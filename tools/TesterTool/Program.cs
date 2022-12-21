@@ -55,6 +55,7 @@ namespace Tester
             info.ArgumentList.Add(config.SdCardImageLocation);
             info.ArgumentList.Add(config.SdCardMountDriveLetter);
             info.ArgumentList.Add(config.Cx16EmulatatorFolder);
+            info.ArgumentList.Add(config.MakeFileFolder);
 
             return info; 
         }

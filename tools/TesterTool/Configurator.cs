@@ -52,15 +52,8 @@ namespace Tester
             }
         }
 
-        public static bool CreateNewConfiguration(string sdCardImageLocation, string sdCardMountDriveLetter, string cx16EmulatatorFolder, out string error)
+        public static bool CreateNewConfiguration(Config config, out string error)
         {
-            Config config = new Config()
-            {
-                SdCardImageLocation = sdCardImageLocation,
-                SdCardMountDriveLetter = sdCardMountDriveLetter,
-                Cx16EmulatatorFolder = cx16EmulatatorFolder,
-            };
-
             try
             {
                 File.WriteAllText(ConfigFileLocation, JsonConvert.SerializeObject(config));

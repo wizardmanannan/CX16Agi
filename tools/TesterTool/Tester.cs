@@ -33,7 +33,17 @@ namespace Tester
         private void Test_Click(object sender, EventArgs e)
         {
             string error;
-            if(!Configurator.CreateNewConfiguration(txtSdImageLocation.Text, txtSdCardMountDriveLetter.Text, txtCx16EmulatorFolder.Text, out error))
+
+            Config config = new Config()
+            {
+                SdCardImageLocation = txtSdImageLocation.Text,
+                SdCardMountDriveLetter = txtSdCardMountDriveLetter.Text,
+                Cx16EmulatatorFolder = txtCx16EmulatorFolder.Text,
+                MakeFileFolder = txtMakeFileFolder.Text,
+            };
+
+
+            if (!Configurator.CreateNewConfiguration(config, out error))
             {
                 MessageBox.Show(error);
             }

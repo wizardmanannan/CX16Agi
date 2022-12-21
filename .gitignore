@@ -1,5 +1,6 @@
 /tools/*/bin
 /tools/*/obj
 /tools/*/.vs
-
+/obj/cx16
+AGI.CX16.*
 *.user

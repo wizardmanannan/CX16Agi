@@ -35,6 +35,8 @@
             this.txtCx16EmulatorFolder = new System.Windows.Forms.TextBox();
             this.label3 = new System.Windows.Forms.Label();
             this.Test = new System.Windows.Forms.Button();
+            this.txtMakeFileFolder = new System.Windows.Forms.TextBox();
+            this.label4 = new System.Windows.Forms.Label();
             this.SuspendLayout();
             // 
             // label1
@@ -46,18 +48,18 @@
             this.label1.TabIndex = 0;
             this.label1.Text = "SDCard Image Location (eg. c:\\myfolder\\sdcard.img)";
             // 
-            // txtImageLocation
+            // txtSdImageLocation
             // 
             this.txtSdImageLocation.Location = new System.Drawing.Point(12, 57);
-            this.txtSdImageLocation.Name = "txtImageLocation";
+            this.txtSdImageLocation.Name = "txtSdImageLocation";
             this.txtSdImageLocation.Size = new System.Drawing.Size(429, 31);
             this.txtSdImageLocation.TabIndex = 1;
             this.txtSdImageLocation.Leave += new System.EventHandler(this.txtImageLocation_Leave);
             // 
-            // txtDriveLetter
+            // txtSdCardMountDriveLetter
             // 
             this.txtSdCardMountDriveLetter.Location = new System.Drawing.Point(12, 134);
-            this.txtSdCardMountDriveLetter.Name = "txtDriveLetter";
+            this.txtSdCardMountDriveLetter.Name = "txtSdCardMountDriveLetter";
             this.txtSdCardMountDriveLetter.Size = new System.Drawing.Size(429, 31);
             this.txtSdCardMountDriveLetter.TabIndex = 3;
             this.txtSdCardMountDriveLetter.Text = "E";
@@ -72,10 +74,10 @@
             this.label2.TabIndex = 2;
             this.label2.Text = "SDCard Mount Letter (eg. E)";
             // 
-            // txtEmulator
+            // txtCx16EmulatorFolder
             // 
             this.txtCx16EmulatorFolder.Location = new System.Drawing.Point(12, 211);
-            this.txtCx16EmulatorFolder.Name = "txtEmulator";
+            this.txtCx16EmulatorFolder.Name = "txtCx16EmulatorFolder";
             this.txtCx16EmulatorFolder.Size = new System.Drawing.Size(429, 31);
             this.txtCx16EmulatorFolder.TabIndex = 5;
             this.txtCx16EmulatorFolder.Leave += new System.EventHandler(this.txtEmulator_Leave);
@@ -91,7 +93,7 @@
             // 
             // Test
             // 
-            this.Test.Location = new System.Drawing.Point(12, 247);
+            this.Test.Location = new System.Drawing.Point(12, 325);
             this.Test.Name = "Test";
             this.Test.Size = new System.Drawing.Size(112, 34);
             this.Test.TabIndex = 6;
@@ -99,11 +101,29 @@
             this.Test.UseVisualStyleBackColor = true;
             this.Test.Click += new System.EventHandler(this.Test_Click);
             // 
+            // txtMakeFileFolder
+            // 
+            this.txtMakeFileFolder.Location = new System.Drawing.Point(12, 288);
+            this.txtMakeFileFolder.Name = "txtMakeFileFolder";
+            this.txtMakeFileFolder.Size = new System.Drawing.Size(429, 31);
+            this.txtMakeFileFolder.TabIndex = 8;
+            // 
+            // label4
+            // 
+            this.label4.AutoSize = true;
+            this.label4.Location = new System.Drawing.Point(12, 251);
+            this.label4.Name = "label4";
+            this.label4.Size = new System.Drawing.Size(316, 25);
+            this.label4.TabIndex = 7;
+            this.label4.Text = "MakeFile Folder (eg. c:\\myCodeFolder)";
+            // 
             // Tester
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(10F, 25F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(457, 295);
+            this.ClientSize = new System.Drawing.Size(457, 374);
+            this.Controls.Add(this.txtMakeFileFolder);
+            this.Controls.Add(this.label4);
             this.Controls.Add(this.Test);
             this.Controls.Add(this.txtCx16EmulatorFolder);
             this.Controls.Add(this.label3);
@@ -127,5 +147,7 @@
         private TextBox txtCx16EmulatorFolder;
         private Label label3;
         private Button Test;
+        private TextBox txtMakeFileFolder;
+        private Label label4;
     }
 }
