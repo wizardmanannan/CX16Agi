@@ -37,13 +37,29 @@ namespace Tester
             }
         }
 
+        public static Config Config
+        {
+            get
+            {
+                Config config = new Config();
+                
+                if (ConfigExists)
+                {
+                    config = JsonConvert.DeserializeObject<Config>(File.ReadAllText(ConfigFileLocation));
+                }
+
+                return config;
+            }
+        }
+
         public static bool CreateNewConfiguration(string sdCardImageLocation, string sdCardMountDriveLetter, string cx16EmulatatorFolder, out string error)
         {
-            Dictionary<string, string> config = new Dictionary<string, string>();
-
-            config[SdCardImageLocationKey] = sdCardImageLocation;
-            config[SdCardMountDriveLetterKey] = sdCardMountDriveLetter;
-            config[Cx16EmulatatorFolderKey] = cx16EmulatatorFolder;
+            Config config = new Config()
+            {
+                SdCardImageLocation = sdCardImageLocation,
+                SdCardMountDriveLetter = sdCardMountDriveLetter,
+                Cx16EmulatatorFolder = cx16EmulatatorFolder,
+            };
 
             try
             {

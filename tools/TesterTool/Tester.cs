@@ -2,8 +2,12 @@ namespace Tester
 {
     public partial class Tester : Form
     {
-        public Tester()
+        private Action<Config> RunTest { get; set; }
+
+        public Tester(Action<Config> runTest)
         {
+            RunTest = runTest;
+
             InitializeComponent();
         }
 
@@ -35,7 +39,8 @@ namespace Tester
             }
             else
             {
-
+                RunTest(Configurator.Config);
+                Application.Exit();
             }
         }
     }
