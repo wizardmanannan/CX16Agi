@@ -1,0 +1,131 @@
+﻿namespace Tester
+{
+    partial class Tester
+    {
+        /// <summary>
+        ///  Required designer variable.
+        /// </summary>
+        private System.ComponentModel.IContainer components = null;
+
+        /// <summary>
+        ///  Clean up any resources being used.
+        /// </summary>
+        /// <param name="disposing">true if managed resources should be disposed; otherwise, false.</param>
+        protected override void Dispose(bool disposing)
+        {
+            if (disposing && (components != null))
+            {
+                components.Dispose();
+            }
+            base.Dispose(disposing);
+        }
+
+        #region Windows Form Designer generated code
+
+        /// <summary>
+        ///  Required method for Designer support - do not modify
+        ///  the contents of this method with the code editor.
+        /// </summary>
+        private void InitializeComponent()
+        {
+            this.label1 = new System.Windows.Forms.Label();
+            this.txtSdImageLocation = new System.Windows.Forms.TextBox();
+            this.txtSdCardMountDriveLetter = new System.Windows.Forms.TextBox();
+            this.label2 = new System.Windows.Forms.Label();
+            this.txtCx16EmulatorFolder = new System.Windows.Forms.TextBox();
+            this.label3 = new System.Windows.Forms.Label();
+            this.Test = new System.Windows.Forms.Button();
+            this.SuspendLayout();
+            // 
+            // label1
+            // 
+            this.label1.AutoSize = true;
+            this.label1.Location = new System.Drawing.Point(12, 20);
+            this.label1.Name = "label1";
+            this.label1.Size = new System.Drawing.Size(429, 25);
+            this.label1.TabIndex = 0;
+            this.label1.Text = "SDCard Image Location (eg. c:\\myfolder\\sdcard.img)";
+            // 
+            // txtImageLocation
+            // 
+            this.txtSdImageLocation.Location = new System.Drawing.Point(12, 57);
+            this.txtSdImageLocation.Name = "txtImageLocation";
+            this.txtSdImageLocation.Size = new System.Drawing.Size(429, 31);
+            this.txtSdImageLocation.TabIndex = 1;
+            this.txtSdImageLocation.Leave += new System.EventHandler(this.txtImageLocation_Leave);
+            // 
+            // txtDriveLetter
+            // 
+            this.txtSdCardMountDriveLetter.Location = new System.Drawing.Point(12, 134);
+            this.txtSdCardMountDriveLetter.Name = "txtDriveLetter";
+            this.txtSdCardMountDriveLetter.Size = new System.Drawing.Size(429, 31);
+            this.txtSdCardMountDriveLetter.TabIndex = 3;
+            this.txtSdCardMountDriveLetter.Text = "E";
+            this.txtSdCardMountDriveLetter.Leave += new System.EventHandler(this.txtDriveLetter_Leave);
+            // 
+            // label2
+            // 
+            this.label2.AutoSize = true;
+            this.label2.Location = new System.Drawing.Point(12, 97);
+            this.label2.Name = "label2";
+            this.label2.Size = new System.Drawing.Size(232, 25);
+            this.label2.TabIndex = 2;
+            this.label2.Text = "SDCard Mount Letter (eg. E)";
+            // 
+            // txtEmulator
+            // 
+            this.txtCx16EmulatorFolder.Location = new System.Drawing.Point(12, 211);
+            this.txtCx16EmulatorFolder.Name = "txtEmulator";
+            this.txtCx16EmulatorFolder.Size = new System.Drawing.Size(429, 31);
+            this.txtCx16EmulatorFolder.TabIndex = 5;
+            this.txtCx16EmulatorFolder.Leave += new System.EventHandler(this.txtEmulator_Leave);
+            // 
+            // label3
+            // 
+            this.label3.AutoSize = true;
+            this.label3.Location = new System.Drawing.Point(12, 174);
+            this.label3.Name = "label3";
+            this.label3.Size = new System.Drawing.Size(432, 25);
+            this.label3.TabIndex = 4;
+            this.label3.Text = "CommanderX16 Emulator Folder (eg. c:\\commander)";
+            // 
+            // Test
+            // 
+            this.Test.Location = new System.Drawing.Point(12, 247);
+            this.Test.Name = "Test";
+            this.Test.Size = new System.Drawing.Size(112, 34);
+            this.Test.TabIndex = 6;
+            this.Test.Text = "Test";
+            this.Test.UseVisualStyleBackColor = true;
+            this.Test.Click += new System.EventHandler(this.Test_Click);
+            // 
+            // Tester
+            // 
+            this.AutoScaleDimensions = new System.Drawing.SizeF(10F, 25F);
+            this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
+            this.ClientSize = new System.Drawing.Size(457, 295);
+            this.Controls.Add(this.Test);
+            this.Controls.Add(this.txtCx16EmulatorFolder);
+            this.Controls.Add(this.label3);
+            this.Controls.Add(this.txtSdCardMountDriveLetter);
+            this.Controls.Add(this.label2);
+            this.Controls.Add(this.txtSdImageLocation);
+            this.Controls.Add(this.label1);
+            this.Name = "Tester";
+            this.Text = "Meka Agi Tester";
+            this.ResumeLayout(false);
+            this.PerformLayout();
+
+        }
+
+        #endregion
+
+        private Label label1;
+        private TextBox txtSdImageLocation;
+        private TextBox txtSdCardMountDriveLetter;
+        private Label label2;
+        private TextBox txtCx16EmulatorFolder;
+        private Label label3;
+        private Button Test;
+    }
+}
