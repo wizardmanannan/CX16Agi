@@ -9,5 +9,3 @@ OSFMount -D -m %2:
 cd C:\Commander\ 
 x16emu.exe -sdcard %~n1%~x1 -prg "agi.cx16" -run -debug d -warp
 cd %cd%
-
-pause

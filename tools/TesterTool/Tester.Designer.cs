@@ -107,6 +107,7 @@
             this.txtMakeFileFolder.Name = "txtMakeFileFolder";
             this.txtMakeFileFolder.Size = new System.Drawing.Size(429, 31);
             this.txtMakeFileFolder.TabIndex = 8;
+            this.txtMakeFileFolder.TextChanged += new System.EventHandler(this.txtMakeFileFolder_TextChanged);
             // 
             // label4
             // 

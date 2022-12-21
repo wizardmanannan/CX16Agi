@@ -16,7 +16,7 @@ namespace Tester
             txtSdImageLocation.Text = txtSdImageLocation.Text.Trim();
             if (string.IsNullOrEmpty(txtCx16EmulatorFolder.Text))
             {
-                txtCx16EmulatorFolder.Text = txtSdImageLocation.Text;
+                txtCx16EmulatorFolder.Text = Path.GetDirectoryName(txtSdImageLocation.Text);
             }
         }
 
@@ -52,6 +52,11 @@ namespace Tester
                 RunTest(Configurator.Config);
                 Application.Exit();
             }
+        }
+
+        private void txtMakeFileFolder_TextChanged(object sender, EventArgs e)
+        {
+            txtMakeFileFolder.Text = txtMakeFileFolder.Text.Trim();
         }
     }
 }
