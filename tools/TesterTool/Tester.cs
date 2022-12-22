@@ -59,5 +59,51 @@ namespace Tester
         {
             txtMakeFileFolder.Text = txtMakeFileFolder.Text.Trim();
         }
+
+        private void btnImageLocationFolderBrowse_Click(object sender, EventArgs e)
+        {
+            BrowseFile(txtSdImageLocation);
+        }
+
+        private void BrowseFile(TextBox textBox)
+        {
+          if(dlgFile.ShowDialog() == DialogResult.OK)
+            {
+                textBox.Text = dlgFile.FileName;
+            }
+        }
+
+        private void BrowseFolder(TextBox textBox)
+        {
+            if (dlgFolder.ShowDialog() == DialogResult.OK)
+            {
+                textBox.Text = dlgFolder.SelectedPath;
+            }
+        }
+
+
+
+        private void button1_Click(object sender, EventArgs e)
+        {
+
+        }
+
+        private void btnEmulatorFolderBrowse_Click(object sender, EventArgs e)
+        {
+            BrowseFolder(txtCx16EmulatorFolder);
+        }
+
+        private void btnMakeFolderBrowse_Click(object sender, EventArgs e)
+        {
+            BrowseFolder(txtMakeFileFolder);
+        }
+
+        private void dlgFile_FileOk(object sender, System.ComponentModel.CancelEventArgs e)
+        {
+            if (string.IsNullOrEmpty(txtCx16EmulatorFolder.Text))
+            {
+                txtCx16EmulatorFolder.Text = Path.GetDirectoryName(((OpenFileDialog) sender).FileName);
+            }
+        }
     }
 }

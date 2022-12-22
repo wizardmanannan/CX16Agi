@@ -37,6 +37,11 @@
             this.Test = new System.Windows.Forms.Button();
             this.txtMakeFileFolder = new System.Windows.Forms.TextBox();
             this.label4 = new System.Windows.Forms.Label();
+            this.dlgFile = new System.Windows.Forms.OpenFileDialog();
+            this.btnImageLocationFolderBrowse = new System.Windows.Forms.Button();
+            this.btnEmulatorFolderBrowse = new System.Windows.Forms.Button();
+            this.btnMakeFolderBrowse = new System.Windows.Forms.Button();
+            this.dlgFolder = new System.Windows.Forms.FolderBrowserDialog();
             this.SuspendLayout();
             // 
             // label1
@@ -118,11 +123,49 @@
             this.label4.TabIndex = 7;
             this.label4.Text = "MakeFile Folder (eg. c:\\myCodeFolder)";
             // 
+            // dlgFile
+            // 
+            this.dlgFile.FileName = "openFileDialog1";
+            this.dlgFile.FileOk += new System.ComponentModel.CancelEventHandler(this.dlgFile_FileOk);
+            // 
+            // btnImageLocationFolderBrowse
+            // 
+            this.btnImageLocationFolderBrowse.Location = new System.Drawing.Point(462, 57);
+            this.btnImageLocationFolderBrowse.Name = "btnImageLocationFolderBrowse";
+            this.btnImageLocationFolderBrowse.Size = new System.Drawing.Size(112, 31);
+            this.btnImageLocationFolderBrowse.TabIndex = 9;
+            this.btnImageLocationFolderBrowse.Text = "Browse";
+            this.btnImageLocationFolderBrowse.UseVisualStyleBackColor = true;
+            this.btnImageLocationFolderBrowse.Click += new System.EventHandler(this.btnImageLocationFolderBrowse_Click);
+            // 
+            // btnEmulatorFolderBrowse
+            // 
+            this.btnEmulatorFolderBrowse.Location = new System.Drawing.Point(462, 211);
+            this.btnEmulatorFolderBrowse.Name = "btnEmulatorFolderBrowse";
+            this.btnEmulatorFolderBrowse.Size = new System.Drawing.Size(112, 31);
+            this.btnEmulatorFolderBrowse.TabIndex = 10;
+            this.btnEmulatorFolderBrowse.Text = "Browse";
+            this.btnEmulatorFolderBrowse.UseVisualStyleBackColor = true;
+            this.btnEmulatorFolderBrowse.Click += new System.EventHandler(this.btnEmulatorFolderBrowse_Click);
+            // 
+            // btnMakeFolderBrowse
+            // 
+            this.btnMakeFolderBrowse.Location = new System.Drawing.Point(462, 288);
+            this.btnMakeFolderBrowse.Name = "btnMakeFolderBrowse";
+            this.btnMakeFolderBrowse.Size = new System.Drawing.Size(112, 31);
+            this.btnMakeFolderBrowse.TabIndex = 11;
+            this.btnMakeFolderBrowse.Text = "Browse";
+            this.btnMakeFolderBrowse.UseVisualStyleBackColor = true;
+            this.btnMakeFolderBrowse.Click += new System.EventHandler(this.btnMakeFolderBrowse_Click);
+            // 
             // Tester
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(10F, 25F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(457, 374);
+            this.ClientSize = new System.Drawing.Size(637, 374);
+            this.Controls.Add(this.btnMakeFolderBrowse);
+            this.Controls.Add(this.btnEmulatorFolderBrowse);
+            this.Controls.Add(this.btnImageLocationFolderBrowse);
             this.Controls.Add(this.txtMakeFileFolder);
             this.Controls.Add(this.label4);
             this.Controls.Add(this.Test);
@@ -150,5 +193,10 @@
         private Button Test;
         private TextBox txtMakeFileFolder;
         private Label label4;
+        private OpenFileDialog dlgFile;
+        private Button btnImageLocationFolderBrowse;
+        private Button btnEmulatorFolderBrowse;
+        private Button btnMakeFolderBrowse;
+        private FolderBrowserDialog dlgFolder;
     }
 }

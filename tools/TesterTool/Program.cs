@@ -18,7 +18,7 @@ namespace Tester
     ///  The main entry point for the application.
     /// </summary>
     [STAThread]
-        async static Task Main()
+        public static void Main()
         {
             try
             {
@@ -39,7 +39,10 @@ namespace Tester
             catch (Exception ex)
             {
                 Console.WriteLine(ex.ToString());
-                await Task.Delay(-1); 
+                for(; ; ) 
+                {
+                    Thread.Sleep(1000); //So you can both read the console and prevent blocking
+                }
             }
         }
 
