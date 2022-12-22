@@ -4,3 +4,4 @@
 /obj/cx16
 AGI.CX16.*
 *.user
+*.pdb

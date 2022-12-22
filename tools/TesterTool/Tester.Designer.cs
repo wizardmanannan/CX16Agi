@@ -131,6 +131,7 @@
             // dlgFile
             // 
             this.dlgFile.FileName = "openFileDialog1";
+            this.dlgFile.Filter = "SDCard Image files (*.img)|*.img";
             this.dlgFile.FileOk += new System.ComponentModel.CancelEventHandler(this.dlgFile_FileOk);
             // 
             // btnImageLocationFolderBrowse
