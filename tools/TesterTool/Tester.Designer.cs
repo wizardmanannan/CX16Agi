@@ -28,15 +28,15 @@
         /// </summary>
         private void InitializeComponent()
         {
-            this.label1 = new System.Windows.Forms.Label();
+            this.lblSdCardImageLocation = new System.Windows.Forms.Label();
             this.txtSdImageLocation = new System.Windows.Forms.TextBox();
-            this.txtSdCardMountDriveLetter = new System.Windows.Forms.TextBox();
-            this.label2 = new System.Windows.Forms.Label();
+            this.txtSdCardMountDriveLetter = new System.Windows.Forms.MaskedTextBox();
+            this.lblSdCardMountDriveLetter = new System.Windows.Forms.Label();
             this.txtCx16EmulatorFolder = new System.Windows.Forms.TextBox();
-            this.label3 = new System.Windows.Forms.Label();
+            this.lblCx16EmulatorFolder = new System.Windows.Forms.Label();
             this.Test = new System.Windows.Forms.Button();
             this.txtMakeFileFolder = new System.Windows.Forms.TextBox();
-            this.label4 = new System.Windows.Forms.Label();
+            this.lblMakeFileFolder = new System.Windows.Forms.Label();
             this.dlgFile = new System.Windows.Forms.OpenFileDialog();
             this.btnImageLocationFolderBrowse = new System.Windows.Forms.Button();
             this.btnEmulatorFolderBrowse = new System.Windows.Forms.Button();
@@ -44,14 +44,14 @@
             this.dlgFolder = new System.Windows.Forms.FolderBrowserDialog();
             this.SuspendLayout();
             // 
-            // label1
+            // lblSdCardImageLocation
             // 
-            this.label1.AutoSize = true;
-            this.label1.Location = new System.Drawing.Point(12, 20);
-            this.label1.Name = "label1";
-            this.label1.Size = new System.Drawing.Size(429, 25);
-            this.label1.TabIndex = 0;
-            this.label1.Text = "SDCard Image Location (eg. c:\\myfolder\\sdcard.img)";
+            this.lblSdCardImageLocation.AutoSize = true;
+            this.lblSdCardImageLocation.Location = new System.Drawing.Point(12, 20);
+            this.lblSdCardImageLocation.Name = "lblSdCardImageLocation";
+            this.lblSdCardImageLocation.Size = new System.Drawing.Size(429, 25);
+            this.lblSdCardImageLocation.TabIndex = 0;
+            this.lblSdCardImageLocation.Text = "SDCard Image Location (eg. c:\\myfolder\\sdcard.img)";
             // 
             // txtSdImageLocation
             // 
@@ -60,24 +60,26 @@
             this.txtSdImageLocation.Size = new System.Drawing.Size(429, 31);
             this.txtSdImageLocation.TabIndex = 1;
             this.txtSdImageLocation.Leave += new System.EventHandler(this.txtImageLocation_Leave);
+            this.txtSdImageLocation.Validating += new System.ComponentModel.CancelEventHandler(this.txtSdImageLocation_Validating);
             // 
             // txtSdCardMountDriveLetter
             // 
             this.txtSdCardMountDriveLetter.Location = new System.Drawing.Point(12, 134);
+            this.txtSdCardMountDriveLetter.Mask = "L";
             this.txtSdCardMountDriveLetter.Name = "txtSdCardMountDriveLetter";
             this.txtSdCardMountDriveLetter.Size = new System.Drawing.Size(429, 31);
             this.txtSdCardMountDriveLetter.TabIndex = 3;
             this.txtSdCardMountDriveLetter.Text = "E";
             this.txtSdCardMountDriveLetter.Leave += new System.EventHandler(this.txtDriveLetter_Leave);
             // 
-            // label2
+            // lblSdCardMountDriveLetter
             // 
-            this.label2.AutoSize = true;
-            this.label2.Location = new System.Drawing.Point(12, 97);
-            this.label2.Name = "label2";
-            this.label2.Size = new System.Drawing.Size(232, 25);
-            this.label2.TabIndex = 2;
-            this.label2.Text = "SDCard Mount Letter (eg. E)";
+            this.lblSdCardMountDriveLetter.AutoSize = true;
+            this.lblSdCardMountDriveLetter.Location = new System.Drawing.Point(12, 97);
+            this.lblSdCardMountDriveLetter.Name = "lblSdCardMountDriveLetter";
+            this.lblSdCardMountDriveLetter.Size = new System.Drawing.Size(232, 25);
+            this.lblSdCardMountDriveLetter.TabIndex = 2;
+            this.lblSdCardMountDriveLetter.Text = "SDCard Mount Letter (eg. E)";
             // 
             // txtCx16EmulatorFolder
             // 
@@ -86,15 +88,16 @@
             this.txtCx16EmulatorFolder.Size = new System.Drawing.Size(429, 31);
             this.txtCx16EmulatorFolder.TabIndex = 5;
             this.txtCx16EmulatorFolder.Leave += new System.EventHandler(this.txtEmulator_Leave);
+            this.txtCx16EmulatorFolder.Validating += new System.ComponentModel.CancelEventHandler(this.txtCx16EmulatorFolder_Validating);
             // 
-            // label3
+            // lblCx16EmulatorFolder
             // 
-            this.label3.AutoSize = true;
-            this.label3.Location = new System.Drawing.Point(12, 174);
-            this.label3.Name = "label3";
-            this.label3.Size = new System.Drawing.Size(432, 25);
-            this.label3.TabIndex = 4;
-            this.label3.Text = "CommanderX16 Emulator Folder (eg. c:\\commander)";
+            this.lblCx16EmulatorFolder.AutoSize = true;
+            this.lblCx16EmulatorFolder.Location = new System.Drawing.Point(12, 174);
+            this.lblCx16EmulatorFolder.Name = "lblCx16EmulatorFolder";
+            this.lblCx16EmulatorFolder.Size = new System.Drawing.Size(432, 25);
+            this.lblCx16EmulatorFolder.TabIndex = 4;
+            this.lblCx16EmulatorFolder.Text = "CommanderX16 Emulator Folder (eg. c:\\commander)";
             // 
             // Test
             // 
@@ -113,15 +116,16 @@
             this.txtMakeFileFolder.Size = new System.Drawing.Size(429, 31);
             this.txtMakeFileFolder.TabIndex = 8;
             this.txtMakeFileFolder.TextChanged += new System.EventHandler(this.txtMakeFileFolder_TextChanged);
+            this.txtMakeFileFolder.Validating += new System.ComponentModel.CancelEventHandler(this.txtMakeFileFolder_Validating);
             // 
-            // label4
+            // lblMakeFileFolder
             // 
-            this.label4.AutoSize = true;
-            this.label4.Location = new System.Drawing.Point(12, 251);
-            this.label4.Name = "label4";
-            this.label4.Size = new System.Drawing.Size(316, 25);
-            this.label4.TabIndex = 7;
-            this.label4.Text = "MakeFile Folder (eg. c:\\myCodeFolder)";
+            this.lblMakeFileFolder.AutoSize = true;
+            this.lblMakeFileFolder.Location = new System.Drawing.Point(12, 251);
+            this.lblMakeFileFolder.Name = "lblMakeFileFolder";
+            this.lblMakeFileFolder.Size = new System.Drawing.Size(316, 25);
+            this.lblMakeFileFolder.TabIndex = 7;
+            this.lblMakeFileFolder.Text = "MakeFile Folder (eg. c:\\myCodeFolder)";
             // 
             // dlgFile
             // 
@@ -162,19 +166,20 @@
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(10F, 25F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
+            this.AutoValidate = System.Windows.Forms.AutoValidate.EnableAllowFocusChange;
             this.ClientSize = new System.Drawing.Size(637, 374);
             this.Controls.Add(this.btnMakeFolderBrowse);
             this.Controls.Add(this.btnEmulatorFolderBrowse);
             this.Controls.Add(this.btnImageLocationFolderBrowse);
             this.Controls.Add(this.txtMakeFileFolder);
-            this.Controls.Add(this.label4);
+            this.Controls.Add(this.lblMakeFileFolder);
             this.Controls.Add(this.Test);
             this.Controls.Add(this.txtCx16EmulatorFolder);
-            this.Controls.Add(this.label3);
+            this.Controls.Add(this.lblCx16EmulatorFolder);
             this.Controls.Add(this.txtSdCardMountDriveLetter);
-            this.Controls.Add(this.label2);
+            this.Controls.Add(this.lblSdCardMountDriveLetter);
             this.Controls.Add(this.txtSdImageLocation);
-            this.Controls.Add(this.label1);
+            this.Controls.Add(this.lblSdCardImageLocation);
             this.Name = "Tester";
             this.Text = "Meka Agi Tester";
             this.ResumeLayout(false);
@@ -184,15 +189,15 @@
 
         #endregion
 
-        private Label label1;
+        private Label lblSdCardImageLocation;
         private TextBox txtSdImageLocation;
-        private TextBox txtSdCardMountDriveLetter;
-        private Label label2;
+        private MaskedTextBox txtSdCardMountDriveLetter;
+        private Label lblSdCardMountDriveLetter;
         private TextBox txtCx16EmulatorFolder;
-        private Label label3;
+        private Label lblCx16EmulatorFolder;
         private Button Test;
         private TextBox txtMakeFileFolder;
-        private Label label4;
+        private Label lblMakeFileFolder;
         private OpenFileDialog dlgFile;
         private Button btnImageLocationFolderBrowse;
         private Button btnEmulatorFolderBrowse;

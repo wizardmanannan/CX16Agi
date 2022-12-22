@@ -2,6 +2,10 @@ namespace Tester
 {
     public partial class Tester : Form
     {
+        public const string ErrorIsRequired = "'{0}' is required";
+        public const string ErrorFileMustExist = "The file in '{0}' must exist";
+        public const string ErrorDirectoryMustExist = "The directory in '{0}' must exist";
+
         private Action<Config> RunTest { get; set; }
 
         public Tester(Action<Config> runTest)
@@ -42,16 +46,18 @@ namespace Tester
                 MakeFileFolder = txtMakeFileFolder.Text,
             };
 
-
-            if (!Configurator.CreateNewConfiguration(config, out error))
+            if (Validate())
             {
-                MessageBox.Show(error);
-                throw new Exception(error);
-            }
-            else
-            {
-                RunTest(Configurator.Config);
-                Application.Exit();
+                if (!Configurator.CreateNewConfiguration(config, out error))
+                {
+                    MessageBox.Show(error);
+                    throw new Exception(error);
+                }
+                else
+                {
+                    RunTest(Configurator.Config);
+                    Application.Exit();
+                }
             }
         }
 
@@ -104,6 +110,43 @@ namespace Tester
             {
                 txtCx16EmulatorFolder.Text = Path.GetDirectoryName(((OpenFileDialog) sender).FileName);
             }
+        }
+
+        private void txtSdImageLocation_Validating(object sender, System.ComponentModel.CancelEventArgs e)
+        {
+            ValidateFunc(txtSdImageLocation, lblSdCardImageLocation.Text, e, File.Exists);
+        }
+
+        private void ValidateFunc(TextBox textBox, string label, System.ComponentModel.CancelEventArgs e, Func<string, bool> existsFunc)
+        {
+            if (string.IsNullOrEmpty(textBox.Text))
+            {
+                DisplayErrorForTextBox(ErrorIsRequired, label);
+                e.Cancel = true;
+            }
+            else
+            {
+                if (!existsFunc(textBox.Text))
+                {
+                    DisplayErrorForTextBox(ErrorDirectoryMustExist, label);
+                    e.Cancel = true;
+                }
+            }
+        }
+
+        private void DisplayErrorForTextBox(string error, string label)
+        {
+            MessageBox.Show(string.Format(error, label), "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+        }
+
+        private void txtCx16EmulatorFolder_Validating(object sender, System.ComponentModel.CancelEventArgs e)
+        {
+            ValidateFunc(txtSdImageLocation, lblSdCardImageLocation.Text, e, Directory.Exists);
+        }
+
+        private void txtMakeFileFolder_Validating(object sender, System.ComponentModel.CancelEventArgs e)
+        {
+            ValidateFunc(txtSdImageLocation, lblSdCardImageLocation.Text, e, Directory.Exists);
         }
     }
 }
