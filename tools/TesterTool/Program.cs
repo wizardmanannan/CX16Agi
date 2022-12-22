@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using System.Runtime.InteropServices;
 
 namespace Tester
 {
@@ -6,43 +7,61 @@ namespace Tester
     {
         public static string TestFileName = "test.bat";
 
-        /// <summary>
-        ///  The main entry point for the application.
-        /// </summary>
-        [STAThread]
-        static void Main()
-        {
-            // To customize application configuration such as set high DPI settings or default font,
-            // see https://aka.ms/applicationconfiguration.
+        private static string _testFilePath = "";
 
-            if (!Configurator.ConfigExists)
+
+    [DllImport("kernel32.dll", SetLastError = true)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    static extern bool AllocConsole();
+
+    /// <summary>
+    ///  The main entry point for the application.
+    /// </summary>
+    [STAThread]
+        async static Task Main()
+        {
+            try
             {
-                ApplicationConfiguration.Initialize();
-                Application.Run(new Tester(ExecuteTestScript));
+                // To customize application configuration such as set high DPI settings or default font,
+                // see https://aka.ms/applicationconfiguration.
+                AllocConsole();
+               _testFilePath = SetUpBatchFile(TestFileName);
+                if (!Configurator.ConfigExists)
+                {
+                    ApplicationConfiguration.Initialize();
+                    Application.Run(new Tester(ExecuteTestScript));
+                }
+                else
+                {
+                    ExecuteTestScript(Configurator.Config);
+                }
             }
-            else
+            catch (Exception ex)
             {
-                ExecuteTestScript(Configurator.Config);
+                Console.WriteLine(ex.ToString());
+                await Task.Delay(-1); 
             }
+        }
+
+        private static string SetUpBatchFile(string resourceName)
+        {
+            string result = $"{Path.GetTempFileName()}.bat";
+            try
+            {
+                File.WriteAllText(result, Resources.test_bat);
+            }
+            catch (Exception ex)
+            {
+                throw new Exception($"Unable to write to temp directory due to {ex.Message}");
+            }
+
+            return result;
         }
 
         static void ExecuteTestScript(Config config)
         {
-//            string script = $@"
-//                make
-//OSFMount -a -t file -f ""{config.SdCardImageLocation}"" -o rw -m {config.SdCardMountDriveLetter}:
-//copy agi.cx16 * ""{config.SdCardMountDriveLetter}:""
-//copy agi.cx16 * ""{config.Cx16EmulatatorFolder}""
-//rename agi.cx16* AGI.CX16*
-//timeout 3
-//OSFMount - D - m ""{config.SdCardMountDriveLetter}""
-//            cd ""{config.Cx16EmulatatorFolder}""
-//x16emu.exe - sdcard ""{config.SdCardImageLocation}"" - prg ""agi.cx16"" - run - debug d - warp
-//cd {Path.GetDirectoryName(Configurator.ConfigFileLocation)}
-//            ";
-
             ProcessStartInfo processStartInfo = GetProcessStartInfo(config);
-            processStartInfo.FileName = TestFileName;
+            processStartInfo.FileName = _testFilePath;
 
             Process.Start(processStartInfo);
         }

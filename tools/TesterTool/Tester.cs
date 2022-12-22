@@ -46,6 +46,7 @@ namespace Tester
             if (!Configurator.CreateNewConfiguration(config, out error))
             {
                 MessageBox.Show(error);
+                throw new Exception(error);
             }
             else
             {
