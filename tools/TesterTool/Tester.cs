@@ -5,6 +5,7 @@ namespace Tester
         public const string ErrorIsRequired = "'{0}' is required";
         public const string ErrorFileMustExist = "The file in '{0}' must exist";
         public const string ErrorDirectoryMustExist = "The directory in '{0}' must exist";
+        public const string ErrorMountDriveMustNotExist = "The mount drive '{0}' already exists";
 
         private Action<Config> RunTest { get; set; }
 
@@ -46,7 +47,7 @@ namespace Tester
                 MakeFileFolder = txtMakeFileFolder.Text,
             };
 
-            if (Validate())
+            if (ValidateChildren())
             {
                 if (!Configurator.CreateNewConfiguration(config, out error))
                 {
@@ -114,10 +115,10 @@ namespace Tester
 
         private void txtSdImageLocation_Validating(object sender, System.ComponentModel.CancelEventArgs e)
         {
-            ValidateFunc(txtSdImageLocation, lblSdCardImageLocation.Text, e, File.Exists);
+            ValidateFunc(txtSdImageLocation, lblSdCardImageLocation.Text, e, File.Exists, ErrorFileMustExist);
         }
 
-        private void ValidateFunc(TextBox textBox, string label, System.ComponentModel.CancelEventArgs e, Func<string, bool> existsFunc)
+        private void ValidateFunc(TextBoxBase textBox, string label, System.ComponentModel.CancelEventArgs e, Func<string, bool> testFunc, string error)
         {
             if (string.IsNullOrEmpty(textBox.Text))
             {
@@ -126,9 +127,9 @@ namespace Tester
             }
             else
             {
-                if (!existsFunc(textBox.Text))
+                if (!testFunc(textBox.Text))
                 {
-                    DisplayErrorForTextBox(ErrorDirectoryMustExist, label);
+                    DisplayErrorForTextBox(error, label);
                     e.Cancel = true;
                 }
             }
@@ -141,12 +142,17 @@ namespace Tester
 
         private void txtCx16EmulatorFolder_Validating(object sender, System.ComponentModel.CancelEventArgs e)
         {
-            ValidateFunc(txtSdImageLocation, lblSdCardImageLocation.Text, e, Directory.Exists);
+            ValidateFunc(txtCx16EmulatorFolder, lblCx16EmulatorFolder.Text, e, Directory.Exists, ErrorDirectoryMustExist);
         }
 
         private void txtMakeFileFolder_Validating(object sender, System.ComponentModel.CancelEventArgs e)
         {
-            ValidateFunc(txtSdImageLocation, lblSdCardImageLocation.Text, e, Directory.Exists);
+            ValidateFunc(txtMakeFileFolder, lblMakeFileFolder.Text, e, Directory.Exists, ErrorDirectoryMustExist);
+        }
+
+        private void txtSdCardMountDriveLetter_Validating(object sender, System.ComponentModel.CancelEventArgs e)
+        {
+            ValidateFunc(txtSdCardMountDriveLetter, lblSdCardMountDriveLetter.Text, e, s=> !Directory.Exists(s + ":\\"), ErrorMountDriveMustNotExist);
         }
     }
 }

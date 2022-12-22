@@ -71,6 +71,7 @@
             this.txtSdCardMountDriveLetter.TabIndex = 3;
             this.txtSdCardMountDriveLetter.Text = "E";
             this.txtSdCardMountDriveLetter.Leave += new System.EventHandler(this.txtDriveLetter_Leave);
+            this.txtSdCardMountDriveLetter.Validating += new System.ComponentModel.CancelEventHandler(this.txtSdCardMountDriveLetter_Validating);
             // 
             // lblSdCardMountDriveLetter
             // 
@@ -166,7 +167,7 @@
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(10F, 25F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.AutoValidate = System.Windows.Forms.AutoValidate.EnableAllowFocusChange;
+            this.AutoValidate = System.Windows.Forms.AutoValidate.Disable;
             this.ClientSize = new System.Drawing.Size(637, 374);
             this.Controls.Add(this.btnMakeFolderBrowse);
             this.Controls.Add(this.btnEmulatorFolderBrowse);
