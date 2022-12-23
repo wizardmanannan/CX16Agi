@@ -8,6 +8,7 @@
 #include "general.h"
 #include "stub.h"
 #include "memoryManager.h"
+#include "agifiles.h"
 
 typedef struct {
 	byte width;
@@ -78,7 +79,7 @@ typedef struct {
 extern ViewTable* viewtab;
 
 #define MAXVIEW  256
-extern View loadedViews[];
+extern View* loadedViews;
 
 extern BITMAP* spriteScreen;
 
@@ -91,6 +92,9 @@ typedef void (*fnTrampolineViewUpdater2Int)(ViewTable* localViewtab, int data1, 
 
 extern void getViewTab(ViewTable* returnedViewTab, byte viewTabNumber);
 extern void setViewTab(ViewTable* viewTab, byte viewTabNumber);
+
+extern void getLoadedView(View* returnedLoadedView, byte loadedViewNumber);
+extern void setLoadedView(View* loadedView, byte loadedViewNumber);
 
 extern void trampolineViewUpdater0(fnTrampolineViewUpdater0 func, ViewTable* localViewtab, byte bank);
 

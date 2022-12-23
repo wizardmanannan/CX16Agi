@@ -25,7 +25,7 @@
 
 #define VERBOSE_LOAD_VIEWS;
 
-View loadedViews[MAXVIEW];
+View* loadedViews = (View*)&BANK_RAM[LOADED_VIEW_START];
 BITMAP* spriteScreen;
 
 extern byte var[256];
@@ -94,6 +94,30 @@ void setViewTab(ViewTable* localViewtab, byte viewTabNumber)
     RAM_BANK = VIEWTAB_BANK;
 
     viewtab[viewTabNumber] = *viewtab;
+
+    RAM_BANK = previousRamBank;
+}
+
+void getLoadedView(View* returnedLoadedView, byte loadedViewNumber)
+{
+    byte previousRamBank = RAM_BANK;
+
+    RAM_BANK = LOADED_VIEW_BANK;
+    
+    printf("Attempting to set %p to %p", returnedLoadedView, &loadedViews[loadedViewNumber]);
+
+   // *returnedLoadedView = loadedViews[loadedViewNumber];
+
+    RAM_BANK = previousRamBank;
+}
+
+void setLoadedView(View* loadedView, byte loadedViewNumber)
+{
+    byte previousRamBank = RAM_BANK;
+
+    RAM_BANK = LOADED_VIEW_BANK;
+
+    loadedViews[loadedViewNumber] = *loadedView;
 
     RAM_BANK = previousRamBank;
 }
@@ -210,6 +234,8 @@ void b9ResetViews()     /* Called after new.room */
     }
 }
 
+const char* _emptyDecription = "\0";
+
 /**************************************************************************
 ** loadViewFile
 **
@@ -218,25 +244,49 @@ void b9ResetViews()     /* Called after new.room */
 **************************************************************************/
 void b9LoadViewFile(byte viewNum)
 {
+#define NO_VIEW_START_BYTES 5
     AGIFile tempAGI;
     AGIFilePosType agiFilePosType;
-    byte *loopStart, *celStart, cWidth;
+    byte* loopStart, * celStart, cWidth;
     byte l, c, x, y, chunk, xTotal, colour, len, loopIndex, viewIndex, trans;
-    byte viewStart[5];
+    byte viewStart[NO_VIEW_START_BYTES];
+    View localView;
+
+    viewNum = 105;
 
 #ifdef VERBOSE_LOAD_VIEWS
     printf("Attempt to load viewNum %d", viewNum);
 #endif // VERBOSE_LOAD_VIEWS
-    
+
     getLogicDirectory(&agiFilePosType, &viewdir[viewNum]);
 
-    loadAGIFile(VIEW, &agiFilePosType, &tempAGI);
-    printf("Exit after reading view");
-    exit(0);
-  
+    printf("&localView is %p ", &localView);
+    getLoadedView(&localView, viewNum);
 
-    //loadedViews[viewNum].description = ((viewStart[3] || viewStart[4])?
-       //strdup((byte *)(viewStart+viewStart[3]+viewStart[4]*256)) : strdup(""));
+    loadAGIFile(VIEW, &agiFilePosType, &tempAGI);
+
+    memCpyBanked(&viewStart[0], tempAGI.code, tempAGI.codeBank, NO_VIEW_START_BYTES);
+
+    loadedViews[viewNum].description = ((viewStart[3] || viewStart[4]) ?
+        // strdup((byte *)(viewStart+viewStart[3]+viewStart[4]*256)) : strdup(""));
+        (const char*)(tempAGI.code + viewStart[3] + viewStart[4] * 256) : _emptyDecription);
+
+#ifdef VERBOSE_LOAD_VIEWS
+    if (loadedViews[viewNum].description == _emptyDecription)
+    {
+        printf("\nThe description is empty\n");
+    }
+    else
+    {
+        printf("The description is not empty\n");
+        copyStringFromBanked(loadedViews[viewNum].description, &GOLDEN_RAM[LOCAL_WORK_AREA_START], 0, 100, tempAGI.codeBank);
+        printf("It has a value of %s ", &GOLDEN_RAM[LOCAL_WORK_AREA_START]);
+    }
+#endif
+
+    exit(0);
+
+
     //loadedViews[viewNum].numberOfLoops = viewStart[2];
     //loadedViews[viewNum].loops = (Loop *)malloc(viewStart[2]*sizeof(Loop));
 
@@ -297,8 +347,8 @@ void b9LoadViewFile(byte viewNum)
     //   }
     //}
 
-    //free(tempAGI.data);   /* Deallocate original buffer. */
-    loadedViews[viewNum].loaded = TRUE;
+    localView.loaded = TRUE;
+    //setLoadedView(&localView, viewNum);
 }
 
 /***************************************************************************
@@ -451,7 +501,7 @@ void b9DrawObject(int entryNum)
         dummy = 1;
     }
 
-    getViewTab(&localViewtab,entryNum);
+    getViewTab(&localViewtab, entryNum);
 
     objFlags = localViewtab.flags;
 
@@ -783,7 +833,7 @@ void bAUpdateObj(int entryNum)
                 celNum++;
                 if (celNum >= localViewtab.numberOfCels)
                     celNum = 0;
-                
+
                 trampolineViewUpdater1Int(&b9SetCel, &localViewtab, celNum, VIEW_CODE_BANK_1);
                 break;
             case 1: /* end.of.loop */
@@ -1277,7 +1327,7 @@ void bCupdateObjects2()
 
     for (entryNum = 0; entryNum < TABLESIZE; entryNum++) {
         getViewTab(&localViewtab, entryNum);
-        
+
         objFlags = localViewtab.flags;
 
         if ((objFlags & ANIMATED) && (objFlags & DRAWN)) {
