@@ -14,20 +14,20 @@ This is based upon the Meka AGI Interpreter by Lance Ewing, and utilises the cod
 
 Permission to use his code has been obtained in written form: https://github.com/lanceewing/agile/issues/65
 
-Thus far the project:
-#Reads the AGI index files
-#Loads the LOGIC and executes most code (code relying on Views with loops is not yet working. This causes hanging)
-#Prints what is executed to the screen
+Thus far the project:\
+#Reads the AGI index files\
+#Loads the LOGIC and executes most code (code relying on Views with loops is not yet working. This causes hanging)\
+#Prints what is executed to the screen\
 
-Obvious things that need to be done:
-#Test more games, I have only tested one game thus far King's Quest III
-#I have been building this under Windows, and the deployment tool I through together for the purpose is Windows dependent. A Linux build tool should be developed
-#Load Views Into Memory Likely Ending The Hanging Issue With Loops
-#This code is currently very SLOW, this most likely culprit is that the engine unloads and loads resources a lot. I suspect that with a cache of some kind the speed should be a vastly improved
-#Import the rest of the MEKA code base. I have been importing it in a piecemeal fashion, and using a stub
-#More stuff needs to be moved out of the low RAM area, as we are upto a 19kb executable. This is both code and data. Although the vast majority of the code is on the banks already, there are some large file loading routines which I would like to seem moved
-#Graphics, sound and keyboard routines need to be implemented
-#Uncomment out routines for the support of AGI 3 games, and put them into the BANKS
+Obvious things that need to be done:\
+#Test more games, I have only tested one game thus far King's Quest III\
+#I have been building this under Windows, and the deployment tool I through together for the purpose is Windows dependent. A Linux build tool should be developed\
+#Load Views Into Memory Likely Ending The Hanging Issue With Loops\
+#This code is currently very SLOW, this most likely culprit is that the engine unloads and loads resources a lot. I suspect that with a cache of some kind the speed should be a vastly improved\
+#Import the rest of the MEKA code base. I have been importing it in a piecemeal fashion, and using a stub\
+#More stuff needs to be moved out of the low RAM area, as we are upto a 19kb executable. This is both code and data. Although the vast majority of the code is on the banks already, there are some large file loading routines which I would like to seem moved\
+#Graphics, sound and keyboard routines need to be implemented\
+#Uncomment out routines for the support of AGI 3 games, and put them into the BANKS\
 
 
 
