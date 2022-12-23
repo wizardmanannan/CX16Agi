@@ -2,6 +2,7 @@
 /tools/*/obj
 /tools/*/.vs
 /obj/cx16
+/.vs
 AGI.CX16.*
 *.user
 *.pdb
