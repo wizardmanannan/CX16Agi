@@ -17,7 +17,7 @@ Permission to use his code has been obtained in written form: https://github.com
 Thus far the project:\
 #Reads the AGI index files\
 #Loads the LOGIC and executes most code (code relying on Views with loops is not yet working. This causes hanging)\
-#Prints what is executed to the screen\
+#Prints what is executed to the screen
 
 Obvious things that need to be done:\
 #Test more games, I have only tested one game thus far King's Quest III\
@@ -27,7 +27,9 @@ Obvious things that need to be done:\
 #Import the rest of the MEKA code base. I have been importing it in a piecemeal fashion, and using a stub\
 #More stuff needs to be moved out of the low RAM area, as we are upto a 19kb executable. This is both code and data. Although the vast majority of the code is on the banks already, there are some large file loading routines which I would like to seem moved\
 #Graphics, sound and keyboard routines need to be implemented\
-#Uncomment out routines for the support of AGI 3 games, and put them into the BANKS\
+#Uncomment out routines for the support of AGI 3 games, and put them into the BANKS
+
+
 
 
 
