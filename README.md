@@ -33,6 +33,7 @@ Obvious things that need to be done:\
 #More stuff needs to be moved out of the low RAM area, as we are upto a 19kb executable. This is both code and data. Although the vast majority of the code is on the banks already, there are some large file loading routines which I would like to seem moved\
 #Graphics, sound and keyboard routines need to be implemented\
 #Uncomment out routines for the support of AGI 3 games, and put them into the BANKS
+#Review the implementation of dynamic memory as mentioned in memorymanager.h and the related C file. I am not a memory algorithm expert, there may be a much more efficent way of doing things. At least a review of the segment sizes I have chosen will be required. 
 
 
 This project requires extensive use of Banked RAM, for both code and data as the Meka source code is quiet large.
@@ -60,13 +61,22 @@ void setLogicEntry(LOGICEntry* logicEntry, byte logicFileNo);
 
 These objects are stored on specific banks as defined in the allocation spreadsheet. 
 
-Memory.h hold defines about sizes, locations of objects in memory, banks and so on.
+memorymanager.h hold defines about sizes, locations of objects in memory, banks and so on.
 
 A system of dynamic banked memory allocation exists for managing these objects. 
 
 This uses my implementation of best fit algorithm, there are six sizes of memory allocation spots stored from banks 16 - 39. 
 
-When dynamic memory is needed 'byte* banked_alloc(int size, byte* bank)' from memorymanager.h
+When dynamic memory is needed 'byte* banked_alloc(int size, byte* bank)' from memorymanager.h is called to allocate the memory. In works very much like the malloc we all understand, the address of the memory block is returned, the key difference between that a bank is also set at the address in the second argument. 
+
+boolean banked_dealloc(byte* ptr, byte bank) conversely deallocates the memory.
+
+The available allocation sizes are described in allocation.xlsx in the 'dynamic' tab
+
+I cannot claim that this is the best algorithm, implementation of it or segmentation of memory. As I mentioned above work will have to be done to come up with better segmentation sizes, I took a guess when I made them.
+As more games are run we will have a better idea of what segment sizes are best.
+
+All of the sizes and other numerous constants related to dynamic memory are location in memory manager.h
 
 
 
