@@ -37,6 +37,6 @@ extern int numLogics, numPictures, numViews, numSounds;
 
 void b6InitFiles();
 void b6LoadAGIDirs();
-void b6LoadAGIFile(int resType, AGIFilePosType* location, AGIFile *AGIData);
+void loadAGIFile(int resType, AGIFilePosType* location, AGIFile *AGIData);
 
 #endif  /* _AGIFILES_H_ */

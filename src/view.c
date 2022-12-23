@@ -23,6 +23,8 @@
 #include "agifiles.h"
 #include "view.h"
 
+#define VERBOSE_LOAD_VIEWS;
+
 View loadedViews[MAXVIEW];
 BITMAP* spriteScreen;
 
@@ -216,14 +218,25 @@ void b9ResetViews()     /* Called after new.room */
 **************************************************************************/
 void b9LoadViewFile(byte viewNum)
 {
-    //AGIFile tempAGI;
-    //byte *viewStart, *loopStart, *celStart, cWidth;
-    //byte l, c, x, y, chunk, xTotal, colour, len, loopIndex, viewIndex, trans;
+    AGIFile tempAGI;
+    AGIFilePosType agiFilePosType;
+    byte *loopStart, *celStart, cWidth;
+    byte l, c, x, y, chunk, xTotal, colour, len, loopIndex, viewIndex, trans;
+    byte viewStart[5];
 
-    //loadAGIFile(VIEW, &viewdir[viewNum], &tempAGI);
-    //viewStart = tempAGI.data;
+#ifdef VERBOSE_LOAD_VIEWS
+    printf("Attempt to load viewNum %d", viewNum);
+#endif // VERBOSE_LOAD_VIEWS
+    
+    getLogicDirectory(&agiFilePosType, &viewdir[viewNum]);
+
+    loadAGIFile(VIEW, &agiFilePosType, &tempAGI);
+    printf("Exit after reading view");
+    exit(0);
+  
+
     //loadedViews[viewNum].description = ((viewStart[3] || viewStart[4])?
-    //   strdup((byte *)(viewStart+viewStart[3]+viewStart[4]*256)) : strdup(""));
+       //strdup((byte *)(viewStart+viewStart[3]+viewStart[4]*256)) : strdup(""));
     //loadedViews[viewNum].numberOfLoops = viewStart[2];
     //loadedViews[viewNum].loops = (Loop *)malloc(viewStart[2]*sizeof(Loop));
 
@@ -285,7 +298,7 @@ void b9LoadViewFile(byte viewNum)
     //}
 
     //free(tempAGI.data);   /* Deallocate original buffer. */
-    //loadedViews[viewNum].loaded = TRUE;
+    loadedViews[viewNum].loaded = TRUE;
 }
 
 /***************************************************************************

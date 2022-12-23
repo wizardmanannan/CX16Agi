@@ -32,7 +32,6 @@ void b8InitLogics();
 void b8LoadLogicFile(byte logFileNum);
 void b8DiscardLogicFile(byte logFileNum);
 
-extern void getLogicDirectory(AGIFilePosType* returnedLogicDirectory, AGIFilePosType* logicDirectoryLocation);
 extern void getLogicFile(LOGICFile* logicFile, byte logicFileNo);
 extern void getLogicEntry(LOGICEntry* logicEntry, byte logicFileNo);
 extern void setLogicEntry(LOGICEntry* logicEntry, byte logicFileNo);

@@ -89,6 +89,17 @@ char* strcpyBanked(char* dest, const char* src, byte bank)
 	return result;
 }
 
+void* memCpyBanked(byte* dest, byte* src, byte bank, size_t len)
+{
+	byte previousRamBank = RAM_BANK;
+
+	RAM_BANK = bank;
+	
+	memcpy(dest, src, len);
+
+	RAM_BANK = previousRamBank;
+}
+
 void copyStringFromBanked(char* src, char* dest, int start, int chunk, byte sourceBank)
 {
 	int i;
@@ -119,13 +130,24 @@ int sprintfBanked(const char* buffer, byte bank, char const* const format,  ...)
 	RAM_BANK = previousRamBank;
 }
 
-void setLogicDirectory(AGIFilePosType* newLogicDirectory, AGIFilePosType* logicDirectoryLocation)
+void setResourceDirectory(AGIFilePosType* newLogicDirectory, AGIFilePosType* logicDirectoryLocation)
 {
 	byte previousRamBank = RAM_BANK;
 
 	RAM_BANK = DIRECTORY_BANK;
 
 	*logicDirectoryLocation = *newLogicDirectory;
+
+	RAM_BANK = previousRamBank;
+}
+
+void getLogicDirectory(AGIFilePosType* returnedLogicDirectory, AGIFilePosType* logicDirectoryLocation)
+{
+	byte previousRamBank = RAM_BANK;
+
+	RAM_BANK = DIRECTORY_BANK;
+
+	*returnedLogicDirectory = *logicDirectoryLocation;
 
 	RAM_BANK = previousRamBank;
 }

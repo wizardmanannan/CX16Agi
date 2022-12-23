@@ -21,17 +21,6 @@
 ** not. If it isn't loaded, then the data is not in memory. */
 LOGICEntry* logics = (LOGICEntry*)&BANK_RAM[LOGIC_ENTRY_START];
 
-void getLogicDirectory(AGIFilePosType* returnedLogicDirectory, AGIFilePosType* logicDirectoryLocation)
-{
-	byte previousRamBank = RAM_BANK;
-
-	RAM_BANK = DIRECTORY_BANK;
-
-	*returnedLogicDirectory = *logicDirectoryLocation;
-
-	RAM_BANK = previousRamBank;
-}
-
 void getLogicFile(LOGICFile* logicFile, byte logicFileNo)
 {
 	byte previousBank = RAM_BANK;
@@ -145,7 +134,7 @@ void b8LoadLogicFile(byte logFileNum)
 	printf("Loading Logic %d\n", logFileNum);
 #endif // VERBOSE
 
-	b6LoadAGIFile(LOGIC, &agiFilePosType, &tempAGI);
+	loadAGIFile(LOGIC, &agiFilePosType, &tempAGI);
 
 	getLogicFile(&logicData, logFileNum);
 	logicData.codeBank = tempAGI.codeBank;

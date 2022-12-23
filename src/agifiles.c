@@ -11,7 +11,9 @@
 //#define VERBOSE_DISPLAY_FILEOFFSETS
 //#define VERBOSE_DISPLAY_MESSAGES
 //#define VERBOSE_DISPLAY_OFFSETS
-//#define VERBOSE
+#define VERBOSE
+#define VERBOSE_VIEW_LOAD_DEBUG
+//define VERBOSE_LOGIC_LOAD_DEBUG
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdint.h>
@@ -160,7 +162,7 @@ void b6LoadAGIDir(int dirNum, char* fName, int* count)
 		switch (dirNum) {
 		case 0:
 		{
-			setLogicDirectory(&tempPos, &logdir[*count]);
+			setResourceDirectory(&tempPos, &logdir[*count]);
 #ifdef VERBOSE_DISPLAY_FILEOFFSETS
 			printf("\n%d Logic File Name %s, Offset %lu\n", *count, tempPos.fileName, logdir[*count].filePos);
 #endif // VERBOSE_DISPLAY_FILEOFFSETS
@@ -170,7 +172,7 @@ void b6LoadAGIDir(int dirNum, char* fName, int* count)
 		}
 		case 1:
 		{
-			setLogicDirectory(&tempPos, &picdir[*count]);
+			setResourceDirectory(&tempPos, &picdir[*count]);
 #ifdef VERBOSE_DISPLAY_FILEOFFSETS
 			printf("\n%d Pic File Name %s, Offset %lu\n", *count, picdir[*count].fileName, picdir[*count].filePos);
 #endif // VERBOSE_DISPLAY_FILEOFFSETS
@@ -178,14 +180,14 @@ void b6LoadAGIDir(int dirNum, char* fName, int* count)
 		break;
 		case 2:
 		{
-		  setLogicDirectory(&tempPos,&viewdir[*count]);
+		  setResourceDirectory(&tempPos,&viewdir[*count]);
 #ifdef VERBOSE_DISPLAY_FILEOFFSETS
 			printf("\n%d View File Name %s, Offset %lu\n", *count, viewdir[*count].fileName, viewdir[*count].filePos);
 #endif // VERBOSE_DISPLAY_FILEOFFSETS
 			break;
 		}
 		case 3:
-			setLogicDirectory(&tempPos, &snddir[*count]);
+			setResourceDirectory(&tempPos, &snddir[*count]);
 
 #ifdef VERBOSE_DISPLAY_FILEOFFSETS
 			printf("\n%d sound File Name %s, Offset %lu\n", *count, snddir[*count].fileName, snddir[*count].filePos);
@@ -401,7 +403,7 @@ boolean b6SeekAndCheckSignature(char* fileName, AGIFilePosType* location)
 	return result;
 }
 
-byte b6SeekAndReadLogicIntoMemory(AGIFile* AGIData)
+byte b6SeekAndReadLogicIntoMemory(AGIFile* AGIData, int resType)
 {
 	byte currentByte, bank;
 	unsigned char byte1, byte2, volNum;
@@ -418,26 +420,33 @@ byte b6SeekAndReadLogicIntoMemory(AGIFile* AGIData)
 
 	AGIData->totalSize = (unsigned int)(byte1)+(unsigned int)(byte2 << 8);
 
+	if (resType == LOGIC)
+	{
 #ifdef VERBOSE
-	printf("volNum:%d byte1:%p, byte2:%p, size:%d\n", volNum, byte1, byte2, (unsigned int)(byte1)+(unsigned int)(byte2 << 8));
+		printf("volNum:%d byte1:%p, byte2:%p, size:%d\n", volNum, byte1, byte2, (unsigned int)(byte1)+(unsigned int)(byte2 << 8));
 #endif // VERBOSE
-	cbm_read(SEQUENTIAL_LFN, &currentByte, 1);
-	byte1 = currentByte;
+		cbm_read(SEQUENTIAL_LFN, &currentByte, 1);
+		byte1 = currentByte;
 
-	cbm_read(SEQUENTIAL_LFN, &currentByte, 1);
-	byte2 = currentByte;
+		cbm_read(SEQUENTIAL_LFN, &currentByte, 1);
+		byte2 = currentByte;
 
-	AGIData->codeSize = byte1 + byte2 * 256;
+		AGIData->codeSize = byte1 + byte2 * 256;
 
-	AGIData->code = b6ReadFileContentsIntoBankedRam(AGIData->codeSize, &bank);
-
+		AGIData->code = b6ReadFileContentsIntoBankedRam(AGIData->codeSize, &bank);
+	}
+	else
+	{
+		AGIData->code = b6ReadFileContentsIntoBankedRam(AGIData->totalSize, &bank);
+	}
 	return bank;
+
 }
 
 #pragma code-name (pop)
 
 //https://www.liquisearch.com/what_is_avis_durgan
-void b6XOrAvisDurgan(byte* toXOR, unsigned int* avisPos)
+void xOrAvisDurgan(byte* toXOR, unsigned int* avisPos)
 {
 	*toXOR ^= avisDurgan[*avisPos];
 	*avisPos = (*avisPos + 1) % 11;
@@ -460,7 +469,7 @@ void b6XOrAvisDurgan(byte* toXOR, unsigned int* avisPos)
 **
 ** In both cases the format that is easier to deal with is returned.
 **************************************************************************/
-void b6LoadAGIFile(int resType, AGIFilePosType* location, AGIFile* AGIData)
+void loadAGIFile(int resType, AGIFilePosType* location, AGIFile* AGIData)
 {
 #define SEPARATOR 0
 
@@ -485,17 +494,26 @@ void b6LoadAGIFile(int resType, AGIFilePosType* location, AGIFile* AGIData)
 	sprintf(&fileName[0], "vol.%d", location->fileNum);
 
 #ifdef VERBOSE
-	printf("---The file name is %s", &fileName[0]);
+#ifdef VERBOSE_VIEW_LOAD_DEBUG
+	if (resType == VIEW)
+#endif // VERBOSE_VIEW_LOAD_DEBUG
+#ifdef VERBOSE_LOGIC_LOAD_DEBUG
+		if (resType == LOGIC)
+#endif // VERBOSE_LOGIC_LOAD_DEBUG
+
+	{
+		printf("---The file name is %s", &fileName[0]);
+	}
 #endif // VERBOSE
 
-
 	lfn = cbm_openForSeeking(&fileName[0]);
-
+	
 	RAM_BANK = FILE_LOADER_HELPERS;
 
-	b6SeekAndCheckSignature(&fileName[0], location);	
-	AGIData->codeBank = b6SeekAndReadLogicIntoMemory(AGIData);
+	b6SeekAndCheckSignature(&fileName[0], location);
 
+	AGIData->codeBank = b6SeekAndReadLogicIntoMemory(AGIData, resType);
+	
 	if (resType == LOGIC) {
 		cbm_read(SEQUENTIAL_LFN, &byte1, 1);
 		AGIData->noMessages = byte1;
@@ -518,7 +536,7 @@ void b6LoadAGIFile(int resType, AGIFilePosType* location, AGIFile* AGIData)
 
 		for (i = 0; i < getMessageSectionSize; i++) {
 
-			b6XOrAvisDurgan((byte*)&AGIData->messageData[i], &avisPos);
+			xOrAvisDurgan((byte*)&AGIData->messageData[i], &avisPos);
 			convertAsciiByteToPetsciiByte(&AGIData->messageData[i]);
 
 			if (lastCharacterSeparator)
@@ -563,10 +581,7 @@ void b6LoadAGIFile(int resType, AGIFilePosType* location, AGIFile* AGIData)
 		}
 		printf("\nYou have %d message", AGIData->noMessages);
 #endif
-		RAM_BANK = previousRamBank;
 		}
-
-
 
 	//if (version3) {
 	//   byte1 = fgetc(fp);
@@ -628,6 +643,7 @@ void b6LoadAGIFile(int resType, AGIFilePosType* location, AGIFile* AGIData)
 	cbm_close(lfn);
 
 #ifdef VERBOSE
-	printf("File closed");
+	//printf("File closed");
 #endif // VERBOSE
+	RAM_BANK = previousRamBank;
 	}

@@ -48,11 +48,14 @@ extern void trampoline_3Int(fnTrampoline_3Int func, int data1, int data2, int da
 
 extern char* strcpyBanked(char* dest, const char* src, byte bank);
 
+extern void* memCpyBanked(byte* dest, byte* src, byte bank, size_t len);
+
 extern void copyStringFromBanked(char* src, char* dest, int start, int chunk, byte sourceBank);
 
 extern int sprintfBanked(const char* buffer, byte bank, char const* const format, ...);
 
-extern void setLogicDirectory(AGIFilePosType* newLogicDirectory, AGIFilePosType* logicDirectoryLocation);
+extern void getLogicDirectory(AGIFilePosType* returnedLogicDirectory, AGIFilePosType* logicDirectoryLocation);
+extern void setResourceDirectory(AGIFilePosType* newLogicDirectory, AGIFilePosType* logicDirectoryLocation);
 
 extern boolean debugStop;
 
