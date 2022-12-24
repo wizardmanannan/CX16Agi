@@ -20,6 +20,7 @@ typedef struct {
 typedef struct {
 	byte numberOfCels;
 	Cel* cels;
+	byte celBank;
 } Loop;
 
 typedef struct {

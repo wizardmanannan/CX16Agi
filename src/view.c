@@ -144,6 +144,29 @@ void setLocalLoop(View* loadedView, Loop* localLoop, byte localLoopNumber)
     RAM_BANK = previousRamBank;
 }
 
+void getLocalCel(Loop* loadedLoop, Cel* returnedLocalCell, byte localCellNumber)
+{
+    byte previousRamBank = RAM_BANK;
+
+    RAM_BANK = loadedLoop->celBank;
+
+    *returnedLocalCell = *(loadedLoop->cels + (localCellNumber * sizeof(Loop)));
+
+    RAM_BANK = previousRamBank;
+}
+
+void setLocalCel(Loop* loadedLoop, Cel* localCell, byte localCellNumber)
+{
+    byte previousRamBank = RAM_BANK;
+
+    RAM_BANK = loadedLoop->celBank;
+
+    *(loadedLoop->cels + (localCellNumber * sizeof(Loop))) = *localCell;
+
+    RAM_BANK = previousRamBank;
+}
+
+
 void trampolineViewUpdater1Pointer(fnTrampolineViewUpdater1BytePtr func, ViewTable* localViewtab, byte* data, byte bank)
 {
     byte previousRamBank = RAM_BANK;
@@ -268,7 +291,11 @@ void b9LoadViewFile(byte viewNum)
 {
 #define NO_VIEW_START_BYTES 5
 #define POSITION_OF_LOOPS_OFFSET 5
-#define POSITION_OF_LOOP_BYTES 2
+#define LOOP_OFFSET_BYTES 2
+#define CEL_OFFSET_BYTES 2
+#define CEL_WIDTH_OFFSET 0
+#define CEL_HEIGHT_OFFSET 1
+#define CEL_TRANSPARENCY_OFFSET 2
     AGIFile tempAGI;
     AGIFilePosType agiFilePosType;
     byte* loopStart, * celStart, cWidth;
@@ -276,9 +303,11 @@ void b9LoadViewFile(byte viewNum)
     byte viewStart[NO_VIEW_START_BYTES];
     View localView;
     Loop localLoop;
+    Cel localCel;
     int i;
     byte cellPositionBytes[NO_CODE_BANKS];
-    int cellPosition;
+    int loopHeaderOffset;
+    int cellHeaderOffset;
 
 #ifdef VERBOSE_LOAD_VIEWS
     printf("Attempt to load viewNum %d", viewNum);
@@ -302,7 +331,7 @@ void b9LoadViewFile(byte viewNum)
     copyStringFromBanked(localView.description, localView.description, 0, COPY_EVERYTHING, tempAGI.codeBank, TRUE);
    
 #ifdef VERBOSE_LOAD_VIEWS
-    if (loadedViews[viewNum].description == _emptyDecription)
+    if (localView.description == _emptyDecription)
     {
         printf("\nThe description is empty\n");
     }
@@ -321,26 +350,34 @@ void b9LoadViewFile(byte viewNum)
 
     for (l=0, viewIndex= POSITION_OF_LOOPS_OFFSET; l<localView.numberOfLoops; l++, viewIndex+=2) {
         getLocalLoop(&localView, &localLoop, l);
-        //loopStart = (byte *)(&viewStart[0] + viewStart[viewIndex] + viewStart[viewIndex + 1] * 256);
-       memCpyBanked(&cellPosition, tempAGI.code + POSITION_OF_LOOPS_OFFSET + (l * POSITION_OF_LOOP_BYTES), tempAGI.codeBank, 2);
-       //((byte*)&cellPosition)[0] = cellPositionBytes[1];
-       //((byte*)&cellPosition)[1] = cellPositionBytes[0];
+       memCpyBanked(&loopHeaderOffset, tempAGI.code + POSITION_OF_LOOPS_OFFSET + (l * LOOP_OFFSET_BYTES), tempAGI.codeBank, LOOP_OFFSET_BYTES);
 
-      memCpyBanked(&localLoop.numberOfCels, tempAGI.code + cellPosition, tempAGI.codeBank, 1);
+      memCpyBanked(&localLoop.numberOfCels, tempAGI.code + loopHeaderOffset, tempAGI.codeBank, 1);
 
 #ifdef VERBOSE_LOAD_VIEWS
-      //printf("The number of loops is %d \n", localView.numberOfLoops);
-       printf("You have %d loops and the num of cells is %d and a cell pos of %d",  localView.numberOfLoops, localLoop.numberOfCels, cellPosition);
+       printf("You have %d loops and the num of cells is %d and a cell pos of %d",  localView.numberOfLoops, localLoop.numberOfCels, loopHeaderOffset);
 #endif // VERBOSE_LOAD_VIEWS
 
        for (;;);
 
-       exit(0);
+        localLoop.cels = (Cel *)banked_alloc(localLoop.numberOfCels *sizeof(Cel), &localLoop.celBank);
 
-       //localView.loops[l].numberOfCels = loopStart[0];
-    //   loadedViews[viewNum].loops[l].cels = (Cel *)malloc(loopStart[0]*sizeof(Cel));
+       for (c=0, loopIndex=1; c<localLoop.numberOfCels; c++, loopIndex+=2) {
 
-    //   for (c=0, loopIndex=1; c<loadedViews[viewNum].loops[l].numberOfCels; c++, loopIndex+=2) {
+           getLocalCel(&localLoop, &localCel, c);
+
+       
+
+           memCpyBanked(&cellHeaderOffset, tempAGI.code + loopHeaderOffset + (c * CEL_OFFSET_BYTES) + 1, tempAGI.codeBank, LOOP_OFFSET_BYTES);
+           
+           memCpyBanked(&localCel.width, tempAGI.code + cellHeaderOffset + CEL_WIDTH_OFFSET, tempAGI.codeBank, 1);
+           memCpyBanked(&localCel.height, tempAGI.code + cellHeaderOffset + CEL_HEIGHT_OFFSET, tempAGI.codeBank, 1);
+           memCpyBanked(&localCel.transparency, tempAGI.code + cellHeaderOffset + CEL_TRANSPARENCY_OFFSET, tempAGI.codeBank, 1);
+        
+           //printf("The cell %d has w: %d, h: %d t: %d \n", localCel.width, localCel.height, localCel.transparency);
+
+    
+
     //      celStart = (byte *)(loopStart + loopStart[loopIndex] + loopStart[loopIndex+1]*256);
     //      memcpy(&loadedViews[viewNum].loops[l].cels[c], celStart, 3);
     //      loadedViews[viewNum].loops[l].cels[c].bmp = create_bitmap(celStart[0], celStart[1]);
@@ -389,7 +426,7 @@ void b9LoadViewFile(byte viewNum)
     //            }
     //         }
     //      }
-    //   }
+      }
     }
 
     localView.loaded = TRUE;
@@ -509,6 +546,8 @@ void b9CalcDirection(ViewTable* localViewtab)
 {
     if (!(localViewtab->flags & FIXLOOP)) {
         if (localViewtab->numberOfLoops < 4) {
+            printf("The direction is %u", localViewtab->direction);
+
             switch (localViewtab->direction) {
             case 1: break;
             case 2: b9SetLoop(localViewtab, 0); break;
@@ -519,7 +558,10 @@ void b9CalcDirection(ViewTable* localViewtab)
             case 7: b9SetLoop(localViewtab, 1); break;
             case 8: b9SetLoop(localViewtab, 1); break;
             }
+
+            exit(0);
         }
+
         else {
             switch (localViewtab->direction) {
             case 1: b9SetLoop(localViewtab, 3); break;
@@ -1540,7 +1582,7 @@ void bCCalcObjMotion()
     ViewTable localViewtab0;
 
     getViewTab(&localViewtab0, 0);
-
+    
     for (entryNum = 0; entryNum < TABLESIZE; entryNum++) {
 
         getViewTab(&localViewtab, entryNum);
@@ -1561,8 +1603,8 @@ void bCCalcObjMotion()
                     case 3: trampoline_3Int(&bANormalAdjust, entryNum, 1, 0, VIEW_CODE_BANK_1); break;
                     case 4: trampoline_3Int(&bANormalAdjust, entryNum, 1, 1, VIEW_CODE_BANK_1); break;
                     case 5: trampoline_3Int(&bANormalAdjust, entryNum, 0, 1, VIEW_CODE_BANK_1); break;
-                    case 6: trampoline_3Int(&bANormalAdjust, entryNum, -1, 1, VIEW_CODE_BANK_1);
-                    case 7: trampoline_3Int(&bANormalAdjust, entryNum, -1, 0, VIEW_CODE_BANK_1);
+                    case 6: trampoline_3Int(&bANormalAdjust, entryNum, -1, 1, VIEW_CODE_BANK_1); break;
+                    case 7: trampoline_3Int(&bANormalAdjust, entryNum, -1, 0, VIEW_CODE_BANK_1); break;
                     case 8: trampoline_3Int(&bANormalAdjust, entryNum, -1, -1, VIEW_CODE_BANK_1);
                     }
                     break;
@@ -1619,11 +1661,12 @@ void bCCalcObjMotion()
         } /* MOTION */
 
         /* Automatic change of direction if needed */
-
         trampolineViewUpdater0(&b9CalcDirection, &localViewtab, VIEW_CODE_BANK_1);
 
         setViewTab(&localViewtab, entryNum);
     }
+
+
 }
 
 #pragma code-name (pop)

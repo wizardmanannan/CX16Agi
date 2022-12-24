@@ -143,6 +143,7 @@ void b7UpdateStatusLine()
 ***************************************************************************/
 void b7Interpret()
 {
+   ViewTable localViewtab;
    flag[2] = FALSE;   //The player has issued a command line
    flag[4] = FALSE;   //The 'said' command has accepted the input
    pollKeyboard();
@@ -150,7 +151,10 @@ void b7Interpret()
    //   dirnOfEgo = var[6];
    //else
    //   var[6] = dirnOfEgo;
-   viewtab[0].direction = var[6];
+
+   getViewTab(&localViewtab, 0);
+   localViewtab.direction = var[6];
+   setViewTab(&localViewtab, 0);
 
    trampoline_0(&bCCalcObjMotion, VIEW_CODE_BANK_4);
 
