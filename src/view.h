@@ -26,6 +26,7 @@ typedef struct {
 	boolean loaded;
 	byte numberOfLoops;
 	Loop* loops;
+	byte loopsBank;
 	char* description;
 } View;
 

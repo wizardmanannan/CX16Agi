@@ -122,6 +122,28 @@ void setLoadedView(View* loadedView, byte loadedViewNumber)
     RAM_BANK = previousRamBank;
 }
 
+void getLocalLoop(View* loadedView, Loop* returnedLocalLoop, byte localLoopNumber)
+{
+    byte previousRamBank = RAM_BANK;
+
+    RAM_BANK = loadedView->loopsBank;
+
+    *returnedLocalLoop = *(loadedView->loops + (localLoopNumber * sizeof(Loop)));
+
+    RAM_BANK = previousRamBank;
+}
+
+void setLocalLoop(View* loadedView, Loop* localLoop, byte localLoopNumber)
+{
+    byte previousRamBank = RAM_BANK;
+
+    RAM_BANK = loadedView->loopsBank;
+
+    *(loadedView->loops + (localLoopNumber * sizeof(Loop))) = *localLoop;
+
+    RAM_BANK = previousRamBank;
+}
+
 void trampolineViewUpdater1Pointer(fnTrampolineViewUpdater1BytePtr func, ViewTable* localViewtab, byte* data, byte bank)
 {
     byte previousRamBank = RAM_BANK;
@@ -245,13 +267,18 @@ const char* _emptyDecription = "\0";
 void b9LoadViewFile(byte viewNum)
 {
 #define NO_VIEW_START_BYTES 5
+#define POSITION_OF_LOOPS_OFFSET 5
+#define POSITION_OF_LOOP_BYTES 2
     AGIFile tempAGI;
     AGIFilePosType agiFilePosType;
     byte* loopStart, * celStart, cWidth;
     byte l, c, x, y, chunk, xTotal, colour, len, loopIndex, viewIndex, trans;
     byte viewStart[NO_VIEW_START_BYTES];
     View localView;
+    Loop localLoop;
     int i;
+    byte cellPositionBytes[NO_CODE_BANKS];
+    int cellPosition;
 
 #ifdef VERBOSE_LOAD_VIEWS
     printf("Attempt to load viewNum %d", viewNum);
@@ -266,13 +293,14 @@ void b9LoadViewFile(byte viewNum)
 
     memCpyBanked(&viewStart[0], tempAGI.code, tempAGI.codeBank, NO_VIEW_START_BYTES);
 
-    loadedViews[viewNum].description = ((viewStart[3] || viewStart[4]) ?
+    //printf("View header bytes %d, %d, %d, %d, %d \n", viewStart[0], viewStart[1], viewStart[2], viewStart[3], viewStart[4]);
+
+    localView.description = ((viewStart[3] || viewStart[4]) ?
         // strdup((byte *)(viewStart+viewStart[3]+viewStart[4]*256)) : strdup(""));
         (const char*)(tempAGI.code + viewStart[3] + viewStart[4] * 256) : _emptyDecription);
 
-    copyStringFromBanked(loadedViews[viewNum].description, loadedViews[viewNum].description, 0, COPY_EVERYTHING, tempAGI.codeBank, TRUE);
-    
-
+    copyStringFromBanked(localView.description, localView.description, 0, COPY_EVERYTHING, tempAGI.codeBank, TRUE);
+   
 #ifdef VERBOSE_LOAD_VIEWS
     if (loadedViews[viewNum].description == _emptyDecription)
     {
@@ -281,20 +309,35 @@ void b9LoadViewFile(byte viewNum)
     else
     {
         printf("The description is not empty\n");
-        copyStringFromBanked(loadedViews[viewNum].description, &GOLDEN_RAM[LOCAL_WORK_AREA_START], 0, 100, tempAGI.codeBank, FALSE);
+
+        copyStringFromBanked(localView.description, &GOLDEN_RAM[LOCAL_WORK_AREA_START], 0, 100, tempAGI.codeBank, FALSE);
         printf("It has a value of %s ", &GOLDEN_RAM[LOCAL_WORK_AREA_START]);
     }
 #endif
 
-    exit(0);
+    localView.numberOfLoops = viewStart[2];
+    localView.loops = (Loop *) banked_alloc(viewStart[2]*sizeof(Loop), &localView.loopsBank);
 
 
-    //loadedViews[viewNum].numberOfLoops = viewStart[2];
-    //loadedViews[viewNum].loops = (Loop *)malloc(viewStart[2]*sizeof(Loop));
+    for (l=0, viewIndex= POSITION_OF_LOOPS_OFFSET; l<localView.numberOfLoops; l++, viewIndex+=2) {
+        getLocalLoop(&localView, &localLoop, l);
+        //loopStart = (byte *)(&viewStart[0] + viewStart[viewIndex] + viewStart[viewIndex + 1] * 256);
+       memCpyBanked(&cellPosition, tempAGI.code + POSITION_OF_LOOPS_OFFSET + (l * POSITION_OF_LOOP_BYTES), tempAGI.codeBank, 2);
+       //((byte*)&cellPosition)[0] = cellPositionBytes[1];
+       //((byte*)&cellPosition)[1] = cellPositionBytes[0];
 
-    //for (l=0, viewIndex=5; l<loadedViews[viewNum].numberOfLoops; l++, viewIndex+=2) {
-    //   loopStart = (byte *)(viewStart + viewStart[viewIndex] + viewStart[viewIndex+1]*256);
-    //   loadedViews[viewNum].loops[l].numberOfCels = loopStart[0];
+      memCpyBanked(&localLoop.numberOfCels, tempAGI.code + cellPosition, tempAGI.codeBank, 1);
+
+#ifdef VERBOSE_LOAD_VIEWS
+      //printf("The number of loops is %d \n", localView.numberOfLoops);
+       printf("You have %d loops and the num of cells is %d and a cell pos of %d",  localView.numberOfLoops, localLoop.numberOfCels, cellPosition);
+#endif // VERBOSE_LOAD_VIEWS
+
+       for (;;);
+
+       exit(0);
+
+       //localView.loops[l].numberOfCels = loopStart[0];
     //   loadedViews[viewNum].loops[l].cels = (Cel *)malloc(loopStart[0]*sizeof(Cel));
 
     //   for (c=0, loopIndex=1; c<loadedViews[viewNum].loops[l].numberOfCels; c++, loopIndex+=2) {
@@ -347,10 +390,10 @@ void b9LoadViewFile(byte viewNum)
     //         }
     //      }
     //   }
-    //}
+    }
 
     localView.loaded = TRUE;
-    //setLoadedView(&localView, viewNum);
+    setLoadedView(&localView, viewNum);
 }
 
 /***************************************************************************
