@@ -1,4 +1,5 @@
 #include "helpers.h"
+//#define VERBOSE
 
 boolean debugStop = FALSE;
 
@@ -7,14 +8,23 @@ byte convertAsciiByteToPetsciiByte(byte* toConvert)
 	if (*toConvert == ASCIIDASH)
 	{
 		*toConvert = PETSCIIDash;
+#ifdef VERBOSE
+		printf("Dash Converting %c to %c \n", *toConvert, *toConvert + DIFF_ASCII_PETSCII_CAPS);
+#endif
 	}
 	else if (*toConvert >= ASCIIA && *toConvert <= ASCIIZ)
 	{
+#ifdef VERBOSE
+		printf("Upper Converting %c to %c \n", *toConvert, *toConvert + DIFF_ASCII_PETSCII_CAPS);
+#endif
 		*toConvert = *toConvert + DIFF_ASCII_PETSCII_CAPS;
 	}
 	else if (*toConvert >= ASCIIa && *toConvert <= ASCIIz)
 	{
 		*toConvert = *toConvert + DIFF_ASCII_PETSCII_LOWER;
+#ifdef VERBOSE
+		printf("Lower Converting %c to %c \n", *toConvert, *toConvert + DIFF_ASCII_PETSCII_CAPS);
+#endif
 	}
 }
 
@@ -100,7 +110,7 @@ void* memCpyBanked(byte* dest, byte* src, byte bank, size_t len)
 	RAM_BANK = previousRamBank;
 }
 
-void copyStringFromBanked(char* src, char* dest, int start, int chunk, byte sourceBank)
+void copyStringFromBanked(char* src, char* dest, int start, int chunk, byte sourceBank, boolean convertFromAsciiByteToPetscii)
 {
 	int i;
 	byte previousRamBank = RAM_BANK;
@@ -110,6 +120,10 @@ void copyStringFromBanked(char* src, char* dest, int start, int chunk, byte sour
 	for (i = start; i - start < chunk && (i == 0 || src[i - 1] != '\0'); i++)
 	{
 		dest[i - start] = src[i];
+		if (convertFromAsciiByteToPetscii)
+		{
+			convertAsciiByteToPetsciiByte((byte*) &dest[i - start]);
+		}
 	}
 
 	RAM_BANK = previousRamBank;

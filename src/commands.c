@@ -1704,7 +1704,7 @@ void b3ProcessString(char* stringPointer, byte stringBank, char* outputString)
     for (i = 0, j = 0; i == 0 || inputString[i - 1] != '\0'; i = (i + 1) % INPUT_BUFFER_SIZE, j++) {
         if (i == 0)
         {
-            copyStringFromBanked(stringPointer, inputString, j, INPUT_BUFFER_SIZE, stringBank);
+            copyStringFromBanked(stringPointer, inputString, j, INPUT_BUFFER_SIZE, stringBank, FALSE);
         }
 
         if (inputString[i] == '%') {

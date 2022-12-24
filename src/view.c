@@ -251,8 +251,7 @@ void b9LoadViewFile(byte viewNum)
     byte l, c, x, y, chunk, xTotal, colour, len, loopIndex, viewIndex, trans;
     byte viewStart[NO_VIEW_START_BYTES];
     View localView;
-
-    viewNum = 105;
+    int i;
 
 #ifdef VERBOSE_LOAD_VIEWS
     printf("Attempt to load viewNum %d", viewNum);
@@ -271,6 +270,9 @@ void b9LoadViewFile(byte viewNum)
         // strdup((byte *)(viewStart+viewStart[3]+viewStart[4]*256)) : strdup(""));
         (const char*)(tempAGI.code + viewStart[3] + viewStart[4] * 256) : _emptyDecription);
 
+    copyStringFromBanked(loadedViews[viewNum].description, loadedViews[viewNum].description, 0, COPY_EVERYTHING, tempAGI.codeBank, TRUE);
+    
+
 #ifdef VERBOSE_LOAD_VIEWS
     if (loadedViews[viewNum].description == _emptyDecription)
     {
@@ -279,7 +281,7 @@ void b9LoadViewFile(byte viewNum)
     else
     {
         printf("The description is not empty\n");
-        copyStringFromBanked(loadedViews[viewNum].description, &GOLDEN_RAM[LOCAL_WORK_AREA_START], 0, 100, tempAGI.codeBank);
+        copyStringFromBanked(loadedViews[viewNum].description, &GOLDEN_RAM[LOCAL_WORK_AREA_START], 0, 100, tempAGI.codeBank, FALSE);
         printf("It has a value of %s ", &GOLDEN_RAM[LOCAL_WORK_AREA_START]);
     }
 #endif

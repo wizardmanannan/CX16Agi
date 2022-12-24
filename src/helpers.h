@@ -50,7 +50,8 @@ extern char* strcpyBanked(char* dest, const char* src, byte bank);
 
 extern void* memCpyBanked(byte* dest, byte* src, byte bank, size_t len);
 
-extern void copyStringFromBanked(char* src, char* dest, int start, int chunk, byte sourceBank);
+#define COPY_EVERYTHING 32767
+extern void copyStringFromBanked(char* src, char* dest, int start, int chunk, byte sourceBank, boolean convertFromAsciiByteToPetscii);
 
 extern int sprintfBanked(const char* buffer, byte bank, char const* const format, ...);
 
