@@ -355,10 +355,8 @@ void b9LoadViewFile(byte viewNum)
       memCpyBanked(&localLoop.numberOfCels, tempAGI.code + loopHeaderOffset, tempAGI.codeBank, 1);
 
 #ifdef VERBOSE_LOAD_VIEWS
-       printf("You have %d loops and the num of cells is %d and a cell pos of %d",  localView.numberOfLoops, localLoop.numberOfCels, loopHeaderOffset);
+       printf("You have %d loops and the num of cells is %d and a loop pos of %d",  localView.numberOfLoops, localLoop.numberOfCels, loopHeaderOffset);
 #endif // VERBOSE_LOAD_VIEWS
-
-       for (;;);
 
         localLoop.cels = (Cel *)banked_alloc(localLoop.numberOfCels *sizeof(Cel), &localLoop.celBank);
 
@@ -366,15 +364,18 @@ void b9LoadViewFile(byte viewNum)
 
            getLocalCel(&localLoop, &localCel, c);
 
-       
-
            memCpyBanked(&cellHeaderOffset, tempAGI.code + loopHeaderOffset + (c * CEL_OFFSET_BYTES) + 1, tempAGI.codeBank, LOOP_OFFSET_BYTES);
-           
-           memCpyBanked(&localCel.width, tempAGI.code + cellHeaderOffset + CEL_WIDTH_OFFSET, tempAGI.codeBank, 1);
-           memCpyBanked(&localCel.height, tempAGI.code + cellHeaderOffset + CEL_HEIGHT_OFFSET, tempAGI.codeBank, 1);
-           memCpyBanked(&localCel.transparency, tempAGI.code + cellHeaderOffset + CEL_TRANSPARENCY_OFFSET, tempAGI.codeBank, 1);
+            
+           printf("The address of tempAGI.code plus offset is %p it is on bank %d and the cell header offset is %d\n", tempAGI.code + cellHeaderOffset, tempAGI.codeBank, cellHeaderOffset);
+
+           memCpyBanked(&localCel.width, tempAGI.code + loopHeaderOffset + cellHeaderOffset + CEL_WIDTH_OFFSET, tempAGI.codeBank, 1);
+           memCpyBanked(&localCel.height, tempAGI.code + loopHeaderOffset + cellHeaderOffset + CEL_HEIGHT_OFFSET, tempAGI.codeBank, 1);
+           memCpyBanked(&localCel.transparency, tempAGI.code + loopHeaderOffset + cellHeaderOffset + CEL_TRANSPARENCY_OFFSET, tempAGI.codeBank, 1);
         
-           //printf("The cell %d has w: %d, h: %d t: %d \n", localCel.width, localCel.height, localCel.transparency);
+#ifdef VERBOSE_LOAD_VIEWS
+           printf("The cell has w: %d, h: %d t: %d \n", localCel.width, localCel.height, localCel.transparency);
+#endif
+           exit(0);
 
     
 
@@ -558,8 +559,6 @@ void b9CalcDirection(ViewTable* localViewtab)
             case 7: b9SetLoop(localViewtab, 1); break;
             case 8: b9SetLoop(localViewtab, 1); break;
             }
-
-            exit(0);
         }
 
         else {
@@ -577,8 +576,11 @@ void b9CalcDirection(ViewTable* localViewtab)
     }
 }
 
+#pragma code-name (pop)
+#pragma code-name (push, "BANKRAM0A")
+
 /* Called by draw() */
-void b9DrawObject(int entryNum)
+void bADrawObject(int entryNum)
 {
     word objFlags;
     int dummy;
@@ -630,7 +632,7 @@ void b9DrawObject(int entryNum)
 **
 ** Purpose: To update var[6] when ego is moved with adjustPosition().
 ***************************************************************************/
-void b9UpdateEgoDirection(int oldX, int oldY, int newX, int newY)
+void bAUpdateEgoDirection(int oldX, int oldY, int newX, int newY)
 {
     int dx = (newX - oldX);
     int dy = (newY - oldY);
@@ -652,9 +654,6 @@ void b9UpdateEgoDirection(int oldX, int oldY, int newX, int newY)
 
     setViewTab(&localViewtab, 0);
 }
-
-#pragma code-name (pop)
-#pragma code-name (push, "BANKRAM0A")
 
 /***************************************************************************
 ** adjustPosition

@@ -112,7 +112,7 @@ void b9AddViewToTable(ViewTable* localViewtab, byte viewNum);
 extern void bAUpdateObj(int entryNum);
 extern void b9SetCel(ViewTable* localViewtab, byte celNum);
 extern void b9SetLoop(ViewTable* localViewtab, byte loopNum);
-extern void b9DrawObject(int entryNum);
+extern void bADrawObject(int entryNum);
 extern void b9AddToPic(int vNum, int lNum, int cNum, int x, int y, int pNum, int bCol);
 extern void bDShowObjectState(int objNum);
 extern void b9ResetViews();

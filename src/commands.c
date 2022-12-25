@@ -821,7 +821,7 @@ void b1Draw(byte** data) // 1, 0x00
     localViewtab.flags |= (DRAWN | UPDATE);   /* Not sure about update */
      
    trampolineViewUpdater1Int(&b9SetCel, &localViewtab, localViewtab.currentCel, VIEW_CODE_BANK_1);
-    trampoline_1Int(&b9DrawObject,entryNum, VIEW_CODE_BANK_1);
+    trampoline_1Int(&bADrawObject,entryNum, VIEW_CODE_BANK_2);
 
     setViewTab(&localViewtab, entryNum);
 }
