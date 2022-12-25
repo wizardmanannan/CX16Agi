@@ -36,7 +36,7 @@
 #define CODE_WINDOW_SIZE 10
 //#define VERBOSE_STRING_CHECK
 //#define VERBOSE_LOGIC_EXEC
-//#define VERBOSE_SCRIPT_START
+#define VERBOSE_SCRIPT_START
 //#define VERBOSE_PRINT_COUNTER;
 //#define VERBOSE_MENU
 //#define VERBOSE_MENU_DUMP
@@ -70,11 +70,11 @@ void executeLogic(int logNum);
 
 //TEMP Should Be In Events
 typedef struct {
-    byte type;     /* either key or menu item */
-    byte eventID;  /* either scancode or menu item ID */
-    byte asciiValue;
-    byte scanCodeValue;
-    boolean activated;
+	byte type;     /* either key or menu item */
+	byte eventID;  /* either scancode or menu item ID */
+	byte asciiValue;
+	byte scanCodeValue;
+	boolean activated;
 } eventType;
 
 eventType events[256];
@@ -93,90 +93,90 @@ objectType* objects;
 
 int getNum(char* inputString, int* i, int inputStringBank)
 {
-    /* char strPos = 0;
-     char* tempString = &BANK_RAM[GET_NUM_TEMP_START];
-     byte previousRamBank = RAM_BANK;
+	/* char strPos = 0;
+	 char* tempString = &BANK_RAM[GET_NUM_TEMP_START];
+	 byte previousRamBank = RAM_BANK;
 
-     RAM_BANK = inputStringBank;
+	 RAM_BANK = inputStringBank;
 
-     while (inputString[*i] == ' ') { *i++; }
-     if ((inputString[*i] < '0') && (inputString[*i] > '9')) return 0;
-     while ((inputString[*i] >= '0') && (inputString[*i] <= '9')) {
-         tempString[strPos++] = inputString[(*i)++];
-     }
-     tempString[strPos] = 0;
+	 while (inputString[*i] == ' ') { *i++; }
+	 if ((inputString[*i] < '0') && (inputString[*i] > '9')) return 0;
+	 while ((inputString[*i] >= '0') && (inputString[*i] <= '9')) {
+		 tempString[strPos++] = inputString[(*i)++];
+	 }
+	 tempString[strPos] = 0;
 
-     (*i)--;
+	 (*i)--;
 
-     RAM_BANK = previousRamBank;
-     return (atoi(tempString));*/
+	 RAM_BANK = previousRamBank;
+	 return (atoi(tempString));*/
 
-    return 0;
+	return 0;
 }
 
 void menuChildInit()
 {
-    int i;
-    int previousRamBank = RAM_BANK;
+	int i;
+	int previousRamBank = RAM_BANK;
 
-    RAM_BANK = MENU_BANK;
+	RAM_BANK = MENU_BANK;
 
-    for (i = 0; i < MAX_MENU_SIZE * MAX_MENU_SIZE; i++)
-    {
-        MENU menuChild;
-        menuChild.dp = NULL;
-        menuChild.flags = 0;
-        menuChild.menuTextBank = 0;
-        menuChild.proc = NULL;
-        menuChild.text = NULL;
-        the_menuChildren[i] = menuChild;
-    }
+	for (i = 0; i < MAX_MENU_SIZE * MAX_MENU_SIZE; i++)
+	{
+		MENU menuChild;
+		menuChild.dp = NULL;
+		menuChild.flags = 0;
+		menuChild.menuTextBank = 0;
+		menuChild.proc = NULL;
+		menuChild.text = NULL;
+		the_menuChildren[i] = menuChild;
+	}
 
-    RAM_BANK = previousRamBank;
+	RAM_BANK = previousRamBank;
 }
 
 void getMenu(MENU* menu, byte menuNo)
 {
-    byte previousBank = RAM_BANK;
+	byte previousBank = RAM_BANK;
 
-    RAM_BANK = MENU_BANK;
-    *menu = the_menu[menuNo];
+	RAM_BANK = MENU_BANK;
+	*menu = the_menu[menuNo];
 
-    RAM_BANK = previousBank;
+	RAM_BANK = previousBank;
 }
 
 void setMenu(MENU* menu, byte menuNo)
 {
-    byte previousBank = RAM_BANK;
+	byte previousBank = RAM_BANK;
 
 #ifdef VERBOSE_MENU
-    printf("-- Adding menu %p at position %d dp %p flags %d proc %p address %p \n", menu, menuNo, menu->dp, menu->flags, menu->proc, menu->text);
+	printf("-- Adding menu %p at position %d dp %p flags %d proc %p address %p \n", menu, menuNo, menu->dp, menu->flags, menu->proc, menu->text);
 #endif // VERBOSE_MENU
 
-    RAM_BANK = MENU_BANK;
-    the_menu[menuNo] = *menu;
+	RAM_BANK = MENU_BANK;
+	the_menu[menuNo] = *menu;
 
-    RAM_BANK = previousBank;
+	RAM_BANK = previousBank;
 }
 
 void setMenuChild(MENU* menu, byte menuNo)
 {
-    int i;
-    byte previousBank = RAM_BANK;
+	int i;
+	byte previousBank = RAM_BANK;
 
-    RAM_BANK = MENU_BANK;
+	RAM_BANK = MENU_BANK;
 
-    for (i = 0; i < MAX_MENU_SIZE && the_menuChildren[menuNo * MAX_MENU_SIZE + i].text != NULL; i++);
+	for (i = 0; i < MAX_MENU_SIZE && the_menuChildren[menuNo * MAX_MENU_SIZE + i].text != NULL; i++);
 
-    if (i < MAX_MENU_SIZE)
-    {
+	if (i < MAX_MENU_SIZE)
+	{
 #ifdef VERBOSE_MENU
-        printf("-- Adding menu childen %p at position %d dp %p flags %d proc %p text %p \n", menu, menuNo * MAX_MENU_SIZE + i, menu->dp, menu->flags, menu->proc, menu->text);
+		printf("-- Adding menu childen %p at position %d dp %p flags %d proc %p text %p \n", menu, menuNo * MAX_MENU_SIZE + i, menu->dp, menu->flags, menu->proc, menu->text);
 #endif // VERBOSE_MENU
-        the_menuChildren[menuNo * MAX_MENU_SIZE + i] = *menu;
-    }
+		the_menuChildren[menuNo * MAX_MENU_SIZE + i] = *menu;
+	}
 
-    RAM_BANK = previousBank;
+	RAM_BANK = previousBank;
 }
 
 //void getMenuChild(MENU* menu, byte menuNo, byte menuChildNo)
@@ -196,62 +196,62 @@ void setMenuChild(MENU* menu, byte menuNo)
 
 char* getMessagePointer(byte logicFileNo, byte messageNo)
 {
-    byte previousBank = RAM_BANK;
-    char* result;
-    int i;
+	byte previousBank = RAM_BANK;
+	char* result;
+	int i;
 
-    LOGICFile logicFile;
-    getLogicFile(&logicFile, logicFileNo);
+	LOGICFile logicFile;
+	getLogicFile(&logicFile, logicFileNo);
 
-    RAM_BANK = logicFile.messageBank;
+	RAM_BANK = logicFile.messageBank;
 
-    result = (char*)logicFile.messages[messageNo];
+	result = (char*)logicFile.messages[messageNo];
 
-    for (i = 1; i < strlen(result) && *result == ' '; i++)
-    {
-        result = (char*)logicFile.messages[messageNo + i];
-    }
+	for (i = 1; i < strlen(result) && *result == ' '; i++)
+	{
+		result = (char*)logicFile.messages[messageNo + i];
+	}
 
 #ifdef VERBOSE_MESSAGE_TEXT
-    printf("The menu is %s \n", result);
+	printf("The menu is %s \n", result);
 #endif //VERBOSE_MENU
 
 
-    RAM_BANK = previousBank;
+	RAM_BANK = previousBank;
 
-    return result;
+	return result;
 }
 
 #ifdef VERBOSE_MENU_DUMP
 void testMenus()
 {
-    byte previousRamBank = RAM_BANK;
-    int i, j;
-    MENU menuToPrint, childMenuToPrint;
+	byte previousRamBank = RAM_BANK;
+	int i, j;
+	MENU menuToPrint, childMenuToPrint;
 
-    RAM_BANK = MENU_BANK;
+	RAM_BANK = MENU_BANK;
 
-    for (i = 0; i < numOfMenus; i++)
-    {
-        menuToPrint = the_menu[i];
+	for (i = 0; i < numOfMenus; i++)
+	{
+		menuToPrint = the_menu[i];
 
-        RAM_BANK = menuToPrint.menuTextBank;
-        printf("- %s dp %dp flags %d proc %d \n", menuToPrint.text, menuToPrint.dp, menuToPrint.flags, menuToPrint.proc);
-        RAM_BANK = MENU_BANK;
+		RAM_BANK = menuToPrint.menuTextBank;
+		printf("- %s dp %dp flags %d proc %d \n", menuToPrint.text, menuToPrint.dp, menuToPrint.flags, menuToPrint.proc);
+		RAM_BANK = MENU_BANK;
 
-        for (j = 0; the_menuChildren[i * MAX_MENU_SIZE + j].text != NULL; j++)
-        {
-            childMenuToPrint = the_menuChildren[i * MAX_MENU_SIZE + j];
+		for (j = 0; the_menuChildren[i * MAX_MENU_SIZE + j].text != NULL; j++)
+		{
+			childMenuToPrint = the_menuChildren[i * MAX_MENU_SIZE + j];
 
-            RAM_BANK = childMenuToPrint.menuTextBank;
-            printf("    -- %s %p dp %d flags %d proc %p \n", childMenuToPrint.text, childMenuToPrint.text, childMenuToPrint.dp, childMenuToPrint.flags, childMenuToPrint.proc);
+			RAM_BANK = childMenuToPrint.menuTextBank;
+			printf("    -- %s %p dp %d flags %d proc %p \n", childMenuToPrint.text, childMenuToPrint.text, childMenuToPrint.dp, childMenuToPrint.flags, childMenuToPrint.proc);
 
-            RAM_BANK = MENU_BANK;
-        }
-    }
+			RAM_BANK = MENU_BANK;
+		}
+	}
 
-    printf("\n\n_____________________________________________________\n");
-    RAM_BANK = previousRamBank;
+	printf("\n\n_____________________________________________________\n");
+	RAM_BANK = previousRamBank;
 }
 #endif // VERBOSE_MENU
 
@@ -261,18 +261,18 @@ void testMenus()
 ****************************************************************************/
 void b1AddLogLine(char* message)
 {
-    FILE* fp;
+	FILE* fp;
 
-    if ((fp = fopen("log.txt", "a")) == NULL) {
+	if ((fp = fopen("log.txt", "a")) == NULL) {
 #ifdef VERBOSE_LOGIC_EXEC
-        fprintf(stderr, "Error opening log file.");
+		fprintf(stderr, "Error opening log file.");
 #endif // VERBOSE
-        return;
-    }
+		return;
+	}
 
-    fprintf(fp, "%s\n", message);
+	fprintf(fp, "%s\n", message);
 
-    fclose(fp);
+	fclose(fp);
 }
 
 /***************************************************************************
@@ -283,190 +283,190 @@ void b1AddLogLine(char* message)
 ***************************************************************************/
 int b1Lprintf(char* fmt, ...)
 {
-    /*va_list args;
-    char tempStr[10];
+	/*va_list args;
+	char tempStr[10];
 
-    va_start(args, fmt);
-    vsprintf(tempStr, fmt, args);
-    va_end(args);
+	va_start(args, fmt);
+	vsprintf(tempStr, fmt, args);
+	va_end(args);
 
-    addLogLine(tempStr);*/
+	addLogLine(tempStr);*/
 
-    //printf("Implement lprinf");
+	//printf("Implement lprinf");
 
-    return 0;
+	return 0;
 }
 
 /* TEST COMMANDS */
 
 boolean b1Equaln(byte** data) // 2, 0x80 
 {
-    int varVal, value;
+	int varVal, value;
 
-    varVal = var[*(*data)++];
-    value = *(*data)++;
-    return (varVal == value);
+	varVal = var[*(*data)++];
+	value = *(*data)++;
+	return (varVal == value);
 }
 
 boolean b1Equalv(byte** data) // 2, 0xC0 
 {
-    int varVal1, varVal2;
+	int varVal1, varVal2;
 
-    varVal1 = var[*(*data)++];
-    varVal2 = var[*(*data)++];
-    return (varVal1 == varVal2);
+	varVal1 = var[*(*data)++];
+	varVal2 = var[*(*data)++];
+	return (varVal1 == varVal2);
 }
 
 boolean b1Lessn(byte** data) // 2, 0x80 
 {
-    int varVal, value;
+	int varVal, value;
 
-    varVal = var[*(*data)++];
-    value = *(*data)++;
-    return (varVal < value);
+	varVal = var[*(*data)++];
+	value = *(*data)++;
+	return (varVal < value);
 }
 
 boolean b1Lessv(byte** data) // 2, 0xC0 
 {
-    int varVal1, varVal2;
+	int varVal1, varVal2;
 
-    varVal1 = var[*(*data)++];
-    varVal2 = var[*(*data)++];
-    return (varVal1 < varVal2);
+	varVal1 = var[*(*data)++];
+	varVal2 = var[*(*data)++];
+	return (varVal1 < varVal2);
 }
 
 boolean b1Greatern(byte** data) // 2, 0x80 
 {
-    int varVal, value;
+	int varVal, value;
 
-    varVal = var[*(*data)++];
-    value = *(*data)++;
+	varVal = var[*(*data)++];
+	value = *(*data)++;
 
-    return (varVal > value);
+	return (varVal > value);
 }
 
 boolean b1Greaterv(byte** data) // 2, 0xC0 
 {
-    int varVal1, varVal2;
+	int varVal1, varVal2;
 
-    varVal1 = var[*(*data)++];
-    varVal2 = var[*(*data)++];
-    return (varVal1 > varVal2);
+	varVal1 = var[*(*data)++];
+	varVal2 = var[*(*data)++];
+	return (varVal1 > varVal2);
 }
 
 boolean b1Isset(byte** data) // 1, 0x00 
 {
-    return (flag[*(*data)++]);
+	return (flag[*(*data)++]);
 }
 
 boolean b1Issetv(byte** data) // 1, 0x80 
 {
-    return (flag[var[*(*data)++]]);
+	return (flag[var[*(*data)++]]);
 }
 
 boolean b1Has(byte** data) // 1, 0x00 
 {
-    return (objects[*(*data)++].roomNum == 255);
+	return (objects[*(*data)++].roomNum == 255);
 }
 
 boolean b1Obj_in_room(byte** data) // 2, 0x40 
 {
-    int objNum, varNum;
+	int objNum, varNum;
 
-    objNum = *(*data)++;
-    varNum = var[*(*data)++];
-    return (objects[objNum].roomNum == varNum);
+	objNum = *(*data)++;
+	varNum = var[*(*data)++];
+	return (objects[objNum].roomNum == varNum);
 }
 
 boolean b1Posn(byte** data) // 5, 0x00 
 {
-    int objNum, x1, y1, x2, y2;
-    ViewTable localViewtab;
+	int objNum, x1, y1, x2, y2;
+	ViewTable localViewtab;
 
-    objNum = *(*data)++;
-    getViewTab(&localViewtab, objNum);
+	objNum = *(*data)++;
+	getViewTab(&localViewtab, objNum);
 
-    x1 = *(*data)++;
-    y1 = *(*data)++;
-    x2 = *(*data)++;
-    y2 = *(*data)++;
+	x1 = *(*data)++;
+	y1 = *(*data)++;
+	x2 = *(*data)++;
+	y2 = *(*data)++;
 
-    return ((localViewtab.xPos >= x1) && (localViewtab.yPos >= y1)
-        && (localViewtab.xPos <= x2) && (localViewtab.yPos <= y2));
+	return ((localViewtab.xPos >= x1) && (localViewtab.yPos >= y1)
+		&& (localViewtab.xPos <= x2) && (localViewtab.yPos <= y2));
 }
 
 boolean b1Controller(byte** data) // 1, 0x00 
 {
-    int eventNum = *(*data)++, retVal = 0;
+	int eventNum = *(*data)++, retVal = 0;
 
-    /* Some events can be activated by menu input or key input. */
+	/* Some events can be activated by menu input or key input. */
 
-    /* Following code detects key presses at the current time */
-    switch (events[eventNum].type) {
-    case ASCII_KEY_EVENT:
-        if (events[eventNum].activated) {
-            events[eventNum].activated = FALSE;
-            return TRUE;
-        }
-        return (asciiState[events[eventNum].eventID]);
-    case SCAN_KEY_EVENT:
-        if (events[eventNum].activated) {
-            events[eventNum].activated = FALSE;
-            return TRUE;
-        }
-        if ((events[eventNum].eventID < 59) &&
-            (asciiState[0] == 0)) return FALSE;   /* ALT Combinations */
-        return (keyState[events[eventNum].eventID]);
-    case MENU_EVENT:
-        retVal = events[eventNum].activated;
-        events[eventNum].activated = 0;
-        return (retVal);
-    default:
-        return (FALSE);
-    }
+	/* Following code detects key presses at the current time */
+	switch (events[eventNum].type) {
+	case ASCII_KEY_EVENT:
+		if (events[eventNum].activated) {
+			events[eventNum].activated = FALSE;
+			return TRUE;
+		}
+		return (asciiState[events[eventNum].eventID]);
+	case SCAN_KEY_EVENT:
+		if (events[eventNum].activated) {
+			events[eventNum].activated = FALSE;
+			return TRUE;
+		}
+		if ((events[eventNum].eventID < 59) &&
+			(asciiState[0] == 0)) return FALSE;   /* ALT Combinations */
+		return (keyState[events[eventNum].eventID]);
+	case MENU_EVENT:
+		retVal = events[eventNum].activated;
+		events[eventNum].activated = 0;
+		return (retVal);
+	default:
+		return (FALSE);
+	}
 }
 
 boolean b1Have_key() // 0, 0x00
 {
-    /* return (TRUE); */
-    /* return (haveKey); */
-    /* return (keypressed() || haveKey); */
-    if (haveKey && key[lastKey]) return TRUE;
-    return keypressed();
+	/* return (TRUE); */
+	/* return (haveKey); */
+	/* return (keypressed() || haveKey); */
+	if (haveKey && key[lastKey]) return TRUE;
+	return keypressed();
 }
 
 boolean b1Said(byte** data)
 {
-    int numOfArgs, wordNum, argValue;
-    boolean wordsMatch = TRUE;
-    byte argLo, argHi;
+	int numOfArgs, wordNum, argValue;
+	boolean wordsMatch = TRUE;
+	byte argLo, argHi;
 
-    numOfArgs = *(*data)++;
+	numOfArgs = *(*data)++;
 
-    if ((flag[2] == 0) || (flag[4] == 1)) {  /* Not valid input waiting */
-        *data += (numOfArgs * 2); /* Jump over arguments */
-        return FALSE;
-    }
+	if ((flag[2] == 0) || (flag[4] == 1)) {  /* Not valid input waiting */
+		*data += (numOfArgs * 2); /* Jump over arguments */
+		return FALSE;
+	}
 
-    /* Needs to deal with ANYWORD and ROL */
-    for (wordNum = 0; wordNum < numOfArgs; wordNum++) {
-        argLo = *(*data)++;
-        argHi = *(*data)++;
-        argValue = (argLo + (argHi << 8));
-        if (argValue == 9999) break; /* Should always be last argument */
-        if (argValue == 1) continue; /* Word comparison does not matter */
-        if (inputWords[wordNum] != argValue) wordsMatch = FALSE;
-    }
+	/* Needs to deal with ANYWORD and ROL */
+	for (wordNum = 0; wordNum < numOfArgs; wordNum++) {
+		argLo = *(*data)++;
+		argHi = *(*data)++;
+		argValue = (argLo + (argHi << 8));
+		if (argValue == 9999) break; /* Should always be last argument */
+		if (argValue == 1) continue; /* Word comparison does not matter */
+		if (inputWords[wordNum] != argValue) wordsMatch = FALSE;
+	}
 
-    if ((numInputWords != numOfArgs) && (argValue != 9999)) return FALSE;
+	if ((numInputWords != numOfArgs) && (argValue != 9999)) return FALSE;
 
-    if (wordsMatch) {
-        flag[4] = TRUE;    /* said() accepted input */
-        numInputWords = 0;
-        flag[2] = FALSE;   /* not sure about this one */
-    }
+	if (wordsMatch) {
+		flag[4] = TRUE;    /* said() accepted input */
+		numInputWords = 0;
+		flag[2] = FALSE;   /* not sure about this one */
+	}
 
-    return (wordsMatch);
+	return (wordsMatch);
 }
 
 /* The said() command is in parser.h
@@ -478,68 +478,68 @@ boolean said(byte **data)
 
 boolean b1Compare_strings(byte** data) // 2, 0x00 
 {
-    int s1, s2;
+	int s1, s2;
 
-    s1 = *(*data)++;
-    s2 = *(*data)++;
-    if (strcmp(string[s1], string[s2]) == 0) return TRUE;
-    return FALSE;
+	s1 = *(*data)++;
+	s2 = *(*data)++;
+	if (strcmp(string[s1], string[s2]) == 0) return TRUE;
+	return FALSE;
 }
 
 boolean b1Obj_in_box(byte** data) // 5, 0x00 
 {
-    int objNum, x1, y1, x2, y2;
-    ViewTable localViewtab;
-    objNum = *(*data)++;
-    x1 = *(*data)++;
-    y1 = *(*data)++;
-    x2 = *(*data)++;
-    y2 = *(*data)++;
+	int objNum, x1, y1, x2, y2;
+	ViewTable localViewtab;
+	objNum = *(*data)++;
+	x1 = *(*data)++;
+	y1 = *(*data)++;
+	x2 = *(*data)++;
+	y2 = *(*data)++;
 
-    getViewTab(&localViewtab, objNum);
+	getViewTab(&localViewtab, objNum);
 
-    return ((localViewtab.xPos >= x1) &&
-        (localViewtab.yPos >= y1) &&
-        ((localViewtab.xPos + localViewtab.xsize - 1) <= x2) &&
-        (localViewtab.yPos <= y2));
+	return ((localViewtab.xPos >= x1) &&
+		(localViewtab.yPos >= y1) &&
+		((localViewtab.xPos + localViewtab.xsize - 1) <= x2) &&
+		(localViewtab.yPos <= y2));
 }
 
 boolean b1Center_posn(byte** data) // 5, 0x00 }
 {
-    int objNum, x1, y1, x2, y2;
-    ViewTable localViewtab;
-    objNum = *(*data)++;
-    x1 = *(*data)++;
-    y1 = *(*data)++;
-    x2 = *(*data)++;
-    y2 = *(*data)++;
+	int objNum, x1, y1, x2, y2;
+	ViewTable localViewtab;
+	objNum = *(*data)++;
+	x1 = *(*data)++;
+	y1 = *(*data)++;
+	x2 = *(*data)++;
+	y2 = *(*data)++;
 
-    getViewTab(&localViewtab, objNum);
+	getViewTab(&localViewtab, objNum);
 
-    return (((localViewtab.xPos + (localViewtab.xsize / 2)) >= x1) &&
-        (localViewtab.yPos >= y1) &&
-        ((localViewtab.xPos + (localViewtab.xsize / 2)) <= x2) &&
-        (localViewtab.yPos <= y2));
+	return (((localViewtab.xPos + (localViewtab.xsize / 2)) >= x1) &&
+		(localViewtab.yPos >= y1) &&
+		((localViewtab.xPos + (localViewtab.xsize / 2)) <= x2) &&
+		(localViewtab.yPos <= y2));
 }
 
 boolean b1Right_posn(byte** data) // 5, 0x00
 {
-    int objNum, x1, y1, x2, y2;
-    ViewTable localViewtab;
+	int objNum, x1, y1, x2, y2;
+	ViewTable localViewtab;
 
-    objNum = *(*data)++;
+	objNum = *(*data)++;
 
-    getViewTab(&localViewtab, objNum);
+	getViewTab(&localViewtab, objNum);
 
-    x1 = *(*data)++;
-    y1 = *(*data)++;
-    x2 = *(*data)++;
-    y2 = *(*data)++;
+	x1 = *(*data)++;
+	y1 = *(*data)++;
+	x2 = *(*data)++;
+	y2 = *(*data)++;
 
-    return (((localViewtab.xPos + localViewtab.xsize - 1) >= x1) &&
-        (localViewtab.yPos >= y1) &&
-        ((localViewtab.xPos + localViewtab.xsize - 1) <= x2) &&
-        (localViewtab.yPos <= y2));
+	return (((localViewtab.xPos + localViewtab.xsize - 1) >= x1) &&
+		(localViewtab.yPos >= y1) &&
+		((localViewtab.xPos + localViewtab.xsize - 1) <= x2) &&
+		(localViewtab.yPos <= y2));
 }
 
 
@@ -548,296 +548,300 @@ boolean b1Right_posn(byte** data) // 5, 0x00
 
 void b1Increment(byte** data) // 1, 0x80 
 {
-    if (var[*(*data)] < 0xFF)
-        var[*(*data)]++;
-    (*data)++;
+	if (var[*(*data)] < 0xFF)
+		var[*(*data)]++;
+	(*data)++;
 
-    /* var[*(*data)++]++;  This one doesn't check bounds */
+	/* var[*(*data)++]++;  This one doesn't check bounds */
 }
 
 void b1Decrement(byte** data) // 1, 0x80 
 {
-    if (var[*(*data)] > 0)
-        var[*(*data)]--;
-    (*data)++;
+	if (var[*(*data)] > 0)
+		var[*(*data)]--;
+	(*data)++;
 
-    /* var[*(*data)++]--;  This one doesn't check bounds */
+	/* var[*(*data)++]--;  This one doesn't check bounds */
 }
 
 void b1Assignn(byte** data) // 2, 0x80 
 {
-    int varNum, value;
+	int varNum, value;
 
-    varNum = *(*data)++;
-    value = *(*data)++;
-    var[varNum] = value;
+	varNum = *(*data)++;
+	value = *(*data)++;
+	var[varNum] = value;
 }
 
 void b1Assignv(byte** data) // 2, 0xC0 
 {
-    int var1, var2;
+	int var1, var2;
 
-    var1 = *(*data)++;
-    var2 = *(*data)++;
-    var[var1] = var[var2];
+	var1 = *(*data)++;
+	var2 = *(*data)++;
+	var[var1] = var[var2];
 }
 
 void b1Addn(byte** data) // 2, 0x80 
 {
-    int varNum, value;
+	int varNum, value;
 
-    varNum = *(*data)++;
-    value = *(*data)++;
-    var[varNum] += value;
+	varNum = *(*data)++;
+	value = *(*data)++;
+	var[varNum] += value;
 }
 
 void b1Addv(byte** data) // 2, 0xC0 
 {
-    int var1, var2;
+	int var1, var2;
 
-    var1 = *(*data)++;
-    var2 = *(*data)++;
-    var[var1] += var[var2];
+	var1 = *(*data)++;
+	var2 = *(*data)++;
+	var[var1] += var[var2];
 }
 
 void b1Subn(byte** data) // 2, 0x80 
 {
-    int varNum, value;
+	int varNum, value;
 
-    varNum = *(*data)++;
-    value = *(*data)++;
-    var[varNum] -= value;
+	varNum = *(*data)++;
+	value = *(*data)++;
+	var[varNum] -= value;
 }
 
 void b1Subv(byte** data) // 2, 0xC0 
 {
-    int var1, var2;
+	int var1, var2;
 
-    var1 = *(*data)++;
-    var2 = *(*data)++;
-    var[var1] -= var[var2];
+	var1 = *(*data)++;
+	var2 = *(*data)++;
+	var[var1] -= var[var2];
 }
 
 void b1Lindirectv(byte** data) // 2, 0xC0 
 {
-    int var1, var2;
+	int var1, var2;
 
-    var1 = *(*data)++;
-    var2 = *(*data)++;
-    var[var[var1]] = var[var2];
+	var1 = *(*data)++;
+	var2 = *(*data)++;
+	var[var[var1]] = var[var2];
 }
 
 void b1Rindirect(byte** data) // 2, 0xC0 
 {
-    int var1, var2;
+	int var1, var2;
 
-    var1 = *(*data)++;
-    var2 = *(*data)++;
-    var[var1] = var[var[var2]];
+	var1 = *(*data)++;
+	var2 = *(*data)++;
+	var[var1] = var[var[var2]];
 }
 
 void b1Lindirectn(byte** data) // 2, 0x80 
 {
-    int varNum, value;
+	int varNum, value;
 
-    varNum = *(*data)++;
-    value = *(*data)++;
-    var[var[varNum]] = value;
+	varNum = *(*data)++;
+	value = *(*data)++;
+	var[var[varNum]] = value;
 }
 
 void b1Set(byte** data) // 1, 0x00 
 {
-    flag[*(*data)++] = TRUE;
+	flag[*(*data)++] = TRUE;
 }
 
 void b1Reset(byte** data) // 1, 0x00 
 {
-    flag[*(*data)++] = FALSE;
+	flag[*(*data)++] = FALSE;
 }
 
 void b1Toggle(byte** data) // 1, 0x00 
 {
-    int f = *(*data)++;
+	int f = *(*data)++;
 
-    flag[f] = (flag[f] ? FALSE : TRUE);
+	flag[f] = (flag[f] ? FALSE : TRUE);
 }
 
 void b1Set_v(byte** data) // 1, 0x80 
 {
-    flag[var[*(*data)++]] = TRUE;
+	flag[var[*(*data)++]] = TRUE;
 }
 
 void b1Reset_v(byte** data) // 1, 0x80 
 {
-    flag[var[*(*data)++]] = FALSE;
+	flag[var[*(*data)++]] = FALSE;
 }
 
 void b1Toggle_v(byte** data) // 1, 0x80 
 {
-    int f = var[*(*data)++];
+	int f = var[*(*data)++];
 
-    flag[f] = (flag[f] ? FALSE : TRUE);
+	flag[f] = (flag[f] ? FALSE : TRUE);
 }
 
 void b1New_room(byte** data) // 1, 0x00 
 {
-    /* This function is handled in meka.c */
-    newRoomNum = *(*data)++;
-    hasEnteredNewRoom = TRUE;
+	/* This function is handled in meka.c */
+	newRoomNum = *(*data)++;
+	hasEnteredNewRoom = TRUE;
 }
 
 void b1New_room_v(byte** data) // 1, 0x80 
 {
-    /* This function is handled in meka.c */
-    newRoomNum = var[*(*data)++];
-    hasEnteredNewRoom = TRUE;
+	/* This function is handled in meka.c */
+	newRoomNum = var[*(*data)++];
+	hasEnteredNewRoom = TRUE;
 }
 
 void b1Load_logics(byte** data) // 1, 0x00 
 {
-    trampoline_1Int(&b8LoadLogicFile,*(*data)++, LOGIC_CODE_BANK);
+	trampoline_1Int(&b8LoadLogicFile, *(*data)++, LOGIC_CODE_BANK);
 }
 
 void b1Load_logics_v(byte** data) // 1, 0x80 
 {
-    trampoline_1Int(&b8LoadLogicFile, var[*(*data)++], LOGIC_CODE_BANK);
+	trampoline_1Int(&b8LoadLogicFile, var[*(*data)++], LOGIC_CODE_BANK);
 }
 
 void b1Call(byte** data) // 1, 0x00 
 {
-    executeLogic(*(*data)++);
+	executeLogic(*(*data)++);
 }
 
 void b1Call_v(byte** data) // 1, 0x80 
 {
-    printf("Trying to execute to %d\n", var[*(*data)]);
-    executeLogic(var[*(*data)++]);
+	executeLogic(var[*(*data)++]);
 }
 
 void b1Load_pic(byte** data) // 1, 0x80 
 {
-    loadPictureFile(var[*(*data)++]);
+	loadPictureFile(var[*(*data)++]);
 }
 
 void b1Draw_pic(byte** data) // 1, 0x80 
 {
-    int pNum;
+	int pNum;
 
-    pNum = var[*(*data)++];
-    //picFNum = pNum;  // Debugging. Delete at some stage!!!
-    drawPic(loadedPictures[pNum].data, loadedPictures[pNum].size, TRUE);
+	pNum = var[*(*data)++];
+	//picFNum = pNum;  // Debugging. Delete at some stage!!!
+	drawPic(loadedPictures[pNum].data, loadedPictures[pNum].size, TRUE);
 }
 
 void b1Show_pic(byte** data) // 0, 0x00 
 {
-    okToShowPic = TRUE;   /* Says draw picture with next object update */
-    /*stretch_blit(picture, working_screen, 0, 0, 160, 168, 0, 20, 640, 336);*/
-    showPicture();
+	okToShowPic = TRUE;   /* Says draw picture with next object update */
+	/*stretch_blit(picture, working_screen, 0, 0, 160, 168, 0, 20, 640, 336);*/
+	showPicture();
 }
 
 void b1Discard_pic(byte** data) // 1, 0x80 
 {
-    discardPictureFile(var[*(*data)++]);
+	discardPictureFile(var[*(*data)++]);
 }
 
 void b1Overlay_pic(byte** data) // 1, 0x80 
 {
-    int pNum;
+	int pNum;
 
-    pNum = var[*(*data)++];
-    drawPic(loadedPictures[pNum].data, loadedPictures[pNum].size, FALSE);
+	pNum = var[*(*data)++];
+	drawPic(loadedPictures[pNum].data, loadedPictures[pNum].size, FALSE);
 }
 
 void b1Show_pri_screen(byte** data) // 0, 0x00 
 {
-    //showPriority();
-    showDebugPri();
-    //getch();
-    //while (!keypressed()) { /* Wait for key */ }
+	//showPriority();
+	showDebugPri();
+	//getch();
+	//while (!keypressed()) { /* Wait for key */ }
 }
 
 /************************** VIEW ACTION COMMANDS **************************/
 
 void b1Load_view(byte** data) // 1, 0x00 
 {
-    trampoline_1Int(&b9LoadViewFile, (*(*data)++), VIEW_CODE_BANK_1);
+	trampoline_1Int(&b9LoadViewFile, (*(*data)++), VIEW_CODE_BANK_1);
 }
 
 void b1Load_view_v(byte** data) // 1, 0x80 
 {
-    trampoline_1Int(&b9LoadViewFile, var[*(*data)++], VIEW_CODE_BANK_1);
+	trampoline_1Int(&b9LoadViewFile, var[*(*data)++], VIEW_CODE_BANK_1);
 }
 
 void b1Discard_view(byte** data) // 1, 0x00 
 {
-    trampoline_1Int(&b9DiscardView, *(*data)++, VIEW_CODE_BANK_1);
+	trampoline_1Int(&b9DiscardView, *(*data)++, VIEW_CODE_BANK_1);
 }
 
 void b1Animate_obj(byte** data) // 1, 0x00 
 {
-    int entryNum;
-    ViewTable localViewTab;
+	int entryNum;
+	ViewTable localViewTab;
 
-    entryNum = *(*data)++;
-    //viewtab[entryNum].flags |= (ANIMATED | UPDATE | CYCLING);
-    getViewTab(&localViewTab, entryNum);
+	entryNum = *(*data)++;
+	//viewtab[entryNum].flags |= (ANIMATED | UPDATE | CYCLING);
+	getViewTab(&localViewTab, entryNum);
 
-    //localViewtab.flags |= (ANIMATED | UPDATE | CYCLING);
-    localViewTab.flags = (ANIMATED | UPDATE | CYCLING);
-    /* Not sure about CYCLING */
-    /* Not sure about whether these two are set to zero */
-    localViewTab.motion = 0;
-    localViewTab.cycleStatus = 0;
-    localViewTab.flags |= MOTION;
-    if (entryNum != 0) localViewTab.direction = 0;
+	//localViewtab.flags |= (ANIMATED | UPDATE | CYCLING);
+	localViewTab.flags = (ANIMATED | UPDATE | CYCLING);
+	/* Not sure about CYCLING */
+	/* Not sure about whether these two are set to zero */
+	localViewTab.motion = 0;
+	localViewTab.cycleStatus = 0;
+	localViewTab.flags |= MOTION;
+	if (entryNum != 0) localViewTab.direction = 0;
 
-    setViewTab(&localViewTab, entryNum);
+	setViewTab(&localViewTab, entryNum);
+
+	getViewTab(&localViewTab, entryNum);
 }
 
 void b1Unanimate_all(byte** data) // 0, 0x00 
 {
-    int entryNum;
-    ViewTable localViewtab;
+	int entryNum;
+	ViewTable localViewtab;
 
-    /* Mark all objects as unanimated and not drawn */
-    for (entryNum = 0; entryNum < TABLESIZE; entryNum++)
-    {
-        getViewTab(&localViewtab, entryNum);
-        
-        localViewtab.flags &= ~(ANIMATED | DRAWN);
+	/* Mark all objects as unanimated and not drawn */
+	for (entryNum = 0; entryNum < TABLESIZE; entryNum++)
+	{
+		getViewTab(&localViewtab, entryNum);
 
-        setViewTab(&localViewtab, entryNum);
-    }
+		localViewtab.flags &= ~(ANIMATED | DRAWN);
+
+		setViewTab(&localViewtab, entryNum);
+	}
 }
 
 void b1Draw(byte** data) // 1, 0x00 
 {
-    int entryNum;
-    ViewTable localViewtab;
+	int entryNum;
+	ViewTable localViewtab;
 
-    entryNum = *(*data)++;
-    getViewTab(&localViewtab, entryNum);
+	entryNum = *(*data)++;
+	getViewTab(&localViewtab, entryNum);
 
-    localViewtab.flags |= (DRAWN | UPDATE);   /* Not sure about update */
-     
-   trampolineViewUpdater1Int(&b9SetCel, &localViewtab, localViewtab.currentCel, VIEW_CODE_BANK_1);
-    trampoline_1Int(&bADrawObject,entryNum, VIEW_CODE_BANK_2);
+	localViewtab.flags |= (DRAWN | UPDATE);   /* Not sure about update */
 
-    setViewTab(&localViewtab, entryNum);
+
+
+	trampolineViewUpdater1Int(&b9SetCel, &localViewtab, localViewtab.currentCel, VIEW_CODE_BANK_1);
+
+	trampoline_1Int(&bADrawObject, entryNum, VIEW_CODE_BANK_2);
+
+	setViewTab(&localViewtab, entryNum);
 }
 
 void b1Erase(byte** data) // 1, 0x00 
 {
-    int entryNum;
-    ViewTable localViewtab;
+	int entryNum;
+	ViewTable localViewtab;
 
-    entryNum = *(*data)++;
-    getViewTab(&localViewtab, entryNum);
-    
+	entryNum = *(*data)++;
+	getViewTab(&localViewtab, entryNum);
 
-    localViewtab.flags &= ~DRAWN;
-    
-    setViewTab(&localViewtab, entryNum);
+
+	localViewtab.flags &= ~DRAWN;
+
+	setViewTab(&localViewtab, entryNum);
 }
 
 #pragma code-name (pop)
@@ -845,762 +849,762 @@ void b1Erase(byte** data) // 1, 0x00
 
 void b2Position(byte** data) // 3, 0x00 
 {
-    int entryNum;
-    ViewTable localViewtab;
+	int entryNum;
+	ViewTable localViewtab;
 
-    entryNum = *(*data)++;
-    getViewTab(&localViewtab, entryNum);
+	entryNum = *(*data)++;
+	getViewTab(&localViewtab, entryNum);
 
-    localViewtab.xPos = *(*data)++;
-    localViewtab.yPos = *(*data)++;
+	localViewtab.xPos = *(*data)++;
+	localViewtab.yPos = *(*data)++;
 
-    setViewTab(&localViewtab, entryNum);
-    /* Need to check that it hasn't been draw()n yet. */
+	setViewTab(&localViewtab, entryNum);
+	/* Need to check that it hasn't been draw()n yet. */
 }
 
 void b2Position_v(byte** data) // 3, 0x60 
 {
-    int entryNum;
-    ViewTable localViewtab;
+	int entryNum;
+	ViewTable localViewtab;
 
-    entryNum = *(*data)++;
-    getViewTab(&localViewtab, entryNum);
+	entryNum = *(*data)++;
+	getViewTab(&localViewtab, entryNum);
 
-    localViewtab.xPos = var[*(*data)++];
-    localViewtab.yPos = var[*(*data)++];
+	localViewtab.xPos = var[*(*data)++];
+	localViewtab.yPos = var[*(*data)++];
 
-    setViewTab(&localViewtab, entryNum);
-    /* Need to check that it hasn't been draw()n yet. */
+	setViewTab(&localViewtab, entryNum);
+	/* Need to check that it hasn't been draw()n yet. */
 }
 
 void b2Get_posn(byte** data) // 3, 0x60 
 {
-    int entryNum;
-    ViewTable localViewtab;
+	int entryNum;
+	ViewTable localViewtab;
 
-    entryNum = *(*data)++;
-    getViewTab(&localViewtab, entryNum);
+	entryNum = *(*data)++;
+	getViewTab(&localViewtab, entryNum);
 
 
-    var[*(*data)++] = localViewtab.xPos;
-    var[*(*data)++] = localViewtab.yPos;
+	var[*(*data)++] = localViewtab.xPos;
+	var[*(*data)++] = localViewtab.yPos;
 }
 
 void b2Reposition(byte** data) // 3, 0x60 
 {
-    int entryNum, dx, dy;
-    ViewTable localViewtab;
+	int entryNum, dx, dy;
+	ViewTable localViewtab;
 
-    entryNum = *(*data)++;
-    getViewTab(&localViewtab, entryNum);
+	entryNum = *(*data)++;
+	getViewTab(&localViewtab, entryNum);
 
-    dx = (signed char)var[*(*data)++];
-    dy = (signed char)var[*(*data)++];
-    localViewtab.xPos += dx;
-    localViewtab.yPos += dy;
+	dx = (signed char)var[*(*data)++];
+	dy = (signed char)var[*(*data)++];
+	localViewtab.xPos += dx;
+	localViewtab.yPos += dy;
 
-    setViewTab(&localViewtab, entryNum);
+	setViewTab(&localViewtab, entryNum);
 }
 
 
 void b2Set_view(byte** data) // 2, 0x00 
 {
-    int entryNum, viewNum;
-    ViewTable localViewtab;
+	int entryNum, viewNum;
+	ViewTable localViewtab;
 
-    entryNum = *(*data)++;
-    viewNum = *(*data)++;
-    
-    getViewTab(&localViewtab, entryNum);
+	entryNum = *(*data)++;
+	viewNum = *(*data)++;
 
-    trampolineViewUpdater1Int(&b9AddViewToTable, &localViewtab, viewNum, VIEW_CODE_BANK_1);
+	getViewTab(&localViewtab, entryNum);
 
-    setViewTab(&localViewtab, entryNum);
+	trampolineViewUpdater1Int(&b9AddViewToTable, &localViewtab, viewNum, VIEW_CODE_BANK_1);
+
+	setViewTab(&localViewtab, entryNum);
 }
 
 void b2Set_view_v(byte** data) // 2, 0x40 
 {
-    int entryNum, viewNum;
-    ViewTable localViewtab;
+	int entryNum, viewNum;
+	ViewTable localViewtab;
 
-    entryNum = *(*data)++;
-    viewNum = var[*(*data)++];
+	entryNum = *(*data)++;
+	viewNum = var[*(*data)++];
 
-    getViewTab(&localViewtab, entryNum);
+	getViewTab(&localViewtab, entryNum);
 
-    trampolineViewUpdater1Int(&b9AddViewToTable, &localViewtab, viewNum, VIEW_CODE_BANK_1);
+	trampolineViewUpdater1Int(&b9AddViewToTable, &localViewtab, viewNum, VIEW_CODE_BANK_1);
 
-    getViewTab(&localViewtab, entryNum);
+	getViewTab(&localViewtab, entryNum);
 }
 
 void b2Set_loop(byte** data) // 2, 0x00 
 {
-    int entryNum, loopNum;
-    ViewTable localViewtab; 
+	int entryNum, loopNum;
+	ViewTable localViewtab;
 
-    entryNum = *(*data)++;
-    loopNum = *(*data)++;
+	entryNum = *(*data)++;
+	loopNum = *(*data)++;
 
-    getViewTab(&localViewtab, entryNum);
-    trampolineViewUpdater1Int(&b9SetLoop, &localViewtab, loopNum, VIEW_CODE_BANK_1);
-    trampolineViewUpdater1Int(&b9SetCel, &localViewtab, 0, VIEW_CODE_BANK_1);
-    
-    setViewTab(&localViewtab, entryNum);
+	getViewTab(&localViewtab, entryNum);
+	trampolineViewUpdater1Int(&b9SetLoop, &localViewtab, loopNum, VIEW_CODE_BANK_1);
+	trampolineViewUpdater1Int(&b9SetCel, &localViewtab, 0, VIEW_CODE_BANK_1);
+
+	setViewTab(&localViewtab, entryNum);
 }
 
 void b2Set_loop_v(byte** data) // 2, 0x40 
 {
-    int entryNum, loopNum;
-    ViewTable localViewtab;
+	int entryNum, loopNum;
+	ViewTable localViewtab;
 
-    entryNum = *(*data)++;
-    getViewTab(&localViewtab, entryNum);
-    
-    loopNum = var[*(*data)++];
+	entryNum = *(*data)++;
+	getViewTab(&localViewtab, entryNum);
 
-    trampolineViewUpdater1Int(&b9SetLoop, &localViewtab, loopNum, VIEW_CODE_BANK_1);
-   trampolineViewUpdater1Int(&b9SetCel, &localViewtab, loopNum, VIEW_CODE_BANK_1);
+	loopNum = var[*(*data)++];
 
-   setViewTab(&localViewtab, entryNum);
+	trampolineViewUpdater1Int(&b9SetLoop, &localViewtab, loopNum, VIEW_CODE_BANK_1);
+	trampolineViewUpdater1Int(&b9SetCel, &localViewtab, loopNum, VIEW_CODE_BANK_1);
+
+	setViewTab(&localViewtab, entryNum);
 }
 
 void b2Fix_loop(byte** data) // 1, 0x00 
 {
-    int entryNum;
-    ViewTable localViewtab;
+	int entryNum;
+	ViewTable localViewtab;
 
-    entryNum = *(*data)++;
-    getViewTab(&localViewtab, entryNum);
+	entryNum = *(*data)++;
+	getViewTab(&localViewtab, entryNum);
 
 
-    localViewtab.flags |= FIXLOOP;
+	localViewtab.flags |= FIXLOOP;
 
-    setViewTab(&localViewtab, entryNum);
+	setViewTab(&localViewtab, entryNum);
 
 }
 
 void b2Release_loop(byte** data) // 1, 0x00 
 {
-    int entryNum;
-    ViewTable localViewtab;
+	int entryNum;
+	ViewTable localViewtab;
 
-    entryNum = *(*data)++;
-    getViewTab(&localViewtab, entryNum);
+	entryNum = *(*data)++;
+	getViewTab(&localViewtab, entryNum);
 
-    localViewtab.flags &= ~FIXLOOP;
-    setViewTab(&localViewtab, entryNum);
+	localViewtab.flags &= ~FIXLOOP;
+	setViewTab(&localViewtab, entryNum);
 }
 
 void b2Set_cel(byte** data) // 2, 0x00 
 {
-    int entryNum, celNum;
-    ViewTable localViewtab;
+	int entryNum, celNum;
+	ViewTable localViewtab;
 
-    entryNum = *(*data)++;
-    celNum = *(*data)++;
-    
-    getViewTab(&localViewtab, entryNum);
+	entryNum = *(*data)++;
+	celNum = *(*data)++;
 
-    trampolineViewUpdater1Int(&b9SetCel, &localViewtab, celNum, VIEW_CODE_BANK_1);
+	getViewTab(&localViewtab, entryNum);
 
-    setViewTab(&localViewtab, entryNum);
+	trampolineViewUpdater1Int(&b9SetCel, &localViewtab, celNum, VIEW_CODE_BANK_1);
+
+	setViewTab(&localViewtab, entryNum);
 }
 
 void b2Set_cel_v(byte** data) // 2, 0x40 
 {
-    int entryNum, celNum;
-    ViewTable localViewtab;
+	int entryNum, celNum;
+	ViewTable localViewtab;
 
-    entryNum = *(*data)++;
-    celNum = var[*(*data)++];
+	entryNum = *(*data)++;
+	celNum = var[*(*data)++];
 
-    getViewTab(&localViewtab, entryNum);
+	getViewTab(&localViewtab, entryNum);
 
-    trampolineViewUpdater1Int(&b9SetCel, &localViewtab, celNum, VIEW_CODE_BANK_1);
+	trampolineViewUpdater1Int(&b9SetCel, &localViewtab, celNum, VIEW_CODE_BANK_1);
 
-    setViewTab(&localViewtab, entryNum);
+	setViewTab(&localViewtab, entryNum);
 }
 
 void b2Last_cel(byte** data) // 2, 0x40 
 {
-    int entryNum, varNum;
-    ViewTable localViewtab;
+	int entryNum, varNum;
+	ViewTable localViewtab;
 
-    entryNum = *(*data)++;
-    getViewTab(&localViewtab, entryNum);
-    varNum = *(*data)++;
+	entryNum = *(*data)++;
+	getViewTab(&localViewtab, entryNum);
+	varNum = *(*data)++;
 
-    var[varNum] = localViewtab.numberOfCels - 1;
-    setViewTab(&localViewtab, entryNum);
+	var[varNum] = localViewtab.numberOfCels - 1;
+	setViewTab(&localViewtab, entryNum);
 }
 
 void b2Current_cel(byte** data) // 2, 0x40 
 {
-    int entryNum, varNum;
-    ViewTable localViewtab;
+	int entryNum, varNum;
+	ViewTable localViewtab;
 
-    entryNum = *(*data)++;
-    getViewTab(&localViewtab, entryNum);
-    varNum = *(*data)++;
+	entryNum = *(*data)++;
+	getViewTab(&localViewtab, entryNum);
+	varNum = *(*data)++;
 
-    var[varNum] = localViewtab.currentCel;
-    setViewTab(&localViewtab, entryNum);
+	var[varNum] = localViewtab.currentCel;
+	setViewTab(&localViewtab, entryNum);
 }
 
 void b2Current_loop(byte** data) // 2, 0x40 
 {
-    int entryNum, varNum;
-    ViewTable localViewtab;
+	int entryNum, varNum;
+	ViewTable localViewtab;
 
-    entryNum = *(*data)++;
-    varNum = *(*data)++;
-    getViewTab(&localViewtab, entryNum);
+	entryNum = *(*data)++;
+	varNum = *(*data)++;
+	getViewTab(&localViewtab, entryNum);
 
-    var[varNum] = localViewtab.currentLoop;
-    setViewTab(&localViewtab, entryNum);
+	var[varNum] = localViewtab.currentLoop;
+	setViewTab(&localViewtab, entryNum);
 }
 
 void b2Current_view(byte** data) // 2, 0x40 
 {
-    int entryNum, varNum;
-    ViewTable localViewtab;
+	int entryNum, varNum;
+	ViewTable localViewtab;
 
-    entryNum = *(*data)++;
-    getViewTab(&localViewtab, entryNum);
-    
-    varNum = *(*data)++;
-    var[varNum] = localViewtab.currentView;
+	entryNum = *(*data)++;
+	getViewTab(&localViewtab, entryNum);
 
-    setViewTab(&localViewtab, entryNum);
+	varNum = *(*data)++;
+	var[varNum] = localViewtab.currentView;
+
+	setViewTab(&localViewtab, entryNum);
 }
 
 void b2Number_of_loops(byte** data) // 2, 0x40 
 {
-    int entryNum, varNum;
-    ViewTable localViewtab;
+	int entryNum, varNum;
+	ViewTable localViewtab;
 
-    entryNum = *(*data)++;
-    getViewTab(&localViewtab, entryNum);
-    
-    varNum = *(*data)++;
-    var[varNum] = localViewtab.numberOfLoops;
+	entryNum = *(*data)++;
+	getViewTab(&localViewtab, entryNum);
 
-    setViewTab(&localViewtab, entryNum);
+	varNum = *(*data)++;
+	var[varNum] = localViewtab.numberOfLoops;
+
+	setViewTab(&localViewtab, entryNum);
 }
 
 void b2Set_priority(byte** data) // 2, 0x00 
 {
-    int entryNum;
-    ViewTable localViewtab;
+	int entryNum;
+	ViewTable localViewtab;
 
-    entryNum = *(*data)++;
-    getViewTab(&localViewtab, entryNum);
+	entryNum = *(*data)++;
+	getViewTab(&localViewtab, entryNum);
 
-    localViewtab.priority = *(*data)++;
-    localViewtab.flags |= FIXEDPRIORITY;
-    
-    setViewTab(&localViewtab, entryNum);
+	localViewtab.priority = *(*data)++;
+	localViewtab.flags |= FIXEDPRIORITY;
+
+	setViewTab(&localViewtab, entryNum);
 }
 
 void b2Set_priority_v(byte** data) // 2, 0x40 
 {
-    int entryNum;
-    ViewTable localViewtab;
+	int entryNum;
+	ViewTable localViewtab;
 
-    entryNum = *(*data)++;
-    getViewTab(&localViewtab, entryNum);
-    
-    localViewtab.priority = var[*(*data)++];
-    localViewtab.flags |= FIXEDPRIORITY;
+	entryNum = *(*data)++;
+	getViewTab(&localViewtab, entryNum);
 
-    setViewTab(&localViewtab, entryNum);
+	localViewtab.priority = var[*(*data)++];
+	localViewtab.flags |= FIXEDPRIORITY;
+
+	setViewTab(&localViewtab, entryNum);
 }
 
 void b2Release_priority(byte** data) // 1, 0x00 
 {
-    int entryNum;
-    ViewTable localViewtab;
+	int entryNum;
+	ViewTable localViewtab;
 
-    entryNum = *(*data)++;
-    getViewTab(&localViewtab, entryNum);
+	entryNum = *(*data)++;
+	getViewTab(&localViewtab, entryNum);
 
-    localViewtab.flags &= ~FIXEDPRIORITY;
+	localViewtab.flags &= ~FIXEDPRIORITY;
 
-    setViewTab(&localViewtab, entryNum);
+	setViewTab(&localViewtab, entryNum);
 }
 
 void b2Get_priority(byte** data) // 2, 0x40 
 {
-    int entryNum, varNum;
-    ViewTable localViewtab;
-    
-    entryNum = *(*data)++;
-    getViewTab(&localViewtab, entryNum);
+	int entryNum, varNum;
+	ViewTable localViewtab;
+
+	entryNum = *(*data)++;
+	getViewTab(&localViewtab, entryNum);
 
 
-    varNum = *(*data)++;
-    var[varNum] = localViewtab.priority;
+	varNum = *(*data)++;
+	var[varNum] = localViewtab.priority;
 
-    setViewTab(&localViewtab, entryNum);
+	setViewTab(&localViewtab, entryNum);
 }
 
 void b2Stop_update(byte** data) // 1, 0x00 
 {
-    int entryNum;
-    ViewTable localViewtab;
+	int entryNum;
+	ViewTable localViewtab;
 
-    entryNum = *(*data)++;
-    getViewTab(&localViewtab, entryNum);
+	entryNum = *(*data)++;
+	getViewTab(&localViewtab, entryNum);
 
-    localViewtab.flags &= ~UPDATE;
+	localViewtab.flags &= ~UPDATE;
 
-    setViewTab(&localViewtab, entryNum);
+	setViewTab(&localViewtab, entryNum);
 }
 
 void b2Start_update(byte** data) // 1, 0x00 
 {
-    int entryNum;
-    ViewTable localViewtab;
+	int entryNum;
+	ViewTable localViewtab;
 
-    entryNum = *(*data)++;
-    getViewTab(&localViewtab, entryNum);
+	entryNum = *(*data)++;
+	getViewTab(&localViewtab, entryNum);
 
 
-    localViewtab.flags |= UPDATE;
+	localViewtab.flags |= UPDATE;
 
-    setViewTab(&localViewtab, entryNum);
+	setViewTab(&localViewtab, entryNum);
 }
 
 void b2Force_update(byte** data) // 1, 0x00 
 {
-    int entryNum;
+	int entryNum;
 
-    entryNum = *(*data)++;
-    /* Do immediate update here. Call update(entryNum) */
-    
-    trampoline_1Int(&bAUpdateObj, entryNum, VIEW_CODE_BANK_1);
+	entryNum = *(*data)++;
+	/* Do immediate update here. Call update(entryNum) */
+
+	trampoline_1Int(&bAUpdateObj, entryNum, VIEW_CODE_BANK_1);
 }
 
 void b2Ignore_horizon(byte** data) // 1, 0x00 
 {
-    int entryNum;
-    ViewTable localViewtab;
-    
-    entryNum = *(*data)++;
-    getViewTab(&localViewtab, entryNum);
+	int entryNum;
+	ViewTable localViewtab;
+
+	entryNum = *(*data)++;
+	getViewTab(&localViewtab, entryNum);
 
 
-    localViewtab.flags |= IGNOREHORIZON;
+	localViewtab.flags |= IGNOREHORIZON;
 
-    setViewTab(&localViewtab, entryNum);
+	setViewTab(&localViewtab, entryNum);
 }
 
 void b2Observe_horizon(byte** data) // 1, 0x00 
 {
-    int entryNum;
-    ViewTable localViewtab;
-    
-    entryNum = *(*data)++;
-    getViewTab(&localViewtab, entryNum);
+	int entryNum;
+	ViewTable localViewtab;
 
-    localViewtab.flags &= ~IGNOREHORIZON;
+	entryNum = *(*data)++;
+	getViewTab(&localViewtab, entryNum);
 
-    setViewTab(&localViewtab, entryNum);
+	localViewtab.flags &= ~IGNOREHORIZON;
+
+	setViewTab(&localViewtab, entryNum);
 }
 
 void b2Set_horizon(byte** data) // 1, 0x00 
 {
-    horizon = *(*data)++;
+	horizon = *(*data)++;
 }
 
 void b2Object_on_water(byte** data) // 1, 0x00 
 {
-    int entryNum;
-    ViewTable localViewtab;
+	int entryNum;
+	ViewTable localViewtab;
 
-    entryNum = *(*data)++;
-    getViewTab(&localViewtab, entryNum);
+	entryNum = *(*data)++;
+	getViewTab(&localViewtab, entryNum);
 
-    localViewtab.flags |= ONWATER;
+	localViewtab.flags |= ONWATER;
 
-    setViewTab(&localViewtab, entryNum);
+	setViewTab(&localViewtab, entryNum);
 }
 
 void b2Object_on_land(byte** data) // 1, 0x00 
 {
-    int entryNum;
-    ViewTable localViewtab;
-    
-    entryNum = *(*data)++;
-    getViewTab(&localViewtab, entryNum);
-    
-    localViewtab.flags |= ONLAND;
+	int entryNum;
+	ViewTable localViewtab;
 
-    setViewTab(&localViewtab, entryNum);
+	entryNum = *(*data)++;
+	getViewTab(&localViewtab, entryNum);
+
+	localViewtab.flags |= ONLAND;
+
+	setViewTab(&localViewtab, entryNum);
 }
 
 void b2Object_on_anything(byte** data) // 1, 0x00 
 {
-    int entryNum;
-    ViewTable localViewtab;
-    
-    entryNum = *(*data)++;
-    getViewTab(&localViewtab, entryNum);
+	int entryNum;
+	ViewTable localViewtab;
 
-    localViewtab.flags &= ~(ONWATER | ONLAND);
+	entryNum = *(*data)++;
+	getViewTab(&localViewtab, entryNum);
 
-    setViewTab(&localViewtab, entryNum);
+	localViewtab.flags &= ~(ONWATER | ONLAND);
+
+	setViewTab(&localViewtab, entryNum);
 }
 
 void b2Ignore_objs(byte** data) // 1, 0x00 
 {
-    int entryNum;
-    ViewTable localViewtab;
+	int entryNum;
+	ViewTable localViewtab;
 
-    entryNum = *(*data)++;
-    getViewTab(&localViewtab, entryNum);
+	entryNum = *(*data)++;
+	getViewTab(&localViewtab, entryNum);
 
-    localViewtab.flags |= IGNOREOBJECTS;
+	localViewtab.flags |= IGNOREOBJECTS;
 
-    setViewTab(&localViewtab, entryNum);
+	setViewTab(&localViewtab, entryNum);
 }
 
 void b2Observe_objs(byte** data) // 1, 0x00 
 {
-    int entryNum;
-    ViewTable localViewtab;
+	int entryNum;
+	ViewTable localViewtab;
 
-    entryNum = *(*data)++;
-    getViewTab(&localViewtab, entryNum);
+	entryNum = *(*data)++;
+	getViewTab(&localViewtab, entryNum);
 
-    localViewtab.flags &= ~IGNOREOBJECTS;
+	localViewtab.flags &= ~IGNOREOBJECTS;
 
-    setViewTab(&localViewtab, entryNum);
+	setViewTab(&localViewtab, entryNum);
 }
 
 
 void b2Distance(byte** data) // 3, 0x20 
 {
-    int o1, o2, varNum, x1, y1, x2, y2;
-    ViewTable localViewtab1, localViewtab2;
+	int o1, o2, varNum, x1, y1, x2, y2;
+	ViewTable localViewtab1, localViewtab2;
 
-    o1 = *(*data)++;
-    o2 = *(*data)++;
+	o1 = *(*data)++;
+	o2 = *(*data)++;
 
-    getViewTab(&localViewtab1, o1);
-    getViewTab(&localViewtab2, o2);
+	getViewTab(&localViewtab1, o1);
+	getViewTab(&localViewtab2, o2);
 
-    varNum = *(*data)++;
-    /* Check that both objects are on screen here. If they aren't
-    ** then 255 should be returned. */
-    if (!((localViewtab1.flags & DRAWN) && (localViewtab2.flags & DRAWN))) {
-        var[varNum] = 255;
-        return;
-    }
-    x1 = localViewtab1.xPos;
-    y1 = localViewtab1.yPos;
-    x2 = localViewtab2.xPos;
-    y2 = localViewtab2.yPos;
-    var[varNum] = abs(x1 - x2) + abs(y1 - y2);
+	varNum = *(*data)++;
+	/* Check that both objects are on screen here. If they aren't
+	** then 255 should be returned. */
+	if (!((localViewtab1.flags & DRAWN) && (localViewtab2.flags & DRAWN))) {
+		var[varNum] = 255;
+		return;
+	}
+	x1 = localViewtab1.xPos;
+	y1 = localViewtab1.yPos;
+	x2 = localViewtab2.xPos;
+	y2 = localViewtab2.yPos;
+	var[varNum] = abs(x1 - x2) + abs(y1 - y2);
 }
 
 void b2Stop_cycling(byte** data) // 1, 0x00 
 {
-    int entryNum;
-    ViewTable localViewtab;
+	int entryNum;
+	ViewTable localViewtab;
 
-    entryNum = *(*data)++;
-    getViewTab(&localViewtab, entryNum);
+	entryNum = *(*data)++;
+	getViewTab(&localViewtab, entryNum);
 
-    localViewtab.flags &= ~CYCLING;
+	localViewtab.flags &= ~CYCLING;
 
-    setViewTab(&localViewtab, entryNum);
+	setViewTab(&localViewtab, entryNum);
 }
 
 void b2Start_cycling(byte** data) // 1, 0x00 
 {
-    int entryNum;
-    ViewTable localViewtab;
+	int entryNum;
+	ViewTable localViewtab;
 
-    entryNum = *(*data)++;
-    getViewTab(&localViewtab, entryNum);
+	entryNum = *(*data)++;
+	getViewTab(&localViewtab, entryNum);
 
-    localViewtab.flags |= CYCLING;
+	localViewtab.flags |= CYCLING;
 
-    setViewTab(&localViewtab, entryNum);
+	setViewTab(&localViewtab, entryNum);
 }
 
 void b2Normal_cycle(byte** data) // 1, 0x00 
 {
-    int entryNum;
-    ViewTable localViewtab;
+	int entryNum;
+	ViewTable localViewtab;
 
-    entryNum = *(*data)++;
-    getViewTab(&localViewtab, entryNum);
-    
-    localViewtab.cycleStatus = 0;
+	entryNum = *(*data)++;
+	getViewTab(&localViewtab, entryNum);
 
-    setViewTab(&localViewtab, entryNum);
+	localViewtab.cycleStatus = 0;
+
+	setViewTab(&localViewtab, entryNum);
 }
 
 void b2End_of_loop(byte** data) // 2, 0x00 
 {
-    int entryNum;
-    ViewTable localViewtab;
+	int entryNum;
+	ViewTable localViewtab;
 
-    entryNum = *(*data)++;
-    getViewTab(&localViewtab, entryNum);
+	entryNum = *(*data)++;
+	getViewTab(&localViewtab, entryNum);
 
-    localViewtab.param1 = *(*data)++;
-    localViewtab.cycleStatus = 1;
-    localViewtab.flags |= (UPDATE | CYCLING);
+	localViewtab.param1 = *(*data)++;
+	localViewtab.cycleStatus = 1;
+	localViewtab.flags |= (UPDATE | CYCLING);
 
-    setViewTab(&localViewtab, entryNum);
+	setViewTab(&localViewtab, entryNum);
 }
 
 void b2Reverse_cycle(byte** data) // 1, 0x00
 {
-    int entryNum;
-    ViewTable localViewtab;
+	int entryNum;
+	ViewTable localViewtab;
 
-    entryNum = *(*data)++;
-    getViewTab(&localViewtab, entryNum);
-    /* Store the other parameters here */
+	entryNum = *(*data)++;
+	getViewTab(&localViewtab, entryNum);
+	/* Store the other parameters here */
 
-    localViewtab.cycleStatus = 3;
+	localViewtab.cycleStatus = 3;
 
-    setViewTab(&localViewtab, entryNum);
+	setViewTab(&localViewtab, entryNum);
 }
 
 void b2Reverse_loop(byte** data) // 2, 0x00 
 {
-    int entryNum;
-    ViewTable localViewtab;
+	int entryNum;
+	ViewTable localViewtab;
 
-    entryNum = *(*data)++;
-    getViewTab(&localViewtab, entryNum);
+	entryNum = *(*data)++;
+	getViewTab(&localViewtab, entryNum);
 
-    localViewtab.param1 = *(*data)++;
-    localViewtab.cycleStatus = 2;
-    localViewtab.flags |= (UPDATE | CYCLING);
+	localViewtab.param1 = *(*data)++;
+	localViewtab.cycleStatus = 2;
+	localViewtab.flags |= (UPDATE | CYCLING);
 
-    setViewTab(&localViewtab, entryNum);
+	setViewTab(&localViewtab, entryNum);
 }
 
 void b2Cycle_time(byte** data) // 2, 0x40 
 {
-    int entryNum;
-    ViewTable localViewtab;
+	int entryNum;
+	ViewTable localViewtab;
 
-    entryNum = *(*data)++;
-    getViewTab(&localViewtab, entryNum);
+	entryNum = *(*data)++;
+	getViewTab(&localViewtab, entryNum);
 
-    localViewtab.cycleTime = var[*(*data)++];
-    setViewTab(&localViewtab, entryNum);
+	localViewtab.cycleTime = var[*(*data)++];
+	setViewTab(&localViewtab, entryNum);
 }
 
 void b2Stop_motion(byte** data) // 1, 0x00 
 {
-    int entryNum;
-    ViewTable localViewtab;
+	int entryNum;
+	ViewTable localViewtab;
 
-    entryNum = *(*data)++;
-    getViewTab(&localViewtab, entryNum);
+	entryNum = *(*data)++;
+	getViewTab(&localViewtab, entryNum);
 
-    localViewtab.flags &= ~MOTION;
-    localViewtab.direction = 0;
-    localViewtab.motion = 0;
+	localViewtab.flags &= ~MOTION;
+	localViewtab.direction = 0;
+	localViewtab.motion = 0;
 
-    setViewTab(&localViewtab, entryNum);
+	setViewTab(&localViewtab, entryNum);
 }
 
 void b2Start_motion(byte** data) // 1, 0x00 
 {
-    int entryNum;
-    ViewTable localViewtab;
+	int entryNum;
+	ViewTable localViewtab;
 
-    entryNum = *(*data)++;
-    getViewTab(&localViewtab, entryNum);
+	entryNum = *(*data)++;
+	getViewTab(&localViewtab, entryNum);
 
-    localViewtab.flags |= MOTION;
-    localViewtab.motion = 0;        /* Not sure about this */
+	localViewtab.flags |= MOTION;
+	localViewtab.motion = 0;        /* Not sure about this */
 
-    setViewTab(&localViewtab, entryNum);
+	setViewTab(&localViewtab, entryNum);
 }
 
 void b2Step_size(byte** data) // 2, 0x40 
 {
-    int entryNum;
-    ViewTable localViewtab;
+	int entryNum;
+	ViewTable localViewtab;
 
-    entryNum = *(*data)++;
-    getViewTab(&localViewtab, entryNum);
+	entryNum = *(*data)++;
+	getViewTab(&localViewtab, entryNum);
 
-    localViewtab.stepSize = var[*(*data)++];
+	localViewtab.stepSize = var[*(*data)++];
 
-    setViewTab(&localViewtab, entryNum);
+	setViewTab(&localViewtab, entryNum);
 }
 
 void b2Step_time(byte** data) // 2, 0x40 
 {
-    int entryNum;
-    ViewTable localViewtab;
+	int entryNum;
+	ViewTable localViewtab;
 
-    entryNum = *(*data)++;
-    getViewTab(&localViewtab, entryNum);
+	entryNum = *(*data)++;
+	getViewTab(&localViewtab, entryNum);
 
-    localViewtab.stepTime = var[*(*data)++];
+	localViewtab.stepTime = var[*(*data)++];
 
-    setViewTab(&localViewtab, entryNum);
+	setViewTab(&localViewtab, entryNum);
 }
 
 void b2Move_obj(byte** data) // 5, 0x00 
 {
-    int entryNum;
-    byte stepVal;
-    ViewTable localViewtab;
+	int entryNum;
+	byte stepVal;
+	ViewTable localViewtab;
 
-    entryNum = *(*data)++;
-    getViewTab(&localViewtab, entryNum);
+	entryNum = *(*data)++;
+	getViewTab(&localViewtab, entryNum);
 
-    localViewtab.param1 = *(*data)++;
-    localViewtab.param2 = *(*data)++;
-    localViewtab.param3 = localViewtab.stepSize;  /* Save stepsize */
-    stepVal = *(*data)++;
-    if (stepVal > 0) localViewtab.stepSize = stepVal;
-    localViewtab.param4 = *(*data)++;
-    localViewtab.motion = 3;
-    localViewtab.flags |= MOTION;
+	localViewtab.param1 = *(*data)++;
+	localViewtab.param2 = *(*data)++;
+	localViewtab.param3 = localViewtab.stepSize;  /* Save stepsize */
+	stepVal = *(*data)++;
+	if (stepVal > 0) localViewtab.stepSize = stepVal;
+	localViewtab.param4 = *(*data)++;
+	localViewtab.motion = 3;
+	localViewtab.flags |= MOTION;
 
-    setViewTab(&localViewtab, entryNum);
+	setViewTab(&localViewtab, entryNum);
 }
 
 void b2Move_obj_v(byte** data) // 5, 0x70 
 {
-    int entryNum;
-    byte stepVal;
-    ViewTable localViewtab;
+	int entryNum;
+	byte stepVal;
+	ViewTable localViewtab;
 
-    entryNum = *(*data)++;
-    getViewTab(&localViewtab, entryNum);
+	entryNum = *(*data)++;
+	getViewTab(&localViewtab, entryNum);
 
-    localViewtab.param1 = var[*(*data)++];
-    localViewtab.param2 = var[*(*data)++];
-    localViewtab.param3 = localViewtab.stepSize;  /* Save stepsize */
-    stepVal = var[*(*data)++];
-    if (stepVal > 0) localViewtab.stepSize = stepVal;
-    localViewtab.param4 = *(*data)++;
-    localViewtab.motion = 3;
-    localViewtab.flags |= MOTION;
+	localViewtab.param1 = var[*(*data)++];
+	localViewtab.param2 = var[*(*data)++];
+	localViewtab.param3 = localViewtab.stepSize;  /* Save stepsize */
+	stepVal = var[*(*data)++];
+	if (stepVal > 0) localViewtab.stepSize = stepVal;
+	localViewtab.param4 = *(*data)++;
+	localViewtab.motion = 3;
+	localViewtab.flags |= MOTION;
 
-    setViewTab(&localViewtab, entryNum);
+	setViewTab(&localViewtab, entryNum);
 }
 
 void b2Follow_ego(byte** data) // 3, 0x00 
 {
-    int entryNum, stepVal, flagNum;
-    ViewTable localViewtab;
+	int entryNum, stepVal, flagNum;
+	ViewTable localViewtab;
 
-    entryNum = *(*data)++;
-    getViewTab(&localViewtab, entryNum);
+	entryNum = *(*data)++;
+	getViewTab(&localViewtab, entryNum);
 
-    stepVal = *(*data)++;
-    flagNum = *(*data)++;
-    localViewtab.param1 = localViewtab.stepSize;
-    /* Might need to put 'if (stepVal != 0)' */
-    //localViewtab.stepSize = stepVal;
-    localViewtab.param2 = flagNum;
-    localViewtab.motion = 2;
-    localViewtab.flags |= MOTION;
+	stepVal = *(*data)++;
+	flagNum = *(*data)++;
+	localViewtab.param1 = localViewtab.stepSize;
+	/* Might need to put 'if (stepVal != 0)' */
+	//localViewtab.stepSize = stepVal;
+	localViewtab.param2 = flagNum;
+	localViewtab.motion = 2;
+	localViewtab.flags |= MOTION;
 
-    setViewTab(&localViewtab, entryNum);
+	setViewTab(&localViewtab, entryNum);
 }
 
 void b2Wander(byte** data) // 1, 0x00 
 {
-    int entryNum;
-    ViewTable localViewtab;
+	int entryNum;
+	ViewTable localViewtab;
 
-    entryNum = *(*data)++;
-    getViewTab(&localViewtab, entryNum);
+	entryNum = *(*data)++;
+	getViewTab(&localViewtab, entryNum);
 
 
-    localViewtab.motion = 1;
-    localViewtab.flags |= MOTION;
+	localViewtab.motion = 1;
+	localViewtab.flags |= MOTION;
 
-    setViewTab(&localViewtab, entryNum);
+	setViewTab(&localViewtab, entryNum);
 }
 
 void b2Normal_motion(byte** data) // 1, 0x00 
 {
-    int entryNum;
-    ViewTable localViewtab;
+	int entryNum;
+	ViewTable localViewtab;
 
-    entryNum = *(*data)++;
-    getViewTab(&localViewtab, entryNum);
+	entryNum = *(*data)++;
+	getViewTab(&localViewtab, entryNum);
 
-    localViewtab.motion = 0;
-    localViewtab.flags |= MOTION;
+	localViewtab.motion = 0;
+	localViewtab.flags |= MOTION;
 
-    setViewTab(&localViewtab, entryNum);    
+	setViewTab(&localViewtab, entryNum);
 }
 
 void b2Set_dir(byte** data) // 2, 0x40 
 {
-    int entryNum;
-    ViewTable localViewtab;
+	int entryNum;
+	ViewTable localViewtab;
 
-    entryNum = *(*data)++;
-    getViewTab(&localViewtab, entryNum);
+	entryNum = *(*data)++;
+	getViewTab(&localViewtab, entryNum);
 
-    localViewtab.direction = var[*(*data)++];
+	localViewtab.direction = var[*(*data)++];
 
-    setViewTab(&localViewtab, entryNum);
+	setViewTab(&localViewtab, entryNum);
 }
 
 void b2Get_dir(byte** data) // 2, 0x40 
 {
-    int entryNum;
-    ViewTable localViewtab;
+	int entryNum;
+	ViewTable localViewtab;
 
-    entryNum = *(*data)++;
-    getViewTab(&localViewtab, entryNum);
+	entryNum = *(*data)++;
+	getViewTab(&localViewtab, entryNum);
 
-    var[*(*data)++] = localViewtab.direction;
+	var[*(*data)++] = localViewtab.direction;
 
-    setViewTab(&localViewtab, entryNum);
+	setViewTab(&localViewtab, entryNum);
 }
 
 void b2Ignore_blocks(byte** data) // 1, 0x00 
 {
-    int entryNum;
-    ViewTable localViewtab;
+	int entryNum;
+	ViewTable localViewtab;
 
-    entryNum = *(*data)++;
-    getViewTab(&localViewtab, entryNum);
+	entryNum = *(*data)++;
+	getViewTab(&localViewtab, entryNum);
 
-    localViewtab.flags |= IGNOREBLOCKS;
+	localViewtab.flags |= IGNOREBLOCKS;
 
-    setViewTab(&localViewtab, entryNum);
+	setViewTab(&localViewtab, entryNum);
 }
 
 void b2Observe_blocks(byte** data) // 1, 0x00 
 {
-    int entryNum;
-    ViewTable localViewtab;
+	int entryNum;
+	ViewTable localViewtab;
 
-    entryNum = *(*data)++;
-    getViewTab(&localViewtab, entryNum);
+	entryNum = *(*data)++;
+	getViewTab(&localViewtab, entryNum);
 
-    localViewtab.flags &= ~IGNOREBLOCKS;
+	localViewtab.flags &= ~IGNOREBLOCKS;
 
-    setViewTab(&localViewtab, entryNum);
+	setViewTab(&localViewtab, entryNum);
 }
 
 void b2Block(byte** data) // 4, 0x00 
 {
-    /* Is this used anywhere? - Not implemented at this stage */
-    *data += 4;
+	/* Is this used anywhere? - Not implemented at this stage */
+	*data += 4;
 }
 
 void b2Unblock(byte** data) // 0, 0x00 
@@ -1613,79 +1617,79 @@ void b2Unblock(byte** data) // 0, 0x00
 
 void b3Get(byte** data) // 1, 00 
 {
-    objects[*(*data)++].roomNum = 255;
+	objects[*(*data)++].roomNum = 255;
 }
 
 void b3Get_v(byte** data) // 1, 0x80 
 {
-    objects[var[*(*data)++]].roomNum = 255;
+	objects[var[*(*data)++]].roomNum = 255;
 }
 
 void b3Drop(byte** data) // 1, 0x00 
 {
-    objects[*(*data)++].roomNum = 0;
+	objects[*(*data)++].roomNum = 0;
 }
 
 
 void b3Put(byte** data) // 2, 0x00 
 {
-    int objNum, room;
+	int objNum, room;
 
-    objNum = *(*data)++;
-    room = *(*data)++;
-    objects[objNum].roomNum = room;
+	objNum = *(*data)++;
+	room = *(*data)++;
+	objects[objNum].roomNum = room;
 }
 
 void b3Put_v(byte** data) // 2, 0x40 
 {
-    int objNum, room;
+	int objNum, room;
 
-    objNum = *(*data)++;
-    room = var[*(*data)++];
-    objects[objNum].roomNum = room;
+	objNum = *(*data)++;
+	room = var[*(*data)++];
+	objects[objNum].roomNum = room;
 }
 
 void b3Get_room_v(byte** data) // 2, 0xC0 
 {
-    int objNum, room;
+	int objNum, room;
 
-    objNum = var[*(*data)++];
-    var[*(*data)++] = objects[objNum].roomNum;
+	objNum = var[*(*data)++];
+	var[*(*data)++] = objects[objNum].roomNum;
 }
 
 void b3Load_sound(byte** data) // 1, 0x00 
 {
-    int soundNum;
+	int soundNum;
 
-    soundNum = *(*data)++;
-    loadSoundFile(soundNum);
+	soundNum = *(*data)++;
+	loadSoundFile(soundNum);
 }
 
 void b3Play_sound(byte** data) // 2, 00  sound() renamed to avoid clash
 {
-    int soundNum;
+	int soundNum;
 
-    soundNum = *(*data)++;
-    soundEndFlag = *(*data)++;
-    /* playSound(soundNum); */
-    flag[soundEndFlag] = TRUE;
+	soundNum = *(*data)++;
+	soundEndFlag = *(*data)++;
+	/* playSound(soundNum); */
+	flag[soundEndFlag] = TRUE;
 }
 
 void b3Stop_sound(byte** data) // 0, 0x00 
 {
-    checkForEnd = FALSE;
-    stop_midi();
+	checkForEnd = FALSE;
+	stop_midi();
 }
 
 boolean b3CharIsIn(char testChar, char* testString)
 {
-    int i;
+	int i;
 
-    for (i = 0; i < strlen(testString); i++) {
-        if (testString[i] == testChar) return TRUE;
-    }
+	for (i = 0; i < strlen(testString); i++) {
+		if (testString[i] == testChar) return TRUE;
+	}
 
-    return FALSE;
+	return FALSE;
 }
 
 void b3ProcessString(char* stringPointer, byte stringBank, char* outputString)
@@ -1693,486 +1697,486 @@ void b3ProcessString(char* stringPointer, byte stringBank, char* outputString)
 #define TEMP_SIZE 80
 #define NUM_STRING_SIZE 80
 #define INPUT_BUFFER_SIZE 10
-    int i, j, strPos = 0, tempNum, widthNum, count, sprintfLength;
-    char* temp, messagePointer;
-    byte tempBank, logicFileBank;
-    char inputString[INPUT_BUFFER_SIZE];
-    LOGICFile logicFile;
+	int i, j, strPos = 0, tempNum, widthNum, count, sprintfLength;
+	char* temp, messagePointer;
+	byte tempBank, logicFileBank;
+	char inputString[INPUT_BUFFER_SIZE];
+	LOGICFile logicFile;
 
-    outputString[0] = 0;
+	outputString[0] = 0;
 
-    for (i = 0, j = 0; i == 0 || inputString[i - 1] != '\0'; i = (i + 1) % INPUT_BUFFER_SIZE, j++) {
-        if (i == 0)
-        {
-            copyStringFromBanked(stringPointer, inputString, j, INPUT_BUFFER_SIZE, stringBank, FALSE);
-        }
+	for (i = 0, j = 0; i == 0 || inputString[i - 1] != '\0'; i = (i + 1) % INPUT_BUFFER_SIZE, j++) {
+		if (i == 0)
+		{
+			copyStringFromBanked(stringPointer, inputString, j, INPUT_BUFFER_SIZE, stringBank, FALSE);
+		}
 
-        if (inputString[i] == '%') {
-            i++;
-            switch (inputString[i++]) {
-                /* %% isn't actually supported */
-                //case '%': sprintf(outputString, "%s%%", outputString); break;
-            case 'v':
-                tempNum = getNum(inputString, &i, stringBank);
-                if (inputString[i + 1] == '|') {
-                    i += 2;
-                    temp = (char*)banked_alloc(NUM_STRING_SIZE, &tempBank);
-                    widthNum = getNum(inputString, &i, stringBank);
-                    sprintfLength = sprintfBanked(temp, tempBank, "%d", var[tempNum]);
-                    for (count = sprintfLength; count < widthNum; count++) {
-                        sprintf(outputString, "%s0", outputString);
-                    }
-                    sprintf(outputString, "%s%d", outputString, var[tempNum]);
-                    banked_dealloc((byte*)temp, &tempBank);
-                }
-                else
-                    sprintf(outputString, "%s%d", outputString, var[tempNum]);
-                break;
-            case 'm':
-                tempNum = getNum(inputString, &i, stringBank);
-                getLogicFile(&logicFile, currentLog);
-                messagePointer = getMessagePointer(currentLog, tempNum - 1);
-                sprintfBanked(outputString, logicFile.codeBank, "%s%s", outputString,
-                    logics[currentLog].data->messages[tempNum - 1]);
-                break;
-            case 'g':
-                tempNum = getNum(inputString, &i, stringBank);
-                getLogicFile(&logicFile, currentLog);
-                messagePointer = getMessagePointer(0, tempNum - 1);
-                sprintfBanked(outputString, "%s%s", outputString, messagePointer);
-                break;
-            case 'w':
-                tempNum = getNum(inputString, &i, stringBank);
-                sprintf(outputString, "%s%s", outputString, wordText[tempNum]);
-                break;
-            case 's':
-                tempNum = getNum(inputString, &i, stringBank);
-                sprintf(outputString, "%s%s", outputString, string[tempNum]);
-                break;
-            default: /* ignore the second character */
-                break;
-            }
-        }
-        else {
-            sprintf(outputString, "%s%c", outputString, inputString[i]);
-        }
-    }
+		if (inputString[i] == '%') {
+			i++;
+			switch (inputString[i++]) {
+				/* %% isn't actually supported */
+				//case '%': sprintf(outputString, "%s%%", outputString); break;
+			case 'v':
+				tempNum = getNum(inputString, &i, stringBank);
+				if (inputString[i + 1] == '|') {
+					i += 2;
+					temp = (char*)banked_alloc(NUM_STRING_SIZE, &tempBank);
+					widthNum = getNum(inputString, &i, stringBank);
+					sprintfLength = sprintfBanked(temp, tempBank, "%d", var[tempNum]);
+					for (count = sprintfLength; count < widthNum; count++) {
+						sprintf(outputString, "%s0", outputString);
+					}
+					sprintf(outputString, "%s%d", outputString, var[tempNum]);
+					banked_dealloc((byte*)temp, &tempBank);
+				}
+				else
+					sprintf(outputString, "%s%d", outputString, var[tempNum]);
+				break;
+			case 'm':
+				tempNum = getNum(inputString, &i, stringBank);
+				getLogicFile(&logicFile, currentLog);
+				messagePointer = getMessagePointer(currentLog, tempNum - 1);
+				sprintfBanked(outputString, logicFile.codeBank, "%s%s", outputString,
+					logics[currentLog].data->messages[tempNum - 1]);
+				break;
+			case 'g':
+				tempNum = getNum(inputString, &i, stringBank);
+				getLogicFile(&logicFile, currentLog);
+				messagePointer = getMessagePointer(0, tempNum - 1);
+				sprintfBanked(outputString, "%s%s", outputString, messagePointer);
+				break;
+			case 'w':
+				tempNum = getNum(inputString, &i, stringBank);
+				sprintf(outputString, "%s%s", outputString, wordText[tempNum]);
+				break;
+			case 's':
+				tempNum = getNum(inputString, &i, stringBank);
+				sprintf(outputString, "%s%s", outputString, string[tempNum]);
+				break;
+			default: /* ignore the second character */
+				break;
+			}
+		}
+		else {
+			sprintf(outputString, "%s%c", outputString, inputString[i]);
+		}
+	}
 
-    /* Recursive part to make sure all % formatting codes are dealt with */
-    if (b3CharIsIn('%', outputString)) {
-        temp = (char*)banked_alloc(TEMP_SIZE, &tempBank);
-        strcpyBanked(temp, outputString, tempBank);
-        b3ProcessString(temp, tempBank, outputString);
+	/* Recursive part to make sure all % formatting codes are dealt with */
+	if (b3CharIsIn('%', outputString)) {
+		temp = (char*)banked_alloc(TEMP_SIZE, &tempBank);
+		strcpyBanked(temp, outputString, tempBank);
+		b3ProcessString(temp, tempBank, outputString);
 
-        banked_dealloc((byte*)temp, tempBank);
-    }
+		banked_dealloc((byte*)temp, tempBank);
+	}
 }
 
 void b3Print(byte** data) // 1, 00 
 {
-    char* tempString = (char*)&GOLDEN_RAM[LOCAL_WORK_AREA_START];
-    BITMAP* temp;
+	char* tempString = (char*)&GOLDEN_RAM[LOCAL_WORK_AREA_START];
+	BITMAP* temp;
 
-    char* messagePointer = getMessagePointer(currentLog, (*(*data)++) - 1);
+	char* messagePointer = getMessagePointer(currentLog, (*(*data)++) - 1);
 
-    show_mouse(NULL);
-    temp = create_bitmap(640, 336);
-    blit(agi_screen, temp, 0, 0, 0, 0, 640, 336);
-    show_mouse(screen);
-    while (key[KEY_ENTER] || key[KEY_ESC]) { /* Wait */ }
-    b3ProcessString(messagePointer, 0, tempString);
-    printInBoxBig(tempString, -1, -1, 30);
-    while (!key[KEY_ENTER] && !key[KEY_ESC]) { /* Wait */ }
-    while (key[KEY_ENTER] || key[KEY_ESC]) { clear_keybuf(); }
-    show_mouse(NULL);
-    blit(temp, agi_screen, 0, 0, 0, 0, 640, 336);
-    show_mouse(screen);
-    destroy_bitmap(temp);
+	show_mouse(NULL);
+	temp = create_bitmap(640, 336);
+	blit(agi_screen, temp, 0, 0, 0, 0, 640, 336);
+	show_mouse(screen);
+	while (key[KEY_ENTER] || key[KEY_ESC]) { /* Wait */ }
+	b3ProcessString(messagePointer, 0, tempString);
+	printInBoxBig(tempString, -1, -1, 30);
+	while (!key[KEY_ENTER] && !key[KEY_ESC]) { /* Wait */ }
+	while (key[KEY_ENTER] || key[KEY_ESC]) { clear_keybuf(); }
+	show_mouse(NULL);
+	blit(temp, agi_screen, 0, 0, 0, 0, 640, 336);
+	show_mouse(screen);
+	destroy_bitmap(temp);
 }
 
 void b3Print_v(byte** data) // 1, 0x80 
 {
-    char* tempString = (char*)malloc(256);
-    BITMAP* temp;
+	char* tempString = (char*)malloc(256);
+	BITMAP* temp;
 
-    char* messagePointer = getMessagePointer(currentLog, (var[*(*data)++]) - 1);
+	char* messagePointer = getMessagePointer(currentLog, (var[*(*data)++]) - 1);
 
-    show_mouse(NULL);
-    temp = create_bitmap(640, 336);
-    blit(agi_screen, temp, 0, 0, 0, 0, 640, 336);
-    while (key[KEY_ENTER] || key[KEY_ESC]) { /* Wait */ }
-    b3ProcessString(messagePointer, 0, tempString);
-    //printf("Warning Print In Bigbox Not Implemented Implement This");
-    //printInBoxBig2(tempString, -1, -1, 30);
-    while (!key[KEY_ENTER] && !key[KEY_ESC]) { /* Wait */ }
-    while (key[KEY_ENTER] || key[KEY_ESC]) { clear_keybuf(); }
-    blit(temp, agi_screen, 0, 0, 0, 0, 640, 336);
-    show_mouse(screen);
-    destroy_bitmap(temp);
+	show_mouse(NULL);
+	temp = create_bitmap(640, 336);
+	blit(agi_screen, temp, 0, 0, 0, 0, 640, 336);
+	while (key[KEY_ENTER] || key[KEY_ESC]) { /* Wait */ }
+	b3ProcessString(messagePointer, 0, tempString);
+	//printf("Warning Print In Bigbox Not Implemented Implement This");
+	//printInBoxBig2(tempString, -1, -1, 30);
+	while (!key[KEY_ENTER] && !key[KEY_ESC]) { /* Wait */ }
+	while (key[KEY_ENTER] || key[KEY_ESC]) { clear_keybuf(); }
+	blit(temp, agi_screen, 0, 0, 0, 0, 640, 336);
+	show_mouse(screen);
+	destroy_bitmap(temp);
 
-    free(tempString);
+	free(tempString);
 }
 
 void b3Display(byte** data) // 3, 0x00 
 {
-    int row, col, messNum;
-    char* tempString = malloc(256);
-    char* messagePointer;
+	int row, col, messNum;
+	char* tempString = malloc(256);
+	char* messagePointer;
 
-    col = *(*data)++;
-    row = *(*data)++;
-    messNum = *(*data)++;
+	col = *(*data)++;
+	row = *(*data)++;
+	messNum = *(*data)++;
 
-    messagePointer = getMessagePointer(currentLog, messNum - 1);
+	messagePointer = getMessagePointer(currentLog, messNum - 1);
 
-    b3ProcessString(messagePointer, 0, tempString);
-    drawBigString(screen, tempString, row * 16, 20 + (col * 16), agi_fg, agi_bg);
-    /*lprintf("info: display() %s, fg: %d bg: %d row: %d col: %d",
-       tempString, agi_fg, agi_bg, row, col);*/
+	b3ProcessString(messagePointer, 0, tempString);
+	drawBigString(screen, tempString, row * 16, 20 + (col * 16), agi_fg, agi_bg);
+	/*lprintf("info: display() %s, fg: %d bg: %d row: %d col: %d",
+	   tempString, agi_fg, agi_bg, row, col);*/
 
-    free(tempString);
+	free(tempString);
 }
 
 void b3Display_v(byte** data) // 3, 0xE0 
 {
-    int row, col, messNum;
-    char* tempString = (char*)malloc(256);
-    char* messagePointer;
+	int row, col, messNum;
+	char* tempString = (char*)malloc(256);
+	char* messagePointer;
 
-    col = var[*(*data)++];
-    row = var[*(*data)++];
-    messNum = var[*(*data)++];
-    //drawString(picture, logics[currentLog].data->messages[messNum-1],
-    //   row*8, col*8, agi_fg, agi_bg);
+	col = var[*(*data)++];
+	row = var[*(*data)++];
+	messNum = var[*(*data)++];
+	//drawString(picture, logics[currentLog].data->messages[messNum-1],
+	//   row*8, col*8, agi_fg, agi_bg);
 
-    messagePointer = getMessagePointer(currentLog, messNum - 1);
-    b3ProcessString(messagePointer, 0, tempString);
-    drawBigString(screen, tempString, row * 16, 20 + (col * 16), agi_fg, agi_bg);
-    /*lprintf("info: display.v() %s, foreground: %d background: %d",
-       tempString, agi_fg, agi_bg);*/
+	messagePointer = getMessagePointer(currentLog, messNum - 1);
+	b3ProcessString(messagePointer, 0, tempString);
+	drawBigString(screen, tempString, row * 16, 20 + (col * 16), agi_fg, agi_bg);
+	/*lprintf("info: display.v() %s, foreground: %d background: %d",
+	   tempString, agi_fg, agi_bg);*/
 
-    free(tempString);
+	free(tempString);
 }
 
 void b3Clear_lines(byte** data) // 3, 0x00 
 {
-    int boxColour, startLine, endLine;
+	int boxColour, startLine, endLine;
 
-    startLine = *(*data)++;
-    endLine = *(*data)++;
-    boxColour = *(*data)++;
-    if ((screenMode == AGI_GRAPHICS) && (boxColour > 0)) boxColour = 15;
-    boxColour++;
-    show_mouse(NULL);
-    rectfill(agi_screen, 0, startLine * 16, 639, (endLine * 16) + 15, boxColour);
-    show_mouse(screen);
+	startLine = *(*data)++;
+	endLine = *(*data)++;
+	boxColour = *(*data)++;
+	if ((screenMode == AGI_GRAPHICS) && (boxColour > 0)) boxColour = 15;
+	boxColour++;
+	show_mouse(NULL);
+	rectfill(agi_screen, 0, startLine * 16, 639, (endLine * 16) + 15, boxColour);
+	show_mouse(screen);
 }
 
 void b3Text_screen(byte** data) // 0, 0x00 
 {
-    screenMode = AGI_TEXT;
-    /* Do something else here */
-    inputLineDisplayed = FALSE;
-    statusLineDisplayed = FALSE;
-    clear(screen);
+	screenMode = AGI_TEXT;
+	/* Do something else here */
+	inputLineDisplayed = FALSE;
+	statusLineDisplayed = FALSE;
+	clear(screen);
 }
 
 void b3Graphics(byte** data) // 0, 0x00 
 {
-    screenMode = AGI_GRAPHICS;
-    /* Do something else here */
-    inputLineDisplayed = TRUE;
-    statusLineDisplayed = TRUE;
-    okToShowPic = TRUE;
-    clear(screen);
+	screenMode = AGI_GRAPHICS;
+	/* Do something else here */
+	inputLineDisplayed = TRUE;
+	statusLineDisplayed = TRUE;
+	okToShowPic = TRUE;
+	clear(screen);
 }
 
 void b3Set_cursor_char(byte** data) // 1, 0x00 
 {
-    char* temp = (char*)&GOLDEN_RAM[LOCAL_WORK_AREA_START];
-    byte msgNo = (*(*data)++) - 1;
-    char* messagePointer = getMessagePointer(currentLog, msgNo);
-    LOGICFile logicFile;
+	char* temp = (char*)&GOLDEN_RAM[LOCAL_WORK_AREA_START];
+	byte msgNo = (*(*data)++) - 1;
+	char* messagePointer = getMessagePointer(currentLog, msgNo);
+	LOGICFile logicFile;
 
-    getLogicFile(&logicFile, currentLog);
+	getLogicFile(&logicFile, currentLog);
 
 #ifdef VERBOSE_STRING_CHECK
-    printf("Your msgNo is %d\n", msgNo);
+	printf("Your msgNo is %d\n", msgNo);
 #endif // VERBOSE_STRING_CHECK
 
-    b3ProcessString(messagePointer, logicFile.messageBank, temp);
-    cursorChar = temp[0];
+	b3ProcessString(messagePointer, logicFile.messageBank, temp);
+	cursorChar = temp[0];
 
 #ifdef VERBOSE_STRING_CHECK
-    printf("Your cursor char is %c\n", cursorChar);
+	printf("Your cursor char is %c\n", cursorChar);
 #endif
 }
 
 void b3Set_text_attribute(byte** data) // 2, 0x00 
 {
-    agi_fg = (*(*data)++) + 1;
-    agi_bg = (*(*data)++) + 1;
+	agi_fg = (*(*data)++) + 1;
+	agi_bg = (*(*data)++) + 1;
 }
 
 void b3Shake_screen(byte** data) // 1, 0x00 
 {
-    (*data)++;  /* Ignore this for now. */
+	(*data)++;  /* Ignore this for now. */
 }
 
 void b3Configure_screen(byte** data) // 3, 0x00 
 {
-    min_print_line = *(*data)++;
-    user_input_line = *(*data)++;
-    status_line_num = *(*data)++;
+	min_print_line = *(*data)++;
+	user_input_line = *(*data)++;
+	status_line_num = *(*data)++;
 }
 
 void b3Status_line_on(byte** data) // 0, 0x00 
 {
-    statusLineDisplayed = TRUE;
+	statusLineDisplayed = TRUE;
 }
 
 void b3Status_line_off(byte** data) // 0, 0x00 
 {
-    statusLineDisplayed = FALSE;
+	statusLineDisplayed = FALSE;
 }
 
 void b3Set_string(byte** data) // 2, 0x00 
 {
-    int stringNum, messNum;
-    char* messagePointer;
-    LOGICFile logicFile;
+	int stringNum, messNum;
+	char* messagePointer;
+	LOGICFile logicFile;
 
-    getLogicFile(&logicFile, currentLog);
+	getLogicFile(&logicFile, currentLog);
 
-    stringNum = *(*data)++;
-    messNum = *(*data)++;
-    messagePointer = getMessagePointer(currentLog, messNum - 1);
+	stringNum = *(*data)++;
+	messNum = *(*data)++;
+	messagePointer = getMessagePointer(currentLog, messNum - 1);
 
-    strcpyBanked(string[stringNum - 1], messagePointer, logicFile.messageBank);
+	strcpyBanked(string[stringNum - 1], messagePointer, logicFile.messageBank);
 }
 
 void b3Get_string(byte** data) // 5, 0x00 
 {
-    int strNum, messNum, row, col, l;
-    char* messagePointer;
+	int strNum, messNum, row, col, l;
+	char* messagePointer;
 
-    strNum = *(*data)++;
-    messNum = *(*data)++;
-    col = *(*data)++;
-    row = *(*data)++;
-    l = *(*data)++;
+	strNum = *(*data)++;
+	messNum = *(*data)++;
+	col = *(*data)++;
+	row = *(*data)++;
+	l = *(*data)++;
 
-    messagePointer = getMessagePointer(currentLog, messNum - 1);
+	messagePointer = getMessagePointer(currentLog, messNum - 1);
 
-    getString(messagePointer, string[strNum], row, col, l);
+	getString(messagePointer, string[strNum], row, col, l);
 }
 
 void b3Word_to_string(byte** data) // 2, 0x00 
 {
-    int stringNum, wordNum;
+	int stringNum, wordNum;
 
-    stringNum = *(*data)++;
-    wordNum = *(*data)++;
-    strcpy(string[stringNum], wordText[wordNum]);
+	stringNum = *(*data)++;
+	wordNum = *(*data)++;
+	strcpy(string[stringNum], wordText[wordNum]);
 }
 
 void b3Parse(byte** data) // 1, 0x00 
 {
-    int stringNum;
+	int stringNum;
 
-    stringNum = *(*data)++;
-    lookupWords(string[stringNum]);
+	stringNum = *(*data)++;
+	lookupWords(string[stringNum]);
 }
 
 void b3Get_num(byte** data) // 2, 0x40 
 {
-    int messNum, varNum;
-    char temp[80];
-    char* messagePointer;
+	int messNum, varNum;
+	char temp[80];
+	char* messagePointer;
 
-    messNum = *(*data)++;
-    varNum = *(*data)++;
+	messNum = *(*data)++;
+	varNum = *(*data)++;
 
-    messagePointer = getMessagePointer(currentLog, messNum - 1);
-    getString(messagePointer, temp, 1, 23, 3);
-    var[varNum] = atoi(temp);
+	messagePointer = getMessagePointer(currentLog, messNum - 1);
+	getString(messagePointer, temp, 1, 23, 3);
+	var[varNum] = atoi(temp);
 }
 
 void b3Prevent_input(byte** data) // 0, 0x00 
 {
-    inputLineDisplayed = FALSE;
-    /* Do something else here */
+	inputLineDisplayed = FALSE;
+	/* Do something else here */
 }
 
 void b3Accept_input(byte** data) // 0, 0x00 
 {
-    inputLineDisplayed = TRUE;
-    /* Do something else here */
+	inputLineDisplayed = TRUE;
+	/* Do something else here */
 }
 
 void b3Set_key(byte** data) // 3, 0x00 
 {
-    int asciiCode, scanCode, eventCode;
-    char* tempStr = (char*)malloc(256);
+	int asciiCode, scanCode, eventCode;
+	char* tempStr = (char*)malloc(256);
 
-    asciiCode = *(*data)++;
-    scanCode = *(*data)++;
-    eventCode = *(*data)++;
+	asciiCode = *(*data)++;
+	scanCode = *(*data)++;
+	eventCode = *(*data)++;
 
 
-    /* Ignore cases which have both values set for now. They seem to behave
-    ** differently than normal and often specify controllers that have
-    ** already been defined.
-    */
-    if (scanCode && asciiCode) return;
+	/* Ignore cases which have both values set for now. They seem to behave
+	** differently than normal and often specify controllers that have
+	** already been defined.
+	*/
+	if (scanCode && asciiCode) return;
 
-    if (scanCode) {
-        events[eventCode].type = SCAN_KEY_EVENT;
-        events[eventCode].eventID = scanCode;
-        events[eventCode].asciiValue = asciiCode;
-        events[eventCode].scanCodeValue = scanCode;
-        events[eventCode].activated = FALSE;
-    }
-    else if (asciiCode) {
-        events[eventCode].type = ASCII_KEY_EVENT;
-        events[eventCode].eventID = asciiCode;
-        events[eventCode].asciiValue = asciiCode;
-        events[eventCode].scanCodeValue = scanCode;
-        events[eventCode].activated = FALSE;
-    }
+	if (scanCode) {
+		events[eventCode].type = SCAN_KEY_EVENT;
+		events[eventCode].eventID = scanCode;
+		events[eventCode].asciiValue = asciiCode;
+		events[eventCode].scanCodeValue = scanCode;
+		events[eventCode].activated = FALSE;
+	}
+	else if (asciiCode) {
+		events[eventCode].type = ASCII_KEY_EVENT;
+		events[eventCode].eventID = asciiCode;
+		events[eventCode].asciiValue = asciiCode;
+		events[eventCode].scanCodeValue = scanCode;
+		events[eventCode].activated = FALSE;
+	}
 
-    free(tempStr);
+	free(tempStr);
 }
 
 void b3Add_to_pic(byte** data) // 7, 0x00 
 {
-    int viewNum, loopNum, celNum, x, y, priNum, baseCol;
+	int viewNum, loopNum, celNum, x, y, priNum, baseCol;
 
-    viewNum = *(*data)++;
-    loopNum = *(*data)++;
-    celNum = *(*data)++;
-    x = *(*data)++;
-    y = *(*data)++;
-    priNum = *(*data)++;
-    baseCol = *(*data)++;
+	viewNum = *(*data)++;
+	loopNum = *(*data)++;
+	celNum = *(*data)++;
+	x = *(*data)++;
+	y = *(*data)++;
+	priNum = *(*data)++;
+	baseCol = *(*data)++;
 
-    trampolineAddToPic(viewNum, loopNum, celNum, x, y, priNum, baseCol);
+	trampolineAddToPic(viewNum, loopNum, celNum, x, y, priNum, baseCol);
 }
 
 void b3Add_to_pic_v(byte** data) // 7, 0xFE 
 {
-    int viewNum, loopNum, celNum, x, y, priNum, baseCol;
+	int viewNum, loopNum, celNum, x, y, priNum, baseCol;
 
-    viewNum = var[*(*data)++];
-    loopNum = var[*(*data)++];
-    celNum = var[*(*data)++];
-    x = var[*(*data)++];
-    y = var[*(*data)++];
-    priNum = var[*(*data)++];
-    baseCol = var[*(*data)++];
+	viewNum = var[*(*data)++];
+	loopNum = var[*(*data)++];
+	celNum = var[*(*data)++];
+	x = var[*(*data)++];
+	y = var[*(*data)++];
+	priNum = var[*(*data)++];
+	baseCol = var[*(*data)++];
 
-    trampolineAddToPic(viewNum, loopNum, celNum, x, y, priNum, baseCol);
+	trampolineAddToPic(viewNum, loopNum, celNum, x, y, priNum, baseCol);
 }
 
 void b3Status(byte** data) // 0, 0x00 
 {
-    /* Inventory */
-    // set text mode
-    // if flag 13 is set then allow selection and store selection in var[25]
-    var[25] = 255;
+	/* Inventory */
+	// set text mode
+	// if flag 13 is set then allow selection and store selection in var[25]
+	var[25] = 255;
 }
 
 void b3Save_game(byte** data) // 0, 0x00 
 {
-    /* Not supported yet */
+	/* Not supported yet */
 }
 
 void b3Restore_game(byte** data) // 0, 0x00 
 {
-    /* Not supported yet */
+	/* Not supported yet */
 }
 
 
 void b3Restart_game(byte** data) // 0, 0x00 
 {
-    int i;
+	int i;
 
-    /* Not supported yet */
-    for (i = 0; i < 256; i++) {
-        flag[i] = FALSE;
-        var[i] = 0;
-    }
-    var[24] = 0x29;
-    var[26] = 3;
-    var[8] = 255;     /* Number of free 256 byte pages of memory */
+	/* Not supported yet */
+	for (i = 0; i < 256; i++) {
+		flag[i] = FALSE;
+		var[i] = 0;
+	}
+	var[24] = 0x29;
+	var[26] = 3;
+	var[8] = 255;     /* Number of free 256 byte pages of memory */
 
-    newRoomNum = 0;
-    hasEnteredNewRoom = TRUE;
+	newRoomNum = 0;
+	hasEnteredNewRoom = TRUE;
 }
 
 void b3Show_obj(byte** data) // 1, 0x00 
 {
-    int objectNum;
+	int objectNum;
 
-    objectNum = *(*data)++;
-    /* Not supported yet */
+	objectNum = *(*data)++;
+	/* Not supported yet */
 }
 
 void b3Random_num(byte** data) // 3, 0x20  random() renamed to avoid clash
 {
-    int startValue, endValue;
+	int startValue, endValue;
 
-    startValue = *(*data)++;
-    endValue = *(*data)++;
-    var[*(*data)++] = (rand() % ((endValue - startValue) + 1)) + startValue;
+	startValue = *(*data)++;
+	endValue = *(*data)++;
+	var[*(*data)++] = (rand() % ((endValue - startValue) + 1)) + startValue;
 }
 
 void b3Program_control(byte** data) // 0, 0x00 
 {
-    controlMode = PROGRAM_CONTROL;
+	controlMode = PROGRAM_CONTROL;
 }
 
 void b3Player_control(byte** data) // 0, 0x00 
 {
-    controlMode = PLAYER_CONTROL;
+	controlMode = PLAYER_CONTROL;
 }
 
 void b3Obj_status_v(byte** data) // 1, 0x80 
 {
-    int objectNum;
+	int objectNum;
 
-    objectNum = var[*(*data)++];
-    /* Not supported yet */
+	objectNum = var[*(*data)++];
+	/* Not supported yet */
 
-    /* showView(viewtab[objectNum].currentView); */
-    trampoline_1Int(&bDShowObjectState,objectNum, VIEW_CODE_BANK_4);
+	/* showView(viewtab[objectNum].currentView); */
+	trampoline_1Int(&bDShowObjectState, objectNum, VIEW_CODE_BANK_4);
 }
 
 
 void b3Quit(byte** data) // 1, 0x00                     /* 0 args for AGI version 2_089 */
 {
-    int quitType, ch;
+	int quitType, ch;
 
-    quitType = ((!oldQuit) ? *(*data)++ : 0);
-    if (quitType == 1) /* Immediate quit */
-        exit(0);
-    else { /* Prompt for exit */
-        printInBoxBig("Press ENTER to quit.\nPress ESC to keep playing.", -1, -1, 30);
-        do {
-            ch = (readkey() >> 8);
-        } while ((ch != KEY_ESC) && (ch != KEY_ENTER));
-        if (ch == KEY_ENTER) exit(0);
-        showPicture();
-    }
+	quitType = ((!oldQuit) ? *(*data)++ : 0);
+	if (quitType == 1) /* Immediate quit */
+		exit(0);
+	else { /* Prompt for exit */
+		printInBoxBig("Press ENTER to quit.\nPress ESC to keep playing.", -1, -1, 30);
+		do {
+			ch = (readkey() >> 8);
+		} while ((ch != KEY_ESC) && (ch != KEY_ENTER));
+		if (ch == KEY_ENTER) exit(0);
+		showPicture();
+	}
 }
 
 void b3Pause(byte** data) // 0, 0x00 
 {
-    while (key[KEY_ENTER]) { /* Wait */ }
-    printInBoxBig("      Game paused.\nPress ENTER to continue.", -1, -1, 30);
-    while (!key[KEY_ENTER]) { /* Wait */ }
-    showPicture();
-    okToShowPic = TRUE;
+	while (key[KEY_ENTER]) { /* Wait */ }
+	printInBoxBig("      Game paused.\nPress ENTER to continue.", -1, -1, 30);
+	while (!key[KEY_ENTER]) { /* Wait */ }
+	showPicture();
+	okToShowPic = TRUE;
 }
 
 
@@ -2184,8 +2188,8 @@ void b3Echo_line(byte** data) // 0, 0x00
 
 void b3Cancel_line(byte** data) // 0, 0x00 
 {
-    /*currentInputStr[0]=0;
-    strPos=0;*/
+	/*currentInputStr[0]=0;
+	strPos=0;*/
 }
 
 #pragma code-name (pop)
@@ -2193,186 +2197,186 @@ void b3Cancel_line(byte** data) // 0, 0x00
 
 void b4Init_joy(byte** data) // 0, 0x00 
 {
-    /* Not important at this stage */
+	/* Not important at this stage */
 }
 
 void b4Version(byte** data) // 0, 0x00 
 {
-    while (key[KEY_ENTER] || key[KEY_ESC]) { /* Wait */ }
-    printInBoxBig("MEKA AGI Interpreter\n    Version 1.0", -1, -1, 30);
-    while (!key[KEY_ENTER] && !key[KEY_ESC]) { /* Wait */ }
-    showPicture();
-    okToShowPic = TRUE;
+	while (key[KEY_ENTER] || key[KEY_ESC]) { /* Wait */ }
+	printInBoxBig("MEKA AGI Interpreter\n    Version 1.0", -1, -1, 30);
+	while (!key[KEY_ENTER] && !key[KEY_ESC]) { /* Wait */ }
+	showPicture();
+	okToShowPic = TRUE;
 }
 
 void b4Script_size(byte** data) // 1, 0x00 
 {
-    (*data)++;  /* Ignore the script size. Not important for this interpreter */
+	(*data)++;  /* Ignore the script size. Not important for this interpreter */
 }
 
 void b4Set_game_id(byte** data) // 1, 0x00 
 {
-    (*data)++;  /* Ignore the game ID. Not important */
+	(*data)++;  /* Ignore the game ID. Not important */
 }
 
 void b4Log(byte** data) // 1, 0x00 
 {
-    (*data)++;  /* Ignore log message. Not important */
+	(*data)++;  /* Ignore log message. Not important */
 }
 
 void b4Set_scan_start(byte** data) // 0, 0x00 
 {
-    LOGICEntry logicEntry;
+	LOGICEntry logicEntry;
 
-    getLogicEntry(&logicEntry, currentLog);
+	getLogicEntry(&logicEntry, currentLog);
 
-    /* currentPoint is set in executeLogic() */
-    logicEntry.entryPoint = logicEntry.currentPoint + 1;
-    /* Does it return() at this point, or does it execute to the end?? */
+	/* currentPoint is set in executeLogic() */
+	logicEntry.entryPoint = logicEntry.currentPoint + 1;
+	/* Does it return() at this point, or does it execute to the end?? */
 
-    setLogicEntry(&logicEntry, currentLog);
+	setLogicEntry(&logicEntry, currentLog);
 }
 
 
 void b4Reset_scan_start(byte** data) // 0, 0x00 
 {
-    LOGICEntry logicEntry;
+	LOGICEntry logicEntry;
 
-    getLogicEntry(&logicEntry, currentLog);
+	getLogicEntry(&logicEntry, currentLog);
 
-    logicEntry.entryPoint = 0;
+	logicEntry.entryPoint = 0;
 
-    setLogicEntry(&logicEntry, currentLog);
+	setLogicEntry(&logicEntry, currentLog);
 }
 
 void b4Reposition_to(byte** data) // 3, 0x00 
 {
-    int entryNum;
-    ViewTable localViewtab;
+	int entryNum;
+	ViewTable localViewtab;
 
-    entryNum = *(*data)++;
-    getViewTab(&localViewtab, entryNum);
+	entryNum = *(*data)++;
+	getViewTab(&localViewtab, entryNum);
 
-    localViewtab.xPos = *(*data)++;
-    localViewtab.yPos = *(*data)++;
+	localViewtab.xPos = *(*data)++;
+	localViewtab.yPos = *(*data)++;
 
-    setViewTab(&localViewtab, entryNum);
+	setViewTab(&localViewtab, entryNum);
 }
 
 void b4Reposition_to_v(byte** data) // 3, 0x60 
 {
-    int entryNum;
-    ViewTable localViewtab;
+	int entryNum;
+	ViewTable localViewtab;
 
-    entryNum = *(*data)++;
-    getViewTab(&localViewtab, entryNum);
+	entryNum = *(*data)++;
+	getViewTab(&localViewtab, entryNum);
 
-    localViewtab.xPos = var[*(*data)++];
-    localViewtab.yPos = var[*(*data)++];
+	localViewtab.xPos = var[*(*data)++];
+	localViewtab.yPos = var[*(*data)++];
 
-    setViewTab(&localViewtab, entryNum);
+	setViewTab(&localViewtab, entryNum);
 }
 
 void b4Trace_on(byte** data) // 0, 0x00 
 {
-    /* Ignore at this stage */
+	/* Ignore at this stage */
 }
 
 void b4Trace_info(byte** data) // 3, 0x00 
 {
-    *data += 3;  /* Ignore trace information at this stage. */
+	*data += 3;  /* Ignore trace information at this stage. */
 }
 
 void b4Print_at(byte** data) // 4, 0x00           /* 3 args for AGI versions before */
 {
-    char* tempString = (char*)malloc(256);
-    BITMAP* temp;
-    int messNum, x, y, l;
-    char* messagePointer;
+	char* tempString = (char*)malloc(256);
+	BITMAP* temp;
+	int messNum, x, y, l;
+	char* messagePointer;
 
-    messNum = *(*data)++;
-    x = *(*data)++;
-    y = *(*data)++;
-    l = *(*data)++;
-    //show_mouse(NULL);
-    //temp = create_bitmap(640, 336);
-    //blit(agi_screen, temp, 0, 0, 0, 0, 640, 336);
-    //show_mouse(screen);
-    //while (key[KEY_ENTER] || key[KEY_ESC]) { /* Wait */ }
+	messNum = *(*data)++;
+	x = *(*data)++;
+	y = *(*data)++;
+	l = *(*data)++;
+	//show_mouse(NULL);
+	//temp = create_bitmap(640, 336);
+	//blit(agi_screen, temp, 0, 0, 0, 0, 640, 336);
+	//show_mouse(screen);
+	//while (key[KEY_ENTER] || key[KEY_ESC]) { /* Wait */ }
 
-    //messagePointer = getMessagePointer(currentLog, messNum - 1);
+	//messagePointer = getMessagePointer(currentLog, messNum - 1);
 
-    //b3ProcessString(messagePointer, 0, tempString);
-    //printInBoxBig(tempString, x, y, l);
-    //while (!key[KEY_ENTER] && !key[KEY_ESC]) { /* Wait */ }
-    //while (key[KEY_ENTER] || key[KEY_ESC]) { clear_keybuf(); }
-    //show_mouse(NULL);
-    //blit(temp, agi_screen, 0, 0, 0, 0, 640, 336);
-    //show_mouse(screen);
-    //destroy_bitmap(temp);
+	//b3ProcessString(messagePointer, 0, tempString);
+	//printInBoxBig(tempString, x, y, l);
+	//while (!key[KEY_ENTER] && !key[KEY_ESC]) { /* Wait */ }
+	//while (key[KEY_ENTER] || key[KEY_ESC]) { clear_keybuf(); }
+	//show_mouse(NULL);
+	//blit(temp, agi_screen, 0, 0, 0, 0, 640, 336);
+	//show_mouse(screen);
+	//destroy_bitmap(temp);
 
-    //free(tempString);
+	//free(tempString);
 }
 
 void b4Print_at_v(byte** data) // 4, 0x80         /* 2_440 (maybe laterz) */
 {
-    char* tempString = (char*)malloc(256);
-    BITMAP* temp;
-    int messNum, x, y, l;
-    char* messagePointer;
+	char* tempString = (char*)malloc(256);
+	BITMAP* temp;
+	int messNum, x, y, l;
+	char* messagePointer;
 
-    messNum = var[*(*data)++];
-    x = *(*data)++;
-    y = *(*data)++;
-    l = *(*data)++;
-    show_mouse(NULL);
-    temp = create_bitmap(640, 336);
-    blit(agi_screen, temp, 0, 0, 0, 0, 640, 336);
-    show_mouse(screen);
-    while (key[KEY_ENTER] || key[KEY_ESC]) { /* Wait */ }
+	messNum = var[*(*data)++];
+	x = *(*data)++;
+	y = *(*data)++;
+	l = *(*data)++;
+	show_mouse(NULL);
+	temp = create_bitmap(640, 336);
+	blit(agi_screen, temp, 0, 0, 0, 0, 640, 336);
+	show_mouse(screen);
+	while (key[KEY_ENTER] || key[KEY_ESC]) { /* Wait */ }
 
-    messagePointer = getMessagePointer(currentLog, messNum - 1);
-    b3ProcessString(messagePointer, 0, tempString);
-    printInBoxBig(tempString, x, y, l);
-    while (!key[KEY_ENTER] && !key[KEY_ESC]) { /* Wait */ }
-    while (key[KEY_ENTER] || key[KEY_ESC]) { clear_keybuf(); }
-    show_mouse(NULL);
-    blit(temp, agi_screen, 0, 0, 0, 0, 640, 336);
-    show_mouse(screen);
-    destroy_bitmap(temp);
+	messagePointer = getMessagePointer(currentLog, messNum - 1);
+	b3ProcessString(messagePointer, 0, tempString);
+	printInBoxBig(tempString, x, y, l);
+	while (!key[KEY_ENTER] && !key[KEY_ESC]) { /* Wait */ }
+	while (key[KEY_ENTER] || key[KEY_ESC]) { clear_keybuf(); }
+	show_mouse(NULL);
+	blit(temp, agi_screen, 0, 0, 0, 0, 640, 336);
+	show_mouse(screen);
+	destroy_bitmap(temp);
 
-    free(tempString);
+	free(tempString);
 }
 
 void b4Discard_view_v(byte** data) // 1, 0x80 
 {
-    trampoline_1Int(&b9DiscardView, var[*(*data)++], VIEW_CODE_BANK_1);
+	trampoline_1Int(&b9DiscardView, var[*(*data)++], VIEW_CODE_BANK_1);
 }
 
 void b4Clear_text_rect(byte** data) // 5, 0x00 
 {
-    int x1, y1, x2, y2, boxColour;
+	int x1, y1, x2, y2, boxColour;
 
-    x1 = *(*data)++;
-    y1 = *(*data)++;
-    x2 = *(*data)++;
-    y2 = *(*data)++;
-    boxColour = *(*data)++;
-    if ((screenMode == AGI_GRAPHICS) && (boxColour > 0)) boxColour = 15;
-    if (screenMode == AGI_TEXT) boxColour = 0;
-    show_mouse(NULL);
-    rectfill(agi_screen, x1 * 16, y1 * 16, (x2 * 16) + 15, (y2 * 16) + 15, boxColour);
-    show_mouse(screen);
+	x1 = *(*data)++;
+	y1 = *(*data)++;
+	x2 = *(*data)++;
+	y2 = *(*data)++;
+	boxColour = *(*data)++;
+	if ((screenMode == AGI_GRAPHICS) && (boxColour > 0)) boxColour = 15;
+	if (screenMode == AGI_TEXT) boxColour = 0;
+	show_mouse(NULL);
+	rectfill(agi_screen, x1 * 16, y1 * 16, (x2 * 16) + 15, (y2 * 16) + 15, boxColour);
+	show_mouse(screen);
 }
 
 void b4Set_upper_left(byte** data) // 2, 0x00    (x, y) ??
 {
-    *data += 2;
+	*data += 2;
 }
 
 void b4WaitKeyRelease()
 {
-    while (keypressed()) { /* Wait */ }
+	while (keypressed()) { /* Wait */ }
 }
 
 int menuEvent0() { b4WaitKeyRelease(); events[0].activated = 1; return D_O_K; }
@@ -2427,87 +2431,87 @@ int menuEvent48() { b4WaitKeyRelease(); events[48].activated = 1; return D_O_K; 
 int menuEvent49() { b4WaitKeyRelease(); events[49].activated = 1; return D_O_K; }
 
 int (*(menuFunctions[50]))() = {
-    menuEvent0, menuEvent1, menuEvent2, menuEvent3, menuEvent4,
-    menuEvent5, menuEvent6, menuEvent7, menuEvent8, menuEvent9,
-    menuEvent10, menuEvent11, menuEvent12, menuEvent13, menuEvent14,
-    menuEvent15, menuEvent16, menuEvent17, menuEvent18, menuEvent19,
-    menuEvent20, menuEvent21, menuEvent22, menuEvent23, menuEvent24,
-    menuEvent25, menuEvent26, menuEvent27, menuEvent28, menuEvent29,
-    menuEvent30, menuEvent31, menuEvent32, menuEvent33, menuEvent34,
-    menuEvent35, menuEvent36, menuEvent37, menuEvent38, menuEvent39,
-    menuEvent40, menuEvent41, menuEvent42, menuEvent43, menuEvent44,
-    menuEvent45, menuEvent46, menuEvent47, menuEvent48, menuEvent49
+	menuEvent0, menuEvent1, menuEvent2, menuEvent3, menuEvent4,
+	menuEvent5, menuEvent6, menuEvent7, menuEvent8, menuEvent9,
+	menuEvent10, menuEvent11, menuEvent12, menuEvent13, menuEvent14,
+	menuEvent15, menuEvent16, menuEvent17, menuEvent18, menuEvent19,
+	menuEvent20, menuEvent21, menuEvent22, menuEvent23, menuEvent24,
+	menuEvent25, menuEvent26, menuEvent27, menuEvent28, menuEvent29,
+	menuEvent30, menuEvent31, menuEvent32, menuEvent33, menuEvent34,
+	menuEvent35, menuEvent36, menuEvent37, menuEvent38, menuEvent39,
+	menuEvent40, menuEvent41, menuEvent42, menuEvent43, menuEvent44,
+	menuEvent45, menuEvent46, menuEvent47, menuEvent48, menuEvent49
 };
 
 void b4Set_menu(byte** data) // 1, 0x00 
 {
-    int messNum, startOffset;
-    char* messData;
+	int messNum, startOffset;
+	char* messData;
 
-    MENU newMenu;
-    LOGICFile currentLogicFile;
+	MENU newMenu;
+	LOGICFile currentLogicFile;
 
-    if (numOfMenus == 0)
-    {
-        menuChildInit();
-    }
+	if (numOfMenus == 0)
+	{
+		menuChildInit();
+	}
 
-    getLogicFile(&currentLogicFile, currentLog);
+	getLogicFile(&currentLogicFile, currentLog);
 
-    newMenu.dp = NULL;
-    newMenu.flags = 0;
-    newMenu.proc = 0;
-    newMenu.menuTextBank = currentLogicFile.messageBank;
+	newMenu.dp = NULL;
+	newMenu.flags = 0;
+	newMenu.proc = 0;
+	newMenu.menuTextBank = currentLogicFile.messageBank;
 
-    messNum = *(*data)++;
+	messNum = *(*data)++;
 
-    /* Create new menu and allocate space for MAX_MENU_SIZE items */
-    newMenu.text = getMessagePointer(currentLog, messNum - 1);
+	/* Create new menu and allocate space for MAX_MENU_SIZE items */
+	newMenu.text = getMessagePointer(currentLog, messNum - 1);
 
 #ifdef VERBOSE_MENU
-    printf("The result is %p \n", newMenu.text);
+	printf("The result is %p \n", newMenu.text);
 #endif // VERBOSE_MENU
 
-    newMenu.proc = NULL;
+	newMenu.proc = NULL;
 
-    setMenu(&newMenu, numOfMenus);
-    numOfMenus++;
+	setMenu(&newMenu, numOfMenus);
+	numOfMenus++;
 
-    newMenu.dp = NULL;
-    newMenu.flags = 0;
-    newMenu.proc = NULL;
-    newMenu.text = NULL;
-    newMenu.menuTextBank = 0;
+	newMenu.dp = NULL;
+	newMenu.flags = 0;
+	newMenu.proc = NULL;
+	newMenu.text = NULL;
+	newMenu.menuTextBank = 0;
 
-    /* Mark end of menu */
-    setMenu(&newMenu, numOfMenus);
+	/* Mark end of menu */
+	setMenu(&newMenu, numOfMenus);
 }
 
 void b4Set_menu_item(byte** data) // 2, 0x00 
 {
-    int messNum, controllerNum, i;
-    MENU childMenu;
-    LOGICFile currentLogicFile;
+	int messNum, controllerNum, i;
+	MENU childMenu;
+	LOGICFile currentLogicFile;
 
-    getLogicFile(&currentLogicFile, currentLog);
+	getLogicFile(&currentLogicFile, currentLog);
 
-    messNum = *(*data)++;
-    controllerNum = *(*data)++;
+	messNum = *(*data)++;
+	controllerNum = *(*data)++;
 
-    if (events[controllerNum].type == NO_EVENT) {
-        events[controllerNum].type = MENU_EVENT;
-    }
-    events[controllerNum].activated = 0;
+	if (events[controllerNum].type == NO_EVENT) {
+		events[controllerNum].type = MENU_EVENT;
+	}
+	events[controllerNum].activated = 0;
 
-    childMenu.text = getMessagePointer(currentLog, messNum - 1);
-    childMenu.proc = menuFunctions[controllerNum];
-    childMenu.menuTextBank = currentLogicFile.messageBank;
+	childMenu.text = getMessagePointer(currentLog, messNum - 1);
+	childMenu.proc = menuFunctions[controllerNum];
+	childMenu.menuTextBank = currentLogicFile.messageBank;
 
-    setMenuChild(&childMenu, numOfMenus - 1);
+	setMenuChild(&childMenu, numOfMenus - 1);
 
 
 #ifdef VERBOSE_MENU_DUMP
-    testMenus();
+	testMenus();
 #endif // VERBOSE_MENU
 
 
@@ -2520,25 +2524,25 @@ void b4Submit_menu(byte** data) // 0, 0x00
 
 void b4Enable_item(byte** data) // 1, 0x00 
 {
-    (*data)++;
+	(*data)++;
 }
 
 void b4Disable_item(byte** data) // 1, 0x00 
 {
-    (*data)++;
+	(*data)++;
 }
 
 void b4Menu_input(byte** data) // 0, 0x00 
 {
-    do_menu(the_menu, 10, 20);
+	do_menu(the_menu, 10, 20);
 }
 
 void b4Show_obj_v(byte** data) // 1, 0x01 
 {
-    int objectNum;
+	int objectNum;
 
-    objectNum = var[*(*data)++];
-    /* Not supported yet */
+	objectNum = var[*(*data)++];
+	/* Not supported yet */
 }
 
 void b4Open_dialogue(byte** data) // 0, 0x00 
@@ -2553,22 +2557,22 @@ void b4Close_dialogue(byte** data) // 0, 0x00
 
 void b4Mul_n(byte** data) // 2, 0x80 
 {
-    var[*(*data)++] *= *(*data)++;
+	var[*(*data)++] *= *(*data)++;
 }
 
 void b4Mul_v(byte** data) // 2, 0xC0 
 {
-    var[*(*data)++] *= var[*(*data)++];
+	var[*(*data)++] *= var[*(*data)++];
 }
 
 void b4Div_n(byte** data) // 2, 0x80 
 {
-    var[*(*data)++] /= *(*data)++;
+	var[*(*data)++] /= *(*data)++;
 }
 
 void b4Div_v(byte** data) // 2, 0xC0 
 {
-    var[*(*data)++] /= var[*(*data)++];
+	var[*(*data)++] /= var[*(*data)++];
 }
 
 void b4Close_window(byte** data) // 0, 0x00 
@@ -2581,286 +2585,286 @@ void b4Close_window(byte** data) // 0, 0x00
 #pragma code-name (push, "BANKRAM05")
 boolean b5instructionHandler(byte code, int* currentLog, byte logNum, byte** ppCodeWindowAddress, byte bank)
 {
-    switch (code)
-    {
-    case 0: /* return */
-        return FALSE;
-        break;
-    case 1: trampoline_1pp(&b1Increment, ppCodeWindowAddress, bank); break;
-    case 2: trampoline_1pp(&b1Decrement, ppCodeWindowAddress, bank); break;
-    case 3: trampoline_1pp(&b1Assignn, ppCodeWindowAddress, bank); break;
-    case 4: trampoline_1pp(&b1Assignv, ppCodeWindowAddress, bank); break;
-    case 5: trampoline_1pp(&b1Addn, ppCodeWindowAddress, bank); break;
-    case 6: trampoline_1pp(&b1Addv, ppCodeWindowAddress, bank); break;
-    case 7: trampoline_1pp(&b1Subn, ppCodeWindowAddress, bank); break;
-    case 8: trampoline_1pp(&b1Subv, ppCodeWindowAddress, bank); break;
-    case 9: trampoline_1pp(&b1Lindirectv, ppCodeWindowAddress, bank); break;
-    case 10: trampoline_1pp(&b1Rindirect, ppCodeWindowAddress, bank); break;
-    case 11: trampoline_1pp(&b1Lindirectn, ppCodeWindowAddress, bank); break;
-    case 12: trampoline_1pp(&b1Set, ppCodeWindowAddress, bank); break;
-    case 13: trampoline_1pp(&b1Reset, ppCodeWindowAddress, bank); break;
-    case 14: trampoline_1pp(&b1Toggle, ppCodeWindowAddress, bank); break;
-    case 15: trampoline_1pp(&b1Set_v, ppCodeWindowAddress, bank); break;
-    case 16: trampoline_1pp(&b1Reset_v, ppCodeWindowAddress, bank); break;
-    case 17: trampoline_1pp(&b1Toggle_v, ppCodeWindowAddress, bank); break;
-    case 18:
-        trampoline_1pp(&b1New_room, ppCodeWindowAddress, bank);
-        exitAllLogics = TRUE;
-        return FALSE;
-        break;
-    case 19:
-        trampoline_1pp(&b1New_room_v, ppCodeWindowAddress, bank);
-        exitAllLogics = TRUE;
-        return FALSE;
-        break;
-    case 20: trampoline_1pp(&b1Load_logics, ppCodeWindowAddress, bank); break;
-    case 21: trampoline_1pp(&b1Load_logics_v, ppCodeWindowAddress, bank); break;
-    case 22:
-        trampoline_1pp(&b1Call, ppCodeWindowAddress, bank);
-        /* The currentLog variable needs to be restored */
-        *currentLog = logNum;
-        if (exitAllLogics) return FALSE;
+	switch (code)
+	{
+	case 0: /* return */
+		return FALSE;
+		break;
+	case 1: trampoline_1pp(&b1Increment, ppCodeWindowAddress, bank); break;
+	case 2: trampoline_1pp(&b1Decrement, ppCodeWindowAddress, bank); break;
+	case 3: trampoline_1pp(&b1Assignn, ppCodeWindowAddress, bank); break;
+	case 4: trampoline_1pp(&b1Assignv, ppCodeWindowAddress, bank); break;
+	case 5: trampoline_1pp(&b1Addn, ppCodeWindowAddress, bank); break;
+	case 6: trampoline_1pp(&b1Addv, ppCodeWindowAddress, bank); break;
+	case 7: trampoline_1pp(&b1Subn, ppCodeWindowAddress, bank); break;
+	case 8: trampoline_1pp(&b1Subv, ppCodeWindowAddress, bank); break;
+	case 9: trampoline_1pp(&b1Lindirectv, ppCodeWindowAddress, bank); break;
+	case 10: trampoline_1pp(&b1Rindirect, ppCodeWindowAddress, bank); break;
+	case 11: trampoline_1pp(&b1Lindirectn, ppCodeWindowAddress, bank); break;
+	case 12: trampoline_1pp(&b1Set, ppCodeWindowAddress, bank); break;
+	case 13: trampoline_1pp(&b1Reset, ppCodeWindowAddress, bank); break;
+	case 14: trampoline_1pp(&b1Toggle, ppCodeWindowAddress, bank); break;
+	case 15: trampoline_1pp(&b1Set_v, ppCodeWindowAddress, bank); break;
+	case 16: trampoline_1pp(&b1Reset_v, ppCodeWindowAddress, bank); break;
+	case 17: trampoline_1pp(&b1Toggle_v, ppCodeWindowAddress, bank); break;
+	case 18:
+		trampoline_1pp(&b1New_room, ppCodeWindowAddress, bank);
+		exitAllLogics = TRUE;
+		return FALSE;
+		break;
+	case 19:
+		trampoline_1pp(&b1New_room_v, ppCodeWindowAddress, bank);
+		exitAllLogics = TRUE;
+		return FALSE;
+		break;
+	case 20: trampoline_1pp(&b1Load_logics, ppCodeWindowAddress, bank); break;
+	case 21: trampoline_1pp(&b1Load_logics_v, ppCodeWindowAddress, bank); break;
+	case 22:
+		trampoline_1pp(&b1Call, ppCodeWindowAddress, bank);
+		/* The currentLog variable needs to be restored */
+		*currentLog = logNum;
+		if (exitAllLogics) return FALSE;
 #ifdef DEBUG
-        sprintf(debugString, "LOGIC.%d:       ", currentLog);
-        drawBigString(screen, debugString, 0, 384, 0, 7);
+		sprintf(debugString, "LOGIC.%d:       ", currentLog);
+		drawBigString(screen, debugString, 0, 384, 0, 7);
 #endif
-        break;
-    case 23:
-        trampoline_1pp(&b1Call_v, ppCodeWindowAddress, bank);
-        /* The currentLog variable needs to be restored */
-        *currentLog = logNum;
-        if (exitAllLogics) return FALSE;
+		break;
+	case 23:
+		trampoline_1pp(&b1Call_v, ppCodeWindowAddress, bank);
+		/* The currentLog variable needs to be restored */
+		*currentLog = logNum;
+		if (exitAllLogics) return FALSE;
 #ifdef DEBUG
-        sprintf(debugString, "LOGIC.%d:       ", currentLog);
-        drawBigString(screen, debugString, 0, 384, 0, 7);
+		sprintf(debugString, "LOGIC.%d:       ", currentLog);
+		drawBigString(screen, debugString, 0, 384, 0, 7);
 #endif
-        break;
-    case 24: trampoline_1pp(&b1Load_pic, ppCodeWindowAddress, bank); break;
-    case 25: trampoline_1pp(&b1Draw_pic, ppCodeWindowAddress, bank); break;
-    case 26: trampoline_1pp(&b1Show_pic, ppCodeWindowAddress, bank); break;
-    case 27: trampoline_1pp(&b1Discard_pic, ppCodeWindowAddress, bank); break;
-    case 28: trampoline_1pp(&b1Overlay_pic, ppCodeWindowAddress, bank); break;
-    case 29: trampoline_1pp(&b1Show_pri_screen, ppCodeWindowAddress, bank); break;
-    case 30: trampoline_1pp(&b1Load_view, ppCodeWindowAddress, bank); break;
-    case 31: trampoline_1pp(&b1Load_view_v, ppCodeWindowAddress, bank); break;
-    case 32: trampoline_1pp(&b1Discard_view, ppCodeWindowAddress, bank); break;
-    case 33: trampoline_1pp(&b1Animate_obj, ppCodeWindowAddress, bank); break;
-    case 34: trampoline_1pp(&b1Unanimate_all, ppCodeWindowAddress, bank); break;
-    case 35: trampoline_1pp(&b1Draw, ppCodeWindowAddress, bank); break;
-    case 36: trampoline_1pp(&b1Erase, ppCodeWindowAddress, bank); break;
-    case 37: trampoline_1pp(&b2Position, ppCodeWindowAddress, bank); break;
-    case 38: trampoline_1pp(&b2Position_v, ppCodeWindowAddress, bank); break;
-    case 39: trampoline_1pp(&b2Get_posn, ppCodeWindowAddress, bank); break;
-    case 40: trampoline_1pp(&b2Reposition, ppCodeWindowAddress, bank); break;
-    case 41: trampoline_1pp(&b2Set_view, ppCodeWindowAddress, bank); break;
-    case 42: trampoline_1pp(&b2Set_view_v, ppCodeWindowAddress, bank); break;
-    case 43: trampoline_1pp(&b2Set_loop, ppCodeWindowAddress, bank); break;
-    case 44: trampoline_1pp(&b2Set_loop_v, ppCodeWindowAddress, bank); break;
-    case 45: trampoline_1pp(&b2Fix_loop, ppCodeWindowAddress, bank); break;
-    case 46: trampoline_1pp(&b2Release_loop, ppCodeWindowAddress, bank); break;
-    case 47: trampoline_1pp(&b2Set_cel, ppCodeWindowAddress, bank); break;
-    case 48: trampoline_1pp(&b2Set_cel_v, ppCodeWindowAddress, bank); break;
-    case 49: trampoline_1pp(&b2Last_cel, ppCodeWindowAddress, bank); break;
-    case 50: trampoline_1pp(&b2Current_cel, ppCodeWindowAddress, bank); break;
-    case 51: trampoline_1pp(&b2Current_loop, ppCodeWindowAddress, bank); break;
-    case 52: trampoline_1pp(&b2Current_view, ppCodeWindowAddress, bank); break;
-    case 53: trampoline_1pp(&b2Number_of_loops, ppCodeWindowAddress, bank); break;
-    case 54: trampoline_1pp(&b2Set_priority, ppCodeWindowAddress, bank); break;
-    case 55: trampoline_1pp(&b2Set_priority_v, ppCodeWindowAddress, bank); break;
-    case 56: trampoline_1pp(&b2Release_priority, ppCodeWindowAddress, bank); break;
-    case 57: trampoline_1pp(&b2Get_priority, ppCodeWindowAddress, bank); break;
-    case 58: trampoline_1pp(&b2Stop_update, ppCodeWindowAddress, bank); break;
-    case 59: trampoline_1pp(&b2Start_update, ppCodeWindowAddress, bank); break;
-    case 60: trampoline_1pp(&b2Force_update, ppCodeWindowAddress, bank); break;
-    case 61: trampoline_1pp(&b2Ignore_horizon, ppCodeWindowAddress, bank); break;
-    case 62: trampoline_1pp(&b2Observe_horizon, ppCodeWindowAddress, bank); break;
-    case 63: trampoline_1pp(&b2Set_horizon, ppCodeWindowAddress, bank); break;
-    case 64: trampoline_1pp(&b2Object_on_water, ppCodeWindowAddress, bank); break;
-    case 65: trampoline_1pp(&b2Object_on_land, ppCodeWindowAddress, bank); break;
-    case 66: trampoline_1pp(&b2Object_on_anything, ppCodeWindowAddress, bank); break;
-    case 67: trampoline_1pp(&b2Ignore_objs, ppCodeWindowAddress, bank); break;
-    case 68: trampoline_1pp(&b2Observe_objs, ppCodeWindowAddress, bank); break;
-    case 69: trampoline_1pp(&b2Distance, ppCodeWindowAddress, bank); break;
-    case 70: trampoline_1pp(&b2Stop_cycling, ppCodeWindowAddress, bank); break;
-    case 71: trampoline_1pp(&b2Start_cycling, ppCodeWindowAddress, bank); break;
-    case 72: trampoline_1pp(&b2Normal_cycle, ppCodeWindowAddress, bank); break;
-    case 73: trampoline_1pp(&b2End_of_loop, ppCodeWindowAddress, bank); break;
-    case 74: trampoline_1pp(&b2Reverse_cycle, ppCodeWindowAddress, bank); break;
-    case 75: trampoline_1pp(&b2Reverse_loop, ppCodeWindowAddress, bank); break;
-    case 76: trampoline_1pp(&b2Cycle_time, ppCodeWindowAddress, bank); break;
-    case 77: trampoline_1pp(&b2Stop_motion, ppCodeWindowAddress, bank); break;
-    case 78: trampoline_1pp(&b2Start_motion, ppCodeWindowAddress, bank); break;
-    case 79: trampoline_1pp(&b2Step_size, ppCodeWindowAddress, bank); break;
-    case 80: trampoline_1pp(&b2Step_time, ppCodeWindowAddress, bank); break;
-    case 81: trampoline_1pp(&b2Move_obj, ppCodeWindowAddress, bank); break;
-    case 82: trampoline_1pp(&b2Move_obj_v, ppCodeWindowAddress, bank); break;
-    case 83: trampoline_1pp(&b2Follow_ego, ppCodeWindowAddress, bank); break;
-    case 84: trampoline_1pp(&b2Wander, ppCodeWindowAddress, bank); break;
-    case 85: trampoline_1pp(&b2Normal_motion, ppCodeWindowAddress, bank); break;
-    case 86: trampoline_1pp(&b2Set_dir, ppCodeWindowAddress, bank); break;
-    case 87: trampoline_1pp(&b2Get_dir, ppCodeWindowAddress, bank); break;
-    case 88: trampoline_1pp(&b2Ignore_blocks, ppCodeWindowAddress, bank); break;
-    case 89: trampoline_1pp(&b2Observe_blocks, ppCodeWindowAddress, bank); break;
-    case 90: trampoline_1pp(&b2Block, ppCodeWindowAddress, bank); break;
-    case 91: trampoline_1pp(&b2Unblock, ppCodeWindowAddress, bank); break;
-    case 92: trampoline_1pp(&b3Get, ppCodeWindowAddress, bank); break;
-    case 93: trampoline_1pp(&b3Get_v, ppCodeWindowAddress, bank); break;
-    case 94: trampoline_1pp(&b3Drop, ppCodeWindowAddress, bank); break;
-    case 95: trampoline_1pp(&b3Put, ppCodeWindowAddress, bank); break;
-    case 96: trampoline_1pp(&b3Put_v, ppCodeWindowAddress, bank); break;
-    case 97: trampoline_1pp(&b3Get_room_v, ppCodeWindowAddress, bank); break;
-    case 98: trampoline_1pp(&b3Load_sound, ppCodeWindowAddress, bank); break;
-    case 99: trampoline_1pp(&b3Play_sound, ppCodeWindowAddress, bank); break;
-    case 100: trampoline_1pp(&b3Stop_sound, ppCodeWindowAddress, bank); break;
-    case 101: trampoline_1pp(&b3Print, ppCodeWindowAddress, bank); break;
-    case 102: trampoline_1pp(&b3Print_v, ppCodeWindowAddress, bank); break;
-    case 103: trampoline_1pp(&b3Display, ppCodeWindowAddress, bank); break;
-    case 104: trampoline_1pp(&b3Display_v, ppCodeWindowAddress, bank); break;
-    case 105: trampoline_1pp(&b3Clear_lines, ppCodeWindowAddress, bank); break;
-    case 106: trampoline_1pp(&b3Text_screen, ppCodeWindowAddress, bank); break;
-    case 107: trampoline_1pp(&b3Graphics, ppCodeWindowAddress, bank); break;
-    case 108: trampoline_1pp(&b3Set_cursor_char, ppCodeWindowAddress, bank); break;
-    case 109: trampoline_1pp(&b3Set_text_attribute, ppCodeWindowAddress, bank); break;
-    case 110: trampoline_1pp(&b3Shake_screen, ppCodeWindowAddress, bank); break;
-    case 111: trampoline_1pp(&b3Configure_screen, ppCodeWindowAddress, bank); break;
-    case 112: trampoline_1pp(&b3Status_line_on, ppCodeWindowAddress, bank); break;
-    case 113: trampoline_1pp(&b3Status_line_off, ppCodeWindowAddress, bank); break;
-    case 114: trampoline_1pp(&b3Set_string, ppCodeWindowAddress, bank); break;
-    case 115: trampoline_1pp(&b3Get_string, ppCodeWindowAddress, bank); break;
-    case 116: trampoline_1pp(&b3Word_to_string, ppCodeWindowAddress, bank); break;
-    case 117: trampoline_1pp(&b3Parse, ppCodeWindowAddress, bank); break;
-    case 118: trampoline_1pp(&b3Get_num, ppCodeWindowAddress, bank); break;
-    case 119: trampoline_1pp(&b3Prevent_input, ppCodeWindowAddress, bank); break;
-    case 120: trampoline_1pp(&b3Accept_input, ppCodeWindowAddress, bank); break;
-    case 121: trampoline_1pp(&b3Set_key, ppCodeWindowAddress, bank); break;
-    case 122: trampoline_1pp(&b3Add_to_pic, ppCodeWindowAddress, bank); break;
-    case 123: trampoline_1pp(&b3Add_to_pic_v, ppCodeWindowAddress, bank); break;
-    case 124: trampoline_1pp(&b3Status, ppCodeWindowAddress, bank); break;
-    case 125: trampoline_1pp(&b3Save_game, ppCodeWindowAddress, bank); break;
-    case 126: trampoline_1pp(&b3Restore_game, ppCodeWindowAddress, bank); break;
-    case 127: break;
-    case 128: trampoline_1pp(&b3Restart_game, ppCodeWindowAddress, bank); break;
-    case 129: trampoline_1pp(&b3Show_obj, ppCodeWindowAddress, bank); break;
-    case 130: trampoline_1pp(&b3Random_num, ppCodeWindowAddress, bank); break;
-    case 131: trampoline_1pp(&b3Program_control, ppCodeWindowAddress, bank); break;
-    case 132: trampoline_1pp(&b3Player_control, ppCodeWindowAddress, bank); break;
-    case 133: trampoline_1pp(&b3Obj_status_v, ppCodeWindowAddress, bank); break;
-    case 134: trampoline_1pp(&b3Quit, ppCodeWindowAddress, bank); break;
-    case 135: break;
-    case 136: trampoline_1pp(&b3Pause, ppCodeWindowAddress, bank); break;
-    case 137: trampoline_1pp(&b3Echo_line, ppCodeWindowAddress, bank); break;
-    case 138: trampoline_1pp(&b3Cancel_line, ppCodeWindowAddress, bank); break;
-    case 139: trampoline_1pp(&b4Init_joy, ppCodeWindowAddress, bank); break;
-    case 140: break;
-    case 141: trampoline_1pp(&b4Version, ppCodeWindowAddress, bank); break;
-    case 142: trampoline_1pp(&b4Script_size, ppCodeWindowAddress, bank); break;
-    case 143: trampoline_1pp(&b4Set_game_id, ppCodeWindowAddress, bank); break;
-    case 144: trampoline_1pp(&b4Log, ppCodeWindowAddress, bank); break;
-    case 145: trampoline_1pp(&b4Set_scan_start, ppCodeWindowAddress, bank); break;
-    case 146: trampoline_1pp(&b4Reset_scan_start, ppCodeWindowAddress, bank); break;
-    case 147: trampoline_1pp(&b4Reposition_to, ppCodeWindowAddress, bank); break;
-    case 148: trampoline_1pp(&b4Reposition_to_v, ppCodeWindowAddress, bank); break;
-    case 149: trampoline_1pp(&b4Trace_on, ppCodeWindowAddress, bank); break;
-    case 150: trampoline_1pp(&b4Trace_info, ppCodeWindowAddress, bank); break;
-    case 151: trampoline_1pp(&b4Print_at, ppCodeWindowAddress, bank); break;
-    case 152: trampoline_1pp(&b4Print_at_v, ppCodeWindowAddress, bank); break;
-    case 153: trampoline_1pp(&b4Discard_view_v, ppCodeWindowAddress, bank); break;
-    case 154: trampoline_1pp(&b4Clear_text_rect, ppCodeWindowAddress, bank); break;
-    case 155: trampoline_1pp(&b4Set_upper_left, ppCodeWindowAddress, bank); break;
-    case 156: trampoline_1pp(&b4Set_menu, ppCodeWindowAddress, bank); break;
-    case 157: trampoline_1pp(&b4Set_menu_item, ppCodeWindowAddress, bank); break;
-    case 158: trampoline_1pp(&b4Submit_menu, ppCodeWindowAddress, bank); break;
-    case 159: trampoline_1pp(&b4Enable_item, ppCodeWindowAddress, bank); break;
-    case 160: trampoline_1pp(&b4Disable_item, ppCodeWindowAddress, bank); break;
-    case 161: trampoline_1pp(&b4Menu_input, ppCodeWindowAddress, bank); break;
-    case 162: trampoline_1pp(&b4Show_obj_v, ppCodeWindowAddress, bank); break;
-    case 163: trampoline_1pp(&b4Open_dialogue, ppCodeWindowAddress, bank); break;
-    case 164: trampoline_1pp(&b4Close_dialogue, ppCodeWindowAddress, bank); break;
-    case 165: trampoline_1pp(&b4Mul_n, ppCodeWindowAddress, bank); break;
-    case 166: trampoline_1pp(&b4Mul_v, ppCodeWindowAddress, bank); break;
-    case 167: trampoline_1pp(&b4Div_n, ppCodeWindowAddress, bank); break;
-    case 168: trampoline_1pp(&b4Div_v, ppCodeWindowAddress, bank); break;
-    case 169: trampoline_1pp(&b4Close_window, ppCodeWindowAddress, bank); break;
-    case 170:  break;
-    case 171:  break;
-    case 172:  break;
-    case 173:  break;
-    case 174:  break;
-    case 175:  break;
-    case 176:  break;
-    case 177:  break;
-    case 178:  break;
-    case 179:  break;
-    case 180:  break;
-    case 181:  break;
-    }
+		break;
+	case 24: trampoline_1pp(&b1Load_pic, ppCodeWindowAddress, bank); break;
+	case 25: trampoline_1pp(&b1Draw_pic, ppCodeWindowAddress, bank); break;
+	case 26: trampoline_1pp(&b1Show_pic, ppCodeWindowAddress, bank); break;
+	case 27: trampoline_1pp(&b1Discard_pic, ppCodeWindowAddress, bank); break;
+	case 28: trampoline_1pp(&b1Overlay_pic, ppCodeWindowAddress, bank); break;
+	case 29: trampoline_1pp(&b1Show_pri_screen, ppCodeWindowAddress, bank); break;
+	case 30: trampoline_1pp(&b1Load_view, ppCodeWindowAddress, bank); break;
+	case 31: trampoline_1pp(&b1Load_view_v, ppCodeWindowAddress, bank); break;
+	case 32: trampoline_1pp(&b1Discard_view, ppCodeWindowAddress, bank); break;
+	case 33: trampoline_1pp(&b1Animate_obj, ppCodeWindowAddress, bank); break;
+	case 34: trampoline_1pp(&b1Unanimate_all, ppCodeWindowAddress, bank); break;
+	case 35: trampoline_1pp(&b1Draw, ppCodeWindowAddress, bank); break;
+	case 36: trampoline_1pp(&b1Erase, ppCodeWindowAddress, bank); break;
+	case 37: trampoline_1pp(&b2Position, ppCodeWindowAddress, bank); break;
+	case 38: trampoline_1pp(&b2Position_v, ppCodeWindowAddress, bank); break;
+	case 39: trampoline_1pp(&b2Get_posn, ppCodeWindowAddress, bank); break;
+	case 40: trampoline_1pp(&b2Reposition, ppCodeWindowAddress, bank); break;
+	case 41: trampoline_1pp(&b2Set_view, ppCodeWindowAddress, bank); break;
+	case 42: trampoline_1pp(&b2Set_view_v, ppCodeWindowAddress, bank); break;
+	case 43: trampoline_1pp(&b2Set_loop, ppCodeWindowAddress, bank); break;
+	case 44: trampoline_1pp(&b2Set_loop_v, ppCodeWindowAddress, bank); break;
+	case 45: trampoline_1pp(&b2Fix_loop, ppCodeWindowAddress, bank); break;
+	case 46: trampoline_1pp(&b2Release_loop, ppCodeWindowAddress, bank); break;
+	case 47: trampoline_1pp(&b2Set_cel, ppCodeWindowAddress, bank); break;
+	case 48: trampoline_1pp(&b2Set_cel_v, ppCodeWindowAddress, bank); break;
+	case 49: trampoline_1pp(&b2Last_cel, ppCodeWindowAddress, bank); break;
+	case 50: trampoline_1pp(&b2Current_cel, ppCodeWindowAddress, bank); break;
+	case 51: trampoline_1pp(&b2Current_loop, ppCodeWindowAddress, bank); break;
+	case 52: trampoline_1pp(&b2Current_view, ppCodeWindowAddress, bank); break;
+	case 53: trampoline_1pp(&b2Number_of_loops, ppCodeWindowAddress, bank); break;
+	case 54: trampoline_1pp(&b2Set_priority, ppCodeWindowAddress, bank); break;
+	case 55: trampoline_1pp(&b2Set_priority_v, ppCodeWindowAddress, bank); break;
+	case 56: trampoline_1pp(&b2Release_priority, ppCodeWindowAddress, bank); break;
+	case 57: trampoline_1pp(&b2Get_priority, ppCodeWindowAddress, bank); break;
+	case 58: trampoline_1pp(&b2Stop_update, ppCodeWindowAddress, bank); break;
+	case 59: trampoline_1pp(&b2Start_update, ppCodeWindowAddress, bank); break;
+	case 60: trampoline_1pp(&b2Force_update, ppCodeWindowAddress, bank); break;
+	case 61: trampoline_1pp(&b2Ignore_horizon, ppCodeWindowAddress, bank); break;
+	case 62: trampoline_1pp(&b2Observe_horizon, ppCodeWindowAddress, bank); break;
+	case 63: trampoline_1pp(&b2Set_horizon, ppCodeWindowAddress, bank); break;
+	case 64: trampoline_1pp(&b2Object_on_water, ppCodeWindowAddress, bank); break;
+	case 65: trampoline_1pp(&b2Object_on_land, ppCodeWindowAddress, bank); break;
+	case 66: trampoline_1pp(&b2Object_on_anything, ppCodeWindowAddress, bank); break;
+	case 67: trampoline_1pp(&b2Ignore_objs, ppCodeWindowAddress, bank); break;
+	case 68: trampoline_1pp(&b2Observe_objs, ppCodeWindowAddress, bank); break;
+	case 69: trampoline_1pp(&b2Distance, ppCodeWindowAddress, bank); break;
+	case 70: trampoline_1pp(&b2Stop_cycling, ppCodeWindowAddress, bank); break;
+	case 71: trampoline_1pp(&b2Start_cycling, ppCodeWindowAddress, bank); break;
+	case 72: trampoline_1pp(&b2Normal_cycle, ppCodeWindowAddress, bank); break;
+	case 73: trampoline_1pp(&b2End_of_loop, ppCodeWindowAddress, bank); break;
+	case 74: trampoline_1pp(&b2Reverse_cycle, ppCodeWindowAddress, bank); break;
+	case 75: trampoline_1pp(&b2Reverse_loop, ppCodeWindowAddress, bank); break;
+	case 76: trampoline_1pp(&b2Cycle_time, ppCodeWindowAddress, bank); break;
+	case 77: trampoline_1pp(&b2Stop_motion, ppCodeWindowAddress, bank); break;
+	case 78: trampoline_1pp(&b2Start_motion, ppCodeWindowAddress, bank); break;
+	case 79: trampoline_1pp(&b2Step_size, ppCodeWindowAddress, bank); break;
+	case 80: trampoline_1pp(&b2Step_time, ppCodeWindowAddress, bank); break;
+	case 81: trampoline_1pp(&b2Move_obj, ppCodeWindowAddress, bank); break;
+	case 82: trampoline_1pp(&b2Move_obj_v, ppCodeWindowAddress, bank); break;
+	case 83: trampoline_1pp(&b2Follow_ego, ppCodeWindowAddress, bank); break;
+	case 84: trampoline_1pp(&b2Wander, ppCodeWindowAddress, bank); break;
+	case 85: trampoline_1pp(&b2Normal_motion, ppCodeWindowAddress, bank); break;
+	case 86: trampoline_1pp(&b2Set_dir, ppCodeWindowAddress, bank); break;
+	case 87: trampoline_1pp(&b2Get_dir, ppCodeWindowAddress, bank); break;
+	case 88: trampoline_1pp(&b2Ignore_blocks, ppCodeWindowAddress, bank); break;
+	case 89: trampoline_1pp(&b2Observe_blocks, ppCodeWindowAddress, bank); break;
+	case 90: trampoline_1pp(&b2Block, ppCodeWindowAddress, bank); break;
+	case 91: trampoline_1pp(&b2Unblock, ppCodeWindowAddress, bank); break;
+	case 92: trampoline_1pp(&b3Get, ppCodeWindowAddress, bank); break;
+	case 93: trampoline_1pp(&b3Get_v, ppCodeWindowAddress, bank); break;
+	case 94: trampoline_1pp(&b3Drop, ppCodeWindowAddress, bank); break;
+	case 95: trampoline_1pp(&b3Put, ppCodeWindowAddress, bank); break;
+	case 96: trampoline_1pp(&b3Put_v, ppCodeWindowAddress, bank); break;
+	case 97: trampoline_1pp(&b3Get_room_v, ppCodeWindowAddress, bank); break;
+	case 98: trampoline_1pp(&b3Load_sound, ppCodeWindowAddress, bank); break;
+	case 99: trampoline_1pp(&b3Play_sound, ppCodeWindowAddress, bank); break;
+	case 100: trampoline_1pp(&b3Stop_sound, ppCodeWindowAddress, bank); break;
+	case 101: trampoline_1pp(&b3Print, ppCodeWindowAddress, bank); break;
+	case 102: trampoline_1pp(&b3Print_v, ppCodeWindowAddress, bank); break;
+	case 103: trampoline_1pp(&b3Display, ppCodeWindowAddress, bank); break;
+	case 104: trampoline_1pp(&b3Display_v, ppCodeWindowAddress, bank); break;
+	case 105: trampoline_1pp(&b3Clear_lines, ppCodeWindowAddress, bank); break;
+	case 106: trampoline_1pp(&b3Text_screen, ppCodeWindowAddress, bank); break;
+	case 107: trampoline_1pp(&b3Graphics, ppCodeWindowAddress, bank); break;
+	case 108: trampoline_1pp(&b3Set_cursor_char, ppCodeWindowAddress, bank); break;
+	case 109: trampoline_1pp(&b3Set_text_attribute, ppCodeWindowAddress, bank); break;
+	case 110: trampoline_1pp(&b3Shake_screen, ppCodeWindowAddress, bank); break;
+	case 111: trampoline_1pp(&b3Configure_screen, ppCodeWindowAddress, bank); break;
+	case 112: trampoline_1pp(&b3Status_line_on, ppCodeWindowAddress, bank); break;
+	case 113: trampoline_1pp(&b3Status_line_off, ppCodeWindowAddress, bank); break;
+	case 114: trampoline_1pp(&b3Set_string, ppCodeWindowAddress, bank); break;
+	case 115: trampoline_1pp(&b3Get_string, ppCodeWindowAddress, bank); break;
+	case 116: trampoline_1pp(&b3Word_to_string, ppCodeWindowAddress, bank); break;
+	case 117: trampoline_1pp(&b3Parse, ppCodeWindowAddress, bank); break;
+	case 118: trampoline_1pp(&b3Get_num, ppCodeWindowAddress, bank); break;
+	case 119: trampoline_1pp(&b3Prevent_input, ppCodeWindowAddress, bank); break;
+	case 120: trampoline_1pp(&b3Accept_input, ppCodeWindowAddress, bank); break;
+	case 121: trampoline_1pp(&b3Set_key, ppCodeWindowAddress, bank); break;
+	case 122: trampoline_1pp(&b3Add_to_pic, ppCodeWindowAddress, bank); break;
+	case 123: trampoline_1pp(&b3Add_to_pic_v, ppCodeWindowAddress, bank); break;
+	case 124: trampoline_1pp(&b3Status, ppCodeWindowAddress, bank); break;
+	case 125: trampoline_1pp(&b3Save_game, ppCodeWindowAddress, bank); break;
+	case 126: trampoline_1pp(&b3Restore_game, ppCodeWindowAddress, bank); break;
+	case 127: break;
+	case 128: trampoline_1pp(&b3Restart_game, ppCodeWindowAddress, bank); break;
+	case 129: trampoline_1pp(&b3Show_obj, ppCodeWindowAddress, bank); break;
+	case 130: trampoline_1pp(&b3Random_num, ppCodeWindowAddress, bank); break;
+	case 131: trampoline_1pp(&b3Program_control, ppCodeWindowAddress, bank); break;
+	case 132: trampoline_1pp(&b3Player_control, ppCodeWindowAddress, bank); break;
+	case 133: trampoline_1pp(&b3Obj_status_v, ppCodeWindowAddress, bank); break;
+	case 134: trampoline_1pp(&b3Quit, ppCodeWindowAddress, bank); break;
+	case 135: break;
+	case 136: trampoline_1pp(&b3Pause, ppCodeWindowAddress, bank); break;
+	case 137: trampoline_1pp(&b3Echo_line, ppCodeWindowAddress, bank); break;
+	case 138: trampoline_1pp(&b3Cancel_line, ppCodeWindowAddress, bank); break;
+	case 139: trampoline_1pp(&b4Init_joy, ppCodeWindowAddress, bank); break;
+	case 140: break;
+	case 141: trampoline_1pp(&b4Version, ppCodeWindowAddress, bank); break;
+	case 142: trampoline_1pp(&b4Script_size, ppCodeWindowAddress, bank); break;
+	case 143: trampoline_1pp(&b4Set_game_id, ppCodeWindowAddress, bank); break;
+	case 144: trampoline_1pp(&b4Log, ppCodeWindowAddress, bank); break;
+	case 145: trampoline_1pp(&b4Set_scan_start, ppCodeWindowAddress, bank); break;
+	case 146: trampoline_1pp(&b4Reset_scan_start, ppCodeWindowAddress, bank); break;
+	case 147: trampoline_1pp(&b4Reposition_to, ppCodeWindowAddress, bank); break;
+	case 148: trampoline_1pp(&b4Reposition_to_v, ppCodeWindowAddress, bank); break;
+	case 149: trampoline_1pp(&b4Trace_on, ppCodeWindowAddress, bank); break;
+	case 150: trampoline_1pp(&b4Trace_info, ppCodeWindowAddress, bank); break;
+	case 151: trampoline_1pp(&b4Print_at, ppCodeWindowAddress, bank); break;
+	case 152: trampoline_1pp(&b4Print_at_v, ppCodeWindowAddress, bank); break;
+	case 153: trampoline_1pp(&b4Discard_view_v, ppCodeWindowAddress, bank); break;
+	case 154: trampoline_1pp(&b4Clear_text_rect, ppCodeWindowAddress, bank); break;
+	case 155: trampoline_1pp(&b4Set_upper_left, ppCodeWindowAddress, bank); break;
+	case 156: trampoline_1pp(&b4Set_menu, ppCodeWindowAddress, bank); break;
+	case 157: trampoline_1pp(&b4Set_menu_item, ppCodeWindowAddress, bank); break;
+	case 158: trampoline_1pp(&b4Submit_menu, ppCodeWindowAddress, bank); break;
+	case 159: trampoline_1pp(&b4Enable_item, ppCodeWindowAddress, bank); break;
+	case 160: trampoline_1pp(&b4Disable_item, ppCodeWindowAddress, bank); break;
+	case 161: trampoline_1pp(&b4Menu_input, ppCodeWindowAddress, bank); break;
+	case 162: trampoline_1pp(&b4Show_obj_v, ppCodeWindowAddress, bank); break;
+	case 163: trampoline_1pp(&b4Open_dialogue, ppCodeWindowAddress, bank); break;
+	case 164: trampoline_1pp(&b4Close_dialogue, ppCodeWindowAddress, bank); break;
+	case 165: trampoline_1pp(&b4Mul_n, ppCodeWindowAddress, bank); break;
+	case 166: trampoline_1pp(&b4Mul_v, ppCodeWindowAddress, bank); break;
+	case 167: trampoline_1pp(&b4Div_n, ppCodeWindowAddress, bank); break;
+	case 168: trampoline_1pp(&b4Div_v, ppCodeWindowAddress, bank); break;
+	case 169: trampoline_1pp(&b4Close_window, ppCodeWindowAddress, bank); break;
+	case 170:  break;
+	case 171:  break;
+	case 172:  break;
+	case 173:  break;
+	case 174:  break;
+	case 175:  break;
+	case 176:  break;
+	case 177:  break;
+	case 178:  break;
+	case 179:  break;
+	case 180:  break;
+	case 181:  break;
+	}
 
-    return TRUE;
+	return TRUE;
 }
 
 int ifLogicHandlers(byte ch, byte** ppCodeWindowAddress, byte bank)
 {
 
-    int result;
+	int result;
 
 #ifdef VERBOSE_LOGIC_EXEC
-    printf("If Check %d d1 %d, %d", ch, *(*ppCodeWindowAddress), *(*ppCodeWindowAddress + 1));
+	printf("If Check %d d1 %d, %d", ch, *(*ppCodeWindowAddress), *(*ppCodeWindowAddress + 1));
 #endif // VERBOSE_LOGIC_EXEC
 
-    switch (ch) {
-    case 0: result = FALSE; break; /* Should never happen */
-    case 1: result = trampoline_1pRetbool(&b1Equaln, ppCodeWindowAddress, bank); break;
-    case 2: result = trampoline_1pRetbool(&b1Equalv, ppCodeWindowAddress, bank); break;
-    case 3: result = trampoline_1pRetbool(&b1Lessn, ppCodeWindowAddress, bank); break;
-    case 4: result = trampoline_1pRetbool(&b1Lessv, ppCodeWindowAddress, bank); break;
-    case 5: result = trampoline_1pRetbool(&b1Greatern, ppCodeWindowAddress, bank); break;
-    case 6: result = trampoline_1pRetbool(&b1Greaterv, ppCodeWindowAddress, bank); break;
-    case 7: result = trampoline_1pRetbool(&b1Isset, ppCodeWindowAddress, bank); break;
-    case 8: result = trampoline_1pRetbool(&b1Issetv, ppCodeWindowAddress, bank); break;
-    case 9: result = trampoline_1pRetbool(&b1Has, ppCodeWindowAddress, bank); break;
-    case 10: result = trampoline_1pRetbool(&b1Obj_in_room, ppCodeWindowAddress, bank); break;
-    case 11: result = trampoline_1pRetbool(&b1Posn, ppCodeWindowAddress, bank); break;
-    case 12: result = trampoline_1pRetbool(&b1Controller, ppCodeWindowAddress, bank); break;
-    case 13: result = trampoline_1pRetbool(&b1Have_key, ppCodeWindowAddress, bank); break;
-    case 14: result = trampoline_1pRetbool(&b1Said, ppCodeWindowAddress, bank); break;
-    case 15: result = trampoline_1pRetbool(&b1Compare_strings, ppCodeWindowAddress, bank); break;
-    case 16: result = trampoline_1pRetbool(&b1Obj_in_box, ppCodeWindowAddress, bank); break;
-    case 17: result = trampoline_1pRetbool(&b1Center_posn, ppCodeWindowAddress, bank); break;
-    case 18: result = trampoline_1pRetbool(&b1Right_posn, ppCodeWindowAddress, bank); break;
-    default:
-        ////lprintf("catastrophe: Illegal test [%d], logic %d, posn %d.",
-            //ch, currentLog, logics[currentLog].currentPoint);
-        result = FALSE;
-        break; /* Should never happen */
-    }
+	switch (ch) {
+	case 0: result = FALSE; break; /* Should never happen */
+	case 1: result = trampoline_1pRetbool(&b1Equaln, ppCodeWindowAddress, bank); break;
+	case 2: result = trampoline_1pRetbool(&b1Equalv, ppCodeWindowAddress, bank); break;
+	case 3: result = trampoline_1pRetbool(&b1Lessn, ppCodeWindowAddress, bank); break;
+	case 4: result = trampoline_1pRetbool(&b1Lessv, ppCodeWindowAddress, bank); break;
+	case 5: result = trampoline_1pRetbool(&b1Greatern, ppCodeWindowAddress, bank); break;
+	case 6: result = trampoline_1pRetbool(&b1Greaterv, ppCodeWindowAddress, bank); break;
+	case 7: result = trampoline_1pRetbool(&b1Isset, ppCodeWindowAddress, bank); break;
+	case 8: result = trampoline_1pRetbool(&b1Issetv, ppCodeWindowAddress, bank); break;
+	case 9: result = trampoline_1pRetbool(&b1Has, ppCodeWindowAddress, bank); break;
+	case 10: result = trampoline_1pRetbool(&b1Obj_in_room, ppCodeWindowAddress, bank); break;
+	case 11: result = trampoline_1pRetbool(&b1Posn, ppCodeWindowAddress, bank); break;
+	case 12: result = trampoline_1pRetbool(&b1Controller, ppCodeWindowAddress, bank); break;
+	case 13: result = trampoline_1pRetbool(&b1Have_key, ppCodeWindowAddress, bank); break;
+	case 14: result = trampoline_1pRetbool(&b1Said, ppCodeWindowAddress, bank); break;
+	case 15: result = trampoline_1pRetbool(&b1Compare_strings, ppCodeWindowAddress, bank); break;
+	case 16: result = trampoline_1pRetbool(&b1Obj_in_box, ppCodeWindowAddress, bank); break;
+	case 17: result = trampoline_1pRetbool(&b1Center_posn, ppCodeWindowAddress, bank); break;
+	case 18: result = trampoline_1pRetbool(&b1Right_posn, ppCodeWindowAddress, bank); break;
+	default:
+		////lprintf("catastrophe: Illegal test [%d], logic %d, posn %d.",
+			//ch, currentLog, logics[currentLog].currentPoint);
+		result = FALSE;
+		break; /* Should never happen */
+	}
 
 #ifdef VERBOSE_LOGIC_EXEC
-    printf(" And the result is %d \n", result);
+	printf(" And the result is %d \n", result);
 #endif // VERBOSE_LOGIC_EXEC
-    return result;
+	return result;
 }
 
 #pragma code-name (pop)
 
 byte getBankBasedOnCode(byte code)
 {
-    if (code <= HIGHEST_BANK1_FUNC)
-    {
-        return 1;
-    }
-    else if (code <= HIGHEST_BANK2_FUNC)
-    {
-        return 2;
-    }
-    else if (code <= HIGHEST_BANK3_FUNC)
-    {
-        return 3;
-    }
-    else if (code <= HIGHEST_BANK4_FUNC)
-    {
-        return 4;
-    }
-    return RAM_BANK;
+	if (code <= HIGHEST_BANK1_FUNC)
+	{
+		return 1;
+	}
+	else if (code <= HIGHEST_BANK2_FUNC)
+	{
+		return 2;
+	}
+	else if (code <= HIGHEST_BANK3_FUNC)
+	{
+		return 3;
+	}
+	else if (code <= HIGHEST_BANK4_FUNC)
+	{
+		return 4;
+	}
+	return RAM_BANK;
 }
 
 /***************************************************************************
@@ -2868,131 +2872,132 @@ byte getBankBasedOnCode(byte code)
 ***************************************************************************/
 void ifHandler(byte** data, byte codeBank)
 {
-    int ch;
-    boolean stillProcessing = TRUE, testVal, notMode = FALSE, orMode = FALSE;
-    byte b1, b2;
-    short int disp, dummy;
-    char debugString[80];
-    byte previousBank = RAM_BANK;
-    byte codeWindow[CODE_WINDOW_SIZE];
-    byte* codeWindowAddress;
-    byte** ppCodeWindowAddress;
-    byte ifHandlerBank;
+	int ch;
+	boolean stillProcessing = TRUE, testVal, notMode = FALSE, orMode = FALSE;
+	byte b1, b2;
+	short int disp, dummy;
+	char debugString[80];
+	byte previousBank = RAM_BANK;
+	byte codeWindow[CODE_WINDOW_SIZE];
+	byte* codeWindowAddress;
+	byte** ppCodeWindowAddress;
+	byte ifHandlerBank;
 
-    ppCodeWindowAddress = &codeWindowAddress;
+	ppCodeWindowAddress = &codeWindowAddress;
 
-    RAM_BANK = codeBank;
-    while (stillProcessing) {
-        ch = *(*data)++;
+	RAM_BANK = codeBank;
+
+	while (stillProcessing) {
+		ch = *(*data)++;
 
 #ifdef DEBUG
-        if (ch <= 18) {
-            sprintf(debugString, "%s [%x]           ", testCommands[ch].commandName, ch);
-            drawBigString(screen, debugString, 0, 400, 0, 7);
-            if ((readkey() & 0xff) == 'q') closedown();
-        }
+		if (ch <= 18) {
+			sprintf(debugString, "%s [%x]           ", testCommands[ch].commandName, ch);
+			drawBigString(screen, debugString, 0, 400, 0, 7);
+			if ((readkey() & 0xff) == 'q') closedown();
+		}
 #endif
 
 #ifdef VERBOSE_LOGIC_EXEC
-        printf("-- %d %d\n", printCounter + 1, ch);
+		printf("-- %d %d\n", printCounter + 1, ch);
 #endif // VERBOSE_LOGIC_EXEC
-        printCounter++;
-        switch (ch) {
-        case 0xff: /* Closing if bracket. Expression must be true. */
+		printCounter++;
+		switch (ch) {
+		case 0xff: /* Closing if bracket. Expression must be true. */
 #ifdef DEBUG
-            drawBigString(screen, "test is true             ", 0, 400, 0, 7);
-            if ((readkey() & 0xff) == 'q') closedown();
+			drawBigString(screen, "test is true             ", 0, 400, 0, 7);
+			if ((readkey() & 0xff) == 'q') closedown();
 #endif
-            * data += 2;
-            return;
-        case 0xfd: /* Not mode toggle */
-            notMode = (notMode ? FALSE : TRUE);
-            break;
-        case 0xfc:
-            if (orMode) {
-                /* If we have reached the closing OR bracket, then the
-                ** test for the whole expression must be false. */
-                stillProcessing = FALSE;
-            }
-            else {
-                orMode = TRUE;
-            }
-            break;
-        default:
-            memcpy(&codeWindow[0], *data, CODE_WINDOW_SIZE);
-            codeWindowAddress = &codeWindow[0];
-            RAM_BANK = IF_LOGIC_HANDLERS_BANK;
-            ifHandlerBank = getBankBasedOnCode(ch);
+			* data += 2;
+			return;
+		case 0xfd: /* Not mode toggle */
+			notMode = (notMode ? FALSE : TRUE);
+			break;
+		case 0xfc:
+			if (orMode) {
+				/* If we have reached the closing OR bracket, then the
+				** test for the whole expression must be false. */
+				stillProcessing = FALSE;
+			}
+			else {
+				orMode = TRUE;
+			}
+			break;
+		default:
+			memcpy(&codeWindow[0], *data, CODE_WINDOW_SIZE);
+			codeWindowAddress = &codeWindow[0];
+			RAM_BANK = IF_LOGIC_HANDLERS_BANK;
+			ifHandlerBank = getBankBasedOnCode(ch);
 
-            testVal = ifLogicHandlers(ch, ppCodeWindowAddress, ifHandlerBank);
+			testVal = ifLogicHandlers(ch, ppCodeWindowAddress, ifHandlerBank);
 
-            RAM_BANK = previousBank;
+			RAM_BANK = previousBank;
 
 #ifdef VERBOSE_LOGIC_EXEC
 
-            printf("Data was %p trying to add %p ", data, codeWindowAddress - &codeWindow[0]);
+			printf("Data was %p trying to add %p ", data, codeWindowAddress - &codeWindow[0]);
 #endif // VERBOSE
-            * data += (codeWindowAddress - &codeWindow[0]);
+			* data += (codeWindowAddress - &codeWindow[0]);
 
 #ifdef VERBOSE_LOGIC_EXEC
-            printf("Data is %p %u \n", data, *data);
+			printf("Data is %p %u \n", data, *data);
 #endif
-            if (notMode) testVal = (testVal ? FALSE : TRUE);
-            notMode = 0;
-            if (testVal) {
-                if (orMode) {
-                    /* Find the closing OR. It can't just search for 0xfc
-                    ** because this could be a parameter for one of the test
-                    ** commands rather than being the closing OR. We therefore
-                    ** have to jump over each command as we find it. */
-                    while (TRUE) {
-                        ch = *(*data)++;
-                        if (ch == 0xfc) break;
-                        if (ch > 0xfc) continue;
-                        if (ch == 0x0e) { /* said() has variable number of args */
-                            ch = *(*data)++;
+			if (notMode) testVal = (testVal ? FALSE : TRUE);
+			notMode = 0;
+			if (testVal) {
+				if (orMode) {
+					/* Find the closing OR. It can't just search for 0xfc
+					** because this could be a parameter for one of the test
+					** commands rather than being the closing OR. We therefore
+					** have to jump over each command as we find it. */
+					while (TRUE) {
+						ch = *(*data)++;
+						if (ch == 0xfc) break;
+						if (ch > 0xfc) continue;
+						if (ch == 0x0e) { /* said() has variable number of args */
+							ch = *(*data)++;
 
-                            *data += (ch << 1);
-                        }
-                        else {
-                            *data += testCommands[ch].numArgs;
-                        }
-                    }
-                }
-            }
-            else {
-                if (!orMode) stillProcessing = FALSE;
-            }
-            break;
-        }
-        RAM_BANK = previousBank;
+							*data += (ch << 1);
+						}
+						else {
+							*data += testCommands[ch].numArgs;
+						}
+					}
+				}
+			}
+			else {
+				if (!orMode) stillProcessing = FALSE;
+			}
+			break;
+}
+		RAM_BANK = previousBank;
 
-    }
+	}
 
 #ifdef DEBUG
-    drawBigString(screen, "test is false            ", 0, 400, 0, 7);
-    if ((readkey() & 0xff) == 'q') closedown();
+	drawBigString(screen, "test is false            ", 0, 400, 0, 7);
+	if ((readkey() & 0xff) == 'q') closedown();
 #endif
 
-    /* Test is false. */
-    while (TRUE) {
-        ch = *(*data)++;
-        if (ch == 0xff) {
-            b1 = *(*data)++;
-            b2 = *(*data)++;
-            disp = (b2 << 8) | b1;  /* Should be signed 16 bit */
-            *data += disp;
-            break;
-        }
-        if (ch >= 0xfc) continue;
-        if (ch == 0x0e) {
-            ch = *(*data)++;
-            *data += (ch << 1);
-        }
-        else {
-            *data += testCommands[ch].numArgs;
-        }
-    }
+	/* Test is false. */
+	while (TRUE) {
+		ch = *(*data)++;
+		if (ch == 0xff) {
+			b1 = *(*data)++;
+			b2 = *(*data)++;
+			disp = (b2 << 8) | b1;  /* Should be signed 16 bit */
+			*data += disp;
+			break;
+		}
+		if (ch >= 0xfc) continue;
+		if (ch == 0x0e) {
+			ch = *(*data)++;
+			*data += (ch << 1);
+		}
+		else {
+			*data += testCommands[ch].numArgs;
+		}
+	}
 }
 
 /***************************************************************************
@@ -3002,195 +3007,191 @@ void ifHandler(byte** data, byte codeBank)
 ***************************************************************************/
 void executeLogic(int logNum)
 {
-    byte previousRamBank = RAM_BANK;
-    boolean discardAfterward = FALSE, stillExecuting = TRUE;
-    byte* code, * endPos, * startPos, b1, b2;
-    byte codeAtTimeOfLastBankSwitch;
-    LOGICEntry currentLogic;
-    LOGICFile currentLogicFile;
-    byte codeWindow[CODE_WINDOW_SIZE];
-    byte* codeWindowAddress;
-    byte** ppCodeWindowAddress;
-    byte instructionCodeBank;
-    boolean lastCodeWasNonWindow = FALSE;
+	byte previousRamBank = RAM_BANK;
+	boolean discardAfterward = FALSE, stillExecuting = TRUE;
+	byte* code, * endPos, * startPos, b1, b2;
+	byte codeAtTimeOfLastBankSwitch;
+	LOGICEntry currentLogic;
+	LOGICFile currentLogicFile;
+	byte codeWindow[CODE_WINDOW_SIZE];
+	byte* codeWindowAddress;
+	byte** ppCodeWindowAddress;
+	byte instructionCodeBank;
+	boolean lastCodeWasNonWindow = FALSE;
 
-    //Temp
+	//Temp
 
-    short int disp;
-    char debugString[80];
-    int i, dummy;
+	short int disp;
+	char debugString[80];
+	int i, dummy;
 
-    currentLog = logNum;
+	currentLog = logNum;
 
-    RAM_BANK = LOGIC_ENTRY_BANK;
-    currentLogic = logics[logNum];
+	RAM_BANK = LOGIC_ENTRY_BANK;
+	currentLogic = logics[logNum];
 
-    RAM_BANK = LOGIC_FILE_BANK;
-    currentLogicFile = *currentLogic.data;
+	RAM_BANK = LOGIC_FILE_BANK;
+	currentLogicFile = *currentLogic.data;
 
 #ifdef VERBOSE_SCRIPT_START
-    printf("ex s. %d\n", logNum);
+	printf("ex s. %d\n", logNum);
 #endif // VERBOSE_SCRIPT_START
 
 
 #ifdef DEBUG
-    sprintf(debugString, "LOGIC.%d:       ", currentLog);
-    drawBigString(screen, debugString, 0, 384, 0, 7);
+	sprintf(debugString, "LOGIC.%d:       ", currentLog);
+	drawBigString(screen, debugString, 0, 384, 0, 7);
 #endif
 
-    /* Load logic file temporarily in order to execute it if the logic is
-    ** not already in memory. */
-    if (!currentLogic.loaded) {
-        discardAfterward = TRUE;
+	/* Load logic file temporarily in order to execute it if the logic is
+	** not already in memory. */
+	if (!currentLogic.loaded) {
+		discardAfterward = TRUE;
 
-        RAM_BANK = LOGIC_CODE_BANK;
+		RAM_BANK = LOGIC_CODE_BANK;
 
 
 
-        b8LoadLogicFile(logNum);
+		b8LoadLogicFile(logNum);
 
-        RAM_BANK = LOGIC_ENTRY_BANK;
-        currentLogic = logics[logNum];
+		RAM_BANK = LOGIC_ENTRY_BANK;
+		currentLogic = logics[logNum];
 
-        RAM_BANK = LOGIC_FILE_BANK;
-        currentLogicFile = *currentLogic.data;
-    }
+		RAM_BANK = LOGIC_FILE_BANK;
+		currentLogicFile = *currentLogic.data;
+	}
 #ifdef DEBUG
-    debugString[0] = 0;
-    for (i = 0; i < 10; i++)
-        sprintf(debugString, "%s %x", debugString, currentLogicFile->logicCode[i]);
-    drawBigString(screen, debugString, 0, 416, 0, 7);
+	debugString[0] = 0;
+	for (i = 0; i < 10; i++)
+		sprintf(debugString, "%s %x", debugString, currentLogicFile->logicCode[i]);
+	drawBigString(screen, debugString, 0, 416, 0, 7);
 #endif
-    /* Set up position to start executing code from. */
-    //currentLogic.currentPoint = currentLogic.entryPoint;
-    startPos = currentLogicFile.logicCode;
-    code = startPos + currentLogic.entryPoint;
-    endPos = startPos + currentLogicFile.codeSize;
+	/* Set up position to start executing code from. */
+	//currentLogic.currentPoint = currentLogic.entryPoint;
+	startPos = currentLogicFile.logicCode;
+	code = startPos + currentLogic.entryPoint;
+	endPos = startPos + currentLogicFile.codeSize;
 
 #ifdef DEBUG
-    drawBigString(screen, "Push a key to advance a step", 0, 400, 0, 7);
-    if ((readkey() & 0xff) == 'q') closedown();
+	drawBigString(screen, "Push a key to advance a step", 0, 400, 0, 7);
+	if ((readkey() & 0xff) == 'q') closedown();
 #endif
 
-    RAM_BANK = currentLogicFile.codeBank;
+	RAM_BANK = currentLogicFile.codeBank;
 
-    while ((code < endPos) && stillExecuting) {
-        if (logNum == 46)
-        {
-            printf("The code is now %u and the address is %p and the bank is %d and the log num is %d and the counter is %d \n", *code, code, RAM_BANK, logNum, opCounter);
-        }
-
-        if (printCounter > 499)
-        {
+	while ((code < endPos) && stillExecuting) {
+		if (logNum == 46)
+		{
+			debugStop = TRUE;
 #ifdef VERBOSE_LOGIC_EXEC
-            printf("The code is now %u and the address is %p and the bank is %d and the log num is %d and the counter is %d \n", *code, code, RAM_BANK, logNum, opCounter);
+			printf("The code is now %u and the address is %p and the bank is %d and the log num is %d and the counter is %d \n", *code, code, RAM_BANK, logNum, opCounter);
 #endif // VERBOSE
-            //exit(0);
-        }
+			//exit(0);
+		}
 
-        memcpy(&codeWindow[0], code, CODE_WINDOW_SIZE);
+		memcpy(&codeWindow[0], code, CODE_WINDOW_SIZE);
 
-        codeWindowAddress = &codeWindow[0] + 1;
-        ppCodeWindowAddress = &codeWindowAddress;
+		codeWindowAddress = &codeWindow[0] + 1;
+		ppCodeWindowAddress = &codeWindowAddress;
 
-        /* Emergency exit */
-        if (key[KEY_F12]) {
-            ////lprintf("info: Exiting MEKA due to F12, logic: %d, posn: %d",
-                //logNum, currentLogic.currentPoint);
-            exit(0);
-        }
+		/* Emergency exit */
+		if (key[KEY_F12]) {
+			////lprintf("info: Exiting MEKA due to F12, logic: %d, posn: %d",
+				//logNum, currentLogic.currentPoint);
+			exit(0);
+		}
 
-        currentLogic.currentPoint = (code - startPos);
+		currentLogic.currentPoint = (code - startPos);
 
 #ifdef DEBUG
-        debugString[0] = 0;
-        for (i = 0; i < 10; i++)
-            sprintf(debugString, "%s %x", debugString, code[i]);
-        drawBigString(screen, debugString, 0, 416, 0, 7);
+		debugString[0] = 0;
+		for (i = 0; i < 10; i++)
+			sprintf(debugString, "%s %x", debugString, code[i]);
+		drawBigString(screen, debugString, 0, 416, 0, 7);
 
-        if (*code < 0xfc) {
-            sprintf(debugString, "(%d) %s [%x]           ", currentLogic.currentPoint, agiCommands[*code].commandName, *code);
-            drawBigString(screen, debugString, 0, 400, 0, 7);
-            if ((readkey() & 0xff) == 'q') closedown();
-        }
+		if (*code < 0xfc) {
+			sprintf(debugString, "(%d) %s [%x]           ", currentLogic.currentPoint, agiCommands[*code].commandName, *code);
+			drawBigString(screen, debugString, 0, 400, 0, 7);
+			if ((readkey() & 0xff) == 'q') closedown();
+		}
 #endif  
 #ifdef VERBOSE_LOGIC_EXEC
-        printf("\n The code is %d, on bank %d address, %p log num %d\n", *code, RAM_BANK, code, logNum);
+		printf("\n The code is %d, on bank %d address, %p log num %d\n", *code, RAM_BANK, code, logNum);
 #endif // VERBOSE
-        codeAtTimeOfLastBankSwitch = *code;
-        instructionCodeBank = getBankBasedOnCode(codeAtTimeOfLastBankSwitch);
-        
+		codeAtTimeOfLastBankSwitch = *code;
+		instructionCodeBank = getBankBasedOnCode(codeAtTimeOfLastBankSwitch);
+
 #ifdef VERBOSE_PRINT_COUNTER
-        printf("%d %d %d\n", printCounter + 1, codeAtTimeOfLastBankSwitch, currentLog);
+		printf("%d %d %d\n", printCounter + 1, codeAtTimeOfLastBankSwitch, currentLog);
 #endif // VERBOSE_PRINT_COUNTER
 #ifdef VERBOSE_LOGIC_EXEC
-        printf("Bank is now %d to execute code %d \n", RAM_BANK, codeAtTimeOfLastBankSwitch);
+		printf("Bank is now %d to execute code %d \n", RAM_BANK, codeAtTimeOfLastBankSwitch);
 #endif // VERBOSE 
-        printCounter++;
+		printCounter++;
 
-        if (*code < 0xfe)
-        {
-            code++;
-            RAM_BANK = INSTRUCTION_HANDLER_BANK;
-            stillExecuting = b5instructionHandler(codeAtTimeOfLastBankSwitch, &currentLog, logNum, ppCodeWindowAddress, instructionCodeBank);
-            RAM_BANK = currentLogicFile.codeBank;
-        }
-        else {
-            switch (codeAtTimeOfLastBankSwitch) {
-            case 0xfe: /* Unconditional branch: else, goto. */
-                code++;
+		if (*code < 0xfe)
+		{
+			code++;
+			RAM_BANK = INSTRUCTION_HANDLER_BANK;
+			stillExecuting = b5instructionHandler(codeAtTimeOfLastBankSwitch, &currentLog, logNum, ppCodeWindowAddress, instructionCodeBank);
+			RAM_BANK = currentLogicFile.codeBank;
+		}
+		else {
+			switch (codeAtTimeOfLastBankSwitch) {
+			case 0xfe: /* Unconditional branch: else, goto. */
+				code++;
 #ifdef DEBUG
-                sprintf(debugString, "(%d) else                           ", currentLogic.currentPoint);
-                drawBigString(screen, debugString, 0, 400, 0, 7);
-                if ((readkey() & 0xff) == 'q') closedown();
+				sprintf(debugString, "(%d) else                           ", currentLogic.currentPoint);
+				drawBigString(screen, debugString, 0, 400, 0, 7);
+				if ((readkey() & 0xff) == 'q') closedown();
 #endif
-                lastCodeWasNonWindow = TRUE;
-                b1 = *code++;
-                b2 = *code++;
-                disp = (b2 << 8) | b1;  /* Should be signed 16 bit */
-                code += disp;
-                break;
+				lastCodeWasNonWindow = TRUE;
+				b1 = *code++;
+				b2 = *code++;
+				disp = (b2 << 8) | b1;  /* Should be signed 16 bit */
+				code += disp;
+				break;
 
-            case 0xff: /* Conditional branch: if */
-                code++;
+			case 0xff: /* Conditional branch: if */
+				code++;
 #ifdef DEBUG
-                sprintf(debugString, "(%d) if                             ", currentLogic.currentPoint);
-                drawBigString(screen, debugString, 0, 400, 0, 7);
-                if ((readkey() & 0xff) == 'q') closedown();
+				sprintf(debugString, "(%d) if                             ", currentLogic.currentPoint);
+				drawBigString(screen, debugString, 0, 400, 0, 7);
+				if ((readkey() & 0xff) == 'q') closedown();
 #endif
-                lastCodeWasNonWindow = TRUE;
-                ifHandler(&code, currentLogicFile.codeBank);
-                break;
+				lastCodeWasNonWindow = TRUE;
+				ifHandler(&code, currentLogicFile.codeBank);
+				break;
 
-            default:    /* Error has occurred */
-                ////lprintf("catastrophe: Illegal action [%d], logic %d, posn %d.",
-                    //*(code - 1), logNum, currentLogic.currentPoint);
-                break;
-            }
-        }
+			default:    /* Error has occurred */
+				////lprintf("catastrophe: Illegal action [%d], logic %d, posn %d.",
+					//*(code - 1), logNum, currentLogic.currentPoint);
+				break;
+	}
+}
 
-        RAM_BANK = currentLogicFile.codeBank;
+		RAM_BANK = currentLogicFile.codeBank;
 
-        if (!lastCodeWasNonWindow)
-        {
+		if (!lastCodeWasNonWindow)
+		{
 #ifdef VERBOSE_LOGIC_EXEC
-            printf("Now jumping (%p - %p - 1) = %p \n", codeWindowAddress, &codeWindow[0], (codeWindowAddress - &codeWindow[0] - 1));
+			printf("Now jumping (%p - %p - 1) = %p \n", codeWindowAddress, &codeWindow[0], (codeWindowAddress - &codeWindow[0] - 1));
 #endif // VERBOSE
-            code += (codeWindowAddress - &codeWindow[0]) - 1;
-        }
+			code += (codeWindowAddress - &codeWindow[0]) - 1;
+		}
 
 
 
-        lastCodeWasNonWindow = FALSE;
+		lastCodeWasNonWindow = FALSE;
 
-        opCounter++;
-    }
+		opCounter++;
+	}
 
-    if (discardAfterward) {
-        RAM_BANK = LOGIC_CODE_BANK;
-        b8DiscardLogicFile(logNum);
-    }
+	if (discardAfterward) {
+		RAM_BANK = LOGIC_CODE_BANK;
+		b8DiscardLogicFile(logNum);
+	}
 
-    RAM_BANK = previousRamBank;
+	RAM_BANK = previousRamBank;
 }
 

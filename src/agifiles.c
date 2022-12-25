@@ -11,8 +11,8 @@
 //#define VERBOSE_DISPLAY_FILEOFFSETS
 //#define VERBOSE_DISPLAY_MESSAGES
 //#define VERBOSE_DISPLAY_OFFSETS
-#define VERBOSE
-#define VERBOSE_VIEW_LOAD_DEBUG
+//#define VERBOSE
+//#define VERBOSE_VIEW_LOAD_DEBUG
 //define VERBOSE_LOGIC_LOAD_DEBUG
 #include <stdio.h>
 #include <stdlib.h>

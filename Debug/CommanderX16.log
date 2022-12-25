@@ -68,9 +68,9 @@
   src/commands.c:2824: Warning: Incompatible pointer conversion to 'char (*)(unsigned char **)' from 'char (* const)(void)'
   src/commands.c:2996: Warning: Variable 'dummy' is defined but never used
   src/commands.c:2996: Warning: Variable 'debugString' is defined but never used
-  src/commands.c:3195: Warning: Variable 'debugString' is defined but never used
-  src/commands.c:3195: Warning: Variable 'i' is defined but never used
-  src/commands.c:3195: Warning: Variable 'dummy' is defined but never used
+  src/commands.c:3193: Warning: Variable 'debugString' is defined but never used
+  src/commands.c:3193: Warning: Variable 'i' is defined but never used
+  src/commands.c:3193: Warning: Variable 'dummy' is defined but never used
   cl65 -t cx16 -c --create-dep obj/cx16/decomp.d  -o obj/cx16/decomp.o src/decomp.c
   cl65 -t cx16 -c --create-dep obj/cx16/helpers.d  -o obj/cx16/helpers.o src/helpers.c
   src/helpers.c:29: Warning: Control reaches end of non-void function [-Wreturn-type]
@@ -85,7 +85,7 @@
   cl65 -t cx16 -c --create-dep obj/cx16/meka.d  -o obj/cx16/meka.o src/meka.c
   src/meka.c:74: Warning: Incompatible pointer conversion to 'void (*)(int)' from 'void (* const)(unsigned char)'
   src/meka.c:76: Warning: Incompatible pointer conversion to 'void (*)(int)' from 'void (* const)(unsigned char)'
-  src/meka.c:295: Warning: Variable 'ret' is defined but never used
+  src/meka.c:299: Warning: Variable 'ret' is defined but never used
   cl65 -t cx16 -c --create-dep obj/cx16/memoryManager.d  -o obj/cx16/memoryManager.o src/memoryManager.c
   cl65 -t cx16 -c --create-dep obj/cx16/stub.d  -o obj/cx16/stub.o src/stub.c
   src/stub.c:8: Warning: Parameter 'bitmap' is never used
@@ -181,54 +181,52 @@
   src/view.c:72: Warning: Parameter 'y' is never used
   src/view.c:72: Warning: Parameter 'color' is never used
   src/view.c:99: Warning: Parameter 'localViewtab' is never used
-  src/view.c:182: Warning: Incompatible pointer conversion to 'struct $anon-struct-001C *' from 'struct $anon-struct-001C ** const'
-  src/view.c:281: Error: ';' expected
-  src/view.c:298: Warning: Pointer conversion to 'char *' from 'const char *' discards qualifiers
-  src/view.c:311: Warning: Pointer conversion to 'char *' from 'unsigned char * const' changes pointee signedness
-  src/view.c:389: Warning: Variable 'loopStart' is defined but never used
-  src/view.c:389: Warning: Variable 'celStart' is defined but never used
-  src/view.c:389: Warning: Variable 'cWidth' is defined but never used
-  src/view.c:389: Warning: Variable 'c' is defined but never used
-  src/view.c:389: Warning: Variable 'x' is defined but never used
-  src/view.c:389: Warning: Variable 'y' is defined but never used
-  src/view.c:389: Warning: Variable 'chunk' is defined but never used
-  src/view.c:389: Warning: Variable 'xTotal' is defined but never used
-  src/view.c:389: Warning: Variable 'colour' is defined but never used
-  src/view.c:389: Warning: Variable 'len' is defined but never used
-  src/view.c:389: Warning: Variable 'loopIndex' is defined but never used
-  src/view.c:389: Warning: Variable 'trans' is defined but never used
-  src/view.c:389: Warning: Variable 'i' is defined but never used
-  src/view.c:389: Warning: Variable 'cellPositionBytes' is defined but never used
-  src/view.c:389: Warning: Variable 'cellPosition' is defined but never used
-  src/view.c:719: Warning: Parameter 'localViewtab' is never used
-  src/view.c:719: Warning: Parameter 'fx' is never used
-  src/view.c:719: Warning: Parameter 'fy' is never used
-  src/view.c:874: Warning: Incompatible pointer conversion to 'void (*)(struct $anon-struct-001C *, int)' from 'void (* const)(struct $anon-struct-001C *, unsigned char)'
-  src/view.c:883: Warning: Incompatible pointer conversion to 'void (*)(struct $anon-struct-001C *, int)' from 'void (* const)(struct $anon-struct-001C *, unsigned char)'
-  src/view.c:892: Warning: Incompatible pointer conversion to 'void (*)(struct $anon-struct-001C *, int)' from 'void (* const)(struct $anon-struct-001C *, unsigned char)'
-  src/view.c:898: Warning: Incompatible pointer conversion to 'void (*)(struct $anon-struct-001C *, int)' from 'void (* const)(struct $anon-struct-001C *, unsigned char)'
-  src/view.c:1050: Warning: Incompatible pointer conversion to 'void (*)(struct $anon-struct-001C *, int)' from 'void (* const)(struct $anon-struct-001C *, unsigned char)'
-  src/view.c:1059: Warning: Incompatible pointer conversion to 'void (*)(struct $anon-struct-001C *, int)' from 'void (* const)(struct $anon-struct-001C *, unsigned char)'
-  src/view.c:1068: Warning: Incompatible pointer conversion to 'void (*)(struct $anon-struct-001C *, int)' from 'void (* const)(struct $anon-struct-001C *, unsigned char)'
-  src/view.c:1074: Warning: Incompatible pointer conversion to 'void (*)(struct $anon-struct-001C *, int)' from 'void (* const)(struct $anon-struct-001C *, unsigned char)'
-  src/view.c:1250: Warning: Incompatible pointer conversion to 'void (*)(struct $anon-struct-001C *, int)' from 'void (* const)(struct $anon-struct-001C *, unsigned char)'
-  src/view.c:1259: Warning: Incompatible pointer conversion to 'void (*)(struct $anon-struct-001C *, int)' from 'void (* const)(struct $anon-struct-001C *, unsigned char)'
-  src/view.c:1268: Warning: Incompatible pointer conversion to 'void (*)(struct $anon-struct-001C *, int)' from 'void (* const)(struct $anon-struct-001C *, unsigned char)'
-  src/view.c:1274: Warning: Incompatible pointer conversion to 'void (*)(struct $anon-struct-001C *, int)' from 'void (* const)(struct $anon-struct-001C *, unsigned char)'
-  src/view.c:1328: Warning: Variable 'oldX' is defined but never used
-  1 errors and 50 warnings generated.
-  src/view.c:1328: Warning: Variable 'oldY' is defined but never used
-  src/view.c:1385: Warning: Incompatible pointer conversion to 'void (*)(struct $anon-struct-001C *, int)' from 'void (* const)(struct $anon-struct-001C *, unsigned char)'
-  src/view.c:1394: Warning: Incompatible pointer conversion to 'void (*)(struct $anon-struct-001C *, int)' from 'void (* const)(struct $anon-struct-001C *, unsigned char)'
-  src/view.c:1403: Warning: Incompatible pointer conversion to 'void (*)(struct $anon-struct-001C *, int)' from 'void (* const)(struct $anon-struct-001C *, unsigned char)'
-  src/view.c:1409: Warning: Incompatible pointer conversion to 'void (*)(struct $anon-struct-001C *, int)' from 'void (* const)(struct $anon-struct-001C *, unsigned char)'
-  src/view.c:1525: Warning: Variable 'oldX' is defined but never used
-  src/view.c:1525: Warning: Variable 'oldY' is defined but never used
-  src/view.c:1594: Warning: Incompatible pointer conversion to 'void (*)(int, int, int)' from 'void (* const)(struct $anon-struct-001C *, int, int)'
-  src/view.c:1619: Warning: Variable 'celNum' is defined but never used
-  make: *** [makefile:294: obj/cx16/view.o] Error 1
+  src/view.c:205: Warning: Incompatible pointer conversion to 'struct $anon-struct-001C *' from 'struct $anon-struct-001C ** const'
+  src/view.c:338: Warning: Pointer conversion to 'unsigned char *' from 'const char *' changes pointee signedness
+  src/view.c:338: Warning: Pointer conversion to 'unsigned char *' from 'const char *' discards qualifiers
+  src/view.c:343: Warning: Converting integer to pointer without a cast
+  src/view.c:347: Warning: Pointer conversion to 'char *' from 'const char *' discards qualifiers
+  src/view.c:353: Warning: Pointer conversion to 'char *' from 'const char *' discards qualifiers
+  src/view.c:366: Warning: Pointer conversion to 'char *' from 'unsigned char * const' changes pointee signedness
+  src/view.c:377: Warning: Incompatible pointer conversion to 'unsigned char *' from 'int * const'
+  src/view.c:391: Warning: Incompatible pointer conversion to 'unsigned char *' from 'int * const'
+  src/view.c:456: Warning: Variable 'loopStart' is defined but never used
+  src/view.c:456: Warning: Variable 'celStart' is defined but never used
+  src/view.c:456: Warning: Variable 'cWidth' is defined but never used
+  src/view.c:456: Warning: Variable 'x' is defined but never used
+  src/view.c:456: Warning: Variable 'y' is defined but never used
+  src/view.c:456: Warning: Variable 'chunk' is defined but never used
+  src/view.c:456: Warning: Variable 'xTotal' is defined but never used
+  src/view.c:456: Warning: Variable 'colour' is defined but never used
+  src/view.c:456: Warning: Variable 'len' is defined but never used
+  src/view.c:456: Warning: Variable 'trans' is defined but never used
+  src/view.c:456: Warning: Variable 'i' is defined but never used
+  src/view.c:456: Warning: Variable 'cellPositionBytes' is defined but never used
+  src/view.c:813: Warning: Parameter 'localViewtab' is never used
+  src/view.c:813: Warning: Parameter 'fx' is never used
+  src/view.c:813: Warning: Parameter 'fy' is never used
+  src/view.c:968: Warning: Incompatible pointer conversion to 'void (*)(struct $anon-struct-001C *, int)' from 'void (* const)(struct $anon-struct-001C *, unsigned char)'
+  src/view.c:977: Warning: Incompatible pointer conversion to 'void (*)(struct $anon-struct-001C *, int)' from 'void (* const)(struct $anon-struct-001C *, unsigned char)'
+  src/view.c:986: Warning: Incompatible pointer conversion to 'void (*)(struct $anon-struct-001C *, int)' from 'void (* const)(struct $anon-struct-001C *, unsigned char)'
+  src/view.c:992: Warning: Incompatible pointer conversion to 'void (*)(struct $anon-struct-001C *, int)' from 'void (* const)(struct $anon-struct-001C *, unsigned char)'
+  src/view.c:1144: Warning: Incompatible pointer conversion to 'void (*)(struct $anon-struct-001C *, int)' from 'void (* const)(struct $anon-struct-001C *, unsigned char)'
+  src/view.c:1153: Warning: Incompatible pointer conversion to 'void (*)(struct $anon-struct-001C *, int)' from 'void (* const)(struct $anon-struct-001C *, unsigned char)'
+  src/view.c:1162: Warning: Incompatible pointer conversion to 'void (*)(struct $anon-struct-001C *, int)' from 'void (* const)(struct $anon-struct-001C *, unsigned char)'
+  src/view.c:1168: Warning: Incompatible pointer conversion to 'void (*)(struct $anon-struct-001C *, int)' from 'void (* const)(struct $anon-struct-001C *, unsigned char)'
+  src/view.c:1344: Warning: Incompatible pointer conversion to 'void (*)(struct $anon-struct-001C *, int)' from 'void (* const)(struct $anon-struct-001C *, unsigned char)'
+  src/view.c:1353: Warning: Incompatible pointer conversion to 'void (*)(struct $anon-struct-001C *, int)' from 'void (* const)(struct $anon-struct-001C *, unsigned char)'
+  src/view.c:1362: Warning: Incompatible pointer conversion to 'void (*)(struct $anon-struct-001C *, int)' from 'void (* const)(struct $anon-struct-001C *, unsigned char)'
+  src/view.c:1368: Warning: Incompatible pointer conversion to 'void (*)(struct $anon-struct-001C *, int)' from 'void (* const)(struct $anon-struct-001C *, unsigned char)'
+  src/view.c:1422: Warning: Variable 'oldX' is defined but never used
+  src/view.c:1422: Warning: Variable 'oldY' is defined but never used
+  src/view.c:1479: Warning: Incompatible pointer conversion to 'void (*)(struct $anon-struct-001C *, int)' from 'void (* const)(struct $anon-struct-001C *, unsigned char)'
+  src/view.c:1488: Warning: Incompatible pointer conversion to 'void (*)(struct $anon-struct-001C *, int)' from 'void (* const)(struct $anon-struct-001C *, unsigned char)'
+  src/view.c:1497: Warning: Incompatible pointer conversion to 'void (*)(struct $anon-struct-001C *, int)' from 'void (* const)(struct $anon-struct-001C *, unsigned char)'
+  src/view.c:1503: Warning: Incompatible pointer conversion to 'void (*)(struct $anon-struct-001C *, int)' from 'void (* const)(struct $anon-struct-001C *, unsigned char)'
+  src/view.c:1619: Warning: Variable 'oldX' is defined but never used
+  src/view.c:1619: Warning: Variable 'oldY' is defined but never used
+  src/view.c:1688: Warning: Incompatible pointer conversion to 'void (*)(int, int, int)' from 'void (* const)(struct $anon-struct-001C *, int, int)'
+  src/view.c:1714: Warning: Variable 'celNum' is defined but never used
+  cl65 -t cx16 -Wl --dbgfile,C:\meka\CommanderX16Repo\Debug\CommanderX16.cx16.dbg -Ln C:\meka\CommanderX16Repo\Debug\CommanderX16.cx16.lbl -o C:\meka\CommanderX16Repo\Debug\CommanderX16.cx16 obj/cx16/agifiles.o obj/cx16/commands.o obj/cx16/decomp.o obj/cx16/helpers.o obj/cx16/logic.o obj/cx16/meka.o obj/cx16/memoryManager.o obj/cx16/stub.o obj/cx16/timer.o obj/cx16/view.o -C cx16-bank.cfg
   make: Leaving directory 'C:/meka/CommanderX16Repo'
   C:\meka\CommanderX16Repo\Debug\CommanderX16.log - The process cannot access the file because it is being used by another process.
-C:\Program Files\Microsoft Visual Studio\2022\Enterprise\MSBuild\Microsoft\VC\v170\Microsoft.MakeFile.Targets(45,5): error MSB3073: The command "make -C "C:\meka\CommanderX16Repo\\" PROGRAM="C:\meka\CommanderX16Repo\Debug\CommanderX16" OPTIONS=debugfile,labelfile
-C:\Program Files\Microsoft Visual Studio\2022\Enterprise\MSBuild\Microsoft\VC\v170\Microsoft.MakeFile.Targets(45,5): error MSB3073: rmdir /S /Q "C:\meka\CommanderX16Repo\obj"
-C:\Program Files\Microsoft Visual Studio\2022\Enterprise\MSBuild\Microsoft\VC\v170\Microsoft.MakeFile.Targets(45,5): error MSB3073: rmdir /S /Q "C:\meka\CommanderX16Repo\Debug"" exited with code 2.

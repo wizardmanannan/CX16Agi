@@ -29,6 +29,7 @@ typedef struct {
 	Loop* loops;
 	byte loopsBank;
 	char* description;
+	byte descriptionBank;
 } View;
 
 #define DRAWN         0x0001
