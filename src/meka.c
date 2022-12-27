@@ -158,6 +158,20 @@ void b7Interpret()
 
    trampoline_0(&bCCalcObjMotion, VIEW_CODE_BANK_4);
 
+   if (opCounter > 121727)
+   {
+       debugStop = TRUE;
+       printf("Trying to get out %d \n", opCounter);
+       exit(0);
+   }
+    
+   //if (opCounter > 121727) //121546)
+   //{
+   //    debugStop = TRUE;
+   //    printf("Past The Point The counter is now %lu \n", opCounter);
+   //    exit(0);
+   //}
+
    // <<-- Update status line here (score & sound)
    b7UpdateStatusLine();
 
@@ -165,6 +179,7 @@ void b7Interpret()
       hasEnteredNewRoom = FALSE;
       exitAllLogics = FALSE;
       executeLogic(0);
+
 #ifdef VERBOSE
       printf("Back To Meka");
 #endif // VERBOSE
@@ -180,6 +195,7 @@ void b7Interpret()
       if (!hasEnteredNewRoom) {
         trampoline_0(&bBUpdateObjects, VIEW_CODE_BANK_3);
       }
+
       if (hasEnteredNewRoom) b7NewRoom();
    } while (hasEnteredNewRoom);
 }

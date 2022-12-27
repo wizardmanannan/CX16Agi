@@ -6,4 +6,5 @@
 
 void executeLogic(int logNum);
 void b1Call(unsigned char** data);
+
 #endif

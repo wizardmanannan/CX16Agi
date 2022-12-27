@@ -36,7 +36,7 @@
 #define CODE_WINDOW_SIZE 10
 //#define VERBOSE_STRING_CHECK
 //#define VERBOSE_LOGIC_EXEC
-#define VERBOSE_SCRIPT_START
+//#define VERBOSE_SCRIPT_START
 //#define VERBOSE_PRINT_COUNTER;
 //#define VERBOSE_MENU
 //#define VERBOSE_MENU_DUMP
@@ -63,7 +63,7 @@ int numOfMenus = 0;
 MENU* the_menu = (MENU*)&BANK_RAM[MENU_START];
 MENU* the_menuChildren = (MENU*)&BANK_RAM[MENU_CHILD_START];
 
-int opCounter = 0;
+long opCounter = 0;
 int printCounter = 1;
 
 void executeLogic(int logNum);
@@ -3079,14 +3079,11 @@ void executeLogic(int logNum)
 
 	RAM_BANK = currentLogicFile.codeBank;
 
-	while ((code < endPos) && stillExecuting) {
-		if (logNum == 46)
+	while ((code < endPos) && stillExecuting) {\
+		if (opCounter > opCounter > 121727)
 		{
-			debugStop = TRUE;
-#ifdef VERBOSE_LOGIC_EXEC
-			printf("The code is now %u and the address is %p and the bank is %d and the log num is %d and the counter is %d \n", *code, code, RAM_BANK, logNum, opCounter);
-#endif // VERBOSE
-			//exit(0);
+			printf("Now we have gone back");
+			exit(0);
 		}
 
 		memcpy(&codeWindow[0], code, CODE_WINDOW_SIZE);

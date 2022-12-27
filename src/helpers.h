@@ -60,4 +60,6 @@ extern void setResourceDirectory(AGIFilePosType* newLogicDirectory, AGIFilePosTy
 
 extern boolean debugStop;
 
+extern long opCounter;
+
 #endif
