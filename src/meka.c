@@ -157,21 +157,7 @@ void b7Interpret()
    setViewTab(&localViewtab, 0);
 
    trampoline_0(&bCCalcObjMotion, VIEW_CODE_BANK_4);
-
-   if (opCounter > 121727)
-   {
-       debugStop = TRUE;
-       printf("Trying to get out %d \n", opCounter);
-       exit(0);
-   }
     
-   //if (opCounter > 121727) //121546)
-   //{
-   //    debugStop = TRUE;
-   //    printf("Past The Point The counter is now %lu \n", opCounter);
-   //    exit(0);
-   //}
-
    // <<-- Update status line here (score & sound)
    b7UpdateStatusLine();
 

@@ -3079,12 +3079,7 @@ void executeLogic(int logNum)
 
 	RAM_BANK = currentLogicFile.codeBank;
 
-	while ((code < endPos) && stillExecuting) {\
-		if (opCounter > opCounter > 121727)
-		{
-			printf("Now we have gone back");
-			exit(0);
-		}
+	while ((code < endPos) && stillExecuting) {
 
 		memcpy(&codeWindow[0], code, CODE_WINDOW_SIZE);
 
@@ -3125,6 +3120,13 @@ void executeLogic(int logNum)
 		printf("Bank is now %d to execute code %d \n", RAM_BANK, codeAtTimeOfLastBankSwitch);
 #endif // VERBOSE 
 		printCounter++;
+
+		if (opCounter > 122500 || debugStop) //121546)
+		{
+			debugStop = TRUE;
+			printf("in the function the point the counter is now %lu and the current log num is %d \n", opCounter, logNum);
+			//exit(0);
+		}
 
 		if (*code < 0xfe)
 		{
