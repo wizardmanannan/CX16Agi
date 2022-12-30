@@ -48,20 +48,26 @@ extern int picFNum;    // Debugging. Delete at some stage!!
 #pragma code-name (push, "BANKRAM07")
 void b7AdjustEgoPosition()
 {
+    ViewTable localViewtab;
+
+    getViewTab(&localViewtab, 0);
+
    switch (var[2]) {
       case 1:
-         viewtab[0].yPos = 167;
+          localViewtab.yPos = 167;
          break;
       case 2:
-         viewtab[0].xPos = 0;
+          localViewtab.xPos = 0;
          break;
       case 3:
-         viewtab[0].yPos = 37;  //Note: This is default horizon + 1 
+          localViewtab.yPos = 37;  //Note: This is default horizon + 1 
          break;
       case 4:
-         viewtab[0].xPos = 160 - (viewtab[0].xsize);
+          localViewtab.xPos = 160 - (localViewtab.xsize);
          break;
    }
+
+   setViewTab(&localViewtab, 0);
 
    // Might need to stop motion of ego 
 }
@@ -164,6 +170,9 @@ void b7Interpret()
    do {
       hasEnteredNewRoom = FALSE;
       exitAllLogics = FALSE;
+
+      printf("Start");
+
       executeLogic(0);
 
 #ifdef VERBOSE
@@ -183,6 +192,8 @@ void b7Interpret()
       }
 
       if (hasEnteredNewRoom) b7NewRoom();
+
+      printf("End\n");
    } while (hasEnteredNewRoom);
 }
 
