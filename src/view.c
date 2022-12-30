@@ -24,7 +24,7 @@
 #include "view.h"
 
 //#define VERBOSE_LOAD_VIEWS;
-#define VERBOSE_UPDATE_OBJECTS
+//#define VERBOSE_UPDATE_OBJECTS
 
 View* loadedViews = (View*)&BANK_RAM[LOADED_VIEW_START];
 BITMAP* spriteScreen;
@@ -575,19 +575,19 @@ void b9Agi_blit(BITMAP* bmp, int x, int y, int w, int h, byte trans, byte pNum)
 {
 	int i, j, c;
 
-	for (i = 0; i < w; i++) {
-		for (j = 0; j < h; j++) {
-			c = bmp->line[j][i];
-			// Next line will be removed when error is found.
-			if (((y + j) < 168) && ((x + i) < 160) && ((y + j) >= 0) && ((x + i) >= 0))
+	//for (i = 0; i < w; i++) {
+	//	for (j = 0; j < h; j++) {
+	//		c = bmp->line[j][i];
+	//		 Next line will be removed when error is found.
+	//		if (((y + j) < 168) && ((x + i) < 160) && ((y + j) >= 0) && ((x + i) >= 0))
 
-				if ((c != (trans + 1)) && (pNum >= priority->line[y + j][x + i])) {
-					priority->line[y + j][x + i] = pNum;
-					//picture->line[y+j][x+i] = c;
-					spriteScreen->line[y + j][x + i] = c;
-				}
-		}
-	}
+	//			if ((c != (trans + 1)) && (pNum >= priority->line[y + j][x + i])) {
+	//				priority->line[y + j][x + i] = pNum;
+	//				picture->line[y+j][x+i] = c;
+	//				spriteScreen->line[y + j][x + i] = c;
+	//			}
+	//	}
+	//}
 }
 #pragma code-name (pop)
 #pragma code-name (push, "BANKRAM0A")
@@ -599,26 +599,26 @@ void bACalcDirection(ViewTable* localViewtab)
 
 			switch (localViewtab->direction) {
 			case 1: break;
-			case 2: b9SetLoop(localViewtab, 0); break;
-			case 3: b9SetLoop(localViewtab, 0); break;
-			case 4: b9SetLoop(localViewtab, 0); break;
+			case 2: trampolineViewUpdater1Int(&b9SetLoop, localViewtab, 0, VIEW_CODE_BANK_1); break;
+			case 3: trampolineViewUpdater1Int(&b9SetLoop, localViewtab, 0, VIEW_CODE_BANK_1); break;
+			case 4: trampolineViewUpdater1Int(&b9SetLoop, localViewtab, 0, VIEW_CODE_BANK_1); break;
 			case 5: break;
-			case 6: b9SetLoop(localViewtab, 1); break;
-			case 7: b9SetLoop(localViewtab, 1); break;
-			case 8: b9SetLoop(localViewtab, 1); break;
+			case 6: trampolineViewUpdater1Int(&b9SetLoop, localViewtab, 1, VIEW_CODE_BANK_1); break;
+			case 7: trampolineViewUpdater1Int(&b9SetLoop, localViewtab, 1, VIEW_CODE_BANK_1); break;
+			case 8: trampolineViewUpdater1Int(&b9SetLoop, localViewtab, 1, VIEW_CODE_BANK_1); break;
 			}
 		}
-
 		else {
 			switch (localViewtab->direction) {
-			case 1: b9SetLoop(localViewtab, 3); break;
-			case 2: b9SetLoop(localViewtab, 0); break;
-			case 3: b9SetLoop(localViewtab, 0); break;
-			case 4: b9SetLoop(localViewtab, 0); break;
-			case 5: b9SetLoop(localViewtab, 2); break;
-			case 6: b9SetLoop(localViewtab, 1); break;
-			case 7: b9SetLoop(localViewtab, 1); break;
-			case 8: b9SetLoop(localViewtab, 1); break;
+			case 1: trampolineViewUpdater1Int(&b9SetLoop, localViewtab, 3, VIEW_CODE_BANK_1); break;
+			case 2: trampolineViewUpdater1Int(&b9SetLoop, localViewtab, 0, VIEW_CODE_BANK_1); break;
+			case 3: trampolineViewUpdater1Int(&b9SetLoop, localViewtab, 0, VIEW_CODE_BANK_1);  break;
+			case 4: trampolineViewUpdater1Int(&b9SetLoop, localViewtab, 0, VIEW_CODE_BANK_1); break;
+			case 5: trampolineViewUpdater1Int(&b9SetLoop, localViewtab, 2, VIEW_CODE_BANK_1); break;
+			case 6: trampolineViewUpdater1Int(&b9SetLoop, localViewtab, 1, VIEW_CODE_BANK_1); break;
+			case 7: trampolineViewUpdater1Int(&b9SetLoop, localViewtab, 1, VIEW_CODE_BANK_1); break;
+			case 8: trampolineViewUpdater1Int(&b9SetLoop, localViewtab, 1, VIEW_CODE_BANK_1); break;
+
 			}
 		}
 	}
@@ -1333,7 +1333,7 @@ void bBUpdateObjects()
 		if (debugStop && entryNum == 3)
 		{
 			printf("Checking entry num %d it has objFlags of %d \n", entryNum, objFlags);
-	     }
+		}
 #endif // VERBOSE_UPDATE_OBJECTS
 
 
@@ -1344,10 +1344,7 @@ void bBUpdateObjects()
 				if (objFlags & CYCLING) {
 
 #ifdef VERBOSE_UPDATE_OBJECTS
-					if (debugStop)
-					{
-						printf("Now inside %d\n", entryNum);
-					}
+					printf("Now inside %d\n", entryNum);
 #endif // VERBOSE_UPDATE_OBJECTS
 
 					localViewtab.cycleTimeCount++;
@@ -1366,6 +1363,7 @@ void bBUpdateObjects()
 							break;
 						case 1: /* end.of.loop */
 							celNum++;
+							//printf("It is now end of loop the celNum is %d and flag[localViewtab.param1] is %d", celNum, flag[localViewtab.param1]);
 							if (celNum >= localViewtab.numberOfCels) {
 								flag[localViewtab.param1] = 1;
 								/* localViewtab.flags &= ~CYCLING; */
@@ -1693,7 +1691,7 @@ void bCCalcObjMotion()
 						(localViewtab.yPos == oldY)) {
 						//printf("The result is %d", (rand() % 8) + 1);
 						//randomNum = (byte)(rand() % 8) + 1;
-						localViewtab.direction = 5; 
+						localViewtab.direction = 5;
 
 						//TO_DO:FIX
 
@@ -1737,7 +1735,7 @@ void bCCalcObjMotion()
 
 		/* Automatic change of direction if needed */
 		trampolineViewUpdater0(&bACalcDirection, &localViewtab, VIEW_CODE_BANK_2);
-		
+
 		setViewTab(&localViewtab, entryNum);
 	}
 }
