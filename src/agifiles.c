@@ -18,6 +18,7 @@
 #include <stdlib.h>
 #include <stdint.h>
 #include <cbm.h>
+#include <dbg.h>
 
 #include "general.h"
 #include "agifiles.h"
@@ -59,7 +60,7 @@ byte cbm_openForSeeking(char* fileName)
 	byte sec_addr = FILE_OPEN_ADDRESS;
 
 	RAM_BANK = ALLOCATION_BANK;
-	fileNameAndFlags = (char*)trampoline_banked_alloc(strlen(&fileName[0]) + strlen(OPEN_FLAGS) + 1, &bank);
+	fileNameAndFlags = (char*)banked_alloc(strlen(&fileName[0]) + strlen(OPEN_FLAGS) + 1, &bank);
 	sprintf(fileNameAndFlags, "%s%s", &fileName[0], OPEN_FLAGS);
 
 #ifdef VERBOSE
@@ -70,7 +71,7 @@ byte cbm_openForSeeking(char* fileName)
 	cbm_open(lfn, dev, sec_addr, fileNameAndFlags);
 	RAM_BANK = previousRamBank;
 
-	trampoline_banked_dealloc((byte*)fileNameAndFlags, bank);
+	banked_dealloc((byte*)fileNameAndFlags, bank);
 
 	return lfn;
 }
@@ -302,7 +303,7 @@ byte* b6ReadFileContentsIntoBankedRam(int size, byte* bank)
 	byte* result;
 	byte previousRamBank = RAM_BANK;
 
-	result = trampoline_banked_alloc(size, bank);
+	result = banked_alloc(size, bank);
 
 #ifdef VERBOSE
 	printf("Attempting to code data of size %d to %p\n", size, result);
@@ -482,13 +483,6 @@ void loadAGIFile(int resType, AGIFilePosType* location, AGIFile* AGIData)
 	char fileName[10];
 
 	previousRamBank = RAM_BANK;
-	
-	//if (opCounter > 342 || debugStop) //121546)
-	//{
-	//	printf("Forced Exit");
-	//	RAM_BANK = previousRamBank;
-	//	return;
-	//}
 
 	if (location->filePos == EMPTY) {
 #ifdef VERBOSE

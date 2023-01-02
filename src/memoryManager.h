@@ -35,19 +35,19 @@
 #define MEDIUM_NO_BANKS 9
 #define LARGE_NO_BANKS 7
 
-#define TINY_FIRST_BANK  39
-#define EXTRA_SMALL_FIRST_BANK 40
-#define SMALL_FIRST_BANK 41
-#define MEDIUM_FIRST_BANK 47
-#define LARGE_FIRST_BANK 55
+#define TINY_FIRST_BANK  16
+#define EXTRA_SMALL_FIRST_BANK 17
+#define SMALL_FIRST_BANK 18
+#define MEDIUM_FIRST_BANK 25
+#define LARGE_FIRST_BANK 34
 
-#define ALLOCATION_BANK 14
+#define ALLOCATION_BANK 60
 
 #define NO_SIZES 5
 
 #define BANK_SIZE 8000
 
-#define ALLOCATION_ARRAY_START 8006
+#define ALLOCATION_ARRAY_START 0
 #define LOGDIR_START 186
 #define PICDIR_START 1462
 #define SOUNDDIR_START 2738
@@ -80,7 +80,7 @@
 
 #define FIRST_CODE_BANK 1
 #define LAST_CODE_BANK 5
-#define NO_CODE_BANKS 15
+#define NO_CODE_BANKS 13
 
 
 //Code Banks
@@ -93,7 +93,6 @@
 #define VIEW_CODE_BANK_3 0xB
 #define VIEW_CODE_BANK_4 0xC
 #define VIEW_CODE_BANK_5 0xD
-#define TIMER_BANK 0xF
 
 //Golden RAM
 #define VARS_AREA_START 0
@@ -116,7 +115,7 @@ extern byte* banked;
 extern int _noSegments;
 
 #ifndef _MSC_VER
-extern void _BANKRAM01_SIZE__[], _BANKRAM02_SIZE__[], _BANKRAM03_SIZE__[], _BANKRAM04_SIZE__[], _BANKRAM05_SIZE__[], _BANKRAM06_SIZE__[], _BANKRAM07_SIZE__[], _BANKRAM08_SIZE__[], _BANKRAM09_SIZE__[], _BANKRAM0A_SIZE__[], _BANKRAM0B_SIZE__[], _BANKRAM0C_SIZE__[], _BANKRAM0D_SIZE__[], _BANKRAM0E_SIZE__[], _BANKRAM0F_SIZE__[];
+extern void _BANKRAM01_SIZE__[], _BANKRAM02_SIZE__[], _BANKRAM03_SIZE__[], _BANKRAM04_SIZE__[], _BANKRAM05_SIZE__[], _BANKRAM06_SIZE__[], _BANKRAM07_SIZE__[], _BANKRAM08_SIZE__[], _BANKRAM09_SIZE__[], _BANKRAM0A_SIZE__[], _BANKRAM0B_SIZE__[], _BANKRAM0C_SIZE__[], _BANKRAM0D_SIZE__[];
 #endif // !_MSC_VER
 
 typedef struct {          /* DIR entry structure */
@@ -127,9 +126,6 @@ typedef struct {          /* DIR entry structure */
 	byte* start;
 } MemoryArea;
 
-byte* trampoline_banked_alloc(int size, byte* bank);
-boolean trampoline_banked_dealloc(byte* ptr, byte bank);
-
 void initDynamicMemory();
 
 void memoryMangerInit();
@@ -137,7 +133,6 @@ byte* banked_alloc(int size, byte* bank);
 boolean banked_dealloc(byte* ptr, byte bank);
 void initSegments(byte segOrder, byte noBanks, int segmentSize, byte noSegments, byte firstBank);
 byte getFirstSegment(byte size);
-
 
 #endif
 
