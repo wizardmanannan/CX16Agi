@@ -24,7 +24,7 @@
 #include "view.h"
 
 //#define VERBOSE_LOAD_VIEWS;
-//#define VERBOSE_UPDATE_OBJECTS
+#define VERBOSE_UPDATE_OBJECTS
 
 View* loadedViews = (View*)&BANK_RAM[LOADED_VIEW_START];
 BITMAP* spriteScreen;
@@ -1332,7 +1332,7 @@ void bBUpdateObjects()
 #ifdef VERBOSE_UPDATE_OBJECTS
 		if (debugStop && entryNum == 3)
 		{
-			printf("Checking entry num %d it has objFlags of %d \n", entryNum, objFlags);
+			//printf("Checking entry num %d it has objFlags of %d \n", entryNum, objFlags);
 		}
 #endif // VERBOSE_UPDATE_OBJECTS
 
@@ -1363,8 +1363,16 @@ void bBUpdateObjects()
 							break;
 						case 1: /* end.of.loop */
 							celNum++;
-							//printf("It is now end of loop the celNum is %d and flag[localViewtab.param1] is %d", celNum, flag[localViewtab.param1]);
+							//printf("It is now end of loop the celNum is %d and flag[localViewtab.param1] is %d and the flag is %d", celNum, flag[localViewtab.param1], localViewtab.param1);
+							//printf("CelNum %d >= %d", celNum, localViewtab.numberOfCels);
+							
+							if (entryNum == 3)
+							{
+								printf("CelNum %d >= %d which is %d", celNum, localViewtab.numberOfCels, celNum >= localViewtab.numberOfCels);
+							}
+							
 							if (celNum >= localViewtab.numberOfCels) {
+								printf("Setting %d", localViewtab.param1);
 								flag[localViewtab.param1] = 1;
 								/* localViewtab.flags &= ~CYCLING; */
 							}
