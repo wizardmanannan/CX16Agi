@@ -26,8 +26,8 @@
 //#include "sound.h"
 
 boolean stillRunning = TRUE, hasEnteredNewRoom=FALSE, exitAllLogics=FALSE;
-byte var[256];
-boolean flag[256];
+byte* var = (byte*)&GOLDEN_RAM[VARS_AREA_START];
+boolean* flag = &GOLDEN_RAM[FLAGS_AREA_START];
 char string[12][40];
 byte horizon;
 

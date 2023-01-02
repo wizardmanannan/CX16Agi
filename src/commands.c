@@ -36,7 +36,7 @@
 #define CODE_WINDOW_SIZE 10
 //#define VERBOSE_STRING_CHECK
 //#define VERBOSE_LOGIC_EXEC
-//#define VERBOSE_SCRIPT_START
+#define VERBOSE_SCRIPT_START
 //#define VERBOSE_PRINT_COUNTER;
 //#define VERBOSE_MENU
 //#define VERBOSE_MENU_DUMP
@@ -44,8 +44,8 @@
 
 //#define  DEBUG
 
-extern byte var[256];
-extern boolean flag[256];
+extern byte* var;
+extern boolean* flag;
 extern char string[12][40];
 extern int newRoomNum;
 extern boolean hasEnteredNewRoom, exitAllLogics;
@@ -3121,12 +3121,19 @@ void executeLogic(int logNum)
 #endif // VERBOSE 
 		printCounter++;
 
-		if (opCounter > 122500 || debugStop) //121546)
-		{
-			debugStop = TRUE;
-			printf("in the function the point the counter is now %lu and the current log num is %d \n", opCounter, logNum);
-			//exit(0);
-		}
+		//if (opCounter > 151455 || debugStop) //121546)
+		//{
+		//	debugStop = TRUE;
+		//	printf("in the function the point the counter is now %lu and the current log num is %d and the code is %d\n", opCounter, logNum, *code);
+		//	exit(0);
+		//}
+
+		//if (currentLog == 0 && currentLogicFile.logicCode == (byte*) 0xa001) //121546)
+		//{
+		//	printf("The code is now %u and the address is %p and the bank is %d and the log num is %d and the counter is %lu \n", *code, code, RAM_BANK, logNum, opCounter);
+		//	printf("The start point is %p (%p + %p) currentLogicFile.logicCode (%p)\n", startPos + currentLogic.entryPoint, startPos, currentLogic.entryPoint, currentLogicFile.logicCode);
+		//	exit(0);
+		//}
 
 		if (*code < 0xfe)
 		{
