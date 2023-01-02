@@ -29,8 +29,8 @@
 View* loadedViews = (View*)&BANK_RAM[LOADED_VIEW_START];
 BITMAP* spriteScreen;
 
-extern byte var[256];
-extern boolean flag[256];
+extern byte* var;
+extern boolean* flag;
 extern char string[12][40];
 extern byte horizon;
 extern int dirnOfEgo;

@@ -171,8 +171,6 @@ void b7Interpret()
       hasEnteredNewRoom = FALSE;
       exitAllLogics = FALSE;
 
-      printf("Start");
-
       executeLogic(0);
 
 #ifdef VERBOSE
@@ -193,7 +191,6 @@ void b7Interpret()
 
       if (hasEnteredNewRoom) b7NewRoom();
 
-      printf("End\n");
    } while (hasEnteredNewRoom);
 }
 

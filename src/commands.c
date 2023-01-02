@@ -301,10 +301,12 @@ int b1Lprintf(char* fmt, ...)
 
 boolean b1Equaln(byte** data) // 2, 0x80 
 {
-	int varVal, value;
+	int varVal, value, variable;
 
-	varVal = var[*(*data)++];
+	variable = *(*data)++;
+	varVal = var[variable];
 	value = *(*data)++;
+
 	return (varVal == value);
 }
 
@@ -356,7 +358,13 @@ boolean b1Greaterv(byte** data) // 2, 0xC0
 
 boolean b1Isset(byte** data) // 1, 0x00 
 {
-	return (flag[*(*data)++]);
+	int flagNo = *(*data)++;
+
+	if (flagNo == 220 && currentLog == 46)
+	{
+		printf("Checking whether %d is set and it is %d \n", flagNo, flag[flagNo]);
+	}
+	return (flag[flagNo]);
 }
 
 boolean b1Issetv(byte** data) // 1, 0x80 
