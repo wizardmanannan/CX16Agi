@@ -1680,7 +1680,7 @@ void bCCalcObjMotion()
 				case 1: /* wander */
 					oldX = localViewtab.xPos;
 					oldY = localViewtab.yPos;
-					/*switch (localViewtab.direction) {
+					switch (localViewtab.direction) {
 					case 0: break;
 					case 1: trampoline_3Int(&bANormalAdjust, entryNum, 0, -1, VIEW_CODE_BANK_2); break;
 					case 2: trampoline_3Int(&bANormalAdjust, entryNum, 0, -1, VIEW_CODE_BANK_2); break;
@@ -1690,18 +1690,11 @@ void bCCalcObjMotion()
 					case 6: trampoline_3Int(&bANormalAdjust, entryNum, -1, 1, VIEW_CODE_BANK_2); break;
 					case 7: trampoline_3Int(&bANormalAdjust, entryNum, -1, 0, VIEW_CODE_BANK_2); break;
 					case 8: trampoline_3Int(&bANormalAdjust, entryNum, -1, -1, VIEW_CODE_BANK_2); break;
-					}*/
+					}
 					if ((localViewtab.xPos == oldX) &&
 						(localViewtab.yPos == oldY)) {
-						//printf("The result is %d", (rand() % 8) + 1);
-						//randomNum = (byte)(rand() % 8) + 1;
+						randomNum = (byte)(rand() % 8) + 1;
 						localViewtab.direction = 5;
-
-						//TO_DO:FIX
-
-						//printf("The address of direction is %p", &localViewtab.direction);
-
-						//for (;;);
 					}
 					break;
 				case 2: /* follow.ego */

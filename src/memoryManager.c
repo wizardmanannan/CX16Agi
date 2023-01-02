@@ -216,6 +216,12 @@ byte* banked_alloc(int size, byte* bank)
 	RAM_BANK = previousRamBank;
 #endif //  __CX16__
 
+	if (!result)
+	{
+		printf("Out of dynamic memory");
+		exit(0);
+	}
+
 	return result;
 }
 

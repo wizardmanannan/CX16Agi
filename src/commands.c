@@ -3042,7 +3042,7 @@ void executeLogic(int logNum)
 	currentLogicFile = *currentLogic.data;
 
 #ifdef VERBOSE_SCRIPT_START
-	printf("ex s. %d\n", logNum);
+	printf("ex s. %d counter %lu\n", logNum, opCounter);
 #endif // VERBOSE_SCRIPT_START
 
 
@@ -3129,19 +3129,13 @@ void executeLogic(int logNum)
 #endif // VERBOSE 
 		printCounter++;
 
-		//if (opCounter > 151455 || debugStop) //121546)
+		//if (opCounter > 151453 || debugStop) //121546)
 		//{
 		//	debugStop = TRUE;
 		//	printf("in the function the point the counter is now %lu and the current log num is %d and the code is %d\n", opCounter, logNum, *code);
-		//	exit(0);
+		//	//exit(0);
 		//}
 
-		//if (currentLog == 0 && currentLogicFile.logicCode == (byte*) 0xa001) //121546)
-		//{
-		//	printf("The code is now %u and the address is %p and the bank is %d and the log num is %d and the counter is %lu \n", *code, code, RAM_BANK, logNum, opCounter);
-		//	printf("The start point is %p (%p + %p) currentLogicFile.logicCode (%p)\n", startPos + currentLogic.entryPoint, startPos, currentLogic.entryPoint, currentLogicFile.logicCode);
-		//	exit(0);
-		//}
 
 		if (*code < 0xfe)
 		{
