@@ -105,7 +105,7 @@ void getLoadedView(View* returnedLoadedView, byte loadedViewNumber)
 
 	RAM_BANK = LOADED_VIEW_BANK;
 
-	printf("Attempting to set %p to %p", returnedLoadedView, &loadedViews[loadedViewNumber]);
+	//printf("Attempting to set %p to %p", returnedLoadedView, &loadedViews[loadedViewNumber]);
 
 	// *returnedLoadedView = loadedViews[loadedViewNumber];
 
@@ -321,9 +321,9 @@ void b9LoadViewFile(byte viewNum)
 
 	printf("&localView is %p ", &localView);
 	getLoadedView(&localView, viewNum);
-
+	
 	loadAGIFile(VIEW, &agiFilePosType, &tempAGI);
-
+	
 	memCpyBanked(&viewStart[0], tempAGI.code, tempAGI.codeBank, NO_VIEW_START_BYTES);
 
 	//printf("View header bytes %d, %d, %d, %d, %d \n", viewStart[0], viewStart[1], viewStart[2], viewStart[3], viewStart[4]);
@@ -334,7 +334,7 @@ void b9LoadViewFile(byte viewNum)
 	{
 		description = (const char*)(tempAGI.code + viewStart[3] + viewStart[4] * 256);
 		descriptionLength = strlen(description);
-		localView.description = (char*)banked_alloc(descriptionLength, &localView.descriptionBank);
+		localView.description = (char*)trampoline_banked_alloc(descriptionLength, &localView.descriptionBank);
 
 		memCpyBanked(&GOLDEN_RAM[LOCAL_WORK_AREA_SIZE], (const char*)&description, tempAGI.codeBank, descriptionLength <= LOCAL_WORK_AREA_SIZE ? descriptionLength : LOCAL_WORK_AREA_SIZE);
 		memCpyBanked((byte*)localView.description, &GOLDEN_RAM[LOCAL_WORK_AREA_SIZE], localView.descriptionBank, descriptionLength <= LOCAL_WORK_AREA_SIZE ? descriptionLength : LOCAL_WORK_AREA_SIZE);
@@ -369,21 +369,20 @@ void b9LoadViewFile(byte viewNum)
 	}
 #endif
 
-	localView.numberOfLoops = viewStart[2];
-	localView.loops = (Loop*)banked_alloc(viewStart[2] * sizeof(Loop), &localView.loopsBank);
+    localView.numberOfLoops = viewStart[2];
+    localView.loops = (Loop*)trampoline_banked_alloc(viewStart[2] * sizeof(Loop), &localView.loopsBank);
 
+    for (l = 0, viewIndex = POSITION_OF_LOOPS_OFFSET; l < localView.numberOfLoops; l++, viewIndex += 2) {
+        getLocalLoop(&localView, &localLoop, l);
+        memCpyBanked(&loopHeaderOffset, tempAGI.code + POSITION_OF_LOOPS_OFFSET + (l * LOOP_OFFSET_BYTES), tempAGI.codeBank, LOOP_OFFSET_BYTES);
 
-	for (l = 0, viewIndex = POSITION_OF_LOOPS_OFFSET; l < localView.numberOfLoops; l++, viewIndex += 2) {
-		getLocalLoop(&localView, &localLoop, l);
-		memCpyBanked(&loopHeaderOffset, tempAGI.code + POSITION_OF_LOOPS_OFFSET + (l * LOOP_OFFSET_BYTES), tempAGI.codeBank, LOOP_OFFSET_BYTES);
-
-		memCpyBanked(&localLoop.numberOfCels, tempAGI.code + loopHeaderOffset, tempAGI.codeBank, 1);
+        memCpyBanked(&localLoop.numberOfCels, tempAGI.code + loopHeaderOffset, tempAGI.codeBank, 1);
 
 #ifdef VERBOSE_LOAD_VIEWS
 		printf("You have %d loops and the num of cells is %d and a loop pos of %d", localView.numberOfLoops, localLoop.numberOfCels, loopHeaderOffset);
 #endif // VERBOSE_LOAD_VIEWS
 
-		localLoop.cels = (Cel*)banked_alloc(localLoop.numberOfCels * sizeof(Cel), &localLoop.celBank);
+		localLoop.cels = (Cel*)trampoline_banked_alloc(localLoop.numberOfCels * sizeof(Cel), &localLoop.celBank);
 
 		for (c = 0, loopIndex = 1; c < localLoop.numberOfCels; c++, loopIndex += 2) {
 
@@ -448,10 +447,9 @@ void b9LoadViewFile(byte viewNum)
 		setLocalLoop(&localView, &localLoop, l);
 	}
 
-
 	localView.loaded = TRUE;
 
-	banked_dealloc(tempAGI.code, tempAGI.codeBank);
+	trampoline_banked_dealloc(tempAGI.code, tempAGI.codeBank);
 
 	setLoadedView(&localView, viewNum);
 }

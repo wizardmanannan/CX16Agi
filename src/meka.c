@@ -26,8 +26,8 @@
 //#include "sound.h"
 
 boolean stillRunning = TRUE, hasEnteredNewRoom=FALSE, exitAllLogics=FALSE;
-byte var[256];
-boolean flag[256];
+byte* var = (byte*)&GOLDEN_RAM[VARS_AREA_START];
+boolean* flag = &GOLDEN_RAM[FLAGS_AREA_START];
 char string[12][40];
 byte horizon;
 
@@ -235,6 +235,8 @@ void initialise()
     byte previousRamBank = RAM_BANK;
     int i;
     memoryMangerInit();
+
+    RAM_BANK = TIMER_BANK;
     initTimer(&b7Timing_proc);
 
     RAM_BANK = LOAD_DIRS_BANK;
@@ -294,8 +296,8 @@ void main()
 
    initialise();
 
-   RAM_BANK = MEKA_BANK;
    while (TRUE) {
+       RAM_BANK = MEKA_BANK;
       /* Cycle initiator. Controlled by delay variable (var[10). */
       if (counter >= var[10]) {
 #ifdef VERBOSE
@@ -304,6 +306,8 @@ void main()
           b7Interpret();
         counter=0;
       }
+
+      RAM_BANK = TIMER_BANK;
       checkTimer(TIMER_WAIT_MS);
    }
 

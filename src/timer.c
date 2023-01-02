@@ -3,6 +3,8 @@ timer_proc _timerProc;
 int _intervalMs = 0;
 clock_t _before;
 
+
+#pragma code-name (push, "BANKRAM0F")
 void initTimer(timer_proc timerProc)
 {
 	_timerProc = timerProc;
@@ -18,8 +20,9 @@ void checkTimer(int intervalMs)
 	{
 		if (_timerProc != NULL)
 		{
-			_timerProc();
+			trampoline_0(_timerProc, MEKA_BANK);
 		}
 		_before = clock();
 	}
 }
+#pragma code-name (pop)

@@ -36,7 +36,7 @@
 #define CODE_WINDOW_SIZE 10
 //#define VERBOSE_STRING_CHECK
 //#define VERBOSE_LOGIC_EXEC
-//#define VERBOSE_SCRIPT_START
+#define VERBOSE_SCRIPT_START
 //#define VERBOSE_PRINT_COUNTER;
 //#define VERBOSE_MENU
 //#define VERBOSE_MENU_DUMP
@@ -1711,65 +1711,65 @@ void b3ProcessString(char* stringPointer, byte stringBank, char* outputString)
 			copyStringFromBanked(stringPointer, inputString, j, INPUT_BUFFER_SIZE, stringBank, FALSE);
 		}
 
-		if (inputString[i] == '%') {
-			i++;
-			switch (inputString[i++]) {
-				/* %% isn't actually supported */
-				//case '%': sprintf(outputString, "%s%%", outputString); break;
-			case 'v':
-				tempNum = getNum(inputString, &i, stringBank);
-				if (inputString[i + 1] == '|') {
-					i += 2;
-					temp = (char*)banked_alloc(NUM_STRING_SIZE, &tempBank);
-					widthNum = getNum(inputString, &i, stringBank);
-					sprintfLength = sprintfBanked(temp, tempBank, "%d", var[tempNum]);
-					for (count = sprintfLength; count < widthNum; count++) {
-						sprintf(outputString, "%s0", outputString);
-					}
-					sprintf(outputString, "%s%d", outputString, var[tempNum]);
-					banked_dealloc((byte*)temp, &tempBank);
-				}
-				else
-					sprintf(outputString, "%s%d", outputString, var[tempNum]);
-				break;
-			case 'm':
-				tempNum = getNum(inputString, &i, stringBank);
-				getLogicFile(&logicFile, currentLog);
-				messagePointer = getMessagePointer(currentLog, tempNum - 1);
-				sprintfBanked(outputString, logicFile.codeBank, "%s%s", outputString,
-					logics[currentLog].data->messages[tempNum - 1]);
-				break;
-			case 'g':
-				tempNum = getNum(inputString, &i, stringBank);
-				getLogicFile(&logicFile, currentLog);
-				messagePointer = getMessagePointer(0, tempNum - 1);
-				sprintfBanked(outputString, "%s%s", outputString, messagePointer);
-				break;
-			case 'w':
-				tempNum = getNum(inputString, &i, stringBank);
-				sprintf(outputString, "%s%s", outputString, wordText[tempNum]);
-				break;
-			case 's':
-				tempNum = getNum(inputString, &i, stringBank);
-				sprintf(outputString, "%s%s", outputString, string[tempNum]);
-				break;
-			default: /* ignore the second character */
-				break;
-			}
-		}
-		else {
-			sprintf(outputString, "%s%c", outputString, inputString[i]);
-		}
-	}
+        if (inputString[i] == '%') {
+            i++;
+            switch (inputString[i++]) {
+                /* %% isn't actually supported */
+                //case '%': sprintf(outputString, "%s%%", outputString); break;
+            case 'v':
+                tempNum = getNum(inputString, &i, stringBank);
+                if (inputString[i + 1] == '|') {
+                    i += 2;
+                    temp = (char*)trampoline_banked_alloc(NUM_STRING_SIZE, &tempBank);
+                    widthNum = getNum(inputString, &i, stringBank);
+                    sprintfLength = sprintfBanked(temp, tempBank, "%d", var[tempNum]);
+                    for (count = sprintfLength; count < widthNum; count++) {
+                        sprintf(outputString, "%s0", outputString);
+                    }
+                    sprintf(outputString, "%s%d", outputString, var[tempNum]);
+                    trampoline_banked_dealloc((byte*)temp, &tempBank);
+                }
+                else
+                    sprintf(outputString, "%s%d", outputString, var[tempNum]);
+                break;
+            case 'm':
+                tempNum = getNum(inputString, &i, stringBank);
+                getLogicFile(&logicFile, currentLog);
+                messagePointer = getMessagePointer(currentLog, tempNum - 1);
+                sprintfBanked(outputString, logicFile.codeBank, "%s%s", outputString,
+                    logics[currentLog].data->messages[tempNum - 1]);
+                break;
+            case 'g':
+                tempNum = getNum(inputString, &i, stringBank);
+                getLogicFile(&logicFile, currentLog);
+                messagePointer = getMessagePointer(0, tempNum - 1);
+                sprintfBanked(outputString, "%s%s", outputString, messagePointer);
+                break;
+            case 'w':
+                tempNum = getNum(inputString, &i, stringBank);
+                sprintf(outputString, "%s%s", outputString, wordText[tempNum]);
+                break;
+            case 's':
+                tempNum = getNum(inputString, &i, stringBank);
+                sprintf(outputString, "%s%s", outputString, string[tempNum]);
+                break;
+            default: /* ignore the second character */
+                break;
+            }
+        }
+        else {
+            sprintf(outputString, "%s%c", outputString, inputString[i]);
+        }
+    }
 
-	/* Recursive part to make sure all % formatting codes are dealt with */
-	if (b3CharIsIn('%', outputString)) {
-		temp = (char*)banked_alloc(TEMP_SIZE, &tempBank);
-		strcpyBanked(temp, outputString, tempBank);
-		b3ProcessString(temp, tempBank, outputString);
+    /* Recursive part to make sure all % formatting codes are dealt with */
+    if (b3CharIsIn('%', outputString)) {
+        temp = (char*)trampoline_banked_alloc(TEMP_SIZE, &tempBank);
+        strcpyBanked(temp, outputString, tempBank);
+        b3ProcessString(temp, tempBank, outputString);
 
-		banked_dealloc((byte*)temp, tempBank);
-	}
+        trampoline_banked_dealloc((byte*)temp, tempBank);
+    }
 }
 
 void b3Print(byte** data) // 1, 00 
@@ -3050,8 +3050,6 @@ void executeLogic(int logNum)
 
 		RAM_BANK = LOGIC_CODE_BANK;
 
-
-
 		b8LoadLogicFile(logNum);
 
 		RAM_BANK = LOGIC_ENTRY_BANK;
@@ -3121,10 +3119,10 @@ void executeLogic(int logNum)
 #endif // VERBOSE 
 		printCounter++;
 
-		if (opCounter > 122500 || debugStop) //121546)
+		if (opCounter > 342 || debugStop) //121546)
 		{
 			debugStop = TRUE;
-			printf("in the function the point the counter is now %lu and the current log num is %d \n", opCounter, logNum);
+			//printf("in the function the point the counter is now %lu and the current log num is %d \n", opCounter, logNum);
 			//exit(0);
 		}
 
