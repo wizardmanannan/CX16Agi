@@ -107,7 +107,7 @@ void getLoadedView(View* returnedLoadedView, byte loadedViewNumber)
 
 	printf("Attempting to set %p to %p", returnedLoadedView, &loadedViews[loadedViewNumber]);
 
-	// *returnedLoadedView = loadedViews[loadedViewNumber];
+	*returnedLoadedView = loadedViews[loadedViewNumber];
 
 	RAM_BANK = previousRamBank;
 }
@@ -319,7 +319,9 @@ void b9LoadViewFile(byte viewNum)
 
 	getLogicDirectory(&agiFilePosType, &viewdir[viewNum]);
 
+#ifdef VERBOSE_LOAD_VIEWS
 	printf("&localView is %p ", &localView);
+#endif
 	getLoadedView(&localView, viewNum);
 
 	loadAGIFile(VIEW, &agiFilePosType, &tempAGI);
@@ -391,7 +393,9 @@ void b9LoadViewFile(byte viewNum)
 
 			memCpyBanked(&cellHeaderOffset, tempAGI.code + loopHeaderOffset + (c * CEL_OFFSET_BYTES) + 1, tempAGI.codeBank, LOOP_OFFSET_BYTES);
 
+#ifdef VERBOSE_LOAD_VIEWS
 			printf("The address of tempAGI.code plus offset is %p it is on bank %d and the cell header offset is %d\n", tempAGI.code + cellHeaderOffset, tempAGI.codeBank, cellHeaderOffset);
+#endif
 
 			memCpyBanked(&localCel.width, tempAGI.code + loopHeaderOffset + cellHeaderOffset + CEL_WIDTH_OFFSET, tempAGI.codeBank, 1);
 			memCpyBanked(&localCel.height, tempAGI.code + loopHeaderOffset + cellHeaderOffset + CEL_HEIGHT_OFFSET, tempAGI.codeBank, 1);
