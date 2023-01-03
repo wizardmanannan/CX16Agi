@@ -2,6 +2,8 @@
 
 **Note This Project Is Under Construction And Is Not Ready For General Use**
 
+**Currently this program is very slow and requires Warp Mode. Significant optimisation will be required**
+
 Sierra released many well known adventure games, like King's Quest and Police Quest. For obvious reasons these games were not coded from scratch, but rather depended upon engines to run the games.
 
 Once such engine was the AGI engine, which was used to power games such as King's Quest 1 - 3 and Space Quest 1 and 2. 
@@ -17,6 +19,13 @@ Permission to use his code has been obtained in written form: https://github.com
 The original MEKA source code is included in the root of this repo in a an archive called Meka.zip
 
 MEKA is written in C, hence this project depends on CC65. KickC may be considered in a future enhancement.
+
+**Instructions For Building In Windows:**
+1. Download WinMake and install WinMake from: https://gnuwin32.sourceforge.net/downlinks/make.php
+2. Clone https://github.com/wizardmanannan/CX16Agi.git
+3. Add WinMake binary directory to your system environment variables. For me the binary directory is: C:\Program Files (x86)\GnuWin32\bin
+4. 
+
 
 
 Thus far the project:\
