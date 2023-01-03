@@ -32,7 +32,8 @@ MEKA is written in C, hence this project depends on CC65. KickC may be considere
 7. Navigate to the directory CX16Agi directory in a command prompt, the root of the repo
 8. Type 'Make'
 9. Download and install 'OSFMount' from: https://www.osforensics.com/tools/mount-disk-images.html
-10. Get an AGI 1 or 2 game. Games cannot be provided for obvious reasons. Check out http://agiwiki.sierrahelp.com/index.php?title=Sierra_AGI_Release_List for a list.
+10. Even if you already have it installed add OSFMount to the path folder in the environment variables. Mine is: C:\Program Files\OSFMount
+11. Get an AGI 1 or 2 game. Games cannot be provided for obvious reasons. Check out http://agiwiki.sierrahelp.com/index.php?title=Sierra_AGI_Release_List for a list.
 Note many games can be legally purchased on GOG https://www.gog.com/.
 Also note due to the immaturity of this project the game is not yet guaranteed to work  
 11. Copy the following files from your game folder to the root of an SD card:
@@ -41,6 +42,9 @@ Also note due to the immaturity of this project the game is not yet guaranteed t
 -VIEWDIR
 -VOL.0 to VOL.X
 -WORDS.TOK
+11. Run 'tester.exe' as admin. Note: The source code for the tester tool is under: \CommanderX16Repo\tools\TesterTool if you would rather compile it yourself
+12. Fill in the text boxes according to the instructions in the Window. Note that the make file is located in the root directory of the repo
+13. Click 'Test'. Note to run again rerun the tester.exe, it will remember the parameters entered last time. Delete: 'cx16TesterConfig.json' to clear the memory.
 
 
 Thus far the project:\
