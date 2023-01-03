@@ -18,6 +18,7 @@ The original MEKA source code is included in the root of this repo in a an archi
 
 MEKA is written in C, hence this project depends on CC65. KickC may be considered in a future enhancement.
 
+
 Thus far the project:\
 #Reads the AGI index files\
 #Loads the LOGIC and executes most code (code relying on Views with loops is not yet working. This causes hanging)\
@@ -26,11 +27,10 @@ Thus far the project:\
 Obvious things that need to be done:\
 #Test more games, I have only tested one game thus far King's Quest III\
 #I have been building this under Windows, and the deployment tool I through together for the purpose is Windows dependent. A Linux build tool should be developed\
-#Load Views Into Memory Likely Ending The Hanging Issue With Loops\
 #String functions need to be uncommented out and retested
 #This code is currently very SLOW, this most likely culprit is that the engine unloads and loads resources a lot. I suspect that with a cache of some kind the speed should be a vastly improved\
 #Import the rest of the MEKA code base. I have been importing it in a piecemeal fashion, and using a stub\
-#More stuff needs to be moved out of the low RAM area, as we are upto a 19kb executable. This is both code and data. Although the vast majority of the code is on the banks already, there are some large file loading routines which I would like to seem moved\
+#More stuff needs to be moved out of the low RAM area, as we are upto a 19kb executable. This is both code and data. Although the vast majority of the code is on the banks already, there are some large file loading routines which I would like to see moved\
 #Graphics, sound and keyboard routines need to be implemented\
 #Uncomment out routines for the support of AGI 3 games, and put them into the BANKS
 #Review the implementation of dynamic memory as mentioned in memorymanager.h and the related C file. I am not a memory algorithm expert, there may be a much more efficent way of doing things. At least a review of the segment sizes I have chosen will be required. 
@@ -40,7 +40,7 @@ This project requires extensive use of Banked RAM, for both code and data as the
 
 Due to the sheer number of objects and amount of code to be stored an allocation spreadsheet tracks this called docs\allocation.xlsx
 
-Code which is stored banks has name starting with bX, where X is the bank in HEX where the code is stored, for example bAFoo.
+Code which is stored in banks has name starting with bX, where X is the bank in HEX where the code is stored, for example bAFoo.
 
 Extensive calling of code between banks in a necessary evil, due to the sheer volume of code. To faciliate this trampoline code exists in helpers.h. 
 
@@ -61,9 +61,9 @@ void setLogicEntry(LOGICEntry* logicEntry, byte logicFileNo);
 
 These objects are stored on specific banks as defined in the allocation spreadsheet. 
 
-memorymanager.h hold defines about sizes, locations of objects in memory, banks and so on.
+memorymanager.h defines sizes, locations of objects in memory, banks and so on.
 
-A system of dynamic banked memory allocation exists for managing these objects. 
+A system of dynamic banked memory allocation exists for managing objects which are dynamically loaded at runtime
 
 This uses my implementation of best fit algorithm, there are six sizes of memory allocation spots stored from banks 16 - 39. 
 
@@ -73,7 +73,7 @@ boolean banked_dealloc(byte* ptr, byte bank) conversely deallocates the memory.
 
 The available allocation sizes are described in allocation.xlsx in the 'dynamic' tab
 
-I cannot claim that this is the best algorithm, implementation of it or segmentation of memory. As I mentioned above work will have to be done to come up with better segmentation sizes, I took a guess when I made them.
+I cannot claim that this is the best algorithm, implementation or segmentation of memory. As I mentioned above work will have to be done to come up with better segmentation sizes, I took a guess when I made them.
 As more games are run we will have a better idea of what segment sizes are best.
 
 All of the sizes and other numerous constants related to dynamic memory are location in memory manager.h
