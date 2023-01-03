@@ -4,6 +4,8 @@
 
 **Currently this program is very slow and requires Warp Mode. Significant optimisation will be required**
 
+**Only AGI 1 & 2 games are currently supported**
+
 Sierra released many well known adventure games, like King's Quest and Police Quest. For obvious reasons these games were not coded from scratch, but rather depended upon engines to run the games.
 
 Once such engine was the AGI engine, which was used to power games such as King's Quest 1 - 3 and Space Quest 1 and 2. 
@@ -24,8 +26,21 @@ MEKA is written in C, hence this project depends on CC65. KickC may be considere
 1. Download WinMake and install WinMake from: https://gnuwin32.sourceforge.net/downlinks/make.php
 2. Clone https://github.com/wizardmanannan/CX16Agi.git
 3. Add WinMake binary directory to your system environment variables. For me the binary directory is: C:\Program Files (x86)\GnuWin32\bin
-4. 
-
+4. Download the CC65 Compiler from https://sourceforge.net/projects/cc65/files/cc65-snapshot-win32.zip/download
+5. Unzip and copy onto your hard drive
+6. Add the CC65 bin folder to your system environment variables. Mine is: C:\cc65\bin
+7. Navigate to the directory CX16Agi directory in a command prompt, the root of the repo
+8. Type 'Make'
+9. Download and install 'OSFMount' from: https://www.osforensics.com/tools/mount-disk-images.html
+10. Get an AGI 1 or 2 game. Games cannot be provided for obvious reasons. Check out http://agiwiki.sierrahelp.com/index.php?title=Sierra_AGI_Release_List for a list.
+Note many games can be legally purchased on GOG https://www.gog.com/.
+Also note due to the immaturity of this project the game is not yet guaranteed to work  
+11. Copy the following files from your game folder to the root of an SD card:
+-LOGDIR
+-SNDDIR
+-VIEWDIR
+-VOL.0 to VOL.X
+-WORDS.TOK
 
 
 Thus far the project:\
@@ -43,7 +58,7 @@ Obvious things that need to be done:\
 #Graphics, sound and keyboard routines need to be implemented\
 #Uncomment out routines for the support of AGI 3 games, and put them into the BANKS
 #Review the implementation of dynamic memory as mentioned in memorymanager.h and the related C file. I am not a memory algorithm expert, there may be a much more efficent way of doing things. At least a review of the segment sizes I have chosen will be required. 
-
+#Menu systems needs to be build, one for game select (maybe BASIC) and another from the internal game menus
 
 This project requires extensive use of Banked RAM, for both code and data as the Meka source code is quiet large.
 
