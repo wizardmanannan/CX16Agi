@@ -18,7 +18,7 @@ This is based upon the Meka AGI Interpreter by Lance Ewing, and utilises the cod
 
 Permission to use his code has been obtained in written form: https://github.com/lanceewing/agile/issues/65
 
-The original MEKA source code is included in the root of this repo in a an archive called Meka.zip
+The original MEKA source code is included in the root of this repo in an archive called Meka.zip
 
 MEKA is written in C, hence this project depends on CC65. KickC may be considered in a future enhancement.
 
@@ -35,7 +35,7 @@ MEKA is written in C, hence this project depends on CC65. KickC may be considere
 10. Even if you already have it installed add OSFMount to the path folder in the environment variables. Mine is: C:\Program Files\OSFMount
 11. Get an AGI 1 or 2 game. Games cannot be provided for obvious reasons. Check out http://agiwiki.sierrahelp.com/index.php?title=Sierra_AGI_Release_List for a list.
 Note many games can be legally purchased on GOG https://www.gog.com/.
-Also note due to the immaturity of this project the game is not yet guaranteed to work  
+Also note due to the immaturity of this project all games are not yet guaranteed to work  
 11. Copy the following files from your game folder to the root of an SD card:
 -LOGDIR
 -SNDDIR
@@ -54,7 +54,7 @@ Thus far the project:\
 
 Obvious things that need to be done:\
 #Test more games, I have only tested one game thus far King's Quest III\
-#I have been building this under Windows, and the deployment tool I through together for the purpose is Windows dependent. A Linux build tool should be developed\
+#I have been building this under Windows, and the deployment tool I threw together for the purpose is Windows dependent. A Linux build tool should be developed\
 #String functions need to be uncommented out and retested
 #This code is currently very SLOW, this most likely culprit is that the engine unloads and loads resources a lot. I suspect that with a cache of some kind the speed should be a vastly improved\
 #Import the rest of the MEKA code base. I have been importing it in a piecemeal fashion, and using a stub\
