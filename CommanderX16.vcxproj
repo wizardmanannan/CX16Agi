@@ -25,6 +25,7 @@
     <ClInclude Include="src\helpers.h" />
     <ClInclude Include="src\LIST.H" />
     <ClInclude Include="src\logic.h" />
+    <ClInclude Include="src\lruCache.h" />
     <ClInclude Include="src\memoryManager.h" />
     <ClInclude Include="src\OBJECT.H" />
     <ClInclude Include="src\PALETTE.H" />
@@ -44,6 +45,7 @@
     <ClCompile Include="src\GUI.C" />
     <ClCompile Include="src\helpers.c" />
     <ClCompile Include="src\logic.c" />
+    <ClCompile Include="src\lruCache.c" />
     <ClCompile Include="src\MEKA.C" />
     <ClCompile Include="src\memoryManager.c" />
     <ClCompile Include="src\OBJECT.C" />

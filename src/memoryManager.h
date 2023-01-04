@@ -80,7 +80,16 @@
 
 #define FIRST_CODE_BANK 0x1
 #define LAST_CODE_BANK 0x5
-#define NO_CODE_BANKS 13
+#define NO_CODE_BANKS 14
+
+#define LRU_CACHE_LOGIC_BANK 0xE
+#define LRU_CACHE_LOGIC_STRUCT_START 8186
+#define LRU_CACHE_LOGIC_DATA_START 8176
+#define LRU_CACHE_VIEW_STRUCT_START 8171
+#define LRU_CACHE_VIEW_DATA_START 8151
+#define LRU_CACHE_LOGIC_DATA_SIZE 10
+#define LRU_CACHE_LOGIC_VIEW_SIZE 20
+
 
 
 //Code Banks
@@ -104,8 +113,6 @@
 #define LOCAL_WORK_AREA_START 514
 #define LOCAL_WORK_AREA_SIZE 500
 
-
-
 #ifdef _MSC_VER //Used for testing under windows
 extern byte* banked;
 #endif 
@@ -115,7 +122,7 @@ extern byte* banked;
 extern int _noSegments;
 
 #ifndef _MSC_VER
-extern void _BANKRAM01_SIZE__[], _BANKRAM02_SIZE__[], _BANKRAM03_SIZE__[], _BANKRAM04_SIZE__[], _BANKRAM05_SIZE__[], _BANKRAM06_SIZE__[], _BANKRAM07_SIZE__[], _BANKRAM08_SIZE__[], _BANKRAM09_SIZE__[], _BANKRAM0A_SIZE__[], _BANKRAM0B_SIZE__[], _BANKRAM0C_SIZE__[], _BANKRAM0D_SIZE__[];
+extern void _BANKRAM01_SIZE__[], _BANKRAM02_SIZE__[], _BANKRAM03_SIZE__[], _BANKRAM04_SIZE__[], _BANKRAM05_SIZE__[], _BANKRAM06_SIZE__[], _BANKRAM07_SIZE__[], _BANKRAM08_SIZE__[], _BANKRAM09_SIZE__[], _BANKRAM0A_SIZE__[], _BANKRAM0B_SIZE__[], _BANKRAM0C_SIZE__[], _BANKRAM0D_SIZE__[], _BANKRAM0E_SIZE__[];
 #endif // !_MSC_VER
 
 typedef struct {          /* DIR entry structure */

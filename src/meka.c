@@ -19,6 +19,7 @@
 #include "view.h"
 #include "stub.h"
 #include "memoryManager.h"
+#include "lruCache.h"
 //#include "object.h"
 //#include "words.h"
 //#include "picture.h"
@@ -76,9 +77,6 @@ void b7DiscardResources()
 {
    int i;
 
-   for (i = 1; i < 256; i++) { 
-       trampoline_1Int(&b8DiscardLogicFile, i, LOGIC_CODE_BANK);
-   }
    for (i=0; i<256; i++) trampoline_1Int(&b9DiscardView, i, VIEW_CODE_BANK_1);
    for (i=0; i<256; i++) discardPictureFile(i);
    for (i=0; i<256; i++) discardSoundFile(i);
@@ -234,6 +232,9 @@ void initialise()
     memoryMangerInit();
     initTimer(&b7Timing_proc);
 
+    RAM_BANK = LRU_CACHE_LOGIC_BANK;
+    bEInitLruCaches(&b8DiscardLogicFile, &b9DiscardView);
+
     RAM_BANK = LOAD_DIRS_BANK;
     b6InitFiles();             /* Load resource directories */
     //// <<--  Determine exact version in here
@@ -280,6 +281,8 @@ void initialise()
 void main()
 {
    int ret, oldCount=0;
+
+   printf("Size of lruCache %d", sizeof(LRUCache));
 
    //chdir("..\\KQ1-2917");
    //chdir("..\\COMPILER\\NEW\\SAMPLE\\TEMPLATE");

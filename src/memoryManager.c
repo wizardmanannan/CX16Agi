@@ -1,5 +1,5 @@
 #include "memoryManager.h"
-//#define VERBOSE
+#define VERBOSE
 MemoryArea* _memoryAreas;
 int _noSegments;
 
@@ -105,7 +105,8 @@ void bankedRamInit()
 		(int)_BANKRAM0A_SIZE__,
 		(int)_BANKRAM0B_SIZE__,
 		(int)_BANKRAM0C_SIZE__,
-		(int)_BANKRAM0D_SIZE__
+		(int)_BANKRAM0D_SIZE__,
+		(int)_BANKRAM0E_SIZE__
 	};
 
 

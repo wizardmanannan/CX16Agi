@@ -3176,11 +3176,6 @@ void executeLogic(int logNum)
 		opCounter++;
 	}
 
-	if (discardAfterward) {
-		RAM_BANK = LOGIC_CODE_BANK;
-		b8DiscardLogicFile(logNum);
-	}
-
 	RAM_BANK = previousRamBank;
 }
 

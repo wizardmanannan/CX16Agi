@@ -125,7 +125,6 @@ void b8LoadLogicFile(byte logFileNum)
 	printf("\n%d Retrieved file num %d, Offset %lu\n", logFileNum, agiFilePosType.filePos);
 #endif // VERBOSE
 
-	b8DiscardLogicFile(logFileNum);
 	/* Load LOGIC file, calculate logic code length, and copy
 	** logic code into tempLOGIC. */
 
@@ -133,8 +132,7 @@ void b8LoadLogicFile(byte logFileNum)
 #ifdef VERBOSE
 	printf("Loading Logic %d\n", logFileNum);
 #endif // VERBOSE
-
-	loadAGIFile(LOGIC, &agiFilePosType, &tempAGI);
+	lruCacheGetTrampoline(LOGIC, logFileNum, &agiFilePosType, &tempAGI);
 
 	getLogicFile(&logicData, logFileNum);
 	logicData.codeBank = tempAGI.codeBank;

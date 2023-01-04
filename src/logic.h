@@ -7,6 +7,7 @@
 
 #include <stdlib.h>
 #include "helpers.h"
+#include "lruCache.h"
 
 typedef struct {
 	word codeSize;
