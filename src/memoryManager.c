@@ -111,6 +111,7 @@ void bankedRamInit()
 
 	for (i = 0; i < NO_CODE_BANKS; i++)
 	{
+		printf("Loading MEKA Resource %d of %d\n", i + 1, NO_CODE_BANKS);
 #ifdef VERBOSE
 		printf("The bank ram size %d is %d\n", i + 1, bankRamSizes[i]);
 #endif // VERBOSE
@@ -130,19 +131,8 @@ void bankedRamInit()
 				fgetc(fp);
 			}
 
-			for (j = 0; j < bankRamSizes[i]; j++) {
-				fileByte = (byte) fgetc(fp);
-						
+			fread(&BANK_RAM[0], 1, bankRamSizes[i], fp);
 
-				BANK_RAM[j] = fileByte;
-				
-#ifdef VERBOSE
-				if (j < 5)
-				{
-					printf("%d Bank ram [%d] is now %p. The file byte is %p \n", i + 1, j, *(BANK_RAM + j), fileByte);
-				}
-#endif // VERBOSE
-			}
 			fclose(fp);
 		}
 		else {
