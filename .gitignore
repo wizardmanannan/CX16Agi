@@ -3,6 +3,7 @@
 /tools/*/.vs
 /obj/cx16
 /.vs
+/debug
 AGI.CX16.*
 *.user
 *.pdb
