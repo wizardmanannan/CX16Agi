@@ -1804,7 +1804,7 @@ void b3Print(byte** data) // 1, 00
 
 void b3Print_v(byte** data) // 1, 0x80 
 {
-	char* tempString = (char*)malloc(256);
+	char* tempString = (char*) & GOLDEN_RAM[LOCAL_WORK_AREA_START];
 	BITMAP* temp;
 
 	char* messagePointer = getMessagePointer(currentLog, (var[*(*data)++]) - 1);
@@ -1822,13 +1822,12 @@ void b3Print_v(byte** data) // 1, 0x80
 	show_mouse(screen);
 	destroy_bitmap(temp);
 
-	free(tempString);
 }
 
 void b3Display(byte** data) // 3, 0x00 
 {
 	int row, col, messNum;
-	char* tempString = malloc(256);
+	char* tempString = (char*) & GOLDEN_RAM[LOCAL_WORK_AREA_START];
 	char* messagePointer;
 
 	col = *(*data)++;
@@ -1841,14 +1840,12 @@ void b3Display(byte** data) // 3, 0x00
 	drawBigString(screen, tempString, row * 16, 20 + (col * 16), agi_fg, agi_bg);
 	/*lprintf("info: display() %s, fg: %d bg: %d row: %d col: %d",
 	   tempString, agi_fg, agi_bg, row, col);*/
-
-	free(tempString);
 }
 
 void b3Display_v(byte** data) // 3, 0xE0 
 {
 	int row, col, messNum;
-	char* tempString = (char*)malloc(256);
+	char* tempString = (char*)&GOLDEN_RAM[LOCAL_WORK_AREA_START];
 	char* messagePointer;
 
 	col = var[*(*data)++];
@@ -1862,8 +1859,6 @@ void b3Display_v(byte** data) // 3, 0xE0
 	drawBigString(screen, tempString, row * 16, 20 + (col * 16), agi_fg, agi_bg);
 	/*lprintf("info: display.v() %s, foreground: %d background: %d",
 	   tempString, agi_fg, agi_bg);*/
-
-	free(tempString);
 }
 
 void b3Clear_lines(byte** data) // 3, 0x00 
@@ -2025,7 +2020,7 @@ void b3Accept_input(byte** data) // 0, 0x00
 void b3Set_key(byte** data) // 3, 0x00 
 {
 	int asciiCode, scanCode, eventCode;
-	char* tempStr = (char*)malloc(256);
+	char* tempStr = (char*)&GOLDEN_RAM[LOCAL_WORK_AREA_START];
 
 	asciiCode = *(*data)++;
 	scanCode = *(*data)++;
@@ -2052,8 +2047,6 @@ void b3Set_key(byte** data) // 3, 0x00
 		events[eventCode].scanCodeValue = scanCode;
 		events[eventCode].activated = FALSE;
 	}
-
-	free(tempStr);
 }
 
 void b3Add_to_pic(byte** data) // 7, 0x00 
@@ -2297,7 +2290,7 @@ void b4Trace_info(byte** data) // 3, 0x00
 
 void b4Print_at(byte** data) // 4, 0x00           /* 3 args for AGI versions before */
 {
-	char* tempString = (char*)malloc(256);
+	char* tempString = (char*)&GOLDEN_RAM[LOCAL_WORK_AREA_START];
 	BITMAP* temp;
 	int messNum, x, y, l;
 	char* messagePointer;
@@ -2322,13 +2315,11 @@ void b4Print_at(byte** data) // 4, 0x00           /* 3 args for AGI versions bef
 	//blit(temp, agi_screen, 0, 0, 0, 0, 640, 336);
 	//show_mouse(screen);
 	//destroy_bitmap(temp);
-
-	//free(tempString);
 }
 
 void b4Print_at_v(byte** data) // 4, 0x80         /* 2_440 (maybe laterz) */
 {
-	char* tempString = (char*)malloc(256);
+	char* tempString = (char*)&GOLDEN_RAM[LOCAL_WORK_AREA_START];
 	BITMAP* temp;
 	int messNum, x, y, l;
 	char* messagePointer;
@@ -2352,8 +2343,6 @@ void b4Print_at_v(byte** data) // 4, 0x80         /* 2_440 (maybe laterz) */
 	blit(temp, agi_screen, 0, 0, 0, 0, 640, 336);
 	show_mouse(screen);
 	destroy_bitmap(temp);
-
-	free(tempString);
 }
 
 void b4Discard_view_v(byte** data) // 1, 0x80 
@@ -3129,12 +3118,6 @@ void executeLogic(int logNum)
 #endif // VERBOSE 
 		printCounter++;
 
-		//if (opCounter > 151453 || debugStop) //121546)
-		//{
-		//	debugStop = TRUE;
-		//	printf("in the function the point the counter is now %lu and the current log num is %d and the code is %d\n", opCounter, logNum, *code);
-		//	//exit(0);
-		//}
 
 
 		if (*code < 0xfe)
@@ -3187,8 +3170,6 @@ void executeLogic(int logNum)
 #endif // VERBOSE
 			code += (codeWindowAddress - &codeWindow[0]) - 1;
 		}
-
-
 
 		lastCodeWasNonWindow = FALSE;
 
