@@ -3,6 +3,11 @@
 LRUCache* _logicCache;
 LRUCache* _viewCache;
 
+#ifdef _MSC_VER
+byte _bankedRam[8196];
+#define BANK_RAM _bankedRam
+#endif
+
 #pragma code-name (push, "BANKRAM0E")
 
 void bENewLruCache(byte max_size, byte* keys, LRUCache* cache, CacheEvictionCallback evictionCallback, byte evictionCallbackBank) {
@@ -46,15 +51,26 @@ void bELruCacheGet(int resType, LRUCache* cache, byte key, AGIFilePosType* locat
     else {
         // cache is full, delete least recently used entry
         if (cache->evictionCallback) {
-            trampoline_1Int(&cache->evictionCallback, key, cache->evictionCallbackBank);
+#ifdef  __CX16__
+            trampoline_1Int(&cache->evictionCallback, cache->keys[cache->size - 1], cache->evictionCallbackBank);
+#endif
+#ifdef _MSC_VER
             cache->evictionCallback(cache->keys[cache->size - 1]);
+#endif // _MSC_VER
         }
     }
     for (i = cache->size - 1; i > 0; i--) {
         cache->keys[i] = cache->keys[i - 1];
     }
     cache->keys[0] = key;
+#ifdef _MSC_VER
+    loadAGIFileTest(resType, location, AGIData);
+#endif // __CX16__
+
+#ifdef __CX16__
     loadAGIFile(resType, location, AGIData);
+#endif // __CX16__
+
 }
 
 
@@ -62,10 +78,14 @@ void bELruCacheGet(int resType, LRUCache* cache, byte key, AGIFilePosType* locat
 
 void lruCacheGetTrampoline(int resType, byte key, AGIFilePosType* location, AGIFile* agiData)
 {
+#ifdef  __CX16__
     byte previousRamBank = RAM_BANK;
-    LRUCache* lruCache;
+#endif
+    LRUCache* lruCache = NULL;
 
+#ifdef  __CX16__
     RAM_BANK = 0xE;
+#endif
 
     if (resType == LOGIC)
     {
@@ -74,5 +94,7 @@ void lruCacheGetTrampoline(int resType, byte key, AGIFilePosType* location, AGIF
 
     bELruCacheGet(resType, lruCache, key, location, agiData);
 
+#ifdef  __CX16__
     RAM_BANK = previousRamBank;
+#endif
 }

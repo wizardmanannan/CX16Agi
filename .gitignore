@@ -3,8 +3,11 @@
 /tools/*/.vs
 /obj/cx16
 /.vs
+src/tests/TestCache/x64/Debug/*
 /debug
+x64/Debug/*
 AGI.CX16.*
 *.user
 *.pdb
+*.filters
 cx16TesterConfig.json

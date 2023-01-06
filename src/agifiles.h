@@ -6,9 +6,12 @@
 #define _AGIFILES_H_
 
 #include <string.h>
-#include <cx16.h>
 #include "memoryManager.h"
+
+#ifdef  __CX16__
+#include <cx16.h>
 #include "helpers.h"
+#endif
 
 #define  LOGIC    0
 #define  PICTURE  1

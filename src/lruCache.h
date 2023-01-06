@@ -3,11 +3,14 @@
 #include "general.h"
 #include "memoryManager.h"
 #include "agifiles.h"
-#include "helpers.h"
-#include <cx16.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <string.h>
+
+#ifdef  __CX16__
+#include <cx16.h>
+#include "helpers.h"
+#endif
 
 #define MAX_CACHE_SIZE 10
 
@@ -26,5 +29,9 @@ extern LRUCache* _viewCache;
 
 extern void lruCacheGetTrampoline(int resType, byte key, AGIFilePosType* location, AGIFile* agiData);
 extern void bEInitLruCaches(CacheEvictionCallback evictionCallbackLogic, CacheEvictionCallback evictionCallbackView);
+
+#ifdef _MSC_VER
+extern void loadAGIFileTest(int resType, AGIFilePosType* location, AGIFile* AGIData);
+#endif
 
 #endif
