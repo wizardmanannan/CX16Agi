@@ -3,7 +3,9 @@
 /tools/*/.vs
 /obj/cx16
 /.vs
-src/tests/TestCache/x64/Debug/*
+/src/tests/TestCache/x64/Debug/*
+/src/Tests/TestMemoryAllocation/Debug/*
+Debug/
 /debug
 x64/Debug/*
 AGI.CX16.*

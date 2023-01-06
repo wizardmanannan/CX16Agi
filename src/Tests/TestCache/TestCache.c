@@ -29,6 +29,8 @@ void testCanAdd(LRUCache* cache)
 	const byte TestVal = 5;
 	lruCacheGetTrampoline(LOGIC, TestVal, &testLocation, &testfile);
 
+	printf("Test Can Add\n");
+
 	assert(_logicCache->keys[0] == 5);
 	assert(_logicCache->size == 1);
 }
@@ -37,6 +39,8 @@ void testCanReorder(LRUCache* cache)
 {
 	const byte TestVal1 = 5;
 	const byte TestVal2 = 7;
+
+	printf("Test Can Reorder\n");
 
 	lruCacheGetTrampoline(LOGIC, TestVal1, &testLocation, &testfile);
 	lruCacheGetTrampoline(LOGIC, TestVal2, &testLocation, &testfile);
@@ -57,6 +61,8 @@ void testCanReorder(LRUCache* cache)
 void testCanFill(LRUCache* cache)
 {
 
+	printf("Test Can Fill\n");
+
 	for (int i = cache->max_size - 1; i >= 0; i--)
 	{
 		lruCacheGetTrampoline(LOGIC, i, &testLocation, &testfile);
@@ -73,6 +79,7 @@ void testCanFill(LRUCache* cache)
 
 void testCanEvict(LRUCache* cache)
 {
+	printf("Test Can Evict\n");
 
 	for (int i = cache->max_size; i >= 0; i--)
 	{
@@ -127,7 +134,11 @@ void runTests(int resType)
 
 int main()
 {
+	int _ = 0;
 	runTests(LOGIC, _logicCache);
+
+	printf("Press any key");
+	scanf("%d", _);
 }
 
 
