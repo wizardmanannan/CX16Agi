@@ -6,6 +6,7 @@ AGIFilePosType testLocation;
 
 byte _evicted;
 boolean _evictedCalled;
+int _expectedResType;
 
 void cacheEvictionCallbackLogic(int key)
 {
@@ -31,6 +32,27 @@ void testCanAdd(LRUCache* cache)
 	assert(_logicCache->keys[0] == 5);
 	assert(_logicCache->size == 1);
 }
+
+void testCanReorder(LRUCache* cache)
+{
+	const byte TestVal1 = 5;
+	const byte TestVal2 = 7;
+
+	lruCacheGetTrampoline(LOGIC, TestVal1, &testLocation, &testfile);
+	lruCacheGetTrampoline(LOGIC, TestVal2, &testLocation, &testfile);
+
+	assert(_logicCache->keys[0] == TestVal2);
+	assert(_logicCache->keys[1] == TestVal1);
+	assert(_logicCache->size == 2);
+
+	lruCacheGetTrampoline(LOGIC, TestVal1, &testLocation, &testfile);
+
+	assert(_logicCache->keys[0] == TestVal1);
+	assert(_logicCache->keys[1] == TestVal2);
+	assert(_logicCache->size == 2);
+}
+
+
 
 void testCanFill(LRUCache* cache)
 {
@@ -70,6 +92,7 @@ void testCanEvict(LRUCache* cache)
 
 void loadAGIFileTest(int resType, AGIFilePosType* location, AGIFile* agiData)
 {
+	assert(resType == _expectedResType);
 	assert(location == &testLocation);
 	assert(agiData == &testfile);
 }
@@ -81,15 +104,30 @@ void reset()
 	_evicted = 0;
 }
 
+void runTests(int resType)
+{
+	LRUCache* cache = NULL;
+	_expectedResType = resType;
+
+	reset();
+
+	if (resType == LOGIC)
+	{
+		cache = _logicCache;
+	}
+
+	testCanAdd(cache);
+
+	reset();
+	testCanFill(cache);
+
+	reset();
+	testCanReorder(cache);
+}
+
 int main()
 {
-	reset();
-	testCanAdd(_logicCache);
-
-	reset();
-	testCanFill(_logicCache);
-
-	reset();
+	runTests(LOGIC, _logicCache);
 }
 
 
