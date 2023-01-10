@@ -50,12 +50,12 @@ void trampoline_1pp(fnTrampoline_1BytePointerPointer func, byte** data, byte ban
 	RAM_BANK = previousRamBank;
 }
 
-boolean trampoline_1pRetbool(fnTrampoline_1BytePointerPointerRetBool func, byte** data, byte bank)
+boolean trampoline_0Retbool(fnTrampoline_0RetBool func, byte bank)
 {
 	byte returnVal;
 	byte previousRamBank = RAM_BANK;
 	RAM_BANK = bank;
-	returnVal = func(data);
+	returnVal = func();
 	RAM_BANK = previousRamBank;
 
 	return returnVal;
@@ -164,6 +164,25 @@ void getLogicDirectory(AGIFilePosType* returnedLogicDirectory, AGIFilePosType* l
 	*returnedLogicDirectory = *logicDirectoryLocation;
 
 	RAM_BANK = previousRamBank;
+}
+
+unsigned int kernalResult;
+unsigned int kernalfAddress;
+
+unsigned int kernalCall_0RetInt(unsigned int fAddress)
+{
+	byte previousRamBank = RAM_BANK;
+
+	RAM_BANK = KERNAL_BANK;
+
+	kernalfAddress = fAddress;
+
+	__asm__("jsr %w", RDTIM_ADDRESS);
+	__asm__("sta %v", kernalResult);
+	
+	RAM_BANK = previousRamBank;
+
+	return kernalResult;
 }
 
 

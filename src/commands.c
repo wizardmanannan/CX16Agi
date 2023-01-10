@@ -35,7 +35,7 @@
 #define  PROGRAM_CONTROL  1
 #define CODE_WINDOW_SIZE 10
 //#define VERBOSE_STRING_CHECK
-//#define VERBOSE_LOGIC_EXEC
+#define VERBOSE_LOGIC_EXEC
 #define VERBOSE_SCRIPT_START
 //#define VERBOSE_PRINT_COUNTER;
 //#define VERBOSE_MENU
@@ -65,6 +65,7 @@ MENU* the_menuChildren = (MENU*)&BANK_RAM[MENU_CHILD_START];
 
 long opCounter = 0;
 int printCounter = 1;
+byte* _codeWindowAddress;
 
 void executeLogic(int logNum);
 
@@ -299,113 +300,113 @@ int b1Lprintf(char* fmt, ...)
 
 /* TEST COMMANDS */
 
-boolean b1Equaln(byte** data) // 2, 0x80 
+boolean b1Equaln() // 2, 0x80 
 {
 	int varVal, value, variable;
 
-	variable = *(*data)++;
+	variable = *_codeWindowAddress++;
 	varVal = var[variable];
-	value = *(*data)++;
+	value = *_codeWindowAddress++;
 
 	return (varVal == value);
 }
 
-boolean b1Equalv(byte** data) // 2, 0xC0 
+boolean b1Equalv() // 2, 0xC0 
 {
 	int varVal1, varVal2;
 
-	varVal1 = var[*(*data)++];
-	varVal2 = var[*(*data)++];
+	varVal1 = var[*_codeWindowAddress++];
+	varVal2 = var[*_codeWindowAddress++];
 	return (varVal1 == varVal2);
 }
 
-boolean b1Lessn(byte** data) // 2, 0x80 
+boolean b1Lessn() // 2, 0x80 
 {
 	int varVal, value;
 
-	varVal = var[*(*data)++];
-	value = *(*data)++;
+	varVal = var[*_codeWindowAddress++];
+	value = *_codeWindowAddress++;
 	return (varVal < value);
 }
 
-boolean b1Lessv(byte** data) // 2, 0xC0 
+boolean b1Lessv() // 2, 0xC0 
 {
 	int varVal1, varVal2;
 
-	varVal1 = var[*(*data)++];
-	varVal2 = var[*(*data)++];
+	varVal1 = var[*_codeWindowAddress++];
+	varVal2 = var[*_codeWindowAddress++];
 	return (varVal1 < varVal2);
 }
 
-boolean b1Greatern(byte** data) // 2, 0x80 
+boolean b1Greatern() // 2, 0x80 
 {
 	int varVal, value;
 
-	varVal = var[*(*data)++];
-	value = *(*data)++;
+	varVal = var[*_codeWindowAddress++];
+	value = *_codeWindowAddress++;
+
+	printf("varVal %d value %d \n", varVal, value);
 
 	return (varVal > value);
 }
 
-boolean b1Greaterv(byte** data) // 2, 0xC0 
+boolean b1Greaterv() // 2, 0xC0 
 {
 	int varVal1, varVal2;
 
-	varVal1 = var[*(*data)++];
-	varVal2 = var[*(*data)++];
+	varVal1 = var[*_codeWindowAddress++];
+	varVal2 = var[*_codeWindowAddress++];
 	return (varVal1 > varVal2);
 }
 
-boolean b1Isset(byte** data) // 1, 0x00 
+boolean b1Isset() // 1, 0x00 
 {
-	int flagNo = *(*data)++;
-
-	if (flagNo == 220 && currentLog == 46)
-	{
-		printf("Checking whether %d is set and it is %d \n", flagNo, flag[flagNo]);
-	}
+	int flagNo = *_codeWindowAddress++;
+	
+	printf("Checking whether %d is set and it is %d \n", flagNo, flag[flagNo]);
+	
 	return (flag[flagNo]);
 }
 
-boolean b1Issetv(byte** data) // 1, 0x80 
+boolean b1Issetv() // 1, 0x80 
 {
-	return (flag[var[*(*data)++]]);
+	return (flag[var[*_codeWindowAddress++]]);
 }
 
-boolean b1Has(byte** data) // 1, 0x00 
+boolean b1Has() // 1, 0x00 
 {
-	return (objects[*(*data)++].roomNum == 255);
+	return (objects[*_codeWindowAddress++].roomNum == 255);
 }
 
-boolean b1Obj_in_room(byte** data) // 2, 0x40 
+boolean b1Obj_in_room() // 2, 0x40 
 {
 	int objNum, varNum;
 
-	objNum = *(*data)++;
-	varNum = var[*(*data)++];
+	objNum = *_codeWindowAddress++;
+	varNum = var[*_codeWindowAddress++];
 	return (objects[objNum].roomNum == varNum);
 }
 
-boolean b1Posn(byte** data) // 5, 0x00 
+boolean b1Posn() // 5, 0x00 
 {
 	int objNum, x1, y1, x2, y2;
 	ViewTable localViewtab;
 
-	objNum = *(*data)++;
+	objNum = *_codeWindowAddress++;
 	getViewTab(&localViewtab, objNum);
 
-	x1 = *(*data)++;
-	y1 = *(*data)++;
-	x2 = *(*data)++;
-	y2 = *(*data)++;
+	x1 = *_codeWindowAddress++;
+	y1 = *_codeWindowAddress++;
+	x2 = *_codeWindowAddress++;
+	y2 = *_codeWindowAddress++;
 
 	return ((localViewtab.xPos >= x1) && (localViewtab.yPos >= y1)
 		&& (localViewtab.xPos <= x2) && (localViewtab.yPos <= y2));
 }
 
-boolean b1Controller(byte** data) // 1, 0x00 
+boolean b1Controller() // 1, 0x00 
 {
-	int eventNum = *(*data)++, retVal = 0;
+	int eventNum = *_codeWindowAddress++, retVal = 0;
 
 	/* Some events can be activated by menu input or key input. */
 
@@ -443,23 +444,23 @@ boolean b1Have_key() // 0, 0x00
 	return keypressed();
 }
 
-boolean b1Said(byte** data)
+boolean b1Said()
 {
 	int numOfArgs, wordNum, argValue;
 	boolean wordsMatch = TRUE;
 	byte argLo, argHi;
 
-	numOfArgs = *(*data)++;
+	numOfArgs = *_codeWindowAddress++;
 
 	if ((flag[2] == 0) || (flag[4] == 1)) {  /* Not valid input waiting */
-		*data += (numOfArgs * 2); /* Jump over arguments */
+		_codeWindowAddress += (numOfArgs * 2); /* Jump over arguments */
 		return FALSE;
 	}
 
 	/* Needs to deal with ANYWORD and ROL */
 	for (wordNum = 0; wordNum < numOfArgs; wordNum++) {
-		argLo = *(*data)++;
-		argHi = *(*data)++;
+		argLo = *_codeWindowAddress++;
+		argHi = *_codeWindowAddress++;
 		argValue = (argLo + (argHi << 8));
 		if (argValue == 9999) break; /* Should always be last argument */
 		if (argValue == 1) continue; /* Word comparison does not matter */
@@ -484,25 +485,25 @@ boolean said(byte **data)
 }
 */
 
-boolean b1Compare_strings(byte** data) // 2, 0x00 
+boolean b1Compare_strings() // 2, 0x00 
 {
 	int s1, s2;
 
-	s1 = *(*data)++;
-	s2 = *(*data)++;
+	s1 = *_codeWindowAddress++;
+	s2 = *_codeWindowAddress++;
 	if (strcmp(string[s1], string[s2]) == 0) return TRUE;
 	return FALSE;
 }
 
-boolean b1Obj_in_box(byte** data) // 5, 0x00 
+boolean b1Obj_in_box() // 5, 0x00 
 {
 	int objNum, x1, y1, x2, y2;
 	ViewTable localViewtab;
-	objNum = *(*data)++;
-	x1 = *(*data)++;
-	y1 = *(*data)++;
-	x2 = *(*data)++;
-	y2 = *(*data)++;
+	objNum = *_codeWindowAddress++;
+	x1 = *_codeWindowAddress++;
+	y1 = *_codeWindowAddress++;
+	x2 = *_codeWindowAddress++;
+	y2 = *_codeWindowAddress++;
 
 	getViewTab(&localViewtab, objNum);
 
@@ -512,15 +513,15 @@ boolean b1Obj_in_box(byte** data) // 5, 0x00
 		(localViewtab.yPos <= y2));
 }
 
-boolean b1Center_posn(byte** data) // 5, 0x00 }
+boolean b1Center_posn() // 5, 0x00 }
 {
 	int objNum, x1, y1, x2, y2;
 	ViewTable localViewtab;
-	objNum = *(*data)++;
-	x1 = *(*data)++;
-	y1 = *(*data)++;
-	x2 = *(*data)++;
-	y2 = *(*data)++;
+	objNum = *_codeWindowAddress++;
+	x1 = *_codeWindowAddress++;
+	y1 = *_codeWindowAddress++;
+	x2 = *_codeWindowAddress++;
+	y2 = *_codeWindowAddress++;
 
 	getViewTab(&localViewtab, objNum);
 
@@ -530,19 +531,19 @@ boolean b1Center_posn(byte** data) // 5, 0x00 }
 		(localViewtab.yPos <= y2));
 }
 
-boolean b1Right_posn(byte** data) // 5, 0x00
+boolean b1Right_posn() // 5, 0x00
 {
 	int objNum, x1, y1, x2, y2;
 	ViewTable localViewtab;
 
-	objNum = *(*data)++;
+	objNum = *_codeWindowAddress++;
 
 	getViewTab(&localViewtab, objNum);
 
-	x1 = *(*data)++;
-	y1 = *(*data)++;
-	x2 = *(*data)++;
-	y2 = *(*data)++;
+	x1 = *_codeWindowAddress++;
+	y1 = *_codeWindowAddress++;
+	x2 = *_codeWindowAddress++;
+	y2 = *_codeWindowAddress++;
 
 	return (((localViewtab.xPos + localViewtab.xsize - 1) >= x1) &&
 		(localViewtab.yPos >= y1) &&
@@ -554,208 +555,210 @@ boolean b1Right_posn(byte** data) // 5, 0x00
 
 /* ACTION COMMANDS */
 
-void b1Increment(byte** data) // 1, 0x80 
+void b1Increment() // 1, 0x80 
 {
-	if (var[*(*data)] < 0xFF)
-		var[*(*data)]++;
-	(*data)++;
+	if (var[*_codeWindowAddress] < 0xFF)
+		var[*_codeWindowAddress]++;
+	_codeWindowAddress++;
 
-	/* var[*(*data)++]++;  This one doesn't check bounds */
+	/* var[*_codeWindowAddress++]++;  This one doesn't check bounds */
 }
 
-void b1Decrement(byte** data) // 1, 0x80 
+void b1Decrement() // 1, 0x80 
 {
-	if (var[*(*data)] > 0)
-		var[*(*data)]--;
-	(*data)++;
+	if (var[*_codeWindowAddress] > 0)
+		var[*_codeWindowAddress]--;
+	_codeWindowAddress++;
 
-	/* var[*(*data)++]--;  This one doesn't check bounds */
+	/* var[*_codeWindowAddress++]--;  This one doesn't check bounds */
 }
 
-void b1Assignn(byte** data) // 2, 0x80 
+void b1Assignn() // 2, 0x80 
 {
 	int varNum, value;
 
-	varNum = *(*data)++;
-	value = *(*data)++;
+	varNum = *_codeWindowAddress++;
+	value = *_codeWindowAddress++;
 	var[varNum] = value;
 }
 
-void b1Assignv(byte** data) // 2, 0xC0 
+void b1Assignv() // 2, 0xC0 
 {
 	int var1, var2;
 
-	var1 = *(*data)++;
-	var2 = *(*data)++;
+	var1 = *_codeWindowAddress++;
+	var2 = *_codeWindowAddress++;
 	var[var1] = var[var2];
 }
 
-void b1Addn(byte** data) // 2, 0x80 
+void b1Addn() // 2, 0x80 
 {
 	int varNum, value;
 
-	varNum = *(*data)++;
-	value = *(*data)++;
+	varNum = *_codeWindowAddress++;
+	value = *_codeWindowAddress++;
 	var[varNum] += value;
 }
 
-void b1Addv(byte** data) // 2, 0xC0 
+void b1Addv() // 2, 0xC0 
 {
 	int var1, var2;
 
-	var1 = *(*data)++;
-	var2 = *(*data)++;
+	var1 = *_codeWindowAddress++;
+	var2 = *_codeWindowAddress++;
 	var[var1] += var[var2];
 }
 
-void b1Subn(byte** data) // 2, 0x80 
+void b1Subn() // 2, 0x80 
 {
 	int varNum, value;
 
-	varNum = *(*data)++;
-	value = *(*data)++;
+	varNum = *_codeWindowAddress++;
+	value = *_codeWindowAddress++;
 	var[varNum] -= value;
 }
 
-void b1Subv(byte** data) // 2, 0xC0 
+void b1Subv() // 2, 0xC0 
 {
 	int var1, var2;
 
-	var1 = *(*data)++;
-	var2 = *(*data)++;
+	var1 = *_codeWindowAddress++;
+	var2 = *_codeWindowAddress++;
 	var[var1] -= var[var2];
 }
 
-void b1Lindirectv(byte** data) // 2, 0xC0 
+void b1Lindirectv() // 2, 0xC0 
 {
 	int var1, var2;
 
-	var1 = *(*data)++;
-	var2 = *(*data)++;
+	var1 = *_codeWindowAddress++;
+	var2 = *_codeWindowAddress++;
 	var[var[var1]] = var[var2];
 }
 
-void b1Rindirect(byte** data) // 2, 0xC0 
+void b1Rindirect() // 2, 0xC0 
 {
 	int var1, var2;
 
-	var1 = *(*data)++;
-	var2 = *(*data)++;
+	var1 = *_codeWindowAddress++;
+	var2 = *_codeWindowAddress++;
 	var[var1] = var[var[var2]];
 }
 
-void b1Lindirectn(byte** data) // 2, 0x80 
+void b1Lindirectn() // 2, 0x80 
 {
 	int varNum, value;
 
-	varNum = *(*data)++;
-	value = *(*data)++;
+	varNum = *_codeWindowAddress++;
+	value = *_codeWindowAddress++;
 	var[var[varNum]] = value;
 }
 
-void b1Set(byte** data) // 1, 0x00 
+void b1Set() // 1, 0x00 
 {
-	flag[*(*data)++] = TRUE;
+	flag[*_codeWindowAddress++] = TRUE;
 }
 
-void b1Reset(byte** data) // 1, 0x00 
+void b1Reset() // 1, 0x00 
 {
-	flag[*(*data)++] = FALSE;
+	flag[*_codeWindowAddress++] = FALSE;
 }
 
-void b1Toggle(byte** data) // 1, 0x00 
+void b1Toggle() // 1, 0x00 
 {
-	int f = *(*data)++;
+	int f = *_codeWindowAddress++;
 
 	flag[f] = (flag[f] ? FALSE : TRUE);
 }
 
-void b1Set_v(byte** data) // 1, 0x80 
+void b1Set_v() // 1, 0x80 
 {
-	flag[var[*(*data)++]] = TRUE;
+	flag[var[*_codeWindowAddress++]] = TRUE;
 }
 
-void b1Reset_v(byte** data) // 1, 0x80 
+void b1Reset_v() // 1, 0x80 
 {
-	flag[var[*(*data)++]] = FALSE;
+	flag[var[*_codeWindowAddress++]] = FALSE;
 }
 
-void b1Toggle_v(byte** data) // 1, 0x80 
+void b1Toggle_v() // 1, 0x80 
 {
-	int f = var[*(*data)++];
+	int f = var[*_codeWindowAddress++];
 
 	flag[f] = (flag[f] ? FALSE : TRUE);
 }
 
-void b1New_room(byte** data) // 1, 0x00 
+void b1New_room() // 1, 0x00 
 {
 	/* This function is handled in meka.c */
-	newRoomNum = *(*data)++;
+	newRoomNum = *_codeWindowAddress++;
 	hasEnteredNewRoom = TRUE;
 }
 
-void b1New_room_v(byte** data) // 1, 0x80 
+void b1New_room_v() // 1, 0x80 
 {
 	/* This function is handled in meka.c */
-	newRoomNum = var[*(*data)++];
+	newRoomNum = var[*_codeWindowAddress++];
 	hasEnteredNewRoom = TRUE;
 }
 
-void b1Load_logics(byte** data) // 1, 0x00 
+void b1Load_logics() // 1, 0x00 
 {
-	trampoline_1Int(&b8LoadLogicFile, *(*data)++, LOGIC_CODE_BANK);
+	trampoline_1Int(&b8LoadLogicFile, *_codeWindowAddress++, LOGIC_CODE_BANK);
 }
 
-void b1Load_logics_v(byte** data) // 1, 0x80 
+void b1Load_logics_v() // 1, 0x80 
 {
-	trampoline_1Int(&b8LoadLogicFile, var[*(*data)++], LOGIC_CODE_BANK);
+	trampoline_1Int(&b8LoadLogicFile, var[*_codeWindowAddress++], LOGIC_CODE_BANK);
 }
 
-void b1Call(byte** data) // 1, 0x00 
+void b1Call() // 1, 0x00 
 {
-	executeLogic(*(*data)++);
+	printf("About to execute logic %d", *_codeWindowAddress);
+	executeLogic(*_codeWindowAddress++);
 }
 
-void b1Call_v(byte** data) // 1, 0x80 
+void b1Call_v() // 1, 0x80 
 {
-	executeLogic(var[*(*data)++]);
+	printf("About to execute logic %d", *_codeWindowAddress);
+	executeLogic(var[*_codeWindowAddress++]);
 }
 
-void b1Load_pic(byte** data) // 1, 0x80 
+void b1Load_pic() // 1, 0x80 
 {
-	loadPictureFile(var[*(*data)++]);
+	loadPictureFile(var[*_codeWindowAddress++]);
 }
 
-void b1Draw_pic(byte** data) // 1, 0x80 
+void b1Draw_pic() // 1, 0x80 
 {
 	int pNum;
 
-	pNum = var[*(*data)++];
+	pNum = var[*_codeWindowAddress++];
 	//picFNum = pNum;  // Debugging. Delete at some stage!!!
 	drawPic(loadedPictures[pNum].data, loadedPictures[pNum].size, TRUE);
 }
 
-void b1Show_pic(byte** data) // 0, 0x00 
+void b1Show_pic() // 0, 0x00 
 {
 	okToShowPic = TRUE;   /* Says draw picture with next object update */
 	/*stretch_blit(picture, working_screen, 0, 0, 160, 168, 0, 20, 640, 336);*/
 	showPicture();
 }
 
-void b1Discard_pic(byte** data) // 1, 0x80 
+void b1Discard_pic() // 1, 0x80 
 {
-	discardPictureFile(var[*(*data)++]);
+	discardPictureFile(var[*_codeWindowAddress++]);
 }
 
-void b1Overlay_pic(byte** data) // 1, 0x80 
+void b1Overlay_pic() // 1, 0x80 
 {
 	int pNum;
 
-	pNum = var[*(*data)++];
+	pNum = var[*_codeWindowAddress++];
 	drawPic(loadedPictures[pNum].data, loadedPictures[pNum].size, FALSE);
 }
 
-void b1Show_pri_screen(byte** data) // 0, 0x00 
+void b1Show_pri_screen() // 0, 0x00 
 {
 	//showPriority();
 	showDebugPri();
@@ -765,27 +768,27 @@ void b1Show_pri_screen(byte** data) // 0, 0x00
 
 /************************** VIEW ACTION COMMANDS **************************/
 
-void b1Load_view(byte** data) // 1, 0x00 
+void b1Load_view() // 1, 0x00 
 {
-	trampoline_1Int(&b9LoadViewFile, (*(*data)++), VIEW_CODE_BANK_1);
+	trampoline_1Int(&b9LoadViewFile, *_codeWindowAddress++, VIEW_CODE_BANK_1);
 }
 
-void b1Load_view_v(byte** data) // 1, 0x80 
+void b1Load_view_v() // 1, 0x80 
 {
-	trampoline_1Int(&b9LoadViewFile, var[*(*data)++], VIEW_CODE_BANK_1);
+	trampoline_1Int(&b9LoadViewFile, var[*_codeWindowAddress++], VIEW_CODE_BANK_1);
 }
 
-void b1Discard_view(byte** data) // 1, 0x00 
+void b1Discard_view() // 1, 0x00 
 {
-	trampoline_1Int(&b9DiscardView, *(*data)++, VIEW_CODE_BANK_1);
+	trampoline_1Int(&b9DiscardView, *_codeWindowAddress++, VIEW_CODE_BANK_1);
 }
 
-void b1Animate_obj(byte** data) // 1, 0x00 
+void b1Animate_obj() // 1, 0x00 
 {
 	int entryNum;
 	ViewTable localViewTab;
 
-	entryNum = *(*data)++;
+	entryNum = *_codeWindowAddress++;
 	//viewtab[entryNum].flags |= (ANIMATED | UPDATE | CYCLING);
 	getViewTab(&localViewTab, entryNum);
 
@@ -803,7 +806,7 @@ void b1Animate_obj(byte** data) // 1, 0x00
 	getViewTab(&localViewTab, entryNum);
 }
 
-void b1Unanimate_all(byte** data) // 0, 0x00 
+void b1Unanimate_all() // 0, 0x00 
 {
 	int entryNum;
 	ViewTable localViewtab;
@@ -819,12 +822,12 @@ void b1Unanimate_all(byte** data) // 0, 0x00
 	}
 }
 
-void b1Draw(byte** data) // 1, 0x00 
+void b1Draw() // 1, 0x00 
 {
 	int entryNum;
 	ViewTable localViewtab;
 
-	entryNum = *(*data)++;
+	entryNum = *_codeWindowAddress++;
 	getViewTab(&localViewtab, entryNum);
 
 	localViewtab.flags |= (DRAWN | UPDATE);   /* Not sure about update */
@@ -838,12 +841,12 @@ void b1Draw(byte** data) // 1, 0x00
 	setViewTab(&localViewtab, entryNum);
 }
 
-void b1Erase(byte** data) // 1, 0x00 
+void b1Erase() // 1, 0x00 
 {
 	int entryNum;
 	ViewTable localViewtab;
 
-	entryNum = *(*data)++;
+	entryNum = *_codeWindowAddress++;
 	getViewTab(&localViewtab, entryNum);
 
 
@@ -855,59 +858,59 @@ void b1Erase(byte** data) // 1, 0x00
 #pragma code-name (pop)
 #pragma code-name (push, "BANKRAM02")
 
-void b2Position(byte** data) // 3, 0x00 
+void b2Position() // 3, 0x00 
 {
 	int entryNum;
 	ViewTable localViewtab;
 
-	entryNum = *(*data)++;
+	entryNum = *_codeWindowAddress++;
 	getViewTab(&localViewtab, entryNum);
 
-	localViewtab.xPos = *(*data)++;
-	localViewtab.yPos = *(*data)++;
+	localViewtab.xPos = *_codeWindowAddress++;
+	localViewtab.yPos = *_codeWindowAddress++;
 
 	setViewTab(&localViewtab, entryNum);
 	/* Need to check that it hasn't been draw()n yet. */
 }
 
-void b2Position_v(byte** data) // 3, 0x60 
+void b2Position_v() // 3, 0x60 
 {
 	int entryNum;
 	ViewTable localViewtab;
 
-	entryNum = *(*data)++;
+	entryNum = *_codeWindowAddress++;
 	getViewTab(&localViewtab, entryNum);
 
-	localViewtab.xPos = var[*(*data)++];
-	localViewtab.yPos = var[*(*data)++];
+	localViewtab.xPos = var[*_codeWindowAddress++];
+	localViewtab.yPos = var[*_codeWindowAddress++];
 
 	setViewTab(&localViewtab, entryNum);
 	/* Need to check that it hasn't been draw()n yet. */
 }
 
-void b2Get_posn(byte** data) // 3, 0x60 
+void b2Get_posn() // 3, 0x60 
 {
 	int entryNum;
 	ViewTable localViewtab;
 
-	entryNum = *(*data)++;
+	entryNum = *_codeWindowAddress++;
 	getViewTab(&localViewtab, entryNum);
 
 
-	var[*(*data)++] = localViewtab.xPos;
-	var[*(*data)++] = localViewtab.yPos;
+	var[*_codeWindowAddress++] = localViewtab.xPos;
+	var[*_codeWindowAddress++] = localViewtab.yPos;
 }
 
-void b2Reposition(byte** data) // 3, 0x60 
+void b2Reposition() // 3, 0x60 
 {
 	int entryNum, dx, dy;
 	ViewTable localViewtab;
 
-	entryNum = *(*data)++;
+	entryNum = *_codeWindowAddress++;
 	getViewTab(&localViewtab, entryNum);
 
-	dx = (signed char)var[*(*data)++];
-	dy = (signed char)var[*(*data)++];
+	dx = (signed char)var[*_codeWindowAddress++];
+	dy = (signed char)var[*_codeWindowAddress++];
 	localViewtab.xPos += dx;
 	localViewtab.yPos += dy;
 
@@ -915,13 +918,13 @@ void b2Reposition(byte** data) // 3, 0x60
 }
 
 
-void b2Set_view(byte** data) // 2, 0x00 
+void b2Set_view() // 2, 0x00 
 {
 	int entryNum, viewNum;
 	ViewTable localViewtab;
 
-	entryNum = *(*data)++;
-	viewNum = *(*data)++;
+	entryNum = *_codeWindowAddress++;
+	viewNum = *_codeWindowAddress++;
 
 	getViewTab(&localViewtab, entryNum);
 
@@ -930,13 +933,13 @@ void b2Set_view(byte** data) // 2, 0x00
 	setViewTab(&localViewtab, entryNum);
 }
 
-void b2Set_view_v(byte** data) // 2, 0x40 
+void b2Set_view_v() // 2, 0x40 
 {
 	int entryNum, viewNum;
 	ViewTable localViewtab;
 
-	entryNum = *(*data)++;
-	viewNum = var[*(*data)++];
+	entryNum = *_codeWindowAddress++;
+	viewNum = var[*_codeWindowAddress++];
 
 	getViewTab(&localViewtab, entryNum);
 
@@ -945,13 +948,13 @@ void b2Set_view_v(byte** data) // 2, 0x40
 	getViewTab(&localViewtab, entryNum);
 }
 
-void b2Set_loop(byte** data) // 2, 0x00 
+void b2Set_loop() // 2, 0x00 
 {
 	int entryNum, loopNum;
 	ViewTable localViewtab;
 
-	entryNum = *(*data)++;
-	loopNum = *(*data)++;
+	entryNum = *_codeWindowAddress++;
+	loopNum = *_codeWindowAddress++;
 
 	getViewTab(&localViewtab, entryNum);
 	trampolineViewUpdater1Int(&b9SetLoop, &localViewtab, loopNum, VIEW_CODE_BANK_1);
@@ -960,15 +963,15 @@ void b2Set_loop(byte** data) // 2, 0x00
 	setViewTab(&localViewtab, entryNum);
 }
 
-void b2Set_loop_v(byte** data) // 2, 0x40 
+void b2Set_loop_v() // 2, 0x40 
 {
 	int entryNum, loopNum;
 	ViewTable localViewtab;
 
-	entryNum = *(*data)++;
+	entryNum = *_codeWindowAddress++;
 	getViewTab(&localViewtab, entryNum);
 
-	loopNum = var[*(*data)++];
+	loopNum = var[*_codeWindowAddress++];
 
 	trampolineViewUpdater1Int(&b9SetLoop, &localViewtab, loopNum, VIEW_CODE_BANK_1);
 	trampolineViewUpdater1Int(&b9SetCel, &localViewtab, loopNum, VIEW_CODE_BANK_1);
@@ -976,12 +979,12 @@ void b2Set_loop_v(byte** data) // 2, 0x40
 	setViewTab(&localViewtab, entryNum);
 }
 
-void b2Fix_loop(byte** data) // 1, 0x00 
+void b2Fix_loop() // 1, 0x00 
 {
 	int entryNum;
 	ViewTable localViewtab;
 
-	entryNum = *(*data)++;
+	entryNum = *_codeWindowAddress++;
 	getViewTab(&localViewtab, entryNum);
 
 
@@ -991,25 +994,25 @@ void b2Fix_loop(byte** data) // 1, 0x00
 
 }
 
-void b2Release_loop(byte** data) // 1, 0x00 
+void b2Release_loop() // 1, 0x00 
 {
 	int entryNum;
 	ViewTable localViewtab;
 
-	entryNum = *(*data)++;
+	entryNum = *_codeWindowAddress++;
 	getViewTab(&localViewtab, entryNum);
 
 	localViewtab.flags &= ~FIXLOOP;
 	setViewTab(&localViewtab, entryNum);
 }
 
-void b2Set_cel(byte** data) // 2, 0x00 
+void b2Set_cel() // 2, 0x00 
 {
 	int entryNum, celNum;
 	ViewTable localViewtab;
 
-	entryNum = *(*data)++;
-	celNum = *(*data)++;
+	entryNum = *_codeWindowAddress++;
+	celNum = *_codeWindowAddress++;
 
 	getViewTab(&localViewtab, entryNum);
 
@@ -1018,13 +1021,13 @@ void b2Set_cel(byte** data) // 2, 0x00
 	setViewTab(&localViewtab, entryNum);
 }
 
-void b2Set_cel_v(byte** data) // 2, 0x40 
+void b2Set_cel_v() // 2, 0x40 
 {
 	int entryNum, celNum;
 	ViewTable localViewtab;
 
-	entryNum = *(*data)++;
-	celNum = var[*(*data)++];
+	entryNum = *_codeWindowAddress++;
+	celNum = var[*_codeWindowAddress++];
 
 	getViewTab(&localViewtab, entryNum);
 
@@ -1033,107 +1036,107 @@ void b2Set_cel_v(byte** data) // 2, 0x40
 	setViewTab(&localViewtab, entryNum);
 }
 
-void b2Last_cel(byte** data) // 2, 0x40 
+void b2Last_cel() // 2, 0x40 
 {
 	int entryNum, varNum;
 	ViewTable localViewtab;
 
-	entryNum = *(*data)++;
+	entryNum = *_codeWindowAddress++;
 	getViewTab(&localViewtab, entryNum);
-	varNum = *(*data)++;
+	varNum = *_codeWindowAddress++;
 
 	var[varNum] = localViewtab.numberOfCels - 1;
 	setViewTab(&localViewtab, entryNum);
 }
 
-void b2Current_cel(byte** data) // 2, 0x40 
+void b2Current_cel() // 2, 0x40 
 {
 	int entryNum, varNum;
 	ViewTable localViewtab;
 
-	entryNum = *(*data)++;
+	entryNum = *_codeWindowAddress++;
 	getViewTab(&localViewtab, entryNum);
-	varNum = *(*data)++;
+	varNum = *_codeWindowAddress++;
 
 	var[varNum] = localViewtab.currentCel;
 	setViewTab(&localViewtab, entryNum);
 }
 
-void b2Current_loop(byte** data) // 2, 0x40 
+void b2Current_loop() // 2, 0x40 
 {
 	int entryNum, varNum;
 	ViewTable localViewtab;
 
-	entryNum = *(*data)++;
-	varNum = *(*data)++;
+	entryNum = *_codeWindowAddress++;
+	varNum = *_codeWindowAddress++;
 	getViewTab(&localViewtab, entryNum);
 
 	var[varNum] = localViewtab.currentLoop;
 	setViewTab(&localViewtab, entryNum);
 }
 
-void b2Current_view(byte** data) // 2, 0x40 
+void b2Current_view() // 2, 0x40 
 {
 	int entryNum, varNum;
 	ViewTable localViewtab;
 
-	entryNum = *(*data)++;
+	entryNum = *_codeWindowAddress++;
 	getViewTab(&localViewtab, entryNum);
 
-	varNum = *(*data)++;
+	varNum = *_codeWindowAddress++;
 	var[varNum] = localViewtab.currentView;
 
 	setViewTab(&localViewtab, entryNum);
 }
 
-void b2Number_of_loops(byte** data) // 2, 0x40 
+void b2Number_of_loops() // 2, 0x40 
 {
 	int entryNum, varNum;
 	ViewTable localViewtab;
 
-	entryNum = *(*data)++;
+	entryNum = *_codeWindowAddress++;
 	getViewTab(&localViewtab, entryNum);
 
-	varNum = *(*data)++;
+	varNum = *_codeWindowAddress++;
 	var[varNum] = localViewtab.numberOfLoops;
 
 	setViewTab(&localViewtab, entryNum);
 }
 
-void b2Set_priority(byte** data) // 2, 0x00 
+void b2Set_priority() // 2, 0x00 
 {
 	int entryNum;
 	ViewTable localViewtab;
 
-	entryNum = *(*data)++;
+	entryNum = *_codeWindowAddress++;
 	getViewTab(&localViewtab, entryNum);
 
-	localViewtab.priority = *(*data)++;
+	localViewtab.priority = *_codeWindowAddress++;
 	localViewtab.flags |= FIXEDPRIORITY;
 
 	setViewTab(&localViewtab, entryNum);
 }
 
-void b2Set_priority_v(byte** data) // 2, 0x40 
+void b2Set_priority_v() // 2, 0x40 
 {
 	int entryNum;
 	ViewTable localViewtab;
 
-	entryNum = *(*data)++;
+	entryNum = *_codeWindowAddress++;
 	getViewTab(&localViewtab, entryNum);
 
-	localViewtab.priority = var[*(*data)++];
+	localViewtab.priority = var[*_codeWindowAddress++];
 	localViewtab.flags |= FIXEDPRIORITY;
 
 	setViewTab(&localViewtab, entryNum);
 }
 
-void b2Release_priority(byte** data) // 1, 0x00 
+void b2Release_priority() // 1, 0x00 
 {
 	int entryNum;
 	ViewTable localViewtab;
 
-	entryNum = *(*data)++;
+	entryNum = *_codeWindowAddress++;
 	getViewTab(&localViewtab, entryNum);
 
 	localViewtab.flags &= ~FIXEDPRIORITY;
@@ -1141,27 +1144,27 @@ void b2Release_priority(byte** data) // 1, 0x00
 	setViewTab(&localViewtab, entryNum);
 }
 
-void b2Get_priority(byte** data) // 2, 0x40 
+void b2Get_priority() // 2, 0x40 
 {
 	int entryNum, varNum;
 	ViewTable localViewtab;
 
-	entryNum = *(*data)++;
+	entryNum = *_codeWindowAddress++;
 	getViewTab(&localViewtab, entryNum);
 
 
-	varNum = *(*data)++;
+	varNum = *_codeWindowAddress++;
 	var[varNum] = localViewtab.priority;
 
 	setViewTab(&localViewtab, entryNum);
 }
 
-void b2Stop_update(byte** data) // 1, 0x00 
+void b2Stop_update() // 1, 0x00 
 {
 	int entryNum;
 	ViewTable localViewtab;
 
-	entryNum = *(*data)++;
+	entryNum = *_codeWindowAddress++;
 	getViewTab(&localViewtab, entryNum);
 
 	localViewtab.flags &= ~UPDATE;
@@ -1169,12 +1172,12 @@ void b2Stop_update(byte** data) // 1, 0x00
 	setViewTab(&localViewtab, entryNum);
 }
 
-void b2Start_update(byte** data) // 1, 0x00 
+void b2Start_update() // 1, 0x00 
 {
 	int entryNum;
 	ViewTable localViewtab;
 
-	entryNum = *(*data)++;
+	entryNum = *_codeWindowAddress++;
 	getViewTab(&localViewtab, entryNum);
 
 
@@ -1183,22 +1186,22 @@ void b2Start_update(byte** data) // 1, 0x00
 	setViewTab(&localViewtab, entryNum);
 }
 
-void b2Force_update(byte** data) // 1, 0x00 
+void b2Force_update() // 1, 0x00 
 {
 	int entryNum;
 
-	entryNum = *(*data)++;
+	entryNum = *_codeWindowAddress++;
 	/* Do immediate update here. Call update(entryNum) */
 
 	trampoline_1Int(&bAUpdateObj, entryNum, VIEW_CODE_BANK_1);
 }
 
-void b2Ignore_horizon(byte** data) // 1, 0x00 
+void b2Ignore_horizon() // 1, 0x00 
 {
 	int entryNum;
 	ViewTable localViewtab;
 
-	entryNum = *(*data)++;
+	entryNum = *_codeWindowAddress++;
 	getViewTab(&localViewtab, entryNum);
 
 
@@ -1207,12 +1210,12 @@ void b2Ignore_horizon(byte** data) // 1, 0x00
 	setViewTab(&localViewtab, entryNum);
 }
 
-void b2Observe_horizon(byte** data) // 1, 0x00 
+void b2Observe_horizon() // 1, 0x00 
 {
 	int entryNum;
 	ViewTable localViewtab;
 
-	entryNum = *(*data)++;
+	entryNum = *_codeWindowAddress++;
 	getViewTab(&localViewtab, entryNum);
 
 	localViewtab.flags &= ~IGNOREHORIZON;
@@ -1220,17 +1223,17 @@ void b2Observe_horizon(byte** data) // 1, 0x00
 	setViewTab(&localViewtab, entryNum);
 }
 
-void b2Set_horizon(byte** data) // 1, 0x00 
+void b2Set_horizon() // 1, 0x00 
 {
-	horizon = *(*data)++;
+	horizon = *_codeWindowAddress++;
 }
 
-void b2Object_on_water(byte** data) // 1, 0x00 
+void b2Object_on_water() // 1, 0x00 
 {
 	int entryNum;
 	ViewTable localViewtab;
 
-	entryNum = *(*data)++;
+	entryNum = *_codeWindowAddress++;
 	getViewTab(&localViewtab, entryNum);
 
 	localViewtab.flags |= ONWATER;
@@ -1238,12 +1241,12 @@ void b2Object_on_water(byte** data) // 1, 0x00
 	setViewTab(&localViewtab, entryNum);
 }
 
-void b2Object_on_land(byte** data) // 1, 0x00 
+void b2Object_on_land() // 1, 0x00 
 {
 	int entryNum;
 	ViewTable localViewtab;
 
-	entryNum = *(*data)++;
+	entryNum = *_codeWindowAddress++;
 	getViewTab(&localViewtab, entryNum);
 
 	localViewtab.flags |= ONLAND;
@@ -1251,12 +1254,12 @@ void b2Object_on_land(byte** data) // 1, 0x00
 	setViewTab(&localViewtab, entryNum);
 }
 
-void b2Object_on_anything(byte** data) // 1, 0x00 
+void b2Object_on_anything() // 1, 0x00 
 {
 	int entryNum;
 	ViewTable localViewtab;
 
-	entryNum = *(*data)++;
+	entryNum = *_codeWindowAddress++;
 	getViewTab(&localViewtab, entryNum);
 
 	localViewtab.flags &= ~(ONWATER | ONLAND);
@@ -1264,12 +1267,12 @@ void b2Object_on_anything(byte** data) // 1, 0x00
 	setViewTab(&localViewtab, entryNum);
 }
 
-void b2Ignore_objs(byte** data) // 1, 0x00 
+void b2Ignore_objs() // 1, 0x00 
 {
 	int entryNum;
 	ViewTable localViewtab;
 
-	entryNum = *(*data)++;
+	entryNum = *_codeWindowAddress++;
 	getViewTab(&localViewtab, entryNum);
 
 	localViewtab.flags |= IGNOREOBJECTS;
@@ -1277,12 +1280,12 @@ void b2Ignore_objs(byte** data) // 1, 0x00
 	setViewTab(&localViewtab, entryNum);
 }
 
-void b2Observe_objs(byte** data) // 1, 0x00 
+void b2Observe_objs() // 1, 0x00 
 {
 	int entryNum;
 	ViewTable localViewtab;
 
-	entryNum = *(*data)++;
+	entryNum = *_codeWindowAddress++;
 	getViewTab(&localViewtab, entryNum);
 
 	localViewtab.flags &= ~IGNOREOBJECTS;
@@ -1291,18 +1294,18 @@ void b2Observe_objs(byte** data) // 1, 0x00
 }
 
 
-void b2Distance(byte** data) // 3, 0x20 
+void b2Distance() // 3, 0x20 
 {
 	int o1, o2, varNum, x1, y1, x2, y2;
 	ViewTable localViewtab1, localViewtab2;
 
-	o1 = *(*data)++;
-	o2 = *(*data)++;
+	o1 = *_codeWindowAddress++;
+	o2 = *_codeWindowAddress++;
 
 	getViewTab(&localViewtab1, o1);
 	getViewTab(&localViewtab2, o2);
 
-	varNum = *(*data)++;
+	varNum = *_codeWindowAddress++;
 	/* Check that both objects are on screen here. If they aren't
 	** then 255 should be returned. */
 	if (!((localViewtab1.flags & DRAWN) && (localViewtab2.flags & DRAWN))) {
@@ -1316,12 +1319,12 @@ void b2Distance(byte** data) // 3, 0x20
 	var[varNum] = abs(x1 - x2) + abs(y1 - y2);
 }
 
-void b2Stop_cycling(byte** data) // 1, 0x00 
+void b2Stop_cycling() // 1, 0x00 
 {
 	int entryNum;
 	ViewTable localViewtab;
 
-	entryNum = *(*data)++;
+	entryNum = *_codeWindowAddress++;
 	getViewTab(&localViewtab, entryNum);
 
 	localViewtab.flags &= ~CYCLING;
@@ -1329,12 +1332,12 @@ void b2Stop_cycling(byte** data) // 1, 0x00
 	setViewTab(&localViewtab, entryNum);
 }
 
-void b2Start_cycling(byte** data) // 1, 0x00 
+void b2Start_cycling() // 1, 0x00 
 {
 	int entryNum;
 	ViewTable localViewtab;
 
-	entryNum = *(*data)++;
+	entryNum = *_codeWindowAddress++;
 	getViewTab(&localViewtab, entryNum);
 
 	localViewtab.flags |= CYCLING;
@@ -1342,12 +1345,12 @@ void b2Start_cycling(byte** data) // 1, 0x00
 	setViewTab(&localViewtab, entryNum);
 }
 
-void b2Normal_cycle(byte** data) // 1, 0x00 
+void b2Normal_cycle() // 1, 0x00 
 {
 	int entryNum;
 	ViewTable localViewtab;
 
-	entryNum = *(*data)++;
+	entryNum = *_codeWindowAddress++;
 	getViewTab(&localViewtab, entryNum);
 
 	localViewtab.cycleStatus = 0;
@@ -1355,27 +1358,27 @@ void b2Normal_cycle(byte** data) // 1, 0x00
 	setViewTab(&localViewtab, entryNum);
 }
 
-void b2End_of_loop(byte** data) // 2, 0x00 
+void b2End_of_loop() // 2, 0x00 
 {
 	int entryNum;
 	ViewTable localViewtab;
 
-	entryNum = *(*data)++;
+	entryNum = *_codeWindowAddress++;
 	getViewTab(&localViewtab, entryNum);
 
-	localViewtab.param1 = *(*data)++;
+	localViewtab.param1 = *_codeWindowAddress++;
 	localViewtab.cycleStatus = 1;
 	localViewtab.flags |= (UPDATE | CYCLING);
 
 	setViewTab(&localViewtab, entryNum);
 }
 
-void b2Reverse_cycle(byte** data) // 1, 0x00
+void b2Reverse_cycle() // 1, 0x00
 {
 	int entryNum;
 	ViewTable localViewtab;
 
-	entryNum = *(*data)++;
+	entryNum = *_codeWindowAddress++;
 	getViewTab(&localViewtab, entryNum);
 	/* Store the other parameters here */
 
@@ -1384,39 +1387,39 @@ void b2Reverse_cycle(byte** data) // 1, 0x00
 	setViewTab(&localViewtab, entryNum);
 }
 
-void b2Reverse_loop(byte** data) // 2, 0x00 
+void b2Reverse_loop() // 2, 0x00 
 {
 	int entryNum;
 	ViewTable localViewtab;
 
-	entryNum = *(*data)++;
+	entryNum = *_codeWindowAddress++;
 	getViewTab(&localViewtab, entryNum);
 
-	localViewtab.param1 = *(*data)++;
+	localViewtab.param1 = *_codeWindowAddress++;
 	localViewtab.cycleStatus = 2;
 	localViewtab.flags |= (UPDATE | CYCLING);
 
 	setViewTab(&localViewtab, entryNum);
 }
 
-void b2Cycle_time(byte** data) // 2, 0x40 
+void b2Cycle_time() // 2, 0x40 
 {
 	int entryNum;
 	ViewTable localViewtab;
 
-	entryNum = *(*data)++;
+	entryNum = *_codeWindowAddress++;
 	getViewTab(&localViewtab, entryNum);
 
-	localViewtab.cycleTime = var[*(*data)++];
+	localViewtab.cycleTime = var[*_codeWindowAddress++];
 	setViewTab(&localViewtab, entryNum);
 }
 
-void b2Stop_motion(byte** data) // 1, 0x00 
+void b2Stop_motion() // 1, 0x00 
 {
 	int entryNum;
 	ViewTable localViewtab;
 
-	entryNum = *(*data)++;
+	entryNum = *_codeWindowAddress++;
 	getViewTab(&localViewtab, entryNum);
 
 	localViewtab.flags &= ~MOTION;
@@ -1426,12 +1429,12 @@ void b2Stop_motion(byte** data) // 1, 0x00
 	setViewTab(&localViewtab, entryNum);
 }
 
-void b2Start_motion(byte** data) // 1, 0x00 
+void b2Start_motion() // 1, 0x00 
 {
 	int entryNum;
 	ViewTable localViewtab;
 
-	entryNum = *(*data)++;
+	entryNum = *_codeWindowAddress++;
 	getViewTab(&localViewtab, entryNum);
 
 	localViewtab.flags |= MOTION;
@@ -1440,84 +1443,84 @@ void b2Start_motion(byte** data) // 1, 0x00
 	setViewTab(&localViewtab, entryNum);
 }
 
-void b2Step_size(byte** data) // 2, 0x40 
+void b2Step_size() // 2, 0x40 
 {
 	int entryNum;
 	ViewTable localViewtab;
 
-	entryNum = *(*data)++;
+	entryNum = *_codeWindowAddress++;
 	getViewTab(&localViewtab, entryNum);
 
-	localViewtab.stepSize = var[*(*data)++];
+	localViewtab.stepSize = var[*_codeWindowAddress++];
 
 	setViewTab(&localViewtab, entryNum);
 }
 
-void b2Step_time(byte** data) // 2, 0x40 
+void b2Step_time() // 2, 0x40 
 {
 	int entryNum;
 	ViewTable localViewtab;
 
-	entryNum = *(*data)++;
+	entryNum = *_codeWindowAddress++;
 	getViewTab(&localViewtab, entryNum);
 
-	localViewtab.stepTime = var[*(*data)++];
+	localViewtab.stepTime = var[*_codeWindowAddress++];
 
 	setViewTab(&localViewtab, entryNum);
 }
 
-void b2Move_obj(byte** data) // 5, 0x00 
+void b2Move_obj() // 5, 0x00 
 {
 	int entryNum;
 	byte stepVal;
 	ViewTable localViewtab;
 
-	entryNum = *(*data)++;
+	entryNum = *_codeWindowAddress++;
 	getViewTab(&localViewtab, entryNum);
 
-	localViewtab.param1 = *(*data)++;
-	localViewtab.param2 = *(*data)++;
+	localViewtab.param1 = *_codeWindowAddress++;
+	localViewtab.param2 = *_codeWindowAddress++;
 	localViewtab.param3 = localViewtab.stepSize;  /* Save stepsize */
-	stepVal = *(*data)++;
+	stepVal = *_codeWindowAddress++;
 	if (stepVal > 0) localViewtab.stepSize = stepVal;
-	localViewtab.param4 = *(*data)++;
+	localViewtab.param4 = *_codeWindowAddress++;
 	localViewtab.motion = 3;
 	localViewtab.flags |= MOTION;
 
 	setViewTab(&localViewtab, entryNum);
 }
 
-void b2Move_obj_v(byte** data) // 5, 0x70 
+void b2Move_obj_v() // 5, 0x70 
 {
 	int entryNum;
 	byte stepVal;
 	ViewTable localViewtab;
 
-	entryNum = *(*data)++;
+	entryNum = *_codeWindowAddress++;
 	getViewTab(&localViewtab, entryNum);
 
-	localViewtab.param1 = var[*(*data)++];
-	localViewtab.param2 = var[*(*data)++];
+	localViewtab.param1 = var[*_codeWindowAddress++];
+	localViewtab.param2 = var[*_codeWindowAddress++];
 	localViewtab.param3 = localViewtab.stepSize;  /* Save stepsize */
-	stepVal = var[*(*data)++];
+	stepVal = var[*_codeWindowAddress++];
 	if (stepVal > 0) localViewtab.stepSize = stepVal;
-	localViewtab.param4 = *(*data)++;
+	localViewtab.param4 = *_codeWindowAddress++;
 	localViewtab.motion = 3;
 	localViewtab.flags |= MOTION;
 
 	setViewTab(&localViewtab, entryNum);
 }
 
-void b2Follow_ego(byte** data) // 3, 0x00 
+void b2Follow_ego() // 3, 0x00 
 {
 	int entryNum, stepVal, flagNum;
 	ViewTable localViewtab;
 
-	entryNum = *(*data)++;
+	entryNum = *_codeWindowAddress++;
 	getViewTab(&localViewtab, entryNum);
 
-	stepVal = *(*data)++;
-	flagNum = *(*data)++;
+	stepVal = *_codeWindowAddress++;
+	flagNum = *_codeWindowAddress++;
 	localViewtab.param1 = localViewtab.stepSize;
 	/* Might need to put 'if (stepVal != 0)' */
 	//localViewtab.stepSize = stepVal;
@@ -1528,12 +1531,12 @@ void b2Follow_ego(byte** data) // 3, 0x00
 	setViewTab(&localViewtab, entryNum);
 }
 
-void b2Wander(byte** data) // 1, 0x00 
+void b2Wander() // 1, 0x00 
 {
 	int entryNum;
 	ViewTable localViewtab;
 
-	entryNum = *(*data)++;
+	entryNum = *_codeWindowAddress++;
 	getViewTab(&localViewtab, entryNum);
 
 
@@ -1543,12 +1546,12 @@ void b2Wander(byte** data) // 1, 0x00
 	setViewTab(&localViewtab, entryNum);
 }
 
-void b2Normal_motion(byte** data) // 1, 0x00 
+void b2Normal_motion() // 1, 0x00 
 {
 	int entryNum;
 	ViewTable localViewtab;
 
-	entryNum = *(*data)++;
+	entryNum = *_codeWindowAddress++;
 	getViewTab(&localViewtab, entryNum);
 
 	localViewtab.motion = 0;
@@ -1557,38 +1560,38 @@ void b2Normal_motion(byte** data) // 1, 0x00
 	setViewTab(&localViewtab, entryNum);
 }
 
-void b2Set_dir(byte** data) // 2, 0x40 
+void b2Set_dir() // 2, 0x40 
 {
 	int entryNum;
 	ViewTable localViewtab;
 
-	entryNum = *(*data)++;
+	entryNum = *_codeWindowAddress++;
 	getViewTab(&localViewtab, entryNum);
 
-	localViewtab.direction = var[*(*data)++];
+	localViewtab.direction = var[*_codeWindowAddress++];
 
 	setViewTab(&localViewtab, entryNum);
 }
 
-void b2Get_dir(byte** data) // 2, 0x40 
+void b2Get_dir() // 2, 0x40 
 {
 	int entryNum;
 	ViewTable localViewtab;
 
-	entryNum = *(*data)++;
+	entryNum = *_codeWindowAddress++;
 	getViewTab(&localViewtab, entryNum);
 
-	var[*(*data)++] = localViewtab.direction;
+	var[*_codeWindowAddress++] = localViewtab.direction;
 
 	setViewTab(&localViewtab, entryNum);
 }
 
-void b2Ignore_blocks(byte** data) // 1, 0x00 
+void b2Ignore_blocks() // 1, 0x00 
 {
 	int entryNum;
 	ViewTable localViewtab;
 
-	entryNum = *(*data)++;
+	entryNum = *_codeWindowAddress++;
 	getViewTab(&localViewtab, entryNum);
 
 	localViewtab.flags |= IGNOREBLOCKS;
@@ -1596,12 +1599,12 @@ void b2Ignore_blocks(byte** data) // 1, 0x00
 	setViewTab(&localViewtab, entryNum);
 }
 
-void b2Observe_blocks(byte** data) // 1, 0x00 
+void b2Observe_blocks() // 1, 0x00 
 {
 	int entryNum;
 	ViewTable localViewtab;
 
-	entryNum = *(*data)++;
+	entryNum = *_codeWindowAddress++;
 	getViewTab(&localViewtab, entryNum);
 
 	localViewtab.flags &= ~IGNOREBLOCKS;
@@ -1609,13 +1612,13 @@ void b2Observe_blocks(byte** data) // 1, 0x00
 	setViewTab(&localViewtab, entryNum);
 }
 
-void b2Block(byte** data) // 4, 0x00 
+void b2Block() // 4, 0x00 
 {
 	/* Is this used anywhere? - Not implemented at this stage */
-	*data += 4;
+	_codeWindowAddress += 4;
 }
 
-void b2Unblock(byte** data) // 0, 0x00 
+void b2Unblock() // 0, 0x00 
 {
 
 }
@@ -1623,67 +1626,67 @@ void b2Unblock(byte** data) // 0, 0x00
 #pragma code-name (pop)
 #pragma code-name (push, "BANKRAM03")
 
-void b3Get(byte** data) // 1, 00 
+void b3Get() // 1, 00 
 {
-	objects[*(*data)++].roomNum = 255;
+	objects[*_codeWindowAddress++].roomNum = 255;
 }
 
-void b3Get_v(byte** data) // 1, 0x80 
+void b3Get_v() // 1, 0x80 
 {
-	objects[var[*(*data)++]].roomNum = 255;
+	objects[var[*_codeWindowAddress++]].roomNum = 255;
 }
 
-void b3Drop(byte** data) // 1, 0x00 
+void b3Drop() // 1, 0x00 
 {
-	objects[*(*data)++].roomNum = 0;
+	objects[*_codeWindowAddress++].roomNum = 0;
 }
 
 
-void b3Put(byte** data) // 2, 0x00 
+void b3Put() // 2, 0x00 
 {
 	int objNum, room;
 
-	objNum = *(*data)++;
-	room = *(*data)++;
+	objNum = *_codeWindowAddress++;
+	room = *_codeWindowAddress++;
 	objects[objNum].roomNum = room;
 }
 
-void b3Put_v(byte** data) // 2, 0x40 
+void b3Put_v() // 2, 0x40 
 {
 	int objNum, room;
 
-	objNum = *(*data)++;
-	room = var[*(*data)++];
+	objNum = *_codeWindowAddress++;
+	room = var[*_codeWindowAddress++];
 	objects[objNum].roomNum = room;
 }
 
-void b3Get_room_v(byte** data) // 2, 0xC0 
+void b3Get_room_v() // 2, 0xC0 
 {
 	int objNum, room;
 
-	objNum = var[*(*data)++];
-	var[*(*data)++] = objects[objNum].roomNum;
+	objNum = var[*_codeWindowAddress++];
+	var[*_codeWindowAddress++] = objects[objNum].roomNum;
 }
 
-void b3Load_sound(byte** data) // 1, 0x00 
+void b3Load_sound() // 1, 0x00 
 {
 	int soundNum;
 
-	soundNum = *(*data)++;
+	soundNum = *_codeWindowAddress++;
 	loadSoundFile(soundNum);
 }
 
-void b3Play_sound(byte** data) // 2, 00  sound() renamed to avoid clash
+void b3Play_sound() // 2, 00  sound() renamed to avoid clash
 {
 	int soundNum;
 
-	soundNum = *(*data)++;
-	soundEndFlag = *(*data)++;
+	soundNum = *_codeWindowAddress++;
+	soundEndFlag = *_codeWindowAddress++;
 	/* playSound(soundNum); */
 	flag[soundEndFlag] = TRUE;
 }
 
-void b3Stop_sound(byte** data) // 0, 0x00 
+void b3Stop_sound() // 0, 0x00 
 {
 	checkForEnd = FALSE;
 	stop_midi();
@@ -1780,12 +1783,12 @@ void b3ProcessString(char* stringPointer, byte stringBank, char* outputString)
 	}
 }
 
-void b3Print(byte** data) // 1, 00 
+void b3Print() // 1, 00 
 {
 	char* tempString = (char*)&GOLDEN_RAM[LOCAL_WORK_AREA_START];
 	BITMAP* temp;
 
-	char* messagePointer = getMessagePointer(currentLog, (*(*data)++) - 1);
+	char* messagePointer = getMessagePointer(currentLog, (*_codeWindowAddress++) - 1);
 
 	show_mouse(NULL);
 	temp = create_bitmap(640, 336);
@@ -1802,12 +1805,12 @@ void b3Print(byte** data) // 1, 00
 	destroy_bitmap(temp);
 }
 
-void b3Print_v(byte** data) // 1, 0x80 
+void b3Print_v() // 1, 0x80 
 {
 	char* tempString = (char*) & GOLDEN_RAM[LOCAL_WORK_AREA_START];
 	BITMAP* temp;
 
-	char* messagePointer = getMessagePointer(currentLog, (var[*(*data)++]) - 1);
+	char* messagePointer = getMessagePointer(currentLog, (var[*_codeWindowAddress++]) - 1);
 
 	show_mouse(NULL);
 	temp = create_bitmap(640, 336);
@@ -1824,15 +1827,15 @@ void b3Print_v(byte** data) // 1, 0x80
 
 }
 
-void b3Display(byte** data) // 3, 0x00 
+void b3Display() // 3, 0x00 
 {
 	int row, col, messNum;
 	char* tempString = (char*) & GOLDEN_RAM[LOCAL_WORK_AREA_START];
 	char* messagePointer;
 
-	col = *(*data)++;
-	row = *(*data)++;
-	messNum = *(*data)++;
+	col = *_codeWindowAddress++;
+	row = *_codeWindowAddress++;
+	messNum = *_codeWindowAddress++;
 
 	messagePointer = getMessagePointer(currentLog, messNum - 1);
 
@@ -1842,15 +1845,15 @@ void b3Display(byte** data) // 3, 0x00
 	   tempString, agi_fg, agi_bg, row, col);*/
 }
 
-void b3Display_v(byte** data) // 3, 0xE0 
+void b3Display_v() // 3, 0xE0 
 {
 	int row, col, messNum;
 	char* tempString = (char*)&GOLDEN_RAM[LOCAL_WORK_AREA_START];
 	char* messagePointer;
 
-	col = var[*(*data)++];
-	row = var[*(*data)++];
-	messNum = var[*(*data)++];
+	col = var[*_codeWindowAddress++];
+	row = var[*_codeWindowAddress++];
+	messNum = var[*_codeWindowAddress++];
 	//drawString(picture, logics[currentLog].data->messages[messNum-1],
 	//   row*8, col*8, agi_fg, agi_bg);
 
@@ -1861,13 +1864,13 @@ void b3Display_v(byte** data) // 3, 0xE0
 	   tempString, agi_fg, agi_bg);*/
 }
 
-void b3Clear_lines(byte** data) // 3, 0x00 
+void b3Clear_lines() // 3, 0x00 
 {
 	int boxColour, startLine, endLine;
 
-	startLine = *(*data)++;
-	endLine = *(*data)++;
-	boxColour = *(*data)++;
+	startLine = *_codeWindowAddress++;
+	endLine = *_codeWindowAddress++;
+	boxColour = *_codeWindowAddress++;
 	if ((screenMode == AGI_GRAPHICS) && (boxColour > 0)) boxColour = 15;
 	boxColour++;
 	show_mouse(NULL);
@@ -1875,7 +1878,7 @@ void b3Clear_lines(byte** data) // 3, 0x00
 	show_mouse(screen);
 }
 
-void b3Text_screen(byte** data) // 0, 0x00 
+void b3Text_screen() // 0, 0x00 
 {
 	screenMode = AGI_TEXT;
 	/* Do something else here */
@@ -1884,7 +1887,7 @@ void b3Text_screen(byte** data) // 0, 0x00
 	clear(screen);
 }
 
-void b3Graphics(byte** data) // 0, 0x00 
+void b3Graphics() // 0, 0x00 
 {
 	screenMode = AGI_GRAPHICS;
 	/* Do something else here */
@@ -1894,10 +1897,10 @@ void b3Graphics(byte** data) // 0, 0x00
 	clear(screen);
 }
 
-void b3Set_cursor_char(byte** data) // 1, 0x00 
+void b3Set_cursor_char() // 1, 0x00 
 {
 	char* temp = (char*)&GOLDEN_RAM[LOCAL_WORK_AREA_START];
-	byte msgNo = (*(*data)++) - 1;
+	byte msgNo = (*_codeWindowAddress++) - 1;
 	char* messagePointer = getMessagePointer(currentLog, msgNo);
 	LOGICFile logicFile;
 
@@ -1915,35 +1918,35 @@ void b3Set_cursor_char(byte** data) // 1, 0x00
 #endif
 }
 
-void b3Set_text_attribute(byte** data) // 2, 0x00 
+void b3Set_text_attribute() // 2, 0x00 
 {
-	agi_fg = (*(*data)++) + 1;
-	agi_bg = (*(*data)++) + 1;
+	agi_fg = (*_codeWindowAddress++) + 1;
+	agi_bg = (*_codeWindowAddress++) + 1;
 }
 
-void b3Shake_screen(byte** data) // 1, 0x00 
+void b3Shake_screen() // 1, 0x00 
 {
-	(*data)++;  /* Ignore this for now. */
+	*_codeWindowAddress++;  /* Ignore this for now. */
 }
 
-void b3Configure_screen(byte** data) // 3, 0x00 
+void b3Configure_screen() // 3, 0x00 
 {
-	min_print_line = *(*data)++;
-	user_input_line = *(*data)++;
-	status_line_num = *(*data)++;
+	min_print_line = *_codeWindowAddress++;
+	user_input_line = *_codeWindowAddress++;
+	status_line_num = *_codeWindowAddress++;
 }
 
-void b3Status_line_on(byte** data) // 0, 0x00 
+void b3Status_line_on() // 0, 0x00 
 {
 	statusLineDisplayed = TRUE;
 }
 
-void b3Status_line_off(byte** data) // 0, 0x00 
+void b3Status_line_off() // 0, 0x00 
 {
 	statusLineDisplayed = FALSE;
 }
 
-void b3Set_string(byte** data) // 2, 0x00 
+void b3Set_string() // 2, 0x00 
 {
 	int stringNum, messNum;
 	char* messagePointer;
@@ -1951,80 +1954,80 @@ void b3Set_string(byte** data) // 2, 0x00
 
 	getLogicFile(&logicFile, currentLog);
 
-	stringNum = *(*data)++;
-	messNum = *(*data)++;
+	stringNum = *_codeWindowAddress++;
+	messNum = *_codeWindowAddress++;
 	messagePointer = getMessagePointer(currentLog, messNum - 1);
 
 	strcpyBanked(string[stringNum - 1], messagePointer, logicFile.messageBank);
 }
 
-void b3Get_string(byte** data) // 5, 0x00 
+void b3Get_string() // 5, 0x00 
 {
 	int strNum, messNum, row, col, l;
 	char* messagePointer;
 
-	strNum = *(*data)++;
-	messNum = *(*data)++;
-	col = *(*data)++;
-	row = *(*data)++;
-	l = *(*data)++;
+	strNum = *_codeWindowAddress++;
+	messNum = *_codeWindowAddress++;
+	col = *_codeWindowAddress++;
+	row = *_codeWindowAddress++;
+	l = *_codeWindowAddress++;
 
 	messagePointer = getMessagePointer(currentLog, messNum - 1);
 
 	getString(messagePointer, string[strNum], row, col, l);
 }
 
-void b3Word_to_string(byte** data) // 2, 0x00 
+void b3Word_to_string() // 2, 0x00 
 {
 	int stringNum, wordNum;
 
-	stringNum = *(*data)++;
-	wordNum = *(*data)++;
+	stringNum = *_codeWindowAddress++;
+	wordNum = *_codeWindowAddress++;
 	strcpy(string[stringNum], wordText[wordNum]);
 }
 
-void b3Parse(byte** data) // 1, 0x00 
+void b3Parse() // 1, 0x00 
 {
 	int stringNum;
 
-	stringNum = *(*data)++;
+	stringNum = *_codeWindowAddress++;
 	lookupWords(string[stringNum]);
 }
 
-void b3Get_num(byte** data) // 2, 0x40 
+void b3Get_num() // 2, 0x40 
 {
 	int messNum, varNum;
 	char temp[80];
 	char* messagePointer;
 
-	messNum = *(*data)++;
-	varNum = *(*data)++;
+	messNum = *_codeWindowAddress++;
+	varNum = *_codeWindowAddress++;
 
 	messagePointer = getMessagePointer(currentLog, messNum - 1);
 	getString(messagePointer, temp, 1, 23, 3);
 	var[varNum] = atoi(temp);
 }
 
-void b3Prevent_input(byte** data) // 0, 0x00 
+void b3Prevent_input() // 0, 0x00 
 {
 	inputLineDisplayed = FALSE;
 	/* Do something else here */
 }
 
-void b3Accept_input(byte** data) // 0, 0x00 
+void b3Accept_input() // 0, 0x00 
 {
 	inputLineDisplayed = TRUE;
 	/* Do something else here */
 }
 
-void b3Set_key(byte** data) // 3, 0x00 
+void b3Set_key() // 3, 0x00 
 {
 	int asciiCode, scanCode, eventCode;
 	char* tempStr = (char*)&GOLDEN_RAM[LOCAL_WORK_AREA_START];
 
-	asciiCode = *(*data)++;
-	scanCode = *(*data)++;
-	eventCode = *(*data)++;
+	asciiCode = *_codeWindowAddress++;
+	scanCode = *_codeWindowAddress++;
+	eventCode = *_codeWindowAddress++;
 
 
 	/* Ignore cases which have both values set for now. They seem to behave
@@ -2049,37 +2052,37 @@ void b3Set_key(byte** data) // 3, 0x00
 	}
 }
 
-void b3Add_to_pic(byte** data) // 7, 0x00 
+void b3Add_to_pic() // 7, 0x00 
 {
 	int viewNum, loopNum, celNum, x, y, priNum, baseCol;
 
-	viewNum = *(*data)++;
-	loopNum = *(*data)++;
-	celNum = *(*data)++;
-	x = *(*data)++;
-	y = *(*data)++;
-	priNum = *(*data)++;
-	baseCol = *(*data)++;
+	viewNum = *_codeWindowAddress++;
+	loopNum = *_codeWindowAddress++;
+	celNum = *_codeWindowAddress++;
+	x = *_codeWindowAddress++;
+	y = *_codeWindowAddress++;
+	priNum = *_codeWindowAddress++;
+	baseCol = *_codeWindowAddress++;
 
 	trampolineAddToPic(viewNum, loopNum, celNum, x, y, priNum, baseCol);
 }
 
-void b3Add_to_pic_v(byte** data) // 7, 0xFE 
+void b3Add_to_pic_v() // 7, 0xFE 
 {
 	int viewNum, loopNum, celNum, x, y, priNum, baseCol;
 
-	viewNum = var[*(*data)++];
-	loopNum = var[*(*data)++];
-	celNum = var[*(*data)++];
-	x = var[*(*data)++];
-	y = var[*(*data)++];
-	priNum = var[*(*data)++];
-	baseCol = var[*(*data)++];
+	viewNum = var[*_codeWindowAddress++];
+	loopNum = var[*_codeWindowAddress++];
+	celNum = var[*_codeWindowAddress++];
+	x = var[*_codeWindowAddress++];
+	y = var[*_codeWindowAddress++];
+	priNum = var[*_codeWindowAddress++];
+	baseCol = var[*_codeWindowAddress++];
 
 	trampolineAddToPic(viewNum, loopNum, celNum, x, y, priNum, baseCol);
 }
 
-void b3Status(byte** data) // 0, 0x00 
+void b3Status() // 0, 0x00 
 {
 	/* Inventory */
 	// set text mode
@@ -2087,18 +2090,18 @@ void b3Status(byte** data) // 0, 0x00
 	var[25] = 255;
 }
 
-void b3Save_game(byte** data) // 0, 0x00 
+void b3Save_game() // 0, 0x00 
 {
 	/* Not supported yet */
 }
 
-void b3Restore_game(byte** data) // 0, 0x00 
+void b3Restore_game() // 0, 0x00 
 {
 	/* Not supported yet */
 }
 
 
-void b3Restart_game(byte** data) // 0, 0x00 
+void b3Restart_game() // 0, 0x00 
 {
 	int i;
 
@@ -2115,38 +2118,38 @@ void b3Restart_game(byte** data) // 0, 0x00
 	hasEnteredNewRoom = TRUE;
 }
 
-void b3Show_obj(byte** data) // 1, 0x00 
+void b3Show_obj() // 1, 0x00 
 {
 	int objectNum;
 
-	objectNum = *(*data)++;
+	objectNum = *_codeWindowAddress++;
 	/* Not supported yet */
 }
 
-void b3Random_num(byte** data) // 3, 0x20  random() renamed to avoid clash
+void b3Random_num() // 3, 0x20  random() renamed to avoid clash
 {
 	int startValue, endValue;
 
-	startValue = *(*data)++;
-	endValue = *(*data)++;
-	var[*(*data)++] = (rand() % ((endValue - startValue) + 1)) + startValue;
+	startValue = *_codeWindowAddress++;
+	endValue = *_codeWindowAddress++;
+	var[*_codeWindowAddress++] = (rand() % ((endValue - startValue) + 1)) + startValue;
 }
 
-void b3Program_control(byte** data) // 0, 0x00 
+void b3Program_control() // 0, 0x00 
 {
 	controlMode = PROGRAM_CONTROL;
 }
 
-void b3Player_control(byte** data) // 0, 0x00 
+void b3Player_control() // 0, 0x00 
 {
 	controlMode = PLAYER_CONTROL;
 }
 
-void b3Obj_status_v(byte** data) // 1, 0x80 
+void b3Obj_status_v() // 1, 0x80 
 {
 	int objectNum;
 
-	objectNum = var[*(*data)++];
+	objectNum = var[*_codeWindowAddress++];
 	/* Not supported yet */
 
 	/* showView(viewtab[objectNum].currentView); */
@@ -2154,11 +2157,11 @@ void b3Obj_status_v(byte** data) // 1, 0x80
 }
 
 
-void b3Quit(byte** data) // 1, 0x00                     /* 0 args for AGI version 2_089 */
+void b3Quit() // 1, 0x00                     /* 0 args for AGI version 2_089 */
 {
 	int quitType, ch;
 
-	quitType = ((!oldQuit) ? *(*data)++ : 0);
+	quitType = ((!oldQuit) ? *_codeWindowAddress++ : 0);
 	if (quitType == 1) /* Immediate quit */
 		exit(0);
 	else { /* Prompt for exit */
@@ -2171,7 +2174,7 @@ void b3Quit(byte** data) // 1, 0x00                     /* 0 args for AGI versio
 	}
 }
 
-void b3Pause(byte** data) // 0, 0x00 
+void b3Pause() // 0, 0x00 
 {
 	while (key[KEY_ENTER]) { /* Wait */ }
 	printInBoxBig("      Game paused.\nPress ENTER to continue.", -1, -1, 30);
@@ -2181,13 +2184,13 @@ void b3Pause(byte** data) // 0, 0x00
 }
 
 
-void b3Echo_line(byte** data) // 0, 0x00 
+void b3Echo_line() // 0, 0x00 
 {
 
 }
 
 
-void b3Cancel_line(byte** data) // 0, 0x00 
+void b3Cancel_line() // 0, 0x00 
 {
 	/*currentInputStr[0]=0;
 	strPos=0;*/
@@ -2196,12 +2199,12 @@ void b3Cancel_line(byte** data) // 0, 0x00
 #pragma code-name (pop)
 #pragma code-name (push, "BANKRAM04")
 
-void b4Init_joy(byte** data) // 0, 0x00 
+void b4Init_joy() // 0, 0x00 
 {
 	/* Not important at this stage */
 }
 
-void b4Version(byte** data) // 0, 0x00 
+void b4Version() // 0, 0x00 
 {
 	while (key[KEY_ENTER] || key[KEY_ESC]) { /* Wait */ }
 	printInBoxBig("MEKA AGI Interpreter\n    Version 1.0", -1, -1, 30);
@@ -2210,22 +2213,22 @@ void b4Version(byte** data) // 0, 0x00
 	okToShowPic = TRUE;
 }
 
-void b4Script_size(byte** data) // 1, 0x00 
+void b4Script_size() // 1, 0x00 
 {
-	(*data)++;  /* Ignore the script size. Not important for this interpreter */
+	*_codeWindowAddress++;  /* Ignore the script size. Not important for this interpreter */
 }
 
-void b4Set_game_id(byte** data) // 1, 0x00 
+void b4Set_game_id() // 1, 0x00 
 {
-	(*data)++;  /* Ignore the game ID. Not important */
+	*_codeWindowAddress++;  /* Ignore the game ID. Not important */
 }
 
-void b4Log(byte** data) // 1, 0x00 
+void b4Log() // 1, 0x00 
 {
-	(*data)++;  /* Ignore log message. Not important */
+	*_codeWindowAddress++;  /* Ignore log message. Not important */
 }
 
-void b4Set_scan_start(byte** data) // 0, 0x00 
+void b4Set_scan_start() // 0, 0x00 
 {
 	LOGICEntry logicEntry;
 
@@ -2239,7 +2242,7 @@ void b4Set_scan_start(byte** data) // 0, 0x00
 }
 
 
-void b4Reset_scan_start(byte** data) // 0, 0x00 
+void b4Reset_scan_start() // 0, 0x00 
 {
 	LOGICEntry logicEntry;
 
@@ -2250,55 +2253,55 @@ void b4Reset_scan_start(byte** data) // 0, 0x00
 	setLogicEntry(&logicEntry, currentLog);
 }
 
-void b4Reposition_to(byte** data) // 3, 0x00 
+void b4Reposition_to() // 3, 0x00 
 {
 	int entryNum;
 	ViewTable localViewtab;
 
-	entryNum = *(*data)++;
+	entryNum = *_codeWindowAddress++;
 	getViewTab(&localViewtab, entryNum);
 
-	localViewtab.xPos = *(*data)++;
-	localViewtab.yPos = *(*data)++;
+	localViewtab.xPos = *_codeWindowAddress++;
+	localViewtab.yPos = *_codeWindowAddress++;
 
 	setViewTab(&localViewtab, entryNum);
 }
 
-void b4Reposition_to_v(byte** data) // 3, 0x60 
+void b4Reposition_to_v() // 3, 0x60 
 {
 	int entryNum;
 	ViewTable localViewtab;
 
-	entryNum = *(*data)++;
+	entryNum = *_codeWindowAddress++;
 	getViewTab(&localViewtab, entryNum);
 
-	localViewtab.xPos = var[*(*data)++];
-	localViewtab.yPos = var[*(*data)++];
+	localViewtab.xPos = var[*_codeWindowAddress++];
+	localViewtab.yPos = var[*_codeWindowAddress++];
 
 	setViewTab(&localViewtab, entryNum);
 }
 
-void b4Trace_on(byte** data) // 0, 0x00 
+void b4Trace_on() // 0, 0x00 
 {
 	/* Ignore at this stage */
 }
 
-void b4Trace_info(byte** data) // 3, 0x00 
+void b4Trace_info() // 3, 0x00 
 {
-	*data += 3;  /* Ignore trace information at this stage. */
+	_codeWindowAddress += 3;  /* Ignore trace information at this stage. */
 }
 
-void b4Print_at(byte** data) // 4, 0x00           /* 3 args for AGI versions before */
+void b4Print_at() // 4, 0x00           /* 3 args for AGI versions before */
 {
 	char* tempString = (char*)&GOLDEN_RAM[LOCAL_WORK_AREA_START];
 	BITMAP* temp;
 	int messNum, x, y, l;
 	char* messagePointer;
 
-	messNum = *(*data)++;
-	x = *(*data)++;
-	y = *(*data)++;
-	l = *(*data)++;
+	messNum = *_codeWindowAddress++;
+	x = *_codeWindowAddress++;
+	y = *_codeWindowAddress++;
+	l = *_codeWindowAddress++;
 	//show_mouse(NULL);
 	//temp = create_bitmap(640, 336);
 	//blit(agi_screen, temp, 0, 0, 0, 0, 640, 336);
@@ -2317,17 +2320,17 @@ void b4Print_at(byte** data) // 4, 0x00           /* 3 args for AGI versions bef
 	//destroy_bitmap(temp);
 }
 
-void b4Print_at_v(byte** data) // 4, 0x80         /* 2_440 (maybe laterz) */
+void b4Print_at_v() // 4, 0x80         /* 2_440 (maybe laterz) */
 {
 	char* tempString = (char*)&GOLDEN_RAM[LOCAL_WORK_AREA_START];
 	BITMAP* temp;
 	int messNum, x, y, l;
 	char* messagePointer;
 
-	messNum = var[*(*data)++];
-	x = *(*data)++;
-	y = *(*data)++;
-	l = *(*data)++;
+	messNum = var[*_codeWindowAddress++];
+	x = *_codeWindowAddress++;
+	y = *_codeWindowAddress++;
+	l = *_codeWindowAddress++;
 	show_mouse(NULL);
 	temp = create_bitmap(640, 336);
 	blit(agi_screen, temp, 0, 0, 0, 0, 640, 336);
@@ -2345,20 +2348,20 @@ void b4Print_at_v(byte** data) // 4, 0x80         /* 2_440 (maybe laterz) */
 	destroy_bitmap(temp);
 }
 
-void b4Discard_view_v(byte** data) // 1, 0x80 
+void b4Discard_view_v() // 1, 0x80 
 {
-	trampoline_1Int(&b9DiscardView, var[*(*data)++], VIEW_CODE_BANK_1);
+	trampoline_1Int(&b9DiscardView, var[*_codeWindowAddress++], VIEW_CODE_BANK_1);
 }
 
-void b4Clear_text_rect(byte** data) // 5, 0x00 
+void b4Clear_text_rect() // 5, 0x00 
 {
 	int x1, y1, x2, y2, boxColour;
 
-	x1 = *(*data)++;
-	y1 = *(*data)++;
-	x2 = *(*data)++;
-	y2 = *(*data)++;
-	boxColour = *(*data)++;
+	x1 = *_codeWindowAddress++;
+	y1 = *_codeWindowAddress++;
+	x2 = *_codeWindowAddress++;
+	y2 = *_codeWindowAddress++;
+	boxColour = *_codeWindowAddress++;
 	if ((screenMode == AGI_GRAPHICS) && (boxColour > 0)) boxColour = 15;
 	if (screenMode == AGI_TEXT) boxColour = 0;
 	show_mouse(NULL);
@@ -2366,9 +2369,9 @@ void b4Clear_text_rect(byte** data) // 5, 0x00
 	show_mouse(screen);
 }
 
-void b4Set_upper_left(byte** data) // 2, 0x00    (x, y) ??
+void b4Set_upper_left() // 2, 0x00    (x, y) ??
 {
-	*data += 2;
+	_codeWindowAddress += 2;
 }
 
 void b4WaitKeyRelease()
@@ -2440,7 +2443,7 @@ int (*(menuFunctions[50]))() = {
 	menuEvent45, menuEvent46, menuEvent47, menuEvent48, menuEvent49
 };
 
-void b4Set_menu(byte** data) // 1, 0x00 
+void b4Set_menu() // 1, 0x00 
 {
 	int messNum, startOffset;
 	char* messData;
@@ -2460,7 +2463,7 @@ void b4Set_menu(byte** data) // 1, 0x00
 	newMenu.proc = 0;
 	newMenu.menuTextBank = currentLogicFile.messageBank;
 
-	messNum = *(*data)++;
+	messNum = *_codeWindowAddress++;
 
 	/* Create new menu and allocate space for MAX_MENU_SIZE items */
 	newMenu.text = getMessagePointer(currentLog, messNum - 1);
@@ -2484,7 +2487,7 @@ void b4Set_menu(byte** data) // 1, 0x00
 	setMenu(&newMenu, numOfMenus);
 }
 
-void b4Set_menu_item(byte** data) // 2, 0x00 
+void b4Set_menu_item() // 2, 0x00 
 {
 	int messNum, controllerNum, i;
 	MENU childMenu;
@@ -2492,8 +2495,8 @@ void b4Set_menu_item(byte** data) // 2, 0x00
 
 	getLogicFile(&currentLogicFile, currentLog);
 
-	messNum = *(*data)++;
-	controllerNum = *(*data)++;
+	messNum = *_codeWindowAddress++;
+	controllerNum = *_codeWindowAddress++;
 
 	if (events[controllerNum].type == NO_EVENT) {
 		events[controllerNum].type = MENU_EVENT;
@@ -2514,65 +2517,65 @@ void b4Set_menu_item(byte** data) // 2, 0x00
 
 }
 
-void b4Submit_menu(byte** data) // 0, 0x00 
+void b4Submit_menu() // 0, 0x00 
 {
 
 }
 
-void b4Enable_item(byte** data) // 1, 0x00 
+void b4Enable_item() // 1, 0x00 
 {
-	(*data)++;
+	_codeWindowAddress++;
 }
 
-void b4Disable_item(byte** data) // 1, 0x00 
+void b4Disable_item() // 1, 0x00 
 {
-	(*data)++;
+	*_codeWindowAddress++;
 }
 
-void b4Menu_input(byte** data) // 0, 0x00 
+void b4Menu_input() // 0, 0x00 
 {
 	do_menu(the_menu, 10, 20);
 }
 
-void b4Show_obj_v(byte** data) // 1, 0x01 
+void b4Show_obj_v() // 1, 0x01 
 {
 	int objectNum;
 
-	objectNum = var[*(*data)++];
+	objectNum = var[*_codeWindowAddress++];
 	/* Not supported yet */
 }
 
-void b4Open_dialogue(byte** data) // 0, 0x00 
+void b4Open_dialogue() // 0, 0x00 
 {
 
 }
 
-void b4Close_dialogue(byte** data) // 0, 0x00 
+void b4Close_dialogue() // 0, 0x00 
 {
 
 }
 
-void b4Mul_n(byte** data) // 2, 0x80 
+void b4Mul_n() // 2, 0x80 
 {
-	var[*(*data)++] *= *(*data)++;
+	var[*_codeWindowAddress++] *= *_codeWindowAddress++;
 }
 
-void b4Mul_v(byte** data) // 2, 0xC0 
+void b4Mul_v() // 2, 0xC0 
 {
-	var[*(*data)++] *= var[*(*data)++];
+	var[*_codeWindowAddress++] *= var[*_codeWindowAddress++];
 }
 
-void b4Div_n(byte** data) // 2, 0x80 
+void b4Div_n() // 2, 0x80 
 {
-	var[*(*data)++] /= *(*data)++;
+	var[*_codeWindowAddress++] /= *_codeWindowAddress++;
 }
 
-void b4Div_v(byte** data) // 2, 0xC0 
+void b4Div_v() // 2, 0xC0 
 {
-	var[*(*data)++] /= var[*(*data)++];
+	var[*_codeWindowAddress++] /= var[*_codeWindowAddress++];
 }
 
-void b4Close_window(byte** data) // 0, 0x00 
+void b4Close_window() // 0, 0x00 
 {
 
 }
@@ -2580,44 +2583,47 @@ void b4Close_window(byte** data) // 0, 0x00
 
 #pragma code-name (pop)
 #pragma code-name (push, "BANKRAM05")
-boolean b5instructionHandler(byte code, int* currentLog, byte logNum, byte** ppCodeWindowAddress, byte bank)
+boolean b5instructionHandler(byte code, int* currentLog, byte logNum, byte bank)
 {
+	//int clockVal;
+	//clock_t before = clock();
+
 	switch (code)
 	{
 	case 0: /* return */
 		return FALSE;
 		break;
-	case 1: trampoline_1pp(&b1Increment, ppCodeWindowAddress, bank); break;
-	case 2: trampoline_1pp(&b1Decrement, ppCodeWindowAddress, bank); break;
-	case 3: trampoline_1pp(&b1Assignn, ppCodeWindowAddress, bank); break;
-	case 4: trampoline_1pp(&b1Assignv, ppCodeWindowAddress, bank); break;
-	case 5: trampoline_1pp(&b1Addn, ppCodeWindowAddress, bank); break;
-	case 6: trampoline_1pp(&b1Addv, ppCodeWindowAddress, bank); break;
-	case 7: trampoline_1pp(&b1Subn, ppCodeWindowAddress, bank); break;
-	case 8: trampoline_1pp(&b1Subv, ppCodeWindowAddress, bank); break;
-	case 9: trampoline_1pp(&b1Lindirectv, ppCodeWindowAddress, bank); break;
-	case 10: trampoline_1pp(&b1Rindirect, ppCodeWindowAddress, bank); break;
-	case 11: trampoline_1pp(&b1Lindirectn, ppCodeWindowAddress, bank); break;
-	case 12: trampoline_1pp(&b1Set, ppCodeWindowAddress, bank); break;
-	case 13: trampoline_1pp(&b1Reset, ppCodeWindowAddress, bank); break;
-	case 14: trampoline_1pp(&b1Toggle, ppCodeWindowAddress, bank); break;
-	case 15: trampoline_1pp(&b1Set_v, ppCodeWindowAddress, bank); break;
-	case 16: trampoline_1pp(&b1Reset_v, ppCodeWindowAddress, bank); break;
-	case 17: trampoline_1pp(&b1Toggle_v, ppCodeWindowAddress, bank); break;
+	case 1: trampoline_0(&b1Increment, bank); break;
+	case 2: trampoline_0(&b1Decrement, bank); break;
+	case 3: trampoline_0(&b1Assignn, bank); break;
+	case 4: trampoline_0(&b1Assignv, bank); break;
+	case 5: trampoline_0(&b1Addn, bank); break;
+	case 6: trampoline_0(&b1Addv, bank); break;
+	case 7: trampoline_0(&b1Subn, bank); break;
+	case 8: trampoline_0(&b1Subv, bank); break;
+	case 9: trampoline_0(&b1Lindirectv, bank); break;
+	case 10: trampoline_0(&b1Rindirect, bank); break;
+	case 11: trampoline_0(&b1Lindirectn, bank); break;
+	case 12: trampoline_0(&b1Set, bank); break;
+	case 13: trampoline_0(&b1Reset, bank); break;
+	case 14: trampoline_0(&b1Toggle, bank); break;
+	case 15: trampoline_0(&b1Set_v, bank); break;
+	case 16: trampoline_0(&b1Reset_v, bank); break;
+	case 17: trampoline_0(&b1Toggle_v, bank); break;
 	case 18:
-		trampoline_1pp(&b1New_room, ppCodeWindowAddress, bank);
+		trampoline_0(&b1New_room, bank);
 		exitAllLogics = TRUE;
 		return FALSE;
 		break;
 	case 19:
-		trampoline_1pp(&b1New_room_v, ppCodeWindowAddress, bank);
+		trampoline_0(&b1New_room_v, bank);
 		exitAllLogics = TRUE;
 		return FALSE;
 		break;
-	case 20: trampoline_1pp(&b1Load_logics, ppCodeWindowAddress, bank); break;
-	case 21: trampoline_1pp(&b1Load_logics_v, ppCodeWindowAddress, bank); break;
+	case 20: trampoline_0(&b1Load_logics, bank); break;
+	case 21: trampoline_0(&b1Load_logics_v, bank); break;
 	case 22:
-		trampoline_1pp(&b1Call, ppCodeWindowAddress, bank);
+		trampoline_0(&b1Call, bank);
 		/* The currentLog variable needs to be restored */
 		*currentLog = logNum;
 		if (exitAllLogics) return FALSE;
@@ -2627,7 +2633,7 @@ boolean b5instructionHandler(byte code, int* currentLog, byte logNum, byte** ppC
 #endif
 		break;
 	case 23:
-		trampoline_1pp(&b1Call_v, ppCodeWindowAddress, bank);
+		trampoline_0(&b1Call_v, bank);
 		/* The currentLog variable needs to be restored */
 		*currentLog = logNum;
 		if (exitAllLogics) return FALSE;
@@ -2636,152 +2642,152 @@ boolean b5instructionHandler(byte code, int* currentLog, byte logNum, byte** ppC
 		drawBigString(screen, debugString, 0, 384, 0, 7);
 #endif
 		break;
-	case 24: trampoline_1pp(&b1Load_pic, ppCodeWindowAddress, bank); break;
-	case 25: trampoline_1pp(&b1Draw_pic, ppCodeWindowAddress, bank); break;
-	case 26: trampoline_1pp(&b1Show_pic, ppCodeWindowAddress, bank); break;
-	case 27: trampoline_1pp(&b1Discard_pic, ppCodeWindowAddress, bank); break;
-	case 28: trampoline_1pp(&b1Overlay_pic, ppCodeWindowAddress, bank); break;
-	case 29: trampoline_1pp(&b1Show_pri_screen, ppCodeWindowAddress, bank); break;
-	case 30: trampoline_1pp(&b1Load_view, ppCodeWindowAddress, bank); break;
-	case 31: trampoline_1pp(&b1Load_view_v, ppCodeWindowAddress, bank); break;
-	case 32: trampoline_1pp(&b1Discard_view, ppCodeWindowAddress, bank); break;
-	case 33: trampoline_1pp(&b1Animate_obj, ppCodeWindowAddress, bank); break;
-	case 34: trampoline_1pp(&b1Unanimate_all, ppCodeWindowAddress, bank); break;
-	case 35: trampoline_1pp(&b1Draw, ppCodeWindowAddress, bank); break;
-	case 36: trampoline_1pp(&b1Erase, ppCodeWindowAddress, bank); break;
-	case 37: trampoline_1pp(&b2Position, ppCodeWindowAddress, bank); break;
-	case 38: trampoline_1pp(&b2Position_v, ppCodeWindowAddress, bank); break;
-	case 39: trampoline_1pp(&b2Get_posn, ppCodeWindowAddress, bank); break;
-	case 40: trampoline_1pp(&b2Reposition, ppCodeWindowAddress, bank); break;
-	case 41: trampoline_1pp(&b2Set_view, ppCodeWindowAddress, bank); break;
-	case 42: trampoline_1pp(&b2Set_view_v, ppCodeWindowAddress, bank); break;
-	case 43: trampoline_1pp(&b2Set_loop, ppCodeWindowAddress, bank); break;
-	case 44: trampoline_1pp(&b2Set_loop_v, ppCodeWindowAddress, bank); break;
-	case 45: trampoline_1pp(&b2Fix_loop, ppCodeWindowAddress, bank); break;
-	case 46: trampoline_1pp(&b2Release_loop, ppCodeWindowAddress, bank); break;
-	case 47: trampoline_1pp(&b2Set_cel, ppCodeWindowAddress, bank); break;
-	case 48: trampoline_1pp(&b2Set_cel_v, ppCodeWindowAddress, bank); break;
-	case 49: trampoline_1pp(&b2Last_cel, ppCodeWindowAddress, bank); break;
-	case 50: trampoline_1pp(&b2Current_cel, ppCodeWindowAddress, bank); break;
-	case 51: trampoline_1pp(&b2Current_loop, ppCodeWindowAddress, bank); break;
-	case 52: trampoline_1pp(&b2Current_view, ppCodeWindowAddress, bank); break;
-	case 53: trampoline_1pp(&b2Number_of_loops, ppCodeWindowAddress, bank); break;
-	case 54: trampoline_1pp(&b2Set_priority, ppCodeWindowAddress, bank); break;
-	case 55: trampoline_1pp(&b2Set_priority_v, ppCodeWindowAddress, bank); break;
-	case 56: trampoline_1pp(&b2Release_priority, ppCodeWindowAddress, bank); break;
-	case 57: trampoline_1pp(&b2Get_priority, ppCodeWindowAddress, bank); break;
-	case 58: trampoline_1pp(&b2Stop_update, ppCodeWindowAddress, bank); break;
-	case 59: trampoline_1pp(&b2Start_update, ppCodeWindowAddress, bank); break;
-	case 60: trampoline_1pp(&b2Force_update, ppCodeWindowAddress, bank); break;
-	case 61: trampoline_1pp(&b2Ignore_horizon, ppCodeWindowAddress, bank); break;
-	case 62: trampoline_1pp(&b2Observe_horizon, ppCodeWindowAddress, bank); break;
-	case 63: trampoline_1pp(&b2Set_horizon, ppCodeWindowAddress, bank); break;
-	case 64: trampoline_1pp(&b2Object_on_water, ppCodeWindowAddress, bank); break;
-	case 65: trampoline_1pp(&b2Object_on_land, ppCodeWindowAddress, bank); break;
-	case 66: trampoline_1pp(&b2Object_on_anything, ppCodeWindowAddress, bank); break;
-	case 67: trampoline_1pp(&b2Ignore_objs, ppCodeWindowAddress, bank); break;
-	case 68: trampoline_1pp(&b2Observe_objs, ppCodeWindowAddress, bank); break;
-	case 69: trampoline_1pp(&b2Distance, ppCodeWindowAddress, bank); break;
-	case 70: trampoline_1pp(&b2Stop_cycling, ppCodeWindowAddress, bank); break;
-	case 71: trampoline_1pp(&b2Start_cycling, ppCodeWindowAddress, bank); break;
-	case 72: trampoline_1pp(&b2Normal_cycle, ppCodeWindowAddress, bank); break;
-	case 73: trampoline_1pp(&b2End_of_loop, ppCodeWindowAddress, bank); break;
-	case 74: trampoline_1pp(&b2Reverse_cycle, ppCodeWindowAddress, bank); break;
-	case 75: trampoline_1pp(&b2Reverse_loop, ppCodeWindowAddress, bank); break;
-	case 76: trampoline_1pp(&b2Cycle_time, ppCodeWindowAddress, bank); break;
-	case 77: trampoline_1pp(&b2Stop_motion, ppCodeWindowAddress, bank); break;
-	case 78: trampoline_1pp(&b2Start_motion, ppCodeWindowAddress, bank); break;
-	case 79: trampoline_1pp(&b2Step_size, ppCodeWindowAddress, bank); break;
-	case 80: trampoline_1pp(&b2Step_time, ppCodeWindowAddress, bank); break;
-	case 81: trampoline_1pp(&b2Move_obj, ppCodeWindowAddress, bank); break;
-	case 82: trampoline_1pp(&b2Move_obj_v, ppCodeWindowAddress, bank); break;
-	case 83: trampoline_1pp(&b2Follow_ego, ppCodeWindowAddress, bank); break;
-	case 84: trampoline_1pp(&b2Wander, ppCodeWindowAddress, bank); break;
-	case 85: trampoline_1pp(&b2Normal_motion, ppCodeWindowAddress, bank); break;
-	case 86: trampoline_1pp(&b2Set_dir, ppCodeWindowAddress, bank); break;
-	case 87: trampoline_1pp(&b2Get_dir, ppCodeWindowAddress, bank); break;
-	case 88: trampoline_1pp(&b2Ignore_blocks, ppCodeWindowAddress, bank); break;
-	case 89: trampoline_1pp(&b2Observe_blocks, ppCodeWindowAddress, bank); break;
-	case 90: trampoline_1pp(&b2Block, ppCodeWindowAddress, bank); break;
-	case 91: trampoline_1pp(&b2Unblock, ppCodeWindowAddress, bank); break;
-	case 92: trampoline_1pp(&b3Get, ppCodeWindowAddress, bank); break;
-	case 93: trampoline_1pp(&b3Get_v, ppCodeWindowAddress, bank); break;
-	case 94: trampoline_1pp(&b3Drop, ppCodeWindowAddress, bank); break;
-	case 95: trampoline_1pp(&b3Put, ppCodeWindowAddress, bank); break;
-	case 96: trampoline_1pp(&b3Put_v, ppCodeWindowAddress, bank); break;
-	case 97: trampoline_1pp(&b3Get_room_v, ppCodeWindowAddress, bank); break;
-	case 98: trampoline_1pp(&b3Load_sound, ppCodeWindowAddress, bank); break;
-	case 99: trampoline_1pp(&b3Play_sound, ppCodeWindowAddress, bank); break;
-	case 100: trampoline_1pp(&b3Stop_sound, ppCodeWindowAddress, bank); break;
-	case 101: trampoline_1pp(&b3Print, ppCodeWindowAddress, bank); break;
-	case 102: trampoline_1pp(&b3Print_v, ppCodeWindowAddress, bank); break;
-	case 103: trampoline_1pp(&b3Display, ppCodeWindowAddress, bank); break;
-	case 104: trampoline_1pp(&b3Display_v, ppCodeWindowAddress, bank); break;
-	case 105: trampoline_1pp(&b3Clear_lines, ppCodeWindowAddress, bank); break;
-	case 106: trampoline_1pp(&b3Text_screen, ppCodeWindowAddress, bank); break;
-	case 107: trampoline_1pp(&b3Graphics, ppCodeWindowAddress, bank); break;
-	case 108: trampoline_1pp(&b3Set_cursor_char, ppCodeWindowAddress, bank); break;
-	case 109: trampoline_1pp(&b3Set_text_attribute, ppCodeWindowAddress, bank); break;
-	case 110: trampoline_1pp(&b3Shake_screen, ppCodeWindowAddress, bank); break;
-	case 111: trampoline_1pp(&b3Configure_screen, ppCodeWindowAddress, bank); break;
-	case 112: trampoline_1pp(&b3Status_line_on, ppCodeWindowAddress, bank); break;
-	case 113: trampoline_1pp(&b3Status_line_off, ppCodeWindowAddress, bank); break;
-	case 114: trampoline_1pp(&b3Set_string, ppCodeWindowAddress, bank); break;
-	case 115: trampoline_1pp(&b3Get_string, ppCodeWindowAddress, bank); break;
-	case 116: trampoline_1pp(&b3Word_to_string, ppCodeWindowAddress, bank); break;
-	case 117: trampoline_1pp(&b3Parse, ppCodeWindowAddress, bank); break;
-	case 118: trampoline_1pp(&b3Get_num, ppCodeWindowAddress, bank); break;
-	case 119: trampoline_1pp(&b3Prevent_input, ppCodeWindowAddress, bank); break;
-	case 120: trampoline_1pp(&b3Accept_input, ppCodeWindowAddress, bank); break;
-	case 121: trampoline_1pp(&b3Set_key, ppCodeWindowAddress, bank); break;
-	case 122: trampoline_1pp(&b3Add_to_pic, ppCodeWindowAddress, bank); break;
-	case 123: trampoline_1pp(&b3Add_to_pic_v, ppCodeWindowAddress, bank); break;
-	case 124: trampoline_1pp(&b3Status, ppCodeWindowAddress, bank); break;
-	case 125: trampoline_1pp(&b3Save_game, ppCodeWindowAddress, bank); break;
-	case 126: trampoline_1pp(&b3Restore_game, ppCodeWindowAddress, bank); break;
+	case 24: trampoline_0(&b1Load_pic, bank); break;
+	case 25: trampoline_0(&b1Draw_pic, bank); break;
+	case 26: trampoline_0(&b1Show_pic, bank); break;
+	case 27: trampoline_0(&b1Discard_pic, bank); break;
+	case 28: trampoline_0(&b1Overlay_pic, bank); break;
+	case 29: trampoline_0(&b1Show_pri_screen, bank); break;
+	case 30: trampoline_0(&b1Load_view, bank); break;
+	case 31: trampoline_0(&b1Load_view_v, bank); break;
+	case 32: trampoline_0(&b1Discard_view, bank); break;
+	case 33: trampoline_0(&b1Animate_obj, bank); break;
+	case 34: trampoline_0(&b1Unanimate_all, bank); break;
+	case 35: trampoline_0(&b1Draw, bank); break;
+	case 36: trampoline_0(&b1Erase, bank); break;
+	case 37: trampoline_0(&b2Position, bank); break;
+	case 38: trampoline_0(&b2Position_v, bank); break;
+	case 39: trampoline_0(&b2Get_posn, bank); break;
+	case 40: trampoline_0(&b2Reposition, bank); break;
+	case 41: trampoline_0(&b2Set_view, bank); break;
+	case 42: trampoline_0(&b2Set_view_v, bank); break;
+	case 43: trampoline_0(&b2Set_loop, bank); break;
+	case 44: trampoline_0(&b2Set_loop_v, bank); break;
+	case 45: trampoline_0(&b2Fix_loop, bank); break;
+	case 46: trampoline_0(&b2Release_loop, bank); break;
+	case 47: trampoline_0(&b2Set_cel, bank); break;
+	case 48: trampoline_0(&b2Set_cel_v, bank); break;
+	case 49: trampoline_0(&b2Last_cel, bank); break;
+	case 50: trampoline_0(&b2Current_cel, bank); break;
+	case 51: trampoline_0(&b2Current_loop, bank); break;
+	case 52: trampoline_0(&b2Current_view, bank); break;
+	case 53: trampoline_0(&b2Number_of_loops, bank); break;
+	case 54: trampoline_0(&b2Set_priority, bank); break;
+	case 55: trampoline_0(&b2Set_priority_v, bank); break;
+	case 56: trampoline_0(&b2Release_priority, bank); break;
+	case 57: trampoline_0(&b2Get_priority, bank); break;
+	case 58: trampoline_0(&b2Stop_update, bank); break;
+	case 59: trampoline_0(&b2Start_update, bank); break;
+	case 60: trampoline_0(&b2Force_update, bank); break;
+	case 61: trampoline_0(&b2Ignore_horizon, bank); break;
+	case 62: trampoline_0(&b2Observe_horizon, bank); break;
+	case 63: trampoline_0(&b2Set_horizon, bank); break;
+	case 64: trampoline_0(&b2Object_on_water, bank); break;
+	case 65: trampoline_0(&b2Object_on_land, bank); break;
+	case 66: trampoline_0(&b2Object_on_anything, bank); break;
+	case 67: trampoline_0(&b2Ignore_objs, bank); break;
+	case 68: trampoline_0(&b2Observe_objs, bank); break;
+	case 69: trampoline_0(&b2Distance, bank); break;
+	case 70: trampoline_0(&b2Stop_cycling, bank); break;
+	case 71: trampoline_0(&b2Start_cycling, bank); break;
+	case 72: trampoline_0(&b2Normal_cycle, bank); break;
+	case 73: trampoline_0(&b2End_of_loop, bank); break;
+	case 74: trampoline_0(&b2Reverse_cycle, bank); break;
+	case 75: trampoline_0(&b2Reverse_loop, bank); break;
+	case 76: trampoline_0(&b2Cycle_time, bank); break;
+	case 77: trampoline_0(&b2Stop_motion, bank); break;
+	case 78: trampoline_0(&b2Start_motion, bank); break;
+	case 79: trampoline_0(&b2Step_size, bank); break;
+	case 80: trampoline_0(&b2Step_time, bank); break;
+	case 81: trampoline_0(&b2Move_obj, bank); break;
+	case 82: trampoline_0(&b2Move_obj_v, bank); break;
+	case 83: trampoline_0(&b2Follow_ego, bank); break;
+	case 84: trampoline_0(&b2Wander, bank); break;
+	case 85: trampoline_0(&b2Normal_motion, bank); break;
+	case 86: trampoline_0(&b2Set_dir, bank); break;
+	case 87: trampoline_0(&b2Get_dir, bank); break;
+	case 88: trampoline_0(&b2Ignore_blocks, bank); break;
+	case 89: trampoline_0(&b2Observe_blocks, bank); break;
+	case 90: trampoline_0(&b2Block, bank); break;
+	case 91: trampoline_0(&b2Unblock, bank); break;
+	case 92: trampoline_0(&b3Get, bank); break;
+	case 93: trampoline_0(&b3Get_v, bank); break;
+	case 94: trampoline_0(&b3Drop, bank); break;
+	case 95: trampoline_0(&b3Put, bank); break;
+	case 96: trampoline_0(&b3Put_v, bank); break;
+	case 97: trampoline_0(&b3Get_room_v, bank); break;
+	case 98: trampoline_0(&b3Load_sound, bank); break;
+	case 99: trampoline_0(&b3Play_sound, bank); break;
+	case 100: trampoline_0(&b3Stop_sound, bank); break;
+	case 101: trampoline_0(&b3Print, bank); break;
+	case 102: trampoline_0(&b3Print_v, bank); break;
+	case 103: trampoline_0(&b3Display, bank); break;
+	case 104: trampoline_0(&b3Display_v, bank); break;
+	case 105: trampoline_0(&b3Clear_lines, bank); break;
+	case 106: trampoline_0(&b3Text_screen, bank); break;
+	case 107: trampoline_0(&b3Graphics, bank); break;
+	case 108: trampoline_0(&b3Set_cursor_char, bank); break;
+	case 109: trampoline_0(&b3Set_text_attribute, bank); break;
+	case 110: trampoline_0(&b3Shake_screen, bank); break;
+	case 111: trampoline_0(&b3Configure_screen, bank); break;
+	case 112: trampoline_0(&b3Status_line_on, bank); break;
+	case 113: trampoline_0(&b3Status_line_off, bank); break;
+	case 114: trampoline_0(&b3Set_string, bank); break;
+	case 115: trampoline_0(&b3Get_string, bank); break;
+	case 116: trampoline_0(&b3Word_to_string, bank); break;
+	case 117: trampoline_0(&b3Parse, bank); break;
+	case 118: trampoline_0(&b3Get_num, bank); break;
+	case 119: trampoline_0(&b3Prevent_input, bank); break;
+	case 120: trampoline_0(&b3Accept_input, bank); break;
+	case 121: trampoline_0(&b3Set_key, bank); break;
+	case 122: trampoline_0(&b3Add_to_pic, bank); break;
+	case 123: trampoline_0(&b3Add_to_pic_v, bank); break;
+	case 124: trampoline_0(&b3Status, bank); break;
+	case 125: trampoline_0(&b3Save_game, bank); break;
+	case 126: trampoline_0(&b3Restore_game, bank); break;
 	case 127: break;
-	case 128: trampoline_1pp(&b3Restart_game, ppCodeWindowAddress, bank); break;
-	case 129: trampoline_1pp(&b3Show_obj, ppCodeWindowAddress, bank); break;
-	case 130: trampoline_1pp(&b3Random_num, ppCodeWindowAddress, bank); break;
-	case 131: trampoline_1pp(&b3Program_control, ppCodeWindowAddress, bank); break;
-	case 132: trampoline_1pp(&b3Player_control, ppCodeWindowAddress, bank); break;
-	case 133: trampoline_1pp(&b3Obj_status_v, ppCodeWindowAddress, bank); break;
-	case 134: trampoline_1pp(&b3Quit, ppCodeWindowAddress, bank); break;
+	case 128: trampoline_0(&b3Restart_game, bank); break;
+	case 129: trampoline_0(&b3Show_obj, bank); break;
+	case 130: trampoline_0(&b3Random_num, bank); break;
+	case 131: trampoline_0(&b3Program_control, bank); break;
+	case 132: trampoline_0(&b3Player_control, bank); break;
+	case 133: trampoline_0(&b3Obj_status_v, bank); break;
+	case 134: trampoline_0(&b3Quit, bank); break;
 	case 135: break;
-	case 136: trampoline_1pp(&b3Pause, ppCodeWindowAddress, bank); break;
-	case 137: trampoline_1pp(&b3Echo_line, ppCodeWindowAddress, bank); break;
-	case 138: trampoline_1pp(&b3Cancel_line, ppCodeWindowAddress, bank); break;
-	case 139: trampoline_1pp(&b4Init_joy, ppCodeWindowAddress, bank); break;
+	case 136: trampoline_0(&b3Pause, bank); break;
+	case 137: trampoline_0(&b3Echo_line, bank); break;
+	case 138: trampoline_0(&b3Cancel_line, bank); break;
+	case 139: trampoline_0(&b4Init_joy, bank); break;
 	case 140: break;
-	case 141: trampoline_1pp(&b4Version, ppCodeWindowAddress, bank); break;
-	case 142: trampoline_1pp(&b4Script_size, ppCodeWindowAddress, bank); break;
-	case 143: trampoline_1pp(&b4Set_game_id, ppCodeWindowAddress, bank); break;
-	case 144: trampoline_1pp(&b4Log, ppCodeWindowAddress, bank); break;
-	case 145: trampoline_1pp(&b4Set_scan_start, ppCodeWindowAddress, bank); break;
-	case 146: trampoline_1pp(&b4Reset_scan_start, ppCodeWindowAddress, bank); break;
-	case 147: trampoline_1pp(&b4Reposition_to, ppCodeWindowAddress, bank); break;
-	case 148: trampoline_1pp(&b4Reposition_to_v, ppCodeWindowAddress, bank); break;
-	case 149: trampoline_1pp(&b4Trace_on, ppCodeWindowAddress, bank); break;
-	case 150: trampoline_1pp(&b4Trace_info, ppCodeWindowAddress, bank); break;
-	case 151: trampoline_1pp(&b4Print_at, ppCodeWindowAddress, bank); break;
-	case 152: trampoline_1pp(&b4Print_at_v, ppCodeWindowAddress, bank); break;
-	case 153: trampoline_1pp(&b4Discard_view_v, ppCodeWindowAddress, bank); break;
-	case 154: trampoline_1pp(&b4Clear_text_rect, ppCodeWindowAddress, bank); break;
-	case 155: trampoline_1pp(&b4Set_upper_left, ppCodeWindowAddress, bank); break;
-	case 156: trampoline_1pp(&b4Set_menu, ppCodeWindowAddress, bank); break;
-	case 157: trampoline_1pp(&b4Set_menu_item, ppCodeWindowAddress, bank); break;
-	case 158: trampoline_1pp(&b4Submit_menu, ppCodeWindowAddress, bank); break;
-	case 159: trampoline_1pp(&b4Enable_item, ppCodeWindowAddress, bank); break;
-	case 160: trampoline_1pp(&b4Disable_item, ppCodeWindowAddress, bank); break;
-	case 161: trampoline_1pp(&b4Menu_input, ppCodeWindowAddress, bank); break;
-	case 162: trampoline_1pp(&b4Show_obj_v, ppCodeWindowAddress, bank); break;
-	case 163: trampoline_1pp(&b4Open_dialogue, ppCodeWindowAddress, bank); break;
-	case 164: trampoline_1pp(&b4Close_dialogue, ppCodeWindowAddress, bank); break;
-	case 165: trampoline_1pp(&b4Mul_n, ppCodeWindowAddress, bank); break;
-	case 166: trampoline_1pp(&b4Mul_v, ppCodeWindowAddress, bank); break;
-	case 167: trampoline_1pp(&b4Div_n, ppCodeWindowAddress, bank); break;
-	case 168: trampoline_1pp(&b4Div_v, ppCodeWindowAddress, bank); break;
-	case 169: trampoline_1pp(&b4Close_window, ppCodeWindowAddress, bank); break;
+	case 141: trampoline_0(&b4Version, bank); break;
+	case 142: trampoline_0(&b4Script_size, bank); break;
+	case 143: trampoline_0(&b4Set_game_id, bank); break;
+	case 144: trampoline_0(&b4Log, bank); break;
+	case 145: trampoline_0(&b4Set_scan_start, bank); break;
+	case 146: trampoline_0(&b4Reset_scan_start, bank); break;
+	case 147: trampoline_0(&b4Reposition_to, bank); break;
+	case 148: trampoline_0(&b4Reposition_to_v, bank); break;
+	case 149: trampoline_0(&b4Trace_on, bank); break;
+	case 150: trampoline_0(&b4Trace_info, bank); break;
+	case 151: trampoline_0(&b4Print_at, bank); break;
+	case 152: trampoline_0(&b4Print_at_v, bank); break;
+	case 153: trampoline_0(&b4Discard_view_v, bank); break;
+	case 154: trampoline_0(&b4Clear_text_rect, bank); break;
+	case 155: trampoline_0(&b4Set_upper_left, bank); break;
+	case 156: trampoline_0(&b4Set_menu, bank); break;
+	case 157: trampoline_0(&b4Set_menu_item, bank); break;
+	case 158: trampoline_0(&b4Submit_menu, bank); break;
+	case 159: trampoline_0(&b4Enable_item, bank); break;
+	case 160: trampoline_0(&b4Disable_item, bank); break;
+	case 161: trampoline_0(&b4Menu_input, bank); break;
+	case 162: trampoline_0(&b4Show_obj_v, bank); break;
+	case 163: trampoline_0(&b4Open_dialogue, bank); break;
+	case 164: trampoline_0(&b4Close_dialogue, bank); break;
+	case 165: trampoline_0(&b4Mul_n, bank); break;
+	case 166: trampoline_0(&b4Mul_v, bank); break;
+	case 167: trampoline_0(&b4Div_n, bank); break;
+	case 168: trampoline_0(&b4Div_v, bank); break;
+	case 169: trampoline_0(&b4Close_window, bank); break;
 	case 170:  break;
 	case 171:  break;
 	case 172:  break;
@@ -2796,38 +2802,45 @@ boolean b5instructionHandler(byte code, int* currentLog, byte logNum, byte** ppC
 	case 181:  break;
 	}
 
+	//clockVal = (unsigned int)((clock() - before) * 1000 / CLOCKS_PER_SEC);
+
+	/*if (clockVal >= 1 && clockVal != 16 && code != 23)
+	{
+		printf("Load Timer %u Code %u \n", clockVal, code);
+	}*/
+
 	return TRUE;
 }
 
-int ifLogicHandlers(byte ch, byte** ppCodeWindowAddress, byte bank)
+int ifLogicHandlers(byte ch, byte bank)
 {
 
 	int result;
 
 #ifdef VERBOSE_LOGIC_EXEC
-	printf("If Check %d d1 %d, %d", ch, *(*ppCodeWindowAddress), *(*ppCodeWindowAddress + 1));
+	printf("If Check %d d1 %d, %d", ch, *_codeWindowAddress, (*_codeWindowAddress + 1));
 #endif // VERBOSE_LOGIC_EXEC
 
 	switch (ch) {
 	case 0: result = FALSE; break; /* Should never happen */
-	case 1: result = trampoline_1pRetbool(&b1Equaln, ppCodeWindowAddress, bank); break;
-	case 2: result = trampoline_1pRetbool(&b1Equalv, ppCodeWindowAddress, bank); break;
-	case 3: result = trampoline_1pRetbool(&b1Lessn, ppCodeWindowAddress, bank); break;
-	case 4: result = trampoline_1pRetbool(&b1Lessv, ppCodeWindowAddress, bank); break;
-	case 5: result = trampoline_1pRetbool(&b1Greatern, ppCodeWindowAddress, bank); break;
-	case 6: result = trampoline_1pRetbool(&b1Greaterv, ppCodeWindowAddress, bank); break;
-	case 7: result = trampoline_1pRetbool(&b1Isset, ppCodeWindowAddress, bank); break;
-	case 8: result = trampoline_1pRetbool(&b1Issetv, ppCodeWindowAddress, bank); break;
-	case 9: result = trampoline_1pRetbool(&b1Has, ppCodeWindowAddress, bank); break;
-	case 10: result = trampoline_1pRetbool(&b1Obj_in_room, ppCodeWindowAddress, bank); break;
-	case 11: result = trampoline_1pRetbool(&b1Posn, ppCodeWindowAddress, bank); break;
-	case 12: result = trampoline_1pRetbool(&b1Controller, ppCodeWindowAddress, bank); break;
-	case 13: result = trampoline_1pRetbool(&b1Have_key, ppCodeWindowAddress, bank); break;
-	case 14: result = trampoline_1pRetbool(&b1Said, ppCodeWindowAddress, bank); break;
-	case 15: result = trampoline_1pRetbool(&b1Compare_strings, ppCodeWindowAddress, bank); break;
-	case 16: result = trampoline_1pRetbool(&b1Obj_in_box, ppCodeWindowAddress, bank); break;
-	case 17: result = trampoline_1pRetbool(&b1Center_posn, ppCodeWindowAddress, bank); break;
-	case 18: result = trampoline_1pRetbool(&b1Right_posn, ppCodeWindowAddress, bank); break;
+	case 1: result = trampoline_0Retbool(&b1Equaln, bank); break;
+	case 2: result = trampoline_0Retbool(&b1Equalv, bank); break;
+	case 3: result = trampoline_0Retbool(&b1Lessn, bank); break;
+	case 4: result = trampoline_0Retbool(&b1Lessv, bank); break;
+	case 5: result = trampoline_0Retbool(&b1Greatern, bank); break;
+	case 6: result = trampoline_0Retbool(&b1Greaterv, bank); break;
+	case 7: result = trampoline_0Retbool(&b1Isset, bank); break;
+	case 8: result = trampoline_0Retbool(&b1Issetv, bank); break;
+	case 9: result = trampoline_0Retbool(&b1Has, bank); break;
+	case 10: result = trampoline_0Retbool(&b1Obj_in_room, bank); break;
+	case 11: result = trampoline_0Retbool(&b1Posn, bank); break;
+	case 12: result = trampoline_0Retbool(&b1Controller, bank); break;
+	case 13: result = trampoline_0Retbool(&b1Have_key, bank); break;
+	case 14: result = trampoline_0Retbool(&b1Said, bank); break;
+	case 15: result = trampoline_0Retbool(&b1Compare_strings, bank); break;
+	case 16: result = trampoline_0Retbool(&b1Obj_in_box, bank); break;
+	case 17: result = trampoline_0Retbool(&b1Center_posn, bank); break;
+	case 18: result = trampoline_0Retbool(&b1Right_posn, bank); break;
 	default:
 		////lprintf("catastrophe: Illegal test [%d], logic %d, posn %d.",
 			//ch, currentLog, logics[currentLog].currentPoint);
@@ -2876,16 +2889,15 @@ void ifHandler(byte** data, byte codeBank)
 	char debugString[80];
 	byte previousBank = RAM_BANK;
 	byte codeWindow[CODE_WINDOW_SIZE];
-	byte* codeWindowAddress;
 	byte** ppCodeWindowAddress;
 	byte ifHandlerBank;
 
-	ppCodeWindowAddress = &codeWindowAddress;
+	ppCodeWindowAddress = &_codeWindowAddress;
 
 	RAM_BANK = codeBank;
 
 	while (stillProcessing) {
-		ch = *(*data)++;
+		ch = *_codeWindowAddress++;
 
 #ifdef DEBUG
 		if (ch <= 18) {
@@ -2922,19 +2934,19 @@ void ifHandler(byte** data, byte codeBank)
 			break;
 		default:
 			memcpy(&codeWindow[0], *data, CODE_WINDOW_SIZE);
-			codeWindowAddress = &codeWindow[0];
+			_codeWindowAddress = &codeWindow[0];
 			RAM_BANK = IF_LOGIC_HANDLERS_BANK;
 			ifHandlerBank = getBankBasedOnCode(ch);
 
-			testVal = ifLogicHandlers(ch, ppCodeWindowAddress, ifHandlerBank);
+			testVal = ifLogicHandlers(ch, ifHandlerBank);
 
 			RAM_BANK = previousBank;
 
 #ifdef VERBOSE_LOGIC_EXEC
 
-			printf("Data was %p trying to add %p ", data, codeWindowAddress - &codeWindow[0]);
+			printf("Data was %p trying to add %p ", data, _codeWindowAddress - &codeWindow[0]);
 #endif // VERBOSE
-			* data += (codeWindowAddress - &codeWindow[0]);
+			* data += (_codeWindowAddress - &codeWindow[0]);
 
 #ifdef VERBOSE_LOGIC_EXEC
 			printf("Data is %p %u \n", data, *data);
@@ -2948,11 +2960,11 @@ void ifHandler(byte** data, byte codeBank)
 					** commands rather than being the closing OR. We therefore
 					** have to jump over each command as we find it. */
 					while (TRUE) {
-						ch = *(*data)++;
+						ch = *_codeWindowAddress++;
 						if (ch == 0xfc) break;
 						if (ch > 0xfc) continue;
 						if (ch == 0x0e) { /* said() has variable number of args */
-							ch = *(*data)++;
+							ch = *_codeWindowAddress++;
 
 							*data += (ch << 1);
 						}
@@ -2978,17 +2990,17 @@ void ifHandler(byte** data, byte codeBank)
 
 	/* Test is false. */
 	while (TRUE) {
-		ch = *(*data)++;
+		ch = *_codeWindowAddress++;
 		if (ch == 0xff) {
-			b1 = *(*data)++;
-			b2 = *(*data)++;
+			b1 = *_codeWindowAddress++;
+			b2 = *_codeWindowAddress++;
 			disp = (b2 << 8) | b1;  /* Should be signed 16 bit */
 			*data += disp;
 			break;
 		}
 		if (ch >= 0xfc) continue;
 		if (ch == 0x0e) {
-			ch = *(*data)++;
+			ch = *_codeWindowAddress++;
 			*data += (ch << 1);
 		}
 		else {
@@ -3006,15 +3018,15 @@ void executeLogic(int logNum)
 {
 	byte previousRamBank = RAM_BANK;
 	boolean discardAfterward = FALSE, stillExecuting = TRUE;
-	byte* code, * endPos, * startPos, b1, b2;
+	byte* code, * endPos, * startPos;
 	byte codeAtTimeOfLastBankSwitch;
 	LOGICEntry currentLogic;
 	LOGICFile currentLogicFile;
 	byte codeWindow[CODE_WINDOW_SIZE];
-	byte* codeWindowAddress;
-	byte** ppCodeWindowAddress;
 	byte instructionCodeBank;
 	boolean lastCodeWasNonWindow = FALSE;
+	unsigned int clockVal;
+	unsigned int b1, b2, b3, bWhole, bInner;
 
 	//Temp
 
@@ -3076,12 +3088,21 @@ void executeLogic(int logNum)
 
 	RAM_BANK = currentLogicFile.codeBank;
 
+	bWhole = RDTIM;
+	
+	printf("\n");
+
+	printf("--LogNum-- %d\n", logNum);
+
 	while ((code < endPos) && stillExecuting) {
+		bInner = RDTIM;
+		b1 = RDTIM;
+
+		printf(" %u ", *code);
 
 		memcpy(&codeWindow[0], code, CODE_WINDOW_SIZE);
 
-		codeWindowAddress = &codeWindow[0] + 1;
-		ppCodeWindowAddress = &codeWindowAddress;
+		_codeWindowAddress = &codeWindow[0] + 1;
 
 		/* Emergency exit */
 		if (key[KEY_F12]) {
@@ -3091,6 +3112,11 @@ void executeLogic(int logNum)
 		}
 
 		currentLogic.currentPoint = (code - startPos);
+
+		clockVal = RDTIM - b1;
+		//printf("Load Timer 1 %u (%u - %u) Code %u \n", clockVal, RDTIM, b1, code);
+
+		b2 = RDTIM;
 
 #ifdef DEBUG
 		debugString[0] = 0;
@@ -3124,10 +3150,14 @@ void executeLogic(int logNum)
 		{
 			code++;
 			RAM_BANK = INSTRUCTION_HANDLER_BANK;
-			stillExecuting = b5instructionHandler(codeAtTimeOfLastBankSwitch, &currentLog, logNum, ppCodeWindowAddress, instructionCodeBank);
+			stillExecuting = b5instructionHandler(codeAtTimeOfLastBankSwitch, &currentLog, logNum, instructionCodeBank);
 			RAM_BANK = currentLogicFile.codeBank;
+
+			clockVal = RDTIM - b2;
+			//printf("Load Timer 2a %u (%u - %u) Code %u \n", clockVal, RDTIM, b2, codeAtTimeOfLastBankSwitch);
 		}
 		else {
+
 			switch (codeAtTimeOfLastBankSwitch) {
 			case 0xfe: /* Unconditional branch: else, goto. */
 				code++;
@@ -3159,22 +3189,37 @@ void executeLogic(int logNum)
 					//*(code - 1), logNum, currentLogic.currentPoint);
 				break;
 	}
+
+			clockVal = RDTIM - b2;
+			//printf("Load Timer 2b %u Code (%u - %u) %u \n", clockVal, RDTIM, b2, codeAtTimeOfLastBankSwitch);
 }
 
 		RAM_BANK = currentLogicFile.codeBank;
 
+		b3 = RDTIM;
+
 		if (!lastCodeWasNonWindow)
 		{
 #ifdef VERBOSE_LOGIC_EXEC
-			printf("Now jumping (%p - %p - 1) = %p \n", codeWindowAddress, &codeWindow[0], (codeWindowAddress - &codeWindow[0] - 1));
+			printf("Now jumping (%p - %p - 1) = %p \n", _codeWindowAddress, &codeWindow[0], (_codeWindowAddress - &codeWindow[0] - 1));
 #endif // VERBOSE
-			code += (codeWindowAddress - &codeWindow[0]) - 1;
+
+			code += (_codeWindowAddress - &codeWindow[0]) - 1;
 		}
 
 		lastCodeWasNonWindow = FALSE;
 
 		opCounter++;
+
+		clockVal = (RDTIM - b3);
+		//printf("Load Timer 3 %u (%u - %u) Code %u \n", clockVal, RDTIM, b1, codeAtTimeOfLastBankSwitch);
+		clockVal = (RDTIM - bInner);
+		//printf("Load Timer Inner %u (%u - %u) \n", clockVal, RDTIM, bInner);
 	}
+	printf("\n");
+
+	clockVal = (RDTIM - bWhole);
+	printf("Load Timer wHOLE %u (%u - %u) \n", clockVal, RDTIM, bWhole);
 
 	RAM_BANK = previousRamBank;
 }

@@ -34,7 +34,7 @@ byte horizon;
 
 #define  PLAYER_CONTROL   0
 #define  PROGRAM_CONTROL  1
-//#define VERBOSE
+#define VERBOSE
 
 const int TIMER_WAIT_MS = 50;
 

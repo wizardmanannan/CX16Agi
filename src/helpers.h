@@ -26,7 +26,7 @@
 typedef void (*fnTrampoline_0)();
 
 typedef void (*fnTrampoline_1BytePointerPointer)(byte** data);
-typedef boolean (*fnTrampoline_1BytePointerPointerRetBool)(byte** data);
+typedef boolean (*fnTrampoline_0RetBool)();
 typedef void (*fnTrampoline_1Int)(int data);
 typedef void (*fnTrampoline_1Int)(int data);
 
@@ -38,7 +38,7 @@ byte convertAsciiByteToPetsciiByte(byte* toConvert);
 
 extern void trampoline_0(fnTrampoline_0 func, byte bank);
 extern void trampoline_1pp(fnTrampoline_1BytePointerPointer func, byte** data, byte bank);
-extern boolean trampoline_1pRetbool(fnTrampoline_1BytePointerPointerRetBool func, byte** data, byte bank);
+extern boolean trampoline_0Retbool(fnTrampoline_0RetBool func, byte bank);
 
 extern void trampoline_1Int(fnTrampoline_1Int func, int data, byte bank);
 extern void trampoline_1Int(fnTrampoline_1Int func, int data, byte bank);
@@ -57,6 +57,11 @@ extern int sprintfBanked(const char* buffer, byte bank, char const* const format
 
 extern void getLogicDirectory(AGIFilePosType* returnedLogicDirectory, AGIFilePosType* logicDirectoryLocation);
 extern void setResourceDirectory(AGIFilePosType* newLogicDirectory, AGIFilePosType* logicDirectoryLocation);
+
+#define RDTIM_ADDRESS 0xFFDE
+#define RDTIM kernalCall_0RetInt(RDTIM_ADDRESS)
+
+extern unsigned int kernalCall_0RetInt(unsigned int fAddress);
 
 extern boolean debugStop;
 
