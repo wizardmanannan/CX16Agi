@@ -1,5 +1,5 @@
 #include "memoryManager.h"
-#define VERBOSE
+//#define VERBOSE
 MemoryArea* _memoryAreas;
 int _noSegments;
 
