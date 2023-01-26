@@ -12,6 +12,9 @@ LOGIC_FILE_LOGIC_BANK_OFFSET = 7
 
 LOGIC_ENTRY_POINT_OFFSET = 1
 
+TRUE = 1
+FALSE = 0
+
 .macro   GET_STRUCT_16 offset, pointer, result
          LDY   #offset
          LDA   (pointer),y
@@ -59,6 +62,19 @@ LOGIC_ENTRY_POINT_OFFSET = 1
         lda firstAddress + 1
         adc secondAddress + 1
         sta result + 1
+.endmacro
+
+.macro GREATER_THAN_OR_EQ_16 word1, word2, branchLabel
+       lda word1 + 1
+       cmp word2 + 1
+       bcc end
+       bne branchLabel
+       lda word1
+       cmp word2
+       beq branchLabel
+       bcs branchLabel
+       end:
+
 .endmacro
 
 .endif

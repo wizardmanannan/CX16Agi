@@ -15,10 +15,9 @@ startPos: .word $0
 entryPoint: .word $0
 endPos:  .word $0
 codeSize: .word $0
+stillExecuting: .byte $1
 _commandLoop:
     .export _commandLoop
-         SAVE_ZERO_PAGE ZP_PTR_LE,oldZPValues,NO_ZERO_PAGE_VALUES
-
          STA   ZP_PTR_LE
          STX   ZP_PTR_LE  + 1
 
@@ -31,11 +30,16 @@ _commandLoop:
          GET_STRUCT_16 LOGIC_FILE_LOGIC_CODE_SIZE_OFFSET, ZP_PTR_LE, codeSize
          GET_STRUCT_16 LOGIC_ENTRY_POINT_OFFSET, ZP_PTR_LF, entryPoint
 
-         RESTORE_ZERO_PAGE ZP_PTR_LE,oldZPValues,NO_ZERO_PAGE_VALUES
-
          ADD_WORD_16 startPos,entryPoint,code
          ADD_WORD_16 startPos,codeSize,endPos
-        
-         STP
+         
+         mainLoop:
+         GREATER_THAN_OR_EQ_16 code, endPos, endLoop
+         lda stillExecuting
+         cmp #TRUE
+         bne endLoop
+
+         jmp mainLoop
+         endLoop:
          rts
 .endif

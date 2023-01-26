@@ -3070,6 +3070,7 @@ void executeLogic(int logNum)
 #define LOGIC_ENTRY_PARAMETERS_OFFSET  0
 	*((LOGICEntry**)(GOLDEN_RAM_PARAMS_AREA + LOGIC_ENTRY_PARAMETERS_OFFSET)) = &currentLogic;
 
+	commandLoop(&currentLogicFile);
 	startPos = currentLogicFile.logicCode;
 	code = startPos + currentLogic.entryPoint;
 	endPos = startPos + currentLogicFile.codeSize;
