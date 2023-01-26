@@ -16,9 +16,9 @@ LOGIC_ENTRY_POINT_OFFSET = 1
          LDY   #offset
          LDA   (pointer),y
          STA   result
-         LDY   #offset    + 1
+         LDY   #offset + 1
          LDA   (pointer),y
-         STA   result     + 1
+         STA   result + 1
 .endmacro
 
 .macro   SAVE_ZERO_PAGE firstPointer, saveLocation, noValues
@@ -51,8 +51,14 @@ LOGIC_ENTRY_POINT_OFFSET = 1
 
 .endmacro
 
-.macro ADD_16_BYTE_ARRAY firstAddress, secondAddress
+.macro ADD_WORD_16 firstAddress, secondAddress, result
         clc
-
+        lda firstAddress
+        adc secondAddress
+        sta result
+        lda firstAddress + 1
+        adc secondAddress + 1
+        sta result + 1
+.endmacro
 
 .endif

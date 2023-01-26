@@ -3069,16 +3069,14 @@ void executeLogic(int logNum)
 	RAM_BANK = currentLogicFile.codeBank;
 #define LOGIC_ENTRY_PARAMETERS_OFFSET  0
 	*((LOGICEntry**)(GOLDEN_RAM_PARAMS_AREA + LOGIC_ENTRY_PARAMETERS_OFFSET)) = &currentLogic;
-	printf("The address is %p\n", &currentLogicFile);
-	commandLoop(&currentLogicFile);
-	exit(0);
-#ifdef FROG
 
 	startPos = currentLogicFile.logicCode;
 	code = startPos + currentLogic.entryPoint;
 	endPos = startPos + currentLogicFile.codeSize;
 
+	printf("startPos %p, code %p, endPos %p", startPos, code, endPos);
 
+	exit(0);
 #ifdef DEBUG
 	drawBigString(screen, "Push a key to advance a step", 0, 400, 0, 7);
 	if ((readkey() & 0xff) == 'q') closedown();
@@ -3183,7 +3181,6 @@ void executeLogic(int logNum)
 
 		opCounter++;
 	}
-#endif
 
 	RAM_BANK = previousRamBank;
 }
