@@ -3065,16 +3065,23 @@ void executeLogic(int logNum)
 #endif
 	/* Set up position to start executing code from. */
 	//currentLogic.currentPoint = currentLogic.entryPoint;
+
+	RAM_BANK = currentLogicFile.codeBank;
+#define LOGIC_ENTRY_PARAMETERS_OFFSET  0
+	*((LOGICEntry**)(GOLDEN_RAM_PARAMS_AREA + LOGIC_ENTRY_PARAMETERS_OFFSET)) = &currentLogic;
+	printf("The address is %p\n", &currentLogic);
+	commandLoop(&currentLogicFile);
+#ifdef FROG
+
 	startPos = currentLogicFile.logicCode;
 	code = startPos + currentLogic.entryPoint;
 	endPos = startPos + currentLogicFile.codeSize;
+
 
 #ifdef DEBUG
 	drawBigString(screen, "Push a key to advance a step", 0, 400, 0, 7);
 	if ((readkey() & 0xff) == 'q') closedown();
 #endif
-
-	RAM_BANK = currentLogicFile.codeBank;
 
 	while ((code < endPos) && stillExecuting) {
 
@@ -3175,6 +3182,7 @@ void executeLogic(int logNum)
 
 		opCounter++;
 	}
+#endif
 
 	RAM_BANK = previousRamBank;
 }

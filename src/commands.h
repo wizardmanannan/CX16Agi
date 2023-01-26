@@ -4,8 +4,11 @@
 #include "memoryManager.h"
 #include "lruCache.h"
 #include <string.h>
+#include "logic.h"
 
 void executeLogic(int logNum);
 void b1Call(unsigned char** data);
+
+extern void commandLoop(LOGICFile* currentLogicFile);
 
 #endif

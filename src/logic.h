@@ -19,7 +19,7 @@ typedef struct {
 
 } LOGICFile;
 
-typedef struct {
+typedef struct { 
 	boolean loaded;
 	word entryPoint;
 	word currentPoint;

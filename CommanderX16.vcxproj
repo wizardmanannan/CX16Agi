@@ -13,6 +13,7 @@
   <ItemGroup>
     <None Include="..\.gitignore" />
     <None Include="makefile" />
+    <None Include="src\commandLoop.asm" />
     <None Include="test.bat" />
   </ItemGroup>
   <ItemGroup>

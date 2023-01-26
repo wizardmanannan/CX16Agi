@@ -112,12 +112,14 @@
 
 #define LOCAL_WORK_AREA_START 514
 #define LOCAL_WORK_AREA_SIZE 500
+#define PARAMETERS_START 1015
 
 #ifdef _MSC_VER //Used for testing under windows
 extern byte* banked;
 #endif 
 
 #define GOLDEN_RAM        ((unsigned char *)0x0400)
+#define GOLDEN_RAM_PARAMS_AREA &GOLDEN_RAM[PARAMETERS_START]
 
 extern int _noSegments;
 
