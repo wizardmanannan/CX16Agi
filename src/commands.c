@@ -3069,8 +3069,9 @@ void executeLogic(int logNum)
 	RAM_BANK = currentLogicFile.codeBank;
 #define LOGIC_ENTRY_PARAMETERS_OFFSET  0
 	*((LOGICEntry**)(GOLDEN_RAM_PARAMS_AREA + LOGIC_ENTRY_PARAMETERS_OFFSET)) = &currentLogic;
-	printf("The address is %p\n", &currentLogic);
+	printf("The address is %p\n", &currentLogicFile);
 	commandLoop(&currentLogicFile);
+	exit(0);
 #ifdef FROG
 
 	startPos = currentLogicFile.logicCode;

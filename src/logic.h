@@ -10,21 +10,21 @@
 #include "lruCache.h"
 
 typedef struct {
-	word codeSize;
-	byte* logicCode;
-	byte numMessages;
-	byte** messages;
-	byte codeBank;
-	byte messageBank;
+	word codeSize; //0
+	byte* logicCode; //2
+	byte numMessages; //4
+	byte** messages; // 5
+	byte codeBank; //7
+	byte messageBank; //8
 
 } LOGICFile;
 
 typedef struct { 
-	boolean loaded;
-	word entryPoint;
-	word currentPoint;
-	LOGICFile* data;
-	byte dataBank;
+	boolean loaded; //0
+	word entryPoint; //1
+	word currentPoint; //3
+	LOGICFile* data; //5
+	byte dataBank; //7
 } LOGICEntry;
 
 extern LOGICEntry* logics;
