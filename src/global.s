@@ -2,6 +2,8 @@
 GLOBAL_INC = 1
 
 GOLDEN_RAM = $400
+RAM_BANK = $0
+STACK_HIGH = $1
 
 LOCAL_WORK_AREA_GOLDEN_OFFSET = 514
 PARAMETERS_WORK_AREA_GOLDEN_OFFSET = 1015
@@ -22,6 +24,12 @@ FALSE = 0
          LDY   #offset + 1
          LDA   (pointer),y
          STA   result + 1
+.endmacro
+
+.macro   GET_STRUCT_8 offset, pointer, result
+         LDY   #offset
+         LDA   (pointer),y
+         STA   result
 .endmacro
 
 .macro   SAVE_ZERO_PAGE firstPointer, saveLocation, noValues
@@ -67,14 +75,46 @@ FALSE = 0
 .macro GREATER_THAN_OR_EQ_16 word1, word2, branchLabel
        lda word1 + 1
        cmp word2 + 1
-       bcc end
+       bcc @end
        bne branchLabel
        lda word1
        cmp word2
        beq branchLabel
        bcs branchLabel
-       end:
+       @end:
 
 .endmacro
 
+.macro BYTES_TO_STACK startAddress, copySize, addressFirst
+        ldy #copySize
+        dey
+        startLoop:
+        cpy #copySize
+        bcs @end
+
+        lda (startAddress),y
+        pha
+
+        dey
+        jmp startLoop
+        @end:
+        stp
+        tsx
+        inx
+        stx addressFirst
+        lda #STACK_HIGH
+        sta addressFirst + 1
+.endmacro
+
+.macro CLEAR_STACK clearSize
+ldx #$0
+@startLoop:
+cpx #clearSize
+beq @endLoop
+stp
+pla
+inx 
+jmp @startLoop
+@endLoop:
+.endmacro
 .endif
