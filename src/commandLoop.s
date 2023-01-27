@@ -20,13 +20,13 @@ codeSize: .word $0
 stillExecuting: .byte $1
 _commandLoop:
     .export _commandLoop
-         STA   ZP_PTR_LF
-         STX   ZP_PTR_LF  + 1
+         sta   ZP_PTR_LF
+         stx   ZP_PTR_LF  + 1
 
-         LDA   GOLDEN_RAM + PARAMETERS_WORK_AREA_GOLDEN_OFFSET + LOGIC_ENTRY_PARAMETERS_OFFSET
-         LDX   GOLDEN_RAM + PARAMETERS_WORK_AREA_GOLDEN_OFFSET + LOGIC_ENTRY_PARAMETERS_OFFSET + 1
-         STA   ZP_PTR_LE
-         STX   ZP_PTR_LE  + 1
+         lda   GOLDEN_RAM + PARAMETERS_WORK_AREA_GOLDEN_OFFSET + LOGIC_ENTRY_PARAMETERS_OFFSET
+         ldx   GOLDEN_RAM + PARAMETERS_WORK_AREA_GOLDEN_OFFSET + LOGIC_ENTRY_PARAMETERS_OFFSET + 1
+         sta   ZP_PTR_LE
+         stx   ZP_PTR_LE  + 1
         
          GET_STRUCT_16 LOGIC_FILE_LOGIC_CODE_OFFSET, ZP_PTR_LF, startPos
          GET_STRUCT_16 LOGIC_FILE_LOGIC_CODE_SIZE_OFFSET, ZP_PTR_LF, codeSize
@@ -36,8 +36,8 @@ _commandLoop:
          ADD_WORD_16 startPos,entryPoint,ZP_PTR_CODE
          ADD_WORD_16 startPos,codeSize,endPos
          
-         LDA codeBank
-         STA RAM_BANK
+         lda codeBank
+         sta RAM_BANK
          mainLoop:
          GREATER_THAN_OR_EQ_16 ZP_PTR_CODE_WIN, endPos, endLoop
          lda stillExecuting
