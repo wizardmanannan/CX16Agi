@@ -9,6 +9,7 @@ ZP_PTR_LF = $02
 ZP_PTR_LE = $04
 ZP_PTR_CODE = $06
 ZP_PTR_CODE_WIN = $08
+ZP_PTR_IF_CODE_WIN = $10
 
 startPos: .word $0
 endPos:  .word $0
@@ -28,9 +29,40 @@ lastCodeWasNonWindow: .byte FALSE
         beq @endIfHandlerLoop
 
         lda (ZP_PTR_CODE)
-        INC_MEM ZP_PTR_CODE
+        stp
 
-        ;jmp startIfHandler
+        cmp #$FF
+        beq @closingIfBracket
+
+        cmp #$fd
+        beq @notMode
+
+        cmp #$FC
+        beq @orMode
+
+        @default:
+            INC_MEM ZP_PTR_CODE
+            
+            BYTES_TO_STACK ZP_PTR_CODE, CODE_WINDOW_SIZE, ZP_PTR_IF_CODE_WIN
+
+            CLEAR_STACK CODE_WINDOW_SIZE
+            ;jmp @ifHandlerLoop
+
+        @closingIfBracket:
+            INC_MEM ZP_PTR_CODE
+            ;toImplement
+            ;jmp @ifHandlerLoop
+
+        @notMode:
+            INC_MEM ZP_PTR_CODE
+            ;toImplement
+            ;jmp @ifHandlerLoop
+
+        @orMode:
+            INC_MEM ZP_PTR_CODE
+            ;toImplement
+
+        ;jmp @ifHandlerLoop
 @endIfHandlerLoop:
 .endmacro
 
@@ -64,8 +96,9 @@ _commandLoop:
          GREATER_THAN_OR_EQ_16 ZP_PTR_CODE_WIN, endPos, @endMainLoop
          lda stillExecuting
          cmp #TRUE
-         bne @endMainLoop
-
+         beq @loopConditionSuccess
+         jmp @endMainLoop
+         @loopConditionSuccess:
          BYTES_TO_STACK ZP_PTR_CODE, CODE_WINDOW_SIZE, ZP_PTR_CODE_WIN
          
          INC_MEM ZP_PTR_CODE_WIN
@@ -98,10 +131,10 @@ _commandLoop:
 
          SUB_WORD_16_IND ZP_PTR_CODE, startPos, LOGIC_ENTRY_CURRENT_POINT_OFFSET, ZP_PTR_LE
          
+         CLEAR_STACK CODE_WINDOW_SIZE
          jmp @endMainLoop ;temp line
 
          jmp @mainLoop
          @endMainLoop:
-         CLEAR_STACK CODE_WINDOW_SIZE
          rts
 .endif

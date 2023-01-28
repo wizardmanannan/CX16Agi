@@ -119,19 +119,25 @@ FALSE = 0
 .endmacro
 
 .macro GREATER_THAN_OR_EQ_16 word1, word2, branchLabel
+       .local @branch
        lda word1 + 1
        cmp word2 + 1
        bcc @end
-       bne branchLabel
+       bne @branch
        lda word1
        cmp word2
-       beq branchLabel
-       bcs branchLabel
+       beq @branch
+       bcs @branch
+       bcs @end
+       @branch:
+       jmp branchLabel
        @end:
 
 .endmacro
 
 .macro BYTES_TO_STACK startAddress, copySize, addressFirst
+        .local @startBtsLoop
+        .local @endBtsLoop
         ldy #copySize
         dey
         @startBtsLoop:
@@ -152,13 +158,15 @@ FALSE = 0
 .endmacro
 
 .macro CLEAR_STACK clearSize
-ldx #$0
-@startClLoop:
-cpx #clearSize
-beq @endClLoop
-pla
-inx 
-jmp @startClLoop
-@endClLoop:
+        .local @startClLoop
+        .local @endClLoop
+        ldx #$0
+        @startClLoop:
+        cpx #clearSize
+        beq @endClLoop
+        pla
+        inx 
+        jmp @startClLoop
+        @endClLoop:
 .endmacro
 .endif
