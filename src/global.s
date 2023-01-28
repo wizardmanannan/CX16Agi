@@ -13,9 +13,30 @@ LOGIC_FILE_LOGIC_CODE_OFFSET =  2
 LOGIC_FILE_LOGIC_BANK_OFFSET = 7
 
 LOGIC_ENTRY_POINT_OFFSET = 1
+LOGIC_ENTRY_CURRENT_POINT_OFFSET = 3
 
 TRUE = 1
 FALSE = 0
+
+.macro  INC_MEM address
+         clc
+         lda address
+         adc #$1
+         sta address
+
+         lda address + 1
+         adc #$0
+         sta address + 1
+.endmacro
+
+.macro   SET_STRUCT_16 offset, pointer, value
+         LDA value
+         LDY   #offset
+         STA   (pointer),y
+         LDA value + 1
+         LDY   #offset + 1
+         STA   (pointer),y
+.endmacro
 
 .macro   GET_STRUCT_16 offset, pointer, result
          LDY   #offset
@@ -38,12 +59,12 @@ FALSE = 0
          PHA
 
          LDX   #$0
-         saveZPLoop:
+         @saveZPLoop:
          LDA   firstPointer,x
          STA   saveLocation,x
          inx
          cpx   #noValues
-         bne   saveZPLoop
+         bne   @saveZPLoop
 
          PLA
          TAX
@@ -53,12 +74,12 @@ FALSE = 0
 
 .macro   RESTORE_ZERO_PAGE firstPointer, saveLocation, noValues
          LDX   #$0
-         restoreZPLoop:
+         @restoreZPLoop:
          LDA   saveLocation,x
          STA   firstPointer,x
          inx
          cpx   noValues
-         bne   restoreZPLoop
+         bne   @restoreZPLoop
 
 .endmacro
 
@@ -70,6 +91,31 @@ FALSE = 0
         lda firstAddress + 1
         adc secondAddress + 1
         sta result + 1
+.endmacro
+
+.macro SUB_WORD_16 firstAddress, secondAddress, result
+        sec
+        lda firstAddress
+        sbc secondAddress
+        sta result
+        lda firstAddress + 1
+        sbc secondAddress + 1
+        sta result + 1
+.endmacro
+
+.macro SUB_WORD_16_IND firstAddress, secondAddress, offset, pointer
+        sec
+        lda firstAddress
+        sbc secondAddress
+        
+        ldy   #offset
+        sta   (pointer),y
+        
+        lda firstAddress + 1
+        sbc secondAddress + 1
+                
+        iny
+        sta   (pointer),y
 .endmacro
 
 .macro GREATER_THAN_OR_EQ_16 word1, word2, branchLabel
@@ -88,17 +134,16 @@ FALSE = 0
 .macro BYTES_TO_STACK startAddress, copySize, addressFirst
         ldy #copySize
         dey
-        startLoop:
+        @startBtsLoop:
         cpy #copySize
-        bcs @end
+        bcs @endBtsLoop
 
         lda (startAddress),y
         pha
 
         dey
-        jmp startLoop
-        @end:
-        stp
+        jmp @startBtsLoop
+        @endBtsLoop:
         tsx
         inx
         stx addressFirst
@@ -108,13 +153,12 @@ FALSE = 0
 
 .macro CLEAR_STACK clearSize
 ldx #$0
-@startLoop:
+@startClLoop:
 cpx #clearSize
-beq @endLoop
-stp
+beq @endClLoop
 pla
 inx 
-jmp @startLoop
-@endLoop:
+jmp @startClLoop
+@endClLoop:
 .endmacro
 .endif
