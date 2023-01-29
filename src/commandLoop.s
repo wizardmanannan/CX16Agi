@@ -15,7 +15,7 @@ endPos:  .word $0
 codeBank: .byte $0
 stillExecuting: .byte $1
 lastCodeWasNonWindow: .byte FALSE
-
+addressForJump: .byte $0
 .macro IF_HANDLER
         jmp @startIfHandler
         @stillProcessing: .byte $1
@@ -39,29 +39,34 @@ lastCodeWasNonWindow: .byte FALSE
         beq orMode
 
         @default:
-            INC_MEM ZP_PTR_CODE
-            
-            BYTES_TO_STACK ZP_PTR_CODE, CODE_WINDOW_SIZE, ZP_PTR_IF_CODE_WIN
+            lda (ZP_PTR_CODE)
+            asl
+            sta addressForJump
 
-            stp
-            jmp _b1Greatern
+            INC_MEM ZP_PTR_CODE
+            BYTES_TO_STACK ZP_PTR_CODE, CODE_WINDOW_SIZE, ZP_PTR_IF_CODE_WIN
             
-            returnFromOpCode:
-            lda 13
+            ldx addressForJump
+            jmp (jmpTableIf,x)
+            
+            returnFromOpCodeTrue:
+            lda #$13
+            ;if (testVal) {
+            ;jmp @ifHandlerLoop
+            returnFromOpCodeFalse:
+            lda #$12
+            ; else
             CLEAR_STACK CODE_WINDOW_SIZE
             ;jmp @ifHandlerLoop
         closingIfBracket:
-            INC_MEM ZP_PTR_CODE
             ;toImplement
             ;jmp @ifHandlerLoop
 
         notMode:
-            INC_MEM ZP_PTR_CODE
             ;toImplement
             ;jmp @ifHandlerLoop
 
         orMode:
-            INC_MEM ZP_PTR_CODE
             ;toImplement
 
         ;jmp @ifHandlerLoop

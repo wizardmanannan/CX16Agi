@@ -3,6 +3,7 @@ GLOBAL_INC = 1
 
 ZP_PTR_CODE_WIN = $08
 ZP_PTR_IF_CODE_WIN = $10
+ZP_TMP = $12
 
 GOLDEN_RAM = $400
 RAM_BANK = $0
@@ -97,16 +98,6 @@ FALSE = 0
         sta result + 1
 .endmacro
 
-.macro ADD_WORD_8_IND_16 firstAddress, secondAddress, result
-        clc
-        lda (firstAddress)
-        adc secondAddress
-        sta result
-        lda #$0
-        adc secondAddress + 1
-        sta result + 1
-.endmacro
-
 .macro SUB_WORD_16 firstAddress, secondAddress, result
         sec
         lda firstAddress
@@ -132,21 +123,59 @@ FALSE = 0
         sta   (pointer),y
 .endmacro
 
-.macro GREATER_THAN_OR_EQ_16 word1, word2, branchLabel
+.macro GREATER_THAN_OR_EQ_16 word1, word2, successBranch, failBranch
        .local @branch
        lda word1 + 1
        cmp word2 + 1
+       .ifblank failBranch
        bcc @end
+       .endif
+       .ifnblank failBranch
+       jmp failBranch
+       .endif
        bne @branch
        lda word1
        cmp word2
        beq @branch
        bcs @branch
-       bcs @end
+       .ifblank failBranch
+       bcc @end
+       .endif
+       .ifnblank failBranch
+       jmp failBranch
+       .endif
        @branch:
-       jmp branchLabel
+       jmp successBranch
        @end:
 
+.endmacro
+
+.macro LESS_THAN_OR_EQ_16 word1, word2, successBranch, failBranch
+       .local @branch
+       lda word1 + 1
+       cmp word2 + 1
+       bcc @lowerBit
+       .ifblank failBranch
+       bcc @end
+       .endif
+       .ifnblank failBranch
+       jmp failBranch
+       .endif
+       @lowerBit:
+       lda word1
+       cmp word2
+       beq @branch
+       bcc @branch
+       .ifblank failBranch
+       bcc @end
+       .endif
+       .ifnblank failBranch
+       jmp failBranch
+       .endif
+       @branch:
+       jmp successBranch
+       @end:
+       
 .endmacro
 
 .macro BYTES_TO_STACK startAddress, copySize, addressFirst
