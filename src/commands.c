@@ -337,15 +337,15 @@ boolean b1Lessv(byte** data) // 2, 0xC0
 	return (varVal1 < varVal2);
 }
 
-boolean b1Greatern(byte** data) // 2, 0x80 
-{
-	int varVal, value;
-
-	varVal = var[*(*data)++];
-	value = *(*data)++;
-
-	return (varVal > value);
-}
+//boolean b1Greatern(byte** data) // 2, 0x80 
+//{
+//	int varVal, value;
+//
+//	varVal = var[*(*data)++];
+//	value = *(*data)++;
+//
+//	return (varVal > value);
+//}
 
 boolean b1Greaterv(byte** data) // 2, 0xC0 
 {
@@ -2814,7 +2814,7 @@ int ifLogicHandlers(byte ch, byte** ppCodeWindowAddress, byte bank)
 	case 2: result = trampoline_1pRetbool(&b1Equalv, ppCodeWindowAddress, bank); break;
 	case 3: result = trampoline_1pRetbool(&b1Lessn, ppCodeWindowAddress, bank); break;
 	case 4: result = trampoline_1pRetbool(&b1Lessv, ppCodeWindowAddress, bank); break;
-	case 5: result = trampoline_1pRetbool(&b1Greatern, ppCodeWindowAddress, bank); break;
+	//case 5: result = trampoline_1pRetbool(&b1Greatern, ppCodeWindowAddress, bank); break;
 	case 6: result = trampoline_1pRetbool(&b1Greaterv, ppCodeWindowAddress, bank); break;
 	case 7: result = trampoline_1pRetbool(&b1Isset, ppCodeWindowAddress, bank); break;
 	case 8: result = trampoline_1pRetbool(&b1Issetv, ppCodeWindowAddress, bank); break;

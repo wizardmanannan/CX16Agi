@@ -9,6 +9,8 @@
 void executeLogic(int logNum);
 void b1Call(unsigned char** data);
 
+extern boolean _b1Greatern();
+
 extern void commandLoop(LOGICFile* currentLogicFile);
 
 #endif

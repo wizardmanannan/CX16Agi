@@ -4,12 +4,11 @@ LOGIC_ENTRY_PARAMETERS_OFFSET =  0
 CODE_WINDOW_SIZE = 10
 
 .include "global.s"
+.include "logicCommands.s"
 
 ZP_PTR_LF = $02
 ZP_PTR_LE = $04
 ZP_PTR_CODE = $06
-ZP_PTR_CODE_WIN = $08
-ZP_PTR_IF_CODE_WIN = $10
 
 startPos: .word $0
 endPos:  .word $0
@@ -26,54 +25,56 @@ lastCodeWasNonWindow: .byte FALSE
 
         @ifHandlerLoop:
         lda @stillProcessing
-        beq @endIfHandlerLoop
+        beq endIfHandlerLoop
 
         lda (ZP_PTR_CODE)
-        stp
 
         cmp #$FF
-        beq @closingIfBracket
+        beq closingIfBracket
 
         cmp #$fd
-        beq @notMode
+        beq notMode
 
         cmp #$FC
-        beq @orMode
+        beq orMode
 
         @default:
             INC_MEM ZP_PTR_CODE
             
             BYTES_TO_STACK ZP_PTR_CODE, CODE_WINDOW_SIZE, ZP_PTR_IF_CODE_WIN
 
+            stp
+            jmp _b1Greatern
+            
+            returnFromOpCode:
+            lda 13
             CLEAR_STACK CODE_WINDOW_SIZE
             ;jmp @ifHandlerLoop
-
-        @closingIfBracket:
+        closingIfBracket:
             INC_MEM ZP_PTR_CODE
             ;toImplement
             ;jmp @ifHandlerLoop
 
-        @notMode:
+        notMode:
             INC_MEM ZP_PTR_CODE
             ;toImplement
             ;jmp @ifHandlerLoop
 
-        @orMode:
+        orMode:
             INC_MEM ZP_PTR_CODE
             ;toImplement
 
         ;jmp @ifHandlerLoop
-@endIfHandlerLoop:
+endIfHandlerLoop:
 .endmacro
 
 _commandLoop:
-    .export _commandLoop
-         jmp @start
-         @entryPoint: .word $0
-         @codeSize: .word $0
-         @codeAtTimeOfLastBankSwitch: .byte $0
+         jmp start
+         entryPoint: .word $0
+         codeSize: .word $0
+         codeAtTimeOfLastBankSwitch: .byte $0
 
-         @start:
+         start:
          sta   ZP_PTR_LF
          stx   ZP_PTR_LF  + 1
 
@@ -83,21 +84,21 @@ _commandLoop:
          stx   ZP_PTR_LE  + 1
         
          GET_STRUCT_16 LOGIC_FILE_LOGIC_CODE_OFFSET, ZP_PTR_LF, startPos
-         GET_STRUCT_16 LOGIC_FILE_LOGIC_CODE_SIZE_OFFSET, ZP_PTR_LF, @codeSize
+         GET_STRUCT_16 LOGIC_FILE_LOGIC_CODE_SIZE_OFFSET, ZP_PTR_LF, codeSize
          GET_STRUCT_8 LOGIC_FILE_LOGIC_BANK_OFFSET, ZP_PTR_LF, codeBank
-         GET_STRUCT_16 LOGIC_ENTRY_POINT_OFFSET, ZP_PTR_LE, @entryPoint
+         GET_STRUCT_16 LOGIC_ENTRY_POINT_OFFSET, ZP_PTR_LE, entryPoint
          
-         ADD_WORD_16 startPos,@entryPoint,ZP_PTR_CODE
-         ADD_WORD_16 startPos,@codeSize,endPos
+         ADD_WORD_16 startPos,entryPoint,ZP_PTR_CODE
+         ADD_WORD_16 startPos,codeSize,endPos
          
          lda codeBank
          sta RAM_BANK
-         @mainLoop:
-         GREATER_THAN_OR_EQ_16 ZP_PTR_CODE_WIN, endPos, @endMainLoop
+         mainLoop:
+         GREATER_THAN_OR_EQ_16 ZP_PTR_CODE_WIN, endPos, endMainLoop
          lda stillExecuting
          cmp #TRUE
          beq @loopConditionSuccess
-         jmp @endMainLoop
+         jmp endMainLoop
          @loopConditionSuccess:
          BYTES_TO_STACK ZP_PTR_CODE, CODE_WINDOW_SIZE, ZP_PTR_CODE_WIN
          
@@ -110,7 +111,7 @@ _commandLoop:
 		; 	exit(0);
 		; }
         lda (ZP_PTR_CODE)
-        sta @codeAtTimeOfLastBankSwitch
+        sta codeAtTimeOfLastBankSwitch
 
 		; instructionCodeBank = getBankBasedOnCode(codeAtTimeOfLastBankSwitch);
         ; if (*code < 0xfe)
@@ -132,9 +133,9 @@ _commandLoop:
          SUB_WORD_16_IND ZP_PTR_CODE, startPos, LOGIC_ENTRY_CURRENT_POINT_OFFSET, ZP_PTR_LE
          
          CLEAR_STACK CODE_WINDOW_SIZE
-         jmp @endMainLoop ;temp line
+         jmp endMainLoop ;temp line
 
-         jmp @mainLoop
-         @endMainLoop:
+         jmp mainLoop
+         endMainLoop:
          rts
 .endif

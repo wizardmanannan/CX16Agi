@@ -1,10 +1,14 @@
 .ifndef  GLOBAL_INC
 GLOBAL_INC = 1
 
+ZP_PTR_CODE_WIN = $08
+ZP_PTR_IF_CODE_WIN = $10
+
 GOLDEN_RAM = $400
 RAM_BANK = $0
 STACK_HIGH = $1
 
+VARS_AREA_START_GOLDEN_OFFSET = 0
 LOCAL_WORK_AREA_GOLDEN_OFFSET = 514
 PARAMETERS_WORK_AREA_GOLDEN_OFFSET = 1015
 
@@ -89,6 +93,16 @@ FALSE = 0
         adc secondAddress
         sta result
         lda firstAddress + 1
+        adc secondAddress + 1
+        sta result + 1
+.endmacro
+
+.macro ADD_WORD_8_IND_16 firstAddress, secondAddress, result
+        clc
+        lda (firstAddress)
+        adc secondAddress
+        sta result
+        lda #$0
         adc secondAddress + 1
         sta result + 1
 .endmacro
