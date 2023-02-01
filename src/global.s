@@ -1,9 +1,9 @@
 .ifndef  GLOBAL_INC
 GLOBAL_INC = 1
 
+ZP_PTR_CODE = $06
 ZP_PTR_CODE_WIN = $08
-ZP_PTR_IF_CODE_WIN = $10
-ZP_TMP = $12
+ZP_TMP = $10
 
 GOLDEN_RAM = $400
 RAM_BANK = $0
@@ -178,7 +178,7 @@ FALSE = 0
        
 .endmacro
 
-.macro BYTES_TO_STACK startAddress, copySize, addressFirst
+.macro REFRESH_CODE_WINDOW startAddress, copySize, addressFirst
         .local @startBtsLoop
         .local @endBtsLoop
         ldy #copySize

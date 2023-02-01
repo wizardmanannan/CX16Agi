@@ -36,13 +36,13 @@ var1: .byte $0
 var2: .byte $0
 
 _b1Greatern:
-    GET_VAR_OR_FLAG VARS_AREA_START_GOLDEN_OFFSET, ZP_PTR_IF_CODE_WIN, var1
-    INC_MEM ZP_PTR_IF_CODE_WIN
+    ;GET_VAR_OR_FLAG VARS_AREA_START_GOLDEN_OFFSET, ZP_PTR_IF_CODE_WIN, var1
+    ;INC_MEM ZP_PTR_IF_CODE_WIN
 
     stp
     lda (ZP_PTR_CODE_WIN)
     sta var2
-    INC_MEM ZP_PTR_IF_CODE_WIN
+    ;INC_MEM ZP_PTR_IF_CODE_WIN
     
     LESS_THAN_OR_EQ_16 var2, var1, returnFromOpCodeTrue, returnFromOpCodeFalse
 

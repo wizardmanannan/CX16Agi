@@ -1,21 +1,20 @@
 .ifndef  COMMAND_LOOP_INC
 COMMAND_LOOP_INC = 1
 LOGIC_ENTRY_PARAMETERS_OFFSET =  0
-CODE_WINDOW_SIZE = 10
 
 .include "global.s"
 .include "logicCommands.s"
+.include "codeWindow.s"
 
 ZP_PTR_LF = $02
 ZP_PTR_LE = $04
-ZP_PTR_CODE = $06
 
 startPos: .word $0
 endPos:  .word $0
 codeBank: .byte $0
 stillExecuting: .byte $1
 lastCodeWasNonWindow: .byte FALSE
-addressForJump: .byte $0
+jumpOffset: .byte $0
 .macro IF_HANDLER
         jmp @startIfHandler
         @stillProcessing: .byte $1
@@ -41,12 +40,12 @@ addressForJump: .byte $0
         @default:
             lda (ZP_PTR_CODE)
             asl
-            sta addressForJump
+            sta jumpOffset
 
             INC_MEM ZP_PTR_CODE
-            BYTES_TO_STACK ZP_PTR_CODE, CODE_WINDOW_SIZE, ZP_PTR_IF_CODE_WIN
+            ;REFRESH_CODE_WINDOW ZP_PTR_CODE, CODE_WINDOW_SIZE, ZP_PTR_IF_CODE_WIN
             
-            ldx addressForJump
+            ldx jumpOffset
             jmp (jmpTableIf,x)
             
             returnFromOpCodeTrue:
@@ -98,6 +97,8 @@ _commandLoop:
          
          lda codeBank
          sta RAM_BANK
+         stp
+         jsr refreshCodeWindow
          mainLoop:
          GREATER_THAN_OR_EQ_16 ZP_PTR_CODE_WIN, endPos, endMainLoop
          lda stillExecuting
@@ -105,7 +106,6 @@ _commandLoop:
          beq @loopConditionSuccess
          jmp endMainLoop
          @loopConditionSuccess:
-         BYTES_TO_STACK ZP_PTR_CODE, CODE_WINDOW_SIZE, ZP_PTR_CODE_WIN
          
          INC_MEM ZP_PTR_CODE_WIN
         
@@ -128,7 +128,6 @@ _commandLoop:
                 ;case 0xff:
                 INC_MEM ZP_PTR_CODE
                 LDA #TRUE
-                STA lastCodeWasNonWindow
 
                 IF_HANDLER
                 ;}
