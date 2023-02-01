@@ -1,13 +1,15 @@
 .ifndef  GLOBAL_INC
+
+codeBank: .byte $0
+
 GLOBAL_INC = 1
 
 ZP_PTR_CODE = $06
-ZP_PTR_CODE_WIN = $08
+;$08 is reserved for code window in codeWindow.s
 ZP_TMP = $10
 
 GOLDEN_RAM = $400
 RAM_BANK = $0
-STACK_HIGH = $1
 
 VARS_AREA_START_GOLDEN_OFFSET = 0
 LOCAL_WORK_AREA_GOLDEN_OFFSET = 514
@@ -22,17 +24,6 @@ LOGIC_ENTRY_CURRENT_POINT_OFFSET = 3
 
 TRUE = 1
 FALSE = 0
-
-.macro  INC_MEM address
-         clc
-         lda address
-         adc #$1
-         sta address
-
-         lda address + 1
-         adc #$0
-         sta address + 1
-.endmacro
 
 .macro   SET_STRUCT_16 offset, pointer, value
          LDA value
@@ -150,8 +141,35 @@ FALSE = 0
 
 .endmacro
 
+.macro LESS_THAN_OR_EQ_8 word1, word2, successBranch, failBranch
+       .local @branch
+       
+       stp
+       
+       lda word1
+       cmp word2
+       
+       bcc @branch
+       beq @branch
+      
+      .ifblank failBranch
+       bcc @end
+       .endif
+       .ifnblank failBranch
+       jmp failBranch
+       .endif
+
+       @branch:
+       jmp successBranch
+       @end:
+       
+.endmacro
+
 .macro LESS_THAN_OR_EQ_16 word1, word2, successBranch, failBranch
        .local @branch
+       
+       stp
+       
        lda word1 + 1
        cmp word2 + 1
        bcc @lowerBit
@@ -176,40 +194,5 @@ FALSE = 0
        jmp successBranch
        @end:
        
-.endmacro
-
-.macro REFRESH_CODE_WINDOW startAddress, copySize, addressFirst
-        .local @startBtsLoop
-        .local @endBtsLoop
-        ldy #copySize
-        dey
-        @startBtsLoop:
-        cpy #copySize
-        bcs @endBtsLoop
-
-        lda (startAddress),y
-        pha
-
-        dey
-        jmp @startBtsLoop
-        @endBtsLoop:
-        tsx
-        inx
-        stx addressFirst
-        lda #STACK_HIGH
-        sta addressFirst + 1
-.endmacro
-
-.macro CLEAR_STACK clearSize
-        .local @startClLoop
-        .local @endClLoop
-        ldx #$0
-        @startClLoop:
-        cpx #clearSize
-        beq @endClLoop
-        pla
-        inx 
-        jmp @startClLoop
-        @endClLoop:
 .endmacro
 .endif

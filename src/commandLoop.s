@@ -11,19 +11,18 @@ ZP_PTR_LE = $04
 
 startPos: .word $0
 endPos:  .word $0
-codeBank: .byte $0
 stillExecuting: .byte $1
 lastCodeWasNonWindow: .byte FALSE
 jumpOffset: .byte $0
 .macro IF_HANDLER
-        jmp @startIfHandler
-        @stillProcessing: .byte $1
+        jmp startIfHandler
+        stillProcessing: .byte $1
         @ch: .word $0
 
-        @startIfHandler:
+        startIfHandler:
 
-        @ifHandlerLoop:
-        lda @stillProcessing
+        ifHandlerLoop:
+        lda stillProcessing
         beq endIfHandlerLoop
 
         lda (ZP_PTR_CODE)
@@ -42,33 +41,32 @@ jumpOffset: .byte $0
             asl
             sta jumpOffset
 
-            INC_MEM ZP_PTR_CODE
-            ;REFRESH_CODE_WINDOW ZP_PTR_CODE, CODE_WINDOW_SIZE, ZP_PTR_IF_CODE_WIN
+            INC_CODE
             
             ldx jumpOffset
             jmp (jmpTableIf,x)
             
             returnFromOpCodeTrue:
             lda #$13
-            ;if (testVal) {
-            ;jmp @ifHandlerLoop
+            jmp ifHandlerLoop
             returnFromOpCodeFalse:
             lda #$12
-            ; else
-            CLEAR_STACK CODE_WINDOW_SIZE
-            ;jmp @ifHandlerLoop
+            lda #FALSE
+            sta stillProcessing
+            ;if (!orMode)
+            jmp ifHandlerLoop
         closingIfBracket:
             ;toImplement
-            ;jmp @ifHandlerLoop
+            ;jmp ifHandlerLoop
 
         notMode:
             ;toImplement
-            ;jmp @ifHandlerLoop
+            ;jmp ifHandlerLoop
 
         orMode:
             ;toImplement
 
-        ;jmp @ifHandlerLoop
+        ;jmp ifHandlerLoop
 endIfHandlerLoop:
 .endmacro
 
@@ -95,20 +93,16 @@ _commandLoop:
          ADD_WORD_16 startPos,entryPoint,ZP_PTR_CODE
          ADD_WORD_16 startPos,codeSize,endPos
          
-         lda codeBank
-         sta RAM_BANK
-         stp
          jsr refreshCodeWindow
          mainLoop:
-         GREATER_THAN_OR_EQ_16 ZP_PTR_CODE_WIN, endPos, endMainLoop
+
+         GREATER_THAN_OR_EQ_16 ZP_PTR_CODE, endPos, endMainLoop
          lda stillExecuting
          cmp #TRUE
          beq @loopConditionSuccess
          jmp endMainLoop
          @loopConditionSuccess:
-         
-         INC_MEM ZP_PTR_CODE_WIN
-        
+                 
         ; /* Emergency exit */
 		; if (key[KEY_F12]) {
 		; 	////lprintf("info: Exiting MEKA due to F12, logic: %d, posn: %d",
@@ -126,7 +120,7 @@ _commandLoop:
                 ;switch (codeAtTimeOfLastBankSwitch) {
 			    ;case 0xfe: 
                 ;case 0xff:
-                INC_MEM ZP_PTR_CODE
+                INC_CODE
                 LDA #TRUE
 
                 IF_HANDLER
@@ -136,9 +130,7 @@ _commandLoop:
 
          SUB_WORD_16_IND ZP_PTR_CODE, startPos, LOGIC_ENTRY_CURRENT_POINT_OFFSET, ZP_PTR_LE
          
-         CLEAR_STACK CODE_WINDOW_SIZE
-         jmp endMainLoop ;temp line
-
+         stp
          jmp mainLoop
          endMainLoop:
          rts

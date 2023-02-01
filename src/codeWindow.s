@@ -1,21 +1,57 @@
+.ifndef  CODE_WINDOW_INC
+CODE_WINDOW_INC = 1
 .include "global.s"
+
+ZP_PTR_CODE_WIN = $08
 
 CODE_WINDOW_SIZE = 10
 codeWindow: .res CODE_WINDOW_SIZE
 cwCurrentCode: .byte $0
 
+codeWindowAddress: .addr codeWindow
+
+codeWindowInit:
+lda codeWindowAddress
+sta ZP_PTR_CODE_WIN
+
+lda codeWindowAddress + 1
+sta ZP_PTR_CODE_WIN + 1
+rts
+
+.macro INC_CODE
+.local @start
+.local @end
+.local @codeIncrement
+
+bra @start
+
+@codeIncrement: .word $1
+
+@start:
+ADD_WORD_16 ZP_PTR_CODE, @codeIncrement, ZP_PTR_CODE
+
+inc cwCurrentCode
+lda cwCurrentCode
+cmp CODE_WINDOW_SIZE
+bne @end
+
+stz cwCurrentCode
+jsr refreshCodeWindow
+@end:
+.endmacro
+
+
 refreshCodeWindow:
     jmp @start
     @previousBank: .byte $0
 
-    tax
-
+    @start:
     lda RAM_BANK
     sta @previousBank
 
-    stx RAM_BANK
+    lda codeBank
+    sta RAM_BANK
 
-    @start:
     ldy #$0
 
     @mainLoop:
@@ -34,3 +70,4 @@ refreshCodeWindow:
     lda @previousBank
     sta RAM_BANK
 rts
+.endif

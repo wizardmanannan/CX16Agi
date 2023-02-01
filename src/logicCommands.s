@@ -2,8 +2,14 @@
 LOGICCOMMANDS_INC = 1
 .include "global.s"
 .include "commandLoop.s"
+.include "codeWindow.s"
 
-.macro GET_VAR_OR_FLAG areaStartOffset, ptrNum, result
+.macro LOAD_CODE_WIN_CODE
+        ldy cwCurrentCode
+        lda (ZP_PTR_CODE_WIN),y
+.endmacro
+
+.macro GET_VAR_OR_FLAG areaStartOffset, result
 
         clc
         lda #<GOLDEN_RAM
@@ -13,7 +19,8 @@ LOGICCOMMANDS_INC = 1
         adc #>areaStartOffset
         sta ZP_TMP + 1
 
-        lda (ptrNum)
+        LOAD_CODE_WIN_CODE
+
         adc ZP_TMP
         sta ZP_TMP 
         lda ZP_TMP + 1
@@ -36,19 +43,13 @@ var1: .byte $0
 var2: .byte $0
 
 _b1Greatern:
-    ;GET_VAR_OR_FLAG VARS_AREA_START_GOLDEN_OFFSET, ZP_PTR_IF_CODE_WIN, var1
-    ;INC_MEM ZP_PTR_IF_CODE_WIN
+    GET_VAR_OR_FLAG VARS_AREA_START_GOLDEN_OFFSET, var1
+    INC_CODE
 
-    stp
-    lda (ZP_PTR_CODE_WIN)
+    LOAD_CODE_WIN_CODE
     sta var2
-    ;INC_MEM ZP_PTR_IF_CODE_WIN
-    
-    LESS_THAN_OR_EQ_16 var2, var1, returnFromOpCodeTrue, returnFromOpCodeFalse
+    INC_CODE
 
-    ; ldy #$0
+    LESS_THAN_OR_EQ_8 var2, var1, returnFromOpCodeFalse, returnFromOpCodeTrue
 
-    ; lda < (address),y
-    ; iny
-    ; lda > (address),y
 .endif
