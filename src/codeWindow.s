@@ -5,6 +5,8 @@ CODE_WINDOW_INC = 1
 ZP_PTR_CODE_WIN = $08
 
 CODE_WINDOW_SIZE = 10
+
+.segment "CODE"
 codeWindow: .res CODE_WINDOW_SIZE
 cwCurrentCode: .byte $0
 

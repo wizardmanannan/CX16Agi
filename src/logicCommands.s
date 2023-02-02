@@ -42,6 +42,7 @@ returnAddress: .word $0
 var1: .byte $0
 var2: .byte $0
 
+.segment "BANKRAM0F"
 _b1Greatern:
     GET_VAR_OR_FLAG VARS_AREA_START_GOLDEN_OFFSET, var1
     INC_CODE

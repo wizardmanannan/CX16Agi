@@ -1,5 +1,4 @@
 #include "memoryManager.h"
-//#define VERBOSE
 MemoryArea* _memoryAreas;
 int _noSegments;
 
@@ -106,7 +105,8 @@ void bankedRamInit()
 		(int)_BANKRAM0B_SIZE__,
 		(int)_BANKRAM0C_SIZE__,
 		(int)_BANKRAM0D_SIZE__,
-		(int)_BANKRAM0E_SIZE__
+		(int)_BANKRAM0E_SIZE__,
+		(int)_BANKRAM0F_SIZE__
 	};
 
 
@@ -142,7 +142,6 @@ void bankedRamInit()
 #endif // VERBOSE
 		}
 	}
-
 	RAM_BANK = previousBank;
 }
 #endif //  __CX16__

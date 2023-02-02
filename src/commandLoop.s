@@ -9,11 +9,18 @@ LOGIC_ENTRY_PARAMETERS_OFFSET =  0
 ZP_PTR_LF = $02
 ZP_PTR_LE = $04
 
+.segment "CODE"
 startPos: .word $0
 endPos:  .word $0
 stillExecuting: .byte $1
 lastCodeWasNonWindow: .byte FALSE
 jumpOffset: .byte $0
+
+.macro SET_BANK_TO_CODE_BANK
+lda codeBank
+sta RAM_BANK
+.endmacro
+
 .macro IF_HANDLER
         jmp startIfHandler
         stillProcessing: .byte $1
@@ -43,18 +50,22 @@ jumpOffset: .byte $0
 
             INC_CODE
             
+            stp
+            LDA #LOGIC_COMMANDS_BANK
+            sta RAM_BANK
             ldx jumpOffset
             jmp (jmpTableIf,x)
             
             returnFromOpCodeTrue:
-            lda #$13
+            SET_BANK_TO_CODE_BANK
             jmp ifHandlerLoop
             returnFromOpCodeFalse:
-            lda #$12
+            SET_BANK_TO_CODE_BANK
             lda #FALSE
             sta stillProcessing
             ;if (!orMode)
             jmp ifHandlerLoop
+        
         closingIfBracket:
             ;toImplement
             ;jmp ifHandlerLoop
