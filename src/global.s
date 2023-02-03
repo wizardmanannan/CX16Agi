@@ -145,9 +145,7 @@ FALSE = 0
 
 .macro LESS_THAN_OR_EQ_8 word1, word2, successBranch, failBranch
        .local @branch
-       
-       stp
-       
+              
        lda word1
        cmp word2
        

@@ -4,11 +4,6 @@ LOGICCOMMANDS_INC = 1
 .include "commandLoop.s"
 .include "codeWindow.s"
 
-.macro LOAD_CODE_WIN_CODE
-        ldy cwCurrentCode
-        lda (ZP_PTR_CODE_WIN),y
-.endmacro
-
 .macro GET_VAR_OR_FLAG areaStartOffset, result
 
         clc
@@ -27,9 +22,23 @@ LOGICCOMMANDS_INC = 1
         adc #$0
 
         lda (ZP_TMP)
+
         sta result
 .endmacro
 
+.segment "BANKRAM0F"
+_b1Greatern:
+
+    GET_VAR_OR_FLAG VARS_AREA_START_GOLDEN_OFFSET, var1
+    INC_CODE
+
+    LOAD_CODE_WIN_CODE
+    sta var2
+    INC_CODE
+
+    LESS_THAN_OR_EQ_8 var2, var1, returnFromOpCodeFalse, returnFromOpCodeTrue
+
+.segment "CODE"
 jmpTableIf:
 .word $0
 .word $1
@@ -41,16 +50,5 @@ jmpTableIf:
 returnAddress: .word $0
 var1: .byte $0
 var2: .byte $0
-
-.segment "BANKRAM0F"
-_b1Greatern:
-    GET_VAR_OR_FLAG VARS_AREA_START_GOLDEN_OFFSET, var1
-    INC_CODE
-
-    LOAD_CODE_WIN_CODE
-    sta var2
-    INC_CODE
-
-    LESS_THAN_OR_EQ_8 var2, var1, returnFromOpCodeFalse, returnFromOpCodeTrue
 
 .endif

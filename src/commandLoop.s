@@ -32,8 +32,7 @@ sta RAM_BANK
         lda stillProcessing
         beq endIfHandlerLoop
 
-        lda (ZP_PTR_CODE)
-
+        LOAD_CODE_WIN_CODE
         cmp #$FF
         beq closingIfBracket
 
@@ -44,13 +43,12 @@ sta RAM_BANK
         beq orMode
 
         @default:
-            lda (ZP_PTR_CODE)
+            LOAD_CODE_WIN_CODE
             asl
             sta jumpOffset
 
             INC_CODE
             
-            stp
             LDA #LOGIC_COMMANDS_BANK
             sta RAM_BANK
             ldx jumpOffset
@@ -59,6 +57,7 @@ sta RAM_BANK
             returnFromOpCodeTrue:
             SET_BANK_TO_CODE_BANK
             jmp ifHandlerLoop
+            
             returnFromOpCodeFalse:
             SET_BANK_TO_CODE_BANK
             lda #FALSE
@@ -113,14 +112,13 @@ _commandLoop:
          beq @loopConditionSuccess
          jmp endMainLoop
          @loopConditionSuccess:
-                 
         ; /* Emergency exit */
 		; if (key[KEY_F12]) {
 		; 	////lprintf("info: Exiting MEKA due to F12, logic: %d, posn: %d",
 		; 		//logNum, currentLogic.currentPoint);
 		; 	exit(0);
 		; }
-        lda (ZP_PTR_CODE)
+        LOAD_CODE_WIN_CODE
         sta codeAtTimeOfLastBankSwitch
 
 		; instructionCodeBank = getBankBasedOnCode(codeAtTimeOfLastBankSwitch);
@@ -141,7 +139,6 @@ _commandLoop:
 
          SUB_WORD_16_IND ZP_PTR_CODE, startPos, LOGIC_ENTRY_CURRENT_POINT_OFFSET, ZP_PTR_LE
          
-         stp
          jmp mainLoop
          endMainLoop:
          rts
