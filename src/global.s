@@ -11,9 +11,10 @@ ZP_TMP = $10
 GOLDEN_RAM = $400
 RAM_BANK = $0
 
-LOGIC_COMMANDS_BANK = $0F
+LOGIC_COMMANDS_BANK = $05
 
 VARS_AREA_START_GOLDEN_OFFSET = 0
+FLAGS_AREA_START_GOLDEN_OFFSET = 257
 LOCAL_WORK_AREA_GOLDEN_OFFSET = 514
 PARAMETERS_WORK_AREA_GOLDEN_OFFSET = 1015
 
@@ -162,6 +163,24 @@ FALSE = 0
        @branch:
        jmp successBranch
        @end:
+       
+.endmacro
+
+.macro GREATER_THAN_OR_EQ_8 word1, word2, successBranch, failBranch
+       .local @branch
+              
+       lda word1
+       cmp word2
+       
+       bcs @branch
+       bra @end
+
+       @branch:
+        jmp successBranch
+       @end:
+       .ifnblank failBranch
+       jmp failBranch
+       .endif
        
 .endmacro
 

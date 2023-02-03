@@ -27,12 +27,14 @@ sta RAM_BANK
         @ch: .word $0
 
         startIfHandler:
-
+        lda #TRUE
+        sta stillProcessing
         ifHandlerLoop:
         lda stillProcessing
         beq endIfHandlerLoop
 
         LOAD_CODE_WIN_CODE
+
         cmp #$FF
         beq closingIfBracket
 
@@ -138,7 +140,7 @@ _commandLoop:
 
 
          SUB_WORD_16_IND ZP_PTR_CODE, startPos, LOGIC_ENTRY_CURRENT_POINT_OFFSET, ZP_PTR_LE
-         
+
          jmp mainLoop
          endMainLoop:
          rts

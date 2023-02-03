@@ -78,4 +78,14 @@ refreshCodeWindow:
     lda @previousBank
     sta RAM_BANK
 rts
+
+_loadAndIncWinCode:
+
+    LOAD_CODE_WIN_CODE
+    tax
+
+    INC_CODE
+    
+    txa
+    rts
 .endif
