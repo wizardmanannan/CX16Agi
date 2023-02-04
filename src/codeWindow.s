@@ -52,7 +52,6 @@ refreshCodeWindow:
     @previousBank: .byte $0
     @codeIncrement: .word CODE_WINDOW_SIZE + 1
     @start:
-
     lda codeWindowInvalid
     cmp #TRUE
     beq @storeAndSetBank
@@ -79,6 +78,9 @@ refreshCodeWindow:
     @endMainLoop:
 
     stz cwCurrentCode
+
+    lda #FALSE
+    sta codeWindowInvalid
 
     lda @previousBank
     sta RAM_BANK

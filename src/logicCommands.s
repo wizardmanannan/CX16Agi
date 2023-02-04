@@ -141,7 +141,8 @@ b1Greaterv:
     LESS_THAN_OR_EQ_8 var2, var1, returnFromOpCodeFalse, returnFromOpCodeTrue
 
 b1Isset:
-    GET_VAR_OR_FLAG VARS_AREA_START_GOLDEN_OFFSET, var1
+    stp
+    GET_VAR_OR_FLAG FLAGS_AREA_START_GOLDEN_OFFSET, var1
     INC_CODE
 
     bne @fail

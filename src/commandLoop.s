@@ -108,10 +108,8 @@ endIfHandlerLoop:
         @startFindBracketLoop:
             lda (ZP_PTR_CODE)
             sta @ch
-            tay
             
             inc ZP_PTR_CODE
-            tya
 
             cmp #$FF
             beq @FFResult
@@ -145,6 +143,7 @@ endIfHandlerLoop:
             sta @b2
             inc ZP_PTR_CODE
             LEFT_SHIFT_16 @b2, #$8, @disp
+
             ORA_16 @b1, @disp, @disp 
             
             ADD_WORD_16 ZP_PTR_CODE, @disp, ZP_PTR_CODE
@@ -152,7 +151,6 @@ endIfHandlerLoop:
 
         @endIfHandlerLoop:
         jsr refreshCodeWindow
-
 .endmacro
 
 _commandLoop:
@@ -205,7 +203,6 @@ _commandLoop:
 			    ;case 0xfe: 
                 ;case 0xff:
                 INC_CODE
-                LDA #TRUE
 
                 IF_HANDLER
                 ;}
