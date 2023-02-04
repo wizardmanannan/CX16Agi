@@ -15,6 +15,7 @@ endPos:  .word $0
 stillExecuting: .byte $1
 lastCodeWasNonWindow: .byte FALSE
 jumpOffset: .byte $0
+numArgs: .byte $0,$2,$2,$2,$2,$2,$2,$1,$1,$1,$2,$5,$1,$0,$0,$2,$5,$5,$5
 
 .macro SET_BANK_TO_CODE_BANK
 lda codeBank
@@ -32,7 +33,7 @@ sta RAM_BANK
         ifHandlerLoop:
         lda stillProcessing
         beq endIfHandlerLoop
-
+ 
         LOAD_CODE_WIN_CODE
 
         cmp #$FF
@@ -80,6 +81,78 @@ sta RAM_BANK
 
         ;jmp ifHandlerLoop
 endIfHandlerLoop:
+; while (TRUE) {
+; 		ch = *(*data)++;
+; 		if (ch == 0xff) {
+; 			b1 = *(*data)++;
+; 			b2 = *(*data)++;
+; 			disp = (b2 << 8) | b1;  /* Should be signed 16 bit */
+; 			*data += disp;
+; 			break;
+; 		}
+; 		if (ch >= 0xfc) continue;
+; 		if (ch == 0x0e) {
+; 			ch = *(*data)++;
+; 			*data += (ch << 1);
+; 		}
+; 		else {
+; 			*data += testCommands[ch].numArgs;
+; 		}
+; 	}   
+        CATCH_UP_CODE
+        bra @startFindBracketLoop
+        @ch: .byte $0
+        @b1: .word $0
+        @b2: .word $0
+        @disp: .word $0
+        @startFindBracketLoop:
+            lda (ZP_PTR_CODE)
+            sta @ch
+            tay
+            
+            inc ZP_PTR_CODE
+            tya
+
+            cmp #$FF
+            beq @FFResult
+
+            cmp #$0E
+            beq @0EResult
+
+            GREATER_THAN_OR_EQ_8 @ch, #$FC, @startFindBracketLoop
+
+            ldx @ch
+            lda numArgs,x
+            sta @disp
+
+            ADD_WORD_16 ZP_PTR_CODE, @disp, ZP_PTR_CODE
+            bra @startFindBracketLoop
+
+            @0EResult:
+            lda (ZP_PTR_CODE)
+            sta @ch
+            INC ZP_PTR_CODE
+            LEFT_SHIFT_16 @ch, #$1, @disp
+            ADD_WORD_16 ZP_PTR_CODE, @disp, ZP_PTR_CODE
+
+            bra @startFindBracketLoop
+            @FFResult:
+            lda (ZP_PTR_CODE)
+            sta @b1
+            inc ZP_PTR_CODE
+
+            lda (ZP_PTR_CODE)
+            sta @b2
+            inc ZP_PTR_CODE
+            LEFT_SHIFT_16 @b2, #$8, @disp
+            ORA_16 @b1, @disp, @disp 
+            
+            ADD_WORD_16 ZP_PTR_CODE, @disp, ZP_PTR_CODE
+            bra @endIfHandlerLoop
+
+        @endIfHandlerLoop:
+        jsr refreshCodeWindow
+
 .endmacro
 
 _commandLoop:
@@ -127,7 +200,7 @@ _commandLoop:
         ; if (*code < 0xfe)
 		; {
         ; }
-        ;else {
+        ;else {ch
                 ;switch (codeAtTimeOfLastBankSwitch) {
 			    ;case 0xfe: 
                 ;case 0xff:

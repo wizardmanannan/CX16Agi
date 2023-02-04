@@ -92,6 +92,16 @@ FALSE = 0
         sta result + 1
 .endmacro
 
+.macro ADD_WORD_16_8 firstAddress, secondAddress, result
+        clc
+        lda firstAddress
+        adc secondAddress
+        sta result
+        lda firstAddress + 1
+        adc #$0
+        sta result + 1
+.endmacro
+
 .macro SUB_WORD_16 firstAddress, secondAddress, result
         sec
         lda firstAddress
@@ -186,9 +196,7 @@ FALSE = 0
 
 .macro LESS_THAN_OR_EQ_16 word1, word2, successBranch, failBranch
        .local @branch
-       
-       stp
-       
+
        lda word1 + 1
        cmp word2 + 1
        bcc @lowerBit
@@ -214,4 +222,39 @@ FALSE = 0
        @end:
        
 .endmacro
+
+.macro LEFT_SHIFT_16 word1, amount, result
+        .local @startLoop
+        .local @endLoop
+
+        ldx #$0
+        @startLoop:
+        cpx amount
+        beq @endLoop
+
+        clc
+        lda word1
+        rol
+        sta result
+
+        lda word1 + 1
+        rol
+        sta result + 1
+
+        inx 
+        bra @startLoop
+        @endLoop:
+.endmacro
+
+
+.macro ORA_16 word1, word2, result
+lda word1
+ora word2
+sta result
+
+lda word1 + 1
+ora word2 + 1
+sta result + 1
+.endmacro
+
 .endif

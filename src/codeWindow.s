@@ -7,11 +7,10 @@ ZP_PTR_CODE_WIN = $08
 CODE_WINDOW_SIZE = 10
 
 .segment "CODE"
-CODE_WINDOW_NOT_INITED_BYTE = $FF
-codeWindow: .res CODE_WINDOW_SIZE, CODE_WINDOW_NOT_INITED_BYTE
+codeWindow: .res CODE_WINDOW_SIZE
 cwCurrentCode: .byte $0
-
 codeWindowAddress: .addr codeWindow
+codeWindowInvalid: .byte TRUE
 
 codeWindowInit:
 lda codeWindowAddress
@@ -41,6 +40,12 @@ jsr refreshCodeWindow
 @end:
 .endmacro
 
+.macro CATCH_UP_CODE ;Warning Invalidates The Code Window Call Refresh Afterwards
+ADD_WORD_16_8 ZP_PTR_CODE, cwCurrentCode, ZP_PTR_CODE
+
+lda #TRUE
+sta codeWindowInvalid
+.endmacro
 
 refreshCodeWindow:
     bra @start
@@ -48,8 +53,8 @@ refreshCodeWindow:
     @codeIncrement: .word CODE_WINDOW_SIZE + 1
     @start:
 
-    lda codeWindow
-    cmp #CODE_WINDOW_NOT_INITED_BYTE
+    lda codeWindowInvalid
+    cmp #TRUE
     beq @storeAndSetBank
 
     ADD_WORD_16 ZP_PTR_CODE, @codeIncrement, ZP_PTR_CODE
