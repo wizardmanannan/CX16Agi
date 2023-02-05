@@ -22,28 +22,109 @@ lda codeBank
 sta RAM_BANK
 .endmacro
 
+ closingIfBracket:
+            INC_CODE
+            INC_CODE
+            jmp endifFunction
+
+checkOrMode:
+    lda orMode
+    bne @orModeFalse
+
+    lda #FALSE
+    sta stillProcessing
+    jmp ifHandlerLoop
+    
+    @orModeFalse:
+        lda #TRUE
+        sta orMode
+        jmp ifHandlerLoop
+
+toggleNotMode:
+    lda notMode
+    beq @toggleOn
+    lda #FALSE
+    sta notMode
+    jmp ifHandlerLoop
+    @toggleOn:
+    lda #TRUE
+    sta notMode
+    jmp ifHandlerLoop
+
+
+startOrModeLoop:
+bra @start
+    @ch: .byte $0
+    @start:
+    LOAD_CODE_WIN_CODE
+    sta @ch
+    INC_CODE
+
+    lda @ch
+    cmp #$FC
+    beq @endOrModeLoop
+
+    LESS_THAN_OR_EQ_8 #$FC, @ch, startOrModeLoop
+
+    CATCH_UP_CODE
+
+    cmp #$0E
+    bne @else
+    lda ZP_PTR_CODE
+    sta ZP_TMP
+    inc ZP_PTR_CODE
+
+    LEFT_SHIFT_16 ZP_TMP, #$1, ZP_TMP 
+
+    ADD_WORD_16 ZP_PTR_CODE, ZP_TMP, ZP_PTR_CODE
+    jsr refreshCodeWindow
+    jmp startOrModeLoop
+
+    @else:
+        ADD_WORD_16_8 numArgs, @ch, ZP_TMP
+        ADD_WORD_16 ZP_PTR_CODE, ZP_TMP, ZP_PTR_CODE
+        jsr refreshCodeWindow
+        jmp startOrModeLoop
+    @endOrModeLoop:
+    jmp ifHandlerLoop
+
+
 .macro IF_HANDLER
         jmp startIfHandler
         stillProcessing: .byte $1
-        @ch: .word $0
+        notMode: .byte FALSE
+        orMode: .byte FALSE
 
         startIfHandler:
         lda #TRUE
         sta stillProcessing
         ifHandlerLoop:
         lda stillProcessing
-        beq endIfHandlerLoop
- 
+        bne @loopBody
+        jmp endIfHandlerLoop
+
+        @loopBody:
         LOAD_CODE_WIN_CODE
 
         cmp #$FF
-        beq closingIfBracket
+        beq @closingIfBracketJmp
 
         cmp #$fd
-        beq notMode
+        beq @toggleNotModeJmp
 
         cmp #$FC
-        beq orMode
+        beq @checkOrModeJmp
+
+        bra @default
+
+        @closingIfBracketJmp:
+            jmp closingIfBracket
+        
+        @toggleNotModeJmp:
+            jmp toggleNotMode
+
+        @checkOrModeJmp:
+            jmp checkOrMode
 
         @default:
             LOAD_CODE_WIN_CODE
@@ -57,48 +138,31 @@ sta RAM_BANK
             ldx jumpOffset
             jmp (jmpTableIf,x)
             
-            returnFromOpCodeTrue:
-            SET_BANK_TO_CODE_BANK
-            jmp ifHandlerLoop
-            
             returnFromOpCodeFalse:
-            SET_BANK_TO_CODE_BANK
-            lda #FALSE
-            sta stillProcessing
-            ;if (!orMode)
-            jmp ifHandlerLoop
-        
-        closingIfBracket:
-            ;toImplement
-            ;jmp ifHandlerLoop
+                SET_BANK_TO_CODE_BANK
+                lda notMode
+                bne returnFromOpCodeTrueAfterNotMode            
+                
+                returnFromOpCodeFalseAfterNotMode:
 
-        notMode:
-            ;toImplement
-            ;jmp ifHandlerLoop
+                SET_BANK_TO_CODE_BANK
+                lda orMode
+                bne ifHandlerLoop
+                lda #FALSE
+                sta stillProcessing
+                bra ifHandlerLoop
 
-        orMode:
-            ;toImplement
+            returnFromOpCodeTrue:
+                SET_BANK_TO_CODE_BANK
+                lda notMode
+                bne returnFromOpCodeFalseAfterNotMode
 
-        ;jmp ifHandlerLoop
+            returnFromOpCodeTrueAfterNotMode:
+                lda orMode
+                beq startIfHandler
+                jmp startOrModeLoop
+    
 endIfHandlerLoop:
-; while (TRUE) {
-; 		ch = *(*data)++;
-; 		if (ch == 0xff) {
-; 			b1 = *(*data)++;
-; 			b2 = *(*data)++;
-; 			disp = (b2 << 8) | b1;  /* Should be signed 16 bit */
-; 			*data += disp;
-; 			break;
-; 		}
-; 		if (ch >= 0xfc) continue;
-; 		if (ch == 0x0e) {
-; 			ch = *(*data)++;
-; 			*data += (ch << 1);
-; 		}
-; 		else {
-; 			*data += testCommands[ch].numArgs;
-; 		}
-; 	}   
         CATCH_UP_CODE
         bra @startFindBracketLoop
         @ch: .byte $0
@@ -147,10 +211,11 @@ endIfHandlerLoop:
             ORA_16 @b1, @disp, @disp 
             
             ADD_WORD_16 ZP_PTR_CODE, @disp, ZP_PTR_CODE
-            bra @endIfHandlerLoop
+            bra @endFindBracketLoop
 
-        @endIfHandlerLoop:
+        @endFindBracketLoop:
         jsr refreshCodeWindow
+        endifFunction:
 .endmacro
 
 _commandLoop:
