@@ -47,9 +47,7 @@ checkOrMode:
     lda orMode
     bne @orModeFalse
 
-    lda #FALSE
-    sta stillProcessing
-    jmp ifHandlerLoop
+    jmp endIfHandlerLoop
     
     @orModeFalse:
         lda #TRUE
@@ -107,20 +105,12 @@ bra @start
 ;endIfHelpers
 ifHandler:
         jmp startIfHandler
-        stillProcessing: .byte $1
         notMode: .byte FALSE
         orMode: .byte FALSE
 
         startIfHandler:
         INC_CODE
-        lda #TRUE
-        sta stillProcessing
         ifHandlerLoop:
-        lda stillProcessing
-        bne @loopBody
-        jmp endIfHandlerLoop
-
-        @loopBody:
         LOAD_CODE_WIN_CODE
 
         cmp #$FF
@@ -165,10 +155,8 @@ ifHandler:
                 SET_BANK_TO_CODE_BANK
                 lda orMode
                 bne ifHandlerLoop
-                lda #FALSE
-                sta stillProcessing
-   
-                bra ifHandlerLoop
+                   
+                bra endIfHandlerLoop
 
             returnFromOpCodeTrue:
                 SET_BANK_TO_CODE_BANK
@@ -194,8 +182,7 @@ ifHandler:
                         
                         INC_CODE
                         lda @ch
-                        stp
-
+                        
                         cmp #$FF
                         beq @FFResult
 
