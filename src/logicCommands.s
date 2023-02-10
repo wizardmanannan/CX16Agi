@@ -101,7 +101,6 @@ b1Equalv:
     jmp returnFromOpCodeTrue
 
 b1Lessn:
-
     GET_VAR_OR_FLAG VARS_AREA_START_GOLDEN_OFFSET, var1
     INC_CODE
 

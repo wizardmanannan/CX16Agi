@@ -1,4 +1,7 @@
 .ifndef  COMMAND_LOOP_INC
+
+ DEBUG = 1
+
 COMMAND_LOOP_INC = 1
 LOGIC_ENTRY_PARAMETERS_OFFSET =  0
 
@@ -17,6 +20,47 @@ lastCodeWasNonWindow: .byte FALSE
 jumpOffset: .byte $0
 numArgs: .byte $0,$2,$2,$2,$2,$2,$2,$1,$1,$1,$2,$5,$1,$0,$0,$2,$5,$5,$5
 
+
+.ifdef DEBUG
+CHROUT   = $FFD2
+NEWLINE = $0D
+
+print_hex_digit:
+   cmp #$A
+   bpl @letter
+   ora #$30    ; PETSCII numbers: 1=$31, 2=$32, etc.
+   bra @print
+@letter:
+   clc
+   adc #$37; PETSCII letters: A=$41, B=$42, etc.
+@print:
+   jsr CHROUT
+   rts
+
+
+print_hex:
+   pha   ; push original A to stack
+   lsr
+   lsr
+   lsr
+   lsr      ; A = A >> 4
+   jsr print_hex_digit
+   pla      ; pull original A back from stack
+   and #$0F ; A = A & 0b00001111
+   jsr print_hex_digit
+   lda #NEWLINE
+   jsr CHROUT
+   rts
+
+.endif
+
+.macro DEBUG_PRINT
+    .ifdef DEBUG
+        LOAD_CODE_WIN_CODE
+        jsr print_hex
+    .endif
+    .endmacro
+
 .macro SET_BANK_TO_CODE_BANK
 lda codeBank
 sta RAM_BANK
@@ -33,7 +77,6 @@ sta RAM_BANK
     LEFT_SHIFT_16 @b2, #$8, @disp
 
     ORA_16 @b1, @disp, @disp 
-
     INC_CODE_BY @disp
 .endmacro
 
@@ -65,7 +108,6 @@ toggleNotMode:
     sta notMode
     jmp ifHandlerLoop
 
-
 startOrModeLoop:
 bra @start
     @ch: .byte $0
@@ -73,14 +115,11 @@ bra @start
     LOAD_CODE_WIN_CODE
     sta @ch
     INC_CODE
-
     lda @ch
     cmp #$FC
     beq @endOrModeLoop
 
     LESS_THAN_OR_EQ_8 #$FC, @ch, startOrModeLoop
-
-    CATCH_UP_CODE
 
     cmp #$0E
     bne @else
@@ -104,14 +143,15 @@ bra @start
 
 ;endIfHelpers
 ifHandler:
-        jmp startIfHandler
+        jmp ifHandlerLoop
         notMode: .byte FALSE
         orMode: .byte FALSE
 
-        startIfHandler:
-        INC_CODE
         ifHandlerLoop:
+        INC_CODE
         LOAD_CODE_WIN_CODE
+
+        DEBUG_PRINT
 
         cmp #$FF
         beq @closingIfBracketJmp
@@ -143,6 +183,7 @@ ifHandler:
             LDA #LOGIC_COMMANDS_BANK
             sta RAM_BANK
             ldx jumpOffset
+            stp
             jmp (jmpTableIf,x)
             
             returnFromOpCodeFalse:
@@ -154,8 +195,7 @@ ifHandler:
 
                 SET_BANK_TO_CODE_BANK
                 lda orMode
-                bne ifHandlerLoop
-                   
+                bne ifHandlerLoop        
                 bra endIfHandlerLoop
 
             returnFromOpCodeTrue:
@@ -168,7 +208,7 @@ ifHandler:
                 beq @gotoStartIfHandler
                 jmp startOrModeLoop
                 @gotoStartIfHandler:
-                jmp startIfHandler
+                jmp ifHandlerLoop
     
             endIfHandlerLoop:
                     bra @startFindBracketLoop
@@ -259,6 +299,7 @@ _commandLoop:
          jmp endMainLoop
          @loopConditionSuccess:
         SUB_WORD_16_IND ZP_PTR_CODE, startPos, LOGIC_ENTRY_CURRENT_POINT_OFFSET, ZP_PTR_LE
+        DEBUG_PRINT
         ; /* Emergency exit */
 		; if (key[KEY_F12]) {
 		; 	////lprintf("info: Exiting MEKA due to F12, logic: %d, posn: %d",
@@ -275,6 +316,16 @@ _commandLoop:
         cmp #$FE
         beq @goto
         @default:
+            LOAD_CODE_WIN_CODE
+            asl
+            sta jumpOffset
+
+            INC_CODE
+            
+            LDA #LOGIC_COMMANDS_BANK
+            sta RAM_BANK
+            ldx jumpOffset
+            jmp (jmpTableCommands,x)
 
         bra mainLoop
         @goto:
