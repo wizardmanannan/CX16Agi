@@ -221,6 +221,11 @@ jmpTableIf:
 .addr b1Right_posnCCall
 
 
+jmpTableCommands:
+.word $0
+
+
+
 returnAddress: .word $0
 var1: .byte $0
 var2: .byte $0

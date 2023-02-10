@@ -22,6 +22,22 @@ lda codeBank
 sta RAM_BANK
 .endmacro
 
+.macro CODE_JUMP ;requires local variables @disp, @b1 and @b2 to be in scope
+    lda (ZP_PTR_CODE)
+    sta @b1
+    inc ZP_PTR_CODE
+
+    lda (ZP_PTR_CODE)
+    sta @b2
+    inc ZP_PTR_CODE
+    LEFT_SHIFT_16 @b2, #$8, @disp
+
+    ORA_16 @b1, @disp, @disp 
+
+    ADD_WORD_16 ZP_PTR_CODE, @disp, ZP_PTR_CODE
+.endmacro
+
+;ifHelpers
  closingIfBracket:
             INC_CODE
             INC_CODE
@@ -88,14 +104,15 @@ bra @start
     @endOrModeLoop:
     jmp ifHandlerLoop
 
-
-.macro IF_HANDLER
+;endIfHelpers
+ifHandler:
         jmp startIfHandler
         stillProcessing: .byte $1
         notMode: .byte FALSE
         orMode: .byte FALSE
 
         startIfHandler:
+        INC_CODE
         lda #TRUE
         sta stillProcessing
         ifHandlerLoop:
@@ -159,64 +176,70 @@ bra @start
 
             returnFromOpCodeTrueAfterNotMode:
                 lda orMode
-                beq startIfHandler
+                beq @gotoStartIfHandler
                 jmp startOrModeLoop
+                @gotoStartIfHandler:
+                jmp startIfHandler
     
-endIfHandlerLoop:
-        CATCH_UP_CODE
-        bra @startFindBracketLoop
-        @ch: .byte $0
-        @b1: .word $0
-        @b2: .word $0
-        @disp: .word $0
-        @startFindBracketLoop:
-            lda (ZP_PTR_CODE)
-            sta @ch
-            
-            inc ZP_PTR_CODE
+            endIfHandlerLoop:
+                    CATCH_UP_CODE
+                    bra @startFindBracketLoop
+                    @ch: .byte $0
+                    @b1: .word $0
+                    @b2: .word $0
+                    @disp: .word $0
+                    @startFindBracketLoop:
+                        lda (ZP_PTR_CODE)
+                        sta @ch
+                        
+                        inc ZP_PTR_CODE
 
-            cmp #$FF
-            beq @FFResult
+                        cmp #$FF
+                        beq @FFResult
 
-            cmp #$0E
-            beq @0EResult
+                        cmp #$0E
+                        beq @0EResult
 
-            GREATER_THAN_OR_EQ_8 @ch, #$FC, @startFindBracketLoop
+                        GREATER_THAN_OR_EQ_8 @ch, #$FC, @startFindBracketLoop
 
-            ldx @ch
-            lda numArgs,x
-            sta @disp
+                        ldx @ch
+                        lda numArgs,x
+                        sta @disp
 
-            ADD_WORD_16 ZP_PTR_CODE, @disp, ZP_PTR_CODE
-            bra @startFindBracketLoop
+                        ADD_WORD_16 ZP_PTR_CODE, @disp, ZP_PTR_CODE
+                        bra @startFindBracketLoop
 
-            @0EResult:
-            lda (ZP_PTR_CODE)
-            sta @ch
-            INC ZP_PTR_CODE
-            LEFT_SHIFT_16 @ch, #$1, @disp
-            ADD_WORD_16 ZP_PTR_CODE, @disp, ZP_PTR_CODE
+                        @0EResult:
+                        lda (ZP_PTR_CODE)
+                        sta @ch
+                        INC ZP_PTR_CODE
+                        LEFT_SHIFT_16 @ch, #$1, @disp
+                        ADD_WORD_16 ZP_PTR_CODE, @disp, ZP_PTR_CODE
 
-            bra @startFindBracketLoop
-            @FFResult:
-            lda (ZP_PTR_CODE)
-            sta @b1
-            inc ZP_PTR_CODE
+                        bra @startFindBracketLoop
+                        @FFResult:
+                        CODE_JUMP
+                        bra @endFindBracketLoop
 
-            lda (ZP_PTR_CODE)
-            sta @b2
-            inc ZP_PTR_CODE
-            LEFT_SHIFT_16 @b2, #$8, @disp
+                    @endFindBracketLoop:
+                    jsr refreshCodeWindow
+                    endifFunction:
+                        jmp mainLoop
 
-            ORA_16 @b1, @disp, @disp 
-            
-            ADD_WORD_16 ZP_PTR_CODE, @disp, ZP_PTR_CODE
-            bra @endFindBracketLoop
+;commandLoopHelpers
+goto:
+    bra @start
+    @b1: .byte $0
+    @b2: .byte $0
+    @disp: .byte $0
+    @start:
+    CATCH_UP_CODE
+    inc ZP_PTR_CODE
+    CODE_JUMP
+    jsr refreshCodeWindow
+    jmp mainLoop
 
-        @endFindBracketLoop:
-        jsr refreshCodeWindow
-        endifFunction:
-.endmacro
+;endCommandLoopHelpers
 
 _commandLoop:
          jmp start
@@ -250,6 +273,7 @@ _commandLoop:
          beq @loopConditionSuccess
          jmp endMainLoop
          @loopConditionSuccess:
+        SUB_WORD_16_IND ZP_PTR_CODE, startPos, LOGIC_ENTRY_CURRENT_POINT_OFFSET, ZP_PTR_LE
         ; /* Emergency exit */
 		; if (key[KEY_F12]) {
 		; 	////lprintf("info: Exiting MEKA due to F12, logic: %d, posn: %d",
@@ -258,25 +282,19 @@ _commandLoop:
 		; }
         LOAD_CODE_WIN_CODE
         sta codeAtTimeOfLastBankSwitch
-
-		; instructionCodeBank = getBankBasedOnCode(codeAtTimeOfLastBankSwitch);
-        ; if (*code < 0xfe)
-		; {
-        ; }
-        ;else {ch
-                ;switch (codeAtTimeOfLastBankSwitch) {
-			    ;case 0xfe: 
-                ;case 0xff:
-                INC_CODE
-
-                IF_HANDLER
-                ;}
-            ;}
-
-
-         SUB_WORD_16_IND ZP_PTR_CODE, startPos, LOGIC_ENTRY_CURRENT_POINT_OFFSET, ZP_PTR_LE
-
-         jmp mainLoop
-         endMainLoop:
-         rts
+        cmp #$FF
+        bne @checkGoTo
+        jmp ifHandler
+        bra mainLoop
+        @checkGoTo:
+        cmp #$FE
+        beq @goto
+        @default:
+        
+        bra mainLoop
+        @goto:
+        jmp goto
+        bra mainLoop
+        endMainLoop:
+        rts
 .endif
