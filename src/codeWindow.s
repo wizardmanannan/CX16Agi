@@ -40,6 +40,19 @@ jsr refreshCodeWindow
 @end:
 .endmacro
 
+.macro INC_CODE_BY jumpAmount
+.local @start
+.local @end
+
+ADD_WORD_16 cwCurrentCode, jumpAmount, cwCurrentCode
+lda cwCurrentCode
+cmp CODE_WINDOW_SIZE
+bcc @end
+CATCH_UP_CODE
+jsr refreshCodeWindow
+@end:
+.endmacro
+
 .macro CATCH_UP_CODE ;Warning Invalidates The Code Window Call Refresh Afterwards
 ADD_WORD_16_8 ZP_PTR_CODE, cwCurrentCode, ZP_PTR_CODE
 
