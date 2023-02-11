@@ -36,7 +36,7 @@
 #define CODE_WINDOW_SIZE 10
 //#define VERBOSE_STRING_CHECK
 //#define VERBOSE_LOGIC_EXEC
-#define VERBOSE_SCRIPT_START
+//#define VERBOSE_SCRIPT_START
 //#define VERBOSE_PRINT_COUNTER;
 //#define VERBOSE_MENU
 //#define VERBOSE_MENU_DUMP
@@ -2887,6 +2887,12 @@ void ifHandler(byte** data, byte codeBank)
 	while (stillProcessing) {
 		ch = *(*data)++;
 
+		if (printCounter == 8)
+		{
+			printf("The value is now %d and ch is %d", **data, ch);
+			exit(0);
+		}
+
 #ifdef DEBUG
 		if (ch <= 18) {
 			sprintf(debugString, "%s [%x]           ", testCommands[ch].commandName, ch);
@@ -2942,6 +2948,10 @@ void ifHandler(byte** data, byte codeBank)
 			if (notMode) testVal = (testVal ? FALSE : TRUE);
 			notMode = 0;
 			if (testVal) {
+				if (printCounter == 8)
+				{
+					printf("Here the data is %d and data + 1 is %d", **data, *((*data) + 1));
+				}
 				if (orMode) {
 					/* Find the closing OR. It can't just search for 0xfc
 					** because this could be a parameter for one of the test
@@ -3077,6 +3087,11 @@ void executeLogic(int logNum)
 	RAM_BANK = currentLogicFile.codeBank;
 
 	while ((code < endPos) && stillExecuting) {
+
+		if (printCounter > 10)
+		{
+			exit(0);
+		}
 
 		memcpy(&codeWindow[0], code, CODE_WINDOW_SIZE);
 
