@@ -127,7 +127,7 @@ b1Greatern:
     LOAD_CODE_WIN_CODE
     sta var2
     INC_CODE
-
+    
     LESS_THAN_OR_EQ_8 var2, var1, returnFromOpCodeFalse, returnFromOpCodeTrue
 
 b1Greaterv:

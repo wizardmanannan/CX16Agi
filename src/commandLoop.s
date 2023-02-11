@@ -22,8 +22,13 @@ numArgs: .byte $0,$2,$2,$2,$2,$2,$2,$1,$1,$1,$2,$5,$1,$0,$0,$2,$5,$5,$5
 
 
 .ifdef DEBUG
+
+.import _exit
+
 CHROUT   = $FFD2
 NEWLINE = $0D
+printCounter: .byte $0
+stopAt: .byte $8
 
 print_hex_digit:
    cmp #$A
@@ -56,6 +61,13 @@ print_hex:
 
 .macro DEBUG_PRINT
     .ifdef DEBUG
+        lda printCounter
+        cmp stopAt
+        bne @print
+        lda #$0
+        jsr _exit
+        @print:
+        inc printCounter
         LOAD_CODE_WIN_CODE
         jsr print_hex
     .endif
@@ -149,10 +161,10 @@ ifHandler:
 
         ifHandlerLoop:
         INC_CODE
-        LOAD_CODE_WIN_CODE
 
         DEBUG_PRINT
 
+        LOAD_CODE_WIN_CODE
         cmp #$FF
         beq @closingIfBracketJmp
 
@@ -183,7 +195,6 @@ ifHandler:
             LDA #LOGIC_COMMANDS_BANK
             sta RAM_BANK
             ldx jumpOffset
-            stp
             jmp (jmpTableIf,x)
             
             returnFromOpCodeFalse:
@@ -205,6 +216,7 @@ ifHandler:
 
             returnFromOpCodeTrueAfterNotMode:
                 lda orMode
+                stp
                 beq @gotoStartIfHandler
                 jmp startOrModeLoop
                 @gotoStartIfHandler:
@@ -327,10 +339,10 @@ _commandLoop:
             ldx jumpOffset
             jmp (jmpTableCommands,x)
 
-        bra mainLoop
+        jmp mainLoop
         @goto:
         jmp goto
-        bra mainLoop
+        jmp mainLoop
         endMainLoop:
         rts
 .endif
