@@ -28,7 +28,7 @@ numArgs: .byte $0,$2,$2,$2,$2,$2,$2,$1,$1,$1,$2,$5,$1,$0,$0,$2,$5,$5,$5
 CHROUT   = $FFD2
 NEWLINE = $0D
 printCounter: .byte $0
-stopAt: .byte $8
+stopAt: .byte $10
 
 print_hex_digit:
    cmp #$A
@@ -59,8 +59,7 @@ print_hex:
 
 .endif
 
-.macro DEBUG_PRINT
-    .ifdef DEBUG
+ debugPrint:
         lda printCounter
         cmp stopAt
         bne @print
@@ -70,8 +69,13 @@ print_hex:
         inc printCounter
         LOAD_CODE_WIN_CODE
         jsr print_hex
+        rts
+
+.macro DEBUG_PRINT
+    .ifdef DEBUG
+        jsr debugPrint
     .endif
-    .endmacro
+.endmacro
 
 .macro SET_BANK_TO_CODE_BANK
 lda codeBank
@@ -158,11 +162,14 @@ ifHandler:
         jmp ifHandlerLoop
         notMode: .byte FALSE
         orMode: .byte FALSE
-
+        ch: .byte $0
         ifHandlerLoop:
+
+        LOAD_CODE_WIN_CODE
+        sta ch
         INC_CODE
 
-        DEBUG_PRINT
+        lda ch
 
         LOAD_CODE_WIN_CODE
         cmp #$FF
@@ -177,15 +184,19 @@ ifHandler:
         bra @default
 
         @closingIfBracketJmp:
+            DEBUG_PRINT
             jmp closingIfBracket
         
         @toggleNotModeJmp:
+            DEBUG_PRINT
             jmp toggleNotMode
 
         @checkOrModeJmp:
+            DEBUG_PRINT
             jmp checkOrMode
 
         @default:
+            DEBUG_PRINT
             LOAD_CODE_WIN_CODE
             asl
             sta jumpOffset
@@ -216,7 +227,6 @@ ifHandler:
 
             returnFromOpCodeTrueAfterNotMode:
                 lda orMode
-                stp
                 beq @gotoStartIfHandler
                 jmp startOrModeLoop
                 @gotoStartIfHandler:
@@ -267,6 +277,7 @@ ifHandler:
 
 ;commandLoopHelpers
 goto:
+    DEBUG_PRINT
     bra @start
     @b1: .byte $0
     @b2: .byte $0
@@ -311,7 +322,6 @@ _commandLoop:
          jmp endMainLoop
          @loopConditionSuccess:
         SUB_WORD_16_IND ZP_PTR_CODE, startPos, LOGIC_ENTRY_CURRENT_POINT_OFFSET, ZP_PTR_LE
-        DEBUG_PRINT
         ; /* Emergency exit */
 		; if (key[KEY_F12]) {
 		; 	////lprintf("info: Exiting MEKA due to F12, logic: %d, posn: %d",
@@ -322,13 +332,16 @@ _commandLoop:
         sta codeAtTimeOfLastBankSwitch
         cmp #$FF
         bne @checkGoTo
+        DEBUG_PRINT
         jmp ifHandler
         bra mainLoop
         @checkGoTo:
+        DEBUG_PRINT
         cmp #$FE
         beq @goto
         @default:
             LOAD_CODE_WIN_CODE
+            DEBUG_PRINT
             asl
             sta jumpOffset
 
@@ -341,6 +354,7 @@ _commandLoop:
 
         jmp mainLoop
         @goto:
+        DEBUG_PRINT
         jmp goto
         jmp mainLoop
         endMainLoop:

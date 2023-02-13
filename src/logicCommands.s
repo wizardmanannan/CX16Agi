@@ -142,15 +142,15 @@ b1Greaterv:
 b1Isset:
     GET_VAR_OR_FLAG FLAGS_AREA_START_GOLDEN_OFFSET, var1
     INC_CODE
-
-    bne @fail
+    lda var1
+    beq @fail
     jmp returnFromOpCodeTrue
     @fail:
     jmp returnFromOpCodeFalse
 
 b1Issetv:
     GET_VAR_OR_FLAG_VAR_OFFSET FLAGS_AREA_START_GOLDEN_OFFSET, var1
-
+    lda var1
     bne @fail
     jmp returnFromOpCodeTrue
     @fail:
