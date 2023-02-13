@@ -1334,10 +1334,7 @@ void bBUpdateObjects()
 		getViewTab(&localViewtab, entryNum);
 
 #ifdef VERBOSE_UPDATE_OBJECTS
-		if (debugStop && entryNum == 3)
-		{
-			printf("Checking entry num %d it has objFlags of %d \n", entryNum, objFlags);
-		}
+		printf("Checking entry num %d it has objFlags of %d \n", entryNum, objFlags);
 #endif // VERBOSE_UPDATE_OBJECTS
 
 

@@ -9,6 +9,8 @@ LOGIC_ENTRY_PARAMETERS_OFFSET =  0
 .include "logicCommands.s"
 .include "codeWindow.s"
 
+.import _debugPrint
+
 ZP_PTR_LF = $02
 ZP_PTR_LE = $04
 
@@ -59,21 +61,15 @@ print_hex:
 
 .endif
 
- debugPrint:
-        lda printCounter
-        cmp stopAt
-        bne @print
-        lda #$0
-        jsr _exit
-        @print:
-        inc printCounter
-        LOAD_CODE_WIN_CODE
-        jsr print_hex
-        rts
-
-.macro DEBUG_PRINT
+.macro DEBUG_PRINT toPrint
     .ifdef DEBUG
-        jsr debugPrint
+        .ifblank
+            LOAD_CODE_WIN_CODE
+        .endif
+        .ifnblank
+            lda toPrint
+        .endif
+        jsr _debugPrint
     .endif
 .endmacro
 
@@ -184,19 +180,19 @@ ifHandler:
         bra @default
 
         @closingIfBracketJmp:
-            DEBUG_PRINT
+            DEBUG_PRINT ch
             jmp closingIfBracket
         
         @toggleNotModeJmp:
-            DEBUG_PRINT
+            DEBUG_PRINT ch
             jmp toggleNotMode
 
         @checkOrModeJmp:
-            DEBUG_PRINT
+            DEBUG_PRINT ch
             jmp checkOrMode
 
         @default:
-            DEBUG_PRINT
+            DEBUG_PRINT ch
             LOAD_CODE_WIN_CODE
             asl
             sta jumpOffset
@@ -216,9 +212,10 @@ ifHandler:
                 returnFromOpCodeFalseAfterNotMode:
 
                 SET_BANK_TO_CODE_BANK
-                lda orMode
-                bne ifHandlerLoop        
-                bra endIfHandlerLoop
+                lda orMode      
+                
+                beq endIfHandlerLoop
+                jmp ifHandlerLoop  
 
             returnFromOpCodeTrue:
                 SET_BANK_TO_CODE_BANK

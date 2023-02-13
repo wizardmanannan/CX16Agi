@@ -58,8 +58,10 @@ extern int sprintfBanked(const char* buffer, byte bank, char const* const format
 extern void getLogicDirectory(AGIFilePosType* returnedLogicDirectory, AGIFilePosType* logicDirectoryLocation);
 extern void setResourceDirectory(AGIFilePosType* newLogicDirectory, AGIFilePosType* logicDirectoryLocation);
 
-extern boolean debugStop;
+extern void debugPrint(byte toPrint);
 
+extern long stopAt;
+extern long exitAt;
 extern long opCounter;
 
 #endif

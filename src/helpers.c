@@ -166,6 +166,27 @@ void getLogicDirectory(AGIFilePosType* returnedLogicDirectory, AGIFilePosType* l
 	RAM_BANK = previousRamBank;
 }
 
+long opCounter = 1;
+long stopAt = 999999;
+long exitAt = 8;
+
+void debugPrint(byte toPrint)
+{
+	printf("Op %lu, %p\n", opCounter, toPrint);
+
+	if (opCounter == stopAt)
+	{
+		asm("stp");
+	}
+
+	if (opCounter == exitAt)
+	{
+		exit(0);
+	}
+
+	opCounter++;
+}
+
 
 
 

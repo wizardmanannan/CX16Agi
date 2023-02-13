@@ -63,7 +63,6 @@ int numOfMenus = 0;
 MENU* the_menu = (MENU*)&BANK_RAM[MENU_START];
 MENU* the_menuChildren = (MENU*)&BANK_RAM[MENU_CHILD_START];
 
-long opCounter = 0;
 int printCounter = 1;
 
 void executeLogic(int logNum);
