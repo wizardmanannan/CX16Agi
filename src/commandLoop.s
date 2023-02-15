@@ -63,10 +63,10 @@ print_hex:
 
 .macro DEBUG_PRINT toPrint
     .ifdef DEBUG
-        .ifblank
+        .ifblank toPrint
             LOAD_CODE_WIN_CODE
         .endif
-        .ifnblank
+        .ifnblank toPrint
             lda toPrint
         .endif
         jsr _debugPrint
@@ -160,14 +160,12 @@ ifHandler:
         orMode: .byte FALSE
         ch: .byte $0
         ifHandlerLoop:
-
         LOAD_CODE_WIN_CODE
         sta ch
         INC_CODE
 
         lda ch
 
-        LOAD_CODE_WIN_CODE
         cmp #$FF
         beq @closingIfBracketJmp
 
@@ -193,11 +191,9 @@ ifHandler:
 
         @default:
             DEBUG_PRINT ch
-            LOAD_CODE_WIN_CODE
+            lda ch
             asl
             sta jumpOffset
-
-            INC_CODE
             
             LDA #LOGIC_COMMANDS_BANK
             sta RAM_BANK
@@ -330,6 +326,7 @@ _commandLoop:
         cmp #$FF
         bne @checkGoTo
         DEBUG_PRINT
+        INC_CODE
         jmp ifHandler
         bra mainLoop
         @checkGoTo:
@@ -338,7 +335,7 @@ _commandLoop:
         beq @goto
         @default:
             LOAD_CODE_WIN_CODE
-            DEBUG_PRINT
+            DEBUG_PRINT ch
             asl
             sta jumpOffset
 
