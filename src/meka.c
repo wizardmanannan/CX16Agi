@@ -284,7 +284,7 @@ void main()
 {
    int ret, oldCount=0;
 
-   printf("Size of lruCache %d", sizeof(LRUCache));
+   printf("The address of opcounter is %p", (byte*)(&opCounter));
 
    //chdir("..\\KQ1-2917");
    //chdir("..\\COMPILER\\NEW\\SAMPLE\\TEMPLATE");

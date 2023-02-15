@@ -167,12 +167,18 @@ void getLogicDirectory(AGIFilePosType* returnedLogicDirectory, AGIFilePosType* l
 }
 
 long opCounter = 1;
-long stopAt = 999999;
-long exitAt = 11;
+long stopAt = 9;
+long exitAt = 12;
+boolean stopEvery = FALSE;
 
 void debugPrint(byte toPrint)
 {
 	printf("Op %lu, %p\n", opCounter, toPrint);
+
+	if (stopEvery)
+	{
+		asm("stp");
+	}
 
 	if (opCounter == stopAt)
 	{

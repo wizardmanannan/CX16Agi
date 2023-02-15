@@ -32,9 +32,8 @@ rts
 
 inc cwCurrentCode
 lda cwCurrentCode
-cmp CODE_WINDOW_SIZE
+cmp #CODE_WINDOW_SIZE - 1
 bne @end
-
 stz cwCurrentCode
 jsr refreshCodeWindow
 @end:
@@ -46,7 +45,7 @@ jsr refreshCodeWindow
 
 ADD_WORD_16 cwCurrentCode, jumpAmount, cwCurrentCode
 lda cwCurrentCode
-cmp CODE_WINDOW_SIZE
+cmp #CODE_WINDOW_SIZE - 1
 bcc @end
 CATCH_UP_CODE
 jsr refreshCodeWindow
@@ -63,7 +62,7 @@ sta codeWindowInvalid
 refreshCodeWindow:
     bra @start
     @previousBank: .byte $0
-    @codeIncrement: .word CODE_WINDOW_SIZE + 1
+    @codeIncrement: .word CODE_WINDOW_SIZE - 1
     @start:
     lda codeWindowInvalid
     cmp #TRUE
