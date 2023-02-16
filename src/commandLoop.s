@@ -155,6 +155,8 @@ bra @start
 
 ;endIfHelpers
 ifHandler:
+        stz notMode
+        stz orMode
         jmp ifHandlerLoop
         notMode: .byte FALSE
         orMode: .byte FALSE

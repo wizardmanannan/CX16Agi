@@ -167,8 +167,8 @@ void getLogicDirectory(AGIFilePosType* returnedLogicDirectory, AGIFilePosType* l
 }
 
 long opCounter = 1;
-long stopAt = 9;
-long exitAt = 12;
+long stopAt = 110;
+long exitAt = 13;
 boolean stopEvery = FALSE;
 
 void debugPrint(byte toPrint)
