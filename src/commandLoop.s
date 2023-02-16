@@ -127,31 +127,30 @@ bra @start
     LOAD_CODE_WIN_CODE
     sta @ch
     INC_CODE
+    
     lda @ch
     cmp #$FC
-    beq @endOrModeLoop
 
+    @eqFC:
+    bne @gtFC
+    jmp ifHandlerLoop
+
+    @gtFC:
     LESS_THAN_OR_EQ_8 #$FC, @ch, startOrModeLoop
+
 
     cmp #$0E
     bne @else
-    lda ZP_PTR_CODE
-    sta ZP_TMP
-    inc ZP_PTR_CODE
 
-    LEFT_SHIFT_16 ZP_TMP, #$1, ZP_TMP 
+    @0E:
+    LEFT_SHIFT_16 @ch, #$1, @ch 
 
-    ADD_WORD_16 ZP_PTR_CODE, ZP_TMP, ZP_PTR_CODE
-    jsr refreshCodeWindow
+    INC_CODE_BY @ch
     jmp startOrModeLoop
 
     @else:
         ADD_WORD_16_8 numArgs, @ch, ZP_TMP
-        ADD_WORD_16 ZP_PTR_CODE, ZP_TMP, ZP_PTR_CODE
-        jsr refreshCodeWindow
-        jmp startOrModeLoop
-    @endOrModeLoop:
-    jmp ifHandlerLoop
+        INC_CODE_BY @ch
 
 ;endIfHelpers
 ifHandler:
