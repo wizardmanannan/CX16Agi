@@ -23,44 +23,6 @@ jumpOffset: .byte $0
 numArgs: .byte $0,$2,$2,$2,$2,$2,$2,$1,$1,$1,$2,$5,$1,$0,$0,$2,$5,$5,$5
 
 
-.ifdef DEBUG
-
-.import _exit
-
-CHROUT   = $FFD2
-NEWLINE = $0D
-printCounter: .byte $0
-stopAt: .byte $10
-
-print_hex_digit:
-   cmp #$A
-   bpl @letter
-   ora #$30    ; PETSCII numbers: 1=$31, 2=$32, etc.
-   bra @print
-@letter:
-   clc
-   adc #$37; PETSCII letters: A=$41, B=$42, etc.
-@print:
-   jsr CHROUT
-   rts
-
-
-print_hex:
-   pha   ; push original A to stack
-   lsr
-   lsr
-   lsr
-   lsr      ; A = A >> 4
-   jsr print_hex_digit
-   pla      ; pull original A back from stack
-   and #$0F ; A = A & 0b00001111
-   jsr print_hex_digit
-   lda #NEWLINE
-   jsr CHROUT
-   rts
-
-.endif
-
 .macro DEBUG_PRINT toPrint
     .ifdef DEBUG
         .ifblank toPrint
@@ -331,27 +293,41 @@ _commandLoop:
         jmp ifHandler
         bra mainLoop
         @checkGoTo:
-        DEBUG_PRINT
         cmp #$FE
-        beq @goto
-        @default:
-            LOAD_CODE_WIN_CODE
-            DEBUG_PRINT ch
-            asl
-            sta jumpOffset
-
-            INC_CODE
-            
-            LDA #LOGIC_COMMANDS_BANK
-            sta RAM_BANK
-            ldx jumpOffset
-            jmp (jmpTableCommands,x)
-
-        jmp mainLoop
-        @goto:
+        bne @default
         DEBUG_PRINT
         jmp goto
         jmp mainLoop
+        @default:          
+            LDA #LOGIC_COMMANDS_BANK
+            sta RAM_BANK
+
+            DEBUG_PRINT
+            
+            LOAD_CODE_WIN_CODE
+            cmp #$80
+            bcs @commands2
+            @commands1:
+            asl
+            sta jumpOffset
+            INC_CODE
+            ldx jumpOffset
+            jmp (jmpTableCommands1,x)
+
+            @commands2:
+            sec
+            sbc #$80 
+            asl
+            sta jumpOffset
+            INC_CODE
+            ldx jumpOffset
+            stp
+            jmp (jmpTableCommands2,x)
+
+            afterLogicCommand:
+            SET_BANK_TO_CODE_BANK
+
+            jmp mainLoop
         endMainLoop:
         rts
 .endif
