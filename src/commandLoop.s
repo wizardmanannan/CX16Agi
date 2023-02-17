@@ -299,12 +299,14 @@ _commandLoop:
         jmp goto
         jmp mainLoop
         @default:          
-            LDA #LOGIC_COMMANDS_BANK
-            sta RAM_BANK
-
             DEBUG_PRINT
             
             LOAD_CODE_WIN_CODE
+            stp
+            tax
+            ldy codeBankArray,x
+            sty RAM_BANK
+            
             cmp #$80
             bcs @commands2
             @commands1:
@@ -321,10 +323,9 @@ _commandLoop:
             sta jumpOffset
             INC_CODE
             ldx jumpOffset
-            stp
             jmp (jmpTableCommands2,x)
 
-            afterLogicCommand:
+            _afterLogicCommand:
             SET_BANK_TO_CODE_BANK
 
             jmp mainLoop

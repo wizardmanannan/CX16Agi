@@ -16,6 +16,7 @@ LOGICCOMMANDS_INC = 1
 .import _b1Right_posn
 
 .import _b4Set_menu
+.import _b4Set_menu_item
 
 .macro GET_VAR_OR_FLAG areaStartOffset, result
 
@@ -71,6 +72,12 @@ jmp returnFromOpCodeFalse
 jmp returnFromOpCodeFalse
 
 .endmacro
+
+
+noOp_1:
+    INC_CODE
+    stp
+    jmp _afterLogicCommand
 
 .segment "BANKRAM05"
 b1Equaln:
@@ -201,7 +208,7 @@ b1Right_posnCCall:
 b5NoOp_1:
     INC_CODE
     stp
-    jmp afterLogicCommand
+    jmp _afterLogicCommand
 
 .segment "CODE"
 jmpTableIf:
@@ -371,7 +378,7 @@ jmpTableCommands2:
 .word $0
 .word $0
 .word $0
-.addr b5NoOp_1
+.addr noOp_1
 .word $0
 .word $0
 .word $0

@@ -11,7 +11,7 @@ codeWindow: .res CODE_WINDOW_SIZE
 cwCurrentCode: .byte $0
 codeWindowAddress: .addr codeWindow
 codeWindowInvalid: .byte TRUE
-
+codeBankArray: .byte $5,$5,$5,$5,$5,$5,$5,$5,$5,$5,$5,$5,$5,$5,$5,$5,$5,$5,$5,$5,$5,$5,$5,$5,$5,$5,$5,$5,$5,$5,$5,$5,$5,$5,$5,$5,$5,$5,$5,$5,$5,$5,$5,$5,$5,$5,$5,$5,$5,$5,$5,$5,$5,$5,$5,$5,$5,$5,$5,$5,$5,$5,$5,$5,$5,$5,$5,$5,$5,$5,$5,$5,$5,$5,$5,$5,$5,$5,$5,$5,$5,$5,$5,$5,$5,$5,$5,$5,$5,$5,$5,$5,$5,$5,$5,$5,$5,$5,$5,$5,$5,$5,$5,$5,$5,$5,$5,$5,$5,$5,$5,$5,$5,$5,$5,$5,$5,$5,$5,$5,$5,$5,$5,$5,$5,$5,$5,$5,$5,$5,$5,$5,$5,$5,$5,$5,$5,$5,$5,$5,$5,$5,$4,$5,$5,$5,$5,$5,$5,$5,$5,$5,$5,$5,$5,$5,$4,$4,$5,$5,$5,$5,$5,$5,$5,$5,$5,$5,$5,$5,$5,$5,$5,$5,$5,$5,$5,$5,$5,$5,$5
 codeWindowInit:
 lda codeWindowAddress
 sta ZP_PTR_CODE_WIN
@@ -99,12 +99,14 @@ refreshCodeWindow:
 rts
 
 _loadAndIncWinCode:
-
+    bra @start
+    @result: .byte $0
+    @start:
     LOAD_CODE_WIN_CODE
-    tax
-
+    sta @result
+    
     INC_CODE
     
-    txa
+    lda @result
     rts
 .endif

@@ -13,5 +13,6 @@ extern boolean _b1Greatern();
 
 extern void commandLoop(LOGICFile* currentLogicFile);
 extern byte loadAndIncWinCode();
-
+extern void afterLogicCommand();
+extern void initCommands();
 #endif

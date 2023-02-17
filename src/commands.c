@@ -38,8 +38,8 @@
 //#define VERBOSE_LOGIC_EXEC
 #define VERBOSE_SCRIPT_START
 //#define VERBOSE_PRINT_COUNTER;
-//#define VERBOSE_MENU
-//#define VERBOSE_MENU_DUMP
+#define VERBOSE_MENU
+#define VERBOSE_MENU_DUMP
 //#define VERBOSE_MESSAGE_TEXT
 
 //#define  DEBUG
@@ -206,7 +206,7 @@ char* getMessagePointer(byte logicFileNo, byte messageNo)
 
 	result = (char*)logicFile.messages[messageNo];
 
-	for (i = 1; i < strlen(result) && *result == ' '; i++)
+	for (i = 1; i < strlen(result) && *result == ' '; i++) //Skip tabbing
 	{
 		result = (char*)logicFile.messages[messageNo + i];
 	}
@@ -2366,7 +2366,7 @@ int (*(menuFunctions[50]))() = {
 	menuEvent45, menuEvent46, menuEvent47, menuEvent48, menuEvent49
 };
 
-void b4Set_menu(byte** data) // 1, 0x00 
+void b4Set_menu() // 1, 0x00 
 {
 	int messNum, startOffset;
 	char* messData;
@@ -2386,7 +2386,7 @@ void b4Set_menu(byte** data) // 1, 0x00
 	newMenu.proc = 0;
 	newMenu.menuTextBank = currentLogicFile.messageBank;
 
-	messNum = *(*data)++;
+	messNum = loadAndIncWinCode();
 
 	/* Create new menu and allocate space for MAX_MENU_SIZE items */
 	newMenu.text = getMessagePointer(currentLog, messNum - 1);
@@ -2408,9 +2408,11 @@ void b4Set_menu(byte** data) // 1, 0x00
 
 	/* Mark end of menu */
 	setMenu(&newMenu, numOfMenus);
+
+	asm("jmp _afterLogicCommand");
 }
 
-void b4Set_menu_item(byte** data) // 2, 0x00 
+void b4Set_menu_item() // 2, 0x00 
 {
 	int messNum, controllerNum, i;
 	MENU childMenu;
@@ -2418,8 +2420,8 @@ void b4Set_menu_item(byte** data) // 2, 0x00
 
 	getLogicFile(&currentLogicFile, currentLog);
 
-	messNum = *(*data)++;
-	controllerNum = *(*data)++;
+	messNum = loadAndIncWinCode();
+	controllerNum = loadAndIncWinCode();
 
 	if (events[controllerNum].type == NO_EVENT) {
 		events[controllerNum].type = MENU_EVENT;

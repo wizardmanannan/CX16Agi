@@ -5,3 +5,4 @@
     .export _commandLoop
     .export _initAsm
     .export _loadAndIncWinCode
+    .export _afterLogicCommand
