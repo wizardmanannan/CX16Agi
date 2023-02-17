@@ -80,7 +80,7 @@ noOp_1:
     jmp _afterLogicCommand
 
 .segment "BANKRAM05"
-b1Equaln:
+b5Equaln:
     GET_VAR_OR_FLAG VARS_AREA_START_GOLDEN_OFFSET, var1
     INC_CODE
 
@@ -95,7 +95,7 @@ b1Equaln:
     @success:
     jmp returnFromOpCodeTrue
 
-b1Equalv:
+b5Equalv:
     GET_VAR_OR_FLAG VARS_AREA_START_GOLDEN_OFFSET, var1
     INC_CODE
 
@@ -109,7 +109,7 @@ b1Equalv:
     @success:
     jmp returnFromOpCodeTrue
 
-b1Lessn:
+b5Lessn:
     GET_VAR_OR_FLAG VARS_AREA_START_GOLDEN_OFFSET, var1
     INC_CODE
 
@@ -119,7 +119,7 @@ b1Lessn:
 
     GREATER_THAN_OR_EQ_8 var2, var1, returnFromOpCodeFalse, returnFromOpCodeTrue
 
-b1Lessv:
+b5Lessv:
     GET_VAR_OR_FLAG VARS_AREA_START_GOLDEN_OFFSET, var1
     INC_CODE
 
@@ -129,7 +129,7 @@ b1Lessv:
     GREATER_THAN_OR_EQ_8 var2, var1, returnFromOpCodeFalse, returnFromOpCodeTrue
 
 
-b1Greatern:
+b5Greatern:
     GET_VAR_OR_FLAG VARS_AREA_START_GOLDEN_OFFSET, var1
     INC_CODE
 
@@ -139,7 +139,7 @@ b1Greatern:
     
     LESS_THAN_OR_EQ_8 var2, var1, returnFromOpCodeFalse, returnFromOpCodeTrue
 
-b1Greaterv:
+b5Greaterv:
     GET_VAR_OR_FLAG VARS_AREA_START_GOLDEN_OFFSET, var1
     INC_CODE
 
@@ -148,7 +148,7 @@ b1Greaterv:
 
     LESS_THAN_OR_EQ_8 var2, var1, returnFromOpCodeFalse, returnFromOpCodeTrue
 
-b1Isset:
+b5Isset:
     GET_VAR_OR_FLAG FLAGS_AREA_START_GOLDEN_OFFSET, var1
     INC_CODE
     lda var1
@@ -157,7 +157,7 @@ b1Isset:
     @fail:
     jmp returnFromOpCodeFalse
 
-b1Issetv:
+b5Issetv:
     GET_VAR_OR_FLAG_VAR_OFFSET FLAGS_AREA_START_GOLDEN_OFFSET, var1
     lda var1
     bne @fail
@@ -165,43 +165,43 @@ b1Issetv:
     @fail:
     jmp returnFromOpCodeFalse
 
-b1HasCCall:
+b5HasCCall:
    jsr _b1Has
    HANDLE_C_IF_RESULT
 
-b1Obj_in_roomCCall:
+b5Obj_in_roomCCall:
    jsr _b1Obj_in_room
    HANDLE_C_IF_RESULT
 
-b1PosnCCall:
+b5PosnCCall:
    jsr _b1Posn
    HANDLE_C_IF_RESULT
 
-b1ControllerCCall:
+b5ControllerCCall:
     jsr _b1Controller
     HANDLE_C_IF_RESULT
 
-b1Have_keyCCall:
+b5Have_keyCCall:
     jsr _b1Have_key
     HANDLE_C_IF_RESULT
 
-b1SaidCCall:
+b5SaidCCall:
     jsr _b1Said
     HANDLE_C_IF_RESULT
 
-b1Compare_stringsCCall:
+b5Compare_stringsCCall:
     jsr _b1Compare_strings
     HANDLE_C_IF_RESULT
 
-b1Obj_in_boxCCall:
+b5Obj_in_boxCCall:
     jsr _b1Obj_in_box
     HANDLE_C_IF_RESULT
 
-b1Center_posnCCall:
+b5Center_posnCCall:
     jsr _b1Center_posn
     HANDLE_C_IF_RESULT
 
-b1Right_posnCCall:
+b5Right_posnCCall:
     jsr _b1Right_posn
     HANDLE_C_IF_RESULT
 
@@ -213,24 +213,24 @@ b5NoOp_1:
 .segment "CODE"
 jmpTableIf:
 .word $0
-.addr b1Equaln
-.addr b1Equalv
-.addr b1Lessn
-.addr b1Lessv
-.addr b1Greatern
-.addr b1Greaterv
-.addr b1Isset
-.addr b1Issetv
-.addr b1HasCCall
-.addr b1Obj_in_roomCCall
-.addr b1PosnCCall
-.addr b1ControllerCCall
-.addr b1Have_keyCCall
-.addr b1SaidCCall
-.addr b1Compare_stringsCCall
-.addr b1Obj_in_boxCCall
-.addr b1Center_posnCCall
-.addr b1Right_posnCCall
+.addr b5Equaln
+.addr b5Equalv
+.addr b5Lessn
+.addr b5Lessv
+.addr b5Greatern
+.addr b5Greaterv
+.addr b5Isset
+.addr b5Issetv
+.addr b5HasCCall
+.addr b5Obj_in_roomCCall
+.addr b5PosnCCall
+.addr b5ControllerCCall
+.addr b5Have_keyCCall
+.addr b5SaidCCall
+.addr b5Compare_stringsCCall
+.addr b5Obj_in_boxCCall
+.addr b5Center_posnCCall
+.addr b5Right_posnCCall
 
 
 jmpTableCommands1:
@@ -393,7 +393,7 @@ jmpTableCommands2:
 .word $0
 .word $0
 .addr _b4Set_menu
-.word $0
+.addr _b4Set_menu_item
 .word $0
 .word $0
 .word $0

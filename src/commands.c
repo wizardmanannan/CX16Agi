@@ -36,10 +36,10 @@
 #define CODE_WINDOW_SIZE 10
 //#define VERBOSE_STRING_CHECK
 //#define VERBOSE_LOGIC_EXEC
-#define VERBOSE_SCRIPT_START
+//#define VERBOSE_SCRIPT_START
 //#define VERBOSE_PRINT_COUNTER;
-#define VERBOSE_MENU
-#define VERBOSE_MENU_DUMP
+//#define VERBOSE_MENU
+//#define VERBOSE_MENU_DUMP
 //#define VERBOSE_MESSAGE_TEXT
 
 //#define  DEBUG
@@ -2439,7 +2439,7 @@ void b4Set_menu_item() // 2, 0x00
 	testMenus();
 #endif // VERBOSE_MENU
 
-
+	asm("jmp _afterLogicCommand");
 }
 
 void b4Submit_menu(byte** data) // 0, 0x00 
