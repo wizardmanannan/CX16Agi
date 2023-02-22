@@ -39,7 +39,7 @@
 //#define VERBOSE_SCRIPT_START
 //#define VERBOSE_PRINT_COUNTER;
 //#define VERBOSE_MENU
-//#define VERBOSE_MENU_DUMP
+#define VERBOSE_MENU_DUMP
 //#define VERBOSE_MESSAGE_TEXT
 
 //#define  DEBUG
@@ -480,179 +480,50 @@ boolean b1Right_posn(byte** data) // 5, 0x00
 
 /* ACTION COMMANDS */
 
-void b1Increment(byte** data) // 1, 0x80 
-{
-	if (var[*(*data)] < 0xFF)
-		var[*(*data)]++;
-	(*data)++;
 
-	/* var[*(*data)++]++;  This one doesn't check bounds */
-}
+#pragma code-name (pop)
+#pragma code-name (push, "BANKRAM02")
 
-void b1Decrement(byte** data) // 1, 0x80 
-{
-	if (var[*(*data)] > 0)
-		var[*(*data)]--;
-	(*data)++;
-
-	/* var[*(*data)++]--;  This one doesn't check bounds */
-}
-
-void b1Assignn(byte** data) // 2, 0x80 
-{
-	int varNum, value;
-
-	varNum = *(*data)++;
-	value = *(*data)++;
-	var[varNum] = value;
-}
-
-void b1Assignv(byte** data) // 2, 0xC0 
-{
-	int var1, var2;
-
-	var1 = *(*data)++;
-	var2 = *(*data)++;
-	var[var1] = var[var2];
-}
-
-void b1Addn(byte** data) // 2, 0x80 
-{
-	int varNum, value;
-
-	varNum = *(*data)++;
-	value = *(*data)++;
-	var[varNum] += value;
-}
-
-void b1Addv(byte** data) // 2, 0xC0 
-{
-	int var1, var2;
-
-	var1 = *(*data)++;
-	var2 = *(*data)++;
-	var[var1] += var[var2];
-}
-
-void b1Subn(byte** data) // 2, 0x80 
-{
-	int varNum, value;
-
-	varNum = *(*data)++;
-	value = *(*data)++;
-	var[varNum] -= value;
-}
-
-void b1Subv(byte** data) // 2, 0xC0 
-{
-	int var1, var2;
-
-	var1 = *(*data)++;
-	var2 = *(*data)++;
-	var[var1] -= var[var2];
-}
-
-void b1Lindirectv(byte** data) // 2, 0xC0 
-{
-	int var1, var2;
-
-	var1 = *(*data)++;
-	var2 = *(*data)++;
-	var[var[var1]] = var[var2];
-}
-
-void b1Rindirect(byte** data) // 2, 0xC0 
-{
-	int var1, var2;
-
-	var1 = *(*data)++;
-	var2 = *(*data)++;
-	var[var1] = var[var[var2]];
-}
-
-void b1Lindirectn(byte** data) // 2, 0x80 
-{
-	int varNum, value;
-
-	varNum = *(*data)++;
-	value = *(*data)++;
-	var[var[varNum]] = value;
-}
-
-void b1Set(byte** data) // 1, 0x00 
-{
-	flag[*(*data)++] = TRUE;
-}
-
-void b1Reset(byte** data) // 1, 0x00 
-{
-	flag[*(*data)++] = FALSE;
-}
-
-void b1Toggle(byte** data) // 1, 0x00 
-{
-	int f = *(*data)++;
-
-	flag[f] = (flag[f] ? FALSE : TRUE);
-}
-
-void b1Set_v(byte** data) // 1, 0x80 
-{
-	flag[var[*(*data)++]] = TRUE;
-}
-
-void b1Reset_v(byte** data) // 1, 0x80 
-{
-	flag[var[*(*data)++]] = FALSE;
-}
-
-void b1Toggle_v(byte** data) // 1, 0x80 
-{
-	int f = var[*(*data)++];
-
-	flag[f] = (flag[f] ? FALSE : TRUE);
-}
-
-void b1New_room(byte** data) // 1, 0x00 
+void b2New_room(byte** data) // 1, 0x00 
 {
 	/* This function is handled in meka.c */
 	newRoomNum = *(*data)++;
 	hasEnteredNewRoom = TRUE;
 }
 
-void b1New_room_v(byte** data) // 1, 0x80 
+void b2New_room_v(byte** data) // 1, 0x80 
 {
 	/* This function is handled in meka.c */
 	newRoomNum = var[*(*data)++];
 	hasEnteredNewRoom = TRUE;
 }
 
-void b1Load_logics(byte** data) // 1, 0x00 
+void b2Load_logics(byte** data) // 1, 0x00 
 {
 	trampoline_1Int(&b8LoadLogicFile, *(*data)++, LOGIC_CODE_BANK);
 }
 
-void b1Load_logics_v(byte** data) // 1, 0x80 
+void b2Load_logics_v(byte** data) // 1, 0x80 
 {
 	trampoline_1Int(&b8LoadLogicFile, var[*(*data)++], LOGIC_CODE_BANK);
 }
 
-void b1Call(byte** data) // 1, 0x00 
+void b2Call(byte** data) // 1, 0x00 
 {
 	executeLogic(*(*data)++);
 }
 
-void b1Call_v(byte** data) // 1, 0x80 
+void b2Call_v(byte** data) // 1, 0x80 
 {
 	executeLogic(var[*(*data)++]);
 }
 
-void b1Load_pic(byte** data) // 1, 0x80 
+void b2Load_pic(byte** data) // 1, 0x80 
 {
 	loadPictureFile(var[*(*data)++]);
 }
 
-void b1Draw_pic(byte** data) // 1, 0x80 
+void b2Draw_pic(byte** data) // 1, 0x80 
 {
 	int pNum;
 
@@ -661,19 +532,19 @@ void b1Draw_pic(byte** data) // 1, 0x80
 	drawPic(loadedPictures[pNum].data, loadedPictures[pNum].size, TRUE);
 }
 
-void b1Show_pic(byte** data) // 0, 0x00 
+void b2Show_pic(byte** data) // 0, 0x00 
 {
 	okToShowPic = TRUE;   /* Says draw picture with next object update */
 	/*stretch_blit(picture, working_screen, 0, 0, 160, 168, 0, 20, 640, 336);*/
 	showPicture();
 }
 
-void b1Discard_pic(byte** data) // 1, 0x80 
+void b2Discard_pic(byte** data) // 1, 0x80 
 {
 	discardPictureFile(var[*(*data)++]);
 }
 
-void b1Overlay_pic(byte** data) // 1, 0x80 
+void b2Overlay_pic(byte** data) // 1, 0x80 
 {
 	int pNum;
 
@@ -681,7 +552,7 @@ void b1Overlay_pic(byte** data) // 1, 0x80
 	drawPic(loadedPictures[pNum].data, loadedPictures[pNum].size, FALSE);
 }
 
-void b1Show_pri_screen(byte** data) // 0, 0x00 
+void b2Show_pri_screen(byte** data) // 0, 0x00 
 {
 	//showPriority();
 	showDebugPri();
@@ -691,22 +562,22 @@ void b1Show_pri_screen(byte** data) // 0, 0x00
 
 /************************** VIEW ACTION COMMANDS **************************/
 
-void b1Load_view(byte** data) // 1, 0x00 
+void b2Load_view(byte** data) // 1, 0x00 
 {
 	trampoline_1Int(&b9LoadViewFile, (*(*data)++), VIEW_CODE_BANK_1);
 }
 
-void b1Load_view_v(byte** data) // 1, 0x80 
+void b2Load_view_v(byte** data) // 1, 0x80 
 {
 	trampoline_1Int(&b9LoadViewFile, var[*(*data)++], VIEW_CODE_BANK_1);
 }
 
-void b1Discard_view(byte** data) // 1, 0x00 
+void b2Discard_view(byte** data) // 1, 0x00 
 {
 	trampoline_1Int(&b9DiscardView, *(*data)++, VIEW_CODE_BANK_1);
 }
 
-void b1Animate_obj(byte** data) // 1, 0x00 
+void b2Animate_obj(byte** data) // 1, 0x00 
 {
 	int entryNum;
 	ViewTable localViewTab;
@@ -729,7 +600,7 @@ void b1Animate_obj(byte** data) // 1, 0x00
 	getViewTab(&localViewTab, entryNum);
 }
 
-void b1Unanimate_all(byte** data) // 0, 0x00 
+void b2Unanimate_all(byte** data) // 0, 0x00 
 {
 	int entryNum;
 	ViewTable localViewtab;
@@ -745,7 +616,7 @@ void b1Unanimate_all(byte** data) // 0, 0x00
 	}
 }
 
-void b1Draw(byte** data) // 1, 0x00 
+void b2Draw(byte** data) // 1, 0x00 
 {
 	int entryNum;
 	ViewTable localViewtab;
@@ -764,7 +635,7 @@ void b1Draw(byte** data) // 1, 0x00
 	setViewTab(&localViewtab, entryNum);
 }
 
-void b1Erase(byte** data) // 1, 0x00 
+void b2Erase(byte** data) // 1, 0x00 
 {
 	int entryNum;
 	ViewTable localViewtab;
@@ -777,9 +648,6 @@ void b1Erase(byte** data) // 1, 0x00
 
 	setViewTab(&localViewtab, entryNum);
 }
-
-#pragma code-name (pop)
-#pragma code-name (push, "BANKRAM02")
 
 void b2Position(byte** data) // 3, 0x00 
 {
@@ -985,7 +853,10 @@ void b2Current_cel(byte** data) // 2, 0x40
 	setViewTab(&localViewtab, entryNum);
 }
 
-void b2Current_loop(byte** data) // 2, 0x40 
+#pragma code-name (pop)
+#pragma code-name (push, "BANKRAM03")
+
+void b3Current_loop(byte** data) // 2, 0x40 
 {
 	int entryNum, varNum;
 	ViewTable localViewtab;
@@ -998,7 +869,7 @@ void b2Current_loop(byte** data) // 2, 0x40
 	setViewTab(&localViewtab, entryNum);
 }
 
-void b2Current_view(byte** data) // 2, 0x40 
+void b3Current_view(byte** data) // 2, 0x40 
 {
 	int entryNum, varNum;
 	ViewTable localViewtab;
@@ -1012,7 +883,7 @@ void b2Current_view(byte** data) // 2, 0x40
 	setViewTab(&localViewtab, entryNum);
 }
 
-void b2Number_of_loops(byte** data) // 2, 0x40 
+void b3Number_of_loops(byte** data) // 2, 0x40 
 {
 	int entryNum, varNum;
 	ViewTable localViewtab;
@@ -1026,7 +897,7 @@ void b2Number_of_loops(byte** data) // 2, 0x40
 	setViewTab(&localViewtab, entryNum);
 }
 
-void b2Set_priority(byte** data) // 2, 0x00 
+void b3Set_priority(byte** data) // 2, 0x00 
 {
 	int entryNum;
 	ViewTable localViewtab;
@@ -1040,7 +911,7 @@ void b2Set_priority(byte** data) // 2, 0x00
 	setViewTab(&localViewtab, entryNum);
 }
 
-void b2Set_priority_v(byte** data) // 2, 0x40 
+void b3Set_priority_v(byte** data) // 2, 0x40 
 {
 	int entryNum;
 	ViewTable localViewtab;
@@ -1054,7 +925,7 @@ void b2Set_priority_v(byte** data) // 2, 0x40
 	setViewTab(&localViewtab, entryNum);
 }
 
-void b2Release_priority(byte** data) // 1, 0x00 
+void b3Release_priority(byte** data) // 1, 0x00 
 {
 	int entryNum;
 	ViewTable localViewtab;
@@ -1067,7 +938,7 @@ void b2Release_priority(byte** data) // 1, 0x00
 	setViewTab(&localViewtab, entryNum);
 }
 
-void b2Get_priority(byte** data) // 2, 0x40 
+void b3Get_priority(byte** data) // 2, 0x40 
 {
 	int entryNum, varNum;
 	ViewTable localViewtab;
@@ -1082,7 +953,7 @@ void b2Get_priority(byte** data) // 2, 0x40
 	setViewTab(&localViewtab, entryNum);
 }
 
-void b2Stop_update(byte** data) // 1, 0x00 
+void b3Stop_update(byte** data) // 1, 0x00 
 {
 	int entryNum;
 	ViewTable localViewtab;
@@ -1095,7 +966,7 @@ void b2Stop_update(byte** data) // 1, 0x00
 	setViewTab(&localViewtab, entryNum);
 }
 
-void b2Start_update(byte** data) // 1, 0x00 
+void b3Start_update(byte** data) // 1, 0x00 
 {
 	int entryNum;
 	ViewTable localViewtab;
@@ -1109,7 +980,7 @@ void b2Start_update(byte** data) // 1, 0x00
 	setViewTab(&localViewtab, entryNum);
 }
 
-void b2Force_update(byte** data) // 1, 0x00 
+void b3Force_update(byte** data) // 1, 0x00 
 {
 	int entryNum;
 
@@ -1119,7 +990,7 @@ void b2Force_update(byte** data) // 1, 0x00
 	trampoline_1Int(&bAUpdateObj, entryNum, VIEW_CODE_BANK_1);
 }
 
-void b2Ignore_horizon(byte** data) // 1, 0x00 
+void b3Ignore_horizon(byte** data) // 1, 0x00 
 {
 	int entryNum;
 	ViewTable localViewtab;
@@ -1133,7 +1004,7 @@ void b2Ignore_horizon(byte** data) // 1, 0x00
 	setViewTab(&localViewtab, entryNum);
 }
 
-void b2Observe_horizon(byte** data) // 1, 0x00 
+void b3Observe_horizon(byte** data) // 1, 0x00 
 {
 	int entryNum;
 	ViewTable localViewtab;
@@ -1146,12 +1017,12 @@ void b2Observe_horizon(byte** data) // 1, 0x00
 	setViewTab(&localViewtab, entryNum);
 }
 
-void b2Set_horizon(byte** data) // 1, 0x00 
+void b3Set_horizon(byte** data) // 1, 0x00 
 {
 	horizon = *(*data)++;
 }
 
-void b2Object_on_water(byte** data) // 1, 0x00 
+void b3Object_on_water(byte** data) // 1, 0x00 
 {
 	int entryNum;
 	ViewTable localViewtab;
@@ -1164,7 +1035,7 @@ void b2Object_on_water(byte** data) // 1, 0x00
 	setViewTab(&localViewtab, entryNum);
 }
 
-void b2Object_on_land(byte** data) // 1, 0x00 
+void b3Object_on_land(byte** data) // 1, 0x00 
 {
 	int entryNum;
 	ViewTable localViewtab;
@@ -1177,7 +1048,7 @@ void b2Object_on_land(byte** data) // 1, 0x00
 	setViewTab(&localViewtab, entryNum);
 }
 
-void b2Object_on_anything(byte** data) // 1, 0x00 
+void b3Object_on_anything(byte** data) // 1, 0x00 
 {
 	int entryNum;
 	ViewTable localViewtab;
@@ -1190,7 +1061,7 @@ void b2Object_on_anything(byte** data) // 1, 0x00
 	setViewTab(&localViewtab, entryNum);
 }
 
-void b2Ignore_objs(byte** data) // 1, 0x00 
+void b3Ignore_objs(byte** data) // 1, 0x00 
 {
 	int entryNum;
 	ViewTable localViewtab;
@@ -1203,7 +1074,7 @@ void b2Ignore_objs(byte** data) // 1, 0x00
 	setViewTab(&localViewtab, entryNum);
 }
 
-void b2Observe_objs(byte** data) // 1, 0x00 
+void b3Observe_objs(byte** data) // 1, 0x00 
 {
 	int entryNum;
 	ViewTable localViewtab;
@@ -1216,8 +1087,7 @@ void b2Observe_objs(byte** data) // 1, 0x00
 	setViewTab(&localViewtab, entryNum);
 }
 
-
-void b2Distance(byte** data) // 3, 0x20 
+void b3Distance(byte** data) // 3, 0x20 
 {
 	int o1, o2, varNum, x1, y1, x2, y2;
 	ViewTable localViewtab1, localViewtab2;
@@ -1242,7 +1112,7 @@ void b2Distance(byte** data) // 3, 0x20
 	var[varNum] = abs(x1 - x2) + abs(y1 - y2);
 }
 
-void b2Stop_cycling(byte** data) // 1, 0x00 
+void b3Stop_cycling(byte** data) // 1, 0x00 
 {
 	int entryNum;
 	ViewTable localViewtab;
@@ -1255,7 +1125,7 @@ void b2Stop_cycling(byte** data) // 1, 0x00
 	setViewTab(&localViewtab, entryNum);
 }
 
-void b2Start_cycling(byte** data) // 1, 0x00 
+void b3Start_cycling(byte** data) // 1, 0x00 
 {
 	int entryNum;
 	ViewTable localViewtab;
@@ -1268,7 +1138,7 @@ void b2Start_cycling(byte** data) // 1, 0x00
 	setViewTab(&localViewtab, entryNum);
 }
 
-void b2Normal_cycle(byte** data) // 1, 0x00 
+void b3Normal_cycle(byte** data) // 1, 0x00 
 {
 	int entryNum;
 	ViewTable localViewtab;
@@ -1281,7 +1151,7 @@ void b2Normal_cycle(byte** data) // 1, 0x00
 	setViewTab(&localViewtab, entryNum);
 }
 
-void b2End_of_loop(byte** data) // 2, 0x00 
+void b3End_of_loop(byte** data) // 2, 0x00 
 {
 	int entryNum;
 	ViewTable localViewtab;
@@ -1296,7 +1166,7 @@ void b2End_of_loop(byte** data) // 2, 0x00
 	setViewTab(&localViewtab, entryNum);
 }
 
-void b2Reverse_cycle(byte** data) // 1, 0x00
+void b3Reverse_cycle(byte** data) // 1, 0x00
 {
 	int entryNum;
 	ViewTable localViewtab;
@@ -1310,7 +1180,7 @@ void b2Reverse_cycle(byte** data) // 1, 0x00
 	setViewTab(&localViewtab, entryNum);
 }
 
-void b2Reverse_loop(byte** data) // 2, 0x00 
+void b3Reverse_loop(byte** data) // 2, 0x00 
 {
 	int entryNum;
 	ViewTable localViewtab;
@@ -1325,7 +1195,7 @@ void b2Reverse_loop(byte** data) // 2, 0x00
 	setViewTab(&localViewtab, entryNum);
 }
 
-void b2Cycle_time(byte** data) // 2, 0x40 
+void b3Cycle_time(byte** data) // 2, 0x40 
 {
 	int entryNum;
 	ViewTable localViewtab;
@@ -1337,7 +1207,7 @@ void b2Cycle_time(byte** data) // 2, 0x40
 	setViewTab(&localViewtab, entryNum);
 }
 
-void b2Stop_motion(byte** data) // 1, 0x00 
+void b3Stop_motion(byte** data) // 1, 0x00 
 {
 	int entryNum;
 	ViewTable localViewtab;
@@ -1352,7 +1222,7 @@ void b2Stop_motion(byte** data) // 1, 0x00
 	setViewTab(&localViewtab, entryNum);
 }
 
-void b2Start_motion(byte** data) // 1, 0x00 
+void b3Start_motion(byte** data) // 1, 0x00 
 {
 	int entryNum;
 	ViewTable localViewtab;
@@ -1366,7 +1236,7 @@ void b2Start_motion(byte** data) // 1, 0x00
 	setViewTab(&localViewtab, entryNum);
 }
 
-void b2Step_size(byte** data) // 2, 0x40 
+void b3Step_size(byte** data) // 2, 0x40 
 {
 	int entryNum;
 	ViewTable localViewtab;
@@ -1379,7 +1249,7 @@ void b2Step_size(byte** data) // 2, 0x40
 	setViewTab(&localViewtab, entryNum);
 }
 
-void b2Step_time(byte** data) // 2, 0x40 
+void b3Step_time(byte** data) // 2, 0x40 
 {
 	int entryNum;
 	ViewTable localViewtab;
@@ -1392,7 +1262,7 @@ void b2Step_time(byte** data) // 2, 0x40
 	setViewTab(&localViewtab, entryNum);
 }
 
-void b2Move_obj(byte** data) // 5, 0x00 
+void b3Move_obj(byte** data) // 5, 0x00 
 {
 	int entryNum;
 	byte stepVal;
@@ -1413,7 +1283,7 @@ void b2Move_obj(byte** data) // 5, 0x00
 	setViewTab(&localViewtab, entryNum);
 }
 
-void b2Move_obj_v(byte** data) // 5, 0x70 
+void b3Move_obj_v(byte** data) // 5, 0x70 
 {
 	int entryNum;
 	byte stepVal;
@@ -1434,7 +1304,7 @@ void b2Move_obj_v(byte** data) // 5, 0x70
 	setViewTab(&localViewtab, entryNum);
 }
 
-void b2Follow_ego(byte** data) // 3, 0x00 
+void b3Follow_ego(byte** data) // 3, 0x00 
 {
 	int entryNum, stepVal, flagNum;
 	ViewTable localViewtab;
@@ -1454,7 +1324,7 @@ void b2Follow_ego(byte** data) // 3, 0x00
 	setViewTab(&localViewtab, entryNum);
 }
 
-void b2Wander(byte** data) // 1, 0x00 
+void b3Wander(byte** data) // 1, 0x00 
 {
 	int entryNum;
 	ViewTable localViewtab;
@@ -1469,7 +1339,7 @@ void b2Wander(byte** data) // 1, 0x00
 	setViewTab(&localViewtab, entryNum);
 }
 
-void b2Normal_motion(byte** data) // 1, 0x00 
+void b3Normal_motion(byte** data) // 1, 0x00 
 {
 	int entryNum;
 	ViewTable localViewtab;
@@ -1483,7 +1353,7 @@ void b2Normal_motion(byte** data) // 1, 0x00
 	setViewTab(&localViewtab, entryNum);
 }
 
-void b2Set_dir(byte** data) // 2, 0x40 
+void b3Set_dir(byte** data) // 2, 0x40 
 {
 	int entryNum;
 	ViewTable localViewtab;
@@ -1496,7 +1366,7 @@ void b2Set_dir(byte** data) // 2, 0x40
 	setViewTab(&localViewtab, entryNum);
 }
 
-void b2Get_dir(byte** data) // 2, 0x40 
+void b3Get_dir(byte** data) // 2, 0x40 
 {
 	int entryNum;
 	ViewTable localViewtab;
@@ -1509,7 +1379,7 @@ void b2Get_dir(byte** data) // 2, 0x40
 	setViewTab(&localViewtab, entryNum);
 }
 
-void b2Ignore_blocks(byte** data) // 1, 0x00 
+void b3Ignore_blocks(byte** data) // 1, 0x00 
 {
 	int entryNum;
 	ViewTable localViewtab;
@@ -1522,7 +1392,7 @@ void b2Ignore_blocks(byte** data) // 1, 0x00
 	setViewTab(&localViewtab, entryNum);
 }
 
-void b2Observe_blocks(byte** data) // 1, 0x00 
+void b3Observe_blocks(byte** data) // 1, 0x00 
 {
 	int entryNum;
 	ViewTable localViewtab;
@@ -1535,19 +1405,16 @@ void b2Observe_blocks(byte** data) // 1, 0x00
 	setViewTab(&localViewtab, entryNum);
 }
 
-void b2Block(byte** data) // 4, 0x00 
-{
-	/* Is this used anywhere? - Not implemented at this stage */
-	*data += 4;
-}
-
-void b2Unblock(byte** data) // 0, 0x00 
-{
-
-}
-
-#pragma code-name (pop)
-#pragma code-name (push, "BANKRAM03")
+//void b3Block(byte** data) // 4, 0x00 
+//{
+//	/* Is this used anywhere? - Not implemented at this stage */
+//	*data += 4;
+//}
+//
+//void b3Unblock(byte** data) // 0, 0x00 
+//{
+//
+//}
 
 void b3Get(byte** data) // 1, 00 
 {
@@ -1608,6 +1475,7 @@ void b3Play_sound(byte** data) // 2, 00  sound() renamed to avoid clash
 	/* playSound(soundNum); */
 	flag[soundEndFlag] = TRUE;
 }
+
 
 void b3Stop_sound(byte** data) // 0, 0x00 
 {
@@ -1728,7 +1596,11 @@ void b3Print(byte** data) // 1, 00
 	destroy_bitmap(temp);
 }
 
-void b3Print_v(byte** data) // 1, 0x80 
+
+#pragma code-name (pop)
+#pragma code-name (push, "BANKRAM04")
+
+void b4Print_v(byte** data) // 1, 0x80 
 {
 	char* tempString = (char*) & GOLDEN_RAM[LOCAL_WORK_AREA_START];
 	BITMAP* temp;
@@ -1750,7 +1622,7 @@ void b3Print_v(byte** data) // 1, 0x80
 
 }
 
-void b3Display(byte** data) // 3, 0x00 
+void b4Display(byte** data) // 3, 0x00 
 {
 	int row, col, messNum;
 	char* tempString = (char*) & GOLDEN_RAM[LOCAL_WORK_AREA_START];
@@ -1768,7 +1640,7 @@ void b3Display(byte** data) // 3, 0x00
 	   tempString, agi_fg, agi_bg, row, col);*/
 }
 
-void b3Display_v(byte** data) // 3, 0xE0 
+void b4Display_v(byte** data) // 3, 0xE0 
 {
 	int row, col, messNum;
 	char* tempString = (char*)&GOLDEN_RAM[LOCAL_WORK_AREA_START];
@@ -1787,7 +1659,7 @@ void b3Display_v(byte** data) // 3, 0xE0
 	   tempString, agi_fg, agi_bg);*/
 }
 
-void b3Clear_lines(byte** data) // 3, 0x00 
+void b4Clear_lines(byte** data) // 3, 0x00 
 {
 	int boxColour, startLine, endLine;
 
@@ -1801,7 +1673,7 @@ void b3Clear_lines(byte** data) // 3, 0x00
 	show_mouse(screen);
 }
 
-void b3Text_screen(byte** data) // 0, 0x00 
+void b4Text_screen(byte** data) // 0, 0x00 
 {
 	screenMode = AGI_TEXT;
 	/* Do something else here */
@@ -1810,7 +1682,7 @@ void b3Text_screen(byte** data) // 0, 0x00
 	clear(screen);
 }
 
-void b3Graphics(byte** data) // 0, 0x00 
+void b4Graphics(byte** data) // 0, 0x00 
 {
 	screenMode = AGI_GRAPHICS;
 	/* Do something else here */
@@ -1820,7 +1692,7 @@ void b3Graphics(byte** data) // 0, 0x00
 	clear(screen);
 }
 
-void b3Set_cursor_char(byte** data) // 1, 0x00 
+void b4Set_cursor_char(byte** data) // 1, 0x00 
 {
 	char* temp = (char*)&GOLDEN_RAM[LOCAL_WORK_AREA_START];
 	byte msgNo = (*(*data)++) - 1;
@@ -1841,35 +1713,36 @@ void b3Set_cursor_char(byte** data) // 1, 0x00
 #endif
 }
 
-void b3Set_text_attribute(byte** data) // 2, 0x00 
+void b4Set_text_attribute(byte** data) // 2, 0x00 
 {
 	agi_fg = (*(*data)++) + 1;
 	agi_bg = (*(*data)++) + 1;
 }
 
-void b3Shake_screen(byte** data) // 1, 0x00 
-{
-	(*data)++;  /* Ignore this for now. */
-}
+//void b4Shake_screen(byte** data) // 1, 0x00 
+//{
+//	(*data)++;  /* Ignore this for now. */
+//}
 
-void b3Configure_screen(byte** data) // 3, 0x00 
+
+void b4Configure_screen(byte** data) // 3, 0x00 
 {
 	min_print_line = *(*data)++;
 	user_input_line = *(*data)++;
 	status_line_num = *(*data)++;
 }
 
-void b3Status_line_on(byte** data) // 0, 0x00 
+void b4Status_line_on(byte** data) // 0, 0x00 
 {
 	statusLineDisplayed = TRUE;
 }
 
-void b3Status_line_off(byte** data) // 0, 0x00 
+void b4Status_line_off(byte** data) // 0, 0x00 
 {
 	statusLineDisplayed = FALSE;
 }
 
-void b3Set_string(byte** data) // 2, 0x00 
+void b4Set_string(byte** data) // 2, 0x00 
 {
 	int stringNum, messNum;
 	char* messagePointer;
@@ -1884,7 +1757,7 @@ void b3Set_string(byte** data) // 2, 0x00
 	strcpyBanked(string[stringNum - 1], messagePointer, logicFile.messageBank);
 }
 
-void b3Get_string(byte** data) // 5, 0x00 
+void b4Get_string(byte** data) // 5, 0x00 
 {
 	int strNum, messNum, row, col, l;
 	char* messagePointer;
@@ -1900,7 +1773,7 @@ void b3Get_string(byte** data) // 5, 0x00
 	getString(messagePointer, string[strNum], row, col, l);
 }
 
-void b3Word_to_string(byte** data) // 2, 0x00 
+void b4Word_to_string(byte** data) // 2, 0x00 
 {
 	int stringNum, wordNum;
 
@@ -1909,7 +1782,7 @@ void b3Word_to_string(byte** data) // 2, 0x00
 	strcpy(string[stringNum], wordText[wordNum]);
 }
 
-void b3Parse(byte** data) // 1, 0x00 
+void b4Parse(byte** data) // 1, 0x00 
 {
 	int stringNum;
 
@@ -1917,7 +1790,7 @@ void b3Parse(byte** data) // 1, 0x00
 	lookupWords(string[stringNum]);
 }
 
-void b3Get_num(byte** data) // 2, 0x40 
+void b4Get_num(byte** data) // 2, 0x40 
 {
 	int messNum, varNum;
 	char temp[80];
@@ -1931,19 +1804,19 @@ void b3Get_num(byte** data) // 2, 0x40
 	var[varNum] = atoi(temp);
 }
 
-void b3Prevent_input(byte** data) // 0, 0x00 
+void b4Prevent_input(byte** data) // 0, 0x00 
 {
 	inputLineDisplayed = FALSE;
 	/* Do something else here */
 }
 
-void b3Accept_input(byte** data) // 0, 0x00 
+void b4Accept_input(byte** data) // 0, 0x00 
 {
 	inputLineDisplayed = TRUE;
 	/* Do something else here */
 }
 
-void b3Set_key(byte** data) // 3, 0x00 
+void b4Set_key(byte** data) // 3, 0x00 
 {
 	int asciiCode, scanCode, eventCode;
 	char* tempStr = (char*)&GOLDEN_RAM[LOCAL_WORK_AREA_START];
@@ -1975,7 +1848,7 @@ void b3Set_key(byte** data) // 3, 0x00
 	}
 }
 
-void b3Add_to_pic(byte** data) // 7, 0x00 
+void b4Add_to_pic(byte** data) // 7, 0x00 
 {
 	int viewNum, loopNum, celNum, x, y, priNum, baseCol;
 
@@ -1990,7 +1863,7 @@ void b3Add_to_pic(byte** data) // 7, 0x00
 	trampolineAddToPic(viewNum, loopNum, celNum, x, y, priNum, baseCol);
 }
 
-void b3Add_to_pic_v(byte** data) // 7, 0xFE 
+void b4Add_to_pic_v(byte** data) // 7, 0xFE 
 {
 	int viewNum, loopNum, celNum, x, y, priNum, baseCol;
 
@@ -2005,7 +1878,7 @@ void b3Add_to_pic_v(byte** data) // 7, 0xFE
 	trampolineAddToPic(viewNum, loopNum, celNum, x, y, priNum, baseCol);
 }
 
-void b3Status(byte** data) // 0, 0x00 
+void b4Status(byte** data) // 0, 0x00 
 {
 	/* Inventory */
 	// set text mode
@@ -2013,18 +1886,17 @@ void b3Status(byte** data) // 0, 0x00
 	var[25] = 255;
 }
 
-void b3Save_game(byte** data) // 0, 0x00 
-{
-	/* Not supported yet */
-}
+//void b4Save_game(byte** data) // 0, 0x00 
+//{
+//	/* Not supported yet */
+//}
+//
+//void b4Restore_game(byte** data) // 0, 0x00 
+//{
+//	/* Not supported yet */
+//}
 
-void b3Restore_game(byte** data) // 0, 0x00 
-{
-	/* Not supported yet */
-}
-
-
-void b3Restart_game(byte** data) // 0, 0x00 
+void b4Restart_game(byte** data) // 0, 0x00 
 {
 	int i;
 
@@ -2041,7 +1913,7 @@ void b3Restart_game(byte** data) // 0, 0x00
 	hasEnteredNewRoom = TRUE;
 }
 
-void b3Show_obj(byte** data) // 1, 0x00 
+void b4Show_obj(byte** data) // 1, 0x00 
 {
 	int objectNum;
 
@@ -2049,7 +1921,7 @@ void b3Show_obj(byte** data) // 1, 0x00
 	/* Not supported yet */
 }
 
-void b3Random_num(byte** data) // 3, 0x20  random() renamed to avoid clash
+void b4Random_num(byte** data) // 3, 0x20  random() renamed to avoid clash
 {
 	int startValue, endValue;
 
@@ -2058,17 +1930,17 @@ void b3Random_num(byte** data) // 3, 0x20  random() renamed to avoid clash
 	var[*(*data)++] = (rand() % ((endValue - startValue) + 1)) + startValue;
 }
 
-void b3Program_control(byte** data) // 0, 0x00 
+void b4Program_control(byte** data) // 0, 0x00 
 {
 	controlMode = PROGRAM_CONTROL;
 }
 
-void b3Player_control(byte** data) // 0, 0x00 
+void b4Player_control(byte** data) // 0, 0x00 
 {
 	controlMode = PLAYER_CONTROL;
 }
 
-void b3Obj_status_v(byte** data) // 1, 0x80 
+void b4Obj_status_v(byte** data) // 1, 0x80 
 {
 	int objectNum;
 
@@ -2080,7 +1952,7 @@ void b3Obj_status_v(byte** data) // 1, 0x80
 }
 
 
-void b3Quit(byte** data) // 1, 0x00                     /* 0 args for AGI version 2_089 */
+void b4Quit(byte** data) // 1, 0x00                     /* 0 args for AGI version 2_089 */
 {
 	int quitType, ch;
 
@@ -2097,7 +1969,7 @@ void b3Quit(byte** data) // 1, 0x00                     /* 0 args for AGI versio
 	}
 }
 
-void b3Pause(byte** data) // 0, 0x00 
+void b4Pause(byte** data) // 0, 0x00 
 {
 	while (key[KEY_ENTER]) { /* Wait */ }
 	printInBoxBig("      Game paused.\nPress ENTER to continue.", -1, -1, 30);
@@ -2107,28 +1979,26 @@ void b3Pause(byte** data) // 0, 0x00
 }
 
 
-void b3Echo_line(byte** data) // 0, 0x00 
-{
+//void b4Echo_line(byte** data) // 0, 0x00 
+//{
+//
+//}
 
-}
 
+//void b4Cancel_line(byte** data) // 0, 0x00 
+//{
+//	/*currentInputStr[0]=0;
+//	strPos=0;*/
+//}
 
-void b3Cancel_line(byte** data) // 0, 0x00 
-{
-	/*currentInputStr[0]=0;
-	strPos=0;*/
-}
-
-#pragma code-name (pop)
-#pragma code-name (push, "BANKRAM04")
-
-void b4Init_joy(byte** data) // 0, 0x00 
-{
-	/* Not important at this stage */
-}
+//void b4Init_joy(byte** data) // 0, 0x00 
+//{
+//	/* Not important at this stage */
+//}
 
 void b4Version(byte** data) // 0, 0x00 
 {
+	asm("stp");
 	while (key[KEY_ENTER] || key[KEY_ESC]) { /* Wait */ }
 	printInBoxBig("MEKA AGI Interpreter\n    Version 1.0", -1, -1, 30);
 	while (!key[KEY_ENTER] && !key[KEY_ESC]) { /* Wait */ }
@@ -2136,20 +2006,20 @@ void b4Version(byte** data) // 0, 0x00
 	okToShowPic = TRUE;
 }
 
-void b4Script_size(byte** data) // 1, 0x00 
-{
-	(*data)++;  /* Ignore the script size. Not important for this interpreter */
-}
-
-void b4Set_game_id(byte** data) // 1, 0x00 
-{
-	(*data)++;  /* Ignore the game ID. Not important */
-}
-
-void b4Log(byte** data) // 1, 0x00 
-{
-	(*data)++;  /* Ignore log message. Not important */
-}
+//void b4Script_size(byte** data) // 1, 0x00 
+//{
+//	(*data)++;  /* Ignore the script size. Not important for this interpreter */
+//}
+//
+//void b4Set_game_id(byte** data) // 1, 0x00 
+//{
+//	(*data)++;  /* Ignore the game ID. Not important */
+//}
+//
+//void b4Log(byte** data) // 1, 0x00 
+//{
+//	(*data)++;  /* Ignore log message. Not important */
+//}
 
 void b4Set_scan_start(byte** data) // 0, 0x00 
 {
@@ -2204,15 +2074,15 @@ void b4Reposition_to_v(byte** data) // 3, 0x60
 	setViewTab(&localViewtab, entryNum);
 }
 
-void b4Trace_on(byte** data) // 0, 0x00 
-{
-	/* Ignore at this stage */
-}
+//void b4Trace_on(byte** data) // 0, 0x00 
+//{
+//	/* Ignore at this stage */
+//}
 
-void b4Trace_info(byte** data) // 3, 0x00 
-{
-	*data += 3;  /* Ignore trace information at this stage. */
-}
+//void b4Trace_info(byte** data) // 3, 0x00 
+//{
+//	*data += 3;  /* Ignore trace information at this stage. */
+//}
 
 void b4Print_at(byte** data) // 4, 0x00           /* 3 args for AGI versions before */
 {
@@ -2292,10 +2162,10 @@ void b4Clear_text_rect(byte** data) // 5, 0x00
 	show_mouse(screen);
 }
 
-void b4Set_upper_left(byte** data) // 2, 0x00    (x, y) ??
-{
-	*data += 2;
-}
+//void b4Set_upper_left(byte** data) // 2, 0x00    (x, y) ??
+//{
+//	*data += 2;
+//}
 
 void b4WaitKeyRelease()
 {
@@ -2412,13 +2282,21 @@ void b4Set_menu() // 1, 0x00
 	asm("jmp _afterLogicCommand");
 }
 
+#pragma code-name (pop)
+#pragma code-name (push, "BANKRAM05")
+
 void b4Set_menu_item() // 2, 0x00 
 {
 	int messNum, controllerNum, i;
 	MENU childMenu;
 	LOGICFile currentLogicFile;
 
+	asm("nop");
+	printf("Here");
+	exit(0);
+
 	getLogicFile(&currentLogicFile, currentLog);
+	
 
 	messNum = loadAndIncWinCode();
 	controllerNum = loadAndIncWinCode();
@@ -2442,20 +2320,21 @@ void b4Set_menu_item() // 2, 0x00
 	asm("jmp _afterLogicCommand");
 }
 
-void b4Submit_menu(byte** data) // 0, 0x00 
-{
+//void b4Submit_menu(byte** data) // 0, 0x00 
+//{
+//
+//}
 
-}
+//void b4Enable_item(byte** data) // 1, 0x00 
+//{
+//	(*data)++;
+//}
+//
+//void b4Disable_item(byte** data) // 1, 0x00 
+//{
+//	(*data)++;
+//}
 
-void b4Enable_item(byte** data) // 1, 0x00 
-{
-	(*data)++;
-}
-
-void b4Disable_item(byte** data) // 1, 0x00 
-{
-	(*data)++;
-}
 
 void b4Menu_input(byte** data) // 0, 0x00 
 {
@@ -2470,15 +2349,15 @@ void b4Show_obj_v(byte** data) // 1, 0x01
 	/* Not supported yet */
 }
 
-void b4Open_dialogue(byte** data) // 0, 0x00 
-{
+//void b4Open_dialogue(byte** data) // 0, 0x00 
+//{
+//
+//}
 
-}
-
-void b4Close_dialogue(byte** data) // 0, 0x00 
-{
-
-}
+//void b4Close_dialogue(byte** data) // 0, 0x00 
+//{
+//
+//}
 
 void b4Mul_n(byte** data) // 2, 0x80 
 {
@@ -2500,9 +2379,15 @@ void b4Div_v(byte** data) // 2, 0xC0
 	var[*(*data)++] /= var[*(*data)++];
 }
 
-void b4Close_window(byte** data) // 0, 0x00 
-{
+//void b4Close_window(byte** data) // 0, 0x00 
+//{
+//
+//}
 
+void b5ZeroOpCode()
+{
+	printf("Op code 0 detected at %p", opCounter);
+	exit(0);
 }
 
 
@@ -2592,4 +2477,5 @@ void executeLogic(int logNum)
 
 	RAM_BANK = previousRamBank;
 }
+
 

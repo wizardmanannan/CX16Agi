@@ -298,11 +298,9 @@ _commandLoop:
         DEBUG_PRINT
         jmp goto
         jmp mainLoop
-        @default:          
+        @default:     
             DEBUG_PRINT
-            
             LOAD_CODE_WIN_CODE
-            stp
             tax
             ldy codeBankArray,x
             sty RAM_BANK
