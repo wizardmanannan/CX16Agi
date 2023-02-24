@@ -595,12 +595,12 @@ b2Lindirectn:
          jmp _afterLogicCommand
 
 b2Set:      
-         SET_VAR_OR_FLAG VARS_AREA_START_GOLDEN_OFFSET, #$1
+         SET_VAR_OR_FLAG FLAGS_AREA_START_GOLDEN_OFFSET, #$1
 
          jmp _afterLogicCommand
 
 b2Reset:      
-         SET_VAR_OR_FLAG VARS_AREA_START_GOLDEN_OFFSET, #$0
+         SET_VAR_OR_FLAG FLAGS_AREA_START_GOLDEN_OFFSET, #$0
 
          jmp _afterLogicCommand
 
@@ -608,7 +608,7 @@ b2Toggle:
       bra @start
       @flagVal: .byte $0
       @start:
-        GET_VAR_OR_FLAG VARS_AREA_START_GOLDEN_OFFSET, @flagVal
+        GET_VAR_OR_FLAG FLAGS_AREA_START_GOLDEN_OFFSET, @flagVal
                 
         lda @flagVal
         bne @setTrue
@@ -619,7 +619,7 @@ b2Toggle:
         lda #$1
         sta @flagVal
         @setValue:
-        SET_VAR_OR_FLAG VARS_AREA_START_GOLDEN_OFFSET, @flagVal
+        SET_VAR_OR_FLAG FLAGS_AREA_START_GOLDEN_OFFSET, @flagVal
 
         INC_CODE
         jmp _afterLogicCommand
@@ -630,7 +630,7 @@ b2Setv:
       @start:
         GET_VAR_OR_FLAG VARS_AREA_START_GOLDEN_OFFSET, @result
                 
-        SET_VAR_OR_FLAG VARS_AREA_START_GOLDEN_OFFSET, #$1, @result
+        SET_VAR_OR_FLAG FLAGS_AREA_START_GOLDEN_OFFSET, #$1, @result
 
         INC_CODE
         jmp _afterLogicCommand
@@ -641,7 +641,7 @@ b2Resetv:
       @start:
         GET_VAR_OR_FLAG VARS_AREA_START_GOLDEN_OFFSET, @result
                 
-        SET_VAR_OR_FLAG VARS_AREA_START_GOLDEN_OFFSET, #$0, @result
+        SET_VAR_OR_FLAG FLAGS_AREA_START_GOLDEN_OFFSET, #$0, @result
 
         INC_CODE
         jmp _afterLogicCommand
@@ -699,8 +699,6 @@ jmpTableCommands1:
 .addr b1Decrement
 .addr b1Assignn
 .addr b1Assignv
-.addr _b2Load_logics
-.addr b1Addn
 .addr b1Addn
 .addr b1Addv
 .addr b2Subn
@@ -709,6 +707,8 @@ jmpTableCommands1:
 .addr b2Rindirect
 .addr b2Lindirectn
 .addr b2Set
+.addr b2Reset
+.addr b2Toggle
 .addr b2Setv
 .addr b2Resetv
 .addr b2Togglev
@@ -776,7 +776,6 @@ jmpTableCommands1:
 .addr _b3Step_size
 .addr _b3Step_time
 .addr _b3Move_obj
-.addr _b3Move_obj
 .addr _b3Move_obj_v
 .addr _b3Follow_ego
 .addr _b3Wander
@@ -796,8 +795,6 @@ jmpTableCommands1:
 .addr _b3Load_sound
 .addr _b3Play_sound
 .addr _b3Stop_sound
-.addr _b3CharIsIn
-.addr _b3ProcessString
 .addr _b3Print
 .addr _b4Print_v
 .addr _b4Display
@@ -824,6 +821,8 @@ jmpTableCommands1:
 .addr _b4Status
 .addr b1NoOp_0
 .addr b1NoOp_0
+.addr b1NoOp_0
+
 
 jmpTableCommands2:
 .addr _b4Restart_game
@@ -856,6 +855,9 @@ jmpTableCommands2:
 .addr b1NoOp_2
 .addr _b4Set_menu
 .addr _b4Set_menu_item
+.addr b1NoOp_0
+.addr b1NoOp_1
+.addr b1NoOp_1
 .addr _b4Menu_input
 .addr _b4Show_obj_v
 .addr b1NoOp_0
@@ -865,6 +867,20 @@ jmpTableCommands2:
 .addr _b4Div_n
 .addr _b4Div_v
 .addr b1NoOp_0
+.addr b1NoOp_1
+.addr b1NoOp_0
+.addr b1NoOp_0
+.addr b1NoOp_0
+.addr b1NoOp_1
+.addr b1NoOp_1
+.addr b1NoOp_0
+.addr b1NoOp_1
+.addr b1NoOp_0
+.addr b1NoOp_4
+.addr b1NoOp_2
+.addr b1NoOp_0
+.addr b1NoOp_0
+
 
 
 returnAddress: .word $0

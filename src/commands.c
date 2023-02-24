@@ -39,7 +39,7 @@
 //#define VERBOSE_SCRIPT_START
 //#define VERBOSE_PRINT_COUNTER;
 //#define VERBOSE_MENU
-#define VERBOSE_MENU_DUMP
+//#define VERBOSE_MENU_DUMP
 //#define VERBOSE_MESSAGE_TEXT
 
 //#define  DEBUG
@@ -2291,10 +2291,6 @@ void b4Set_menu_item() // 2, 0x00
 	MENU childMenu;
 	LOGICFile currentLogicFile;
 
-	asm("nop");
-	printf("Here");
-	exit(0);
-
 	getLogicFile(&currentLogicFile, currentLog);
 	
 
@@ -2469,7 +2465,6 @@ void executeLogic(int logNum)
 
 	printf("startPos %p, code %p, endPos %p", startPos, code, endPos);
 
-	exit(0);
 #ifdef DEBUG
 	drawBigString(screen, "Push a key to advance a step", 0, 400, 0, 7);
 	if ((readkey() & 0xff) == 'q') closedown();
