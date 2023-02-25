@@ -36,7 +36,7 @@
 #define CODE_WINDOW_SIZE 10
 //#define VERBOSE_STRING_CHECK
 //#define VERBOSE_LOGIC_EXEC
-//#define VERBOSE_SCRIPT_START
+#define VERBOSE_SCRIPT_START
 //#define VERBOSE_PRINT_COUNTER;
 //#define VERBOSE_MENU
 //#define VERBOSE_MENU_DUMP
@@ -89,6 +89,8 @@ typedef struct {
 objectType* objects;
 
 //
+
+void trampolineProcessString(char* stringPointer, byte stringBank, char* outputString);
 
 int getNum(char* inputString, int* i, int inputStringBank)
 {
@@ -254,6 +256,19 @@ void testMenus()
 }
 #endif // VERBOSE_MENU
 
+#define PROCESS_STRING_BANK 3
+void b3ProcessString(char* stringPointer, byte stringBank, char* outputString);
+void trampolineProcessString(char* stringPointer, byte stringBank, char* outputString)
+{
+	byte previousRamBank = RAM_BANK;
+
+	RAM_BANK = PROCESS_STRING_BANK;
+
+	b3ProcessString(stringPointer, stringBank, outputString);
+
+	RAM_BANK = previousRamBank;
+}
+
 #pragma code-name (push, "BANKRAM01");
 /****************************************************************************
 ** addLogLine
@@ -298,40 +313,40 @@ int b1Lprintf(char* fmt, ...)
 
 /* TEST COMMANDS */
 
-boolean b1Has(byte** data) // 1, 0x00 
+boolean b1Has() // 1, 0x00 
 {
-	return (objects[*(*data)++].roomNum == 255);
+	return (objects[loadAndIncWinCode()].roomNum == 255);
 }
 
-boolean b1Obj_in_room(byte** data) // 2, 0x40 
+boolean b1Obj_in_room() // 2, 0x40 
 {
 	int objNum, varNum;
 
-	objNum = *(*data)++;
-	varNum = var[*(*data)++];
+	objNum = loadAndIncWinCode();
+	varNum = var[loadAndIncWinCode()];
 	return (objects[objNum].roomNum == varNum);
 }
 
-boolean b1Posn(byte** data) // 5, 0x00 
+boolean b1Posn() // 5, 0x00 
 {
 	int objNum, x1, y1, x2, y2;
 	ViewTable localViewtab;
 
-	objNum = *(*data)++;
+	objNum = loadAndIncWinCode();
 	getViewTab(&localViewtab, objNum);
 
-	x1 = *(*data)++;
-	y1 = *(*data)++;
-	x2 = *(*data)++;
-	y2 = *(*data)++;
+	x1 = loadAndIncWinCode();
+	y1 = loadAndIncWinCode();
+	x2 = loadAndIncWinCode();
+	y2 = loadAndIncWinCode();
 
 	return ((localViewtab.xPos >= x1) && (localViewtab.yPos >= y1)
 		&& (localViewtab.xPos <= x2) && (localViewtab.yPos <= y2));
 }
 
-boolean b1Controller(byte** data) // 1, 0x00 
+boolean b1Controller() // 1, 0x00 
 {
-	int eventNum = *(*data)++, retVal = 0;
+	int eventNum = loadAndIncWinCode(), retVal = 0;
 
 	/* Some events can be activated by menu input or key input. */
 
@@ -369,23 +384,23 @@ boolean b1Have_key() // 0, 0x00
 	return keypressed();
 }
 
-boolean b1Said(byte** data)
+boolean b1Said()
 {
 	int numOfArgs, wordNum, argValue;
 	boolean wordsMatch = TRUE;
 	byte argLo, argHi;
 
-	numOfArgs = *(*data)++;
+	numOfArgs = loadAndIncWinCode();
 
 	if ((flag[2] == 0) || (flag[4] == 1)) {  /* Not valid input waiting */
-		*data += (numOfArgs * 2); /* Jump over arguments */
+		incCodeBy(numOfArgs * 2); /* Jump over arguments */
 		return FALSE;
 	}
 
 	/* Needs to deal with ANYWORD and ROL */
 	for (wordNum = 0; wordNum < numOfArgs; wordNum++) {
-		argLo = *(*data)++;
-		argHi = *(*data)++;
+		argLo = loadAndIncWinCode();
+		argHi = loadAndIncWinCode();
 		argValue = (argLo + (argHi << 8));
 		if (argValue == 9999) break; /* Should always be last argument */
 		if (argValue == 1) continue; /* Word comparison does not matter */
@@ -410,25 +425,25 @@ boolean said(byte **data)
 }
 */
 
-boolean b1Compare_strings(byte** data) // 2, 0x00 
+boolean b1Compare_strings() // 2, 0x00 
 {
 	int s1, s2;
 
-	s1 = *(*data)++;
-	s2 = *(*data)++;
+	s1 = loadAndIncWinCode();
+	s2 = loadAndIncWinCode();
 	if (strcmp(string[s1], string[s2]) == 0) return TRUE;
 	return FALSE;
 }
 
-boolean b1Obj_in_box(byte** data) // 5, 0x00 
+boolean b1Obj_in_box() // 5, 0x00 
 {
 	int objNum, x1, y1, x2, y2;
 	ViewTable localViewtab;
-	objNum = *(*data)++;
-	x1 = *(*data)++;
-	y1 = *(*data)++;
-	x2 = *(*data)++;
-	y2 = *(*data)++;
+	objNum = loadAndIncWinCode();
+	x1 = loadAndIncWinCode();
+	y1 = loadAndIncWinCode();
+	x2 = loadAndIncWinCode();
+	y2 = loadAndIncWinCode();
 
 	getViewTab(&localViewtab, objNum);
 
@@ -438,15 +453,15 @@ boolean b1Obj_in_box(byte** data) // 5, 0x00
 		(localViewtab.yPos <= y2));
 }
 
-boolean b1Center_posn(byte** data) // 5, 0x00 }
+boolean b1Center_posn() // 5, 0x00 }
 {
 	int objNum, x1, y1, x2, y2;
 	ViewTable localViewtab;
-	objNum = *(*data)++;
-	x1 = *(*data)++;
-	y1 = *(*data)++;
-	x2 = *(*data)++;
-	y2 = *(*data)++;
+	objNum = loadAndIncWinCode();
+	x1 = loadAndIncWinCode();
+	y1 = loadAndIncWinCode();
+	x2 = loadAndIncWinCode();
+	y2 = loadAndIncWinCode();
 
 	getViewTab(&localViewtab, objNum);
 
@@ -456,19 +471,19 @@ boolean b1Center_posn(byte** data) // 5, 0x00 }
 		(localViewtab.yPos <= y2));
 }
 
-boolean b1Right_posn(byte** data) // 5, 0x00
+boolean b1Right_posn() // 5, 0x00
 {
 	int objNum, x1, y1, x2, y2;
 	ViewTable localViewtab;
 
-	objNum = *(*data)++;
+	objNum = loadAndIncWinCode();
 
 	getViewTab(&localViewtab, objNum);
 
-	x1 = *(*data)++;
-	y1 = *(*data)++;
-	x2 = *(*data)++;
-	y2 = *(*data)++;
+	x1 = loadAndIncWinCode();
+	y1 = loadAndIncWinCode();
+	x2 = loadAndIncWinCode();
+	y2 = loadAndIncWinCode();
 
 	return (((localViewtab.xPos + localViewtab.xsize - 1) >= x1) &&
 		(localViewtab.yPos >= y1) &&
@@ -484,105 +499,129 @@ boolean b1Right_posn(byte** data) // 5, 0x00
 #pragma code-name (pop)
 #pragma code-name (push, "BANKRAM02")
 
-void b2New_room(byte** data) // 1, 0x00 
+void b2New_room() // 1, 0x00 
 {
 	/* This function is handled in meka.c */
-	newRoomNum = *(*data)++;
+	newRoomNum = loadAndIncWinCode();
 	hasEnteredNewRoom = TRUE;
+
+	asm("jmp _afterLogicCommand");
 }
 
-void b2New_room_v(byte** data) // 1, 0x80 
+void b2New_room_v() // 1, 0x80 
 {
 	/* This function is handled in meka.c */
-	newRoomNum = var[*(*data)++];
+	newRoomNum = var[loadAndIncWinCode()];
 	hasEnteredNewRoom = TRUE;
+
+	asm("jmp _afterLogicCommand");
 }
 
-void b2Load_logics(byte** data) // 1, 0x00 
+void b2Load_logics() // 1, 0x00 
 {
-	trampoline_1Int(&b8LoadLogicFile, *(*data)++, LOGIC_CODE_BANK);
+	trampoline_1Int(&b8LoadLogicFile, loadAndIncWinCode(), LOGIC_CODE_BANK);
+
+	asm("jmp _afterLogicCommand");
 }
 
-void b2Load_logics_v(byte** data) // 1, 0x80 
+void b2Load_logics_v() // 1, 0x80 
 {
-	trampoline_1Int(&b8LoadLogicFile, var[*(*data)++], LOGIC_CODE_BANK);
+	trampoline_1Int(&b8LoadLogicFile, var[loadAndIncWinCode()], LOGIC_CODE_BANK);
+
+	asm("jmp _afterLogicCommand");
 }
 
-void b2Call(byte** data) // 1, 0x00 
+//void b2Call() // 1, 0x00 
+//{
+//	executeLogic(loadAndIncWinCode());
+//}
+
+void b2Call_v() // 1, 0x80 
 {
-	executeLogic(*(*data)++);
+	executeLogic(var[loadAndIncWinCode()]);
+
+	asm("jmp _afterLogicCommand");
 }
 
-void b2Call_v(byte** data) // 1, 0x80 
+void b2Load_pic() // 1, 0x80 
 {
-	executeLogic(var[*(*data)++]);
+	loadPictureFile(var[loadAndIncWinCode()]);
+
+	asm("jmp _afterLogicCommand");
 }
 
-void b2Load_pic(byte** data) // 1, 0x80 
-{
-	loadPictureFile(var[*(*data)++]);
-}
-
-void b2Draw_pic(byte** data) // 1, 0x80 
+void b2Draw_pic() // 1, 0x80 
 {
 	int pNum;
 
-	pNum = var[*(*data)++];
+	pNum = var[loadAndIncWinCode()];
 	//picFNum = pNum;  // Debugging. Delete at some stage!!!
 	drawPic(loadedPictures[pNum].data, loadedPictures[pNum].size, TRUE);
+
+	asm("jmp _afterLogicCommand");
 }
 
-void b2Show_pic(byte** data) // 0, 0x00 
+void b2Show_pic() // 0, 0x00 
 {
 	okToShowPic = TRUE;   /* Says draw picture with next object update */
 	/*stretch_blit(picture, working_screen, 0, 0, 160, 168, 0, 20, 640, 336);*/
 	showPicture();
+
+	asm("jmp _afterLogicCommand");
 }
 
-void b2Discard_pic(byte** data) // 1, 0x80 
+void b2Discard_pic() // 1, 0x80 
 {
-	discardPictureFile(var[*(*data)++]);
+	discardPictureFile(var[loadAndIncWinCode()]);
+
+	asm("jmp _afterLogicCommand");
 }
 
-void b2Overlay_pic(byte** data) // 1, 0x80 
+void b2Overlay_pic() // 1, 0x80 
 {
 	int pNum;
 
-	pNum = var[*(*data)++];
+	pNum = var[loadAndIncWinCode()];
 	drawPic(loadedPictures[pNum].data, loadedPictures[pNum].size, FALSE);
+
+	asm("jmp _afterLogicCommand");
 }
 
-void b2Show_pri_screen(byte** data) // 0, 0x00 
+void b2Show_pri_screen() // 0, 0x00 
 {
 	//showPriority();
 	showDebugPri();
 	//getch();
 	//while (!keypressed()) { /* Wait for key */ }
+	asm("jmp _afterLogicCommand");
 }
 
 /************************** VIEW ACTION COMMANDS **************************/
 
-void b2Load_view(byte** data) // 1, 0x00 
+void b2Load_view() // 1, 0x00 
 {
-	trampoline_1Int(&b9LoadViewFile, (*(*data)++), VIEW_CODE_BANK_1);
+	trampoline_1Int(&b9LoadViewFile, (loadAndIncWinCode()), VIEW_CODE_BANK_1);
+	asm("jmp _afterLogicCommand");
 }
 
-void b2Load_view_v(byte** data) // 1, 0x80 
+void b2Load_view_v() // 1, 0x80 
 {
-	trampoline_1Int(&b9LoadViewFile, var[*(*data)++], VIEW_CODE_BANK_1);
+	trampoline_1Int(&b9LoadViewFile, var[loadAndIncWinCode()], VIEW_CODE_BANK_1);
+	asm("jmp _afterLogicCommand");
 }
 
-void b2Discard_view(byte** data) // 1, 0x00 
+void b2Discard_view() // 1, 0x00 
 {
-	trampoline_1Int(&b9DiscardView, *(*data)++, VIEW_CODE_BANK_1);
+	trampoline_1Int(&b9DiscardView, loadAndIncWinCode(), VIEW_CODE_BANK_1);
+	asm("jmp _afterLogicCommand");
 }
 
-void b2Animate_obj(byte** data) // 1, 0x00 
+void b2Animate_obj() // 1, 0x00 
 {
 	int entryNum;
 	ViewTable localViewTab;
 
-	entryNum = *(*data)++;
+	entryNum = loadAndIncWinCode();
 	//viewtab[entryNum].flags |= (ANIMATED | UPDATE | CYCLING);
 	getViewTab(&localViewTab, entryNum);
 
@@ -598,9 +637,10 @@ void b2Animate_obj(byte** data) // 1, 0x00
 	setViewTab(&localViewTab, entryNum);
 
 	getViewTab(&localViewTab, entryNum);
+	asm("jmp _afterLogicCommand");
 }
 
-void b2Unanimate_all(byte** data) // 0, 0x00 
+void b2Unanimate_all() // 0, 0x00 
 {
 	int entryNum;
 	ViewTable localViewtab;
@@ -614,14 +654,15 @@ void b2Unanimate_all(byte** data) // 0, 0x00
 
 		setViewTab(&localViewtab, entryNum);
 	}
+	asm("jmp _afterLogicCommand");
 }
 
-void b2Draw(byte** data) // 1, 0x00 
+void b2Draw() // 1, 0x00 
 {
 	int entryNum;
 	ViewTable localViewtab;
 
-	entryNum = *(*data)++;
+	entryNum = loadAndIncWinCode();
 	getViewTab(&localViewtab, entryNum);
 
 	localViewtab.flags |= (DRAWN | UPDATE);   /* Not sure about update */
@@ -633,149 +674,159 @@ void b2Draw(byte** data) // 1, 0x00
 	trampoline_1Int(&bADrawObject, entryNum, VIEW_CODE_BANK_2);
 
 	setViewTab(&localViewtab, entryNum);
+	asm("jmp _afterLogicCommand");
 }
 
-void b2Erase(byte** data) // 1, 0x00 
+void b2Erase() // 1, 0x00 
 {
 	int entryNum;
 	ViewTable localViewtab;
 
-	entryNum = *(*data)++;
+	entryNum = loadAndIncWinCode();
 	getViewTab(&localViewtab, entryNum);
 
 
 	localViewtab.flags &= ~DRAWN;
 
 	setViewTab(&localViewtab, entryNum);
+	asm("jmp _afterLogicCommand");
 }
 
-void b2Position(byte** data) // 3, 0x00 
+void b2Position() // 3, 0x00 
 {
 	int entryNum;
 	ViewTable localViewtab;
 
-	entryNum = *(*data)++;
+	entryNum = loadAndIncWinCode();
 	getViewTab(&localViewtab, entryNum);
 
-	localViewtab.xPos = *(*data)++;
-	localViewtab.yPos = *(*data)++;
+	localViewtab.xPos = loadAndIncWinCode();
+	localViewtab.yPos = loadAndIncWinCode();
 
 	setViewTab(&localViewtab, entryNum);
 	/* Need to check that it hasn't been draw()n yet. */
+	asm("jmp _afterLogicCommand");
 }
 
-void b2Position_v(byte** data) // 3, 0x60 
+void b2Position_v() // 3, 0x60 
 {
 	int entryNum;
 	ViewTable localViewtab;
 
-	entryNum = *(*data)++;
+	entryNum = loadAndIncWinCode();
 	getViewTab(&localViewtab, entryNum);
 
-	localViewtab.xPos = var[*(*data)++];
-	localViewtab.yPos = var[*(*data)++];
+	localViewtab.xPos = var[loadAndIncWinCode()];
+	localViewtab.yPos = var[loadAndIncWinCode()];
 
 	setViewTab(&localViewtab, entryNum);
 	/* Need to check that it hasn't been draw()n yet. */
+	asm("jmp _afterLogicCommand");
 }
 
-void b2Get_posn(byte** data) // 3, 0x60 
+void b2Get_posn() // 3, 0x60 
 {
 	int entryNum;
 	ViewTable localViewtab;
 
-	entryNum = *(*data)++;
+	entryNum = loadAndIncWinCode();
 	getViewTab(&localViewtab, entryNum);
 
 
-	var[*(*data)++] = localViewtab.xPos;
-	var[*(*data)++] = localViewtab.yPos;
+	var[loadAndIncWinCode()] = localViewtab.xPos;
+	var[loadAndIncWinCode()] = localViewtab.yPos;
+	asm("jmp _afterLogicCommand");
 }
 
-void b2Reposition(byte** data) // 3, 0x60 
+void b2Reposition() // 3, 0x60 
 {
 	int entryNum, dx, dy;
 	ViewTable localViewtab;
 
-	entryNum = *(*data)++;
+	entryNum = loadAndIncWinCode();
 	getViewTab(&localViewtab, entryNum);
 
-	dx = (signed char)var[*(*data)++];
-	dy = (signed char)var[*(*data)++];
+	dx = (signed char)var[loadAndIncWinCode()];
+	dy = (signed char)var[loadAndIncWinCode()];
 	localViewtab.xPos += dx;
 	localViewtab.yPos += dy;
 
 	setViewTab(&localViewtab, entryNum);
+	asm("jmp _afterLogicCommand");
 }
 
 
-void b2Set_view(byte** data) // 2, 0x00 
+void b2Set_view() // 2, 0x00 
 {
 	int entryNum, viewNum;
 	ViewTable localViewtab;
 
-	entryNum = *(*data)++;
-	viewNum = *(*data)++;
+	entryNum = loadAndIncWinCode();
+	viewNum = loadAndIncWinCode();
 
 	getViewTab(&localViewtab, entryNum);
 
 	trampolineViewUpdater1Int(&b9AddViewToTable, &localViewtab, viewNum, VIEW_CODE_BANK_1);
 
 	setViewTab(&localViewtab, entryNum);
+	asm("jmp _afterLogicCommand");
 }
 
-void b2Set_view_v(byte** data) // 2, 0x40 
+void b2Set_view_v() // 2, 0x40 
 {
 	int entryNum, viewNum;
 	ViewTable localViewtab;
 
-	entryNum = *(*data)++;
-	viewNum = var[*(*data)++];
+	entryNum = loadAndIncWinCode();
+	viewNum = var[loadAndIncWinCode()];
 
 	getViewTab(&localViewtab, entryNum);
 
 	trampolineViewUpdater1Int(&b9AddViewToTable, &localViewtab, viewNum, VIEW_CODE_BANK_1);
 
 	getViewTab(&localViewtab, entryNum);
+	asm("jmp _afterLogicCommand");
 }
 
-void b2Set_loop(byte** data) // 2, 0x00 
+void b2Set_loop() // 2, 0x00 
 {
 	int entryNum, loopNum;
 	ViewTable localViewtab;
 
-	entryNum = *(*data)++;
-	loopNum = *(*data)++;
+	entryNum = loadAndIncWinCode();
+	loopNum = loadAndIncWinCode();
 
 	getViewTab(&localViewtab, entryNum);
 	trampolineViewUpdater1Int(&b9SetLoop, &localViewtab, loopNum, VIEW_CODE_BANK_1);
 	trampolineViewUpdater1Int(&b9SetCel, &localViewtab, 0, VIEW_CODE_BANK_1);
 
 	setViewTab(&localViewtab, entryNum);
+	asm("jmp _afterLogicCommand");
 }
 
-void b2Set_loop_v(byte** data) // 2, 0x40 
+void b2Set_loop_v() // 2, 0x40 
 {
 	int entryNum, loopNum;
 	ViewTable localViewtab;
 
-	entryNum = *(*data)++;
+	entryNum = loadAndIncWinCode();
 	getViewTab(&localViewtab, entryNum);
 
-	loopNum = var[*(*data)++];
+	loopNum = var[loadAndIncWinCode()];
 
 	trampolineViewUpdater1Int(&b9SetLoop, &localViewtab, loopNum, VIEW_CODE_BANK_1);
 	trampolineViewUpdater1Int(&b9SetCel, &localViewtab, loopNum, VIEW_CODE_BANK_1);
 
 	setViewTab(&localViewtab, entryNum);
+	asm("jmp _afterLogicCommand");
 }
 
-void b2Fix_loop(byte** data) // 1, 0x00 
+void b2Fix_loop() // 1, 0x00 
 {
 	int entryNum;
 	ViewTable localViewtab;
 
-	entryNum = *(*data)++;
+	entryNum = loadAndIncWinCode();
 	getViewTab(&localViewtab, entryNum);
 
 
@@ -783,322 +834,348 @@ void b2Fix_loop(byte** data) // 1, 0x00
 
 	setViewTab(&localViewtab, entryNum);
 
+	asm("jmp _afterLogicCommand");
 }
 
-void b2Release_loop(byte** data) // 1, 0x00 
+void b2Release_loop() // 1, 0x00 
 {
 	int entryNum;
 	ViewTable localViewtab;
 
-	entryNum = *(*data)++;
+	entryNum = loadAndIncWinCode();
 	getViewTab(&localViewtab, entryNum);
 
 	localViewtab.flags &= ~FIXLOOP;
 	setViewTab(&localViewtab, entryNum);
+	asm("jmp _afterLogicCommand");
 }
 
-void b2Set_cel(byte** data) // 2, 0x00 
+void b2Set_cel() // 2, 0x00 
 {
 	int entryNum, celNum;
 	ViewTable localViewtab;
 
-	entryNum = *(*data)++;
-	celNum = *(*data)++;
+	entryNum = loadAndIncWinCode();
+	celNum = loadAndIncWinCode();
 
 	getViewTab(&localViewtab, entryNum);
 
 	trampolineViewUpdater1Int(&b9SetCel, &localViewtab, celNum, VIEW_CODE_BANK_1);
 
 	setViewTab(&localViewtab, entryNum);
+	asm("jmp _afterLogicCommand");
 }
 
-void b2Set_cel_v(byte** data) // 2, 0x40 
+void b2Set_cel_v() // 2, 0x40 
 {
 	int entryNum, celNum;
 	ViewTable localViewtab;
 
-	entryNum = *(*data)++;
-	celNum = var[*(*data)++];
+	entryNum = loadAndIncWinCode();
+	celNum = var[loadAndIncWinCode()];
 
 	getViewTab(&localViewtab, entryNum);
 
 	trampolineViewUpdater1Int(&b9SetCel, &localViewtab, celNum, VIEW_CODE_BANK_1);
 
 	setViewTab(&localViewtab, entryNum);
+	asm("jmp _afterLogicCommand");
 }
 
-void b2Last_cel(byte** data) // 2, 0x40 
+void b2Last_cel() // 2, 0x40 
 {
 	int entryNum, varNum;
 	ViewTable localViewtab;
 
-	entryNum = *(*data)++;
+	entryNum = loadAndIncWinCode();
 	getViewTab(&localViewtab, entryNum);
-	varNum = *(*data)++;
+	varNum = loadAndIncWinCode();
 
 	var[varNum] = localViewtab.numberOfCels - 1;
 	setViewTab(&localViewtab, entryNum);
+	asm("jmp _afterLogicCommand");
 }
 
-void b2Current_cel(byte** data) // 2, 0x40 
+void b2Current_cel() // 2, 0x40 
 {
 	int entryNum, varNum;
 	ViewTable localViewtab;
 
-	entryNum = *(*data)++;
+	entryNum = loadAndIncWinCode();
 	getViewTab(&localViewtab, entryNum);
-	varNum = *(*data)++;
+	varNum = loadAndIncWinCode();
 
 	var[varNum] = localViewtab.currentCel;
 	setViewTab(&localViewtab, entryNum);
+	asm("jmp _afterLogicCommand");
 }
 
 #pragma code-name (pop)
 #pragma code-name (push, "BANKRAM03")
 
-void b3Current_loop(byte** data) // 2, 0x40 
+void b3Current_loop() // 2, 0x40 
 {
 	int entryNum, varNum;
 	ViewTable localViewtab;
 
-	entryNum = *(*data)++;
-	varNum = *(*data)++;
+	entryNum = loadAndIncWinCode();
+	varNum = loadAndIncWinCode();
 	getViewTab(&localViewtab, entryNum);
 
 	var[varNum] = localViewtab.currentLoop;
 	setViewTab(&localViewtab, entryNum);
+	asm("jmp _afterLogicCommand");
 }
 
-void b3Current_view(byte** data) // 2, 0x40 
+void b3Current_view() // 2, 0x40 
 {
 	int entryNum, varNum;
 	ViewTable localViewtab;
 
-	entryNum = *(*data)++;
+	entryNum = loadAndIncWinCode();
 	getViewTab(&localViewtab, entryNum);
 
-	varNum = *(*data)++;
+	varNum = loadAndIncWinCode();
 	var[varNum] = localViewtab.currentView;
 
 	setViewTab(&localViewtab, entryNum);
+	asm("jmp _afterLogicCommand");
 }
 
-void b3Number_of_loops(byte** data) // 2, 0x40 
+void b3Number_of_loops() // 2, 0x40 
 {
 	int entryNum, varNum;
 	ViewTable localViewtab;
 
-	entryNum = *(*data)++;
+	entryNum = loadAndIncWinCode();
 	getViewTab(&localViewtab, entryNum);
 
-	varNum = *(*data)++;
+	varNum = loadAndIncWinCode();
 	var[varNum] = localViewtab.numberOfLoops;
 
 	setViewTab(&localViewtab, entryNum);
+	asm("jmp _afterLogicCommand");
 }
 
-void b3Set_priority(byte** data) // 2, 0x00 
+void b3Set_priority() // 2, 0x00 
 {
 	int entryNum;
 	ViewTable localViewtab;
 
-	entryNum = *(*data)++;
+	entryNum = loadAndIncWinCode();
 	getViewTab(&localViewtab, entryNum);
 
-	localViewtab.priority = *(*data)++;
+	localViewtab.priority = loadAndIncWinCode();
 	localViewtab.flags |= FIXEDPRIORITY;
 
 	setViewTab(&localViewtab, entryNum);
+	asm("jmp _afterLogicCommand");
 }
 
-void b3Set_priority_v(byte** data) // 2, 0x40 
+void b3Set_priority_v() // 2, 0x40 
 {
 	int entryNum;
 	ViewTable localViewtab;
 
-	entryNum = *(*data)++;
+	entryNum = loadAndIncWinCode();
 	getViewTab(&localViewtab, entryNum);
 
-	localViewtab.priority = var[*(*data)++];
+	localViewtab.priority = var[loadAndIncWinCode()];
 	localViewtab.flags |= FIXEDPRIORITY;
 
 	setViewTab(&localViewtab, entryNum);
+	asm("jmp _afterLogicCommand");
 }
 
-void b3Release_priority(byte** data) // 1, 0x00 
+void b3Release_priority() // 1, 0x00 
 {
 	int entryNum;
 	ViewTable localViewtab;
 
-	entryNum = *(*data)++;
+	entryNum = loadAndIncWinCode();
 	getViewTab(&localViewtab, entryNum);
 
 	localViewtab.flags &= ~FIXEDPRIORITY;
 
 	setViewTab(&localViewtab, entryNum);
+	asm("jmp _afterLogicCommand");
 }
 
-void b3Get_priority(byte** data) // 2, 0x40 
+void b3Get_priority() // 2, 0x40 
 {
 	int entryNum, varNum;
 	ViewTable localViewtab;
 
-	entryNum = *(*data)++;
+	entryNum = loadAndIncWinCode();
 	getViewTab(&localViewtab, entryNum);
 
 
-	varNum = *(*data)++;
+	varNum = loadAndIncWinCode();
 	var[varNum] = localViewtab.priority;
 
 	setViewTab(&localViewtab, entryNum);
+	asm("jmp _afterLogicCommand");
 }
 
-void b3Stop_update(byte** data) // 1, 0x00 
+void b3Stop_update() // 1, 0x00 
 {
 	int entryNum;
 	ViewTable localViewtab;
 
-	entryNum = *(*data)++;
+	entryNum = loadAndIncWinCode();
 	getViewTab(&localViewtab, entryNum);
 
 	localViewtab.flags &= ~UPDATE;
 
 	setViewTab(&localViewtab, entryNum);
+	asm("jmp _afterLogicCommand");
 }
 
-void b3Start_update(byte** data) // 1, 0x00 
+void b3Start_update() // 1, 0x00 
 {
 	int entryNum;
 	ViewTable localViewtab;
 
-	entryNum = *(*data)++;
+	entryNum = loadAndIncWinCode();
 	getViewTab(&localViewtab, entryNum);
 
 
 	localViewtab.flags |= UPDATE;
 
 	setViewTab(&localViewtab, entryNum);
+	asm("jmp _afterLogicCommand");
 }
 
-void b3Force_update(byte** data) // 1, 0x00 
+void b3Force_update() // 1, 0x00 
 {
 	int entryNum;
 
-	entryNum = *(*data)++;
+	entryNum = loadAndIncWinCode();
 	/* Do immediate update here. Call update(entryNum) */
 
 	trampoline_1Int(&bAUpdateObj, entryNum, VIEW_CODE_BANK_1);
+	asm("jmp _afterLogicCommand");
 }
 
-void b3Ignore_horizon(byte** data) // 1, 0x00 
+void b3Ignore_horizon() // 1, 0x00 
 {
 	int entryNum;
 	ViewTable localViewtab;
 
-	entryNum = *(*data)++;
+	entryNum = loadAndIncWinCode();
 	getViewTab(&localViewtab, entryNum);
 
 
 	localViewtab.flags |= IGNOREHORIZON;
 
 	setViewTab(&localViewtab, entryNum);
+	asm("jmp _afterLogicCommand");
 }
 
-void b3Observe_horizon(byte** data) // 1, 0x00 
+void b3Observe_horizon() // 1, 0x00 
 {
 	int entryNum;
 	ViewTable localViewtab;
 
-	entryNum = *(*data)++;
+	entryNum = loadAndIncWinCode();
 	getViewTab(&localViewtab, entryNum);
 
 	localViewtab.flags &= ~IGNOREHORIZON;
 
 	setViewTab(&localViewtab, entryNum);
+	asm("jmp _afterLogicCommand");
 }
 
-void b3Set_horizon(byte** data) // 1, 0x00 
+void b3Set_horizon() // 1, 0x00 
 {
-	horizon = *(*data)++;
+	printf("The horizon is %d", horizon);
+	exit(0);
+	horizon = loadAndIncWinCode();
+	asm("jmp _afterLogicCommand");
 }
 
-void b3Object_on_water(byte** data) // 1, 0x00 
+void b3Object_on_water() // 1, 0x00 
 {
 	int entryNum;
 	ViewTable localViewtab;
 
-	entryNum = *(*data)++;
+	entryNum = loadAndIncWinCode();
 	getViewTab(&localViewtab, entryNum);
 
 	localViewtab.flags |= ONWATER;
 
 	setViewTab(&localViewtab, entryNum);
+	asm("jmp _afterLogicCommand");
 }
 
-void b3Object_on_land(byte** data) // 1, 0x00 
+void b3Object_on_land() // 1, 0x00 
 {
 	int entryNum;
 	ViewTable localViewtab;
 
-	entryNum = *(*data)++;
+	entryNum = loadAndIncWinCode();
 	getViewTab(&localViewtab, entryNum);
 
 	localViewtab.flags |= ONLAND;
 
 	setViewTab(&localViewtab, entryNum);
+	asm("jmp _afterLogicCommand");
 }
 
-void b3Object_on_anything(byte** data) // 1, 0x00 
+void b3Object_on_anything() // 1, 0x00 
 {
 	int entryNum;
 	ViewTable localViewtab;
 
-	entryNum = *(*data)++;
+	entryNum = loadAndIncWinCode();
 	getViewTab(&localViewtab, entryNum);
 
 	localViewtab.flags &= ~(ONWATER | ONLAND);
 
 	setViewTab(&localViewtab, entryNum);
+	asm("jmp _afterLogicCommand");
 }
 
-void b3Ignore_objs(byte** data) // 1, 0x00 
+void b3Ignore_objs() // 1, 0x00 
 {
 	int entryNum;
 	ViewTable localViewtab;
 
-	entryNum = *(*data)++;
+	entryNum = loadAndIncWinCode();
 	getViewTab(&localViewtab, entryNum);
 
 	localViewtab.flags |= IGNOREOBJECTS;
 
 	setViewTab(&localViewtab, entryNum);
+	asm("jmp _afterLogicCommand");
 }
 
-void b3Observe_objs(byte** data) // 1, 0x00 
+void b3Observe_objs() // 1, 0x00 
 {
 	int entryNum;
 	ViewTable localViewtab;
 
-	entryNum = *(*data)++;
+	entryNum = loadAndIncWinCode();
 	getViewTab(&localViewtab, entryNum);
 
 	localViewtab.flags &= ~IGNOREOBJECTS;
 
 	setViewTab(&localViewtab, entryNum);
+	asm("jmp _afterLogicCommand");
 }
 
-void b3Distance(byte** data) // 3, 0x20 
+void b3Distance() // 3, 0x20 
 {
 	int o1, o2, varNum, x1, y1, x2, y2;
 	ViewTable localViewtab1, localViewtab2;
 
-	o1 = *(*data)++;
-	o2 = *(*data)++;
+	o1 = loadAndIncWinCode();
+	o2 = loadAndIncWinCode();
 
 	getViewTab(&localViewtab1, o1);
 	getViewTab(&localViewtab2, o2);
 
-	varNum = *(*data)++;
+	varNum = loadAndIncWinCode();
 	/* Check that both objects are on screen here. If they aren't
 	** then 255 should be returned. */
 	if (!((localViewtab1.flags & DRAWN) && (localViewtab2.flags & DRAWN))) {
@@ -1110,109 +1187,117 @@ void b3Distance(byte** data) // 3, 0x20
 	x2 = localViewtab2.xPos;
 	y2 = localViewtab2.yPos;
 	var[varNum] = abs(x1 - x2) + abs(y1 - y2);
+	asm("jmp _afterLogicCommand");
 }
 
-void b3Stop_cycling(byte** data) // 1, 0x00 
+void b3Stop_cycling() // 1, 0x00 
 {
 	int entryNum;
 	ViewTable localViewtab;
 
-	entryNum = *(*data)++;
+	entryNum = loadAndIncWinCode();
 	getViewTab(&localViewtab, entryNum);
 
 	localViewtab.flags &= ~CYCLING;
 
 	setViewTab(&localViewtab, entryNum);
+	asm("jmp _afterLogicCommand");
 }
 
-void b3Start_cycling(byte** data) // 1, 0x00 
+void b3Start_cycling() // 1, 0x00 
 {
 	int entryNum;
 	ViewTable localViewtab;
 
-	entryNum = *(*data)++;
+	entryNum = loadAndIncWinCode();
 	getViewTab(&localViewtab, entryNum);
 
 	localViewtab.flags |= CYCLING;
 
 	setViewTab(&localViewtab, entryNum);
+	asm("jmp _afterLogicCommand");
 }
 
-void b3Normal_cycle(byte** data) // 1, 0x00 
+void b3Normal_cycle() // 1, 0x00 
 {
 	int entryNum;
 	ViewTable localViewtab;
 
-	entryNum = *(*data)++;
+	entryNum = loadAndIncWinCode();
 	getViewTab(&localViewtab, entryNum);
 
 	localViewtab.cycleStatus = 0;
 
 	setViewTab(&localViewtab, entryNum);
+	asm("jmp _afterLogicCommand");
 }
 
-void b3End_of_loop(byte** data) // 2, 0x00 
+void b3End_of_loop() // 2, 0x00 
 {
 	int entryNum;
 	ViewTable localViewtab;
 
-	entryNum = *(*data)++;
+	entryNum = loadAndIncWinCode();
 	getViewTab(&localViewtab, entryNum);
 
-	localViewtab.param1 = *(*data)++;
+	localViewtab.param1 = loadAndIncWinCode();
 	localViewtab.cycleStatus = 1;
 	localViewtab.flags |= (UPDATE | CYCLING);
 
 	setViewTab(&localViewtab, entryNum);
+	asm("jmp _afterLogicCommand");
 }
 
-void b3Reverse_cycle(byte** data) // 1, 0x00
+void b3Reverse_cycle() // 1, 0x00
 {
 	int entryNum;
 	ViewTable localViewtab;
 
-	entryNum = *(*data)++;
+	entryNum = loadAndIncWinCode();
 	getViewTab(&localViewtab, entryNum);
 	/* Store the other parameters here */
 
 	localViewtab.cycleStatus = 3;
 
 	setViewTab(&localViewtab, entryNum);
+	asm("jmp _afterLogicCommand");
 }
 
-void b3Reverse_loop(byte** data) // 2, 0x00 
+void b3Reverse_loop() // 2, 0x00 
 {
 	int entryNum;
 	ViewTable localViewtab;
 
-	entryNum = *(*data)++;
+	entryNum = loadAndIncWinCode();
 	getViewTab(&localViewtab, entryNum);
 
-	localViewtab.param1 = *(*data)++;
+	localViewtab.param1 = loadAndIncWinCode();
 	localViewtab.cycleStatus = 2;
 	localViewtab.flags |= (UPDATE | CYCLING);
 
 	setViewTab(&localViewtab, entryNum);
+	asm("jmp _afterLogicCommand");
 }
 
-void b3Cycle_time(byte** data) // 2, 0x40 
+void b3Cycle_time() // 2, 0x40 
 {
 	int entryNum;
 	ViewTable localViewtab;
 
-	entryNum = *(*data)++;
+	entryNum = loadAndIncWinCode();
 	getViewTab(&localViewtab, entryNum);
 
-	localViewtab.cycleTime = var[*(*data)++];
+	localViewtab.cycleTime = var[loadAndIncWinCode()];
 	setViewTab(&localViewtab, entryNum);
+	asm("jmp _afterLogicCommand");
 }
 
-void b3Stop_motion(byte** data) // 1, 0x00 
+void b3Stop_motion() // 1, 0x00 
 {
 	int entryNum;
 	ViewTable localViewtab;
 
-	entryNum = *(*data)++;
+	entryNum = loadAndIncWinCode();
 	getViewTab(&localViewtab, entryNum);
 
 	localViewtab.flags &= ~MOTION;
@@ -1220,100 +1305,106 @@ void b3Stop_motion(byte** data) // 1, 0x00
 	localViewtab.motion = 0;
 
 	setViewTab(&localViewtab, entryNum);
+	asm("jmp _afterLogicCommand");
 }
 
-void b3Start_motion(byte** data) // 1, 0x00 
+void b3Start_motion() // 1, 0x00 
 {
 	int entryNum;
 	ViewTable localViewtab;
 
-	entryNum = *(*data)++;
+	entryNum = loadAndIncWinCode();
 	getViewTab(&localViewtab, entryNum);
 
 	localViewtab.flags |= MOTION;
 	localViewtab.motion = 0;        /* Not sure about this */
 
 	setViewTab(&localViewtab, entryNum);
+	asm("jmp _afterLogicCommand");
 }
 
-void b3Step_size(byte** data) // 2, 0x40 
+void b3Step_size() // 2, 0x40 
 {
 	int entryNum;
 	ViewTable localViewtab;
 
-	entryNum = *(*data)++;
+	entryNum = loadAndIncWinCode();
 	getViewTab(&localViewtab, entryNum);
 
-	localViewtab.stepSize = var[*(*data)++];
+	localViewtab.stepSize = var[loadAndIncWinCode()];
 
 	setViewTab(&localViewtab, entryNum);
+	asm("jmp _afterLogicCommand");
 }
 
-void b3Step_time(byte** data) // 2, 0x40 
+void b3Step_time() // 2, 0x40 
 {
 	int entryNum;
 	ViewTable localViewtab;
 
-	entryNum = *(*data)++;
+	entryNum = loadAndIncWinCode();
 	getViewTab(&localViewtab, entryNum);
 
-	localViewtab.stepTime = var[*(*data)++];
+	localViewtab.stepTime = var[loadAndIncWinCode()];
 
 	setViewTab(&localViewtab, entryNum);
+	asm("jmp _afterLogicCommand");
 }
 
-void b3Move_obj(byte** data) // 5, 0x00 
-{
-	int entryNum;
-	byte stepVal;
-	ViewTable localViewtab;
-
-	entryNum = *(*data)++;
-	getViewTab(&localViewtab, entryNum);
-
-	localViewtab.param1 = *(*data)++;
-	localViewtab.param2 = *(*data)++;
-	localViewtab.param3 = localViewtab.stepSize;  /* Save stepsize */
-	stepVal = *(*data)++;
-	if (stepVal > 0) localViewtab.stepSize = stepVal;
-	localViewtab.param4 = *(*data)++;
-	localViewtab.motion = 3;
-	localViewtab.flags |= MOTION;
-
-	setViewTab(&localViewtab, entryNum);
-}
-
-void b3Move_obj_v(byte** data) // 5, 0x70 
+void b3Move_obj() // 5, 0x00 
 {
 	int entryNum;
 	byte stepVal;
 	ViewTable localViewtab;
 
-	entryNum = *(*data)++;
+	entryNum = loadAndIncWinCode();
 	getViewTab(&localViewtab, entryNum);
 
-	localViewtab.param1 = var[*(*data)++];
-	localViewtab.param2 = var[*(*data)++];
+	localViewtab.param1 = loadAndIncWinCode();
+	localViewtab.param2 = loadAndIncWinCode();
 	localViewtab.param3 = localViewtab.stepSize;  /* Save stepsize */
-	stepVal = var[*(*data)++];
+	stepVal = loadAndIncWinCode();
 	if (stepVal > 0) localViewtab.stepSize = stepVal;
-	localViewtab.param4 = *(*data)++;
+	localViewtab.param4 = loadAndIncWinCode();
 	localViewtab.motion = 3;
 	localViewtab.flags |= MOTION;
 
 	setViewTab(&localViewtab, entryNum);
+	asm("jmp _afterLogicCommand");
 }
 
-void b3Follow_ego(byte** data) // 3, 0x00 
+void b3Move_obj_v() // 5, 0x70 
+{
+	int entryNum;
+	byte stepVal;
+	ViewTable localViewtab;
+
+	entryNum = loadAndIncWinCode();
+	getViewTab(&localViewtab, entryNum);
+
+	localViewtab.param1 = var[loadAndIncWinCode()];
+	localViewtab.param2 = var[loadAndIncWinCode()];
+	localViewtab.param3 = localViewtab.stepSize;  /* Save stepsize */
+	stepVal = var[loadAndIncWinCode()];
+	if (stepVal > 0) localViewtab.stepSize = stepVal;
+	localViewtab.param4 = loadAndIncWinCode();
+	localViewtab.motion = 3;
+	localViewtab.flags |= MOTION;
+
+	setViewTab(&localViewtab, entryNum);
+	asm("jmp _afterLogicCommand");
+}
+
+void b3Follow_ego() // 3, 0x00 
 {
 	int entryNum, stepVal, flagNum;
 	ViewTable localViewtab;
 
-	entryNum = *(*data)++;
+	entryNum = loadAndIncWinCode();
 	getViewTab(&localViewtab, entryNum);
 
-	stepVal = *(*data)++;
-	flagNum = *(*data)++;
+	stepVal = loadAndIncWinCode();
+	flagNum = loadAndIncWinCode();
 	localViewtab.param1 = localViewtab.stepSize;
 	/* Might need to put 'if (stepVal != 0)' */
 	//localViewtab.stepSize = stepVal;
@@ -1322,14 +1413,15 @@ void b3Follow_ego(byte** data) // 3, 0x00
 	localViewtab.flags |= MOTION;
 
 	setViewTab(&localViewtab, entryNum);
+	asm("jmp _afterLogicCommand");
 }
 
-void b3Wander(byte** data) // 1, 0x00 
+void b3Wander() // 1, 0x00 
 {
 	int entryNum;
 	ViewTable localViewtab;
 
-	entryNum = *(*data)++;
+	entryNum = loadAndIncWinCode();
 	getViewTab(&localViewtab, entryNum);
 
 
@@ -1337,150 +1429,165 @@ void b3Wander(byte** data) // 1, 0x00
 	localViewtab.flags |= MOTION;
 
 	setViewTab(&localViewtab, entryNum);
+	asm("jmp _afterLogicCommand");
 }
 
-void b3Normal_motion(byte** data) // 1, 0x00 
+void b3Normal_motion() // 1, 0x00 
 {
 	int entryNum;
 	ViewTable localViewtab;
 
-	entryNum = *(*data)++;
+	entryNum = loadAndIncWinCode();
 	getViewTab(&localViewtab, entryNum);
 
 	localViewtab.motion = 0;
 	localViewtab.flags |= MOTION;
 
 	setViewTab(&localViewtab, entryNum);
+	asm("jmp _afterLogicCommand");
 }
 
-void b3Set_dir(byte** data) // 2, 0x40 
+void b3Set_dir() // 2, 0x40 
 {
 	int entryNum;
 	ViewTable localViewtab;
 
-	entryNum = *(*data)++;
+	entryNum = loadAndIncWinCode();
 	getViewTab(&localViewtab, entryNum);
 
-	localViewtab.direction = var[*(*data)++];
+	localViewtab.direction = var[loadAndIncWinCode()];
 
 	setViewTab(&localViewtab, entryNum);
+	asm("jmp _afterLogicCommand");
 }
 
-void b3Get_dir(byte** data) // 2, 0x40 
+void b3Get_dir() // 2, 0x40 
 {
 	int entryNum;
 	ViewTable localViewtab;
 
-	entryNum = *(*data)++;
+	entryNum = loadAndIncWinCode();
 	getViewTab(&localViewtab, entryNum);
 
-	var[*(*data)++] = localViewtab.direction;
+	var[loadAndIncWinCode()] = localViewtab.direction;
 
 	setViewTab(&localViewtab, entryNum);
+	asm("jmp _afterLogicCommand");
 }
 
-void b3Ignore_blocks(byte** data) // 1, 0x00 
+void b3Ignore_blocks() // 1, 0x00 
 {
 	int entryNum;
 	ViewTable localViewtab;
 
-	entryNum = *(*data)++;
+	entryNum = loadAndIncWinCode();
 	getViewTab(&localViewtab, entryNum);
 
 	localViewtab.flags |= IGNOREBLOCKS;
 
 	setViewTab(&localViewtab, entryNum);
+	asm("jmp _afterLogicCommand");
 }
 
-void b3Observe_blocks(byte** data) // 1, 0x00 
+void b3Observe_blocks() // 1, 0x00 
 {
 	int entryNum;
 	ViewTable localViewtab;
 
-	entryNum = *(*data)++;
+	entryNum = loadAndIncWinCode();
 	getViewTab(&localViewtab, entryNum);
 
 	localViewtab.flags &= ~IGNOREBLOCKS;
 
 	setViewTab(&localViewtab, entryNum);
+	asm("jmp _afterLogicCommand");
 }
 
-//void b3Block(byte** data) // 4, 0x00 
+//void b3Block() // 4, 0x00 
 //{
 //	/* Is this used anywhere? - Not implemented at this stage */
 //	*data += 4;
 //}
 //
-//void b3Unblock(byte** data) // 0, 0x00 
+//void b3Unblock() // 0, 0x00 
 //{
 //
 //}
 
-void b3Get(byte** data) // 1, 00 
+void b3Get() // 1, 00 
 {
-	objects[*(*data)++].roomNum = 255;
+	objects[loadAndIncWinCode()].roomNum = 255;
+	asm("jmp _afterLogicCommand");
 }
 
-void b3Get_v(byte** data) // 1, 0x80 
+void b3Get_v() // 1, 0x80 
 {
-	objects[var[*(*data)++]].roomNum = 255;
+	objects[var[loadAndIncWinCode()]].roomNum = 255;
+	asm("jmp _afterLogicCommand");
 }
 
-void b3Drop(byte** data) // 1, 0x00 
+void b3Drop() // 1, 0x00 
 {
-	objects[*(*data)++].roomNum = 0;
+	objects[loadAndIncWinCode()].roomNum = 0;
+	asm("jmp _afterLogicCommand");
 }
 
 
-void b3Put(byte** data) // 2, 0x00 
+void b3Put() // 2, 0x00 
 {
 	int objNum, room;
 
-	objNum = *(*data)++;
-	room = *(*data)++;
+	objNum = loadAndIncWinCode();
+	room = loadAndIncWinCode();
 	objects[objNum].roomNum = room;
+	asm("jmp _afterLogicCommand");
 }
 
-void b3Put_v(byte** data) // 2, 0x40 
+void b3Put_v() // 2, 0x40 
 {
 	int objNum, room;
 
-	objNum = *(*data)++;
-	room = var[*(*data)++];
+	objNum = loadAndIncWinCode();
+	room = var[loadAndIncWinCode()];
 	objects[objNum].roomNum = room;
+	asm("jmp _afterLogicCommand");
 }
 
-void b3Get_room_v(byte** data) // 2, 0xC0 
+void b3Get_room_v() // 2, 0xC0 
 {
 	int objNum, room;
 
-	objNum = var[*(*data)++];
-	var[*(*data)++] = objects[objNum].roomNum;
+	objNum = var[loadAndIncWinCode()];
+	var[loadAndIncWinCode()] = objects[objNum].roomNum;
+	asm("jmp _afterLogicCommand");
 }
 
-void b3Load_sound(byte** data) // 1, 0x00 
+void b3Load_sound() // 1, 0x00 
 {
 	int soundNum;
 
-	soundNum = *(*data)++;
+	soundNum = loadAndIncWinCode();
 	loadSoundFile(soundNum);
+	asm("jmp _afterLogicCommand");
 }
 
-void b3Play_sound(byte** data) // 2, 00  sound() renamed to avoid clash
+void b3Play_sound() // 2, 00  sound() renamed to avoid clash
 {
 	int soundNum;
 
-	soundNum = *(*data)++;
-	soundEndFlag = *(*data)++;
+	soundNum = loadAndIncWinCode();
+	soundEndFlag = loadAndIncWinCode();
 	/* playSound(soundNum); */
 	flag[soundEndFlag] = TRUE;
+	asm("jmp _afterLogicCommand");
 }
 
 
-void b3Stop_sound(byte** data) // 0, 0x00 
+void b3Stop_sound() // 0, 0x00 
 {
 	checkForEnd = FALSE;
 	stop_midi();
+	asm("jmp _afterLogicCommand");
 }
 
 boolean b3CharIsIn(char testChar, char* testString)
@@ -1492,6 +1599,7 @@ boolean b3CharIsIn(char testChar, char* testString)
 	}
 
 	return FALSE;
+	asm("jmp _afterLogicCommand");
 }
 
 void b3ProcessString(char* stringPointer, byte stringBank, char* outputString)
@@ -1574,12 +1682,12 @@ void b3ProcessString(char* stringPointer, byte stringBank, char* outputString)
 	}
 }
 
-void b3Print(byte** data) // 1, 00 
+void b3Print() // 1, 00 
 {
 	char* tempString = (char*)&GOLDEN_RAM[LOCAL_WORK_AREA_START];
 	BITMAP* temp;
 
-	char* messagePointer = getMessagePointer(currentLog, (*(*data)++) - 1);
+	char* messagePointer = getMessagePointer(currentLog, (loadAndIncWinCode()) - 1);
 
 	show_mouse(NULL);
 	temp = create_bitmap(640, 336);
@@ -1594,24 +1702,25 @@ void b3Print(byte** data) // 1, 00
 	blit(temp, agi_screen, 0, 0, 0, 0, 640, 336);
 	show_mouse(screen);
 	destroy_bitmap(temp);
+	asm("jmp _afterLogicCommand");
 }
 
 
 #pragma code-name (pop)
 #pragma code-name (push, "BANKRAM04")
 
-void b4Print_v(byte** data) // 1, 0x80 
+void b4Print_v() // 1, 0x80 
 {
-	char* tempString = (char*) & GOLDEN_RAM[LOCAL_WORK_AREA_START];
+	char* tempString = (char*)&GOLDEN_RAM[LOCAL_WORK_AREA_START];
 	BITMAP* temp;
 
-	char* messagePointer = getMessagePointer(currentLog, (var[*(*data)++]) - 1);
+	char* messagePointer = getMessagePointer(currentLog, (var[loadAndIncWinCode()]) - 1);
 
 	show_mouse(NULL);
 	temp = create_bitmap(640, 336);
 	blit(agi_screen, temp, 0, 0, 0, 0, 640, 336);
 	while (key[KEY_ENTER] || key[KEY_ESC]) { /* Wait */ }
-	b3ProcessString(messagePointer, 0, tempString);
+	trampolineProcessString(messagePointer, 0, tempString);
 	//printf("Warning Print In Bigbox Not Implemented Implement This");
 	//printInBoxBig2(tempString, -1, -1, 30);
 	while (!key[KEY_ENTER] && !key[KEY_ESC]) { /* Wait */ }
@@ -1620,69 +1729,74 @@ void b4Print_v(byte** data) // 1, 0x80
 	show_mouse(screen);
 	destroy_bitmap(temp);
 
+	asm("jmp _afterLogicCommand");
 }
 
-void b4Display(byte** data) // 3, 0x00 
-{
-	int row, col, messNum;
-	char* tempString = (char*) & GOLDEN_RAM[LOCAL_WORK_AREA_START];
-	char* messagePointer;
-
-	col = *(*data)++;
-	row = *(*data)++;
-	messNum = *(*data)++;
-
-	messagePointer = getMessagePointer(currentLog, messNum - 1);
-
-	b3ProcessString(messagePointer, 0, tempString);
-	drawBigString(screen, tempString, row * 16, 20 + (col * 16), agi_fg, agi_bg);
-	/*lprintf("info: display() %s, fg: %d bg: %d row: %d col: %d",
-	   tempString, agi_fg, agi_bg, row, col);*/
-}
-
-void b4Display_v(byte** data) // 3, 0xE0 
+void b4Display() // 3, 0x00 
 {
 	int row, col, messNum;
 	char* tempString = (char*)&GOLDEN_RAM[LOCAL_WORK_AREA_START];
 	char* messagePointer;
 
-	col = var[*(*data)++];
-	row = var[*(*data)++];
-	messNum = var[*(*data)++];
+	col = loadAndIncWinCode();
+	row = loadAndIncWinCode();
+	messNum = loadAndIncWinCode();
+
+	messagePointer = getMessagePointer(currentLog, messNum - 1);
+
+	trampolineProcessString(messagePointer, 0, tempString);
+	drawBigString(screen, tempString, row * 16, 20 + (col * 16), agi_fg, agi_bg);
+	/*lprintf("info: display() %s, fg: %d bg: %d row: %d col: %d",
+	   tempString, agi_fg, agi_bg, row, col);*/
+	asm("jmp _afterLogicCommand");
+}
+
+void b4Display_v() // 3, 0xE0 
+{
+	int row, col, messNum;
+	char* tempString = (char*)&GOLDEN_RAM[LOCAL_WORK_AREA_START];
+	char* messagePointer;
+
+	col = var[loadAndIncWinCode()];
+	row = var[loadAndIncWinCode()];
+	messNum = var[loadAndIncWinCode()];
 	//drawString(picture, logics[currentLog].data->messages[messNum-1],
 	//   row*8, col*8, agi_fg, agi_bg);
 
 	messagePointer = getMessagePointer(currentLog, messNum - 1);
-	b3ProcessString(messagePointer, 0, tempString);
+	trampolineProcessString(messagePointer, 0, tempString);
 	drawBigString(screen, tempString, row * 16, 20 + (col * 16), agi_fg, agi_bg);
 	/*lprintf("info: display.v() %s, foreground: %d background: %d",
 	   tempString, agi_fg, agi_bg);*/
+	asm("jmp _afterLogicCommand");
 }
 
-void b4Clear_lines(byte** data) // 3, 0x00 
+void b4Clear_lines() // 3, 0x00 
 {
 	int boxColour, startLine, endLine;
 
-	startLine = *(*data)++;
-	endLine = *(*data)++;
-	boxColour = *(*data)++;
+	startLine = loadAndIncWinCode();
+	endLine = loadAndIncWinCode();
+	boxColour = loadAndIncWinCode();
 	if ((screenMode == AGI_GRAPHICS) && (boxColour > 0)) boxColour = 15;
 	boxColour++;
 	show_mouse(NULL);
 	rectfill(agi_screen, 0, startLine * 16, 639, (endLine * 16) + 15, boxColour);
 	show_mouse(screen);
+	asm("jmp _afterLogicCommand");
 }
 
-void b4Text_screen(byte** data) // 0, 0x00 
+void b4Text_screen() // 0, 0x00 
 {
 	screenMode = AGI_TEXT;
 	/* Do something else here */
 	inputLineDisplayed = FALSE;
 	statusLineDisplayed = FALSE;
 	clear(screen);
+	asm("jmp _afterLogicCommand");
 }
 
-void b4Graphics(byte** data) // 0, 0x00 
+void b4Graphics() // 0, 0x00 
 {
 	screenMode = AGI_GRAPHICS;
 	/* Do something else here */
@@ -1690,12 +1804,13 @@ void b4Graphics(byte** data) // 0, 0x00
 	statusLineDisplayed = TRUE;
 	okToShowPic = TRUE;
 	clear(screen);
+	asm("jmp _afterLogicCommand");
 }
 
-void b4Set_cursor_char(byte** data) // 1, 0x00 
+void b4Set_cursor_char() // 1, 0x00 
 {
 	char* temp = (char*)&GOLDEN_RAM[LOCAL_WORK_AREA_START];
-	byte msgNo = (*(*data)++) - 1;
+	byte msgNo = loadAndIncWinCode() - 1;
 	char* messagePointer = getMessagePointer(currentLog, msgNo);
 	LOGICFile logicFile;
 
@@ -1705,44 +1820,51 @@ void b4Set_cursor_char(byte** data) // 1, 0x00
 	printf("Your msgNo is %d\n", msgNo);
 #endif // VERBOSE_STRING_CHECK
 
-	b3ProcessString(messagePointer, logicFile.messageBank, temp);
+
+	trampolineProcessString(messagePointer, logicFile.messageBank, temp);
 	cursorChar = temp[0];
 
 #ifdef VERBOSE_STRING_CHECK
 	printf("Your cursor char is %c\n", cursorChar);
 #endif
+
+	asm("jmp _afterLogicCommand");
 }
 
-void b4Set_text_attribute(byte** data) // 2, 0x00 
+void b4Set_text_attribute() // 2, 0x00 
 {
-	agi_fg = (*(*data)++) + 1;
-	agi_bg = (*(*data)++) + 1;
+	agi_fg = (loadAndIncWinCode()) + 1;
+	agi_bg = (loadAndIncWinCode()) + 1;
+	asm("jmp _afterLogicCommand");
 }
 
-//void b4Shake_screen(byte** data) // 1, 0x00 
+//void b4Shake_screen() // 1, 0x00 
 //{
 //	(*data)++;  /* Ignore this for now. */
 //}
 
 
-void b4Configure_screen(byte** data) // 3, 0x00 
+void b4Configure_screen() // 3, 0x00 
 {
-	min_print_line = *(*data)++;
-	user_input_line = *(*data)++;
-	status_line_num = *(*data)++;
+	min_print_line = loadAndIncWinCode();
+	user_input_line = loadAndIncWinCode();
+	status_line_num = loadAndIncWinCode();
+	asm("jmp _afterLogicCommand");
 }
 
-void b4Status_line_on(byte** data) // 0, 0x00 
+void b4Status_line_on() // 0, 0x00 
 {
 	statusLineDisplayed = TRUE;
+	asm("jmp _afterLogicCommand");
 }
 
-void b4Status_line_off(byte** data) // 0, 0x00 
+void b4Status_line_off() // 0, 0x00 
 {
 	statusLineDisplayed = FALSE;
+	asm("jmp _afterLogicCommand");
 }
 
-void b4Set_string(byte** data) // 2, 0x00 
+void b4Set_string() // 2, 0x00 
 {
 	int stringNum, messNum;
 	char* messagePointer;
@@ -1750,80 +1872,87 @@ void b4Set_string(byte** data) // 2, 0x00
 
 	getLogicFile(&logicFile, currentLog);
 
-	stringNum = *(*data)++;
-	messNum = *(*data)++;
+	stringNum = loadAndIncWinCode();
+	messNum = loadAndIncWinCode();
 	messagePointer = getMessagePointer(currentLog, messNum - 1);
 
 	strcpyBanked(string[stringNum - 1], messagePointer, logicFile.messageBank);
+	asm("jmp _afterLogicCommand");
 }
 
-void b4Get_string(byte** data) // 5, 0x00 
+void b4Get_string() // 5, 0x00 
 {
 	int strNum, messNum, row, col, l;
 	char* messagePointer;
 
-	strNum = *(*data)++;
-	messNum = *(*data)++;
-	col = *(*data)++;
-	row = *(*data)++;
-	l = *(*data)++;
+	strNum = loadAndIncWinCode();
+	messNum = loadAndIncWinCode();
+	col = loadAndIncWinCode();
+	row = loadAndIncWinCode();
+	l = loadAndIncWinCode();
 
 	messagePointer = getMessagePointer(currentLog, messNum - 1);
 
 	getString(messagePointer, string[strNum], row, col, l);
+	asm("jmp _afterLogicCommand");
 }
 
-void b4Word_to_string(byte** data) // 2, 0x00 
+void b4Word_to_string() // 2, 0x00 
 {
 	int stringNum, wordNum;
 
-	stringNum = *(*data)++;
-	wordNum = *(*data)++;
+	stringNum = loadAndIncWinCode();
+	wordNum = loadAndIncWinCode();
 	strcpy(string[stringNum], wordText[wordNum]);
+	asm("jmp _afterLogicCommand");
 }
 
-void b4Parse(byte** data) // 1, 0x00 
+void b4Parse() // 1, 0x00 
 {
 	int stringNum;
 
-	stringNum = *(*data)++;
+	stringNum = loadAndIncWinCode();
 	lookupWords(string[stringNum]);
+	asm("jmp _afterLogicCommand");
 }
 
-void b4Get_num(byte** data) // 2, 0x40 
+void b4Get_num() // 2, 0x40 
 {
 	int messNum, varNum;
 	char temp[80];
 	char* messagePointer;
 
-	messNum = *(*data)++;
-	varNum = *(*data)++;
+	messNum = loadAndIncWinCode();
+	varNum = loadAndIncWinCode();
 
 	messagePointer = getMessagePointer(currentLog, messNum - 1);
 	getString(messagePointer, temp, 1, 23, 3);
 	var[varNum] = atoi(temp);
+	asm("jmp _afterLogicCommand");
 }
 
-void b4Prevent_input(byte** data) // 0, 0x00 
+void b4Prevent_input() // 0, 0x00 
 {
 	inputLineDisplayed = FALSE;
 	/* Do something else here */
+	asm("jmp _afterLogicCommand");
 }
 
-void b4Accept_input(byte** data) // 0, 0x00 
+void b4Accept_input() // 0, 0x00 
 {
 	inputLineDisplayed = TRUE;
 	/* Do something else here */
+	asm("jmp _afterLogicCommand");
 }
 
-void b4Set_key(byte** data) // 3, 0x00 
+void b4Set_key() // 3, 0x00 
 {
 	int asciiCode, scanCode, eventCode;
 	char* tempStr = (char*)&GOLDEN_RAM[LOCAL_WORK_AREA_START];
 
-	asciiCode = *(*data)++;
-	scanCode = *(*data)++;
-	eventCode = *(*data)++;
+	asciiCode = loadAndIncWinCode();
+	scanCode = loadAndIncWinCode();
+	eventCode = loadAndIncWinCode();
 
 
 	/* Ignore cases which have both values set for now. They seem to behave
@@ -1846,39 +1975,42 @@ void b4Set_key(byte** data) // 3, 0x00
 		events[eventCode].scanCodeValue = scanCode;
 		events[eventCode].activated = FALSE;
 	}
+	asm("jmp _afterLogicCommand");
 }
 
-void b4Add_to_pic(byte** data) // 7, 0x00 
+void b4Add_to_pic() // 7, 0x00 
 {
 	int viewNum, loopNum, celNum, x, y, priNum, baseCol;
 
-	viewNum = *(*data)++;
-	loopNum = *(*data)++;
-	celNum = *(*data)++;
-	x = *(*data)++;
-	y = *(*data)++;
-	priNum = *(*data)++;
-	baseCol = *(*data)++;
+	viewNum = loadAndIncWinCode();
+	loopNum = loadAndIncWinCode();
+	celNum = loadAndIncWinCode();
+	x = loadAndIncWinCode();
+	y = loadAndIncWinCode();
+	priNum = loadAndIncWinCode();
+	baseCol = loadAndIncWinCode();
 
 	trampolineAddToPic(viewNum, loopNum, celNum, x, y, priNum, baseCol);
+	asm("jmp _afterLogicCommand");
 }
 
-void b4Add_to_pic_v(byte** data) // 7, 0xFE 
+void b4Add_to_pic_v() // 7, 0xFE 
 {
 	int viewNum, loopNum, celNum, x, y, priNum, baseCol;
 
-	viewNum = var[*(*data)++];
-	loopNum = var[*(*data)++];
-	celNum = var[*(*data)++];
-	x = var[*(*data)++];
-	y = var[*(*data)++];
-	priNum = var[*(*data)++];
-	baseCol = var[*(*data)++];
+	viewNum = var[loadAndIncWinCode()];
+	loopNum = var[loadAndIncWinCode()];
+	celNum = var[loadAndIncWinCode()];
+	x = var[loadAndIncWinCode()];
+	y = var[loadAndIncWinCode()];
+	priNum = var[loadAndIncWinCode()];
+	baseCol = var[loadAndIncWinCode()];
 
 	trampolineAddToPic(viewNum, loopNum, celNum, x, y, priNum, baseCol);
+	asm("jmp _afterLogicCommand");
 }
 
-void b4Status(byte** data) // 0, 0x00 
+void b4Status() // 0, 0x00 
 {
 	/* Inventory */
 	// set text mode
@@ -1886,17 +2018,17 @@ void b4Status(byte** data) // 0, 0x00
 	var[25] = 255;
 }
 
-//void b4Save_game(byte** data) // 0, 0x00 
+//void b4Save_game() // 0, 0x00 
 //{
 //	/* Not supported yet */
 //}
 //
-//void b4Restore_game(byte** data) // 0, 0x00 
+//void b4Restore_game() // 0, 0x00 
 //{
 //	/* Not supported yet */
 //}
 
-void b4Restart_game(byte** data) // 0, 0x00 
+void b4Restart_game() // 0, 0x00 
 {
 	int i;
 
@@ -1911,52 +2043,58 @@ void b4Restart_game(byte** data) // 0, 0x00
 
 	newRoomNum = 0;
 	hasEnteredNewRoom = TRUE;
+	asm("jmp _afterLogicCommand");
 }
 
-void b4Show_obj(byte** data) // 1, 0x00 
+void b4Show_obj() // 1, 0x00 
 {
 	int objectNum;
 
-	objectNum = *(*data)++;
+	objectNum = loadAndIncWinCode();
 	/* Not supported yet */
+	asm("jmp _afterLogicCommand");
 }
 
-void b4Random_num(byte** data) // 3, 0x20  random() renamed to avoid clash
+void b4Random_num() // 3, 0x20  random() renamed to avoid clash
 {
 	int startValue, endValue;
 
-	startValue = *(*data)++;
-	endValue = *(*data)++;
-	var[*(*data)++] = (rand() % ((endValue - startValue) + 1)) + startValue;
+	startValue = loadAndIncWinCode();
+	endValue = loadAndIncWinCode();
+	var[loadAndIncWinCode()] = (rand() % ((endValue - startValue) + 1)) + startValue;
+	asm("jmp _afterLogicCommand");
 }
 
-void b4Program_control(byte** data) // 0, 0x00 
+void b4Program_control() // 0, 0x00 
 {
 	controlMode = PROGRAM_CONTROL;
+	asm("jmp _afterLogicCommand");
 }
 
-void b4Player_control(byte** data) // 0, 0x00 
+void b4Player_control() // 0, 0x00 
 {
 	controlMode = PLAYER_CONTROL;
+	asm("jmp _afterLogicCommand");
 }
 
-void b4Obj_status_v(byte** data) // 1, 0x80 
+void b4Obj_status_v() // 1, 0x80 
 {
 	int objectNum;
 
-	objectNum = var[*(*data)++];
+	objectNum = var[loadAndIncWinCode()];
 	/* Not supported yet */
 
 	/* showView(viewtab[objectNum].currentView); */
 	trampoline_1Int(&bDShowObjectState, objectNum, VIEW_CODE_BANK_4);
+	asm("jmp _afterLogicCommand");
 }
 
 
-void b4Quit(byte** data) // 1, 0x00                     /* 0 args for AGI version 2_089 */
+void b4Quit() // 1, 0x00                     /* 0 args for AGI version 2_089 */
 {
 	int quitType, ch;
 
-	quitType = ((!oldQuit) ? *(*data)++ : 0);
+	quitType = ((!oldQuit) ? loadAndIncWinCode() : 0);
 	if (quitType == 1) /* Immediate quit */
 		exit(0);
 	else { /* Prompt for exit */
@@ -1967,36 +2105,38 @@ void b4Quit(byte** data) // 1, 0x00                     /* 0 args for AGI versio
 		if (ch == KEY_ENTER) exit(0);
 		showPicture();
 	}
+	asm("jmp _afterLogicCommand");
 }
 
-void b4Pause(byte** data) // 0, 0x00 
+void b4Pause() // 0, 0x00 
 {
 	while (key[KEY_ENTER]) { /* Wait */ }
 	printInBoxBig("      Game paused.\nPress ENTER to continue.", -1, -1, 30);
 	while (!key[KEY_ENTER]) { /* Wait */ }
 	showPicture();
 	okToShowPic = TRUE;
+	asm("jmp _afterLogicCommand");
 }
 
 
-//void b4Echo_line(byte** data) // 0, 0x00 
+//void b4Echo_line() // 0, 0x00 
 //{
 //
 //}
 
 
-//void b4Cancel_line(byte** data) // 0, 0x00 
+//void b4Cancel_line() // 0, 0x00 
 //{
 //	/*currentInputStr[0]=0;
 //	strPos=0;*/
 //}
 
-//void b4Init_joy(byte** data) // 0, 0x00 
+//void b4Init_joy() // 0, 0x00 
 //{
 //	/* Not important at this stage */
 //}
 
-void b4Version(byte** data) // 0, 0x00 
+void b4Version() // 0, 0x00 
 {
 	asm("stp");
 	while (key[KEY_ENTER] || key[KEY_ESC]) { /* Wait */ }
@@ -2004,24 +2144,25 @@ void b4Version(byte** data) // 0, 0x00
 	while (!key[KEY_ENTER] && !key[KEY_ESC]) { /* Wait */ }
 	showPicture();
 	okToShowPic = TRUE;
+	asm("jmp _afterLogicCommand");
 }
 
-//void b4Script_size(byte** data) // 1, 0x00 
+//void b4Script_size() // 1, 0x00 
 //{
 //	(*data)++;  /* Ignore the script size. Not important for this interpreter */
 //}
 //
-//void b4Set_game_id(byte** data) // 1, 0x00 
+//void b4Set_game_id() // 1, 0x00 
 //{
 //	(*data)++;  /* Ignore the game ID. Not important */
 //}
 //
-//void b4Log(byte** data) // 1, 0x00 
+//void b4Log() // 1, 0x00 
 //{
 //	(*data)++;  /* Ignore log message. Not important */
 //}
 
-void b4Set_scan_start(byte** data) // 0, 0x00 
+void b4Set_scan_start() // 0, 0x00 
 {
 	LOGICEntry logicEntry;
 
@@ -2032,10 +2173,11 @@ void b4Set_scan_start(byte** data) // 0, 0x00
 	/* Does it return() at this point, or does it execute to the end?? */
 
 	setLogicEntry(&logicEntry, currentLog);
+	asm("jmp _afterLogicCommand");
 }
 
 
-void b4Reset_scan_start(byte** data) // 0, 0x00 
+void b4Reset_scan_start() // 0, 0x00 
 {
 	LOGICEntry logicEntry;
 
@@ -2044,57 +2186,60 @@ void b4Reset_scan_start(byte** data) // 0, 0x00
 	logicEntry.entryPoint = 0;
 
 	setLogicEntry(&logicEntry, currentLog);
+	asm("jmp _afterLogicCommand");
 }
 
-void b4Reposition_to(byte** data) // 3, 0x00 
+void b4Reposition_to() // 3, 0x00 
 {
 	int entryNum;
 	ViewTable localViewtab;
 
-	entryNum = *(*data)++;
+	entryNum = loadAndIncWinCode();
 	getViewTab(&localViewtab, entryNum);
 
-	localViewtab.xPos = *(*data)++;
-	localViewtab.yPos = *(*data)++;
+	localViewtab.xPos = loadAndIncWinCode();
+	localViewtab.yPos = loadAndIncWinCode();
 
 	setViewTab(&localViewtab, entryNum);
+	asm("jmp _afterLogicCommand");
 }
 
-void b4Reposition_to_v(byte** data) // 3, 0x60 
+void b4Reposition_to_v() // 3, 0x60 
 {
 	int entryNum;
 	ViewTable localViewtab;
 
-	entryNum = *(*data)++;
+	entryNum = loadAndIncWinCode();
 	getViewTab(&localViewtab, entryNum);
 
-	localViewtab.xPos = var[*(*data)++];
-	localViewtab.yPos = var[*(*data)++];
+	localViewtab.xPos = var[loadAndIncWinCode()];
+	localViewtab.yPos = var[loadAndIncWinCode()];
 
 	setViewTab(&localViewtab, entryNum);
+	asm("jmp _afterLogicCommand");
 }
 
-//void b4Trace_on(byte** data) // 0, 0x00 
+//void b4Trace_on() // 0, 0x00 
 //{
 //	/* Ignore at this stage */
 //}
 
-//void b4Trace_info(byte** data) // 3, 0x00 
+//void b4Trace_info() // 3, 0x00 
 //{
 //	*data += 3;  /* Ignore trace information at this stage. */
 //}
 
-void b4Print_at(byte** data) // 4, 0x00           /* 3 args for AGI versions before */
+void b4Print_at() // 4, 0x00           /* 3 args for AGI versions before */
 {
 	char* tempString = (char*)&GOLDEN_RAM[LOCAL_WORK_AREA_START];
 	BITMAP* temp;
 	int messNum, x, y, l;
 	char* messagePointer;
 
-	messNum = *(*data)++;
-	x = *(*data)++;
-	y = *(*data)++;
-	l = *(*data)++;
+	messNum = loadAndIncWinCode();
+	x = loadAndIncWinCode();
+	y = loadAndIncWinCode();
+	l = loadAndIncWinCode();
 	//show_mouse(NULL);
 	//temp = create_bitmap(640, 336);
 	//blit(agi_screen, temp, 0, 0, 0, 0, 640, 336);
@@ -2103,7 +2248,7 @@ void b4Print_at(byte** data) // 4, 0x00           /* 3 args for AGI versions bef
 
 	//messagePointer = getMessagePointer(currentLog, messNum - 1);
 
-	//b3ProcessString(messagePointer, 0, tempString);
+	//trampolineProcessString(messagePointer, 0, tempString);
 	//printInBoxBig(tempString, x, y, l);
 	//while (!key[KEY_ENTER] && !key[KEY_ESC]) { /* Wait */ }
 	//while (key[KEY_ENTER] || key[KEY_ESC]) { clear_keybuf(); }
@@ -2111,19 +2256,20 @@ void b4Print_at(byte** data) // 4, 0x00           /* 3 args for AGI versions bef
 	//blit(temp, agi_screen, 0, 0, 0, 0, 640, 336);
 	//show_mouse(screen);
 	//destroy_bitmap(temp);
+	asm("jmp _afterLogicCommand");
 }
 
-void b4Print_at_v(byte** data) // 4, 0x80         /* 2_440 (maybe laterz) */
+void b4Print_at_v() // 4, 0x80         /* 2_440 (maybe laterz) */
 {
 	char* tempString = (char*)&GOLDEN_RAM[LOCAL_WORK_AREA_START];
 	BITMAP* temp;
 	int messNum, x, y, l;
 	char* messagePointer;
 
-	messNum = var[*(*data)++];
-	x = *(*data)++;
-	y = *(*data)++;
-	l = *(*data)++;
+	messNum = var[loadAndIncWinCode()];
+	x = loadAndIncWinCode();
+	y = loadAndIncWinCode();
+	l = loadAndIncWinCode();
 	show_mouse(NULL);
 	temp = create_bitmap(640, 336);
 	blit(agi_screen, temp, 0, 0, 0, 0, 640, 336);
@@ -2131,7 +2277,7 @@ void b4Print_at_v(byte** data) // 4, 0x80         /* 2_440 (maybe laterz) */
 	while (key[KEY_ENTER] || key[KEY_ESC]) { /* Wait */ }
 
 	messagePointer = getMessagePointer(currentLog, messNum - 1);
-	b3ProcessString(messagePointer, 0, tempString);
+	trampolineProcessString(messagePointer, 0, tempString);
 	printInBoxBig(tempString, x, y, l);
 	while (!key[KEY_ENTER] && !key[KEY_ESC]) { /* Wait */ }
 	while (key[KEY_ENTER] || key[KEY_ESC]) { clear_keybuf(); }
@@ -2139,30 +2285,33 @@ void b4Print_at_v(byte** data) // 4, 0x80         /* 2_440 (maybe laterz) */
 	blit(temp, agi_screen, 0, 0, 0, 0, 640, 336);
 	show_mouse(screen);
 	destroy_bitmap(temp);
+	asm("jmp _afterLogicCommand");
 }
 
-void b4Discard_view_v(byte** data) // 1, 0x80 
+void b4Discard_view_v() // 1, 0x80 
 {
-	trampoline_1Int(&b9DiscardView, var[*(*data)++], VIEW_CODE_BANK_1);
+	trampoline_1Int(&b9DiscardView, var[loadAndIncWinCode()], VIEW_CODE_BANK_1);
+	asm("jmp _afterLogicCommand");
 }
 
-void b4Clear_text_rect(byte** data) // 5, 0x00 
+void b4Clear_text_rect() // 5, 0x00 
 {
 	int x1, y1, x2, y2, boxColour;
 
-	x1 = *(*data)++;
-	y1 = *(*data)++;
-	x2 = *(*data)++;
-	y2 = *(*data)++;
-	boxColour = *(*data)++;
+	x1 = loadAndIncWinCode();
+	y1 = loadAndIncWinCode();
+	x2 = loadAndIncWinCode();
+	y2 = loadAndIncWinCode();
+	boxColour = loadAndIncWinCode();
 	if ((screenMode == AGI_GRAPHICS) && (boxColour > 0)) boxColour = 15;
 	if (screenMode == AGI_TEXT) boxColour = 0;
 	show_mouse(NULL);
 	rectfill(agi_screen, x1 * 16, y1 * 16, (x2 * 16) + 15, (y2 * 16) + 15, boxColour);
 	show_mouse(screen);
+	asm("jmp _afterLogicCommand");
 }
 
-//void b4Set_upper_left(byte** data) // 2, 0x00    (x, y) ??
+//void b4Set_upper_left() // 2, 0x00    (x, y) ??
 //{
 //	*data += 2;
 //}
@@ -2170,6 +2319,7 @@ void b4Clear_text_rect(byte** data) // 5, 0x00
 void b4WaitKeyRelease()
 {
 	while (keypressed()) { /* Wait */ }
+	asm("jmp _afterLogicCommand");
 }
 
 int menuEvent0() { b4WaitKeyRelease(); events[0].activated = 1; return D_O_K; }
@@ -2292,7 +2442,7 @@ void b4Set_menu_item() // 2, 0x00
 	LOGICFile currentLogicFile;
 
 	getLogicFile(&currentLogicFile, currentLog);
-	
+
 
 	messNum = loadAndIncWinCode();
 	controllerNum = loadAndIncWinCode();
@@ -2316,75 +2466,77 @@ void b4Set_menu_item() // 2, 0x00
 	asm("jmp _afterLogicCommand");
 }
 
-//void b4Submit_menu(byte** data) // 0, 0x00 
+//void b4Submit_menu() // 0, 0x00 
 //{
 //
 //}
 
-//void b4Enable_item(byte** data) // 1, 0x00 
+//void b4Enable_item() // 1, 0x00 
 //{
 //	(*data)++;
 //}
 //
-//void b4Disable_item(byte** data) // 1, 0x00 
+//void b4Disable_item() // 1, 0x00 
 //{
 //	(*data)++;
 //}
 
 
-void b4Menu_input(byte** data) // 0, 0x00 
+void b4Menu_input() // 0, 0x00 
 {
 	do_menu(the_menu, 10, 20);
+	asm("jmp _afterLogicCommand");
 }
 
-void b4Show_obj_v(byte** data) // 1, 0x01 
+void b4Show_obj_v() // 1, 0x01 
 {
 	int objectNum;
 
-	objectNum = var[*(*data)++];
+	objectNum = var[loadAndIncWinCode()];
 	/* Not supported yet */
+	asm("jmp _afterLogicCommand");
 }
 
-//void b4Open_dialogue(byte** data) // 0, 0x00 
+//void b4Open_dialogue() // 0, 0x00 
 //{
 //
 //}
 
-//void b4Close_dialogue(byte** data) // 0, 0x00 
+//void b4Close_dialogue() // 0, 0x00 
 //{
 //
 //}
 
-void b4Mul_n(byte** data) // 2, 0x80 
+void b4Mul_n() // 2, 0x80 
 {
-	var[*(*data)++] *= *(*data)++;
+	var[loadAndIncWinCode()] *= loadAndIncWinCode();
+	asm("jmp _afterLogicCommand");
 }
 
-void b4Mul_v(byte** data) // 2, 0xC0 
+void b4Mul_v() // 2, 0xC0 
 {
-	var[*(*data)++] *= var[*(*data)++];
+	var[loadAndIncWinCode()] *= var[loadAndIncWinCode()];
+	asm("jmp _afterLogicCommand");
 }
 
-void b4Div_n(byte** data) // 2, 0x80 
+void b4Div_n() // 2, 0x80 
 {
-	var[*(*data)++] /= *(*data)++;
+	var[loadAndIncWinCode()] /= loadAndIncWinCode();
+	asm("jmp _afterLogicCommand");
 }
 
-void b4Div_v(byte** data) // 2, 0xC0 
+void b4Div_v() // 2, 0xC0 
 {
-	var[*(*data)++] /= var[*(*data)++];
+	var[loadAndIncWinCode()] /= var[loadAndIncWinCode()];
+	asm("jmp _afterLogicCommand");
 }
 
-//void b4Close_window(byte** data) // 0, 0x00 
+//void b4Close_window() // 0, 0x00 
 //{
 //
 //}
 
-void b5ZeroOpCode()
-{
-	printf("Op code 0 detected at %p", opCounter);
-	exit(0);
-}
+
 
 
 #pragma code-name (pop)
@@ -2459,8 +2611,8 @@ void executeLogic(int logNum)
 
 	RAM_BANK = currentLogicFile.codeBank;
 #define LOGIC_ENTRY_PARAMETERS_OFFSET  0
-	*((LOGICEntry**)(GOLDEN_RAM_PARAMS_AREA + LOGIC_ENTRY_PARAMETERS_OFFSET)) = &currentLogic;
-	
+	* ((LOGICEntry**)(GOLDEN_RAM_PARAMS_AREA + LOGIC_ENTRY_PARAMETERS_OFFSET)) = &currentLogic;
+
 	commandLoop(&currentLogicFile);
 
 	printf("startPos %p, code %p, endPos %p", startPos, code, endPos);

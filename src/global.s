@@ -1,5 +1,6 @@
 .ifndef  GLOBAL_INC
-
+startPos: .word $0
+endPos:  .word $0
 codeBank: .byte $0
 
 GLOBAL_INC = 1

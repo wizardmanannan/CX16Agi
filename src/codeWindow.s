@@ -109,4 +109,15 @@ _loadAndIncWinCode:
     
     lda @result
     rts
+
+_incCodeBy:
+    bra @start
+    @jumpAmount: .word $0
+    @start:
+    sta @jumpAmount
+    stx @jumpAmount + 1
+
+    INC_CODE_BY @jumpAmount
+    rts
+
 .endif

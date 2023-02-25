@@ -15,10 +15,7 @@ ZP_PTR_LF = $02
 ZP_PTR_LE = $04
 
 .segment "CODE"
-startPos: .word $0
-endPos:  .word $0
 stillExecuting: .byte $1
-lastCodeWasNonWindow: .byte FALSE
 jumpOffset: .byte $0
 numArgs: .byte $0,$2,$2,$2,$2,$2,$2,$1,$1,$1,$2,$5,$1,$0,$0,$2,$5,$5,$5
 

@@ -20,7 +20,6 @@ LOGICCOMMANDS_INC = 1
 .import _b2New_room_v
 .import _b2Load_logics
 .import _b2Load_logics_v
-.import _b2Call
 .import _b2Call_v
 .import _b2Load_pic
 .import _b2Draw_pic
@@ -149,8 +148,41 @@ LOGICCOMMANDS_INC = 1
 .import _b4Div_n
 .import _b4Div_v
 
+.import _executeLogic
 
 
+
+.macro STORE_ON_STACK_RECURSIVE_CALL
+lda startPos
+pha 
+lda startPos + 1
+pha
+lda endPos
+pha 
+lda endPos + 1
+pha
+CATCH_UP_CODE
+lda ZP_PTR_CODE
+pha
+lda ZP_PTR_CODE + 1
+pha
+.endmacro
+
+.macro RESTORE_FROM_STACK_RECURSIVE_CALL
+pla
+sta ZP_PTR_CODE + 1
+pla
+sta ZP_PTR_CODE
+pla
+sta endPos + 1
+pla
+sta endPos
+pla
+sta startPos + 1
+pla
+sta startPos
+
+.endmacro
 
 .macro SET_VAR_OR_FLAG areaStartOffset, toStore, var
 
@@ -668,11 +700,25 @@ b2Togglev:
         INC_CODE
         jmp _afterLogicCommand
 
+b2Call:
+bra @start
+@logNum: .byte $0
+
+@start:
+STORE_ON_STACK_RECURSIVE_CALL
+LOAD_CODE_WIN_CODE
+sta @logNum
+INC_CODE
+lda @logNum
+ldx #$0
+jsr _executeLogic
+RESTORE_FROM_STACK_RECURSIVE_CALL
+
 .segment "CODE"
 
 
 jmpTableIf:
-.addr _b5ZeroOpCode
+.addr b1NoOp_0
 .addr b1Equaln
 .addr b1Equalv
 .addr b1Lessn
@@ -716,7 +762,7 @@ jmpTableCommands1:
 .addr _b2New_room_v
 .addr _b2Load_logics
 .addr _b2Load_logics_v
-.addr _b2Call
+.addr b2Call
 .addr _b2Call_v
 .addr _b2Load_pic
 .addr _b2Draw_pic

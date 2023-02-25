@@ -15,4 +15,5 @@ extern void commandLoop(LOGICFile* currentLogicFile);
 extern byte loadAndIncWinCode();
 extern void afterLogicCommand();
 extern void initCommands();
+extern void incCodeBy(int jumpAmount);
 #endif

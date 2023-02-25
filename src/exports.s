@@ -6,3 +6,4 @@
     .export _initAsm
     .export _loadAndIncWinCode
     .export _afterLogicCommand
+    .export _incCodeBy
