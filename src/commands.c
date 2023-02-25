@@ -531,17 +531,7 @@ void b2Load_logics_v() // 1, 0x80
 	asm("jmp _afterLogicCommand");
 }
 
-//void b2Call() // 1, 0x00 
-//{
-//	executeLogic(loadAndIncWinCode());
-//}
 
-void b2Call_v() // 1, 0x80 
-{
-	executeLogic(var[loadAndIncWinCode()]);
-
-	asm("jmp _afterLogicCommand");
-}
 
 void b2Load_pic() // 1, 0x80 
 {

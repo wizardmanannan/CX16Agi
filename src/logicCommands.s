@@ -20,7 +20,6 @@ LOGICCOMMANDS_INC = 1
 .import _b2New_room_v
 .import _b2Load_logics
 .import _b2Load_logics_v
-.import _b2Call_v
 .import _b2Load_pic
 .import _b2Draw_pic
 .import _b2Show_pic
@@ -419,6 +418,7 @@ b1Right_posnCCall:
     HANDLE_C_IF_RESULT
 
 ;Logic Commands
+;Instruction 0 return is handled by jumping straight to the end main loop
 
 b1Increment:
     bra @start
@@ -523,6 +523,20 @@ b1Addv:
          jmp _afterLogicCommand
 
 .segment "BANKRAM02"
+b2CallLogic: ;A subroutine for making calls not an instruction
+bra @start
+@logNum: .byte $0
+
+@start:
+sta @logNum
+STORE_ON_STACK_RECURSIVE_CALL
+lda @logNum
+ldx #$0
+jsr _executeLogic
+stp
+RESTORE_FROM_STACK_RECURSIVE_CALL
+rts
+
 b2Subn:
       bra @start
       @existingVal: .byte $0
@@ -701,21 +715,24 @@ b2Togglev:
         jmp _afterLogicCommand
 
 b2Call:
-bra @start
-@logNum: .byte $0
-
-@start:
-STORE_ON_STACK_RECURSIVE_CALL
 LOAD_CODE_WIN_CODE
-sta @logNum
+jsr b2CallLogic
 INC_CODE
-lda @logNum
-ldx #$0
-jsr _executeLogic
-RESTORE_FROM_STACK_RECURSIVE_CALL
-
+ jmp _afterLogicCommand
 .segment "CODE"
 
+b2Call_v:
+bra @start
+@var1: .byte $0
+@start:
+GET_VAR_OR_FLAG VARS_AREA_START_GOLDEN_OFFSET, @var1
+
+lda @var1
+jsr b2CallLogic
+INC_CODE
+jmp _afterLogicCommand
+
+.segment "CODE"
 
 jmpTableIf:
 .addr b1NoOp_0
@@ -740,7 +757,7 @@ jmpTableIf:
 
 
 jmpTableCommands1:
-.addr b1NoOp_0
+.addr endMainLoop
 .addr b1Increment
 .addr b1Decrement
 .addr b1Assignn
@@ -763,7 +780,7 @@ jmpTableCommands1:
 .addr _b2Load_logics
 .addr _b2Load_logics_v
 .addr b2Call
-.addr _b2Call_v
+.addr b2Call_v
 .addr _b2Load_pic
 .addr _b2Draw_pic
 .addr _b2Show_pic
