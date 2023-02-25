@@ -230,13 +230,11 @@ ifHandler:
 
 ;commandLoopHelpers
 goto:
-    DEBUG_PRINT
     bra @start
     @b1: .byte $0
     @b2: .byte $0
     @disp: .byte $0
     @start:
-    INC_CODE
     CODE_JUMP
     jmp mainLoop
 
@@ -293,6 +291,7 @@ _commandLoop:
         cmp #$FE
         bne @default
         DEBUG_PRINT
+        INC_CODE
         jmp goto
         jmp mainLoop
         @default:     

@@ -628,12 +628,12 @@ b2Lindirectn:
 
 b2Set:      
          SET_VAR_OR_FLAG FLAGS_AREA_START_GOLDEN_OFFSET, #$1
-
+         INC_CODE
          jmp _afterLogicCommand
 
 b2Reset:      
          SET_VAR_OR_FLAG FLAGS_AREA_START_GOLDEN_OFFSET, #$0
-
+         INC_CODE
          jmp _afterLogicCommand
 
 b2Toggle:

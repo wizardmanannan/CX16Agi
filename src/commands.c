@@ -1088,8 +1088,6 @@ void b3Observe_horizon() // 1, 0x00
 
 void b3Set_horizon() // 1, 0x00 
 {
-	printf("The horizon is %d", horizon);
-	exit(0);
 	horizon = loadAndIncWinCode();
 	asm("jmp _afterLogicCommand");
 }
@@ -1180,7 +1178,7 @@ void b3Distance() // 3, 0x20
 	** then 255 should be returned. */
 	if (!((localViewtab1.flags & DRAWN) && (localViewtab2.flags & DRAWN))) {
 		var[varNum] = 255;
-		return;
+		asm("jmp _afterLogicCommand");
 	}
 	x1 = localViewtab1.xPos;
 	y1 = localViewtab1.yPos;
@@ -1954,12 +1952,11 @@ void b4Set_key() // 3, 0x00
 	scanCode = loadAndIncWinCode();
 	eventCode = loadAndIncWinCode();
 
-
 	/* Ignore cases which have both values set for now. They seem to behave
 	** differently than normal and often specify controllers that have
 	** already been defined.
 	*/
-	if (scanCode && asciiCode) return;
+	if (scanCode && asciiCode) asm("jmp _afterLogicCommand");
 
 	if (scanCode) {
 		events[eventCode].type = SCAN_KEY_EVENT;
