@@ -2602,8 +2602,6 @@ void executeLogic(int logNum)
 
 	commandLoop(&currentLogicFile);
 
-	printf("startPos %p, code %p, endPos %p", startPos, code, endPos);
-
 #ifdef DEBUG
 	drawBigString(screen, "Push a key to advance a step", 0, 400, 0, 7);
 	if ((readkey() & 0xff) == 'q') closedown();

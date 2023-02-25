@@ -165,9 +165,13 @@ lda ZP_PTR_CODE
 pha
 lda ZP_PTR_CODE + 1
 pha
+lda codeBank
+pha
 .endmacro
 
 .macro RESTORE_FROM_STACK_RECURSIVE_CALL
+pla
+sta codeBank
 pla
 sta ZP_PTR_CODE + 1
 pla
@@ -523,20 +527,6 @@ b1Addv:
          jmp _afterLogicCommand
 
 .segment "BANKRAM02"
-b2CallLogic: ;A subroutine for making calls not an instruction
-bra @start
-@logNum: .byte $0
-
-@start:
-sta @logNum
-STORE_ON_STACK_RECURSIVE_CALL
-lda @logNum
-ldx #$0
-jsr _executeLogic
-stp
-RESTORE_FROM_STACK_RECURSIVE_CALL
-rts
-
 b2Subn:
       bra @start
       @existingVal: .byte $0
@@ -716,10 +706,9 @@ b2Togglev:
 
 b2Call:
 LOAD_CODE_WIN_CODE
-jsr b2CallLogic
+jsr callLogic
 INC_CODE
- jmp _afterLogicCommand
-.segment "CODE"
+jmp _afterLogicCommand
 
 b2Call_v:
 bra @start
@@ -728,11 +717,36 @@ bra @start
 GET_VAR_OR_FLAG VARS_AREA_START_GOLDEN_OFFSET, @var1
 
 lda @var1
-jsr b2CallLogic
+jsr callLogic
 INC_CODE
 jmp _afterLogicCommand
-
+ 
 .segment "CODE"
+callLogic: ;A subroutine for making calls not an instruction
+bra @start
+@logNum: .byte $0
+@previousBank: .byte $0
+@start:
+sta @logNum
+
+lda RAM_BANK
+sta @previousBank
+
+STORE_ON_STACK_RECURSIVE_CALL
+lda @logNum
+ldx #$0
+jsr _executeLogic
+RESTORE_FROM_STACK_RECURSIVE_CALL
+
+stp
+lda #TRUE
+sta codeWindowInvalid
+jsr refreshCodeWindow
+
+lda @previousBank
+sta RAM_BANK
+rts
+
 
 jmpTableIf:
 .addr b1NoOp_0

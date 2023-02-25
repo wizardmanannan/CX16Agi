@@ -1,5 +1,4 @@
 .ifndef  COMMAND_LOOP_INC
-
  DEBUG = 1
 
 COMMAND_LOOP_INC = 1
