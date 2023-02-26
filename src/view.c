@@ -105,8 +105,6 @@ void getLoadedView(View* returnedLoadedView, byte loadedViewNumber)
 
 	RAM_BANK = LOADED_VIEW_BANK;
 
-	printf("Attempting to set %p to %p", returnedLoadedView, &loadedViews[loadedViewNumber]);
-
 	*returnedLoadedView = loadedViews[loadedViewNumber];
 
 	RAM_BANK = previousRamBank;

@@ -499,24 +499,6 @@ boolean b1Right_posn() // 5, 0x00
 #pragma code-name (pop)
 #pragma code-name (push, "BANKRAM02")
 
-void b2New_room() // 1, 0x00 
-{
-	/* This function is handled in meka.c */
-	newRoomNum = loadAndIncWinCode();
-	hasEnteredNewRoom = TRUE;
-
-	asm("jmp _afterLogicCommand");
-}
-
-void b2New_room_v() // 1, 0x80 
-{
-	/* This function is handled in meka.c */
-	newRoomNum = var[loadAndIncWinCode()];
-	hasEnteredNewRoom = TRUE;
-
-	asm("jmp _afterLogicCommand");
-}
-
 void b2Load_logics() // 1, 0x00 
 {
 	trampoline_1Int(&b8LoadLogicFile, loadAndIncWinCode(), LOGIC_CODE_BANK);
@@ -2524,7 +2506,7 @@ void b4Div_v() // 2, 0xC0
 //}
 
 
-
+boolean hasSeen1 = FALSE;
 
 #pragma code-name (pop)
 /***************************************************************************
@@ -2608,6 +2590,14 @@ void executeLogic(int logNum)
 #endif
 
 	RAM_BANK = previousRamBank;
+
+	//if (hasSeen1)
+	//{
+	//	printf("You have returned to commands on bank %d \n", RAM_BANK);
+	//	asm("stp");
+	//	exit(0);
+	//}
+	//hasSeen1 = TRUE;
 }
 
 

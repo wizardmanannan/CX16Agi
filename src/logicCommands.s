@@ -16,8 +16,6 @@ LOGICCOMMANDS_INC = 1
 .import _b1Right_posn
 
 .import _b5ZeroOpCode
-.import _b2New_room
-.import _b2New_room_v
 .import _b2Load_logics
 .import _b2Load_logics_v
 .import _b2Load_pic
@@ -149,6 +147,10 @@ LOGICCOMMANDS_INC = 1
 
 .import _executeLogic
 
+.import _exitAllLogics
+.import _hasEnteredNewRoom
+.import _newRoomNum
+
 
 
 .macro STORE_ON_STACK_RECURSIVE_CALL
@@ -273,6 +275,13 @@ jmp returnFromOpCodeFalse
 @success:
 jmp returnFromOpCodeFalse
 
+.endmacro
+
+.macro EXIT_ALL_LOGICS_IF_SET
+lda _exitAllLogics
+beq @dontExit
+jmp mainLoop
+@dontExit:
 .endmacro
 
 .segment "BANKRAM01"
@@ -708,18 +717,39 @@ b2Call:
 LOAD_CODE_WIN_CODE
 jsr callLogic
 INC_CODE
+EXIT_ALL_LOGICS_IF_SET
 jmp _afterLogicCommand
 
 b2Call_v:
 bra @start
 @var1: .byte $0
 @start:
+EXIT_ALL_LOGICS_IF_SET
 GET_VAR_OR_FLAG VARS_AREA_START_GOLDEN_OFFSET, @var1
 
 lda @var1
 jsr callLogic
 INC_CODE
 jmp _afterLogicCommand
+
+b2New_room:
+LOAD_CODE_WIN_CODE
+sta _newRoomNum
+
+switchToNewRoom:
+lda #TRUE
+sta _hasEnteredNewRoom
+sta _exitAllLogics
+INC_CODE 
+rts
+
+
+b2New_room_v:
+bra @start
+@var1: .byte $0
+@start:
+GET_VAR_OR_FLAG VARS_AREA_START_GOLDEN_OFFSET, @var1
+bra switchToNewRoom
  
 .segment "CODE"
 callLogic: ;A subroutine for making calls not an instruction
@@ -737,8 +767,6 @@ lda @logNum
 ldx #$0
 jsr _executeLogic
 RESTORE_FROM_STACK_RECURSIVE_CALL
-
-stp
 lda #TRUE
 sta codeWindowInvalid
 jsr refreshCodeWindow
@@ -789,8 +817,8 @@ jmpTableCommands1:
 .addr b2Setv
 .addr b2Resetv
 .addr b2Togglev
-.addr _b2New_room
-.addr _b2New_room_v
+.addr b2New_room
+.addr b2New_room_v
 .addr _b2Load_logics
 .addr _b2Load_logics_v
 .addr b2Call
