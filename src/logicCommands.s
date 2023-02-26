@@ -294,6 +294,9 @@ lda RAM_BANK
 sta @previousBank
 
 STORE_ON_STACK_RECURSIVE_CALL
+
+lda #MEKA_BANK
+sta RAM_BANK
 lda @logNum
 ldx #$0
 jsr _executeLogic
@@ -831,7 +834,7 @@ lda #TRUE
 sta _hasEnteredNewRoom
 sta _exitAllLogics
 INC_CODE 
-rts
+jmp endMainLoop
 
 
 b2New_room_v:

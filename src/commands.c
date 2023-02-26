@@ -2509,6 +2509,7 @@ void b4Div_v() // 2, 0xC0
 boolean hasSeen1 = FALSE;
 
 #pragma code-name (pop)
+#pragma code-name (push, "BANKRAM07")
 /***************************************************************************
 ** executeLogic
 **
@@ -2516,7 +2517,6 @@ boolean hasSeen1 = FALSE;
 ***************************************************************************/
 void executeLogic(int logNum)
 {
-	byte previousRamBank = RAM_BANK;
 	boolean discardAfterward = FALSE, stillExecuting = TRUE;
 	byte* code, * endPos, * startPos, b1, b2;
 	byte codeAtTimeOfLastBankSwitch;
@@ -2536,11 +2536,9 @@ void executeLogic(int logNum)
 
 	currentLog = logNum;
 
-	RAM_BANK = LOGIC_ENTRY_BANK;
-	currentLogic = logics[logNum];
+	getLogicEntry(&currentLogic, logNum);
 
-	RAM_BANK = LOGIC_FILE_BANK;
-	currentLogicFile = *currentLogic.data;
+	getLogicFile(&currentLogicFile, logNum);
 
 #ifdef VERBOSE_SCRIPT_START
 	printf("ex s. %d counter %lu\n", logNum, opCounter);
@@ -2556,18 +2554,12 @@ void executeLogic(int logNum)
 	** not already in memory. */
 	if (!currentLogic.loaded) {
 		discardAfterward = TRUE;
+		
+		trampoline_1Int(&b8LoadLogicFile, logNum, LOGIC_CODE_BANK);
 
-		RAM_BANK = LOGIC_CODE_BANK;
+		getLogicEntry(&currentLogic, logNum);
 
-
-
-		b8LoadLogicFile(logNum);
-
-		RAM_BANK = LOGIC_ENTRY_BANK;
-		currentLogic = logics[logNum];
-
-		RAM_BANK = LOGIC_FILE_BANK;
-		currentLogicFile = *currentLogic.data;
+		getLogicFile(&currentLogicFile, logNum);
 	}
 #ifdef DEBUG
 	debugString[0] = 0;
@@ -2578,7 +2570,6 @@ void executeLogic(int logNum)
 	/* Set up position to start executing code from. */
 	//currentLogic.currentPoint = currentLogic.entryPoint;
 
-	RAM_BANK = currentLogicFile.codeBank;
 #define LOGIC_ENTRY_PARAMETERS_OFFSET  0
 	* ((LOGICEntry**)(GOLDEN_RAM_PARAMS_AREA + LOGIC_ENTRY_PARAMETERS_OFFSET)) = &currentLogic;
 
@@ -2588,16 +2579,7 @@ void executeLogic(int logNum)
 	drawBigString(screen, "Push a key to advance a step", 0, 400, 0, 7);
 	if ((readkey() & 0xff) == 'q') closedown();
 #endif
-
-	RAM_BANK = previousRamBank;
-
-	//if (hasSeen1)
-	//{
-	//	printf("You have returned to commands on bank %d \n", RAM_BANK);
-	//	asm("stp");
-	//	exit(0);
-	//}
-	//hasSeen1 = TRUE;
 }
+#pragma code-name (pop)
 
 
