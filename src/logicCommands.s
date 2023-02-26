@@ -151,8 +151,6 @@ LOGICCOMMANDS_INC = 1
 .import _hasEnteredNewRoom
 .import _newRoomNum
 
-
-
 .macro STORE_ON_STACK_RECURSIVE_CALL
 lda startPos
 pha 
@@ -284,6 +282,223 @@ jmp mainLoop
 @dontExit:
 .endmacro
 
+.segment "CODE"
+callLogic: ;A subroutine for making calls not an instruction
+bra @start
+@logNum: .byte $0
+@previousBank: .byte $0
+@start:
+sta @logNum
+
+lda RAM_BANK
+sta @previousBank
+
+STORE_ON_STACK_RECURSIVE_CALL
+lda @logNum
+ldx #$0
+jsr _executeLogic
+RESTORE_FROM_STACK_RECURSIVE_CALL
+lda #TRUE
+sta codeWindowInvalid
+jsr refreshCodeWindow
+
+lda @previousBank
+sta RAM_BANK
+rts
+
+jmpTableCommands1:
+.addr endMainLoop
+.addr b1Increment
+.addr b1Decrement
+.addr b1Assignn
+.addr b1Assignv
+.addr b1Addn
+.addr b1Addv
+.addr b2Subn
+.addr b2Subv
+.addr b2Lindirectv
+.addr b2Rindirect
+.addr b2Lindirectn
+.addr b2Set
+.addr b2Reset
+.addr b2Toggle
+.addr b2Setv
+.addr b2Resetv
+.addr b2Togglev
+.addr b2New_room
+.addr b2New_room_v
+.addr _b2Load_logics
+.addr _b2Load_logics_v
+.addr b2Call
+.addr b2Call_v
+.addr _b2Load_pic
+.addr _b2Draw_pic
+.addr _b2Show_pic
+.addr _b2Discard_pic
+.addr _b2Overlay_pic
+.addr _b2Show_pri_screen ;check
+.addr _b2Load_view
+.addr _b2Load_view_v
+.addr _b2Discard_view
+.addr _b2Animate_obj
+.addr _b2Unanimate_all
+.addr _b2Draw
+.addr _b2Erase
+.addr _b2Position
+.addr _b2Position_v
+.addr _b2Get_posn
+.addr _b2Reposition
+.addr _b2Set_view
+.addr _b2Set_view_v
+.addr _b2Set_loop
+.addr _b2Set_loop_v
+.addr _b2Fix_loop
+.addr _b2Release_loop
+.addr _b2Set_cel
+.addr _b2Set_cel_v
+.addr _b2Last_cel
+.addr _b2Current_cel
+.addr _b3Current_loop
+.addr _b3Current_view
+.addr _b3Number_of_loops
+.addr _b3Set_priority
+.addr _b3Set_priority_v
+.addr _b3Release_priority
+.addr _b3Get_priority
+.addr _b3Stop_update
+.addr _b3Start_update
+.addr _b3Force_update
+.addr _b3Ignore_horizon
+.addr _b3Observe_horizon
+.addr _b3Set_horizon
+.addr _b3Object_on_water
+.addr _b3Object_on_land
+.addr _b3Object_on_anything
+.addr _b3Ignore_objs
+.addr _b3Observe_objs
+.addr _b3Distance
+.addr _b3Stop_cycling
+.addr _b3Start_cycling
+.addr _b3Normal_cycle
+.addr _b3End_of_loop
+.addr _b3Reverse_cycle
+.addr _b3Reverse_loop
+.addr _b3Cycle_time
+.addr _b3Stop_motion
+.addr _b3Start_motion
+.addr _b3Step_size
+.addr _b3Step_time
+.addr _b3Move_obj
+.addr _b3Move_obj_v
+.addr _b3Follow_ego
+.addr _b3Wander
+.addr _b3Normal_motion
+.addr _b3Set_dir
+.addr _b3Get_dir
+.addr _b3Ignore_blocks
+.addr _b3Observe_blocks
+.addr b1NoOp_4
+.addr b1NoOp_0
+.addr _b3Get
+.addr _b3Get_v
+.addr _b3Drop
+.addr _b3Put
+.addr _b3Put_v
+.addr _b3Get_room_v
+.addr _b3Load_sound
+.addr _b3Play_sound
+.addr _b3Stop_sound
+.addr _b3Print
+.addr _b4Print_v
+.addr _b4Display
+.addr _b4Display_v
+.addr _b4Clear_lines
+.addr _b4Text_screen
+.addr _b4Graphics
+.addr _b4Set_cursor_char
+.addr _b4Set_text_attribute
+.addr b1NoOp_1
+.addr _b4Configure_screen
+.addr _b4Status_line_on
+.addr _b4Status_line_off
+.addr _b4Set_string
+.addr _b4Get_string
+.addr _b4Word_to_string
+.addr _b4Parse
+.addr _b4Get_num
+.addr _b4Prevent_input
+.addr _b4Accept_input
+.addr _b4Set_key
+.addr _b4Add_to_pic
+.addr _b4Add_to_pic_v
+.addr _b4Status
+.addr b1NoOp_0
+.addr b1NoOp_0
+.addr b1NoOp_0
+
+jmpTableCommands2:
+.addr _b4Restart_game
+.addr _b4Show_obj
+.addr _b4Random_num
+.addr _b4Program_control
+.addr _b4Player_control
+.addr _b4Obj_status_v
+.addr _b4Quit
+.addr b1NoOp_0
+.addr _b4Pause
+.addr b1NoOp_0
+.addr b1NoOp_0
+.addr b1NoOp_0
+.addr b1NoOp_0
+.addr _b4Version
+.addr b1NoOp_1
+.addr b1NoOp_1
+.addr b1NoOp_1
+.addr _b4Set_scan_start
+.addr _b4Reset_scan_start
+.addr _b4Reposition_to
+.addr _b4Reposition_to_v
+.addr b1NoOp_0
+.addr b1NoOp_3
+.addr _b4Print_at
+.addr _b4Print_at_v
+.addr _b4Discard_view_v
+.addr _b4Clear_text_rect
+.addr b1NoOp_2
+.addr _b4Set_menu
+.addr _b4Set_menu_item
+.addr b1NoOp_0
+.addr b1NoOp_1
+.addr b1NoOp_1
+.addr _b4Menu_input
+.addr _b4Show_obj_v
+.addr b1NoOp_0
+.addr b1NoOp_0
+.addr _b4Mul_n
+.addr _b4Mul_v
+.addr _b4Div_n
+.addr _b4Div_v
+.addr b1NoOp_0
+.addr b1NoOp_1
+.addr b1NoOp_0
+.addr b1NoOp_0
+.addr b1NoOp_0
+.addr b1NoOp_1
+.addr b1NoOp_1
+.addr b1NoOp_0
+.addr b1NoOp_1
+.addr b1NoOp_0
+.addr b1NoOp_4
+.addr b1NoOp_2
+.addr b1NoOp_0
+.addr b1NoOp_0
+
+
+
+returnAddress: .word $0
+var1: .byte $0
+var2: .byte $0
+
 .segment "BANKRAM01"
 b1NoOp_0:
     jmp _afterLogicCommand
@@ -304,131 +519,6 @@ b1NoOp_3:
 b1NoOp_4:
     INC_CODE_BY #$4
     jmp _afterLogicCommand
-;If Checks
-b1Equaln:
-    GET_VAR_OR_FLAG VARS_AREA_START_GOLDEN_OFFSET, var1
-    INC_CODE
-
-    LOAD_CODE_WIN_CODE
-    sta var2
-    INC_CODE
-
-    lda var2
-
-    beq @success
-    jmp returnFromOpCodeFalse
-    @success:
-    jmp returnFromOpCodeTrue
-
-b1Equalv:
-    GET_VAR_OR_FLAG VARS_AREA_START_GOLDEN_OFFSET, var1
-    INC_CODE
-
-    GET_VAR_OR_FLAG VARS_AREA_START_GOLDEN_OFFSET, var2
-    INC_CODE
-
-    lda var2
-
-    beq @success
-    jmp returnFromOpCodeFalse
-    @success:
-    jmp returnFromOpCodeTrue
-
-b1Lessn:
-    GET_VAR_OR_FLAG VARS_AREA_START_GOLDEN_OFFSET, var1
-    INC_CODE
-
-    LOAD_CODE_WIN_CODE
-    sta var2
-    INC_CODE
-
-    GREATER_THAN_OR_EQ_8 var2, var1, returnFromOpCodeFalse, returnFromOpCodeTrue
-
-b1Lessv:
-    GET_VAR_OR_FLAG VARS_AREA_START_GOLDEN_OFFSET, var1
-    INC_CODE
-
-    GET_VAR_OR_FLAG VARS_AREA_START_GOLDEN_OFFSET, var2
-    INC_CODE
-
-    GREATER_THAN_OR_EQ_8 var2, var1, returnFromOpCodeFalse, returnFromOpCodeTrue
-
-b1Greatern:
-    GET_VAR_OR_FLAG VARS_AREA_START_GOLDEN_OFFSET, var1
-    INC_CODE
-
-    LOAD_CODE_WIN_CODE
-    sta var2
-    INC_CODE
-    
-    LESS_THAN_OR_EQ_8 var2, var1, returnFromOpCodeFalse, returnFromOpCodeTrue
-
-b1Greaterv:
-    GET_VAR_OR_FLAG VARS_AREA_START_GOLDEN_OFFSET, var1
-    INC_CODE
-
-    GET_VAR_OR_FLAG VARS_AREA_START_GOLDEN_OFFSET, var2
-    INC_CODE
-
-    LESS_THAN_OR_EQ_8 var2, var1, returnFromOpCodeFalse, returnFromOpCodeTrue
-
-b1Isset:
-    GET_VAR_OR_FLAG FLAGS_AREA_START_GOLDEN_OFFSET, var1
-    INC_CODE
-    lda var1
-    beq @fail
-    jmp returnFromOpCodeTrue
-    @fail:
-    jmp returnFromOpCodeFalse
-
-b1Issetv:
-    GET_VAR_OR_FLAG_VAR_OFFSET FLAGS_AREA_START_GOLDEN_OFFSET, var1
-    INC_CODE
-    lda var1
-    bne @fail
-    jmp returnFromOpCodeTrue
-    @fail:
-    jmp returnFromOpCodeFalse
-
-b1HasCCall:
-   jsr _b1Has
-   HANDLE_C_IF_RESULT
-
-b1Obj_in_roomCCall:
-   jsr _b1Obj_in_room
-   HANDLE_C_IF_RESULT
-
-b1PosnCCall:
-   jsr _b1Posn
-   HANDLE_C_IF_RESULT
-
-b1ControllerCCall:
-    jsr _b1Controller
-    HANDLE_C_IF_RESULT
-
-b1Have_keyCCall:
-    jsr _b1Have_key
-    HANDLE_C_IF_RESULT
-
-b1SaidCCall:
-    jsr _b1Said
-    HANDLE_C_IF_RESULT
-
-b1Compare_stringsCCall:
-    jsr _b1Compare_strings
-    HANDLE_C_IF_RESULT
-
-b1Obj_in_boxCCall:
-    jsr _b1Obj_in_box
-    HANDLE_C_IF_RESULT
-
-b1Center_posnCCall:
-    jsr _b1Center_posn
-    HANDLE_C_IF_RESULT
-
-b1Right_posnCCall:
-    jsr _b1Right_posn
-    HANDLE_C_IF_RESULT
 
 ;Logic Commands
 ;Instruction 0 return is handled by jumping straight to the end main loop
@@ -750,32 +840,9 @@ bra @start
 @start:
 GET_VAR_OR_FLAG VARS_AREA_START_GOLDEN_OFFSET, @var1
 bra switchToNewRoom
- 
-.segment "CODE"
-callLogic: ;A subroutine for making calls not an instruction
-bra @start
-@logNum: .byte $0
-@previousBank: .byte $0
-@start:
-sta @logNum
 
-lda RAM_BANK
-sta @previousBank
-
-STORE_ON_STACK_RECURSIVE_CALL
-lda @logNum
-ldx #$0
-jsr _executeLogic
-RESTORE_FROM_STACK_RECURSIVE_CALL
-lda #TRUE
-sta codeWindowInvalid
-jsr refreshCodeWindow
-
-lda @previousBank
-sta RAM_BANK
-rts
-
-
+;If Checks
+.segment "BANKRAM05"
 jmpTableIf:
 .addr b1NoOp_0
 .addr b1Equaln
@@ -797,199 +864,128 @@ jmpTableIf:
 .addr b1Center_posnCCall
 .addr b1Right_posnCCall
 
+b1Equaln:
+    GET_VAR_OR_FLAG VARS_AREA_START_GOLDEN_OFFSET, var1
+    INC_CODE
 
-jmpTableCommands1:
-.addr endMainLoop
-.addr b1Increment
-.addr b1Decrement
-.addr b1Assignn
-.addr b1Assignv
-.addr b1Addn
-.addr b1Addv
-.addr b2Subn
-.addr b2Subv
-.addr b2Lindirectv
-.addr b2Rindirect
-.addr b2Lindirectn
-.addr b2Set
-.addr b2Reset
-.addr b2Toggle
-.addr b2Setv
-.addr b2Resetv
-.addr b2Togglev
-.addr b2New_room
-.addr b2New_room_v
-.addr _b2Load_logics
-.addr _b2Load_logics_v
-.addr b2Call
-.addr b2Call_v
-.addr _b2Load_pic
-.addr _b2Draw_pic
-.addr _b2Show_pic
-.addr _b2Discard_pic
-.addr _b2Overlay_pic
-.addr _b2Show_pri_screen ;check
-.addr _b2Load_view
-.addr _b2Load_view_v
-.addr _b2Discard_view
-.addr _b2Animate_obj
-.addr _b2Unanimate_all
-.addr _b2Draw
-.addr _b2Erase
-.addr _b2Position
-.addr _b2Position_v
-.addr _b2Get_posn
-.addr _b2Reposition
-.addr _b2Set_view
-.addr _b2Set_view_v
-.addr _b2Set_loop
-.addr _b2Set_loop_v
-.addr _b2Fix_loop
-.addr _b2Release_loop
-.addr _b2Set_cel
-.addr _b2Set_cel_v
-.addr _b2Last_cel
-.addr _b2Current_cel
-.addr _b3Current_loop
-.addr _b3Current_view
-.addr _b3Number_of_loops
-.addr _b3Set_priority
-.addr _b3Set_priority_v
-.addr _b3Release_priority
-.addr _b3Get_priority
-.addr _b3Stop_update
-.addr _b3Start_update
-.addr _b3Force_update
-.addr _b3Ignore_horizon
-.addr _b3Observe_horizon
-.addr _b3Set_horizon
-.addr _b3Object_on_water
-.addr _b3Object_on_land
-.addr _b3Object_on_anything
-.addr _b3Ignore_objs
-.addr _b3Observe_objs
-.addr _b3Distance
-.addr _b3Stop_cycling
-.addr _b3Start_cycling
-.addr _b3Normal_cycle
-.addr _b3End_of_loop
-.addr _b3Reverse_cycle
-.addr _b3Reverse_loop
-.addr _b3Cycle_time
-.addr _b3Stop_motion
-.addr _b3Start_motion
-.addr _b3Step_size
-.addr _b3Step_time
-.addr _b3Move_obj
-.addr _b3Move_obj_v
-.addr _b3Follow_ego
-.addr _b3Wander
-.addr _b3Normal_motion
-.addr _b3Set_dir
-.addr _b3Get_dir
-.addr _b3Ignore_blocks
-.addr _b3Observe_blocks
-.addr b1NoOp_4
-.addr b1NoOp_0
-.addr _b3Get
-.addr _b3Get_v
-.addr _b3Drop
-.addr _b3Put
-.addr _b3Put_v
-.addr _b3Get_room_v
-.addr _b3Load_sound
-.addr _b3Play_sound
-.addr _b3Stop_sound
-.addr _b3Print
-.addr _b4Print_v
-.addr _b4Display
-.addr _b4Display_v
-.addr _b4Clear_lines
-.addr _b4Text_screen
-.addr _b4Graphics
-.addr _b4Set_cursor_char
-.addr _b4Set_text_attribute
-.addr b1NoOp_1
-.addr _b4Configure_screen
-.addr _b4Status_line_on
-.addr _b4Status_line_off
-.addr _b4Set_string
-.addr _b4Get_string
-.addr _b4Word_to_string
-.addr _b4Parse
-.addr _b4Get_num
-.addr _b4Prevent_input
-.addr _b4Accept_input
-.addr _b4Set_key
-.addr _b4Add_to_pic
-.addr _b4Add_to_pic_v
-.addr _b4Status
-.addr b1NoOp_0
-.addr b1NoOp_0
-.addr b1NoOp_0
+    LOAD_CODE_WIN_CODE
+    sta var2
+    INC_CODE
 
+    lda var2
 
-jmpTableCommands2:
-.addr _b4Restart_game
-.addr _b4Show_obj
-.addr _b4Random_num
-.addr _b4Program_control
-.addr _b4Player_control
-.addr _b4Obj_status_v
-.addr _b4Quit
-.addr b1NoOp_0
-.addr _b4Pause
-.addr b1NoOp_0
-.addr b1NoOp_0
-.addr b1NoOp_0
-.addr b1NoOp_0
-.addr _b4Version
-.addr b1NoOp_1
-.addr b1NoOp_1
-.addr b1NoOp_1
-.addr _b4Set_scan_start
-.addr _b4Reset_scan_start
-.addr _b4Reposition_to
-.addr _b4Reposition_to_v
-.addr b1NoOp_0
-.addr b1NoOp_3
-.addr _b4Print_at
-.addr _b4Print_at_v
-.addr _b4Discard_view_v
-.addr _b4Clear_text_rect
-.addr b1NoOp_2
-.addr _b4Set_menu
-.addr _b4Set_menu_item
-.addr b1NoOp_0
-.addr b1NoOp_1
-.addr b1NoOp_1
-.addr _b4Menu_input
-.addr _b4Show_obj_v
-.addr b1NoOp_0
-.addr b1NoOp_0
-.addr _b4Mul_n
-.addr _b4Mul_v
-.addr _b4Div_n
-.addr _b4Div_v
-.addr b1NoOp_0
-.addr b1NoOp_1
-.addr b1NoOp_0
-.addr b1NoOp_0
-.addr b1NoOp_0
-.addr b1NoOp_1
-.addr b1NoOp_1
-.addr b1NoOp_0
-.addr b1NoOp_1
-.addr b1NoOp_0
-.addr b1NoOp_4
-.addr b1NoOp_2
-.addr b1NoOp_0
-.addr b1NoOp_0
+    beq @success
+    jmp returnFromOpCodeFalse
+    @success:
+    jmp returnFromOpCodeTrue
 
+b1Equalv:
+    GET_VAR_OR_FLAG VARS_AREA_START_GOLDEN_OFFSET, var1
+    INC_CODE
 
+    GET_VAR_OR_FLAG VARS_AREA_START_GOLDEN_OFFSET, var2
+    INC_CODE
 
-returnAddress: .word $0
-var1: .byte $0
-var2: .byte $0
+    lda var2
 
+    beq @success
+    jmp returnFromOpCodeFalse
+    @success:
+    jmp returnFromOpCodeTrue
+
+b1Lessn:
+    GET_VAR_OR_FLAG VARS_AREA_START_GOLDEN_OFFSET, var1
+    INC_CODE
+
+    LOAD_CODE_WIN_CODE
+    sta var2
+    INC_CODE
+
+    GREATER_THAN_OR_EQ_8 var2, var1, returnFromOpCodeFalse, returnFromOpCodeTrue
+
+b1Lessv:
+    GET_VAR_OR_FLAG VARS_AREA_START_GOLDEN_OFFSET, var1
+    INC_CODE
+
+    GET_VAR_OR_FLAG VARS_AREA_START_GOLDEN_OFFSET, var2
+    INC_CODE
+
+    GREATER_THAN_OR_EQ_8 var2, var1, returnFromOpCodeFalse, returnFromOpCodeTrue
+
+b1Greatern:
+    GET_VAR_OR_FLAG VARS_AREA_START_GOLDEN_OFFSET, var1
+    INC_CODE
+
+    LOAD_CODE_WIN_CODE
+    sta var2
+    INC_CODE
+    
+    LESS_THAN_OR_EQ_8 var2, var1, returnFromOpCodeFalse, returnFromOpCodeTrue
+
+b1Greaterv:
+    GET_VAR_OR_FLAG VARS_AREA_START_GOLDEN_OFFSET, var1
+    INC_CODE
+
+    GET_VAR_OR_FLAG VARS_AREA_START_GOLDEN_OFFSET, var2
+    INC_CODE
+
+    LESS_THAN_OR_EQ_8 var2, var1, returnFromOpCodeFalse, returnFromOpCodeTrue
+
+b1Isset:
+    GET_VAR_OR_FLAG FLAGS_AREA_START_GOLDEN_OFFSET, var1
+    INC_CODE
+    lda var1
+    beq @fail
+    jmp returnFromOpCodeTrue
+    @fail:
+    jmp returnFromOpCodeFalse
+
+b1Issetv:
+    GET_VAR_OR_FLAG_VAR_OFFSET FLAGS_AREA_START_GOLDEN_OFFSET, var1
+    INC_CODE
+    lda var1
+    bne @fail
+    jmp returnFromOpCodeTrue
+    @fail:
+    jmp returnFromOpCodeFalse
+
+b1HasCCall:
+   jsr _b1Has
+   HANDLE_C_IF_RESULT
+
+b1Obj_in_roomCCall:
+   jsr _b1Obj_in_room
+   HANDLE_C_IF_RESULT
+
+b1PosnCCall:
+   jsr _b1Posn
+   HANDLE_C_IF_RESULT
+
+b1ControllerCCall:
+    jsr _b1Controller
+    HANDLE_C_IF_RESULT
+
+b1Have_keyCCall:
+    jsr _b1Have_key
+    HANDLE_C_IF_RESULT
+
+b1SaidCCall:
+    jsr _b1Said
+    HANDLE_C_IF_RESULT
+
+b1Compare_stringsCCall:
+    jsr _b1Compare_strings
+    HANDLE_C_IF_RESULT
+
+b1Obj_in_boxCCall:
+    jsr _b1Obj_in_box
+    HANDLE_C_IF_RESULT
+
+b1Center_posnCCall:
+    jsr _b1Center_posn
+    HANDLE_C_IF_RESULT
+
+b1Right_posnCCall:
+    jsr _b1Right_posn
+    HANDLE_C_IF_RESULT
 .endif

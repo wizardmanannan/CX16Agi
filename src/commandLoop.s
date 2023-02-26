@@ -36,6 +36,11 @@ lda codeBank
 sta RAM_BANK
 .endmacro
 
+.macro SET_BANK_TO_IF_BANK
+lda #LOGIC_COMMANDS_BANK
+sta RAM_BANK
+.endmacro
+
 .macro CODE_JUMP ;requires local variables @disp, @b1 and @b2 to be in scope
     LOAD_CODE_WIN_CODE
     sta @b1
@@ -51,6 +56,7 @@ sta RAM_BANK
 .endmacro
 
 ;ifHelpers
+.segment "BANKRAM05"
  closingIfBracket:
             INC_CODE
             INC_CODE
@@ -160,20 +166,16 @@ ifHandler:
             jmp (jmpTableIf,x)
             
             returnFromOpCodeFalse:
-                SET_BANK_TO_CODE_BANK
                 lda notMode
                 bne returnFromOpCodeTrueAfterNotMode            
                 
                 returnFromOpCodeFalseAfterNotMode:
-
-                SET_BANK_TO_CODE_BANK
                 lda orMode      
                 
                 beq endIfHandlerLoop
                 jmp ifHandlerLoop  
 
             returnFromOpCodeTrue:
-                SET_BANK_TO_CODE_BANK
                 lda notMode
                 bne returnFromOpCodeFalseAfterNotMode
 
@@ -226,7 +228,7 @@ ifHandler:
 
                     endifFunction:
                         jmp mainLoop
-
+.segment "CODE"
 ;commandLoopHelpers
 goto:
     bra @start
@@ -264,7 +266,7 @@ _commandLoop:
          
          jsr refreshCodeWindow
          mainLoop:
-
+         SET_BANK_TO_CODE_BANK
          GREATER_THAN_OR_EQ_16 ZP_PTR_CODE, endPos, endMainLoop
          lda stillExecuting
          cmp #TRUE
@@ -284,6 +286,7 @@ _commandLoop:
         bne @checkGoTo
         DEBUG_PRINT
         INC_CODE
+        SET_BANK_TO_IF_BANK
         jmp ifHandler
         bra mainLoop
         @checkGoTo:
