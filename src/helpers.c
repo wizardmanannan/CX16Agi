@@ -171,6 +171,8 @@ long exitAt = 150;
 boolean stopEvery = FALSE;
 
 #ifdef DEBUG
+extern boolean* flag;
+
 void debugPrint(byte toPrint)
 {
 	printf("Op %lu, %d\n", opCounter, toPrint);
@@ -211,6 +213,11 @@ void debugPrintNot()
 void debugPrintOrMode()
 {
 	printf("Or Mode Started\n");
+}
+
+void debugIsSet(boolean flagVal)
+{
+	printf("Checking that %d is set and it %d", flagVal, flag[flagVal]);
 }
 
 extern byte logDebugVal1;

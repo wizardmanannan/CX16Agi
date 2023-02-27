@@ -154,6 +154,7 @@ LOGICCOMMANDS_INC = 1
 .ifdef DEBUG
 .import _debugGreaterThan_8
 .import _debugLessThan_8
+.import _debugIsSet
 
 _logDebugVal1: .byte $0
 _logDebugVal2: .byte $0
@@ -178,6 +179,13 @@ lda var2
 sta _logDebugVal2
 
 jsr _debugLessThan_8
+.endif
+.endmacro
+
+.macro DEBUG_IS_SET var1
+.ifdef DEBUG
+LOAD_CODE_WIN_CODE
+jsr _debugIsSet
 .endif
 .endmacro
 
@@ -970,6 +978,9 @@ b1Greaterv:
 
 b1Isset:
     GET_VAR_OR_FLAG FLAGS_AREA_START_GOLDEN_OFFSET, var1
+
+    DEBUG_IS_SET
+
     INC_CODE
     lda var1
     beq @fail
@@ -979,6 +990,9 @@ b1Isset:
 
 b1Issetv:
     GET_VAR_OR_FLAG_VAR_OFFSET FLAGS_AREA_START_GOLDEN_OFFSET, var1
+
+    DEBUG_IS_SET
+
     INC_CODE
     lda var1
     bne @fail
