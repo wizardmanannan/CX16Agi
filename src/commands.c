@@ -35,7 +35,7 @@
 #define  PROGRAM_CONTROL  1
 #define CODE_WINDOW_SIZE 10
 //#define VERBOSE_STRING_CHECK
-//#define VERBOSE_LOGIC_EXEC
+#define VERBOSE_LOGIC_EXEC
 //#define VERBOSE_SCRIPT_START
 //#define VERBOSE_PRINT_COUNTER;
 //#define VERBOSE_MENU
@@ -63,7 +63,7 @@ int numOfMenus = 0;
 MENU* the_menu = (MENU*)&BANK_RAM[MENU_START];
 MENU* the_menuChildren = (MENU*)&BANK_RAM[MENU_CHILD_START];
 
-long opCounter = 0;
+long opCounter = 1;
 int printCounter = 1;
 
 void executeLogic(int logNum);
@@ -2805,7 +2805,7 @@ int ifLogicHandlers(byte ch, byte** ppCodeWindowAddress, byte bank)
 	int result;
 
 #ifdef VERBOSE_LOGIC_EXEC
-	printf("If Check %d d1 %d, %d", ch, *(*ppCodeWindowAddress), *(*ppCodeWindowAddress + 1));
+	printf("%lu, %d\n", opCounter++, ch);
 #endif // VERBOSE_LOGIC_EXEC
 
 	switch (ch) {
@@ -2835,9 +2835,9 @@ int ifLogicHandlers(byte ch, byte** ppCodeWindowAddress, byte bank)
 		break; /* Should never happen */
 	}
 
-#ifdef VERBOSE_LOGIC_EXEC
-	printf(" And the result is %d \n", result);
-#endif // VERBOSE_LOGIC_EXEC
+//#ifdef VERBOSE_LOGIC_EXEC
+//	printf(" And the result is %d \n", result);
+//#endif // VERBOSE_LOGIC_EXEC
 	return result;
 }
 
@@ -2887,12 +2887,6 @@ void ifHandler(byte** data, byte codeBank)
 	while (stillProcessing) {
 		ch = *(*data)++;
 
-		if (printCounter == 8)
-		{
-			printf("The value is now %d and ch is %d", **data, ch);
-			exit(0);
-		}
-
 #ifdef DEBUG
 		if (ch <= 18) {
 			sprintf(debugString, "%s [%x]           ", testCommands[ch].commandName, ch);
@@ -2901,12 +2895,12 @@ void ifHandler(byte** data, byte codeBank)
 		}
 #endif
 
-#ifdef VERBOSE_LOGIC_EXEC
-		printf("-- %d %d\n", printCounter + 1, ch);
-#endif // VERBOSE_LOGIC_EXEC
 		printCounter++;
 		switch (ch) {
 		case 0xff: /* Closing if bracket. Expression must be true. */
+#ifdef VERBOSE_LOGIC_EXEC
+			printf("%lu, %d\n", opCounter++, ch);
+#endif // VERBOSE_LOGIC_EXEC
 #ifdef DEBUG
 			drawBigString(screen, "test is true             ", 0, 400, 0, 7);
 			if ((readkey() & 0xff) == 'q') closedown();
@@ -2914,9 +2908,15 @@ void ifHandler(byte** data, byte codeBank)
 			* data += 2;
 			return;
 		case 0xfd: /* Not mode toggle */
+#ifdef VERBOSE_LOGIC_EXEC
+			printf("%lu, %d\n", opCounter++, ch);
+#endif // VERBOSE_LOGIC_EXEC
 			notMode = (notMode ? FALSE : TRUE);
 			break;
 		case 0xfc:
+#ifdef VERBOSE_LOGIC_EXEC
+			printf("%lu, %d\n", opCounter++, ch);
+#endif // VERBOSE_LOGIC_EXEC
 			if (orMode) {
 				/* If we have reached the closing OR bracket, then the
 				** test for the whole expression must be false. */
@@ -2936,22 +2936,11 @@ void ifHandler(byte** data, byte codeBank)
 
 			RAM_BANK = previousBank;
 
-#ifdef VERBOSE_LOGIC_EXEC
-
-			printf("Data was %p trying to add %p ", data, codeWindowAddress - &codeWindow[0]);
-#endif // VERBOSE
 			* data += (codeWindowAddress - &codeWindow[0]);
 
-#ifdef VERBOSE_LOGIC_EXEC
-			printf("Data is %p %u \n", data, *data);
-#endif
 			if (notMode) testVal = (testVal ? FALSE : TRUE);
 			notMode = 0;
 			if (testVal) {
-				if (printCounter == 8)
-				{
-					printf("Here the data is %d and data + 1 is %d", **data, *((*data) + 1));
-				}
 				if (orMode) {
 					/* Find the closing OR. It can't just search for 0xfc
 					** because this could be a parameter for one of the test
@@ -3088,7 +3077,7 @@ void executeLogic(int logNum)
 
 	while ((code < endPos) && stillExecuting) {
 
-		if (printCounter > 10)
+		if (opCounter > 150)
 		{
 			exit(0);
 		}
@@ -3119,20 +3108,20 @@ void executeLogic(int logNum)
 			if ((readkey() & 0xff) == 'q') closedown();
 		}
 #endif  
-#ifdef VERBOSE_LOGIC_EXEC
-		printf("\n The code is %d, on bank %d address, %p log num %d\n", *code, RAM_BANK, code, logNum);
-#endif // VERBOSE
+//#ifdef VERBOSE_LOGIC_EXEC
+//		printf("\n The code is %d, on bank %d address, %p log num %d\n", *code, RAM_BANK, code, logNum);
+//#endif // VERBOSE
 		codeAtTimeOfLastBankSwitch = *code;
 		instructionCodeBank = getBankBasedOnCode(codeAtTimeOfLastBankSwitch);
 
 #ifdef VERBOSE_PRINT_COUNTER
 		printf("%d %d %d\n", printCounter + 1, codeAtTimeOfLastBankSwitch, currentLog);
 #endif // VERBOSE_PRINT_COUNTER
-#ifdef VERBOSE_LOGIC_EXEC
-		printf("Bank is now %d to execute code %d \n", RAM_BANK, codeAtTimeOfLastBankSwitch);
-#endif // VERBOSE 
 		printCounter++;
 
+#ifdef VERBOSE_LOGIC_EXEC
+		printf("%lu, %d\n", opCounter++, *code);
+#endif // VERBOSE_LOGIC_EXEC
 
 
 		if (*code < 0xfe)
@@ -3180,15 +3169,10 @@ void executeLogic(int logNum)
 
 		if (!lastCodeWasNonWindow)
 		{
-#ifdef VERBOSE_LOGIC_EXEC
-			printf("Now jumping (%p - %p - 1) = %p \n", codeWindowAddress, &codeWindow[0], (codeWindowAddress - &codeWindow[0] - 1));
-#endif // VERBOSE
 			code += (codeWindowAddress - &codeWindow[0]) - 1;
 		}
 
 		lastCodeWasNonWindow = FALSE;
-
-		opCounter++;
 	}
 
 	RAM_BANK = previousRamBank;
