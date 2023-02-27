@@ -196,6 +196,44 @@ FALSE = 0
        
 .endmacro
 
+.macro GREATER_THAN_8 word1, word2, successBranch, failBranch
+       .local @branch
+              
+       lda word1
+       cmp word2
+       
+       beq @end
+       bcs @branch
+       bra @end
+
+       @branch:
+        jmp successBranch
+       @end:
+       .ifnblank failBranch
+       jmp failBranch
+       .endif
+       
+.endmacro
+
+.macro LESS_THAN_8 word1, word2, successBranch, failBranch
+       .local @branch
+              
+       lda word1
+       cmp word2
+       
+       beq @end
+       bcc @branch
+       bra @end
+
+       @branch:
+        jmp successBranch
+       @end:
+       .ifnblank failBranch
+       jmp failBranch
+       .endif
+       
+.endmacro
+
 .macro LESS_THAN_OR_EQ_16 word1, word2, successBranch, failBranch
        .local @branch
 

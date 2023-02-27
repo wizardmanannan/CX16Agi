@@ -151,6 +151,36 @@ LOGICCOMMANDS_INC = 1
 .import _hasEnteredNewRoom
 .import _newRoomNum
 
+.ifdef DEBUG
+.import _debugGreaterThan_8
+.import _debugLessThan_8
+
+_logDebugVal1: .byte $0
+_logDebugVal2: .byte $0
+.endif 
+
+.macro DEBUG_GREATER_THAN_8 var1, var2
+.ifdef DEBUG
+lda var1
+sta _logDebugVal1
+lda var2
+sta _logDebugVal2
+
+jsr _debugGreaterThan_8
+.endif
+.endmacro
+
+.macro DEBUG_LESS_THAN_8 var1, var2
+.ifdef DEBUG
+lda var1
+sta _logDebugVal1
+lda var2
+sta _logDebugVal2
+
+jsr _debugLessThan_8
+.endif
+.endmacro
+
 .macro STORE_ON_STACK_RECURSIVE_CALL
 lda startPos
 pha 
@@ -904,7 +934,8 @@ b1Lessn:
     sta var2
     INC_CODE
 
-    GREATER_THAN_OR_EQ_8 var2, var1, returnFromOpCodeFalse, returnFromOpCodeTrue
+    DEBUG_LESS_THAN_8 var1, var2
+    LESS_THAN_8 var1, var2, returnFromOpCodeTrue, returnFromOpCodeFalse
 
 b1Lessv:
     GET_VAR_OR_FLAG VARS_AREA_START_GOLDEN_OFFSET, var1
@@ -913,7 +944,8 @@ b1Lessv:
     GET_VAR_OR_FLAG VARS_AREA_START_GOLDEN_OFFSET, var2
     INC_CODE
 
-    GREATER_THAN_OR_EQ_8 var2, var1, returnFromOpCodeFalse, returnFromOpCodeTrue
+    DEBUG_LESS_THAN_8 var1, var2
+    LESS_THAN_8 var1, var2, returnFromOpCodeTrue, returnFromOpCodeFalse
 
 b1Greatern:
     GET_VAR_OR_FLAG VARS_AREA_START_GOLDEN_OFFSET, var1
@@ -922,8 +954,10 @@ b1Greatern:
     LOAD_CODE_WIN_CODE
     sta var2
     INC_CODE
+
+    DEBUG_GREATER_THAN_8 var1, var2
     
-    LESS_THAN_OR_EQ_8 var2, var1, returnFromOpCodeFalse, returnFromOpCodeTrue
+    GREATER_THAN_8 var1, var2, returnFromOpCodeTrue, returnFromOpCodeFalse
 
 b1Greaterv:
     GET_VAR_OR_FLAG VARS_AREA_START_GOLDEN_OFFSET, var1
@@ -932,7 +966,7 @@ b1Greaterv:
     GET_VAR_OR_FLAG VARS_AREA_START_GOLDEN_OFFSET, var2
     INC_CODE
 
-    LESS_THAN_OR_EQ_8 var2, var1, returnFromOpCodeFalse, returnFromOpCodeTrue
+    DEBUG_GREATER_THAN_8 var1, var2
 
 b1Isset:
     GET_VAR_OR_FLAG FLAGS_AREA_START_GOLDEN_OFFSET, var1

@@ -1,8 +1,9 @@
 .ifndef  COMMAND_LOOP_INC
- DEBUG = 1
+ 
 
 COMMAND_LOOP_INC = 1
 LOGIC_ENTRY_PARAMETERS_OFFSET =  0
+DEBUG = 1 ;Note the debug preprocessor variable in helpers.h must also be enabled to avoid errors
 
 .include "global.s"
 .include "logicCommands.s"
@@ -18,6 +19,42 @@ stillExecuting: .byte $1
 jumpOffset: .byte $0
 numArgs: .byte $0,$2,$2,$2,$2,$2,$2,$1,$1,$1,$2,$5,$1,$0,$0,$2,$5,$5,$5
 
+.ifdef DEBUG
+    .import _debugPrintTrue
+    .import _debugPrintFalse
+    .import _debugPrintNot
+    .import _debugPrintOrMode
+.endif
+
+.macro DEBUG_PRINT_TRUE
+.ifdef DEBUG
+    jsr _debugPrintTrue    
+.endif
+.endmacro
+
+.macro DEBUG_PRINT_FALSE
+.ifdef DEBUG
+    jsr _debugPrintFalse   
+.endif
+.endmacro
+
+.macro DEBUG_PRINT_NOT
+.ifdef DEBUG
+    lda notMode
+    beq @exit
+    jsr _debugPrintNot
+    @exit:
+.endif
+.endmacro
+
+.macro DEBUG_PRINT_OR_MODE
+.ifdef DEBUG
+    lda notMode
+    beq @exit
+    jsr _debugPrintOrMode
+    @exit:
+.endif
+.endmacro
 
 .macro DEBUG_PRINT toPrint
     .ifdef DEBUG
@@ -139,6 +176,7 @@ ifHandler:
 
         cmp #$FC
         beq @checkOrModeJmp
+        
 
         bra @default
 
@@ -152,6 +190,7 @@ ifHandler:
 
         @checkOrModeJmp:
             DEBUG_PRINT ch
+            DEBUG_PRINT_OR_MODE
             jmp checkOrMode
 
         @default:
@@ -166,20 +205,26 @@ ifHandler:
             jmp (jmpTableIf,x)
             
             returnFromOpCodeFalse:
+                DEBUG_PRINT_FALSE
                 lda notMode
                 bne returnFromOpCodeTrueAfterNotMode            
                 
                 returnFromOpCodeFalseAfterNotMode:
+                DEBUG_PRINT_NOT
+
                 lda orMode      
                 
                 beq endIfHandlerLoop
                 jmp ifHandlerLoop  
 
             returnFromOpCodeTrue:
+                DEBUG_PRINT_TRUE
                 lda notMode
                 bne returnFromOpCodeFalseAfterNotMode
 
             returnFromOpCodeTrueAfterNotMode:
+                DEBUG_PRINT_NOT
+
                 lda orMode
                 beq @gotoStartIfHandler
                 jmp startOrModeLoop

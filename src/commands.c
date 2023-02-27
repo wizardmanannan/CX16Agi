@@ -42,7 +42,6 @@
 //#define VERBOSE_MENU_DUMP
 //#define VERBOSE_MESSAGE_TEXT
 
-//#define  DEBUG
 
 extern byte* var;
 extern boolean* flag;
@@ -2545,10 +2544,10 @@ void executeLogic(int logNum)
 #endif // VERBOSE_SCRIPT_START
 
 
-#ifdef DEBUG
-	sprintf(debugString, "LOGIC.%d:       ", currentLog);
-	drawBigString(screen, debugString, 0, 384, 0, 7);
-#endif
+//#ifdef DEBUG
+//	sprintf(debugString, "LOGIC.%d:       ", currentLog);
+//	drawBigString(screen, debugString, 0, 384, 0, 7);
+//#endif
 
 	/* Load logic file temporarily in order to execute it if the logic is
 	** not already in memory. */
@@ -2561,12 +2560,12 @@ void executeLogic(int logNum)
 
 		getLogicFile(&currentLogicFile, logNum);
 	}
-#ifdef DEBUG
-	debugString[0] = 0;
-	for (i = 0; i < 10; i++)
-		sprintf(debugString, "%s %x", debugString, currentLogicFile->logicCode[i]);
-	drawBigString(screen, debugString, 0, 416, 0, 7);
-#endif
+//#ifdef DEBUG
+//	debugString[0] = 0;
+//	for (i = 0; i < 10; i++)
+//		sprintf(debugString, "%s %x", debugString, currentLogicFile->logicCode[i]);
+//	drawBigString(screen, debugString, 0, 416, 0, 7);
+//#endif
 	/* Set up position to start executing code from. */
 	//currentLogic.currentPoint = currentLogic.entryPoint;
 
@@ -2575,10 +2574,10 @@ void executeLogic(int logNum)
 
 	commandLoop(&currentLogicFile);
 
-#ifdef DEBUG
+/*#ifdef DEBUG
 	drawBigString(screen, "Push a key to advance a step", 0, 400, 0, 7);
 	if ((readkey() & 0xff) == 'q') closedown();
-#endif
+#endif*/
 }
 #pragma code-name (pop)
 

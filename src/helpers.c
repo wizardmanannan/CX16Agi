@@ -165,12 +165,12 @@ void getLogicDirectory(AGIFilePosType* returnedLogicDirectory, AGIFilePosType* l
 
 	RAM_BANK = previousRamBank;
 }
-
 long opCounter = 1;
 long stopAt = 3000;
 long exitAt = 150;
 boolean stopEvery = FALSE;
 
+#ifdef DEBUG
 void debugPrint(byte toPrint)
 {
 	printf("Op %lu, %d\n", opCounter, toPrint);
@@ -192,6 +192,41 @@ void debugPrint(byte toPrint)
 
 	opCounter++;
 }
+
+void debugPrintFalse()
+{
+	printf("The result is false\n");
+}
+
+void debugPrintTrue()
+{
+	printf("The result is true\n");
+}
+
+void debugPrintNot()
+{
+	printf("The result is inverted by not\n");
+}
+
+void debugPrintOrMode()
+{
+	printf("Or Mode Started\n");
+}
+
+extern byte logDebugVal1;
+extern byte logDebugVal2;
+
+void debugGreaterThan_8()
+{
+	printf("Checking that %d is > %d and the result should be %d", logDebugVal1, logDebugVal2, logDebugVal1 > logDebugVal2);
+}
+
+void debugLessThan_8()
+{
+	printf("Checking that %d is < %d and the result should be %d", logDebugVal1, logDebugVal2, logDebugVal1 < logDebugVal2);
+}
+
+#endif
 
 
 
