@@ -217,7 +217,7 @@ void debugPrintOrMode()
 
 void debugIsSet(boolean flagVal)
 {
-	printf("Checking that %d is set and it %d", flagVal, flag[flagVal]);
+	printf("Checking that %d is set and it %d\n", flagVal, flag[flagVal]);
 }
 
 extern byte logDebugVal1;
@@ -225,12 +225,12 @@ extern byte logDebugVal2;
 
 void debugGreaterThan_8()
 {
-	printf("Checking that %d is > %d and the result should be %d", logDebugVal1, logDebugVal2, logDebugVal1 > logDebugVal2);
+	printf("Checking that %d is > %d and the result should be %d\n", logDebugVal1, logDebugVal2, logDebugVal1 > logDebugVal2);
 }
 
 void debugLessThan_8()
 {
-	printf("Checking that %d is < %d and the result should be %d", logDebugVal1, logDebugVal2, logDebugVal1 < logDebugVal2);
+	printf("Checking that %d is < %d and the result should be %d\n", logDebugVal1, logDebugVal2, logDebugVal1 < logDebugVal2);
 }
 
 #endif
