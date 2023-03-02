@@ -307,6 +307,8 @@ boolean b1Equaln(byte** data) // 2, 0x80
 	varVal = var[variable];
 	value = *(*data)++;
 
+	printf("Checking that %d is equal to %d and it %d\n", varVal, value, varVal == value);
+
 	return (varVal == value);
 }
 
@@ -325,6 +327,9 @@ boolean b1Lessn(byte** data) // 2, 0x80
 
 	varVal = var[*(*data)++];
 	value = *(*data)++;
+
+	printf("Checking that %d is < %d and the result should be %d\n", varVal, value, varVal < value);
+
 	return (varVal < value);
 }
 
@@ -334,6 +339,9 @@ boolean b1Lessv(byte** data) // 2, 0xC0
 
 	varVal1 = var[*(*data)++];
 	varVal2 = var[*(*data)++];
+
+	printf("Checking that %d is < %d and the result should be %d\n", varVal1, varVal2, varVal1 < varVal2);
+
 	return (varVal1 < varVal2);
 }
 
@@ -344,6 +352,8 @@ boolean b1Greatern(byte** data) // 2, 0x80
 	varVal = var[*(*data)++];
 	value = *(*data)++;
 
+	printf("Checking that %d is > %d and the result should be %d\n", varVal, value, varVal > value);
+
 	return (varVal > value);
 }
 
@@ -353,6 +363,9 @@ boolean b1Greaterv(byte** data) // 2, 0xC0
 
 	varVal1 = var[*(*data)++];
 	varVal2 = var[*(*data)++];
+
+	printf("Checking that %d is > %d and the result should be %d\n", varVal1, varVal2, varVal1 > varVal2);
+
 	return (varVal1 > varVal2);
 }
 
@@ -360,16 +373,15 @@ boolean b1Isset(byte** data) // 1, 0x00
 {
 	int flagNo = *(*data)++;
 
-	if (flagNo == 220 && currentLog == 46)
-	{
-		printf("Checking whether %d is set and it is %d \n", flagNo, flag[flagNo]);
-	}
+	printf("Checking that %d is set and it %d\n", flagNo, flag[flagNo]);
 	return (flag[flagNo]);
 }
 
 boolean b1Issetv(byte** data) // 1, 0x80 
 {
-	return (flag[var[*(*data)++]]);
+	int flagNo = *(*data)++;
+	printf("Checking that %d is set and it %d\n", flagNo, flag[flagNo]);
+	return (flag[var[flagNo]]);
 }
 
 boolean b1Has(byte** data) // 1, 0x00 
@@ -2934,11 +2946,23 @@ void ifHandler(byte** data, byte codeBank)
 
 			testVal = ifLogicHandlers(ch, ppCodeWindowAddress, ifHandlerBank);
 
+			if (testVal)
+			{
+				printf("The result is true\n");
+			}
+			else
+			{
+				printf("The result is false\n");
+			}
+
 			RAM_BANK = previousBank;
 
 			* data += (codeWindowAddress - &codeWindow[0]);
 
-			if (notMode) testVal = (testVal ? FALSE : TRUE);
+			if (notMode) {
+				testVal = (testVal ? FALSE : TRUE);
+				printf("The result is inverted by not\n");
+			}
 			notMode = 0;
 			if (testVal) {
 				if (orMode) {
