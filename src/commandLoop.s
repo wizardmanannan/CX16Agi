@@ -256,7 +256,7 @@ ifHandler:
                         lda numArgs,x
                         sta @disp
 
-                        ADD_WORD_16 ZP_PTR_CODE, @disp, ZP_PTR_CODE
+                        jsr _incCodeBy
                         bra @startFindBracketLoop
 
                         @0EResult:
@@ -264,7 +264,8 @@ ifHandler:
                         sta @ch
                         INC_CODE
                         LEFT_SHIFT_16 @ch, #$1, @disp
-                        ADD_WORD_16 ZP_PTR_CODE, @disp, ZP_PTR_CODE
+                        sta @disp
+                        jsr _incCodeBy
 
                         jmp @startFindBracketLoop
                         @FFResult:

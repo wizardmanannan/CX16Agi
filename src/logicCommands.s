@@ -927,7 +927,6 @@ b1Equaln:
 
     lda var1
     cmp var2
-    stp
     beq @success
     jmp returnFromOpCodeFalse
     @success:
