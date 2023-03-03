@@ -155,7 +155,7 @@ LOGICCOMMANDS_INC = 1
 .import _debugGreaterThan_8
 .import _debugLessThan_8
 .import _debugIsSet
-
+.import _debugEqual
 _logDebugVal1: .byte $0
 _logDebugVal2: .byte $0
 .endif 
@@ -186,6 +186,16 @@ jsr _debugLessThan_8
 .ifdef DEBUG
 LOAD_CODE_WIN_CODE
 jsr _debugIsSet
+.endif
+.endmacro
+
+.macro DEBUG_IS_EQUAL var1, var2
+.ifdef DEBUG
+lda var1
+sta _logDebugVal1
+lda var2
+sta _logDebugVal2
+jsr _debugEqual
 .endif
 .endmacro
 
@@ -912,9 +922,12 @@ b1Equaln:
     LOAD_CODE_WIN_CODE
     sta var2
     INC_CODE
+    
+    DEBUG_IS_EQUAL var1, var2
 
-    lda var2
-
+    lda var1
+    cmp var2
+    stp
     beq @success
     jmp returnFromOpCodeFalse
     @success:
@@ -927,7 +940,10 @@ b1Equalv:
     GET_VAR_OR_FLAG VARS_AREA_START_GOLDEN_OFFSET, var2
     INC_CODE
 
-    lda var2
+    DEBUG_IS_EQUAL var1, var2
+
+    lda var1
+    cmp var2
 
     beq @success
     jmp returnFromOpCodeFalse

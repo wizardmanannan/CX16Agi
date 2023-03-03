@@ -233,6 +233,11 @@ void debugLessThan_8()
 	printf("Checking that %d is < %d and the result should be %d\n", logDebugVal1, logDebugVal2, logDebugVal1 < logDebugVal2);
 }
 
+void debugEqual()
+{
+	printf("Checking that %d is equal to %d and it % d\n", logDebugVal1, logDebugVal2, logDebugVal1 == logDebugVal2);
+}
+
 #endif
 
 

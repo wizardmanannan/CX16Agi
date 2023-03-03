@@ -211,7 +211,7 @@ ifHandler:
                 
                 returnFromOpCodeFalseAfterNotMode:
                 DEBUG_PRINT_NOT
-
+                stz notMode
                 lda orMode      
                 
                 beq endIfHandlerLoop
@@ -224,7 +224,7 @@ ifHandler:
 
             returnFromOpCodeTrueAfterNotMode:
                 DEBUG_PRINT_NOT
-
+                stz notMode
                 lda orMode
                 beq @gotoStartIfHandler
                 jmp startOrModeLoop
