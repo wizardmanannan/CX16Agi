@@ -1029,13 +1029,19 @@ b2Resetv:
       bra @start
       @result: .byte $0
       @start:
+        
+        .ifdef DEBUG
+            LOAD_CODE_WIN_CODE
+            sta _logDebugVal1
+         .endif
+
         GET_VAR_OR_FLAG VARS_AREA_START_GOLDEN_OFFSET, @result
                 
         SET_VAR_OR_FLAG FLAGS_AREA_START_GOLDEN_OFFSET, #$0, @result
 
         INC_CODE
 
-        DEBUG_POST_CHECK_FLAG @result
+        DEBUG_POST_CHECK_FLAG
 
         jmp _afterLogicCommand
 
