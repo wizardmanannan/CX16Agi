@@ -279,6 +279,14 @@ void debugAssignV()
 	printf("Assign var %d (%d) to %d (%d) which is\n", logDebugVal1, var[logDebugVal1], logDebugVal2, var[logDebugVal2]);
 }
 
+void debugIndirect()
+{
+	printf("Indir %d (%d) value %d\n", logDebugVal1, var[logDebugVal1], logDebugVal2);
+
+	//printf(postCheckVar, var[varNum], var[var[varNum]]);
+}
+
+
 void debugPostCheckVar()
 {
 	printf("Post check var %d (%d)\n", logDebugVal1, var[logDebugVal1]);

@@ -165,6 +165,7 @@ LOGICCOMMANDS_INC = 1
 .import _debugAssignN
 .import _debugPostCheckVar
 .import _debugPostCheckFlag
+.import _debugIndirect
 
 _logDebugVal1: .byte $0
 _logDebugVal2: .byte $0
@@ -297,6 +298,17 @@ jsr _debugPostCheckFlag
 .endif
 .endmacro
 
+.macro DEBUG_INDIRECT var1, var2
+.ifdef DEBUG
+lda var1
+sta _logDebugVal1
+
+lda var2
+sta _logDebugVal2
+jsr _debugIndirect
+.endif
+.endmacro
+
 .macro STORE_ON_STACK_RECURSIVE_CALL
 lda startPos
 pha 
@@ -368,7 +380,7 @@ sta startPos
         lda #>GOLDEN_RAM
         adc #>areaStartOffset
         sta ZP_TMP + 1
-
+        nop
         .ifblank var
             LOAD_CODE_WIN_CODE
         .endif
@@ -915,8 +927,6 @@ b2Lindirectv:
          INC_CODE
          GET_VAR_OR_FLAG VARS_AREA_START_GOLDEN_OFFSET, @var2
          INC_CODE
-         GET_VAR_OR_FLAG VARS_AREA_START_GOLDEN_OFFSET, @var2
-         INC_CODE
          GET_VAR_OR_FLAG VARS_AREA_START_GOLDEN_OFFSET, @result, @var1
          INC_CODE
 
@@ -949,15 +959,19 @@ b2Lindirectn:
       @varNum: .byte $0
       @val: .byte $0
       @result: .byte $0
-    @start:         
+    @start:        
+        stp 
          GET_VAR_OR_FLAG VARS_AREA_START_GOLDEN_OFFSET, @varNum
          INC_CODE
          GET_VAR_OR_FLAG VARS_AREA_START_GOLDEN_OFFSET, @val
          INC_CODE
-         GET_VAR_OR_FLAG VARS_AREA_START_GOLDEN_OFFSET, @result, @varNum
-         INC_CODE
 
+         DEBUG_INDIRECT @varNum, @val
+
+         GET_VAR_OR_FLAG VARS_AREA_START_GOLDEN_OFFSET, @result, @varNum
          SET_VAR_OR_FLAG VARS_AREA_START_GOLDEN_OFFSET, @val, @result
+        
+         DEBUG_POST_CHECK_VAR @result
 
          jmp _afterLogicCommand
 
