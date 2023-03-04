@@ -25,9 +25,9 @@
 #include "stub.h"
 #include "helpers.h"
 
-#define HIGHEST_BANK1_FUNC 29
-#define HIGHEST_BANK2_FUNC 87
-#define HIGHEST_BANK3_FUNC 138
+#define HIGHEST_BANK1_FUNC 22
+#define HIGHEST_BANK2_FUNC 83
+#define HIGHEST_BANK3_FUNC 133
 #define HIGHEST_BANK4_FUNC 181
 
 
@@ -36,7 +36,7 @@
 #define CODE_WINDOW_SIZE 10
 //#define VERBOSE_STRING_CHECK
 #define VERBOSE_LOGIC_EXEC
-//#define VERBOSE_SCRIPT_START
+#define VERBOSE_SCRIPT_START
 //#define VERBOSE_PRINT_COUNTER;
 //#define VERBOSE_MENU
 //#define VERBOSE_MENU_DUMP
@@ -67,6 +67,7 @@ long opCounter = 1;
 int printCounter = 1;
 
 const char* postCheckVar = "Post check var %d (%d)\n";
+const char* postCheckFlag = "Post check flag %d (%d)\n";
 
 void executeLogic(int logNum);
 
@@ -710,12 +711,17 @@ void b1Lindirectn(byte** data) // 2, 0x80
 
 void b1Set(byte** data) // 1, 0x00 
 {
+	byte f = *(*data);
 	flag[*(*data)++] = TRUE;
+
+	printf(postCheckFlag, f, var[f]);
 }
 
 void b1Reset(byte** data) // 1, 0x00 
 {
+	byte f = *(*data);
 	flag[*(*data)++] = FALSE;
+	printf(postCheckFlag, f, var[f]);
 }
 
 void b1Toggle(byte** data) // 1, 0x00 
@@ -723,16 +729,22 @@ void b1Toggle(byte** data) // 1, 0x00
 	int f = *(*data)++;
 
 	flag[f] = (flag[f] ? FALSE : TRUE);
+
+	printf(postCheckFlag, f, var[f]);
 }
 
 void b1Set_v(byte** data) // 1, 0x80 
 {
+	byte f = *(*data);
 	flag[var[*(*data)++]] = TRUE;
+	printf(postCheckFlag, f, var[f]);
 }
 
 void b1Reset_v(byte** data) // 1, 0x80 
 {
+	byte f = *(*data);
 	flag[var[*(*data)++]] = FALSE;
+	printf(postCheckFlag, f, var[f]);
 }
 
 void b1Toggle_v(byte** data) // 1, 0x80 
@@ -740,6 +752,7 @@ void b1Toggle_v(byte** data) // 1, 0x80
 	int f = var[*(*data)++];
 
 	flag[f] = (flag[f] ? FALSE : TRUE);
+	printf(postCheckFlag, f, var[f]);
 }
 
 void b1New_room(byte** data) // 1, 0x00 
@@ -770,6 +783,9 @@ void b1Call(byte** data) // 1, 0x00
 {
 	executeLogic(*(*data)++);
 }
+
+#pragma code-name (pop)
+#pragma code-name (push, "BANKRAM02")
 
 void b1Call_v(byte** data) // 1, 0x80 
 {
@@ -819,9 +835,6 @@ void b1Show_pri_screen(byte** data) // 0, 0x00
 }
 
 /************************** VIEW ACTION COMMANDS **************************/
-
-#pragma code-name (pop)
-#pragma code-name (push, "BANKRAM02")
 
 void b1Load_view(byte** data) // 1, 0x00 
 {
@@ -1583,6 +1596,9 @@ void b2Follow_ego(byte** data) // 3, 0x00
 	setViewTab(&localViewtab, entryNum);
 }
 
+#pragma code-name (pop)
+#pragma code-name (push, "BANKRAM03")
+
 void b2Wander(byte** data) // 1, 0x00 
 {
 	int entryNum;
@@ -1637,9 +1653,6 @@ void b2Get_dir(byte** data) // 2, 0x40
 
 	setViewTab(&localViewtab, entryNum);
 }
-
-#pragma code-name (pop)
-#pragma code-name (push, "BANKRAM03")
 
 void b2Ignore_blocks(byte** data) // 1, 0x00 
 {
@@ -2208,6 +2221,8 @@ void b3Obj_status_v(byte** data) // 1, 0x80
 	trampoline_1Int(&bDShowObjectState, objectNum, VIEW_CODE_BANK_4);
 }
 
+#pragma code-name (pop)
+#pragma code-name (push, "BANKRAM04")
 
 void b3Quit(byte** data) // 1, 0x00                     /* 0 args for AGI version 2_089 */
 {
@@ -2247,9 +2262,6 @@ void b3Cancel_line(byte** data) // 0, 0x00
 	/*currentInputStr[0]=0;
 	strPos=0;*/
 }
-
-#pragma code-name (pop)
-#pragma code-name (push, "BANKRAM04")
 
 void b4Init_joy(byte** data) // 0, 0x00 
 {
