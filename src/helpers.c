@@ -166,7 +166,7 @@ void getLogicDirectory(AGIFilePosType* returnedLogicDirectory, AGIFilePosType* l
 	RAM_BANK = previousRamBank;
 }
 long opCounter = 1;
-long stopAt = 191;
+long stopAt = 56;
 long exitAt = 2500;
 boolean stopEvery = FALSE;
 
@@ -276,7 +276,7 @@ void debugAssignN()
 
 void debugAssignV()
 {
-	printf("Sub var %d (%d) to %d (%d) which is\n", logDebugVal1, var[logDebugVal1], logDebugVal2, var[logDebugVal2]);
+	printf("Assign var %d (%d) to %d (%d) which is\n", logDebugVal1, var[logDebugVal1], logDebugVal2, var[logDebugVal2]);
 }
 
 void debugPostCheckVar()
