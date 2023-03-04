@@ -166,7 +166,7 @@ void getLogicDirectory(AGIFilePosType* returnedLogicDirectory, AGIFilePosType* l
 	RAM_BANK = previousRamBank;
 }
 long opCounter = 1;
-long stopAt = 300;
+long stopAt = 196;
 long exitAt = 2500;
 boolean stopEvery = FALSE;
 

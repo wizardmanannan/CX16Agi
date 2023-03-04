@@ -293,7 +293,7 @@ lda var
 .ifblank var
 lda _logDebugVal1
 .endif
-jsr _debugPostCheckVar
+jsr _debugPostCheckFlag
 .endif
 .endmacro
 
