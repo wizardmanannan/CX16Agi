@@ -298,12 +298,9 @@ jsr _debugPostCheckFlag
 .endif
 .endmacro
 
-.macro DEBUG_INDIRECT var1, var2
+.macro DEBUG_INDIRECT value
 .ifdef DEBUG
-lda var1
-sta _logDebugVal1
-
-lda var2
+lda value
 sta _logDebugVal2
 jsr _debugIndirect
 .endif
@@ -960,13 +957,19 @@ b2Lindirectn:
       @val: .byte $0
       @result: .byte $0
     @start:        
-        stp 
+        
+        .ifdef DEBUG
+            LOAD_CODE_WIN_CODE
+            sta _logDebugVal1
+         .endif
+         stp
          GET_VAR_OR_FLAG VARS_AREA_START_GOLDEN_OFFSET, @varNum
          INC_CODE
-         GET_VAR_OR_FLAG VARS_AREA_START_GOLDEN_OFFSET, @val
+         LOAD_CODE_WIN_CODE
+         sta @val
          INC_CODE
 
-         DEBUG_INDIRECT @varNum, @val
+         DEBUG_INDIRECT @val
 
          GET_VAR_OR_FLAG VARS_AREA_START_GOLDEN_OFFSET, @result, @varNum
          SET_VAR_OR_FLAG VARS_AREA_START_GOLDEN_OFFSET, @val, @result
