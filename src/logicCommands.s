@@ -729,12 +729,13 @@ b1Assignn:
     @var: .byte $0
     @start:
          LOAD_CODE_WIN_CODE
-         sta @val
+         sta @var
          INC_CODE
 
-         sta @var
+         LOAD_CODE_WIN_CODE
+         sta @val
 
-         DEBUG_ASSIGN_N @val, @var
+         DEBUG_ASSIGN_N @var, @val
 
          SET_VAR_OR_FLAG VARS_AREA_START_GOLDEN_OFFSET, @val, @var
          INC_CODE
