@@ -278,8 +278,9 @@ jsr _debugAddV
 lda _logDebugVal1
 .endif
 
-.ifnblank
+.ifnblank var
 lda var
+sta _logDebugVal1
 .endif
 
 jsr _debugPostCheckVar
@@ -702,7 +703,7 @@ b1Increment:
          SET_VAR_OR_FLAG VARS_AREA_START_GOLDEN_OFFSET, @value
          @end:
          INC_CODE
-
+        
          DEBUG_POST_CHECK_VAR
          jmp _afterLogicCommand
 
@@ -955,14 +956,13 @@ b2Lindirectn:
       bra @start
       @varNum: .byte $0
       @val: .byte $0
-      @result: .byte $0
     @start:        
         
         .ifdef DEBUG
             LOAD_CODE_WIN_CODE
             sta _logDebugVal1
          .endif
-         stp
+            
          GET_VAR_OR_FLAG VARS_AREA_START_GOLDEN_OFFSET, @varNum
          INC_CODE
          LOAD_CODE_WIN_CODE
@@ -970,11 +970,11 @@ b2Lindirectn:
          INC_CODE
 
          DEBUG_INDIRECT @val
-
-         GET_VAR_OR_FLAG VARS_AREA_START_GOLDEN_OFFSET, @result, @varNum
-         SET_VAR_OR_FLAG VARS_AREA_START_GOLDEN_OFFSET, @val, @result
         
-         DEBUG_POST_CHECK_VAR @result
+         SET_VAR_OR_FLAG VARS_AREA_START_GOLDEN_OFFSET, @val, @varNum
+         
+         stp
+         DEBUG_POST_CHECK_VAR @varNum
 
          jmp _afterLogicCommand
 
