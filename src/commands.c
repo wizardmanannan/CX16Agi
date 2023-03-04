@@ -714,14 +714,14 @@ void b1Set(byte** data) // 1, 0x00
 	byte f = *(*data);
 	flag[*(*data)++] = TRUE;
 
-	printf(postCheckFlag, f, var[f]);
+	printf(postCheckFlag, f, flag[f]);
 }
 
 void b1Reset(byte** data) // 1, 0x00 
 {
 	byte f = *(*data);
 	flag[*(*data)++] = FALSE;
-	printf(postCheckFlag, f, var[f]);
+	printf(postCheckFlag, f, flag[f]);
 }
 
 void b1Toggle(byte** data) // 1, 0x00 
@@ -730,21 +730,21 @@ void b1Toggle(byte** data) // 1, 0x00
 
 	flag[f] = (flag[f] ? FALSE : TRUE);
 
-	printf(postCheckFlag, f, var[f]);
+	printf(postCheckFlag, f, flag[f]);
 }
 
 void b1Set_v(byte** data) // 1, 0x80 
 {
 	byte f = *(*data);
 	flag[var[*(*data)++]] = TRUE;
-	printf(postCheckFlag, f, var[f]);
+	printf(postCheckFlag, f, flag[f]);
 }
 
 void b1Reset_v(byte** data) // 1, 0x80 
 {
 	byte f = *(*data);
 	flag[var[*(*data)++]] = FALSE;
-	printf(postCheckFlag, f, var[f]);
+	printf(postCheckFlag, f, flag[f]);
 }
 
 void b1Toggle_v(byte** data) // 1, 0x80 
@@ -3156,7 +3156,7 @@ void executeLogic(int logNum)
 
 	while ((code < endPos) && stillExecuting) {
 
-		if (opCounter > 150)
+		if (opCounter > 250)
 		{
 			exit(0);
 		}
