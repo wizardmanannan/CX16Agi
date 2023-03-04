@@ -166,12 +166,13 @@ void getLogicDirectory(AGIFilePosType* returnedLogicDirectory, AGIFilePosType* l
 	RAM_BANK = previousRamBank;
 }
 long opCounter = 1;
-long stopAt = 138;
-long exitAt = 150;
+long stopAt = 191;
+long exitAt = 2500;
 boolean stopEvery = FALSE;
 
 #ifdef DEBUG
 extern boolean* flag;
+extern byte* var;
 
 void debugPrint(byte toPrint)
 {
@@ -237,6 +238,58 @@ void debugEqual()
 {
 	printf("Checking that %d is equal to %d and it % d\n", logDebugVal1, logDebugVal2, logDebugVal1 == logDebugVal2);
 }
+
+void debugInc()
+{
+	printf("Incrementing value %d to %d", logDebugVal1, var[logDebugVal1]++);
+}
+
+void debugDec()
+{
+	printf("Decementing value %d to %d", logDebugVal1, var[logDebugVal1]--);
+}
+
+void debugAddN()
+{
+	printf("Add var %d (%d) to %d which is", logDebugVal1, var[logDebugVal1], logDebugVal2,  var[logDebugVal1] + logDebugVal2);
+}
+
+void debugAddV()
+{
+	printf("Add var %d (%d) to %d (%d) which is\n", logDebugVal1, var[logDebugVal1], logDebugVal2, var[logDebugVal2], var[logDebugVal1] + var[logDebugVal2]);
+}
+
+void debugSubN()
+{
+	printf("Sub var %d (%d) to %d which is\n", logDebugVal1, var[logDebugVal1], logDebugVal2, var[logDebugVal1] - logDebugVal2);
+}
+
+void debugSubV()
+{
+	printf("Sub var %d (%d) to %d (%d) which is\n", logDebugVal1, var[logDebugVal1], logDebugVal2, var[logDebugVal2], var[logDebugVal1] - var[logDebugVal2]);
+}
+
+void debugAssignN()
+{
+	printf("Assign var %d (%d) to %d\n", logDebugVal1, var[logDebugVal1], logDebugVal2);
+}
+
+void debugAssignV()
+{
+	printf("Sub var %d (%d) to %d (%d) which is\n", logDebugVal1, var[logDebugVal1], logDebugVal2, var[logDebugVal2]);
+}
+
+void debugPostCheckVar()
+{
+	printf("Post check var %d (%d)\n", logDebugVal1, var[logDebugVal1]);
+}
+
+void debugPostCheckFlag()
+{
+	printf("Post check flag %d (%d)\n", logDebugVal1, flag[logDebugVal1]);
+}
+
+
 
 #endif
 

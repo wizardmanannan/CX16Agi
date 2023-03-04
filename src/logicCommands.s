@@ -156,6 +156,16 @@ LOGICCOMMANDS_INC = 1
 .import _debugLessThan_8
 .import _debugIsSet
 .import _debugEqual
+.import _debugInc
+.import _debugDec
+.import _debugAddN
+.import _debugAddV
+.import _debugSubN
+.import _debugSubV
+.import _debugAssignN
+.import _debugPostCheckVar
+.import _debugPostCheckFlag
+
 _logDebugVal1: .byte $0
 _logDebugVal2: .byte $0
 .endif 
@@ -196,6 +206,87 @@ sta _logDebugVal1
 lda var2
 sta _logDebugVal2
 jsr _debugEqual
+.endif
+.endmacro
+
+.macro DEBUG_INC
+.ifdef DEBUG
+LOAD_CODE_WIN_CODE
+sta _logDebugVal1
+jsr _debugInc
+.endif
+.endmacro
+
+.macro DEBUG_DEC
+.ifdef DEBUG
+LOAD_CODE_WIN_CODE
+sta _logDebugVal1
+jsr _debugDec
+.endif
+.endmacro
+
+.macro DEBUG_ADD_N var
+.ifdef DEBUG
+sta _logDebugVal2
+lda var
+sta _logDebugVal1
+jsr _debugAddN
+.endif
+.endmacro
+
+.macro DEBUG_ADD_V var
+.ifdef DEBUG
+jsr _debugAddV
+.endif
+.endmacro
+
+.macro DEBUG_SUB_N var
+.ifdef DEBUG
+sta _logDebugVal2
+lda var
+sta _logDebugVal1
+jsr _debugSubN
+.endif
+.endmacro
+
+.macro DEBUG_SUB_V var
+.ifdef DEBUG
+jsr _debugSubV
+.endif
+.endmacro
+
+.macro DEBUG_ASSIGN_N var1, var2
+.ifdef DEBUG
+lda var1
+sta _logDebugVal1
+lda var2
+sta _logDebugVal2
+jsr _debugAssignN
+.endif
+.endmacro
+
+.macro DEBUG_ASSIGN_V var
+.ifdef DEBUG
+jsr _debugAddV
+.endif
+.endmacro
+
+.macro DEBUG_POST_CHECK_VAR var
+.ifdef DEBUG
+lda var
+jsr _debugPostCheckVar
+.endif
+.endmacro
+
+.macro DEBUG_POST_CHECK_FLAG var
+.ifdef DEBUG
+.ifnblank var
+lda var
+.endif
+.ifblank var
+lda _logDebugVal1
+.endif
+jsr _debugPostCheckVar
 .endif
 .endmacro
 
@@ -578,7 +669,9 @@ b1Increment:
     bra @start
     @value: .byte $0
     @start:
+         DEBUG_INC
          GET_VAR_OR_FLAG FLAGS_AREA_START_GOLDEN_OFFSET, @value
+
          INC_CODE
          lda @value 
          cmp #$FF
@@ -594,7 +687,9 @@ b1Decrement:
     bra @start
     @value: .byte $0
     @start:
+         DEBUG_DEC
          GET_VAR_OR_FLAG FLAGS_AREA_START_GOLDEN_OFFSET, @value
+
          INC_CODE
          lda @value 
          cmp #$0
@@ -613,9 +708,16 @@ b1Assignn:
          LOAD_CODE_WIN_CODE
          sta @val
          INC_CODE
+
          sta @var
+
+         DEBUG_ASSIGN_N @val, @var
+
          SET_VAR_OR_FLAG VARS_AREA_START_GOLDEN_OFFSET, @val, @var
          INC_CODE
+
+        DEBUG_POST_CHECK_VAR @var
+
          jmp _afterLogicCommand
 
 b1Assignv:
@@ -623,16 +725,33 @@ b1Assignv:
     @val: .byte $0
     @var: .byte $0
     @start:
+         .ifdef DEBUG
+            LOAD_CODE_WIN_CODE
+            sta _logDebugVal1  
+         .endif
+
          GET_VAR_OR_FLAG VARS_AREA_START_GOLDEN_OFFSET, @val
+
          INC_CODE
+
+        .ifdef DEBUG
+            LOAD_CODE_WIN_CODE
+            sta _logDebugVal2
+         .endif
+
+         DEBUG_ASSIGN_V
+
          SET_VAR_OR_FLAG VARS_AREA_START_GOLDEN_OFFSET, @val, @var
          INC_CODE
+
+         DEBUG_POST_CHECK_VAR @var
+
          jmp _afterLogicCommand
 
 b1Addn:
       bra @start
       @existingVal: .byte $0
-      @val: .byte $0
+      @resultVal: .byte $0
       @var: .byte $0
     @start:
          LOAD_CODE_WIN_CODE
@@ -642,13 +761,17 @@ b1Addn:
          INC_CODE
          LOAD_CODE_WIN_CODE
          
+         DEBUG_ADD_N @var 
+
          clc
          adc @existingVal
          INC_CODE
-         sta @val
+         sta @resultVal
 
-         SET_VAR_OR_FLAG VARS_AREA_START_GOLDEN_OFFSET, @val, @var
+         SET_VAR_OR_FLAG VARS_AREA_START_GOLDEN_OFFSET, @resultVal, @var
 
+        DEBUG_POST_CHECK_VAR @var 
+        
          jmp _afterLogicCommand
 
 b1Addv:
@@ -658,12 +781,26 @@ b1Addv:
       @var: .byte $0
     @start:
          LOAD_CODE_WIN_CODE
+         
+        .ifdef DEBUG
+            sta _logDebugVal1  
+         .endif
+         
          sta @var
          
          GET_VAR_OR_FLAG VARS_AREA_START_GOLDEN_OFFSET, @existingVal
+                  
          INC_CODE
-        
+
+         .ifdef DEBUG
+            LOAD_CODE_WIN_CODE
+            sta _logDebugVal2
+         .endif
+
+         DEBUG_ADD_V
+
          GET_VAR_OR_FLAG VARS_AREA_START_GOLDEN_OFFSET, @val
+
          INC_CODE
          lda @val
 
@@ -673,6 +810,8 @@ b1Addv:
          sta @val
 
          SET_VAR_OR_FLAG VARS_AREA_START_GOLDEN_OFFSET, @val, @var
+        
+         DEBUG_POST_CHECK_VAR @var
 
          jmp _afterLogicCommand
 
@@ -690,12 +829,16 @@ b2Subn:
          INC_CODE
          LOAD_CODE_WIN_CODE
          
+         DEBUG_SUB_N @var
+
          sec
          sbc @existingVal
          INC_CODE
          sta @val
 
          SET_VAR_OR_FLAG VARS_AREA_START_GOLDEN_OFFSET, @val, @var
+
+         DEBUG_POST_CHECK_VAR @var
 
          jmp _afterLogicCommand
 
@@ -708,6 +851,11 @@ b2Subv:
          LOAD_CODE_WIN_CODE
          sta @var
          
+        
+         .ifdef DEBUG
+            sta _logDebugVal2
+         .endif
+
          GET_VAR_OR_FLAG VARS_AREA_START_GOLDEN_OFFSET, @existingVal
          INC_CODE
         
@@ -715,12 +863,18 @@ b2Subv:
          INC_CODE
          lda @val
 
+         .ifdef DEBUG
+            sta _logDebugVal2
+         .endif
+
          clc
          sbc @existingVal
          INC_CODE
          sta @val
 
          SET_VAR_OR_FLAG VARS_AREA_START_GOLDEN_OFFSET, @val, @var
+         
+        DEBUG_POST_CHECK_VAR @var
 
          jmp _afterLogicCommand
 
@@ -780,14 +934,31 @@ b2Lindirectn:
 
          jmp _afterLogicCommand
 
-b2Set:      
+b2Set:   
+        .ifdef DEBUG
+            LOAD_CODE_WIN_CODE
+            sta _logDebugVal1
+         .endif
+
          SET_VAR_OR_FLAG FLAGS_AREA_START_GOLDEN_OFFSET, #$1
+                  
          INC_CODE
+
+        DEBUG_POST_CHECK_FLAG
+
          jmp _afterLogicCommand
 
-b2Reset:      
+b2Reset:  
+        .ifdef DEBUG
+            LOAD_CODE_WIN_CODE
+            sta _logDebugVal1
+         .endif
+
          SET_VAR_OR_FLAG FLAGS_AREA_START_GOLDEN_OFFSET, #$0
          INC_CODE
+
+        DEBUG_POST_CHECK_FLAG
+
          jmp _afterLogicCommand
 
 b2Toggle:
@@ -808,6 +979,9 @@ b2Toggle:
         SET_VAR_OR_FLAG FLAGS_AREA_START_GOLDEN_OFFSET, @flagVal
 
         INC_CODE
+
+        DEBUG_POST_CHECK_FLAG @flagVal
+
         jmp _afterLogicCommand
 
 b2Setv:
@@ -819,6 +993,9 @@ b2Setv:
         SET_VAR_OR_FLAG FLAGS_AREA_START_GOLDEN_OFFSET, #$1, @result
 
         INC_CODE
+
+        DEBUG_POST_CHECK_FLAG @result
+
         jmp _afterLogicCommand
 
 b2Resetv:
@@ -830,6 +1007,9 @@ b2Resetv:
         SET_VAR_OR_FLAG FLAGS_AREA_START_GOLDEN_OFFSET, #$0, @result
 
         INC_CODE
+
+        DEBUG_POST_CHECK_FLAG @result
+
         jmp _afterLogicCommand
 
 b2Togglev:
@@ -850,6 +1030,8 @@ b2Togglev:
         sta @flagVal
         @setValue:
         SET_VAR_OR_FLAG VARS_AREA_START_GOLDEN_OFFSET, @flagVal
+
+        DEBUG_POST_CHECK_FLAG @flagVal
 
         INC_CODE
         jmp _afterLogicCommand
