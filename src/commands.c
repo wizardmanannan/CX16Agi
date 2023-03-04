@@ -25,8 +25,8 @@
 #include "stub.h"
 #include "helpers.h"
 
-#define HIGHEST_BANK1_FUNC 36
-#define HIGHEST_BANK2_FUNC 91
+#define HIGHEST_BANK1_FUNC 29
+#define HIGHEST_BANK2_FUNC 87
 #define HIGHEST_BANK3_FUNC 138
 #define HIGHEST_BANK4_FUNC 181
 
@@ -65,6 +65,8 @@ MENU* the_menuChildren = (MENU*)&BANK_RAM[MENU_CHILD_START];
 
 long opCounter = 1;
 int printCounter = 1;
+
+const char* postCheckVar = "Post check var %d (%d)\n";
 
 void executeLogic(int logNum);
 
@@ -565,22 +567,31 @@ boolean b1Right_posn(byte** data) // 5, 0x00
 
 
 /* ACTION COMMANDS */
-
 void b1Increment(byte** data) // 1, 0x80 
 {
+	int varNum = *(*data);
+
+	printf("Incrementing value %d to %d", varNum, var[varNum]++);
+
 	if (var[*(*data)] < 0xFF)
 		var[*(*data)]++;
 	(*data)++;
-
 	/* var[*(*data)++]++;  This one doesn't check bounds */
+
+	printf(postCheckVar, varNum, var[varNum]);
 }
 
 void b1Decrement(byte** data) // 1, 0x80 
 {
+	int varNum = *(*data);
+	
+	printf("Decementing value %d to %d", varNum, var[varNum]++);
+	
 	if (var[*(*data)] > 0)
 		var[*(*data)]--;
 	(*data)++;
 
+	printf(postCheckVar, varNum, var[varNum]);
 	/* var[*(*data)++]--;  This one doesn't check bounds */
 }
 
@@ -590,7 +601,12 @@ void b1Assignn(byte** data) // 2, 0x80
 
 	varNum = *(*data)++;
 	value = *(*data)++;
+	
+	printf("Assign var %d (%d) to %d\n", varNum, var[varNum], value);
+
 	var[varNum] = value;
+
+	printf(postCheckVar, varNum, var[varNum]);
 }
 
 void b1Assignv(byte** data) // 2, 0xC0 
@@ -599,16 +615,26 @@ void b1Assignv(byte** data) // 2, 0xC0
 
 	var1 = *(*data)++;
 	var2 = *(*data)++;
-	var[var1] = var[var2];
-}
 
+	printf("Assign var %d (%d) to %d (%d) which is\n", var1, var[var1], var2, var[var2]);
+
+	var[var1] = var[var2];
+
+	printf(postCheckVar, var1, var[var1]);
+}
+	
 void b1Addn(byte** data) // 2, 0x80 
 {
 	int varNum, value;
 
 	varNum = *(*data)++;
 	value = *(*data)++;
+
+	printf("Add var %d (%d) to %d which is", varNum, var[varNum], value, var[varNum] + value);
+
 	var[varNum] += value;
+
+	printf(postCheckVar, varNum, var[varNum]);
 }
 
 void b1Addv(byte** data) // 2, 0xC0 
@@ -617,8 +643,14 @@ void b1Addv(byte** data) // 2, 0xC0
 
 	var1 = *(*data)++;
 	var2 = *(*data)++;
+
+	printf("Add var %d (%d) to %d (%d) which is\n", var1, var[var1], var2, var[var2], var[var1] + var[var2]);
+
 	var[var1] += var[var2];
+
+	printf(postCheckVar, var1, var[var2]);
 }
+
 
 void b1Subn(byte** data) // 2, 0x80 
 {
@@ -626,7 +658,12 @@ void b1Subn(byte** data) // 2, 0x80
 
 	varNum = *(*data)++;
 	value = *(*data)++;
+
+	printf("Sub var %d (%d) to %d which is", varNum, var[varNum], value, var[varNum] + value);
+
 	var[varNum] -= value;
+
+	printf(postCheckVar, varNum, var[varNum]);
 }
 
 void b1Subv(byte** data) // 2, 0xC0 
@@ -635,7 +672,13 @@ void b1Subv(byte** data) // 2, 0xC0
 
 	var1 = *(*data)++;
 	var2 = *(*data)++;
+
+	printf("Sub var %d (%d) to %d (%d) which is\n", var1, var[var1], var2, var[var2], var[var1] + var[var2]);
+
+
 	var[var1] -= var[var2];
+
+	printf(postCheckVar, var1, var[var1]);
 }
 
 void b1Lindirectv(byte** data) // 2, 0xC0 
@@ -777,6 +820,9 @@ void b1Show_pri_screen(byte** data) // 0, 0x00
 
 /************************** VIEW ACTION COMMANDS **************************/
 
+#pragma code-name (pop)
+#pragma code-name (push, "BANKRAM02")
+
 void b1Load_view(byte** data) // 1, 0x00 
 {
 	trampoline_1Int(&b9LoadViewFile, (*(*data)++), VIEW_CODE_BANK_1);
@@ -863,9 +909,6 @@ void b1Erase(byte** data) // 1, 0x00
 
 	setViewTab(&localViewtab, entryNum);
 }
-
-#pragma code-name (pop)
-#pragma code-name (push, "BANKRAM02")
 
 void b2Position(byte** data) // 3, 0x00 
 {
@@ -1595,6 +1638,9 @@ void b2Get_dir(byte** data) // 2, 0x40
 	setViewTab(&localViewtab, entryNum);
 }
 
+#pragma code-name (pop)
+#pragma code-name (push, "BANKRAM03")
+
 void b2Ignore_blocks(byte** data) // 1, 0x00 
 {
 	int entryNum;
@@ -1631,9 +1677,6 @@ void b2Unblock(byte** data) // 0, 0x00
 {
 
 }
-
-#pragma code-name (pop)
-#pragma code-name (push, "BANKRAM03")
 
 void b3Get(byte** data) // 1, 00 
 {
