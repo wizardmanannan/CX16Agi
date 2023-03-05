@@ -23,8 +23,6 @@
 #define DIFF_ASCII_PETSCII_CAPS -128
 #define DIFF_ASCII_PETSCII_LOWER -32
 
-#define DEBUG //Note the debug preprocessor variable in commandLoop.s must also be enabled to avoid errors
-
 typedef void (*fnTrampoline_0)();
 
 typedef void (*fnTrampoline_1BytePointerPointer)(byte** data);

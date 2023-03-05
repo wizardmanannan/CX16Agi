@@ -20,6 +20,7 @@
     <ClInclude Include="src\AGICODES.H" />
     <ClInclude Include="src\agiFiles.h" />
     <ClInclude Include="src\commands.h" />
+    <ClInclude Include="src\debugHelper.h" />
     <ClInclude Include="src\DECOMP.H" />
     <ClInclude Include="src\GENERAL.H" />
     <ClInclude Include="src\GUI.H" />
@@ -41,6 +42,7 @@
   <ItemGroup>
     <ClCompile Include="src\agiFiles.c" />
     <ClCompile Include="src\commands.c" />
+    <ClCompile Include="src\debugHelper.c" />
     <ClCompile Include="src\DECOMP.C" />
     <ClCompile Include="src\GRAPHICS.C" />
     <ClCompile Include="src\GUI.C" />

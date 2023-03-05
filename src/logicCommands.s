@@ -166,10 +166,32 @@ LOGICCOMMANDS_INC = 1
 .import _debugPostCheckVar
 .import _debugPostCheckFlag
 .import _debugIndirect
+.import _debugIndirectV
 
 _logDebugVal1: .byte $0
 _logDebugVal2: .byte $0
 .endif 
+
+
+debugTrampoline:
+bra @start
+@jumpTo: .word $0
+@start:
+sta @jumpTo
+stx @jumpTo + 1
+
+lda RAM_BANK
+pha
+
+lda #DEBUG_BANK
+sta RAM_BANK
+
+jmp (@jumpTo)
+
+debugReturn:
+pla
+sta RAM_BANK
+rts
 
 .macro DEBUG_GREATER_THAN_8 var1, var2
 .ifdef DEBUG
@@ -178,7 +200,10 @@ sta _logDebugVal1
 lda var2
 sta _logDebugVal2
 
-jsr _debugGreaterThan_8
+lda #< _debugGreaterThan_8
+ldx #> _debugGreaterThan_8
+
+jsr debugTrampoline
 .endif
 .endmacro
 
@@ -189,14 +214,23 @@ sta _logDebugVal1
 lda var2
 sta _logDebugVal2
 
-jsr _debugLessThan_8
+lda #< _debugLessThan_8
+ldx #> _debugLessThan_8
+
+jsr debugTrampoline
+
 .endif
 .endmacro
 
 .macro DEBUG_IS_SET var1
 .ifdef DEBUG
 LOAD_CODE_WIN_CODE
-jsr _debugIsSet
+sta _logDebugVal1
+
+lda #< _debugIsSet
+ldx #> _debugIsSet
+
+jsr debugTrampoline
 .endif
 .endmacro
 
@@ -206,7 +240,11 @@ lda var1
 sta _logDebugVal1
 lda var2
 sta _logDebugVal2
-jsr _debugEqual
+
+lda #< _debugEqual
+ldx #> _debugEqual
+
+jsr debugTrampoline
 .endif
 .endmacro
 
@@ -214,7 +252,11 @@ jsr _debugEqual
 .ifdef DEBUG
 LOAD_CODE_WIN_CODE
 sta _logDebugVal1
-jsr _debugInc
+
+lda #< _debugInc
+ldx #> _debugInc
+
+jsr debugTrampoline
 .endif
 .endmacro
 
@@ -222,7 +264,12 @@ jsr _debugInc
 .ifdef DEBUG
 LOAD_CODE_WIN_CODE
 sta _logDebugVal1
-jsr _debugDec
+
+lda #< _debugDec
+ldx #> _debugDec
+
+jsr debugTrampoline
+
 .endif
 .endmacro
 
@@ -231,13 +278,22 @@ jsr _debugDec
 sta _logDebugVal2
 lda var
 sta _logDebugVal1
-jsr _debugAddN
+
+lda #< _debugAddN
+ldx #> _debugAddN
+
+jsr debugTrampoline
+
 .endif
 .endmacro
 
 .macro DEBUG_ADD_V var
 .ifdef DEBUG
-jsr _debugAddV
+
+lda #< _debugAddV
+ldx #> _debugAddV
+
+jsr debugTrampoline
 .endif
 .endmacro
 
@@ -246,13 +302,21 @@ jsr _debugAddV
 sta _logDebugVal2
 lda var
 sta _logDebugVal1
-jsr _debugSubN
+
+lda #< _debugSubN
+ldx #> _debugSubN
+
+jsr debugTrampoline
 .endif
 .endmacro
 
 .macro DEBUG_SUB_V var
 .ifdef DEBUG
-jsr _debugSubV
+
+lda #< _debugSubV
+ldx #> _debugSubV
+
+jsr debugTrampoline
 .endif
 .endmacro
 
@@ -262,20 +326,33 @@ lda var1
 sta _logDebugVal1
 lda var2
 sta _logDebugVal2
-jsr _debugAssignN
+
+lda #< _debugAssignN
+ldx #> _debugAssignN
+
+jsr debugTrampoline
+
 .endif
 .endmacro
 
 .macro DEBUG_ASSIGN_V var
 .ifdef DEBUG
-jsr _debugAddV
+
+lda #< _debugAddV
+ldx #> _debugAddV
+
+jsr debugTrampoline
 .endif
 .endmacro
 
 .macro DEBUG_POST_CHECK_VAR var
 .ifdef DEBUG
 .ifblank var
-lda _logDebugVal1
+
+lda #< _logDebugVal1
+ldx #> _logDebugVal1
+
+jsr debugTrampoline
 .endif
 
 .ifnblank var
@@ -283,7 +360,10 @@ lda var
 sta _logDebugVal1
 .endif
 
-jsr _debugPostCheckVar
+lda #< _debugPostCheckVar
+ldx #> _debugPostCheckVar
+
+jsr debugTrampoline
 .endif
 .endmacro
 
@@ -295,7 +375,11 @@ lda var
 .ifblank var
 lda _logDebugVal1
 .endif
-jsr _debugPostCheckFlag
+
+lda #< _debugPostCheckFlag
+ldx #> _debugPostCheckFlag
+
+jsr debugTrampoline
 .endif
 .endmacro
 
@@ -303,7 +387,20 @@ jsr _debugPostCheckFlag
 .ifdef DEBUG
 lda value
 sta _logDebugVal2
-jsr _debugIndirect
+
+lda #< _debugIndirect
+ldx #> _debugIndirect
+
+jsr debugTrampoline
+.endif
+.endmacro
+
+.macro DEBUG_INDIRECT_V value
+.ifdef DEBUG
+lda #<  _debugIndirectV
+ldx #>  _debugIndirectV
+
+jsr debugTrampoline
 .endif
 .endmacro
 
@@ -917,18 +1014,31 @@ b2Subv:
 
 b2Lindirectv:
       bra @start
-      @var1: .byte $0
-      @var2: .byte $0
+      @varNum1: .byte $0
+      @varNum2: .byte $0
       @result: .byte $0
     @start:         
-         GET_VAR_OR_FLAG VARS_AREA_START_GOLDEN_OFFSET, @var1
-         INC_CODE
-         GET_VAR_OR_FLAG VARS_AREA_START_GOLDEN_OFFSET, @var2
-         INC_CODE
-         GET_VAR_OR_FLAG VARS_AREA_START_GOLDEN_OFFSET, @result, @var1
+        .ifdef DEBUG
+            LOAD_CODE_WIN_CODE
+            sta _logDebugVal1
+         .endif
+            
+         GET_VAR_OR_FLAG VARS_AREA_START_GOLDEN_OFFSET, @varNum1
          INC_CODE
 
-         SET_VAR_OR_FLAG VARS_AREA_START_GOLDEN_OFFSET, @result, @var2
+         .ifdef DEBUG
+            LOAD_CODE_WIN_CODE
+            sta _logDebugVal2
+         .endif
+
+         GET_VAR_OR_FLAG VARS_AREA_START_GOLDEN_OFFSET, @varNum2
+         INC_CODE
+
+         DEBUG_INDIRECT_V
+        
+         SET_VAR_OR_FLAG VARS_AREA_START_GOLDEN_OFFSET, @varNum2, @varNum1
+         
+         DEBUG_POST_CHECK_VAR @varNum1
 
          jmp _afterLogicCommand
 
@@ -973,7 +1083,6 @@ b2Lindirectn:
         
          SET_VAR_OR_FLAG VARS_AREA_START_GOLDEN_OFFSET, @val, @varNum
          
-         stp
          DEBUG_POST_CHECK_VAR @varNum
 
          jmp _afterLogicCommand

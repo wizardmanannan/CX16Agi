@@ -1,0 +1,163 @@
+#pragma once
+#include "debugHelper.h"
+
+extern boolean* flag;
+extern byte* var;
+
+long opCounter = 1;
+long stopAt = 196;
+long exitAt = 2500;
+boolean stopEvery = FALSE;
+
+
+#pragma code-name (push, "BANKRAM05");
+
+void debugPrint(byte toPrint)
+{
+	printf("Op %lu, %d\n", opCounter, toPrint);
+
+	if (stopEvery)
+	{
+		asm("stp");
+	}
+
+	if (opCounter == stopAt)
+	{
+		asm("stp");
+	}
+
+	if (opCounter == exitAt)
+	{
+		exit(0);
+	}
+
+	opCounter++;
+}
+
+void debugPrintFalse()
+{
+	printf("The result is false\n");
+}
+
+void debugPrintTrue()
+{
+	printf("The result is true\n");
+}
+
+void debugPrintNot()
+{
+	printf("The result is inverted by not\n");
+}
+
+void debugPrintOrMode()
+{
+	printf("Or Mode Started\n");
+}
+
+
+extern byte logDebugVal1;
+extern byte logDebugVal2;
+
+void debugIsSet()
+{
+	printf("Checking that %d is set and it %d\n", logDebugVal1, flag[logDebugVal1]);
+
+	asm("jmp debugReturn");
+}
+
+void debugGreaterThan_8()
+{
+	printf("Checking that %d is > %d and the result should be %d\n", logDebugVal1, logDebugVal2, logDebugVal1 > logDebugVal2);
+	
+	asm("jmp debugReturn");
+}
+
+void debugLessThan_8()
+{
+	printf("Checking that %d is < %d and the result should be %d\n", logDebugVal1, logDebugVal2, logDebugVal1 < logDebugVal2);
+	asm("jmp debugReturn");
+}
+
+void debugEqual()
+{
+	printf("Checking that %d is equal to %d and it % d\n", logDebugVal1, logDebugVal2, logDebugVal1 == logDebugVal2);
+	asm("jmp debugReturn");
+}
+
+void debugInc()
+{
+	printf("Incrementing value %d to %d", logDebugVal1, var[logDebugVal1]++);
+	asm("jmp debugReturn");
+}
+
+void debugDec()
+{
+	printf("Decementing value %d to %d", logDebugVal1, var[logDebugVal1]--);
+	asm("jmp debugReturn");
+}
+
+void debugAddN()
+{
+	printf("Add var %d (%d) to %d which is", logDebugVal1, var[logDebugVal1], logDebugVal2, var[logDebugVal1] + logDebugVal2);
+	asm("jmp debugReturn");
+}
+
+void debugAddV()
+{
+	printf("Add var %d (%d) to %d (%d) which is\n", logDebugVal1, var[logDebugVal1], logDebugVal2, var[logDebugVal2], var[logDebugVal1] + var[logDebugVal2]);
+	asm("jmp debugReturn");
+}
+
+void debugSubN()
+{
+	printf("Sub var %d (%d) to %d which is\n", logDebugVal1, var[logDebugVal1], logDebugVal2, var[logDebugVal1] - logDebugVal2);
+	asm("jmp debugReturn");
+}
+
+void debugSubV()
+{
+	printf("Sub var %d (%d) to %d (%d) which is\n", logDebugVal1, var[logDebugVal1], logDebugVal2, var[logDebugVal2], var[logDebugVal1] - var[logDebugVal2]);
+	asm("jmp debugReturn");
+}
+
+void debugAssignN()
+{
+	printf("Assign var %d (%d) to %d\n", logDebugVal1, var[logDebugVal1], logDebugVal2);
+	asm("jmp debugReturn");
+}
+
+void debugAssignV()
+{
+	printf("Assign var %d (%d) to %d (%d) which is\n", logDebugVal1, var[logDebugVal1], logDebugVal2, var[logDebugVal2]);
+	asm("jmp debugReturn");
+}
+
+void debugIndirect()
+{
+	printf("Indir %d (%d) value %d\n", logDebugVal1, var[logDebugVal1], logDebugVal2);
+	asm("jmp debugReturn");
+}
+
+void debugIndirectV()
+{
+	printf("Indir V %d (%d) value %d (%d)\n", logDebugVal1, var[logDebugVal1], logDebugVal2, var[logDebugVal2]);
+	asm("jmp debugReturn");
+}
+
+
+void debugPostCheckVar()
+{
+	printf("Post check var %d (%d)\n", logDebugVal1, var[logDebugVal1]);
+	asm("jmp debugReturn");
+}
+
+void debugPostCheckFlag()
+{
+	printf("Post check flag %d (%d)\n", logDebugVal1, flag[logDebugVal1]);
+	asm("jmp debugReturn");
+}
+#pragma code-name (pop);
+
+
+
+

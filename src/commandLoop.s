@@ -28,7 +28,18 @@ numArgs: .byte $0,$2,$2,$2,$2,$2,$2,$1,$1,$1,$2,$5,$1,$0,$0,$2,$5,$5,$5
 
 .macro DEBUG_PRINT_TRUE
 .ifdef DEBUG
+    .local @start
+    jmp @start
+    @previousBank: .byte $0
+    @start:
+    lda RAM_BANK
+    sta @previousBank
+    lda #DEBUG_BANK
+    sta RAM_BANK
+
     jsr _debugPrintTrue    
+    lda @previousBank
+    sta RAM_BANK
 .endif
 .endmacro
 
@@ -64,7 +75,7 @@ numArgs: .byte $0,$2,$2,$2,$2,$2,$2,$1,$1,$1,$2,$5,$1,$0,$0,$2,$5,$5,$5
         .ifnblank toPrint
             lda toPrint
         .endif
-        jsr _debugPrint
+        jsr debugPrintTrampoline
     .endif
 .endmacro
 
@@ -91,6 +102,17 @@ sta RAM_BANK
     ORA_16 @b1, @disp, @disp 
     INC_CODE_BY @disp
 .endmacro
+
+debugPrintTrampoline:
+ldx RAM_BANK
+phx
+ldx #DEBUG_BANK
+stx RAM_BANK
+jsr _debugPrint
+pla
+sta RAM_BANK
+rts
+
 
 ;ifHelpers
 .segment "BANKRAM05"
