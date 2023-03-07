@@ -572,7 +572,7 @@ void b1Increment(byte** data) // 1, 0x80
 {
 	int varNum = *(*data);
 
-	printf("Incrementing value %d to %d", varNum, var[varNum]++);
+	printf("Incrementing var %d(%d) to %d", varNum, var[varNum], var[varNum] + 1);
 
 	if (var[*(*data)] < 0xFF)
 		var[*(*data)]++;
@@ -586,7 +586,7 @@ void b1Decrement(byte** data) // 1, 0x80
 {
 	int varNum = *(*data);
 	
-	printf("Decementing value %d to %d", varNum, var[varNum]++);
+	printf("Decrementing var %d(%d) to %d", varNum, var[varNum], var[varNum] - 1);
 	
 	if (var[*(*data)] > 0)
 		var[*(*data)]--;
