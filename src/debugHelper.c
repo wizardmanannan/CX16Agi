@@ -9,7 +9,6 @@ long stopAt = 196;
 long exitAt = 2500;
 boolean stopEvery = FALSE;
 
-
 #pragma code-name (push, "BANKRAM05");
 
 void debugPrint(byte toPrint)

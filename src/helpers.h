@@ -37,12 +37,9 @@ typedef void (*fnTrampoline_3Int)(int data1, int data2, int data3);
 byte convertAsciiByteToPetsciiByte(byte* toConvert);
 
 extern void trampoline_0(fnTrampoline_0 func, byte bank);
-extern void trampoline_1pp(fnTrampoline_1BytePointerPointer func, byte** data, byte bank);
-extern boolean trampoline_1pRetbool(fnTrampoline_1BytePointerPointerRetBool func, byte** data, byte bank);
 
 extern void trampoline_1Int(fnTrampoline_1Int func, int data, byte bank);
 extern void trampoline_1Int(fnTrampoline_1Int func, int data, byte bank);
-extern void trampoline_2Int(fnTrampoline_2Int func, int data1, int data2, byte bank);
 
 extern void trampoline_3Int(fnTrampoline_3Int func, int data1, int data2, int data3, int bank);
 

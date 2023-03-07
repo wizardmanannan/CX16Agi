@@ -39,41 +39,11 @@ void trampoline_0(fnTrampoline_0 func, byte bank)
 	RAM_BANK = previousRamBank;
 }
 
-
-void trampoline_1pp(fnTrampoline_1BytePointerPointer func, byte** data, byte bank)
-{
-	byte previousRamBank = RAM_BANK;
-
-	RAM_BANK = bank;
-	func(data);
-
-	RAM_BANK = previousRamBank;
-}
-
-boolean trampoline_1pRetbool(fnTrampoline_1BytePointerPointerRetBool func, byte** data, byte bank)
-{
-	byte returnVal;
-	byte previousRamBank = RAM_BANK;
-	RAM_BANK = bank;
-	returnVal = func(data);
-	RAM_BANK = previousRamBank;
-
-	return returnVal;
-}
-
 void trampoline_1Int(fnTrampoline_1Int func, int data, byte bank)
 {
 	byte previousRamBank = RAM_BANK;
 	RAM_BANK = bank;
 	func(data);
-	RAM_BANK = previousRamBank;
-}
-
-void trampoline_2Int(fnTrampoline_2Int func, int data1, int data2, byte bank)
-{
-	byte previousRamBank = RAM_BANK;
-	RAM_BANK = bank;
-	func(data1, data2);
 	RAM_BANK = previousRamBank;
 }
 

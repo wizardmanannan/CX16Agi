@@ -340,8 +340,6 @@ _commandLoop:
          sta codeWindowInvalid
          jsr refreshCodeWindow
          mainLoop:
-         SET_BANK_TO_CODE_BANK
-
          GREATER_THAN_OR_EQ_16 ZP_PTR_CODE, endPos, endMainLoop
          lda stillExecuting
          cmp #TRUE
@@ -397,7 +395,6 @@ _commandLoop:
             jmp (jmpTableCommands2,x)
 
             _afterLogicCommand:
-            SET_BANK_TO_CODE_BANK
 
             jmp mainLoop
         endMainLoop:

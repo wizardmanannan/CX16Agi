@@ -348,11 +348,7 @@ jsr debugTrampoline
 .macro DEBUG_POST_CHECK_VAR var
 .ifdef DEBUG
 .ifblank var
-
-lda #< _logDebugVal1
-ldx #> _logDebugVal1
-
-jsr debugTrampoline
+sta _logDebugVal1
 .endif
 
 .ifnblank var
@@ -810,12 +806,10 @@ b1Decrement:
     @value: .byte $0
     @start:
          DEBUG_DEC
-
         .ifdef DEBUG
             LOAD_CODE_WIN_CODE
             sta _logDebugVal1
          .endif
-
          GET_VAR_OR_FLAG FLAGS_AREA_START_GOLDEN_OFFSET, @value
 
          INC_CODE
@@ -826,7 +820,7 @@ b1Decrement:
          SET_VAR_OR_FLAG VARS_AREA_START_GOLDEN_OFFSET, @value
          @end:
          INC_CODE
-
+        
          DEBUG_POST_CHECK_VAR
          jmp _afterLogicCommand
 
