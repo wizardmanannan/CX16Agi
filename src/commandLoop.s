@@ -296,19 +296,19 @@ ifHandler:
 
                     endifFunction:
                         jmp mainLoop
-.segment "CODE"
 ;commandLoopHelpers
 goto:
     bra @start
     @b1: .byte $0
     @b2: .byte $0
-    @disp: .byte $0
+    @disp: .word $0
     @start:
     CODE_JUMP
     jmp mainLoop
 
 ;endCommandLoopHelpers
 
+.segment "CODE"
 _commandLoop:
          jmp start
          entryPoint: .word $0
@@ -367,6 +367,8 @@ _commandLoop:
         bne @default
         DEBUG_PRINT
         INC_CODE
+        lda #COMMAND_LOOP_HELPER_BANK
+        sta RAM_BANK
         jmp goto
         jmp mainLoop
         @default:     
