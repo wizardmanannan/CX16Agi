@@ -24,7 +24,20 @@ numArgs: .byte $0,$2,$2,$2,$2,$2,$2,$1,$1,$1,$2,$5,$1,$0,$0,$2,$5,$5,$5
     .import _debugPrintFalse
     .import _debugPrintNot
     .import _debugPrintOrMode
+    .import _codeJumpDebug
 .endif
+
+.macro DEBUG_JUMP val1, val2
+.ifdef DEBUG
+lda val1
+sta _logDebugVal1
+
+lda val2
+sta _logDebugVal2
+
+jsr _codeJumpDebug ;same bank
+.endif
+.endmacro
 
 .macro DEBUG_PRINT_TRUE
 .ifdef DEBUG
@@ -97,6 +110,9 @@ sta RAM_BANK
     LOAD_CODE_WIN_CODE
     sta @b2
     INC_CODE
+
+    DEBUG_JUMP @b1, @b2
+
     LEFT_SHIFT_16 @b2, #$8, @disp
 
     ORA_16 @b1, @disp, @disp 

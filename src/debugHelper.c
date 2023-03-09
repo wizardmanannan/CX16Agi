@@ -155,6 +155,11 @@ void debugPostCheckFlag()
 	printf("Post check flag %d (%d)\n", logDebugVal1, flag[logDebugVal1]);
 	asm("jmp debugReturn");
 }
+
+void codeJumpDebug()
+{
+	printf("b1 is %d b2 is %d and the jump result is %u\n", logDebugVal1, logDebugVal2, (logDebugVal2 << 8) | logDebugVal1);
+}
 #pragma code-name (pop);
 
 
