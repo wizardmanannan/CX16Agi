@@ -3043,6 +3043,7 @@ void ifHandler(byte** data, byte codeBank)
 							ch = *(*data)++;
 
 							*data += (ch << 1);
+
 						}
 						else {
 							*data += testCommands[ch].numArgs;
@@ -3071,7 +3072,9 @@ void ifHandler(byte** data, byte codeBank)
 			b1 = *(*data)++;
 			b2 = *(*data)++;
 			disp = (b2 << 8) | b1;  /* Should be signed 16 bit */
+			printf("b1 is %d b2 is %d and the jump result is %hu\n", b1, b2, (b2 << 8) | b1);
 			*data += disp;
+			printf("The code is now %u and the address is %p\n", **data, *data);
 			break;
 		}
 		if (ch >= 0xfc) continue;
@@ -3223,6 +3226,7 @@ void executeLogic(int logNum)
 		else {
 			switch (codeAtTimeOfLastBankSwitch) {
 			case 0xfe: /* Unconditional branch: else, goto. */
+				printf("The code is now %u and the address is %p\n", *code, code);
 				code++;
 #ifdef DEBUG
 				sprintf(debugString, "(%d) else                           ", currentLogic.currentPoint);
