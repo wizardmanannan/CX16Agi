@@ -572,7 +572,7 @@ void b1Increment(byte** data) // 1, 0x80
 {
 	int varNum = *(*data);
 
-	printf("Incrementing var %d(%d) to %d", varNum, var[varNum], var[varNum] + 1);
+	printf("Incrementing var %d(%d) to %d\n", varNum, var[varNum], var[varNum] + 1);
 
 	if (var[*(*data)] < 0xFF)
 		var[*(*data)]++;
@@ -586,7 +586,7 @@ void b1Decrement(byte** data) // 1, 0x80
 {
 	int varNum = *(*data);
 	
-	printf("Decrementing var %d(%d) to %d", varNum, var[varNum], var[varNum] - 1);
+	printf("Decrementing var %d(%d) to %d\n", varNum, var[varNum], var[varNum] - 1);
 	
 	if (var[*(*data)] > 0)
 		var[*(*data)]--;
@@ -3233,7 +3233,12 @@ void executeLogic(int logNum)
 				b1 = *code++;
 				b2 = *code++;
 				disp = (b2 << 8) | b1;  /* Should be signed 16 bit */
+
+				printf("b1 is %d b2 is %d and the jump result is %hu\n", b1, b2, (b2 << 8) | b1);
+
 				code += disp;
+
+				printf("The code is now %u and the address is %p\n", *code, code);
 				break;
 
 			case 0xff: /* Conditional branch: if */
