@@ -5,7 +5,7 @@ extern boolean* flag;
 extern byte* var;
 
 long opCounter = 1;
-long stopAt = 196;
+long stopAt = 197;
 long exitAt = 2500;
 boolean stopEvery = FALSE;
 
@@ -85,13 +85,13 @@ void debugEqual()
 
 void debugInc()
 {
-	printf("Incrementing value %d to %d", logDebugVal1, var[logDebugVal1]++);
+	printf("Incrementing var %d(%d) to %d\n", logDebugVal1, var[logDebugVal1], var[logDebugVal1] + 1);
 	asm("jmp debugReturn");
 }
 
 void debugDec()
 {
-	printf("Decementing value %d to %d", logDebugVal1, var[logDebugVal1]--);
+	printf("Decrementing var %d(%d) to %d\n", logDebugVal1, var[logDebugVal1], var[logDebugVal1] - 1);
 	asm("jmp debugReturn");
 }
 

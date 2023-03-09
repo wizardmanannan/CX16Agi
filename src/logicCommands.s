@@ -347,9 +347,6 @@ jsr debugTrampoline
 
 .macro DEBUG_POST_CHECK_VAR var
 .ifdef DEBUG
-.ifblank var
-sta _logDebugVal1
-.endif
 
 .ifnblank var
 lda var
@@ -435,7 +432,6 @@ pla
 sta startPos
 
 .endmacro
-
 .macro SET_VAR_OR_FLAG areaStartOffset, toStore, var
 
         clc
@@ -778,25 +774,20 @@ b1NoOp_4:
 b1Increment:
     bra @start
     @value: .byte $0
+    @var: .byte $0
     @start:
          DEBUG_INC
-
-        .ifdef DEBUG
-            LOAD_CODE_WIN_CODE
-            sta _logDebugVal1
-         .endif
-
-         GET_VAR_OR_FLAG FLAGS_AREA_START_GOLDEN_OFFSET, @value
+         LOAD_CODE_WIN_CODE
+         sta @var
+         GET_VAR_OR_FLAG VARS_AREA_START_GOLDEN_OFFSET, @value
 
          INC_CODE
          lda @value 
          cmp #$FF
-         bcs @end
+         beq @end
          inc @value
-         SET_VAR_OR_FLAG VARS_AREA_START_GOLDEN_OFFSET, @value
-         @end:
-         INC_CODE
-        
+         SET_VAR_OR_FLAG VARS_AREA_START_GOLDEN_OFFSET, @value, @var
+         @end:        
          DEBUG_POST_CHECK_VAR
          jmp _afterLogicCommand
 
@@ -804,23 +795,19 @@ b1Increment:
 b1Decrement:
     bra @start
     @value: .byte $0
+    @var: .byte $0
     @start:
          DEBUG_DEC
-        .ifdef DEBUG
-            LOAD_CODE_WIN_CODE
-            sta _logDebugVal1
-         .endif
-         GET_VAR_OR_FLAG FLAGS_AREA_START_GOLDEN_OFFSET, @value
+         LOAD_CODE_WIN_CODE
+         sta @var
+         GET_VAR_OR_FLAG VARS_AREA_START_GOLDEN_OFFSET, @value
 
          INC_CODE
          lda @value 
-         cmp #$0
-         bcs @end
+         beq @end
          dec @value
-         SET_VAR_OR_FLAG VARS_AREA_START_GOLDEN_OFFSET, @value
-         @end:
-         INC_CODE
-        
+         SET_VAR_OR_FLAG VARS_AREA_START_GOLDEN_OFFSET, @value, @var
+         @end:        
          DEBUG_POST_CHECK_VAR
          jmp _afterLogicCommand
 
