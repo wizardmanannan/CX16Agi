@@ -3,7 +3,6 @@
 
 COMMAND_LOOP_INC = 1
 LOGIC_ENTRY_PARAMETERS_OFFSET =  0
-DEBUG = 1 ;Note the debug preprocessor variable in helpers.h must also be enabled to avoid errors
 
 .include "global.s"
 .include "logicCommands.s"
@@ -102,7 +101,7 @@ lda #LOGIC_COMMANDS_BANK
 sta RAM_BANK
 .endmacro
 
-.macro CODE_JUMP ;requires local variables @disp, @b1 and @b2 to be in scope
+.macro CODE_JUMP ;requires local variables @disp, @b1 and @b2 to be in scope    
     LOAD_CODE_WIN_CODE
     sta @b1
     INC_CODE
@@ -117,6 +116,8 @@ sta RAM_BANK
 
     ORA_16 @b1, @disp, @disp 
     INC_CODE_BY @disp
+
+    jsr debugCodeState
 .endmacro
 
 debugPrintTrampoline:
@@ -382,6 +383,7 @@ _commandLoop:
         cmp #$FE
         bne @default
         DEBUG_PRINT
+        jsr debugCodeState
         INC_CODE
         lda #COMMAND_LOOP_HELPER_BANK
         sta RAM_BANK

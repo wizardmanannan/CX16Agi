@@ -161,6 +161,10 @@ void codeJumpDebug()
 	printf("b1 is %d b2 is %d and the jump result is %u\n", logDebugVal1, logDebugVal2, (logDebugVal2 << 8) | logDebugVal1);
 }
 #pragma code-name (pop);
+void debugPrintCurrentCodeState(byte* code)
+{
+	printf("The code is now %u and the address is %p\n", *code, code);
+}
 
 
 

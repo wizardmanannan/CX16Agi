@@ -1,6 +1,10 @@
 .ifndef  CODE_WINDOW_INC
 CODE_WINDOW_INC = 1
 .include "global.s"
+.ifdef DEBUG
+.import _debugPrintCurrentCodeState
+.endif
+
 
 ZP_PTR_CODE_WIN = $08
 
@@ -118,5 +122,35 @@ _incCodeBy:
 
     INC_CODE_BY @jumpAmount
     rts
+
+.ifdef DEBUG
+debugCodeState:
+    bra @start
+    @result: .word $0
+    @previousBank: .byte $0
+    @start:
+    lda RAM_BANK
+    sta @previousBank
+
+    lda codeBank
+    sta RAM_BANK
+
+    clc
+    lda ZP_PTR_CODE
+    adc cwCurrentCode
+    sta @result
+
+    ldx ZP_PTR_CODE + 1
+    adc #$0
+    stx @result + 1
+
+
+    jsr _debugPrintCurrentCodeState
+
+    lda @previousBank
+    sta RAM_BANK
+
+    rts
+.endif
 
 .endif

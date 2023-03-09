@@ -1,4 +1,6 @@
 .ifndef  GLOBAL_INC
+DEBUG = 1 ;Note the debug preprocessor variable in helpers.h must also be enabled to avoid errors
+
 startPos: .word $0
 endPos:  .word $0
 codeBank: .byte $0

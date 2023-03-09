@@ -172,7 +172,6 @@ _logDebugVal1: .byte $0
 _logDebugVal2: .byte $0
 .endif 
 
-
 debugTrampoline:
 bra @start
 @jumpTo: .word $0
