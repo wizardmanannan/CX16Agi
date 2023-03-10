@@ -24,6 +24,7 @@ numArgs: .byte $0,$2,$2,$2,$2,$2,$2,$1,$1,$1,$2,$5,$1,$0,$0,$2,$5,$5,$5
     .import _debugPrintNot
     .import _debugPrintOrMode
     .import _codeJumpDebug
+    .import _stopAtFunc
 .endif
 
 .macro DEBUG_JUMP val1, val2
