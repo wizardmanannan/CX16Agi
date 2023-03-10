@@ -5,7 +5,7 @@ extern boolean* flag;
 extern byte* var;
 
 long opCounter = 1;
-long stopAt = 300;
+long stopAt = 600;
 long exitAt = 2500;
 boolean stopEvery = FALSE;
 

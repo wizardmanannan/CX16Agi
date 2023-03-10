@@ -2595,7 +2595,6 @@ void gotoFunc(byte** code)
 	b2 = *(*code)++;
 
 #ifdef  VERBOSE_GOTO
-	exit(0);
 	printf("b1 is %d b2 is %d and the jump result is %u\n", b1, b2, (b2 << 8) | b1);
 #endif //  DEBUG
 
