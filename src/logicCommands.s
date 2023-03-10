@@ -410,13 +410,13 @@ lda ZP_PTR_CODE
 pha
 lda ZP_PTR_CODE + 1
 pha
-lda codeBank
+lda _codeBank
 pha
 .endmacro
 
 .macro RESTORE_FROM_STACK_RECURSIVE_CALL
 pla
-sta codeBank
+sta _codeBank
 pla
 sta ZP_PTR_CODE + 1
 pla

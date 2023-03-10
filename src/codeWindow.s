@@ -77,7 +77,7 @@ refreshCodeWindow:
     lda RAM_BANK
     sta @previousBank
 
-    lda codeBank
+    lda _codeBank
     sta RAM_BANK
 
     ldy #$0
@@ -93,6 +93,7 @@ refreshCodeWindow:
     @endMainLoop:
 
     stz cwCurrentCode
+    stz cwCurrentCode + 1
 
     lda #FALSE
     sta codeWindowInvalid
@@ -132,7 +133,7 @@ debugCodeState:
     lda RAM_BANK
     sta @previousBank
 
-    lda codeBank
+    lda _codeBank
     sta RAM_BANK
 
     clc

@@ -26,6 +26,7 @@ numArgs: .byte $0,$2,$2,$2,$2,$2,$2,$1,$1,$1,$2,$5,$1,$0,$0,$2,$5,$5,$5
     .import _codeJumpDebug
     .import _stopAtFunc
 .endif
+.import _gotoFunc
 
 .macro DEBUG_JUMP val1, val2
 .ifdef DEBUG
@@ -112,10 +113,10 @@ sta RAM_BANK
     INC_CODE
 
     DEBUG_JUMP @b1, @b2
-
     LEFT_SHIFT_16 @b2, #$8, @disp
 
     ORA_16 @b1, @disp, @disp 
+
     INC_CODE_BY @disp
 
     jsr debugCodeState
@@ -316,12 +317,16 @@ ifHandler:
                         jmp mainLoop
 ;commandLoopHelpers
 goto:
-    bra @start
-    @b1: .byte $0
-    @b2: .byte $0
-    @disp: .word $0
     @start:
-    CODE_JUMP
+    CATCH_UP_CODE
+
+    lda #ZP_PTR_CODE
+    ldx #$0
+    jsr _gotoFunc  
+    lda #TRUE
+    sta codeWindowInvalid
+    jsr refreshCodeWindow
+    jsr debugCodeState
     jmp mainLoop
 
 ;endCommandLoopHelpers
@@ -348,7 +353,7 @@ _commandLoop:
          GET_STRUCT_16 LOGIC_FILE_LOGIC_CODE_OFFSET, ZP_PTR_LF, startPos
          GET_STRUCT_16 LOGIC_FILE_LOGIC_CODE_SIZE_OFFSET, ZP_PTR_LF, codeSize
 
-         GET_STRUCT_8 LOGIC_FILE_LOGIC_BANK_OFFSET, ZP_PTR_LF, codeBank
+         GET_STRUCT_8 LOGIC_FILE_LOGIC_BANK_OFFSET, ZP_PTR_LF, _codeBank
          GET_STRUCT_16 LOGIC_ENTRY_POINT_OFFSET, ZP_PTR_LE, entryPoint
          
          ADD_WORD_16 startPos,entryPoint,ZP_PTR_CODE

@@ -5,13 +5,16 @@ extern boolean* flag;
 extern byte* var;
 
 long opCounter = 1;
-long stopAt = 205;
+long stopAt = 300;
 long exitAt = 2500;
 boolean stopEvery = FALSE;
 
 void stopAtFunc()
 {
-
+	if (opCounter > 190)
+	{
+		asm("stp");
+	}
 }
 
 #pragma code-name (push, "BANKRAM05");

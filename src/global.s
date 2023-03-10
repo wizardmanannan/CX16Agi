@@ -3,7 +3,7 @@ DEBUG = 1 ;Note the debug preprocessor variable in helpers.h must also be enable
 
 startPos: .word $0
 endPos:  .word $0
-codeBank: .byte $0
+_codeBank: .byte $0
 
 GLOBAL_INC = 1
 

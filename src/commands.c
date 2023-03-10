@@ -41,6 +41,8 @@
 //#define VERBOSE_MENU
 //#define VERBOSE_MENU_DUMP
 //#define VERBOSE_MESSAGE_TEXT
+#define VERBOSE_GOTO
+
 
 
 extern byte* var;
@@ -2580,5 +2582,28 @@ void executeLogic(int logNum)
 #endif*/
 }
 #pragma code-name (pop)
+
+void gotoFunc(byte** code)
+{
+	byte b1 = 0, b2 = 0;
+	short int disp;
+	byte previousBank = RAM_BANK;
+
+	RAM_BANK = codeBank;
+
+	b1 = *(*code)++;
+	b2 = *(*code)++;
+
+#ifdef  VERBOSE_GOTO
+	exit(0);
+	printf("b1 is %d b2 is %d and the jump result is %u\n", b1, b2, (b2 << 8) | b1);
+#endif //  DEBUG
+
+	disp = (b2 << 8) | b1;  /* Should be signed 16 bit */
+	*code += disp;
+
+	RAM_BANK = previousBank;
+}
+
 
 
