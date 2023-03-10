@@ -328,6 +328,9 @@ goto:
     LOAD_CODE_WIN_CODE
     sta _callC2
     INC_CODE
+
+    DEBUG_JUMP _callC1, _callC2
+
     CATCH_UP_CODE
     lda #ZP_PTR_CODE
     ldx #$0

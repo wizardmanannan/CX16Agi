@@ -2510,8 +2510,6 @@ void b5GotoFunc(byte** code)
 {
 	short int disp;
 
-	printf("b1 is %d b2 is %d and the jump result is %u\n", callC1, callC2, (callC2 << 8) | callC1);
-
 	disp = (callC2 << 8) | callC1;  /* Should be signed 16 bit */
 	*code += disp;
 }
