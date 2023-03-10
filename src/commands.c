@@ -2506,6 +2506,15 @@ void b4Div_v() // 2, 0xC0
 //
 //}
 
+void b5GotoFunc(byte** code)
+{
+	short int disp;
+
+	printf("b1 is %d b2 is %d and the jump result is %u\n", callC1, callC2, (callC2 << 8) | callC1);
+
+	disp = (callC2 << 8) | callC1;  /* Should be signed 16 bit */
+	*code += disp;
+}
 
 boolean hasSeen1 = FALSE;
 
@@ -2581,28 +2590,7 @@ void executeLogic(int logNum)
 	if ((readkey() & 0xff) == 'q') closedown();
 #endif*/
 }
+
 #pragma code-name (pop)
-
-void gotoFunc(byte** code)
-{
-	byte b1 = 0, b2 = 0;
-	short int disp;
-	byte previousBank = RAM_BANK;
-
-	RAM_BANK = codeBank;
-
-	b1 = *(*code)++;
-	b2 = *(*code)++;
-
-#ifdef  VERBOSE_GOTO
-	printf("b1 is %d b2 is %d and the jump result is %u\n", b1, b2, (b2 << 8) | b1);
-#endif //  DEBUG
-
-	disp = (b2 << 8) | b1;  /* Should be signed 16 bit */
-	*code += disp;
-
-	RAM_BANK = previousBank;
-}
-
 
 

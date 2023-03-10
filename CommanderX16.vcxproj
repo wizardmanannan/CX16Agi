@@ -44,6 +44,7 @@
     <ClCompile Include="src\commands.c" />
     <ClCompile Include="src\debugHelper.c" />
     <ClCompile Include="src\DECOMP.C" />
+    <ClCompile Include="src\general.c" />
     <ClCompile Include="src\GRAPHICS.C" />
     <ClCompile Include="src\GUI.C" />
     <ClCompile Include="src\helpers.c" />

@@ -26,7 +26,9 @@ numArgs: .byte $0,$2,$2,$2,$2,$2,$2,$1,$1,$1,$2,$5,$1,$0,$0,$2,$5,$5,$5
     .import _codeJumpDebug
     .import _stopAtFunc
 .endif
-.import _gotoFunc
+.import _b5GotoFunc
+.import _callC1
+.import _callC2
 
 .macro DEBUG_JUMP val1, val2
 .ifdef DEBUG
@@ -209,6 +211,8 @@ ifHandler:
 
         lda ch
 
+        jsr _stopAtFunc
+
         cmp #$FF
         beq @closingIfBracketJmp
 
@@ -318,11 +322,16 @@ ifHandler:
 ;commandLoopHelpers
 goto:
     @start:
+    LOAD_CODE_WIN_CODE
+    sta _callC1
+    INC_CODE
+    LOAD_CODE_WIN_CODE
+    sta _callC2
+    INC_CODE
     CATCH_UP_CODE
-
     lda #ZP_PTR_CODE
     ldx #$0
-    jsr _gotoFunc  
+    jsr _b5GotoFunc
     lda #TRUE
     sta codeWindowInvalid
     jsr refreshCodeWindow

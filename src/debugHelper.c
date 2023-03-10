@@ -11,10 +11,10 @@ boolean stopEvery = FALSE;
 
 void stopAtFunc()
 {
-	if (opCounter > 190)
+	/*if (opCounter == 451)
 	{
 		asm("stp");
-	}
+	}*/
 }
 
 #pragma code-name (push, "BANKRAM05");
