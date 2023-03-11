@@ -321,6 +321,9 @@ boolean b1Equalv(byte** data) // 2, 0xC0
 
 	varVal1 = var[*(*data)++];
 	varVal2 = var[*(*data)++];
+
+	printf("Checking that %d is equal to %d and it %d\n", varVal1, varVal2, varVal1 == varVal2);
+
 	return (varVal1 == varVal2);
 }
 
@@ -3001,6 +3004,7 @@ void ifHandler(byte** data, byte codeBank)
 			}
 			else {
 				orMode = TRUE;
+				printf("Or Mode Started");
 			}
 			break;
 		default:
@@ -3169,7 +3173,7 @@ void executeLogic(int logNum)
 
 	while ((code < endPos) && stillExecuting) {
 
-		if (opCounter > 250)
+		if (opCounter > 700)
 		{
 			exit(0);
 		}
