@@ -9,7 +9,6 @@
     .export _afterLogicCommand
     .export _incCodeBy
     .export codeWindow
-    .export debugReturn
     .export _codeBank
     .ifdef DEBUG
     .export _logDebugVal1

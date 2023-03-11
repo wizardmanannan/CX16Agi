@@ -172,26 +172,6 @@ _logDebugVal1: .byte $0
 _logDebugVal2: .byte $0
 .endif 
 
-debugTrampoline:
-bra @start
-@jumpTo: .word $0
-@start:
-sta @jumpTo
-stx @jumpTo + 1
-
-lda RAM_BANK
-pha
-
-lda #DEBUG_BANK
-sta RAM_BANK
-
-jmp (@jumpTo)
-
-debugReturn:
-pla
-sta RAM_BANK
-rts
-
 .macro DEBUG_GREATER_THAN_8 var1, var2
 .ifdef DEBUG
 lda var1
@@ -199,10 +179,7 @@ sta _logDebugVal1
 lda var2
 sta _logDebugVal2
 
-lda #< _debugGreaterThan_8
-ldx #> _debugGreaterThan_8
-
-jsr debugTrampoline
+JSRFAR _debugGreaterThan_8, DEBUG_BANK
 .endif
 .endmacro
 
@@ -213,10 +190,7 @@ sta _logDebugVal1
 lda var2
 sta _logDebugVal2
 
-lda #< _debugLessThan_8
-ldx #> _debugLessThan_8
-
-jsr debugTrampoline
+JSRFAR _debugLessThan_8, DEBUG_BANK
 
 .endif
 .endmacro
@@ -226,10 +200,7 @@ jsr debugTrampoline
 LOAD_CODE_WIN_CODE
 sta _logDebugVal1
 
-lda #< _debugIsSet
-ldx #> _debugIsSet
-
-jsr debugTrampoline
+JSRFAR _debugIsSet, DEBUG_BANK
 .endif
 .endmacro
 
@@ -240,10 +211,7 @@ sta _logDebugVal1
 lda var2
 sta _logDebugVal2
 
-lda #< _debugEqual
-ldx #> _debugEqual
-
-jsr debugTrampoline
+JSRFAR _debugEqual, DEBUG_BANK
 .endif
 .endmacro
 
@@ -252,10 +220,8 @@ jsr debugTrampoline
 LOAD_CODE_WIN_CODE
 sta _logDebugVal1
 
-lda #< _debugInc
-ldx #> _debugInc
+JSRFAR _debugInc, DEBUG_BANK
 
-jsr debugTrampoline
 .endif
 .endmacro
 
@@ -267,7 +233,7 @@ sta _logDebugVal1
 lda #< _debugDec
 ldx #> _debugDec
 
-jsr debugTrampoline
+JSRFAR _debugDec, DEBUG_BANK
 
 .endif
 .endmacro
@@ -278,10 +244,7 @@ sta _logDebugVal2
 lda var
 sta _logDebugVal1
 
-lda #< _debugAddN
-ldx #> _debugAddN
-
-jsr debugTrampoline
+JSRFAR _debugAddN, DEBUG_BANK
 
 .endif
 .endmacro
@@ -289,10 +252,7 @@ jsr debugTrampoline
 .macro DEBUG_ADD_V var
 .ifdef DEBUG
 
-lda #< _debugAddV
-ldx #> _debugAddV
-
-jsr debugTrampoline
+JSRFAR _debugAddV, DEBUG_BANK
 .endif
 .endmacro
 
@@ -302,10 +262,7 @@ sta _logDebugVal2
 lda var
 sta _logDebugVal1
 
-lda #< _debugSubN
-ldx #> _debugSubN
-
-jsr debugTrampoline
+JSRFAR _debugSubN, DEBUG_BANK
 .endif
 .endmacro
 
@@ -315,7 +272,7 @@ jsr debugTrampoline
 lda #< _debugSubV
 ldx #> _debugSubV
 
-jsr debugTrampoline
+JSRFAR _debugSubV, DEBUG_BANK
 .endif
 .endmacro
 
@@ -329,7 +286,7 @@ sta _logDebugVal2
 lda #< _debugAssignN
 ldx #> _debugAssignN
 
-jsr debugTrampoline
+JSRFAR _debugAssignN, DEBUG_BANK
 
 .endif
 .endmacro
@@ -337,10 +294,7 @@ jsr debugTrampoline
 .macro DEBUG_ASSIGN_V var
 .ifdef DEBUG
 
-lda #< _debugAddV
-ldx #> _debugAddV
-
-jsr debugTrampoline
+JSRFAR _debugAddV, DEBUG_BANK
 .endif
 .endmacro
 
@@ -352,10 +306,7 @@ lda var
 sta _logDebugVal1
 .endif
 
-lda #< _debugPostCheckVar
-ldx #> _debugPostCheckVar
-
-jsr debugTrampoline
+JSRFAR _debugPostCheckVar, DEBUG_BANK
 .endif
 .endmacro
 
@@ -368,10 +319,7 @@ lda var
 lda _logDebugVal1
 .endif
 
-lda #< _debugPostCheckFlag
-ldx #> _debugPostCheckFlag
-
-jsr debugTrampoline
+JSRFAR _debugPostCheckFlag, DEBUG_BANK
 .endif
 .endmacro
 
@@ -383,7 +331,7 @@ sta _logDebugVal2
 lda #< _debugIndirect
 ldx #> _debugIndirect
 
-jsr debugTrampoline
+JSRFAR _debugIndirect, DEBUG_BANK
 .endif
 .endmacro
 
@@ -392,7 +340,7 @@ jsr debugTrampoline
 lda #<  _debugIndirectV
 ldx #>  _debugIndirectV
 
-jsr debugTrampoline
+JSRFAR _debugIndirectV, DEBUG_BANK
 .endif
 .endmacro
 

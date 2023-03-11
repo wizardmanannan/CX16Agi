@@ -1,4 +1,7 @@
 .ifndef  GLOBAL_INC
+
+.include "x16.inc"
+
 DEBUG = 1 ;Note the debug preprocessor variable in helpers.h must also be enabled to avoid errors
 
 startPos: .word $0
@@ -12,7 +15,6 @@ ZP_PTR_CODE = $06
 ZP_TMP = $10
 
 GOLDEN_RAM = $400
-RAM_BANK = $0
 
 LOGIC_COMMANDS_BANK = $05
 DEBUG_BANK = $05
@@ -30,6 +32,8 @@ LOGIC_FILE_LOGIC_BANK_OFFSET = 7
 
 LOGIC_ENTRY_POINT_OFFSET = 1
 LOGIC_ENTRY_CURRENT_POINT_OFFSET = 3
+
+JSRFAR_KERNAL_ADDR = $FF6E
 
 TRUE = 1
 FALSE = 0
