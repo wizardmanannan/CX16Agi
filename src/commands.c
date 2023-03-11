@@ -274,21 +274,21 @@ void trampolineProcessString(char* stringPointer, byte stringBank, char* outputS
 /****************************************************************************
 ** addLogLine
 ****************************************************************************/
-void b1AddLogLine(char* message)
-{
-	FILE* fp;
-
-	if ((fp = fopen("log.txt", "a")) == NULL) {
-#ifdef VERBOSE_LOGIC_EXEC
-		fprintf(stderr, "Error opening log file.");
-#endif // VERBOSE
-		return;
-	}
-
-	fprintf(fp, "%s\n", message);
-
-	fclose(fp);
-}
+//void b1AddLogLine(char* message)
+//{
+//	FILE* fp;
+//
+//	if ((fp = fopen("log.txt", "a")) == NULL) {
+//#ifdef VERBOSE_LOGIC_EXEC
+//		fprintf(stderr, "Error opening log file.");
+//#endif // VERBOSE
+//		return;
+//	}
+//
+//	fprintf(fp, "%s\n", message);
+//
+//	fclose(fp);
+//}
 
 /***************************************************************************
 ** //lprintf

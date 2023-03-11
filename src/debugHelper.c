@@ -11,14 +11,13 @@ boolean stopEvery = FALSE;
 
 void stopAtFunc()
 {
-	/*if (opCounter == 451)
+	if (opCounter > 450)
 	{
 		asm("stp");
-	}*/
+	}
 }
 
 #pragma code-name (push, "BANKRAM05");
-
 void debugPrint(byte toPrint)
 {
 	printf("Op %lu, %d\n", opCounter, toPrint);
@@ -31,6 +30,8 @@ void debugPrint(byte toPrint)
 	if (opCounter == stopAt)
 	{
 		asm("stp");
+		asm("nop");
+		return;
 	}
 
 	if (opCounter == exitAt)

@@ -24,7 +24,8 @@ numArgs: .byte $0,$2,$2,$2,$2,$2,$2,$1,$1,$1,$2,$5,$1,$0,$0,$2,$5,$5,$5
     .import _debugPrintNot
     .import _debugPrintOrMode
     .import _codeJumpDebug
-    .import _stopAtFunc
+    .import _opCounter
+    .import _stopAtFunc 
 .endif
 .import _b5GotoFunc
 .import _callC1
@@ -76,7 +77,7 @@ jsr _codeJumpDebug ;same bank
 
 .macro DEBUG_PRINT_OR_MODE
 .ifdef DEBUG
-    lda notMode
+    lda orMode
     beq @exit
     jsr _debugPrintOrMode
     @exit:
@@ -144,7 +145,7 @@ rts
 
 checkOrMode:
     lda orMode
-    bne @orModeFalse
+    beq @orModeFalse
 
     jmp endIfHandlerLoop
     
@@ -210,8 +211,6 @@ ifHandler:
         INC_CODE
 
         lda ch
-
-        jsr _stopAtFunc
 
         cmp #$FF
         beq @closingIfBracketJmp
