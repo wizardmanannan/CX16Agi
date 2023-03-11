@@ -112,6 +112,7 @@ _loadAndIncWinCode:
     INC_CODE
     
     lda @result
+    ldx #$0
     rts
 
 _incCodeBy:

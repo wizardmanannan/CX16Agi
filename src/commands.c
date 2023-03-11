@@ -701,7 +701,7 @@ void b2Get_posn() // 3, 0x60
 {
 	int entryNum;
 	ViewTable localViewtab;
-
+	
 	entryNum = loadAndIncWinCode();
 	getViewTab(&localViewtab, entryNum);
 
@@ -1959,15 +1959,19 @@ void b4Add_to_pic() // 7, 0x00
 	y = loadAndIncWinCode();
 	priNum = loadAndIncWinCode();
 	baseCol = loadAndIncWinCode();
-
+		
+	//printf("viewNum %d, loopNum %d, celNum %d, x %d, y %d priNum %d baseCol %d", viewNum, loopNum, celNum, x, y, priNum, baseCol);
+	
 	trampolineAddToPic(viewNum, loopNum, celNum, x, y, priNum, baseCol);
+	
+
+
 	asm("jmp _afterLogicCommand");
 }
 
 void b4Add_to_pic_v() // 7, 0xFE 
 {
 	int viewNum, loopNum, celNum, x, y, priNum, baseCol;
-
 	viewNum = var[loadAndIncWinCode()];
 	loopNum = var[loadAndIncWinCode()];
 	celNum = var[loadAndIncWinCode()];

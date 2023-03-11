@@ -547,27 +547,27 @@ void b9AddViewToTable(ViewTable* localViewtab, byte viewNum)
 
 void b9AddToPic(int vNum, int lNum, int cNum, int x, int y, int pNum, int bCol)
 {
-	int i, j, w, h, trans, c, boxWidth;
+	//int i, j, w, h, trans, c, boxWidth;
+	//TODO: Fix
+	//trans = loadedViews[vNum].loops[lNum].cels[cNum].transparency & 0x0F;
+	//w = loadedViews[vNum].loops[lNum].cels[cNum].width;
+	//h = loadedViews[vNum].loops[lNum].cels[cNum].height;
+	//y = (y - h) + 1;
 
-	trans = loadedViews[vNum].loops[lNum].cels[cNum].transparency & 0x0F;
-	w = loadedViews[vNum].loops[lNum].cels[cNum].width;
-	h = loadedViews[vNum].loops[lNum].cels[cNum].height;
-	y = (y - h) + 1;
+	//for (i = 0; i < w; i++) {
+	//	for (j = 0; j < h; j++) {
+	//		c = loadedViews[vNum].loops[lNum].cels[cNum].bmp->line[j][i];
+	//		if ((c != (trans + 1)) && (pNum >= priority->line[y + j][x + i])) {
+	//			priority->line[y + j][x + i] = pNum;
+	//			picture->line[y + j][x + i] = c;
+	//		}
+	//	}
+	//}
 
-	for (i = 0; i < w; i++) {
-		for (j = 0; j < h; j++) {
-			c = loadedViews[vNum].loops[lNum].cels[cNum].bmp->line[j][i];
-			if ((c != (trans + 1)) && (pNum >= priority->line[y + j][x + i])) {
-				priority->line[y + j][x + i] = pNum;
-				picture->line[y + j][x + i] = c;
-			}
-		}
-	}
+	///* Maybe the box height only extends to the next priority band */
 
-	/* Maybe the box height only extends to the next priority band */
-
-	boxWidth = ((h >= 7) ? 7 : h);
-	if (bCol < 4) rect(control, x, (y + h) - (boxWidth), (x + w) - 1, (y + h) - 1, bCol);
+	//boxWidth = ((h >= 7) ? 7 : h);
+	//if (bCol < 4) rect(control, x, (y + h) - (boxWidth), (x + w) - 1, (y + h) - 1, bCol);
 }
 
 /***************************************************************************
@@ -2051,6 +2051,7 @@ void trampolineAddToPic(int vNum, int lNum, int cNum, int x, int y, int pNum, in
 	b9AddToPic(vNum, lNum, cNum, x, y, pNum, bCol);
 
 	RAM_BANK = previousRamBank;
+	asm("stp");
 }
 
 void agi_blitTrampoline(BITMAP* bmp, int x, int y, int w, int h, byte trans, byte pNum)

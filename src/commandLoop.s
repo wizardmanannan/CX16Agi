@@ -398,12 +398,12 @@ _commandLoop:
         sta RAM_BANK
         jmp goto
         jmp mainLoop
-        @default:     
+        @default:
             DEBUG_PRINT
             LOAD_CODE_WIN_CODE
             tax
             ldy codeBankArray,x
-            sty RAM_BANK
+            sty RAM_BANK              
             
             cmp #$80
             bcs @commands2
