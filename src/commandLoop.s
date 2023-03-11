@@ -31,6 +31,24 @@ numArgs: .byte $0,$2,$2,$2,$2,$2,$2,$1,$1,$1,$2,$5,$1,$0,$0,$2,$5,$5,$5
 .import _callC1
 .import _callC2
 
+; .macro STOP_AT
+; .local @start
+; bra @start
+; @byte0: .byte $C2
+; @byte1: .byte $01
+; @start:
+; lda _opCounter
+; cmp @byte0
+; bne @end
+; stp
+; lda _opCounter + 1
+; cmp @byte1
+; bne @end
+; stp
+; @end:
+; .endmacro
+
+
 .macro DEBUG_JUMP val1, val2
 .ifdef DEBUG
 lda val1
@@ -144,6 +162,7 @@ rts
             jmp endifFunction
 
 checkOrMode:
+    stp
     lda orMode
     beq @orModeFalse
 
@@ -209,6 +228,7 @@ ifHandler:
         LOAD_CODE_WIN_CODE
         sta ch
         INC_CODE
+        ;jsr _stopAtFunc
 
         lda ch
 
