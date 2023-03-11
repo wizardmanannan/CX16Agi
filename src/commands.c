@@ -270,7 +270,7 @@ void trampolineProcessString(char* stringPointer, byte stringBank, char* outputS
 	RAM_BANK = previousRamBank;
 }
 
-#pragma code-name (push, "BANKRAM01");
+#pragma code-name (push, "BANKRAM0F");
 /****************************************************************************
 ** addLogLine
 ****************************************************************************/

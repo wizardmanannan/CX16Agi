@@ -178,7 +178,6 @@ lda var1
 sta _logDebugVal1
 lda var2
 sta _logDebugVal2
-
 JSRFAR _debugGreaterThan_8, DEBUG_BANK
 .endif
 .endmacro
@@ -1162,7 +1161,7 @@ GET_VAR_OR_FLAG VARS_AREA_START_GOLDEN_OFFSET, @var1
 bra switchToNewRoom
 
 ;If Checks
-.segment "BANKRAM05"
+.segment "BANKRAM0F"
 jmpTableIf:
 .addr b1NoOp_0
 .addr b1Equaln
@@ -1193,7 +1192,6 @@ b1Equaln:
     INC_CODE
     
     DEBUG_IS_EQUAL var1, var2
-
     lda var1
     cmp var2
     beq @success
@@ -1259,6 +1257,8 @@ b1Greaterv:
     INC_CODE
 
     DEBUG_GREATER_THAN_8 var1, var2
+    
+    GREATER_THAN_8 var1, var2, returnFromOpCodeTrue, returnFromOpCodeFalse
 
 b1Isset:
     GET_VAR_OR_FLAG FLAGS_AREA_START_GOLDEN_OFFSET, var1

@@ -21,11 +21,11 @@ void initSegments(byte segOrder, byte noBanks, int segmentSize, byte noSegments,
 	}
 
 	_memoryAreas[segOrder].firstBank = firstBank;
-	
+
 	_memoryAreas[segOrder].noBanks = noBanks;
-	
+
 	_memoryAreas[segOrder].segmentSize = segmentSize;
-	
+
 	_memoryAreas[segOrder].noSegments = noSegments;
 
 	//printf("Segments: banks %p, noBanks %d, segmentSize %d, allocationArray %p, noSegments %d\n", _segments[segOrder].banks, _segments[segOrder].noBanks, _segments[segOrder].segmentSize, _segments[segOrder].allocationArray, _segments[segOrder].noSegments);
@@ -38,7 +38,7 @@ byte getFirstSegment(byte size)
 
 #ifdef  __CX16__
 	byte previousRamBank = RAM_BANK;
-	
+
 	RAM_BANK = ALLOCATION_BANK;
 #endif //  __CX16__
 
@@ -50,7 +50,7 @@ byte getFirstSegment(byte size)
 	return result;
 
 #ifdef  __CX16__
-		RAM_BANK = previousRamBank;
+	RAM_BANK = previousRamBank;
 #endif //  __CX16__
 }
 
@@ -93,8 +93,8 @@ void bankedRamInit()
 
 	unsigned char fileByte;
 	int bankRamSizes[NO_CODE_BANKS] = {
-		(int) _BANKRAM01_SIZE__,
-		(int) _BANKRAM02_SIZE__,
+		(int)_BANKRAM01_SIZE__,
+		(int)_BANKRAM02_SIZE__,
 		(int)_BANKRAM03_SIZE__,
 		(int)_BANKRAM04_SIZE__,
 		(int)_BANKRAM05_SIZE__,
@@ -106,7 +106,8 @@ void bankedRamInit()
 		(int)_BANKRAM0B_SIZE__,
 		(int)_BANKRAM0C_SIZE__,
 		(int)_BANKRAM0D_SIZE__,
-		(int)_BANKRAM0E_SIZE__
+		(int)_BANKRAM0E_SIZE__,
+		(int)_BANKRAM0F_SIZE__
 	};
 
 
@@ -118,7 +119,7 @@ void bankedRamInit()
 #endif // VERBOSE
 
 		sprintf(fileName, "agi.cx16.0%x", i + 1);
-		
+
 #ifdef VERBOSE
 		printf("Loading file %s\n", fileName);
 #endif // VERBOSE
@@ -150,7 +151,7 @@ void memoryMangerInit()
 {
 	initDynamicMemory();
 #ifdef __CX16__
-bankedRamInit();
+	bankedRamInit();
 #endif // __CX16__
 }
 
@@ -186,14 +187,14 @@ byte* banked_alloc(int size, byte* bank)
 
 					printf("Bank Calc ((%d * %d) / %d + %d)\n", j, _memoryAreas[i].segmentSize, BANK_SIZE, _memoryAreas[i].firstBank);
 #endif
-					*bank = (byte) (((unsigned long)j * _memoryAreas[i].segmentSize) / BANK_SIZE + _memoryAreas[i].firstBank);
-					
+					*bank = (byte)(((unsigned long)j * _memoryAreas[i].segmentSize) / BANK_SIZE + _memoryAreas[i].firstBank);
+
 					//printf("Size of unsigned long long %d, size of unsigned long %d", sizeof(unsigned long long), sizeof(unsigned long));
 
 #ifdef VERBOSE
 					printf("Result calc: (%d * %d) mod %d + %p;\n", _memoryAreas[i].segmentSize, j, BANK_SIZE, &BANK_RAM[0]);
 #endif
-					result = ((unsigned long) _memoryAreas[i].segmentSize * j) % BANK_SIZE + &BANK_RAM[0];
+					result = ((unsigned long)_memoryAreas[i].segmentSize * j) % BANK_SIZE + &BANK_RAM[0];
 #ifdef VERBOSE
 					printf("The result is %p, on bank %d size: %d, segment %d\n", result, *bank, i, j);
 #endif // VERBOSE
@@ -237,7 +238,7 @@ boolean banked_dealloc(byte* ptr, byte bank)
 
 	memoryArea = _memoryAreas[size];
 
-	allocationAddress = memoryArea.start + ((ptr - &BANK_RAM[0]) / memoryArea.segmentSize) ;
+	allocationAddress = memoryArea.start + ((ptr - &BANK_RAM[0]) / memoryArea.segmentSize);
 
 	if (*(allocationAddress))
 	{
@@ -247,7 +248,7 @@ boolean banked_dealloc(byte* ptr, byte bank)
 	}
 
 #ifdef VERBOSE
-	printf("\n Deallocation segment (%p - %p)  %p \n", allocationAddress, &BANK_RAM[0],  allocationAddress - &BANK_RAM[0]);
+	printf("\n Deallocation segment (%p - %p)  %p \n", allocationAddress, &BANK_RAM[0], allocationAddress - &BANK_RAM[0]);
 #endif // VERBOSE
 
 #ifdef  __CX16__

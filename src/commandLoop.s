@@ -46,24 +46,13 @@ JSRFAR _codeJumpDebug, DEBUG_BANK
 
 .macro DEBUG_PRINT_TRUE
 .ifdef DEBUG
-    .local @start
-    jmp @start
-    @previousBank: .byte $0
-    @start:
-    lda RAM_BANK
-    sta @previousBank
-    lda #DEBUG_BANK
-    sta RAM_BANK
-
-    jsr _debugPrintTrue    
-    lda @previousBank
-    sta RAM_BANK
+    JSRFAR _debugPrintTrue, DEBUG_BANK
 .endif
 .endmacro
 
 .macro DEBUG_PRINT_FALSE
 .ifdef DEBUG
-    jsr _debugPrintFalse   
+    JSRFAR _debugPrintFalse, DEBUG_BANK  
 .endif
 .endmacro
 
@@ -71,7 +60,7 @@ JSRFAR _codeJumpDebug, DEBUG_BANK
 .ifdef DEBUG
     lda notMode
     beq @exit
-    jsr _debugPrintNot
+    JSRFAR _debugPrintNot, DEBUG_BANK  
     @exit:
 .endif
 .endmacro
@@ -80,7 +69,7 @@ JSRFAR _codeJumpDebug, DEBUG_BANK
 .ifdef DEBUG
     lda orMode
     beq @exit
-    jsr _debugPrintOrMode
+    JSRFAR _debugPrintOrMode, DEBUG_BANK
     @exit:
 .endif
 .endmacro
@@ -138,14 +127,13 @@ rts
 
 
 ;ifHelpers
-.segment "BANKRAM05"
+.segment "BANKRAM0F"
  closingIfBracket:
             INC_CODE
             INC_CODE
             jmp endifFunction
 
 checkOrMode:
-    stp
     lda orMode
     beq @orModeFalse
 
@@ -322,6 +310,7 @@ ifHandler:
                     endifFunction:
                         jmp mainLoop
 ;commandLoopHelpers
+.segment "BANKRAM05"
 goto:
     @start:
     LOAD_CODE_WIN_CODE
