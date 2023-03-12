@@ -25,9 +25,9 @@
 #include "stub.h"
 #include "helpers.h"
 
-#define HIGHEST_BANK1_FUNC 18
-#define HIGHEST_BANK2_FUNC 82
-#define HIGHEST_BANK3_FUNC 129
+#define HIGHEST_BANK1_FUNC 15
+#define HIGHEST_BANK2_FUNC 81
+#define HIGHEST_BANK3_FUNC 126
 #define HIGHEST_BANK4_FUNC 181
 
 
@@ -66,8 +66,8 @@ MENU* the_menuChildren = (MENU*)&BANK_RAM[MENU_CHILD_START];
 long opCounter = 1;
 int printCounter = 1;
 
-const char* postCheckVar = "Post check var %d (%d)\n";
-const char* postCheckFlag = "Post check flag %d (%d)\n";
+const char* postCheckVar = "post check var %d (%d)\n";
+const char* postCheckFlag = "post check flag %d (%d)\n";
 
 void executeLogic(int logNum);
 
@@ -305,12 +305,11 @@ int b1Lprintf(char* fmt, ...)
 boolean b1Equaln(byte** data) // 2, 0x80 
 {
 	int varVal, value, variable;
-
 	variable = *(*data)++;
 	varVal = var[variable];
 	value = *(*data)++;
 
-	printf("Checking that %d is equal to %d and it %d\n", varVal, value, varVal == value);
+	printf("checking that %d is equal to %d and it %d\n", variable, varVal, value, varVal == value);
 
 	return (varVal == value);
 }
@@ -318,11 +317,14 @@ boolean b1Equaln(byte** data) // 2, 0x80
 boolean b1Equalv(byte** data) // 2, 0xC0 
 {
 	int varVal1, varVal2;
+	int var1, var2;
 
+	var1 = *(*data);
 	varVal1 = var[*(*data)++];
+	var2 = *(*data);
 	varVal2 = var[*(*data)++];
 
-	printf("Checking that %d is equal to %d and it %d\n", varVal1, varVal2, varVal1 == varVal2);
+	printf("checking that %d (%d) is equal to %d (%d) and it %d\n", var1, varVal1, var2, varVal2, varVal1 == varVal2);
 
 	return (varVal1 == varVal2);
 }
@@ -330,11 +332,15 @@ boolean b1Equalv(byte** data) // 2, 0xC0
 boolean b1Lessn(byte** data) // 2, 0x80 
 {
 	int varVal, value;
+	int var1;
 
 	varVal = var[*(*data)++];
+	var1 = *(*data);
+
+
 	value = *(*data)++;
 
-	printf("Checking that %d is < %d and the result should be %d\n", varVal, value, varVal < value);
+	printf("checking that %d (%d) is < %d and the result should be %d\n", var1, varVal, value, varVal < value);
 
 	return (varVal < value);
 }
@@ -342,11 +348,15 @@ boolean b1Lessn(byte** data) // 2, 0x80
 boolean b1Lessv(byte** data) // 2, 0xC0 
 {
 	int varVal1, varVal2;
+	int var1, var2;
 
+	var1 = *(*data);
 	varVal1 = var[*(*data)++];
+
+	var2 = *(*data);
 	varVal2 = var[*(*data)++];
 
-	printf("Checking that %d is < %d and the result should be %d\n", varVal1, varVal2, varVal1 < varVal2);
+	printf("checking that %d (%d) is < %d (%d) and the result should be %d\n", var1, varVal1, var2, varVal2, varVal1 < varVal2);
 
 	return (varVal1 < varVal2);
 }
@@ -354,11 +364,12 @@ boolean b1Lessv(byte** data) // 2, 0xC0
 boolean b1Greatern(byte** data) // 2, 0x80 
 {
 	int varVal, value;
+	int var1 = *(*data);
 
 	varVal = var[*(*data)++];
 	value = *(*data)++;
 
-	printf("Checking that %d is > %d and the result should be %d\n", varVal, value, varVal > value);
+	printf("checking that %d (%d) is > %d and the result should be %d\n", var1, varVal, value, varVal > value);
 
 	return (varVal > value);
 }
@@ -367,10 +378,16 @@ boolean b1Greaterv(byte** data) // 2, 0xC0
 {
 	int varVal1, varVal2;
 
+	int var1, var2;
+
+	var1 = *(*data);
+
 	varVal1 = var[*(*data)++];
 	varVal2 = var[*(*data)++];
 
-	printf("Checking that %d is > %d and the result should be %d\n", varVal1, varVal2, varVal1 > varVal2);
+	var2 = *(*data);
+
+	printf("checking that %d (%d) is > %d (%d) and the result should be %d\n", var1, varVal1, var2, varVal2, varVal1 > varVal2);
 
 	return (varVal1 > varVal2);
 }
@@ -379,14 +396,14 @@ boolean b1Isset(byte** data) // 1, 0x00
 {
 	int flagNo = *(*data)++;
 
-	printf("Checking that %d is set and it %d\n", flagNo, flag[flagNo]);
+	printf("checking that %d is set and it %d\n", flagNo, flag[flagNo]);
 	return (flag[flagNo]);
 }
 
 boolean b1Issetv(byte** data) // 1, 0x80 
 {
 	int flagNo = *(*data)++;
-	printf("Checking that %d is set and it %d\n", flagNo, flag[flagNo]);
+	printf("checking that %d is set and it %d\n", flagNo, flag[flagNo]);
 	return (flag[var[flagNo]]);
 }
 
@@ -575,7 +592,7 @@ void b1Increment(byte** data) // 1, 0x80
 {
 	int varNum = *(*data);
 
-	printf("Incrementing var %d(%d) to %d\n", varNum, var[varNum], var[varNum] + 1);
+	printf("incrementing var %d(%d) to %d\n", varNum, var[varNum], var[varNum] + 1);
 
 	if (var[*(*data)] < 0xFF)
 		var[*(*data)]++;
@@ -588,9 +605,9 @@ void b1Increment(byte** data) // 1, 0x80
 void b1Decrement(byte** data) // 1, 0x80 
 {
 	int varNum = *(*data);
-	
-	printf("Decrementing var %d(%d) to %d\n", varNum, var[varNum], var[varNum] - 1);
-	
+
+	printf("decrementing var %d(%d) to %d\n", varNum, var[varNum], var[varNum] - 1);
+
 	if (var[*(*data)] > 0)
 		var[*(*data)]--;
 	(*data)++;
@@ -605,8 +622,8 @@ void b1Assignn(byte** data) // 2, 0x80
 
 	varNum = *(*data)++;
 	value = *(*data)++;
-	
-	printf("Assign var %d (%d) to %d\n", varNum, var[varNum], value);
+
+	printf("assign var %d (%d) to %d\n", varNum, var[varNum], value);
 
 	var[varNum] = value;
 
@@ -620,13 +637,13 @@ void b1Assignv(byte** data) // 2, 0xC0
 	var1 = *(*data)++;
 	var2 = *(*data)++;
 
-	printf("Assign var %d (%d) to %d (%d) which is\n", var1, var[var1], var2, var[var2]);
+	printf("assign var %d (%d) to %d (%d) which is\n", var1, var[var1], var2, var[var2]);
 
 	var[var1] = var[var2];
 
 	printf(postCheckVar, var1, var[var1]);
 }
-	
+
 void b1Addn(byte** data) // 2, 0x80 
 {
 	int varNum, value;
@@ -634,7 +651,7 @@ void b1Addn(byte** data) // 2, 0x80
 	varNum = *(*data)++;
 	value = *(*data)++;
 
-	printf("Add var %d (%d) to %d which is", varNum, var[varNum], value, var[varNum] + value);
+	printf("add var %d (%d) to %d which is", varNum, var[varNum], value, var[varNum] + value);
 
 	var[varNum] += value;
 
@@ -648,7 +665,7 @@ void b1Addv(byte** data) // 2, 0xC0
 	var1 = *(*data)++;
 	var2 = *(*data)++;
 
-	printf("Add var %d (%d) to %d (%d) which is\n", var1, var[var1], var2, var[var2], var[var1] + var[var2]);
+	printf("add var %d (%d) to %d (%d) which is\n", var1, var[var1], var2, var[var2], var[var1] + var[var2]);
 
 	var[var1] += var[var2];
 
@@ -663,7 +680,7 @@ void b1Subn(byte** data) // 2, 0x80
 	varNum = *(*data)++;
 	value = *(*data)++;
 
-	printf("Sub var %d (%d) to %d which is", varNum, var[varNum], value, var[varNum] + value);
+	printf("sub var %d (%d) to %d which is", varNum, var[varNum], value, var[varNum] + value);
 
 	var[varNum] -= value;
 
@@ -677,7 +694,7 @@ void b1Subv(byte** data) // 2, 0xC0
 	var1 = *(*data)++;
 	var2 = *(*data)++;
 
-	printf("Sub var %d (%d) to %d (%d) which is\n", var1, var[var1], var2, var[var2], var[var1] + var[var2]);
+	printf("sub var %d (%d) to %d (%d) which is\n", var1, var[var1], var2, var[var2], var[var1] + var[var2]);
 
 
 	var[var1] -= var[var2];
@@ -701,7 +718,7 @@ void b1Rindirect(byte** data) // 2, 0xC0
 	var1 = *(*data)++;
 	var2 = *(*data)++;
 
-	printf("Indir %d (%d) value %d \n", var2, var[var2], var1);
+	printf("indir %d (%d) value %d \n", var2, var[var2], var1);
 
 	var[var1] = var[var[var2]];
 
@@ -715,7 +732,7 @@ void b1Lindirectn(byte** data) // 2, 0x80
 	varNum = *(*data)++;
 	value = *(*data)++;
 
-	printf("Indir %d (%d) value %d\n", varNum, var[varNum], value);
+	printf("indir %d (%d) value %d\n", varNum, var[varNum], value);
 
 	var[var[varNum]] = value;
 
@@ -753,6 +770,9 @@ void b1Set_v(byte** data) // 1, 0x80
 	printf(postCheckFlag, f, flag[f]);
 }
 
+#pragma code-name (pop)
+#pragma code-name (push, "BANKRAM02")
+
 void b1Reset_v(byte** data) // 1, 0x80 
 {
 	byte f = *(*data);
@@ -774,9 +794,6 @@ void b1New_room(byte** data) // 1, 0x00
 	newRoomNum = *(*data)++;
 	hasEnteredNewRoom = TRUE;
 }
-
-#pragma code-name (pop)
-#pragma code-name (push, "BANKRAM02")
 
 void b1New_room_v(byte** data) // 1, 0x80 
 {
@@ -1568,6 +1585,9 @@ void b2Move_obj(byte** data) // 5, 0x00
 	setViewTab(&localViewtab, entryNum);
 }
 
+#pragma code-name (pop)
+#pragma code-name (push, "BANKRAM03")
+
 void b2Move_obj_v(byte** data) // 5, 0x70 
 {
 	int entryNum;
@@ -1588,9 +1608,6 @@ void b2Move_obj_v(byte** data) // 5, 0x70
 
 	setViewTab(&localViewtab, entryNum);
 }
-
-#pragma code-name (pop)
-#pragma code-name (push, "BANKRAM03")
 
 void b2Follow_ego(byte** data) // 3, 0x00 
 {
@@ -1885,7 +1902,7 @@ void b3Print(byte** data) // 1, 00
 
 void b3Print_v(byte** data) // 1, 0x80 
 {
-	char* tempString = (char*) & GOLDEN_RAM[LOCAL_WORK_AREA_START];
+	char* tempString = (char*)&GOLDEN_RAM[LOCAL_WORK_AREA_START];
 	BITMAP* temp;
 
 	char* messagePointer = getMessagePointer(currentLog, (var[*(*data)++]) - 1);
@@ -1908,7 +1925,7 @@ void b3Print_v(byte** data) // 1, 0x80
 void b3Display(byte** data) // 3, 0x00 
 {
 	int row, col, messNum;
-	char* tempString = (char*) & GOLDEN_RAM[LOCAL_WORK_AREA_START];
+	char* tempString = (char*)&GOLDEN_RAM[LOCAL_WORK_AREA_START];
 	char* messagePointer;
 
 	col = *(*data)++;
@@ -2178,6 +2195,8 @@ void b3Restore_game(byte** data) // 0, 0x00
 	/* Not supported yet */
 }
 
+#pragma code-name (pop)
+#pragma code-name (push, "BANKRAM04")
 
 void b3Restart_game(byte** data) // 0, 0x00 
 {
@@ -2203,9 +2222,6 @@ void b3Show_obj(byte** data) // 1, 0x00
 	objectNum = *(*data)++;
 	/* Not supported yet */
 }
-
-#pragma code-name (pop)
-#pragma code-name (push, "BANKRAM04")
 
 void b3Random_num(byte** data) // 3, 0x20  random() renamed to avoid clash
 {
@@ -2546,7 +2562,7 @@ void b4Set_menu(byte** data) // 1, 0x00
 	newMenu.text = getMessagePointer(currentLog, messNum - 1);
 
 #ifdef VERBOSE_MENU
-	printf("The result is %p \n", newMenu.text);
+	printf("the result is %p \n", newMenu.text);
 #endif // VERBOSE_MENU
 
 	newMenu.proc = NULL;
@@ -2885,7 +2901,7 @@ int ifLogicHandlers(byte ch, byte** ppCodeWindowAddress, byte bank)
 	int result;
 
 #ifdef VERBOSE_LOGIC_EXEC
-	printf("%lu, %d\n", opCounter++, ch);
+	printf("op %lu, %d, var 0 is %d\n", opCounter++, ch, var[0]);
 #endif // VERBOSE_LOGIC_EXEC
 
 	switch (ch) {
@@ -2915,9 +2931,9 @@ int ifLogicHandlers(byte ch, byte** ppCodeWindowAddress, byte bank)
 		break; /* Should never happen */
 	}
 
-//#ifdef VERBOSE_LOGIC_EXEC
-//	printf(" And the result is %d \n", result);
-//#endif // VERBOSE_LOGIC_EXEC
+	//#ifdef VERBOSE_LOGIC_EXEC
+	//	printf(" And the result is %d \n", result);
+	//#endif // VERBOSE_LOGIC_EXEC
 	return result;
 }
 
@@ -2979,7 +2995,7 @@ void ifHandler(byte** data, byte codeBank)
 		switch (ch) {
 		case 0xff: /* Closing if bracket. Expression must be true. */
 #ifdef VERBOSE_LOGIC_EXEC
-			printf("%lu, %d\n", opCounter++, ch);
+			printf("op %lu, %d, var 0 is %d\n", opCounter++, ch, var[0]);
 #endif // VERBOSE_LOGIC_EXEC
 #ifdef DEBUG
 			drawBigString(screen, "test is true             ", 0, 400, 0, 7);
@@ -2989,13 +3005,14 @@ void ifHandler(byte** data, byte codeBank)
 			return;
 		case 0xfd: /* Not mode toggle */
 #ifdef VERBOSE_LOGIC_EXEC
-			printf("%lu, %d\n", opCounter++, ch);
+			printf("op %lu, %d, var 0 is %d\n", opCounter++, ch, var[0]);
 #endif // VERBOSE_LOGIC_EXEC
 			notMode = (notMode ? FALSE : TRUE);
 			break;
 		case 0xfc:
 #ifdef VERBOSE_LOGIC_EXEC
-			printf("%lu, %d\n", opCounter++, ch);
+			printf("op %lu, %d, var 0 is %d\n", opCounter++, ch, var[0]);
+			printf("or mode Started\n");
 #endif // VERBOSE_LOGIC_EXEC
 			if (orMode) {
 				/* If we have reached the closing OR bracket, then the
@@ -3004,7 +3021,6 @@ void ifHandler(byte** data, byte codeBank)
 			}
 			else {
 				orMode = TRUE;
-				printf("Or Mode Started");
 			}
 			break;
 		default:
@@ -3017,20 +3033,20 @@ void ifHandler(byte** data, byte codeBank)
 
 			if (testVal)
 			{
-				printf("The result is true\n");
+				printf("the result is true\n");
 			}
 			else
 			{
-				printf("The result is false\n");
+				printf("the result is false\n");
 			}
 
 			RAM_BANK = previousBank;
 
-			* data += (codeWindowAddress - &codeWindow[0]);
+			*data += (codeWindowAddress - &codeWindow[0]);
 
 			if (notMode) {
 				testVal = (testVal ? FALSE : TRUE);
-				printf("The result is inverted by not\n");
+				printf("the result is inverted by not\n");
 			}
 			notMode = 0;
 			if (testVal) {
@@ -3059,7 +3075,7 @@ void ifHandler(byte** data, byte codeBank)
 				if (!orMode) stillProcessing = FALSE;
 			}
 			break;
-}
+		}
 		RAM_BANK = previousBank;
 
 	}
@@ -3078,7 +3094,7 @@ void ifHandler(byte** data, byte codeBank)
 			disp = (b2 << 8) | b1;  /* Should be signed 16 bit */
 			printf("b1 is %d b2 is %d and the jump result is %hu\n", b1, b2, (b2 << 8) | b1);
 			*data += disp;
-			printf("The code is now %u and the address is %p\n", **data, *data);
+			printf("the code is now %u and the address is %p\n", **data, *data);
 			break;
 		}
 		if (ch >= 0xfc) continue;
@@ -3126,7 +3142,7 @@ void executeLogic(int logNum)
 	currentLogicFile = *currentLogic.data;
 
 #ifdef VERBOSE_SCRIPT_START
-	printf("ex s. %d counter %lu\n", logNum, opCounter);
+	printf("ex s. %d counter op %lu, var 0 is %d\n", logNum, opCounter, var[0]);
 #endif // VERBOSE_SCRIPT_START
 
 
@@ -3173,7 +3189,7 @@ void executeLogic(int logNum)
 
 	while ((code < endPos) && stillExecuting) {
 
-		if (opCounter > 700)
+		if (opCounter > 1000)
 		{
 			exit(0);
 		}
@@ -3204,9 +3220,9 @@ void executeLogic(int logNum)
 			if ((readkey() & 0xff) == 'q') closedown();
 		}
 #endif  
-//#ifdef VERBOSE_LOGIC_EXEC
-//		printf("\n The code is %d, on bank %d address, %p log num %d\n", *code, RAM_BANK, code, logNum);
-//#endif // VERBOSE
+		//#ifdef VERBOSE_LOGIC_EXEC
+		//		printf("\n the code is %d, on bank %d address, %p log num %d\n", *code, RAM_BANK, code, logNum);
+		//#endif // VERBOSE
 		codeAtTimeOfLastBankSwitch = *code;
 		instructionCodeBank = getBankBasedOnCode(codeAtTimeOfLastBankSwitch);
 
@@ -3216,7 +3232,7 @@ void executeLogic(int logNum)
 		printCounter++;
 
 #ifdef VERBOSE_LOGIC_EXEC
-		printf("%lu, %d\n", opCounter++, *code);
+		printf("op %lu, %d, var 0 is %d\n", opCounter++, *code, var[0]);
 #endif // VERBOSE_LOGIC_EXEC
 
 
@@ -3230,7 +3246,7 @@ void executeLogic(int logNum)
 		else {
 			switch (codeAtTimeOfLastBankSwitch) {
 			case 0xfe: /* Unconditional branch: else, goto. */
-				printf("The code is now %u and the address is %p\n", *code, code);
+				printf("the code is now %u and the address is %p\n", *code, code);
 				code++;
 #ifdef DEBUG
 				sprintf(debugString, "(%d) else                           ", currentLogic.currentPoint);
@@ -3246,7 +3262,7 @@ void executeLogic(int logNum)
 
 				code += disp;
 
-				printf("The code is now %u and the address is %p\n", *code, code);
+				printf("the code is now %u and the address is %p\n", *code, code);
 				break;
 
 			case 0xff: /* Conditional branch: if */
@@ -3264,8 +3280,8 @@ void executeLogic(int logNum)
 				////lprintf("catastrophe: Illegal action [%d], logic %d, posn %d.",
 					//*(code - 1), logNum, currentLogic.currentPoint);
 				break;
-	}
-}
+			}
+		}
 
 		RAM_BANK = currentLogicFile.codeBank;
 
