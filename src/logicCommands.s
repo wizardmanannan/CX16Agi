@@ -828,16 +828,18 @@ b1Assignv:
          INC_CODE
         
         
-         LOAD_CODE_WIN_CODE
+
         .ifdef DEBUG
+            LOAD_CODE_WIN_CODE
             sta _logDebugVal2
          .endif
-            sta @val
-
+         GET_VAR_OR_FLAG VARS_AREA_START_GOLDEN_OFFSET, @val
+         INC_CODE
+         
          DEBUG_ASSIGN_V
 
          SET_VAR_OR_FLAG VARS_AREA_START_GOLDEN_OFFSET, @val, @var
-         INC_CODE
+
 
          DEBUG_POST_CHECK_VAR @var
 
