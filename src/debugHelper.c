@@ -93,12 +93,12 @@ void debugLessThan_8V()
 
 void debugEqualN()
 {
-	printf("checking that %d is equal to var %d (%d) and it % d\n", logDebugVal1, var[logDebugVal2], logDebugVal1 == var[logDebugVal2]);
+	printf("checking that %d is equal %d (%d) and it %d\n", logDebugVal1, var[logDebugVal2], var[logDebugVal2], logDebugVal1 == var[logDebugVal2]);
 }
 
 void debugEqualV()
 {
-	printf("checking that %d (%d) is equal to var %d (%d) and it % d\n", var[logDebugVal1], var[logDebugVal2], var[logDebugVal1] == var[logDebugVal2]);
+	printf("checking that %d (%d) is equal %d (%d) and it %d\n", logDebugVal1, var[logDebugVal1], logDebugVal2, var[logDebugVal2], var[logDebugVal1] == var[logDebugVal2]);
 }
 
 void debugInc()

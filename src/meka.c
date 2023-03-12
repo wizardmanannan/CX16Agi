@@ -285,8 +285,6 @@ void main()
 {
    int ret, oldCount=0;
 
-   printf("The address of opcounter is %p", (byte*)(&opCounter));
-
    //chdir("..\\KQ1-2917");
    //chdir("..\\COMPILER\\NEW\\SAMPLE\\TEMPLATE");
    //chdir("\\GAMES\\SIERRA\\MH2");

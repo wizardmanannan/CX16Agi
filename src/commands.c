@@ -2553,7 +2553,7 @@ void executeLogic(int logNum)
 	getLogicFile(&currentLogicFile, logNum);
 
 #ifdef VERBOSE_SCRIPT_START
-	printf("ex s. %d counter %lu\n", logNum, opCounter);
+	printf("ex s. %d counter op %lu, var 0 is %d\n", logNum, opCounter, var[0]);
 #endif // VERBOSE_SCRIPT_START
 
 
