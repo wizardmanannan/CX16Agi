@@ -822,14 +822,17 @@ b1Assignv:
             sta _logDebugVal1  
          .endif
 
-         GET_VAR_OR_FLAG VARS_AREA_START_GOLDEN_OFFSET, @val
+         LOAD_CODE_WIN_CODE
+         sta @var
 
          INC_CODE
-
+        
+        
+         LOAD_CODE_WIN_CODE
         .ifdef DEBUG
-            LOAD_CODE_WIN_CODE
             sta _logDebugVal2
          .endif
+            sta @val
 
          DEBUG_ASSIGN_V
 
@@ -1178,7 +1181,7 @@ jmp _afterLogicCommand
 b2New_room:
 LOAD_CODE_WIN_CODE
 sta _newRoomNum
-
+stz _newRoomNum + 1
 switchToNewRoom:
 lda #TRUE
 sta _hasEnteredNewRoom
