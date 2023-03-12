@@ -3012,7 +3012,7 @@ void ifHandler(byte** data, byte codeBank)
 		case 0xfc:
 #ifdef VERBOSE_LOGIC_EXEC
 			printf("op %lu, %d, var 0 is %d\n", opCounter++, ch, var[0]);
-			printf("or mode Started\n");
+			printf("or mode started\n");
 #endif // VERBOSE_LOGIC_EXEC
 			if (orMode) {
 				/* If we have reached the closing OR bracket, then the
