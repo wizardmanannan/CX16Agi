@@ -5,8 +5,8 @@ extern boolean* flag;
 extern byte* var;
 
 long opCounter = 1;
-long stopAt = 1000;
-long exitAt = 2500;
+long stopAt = 2000;
+long exitAt = 2000;
 boolean stopEvery = FALSE;
 
 void stopAtFunc()
@@ -59,7 +59,7 @@ void debugPrintNot()
 
 void debugPrintOrMode()
 {
-	printf("or mode started\n");
+	//printf("or mode started\n");
 }
 
 

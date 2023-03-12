@@ -171,9 +171,10 @@ LOGICCOMMANDS_INC = 1
 .import _debugIndirect
 .import _debugIndirectV
 
+.endif 
+
 _logDebugVal1: .byte $0
 _logDebugVal2: .byte $0
-.endif 
 
 .macro DEBUG_GREATER_THAN_8_N var1, var2
 .ifdef DEBUG
@@ -835,7 +836,7 @@ b1Assignv:
          .endif
          GET_VAR_OR_FLAG VARS_AREA_START_GOLDEN_OFFSET, @val
          INC_CODE
-         
+
          DEBUG_ASSIGN_V
 
          SET_VAR_OR_FLAG VARS_AREA_START_GOLDEN_OFFSET, @val, @var

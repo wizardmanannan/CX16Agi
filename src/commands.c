@@ -41,7 +41,7 @@
 //#define VERBOSE_MENU
 //#define VERBOSE_MENU_DUMP
 //#define VERBOSE_MESSAGE_TEXT
-#define VERBOSE_GOTO
+//#define VERBOSE_GOTO
 
 
 

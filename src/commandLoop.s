@@ -329,7 +329,9 @@ goto:
     lda #TRUE
     sta codeWindowInvalid
     jsr refreshCodeWindow
+.ifdef DEBUG
     jsr debugCodeState
+.endif
     rts
 ;endCommandLoopHelpers
 
@@ -391,7 +393,9 @@ _commandLoop:
         cmp #$FE
         bne @default
         DEBUG_PRINT
+        .ifdef DEBUG
         jsr debugCodeState
+        .endif
         INC_CODE
         lda #COMMAND_LOOP_HELPER_BANK
         sta RAM_BANK
