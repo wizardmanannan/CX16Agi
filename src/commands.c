@@ -309,7 +309,7 @@ boolean b1Equaln(byte** data) // 2, 0x80
 	varVal = var[variable];
 	value = *(*data)++;
 
-	printf("checking that %d is equal to %d and it %d\n", variable, varVal, value, varVal == value);
+	printf("checking that %d (%d) is equal to %d and it %d\n", variable, varVal, value, varVal == value);
 
 	return (varVal == value);
 }
