@@ -413,7 +413,6 @@ sta startPos
         lda #>GOLDEN_RAM
         adc #>areaStartOffset
         sta ZP_TMP + 1
-        nop
         .ifblank var
             LOAD_CODE_WIN_CODE
         .endif
@@ -698,7 +697,6 @@ b1NoOp_0:
     jmp _afterLogicCommand
 
 b1NoOp_1:
-    nop
     INC_CODE
     jmp _afterLogicCommand
 

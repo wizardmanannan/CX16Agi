@@ -2051,7 +2051,6 @@ void trampolineAddToPic(int vNum, int lNum, int cNum, int x, int y, int pNum, in
 	b9AddToPic(vNum, lNum, cNum, x, y, pNum, bCol);
 
 	RAM_BANK = previousRamBank;
-	asm("stp");
 }
 
 void agi_blitTrampoline(BITMAP* bmp, int x, int y, int w, int h, byte trans, byte pNum)

@@ -304,7 +304,7 @@ ifHandler:
 
                         jmp @startFindBracketLoop
                         @FFResult:
-                        CODE_JUMP
+                        JSRFAR goto, COMMAND_LOOP_HELPER_BANK
                         bra endifFunction
 
                     endifFunction:
@@ -330,8 +330,7 @@ goto:
     sta codeWindowInvalid
     jsr refreshCodeWindow
     jsr debugCodeState
-    jmp mainLoop
-
+    rts
 ;endCommandLoopHelpers
 
 .segment "CODE"
@@ -396,15 +395,15 @@ _commandLoop:
         INC_CODE
         lda #COMMAND_LOOP_HELPER_BANK
         sta RAM_BANK
-        jmp goto
+        jsr goto
         jmp mainLoop
         @default:
+ 
             DEBUG_PRINT
             LOAD_CODE_WIN_CODE
             tax
             ldy codeBankArray,x
-            sty RAM_BANK              
-            
+            sty RAM_BANK                
             cmp #$80
             bcs @commands2
             @commands1:
