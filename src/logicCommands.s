@@ -152,10 +152,13 @@ LOGICCOMMANDS_INC = 1
 .import _newRoomNum
 
 .ifdef DEBUG
-.import _debugGreaterThan_8
-.import _debugLessThan_8
+.import _debugGreaterThan_8N
+.import _debugLessThan_8N
+.import _debugGreaterThan_8V
+.import _debugLessThan_8V
 .import _debugIsSet
-.import _debugEqual
+.import _debugEqualN
+.import _debugEqualV
 .import _debugInc
 .import _debugDec
 .import _debugAddN
@@ -172,24 +175,46 @@ _logDebugVal1: .byte $0
 _logDebugVal2: .byte $0
 .endif 
 
-.macro DEBUG_GREATER_THAN_8 var1, var2
+.macro DEBUG_GREATER_THAN_8_N var1, var2
 .ifdef DEBUG
 lda var1
 sta _logDebugVal1
 lda var2
 sta _logDebugVal2
-JSRFAR _debugGreaterThan_8, DEBUG_BANK
+JSRFAR _debugGreaterThan_8N, DEBUG_BANK
 .endif
 .endmacro
 
-.macro DEBUG_LESS_THAN_8 var1, var2
+.macro DEBUG_LESS_THAN_8_N var1, var2
 .ifdef DEBUG
 lda var1
 sta _logDebugVal1
 lda var2
 sta _logDebugVal2
 
-JSRFAR _debugLessThan_8, DEBUG_BANK
+JSRFAR _debugLessThan_8N, DEBUG_BANK
+
+.endif
+.endmacro
+
+.macro DEBUG_GREATER_THAN_8_V var1, var2
+.ifdef DEBUG
+lda var1
+sta _logDebugVal1
+lda var2
+sta _logDebugVal2
+JSRFAR _debugGreaterThan_8V, DEBUG_BANK
+.endif
+.endmacro
+
+.macro DEBUG_LESS_THAN_8_V var1, var2
+.ifdef DEBUG
+lda var1
+sta _logDebugVal1
+lda var2
+sta _logDebugVal2
+
+JSRFAR _debugLessThan_8V, DEBUG_BANK
 
 .endif
 .endmacro
@@ -203,14 +228,25 @@ JSRFAR _debugIsSet, DEBUG_BANK
 .endif
 .endmacro
 
-.macro DEBUG_IS_EQUAL var1, var2
+.macro DEBUG_IS_EQUAL_N var1, var2
 .ifdef DEBUG
 lda var1
 sta _logDebugVal1
 lda var2
 sta _logDebugVal2
 
-JSRFAR _debugEqual, DEBUG_BANK
+JSRFAR _debugEqualN, DEBUG_BANK
+.endif
+.endmacro
+
+.macro DEBUG_IS_EQUAL_V var1, var2
+.ifdef DEBUG
+lda var1
+sta _logDebugVal1
+lda var2
+sta _logDebugVal2
+
+JSRFAR _debugEqualV, DEBUG_BANK
 .endif
 .endmacro
 
@@ -1182,6 +1218,12 @@ jmpTableIf:
 .addr b1Right_posnCCall
 
 b1Equaln:
+
+    .ifdef DEBUG
+    LOAD_CODE_WIN_CODE
+    sta _logDebugVal1
+    .endif
+
     GET_VAR_OR_FLAG VARS_AREA_START_GOLDEN_OFFSET, var1
     INC_CODE
 
@@ -1189,7 +1231,7 @@ b1Equaln:
     sta var2
     INC_CODE
     
-    DEBUG_IS_EQUAL var1, var2
+    DEBUG_IS_EQUAL_N _logDebugVal1, var2
     lda var1
     cmp var2
     beq @success
@@ -1198,13 +1240,24 @@ b1Equaln:
     jmp returnFromOpCodeTrue
 
 b1Equalv:
+
+    .ifdef DEBUG
+    LOAD_CODE_WIN_CODE
+    sta _logDebugVal1
+    .endif
+
     GET_VAR_OR_FLAG VARS_AREA_START_GOLDEN_OFFSET, var1
     INC_CODE
+
+    .ifdef DEBUG
+    LOAD_CODE_WIN_CODE
+    sta _logDebugVal2
+    .endif
 
     GET_VAR_OR_FLAG VARS_AREA_START_GOLDEN_OFFSET, var2
     INC_CODE
 
-    DEBUG_IS_EQUAL var1, var2
+    DEBUG_IS_EQUAL_V _logDebugVal1, _logDebugVal2
 
     lda var1
     cmp var2
@@ -1215,6 +1268,12 @@ b1Equalv:
     jmp returnFromOpCodeTrue
 
 b1Lessn:
+
+    .ifdef DEBUG
+    LOAD_CODE_WIN_CODE
+    sta _logDebugVal1
+    .endif
+
     GET_VAR_OR_FLAG VARS_AREA_START_GOLDEN_OFFSET, var1
     INC_CODE
 
@@ -1222,20 +1281,35 @@ b1Lessn:
     sta var2
     INC_CODE
 
-    DEBUG_LESS_THAN_8 var1, var2
+    DEBUG_LESS_THAN_8_N _logDebugVal1, var2
     LESS_THAN_8 var1, var2, returnFromOpCodeTrue, returnFromOpCodeFalse
 
 b1Lessv:
+    .ifdef DEBUG
+    LOAD_CODE_WIN_CODE
+    sta _logDebugVal1
+    .endif
+
     GET_VAR_OR_FLAG VARS_AREA_START_GOLDEN_OFFSET, var1
     INC_CODE
+
+    .ifdef DEBUG
+    LOAD_CODE_WIN_CODE
+    sta _logDebugVal2
+    .endif
 
     GET_VAR_OR_FLAG VARS_AREA_START_GOLDEN_OFFSET, var2
     INC_CODE
 
-    DEBUG_LESS_THAN_8 var1, var2
+    DEBUG_LESS_THAN_8_V _logDebugVal1, _logDebugVal2
     LESS_THAN_8 var1, var2, returnFromOpCodeTrue, returnFromOpCodeFalse
 
 b1Greatern:
+    .ifdef DEBUG
+    LOAD_CODE_WIN_CODE
+    sta _logDebugVal1
+    .endif
+
     GET_VAR_OR_FLAG VARS_AREA_START_GOLDEN_OFFSET, var1
     INC_CODE
 
@@ -1243,18 +1317,28 @@ b1Greatern:
     sta var2
     INC_CODE
 
-    DEBUG_GREATER_THAN_8 var1, var2
+    DEBUG_GREATER_THAN_8_N _logDebugVal1, var2
     
     GREATER_THAN_8 var1, var2, returnFromOpCodeTrue, returnFromOpCodeFalse
 
 b1Greaterv:
+    .ifdef DEBUG
+    LOAD_CODE_WIN_CODE
+    sta _logDebugVal1
+    .endif
+
     GET_VAR_OR_FLAG VARS_AREA_START_GOLDEN_OFFSET, var1
     INC_CODE
+
+    .ifdef DEBUG
+    LOAD_CODE_WIN_CODE
+    sta _logDebugVal2
+    .endif
 
     GET_VAR_OR_FLAG VARS_AREA_START_GOLDEN_OFFSET, var2
     INC_CODE
 
-    DEBUG_GREATER_THAN_8 var1, var2
+    DEBUG_GREATER_THAN_8_V _logDebugVal1, _logDebugVal2
     
     GREATER_THAN_8 var1, var2, returnFromOpCodeTrue, returnFromOpCodeFalse
 

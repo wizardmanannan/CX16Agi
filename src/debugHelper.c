@@ -5,7 +5,7 @@ extern boolean* flag;
 extern byte* var;
 
 long opCounter = 1;
-long stopAt = 2000;
+long stopAt = 796;
 long exitAt = 2500;
 boolean stopEvery = FALSE;
 
@@ -71,19 +71,34 @@ void debugIsSet()
 	printf("Checking that %d is set and it %d\n", logDebugVal1, flag[logDebugVal1]);
 }
 
-void debugGreaterThan_8()
+void debugGreaterThan_8N()
 {
-	printf("Checking that %d is > %d and the result should be %d\n", logDebugVal1, logDebugVal2, logDebugVal1 > logDebugVal2);
+	printf("Checking that %d (%d) is > %d and the result should be %d\n", logDebugVal1, var[logDebugVal1], logDebugVal2, var[logDebugVal1] > logDebugVal2);
 }
 
-void debugLessThan_8()
+void debugLessThan_8N()
 {
-	printf("Checking that %d is < %d and the result should be %d\n", logDebugVal1, logDebugVal2, logDebugVal1 < logDebugVal2);
+	printf("Checking that %d is < %d and the result should be %d\n", logDebugVal1, var[logDebugVal1], logDebugVal2, var[logDebugVal1] < logDebugVal2);
 }
 
-void debugEqual()
+void debugGreaterThan_8V()
 {
-	printf("Checking that %d is equal to %d and it % d\n", logDebugVal1, logDebugVal2, logDebugVal1 == logDebugVal2);
+	printf("Checking that %d (%d) is > %d and the result should be %d\n", logDebugVal1, var[logDebugVal1] , logDebugVal2, var[logDebugVal2], var[logDebugVal1] > var[logDebugVal2]);
+}
+
+void debugLessThan_8V()
+{
+	printf("Checking that %d is < %d and the result should be %d\n", logDebugVal1, var[logDebugVal1], logDebugVal2, var[logDebugVal2], var[logDebugVal1] < var[logDebugVal2]);
+}
+
+void debugEqualN()
+{
+	printf("Checking that %d is equal to var %d (%d) and it % d\n", logDebugVal1, var[logDebugVal2], logDebugVal1 == var[logDebugVal2]);
+}
+
+void debugEqualV()
+{
+	printf("Checking that %d (%d) is equal to var %d (%d) and it % d\n", var[logDebugVal1], var[logDebugVal2], var[logDebugVal1] == var[logDebugVal2]);
 }
 
 void debugInc()
