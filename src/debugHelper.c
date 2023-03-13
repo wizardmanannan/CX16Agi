@@ -20,7 +20,7 @@ void stopAtFunc()
 #pragma code-name (push, "BANKRAM05");
 void debugPrint(byte toPrint)
 {
-	printf("op %lu, %d, var 222 is %d\n", opCounter, toPrint, flag[222]);
+	printf("op %lu, %d, flag 222 is %d\n", opCounter, toPrint, flag[222]);
 
 	if (stopEvery)
 	{
