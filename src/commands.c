@@ -2901,7 +2901,7 @@ int ifLogicHandlers(byte ch, byte** ppCodeWindowAddress, byte bank)
 	int result;
 
 #ifdef VERBOSE_LOGIC_EXEC
-	printf("op %lu, %d, var 222 is %d\n", opCounter++, ch, flag[222]);
+	printf("op %lu, %d, flag 222 is %d\n", opCounter++, ch, flag[222]);
 #endif // VERBOSE_LOGIC_EXEC
 
 	switch (ch) {
