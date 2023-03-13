@@ -541,7 +541,6 @@ void b9AddViewToTable(ViewTable* localViewtab, byte viewNum)
 	localViewtab->numberOfLoops = loadedViews[viewNum].numberOfLoops;
 	b9SetLoop(localViewtab, 0);
 
-	printf("---Setting %d to %d", localViewtab->numberOfCels, loadedViews[viewNum].loops[0].numberOfCels);
 	localViewtab->numberOfCels = loadedViews[viewNum].loops[0].numberOfCels;
 	b9SetCel(localViewtab, 0);
 	/* Might need to set some more defaults here */
