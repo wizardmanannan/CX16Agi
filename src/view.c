@@ -540,6 +540,8 @@ void b9AddViewToTable(ViewTable* localViewtab, byte viewNum)
 	localViewtab->viewData = &loadedViews[viewNum];
 	localViewtab->numberOfLoops = loadedViews[viewNum].numberOfLoops;
 	b9SetLoop(localViewtab, 0);
+
+	printf("---Setting %d to %d", localViewtab->numberOfCels, loadedViews[viewNum].loops[0].numberOfCels);
 	localViewtab->numberOfCels = loadedViews[viewNum].loops[0].numberOfCels;
 	b9SetCel(localViewtab, 0);
 	/* Might need to set some more defaults here */
@@ -547,27 +549,36 @@ void b9AddViewToTable(ViewTable* localViewtab, byte viewNum)
 
 void b9AddToPic(int vNum, int lNum, int cNum, int x, int y, int pNum, int bCol)
 {
-	//int i, j, w, h, trans, c, boxWidth;
+	int i, j, w, h, trans, c, boxWidth;
+	View localLoadedView;
+	Loop localLoop;
+	Cel localCell;
+
+	getLoadedView(&localLoadedView, vNum);
+	getLocalLoop(&localLoadedView, &localLoop, lNum);
+	getLocalCel(&localLoop, &localCell, cNum);
+
+	trans = localCell.transparency & 0x0F;
+	w = localCell.width;
+	h = localCell.height;
+	y = (y - h) + 1;
+
 	//TODO: Fix
-	//trans = loadedViews[vNum].loops[lNum].cels[cNum].transparency & 0x0F;
-	//w = loadedViews[vNum].loops[lNum].cels[cNum].width;
-	//h = loadedViews[vNum].loops[lNum].cels[cNum].height;
-	//y = (y - h) + 1;
-
-	//for (i = 0; i < w; i++) {
-	//	for (j = 0; j < h; j++) {
-	//		c = loadedViews[vNum].loops[lNum].cels[cNum].bmp->line[j][i];
-	//		if ((c != (trans + 1)) && (pNum >= priority->line[y + j][x + i])) {
-	//			priority->line[y + j][x + i] = pNum;
-	//			picture->line[y + j][x + i] = c;
-	//		}
-	//	}
-	//}
-
-	///* Maybe the box height only extends to the next priority band */
-
-	//boxWidth = ((h >= 7) ? 7 : h);
-	//if (bCol < 4) rect(control, x, (y + h) - (boxWidth), (x + w) - 1, (y + h) - 1, bCol);
+//
+//	for (i = 0; i < w; i++) {
+//		for (j = 0; j < h; j++) {
+//			c = localCell.bmp->line[j][i];
+//			if ((c != (trans + 1)) && (pNum >= priority->line[y + j][x + i])) {
+//				priority->line[y + j][x + i] = pNum;
+//				picture->line[y + j][x + i] = c;
+//			}
+//		}
+//	}
+//
+//	/* Maybe the box height only extends to the next priority band */
+//
+//	boxWidth = ((h >= 7) ? 7 : h);
+//	if (bCol < 4) rect(control, x, (y + h) - (boxWidth), (x + w) - 1, (y + h) - 1, bCol);
 }
 
 /***************************************************************************
@@ -1328,13 +1339,14 @@ void bBUpdateObjects()
 	}
 
 	for (entryNum = 0; entryNum < TABLESIZE; entryNum++) {
+		printf("1. Flag 222 is %d\n", flag[222]);
+		
 		objFlags = localViewtab.flags;
 		getViewTab(&localViewtab, entryNum);
 
 #ifdef VERBOSE_UPDATE_OBJECTS
 		printf("Checking entry num %d it has objFlags of %d \n", entryNum, objFlags);
 #endif // VERBOSE_UPDATE_OBJECTS
-
 
 		if ((objFlags & ANIMATED) && (objFlags & DRAWN)) {
 
@@ -1353,6 +1365,8 @@ void bBUpdateObjects()
 						celNum = localViewtab.currentCel;
 
 						setViewTab(&localViewtab, entryNum);
+						
+						printf("2. Flag 222 is %d and the cycle status is %d\n", flag[222], localViewtab.cycleStatus);
 						switch (localViewtab.cycleStatus) {
 						case 0: /* normal.cycle */
 							celNum++;
@@ -1362,8 +1376,9 @@ void bBUpdateObjects()
 							break;
 						case 1: /* end.of.loop */
 							celNum++;
-							//printf("It is now end of loop the celNum is %d and flag[localViewtab.param1] is %d", celNum, flag[localViewtab.param1]);
+							printf("The cellNum is %d and the number of cell is %d\n", celNum, localViewtab.numberOfCels);
 							if (celNum >= localViewtab.numberOfCels) {
+								printf("The param is %d and the entrynum is %d", localViewtab.param1, entryNum);
 								flag[localViewtab.param1] = 1;
 								/* localViewtab.flags &= ~CYCLING; */
 							}
@@ -1386,6 +1401,8 @@ void bBUpdateObjects()
 							trampolineViewUpdater1Int(&b9SetCel, &localViewtab, celNum, VIEW_CODE_BANK_1);
 							break;
 						}
+
+						printf("3. Flag 222 is %d\n", flag[222]);
 						setViewTab(&localViewtab, entryNum);
 					}
 				} /* CYCLING */
