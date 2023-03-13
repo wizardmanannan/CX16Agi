@@ -637,7 +637,7 @@ void b1Assignv(byte** data) // 2, 0xC0
 	var1 = *(*data)++;
 	var2 = *(*data)++;
 
-	printf("assign var %d (%d) to %d (%d) which is\n", var1, var[var1], var2, var[var2]);
+	printf("assign var %d (%d) to %d (%d) which is %d\n", var1, var[var1], var2, var[var2], var2);
 
 	var[var1] = var[var2];
 
@@ -651,7 +651,7 @@ void b1Addn(byte** data) // 2, 0x80
 	varNum = *(*data)++;
 	value = *(*data)++;
 
-	printf("add var %d (%d) to %d which is", varNum, var[varNum], value, var[varNum] + value);
+	printf("add var %d (%d) to %d which is %d", varNum, var[varNum], value, var[varNum] + value);
 
 	var[varNum] += value;
 
@@ -665,7 +665,7 @@ void b1Addv(byte** data) // 2, 0xC0
 	var1 = *(*data)++;
 	var2 = *(*data)++;
 
-	printf("add var %d (%d) to %d (%d) which is\n", var1, var[var1], var2, var[var2], var[var1] + var[var2]);
+	printf("add var %d (%d) to %d (%d) which is %d\n", var1, var[var1], var2, var[var2], var[var1] + var[var2]);
 
 	var[var1] += var[var2];
 
@@ -3012,7 +3012,7 @@ void ifHandler(byte** data, byte codeBank)
 		case 0xfc:
 #ifdef VERBOSE_LOGIC_EXEC
 			printf("op %lu, %d, var 0 is %d\n", opCounter++, ch, var[0]);
-			printf("or mode started\n");
+			//printf("or mode started\n");
 #endif // VERBOSE_LOGIC_EXEC
 			if (orMode) {
 				/* If we have reached the closing OR bracket, then the
@@ -3189,7 +3189,7 @@ void executeLogic(int logNum)
 
 	while ((code < endPos) && stillExecuting) {
 
-		if (opCounter > 1000)
+		if (opCounter > 1900)
 		{
 			exit(0);
 		}

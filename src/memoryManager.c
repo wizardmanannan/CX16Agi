@@ -142,7 +142,7 @@ void bankedRamInit()
 #endif // VERBOSE
 		}
 	}
-
+	printf("Loading MEKA Resource 15 OF 15\n");
 	RAM_BANK = previousBank;
 }
 #endif //  __CX16__
