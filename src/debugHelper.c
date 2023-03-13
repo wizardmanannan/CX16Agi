@@ -5,7 +5,7 @@ extern boolean* flag;
 extern byte* var;
 
 long opCounter = 1;
-long stopAt = 20000;
+long stopAt = 2000;
 long exitAt = 20000;
 boolean stopEvery = FALSE;
 
@@ -21,7 +21,7 @@ void stopAtFunc()
 #pragma code-name (push, "BANKRAM05");
 void debugPrint(byte toPrint)
 {
-	printf("op %lu, %d, flag 222 is %d\n", opCounter, toPrint, flag[222]);
+	printf("op %lu, %d, var 0 is %d\n", opCounter, toPrint, var[0]);
 	if (stopEvery)
 	{
 		asm("stp");
