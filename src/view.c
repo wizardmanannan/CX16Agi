@@ -1365,7 +1365,7 @@ void bBUpdateObjects()
 							break;
 						case 1: /* end.of.loop */
 							celNum++;
-							//printf("It is now end of loop the celNum is %d and flag[localViewtab.param1] is %d", celNum, flag[localViewtab.param1]);
+							printf("The cellNum is %d and the number of cell is %d, for entry %d\n", celNum, localViewtab.numberOfCels, entryNum);
 							if (celNum >= localViewtab.numberOfCels) {
 								flag[localViewtab.param1] = 1;
 								/* localViewtab.flags &= ~CYCLING; */
