@@ -1367,6 +1367,7 @@ void bBUpdateObjects()
 							celNum++;
 							printf("The cellNum is %d and the number of cell is %d, for entry %d\n", celNum, localViewtab.numberOfCels, entryNum);
 							if (celNum >= localViewtab.numberOfCels) {
+								printf("Setting flag %d for entry number %d", localViewtab.param1, entryNum);
 								flag[localViewtab.param1] = 1;
 								/* localViewtab.flags &= ~CYCLING; */
 							}
