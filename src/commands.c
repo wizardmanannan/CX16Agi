@@ -94,14 +94,6 @@ objectType* objects;
 
 //
 
-void printNumberOfCells()
-{
-	ViewTable localView;
-	getViewTab(&localView, 2);
-
-	printf("The number of cell is %d\n", localView.numberOfCels);
-}
-
 int getNum(char* inputString, int* i, int inputStringBank)
 {
 	/* char strPos = 0;
@@ -2909,9 +2901,7 @@ int ifLogicHandlers(byte ch, byte** ppCodeWindowAddress, byte bank)
 	int result;
 
 #ifdef VERBOSE_LOGIC_EXEC
-	printf("op %lu, %d, flag 222 is %d\n", opCounter++, ch, flag[222]);
-	printNumberOfCells();
-
+	printf("op %lu, %d, var 0 is %d\n", opCounter++, ch, var[0]);
 #endif // VERBOSE_LOGIC_EXEC
 
 	switch (ch) {
@@ -3005,8 +2995,7 @@ void ifHandler(byte** data, byte codeBank)
 		switch (ch) {
 		case 0xff: /* Closing if bracket. Expression must be true. */
 #ifdef VERBOSE_LOGIC_EXEC
-			printf("op %lu, %d, flag 222 is %d\n", opCounter++, ch, flag[222]);
-			printNumberOfCells();
+			printf("op %lu, %d, var 0 is %d\n", opCounter++, ch, var[0]);
 #endif // VERBOSE_LOGIC_EXEC
 #ifdef DEBUG
 			drawBigString(screen, "test is true             ", 0, 400, 0, 7);
@@ -3016,15 +3005,13 @@ void ifHandler(byte** data, byte codeBank)
 			return;
 		case 0xfd: /* Not mode toggle */
 #ifdef VERBOSE_LOGIC_EXEC
-			printf("op %lu, %d, flag 222 is %d\n", opCounter++, ch, flag[222]);
-			printNumberOfCells();
+			printf("op %lu, %d, var 0 is %d\n", opCounter++, ch, var[0]);
 #endif // VERBOSE_LOGIC_EXEC
 			notMode = (notMode ? FALSE : TRUE);
 			break;
 		case 0xfc:
 #ifdef VERBOSE_LOGIC_EXEC
-			printf("op %lu, %d, flag 222 is %d\n", opCounter++, ch, flag[222]);
-			printNumberOfCells();
+			printf("op %lu, %d, var 0 is %d\n", opCounter++, ch, var[0]);
 			//printf("or mode started\n");
 #endif // VERBOSE_LOGIC_EXEC
 			if (orMode) {
@@ -3155,8 +3142,7 @@ void executeLogic(int logNum)
 	currentLogicFile = *currentLogic.data;
 
 #ifdef VERBOSE_SCRIPT_START
-	printf("ex s. %d counter op %lu, flag 222 is %d\n", logNum, opCounter, flag[222]);
-	printNumberOfCells();
+	printf("ex s. %d counter op %lu, var 0 is %d\n", logNum, opCounter, var[0]);
 #endif // VERBOSE_SCRIPT_START
 
 
@@ -3246,8 +3232,7 @@ void executeLogic(int logNum)
 		printCounter++;
 
 #ifdef VERBOSE_LOGIC_EXEC
-		printf("op %lu, %d, flag 222 is %d\n", opCounter++, *code, flag[222]);
-		printNumberOfCells();
+		printf("op %lu, %d, var 0 is %d\n", opCounter++, *code, var[0]);
 #endif // VERBOSE_LOGIC_EXEC
 
 
