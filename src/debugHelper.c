@@ -5,8 +5,8 @@ extern boolean* flag;
 extern byte* var;
 
 long opCounter = 1;
-long stopAt = 2000;
-long exitAt = 2000;
+long stopAt = 20000;
+long exitAt = 20000;
 boolean stopEvery = FALSE;
 
 void stopAtFunc()
@@ -17,11 +17,11 @@ void stopAtFunc()
 	}
 }
 
+
 #pragma code-name (push, "BANKRAM05");
 void debugPrint(byte toPrint)
 {
 	printf("op %lu, %d, flag 222 is %d\n", opCounter, toPrint, flag[222]);
-
 	if (stopEvery)
 	{
 		asm("stp");
@@ -83,7 +83,7 @@ void debugLessThan_8N()
 
 void debugGreaterThan_8V()
 {
-	printf("checking that %d (%d) is > %d and the result should be %d\n", logDebugVal1, var[logDebugVal1] , logDebugVal2, var[logDebugVal2], var[logDebugVal1] > var[logDebugVal2]);
+	printf("checking that %d (%d) is > %d and the result should be %d\n", logDebugVal1, var[logDebugVal1], logDebugVal2, var[logDebugVal2], var[logDebugVal1] > var[logDebugVal2]);
 }
 
 void debugLessThan_8V()

@@ -3,4 +3,5 @@
 
 #include "general.h"
 #include "helpers.h"
+#include "view.h"
 #endif

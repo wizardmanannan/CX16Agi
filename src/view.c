@@ -507,23 +507,26 @@ void b9DiscardView(byte viewNum)
 
 void b9SetCel(ViewTable* localViewtab, byte celNum)
 {
-	Loop* temp;
+	Loop temp;
+	View localLoadedView;
 
-	temp = localViewtab->loopData;
+	getLoadedView(&localLoadedView, localViewtab->currentView);
+	getLocalLoop(&localLoadedView, &temp, localViewtab->currentLoop);
+		
 	localViewtab->currentCel = celNum;
-	localViewtab->celData = &temp->cels[celNum];
-	localViewtab->xsize = temp->cels[celNum].width;
-	localViewtab->ysize = temp->cels[celNum].height;
+	localViewtab->xsize = temp.cels[celNum].width;
+	localViewtab->ysize = temp.cels[celNum].height;
 }
 
 void b9SetLoop(ViewTable* localViewtab, byte loopNum)
 {
-	View* temp;
+	View temp;
+	Loop loop;
+	getLoadedView(&temp, localViewtab->currentView);
+	getLocalLoop(&temp, &loop, loopNum);
 
-	temp = localViewtab->viewData;
 	localViewtab->currentLoop = loopNum;
-	localViewtab->loopData = &temp->loops[loopNum];
-	localViewtab->numberOfCels = temp->loops[loopNum].numberOfCels;
+	localViewtab->numberOfCels = loop.numberOfCels;
 	/* Might have to set the cel as well */
 	/* It's probably better to do that in the set_loop function */
 }

@@ -772,7 +772,7 @@ void b2Set_loop() // 2, 0x00
 	getViewTab(&localViewtab, entryNum);
 	trampolineViewUpdater1Int(&b9SetLoop, &localViewtab, loopNum, VIEW_CODE_BANK_1);
 	trampolineViewUpdater1Int(&b9SetCel, &localViewtab, 0, VIEW_CODE_BANK_1);
-
+   
 	setViewTab(&localViewtab, entryNum);
 	asm("jmp _afterLogicCommand");
 }
