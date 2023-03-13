@@ -20,7 +20,7 @@ void stopAtFunc()
 #pragma code-name (push, "BANKRAM05");
 void debugPrint(byte toPrint)
 {
-	printf("op %lu, %d, var 0 is %d\n", opCounter, toPrint, var[0]);
+	printf("op %lu, %d, var 222 is %d\n", opCounter, toPrint, flag[222]);
 
 	if (stopEvery)
 	{
@@ -138,7 +138,7 @@ void debugAssignN()
 
 void debugAssignV()
 {
-	printf("assign var %d (%d) to %d (%d) which is\n", logDebugVal1, var[logDebugVal1], logDebugVal2, var[logDebugVal2]);
+	printf("assign var %d (%d) to %d (%d) which is\n", logDebugVal1, var[logDebugVal1], logDebugVal2, var[logDebugVal2], logDebugVal2);
 }
 
 void debugIndirect()
