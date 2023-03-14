@@ -3262,7 +3262,7 @@ void executeLogic(int logNum)
 
 	while ((code < endPos) && stillExecuting) {
 
-		if (opCounter > 3000)
+		if (opCounter > 5000)
 		{
 			exit(0);
 		}
