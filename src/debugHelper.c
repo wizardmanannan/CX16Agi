@@ -5,7 +5,7 @@ extern boolean* flag;
 extern byte* var;
 
 long opCounter = 1;
-long stopAt = 2000;
+long stopAt = 3000;
 long exitAt = 20000;
 boolean stopEvery = FALSE;
 
@@ -113,7 +113,7 @@ void debugDec()
 
 void debugAddN()
 {
-	printf("add var %d (%d) to %d which is", logDebugVal1, var[logDebugVal1], logDebugVal2, var[logDebugVal1] + logDebugVal2);
+	printf("add var %d (%d) to %d which is %d", logDebugVal1, var[logDebugVal1], logDebugVal2, var[logDebugVal1] + logDebugVal2);
 }
 
 void debugAddV()
