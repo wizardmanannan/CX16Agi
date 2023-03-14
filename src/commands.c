@@ -42,6 +42,7 @@
 //#define VERBOSE_MENU_DUMP
 //#define VERBOSE_MESSAGE_TEXT
 //#define VERBOSE_GOTO
+#define VERBOSE_ROOM_CHANGE
 
 
 
@@ -65,6 +66,7 @@ MENU* the_menu = (MENU*)&BANK_RAM[MENU_START];
 MENU* the_menuChildren = (MENU*)&BANK_RAM[MENU_CHILD_START];
 
 int printCounter = 1;
+byte lastRoom = 0;
 
 void executeLogic(int logNum);
 
@@ -2112,7 +2114,6 @@ void b4Pause() // 0, 0x00
 
 void b4Version() // 0, 0x00 
 {
-	asm("stp");
 	while (key[KEY_ENTER] || key[KEY_ESC]) { /* Wait */ }
 	printInBoxBig("MEKA AGI Interpreter\n    Version 1.0", -1, -1, 30);
 	while (!key[KEY_ENTER] && !key[KEY_ESC]) { /* Wait */ }
@@ -2554,6 +2555,14 @@ void executeLogic(int logNum)
 
 #ifdef VERBOSE_SCRIPT_START
 	printf("ex s. %d counter op %lu, var 0 is %d\n", logNum, opCounter, var[0]);
+#endif // VERBOSE_SCRIPT_START
+
+#ifdef VERBOSE_ROOM_CHANGE
+	if(var[0] != lastRoom)
+	{
+		printf("We are at %d, counter %lu\n", var[0], opCounter);
+	}
+	lastRoom = var[0];
 #endif // VERBOSE_SCRIPT_START
 
 

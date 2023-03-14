@@ -1341,8 +1341,6 @@ void bBUpdateObjects()
 	}
 
 	for (entryNum = 0; entryNum < TABLESIZE; entryNum++) {
-		printf("1. Flag 222 is %d\n", flag[222]);
-		
 		objFlags = localViewtab.flags;
 		getViewTab(&localViewtab, entryNum);
 
@@ -1368,7 +1366,6 @@ void bBUpdateObjects()
 
 						setViewTab(&localViewtab, entryNum);
 						
-						printf("2. Flag 222 is %d and the cycle status is %d\n", flag[222], localViewtab.cycleStatus);
 						switch (localViewtab.cycleStatus) {
 						case 0: /* normal.cycle */
 							celNum++;
@@ -1377,10 +1374,10 @@ void bBUpdateObjects()
 							trampolineViewUpdater1Int(&b9SetCel, &localViewtab, celNum, VIEW_CODE_BANK_1);
 							break;
 						case 1: /* end.of.loop */
+							//Debug Here
 							celNum++;
-							printf("The cellNum is %d and the number of cell is %d, for entry %d\n", celNum, localViewtab.numberOfCels, entryNum);
 							if (celNum >= localViewtab.numberOfCels) {
-								printf("The param is %d and the entrynum is %d", localViewtab.param1, entryNum);
+		
 								flag[localViewtab.param1] = 1;
 								/* localViewtab.flags &= ~CYCLING; */
 							}
@@ -1403,8 +1400,6 @@ void bBUpdateObjects()
 							trampolineViewUpdater1Int(&b9SetCel, &localViewtab, celNum, VIEW_CODE_BANK_1);
 							break;
 						}
-
-						printf("3. Flag 222 is %d\n", flag[222]);
 						setViewTab(&localViewtab, entryNum);
 					}
 				} /* CYCLING */
