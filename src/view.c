@@ -507,23 +507,26 @@ void b9DiscardView(byte viewNum)
 
 void b9SetCel(ViewTable* localViewtab, byte celNum)
 {
-	Loop* temp;
+	Loop temp;
+	View localLoadedView;
 
-	temp = localViewtab->loopData;
+	getLoadedView(&localLoadedView, localViewtab->currentView);
+	getLocalLoop(&localLoadedView, &temp, localViewtab->currentLoop);
+
 	localViewtab->currentCel = celNum;
-	localViewtab->celData = &temp->cels[celNum];
-	localViewtab->xsize = temp->cels[celNum].width;
-	localViewtab->ysize = temp->cels[celNum].height;
+	localViewtab->xsize = temp.cels[celNum].width;
+	localViewtab->ysize = temp.cels[celNum].height;
 }
 
 void b9SetLoop(ViewTable* localViewtab, byte loopNum)
 {
-	View* temp;
+	View temp;
+	Loop loop;
+	getLoadedView(&temp, localViewtab->currentView);
+	getLocalLoop(&temp, &loop, loopNum);
 
-	temp = localViewtab->viewData;
 	localViewtab->currentLoop = loopNum;
-	localViewtab->loopData = &temp->loops[loopNum];
-	localViewtab->numberOfCels = temp->loops[loopNum].numberOfCels;
+	localViewtab->numberOfCels = loop.numberOfCels;
 	/* Might have to set the cel as well */
 	/* It's probably better to do that in the set_loop function */
 }
@@ -540,6 +543,7 @@ void b9AddViewToTable(ViewTable* localViewtab, byte viewNum)
 	localViewtab->viewData = &loadedViews[viewNum];
 	localViewtab->numberOfLoops = loadedViews[viewNum].numberOfLoops;
 	b9SetLoop(localViewtab, 0);
+
 	localViewtab->numberOfCels = loadedViews[viewNum].loops[0].numberOfCels;
 	b9SetCel(localViewtab, 0);
 	/* Might need to set some more defaults here */
@@ -548,26 +552,35 @@ void b9AddViewToTable(ViewTable* localViewtab, byte viewNum)
 void b9AddToPic(int vNum, int lNum, int cNum, int x, int y, int pNum, int bCol)
 {
 	int i, j, w, h, trans, c, boxWidth;
+	View localLoadedView;
+	Loop localLoop;
+	Cel localCell;
 
-	trans = loadedViews[vNum].loops[lNum].cels[cNum].transparency & 0x0F;
-	w = loadedViews[vNum].loops[lNum].cels[cNum].width;
-	h = loadedViews[vNum].loops[lNum].cels[cNum].height;
+	getLoadedView(&localLoadedView, vNum);
+	getLocalLoop(&localLoadedView, &localLoop, lNum);
+	getLocalCel(&localLoop, &localCell, cNum);
+
+	trans = localCell.transparency & 0x0F;
+	w = localCell.width;
+	h = localCell.height;
 	y = (y - h) + 1;
 
-	for (i = 0; i < w; i++) {
-		for (j = 0; j < h; j++) {
-			c = loadedViews[vNum].loops[lNum].cels[cNum].bmp->line[j][i];
-			if ((c != (trans + 1)) && (pNum >= priority->line[y + j][x + i])) {
-				priority->line[y + j][x + i] = pNum;
-				picture->line[y + j][x + i] = c;
-			}
-		}
-	}
-
-	/* Maybe the box height only extends to the next priority band */
-
-	boxWidth = ((h >= 7) ? 7 : h);
-	if (bCol < 4) rect(control, x, (y + h) - (boxWidth), (x + w) - 1, (y + h) - 1, bCol);
+	//TODO: Fix
+//
+//	for (i = 0; i < w; i++) {
+//		for (j = 0; j < h; j++) {
+//			c = localCell.bmp->line[j][i];
+//			if ((c != (trans + 1)) && (pNum >= priority->line[y + j][x + i])) {
+//				priority->line[y + j][x + i] = pNum;
+//				picture->line[y + j][x + i] = c;
+//			}
+//		}
+//	}
+//
+//	/* Maybe the box height only extends to the next priority band */
+//
+//	boxWidth = ((h >= 7) ? 7 : h);
+//	if (bCol < 4) rect(control, x, (y + h) - (boxWidth), (x + w) - 1, (y + h) - 1, bCol);
 }
 
 /***************************************************************************
@@ -829,11 +842,6 @@ void bANormalAdjust(int entryNum, int dx, int dy)
 {
 	int tempX, tempY, testX, startX, endX, waterCount = 0;
 	ViewTable localViewtab;
-
-	if (opCounter > 121727)
-	{
-		printf("I have successfully made the call");
-	}
 
 	getViewTab(&localViewtab, entryNum);
 
@@ -1332,12 +1340,8 @@ void bBUpdateObjects()
 		getViewTab(&localViewtab, entryNum);
 
 #ifdef VERBOSE_UPDATE_OBJECTS
-		if (debugStop && entryNum == 3)
-		{
-			printf("Checking entry num %d it has objFlags of %d \n", entryNum, objFlags);
-		}
+		printf("Checking entry num %d it has objFlags of %d \n", entryNum, objFlags);
 #endif // VERBOSE_UPDATE_OBJECTS
-
 
 		if ((objFlags & ANIMATED) && (objFlags & DRAWN)) {
 
@@ -1356,6 +1360,7 @@ void bBUpdateObjects()
 						celNum = localViewtab.currentCel;
 
 						setViewTab(&localViewtab, entryNum);
+
 						switch (localViewtab.cycleStatus) {
 						case 0: /* normal.cycle */
 							celNum++;
@@ -1364,10 +1369,11 @@ void bBUpdateObjects()
 							trampolineViewUpdater1Int(&b9SetCel, &localViewtab, celNum, VIEW_CODE_BANK_1);
 							break;
 						case 1: /* end.of.loop */
+							//Debug Here
 							celNum++;
-							printf("The cellNum is %d and the number of cell is %d, for entry %d\n", celNum, localViewtab.numberOfCels, entryNum);
+							//printf("The entry number is %d and the numberOfCels is %d", entryNum, localViewtab.numberOfCels);
 							if (celNum >= localViewtab.numberOfCels) {
-								printf("Setting flag %d for entry number %d", localViewtab.param1, entryNum);
+								//printf("I am in setting flag %d and the celNum %d", localViewtab.param1, celNum);
 								flag[localViewtab.param1] = 1;
 								/* localViewtab.flags &= ~CYCLING; */
 							}
@@ -1892,6 +1898,9 @@ void bDShowView2(int viewNum)
 	BITMAP* temp = create_bitmap(640, 480);
 	char viewString[20], loopString[20], celString[20];
 	boolean stillViewing = TRUE;
+
+	printf("Warning Unfinished Function That Will Corrupt Memory");
+	exit(0);
 
 	sprintf(viewString, "View number: %d", viewNum);
 

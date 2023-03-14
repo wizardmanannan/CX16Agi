@@ -309,8 +309,9 @@ boolean b1Equaln(byte** data) // 2, 0x80
 	varVal = var[variable];
 	value = *(*data)++;
 
+#ifdef VERBOSE_LOGIC_EXEC
 	printf("checking that %d (%d) is equal to %d and it %d\n", variable, varVal, value, varVal == value);
-
+#endif // VERBOSE_LOGIC_EXEC
 	return (varVal == value);
 }
 
@@ -324,7 +325,9 @@ boolean b1Equalv(byte** data) // 2, 0xC0
 	var2 = *(*data);
 	varVal2 = var[*(*data)++];
 
+#ifdef VERBOSE_LOGIC_EXEC
 	printf("checking that %d (%d) is equal to %d (%d) and it %d\n", var1, varVal1, var2, varVal2, varVal1 == varVal2);
+#endif
 
 	return (varVal1 == varVal2);
 }
@@ -340,7 +343,9 @@ boolean b1Lessn(byte** data) // 2, 0x80
 
 	value = *(*data)++;
 
+#ifdef VERBOSE_LOGIC_EXEC
 	printf("checking that %d (%d) is < %d and the result should be %d\n", var1, varVal, value, varVal < value);
+#endif
 
 	return (varVal < value);
 }
@@ -356,7 +361,9 @@ boolean b1Lessv(byte** data) // 2, 0xC0
 	var2 = *(*data);
 	varVal2 = var[*(*data)++];
 
+#ifdef VERBOSE_LOGIC_EXEC
 	printf("checking that %d (%d) is < %d (%d) and the result should be %d\n", var1, varVal1, var2, varVal2, varVal1 < varVal2);
+#endif
 
 	return (varVal1 < varVal2);
 }
@@ -369,7 +376,9 @@ boolean b1Greatern(byte** data) // 2, 0x80
 	varVal = var[*(*data)++];
 	value = *(*data)++;
 
+#ifdef VERBOSE_LOGIC_EXEC
 	printf("checking that %d (%d) is > %d and the result should be %d\n", var1, varVal, value, varVal > value);
+#endif
 
 	return (varVal > value);
 }
@@ -387,7 +396,9 @@ boolean b1Greaterv(byte** data) // 2, 0xC0
 
 	var2 = *(*data);
 
+#ifdef VERBOSE_LOGIC_EXEC
 	printf("checking that %d (%d) is > %d (%d) and the result should be %d\n", var1, varVal1, var2, varVal2, varVal1 > varVal2);
+#endif
 
 	return (varVal1 > varVal2);
 }
@@ -396,14 +407,18 @@ boolean b1Isset(byte** data) // 1, 0x00
 {
 	int flagNo = *(*data)++;
 
+#ifdef VERBOSE_LOGIC_EXEC
 	printf("checking that %d is set and it %d\n", flagNo, flag[flagNo]);
+#endif
 	return (flag[flagNo]);
 }
 
 boolean b1Issetv(byte** data) // 1, 0x80 
 {
 	int flagNo = *(*data)++;
+#ifdef VERBOSE_LOGIC_EXEC
 	printf("checking that %d is set and it %d\n", flagNo, flag[flagNo]);
+#endif
 	return (flag[var[flagNo]]);
 }
 
@@ -592,27 +607,35 @@ void b1Increment(byte** data) // 1, 0x80
 {
 	int varNum = *(*data);
 
+#ifdef VERBOSE_LOGIC_EXEC
 	printf("incrementing var %d(%d) to %d\n", varNum, var[varNum], var[varNum] + 1);
+#endif
 
 	if (var[*(*data)] < 0xFF)
 		var[*(*data)]++;
 	(*data)++;
 	/* var[*(*data)++]++;  This one doesn't check bounds */
 
+#ifdef VERBOSE_LOGIC_EXEC
 	printf(postCheckVar, varNum, var[varNum]);
+#endif
 }
 
 void b1Decrement(byte** data) // 1, 0x80 
 {
 	int varNum = *(*data);
 
+#ifdef VERBOSE_LOGIC_EXEC
 	printf("decrementing var %d(%d) to %d\n", varNum, var[varNum], var[varNum] - 1);
+#endif
 
 	if (var[*(*data)] > 0)
 		var[*(*data)]--;
 	(*data)++;
 
+#ifdef VERBOSE_LOGIC_EXEC
 	printf(postCheckVar, varNum, var[varNum]);
+#endif // VERBOSE_LOGIC_EXEC
 	/* var[*(*data)++]--;  This one doesn't check bounds */
 }
 
@@ -623,11 +646,14 @@ void b1Assignn(byte** data) // 2, 0x80
 	varNum = *(*data)++;
 	value = *(*data)++;
 
+#ifdef VERBOSE_LOGIC_EXEC
 	printf("assign var %d (%d) to %d\n", varNum, var[varNum], value);
+#endif
 
 	var[varNum] = value;
-
+#ifdef VERBOSE_LOGIC_EXEC
 	printf(postCheckVar, varNum, var[varNum]);
+#endif
 }
 
 void b1Assignv(byte** data) // 2, 0xC0 
@@ -637,11 +663,14 @@ void b1Assignv(byte** data) // 2, 0xC0
 	var1 = *(*data)++;
 	var2 = *(*data)++;
 
+#ifdef VERBOSE_LOGIC_EXEC
 	printf("assign var %d (%d) to %d (%d) which is %d\n", var1, var[var1], var2, var[var2], var2);
+#endif
 
 	var[var1] = var[var2];
-
+#ifdef VERBOSE_LOGIC_EXEC
 	printf(postCheckVar, var1, var[var1]);
+#endif
 }
 
 void b1Addn(byte** data) // 2, 0x80 
@@ -651,11 +680,14 @@ void b1Addn(byte** data) // 2, 0x80
 	varNum = *(*data)++;
 	value = *(*data)++;
 
+#ifdef VERBOSE_LOGIC_EXEC
 	printf("add var %d (%d) to %d which is %d", varNum, var[varNum], value, var[varNum] + value);
+#endif
 
 	var[varNum] += value;
-
+#ifdef VERBOSE_LOGIC_EXEC
 	printf(postCheckVar, varNum, var[varNum]);
+#endif
 }
 
 void b1Addv(byte** data) // 2, 0xC0 
@@ -665,11 +697,14 @@ void b1Addv(byte** data) // 2, 0xC0
 	var1 = *(*data)++;
 	var2 = *(*data)++;
 
+#ifdef VERBOSE_LOGIC_EXEC
 	printf("add var %d (%d) to %d (%d) which is %d\n", var1, var[var1], var2, var[var2], var[var1] + var[var2]);
+#endif
 
 	var[var1] += var[var2];
-
+#ifdef VERBOSE_LOGIC_EXEC
 	printf(postCheckVar, var1, var[var2]);
+#endif
 }
 
 
@@ -680,11 +715,14 @@ void b1Subn(byte** data) // 2, 0x80
 	varNum = *(*data)++;
 	value = *(*data)++;
 
+#ifdef VERBOSE_LOGIC_EXEC
 	printf("sub var %d (%d) to %d which is", varNum, var[varNum], value, var[varNum] + value);
+#endif
 
 	var[varNum] -= value;
-
+#ifdef VERBOSE_LOGIC_EXEC
 	printf(postCheckVar, varNum, var[varNum]);
+#endif
 }
 
 void b1Subv(byte** data) // 2, 0xC0 
@@ -694,12 +732,15 @@ void b1Subv(byte** data) // 2, 0xC0
 	var1 = *(*data)++;
 	var2 = *(*data)++;
 
+#ifdef VERBOSE_LOGIC_EXEC
 	printf("sub var %d (%d) to %d (%d) which is\n", var1, var[var1], var2, var[var2], var[var1] + var[var2]);
+#endif
 
 
 	var[var1] -= var[var2];
-
+#ifdef VERBOSE_LOGIC_EXEC
 	printf(postCheckVar, var1, var[var1]);
+#endif
 }
 
 void b1Lindirectv(byte** data) // 2, 0xC0 
@@ -718,7 +759,9 @@ void b1Rindirect(byte** data) // 2, 0xC0
 	var1 = *(*data)++;
 	var2 = *(*data)++;
 
+#ifdef VERBOSE_LOGIC_EXEC
 	printf("indir %d (%d) value %d \n", var2, var[var2], var1);
+#endif
 
 	var[var1] = var[var[var2]];
 
@@ -732,11 +775,14 @@ void b1Lindirectn(byte** data) // 2, 0x80
 	varNum = *(*data)++;
 	value = *(*data)++;
 
+#ifdef VERBOSE_LOGIC_EXEC
 	printf("indir %d (%d) value %d\n", varNum, var[varNum], value);
+#endif
 
 	var[var[varNum]] = value;
-
+#ifdef VERBOSE_LOGIC_EXEC
 	printf(postCheckVar, var[varNum], var[var[varNum]]);
+#endif
 }
 
 void b1Set(byte** data) // 1, 0x00 
@@ -744,15 +790,21 @@ void b1Set(byte** data) // 1, 0x00
 	byte f = *(*data);
 	flag[*(*data)++] = TRUE;
 
+#ifdef VERBOSE_LOGIC_EXEC
 	printf(postCheckFlag, f, flag[f]);
+#endif
 }
 
 void b1Reset(byte** data) // 1, 0x00 
 {
 	byte f = *(*data);
 	flag[*(*data)++] = FALSE;
+
+#ifdef VERBOSE_LOGIC_EXEC
 	printf(postCheckFlag, f, flag[f]);
+#endif
 }
+
 
 void b1Toggle(byte** data) // 1, 0x00 
 {
@@ -760,14 +812,19 @@ void b1Toggle(byte** data) // 1, 0x00
 
 	flag[f] = (flag[f] ? FALSE : TRUE);
 
+#ifdef VERBOSE_LOGIC_EXEC
 	printf(postCheckFlag, f, flag[f]);
+#endif
 }
 
 void b1Set_v(byte** data) // 1, 0x80 
 {
 	byte f = *(*data);
 	flag[var[*(*data)++]] = TRUE;
+
+#ifdef VERBOSE_LOGIC_EXEC
 	printf(postCheckFlag, f, flag[f]);
+#endif
 }
 
 #pragma code-name (pop)
@@ -777,7 +834,10 @@ void b1Reset_v(byte** data) // 1, 0x80
 {
 	byte f = *(*data);
 	flag[var[*(*data)++]] = FALSE;
+
+#ifdef VERBOSE_LOGIC_EXEC
 	printf(postCheckFlag, f, flag[f]);
+#endif
 }
 
 void b1Toggle_v(byte** data) // 1, 0x80 
@@ -785,7 +845,10 @@ void b1Toggle_v(byte** data) // 1, 0x80
 	int f = var[*(*data)++];
 
 	flag[f] = (flag[f] ? FALSE : TRUE);
+
+#ifdef VERBOSE_LOGIC_EXEC
 	printf(postCheckFlag, f, var[f]);
+#endif
 }
 
 void b1New_room(byte** data) // 1, 0x00 
@@ -3033,11 +3096,15 @@ void ifHandler(byte** data, byte codeBank)
 
 			if (testVal)
 			{
+#ifdef VERBOSE_LOGIC_EXEC
 				printf("the result is true\n");
+#endif
 			}
 			else
 			{
+#ifdef VERBOSE_LOGIC_EXEC
 				printf("the result is false\n");
+#endif
 			}
 
 			RAM_BANK = previousBank;
@@ -3046,7 +3113,9 @@ void ifHandler(byte** data, byte codeBank)
 
 			if (notMode) {
 				testVal = (testVal ? FALSE : TRUE);
+#ifdef VERBOSE_LOGIC_EXEC
 				printf("the result is inverted by not\n");
+#endif
 			}
 			notMode = 0;
 			if (testVal) {
@@ -3092,9 +3161,13 @@ void ifHandler(byte** data, byte codeBank)
 			b1 = *(*data)++;
 			b2 = *(*data)++;
 			disp = (b2 << 8) | b1;  /* Should be signed 16 bit */
+#ifdef VERBOSE_LOGIC_EXEC
 			printf("b1 is %d b2 is %d and the jump result is %hu\n", b1, b2, (b2 << 8) | b1);
+#endif
 			*data += disp;
+#ifdef VERBOSE_LOGIC_EXEC
 			printf("the code is now %u and the address is %p\n", **data, *data);
+#endif
 			break;
 		}
 		if (ch >= 0xfc) continue;
@@ -3189,7 +3262,7 @@ void executeLogic(int logNum)
 
 	while ((code < endPos) && stillExecuting) {
 
-		if (opCounter > 1900)
+		if (opCounter > 3000)
 		{
 			exit(0);
 		}
@@ -3246,7 +3319,9 @@ void executeLogic(int logNum)
 		else {
 			switch (codeAtTimeOfLastBankSwitch) {
 			case 0xfe: /* Unconditional branch: else, goto. */
+#ifdef VERBOSE_LOGIC_EXEC
 				printf("the code is now %u and the address is %p\n", *code, code);
+#endif
 				code++;
 #ifdef DEBUG
 				sprintf(debugString, "(%d) else                           ", currentLogic.currentPoint);
@@ -3258,11 +3333,14 @@ void executeLogic(int logNum)
 				b2 = *code++;
 				disp = (b2 << 8) | b1;  /* Should be signed 16 bit */
 
+#ifdef VERBOSE_LOGIC_EXEC
 				printf("b1 is %d b2 is %d and the jump result is %hu\n", b1, b2, (b2 << 8) | b1);
+#endif
 
 				code += disp;
-
+#ifdef VERBOSE_LOGIC_EXEC
 				printf("the code is now %u and the address is %p\n", *code, code);
+#endif
 				break;
 
 			case 0xff: /* Conditional branch: if */
