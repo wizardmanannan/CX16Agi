@@ -76,12 +76,7 @@ byte cbm_openForSeeking(char* fileName)
 	return lfn;
 }
 
-byte cbm_getSeekedByte()
-{
-	cbm_k_chkin(2);
-
-	return cbm_k_chrin();
-}
+#pragma code-name (push, "BANKRAM06")
 
 int8_t cx16_fseek(uint8_t channel, uint32_t offset) {
 	int8_t result = 0, status = 0, chkin = 0;
@@ -119,9 +114,6 @@ int8_t cx16_fseek(uint8_t channel, uint32_t offset) {
 	return 0;
 	// TODO: ERROR HANDLING!!!!!
 }
-
-
-#pragma code-name (push, "BANKRAM06")
 
 /***************************************************************************
 ** loadAGIDir
