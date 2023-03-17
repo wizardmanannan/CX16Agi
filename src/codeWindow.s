@@ -22,10 +22,6 @@ codeBankArray: .byte $5,$1,$1,$1,$1,$1,$1,$2,$2,$2,$2,$2,$2,$2,$2,$2,$2,$2,$2,$2
 .endif
 .endmacro
 
-codeWindowInit:
-lda codeWindowAddress
-sta ZP_PTR_CODE_WIN
-
 lda codeWindowAddress + 1
 sta ZP_PTR_CODE_WIN + 1
 rts
@@ -69,6 +65,7 @@ lda #TRUE
 sta codeWindowInvalid
 .endmacro
 
+.SEGMENT "CODE"
 refreshCodeWindow:
     bra @start
     @previousBank: .byte $0
@@ -131,6 +128,15 @@ _incCodeBy:
 
     INC_CODE_BY @jumpAmount
     rts
+
+.SEGMENT "BANKRAM07"
+codeWindowInit:
+lda codeWindowAddress
+sta ZP_PTR_CODE_WIN
+
+lda codeWindowAddress + 1
+sta ZP_PTR_CODE_WIN + 1
+rts
 
 .SEGMENT "BANKRAM05"
 .ifdef DEBUG

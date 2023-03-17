@@ -8,7 +8,7 @@ extern byte codeBank;
 long opCounter = 1;
 long stopAt = 10000;
 long exitAt = 20000;
-long startPrintingAt = 6000;
+long startPrintingAt = 6700;
 boolean stopEvery = FALSE;
 
 void stopAtFunc()
