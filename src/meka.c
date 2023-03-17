@@ -221,27 +221,17 @@ void b7Closedown()
    discardObjects();
    discardWords();
    closePicture();
-
-   exit(0);
 }
 
-#pragma code-name (pop)
-
-void initialise()
+void b7Initialise()
 {
-    byte previousRamBank = RAM_BANK;
     int i;
-
-    memoryMangerInit();
-
-    RAM_BANK = MEKA_BANK;
     b7InitTimer(&b7Timing_proc);
-    
-    RAM_BANK = LRU_CACHE_LOGIC_BANK;
-    bEInitLruCaches(&b8DiscardLogicFile, &b9DiscardView);
 
-    RAM_BANK = LOAD_DIRS_BANK;
-    b6InitFiles();             /* Load resource directories */
+    initLruCachesTrampoline(&b8DiscardLogicFile, &b9DiscardView);
+    
+    trampoline_0(&b6InitFiles, LOAD_DIRS_BANK);             /* Load resource directories */
+
     //// <<--  Determine exact version in here
     for (i = 0; i < 255; i++) {  /* Initialize variables and flags */
         var[i] = 0;
@@ -260,17 +250,15 @@ void initialise()
     initAGIScreen();
     initPalette();
 
-    RAM_BANK = LOGIC_CODE_BANK;
-    b8InitLogics();
+   
+    trampoline_0(&b8InitLogics, LOGIC_CODE_BANK);
     initPicture();
     initPictures();
     initSound();
     
-    RAM_BANK = 9;
-    b9InitViews();
-    b9InitObjects();
+    trampoline_0(&b9InitViews, VIEW_CODE_BANK_1);
+    trampoline_0(&b9InitObjects, VIEW_CODE_BANK_1);
 
-    RAM_BANK = MEKA_BANK;
     loadObjectFile();
     loadWords();
     initEvents();
@@ -280,9 +268,10 @@ void initialise()
 
     ///* Set up timer. The timer controls the interpreter speed. */
     counter = 0;
-
-    RAM_BANK = previousRamBank;
 }
+
+
+#pragma code-name (pop)
 
 void main()
 {
@@ -296,9 +285,11 @@ void main()
    //chdir("\\GAMES\\SIERRA\\LSL1");
    //chdir("..\\KQ2-2917");
 
-   initialise();
+   memoryMangerInit();
 
    RAM_BANK = MEKA_BANK;
+   b7Initialise();
+
    while (TRUE) {
       /* Cycle initiator. Controlled by delay variable (var[10). */
       if (counter >= var[10]) {
