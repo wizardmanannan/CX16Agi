@@ -89,7 +89,6 @@ void b8InitLogics()
 {
 	int i;
 	LOGICEntry logicEntry;
-
 	for (i = 0; i < 256; i++) {
 		getLogicEntry(&logicEntry, i);
 
@@ -178,14 +177,14 @@ void b8DiscardLogicFile(byte logFileNum)
 
 	if (logicEntry.loaded) {
 
-		if (logicEntry.loaded && !banked_dealloc((byte*)logicData.messages, logicData.messageBank))
+		if (logicEntry.loaded && !banked_deallocTrampoline((byte*)logicData.messages, logicData.messageBank))
 		{
 #ifdef VERBOSE
 			printf("Failed to deallocate messages for logic %d in bank %d", logFileNum, logicData.codeBank);
 #endif // VERBOSE
 		}
 
-		if (logicEntry.loaded && !banked_dealloc((byte*)logicData.logicCode, logicData.codeBank))
+		if (logicEntry.loaded && !banked_deallocTrampoline((byte*)logicData.logicCode, logicData.codeBank))
 		{
 #ifdef VERBOSE
 			printf("Failed to deallocate messages for logic %d in bank %d", logFileNum, logicData.codeBank);

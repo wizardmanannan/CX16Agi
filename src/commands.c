@@ -1603,14 +1603,14 @@ void b3ProcessString(char* stringPointer, byte stringBank, char* outputString)
 				tempNum = getNum(inputString, &i, stringBank);
 				if (inputString[i + 1] == '|') {
 					i += 2;
-					temp = (char*)banked_alloc(NUM_STRING_SIZE, &tempBank);
+					temp = (char*)banked_allocTrampoline(NUM_STRING_SIZE, &tempBank);
 					widthNum = getNum(inputString, &i, stringBank);
 					sprintfLength = sprintfBanked(temp, tempBank, "%d", var[tempNum]);
 					for (count = sprintfLength; count < widthNum; count++) {
 						sprintf(outputString, "%s0", outputString);
 					}
 					sprintf(outputString, "%s%d", outputString, var[tempNum]);
-					banked_dealloc((byte*)temp, &tempBank);
+					banked_deallocTrampoline((byte*)temp, &tempBank);
 				}
 				else
 					sprintf(outputString, "%s%d", outputString, var[tempNum]);
@@ -1647,11 +1647,11 @@ void b3ProcessString(char* stringPointer, byte stringBank, char* outputString)
 
 	/* Recursive part to make sure all % formatting codes are dealt with */
 	if (b3CharIsIn('%', outputString)) {
-		temp = (char*)banked_alloc(TEMP_SIZE, &tempBank);
+		temp = (char*)banked_allocTrampoline(TEMP_SIZE, &tempBank);
 		strcpyBanked(temp, outputString, tempBank);
 		b3ProcessString(temp, tempBank, outputString);
 
-		banked_dealloc((byte*)temp, tempBank);
+		banked_deallocTrampoline((byte*)temp, tempBank);
 	}
 }
 

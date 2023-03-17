@@ -231,9 +231,11 @@ void initialise()
 {
     byte previousRamBank = RAM_BANK;
     int i;
-    memoryMangerInit();
-    initTimer(&b7Timing_proc);
 
+    memoryMangerInit();
+
+    initTimer(&b7Timing_proc);
+    
     RAM_BANK = LRU_CACHE_LOGIC_BANK;
     bEInitLruCaches(&b8DiscardLogicFile, &b9DiscardView);
 

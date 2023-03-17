@@ -80,7 +80,7 @@
 
 #define FIRST_CODE_BANK 0x1
 #define LAST_CODE_BANK 0x5
-#define NO_CODE_BANKS 15
+#define NO_CODE_BANKS 16
 
 #define LRU_CACHE_LOGIC_BANK 0xE
 #define LRU_CACHE_LOGIC_STRUCT_START 8183
@@ -97,6 +97,7 @@
 #define FILE_LOADER_HELPERS 0x6
 #define MEKA_BANK 0x7
 #define LOGIC_CODE_BANK 0x8
+#define MEMORY_MANAGEMENT_BANK 0x10
 #define VIEW_CODE_BANK_1 0x9
 #define VIEW_CODE_BANK_2 0xA
 #define VIEW_CODE_BANK_3 0xB
@@ -124,7 +125,7 @@ extern byte* banked;
 extern int _noSegments;
 
 #ifndef _MSC_VER
-extern void _BANKRAM01_SIZE__[], _BANKRAM02_SIZE__[], _BANKRAM03_SIZE__[], _BANKRAM04_SIZE__[], _BANKRAM05_SIZE__[], _BANKRAM06_SIZE__[], _BANKRAM07_SIZE__[], _BANKRAM08_SIZE__[], _BANKRAM09_SIZE__[], _BANKRAM0A_SIZE__[], _BANKRAM0B_SIZE__[], _BANKRAM0C_SIZE__[], _BANKRAM0D_SIZE__[], _BANKRAM0E_SIZE__[], _BANKRAM0F_SIZE__[];
+extern void _BANKRAM01_SIZE__[], _BANKRAM02_SIZE__[], _BANKRAM03_SIZE__[], _BANKRAM04_SIZE__[], _BANKRAM05_SIZE__[], _BANKRAM06_SIZE__[], _BANKRAM07_SIZE__[], _BANKRAM08_SIZE__[], _BANKRAM09_SIZE__[], _BANKRAM0A_SIZE__[], _BANKRAM0B_SIZE__[], _BANKRAM0C_SIZE__[], _BANKRAM0D_SIZE__[], _BANKRAM0E_SIZE__[], _BANKRAM0F_SIZE__[], _BANKRAM10_SIZE__[];
 #endif // !_MSC_VER
 
 typedef struct {          /* DIR entry structure */
@@ -135,13 +136,11 @@ typedef struct {          /* DIR entry structure */
 	byte* start;
 } MemoryArea;
 
-void initDynamicMemory();
+void b10InitDynamicMemory();
 
 void memoryMangerInit();
-byte* banked_alloc(int size, byte* bank);
-boolean banked_dealloc(byte* ptr, byte bank);
-void initSegments(byte segOrder, byte noBanks, int segmentSize, byte noSegments, byte firstBank);
-byte getFirstSegment(byte size);
+byte* banked_allocTrampoline(int size, byte* bank);
+boolean banked_deallocTrampoline(byte* ptr, byte bank);
 
 #endif
 

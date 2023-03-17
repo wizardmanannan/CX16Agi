@@ -334,7 +334,7 @@ void b9LoadViewFile(byte viewNum)
 	{
 		description = (const char*)(tempAGI.code + viewStart[3] + viewStart[4] * 256);
 		descriptionLength = strlen(description);
-		localView.description = (char*)banked_alloc(descriptionLength, &localView.descriptionBank);
+		localView.description = (char*)banked_allocTrampoline(descriptionLength, &localView.descriptionBank);
 
 		memCpyBanked(&GOLDEN_RAM[LOCAL_WORK_AREA_SIZE], (const char*)&description, tempAGI.codeBank, descriptionLength <= LOCAL_WORK_AREA_SIZE ? descriptionLength : LOCAL_WORK_AREA_SIZE);
 		memCpyBanked((byte*)localView.description, &GOLDEN_RAM[LOCAL_WORK_AREA_SIZE], localView.descriptionBank, descriptionLength <= LOCAL_WORK_AREA_SIZE ? descriptionLength : LOCAL_WORK_AREA_SIZE);
@@ -370,7 +370,7 @@ void b9LoadViewFile(byte viewNum)
 #endif
 
 	localView.numberOfLoops = viewStart[2];
-	localView.loops = (Loop*)banked_alloc(viewStart[2] * sizeof(Loop), &localView.loopsBank);
+	localView.loops = (Loop*)banked_allocTrampoline(viewStart[2] * sizeof(Loop), &localView.loopsBank);
 
 
 	for (l = 0, viewIndex = POSITION_OF_LOOPS_OFFSET; l < localView.numberOfLoops; l++, viewIndex += 2) {
@@ -383,7 +383,7 @@ void b9LoadViewFile(byte viewNum)
 		printf("You have %d loops and the num of cells is %d and a loop pos of %d", localView.numberOfLoops, localLoop.numberOfCels, loopHeaderOffset);
 #endif // VERBOSE_LOAD_VIEWS
 
-		localLoop.cels = (Cel*)banked_alloc(localLoop.numberOfCels * sizeof(Cel), &localLoop.celBank);
+		localLoop.cels = (Cel*)banked_allocTrampoline(localLoop.numberOfCels * sizeof(Cel), &localLoop.celBank);
 
 		for (c = 0, loopIndex = 1; c < localLoop.numberOfCels; c++, loopIndex += 2) {
 
@@ -453,7 +453,7 @@ void b9LoadViewFile(byte viewNum)
 
 	localView.loaded = TRUE;
 
-	banked_dealloc(tempAGI.code, tempAGI.codeBank);
+	banked_deallocTrampoline(tempAGI.code, tempAGI.codeBank);
 
 	setLoadedView(&localView, viewNum);
 }
@@ -487,7 +487,7 @@ void b9DiscardView(byte viewNum)
 
 				setLocalCel(&localLoop, &localCel, c);
 			}
-			banked_dealloc((byte*)localLoop.cels, localLoop.celBank);
+			banked_deallocTrampoline((byte*)localLoop.cels, localLoop.celBank);
 			localLoop.celBank = 0;
 			localLoop.cels = NULL;
 			localLoop.numberOfCels = 0;
@@ -497,10 +497,10 @@ void b9DiscardView(byte viewNum)
 
 		if (localView.description != _emptyDecription)
 		{
-			banked_dealloc((byte*)localView.description, localView.descriptionBank);
+			banked_deallocTrampoline((byte*)localView.description, localView.descriptionBank);
 		}
 
-		banked_dealloc((byte*)localView.loops, localView.loopsBank);
+		banked_deallocTrampoline((byte*)localView.loops, localView.loopsBank);
 		localView.loaded = FALSE;
 	}
 }
