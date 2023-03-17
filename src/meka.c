@@ -234,7 +234,8 @@ void initialise()
 
     memoryMangerInit();
 
-    initTimer(&b7Timing_proc);
+    RAM_BANK = MEKA_BANK;
+    b7InitTimer(&b7Timing_proc);
     
     RAM_BANK = LRU_CACHE_LOGIC_BANK;
     bEInitLruCaches(&b8DiscardLogicFile, &b9DiscardView);
@@ -307,7 +308,7 @@ void main()
           b7Interpret();
         counter=0;
       }
-      checkTimer(TIMER_WAIT_MS);
+      b7CheckTimer(TIMER_WAIT_MS);
    }
 
    //chdir("\\HACK\\AGI\\D\\AGI\\MEKA");

@@ -1,15 +1,18 @@
 #include "timer.h"
+
+#pragma code-name (push, "BANKRAM07")
+
 timer_proc _timerProc;
 int _intervalMs = 0;
 clock_t _before;
 
-void initTimer(timer_proc timerProc)
+void b7InitTimer(timer_proc timerProc)
 {
 	_timerProc = timerProc;
 	_before = clock();
 }
 
-void checkTimer(int intervalMs)
+void b7CheckTimer(int intervalMs)
 {
 	clock_t difference = clock() - _before;
 	int msec = difference * 1000 / CLOCKS_PER_SEC;
@@ -23,3 +26,5 @@ void checkTimer(int intervalMs)
 		_before = clock();
 	}
 }
+
+#pragma code-name (pop)
