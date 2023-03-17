@@ -15,6 +15,13 @@ cwCurrentCode: .word $0
 codeWindowAddress: .addr codeWindow
 codeWindowInvalid: .byte TRUE
 codeBankArray: .byte $5,$1,$1,$1,$1,$1,$1,$2,$2,$2,$2,$2,$2,$2,$2,$2,$2,$2,$2,$2,$2,$2,$2,$2,$2,$2,$2,$2,$2,$2,$2,$2,$2,$2,$2,$2,$2,$2,$2,$2,$2,$2,$2,$2,$2,$2,$2,$2,$2,$2,$2,$3,$3,$3,$3,$3,$3,$3,$3,$3,$3,$3,$3,$3,$3,$3,$3,$3,$3,$3,$3,$3,$3,$3,$3,$3,$3,$3,$3,$3,$3,$3,$3,$3,$3,$3,$3,$3,$3,$3,$1,$1,$3,$3,$3,$3,$3,$3,$3,$3,$3,$3,$4,$4,$4,$4,$4,$4,$4,$4,$1,$4,$4,$4,$4,$4,$4,$4,$4,$4,$4,$4,$4,$4,$4,$1,$1,$1,$4,$4,$4,$4,$4,$4,$4,$1,$4,$1,$1,$1,$1,$4,$1,$1,$1,$4,$4,$4,$4,$1,$1,$4,$4,$4,$4,$1,$4,$5,$1,$1,$1,$5,$5,$1,$1,$5,$5,$5,$5,$1,$1,$1,$1,$1,$1,$1,$1,$1,$1,$1,$1,$1,$1
+
+.macro DEBUG_CODE_STATE
+.ifdef DEBUG
+ JSRFAR debugCodeState, DEBUG_BANK
+.endif
+.endmacro
+
 codeWindowInit:
 lda codeWindowAddress
 sta ZP_PTR_CODE_WIN
@@ -125,18 +132,12 @@ _incCodeBy:
     INC_CODE_BY @jumpAmount
     rts
 
+.SEGMENT "BANKRAM05"
 .ifdef DEBUG
 debugCodeState:
     bra @start
     @result: .word $0
-    @previousBank: .byte $0
     @start:
-    lda RAM_BANK
-    sta @previousBank
-
-    lda _codeBank
-    sta RAM_BANK
-
     clc
     lda ZP_PTR_CODE
     adc cwCurrentCode
@@ -148,10 +149,6 @@ debugCodeState:
 
 
     jsr _debugPrintCurrentCodeState
-
-    lda @previousBank
-    sta RAM_BANK
-
     rts
 .endif
 

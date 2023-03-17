@@ -8,12 +8,12 @@ LOGIC_ENTRY_PARAMETERS_OFFSET =  0
 .include "logicCommands.s"
 .include "codeWindow.s"
 
+.segment "CODE"
 .import _debugPrint
 
 ZP_PTR_LF = $02
 ZP_PTR_LE = $04
 
-.segment "CODE"
 stillExecuting: .byte $1
 jumpOffset: .byte $0
 numArgs: .byte $0,$2,$2,$2,$2,$2,$2,$1,$1,$1,$2,$5,$1,$0,$0,$2,$5,$5,$5
@@ -111,8 +111,7 @@ sta RAM_BANK
     ORA_16 @b1, @disp, @disp 
 
     INC_CODE_BY @disp
-
-    jsr debugCodeState
+    DEBUG_CODE_STATE
 .endmacro
 
 debugPrintTrampoline:
@@ -329,9 +328,7 @@ goto:
     lda #TRUE
     sta codeWindowInvalid
     jsr refreshCodeWindow
-.ifdef DEBUG
-    jsr debugCodeState
-.endif
+    DEBUG_CODE_STATE
     rts
 ;endCommandLoopHelpers
 
@@ -393,9 +390,7 @@ _commandLoop:
         cmp #$FE
         bne @default
         DEBUG_PRINT
-        .ifdef DEBUG
-        jsr debugCodeState
-        .endif
+        DEBUG_CODE_STATE
         INC_CODE
         lda #COMMAND_LOOP_HELPER_BANK
         sta RAM_BANK

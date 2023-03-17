@@ -3,11 +3,12 @@
 
 extern boolean* flag;
 extern byte* var;
+extern byte codeBank;
 
 long opCounter = 1;
 long stopAt = 10000;
 long exitAt = 20000;
-long startPrintingAt = 5000;
+long startPrintingAt = 6000;
 boolean stopEvery = FALSE;
 
 void stopAtFunc()
@@ -238,13 +239,18 @@ void codeJumpDebug()
 		printf("b1 is %d b2 is %d and the jump result is %u\n", logDebugVal1, logDebugVal2, (logDebugVal2 << 8) | logDebugVal1);
 	}
 }
-#pragma code-name (pop);
+
 void debugPrintCurrentCodeState(byte* code)
 {
+	byte codeValue;
+	memCpyBanked(&codeValue, code, codeBank, 1);
 	if (opCounter >= startPrintingAt) {
-		printf("the code is now %u and the address is %p\n", *code, code);
+		printf("the code is now %u and the address is %p\n", codeValue, code);
 	}
 }
+
+#pragma code-name (pop);
+
 
 
 

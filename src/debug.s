@@ -1,5 +1,5 @@
 .include "codeWindow.s"
-
+.segment "CODE"
 .import _opCounter
 
 tellMeTheAddressPlease:
