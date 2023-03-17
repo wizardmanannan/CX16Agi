@@ -4,7 +4,7 @@
     .include "codeWindow.s"
     .include "global.s"
     .export _commandLoop
-    .export _initAsm
+    .export _b7InitAsm
     .export _loadAndIncWinCode
     .export _afterLogicCommand
     .export _incCodeBy

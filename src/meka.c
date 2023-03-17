@@ -46,7 +46,7 @@ int controlMode=PLAYER_CONTROL;    /* player.control or program.control */
 int dirnOfEgo, newRoomNum, score;
 
 extern int picFNum;    // Debugging. Delete at some stage!!
-extern void initAsm();
+extern void b7InitAsm();
 
 #pragma code-name (push, "BANKRAM07")
 void b7AdjustEgoPosition()
@@ -273,7 +273,7 @@ void initialise()
     loadObjectFile();
     loadWords();
     initEvents();
-    initAsm();
+    b7InitAsm();
 
     horizon = 36;
 

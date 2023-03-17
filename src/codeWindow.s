@@ -18,13 +18,9 @@ codeBankArray: .byte $5,$1,$1,$1,$1,$1,$1,$2,$2,$2,$2,$2,$2,$2,$2,$2,$2,$2,$2,$2
 
 .macro DEBUG_CODE_STATE
 .ifdef DEBUG
- JSRFAR debugCodeState, DEBUG_BANK
+ JSRFAR b5DebugCodeState, DEBUG_BANK
 .endif
 .endmacro
-
-codeWindowInit:
-lda codeWindowAddress
-sta ZP_PTR_CODE_WIN
 
 lda codeWindowAddress + 1
 sta ZP_PTR_CODE_WIN + 1
@@ -69,6 +65,7 @@ lda #TRUE
 sta codeWindowInvalid
 .endmacro
 
+.SEGMENT "CODE"
 refreshCodeWindow:
     bra @start
     @previousBank: .byte $0
@@ -132,9 +129,18 @@ _incCodeBy:
     INC_CODE_BY @jumpAmount
     rts
 
+.SEGMENT "BANKRAM07"
+b7CodeWindowInit:
+lda codeWindowAddress
+sta ZP_PTR_CODE_WIN
+
+lda codeWindowAddress + 1
+sta ZP_PTR_CODE_WIN + 1
+rts
+
 .SEGMENT "BANKRAM05"
 .ifdef DEBUG
-debugCodeState:
+b5DebugCodeState:
     bra @start
     @result: .word $0
     @start:

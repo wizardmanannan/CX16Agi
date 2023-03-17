@@ -2,7 +2,7 @@
 .segment "BANKRAM05"
 .import _opCounter
 
-tellMeTheAddressPlease:
+b5TellMeTheAddressPlease:
 stp
 lda codeWindow
 lda cwCurrentCode

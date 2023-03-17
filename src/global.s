@@ -1,7 +1,6 @@
 .ifndef  GLOBAL_INC
 
 .include "x16.inc"
-
 DEBUG = 1 ;Note the debug preprocessor variable in helpers.h must also be enabled to avoid errors
 
 startPos: .word $0
