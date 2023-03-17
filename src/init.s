@@ -4,7 +4,7 @@
 
 .segment "CODE"
 _initAsm:
-jsr tellMeTheAddressPlease
+JSRFAR tellMeTheAddressPlease, DEBUG_BANK
 jsr codeWindowInit
 
 rts
