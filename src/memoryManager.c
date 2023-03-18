@@ -2,7 +2,7 @@
 MemoryArea* _memoryAreas;
 int _noSegments;
 
-#define VERBOSE
+//#define VERBOSE
 
 #ifdef _MSC_VER //Used for testing under windows
 byte* banked;
@@ -116,7 +116,7 @@ void b10InitDynamicMemory()
 
 	_noSegments = TINY_NO_SEGMENTS + EXTRA_SMALL_NO_SEGMENTS + SMALL_NO_SEGMENTS + MEDIUM_NO_SEGMENTS + LARGE_NO_SEGMENTS;
 
-	_memoryAreas = BANK_RAM[MEMORY_AREA_START];
+	_memoryAreas = malloc(sizeof(MemoryArea) * NO_SIZES);
 
 	initSegments(TINY_SEG_ORDER, TINY_NO_BANKS, TINY_SIZE, TINY_NO_SEGMENTS, TINY_FIRST_BANK);
 	initSegments(EXTRA_SMALL_SEG_ORDER, EXTRA_SMALL_NO_BANKS, EXTRA_SMALL_SIZE, EXTRA_SMALL_NO_SEGMENTS, EXTRA_SMALL_FIRST_BANK);
