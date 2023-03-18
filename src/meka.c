@@ -176,7 +176,9 @@ void b7Interpret()
       printf("Back To Meka");
 #endif // VERBOSE
       //dirnOfEgo = var[6];
-      viewtab[0].direction = var[6];
+      getViewTab(&localViewtab, 0);
+      localViewtab.direction = var[6];
+      setViewTab(&localViewtab, 0);
       // <<-- Update status line here (score & sound)
       b7UpdateStatusLine();
       var[5] = 0;

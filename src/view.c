@@ -209,10 +209,16 @@ void viewUpdaterTrampoline2i(fnTrampolineViewUpdater2Int func, ViewTable* localV
 void b9InitViews()
 {
 	int i;
-
+	View localView;
 	for (i = 0; i < 256; i++) {
-		loadedViews[i].loaded = FALSE;
-		loadedViews[i].numberOfLoops = 0;
+		localView.description = 0;
+		localView.descriptionBank = 0;
+		localView.loaded = FALSE;
+		localView.loops = 0;
+		localView.loopsBank = 0;
+		localView.numberOfLoops = 0;
+
+		setLoadedView(&localView, i);
 	}
 
 	spriteScreen = create_bitmap(160, 168);
@@ -508,13 +514,15 @@ void b9SetCel(ViewTable* localViewtab, byte celNum)
 {
 	Loop temp;
 	View localLoadedView;
+	Cel localCel;
 
 	getLoadedView(&localLoadedView, localViewtab->currentView);
 	getLocalLoop(&localLoadedView, &temp, localViewtab->currentLoop);
-		
+	getLocalCel(&temp, &localCel, celNum);
+
 	localViewtab->currentCel = celNum;
-	localViewtab->xsize = temp.cels[celNum].width;
-	localViewtab->ysize = temp.cels[celNum].height;
+	localViewtab->xsize = localCel.width;
+	localViewtab->ysize = localCel.height;
 }
 
 void b9SetLoop(ViewTable* localViewtab, byte loopNum)
@@ -538,12 +546,17 @@ void b9SetLoop(ViewTable* localViewtab, byte loopNum)
 **************************************************************************/
 void b9AddViewToTable(ViewTable* localViewtab, byte viewNum)
 {
+	View localView;
+	Loop localLoop;
+	
+	getLoadedView(&localView, viewNum);
+	getLocalLoop(&localView, &localLoop, 0);
+
 	localViewtab->currentView = viewNum;
-	localViewtab->viewData = &loadedViews[viewNum];
-	localViewtab->numberOfLoops = loadedViews[viewNum].numberOfLoops;
+	localViewtab->numberOfLoops = localView.numberOfLoops;
 	b9SetLoop(localViewtab, 0);
 
-	localViewtab->numberOfCels = loadedViews[viewNum].loops[0].numberOfCels;
+	localViewtab->numberOfCels = localLoop.numberOfCels;
 	b9SetCel(localViewtab, 0);
 	/* Might need to set some more defaults here */
 }
@@ -832,7 +845,7 @@ void bAFollowEgo(int entryNum) /* This needs to be more intelligent. */
 
 	getViewTab(&localViewtab, entryNum);
 
-	bAAdjustPosition(&localViewtab, viewtab[0].xPos, viewtab[0].yPos);
+	bAAdjustPosition(&localViewtab, localViewtab.xPos, localViewtab.yPos);
 
 	setViewTab(&localViewtab, entryNum);
 }
@@ -1748,203 +1761,203 @@ void bCCalcObjMotion()
 #pragma code-name (pop)
 #pragma code-name (push, "BANKRAM0D")
 
-/***************************************************************************
-** showView
-**
-** Purpose: To display all the cells of VIEW.
-***************************************************************************/
-void bDShowView(int viewNum)
-{
-	int loopNum, celNum, maxHeight, totalWidth, totalHeight = 5;
-	int startX = 0, startY = 0;
-	BITMAP* temp = create_bitmap(800, 600);
-	BITMAP* scn = create_bitmap(320, 240);
-	char viewString[20], loopString[3];
-	boolean stillViewing = TRUE;
-
-	clear_to_color(temp, 15);
-
-	for (loopNum = 0; loopNum < loadedViews[viewNum].numberOfLoops; loopNum++) {
-		maxHeight = 0;
-		totalWidth = 25;
-		sprintf(loopString, "%2d", loopNum);
-		drawString(temp, loopString, 2, totalHeight, 0, 15);
-		for (celNum = 0; celNum < loadedViews[viewNum].loops[loopNum].numberOfCels; celNum++) {
-			if (maxHeight < loadedViews[viewNum].loops[loopNum].cels[celNum].height)
-				maxHeight = loadedViews[viewNum].loops[loopNum].cels[celNum].height;
-			//blit(loadedViews[viewNum].loops[loopNum].cels[celNum].bmp, temp,
-			//   0, 0, totalWidth, totalHeight,
-			//   loadedViews[viewNum].loops[loopNum].cels[celNum].width,
-			//   loadedViews[viewNum].loops[loopNum].cels[celNum].height);
-			stretch_blit(loadedViews[viewNum].loops[loopNum].cels[celNum].bmp,
-				temp, 0, 0,
-				loadedViews[viewNum].loops[loopNum].cels[celNum].width,
-				loadedViews[viewNum].loops[loopNum].cels[celNum].height,
-				totalWidth, totalHeight,
-				loadedViews[viewNum].loops[loopNum].cels[celNum].width * 2,
-				loadedViews[viewNum].loops[loopNum].cels[celNum].height);
-			totalWidth += loadedViews[viewNum].loops[loopNum].cels[celNum].width * 2;
-			totalWidth += 3;
-		}
-		if (maxHeight < 10) maxHeight = 10;
-		totalHeight += maxHeight;
-		totalHeight += 3;
-	}
-
-	if (strcmp(loadedViews[viewNum].description, "") != 0) {
-		int i, counter = 0, descLine = 0, maxLen = 0, strPos;
-		char* tempString = (char*)&GOLDEN_RAM[LOCAL_WORK_AREA_START];
-		char* string = loadedViews[viewNum].description;
-
-		totalHeight += 20;
-
-		for (i = 0; i < strlen(string); i++) {
-			if (counter++ > 30) {
-				for (strPos = strlen(tempString) - 1; strPos >= 0; strPos--)
-					if (tempString[strPos] == ' ') break;
-				tempString[strPos] = 0;
-				drawString(temp, tempString, 27, totalHeight + descLine, 0, 15);
-				sprintf(tempString, "%s%c", &tempString[strPos + 1], string[i]);
-				descLine += 8;
-				if (strPos > maxLen) maxLen = strPos;
-				counter = strlen(tempString);
-			}
-			else {
-				if (string[i] == 0x0A) {
-					sprintf(tempString, "%s\\n", tempString);
-					counter++;
-				}
-				else {
-					if (string[i] == '\"') {
-						sprintf(tempString, "%s\\\"", tempString);
-						counter++;
-					}
-					else {
-						sprintf(tempString, "%s%c", tempString, string[i]);
-					}
-				}
-			}
-		}
-		drawString(temp, tempString, 27, totalHeight + descLine, 0, 15);
-		rect(temp, 25, totalHeight - 2, 25 + (maxLen + 1) * 8 + 3,
-			(totalHeight - 2) + (descLine + 8) + 3, 4);
-	}
-
-	sprintf(viewString, "view.%d", viewNum);
-	rect(scn, 0, 0, 319, 9, 4);
-	rectfill(scn, 1, 1, 318, 8, 4);
-	drawString(scn, viewString, 130, 1, 0, 4);
-	rect(scn, 310, 9, 319, 230, 4);
-	rectfill(scn, 311, 10, 318, 229, 3);
-	rect(scn, 310, 230, 319, 239, 4);
-	drawChar(scn, 0xB1, 311, 231, 4, 3);
-	drawChar(scn, 0x18, 311, 11, 4, 3);
-	drawChar(scn, 0x19, 311, 222, 4, 3);
-	rect(scn, 0, 230, 310, 239, 4);
-	rectfill(scn, 1, 231, 309, 238, 3);
-	drawChar(scn, 0x1B, 2, 231, 4, 3);
-	drawChar(scn, 0x1A, 302, 231, 4, 3);
-	blit(temp, scn, 0, 0, 0, 10, 310, 220);
-	stretch_blit(scn, screen, 0, 0, 320, 240, 0, 0, 640, 480);
-
-	while (stillViewing) {
-		switch (readkey() >> 8) {
-		case KEY_ESC:
-			stillViewing = FALSE;
-			break;
-		case KEY_UP:
-			startY -= 5;
-			break;
-		case KEY_DOWN:
-			startY += 5;
-			break;
-		case KEY_LEFT:
-			startX -= 5;
-			break;
-		case KEY_RIGHT:
-			startX += 5;
-			break;
-		case KEY_PGUP:
-			startY -= 220;
-			break;
-		case KEY_PGDN:
-			startY += 220;
-			break;
-		case KEY_END:
-			startX = 489;
-			break;
-		case KEY_HOME:
-			startX = 0;
-			break;
-		}
-		if (startY < 0) startY = 0;
-		if (startY >= 380) startY = 379;
-		if (startX < 0) startX = 0;
-		if (startX >= 490) startX = 489;
-		stretch_blit(temp, screen, startX, startY, 310, 220, 0, 20, 620, 440);
-	}
-
-	destroy_bitmap(temp);
-	destroy_bitmap(scn);
-}
-
-/***************************************************************************
-** showView2
-**
-** Purpose: To display AGI VIEWs and allow scrolling through the cells and
-** loops. You have to install the allegro keyboard handler to call this
-** function.
-***************************************************************************/
-void bDShowView2(int viewNum)
-{
-	int loopNum = 0, celNum = 0;
-	BITMAP* temp = create_bitmap(640, 480);
-	char viewString[20], loopString[20], celString[20];
-	boolean stillViewing = TRUE;
-
-	sprintf(viewString, "View number: %d", viewNum);
-
-	while (stillViewing) {
-		clear(temp);
-		textout(temp, font, viewString, 10, 10, 15);
-		sprintf(loopString, "Loop number: %d", loopNum);
-		sprintf(celString, "Cel number: %d", celNum);
-		textout(temp, font, loopString, 10, 18, 15);
-		textout(temp, font, celString, 10, 26, 15);
-		stretch_blit(loadedViews[viewNum].loops[loopNum].cels[celNum].bmp, temp,
-			0, 0, loadedViews[viewNum].loops[loopNum].cels[celNum].width,
-			loadedViews[viewNum].loops[loopNum].cels[celNum].height, 10, 40,
-			loadedViews[viewNum].loops[loopNum].cels[celNum].width * 4,
-			loadedViews[viewNum].loops[loopNum].cels[celNum].height * 3);
-		blit(temp, screen, 0, 0, 0, 0, 640, 480);
-		switch (readkey() >> 8) {  /* Scan code */
-		case KEY_UP:
-			loopNum++;
-			break;
-		case KEY_DOWN:
-			loopNum--;
-			break;
-		case KEY_LEFT:
-			celNum--;
-			break;
-		case KEY_RIGHT:
-			celNum++;
-			break;
-		case KEY_ESC:
-			stillViewing = FALSE;
-			break;
-		}
-
-		if (loopNum < 0) loopNum = loadedViews[viewNum].numberOfLoops - 1;
-		if (loopNum >= loadedViews[viewNum].numberOfLoops) loopNum = 0;
-		if (celNum < 0)
-			celNum = loadedViews[viewNum].loops[loopNum].numberOfCels - 1;
-		if (celNum >= loadedViews[viewNum].loops[loopNum].numberOfCels)
-			celNum = 0;
-	}
-
-	destroy_bitmap(temp);
-}
+///***************************************************************************
+//** showView
+//**
+//** Purpose: To display all the cells of VIEW.
+//***************************************************************************/
+//void bDShowView(int viewNum)
+//{
+//	int loopNum, celNum, maxHeight, totalWidth, totalHeight = 5;
+//	int startX = 0, startY = 0;
+//	BITMAP* temp = create_bitmap(800, 600);
+//	BITMAP* scn = create_bitmap(320, 240);
+//	char viewString[20], loopString[3];
+//	boolean stillViewing = TRUE;
+//
+//	clear_to_color(temp, 15);
+//
+//	for (loopNum = 0; loopNum < loadedViews[viewNum].numberOfLoops; loopNum++) {
+//		maxHeight = 0;
+//		totalWidth = 25;
+//		sprintf(loopString, "%2d", loopNum);
+//		drawString(temp, loopString, 2, totalHeight, 0, 15);
+//		for (celNum = 0; celNum < loadedViews[viewNum].loops[loopNum].numberOfCels; celNum++) {
+//			if (maxHeight < loadedViews[viewNum].loops[loopNum].cels[celNum].height)
+//				maxHeight = loadedViews[viewNum].loops[loopNum].cels[celNum].height;
+//			//blit(loadedViews[viewNum].loops[loopNum].cels[celNum].bmp, temp,
+//			//   0, 0, totalWidth, totalHeight,
+//			//   loadedViews[viewNum].loops[loopNum].cels[celNum].width,
+//			//   loadedViews[viewNum].loops[loopNum].cels[celNum].height);
+//			stretch_blit(loadedViews[viewNum].loops[loopNum].cels[celNum].bmp,
+//				temp, 0, 0,
+//				loadedViews[viewNum].loops[loopNum].cels[celNum].width,
+//				loadedViews[viewNum].loops[loopNum].cels[celNum].height,
+//				totalWidth, totalHeight,
+//				loadedViews[viewNum].loops[loopNum].cels[celNum].width * 2,
+//				loadedViews[viewNum].loops[loopNum].cels[celNum].height);
+//			totalWidth += loadedViews[viewNum].loops[loopNum].cels[celNum].width * 2;
+//			totalWidth += 3;
+//		}
+//		if (maxHeight < 10) maxHeight = 10;
+//		totalHeight += maxHeight;
+//		totalHeight += 3;
+//	}
+//
+//	if (strcmp(loadedViews[viewNum].description, "") != 0) {
+//		int i, counter = 0, descLine = 0, maxLen = 0, strPos;
+//		char* tempString = (char*)&GOLDEN_RAM[LOCAL_WORK_AREA_START];
+//		char* string = loadedViews[viewNum].description;
+//
+//		totalHeight += 20;
+//
+//		for (i = 0; i < strlen(string); i++) {
+//			if (counter++ > 30) {
+//				for (strPos = strlen(tempString) - 1; strPos >= 0; strPos--)
+//					if (tempString[strPos] == ' ') break;
+//				tempString[strPos] = 0;
+//				drawString(temp, tempString, 27, totalHeight + descLine, 0, 15);
+//				sprintf(tempString, "%s%c", &tempString[strPos + 1], string[i]);
+//				descLine += 8;
+//				if (strPos > maxLen) maxLen = strPos;
+//				counter = strlen(tempString);
+//			}
+//			else {
+//				if (string[i] == 0x0A) {
+//					sprintf(tempString, "%s\\n", tempString);
+//					counter++;
+//				}
+//				else {
+//					if (string[i] == '\"') {
+//						sprintf(tempString, "%s\\\"", tempString);
+//						counter++;
+//					}
+//					else {
+//						sprintf(tempString, "%s%c", tempString, string[i]);
+//					}
+//				}
+//			}
+//		}
+//		drawString(temp, tempString, 27, totalHeight + descLine, 0, 15);
+//		rect(temp, 25, totalHeight - 2, 25 + (maxLen + 1) * 8 + 3,
+//			(totalHeight - 2) + (descLine + 8) + 3, 4);
+//	}
+//
+//	sprintf(viewString, "view.%d", viewNum);
+//	rect(scn, 0, 0, 319, 9, 4);
+//	rectfill(scn, 1, 1, 318, 8, 4);
+//	drawString(scn, viewString, 130, 1, 0, 4);
+//	rect(scn, 310, 9, 319, 230, 4);
+//	rectfill(scn, 311, 10, 318, 229, 3);
+//	rect(scn, 310, 230, 319, 239, 4);
+//	drawChar(scn, 0xB1, 311, 231, 4, 3);
+//	drawChar(scn, 0x18, 311, 11, 4, 3);
+//	drawChar(scn, 0x19, 311, 222, 4, 3);
+//	rect(scn, 0, 230, 310, 239, 4);
+//	rectfill(scn, 1, 231, 309, 238, 3);
+//	drawChar(scn, 0x1B, 2, 231, 4, 3);
+//	drawChar(scn, 0x1A, 302, 231, 4, 3);
+//	blit(temp, scn, 0, 0, 0, 10, 310, 220);
+//	stretch_blit(scn, screen, 0, 0, 320, 240, 0, 0, 640, 480);
+//
+//	while (stillViewing) {
+//		switch (readkey() >> 8) {
+//		case KEY_ESC:
+//			stillViewing = FALSE;
+//			break;
+//		case KEY_UP:
+//			startY -= 5;
+//			break;
+//		case KEY_DOWN:
+//			startY += 5;
+//			break;
+//		case KEY_LEFT:
+//			startX -= 5;
+//			break;
+//		case KEY_RIGHT:
+//			startX += 5;
+//			break;
+//		case KEY_PGUP:
+//			startY -= 220;
+//			break;
+//		case KEY_PGDN:
+//			startY += 220;
+//			break;
+//		case KEY_END:
+//			startX = 489;
+//			break;
+//		case KEY_HOME:
+//			startX = 0;
+//			break;
+//		}
+//		if (startY < 0) startY = 0;
+//		if (startY >= 380) startY = 379;
+//		if (startX < 0) startX = 0;
+//		if (startX >= 490) startX = 489;
+//		stretch_blit(temp, screen, startX, startY, 310, 220, 0, 20, 620, 440);
+//	}
+//
+//	destroy_bitmap(temp);
+//	destroy_bitmap(scn);
+//}
+//
+///***************************************************************************
+//** showView2
+//**
+//** Purpose: To display AGI VIEWs and allow scrolling through the cells and
+//** loops. You have to install the allegro keyboard handler to call this
+//** function.
+//***************************************************************************/
+//void bDShowView2(int viewNum)
+//{
+//	int loopNum = 0, celNum = 0;
+//	BITMAP* temp = create_bitmap(640, 480);
+//	char viewString[20], loopString[20], celString[20];
+//	boolean stillViewing = TRUE;
+//
+//	sprintf(viewString, "View number: %d", viewNum);
+//
+//	while (stillViewing) {
+//		clear(temp);
+//		textout(temp, font, viewString, 10, 10, 15);
+//		sprintf(loopString, "Loop number: %d", loopNum);
+//		sprintf(celString, "Cel number: %d", celNum);
+//		textout(temp, font, loopString, 10, 18, 15);
+//		textout(temp, font, celString, 10, 26, 15);
+//		stretch_blit(loadedViews[viewNum].loops[loopNum].cels[celNum].bmp, temp,
+//			0, 0, loadedViews[viewNum].loops[loopNum].cels[celNum].width,
+//			loadedViews[viewNum].loops[loopNum].cels[celNum].height, 10, 40,
+//			loadedViews[viewNum].loops[loopNum].cels[celNum].width * 4,
+//			loadedViews[viewNum].loops[loopNum].cels[celNum].height * 3);
+//		blit(temp, screen, 0, 0, 0, 0, 640, 480);
+//		switch (readkey() >> 8) {  /* Scan code */
+//		case KEY_UP:
+//			loopNum++;
+//			break;
+//		case KEY_DOWN:
+//			loopNum--;
+//			break;
+//		case KEY_LEFT:
+//			celNum--;
+//			break;
+//		case KEY_RIGHT:
+//			celNum++;
+//			break;
+//		case KEY_ESC:
+//			stillViewing = FALSE;
+//			break;
+//		}
+//
+//		if (loopNum < 0) loopNum = loadedViews[viewNum].numberOfLoops - 1;
+//		if (loopNum >= loadedViews[viewNum].numberOfLoops) loopNum = 0;
+//		if (celNum < 0)
+//			celNum = loadedViews[viewNum].loops[loopNum].numberOfCels - 1;
+//		if (celNum >= loadedViews[viewNum].loops[loopNum].numberOfCels)
+//			celNum = 0;
+//	}
+//
+//	destroy_bitmap(temp);
+//}
 
 /***************************************************************************
 ** showObjectState

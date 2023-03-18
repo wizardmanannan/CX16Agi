@@ -1166,7 +1166,7 @@ void b3Stop_cycling() // 1, 0x00
 {
 	int entryNum;
 	ViewTable localViewtab;
-
+	
 	entryNum = loadAndIncWinCode();
 	getViewTab(&localViewtab, entryNum);
 
