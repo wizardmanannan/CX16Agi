@@ -3,9 +3,6 @@
 #include "general.h"
 #include "memoryManager.h"
 #include "agifiles.h"
-#include <stdbool.h>
-#include <stdio.h>
-#include <string.h>
 
 #ifdef  __CX16__
 #include <cx16.h>

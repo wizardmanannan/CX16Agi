@@ -9,8 +9,6 @@
 **
 ** (c) Lance Ewing, 1998.
 ***************************************************************************/
-#include <string.h>
-#include <stdlib.h>
 #include "general.h"
 #include "timer.h"
 #include "agifiles.h"
@@ -20,6 +18,7 @@
 #include "stub.h"
 #include "memoryManager.h"
 #include "lruCache.h"
+#include "debugHelper.h"
 //#include "object.h"
 //#include "words.h"
 //#include "picture.h"
@@ -286,6 +285,7 @@ void main()
    //chdir("..\\KQ2-2917");
 
    memoryMangerInit();
+   trampoline_0(b5CheckMemory, DEBUG_BANK);
 
    RAM_BANK = MEKA_BANK;
    b7Initialise();

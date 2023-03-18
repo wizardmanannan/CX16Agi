@@ -3,8 +3,8 @@
 #include "helpers.h"
 #include "memoryManager.h"
 #include "lruCache.h"
-#include <string.h>
 #include "logic.h"
+#include "debugHelper.h"
 
 void executeLogic(int logNum);
 void b1Call(unsigned char** data);

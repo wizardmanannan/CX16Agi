@@ -5,7 +5,6 @@
 #ifndef _LOGIC_H_
 #define _LOGIC_H_
 
-#include <stdlib.h>
 #include "helpers.h"
 #include "lruCache.h"
 

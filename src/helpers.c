@@ -3,30 +3,33 @@
 
 boolean debugStop = FALSE;
 
-byte convertAsciiByteToPetsciiByte(byte* toConvert)
+#pragma code-name (push, "BANKRAM05")
+byte convertAsciiByteToPetsciiByte(byte toConvert)
 {
-	if (*toConvert == ASCIIDASH)
+	if (toConvert == ASCIIDASH)
 	{
-		*toConvert = PETSCIIDash;
+		toConvert = PETSCIIDash;
 #ifdef VERBOSE
-		printf("Dash Converting %c to %c \n", *toConvert, *toConvert + DIFF_ASCII_PETSCII_CAPS);
+		printf("Dash Converting %c to %c \n", toConvert, toConvert + DIFF_ASCII_PETSCII_CAPS);
 #endif
 	}
-	else if (*toConvert >= ASCIIA && *toConvert <= ASCIIZ)
+	else if (toConvert >= ASCIIA && toConvert <= ASCIIZ)
 	{
 #ifdef VERBOSE
-		printf("Upper Converting %c to %c \n", *toConvert, *toConvert + DIFF_ASCII_PETSCII_CAPS);
+		printf("Upper Converting %c to %c \n", toConvert, toConvert + DIFF_ASCII_PETSCII_CAPS);
 #endif
-		*toConvert = *toConvert + DIFF_ASCII_PETSCII_CAPS;
+		toConvert = toConvert + DIFF_ASCII_PETSCII_CAPS;
 	}
-	else if (*toConvert >= ASCIIa && *toConvert <= ASCIIz)
+	else if (toConvert >= ASCIIa && toConvert <= ASCIIz)
 	{
-		*toConvert = *toConvert + DIFF_ASCII_PETSCII_LOWER;
+		toConvert = toConvert + DIFF_ASCII_PETSCII_LOWER;
 #ifdef VERBOSE
-		printf("Lower Converting %c to %c \n", *toConvert, *toConvert + DIFF_ASCII_PETSCII_CAPS);
+		printf("Lower Converting %c to %c \n", toConvert, toConvert + DIFF_ASCII_PETSCII_CAPS);
 #endif
 	}
+	return toConvert;
 }
+#pragma code-name (pop);
 
 void trampoline_0(fnTrampoline_0 func, byte bank)
 {
@@ -84,6 +87,7 @@ void copyStringFromBanked(char* src, char* dest, int start, int chunk, byte sour
 {
 	int i;
 	byte previousRamBank = RAM_BANK;
+	byte convertResult;
 
 	RAM_BANK = sourceBank;
 
@@ -92,7 +96,10 @@ void copyStringFromBanked(char* src, char* dest, int start, int chunk, byte sour
 		dest[i - start] = src[i];
 		if (convertFromAsciiByteToPetscii)
 		{
-			convertAsciiByteToPetsciiByte((byte*) &dest[i - start]);
+			RAM_BANK = HELPERS_BANK;
+			convertResult = convertAsciiByteToPetsciiByte(dest[i - start]);
+			RAM_BANK = sourceBank;
+			dest[i - start] = convertResult;
 		}
 	}
 

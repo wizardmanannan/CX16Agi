@@ -5,7 +5,6 @@
 #ifndef _AGIFILES_H_
 #define _AGIFILES_H_
 
-#include <string.h>
 #include "memoryManager.h"
 
 #ifdef  __CX16__

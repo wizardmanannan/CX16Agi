@@ -4,4 +4,7 @@
 #include "general.h"
 #include "helpers.h"
 #include "view.h"
+
+
+void b5CheckMemory();
 #endif

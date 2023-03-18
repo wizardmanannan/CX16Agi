@@ -14,11 +14,9 @@
 //#define VERBOSE
 //#define VERBOSE_VIEW_LOAD_DEBUG
 //define VERBOSE_LOGIC_LOAD_DEBUG
-#include <stdio.h>
-#include <stdlib.h>
 #include <stdint.h>
 #include <cbm.h>
-#include <dbg.h>
+
 
 #include "general.h"
 #include "agifiles.h"
@@ -474,6 +472,7 @@ void loadAGIFile(int resType, AGIFilePosType* location, AGIFile* AGIData)
 	byte previousRamBank = RAM_BANK;
 	char fileName[10];
 
+
 	previousRamBank = RAM_BANK;
 
 	if (location->filePos == EMPTY) {
@@ -529,7 +528,12 @@ void loadAGIFile(int resType, AGIFilePosType* location, AGIFile* AGIData)
 		for (i = 0; i < getMessageSectionSize; i++) {
 
 			xOrAvisDurgan((byte*)&AGIData->messageData[i], &avisPos);
-			convertAsciiByteToPetsciiByte(&AGIData->messageData[i]);
+			byte1 = AGIData->messageData[i];
+			RAM_BANK = HELPERS_BANK;
+			byte1 = convertAsciiByteToPetsciiByte(byte1);
+
+			RAM_BANK = AGIData->messageBank;
+			AGIData->messageData[i] = byte1;
 
 			if (lastCharacterSeparator)
 			{

@@ -11,10 +11,6 @@
 ***************************************************************************/
 
 
-#include <stdlib.h>
-#include <string.h>
-#include <stdio.h>
-#include <stdarg.h>
 #include <cx16.h>
 
 #include "commands.h"
@@ -710,6 +706,7 @@ void b2Get_posn() // 3, 0x60
 
 	var[loadAndIncWinCode()] = localViewtab.xPos;
 	var[loadAndIncWinCode()] = localViewtab.yPos;
+
 	asm("jmp _afterLogicCommand");
 }
 
@@ -904,7 +901,8 @@ void b3Current_loop() // 2, 0x40
 
 void b3Current_view() // 2, 0x40 
 {
-	int entryNum, varNum;
+	int entryNum, varNum, i;
+	byte* mem;
 	ViewTable localViewtab;
 
 	entryNum = loadAndIncWinCode();
@@ -914,6 +912,7 @@ void b3Current_view() // 2, 0x40
 	var[varNum] = localViewtab.currentView;
 
 	setViewTab(&localViewtab, entryNum);
+	
 	asm("jmp _afterLogicCommand");
 }
 
@@ -2037,7 +2036,7 @@ void b4Random_num() // 3, 0x20  random() renamed to avoid clash
 
 	startValue = loadAndIncWinCode();
 	endValue = loadAndIncWinCode();
-	var[loadAndIncWinCode()] = (rand() % ((endValue - startValue) + 1)) + startValue;
+	var[loadAndIncWinCode()] = 5;  (rand() % ((endValue - startValue) + 1)) + startValue;
 	asm("jmp _afterLogicCommand");
 }
 
@@ -2530,22 +2529,11 @@ boolean hasSeen1 = FALSE;
 ***************************************************************************/
 void executeLogic(int logNum)
 {
-	boolean discardAfterward = FALSE, stillExecuting = TRUE;
-	byte* code, * endPos, * startPos, b1, b2;
-	byte codeAtTimeOfLastBankSwitch;
+	//boolean discardAfterward = FALSE, stillExecuting = TRUE;
+	//byte* code, * endPos, * startPos, b1, b2;
+	//byte codeAtTimeOfLastBankSwitch;
 	LOGICEntry currentLogic;
 	LOGICFile currentLogicFile;
-	byte codeWindow[CODE_WINDOW_SIZE];
-	byte* codeWindowAddress;
-	byte** ppCodeWindowAddress;
-	byte instructionCodeBank;
-	boolean lastCodeWasNonWindow = FALSE;
-
-	//Temp
-
-	short int disp;
-	char debugString[80];
-	int i, dummy;
 
 	currentLog = logNum;
 
@@ -2574,7 +2562,7 @@ void executeLogic(int logNum)
 	/* Load logic file temporarily in order to execute it if the logic is
 	** not already in memory. */
 	if (!currentLogic.loaded) {
-		discardAfterward = TRUE;
+		//discardAfterward = TRUE;
 		
 		trampoline_1Int(&b8LoadLogicFile, logNum, LOGIC_CODE_BANK);
 

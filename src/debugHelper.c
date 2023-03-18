@@ -8,8 +8,10 @@ extern byte codeBank;
 long opCounter = 1;
 long stopAt = 10000;
 long exitAt = 20000;
-long startPrintingAt = 6700;
+long startPrintingAt = 7000;
 boolean stopEvery = FALSE;
+
+//#define CHECK_MEM;
 
 void stopAtFunc()
 {
@@ -21,11 +23,36 @@ void stopAtFunc()
 
 
 #pragma code-name (push, "BANKRAM05");
+void b5CheckMemory()
+{
+#ifdef CHECK_MEM
+	int i;
+	byte* mem = (byte*) 1;
+	for (i = 10; i < 100000 && i >= 0 && mem; i = i + 100)
+	{
+		mem = (byte*)malloc(i);
+		if (!mem)
+		{
+			printf("Your remaining memory is approx: %d \n", i);
+			i = -1;
+		}
+		else
+		{
+			free((byte*)mem);
+		}
+	}
+
+#endif // CHECK_MEM
+}
+
 void debugPrint(byte toPrint)
 {
 	if (opCounter >= startPrintingAt)
 	{
 		printf("op %lu, %d, var 0 is %d\n", opCounter, toPrint, var[0]);
+#ifdef CHECK_MEM
+		b5CheckMemory();
+#endif
 	}
 	if (stopEvery)
 	{
