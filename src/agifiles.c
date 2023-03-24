@@ -27,6 +27,7 @@
 byte avisDurgan[11] = { 0x41, 0x76, 0x69, 0x73, 0x20, 0x44, 0x75, 0x72, 0x67, 0x61, 0x6E };//https://www.liquisearch.com/what_is_avis_durgan
 #define FILE_OPEN_ADDRESS 2
 #define NO_BYTES_PER_MESSAGE 2
+#define FILE_NAME_SIZE 10
 
 AGIFilePosType* logdir = (AGIFilePosType*)&BANK_RAM[LOGDIR_START];
 AGIFilePosType* picdir = (AGIFilePosType*)&BANK_RAM[PICDIR_START];
@@ -36,6 +37,7 @@ AGIFilePosType* snddir = (AGIFilePosType*)&BANK_RAM[SOUNDDIR_START];
 int numLogics, numPictures, numViews, numSounds;
 boolean version3 = FALSE;
 
+
 /***************************************************************************
 ** initFiles
 **
@@ -44,22 +46,17 @@ boolean version3 = FALSE;
 ** initialize the game signature in the case of a version 3 game.
 ***************************************************************************/
 
+#pragma code-name (push, "BANKRAM06")
 byte cbm_openForSeeking(char* fileName)
 {
-	byte previousRamBank = RAM_BANK;
 	const char* OPEN_FLAGS = ",S,R";
-
 	byte lfn = SEQUENTIAL_LFN;
 	byte dev = 8;
 
-	byte bank;
-
-	char* fileNameAndFlags;
+	char fileNameAndFlags[FILE_NAME_SIZE + 4];
 	byte sec_addr = FILE_OPEN_ADDRESS;
 
-	RAM_BANK = ALLOCATION_BANK;
-	fileNameAndFlags = (char*)banked_allocTrampoline(strlen(&fileName[0]) + strlen(OPEN_FLAGS) + 1, &bank);
-	sprintf(fileNameAndFlags, "%s%s", &fileName[0], OPEN_FLAGS);
+	sprintf(&fileNameAndFlags[0], "%s%s", &fileName[0], OPEN_FLAGS);
 
 #ifdef VERBOSE
 	printf("Attempting to load file %s", fileNameAndFlags);
@@ -67,14 +64,9 @@ byte cbm_openForSeeking(char* fileName)
 
 
 	cbm_open(lfn, dev, sec_addr, fileNameAndFlags);
-	RAM_BANK = previousRamBank;
-
-	banked_deallocTrampoline((byte*)fileNameAndFlags, bank);
 
 	return lfn;
 }
-
-#pragma code-name (push, "BANKRAM06")
 
 int8_t cx16_fseek(uint8_t channel, uint32_t offset) {
 	int8_t result = 0, status = 0, chkin = 0;
@@ -470,7 +462,7 @@ void loadAGIFile(int resType, AGIFilePosType* location, AGIFile* AGIData)
 	byte** offsetPointer;
 	boolean lastCharacterSeparator = TRUE;
 	byte previousRamBank = RAM_BANK;
-	char fileName[10];
+	char fileName[FILE_NAME_SIZE];
 
 
 	previousRamBank = RAM_BANK;
@@ -496,10 +488,10 @@ void loadAGIFile(int resType, AGIFilePosType* location, AGIFile* AGIData)
 		printf("---The file name is %s", &fileName[0]);
 	}
 #endif // VERBOSE
-
-	lfn = cbm_openForSeeking(&fileName[0]);
 	
 	RAM_BANK = FILE_LOADER_HELPERS;
+
+	lfn = cbm_openForSeeking(&fileName[0]);
 
 	b6SeekAndCheckSignature(&fileName[0], location);
 
