@@ -11,8 +11,8 @@ LOGIC_ENTRY_PARAMETERS_OFFSET =  0
 .segment "CODE"
 .import _debugPrint
 
-ZP_PTR_LF = $02
-ZP_PTR_LE = $04
+ZP_PTR_LF = $7E
+ZP_PTR_LE = $70
 
 stillExecuting: .byte $1
 jumpOffset: .byte $0

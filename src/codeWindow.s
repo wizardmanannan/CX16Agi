@@ -6,7 +6,7 @@ CODE_WINDOW_INC = 1
 .endif
 
 
-ZP_PTR_CODE_WIN = $08
+ZP_PTR_CODE_WIN = $80
 
 CODE_WINDOW_SIZE = 10
 .segment "CODE"

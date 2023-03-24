@@ -9,9 +9,9 @@ _codeBank: .byte $0
 
 GLOBAL_INC = 1
 
-ZP_PTR_CODE = $06
+ZP_PTR_CODE = $69
 ;$08 is reserved for code window in codeWindow.s
-ZP_TMP = $10
+ZP_TMP = $67
 
 GOLDEN_RAM = $400
 
