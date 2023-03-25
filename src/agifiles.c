@@ -278,26 +278,46 @@ void b6InitFiles()
 	b6LoadAGIDirs();
 }
 
-#pragma code-name (pop)
-
 byte* b6ReadFileContentsIntoBankedRam(int size, byte* bank)
 {
 	byte* result;
-	byte previousRamBank = RAM_BANK;
-
+	int i;
+	int copySize;
 	result = banked_allocTrampoline(size, bank);
 
 #ifdef VERBOSE
 	printf("Attempting to code data of size %d to %p\n", size, result);
 #endif
-	RAM_BANK = *bank;
-	cbm_read(SEQUENTIAL_LFN, result, size);
+
+	for (i = 0; i < size; i = i + LOCAL_WORK_AREA_SIZE)
+	{
+		if (i + LOCAL_WORK_AREA_SIZE > size)
+		{
+			copySize = size - i; 
+
+#ifdef VERBOSE
+			printf("CopySize is %d, size is %d and i is %d \n", copySize, size, i);
+#endif
+		}
+		else
+		{
+			copySize = LOCAL_WORK_AREA_SIZE;
+#ifdef VERBOSE
+			printf("CopySize is %d\n", copySize );
+#endif
+		}
+
+		cbm_read(SEQUENTIAL_LFN, &GOLDEN_RAM[LOCAL_WORK_AREA_START], copySize);
+
+#ifdef VERBOSE
+		printf("result + i %p. i %d\n", result + i, i);
+#endif
+		memCpyBanked(result + i, &GOLDEN_RAM[LOCAL_WORK_AREA_START], *bank, copySize);
+	}
 
 #ifdef VERBOSE
 	printf("Data is in bank %d at address %p and the first byte is %p and the size is %d \n", *bank, result, result[0], size);
 #endif // VERBOSE
-
-	RAM_BANK = previousRamBank;
 
 	return result;
 }
@@ -341,8 +361,6 @@ byte* b6ReadFileContentsIntoBankedRam(int size, byte* bank)
 //		oldData = data;
 //	}
 //}
-
-#pragma code-name (push, "BANKRAM06")
 
 #define getMessageSectionSize AGIData->totalSize - AGIData->codeSize - 5 - AGIData->noMessages * 2
 

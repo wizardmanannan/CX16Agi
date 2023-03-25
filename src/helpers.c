@@ -78,6 +78,11 @@ void* memCpyBanked(byte* dest, byte* src, byte bank, size_t len)
 
 	RAM_BANK = bank;
 	
+#ifdef VERBOSE
+	printf("Attempting to copy to %p from %p on bank %d length %d and the first byte is %d\n", dest, src, bank, len, *src);
+#endif
+
+
 	memcpy(dest, src, len);
 
 	RAM_BANK = previousRamBank;
