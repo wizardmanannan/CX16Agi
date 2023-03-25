@@ -327,7 +327,7 @@ void b9LoadViewFile(byte viewNum)
 #endif
 	getLoadedView(&localView, viewNum);
 
-	loadAGIFile(VIEW, &agiFilePosType, &tempAGI);
+    loadAGIFileTrampoline(VIEW, &agiFilePosType, &tempAGI);
 
 	memCpyBanked(&viewStart[0], tempAGI.code, tempAGI.codeBank, NO_VIEW_START_BYTES);
 

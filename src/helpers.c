@@ -1,5 +1,6 @@
 #include "helpers.h"
 //#define VERBOSE
+//#define VERBOSE_CPY_CHECK
 
 boolean debugStop = FALSE;
 
@@ -50,6 +51,17 @@ void trampoline_1Int(fnTrampoline_1Int func, int data, byte bank)
 	RAM_BANK = previousRamBank;
 }
 
+byte trampoline_1ByteRByte(fnTrampoline_1ByteRByte func, byte data, byte bank)
+{
+	byte result;
+	byte previousRamBank = RAM_BANK;
+	RAM_BANK = bank;
+	result = func(data);
+	RAM_BANK = previousRamBank;
+
+	return result;
+}
+
 void trampoline_3Int(fnTrampoline_3Int func, int data1, int data2, int data3, int bank)
 {
 	byte previousRamBank = RAM_BANK;
@@ -78,7 +90,7 @@ void* memCpyBanked(byte* dest, byte* src, byte bank, size_t len)
 
 	RAM_BANK = bank;
 	
-#ifdef VERBOSE
+#ifdef VERBOSE_CPY_CHECK
 	printf("Attempting to copy to %p from %p on bank %d length %d and the first byte is %d\n", dest, src, bank, len, *src);
 #endif
 

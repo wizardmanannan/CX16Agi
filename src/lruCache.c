@@ -68,7 +68,7 @@ void bELruCacheGet(int resType, LRUCache* cache, byte key, AGIFilePosType* locat
 #endif // __CX16__
 
 #ifdef __CX16__
-    loadAGIFile(resType, location, AGIData);
+    loadAGIFileTrampoline(resType, location, AGIData);
 #endif // __CX16__
 
 }

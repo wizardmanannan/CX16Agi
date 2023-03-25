@@ -28,6 +28,7 @@ typedef void (*fnTrampoline_0)();
 typedef void (*fnTrampoline_1BytePointerPointer)(byte** data);
 typedef boolean (*fnTrampoline_1BytePointerPointerRetBool)(byte** data);
 typedef void (*fnTrampoline_1Int)(int data);
+typedef byte (*fnTrampoline_1ByteRByte)(byte data);
 typedef void (*fnTrampoline_1Int)(int data);
 
 typedef void (*fnTrampoline_2Int)(int data, int data2);
@@ -42,6 +43,8 @@ extern void trampoline_1Int(fnTrampoline_1Int func, int data, byte bank);
 extern void trampoline_1Int(fnTrampoline_1Int func, int data, byte bank);
 
 extern void trampoline_3Int(fnTrampoline_3Int func, int data1, int data2, int data3, int bank);
+
+extern byte trampoline_1ByteRByte(fnTrampoline_1ByteRByte func, byte data, byte bank);
 
 extern char* strcpyBanked(char* dest, const char* src, byte bank);
 
