@@ -6,9 +6,9 @@ extern byte* var;
 extern byte codeBank;
 
 long opCounter = 1;
-long stopAt = 10000;
-long exitAt = 20000;
-long startPrintingAt = 7000;
+long stopAt = -1;
+long exitAt = -1;
+long startPrintingAt = -1;
 boolean stopEvery = FALSE;
 
 //#define CHECK_MEM;
@@ -47,7 +47,7 @@ void b5CheckMemory()
 
 void debugPrint(byte toPrint)
 {
-	if (opCounter >= startPrintingAt)
+	if (opCounter >= startPrintingAt && startPrintingAt != -1 && startPrintingAt != -1)
 	{
 		printf("op %lu, %d, var 0 is %d\n", opCounter, toPrint, var[0]);
 #ifdef CHECK_MEM
@@ -76,7 +76,7 @@ void debugPrint(byte toPrint)
 
 void debugPrintFalse()
 {
-	if (opCounter >= startPrintingAt)
+	if (opCounter >= startPrintingAt && startPrintingAt != -1)
 	{
 		printf("the result is false\n");
 	}
@@ -84,7 +84,7 @@ void debugPrintFalse()
 
 void debugPrintTrue()
 {
-	if (opCounter >= startPrintingAt)
+	if (opCounter >= startPrintingAt && startPrintingAt != -1)
 	{
 		printf("the result is true\n");
 	}
@@ -92,7 +92,7 @@ void debugPrintTrue()
 
 void debugPrintNot()
 {
-	if (opCounter >= startPrintingAt)
+	if (opCounter >= startPrintingAt && startPrintingAt != -1)
 	{
 		printf("the result is inverted by not\n");
 	}
@@ -109,7 +109,7 @@ extern byte logDebugVal2;
 
 void debugIsSet()
 {
-	if (opCounter >= startPrintingAt)
+	if (opCounter >= startPrintingAt && startPrintingAt != -1)
 	{
 		printf("checking that %d is set and it %d\n", logDebugVal1, flag[logDebugVal1]);
 	}
@@ -117,7 +117,7 @@ void debugIsSet()
 
 void debugGreaterThan_8N()
 {
-	if (opCounter >= startPrintingAt)
+	if (opCounter >= startPrintingAt && startPrintingAt != -1)
 	{
 		printf("checking that %d (%d) is > %d and the result should be %d\n", logDebugVal1, var[logDebugVal1], logDebugVal2, var[logDebugVal1] > logDebugVal2);
 	}
@@ -125,7 +125,7 @@ void debugGreaterThan_8N()
 
 void debugLessThan_8N()
 {
-	if (opCounter >= startPrintingAt)
+	if (opCounter >= startPrintingAt && startPrintingAt != -1)
 	{
 		printf("Checking that %d is < %d and the result should be %d\n", logDebugVal1, var[logDebugVal1], logDebugVal2, var[logDebugVal1] < logDebugVal2);
 	}
@@ -133,7 +133,7 @@ void debugLessThan_8N()
 
 void debugGreaterThan_8V()
 {
-	if (opCounter >= startPrintingAt)
+	if (opCounter >= startPrintingAt && startPrintingAt != -1)
 	{
 		printf("checking that %d (%d) is > %d and the result should be %d\n", logDebugVal1, var[logDebugVal1], logDebugVal2, var[logDebugVal2], var[logDebugVal1] > var[logDebugVal2]);
 	}
@@ -141,7 +141,7 @@ void debugGreaterThan_8V()
 
 void debugLessThan_8V()
 {
-	if (opCounter >= startPrintingAt)
+	if (opCounter >= startPrintingAt && startPrintingAt != -1)
 	{
 		printf("checking that %d is < %d and the result should be %d\n", logDebugVal1, var[logDebugVal1], logDebugVal2, var[logDebugVal2], var[logDebugVal1] < var[logDebugVal2]);
 	}
@@ -149,7 +149,7 @@ void debugLessThan_8V()
 
 void debugEqualN()
 {
-	if (opCounter >= startPrintingAt)
+	if (opCounter >= startPrintingAt && startPrintingAt != -1)
 	{
 		printf("checking that %d (%d) is equal to %d and it %d\n", logDebugVal1, var[logDebugVal1], logDebugVal2, var[logDebugVal1] == logDebugVal2);
 	}
@@ -157,7 +157,7 @@ void debugEqualN()
 
 void debugEqualV()
 {
-	if (opCounter >= startPrintingAt)
+	if (opCounter >= startPrintingAt && startPrintingAt != -1)
 	{
 		printf("checking that %d (%d) is equal to %d (%d) and it %d\n", logDebugVal1, var[logDebugVal1], logDebugVal2, var[logDebugVal2], var[logDebugVal1] == var[logDebugVal2]);
 	}
@@ -165,7 +165,7 @@ void debugEqualV()
 
 void debugInc()
 {
-	if (opCounter >= startPrintingAt)
+	if (opCounter >= startPrintingAt && startPrintingAt != -1)
 	{
 		printf("incrementing var %d(%d) to %d\n", logDebugVal1, var[logDebugVal1], var[logDebugVal1] + 1);
 	}
@@ -173,7 +173,7 @@ void debugInc()
 
 void debugDec()
 {
-	if (opCounter >= startPrintingAt)
+	if (opCounter >= startPrintingAt && startPrintingAt != -1)
 	{
 		printf("decrementing var %d(%d) to %d\n", logDebugVal1, var[logDebugVal1], var[logDebugVal1] - 1);
 	}
@@ -181,7 +181,7 @@ void debugDec()
 
 void debugAddN()
 {
-	if (opCounter >= startPrintingAt)
+	if (opCounter >= startPrintingAt && startPrintingAt != -1)
 	{
 		printf("add var %d (%d) to %d which is %d", logDebugVal1, var[logDebugVal1], logDebugVal2, var[logDebugVal1] + logDebugVal2);
 	}
@@ -189,7 +189,7 @@ void debugAddN()
 
 void debugAddV()
 {
-	if (opCounter >= startPrintingAt)
+	if (opCounter >= startPrintingAt && startPrintingAt != -1)
 	{
 		printf("add var %d (%d) to %d (%d) which is\n", logDebugVal1, var[logDebugVal1], logDebugVal2, var[logDebugVal2], var[logDebugVal1] + var[logDebugVal2]);
 	}
@@ -197,7 +197,7 @@ void debugAddV()
 
 void debugSubN()
 {
-	if (opCounter >= startPrintingAt)
+	if (opCounter >= startPrintingAt && startPrintingAt != -1)
 	{
 		printf("sub var %d (%d) to %d which is\n", logDebugVal1, var[logDebugVal1], logDebugVal2, var[logDebugVal1] - logDebugVal2);
 	}
@@ -205,14 +205,14 @@ void debugSubN()
 
 void debugSubV()
 {
-	if (opCounter >= startPrintingAt) {
+	if (opCounter >= startPrintingAt && startPrintingAt != -1) {
 		printf("sub var %d (%d) to %d (%d) which is\n", logDebugVal1, var[logDebugVal1], logDebugVal2, var[logDebugVal2], var[logDebugVal1] - var[logDebugVal2]);
 	}
 }
 
 void debugAssignN()
 {
-	if (opCounter >= startPrintingAt)
+	if (opCounter >= startPrintingAt && startPrintingAt != -1)
 	{
 		printf("assign var %d (%d) to %d\n", logDebugVal1, var[logDebugVal1], logDebugVal2);
 	}
@@ -220,7 +220,7 @@ void debugAssignN()
 
 void debugAssignV()
 {
-	if (opCounter >= startPrintingAt)
+	if (opCounter >= startPrintingAt && startPrintingAt != -1)
 	{
 		printf("assign var %d (%d) to %d (%d) which is\n", logDebugVal1, var[logDebugVal1], logDebugVal2, var[logDebugVal2], logDebugVal2);
 	}
@@ -228,7 +228,7 @@ void debugAssignV()
 
 void debugIndirect()
 {
-	if (opCounter >= startPrintingAt)
+	if (opCounter >= startPrintingAt && startPrintingAt != -1)
 	{
 		printf("indir %d (%d) value %d\n", logDebugVal1, var[logDebugVal1], logDebugVal2);
 	}
@@ -236,7 +236,7 @@ void debugIndirect()
 
 void debugIndirectV()
 {
-	if (opCounter >= startPrintingAt)
+	if (opCounter >= startPrintingAt && startPrintingAt != -1)
 	{
 		printf("indir V %d (%d) value %d (%d)\n", logDebugVal1, var[logDebugVal1], logDebugVal2, var[logDebugVal2]);
 	}
@@ -245,7 +245,7 @@ void debugIndirectV()
 
 void debugPostCheckVar()
 {
-	if (opCounter >= startPrintingAt)
+	if (opCounter >= startPrintingAt && startPrintingAt != -1)
 	{
 		printf("post check var %d (%d)\n", logDebugVal1, var[logDebugVal1]);
 	}
@@ -253,7 +253,7 @@ void debugPostCheckVar()
 
 void debugPostCheckFlag()
 {
-	if (opCounter >= startPrintingAt)
+	if (opCounter >= startPrintingAt && startPrintingAt != -1)
 	{
 		printf("post check flag %d (%d)\n", logDebugVal1, flag[logDebugVal1]);
 	}
@@ -261,7 +261,7 @@ void debugPostCheckFlag()
 
 void codeJumpDebug()
 {
-	if (opCounter >= startPrintingAt)
+	if (opCounter >= startPrintingAt && startPrintingAt != -1)
 	{
 		printf("b1 is %d b2 is %d and the jump result is %u\n", logDebugVal1, logDebugVal2, (logDebugVal2 << 8) | logDebugVal1);
 	}
@@ -271,7 +271,7 @@ void debugPrintCurrentCodeState(byte* code)
 {
 	byte codeValue;
 	memCpyBanked(&codeValue, code, codeBank, 1);
-	if (opCounter >= startPrintingAt) {
+	if (opCounter >= startPrintingAt && startPrintingAt != -1) {
 		printf("the code is now %u and the address is %p\n", codeValue, code);
 	}
 }

@@ -502,14 +502,14 @@ void b2Load_logics() // 1, 0x00
 {
 	trampoline_1Int(&b8LoadLogicFile, loadAndIncWinCode(), LOGIC_CODE_BANK);
 
-	asm("jmp _afterLogicCommand");
+	return;
 }
 
 void b2Load_logics_v() // 1, 0x80 
 {
 	trampoline_1Int(&b8LoadLogicFile, var[loadAndIncWinCode()], LOGIC_CODE_BANK);
 
-	asm("jmp _afterLogicCommand");
+	return;
 }
 
 
@@ -518,7 +518,7 @@ void b2Load_pic() // 1, 0x80
 {
 	loadPictureFile(var[loadAndIncWinCode()]);
 
-	asm("jmp _afterLogicCommand");
+	return;
 }
 
 void b2Draw_pic() // 1, 0x80 
@@ -529,7 +529,7 @@ void b2Draw_pic() // 1, 0x80
 	//picFNum = pNum;  // Debugging. Delete at some stage!!!
 	drawPic(loadedPictures[pNum].data, loadedPictures[pNum].size, TRUE);
 
-	asm("jmp _afterLogicCommand");
+	return;
 }
 
 void b2Show_pic() // 0, 0x00 
@@ -538,14 +538,14 @@ void b2Show_pic() // 0, 0x00
 	/*stretch_blit(picture, working_screen, 0, 0, 160, 168, 0, 20, 640, 336);*/
 	showPicture();
 
-	asm("jmp _afterLogicCommand");
+	return;
 }
 
 void b2Discard_pic() // 1, 0x80 
 {
 	discardPictureFile(var[loadAndIncWinCode()]);
 
-	asm("jmp _afterLogicCommand");
+	return;
 }
 
 void b2Overlay_pic() // 1, 0x80 
@@ -555,7 +555,7 @@ void b2Overlay_pic() // 1, 0x80
 	pNum = var[loadAndIncWinCode()];
 	drawPic(loadedPictures[pNum].data, loadedPictures[pNum].size, FALSE);
 
-	asm("jmp _afterLogicCommand");
+	return;
 }
 
 void b2Show_pri_screen() // 0, 0x00 
@@ -564,7 +564,7 @@ void b2Show_pri_screen() // 0, 0x00
 	showDebugPri();
 	//getch();
 	//while (!keypressed()) { /* Wait for key */ }
-	asm("jmp _afterLogicCommand");
+	return;
 }
 
 /************************** VIEW ACTION COMMANDS **************************/
@@ -572,19 +572,19 @@ void b2Show_pri_screen() // 0, 0x00
 void b2Load_view() // 1, 0x00 
 {
 	trampoline_1Int(&b9LoadViewFile, (loadAndIncWinCode()), VIEW_CODE_BANK_1);
-	asm("jmp _afterLogicCommand");
+	return;
 }
 
 void b2Load_view_v() // 1, 0x80 
 {
 	trampoline_1Int(&b9LoadViewFile, var[loadAndIncWinCode()], VIEW_CODE_BANK_1);
-	asm("jmp _afterLogicCommand");
+	return;
 }
 
 void b2Discard_view() // 1, 0x00 
 {
 	trampoline_1Int(&b9DiscardView, loadAndIncWinCode(), VIEW_CODE_BANK_1);
-	asm("jmp _afterLogicCommand");
+	return;
 }
 
 void b2Animate_obj() // 1, 0x00 
@@ -608,7 +608,7 @@ void b2Animate_obj() // 1, 0x00
 	setViewTab(&localViewTab, entryNum);
 
 	getViewTab(&localViewTab, entryNum);
-	asm("jmp _afterLogicCommand");
+	return;
 }
 
 void b2Unanimate_all() // 0, 0x00 
@@ -625,7 +625,7 @@ void b2Unanimate_all() // 0, 0x00
 
 		setViewTab(&localViewtab, entryNum);
 	}
-	asm("jmp _afterLogicCommand");
+	return;
 }
 
 void b2Draw() // 1, 0x00 
@@ -645,7 +645,7 @@ void b2Draw() // 1, 0x00
 	trampoline_1Int(&bADrawObject, entryNum, VIEW_CODE_BANK_2);
 
 	setViewTab(&localViewtab, entryNum);
-	asm("jmp _afterLogicCommand");
+	return;
 }
 
 void b2Erase() // 1, 0x00 
@@ -660,7 +660,7 @@ void b2Erase() // 1, 0x00
 	localViewtab.flags &= ~DRAWN;
 
 	setViewTab(&localViewtab, entryNum);
-	asm("jmp _afterLogicCommand");
+	return;
 }
 
 void b2Position() // 3, 0x00 
@@ -676,7 +676,7 @@ void b2Position() // 3, 0x00
 
 	setViewTab(&localViewtab, entryNum);
 	/* Need to check that it hasn't been draw()n yet. */
-	asm("jmp _afterLogicCommand");
+	return;
 }
 
 void b2Position_v() // 3, 0x60 
@@ -692,7 +692,7 @@ void b2Position_v() // 3, 0x60
 
 	setViewTab(&localViewtab, entryNum);
 	/* Need to check that it hasn't been draw()n yet. */
-	asm("jmp _afterLogicCommand");
+	return;
 }
 
 void b2Get_posn() // 3, 0x60 
@@ -707,7 +707,7 @@ void b2Get_posn() // 3, 0x60
 	var[loadAndIncWinCode()] = localViewtab.xPos;
 	var[loadAndIncWinCode()] = localViewtab.yPos;
 
-	asm("jmp _afterLogicCommand");
+	return;
 }
 
 void b2Reposition() // 3, 0x60 
@@ -724,7 +724,7 @@ void b2Reposition() // 3, 0x60
 	localViewtab.yPos += dy;
 
 	setViewTab(&localViewtab, entryNum);
-	asm("jmp _afterLogicCommand");
+	return;
 }
 
 
@@ -741,7 +741,7 @@ void b2Set_view() // 2, 0x00
 	trampolineViewUpdater1Int(&b9AddViewToTable, &localViewtab, viewNum, VIEW_CODE_BANK_1);
 
 	setViewTab(&localViewtab, entryNum);
-	asm("jmp _afterLogicCommand");
+	return;
 }
 
 void b2Set_view_v() // 2, 0x40 
@@ -757,7 +757,7 @@ void b2Set_view_v() // 2, 0x40
 	trampolineViewUpdater1Int(&b9AddViewToTable, &localViewtab, viewNum, VIEW_CODE_BANK_1);
 
 	getViewTab(&localViewtab, entryNum);
-	asm("jmp _afterLogicCommand");
+	return;
 }
 
 void b2Set_loop() // 2, 0x00 
@@ -773,7 +773,7 @@ void b2Set_loop() // 2, 0x00
 	trampolineViewUpdater1Int(&b9SetCel, &localViewtab, 0, VIEW_CODE_BANK_1);
    
 	setViewTab(&localViewtab, entryNum);
-	asm("jmp _afterLogicCommand");
+	return;
 }
 
 void b2Set_loop_v() // 2, 0x40 
@@ -790,7 +790,7 @@ void b2Set_loop_v() // 2, 0x40
 	trampolineViewUpdater1Int(&b9SetCel, &localViewtab, loopNum, VIEW_CODE_BANK_1);
 
 	setViewTab(&localViewtab, entryNum);
-	asm("jmp _afterLogicCommand");
+	return;
 }
 
 void b2Fix_loop() // 1, 0x00 
@@ -806,7 +806,7 @@ void b2Fix_loop() // 1, 0x00
 
 	setViewTab(&localViewtab, entryNum);
 
-	asm("jmp _afterLogicCommand");
+	return;
 }
 
 void b2Release_loop() // 1, 0x00 
@@ -819,7 +819,7 @@ void b2Release_loop() // 1, 0x00
 
 	localViewtab.flags &= ~FIXLOOP;
 	setViewTab(&localViewtab, entryNum);
-	asm("jmp _afterLogicCommand");
+	return;
 }
 
 void b2Set_cel() // 2, 0x00 
@@ -835,7 +835,7 @@ void b2Set_cel() // 2, 0x00
 	trampolineViewUpdater1Int(&b9SetCel, &localViewtab, celNum, VIEW_CODE_BANK_1);
 
 	setViewTab(&localViewtab, entryNum);
-	asm("jmp _afterLogicCommand");
+	return;
 }
 
 void b2Set_cel_v() // 2, 0x40 
@@ -851,7 +851,7 @@ void b2Set_cel_v() // 2, 0x40
 	trampolineViewUpdater1Int(&b9SetCel, &localViewtab, celNum, VIEW_CODE_BANK_1);
 
 	setViewTab(&localViewtab, entryNum);
-	asm("jmp _afterLogicCommand");
+	return;
 }
 
 void b2Last_cel() // 2, 0x40 
@@ -865,7 +865,7 @@ void b2Last_cel() // 2, 0x40
 
 	var[varNum] = localViewtab.numberOfCels - 1;
 	setViewTab(&localViewtab, entryNum);
-	asm("jmp _afterLogicCommand");
+	return;
 }
 
 void b2Current_cel() // 2, 0x40 
@@ -879,7 +879,7 @@ void b2Current_cel() // 2, 0x40
 
 	var[varNum] = localViewtab.currentCel;
 	setViewTab(&localViewtab, entryNum);
-	asm("jmp _afterLogicCommand");
+	return;
 }
 
 #pragma code-name (pop)
@@ -896,7 +896,7 @@ void b3Current_loop() // 2, 0x40
 
 	var[varNum] = localViewtab.currentLoop;
 	setViewTab(&localViewtab, entryNum);
-	asm("jmp _afterLogicCommand");
+	return;
 }
 
 void b3Current_view() // 2, 0x40 
@@ -913,7 +913,7 @@ void b3Current_view() // 2, 0x40
 
 	setViewTab(&localViewtab, entryNum);
 	
-	asm("jmp _afterLogicCommand");
+	return;
 }
 
 void b3Number_of_loops() // 2, 0x40 
@@ -928,7 +928,7 @@ void b3Number_of_loops() // 2, 0x40
 	var[varNum] = localViewtab.numberOfLoops;
 
 	setViewTab(&localViewtab, entryNum);
-	asm("jmp _afterLogicCommand");
+	return;
 }
 
 void b3Set_priority() // 2, 0x00 
@@ -943,7 +943,7 @@ void b3Set_priority() // 2, 0x00
 	localViewtab.flags |= FIXEDPRIORITY;
 
 	setViewTab(&localViewtab, entryNum);
-	asm("jmp _afterLogicCommand");
+	return;
 }
 
 void b3Set_priority_v() // 2, 0x40 
@@ -958,7 +958,7 @@ void b3Set_priority_v() // 2, 0x40
 	localViewtab.flags |= FIXEDPRIORITY;
 
 	setViewTab(&localViewtab, entryNum);
-	asm("jmp _afterLogicCommand");
+	return;
 }
 
 void b3Release_priority() // 1, 0x00 
@@ -972,7 +972,7 @@ void b3Release_priority() // 1, 0x00
 	localViewtab.flags &= ~FIXEDPRIORITY;
 
 	setViewTab(&localViewtab, entryNum);
-	asm("jmp _afterLogicCommand");
+	return;
 }
 
 void b3Get_priority() // 2, 0x40 
@@ -988,7 +988,7 @@ void b3Get_priority() // 2, 0x40
 	var[varNum] = localViewtab.priority;
 
 	setViewTab(&localViewtab, entryNum);
-	asm("jmp _afterLogicCommand");
+	return;
 }
 
 void b3Stop_update() // 1, 0x00 
@@ -1002,7 +1002,7 @@ void b3Stop_update() // 1, 0x00
 	localViewtab.flags &= ~UPDATE;
 
 	setViewTab(&localViewtab, entryNum);
-	asm("jmp _afterLogicCommand");
+	return;
 }
 
 void b3Start_update() // 1, 0x00 
@@ -1017,7 +1017,7 @@ void b3Start_update() // 1, 0x00
 	localViewtab.flags |= UPDATE;
 
 	setViewTab(&localViewtab, entryNum);
-	asm("jmp _afterLogicCommand");
+	return;
 }
 
 void b3Force_update() // 1, 0x00 
@@ -1028,7 +1028,7 @@ void b3Force_update() // 1, 0x00
 	/* Do immediate update here. Call update(entryNum) */
 
 	trampoline_1Int(&bAUpdateObj, entryNum, VIEW_CODE_BANK_1);
-	asm("jmp _afterLogicCommand");
+	return;
 }
 
 void b3Ignore_horizon() // 1, 0x00 
@@ -1043,7 +1043,7 @@ void b3Ignore_horizon() // 1, 0x00
 	localViewtab.flags |= IGNOREHORIZON;
 
 	setViewTab(&localViewtab, entryNum);
-	asm("jmp _afterLogicCommand");
+	return;
 }
 
 void b3Observe_horizon() // 1, 0x00 
@@ -1057,13 +1057,13 @@ void b3Observe_horizon() // 1, 0x00
 	localViewtab.flags &= ~IGNOREHORIZON;
 
 	setViewTab(&localViewtab, entryNum);
-	asm("jmp _afterLogicCommand");
+	return;
 }
 
 void b3Set_horizon() // 1, 0x00 
 {
 	horizon = loadAndIncWinCode();
-	asm("jmp _afterLogicCommand");
+	return;
 }
 
 void b3Object_on_water() // 1, 0x00 
@@ -1077,7 +1077,7 @@ void b3Object_on_water() // 1, 0x00
 	localViewtab.flags |= ONWATER;
 
 	setViewTab(&localViewtab, entryNum);
-	asm("jmp _afterLogicCommand");
+	return;
 }
 
 void b3Object_on_land() // 1, 0x00 
@@ -1091,7 +1091,7 @@ void b3Object_on_land() // 1, 0x00
 	localViewtab.flags |= ONLAND;
 
 	setViewTab(&localViewtab, entryNum);
-	asm("jmp _afterLogicCommand");
+	return;
 }
 
 void b3Object_on_anything() // 1, 0x00 
@@ -1105,7 +1105,7 @@ void b3Object_on_anything() // 1, 0x00
 	localViewtab.flags &= ~(ONWATER | ONLAND);
 
 	setViewTab(&localViewtab, entryNum);
-	asm("jmp _afterLogicCommand");
+	return;
 }
 
 void b3Ignore_objs() // 1, 0x00 
@@ -1119,7 +1119,7 @@ void b3Ignore_objs() // 1, 0x00
 	localViewtab.flags |= IGNOREOBJECTS;
 
 	setViewTab(&localViewtab, entryNum);
-	asm("jmp _afterLogicCommand");
+	return;
 }
 
 void b3Observe_objs() // 1, 0x00 
@@ -1133,7 +1133,7 @@ void b3Observe_objs() // 1, 0x00
 	localViewtab.flags &= ~IGNOREOBJECTS;
 
 	setViewTab(&localViewtab, entryNum);
-	asm("jmp _afterLogicCommand");
+	return;
 }
 
 void b3Distance() // 3, 0x20 
@@ -1152,14 +1152,14 @@ void b3Distance() // 3, 0x20
 	** then 255 should be returned. */
 	if (!((localViewtab1.flags & DRAWN) && (localViewtab2.flags & DRAWN))) {
 		var[varNum] = 255;
-		asm("jmp _afterLogicCommand");
+		return;
 	}
 	x1 = localViewtab1.xPos;
 	y1 = localViewtab1.yPos;
 	x2 = localViewtab2.xPos;
 	y2 = localViewtab2.yPos;
 	var[varNum] = abs(x1 - x2) + abs(y1 - y2);
-	asm("jmp _afterLogicCommand");
+	return;
 }
 
 void b3Stop_cycling() // 1, 0x00 
@@ -1173,7 +1173,7 @@ void b3Stop_cycling() // 1, 0x00
 	localViewtab.flags &= ~CYCLING;
 
 	setViewTab(&localViewtab, entryNum);
-	asm("jmp _afterLogicCommand");
+	return;
 }
 
 void b3Start_cycling() // 1, 0x00 
@@ -1187,7 +1187,7 @@ void b3Start_cycling() // 1, 0x00
 	localViewtab.flags |= CYCLING;
 
 	setViewTab(&localViewtab, entryNum);
-	asm("jmp _afterLogicCommand");
+	return;
 }
 
 void b3Normal_cycle() // 1, 0x00 
@@ -1201,7 +1201,7 @@ void b3Normal_cycle() // 1, 0x00
 	localViewtab.cycleStatus = 0;
 
 	setViewTab(&localViewtab, entryNum);
-	asm("jmp _afterLogicCommand");
+	return;
 }
 
 void b3End_of_loop() // 2, 0x00 
@@ -1217,7 +1217,7 @@ void b3End_of_loop() // 2, 0x00
 	localViewtab.flags |= (UPDATE | CYCLING);
 
 	setViewTab(&localViewtab, entryNum);
-	asm("jmp _afterLogicCommand");
+	return;
 }
 
 void b3Reverse_cycle() // 1, 0x00
@@ -1232,7 +1232,7 @@ void b3Reverse_cycle() // 1, 0x00
 	localViewtab.cycleStatus = 3;
 
 	setViewTab(&localViewtab, entryNum);
-	asm("jmp _afterLogicCommand");
+	return;
 }
 
 void b3Reverse_loop() // 2, 0x00 
@@ -1248,7 +1248,7 @@ void b3Reverse_loop() // 2, 0x00
 	localViewtab.flags |= (UPDATE | CYCLING);
 
 	setViewTab(&localViewtab, entryNum);
-	asm("jmp _afterLogicCommand");
+	return;
 }
 
 void b3Cycle_time() // 2, 0x40 
@@ -1261,7 +1261,7 @@ void b3Cycle_time() // 2, 0x40
 
 	localViewtab.cycleTime = var[loadAndIncWinCode()];
 	setViewTab(&localViewtab, entryNum);
-	asm("jmp _afterLogicCommand");
+	return;
 }
 
 void b3Stop_motion() // 1, 0x00 
@@ -1277,7 +1277,7 @@ void b3Stop_motion() // 1, 0x00
 	localViewtab.motion = 0;
 
 	setViewTab(&localViewtab, entryNum);
-	asm("jmp _afterLogicCommand");
+	return;
 }
 
 void b3Start_motion() // 1, 0x00 
@@ -1292,7 +1292,7 @@ void b3Start_motion() // 1, 0x00
 	localViewtab.motion = 0;        /* Not sure about this */
 
 	setViewTab(&localViewtab, entryNum);
-	asm("jmp _afterLogicCommand");
+	return;
 }
 
 void b3Step_size() // 2, 0x40 
@@ -1306,7 +1306,7 @@ void b3Step_size() // 2, 0x40
 	localViewtab.stepSize = var[loadAndIncWinCode()];
 
 	setViewTab(&localViewtab, entryNum);
-	asm("jmp _afterLogicCommand");
+	return;
 }
 
 void b3Step_time() // 2, 0x40 
@@ -1320,7 +1320,7 @@ void b3Step_time() // 2, 0x40
 	localViewtab.stepTime = var[loadAndIncWinCode()];
 
 	setViewTab(&localViewtab, entryNum);
-	asm("jmp _afterLogicCommand");
+	return;
 }
 
 void b3Move_obj() // 5, 0x00 
@@ -1342,7 +1342,7 @@ void b3Move_obj() // 5, 0x00
 	localViewtab.flags |= MOTION;
 
 	setViewTab(&localViewtab, entryNum);
-	asm("jmp _afterLogicCommand");
+	return;
 }
 
 void b3Move_obj_v() // 5, 0x70 
@@ -1364,7 +1364,7 @@ void b3Move_obj_v() // 5, 0x70
 	localViewtab.flags |= MOTION;
 
 	setViewTab(&localViewtab, entryNum);
-	asm("jmp _afterLogicCommand");
+	return;
 }
 
 void b3Follow_ego() // 3, 0x00 
@@ -1385,7 +1385,7 @@ void b3Follow_ego() // 3, 0x00
 	localViewtab.flags |= MOTION;
 
 	setViewTab(&localViewtab, entryNum);
-	asm("jmp _afterLogicCommand");
+	return;
 }
 
 void b3Wander() // 1, 0x00 
@@ -1401,7 +1401,7 @@ void b3Wander() // 1, 0x00
 	localViewtab.flags |= MOTION;
 
 	setViewTab(&localViewtab, entryNum);
-	asm("jmp _afterLogicCommand");
+	return;
 }
 
 void b3Normal_motion() // 1, 0x00 
@@ -1416,7 +1416,7 @@ void b3Normal_motion() // 1, 0x00
 	localViewtab.flags |= MOTION;
 
 	setViewTab(&localViewtab, entryNum);
-	asm("jmp _afterLogicCommand");
+	return;
 }
 
 void b3Set_dir() // 2, 0x40 
@@ -1430,7 +1430,7 @@ void b3Set_dir() // 2, 0x40
 	localViewtab.direction = var[loadAndIncWinCode()];
 
 	setViewTab(&localViewtab, entryNum);
-	asm("jmp _afterLogicCommand");
+	return;
 }
 
 void b3Get_dir() // 2, 0x40 
@@ -1444,7 +1444,7 @@ void b3Get_dir() // 2, 0x40
 	var[loadAndIncWinCode()] = localViewtab.direction;
 
 	setViewTab(&localViewtab, entryNum);
-	asm("jmp _afterLogicCommand");
+	return;
 }
 
 void b3Ignore_blocks() // 1, 0x00 
@@ -1458,7 +1458,7 @@ void b3Ignore_blocks() // 1, 0x00
 	localViewtab.flags |= IGNOREBLOCKS;
 
 	setViewTab(&localViewtab, entryNum);
-	asm("jmp _afterLogicCommand");
+	return;
 }
 
 void b3Observe_blocks() // 1, 0x00 
@@ -1472,7 +1472,7 @@ void b3Observe_blocks() // 1, 0x00
 	localViewtab.flags &= ~IGNOREBLOCKS;
 
 	setViewTab(&localViewtab, entryNum);
-	asm("jmp _afterLogicCommand");
+	return;
 }
 
 //void b3Block() // 4, 0x00 
@@ -1489,19 +1489,19 @@ void b3Observe_blocks() // 1, 0x00
 void b3Get() // 1, 00 
 {
 	objects[loadAndIncWinCode()].roomNum = 255;
-	asm("jmp _afterLogicCommand");
+	return;
 }
 
 void b3Get_v() // 1, 0x80 
 {
 	objects[var[loadAndIncWinCode()]].roomNum = 255;
-	asm("jmp _afterLogicCommand");
+	return;
 }
 
 void b3Drop() // 1, 0x00 
 {
 	objects[loadAndIncWinCode()].roomNum = 0;
-	asm("jmp _afterLogicCommand");
+	return;
 }
 
 
@@ -1512,7 +1512,7 @@ void b3Put() // 2, 0x00
 	objNum = loadAndIncWinCode();
 	room = loadAndIncWinCode();
 	objects[objNum].roomNum = room;
-	asm("jmp _afterLogicCommand");
+	return;
 }
 
 void b3Put_v() // 2, 0x40 
@@ -1522,7 +1522,7 @@ void b3Put_v() // 2, 0x40
 	objNum = loadAndIncWinCode();
 	room = var[loadAndIncWinCode()];
 	objects[objNum].roomNum = room;
-	asm("jmp _afterLogicCommand");
+	return;
 }
 
 void b3Get_room_v() // 2, 0xC0 
@@ -1531,7 +1531,7 @@ void b3Get_room_v() // 2, 0xC0
 
 	objNum = var[loadAndIncWinCode()];
 	var[loadAndIncWinCode()] = objects[objNum].roomNum;
-	asm("jmp _afterLogicCommand");
+	return;
 }
 
 void b3Load_sound() // 1, 0x00 
@@ -1540,7 +1540,7 @@ void b3Load_sound() // 1, 0x00
 
 	soundNum = loadAndIncWinCode();
 	loadSoundFile(soundNum);
-	asm("jmp _afterLogicCommand");
+	return;
 }
 
 void b3Play_sound() // 2, 00  sound() renamed to avoid clash
@@ -1551,7 +1551,7 @@ void b3Play_sound() // 2, 00  sound() renamed to avoid clash
 	soundEndFlag = loadAndIncWinCode();
 	/* playSound(soundNum); */
 	flag[soundEndFlag] = TRUE;
-	asm("jmp _afterLogicCommand");
+	return;
 }
 
 
@@ -1559,7 +1559,7 @@ void b3Stop_sound() // 0, 0x00
 {
 	checkForEnd = FALSE;
 	stop_midi();
-	asm("jmp _afterLogicCommand");
+	return;
 }
 
 boolean b3CharIsIn(char testChar, char* testString)
@@ -1571,7 +1571,6 @@ boolean b3CharIsIn(char testChar, char* testString)
 	}
 
 	return FALSE;
-	asm("jmp _afterLogicCommand");
 }
 
 void b3ProcessString(char* stringPointer, byte stringBank, char* outputString)
@@ -1674,7 +1673,7 @@ void b3Print() // 1, 00
 	blit(temp, agi_screen, 0, 0, 0, 0, 640, 336);
 	show_mouse(screen);
 	destroy_bitmap(temp);
-	asm("jmp _afterLogicCommand");
+	return;
 }
 
 
@@ -1701,7 +1700,7 @@ void b4Print_v() // 1, 0x80
 	show_mouse(screen);
 	destroy_bitmap(temp);
 
-	asm("jmp _afterLogicCommand");
+	return;
 }
 
 void b4Display() // 3, 0x00 
@@ -1720,7 +1719,7 @@ void b4Display() // 3, 0x00
 	drawBigString(screen, tempString, row * 16, 20 + (col * 16), agi_fg, agi_bg);
 	/*lprintf("info: display() %s, fg: %d bg: %d row: %d col: %d",
 	   tempString, agi_fg, agi_bg, row, col);*/
-	asm("jmp _afterLogicCommand");
+	return;
 }
 
 void b4Display_v() // 3, 0xE0 
@@ -1740,7 +1739,7 @@ void b4Display_v() // 3, 0xE0
 	drawBigString(screen, tempString, row * 16, 20 + (col * 16), agi_fg, agi_bg);
 	/*lprintf("info: display.v() %s, foreground: %d background: %d",
 	   tempString, agi_fg, agi_bg);*/
-	asm("jmp _afterLogicCommand");
+	return;
 }
 
 void b4Clear_lines() // 3, 0x00 
@@ -1755,7 +1754,7 @@ void b4Clear_lines() // 3, 0x00
 	show_mouse(NULL);
 	rectfill(agi_screen, 0, startLine * 16, 639, (endLine * 16) + 15, boxColour);
 	show_mouse(screen);
-	asm("jmp _afterLogicCommand");
+	return;
 }
 
 void b4Text_screen() // 0, 0x00 
@@ -1765,7 +1764,7 @@ void b4Text_screen() // 0, 0x00
 	inputLineDisplayed = FALSE;
 	statusLineDisplayed = FALSE;
 	clear(screen);
-	asm("jmp _afterLogicCommand");
+	return;
 }
 
 void b4Graphics() // 0, 0x00 
@@ -1776,7 +1775,7 @@ void b4Graphics() // 0, 0x00
 	statusLineDisplayed = TRUE;
 	okToShowPic = TRUE;
 	clear(screen);
-	asm("jmp _afterLogicCommand");
+	return;
 }
 
 void b4Set_cursor_char() // 1, 0x00 
@@ -1800,14 +1799,14 @@ void b4Set_cursor_char() // 1, 0x00
 	printf("Your cursor char is %c\n", cursorChar);
 #endif
 
-	asm("jmp _afterLogicCommand");
+	return;
 }
 
 void b4Set_text_attribute() // 2, 0x00 
 {
 	agi_fg = (loadAndIncWinCode()) + 1;
 	agi_bg = (loadAndIncWinCode()) + 1;
-	asm("jmp _afterLogicCommand");
+	return;
 }
 
 //void b4Shake_screen() // 1, 0x00 
@@ -1821,19 +1820,19 @@ void b4Configure_screen() // 3, 0x00
 	min_print_line = loadAndIncWinCode();
 	user_input_line = loadAndIncWinCode();
 	status_line_num = loadAndIncWinCode();
-	asm("jmp _afterLogicCommand");
+	return;
 }
 
 void b4Status_line_on() // 0, 0x00 
 {
 	statusLineDisplayed = TRUE;
-	asm("jmp _afterLogicCommand");
+	return;
 }
 
 void b4Status_line_off() // 0, 0x00 
 {
 	statusLineDisplayed = FALSE;
-	asm("jmp _afterLogicCommand");
+	return;
 }
 
 void b4Set_string() // 2, 0x00 
@@ -1849,7 +1848,7 @@ void b4Set_string() // 2, 0x00
 	messagePointer = getMessagePointer(currentLog, messNum - 1);
 
 	strcpyBanked(string[stringNum - 1], messagePointer, logicFile.messageBank);
-	asm("jmp _afterLogicCommand");
+	return;
 }
 
 void b4Get_string() // 5, 0x00 
@@ -1866,7 +1865,7 @@ void b4Get_string() // 5, 0x00
 	messagePointer = getMessagePointer(currentLog, messNum - 1);
 
 	getString(messagePointer, string[strNum], row, col, l);
-	asm("jmp _afterLogicCommand");
+	return;
 }
 
 void b4Word_to_string() // 2, 0x00 
@@ -1876,7 +1875,7 @@ void b4Word_to_string() // 2, 0x00
 	stringNum = loadAndIncWinCode();
 	wordNum = loadAndIncWinCode();
 	strcpy(string[stringNum], wordText[wordNum]);
-	asm("jmp _afterLogicCommand");
+	return;
 }
 
 void b4Parse() // 1, 0x00 
@@ -1885,7 +1884,7 @@ void b4Parse() // 1, 0x00
 
 	stringNum = loadAndIncWinCode();
 	lookupWords(string[stringNum]);
-	asm("jmp _afterLogicCommand");
+	return;
 }
 
 void b4Get_num() // 2, 0x40 
@@ -1900,21 +1899,21 @@ void b4Get_num() // 2, 0x40
 	messagePointer = getMessagePointer(currentLog, messNum - 1);
 	getString(messagePointer, temp, 1, 23, 3);
 	var[varNum] = atoi(temp);
-	asm("jmp _afterLogicCommand");
+	return;
 }
 
 void b4Prevent_input() // 0, 0x00 
 {
 	inputLineDisplayed = FALSE;
 	/* Do something else here */
-	asm("jmp _afterLogicCommand");
+	return;
 }
 
 void b4Accept_input() // 0, 0x00 
 {
 	inputLineDisplayed = TRUE;
 	/* Do something else here */
-	asm("jmp _afterLogicCommand");
+	return;
 }
 
 void b4Set_key() // 3, 0x00 
@@ -1930,7 +1929,7 @@ void b4Set_key() // 3, 0x00
 	** differently than normal and often specify controllers that have
 	** already been defined.
 	*/
-	if (scanCode && asciiCode) asm("jmp _afterLogicCommand");
+	if (scanCode && asciiCode) return;
 
 	if (scanCode) {
 		events[eventCode].type = SCAN_KEY_EVENT;
@@ -1946,7 +1945,6 @@ void b4Set_key() // 3, 0x00
 		events[eventCode].scanCodeValue = scanCode;
 		events[eventCode].activated = FALSE;
 	}
-	asm("jmp _afterLogicCommand");
 }
 
 void b4Add_to_pic() // 7, 0x00 
@@ -1967,7 +1965,7 @@ void b4Add_to_pic() // 7, 0x00
 	
 
 
-	asm("jmp _afterLogicCommand");
+	return;
 }
 
 void b4Add_to_pic_v() // 7, 0xFE 
@@ -1982,7 +1980,7 @@ void b4Add_to_pic_v() // 7, 0xFE
 	baseCol = var[loadAndIncWinCode()];
 
 	trampolineAddToPic(viewNum, loopNum, celNum, x, y, priNum, baseCol);
-	asm("jmp _afterLogicCommand");
+	return;
 }
 
 void b4Status() // 0, 0x00 
@@ -2018,7 +2016,7 @@ void b4Restart_game() // 0, 0x00
 
 	newRoomNum = 0;
 	hasEnteredNewRoom = TRUE;
-	asm("jmp _afterLogicCommand");
+	return;
 }
 
 void b4Show_obj() // 1, 0x00 
@@ -2027,7 +2025,7 @@ void b4Show_obj() // 1, 0x00
 
 	objectNum = loadAndIncWinCode();
 	/* Not supported yet */
-	asm("jmp _afterLogicCommand");
+	return;
 }
 
 void b4Random_num() // 3, 0x20  random() renamed to avoid clash
@@ -2037,19 +2035,19 @@ void b4Random_num() // 3, 0x20  random() renamed to avoid clash
 	startValue = loadAndIncWinCode();
 	endValue = loadAndIncWinCode();
 	var[loadAndIncWinCode()] = 5;  (rand() % ((endValue - startValue) + 1)) + startValue;
-	asm("jmp _afterLogicCommand");
+	return;
 }
 
 void b4Program_control() // 0, 0x00 
 {
 	controlMode = PROGRAM_CONTROL;
-	asm("jmp _afterLogicCommand");
+	return;
 }
 
 void b4Player_control() // 0, 0x00 
 {
 	controlMode = PLAYER_CONTROL;
-	asm("jmp _afterLogicCommand");
+	return;
 }
 
 void b4Obj_status_v() // 1, 0x80 
@@ -2061,7 +2059,7 @@ void b4Obj_status_v() // 1, 0x80
 
 	/* showView(viewtab[objectNum].currentView); */
 	trampoline_1Int(&bDShowObjectState, objectNum, VIEW_CODE_BANK_4);
-	asm("jmp _afterLogicCommand");
+	return;
 }
 
 
@@ -2080,7 +2078,7 @@ void b4Quit() // 1, 0x00                     /* 0 args for AGI version 2_089 */
 		if (ch == KEY_ENTER) exit(0);
 		showPicture();
 	}
-	asm("jmp _afterLogicCommand");
+	return;
 }
 
 void b4Pause() // 0, 0x00 
@@ -2090,7 +2088,7 @@ void b4Pause() // 0, 0x00
 	while (!key[KEY_ENTER]) { /* Wait */ }
 	showPicture();
 	okToShowPic = TRUE;
-	asm("jmp _afterLogicCommand");
+	return;
 }
 
 
@@ -2118,7 +2116,7 @@ void b4Version() // 0, 0x00
 	while (!key[KEY_ENTER] && !key[KEY_ESC]) { /* Wait */ }
 	showPicture();
 	okToShowPic = TRUE;
-	asm("jmp _afterLogicCommand");
+	return;
 }
 
 //void b4Script_size() // 1, 0x00 
@@ -2147,7 +2145,7 @@ void b4Set_scan_start() // 0, 0x00
 	/* Does it return() at this point, or does it execute to the end?? */
 
 	setLogicEntry(&logicEntry, currentLog);
-	asm("jmp _afterLogicCommand");
+	return;
 }
 
 
@@ -2160,7 +2158,7 @@ void b4Reset_scan_start() // 0, 0x00
 	logicEntry.entryPoint = 0;
 
 	setLogicEntry(&logicEntry, currentLog);
-	asm("jmp _afterLogicCommand");
+	return;
 }
 
 void b4Reposition_to() // 3, 0x00 
@@ -2175,7 +2173,7 @@ void b4Reposition_to() // 3, 0x00
 	localViewtab.yPos = loadAndIncWinCode();
 
 	setViewTab(&localViewtab, entryNum);
-	asm("jmp _afterLogicCommand");
+	return;
 }
 
 void b4Reposition_to_v() // 3, 0x60 
@@ -2190,7 +2188,7 @@ void b4Reposition_to_v() // 3, 0x60
 	localViewtab.yPos = var[loadAndIncWinCode()];
 
 	setViewTab(&localViewtab, entryNum);
-	asm("jmp _afterLogicCommand");
+	return;
 }
 
 //void b4Trace_on() // 0, 0x00 
@@ -2230,7 +2228,7 @@ void b4Print_at() // 4, 0x00           /* 3 args for AGI versions before */
 	//blit(temp, agi_screen, 0, 0, 0, 0, 640, 336);
 	//show_mouse(screen);
 	//destroy_bitmap(temp);
-	asm("jmp _afterLogicCommand");
+	return;
 }
 
 void b4Print_at_v() // 4, 0x80         /* 2_440 (maybe laterz) */
@@ -2259,13 +2257,13 @@ void b4Print_at_v() // 4, 0x80         /* 2_440 (maybe laterz) */
 	blit(temp, agi_screen, 0, 0, 0, 0, 640, 336);
 	show_mouse(screen);
 	destroy_bitmap(temp);
-	asm("jmp _afterLogicCommand");
+	return;
 }
 
 void b4Discard_view_v() // 1, 0x80 
 {
 	trampoline_1Int(&b9DiscardView, var[loadAndIncWinCode()], VIEW_CODE_BANK_1);
-	asm("jmp _afterLogicCommand");
+	return;
 }
 
 void b4Clear_text_rect() // 5, 0x00 
@@ -2282,7 +2280,7 @@ void b4Clear_text_rect() // 5, 0x00
 	show_mouse(NULL);
 	rectfill(agi_screen, x1 * 16, y1 * 16, (x2 * 16) + 15, (y2 * 16) + 15, boxColour);
 	show_mouse(screen);
-	asm("jmp _afterLogicCommand");
+	return;
 }
 
 //void b4Set_upper_left() // 2, 0x00    (x, y) ??
@@ -2293,7 +2291,7 @@ void b4Clear_text_rect() // 5, 0x00
 void b4WaitKeyRelease()
 {
 	while (keypressed()) { /* Wait */ }
-	asm("jmp _afterLogicCommand");
+	return;
 }
 
 int menuEvent0() { b4WaitKeyRelease(); events[0].activated = 1; return D_O_K; }
@@ -2403,7 +2401,7 @@ void b4Set_menu() // 1, 0x00
 	/* Mark end of menu */
 	setMenu(&newMenu, numOfMenus);
 
-	asm("jmp _afterLogicCommand");
+	return;
 }
 
 #pragma code-name (pop)
@@ -2437,7 +2435,7 @@ void b4Set_menu_item() // 2, 0x00
 	testMenus();
 #endif // VERBOSE_MENU
 
-	asm("jmp _afterLogicCommand");
+	return;
 }
 
 //void b4Submit_menu() // 0, 0x00 
@@ -2459,7 +2457,7 @@ void b4Set_menu_item() // 2, 0x00
 void b4Menu_input() // 0, 0x00 
 {
 	do_menu(the_menu, 10, 20);
-	asm("jmp _afterLogicCommand");
+	return;
 }
 
 void b4Show_obj_v() // 1, 0x01 
@@ -2468,7 +2466,7 @@ void b4Show_obj_v() // 1, 0x01
 
 	objectNum = var[loadAndIncWinCode()];
 	/* Not supported yet */
-	asm("jmp _afterLogicCommand");
+	return;
 }
 
 //void b4Open_dialogue() // 0, 0x00 
@@ -2484,25 +2482,25 @@ void b4Show_obj_v() // 1, 0x01
 void b4Mul_n() // 2, 0x80 
 {
 	var[loadAndIncWinCode()] *= loadAndIncWinCode();
-	asm("jmp _afterLogicCommand");
+	return;
 }
 
 void b4Mul_v() // 2, 0xC0 
 {
 	var[loadAndIncWinCode()] *= var[loadAndIncWinCode()];
-	asm("jmp _afterLogicCommand");
+	return;
 }
 
 void b4Div_n() // 2, 0x80 
 {
 	var[loadAndIncWinCode()] /= loadAndIncWinCode();
-	asm("jmp _afterLogicCommand");
+	return;
 }
 
 void b4Div_v() // 2, 0xC0 
 {
 	var[loadAndIncWinCode()] /= var[loadAndIncWinCode()];
-	asm("jmp _afterLogicCommand");
+	return;
 }
 
 //void b4Close_window() // 0, 0x00 

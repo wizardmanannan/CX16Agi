@@ -557,123 +557,123 @@ jmpTableCommands1:
 .addr b2Togglev
 .addr b2New_room
 .addr b2New_room_v
-.addr _b2Load_logics
-.addr _b2Load_logics_v
+.addr b2Load_logicsCCall
+.addr b2Load_logics_vCCall
 .addr b2Call
 .addr b2Call_v
-.addr _b2Load_pic
-.addr _b2Draw_pic
-.addr _b2Show_pic
-.addr _b2Discard_pic
-.addr _b2Overlay_pic
-.addr _b2Show_pri_screen ;check
-.addr _b2Load_view
-.addr _b2Load_view_v
-.addr _b2Discard_view
-.addr _b2Animate_obj
-.addr _b2Unanimate_all
-.addr _b2Draw
-.addr _b2Erase
-.addr _b2Position
-.addr _b2Position_v
-.addr _b2Get_posn
-.addr _b2Reposition
-.addr _b2Set_view
-.addr _b2Set_view_v
-.addr _b2Set_loop
-.addr _b2Set_loop_v
-.addr _b2Fix_loop
-.addr _b2Release_loop
-.addr _b2Set_cel
-.addr _b2Set_cel_v
-.addr _b2Last_cel
-.addr _b2Current_cel
-.addr _b3Current_loop
-.addr _b3Current_view
-.addr _b3Number_of_loops
-.addr _b3Set_priority
-.addr _b3Set_priority_v
-.addr _b3Release_priority
-.addr _b3Get_priority
-.addr _b3Stop_update
-.addr _b3Start_update
-.addr _b3Force_update
-.addr _b3Ignore_horizon
-.addr _b3Observe_horizon
-.addr _b3Set_horizon
-.addr _b3Object_on_water
-.addr _b3Object_on_land
-.addr _b3Object_on_anything
-.addr _b3Ignore_objs
-.addr _b3Observe_objs
-.addr _b3Distance
-.addr _b3Stop_cycling
-.addr _b3Start_cycling
-.addr _b3Normal_cycle
-.addr _b3End_of_loop
-.addr _b3Reverse_cycle
-.addr _b3Reverse_loop
-.addr _b3Cycle_time
-.addr _b3Stop_motion
-.addr _b3Start_motion
-.addr _b3Step_size
-.addr _b3Step_time
-.addr _b3Move_obj
-.addr _b3Move_obj_v
-.addr _b3Follow_ego
-.addr _b3Wander
-.addr _b3Normal_motion
-.addr _b3Set_dir
-.addr _b3Get_dir
-.addr _b3Ignore_blocks
-.addr _b3Observe_blocks
+.addr b2Load_picCCall
+.addr b2Draw_picCCall
+.addr b2Show_picCCall
+.addr b2Discard_picCCall
+.addr b2Overlay_picCCall
+.addr b2Show_pri_screenCCall ;check
+.addr b2Load_viewCCall
+.addr b2Load_view_vCCall
+.addr b2Discard_viewCCall
+.addr b2Animate_objCCall
+.addr b2Unanimate_allCCall
+.addr b2DrawCCall
+.addr b2EraseCCall
+.addr b2PositionCCall
+.addr b2Position_vCCall
+.addr b2Get_posnCCall
+.addr b2RepositionCCall
+.addr b2Set_viewCCall
+.addr b2Set_view_vCCall
+.addr b2Set_loopCCall
+.addr b2Set_loop_vCCall
+.addr b2Fix_loopCCall
+.addr b2Release_loopCCall
+.addr b2Set_celCCall
+.addr b2Set_cel_vCCall
+.addr b2Last_celCCall
+.addr b2Current_celCCall
+.addr b3Current_loopCCall
+.addr b3Current_viewCCall
+.addr b3Number_of_loopsCCall
+.addr b3Set_priorityCCall
+.addr b3Set_priority_vCCall
+.addr b3Release_priorityCCall
+.addr b3Get_priorityCCall
+.addr b3Stop_updateCCall
+.addr b3Start_updateCCall
+.addr b3Force_updateCCall
+.addr b3Ignore_horizonCCall
+.addr b3Observe_horizonCCall
+.addr b3Set_horizonCCall
+.addr b3Object_on_waterCCall
+.addr b3Object_on_landCCall
+.addr b3Object_on_anythingCCall
+.addr b3Ignore_objsCCall
+.addr b3Observe_objsCCall
+.addr b3DistanceCCall
+.addr b3Stop_cyclingCCall
+.addr b3Start_cyclingCCall
+.addr b3Normal_cycleCCall
+.addr b3End_of_loopCCall
+.addr b3Reverse_cycleCCall
+.addr b3Reverse_loopCCall
+.addr b3Cycle_timeCCall
+.addr b3Stop_motionCCall
+.addr b3Start_motionCCall
+.addr b3Step_sizeCCall
+.addr b3Step_timeCCall
+.addr b3Move_objCCall
+.addr b3Move_obj_vCCall
+.addr b3Follow_egoCCall
+.addr b3WanderCCall
+.addr b3Normal_motionCCall
+.addr b3Set_dirCCall
+.addr b3Get_dirCCall
+.addr b3Ignore_blocksCCall
+.addr b3Observe_blocksCCall
 .addr b1NoOp_4
 .addr b1NoOp_0
-.addr _b3Get
-.addr _b3Get_v
-.addr _b3Drop
-.addr _b3Put
-.addr _b3Put_v
-.addr _b3Get_room_v
-.addr _b3Load_sound
-.addr _b3Play_sound
-.addr _b3Stop_sound
-.addr _b3Print
-.addr _b4Print_v
-.addr _b4Display
-.addr _b4Display_v
-.addr _b4Clear_lines
-.addr _b4Text_screen
-.addr _b4Graphics
-.addr _b4Set_cursor_char
-.addr _b4Set_text_attribute
+.addr b3GetCCall
+.addr b3Get_vCCall
+.addr b3DropCCall
+.addr b3PutCCall
+.addr b3Put_vCCall
+.addr b3Get_room_vCCall
+.addr b3Load_soundCCall
+.addr b3Play_soundCCall
+.addr b3Stop_soundCCall
+.addr b3PrintCCall
+.addr b4Print_vCCall
+.addr b4DisplayCCall
+.addr b4Display_vCCall
+.addr b4Clear_linesCCall
+.addr b4Text_screenCCall
+.addr b4GraphicsCCall
+.addr b4Set_cursor_charCCall
+.addr b4Set_text_attributeCCall
 .addr b1NoOp_1
-.addr _b4Configure_screen
-.addr _b4Status_line_on
-.addr _b4Status_line_off
-.addr _b4Set_string
-.addr _b4Get_string
-.addr _b4Word_to_string
-.addr _b4Parse
-.addr _b4Get_num
-.addr _b4Prevent_input
-.addr _b4Accept_input
-.addr _b4Set_key
-.addr _b4Add_to_pic
-.addr _b4Add_to_pic_v
-.addr _b4Status
+.addr b4Configure_screenCCall
+.addr b4Status_line_onCCall
+.addr b4Status_line_offCCall
+.addr b4Set_stringCCall
+.addr b4Get_stringCCall
+.addr b4Word_to_stringCCall
+.addr b4ParseCCall
+.addr b4Get_numCCall
+.addr b4Prevent_inputCCall
+.addr b4Accept_inputCCall
+.addr b4Set_keyCCall
+.addr b4Add_to_picCCall
+.addr b4Add_to_pic_vCCall
+.addr b4StatusCCall
 .addr b1NoOp_0
 .addr b1NoOp_0
 .addr b1NoOp_0
 
 jmpTableCommands2:
-.addr _b4Restart_game
-.addr _b4Show_obj
-.addr _b4Random_num
-.addr _b4Program_control
-.addr _b4Player_control
-.addr _b4Obj_status_v
-.addr _b4Quit
+.addr b4Restart_gameCCall
+.addr b4Show_objCCall
+.addr b4Random_numCCall
+.addr b4Program_controlCCall
+.addr b4Player_controlCCall
+.addr b4Obj_status_vCCall
+.addr b4QuitCCall
 .addr b1NoOp_0
 .addr _b4Pause
 .addr b1NoOp_0
@@ -695,13 +695,13 @@ jmpTableCommands2:
 .addr _b4Discard_view_v
 .addr _b4Clear_text_rect
 .addr b1NoOp_2
-.addr _b4Set_menu
-.addr _b4Set_menu_item
+.addr b4Set_menuCCall
+.addr b4Set_menu_itemCCall
 .addr b1NoOp_0
 .addr b1NoOp_1
 .addr b1NoOp_1
-.addr _b4Menu_input
-.addr _b4Show_obj_v
+.addr b4Menu_inputCCall
+.addr b4Show_obj_vCCall
 .addr b1NoOp_0
 .addr b1NoOp_0
 .addr _b4Mul_n
@@ -1199,6 +1199,388 @@ bra @start
 @start:
 GET_VAR_OR_FLAG VARS_AREA_START_GOLDEN_OFFSET, @var1
 bra switchToNewRoom
+
+.segment "BANKRAM02"
+b2Load_logicsCCall:
+        jsr _b2Load_logics
+        jmp _afterLogicCommand
+b2Load_logics_vCCall:
+        jsr _b2Load_logics_v
+        jmp _afterLogicCommand
+b2Load_picCCall:
+        jsr _b2Load_pic
+        jmp _afterLogicCommand
+b2Draw_picCCall:
+        jsr _b2Draw_pic
+        jmp _afterLogicCommand
+b2Show_picCCall:
+        jsr _b2Show_pic
+        jmp _afterLogicCommand
+b2Discard_picCCall:
+        jsr _b2Discard_pic
+        jmp _afterLogicCommand
+b2Overlay_picCCall:
+        jsr _b2Overlay_pic
+        jmp _afterLogicCommand
+b2Show_pri_screenCCall: ;check
+        jsr _b2Show_pri_screen ;check
+        jmp _afterLogicCommand
+b2Load_viewCCall:
+        jsr _b2Load_view
+        jmp _afterLogicCommand
+b2Load_view_vCCall:
+        jsr _b2Load_view_v
+        jmp _afterLogicCommand
+b2Discard_viewCCall:
+        jsr _b2Discard_view
+        jmp _afterLogicCommand
+b2Animate_objCCall:
+        jsr _b2Animate_obj
+        jmp _afterLogicCommand
+b2Unanimate_allCCall:
+        jsr _b2Unanimate_all
+        jmp _afterLogicCommand
+b2DrawCCall:
+        jsr _b2Draw
+        jmp _afterLogicCommand
+b2EraseCCall:
+        jsr _b2Erase
+        jmp _afterLogicCommand
+b2PositionCCall:
+        jsr _b2Position
+        jmp _afterLogicCommand
+b2Position_vCCall:
+        jsr _b2Position_v
+        jmp _afterLogicCommand
+b2Get_posnCCall:
+        jsr _b2Get_posn
+        jmp _afterLogicCommand
+b2RepositionCCall:
+        jsr _b2Reposition
+        jmp _afterLogicCommand
+b2Set_viewCCall:
+        jsr _b2Set_view
+        jmp _afterLogicCommand
+b2Set_view_vCCall:
+        jsr _b2Set_view_v
+        jmp _afterLogicCommand
+b2Set_loopCCall:
+        jsr _b2Set_loop
+        jmp _afterLogicCommand
+b2Set_loop_vCCall:
+        jsr _b2Set_loop_v
+        jmp _afterLogicCommand
+b2Fix_loopCCall:
+        jsr _b2Fix_loop
+        jmp _afterLogicCommand
+b2Release_loopCCall:
+        jsr _b2Release_loop
+        jmp _afterLogicCommand
+b2Set_celCCall:
+        jsr _b2Set_cel
+        jmp _afterLogicCommand
+b2Set_cel_vCCall:
+        jsr _b2Set_cel_v
+        jmp _afterLogicCommand
+b2Last_celCCall:
+        jsr _b2Last_cel
+        jmp _afterLogicCommand
+b2Current_celCCall:
+        jsr _b2Current_cel
+        jmp _afterLogicCommand
+.segment "BANKRAM03"
+b3Current_loopCCall:
+        jsr _b3Current_loop
+        jmp _afterLogicCommand
+b3Current_viewCCall:
+        jsr _b3Current_view
+        jmp _afterLogicCommand
+b3Number_of_loopsCCall:
+        jsr _b3Number_of_loops
+        jmp _afterLogicCommand
+b3Set_priorityCCall:
+        jsr _b3Set_priority
+        jmp _afterLogicCommand
+b3Set_priority_vCCall:
+        jsr _b3Set_priority_v
+        jmp _afterLogicCommand
+b3Release_priorityCCall:
+        jsr _b3Release_priority
+        jmp _afterLogicCommand
+b3Get_priorityCCall:
+        jsr _b3Get_priority
+        jmp _afterLogicCommand
+b3Stop_updateCCall:
+        jsr _b3Stop_update
+        jmp _afterLogicCommand
+b3Start_updateCCall:
+        jsr _b3Start_update
+        jmp _afterLogicCommand
+b3Force_updateCCall:
+        jsr _b3Force_update
+        jmp _afterLogicCommand
+b3Ignore_horizonCCall:
+        jsr _b3Ignore_horizon
+        jmp _afterLogicCommand
+b3Observe_horizonCCall:
+        jsr _b3Observe_horizon
+        jmp _afterLogicCommand
+b3Set_horizonCCall:
+        jsr _b3Set_horizon
+        jmp _afterLogicCommand
+b3Object_on_waterCCall:
+        jsr _b3Object_on_water
+        jmp _afterLogicCommand
+b3Object_on_landCCall:
+        jsr _b3Object_on_land
+        jmp _afterLogicCommand
+b3Object_on_anythingCCall:
+        jsr _b3Object_on_anything
+        jmp _afterLogicCommand
+b3Ignore_objsCCall:
+        jsr _b3Ignore_objs
+        jmp _afterLogicCommand
+b3Observe_objsCCall:
+        jsr _b3Observe_objs
+        jmp _afterLogicCommand
+b3DistanceCCall:
+        jsr _b3Distance
+        jmp _afterLogicCommand
+b3Stop_cyclingCCall:
+        jsr _b3Stop_cycling
+        jmp _afterLogicCommand
+b3Start_cyclingCCall:
+        jsr _b3Start_cycling
+        jmp _afterLogicCommand
+b3Normal_cycleCCall:
+        jsr _b3Normal_cycle
+        jmp _afterLogicCommand
+b3End_of_loopCCall:
+        jsr _b3End_of_loop
+        jmp _afterLogicCommand
+b3Reverse_cycleCCall:
+        jsr _b3Reverse_cycle
+        jmp _afterLogicCommand
+b3Reverse_loopCCall:
+        jsr _b3Reverse_loop
+        jmp _afterLogicCommand
+b3Cycle_timeCCall:
+        jsr _b3Cycle_time
+        jmp _afterLogicCommand
+b3Stop_motionCCall:
+        jsr _b3Stop_motion
+        jmp _afterLogicCommand
+b3Start_motionCCall:
+        jsr _b3Start_motion
+        jmp _afterLogicCommand
+b3Step_sizeCCall:
+        jsr _b3Step_size
+        jmp _afterLogicCommand
+b3Step_timeCCall:
+        jsr _b3Step_time
+        jmp _afterLogicCommand
+b3Move_objCCall:
+        jsr _b3Move_obj
+        jmp _afterLogicCommand
+b3Move_obj_vCCall:
+        jsr _b3Move_obj_v
+        jmp _afterLogicCommand
+b3Follow_egoCCall:
+        jsr _b3Follow_ego
+        jmp _afterLogicCommand
+b3WanderCCall:
+        jsr _b3Wander
+        jmp _afterLogicCommand
+b3Normal_motionCCall:
+        jsr _b3Normal_motion
+        jmp _afterLogicCommand
+b3Set_dirCCall:
+        jsr _b3Set_dir
+        jmp _afterLogicCommand
+b3Get_dirCCall:
+        jsr _b3Get_dir
+        jmp _afterLogicCommand
+b3Ignore_blocksCCall:
+        jsr _b3Ignore_blocks
+        jmp _afterLogicCommand
+b3Observe_blocksCCall:
+        jsr _b3Observe_blocks
+        jmp _afterLogicCommand
+b3GetCCall:
+        jsr _b3Get
+        jmp _afterLogicCommand
+b3Get_vCCall:
+        jsr _b3Get_v
+        jmp _afterLogicCommand
+b3DropCCall:
+        jsr _b3Drop
+        jmp _afterLogicCommand
+b3PutCCall:
+        jsr _b3Put
+        jmp _afterLogicCommand
+b3Put_vCCall:
+        jsr _b3Put_v
+        jmp _afterLogicCommand
+b3Get_room_vCCall:
+        jsr _b3Get_room_v
+        jmp _afterLogicCommand
+b3Load_soundCCall:
+        jsr _b3Load_sound
+        jmp _afterLogicCommand
+b3Play_soundCCall:
+        jsr _b3Play_sound
+        jmp _afterLogicCommand
+b3Stop_soundCCall:
+        jsr _b3Stop_sound
+        jmp _afterLogicCommand
+b3PrintCCall:
+        jsr _b3Print
+        jmp _afterLogicCommand
+.segment "BANKRAM04"
+b4Print_vCCall:
+        jsr _b4Print_v
+        jmp _afterLogicCommand
+b4DisplayCCall:
+        jsr _b4Display
+        jmp _afterLogicCommand
+b4Display_vCCall:
+        jsr _b4Display_v
+        jmp _afterLogicCommand
+b4Clear_linesCCall:
+        jsr _b4Clear_lines
+        jmp _afterLogicCommand
+b4Text_screenCCall:
+        jsr _b4Text_screen
+        jmp _afterLogicCommand
+b4GraphicsCCall:
+        jsr _b4Graphics
+        jmp _afterLogicCommand
+b4Set_cursor_charCCall:
+        jsr _b4Set_cursor_char
+        jmp _afterLogicCommand
+b4Set_text_attributeCCall:
+        jsr _b4Set_text_attribute
+        jmp _afterLogicCommand
+b4Configure_screenCCall:
+        jsr _b4Configure_screen
+        jmp _afterLogicCommand
+b4Status_line_onCCall:
+        jsr _b4Status_line_on
+        jmp _afterLogicCommand
+b4Status_line_offCCall:
+        jsr _b4Status_line_off
+        jmp _afterLogicCommand
+b4Set_stringCCall:
+        jsr _b4Set_string
+        jmp _afterLogicCommand
+b4Get_stringCCall:
+        jsr _b4Get_string
+        jmp _afterLogicCommand
+b4Word_to_stringCCall:
+        jsr _b4Word_to_string
+        jmp _afterLogicCommand
+b4ParseCCall:
+        jsr _b4Parse
+        jmp _afterLogicCommand
+b4Get_numCCall:
+        jsr _b4Get_num
+        jmp _afterLogicCommand
+b4Prevent_inputCCall:
+        jsr _b4Prevent_input
+        jmp _afterLogicCommand
+b4Accept_inputCCall:
+        jsr _b4Accept_input
+        jmp _afterLogicCommand
+b4Set_keyCCall:
+        jsr _b4Set_key
+        jmp _afterLogicCommand
+b4Add_to_picCCall:
+        jsr _b4Add_to_pic
+        jmp _afterLogicCommand
+b4Add_to_pic_vCCall:
+        jsr _b4Add_to_pic_v
+        jmp _afterLogicCommand
+b4StatusCCall:
+        jsr _b4Status
+        jmp _afterLogicCommand
+b4Restart_gameCCall:
+        jsr _b4Restart_game
+        jmp _afterLogicCommand
+b4Show_objCCall:
+        jsr _b4Show_obj
+        jmp _afterLogicCommand
+b4Random_numCCall:
+        jsr _b4Random_num
+        jmp _afterLogicCommand
+b4Program_controlCCall:
+        jsr _b4Program_control
+        jmp _afterLogicCommand
+b4Player_controlCCall:
+        jsr _b4Player_control
+        jmp _afterLogicCommand
+b4Obj_status_vCCall:
+        jsr _b4Obj_status_v
+        jmp _afterLogicCommand
+b4QuitCCall:
+        jsr _b4Quit
+        jmp _afterLogicCommand
+b4PauseCCall:
+        jsr _b4Pause
+        jmp _afterLogicCommand
+b4VersionCCall:
+        jsr _b4Version
+        jmp _afterLogicCommand
+b4Set_scan_startCCall:
+        jsr _b4Set_scan_start
+        jmp _afterLogicCommand
+b4Reset_scan_startCCall:
+        jsr _b4Reset_scan_start
+        jmp _afterLogicCommand
+b4Reposition_toCCall:
+        jsr _b4Reposition_to
+        jmp _afterLogicCommand
+b4Reposition_to_vCCall:
+        jsr _b4Reposition_to_v
+        jmp _afterLogicCommand
+b4Print_atCCall:
+        jsr _b4Print_at
+        jmp _afterLogicCommand
+b4Print_at_vCCall:
+        jsr _b4Print_at_v
+        jmp _afterLogicCommand
+b4Discard_view_vCCall:
+        jsr _b4Discard_view_v
+        jmp _afterLogicCommand
+b4Clear_text_rectCCall:
+        jsr _b4Clear_text_rect
+        jmp _afterLogicCommand
+b4Set_menuCCall:
+        jsr _b4Set_menu
+        jmp _afterLogicCommand
+.segment "BANKRAM05"
+b4Set_menu_itemCCall:
+        jsr _b4Set_menu_item
+        jmp _afterLogicCommand
+b4Menu_inputCCall:
+        jsr _b4Menu_input
+        jmp _afterLogicCommand
+b4Show_obj_vCCall:
+        jsr _b4Show_obj_v
+        jmp _afterLogicCommand
+b4Mul_nCCall:
+        jsr _b4Mul_n
+        jmp _afterLogicCommand
+b4Mul_vCCall:
+        jsr _b4Mul_v
+        jmp _afterLogicCommand
+b4Div_nCCall:
+        jsr _b4Div_n
+        jmp _afterLogicCommand
+b4Div_vCCall:
+        jsr _b4Div_v
+        jmp _afterLogicCommand
+
+
 
 ;If Checks
 .segment "BANKRAM0F"

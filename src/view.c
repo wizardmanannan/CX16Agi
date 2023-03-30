@@ -855,11 +855,6 @@ void bANormalAdjust(int entryNum, int dx, int dy)
 	int tempX, tempY, testX, startX, endX, waterCount = 0;
 	ViewTable localViewtab;
 
-	if (opCounter > 121727)
-	{
-		printf("I have successfully made the call");
-	}
-
 	getViewTab(&localViewtab, entryNum);
 
 	tempX = (localViewtab.xPos + dx);
