@@ -8,7 +8,7 @@ extern byte codeBank;
 long opCounter = 1;
 long stopAt = -1;
 long exitAt = -1;
-long startPrintingAt = -1;
+long startPrintingAt = 284664;
 boolean stopEvery = FALSE;
 
 //#define CHECK_MEM;
