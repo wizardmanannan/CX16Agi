@@ -8,11 +8,12 @@ namespace Tester
         public const string ErrorMountDriveMustNotExist = "The mount drive '{0}' already exists";
 
         private Action<Config> RunTest { get; set; }
+        private string _optionalArgments;
 
-        public Tester(Action<Config> runTest)
+        public Tester(Action<Config> runTest, string optionalArgments)
         {
             RunTest = runTest;
-
+            _optionalArgments = optionalArgments;
             InitializeComponent();
         }
 
@@ -45,6 +46,7 @@ namespace Tester
                 SdCardMountDriveLetter = txtSdCardMountDriveLetter.Text,
                 Cx16EmulatatorFolder = txtCx16EmulatorFolder.Text,
                 MakeFileFolder = txtMakeFileFolder.Text,
+                OptionalArguments = _optionalArgments
             };
 
             if (ValidateChildren())
