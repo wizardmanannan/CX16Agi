@@ -36,11 +36,12 @@
 #define CODE_WINDOW_SIZE 10
 //#define VERBOSE_STRING_CHECK
 //#define VERBOSE_LOGIC_EXEC
-#define VERBOSE_SCRIPT_START
+//#define VERBOSE_SCRIPT_START
 //#define VERBOSE_PRINT_COUNTER;
 //#define VERBOSE_MENU
 //#define VERBOSE_MENU_DUMP
 //#define VERBOSE_MESSAGE_TEXT
+#define VERBOSE_ROOM_CHANGE
 
 //#define  DEBUG
 
@@ -62,6 +63,7 @@ boolean oldQuit = FALSE;
 int numOfMenus = 0;
 MENU* the_menu = (MENU*)&BANK_RAM[MENU_START];
 MENU* the_menuChildren = (MENU*)&BANK_RAM[MENU_CHILD_START];
+byte lastRoom = 0;
 
 long opCounter = 0;
 int printCounter = 1;
@@ -3033,6 +3035,14 @@ void executeLogic(int logNum)
 #ifdef VERBOSE_SCRIPT_START
 	printf("ex s. %d counter %lu\n", logNum, opCounter);
 #endif // VERBOSE_SCRIPT_START
+
+#ifdef VERBOSE_ROOM_CHANGE
+	if (var[0] != lastRoom)
+	{
+		printf("We are at %d, counter %lu\n", var[0], opCounter);
+}
+	lastRoom = var[0];
+#endif
 
 
 #ifdef DEBUG
