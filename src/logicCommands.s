@@ -170,7 +170,9 @@ LOGICCOMMANDS_INC = 1
 .import _debugPostCheckFlag
 .import _debugIndirect
 .import _debugIndirectV
-
+.import _debugNewRoom
+.import _debugExitAllLogics
+.import _stopAtFunc
 .endif 
 
 _logDebugVal1: .byte $0
@@ -380,6 +382,21 @@ JSRFAR _debugIndirectV, DEBUG_BANK
 .endif
 .endmacro
 
+.macro DEBUG_NEW_ROOM
+.ifdef DEBUG
+LOAD_CODE_WIN_CODE
+sta _logDebugVal1
+
+JSRFAR _debugNewRoom, DEBUG_BANK
+.endif
+.endmacro
+
+.macro DEBUG_EXIT_ALL_LOGICS
+.ifdef DEBUG
+JSRFAR _debugExitAllLogics, DEBUG_BANK
+.endif
+.endmacro
+
 .macro STORE_ON_STACK_RECURSIVE_CALL
 lda startPos
 pha 
@@ -503,9 +520,10 @@ jmp returnFromOpCodeFalse
 .endmacro
 
 .macro EXIT_ALL_LOGICS_IF_SET
+DEBUG_EXIT_ALL_LOGICS
 lda _exitAllLogics
 beq @dontExit
-jmp mainLoop
+jmp endMainLoop
 @dontExit:
 .endmacro
 
@@ -1173,15 +1191,16 @@ b2Call_v:
 bra @start
 @var1: .byte $0
 @start:
-EXIT_ALL_LOGICS_IF_SET
 GET_VAR_OR_FLAG VARS_AREA_START_GOLDEN_OFFSET, @var1
 
 lda @var1
 jsr callLogic
 INC_CODE
+EXIT_ALL_LOGICS_IF_SET
 jmp _afterLogicCommand
 
 b2New_room:
+DEBUG_NEW_ROOM
 LOAD_CODE_WIN_CODE
 sta _newRoomNum
 stz _newRoomNum + 1

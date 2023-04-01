@@ -4,20 +4,23 @@
 extern boolean* flag;
 extern byte* var;
 extern byte codeBank;
+extern byte newRoomNum;
+extern boolean hasEnteredNewRoom, exitAllLogics;
 
 long opCounter = 1;
 long stopAt = -1;
-long exitAt = 584664;
-long startPrintingAt = 0;
+long exitAt = -1;
+long startPrintingAt = -1;
 boolean stopEvery = FALSE;
 
 //#define CHECK_MEM;
 
 void stopAtFunc()
 {
-	if (opCounter > 1)
+	if (opCounter > 284611)
 	{
 		asm("stp");
+		asm("nop");
 	}
 }
 
@@ -264,6 +267,22 @@ void codeJumpDebug()
 	if (opCounter >= startPrintingAt && startPrintingAt != -1)
 	{
 		printf("b1 is %d b2 is %d and the jump result is %u\n", logDebugVal1, logDebugVal2, (logDebugVal2 << 8) | logDebugVal1);
+	}
+}
+
+void debugNewRoom()
+{
+	if (opCounter >= startPrintingAt && startPrintingAt != -1)
+	{
+		printf("Attempting to enter new room %d\n", logDebugVal1);
+	}
+}
+
+void debugExitAllLogics()
+{
+	if (opCounter >= startPrintingAt && startPrintingAt != -1)
+	{
+		printf("----------Exit Debug: Attempting to enter new room %d. Has entered new Room: %d. Has exited all logics %d\n", newRoomNum, hasEnteredNewRoom, exitAllLogics);
 	}
 }
 

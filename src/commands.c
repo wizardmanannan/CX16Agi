@@ -2517,7 +2517,6 @@ void b5GotoFunc(byte** code)
 }
 
 boolean hasSeen1 = FALSE;
-
 #pragma code-name (pop)
 #pragma code-name (push, "BANKRAM07")
 /***************************************************************************
