@@ -70,7 +70,9 @@ namespace Tester {
         ///timeout 3
         ///OSFMount -D -m %2:
         ///cd C:\Commander\ 
-        ///x16emu.exe -sdcard %~n1%~x1 -prg &quot;agi.cx16&quot; -run -debug d -echo
+        ///IF  %5==&quot;&quot; ( x16emu.exe -sdcard %~n1%~x1 -prg &quot;agi.cx16&quot; -run -debug d -echo &gt;c:\temp\output.txt ) else  ( x16emu.exe -sdcard %~n1%~x1 -prg &quot;agi.cx16&quot; -run -debug d -echo %5 &gt;c:\temp\output.txt )
+        ///
+        ///pause
         ///cd %4.
         /// </summary>
         internal static string test_bat {
