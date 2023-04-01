@@ -2034,7 +2034,7 @@ void b4Random_num() // 3, 0x20  random() renamed to avoid clash
 
 	startValue = loadAndIncWinCode();
 	endValue = loadAndIncWinCode();
-	var[loadAndIncWinCode()] = 5;  (rand() % ((endValue - startValue) + 1)) + startValue;
+	var[loadAndIncWinCode()] = 4;  (rand() % ((endValue - startValue) + 1)) + startValue;
 	return;
 }
 
