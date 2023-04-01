@@ -2508,7 +2508,10 @@ void b4Div_v() // 2, 0xC0
 //
 //}
 
-void b5GotoFunc(byte** code)
+#pragma code-name (pop)
+#pragma code-name (push, "BANKRAM0F")
+
+void bFGotoFunc(byte** code)
 {
 	short int disp;
 

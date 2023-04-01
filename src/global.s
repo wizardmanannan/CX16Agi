@@ -1,7 +1,7 @@
 .ifndef  GLOBAL_INC
 
 .include "x16.inc"
-DEBUG = 1 ;Note the debug preprocessor variable in helpers.h must also be enabled to avoid errors
+DEBUG = 0
 
 startPos: .word $0
 endPos:  .word $0
@@ -17,7 +17,7 @@ GOLDEN_RAM = $400
 
 LOGIC_COMMANDS_BANK = $0F
 DEBUG_BANK = $05
-COMMAND_LOOP_HELPER_BANK = $05
+COMMAND_LOOP_HELPER_BANK = $0F
 MEKA_BANK = $07
 
 VARS_AREA_START_GOLDEN_OFFSET = 0

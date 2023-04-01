@@ -27,7 +27,7 @@ numArgs: .byte $0,$2,$2,$2,$2,$2,$2,$1,$1,$1,$2,$5,$1,$0,$0,$2,$5,$5,$5
     .import _opCounter
     .import _stopAtFunc 
 .endif
-.import _b5GotoFunc
+.import _bFGotoFunc
 .import _callC1
 .import _callC2
 
@@ -198,7 +198,6 @@ ifHandler:
         LOAD_CODE_WIN_CODE
         sta ch
         INC_CODE
-        ;jsr _stopAtFunc
 
         lda ch
 
@@ -303,13 +302,11 @@ ifHandler:
 
                         jmp @startFindBracketLoop
                         @FFResult:
-                        JSRFAR goto, COMMAND_LOOP_HELPER_BANK
+                        jsr goto
                         bra endifFunction
 
                     endifFunction:
                         jmp mainLoop
-;commandLoopHelpers
-.segment "BANKRAM05"
 goto:
     @start:
     LOAD_CODE_WIN_CODE
@@ -324,7 +321,7 @@ goto:
     CATCH_UP_CODE
     lda #ZP_PTR_CODE
     ldx #$0
-    jsr _b5GotoFunc
+    jsr _bFGotoFunc
     lda #TRUE
     sta codeWindowInvalid
     jsr refreshCodeWindow
