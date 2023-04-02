@@ -749,23 +749,23 @@ var2: .byte $0
 
 .segment "BANKRAM01"
 b1NoOp_0:
-    jmp _afterLogicCommand
+    jmp mainLoop
 
 b1NoOp_1:
     INC_CODE
-    jmp _afterLogicCommand
+    jmp mainLoop
 
 b1NoOp_2:
     INC_CODE_BY #$2
-    jmp _afterLogicCommand
+    jmp mainLoop
 
 b1NoOp_3:
     INC_CODE_BY #$3
-    jmp _afterLogicCommand
+    jmp mainLoop
 
 b1NoOp_4:
     INC_CODE_BY #$4
-    jmp _afterLogicCommand
+    jmp mainLoop
 
 ;Logic Commands
 ;Instruction 0 return is handled by jumping straight to the end main loop
@@ -788,7 +788,7 @@ b1Increment:
          SET_VAR_OR_FLAG VARS_AREA_START_GOLDEN_OFFSET, @value, @var
          @end:        
          DEBUG_POST_CHECK_VAR
-         jmp _afterLogicCommand
+         jmp mainLoop
 
 
 b1Decrement:
@@ -808,7 +808,7 @@ b1Decrement:
          SET_VAR_OR_FLAG VARS_AREA_START_GOLDEN_OFFSET, @value, @var
          @end:        
          DEBUG_POST_CHECK_VAR
-         jmp _afterLogicCommand
+         jmp mainLoop
 
 b1Assignn:
       bra @start
@@ -829,7 +829,7 @@ b1Assignn:
 
         DEBUG_POST_CHECK_VAR @var
 
-         jmp _afterLogicCommand
+         jmp mainLoop
 
 b1Assignv:
       bra @start
@@ -862,7 +862,7 @@ b1Assignv:
 
          DEBUG_POST_CHECK_VAR @var
 
-         jmp _afterLogicCommand
+         jmp mainLoop
 
 b1Addn:
       bra @start
@@ -888,7 +888,7 @@ b1Addn:
 
         DEBUG_POST_CHECK_VAR @var 
         
-         jmp _afterLogicCommand
+         jmp mainLoop
 
 b1Addv:
       bra @start
@@ -929,7 +929,7 @@ b1Addv:
         
          DEBUG_POST_CHECK_VAR @var
 
-         jmp _afterLogicCommand
+         jmp mainLoop
 
 .segment "BANKRAM02"
 b2Subn:
@@ -957,7 +957,7 @@ b2Subn:
 
          DEBUG_POST_CHECK_VAR @var
 
-         jmp _afterLogicCommand
+         jmp mainLoop
 
 b2Subv:
       bra @start
@@ -995,7 +995,7 @@ b2Subv:
          
         DEBUG_POST_CHECK_VAR @var
 
-         jmp _afterLogicCommand
+         jmp mainLoop
 
 b2Lindirectv:
       bra @start
@@ -1025,7 +1025,7 @@ b2Lindirectv:
          
          DEBUG_POST_CHECK_VAR @varNum1
 
-         jmp _afterLogicCommand
+         jmp mainLoop
 
 
 b2Rindirect:
@@ -1045,7 +1045,7 @@ b2Rindirect:
 
          SET_VAR_OR_FLAG VARS_AREA_START_GOLDEN_OFFSET, @result, @var1
 
-         jmp _afterLogicCommand
+         jmp mainLoop
 
 b2Lindirectn:
       bra @start
@@ -1070,7 +1070,7 @@ b2Lindirectn:
          
          DEBUG_POST_CHECK_VAR @varNum
 
-         jmp _afterLogicCommand
+         jmp mainLoop
 
 b2Set:   
         .ifdef DEBUG
@@ -1084,7 +1084,7 @@ b2Set:
 
         DEBUG_POST_CHECK_FLAG
 
-         jmp _afterLogicCommand
+         jmp mainLoop
 
 b2Reset:  
         .ifdef DEBUG
@@ -1097,7 +1097,7 @@ b2Reset:
 
         DEBUG_POST_CHECK_FLAG
 
-         jmp _afterLogicCommand
+         jmp mainLoop
 
 b2Toggle:
       bra @start
@@ -1120,7 +1120,7 @@ b2Toggle:
 
         DEBUG_POST_CHECK_FLAG @flagVal
 
-        jmp _afterLogicCommand
+        jmp mainLoop
 
 b2Setv:
       bra @start
@@ -1134,7 +1134,7 @@ b2Setv:
 
         DEBUG_POST_CHECK_FLAG @result
 
-        jmp _afterLogicCommand
+        jmp mainLoop
 
 b2Resetv:
       bra @start
@@ -1154,7 +1154,7 @@ b2Resetv:
 
         DEBUG_POST_CHECK_FLAG
 
-        jmp _afterLogicCommand
+        jmp mainLoop
 
 b2Togglev:
       bra @start
@@ -1178,14 +1178,14 @@ b2Togglev:
         DEBUG_POST_CHECK_FLAG @flagVal
 
         INC_CODE
-        jmp _afterLogicCommand
+        jmp mainLoop
 
 b2Call:
 LOAD_CODE_WIN_CODE
 jsr callLogic
 INC_CODE
 EXIT_ALL_LOGICS_IF_SET
-jmp _afterLogicCommand
+jmp mainLoop
 
 b2Call_v:
 bra @start
@@ -1197,7 +1197,7 @@ lda @var1
 jsr callLogic
 INC_CODE
 EXIT_ALL_LOGICS_IF_SET
-jmp _afterLogicCommand
+jmp mainLoop
 
 b2New_room:
 DEBUG_NEW_ROOM
@@ -1222,382 +1222,382 @@ bra switchToNewRoom
 .segment "BANKRAM02"
 b2Load_logicsCCall:
         jsr _b2Load_logics
-        jmp _afterLogicCommand
+        jmp mainLoop
 b2Load_logics_vCCall:
         jsr _b2Load_logics_v
-        jmp _afterLogicCommand
+        jmp mainLoop
 b2Load_picCCall:
         jsr _b2Load_pic
-        jmp _afterLogicCommand
+        jmp mainLoop
 b2Draw_picCCall:
         jsr _b2Draw_pic
-        jmp _afterLogicCommand
+        jmp mainLoop
 b2Show_picCCall:
         jsr _b2Show_pic
-        jmp _afterLogicCommand
+        jmp mainLoop
 b2Discard_picCCall:
         jsr _b2Discard_pic
-        jmp _afterLogicCommand
+        jmp mainLoop
 b2Overlay_picCCall:
         jsr _b2Overlay_pic
-        jmp _afterLogicCommand
+        jmp mainLoop
 b2Show_pri_screenCCall: ;check
         jsr _b2Show_pri_screen ;check
-        jmp _afterLogicCommand
+        jmp mainLoop
 b2Load_viewCCall:
         jsr _b2Load_view
-        jmp _afterLogicCommand
+        jmp mainLoop
 b2Load_view_vCCall:
         jsr _b2Load_view_v
-        jmp _afterLogicCommand
+        jmp mainLoop
 b2Discard_viewCCall:
         jsr _b2Discard_view
-        jmp _afterLogicCommand
+        jmp mainLoop
 b2Animate_objCCall:
         jsr _b2Animate_obj
-        jmp _afterLogicCommand
+        jmp mainLoop
 b2Unanimate_allCCall:
         jsr _b2Unanimate_all
-        jmp _afterLogicCommand
+        jmp mainLoop
 b2DrawCCall:
         jsr _b2Draw
-        jmp _afterLogicCommand
+        jmp mainLoop
 b2EraseCCall:
         jsr _b2Erase
-        jmp _afterLogicCommand
+        jmp mainLoop
 b2PositionCCall:
         jsr _b2Position
-        jmp _afterLogicCommand
+        jmp mainLoop
 b2Position_vCCall:
         jsr _b2Position_v
-        jmp _afterLogicCommand
+        jmp mainLoop
 b2Get_posnCCall:
         jsr _b2Get_posn
-        jmp _afterLogicCommand
+        jmp mainLoop
 b2RepositionCCall:
         jsr _b2Reposition
-        jmp _afterLogicCommand
+        jmp mainLoop
 b2Set_viewCCall:
         jsr _b2Set_view
-        jmp _afterLogicCommand
+        jmp mainLoop
 b2Set_view_vCCall:
         jsr _b2Set_view_v
-        jmp _afterLogicCommand
+        jmp mainLoop
 b2Set_loopCCall:
         jsr _b2Set_loop
-        jmp _afterLogicCommand
+        jmp mainLoop
 b2Set_loop_vCCall:
         jsr _b2Set_loop_v
-        jmp _afterLogicCommand
+        jmp mainLoop
 b2Fix_loopCCall:
         jsr _b2Fix_loop
-        jmp _afterLogicCommand
+        jmp mainLoop
 b2Release_loopCCall:
         jsr _b2Release_loop
-        jmp _afterLogicCommand
+        jmp mainLoop
 b2Set_celCCall:
         jsr _b2Set_cel
-        jmp _afterLogicCommand
+        jmp mainLoop
 b2Set_cel_vCCall:
         jsr _b2Set_cel_v
-        jmp _afterLogicCommand
+        jmp mainLoop
 b2Last_celCCall:
         jsr _b2Last_cel
-        jmp _afterLogicCommand
+        jmp mainLoop
 b2Current_celCCall:
         jsr _b2Current_cel
-        jmp _afterLogicCommand
+        jmp mainLoop
 .segment "BANKRAM03"
 b3Current_loopCCall:
         jsr _b3Current_loop
-        jmp _afterLogicCommand
+        jmp mainLoop
 b3Current_viewCCall:
         jsr _b3Current_view
-        jmp _afterLogicCommand
+        jmp mainLoop
 b3Number_of_loopsCCall:
         jsr _b3Number_of_loops
-        jmp _afterLogicCommand
+        jmp mainLoop
 b3Set_priorityCCall:
         jsr _b3Set_priority
-        jmp _afterLogicCommand
+        jmp mainLoop
 b3Set_priority_vCCall:
         jsr _b3Set_priority_v
-        jmp _afterLogicCommand
+        jmp mainLoop
 b3Release_priorityCCall:
         jsr _b3Release_priority
-        jmp _afterLogicCommand
+        jmp mainLoop
 b3Get_priorityCCall:
         jsr _b3Get_priority
-        jmp _afterLogicCommand
+        jmp mainLoop
 b3Stop_updateCCall:
         jsr _b3Stop_update
-        jmp _afterLogicCommand
+        jmp mainLoop
 b3Start_updateCCall:
         jsr _b3Start_update
-        jmp _afterLogicCommand
+        jmp mainLoop
 b3Force_updateCCall:
         jsr _b3Force_update
-        jmp _afterLogicCommand
+        jmp mainLoop
 b3Ignore_horizonCCall:
         jsr _b3Ignore_horizon
-        jmp _afterLogicCommand
+        jmp mainLoop
 b3Observe_horizonCCall:
         jsr _b3Observe_horizon
-        jmp _afterLogicCommand
+        jmp mainLoop
 b3Set_horizonCCall:
         jsr _b3Set_horizon
-        jmp _afterLogicCommand
+        jmp mainLoop
 b3Object_on_waterCCall:
         jsr _b3Object_on_water
-        jmp _afterLogicCommand
+        jmp mainLoop
 b3Object_on_landCCall:
         jsr _b3Object_on_land
-        jmp _afterLogicCommand
+        jmp mainLoop
 b3Object_on_anythingCCall:
         jsr _b3Object_on_anything
-        jmp _afterLogicCommand
+        jmp mainLoop
 b3Ignore_objsCCall:
         jsr _b3Ignore_objs
-        jmp _afterLogicCommand
+        jmp mainLoop
 b3Observe_objsCCall:
         jsr _b3Observe_objs
-        jmp _afterLogicCommand
+        jmp mainLoop
 b3DistanceCCall:
         jsr _b3Distance
-        jmp _afterLogicCommand
+        jmp mainLoop
 b3Stop_cyclingCCall:
         jsr _b3Stop_cycling
-        jmp _afterLogicCommand
+        jmp mainLoop
 b3Start_cyclingCCall:
         jsr _b3Start_cycling
-        jmp _afterLogicCommand
+        jmp mainLoop
 b3Normal_cycleCCall:
         jsr _b3Normal_cycle
-        jmp _afterLogicCommand
+        jmp mainLoop
 b3End_of_loopCCall:
         jsr _b3End_of_loop
-        jmp _afterLogicCommand
+        jmp mainLoop
 b3Reverse_cycleCCall:
         jsr _b3Reverse_cycle
-        jmp _afterLogicCommand
+        jmp mainLoop
 b3Reverse_loopCCall:
         jsr _b3Reverse_loop
-        jmp _afterLogicCommand
+        jmp mainLoop
 b3Cycle_timeCCall:
         jsr _b3Cycle_time
-        jmp _afterLogicCommand
+        jmp mainLoop
 b3Stop_motionCCall:
         jsr _b3Stop_motion
-        jmp _afterLogicCommand
+        jmp mainLoop
 b3Start_motionCCall:
         jsr _b3Start_motion
-        jmp _afterLogicCommand
+        jmp mainLoop
 b3Step_sizeCCall:
         jsr _b3Step_size
-        jmp _afterLogicCommand
+        jmp mainLoop
 b3Step_timeCCall:
         jsr _b3Step_time
-        jmp _afterLogicCommand
+        jmp mainLoop
 b3Move_objCCall:
         jsr _b3Move_obj
-        jmp _afterLogicCommand
+        jmp mainLoop
 b3Move_obj_vCCall:
         jsr _b3Move_obj_v
-        jmp _afterLogicCommand
+        jmp mainLoop
 b3Follow_egoCCall:
         jsr _b3Follow_ego
-        jmp _afterLogicCommand
+        jmp mainLoop
 b3WanderCCall:
         jsr _b3Wander
-        jmp _afterLogicCommand
+        jmp mainLoop
 b3Normal_motionCCall:
         jsr _b3Normal_motion
-        jmp _afterLogicCommand
+        jmp mainLoop
 b3Set_dirCCall:
         jsr _b3Set_dir
-        jmp _afterLogicCommand
+        jmp mainLoop
 b3Get_dirCCall:
         jsr _b3Get_dir
-        jmp _afterLogicCommand
+        jmp mainLoop
 b3Ignore_blocksCCall:
         jsr _b3Ignore_blocks
-        jmp _afterLogicCommand
+        jmp mainLoop
 b3Observe_blocksCCall:
         jsr _b3Observe_blocks
-        jmp _afterLogicCommand
+        jmp mainLoop
 b3GetCCall:
         jsr _b3Get
-        jmp _afterLogicCommand
+        jmp mainLoop
 b3Get_vCCall:
         jsr _b3Get_v
-        jmp _afterLogicCommand
+        jmp mainLoop
 b3DropCCall:
         jsr _b3Drop
-        jmp _afterLogicCommand
+        jmp mainLoop
 b3PutCCall:
         jsr _b3Put
-        jmp _afterLogicCommand
+        jmp mainLoop
 b3Put_vCCall:
         jsr _b3Put_v
-        jmp _afterLogicCommand
+        jmp mainLoop
 b3Get_room_vCCall:
         jsr _b3Get_room_v
-        jmp _afterLogicCommand
+        jmp mainLoop
 b3Load_soundCCall:
         jsr _b3Load_sound
-        jmp _afterLogicCommand
+        jmp mainLoop
 b3Play_soundCCall:
         jsr _b3Play_sound
-        jmp _afterLogicCommand
+        jmp mainLoop
 b3Stop_soundCCall:
         jsr _b3Stop_sound
-        jmp _afterLogicCommand
+        jmp mainLoop
 b3PrintCCall:
         jsr _b3Print
-        jmp _afterLogicCommand
+        jmp mainLoop
 .segment "BANKRAM04"
 b4Print_vCCall:
         jsr _b4Print_v
-        jmp _afterLogicCommand
+        jmp mainLoop
 b4DisplayCCall:
         jsr _b4Display
-        jmp _afterLogicCommand
+        jmp mainLoop
 b4Display_vCCall:
         jsr _b4Display_v
-        jmp _afterLogicCommand
+        jmp mainLoop
 b4Clear_linesCCall:
         jsr _b4Clear_lines
-        jmp _afterLogicCommand
+        jmp mainLoop
 b4Text_screenCCall:
         jsr _b4Text_screen
-        jmp _afterLogicCommand
+        jmp mainLoop
 b4GraphicsCCall:
         jsr _b4Graphics
-        jmp _afterLogicCommand
+        jmp mainLoop
 b4Set_cursor_charCCall:
         jsr _b4Set_cursor_char
-        jmp _afterLogicCommand
+        jmp mainLoop
 b4Set_text_attributeCCall:
         jsr _b4Set_text_attribute
-        jmp _afterLogicCommand
+        jmp mainLoop
 b4Configure_screenCCall:
         jsr _b4Configure_screen
-        jmp _afterLogicCommand
+        jmp mainLoop
 b4Status_line_onCCall:
         jsr _b4Status_line_on
-        jmp _afterLogicCommand
+        jmp mainLoop
 b4Status_line_offCCall:
         jsr _b4Status_line_off
-        jmp _afterLogicCommand
+        jmp mainLoop
 b4Set_stringCCall:
         jsr _b4Set_string
-        jmp _afterLogicCommand
+        jmp mainLoop
 b4Get_stringCCall:
         jsr _b4Get_string
-        jmp _afterLogicCommand
+        jmp mainLoop
 b4Word_to_stringCCall:
         jsr _b4Word_to_string
-        jmp _afterLogicCommand
+        jmp mainLoop
 b4ParseCCall:
         jsr _b4Parse
-        jmp _afterLogicCommand
+        jmp mainLoop
 b4Get_numCCall:
         jsr _b4Get_num
-        jmp _afterLogicCommand
+        jmp mainLoop
 b4Prevent_inputCCall:
         jsr _b4Prevent_input
-        jmp _afterLogicCommand
+        jmp mainLoop
 b4Accept_inputCCall:
         jsr _b4Accept_input
-        jmp _afterLogicCommand
+        jmp mainLoop
 b4Set_keyCCall:
         jsr _b4Set_key
-        jmp _afterLogicCommand
+        jmp mainLoop
 b4Add_to_picCCall:
         jsr _b4Add_to_pic
-        jmp _afterLogicCommand
+        jmp mainLoop
 b4Add_to_pic_vCCall:
         jsr _b4Add_to_pic_v
-        jmp _afterLogicCommand
+        jmp mainLoop
 b4StatusCCall:
         jsr _b4Status
-        jmp _afterLogicCommand
+        jmp mainLoop
 b4Restart_gameCCall:
         jsr _b4Restart_game
-        jmp _afterLogicCommand
+        jmp mainLoop
 b4Show_objCCall:
         jsr _b4Show_obj
-        jmp _afterLogicCommand
+        jmp mainLoop
 b4Random_numCCall:
         jsr _b4Random_num
-        jmp _afterLogicCommand
+        jmp mainLoop
 b4Program_controlCCall:
         jsr _b4Program_control
-        jmp _afterLogicCommand
+        jmp mainLoop
 b4Player_controlCCall:
         jsr _b4Player_control
-        jmp _afterLogicCommand
+        jmp mainLoop
 b4Obj_status_vCCall:
         jsr _b4Obj_status_v
-        jmp _afterLogicCommand
+        jmp mainLoop
 b4QuitCCall:
         jsr _b4Quit
-        jmp _afterLogicCommand
+        jmp mainLoop
 b4PauseCCall:
         jsr _b4Pause
-        jmp _afterLogicCommand
+        jmp mainLoop
 b4VersionCCall:
         jsr _b4Version
-        jmp _afterLogicCommand
+        jmp mainLoop
 b4Set_scan_startCCall:
         jsr _b4Set_scan_start
-        jmp _afterLogicCommand
+        jmp mainLoop
 b4Reset_scan_startCCall:
         jsr _b4Reset_scan_start
-        jmp _afterLogicCommand
+        jmp mainLoop
 b4Reposition_toCCall:
         jsr _b4Reposition_to
-        jmp _afterLogicCommand
+        jmp mainLoop
 b4Reposition_to_vCCall:
         jsr _b4Reposition_to_v
-        jmp _afterLogicCommand
+        jmp mainLoop
 b4Print_atCCall:
         jsr _b4Print_at
-        jmp _afterLogicCommand
+        jmp mainLoop
 b4Print_at_vCCall:
         jsr _b4Print_at_v
-        jmp _afterLogicCommand
+        jmp mainLoop
 b4Discard_view_vCCall:
         jsr _b4Discard_view_v
-        jmp _afterLogicCommand
+        jmp mainLoop
 b4Clear_text_rectCCall:
         jsr _b4Clear_text_rect
-        jmp _afterLogicCommand
+        jmp mainLoop
 b4Set_menuCCall:
         jsr _b4Set_menu
-        jmp _afterLogicCommand
+        jmp mainLoop
 .segment "BANKRAM05"
 b4Set_menu_itemCCall:
         jsr _b4Set_menu_item
-        jmp _afterLogicCommand
+        jmp mainLoop
 b4Menu_inputCCall:
         jsr _b4Menu_input
-        jmp _afterLogicCommand
+        jmp mainLoop
 b4Show_obj_vCCall:
         jsr _b4Show_obj_v
-        jmp _afterLogicCommand
+        jmp mainLoop
 b4Mul_nCCall:
         jsr _b4Mul_n
-        jmp _afterLogicCommand
+        jmp mainLoop
 b4Mul_vCCall:
         jsr _b4Mul_v
-        jmp _afterLogicCommand
+        jmp mainLoop
 b4Div_nCCall:
         jsr _b4Div_n
-        jmp _afterLogicCommand
+        jmp mainLoop
 b4Div_vCCall:
         jsr _b4Div_v
-        jmp _afterLogicCommand
+        jmp mainLoop
 
 
 

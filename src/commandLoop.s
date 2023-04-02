@@ -417,10 +417,6 @@ _commandLoop:
             INC_CODE
             ldx jumpOffset
             jmp (jmpTableCommands2,x)
-
-            _afterLogicCommand:
-
-            jmp mainLoop
         endMainLoop:
         lda previousRamBank
         sta RAM_BANK

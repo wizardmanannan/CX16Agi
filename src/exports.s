@@ -6,7 +6,6 @@
     .export _commandLoop
     .export _b7InitAsm
     .export _loadAndIncWinCode
-    .export _afterLogicCommand
     .export _incCodeBy
     .export codeWindow
     .export _codeBank

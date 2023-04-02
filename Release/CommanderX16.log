@@ -1,0 +1,9 @@
+﻿  Could Not Find C:\meka\CommanderX16Repo\makefile.options
+  'c:\cc65\make' is not recognized as an internal or external command,
+  operable program or batch file.
+  The system cannot find the file specified.
+  C:\meka\CommanderX16Repo\Release\CommanderX16.log - The process cannot access the file because it is being used by another process.
+C:\Program Files\Microsoft Visual Studio\2022\Enterprise\MSBuild\Microsoft\VC\v170\Microsoft.MakeFile.Targets(45,5): error MSB3073: The command "del /S /Q "C:\meka\CommanderX16Repo\makefile.options
+C:\Program Files\Microsoft Visual Studio\2022\Enterprise\MSBuild\Microsoft\VC\v170\Microsoft.MakeFile.Targets(45,5): error MSB3073: c:\cc65\make -C "C:\meka\CommanderX16Repo\\" PROGRAM="C:\meka\CommanderX16Repo\Release\CommanderX16"
+C:\Program Files\Microsoft Visual Studio\2022\Enterprise\MSBuild\Microsoft\VC\v170\Microsoft.MakeFile.Targets(45,5): error MSB3073: rmdir /S /Q "C:\meka\CommanderX16Repo\obj\Win32"
+C:\Program Files\Microsoft Visual Studio\2022\Enterprise\MSBuild\Microsoft\VC\v170\Microsoft.MakeFile.Targets(45,5): error MSB3073: rmdir /S /Q "C:\meka\CommanderX16Repo\Release"" exited with code 9009.

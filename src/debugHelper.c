@@ -10,8 +10,9 @@ extern boolean hasEnteredNewRoom, exitAllLogics;
 long opCounter = 1;
 long stopAt = -1;
 long exitAt = -1;
-long startPrintingAt = -1;
+long startPrintingAt = 0;
 boolean stopEvery = FALSE;
+int _clockBefore = 0;
 
 //#define CHECK_MEM;
 
@@ -50,9 +51,23 @@ void b5CheckMemory()
 
 void debugPrint(byte toPrint)
 {
+	int time;
+	int clockVal = (int)clock();
 	if (opCounter >= startPrintingAt && startPrintingAt != -1 && startPrintingAt != -1)
 	{
-		printf("op %lu, %d, var 0 is %d\n", opCounter, toPrint, var[0]);
+		if (clockVal > _clockBefore)
+		{
+			time = clockVal - _clockBefore;
+		}
+		else
+		{
+			time = _clockBefore - clockVal;
+		}
+
+
+
+		printf("op %lu, %d, var 0 is %d. Time taken %d\n", opCounter, toPrint, var[0], time);
+		_clockBefore = clockVal;
 #ifdef CHECK_MEM
 		b5CheckMemory();
 #endif
