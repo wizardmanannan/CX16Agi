@@ -156,7 +156,7 @@ toggleNotMode:
 
 startOrModeLoop:
 bra @start
-    @ch: .byte $0
+    @ch: .word $0
     @start:
     LOAD_CODE_WIN_CODE
     sta @ch
@@ -266,7 +266,7 @@ ifHandler:
     
             endIfHandlerLoop:
                     bra @startFindBracketLoop
-                    @ch: .byte $0
+                    @ch: .word $0
                     @b1: .word $0
                     @b2: .word $0
                     @disp: .word $0
@@ -287,7 +287,9 @@ ifHandler:
 
                         ldx @ch
                         lda numArgs,x
+                        ldx #$0
                         sta @disp
+                        stz @disp + 1
 
                         jsr _incCodeBy
                         bra @startFindBracketLoop
@@ -308,6 +310,8 @@ ifHandler:
                     endifFunction:
                         jmp mainLoop
 goto:
+    bra @start
+    @jumpAmount: .word $0
     @start:
     LOAD_CODE_WIN_CODE
     sta _callC1
@@ -318,13 +322,10 @@ goto:
 
     DEBUG_JUMP _callC1, _callC2
 
-    CATCH_UP_CODE
-    lda #ZP_PTR_CODE
-    ldx #$0
     jsr _bFGotoFunc
-    lda #TRUE
-    sta codeWindowInvalid
-    jsr refreshCodeWindow
+    sta @jumpAmount
+    stx @jumpAmount + 1
+    INC_CODE_BY @jumpAmount
     DEBUG_CODE_STATE
     rts
 ;endCommandLoopHelpers

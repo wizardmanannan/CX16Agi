@@ -10,7 +10,7 @@ extern boolean hasEnteredNewRoom, exitAllLogics;
 long opCounter = 1;
 long stopAt = -1;
 long exitAt = -1;
-long startPrintingAt = 0;
+long startPrintingAt = -1;
 boolean stopEvery = FALSE;
 int _clockBefore = 0;
 
@@ -18,9 +18,10 @@ int _clockBefore = 0;
 
 void stopAtFunc()
 {
-	if (opCounter > 284611)
+	if (opCounter > 137)
 	{
 		asm("stp");
+		asm("nop");
 		asm("nop");
 	}
 }

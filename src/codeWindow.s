@@ -3,12 +3,13 @@ CODE_WINDOW_INC = 1
 .include "global.s"
 .ifdef DEBUG
 .import _debugPrintCurrentCodeState
+.import _stopAtFunc 
 .endif
 
 
 ZP_PTR_CODE_WIN = $80
 
-CODE_WINDOW_SIZE = 10
+CODE_WINDOW_SIZE = 50
 .segment "CODE"
 codeWindow: .res CODE_WINDOW_SIZE
 cwCurrentCode: .word $0
@@ -48,18 +49,21 @@ jsr refreshCodeWindow
 .macro INC_CODE_BY jumpAmount
 .local @start
 .local @end
-
+.local @catchUp
 ADD_WORD_16 cwCurrentCode, jumpAmount, cwCurrentCode
+lda cwCurrentCode + 1
+bne @catchUp
 lda cwCurrentCode
 cmp #CODE_WINDOW_SIZE - 1
 bcc @end
+@catchUp:
 CATCH_UP_CODE
 jsr refreshCodeWindow
 @end:
 .endmacro
 
 .macro CATCH_UP_CODE ;Warning Invalidates The Code Window Call Refresh Afterwards
-ADD_WORD_16_8 ZP_PTR_CODE, cwCurrentCode, ZP_PTR_CODE
+ADD_WORD_16 ZP_PTR_CODE, cwCurrentCode, ZP_PTR_CODE
 
 lda #TRUE
 sta codeWindowInvalid

@@ -2511,12 +2511,12 @@ void b4Div_v() // 2, 0xC0
 #pragma code-name (pop)
 #pragma code-name (push, "BANKRAM0F")
 
-void bFGotoFunc(byte** code)
+int bFGotoFunc()
 {
 	short int disp;
 
 	disp = (callC2 << 8) | callC1;  /* Should be signed 16 bit */
-	*code += disp;
+	return disp;
 }
 
 boolean hasSeen1 = FALSE;

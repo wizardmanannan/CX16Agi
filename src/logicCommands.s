@@ -756,16 +756,19 @@ b1NoOp_1:
     jmp mainLoop
 
 b1NoOp_2:
-    INC_CODE_BY #$2
+    INC_CODE_BY @amount
     jmp mainLoop
+    @amount: .word $2
 
 b1NoOp_3:
-    INC_CODE_BY #$3
+    INC_CODE_BY @amount
     jmp mainLoop
+    @amount: .word $3
 
 b1NoOp_4:
-    INC_CODE_BY #$4
+    INC_CODE_BY @amount
     jmp mainLoop
+    @amount: .word $4
 
 ;Logic Commands
 ;Instruction 0 return is handled by jumping straight to the end main loop
