@@ -18,7 +18,7 @@ int _clockBefore = 0;
 
 void stopAtFunc()
 {
-	if (opCounter > 137)
+	if (opCounter >= 197)
 	{
 		asm("stp");
 		asm("nop");
@@ -282,7 +282,7 @@ void codeJumpDebug()
 {
 	if (opCounter >= startPrintingAt && startPrintingAt != -1)
 	{
-		printf("b1 is %d b2 is %d and the jump result is %u\n", logDebugVal1, logDebugVal2, (logDebugVal2 << 8) | logDebugVal1);
+		printf("b1 is %d b2 is %d, Shift %u and the jump result is %u.\n", logDebugVal1, logDebugVal2, (logDebugVal2 << 8), (logDebugVal2 << 8) | logDebugVal1);
 	}
 }
 

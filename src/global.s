@@ -270,27 +270,25 @@ FALSE = 0
        
 .endmacro
 
-.macro LEFT_SHIFT_16 word1, amount, result
-        .local @startLoop
-        .local @endLoop
+.macro LEFT_SHIFT_BY_8 word1, result
+;Shift by 8
+lda word1
+sta result + 1
 
-        ldx #$0
-        @startLoop:
-        cpx amount
-        beq @endLoop
+; Zero the lower byte
+lda #$00
+sta result
+.endmacro
 
-        clc
-        lda word1
-        rol
-        sta result
 
-        lda word1 + 1
-        rol
-        sta result + 1
-
-        inx 
-        bra @startLoop
-        @endLoop:
+.macro LEFT_SHIFT_BY_1 word1, result
+clc
+lda word1
+rol
+sta result
+lda word1 + 1
+rol
+sta result + 1
 .endmacro
 
 

@@ -96,7 +96,7 @@ lda #LOGIC_COMMANDS_BANK
 sta RAM_BANK
 .endmacro
 
-.macro CODE_JUMP ;requires local variables @disp, @b1 and @b2 to be in scope    
+.macro CODE_JUMP ;requires local variables @disp, @b1 and @b2 to be in scope        
     LOAD_CODE_WIN_CODE
     sta @b1
     INC_CODE
@@ -106,7 +106,7 @@ sta RAM_BANK
     INC_CODE
 
     DEBUG_JUMP @b1, @b2
-    LEFT_SHIFT_16 @b2, #$8, @disp
+    LEFT_SHIFT_BY_8 @b2, @disp
 
     ORA_16 @b1, @disp, @disp 
 
@@ -177,7 +177,7 @@ bra @start
     bne @else
 
     @0E:
-    LEFT_SHIFT_16 @ch, #$1, @ch 
+    LEFT_SHIFT_BY_1 @ch, @ch 
 
     INC_CODE_BY @ch
     jmp startOrModeLoop
@@ -298,7 +298,7 @@ ifHandler:
                         LOAD_CODE_WIN_CODE
                         sta @ch
                         INC_CODE
-                        LEFT_SHIFT_16 @ch, #$1, @disp
+                        LEFT_SHIFT_BY_1 @ch, @disp
                         sta @disp
                         jsr _incCodeBy
 
@@ -311,21 +311,12 @@ ifHandler:
                         jmp mainLoop
 goto:
     bra @start
-    @jumpAmount: .word $0
+    @disp: .word $0
+    @b1: .word $0
+    @b2: .word $0
     @start:
-    LOAD_CODE_WIN_CODE
-    sta _callC1
-    INC_CODE
-    LOAD_CODE_WIN_CODE
-    sta _callC2
-    INC_CODE
+    CODE_JUMP
 
-    DEBUG_JUMP _callC1, _callC2
-
-    jsr _bFGotoFunc
-    sta @jumpAmount
-    stx @jumpAmount + 1
-    INC_CODE_BY @jumpAmount
     DEBUG_CODE_STATE
     rts
 ;endCommandLoopHelpers
