@@ -96,7 +96,16 @@ lda #LOGIC_COMMANDS_BANK
 sta RAM_BANK
 .endmacro
 
-.macro CODE_JUMP ;requires local variables @disp, @b1 and @b2 to be in scope        
+.macro GOTO
+    .local @disp
+    .local @b1
+    .local @b2
+    .local @start
+    bra @start
+    @disp: .word $0
+    @b1: .word $0
+    @b2: .word $0
+    @start:
     LOAD_CODE_WIN_CODE
     sta @b1
     INC_CODE
@@ -113,6 +122,8 @@ sta RAM_BANK
     INC_CODE_BY @disp
     DEBUG_CODE_STATE
 .endmacro
+
+
 
 debugPrintTrampoline:
 ldx RAM_BANK
@@ -304,21 +315,11 @@ ifHandler:
 
                         jmp @startFindBracketLoop
                         @FFResult:
-                        jsr goto
+                        GOTO
                         bra endifFunction
 
                     endifFunction:
                         jmp mainLoop
-goto:
-    bra @start
-    @disp: .word $0
-    @b1: .word $0
-    @b2: .word $0
-    @start:
-    CODE_JUMP
-
-    DEBUG_CODE_STATE
-    rts
 ;endCommandLoopHelpers
 
 .segment "CODE"
@@ -377,13 +378,15 @@ _commandLoop:
         bra mainLoop
         @checkGoTo:
         cmp #$FE
-        bne @default
+        beq @FE
+        jmp @default
+        @FE:
         DEBUG_PRINT
         DEBUG_CODE_STATE
         INC_CODE
         lda #COMMAND_LOOP_HELPER_BANK
         sta RAM_BANK
-        jsr goto
+        GOTO
         jmp mainLoop
         @default:
  
