@@ -289,8 +289,11 @@ ifHandler:
                         lda @ch
                         
                         cmp #$FF
-                        beq @FFResult
+                        bne @0E
+                        
+                        jmp @FFResult
 
+                        @0E:
                         cmp #$0E
                         beq @0EResult
 
@@ -302,7 +305,7 @@ ifHandler:
                         sta @disp
                         stz @disp + 1
 
-                        jsr _incCodeBy
+                        INC_CODE_BY @disp
                         bra @startFindBracketLoop
 
                         @0EResult:
@@ -311,7 +314,7 @@ ifHandler:
                         INC_CODE
                         LEFT_SHIFT_BY_1 @ch, @disp
                         sta @disp
-                        jsr _incCodeBy
+                        INC_CODE_BY @disp
 
                         jmp @startFindBracketLoop
                         @FFResult:
