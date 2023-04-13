@@ -1,7 +1,7 @@
 .ifndef  GLOBAL_INC
 
 .include "x16.inc"
-DEBUG = 0
+;DEBUG = 0
 
 startPos: .word $0
 endPos:  .word $0
