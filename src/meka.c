@@ -36,7 +36,7 @@ byte horizon;
 #define DEBUG 1
 //#define VERBOSE
 
-const unsigned int TIMER_WAIT_MS = 50;
+const int TIMER_WAIT_MS = 50;
 
 volatile int counter;              /* Used for timer control */
 volatile int hund;                 /* Used for interpreters clock */
