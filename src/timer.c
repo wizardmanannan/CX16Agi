@@ -15,7 +15,7 @@ void b7InitTimer(timer_proc timerProc)
 void b7CheckTimer(int intervalMs)
 {
 	clock_t difference = clock() - _before;
-	int msec = difference * 1000 / CLOCKS_PER_SEC;
+	unsigned int msec = difference * 1000 / CLOCKS_PER_SEC;
 
 	if (msec > intervalMs)
 	{
