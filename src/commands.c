@@ -2580,7 +2580,7 @@ void executeLogic(int logNum)
 	//currentLogic.currentPoint = currentLogic.entryPoint;
 
 #define LOGIC_ENTRY_PARAMETERS_OFFSET  0
-	* ((LOGICEntry**)(GOLDEN_RAM_PARAMS_AREA + LOGIC_ENTRY_PARAMETERS_OFFSET)) = &currentLogic;
+	* ((LOGICEntry**)(GOLDEN_RAM_PARAMS_AREA + LOGIC_ENTRY_PARAMETERS_OFFSET)) = &currentLogic; //TODO: This isn't the cleanest solution. I need to figure out how to pass both params as argument. 
 
 	commandLoop(&currentLogicFile);
 

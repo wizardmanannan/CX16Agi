@@ -14,7 +14,6 @@ LOGIC_ENTRY_PARAMETERS_OFFSET =  0
 ZP_PTR_LF = $7E
 ZP_PTR_LE = $70
 
-stillExecuting: .byte $1
 jumpOffset: .byte $0
 numArgs: .byte $0,$2,$2,$2,$2,$2,$2,$1,$1,$1,$2,$5,$1,$0,$0,$2,$5,$5,$5
 
@@ -139,13 +138,20 @@ rts
 ;ifHelpers
 .segment "BANKRAM0F"
  closingIfBracket:
-            INC_CODE
+            INC_CODE ;* data += 2;
             INC_CODE
             jmp endifFunction
 
 checkOrMode:
     lda orMode
-    beq @orModeFalse
+    beq @orModeFalse                  ;if (orMode) {
+                                        ;If we have reached the closing OR bracket, then the
+                                        ;test for the whole expression must be false. */
+                                        ;stillProcessing = FALSE;
+                                        ;}
+                                        ;else {
+                                        ;	orMode = TRUE;
+                                        ;}
 
     jmp endIfHandlerLoop
     
@@ -155,8 +161,8 @@ checkOrMode:
         jmp ifHandlerLoop
 
 toggleNotMode:
-    lda notMode
-    beq @toggleOn
+    lda notMode  
+    beq @toggleOn  ;notMode = (notMode ? FALSE : TRUE);
     lda #FALSE
     sta notMode
     jmp ifHandlerLoop
@@ -165,10 +171,30 @@ toggleNotMode:
     sta notMode
     jmp ifHandlerLoop
 
+;Find the closing OR. It can't just search for 0xfc
+;because this could be a parameter for one of the test
+;commands rather than being the closing OR. We therefore
+;have to jump over each command as we find it. 
+
+;while (TRUE) {
+;						ch = *(*data)++;
+;						if (ch == 0xfc) break;
+;						if (ch > 0xfc) continue;
+;						if (ch == 0x0e) { /* said() has variable number of args */
+;							ch = *(*data)++;
+;
+;							*data += (ch << 1);
+;						}
+;						else {
+;							*data += testCommands[ch].numArgs;
+;						}
+;					}
+
+
 startOrModeLoop:
 bra @start
     @ch: .word $0
-    @start:
+    @start:                         
     LOAD_CODE_WIN_CODE
     sta @ch
     INC_CODE
@@ -201,7 +227,7 @@ bra @start
 ifHandler:
         stz notMode
         stz orMode
-        jmp ifHandlerLoop
+        bra ifHandlerLoop
         notMode: .byte FALSE
         orMode: .byte FALSE
         ch: .byte $0
@@ -212,20 +238,20 @@ ifHandler:
 
         lda ch
 
-        cmp #$FF
+        cmp #$FF ;Closing if bracket. Expression must be true.
         beq @closingIfBracketJmp
 
-        cmp #$fd
+        cmp #$fd ;Not mode toggle
         beq @toggleNotModeJmp
 
-        cmp #$FC
+        cmp #$FC ;Or Mode
         beq @checkOrModeJmp
         
 
         bra @default
 
         @closingIfBracketJmp:
-            DEBUG_PRINT ch
+            DEBUG_PRINT ch ;/* Closing if bracket. Expression must be true. */
             jmp closingIfBracket
         
         @toggleNotModeJmp:
@@ -249,21 +275,21 @@ ifHandler:
             jmp (jmpTableIf,x)
             
             returnFromOpCodeFalse:
-                DEBUG_PRINT_FALSE
-                lda notMode
+                DEBUG_PRINT_FALSE 
+                lda notMode ;If not mode branch to false result
                 bne returnFromOpCodeTrueAfterNotMode            
                 
                 returnFromOpCodeFalseAfterNotMode:
                 DEBUG_PRINT_NOT
                 stz notMode
-                lda orMode      
+                lda orMode  ;if (!orMode) stillProcessing = FALSE;
                 
                 beq endIfHandlerLoop
                 jmp ifHandlerLoop  
 
             returnFromOpCodeTrue:
                 DEBUG_PRINT_TRUE
-                lda notMode
+                lda notMode ;If not mode branch to true result
                 bne returnFromOpCodeFalseAfterNotMode
 
             returnFromOpCodeTrueAfterNotMode:
@@ -271,24 +297,43 @@ ifHandler:
                 stz notMode
                 lda orMode
                 beq @gotoStartIfHandler
-                jmp startOrModeLoop
+                jmp startOrModeLoop ;On return from a true result use the or mode loop to skip the other side of the or. Short circuit evaluation
                 @gotoStartIfHandler:
                 jmp ifHandlerLoop
     
             endIfHandlerLoop:
                     bra @startFindBracketLoop
+        ;while (TRUE) {
+        ;    ch = *(*data)++;
+        ;    if (ch == 0xff) {
+        ;        b1 = *(*data)++;
+        ;        b2 = *(*data)++;
+        ;        disp = (b2 << 8) | b1;  /* Should be signed 16 bit */
+        ;        *data += disp;
+        ;        break;
+        ;    }
+        ;    if (ch >= 0xfc) continue;
+        ;    if (ch == 0x0e) {
+        ;        ch = *(*data)++;
+        ;        *data += (ch << 1);
+        ;    }
+        ;    else {
+        ;        *data += testCommands[ch].numArgs;
+        ;    }
+	    ;}
+
                     @ch: .word $0
                     @b1: .word $0
                     @b2: .word $0
                     @disp: .word $0
                     @startFindBracketLoop:
-                        LOAD_CODE_WIN_CODE
+                        LOAD_CODE_WIN_CODE                                 
                         sta @ch
                         
                         INC_CODE
                         lda @ch
                         
-                        cmp #$FF
+                        cmp #$FF ;Closing If Bracket
                         bne @0E
                         
                         jmp @FFResult
@@ -297,9 +342,9 @@ ifHandler:
                         cmp #$0E
                         beq @0EResult
 
-                        GREATER_THAN_OR_EQ_8 @ch, #$FC, @startFindBracketLoop
+                        GREATER_THAN_OR_EQ_8 @ch, #$FC, @startFindBracketLoop ;Skip or modes
 
-                        ldx @ch
+                        ldx @ch ;*data += testCommands[ch].numArgs;
                         lda numArgs,x
                         ldx #$0
                         sta @disp
@@ -308,7 +353,7 @@ ifHandler:
                         INC_CODE_BY @disp
                         bra @startFindBracketLoop
 
-                        @0EResult:
+                        @0EResult: ;said() has variable number of args
                         LOAD_CODE_WIN_CODE
                         sta @ch
                         INC_CODE
@@ -327,85 +372,80 @@ ifHandler:
 
 .segment "CODE"
 _commandLoop:
-         jmp start
+         bra start
          entryPoint: .word $0
          codeSize: .word $0
          codeAtTimeOfLastBankSwitch: .byte $0
          previousRamBank: .byte $0
          start:
-         sta   ZP_PTR_LF
+         sta   ZP_PTR_LF ;currentLogicFile = *currentLogic.data;
          stx   ZP_PTR_LF  + 1
 
          lda RAM_BANK
          sta previousRamBank
 
          lda   GOLDEN_RAM + PARAMETERS_WORK_AREA_GOLDEN_OFFSET + LOGIC_ENTRY_PARAMETERS_OFFSET
-         ldx   GOLDEN_RAM + PARAMETERS_WORK_AREA_GOLDEN_OFFSET + LOGIC_ENTRY_PARAMETERS_OFFSET + 1
+         ldx   GOLDEN_RAM + PARAMETERS_WORK_AREA_GOLDEN_OFFSET + LOGIC_ENTRY_PARAMETERS_OFFSET + 1 ;Get the stored value from the parameter storage
          sta   ZP_PTR_LE
          stx   ZP_PTR_LE  + 1
         
-         GET_STRUCT_16 LOGIC_FILE_LOGIC_CODE_OFFSET, ZP_PTR_LF, startPos
+         GET_STRUCT_16 LOGIC_FILE_LOGIC_CODE_OFFSET, ZP_PTR_LF, startPos ;Retrieving the struct members required
          GET_STRUCT_16 LOGIC_FILE_LOGIC_CODE_SIZE_OFFSET, ZP_PTR_LF, codeSize
 
          GET_STRUCT_8 LOGIC_FILE_LOGIC_BANK_OFFSET, ZP_PTR_LF, _codeBank
          GET_STRUCT_16 LOGIC_ENTRY_POINT_OFFSET, ZP_PTR_LE, entryPoint
          
-         ADD_WORD_16 startPos,entryPoint,ZP_PTR_CODE
-         ADD_WORD_16 startPos,codeSize,endPos
+         ADD_WORD_16 startPos,entryPoint,ZP_PTR_CODE ;code = startPos + currentLogic.entryPoint;
+         ADD_WORD_16 startPos,codeSize,endPos ;startPos + currentLogicFile.codeSize;
          
          LDA #TRUE
-         sta codeWindowInvalid
+         sta codeWindowInvalid ;At the beginning start from ZP_PTR_CODE
          jsr refreshCodeWindow
          mainLoop:
          GREATER_THAN_OR_EQ_16 ZP_PTR_CODE, endPos, endMainLoop
-         lda stillExecuting
-         cmp #TRUE
-         beq @loopConditionSuccess
-         jmp endMainLoop
-         @loopConditionSuccess:
-        SUB_WORD_16_IND ZP_PTR_CODE, startPos, LOGIC_ENTRY_CURRENT_POINT_OFFSET, ZP_PTR_LE
+         SUB_WORD_16_IND ZP_PTR_CODE, startPos, LOGIC_ENTRY_CURRENT_POINT_OFFSET, ZP_PTR_LE
         ; /* Emergency exit */
 		; if (key[KEY_F12]) {
 		; 	////lprintf("info: Exiting MEKA due to F12, logic: %d, posn: %d",
 		; 		//logNum, currentLogic.currentPoint);
 		; 	exit(0);
 		; }
-        LOAD_CODE_WIN_CODE
-        sta codeAtTimeOfLastBankSwitch
-        cmp #$FF
-        bne @checkGoTo
-        DEBUG_PRINT
-        INC_CODE
-        SET_BANK_TO_IF_BANK
-        jmp ifHandler
-        bra mainLoop
-        @checkGoTo:
-        cmp #$FE
-        beq @FE
-        jmp @default
-        @FE:
-        DEBUG_PRINT
-        DEBUG_CODE_STATE
-        INC_CODE
-        lda #COMMAND_LOOP_HELPER_BANK
-        sta RAM_BANK
-        GOTO
-        jmp mainLoop
-        @default:
+         LOAD_CODE_WIN_CODE
+         sta codeAtTimeOfLastBankSwitch
+         cmp #$FF
+         bne @checkGoTo
+         DEBUG_PRINT
+         INC_CODE
+         SET_BANK_TO_IF_BANK
+         jmp ifHandler
+         bra mainLoop
+         @checkGoTo:
+         cmp #$FE
+         beq @FE
+         jmp @default
+         @FE:
+         DEBUG_PRINT
+         DEBUG_CODE_STATE
+         INC_CODE
+         lda #COMMAND_LOOP_HELPER_BANK
+         sta RAM_BANK
+         GOTO
+         jmp mainLoop
+         @default:
  
             DEBUG_PRINT
             LOAD_CODE_WIN_CODE
             tax
-            ldy codeBankArray,x
+            ldy codeBankArray,x ;Get the code bank from the large array
             sty RAM_BANK                
             cmp #$80
-            bcs @commands2
+            bcs @commands2 ;Greater than 80 command is in second jump table
             @commands1:
-            asl
+            asl ;Multiple jump offset by 2 as addresses are two bytes each
             sta jumpOffset
             INC_CODE
             ldx jumpOffset
-            jmp (jmpTableCommands1,x)
+            jmp (jmpTableCommands1,x) ; Jump to offset
 
             @commands2:
             sec
