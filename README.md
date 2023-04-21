@@ -1,8 +1,13 @@
-# CX16Agi
+# CX16Agi Interation 2
+
+Major Changes Since Iteration 2:
+-File Loading Cache Implemented Significantly Improving Speed
+- Core of interpreter has been rewritten in 6502 assembly improving speed
+- Size of executable has been reduced by shifing more code into banked RAM.
 
 **Note This Project Is Under Construction And Is Not Ready For General Use**
 
-**Currently this program is very slow and requires Warp Mode. Significant optimisation will be required**
+**Currently this program is too slow. Optimisation will be required, but it is many times faster than iteration 1**
 
 **Only AGI 1 & 2 games are currently supported**
 
@@ -42,6 +47,7 @@ Also note due to the immaturity of this project all games are not yet guaranteed
 -VIEWDIR
 -VOL.0 to VOL.X
 -WORDS.TOK
+11. Copy the bank config file 'cx16-bank.cfg' to the cc65\cfg. Don't forget to back up the old one.
 11. Run 'tester.exe' as admin. Note: The source code for the tester tool is under: \CommanderX16Repo\tools\TesterTool if you would rather compile it yourself
 12. Fill in the text boxes according to the instructions in the Window. Note that the make file is located in the root directory of the repo
 13. Click 'Test'. Note to run again rerun the tester.exe, it will remember the parameters entered last time. Delete: 'cx16TesterConfig.json' to clear the memory.
@@ -49,14 +55,14 @@ Also note due to the immaturity of this project all games are not yet guaranteed
 
 Thus far the project:\
 #Reads the AGI index files\
-#Loads the LOGIC and executes most code (code relying on Views with loops is not yet working. This causes hanging)\
-#Prints what is executed to the screen
+#Loads the LOGIC and executes most code
+#Prints the script executing to the screen. There is a DEBUG define variable in global.s which can be uncommented out which means that individual instructions and results are printed to screen but that is SLOW
 
 Obvious things that need to be done:\
 #Test more games, I have only tested one game thus far King's Quest III\
 #I have been building this under Windows, and the deployment tool I threw together for the purpose is Windows dependent. A Linux build tool should be developed\
 #String functions need to be uncommented out and retested
-#This code is currently very SLOW, this most likely culprit is that the engine unloads and loads resources a lot. I suspect that with a cache of some kind the speed should be a vastly improved\
+#This code is currently slow. It takes 1:10 to execute the first intro screen of King's Quest III, when it should take 45 seconds
 #Import the rest of the MEKA code base. I have been importing it in a piecemeal fashion, and using a stub\
 #More stuff needs to be moved out of the low RAM area, as we are upto a 19kb executable. This is both code and data. Although the vast majority of the code is on the banks already, there are some large file loading routines which I would like to see moved\
 #Graphics, sound and keyboard routines need to be implemented\
@@ -72,7 +78,7 @@ Code which is stored in banks has name starting with bX, where X is the bank in 
 
 Extensive calling of code between banks in a necessary evil, due to the sheer volume of code. To faciliate this trampoline code exists in helpers.h. 
 
-There are trampolines for the most common function signatures for example: boolean trampoline_1pRetbool(fnTrampoline_1BytePointerPointerRetBool func, byte** data, byte bank) is for functions taking 1 byte pointer as an argument and returning a boolean. 
+There are trampolines for the common function signatures for example: boolean trampoline_1pRetbool(fnTrampoline_1BytePointerPointerRetBool func, byte** data, byte bank) is for functions taking 1 byte pointer as an argument and returning a boolean. 
 
 For functions with unique signatures, individual trampolines may exist.
 
