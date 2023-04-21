@@ -1,35 +1,48 @@
-.ifndef  COMMAND_LOOP_INC
- 
+; Define the include guard for command loop
+.ifndef COMMAND_LOOP_INC
 
+; Set the value of include guard and define constants
 COMMAND_LOOP_INC = 1
-LOGIC_ENTRY_PARAMETERS_OFFSET =  0
+LOGIC_ENTRY_PARAMETERS_OFFSET = 0
 
+; Include necessary files
 .include "global.s"
 .include "logicCommands.s"
 .include "codeWindow.s"
 
+; Set the segment for the code
 .segment "CODE"
+; Import required functions
 .import _debugPrint
 
+; Define zero-page pointers
 ZP_PTR_LF = $7E
 ZP_PTR_LE = $70
 
+; Define variables
 jumpOffset: .byte $0
 numArgs: .byte $0,$2,$2,$2,$2,$2,$2,$1,$1,$1,$2,$5,$1,$0,$0,$2,$5,$5,$5
 
+; Define the codeBankArray, which stores the bank of every opcode (excluding return and boolean operators like greater than) starting from opcode 1 and going to 182
+codeBankArray: .byte $5,$1,$1,$1,$1,$1,$1,$2,$2,$2,$2,$2,$2,$2,$2,$2,$2,$2,$2,$2,$2,$2,$2,$2,$2,$2,$2,$2,$2,$2,$2,$2,$2,$2,$2,$2,$2,$2,$2,$2,$2,$2,$2,$2,$2,$2,$2,$2,$2,$2,$2,$3,$3,$3,$3,$3,$3,$3,$3,$3,$3,$3,$3,$3,$3,$3,$3,$3,$3,$3,$3,$3,$3,$3,$3,$3,$3,$3,$3,$3,$3,$3,$3,$3,$3,$3,$3,$3,$3,$3,$1,$1,$3,$3,$3,$3,$3,$3,$3,$3,$3,$3,$4,$4,$4,$4,$4,$4,$4,$4,$1,$4,$4,$4,$4,$4,$4,$4,$4,$4,$4,$4,$4,$4,$4,$1,$1,$1,$4,$4,$4,$4,$4,$4,$4,$1,$4,$1,$1,$1,$1,$4,$1,$1,$1,$4,$4,$4,$4,$1,$1,$4,$4,$4,$4,$1,$4,$5,$1,$1,$1,$5,$5,$1,$1,$5,$5,$5,$5,$1,$1,$1,$1,$1,$1,$1,$1,$1,$1,$1,$1,$1,$1
+
+; Import debug functions if DEBUG is defined
 .ifdef DEBUG
-    .import _debugPrintTrue
-    .import _debugPrintFalse
-    .import _debugPrintNot
-    .import _debugPrintOrMode
-    .import _codeJumpDebug
-    .import _opCounter
-    .import _stopAtFunc 
+.import _debugPrintTrue
+.import _debugPrintFalse
+.import _debugPrintNot
+.import _debugPrintOrMode
+.import _codeJumpDebug
+.import _opCounter
+.import _stopAtFunc
 .endif
+
+; Import more required functions
 .import _bFGotoFunc
 .import _callC1
 .import _callC2
 
+; Define DEBUG_JUMP macro
 .macro DEBUG_JUMP val1, val2
 .ifdef DEBUG
 lda val1
@@ -43,6 +56,7 @@ JSRFAR _codeJumpDebug, DEBUG_BANK
 .endif
 .endmacro
 
+; Debugging macros for printing true, false, and not values
 .macro DEBUG_PRINT_TRUE
 .ifdef DEBUG
     JSRFAR _debugPrintTrue, DEBUG_BANK
@@ -64,6 +78,7 @@ JSRFAR _codeJumpDebug, DEBUG_BANK
 .endif
 .endmacro
 
+; Debugging macro for printing the value of OR mode
 .macro DEBUG_PRINT_OR_MODE
 .ifdef DEBUG
     lda orMode
@@ -73,6 +88,7 @@ JSRFAR _codeJumpDebug, DEBUG_BANK
 .endif
 .endmacro
 
+; Debugging macro for printing a value
 .macro DEBUG_PRINT toPrint
     .ifdef DEBUG
         .ifblank toPrint
@@ -85,21 +101,31 @@ JSRFAR _codeJumpDebug, DEBUG_BANK
     .endif
 .endmacro
 
+; Macro to set the RAM bank to the code bank
 .macro SET_BANK_TO_CODE_BANK
 lda codeBank
 sta RAM_BANK
 .endmacro
 
+; Macro to set the RAM bank to the IF bank
 .macro SET_BANK_TO_IF_BANK
 lda #LOGIC_COMMANDS_BANK
 sta RAM_BANK
 .endmacro
 
+; Macro to handle GOTO logic
 .macro GOTO
     .local @disp
     .local @b1
     .local @b2
     .local @start
+
+; code++;
+; b1 = *code++;
+; b2 = *code++;
+; disp = (b2 << 8) | b1;  /* Should be signed 16 bit */
+; code += disp;
+
     bra @start
     @disp: .word $0
     @b1: .word $0
@@ -122,8 +148,7 @@ sta RAM_BANK
     DEBUG_CODE_STATE
 .endmacro
 
-
-
+; Debug print trampoline function
 debugPrintTrampoline:
 ldx RAM_BANK
 phx
@@ -134,14 +159,12 @@ pla
 sta RAM_BANK
 rts
 
-
-;ifHelpers
+; Helper functions for if statement processing
 .segment "BANKRAM0F"
- closingIfBracket:
-            INC_CODE ;* data += 2;
-            INC_CODE
-            jmp endifFunction
-
+closingIfBracket:
+    INC_CODE ; * data += 2;
+    INC_CODE
+    jmp endifFunction
 checkOrMode:
     lda orMode
     beq @orModeFalse                  ;if (orMode) {
@@ -460,3 +483,4 @@ _commandLoop:
         sta RAM_BANK
         rts
 .endif
+

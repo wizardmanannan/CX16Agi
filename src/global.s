@@ -1,42 +1,55 @@
+; Check if global definitions are included, if not, include them
 .ifndef  GLOBAL_INC
 
+; Include the x16.inc file
 .include "x16.inc"
 ;DEBUG = 0
 
+; Define some start and end positions and code bank
 startPos: .word $0
 endPos:  .word $0
 _codeBank: .byte $0
 
+; Set global definitions
 GLOBAL_INC = 1
 
+; Define some zero page pointers
 ZP_PTR_CODE = $69
 ;$08 is reserved for code window in codeWindow.s
 ZP_TMP = $67
 
+; Define the starting address for golden RAM
 GOLDEN_RAM = $400
 
+; Define banks for various purposes
 LOGIC_COMMANDS_BANK = $0F
 DEBUG_BANK = $05
 COMMAND_LOOP_HELPER_BANK = $0F
 MEKA_BANK = $07
 
+; Define offsets for different areas within golden RAM
 VARS_AREA_START_GOLDEN_OFFSET = 0
 FLAGS_AREA_START_GOLDEN_OFFSET = 257
 LOCAL_WORK_AREA_GOLDEN_OFFSET = 514
 PARAMETERS_WORK_AREA_GOLDEN_OFFSET = 1015
 
+; Define offsets for logic file and code
 LOGIC_FILE_LOGIC_CODE_SIZE_OFFSET =  0
 LOGIC_FILE_LOGIC_CODE_OFFSET =  2
 LOGIC_FILE_LOGIC_BANK_OFFSET = 7
 
+; Define offsets for logic entry points
 LOGIC_ENTRY_POINT_OFFSET = 1
 LOGIC_ENTRY_CURRENT_POINT_OFFSET = 3
 
+; Define the JSRFAR kernal address
 JSRFAR_KERNAL_ADDR = $FF6E
 
+; Define true and false values for easier reading
 TRUE = 1
 FALSE = 0
 
+; Macro for setting a 16-bit struct value
 .macro   SET_STRUCT_16 offset, pointer, value
          LDA value
          LDY   #offset
@@ -46,6 +59,7 @@ FALSE = 0
          STA   (pointer),y
 .endmacro
 
+; Macro for getting a 16-bit struct value
 .macro   GET_STRUCT_16 offset, pointer, result
          LDY   #offset
          LDA   (pointer),y
@@ -55,12 +69,14 @@ FALSE = 0
          STA   result + 1
 .endmacro
 
+; Macro for getting an 8-bit struct value
 .macro   GET_STRUCT_8 offset, pointer, result
          LDY   #offset
          LDA   (pointer),y
          STA   result
 .endmacro
 
+; Macro for saving zero page values
 .macro   SAVE_ZERO_PAGE firstPointer, saveLocation, noValues
          PHA
          TXA
@@ -80,6 +96,7 @@ FALSE = 0
 
 .endmacro
 
+; Macro for restoring zero page values
 .macro   RESTORE_ZERO_PAGE firstPointer, saveLocation, noValues
          LDX   #$0
          @restoreZPLoop:
@@ -91,6 +108,8 @@ FALSE = 0
 
 .endmacro
 
+
+; Macro for adding two 16-bit words
 .macro ADD_WORD_16 firstAddress, secondAddress, result
         clc
         lda firstAddress
@@ -101,6 +120,7 @@ FALSE = 0
         sta result + 1
 .endmacro
 
+; Macro for adding a 16-bit word and an 8-bit word
 .macro ADD_WORD_16_8 firstAddress, secondAddress, result
         clc
         lda firstAddress
@@ -111,6 +131,7 @@ FALSE = 0
         sta result + 1
 .endmacro
 
+; Macro for subtracting two 16-bit words
 .macro SUB_WORD_16 firstAddress, secondAddress, result
         sec
         lda firstAddress
@@ -121,6 +142,7 @@ FALSE = 0
         sta result + 1
 .endmacro
 
+; Macro for subtracting two 16-bit words with an indirect addressing mode
 .macro SUB_WORD_16_IND firstAddress, secondAddress, offset, pointer
         sec
         lda firstAddress
@@ -136,6 +158,7 @@ FALSE = 0
         sta   (pointer),y
 .endmacro
 
+; Macro for comparing two 16-bit words and branching if greater or equal
 .macro GREATER_THAN_OR_EQ_16 word1, word2, successBranch, failBranch
        .local @branch
        lda word1 + 1
@@ -163,6 +186,7 @@ FALSE = 0
 
 .endmacro
 
+; Macro for comparing two 8-bit words and branching if less or equal
 .macro LESS_THAN_OR_EQ_8 word1, word2, successBranch, failBranch
        .local @branch
               
@@ -185,6 +209,7 @@ FALSE = 0
        
 .endmacro
 
+; Macro for comparing two 8-bit words and branching if greater or equal
 .macro GREATER_THAN_OR_EQ_8 word1, word2, successBranch, failBranch
        .local @branch
               
@@ -203,6 +228,7 @@ FALSE = 0
        
 .endmacro
 
+; Macro for comparing two 8-bit words and branching if greater
 .macro GREATER_THAN_8 word1, word2, successBranch, failBranch
        .local @branch
               
@@ -222,6 +248,7 @@ FALSE = 0
        
 .endmacro
 
+; Macro for comparing two 8-bit words and branching if less
 .macro LESS_THAN_8 word1, word2, successBranch, failBranch
        .local @branch
               
@@ -241,6 +268,7 @@ FALSE = 0
        
 .endmacro
 
+; Macro for comparing two 16-bit words and branching if less or equal
 .macro LESS_THAN_OR_EQ_16 word1, word2, successBranch, failBranch
        .local @branch
 
@@ -270,6 +298,7 @@ FALSE = 0
        
 .endmacro
 
+; Macro for left shifting a 16-bit word by 8 bits
 .macro LEFT_SHIFT_BY_8 word1, result
 ;Shift by 8
 lda word1
@@ -281,6 +310,7 @@ sta result
 .endmacro
 
 
+; Macro for left shifting a 16-bit word by 1 bit
 .macro LEFT_SHIFT_BY_1 word1, result
 clc
 lda word1
@@ -292,6 +322,7 @@ sta result + 1
 .endmacro
 
 
+; Macro for bitwise OR operation on two 16-bit words
 .macro ORA_16 word1, word2, result
 lda word1
 ora word2

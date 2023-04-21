@@ -1,38 +1,45 @@
+; This code deals with managing a code window that stores op codes.
+; It helps to access op codes from different banks and allows execution of scripts.
+; The code window can hold CODE_WINDOW_SIZE op codes and has a counter cwCurrentCode to track the next op code to process.
+
 .ifndef  CODE_WINDOW_INC
 CODE_WINDOW_INC = 1
 .include "global.s"
+
+; Import debug functions if in DEBUG mode.
 .ifdef DEBUG
 .import _debugPrintCurrentCodeState
 .import _stopAtFunc 
 .endif
 
-
-ZP_PTR_CODE_WIN = $80
-
+; Set up zero page pointer (ZP_PTR_CODE_WIN) and other variables related to code window management.
+ZP_PTR_CODE_WIN = $80 ;Zero Pointer Page Pointer To Code Window
 CODE_WINDOW_SIZE = 50
 .segment "CODE"
-codeWindow: .res CODE_WINDOW_SIZE
-cwCurrentCode: .word $0
+codeWindow: .res CODE_WINDOW_SIZE 
+cwCurrentCode: .word $0 ;A counter 
 codeWindowAddress: .addr codeWindow
 codeWindowInvalid: .byte TRUE
-codeBankArray: .byte $5,$1,$1,$1,$1,$1,$1,$2,$2,$2,$2,$2,$2,$2,$2,$2,$2,$2,$2,$2,$2,$2,$2,$2,$2,$2,$2,$2,$2,$2,$2,$2,$2,$2,$2,$2,$2,$2,$2,$2,$2,$2,$2,$2,$2,$2,$2,$2,$2,$2,$2,$3,$3,$3,$3,$3,$3,$3,$3,$3,$3,$3,$3,$3,$3,$3,$3,$3,$3,$3,$3,$3,$3,$3,$3,$3,$3,$3,$3,$3,$3,$3,$3,$3,$3,$3,$3,$3,$3,$3,$1,$1,$3,$3,$3,$3,$3,$3,$3,$3,$3,$3,$4,$4,$4,$4,$4,$4,$4,$4,$1,$4,$4,$4,$4,$4,$4,$4,$4,$4,$4,$4,$4,$4,$4,$1,$1,$1,$4,$4,$4,$4,$4,$4,$4,$1,$4,$1,$1,$1,$1,$4,$1,$1,$1,$4,$4,$4,$4,$1,$1,$4,$4,$4,$4,$1,$4,$5,$1,$1,$1,$5,$5,$1,$1,$5,$5,$5,$5,$1,$1,$1,$1,$1,$1,$1,$1,$1,$1,$1,$1,$1,$1
 
+; Macro for debugging the current code state.
 .macro DEBUG_CODE_STATE
 .ifdef DEBUG
  JSRFAR b5DebugCodeState, DEBUG_BANK
 .endif
 .endmacro
 
+; Load code window address into the accumulator and store it in ZP_PTR_CODE_WIN + 1.
 lda codeWindowAddress + 1
 sta ZP_PTR_CODE_WIN + 1
 rts
 
-
+; Macro for loading code from the window without incrementing.
 .macro LOAD_CODE_WIN_CODE
         ldy cwCurrentCode
         lda (ZP_PTR_CODE_WIN),y
 .endmacro
 
+; Macro for incrementing code and refreshing the code window if necessary.
 .macro INC_CODE
 .local @start
 .local @end
@@ -46,6 +53,7 @@ jsr refreshCodeWindow
 @end:
 .endmacro
 
+; Macro for incrementing code by a given amount and refreshing the code window if necessary.
 .macro INC_CODE_BY jumpAmount
 .local @start
 .local @end
@@ -62,6 +70,7 @@ jsr refreshCodeWindow
 @end:
 .endmacro
 
+; Macro for catching up code and invalidating the code window.
 .macro CATCH_UP_CODE ;Warning Invalidates The Code Window Call Refresh Afterwards
 ADD_WORD_16 ZP_PTR_CODE, cwCurrentCode, ZP_PTR_CODE
 
@@ -69,6 +78,9 @@ lda #TRUE
 sta codeWindowInvalid
 .endmacro
 
+; refreshCodeWindow subroutine:
+; Refreshes the code window by loading new op codes from the source.
+; It takes into account if the code window is invalid and needs to be fully refreshed.
 .SEGMENT "CODE"
 refreshCodeWindow:
     bra @start
@@ -114,33 +126,33 @@ _loadAndIncWinCode:
     bra @start
     @result: .byte $0
     @start:
-    LOAD_CODE_WIN_CODE
-    sta @result
+    LOAD_CODE_WIN_CODE      ; Load code from the code window
+    sta @result             ; Store the result in @result
     
-    INC_CODE
+    INC_CODE                ; Increment the code pointer
     
-    lda @result
-    ldx #$0
-    rts
+    lda @result             ; Load the result into accumulator A
+    ldx #$0                 ; Load zero into index register X
+    rts                     ; Return from subroutine
 
 _incCodeBy:
     bra @start
     @jumpAmount: .word $0
     @start:
-    sta @jumpAmount
-    stx @jumpAmount + 1
+    sta @jumpAmount         ; Store the jump amount
+    stx @jumpAmount + 1     ; Store the jump amount (high byte)
 
-    INC_CODE_BY @jumpAmount
-    rts
+    INC_CODE_BY @jumpAmount ; Increment code pointer by jump amount
+    rts                     ; Return from subroutine
 
 .SEGMENT "BANKRAM07"
 b7CodeWindowInit:
-lda codeWindowAddress
-sta ZP_PTR_CODE_WIN
+lda codeWindowAddress      ; Load the code window address
+sta ZP_PTR_CODE_WIN        ; Store it in ZP_PTR_CODE_WIN
 
-lda codeWindowAddress + 1
-sta ZP_PTR_CODE_WIN + 1
-rts
+lda codeWindowAddress + 1  ; Load the high byte of the code window address
+sta ZP_PTR_CODE_WIN + 1    ; Store it in ZP_PTR_CODE_WIN + 1
+rts                         ; Return from subroutine
 
 .SEGMENT "BANKRAM05"
 .ifdef DEBUG
@@ -148,18 +160,17 @@ b5DebugCodeState:
     bra @start
     @result: .word $0
     @start:
-    clc
-    lda ZP_PTR_CODE
-    adc cwCurrentCode
-    sta @result
+    clc                      ; Clear carry flag
+    lda ZP_PTR_CODE          ; Load the zero page pointer to code
+    adc cwCurrentCode        ; Add the current code value
+    sta @result              ; Store the result
 
-    ldx ZP_PTR_CODE + 1
-    adc #$0
-    stx @result + 1
+    ldx ZP_PTR_CODE + 1      ; Load the high byte of the zero page pointer to code
+    adc #$0                  ; Add zero (carry from previous addition)
+    stx @result + 1          ; Store the high byte of the result
 
-
-    jsr _debugPrintCurrentCodeState
-    rts
+    jsr _debugPrintCurrentCodeState  ; Call debug print subroutine for current code state
+    rts                              ; Return from subroutine
 .endif
 
 .endif

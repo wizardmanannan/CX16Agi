@@ -1,9 +1,20 @@
+
+; This code is an assembly language implementation of various logic commands,
+; functions, and macros for a game engine.
+; The code is split into different sections, which are imported and included from various files.
+; The engine also has debugging capabilities that can be enabled.
+
+; Prevent multiple inclusions of this file
 .ifndef  LOGICCOMMANDS_INC
 LOGICCOMMANDS_INC = 1
+
+; Include necessary files
 .include "global.s"
 .include "commandLoop.s"
 .include "codeWindow.s"
 
+; Import various functions and variables from other files
+; (functions related to game logic, drawing, animations, sound, text, etc.)
 .import _b1Has
 .import _b1Obj_in_room
 .import _b1Posn
@@ -151,6 +162,7 @@ LOGICCOMMANDS_INC = 1
 .import _hasEnteredNewRoom
 .import _newRoomNum
 
+; Debugging related imports (only included if DEBUG is defined)
 .ifdef DEBUG
 .import _debugGreaterThan_8N
 .import _debugLessThan_8N
@@ -175,9 +187,13 @@ LOGICCOMMANDS_INC = 1
 .import _stopAtFunc
 .endif 
 
+
+
+; Debugging related variables
 _logDebugVal1: .byte $0
 _logDebugVal2: .byte $0
 
+; Debugging related macros (for debugging comparisons, flag checking, arithmetic operations, etc.)
 .macro DEBUG_GREATER_THAN_8_N var1, var2
 .ifdef DEBUG
 lda var1
@@ -397,6 +413,7 @@ JSRFAR _debugExitAllLogics, DEBUG_BANK
 .endif
 .endmacro
 
+; Macro to store values on the stack for recursive calls
 .macro STORE_ON_STACK_RECURSIVE_CALL
 lda startPos
 pha 
@@ -415,6 +432,7 @@ lda _codeBank
 pha
 .endmacro
 
+; Macro to restore values from the stack after a recursive call
 .macro RESTORE_FROM_STACK_RECURSIVE_CALL
 pla
 sta _codeBank
@@ -432,6 +450,8 @@ pla
 sta startPos
 
 .endmacro
+
+; Macro to get a variable or flag value and store it in the result
 .macro SET_VAR_OR_FLAG areaStartOffset, toStore, var
 
         clc
@@ -458,6 +478,7 @@ sta startPos
         sta (ZP_TMP)
 .endmacro
 
+; Macro to get a variable or flag value with a variable offset and store it in the result
 .macro GET_VAR_OR_FLAG areaStartOffset, result, var
 
         clc
@@ -485,7 +506,6 @@ sta startPos
 
         sta result
 .endmacro
-
 .macro GET_VAR_OR_FLAG_VAR_OFFSET areaStartOffset, result
 
         clc
@@ -508,27 +528,34 @@ sta startPos
         sta result
 .endmacro
 
+; Macro: HANDLE_C_IF_RESULT
 .macro HANDLE_C_IF_RESULT
 .local @success
 
+; Branch if not equal
 bne @success
 
+; Jump to return address if false
 jmp returnFromOpCodeFalse
 @success:
+; Jump to return address if true
 jmp returnFromOpCodeFalse
 
 .endmacro
 
+; Macro: EXIT_ALL_LOGICS_IF_SET
 .macro EXIT_ALL_LOGICS_IF_SET
 DEBUG_EXIT_ALL_LOGICS
 lda _exitAllLogics
 beq @dontExit
+; Jump to the end of the main loop if the flag is set
 jmp endMainLoop
 @dontExit:
 .endmacro
 
+; Main code segment
 .segment "CODE"
-callLogic: ;A subroutine for making calls not an instruction
+callLogic: ; A subroutine for making calls, not an instruction
 bra @start
 @logNum: .byte $0
 @previousBank: .byte $0
@@ -554,6 +581,9 @@ lda @previousBank
 sta RAM_BANK
 rts
 
+; Jump table for commands
+; This table holds the addresses of various instructions.
+; The interpreter will jump to the corresponding address based on the current command in the script.
 jmpTableCommands1:
 .addr endMainLoop
 .addr b1Increment
@@ -741,13 +771,17 @@ jmpTableCommands2:
 .addr b1NoOp_0
 .addr b1NoOp_0
 
-
-
+; Variables used in the code
 returnAddress: .word $0
 var1: .byte $0
 var2: .byte $0
 
+; Banked RAM section
 .segment "BANKRAM01"
+; This section contains various instructions for the interpreter, such as:
+; No operation, increment, decrement, assign, add, and subtract
+; Each section of code is marked by a label, such as "b1NoOp_0", "b1Increment", and so on.
+
 b1NoOp_0:
     jmp mainLoop
 
