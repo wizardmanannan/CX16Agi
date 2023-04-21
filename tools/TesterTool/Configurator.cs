@@ -37,18 +37,23 @@ namespace Tester
             }
         }
 
+        private static Config _config;
+
         public static Config Config
         {
             get
             {
-                Config config = new Config();
-                
-                if (ConfigExists)
+                if (_config == null)
                 {
-                    config = JsonConvert.DeserializeObject<Config>(File.ReadAllText(ConfigFileLocation));
+                    _config = new Config();
+                    
+                    if (ConfigExists)
+                    {
+                        _config = JsonConvert.DeserializeObject<Config>(File.ReadAllText(ConfigFileLocation));
+                    }
                 }
-
-                return config;
+                
+                return _config;
             }
         }
 

@@ -9,8 +9,6 @@
 **
 ** (c) Lance Ewing, 1998.
 ***************************************************************************/
-#include <string.h>
-#include <stdlib.h>
 #include "general.h"
 #include "timer.h"
 #include "agifiles.h"
@@ -20,6 +18,7 @@
 #include "stub.h"
 #include "memoryManager.h"
 #include "lruCache.h"
+#include "debugHelper.h"
 //#include "object.h"
 //#include "words.h"
 //#include "picture.h"
@@ -34,9 +33,10 @@ byte horizon;
 
 #define  PLAYER_CONTROL   0
 #define  PROGRAM_CONTROL  1
+#define DEBUG 1
 //#define VERBOSE
 
-const int TIMER_WAIT_MS = 50;
+const unsigned int TIMER_WAIT_MS = 50;
 
 volatile int counter;              /* Used for timer control */
 volatile int hund;                 /* Used for interpreters clock */
@@ -45,6 +45,7 @@ int controlMode=PLAYER_CONTROL;    /* player.control or program.control */
 int dirnOfEgo, newRoomNum, score;
 
 extern int picFNum;    // Debugging. Delete at some stage!!
+extern void b7InitAsm();
 
 #pragma code-name (push, "BANKRAM07")
 void b7AdjustEgoPosition()
@@ -175,7 +176,9 @@ void b7Interpret()
       printf("Back To Meka");
 #endif // VERBOSE
       //dirnOfEgo = var[6];
-      viewtab[0].direction = var[6];
+      getViewTab(&localViewtab, 0);
+      localViewtab.direction = var[6];
+      setViewTab(&localViewtab, 0);
       // <<-- Update status line here (score & sound)
       b7UpdateStatusLine();
       var[5] = 0;
@@ -219,24 +222,17 @@ void b7Closedown()
    discardObjects();
    discardWords();
    closePicture();
-
-   exit(0);
 }
 
-#pragma code-name (pop)
-
-void initialise()
+void b7Initialise()
 {
-    byte previousRamBank = RAM_BANK;
     int i;
-    memoryMangerInit();
-    initTimer(&b7Timing_proc);
+    b7InitTimer(&b7Timing_proc);
 
-    RAM_BANK = LRU_CACHE_LOGIC_BANK;
-    bEInitLruCaches(&b8DiscardLogicFile, &b9DiscardView);
+    initLruCachesTrampoline(&b8DiscardLogicFile, &b9DiscardView);
+    
+    trampoline_0(&b6InitFiles, LOAD_DIRS_BANK);             /* Load resource directories */
 
-    RAM_BANK = LOAD_DIRS_BANK;
-    b6InitFiles();             /* Load resource directories */
     //// <<--  Determine exact version in here
     for (i = 0; i < 255; i++) {  /* Initialize variables and flags */
         var[i] = 0;
@@ -255,34 +251,32 @@ void initialise()
     initAGIScreen();
     initPalette();
 
-    RAM_BANK = LOGIC_CODE_BANK;
-    b8InitLogics();
+   
+    trampoline_0(&b8InitLogics, LOGIC_CODE_BANK);
     initPicture();
     initPictures();
     initSound();
     
-    RAM_BANK = 9;
-    b9InitViews();
-    b9InitObjects();
+    trampoline_0(&b9InitViews, VIEW_CODE_BANK_1);
+    trampoline_0(&b9InitObjects, VIEW_CODE_BANK_1);
 
-    RAM_BANK = MEKA_BANK;
     loadObjectFile();
     loadWords();
     initEvents();
+    b7InitAsm();
 
     horizon = 36;
 
     ///* Set up timer. The timer controls the interpreter speed. */
     counter = 0;
-
-    RAM_BANK = previousRamBank;
 }
+
+
+#pragma code-name (pop)
 
 void main()
 {
    int ret, oldCount=0;
-
-   printf("Size of lruCache %d", sizeof(LRUCache));
 
    //chdir("..\\KQ1-2917");
    //chdir("..\\COMPILER\\NEW\\SAMPLE\\TEMPLATE");
@@ -292,9 +286,12 @@ void main()
    //chdir("\\GAMES\\SIERRA\\LSL1");
    //chdir("..\\KQ2-2917");
 
-   initialise();
+   memoryMangerInit();
+   trampoline_0(b5CheckMemory, DEBUG_BANK);
 
    RAM_BANK = MEKA_BANK;
+   b7Initialise();
+
    while (TRUE) {
       /* Cycle initiator. Controlled by delay variable (var[10). */
       if (counter >= var[10]) {
@@ -304,7 +301,7 @@ void main()
           b7Interpret();
         counter=0;
       }
-      checkTimer(TIMER_WAIT_MS);
+      b7CheckTimer(TIMER_WAIT_MS);
    }
 
    //chdir("\\HACK\\AGI\\D\\AGI\\MEKA");

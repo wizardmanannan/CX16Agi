@@ -14,11 +14,9 @@
 //#define VERBOSE
 //#define VERBOSE_VIEW_LOAD_DEBUG
 //define VERBOSE_LOGIC_LOAD_DEBUG
-#include <stdio.h>
-#include <stdlib.h>
 #include <stdint.h>
 #include <cbm.h>
-#include <dbg.h>
+
 
 #include "general.h"
 #include "agifiles.h"
@@ -29,6 +27,7 @@
 byte avisDurgan[11] = { 0x41, 0x76, 0x69, 0x73, 0x20, 0x44, 0x75, 0x72, 0x67, 0x61, 0x6E };//https://www.liquisearch.com/what_is_avis_durgan
 #define FILE_OPEN_ADDRESS 2
 #define NO_BYTES_PER_MESSAGE 2
+#define FILE_NAME_SIZE 10
 
 AGIFilePosType* logdir = (AGIFilePosType*)&BANK_RAM[LOGDIR_START];
 AGIFilePosType* picdir = (AGIFilePosType*)&BANK_RAM[PICDIR_START];
@@ -38,6 +37,7 @@ AGIFilePosType* snddir = (AGIFilePosType*)&BANK_RAM[SOUNDDIR_START];
 int numLogics, numPictures, numViews, numSounds;
 boolean version3 = FALSE;
 
+
 /***************************************************************************
 ** initFiles
 **
@@ -46,22 +46,64 @@ boolean version3 = FALSE;
 ** initialize the game signature in the case of a version 3 game.
 ***************************************************************************/
 
+#define getMessageSectionSize AGIData->totalSize - AGIData->codeSize - 5 - AGIData->noMessages * 2
+
+#ifdef VERBOSE_DISPLAY_MESSAGES
+void printMessages(AGIFile* AGIData)
+{
+	int i;
+	byte previousRamBank = RAM_BANK;
+	RAM_BANK = AGIData->messageBank;
+
+	for (i = 0; i < getMessageSectionSize; i++)
+	{
+		printf("%c", AGIData->messageData[i]);
+
+		if (!AGIData->messageData[i])
+		{
+			printf("\n");
+		}
+	}
+
+	RAM_BANK = previousRamBank;
+}
+#endif 
+
+#ifdef VERBOSE_DISPLAY_OFFSETS
+void printMessagesFromOffsets(AGIFile* AGIData)
+{
+	int i;
+	byte previousRamBank = RAM_BANK;
+
+	RAM_BANK = AGIData->messageBank;
+	for (i = 0; i < AGIData->noMessages; i++)
+	{
+		if (AGIData->messagePointers[i] > 0)
+		{
+			printf("%d Data Length: %d Address %p Bank %d, Message %s\n", i + 1, strlen((char*)AGIData->messagePointers[i]), AGIData->messagePointers[i], AGIData->messageBank, AGIData->messagePointers[i]);
+		}
+		else
+		{
+			printf("%d is skipped\n", i + 1);
+		}
+	}
+	printf("\nYou have %d message", AGIData->noMessages);
+
+	RAM_BANK = previousRamBank;
+}
+#endif
+
+#pragma code-name (push, "BANKRAM06")
 byte cbm_openForSeeking(char* fileName)
 {
-	byte previousRamBank = RAM_BANK;
 	const char* OPEN_FLAGS = ",S,R";
-
 	byte lfn = SEQUENTIAL_LFN;
 	byte dev = 8;
 
-	byte bank;
-
-	char* fileNameAndFlags;
+	char fileNameAndFlags[FILE_NAME_SIZE + 4];
 	byte sec_addr = FILE_OPEN_ADDRESS;
 
-	RAM_BANK = ALLOCATION_BANK;
-	fileNameAndFlags = (char*)banked_alloc(strlen(&fileName[0]) + strlen(OPEN_FLAGS) + 1, &bank);
-	sprintf(fileNameAndFlags, "%s%s", &fileName[0], OPEN_FLAGS);
+	sprintf(&fileNameAndFlags[0], "%s%s", &fileName[0], OPEN_FLAGS);
 
 #ifdef VERBOSE
 	printf("Attempting to load file %s", fileNameAndFlags);
@@ -69,18 +111,8 @@ byte cbm_openForSeeking(char* fileName)
 
 
 	cbm_open(lfn, dev, sec_addr, fileNameAndFlags);
-	RAM_BANK = previousRamBank;
-
-	banked_dealloc((byte*)fileNameAndFlags, bank);
 
 	return lfn;
-}
-
-byte cbm_getSeekedByte()
-{
-	cbm_k_chkin(2);
-
-	return cbm_k_chrin();
 }
 
 int8_t cx16_fseek(uint8_t channel, uint32_t offset) {
@@ -119,9 +151,6 @@ int8_t cx16_fseek(uint8_t channel, uint32_t offset) {
 	return 0;
 	// TODO: ERROR HANDLING!!!!!
 }
-
-
-#pragma code-name (push, "BANKRAM06")
 
 /***************************************************************************
 ** loadAGIDir
@@ -180,7 +209,7 @@ void b6LoadAGIDir(int dirNum, char* fName, int* count)
 		break;
 		case 2:
 		{
-		  setResourceDirectory(&tempPos,&viewdir[*count]);
+			setResourceDirectory(&tempPos, &viewdir[*count]);
 #ifdef VERBOSE_DISPLAY_FILEOFFSETS
 			printf("\n%d View File Name %s, Offset %lu\n", *count, viewdir[*count].fileName, viewdir[*count].filePos);
 #endif // VERBOSE_DISPLAY_FILEOFFSETS
@@ -296,26 +325,46 @@ void b6InitFiles()
 	b6LoadAGIDirs();
 }
 
-#pragma code-name (pop)
-
 byte* b6ReadFileContentsIntoBankedRam(int size, byte* bank)
 {
 	byte* result;
-	byte previousRamBank = RAM_BANK;
-
-	result = banked_alloc(size, bank);
+	int i;
+	int copySize;
+	result = banked_allocTrampoline(size, bank);
 
 #ifdef VERBOSE
 	printf("Attempting to code data of size %d to %p\n", size, result);
 #endif
-	RAM_BANK = *bank;
-	cbm_read(SEQUENTIAL_LFN, result, size);
+
+	for (i = 0; i < size; i = i + LOCAL_WORK_AREA_SIZE)
+	{
+		if (i + LOCAL_WORK_AREA_SIZE > size)
+		{
+			copySize = size - i;
+
+#ifdef VERBOSE
+			printf("CopySize is %d, size is %d and i is %d \n", copySize, size, i);
+#endif
+		}
+		else
+		{
+			copySize = LOCAL_WORK_AREA_SIZE;
+#ifdef VERBOSE
+			printf("CopySize is %d\n", copySize);
+#endif
+		}
+
+		cbm_read(SEQUENTIAL_LFN, &GOLDEN_RAM[LOCAL_WORK_AREA_START], copySize);
+
+#ifdef VERBOSE
+		printf("result + i %p. i %d\n", result + i, i);
+#endif
+		memCpyBanked(result + i, &GOLDEN_RAM[LOCAL_WORK_AREA_START], *bank, copySize);
+	}
 
 #ifdef VERBOSE
 	printf("Data is in bank %d at address %p and the first byte is %p and the size is %d \n", *bank, result, result[0], size);
 #endif // VERBOSE
-
-	RAM_BANK = previousRamBank;
 
 	return result;
 }
@@ -360,10 +409,6 @@ byte* b6ReadFileContentsIntoBankedRam(int size, byte* bank)
 //	}
 //}
 
-#pragma code-name (push, "BANKRAM06")
-
-#define getMessageSectionSize AGIData->totalSize - AGIData->codeSize - 5 - AGIData->noMessages * 2
-
 unsigned int b6GetPositionOfFirstMessage(AGIFile* AGIData)
 {
 	return AGIData->noMessages * NO_BYTES_PER_MESSAGE;
@@ -397,7 +442,7 @@ boolean b6SeekAndCheckSignature(char* fileName, AGIFilePosType* location)
 	}
 
 #ifdef VERBOSE
-		printf("PS\n");
+	printf("PS\n");
 #endif // VERBOSE
 
 	return result;
@@ -443,7 +488,7 @@ byte b6SeekAndReadLogicIntoMemory(AGIFile* AGIData, int resType)
 
 }
 
-#pragma code-name (pop)
+
 
 //https://www.liquisearch.com/what_is_avis_durgan
 void xOrAvisDurgan(byte* toXOR, unsigned int* avisPos)
@@ -451,8 +496,6 @@ void xOrAvisDurgan(byte* toXOR, unsigned int* avisPos)
 	*toXOR ^= avisDurgan[*avisPos];
 	*avisPos = (*avisPos + 1) % 11;
 }
-
-
 
 /**************************************************************************
 ** loadAGIFile
@@ -469,20 +512,17 @@ void xOrAvisDurgan(byte* toXOR, unsigned int* avisPos)
 **
 ** In both cases the format that is easier to deal with is returned.
 **************************************************************************/
-void loadAGIFile(int resType, AGIFilePosType* location, AGIFile* AGIData)
+void b6LoadAGIFile(int resType, AGIFilePosType* location, AGIFile* AGIData)
 {
 #define SEPARATOR 0
 
-	unsigned int avisPos = 0, i, j = 1;
+	unsigned int avisPos = 0, i, j = 0, k = 1, bufferSize = 0, offset;
 	unsigned char byte1, byte2;
 	byte lfn;
 	byte* wholeMessageSectionData;
 	byte** offsetPointer;
 	boolean lastCharacterSeparator = TRUE;
-	byte previousRamBank = RAM_BANK;
-	char fileName[10];
-
-	previousRamBank = RAM_BANK;
+	char fileName[FILE_NAME_SIZE];
 
 	if (location->filePos == EMPTY) {
 #ifdef VERBOSE
@@ -501,87 +541,92 @@ void loadAGIFile(int resType, AGIFilePosType* location, AGIFile* AGIData)
 		if (resType == LOGIC)
 #endif // VERBOSE_LOGIC_LOAD_DEBUG
 
-	{
-		printf("---The file name is %s", &fileName[0]);
-	}
+		{
+			printf("---The file name is %s", &fileName[0]);
+		}
 #endif // VERBOSE
 
 	lfn = cbm_openForSeeking(&fileName[0]);
-	
-	RAM_BANK = FILE_LOADER_HELPERS;
 
 	b6SeekAndCheckSignature(&fileName[0], location);
 
 	AGIData->codeBank = b6SeekAndReadLogicIntoMemory(AGIData, resType);
-	
+
 	if (resType == LOGIC) {
 		cbm_read(SEQUENTIAL_LFN, &byte1, 1);
 		AGIData->noMessages = byte1;
 
 		cbm_read(SEQUENTIAL_LFN, &byte1, 1);
 		cbm_read(SEQUENTIAL_LFN, &byte2, 1);
-		
+
 		wholeMessageSectionData = b6ReadFileContentsIntoBankedRam(AGIData->totalSize - AGIData->codeSize - 5, &AGIData->messageBank);
 		AGIData->messagePointers = (byte**)&wholeMessageSectionData[0];
 
-
 		AGIData->messageData = &wholeMessageSectionData[b6GetPositionOfFirstMessage(AGIData)];
-
-		RAM_BANK = AGIData->messageBank;
 
 #ifdef VERBOSE
 		printf("\nTrying to iterate from %d to %d\n", getMessageSectionSize);
 #endif
 		offsetPointer = AGIData->messagePointers;
 
-		for (i = 0; i < getMessageSectionSize; i++) {
-
-			xOrAvisDurgan((byte*)&AGIData->messageData[i], &avisPos);
-			convertAsciiByteToPetsciiByte(&AGIData->messageData[i]);
-
-			if (lastCharacterSeparator)
+		for (i = 0; i < getMessageSectionSize; i = i + LOCAL_WORK_AREA_SIZE) {
+			if (i + LOCAL_WORK_AREA_SIZE < getMessageSectionSize)
 			{
-				*offsetPointer = &AGIData->messageData[i];
-
-				lastCharacterSeparator = FALSE;
-
-				do
-				{
-#ifdef VERBOSE_DISPLAY_OFFSETS
-					printf("%d offsetPointer is %p and offsetPointer == true is %d \n", j, *offsetPointer, *offsetPointer > 0 == TRUE);
-					j++;
-#endif // VERBOSE_DISPLAY_OFFSETS
-					offsetPointer++;
-
-				} while (*offsetPointer == 0 && offsetPointer < (byte**)&AGIData->messageData[0]); //So that null message offsets are skipped
-			}
-
-			lastCharacterSeparator = AGIData->messageData[i] == SEPARATOR;
-
-#ifdef VERBOSE_DISPLAY_MESSAGES
-			printf("%c", AGIData->messageData[i], AGIData->messageData[i]);
-			if (!AGIData->messageData[i]) {
-				printf("\n");
-			}
-
-#endif 
-		}
-
-#ifdef VERBOSE_DISPLAY_OFFSETS
-		for (i = 0; i < AGIData->noMessages; i++)
-		{
-			if (AGIData->messagePointers[i] > 0)
-			{
-				printf("%d Data Length: %d Address %p Bank %d, Message %s\n", i + 1, strlen((char*)AGIData->messagePointers[i]), AGIData->messagePointers[i], AGIData->messageBank, AGIData->messagePointers[i]);
+				bufferSize = LOCAL_WORK_AREA_SIZE;
 			}
 			else
 			{
-				printf("%d is skipped\n", i + 1);
+				bufferSize = (getMessageSectionSize - i);
 			}
+
+			memCpyBanked(&GOLDEN_RAM_WORK_AREA[0], &AGIData->messageData[i], AGIData->messageBank, bufferSize);
+			for (j = 0; j < bufferSize; j++)
+			{
+				xOrAvisDurgan(&GOLDEN_RAM_WORK_AREA[j], &avisPos);
+
+				GOLDEN_RAM_WORK_AREA[j] = trampoline_1ByteRByte(&convertAsciiByteToPetsciiByte, GOLDEN_RAM_WORK_AREA[j], HELPERS_BANK);
+
+#ifdef VERBOSE_DISPLAY_MESSAGES_PRE_COPY_BACK
+				printf("%c", GOLDEN_RAM_WORK_AREA[j]);
+				if (!GOLDEN_RAM_WORK_AREA[j]) {
+					printf("\n");
+				}
+#endif 
+
+				if (lastCharacterSeparator)
+				{
+					lastCharacterSeparator = FALSE;
+
+					offset = (unsigned int)&AGIData->messageData[i + j];
+					 memCpyBanked(offsetPointer, &offset, AGIData->messageBank, 2);
+					
+					do
+					{
+#ifdef VERBOSE_DISPLAY_OFFSETS
+
+						printf("%d offsetPointer is %p and offsetPointer == true is %d \n", k, offset, offset > 0 == TRUE);
+						k++;
+#endif // VERBOSE_DISPLAY_OFFSETS
+						offsetPointer++;
+
+						memCpyBanked(&offset, offsetPointer, AGIData->messageBank, 2);
+
+					} while (offset == 0 && offsetPointer < (byte**)&AGIData->messageData[0]); //So that null message offsets are skipped
+				}
+
+				lastCharacterSeparator = GOLDEN_RAM_WORK_AREA[j] == SEPARATOR;
+			}
+			memCpyBanked(&AGIData->messageData[i], &GOLDEN_RAM_WORK_AREA[0], AGIData->messageBank, bufferSize);
 		}
-		printf("\nYou have %d message", AGIData->noMessages);
+
+#ifdef VERBOSE_DISPLAY_MESSAGES
+		printMessages(AGIData);
 #endif
-		}
+
+#ifdef VERBOSE_DISPLAY_OFFSETS
+		printMessagesFromOffsets(AGIData);
+#endif
+	}
 
 	//if (version3) {
 	//   byte1 = fgetc(fp);
@@ -645,5 +690,16 @@ void loadAGIFile(int resType, AGIFilePosType* location, AGIFile* AGIData)
 #ifdef VERBOSE
 	//printf("File closed");
 #endif // VERBOSE
+
+}
+#pragma code-name (pop)
+void loadAGIFileTrampoline(int resType, AGIFilePosType* location, AGIFile* AGIData)
+{
+	byte previousRamBank = RAM_BANK;
+	RAM_BANK = FILE_LOADER_HELPERS;
+	b6LoadAGIFile(resType, location, AGIData);
 	RAM_BANK = previousRamBank;
-	}
+}
+
+
+

@@ -5,7 +5,6 @@
 #ifndef _AGIFILES_H_
 #define _AGIFILES_H_
 
-#include <string.h>
 #include "memoryManager.h"
 
 #ifdef  __CX16__
@@ -40,6 +39,6 @@ extern int numLogics, numPictures, numViews, numSounds;
 
 void b6InitFiles();
 void b6LoadAGIDirs();
-void loadAGIFile(int resType, AGIFilePosType* location, AGIFile *AGIData);
+void loadAGIFileTrampoline(int resType, AGIFilePosType* location, AGIFile *AGIData);
 
 #endif  /* _AGIFILES_H_ */

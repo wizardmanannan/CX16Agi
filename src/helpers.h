@@ -28,23 +28,23 @@ typedef void (*fnTrampoline_0)();
 typedef void (*fnTrampoline_1BytePointerPointer)(byte** data);
 typedef boolean (*fnTrampoline_1BytePointerPointerRetBool)(byte** data);
 typedef void (*fnTrampoline_1Int)(int data);
+typedef byte (*fnTrampoline_1ByteRByte)(byte data);
 typedef void (*fnTrampoline_1Int)(int data);
 
 typedef void (*fnTrampoline_2Int)(int data, int data2);
 
 typedef void (*fnTrampoline_3Int)(int data1, int data2, int data3);
 
-byte convertAsciiByteToPetsciiByte(byte* toConvert);
+byte convertAsciiByteToPetsciiByte(byte toConvert);
 
 extern void trampoline_0(fnTrampoline_0 func, byte bank);
-extern void trampoline_1pp(fnTrampoline_1BytePointerPointer func, byte** data, byte bank);
-extern boolean trampoline_1pRetbool(fnTrampoline_1BytePointerPointerRetBool func, byte** data, byte bank);
 
 extern void trampoline_1Int(fnTrampoline_1Int func, int data, byte bank);
 extern void trampoline_1Int(fnTrampoline_1Int func, int data, byte bank);
-extern void trampoline_2Int(fnTrampoline_2Int func, int data1, int data2, byte bank);
 
 extern void trampoline_3Int(fnTrampoline_3Int func, int data1, int data2, int data3, int bank);
+
+extern byte trampoline_1ByteRByte(fnTrampoline_1ByteRByte func, byte data, byte bank);
 
 extern char* strcpyBanked(char* dest, const char* src, byte bank);
 
@@ -58,8 +58,10 @@ extern int sprintfBanked(const char* buffer, byte bank, char const* const format
 extern void getLogicDirectory(AGIFilePosType* returnedLogicDirectory, AGIFilePosType* logicDirectoryLocation);
 extern void setResourceDirectory(AGIFilePosType* newLogicDirectory, AGIFilePosType* logicDirectoryLocation);
 
-extern boolean debugStop;
+extern void debugPrint(byte toPrint);
 
+extern long stopAt;
+extern long exitAt;
 extern long opCounter;
 
 #endif

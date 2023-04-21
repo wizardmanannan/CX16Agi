@@ -12,5 +12,6 @@ namespace Tester
        public string SdCardMountDriveLetter { get; set; } //%2
        public string Cx16EmulatatorFolder { get; set; } //%3
        public string MakeFileFolder { get; set; } //%4
+       public string OptionalArguments { get; set; } //%5
     }
 }

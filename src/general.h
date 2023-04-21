@@ -39,4 +39,6 @@ typedef struct {          /* DIR entry structure */
 	unsigned long filePos;
 } AGIFilePosType;
 
+extern byte callC1, callC2;
+
 #endif  /* _GENERAL_H_ */

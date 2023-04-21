@@ -33,13 +33,13 @@
 #define EXTRA_SMALL_NO_BANKS 1
 #define SMALL_NO_BANKS 7
 #define MEDIUM_NO_BANKS 9
-#define LARGE_NO_BANKS 7
+#define LARGE_NO_BANKS 6
 
-#define TINY_FIRST_BANK  0x10
-#define EXTRA_SMALL_FIRST_BANK 0x11
-#define SMALL_FIRST_BANK 0x12
-#define MEDIUM_FIRST_BANK 0x19
-#define LARGE_FIRST_BANK 0x22
+#define TINY_FIRST_BANK  0x13
+#define EXTRA_SMALL_FIRST_BANK 0x14
+#define SMALL_FIRST_BANK 0x15
+#define MEDIUM_FIRST_BANK 0x2C
+#define LARGE_FIRST_BANK 0x35
 
 #define ALLOCATION_BANK 60
 
@@ -58,21 +58,26 @@
 #define MENU_CHILD_START 181
 #define VIEWTAB_START 3782
 #define LOADED_VIEW_START 4623
+#define MEMORY_AREA_START 8156
 
 #define DIR_SIZE 6
 #define LOGIC_ENTRY_SIZE 8
 #define LOGIC_FILE_SIZE 2
+#define MEMORY_AREA_SIZE 7
 
 #define TOTAL_SIZE_OF_DIR 1275
 #define TOTAL_SIZE_OF_LOGIC_ENTRY 2040
 #define TOTAL_SIZE_OF_LOGIC_DATA 7331
 #define TOTAL_SIZE_OF_VIEWTAB_DATA 840
 #define TOTAL_SIZE_OF_LOADED_VIEWS 1536
+#define TOTAL_SIZE_OF_MEMORY_AREA 35
 
 #define DIRECTORY_BANK 60
 #define LOGIC_ENTRY_BANK 60
 #define LOGIC_FILE_BANK 60
 #define MENU_BANK 61
+#define DEBUG_BANK 5
+#define HELPERS_BANK 5
 #define INSTRUCTION_HANDLER_BANK 5
 #define IF_LOGIC_HANDLERS_BANK 5
 #define VIEWTAB_BANK 61
@@ -80,7 +85,7 @@
 
 #define FIRST_CODE_BANK 0x1
 #define LAST_CODE_BANK 0x5
-#define NO_CODE_BANKS 14
+#define NO_CODE_BANKS 16
 
 #define LRU_CACHE_LOGIC_BANK 0xE
 #define LRU_CACHE_LOGIC_STRUCT_START 8183
@@ -97,6 +102,7 @@
 #define FILE_LOADER_HELPERS 0x6
 #define MEKA_BANK 0x7
 #define LOGIC_CODE_BANK 0x8
+#define MEMORY_MANAGEMENT_BANK 0x10
 #define VIEW_CODE_BANK_1 0x9
 #define VIEW_CODE_BANK_2 0xA
 #define VIEW_CODE_BANK_3 0xB
@@ -112,17 +118,20 @@
 
 #define LOCAL_WORK_AREA_START 514
 #define LOCAL_WORK_AREA_SIZE 500
+#define PARAMETERS_START 1015
 
 #ifdef _MSC_VER //Used for testing under windows
 extern byte* banked;
 #endif 
 
 #define GOLDEN_RAM        ((unsigned char *)0x0400)
+#define GOLDEN_RAM_WORK_AREA        ((unsigned char *)0x0400 + LOCAL_WORK_AREA_START)
+#define GOLDEN_RAM_PARAMS_AREA &GOLDEN_RAM[PARAMETERS_START]
 
 extern int _noSegments;
 
 #ifndef _MSC_VER
-extern void _BANKRAM01_SIZE__[], _BANKRAM02_SIZE__[], _BANKRAM03_SIZE__[], _BANKRAM04_SIZE__[], _BANKRAM05_SIZE__[], _BANKRAM06_SIZE__[], _BANKRAM07_SIZE__[], _BANKRAM08_SIZE__[], _BANKRAM09_SIZE__[], _BANKRAM0A_SIZE__[], _BANKRAM0B_SIZE__[], _BANKRAM0C_SIZE__[], _BANKRAM0D_SIZE__[], _BANKRAM0E_SIZE__[];
+extern void _BANKRAM01_SIZE__[], _BANKRAM02_SIZE__[], _BANKRAM03_SIZE__[], _BANKRAM04_SIZE__[], _BANKRAM05_SIZE__[], _BANKRAM06_SIZE__[], _BANKRAM07_SIZE__[], _BANKRAM08_SIZE__[], _BANKRAM09_SIZE__[], _BANKRAM0A_SIZE__[], _BANKRAM0B_SIZE__[], _BANKRAM0C_SIZE__[], _BANKRAM0D_SIZE__[], _BANKRAM0E_SIZE__[], _BANKRAM0F_SIZE__[], _BANKRAM10_SIZE__[];
 #endif // !_MSC_VER
 
 typedef struct {          /* DIR entry structure */
@@ -133,13 +142,11 @@ typedef struct {          /* DIR entry structure */
 	byte* start;
 } MemoryArea;
 
-void initDynamicMemory();
+void b10InitDynamicMemory();
 
 void memoryMangerInit();
-byte* banked_alloc(int size, byte* bank);
-boolean banked_dealloc(byte* ptr, byte bank);
-void initSegments(byte segOrder, byte noBanks, int segmentSize, byte noSegments, byte firstBank);
-byte getFirstSegment(byte size);
+byte* banked_allocTrampoline(int size, byte* bank);
+boolean banked_deallocTrampoline(byte* ptr, byte bank);
 
 #endif
 

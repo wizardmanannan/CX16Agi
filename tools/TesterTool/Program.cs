@@ -18,7 +18,7 @@ namespace Tester
     ///  The main entry point for the application.
     /// </summary>
     [STAThread]
-        public static void Main()
+        public static void Main(string[] args)
         {
             try
             {
@@ -29,10 +29,11 @@ namespace Tester
                 if (!Configurator.ConfigExists)
                 {
                     ApplicationConfiguration.Initialize();
-                    Application.Run(new Tester(ExecuteTestScript));
+                    Application.Run(new Tester(ExecuteTestScript, args.Length > 0 ? args[0]: string.Empty));
                 }
                 else
                 {
+                    Configurator.Config.OptionalArguments = args.Length > 0 ? args[0] : string.Empty;
                     ExecuteTestScript(Configurator.Config);
                 }
             }
@@ -78,7 +79,7 @@ namespace Tester
             info.ArgumentList.Add(config.SdCardMountDriveLetter);
             info.ArgumentList.Add(config.Cx16EmulatatorFolder);
             info.ArgumentList.Add(config.MakeFileFolder);
-
+            info.ArgumentList.Add(config.OptionalArguments);
             return info; 
         }
     }

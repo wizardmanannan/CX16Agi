@@ -3,9 +3,6 @@
 #include "general.h"
 #include "memoryManager.h"
 #include "agifiles.h"
-#include <stdbool.h>
-#include <stdio.h>
-#include <string.h>
 
 #ifdef  __CX16__
 #include <cx16.h>
@@ -28,7 +25,7 @@ extern LRUCache* _logicCache;
 extern LRUCache* _viewCache;
 
 extern void lruCacheGetTrampoline(int resType, byte key, AGIFilePosType* location, AGIFile* agiData);
-extern void bEInitLruCaches(CacheEvictionCallback evictionCallbackLogic, CacheEvictionCallback evictionCallbackView);
+extern void initLruCachesTrampoline(CacheEvictionCallback evictionCallbackLogic, CacheEvictionCallback evictionCallbackView);
 
 #ifdef _MSC_VER
 extern void loadAGIFileTest(int resType, AGIFilePosType* location, AGIFile* AGIData);

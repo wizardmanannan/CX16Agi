@@ -68,7 +68,7 @@ void bELruCacheGet(int resType, LRUCache* cache, byte key, AGIFilePosType* locat
 #endif // __CX16__
 
 #ifdef __CX16__
-    loadAGIFile(resType, location, AGIData);
+    loadAGIFileTrampoline(resType, location, AGIData);
 #endif // __CX16__
 
 }
@@ -97,4 +97,16 @@ void lruCacheGetTrampoline(int resType, byte key, AGIFilePosType* location, AGIF
 #ifdef  __CX16__
     RAM_BANK = previousRamBank;
 #endif
+}
+
+void initLruCachesTrampoline(CacheEvictionCallback evictionCallbackLogic, CacheEvictionCallback evictionCallbackView)
+{
+    byte previousRamBank = RAM_BANK;
+    
+    RAM_BANK = LRU_CACHE_LOGIC_BANK;
+
+    bEInitLruCaches(evictionCallbackLogic, evictionCallbackView);
+   
+
+    RAM_BANK = previousRamBank;
 }
