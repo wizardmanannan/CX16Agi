@@ -2569,6 +2569,7 @@ void executeLogic(int logNum)
 		getLogicEntry(&currentLogic, logNum);
 
 		getLogicFile(&currentLogicFile, logNum);
+
 	}
 //#ifdef DEBUG
 //	debugString[0] = 0;
@@ -2582,6 +2583,7 @@ void executeLogic(int logNum)
 #define LOGIC_ENTRY_PARAMETERS_OFFSET  0
 	* ((LOGICEntry**)(GOLDEN_RAM_PARAMS_AREA + LOGIC_ENTRY_PARAMETERS_OFFSET)) = &currentLogic; //TODO: This isn't the cleanest solution. I need to figure out how to pass both params as argument. 
 
+	//temp(logNum);
 	commandLoop(&currentLogicFile);
 
 /*#ifdef DEBUG

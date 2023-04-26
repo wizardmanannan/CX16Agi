@@ -18,7 +18,7 @@ typedef struct {
 
 } LOGICFile;
 
-typedef struct { 
+typedef struct {
 	boolean loaded; //0
 	word entryPoint; //1
 	word currentPoint; //3
@@ -32,9 +32,11 @@ void b8InitLogics();
 void b8LoadLogicFile(byte logFileNum);
 void b8DiscardLogicFile(byte logFileNum);
 
+void temp(byte logicFileNo);
+
 extern void getLogicFile(LOGICFile* logicFile, byte logicFileNo);
 extern void getLogicEntry(LOGICEntry* logicEntry, byte logicFileNo);
 extern void setLogicEntry(LOGICEntry* logicEntry, byte logicFileNo);
-
+extern void temp(byte logicFileNo);
 
 #endif  /* _LOGIC_H_ */

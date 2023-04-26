@@ -17,6 +17,11 @@ GLOBAL_INC = 1
 ZP_PTR_CODE = $69
 ;$08 is reserved for code window in codeWindow.s
 ZP_TMP = $67
+ZP_TMP_2 = $70
+ZP_TMP_3 = $72
+ZP_PTR_LF = $74
+ZP_PTR_LE = $76
+
 
 ; Define the starting address for golden RAM
 GOLDEN_RAM = $400
@@ -26,6 +31,7 @@ LOGIC_COMMANDS_BANK = $0F
 DEBUG_BANK = $05
 COMMAND_LOOP_HELPER_BANK = $0F
 MEKA_BANK = $07
+LOGIC_BANK = $3C
 
 ; Define offsets for different areas within golden RAM
 VARS_AREA_START_GOLDEN_OFFSET = 0
@@ -36,6 +42,7 @@ PARAMETERS_WORK_AREA_GOLDEN_OFFSET = 1015
 ; Define offsets for logic file and code
 LOGIC_FILE_LOGIC_CODE_SIZE_OFFSET =  0
 LOGIC_FILE_LOGIC_CODE_OFFSET =  2
+LOGIC_FILE_LOGIC_DATA_OFFSET = 5
 LOGIC_FILE_LOGIC_BANK_OFFSET = 7
 
 ; Define offsets for logic entry points

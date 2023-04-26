@@ -26,11 +26,11 @@ void getLogicFile(LOGICFile* logicFile, byte logicFileNo)
 	byte previousBank = RAM_BANK;
 	LOGICEntry logicEntry;
 
-	RAM_BANK = LOGIC_ENTRY_BANK;
+	RAM_BANK = LOGIC_BANK;
 
 	logicEntry = logics[logicFileNo];
 
-	RAM_BANK = LOGIC_FILE_BANK;
+	RAM_BANK = LOGIC_BANK;
 	*logicFile = *logicEntry.data;
 
 	RAM_BANK = previousBank;
@@ -41,11 +41,11 @@ void setLogicFile(LOGICFile* logicFile, byte logicFileNo)
 	byte previousBank = RAM_BANK;
 	LOGICEntry logicEntry;
 
-	RAM_BANK = LOGIC_ENTRY_BANK;
+	RAM_BANK = LOGIC_BANK;
 
 	logicEntry = logics[logicFileNo];
 
-	RAM_BANK = LOGIC_FILE_BANK;
+	RAM_BANK = LOGIC_BANK;
 
 	*logicFile;
 	*(logicEntry.data) = *logicFile;
@@ -57,7 +57,7 @@ void setLogicEntry(LOGICEntry* logicEntry, byte logicFileNo)
 {
 	byte previousBank = RAM_BANK;
 
-	RAM_BANK = LOGIC_ENTRY_BANK;
+	RAM_BANK = LOGIC_BANK;
 
 	logics[logicFileNo] = *logicEntry;
 
@@ -68,14 +68,22 @@ void getLogicEntry(LOGICEntry* logicEntry, byte logicFileNo)
 {
 	byte previousBank = RAM_BANK;
 
-	RAM_BANK = LOGIC_ENTRY_BANK;
-	logics[logicFileNo].data = &((LOGICFile*)&BANK_RAM[LOGIC_FILE_BANK])[logicFileNo];
+	RAM_BANK = LOGIC_BANK;
 	*logicEntry = logics[logicFileNo];
 
 	RAM_BANK = previousBank;
 }
 
+void temp(byte logicFileNo)
+{
+	byte previousBank = RAM_BANK;
 
+	RAM_BANK = LOGIC_BANK;
+	printf("The address of logic entry %d is %p\n", logicFileNo, &logics[logicFileNo]);
+	printf("The address of logic file %d is %p and start pos is %p\n", logicFileNo, logics[logicFileNo].data, logics[logicFileNo].data->logicCode);
+
+	RAM_BANK = previousBank;
+}
 /***************************************************************************
 ** initLogics
 **
@@ -95,9 +103,9 @@ void b8InitLogics()
 		logicEntry.loaded = FALSE;
 		logicEntry.entryPoint = 0;
 		logicEntry.currentPoint = 0;
-		logicEntry.data = NULL;
+		logicEntry.data = &((LOGICFile*)&BANK_RAM[LOGIC_FILE_SIZE])[i];
+		setLogicEntry(&logicEntry, i);
 	}
-
 	b8LoadLogicFile(0);
 }
 
@@ -151,7 +159,7 @@ void b8LoadLogicFile(byte logFileNum)
 #endif // VERBOSE
 
 	setLogicFile(&logicData, logFileNum);
-	
+
 	logicEntry.loaded = TRUE;
 
 	setLogicEntry(&logicEntry, logFileNum);

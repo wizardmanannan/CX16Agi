@@ -15,10 +15,6 @@ LOGIC_ENTRY_PARAMETERS_OFFSET = 0
 ; Import required functions
 .import _debugPrint
 
-; Define zero-page pointers
-ZP_PTR_LF = $7E
-ZP_PTR_LE = $70
-
 ; Define variables
 jumpOffset: .byte $0
 numArgs: .byte $0,$2,$2,$2,$2,$2,$2,$1,$1,$1,$2,$5,$1,$0,$0,$2,$5,$5,$5
@@ -41,6 +37,9 @@ codeBankArray: .byte $5,$1,$1,$1,$1,$1,$1,$2,$2,$2,$2,$2,$2,$2,$2,$2,$2,$2,$2,$2
 .import _bFGotoFunc
 .import _callC1
 .import _callC2
+
+; Logic array imports
+.import _logics
 
 ; Define DEBUG_JUMP macro
 .macro DEBUG_JUMP val1, val2
@@ -401,17 +400,21 @@ _commandLoop:
          codeAtTimeOfLastBankSwitch: .byte $0
          previousRamBank: .byte $0
          start:
-         sta   ZP_PTR_LF ;currentLogicFile = *currentLogic.data;
-         stx   ZP_PTR_LF  + 1
 
-         lda RAM_BANK
-         sta previousRamBank
-
+        
          lda   GOLDEN_RAM + PARAMETERS_WORK_AREA_GOLDEN_OFFSET + LOGIC_ENTRY_PARAMETERS_OFFSET
          ldx   GOLDEN_RAM + PARAMETERS_WORK_AREA_GOLDEN_OFFSET + LOGIC_ENTRY_PARAMETERS_OFFSET + 1 ;Get the stored value from the parameter storage
          sta   ZP_PTR_LE
          stx   ZP_PTR_LE  + 1
         
+         ldx RAM_BANK
+         stx previousRamBank
+
+         ldx #LOGIC_BANK
+         stx RAM_BANK
+         
+         GET_STRUCT_16 LOGIC_FILE_LOGIC_DATA_OFFSET, ZP_PTR_LE, ZP_PTR_LF ;
+         
          GET_STRUCT_16 LOGIC_FILE_LOGIC_CODE_OFFSET, ZP_PTR_LF, startPos ;Retrieving the struct members required
          GET_STRUCT_16 LOGIC_FILE_LOGIC_CODE_SIZE_OFFSET, ZP_PTR_LF, codeSize
 
