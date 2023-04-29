@@ -2580,11 +2580,7 @@ void executeLogic(int logNum)
 	/* Set up position to start executing code from. */
 	//currentLogic.currentPoint = currentLogic.entryPoint;
 
-#define LOGIC_ENTRY_PARAMETERS_OFFSET  0
-	* ((LOGICEntry**)(GOLDEN_RAM_PARAMS_AREA + LOGIC_ENTRY_PARAMETERS_OFFSET)) = &currentLogic; //TODO: This isn't the cleanest solution. I need to figure out how to pass both params as argument. 
-
-	//temp(logNum);
-	commandLoop(&currentLogicFile);
+	commandLoop(logNum);
 
 /*#ifdef DEBUG
 	drawBigString(screen, "Push a key to advance a step", 0, 400, 0, 7);

@@ -11,7 +11,7 @@ void b1Call(unsigned char** data);
 
 extern boolean _b1Greatern();
 
-extern void commandLoop(LOGICFile* currentLogicFile);
+extern void commandLoop(byte logNum);
 extern byte loadAndIncWinCode();
 extern void afterLogicCommand();
 extern void initCommands();

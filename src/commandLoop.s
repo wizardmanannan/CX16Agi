@@ -15,6 +15,10 @@ LOGIC_ENTRY_PARAMETERS_OFFSET = 0
 ; Import required functions
 .import _debugPrint
 
+; Import required C variables
+.import _logicEntryAddressesLow
+.import _logicEntryAddressesHigh
+
 ; Define variables
 jumpOffset: .byte $0
 numArgs: .byte $0,$2,$2,$2,$2,$2,$2,$1,$1,$1,$2,$5,$1,$0,$0,$2,$5,$5,$5
@@ -393,6 +397,27 @@ ifHandler:
 ;endCommandLoopHelpers
 
 .segment "CODE"
+
+.macro STORE_LOGIC_ENTRY_ADDRESS
+.local @low
+.local @end
+    ldx #LOGIC_ENTRY_ADDRESSES_BANK
+    stx RAM_BANK
+    
+    cmp #$80
+    bcc @low
+    sec
+    sbc #$80
+    bra @high
+
+@low:
+  READ_ARRAY_POINTER ZP_PTR_PLF_LOW
+  bra @end
+@high:
+  READ_ARRAY_POINTER ZP_PTR_PLF_HIGH
+@end:
+.endmacro
+
 _commandLoop:
          bra start
          entryPoint: .word $0
@@ -400,25 +425,21 @@ _commandLoop:
          codeAtTimeOfLastBankSwitch: .byte $0
          previousRamBank: .byte $0
          start:
-
-        
-         lda   GOLDEN_RAM + PARAMETERS_WORK_AREA_GOLDEN_OFFSET + LOGIC_ENTRY_PARAMETERS_OFFSET
-         ldx   GOLDEN_RAM + PARAMETERS_WORK_AREA_GOLDEN_OFFSET + LOGIC_ENTRY_PARAMETERS_OFFSET + 1 ;Get the stored value from the parameter storage
-         sta   ZP_PTR_LE
-         stx   ZP_PTR_LE  + 1
-        
          ldx RAM_BANK
          stx previousRamBank
-
+    
+         STORE_LOGIC_ENTRY_ADDRESS
+                  
          ldx #LOGIC_BANK
          stx RAM_BANK
-         
+     
          GET_STRUCT_16 LOGIC_FILE_LOGIC_DATA_OFFSET, ZP_PTR_LE, ZP_PTR_LF ;
          
          GET_STRUCT_16 LOGIC_FILE_LOGIC_CODE_OFFSET, ZP_PTR_LF, startPos ;Retrieving the struct members required
          GET_STRUCT_16 LOGIC_FILE_LOGIC_CODE_SIZE_OFFSET, ZP_PTR_LF, codeSize
 
          GET_STRUCT_8 LOGIC_FILE_LOGIC_BANK_OFFSET, ZP_PTR_LF, _codeBank
+         
          GET_STRUCT_16 LOGIC_ENTRY_POINT_OFFSET, ZP_PTR_LE, entryPoint
          
          ADD_WORD_16 startPos,entryPoint,ZP_PTR_CODE ;code = startPos + currentLogic.entryPoint;
@@ -426,10 +447,15 @@ _commandLoop:
          
          LDA #TRUE
          sta codeWindowInvalid ;At the beginning start from ZP_PTR_CODE
+     
          jsr refreshCodeWindow
          mainLoop:
          GREATER_THAN_OR_EQ_16 ZP_PTR_CODE, endPos, endMainLoop
+         
+         lda #LOGIC_BANK
+         sta RAM_BANK        
          SUB_WORD_16_IND ZP_PTR_CODE, startPos, LOGIC_ENTRY_CURRENT_POINT_OFFSET, ZP_PTR_LE
+
         ; /* Emergency exit */
 		; if (key[KEY_F12]) {
 		; 	////lprintf("info: Exiting MEKA due to F12, logic: %d, posn: %d",

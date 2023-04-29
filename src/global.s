@@ -21,7 +21,11 @@ ZP_TMP_2 = $70
 ZP_TMP_3 = $72
 ZP_PTR_LF = $74
 ZP_PTR_LE = $76
-
+ZP_PTR_PLF_HIGH = $78
+ZP_PTR_PLF_LOW = $80
+;System Reserved 82 and 83
+; Set up zero page pointer (ZP_PTR_CODE_WIN) and other variables related to code window management.
+ZP_PTR_CODE_WIN = $84 ;Zero Pointer Page Pointer To Code Window
 
 ; Define the starting address for golden RAM
 GOLDEN_RAM = $400
@@ -32,6 +36,7 @@ DEBUG_BANK = $05
 COMMAND_LOOP_HELPER_BANK = $0F
 MEKA_BANK = $07
 LOGIC_BANK = $3C
+LOGIC_ENTRY_ADDRESSES_BANK = $8
 
 ; Define offsets for different areas within golden RAM
 VARS_AREA_START_GOLDEN_OFFSET = 0
@@ -55,6 +60,22 @@ JSRFAR_KERNAL_ADDR = $FF6E
 ; Define true and false values for easier reading
 TRUE = 1
 FALSE = 0
+
+;Define struct sizes
+LOGIC_ENTRY_SIZE = 8
+LOGIC_FILE_SIZE = 2
+
+; Macro for reading from an array
+.macro READ_ARRAY_POINTER arrayZeroPointer
+    clc
+    asl 
+    tay
+    lda (arrayZeroPointer),y
+    sta ZP_PTR_LE
+    iny
+    lda (arrayZeroPointer),y
+    sta ZP_PTR_LE + 1
+.endmacro
 
 ; Macro for setting a 16-bit struct value
 .macro   SET_STRUCT_16 offset, pointer, value
@@ -338,6 +359,20 @@ sta result
 lda word1 + 1
 ora word2 + 1
 sta result + 1
+.endmacro
+
+.macro STOP_AT_FUNC
+pha
+txa
+pha
+tya
+pha
+jsr _stopAtFunc
+pla
+tay
+pla
+tax
+pla
 .endmacro
 
 .endif

@@ -12,8 +12,6 @@ CODE_WINDOW_INC = 1
 .import _stopAtFunc 
 .endif
 
-; Set up zero page pointer (ZP_PTR_CODE_WIN) and other variables related to code window management.
-ZP_PTR_CODE_WIN = $80 ;Zero Pointer Page Pointer To Code Window
 CODE_WINDOW_SIZE = 50
 .segment "CODE"
 codeWindow: .res CODE_WINDOW_SIZE 

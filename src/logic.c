@@ -21,6 +21,8 @@
 ** not. If it isn't loaded, then the data is not in memory. */
 LOGICEntry* logics = (LOGICEntry*)&BANK_RAM[LOGIC_ENTRY_START];
 
+LOGICEntry** logicEntryAddressesLow = (LOGICEntry**)&BANK_RAM[LOGIC_ENTRY_ADDRESSES_START];
+LOGICEntry** logicEntryAddressesHigh = &((LOGICEntry**)&BANK_RAM[LOGIC_ENTRY_ADDRESSES_START])[128];
 void getLogicFile(LOGICFile* logicFile, byte logicFileNo)
 {
 	byte previousBank = RAM_BANK;
@@ -74,16 +76,6 @@ void getLogicEntry(LOGICEntry* logicEntry, byte logicFileNo)
 	RAM_BANK = previousBank;
 }
 
-void temp(byte logicFileNo)
-{
-	byte previousBank = RAM_BANK;
-
-	RAM_BANK = LOGIC_BANK;
-	printf("The address of logic entry %d is %p\n", logicFileNo, &logics[logicFileNo]);
-	printf("The address of logic file %d is %p and start pos is %p\n", logicFileNo, logics[logicFileNo].data, logics[logicFileNo].data->logicCode);
-
-	RAM_BANK = previousBank;
-}
 /***************************************************************************
 ** initLogics
 **
@@ -105,6 +97,7 @@ void b8InitLogics()
 		logicEntry.currentPoint = 0;
 		logicEntry.data = &((LOGICFile*)&BANK_RAM[LOGIC_FILE_SIZE])[i];
 		setLogicEntry(&logicEntry, i);
+		logicEntryAddressesLow[i] = &logics[i];
 	}
 	b8LoadLogicFile(0);
 }

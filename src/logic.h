@@ -27,12 +27,9 @@ typedef struct {
 } LOGICEntry;
 
 extern LOGICEntry* logics;
-
 void b8InitLogics();
 void b8LoadLogicFile(byte logFileNum);
 void b8DiscardLogicFile(byte logFileNum);
-
-void temp(byte logicFileNo);
 
 extern void getLogicFile(LOGICFile* logicFile, byte logicFileNo);
 extern void getLogicEntry(LOGICEntry* logicEntry, byte logicFileNo);

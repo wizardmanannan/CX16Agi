@@ -18,7 +18,7 @@ int _clockBefore = 0;
 
 void stopAtFunc()
 {
-	if (opCounter >= 197)
+	if (opCounter >= 51)
 	{
 		asm("stp");
 		asm("nop");
