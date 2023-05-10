@@ -118,36 +118,25 @@ sta RAM_BANK
 
 ; Macro to handle GOTO logic
 .macro GOTO
-    .local @disp
-    .local @b1
-    .local @b2
-    .local @start
-
 ; code++;
 ; b1 = *code++;
 ; b2 = *code++;
 ; disp = (b2 << 8) | b1;  /* Should be signed 16 bit */
 ; code += disp;
-
-    bra @start
-    @disp: .word $0
-    @b1: .word $0
-    @b2: .word $0
-    @start:
     LOAD_CODE_WIN_CODE
-    sta @b1
+    sta ZP_PTR_B1
     INC_CODE
 
     LOAD_CODE_WIN_CODE
-    sta @b2
+    sta ZP_PTR_B2
     INC_CODE
 
-    DEBUG_JUMP @b1, @b2
-    LEFT_SHIFT_BY_8 @b2, @disp
+    DEBUG_JUMP ZP_PTR_B1, ZP_PTR_B2
+    LEFT_SHIFT_BY_8 ZP_PTR_B2, ZP_PTR_DISP
 
-    ORA_16 @b1, @disp, @disp 
+    ORA_16 ZP_PTR_B1, ZP_PTR_DISP, ZP_PTR_DISP
 
-    INC_CODE_BY @disp
+    INC_CODE_BY ZP_PTR_DISP
     DEBUG_CODE_STATE
 .endmacro
 
