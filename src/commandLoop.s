@@ -245,13 +245,12 @@ ifHandler:
         bra ifHandlerLoop
         notMode: .byte FALSE
         orMode: .byte FALSE
-        ch: .byte $0
         ifHandlerLoop:
         LOAD_CODE_WIN_CODE
-        sta ch
+        sta ZP_PTR_CH
         INC_CODE
 
-        lda ch
+        lda ZP_PTR_CH
 
         cmp #$FF ;Closing if bracket. Expression must be true.
         beq @closingIfBracketJmp
@@ -279,8 +278,8 @@ ifHandler:
             jmp checkOrMode
 
         @default:
-            DEBUG_PRINT ch
-            lda ch
+            DEBUG_PRINT ZP_PTR_CH
+            lda ZP_PTR_CH
             asl
             sta jumpOffset
             
