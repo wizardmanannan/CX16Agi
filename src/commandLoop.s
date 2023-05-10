@@ -10,6 +10,11 @@ LOGIC_ENTRY_PARAMETERS_OFFSET = 0
 .include "logicCommands.s"
 .include "codeWindow.s"
 
+.global endMainLoop
+.global mainLoop
+.global returnFromOpCodeTrue
+.global returnFromOpCodeFalse
+
 ; Set the segment for the code
 .segment "CODE"
 ; Import required functions

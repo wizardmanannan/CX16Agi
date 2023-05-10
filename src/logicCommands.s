@@ -10,8 +10,12 @@ LOGICCOMMANDS_INC = 1
 
 ; Include necessary files
 .include "global.s"
-.include "commandLoop.s"
 .include "codeWindow.s"
+
+.global endMainLoop
+.global mainLoop
+.global returnFromOpCodeTrue
+.global returnFromOpCodeFalse
 
 ; Import various functions and variables from other files
 ; (functions related to game logic, drawing, animations, sound, text, etc.)

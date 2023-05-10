@@ -215,15 +215,13 @@ override PROGRAM := $(PROGRAM).$(TARGETLIST)
 # Use of assembler files with names ending differently than .s is deprecated!
 SOURCES := $(wildcard $(SRCDIR)/*.c)
 SOURCES += $(wildcard $(SRCDIR)/*.C)
-SOURCES += $(wildcard $(SRCDIR)/*.s)
-SOURCES += $(wildcard $(SRCDIR)/*.asm)
+SOURCES += $(SRCDIR)/main.s
 SOURCES += $(wildcard $(SRCDIR)/*.a65)
 
 # Add to SOURCES something like 'src/c64/me.c src/c64/too.s'.
 # Use of assembler files with names ending differently than .s is deprecated!
 SOURCES += $(wildcard $(SRCDIR)/$(TARGETLIST)/*.c)
-SOURCES += $(wildcard $(SRCDIR)/$(TARGETLIST)/*.s)
-SOURCES += $(wildcard $(SRCDIR)/$(TARGETLIST)/*.asm)
+SOURCES += $(SRCDIR)/main.s
 SOURCES += $(wildcard $(SRCDIR)/$(TARGETLIST)/*.a65)
 
 # Set OBJECTS to something like 'obj/c64/foo.o obj/c64/bar.o'.
