@@ -6,9 +6,10 @@ extern byte* var;
 extern byte codeBank;
 extern byte newRoomNum;
 extern boolean hasEnteredNewRoom, exitAllLogics;
+extern int currentLog;
 
 long opCounter = 1;
-long stopAt = -1;
+long stopAt = 0;
 long exitAt = -1;
 long startPrintingAt = -1;
 boolean stopEvery = FALSE;
@@ -309,6 +310,16 @@ void debugPrintCurrentCodeState(byte* code)
 	if (opCounter >= startPrintingAt && startPrintingAt != -1) {
 		printf("the code is now %u and the address is %p\n", codeValue, code);
 	}
+}
+
+void b5DebugPrintScriptStart()
+{
+	printf("ex s. %d counter op %lu, var 0 is %d\n", currentLog, opCounter, var[0]);
+}
+
+void b5DebugPrintRoomChange()
+{
+	printf("We are at %d, counter %lu\n", var[0], opCounter);
 }
 
 #pragma code-name (pop);
