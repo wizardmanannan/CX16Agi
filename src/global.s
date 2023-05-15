@@ -3,7 +3,7 @@
 
 ; Include the x16.inc file
 .include "x16.inc"
-;DEBUG = 0
+DEBUG = 0
 
 ; Define some start and end positions and code bank
 startPos: .word $0
@@ -16,13 +16,15 @@ GLOBAL_INC = 1
 ; Define some zero page pointers
 ZP_PTR_CODE = $69
 ;$08 is reserved for code window in codeWindow.s
-ZP_TMP = $67
-ZP_TMP_2 = $70
-ZP_TMP_3 = $72
+ZP_TMP = $66
 ZP_PTR_LF = $74
 ZP_PTR_LE = $76
 ZP_PTR_PLF_HIGH = $78
 ZP_PTR_PLF_LOW = $80
+ZP_PTR_CH  = $F8
+ZP_PTR_B1  = $FA
+ZP_PTR_B2  = $FC
+ZP_PTR_DISP  = $FE
 ;System Reserved 82 and 83
 ; Set up zero page pointer (ZP_PTR_CODE_WIN) and other variables related to code window management.
 ZP_PTR_CODE_WIN = $84 ;Zero Pointer Page Pointer To Code Window

@@ -136,36 +136,25 @@ sta RAM_BANK
 
 ; Macro to handle GOTO logic
 .macro GOTO
-    .local @disp
-    .local @b1
-    .local @b2
-    .local @start
-
 ; code++;
 ; b1 = *code++;
 ; b2 = *code++;
 ; disp = (b2 << 8) | b1;  /* Should be signed 16 bit */
 ; code += disp;
-
-    bra @start
-    @disp: .word $0
-    @b1: .word $0
-    @b2: .word $0
-    @start:
     LOAD_CODE_WIN_CODE
-    sta @b1
+    sta ZP_PTR_B1
     INC_CODE
 
     LOAD_CODE_WIN_CODE
-    sta @b2
+    sta ZP_PTR_B2
     INC_CODE
 
-    DEBUG_JUMP @b1, @b2
-    LEFT_SHIFT_BY_8 @b2, @disp
+    DEBUG_JUMP ZP_PTR_B1, ZP_PTR_B2
+    LEFT_SHIFT_BY_8 ZP_PTR_B2, ZP_PTR_DISP
 
-    ORA_16 @b1, @disp, @disp 
+    ORA_16 ZP_PTR_B1, ZP_PTR_DISP, ZP_PTR_DISP
 
-    INC_CODE_BY @disp
+    INC_CODE_BY ZP_PTR_DISP
     DEBUG_CODE_STATE
 .endmacro
 
@@ -274,13 +263,12 @@ ifHandler:
         bra ifHandlerLoop
         notMode: .byte FALSE
         orMode: .byte FALSE
-        ch: .byte $0
         ifHandlerLoop:
         LOAD_CODE_WIN_CODE
-        sta ch
+        sta ZP_PTR_CH
         INC_CODE
 
-        lda ch
+        lda ZP_PTR_CH
 
         cmp #$FF ;Closing if bracket. Expression must be true.
         beq @closingIfBracketJmp
@@ -295,21 +283,21 @@ ifHandler:
         bra @default
 
         @closingIfBracketJmp:
-            DEBUG_PRINT ch ;/* Closing if bracket. Expression must be true. */
+            DEBUG_PRINT ZP_PTR_CH ;/* Closing if bracket. Expression must be true. */
             jmp closingIfBracket
         
         @toggleNotModeJmp:
-            DEBUG_PRINT ch
+            DEBUG_PRINT ZP_PTR_CH
             jmp toggleNotMode
 
         @checkOrModeJmp:
-            DEBUG_PRINT ch
+            DEBUG_PRINT ZP_PTR_CH
             DEBUG_PRINT_OR_MODE
             jmp checkOrMode
 
         @default:
-            DEBUG_PRINT ch
-            lda ch
+            DEBUG_PRINT ZP_PTR_CH
+            lda ZP_PTR_CH
             asl
             sta jumpOffset
             
@@ -346,7 +334,6 @@ ifHandler:
                 jmp ifHandlerLoop
     
             endIfHandlerLoop:
-                    bra @startFindBracketLoop
         ;while (TRUE) {
         ;    ch = *(*data)++;
         ;    if (ch == 0xff) {
@@ -366,16 +353,12 @@ ifHandler:
         ;    }
 	    ;}
 
-                    @ch: .word $0
-                    @b1: .word $0
-                    @b2: .word $0
-                    @disp: .word $0
                     @startFindBracketLoop:
                         LOAD_CODE_WIN_CODE                                 
-                        sta @ch
+                        sta ZP_PTR_CH
                         
                         INC_CODE
-                        lda @ch
+                        lda ZP_PTR_CH
                         
                         cmp #$FF ;Closing If Bracket
                         bne @0E
@@ -386,24 +369,24 @@ ifHandler:
                         cmp #$0E
                         beq @0EResult
 
-                        GREATER_THAN_OR_EQ_8 @ch, #$FC, @startFindBracketLoop ;Skip or modes
+                        GREATER_THAN_OR_EQ_8 ZP_PTR_CH, #$FC, @startFindBracketLoop ;Skip or modes
 
-                        ldx @ch ;*data += testCommands[ch].numArgs;
+                        ldx ZP_PTR_CH ;*data += testCommands[ch].numArgs;
                         lda numArgs,x
                         ldx #$0
-                        sta @disp
-                        stz @disp + 1
+                        sta ZP_PTR_DISP
+                        stz ZP_PTR_DISP + 1
 
-                        INC_CODE_BY @disp
+                        INC_CODE_BY ZP_PTR_DISP
                         bra @startFindBracketLoop
 
                         @0EResult: ;said() has variable number of args
                         LOAD_CODE_WIN_CODE
-                        sta @ch
+                        sta ZP_PTR_CH
                         INC_CODE
-                        LEFT_SHIFT_BY_1 @ch, @disp
-                        sta @disp
-                        INC_CODE_BY @disp
+                        LEFT_SHIFT_BY_1 ZP_PTR_CH, ZP_PTR_DISP
+                        sta ZP_PTR_DISP
+                        INC_CODE_BY ZP_PTR_DISP
 
                         jmp @startFindBracketLoop
                         @FFResult:

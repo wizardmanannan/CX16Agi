@@ -11,7 +11,7 @@ extern int currentLog;
 long opCounter = 1;
 long stopAt = 0;
 long exitAt = -1;
-long startPrintingAt = -1;
+long startPrintingAt = 0;
 boolean stopEvery = FALSE;
 int _clockBefore = 0;
 
