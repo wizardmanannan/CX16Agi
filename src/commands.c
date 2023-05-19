@@ -2521,6 +2521,73 @@ int bFGotoFunc()
 
 boolean hasSeen1 = FALSE;
 #pragma code-name (pop)
+#pragma code-name (push, "BANKRAM07")
+/***************************************************************************
+** executeLogic
+**
+** Purpose: To execute the logic code for the logic with the given number.
+***************************************************************************/
+void executeLogic(int logNum)
+{
+	//boolean discardAfterward = FALSE, stillExecuting = TRUE;
+	//byte* code, * endPos, * startPos, b1, b2;
+	//byte codeAtTimeOfLastBankSwitch;
+	LOGICEntry currentLogic;
+	LOGICFile currentLogicFile;
 
+	currentLog = logNum;
+
+	getLogicEntry(&currentLogic, logNum);
+
+	getLogicFile(&currentLogicFile, logNum);
+
+#ifdef VERBOSE_SCRIPT_START
+	printf("ex s. %d counter op %lu, var 0 is %d\n", logNum, opCounter, var[0]);
+#endif // VERBOSE_SCRIPT_START
+
+#ifdef VERBOSE_ROOM_CHANGE
+	if(var[0] != lastRoom)
+	{
+		printf("We are at %d, counter %lu\n", var[0], opCounter);
+	}
+	lastRoom = var[0];
+#endif // VERBOSE_SCRIPT_START
+
+
+//#ifdef DEBUG
+//	sprintf(debugString, "LOGIC.%d:       ", currentLog);
+//	drawBigString(screen, debugString, 0, 384, 0, 7);
+//#endif
+
+	/* Load logic file temporarily in order to execute it if the logic is
+	** not already in memory. */
+	if (!currentLogic.loaded) {
+		//discardAfterward = TRUE;
+		
+		trampoline_1Int(&b8LoadLogicFile, logNum, LOGIC_CODE_BANK);
+
+		getLogicEntry(&currentLogic, logNum);
+
+		getLogicFile(&currentLogicFile, logNum);
+
+	}
+//#ifdef DEBUG
+//	debugString[0] = 0;
+//	for (i = 0; i < 10; i++)
+//		sprintf(debugString, "%s %x", debugString, currentLogicFile->logicCode[i]);
+//	drawBigString(screen, debugString, 0, 416, 0, 7);
+//#endif
+	/* Set up position to start executing code from. */
+	//currentLogic.currentPoint = currentLogic.entryPoint;
+
+	commandLoop(logNum);
+
+/*#ifdef DEBUG
+	drawBigString(screen, "Push a key to advance a step", 0, 400, 0, 7);
+	if ((readkey() & 0xff) == 'q') closedown();
+#endif*/
+}
+
+#pragma code-name (pop)
 
 

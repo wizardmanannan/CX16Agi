@@ -3,7 +3,7 @@
     .include "logicCommands.s"
     .include "codeWindow.s"
     .include "global.s"
-    .export _executeLogic
+    .export _commandLoop
     .export _b7InitAsm
     .export _loadAndIncWinCode
     .export _incCodeBy
