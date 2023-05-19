@@ -46,7 +46,6 @@ int dirnOfEgo, newRoomNum, score;
 
 extern int picFNum;    // Debugging. Delete at some stage!!
 extern void b7InitAsm();
-extern void _executeLogic(int logNum);
 
 #pragma code-name (push, "BANKRAM07")
 void b7AdjustEgoPosition()
