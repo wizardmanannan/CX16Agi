@@ -472,10 +472,7 @@ _executeLogic:
          
          ldx #LOGIC_BANK
          stx RAM_BANK
-         @endifLoaded:
-         ADD_WORD_16 startPos,entryPoint,ZP_PTR_CODE ;code = startPos + currentLogic.entryPoint;
-         ADD_WORD_16 startPos,codeSize,endPos ;startPos + currentLogicFile.codeSize;
-     
+         @endifLoaded:    
          GET_STRUCT_16 LOGIC_FILE_LOGIC_DATA_OFFSET, ZP_PTR_LE, ZP_PTR_LF ;
          
          GET_STRUCT_16 LOGIC_FILE_LOGIC_CODE_OFFSET, ZP_PTR_LF, startPos ;Retrieving the struct members required
@@ -485,9 +482,11 @@ _executeLogic:
          
          GET_STRUCT_16 LOGIC_ENTRY_POINT_OFFSET, ZP_PTR_LE, entryPoint
          
+         ADD_WORD_16 startPos,entryPoint,ZP_PTR_CODE ;code = startPos + currentLogic.entryPoint;
+         ADD_WORD_16 startPos,codeSize,endPos ;startPos + currentLogicFile.codeSize;
+
          LDA #TRUE
          sta codeWindowInvalid ;At the beginning start from ZP_PTR_CODE
-     
          jsr refreshCodeWindow
          mainLoop:
          GREATER_THAN_OR_EQ_16 ZP_PTR_CODE, endPos, endMainLoop
