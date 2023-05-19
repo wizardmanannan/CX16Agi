@@ -5,6 +5,18 @@
 COMMAND_LOOP_INC = 1
 LOGIC_ENTRY_PARAMETERS_OFFSET = 0
 
+
+;VERBOSE_SCRIPT_START = 1
+
+.ifdef VERBOSE_SCRIPT_START
+.import _b5DebugPrintScriptStart
+.endif
+
+VERBOSE_ROOM_CHANGE = 1
+.ifdef VERBOSE_ROOM_CHANGE
+.import _b5DebugPrintRoomChange
+.endif
+
 ; Include necessary files
 .include "global.s"
 .include "logicCommands.s"
@@ -19,10 +31,11 @@ LOGIC_ENTRY_PARAMETERS_OFFSET = 0
 .segment "CODE"
 ; Import required functions
 .import _debugPrint
-
+.import _b8LoadLogicFile
 ; Import required C variables
 .import _logicEntryAddressesLow
 .import _logicEntryAddressesHigh
+.import _currentLog
 
 ; Define variables
 jumpOffset: .byte $0
@@ -423,20 +436,62 @@ ifHandler:
 @end:
 .endmacro
 
-_commandLoop:
+_executeLogic:
          bra start
          entryPoint: .word $0
          codeSize: .word $0
          codeAtTimeOfLastBankSwitch: .byte $0
          previousRamBank: .byte $0
-         start:
-         ldx RAM_BANK
-         stx previousRamBank
-    
+         .ifdef VERBOSE_ROOM_CHANGE
+         lastRoom: .byte $0
+         currentRoom: .byte $0
+         .endif
+         start:         
+         ldy RAM_BANK
+         sty previousRamBank
+
+         sta _currentLog
+         stx _currentLog + 1
+
          STORE_LOGIC_ENTRY_ADDRESS
-                  
+
+         .ifdef VERBOSE_SCRIPT_START
+            JSRFAR _b5DebugPrintScriptStart, DEBUG_BANK
+         .endif
+
+         .ifdef VERBOSE_ROOM_CHANGE
+            GET_VAR_OR_FLAG VARS_AREA_START_GOLDEN_OFFSET, currentRoom, #$0
+            lda currentRoom
+            cmp lastRoom
+            beq @endif
+            JSRFAR _b5DebugPrintRoomChange, DEBUG_BANK
+            @endif:
+            lda currentRoom
+            sta lastRoom
+         .endif
+
+        ;if (!currentLogic.loaded) {		
+		    ;trampoline_1Int(&b8LoadLogicFile, logNum, LOGIC_CODE_BANK);
+        ;}
+         
          ldx #LOGIC_BANK
          stx RAM_BANK
+
+         GET_STRUCT_8 LOGIC_LOADED_OFFSET, ZP_PTR_LE, ZP_TMP   
+         lda ZP_TMP
+         bne @endifLoaded
+         lda #LOGIC_CODE_BANK
+         sta RAM_BANK
+         
+         lda _currentLog
+         ldx _currentLog + 1
+         jsr _b8LoadLogicFile
+         
+         ldx #LOGIC_BANK
+         stx RAM_BANK
+         @endifLoaded:
+         ADD_WORD_16 startPos,entryPoint,ZP_PTR_CODE ;code = startPos + currentLogic.entryPoint;
+         ADD_WORD_16 startPos,codeSize,endPos ;startPos + currentLogicFile.codeSize;
      
          GET_STRUCT_16 LOGIC_FILE_LOGIC_DATA_OFFSET, ZP_PTR_LE, ZP_PTR_LF ;
          
@@ -446,9 +501,6 @@ _commandLoop:
          GET_STRUCT_8 LOGIC_FILE_LOGIC_BANK_OFFSET, ZP_PTR_LF, _codeBank
          
          GET_STRUCT_16 LOGIC_ENTRY_POINT_OFFSET, ZP_PTR_LE, entryPoint
-         
-         ADD_WORD_16 startPos,entryPoint,ZP_PTR_CODE ;code = startPos + currentLogic.entryPoint;
-         ADD_WORD_16 startPos,codeSize,endPos ;startPos + currentLogicFile.codeSize;
          
          LDA #TRUE
          sta codeWindowInvalid ;At the beginning start from ZP_PTR_CODE
@@ -489,7 +541,6 @@ _commandLoop:
          GOTO
          jmp mainLoop
          @default:
- 
             DEBUG_PRINT
             LOAD_CODE_WIN_CODE
             tax

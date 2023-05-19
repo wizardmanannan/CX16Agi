@@ -160,8 +160,6 @@ LOGICCOMMANDS_INC = 1
 .import _b4Div_n
 .import _b4Div_v
 
-.import _executeLogic
-
 .import _exitAllLogics
 .import _hasEnteredNewRoom
 .import _newRoomNum
