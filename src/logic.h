@@ -34,6 +34,5 @@ void b8DiscardLogicFile(byte logFileNum);
 extern void getLogicFile(LOGICFile* logicFile, byte logicFileNo);
 extern void getLogicEntry(LOGICEntry* logicEntry, byte logicFileNo);
 extern void setLogicEntry(LOGICEntry* logicEntry, byte logicFileNo);
-extern void temp(byte logicFileNo);
 
 #endif  /* _LOGIC_H_ */
