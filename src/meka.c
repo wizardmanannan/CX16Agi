@@ -19,6 +19,7 @@
 #include "memoryManager.h"
 #include "lruCache.h"
 #include "debugHelper.h"
+#include "graphics.h"
 //#include "object.h"
 //#include "words.h"
 //#include "picture.h"
@@ -36,7 +37,7 @@ byte horizon;
 #define DEBUG 1
 //#define VERBOSE
 
-const unsigned int TIMER_WAIT_MS = 50;
+const unsigned int TIMER_WAIT_MS = 0;
 
 volatile int counter;              /* Used for timer control */
 volatile int hund;                 /* Used for interpreters clock */
@@ -254,6 +255,7 @@ void b7Initialise()
 
    
     trampoline_0(&b8InitLogics, LOGIC_CODE_BANK);
+    b7InitGraphics();
     initPicture();
     initPictures();
     initSound();

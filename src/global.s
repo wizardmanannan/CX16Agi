@@ -379,4 +379,7 @@ tax
 pla
 .endmacro
 
+;Global IRQ
+default_irq_vector: .addr 0
+VSYNC_BIT            = $01
 .endif

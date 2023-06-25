@@ -23,6 +23,7 @@
     <ClInclude Include="src\debugHelper.h" />
     <ClInclude Include="src\DECOMP.H" />
     <ClInclude Include="src\GENERAL.H" />
+    <ClInclude Include="src\graphics.h" />
     <ClInclude Include="src\GUI.H" />
     <ClInclude Include="src\helpers.h" />
     <ClInclude Include="src\LIST.H" />
@@ -45,7 +46,7 @@
     <ClCompile Include="src\debugHelper.c" />
     <ClCompile Include="src\DECOMP.C" />
     <ClCompile Include="src\general.c" />
-    <ClCompile Include="src\GRAPHICS.C" />
+    <ClCompile Include="src\graphics.c" />
     <ClCompile Include="src\GUI.C" />
     <ClCompile Include="src\helpers.c" />
     <ClCompile Include="src\logic.c" />

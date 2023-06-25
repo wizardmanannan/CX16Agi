@@ -1,6 +1,7 @@
 .include "global.s"
 .include "codeWindow.s"
 .include "debug.s"
+.include "irq.s"
 
 ; Import required C variables
 .import _logicEntryAddressesLow
@@ -38,5 +39,7 @@ _b7InitAsm:
     sta ZP_PTR_PLF_HIGH
     lda _logicEntryAddressesHigh + 1
     sta ZP_PTR_PLF_HIGH + 1
+
+    jsr _b7InitIrq
 rts
 .segment "CODE" ;Not sure why this is needed TODO:Fix
