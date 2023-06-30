@@ -52,9 +52,8 @@ sta @mapHeight
 @loopOuter:
     ldy @mapHeight  ; Load Y with mapHeight
     @loopInner:
-        lda #$00
-        sta VERA_data0  ; Store 15 into VRAM (set pixel to white)
-        ;stz VERA_data0  ; Store 0 into VRAM (set pixel to black)
+        lda #$CC
+        stz VERA_data0  ; Store 0 into VRAM (set pixel to black)
         dey  ; Decrement Y
         bne @loopInner  ; If Y is not 0, continue loop
     dex  ; Decrement X
