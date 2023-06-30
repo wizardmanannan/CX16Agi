@@ -33,7 +33,7 @@
     <ClInclude Include="src\OBJECT.H" />
     <ClInclude Include="src\PALETTE.H" />
     <ClInclude Include="src\PARSER.H" />
-    <ClInclude Include="src\PICTURE.H" />
+    <ClInclude Include="src\picture.h" />
     <ClInclude Include="src\SOUND.H" />
     <ClInclude Include="src\stub.h" />
     <ClInclude Include="src\timer.h" />
@@ -55,7 +55,7 @@
     <ClCompile Include="src\memoryManager.c" />
     <ClCompile Include="src\OBJECT.C" />
     <ClCompile Include="src\PARSER.C" />
-    <ClCompile Include="src\PICTURE.C" />
+    <ClCompile Include="src\picture.c" />
     <ClCompile Include="src\PLAY.C" />
     <ClCompile Include="src\SHOWLOG.C" />
     <ClCompile Include="src\SOUND.C" />

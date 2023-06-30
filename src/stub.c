@@ -93,10 +93,6 @@ void discardPictureFile(int picFileNum) {
 
 }
 
-void initPicture() {
-
-}
-
 void initPictures() {
 
 }

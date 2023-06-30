@@ -1,6 +1,7 @@
 #include "helpers.h"
 //#define VERBOSE
 //#define VERBOSE_CPY_CHECK
+#define VERBOSE_MEMSET_CHECK
 
 boolean debugStop = FALSE;
 

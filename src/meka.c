@@ -19,10 +19,9 @@
 #include "memoryManager.h"
 #include "lruCache.h"
 #include "debugHelper.h"
-#include "graphics.h"
 //#include "object.h"
 //#include "words.h"
-//#include "picture.h"
+#include "picture.h"
 //#include "parser.h"
 //#include "sound.h"
 
@@ -255,8 +254,7 @@ void b7Initialise()
 
    
     trampoline_0(&b8InitLogics, LOGIC_CODE_BANK);
-    b7InitGraphics();
-    initPicture();
+    trampoline_0(&initPicture, PICTURE_BANK);
     initPictures();
     initSound();
     

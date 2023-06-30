@@ -70,7 +70,6 @@ extern agiCommandType testCommands[];
 #define  AGI_TEXT      1
 
 void discardPictureFile(int picFileNum);
-void initPicture();
 void initPictures();
 void closePicture();
 void drawPic(byte* data, int pLen, boolean okToClearScreen);
