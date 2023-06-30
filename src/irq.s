@@ -52,7 +52,6 @@ sta @mapHeight
 @loopOuter:
     ldy @mapHeight  ; Load Y with mapHeight
     @loopInner:
-        lda #$CC
         stz VERA_data0  ; Store 0 into VRAM (set pixel to black)
         dey  ; Decrement Y
         bne @loopInner  ; If Y is not 0, continue loop
@@ -72,7 +71,8 @@ custom_irq_handler:
    bra initPictureVRAM
    inc hasInitedPictureVRAM
    afterInit:
-
+   lda #$11 ;Reenable the display after update
+   sta VERA_dc_video
    defaultIqr:
    jmp (default_irq_vector)
    ; RTI will happen after jump

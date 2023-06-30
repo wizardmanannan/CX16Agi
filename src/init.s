@@ -9,8 +9,7 @@
 
 .segment "BANKRAM07"
 b7InitGraphics:
-lda #$11
-sta VERA_dc_video
+stz VERA_dc_video
 
 lda #DISPLAY_SCALE
 sta VERA_dc_hscale
