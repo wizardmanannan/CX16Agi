@@ -80,7 +80,7 @@ void b7DiscardResources()
    int i;
 
    for (i=0; i<256; i++) trampoline_1Int(&b9DiscardView, i, VIEW_CODE_BANK_1);
-   for (i=0; i<256; i++) discardPictureFile(i);
+   for (i=0; i<256; i++) trampoline_1Int(&b11DiscardPictureFile, var[loadAndIncWinCode()], PICTURE_BANK);
    for (i=0; i<256; i++) discardSoundFile(i);
 }
 
@@ -222,7 +222,6 @@ void b7Closedown()
 {
    discardObjects();
    discardWords();
-   closePicture();
 }
 
 void b7Initialise()
@@ -248,14 +247,9 @@ void b7Initialise()
 
     ///* SQ2 patch. I don't know where these are set in the game. */
     ///* var[86] = 1; var[87] = 2; var[88] = 3; */
-
-    initAGIScreen();
-    initPalette();
-
    
     trampoline_0(&b8InitLogics, LOGIC_CODE_BANK);
-    trampoline_0(&initPicture, PICTURE_BANK);
-    initPictures();
+    trampoline_0(&b11InitPicture, PICTURE_BANK);
     initSound();
     
     trampoline_0(&b9InitViews, VIEW_CODE_BANK_1);

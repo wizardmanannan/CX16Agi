@@ -9,6 +9,7 @@
 //allgero
 void stop_midi();
 void show_mouse(BITMAP* bmp);
+void nosound();
 extern void stretch_sprite(BITMAP* bmp, BITMAP* sprite, int x, int y, int w, int h);
 extern void clear_to_color(BITMAP* bitmap, int color);
 extern void stretch_blit(BITMAP* s, BITMAP* d, int s_x, int s_y, int s_w, int s_h, int d_x, int d_y, int d_w, int d_h);
@@ -16,6 +17,7 @@ extern void stretch_blit(BITMAP* s, BITMAP* d, int s_x, int s_y, int s_w, int s_
 int keypressed();
 extern BITMAP* create_bitmap(int width, int height);
 extern void rect(BITMAP* bmp, int x1, int y1, int x2, int y2, int color);
+
 
 typedef struct MENU
 {
@@ -66,22 +68,17 @@ typedef struct {
 extern agiCommandType testCommands[];
 
 //Picture
-#define  AGI_GRAPHICS  0
-#define  AGI_TEXT      1
-
-void discardPictureFile(int picFileNum);
-void initPictures();
-void closePicture();
-void drawPic(byte* data, int pLen, boolean okToClearScreen);
-void showPicture();
-void showDebugPri();
-
-extern BITMAP* picture, * priority, * control, * agi_screen, * working_screen;
-
-extern boolean okToShowPic;
-extern int screenMode;
+//#define  AGI_GRAPHICS  0
+//#define  AGI_TEXT      1
+//
+//
+//extern BITMAP * priority, * control, * agi_screen, * working_screen;
+//
+//extern int screenMode;
 
 //Sound
+
+void loadSoundFile(int soundNum);
 
 typedef struct {
 	int loaded;
@@ -261,22 +258,8 @@ extern byte directions[9];
 #define MSG_USER        16       /* from here on are free... */
 
 
-//Picture
-typedef struct {
-	int loaded;
-	unsigned int size;
-	char* data;
-} PictureFile;
 
-extern int min_print_line, user_input_line, status_line_num;
-extern boolean statusLineDisplayed, inputLineDisplayed;
-void initAGIScreen();
-void initPalette();
-void loadPictureFile(int picFileNum);
-void loadSoundFile(int soundNum);
-void b9LoadViewFile(byte viewNum);
 
-extern PictureFile loadedPictures[];
 
 //Graphics
 extern void drawString(BITMAP* scn, char* data, int x, int y, int foreColour, int backColour);

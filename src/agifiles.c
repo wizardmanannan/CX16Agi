@@ -13,6 +13,7 @@
 //#define VERBOSE_DISPLAY_OFFSETS
 //#define VERBOSE
 //#define VERBOSE_VIEW_LOAD_DEBUG
+//#define VERBOSE_VIEW_LOAD_DEBUG
 //define VERBOSE_LOGIC_LOAD_DEBUG
 #include <stdint.h>
 #include <cbm.h>
@@ -330,6 +331,7 @@ byte* b6ReadFileContentsIntoBankedRam(int size, byte* bank)
 	byte* result;
 	int i;
 	int copySize;
+	int debug;
 	result = banked_allocTrampoline(size, bank);
 
 #ifdef VERBOSE
@@ -363,7 +365,8 @@ byte* b6ReadFileContentsIntoBankedRam(int size, byte* bank)
 	}
 
 #ifdef VERBOSE
-	printf("Data is in bank %d at address %p and the first byte is %p and the size is %d \n", *bank, result, result[0], size);
+	memCpyBanked(&debug, &result[0], *bank, 1);
+	printf("Data is in bank %d at address %p and the first byte is %p and the size is %d \n", *bank, &result[0], debug, size);
 #endif // VERBOSE
 
 	return result;
@@ -524,6 +527,10 @@ void b6LoadAGIFile(int resType, AGIFilePosType* location, AGIFile* AGIData)
 	boolean lastCharacterSeparator = TRUE;
 	char fileName[FILE_NAME_SIZE];
 
+#ifdef VERBOSE
+	printf("Attempting to load resource %d from location %d file %d\n", resType, location->filePos, location->fileNum);
+#endif // VERBOSE
+
 	if (location->filePos == EMPTY) {
 #ifdef VERBOSE
 		printf("Could not find requested AGI file, as the filePos is empty.\n");
@@ -537,12 +544,15 @@ void b6LoadAGIFile(int resType, AGIFilePosType* location, AGIFile* AGIData)
 #ifdef VERBOSE_VIEW_LOAD_DEBUG
 	if (resType == VIEW)
 #endif // VERBOSE_VIEW_LOAD_DEBUG
+#ifdef VERBOSE_PICTURE_LOAD_DEBUG
+		if (resType == PICTURE)
+#endif
 #ifdef VERBOSE_LOGIC_LOAD_DEBUG
 		if (resType == LOGIC)
 #endif // VERBOSE_LOGIC_LOAD_DEBUG
 
 		{
-			printf("---The file name is %s", &fileName[0]);
+			printf("---The file name is %s\n", &fileName[0]);
 		}
 #endif // VERBOSE
 
@@ -551,6 +561,11 @@ void b6LoadAGIFile(int resType, AGIFilePosType* location, AGIFile* AGIData)
 	b6SeekAndCheckSignature(&fileName[0], location);
 
 	AGIData->codeBank = b6SeekAndReadLogicIntoMemory(AGIData, resType);
+
+#ifdef VERBOSE
+	printf("Loaded resource type %d into bank %d address %p size %d\n", resType, AGIData->codeBank, AGIData->code, AGIData->totalSize);
+#endif // VERBOSE
+
 
 	if (resType == LOGIC) {
 		cbm_read(SEQUENTIAL_LFN, &byte1, 1);
@@ -682,7 +697,7 @@ void b6LoadAGIFile(int resType, AGIFilePosType* location, AGIFile* AGIData)
 	//   }
 	//}
 #ifdef VERBOSE
-	printf("Now closing the file");
+	printf("Now closing the file\n");
 #endif // VERBOSE
 
 	cbm_close(lfn);

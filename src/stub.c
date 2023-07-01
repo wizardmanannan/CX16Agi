@@ -3,6 +3,11 @@
 //A temporary file so that references to yet to be imported files can resolved
 
 //Allegro
+void nosound()
+{
+
+}
+
 void clear_to_color(BITMAP* bitmap, int color)
 {
 }
@@ -63,75 +68,6 @@ void lookupWords(char* inputLine)
 }
 
 
-//Picture
-
-int min_print_line = 1, user_input_line = 23, status_line_num = 0;
-
-boolean okToShowPic;
-int screenMode;
-
-PictureFile loadedPictures[256];
-
-BITMAP* picture;
-BITMAP* priority;
-BITMAP* control;
-BITMAP* agi_screen;      /* This is a subbitmap of the screen */
-
-int numInputWords, inputWords[10];
-char wordText[10][80];
-
-void showPicture()
-{
-
-}
-void showDebugPri()
-{
-
-}
-
-void discardPictureFile(int picFileNum) {
-
-}
-
-void initPictures() {
-
-}
-
-void initSound() {
-
-}
-
-void initAGIScreen()
-{
-}
-
-void initPalette()
-{
-
-}
-
-boolean statusLineDisplayed, inputLineDisplayed;
-
-void discardSoundFile(int soundNum)
-{
-
-}
-
-void closePicture() {
-
-}
-
-void drawPic(byte* data, int pLen, boolean okToClearScreen) {
-
-}
-
-void loadPictureFile(int picFileNum) {
-
-}
-
-void loadSoundFile(int soundNum) {
-
-}
 
 //Graphics
 void drawString(BITMAP* scn, char* data, int x, int y, int foreColour, int backColour)
@@ -194,6 +130,9 @@ void discardObjects() {
 }
 
 //Words
+int numInputWords, inputWords[10];
+char wordText[10][80];
+
 void loadWords()
 {
 
@@ -214,6 +153,21 @@ extern int soundEndFlag;
 
 void stop_midi()
 {
+}
+
+
+void initSound() {
+
+}
+
+void discardSoundFile(int soundNum)
+{
+
+}
+
+
+void loadSoundFile(int soundNum) {
+
 }
 
 

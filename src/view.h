@@ -9,6 +9,7 @@
 #include "stub.h"
 #include "memoryManager.h"
 #include "agifiles.h"
+#include "picture.h"
 
 typedef struct {
 	byte width;

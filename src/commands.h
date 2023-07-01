@@ -5,6 +5,7 @@
 #include "lruCache.h"
 #include "logic.h"
 #include "debugHelper.h"
+#include "picture.h"
 
 void executeLogic(int logNum);
 void b1Call(unsigned char** data);
