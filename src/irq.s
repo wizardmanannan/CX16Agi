@@ -4,6 +4,16 @@ IRQ_INC = 1
 
 .include "global.s"
 
+.macro WAIT_FOR_VSYNC
+.local @wait
+lda vSyncCounter
+@wait:
+wai
+cmp vSyncCounter
+beq @wait
+.endmacro
+
+
 .segment "BANKRAM07"
 _b7InitIrq:
  ; backup default RAM IRQ vector
@@ -23,56 +33,17 @@ _b7InitIrq:
    cli ; enable IRQ now that vector is properly set
 rts
 
+
 .segment "CODE"
-hasInitedPictureVRAM: .byte $0
-
-BITMAP_WIDTH = 320
-BITMAP_HEIGHT = 240
-initPictureVRAM:
-
-lda #$6   ; Bitmap mode 16 colors
-sta VERA_L0_config
-
-stz VERA_ctrl
-lda #$10
-sta VERA_addr_bank
-stz VERA_addr_high
-stz VERA_addr_low
-
-
-
-; Calculate number of bytes per row (BITMAP_WIDTH / 2) and store it into X
-lda #<(BITMAP_WIDTH / 2)
-tax
-
-; Calculate number of rows (BITMAP_HEIGHT) and store it into @mapHeight
-lda #<BITMAP_HEIGHT
-sta @mapHeight
-
-@loopOuter:
-    ldy @mapHeight  ; Load Y with mapHeight
-    @loopInner:
-        stz VERA_data0  ; Store 0 into VRAM (set pixel to black)
-        dey  ; Decrement Y
-        bne @loopInner  ; If Y is not 0, continue loop
-    dex  ; Decrement X
-    bne @loopOuter  ; If X is not 0, continue loop
-bra afterInit
-@mapHeight: .byte $0
-
+vSyncCounter: .byte $0
 custom_irq_handler:   
    ; continue to default IRQ handler
    lda VERA_isr
    and #VSYNC_BIT
    beq defaultIqr
-
-   lda hasInitedPictureVRAM
-   bne afterInit
-   bra initPictureVRAM
-   inc hasInitedPictureVRAM
-   afterInit:
    lda #$11 ;Reenable the display after update
    sta VERA_dc_video
+   inc vSyncCounter
    defaultIqr:
    jmp (default_irq_vector)
    ; RTI will happen after jump
