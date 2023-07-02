@@ -593,6 +593,9 @@ void b11DrawPic(byte* bankedData, int pLen, boolean okToClearScreen, byte picNum
     trampoline_0(&b7DisableAndWaitForVsync, IRQ_BANK);
 
     if (okToClearScreen) b11ClearPicture();
+
+    exit(0);
+
     patCode = 0x00;
 
     do {
@@ -665,9 +668,6 @@ void b11LoadPictureFile(int picFileNum)
 #ifdef VERBOSE
     printf("Loaded Picture %d, data %p, bank %d, loaded %d\n", loadedPictures[picFileNum].size, loadedPictures[picFileNum].data, loadedPictures[picFileNum].bank, loadedPictures[picFileNum].loaded);
 #endif // VERBOSE
-
-    
-    exit(0);
 }
 
 void b11DiscardPictureFile(int picFileNum)
