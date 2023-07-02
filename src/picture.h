@@ -22,14 +22,18 @@
 
 #define DEFAULT_COLOR 0xF
 
-#define PWIDTH   160  /* Picture resolution */
-#define PHEIGHT  168
+#define PICTURE_WIDTH   160  /* Picture resolution */
+#define PICTURE_HEIGHT  168
 
 #define BITMAP_WIDTH 320
 #define BITMAP_HEIGHT 240
 
 #define  AGI_GRAPHICS  0
 #define  AGI_TEXT      1
+
+#define STARTING_ROW ((BITMAP_HEIGHT / 2) - (PICTURE_HEIGHT / 2))
+#define STARTING_BYTE (STARTING_ROW * BITMAP_WIDTH)
+#define BYTES_PER_ROW BITMAP_WIDTH / 2
 
 typedef struct {
    int loaded;
@@ -56,6 +60,7 @@ void b11ShowPicture();
 void b11DiscardPictureFile(int picFileNum);
 
 
+extern void getLoadedPicture(PictureFile* returnedloadedPicture, byte loadedPictureNumber);
 void drawPicTrampoline(byte* bankedData, int pLen, boolean okToClearScreen, byte picNum);
 
 

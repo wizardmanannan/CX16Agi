@@ -523,10 +523,15 @@ void b2Load_pic() // 1, 0x80
 void b2Draw_pic() // 1, 0x80 
 {
 	int pNum;
-
+	int pLen;
+	PictureFile loadedPicture;
 	pNum = var[loadAndIncWinCode()];
+
+	getLoadedPicture(&loadedPicture, pNum);
+
 	//picFNum = pNum;  // Debugging. Delete at some stage!!!
-		drawPicTrampoline(loadedPictures[pNum].data, loadedPictures[pNum].size, TRUE, pNum);
+
+    drawPicTrampoline(loadedPicture.data, loadedPicture.size, TRUE, pNum);
 
 	return;
 }

@@ -12,6 +12,7 @@
 #define PIC_DEFAULT 16
 #define PRI_DEFAULT 4
 #define VERBOSE
+//#define VERBOSE_PLOT
 
 boolean okToShowPic = FALSE;
 PictureFile* loadedPictures = (PictureFile*)&BANK_RAM[PICTURE_START];
@@ -37,6 +38,19 @@ byte picColour = 0, priColour = 0, patCode, patNum;
 
 word buf[QMAX + 1];
 word rpos = QMAX, spos = 0;
+
+
+void getLoadedPicture(PictureFile* returnedloadedPicture, byte loadedPictureNumber)
+{
+    byte previousRamBank = RAM_BANK;
+
+    RAM_BANK = PICTURE_BANK;
+
+    *returnedloadedPicture = loadedPictures[loadedPictureNumber];
+
+    RAM_BANK = previousRamBank;
+}
+
 #pragma code-name (push, "BANKRAM11")
 boolean b11Empty()
 {
@@ -113,9 +127,17 @@ void b11ClearPicture()
 **************************************************************************/
 void b11PicPSet(word x, word y)
 {
+    byte toDraw = picColour << 4 | picColour;
+    word drawWhere = ((STARTING_BYTE + x) * BYTES_PER_ROW);
     if (x > 159) return;
     if (y > 167) return;
-    picture->line[y][x] = picColour + 1;
+
+#ifdef VERBOSE_PLOT
+    printf("Plotting toDraw: %p at: %p  \n", toDraw, drawWhere);
+#endif // VERBOSE_PLOT
+
+
+    vpoke(toDraw, drawWhere);
 }
 
 /**************************************************************************
@@ -166,57 +188,31 @@ byte b11PriGetPixel(word x, word y)
     return (priority->line[y][x]);
 }
 
-///**************************************************************************
-//** round
-//**
-//** Rounds a float to the closest int. Takes into actions which direction
-//** the current line is being drawn when it has a 50:50 decision about
-//** where to put a pixel.
-//**************************************************************************/
-//int b11Round(float aNumber, float dirn)
-//{
-//    //TODO:FIX
-//    /*if (dirn < 0)
-//        return ((aNumber - floor(aNumber) <= 0.501) ? floor(aNumber) : ceil(aNumber));
-//    return ((aNumber - floor(aNumber) < 0.499) ? floor(aNumber) : ceil(aNumber));*/
-//}
-
 /**************************************************************************
 ** drawline
 **
 ** Draws an AGI line.
 **************************************************************************/
-void b11Drawline(word x1, word y1, word x2, word y2)
+void b11Drawline(int x1, int y1, int x2, int y2)
 {
-    //TODO Rewrite
-   /* int height, width, startX, startY;
-    float x, y, addX, addY;
+    int dx = abs(x2 - x1), sx = x1 < x2 ? 1 : -1;
+    int dy = -abs(y2 - y1), sy = y1 < y2 ? 1 : -1;
+    int err = dx + dy, e2;
 
-    height = (y2 - y1);
-    width = (x2 - x1);
-    addX = (height == 0 ? height : (float)width / abs(height));
-    addY = (width == 0 ? width : (float)height / abs(width));
+    while (1) {
+        b11Pset(x1, y1);
 
-    if (abs(width) > abs(height)) {
-        y = y1;
-        addX = (width == 0 ? 0 : (width / abs(width)));
-        for (x = x1; x != x2; x += addX) {
-            pset(round(x, addX), round(y, addY));
-            y += addY;
-        }
-        pset(x2, y2);
+#ifdef VERBOSE
+        printf("Draw Line x1: %d, x2: %d, y1: %d, y2: %d\n", x1, x2, y1, y2);
+#endif
+        if (x1 == x2 && y1 == y2) break;
+        e2 = 2 * err;
+        if (e2 >= dy) { err += dy; x1 += sx; }
+        if (e2 <= dx) { err += dx; y1 += sy; }
     }
-    else {
-        x = x1;
-        addY = (height == 0 ? 0 : (height / abs(height)));
-        for (y = y1; y != y2; y += addY) {
-            pset(round(x, addX), round(y, addY));
-            x += addX;
-        }
-        pset(x2, y2);
-    }*/
-
 }
+
+
 
 /**************************************************************************
 ** okToFill
@@ -237,6 +233,8 @@ void b11AgiFill(word x, word y)
 {
     byte x1, y1;
     rpos = spos = 0;
+
+    return;
 
     b11Qstore(x);
     b11Qstore(y);
@@ -398,8 +396,24 @@ void b11AbsoluteLine(byte** data)
     b11Pset(x1, y1);
 
     for (;;) {
-        if ((x2 = *((*data)++)) >= 0xF0) break;
-        if ((y2 = *((*data)++)) >= 0xF0) break;
+        if ((x2 = *((*data)++)) >= 0xF0)
+        {
+#ifdef VERBOSE
+            printf("Absolute Line Break\n");
+#endif // VERBOSE
+
+            break;
+        }
+        if ((y2 = *((*data)++)) >= 0xF0)
+        {
+#ifdef VERBOSE
+            printf("Absolute Line Break\n");
+#endif // VERBOSE
+            break;
+        }
+#ifdef VERBOSE
+        printf("Draw Abs Line x1: %d, x2: %d, y1: %d, y2: %d\n", x1, x2, y1, y2);
+#endif
         b11Drawline(x1, y1, x2, y2);
         x1 = x2;
         y1 = y2;
@@ -416,12 +430,6 @@ void b11AbsoluteLine(byte** data)
       if (bitPos == 0xff) bitPos=0; \
    } else b11Pset(x1, y1)
 
-/**************************************************************************
-** plotPattern
-**
-** Draws pixels, circles, squares, or splatter brush patterns depending
-** on the pattern code.
-**************************************************************************/
 void b11PlotPattern(byte x, byte y)
 {
     static char circles[][15] = { /* agi circle bitmaps */
@@ -466,33 +474,25 @@ void b11PlotPattern(byte x, byte y)
 
     penSize = (patCode & 7);
 
-    /* Don't know exactly what happens at the borders, but it can definitely
-    ** cause problems if it isn't right. */
-    /*
-    if (x<((penSize/2)+1)) x=((penSize/2)+1);
-    else if (x>160-((penSize/2)+1)) x=160-((penSize/2)+1);
-    if (y<penSize) y = penSize;
-    else if (y>=168-penSize) y=167-penSize;
-    */
     if (x < penSize) x = penSize - 1;
     if (y < penSize) y = penSize;
-    //else if (y>=168-penSize) y=167-penSize;
+    else if (y >= 168 - penSize) y = 167 - penSize;
 
-    //TODO: Fix Float
-    //for (y1 = y - penSize; y1 <= y + penSize; y1++) {
-    //    for (x1 = x - (ceil((float)penSize / 2)); x1 <= x + (floor((float)penSize / 2)); x1++) {
-    //        if (patCode & 0x10) { /* Square */
-    //            plotPatternPoint();
-    //        }
-    //        else { /* Circle */
-    //            if ((circles[patCode & 7][circlePos >> 3] >> (7 - (circlePos & 7))) & 1) {
-    //                plotPatternPoint();
-    //            }
-    //            circlePos++;
-    //        }
-    //    }
-    //}
+    for (y1 = y - penSize; y1 <= y + penSize; y1++) {
+        for (x1 = x - ((penSize + 1) / 2); x1 <= x + (penSize / 2); x1++) {
+            if (patCode & 0x10) { /* Square */
+                plotPatternPoint();
+            }
+            else { /* Circle */
+                if ((circles[patCode & 7][circlePos >> 3] >> (7 - (circlePos & 7))) & 1) {
+                    plotPatternPoint();
+                }
+                circlePos++;
+            }
+        }
+    }
 
+    // ... (rest of the code) ...
 }
 
 
@@ -581,6 +581,11 @@ void b11DrawPic(byte* bankedData, int pLen, boolean okToClearScreen, byte picNum
     byte* data;
     loadedPicture = loadedPictures[picNum];
 
+#ifdef VERBOSE
+    printf("Preparing To Draw %d of size %d\n", picNum, loadedPicture.size);
+#endif // VERBOSE
+
+
     data = (byte*)malloc(loadedPicture.size);
 
     if (!data)
@@ -590,19 +595,29 @@ void b11DrawPic(byte* bankedData, int pLen, boolean okToClearScreen, byte picNum
 
     memCpyBanked(&data[0], (byte*)loadedPicture.data, loadedPicture.bank, loadedPicture.size);
     
-    trampoline_0(&b7DisableAndWaitForVsync, IRQ_BANK);
+    //asm("sei");
 
     if (okToClearScreen) b11ClearPicture();
 
-    exit(0);
+    //asm("cli");
+
+    //trampoline_0(&b7DisableAndWaitForVsync, IRQ_BANK);
+
+    //asm("sei");
 
     patCode = 0x00;
+    
+#ifdef VERBOSE
+    printf("Plotting. . .\n");
+#endif // VERBOSE
 
     do {
         action = *(data++);
-
+        printf("Action: %p \n", action);
         switch (action) {
-        case 0xFF: stillDrawing = 0; break;
+        case 0xFF: 
+            stillDrawing = 0; 
+            break;
         case 0xF0: picColour = *(data++);
             picDrawEnabled = TRUE;
             break;
@@ -626,9 +641,14 @@ void b11DrawPic(byte* bankedData, int pLen, boolean okToClearScreen, byte picNum
         //   if ((readkey() >> 8) == KEY_ESC) closedown();
         //}
 
+        printf(" data %p pLen %d data + pLen %p stillDrawing %d \n", data, pLen, data + pLen, stillDrawing);
     } while ((data < (data + pLen)) && stillDrawing);
 
     b11SplitPriority();
+
+    //asm("cli");
+
+    //trampoline_0(&b7DisableAndWaitForVsync, IRQ_BANK);
 
     free(data);
 }
