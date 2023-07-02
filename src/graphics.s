@@ -18,7 +18,6 @@ STARTING_BYTE = STARTING_ROW * BITMAP_WIDTH
 DEFAULT_BACKGROUND_COLOR = $F
 
 _b7ClearBackground:
-stp
 lda #$10 | ^STARTING_BYTE
 sta VERA_addr_bank
 lda #> (STARTING_ROW * (BITMAP_WIDTH / 2) ) ;There are 320 bytes per row, but since each pixel is 4 bits we divide by 2
