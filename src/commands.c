@@ -526,7 +526,7 @@ void b2Draw_pic() // 1, 0x80
 
 	pNum = var[loadAndIncWinCode()];
 	//picFNum = pNum;  // Debugging. Delete at some stage!!!
-	drawPicTrampoline(loadedPictures[pNum].data, loadedPictures[pNum].size, TRUE);
+		drawPicTrampoline(loadedPictures[pNum].data, loadedPictures[pNum].size, TRUE, pNum);
 
 	return;
 }
@@ -552,7 +552,7 @@ void b2Overlay_pic() // 1, 0x80
 	int pNum;
 
 	pNum = var[loadAndIncWinCode()];
-	drawPicTrampoline(loadedPictures[pNum].data, loadedPictures[pNum].size, FALSE);
+	drawPicTrampoline(loadedPictures[pNum].data, loadedPictures[pNum].size, FALSE, pNum);
 
 	return;
 }

@@ -87,6 +87,8 @@
 #define IF_LOGIC_HANDLERS_BANK 5
 #define VIEWTAB_BANK 61
 #define LOADED_VIEW_BANK 61
+#define IRQ_BANK 7
+#define GRAPHICS_BANK 7
 
 #define FIRST_CODE_BANK 0x1
 #define LAST_CODE_BANK 0x5

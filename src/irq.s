@@ -33,6 +33,10 @@ _b7InitIrq:
    cli ; enable IRQ now that vector is properly set
 rts
 
+_b7DisableAndWaitForVsync:
+stz VERA_dc_video
+WAIT_FOR_VSYNC
+rts
 
 .segment "CODE"
 vSyncCounter: .byte $0

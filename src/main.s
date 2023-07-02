@@ -3,6 +3,7 @@
     .include "logicCommands.s"
     .include "codeWindow.s"
     .include "global.s"
+    .include "graphics.s"
     .export _executeLogic
     .export _b7InitAsm
     .export _loadAndIncWinCode
@@ -11,3 +12,5 @@
     .export _codeBank
     .export _logDebugVal1
     .export _logDebugVal2
+    .export _b7DisableAndWaitForVsync
+    .export _b7ClearBackground

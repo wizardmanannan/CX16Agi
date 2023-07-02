@@ -101,7 +101,7 @@ void b11InitAGIScreen()
 **************************************************************************/
 void b11ClearPicture()
 {
-    clear_to_color(picture, PIC_DEFAULT);
+    trampoline_0(&b7ClearBackground, IRQ_BANK);
     clear_to_color(priority, PRI_DEFAULT);
     clear_to_color(control, PRI_DEFAULT);
 }
@@ -573,10 +573,24 @@ int picFNum = 0;
 **
 **  pLen = length of PICTURE data
 **************************************************************************/
-void b11DrawPic(byte* data, int pLen, boolean okToClearScreen)
+void b11DrawPic(byte* bankedData, int pLen, boolean okToClearScreen, byte picNum)
 {
     byte action;
     boolean stillDrawing = TRUE;
+    PictureFile loadedPicture;
+    byte* data;
+    loadedPicture = loadedPictures[picNum];
+
+    data = (byte*)malloc(loadedPicture.size);
+
+    if (!data)
+    {
+        printf("Out of memory in picture code");
+    }
+
+    memCpyBanked(&data[0], (byte*)loadedPicture.data, loadedPicture.bank, loadedPicture.size);
+    
+    trampoline_0(&b7DisableAndWaitForVsync, IRQ_BANK);
 
     if (okToClearScreen) b11ClearPicture();
     patCode = 0x00;
@@ -612,6 +626,8 @@ void b11DrawPic(byte* data, int pLen, boolean okToClearScreen)
     } while ((data < (data + pLen)) && stillDrawing);
 
     b11SplitPriority();
+
+    free(data);
 }
 
 void b11InitPictures()
@@ -669,12 +685,12 @@ void b11ShowPicture()
 
 #pragma code-name (pop)
 
-void drawPicTrampoline(byte* data, int pLen, boolean okToClearScreen)
+void drawPicTrampoline(byte* bankedData, int pLen, boolean okToClearScreen, byte picNum)
 {
     byte previousBank = RAM_BANK;
     RAM_BANK = PICTURE_BANK;
     
-    b11DrawPic(data, pLen, okToClearScreen);
+    b11DrawPic(bankedData, pLen, okToClearScreen, picNum);
 
     RAM_BANK = previousBank;
 }

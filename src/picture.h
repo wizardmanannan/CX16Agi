@@ -48,12 +48,15 @@ extern BITMAP *picture, *priority, *control, *agi_screen, *working_screen;
 
 extern void b11InitPicture();
 extern void b11InitPictures();
+extern void b7DisableAndWaitForVsync();
+extern void b7ClearBackground();
 
 void b11LoadPictureFile(int picFileNum);
 void b11ShowPicture();
 void b11DiscardPictureFile(int picFileNum);
 
 
-void drawPicTrampoline(byte* data, int pLen, boolean okToClearScreen);
+void drawPicTrampoline(byte* bankedData, int pLen, boolean okToClearScreen, byte picNum);
+
 
 #endif  /* _PICTURE_H_ */

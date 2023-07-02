@@ -9,10 +9,33 @@ GRAPHICS_INC = 1
 BITMAP_WIDTH = 320
 BITMAP_HEIGHT = 240
 
-b7InitGraphics:
-stz VERA_dc_video
+_b7ClearBackground:
+lda #$10
+sta VERA_addr_bank
+stz VERA_addr_high
+stz VERA_addr_low
 
-WAIT_FOR_VSYNC
+; Calculate number of bytes per row (BITMAP_WIDTH / 2) and store it into X
+lda #<(BITMAP_WIDTH / 2)
+tax
+
+; Calculate number of rows (BITMAP_HEIGHT) and store it into @mapHeight
+lda #<BITMAP_HEIGHT
+sta @mapHeight
+
+@loopOuter:
+    ldy @mapHeight  ; Load Y with mapHeight
+    @loopInner:
+        stz VERA_data0  ; Store 0 into VRAM (set pixel to black)
+        dey  ; Decrement Y
+        bne @loopInner  ; If Y is not 0, continue loop
+    dex  ; Decrement X
+    bne @loopOuter  ; If X is not 0, continue loop
+rts
+@mapHeight: .byte $0
+
+b7InitGraphics:
+jsr _b7DisableAndWaitForVsync
 
 sei
 lda #DISPLAY_SCALE
@@ -109,29 +132,9 @@ sta VERA_data0
 lda #$6   ; Bitmap mode 16 colors
 sta VERA_L0_config
 
-lda #$10
-sta VERA_addr_bank
-stz VERA_addr_high
-stz VERA_addr_low
+jsr _b7ClearBackground
 
-; Calculate number of bytes per row (BITMAP_WIDTH / 2) and store it into X
-lda #<(BITMAP_WIDTH / 2)
-tax
-
-; Calculate number of rows (BITMAP_HEIGHT) and store it into @mapHeight
-lda #<BITMAP_HEIGHT
-sta @mapHeight
-
-@loopOuter:
-    ldy @mapHeight  ; Load Y with mapHeight
-    @loopInner:
-        stz VERA_data0  ; Store 0 into VRAM (set pixel to black)
-        dey  ; Decrement Y
-        bne @loopInner  ; If Y is not 0, continue loop
-    dex  ; Decrement X
-    bne @loopOuter  ; If X is not 0, continue loop
 cli
 rts
-@mapHeight: .byte $0
 
 .endif
