@@ -516,7 +516,7 @@ void b2Load_logics_v() // 1, 0x80
 
 void b2Load_pic() // 1, 0x80 
 {
-	trampoline_1Int(&b11LoadPictureFile, var[loadAndIncWinCode()], PICTURE_BANK);
+	trampoline_1Int(&b11LoadPictureFile, var[loadAndIncWinCode()], PICTURE_CODE_BANK);
 	return;
 }
 
@@ -540,14 +540,14 @@ void b2Show_pic() // 0, 0x00
 {
 	okToShowPic = TRUE;   /* Says draw picture with next object update */
 	/*stretch_blit(picture, working_screen, 0, 0, 160, 168, 0, 20, 640, 336);*/
-	trampoline_0(&b11ShowPicture, PICTURE_BANK);
+	trampoline_0(&b11ShowPicture, PICTURE_CODE_BANK);
 
 	return;
 }
 
 void b2Discard_pic() // 1, 0x80 
 {
-	trampoline_1Int(&b11DiscardPictureFile,var[loadAndIncWinCode()], PICTURE_BANK);
+	trampoline_1Int(&b11DiscardPictureFile,var[loadAndIncWinCode()], PICTURE_CODE_BANK);
 
 	return;
 }
@@ -555,9 +555,12 @@ void b2Discard_pic() // 1, 0x80
 void b2Overlay_pic() // 1, 0x80 
 {
 	int pNum;
-
+	PictureFile loadedPicture;
 	pNum = var[loadAndIncWinCode()];
-	drawPicTrampoline(loadedPictures[pNum].data, loadedPictures[pNum].size, FALSE, pNum);
+
+	getLoadedPicture(&loadedPicture, pNum);
+
+	drawPicTrampoline(loadedPicture.data, loadedPicture.size, FALSE, pNum);
 
 	return;
 }
@@ -2076,7 +2079,7 @@ void b4Quit() // 1, 0x00                     /* 0 args for AGI version 2_089 */
 			ch = (readkey() >> 8);
 		} while ((ch != KEY_ESC) && (ch != KEY_ENTER));
 		if (ch == KEY_ENTER) exit(0);
-		trampoline_0(&b11ShowPicture, PICTURE_BANK);
+		trampoline_0(&b11ShowPicture, PICTURE_CODE_BANK);
 	}
 	return;
 }
@@ -2086,7 +2089,7 @@ void b4Pause() // 0, 0x00
 	while (key[KEY_ENTER]) { /* Wait */ }
 	printInBoxBig("      Game paused.\nPress ENTER to continue.", -1, -1, 30);
 	while (!key[KEY_ENTER]) { /* Wait */ }
-	trampoline_0(&b11ShowPicture, PICTURE_BANK);
+	trampoline_0(&b11ShowPicture, PICTURE_CODE_BANK);
 	okToShowPic = TRUE;
 	return;
 }
@@ -2114,7 +2117,7 @@ void b4Version() // 0, 0x00
 	while (key[KEY_ENTER] || key[KEY_ESC]) { /* Wait */ }
 	printInBoxBig("MEKA AGI Interpreter\n    Version 1.0", -1, -1, 30);
 	while (!key[KEY_ENTER] && !key[KEY_ESC]) { /* Wait */ }
-	trampoline_0(&b11ShowPicture, PICTURE_BANK);
+	trampoline_0(&b11ShowPicture, PICTURE_CODE_BANK);
 	okToShowPic = TRUE;
 	return;
 }

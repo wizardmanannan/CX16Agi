@@ -80,7 +80,7 @@ void b7DiscardResources()
    int i;
 
    for (i=0; i<256; i++) trampoline_1Int(&b9DiscardView, i, VIEW_CODE_BANK_1);
-   for (i=0; i<256; i++) trampoline_1Int(&b11DiscardPictureFile, var[loadAndIncWinCode()], PICTURE_BANK);
+   for (i=0; i<256; i++) trampoline_1Int(&b11DiscardPictureFile, var[loadAndIncWinCode()], PICTURE_CODE_BANK);
    for (i=0; i<256; i++) discardSoundFile(i);
 }
 
@@ -249,7 +249,7 @@ void b7Initialise()
     ///* var[86] = 1; var[87] = 2; var[88] = 3; */
    
     trampoline_0(&b8InitLogics, LOGIC_CODE_BANK);
-    trampoline_0(&b11InitPicture, PICTURE_BANK);
+    trampoline_0(&b11InitPicture, PICTURE_CODE_BANK);
     initSound();
     
     trampoline_0(&b9InitViews, VIEW_CODE_BANK_1);

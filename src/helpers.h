@@ -64,4 +64,7 @@ extern long stopAt;
 extern long exitAt;
 extern long opCounter;
 
+
+#define abs_val(a) ((a) < 0 ? -(a) : (a))
+
 #endif

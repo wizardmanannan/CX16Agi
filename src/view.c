@@ -1117,7 +1117,7 @@ void bAUpdateObj(int entryNum)
 	show_mouse(NULL);
 	stretch_sprite(agi_screen, spriteScreen, 0, 0, 640, 336);
 	show_mouse(screen);
-	trampoline_0(&b11ShowPicture, PICTURE_BANK);
+	trampoline_0(&b11ShowPicture, PICTURE_CODE_BANK);
 }
 
 #pragma code-name (pop)
@@ -1301,7 +1301,7 @@ void bBUpdateObj2(int entryNum)
 	}
 
 	setViewTab(&localViewtab, entryNum);
-	trampoline_0(&b11ShowPicture, PICTURE_BANK);
+	trampoline_0(&b11ShowPicture, PICTURE_CODE_BANK);
 }
 
 void bBUpdateObjects()
@@ -1654,7 +1654,7 @@ void bCupdateObjects2()
 		setViewTab(&localViewtab, entryNum);
 	}
 
-	trampoline_0(&b11ShowPicture, PICTURE_BANK);
+	trampoline_0(&b11ShowPicture, PICTURE_CODE_BANK);
 }
 
 void bCCalcObjMotion()

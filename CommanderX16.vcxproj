@@ -22,6 +22,7 @@
     <ClInclude Include="src\commands.h" />
     <ClInclude Include="src\debugHelper.h" />
     <ClInclude Include="src\DECOMP.H" />
+    <ClInclude Include="src\fixed.h" />
     <ClInclude Include="src\GENERAL.H" />
     <ClInclude Include="src\graphics.h" />
     <ClInclude Include="src\GUI.H" />

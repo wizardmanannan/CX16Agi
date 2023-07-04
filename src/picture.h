@@ -19,6 +19,8 @@
 #include "stub.h"
 #include "agifiles.h"
 #include "memoryManager.h"
+#include "fixed.h"
+#include "helpers.h"
 
 #define DEFAULT_COLOR 0xF
 
@@ -38,7 +40,7 @@
 typedef struct {
    int loaded;
    unsigned int size;
-   char *data;
+   byte *data;
    byte bank;
 } PictureFile;
 

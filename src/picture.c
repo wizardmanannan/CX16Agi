@@ -11,7 +11,8 @@
 
 #define PIC_DEFAULT 16
 #define PRI_DEFAULT 4
-#define VERBOSE
+//#define VERBOSE
+#define VERBOSE_REL_DRAW
 //#define VERBOSE_PLOT
 
 boolean okToShowPic = FALSE;
@@ -47,6 +48,17 @@ void getLoadedPicture(PictureFile* returnedloadedPicture, byte loadedPictureNumb
     RAM_BANK = PICTURE_BANK;
 
     *returnedloadedPicture = loadedPictures[loadedPictureNumber];
+
+    RAM_BANK = previousRamBank;
+}
+
+void setLoadedPicture(PictureFile* loadedPicture, byte loadedPictureNumber)
+{
+    byte previousRamBank = RAM_BANK;
+
+    RAM_BANK = PICTURE_BANK;
+
+    loadedPictures[loadedPictureNumber]  = *loadedPicture;
 
     RAM_BANK = previousRamBank;
 }
@@ -128,12 +140,13 @@ void b11ClearPicture()
 void b11PicPSet(word x, word y)
 {
     byte toDraw = picColour << 4 | picColour;
-    word drawWhere = ((STARTING_BYTE + x) * BYTES_PER_ROW);
+    word drawWhere = (STARTING_BYTE + x) + (y * BYTES_PER_ROW);
     if (x > 159) return;
     if (y > 167) return;
 
-#ifdef VERBOSE_PLOT
+#ifdef VERBOSE
     printf("Plotting toDraw: %p at: %p  \n", toDraw, drawWhere);
+    printf("(%p + %u) + (%u * %u) \n", STARTING_BYTE,x,y,BYTES_PER_ROW);
 #endif // VERBOSE_PLOT
 
 
@@ -160,8 +173,12 @@ void b11PriPSet(word x, word y)
 **************************************************************************/
 void b11Pset(word x, word y)
 {
+#ifdef VERBOSE
+    printf("Set pixel x %u y %u\n", x, y);
+#endif // VERBOSE
+
     if (picDrawEnabled) b11PicPSet(x, y);
-    if (priDrawEnabled) b11PriPSet(x, y);
+    //if (priDrawEnabled) b11PriPSet(x, y);
 }
 
 /**************************************************************************
@@ -188,32 +205,93 @@ byte b11PriGetPixel(word x, word y)
     return (priority->line[y][x]);
 }
 
-/**************************************************************************
-** drawline
-**
-** Draws an AGI line.
-**************************************************************************/
-void b11Drawline(int x1, int y1, int x2, int y2)
+///**************************************************************************
+//** round
+//**
+//** Rounds a float to the closest int. Takes into actions which direction
+//** the current line is being drawn when it has a 50:50 decision about
+//** where to put a pixel.
+//**************************************************************************/
+int b11Round(fix16 aNumber, fix16 dirn)
 {
-    int dx = abs(x2 - x1), sx = x1 < x2 ? 1 : -1;
-    int dy = -abs(y2 - y1), sy = y1 < y2 ? 1 : -1;
-    int err = dx + dy, e2;
+    fix16 pointFive = int_to_fix16(1 << (FIX16_SHIFT - 1)); // 0.5 in fixed point representation
 
-    while (1) {
-        b11Pset(x1, y1);
+    if (fix16_to_int_round_down(dirn) < 0)
+        return fix16_to_int_round_down(aNumber - pointFive <= 0 ? aNumber : fix16_add(aNumber, int_to_fix16(1)));
 
-#ifdef VERBOSE
-        printf("Draw Line x1: %d, x2: %d, y1: %d, y2: %d\n", x1, x2, y1, y2);
-#endif
-        if (x1 == x2 && y1 == y2) break;
-        e2 = 2 * err;
-        if (e2 >= dy) { err += dy; x1 += sx; }
-        if (e2 <= dx) { err += dx; y1 += sy; }
-    }
+    return fix16_to_int_round_down(aNumber - pointFive < 0 ? aNumber : fix16_add(aNumber, int_to_fix16(1)));
 }
 
 
 
+void b11Drawline(word x1, word y1, word x2, word y2)
+{
+    fix16 height, width, x, y, addX, addY;
+    word i, steps, temp;
+
+#ifdef VERBOSE
+    printf("Converting %u:%u,%u,%u %u:%u,%u,%u\n", x1, int_to_fix16(x1), y1, int_to_fix16(y1), x2, int_to_fix16(x2), y2, int_to_fix16(y2));
+#endif // VERBOSE
+
+    if (y1 > y2)
+    {
+        temp = y2;
+        y2 = y1;
+        y1 = temp;
+    }
+
+    if (x1 > x2)
+    {
+        temp = x2;
+        x2 = x1;
+        x1 = temp;
+    }
+   
+#ifdef VERBOSE
+    printf("Width %u - %u\n", x2, x1);
+    printf("Height %u - %u\n", y2, y1);
+#endif
+
+    height = fix16_sub(int_to_fix16(y2), int_to_fix16(y1));
+
+    width = fix16_sub(int_to_fix16(x2), int_to_fix16(x1));
+
+#ifdef VERBOSE
+    printf("the width is %u (%u) and the height %u (%u)\n", fix16_to_int_round_nearest(width), width, fix16_to_int_round_nearest(height), height);
+#endif // VERBOSE
+
+    if (abs_val(fix16_to_int_round_down(width)) > abs_val(fix16_to_int_round_down(height))) {
+        steps = abs_val(fix16_to_int_round_down(width));
+        addX = (width > 0 ? int_to_fix16(1) : int_to_fix16(-1));
+        addY = (steps == 0 ? 0 : fix16_div(height, int_to_fix16(steps)));
+        for (i = 0; i <= steps; i++) {
+            x = fix16_add(int_to_fix16(x1), fix16_mul(addX, int_to_fix16(i)));
+            y = fix16_add(int_to_fix16(y1), fix16_mul(addY, int_to_fix16(i)));
+
+#ifdef VERBOSE
+            printf("Pos Draw Point x: %u, y: %u\n", fix16_to_int_round_nearest(x), fix16_to_int_round_nearest(y));
+#endif
+
+            b11Pset(fix16_to_int_round_nearest(x), fix16_to_int_round_nearest(y));
+        }
+    }
+    else {
+        steps = abs_val(fix16_to_int_round_down(height));
+        addY = (height > 0 ? int_to_fix16(1) : int_to_fix16(-1));
+        addX = (steps == 0 ? 0 : fix16_div(width, int_to_fix16(steps)));
+        for (i = 0; i <= steps; i++) {
+                   
+            y = fix16_add(int_to_fix16(y1), fix16_mul(addY, int_to_fix16(i)));
+            x = fix16_add(int_to_fix16(x1), fix16_mul(addX, int_to_fix16(i)));
+
+#ifdef VERBOSE
+            printf("Neg Draw Point x: %u, y: %u\n", fix16_to_int_round_nearest(x), fix16_to_int_round_nearest(y));
+#endif
+
+            b11Pset(fix16_to_int_round_nearest(x), fix16_to_int_round_nearest(y));
+        }
+    }
+}
 /**************************************************************************
 ** okToFill
 **************************************************************************/
@@ -341,7 +419,7 @@ void b11YCorner(byte** data)
 void b11RelativeDraw(byte** data)
 {
     byte x1, y1, disp;
-    char dx, dy;
+    signed char dx, dy;
 
     x1 = *((*data)++);
     y1 = *((*data)++);
@@ -350,11 +428,60 @@ void b11RelativeDraw(byte** data)
 
     for (;;) {
         disp = *((*data)++);
+
+#ifdef VERBOSE_REL_DRAW
+        printf("Disp %u \n", disp);
+#endif // VERBOSE
+
         if (disp >= 0xF0) break;
         dx = ((disp & 0xF0) >> 4) & 0x0F;
+
+        printf("Prior dx: ((%u & 0xF0) >> 4) & 0x0f : %d\n", disp, dx);
+
+
         dy = (disp & 0x0F);
-        if (dx & 0x08) dx = (-1) * (dx & 0x07);
-        if (dy & 0x08) dy = (-1) * (dy & 0x07);
+
+        printf("Prior dy: ( %u & 0x0f): %d\n", disp, dy);
+
+        if (dx & 0x08)
+        {
+#ifdef VERBOSE_REL_DRAW
+            printf("x neg -1 * (%d & 07) :  %d \n", dx, (-1) * (dx & 0x07));
+#endif
+            dx = (-1) * (dx & 0x07);
+#ifdef VERBOSE_REL_DRAW
+            printf("dy is %d\n", dy);
+#endif
+        }
+#ifdef  VERBOSE_REL_DRAW
+        else
+        {
+            printf("x not neg %d \n", dx & 0x08);
+        }
+#endif //  VERBOSE
+
+        if (dy & 0x08)
+        {
+#ifdef VERBOSE_REL_DRAW
+            printf("y neg -1 * (%d & 07) :  %d \n", dy, (-1) * (dy & 0x07));
+#endif
+            dy = (-1) * (dy & 0x07);
+
+#ifdef VERBOSE_REL_DRAW
+            printf("dy is %d\n", dy);
+#endif
+        }
+#ifdef  VERBOSE_REL_DRAW
+        else
+        {
+            printf("y not neg %d \n", dy & 0x08);
+        }
+#endif //  VERBOSE
+
+#ifdef VERBOSE_REL_DRAW
+        printf("Rel Draw  x1 %u, y1 %u dx: %d, dy: %d, x1 + dx: %u, y1 + dy %u \n", x1, y1, dx, dy, x1 + dx, y1 + dy);
+#endif // VERBOSE
+
         b11Drawline(x1, y1, x1 + dx, y1 + dy);
         x1 += dx;
         y1 += dy;
@@ -412,7 +539,7 @@ void b11AbsoluteLine(byte** data)
             break;
         }
 #ifdef VERBOSE
-        printf("Draw Abs Line x1: %d, x2: %d, y1: %d, y2: %d\n", x1, x2, y1, y2);
+        printf("Draw Abs Line x1: %u, x2: %u, y1: %u, y2: %u\n", x1, x2, y1, y2);
 #endif
         b11Drawline(x1, y1, x2, y2);
         x1 = x2;
@@ -430,6 +557,12 @@ void b11AbsoluteLine(byte** data)
       if (bitPos == 0xff) bitPos=0; \
    } else b11Pset(x1, y1)
 
+/**************************************************************************
+** plotPattern
+**
+** Draws pixels, circles, squares, or splatter brush patterns depending
+** on the pattern code.
+**************************************************************************/
 void b11PlotPattern(byte x, byte y)
 {
     static char circles[][15] = { /* agi circle bitmaps */
@@ -474,25 +607,33 @@ void b11PlotPattern(byte x, byte y)
 
     penSize = (patCode & 7);
 
+    /* Don't know exactly what happens at the borders, but it can definitely
+    ** cause problems if it isn't right. */
+    /*
+    if (x<((penSize/2)+1)) x=((penSize/2)+1);
+    else if (x>160-((penSize/2)+1)) x=160-((penSize/2)+1);
+    if (y<penSize) y = penSize;
+    else if (y>=168-penSize) y=167-penSize;
+    */
     if (x < penSize) x = penSize - 1;
     if (y < penSize) y = penSize;
-    else if (y >= 168 - penSize) y = 167 - penSize;
+    //else if (y>=168-penSize) y=167-penSize;
 
-    for (y1 = y - penSize; y1 <= y + penSize; y1++) {
-        for (x1 = x - ((penSize + 1) / 2); x1 <= x + (penSize / 2); x1++) {
-            if (patCode & 0x10) { /* Square */
-                plotPatternPoint();
-            }
-            else { /* Circle */
-                if ((circles[patCode & 7][circlePos >> 3] >> (7 - (circlePos & 7))) & 1) {
-                    plotPatternPoint();
-                }
-                circlePos++;
-            }
-        }
-    }
+    //TODO: Fix Float
+    //for (y1 = y - penSize; y1 <= y + penSize; y1++) {
+    //    for (x1 = x - (ceil((float)penSize / 2)); x1 <= x + (floor((float)penSize / 2)); x1++) {
+    //        if (patCode & 0x10) { /* Square */
+    //            plotPatternPoint();
+    //        }
+    //        else { /* Circle */
+    //            if ((circles[patCode & 7][circlePos >> 3] >> (7 - (circlePos & 7))) & 1) {
+    //                plotPatternPoint();
+    //            }
+    //            circlePos++;
+    //        }
+    //    }
+    //}
 
-    // ... (rest of the code) ...
 }
 
 
@@ -579,7 +720,8 @@ void b11DrawPic(byte* bankedData, int pLen, boolean okToClearScreen, byte picNum
     boolean stillDrawing = TRUE;
     PictureFile loadedPicture;
     byte* data;
-    loadedPicture = loadedPictures[picNum];
+    
+    getLoadedPicture(&loadedPicture, picNum);
 
 #ifdef VERBOSE
     printf("Preparing To Draw %d of size %d\n", picNum, loadedPicture.size);
@@ -656,9 +798,11 @@ void b11DrawPic(byte* bankedData, int pLen, boolean okToClearScreen, byte picNum
 void b11InitPictures()
 {
     int i;
-
+    PictureFile loadedPicture;
     for (i = 0; i < 256; i++) {
-        loadedPictures[i].loaded = FALSE;
+        getLoadedPicture(&loadedPicture, i);
+        loadedPicture.loaded = FALSE;
+        setLoadedPicture(&loadedPicture, i);
     }
 }
 
@@ -671,6 +815,9 @@ void b11LoadPictureFile(int picFileNum)
 {
     AGIFile tempAGI;
     AGIFilePosType agiFilePosType;
+    PictureFile loadedPicture;
+
+    getLoadedPicture(&loadedPictures, picFileNum);
 
     getLogicDirectory(&agiFilePosType, &picdir[picFileNum]);
 
@@ -680,22 +827,30 @@ void b11LoadPictureFile(int picFileNum)
 
     loadAGIFileTrampoline(PICTURE, &agiFilePosType, &tempAGI);
     
-    loadedPictures[picFileNum].size = tempAGI.totalSize;
-    loadedPictures[picFileNum].data = tempAGI.code;
-    loadedPictures[picFileNum].bank = tempAGI.codeBank;
-    loadedPictures[picFileNum].loaded = TRUE;
+    loadedPicture.size = tempAGI.totalSize;
+    loadedPicture.data = tempAGI.code;
+    loadedPicture.bank = tempAGI.codeBank;
+    loadedPicture.loaded = TRUE;
+
+    setLoadedPicture(&loadedPicture, picFileNum);
 
 #ifdef VERBOSE
-    printf("Loaded Picture %d, data %p, bank %d, loaded %d\n", loadedPictures[picFileNum].size, loadedPictures[picFileNum].data, loadedPictures[picFileNum].bank, loadedPictures[picFileNum].loaded);
+    printf("Loaded Picture %d, data %p, bank %d, loaded %d\n", loadedPicture.size, loadedPicture.data, loadedPicture.bank, loadedPicture.loaded);
 #endif // VERBOSE
 }
 
 void b11DiscardPictureFile(int picFileNum)
 {
-    if (loadedPictures[picFileNum].loaded) {
-        loadedPictures[picFileNum].loaded = FALSE;
-        banked_deallocTrampoline(loadedPictures[picFileNum].data, loadedPictures[picFileNum].bank);
+    PictureFile loadedPicture;
+
+    getLoadedPicture(&loadedPicture, picFileNum);
+
+    if (loadedPicture.loaded) {
+        loadedPicture.loaded = FALSE;
+        banked_deallocTrampoline(loadedPicture.data, loadedPicture.bank);
     }
+
+    setLoadedPicture(&loadedPicture, picFileNum);
 }
 
 void b11ShowPicture()
@@ -708,7 +863,7 @@ void b11ShowPicture()
 void drawPicTrampoline(byte* bankedData, int pLen, boolean okToClearScreen, byte picNum)
 {
     byte previousBank = RAM_BANK;
-    RAM_BANK = PICTURE_BANK;
+    RAM_BANK = PICTURE_CODE_BANK;
     
     b11DrawPic(bankedData, pLen, okToClearScreen, picNum);
 
