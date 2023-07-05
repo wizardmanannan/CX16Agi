@@ -129,7 +129,14 @@
 
 #define LOCAL_WORK_AREA_START 514
 #define LOCAL_WORK_AREA_SIZE 500
-#define PARAMETERS_START 1015
+#define PARAMETERS_START 1015   
+
+//CX16 Constants
+#define VERA_addr_bank 0x9F22
+#define VERA_addr_high 0x9F21
+#define VERA_addr_low 0x9F20
+#define VERA_data0 0x9F23
+
 
 #ifdef _MSC_VER //Used for testing under windows
 extern byte* banked;

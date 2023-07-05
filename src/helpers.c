@@ -158,7 +158,9 @@ void getLogicDirectory(AGIFilePosType* returnedLogicDirectory, AGIFilePosType* l
 
 	*returnedLogicDirectory = *logicDirectoryLocation;
 
+#ifdef VERBOSE
 	printf("Retrieving file no: %d, location %p\n", logicDirectoryLocation->fileNum, logicDirectoryLocation->filePos);
+#endif // VERBOSE
 
 	RAM_BANK = previousRamBank;
 }

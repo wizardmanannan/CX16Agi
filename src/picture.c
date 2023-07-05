@@ -12,7 +12,7 @@
 #define PIC_DEFAULT 16
 #define PRI_DEFAULT 4
 //#define VERBOSE
-#define VERBOSE_REL_DRAW
+//#define VERBOSE_REL_DRAW
 //#define VERBOSE_PLOT
 
 boolean okToShowPic = FALSE;
@@ -133,27 +133,6 @@ void b11ClearPicture()
 }
 
 /**************************************************************************
-** picPSet
-**
-** Draws a pixel in the picture screen.
-**************************************************************************/
-void b11PicPSet(word x, word y)
-{
-    byte toDraw = picColour << 4 | picColour;
-    word drawWhere = (STARTING_BYTE + x) + (y * BYTES_PER_ROW);
-    if (x > 159) return;
-    if (y > 167) return;
-
-#ifdef VERBOSE
-    printf("Plotting toDraw: %p at: %p  \n", toDraw, drawWhere);
-    printf("(%p + %u) + (%u * %u) \n", STARTING_BYTE,x,y,BYTES_PER_ROW);
-#endif // VERBOSE_PLOT
-
-
-    vpoke(toDraw, drawWhere);
-}
-
-/**************************************************************************
 ** priPSet
 **
 ** Draws a pixel in the priority screen.
@@ -171,15 +150,25 @@ void b11PriPSet(word x, word y)
 ** Draws a pixel in each screen depending on whether drawing in that
 ** screen is enabled or not.
 **************************************************************************/
-void b11Pset(word x, word y)
-{
-#ifdef VERBOSE
-    printf("Set pixel x %u y %u\n", x, y);
-#endif // VERBOSE
+byte toDraw;
+word drawWhere;
 
-    if (picDrawEnabled) b11PicPSet(x, y);
-    //if (priDrawEnabled) b11PriPSet(x, y);
-}
+#define B11PSET(x, y) \
+toDraw = picColour << 4 | picColour;          \
+drawWhere = (STARTING_BYTE + x) + (y * BYTES_PER_ROW); \
+    if (picDrawEnabled) { \
+if ((x) <= 159 && (y) <= 167) {  \
+              asm("lda #$10"); \
+              asm("ora #^_drawWhere"); \
+              asm("sta %w", VERA_addr_bank); \
+              asm("lda _drawWhere + 1"); \
+              asm("sta %w", VERA_addr_high); \
+              asm("lda _drawWhere"); \
+              asm("sta %w", VERA_addr_low); \
+              asm("lda _toDraw"); \
+              asm("sta %w", VERA_data0); \
+           } \
+    } 
 
 /**************************************************************************
 ** picGetPixel
@@ -272,7 +261,7 @@ void b11Drawline(word x1, word y1, word x2, word y2)
             printf("Pos Draw Point x: %u, y: %u\n", fix16_to_int_round_nearest(x), fix16_to_int_round_nearest(y));
 #endif
 
-            b11Pset(fix16_to_int_round_nearest(x), fix16_to_int_round_nearest(y));
+            B11PSET(fix16_to_int_round_nearest(x), fix16_to_int_round_nearest(y));
         }
     }
     else {
@@ -288,7 +277,7 @@ void b11Drawline(word x1, word y1, word x2, word y2)
             printf("Neg Draw Point x: %u, y: %u\n", fix16_to_int_round_nearest(x), fix16_to_int_round_nearest(y));
 #endif
 
-            b11Pset(fix16_to_int_round_nearest(x), fix16_to_int_round_nearest(y));
+            B11PSET(fix16_to_int_round_nearest(x), fix16_to_int_round_nearest(y));
         }
     }
 }
@@ -328,7 +317,7 @@ void b11AgiFill(word x, word y)
 
             if (b11OkToFill(x1, y1)) {
 
-                b11Pset(x1, y1);
+                B11PSET(x1, y1);
 
                 if (b11OkToFill(x1, y1 - 1) && (y1 != 0)) {
                     b11Qstore(x1);
@@ -367,7 +356,7 @@ void b11XCorner(byte** data)
     x1 = *((*data)++);
     y1 = *((*data)++);
 
-    b11Pset(x1, y1);
+    B11PSET(x1, y1);
 
     for (;;) {
         x2 = *((*data)++);
@@ -395,7 +384,7 @@ void b11YCorner(byte** data)
     x1 = *((*data)++);
     y1 = *((*data)++);
 
-    b11Pset(x1, y1);
+    B11PSET(x1, y1);
 
     for (;;) {
         y2 = *((*data)++);
@@ -424,7 +413,7 @@ void b11RelativeDraw(byte** data)
     x1 = *((*data)++);
     y1 = *((*data)++);
 
-    b11Pset(x1, y1);
+    B11PSET(x1, y1);
 
     for (;;) {
         disp = *((*data)++);
@@ -435,13 +424,16 @@ void b11RelativeDraw(byte** data)
 
         if (disp >= 0xF0) break;
         dx = ((disp & 0xF0) >> 4) & 0x0F;
-
+#ifdef VERBOSE_REL_DRAW
         printf("Prior dx: ((%u & 0xF0) >> 4) & 0x0f : %d\n", disp, dx);
+#endif
 
 
         dy = (disp & 0x0F);
 
+#ifdef VERBOSE_REL_DRAW
         printf("Prior dy: ( %u & 0x0f): %d\n", disp, dy);
+#endif
 
         if (dx & 0x08)
         {
@@ -520,7 +512,7 @@ void b11AbsoluteLine(byte** data)
     x1 = *((*data)++);
     y1 = *((*data)++);
 
-    b11Pset(x1, y1);
+    B11PSET(x1, y1);
 
     for (;;) {
         if ((x2 = *((*data)++)) >= 0xF0)
@@ -552,10 +544,10 @@ void b11AbsoluteLine(byte** data)
 
 #define plotPatternPoint() \
    if (patCode & 0x20) { \
-      if ((splatterMap[bitPos>>3] >> (7-(bitPos&7))) & 1) b11Pset(x1, y1); \
+      if ((splatterMap[bitPos>>3] >> (7-(bitPos&7))) & 1) B11PSET(x1, y1); \
       bitPos++; \
       if (bitPos == 0xff) bitPos=0; \
-   } else b11Pset(x1, y1)
+   } else B11PSET(x1, y1)
 
 /**************************************************************************
 ** plotPattern
@@ -755,7 +747,9 @@ void b11DrawPic(byte* bankedData, int pLen, boolean okToClearScreen, byte picNum
 
     do {
         action = *(data++);
+#ifdef VERBOSE
         printf("Action: %p \n", action);
+#endif // VERBOSE
         switch (action) {
         case 0xFF: 
             stillDrawing = 0; 
@@ -777,13 +771,14 @@ void b11DrawPic(byte* bankedData, int pLen, boolean okToClearScreen, byte picNum
         case 0xFA: b11PlotBrush(&data); break;
         default: printf("Unknown picture code : %X\n", action); exit(0);
         }
-
+        
         //if (picFNum == 3) {
         //   showPicture();
         //   if ((readkey() >> 8) == KEY_ESC) closedown();
         //}
-
+#ifdef VERBOSE
         printf(" data %p pLen %d data + pLen %p stillDrawing %d \n", data, pLen, data + pLen, stillDrawing);
+#endif
     } while ((data < (data + pLen)) && stillDrawing);
 
     b11SplitPriority();
@@ -821,9 +816,11 @@ void b11LoadPictureFile(int picFileNum)
 
     getLogicDirectory(&agiFilePosType, &picdir[picFileNum]);
 
+#ifdef VERBOSE
     printf("The address of picdir is %p\n", &picdir[picFileNum]);
     printf("The picture number is %d \n", picFileNum);
     printf("Loading Picture file %d, position %d\n", agiFilePosType.fileNum, agiFilePosType.filePos);
+#endif
 
     loadAGIFileTrampoline(PICTURE, &agiFilePosType, &tempAGI);
     
