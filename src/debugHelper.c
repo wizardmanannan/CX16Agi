@@ -127,6 +127,8 @@ void debugPrintOrMode()
 
 extern byte logDebugVal1;
 extern byte logDebugVal2;
+extern byte logDebugVal3;
+extern byte logDebugVal4;
 
 void debugIsSet()
 {
@@ -354,8 +356,13 @@ void b5CheckPixelDrawn()
 	}
 	else
 	{
-		printf("Pixel drawn %d, %d", logDebugVal1, logDebugVal2);
+		printf("Pixel drawn %d, %d \n", logDebugVal1, logDebugVal2);
 	}
+}
+
+void b5LineDrawDebug()
+{
+	printf("draw line %d,%d %d,%d\n", logDebugVal1, logDebugVal2, logDebugVal3, logDebugVal4);
 }
 
 #pragma code-name (pop);

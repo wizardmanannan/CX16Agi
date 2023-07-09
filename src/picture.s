@@ -11,11 +11,19 @@ PICTURE_INC = 1
 
 .segment "CODE"
 
+DEBUG_CHECK_LINE_DRAWN = 1
+
+
 .ifdef DEBUG_PICTURE
 .import _b5DebugPixelDraw
 .import _b5DebugPrePixelDraw
 .import _b5CheckPixelDrawn
 .endif
+
+.ifdef DEBUG_CHECK_LINE_DRAWN
+.import _b5LineDrawDebug
+.endif
+
 _pixelCounter: .word $0 ; Used for debugging but can't be hidden in the if def as the C won't compile without it.
 
 .macro DEBUG_PIXEL_DRAW var1, var2
@@ -46,6 +54,20 @@ sta _logDebugVal1
 lda var2
 sta _logDebugVal2
 JSRFAR _b5CheckPixelDrawn, DEBUG_BANK
+.endif
+.endmacro
+
+.macro DEBUG_LINE_DRAW var1, var2, var3, var4
+.ifdef DEBUG_CHECK_LINE_DRAWN
+lda var1
+sta _logDebugVal1
+lda var2
+sta _logDebugVal2
+lda var3
+sta _logDebugVal3
+lda var3
+sta _logDebugVal4
+JSRFAR _b5LineDrawDebug, DEBUG_BANK
 .endif
 .endmacro
 
@@ -232,6 +254,7 @@ b11Init_Bresenham:
 		;*****************************************************************
 
 _b11Drawline:
+		DEBUG_LINE_DRAW _bresenham_x1, _bresenham_y1, _bresenham_x2, _bresenham_y2
 		DEBUG_PREPIXEL_DRAW _bresenham_x1, _bresenham_y1
         PSET _bresenham_x1, _bresenham_y1
 		DEBUG_PIXEL_DRAWN _bresenham_x1, _bresenham_y1

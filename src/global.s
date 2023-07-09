@@ -411,5 +411,7 @@ VSYNC_BIT            = $01
 ; Debugging related variables
 _logDebugVal1: .byte $0
 _logDebugVal2: .byte $0
+_logDebugVal3: .byte $0
+_logDebugVal4: .byte $0
 
 .endif

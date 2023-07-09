@@ -11,7 +11,7 @@
 
 #define PIC_DEFAULT 16
 #define PRI_DEFAULT 4
-#define VERBOSE
+//#define VERBOSE
 //#define VERBOSE_REL_DRAW
 //#define VERBOSE_PLOT
 
@@ -301,7 +301,7 @@ void b11XCorner(byte** data)
         bresenham_y2 = y2;
         
 #ifdef VERBOSE
-        printf("x Corner line 1: %d,%d : %d,%d\n", bresenham_x1, bresenham_y1, bresenham_x2, bresenham_y2);
+        printf("x corner line 1: %d,%d : %d,%d\n", bresenham_x1, bresenham_y1, bresenham_x2, bresenham_y2);
 #endif
         b11Drawline();
         x1 = x2;
@@ -348,7 +348,7 @@ void b11YCorner(byte** data)
         bresenham_y2 = y2;
         
 #ifdef VERBOSE
-        printf("y Corner line 1: %d,%d : %d,%d\n", bresenham_x1, bresenham_y1, bresenham_x2, bresenham_y2);
+        printf("y corner line 1: %d,%d : %d,%d\n", bresenham_x1, bresenham_y1, bresenham_x2, bresenham_y2);
 #endif
         
         b11Drawline();

@@ -13,6 +13,8 @@
     .export _codeBank
     .export _logDebugVal1
     .export _logDebugVal2
+    .export _logDebugVal3
+    .export _logDebugVal4
     .export _b7DisableAndWaitForVsync
     .export _b7ClearBackground
     .export _b11Drawline
