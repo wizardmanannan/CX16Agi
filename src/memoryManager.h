@@ -55,7 +55,7 @@
 #define TOTAL_SIZE_OF_MEMORY_AREA 35
 #define TOTAL_SIZE_LOGIC_ENTRY_ADDRESSES 512
 #define TOTAL_SIZE_OF_PICTURES 1536
-
+#define TOTAL_SIZE_OF_BITMAP_WIDTH_PREMULT 167 * 2
 
 #define ALLOCATION_ARRAY_START 0
 #define LOGDIR_START 186
@@ -70,6 +70,7 @@
 #define LOADED_VIEW_START 4623
 #define MEMORY_AREA_START 8156
 #define LOGIC_ENTRY_ADDRESSES_START 7679
+#define BITMAP_WIDTH_PREMULT_START (BANK_SIZE - TOTAL_SIZE_OF_BITMAP_WIDTH_PREMULT)
 
 #define DIR_SIZE 6
 #define LOGIC_ENTRY_SIZE 8
@@ -137,6 +138,8 @@
 #define VERA_addr_low 0x9F20
 #define VERA_data0 0x9F23
 
+//Zero Page Values 
+#define ZP_PTR_TEMP 0x66
 
 #ifdef _MSC_VER //Used for testing under windows
 extern byte* banked;

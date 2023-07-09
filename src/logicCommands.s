@@ -189,12 +189,6 @@ LOGICCOMMANDS_INC = 1
 .import _stopAtFunc
 .endif 
 
-
-
-; Debugging related variables
-_logDebugVal1: .byte $0
-_logDebugVal2: .byte $0
-
 ; Debugging related macros (for debugging comparisons, flag checking, arithmetic operations, etc.)
 .macro DEBUG_GREATER_THAN_8_N var1, var2
 .ifdef DEBUG

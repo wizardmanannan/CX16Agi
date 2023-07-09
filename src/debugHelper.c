@@ -7,6 +7,7 @@ extern byte codeBank;
 extern byte newRoomNum;
 extern boolean hasEnteredNewRoom, exitAllLogics;
 extern int currentLog;
+extern int pixelCounter;
 
 long opCounter = 1;
 long stopAt = 0;
@@ -320,6 +321,41 @@ void b5DebugPrintScriptStart()
 void b5DebugPrintRoomChange()
 {
 	printf("We are at %d, counter %lu\n", var[0], opCounter);
+}
+
+
+int lastPixelCounter;
+boolean pixelDrawn = FALSE;
+void b5DebugPrePixelDraw()
+{
+	pixelDrawn = FALSE;
+	printf("\n%d: attempting To Draw At %d, %d. The address of pixel counter is %p \n", pixelCounter, logDebugVal1, logDebugVal2, &pixelCounter);
+}
+
+void b5DebugPixelDraw()
+{
+	int* localDrawWhere;
+	byte localToDraw;
+	int* expectedDrawAddress = (STARTING_BYTE + logDebugVal1) + (logDebugVal2 * BYTES_PER_ROW);
+
+	memCpyBanked((byte*) &localDrawWhere, (byte*)&drawWhere, PICTURE_CODE_BANK, 2);
+	memCpyBanked(&localToDraw, &toDraw, PICTURE_CODE_BANK, 1);
+
+	printf("%d: We expect to draw at %p, we draw at %p. Color: %p. Result %d. %d,%d\n", pixelCounter, expectedDrawAddress, localDrawWhere, localToDraw, expectedDrawAddress == localDrawWhere, logDebugVal1, logDebugVal2);
+
+	pixelDrawn = TRUE;
+}
+
+void b5CheckPixelDrawn()
+{
+	if (!pixelDrawn)
+	{
+		printf("draw warning: %d: %d,%d wasn't drawn\n", logDebugVal1, logDebugVal2);
+	}
+	else
+	{
+		printf("Pixel drawn %d, %d", logDebugVal1, logDebugVal2);
+	}
 }
 
 #pragma code-name (pop);

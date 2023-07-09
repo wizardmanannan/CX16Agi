@@ -90,6 +90,8 @@ COLOR_YELLOW     = $FF5
 COLOR_WHITE      = $FFF
 
 
+MULT_TABLE_HALF_POINT = $80
+
 
 ; Macro for reading from an array
 .macro READ_ARRAY_POINTER arrayZeroPointer
@@ -404,4 +406,10 @@ pla
 ;Global IRQ
 default_irq_vector: .addr 0
 VSYNC_BIT            = $01
+
+
+; Debugging related variables
+_logDebugVal1: .byte $0
+_logDebugVal2: .byte $0
+
 .endif

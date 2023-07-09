@@ -11,7 +11,7 @@
 
 #define PIC_DEFAULT 16
 #define PRI_DEFAULT 4
-//#define VERBOSE
+#define VERBOSE
 //#define VERBOSE_REL_DRAW
 //#define VERBOSE_PLOT
 
@@ -39,6 +39,8 @@ byte picColour = 0, priColour = 0, patCode, patNum;
 
 word buf[QMAX + 1];
 word rpos = QMAX, spos = 0;
+
+int* bitmapWidthPreMult = &BANK_RAM[BITMAP_WIDTH_PREMULT_START];
 
 
 void getLoadedPicture(PictureFile* returnedloadedPicture, byte loadedPictureNumber)
@@ -105,7 +107,11 @@ word b11Qretrieve()
 **************************************************************************/
 void b11InitPicture()
 {
-
+    int i;
+    for (i = 0; i < PICTURE_HEIGHT; i++)
+    {
+        bitmapWidthPreMult[i] = i * BYTES_PER_ROW;
+    }
 }
 
 /**************************************************************************
@@ -150,9 +156,6 @@ void b11PriPSet(word x, word y)
 ** Draws a pixel in each screen depending on whether drawing in that
 ** screen is enabled or not.
 **************************************************************************/
-byte toDraw;
-word drawWhere;
-
 #define B11PSET(x, y) \
 toDraw = picColour << 4 | picColour;          \
 drawWhere = (STARTING_BYTE + x) + (y * BYTES_PER_ROW); \
@@ -211,76 +214,6 @@ int b11Round(fix16 aNumber, fix16 dirn)
     return fix16_to_int_round_down(aNumber - pointFive < 0 ? aNumber : fix16_add(aNumber, int_to_fix16(1)));
 }
 
-
-
-void b11Drawline(word x1, word y1, word x2, word y2)
-{
-    fix16 height, width, x, y, addX, addY;
-    word i, steps, temp;
-
-#ifdef VERBOSE
-    printf("Converting %u:%u,%u,%u %u:%u,%u,%u\n", x1, int_to_fix16(x1), y1, int_to_fix16(y1), x2, int_to_fix16(x2), y2, int_to_fix16(y2));
-#endif // VERBOSE
-
-    if (y1 > y2)
-    {
-        temp = y2;
-        y2 = y1;
-        y1 = temp;
-    }
-
-    if (x1 > x2)
-    {
-        temp = x2;
-        x2 = x1;
-        x1 = temp;
-    }
-   
-#ifdef VERBOSE
-    printf("Width %u - %u\n", x2, x1);
-    printf("Height %u - %u\n", y2, y1);
-#endif
-
-    height = fix16_sub(int_to_fix16(y2), int_to_fix16(y1));
-
-    width = fix16_sub(int_to_fix16(x2), int_to_fix16(x1));
-
-#ifdef VERBOSE
-    printf("the width is %u (%u) and the height %u (%u)\n", fix16_to_int_round_nearest(width), width, fix16_to_int_round_nearest(height), height);
-#endif // VERBOSE
-
-    if (abs_val(fix16_to_int_round_down(width)) > abs_val(fix16_to_int_round_down(height))) {
-        steps = abs_val(fix16_to_int_round_down(width));
-        addX = (width > 0 ? int_to_fix16(1) : int_to_fix16(-1));
-        addY = (steps == 0 ? 0 : fix16_div(height, int_to_fix16(steps)));
-        for (i = 0; i <= steps; i++) {
-            x = fix16_add(int_to_fix16(x1), fix16_mul(addX, int_to_fix16(i)));
-            y = fix16_add(int_to_fix16(y1), fix16_mul(addY, int_to_fix16(i)));
-
-#ifdef VERBOSE
-            printf("Pos Draw Point x: %u, y: %u\n", fix16_to_int_round_nearest(x), fix16_to_int_round_nearest(y));
-#endif
-
-            B11PSET(fix16_to_int_round_nearest(x), fix16_to_int_round_nearest(y));
-        }
-    }
-    else {
-        steps = abs_val(fix16_to_int_round_down(height));
-        addY = (height > 0 ? int_to_fix16(1) : int_to_fix16(-1));
-        addX = (steps == 0 ? 0 : fix16_div(width, int_to_fix16(steps)));
-        for (i = 0; i <= steps; i++) {
-                   
-            y = fix16_add(int_to_fix16(y1), fix16_mul(addY, int_to_fix16(i)));
-            x = fix16_add(int_to_fix16(x1), fix16_mul(addX, int_to_fix16(i)));
-
-#ifdef VERBOSE
-            printf("Neg Draw Point x: %u, y: %u\n", fix16_to_int_round_nearest(x), fix16_to_int_round_nearest(y));
-#endif
-
-            B11PSET(fix16_to_int_round_nearest(x), fix16_to_int_round_nearest(y));
-        }
-    }
-}
 /**************************************************************************
 ** okToFill
 **************************************************************************/
@@ -361,11 +294,29 @@ void b11XCorner(byte** data)
     for (;;) {
         x2 = *((*data)++);
         if (x2 >= 0xF0) break;
-        b11Drawline(x1, y1, x2, y1);
+
+        bresenham_x1 = x1;
+        bresenham_x2 = x2;
+        bresenham_y1 = y1;
+        bresenham_y2 = y2;
+        
+#ifdef VERBOSE
+        printf("x Corner line 1: %d,%d : %d,%d\n", bresenham_x1, bresenham_y1, bresenham_x2, bresenham_y2);
+#endif
+        b11Drawline();
         x1 = x2;
         y2 = *((*data)++);
         if (y2 >= 0xF0) break;
-        b11Drawline(x1, y1, x1, y2);
+
+        bresenham_x1 = x1;
+        bresenham_x2 = x2;
+        bresenham_y1 = y1;
+        bresenham_y2 = y2;
+
+#ifdef VERBOSE
+        printf("x corner line 2: %d,%d : %d,%d\n", bresenham_x1, bresenham_y1, bresenham_x2, bresenham_y2);
+#endif
+        b11Drawline();
         y1 = y2;
     }
 
@@ -389,11 +340,32 @@ void b11YCorner(byte** data)
     for (;;) {
         y2 = *((*data)++);
         if (y2 >= 0xF0) break;
-        b11Drawline(x1, y1, x1, y2);
+
+
+        bresenham_x1 = x1;
+        bresenham_x2 = x2;
+        bresenham_y1 = y1;
+        bresenham_y2 = y2;
+        
+#ifdef VERBOSE
+        printf("y Corner line 1: %d,%d : %d,%d\n", bresenham_x1, bresenham_y1, bresenham_x2, bresenham_y2);
+#endif
+        
+        b11Drawline();
         y1 = y2;
         x2 = *((*data)++);
         if (x2 >= 0xF0) break;
-        b11Drawline(x1, y1, x2, y1);
+
+
+        bresenham_x1 = x1;
+        bresenham_x2 = x2;
+        bresenham_y1 = y1;
+        bresenham_y2 = y2;
+
+#ifdef VERBOSE
+        printf("y Corner line 2: %d,%d : %d,%d\n", bresenham_x1, bresenham_y1, bresenham_x2, bresenham_y2);
+#endif
+        b11Drawline();
         x1 = x2;
     }
 
@@ -474,7 +446,17 @@ void b11RelativeDraw(byte** data)
         printf("Rel Draw  x1 %u, y1 %u dx: %d, dy: %d, x1 + dx: %u, y1 + dy %u \n", x1, y1, dx, dy, x1 + dx, y1 + dy);
 #endif // VERBOSE
 
-        b11Drawline(x1, y1, x1 + dx, y1 + dy);
+
+        bresenham_x1 = x1;
+        bresenham_x2 = x1 + dx;
+        bresenham_y1 = y1;
+        bresenham_y2 = y1 + dy;
+
+#ifdef VERBOSE
+        printf("rel line: %d,%d : %d,%d\n", bresenham_x1, bresenham_y1, bresenham_x2, bresenham_y2);
+#endif
+
+        b11Drawline();
         x1 += dx;
         y1 += dy;
     }
@@ -517,23 +499,27 @@ void b11AbsoluteLine(byte** data)
     for (;;) {
         if ((x2 = *((*data)++)) >= 0xF0)
         {
-#ifdef VERBOSE
-            printf("Absolute Line Break\n");
-#endif // VERBOSE
+//#ifdef VERBOSE
+//            printf("Absolute Line Break\n");
+//#endif // VERBOSE
 
             break;
         }
         if ((y2 = *((*data)++)) >= 0xF0)
         {
-#ifdef VERBOSE
-            printf("Absolute Line Break\n");
-#endif // VERBOSE
+//#ifdef VERBOSE
+//            printf("Absolute Line Break\n");
+//#endif // VERBOSE
             break;
         }
+        bresenham_x1 = x1;
+        bresenham_x2 = x2;
+        bresenham_y1 = y1;
+        bresenham_y2 = y2;
 #ifdef VERBOSE
-        printf("Draw Abs Line x1: %u, x2: %u, y1: %u, y2: %u\n", x1, x2, y1, y2);
+        printf("abs line: %d,%d : %d,%d\n", bresenham_x1, bresenham_y1, bresenham_x2, bresenham_y2);
 #endif
-        b11Drawline(x1, y1, x2, y2);
+        b11Drawline();
         x1 = x2;
         y1 = y2;
     }
@@ -713,6 +699,9 @@ void b11DrawPic(byte* bankedData, int pLen, boolean okToClearScreen, byte picNum
     PictureFile loadedPicture;
     byte* data;
     
+    int** zpPtrTemp = (int**) ZP_PTR_TEMP;
+    *zpPtrTemp = &bitmapWidthPreMult[0];
+
     getLoadedPicture(&loadedPicture, picNum);
 
 #ifdef VERBOSE

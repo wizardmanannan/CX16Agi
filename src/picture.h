@@ -36,6 +36,7 @@
 #define STARTING_ROW ((BITMAP_HEIGHT / 2) - (PICTURE_HEIGHT / 2))
 #define STARTING_BYTE (STARTING_ROW * BITMAP_WIDTH)
 #define BYTES_PER_ROW BITMAP_WIDTH / 2
+#define MULT_HALF_POINT 128
 
 typedef struct {
    int loaded;
@@ -63,6 +64,16 @@ void b11DiscardPictureFile(int picFileNum);
 
 
 extern void getLoadedPicture(PictureFile* returnedloadedPicture, byte loadedPictureNumber);
+
+extern void b11Drawline();
+extern byte bresenham_x1;
+extern byte bresenham_x2;
+extern byte bresenham_y1;
+extern byte bresenham_y2;
+
+extern byte toDraw;
+extern int* drawWhere;
+
 void drawPicTrampoline(byte* bankedData, int pLen, boolean okToClearScreen, byte picNum);
 
 
