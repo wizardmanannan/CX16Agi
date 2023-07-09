@@ -65,7 +65,7 @@ lda var2
 sta _logDebugVal2
 lda var3
 sta _logDebugVal3
-lda var3
+lda var4
 sta _logDebugVal4
 JSRFAR _b5LineDrawDebug, DEBUG_BANK
 .endif
