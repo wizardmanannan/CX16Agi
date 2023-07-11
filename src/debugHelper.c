@@ -338,7 +338,7 @@ void b5DebugPixelDraw()
 {
 	int* localDrawWhere;
 	byte localToDraw;
-	int* expectedDrawAddress = (STARTING_BYTE + logDebugVal1) + (logDebugVal2 * BYTES_PER_ROW);
+	int* expectedDrawAddress = ((STARTING_BYTE / 2) + logDebugVal1) + (logDebugVal2 * BYTES_PER_ROW);
 
 	memCpyBanked((byte*) &localDrawWhere, (byte*)&drawWhere, PICTURE_CODE_BANK, 2);
 	memCpyBanked(&localToDraw, &toDraw, PICTURE_CODE_BANK, 1);

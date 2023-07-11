@@ -158,7 +158,7 @@ void b11PriPSet(word x, word y)
 **************************************************************************/
 #define B11PSET(x, y) \
 toDraw = picColour << 4 | picColour;          \
-drawWhere = (STARTING_BYTE + x) + (y * BYTES_PER_ROW); \
+drawWhere = (STARTING_BYTE / 2 + x) + (y * BYTES_PER_ROW); \
     if (picDrawEnabled) { \
 if ((x) <= 159 && (y) <= 167) {  \
               asm("lda #$10"); \
