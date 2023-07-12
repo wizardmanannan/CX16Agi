@@ -9,6 +9,8 @@ PICTURE_INC = 1
 .import _picColour
 .import _picDrawEnabled
 
+.import popa
+
 .segment "CODE"
 
 ;DEBUG_PICTURE = 1
@@ -84,7 +86,6 @@ _toDraw: .byte $0
 lda coX
 cmp #160        ; if x > 159
 bcc @checkYBounds         ; then @end
-stp
 lda #$1
 jmp @endPSet
 
@@ -92,7 +93,6 @@ jmp @endPSet
 lda coY
 cmp #168        ; if y > 167
 bcc @start         ; then @end
-stp
 lda #$2
 jmp @endPSet
 
@@ -258,7 +258,7 @@ _b11Drawline:
 		DEBUG_PREPIXEL_DRAW _bresenham_x1, _bresenham_y1
         PSET _bresenham_x1, _bresenham_y1
 		DEBUG_PIXEL_DRAWN _bresenham_x1, _bresenham_y1
-        jsr b11Init_Bresenham
+		jsr b11Init_Bresenham
 
 		; err2 = err
 
@@ -313,5 +313,14 @@ _b11Drawline:
 
     @endDrawLine:
 rts
+
+_b11PSet:
+sta @coY
+jsr popa
+sta @coX
+PSET @coX, @coY
+rts
+@coX: .byte $0
+@coY: .byte $0
 
 .endif

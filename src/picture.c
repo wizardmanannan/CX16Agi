@@ -42,6 +42,7 @@ word rpos = QMAX, spos = 0;
 
 int* bitmapWidthPreMult = &BANK_RAM[BITMAP_WIDTH_PREMULT_START];
 
+extern void b11PSet(byte x, byte y);
 
 void getLoadedPicture(PictureFile* returnedloadedPicture, byte loadedPictureNumber)
 {
@@ -156,20 +157,12 @@ void b11PriPSet(word x, word y)
 ** Draws a pixel in each screen depending on whether drawing in that
 ** screen is enabled or not.
 **************************************************************************/
-#define B11PSET(x, y) \
+#define PSET(x, y) \
 toDraw = picColour << 4 | picColour;          \
 drawWhere = (STARTING_BYTE / 2 + x) + (y * BYTES_PER_ROW); \
     if (picDrawEnabled) { \
 if ((x) <= 159 && (y) <= 167) {  \
-              asm("lda #$10"); \
-              asm("ora #^_drawWhere"); \
-              asm("sta %w", VERA_addr_bank); \
-              asm("lda _drawWhere + 1"); \
-              asm("sta %w", VERA_addr_high); \
-              asm("lda _drawWhere"); \
-              asm("sta %w", VERA_addr_low); \
-              asm("lda _toDraw"); \
-              asm("sta %w", VERA_data0); \
+             b11PSet(x, y); \
            } \
     } 
 
@@ -250,7 +243,7 @@ void b11AgiFill(word x, word y)
 
             if (b11OkToFill(x1, y1)) {
 
-                B11PSET(x1, y1);
+                PSET(x1, y1);
 
                 if (b11OkToFill(x1, y1 - 1) && (y1 != 0)) {
                     b11Qstore(x1);
@@ -289,7 +282,7 @@ void b11XCorner(byte** data)
     x1 = *((*data)++);
     y1 = *((*data)++);
 
-    B11PSET(x1, y1);
+    PSET(x1, y1);
 
     for (;;) {
         x2 = *((*data)++);
@@ -335,7 +328,7 @@ void b11YCorner(byte** data)
     x1 = *((*data)++);
     y1 = *((*data)++);
 
-    B11PSET(x1, y1);
+    PSET(x1, y1);
 
     for (;;) {
         y2 = *((*data)++);
@@ -385,7 +378,7 @@ void b11RelativeDraw(byte** data)
     x1 = *((*data)++);
     y1 = *((*data)++);
 
-    B11PSET(x1, y1);
+    PSET(x1, y1);
 
     for (;;) {
         disp = *((*data)++);
@@ -494,7 +487,7 @@ void b11AbsoluteLine(byte** data)
     x1 = *((*data)++);
     y1 = *((*data)++);
 
-    B11PSET(x1, y1);
+    PSET(x1, y1);
 
     for (;;) {
         if ((x2 = *((*data)++)) >= 0xF0)
@@ -530,10 +523,10 @@ void b11AbsoluteLine(byte** data)
 
 #define plotPatternPoint() \
    if (patCode & 0x20) { \
-      if ((splatterMap[bitPos>>3] >> (7-(bitPos&7))) & 1) B11PSET(x1, y1); \
+      if ((splatterMap[bitPos>>3] >> (7-(bitPos&7))) & 1) PSET(x1, y1); \
       bitPos++; \
       if (bitPos == 0xff) bitPos=0; \
-   } else B11PSET(x1, y1)
+   } else PSET(x1, y1)
 
 /**************************************************************************
 ** plotPattern
