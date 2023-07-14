@@ -65,11 +65,7 @@ void b11DiscardPictureFile(int picFileNum);
 
 extern void getLoadedPicture(PictureFile* returnedloadedPicture, byte loadedPictureNumber);
 
-extern void b11Drawline();
-extern byte bresenham_x1;
-extern byte bresenham_x2;
-extern byte bresenham_y1;
-extern byte bresenham_y2;
+extern void b11Drawline(byte x1, byte y1, byte x2, byte y2);
 
 extern byte toDraw;
 extern int* drawWhere;

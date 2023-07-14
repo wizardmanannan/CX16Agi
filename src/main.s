@@ -18,11 +18,7 @@
     .export _b7DisableAndWaitForVsync
     .export _b7ClearBackground
     .export _b11Drawline
-    .export _bresenham_x1
     .export _toDraw
     .export _drawWhere
     .export _pixelCounter
-    .export _bresenham_x2
-    .export _bresenham_y1
-    .export _bresenham_y2
     .export _b11PSet

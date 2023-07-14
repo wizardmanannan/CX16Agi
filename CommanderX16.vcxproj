@@ -13,7 +13,10 @@
   <ItemGroup>
     <None Include="..\.gitignore" />
     <None Include="makefile" />
+    <None Include="src\codeWindow.s" />
     <None Include="src\commandLoop.asm" />
+    <None Include="src\graphics.s" />
+    <None Include="src\picture.s" />
     <None Include="test.bat" />
   </ItemGroup>
   <ItemGroup>

@@ -13,7 +13,6 @@
 #define PRI_DEFAULT 4
 //#define VERBOSE
 //#define VERBOSE_REL_DRAW
-//#define VERBOSE_PLOT
 
 boolean okToShowPic = FALSE;
 PictureFile* loadedPictures = (PictureFile*)&BANK_RAM[PICTURE_START];
@@ -61,7 +60,7 @@ void setLoadedPicture(PictureFile* loadedPicture, byte loadedPictureNumber)
 
     RAM_BANK = PICTURE_BANK;
 
-    loadedPictures[loadedPictureNumber]  = *loadedPicture;
+    loadedPictures[loadedPictureNumber] = *loadedPicture;
 
     RAM_BANK = previousRamBank;
 }
@@ -286,28 +285,19 @@ void b11XCorner(byte** data)
         x2 = *((*data)++);
         if (x2 >= 0xF0) break;
 
-        bresenham_x1 = x1;
-        bresenham_x2 = x2;
-        bresenham_y1 = y1;
-        bresenham_y2 = y2;
-        
+
 #ifdef VERBOSE
-        printf("x corner line 1: %d,%d : %d,%d\n", bresenham_x1, bresenham_y1, bresenham_x2, bresenham_y2);
+        printf("x corner line 1: %d,%d : %d,%d\n", x1, y1, x2, y2);
 #endif
-        b11Drawline();
+        b11Drawline(x1, y1, x2, y2);
         x1 = x2;
         y2 = *((*data)++);
         if (y2 >= 0xF0) break;
 
-        bresenham_x1 = x1;
-        bresenham_x2 = x2;
-        bresenham_y1 = y1;
-        bresenham_y2 = y2;
-
 #ifdef VERBOSE
-        printf("x corner line 2: %d,%d : %d,%d\n", bresenham_x1, bresenham_y1, bresenham_x2, bresenham_y2);
+        printf("x corner line 2: %d,%d : %d,%d\n", x1, y1, x2, y2);
 #endif
-        b11Drawline();
+        b11Drawline(x1, y1, x2, y2);
         y1 = y2;
     }
 
@@ -333,30 +323,20 @@ void b11YCorner(byte** data)
         if (y2 >= 0xF0) break;
 
 
-        bresenham_x1 = x1;
-        bresenham_x2 = x2;
-        bresenham_y1 = y1;
-        bresenham_y2 = y2;
-        
+
 #ifdef VERBOSE
-        printf("y corner line 1: %d,%d : %d,%d\n", bresenham_x1, bresenham_y1, bresenham_x2, bresenham_y2);
+        printf("y corner line 1: %d,%d : %d,%d\n", x1, y1, x2, y2);
 #endif
-        
-        b11Drawline();
+
+        b11Drawline(x1, y1, x2, y2);
         y1 = y2;
         x2 = *((*data)++);
         if (x2 >= 0xF0) break;
 
-
-        bresenham_x1 = x1;
-        bresenham_x2 = x2;
-        bresenham_y1 = y1;
-        bresenham_y2 = y2;
-
 #ifdef VERBOSE
-        printf("y Corner line 2: %d,%d : %d,%d\n", bresenham_x1, bresenham_y1, bresenham_x2, bresenham_y2);
+        printf("y Corner line 2: %d,%d : %d,%d\n", x1, y1, x2, y2);
 #endif
-        b11Drawline();
+        b11Drawline(x1, y1, x2, y2);
         x1 = x2;
     }
 
@@ -438,16 +418,11 @@ void b11RelativeDraw(byte** data)
 #endif // VERBOSE
 
 
-        bresenham_x1 = x1;
-        bresenham_x2 = x1 + dx;
-        bresenham_y1 = y1;
-        bresenham_y2 = y1 + dy;
-
 #ifdef VERBOSE
-        printf("rel line: %d,%d : %d,%d\n", bresenham_x1, bresenham_y1, bresenham_x2, bresenham_y2);
+        printf("rel line: %d,%d : %d,%d\n", x1, y1, x1 + dx, y1 + dy);
 #endif
 
-        b11Drawline();
+        b11Drawline(x1, y1, x1 + dx, y1 + dy);
         x1 += dx;
         y1 += dy;
     }
@@ -490,27 +465,23 @@ void b11AbsoluteLine(byte** data)
     for (;;) {
         if ((x2 = *((*data)++)) >= 0xF0)
         {
-//#ifdef VERBOSE
-//            printf("Absolute Line Break\n");
-//#endif // VERBOSE
+            //#ifdef VERBOSE
+            //            printf("Absolute Line Break\n");
+            //#endif // VERBOSE
 
             break;
         }
         if ((y2 = *((*data)++)) >= 0xF0)
         {
-//#ifdef VERBOSE
-//            printf("Absolute Line Break\n");
-//#endif // VERBOSE
+            //#ifdef VERBOSE
+            //            printf("Absolute Line Break\n");
+            //#endif // VERBOSE
             break;
         }
-        bresenham_x1 = x1;
-        bresenham_x2 = x2;
-        bresenham_y1 = y1;
-        bresenham_y2 = y2;
 #ifdef VERBOSE
-        printf("abs line: %d,%d : %d,%d\n", bresenham_x1, bresenham_y1, bresenham_x2, bresenham_y2);
+        printf("abs line: %d,%d : %d,%d\n", x1, y1, x2, y2);
 #endif
-        b11Drawline();
+        b11Drawline(x1, y1, x2, y2);
         x1 = x2;
         y1 = y2;
     }
@@ -689,10 +660,9 @@ void b11DrawPic(byte* bankedData, int pLen, boolean okToClearScreen, byte picNum
     boolean stillDrawing = TRUE;
     PictureFile loadedPicture;
     byte* data;
-    
-    int** zpPtrTemp = (int**) ZP_PTR_TEMP;
+    int** zpPtrTemp = (int**)ZP_PTR_TEMP;
     *zpPtrTemp = &bitmapWidthPreMult[0];
-
+    
     getLoadedPicture(&loadedPicture, picNum);
 
 #ifdef VERBOSE
@@ -708,7 +678,7 @@ void b11DrawPic(byte* bankedData, int pLen, boolean okToClearScreen, byte picNum
     }
 
     memCpyBanked(&data[0], (byte*)loadedPicture.data, loadedPicture.bank, loadedPicture.size);
-    
+
     //asm("sei");
 
     if (okToClearScreen) b11ClearPicture();
@@ -720,7 +690,7 @@ void b11DrawPic(byte* bankedData, int pLen, boolean okToClearScreen, byte picNum
     //asm("sei");
 
     patCode = 0x00;
-    
+
 #ifdef VERBOSE
     printf("Plotting. . .\n");
 #endif // VERBOSE
@@ -731,8 +701,8 @@ void b11DrawPic(byte* bankedData, int pLen, boolean okToClearScreen, byte picNum
         printf("Action: %p \n", action);
 #endif // VERBOSE
         switch (action) {
-        case 0xFF: 
-            stillDrawing = 0; 
+        case 0xFF:
+            stillDrawing = 0;
             break;
         case 0xF0: picColour = *(data++);
             picDrawEnabled = TRUE;
@@ -751,7 +721,7 @@ void b11DrawPic(byte* bankedData, int pLen, boolean okToClearScreen, byte picNum
         case 0xFA: b11PlotBrush(&data); break;
         default: printf("Unknown picture code : %X\n", action); exit(0);
         }
-        
+
         //if (picFNum == 3) {
         //   showPicture();
         //   if ((readkey() >> 8) == KEY_ESC) closedown();
@@ -803,7 +773,7 @@ void b11LoadPictureFile(int picFileNum)
 #endif
 
     loadAGIFileTrampoline(PICTURE, &agiFilePosType, &tempAGI);
-    
+
     loadedPicture.size = tempAGI.totalSize;
     loadedPicture.data = tempAGI.code;
     loadedPicture.bank = tempAGI.codeBank;
@@ -841,7 +811,7 @@ void drawPicTrampoline(byte* bankedData, int pLen, boolean okToClearScreen, byte
 {
     byte previousBank = RAM_BANK;
     RAM_BANK = PICTURE_CODE_BANK;
-    
+
     b11DrawPic(bankedData, pLen, okToClearScreen, picNum);
 
     RAM_BANK = previousBank;

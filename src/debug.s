@@ -8,8 +8,8 @@ stp
 lda codeWindow
 lda cwCurrentCode
 lda _opCounter
-lda _bresenham_x1
-lda _bresenham_x2
-lda _bresenham_y1
-lda _bresenham_y2
+lda bresenham_x1
+lda bresenham_x2
+lda bresenham_y1
+lda bresenham_y2
 rts

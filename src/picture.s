@@ -10,6 +10,7 @@ PICTURE_INC = 1
 .import _picDrawEnabled
 
 .import popa
+.import popax
 
 .segment "CODE"
 
@@ -185,10 +186,10 @@ neg:		eor #$ff
 		;*****************************************************************
 bresenham_sx: .byte $0 
 bresenham_err: .word $0
-_bresenham_x1: .byte $0
-_bresenham_x2: .byte $0
-_bresenham_y1: .byte $0
-_bresenham_y2: .byte $0
+bresenham_x1: .byte $0
+bresenham_x2: .byte $0
+bresenham_y1: .byte $0
+bresenham_y2: .byte $0
 bresenham_dx: .word $0
 bresenham_sy: .byte $0
 bresenham_dy: .word $0
@@ -209,9 +210,9 @@ b11Init_Bresenham:
 		; 	sy = -1
 		; 	dy = y1 - y2
 		ldx #$ff		; X = -1
-		lda _bresenham_y1
+		lda bresenham_y1
 		sec
-		sbc _bresenham_y2	; A = y1 - y2
+		sbc bresenham_y2	; A = y1 - y2
 		bpl :+
 		ldx #1			; X = 1
 		jsr neg			; A = y2 - y1
@@ -225,9 +226,9 @@ b11Init_Bresenham:
 		; 	sx = -1
 		; 	dx = x1 - x2
 		ldx #$ff		; X = -1
-		lda _bresenham_x1
+		lda bresenham_x1
 		sec
-		sbc _bresenham_x2	; A = x1 - x2
+		sbc bresenham_x2	; A = x1 - x2
 		bpl :+
 		ldx #1			; X = 1
 		jsr neg			; A = x2 - x1
@@ -254,10 +255,18 @@ b11Init_Bresenham:
 		;*****************************************************************
 
 _b11Drawline:
-		DEBUG_LINE_DRAW _bresenham_x1, _bresenham_y1, _bresenham_x2, _bresenham_y2
-		DEBUG_PREPIXEL_DRAW _bresenham_x1, _bresenham_y1
-        PSET _bresenham_x1, _bresenham_y1
-		DEBUG_PIXEL_DRAWN _bresenham_x1, _bresenham_y1
+		sta bresenham_y2
+		jsr popax
+		sta bresenham_x2
+		stx bresenham_y1
+		jsr popa
+		sta bresenham_x1
+
+
+		DEBUG_LINE_DRAW bresenham_x1, bresenham_y1, bresenham_x2, bresenham_y2
+		DEBUG_PREPIXEL_DRAW bresenham_x1, bresenham_y1
+        PSET bresenham_x1, bresenham_y1
+		DEBUG_PIXEL_DRAWN bresenham_x1, bresenham_y1
 		jsr b11Init_Bresenham
 
 		; err2 = err
@@ -277,10 +286,10 @@ _b11Drawline:
 		sec
 		sbc bresenham_dy
 		sta bresenham_err
-		lda _bresenham_x1
+		lda bresenham_x1
 		clc
 		adc bresenham_sx
-		sta _bresenham_x1
+		sta bresenham_x1
 :
 		; if err2 < dy:
 		;   err = err + dx
@@ -292,22 +301,22 @@ _b11Drawline:
 		clc
 		adc bresenham_dx
 		sta bresenham_err
-		lda _bresenham_y1
+		lda bresenham_y1
 		clc
 		adc bresenham_sy
-		sta _bresenham_y1
+		sta bresenham_y1
 :
-		DEBUG_PREPIXEL_DRAW _bresenham_x1, _bresenham_y1
-        PSET _bresenham_x1, _bresenham_y1
-		DEBUG_PIXEL_DRAWN _bresenham_x1, _bresenham_y1
-        lda _bresenham_x1
-        cmp _bresenham_x2
+		DEBUG_PREPIXEL_DRAW bresenham_x1, bresenham_y1
+        PSET bresenham_x1, bresenham_y1
+		DEBUG_PIXEL_DRAWN bresenham_x1, bresenham_y1
+        lda bresenham_x1
+        cmp bresenham_x2
         beq @checkX
         jmp drawLineStart
 
         @checkX:
-        lda _bresenham_y1
-        cmp _bresenham_y2
+        lda bresenham_y1
+        cmp bresenham_y2
         beq @endDrawLine
         jmp drawLineStart
 
