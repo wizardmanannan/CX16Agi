@@ -116,10 +116,10 @@ sta _toDraw     ; toDraw = picColour << 4 | picColour
 
 lda coX
 clc
-adc #<(STARTING_BYTE / 2)
+adc #<STARTING_BYTE
 sta _drawWhere
 lda #$0
-adc #>(STARTING_BYTE / 2)
+adc #>STARTING_BYTE
 sta _drawWhere+1
 
 clc

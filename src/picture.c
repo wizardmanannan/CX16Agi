@@ -158,8 +158,6 @@ void b11PriPSet(word x, word y)
 ** screen is enabled or not.
 **************************************************************************/
 #define PSET(x, y) \
-toDraw = picColour << 4 | picColour;          \
-drawWhere = (STARTING_BYTE / 2 + x) + (y * BYTES_PER_ROW); \
     if (picDrawEnabled) { \
 if ((x) <= 159 && (y) <= 167) {  \
              b11PSet(x, y); \
