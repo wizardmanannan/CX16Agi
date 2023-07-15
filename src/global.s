@@ -246,6 +246,50 @@ MULT_TABLE_HALF_POINT = $80
 
 .endmacro
 
+; Macro for comparing two 16-bit words and branching if equal
+.macro EQ_16_WORD_TO_LITERAL word1, word2, successBranch, failBranch
+       .local @branch
+       lda word1 + 1
+       cmp #>word2
+       .ifblank failBranch
+       bne @end
+       .endif
+       .ifnblank failBranch
+       bne failBranch
+       .endif
+       lda word1
+       cmp #< word2
+       .ifblank failBranch
+       bne @end
+       .endif
+       .ifnblank failBranch
+       bne failBranch
+       .endif
+       jmp successBranch
+       @end:
+
+.endmacro
+
+; Macro for comparing two 16-bit words and branching if not equal
+.macro NEQ_16_WORD_TO_LITERAL word1, word2, successBranch, failBranch
+       .local @branch
+       lda word1 + 1
+       cmp #> word2
+       bne successBranch
+       lda word1
+       cmp #< word2
+       .ifblank failBranch
+       beq @end
+       .endif
+       .ifnblank failBranch
+       beq failBranch
+       .endif
+       jmp successBranch
+       @end:
+
+.endmacro
+
+
 ; Macro for comparing two 8-bit words and branching if less or equal
 .macro LESS_THAN_OR_EQ_8 word1, word2, successBranch, failBranch
        .local @branch

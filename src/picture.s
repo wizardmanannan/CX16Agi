@@ -347,15 +347,13 @@ QUEUEMAX = 40000
 .local @q
 .local @end
 .local @incBank
-sta @q
 bra @start
 @q: .byte $0
+@floodQueueEnd: .word $0
 @start:
-
 lda sposBank
 sta RAM_BANK
 
-stp
 lda @q
 sta (ZP_PTR_B1)
 
@@ -367,8 +365,7 @@ sta ZP_PTR_B1
 lda #$0
 adc ZP_PTR_B1 + 1
 sta ZP_PTR_B1 + 1
-
-LESS_THAN_OR_EQ_16 ZP_PTR_B1, FLOOD_QUEUE_END, @end
+NEQ_16_WORD_TO_LITERAL ZP_PTR_B1, FLOOD_QUEUE_END, @end
 lda #< FLOOD_QUEUE_START
 sta ZP_PTR_B1
 lda #> FLOOD_QUEUE_START
