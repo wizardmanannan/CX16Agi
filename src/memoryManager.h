@@ -93,6 +93,9 @@
 #define GRAPHICS_BANK 7
 
 
+#define FIRST_FLOOD_BANK 0x38
+#define NO_FLOOD_BANKS 4
+
 #define FIRST_CODE_BANK 0x1
 #define LAST_CODE_BANK 0x5
 #define NO_CODE_BANKS 17

@@ -65,13 +65,53 @@ void setLoadedPicture(PictureFile* loadedPicture, byte loadedPictureNumber)
     RAM_BANK = previousRamBank;
 }
 
-#pragma code-name (push, "BANKRAM11")
-boolean b11Empty()
+#pragma code-name (push, "BANKRAMFLOOD")
+
+/**************************************************************************
+** pset
+**
+** Draws a pixel in each screen depending on whether drawing in that
+** screen is enabled or not.
+**************************************************************************/
+#define PSETFLOOD(x, y) \
+    if (picDrawEnabled) { \
+if ((x) <= 159 && (y) <= 167) {  \
+            trampoline_2Byte(&b11PSet,x, y, PICTURE_BANK); \
+           } \
+    } 
+
+
+/**************************************************************************
+** picGetPixel
+**
+** Get colour at x,y on the picture page.
+**************************************************************************/
+byte bFloodPicGetPixel(word x, word y)
+{
+    if (x > 159) return(PIC_DEFAULT);
+    if (y > 167) return(PIC_DEFAULT);
+    return (picture->line[y][x]);
+}
+
+/**************************************************************************
+** priGetPixel
+**
+** Get colour at x,y on the priority page.
+**************************************************************************/
+byte bFloodPriGetPixel(word x, word y)
+{
+    if (x > 159) return(PRI_DEFAULT);
+    if (y > 167) return(PRI_DEFAULT);
+    return (priority->line[y][x]);
+}
+
+
+boolean bFloodEmpty()
 {
     return (rpos == spos);
 }
 
-void b11Qstore(word q)
+void bFloodQstore(word q)
 {
     if (spos + 1 == rpos || (spos + 1 == QMAX && !rpos)) {
         nosound();
@@ -82,7 +122,7 @@ void b11Qstore(word q)
     if (spos == QMAX) spos = 0;  /* loop back */
 }
 
-word b11Qretrieve()
+word bFloodQretrieve()
 {
     if (rpos == QMAX) rpos = 0;  /* loop back */
     if (rpos == spos) {
@@ -91,6 +131,88 @@ word b11Qretrieve()
     rpos++;
     return buf[rpos - 1];
 }
+
+/**************************************************************************
+** okToFill
+**************************************************************************/
+boolean bFloodOkToFill(byte x, byte y)
+{
+    if (!picDrawEnabled && !priDrawEnabled) return FALSE;
+    if (picColour == PIC_DEFAULT) return FALSE;
+    if (!priDrawEnabled) return (bFloodPicGetPixel(x, y) == PIC_DEFAULT);
+    if (priDrawEnabled && !picDrawEnabled) return (bFloodPriGetPixel(x, y) == PRI_DEFAULT);
+    return (bFloodPicGetPixel(x, y) == PIC_DEFAULT);
+}
+
+/**************************************************************************
+** agiFill
+**************************************************************************/
+void bFloodAgiFill(word x, word y)
+{
+    byte x1, y1;
+    rpos = spos = 0;
+
+    bFloodQstore(x);
+    bFloodQstore(y);
+
+    for (;;) {
+
+        x1 = bFloodQretrieve();
+        y1 = bFloodQretrieve();
+
+        if ((x1 == QEMPTY) || (y1 == QEMPTY))
+            break;
+        else {
+
+            if (bFloodOkToFill(x1, y1)) {
+
+                PSETFLOOD(x1, y1);
+
+                if (bFloodOkToFill(x1, y1 - 1) && (y1 != 0)) {
+                    bFloodQstore(x1);
+                    bFloodQstore(y1 - 1);
+                }
+                if (bFloodOkToFill(x1 - 1, y1) && (x1 != 0)) {
+                    bFloodQstore(x1 - 1);
+                    bFloodQstore(y1);
+                }
+                if (bFloodOkToFill(x1 + 1, y1) && (x1 != 159)) {
+                    bFloodQstore(x1 + 1);
+                    bFloodQstore(y1);
+                }
+                if (bFloodOkToFill(x1, y1 + 1) && (y1 != 167)) {
+                    bFloodQstore(x1);
+                    bFloodQstore(y1 + 1);
+                }
+
+            }
+
+        }
+
+    }
+
+}
+#pragma code-name (pop)
+#pragma code-name (push, "BANKRAM11")
+/**************************************************************************
+** fill
+**
+** Agi flood fill.  (drawing action 0xF8)
+**************************************************************************/
+void b11FloodFill(byte** data)
+{
+    byte x1, y1;
+
+    for (;;) {
+        if ((x1 = *((*data)++)) >= 0xF0) break;
+        if ((y1 = *((*data)++)) >= 0xF0) break;
+        //trampoline_2Int(&bFloodAgiFill,x1, y1, FIRST_FLOOD_BANK);
+    }
+
+    (*data)--;
+}
+
+
 
 #define SWIDTH   640  /* Screen resolution */
 #define SHEIGHT  480
@@ -162,111 +284,6 @@ if ((x) <= 159 && (y) <= 167) {  \
              b11PSet(x, y); \
            } \
     } 
-
-/**************************************************************************
-** picGetPixel
-**
-** Get colour at x,y on the picture page.
-**************************************************************************/
-byte b11PicGetPixel(word x, word y)
-{
-    if (x > 159) return(PIC_DEFAULT);
-    if (y > 167) return(PIC_DEFAULT);
-    return (picture->line[y][x]);
-}
-
-/**************************************************************************
-** priGetPixel
-**
-** Get colour at x,y on the priority page.
-**************************************************************************/
-byte b11PriGetPixel(word x, word y)
-{
-    if (x > 159) return(PRI_DEFAULT);
-    if (y > 167) return(PRI_DEFAULT);
-    return (priority->line[y][x]);
-}
-
-///**************************************************************************
-//** round
-//**
-//** Rounds a float to the closest int. Takes into actions which direction
-//** the current line is being drawn when it has a 50:50 decision about
-//** where to put a pixel.
-//**************************************************************************/
-int b11Round(fix16 aNumber, fix16 dirn)
-{
-    fix16 pointFive = int_to_fix16(1 << (FIX16_SHIFT - 1)); // 0.5 in fixed point representation
-
-    if (fix16_to_int_round_down(dirn) < 0)
-        return fix16_to_int_round_down(aNumber - pointFive <= 0 ? aNumber : fix16_add(aNumber, int_to_fix16(1)));
-
-    return fix16_to_int_round_down(aNumber - pointFive < 0 ? aNumber : fix16_add(aNumber, int_to_fix16(1)));
-}
-
-/**************************************************************************
-** okToFill
-**************************************************************************/
-boolean b11OkToFill(byte x, byte y)
-{
-    if (!picDrawEnabled && !priDrawEnabled) return FALSE;
-    if (picColour == PIC_DEFAULT) return FALSE;
-    if (!priDrawEnabled) return (b11PicGetPixel(x, y) == PIC_DEFAULT);
-    if (priDrawEnabled && !picDrawEnabled) return (b11PriGetPixel(x, y) == PRI_DEFAULT);
-    return (b11PicGetPixel(x, y) == PIC_DEFAULT);
-}
-
-/**************************************************************************
-** agiFill
-**************************************************************************/
-void b11AgiFill(word x, word y)
-{
-    byte x1, y1;
-    rpos = spos = 0;
-
-    return;
-
-    b11Qstore(x);
-    b11Qstore(y);
-
-    for (;;) {
-
-        x1 = b11Qretrieve();
-        y1 = b11Qretrieve();
-
-        if ((x1 == QEMPTY) || (y1 == QEMPTY))
-            break;
-        else {
-
-            if (b11OkToFill(x1, y1)) {
-
-                PSET(x1, y1);
-
-                if (b11OkToFill(x1, y1 - 1) && (y1 != 0)) {
-                    b11Qstore(x1);
-                    b11Qstore(y1 - 1);
-                }
-                if (b11OkToFill(x1 - 1, y1) && (x1 != 0)) {
-                    b11Qstore(x1 - 1);
-                    b11Qstore(y1);
-                }
-                if (b11OkToFill(x1 + 1, y1) && (x1 != 159)) {
-                    b11Qstore(x1 + 1);
-                    b11Qstore(y1);
-                }
-                if (b11OkToFill(x1, y1 + 1) && (y1 != 167)) {
-                    b11Qstore(x1);
-                    b11Qstore(y1 + 1);
-                }
-
-            }
-
-        }
-
-    }
-
-}
-
 /**************************************************************************
 ** xCorner
 **
@@ -425,24 +442,6 @@ void b11RelativeDraw(byte** data)
         b11Drawline(x1, y1, x1 + dx, y1 + dy);
         x1 += dx;
         y1 += dy;
-    }
-
-    (*data)--;
-}
-
-/**************************************************************************
-** fill
-**
-** Agi flood fill.  (drawing action 0xF8)
-**************************************************************************/
-void b11Fill(byte** data)
-{
-    byte x1, y1;
-
-    for (;;) {
-        if ((x1 = *((*data)++)) >= 0xF0) break;
-        if ((y1 = *((*data)++)) >= 0xF0) break;
-        b11AgiFill(x1, y1);
     }
 
     (*data)--;
@@ -613,36 +612,36 @@ void b11SplitPriority()
     byte data;
     boolean priFound;
 
-    for (x = 0; x < 160; x++) {
-        for (y = 0; y < 168; y++) {
-            data = priority->line[y][x];
-            if (data == 3) {
-                priority->line[y][x] = 4;
-                control->line[y][x] = data;
-            }
-            if (data < 3) {
-                control->line[y][x] = data;
-                dy = y + 1;
-                priFound = FALSE;
-                while (!priFound && (dy < 168)) {
-                    data = priority->line[dy][x];
-                    /* The following if statement is a hack to fix a problem
-                    ** in KQ1 room 1.
-                    */
-                    if (data == 3) {
-                        priFound = TRUE;
-                        priority->line[y][x] = 4;
-                    }
-                    else if (data > 3) {
-                        priFound = TRUE;
-                        priority->line[y][x] = data;
-                    }
-                    else
-                        dy++;
-                }
-            }
-        }
-    }
+    //for (x = 0; x < 160; x++) {
+    //    for (y = 0; y < 168; y++) {
+    //        data = priority->line[y][x];
+    //        if (data == 3) {
+    //            priority->line[y][x] = 4;
+    //            control->line[y][x] = data;
+    //        }
+    //        if (data < 3) {
+    //            control->line[y][x] = data;
+    //            dy = y + 1;
+    //            priFound = FALSE;
+    //            while (!priFound && (dy < 168)) {
+    //                data = priority->line[dy][x];
+    //                /* The following if statement is a hack to fix a problem
+    //                ** in KQ1 room 1.
+    //                */
+    //                if (data == 3) {
+    //                    priFound = TRUE;
+    //                    priority->line[y][x] = 4;
+    //                }
+    //                else if (data > 3) {
+    //                    priFound = TRUE;
+    //                    priority->line[y][x] = data;
+    //                }
+    //                else
+    //                    dy++;
+    //            }
+    //        }
+    //    }
+    //}
 }
 
 int picFNum = 0;
@@ -716,7 +715,7 @@ void b11DrawPic(byte* bankedData, int pLen, boolean okToClearScreen, byte picNum
         case 0xF5: b11XCorner(&data); break;
         case 0xF6: b11AbsoluteLine(&data); break;
         case 0xF7: b11RelativeDraw(&data); break;
-        case 0xF8: b11Fill(&data); break;
+        case 0xF8: b11FloodFill(&data); break;
         case 0xF9: patCode = *(data++); break;
         case 0xFA: b11PlotBrush(&data); break;
         default: printf("Unknown picture code : %X\n", action); exit(0);
@@ -736,6 +735,8 @@ void b11DrawPic(byte* bankedData, int pLen, boolean okToClearScreen, byte picNum
     //asm("cli");
 
     //trampoline_0(&b7DisableAndWaitForVsync, IRQ_BANK);
+
+
 
     free(data);
 }
