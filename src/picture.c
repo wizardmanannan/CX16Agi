@@ -148,7 +148,21 @@ void bFloodAgiFill(word x, word y)
 {
     byte x1, y1;
 
-    printf("x and y are %p and %p", x, y);
+
+    int i;
+
+    for (i = 0; i <= 5858; i++)
+    {
+        bFloodQstore(i);
+    }
+
+    for (i = 0; i <= 5858; i++)
+    {
+        bFloodQretrieve();
+    }
+
+
+
     bFloodQstore(x);
     bFloodQstore(y);
 
