@@ -14,10 +14,13 @@ byte* banked;
 void bankedRamInit()
 {
 #define FILE_NAME_LENGTH 13
+#define FLOOD_MESSAGE_LENGTH 30
 	int i, j = 0;
 	FILE* fp;
 	char fileName[FILE_NAME_LENGTH];
+	char openFloodFileMessage[FLOOD_MESSAGE_LENGTH];
 	byte previousBank = RAM_BANK;
+	char* openFloodFileMessageString = "Opening flood file %d of %d";
 
 	unsigned char fileByte;
 	int bankRamSizes[NO_CODE_BANKS] = {
@@ -36,7 +39,7 @@ void bankedRamInit()
 		(int)_BANKRAM0D_SIZE__,
 		(int)_BANKRAM0E_SIZE__,
 		(int)_BANKRAM0F_SIZE__,
-		(int )_BANKRAM10_SIZE__,
+		(int)_BANKRAM10_SIZE__,
 		(int)_BANKRAM11_SIZE__
 	};
 
@@ -81,6 +84,21 @@ void bankedRamInit()
 #endif // VERBOSE
 		}
 	}
+
+	for (i = 0; i < NO_FLOOD_BANKS; i++)
+	{
+		if ((fp = fopen(FLOODBANKFILENAME, "rb")) != NULL) {
+			sprintf(openFloodFileMessage, openFloodFileMessageString, i + 1, NO_FLOOD_BANKS);
+			printf("%s\n", openFloodFileMessage);
+			RAM_BANK = FIRST_FLOOD_BANK + i;
+			fread(&BANK_RAM[0], 1, _BANKRAMFLOOD_SIZE__, fp);
+		}
+		else {
+			printf("Cannot open flood bank file");
+		}
+		fclose(fp);
+	}
+
 	RAM_BANK = previousBank;
 }
 #endif //  __CX16__
@@ -117,7 +135,7 @@ void b10InitDynamicMemory()
 
 	_noSegments = TINY_NO_SEGMENTS + EXTRA_SMALL_NO_SEGMENTS + SMALL_NO_SEGMENTS + MEDIUM_NO_SEGMENTS + LARGE_NO_SEGMENTS;
 
-	_memoryAreas = (MemoryArea*) &BANK_RAM[MEMORY_AREA_START];
+	_memoryAreas = (MemoryArea*)&BANK_RAM[MEMORY_AREA_START];
 
 	initSegments(TINY_SEG_ORDER, TINY_NO_BANKS, TINY_SIZE, TINY_NO_SEGMENTS, TINY_FIRST_BANK);
 	initSegments(EXTRA_SMALL_SEG_ORDER, EXTRA_SMALL_NO_BANKS, EXTRA_SMALL_SIZE, EXTRA_SMALL_NO_SEGMENTS, EXTRA_SMALL_FIRST_BANK);
@@ -156,7 +174,7 @@ byte* b8Bbanked_alloc(int size, byte* bank)
 
 					printf("Bank Calc ((%d * %d) / %d + %d)\n", j, _memoryAreas[i].segmentSize, BANK_SIZE, _memoryAreas[i].firstBank);
 #endif
-					*bank = (byte)(((unsigned long)j * _memoryAreas[i].segmentSize) / BANK_SIZE + _memoryAreas[i].firstBank);
+					* bank = (byte)(((unsigned long)j * _memoryAreas[i].segmentSize) / BANK_SIZE + _memoryAreas[i].firstBank);
 
 					//printf("Size of unsigned long long %d, size of unsigned long %d", sizeof(unsigned long long), sizeof(unsigned long));
 
@@ -168,9 +186,9 @@ byte* b8Bbanked_alloc(int size, byte* bank)
 					printf("The result is %p, on bank %d size: %d, segment %d\n", result, *bank, i, j);
 #endif // VERBOSE
 				}
+				}
 			}
 		}
-	}
 
 	if (!result)
 	{
@@ -179,7 +197,7 @@ byte* b8Bbanked_alloc(int size, byte* bank)
 	}
 
 	return result;
-}
+	}
 
 boolean banked_dealloc(byte* ptr, byte bank)
 {
