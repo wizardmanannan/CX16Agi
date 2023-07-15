@@ -110,7 +110,7 @@
 #define LRU_CACHE_LOGIC_VIEW_SIZE 20
 #define PICTURE_START 513
 
-
+#define FLOOD_QUEUE_START 0xA7D0
 
 //Code Banks
 #define LOAD_DIRS_BANK 0x6
@@ -145,6 +145,7 @@
 
 //Zero Page Values 
 #define ZP_PTR_TEMP 0x66
+#define ZP_PTR_B1 0xFA //For Flood Queue
 
 #ifdef _MSC_VER //Used for testing under windows
 extern byte* banked;

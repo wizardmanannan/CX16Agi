@@ -8,6 +8,7 @@ PICTURE_INC = 1
 
 .import _picColour
 .import _picDrawEnabled
+.import _noSound
 
 .import popa
 .import popax
@@ -331,5 +332,64 @@ PSET @coX, @coY
 rts
 @coX: .byte $0
 @coY: .byte $0
+
+.segment "BANKRAMFLOOD"
+FLOOD_QUEUE_START = $A7D0
+FLOOD_QUEUE_END = $BEB1
+rpos: .word FLOOD_QUEUE_START
+spos: .word FLOOD_QUEUE_START
+rposBank: .byte FIRST_FLOOD_BANK
+sposBank: .byte FIRST_FLOOD_BANK
+QUEUEMAX = 40000
+
+.macro FLOOD_Q_STORE
+.local @start
+.local @q
+.local @end
+.local @incBank
+sta @q
+bra @start
+@q: .byte $0
+@start:
+
+lda sposBank
+sta RAM_BANK
+
+stp
+lda @q
+sta (ZP_PTR_B1)
+
+clc
+lda #$1
+adc ZP_PTR_B1
+sta ZP_PTR_B1
+
+lda #$0
+adc ZP_PTR_B1 + 1
+sta ZP_PTR_B1 + 1
+
+LESS_THAN_OR_EQ_16 ZP_PTR_B1, FLOOD_QUEUE_END, @end
+lda #< FLOOD_QUEUE_START
+sta ZP_PTR_B1
+lda #> FLOOD_QUEUE_START
+sta ZP_PTR_B1 + 1
+
+lda #LAST_FLOOD_BANK
+bne @incBank
+lda #FIRST_FLOOD_BANK
+sta RAM_BANK
+sta sposBank
+
+@incBank:
+inc RAM_BANK ; The next flood bank will have identical code, so we can just increment the bank
+inc sposBank
+@end:
+.endmacro
+
+_bFloodQstore:
+FLOOD_Q_STORE
+rts
+
+_bFloodQretrieve:
 
 .endif

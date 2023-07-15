@@ -32,13 +32,7 @@ byte picColour = 0, priColour = 0, patCode, patNum;
 
 
 /* QUEUE DEFINITIONS */
-
-#define QMAX 10 //TODO:Fix
 #define QEMPTY 0xFF
-
-word buf[QMAX + 1];
-word rpos = QMAX, spos = 0;
-
 int* bitmapWidthPreMult = &BANK_RAM[BITMAP_WIDTH_PREMULT_START];
 
 extern void b11PSet(byte x, byte y);
@@ -66,6 +60,9 @@ void setLoadedPicture(PictureFile* loadedPicture, byte loadedPictureNumber)
 }
 
 #pragma code-name (push, "BANKRAMFLOOD")
+
+extern word bFloodQretrieve();
+extern word bFloodQstore(byte q);
 
 /**************************************************************************
 ** pset
@@ -106,31 +103,31 @@ byte bFloodPriGetPixel(word x, word y)
 }
 
 
-boolean bFloodEmpty()
-{
-    return (rpos == spos);
-}
+//boolean bFloodEmpty()
+//{
+//    return (rpos == spos);
+//}
 
-void bFloodQstore(word q)
-{
-    if (spos + 1 == rpos || (spos + 1 == QMAX && !rpos)) {
-        nosound();
-        return;
-    }
-    buf[spos] = q;
-    spos++;
-    if (spos == QMAX) spos = 0;  /* loop back */
-}
-
-word bFloodQretrieve()
-{
-    if (rpos == QMAX) rpos = 0;  /* loop back */
-    if (rpos == spos) {
-        return QEMPTY;
-    }
-    rpos++;
-    return buf[rpos - 1];
-}
+//void bFloodQstore(word q)
+//{
+//    if (spos + 1 == rpos || (spos + 1 == QMAX && !rpos)) {
+//        nosound();
+//        return;
+//    }
+//    buf[spos] = q;
+//    spos++;
+//    if (spos == QMAX) spos = 0;  /* loop back */
+//}
+//
+//word bFloodQretrieve()
+//{
+//    if (rpos == QMAX) rpos = 0;  /* loop back */
+//    if (rpos == spos) {
+//        return QEMPTY;
+//    }
+//    rpos++;
+//    return buf[rpos - 1];
+//}
 
 /**************************************************************************
 ** okToFill
@@ -150,7 +147,6 @@ boolean bFloodOkToFill(byte x, byte y)
 void bFloodAgiFill(word x, word y)
 {
     byte x1, y1;
-    rpos = spos = 0;
 
     bFloodQstore(x);
     bFloodQstore(y);
@@ -206,7 +202,7 @@ void b11FloodFill(byte** data)
     for (;;) {
         if ((x1 = *((*data)++)) >= 0xF0) break;
         if ((y1 = *((*data)++)) >= 0xF0) break;
-        //trampoline_2Int(&bFloodAgiFill,x1, y1, FIRST_FLOOD_BANK);
+        trampoline_2Int(&bFloodAgiFill,x1, y1, FIRST_FLOOD_BANK);
     }
 
     (*data)--;
@@ -660,7 +656,10 @@ void b11DrawPic(byte* bankedData, int pLen, boolean okToClearScreen, byte picNum
     PictureFile loadedPicture;
     byte* data;
     int** zpPtrTemp = (int**)ZP_PTR_TEMP;
+    int** zpB1 = (int**)ZP_PTR_B1;
+
     *zpPtrTemp = &bitmapWidthPreMult[0];
+    *zpB1 = (int*)FLOOD_QUEUE_START;
     
     getLoadedPicture(&loadedPicture, picNum);
 

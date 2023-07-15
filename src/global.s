@@ -42,6 +42,10 @@ LOGIC_ENTRY_ADDRESSES_BANK = $8
 LOGIC_CODE_BANK = $8
 PICTURE_BANK = $11
 
+FIRST_FLOOD_BANK = $37
+NO_FLOOD_BANKS = 6
+LAST_FLOOD_BANK = FIRST_FLOOD_BANK + NO_FLOOD_BANKS - 1
+
 ; Define offsets for different areas within golden RAM
 VARS_AREA_START_GOLDEN_OFFSET = 0
 FLAGS_AREA_START_GOLDEN_OFFSET = 257
@@ -347,6 +351,35 @@ MULT_TABLE_HALF_POINT = $80
        .endif
        .ifnblank failBranch
        jmp failBranch
+       .endif
+       @branch:
+       jmp successBranch
+       @end:
+       
+.endmacro
+
+; Macro for comparing two 16-bit words and branching if less
+.macro LESS_THAN_16 word1, word2, successBranch, failBranch
+       .local @branch
+       .local @lowerBit
+       .local @end
+       lda word1 + 1
+       cmp word2 + 1
+       bcc @branch
+       .ifblank failBranch
+       bne @end
+       .endif
+       .ifnblank failBranch
+       bne failBranch
+       .endif
+       @lowerBit:
+       lda word1
+       cmp word2    
+        .ifblank failBranch
+       bcs @end
+       .endif
+       .ifnblank failBranch
+       bcs failBranch
        .endif
        @branch:
        jmp successBranch
