@@ -61,8 +61,8 @@ void setLoadedPicture(PictureFile* loadedPicture, byte loadedPictureNumber)
 
 #pragma code-name (push, "BANKRAMFLOOD")
 
-extern word bFloodQretrieve();
-extern word bFloodQstore(byte q);
+extern byte bFloodQretrieve();
+extern byte bFloodQstore(byte q);
 
 /**************************************************************************
 ** pset
@@ -148,6 +148,7 @@ void bFloodAgiFill(word x, word y)
 {
     byte x1, y1;
 
+    printf("x and y are %p and %p", x, y);
     bFloodQstore(x);
     bFloodQstore(y);
 
@@ -657,9 +658,11 @@ void b11DrawPic(byte* bankedData, int pLen, boolean okToClearScreen, byte picNum
     byte* data;
     int** zpPtrTemp = (int**)ZP_PTR_TEMP;
     int** zpB1 = (int**)ZP_PTR_B1;
+    int** zpB2 = (int**)ZP_PTR_B2;
 
     *zpPtrTemp = &bitmapWidthPreMult[0];
     *zpB1 = (int*)FLOOD_QUEUE_START;
+    *zpB2 = (int*)FLOOD_QUEUE_START;
     
     getLoadedPicture(&loadedPicture, picNum);
 

@@ -145,7 +145,8 @@
 
 //Zero Page Values 
 #define ZP_PTR_TEMP 0x66
-#define ZP_PTR_B1 0xFA //For Flood Queue
+#define ZP_PTR_B1 0xFA //For Flood Queue Queue
+#define ZP_PTR_B2 0xFC //For Flood Queue Serve
 
 #ifdef _MSC_VER //Used for testing under windows
 extern byte* banked;

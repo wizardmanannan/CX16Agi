@@ -342,11 +342,33 @@ rposBank: .byte FIRST_FLOOD_BANK
 sposBank: .byte FIRST_FLOOD_BANK
 QUEUEMAX = 40000
 
+
+; void FLOOD_Q_STORE(unsigned short* ZP_PTR_B1) {
+;     unsigned char q = 0;
+;     unsigned short floodQueueEnd = 0;
+;     unsigned short RAM_BANK = sposBank;
+
+;     *ZP_PTR_B1 = q;
+;     (*ZP_PTR_B1)++; // Increment the queue pointer
+
+;     if (*ZP_PTR_B1 == FLOOD_QUEUE_END) {
+;         *ZP_PTR_B1 = FLOOD_QUEUE_START; // Reset the queue pointer to the start
+
+;         if (RAM_BANK == LAST_FLOOD_BANK) {
+;             RAM_BANK = FIRST_FLOOD_BANK;
+;             sposBank = FIRST_FLOOD_BANK;
+;         } else {
+;             RAM_BANK++;
+;             sposBank++;
+;         }
+;     }
+; }
 .macro FLOOD_Q_STORE
 .local @start
 .local @q
 .local @end
 .local @incBank
+sta @q
 bra @start
 @q: .byte $0
 @floodQueueEnd: .word $0
@@ -387,6 +409,66 @@ _bFloodQstore:
 FLOOD_Q_STORE
 rts
 
-_bFloodQretrieve:
+QEMPTY = $FF
 
+; void FLOOD_Q_RETRIEVE() {
+;     unsigned short RAM_BANK = rposBank;
+;     unsigned char X; // Using 'X' to represent 6502's X register
+
+;     if (*ZP_PTR_B2 == FLOOD_QUEUE_END + 1) {
+;         *ZP_PTR_B2 = FLOOD_QUEUE_START;
+
+;         rposBank++;
+;         if (rposBank == LAST_FLOOD_BANK + 1) {
+;             rposBank = FIRST_FLOOD_BANK;
+;             return QEMPTY; // Assuming QEMPTY is a status indicating the queue is empty
+;         }
+;     }
+
+;     X = *ZP_PTR_B2;
+;     (*ZP_PTR_B2)++;
+
+;     return X; // Assuming this function returns the value from the queue
+; }
+
+.macro FLOOD_Q_RETRIEVE
+.local @end
+.local @serve
+lda rposBank
+sta RAM_BANK
+NEQ_16_WORD_TO_LITERAL ZP_PTR_B2, (FLOOD_QUEUE_END + 1), @serve
+
+lda #< FLOOD_QUEUE_START
+sta ZP_PTR_B2
+lda #> FLOOD_QUEUE_START
+sta ZP_PTR_B2 + 1
+
+inc rposBank
+cmp LAST_FLOOD_BANK + 1
+bne @serve
+lda FIRST_FLOOD_BANK
+sta rposBank
+lda QEMPTY
+bra @end
+
+@serve:
+lda (ZP_PTR_B2)
+tax
+
+clc
+lda #$1
+adc ZP_PTR_B2
+sta ZP_PTR_B2
+
+lda #$0
+adc ZP_PTR_B2 + 1
+sta ZP_PTR_B2 + 1
+txa
+
+@end:
+.endmacro
+
+_bFloodQretrieve:
+FLOOD_Q_RETRIEVE
+rts
 .endif
