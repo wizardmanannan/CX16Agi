@@ -93,8 +93,8 @@
 #define GRAPHICS_BANK 7
 
 
-#define FIRST_FLOOD_BANK 0x37
-#define NO_FLOOD_BANKS 6
+#define FIRST_FLOOD_BANK 0x3B
+#define NO_FLOOD_BANKS 7
 
 #define FLOODBANKFILENAME "agi.cx16.flood"
 

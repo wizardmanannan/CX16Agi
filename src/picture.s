@@ -10,6 +10,11 @@ PICTURE_INC = 1
 .import _picDrawEnabled
 .import _noSound
 
+.import _rpos
+.import _spos
+.import _rposBank
+.import _sposBank
+
 .import popa
 .import popax
 
@@ -336,12 +341,6 @@ rts
 .segment "BANKRAMFLOOD"
 FLOOD_QUEUE_START = $A7D0
 FLOOD_QUEUE_END = $BEB1
-_rpos: .word FLOOD_QUEUE_START
-_spos: .word FLOOD_QUEUE_START
-_rposBank: .byte FIRST_FLOOD_BANK
-_sposBank: .byte FIRST_FLOOD_BANK
-QUEUEMAX = 40000
-
 
 ; void FLOOD_Q_STORE(unsigned short* ZP_PTR_B1) {
 ;     unsigned char q = 0;
@@ -373,6 +372,9 @@ bra @start
 @q: .byte $0
 @floodQueueEnd: .word $0
 @start:
+lda #8
+lda #8
+lda #8
 lda _sposBank
 sta RAM_BANK
 
@@ -441,8 +443,6 @@ lda _rposBank
 sta RAM_BANK
 NEQ_16_WORD_TO_LITERAL ZP_PTR_B2, (FLOOD_QUEUE_END + 1), @serve
 
-stp
-
 lda #< FLOOD_QUEUE_START
 sta ZP_PTR_B2
 lda #> FLOOD_QUEUE_START
@@ -455,6 +455,7 @@ inc RAM_BANK
 bra @serve
 
 @resetBank:
+stp
 lda FIRST_FLOOD_BANK
 sta _rposBank
 lda QEMPTY
