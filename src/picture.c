@@ -28,7 +28,8 @@ BITMAP* agi_screen;      /* This is a subbitmap of the screen */
 boolean picDrawEnabled = FALSE, priDrawEnabled = FALSE;
 /* Not sure what the default patCode value is */
 byte picColour = 0, priColour = 0, patCode, patNum;
-
+word rpos = FLOOD_QUEUE_START, spos = FLOOD_QUEUE_START;
+byte rposBank = FIRST_FLOOD_BANK, sposBank = FIRST_FLOOD_BANK;
 
 
 /* QUEUE DEFINITIONS */
@@ -151,7 +152,7 @@ void bFloodAgiFill(word x, word y)
 
     int i;
 
-    for (i = 0; i <= 5858; i++)
+    for (i = 0; i <= 50000; i++)
     {
         bFloodQstore(i);
     }
@@ -160,9 +161,6 @@ void bFloodAgiFill(word x, word y)
     {
         bFloodQretrieve();
     }
-
-
-
     bFloodQstore(x);
     bFloodQstore(y);
 
@@ -677,7 +675,11 @@ void b11DrawPic(byte* bankedData, int pLen, boolean okToClearScreen, byte picNum
     *zpPtrTemp = &bitmapWidthPreMult[0];
     *zpB1 = (int*)FLOOD_QUEUE_START;
     *zpB2 = (int*)FLOOD_QUEUE_START;
-    
+    rpos = FLOOD_QUEUE_START;
+    spos = FLOOD_QUEUE_START;
+    rposBank = FIRST_FLOOD_BANK;
+    sposBank = FIRST_FLOOD_BANK;
+
     getLoadedPicture(&loadedPicture, picNum);
 
 #ifdef VERBOSE
