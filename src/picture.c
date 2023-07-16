@@ -154,6 +154,10 @@ void bFloodAgiFill(word x, word y)
 
     for (i = 0; i <= 50000; i++)
     {
+        if (i == 40996)
+        {
+            asm("stp");
+        }
         bFloodQstore(i);
     }
 

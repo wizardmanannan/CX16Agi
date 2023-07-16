@@ -372,6 +372,9 @@ bra @start
 @q: .byte $0
 @floodQueueEnd: .word $0
 @start:
+lda #8
+lda #8
+lda #8
 lda _sposBank
 sta RAM_BANK
 
@@ -452,6 +455,7 @@ inc RAM_BANK
 bra @serve
 
 @resetBank:
+stp
 lda FIRST_FLOOD_BANK
 sta _rposBank
 lda QEMPTY
