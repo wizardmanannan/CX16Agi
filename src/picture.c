@@ -662,7 +662,7 @@ void b11DrawPic(byte* bankedData, int pLen, boolean okToClearScreen, byte picNum
     byte* data;
     int** zpPtrTemp = (int**)ZP_PTR_TEMP;
     *zpPtrTemp = &bitmapWidthPreMult[0];
-    
+   
     getLoadedPicture(&loadedPicture, picNum);
 
 #ifdef VERBOSE
@@ -762,17 +762,18 @@ void b11LoadPictureFile(int picFileNum)
     AGIFilePosType agiFilePosType;
     PictureFile loadedPicture;
 
-    getLoadedPicture(&loadedPictures, picFileNum);
+    getLoadedPicture(&loadedPicture, picFileNum);
 
     getLogicDirectory(&agiFilePosType, &picdir[picFileNum]);
+
 
 #ifdef VERBOSE
     printf("The address of picdir is %p\n", &picdir[picFileNum]);
     printf("The picture number is %d \n", picFileNum);
     printf("Loading Picture file %d, position %d\n", agiFilePosType.fileNum, agiFilePosType.filePos);
 #endif
-
     loadAGIFileTrampoline(PICTURE, &agiFilePosType, &tempAGI);
+
 
     loadedPicture.size = tempAGI.totalSize;
     loadedPicture.data = tempAGI.code;

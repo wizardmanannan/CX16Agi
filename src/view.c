@@ -148,7 +148,8 @@ void getLocalCel(Loop* loadedLoop, Cel* returnedLocalCell, byte localCellNumber)
 
 	RAM_BANK = loadedLoop->celBank;
 
-	*returnedLocalCell = *(loadedLoop->cels + (localCellNumber * sizeof(Loop)));
+	//TODO: This deferenced address ends up in the wrong place. Investigate when we do sprites
+	//*returnedLocalCell = *(loadedLoop->cels + (localCellNumber * sizeof(Loop)));
 
 	RAM_BANK = previousRamBank;
 }
@@ -157,9 +158,11 @@ void setLocalCel(Loop* loadedLoop, Cel* localCell, byte localCellNumber)
 {
 	byte previousRamBank = RAM_BANK;
 
-	RAM_BANK = loadedLoop->celBank;
+	//printf("The cel bank is %d \n", loadedLoop->celBank);
+	//RAM_BANK = loadedLoop->celBank;
 
-	*(loadedLoop->cels + (localCellNumber * sizeof(Loop))) = *localCell;
+	//printf("Attempting to dereference %p. (%p + %d)\n", loadedLoop->cels + (localCellNumber * sizeof(Loop)), loadedLoop->cels, (localCellNumber * sizeof(Loop)));
+	//*(loadedLoop->cels + (localCellNumber * sizeof(Loop))) = *localCell;
 
 	RAM_BANK = previousRamBank;
 }

@@ -13,7 +13,7 @@
 //#define VERBOSE_DISPLAY_OFFSETS
 //#define VERBOSE
 //#define VERBOSE_VIEW_LOAD_DEBUG
-//#define VERBOSE_VIEW_LOAD_DEBUG
+//#define VERBOSE_PICTURE_LOAD_DEBUG
 //define VERBOSE_LOGIC_LOAD_DEBUG
 #include <stdint.h>
 #include <cbm.h>
@@ -528,12 +528,12 @@ void b6LoadAGIFile(int resType, AGIFilePosType* location, AGIFile* AGIData)
 	char fileName[FILE_NAME_SIZE];
 
 #ifdef VERBOSE
-	printf("Attempting to load resource %d from location %d file %d\n", resType, location->filePos, location->fileNum);
+		printf("Attempting to load resource %d from location %d file %d\n", resType, location->filePos, location->fileNum);
 #endif // VERBOSE
 
 	if (location->filePos == EMPTY) {
 #ifdef VERBOSE
-		printf("Could not find requested AGI file, as the filePos is empty.\n");
+			printf("Could not find requested AGI file, as the filePos is empty.\n");
 #endif // VERBOSE
 		exit(0);
 	}
@@ -563,7 +563,7 @@ void b6LoadAGIFile(int resType, AGIFilePosType* location, AGIFile* AGIData)
 	AGIData->codeBank = b6SeekAndReadLogicIntoMemory(AGIData, resType);
 
 #ifdef VERBOSE
-	printf("Loaded resource type %d into bank %d address %p size %d\n", resType, AGIData->codeBank, AGIData->code, AGIData->totalSize);
+		printf("Loaded resource type %d into bank %d address %p size %d\n", resType, AGIData->codeBank, AGIData->code, AGIData->totalSize);
 #endif // VERBOSE
 
 
@@ -697,11 +697,10 @@ void b6LoadAGIFile(int resType, AGIFilePosType* location, AGIFile* AGIData)
 	//   }
 	//}
 #ifdef VERBOSE
-	printf("Now closing the file\n");
+		printf("Now closing the file\n");
 #endif // VERBOSE
 
 	cbm_close(lfn);
-
 #ifdef VERBOSE
 	//printf("File closed");
 #endif // VERBOSE

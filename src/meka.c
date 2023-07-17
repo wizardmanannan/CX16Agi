@@ -78,9 +78,8 @@ void b7AdjustEgoPosition()
 void b7DiscardResources()
 {
    int i;
-
    for (i=0; i<256; i++) trampoline_1Int(&b9DiscardView, i, VIEW_CODE_BANK_1);
-   for (i=0; i<256; i++) trampoline_1Int(&b11DiscardPictureFile, var[loadAndIncWinCode()], PICTURE_CODE_BANK);
+   for (i=0; i<256; i++) trampoline_1Int(&b11DiscardPictureFile, i, PICTURE_CODE_BANK);
    for (i=0; i<256; i++) discardSoundFile(i);
 }
 
@@ -190,7 +189,6 @@ void b7Interpret()
       if (!hasEnteredNewRoom) {
         trampoline_0(&bBUpdateObjects, VIEW_CODE_BANK_3);
       }
-
       if (hasEnteredNewRoom) b7NewRoom();
 
    } while (hasEnteredNewRoom);
