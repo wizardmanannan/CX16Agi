@@ -14,8 +14,8 @@ beq @wait
 .endmacro
 
 
-.segment "BANKRAM07"
-_b7InitIrq:
+.segment "BANKRAM06"
+_b6InitIrq:
  ; backup default RAM IRQ vector
    lda IRQVec
    sta default_irq_vector
@@ -33,7 +33,7 @@ _b7InitIrq:
    cli ; enable IRQ now that vector is properly set
 rts
 
-_b7DisableAndWaitForVsync:
+_b6DisableAndWaitForVsync:
 stz VERA_dc_video
 WAIT_FOR_VSYNC
 rts

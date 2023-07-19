@@ -15,7 +15,6 @@
 #include "stub.h"
 #include "helpers.h"
 #include "general.h"
-#include "graphics.h"
 #include "stub.h"
 #include "agifiles.h"
 #include "memoryManager.h"
@@ -55,8 +54,8 @@ extern BITMAP *picture, *priority, *control, *agi_screen, *working_screen;
 
 extern void b11InitPicture();
 extern void b11InitPictures();
-extern void b7DisableAndWaitForVsync();
-extern void b7ClearBackground();
+extern void b6DisableAndWaitForVsync();
+extern void b6ClearBackground();
 
 void b11LoadPictureFile(int picFileNum);
 void b11ShowPicture();

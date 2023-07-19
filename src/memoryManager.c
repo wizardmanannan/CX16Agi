@@ -45,7 +45,7 @@ void bankedRamInit()
 	{
 		printf("Loading MEKA Resource %d of %d\n", i + 1, NO_CODE_BANKS);
 #ifdef VERBOSE
-		printf("The bank ram size %d is %d\n", i + 1, bankRamSizes[i]);
+		printf("The bank ram size %p is %d\n", i + 1, bankRamSizes[i]);
 #endif // VERBOSE
 
 		if (i < 15)

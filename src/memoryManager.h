@@ -89,8 +89,8 @@
 #define VIEWTAB_BANK 61
 #define LOADED_VIEW_BANK 61
 #define PICTURE_BANK 0x3E
-#define IRQ_BANK 7
-#define GRAPHICS_BANK 7
+#define IRQ_BANK 6
+#define GRAPHICS_BANK 6
 
 
 #define FIRST_CODE_BANK 0x1
@@ -110,7 +110,7 @@
 //Code Banks
 #define LOAD_DIRS_BANK 0x6
 #define FILE_LOADER_HELPERS 0x6
-#define MEKA_BANK 0x7
+#define MEKA_BANK 0x6
 #define LOGIC_CODE_BANK 0x8
 #define VIEW_CODE_BANK_1 0x9
 #define VIEW_CODE_BANK_2 0xA

@@ -143,8 +143,8 @@ _incCodeBy:
     INC_CODE_BY @jumpAmount ; Increment code pointer by jump amount
     rts                     ; Return from subroutine
 
-.SEGMENT "BANKRAM07"
-b7CodeWindowInit:
+.SEGMENT "BANKRAM06"
+b6CodeWindowInit:
 lda codeWindowAddress      ; Load the code window address
 sta ZP_PTR_CODE_WIN        ; Store it in ZP_PTR_CODE_WIN
 

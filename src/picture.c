@@ -133,7 +133,7 @@ void b11InitAGIScreen()
 **************************************************************************/
 void b11ClearPicture()
 {
-    trampoline_0(&b7ClearBackground, IRQ_BANK);
+    trampoline_0(&b6ClearBackground, IRQ_BANK);
     clear_to_color(priority, PRI_DEFAULT);
     clear_to_color(control, PRI_DEFAULT);
 }
@@ -662,7 +662,9 @@ void b11DrawPic(byte* bankedData, int pLen, boolean okToClearScreen, byte picNum
     byte* data;
     int** zpPtrTemp = (int**)ZP_PTR_TEMP;
     *zpPtrTemp = &bitmapWidthPreMult[0];
-   
+    
+    return;
+
     getLoadedPicture(&loadedPicture, picNum);
 
 #ifdef VERBOSE
@@ -685,7 +687,7 @@ void b11DrawPic(byte* bankedData, int pLen, boolean okToClearScreen, byte picNum
 
     //asm("cli");
 
-    //trampoline_0(&b7DisableAndWaitForVsync, IRQ_BANK);
+    //trampoline_0(&b6DisableAndWaitForVsync, IRQ_BANK);
 
     //asm("sei");
 
@@ -735,7 +737,7 @@ void b11DrawPic(byte* bankedData, int pLen, boolean okToClearScreen, byte picNum
 
     //asm("cli");
 
-    //trampoline_0(&b7DisableAndWaitForVsync, IRQ_BANK);
+    //trampoline_0(&b6DisableAndWaitForVsync, IRQ_BANK);
 
     free(data);
 }

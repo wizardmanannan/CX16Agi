@@ -45,11 +45,11 @@ int controlMode=PLAYER_CONTROL;    /* player.control or program.control */
 int dirnOfEgo, newRoomNum, score;
 
 extern int picFNum;    // Debugging. Delete at some stage!!
-extern void b7InitAsm();
+extern void b6InitAsm();
 extern void _executeLogic(int logNum);
 
-#pragma code-name (push, "BANKRAM07")
-void b7AdjustEgoPosition()
+#pragma code-name (push, "BANKRAM06")
+void b6AdjustEgoPosition()
 {
     ViewTable localViewtab;
 
@@ -75,7 +75,7 @@ void b7AdjustEgoPosition()
    // Might need to stop motion of ego 
 }
 
-void b7DiscardResources()
+void b6DiscardResources()
 {
    int i;
    for (i=0; i<256; i++) trampoline_1Int(&b9DiscardView, i, VIEW_CODE_BANK_1);
@@ -92,12 +92,12 @@ void b7DiscardResources()
 ** main module for this reason and also because it is one of the most
 ** important of the AGI commands.
 ***************************************************************************/
-void b7NewRoom()
+void b6NewRoom()
 {
   trampoline_0(&b9ResetViews, VIEW_CODE_BANK_1);
    //stop_update_all();
    //unanimate_all();
-   b7DiscardResources();
+   b6DiscardResources();
    controlMode = PLAYER_CONTROL;
    //unblock();
    horizon = 36;
@@ -107,7 +107,7 @@ void b7NewRoom()
    var[5] = 0;
    var[9] = 0;
    var[16] = 0;
-   b7AdjustEgoPosition();
+   b6AdjustEgoPosition();
    var[2] = 0;
    flag[2] = 0;
    flag[5] = 1;
@@ -126,7 +126,7 @@ void b7NewRoom()
 **
 ** The status line shows the score and sound at the top of the screen.
 ***************************************************************************/
-void b7UpdateStatusLine()
+void b6UpdateStatusLine()
 {
    char scoreStr[256], soundStr[256];
 
@@ -146,7 +146,7 @@ void b7UpdateStatusLine()
 ** The main routine that gets called everytime the timing procedure is
 ** activated.
 ***************************************************************************/
-void b7Interpret()
+void b6Interpret()
 {
    ViewTable localViewtab;
    flag[2] = FALSE;   //The player has issued a command line
@@ -164,7 +164,7 @@ void b7Interpret()
    trampoline_0(&bCCalcObjMotion, VIEW_CODE_BANK_4);
     
    // <<-- Update status line here (score & sound)
-   b7UpdateStatusLine();
+   b6UpdateStatusLine();
 
    do {
       hasEnteredNewRoom = FALSE;
@@ -180,7 +180,7 @@ void b7Interpret()
       localViewtab.direction = var[6];
       setViewTab(&localViewtab, 0);
       // <<-- Update status line here (score & sound)
-      b7UpdateStatusLine();
+      b6UpdateStatusLine();
       var[5] = 0;
       var[4] = 0;
       flag[5] = 0;
@@ -189,12 +189,12 @@ void b7Interpret()
       if (!hasEnteredNewRoom) {
         trampoline_0(&bBUpdateObjects, VIEW_CODE_BANK_3);
       }
-      if (hasEnteredNewRoom) b7NewRoom();
+      if (hasEnteredNewRoom) b6NewRoom();
 
    } while (hasEnteredNewRoom);
 }
 
-void b7Timing_proc()
+void b6Timing_proc()
 {
    counter++;
    hund += 5;
@@ -216,20 +216,21 @@ void b7Timing_proc()
    }
 }
 
-void b7Closedown()
+void b6Closedown()
 {
    discardObjects();
    discardWords();
 }
 
-void b7Initialise()
+void b6Initialise()
 {
     int i;
-    b7InitTimer(&b7Timing_proc);
 
+    b6InitTimer(&b6Timing_proc);
+    
     initLruCachesTrampoline(&b8DiscardLogicFile, &b9DiscardView);
     
-    trampoline_0(&b6InitFiles, LOAD_DIRS_BANK);             /* Load resource directories */
+    b6InitFiles();             /* Load resource directories */
 
     //// <<--  Determine exact version in here
     for (i = 0; i < 255; i++) {  /* Initialize variables and flags */
@@ -256,7 +257,7 @@ void b7Initialise()
     loadObjectFile();
     loadWords();
     initEvents();
-    b7InitAsm();
+    b6InitAsm();
 
     horizon = 36;
 
@@ -283,7 +284,7 @@ void main()
    trampoline_0(b5CheckMemory, DEBUG_BANK);
 
    RAM_BANK = MEKA_BANK;
-   b7Initialise();
+   b6Initialise();
 
    while (TRUE) {
       /* Cycle initiator. Controlled by delay variable (var[10). */
@@ -291,10 +292,10 @@ void main()
 #ifdef VERBOSE
           printf("Interpret Runs");
 #endif // VERBOSE
-          b7Interpret();
+          b6Interpret();
         counter=0;
       }
-      b7CheckTimer(TIMER_WAIT_MS);
+      b6CheckTimer(TIMER_WAIT_MS);
    }
 
    //chdir("\\HACK\\AGI\\D\\AGI\\MEKA");
@@ -339,3 +340,6 @@ void main2()
    //strcpy(string1, "Variable 1: %v1|2 %%");
    //processString(string1, string2);
 }
+#pragma code-name (push, "BANKRAM07")
+void Dummy() {};
+#pragma code-name (pop)
