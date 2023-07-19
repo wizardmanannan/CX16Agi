@@ -31,7 +31,7 @@ VERBOSE_ROOM_CHANGE = 1
 .segment "CODE"
 ; Import required functions
 .import _debugPrint
-.import _b8LoadLogicFile
+.import _b6LoadLogicFile
 ; Import required C variables
 .import _logicEntryAddressesLow
 .import _logicEntryAddressesHigh
@@ -429,7 +429,7 @@ _executeLogic:
          lastRoom: .byte $0
          currentRoom: .byte $0
          .endif
-         start:         
+         start:      
          ldy RAM_BANK
          sty previousRamBank
 
@@ -437,7 +437,7 @@ _executeLogic:
          stx _currentLog + 1
 
          STORE_LOGIC_ENTRY_ADDRESS
-
+    
          .ifdef VERBOSE_SCRIPT_START
             JSRFAR _b5DebugPrintScriptStart, DEBUG_BANK
          .endif
@@ -456,7 +456,6 @@ _executeLogic:
         ;if (!currentLogic.loaded) {		
 		    ;trampoline_1Int(&b8LoadLogicFile, logNum, LOGIC_CODE_BANK);
         ;}
-         
          ldx #LOGIC_BANK
          stx RAM_BANK
 
@@ -468,7 +467,7 @@ _executeLogic:
          
          lda _currentLog
          ldx _currentLog + 1
-         jsr _b8LoadLogicFile
+         jsr _b6LoadLogicFile
          
          ldx #LOGIC_BANK
          stx RAM_BANK

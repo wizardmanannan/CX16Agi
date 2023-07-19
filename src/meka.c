@@ -228,7 +228,7 @@ void b6Initialise()
 
     b6InitTimer(&b6Timing_proc);
     
-    initLruCachesTrampoline(&b8DiscardLogicFile, &b9DiscardView);
+    initLruCachesTrampoline(&b6DiscardLogicFile, &b9DiscardView);
     
     b6InitFiles();             /* Load resource directories */
 
@@ -247,7 +247,12 @@ void b6Initialise()
     ///* SQ2 patch. I don't know where these are set in the game. */
     ///* var[86] = 1; var[87] = 2; var[88] = 3; */
    
-    trampoline_0(&b8InitLogics, LOGIC_CODE_BANK);
+    b6InitLogics();
+
+#ifdef VERBOSE
+    printf("Logics Inited\n");
+#endif
+
     trampoline_0(&b11InitPicture, PICTURE_CODE_BANK);
     initSound();
     
@@ -290,7 +295,7 @@ void main()
       /* Cycle initiator. Controlled by delay variable (var[10). */
       if (counter >= var[10]) {
 #ifdef VERBOSE
-          printf("Interpret Runs");
+          printf("Interpret Runs\n");
 #endif // VERBOSE
           b6Interpret();
         counter=0;

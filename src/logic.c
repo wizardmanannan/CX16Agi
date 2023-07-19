@@ -85,7 +85,10 @@ void getLogicEntry(LOGICEntry* logicEntry, byte logicFileNo)
 ** this function.
 ***************************************************************************/
 #pragma code-name (push, "BANKRAM08")
-void b8InitLogics()
+void b8Dummy() {}
+#pragma code-name (pop)
+#pragma code-name (push, "BANKRAM06")
+void b6InitLogics()
 {
 	int i;
 	LOGICEntry logicEntry;
@@ -99,7 +102,7 @@ void b8InitLogics()
 		setLogicEntry(&logicEntry, i);
 		logicEntryAddressesLow[i] = &logics[i];
 	}
-	b8LoadLogicFile(0);
+	b6LoadLogicFile(0);
 }
 
 
@@ -109,7 +112,7 @@ void b8InitLogics()
 ** Purpose: To load a LOGIC file, decode the messages, and store in a
 ** suitable structure.
 **************************************************************************/
-void b8LoadLogicFile(byte logFileNum)
+void b6LoadLogicFile(byte logFileNum)
 {
 	AGIFile tempAGI;
 	AGIFilePosType agiFilePosType;
@@ -167,7 +170,7 @@ void b8LoadLogicFile(byte logFileNum)
 ** struct. This function can only be used with dynamically allocated
 ** LOGICFile structs which is what I plan to use.
 **************************************************************************/
-void b8DiscardLogicFile(byte logFileNum)
+void b6DiscardLogicFile(byte logFileNum)
 {
 	int messNum;
 	LOGICFile logicData;
@@ -198,11 +201,3 @@ void b8DiscardLogicFile(byte logFileNum)
 }
 
 #pragma code-name (pop)
-
-void testLogic()
-{
-	b6InitFiles();
-	b8InitLogics();
-	b8LoadLogicFile(0);
-	b8DiscardLogicFile(0);
-}

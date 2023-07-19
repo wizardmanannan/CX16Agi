@@ -111,7 +111,7 @@
 #define LOAD_DIRS_BANK 0x6
 #define FILE_LOADER_HELPERS 0x6
 #define MEKA_BANK 0x6
-#define LOGIC_CODE_BANK 0x8
+#define LOGIC_CODE_BANK 0x6
 #define VIEW_CODE_BANK_1 0x9
 #define VIEW_CODE_BANK_2 0xA
 #define VIEW_CODE_BANK_3 0xB

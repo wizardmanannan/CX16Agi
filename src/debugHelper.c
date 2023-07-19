@@ -12,7 +12,7 @@ extern int pixelCounter;
 long opCounter = 1;
 long stopAt = 0;
 long exitAt = -1;
-long startPrintingAt = 0;
+long startPrintingAt = -1;
 boolean stopEvery = FALSE;
 int _clockBefore = 0;
 
