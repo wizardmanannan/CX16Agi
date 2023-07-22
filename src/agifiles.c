@@ -56,6 +56,8 @@ void printMessages(AGIFile* AGIData)
 	byte previousRamBank = RAM_BANK;
 	RAM_BANK = AGIData->messageBank;
 
+	printf("Attempting to display messages at %p on bank %p\n", &AGIData->messageData[i], RAM_BANK);
+
 	for (i = 0; i < getMessageSectionSize; i++)
 	{
 		printf("%c", AGIData->messageData[i]);

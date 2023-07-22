@@ -154,16 +154,16 @@ byte* b8Bbanked_alloc(int size, byte* bank)
 
 #ifdef VERBOSE
 
-					printf("Bank Calc ((%d * %d) / %d + %d)\n", j, _memoryAreas[i].segmentSize, BANK_SIZE, _memoryAreas[i].firstBank);
+					printf("Bank Calc ((%d * %d) / %d + %d)\n", j, _memoryAreas[i].segmentSize, MEMORY_MANAGER_BANK_SIZE, _memoryAreas[i].firstBank);
 #endif
-					*bank = (byte)(((unsigned long)j * _memoryAreas[i].segmentSize) / BANK_SIZE + _memoryAreas[i].firstBank);
+					*bank = (byte)(((unsigned long)j * _memoryAreas[i].segmentSize) / MEMORY_MANAGER_BANK_SIZE + _memoryAreas[i].firstBank);
 
 					//printf("Size of unsigned long long %d, size of unsigned long %d", sizeof(unsigned long long), sizeof(unsigned long));
 
 #ifdef VERBOSE
-					printf("Result calc: (%d * %d) mod %d + %p;\n", _memoryAreas[i].segmentSize, j, BANK_SIZE, &BANK_RAM[0]);
+					printf("Result calc: (%d * %d) mod %d + %p;\n", _memoryAreas[i].segmentSize, j, MEMORY_MANAGER_BANK_SIZE, &BANK_RAM[0]);
 #endif
-					result = ((unsigned long)_memoryAreas[i].segmentSize * j) % BANK_SIZE + &BANK_RAM[0];
+					result = ((unsigned long)_memoryAreas[i].segmentSize * j) % MEMORY_MANAGER_BANK_SIZE + &BANK_RAM[0];
 #ifdef VERBOSE
 					printf("The result is %p, on bank %d size: %d, segment %d\n", result, *bank, i, j);
 #endif // VERBOSE
