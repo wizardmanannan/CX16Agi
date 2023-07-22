@@ -38,10 +38,10 @@
 #define MULT_HALF_POINT 128
 
 typedef struct {
-   int loaded;
-   unsigned int size;
-   byte *data;
-   byte bank;
+   int loaded; //0
+   unsigned int size; //2
+   byte *data; //4
+   byte bank; //6
 } PictureFile;
 
 extern PictureFile* loadedPictures;

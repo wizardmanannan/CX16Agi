@@ -25,7 +25,7 @@
 //#include "parser.h"
 //#include "sound.h"
 
-boolean stillRunning = TRUE, hasEnteredNewRoom=FALSE, exitAllLogics=FALSE;
+boolean stillRunning = TRUE, hasEnteredNewRoom = FALSE, exitAllLogics = FALSE;
 byte* var = (byte*)&GOLDEN_RAM[VARS_AREA_START];
 boolean* flag = &GOLDEN_RAM[FLAGS_AREA_START];
 char string[12][40];
@@ -41,12 +41,11 @@ const unsigned int TIMER_WAIT_MS = 0;
 volatile int counter;              /* Used for timer control */
 volatile int hund;                 /* Used for interpreters clock */
 
-int controlMode=PLAYER_CONTROL;    /* player.control or program.control */
+int controlMode = PLAYER_CONTROL;    /* player.control or program.control */
 int dirnOfEgo, newRoomNum, score;
 
 extern int picFNum;    // Debugging. Delete at some stage!!
 extern void b6InitAsm();
-extern void _executeLogic(int logNum);
 
 #pragma code-name (push, "BANKRAM06")
 void b6AdjustEgoPosition()
@@ -55,32 +54,32 @@ void b6AdjustEgoPosition()
 
     getViewTab(&localViewtab, 0);
 
-   switch (var[2]) {
-      case 1:
-          localViewtab.yPos = 167;
-         break;
-      case 2:
-          localViewtab.xPos = 0;
-         break;
-      case 3:
-          localViewtab.yPos = 37;  //Note: This is default horizon + 1 
-         break;
-      case 4:
-          localViewtab.xPos = 160 - (localViewtab.xsize);
-         break;
-   }
+    switch (var[2]) {
+    case 1:
+        localViewtab.yPos = 167;
+        break;
+    case 2:
+        localViewtab.xPos = 0;
+        break;
+    case 3:
+        localViewtab.yPos = 37;  //Note: This is default horizon + 1 
+        break;
+    case 4:
+        localViewtab.xPos = 160 - (localViewtab.xsize);
+        break;
+    }
 
-   setViewTab(&localViewtab, 0);
+    setViewTab(&localViewtab, 0);
 
-   // Might need to stop motion of ego 
+    // Might need to stop motion of ego 
 }
 
 void b6DiscardResources()
 {
-   int i;
-   for (i=0; i<256; i++) trampoline_1Int(&b9DiscardView, i, VIEW_CODE_BANK_1);
-   for (i=0; i<256; i++) trampoline_1Int(&b11DiscardPictureFile, i, PICTURE_CODE_BANK);
-   for (i=0; i<256; i++) discardSoundFile(i);
+    int i;
+    for (i = 0; i < 256; i++) trampoline_1Int(&b9DiscardView, i, VIEW_CODE_BANK_1);
+    for (i = 0; i < 256; i++) trampoline_1Int(&b11DiscardPictureFile, i, PICTURE_CODE_BANK);
+    for (i = 0; i < 256; i++) discardSoundFile(i);
 }
 
 /***************************************************************************
@@ -94,30 +93,30 @@ void b6DiscardResources()
 ***************************************************************************/
 void b6NewRoom()
 {
-  trampoline_0(&b9ResetViews, VIEW_CODE_BANK_1);
-   //stop_update_all();
-   //unanimate_all();
-   b6DiscardResources();
-   controlMode = PLAYER_CONTROL;
-   //unblock();
-   horizon = 36;
-   var[1] = var[0];
-   var[0] = newRoomNum;
-   var[4] = 0;
-   var[5] = 0;
-   var[9] = 0;
-   var[16] = 0;
-   b6AdjustEgoPosition();
-   var[2] = 0;
-   flag[2] = 0;
-   flag[5] = 1;
-   score = var[3];
+    trampoline_0(&b9ResetViews, VIEW_CODE_BANK_1);
+    //stop_update_all();
+    //unanimate_all();
+    b6DiscardResources();
+    controlMode = PLAYER_CONTROL;
+    //unblock();
+    horizon = 36;
+    var[1] = var[0];
+    var[0] = newRoomNum;
+    var[4] = 0;
+    var[5] = 0;
+    var[9] = 0;
+    var[16] = 0;
+    b6AdjustEgoPosition();
+    var[2] = 0;
+    flag[2] = 0;
+    flag[5] = 1;
+    score = var[3];
 
-   memset(directions, 0, 9);
-   /* rectfill(screen, 0, 20+(22*16), 639, 463, 0); */   /* Clear screen */
-   clear(screen);
+    memset(directions, 0, 9);
+    /* rectfill(screen, 0, 20+(22*16), 639, 463, 0); */   /* Clear screen */
+    clear(screen);
 #ifdef VERBOSE
-   printf("New room code called");
+    printf("New room code called");
 #endif // VERBOSE
 }
 
@@ -128,16 +127,17 @@ void b6NewRoom()
 ***************************************************************************/
 void b6UpdateStatusLine()
 {
-   char scoreStr[256], soundStr[256];
+    char scoreStr[256], soundStr[256];
 
-   if (statusLineDisplayed) {
-      sprintf(scoreStr, "Score: %d of %d", var[3], var[7]);
-      sprintf(soundStr,  "Sound:%-3s", (flag[9]? "on" : "off"));
-      drawBigString(screen, scoreStr, 16, 0, 8, 1);
-      drawBigString(screen, soundStr, 496, 0, 8, 1);
-   } else {
-      rectfill(screen, 0, 0, 639, 15, 0);   /* Clear status line */
-   }
+    if (statusLineDisplayed) {
+        sprintf(scoreStr, "Score: %d of %d", var[3], var[7]);
+        sprintf(soundStr, "Sound:%-3s", (flag[9] ? "on" : "off"));
+        drawBigString(screen, scoreStr, 16, 0, 8, 1);
+        drawBigString(screen, soundStr, 496, 0, 8, 1);
+    }
+    else {
+        rectfill(screen, 0, 0, 639, 15, 0);   /* Clear status line */
+    }
 }
 
 /***************************************************************************
@@ -148,78 +148,81 @@ void b6UpdateStatusLine()
 ***************************************************************************/
 void b6Interpret()
 {
-   ViewTable localViewtab;
-   flag[2] = FALSE;   //The player has issued a command line
-   flag[4] = FALSE;   //The 'said' command has accepted the input
-   pollKeyboard();
-   //if (controlMode == PROGRAM_CONTROL)
-   //   dirnOfEgo = var[6];
-   //else
-   //   var[6] = dirnOfEgo;
+    ViewTable localViewtab;
+    LOGICFile logicFile;
+    LOGICEntry logicEntry;
+    flag[2] = FALSE;   //The player has issued a command line
+    flag[4] = FALSE;   //The 'said' command has accepted the input
+    pollKeyboard();
+    //if (controlMode == PROGRAM_CONTROL)
+    //   dirnOfEgo = var[6];
+    //else
+    //   var[6] = dirnOfEgo;
+    getLogicFile(&logicFile, 0);
+    getLogicEntry(&logicEntry, 0);
+    getViewTab(&localViewtab, 0);
+    localViewtab.direction = var[6];
+    setViewTab(&localViewtab, 0);
 
-   getViewTab(&localViewtab, 0);
-   localViewtab.direction = var[6];
-   setViewTab(&localViewtab, 0);
+    trampoline_0(&bCCalcObjMotion, VIEW_CODE_BANK_4);
 
-   trampoline_0(&bCCalcObjMotion, VIEW_CODE_BANK_4);
-    
-   // <<-- Update status line here (score & sound)
-   b6UpdateStatusLine();
+    // <<-- Update status line here (score & sound)
+    b6UpdateStatusLine();
 
-   do {
-      hasEnteredNewRoom = FALSE;
-      exitAllLogics = FALSE;
+    do {
+        hasEnteredNewRoom = FALSE;
+        exitAllLogics = FALSE;
 
-      executeLogic(0);
+        executeLogic(&logicEntry, &logicFile, 0);
 
 #ifdef VERBOSE
-      printf("Back To Meka");
+        printf("Back To Meka");
 #endif // VERBOSE
-      //dirnOfEgo = var[6];
-      getViewTab(&localViewtab, 0);
-      localViewtab.direction = var[6];
-      setViewTab(&localViewtab, 0);
-      // <<-- Update status line here (score & sound)
-      b6UpdateStatusLine();
-      var[5] = 0;
-      var[4] = 0;
-      flag[5] = 0;
-      flag[6] = FALSE;
-      flag[12] = FALSE;
-      if (!hasEnteredNewRoom) {
-        trampoline_0(&bBUpdateObjects, VIEW_CODE_BANK_3);
-      }
-      if (hasEnteredNewRoom) b6NewRoom();
+        //dirnOfEgo = var[6];
+        getViewTab(&localViewtab, 0);
+        localViewtab.direction = var[6];
+        setViewTab(&localViewtab, 0);
+        // <<-- Update status line here (score & sound)
+        b6UpdateStatusLine();
+        var[5] = 0;
+        var[4] = 0;
+        flag[5] = 0;
+        flag[6] = FALSE;
+        flag[12] = FALSE;
+        if (!hasEnteredNewRoom) {
+            trampoline_0(&bBUpdateObjects, VIEW_CODE_BANK_3);
+        }
+        if (hasEnteredNewRoom) b6NewRoom();
 
-   } while (hasEnteredNewRoom);
+    } while (hasEnteredNewRoom);
 }
 
 void b6Timing_proc()
 {
-   counter++;
-   hund += 5;
-   if (hund >= 100) { //One second has passed
-      var[11]++;
-      if (var[11] >= 60) {  //One minute has passed
-         var[12]++;
-         if (var[12] >= 60) { //One hour has passed
-            var[13]++;
-            if (var[13] >= 24) { //One day has passed 
-               var[14]++;
-               var[13] = 0;
+    counter++;
+    hund += 5;
+    if (hund >= 100) { //One second has passed
+        var[11]++;
+        if (var[11] >= 60) {  //One minute has passed
+            var[12]++;
+            if (var[12] >= 60) { //One hour has passed
+                var[13]++;
+                if (var[13] >= 24) { //One day has passed 
+                    var[14]++;
+                    var[13] = 0;
+                }
+                var[12] = 0;
             }
-            var[12] = 0;
-         }
-         var[11] = 0;
-      }
-      hund = 0;
-   }
+            var[11] = 0;
+        }
+        hund = 0;
+    }
 }
 
 void b6Closedown()
 {
-   discardObjects();
-   discardWords();
+    discardObjects();
+    discardWords();
 }
 
 void b6Initialise()
@@ -227,9 +230,9 @@ void b6Initialise()
     int i;
 
     b6InitTimer(&b6Timing_proc);
-    
+
     initLruCachesTrampoline(&b6DiscardLogicFile, &b9DiscardView);
-    
+
     b6InitFiles();             /* Load resource directories */
 
     //// <<--  Determine exact version in here
@@ -246,7 +249,7 @@ void b6Initialise()
 
     ///* SQ2 patch. I don't know where these are set in the game. */
     ///* var[86] = 1; var[87] = 2; var[88] = 3; */
-   
+
     b6InitLogics();
 
 #ifdef VERBOSE
@@ -255,7 +258,7 @@ void b6Initialise()
 
     trampoline_0(&b11InitPicture, PICTURE_CODE_BANK);
     initSound();
-    
+
     trampoline_0(&b9InitViews, VIEW_CODE_BANK_1);
     trampoline_0(&b9InitObjects, VIEW_CODE_BANK_1);
 
@@ -275,75 +278,75 @@ void b6Initialise()
 
 void main()
 {
-   int ret, oldCount=0;
+    int ret, oldCount = 0;
 
-   //chdir("..\\KQ1-2917");
-   //chdir("..\\COMPILER\\NEW\\SAMPLE\\TEMPLATE");
-   //chdir("\\GAMES\\SIERRA\\MH2");
-   //chdir("\\GAMES\\SIERRA\\MH1");
-   //chdir("\\GAMES\\SIERRA\\SQ2");
-   //chdir("\\GAMES\\SIERRA\\LSL1");
-   //chdir("..\\KQ2-2917");
+    //chdir("..\\KQ1-2917");
+    //chdir("..\\COMPILER\\NEW\\SAMPLE\\TEMPLATE");
+    //chdir("\\GAMES\\SIERRA\\MH2");
+    //chdir("\\GAMES\\SIERRA\\MH1");
+    //chdir("\\GAMES\\SIERRA\\SQ2");
+    //chdir("\\GAMES\\SIERRA\\LSL1");
+    //chdir("..\\KQ2-2917");
 
-   memoryMangerInit();
-   trampoline_0(b5CheckMemory, DEBUG_BANK);
+    memoryMangerInit();
+    trampoline_0(b5CheckMemory, DEBUG_BANK);
 
-   RAM_BANK = MEKA_BANK;
-   b6Initialise();
+    RAM_BANK = MEKA_BANK;
+    b6Initialise();
 
-   while (TRUE) {
-      /* Cycle initiator. Controlled by delay variable (var[10). */
-      if (counter >= var[10]) {
+    while (TRUE) {
+        /* Cycle initiator. Controlled by delay variable (var[10). */
+        if (counter >= var[10]) {
 #ifdef VERBOSE
-          printf("Interpret Runs\n");
+            printf("Interpret Runs\n");
 #endif // VERBOSE
-          b6Interpret();
-        counter=0;
-      }
-      b6CheckTimer(TIMER_WAIT_MS);
-   }
+            b6Interpret();
+            counter = 0;
+        }
+        b6CheckTimer(TIMER_WAIT_MS);
+    }
 
-   //chdir("\\HACK\\AGI\\D\\AGI\\MEKA");
-   //closedown();
+    //chdir("\\HACK\\AGI\\D\\AGI\\MEKA");
+    //closedown();
 }
 
 void main2()
 {
-   //AGIFile AGIData;
-   //BITMAP *temp = create_bitmap(640, 32);
-   //char string1[80], string2[80];
+    //AGIFile AGIData;
+    //BITMAP *temp = create_bitmap(640, 32);
+    //char string1[80], string2[80];
 
-   //allegro_init();
-   //install_keyboard();
-   //initFiles();
-   ////loadAGIFile(PICTURE, picdir[129], &AGIData);
-   //loadPictureFile(3);
-   //initPicture();
-   ////drawPic(AGIData.data, AGIData.size, TRUE);
-   //initAGIScreen();
-   //initPalette();
-   //install_timer();
-   //initSound();
-   //picFNum = 3;
-   //drawPic(loadedPictures[3].data, loadedPictures[3].size, TRUE);
-   //loadViewFile(0);
-   //addToPic(0, 0, 0, 55, 50, 7, 0);
-   //discardView(0);
-   //showPic();
+    //allegro_init();
+    //install_keyboard();
+    //initFiles();
+    ////loadAGIFile(PICTURE, picdir[129], &AGIData);
+    //loadPictureFile(3);
+    //initPicture();
+    ////drawPic(AGIData.data, AGIData.size, TRUE);
+    //initAGIScreen();
+    //initPalette();
+    //install_timer();
+    //initSound();
+    //picFNum = 3;
+    //drawPic(loadedPictures[3].data, loadedPictures[3].size, TRUE);
+    //loadViewFile(0);
+    //addToPic(0, 0, 0, 55, 50, 7, 0);
+    //discardView(0);
+    //showPic();
 
-   ////drawBigChar(temp, 'A', 0, 0, 7, 15);
-   ////drawBigString(temp, "This is a test", 0, 0, 7, 15);
-   ////blit(temp, agi_screen, 0, 0, 0, 0, 16*14, 16);
-   ////getch();
-   //remove_keyboard();
-   //printInBoxBig("The quick brown fox jumps over the lazy dog.", -1, -1, 30);
-   //loadSoundFile(1);
-   //playSound(1);
-   //getch();
-   //closePicture();
-   //allegro_exit();
-   //strcpy(string1, "Variable 1: %v1|2 %%");
-   //processString(string1, string2);
+    ////drawBigChar(temp, 'A', 0, 0, 7, 15);
+    ////drawBigString(temp, "This is a test", 0, 0, 7, 15);
+    ////blit(temp, agi_screen, 0, 0, 0, 0, 16*14, 16);
+    ////getch();
+    //remove_keyboard();
+    //printInBoxBig("The quick brown fox jumps over the lazy dog.", -1, -1, 30);
+    //loadSoundFile(1);
+    //playSound(1);
+    //getch();
+    //closePicture();
+    //allegro_exit();
+    //strcpy(string1, "Variable 1: %v1|2 %%");
+    //processString(string1, string2);
 }
 #pragma code-name (push, "BANKRAM07")
 void Dummy() {};

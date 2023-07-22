@@ -163,6 +163,9 @@ LOGICCOMMANDS_INC = 1
 .import _exitAllLogics
 .import _hasEnteredNewRoom
 .import _newRoomNum
+.import _getLogicFile
+.import _getLogicEntry
+.import pushax
 
 ; Debugging related imports (only included if DEBUG is defined)
 .ifdef DEBUG
@@ -555,6 +558,8 @@ callLogic: ; A subroutine for making calls, not an instruction
 bra @start
 @logNum: .byte $0
 @previousBank: .byte $0
+@logicFile: .res 7, $0
+@logicEntry: .res 8, $0
 @start:
 sta @logNum
 
@@ -565,6 +570,38 @@ STORE_ON_STACK_RECURSIVE_CALL
 
 lda #MEKA_BANK
 sta RAM_BANK
+
+;lda #<logicFile
+;sta ZP_TMP
+;lda #>logicFile
+;sta ZP_TMP + 1
+;lda #ZP_TMP
+;ldx #$0
+lda #<@logicFile
+ldx #>@logicFile
+jsr pushax
+lda @logNum
+ldx #$0
+jsr _getLogicFile
+
+
+lda #<@logicEntry
+ldx #>@logicEntry
+jsr pushax
+lda @logNum
+lda @logNum
+ldx #$0
+jsr _getLogicEntry
+
+lda @logNum
+ldx #$0
+
+lda #<@logicEntry
+ldx #>@logicEntry
+jsr pushax
+lda #<@logicFile
+ldx #>@logicFile
+jsr pushax
 lda @logNum
 ldx #$0
 jsr _executeLogic

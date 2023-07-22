@@ -28,12 +28,20 @@ void getLogicFile(LOGICFile* logicFile, byte logicFileNo)
 	byte previousBank = RAM_BANK;
 	LOGICEntry logicEntry;
 
+#ifdef VERBOSE
+	printf("attempting to write to %p for logicfileno %d \n", logicFile, logicFileNo);
+#endif // VERBOSE
 	RAM_BANK = LOGIC_BANK;
 
 	logicEntry = logics[logicFileNo];
 
 	RAM_BANK = LOGIC_BANK;
 	*logicFile = *logicEntry.data;
+
+#ifdef VERBOSE
+	printf("logic entry address is %p \n", logicEntry.data);
+	printf("the code bank is %p\n", logicFile->codeBank);
+#endif // VERBOSE
 
 	RAM_BANK = previousBank;
 }
@@ -98,9 +106,11 @@ void b6InitLogics()
 		logicEntry.loaded = FALSE;
 		logicEntry.entryPoint = 0;
 		logicEntry.currentPoint = 0;
-		logicEntry.data = &((LOGICFile*)&BANK_RAM[LOGIC_FILE_SIZE])[i];
+		logicEntry.data = &((LOGICFile*)&BANK_RAM[LOGIC_FILE_START])[i];
 		setLogicEntry(&logicEntry, i);
-		logicEntryAddressesLow[i] = &logics[i];
+#ifdef VERBOSE
+		printf("%d: currentPoint: %p, data: %p, dataBank: %d, loaded %d  &logics[i] %p\n",i, logicEntry.currentPoint, logicEntry.data, logicEntry.dataBank, logicEntry.loaded, &logics[i]);
+#endif // VERBOSE
 	}
 	b6LoadLogicFile(0);
 }
@@ -151,6 +161,10 @@ void b6LoadLogicFile(byte logFileNum)
 		, logicData.logicCode == tempAGI.code && logicData.logicCode
 		, logicData.messages == (byte**)tempAGI.messagePointers && logicData.messages
 	);
+
+#ifdef VERBOSE
+	printf("currentPoint: %p, data: %p, dataBank: %d, loaded %d \n", logicEntry.currentPoint, logicEntry.data, logicEntry.dataBank, logicEntry.loaded);
+#endif
 
 #endif // VERBOSE
 
