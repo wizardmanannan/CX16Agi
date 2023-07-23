@@ -94,7 +94,7 @@ void initSegments(byte segOrder, byte noBanks, int segmentSize, byte noSegments,
 		//printf("The address is %p \n", _segments[segOrder].start);
 	}
 	else {
-		_memoryAreas[segOrder].start = &BANK_RAM[0];
+		_memoryAreas[segOrder].start = &BANK_RAM[ALLOCATION_ARRAY_START];
 	}
 
 	_memoryAreas[segOrder].firstBank = firstBank;
@@ -147,6 +147,10 @@ byte* b8Bbanked_alloc(int size, byte* bank)
 			for (j = 0; j < _memoryAreas[i].noSegments && !result; j++)
 			{
 				allocationByte = _memoryAreas[i].start + j;
+
+#ifdef VERBOSE
+				printf("The allocation byte %d (%p + %d) is %d\n", i, _memoryAreas[i].start, j, *allocationByte);
+#endif
 
 				if (!*(allocationByte))
 				{
