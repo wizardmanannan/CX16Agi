@@ -558,7 +558,7 @@ callLogic: ; A subroutine for making calls, not an instruction
 bra @start
 @logNum: .byte $0
 @previousBank: .byte $0
-@logicFile: .res 7, $0
+@logicFile: .res 9, $0
 @logicEntry: .res 8, $0
 @start:
 sta @logNum
@@ -593,6 +593,7 @@ lda @logNum
 ldx #$0
 jsr _getLogicEntry
 
+jsr _stopAtFunc
 lda @logNum
 ldx #$0
 
