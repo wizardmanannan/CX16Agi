@@ -15,7 +15,6 @@
 #include "stub.h"
 #include "helpers.h"
 #include "general.h"
-#include "graphics.h"
 #include "stub.h"
 #include "agifiles.h"
 #include "memoryManager.h"
@@ -39,10 +38,10 @@
 #define MULT_HALF_POINT 128
 
 typedef struct {
-   int loaded;
-   unsigned int size;
-   byte *data;
-   byte bank;
+   int loaded; //0
+   unsigned int size; //2
+   byte *data; //4
+   byte bank; //6
 } PictureFile;
 
 extern PictureFile* loadedPictures;
@@ -55,8 +54,8 @@ extern BITMAP *picture, *priority, *control, *agi_screen, *working_screen;
 
 extern void b11InitPicture();
 extern void b11InitPictures();
-extern void b7DisableAndWaitForVsync();
-extern void b7ClearBackground();
+extern void b6DisableAndWaitForVsync();
+extern void b6ClearBackground();
 
 void b11LoadPictureFile(int picFileNum);
 void b11ShowPicture();

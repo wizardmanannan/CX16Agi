@@ -2,6 +2,6 @@
 #define _TIMER_H_
 #include <time.h>
 typedef void (*timer_proc)();
-void b7InitTimer(timer_proc timerProc);
-void b7CheckTimer(int intervalMs);
+void b6InitTimer(timer_proc timerProc);
+void b6CheckTimer(int intervalMs);
 #endif /* _TIMER_H_ */
