@@ -28,12 +28,20 @@ void getLogicFile(LOGICFile* logicFile, byte logicFileNo)
 	byte previousBank = RAM_BANK;
 	LOGICEntry logicEntry;
 
+#ifdef VERBOSE
+	printf("attempting to write to %p for logicfileno %d \n", logicFile, logicFileNo);
+#endif // VERBOSE
 	RAM_BANK = LOGIC_BANK;
 
 	logicEntry = logics[logicFileNo];
 
 	RAM_BANK = LOGIC_BANK;
 	*logicFile = *logicEntry.data;
+
+#ifdef VERBOSE
+	printf("logic entry address is %p \n", logicEntry.data);
+	printf("the code bank is %p\n", logicFile->codeBank);
+#endif // VERBOSE
 
 	RAM_BANK = previousBank;
 }
@@ -85,7 +93,10 @@ void getLogicEntry(LOGICEntry* logicEntry, byte logicFileNo)
 ** this function.
 ***************************************************************************/
 #pragma code-name (push, "BANKRAM08")
-void b8InitLogics()
+void b8Dummy() {}
+#pragma code-name (pop)
+#pragma code-name (push, "BANKRAM06")
+void b6InitLogics()
 {
 	int i;
 	LOGICEntry logicEntry;
@@ -95,11 +106,13 @@ void b8InitLogics()
 		logicEntry.loaded = FALSE;
 		logicEntry.entryPoint = 0;
 		logicEntry.currentPoint = 0;
-		logicEntry.data = &((LOGICFile*)&BANK_RAM[LOGIC_FILE_SIZE])[i];
+		logicEntry.data = &((LOGICFile*)&BANK_RAM[LOGIC_FILE_START])[i];
 		setLogicEntry(&logicEntry, i);
-		logicEntryAddressesLow[i] = &logics[i];
+#ifdef VERBOSE
+		printf("%d: currentPoint: %p, data: %p, dataBank: %d, loaded %d  &logics[i] %p\n",i, logicEntry.currentPoint, logicEntry.data, logicEntry.dataBank, logicEntry.loaded, &logics[i]);
+#endif // VERBOSE
 	}
-	b8LoadLogicFile(0);
+	b6LoadLogicFile(0);
 }
 
 
@@ -109,7 +122,7 @@ void b8InitLogics()
 ** Purpose: To load a LOGIC file, decode the messages, and store in a
 ** suitable structure.
 **************************************************************************/
-void b8LoadLogicFile(byte logFileNum)
+void b6LoadLogicFile(byte logFileNum)
 {
 	AGIFile tempAGI;
 	AGIFilePosType agiFilePosType;
@@ -149,6 +162,10 @@ void b8LoadLogicFile(byte logFileNum)
 		, logicData.messages == (byte**)tempAGI.messagePointers && logicData.messages
 	);
 
+#ifdef VERBOSE
+	printf("currentPoint: %p, data: %p, dataBank: %d, loaded %d \n", logicEntry.currentPoint, logicEntry.data, logicEntry.dataBank, logicEntry.loaded);
+#endif
+
 #endif // VERBOSE
 
 	setLogicFile(&logicData, logFileNum);
@@ -167,7 +184,7 @@ void b8LoadLogicFile(byte logFileNum)
 ** struct. This function can only be used with dynamically allocated
 ** LOGICFile structs which is what I plan to use.
 **************************************************************************/
-void b8DiscardLogicFile(byte logFileNum)
+void b6DiscardLogicFile(byte logFileNum)
 {
 	int messNum;
 	LOGICFile logicData;
@@ -198,11 +215,3 @@ void b8DiscardLogicFile(byte logFileNum)
 }
 
 #pragma code-name (pop)
-
-void testLogic()
-{
-	b6InitFiles();
-	b8InitLogics();
-	b8LoadLogicFile(0);
-	b8DiscardLogicFile(0);
-}

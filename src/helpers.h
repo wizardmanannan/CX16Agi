@@ -3,7 +3,9 @@
 #include "general.h"
 #include "memoryManager.h"
 #include <stdarg.h>
+#ifdef  __CX16__
 #include <cx16.h>
+#endif
 #include <string.h>
 
 #define ASCIIDASH 95

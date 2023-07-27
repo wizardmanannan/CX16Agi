@@ -1,4 +1,4 @@
-.segment "BANKRAM07"
+.segment "BANKRAM06"
 .ifndef GRAPHICS_INC
 
 .include "global.s"
@@ -18,7 +18,7 @@ STARTING_BYTE = STARTING_ROW * BYTES_PER_ROW
 
 DEFAULT_BACKGROUND_COLOR = $F
 
-_b7ClearBackground:
+_b6ClearBackground:
 lda #$10 | ^STARTING_BYTE
 sta VERA_addr_bank
 lda #> (STARTING_ROW * (BITMAP_WIDTH / 2) ) ;There are 320 bytes per row, but since each pixel is 4 bits we divide by 2
@@ -46,7 +46,7 @@ sta @mapHeight
 rts
 @mapHeight: .byte $0
 
-_b7InitBackground:
+_b6InitBackground:
 lda #$10
 sta VERA_addr_bank
 stz VERA_addr_high
@@ -71,8 +71,8 @@ sta @mapHeight
 rts
 @mapHeight: .byte $0
 
-b7InitGraphics:
-jsr _b7DisableAndWaitForVsync
+b6InitGraphics:
+jsr _b6DisableAndWaitForVsync
 
 sei
 lda #DISPLAY_SCALE
@@ -169,7 +169,7 @@ sta VERA_data0
 lda #$6   ; Bitmap mode 16 colors
 sta VERA_L0_config
 
-jsr _b7InitBackground
+jsr _b6InitBackground
 
 cli
 rts

@@ -69,7 +69,7 @@ void debugPrint(byte toPrint)
 
 
 
-		printf("op %lu, %d, var 0 is %d. Time taken %d\n", opCounter, toPrint, var[0], time);
+		printf("op %lu, %d, var 0 is %d. Time taken %d. The RAM Bank is %p\n", opCounter, toPrint, var[0], time, *((byte*)(0x1d4b)));
 		_clockBefore = clockVal;
 #ifdef CHECK_MEM
 		b5CheckMemory();

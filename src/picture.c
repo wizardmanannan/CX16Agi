@@ -268,7 +268,7 @@ void b11InitAGIScreen()
 **************************************************************************/
 void b11ClearPicture()
 {
-    trampoline_0(&b7ClearBackground, IRQ_BANK);
+    trampoline_0(&b6ClearBackground, IRQ_BANK);
     clear_to_color(priority, PRI_DEFAULT);
     clear_to_color(control, PRI_DEFAULT);
 }
@@ -706,7 +706,7 @@ void b11DrawPic(byte* bankedData, int pLen, boolean okToClearScreen, byte picNum
 
     //asm("cli");
 
-    //trampoline_0(&b7DisableAndWaitForVsync, IRQ_BANK);
+    //trampoline_0(&b6DisableAndWaitForVsync, IRQ_BANK);
 
     //asm("sei");
 
@@ -756,7 +756,7 @@ void b11DrawPic(byte* bankedData, int pLen, boolean okToClearScreen, byte picNum
 
     //asm("cli");
 
-    //trampoline_0(&b7DisableAndWaitForVsync, IRQ_BANK);
+    //trampoline_0(&b6DisableAndWaitForVsync, IRQ_BANK);
 
 
 
@@ -785,17 +785,18 @@ void b11LoadPictureFile(int picFileNum)
     AGIFilePosType agiFilePosType;
     PictureFile loadedPicture;
 
-    getLoadedPicture(&loadedPictures, picFileNum);
+    getLoadedPicture(&loadedPicture, picFileNum);
 
     getLogicDirectory(&agiFilePosType, &picdir[picFileNum]);
+
 
 #ifdef VERBOSE
     printf("The address of picdir is %p\n", &picdir[picFileNum]);
     printf("The picture number is %d \n", picFileNum);
     printf("Loading Picture file %d, position %d\n", agiFilePosType.fileNum, agiFilePosType.filePos);
 #endif
-
     loadAGIFileTrampoline(PICTURE, &agiFilePosType, &tempAGI);
+
 
     loadedPicture.size = tempAGI.totalSize;
     loadedPicture.data = tempAGI.code;
