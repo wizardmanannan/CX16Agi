@@ -94,7 +94,7 @@
 #define GRAPHICS_BANK 6
 
 
-#define FIRST_FLOOD_BANK 0x3B
+#define FIRST_FLOOD_BANK 0x29
 #define NO_FLOOD_BANKS 7
 
 #define FLOODBANKFILENAME "agi.cx16.flood"
