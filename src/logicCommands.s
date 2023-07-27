@@ -599,9 +599,7 @@ ldx #$0
 lda #<@logicEntry
 ldx #>@logicEntry
 jsr pushax
-lda #<@logicFile
-ldx #>@logicFile
-jsr pushax
+
 lda @logNum
 ldx #$0
 jsr _executeLogic

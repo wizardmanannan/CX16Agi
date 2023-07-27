@@ -173,7 +173,7 @@ void b6Interpret()
         hasEnteredNewRoom = FALSE;
         exitAllLogics = FALSE;
 
-        executeLogic(&logicEntry, &logicFile, 0);
+        executeLogic(&logicEntry, 0);
 
 #ifdef VERBOSE
         printf("Back To Meka");

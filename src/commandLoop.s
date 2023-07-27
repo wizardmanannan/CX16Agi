@@ -418,10 +418,6 @@ _executeLogic:
 
          sta _currentLog
          stx _currentLog + 1
-
-         jsr popax
-         sta ZP_PTR_LF
-         stx ZP_PTR_LF + 1
          
          jsr popax 
          sta ZP_PTR_LE

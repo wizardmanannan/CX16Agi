@@ -64,7 +64,7 @@ MENU* the_menuChildren = (MENU*)&BANK_RAM[MENU_CHILD_START];
 int printCounter = 1;
 byte lastRoom = 0;
 
-void executeLogic(LOGICEntry* logicEntry, LOGICFile* logicFile, int logNum);
+void executeLogic(LOGICEntry* logicEntry, int logNum);
 
 //TEMP Should Be In Events
 typedef struct {

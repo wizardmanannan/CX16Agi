@@ -7,7 +7,7 @@
 #include "debugHelper.h"
 #include "picture.h"
 
-void executeLogic(LOGICEntry* logicEntry, LOGICFile* logicFile, int logNum);
+void executeLogic(LOGICEntry* logicEntry, int logNum);
 void b1Call(unsigned char** data);
 
 extern boolean _b1Greatern();
