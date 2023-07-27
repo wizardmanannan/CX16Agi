@@ -32,7 +32,7 @@
 
 #define TINY_NO_BANKS  1
 #define EXTRA_SMALL_NO_BANKS 1
-#define SMALL_NO_BANKS 7
+#define SMALL_NO_BANKS 6
 #define MEDIUM_NO_BANKS 9
 #define LARGE_NO_BANKS 6
 

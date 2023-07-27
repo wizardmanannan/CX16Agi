@@ -6,7 +6,9 @@ int _noSegments;
 
 #ifdef _MSC_VER //Used for testing under windows
 byte* banked;
+byte ramBank;
 #define BANK_RAM banked
+#define RAM_BANK ramBank
 #endif 
 
 
@@ -185,6 +187,7 @@ byte* b8Bbanked_alloc(int size, byte* bank)
 	return result;
 }
 
+extern long opCounter;
 boolean banked_dealloc(byte* ptr, byte bank)
 {
 	int i;
@@ -201,9 +204,24 @@ boolean banked_dealloc(byte* ptr, byte bank)
 		}
 	}
 
+	if (bank == 0 || ptr == 0)
+	{
+#ifdef  __CX16__
+		printf("Zero deallocation detected ptr %p bank %p on %lu", ptr, bank,  opCounter);
+#endif
+		return FALSE;
+	}
+
 	memoryArea = _memoryAreas[size];
 
-	allocationAddress = memoryArea.start + ((ptr - &BANK_RAM[0]) / memoryArea.segmentSize);
+	allocationAddress = memoryArea.start + ((ptr - &BANK_RAM[0]) / memoryArea.segmentSize) + ((bank - memoryArea.firstBank) * (memoryArea.noSegments / memoryArea.noBanks));
+
+#ifdef VERBOSE
+    printf("allocationAddressCalc: %p + ((%p - %p) / %d) + ((%p - %p) * (%d / %d) ) = %p\n", memoryArea.start, ptr, &BANK_RAM[0], memoryArea.segmentSize, bank, memoryArea.firstBank, memoryArea.noSegments, memoryArea.noBanks, allocationAddress);
+	
+	printf("allocationAddressCalc: %p + ((%p - %p) / %d) + ((%p - %p) * %d)\n", memoryArea.start, ptr, &BANK_RAM[0], memoryArea.segmentSize, bank, memoryArea.firstBank, memoryArea.noSegments);
+	printf("the allocation address is %p and the pointer is %p and the bank is %p\n", allocationAddress, ptr, bank);
+#endif
 
 	if (*(allocationAddress))
 	{

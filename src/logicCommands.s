@@ -593,7 +593,6 @@ lda @logNum
 ldx #$0
 jsr _getLogicEntry
 
-jsr _stopAtFunc
 lda @logNum
 ldx #$0
 

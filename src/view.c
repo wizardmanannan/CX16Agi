@@ -495,7 +495,7 @@ void b9DiscardView(byte viewNum)
 
 				setLocalCel(&localLoop, &localCel, c);
 			}
-			banked_deallocTrampoline((byte*)localLoop.cels, localLoop.celBank);
+			//banked_deallocTrampoline((byte*)localLoop.cels, localLoop.celBank); //TODO:FIX
 			localLoop.celBank = 0;
 			localLoop.cels = NULL;
 			localLoop.numberOfCels = 0;
