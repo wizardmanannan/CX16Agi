@@ -97,7 +97,7 @@ void printMessagesFromOffsets(AGIFile* AGIData)
 #endif
 
 #pragma code-name (push, "BANKRAM06")
-byte cbm_openForSeeking(char* fileName)
+byte b6Cbm_openForSeeking(char* fileName)
 {
 	const char* OPEN_FLAGS = ",S,R";
 	byte lfn = SEQUENTIAL_LFN;
@@ -118,7 +118,7 @@ byte cbm_openForSeeking(char* fileName)
 	return lfn;
 }
 
-int8_t cx16_fseek(uint8_t channel, uint32_t offset) {
+int8_t b6Cx16_fseek(uint8_t channel, uint32_t offset) {
 	int8_t result = 0, status = 0, chkin = 0;
 #define SETNAM 0xFFBD
 	static struct cmd {
@@ -431,7 +431,7 @@ boolean b6SeekAndCheckSignature(char* fileName, AGIFilePosType* location)
 	printf("----Attempting to open %s for seeking data\n", fileName);
 #endif // VERBOSE_DISPLAY_MESSAGES
 
-	cx16_fseek(FILE_OPEN_ADDRESS, location->filePos);
+	b6Cx16_fseek(FILE_OPEN_ADDRESS, location->filePos);
 
 	cbm_read(SEQUENTIAL_LFN, &currentByte, 1);
 	signatureValidationPassed = currentByte == 0x12;
@@ -496,7 +496,7 @@ byte b6SeekAndReadLogicIntoMemory(AGIFile* AGIData, int resType)
 
 
 //https://www.liquisearch.com/what_is_avis_durgan
-void xOrAvisDurgan(byte* toXOR, unsigned int* avisPos)
+void b6XOrAvisDurgan(byte* toXOR, unsigned int* avisPos)
 {
 	*toXOR ^= avisDurgan[*avisPos];
 	*avisPos = (*avisPos + 1) % 11;
@@ -558,7 +558,7 @@ void b6LoadAGIFile(int resType, AGIFilePosType* location, AGIFile* AGIData)
 		}
 #endif // VERBOSE
 
-	lfn = cbm_openForSeeking(&fileName[0]);
+	lfn = b6Cbm_openForSeeking(&fileName[0]);
 
 	b6SeekAndCheckSignature(&fileName[0], location);
 
@@ -599,7 +599,7 @@ void b6LoadAGIFile(int resType, AGIFilePosType* location, AGIFile* AGIData)
 			memCpyBanked(&GOLDEN_RAM_WORK_AREA[0], &AGIData->messageData[i], AGIData->messageBank, bufferSize);
 			for (j = 0; j < bufferSize; j++)
 			{
-				xOrAvisDurgan(&GOLDEN_RAM_WORK_AREA[j], &avisPos);
+				b6XOrAvisDurgan(&GOLDEN_RAM_WORK_AREA[j], &avisPos);
 
 				GOLDEN_RAM_WORK_AREA[j] = trampoline_1ByteRByte(&convertAsciiByteToPetsciiByte, GOLDEN_RAM_WORK_AREA[j], HELPERS_BANK);
 

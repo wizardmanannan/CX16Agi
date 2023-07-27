@@ -88,7 +88,7 @@ void bankedRamInit()
 #endif //  __CX16__
 #pragma code-name (push, "BANKRAM10")
 
-void initSegments(byte segOrder, byte noBanks, int segmentSize, byte noSegments, byte firstBank)
+void b10InitSegments(byte segOrder, byte noBanks, int segmentSize, byte noSegments, byte firstBank)
 {
 	if (segOrder > 0)
 	{
@@ -121,11 +121,11 @@ void b10InitDynamicMemory()
 
 	_memoryAreas = (MemoryArea*) &BANK_RAM[MEMORY_AREA_START];
 
-	initSegments(TINY_SEG_ORDER, TINY_NO_BANKS, TINY_SIZE, TINY_NO_SEGMENTS, TINY_FIRST_BANK);
-	initSegments(EXTRA_SMALL_SEG_ORDER, EXTRA_SMALL_NO_BANKS, EXTRA_SMALL_SIZE, EXTRA_SMALL_NO_SEGMENTS, EXTRA_SMALL_FIRST_BANK);
-	initSegments(SMALL_SEG_ORDER, SMALL_NO_BANKS, SMALL_SIZE, SMALL_NO_SEGMENTS, SMALL_FIRST_BANK);
-	initSegments(MEDIUM_SEG_ORDER, MEDIUM_NO_BANKS, MEDIUM_SIZE, MEDIUM_NO_SEGMENTS, MEDIUM_FIRST_BANK);
-	initSegments(LARGE_SEG_ORDER, LARGE_NO_BANKS, LARGE_SIZE, LARGE_NO_SEGMENTS, LARGE_FIRST_BANK);
+	b10InitSegments(TINY_SEG_ORDER, TINY_NO_BANKS, TINY_SIZE, TINY_NO_SEGMENTS, TINY_FIRST_BANK);
+	b10InitSegments(EXTRA_SMALL_SEG_ORDER, EXTRA_SMALL_NO_BANKS, EXTRA_SMALL_SIZE, EXTRA_SMALL_NO_SEGMENTS, EXTRA_SMALL_FIRST_BANK);
+	b10InitSegments(SMALL_SEG_ORDER, SMALL_NO_BANKS, SMALL_SIZE, SMALL_NO_SEGMENTS, SMALL_FIRST_BANK);
+	b10InitSegments(MEDIUM_SEG_ORDER, MEDIUM_NO_BANKS, MEDIUM_SIZE, MEDIUM_NO_SEGMENTS, MEDIUM_FIRST_BANK);
+	b10InitSegments(LARGE_SEG_ORDER, LARGE_NO_BANKS, LARGE_SIZE, LARGE_NO_SEGMENTS, LARGE_FIRST_BANK);
 
 	memset(_memoryAreas[0].start, 0, _noSegments);
 }
@@ -135,7 +135,7 @@ void b10InitDynamicMemory()
 //	return _memoryAreas[memoryArea].start - &[ALLOCATION_ARRAY_START_INDEX]
 //}
 
-byte* b8Bbanked_alloc(int size, byte* bank)
+byte* b10Banked_Alloc(int size, byte* bank)
 {
 
 	byte i, j;
@@ -188,7 +188,7 @@ byte* b8Bbanked_alloc(int size, byte* bank)
 }
 
 extern long opCounter;
-boolean banked_dealloc(byte* ptr, byte bank)
+boolean b10Banked_Dealloc(byte* ptr, byte bank)
 {
 	int i;
 	byte size = 0;
@@ -206,8 +206,8 @@ boolean banked_dealloc(byte* ptr, byte bank)
 
 	if (bank == 0 || ptr == 0)
 	{
-#ifdef  __CX16__
-		printf("Zero deallocation detected ptr %p bank %p on %lu", ptr, bank,  opCounter);
+#ifdef  VERBOSE
+		printf("Zero deallocation detected ptr %p bank %p on %lu \n", ptr, bank,  opCounter);
 #endif
 		return FALSE;
 	}
@@ -246,7 +246,7 @@ byte* banked_allocTrampoline(int size, byte* bank)
 
 	RAM_BANK = MEMORY_MANAGEMENT_BANK;
 
-	result = b8Bbanked_alloc(size, bank);
+	result = b10Banked_Alloc(size, bank);
 
 	RAM_BANK = previousRamBank;
 
@@ -260,7 +260,7 @@ boolean banked_deallocTrampoline(byte* ptr, byte bank)
 
 	RAM_BANK = MEMORY_MANAGEMENT_BANK;
 
-	result = banked_dealloc(ptr, bank);
+	result = b10Banked_Dealloc(ptr, bank);
 
 	RAM_BANK = previousRamBank;
 
