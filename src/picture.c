@@ -13,7 +13,7 @@
 #define PRI_DEFAULT 4
 //#define VERBOSE
 //#define VERBOSE_REL_DRAW
-#define TEST_QUEUE
+//#define TEST_QUEUE
 
 boolean okToShowPic = FALSE;
 PictureFile* loadedPictures = (PictureFile*)&BANK_RAM[PICTURE_START];
@@ -143,13 +143,9 @@ boolean bFloodOkToFill(byte x, byte y)
     return (bFloodPicGetPixel(x, y) == PIC_DEFAULT);
 }
 
-/**************************************************************************
-** agiFill
-**************************************************************************/
-void bFloodAgiFill(word x, word y)
+#ifdef TEST_QUEUE
+void testQueue()
 {
-    byte x1, y1;
-
     int testAmount = 41004;
     byte testVal;
     unsigned int i;
@@ -167,13 +163,28 @@ void bFloodAgiFill(word x, word y)
         if ((byte)i != testVal)
         {
             asm("stp");
-            asm("lda #4");
+            asm("lda #4"); //This is a deliberately pointless instruction. It is there so we can see where we have stopped in the debugger
         }
     }
 
     asm("stp");
     asm("lda #$19");
+}
+#endif // TEST_QUEUE
 
+
+/**************************************************************************
+** agiFill
+**************************************************************************/
+void bFloodAgiFill(word x, word y)
+{
+    byte x1, y1;
+
+#ifdef TEST_QUEUE
+    testQueue();
+#endif // TEST_QUEUE
+
+    
     bFloodQstore(x);
     bFloodQstore(y);
 
