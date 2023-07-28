@@ -1,7 +1,7 @@
 #include "memoryManager.h"
 MemoryArea* _memoryAreas;
 int _noSegments;
-#define VERBOSE
+//#define VERBOSE
 
 #ifdef _MSC_VER //Used for testing under windows
 byte* banked;

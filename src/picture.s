@@ -399,9 +399,11 @@ sta ZP_PTR_B1 + 1
 lda #LAST_FLOOD_BANK
 cmp RAM_BANK
 bne @incBank
+
 lda #FIRST_FLOOD_BANK
 sta RAM_BANK
 sta _sposBank
+bra @end
 
 @incBank:
 inc RAM_BANK ; The next flood bank will have identical code, so we can just increment the bank

@@ -314,7 +314,7 @@ void b9LoadViewFile(byte viewNum)
 	Loop localLoop;
 	Cel localCel;
 	int i;
-	byte cellPositionBytes[NO_CODE_BANKS];
+	byte cellPositionBytes[NO_CODE_BANKS]; //TODO: Investigate seems like an odd choice for size
 	int loopHeaderOffset;
 	int cellHeaderOffset;
 	const char* description;

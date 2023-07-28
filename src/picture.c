@@ -150,16 +150,17 @@ void bFloodAgiFill(word x, word y)
     byte x1, y1;
 
 
-    int i;
+    unsigned int i;
+    printf("The address of i is %p\n", &i);
 
-    for (i = 0; i <= 50000; i++)
+    for (i = 0; i <= 41006; i++)
     {
-        if (i == 40996)
-        {
-            asm("stp");
-        }
         bFloodQstore(i);
     }
+
+    printf("The last value of i is %p\n", (byte)i);
+
+    asm("stp");
 
     for (i = 0; i <= 5858; i++)
     {

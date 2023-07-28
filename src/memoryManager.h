@@ -99,8 +99,6 @@
 
 #define FLOODBANKFILENAME "agi.cx16.flood"
 
-#define FIRST_CODE_BANK 0x1
-#define LAST_CODE_BANK 0x5
 #define NO_CODE_BANKS 17
 
 #define LRU_CACHE_LOGIC_STRUCT_START 8183
