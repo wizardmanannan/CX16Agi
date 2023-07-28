@@ -13,6 +13,7 @@
 #define PRI_DEFAULT 4
 //#define VERBOSE
 //#define VERBOSE_REL_DRAW
+#define TEST_QUEUE
 
 boolean okToShowPic = FALSE;
 PictureFile* loadedPictures = (PictureFile*)&BANK_RAM[PICTURE_START];
@@ -149,23 +150,30 @@ void bFloodAgiFill(word x, word y)
 {
     byte x1, y1;
 
-
+    int testAmount = 41004;
+    byte testVal;
     unsigned int i;
-    printf("The address of i is %p\n", &i);
+    printf("The address of i %p and the address of testVal is %p\n", &i, &testVal);
 
-    for (i = 0; i <= 41006; i++)
+    for (i = 0; i <= testAmount; i++)
     {
         bFloodQstore(i);
     }
 
-    printf("The last value of i is %p\n", (byte)i);
+
+    for (i = 0; i <= testAmount; i++)
+    {
+        testVal = bFloodQretrieve();
+        if ((byte)i != testVal)
+        {
+            asm("stp");
+            asm("lda #4");
+        }
+    }
 
     asm("stp");
+    asm("lda #$19");
 
-    for (i = 0; i <= 5858; i++)
-    {
-        bFloodQretrieve();
-    }
     bFloodQstore(x);
     bFloodQstore(y);
 

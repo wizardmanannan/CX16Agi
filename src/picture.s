@@ -372,9 +372,6 @@ bra @start
 @q: .byte $0
 @floodQueueEnd: .word $0
 @start:
-lda #8
-lda #8
-lda #8
 lda _sposBank
 sta RAM_BANK
 
@@ -441,31 +438,26 @@ QEMPTY = $FF
 .local @end
 .local @serve
 .local @resetBank
+.local @returnResult
+.local @serve
 lda _rposBank
 sta RAM_BANK
-NEQ_16_WORD_TO_LITERAL ZP_PTR_B2, (FLOOD_QUEUE_END + 1), @serve
 
-lda #< FLOOD_QUEUE_START
-sta ZP_PTR_B2
-lda #> FLOOD_QUEUE_START
-sta ZP_PTR_B2 + 1
+lda _sposBank
+cmp _rposBank
+bne @serve
 
-inc _rposBank
-cmp LAST_FLOOD_BANK + 1
-beq @resetBank
-inc RAM_BANK
-bra @serve
+lda ZP_PTR_B1
+cmp ZP_PTR_B2
+bne @serve
 
-@resetBank:
-stp
-lda FIRST_FLOOD_BANK
-sta _rposBank
-lda QEMPTY
-bra @end
+lda ZP_PTR_B1 + 1
+cmp ZP_PTR_B2 + 1
+beq @returnEmpty
 
 @serve:
 lda (ZP_PTR_B2)
-tax
+tay
 
 clc
 lda #$1
@@ -475,9 +467,35 @@ sta ZP_PTR_B2
 lda #$0
 adc ZP_PTR_B2 + 1
 sta ZP_PTR_B2 + 1
-txa
 
+NEQ_16_WORD_TO_LITERAL ZP_PTR_B2, (FLOOD_QUEUE_END + 1), @returnResult
+
+lda #< FLOOD_QUEUE_START
+sta ZP_PTR_B2
+lda #> FLOOD_QUEUE_START
+sta ZP_PTR_B2 + 1
+
+lda _rposBank
+cmp #LAST_FLOOD_BANK
+beq @resetBank
+
+inc RAM_BANK
+inc _rposBank
+bra @returnResult
+
+@resetBank:
+lda #FIRST_FLOOD_BANK
+sta _rposBank
+bra @returnResult
+
+@returnEmpty:
+lda #QEMPTY
+bra @end
+
+@returnResult:
+tya
 @end:
+ldx #$0
 .endmacro
 
 _bFloodQretrieve:
