@@ -85,9 +85,7 @@ _drawWhere: .word $0
 _toDraw: .byte $0
 .macro PSET coX, coY
 .local @endPSet
-.local @lowerNumbers
 .local @start
-.local @originalZPTMP
 .local @checkYBounds
 
 lda coX
@@ -103,23 +101,40 @@ bcc @start         ; then @end
 lda #$2
 jmp @endPSet
 
-@originalZPTMP: .word $0
-
 @start:
 lda _picDrawEnabled
 bne @drawPictureScreen         ; If picDrawEnabled == 0, skip to the end
 jmp @endPSet
 
 @drawPictureScreen:
-lda ZP_TMP 
-sta @originalZPTMP  ; Save ZP_TMP
-lda ZP_TMP+1
-sta @originalZPTMP+1
-
 lda _picColour
 asl a           ; Shift left 4 times to multiply by 16
 ora _picColour
 sta _toDraw     ; toDraw = picColour << 4 | picColour
+
+SET_VERA_ADDRESS coX, coY
+
+lda _toDraw
+sta VERA_data0
+
+DEBUG_PIXEL_DRAW coX, coY
+
+@endPSet:
+    ; Continue with the rest of the code
+
+.endmacro
+
+.macro SET_VERA_ADDRESS coX, coY
+.local @start
+.local @originalZPTMP
+bra @start
+@originalZPTMP: .word $0
+
+@start:
+lda ZP_TMP 
+sta @originalZPTMP  ; Save ZP_TMP
+lda ZP_TMP+1
+sta @originalZPTMP+1
 
 lda coX
 clc
@@ -166,14 +181,6 @@ sta VERA_addr_high
 
 lda _drawWhere
 sta VERA_addr_low
-
-lda _toDraw
-sta VERA_data0
-
-DEBUG_PIXEL_DRAW coX, coY
-
-@endPSet:
-    ; Continue with the rest of the code
 
 .endmacro
 

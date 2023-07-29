@@ -263,10 +263,14 @@ void b11FloodFill(byte** data)
 void b11InitPicture()
 {
     int i;
+    int* tempbitmapWidthPreMult = (int*)GOLDEN_RAM_WORK_AREA;
+
     for (i = 0; i < PICTURE_HEIGHT; i++)
     {
-        bitmapWidthPreMult[i] = i * BYTES_PER_ROW;
+        tempbitmapWidthPreMult[i] = i * BYTES_PER_ROW;
     }
+
+    memcpy(&bitmapWidthPreMult[0], & tempbitmapWidthPreMult[0], PICTURE_HEIGHT * 2);
 }
 
 /**************************************************************************
