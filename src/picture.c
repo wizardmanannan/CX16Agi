@@ -14,7 +14,7 @@
 //#define VERBOSE
 //#define VERBOSE_REL_DRAW
 //#define TEST_QUEUE
-#define VERBOSE_FLOOD
+//#define VERBOSE_FLOOD
 
 boolean okToShowPic = FALSE;
 PictureFile* loadedPictures = (PictureFile*)&BANK_RAM[PICTURE_START];
@@ -139,10 +139,22 @@ byte bFloodPriGetPixel(word x, word y)
 **************************************************************************/
 boolean bFloodOkToFill(byte x, byte y)
 {
+    boolean getPicResult;
+
+#ifdef VERBOSE_FLOOD
+   printf("State: pic: %d, pri %d, color: %d\n", picDrawEnabled, priDrawEnabled, picColour);
+#endif
+
     if (!picDrawEnabled && !priDrawEnabled) return FALSE;
     if (picColour == PIC_DEFAULT) return FALSE;
-    if (!priDrawEnabled) 
-        return (bFloodPicGetPixel(x, y) == PIC_DEFAULT);
+    if (!priDrawEnabled)
+    {
+        getPicResult = bFloodPicGetPixel(x, y);
+#ifdef VERBOSE_FLOOD
+       printf("result %d,%d %d \n", x,y, getPicResult);
+#endif
+        return (getPicResult == PIC_DEFAULT);
+    }
     if (priDrawEnabled && !picDrawEnabled) return (bFloodPriGetPixel(x, y) == PRI_DEFAULT);
     return (bFloodPicGetPixel(x, y) == PIC_DEFAULT);
 }
@@ -187,12 +199,14 @@ void bFloodAgiFill(word x, word y)
     testQueue();
 #endif // TEST_QUEUE
 
-    
+    printf("before loop\n");
     bFloodQstore(x);
     bFloodQstore(y);
 
     for (;;) {
-
+#ifdef VERBOSE_FLOOD
+        printf("at start loop\n");
+#endif
         x1 = bFloodQretrieve();
         y1 = bFloodQretrieve();
 
@@ -211,18 +225,30 @@ void bFloodAgiFill(word x, word y)
                 PSETFLOOD(x1, y1);
 
                 if (bFloodOkToFill(x1, y1 - 1) && (y1 != 0)) {
+#ifdef VERBOSE_FLOOD
+                    printf("1\n");
+#endif
                     bFloodQstore(x1);
                     bFloodQstore(y1 - 1);
                 }
                 if (bFloodOkToFill(x1 - 1, y1) && (x1 != 0)) {
+#ifdef VERBOSE_FLOOD
+                    printf("2\n");
+#endif
                     bFloodQstore(x1 - 1);
                     bFloodQstore(y1);
                 }
                 if (bFloodOkToFill(x1 + 1, y1) && (x1 != 159)) {
+#ifdef VERBOSE_FLOOD
+                    printf("3\n");
+#endif
                     bFloodQstore(x1 + 1);
                     bFloodQstore(y1);
                 }
                 if (bFloodOkToFill(x1, y1 + 1) && (y1 != 167)) {
+#ifdef VERBOSE_FLOOD
+                    printf("4\n");
+#endif
                     bFloodQstore(x1);
                     bFloodQstore(y1 + 1);
                 }
@@ -244,6 +270,11 @@ void bFloodAgiFill(word x, word y)
 void b11FloodFill(byte** data)
 {
     byte x1, y1;
+    byte picColorOld = picColour;
+    picColour = 0xE;
+   
+    //b11PSet(90, 43);
+    picColour = picColorOld;
 
     for (;;) {
         if ((x1 = *((*data)++)) >= 0xF0) break;

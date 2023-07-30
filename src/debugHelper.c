@@ -368,12 +368,12 @@ void b5LineDrawDebug()
 unsigned long queueAction = 0;
 void b5DebugFloodQueueRetrieve()
 {
-	printf(" : Retrieved\n");
+	printf("%lu : retrieved %d\n", queueAction++, logDebugVal1);
 }
 
 void b5DebugFloodQueueStore()
 {
-	printf("%lu : Stored %d\n", queueAction++, logDebugVal1);
+	printf("%lu : stored %d\n", queueAction++, logDebugVal1);
 }
 
 #pragma code-name (pop);

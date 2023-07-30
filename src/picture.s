@@ -21,7 +21,7 @@ PICTURE_INC = 1
 .segment "CODE"
 
 ;DEBUG_PICTURE = 1
-DEBUG_FLOOD = 1
+;DEBUG_FLOOD = 1
 
 .ifdef DEBUG_PICTURE
 .import _b5DebugPixelDraw
@@ -91,9 +91,9 @@ JSRFAR _b5LineDrawDebug, DEBUG_BANK
 
 .macro DEBUG_FLOOD_QUEUE_RETRIEVE
 .ifdef DEBUG_FLOOD
-sty _logDebugVal1
+sta _logDebugVal1
 JSRFAR _b5DebugFloodQueueRetrieve, DEBUG_BANK
-ldy _logDebugVal1
+lda _logDebugVal1
 .endif
 .endmacro
 
@@ -134,6 +134,9 @@ jmp @endPSet
 @drawPictureScreen:
 lda _picColour
 asl a           ; Shift left 4 times to multiply by 16
+asl a  
+asl a  
+asl a  
 ora _picColour
 sta _toDraw     ; toDraw = picColour << 4 | picColour
 
