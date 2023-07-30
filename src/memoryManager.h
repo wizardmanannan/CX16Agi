@@ -96,6 +96,7 @@
 
 #define FIRST_FLOOD_BANK 0x29
 #define NO_FLOOD_BANKS 7
+#define LAST_FLOOD_BANK (FIRST_FLOOD_BANK + NO_FLOOD_BANKS - 1)
 
 #define FLOODBANKFILENAME "agi.cx16.flood"
 

@@ -21,7 +21,7 @@ PICTURE_INC = 1
 .segment "CODE"
 
 ;DEBUG_PICTURE = 1
-
+DEBUG_FLOOD = 1
 
 .ifdef DEBUG_PICTURE
 .import _b5DebugPixelDraw
@@ -29,9 +29,17 @@ PICTURE_INC = 1
 .import _b5CheckPixelDrawn
 .endif
 
+.ifdef DEBUG_FLOOD
+.import _b5DebugFloodQueueRetrieve
+.import _b5DebugFloodQueueStore
+.endif
+
 .ifdef DEBUG_CHECK_LINE_DRAWN
 .import _b5LineDrawDebug
 .endif
+
+MAX_X = 160
+MAX_Y = 168
 
 _pixelCounter: .word $0 ; Used for debugging but can't be hidden in the if def as the C won't compile without it.
 
@@ -81,6 +89,23 @@ JSRFAR _b5LineDrawDebug, DEBUG_BANK
 .endmacro
 
 
+.macro DEBUG_FLOOD_QUEUE_RETRIEVE
+.ifdef DEBUG_FLOOD
+sty _logDebugVal1
+JSRFAR _b5DebugFloodQueueRetrieve, DEBUG_BANK
+ldy _logDebugVal1
+.endif
+.endmacro
+
+.macro DEBUG_FLOOD_QUEUE_STORE var1, var2
+.ifdef DEBUG_FLOOD
+lda var1
+sta _logDebugVal1
+JSRFAR _b5DebugFloodQueueStore, DEBUG_BANK
+.endif
+.endmacro
+
+
 _drawWhere: .word $0
 _toDraw: .byte $0
 .macro PSET coX, coY
@@ -89,14 +114,14 @@ _toDraw: .byte $0
 .local @checkYBounds
 
 lda coX
-cmp #160        ; if x > 159
+cmp #MAX_X       ; if x > 159
 bcc @checkYBounds         ; then @end
 lda #$1
 jmp @endPSet
 
 @checkYBounds:
 lda coY
-cmp #168        ; if y > 167
+cmp #MAX_Y        ; if y > 167
 bcc @start         ; then @end
 lda #$2
 jmp @endPSet
@@ -346,8 +371,50 @@ rts
 @coY: .byte $0
 
 .segment "BANKRAMFLOOD"
+
+PIC_DEFAULT = 16
+PRI_DEFAULT = 4
+.macro PIC_GET_PIXEL coX, coY
+.local @end
+.local @returnDefault
+
+lda coX
+cmp #MAX_X
+bcs @returnDefault
+
+lda coY
+cmp #MAX_Y
+bcs @returnDefault
+
+SET_VERA_ADDRESS coX, coY
+lda VERA_data0
+lsr
+lsr
+lsr
+lsr
+bra @end
+@returnDefault:
+lda #PIC_DEFAULT
+@end:
+ldx #$0
+.endmacro
+
 FLOOD_QUEUE_START = $A7D0
 FLOOD_QUEUE_END = $BEB1
+
+
+_bFloodPicGetPixel:
+bra @start
+@coX: .byte $0
+@coY: .byte $0
+@start:
+sta @coY
+jsr popax
+sta @coX
+
+PIC_GET_PIXEL @coX, @coY
+rts
+
 
 ; void FLOOD_Q_STORE(unsigned short* ZP_PTR_B1) {
 ;     unsigned char q = 0;
@@ -375,6 +442,7 @@ FLOOD_QUEUE_END = $BEB1
 .local @end
 .local @incBank
 sta @q
+DEBUG_FLOOD_QUEUE_STORE @q
 bra @start
 @q: .byte $0
 @floodQueueEnd: .word $0
@@ -501,6 +569,7 @@ bra @end
 
 @returnResult:
 tya
+DEBUG_FLOOD_QUEUE_RETRIEVE 
 @end:
 ldx #$0
 .endmacro
