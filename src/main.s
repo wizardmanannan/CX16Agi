@@ -24,3 +24,4 @@
     .export _b11PSet
     .export _bFloodQstore
     .export _bFloodQretrieve
+    .export _bFloodPicGetPixel

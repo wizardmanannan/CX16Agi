@@ -9,11 +9,12 @@
 
 #include "picture.h"
 
-#define PIC_DEFAULT 16
+#define PIC_DEFAULT 15
 #define PRI_DEFAULT 4
 //#define VERBOSE
 //#define VERBOSE_REL_DRAW
 //#define TEST_QUEUE
+#define VERBOSE_FLOOD
 
 boolean okToShowPic = FALSE;
 PictureFile* loadedPictures = (PictureFile*)&BANK_RAM[PICTURE_START];
@@ -75,22 +76,24 @@ extern byte bFloodQstore(byte q);
 #define PSETFLOOD(x, y) \
     if (picDrawEnabled) { \
 if ((x) <= 159 && (y) <= 167) {  \
-            trampoline_2Byte(&b11PSet,x, y, PICTURE_BANK); \
+            trampoline_2Byte(&b11PSet,x, y, PICTURE_CODE_BANK); \
            } \
     } 
 
 
-/**************************************************************************
-** picGetPixel
-**
-** Get colour at x,y on the picture page.
-**************************************************************************/
-byte bFloodPicGetPixel(word x, word y)
-{
-    if (x > 159) return(PIC_DEFAULT);
-    if (y > 167) return(PIC_DEFAULT);
-    return (picture->line[y][x]);
-}
+extern byte bFloodPicGetPixel(word x, word y);
+
+///**************************************************************************
+//** picGetPixel
+//**
+//** Get colour at x,y on the picture page.
+//**************************************************************************/
+//byte bFloodPicGetPixel(word x, word y)
+//{
+//    if (x > 159) return(PIC_DEFAULT);
+//    if (y > 167) return(PIC_DEFAULT);
+//return (picture->line[y][x]);
+//}
 
 /**************************************************************************
 ** priGetPixel
@@ -138,11 +141,12 @@ boolean bFloodOkToFill(byte x, byte y)
 {
     if (!picDrawEnabled && !priDrawEnabled) return FALSE;
     if (picColour == PIC_DEFAULT) return FALSE;
-    if (!priDrawEnabled) return (bFloodPicGetPixel(x, y) == PIC_DEFAULT);
+    if (!priDrawEnabled) 
+        return (bFloodPicGetPixel(x, y) == PIC_DEFAULT);
     if (priDrawEnabled && !picDrawEnabled) return (bFloodPriGetPixel(x, y) == PRI_DEFAULT);
     return (bFloodPicGetPixel(x, y) == PIC_DEFAULT);
 }
-
+ 
 #ifdef TEST_QUEUE
 void testQueue()
 {
@@ -179,7 +183,7 @@ void testQueue()
 void bFloodAgiFill(word x, word y)
 {
     byte x1, y1;
-
+    boolean okToFillResult;
 #ifdef TEST_QUEUE
     testQueue();
 #endif // TEST_QUEUE
@@ -192,6 +196,12 @@ void bFloodAgiFill(word x, word y)
 
         x1 = bFloodQretrieve();
         y1 = bFloodQretrieve();
+
+#ifdef VERBOSE_FLOOD
+        printf("Retrieved %d,%d\n", x1, y1);
+#endif // VERBOSE_FLOOD
+
+
 
         if ((x1 == QEMPTY) || (y1 == QEMPTY))
             break;
@@ -271,6 +281,12 @@ void b11InitPicture()
     }
 
     memcpy(&bitmapWidthPreMult[0], & tempbitmapWidthPreMult[0], PICTURE_HEIGHT * 2);
+    
+    for (i = FIRST_FLOOD_BANK; i < LAST_FLOOD_BANK; i++)
+    {
+        memCpyBanked(&bitmapWidthPreMult[0], &tempbitmapWidthPreMult[0], i, PICTURE_HEIGHT * 2);
+    }
+
 }
 
 /**************************************************************************
