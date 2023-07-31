@@ -199,7 +199,10 @@ void bFloodAgiFill(word x, word y)
     testQueue();
 #endif // TEST_QUEUE
 
+#ifdef VERBOSE_FLOOD
     printf("before loop\n");
+#endif
+
     bFloodQstore(x);
     bFloodQstore(y);
 

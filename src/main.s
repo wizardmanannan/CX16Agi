@@ -20,7 +20,6 @@
     .export _b11Drawline
     .export _toDraw
     .export _drawWhere
-    .export _pixelCounter
     .export _b11PSet
     .export _bFloodQstore
     .export _bFloodQretrieve

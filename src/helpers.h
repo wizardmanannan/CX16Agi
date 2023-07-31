@@ -65,8 +65,8 @@ extern void setResourceDirectory(AGIFilePosType* newLogicDirectory, AGIFilePosTy
 
 extern void debugPrint(byte toPrint);
 
-extern long stopAt;
-extern long exitAt;
+extern long opStopAt;
+extern long opExitAt;
 extern long opCounter;
 
 

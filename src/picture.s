@@ -20,8 +20,9 @@ PICTURE_INC = 1
 
 .segment "CODE"
 
-;DEBUG_PICTURE = 1
+DEBUG_PICTURE = 1
 ;DEBUG_FLOOD = 1
+DEBUG_CHECK_DRAWN = 1
 
 .ifdef DEBUG_PICTURE
 .import _b5DebugPixelDraw
@@ -41,8 +42,6 @@ PICTURE_INC = 1
 MAX_X = 160
 MAX_Y = 168
 
-_pixelCounter: .word $0 ; Used for debugging but can't be hidden in the if def as the C won't compile without it.
-
 .macro DEBUG_PIXEL_DRAW var1, var2
 .ifdef DEBUG_PICTURE
 lda var1
@@ -59,7 +58,6 @@ lda var1
 sta _logDebugVal1
 lda var2
 sta _logDebugVal2
-inc _pixelCounter
 JSRFAR _b5DebugPrePixelDraw, DEBUG_BANK
 .endif
 .endmacro
