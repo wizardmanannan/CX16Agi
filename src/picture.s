@@ -20,22 +20,21 @@ PICTURE_INC = 1
 
 .segment "CODE"
 
-DEBUG_PICTURE = 1
-;DEBUG_FLOOD = 1
-DEBUG_CHECK_DRAWN = 1
+;DEBUG_FLOOD_QUEUE = 1
+DEBUG_PIXEL_DRAW = 1
 
-.ifdef DEBUG_PICTURE
+.ifdef DEBUG_PIXEL_DRAW
 .import _b5DebugPixelDraw
 .import _b5DebugPrePixelDraw
 .import _b5CheckPixelDrawn
 .endif
 
-.ifdef DEBUG_FLOOD
+.ifdef DEBUG_FLOOD_QUEUE
 .import _b5DebugFloodQueueRetrieve
 .import _b5DebugFloodQueueStore
 .endif
 
-.ifdef DEBUG_CHECK_DRAWN
+.ifdef DEBUG_PIXEL_DRAW
 .import _pixelCounter
 .import _pixelStartPrintingAt
 .import _pixelStopAt
@@ -56,7 +55,7 @@ JSRFAR printFunc, DEBUG_BANK
 .endmacro
 
 .macro DEBUG_PIXEL_DRAW var1, var2
-.ifdef DEBUG_PICTURE
+.ifdef DEBUG_PIXEL_DRAW
 lda var1
 sta _logDebugVal1
 lda var2
@@ -70,7 +69,7 @@ PRINT_PIXEL_MESSAGE _b5DebugPrePixelDraw
 .local @end
 
 
-.ifdef DEBUG_CHECK_DRAWN
+.ifdef DEBUG_PIXEL_DRAW
 lda var1
 sta _logDebugVal1
 lda var2
@@ -101,7 +100,7 @@ nop ;There to make it clearer where we have stopped
 .endmacro
 
 .macro DEBUG_PIXEL_DRAWN var1, var2
-.ifdef DEBUG_CHECK_DRAWN
+.ifdef DEBUG_PIXEL_DRAW
 lda var1
 sta _logDebugVal1
 lda var2
@@ -126,7 +125,7 @@ JSRFAR _b5LineDrawDebug, DEBUG_BANK
 
 
 .macro DEBUG_FLOOD_QUEUE_RETRIEVE
-.ifdef DEBUG_FLOOD
+.ifdef DEBUG_FLOOD_QUEUE
 sta _logDebugVal1
 JSRFAR _b5DebugFloodQueueRetrieve, DEBUG_BANK
 lda _logDebugVal1
@@ -134,7 +133,7 @@ lda _logDebugVal1
 .endmacro
 
 .macro DEBUG_FLOOD_QUEUE_STORE var1, var2
-.ifdef DEBUG_FLOOD
+.ifdef DEBUG_FLOOD_QUEUE
 lda var1
 sta _logDebugVal1
 JSRFAR _b5DebugFloodQueueStore, DEBUG_BANK
