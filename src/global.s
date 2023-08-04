@@ -270,7 +270,7 @@ MULT_TABLE_HALF_POINT = $80
 
 .endmacro
 
-; Macro for comparing two 16-bit words and branching if not equal
+;Macro for comparing two 16-bit words and branching if not equal
 .macro NEQ_16_WORD_TO_LITERAL word1, word2, successBranch, failBranch
        .local @branch
        lda word1 + 1
@@ -429,6 +429,36 @@ MULT_TABLE_HALF_POINT = $80
        jmp successBranch
        @end:
        
+.endmacro
+
+.macro LESS_THAN_32 word1, word2, successBranch, failBranch
+       .local @checkIfHigherBitsAreEqual
+       .local @end
+
+       LESS_THAN_16 word1 + 2, word2 + 2, successBranch, @checkIfHigherBitsAreEqual
+       @checkIfHigherBitsAreEqual:
+       lda word1 + 3
+       cmp word2 + 3
+       .ifblank failBranch
+       bne @end
+       .endif
+       .ifnblank failBranch
+       bne failBranch
+       .endif
+
+
+       lda word1 + 2
+       cmp word2 + 2
+        .ifblank failBranch
+       bne @end
+       .endif
+       .ifnblank failBranch
+       bne failBranch
+       .endif
+
+       LESS_THAN_16 word1, word2, successBranch, failBranch
+
+       @end:
 .endmacro
 
 ; Macro for left shifting a 16-bit word by 8 bits

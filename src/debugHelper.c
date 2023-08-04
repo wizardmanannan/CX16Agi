@@ -9,15 +9,15 @@ extern boolean hasEnteredNewRoom, exitAllLogics;
 extern int currentLog;
 
 long opCounter = 1;
-long opStopAt = 0; 
+long opStopAt = 0;
 long opExitAt = 0;
 long opStartPrintingAt = 0x1F00;
 boolean opStopEvery = FALSE;
 int _clockBefore = 0;
 
 long pixelCounter = 1;
-long pixelStartPrintingAt = 0x300;
-long pixelStopAt = 0x10000;
+long pixelStartPrintingAt = 0x30000;
+long pixelStopAt = 0x93D;
 
 //#define CHECK_MEM;
 
@@ -37,7 +37,7 @@ void b5CheckMemory()
 {
 #ifdef CHECK_MEM
 	int i;
-	byte* mem = (byte*) 1;
+	byte* mem = (byte*)1;
 	for (i = 10; i < 100000 && i >= 0 && mem; i = i + 100)
 	{
 		mem = (byte*)malloc(i);
@@ -335,10 +335,8 @@ void b5DebugPrePixelDraw()
 {
 	pixelDrawn = FALSE;
 
-	if (pixelCounter >= pixelStartPrintingAt || pixelStartPrintingAt == 0)
-	{
-		printf("\n%lu: attempting To Draw At %d, %d. The address of pixel counter is %p \n", pixelCounter, logDebugVal1, logDebugVal2, &pixelCounter);
-	}
+
+	printf("\n%lu: attempting To Draw At %d, %d. The address of pixel counter is %p \n", pixelCounter, logDebugVal1, logDebugVal2, &pixelCounter);
 }
 
 void b5DebugPixelDraw()
@@ -347,32 +345,22 @@ void b5DebugPixelDraw()
 	byte localToDraw;
 	int* expectedDrawAddress = (STARTING_BYTE + logDebugVal1) + (logDebugVal2 * BYTES_PER_ROW);
 
-	memCpyBanked((byte*) &localDrawWhere, (byte*)&drawWhere, PICTURE_CODE_BANK, 2);
+	memCpyBanked((byte*)&localDrawWhere, (byte*)&drawWhere, PICTURE_CODE_BANK, 2);
 	memCpyBanked(&localToDraw, &toDraw, PICTURE_CODE_BANK, 1);
 
-	if (pixelCounter >= pixelStartPrintingAt || pixelStartPrintingAt == 0)
-	{
-		printf("%lu: We expect to draw at %p, we draw at %p. Color: %p. Result %d. %d,%d\n", pixelCounter, expectedDrawAddress, localDrawWhere, localToDraw, expectedDrawAddress == localDrawWhere, logDebugVal1, logDebugVal2);
-	}
 
-	if (pixelCounter >= pixelStopAt)
-	{
-		asm("stp");
-		asm("nop"); //A pointless no op follows in order to make it clear in the debugger that this is the point we have stopped
-	}
-
-	pixelCounter++;
+	printf("%lu: We expect to draw at %p, we draw at %p. Color: %p. Result %d. %d,%d\n", pixelCounter, expectedDrawAddress, localDrawWhere, localToDraw, expectedDrawAddress == localDrawWhere, logDebugVal1, logDebugVal2);
 
 	pixelDrawn = TRUE;
 }
 
 void b5CheckPixelDrawn()
 {
-	if (!pixelDrawn && pixelCounter - 1 >= pixelStartPrintingAt || pixelStartPrintingAt == 0)
+	if (!pixelDrawn)
 	{
 		printf("draw warning: %d: %d,%d wasn't drawn\n", logDebugVal1, logDebugVal2);
 	}
-	else if(pixelCounter - 1 >= pixelStartPrintingAt || pixelStartPrintingAt == 0)
+	else
 	{
 		printf("Pixel drawn %d, %d \n", logDebugVal1, logDebugVal2);
 	}

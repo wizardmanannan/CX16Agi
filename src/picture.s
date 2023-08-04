@@ -35,6 +35,12 @@ DEBUG_CHECK_DRAWN = 1
 .import _b5DebugFloodQueueStore
 .endif
 
+.ifdef DEBUG_CHECK_DRAWN
+.import _pixelCounter
+.import _pixelStartPrintingAt
+.import _pixelStopAt
+.endif
+
 .ifdef DEBUG_CHECK_LINE_DRAWN
 .import _b5LineDrawDebug
 .endif
@@ -42,23 +48,55 @@ DEBUG_CHECK_DRAWN = 1
 MAX_X = 160
 MAX_Y = 168
 
+.macro PRINT_PIXEL_MESSAGE printFunc
+.local @end
+LESS_THAN_32 _pixelCounter, _pixelStartPrintingAt, @end
+JSRFAR printFunc, DEBUG_BANK
+@end:
+.endmacro
+
 .macro DEBUG_PIXEL_DRAW var1, var2
 .ifdef DEBUG_PICTURE
 lda var1
 sta _logDebugVal1
 lda var2
 sta _logDebugVal2
-JSRFAR _b5DebugPixelDraw, DEBUG_BANK
+PRINT_PIXEL_MESSAGE _b5DebugPrePixelDraw
 .endif
 .endmacro
 
 .macro DEBUG_PREPIXEL_DRAW var1, var2
+.local @stop
+.local @end
+
+
 .ifdef DEBUG_CHECK_DRAWN
 lda var1
 sta _logDebugVal1
 lda var2
 sta _logDebugVal2
-JSRFAR _b5DebugPrePixelDraw, DEBUG_BANK
+
+PRINT_PIXEL_MESSAGE _b5DebugPrePixelDraw
+
+clc
+lda #$1
+adc _pixelCounter
+sta _pixelCounter
+lda #$0
+adc _pixelCounter + 1
+sta _pixelCounter + 1
+lda #$0
+adc _pixelCounter + 2
+sta _pixelCounter + 2
+lda #$0
+adc _pixelCounter + 3
+sta _pixelCounter + 3
+
+LESS_THAN_32 _pixelCounter, _pixelStopAt, @end, @stop
+@stop:
+stp
+nop ;There to make it clearer where we have stopped
+@end:
 .endif
 .endmacro
 
@@ -68,7 +106,7 @@ lda var1
 sta _logDebugVal1
 lda var2
 sta _logDebugVal2
-JSRFAR _b5CheckPixelDrawn, DEBUG_BANK
+PRINT_PIXEL_MESSAGE _b5CheckPixelDrawn
 .endif
 .endmacro
 
@@ -366,7 +404,9 @@ _b11PSet:
 sta @coY
 jsr popa
 sta @coX
+DEBUG_PREPIXEL_DRAW @coX, @coY
 PSET @coX, @coY
+DEBUG_PIXEL_DRAWN @coX, @coY
 rts
 @coX: .byte $0
 @coY: .byte $0
