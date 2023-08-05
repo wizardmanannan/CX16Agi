@@ -461,6 +461,22 @@ MULT_TABLE_HALF_POINT = $80
        @end:
 .endmacro
 
+.macro INC_32 long
+lda #$1
+clc
+adc long
+sta long
+lda #$0
+adc long + 1
+sta long + 1
+lda #$0
+adc long + 2
+sta long + 2
+lda #$0
+adc long + 3
+sta long + 3
+.endmacro
+
 ; Macro for left shifting a 16-bit word by 8 bits
 .macro LEFT_SHIFT_BY_8 word1, result
 ;Shift by 8

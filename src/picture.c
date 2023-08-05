@@ -14,7 +14,7 @@
 //#define VERBOSE
 //#define VERBOSE_REL_DRAW
 //#define TEST_QUEUE
-//#define VERBOSE_FLOOD
+#define VERBOSE_FLOOD
 
 boolean okToShowPic = FALSE;
 PictureFile* loadedPictures = (PictureFile*)&BANK_RAM[PICTURE_START];
@@ -39,6 +39,11 @@ byte rposBank = FIRST_FLOOD_BANK, sposBank = FIRST_FLOOD_BANK;
 int* bitmapWidthPreMult = &BANK_RAM[BITMAP_WIDTH_PREMULT_START];
 
 extern void b11PSet(byte x, byte y);
+
+#ifdef VERBOSE_FLOOD
+extern long pixelCounter;
+extern long pixelStartPrintingAt;
+#endif // VERBOSE_FLOOD
 
 void getLoadedPicture(PictureFile* returnedloadedPicture, byte loadedPictureNumber)
 {
@@ -142,7 +147,10 @@ boolean bFloodOkToFill(byte x, byte y)
     boolean getPicResult;
 
 #ifdef VERBOSE_FLOOD
-   printf("State: pic: %d, pri %d, color: %d\n", picDrawEnabled, priDrawEnabled, picColour);
+    if (pixelCounter >= pixelStartPrintingAt)
+    {
+        printf("State: pic: %d, pri %d, color: %d\n", picDrawEnabled, priDrawEnabled, picColour);
+    }
 #endif
 
     if (!picDrawEnabled && !priDrawEnabled) return FALSE;
@@ -151,7 +159,10 @@ boolean bFloodOkToFill(byte x, byte y)
     {
         getPicResult = bFloodPicGetPixel(x, y);
 #ifdef VERBOSE_FLOOD
-       printf("result %d,%d %d \n", x,y, getPicResult);
+        if (pixelCounter >= pixelStartPrintingAt)
+        {
+            printf("result %d,%d %d \n", x, y, getPicResult);
+        }
 #endif
         return (getPicResult == PIC_DEFAULT);
     }
@@ -200,7 +211,9 @@ void bFloodAgiFill(word x, word y)
 #endif // TEST_QUEUE
 
 #ifdef VERBOSE_FLOOD
-    printf("before loop\n");
+    if (pixelCounter >= pixelStartPrintingAt) {
+        printf("before loop\n");
+    }
 #endif
 
     bFloodQstore(x);
@@ -208,13 +221,17 @@ void bFloodAgiFill(word x, word y)
 
     for (;;) {
 #ifdef VERBOSE_FLOOD
-        printf("at start loop\n");
+        if (pixelCounter >= pixelStartPrintingAt) {
+            printf("at start loop\n");
+        }
 #endif
         x1 = bFloodQretrieve();
         y1 = bFloodQretrieve();
 
 #ifdef VERBOSE_FLOOD
-        printf("Retrieved %d,%d\n", x1, y1);
+        if (pixelCounter >= pixelStartPrintingAt) {
+            printf("Retrieved %d,%d\n", x1, y1);
+        }
 #endif // VERBOSE_FLOOD
 
 
@@ -229,28 +246,36 @@ void bFloodAgiFill(word x, word y)
 
                 if (bFloodOkToFill(x1, y1 - 1) && (y1 != 0)) {
 #ifdef VERBOSE_FLOOD
-                    printf("1\n");
+                    if (pixelCounter >= pixelStartPrintingAt) {
+                        printf("1\n");
+                    }
 #endif
                     bFloodQstore(x1);
                     bFloodQstore(y1 - 1);
                 }
                 if (bFloodOkToFill(x1 - 1, y1) && (x1 != 0)) {
 #ifdef VERBOSE_FLOOD
-                    printf("2\n");
+                    if (pixelCounter >= pixelStartPrintingAt) {
+                        printf("2\n");
+                    }
 #endif
                     bFloodQstore(x1 - 1);
                     bFloodQstore(y1);
                 }
                 if (bFloodOkToFill(x1 + 1, y1) && (x1 != 159)) {
 #ifdef VERBOSE_FLOOD
-                    printf("3\n");
+                    if (pixelCounter >= pixelStartPrintingAt) {
+                        printf("3\n");
+                    }
 #endif
                     bFloodQstore(x1 + 1);
                     bFloodQstore(y1);
                 }
                 if (bFloodOkToFill(x1, y1 + 1) && (y1 != 167)) {
 #ifdef VERBOSE_FLOOD
-                    printf("4\n");
+                    if (pixelCounter >= pixelStartPrintingAt) {
+                        printf("4\n");
+                    }
 #endif
                     bFloodQstore(x1);
                     bFloodQstore(y1 + 1);
@@ -741,6 +766,7 @@ int picFNum = 0;
 **************************************************************************/
 void b11DrawPic(byte* bankedData, int pLen, boolean okToClearScreen, byte picNum)
 {
+    unsigned long i;
     byte action;
     boolean stillDrawing = TRUE;
     PictureFile loadedPicture;
@@ -784,6 +810,13 @@ void b11DrawPic(byte* bankedData, int pLen, boolean okToClearScreen, byte picNum
     //asm("sei");
 
     patCode = 0x00;
+
+
+    picColour = 12;
+    picDrawEnabled = TRUE;
+    PSETFLOOD(69, 69);
+
+    for (i = 0; i < 100000;i++);
 
 #ifdef VERBOSE
     printf("Plotting. . .\n");

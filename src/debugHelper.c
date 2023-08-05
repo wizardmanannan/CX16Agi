@@ -16,10 +16,27 @@ boolean opStopEvery = FALSE;
 int _clockBefore = 0;
 
 long pixelCounter = 1;
-long pixelStartPrintingAt = 0x30000;
-long pixelStopAt = 0x93D;
+long pixelStartPrintingAt = 0x100000;
+long pixelStopAt = 0x100000;
+
+unsigned long queueAction = 0;
 
 //#define CHECK_MEM;
+
+//void stopAtQueue()
+//{
+//	byte previousRAMBank = RAM_BANK; 
+//
+//	RAM_BANK = 0x2A;
+//	if (*((byte*)0xA7EE) == 69)
+//	{
+//		printf("The queue action number is %lu\n", queueAction);
+//		asm("stp");
+//		asm("lda #$EA");
+//	}
+//
+//	RAM_BANK = previousRAMBank;
+//}
 
 void stopAtFunc()
 {
@@ -371,15 +388,14 @@ void b5LineDrawDebug()
 	printf("draw line %d,%d %d,%d\n", logDebugVal1, logDebugVal2, logDebugVal3, logDebugVal4);
 }
 
-unsigned long queueAction = 0;
 void b5DebugFloodQueueRetrieve()
 {
-	printf("%lu : retrieved %d\n", queueAction++, logDebugVal1);
+	printf("%lu : retrieved %d\n", queueAction, logDebugVal1);
 }
 
 void b5DebugFloodQueueStore()
 {
-	printf("%lu : stored %d\n", queueAction++, logDebugVal1);
+	printf("%lu : stored %d\n", queueAction, logDebugVal1);
 }
 
 #pragma code-name (pop);

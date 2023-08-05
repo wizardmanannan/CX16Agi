@@ -20,7 +20,6 @@ PICTURE_INC = 1
 
 .segment "CODE"
 
-;DEBUG_FLOOD_QUEUE = 1
 DEBUG_PIXEL_DRAW = 1
 
 .ifdef DEBUG_PIXEL_DRAW
@@ -29,15 +28,13 @@ DEBUG_PIXEL_DRAW = 1
 .import _b5CheckPixelDrawn
 .endif
 
-.ifdef DEBUG_FLOOD_QUEUE
+.ifdef DEBUG_PIXEL_DRAW
 .import _b5DebugFloodQueueRetrieve
 .import _b5DebugFloodQueueStore
-.endif
-
-.ifdef DEBUG_PIXEL_DRAW
 .import _pixelCounter
 .import _pixelStartPrintingAt
 .import _pixelStopAt
+.import _queueAction
 .endif
 
 .ifdef DEBUG_CHECK_LINE_DRAWN
@@ -60,7 +57,7 @@ lda var1
 sta _logDebugVal1
 lda var2
 sta _logDebugVal2
-PRINT_PIXEL_MESSAGE _b5DebugPrePixelDraw
+PRINT_PIXEL_MESSAGE _b5DebugPixelDraw
 .endif
 .endmacro
 
@@ -125,18 +122,30 @@ JSRFAR _b5LineDrawDebug, DEBUG_BANK
 
 
 .macro DEBUG_FLOOD_QUEUE_RETRIEVE
-.ifdef DEBUG_FLOOD_QUEUE
+.local @end
+
+.ifdef DEBUG_PIXEL_DRAW
+
+
 sta _logDebugVal1
+LESS_THAN_32 _pixelCounter, _pixelStartPrintingAt, @end
 JSRFAR _b5DebugFloodQueueRetrieve, DEBUG_BANK
+@end:
+INC_32 _queueAction
 lda _logDebugVal1
 .endif
 .endmacro
 
 .macro DEBUG_FLOOD_QUEUE_STORE var1, var2
-.ifdef DEBUG_FLOOD_QUEUE
+.local @end
+.ifdef DEBUG_PIXEL_DRAW
+
+LESS_THAN_32 _pixelCounter, _pixelStartPrintingAt, @end
 lda var1
 sta _logDebugVal1
 JSRFAR _b5DebugFloodQueueStore, DEBUG_BANK
+@end:
+INC_32 _queueAction
 .endif
 .endmacro
 
@@ -481,10 +490,13 @@ rts
 .local @q
 .local @end
 .local @incBank
+sta _logDebugVal1
 sta @q
 DEBUG_FLOOD_QUEUE_STORE @q
 bra @start
+.segment "CODE"
 @q: .byte $0
+.segment "BANKRAMFLOOD"
 @floodQueueEnd: .word $0
 @start:
 lda _sposBank
@@ -555,6 +567,7 @@ QEMPTY = $FF
 .local @resetBank
 .local @returnResult
 .local @serve
+
 lda _rposBank
 sta RAM_BANK
 
