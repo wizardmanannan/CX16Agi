@@ -96,6 +96,7 @@ COLOR_WHITE      = $FFF
 
 MULT_TABLE_HALF_POINT = $80
 
+NEG_1_16 = $FFFF
 
 ; Macro for reading from an array
 .macro READ_ARRAY_POINTER arrayZeroPointer
@@ -249,26 +250,28 @@ MULT_TABLE_HALF_POINT = $80
 ; Macro for comparing two 16-bit words and branching if equal
 .macro EQ_16_WORD_TO_LITERAL word1, word2, successBranch, failBranch
        .local @branch
+       .local @end
        lda word1 + 1
        cmp #>word2
-       .ifblank failBranch
        bne @end
-       .endif
-       .ifnblank failBranch
-       bne failBranch
-       .endif
        lda word1
        cmp #< word2
-       .ifblank failBranch
        bne @end
-       .endif
-       .ifnblank failBranch
-       bne failBranch
-       .endif
        jmp successBranch
        @end:
+       .ifnblank failBranch
+       jmp failBranch
+       .endif
 
 .endmacro
+
+.macro EQ_32_LONG_TO_LITERAL long1, word1, word2, successBranch, failBranch
+.local @higherBits
+EQ_16_WORD_TO_LITERAL long1, word1, @higherBits , failBranch
+@higherBits:
+EQ_16_WORD_TO_LITERAL long1 + 2, word2, successBranch , failBranch
+.endmacro
+
 
 ;Macro for comparing two 16-bit words and branching if not equal
 .macro NEQ_16_WORD_TO_LITERAL word1, word2, successBranch, failBranch
@@ -278,14 +281,12 @@ MULT_TABLE_HALF_POINT = $80
        bne successBranch
        lda word1
        cmp #< word2
-       .ifblank failBranch
        beq @end
-       .endif
-       .ifnblank failBranch
-       beq failBranch
-       .endif
        jmp successBranch
        @end:
+       .ifnblank failBranch
+       jmp failBranch
+       .endif
 
 .endmacro
 

@@ -46,6 +46,7 @@ MAX_Y = 168
 
 .macro PRINT_PIXEL_MESSAGE printFunc
 .local @end
+EQ_32_LONG_TO_LITERAL _pixelCounter, NEG_1_16, NEG_1_16, @end
 LESS_THAN_32 _pixelCounter, _pixelStartPrintingAt, @end
 JSRFAR printFunc, DEBUG_BANK
 @end:
@@ -88,6 +89,7 @@ lda #$0
 adc _pixelCounter + 3
 sta _pixelCounter + 3
 
+EQ_32_LONG_TO_LITERAL _pixelCounter, NEG_1_16, NEG_1_16, @end
 LESS_THAN_32 _pixelCounter, _pixelStopAt, @end, @stop
 @stop:
 stp
@@ -108,6 +110,7 @@ PRINT_PIXEL_MESSAGE _b5CheckPixelDrawn
 
 .macro DEBUG_LINE_DRAW var1, var2, var3, var4
 .ifdef DEBUG_CHECK_LINE_DRAWN
+.local @shouldPrint
 lda var1
 sta _logDebugVal1
 lda var2
@@ -128,6 +131,7 @@ JSRFAR _b5LineDrawDebug, DEBUG_BANK
 
 
 sta _logDebugVal1
+EQ_32_LONG_TO_LITERAL _pixelCounter, NEG_1_16, NEG_1_16, @end
 LESS_THAN_32 _pixelCounter, _pixelStartPrintingAt, @end
 JSRFAR _b5DebugFloodQueueRetrieve, DEBUG_BANK
 @end:
@@ -139,7 +143,7 @@ lda _logDebugVal1
 .macro DEBUG_FLOOD_QUEUE_STORE var1, var2
 .local @end
 .ifdef DEBUG_PIXEL_DRAW
-
+EQ_32_LONG_TO_LITERAL _pixelCounter, NEG_1_16, NEG_1_16, @end
 LESS_THAN_32 _pixelCounter, _pixelStartPrintingAt, @end
 lda var1
 sta _logDebugVal1
@@ -448,7 +452,7 @@ lda #PIC_DEFAULT
 ldx #$0
 .endmacro
 
-FLOOD_QUEUE_START = $A7D0
+FLOOD_QUEUE_START = $A850
 FLOOD_QUEUE_END = $BEB1
 
 
@@ -618,7 +622,7 @@ bra @returnResult
 
 @returnEmpty:
 lda #QEMPTY
-bra @end
+jmp @end
 
 @returnResult:
 tya

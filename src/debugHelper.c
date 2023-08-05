@@ -16,8 +16,8 @@ boolean opStopEvery = FALSE;
 int _clockBefore = 0;
 
 long pixelCounter = 1;
-long pixelStartPrintingAt = 0x100000;
-long pixelStopAt = 0x100000;
+long pixelStartPrintingAt = -1;
+long pixelStopAt = -1;
 
 unsigned long queueAction = 0;
 
