@@ -290,6 +290,12 @@ void bFloodAgiFill(word x, word y)
 }
 #pragma code-name (pop)
 #pragma code-name (push, "BANKRAM11")
+void b11FloodBankFull() //Is on this bank to save room on flood bank 
+{
+    printf("warning Flood Bank Full\n");
+}
+
+
 /**************************************************************************
 ** fill
 **
@@ -811,12 +817,6 @@ void b11DrawPic(byte* bankedData, int pLen, boolean okToClearScreen, byte picNum
 
     patCode = 0x00;
 
-    picColour = 12;
-    picDrawEnabled = TRUE;
-    PSETFLOOD(149, 80);
-
-    for (i = 0; i < 100000;i++);
-
 #ifdef VERBOSE
     printf("Plotting. . .\n");
 #endif // VERBOSE
@@ -866,6 +866,8 @@ void b11DrawPic(byte* bankedData, int pLen, boolean okToClearScreen, byte picNum
 
 
     free(data);
+
+    for (;;);
 }
 
 void b11InitPictures()

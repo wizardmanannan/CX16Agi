@@ -43,7 +43,7 @@ LOGIC_CODE_BANK = $6
 PICTURE_BANK = $11
 
 FIRST_FLOOD_BANK = $29
-NO_FLOOD_BANKS = 7
+NO_FLOOD_BANKS = $0A
 LAST_FLOOD_BANK = FIRST_FLOOD_BANK + NO_FLOOD_BANKS - 1
 
 ; Define offsets for different areas within golden RAM

@@ -16,8 +16,12 @@ PICTURE_INC = 1
 .import _rposBank
 .import _sposBank
 
+.import _trampoline_0
+.import _b11FloodBankFull
+
 .import popa
 .import popax
+.import pushax
 
 .segment "CODE"
 
@@ -545,6 +549,14 @@ bne @incBank
 lda #FIRST_FLOOD_BANK
 sta RAM_BANK
 sta _sposBank
+
+ldx #> _b11FloodBankFull
+lda #< _b11FloodBankFull
+jsr pushax
+lda #PICTURE_BANK
+ldx #$0
+jsr _trampoline_0
+
 bra @end
 
 @incBank:
