@@ -6,6 +6,7 @@ PICTURE_INC = 1
 .include "global.s"
 .include "graphics.s"
 
+
 .import _picColour
 .import _picDrawEnabled
 .import _noSound
@@ -26,6 +27,7 @@ DEBUG_PIXEL_DRAW = 1
 .import _b5DebugPixelDraw
 .import _b5DebugPrePixelDraw
 .import _b5CheckPixelDrawn
+.import _stopAtPixel
 .endif
 
 .ifdef DEBUG_PIXEL_DRAW
@@ -35,6 +37,7 @@ DEBUG_PIXEL_DRAW = 1
 .import _pixelStartPrintingAt
 .import _pixelStopAt
 .import _queueAction
+.import _pixelFreezeAt
 .endif
 
 .ifdef DEBUG_CHECK_LINE_DRAWN
@@ -65,6 +68,8 @@ PRINT_PIXEL_MESSAGE _b5DebugPixelDraw
 .macro DEBUG_PREPIXEL_DRAW var1, var2
 .local @stop
 .local @end
+.local @freeze
+.local @checkFreeze
 
 
 .ifdef DEBUG_PIXEL_DRAW
@@ -89,12 +94,21 @@ lda #$0
 adc _pixelCounter + 3
 sta _pixelCounter + 3
 
-EQ_32_LONG_TO_LITERAL _pixelCounter, NEG_1_16, NEG_1_16, @end
-LESS_THAN_32 _pixelCounter, _pixelStopAt, @end, @stop
+EQ_32_LONG_TO_LITERAL _pixelStopAt, NEG_1_16, NEG_1_16, @checkFreeze
+LESS_THAN_32 _pixelCounter, _pixelStopAt, @checkFreeze, @stop
 @stop:
 stp
 nop ;There to make it clearer where we have stopped
+@checkFreeze:
+
+EQ_32_LONG_TO_LITERAL _pixelFreezeAt, NEG_1_16, NEG_1_16, @end
+LESS_THAN_32 _pixelCounter, _pixelFreezeAt, @end, @freeze
+@freeze:
+lda var1 ;Pointless instruction to make it clearer what the points are on freeze
+lda var2
+bra @freeze
 @end:
+
 .endif
 .endmacro
 

@@ -18,6 +18,7 @@ int _clockBefore = 0;
 long pixelCounter = 1;
 long pixelStartPrintingAt = -1;
 long pixelStopAt = -1;
+long pixelFreezeAt = -1;
 
 unsigned long queueAction = 0;
 
@@ -37,6 +38,16 @@ unsigned long queueAction = 0;
 //
 //	RAM_BANK = previousRAMBank;
 //}
+
+void stopAtPixel()
+{
+	if (pixelCounter >= 0x25D9)
+	{
+		asm("stp"); //Two pointless nops follow in order to make it clear where we have stopped
+		asm("nop");
+		asm("nop");
+	}
+}
 
 void stopAtFunc()
 {

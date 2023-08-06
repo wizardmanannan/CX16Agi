@@ -210,9 +210,9 @@ void bFloodAgiFill(word x, word y)
     testQueue();
 #endif // TEST_QUEUE
 
-#ifdef VERBOSE_FLOOD
+#ifdef VERBOSE_FLOOD_FILL
     if (pixelCounter >= pixelStartPrintingAt && pixelStartPrintingAt != 1) {
-        printf("before loop\n");
+        printf("bl\n");
     }
 #endif
 
@@ -220,17 +220,17 @@ void bFloodAgiFill(word x, word y)
     bFloodQstore(y);
 
     for (;;) {
-#ifdef VERBOSE_FLOOD
+#ifdef VERBOSE_FLOOD_FILL
         if (pixelCounter >= pixelStartPrintingAt && pixelStartPrintingAt != 1) {
-            printf("at start loop\n");
+            printf("al\n");
         }
 #endif
         x1 = bFloodQretrieve();
         y1 = bFloodQretrieve();
 
-#ifdef VERBOSE_FLOOD
+#ifdef VERBOSE_FLOOD_FILL
         if (pixelCounter >= pixelStartPrintingAt && pixelStartPrintingAt != 1) {
-            printf("Retrieved %d,%d\n", x1, y1);
+            printf("R %d,%d\n", x1, y1);
         }
 #endif // VERBOSE_FLOOD
 
@@ -245,7 +245,7 @@ void bFloodAgiFill(word x, word y)
                 PSETFLOOD(x1, y1);
 
                 if (bFloodOkToFill(x1, y1 - 1) && (y1 != 0)) {
-#ifdef VERBOSE_FLOOD
+#ifdef VERBOSE_FLOOD_FILL
                     if (pixelCounter >= pixelStartPrintingAt && pixelStartPrintingAt != 1) {
                         printf("1\n");
                     }
@@ -254,7 +254,7 @@ void bFloodAgiFill(word x, word y)
                     bFloodQstore(y1 - 1);
                 }
                 if (bFloodOkToFill(x1 - 1, y1) && (x1 != 0)) {
-#ifdef VERBOSE_FLOOD
+#ifdef VERBOSE_FLOOD_FILL
                     if (pixelCounter >= pixelStartPrintingAt && pixelStartPrintingAt != 1) {
                         printf("2\n");
                     }
@@ -263,7 +263,7 @@ void bFloodAgiFill(word x, word y)
                     bFloodQstore(y1);
                 }
                 if (bFloodOkToFill(x1 + 1, y1) && (x1 != 159)) {
-#ifdef VERBOSE_FLOOD
+#ifdef VERBOSE_FLOOD_FILL
                     if (pixelCounter >= pixelStartPrintingAt && pixelStartPrintingAt != 1) {
                         printf("3\n");
                     }
@@ -272,7 +272,7 @@ void bFloodAgiFill(word x, word y)
                     bFloodQstore(y1);
                 }
                 if (bFloodOkToFill(x1, y1 + 1) && (y1 != 167)) {
-#ifdef VERBOSE_FLOOD
+#ifdef VERBOSE_FLOOD_FILL
                     if (pixelCounter >= pixelStartPrintingAt && pixelStartPrintingAt != 1) {
                         printf("4\n");
                     }
@@ -340,7 +340,7 @@ void b11InitPicture()
 
     memcpy(&bitmapWidthPreMult[0], & tempbitmapWidthPreMult[0], PICTURE_HEIGHT * 2);
     
-    for (i = FIRST_FLOOD_BANK; i < LAST_FLOOD_BANK; i++)
+    for (i = FIRST_FLOOD_BANK; i <= LAST_FLOOD_BANK; i++)
     {
         memCpyBanked(&bitmapWidthPreMult[0], &tempbitmapWidthPreMult[0], i, PICTURE_HEIGHT * 2);
     }
@@ -810,6 +810,10 @@ void b11DrawPic(byte* bankedData, int pLen, boolean okToClearScreen, byte picNum
     //asm("sei");
 
     patCode = 0x00;
+
+    picColour = 12;
+    picDrawEnabled = TRUE;
+    PSETFLOOD(149, 80);
 
     for (i = 0; i < 100000;i++);
 
