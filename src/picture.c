@@ -345,7 +345,7 @@ void b11InitPicture()
     }
 
     memcpy(&bitmapWidthPreMult[0], & tempbitmapWidthPreMult[0], PICTURE_HEIGHT * 2);
-    
+
     for (i = FIRST_FLOOD_BANK; i <= LAST_FLOOD_BANK; i++)
     {
         memCpyBanked(&bitmapWidthPreMult[0], &tempbitmapWidthPreMult[0], i, PICTURE_HEIGHT * 2);
