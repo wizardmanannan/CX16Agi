@@ -328,6 +328,33 @@ void b11FloodFill(byte** data)
 #define VWIDTH   640  /* Viewport size */
 #define VHEIGHT  336
 
+void b11LoadDivisionTables()
+{
+    FILE* fp;
+    int bank, i;
+    char fileNameBuffer[30];
+    const char* fileName = "div%x.bin";
+
+    for (bank = FIRST_DIVISION_BANK; bank <= LAST_DIVISION_BANK; bank++)
+    {
+        sprintf(&fileNameBuffer[0], fileName, bank);
+
+        printf("loading division tables from file %s\n", &fileNameBuffer[0]);
+        if ((fp = fopen(&fileNameBuffer[0], "rb")) != NULL) {
+            size_t bytesRead;
+            i = 0; 
+            while ((bytesRead = fread(&GOLDEN_RAM_WORK_AREA[0], 1, LOCAL_WORK_AREA_SIZE, fp)) > 0) {
+                memCpyBanked(DIVISION_AREA + LOCAL_WORK_AREA_SIZE * i++, &GOLDEN_RAM_WORK_AREA[0], bank, bytesRead);
+            }
+
+            fclose(fp);
+        }
+        else {
+            printf("failed to division table file %s\n", &fileNameBuffer[0]);
+        }
+    }
+}
+
 /**************************************************************************
 ** initPicture
 **
@@ -351,8 +378,8 @@ void b11InitPicture()
         memCpyBanked(&bitmapWidthPreMult[0], &tempbitmapWidthPreMult[0], i, PICTURE_HEIGHT * 2);
     }
 
+    b11LoadDivisionTables();
 }
-
 /**************************************************************************
 ** initAGIScreen
 **
