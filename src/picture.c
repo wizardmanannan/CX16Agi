@@ -47,24 +47,24 @@ extern long pixelStartPrintingAt;
 
 void getLoadedPicture(PictureFile* returnedloadedPicture, byte loadedPictureNumber)
 {
-    byte previousRamBank = RAM_BANK;
+	byte previousRamBank = RAM_BANK;
 
-    RAM_BANK = PICTURE_BANK;
+	RAM_BANK = PICTURE_BANK;
 
-    *returnedloadedPicture = loadedPictures[loadedPictureNumber];
+	*returnedloadedPicture = loadedPictures[loadedPictureNumber];
 
-    RAM_BANK = previousRamBank;
+	RAM_BANK = previousRamBank;
 }
 
 void setLoadedPicture(PictureFile* loadedPicture, byte loadedPictureNumber)
 {
-    byte previousRamBank = RAM_BANK;
+	byte previousRamBank = RAM_BANK;
 
-    RAM_BANK = PICTURE_BANK;
+	RAM_BANK = PICTURE_BANK;
 
-    loadedPictures[loadedPictureNumber] = *loadedPicture;
+	loadedPictures[loadedPictureNumber] = *loadedPicture;
 
-    RAM_BANK = previousRamBank;
+	RAM_BANK = previousRamBank;
 }
 
 #pragma code-name (push, "BANKRAMFLOOD")
@@ -107,9 +107,9 @@ extern byte bFloodPicGetPixel(word x, word y);
 **************************************************************************/
 byte bFloodPriGetPixel(word x, word y)
 {
-    if (x > 159) return(PRI_DEFAULT);
-    if (y > 167) return(PRI_DEFAULT);
-    return (priority->line[y][x]);
+	if (x > 159) return(PRI_DEFAULT);
+	if (y > 167) return(PRI_DEFAULT);
+	return (priority->line[y][x]);
 }
 
 
@@ -144,58 +144,58 @@ byte bFloodPriGetPixel(word x, word y)
 **************************************************************************/
 boolean bFloodOkToFill(byte x, byte y)
 {
-    boolean getPicResult;
+	boolean getPicResult;
 
 #ifdef VERBOSE_FLOOD
-    if (pixelCounter >= pixelStartPrintingAt)
-    {
-        printf("State: pic: %d, pri %d, color: %d\n", picDrawEnabled, priDrawEnabled, picColour);
-    }
+	if (pixelCounter >= pixelStartPrintingAt)
+	{
+		printf("State: pic: %d, pri %d, color: %d\n", picDrawEnabled, priDrawEnabled, picColour);
+	}
 #endif
 
-    if (!picDrawEnabled && !priDrawEnabled) return FALSE;
-    if (picColour == PIC_DEFAULT) return FALSE;
-    if (!priDrawEnabled)
-    {
-        getPicResult = bFloodPicGetPixel(x, y);
+	if (!picDrawEnabled && !priDrawEnabled) return FALSE;
+	if (picColour == PIC_DEFAULT) return FALSE;
+	if (!priDrawEnabled)
+	{
+		getPicResult = bFloodPicGetPixel(x, y);
 #ifdef VERBOSE_FLOOD
-        if (pixelCounter >= pixelStartPrintingAt)
-        {
-            printf("result %d,%d %d \n", x, y, getPicResult);
-        }
+		if (pixelCounter >= pixelStartPrintingAt)
+		{
+			printf("result %d,%d %d \n", x, y, getPicResult);
+		}
 #endif
-        return (getPicResult == PIC_DEFAULT);
-    }
-    if (priDrawEnabled && !picDrawEnabled) return (bFloodPriGetPixel(x, y) == PRI_DEFAULT);
-    return (bFloodPicGetPixel(x, y) == PIC_DEFAULT);
+		return (getPicResult == PIC_DEFAULT);
+	}
+	if (priDrawEnabled && !picDrawEnabled) return (bFloodPriGetPixel(x, y) == PRI_DEFAULT);
+	return (bFloodPicGetPixel(x, y) == PIC_DEFAULT);
 }
- 
+
 #ifdef TEST_QUEUE
 void testQueue()
 {
-    int testAmount = 40103;
-    byte testVal;
-    unsigned int i;
-    printf("The address of i %p and the address of testVal is %p\n", &i, &testVal);
+	int testAmount = 40103;
+	byte testVal;
+	unsigned int i;
+	printf("The address of i %p and the address of testVal is %p\n", &i, &testVal);
 
-    for (i = 0; i <= testAmount; i++)
-    {
-        bFloodQstore(i);
-    }
+	for (i = 0; i <= testAmount; i++)
+	{
+		bFloodQstore(i);
+	}
 
 
-    for (i = 0; i <= testAmount; i++)
-    {
-        testVal = bFloodQretrieve();
-        if ((byte)i != testVal)
-        {
-            asm("stp");
-            asm("lda #4"); //This is a deliberately pointless instruction. It is there so we can see where we have stopped in the debugger
-        }
-    }
+	for (i = 0; i <= testAmount; i++)
+	{
+		testVal = bFloodQretrieve();
+		if ((byte)i != testVal)
+		{
+			asm("stp");
+			asm("lda #4"); //This is a deliberately pointless instruction. It is there so we can see where we have stopped in the debugger
+		}
+	}
 
-    asm("stp");
-    asm("lda #$19");
+	asm("stp");
+	asm("lda #$19");
 }
 #endif // TEST_QUEUE
 
@@ -205,94 +205,94 @@ void testQueue()
 **************************************************************************/
 void bFloodAgiFill(word x, word y)
 {
-    byte x1, y1;
+	byte x1, y1;
 #ifdef TEST_QUEUE
-    testQueue();
+	testQueue();
 #endif // TEST_QUEUE
 
 #ifdef VERBOSE_FLOOD_FILL
-    if (pixelCounter >= pixelStartPrintingAt && pixelStartPrintingAt != 1) {
-        printf("bl\n");
-    }
+	if (pixelCounter >= pixelStartPrintingAt && pixelStartPrintingAt != 1) {
+		printf("bl\n");
+	}
 #endif
 
-    bFloodQstore(x);
-    bFloodQstore(y);
+	bFloodQstore(x);
+	bFloodQstore(y);
 
-    for (;;) {
+	for (;;) {
 #ifdef VERBOSE_FLOOD_FILL
-        if (pixelCounter >= pixelStartPrintingAt && pixelStartPrintingAt != 1) {
-            printf("al\n");
-        }
+		if (pixelCounter >= pixelStartPrintingAt && pixelStartPrintingAt != 1) {
+			printf("al\n");
+		}
 #endif
-        x1 = bFloodQretrieve();
-        y1 = bFloodQretrieve();
+		x1 = bFloodQretrieve();
+		y1 = bFloodQretrieve();
 
 #ifdef VERBOSE_FLOOD_FILL
-        if (pixelCounter >= pixelStartPrintingAt && pixelStartPrintingAt != 1) {
-            printf("R %d,%d\n", x1, y1);
-        }
+		if (pixelCounter >= pixelStartPrintingAt && pixelStartPrintingAt != 1) {
+			printf("R %d,%d\n", x1, y1);
+		}
 #endif // VERBOSE_FLOOD
 
 
 
-        if ((x1 == QEMPTY) || (y1 == QEMPTY))
-            break;
-        else {
+		if ((x1 == QEMPTY) || (y1 == QEMPTY))
+			break;
+		else {
 
-            if (bFloodOkToFill(x1, y1)) {
+			if (bFloodOkToFill(x1, y1)) {
 
-                PSETFLOOD(x1, y1);
+				PSETFLOOD(x1, y1);
 
-                if (bFloodOkToFill(x1, y1 - 1) && (y1 != 0)) {
+				if (bFloodOkToFill(x1, y1 - 1) && (y1 != 0)) {
 #ifdef VERBOSE_FLOOD_FILL
-                    if (pixelCounter >= pixelStartPrintingAt && pixelStartPrintingAt != 1) {
-                        printf("1\n");
-                    }
+					if (pixelCounter >= pixelStartPrintingAt && pixelStartPrintingAt != 1) {
+						printf("1\n");
+					}
 #endif
-                    bFloodQstore(x1);
-                    bFloodQstore(y1 - 1);
-                }
-                if (bFloodOkToFill(x1 - 1, y1) && (x1 != 0)) {
+					bFloodQstore(x1);
+					bFloodQstore(y1 - 1);
+				}
+				if (bFloodOkToFill(x1 - 1, y1) && (x1 != 0)) {
 #ifdef VERBOSE_FLOOD_FILL
-                    if (pixelCounter >= pixelStartPrintingAt && pixelStartPrintingAt != 1) {
-                        printf("2\n");
-                    }
+					if (pixelCounter >= pixelStartPrintingAt && pixelStartPrintingAt != 1) {
+						printf("2\n");
+					}
 #endif
-                    bFloodQstore(x1 - 1);
-                    bFloodQstore(y1);
-                }
-                if (bFloodOkToFill(x1 + 1, y1) && (x1 != 159)) {
+					bFloodQstore(x1 - 1);
+					bFloodQstore(y1);
+				}
+				if (bFloodOkToFill(x1 + 1, y1) && (x1 != 159)) {
 #ifdef VERBOSE_FLOOD_FILL
-                    if (pixelCounter >= pixelStartPrintingAt && pixelStartPrintingAt != 1) {
-                        printf("3\n");
-                    }
+					if (pixelCounter >= pixelStartPrintingAt && pixelStartPrintingAt != 1) {
+						printf("3\n");
+					}
 #endif
-                    bFloodQstore(x1 + 1);
-                    bFloodQstore(y1);
-                }
-                if (bFloodOkToFill(x1, y1 + 1) && (y1 != 167)) {
+					bFloodQstore(x1 + 1);
+					bFloodQstore(y1);
+				}
+				if (bFloodOkToFill(x1, y1 + 1) && (y1 != 167)) {
 #ifdef VERBOSE_FLOOD_FILL
-                    if (pixelCounter >= pixelStartPrintingAt && pixelStartPrintingAt != 1) {
-                        printf("4\n");
-                    }
+					if (pixelCounter >= pixelStartPrintingAt && pixelStartPrintingAt != 1) {
+						printf("4\n");
+					}
 #endif
-                    bFloodQstore(x1);
-                    bFloodQstore(y1 + 1);
-                }
+					bFloodQstore(x1);
+					bFloodQstore(y1 + 1);
+				}
 
-            }
+			}
 
-        }
+		}
 
-    }
+	}
 
 }
 #pragma code-name (pop)
 #pragma code-name (push, "BANKRAM11")
 void b11FloodBankFull() //Is on this bank to save room on flood bank 
 {
-    printf("warning Flood Bank Full\n");
+	printf("warning Flood Bank Full\n");
 }
 
 
@@ -303,22 +303,51 @@ void b11FloodBankFull() //Is on this bank to save room on flood bank
 **************************************************************************/
 void b11FloodFill(byte** data)
 {
-    byte x1, y1;
-    byte picColorOld = picColour;
-    picColour = 0xE;
-   
-    //b11PSet(90, 43);
-    picColour = picColorOld;
+	byte x1, y1;
+	byte picColorOld = picColour;
+	picColour = 0xE;
 
-    for (;;) {
-        if ((x1 = *((*data)++)) >= 0xF0) break;
-        if ((y1 = *((*data)++)) >= 0xF0) break;
-        trampoline_2Int(&bFloodAgiFill,x1, y1, FIRST_FLOOD_BANK);
-    }
+	//b11PSet(90, 43);
+	picColour = picColorOld;
 
-    (*data)--;
+	for (;;) {
+		if ((x1 = *((*data)++)) >= 0xF0) break;
+		if ((y1 = *((*data)++)) >= 0xF0) break;
+		trampoline_2Int(&bFloodAgiFill, x1, y1, FIRST_FLOOD_BANK);
+	}
+
+	(*data)--;
 }
 
+void b11LoadDivisionMetadata(const char* fileName, int metadataSize, byte* metadataLocation)
+{
+	FILE* fp;
+	char fileNameBuffer[30];
+	size_t bytesRead;
+
+#ifdef VERBOSE
+	printf("The filename is %s and the metadata size is %d\n", fileName, metadataSize);
+#endif // VERBOSE
+
+
+	if ((fp = fopen(fileName, "rb")) != NULL) {
+     	bytesRead = fread(&GOLDEN_RAM_WORK_AREA[0], 1, metadataSize, fp);
+		
+#ifdef VERBOSE
+		printf("Read %d bytes. The first byte is %p\n", bytesRead);
+#endif // VERBOSE
+		
+		memCpyBanked(metadataLocation, &GOLDEN_RAM_WORK_AREA[0], DIV_METADATA_BANK, metadataSize);
+#ifdef VERBOSE
+		printf("Copy %d bytes to location %p \n", bytesRead, metadataLocation);
+#endif // VERBOSE
+
+		fclose(fp);
+	}
+	else {
+		printf("Failed to open %s\n", fileName);
+	}
+}
 
 
 #define SWIDTH   640  /* Screen resolution */
@@ -330,29 +359,35 @@ void b11FloodFill(byte** data)
 
 void b11LoadDivisionTables()
 {
-    FILE* fp;
-    int bank, i;
-    char fileNameBuffer[30];
-    const char* fileName = "div%x.bin";
+	FILE* fp;
+	int bank, i;
+	char fileNameBuffer[30];
+	const char* divFileName = "div%x.bin";
+	const char* bankfileName = "divb.bin";
+	const char* addressfileName = "diva.bin";
 
-    for (bank = FIRST_DIVISION_BANK; bank <= LAST_DIVISION_BANK; bank++)
-    {
-        sprintf(&fileNameBuffer[0], fileName, bank);
+	for (bank = FIRST_DIVISION_BANK; bank <= LAST_DIVISION_BANK; bank++)
+	{
+		sprintf(&fileNameBuffer[0], divFileName, bank);
 
-        printf("loading division tables from file %s\n", &fileNameBuffer[0]);
-        if ((fp = fopen(&fileNameBuffer[0], "rb")) != NULL) {
-            size_t bytesRead;
-            i = 0; 
-            while ((bytesRead = fread(&GOLDEN_RAM_WORK_AREA[0], 1, LOCAL_WORK_AREA_SIZE, fp)) > 0) {
-                memCpyBanked(DIVISION_AREA + LOCAL_WORK_AREA_SIZE * i++, &GOLDEN_RAM_WORK_AREA[0], bank, bytesRead);
-            }
+		printf("Loading division tables %d of %d \n", bank - FIRST_DIVISION_BANK + 1, LAST_DIVISION_BANK - FIRST_DIVISION_BANK + 1);
+		if ((fp = fopen(&fileNameBuffer[0], "rb")) != NULL) {
+			size_t bytesRead;
+			i = 0;
+			while ((bytesRead = fread(&GOLDEN_RAM_WORK_AREA[0], 1, LOCAL_WORK_AREA_SIZE, fp)) > 0) {
+				memCpyBanked(DIVISION_AREA + LOCAL_WORK_AREA_SIZE * i++, &GOLDEN_RAM_WORK_AREA[0], bank, bytesRead);
+			}
 
-            fclose(fp);
-        }
-        else {
-            printf("failed to division table file %s\n", &fileNameBuffer[0]);
-        }
-    }
+			fclose(fp);
+		}
+		else {
+			printf("failed to division table file %s\n", &fileNameBuffer[0]);
+		}
+	}
+	printf("Loading Division Metdata 1 of 2\n");
+	b11LoadDivisionMetadata(bankfileName, DIV_BANK_METADATA_SIZE, &DIV_BANK_METADATA[0]);
+	printf("Loading Division Metdata 2 of 2\n");
+	b11LoadDivisionMetadata(addressfileName, DIV_ADDRESS_METADATA_SIZE, &DIV_ADDRESS_METADATA[0]);
 }
 
 /**************************************************************************
@@ -363,22 +398,22 @@ void b11LoadDivisionTables()
 **************************************************************************/
 void b11InitPicture()
 {
-    int i;
-    int* tempbitmapWidthPreMult = (int*)GOLDEN_RAM_WORK_AREA;
+	int i;
+	int* tempbitmapWidthPreMult = (int*)GOLDEN_RAM_WORK_AREA;
 
-    for (i = 0; i < PICTURE_HEIGHT; i++)
-    {
-        tempbitmapWidthPreMult[i] = i * BYTES_PER_ROW;
-    }
+	for (i = 0; i < PICTURE_HEIGHT; i++)
+	{
+		tempbitmapWidthPreMult[i] = i * BYTES_PER_ROW;
+	}
 
-    memcpy(&bitmapWidthPreMult[0], & tempbitmapWidthPreMult[0], PICTURE_HEIGHT * 2);
+	memcpy(&bitmapWidthPreMult[0], &tempbitmapWidthPreMult[0], PICTURE_HEIGHT * 2);
 
-    for (i = FIRST_FLOOD_BANK; i <= LAST_FLOOD_BANK; i++)
-    {
-        memCpyBanked(&bitmapWidthPreMult[0], &tempbitmapWidthPreMult[0], i, PICTURE_HEIGHT * 2);
-    }
+	for (i = FIRST_FLOOD_BANK; i <= LAST_FLOOD_BANK; i++)
+	{
+		memCpyBanked(&bitmapWidthPreMult[0], &tempbitmapWidthPreMult[0], i, PICTURE_HEIGHT * 2);
+	}
 
-    b11LoadDivisionTables();
+	b11LoadDivisionTables();
 }
 /**************************************************************************
 ** initAGIScreen
@@ -399,9 +434,9 @@ void b11InitAGIScreen()
 **************************************************************************/
 void b11ClearPicture()
 {
-    trampoline_0(&b6ClearBackground, IRQ_BANK);
-    clear_to_color(priority, PRI_DEFAULT);
-    clear_to_color(control, PRI_DEFAULT);
+	trampoline_0(&b6ClearBackground, IRQ_BANK);
+	clear_to_color(priority, PRI_DEFAULT);
+	clear_to_color(control, PRI_DEFAULT);
 }
 
 /**************************************************************************
@@ -411,9 +446,9 @@ void b11ClearPicture()
 **************************************************************************/
 void b11PriPSet(word x, word y)
 {
-    if (x > 159) return;
-    if (y > 167) return;
-    priority->line[y][x] = priColour;
+	if (x > 159) return;
+	if (y > 167) return;
+	priority->line[y][x] = priColour;
 }
 
 /**************************************************************************
@@ -435,34 +470,34 @@ if ((x) <= 159 && (y) <= 167) {  \
 **************************************************************************/
 void b11XCorner(byte** data)
 {
-    byte x1, x2, y1, y2;
+	byte x1, x2, y1, y2;
 
-    x1 = *((*data)++);
-    y1 = *((*data)++);
+	x1 = *((*data)++);
+	y1 = *((*data)++);
 
-    PSET(x1, y1);
+	PSET(x1, y1);
 
-    for (;;) {
-        x2 = *((*data)++);
-        if (x2 >= 0xF0) break;
+	for (;;) {
+		x2 = *((*data)++);
+		if (x2 >= 0xF0) break;
 
-
-#ifdef VERBOSE
-        printf("x corner line 1: %d,%d : %d,%d\n", x1, y1, x2, y2);
-#endif
-        b11Drawline(x1, y1, x2, y2);
-        x1 = x2;
-        y2 = *((*data)++);
-        if (y2 >= 0xF0) break;
 
 #ifdef VERBOSE
-        printf("x corner line 2: %d,%d : %d,%d\n", x1, y1, x2, y2);
+		printf("x corner line 1: %d,%d : %d,%d\n", x1, y1, x2, y2);
 #endif
-        b11Drawline(x1, y1, x2, y2);
-        y1 = y2;
-    }
+		b11Drawline(x1, y1, x2, y2);
+		x1 = x2;
+		y2 = *((*data)++);
+		if (y2 >= 0xF0) break;
 
-    (*data)--;
+#ifdef VERBOSE
+		printf("x corner line 2: %d,%d : %d,%d\n", x1, y1, x2, y2);
+#endif
+		b11Drawline(x1, y1, x2, y2);
+		y1 = y2;
+	}
+
+	(*data)--;
 }
 
 /**************************************************************************
@@ -472,36 +507,36 @@ void b11XCorner(byte** data)
 **************************************************************************/
 void b11YCorner(byte** data)
 {
-    byte x1, x2, y1, y2;
+	byte x1, x2, y1, y2;
 
-    x1 = *((*data)++);
-    y1 = *((*data)++);
+	x1 = *((*data)++);
+	y1 = *((*data)++);
 
-    PSET(x1, y1);
+	PSET(x1, y1);
 
-    for (;;) {
-        y2 = *((*data)++);
-        if (y2 >= 0xF0) break;
+	for (;;) {
+		y2 = *((*data)++);
+		if (y2 >= 0xF0) break;
 
 
-
-#ifdef VERBOSE
-        printf("y corner line 1: %d,%d : %d,%d\n", x1, y1, x2, y2);
-#endif
-
-        b11Drawline(x1, y1, x2, y2);
-        y1 = y2;
-        x2 = *((*data)++);
-        if (x2 >= 0xF0) break;
 
 #ifdef VERBOSE
-        printf("y Corner line 2: %d,%d : %d,%d\n", x1, y1, x2, y2);
+		printf("y corner line 1: %d,%d : %d,%d\n", x1, y1, x2, y2);
 #endif
-        b11Drawline(x1, y1, x2, y2);
-        x1 = x2;
-    }
 
-    (*data)--;
+		b11Drawline(x1, y1, x2, y2);
+		y1 = y2;
+		x2 = *((*data)++);
+		if (x2 >= 0xF0) break;
+
+#ifdef VERBOSE
+		printf("y Corner line 2: %d,%d : %d,%d\n", x1, y1, x2, y2);
+#endif
+		b11Drawline(x1, y1, x2, y2);
+		x1 = x2;
+	}
+
+	(*data)--;
 }
 
 /**************************************************************************
@@ -511,84 +546,84 @@ void b11YCorner(byte** data)
 **************************************************************************/
 void b11RelativeDraw(byte** data)
 {
-    byte x1, y1, disp;
-    signed char dx, dy;
+	byte x1, y1, disp;
+	signed char dx, dy;
 
-    x1 = *((*data)++);
-    y1 = *((*data)++);
+	x1 = *((*data)++);
+	y1 = *((*data)++);
 
-    PSET(x1, y1);
+	PSET(x1, y1);
 
-    for (;;) {
-        disp = *((*data)++);
+	for (;;) {
+		disp = *((*data)++);
 
 #ifdef VERBOSE_REL_DRAW
-        printf("Disp %u \n", disp);
+		printf("Disp %u \n", disp);
 #endif // VERBOSE
 
-        if (disp >= 0xF0) break;
-        dx = ((disp & 0xF0) >> 4) & 0x0F;
+		if (disp >= 0xF0) break;
+		dx = ((disp & 0xF0) >> 4) & 0x0F;
 #ifdef VERBOSE_REL_DRAW
-        printf("Prior dx: ((%u & 0xF0) >> 4) & 0x0f : %d\n", disp, dx);
+		printf("Prior dx: ((%u & 0xF0) >> 4) & 0x0f : %d\n", disp, dx);
 #endif
 
 
-        dy = (disp & 0x0F);
+		dy = (disp & 0x0F);
 
 #ifdef VERBOSE_REL_DRAW
-        printf("Prior dy: ( %u & 0x0f): %d\n", disp, dy);
+		printf("Prior dy: ( %u & 0x0f): %d\n", disp, dy);
 #endif
 
-        if (dx & 0x08)
-        {
+		if (dx & 0x08)
+		{
 #ifdef VERBOSE_REL_DRAW
-            printf("x neg -1 * (%d & 07) :  %d \n", dx, (-1) * (dx & 0x07));
+			printf("x neg -1 * (%d & 07) :  %d \n", dx, (-1) * (dx & 0x07));
 #endif
-            dx = (-1) * (dx & 0x07);
+			dx = (-1) * (dx & 0x07);
 #ifdef VERBOSE_REL_DRAW
-            printf("dy is %d\n", dy);
+			printf("dy is %d\n", dy);
 #endif
-        }
+		}
 #ifdef  VERBOSE_REL_DRAW
-        else
-        {
-            printf("x not neg %d \n", dx & 0x08);
-        }
+		else
+		{
+			printf("x not neg %d \n", dx & 0x08);
+		}
 #endif //  VERBOSE
 
-        if (dy & 0x08)
-        {
+		if (dy & 0x08)
+		{
 #ifdef VERBOSE_REL_DRAW
-            printf("y neg -1 * (%d & 07) :  %d \n", dy, (-1) * (dy & 0x07));
+			printf("y neg -1 * (%d & 07) :  %d \n", dy, (-1) * (dy & 0x07));
 #endif
-            dy = (-1) * (dy & 0x07);
+			dy = (-1) * (dy & 0x07);
 
 #ifdef VERBOSE_REL_DRAW
-            printf("dy is %d\n", dy);
+			printf("dy is %d\n", dy);
 #endif
-        }
+		}
 #ifdef  VERBOSE_REL_DRAW
-        else
-        {
-            printf("y not neg %d \n", dy & 0x08);
-        }
+		else
+		{
+			printf("y not neg %d \n", dy & 0x08);
+		}
 #endif //  VERBOSE
 
 #ifdef VERBOSE_REL_DRAW
-        printf("Rel Draw  x1 %u, y1 %u dx: %d, dy: %d, x1 + dx: %u, y1 + dy %u \n", x1, y1, dx, dy, x1 + dx, y1 + dy);
+		printf("Rel Draw  x1 %u, y1 %u dx: %d, dy: %d, x1 + dx: %u, y1 + dy %u \n", x1, y1, dx, dy, x1 + dx, y1 + dy);
 #endif // VERBOSE
 
 
 #ifdef VERBOSE
-        printf("rel line: %d,%d : %d,%d\n", x1, y1, x1 + dx, y1 + dy);
+		printf("rel line: %d,%d : %d,%d\n", x1, y1, x1 + dx, y1 + dy);
 #endif
 
-        b11Drawline(x1, y1, x1 + dx, y1 + dy);
-        x1 += dx;
-        y1 += dy;
-    }
+		b11Drawline(x1, y1, x1 + dx, y1 + dy);
+		x1 += dx;
+		y1 += dy;
+	}
 
-    (*data)--;
+	(*data)--;
 }
 
 /**************************************************************************
@@ -598,38 +633,38 @@ void b11RelativeDraw(byte** data)
 **************************************************************************/
 void b11AbsoluteLine(byte** data)
 {
-    byte x1, y1, x2, y2;
+	byte x1, y1, x2, y2;
 
-    x1 = *((*data)++);
-    y1 = *((*data)++);
+	x1 = *((*data)++);
+	y1 = *((*data)++);
 
-    PSET(x1, y1);
+	PSET(x1, y1);
 
-    for (;;) {
-        if ((x2 = *((*data)++)) >= 0xF0)
-        {
-            //#ifdef VERBOSE
-            //            printf("Absolute Line Break\n");
-            //#endif // VERBOSE
+	for (;;) {
+		if ((x2 = *((*data)++)) >= 0xF0)
+		{
+			//#ifdef VERBOSE
+			//            printf("Absolute Line Break\n");
+			//#endif // VERBOSE
 
-            break;
-        }
-        if ((y2 = *((*data)++)) >= 0xF0)
-        {
-            //#ifdef VERBOSE
-            //            printf("Absolute Line Break\n");
-            //#endif // VERBOSE
-            break;
-        }
+			break;
+		}
+		if ((y2 = *((*data)++)) >= 0xF0)
+		{
+			//#ifdef VERBOSE
+			//            printf("Absolute Line Break\n");
+			//#endif // VERBOSE
+			break;
+		}
 #ifdef VERBOSE
-        printf("abs line: %d,%d : %d,%d\n", x1, y1, x2, y2);
+		printf("abs line: %d,%d : %d,%d\n", x1, y1, x2, y2);
 #endif
-        b11Drawline(x1, y1, x2, y2);
-        x1 = x2;
-        y1 = y2;
-    }
+		b11Drawline(x1, y1, x2, y2);
+		x1 = x2;
+		y1 = y2;
+	}
 
-    (*data)--;
+	(*data)--;
 }
 
 
@@ -648,74 +683,74 @@ void b11AbsoluteLine(byte** data)
 **************************************************************************/
 void b11PlotPattern(byte x, byte y)
 {
-    static char circles[][15] = { /* agi circle bitmaps */
-      {0x80},
-      {0xfc},
-      {0x5f, 0xf4},
-      {0x66, 0xff, 0xf6, 0x60},
-      {0x23, 0xbf, 0xff, 0xff, 0xee, 0x20},
-      {0x31, 0xe7, 0x9e, 0xff, 0xff, 0xde, 0x79, 0xe3, 0x00},
-      {0x38, 0xf9, 0xf3, 0xef, 0xff, 0xff, 0xff, 0xfe, 0xf9, 0xf3, 0xe3, 0x80},
-      {0x18, 0x3c, 0x7e, 0x7e, 0x7e, 0xff, 0xff, 0xff, 0xff, 0xff, 0x7e, 0x7e,
-       0x7e, 0x3c, 0x18}
-    };
+	static char circles[][15] = { /* agi circle bitmaps */
+	  {0x80},
+	  {0xfc},
+	  {0x5f, 0xf4},
+	  {0x66, 0xff, 0xf6, 0x60},
+	  {0x23, 0xbf, 0xff, 0xff, 0xee, 0x20},
+	  {0x31, 0xe7, 0x9e, 0xff, 0xff, 0xde, 0x79, 0xe3, 0x00},
+	  {0x38, 0xf9, 0xf3, 0xef, 0xff, 0xff, 0xff, 0xfe, 0xf9, 0xf3, 0xe3, 0x80},
+	  {0x18, 0x3c, 0x7e, 0x7e, 0x7e, 0xff, 0xff, 0xff, 0xff, 0xff, 0x7e, 0x7e,
+	   0x7e, 0x3c, 0x18}
+	};
 
-    static byte splatterMap[32] = { /* splatter brush bitmaps */
-      0x20, 0x94, 0x02, 0x24, 0x90, 0x82, 0xa4, 0xa2,
-      0x82, 0x09, 0x0a, 0x22, 0x12, 0x10, 0x42, 0x14,
-      0x91, 0x4a, 0x91, 0x11, 0x08, 0x12, 0x25, 0x10,
-      0x22, 0xa8, 0x14, 0x24, 0x00, 0x50, 0x24, 0x04
-    };
+	static byte splatterMap[32] = { /* splatter brush bitmaps */
+	  0x20, 0x94, 0x02, 0x24, 0x90, 0x82, 0xa4, 0xa2,
+	  0x82, 0x09, 0x0a, 0x22, 0x12, 0x10, 0x42, 0x14,
+	  0x91, 0x4a, 0x91, 0x11, 0x08, 0x12, 0x25, 0x10,
+	  0x22, 0xa8, 0x14, 0x24, 0x00, 0x50, 0x24, 0x04
+	};
 
-    static byte splatterStart[128] = { /* starting bit position */
-      0x00, 0x18, 0x30, 0xc4, 0xdc, 0x65, 0xeb, 0x48,
-      0x60, 0xbd, 0x89, 0x05, 0x0a, 0xf4, 0x7d, 0x7d,
-      0x85, 0xb0, 0x8e, 0x95, 0x1f, 0x22, 0x0d, 0xdf,
-      0x2a, 0x78, 0xd5, 0x73, 0x1c, 0xb4, 0x40, 0xa1,
-      0xb9, 0x3c, 0xca, 0x58, 0x92, 0x34, 0xcc, 0xce,
-      0xd7, 0x42, 0x90, 0x0f, 0x8b, 0x7f, 0x32, 0xed,
-      0x5c, 0x9d, 0xc8, 0x99, 0xad, 0x4e, 0x56, 0xa6,
-      0xf7, 0x68, 0xb7, 0x25, 0x82, 0x37, 0x3a, 0x51,
-      0x69, 0x26, 0x38, 0x52, 0x9e, 0x9a, 0x4f, 0xa7,
-      0x43, 0x10, 0x80, 0xee, 0x3d, 0x59, 0x35, 0xcf,
-      0x79, 0x74, 0xb5, 0xa2, 0xb1, 0x96, 0x23, 0xe0,
-      0xbe, 0x05, 0xf5, 0x6e, 0x19, 0xc5, 0x66, 0x49,
-      0xf0, 0xd1, 0x54, 0xa9, 0x70, 0x4b, 0xa4, 0xe2,
-      0xe6, 0xe5, 0xab, 0xe4, 0xd2, 0xaa, 0x4c, 0xe3,
-      0x06, 0x6f, 0xc6, 0x4a, 0xa4, 0x75, 0x97, 0xe1
-    };
+	static byte splatterStart[128] = { /* starting bit position */
+	  0x00, 0x18, 0x30, 0xc4, 0xdc, 0x65, 0xeb, 0x48,
+	  0x60, 0xbd, 0x89, 0x05, 0x0a, 0xf4, 0x7d, 0x7d,
+	  0x85, 0xb0, 0x8e, 0x95, 0x1f, 0x22, 0x0d, 0xdf,
+	  0x2a, 0x78, 0xd5, 0x73, 0x1c, 0xb4, 0x40, 0xa1,
+	  0xb9, 0x3c, 0xca, 0x58, 0x92, 0x34, 0xcc, 0xce,
+	  0xd7, 0x42, 0x90, 0x0f, 0x8b, 0x7f, 0x32, 0xed,
+	  0x5c, 0x9d, 0xc8, 0x99, 0xad, 0x4e, 0x56, 0xa6,
+	  0xf7, 0x68, 0xb7, 0x25, 0x82, 0x37, 0x3a, 0x51,
+	  0x69, 0x26, 0x38, 0x52, 0x9e, 0x9a, 0x4f, 0xa7,
+	  0x43, 0x10, 0x80, 0xee, 0x3d, 0x59, 0x35, 0xcf,
+	  0x79, 0x74, 0xb5, 0xa2, 0xb1, 0x96, 0x23, 0xe0,
+	  0xbe, 0x05, 0xf5, 0x6e, 0x19, 0xc5, 0x66, 0x49,
+	  0xf0, 0xd1, 0x54, 0xa9, 0x70, 0x4b, 0xa4, 0xe2,
+	  0xe6, 0xe5, 0xab, 0xe4, 0xd2, 0xaa, 0x4c, 0xe3,
+	  0x06, 0x6f, 0xc6, 0x4a, 0xa4, 0x75, 0x97, 0xe1
+	};
 
-    int circlePos = 0;
-    byte x1, y1, penSize, bitPos = splatterStart[patNum];
+	int circlePos = 0;
+	byte x1, y1, penSize, bitPos = splatterStart[patNum];
 
-    penSize = (patCode & 7);
+	penSize = (patCode & 7);
 
-    /* Don't know exactly what happens at the borders, but it can definitely
-    ** cause problems if it isn't right. */
-    /*
-    if (x<((penSize/2)+1)) x=((penSize/2)+1);
-    else if (x>160-((penSize/2)+1)) x=160-((penSize/2)+1);
-    if (y<penSize) y = penSize;
-    else if (y>=168-penSize) y=167-penSize;
-    */
-    if (x < penSize) x = penSize - 1;
-    if (y < penSize) y = penSize;
-    //else if (y>=168-penSize) y=167-penSize;
+	/* Don't know exactly what happens at the borders, but it can definitely
+	** cause problems if it isn't right. */
+	/*
+	if (x<((penSize/2)+1)) x=((penSize/2)+1);
+	else if (x>160-((penSize/2)+1)) x=160-((penSize/2)+1);
+	if (y<penSize) y = penSize;
+	else if (y>=168-penSize) y=167-penSize;
+	*/
+	if (x < penSize) x = penSize - 1;
+	if (y < penSize) y = penSize;
+	//else if (y>=168-penSize) y=167-penSize;
 
-    //TODO: Fix Float
-    //for (y1 = y - penSize; y1 <= y + penSize; y1++) {
-    //    for (x1 = x - (ceil((float)penSize / 2)); x1 <= x + (floor((float)penSize / 2)); x1++) {
-    //        if (patCode & 0x10) { /* Square */
-    //            plotPatternPoint();
-    //        }
-    //        else { /* Circle */
-    //            if ((circles[patCode & 7][circlePos >> 3] >> (7 - (circlePos & 7))) & 1) {
-    //                plotPatternPoint();
-    //            }
-    //            circlePos++;
-    //        }
-    //    }
-    //}
+	//TODO: Fix Float
+	//for (y1 = y - penSize; y1 <= y + penSize; y1++) {
+	//    for (x1 = x - (ceil((float)penSize / 2)); x1 <= x + (floor((float)penSize / 2)); x1++) {
+	//        if (patCode & 0x10) { /* Square */
+	//            plotPatternPoint();
+	//        }
+	//        else { /* Circle */
+	//            if ((circles[patCode & 7][circlePos >> 3] >> (7 - (circlePos & 7))) & 1) {
+	//                plotPatternPoint();
+	//            }
+	//            circlePos++;
+	//        }
+	//    }
+	//}
 
 }
 
@@ -727,19 +762,19 @@ void b11PlotPattern(byte x, byte y)
 **************************************************************************/
 void b11PlotBrush(byte** data)
 {
-    byte x1, y1, store;
+	byte x1, y1, store;
 
-    for (;;) {
-        if (patCode & 0x20) {
-            if ((patNum = *((*data)++)) >= 0xF0) break;
-            patNum = ((patNum >> 1) & 0x7f);
-        }
-        if ((x1 = *((*data)++)) >= 0xF0) break;
-        if ((y1 = *((*data)++)) >= 0xF0) break;
-        b11PlotPattern(x1, y1);
-    }
+	for (;;) {
+		if (patCode & 0x20) {
+			if ((patNum = *((*data)++)) >= 0xF0) break;
+			patNum = ((patNum >> 1) & 0x7f);
+		}
+		if ((x1 = *((*data)++)) >= 0xF0) break;
+		if ((y1 = *((*data)++)) >= 0xF0) break;
+		b11PlotPattern(x1, y1);
+	}
 
-    (*data)--;
+	(*data)--;
 }
 
 /**************************************************************************
@@ -752,40 +787,40 @@ void b11PlotBrush(byte** data)
 **************************************************************************/
 void b11SplitPriority()
 {
-    int x, y, dy;
-    byte data;
-    boolean priFound;
+	int x, y, dy;
+	byte data;
+	boolean priFound;
 
-    //for (x = 0; x < 160; x++) {
-    //    for (y = 0; y < 168; y++) {
-    //        data = priority->line[y][x];
-    //        if (data == 3) {
-    //            priority->line[y][x] = 4;
-    //            control->line[y][x] = data;
-    //        }
-    //        if (data < 3) {
-    //            control->line[y][x] = data;
-    //            dy = y + 1;
-    //            priFound = FALSE;
-    //            while (!priFound && (dy < 168)) {
-    //                data = priority->line[dy][x];
-    //                /* The following if statement is a hack to fix a problem
-    //                ** in KQ1 room 1.
-    //                */
-    //                if (data == 3) {
-    //                    priFound = TRUE;
-    //                    priority->line[y][x] = 4;
-    //                }
-    //                else if (data > 3) {
-    //                    priFound = TRUE;
-    //                    priority->line[y][x] = data;
-    //                }
-    //                else
-    //                    dy++;
-    //            }
-    //        }
-    //    }
-    //}
+	//for (x = 0; x < 160; x++) {
+	//    for (y = 0; y < 168; y++) {
+	//        data = priority->line[y][x];
+	//        if (data == 3) {
+	//            priority->line[y][x] = 4;
+	//            control->line[y][x] = data;
+	//        }
+	//        if (data < 3) {
+	//            control->line[y][x] = data;
+	//            dy = y + 1;
+	//            priFound = FALSE;
+	//            while (!priFound && (dy < 168)) {
+	//                data = priority->line[dy][x];
+	//                /* The following if statement is a hack to fix a problem
+	//                ** in KQ1 room 1.
+	//                */
+	//                if (data == 3) {
+	//                    priFound = TRUE;
+	//                    priority->line[y][x] = 4;
+	//                }
+	//                else if (data > 3) {
+	//                    priFound = TRUE;
+	//                    priority->line[y][x] = data;
+	//                }
+	//                else
+	//                    dy++;
+	//            }
+	//        }
+	//    }
+	//}
 }
 
 int picFNum = 0;
@@ -799,113 +834,113 @@ int picFNum = 0;
 **************************************************************************/
 void b11DrawPic(byte* bankedData, int pLen, boolean okToClearScreen, byte picNum)
 {
-    unsigned long i;
-    byte action;
-    boolean stillDrawing = TRUE;
-    PictureFile loadedPicture;
-    byte* data;
-    int** zpPtrTemp = (int**)ZP_PTR_TEMP;
-    int** zpB1 = (int**)ZP_PTR_B1;
-    int** zpB2 = (int**)ZP_PTR_B2;
+	unsigned long i;
+	byte action;
+	boolean stillDrawing = TRUE;
+	PictureFile loadedPicture;
+	byte* data;
+	int** zpPtrTemp = (int**)ZP_PTR_TEMP;
+	int** zpB1 = (int**)ZP_PTR_B1;
+	int** zpB2 = (int**)ZP_PTR_B2;
 
-    *zpPtrTemp = &bitmapWidthPreMult[0];
-    *zpB1 = (int*)FLOOD_QUEUE_START;
-    *zpB2 = (int*)FLOOD_QUEUE_START;
-    rpos = FLOOD_QUEUE_START;
-    spos = FLOOD_QUEUE_START;
-    rposBank = FIRST_FLOOD_BANK;
-    sposBank = FIRST_FLOOD_BANK;
+	*zpPtrTemp = &bitmapWidthPreMult[0];
+	*zpB1 = (int*)FLOOD_QUEUE_START;
+	*zpB2 = (int*)FLOOD_QUEUE_START;
+	rpos = FLOOD_QUEUE_START;
+	spos = FLOOD_QUEUE_START;
+	rposBank = FIRST_FLOOD_BANK;
+	sposBank = FIRST_FLOOD_BANK;
 
-    getLoadedPicture(&loadedPicture, picNum);
+	getLoadedPicture(&loadedPicture, picNum);
 
 #ifdef VERBOSE
-    printf("Preparing To Draw %d of size %d\n", picNum, loadedPicture.size);
+	printf("Preparing To Draw %d of size %d\n", picNum, loadedPicture.size);
 #endif // VERBOSE
 
 
-    data = (byte*)malloc(loadedPicture.size);
+	data = (byte*)malloc(loadedPicture.size);
 
-    if (!data)
-    {
-        printf("Out of memory in picture code");
-    }
+	if (!data)
+	{
+		printf("Out of memory in picture code");
+	}
 
-    memCpyBanked(&data[0], (byte*)loadedPicture.data, loadedPicture.bank, loadedPicture.size);
+	memCpyBanked(&data[0], (byte*)loadedPicture.data, loadedPicture.bank, loadedPicture.size);
 
-    //asm("sei");
+	//asm("sei");
 
-    if (okToClearScreen) b11ClearPicture();
+	if (okToClearScreen) b11ClearPicture();
 
-    //asm("cli");
+	//asm("cli");
 
-    //trampoline_0(&b6DisableAndWaitForVsync, IRQ_BANK);
+	//trampoline_0(&b6DisableAndWaitForVsync, IRQ_BANK);
 
-    //asm("sei");
+	//asm("sei");
 
-    patCode = 0x00;
+	patCode = 0x00;
 
 #ifdef VERBOSE
-    printf("Plotting. . .\n");
+	printf("Plotting. . .\n");
 #endif // VERBOSE
 
-    do {
-        action = *(data++);
+	do {
+		action = *(data++);
 #ifdef VERBOSE
-        printf("Action: %p \n", action);
+		printf("Action: %p \n", action);
 #endif // VERBOSE
-        switch (action) {
-        case 0xFF:
-            stillDrawing = 0;
-            break;
-        case 0xF0: picColour = *(data++);
-            picDrawEnabled = TRUE;
-            break;
-        case 0xF1: picDrawEnabled = FALSE; break;
-        case 0xF2: priColour = *(data++);
-            priDrawEnabled = TRUE;
-            break;
-        case 0xF3: priDrawEnabled = FALSE; break;
-        case 0xF4: b11YCorner(&data); break;
-        case 0xF5: b11XCorner(&data); break;
-        case 0xF6: b11AbsoluteLine(&data); break;
-        case 0xF7: b11RelativeDraw(&data); break;
-        case 0xF8: b11FloodFill(&data); break;
-        case 0xF9: patCode = *(data++); break;
-        case 0xFA: b11PlotBrush(&data); break;
-        default: printf("Unknown picture code : %X\n", action); exit(0);
-        }
+		switch (action) {
+		case 0xFF:
+			stillDrawing = 0;
+			break;
+		case 0xF0: picColour = *(data++);
+			picDrawEnabled = TRUE;
+			break;
+		case 0xF1: picDrawEnabled = FALSE; break;
+		case 0xF2: priColour = *(data++);
+			priDrawEnabled = TRUE;
+			break;
+		case 0xF3: priDrawEnabled = FALSE; break;
+		case 0xF4: b11YCorner(&data); break;
+		case 0xF5: b11XCorner(&data); break;
+		case 0xF6: b11AbsoluteLine(&data); break;
+		case 0xF7: b11RelativeDraw(&data); break;
+		case 0xF8: b11FloodFill(&data); break;
+		case 0xF9: patCode = *(data++); break;
+		case 0xFA: b11PlotBrush(&data); break;
+		default: printf("Unknown picture code : %X\n", action); exit(0);
+		}
 
-        //if (picFNum == 3) {
-        //   showPicture();
-        //   if ((readkey() >> 8) == KEY_ESC) closedown();
-        //}
+		//if (picFNum == 3) {
+		//   showPicture();
+		//   if ((readkey() >> 8) == KEY_ESC) closedown();
+		//}
 #ifdef VERBOSE
-        printf(" data %p pLen %d data + pLen %p stillDrawing %d \n", data, pLen, data + pLen, stillDrawing);
+		printf(" data %p pLen %d data + pLen %p stillDrawing %d \n", data, pLen, data + pLen, stillDrawing);
 #endif
-    } while ((data < (data + pLen)) && stillDrawing);
+	} while ((data < (data + pLen)) && stillDrawing);
 
-    b11SplitPriority();
+	b11SplitPriority();
 
-    //asm("cli");
+	//asm("cli");
 
-    //trampoline_0(&b6DisableAndWaitForVsync, IRQ_BANK);
+	//trampoline_0(&b6DisableAndWaitForVsync, IRQ_BANK);
 
 
 
-    free(data);
+	free(data);
 
-    for (;;);
+	for (;;);
 }
 
 void b11InitPictures()
 {
-    int i;
-    PictureFile loadedPicture;
-    for (i = 0; i < 256; i++) {
-        getLoadedPicture(&loadedPicture, i);
-        loadedPicture.loaded = FALSE;
-        setLoadedPicture(&loadedPicture, i);
-    }
+	int i;
+	PictureFile loadedPicture;
+	for (i = 0; i < 256; i++) {
+		getLoadedPicture(&loadedPicture, i);
+		loadedPicture.loaded = FALSE;
+		setLoadedPicture(&loadedPicture, i);
+	}
 }
 
 /***************************************************************************
@@ -915,63 +950,63 @@ void b11InitPictures()
 ***************************************************************************/
 void b11LoadPictureFile(int picFileNum)
 {
-    AGIFile tempAGI;
-    AGIFilePosType agiFilePosType;
-    PictureFile loadedPicture;
+	AGIFile tempAGI;
+	AGIFilePosType agiFilePosType;
+	PictureFile loadedPicture;
 
-    getLoadedPicture(&loadedPicture, picFileNum);
+	getLoadedPicture(&loadedPicture, picFileNum);
 
-    getLogicDirectory(&agiFilePosType, &picdir[picFileNum]);
+	getLogicDirectory(&agiFilePosType, &picdir[picFileNum]);
 
 
 #ifdef VERBOSE
-    printf("The address of picdir is %p\n", &picdir[picFileNum]);
-    printf("The picture number is %d \n", picFileNum);
-    printf("Loading Picture file %d, position %d\n", agiFilePosType.fileNum, agiFilePosType.filePos);
+	printf("The address of picdir is %p\n", &picdir[picFileNum]);
+	printf("The picture number is %d \n", picFileNum);
+	printf("Loading Picture file %d, position %d\n", agiFilePosType.fileNum, agiFilePosType.filePos);
 #endif
-    loadAGIFileTrampoline(PICTURE, &agiFilePosType, &tempAGI);
+	loadAGIFileTrampoline(PICTURE, &agiFilePosType, &tempAGI);
 
 
-    loadedPicture.size = tempAGI.totalSize;
-    loadedPicture.data = tempAGI.code;
-    loadedPicture.bank = tempAGI.codeBank;
-    loadedPicture.loaded = TRUE;
+	loadedPicture.size = tempAGI.totalSize;
+	loadedPicture.data = tempAGI.code;
+	loadedPicture.bank = tempAGI.codeBank;
+	loadedPicture.loaded = TRUE;
 
-    setLoadedPicture(&loadedPicture, picFileNum);
+	setLoadedPicture(&loadedPicture, picFileNum);
 
 #ifdef VERBOSE
-    printf("Loaded Picture %d, data %p, bank %d, loaded %d\n", loadedPicture.size, loadedPicture.data, loadedPicture.bank, loadedPicture.loaded);
+	printf("Loaded Picture %d, data %p, bank %d, loaded %d\n", loadedPicture.size, loadedPicture.data, loadedPicture.bank, loadedPicture.loaded);
 #endif // VERBOSE
 }
 
 void b11DiscardPictureFile(int picFileNum)
 {
-    PictureFile loadedPicture;
+	PictureFile loadedPicture;
 
-    getLoadedPicture(&loadedPicture, picFileNum);
+	getLoadedPicture(&loadedPicture, picFileNum);
 
-    if (loadedPicture.loaded) {
-        loadedPicture.loaded = FALSE;
-        banked_deallocTrampoline(loadedPicture.data, loadedPicture.bank);
-    }
+	if (loadedPicture.loaded) {
+		loadedPicture.loaded = FALSE;
+		banked_deallocTrampoline(loadedPicture.data, loadedPicture.bank);
+	}
 
-    setLoadedPicture(&loadedPicture, picFileNum);
+	setLoadedPicture(&loadedPicture, picFileNum);
 }
 
 void b11ShowPicture()
 {
-    //Doesn't need to do much since picture is stored straight in VRAM. Need to investigate whether we need to do this
+	//Doesn't need to do much since picture is stored straight in VRAM. Need to investigate whether we need to do this
 }
 
 #pragma code-name (pop)
 
 void drawPicTrampoline(byte* bankedData, int pLen, boolean okToClearScreen, byte picNum)
 {
-    byte previousBank = RAM_BANK;
-    RAM_BANK = PICTURE_CODE_BANK;
+	byte previousBank = RAM_BANK;
+	RAM_BANK = PICTURE_CODE_BANK;
 
-    b11DrawPic(bankedData, pLen, okToClearScreen, picNum);
+	b11DrawPic(bankedData, pLen, okToClearScreen, picNum);
 
-    RAM_BANK = previousBank;
+	RAM_BANK = previousBank;
 }
 

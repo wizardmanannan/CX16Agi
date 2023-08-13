@@ -12,7 +12,7 @@ namespace DividingNumbers
             string divisionBankTableFilePath = "DIVB.BIN"; // Shortened name and extension
             int currentBank = 0x31; // Start at bank 0x31
             int currentByteCount = 0;
-            int[] iGroupsPerFile = { 15, 15, 15, 15, 15, 16, 15, 15, 15, 15, 16 }; // 167 'i' groups across 11 files
+            int[] iGroupsPerFile = { 15, 15, 15, 15, 15, 15, 15, 15, 16, 16, 16 }; // 167 'i' groups across 11 files
 
             FileStream divisionFileStream = new FileStream(divisionTableFilePrefix + currentBank.ToString("X2") + ".BIN", FileMode.Create); // Uppercase hexadecimal for bank value, capital file extension
             BinaryWriter divisionWriter = new BinaryWriter(divisionFileStream);
