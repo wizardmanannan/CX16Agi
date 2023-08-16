@@ -55,7 +55,7 @@ namespace DividingNumbers
                     divisionWriter.Write((byte)(mantissa >> 8));
                     divisionWriter.Write((byte)wholeNumber);
 
-                    if (i == 35 && j == 64)
+                    if (i == 167 && j == 2)
                     {
                         int _ = 5;
                     }
