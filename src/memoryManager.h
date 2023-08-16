@@ -100,9 +100,9 @@
 #define FIRST_DIVISION_BANK 0x31
 #define NO_DIVISION_BANKS 0x0B
 #define LAST_DIVISION_BANK (FIRST_DIVISION_BANK + NO_DIVISION_BANKS - 1)
-#define DIVISION_AREA        ((unsigned char *)0xA000)
-#define DIV_BANK_METADATA ((unsigned char *)0xA000 + 7470)
-#define DIV_ADDRESS_METADATA ((unsigned char *)0xA000 + 7637)
+#define DIVISION_AREA        ((byte *)0xA000)
+#define divBankMetadata ((byte *)0xA000 + 7470)
+#define divAddressMetadata ((byte *)0xA000 + 7637)
 #define DIV_METADATA_BANK 0x31
 #define DIV_BANK_METADATA_SIZE 167
 #define DIV_ADDRESS_METADATA_SIZE 334
@@ -153,9 +153,14 @@
 #define VERA_data0 0x9F23
 
 //Zero Page Values 
-#define ZP_PTR_TEMP 0x66
+#define ZP_PTR_TEMP 0x66 //For Pre Mult Table
+#define ZP_PTR_TEMP_2 0x70 //For Pre Div Table
 #define ZP_PTR_B1 0xFA //For Flood Queue Queue
 #define ZP_PTR_B2 0xFC //For Flood Queue Serve
+#define ZP_PTR_CH 0xF8 //For Div. Bank Table
+#define ZP_PTR_DISP 0xFE //For Div. Address Table
+
+
 
 #ifdef _MSC_VER //Used for testing under windows
 extern byte* banked;

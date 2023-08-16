@@ -1,3 +1,4 @@
+    .importzp sreg
     .include "init.s"
     .include "commandLoop.s"
     .include "logicCommands.s"
@@ -24,3 +25,4 @@
     .export _bFloodQstore
     .export _bFloodQretrieve
     .export _bFloodPicGetPixel
+    .export _floatDivision

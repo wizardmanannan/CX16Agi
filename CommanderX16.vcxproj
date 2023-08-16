@@ -19,6 +19,19 @@
     <None Include="src\graphics.s" />
     <None Include="src\picture.s" />
     <None Include="test.bat" />
+    <None Include="tools\New folder\DivisionTableCreater\DivisionTableCreater\bin\Debug\net7.0\DIV31.BIN" />
+    <None Include="tools\New folder\DivisionTableCreater\DivisionTableCreater\bin\Debug\net7.0\DIV32.BIN" />
+    <None Include="tools\New folder\DivisionTableCreater\DivisionTableCreater\bin\Debug\net7.0\DIV33.BIN" />
+    <None Include="tools\New folder\DivisionTableCreater\DivisionTableCreater\bin\Debug\net7.0\DIV34.BIN" />
+    <None Include="tools\New folder\DivisionTableCreater\DivisionTableCreater\bin\Debug\net7.0\DIV35.BIN" />
+    <None Include="tools\New folder\DivisionTableCreater\DivisionTableCreater\bin\Debug\net7.0\DIV36.BIN" />
+    <None Include="tools\New folder\DivisionTableCreater\DivisionTableCreater\bin\Debug\net7.0\DIV37.BIN" />
+    <None Include="tools\New folder\DivisionTableCreater\DivisionTableCreater\bin\Debug\net7.0\DIV38.BIN" />
+    <None Include="tools\New folder\DivisionTableCreater\DivisionTableCreater\bin\Debug\net7.0\DIV39.BIN" />
+    <None Include="tools\New folder\DivisionTableCreater\DivisionTableCreater\bin\Debug\net7.0\DIV3A.BIN" />
+    <None Include="tools\New folder\DivisionTableCreater\DivisionTableCreater\bin\Debug\net7.0\DIV3B.BIN" />
+    <None Include="tools\New folder\DivisionTableCreater\DivisionTableCreater\bin\Debug\net7.0\DIVA.BIN" />
+    <None Include="tools\New folder\DivisionTableCreater\DivisionTableCreater\bin\Debug\net7.0\DIVB.BIN" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\AGICODES.H" />

@@ -278,6 +278,123 @@ sta VERA_addr_low
 
 .endmacro
 
+_floatDivision:
+bra @start
+@numerator: .word $0 ; Even though numerator is only one byte we double it for address looked up
+@denominator: .word $0 ; Even though denominator is only one byte we double it for address looked up
+@originalZPCh: .word $0 ;For Division Bank Table
+@originalZPDisp: .word $0 ;For Division Address Table
+@previousRamBank: .byte $0
+@start:
+dec
+dec
+sta @denominator
+
+jsr popa
+dec
+sta @numerator
+
+lda RAM_BANK
+sta @previousRamBank
+
+lda ZP_PTR_CH
+sta @originalZPCh
+lda ZP_PTR_CH+1
+sta @originalZPCh+1
+
+lda ZP_PTR_DISP
+sta @originalZPDisp
+lda ZP_PTR_DISP+1
+sta @originalZPDisp+1
+
+lda @numerator
+clc
+adc ZP_PTR_CH
+sta ZP_PTR_CH
+lda #$0
+adc ZP_PTR_CH + 1
+sta ZP_PTR_CH + 1
+
+lda #DIVISION_METADATA_BANK
+sta RAM_BANK
+
+lda (ZP_PTR_CH)
+tax
+
+lda @originalZPCh
+sta ZP_PTR_CH
+
+lda @originalZPCh + 1
+sta ZP_PTR_CH + 1
+
+lda @numerator
+clc
+asl 
+sta @numerator
+lda #$0 ; always zero
+rol
+sta @numerator+1
+
+lda @numerator
+clc
+adc ZP_PTR_DISP
+sta ZP_PTR_DISP
+lda #$0
+adc ZP_PTR_DISP + 1
+sta ZP_PTR_DISP + 1
+
+lda (ZP_PTR_DISP)
+sta ZP_TMP_2
+ldy #$1
+lda (ZP_PTR_DISP),y
+sta ZP_TMP_2+1
+
+lda @originalZPDisp
+sta ZP_PTR_DISP
+lda @originalZPDisp + 1
+sta ZP_PTR_DISP + 1
+
+lda @denominator
+pha
+clc
+asl 
+sta @denominator
+lda #$0 ; always zero
+rol
+sta @denominator+1
+
+pla
+clc
+adc @denominator
+sta @denominator
+lda #$0
+adc @denominator+1
+sta @denominator+1
+
+lda @denominator
+clc
+adc ZP_TMP_2
+sta ZP_TMP_2
+lda @denominator+1
+adc ZP_TMP_2+1
+sta ZP_TMP_2+1
+
+stx RAM_BANK
+stz sreg + 1
+ldy #$1
+lda (ZP_TMP_2),y
+tax
+ldy #$2
+lda (ZP_TMP_2),y
+sta sreg
+lda (ZP_TMP_2)
+
+stp
+ldy @previousRamBank
+sty RAM_BANK
+
+rts
+
 .segment "BANKRAM11"
 	;*****************************************************************
 		; negate accumulator

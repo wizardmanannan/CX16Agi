@@ -17,6 +17,7 @@ GLOBAL_INC = 1
 ZP_PTR_CODE = $69
 ;$08 is reserved for code window in codeWindow.s
 ZP_TMP = $66
+ZP_TMP_2 = $70
 ZP_PTR_LF = $74
 ZP_PTR_LE = $76
 ZP_PTR_PLF_HIGH = $78
@@ -45,6 +46,8 @@ PICTURE_BANK = $11
 FIRST_FLOOD_BANK = $27
 NO_FLOOD_BANKS = $0A
 LAST_FLOOD_BANK = FIRST_FLOOD_BANK + NO_FLOOD_BANKS - 1
+
+DIVISION_METADATA_BANK = $31
 
 ; Define offsets for different areas within golden RAM
 VARS_AREA_START_GOLDEN_OFFSET = 0

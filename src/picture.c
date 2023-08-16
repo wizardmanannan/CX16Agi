@@ -15,6 +15,9 @@
 //#define VERBOSE_REL_DRAW
 //#define TEST_QUEUE
 //#define VERBOSE_FLOOD
+#define TEST_DIVISION
+
+typedef long INT_FLOAT; //Float where mantissa is an integer
 
 boolean okToShowPic = FALSE;
 PictureFile* loadedPictures = (PictureFile*)&BANK_RAM[PICTURE_START];
@@ -39,6 +42,7 @@ byte rposBank = FIRST_FLOOD_BANK, sposBank = FIRST_FLOOD_BANK;
 int* bitmapWidthPreMult = &BANK_RAM[BITMAP_WIDTH_PREMULT_START];
 
 extern void b11PSet(byte x, byte y);
+extern INT_FLOAT floatDivision(byte numerator, byte denominator);
 
 #ifdef VERBOSE_FLOOD
 extern long pixelCounter;
@@ -290,6 +294,37 @@ void bFloodAgiFill(word x, word y)
 }
 #pragma code-name (pop)
 #pragma code-name (push, "BANKRAM11")
+
+#ifdef TEST_DIVISION
+void testDivision()
+{
+	INT_FLOAT result;
+
+	result = floatDivision(0x1, 0xA7); //1 and 167
+
+	if (result != 0x3Cl)
+	{
+		printf("Fail Division 1. Expected %lx got %lx\n", 0x3Cl, result);
+	}
+
+	result = floatDivision(0x23, 0x40); //35 and 64
+
+	if (result != 0x155Dl)
+	{
+		printf("Fail Division 2. Expected %lx got %lx\n", 0x155Dl, result);
+	}
+
+
+	result = floatDivision(0xA7, 0x2); //167 and 2
+
+	if (result != 0xCBDB8l)
+	{
+		printf("Fail Division . Expected %lx got %lx\n", 0xCBDB8l, result);
+	}
+}
+#endif // TEST_DIVISION
+
+
 void b11FloodBankFull() //Is on this bank to save room on flood bank 
 {
 	printf("warning Flood Bank Full\n");
@@ -385,9 +420,9 @@ void b11LoadDivisionTables()
 		}
 	}
 	printf("Loading Division Metdata 1 of 2\n");
-	b11LoadDivisionMetadata(bankfileName, DIV_BANK_METADATA_SIZE, &DIV_BANK_METADATA[0]);
+	b11LoadDivisionMetadata(bankfileName, DIV_BANK_METADATA_SIZE, &divBankMetadata[0]);
 	printf("Loading Division Metdata 2 of 2\n");
-	b11LoadDivisionMetadata(addressfileName, DIV_ADDRESS_METADATA_SIZE, &DIV_ADDRESS_METADATA[0]);
+	b11LoadDivisionMetadata(addressfileName, DIV_ADDRESS_METADATA_SIZE, &divAddressMetadata[0]);
 }
 
 /**************************************************************************
@@ -839,17 +874,27 @@ void b11DrawPic(byte* bankedData, int pLen, boolean okToClearScreen, byte picNum
 	boolean stillDrawing = TRUE;
 	PictureFile loadedPicture;
 	byte* data;
-	int** zpPtrTemp = (int**)ZP_PTR_TEMP;
+	int** zpTemp = (int**)ZP_PTR_TEMP;
+	byte** zpTemp2 = (int**)ZP_PTR_TEMP_2;
 	int** zpB1 = (int**)ZP_PTR_B1;
 	int** zpB2 = (int**)ZP_PTR_B2;
+	byte** zpCh = (byte**)ZP_PTR_CH;
+	byte** zpDisp = (byte**)ZP_PTR_DISP;
 
-	*zpPtrTemp = &bitmapWidthPreMult[0];
+	*zpTemp = &bitmapWidthPreMult[0];
+	*zpTemp2 = &DIVISION_AREA[0];
 	*zpB1 = (int*)FLOOD_QUEUE_START;
 	*zpB2 = (int*)FLOOD_QUEUE_START;
+	*zpCh = divBankMetadata;
+	*zpDisp = divAddressMetadata;
 	rpos = FLOOD_QUEUE_START;
 	spos = FLOOD_QUEUE_START;
 	rposBank = FIRST_FLOOD_BANK;
 	sposBank = FIRST_FLOOD_BANK;
+
+#ifdef TEST_DIVISION
+	testDivision();
+#endif
 
 	getLoadedPicture(&loadedPicture, picNum);
 
