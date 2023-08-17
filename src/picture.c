@@ -300,6 +300,13 @@ void testDivision()
 {
 	INT_FLOAT result;
 
+	result = floatDivision(0x1, 0x2); //1 and 167
+
+	if (result != 0x1388l)
+	{
+		printf("Fail Division 1. Expected %lx got %lx\n", 0x1388l, result);
+	}
+
 	result = floatDivision(0x1, 0xA7); //1 and 167
 
 	if (result != 0x3Cl)
@@ -314,12 +321,18 @@ void testDivision()
 		printf("Fail Division 2. Expected %lx got %lx\n", 0x155Dl, result);
 	}
 
-
 	result = floatDivision(0xA7, 0x2); //167 and 2
 
-	if (result != 0xCBDB8l)
+	if (result != 0x531388)
 	{
 		printf("Fail Division . Expected %lx got %lx\n", 0xCBDB8l, result);
+	}
+
+	result = floatDivision(0xA7, 0xA7); //1 and 167
+
+	if (result != 0x10000)
+	{
+		printf("Fail Division 1. Expected %lx got %lx\n", 0x10000, result);
 	}
 }
 #endif // TEST_DIVISION

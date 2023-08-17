@@ -327,6 +327,7 @@ sta ZP_PTR_CH
 lda @originalZPCh + 1
 sta ZP_PTR_CH + 1
 
+
 lda @numerator
 clc
 asl 
@@ -339,7 +340,7 @@ lda @numerator
 clc
 adc ZP_PTR_DISP
 sta ZP_PTR_DISP
-lda #$0
+lda @numerator+1
 adc ZP_PTR_DISP + 1
 sta ZP_PTR_DISP + 1
 
@@ -389,7 +390,6 @@ lda (ZP_TMP_2),y
 sta sreg
 lda (ZP_TMP_2)
 
-stp
 ldy @previousRamBank
 sty RAM_BANK
 
