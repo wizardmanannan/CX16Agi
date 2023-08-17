@@ -17,8 +17,6 @@
 //#define VERBOSE_FLOOD
 #define TEST_DIVISION
 
-typedef long INT_FLOAT; //Float where mantissa is an integer
-
 boolean okToShowPic = FALSE;
 PictureFile* loadedPictures = (PictureFile*)&BANK_RAM[PICTURE_START];
 int screenMode;
@@ -42,7 +40,7 @@ byte rposBank = FIRST_FLOOD_BANK, sposBank = FIRST_FLOOD_BANK;
 int* bitmapWidthPreMult = &BANK_RAM[BITMAP_WIDTH_PREMULT_START];
 
 extern void b11PSet(byte x, byte y);
-extern INT_FLOAT floatDivision(byte numerator, byte denominator);
+extern fix32 floatDivision(byte numerator, byte denominator);
 
 #ifdef VERBOSE_FLOOD
 extern long pixelCounter;
@@ -295,44 +293,75 @@ void bFloodAgiFill(word x, word y)
 #pragma code-name (pop)
 #pragma code-name (push, "BANKRAM11")
 
+#define DIV(numerator, denominator) (\
+    ((denominator) == 0 || (numerator) == 0) ? 0 : \
+    ((denominator) == 1) ? ((fix32)(numerator) << 16) : \
+    ((numerator) == (denominator)) ? ((fix32)1 << 16) : \
+    floatDivision((numerator), (denominator)) \
+)
+
 #ifdef TEST_DIVISION
 void testDivision()
 {
-	INT_FLOAT result;
+	fix32 result;
 
-	result = floatDivision(0x1, 0x2); //1 and 167
+	result = DIV(0x1, 0x2); //1 and 167
 
 	if (result != 0x1388l)
 	{
 		printf("Fail Division 1. Expected %lx got %lx\n", 0x1388l, result);
 	}
 
-	result = floatDivision(0x1, 0xA7); //1 and 167
+	result = DIV(0x1, 0xA7); //1 and 167
 
 	if (result != 0x3Cl)
 	{
-		printf("Fail Division 1. Expected %lx got %lx\n", 0x3Cl, result);
+		printf("Fail Division 2. Expected %lx got %lx\n", 0x3Cl, result);
 	}
 
-	result = floatDivision(0x23, 0x40); //35 and 64
+	result = DIV(0x23, 0x40); //35 and 64
 
 	if (result != 0x155Dl)
 	{
-		printf("Fail Division 2. Expected %lx got %lx\n", 0x155Dl, result);
+		printf("Fail Division 3. Expected %lx got %lx\n", 0x155Dl, result);
 	}
 
-	result = floatDivision(0xA7, 0x2); //167 and 2
+	result = DIV(0xA7, 0x2); //167 and 2
 
 	if (result != 0x531388)
 	{
-		printf("Fail Division . Expected %lx got %lx\n", 0xCBDB8l, result);
+		printf("Fail Division 4. Expected %lx got %lx\n", 0xCBDB8l, result);
 	}
 
-	result = floatDivision(0xA7, 0xA7); //1 and 167
 
-	if (result != 0x10000)
+	result = DIV(0, 0xA7); //1 and 167
+
+	if (result != 0)
 	{
-		printf("Fail Division 1. Expected %lx got %lx\n", 0x10000, result);
+		printf("Fail Division 5. Expected %lx got %lx\n", 0, result);
+	}
+
+	result = DIV(0xA7, 0); //1 and 167
+
+	if (result != 0)
+	{
+		printf("Fail Division 6. Expected %lx got %lx\n", 0, result);
+	}
+
+
+	result = DIV(0xA7, 1); //1 and 167
+
+	if (result != int_to_fix32(0xA7))
+	{
+		printf("Fail Division 7. Expected %lx got %lx\n", int_to_fix32(0xA7), result);
+	}
+
+
+	result = DIV(0xA7, 0xA7); //1 and 167
+
+	if (result != int_to_fix32(0x1))
+	{
+		printf("Fail Division 8. Expected %lx got %lx\n", int_to_fix32(0x1), result);
 	}
 }
 #endif // TEST_DIVISION
