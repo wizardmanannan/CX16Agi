@@ -10,4 +10,14 @@ typedef long fix32; // We are using a 32-bit number for our fixed point numbers
 // Convert an integer to a fixed point number
 #define int_to_fix32(num) (((long)num) << FIX32_SHIFT)
 
+#define fix32_to_int(fix32) ((int)((fix32) >> FIX32_SHIFT))
+
+#define floor_fix_32(fix32) (fix32_to_int(fix32))
+
+#define ceil_fix_32(fix32) (fix32_to_int(fix32) + 1)
+
+#define getMantissa(fixed32) (*((int*)&fixed32))
+
+
+
 #endif

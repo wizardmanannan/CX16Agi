@@ -15,7 +15,8 @@
 //#define VERBOSE_REL_DRAW
 //#define TEST_QUEUE
 //#define VERBOSE_FLOOD
-#define TEST_DIVISION
+//#define TEST_DIVISION 
+//#define TEST_ROUND
 
 boolean okToShowPic = FALSE;
 PictureFile* loadedPictures = (PictureFile*)&BANK_RAM[PICTURE_START];
@@ -299,6 +300,71 @@ void bFloodAgiFill(word x, word y)
     ((numerator) == (denominator)) ? ((fix32)1 << 16) : \
     floatDivision((numerator), (denominator)) \
 )
+
+#define ROUND_THRESHOLD_POS 499 
+#define ROUND_THRESHOLD_NEG 501
+int round(fix32 aNumber, boolean isPos)
+{
+	if(isPos)
+	{
+		printf("%lu Pos True %d result %p. %d < %d\n", aNumber, getMantissa(aNumber), getMantissa(aNumber) < ROUND_THRESHOLD_POS ? floor_fix_32(aNumber) : ceil_fix_32(aNumber), getMantissa(aNumber), ROUND_THRESHOLD_POS);
+		return getMantissa(aNumber) < ROUND_THRESHOLD_POS ? floor_fix_32(aNumber) : ceil_fix_32(aNumber);
+	}
+	else
+	{
+		printf("%lu Neg True %d result %p %d < %d\n", aNumber, getMantissa(aNumber), getMantissa(aNumber) <= ROUND_THRESHOLD_NEG ? floor_fix_32(aNumber) : ceil_fix_32(aNumber), getMantissa(aNumber), ROUND_THRESHOLD_POS);
+		return getMantissa(aNumber) <= ROUND_THRESHOLD_NEG ? floor_fix_32(aNumber) : ceil_fix_32(aNumber);
+	}
+}
+
+#ifdef TEST_ROUND
+void testRound()
+{
+	int result;
+	result = round(0x4301F3, TRUE);
+
+	if (result != 0x44)
+	{
+		printf("Fail Round 1 Pos (Equal). Expected %p got %p \n", 0x44, result);
+	}
+
+	result = round(0x4301F2, TRUE);
+
+	if (result != 0x43)
+	{
+		printf("Fail Round 2 Pos (Less). Expected %p got %p \n", 0x43, result);
+	}
+
+	result = round(0x4301F4, TRUE);
+
+	if (result != 0x44)
+	{
+		printf("Fail Round 2 Pos (Less). Expected %p got %p \n", 0x44, result);
+	}
+
+	result = round(0x4301F5, FALSE);
+
+	if (result != 0x43)
+	{
+		printf("Fail Round 1 Neg (Equal). Expected %p got %p \n", 0x43, result);
+	}
+
+	result = round(0x4301F4, FALSE);
+
+	if (result != 0x43)
+	{
+		printf("Fail Round 2 Neg (Less). Expected %p got %p \n", 0x43, result);
+	}
+
+	result = round(0x4301F6, FALSE);
+
+	if (result != 0x44)
+	{
+		printf("Fail Round 3 Neg (Greater). Expected %p got %p \n", 0x44, result);
+	}
+}
+#endif // TEST_ROUND
+
 
 #ifdef TEST_DIVISION
 void testDivision()
@@ -936,6 +1002,10 @@ void b11DrawPic(byte* bankedData, int pLen, boolean okToClearScreen, byte picNum
 
 #ifdef TEST_DIVISION
 	testDivision();
+#endif
+
+#ifdef TEST_ROUND
+	testRound();
 #endif
 
 	getLoadedPicture(&loadedPicture, picNum);
