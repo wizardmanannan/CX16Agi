@@ -18,7 +18,6 @@
     .export _logDebugVal4
     .export _b6DisableAndWaitForVsync
     .export _b6ClearBackground
-    .export _b11Drawline
     .export _toDraw
     .export _drawWhere
     .export _b11PSet

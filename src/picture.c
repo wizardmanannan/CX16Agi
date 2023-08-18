@@ -17,6 +17,7 @@
 //#define VERBOSE_FLOOD
 //#define TEST_DIVISION 
 //#define TEST_ROUND
+#define VERBOSE_DRAW_LINE
 
 boolean okToShowPic = FALSE;
 PictureFile* loadedPictures = (PictureFile*)&BANK_RAM[PICTURE_START];
@@ -294,12 +295,20 @@ void bFloodAgiFill(word x, word y)
 #pragma code-name (pop)
 #pragma code-name (push, "BANKRAM11")
 
-#define DIV(numerator, denominator) (\
-    ((denominator) == 0 || (numerator) == 0) ? 0 : \
-    ((denominator) == 1) ? ((fix32)(numerator) << 16) : \
-    ((numerator) == (denominator)) ? ((fix32)1 << 16) : \
-    floatDivision((numerator), (denominator)) \
-)
+fix32 DIV(int numerator, int denominator) {
+	if (denominator == 0 || numerator == 0) {
+		return (fix32)0;
+	}
+	else if (denominator == 1) {
+		return (fix32)(numerator) << 16;
+	}
+	else if (numerator == denominator) {
+		return (fix32)1 << 16;
+	}
+	else {
+		return floatDivision(numerator, denominator);
+	}
+}
 
 #define ROUND_THRESHOLD_POS 499 
 #define ROUND_THRESHOLD_NEG 501
@@ -307,12 +316,16 @@ int round(fix32 aNumber, boolean isPos)
 {
 	if(isPos)
 	{
-		printf("%lu Pos True %d result %p. %d < %d\n", aNumber, getMantissa(aNumber), getMantissa(aNumber) < ROUND_THRESHOLD_POS ? floor_fix_32(aNumber) : ceil_fix_32(aNumber), getMantissa(aNumber), ROUND_THRESHOLD_POS);
+#ifdef TEST_ROUND
+	printf("%lu Pos True %d result %p. %d < %d\n", aNumber, getMantissa(aNumber), getMantissa(aNumber) < ROUND_THRESHOLD_POS ? floor_fix_32(aNumber) : ceil_fix_32(aNumber), getMantissa(aNumber), ROUND_THRESHOLD_POS);
+#endif
 		return getMantissa(aNumber) < ROUND_THRESHOLD_POS ? floor_fix_32(aNumber) : ceil_fix_32(aNumber);
 	}
 	else
 	{
+#ifdef TEST_ROUND
 		printf("%lu Neg True %d result %p %d < %d\n", aNumber, getMantissa(aNumber), getMantissa(aNumber) <= ROUND_THRESHOLD_NEG ? floor_fix_32(aNumber) : ceil_fix_32(aNumber), getMantissa(aNumber), ROUND_THRESHOLD_POS);
+#endif
 		return getMantissa(aNumber) <= ROUND_THRESHOLD_NEG ? floor_fix_32(aNumber) : ceil_fix_32(aNumber);
 	}
 }
@@ -605,7 +618,144 @@ void b11PriPSet(word x, word y)
 if ((x) <= 159 && (y) <= 167) {  \
              b11PSet(x, y); \
            } \
-    } 
+    }
+
+
+void b11Drawline(byte x1, byte y1, byte x2, byte y2)
+{
+	int height, width, startX, startY;
+	boolean xIsPos = TRUE, yIsPos = TRUE;
+	fix32 x, y, addX, addY;
+	word temp;
+	
+#ifdef VERBOSE_DRAW_LINE
+	printf("drawing %d:%d %d:%d \n", x1, y1, x2, y2);
+#endif // VERBOSE_DRAW_LINE
+
+	asm("stp");
+
+	if (x1 > x2)
+	{
+		temp = x1;
+		x1 = x2;
+		x2 = temp;
+		xIsPos = FALSE;
+
+#ifdef VERBOSE_DRAW_LINE
+		printf("swap x drawing %d:%d %d:%d \n", x1, y1, x2, y2);
+#endif
+	}
+
+	if (y1 > y2)
+	{
+		temp = y1;
+		y1 = y2;
+		y2 = temp;
+		yIsPos = FALSE;
+
+#ifdef VERBOSE_DRAW_LINE
+	printf("swap y drawing %d:%d %d:%d \n", x1, y1, x2, y2);
+#endif
+	}
+
+	height = (y2 - y1);
+	printf("Height %d - %d = %d\n", y2, y1, height);
+
+	width = (x2 - x1);
+	printf("Width %d - %d = %d \n", x2, x1, width);
+
+	printf("****%d == %d (%d) %lx \n", width, height, width == height , (fix32)1 << 16);
+	addX = height == 0 ? height : DIV(width, height);
+
+#ifdef VERBOSE_DRAW_LINE
+	printf("divide addx %d / %d result: %lx  Address %p\n", width, height, addX, &addX);
+#endif // VERBOSE
+
+	addY = width == 0 ? width : DIV(height, width);
+
+
+#ifdef VERBOSE_DRAW_LINE
+	printf("divide addy %d / %d result: %lx. Address %p\n ", height, width, addY, &addY);
+#endif // VERBOSE
+
+	if (width > height) {
+		y = int_to_fix32(y1);
+
+
+#ifdef VERBOSE_DRAW_LINE
+		printf("convert top y %d to fix32 %lx\n ", y1, y);
+#endif // VERBOSE
+
+		addX = (width == 0 ? 0 : int_to_fix32(1));
+
+#ifdef VERBOSE_DRAW_LINE
+		printf("convert top width (%d) to fix32 %lx\n ", width, addX);
+#endif // VERBOSE
+
+		for (x = int_to_fix32(x1); x != int_to_fix32(x2); x += addX) {
+#ifdef VERBOSE_DRAW_LINE
+			printf("psettop in loop %lx, %d (isPos), %lx, %d (isPos)  round %d %d\n", x, xIsPos, y, yIsPos, round(x, xIsPos), round(y, yIsPos));
+#endif // VERBOSE
+
+			PSET(round(x, xIsPos), round(y, yIsPos));
+
+#ifdef VERBOSE_DRAW_LINE
+			printf("add y top %lx + %lx = %lx\n", y, addY, y + addY);
+#endif
+			y += addY;
+
+#ifdef VERBOSE_DRAW_LINE
+			printf("add x top %lx + %lx = %lx, %lx != %lx (%d)\n", x, addX, x + addX, x + addX, int_to_fix32(x2), x + addX != int_to_fix32(x2));
+#endif
+		}
+
+#ifdef VERBOSE_DRAW_LINE
+		printf("pset top out of loop %d,%d\n", x2, y2);
+#endif
+		PSET(x2, y2);
+	}
+	else {
+		x = int_to_fix32(x1);
+#ifdef VERBOSE_DRAW_LINE
+		printf("%d convert bottom x to fix32 %d\n ",x1, x);
+#endif // VERBOSE
+
+
+		addY = (height == 0 ? 0 : int_to_fix32(1));
+
+
+#ifdef VERBOSE_DRAW_LINE
+		printf("convert top height (%d) to fix32 %lx\n ", height, addY);
+#endif // VERBOSE
+
+
+
+		for (y = int_to_fix32(y1); y != int_to_fix32(y2); y += addY) {
+
+#ifdef VERBOSE_DRAW_LINE
+			printf("pset bottom in loop %lx, %d (isPos), %lx, %d (isPos)  round %d %d\n", x, xIsPos, y, yIsPos, round(x, xIsPos), round(y, yIsPos));
+#endif // VERBOSE
+			PSET(round(x, xIsPos), round(y, yIsPos));
+
+
+#ifdef VERBOSE_DRAW_LINE
+			printf("add x bottom %lx + %lx = %lx\n", x, addX, x + addX);
+#endif
+			x += addX;
+
+#ifdef VERBOSE_DRAW_LINE
+			printf("add y bottom %lx + %lx = %lx, %lx != %lx (%d)\n", y, addY, y + addY, y + addY, int_to_fix32(y2), y + addY != int_to_fix32(y2));
+#endif
+		}
+
+#ifdef VERBOSE_DRAW_LINE
+		printf("pset bottom out loop %d,%d\n", x2, y2);
+#endif
+		PSET(x2, y2);
+	}
+
+}
+
 /**************************************************************************
 ** xCorner
 **
