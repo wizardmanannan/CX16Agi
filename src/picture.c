@@ -632,30 +632,14 @@ void b11Drawline(byte x1, byte y1, byte x2, byte y2)
 	printf("drawing %d:%d %d:%d \n", x1, y1, x2, y2);
 #endif // VERBOSE_DRAW_LINE
 
-	asm("stp");
-
 	if (x1 > x2)
 	{
-		temp = x1;
-		x1 = x2;
-		x2 = temp;
 		xIsPos = FALSE;
-
-#ifdef VERBOSE_DRAW_LINE
-		printf("swap x drawing %d:%d %d:%d \n", x1, y1, x2, y2);
-#endif
 	}
 
 	if (y1 > y2)
 	{
-		temp = y1;
-		y1 = y2;
-		y2 = temp;
 		yIsPos = FALSE;
-
-#ifdef VERBOSE_DRAW_LINE
-	printf("swap y drawing %d:%d %d:%d \n", x1, y1, x2, y2);
-#endif
 	}
 
 	height = (y2 - y1);
@@ -664,21 +648,35 @@ void b11Drawline(byte x1, byte y1, byte x2, byte y2)
 	width = (x2 - x1);
 	printf("Width %d - %d = %d \n", x2, x1, width);
 
-	printf("****%d == %d (%d) %lx \n", width, height, width == height , (fix32)1 << 16);
-	addX = height == 0 ? height : DIV(width, height);
-
+	addX = height == 0 ? height : DIV(abs(width), abs(height));
+	
 #ifdef VERBOSE_DRAW_LINE
-	printf("divide addx %d / %d result: %lx  Address %p\n", width, height, addX, &addX);
-#endif // VERBOSE
+	printf("add x div(abs(w: %d), abs(h %d) = %lx \n", width, height, DIV(abs(width), abs(height)));
+#endif
 
-	addY = width == 0 ? width : DIV(height, width);
+	if (!xIsPos)
+	{
+#ifdef VERBOSE_DRAW_LINE
+		printf("x is neg ");
+#endif // VERBOSE_DRAW_LINE
+	}
 
+	addY = width == 0 ? width : DIV(abs(height), abs(width));
+#ifdef VERBOSE_DRAW_LINE
+	printf("add y div(abs(h: %d), abs(w %d) = %lx \n", height, width, DIV(abs(height), abs(width)));
+#endif
+
+
+	if (!yIsPos)
+	{
+		printf("y is neg ");
+	}
 
 #ifdef VERBOSE_DRAW_LINE
 	printf("divide addy %d / %d result: %lx. Address %p\n ", height, width, addY, &addY);
 #endif // VERBOSE
 
-	if (width > height) {
+	if (abs(width) > abs(height)) {
 		y = int_to_fix32(y1);
 
 
@@ -692,7 +690,7 @@ void b11Drawline(byte x1, byte y1, byte x2, byte y2)
 		printf("convert top width (%d) to fix32 %lx\n ", width, addX);
 #endif // VERBOSE
 
-		for (x = int_to_fix32(x1); x != int_to_fix32(x2); x += addX) {
+		for (x = int_to_fix32(x1); x != int_to_fix32(x2); xIsPos ? x += addX: x -= addX) {
 #ifdef VERBOSE_DRAW_LINE
 			printf("psettop in loop %lx, %d (isPos), %lx, %d (isPos)  round %d %d\n", x, xIsPos, y, yIsPos, round(x, xIsPos), round(y, yIsPos));
 #endif // VERBOSE
@@ -700,12 +698,12 @@ void b11Drawline(byte x1, byte y1, byte x2, byte y2)
 			PSET(round(x, xIsPos), round(y, yIsPos));
 
 #ifdef VERBOSE_DRAW_LINE
-			printf("add y top %lx + %lx = %lx\n", y, addY, y + addY);
+			printf("add y top %lx + %lx = %lx. yIsPos %d\n", y, addY, yIsPos ? y += addY : y -= addY, yIsPos);
 #endif
-			y += addY;
+			yIsPos ? y += addY : y -= addY;
 
 #ifdef VERBOSE_DRAW_LINE
-			printf("add x top %lx + %lx = %lx, %lx != %lx (%d)\n", x, addX, x + addX, x + addX, int_to_fix32(x2), x + addX != int_to_fix32(x2));
+			printf("add x top %lx + %lx = %lx, %lx != %lx (%d). xIsPos %d\n", x, addX, xIsPos ? x + addX : x - addX, xIsPos ? x + addX : x - addX, int_to_fix32(x2), xIsPos? x + addX != int_to_fix32(x2) : x - addX != int_to_fix32(x2), xIsPos);
 #endif
 		}
 
@@ -730,7 +728,7 @@ void b11Drawline(byte x1, byte y1, byte x2, byte y2)
 
 
 
-		for (y = int_to_fix32(y1); y != int_to_fix32(y2); y += addY) {
+		for (y = int_to_fix32(y1); y != int_to_fix32(y2); yIsPos ? y += addY: y -= addY) {
 
 #ifdef VERBOSE_DRAW_LINE
 			printf("pset bottom in loop %lx, %d (isPos), %lx, %d (isPos)  round %d %d\n", x, xIsPos, y, yIsPos, round(x, xIsPos), round(y, yIsPos));
@@ -739,12 +737,12 @@ void b11Drawline(byte x1, byte y1, byte x2, byte y2)
 
 
 #ifdef VERBOSE_DRAW_LINE
-			printf("add x bottom %lx + %lx = %lx\n", x, addX, x + addX);
+			printf("add x bottom %lx + %lx = %lx. xIsPos %d\n", x, addX, xIsPos ? x += addX : x -= addX, xIsPos);
 #endif
-			x += addX;
+			xIsPos ? x += addX: x -= addX;
 
 #ifdef VERBOSE_DRAW_LINE
-			printf("add y bottom %lx + %lx = %lx, %lx != %lx (%d)\n", y, addY, y + addY, y + addY, int_to_fix32(y2), y + addY != int_to_fix32(y2));
+			printf("add y top %lx + %lx = %lx, %lx != %lx (%d). yIsPos %d\n", y, addY, yIsPos ? y + addY : y - addY, yIsPos ? y + addY : y - addY, int_to_fix32(y2), yIsPos ? y + addY != int_to_fix32(y2) : y - addY != int_to_fix32(y2), yIsPos);
 #endif
 		}
 
