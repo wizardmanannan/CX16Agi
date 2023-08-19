@@ -620,7 +620,7 @@ if ((x) <= 159 && (y) <= 167) {  \
            } \
     }
 
-
+unsigned long lineDrawCounter = 0;
 void b11Drawline(byte x1, byte y1, byte x2, byte y2)
 {
 	int height, width, startX, startY;
@@ -629,7 +629,7 @@ void b11Drawline(byte x1, byte y1, byte x2, byte y2)
 	word temp;
 	
 #ifdef VERBOSE_DRAW_LINE
-	printf("drawing %d:%d %d:%d \n", x1, y1, x2, y2);
+	printf("drawing %d:%d %d:%d. The address of line draw counter is %p and its value is %lu\n", x1, y1, x2, y2, &lineDrawCounter, lineDrawCounter);
 #endif // VERBOSE_DRAW_LINE
 
 	if (x1 > x2)
@@ -651,26 +651,27 @@ void b11Drawline(byte x1, byte y1, byte x2, byte y2)
 	addX = height == 0 ? height : DIV(abs(width), abs(height));
 	
 #ifdef VERBOSE_DRAW_LINE
-	printf("add x div(abs(w: %d), abs(h %d) = %lx \n", width, height, DIV(abs(width), abs(height)));
+	printf("add x div (abs(w: %d), abs(h %d) = %lx \n", abs(width), abs(height), DIV(abs(width), abs(height)));
 #endif
 
 	if (!xIsPos)
 	{
 #ifdef VERBOSE_DRAW_LINE
-		printf("x is neg ");
+		printf("x is neg \n");
 #endif // VERBOSE_DRAW_LINE
 	}
 
 	addY = width == 0 ? width : DIV(abs(height), abs(width));
 #ifdef VERBOSE_DRAW_LINE
-	printf("add y div(abs(h: %d), abs(w %d) = %lx \n", height, width, DIV(abs(height), abs(width)));
+	printf("add y div(abs(h: %d), abs(w %d) = %lx \n", abs(height), abs(width), DIV(abs(height), abs(width)));
 #endif
 
-
+#ifdef VERBOSE_DRAW_LINE
 	if (!yIsPos)
 	{
-		printf("y is neg ");
+		printf("y is neg \n");
 	}
+#endif
 
 #ifdef VERBOSE_DRAW_LINE
 	printf("divide addy %d / %d result: %lx. Address %p\n ", height, width, addY, &addY);
@@ -698,7 +699,7 @@ void b11Drawline(byte x1, byte y1, byte x2, byte y2)
 			PSET(round(x, xIsPos), round(y, yIsPos));
 
 #ifdef VERBOSE_DRAW_LINE
-			printf("add y top %lx + %lx = %lx. yIsPos %d\n", y, addY, yIsPos ? y += addY : y -= addY, yIsPos);
+			printf("add y top %lx + %lx = %lx. yIsPos %d\n", y, addY, yIsPos ? y + addY : y - addY, yIsPos);
 #endif
 			yIsPos ? y += addY : y -= addY;
 
@@ -737,12 +738,12 @@ void b11Drawline(byte x1, byte y1, byte x2, byte y2)
 
 
 #ifdef VERBOSE_DRAW_LINE
-			printf("add x bottom %lx + %lx = %lx. xIsPos %d\n", x, addX, xIsPos ? x += addX : x -= addX, xIsPos);
+			printf("add x bottom %lx + %lx = %lx. xIsPos %d\n", x, addX, xIsPos ? x + addX : x - addX, xIsPos);
 #endif
 			xIsPos ? x += addX: x -= addX;
 
 #ifdef VERBOSE_DRAW_LINE
-			printf("add y top %lx + %lx = %lx, %lx != %lx (%d). yIsPos %d\n", y, addY, yIsPos ? y + addY : y - addY, yIsPos ? y + addY : y - addY, int_to_fix32(y2), yIsPos ? y + addY != int_to_fix32(y2) : y - addY != int_to_fix32(y2), yIsPos);
+			printf("add y bottom %lx + %lx = %lx, %lx != %lx (%d). yIsPos %d\n", y, addY, yIsPos ? y + addY : y - addY, yIsPos ? y + addY : y - addY, int_to_fix32(y2), yIsPos ? y + addY != int_to_fix32(y2) : y - addY != int_to_fix32(y2), yIsPos);
 #endif
 		}
 
@@ -751,6 +752,10 @@ void b11Drawline(byte x1, byte y1, byte x2, byte y2)
 #endif
 		PSET(x2, y2);
 	}
+
+#ifdef VERBOSE_DRAW_LINE
+	lineDrawCounter++;
+#endif // VERBOSE_DRAW_LINE
 
 }
 
