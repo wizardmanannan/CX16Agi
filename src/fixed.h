@@ -1,23 +1,20 @@
-#ifndef _FIXED_H_
-#define _FIXED_H_
+#ifndef FIXED_POINT_H
+#define FIXED_POINT_H
 
-#include <stdint.h>
+#include "general.h"
 
-typedef long fix32; // We are using a 32-bit number for our fixed point numbers
+// Define the fixed point number representation
+typedef long fix32;
 
-#define FIX32_SHIFT 16 // Fractional part is the lower 16 bits
+// Constants
+#define FP_SHIFT 16 // 16 bits for the mantissa
+#define FP_MASK 0xFFFF // Mask to extract the mantissa
 
-// Convert an integer to a fixed point number
-#define int_to_fix32(num) (((long)num) << FIX32_SHIFT)
-
-#define fix32_to_int(fix32) ((int)((fix32) >> FIX32_SHIFT))
-
-#define floor_fix_32(fix32) (fix32_to_int(fix32))
-
-#define ceil_fix_32(fix32) (fix32_to_int(fix32) + 1)
-
-#define getMantissa(fixed32) (*((int*)&fixed32))
-
-
-
-#endif
+// Function prototypes
+extern fix32 floatDivision(byte numerator, byte denominator);
+extern fix32 fp_fromInt(int integer);
+extern int fp_toInt(fix32 fixed);
+extern int getMantissa(fix32 fp);
+extern int floor_fix_32(fix32 fp);
+extern int ceil_fix_32(fix32 fp);
+#endif // FIXED_POINT_H
