@@ -12,7 +12,7 @@ typedef long fix32;
 
 // Function prototypes
 extern fix32 floatDivision(byte numerator, byte denominator);
-extern fix32 fp_fromInt(int integer);
+extern fix32 fp_fromInt(unsigned int integer);
 extern int fp_toInt(fix32 fixed);
 extern int getMantissa(fix32 fp);
 extern int floor_fix_32(fix32 fp);

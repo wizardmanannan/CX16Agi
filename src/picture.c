@@ -15,7 +15,7 @@
 //#define VERBOSE_REL_DRAW
 //#define TEST_QUEUE
 //#define VERBOSE_FLOOD
-#define TEST_DIVISION 
+//#define TEST_DIVISION 
 //#define TEST_ROUND
 //#define VERBOSE_DRAW_LINE
 
@@ -319,6 +319,7 @@ int round(fix32 aNumber, boolean isPos)
 #ifdef TEST_ROUND
 	printf("%lu Pos True %d result %d\n", aNumber, getMantissa(aNumber), getMantissa(aNumber) < ROUND_THRESHOLD_POS ? floor_fix_32(aNumber) : ceil_fix_32(aNumber));
 	printf("%u < %u = %d\n", getMantissa(aNumber), ROUND_THRESHOLD_POS, getMantissa(aNumber) < ROUND_THRESHOLD_POS);
+	printf("The address of aNumber is %p", &aNumber);
 #endif
 		return getMantissa(aNumber) < ROUND_THRESHOLD_POS ? floor_fix_32(aNumber) : ceil_fix_32(aNumber);
 	}
@@ -627,10 +628,16 @@ void b11Drawline(byte x1, byte y1, byte x2, byte y2)
 	}
 
 	height = (y2 - y1);
+
+#ifdef VERBOSE_DRAW_LINE
 	printf("Height %d - %d = %d\n", y2, y1, height);
+#endif
 
 	width = (x2 - x1);
+
+#ifdef VERBOSE_DRAW_LINE
 	printf("Width %d - %d = %d \n", x2, x1, width);
+#endif
 
 	addX = height == 0 ? height : DIV(abs(width), abs(height));
 	
@@ -677,6 +684,7 @@ void b11Drawline(byte x1, byte y1, byte x2, byte y2)
 
 		for (x = fp_fromInt(x1); x != fp_fromInt(x2); xIsPos ? x += addX: x -= addX) {
 #ifdef VERBOSE_DRAW_LINE
+			printf("x is %lx\n", x);
 			printf("psettop in loop %lx, %d (isPos), %lx, %d (isPos)  round %d %d\n", x, xIsPos, y, yIsPos, round(x, xIsPos), round(y, yIsPos));
 #endif // VERBOSE
 
@@ -688,7 +696,7 @@ void b11Drawline(byte x1, byte y1, byte x2, byte y2)
 			yIsPos ? y += addY : y -= addY;
 
 #ifdef VERBOSE_DRAW_LINE
-			printf("add x top %lx + %lx = %lx, %lx != %lx (%d). xIsPos %d\n", x, addX, xIsPos ? x + addX : x - addX, xIsPos ? x + addX : x - addX, int_to_fix32(x2), xIsPos? x + addX != int_to_fix32(x2) : x - addX != int_to_fix32(x2), xIsPos);
+			printf("add x top %lx + %lx = %lx, %lx != %lx (%d). xIsPos %d\n", x, addX, xIsPos ? x + addX : x - addX, xIsPos ? x + addX : x - addX, fp_fromInt(x2), xIsPos? x + addX != fp_fromInt(x2) : x - addX != fp_fromInt(x2), xIsPos);
 #endif
 		}
 
@@ -727,7 +735,7 @@ void b11Drawline(byte x1, byte y1, byte x2, byte y2)
 			xIsPos ? x += addX: x -= addX;
 
 #ifdef VERBOSE_DRAW_LINE
-			printf("add y bottom %lx + %lx = %lx, %lx != %lx (%d). yIsPos %d\n", y, addY, yIsPos ? y + addY : y - addY, yIsPos ? y + addY : y - addY, int_to_fix32(y2), yIsPos ? y + addY != int_to_fix32(y2) : y - addY != int_to_fix32(y2), yIsPos);
+			printf("add y bottom %lx + %lx = %lx, %lx != %lx (%d). yIsPos %d\n", y, addY, yIsPos ? y + addY : y - addY, yIsPos ? y + addY : y - addY, fp_fromInt(y2), yIsPos ? y + addY != fp_fromInt(y2) : y - addY != fp_fromInt(y2), yIsPos);
 #endif
 		}
 
@@ -1222,8 +1230,6 @@ void b11DrawPic(byte* bankedData, int pLen, boolean okToClearScreen, byte picNum
 
 
 	free(data);
-
-	for (;;);
 }
 
 void b11InitPictures()

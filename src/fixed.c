@@ -1,8 +1,8 @@
 #include "fixed.h"
 
 // Convert a standard integer to fixed-point representation
-fix32 fp_fromInt(int integer) {
-    return integer << FP_SHIFT; // Shift left by the mantissa size
+fix32 fp_fromInt(unsigned int integer) {
+    return (long) integer << FP_SHIFT; // Shift left by the mantissa size
 }
 
 // Convert a fixed-point number back to a standard integer
@@ -16,7 +16,6 @@ int getMantissa(fix32 fp) {
 
 int floor_fix_32(fix32 fp) {
     // Mask out the mantissa and create a new fixed-point number
-    printf("Floor Is Called\n");
     return fp_toInt(fp & 0xFF0000);
 }
 
@@ -25,6 +24,5 @@ int ceil_fix_32(fix32 fp) {
         return fp;
     }
     // Mask out the mantissa, add 1 to the integer part, and create a new fixed-point number
-    printf("Ceil Is Called\n");
     return fp_toInt((fp & 0xFF0000) + 0x10000);
 }
