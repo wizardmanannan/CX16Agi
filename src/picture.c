@@ -1127,6 +1127,7 @@ void b11DrawPic(byte* bankedData, int pLen, boolean okToClearScreen, byte picNum
 	boolean stillDrawing = TRUE;
 	PictureFile loadedPicture;
 	byte* data;
+	byte* originalPointer;
 	int** zpTemp = (int**)ZP_PTR_TEMP;
 	byte** zpTemp2 = (int**)ZP_PTR_TEMP_2;
 	int** zpB1 = (int**)ZP_PTR_B1;
@@ -1159,8 +1160,8 @@ void b11DrawPic(byte* bankedData, int pLen, boolean okToClearScreen, byte picNum
 	printf("Preparing To Draw %d of size %d\n", picNum, loadedPicture.size);
 #endif // VERBOSE
 
-
 	data = (byte*)malloc(loadedPicture.size);
+	originalPointer = data;
 
 	if (!data)
 	{
@@ -1227,9 +1228,14 @@ void b11DrawPic(byte* bankedData, int pLen, boolean okToClearScreen, byte picNum
 
 	//trampoline_0(&b6DisableAndWaitForVsync, IRQ_BANK);
 
+	*zpTemp = 0;
+	*zpTemp2 = 0;
+	*zpB1 = 0;
+	*zpB2 = 0;
+	*zpCh = 0;
+	*zpDisp = 0;
 
-
-	free(data);
+	free(originalPointer);
 }
 
 void b11InitPictures()
