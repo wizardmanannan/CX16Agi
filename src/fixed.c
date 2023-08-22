@@ -1,5 +1,6 @@
 #include "fixed.h"
 
+#pragma code-name (push, "BANKRAM11")
 // Convert a standard integer to fixed-point representation
 fix32 fp_fromInt(unsigned int integer) {
     return (long) integer << FP_SHIFT; // Shift left by the mantissa size
@@ -26,3 +27,5 @@ int ceil_fix_32(fix32 fp) {
     // Mask out the mantissa, add 1 to the integer part, and create a new fixed-point number
     return fp_toInt((fp & 0xFF0000) + 0x10000);
 }
+
+#pragma code-name (pop);
