@@ -18,6 +18,7 @@
 //#define TEST_DIVISION 
 //#define TEST_ROUND
 //#define VERBOSE_DRAW_LINE
+#define TEST_OK_TO_FILL
 
 boolean okToShowPic = FALSE;
 PictureFile* loadedPictures = (PictureFile*)&BANK_RAM[PICTURE_START];
@@ -143,36 +144,99 @@ byte bFloodPriGetPixel(word x, word y)
 //    return buf[rpos - 1];
 //}
 
-/**************************************************************************
-** okToFill
-**************************************************************************/
-boolean bFloodOkToFill(byte x, byte y)
+///**************************************************************************
+//** okToFill
+//**************************************************************************/
+//boolean bFloodOkToFill(byte x, byte y)
+//{
+//	boolean getPicResult;
+//
+//#ifdef VERBOSE_FLOOD
+//	if (pixelCounter >= pixelStartPrintingAt)
+//	{
+//		printf("State: pic: %d, pri %d, color: %d\n", picDrawEnabled, priDrawEnabled, picColour);
+//	}
+//#endif
+//
+//	if (!picDrawEnabled && !priDrawEnabled) return FALSE;
+//	if (picColour == PIC_DEFAULT) return FALSE;
+//	if (!priDrawEnabled)
+//	{
+//		getPicResult = bFloodPicGetPixel(x, y);
+//#ifdef VERBOSE_FLOOD
+//		if (pixelCounter >= pixelStartPrintingAt)
+//		{
+//			printf("result %d,%d %d \n", x, y, getPicResult);
+//		}
+//#endif
+//		return (getPicResult == PIC_DEFAULT);
+//	}
+//	if (priDrawEnabled && !picDrawEnabled) return (bFloodPriGetPixel(x, y) == PRI_DEFAULT);
+//	return (bFloodPicGetPixel(x, y) == PIC_DEFAULT);
+//}
+
+extern boolean bFloodOkToFill();
+extern byte okFillX;
+extern byte okFillY;
+
+#ifdef TEST_OK_TO_FILL
+void testOkToFill()
 {
-	boolean getPicResult;
+	okFillX = 0;
+	okFillY = 0;
 
-#ifdef VERBOSE_FLOOD
-	if (pixelCounter >= pixelStartPrintingAt)
+	priDrawEnabled = FALSE;
+	picDrawEnabled = FALSE;
+	if (bFloodOkToFill())
 	{
-		printf("State: pic: %d, pri %d, color: %d\n", picDrawEnabled, priDrawEnabled, picColour);
+		printf("fail pri false pic false");
 	}
-#endif
 
-	if (!picDrawEnabled && !priDrawEnabled) return FALSE;
-	if (picColour == PIC_DEFAULT) return FALSE;
-	if (!priDrawEnabled)
+	picColour = DEFAULT_COLOR;
+	priDrawEnabled = FALSE;
+	picDrawEnabled = TRUE;
+	if (bFloodOkToFill())
 	{
-		getPicResult = bFloodPicGetPixel(x, y);
-#ifdef VERBOSE_FLOOD
-		if (pixelCounter >= pixelStartPrintingAt)
-		{
-			printf("result %d,%d %d \n", x, y, getPicResult);
-		}
-#endif
-		return (getPicResult == PIC_DEFAULT);
+		printf("fail color default test");
 	}
-	if (priDrawEnabled && !picDrawEnabled) return (bFloodPriGetPixel(x, y) == PRI_DEFAULT);
-	return (bFloodPicGetPixel(x, y) == PIC_DEFAULT);
+
+	picColour = 3;
+	priDrawEnabled = FALSE;
+	picDrawEnabled = TRUE;
+	if (!bFloodOkToFill())
+	{
+		printf("fail pri disabled pic enabled");
+	}
+
+	picColour = 3;
+	priDrawEnabled = TRUE;
+	picDrawEnabled = FALSE;
+	if (bFloodOkToFill())
+	{
+		printf("fail pri enabled pic disabled");
+	}
+
+	picColour = 3;
+	priDrawEnabled = TRUE;
+	picDrawEnabled = TRUE;
+	if (!bFloodOkToFill())
+	{
+		printf("fail both enabled");
+	}
+
+	trampoline_2Byte(&b11PSet, 0, 0, PICTURE_CODE_BANK);
+	picColour = 3;
+	priDrawEnabled = FALSE;
+	picDrawEnabled = TRUE;
+	asm("stp");
+	if (bFloodOkToFill())
+	{
+		printf("fail both enabled");
+	}
+
 }
+#endif // TEST_OK_TO_FILL
+
 
 #ifdef TEST_QUEUE
 void testQueue()
@@ -1173,6 +1237,10 @@ void b11DrawPic(byte* bankedData, int pLen, boolean okToClearScreen, byte picNum
 	//asm("sei");
 
 	if (okToClearScreen) b11ClearPicture();
+
+#ifdef TEST_OK_TO_FILL
+	trampoline_0(&testOkToFill, FIRST_FLOOD_BANK);
+#endif
 
 	//asm("cli");
 

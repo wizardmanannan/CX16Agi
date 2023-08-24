@@ -9,6 +9,7 @@ PICTURE_INC = 1
 
 .import _picColour
 .import _picDrawEnabled
+.import _priDrawEnabled
 .import _noSound
 
 .import _rpos
@@ -22,6 +23,9 @@ PICTURE_INC = 1
 .import popa
 .import popax
 .import pushax
+
+.import picDrawEnabled
+.import priDrawEnabled
 
 .segment "CODE"
 
@@ -278,6 +282,97 @@ sta VERA_addr_low
 
 .endmacro
 
+;boolean bFloodOkToFill(byte x, byte y)
+;{
+;	boolean getPicResult;
+;
+;#ifdef VERBOSE_FLOOD
+;	if (pixelCounter >= pixelStartPrintingAt)
+;	{
+;		printf("State: pic: %d, pri %d, color: %d\n", picDrawEnabled, priDrawEnabled, picColour);
+;	}
+;#endif
+;
+;	if (!picDrawEnabled && !priDrawEnabled) return FALSE;
+;	if (picColour == PIC_DEFAULT) return FALSE;
+;	if (!priDrawEnabled)
+;	{
+;		getPicResult = bFloodPicGetPixel(x, y);
+;#ifdef VERBOSE_FLOOD
+;		if (pixelCounter >= pixelStartPrintingAt)
+;		{
+;			printf("result %d,%d %d \n", x, y, getPicResult);
+;		}
+;#endif
+;		return (getPicResult == PIC_DEFAULT);
+;	}
+;	if (priDrawEnabled && !picDrawEnabled) return (bFloodPriGetPixel(x, y) == PRI_DEFAULT);
+;	return (bFloodPicGetPixel(x, y) == PIC_DEFAULT);
+;}
+
+.macro OK_TO_FILL
+.local @priDisabledPicDisabled
+.local @temp
+.local @colorDefault
+.local @checkColorDefault
+.local @checkPriDisable
+.local @checkPriEnabledPicDisabled
+.local @returnGetPixelResult
+.local @priDisablePicEnabled
+.local @priEnabledPicEnabled
+.local @priEnabledPicDisabled
+.local @returnZero
+.local @end
+lda _picDrawEnabled
+eor #$1
+tax
+lda _priDrawEnabled
+eor #$1
+sta @temp
+txa
+and @temp
+beq @checkColorDefault
+@priDisabledPicDisabled:
+jmp @returnZero
+
+@checkColorDefault:
+lda _picColour
+cmp #PIC_DEFAULT
+bne @checkPriDisable
+
+@colorDefault:
+jmp @returnZero
+
+@checkPriDisable:
+lda _priDrawEnabled
+bne @checkPriEnabledPicDisabled
+@priDisablePicEnabled:
+bra @returnGetPixelResult
+
+@checkPriEnabledPicDisabled:
+lda _picDrawEnabled
+eor #$1
+and _priDrawEnabled
+@priEnabledPicEnabled:
+beq @returnGetPixelResult
+
+@priEnabledPicDisabled: ;ToDO
+jmp @returnZero
+
+@returnGetPixelResult:
+PIC_GET_PIXEL _okFillX, _okFillY
+cmp #PIC_DEFAULT
+bne @returnZero
+lda #$1
+bra @end
+@returnZero:
+lda #$0
+bra @end
+@temp: .byte $0
+@end:
+.endmacro
+
+
 _floatDivision:
 bra @start
 @numerator: .word $0 ; Even though numerator is only one byte we double it for address looked up
@@ -409,7 +504,7 @@ rts
 
 .segment "BANKRAMFLOOD"
 
-PIC_DEFAULT = 16
+PIC_DEFAULT = $F
 PRI_DEFAULT = 4
 .macro PIC_GET_PIXEL coX, coY
 .local @end
@@ -439,7 +534,6 @@ ldx #$0
 FLOOD_QUEUE_START = $A84F
 FLOOD_QUEUE_END = $BEB0
 
-
 _bFloodPicGetPixel:
 bra @start
 @coX: .byte $0
@@ -452,6 +546,15 @@ sta @coX
 PIC_GET_PIXEL @coX, @coY
 rts
 
+_bFloodOkToFill:
+OK_TO_FILL
+rts
+@temp: .byte $0
+
+.segment "CODE"
+_okFillX: .byte $0
+_okFillY: .byte $0
+.segment "BANKRAMFLOOD"
 
 ; void FLOOD_Q_STORE(unsigned short* ZP_PTR_B1) {
 ;     unsigned char q = 0;
