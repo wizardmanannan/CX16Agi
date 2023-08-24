@@ -311,6 +311,7 @@ sta VERA_addr_low
 ;}
 
 .macro OK_TO_FILL
+.local @start
 .local @priDisabledPicDisabled
 .local @temp
 .local @colorDefault
@@ -323,6 +324,21 @@ sta VERA_addr_low
 .local @priEnabledPicDisabled
 .local @returnZero
 .local @end
+
+lda _okFillX
+cmp #MAX_X       ; if x > 159
+bcc @checkYBounds         ; then @returnZero
+lda #$1
+jmp @returnZero
+
+@checkYBounds:
+lda _okFillY
+cmp #MAX_Y        ; if y > 167
+bcc @start         ; then @returnZero
+lda #$2
+jmp @returnZero
+
+@start:
 lda _picDrawEnabled
 eor #$1
 tax

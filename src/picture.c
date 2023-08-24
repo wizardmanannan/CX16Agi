@@ -18,7 +18,7 @@
 //#define TEST_DIVISION 
 //#define TEST_ROUND
 //#define VERBOSE_DRAW_LINE
-#define TEST_OK_TO_FILL
+//#define TEST_OK_TO_FILL
 
 boolean okToShowPic = FALSE;
 PictureFile* loadedPictures = (PictureFile*)&BANK_RAM[PICTURE_START];
@@ -228,12 +228,33 @@ void testOkToFill()
 	picColour = 3;
 	priDrawEnabled = FALSE;
 	picDrawEnabled = TRUE;
-	asm("stp");
+
 	if (bFloodOkToFill())
 	{
 		printf("fail both enabled");
 	}
 
+	okFillX = 160;
+	okFillY = 0;
+
+	priDrawEnabled = FALSE;
+	picDrawEnabled = TRUE;
+	if (bFloodOkToFill())
+	{
+		printf("Fail Bound Check X");
+	}
+
+	okFillX = 0;
+	okFillY = 168;
+
+	priDrawEnabled = FALSE;
+	picDrawEnabled = TRUE;
+	if (bFloodOkToFill())
+	{
+		printf("Fail Bound Check X");
+	}
+
+	exit(0);
 }
 #endif // TEST_OK_TO_FILL
 
@@ -308,11 +329,15 @@ void bFloodAgiFill(word x, word y)
 			break;
 		else {
 
-			if (bFloodOkToFill(x1, y1)) {
+			okFillX = x1;
+			okFillY = y1;
+			if (bFloodOkToFill()) {
 
 				PSETFLOOD(x1, y1);
 
-				if (bFloodOkToFill(x1, y1 - 1) && (y1 != 0)) {
+				okFillX = x1;
+				okFillY = y1 -1;
+				if (bFloodOkToFill() && (y1 != 0)) {
 #ifdef VERBOSE_FLOOD_FILL
 					if (pixelCounter >= pixelStartPrintingAt && pixelStartPrintingAt != 1) {
 						printf("1\n");
@@ -321,7 +346,9 @@ void bFloodAgiFill(word x, word y)
 					bFloodQstore(x1);
 					bFloodQstore(y1 - 1);
 				}
-				if (bFloodOkToFill(x1 - 1, y1) && (x1 != 0)) {
+				okFillX = x1 - 1;
+				okFillY = y1;
+				if (bFloodOkToFill() && (x1 != 0)) {
 #ifdef VERBOSE_FLOOD_FILL
 					if (pixelCounter >= pixelStartPrintingAt && pixelStartPrintingAt != 1) {
 						printf("2\n");
@@ -330,7 +357,10 @@ void bFloodAgiFill(word x, word y)
 					bFloodQstore(x1 - 1);
 					bFloodQstore(y1);
 				}
-				if (bFloodOkToFill(x1 + 1, y1) && (x1 != 159)) {
+
+				okFillX = x1 + 1;
+				okFillY = y1;
+				if (bFloodOkToFill() && (x1 != 159)) {
 #ifdef VERBOSE_FLOOD_FILL
 					if (pixelCounter >= pixelStartPrintingAt && pixelStartPrintingAt != 1) {
 						printf("3\n");
@@ -339,7 +369,10 @@ void bFloodAgiFill(word x, word y)
 					bFloodQstore(x1 + 1);
 					bFloodQstore(y1);
 				}
-				if (bFloodOkToFill(x1, y1 + 1) && (y1 != 167)) {
+
+				okFillX = x1;
+				okFillY = y1 + 1;
+				if (bFloodOkToFill() && (y1 != 167)) {
 #ifdef VERBOSE_FLOOD_FILL
 					if (pixelCounter >= pixelStartPrintingAt && pixelStartPrintingAt != 1) {
 						printf("4\n");
