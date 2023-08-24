@@ -22,9 +22,9 @@
     .export _drawWhere
     .export _b11PSet
     .export _bFloodQstore
-    .export _bFloodQretrieve
     .export _bFloodPicGetPixel
     .export _floatDivision
     .export _bFloodOkToFill
     .export _okFillX
     .export _okFillY
+    .export _bFloodAgiFill

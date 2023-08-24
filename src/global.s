@@ -225,6 +225,7 @@ NEG_1_16 = $FFFF
 ; Macro for comparing two 16-bit words and branching if greater or equal
 .macro GREATER_THAN_OR_EQ_16 word1, word2, successBranch, failBranch
        .local @branch
+       .local @end
        lda word1 + 1
        cmp word2 + 1
        .ifblank failBranch
@@ -279,6 +280,7 @@ EQ_16_WORD_TO_LITERAL long1 + 2, word2, successBranch , failBranch
 ;Macro for comparing two 16-bit words and branching if not equal
 .macro NEQ_16_WORD_TO_LITERAL word1, word2, successBranch, failBranch
        .local @branch
+       .local @end
        lda word1 + 1
        cmp #> word2
        bne successBranch
@@ -297,7 +299,7 @@ EQ_16_WORD_TO_LITERAL long1 + 2, word2, successBranch , failBranch
 ; Macro for comparing two 8-bit words and branching if less or equal
 .macro LESS_THAN_OR_EQ_8 word1, word2, successBranch, failBranch
        .local @branch
-              
+       .local @end
        lda word1
        cmp word2
        
@@ -320,7 +322,7 @@ EQ_16_WORD_TO_LITERAL long1 + 2, word2, successBranch , failBranch
 ; Macro for comparing two 8-bit words and branching if greater or equal
 .macro GREATER_THAN_OR_EQ_8 word1, word2, successBranch, failBranch
        .local @branch
-              
+       .local @end  
        lda word1
        cmp word2
        
@@ -339,7 +341,7 @@ EQ_16_WORD_TO_LITERAL long1 + 2, word2, successBranch , failBranch
 ; Macro for comparing two 8-bit words and branching if greater
 .macro GREATER_THAN_8 word1, word2, successBranch, failBranch
        .local @branch
-              
+       .local @end  
        lda word1
        cmp word2
        
@@ -359,7 +361,7 @@ EQ_16_WORD_TO_LITERAL long1 + 2, word2, successBranch , failBranch
 ; Macro for comparing two 8-bit words and branching if less
 .macro LESS_THAN_8 word1, word2, successBranch, failBranch
        .local @branch
-              
+       .local @end    
        lda word1
        cmp word2
        
@@ -379,7 +381,7 @@ EQ_16_WORD_TO_LITERAL long1 + 2, word2, successBranch , failBranch
 ; Macro for comparing two 16-bit words and branching if less or equal
 .macro LESS_THAN_OR_EQ_16 word1, word2, successBranch, failBranch
        .local @branch
-
+       .local @end
        lda word1 + 1
        cmp word2 + 1
        bcc @lowerBit

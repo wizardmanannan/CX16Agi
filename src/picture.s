@@ -285,25 +285,13 @@ sta VERA_addr_low
 ;boolean bFloodOkToFill(byte x, byte y)
 ;{
 ;	boolean getPicResult;
-;
-;#ifdef VERBOSE_FLOOD
-;	if (pixelCounter >= pixelStartPrintingAt)
-;	{
-;		printf("State: pic: %d, pri %d, color: %d\n", picDrawEnabled, priDrawEnabled, picColour);
-;	}
-;#endif
-;
-;	if (!picDrawEnabled && !priDrawEnabled) return FALSE;
+;   if(x > 160 || y > 168) return FALSE;
+;	
+;   if (!picDrawEnabled && !priDrawEnabled) return FALSE;
 ;	if (picColour == PIC_DEFAULT) return FALSE;
 ;	if (!priDrawEnabled)
 ;	{
 ;		getPicResult = bFloodPicGetPixel(x, y);
-;#ifdef VERBOSE_FLOOD
-;		if (pixelCounter >= pixelStartPrintingAt)
-;		{
-;			printf("result %d,%d %d \n", x, y, getPicResult);
-;		}
-;#endif
 ;		return (getPicResult == PIC_DEFAULT);
 ;	}
 ;	if (priDrawEnabled && !picDrawEnabled) return (bFloodPriGetPixel(x, y) == PRI_DEFAULT);
@@ -311,6 +299,8 @@ sta VERA_addr_low
 ;}
 
 .macro OK_TO_FILL
+.local @checkXBounds
+.local @checkYBounds
 .local @start
 .local @priDisabledPicDisabled
 .local @temp
@@ -325,20 +315,21 @@ sta VERA_addr_low
 .local @returnZero
 .local @end
 
-lda _okFillX
+@checkXBounds:
 cmp #MAX_X       ; if x > 159
 bcc @checkYBounds         ; then @returnZero
 lda #$1
 jmp @returnZero
 
 @checkYBounds:
-lda _okFillY
-cmp #MAX_Y        ; if y > 167
+sta _okFillX
+cpx #MAX_Y        ; if y > 167
 bcc @start         ; then @returnZero
 lda #$2
 jmp @returnZero
 
 @start:
+stx _okFillY
 lda _picDrawEnabled
 eor #$1
 tax
@@ -386,6 +377,153 @@ lda #$0
 bra @end
 @temp: .byte $0
 @end:
+.endmacro
+
+; void FLOOD_Q_STORE(unsigned short* ZP_PTR_B1) {
+;     unsigned char q = 0;
+;     unsigned short floodQueueEnd = 0;
+;     unsigned short RAM_BANK = _sposBank;
+
+;     *ZP_PTR_B1 = q;
+;     (*ZP_PTR_B1)++; // Increment the queue pointer
+
+;     if (*ZP_PTR_B1 == FLOOD_QUEUE_END) {
+;         *ZP_PTR_B1 = FLOOD_QUEUE_START; // Reset the queue pointer to the start
+
+;         if (RAM_BANK == LAST_FLOOD_BANK) {
+;             RAM_BANK = FIRST_FLOOD_BANK;
+;             _sposBank = FIRST_FLOOD_BANK;
+;         } else {
+;             RAM_BANK++;
+;             _sposBank++;
+;         }
+;     }
+; }
+.macro FLOOD_Q_STORE
+.local @floodQueueEnd
+.local @start
+.local @q
+.local @end
+.local @incBank
+.local @end
+sta _logDebugVal1
+sta @q
+DEBUG_FLOOD_QUEUE_STORE @q
+bra @start
+.segment "CODE"
+@q: .byte $0
+.segment "BANKRAMFLOOD"
+@floodQueueEnd: .word $0
+@start:
+lda _sposBank
+sta RAM_BANK
+
+lda @q
+sta (ZP_PTR_B1)
+
+clc
+lda #$1
+adc ZP_PTR_B1
+sta ZP_PTR_B1
+
+lda #$0
+adc ZP_PTR_B1 + 1
+sta ZP_PTR_B1 + 1
+NEQ_16_WORD_TO_LITERAL ZP_PTR_B1, (FLOOD_QUEUE_END + 1), @end
+
+lda #< FLOOD_QUEUE_START
+sta ZP_PTR_B1
+lda #> FLOOD_QUEUE_START
+sta ZP_PTR_B1 + 1
+
+lda #LAST_FLOOD_BANK
+cmp RAM_BANK
+bne @incBank
+
+lda #FIRST_FLOOD_BANK
+sta RAM_BANK
+sta _sposBank
+
+ldx #> _b11FloodBankFull
+lda #< _b11FloodBankFull
+jsr pushax
+lda #PICTURE_BANK
+ldx #$0
+jsr _trampoline_0
+
+bra @end
+
+@incBank:
+inc RAM_BANK ; The next flood bank will have identical code, so we can just increment the bank
+inc _sposBank
+@end:
+.endmacro
+
+.macro FLOOD_Q_RETRIEVE
+.local @end
+.local @serve
+.local @resetBank
+.local @returnResult
+.local @serve
+.local @returnEmpty
+
+lda _rposBank
+sta RAM_BANK
+
+lda _sposBank
+cmp _rposBank
+bne @serve
+
+lda ZP_PTR_B1
+cmp ZP_PTR_B2
+bne @serve
+
+lda ZP_PTR_B1 + 1
+cmp ZP_PTR_B2 + 1
+beq @returnEmpty
+
+@serve:
+lda (ZP_PTR_B2)
+tay
+
+clc
+lda #$1
+adc ZP_PTR_B2
+sta ZP_PTR_B2
+
+lda #$0
+adc ZP_PTR_B2 + 1
+sta ZP_PTR_B2 + 1
+
+NEQ_16_WORD_TO_LITERAL ZP_PTR_B2, (FLOOD_QUEUE_END + 1), @returnResult
+
+lda #< FLOOD_QUEUE_START
+sta ZP_PTR_B2
+lda #> FLOOD_QUEUE_START
+sta ZP_PTR_B2 + 1
+
+lda _rposBank
+cmp #LAST_FLOOD_BANK
+beq @resetBank
+
+inc RAM_BANK
+inc _rposBank
+bra @returnResult
+
+@resetBank:
+lda #FIRST_FLOOD_BANK
+sta _rposBank
+bra @returnResult
+
+@returnEmpty:
+lda #QEMPTY
+jmp @end
+
+@returnResult:
+tya
+DEBUG_FLOOD_QUEUE_RETRIEVE 
+@end:
+ldx #$0
 .endmacro
 
 
@@ -563,92 +701,206 @@ PIC_GET_PIXEL @coX, @coY
 rts
 
 _bFloodOkToFill:
+lda _okFillX
+ldx _okFillY
 OK_TO_FILL
 rts
 @temp: .byte $0
+
+; /**************************************************************************
+; ** agiFill
+; **************************************************************************/
+; void bFloodAgiFill(word x, word y)
+; {
+; 	byte x1, y1;
+; #ifdef TEST_QUEUE
+; 	testQueue();
+; #endif // TEST_QUEUE
+
+; #ifdef VERBOSE_FLOOD_FILL
+; 	if (pixelCounter >= pixelStartPrintingAt && pixelStartPrintingAt != 1) {
+; 		printf("bl\n");
+; 	}
+; #endif
+
+; 	bFloodQstore(x);
+; 	bFloodQstore(y);
+
+; 	for (;;) {
+;
+; 		      x1 = qretrieve();
+;             y1 = qretrieve();
+
+; 		if ((x1 == QEMPTY) || (y1 == QEMPTY))
+; 			break;
+; 		else {
+
+; 			okFillX = x1;
+; 			okFillY = y1;
+; 			if (bFloodOkToFill()) {
+
+; 				PSETFLOOD(x1, y1);
+
+; 				okFillX = x1;
+; 				okFillY = y1 -1;
+; 				if (bFloodOkToFill() && (y1 != 0)) {
+; #ifdef VERBOSE_FLOOD_FILL
+; 					if (pixelCounter >= pixelStartPrintingAt && pixelStartPrintingAt != 1) {
+; 						printf("1\n");
+; 					}
+; #endif
+; 					bFloodQstore(x1);
+; 					bFloodQstore(y1 - 1);
+; 				}
+; 				okFillX = x1 - 1;
+; 				okFillY = y1;
+; 				if (bFloodOkToFill() && (x1 != 0)) {
+; #ifdef VERBOSE_FLOOD_FILL
+; 					if (pixelCounter >= pixelStartPrintingAt && pixelStartPrintingAt != 1) {
+; 						printf("2\n");
+; 					}
+; #endif
+; 					bFloodQstore(x1 - 1);
+; 					bFloodQstore(y1);
+; 				}
+
+; 				okFillX = x1 + 1;
+; 				okFillY = y1;
+; 				if (bFloodOkToFill() && (x1 != 159)) {
+; #ifdef VERBOSE_FLOOD_FILL
+; 					if (pixelCounter >= pixelStartPrintingAt && pixelStartPrintingAt != 1) {
+; 						printf("3\n");
+; 					}
+; #endif
+; 					bFloodQstore(x1 + 1);
+; 					bFloodQstore(y1);
+; 				}
+
+; 				okFillX = x1;
+; 				okFillY = y1 + 1;
+; 				if (bFloodOkToFill() && (y1 != 167)) {
+; #ifdef VERBOSE_FLOOD_FILL
+; 					if (pixelCounter >= pixelStartPrintingAt && pixelStartPrintingAt != 1) {
+; 						printf("4\n");
+; 					}
+; #endif
+; 					bFloodQstore(x1);
+; 					bFloodQstore(y1 + 1);
+; 				}
+
+; 			}
+
+; 		}
+
+; 	}
+
+; }
+_bFloodAgiFill:
+ldy #$0
+
+@initialStore:
+lda @x,y
+jsr _bFloodQstore
+iny
+bcs @fillLoop
+jmp @initialStore
+
+@fillLoop:
+
+lda #$0
+sta @loopCounter
+@retrieveLoop:
+FLOOD_Q_RETRIEVE
+ldy @loopCounter
+sta @x,y
+cmp #QEMPTY
+bne @checkIfRetrieveLoopShouldContinue
+jmp @end
+@checkIfRetrieveLoopShouldContinue:
+iny
+cpy #$2
+bcs @checkXYOKFill
+jmp @retrieveLoop
+
+@checkXYOKFill:
+lda @x
+ldx @y
+OK_TO_FILL
+
+bne @isOkToFill
+jmp @fillLoop
+@isOkToFill:
+PSET @x, @y
+
+@storeFillChecks:
+lda @x 
+sta @toStore
+lda @y
+dec
+sta @toStore + 1
+
+lda @x
+dec
+sta @toStore + 2
+lda @y
+sta @toStore + 3
+
+lda @x
+inc
+sta @toStore + 4
+lda @y
+sta @toStore + 5
+
+lda @x
+inc
+sta @toStore + 6
+lda @y
+sta @toStore + 7
+
+lda #$0
+sta @loopCounter
+@neighbourCheckLoop:
+
+lda @loopCounter,y
+sta @x
+iny
+ldx @loopCounter,y
+sta @y
+OK_TO_FILL
+bne @storeInQueue
+jmp @checkNeighbourHoodLoopCounter
+@storeInQueue:
+ldy #$0
+sty @storeCounter
+
+@storeLoop:
+lda @x,y
+FLOOD_Q_STORE
+ldy @storeCounter
+iny
+cpy #$2
+bcs @checkNeighbourHoodLoopCounter
+jmp @storeLoop
+@checkNeighbourHoodLoopCounter:
+
+inc @loopCounter
+ldy @loopCounter
+cmp #7
+beq @end
+jmp @neighbourCheckLoop
+@end:
+
+rts
+@x: .byte $0
+@y: .byte $0
+@toStore: .res 8
+@loopCounter: .byte $0
+@storeCounter: .byte $0
 
 .segment "CODE"
 _okFillX: .byte $0
 _okFillY: .byte $0
 .segment "BANKRAMFLOOD"
-
-; void FLOOD_Q_STORE(unsigned short* ZP_PTR_B1) {
-;     unsigned char q = 0;
-;     unsigned short floodQueueEnd = 0;
-;     unsigned short RAM_BANK = _sposBank;
-
-;     *ZP_PTR_B1 = q;
-;     (*ZP_PTR_B1)++; // Increment the queue pointer
-
-;     if (*ZP_PTR_B1 == FLOOD_QUEUE_END) {
-;         *ZP_PTR_B1 = FLOOD_QUEUE_START; // Reset the queue pointer to the start
-
-;         if (RAM_BANK == LAST_FLOOD_BANK) {
-;             RAM_BANK = FIRST_FLOOD_BANK;
-;             _sposBank = FIRST_FLOOD_BANK;
-;         } else {
-;             RAM_BANK++;
-;             _sposBank++;
-;         }
-;     }
-; }
-.macro FLOOD_Q_STORE
-.local @start
-.local @q
-.local @end
-.local @incBank
-sta _logDebugVal1
-sta @q
-DEBUG_FLOOD_QUEUE_STORE @q
-bra @start
-.segment "CODE"
-@q: .byte $0
-.segment "BANKRAMFLOOD"
-@floodQueueEnd: .word $0
-@start:
-lda _sposBank
-sta RAM_BANK
-
-lda @q
-sta (ZP_PTR_B1)
-
-clc
-lda #$1
-adc ZP_PTR_B1
-sta ZP_PTR_B1
-
-lda #$0
-adc ZP_PTR_B1 + 1
-sta ZP_PTR_B1 + 1
-NEQ_16_WORD_TO_LITERAL ZP_PTR_B1, (FLOOD_QUEUE_END + 1), @end
-
-lda #< FLOOD_QUEUE_START
-sta ZP_PTR_B1
-lda #> FLOOD_QUEUE_START
-sta ZP_PTR_B1 + 1
-
-lda #LAST_FLOOD_BANK
-cmp RAM_BANK
-bne @incBank
-
-lda #FIRST_FLOOD_BANK
-sta RAM_BANK
-sta _sposBank
-
-ldx #> _b11FloodBankFull
-lda #< _b11FloodBankFull
-jsr pushax
-lda #PICTURE_BANK
-ldx #$0
-jsr _trampoline_0
-
-bra @end
-
-@incBank:
-inc RAM_BANK ; The next flood bank will have identical code, so we can just increment the bank
-inc _sposBank
-@end:
-.endmacro
 
 _bFloodQstore:
 FLOOD_Q_STORE
@@ -675,74 +927,4 @@ QEMPTY = $FF
 
 ;     return X; // Assuming this function returns the value from the queue
 ; }
-
-.macro FLOOD_Q_RETRIEVE
-.local @end
-.local @serve
-.local @resetBank
-.local @returnResult
-.local @serve
-
-lda _rposBank
-sta RAM_BANK
-
-lda _sposBank
-cmp _rposBank
-bne @serve
-
-lda ZP_PTR_B1
-cmp ZP_PTR_B2
-bne @serve
-
-lda ZP_PTR_B1 + 1
-cmp ZP_PTR_B2 + 1
-beq @returnEmpty
-
-@serve:
-lda (ZP_PTR_B2)
-tay
-
-clc
-lda #$1
-adc ZP_PTR_B2
-sta ZP_PTR_B2
-
-lda #$0
-adc ZP_PTR_B2 + 1
-sta ZP_PTR_B2 + 1
-
-NEQ_16_WORD_TO_LITERAL ZP_PTR_B2, (FLOOD_QUEUE_END + 1), @returnResult
-
-lda #< FLOOD_QUEUE_START
-sta ZP_PTR_B2
-lda #> FLOOD_QUEUE_START
-sta ZP_PTR_B2 + 1
-
-lda _rposBank
-cmp #LAST_FLOOD_BANK
-beq @resetBank
-
-inc RAM_BANK
-inc _rposBank
-bra @returnResult
-
-@resetBank:
-lda #FIRST_FLOOD_BANK
-sta _rposBank
-bra @returnResult
-
-@returnEmpty:
-lda #QEMPTY
-jmp @end
-
-@returnResult:
-tya
-DEBUG_FLOOD_QUEUE_RETRIEVE 
-@end:
-ldx #$0
-.endmacro
-
-_bFloodQretrieve:
-FLOOD_Q_RETRIEVE
-rts
 .endif

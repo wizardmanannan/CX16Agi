@@ -92,90 +92,9 @@ if ((x) <= 159 && (y) <= 167) {  \
 
 
 extern byte bFloodPicGetPixel(word x, word y);
-
-///**************************************************************************
-//** picGetPixel
-//**
-//** Get colour at x,y on the picture page.
-//**************************************************************************/
-//byte bFloodPicGetPixel(word x, word y)
-//{
-//    if (x > 159) return(PIC_DEFAULT);
-//    if (y > 167) return(PIC_DEFAULT);
-//return (picture->line[y][x]);
-//}
-
-/**************************************************************************
-** priGetPixel
-**
-** Get colour at x,y on the priority page.
-**************************************************************************/
-byte bFloodPriGetPixel(word x, word y)
-{
-	if (x > 159) return(PRI_DEFAULT);
-	if (y > 167) return(PRI_DEFAULT);
-	return (priority->line[y][x]);
-}
-
-
-//boolean bFloodEmpty()
-//{
-//    return (rpos == spos);
-//}
-
-//void bFloodQstore(word q)
-//{
-//    if (spos + 1 == rpos || (spos + 1 == QMAX && !rpos)) {
-//        nosound();
-//        return;
-//    }
-//    buf[spos] = q;
-//    spos++;
-//    if (spos == QMAX) spos = 0;  /* loop back */
-//}
-//
-//word bFloodQretrieve()
-//{
-//    if (rpos == QMAX) rpos = 0;  /* loop back */
-//    if (rpos == spos) {
-//        return QEMPTY;
-//    }
-//    rpos++;
-//    return buf[rpos - 1];
-//}
-
-///**************************************************************************
-//** okToFill
-//**************************************************************************/
-//boolean bFloodOkToFill(byte x, byte y)
-//{
-//	boolean getPicResult;
-//
-//#ifdef VERBOSE_FLOOD
-//	if (pixelCounter >= pixelStartPrintingAt)
-//	{
-//		printf("State: pic: %d, pri %d, color: %d\n", picDrawEnabled, priDrawEnabled, picColour);
-//	}
-//#endif
-//
-//	if (!picDrawEnabled && !priDrawEnabled) return FALSE;
-//	if (picColour == PIC_DEFAULT) return FALSE;
-//	if (!priDrawEnabled)
-//	{
-//		getPicResult = bFloodPicGetPixel(x, y);
-//#ifdef VERBOSE_FLOOD
-//		if (pixelCounter >= pixelStartPrintingAt)
-//		{
-//			printf("result %d,%d %d \n", x, y, getPicResult);
-//		}
-//#endif
-//		return (getPicResult == PIC_DEFAULT);
-//	}
-//	if (priDrawEnabled && !picDrawEnabled) return (bFloodPriGetPixel(x, y) == PRI_DEFAULT);
-//	return (bFloodPicGetPixel(x, y) == PIC_DEFAULT);
-//}
-
 extern boolean bFloodOkToFill();
+extern void bFloodAgiFill();
+
 extern byte okFillX;
 extern byte okFillY;
 
@@ -241,7 +160,7 @@ void testOkToFill()
 	picDrawEnabled = TRUE;
 	if (bFloodOkToFill())
 	{
-		printf("Fail Bound Check X");
+		printf("fail bound check x");
 	}
 
 	okFillX = 0;
@@ -251,7 +170,7 @@ void testOkToFill()
 	picDrawEnabled = TRUE;
 	if (bFloodOkToFill())
 	{
-		printf("Fail Bound Check X");
+		printf("fail bound check x");
 	}
 
 	exit(0);
@@ -288,107 +207,6 @@ void testQueue()
 }
 #endif // TEST_QUEUE
 
-
-/**************************************************************************
-** agiFill
-**************************************************************************/
-void bFloodAgiFill(word x, word y)
-{
-	byte x1, y1;
-#ifdef TEST_QUEUE
-	testQueue();
-#endif // TEST_QUEUE
-
-#ifdef VERBOSE_FLOOD_FILL
-	if (pixelCounter >= pixelStartPrintingAt && pixelStartPrintingAt != 1) {
-		printf("bl\n");
-	}
-#endif
-
-	bFloodQstore(x);
-	bFloodQstore(y);
-
-	for (;;) {
-#ifdef VERBOSE_FLOOD_FILL
-		if (pixelCounter >= pixelStartPrintingAt && pixelStartPrintingAt != 1) {
-			printf("al\n");
-		}
-#endif
-		x1 = bFloodQretrieve();
-		y1 = bFloodQretrieve();
-
-#ifdef VERBOSE_FLOOD_FILL
-		if (pixelCounter >= pixelStartPrintingAt && pixelStartPrintingAt != 1) {
-			printf("R %d,%d\n", x1, y1);
-		}
-#endif // VERBOSE_FLOOD
-
-
-
-		if ((x1 == QEMPTY) || (y1 == QEMPTY))
-			break;
-		else {
-
-			okFillX = x1;
-			okFillY = y1;
-			if (bFloodOkToFill()) {
-
-				PSETFLOOD(x1, y1);
-
-				okFillX = x1;
-				okFillY = y1 -1;
-				if (bFloodOkToFill() && (y1 != 0)) {
-#ifdef VERBOSE_FLOOD_FILL
-					if (pixelCounter >= pixelStartPrintingAt && pixelStartPrintingAt != 1) {
-						printf("1\n");
-					}
-#endif
-					bFloodQstore(x1);
-					bFloodQstore(y1 - 1);
-				}
-				okFillX = x1 - 1;
-				okFillY = y1;
-				if (bFloodOkToFill() && (x1 != 0)) {
-#ifdef VERBOSE_FLOOD_FILL
-					if (pixelCounter >= pixelStartPrintingAt && pixelStartPrintingAt != 1) {
-						printf("2\n");
-					}
-#endif
-					bFloodQstore(x1 - 1);
-					bFloodQstore(y1);
-				}
-
-				okFillX = x1 + 1;
-				okFillY = y1;
-				if (bFloodOkToFill() && (x1 != 159)) {
-#ifdef VERBOSE_FLOOD_FILL
-					if (pixelCounter >= pixelStartPrintingAt && pixelStartPrintingAt != 1) {
-						printf("3\n");
-					}
-#endif
-					bFloodQstore(x1 + 1);
-					bFloodQstore(y1);
-				}
-
-				okFillX = x1;
-				okFillY = y1 + 1;
-				if (bFloodOkToFill() && (y1 != 167)) {
-#ifdef VERBOSE_FLOOD_FILL
-					if (pixelCounter >= pixelStartPrintingAt && pixelStartPrintingAt != 1) {
-						printf("4\n");
-					}
-#endif
-					bFloodQstore(x1);
-					bFloodQstore(y1 + 1);
-				}
-
-			}
-
-		}
-
-	}
-
-}
 #pragma code-name (pop)
 #pragma code-name (push, "BANKRAM11")
 
