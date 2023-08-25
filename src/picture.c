@@ -369,7 +369,6 @@ void b11FloodFill(byte** data)
 	for (;;) {
 		if ((x1 = *((*data)++)) >= 0xF0) break;
 		if ((y1 = *((*data)++)) >= 0xF0) break;
-		printf("x %d y %d\n", x1, y1);
 		trampoline_2Byte(&bFloodAgiFill, x1, y1, FIRST_FLOOD_BANK);
 	}
 

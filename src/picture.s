@@ -105,7 +105,6 @@ sta _pixelCounter + 3
 EQ_32_LONG_TO_LITERAL _pixelStopAt, NEG_1_16, NEG_1_16, @checkFreeze
 LESS_THAN_32 _pixelCounter, _pixelStopAt, @checkFreeze, @stop
 @stop:
-stp
 nop ;There to make it clearer where we have stopped
 @checkFreeze:
 
@@ -803,19 +802,19 @@ sta @x
 ldy #$0
 @initialStore:
 lda @x,y
+sty @storeCounter
 jsr _bFloodQstore
+ldy @storeCounter
 iny
 cpy #$2
 bcs @fillLoop
 jmp @initialStore
 
 @fillLoop:
-
 lda #$0
 sta @loopCounter
 @retrieveLoop:
 FLOOD_Q_RETRIEVE
-
 ldy @loopCounter
 sta @x,y
 cmp #QEMPTY
@@ -832,7 +831,6 @@ jmp @retrieveLoop
 lda @x
 ldx @y
 OK_TO_FILL
-
 bne @isOkToFill
 jmp @fillLoop
 @isOkToFill:
@@ -858,23 +856,22 @@ lda @y
 sta @toStore + 5
 
 lda @x
-inc
 sta @toStore + 6
 lda @y
+inc
 sta @toStore + 7
 
 ldy #$0
 sty @loopCounter
 @neighbourCheckLoop:
 ldy @loopCounter
-stp
+
 lda @toStore,y
 sta @x
 iny
 ldx @toStore,y
 stx @y
 OK_TO_FILL
-stp
 bne @storeInQueue
 jmp @checkNeighbourHoodLoopCounter
 @storeInQueue:
@@ -893,8 +890,9 @@ jmp @storeLoop
 @checkNeighbourHoodLoopCounter:
 
 inc @loopCounter
+inc @loopCounter
 ldy @loopCounter
-cpy #7
+cpy #8
 bne @jmpBackToNeighbourCheckLoop
 jmp @fillLoop
 @jmpBackToNeighbourCheckLoop:
