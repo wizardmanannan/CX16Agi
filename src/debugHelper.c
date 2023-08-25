@@ -16,7 +16,7 @@ boolean opStopEvery = FALSE;
 int _clockBefore = 0;
 
 long pixelCounter = 1;
-long pixelStartPrintingAt = 0;
+long pixelStartPrintingAt = -1;
 long pixelStopAt = -1;
 long pixelFreezeAt = -1;
 

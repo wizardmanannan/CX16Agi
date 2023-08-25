@@ -31,14 +31,11 @@ PICTURE_INC = 1
 
 ;DEBUG_PIXEL_DRAW = 1
 
-.ifdef DEBUG_PIXEL_DRAW
+
 .import _b5DebugPixelDraw
 .import _b5DebugPrePixelDraw
 .import _b5CheckPixelDrawn
 .import _stopAtPixel
-.endif
-
-.ifdef DEBUG_PIXEL_DRAW
 .import _b5DebugFloodQueueRetrieve
 .import _b5DebugFloodQueueStore
 .import _pixelCounter
@@ -46,7 +43,7 @@ PICTURE_INC = 1
 .import _pixelStopAt
 .import _queueAction
 .import _pixelFreezeAt
-.endif
+
 
 .ifdef DEBUG_CHECK_LINE_DRAWN
 .import _b5LineDrawDebug
@@ -65,67 +62,19 @@ JSRFAR printFunc, DEBUG_BANK
 
 .macro DEBUG_PIXEL_DRAW var1, var2
 .ifdef DEBUG_PIXEL_DRAW
-lda var1
-sta _logDebugVal1
-lda var2
-sta _logDebugVal2
-PRINT_PIXEL_MESSAGE _b5DebugPixelDraw
+JSRFAR _b5DebugPixelDrawAsm, DEBUG_BANK
 .endif
 .endmacro
 
 .macro DEBUG_PREPIXEL_DRAW var1, var2
-.local @stop
-.local @end
-.local @freeze
-.local @checkFreeze
-
-
 .ifdef DEBUG_PIXEL_DRAW
-lda var1
-sta _logDebugVal1
-lda var2
-sta _logDebugVal2
-
-PRINT_PIXEL_MESSAGE _b5DebugPrePixelDraw
-
-clc
-lda #$1
-adc _pixelCounter
-sta _pixelCounter
-lda #$0
-adc _pixelCounter + 1
-sta _pixelCounter + 1
-lda #$0
-adc _pixelCounter + 2
-sta _pixelCounter + 2
-lda #$0
-adc _pixelCounter + 3
-sta _pixelCounter + 3
-
-EQ_32_LONG_TO_LITERAL _pixelStopAt, NEG_1_16, NEG_1_16, @checkFreeze
-LESS_THAN_32 _pixelCounter, _pixelStopAt, @checkFreeze, @stop
-@stop:
-nop ;There to make it clearer where we have stopped
-@checkFreeze:
-
-EQ_32_LONG_TO_LITERAL _pixelFreezeAt, NEG_1_16, NEG_1_16, @end
-LESS_THAN_32 _pixelCounter, _pixelFreezeAt, @end, @freeze
-@freeze:
-lda var1 ;Pointless instruction to make it clearer what the points are on freeze
-lda var2
-bra @freeze
-@end:
-
-.endif
+ JSRFAR _b5DebugPrePixelDrawAsm, DEBUG_BANK
+ .endif
 .endmacro
 
 .macro DEBUG_PIXEL_DRAWN var1, var2
 .ifdef DEBUG_PIXEL_DRAW
-lda var1
-sta _logDebugVal1
-lda var2
-sta _logDebugVal2
-PRINT_PIXEL_MESSAGE _b5CheckPixelDrawn
+ JSRFAR _b5DebugPixelDrawnAsm, DEBUG_BANK
 .endif
 .endmacro
 
@@ -181,7 +130,6 @@ _toDraw: .byte $0
 .local @endPSet
 .local @start
 .local @checkYBounds
-
 lda coX
 cmp #MAX_X       ; if x > 159
 bcc @checkYBounds         ; then @end
@@ -196,6 +144,7 @@ lda #$2
 jmp @endPSet
 
 @start:
+DEBUG_PREPIXEL_DRAW @coX, @coY
 lda _picDrawEnabled
 bne @drawPictureScreen         ; If picDrawEnabled == 0, skip to the end
 jmp @endPSet
@@ -217,6 +166,7 @@ sta VERA_data0
 DEBUG_PIXEL_DRAW coX, coY
 
 @endPSet:
+DEBUG_PIXEL_DRAWN @coX, @coY
     ; Continue with the rest of the code
 
 .endmacro
@@ -643,14 +593,59 @@ sty RAM_BANK
 
 rts
 
+.segment "BANKRAM05"
+_b5DebugPixelDrawAsm:
+lda var1
+sta _logDebugVal1
+lda var2
+sta _logDebugVal2
+PRINT_PIXEL_MESSAGE _b5DebugPixelDraw
+rts
+
+_b5DebugPrePixelDrawAsm:
+clc
+lda #$1
+adc _pixelCounter
+sta _pixelCounter
+lda #$0
+adc _pixelCounter + 1
+sta _pixelCounter + 1
+lda #$0
+adc _pixelCounter + 2
+sta _pixelCounter + 2
+lda #$0
+adc _pixelCounter + 3
+sta _pixelCounter + 3
+
+EQ_32_LONG_TO_LITERAL _pixelStopAt, NEG_1_16, NEG_1_16, @checkFreeze
+LESS_THAN_32 _pixelCounter, _pixelStopAt, @checkFreeze, @stop
+@stop:
+nop ;There to make it clearer where we have stopped
+@checkFreeze:
+
+EQ_32_LONG_TO_LITERAL _pixelFreezeAt, NEG_1_16, NEG_1_16, @end
+LESS_THAN_32 _pixelCounter, _pixelFreezeAt, @end, @freeze
+@freeze:
+lda var1 ;Pointless instruction to make it clearer what the points are on freeze
+lda var2
+bra @freeze
+@end:
+rts
+
+_b5DebugPixelDrawnAsm:
+lda var1
+sta _logDebugVal1
+lda var2
+sta _logDebugVal2
+PRINT_PIXEL_MESSAGE _b5CheckPixelDrawn
+rts
+
 .segment "BANKRAM11"
 _b11PSet:
 sta @coY
 jsr popa
 sta @coX
-DEBUG_PREPIXEL_DRAW @coX, @coY
 PSET @coX, @coY
-DEBUG_PIXEL_DRAWN @coX, @coY
 rts
 @coX: .byte $0
 @coY: .byte $0
