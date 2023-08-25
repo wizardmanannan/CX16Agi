@@ -93,7 +93,7 @@ if ((x) <= 159 && (y) <= 167) {  \
 
 extern byte bFloodPicGetPixel(word x, word y);
 extern boolean bFloodOkToFill();
-extern void bFloodAgiFill();
+extern void bFloodAgiFill(byte x, byte y);
 
 extern byte okFillX;
 extern byte okFillY;
@@ -369,7 +369,8 @@ void b11FloodFill(byte** data)
 	for (;;) {
 		if ((x1 = *((*data)++)) >= 0xF0) break;
 		if ((y1 = *((*data)++)) >= 0xF0) break;
-		trampoline_2Int(&bFloodAgiFill, x1, y1, FIRST_FLOOD_BANK);
+		printf("x %d y %d\n", x1, y1);
+		trampoline_2Byte(&bFloodAgiFill, x1, y1, FIRST_FLOOD_BANK);
 	}
 
 	(*data)--;

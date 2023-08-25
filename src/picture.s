@@ -29,7 +29,7 @@ PICTURE_INC = 1
 
 .segment "CODE"
 
-DEBUG_PIXEL_DRAW = 1
+;DEBUG_PIXEL_DRAW = 1
 
 .ifdef DEBUG_PIXEL_DRAW
 .import _b5DebugPixelDraw
@@ -796,12 +796,16 @@ rts
 
 ; }
 _bFloodAgiFill:
-ldy #$0
+sta @y
+jsr popa 
+sta @x
 
+ldy #$0
 @initialStore:
 lda @x,y
 jsr _bFloodQstore
 iny
+cpy #$2
 bcs @fillLoop
 jmp @initialStore
 
@@ -811,13 +815,15 @@ lda #$0
 sta @loopCounter
 @retrieveLoop:
 FLOOD_Q_RETRIEVE
+
 ldy @loopCounter
 sta @x,y
 cmp #QEMPTY
 bne @checkIfRetrieveLoopShouldContinue
 jmp @end
 @checkIfRetrieveLoopShouldContinue:
-iny
+inc @loopCounter
+ldy @loopCounter
 cpy #$2
 bcs @checkXYOKFill
 jmp @retrieveLoop
@@ -857,16 +863,18 @@ sta @toStore + 6
 lda @y
 sta @toStore + 7
 
-lda #$0
-sta @loopCounter
+ldy #$0
+sty @loopCounter
 @neighbourCheckLoop:
-
-lda @loopCounter,y
+ldy @loopCounter
+stp
+lda @toStore,y
 sta @x
 iny
-ldx @loopCounter,y
-sta @y
+ldx @toStore,y
+stx @y
 OK_TO_FILL
+stp
 bne @storeInQueue
 jmp @checkNeighbourHoodLoopCounter
 @storeInQueue:
@@ -876,8 +884,9 @@ sty @storeCounter
 @storeLoop:
 lda @x,y
 FLOOD_Q_STORE
+
+inc @storeCounter
 ldy @storeCounter
-iny
 cpy #$2
 bcs @checkNeighbourHoodLoopCounter
 jmp @storeLoop
@@ -885,19 +894,20 @@ jmp @storeLoop
 
 inc @loopCounter
 ldy @loopCounter
-cmp #7
-beq @end
+cpy #7
+bne @jmpBackToNeighbourCheckLoop
+jmp @fillLoop
+@jmpBackToNeighbourCheckLoop:
 jmp @neighbourCheckLoop
 @end:
 
 rts
+.segment "CODE"
 @x: .byte $0
 @y: .byte $0
 @toStore: .res 8
 @loopCounter: .byte $0
 @storeCounter: .byte $0
-
-.segment "CODE"
 _okFillX: .byte $0
 _okFillY: .byte $0
 .segment "BANKRAMFLOOD"
