@@ -29,7 +29,7 @@ PICTURE_INC = 1
 
 .segment "CODE"
 
-;DEBUG_PIXEL_DRAW = 1
+DEBUG_PIXEL_DRAW = 1
 
 
 .import _b5DebugPixelDraw
@@ -62,18 +62,26 @@ JSRFAR printFunc, DEBUG_BANK
 
 .macro DEBUG_PIXEL_DRAW var1, var2
 .ifdef DEBUG_PIXEL_DRAW
+lda var1
+ldx var2
 JSRFAR _b5DebugPixelDrawAsm, DEBUG_BANK
 .endif
 .endmacro
 
 .macro DEBUG_PREPIXEL_DRAW var1, var2
 .ifdef DEBUG_PIXEL_DRAW
+
+ lda var1
+ ldx var2
  JSRFAR _b5DebugPrePixelDrawAsm, DEBUG_BANK
  .endif
 .endmacro
 
 .macro DEBUG_PIXEL_DRAWN var1, var2
 .ifdef DEBUG_PIXEL_DRAW
+
+lda var1
+ldx var2
  JSRFAR _b5DebugPixelDrawnAsm, DEBUG_BANK
 .endif
 .endmacro
@@ -144,7 +152,7 @@ lda #$2
 jmp @endPSet
 
 @start:
-DEBUG_PREPIXEL_DRAW @coX, @coY
+DEBUG_PREPIXEL_DRAW coX, coY
 lda _picDrawEnabled
 bne @drawPictureScreen         ; If picDrawEnabled == 0, skip to the end
 jmp @endPSet
@@ -166,7 +174,7 @@ sta VERA_data0
 DEBUG_PIXEL_DRAW coX, coY
 
 @endPSet:
-DEBUG_PIXEL_DRAWN @coX, @coY
+DEBUG_PIXEL_DRAWN coX, coY
     ; Continue with the rest of the code
 
 .endmacro
@@ -595,10 +603,8 @@ rts
 
 .segment "BANKRAM05"
 _b5DebugPixelDrawAsm:
-lda var1
 sta _logDebugVal1
-lda var2
-sta _logDebugVal2
+stx _logDebugVal2
 PRINT_PIXEL_MESSAGE _b5DebugPixelDraw
 rts
 
@@ -620,6 +626,7 @@ sta _pixelCounter + 3
 EQ_32_LONG_TO_LITERAL _pixelStopAt, NEG_1_16, NEG_1_16, @checkFreeze
 LESS_THAN_32 _pixelCounter, _pixelStopAt, @checkFreeze, @stop
 @stop:
+stp
 nop ;There to make it clearer where we have stopped
 @checkFreeze:
 
@@ -633,10 +640,8 @@ bra @freeze
 rts
 
 _b5DebugPixelDrawnAsm:
-lda var1
 sta _logDebugVal1
-lda var2
-sta _logDebugVal2
+stx _logDebugVal2
 PRINT_PIXEL_MESSAGE _b5CheckPixelDrawn
 rts
 

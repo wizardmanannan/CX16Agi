@@ -369,15 +369,9 @@ void b5DebugPrePixelDraw()
 
 void b5DebugPixelDraw()
 {
-	int* localDrawWhere;
-	byte localToDraw;
 	int* expectedDrawAddress = (STARTING_BYTE + logDebugVal1) + (logDebugVal2 * BYTES_PER_ROW);
 
-	memCpyBanked((byte*)&localDrawWhere, (byte*)&drawWhere, PICTURE_CODE_BANK, 2);
-	memCpyBanked(&localToDraw, &toDraw, PICTURE_CODE_BANK, 1);
-
-
-	printf("%lu: We expect to draw at %p, we draw at %p. Color: %p. Result %d. %d,%d\n", pixelCounter, expectedDrawAddress, localDrawWhere, localToDraw, expectedDrawAddress == localDrawWhere, logDebugVal1, logDebugVal2);
+	printf("%lu: We expect to draw at %p, we draw at %p. Color: %p. Result %d. %d,%d\n", pixelCounter, expectedDrawAddress, drawWhere, toDraw, expectedDrawAddress == drawWhere, logDebugVal1, logDebugVal2);
 
 	pixelDrawn = TRUE;
 }
