@@ -179,7 +179,8 @@ DEBUG_PIXEL_DRAWN coX, coY
 
 .endmacro
 
-.macro SET_VERA_ADDRESS coX, coY
+
+.macro GET_VERA_ADDRESS coX, coY, outputVar
 .local @start
 .local @originalZPTMP
 bra @start
@@ -194,10 +195,10 @@ sta @originalZPTMP+1
 lda coX
 clc
 adc #<STARTING_BYTE
-sta _drawWhere
+sta outputVar
 lda #$0
 adc #>STARTING_BYTE
-sta _drawWhere+1
+sta outputVar+1
 
 clc
 lda coY
@@ -215,22 +216,26 @@ sta ZP_TMP+1
 
 clc
 lda (ZP_TMP)  ; y * BYTES_PER_ROW.
-adc _drawWhere
-sta _drawWhere
+adc outputVar
+sta outputVar
 ldy #$1
 lda (ZP_TMP),y
-adc _drawWhere+1
-sta _drawWhere+1
+adc outputVar+1
+sta outputVar+1
 
 lda @originalZPTMP
 sta ZP_TMP
 lda @originalZPTMP+1
 sta ZP_TMP+1
 
+.endmacro
+
+
+.macro SET_VERA_ADDRESS coX, coY
+GET_VERA_ADDRESS coX, coY, _drawWhere
+
 lda #$10
 sta VERA_addr_bank ; Stride 1. High byte of address will always be 0
-
-
 lda _drawWhere + 1
 sta VERA_addr_high
 
