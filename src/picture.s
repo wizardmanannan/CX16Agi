@@ -684,8 +684,8 @@ lda #PIC_DEFAULT
 ldx #$0
 .endmacro
 
-FLOOD_QUEUE_START = $A84F
-FLOOD_QUEUE_END = $BEB0
+FLOOD_QUEUE_START = $A850
+FLOOD_QUEUE_END = $BEAF
 
 _bFloodPicGetPixel:
 bra @start
