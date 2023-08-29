@@ -25,6 +25,4 @@
     .export _bFloodPicGetPixel
     .export _floatDivision
     .export _bFloodOkToFill
-    .export _okFillX
-    .export _okFillY
     .export _bFloodAgiFill

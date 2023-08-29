@@ -52,6 +52,8 @@ DEBUG_PIXEL_DRAW = 1
 MAX_X = 160
 MAX_Y = 168
 
+MAX_ADDRESS = $7F7F
+
 .macro PRINT_PIXEL_MESSAGE printFunc
 .local @end
 EQ_32_LONG_TO_LITERAL _pixelCounter, NEG_1_16, NEG_1_16, @end
@@ -277,21 +279,10 @@ sta VERA_addr_low
 .local @returnZero
 .local @end
 
-@checkXBounds:
-cmp #MAX_X       ; if x > 159
-bcc @checkYBounds         ; then @returnZero
-lda #$1
-jmp @returnZero
 
-@checkYBounds:
-sta _okFillX
-cpx #MAX_Y        ; if y > 167
-bcc @start         ; then @returnZero
-lda #$2
-jmp @returnZero
+GREATER_THAN_OR_EQ_16_LITERAL _okFillAddress, MAX_ADDRESS + 1, @returnZero 
 
 @start:
-stx _okFillY
 lda _picDrawEnabled
 eor #$1
 tax
@@ -329,8 +320,8 @@ beq @returnGetPixelResult
 jmp @returnZero
 
 @returnGetPixelResult:
-PIC_GET_PIXEL _okFillX, _okFillY
-cmp #PIC_DEFAULT
+PIC_GET_PIXEL_ADDRESS _okFillAddress
+cmp #PIC_DOUBLE_DEFAULT ; Expected to have $FF as each pixel is double width. Just compare it with this value to save a shift
 bne @returnZero
 lda #$1
 bra @end
@@ -662,6 +653,7 @@ rts
 
 .segment "BANKRAMFLOOD"
 
+PIC_DOUBLE_DEFAULT = PIC_DEFAULT * $10 + PIC_DEFAULT
 PIC_DEFAULT = $F
 PRI_DEFAULT = 4
 .macro PIC_GET_PIXEL coX, coY
@@ -704,9 +696,25 @@ sta @coX
 PIC_GET_PIXEL @coX, @coY
 rts
 
+.macro PIC_GET_PIXEL_ADDRESS address
+.local @end
+.local @returnDefault
+.local @start
+
+lda #$10
+sta VERA_addr_bank ; Stride 1. High byte of address will always be 0
+lda address + 1
+sta VERA_addr_high
+
+lda address
+sta VERA_addr_low
+
+lda VERA_data0
+.endmacro
+
 _bFloodOkToFill:
-lda _okFillX
-ldx _okFillY
+sta _okFillAddress
+stx _okFillAddress + 1
 OK_TO_FILL
 rts
 @temp: .byte $0
@@ -911,8 +919,7 @@ rts
 @toStore: .res 8
 @loopCounter: .byte $0
 @storeCounter: .byte $0
-_okFillX: .byte $0
-_okFillY: .byte $0
+_okFillAddress: .word $0
 .segment "BANKRAMFLOOD"
 
 _bFloodQstore:

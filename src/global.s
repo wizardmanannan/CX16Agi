@@ -251,6 +251,36 @@ NEG_1_16 = $FFFF
 
 .endmacro
 
+
+; Macro for comparing two 16-bit words and branching if greater or equal
+.macro GREATER_THAN_OR_EQ_16_LITERAL word1, literal, successBranch, failBranch
+       .local @branch
+       .local @end
+       lda word1 + 1
+       cmp #> literal
+       .ifblank failBranch
+       bcc @end
+       .endif
+       .ifnblank failBranch
+       jmp failBranch
+       .endif
+       bne @branch
+       lda word1
+       cmp #< literal
+       beq @branch
+       bcs @branch
+       .ifblank failBranch
+       bcc @end
+       .endif
+       .ifnblank failBranch
+       jmp failBranch
+       .endif
+       @branch:
+       jmp successBranch
+       @end:
+
+.endmacro
+
 ; Macro for comparing two 16-bit words and branching if equal
 .macro EQ_16_WORD_TO_LITERAL word1, word2, successBranch, failBranch
        .local @branch

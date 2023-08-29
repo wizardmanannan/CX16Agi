@@ -92,7 +92,7 @@ if ((x) <= 159 && (y) <= 167) {  \
 
 
 extern byte bFloodPicGetPixel(word x, word y);
-extern boolean bFloodOkToFill();
+extern boolean bFloodOkToFill(byte* address);
 extern void bFloodAgiFill(byte x, byte y);
 
 extern byte okFillX;
@@ -101,46 +101,43 @@ extern byte okFillY;
 #ifdef TEST_OK_TO_FILL
 void testOkToFill()
 {
-	okFillX = 0;
-	okFillY = 0;
-
 	priDrawEnabled = FALSE;
 	picDrawEnabled = FALSE;
-	if (bFloodOkToFill())
+	if (bFloodOkToFill((byte*)0x1680))
 	{
-		printf("fail pri false pic false");
+		printf("fail pri false pic false\n");
 	}
 
 	picColour = DEFAULT_COLOR;
 	priDrawEnabled = FALSE;
 	picDrawEnabled = TRUE;
-	if (bFloodOkToFill())
+	if (bFloodOkToFill((byte*)0x1680))
 	{
-		printf("fail color default test");
+		printf("fail color default test\n");
 	}
 
 	picColour = 3;
 	priDrawEnabled = FALSE;
 	picDrawEnabled = TRUE;
-	if (!bFloodOkToFill())
+	if (!bFloodOkToFill((byte*)0x1680))
 	{
-		printf("fail pri disabled pic enabled");
+		printf("fail pri disabled pic enabled\n");
 	}
 
 	picColour = 3;
 	priDrawEnabled = TRUE;
 	picDrawEnabled = FALSE;
-	if (bFloodOkToFill())
+	if (bFloodOkToFill((byte*)0x1680))
 	{
-		printf("fail pri enabled pic disabled");
+		printf("fail pri enabled pic disabled\n");
 	}
 
 	picColour = 3;
 	priDrawEnabled = TRUE;
 	picDrawEnabled = TRUE;
-	if (!bFloodOkToFill())
+	if (!bFloodOkToFill((byte*)0x1680))
 	{
-		printf("fail both enabled");
+		printf("fail both enabled\n");
 	}
 
 	trampoline_2Byte(&b11PSet, 0, 0, PICTURE_CODE_BANK);
@@ -148,29 +145,23 @@ void testOkToFill()
 	priDrawEnabled = FALSE;
 	picDrawEnabled = TRUE;
 
-	if (bFloodOkToFill())
+	if (bFloodOkToFill((byte*)0x1680))
 	{
-		printf("fail both enabled");
+		printf("fail both enabled\n");
 	}
-
-	okFillX = 160;
-	okFillY = 0;
 
 	priDrawEnabled = FALSE;
 	picDrawEnabled = TRUE;
-	if (bFloodOkToFill())
+	if (!bFloodOkToFill((byte*)0x7F7F)) //One before boundary
 	{
-		printf("fail bound check x");
+		printf("fail bound check x before\n");
 	}
-
-	okFillX = 0;
-	okFillY = 168;
 
 	priDrawEnabled = FALSE;
 	picDrawEnabled = TRUE;
-	if (bFloodOkToFill())
+	if (bFloodOkToFill((byte*)0x7F80)) //One over boundary
 	{
-		printf("fail bound check x");
+		printf("fail bound check x after\n");
 	}
 
 	exit(0);
