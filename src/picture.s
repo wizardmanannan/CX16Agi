@@ -29,12 +29,13 @@ PICTURE_INC = 1
 
 .segment "CODE"
 
-DEBUG_PIXEL_DRAW = 1
+;DEBUG_PIXEL_DRAW = 1
 
 
 .import _b5DebugPixelDraw
 .import _b5DebugPrePixelDraw
 .import _b5CheckPixelDrawn
+.import _b5DebugPixelDrawAddress
 .import _stopAtPixel
 .import _b5DebugFloodQueueRetrieve
 .import _b5DebugFloodQueueStore
@@ -60,6 +61,16 @@ EQ_32_LONG_TO_LITERAL _pixelCounter, NEG_1_16, NEG_1_16, @end
 LESS_THAN_32 _pixelCounter, _pixelStartPrintingAt, @end
 JSRFAR printFunc, DEBUG_BANK
 @end:
+.endmacro
+
+.macro DEBUG_PIXEL_DRAW_ADDRESS address
+.ifdef DEBUG_PIXEL_DRAW
+lda address
+sta _logDebugVal1
+lda address + 1
+sta _logDebugVal2
+JSRFAR _b5DebugPixelDrawAddress, DEBUG_BANK
+.endif
 .endmacro
 
 .macro DEBUG_PIXEL_DRAW var1, var2
@@ -181,6 +192,24 @@ DEBUG_PIXEL_DRAWN coX, coY
 
 .endmacro
 
+.macro PSET_ADDRESS address
+.local @endPSet
+.local @start
+.local @checkYBounds
+
+SET_VERA_ADDRESS_ADDRESS address
+
+lda _toDraw
+sta VERA_data0
+
+DEBUG_PIXEL_DRAW_ADDRESS address
+
+@endPSet:
+;DEBUG_PIXEL_DRAWN coX, coY
+    ; Continue with the rest of the code
+
+.endmacro
+
 
 .macro GET_VERA_ADDRESS coX, coY, outputVar
 .local @start
@@ -238,10 +267,23 @@ GET_VERA_ADDRESS coX, coY, _drawWhere
 
 lda #$10
 sta VERA_addr_bank ; Stride 1. High byte of address will always be 0
+
 lda _drawWhere + 1
 sta VERA_addr_high
 
 lda _drawWhere
+sta VERA_addr_low
+
+.endmacro
+
+.macro SET_VERA_ADDRESS_ADDRESS address
+lda #$10
+sta VERA_addr_bank ; Stride 1. High byte of address will always be 0
+
+lda address + 1
+sta VERA_addr_high
+
+lda address
 sta VERA_addr_low
 
 .endmacro
@@ -466,17 +508,14 @@ bra @returnResult
 @resetBank:
 lda #FIRST_FLOOD_BANK
 sta _rposBank
-bra @returnResult
-
-@returnEmpty:
-lda #QEMPTY
-jmp @end
-
 @returnResult:
 tya
 DEBUG_FLOOD_QUEUE_RETRIEVE 
-@end:
 ldx #$0
+bra @end
+@returnEmpty:
+ldx #QEMPTY
+@end:
 .endmacro
 
 
@@ -598,6 +637,13 @@ sty RAM_BANK
 rts
 
 .segment "BANKRAM05"
+_b5DebugPixelDrawAddressAsm:
+sta _logDebugVal1
+stx _logDebugVal2
+PRINT_PIXEL_MESSAGE _b5DebugPixelDrawAddress
+rts
+
+
 _b5DebugPixelDrawAsm:
 sta _logDebugVal1
 stx _logDebugVal2
@@ -812,9 +858,10 @@ sta @y
 jsr popa 
 sta @x
 
+GET_VERA_ADDRESS @x, @y, _okFillAddress
 ldy #$0
 @initialStore:
-lda @x,y
+lda _okFillAddress,y
 sty @storeCounter
 jsr _bFloodQstore
 ldy @storeCounter
@@ -829,8 +876,8 @@ sta @loopCounter
 @retrieveLoop:
 FLOOD_Q_RETRIEVE
 ldy @loopCounter
-sta @x,y
-cmp #QEMPTY
+sta _okFillAddress,y
+cpx #QEMPTY
 bne @checkIfRetrieveLoopShouldContinue
 jmp @end
 @checkIfRetrieveLoopShouldContinue:
@@ -841,37 +888,48 @@ bcs @checkXYOKFill
 jmp @retrieveLoop
 
 @checkXYOKFill:
-lda @x
-ldx @y
 OK_TO_FILL
 bne @isOkToFill
 jmp @fillLoop
 @isOkToFill:
-PSET @x, @y
+PSET_ADDRESS _okFillAddress
 
 @storeFillChecks:
-lda @x 
+
+sec
+lda _okFillAddress
+sbc #< BYTES_PER_ROW
 sta @toStore
-lda @y
-dec
+
+lda _okFillAddress + 1
+sbc #> BYTES_PER_ROW
 sta @toStore + 1
 
-lda @x
-dec
+sec
+lda _okFillAddress
+sbc #$1
 sta @toStore + 2
-lda @y
+
+lda _okFillAddress + 1
+sbc #$0
 sta @toStore + 3
 
-lda @x
-inc
+clc
+lda _okFillAddress
+adc #$1
 sta @toStore + 4
-lda @y
+
+lda _okFillAddress + 1
+adc #$0
 sta @toStore + 5
 
-lda @x
+clc
+lda _okFillAddress
+adc #< BYTES_PER_ROW
 sta @toStore + 6
-lda @y
-inc
+
+lda _okFillAddress + 1
+adc #> BYTES_PER_ROW
 sta @toStore + 7
 
 ldy #$0
@@ -880,10 +938,10 @@ sty @loopCounter
 ldy @loopCounter
 
 lda @toStore,y
-sta @x
+sta _okFillAddress
 iny
-ldx @toStore,y
-stx @y
+lda @toStore,y
+sta _okFillAddress + 1
 OK_TO_FILL
 bne @storeInQueue
 jmp @checkNeighbourHoodLoopCounter
@@ -892,7 +950,7 @@ ldy #$0
 sty @storeCounter
 
 @storeLoop:
-lda @x,y
+lda _okFillAddress,y
 FLOOD_Q_STORE
 
 inc @storeCounter

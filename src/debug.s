@@ -10,4 +10,5 @@ lda cwCurrentCode
 lda _opCounter
 lda _pixelCounter
 lda _logDebugVal1
+lda _okFillAddress
 rts

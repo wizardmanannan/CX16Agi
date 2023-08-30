@@ -403,6 +403,14 @@ void b5DebugFloodQueueStore()
 	printf("%lu : stored %d\n", queueAction, logDebugVal1);
 }
 
+void b5DebugPixelDrawAddress()
+{
+	int result;
+	*((byte*)&result) = logDebugVal1;
+	*((byte*)&result + 1) = logDebugVal2;
+	printf("Drawing at %p\n", result);
+}
+
 #pragma code-name (pop);
 
 
