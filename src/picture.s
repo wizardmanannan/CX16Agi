@@ -144,6 +144,16 @@ INC_32 _queueAction
 .endif
 .endmacro
 
+.macro SET_PICCOLOR
+lda _picColour
+asl a           ; Shift left 4 times to multiply by 16
+asl a  
+asl a  
+asl a  
+ora _picColour
+sta _toDraw     ; toDraw = picColour << 4 | picColour
+
+.endmacro
 
 _drawWhere: .word $0
 _toDraw: .byte $0
@@ -171,13 +181,7 @@ bne @drawPictureScreen         ; If picDrawEnabled == 0, skip to the end
 jmp @endPSet
 
 @drawPictureScreen:
-lda _picColour
-asl a           ; Shift left 4 times to multiply by 16
-asl a  
-asl a  
-asl a  
-ora _picColour
-sta _toDraw     ; toDraw = picColour << 4 | picColour
+SET_PICCOLOR
 
 SET_VERA_ADDRESS coX, coY
 
@@ -748,6 +752,8 @@ rts
 .local @end
 .local @returnDefault
 .local @start
+
+SET_PICCOLOR
 
 lda #$10
 sta VERA_addr_bank ; Stride 1. High byte of address will always be 0
