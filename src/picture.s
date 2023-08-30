@@ -69,7 +69,7 @@ lda address
 sta _logDebugVal1
 lda address + 1
 sta _logDebugVal2
-JSRFAR _b5DebugPixelDrawAddress, DEBUG_BANK
+PRINT_PIXEL_MESSAGE _b5DebugPixelDrawAddress
 .endif
 .endmacro
 
@@ -81,7 +81,7 @@ JSRFAR _b5DebugPixelDrawAsm, DEBUG_BANK
 .endif
 .endmacro
 
-.macro DEBUG_PREPIXEL_DRAW var1, var2
+.macro DEBUG_PREPIXEL_DRAW
 .ifdef DEBUG_PIXEL_DRAW
 
  lda var1
@@ -165,7 +165,7 @@ lda #$2
 jmp @endPSet
 
 @start:
-DEBUG_PREPIXEL_DRAW coX, coY
+DEBUG_PREPIXEL_DRAW
 lda _picDrawEnabled
 bne @drawPictureScreen         ; If picDrawEnabled == 0, skip to the end
 jmp @endPSet
@@ -196,6 +196,8 @@ DEBUG_PIXEL_DRAWN coX, coY
 .local @endPSet
 .local @start
 .local @checkYBounds
+;DEBUG_PREPIXEL_DRAW
+
 
 SET_VERA_ADDRESS_ADDRESS address
 
@@ -475,8 +477,8 @@ bne @serve
 
 lda ZP_PTR_B1 + 1
 cmp ZP_PTR_B2 + 1
-beq @returnEmpty
-
+bne @serve
+jmp @returnEmpty
 @serve:
 lda (ZP_PTR_B2)
 tay
