@@ -19,6 +19,7 @@
 //#define TEST_ROUND
 //#define VERBOSE_DRAW_LINE
 //#define TEST_OK_TO_FILL
+//#define TEST_IS_MULT_OF_160 //Don't forget to enable TEST_IS_MULTIPLE_OF_160 in assembly
 
 boolean okToShowPic = FALSE;
 PictureFile* loadedPictures = (PictureFile*)&BANK_RAM[PICTURE_START];
@@ -76,6 +77,34 @@ void setLoadedPicture(PictureFile* loadedPicture, byte loadedPictureNumber)
 
 extern byte bFloodQretrieve();
 extern byte bFloodQstore(byte q);
+
+boolean isMultipleOf160(int toTest)
+{
+#ifdef TEST_IS_MULT_OF_160
+	printf("Slow called for %d\n", toTest);
+#endif // TEST_IS_MULT_OF_160
+
+	return toTest % 160 == 0;
+
+}
+
+extern boolean testIsMultipleOf160Asm(int toTest);
+#ifdef TEST_IS_MULT_OF_160
+void testIsMultOf160()
+{
+	int i;
+	for (i = 0; i <= 0x68FF; i++)
+	{
+		if (testIsMultipleOf160Asm(i) != i % 160 == 0)
+		{
+			printf("Fail test multiple on %d\n",i);
+		}
+	}
+
+	exit(0);
+}
+#endif // TEST_IS_MULT_OF_160
+
 
 /**************************************************************************
 ** pset
@@ -1058,6 +1087,10 @@ void b11DrawPic(byte* bankedData, int pLen, boolean okToClearScreen, byte picNum
 
 #ifdef TEST_ROUND
 	testRound();
+#endif
+
+#ifdef TEST_IS_MULT_OF_160
+	trampoline_0(&testIsMultOf160, FIRST_FLOOD_BANK);
 #endif
 
 	getLoadedPicture(&loadedPicture, picNum);

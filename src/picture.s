@@ -1,6 +1,7 @@
 ; Check if global definitions are included, if not, include them
 .ifndef  PICTURE_INC
 PICTURE_INC = 1
+;TEST_IS_MULTIPLE_OF_160 = 1 
 
 .include "x16.inc"
 .include "global.s"
@@ -44,7 +45,8 @@ PICTURE_INC = 1
 .import _pixelStopAt
 .import _queueAction
 .import _pixelFreezeAt
-
+.import _isMultipleOf160
+.import _exit
 
 .ifdef DEBUG_CHECK_LINE_DRAWN
 .import _b5LineDrawDebug
@@ -54,6 +56,45 @@ MAX_X = 160
 MAX_Y = 168
 
 MAX_ADDRESS = $7F7F
+
+.macro IS_MULT_OF_160 word
+   .local @fail
+   .local @end 
+   .local @result
+   .local @shiftLoop
+   .local @lastForMustBeZero
+   
+   lda word + 1
+   bne @lastForMustBeZero ; If the high byte is zero then the value must be greater than 160 and could be a multiple
+   lda word
+   beq @succeed ; Zero is a factor
+   cmp #160
+   beq @succeed ; 160 is a factor
+   bra @fail ; Less than 256 and not equal to 0 or 160 therefore not a factor
+
+   @lastForMustBeZero:
+   lda word
+   and #$0F ;Last four bits must be 0
+   bne @fail
+   
+
+   lda word + 1
+   and #$10
+   bne @fail ; Because 160 is 16 × 10  number >> 4 must be a multiple of 10. Which means that last bit of the first nibble of the high byte must be even, 
+   
+   lda word
+   ldx word + 1
+   jsr _isMultipleOf160
+   bra @end
+
+   @fail:
+   lda #$0
+   bra @end
+   @result: .word $10
+   @succeed:
+   lda #$1
+   @end:
+.endmacro
 
 .macro PRINT_PIXEL_MESSAGE printFunc
 .local @end
@@ -704,6 +745,17 @@ rts
 @coY: .byte $0
 
 .segment "BANKRAMFLOOD"
+.ifdef TEST_IS_MULTIPLE_OF_160
+_testIsMultipleOf160Asm:
+sta @toTest
+stx @toTest + 1
+IS_MULT_OF_160 @toTest
+rts
+@toTest: .word $0
+
+.export _testIsMultipleOf160Asm
+.endif
+
 
 PIC_DOUBLE_DEFAULT = PIC_DEFAULT * $10 + PIC_DEFAULT
 PIC_DEFAULT = $F
