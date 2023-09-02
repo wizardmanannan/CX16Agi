@@ -27,24 +27,25 @@ lda #< (STARTING_ROW * (BITMAP_WIDTH / 2) )
 sta VERA_addr_low
 
 ; Calculate number of bytes per row. There are 160 pixel per row, double width. However each pixel is 4 bits, so 160 * 2 / 2 = 160
-lda #< PICTURE_WIDTH
+lda #PICTURE_HEIGHT
 tax
 
 ; Calculate number of rows (BITMAP_HEIGHT) and store it into @mapHeight
-lda #PICTURE_HEIGHT
-sta @mapHeight
+lda #PICTURE_WIDTH
+sta @mapWidth
 
 @loopOuter:
-    ldy @mapHeight  ; Load Y with mapHeight
+    ldy @mapWidth  ; Load Y with mapHeight
     @loopInner:
         lda #DEFAULT_BACKGROUND_COLOR << 4 | DEFAULT_BACKGROUND_COLOR
         sta VERA_data0  ; Store 0 into VRAM (set pixel to white)
         dey  ; Decrement Y
         bne @loopInner  ; If Y is not 0, continue loop
+        stp
     dex  ; Decrement X
     bne @loopOuter  ; If X is not 0, continue loop
 rts
-@mapHeight: .byte $0
+@mapWidth: .byte $0
 
 _b6InitBackground:
 lda #$10
