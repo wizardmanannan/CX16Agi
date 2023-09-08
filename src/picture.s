@@ -237,6 +237,9 @@ DEBUG_PIXEL_DRAWN coX, coY
 
 .endmacro
 
+_goNoFurtherLeft: .byte $0
+_goNoFurtherRight: .byte $0
+
 .macro PSET_ADDRESS address
 .local @endPSet
 .local @start
@@ -244,14 +247,27 @@ DEBUG_PIXEL_DRAWN coX, coY
 ;DEBUG_PREPIXEL_DRAW
 
 
-SET_VERA_ADDRESS_ADDRESS address
+SET_VERA_ADDRESS_ADDRESS address, #$0
 
+lda VERA_data0
+cmp #$FF
+beq @draw
+@checkLeftBorder:
+cmp #LEFT_BORDER
+bne @checkRightBorder
+lda #$1
+sta _goNoFurtherLeft
+bra @draw
+@checkRightBorder:
+cmp #RIGHT_BORDER
+bne @draw
+lda #$1
+sta _goNoFurtherRight
+@draw:
 lda _toDraw
 sta VERA_data0
 
 DEBUG_PIXEL_DRAW_ADDRESS address
-
-@endPSet:
 ;DEBUG_PIXEL_DRAWN coX, coY
     ; Continue with the rest of the code
 
@@ -323,8 +339,14 @@ sta VERA_addr_low
 
 .endmacro
 
-.macro SET_VERA_ADDRESS_ADDRESS address
-lda #$10
+.macro SET_VERA_ADDRESS_ADDRESS address, stride
+.ifnblank stride
+lda stride << 4
+.endif
+.ifblank stride
+lda #$10 ;High byte of address will always be 0
+.endif
+
 sta VERA_addr_bank ; Stride 1. High byte of address will always be 0
 
 lda address + 1
@@ -365,6 +387,7 @@ sta VERA_addr_low
 .local @priDisablePicEnabled
 .local @priEnabledPicEnabled
 .local @priEnabledPicDisabled
+.local @returnOne
 .local @returnZero
 .local @end
 
@@ -411,11 +434,16 @@ jmp @returnZero
 @returnGetPixelResult:
 PIC_GET_PIXEL_ADDRESS _okFillAddress
 cmp #PIC_DOUBLE_DEFAULT ; Expected to have $FF as each pixel is double width. Just compare it with this value to save a shift
-bne @returnZero
-lda #$1
-bra @end
+beq @returnOne
+cmp #RIGHT_BORDER
+beq @returnOne
+cmp #LEFT_BORDER
+beq @returnOne
 @returnZero:
 lda #$0
+bra @end
+@returnOne:
+lda #$1
 bra @end
 @temp: .byte $0
 @end:
@@ -715,7 +743,6 @@ sta _pixelCounter + 3
 EQ_32_LONG_TO_LITERAL _pixelStopAt, NEG_1_16, NEG_1_16, @checkFreeze
 LESS_THAN_32 _pixelCounter, _pixelStopAt, @checkFreeze, @stop
 @stop:
-stp
 nop ;There to make it clearer where we have stopped
 @checkFreeze:
 
@@ -917,7 +944,6 @@ _bFloodAgiFill:
 sta @y
 jsr popa 
 sta @x
-
 GET_VERA_ADDRESS @x, @y, _okFillAddress
 ldy #$0
 @initialStore:
@@ -931,6 +957,8 @@ bcs @fillLoop
 jmp @initialStore
 
 @fillLoop:
+stz _goNoFurtherLeft
+stz _goNoFurtherRight
 lda #$0
 sta @loopCounter
 @retrieveLoop:
@@ -951,11 +979,11 @@ jmp @retrieveLoop
 OK_TO_FILL
 bne @isOkToFill
 jmp @fillLoop
+
 @isOkToFill:
 PSET_ADDRESS _okFillAddress
 
 @storeFillChecks:
-
 sec
 lda _okFillAddress
 sbc #< BYTES_PER_ROW
@@ -964,7 +992,7 @@ sta @toStore
 lda _okFillAddress + 1
 sbc #> BYTES_PER_ROW
 sta @toStore + 1
-
+ 
 sec
 lda _okFillAddress
 sbc #$1
@@ -997,11 +1025,28 @@ sty @loopCounter
 @neighbourCheckLoop:
 ldy @loopCounter
 
+@check_goNoFurtherLeft:
+cpy #$2
+bne @check_goNoFurtherRight
+lda _goNoFurtherLeft
+beq @continue
+jmp @checkNeighbourHoodLoopCounter
+
+@check_goNoFurtherRight:
+cpy #$4
+
+bne @continue
+lda _goNoFurtherRight
+beq @continue
+jmp @checkNeighbourHoodLoopCounter
+
+@continue:
 lda @toStore,y
 sta _okFillAddress
 iny
 lda @toStore,y
 sta _okFillAddress + 1
+
 OK_TO_FILL
 bne @storeInQueue
 jmp @checkNeighbourHoodLoopCounter

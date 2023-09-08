@@ -26,3 +26,5 @@
     .export _floatDivision
     .export _bFloodOkToFill
     .export _bFloodAgiFill
+    .export _goNoFurtherLeft
+    .export _goNoFurtherRight

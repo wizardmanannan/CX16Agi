@@ -124,8 +124,8 @@ extern byte bFloodPicGetPixel(word x, word y);
 extern boolean bFloodOkToFill(byte* address);
 extern void bFloodAgiFill(byte x, byte y);
 
-extern byte okFillX;
-extern byte okFillY;
+extern byte goNoFurtherLeft;
+extern byte goNoFurtherRight;
 
 #ifdef TEST_OK_TO_FILL
 void testOkToFill()
@@ -150,7 +150,21 @@ void testOkToFill()
 	picDrawEnabled = TRUE;
 	if (!bFloodOkToFill((byte*)0x1680))
 	{
-		printf("fail pri disabled pic enabled\n");
+		printf("fail pri disabled pic enabled (left border)\n");
+	}
+
+	priDrawEnabled = FALSE;
+	picDrawEnabled = TRUE;
+	if (!bFloodOkToFill((byte*)0x171F))
+	{
+		printf("fail pri disabled pic enabled (right border)\n");
+	}
+
+	priDrawEnabled = FALSE;
+	picDrawEnabled = TRUE;
+	if (!bFloodOkToFill((byte*)0x1681))
+	{
+		printf("fail pri disabled pic enabled (non border)\n");
 	}
 
 	picColour = 3;
@@ -158,7 +172,7 @@ void testOkToFill()
 	picDrawEnabled = FALSE;
 	if (bFloodOkToFill((byte*)0x1680))
 	{
-		printf("fail pri enabled pic disabled\n");
+		printf("fail pri enabled pic disabled (left border)\n");
 	}
 
 	picColour = 3;
@@ -166,7 +180,15 @@ void testOkToFill()
 	picDrawEnabled = TRUE;
 	if (!bFloodOkToFill((byte*)0x1680))
 	{
-		printf("fail both enabled\n");
+		printf("fail both enabled (left border)\n");
+	}
+
+	picColour = 3;
+	priDrawEnabled = TRUE;
+	picDrawEnabled = TRUE;
+	if (!bFloodOkToFill((byte*)0x171F))
+	{
+		printf("fail both enabled (right border)\n");
 	}
 
 	trampoline_2Byte(&b11PSet, 0, 0, PICTURE_CODE_BANK);
@@ -192,7 +214,8 @@ void testOkToFill()
 	{
 		printf("fail bound check x after\n");
 	}
-
+	
+	asm("stp");
 	exit(0);
 }
 #endif // TEST_OK_TO_FILL
