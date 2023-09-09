@@ -256,6 +256,7 @@ _goNoFurtherLeft: .byte $0
 _goNoFurtherRight: .byte $0
 _okToFillUpperCheckPoint: .word $0
 _okToFillLowerCheckPoint: .word $0
+_okToFillDebuggerCheckPoint: .word $0 ; Never used but needed to make the macro work
 
 .macro PSET_ADDRESS address
 .local @endPSet
@@ -410,6 +411,15 @@ OK_TO_FILL endOkToFillLower, _okToFillLowerCheckPoint
 returnZeroLower:
 lda #$0
 endOkToFillLower:
+.endmacro
+
+.macro OK_TO_FILL_DEBUG
+GREATER_THAN_OR_EQ_16_LITERAL _okFillAddress, MAX_ADDRESS + 1, returnZeroDebugger
+startOkToFillDebugger:
+OK_TO_FILL endOkToFillDebugger, _okToFillDebuggerCheckPoint
+returnZeroDebugger:
+lda #$0
+endOkToFillDebugger:
 .endmacro
 
 .macro OK_TO_FILL endLabel, checkpoint
@@ -893,7 +903,7 @@ lda VERA_data0
 _bFloodOkToFill:
 sta _okFillAddress
 stx _okFillAddress + 1
-;OK_TO_FILL_UPPER
+OK_TO_FILL_DEBUG
 rts
 @temp: .byte $0
 
