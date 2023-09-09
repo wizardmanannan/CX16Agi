@@ -231,7 +231,7 @@ lda #$2
 jmp @endPSet
 
 @start:
-DEBUG_PREPIXEL_DRAW
+;DEBUG_PREPIXEL_DRAW
 lda _picDrawEnabled
 bne @drawPictureScreen         ; If picDrawEnabled == 0, skip to the end
 jmp @endPSet
@@ -244,16 +244,18 @@ SET_VERA_ADDRESS coX, coY
 lda _toDraw
 sta VERA_data0
 
-DEBUG_PIXEL_DRAW coX, coY
+;DEBUG_PIXEL_DRAW coX, coY
 
 @endPSet:
-DEBUG_PIXEL_DRAWN coX, coY
+;DEBUG_PIXEL_DRAWN coX, coY
     ; Continue with the rest of the code
 
 .endmacro
 
 _goNoFurtherLeft: .byte $0
 _goNoFurtherRight: .byte $0
+_okToFillUpperCheckPoint: .word $0
+_okToFillLowerCheckPoint: .word $0
 
 .macro PSET_ADDRESS address
 .local @endPSet
@@ -388,7 +390,28 @@ sta VERA_addr_low
 ;	return (bFloodPicGetPixel(x, y) == PIC_DEFAULT);
 ;}
 
-.macro OK_TO_FILL
+.macro OK_TO_FILL_UPPER
+.local startOkToFillUpper ;The test function operates on this method, hence the need for the local
+.local endOkToFillUpper
+.local returnZeroUpper
+GREATER_THAN_OR_EQ_16_LITERAL _okFillAddress, MAX_ADDRESS + 1, returnZeroUpper
+startOkToFillUpper:
+OK_TO_FILL endOkToFillUpper
+returnZeroUpper:
+lda #$0
+endOkToFillUpper:
+.endmacro
+
+.macro OK_TO_FILL_LOWER
+GREATER_THAN_OR_EQ_16_LITERAL _okFillAddress, MAX_ADDRESS + 1, returnZeroLower
+startOkToFillLower:
+OK_TO_FILL endOkToFillLower
+returnZeroLower:
+lda #$0
+endOkToFillLower:
+.endmacro
+
+.macro OK_TO_FILL endLabel
 .local @checkXBounds
 .local @checkYBounds
 .local @start
@@ -405,8 +428,7 @@ sta VERA_addr_low
 .local @returnOne
 .local @returnZero
 .local @end
-GREATER_THAN_OR_EQ_16_LITERAL _okFillAddress, MAX_ADDRESS + 1, @returnZero 
-@start:
+
 lda _picDrawEnabled
 eor #$1
 tax
@@ -453,10 +475,10 @@ cmp #LEFT_BORDER
 beq @returnOne
 @returnZero:
 lda #$0
-bra @end
+bra endLabel
 @returnOne:
 lda #$1
-bra @end
+bra endLabel
 @temp: .byte $0
 @end:
 .endmacro
@@ -860,7 +882,7 @@ lda VERA_data0
 _bFloodOkToFill:
 sta _okFillAddress
 stx _okFillAddress + 1
-OK_TO_FILL
+OK_TO_FILL_UPPER
 rts
 @temp: .byte $0
 
@@ -988,7 +1010,7 @@ bcs checkXYOKFill
 jmp retrieveLoop
 
 checkXYOKFill:
-OK_TO_FILL
+OK_TO_FILL_UPPER
 bne isOkToFill
 jmp fillLoop
 
@@ -1059,7 +1081,7 @@ iny
 lda toStore,y
 sta _okFillAddress + 1
 
-OK_TO_FILL
+OK_TO_FILL_LOWER
 bne storeInQueue
 jmp checkNeighbourHoodLoopCounter
 storeInQueue:
