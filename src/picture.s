@@ -887,8 +887,6 @@ rts
 .local @returnDefault
 .local @start
 
-SET_PICCOLOR
-
 lda #$10
 sta VERA_addr_bank ; Stride 1. High byte of address will always be 0
 lda address + 1
@@ -1009,6 +1007,8 @@ lda #< startOkToFillLower
 sta _okToFillLowerCheckPoint
 lda #> startOkToFillLower
 sta _okToFillLowerCheckPoint + 1
+
+SET_PICCOLOR
 
 GET_VERA_ADDRESS fillX, fillY, _okFillAddress
 ldy #$0
