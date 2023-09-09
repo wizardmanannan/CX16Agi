@@ -391,12 +391,12 @@ sta VERA_addr_low
 ;}
 
 .macro OK_TO_FILL_UPPER
-.local startOkToFillUpper ;The test function operates on this method, hence the need for the local
 .local endOkToFillUpper
 .local returnZeroUpper
 GREATER_THAN_OR_EQ_16_LITERAL _okFillAddress, MAX_ADDRESS + 1, returnZeroUpper
+jmp (_okToFillUpperCheckPoint)
 startOkToFillUpper:
-OK_TO_FILL endOkToFillUpper
+OK_TO_FILL endOkToFillUpper, _okToFillUpperCheckPoint
 returnZeroUpper:
 lda #$0
 endOkToFillUpper:
@@ -404,14 +404,15 @@ endOkToFillUpper:
 
 .macro OK_TO_FILL_LOWER
 GREATER_THAN_OR_EQ_16_LITERAL _okFillAddress, MAX_ADDRESS + 1, returnZeroLower
+jmp (_okToFillLowerCheckPoint)
 startOkToFillLower:
-OK_TO_FILL endOkToFillLower
+OK_TO_FILL endOkToFillLower, _okToFillLowerCheckPoint
 returnZeroLower:
 lda #$0
 endOkToFillLower:
 .endmacro
 
-.macro OK_TO_FILL endLabel
+.macro OK_TO_FILL endLabel, checkpoint
 .local @checkXBounds
 .local @checkYBounds
 .local @start
@@ -447,6 +448,11 @@ cmp #PIC_DEFAULT
 bne @checkPriDisable
 
 @colorDefault:
+lda #<@colorDefaultCheckPoint
+sta checkpoint
+lda #>@colorDefaultCheckPoint
+sta checkpoint + 1
+@colorDefaultCheckPoint:
 jmp @returnZero
 
 @checkPriDisable:
@@ -466,6 +472,11 @@ beq @returnGetPixelResult
 jmp @returnZero
 
 @returnGetPixelResult:
+lda #<@returnGetPixelResultCheckPoint
+sta checkpoint
+lda #>@returnGetPixelResultCheckPoint
+sta checkpoint + 1
+@returnGetPixelResultCheckPoint:
 PIC_GET_PIXEL_ADDRESS _okFillAddress
 cmp #PIC_DOUBLE_DEFAULT ; Expected to have $FF as each pixel is double width. Just compare it with this value to save a shift
 beq @returnOne
@@ -882,7 +893,7 @@ lda VERA_data0
 _bFloodOkToFill:
 sta _okFillAddress
 stx _okFillAddress + 1
-OK_TO_FILL_UPPER
+;OK_TO_FILL_UPPER
 rts
 @temp: .byte $0
 
@@ -978,6 +989,17 @@ _bFloodAgiFill:
 sta fillY
 jsr popa 
 sta fillX
+
+lda #< startOkToFillUpper
+sta _okToFillUpperCheckPoint
+lda #> startOkToFillUpper
+sta _okToFillUpperCheckPoint + 1
+
+lda #< startOkToFillLower
+sta _okToFillLowerCheckPoint
+lda #> startOkToFillLower
+sta _okToFillLowerCheckPoint + 1
+
 GET_VERA_ADDRESS fillX, fillY, _okFillAddress
 ldy #$0
 initialStore:
