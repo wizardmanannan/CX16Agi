@@ -405,8 +405,6 @@ sta VERA_addr_low
 .local @returnOne
 .local @returnZero
 .local @end
-
-
 GREATER_THAN_OR_EQ_16_LITERAL _okFillAddress, MAX_ADDRESS + 1, @returnZero 
 @start:
 lda _picDrawEnabled
@@ -955,147 +953,147 @@ rts
 
 ; }
 _bFloodAgiFill:
-sta @y
+sta fillY
 jsr popa 
-sta @x
-GET_VERA_ADDRESS @x, @y, _okFillAddress
+sta fillX
+GET_VERA_ADDRESS fillX, fillY, _okFillAddress
 ldy #$0
-@initialStore:
+initialStore:
 lda _okFillAddress,y
-sty @storeCounter
+sty storeCounter
 jsr _bFloodQstore
-ldy @storeCounter
+ldy storeCounter
 iny
 cpy #$2
-bcs @fillLoop
-jmp @initialStore
+bcs fillLoop
+jmp initialStore
 
-@fillLoop:
+fillLoop:
 stz _goNoFurtherLeft
 stz _goNoFurtherRight
 lda #$0
-sta @loopCounter
-@retrieveLoop:
+sta loopCounter
+retrieveLoop:
 FLOOD_Q_RETRIEVE
-ldy @loopCounter
+ldy loopCounter
 sta _okFillAddress,y
 cpx #QEMPTY
-bne @checkIfRetrieveLoopShouldContinue
-jmp @end
-@checkIfRetrieveLoopShouldContinue:
-inc @loopCounter
-ldy @loopCounter
+bne checkIfRetrieveLoopShouldContinue
+jmp fillEnd
+checkIfRetrieveLoopShouldContinue:
+inc loopCounter
+ldy loopCounter
 cpy #$2
-bcs @checkXYOKFill
-jmp @retrieveLoop
+bcs checkXYOKFill
+jmp retrieveLoop
 
-@checkXYOKFill:
+checkXYOKFill:
 OK_TO_FILL
-bne @isOkToFill
-jmp @fillLoop
+bne isOkToFill
+jmp fillLoop
 
-@isOkToFill:
+isOkToFill:
 PSET_ADDRESS _okFillAddress
 
-@storeFillChecks:
+storeFillChecks:
 sec
 lda _okFillAddress
 sbc #< BYTES_PER_ROW
-sta @toStore
+sta toStore
 
 lda _okFillAddress + 1
 sbc #> BYTES_PER_ROW
-sta @toStore + 1
+sta toStore + 1
  
 sec
 lda _okFillAddress
 sbc #$1
-sta @toStore + 2
+sta toStore + 2
 
 lda _okFillAddress + 1
 sbc #$0
-sta @toStore + 3
+sta toStore + 3
 
 clc
 lda _okFillAddress
 adc #$1
-sta @toStore + 4
+sta toStore + 4
 
 lda _okFillAddress + 1
 adc #$0
-sta @toStore + 5
+sta toStore + 5
 
 clc
 lda _okFillAddress
 adc #< BYTES_PER_ROW
-sta @toStore + 6
+sta toStore + 6
 
 lda _okFillAddress + 1
 adc #> BYTES_PER_ROW
-sta @toStore + 7
+sta toStore + 7
 
 ldy #$0
-sty @loopCounter
-@neighbourCheckLoop:
-ldy @loopCounter
+sty loopCounter
+neighbourCheckLoop:
+ldy loopCounter
 
-@check_goNoFurtherLeft:
+check_goNoFurtherLeft:
 cpy #$2
-bne @check_goNoFurtherRight
+bne check_goNoFurtherRight
 lda _goNoFurtherLeft
-beq @continue
-jmp @checkNeighbourHoodLoopCounter
+beq continue
+jmp checkNeighbourHoodLoopCounter
 
-@check_goNoFurtherRight:
+check_goNoFurtherRight:
 cpy #$4
 
-bne @continue
+bne continue
 lda _goNoFurtherRight
-beq @continue
-jmp @checkNeighbourHoodLoopCounter
+beq continue
+jmp checkNeighbourHoodLoopCounter
 
-@continue:
-lda @toStore,y
+continue:
+lda toStore,y
 sta _okFillAddress
 iny
-lda @toStore,y
+lda toStore,y
 sta _okFillAddress + 1
 
 OK_TO_FILL
-bne @storeInQueue
-jmp @checkNeighbourHoodLoopCounter
-@storeInQueue:
+bne storeInQueue
+jmp checkNeighbourHoodLoopCounter
+storeInQueue:
 ldy #$0
-sty @storeCounter
+sty storeCounter
 
-@storeLoop:
+storeLoop:
 lda _okFillAddress,y
 FLOOD_Q_STORE
 
-inc @storeCounter
-ldy @storeCounter
+inc storeCounter
+ldy storeCounter
 cpy #$2
-bcs @checkNeighbourHoodLoopCounter
-jmp @storeLoop
-@checkNeighbourHoodLoopCounter:
+bcs checkNeighbourHoodLoopCounter
+jmp storeLoop
+checkNeighbourHoodLoopCounter:
 
-inc @loopCounter
-inc @loopCounter
-ldy @loopCounter
+inc loopCounter
+inc loopCounter
+ldy loopCounter
 cpy #8
-bne @jmpBackToNeighbourCheckLoop
-jmp @fillLoop
-@jmpBackToNeighbourCheckLoop:
-jmp @neighbourCheckLoop
-@end:
+bne jmpBackToNeighbourCheckLoop
+jmp fillLoop
+jmpBackToNeighbourCheckLoop:
+jmp neighbourCheckLoop
+fillEnd:
 
 rts
 .segment "CODE"
-@x: .byte $0
-@y: .byte $0
-@toStore: .res 8
-@loopCounter: .byte $0
-@storeCounter: .byte $0
+fillX: .byte $0
+fillY: .byte $0
+toStore: .res 8
+loopCounter: .byte $0
+storeCounter: .byte $0
 _okFillAddress: .word $0
 .segment "BANKRAMFLOOD"
 
