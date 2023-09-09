@@ -40,6 +40,7 @@ rts
 
 .segment "CODE"
 vSyncCounter: .byte $0
+debugVSyncCounter: .word $0
 custom_irq_handler:   
    ; continue to default IRQ handler
    lda VERA_isr
@@ -48,6 +49,14 @@ custom_irq_handler:
    lda #$11 ;Reenable the display after update
    sta VERA_dc_video
    inc vSyncCounter
+   
+   clc
+   lda debugVSyncCounter
+   adc #$1
+   sta debugVSyncCounter
+   lda #$0
+   sta debugVSyncCounter+1
+   
    defaultIqr:
    jmp (default_irq_vector)
    ; RTI will happen after jump
