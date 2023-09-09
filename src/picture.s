@@ -47,6 +47,7 @@ PICTURE_INC = 1
 .import _pixelFreezeAt
 .import _isMultipleOf160
 .import _exit
+.import _stopAtQueueAction
 
 .ifdef DEBUG_CHECK_LINE_DRAWN
 .import _b5LineDrawDebug
@@ -56,6 +57,20 @@ MAX_X = 160
 MAX_Y = 168
 
 MAX_ADDRESS = $7F7F
+
+.macro STOP_AT_QUEUE_ACTION
+pha
+txa
+pha
+tya
+pha
+jsr _stopAtQueueAction
+pla
+tay
+pla
+tax
+pla
+.endmacro
 
 .macro IS_MULT_OF_160 word
    .local @fail
@@ -393,7 +408,6 @@ sta VERA_addr_low
 
 
 GREATER_THAN_OR_EQ_16_LITERAL _okFillAddress, MAX_ADDRESS + 1, @returnZero 
-
 @start:
 lda _picDrawEnabled
 eor #$1

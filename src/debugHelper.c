@@ -49,6 +49,16 @@ void stopAtPixel()
 	}
 }
 
+void stopAtQueueAction()
+{
+	if (queueAction >= 66)
+	{
+		asm("stp"); //Two pointless nops follow in order to make it clear where we have stopped
+		asm("nop");
+		asm("nop");
+	}
+}
+
 void stopAtFunc()
 {
 	if (opCounter >= 51)
