@@ -231,7 +231,7 @@ lda #$2
 jmp @endPSet
 
 @start:
-;DEBUG_PREPIXEL_DRAW
+DEBUG_PREPIXEL_DRAW
 lda _picDrawEnabled
 bne @drawPictureScreen         ; If picDrawEnabled == 0, skip to the end
 jmp @endPSet
@@ -244,10 +244,10 @@ SET_VERA_ADDRESS coX, coY
 lda _toDraw
 sta VERA_data0
 
-;DEBUG_PIXEL_DRAW coX, coY
+DEBUG_PIXEL_DRAW coX, coY
 
 @endPSet:
-;DEBUG_PIXEL_DRAWN coX, coY
+DEBUG_PIXEL_DRAWN coX, coY
     ; Continue with the rest of the code
 
 .endmacro
@@ -827,6 +827,7 @@ EQ_32_LONG_TO_LITERAL _pixelStopAt, NEG_1_16, NEG_1_16, @checkFreeze
 LESS_THAN_32 _pixelCounter, _pixelStopAt, @checkFreeze, @stop
 @stop:
 nop ;There to make it clearer where we have stopped
+stp
 @checkFreeze:
 
 EQ_32_LONG_TO_LITERAL _pixelFreezeAt, NEG_1_16, NEG_1_16, @end

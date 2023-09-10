@@ -20,7 +20,7 @@
 //#define VERBOSE_DRAW_LINE
 //#define TEST_OK_TO_FILL
 //#define TEST_IS_MULT_OF_160 //Don't forget to enable TEST_IS_MULTIPLE_OF_160 in assembly
-
+//#define VERBOSE_X_CORNER
 boolean okToShowPic = FALSE;
 PictureFile* loadedPictures = (PictureFile*)&BANK_RAM[PICTURE_START];
 int screenMode;
@@ -564,6 +564,9 @@ if ((x) <= 159 && (y) <= 167) {  \
     }
 
 unsigned long lineDrawCounter = 0;
+
+extern long pixelCounter;
+extern long pixelStartPrintingAt;
 void b11Drawline(byte x1, byte y1, byte x2, byte y2)
 {
 	int height, width, startX, startY;
@@ -572,7 +575,10 @@ void b11Drawline(byte x1, byte y1, byte x2, byte y2)
 	word temp;
 	
 #ifdef VERBOSE_DRAW_LINE
-	printf("drawing %d:%d %d:%d. The address of line draw counter is %p and its value is %lu\n", x1, y1, x2, y2, &lineDrawCounter, lineDrawCounter);
+	if (pixelCounter >= pixelStartPrintingAt)
+	{
+		printf("drawing %d:%d %d:%d. add line draw counter is %p value is %lu\n", x1, y1, x2, y2, &lineDrawCounter, lineDrawCounter);
+	}
 #endif // VERBOSE_DRAW_LINE
 
 	if (x1 > x2)
@@ -588,42 +594,63 @@ void b11Drawline(byte x1, byte y1, byte x2, byte y2)
 	height = (y2 - y1);
 
 #ifdef VERBOSE_DRAW_LINE
-	printf("Height %d - %d = %d\n", y2, y1, height);
+	if (pixelCounter >= pixelStartPrintingAt)
+	{
+		printf("Height %d - %d = %d\n", y2, y1, height);
+	}
 #endif
 
 	width = (x2 - x1);
 
 #ifdef VERBOSE_DRAW_LINE
-	printf("Width %d - %d = %d \n", x2, x1, width);
+	if (pixelCounter >= pixelStartPrintingAt)
+	{
+		printf("Width %d - %d = %d \n", x2, x1, width);
+	}
 #endif
 
 	addX = height == 0 ? height : DIV(abs(width), abs(height));
 	
 #ifdef VERBOSE_DRAW_LINE
-	printf("add x div (abs(w: %d), abs(h %d) = %lx \n", abs(width), abs(height), DIV(abs(width), abs(height)));
-#endif
-
-	if (!xIsPos)
+	if (pixelCounter >= pixelStartPrintingAt)
 	{
-#ifdef VERBOSE_DRAW_LINE
-		printf("x is neg \n");
-#endif // VERBOSE_DRAW_LINE
+		printf("add x div (abs(w: %d), abs(h %d) = %lx \n", abs(width), abs(height), DIV(abs(width), abs(height)));
 	}
+#endif
+//
+//	if (!xIsPos)
+//	{
+//#ifdef VERBOSE_DRAW_LINE
+//		if (pixelCounter >= pixelStartPrintingAt)
+//		{
+//			printf("x is neg \n");
+//		}
+//#endif // VERBOSE_DRAW_LINE
+//	}
 
 	addY = width == 0 ? width : DIV(abs(height), abs(width));
-#ifdef VERBOSE_DRAW_LINE
-	printf("add y div(abs(h: %d), abs(w %d) = %lx \n", abs(height), abs(width), DIV(abs(height), abs(width)));
-#endif
+//#ifdef VERBOSE_DRAW_LINE
+//	if (pixelCounter >= pixelStartPrintingAt)
+//	{
+//		printf("add y div(abs(h: %d), abs(w %d) = %lx \n", abs(height), abs(width), DIV(abs(height), abs(width)));
+//	}
+//#endif
+
+//#ifdef VERBOSE_DRAW_LINE
+//	if (pixelCounter >= pixelStartPrintingAt)
+//	{
+//		if (!yIsPos)
+//		{
+//			printf("y is neg \n");
+//		}
+//	}
+//#endif
 
 #ifdef VERBOSE_DRAW_LINE
-	if (!yIsPos)
+	if (pixelCounter >= pixelStartPrintingAt)
 	{
-		printf("y is neg \n");
+		printf("divide addy %d / %d result: %lx. Address %p\n ", height, width, addY, &addY);
 	}
-#endif
-
-#ifdef VERBOSE_DRAW_LINE
-	printf("divide addy %d / %d result: %lx. Address %p\n ", height, width, addY, &addY);
 #endif // VERBOSE
 
 	if (abs(width) > abs(height)) {
@@ -631,42 +658,63 @@ void b11Drawline(byte x1, byte y1, byte x2, byte y2)
 
 
 #ifdef VERBOSE_DRAW_LINE
-		printf("convert top y %d to fix32 %lx\n ", y1, y);
+		if (pixelCounter >= pixelStartPrintingAt)
+		{
+			printf("convert top y %d to fix32 %lx\n ", y1, y);
+		}
 #endif // VERBOSE
 
 		addX = (width == 0 ? 0 : fp_fromInt(1));
 
 #ifdef VERBOSE_DRAW_LINE
-		printf("convert top width (%d) to fix32 %lx\n ", width, addX);
+		if (pixelCounter >= pixelStartPrintingAt)
+		{
+			printf("convert top width (%d) to fix32 %lx\n ", width, addX);
+		}
 #endif // VERBOSE
 
 		for (x = fp_fromInt(x1); xIsPos ? x < fp_fromInt(x2) : x > fp_fromInt(x2); xIsPos ? x += addX: x -= addX) {
 #ifdef VERBOSE_DRAW_LINE
-			printf("x is %lx\n", x);
-			printf("psettop in loop %lx, %d (isPos), %lx, %d (isPos)  round %d %d\n", x, xIsPos, y, yIsPos, round(x, xIsPos), round(y, yIsPos));
+			if (pixelCounter >= pixelStartPrintingAt)
+			{
+		/*		printf("x is %lx\n", x);*/
+				printf("psettop in loop %lx, %d (isPos), %lx, %d (isPos)  round %d %d\n", x, xIsPos, y, yIsPos, round(x, xIsPos), round(y, yIsPos));
+			}
 #endif // VERBOSE
 
 			PSET(round(x, xIsPos), round(y, yIsPos));
 
 #ifdef VERBOSE_DRAW_LINE
-			printf("add y top %lx + %lx = %lx. yIsPos %d\n", y, addY, yIsPos ? y + addY : y - addY, yIsPos);
+			if (pixelCounter >= pixelStartPrintingAt)
+			{
+				printf("add y top %lx + %lx = %lx. yIsPos %d\n", y, addY, yIsPos ? y + addY : y - addY, yIsPos);
+			}
 #endif
 			yIsPos ? y += addY : y -= addY;
 
 #ifdef VERBOSE_DRAW_LINE
-			printf("add x top %lx + %lx = %lx, %lx != %lx (%d). xIsPos %d\n", x, addX, xIsPos ? x + addX : x - addX, xIsPos ? x + addX : x - addX, fp_fromInt(x2), xIsPos? x + addX != fp_fromInt(x2) : x - addX != fp_fromInt(x2), xIsPos);
+			if (pixelCounter >= pixelStartPrintingAt)
+			{
+				printf("add x top %lx + %lx = %lx, %lx != %lx (%d). xIsPos %d\n", x, addX, xIsPos ? x + addX : x - addX, xIsPos ? x + addX : x - addX, fp_fromInt(x2), xIsPos ? x + addX != fp_fromInt(x2) : x - addX != fp_fromInt(x2), xIsPos);
+			}
 #endif
 		}
 
 #ifdef VERBOSE_DRAW_LINE
-		printf("pset top out of loop %d,%d\n", x2, y2);
+		if (pixelCounter >= pixelStartPrintingAt)
+		{
+			printf("pset top out of loop %d,%d\n", x2, y2);
+		}
 #endif
 		PSET(x2, y2);
 	}
 	else {
 		x = fp_fromInt(x1);
 #ifdef VERBOSE_DRAW_LINE
-		printf("%d convert bottom x to fix32 %d\n ",x1, x);
+		if (pixelCounter >= pixelStartPrintingAt)
+		{
+			printf("%d convert bottom x to fix32 %d\n ", x1, x);
+		}
 #endif // VERBOSE
 
 
@@ -674,7 +722,10 @@ void b11Drawline(byte x1, byte y1, byte x2, byte y2)
 
 
 #ifdef VERBOSE_DRAW_LINE
-		printf("convert top height (%d) to fix32 %lx\n ", height, addY);
+		if (pixelCounter >= pixelStartPrintingAt)
+		{
+			printf("convert top height (%d) to fix32 %lx\n ", height, addY);
+		}
 #endif // VERBOSE
 
 
@@ -682,31 +733,41 @@ void b11Drawline(byte x1, byte y1, byte x2, byte y2)
 		for (y = fp_fromInt(y1); y != fp_fromInt(y2); yIsPos ? y += addY: y -= addY) {
 
 #ifdef VERBOSE_DRAW_LINE
-			printf("pset bottom in loop %lx, %d (isPos), %lx, %d (isPos)  round %d %d\n", x, xIsPos, y, yIsPos, round(x, xIsPos), round(y, yIsPos));
+			if (pixelCounter >= pixelStartPrintingAt)
+			{
+				printf("pset bottom in loop %lx, %d (isPos), %lx, %d (isPos)  round %d %d\n", x, xIsPos, y, yIsPos, round(x, xIsPos), round(y, yIsPos));
+			}
 #endif // VERBOSE
 			PSET(round(x, xIsPos), round(y, yIsPos));
 
 
 #ifdef VERBOSE_DRAW_LINE
-			printf("add x bottom %lx + %lx = %lx. xIsPos %d\n", x, addX, xIsPos ? x + addX : x - addX, xIsPos);
+			if (pixelCounter >= pixelStartPrintingAt)
+			{
+				printf("add x bottom %lx + %lx = %lx. xIsPos %d\n", x, addX, xIsPos ? x + addX : x - addX, xIsPos);
+			}
 #endif
 			xIsPos ? x += addX: x -= addX;
 
 #ifdef VERBOSE_DRAW_LINE
-			printf("add y bottom %lx + %lx = %lx, %lx != %lx (%d). yIsPos %d\n", y, addY, yIsPos ? y + addY : y - addY, yIsPos ? y + addY : y - addY, fp_fromInt(y2), yIsPos ? y + addY != fp_fromInt(y2) : y - addY != fp_fromInt(y2), yIsPos);
+			if (pixelCounter >= pixelStartPrintingAt)
+			{
+				printf("add y bottom %lx + %lx = %lx, %lx != %lx (%d). yIsPos %d\n", y, addY, yIsPos ? y + addY : y - addY, yIsPos ? y + addY : y - addY, fp_fromInt(y2), yIsPos ? y + addY != fp_fromInt(y2) : y - addY != fp_fromInt(y2), yIsPos);
+			}
 #endif
 		}
 
 #ifdef VERBOSE_DRAW_LINE
-		printf("pset bottom out loop %d,%d\n", x2, y2);
+		if (pixelCounter >= pixelStartPrintingAt)
+		{
+			printf("pset bottom out loop %d,%d\n", x2, y2);
+		}
 #endif
 		PSET(x2, y2);
 	}
-
 #ifdef VERBOSE_DRAW_LINE
 	lineDrawCounter++;
 #endif // VERBOSE_DRAW_LINE
-
 }
 
 /**************************************************************************
@@ -728,18 +789,19 @@ void b11XCorner(byte** data)
 		if (x2 >= 0xF0) break;
 
 
-#ifdef VERBOSE
-		printf("x corner line 1: %d,%d : %d,%d\n", x1, y1, x2, y2);
+#ifdef VERBOSE_X_CORNER
+		printf("x corner line 1: %d,%d : %d,%d. Address data %p\n", x1, y1, x2, y2, *data);
 #endif
-		b11Drawline(x1, y1, x2, y2);
+
+		b11Drawline(x1, y1, x2, y1);
 		x1 = x2;
 		y2 = *((*data)++);
 		if (y2 >= 0xF0) break;
 
-#ifdef VERBOSE
+#ifdef VERBOSE_X_CORNER
 		printf("x corner line 2: %d,%d : %d,%d\n", x1, y1, x2, y2);
 #endif
-		b11Drawline(x1, y1, x2, y2);
+		b11Drawline(x1, y1, x1, y2);
 		y1 = y2;
 	}
 
@@ -770,7 +832,7 @@ void b11YCorner(byte** data)
 		printf("y corner line 1: %d,%d : %d,%d\n", x1, y1, x2, y2);
 #endif
 
-		b11Drawline(x1, y1, x2, y2);
+		b11Drawline(x1, y1, x1, y2);
 		y1 = y2;
 		x2 = *((*data)++);
 		if (x2 >= 0xF0) break;
@@ -778,7 +840,7 @@ void b11YCorner(byte** data)
 #ifdef VERBOSE
 		printf("y Corner line 2: %d,%d : %d,%d\n", x1, y1, x2, y2);
 #endif
-		b11Drawline(x1, y1, x2, y2);
+		b11Drawline(x1, y1, x2, y1);
 		x1 = x2;
 	}
 
