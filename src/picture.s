@@ -375,21 +375,49 @@ sta VERA_addr_low
 
 .endmacro
 
-;boolean bFloodOkToFill(byte x, byte y)
-;{
-;	boolean getPicResult;
-;   if(x > 160 || y > 168) return FALSE;
-;	
-;   if (!picDrawEnabled && !priDrawEnabled) return FALSE;
-;	if (picColour == PIC_DEFAULT) return FALSE;
-;	if (!priDrawEnabled)
-;	{
-;		getPicResult = bFloodPicGetPixel(x, y);
-;		return (getPicResult == PIC_DEFAULT);
-;	}
-;	if (priDrawEnabled && !picDrawEnabled) return (bFloodPriGetPixel(x, y) == PRI_DEFAULT);
-;	return (bFloodPicGetPixel(x, y) == PIC_DEFAULT);
-;}
+; void OK_TO_FILL(int endLabel, int checkpoint) {
+;     int A = _picDrawEnabled ^ 1;
+;     int X = A;
+;     A = _priDrawEnabled ^ 1;
+;     temp = A;
+;     A = X & temp;
+;     if (A == 0) goto checkColorDefault;
+;     goto returnZero;
+    
+;     checkColorDefault:
+;     A = _picColour;
+;     if (A != PIC_DEFAULT) goto checkPriDisable;
+;     checkpoint = &colorDefaultCheckPoint;
+;     goto returnZero;
+    
+;     checkPriDisable:
+;     A = _priDrawEnabled;
+;     if (A != 0) goto checkPriEnabledPicDisabled;
+;     goto returnGetPixelResult;
+    
+;     checkPriEnabledPicDisabled:
+;     A = _picDrawEnabled ^ 1;
+;     A &= _priDrawEnabled;
+;     if (A == 0) goto returnGetPixelResult;
+;     goto returnZero;
+    
+;     returnGetPixelResult:
+;     checkpoint = &returnGetPixelResultCheckPoint;
+;     int okFillAddress = ...; // should be initialized before
+;     A = PIC_GET_PIXEL_ADDRESS(okFillAddress);
+;     if (A == PIC_DOUBLE_DEFAULT || A == RIGHT_BORDER || A == LEFT_BORDER) goto returnOne;
+;     goto returnZero;
+    
+;     returnZero:
+;     A = 0;
+;     goto endLabel;
+    
+;     returnOne:
+;     A = 1;
+;     goto endLabel;
+    
+;     end:
+; }
 
 .macro OK_TO_FILL_UPPER
 .local endOkToFillUpper
