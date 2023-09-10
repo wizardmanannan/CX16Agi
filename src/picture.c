@@ -640,7 +640,7 @@ void b11Drawline(byte x1, byte y1, byte x2, byte y2)
 		printf("convert top width (%d) to fix32 %lx\n ", width, addX);
 #endif // VERBOSE
 
-		for (x = fp_fromInt(x1); x != fp_fromInt(x2); xIsPos ? x += addX: x -= addX) {
+		for (x = fp_fromInt(x1); xIsPos ? x < fp_fromInt(x2) : x > fp_fromInt(x2); xIsPos ? x += addX: x -= addX) {
 #ifdef VERBOSE_DRAW_LINE
 			printf("x is %lx\n", x);
 			printf("psettop in loop %lx, %d (isPos), %lx, %d (isPos)  round %d %d\n", x, xIsPos, y, yIsPos, round(x, xIsPos), round(y, yIsPos));

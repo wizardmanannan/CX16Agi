@@ -252,7 +252,7 @@ sta VERA_data0
 
 .endmacro
 
-_goNoFurtherLeft: .byte $0
+_goNoFurtherLeft: .byte $0 ;There is no equivalent for top, as the is a built in border
 _goNoFurtherRight: .byte $0
 _okToFillUpperCheckPoint: .word $0
 _okToFillLowerCheckPoint: .word $0
@@ -908,90 +908,57 @@ rts
 ; /**************************************************************************
 ; ** agiFill
 ; **************************************************************************/
-; void bFloodAgiFill(word x, word y)
-; {
-; 	byte x1, y1;
-; #ifdef TEST_QUEUE
-; 	testQueue();
-; #endif // TEST_QUEUE
+; // Function to perform flood fill
+; void bFloodAgiFill(byte fillX, byte fillY) {
+;     int _okFillAddress = 0, storeCounter = 0, loopCounter = 0;
+;     int* okToFillUpperCheckPoint = &startOkToFillUpper, okToFillLowerCheckPoint = &startOkToFillLower;
+;     bool _goNoFurtherLeft = 0, _goNoFurtherRight = 0;
+;     bool ok = false;
 
-; #ifdef VERBOSE_FLOOD_FILL
-; 	if (pixelCounter >= pixelStartPrintingAt && pixelStartPrintingAt != 1) {
-; 		printf("bl\n");
-; 	}
-; #endif
+;     // Set initial values
+;     SET_PICCOLOR();
+;     GET_VERA_ADDRESS(fillX, fillY, &_okFillAddress);
 
-; 	bFloodQstore(x);
-; 	bFloodQstore(y);
+;     // initialStore loop
+;     _okFillAddress = _bFloodQstore();
 
-; 	for (;;) {
-;
-; 		      x1 = qretrieve();
-;             y1 = qretrieve();
+;     // Fill Loop
+;     while (true) {
+;         // Reset flags
+;         _goNoFurtherLeft = 0;
+;         _goNoFurtherRight = 0;
+;         loopCounter = 0;
+;         
+;    // RetrieveLoop           
+;         bool isEmpty; 
+;         _okFillAddress = FLOOD_Q_RETRIEVE(&isEmpty);
+;         if (isEmpty) {
+;             return;
+;         }
+        
+;         // checkXYOKFill
+;         ok = OK_TO_FILL();
+;         if (!ok) {
+;             continue;
+;         }
+;         // pSet
+;         bool goNoFurtherLeft, goNoFurtherRight
+;         PSET_ADDRESS(_okFillAddress, &goNoFurtherLeft, &goNoFurtherRight);
 
-; 		if ((x1 == QEMPTY) || (y1 == QEMPTY))
-; 			break;
-; 		else {
-
-; 			okFillX = x1;
-; 			okFillY = y1;
-; 			if (bFloodOkToFill()) {
-
-; 				PSETFLOOD(x1, y1);
-
-; 				okFillX = x1;
-; 				okFillY = y1 -1;
-; 				if (bFloodOkToFill() && (y1 != 0)) {
-; #ifdef VERBOSE_FLOOD_FILL
-; 					if (pixelCounter >= pixelStartPrintingAt && pixelStartPrintingAt != 1) {
-; 						printf("1\n");
-; 					}
-; #endif
-; 					bFloodQstore(x1);
-; 					bFloodQstore(y1 - 1);
-; 				}
-; 				okFillX = x1 - 1;
-; 				okFillY = y1;
-; 				if (bFloodOkToFill() && (x1 != 0)) {
-; #ifdef VERBOSE_FLOOD_FILL
-; 					if (pixelCounter >= pixelStartPrintingAt && pixelStartPrintingAt != 1) {
-; 						printf("2\n");
-; 					}
-; #endif
-; 					bFloodQstore(x1 - 1);
-; 					bFloodQstore(y1);
-; 				}
-
-; 				okFillX = x1 + 1;
-; 				okFillY = y1;
-; 				if (bFloodOkToFill() && (x1 != 159)) {
-; #ifdef VERBOSE_FLOOD_FILL
-; 					if (pixelCounter >= pixelStartPrintingAt && pixelStartPrintingAt != 1) {
-; 						printf("3\n");
-; 					}
-; #endif
-; 					bFloodQstore(x1 + 1);
-; 					bFloodQstore(y1);
-; 				}
-
-; 				okFillX = x1;
-; 				okFillY = y1 + 1;
-; 				if (bFloodOkToFill() && (y1 != 167)) {
-; #ifdef VERBOSE_FLOOD_FILL
-; 					if (pixelCounter >= pixelStartPrintingAt && pixelStartPrintingAt != 1) {
-; 						printf("4\n");
-; 					}
-; #endif
-; 					bFloodQstore(x1);
-; 					bFloodQstore(y1 + 1);
-; 				}
-
-; 			}
-
-; 		}
-
-; 	}
-
+;         // storeFillChecks
+;         if (OK_TO_FILL(_okFillAddress - NO_BYTES_PER_LINE)) {
+;             _bFloodQstore(_okFillAddress - NO_BYTES_PER_LINE);
+;         }
+;         if (OK_TO_FILL(_okFillAddress - 1) && !goNoFurtherLeft) {
+;             _bFloodQstore(_okFillAddress - 1);
+;         }
+;         if (OK_TO_FILL(_okFillAddress + 1) && !goNoFurtherRight) {
+;             _bFloodQstore(_okFillAddress + 1);
+;         }
+;         if (OK_TO_FILL(_okFillAddress + NO_BYTES_PER_LINE)) {
+;             _bFloodQstore(_okFillAddress + NO_BYTES_PER_LINE);
+;         }
+;     }
 ; }
 _bFloodAgiFill:
 sta fillY
@@ -1008,9 +975,11 @@ sta _okToFillLowerCheckPoint
 lda #> startOkToFillLower
 sta _okToFillLowerCheckPoint + 1
 
+;Set initial values
 SET_PICCOLOR
-
 GET_VERA_ADDRESS fillX, fillY, _okFillAddress
+
+;InitialStore loop
 ldy #$0
 initialStore:
 lda _okFillAddress,y
@@ -1022,11 +991,16 @@ cpy #$2
 bcs fillLoop
 jmp initialStore
 
+;Fill loop
 fillLoop:
+
+;Reset flags
 stz _goNoFurtherLeft
 stz _goNoFurtherRight
+
 lda #$0
 sta loopCounter
+
 retrieveLoop:
 FLOOD_Q_RETRIEVE
 ldy loopCounter
@@ -1043,10 +1017,10 @@ jmp retrieveLoop
 
 checkXYOKFill:
 OK_TO_FILL_UPPER
-bne isOkToFill
+bne @pSet
 jmp fillLoop
 
-isOkToFill:
+@pSet:
 PSET_ADDRESS _okFillAddress
 
 storeFillChecks:
