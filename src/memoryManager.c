@@ -16,11 +16,13 @@ void bankedRamInit()
 {
 #define FILE_NAME_LENGTH 13
 #define FLOOD_MESSAGE_LENGTH 30
+	
+	byte previousRamBank = RAM_BANK;
+	
 	int i, j = 0;
 	FILE* fp;
 	char fileName[FILE_NAME_LENGTH];
 	char openFloodFileMessage[FLOOD_MESSAGE_LENGTH];
-	byte previousBank = RAM_BANK;
 	char* openFloodFileMessageString = "Opening flood file %d of %d";
 
 	unsigned char fileByte;
@@ -44,6 +46,13 @@ void bankedRamInit()
 		(int)_BANKRAM11_SIZE__
 	};
 
+	printf("Zeroing Banks\n");
+	for (i = 1; i < get_numbanks(); i++) //Don't do bank zero as it as a system bank
+	{
+		RAM_BANK = i;
+		memset(&BANK_RAM[0], 0, BANK_SIZE);
+	}
+	RAM_BANK = previousRamBank;
 
 	for (i = 0; i < NO_CODE_BANKS; i++)
 	{
@@ -100,7 +109,7 @@ void bankedRamInit()
 		fclose(fp);
 	}
 
-	RAM_BANK = previousBank;
+	RAM_BANK = previousRamBank;
 }
 #endif //  __CX16__
 #pragma code-name (push, "BANKRAM10")
