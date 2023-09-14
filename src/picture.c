@@ -617,34 +617,35 @@ void b11Drawline(byte x1, byte y1, byte x2, byte y2)
 		printf("add x div (abs(w: %d), abs(h %d) = %lx \n", abs(width), abs(height), DIV(abs(width), abs(height)));
 	}
 #endif
-//
-//	if (!xIsPos)
-//	{
-//#ifdef VERBOSE_DRAW_LINE
-//		if (pixelCounter >= pixelStartPrintingAt)
-//		{
-//			printf("x is neg \n");
-//		}
-//#endif // VERBOSE_DRAW_LINE
-//	}
+
+#ifdef VERBOSE_DRAW_LINE
+	if (!xIsPos)
+	{
+		if (pixelCounter >= pixelStartPrintingAt)
+		{
+			printf("x is neg \n");
+		}
+
+	}
+#endif // VERBOSE_DRAW_LINE
 
 	addY = width == 0 ? width : DIV(abs(height), abs(width));
-//#ifdef VERBOSE_DRAW_LINE
-//	if (pixelCounter >= pixelStartPrintingAt)
-//	{
-//		printf("add y div(abs(h: %d), abs(w %d) = %lx \n", abs(height), abs(width), DIV(abs(height), abs(width)));
-//	}
-//#endif
+#ifdef VERBOSE_DRAW_LINE
+	if (pixelCounter >= pixelStartPrintingAt)
+	{
+		printf("add y div(abs(h: %d), abs(w %d) = %lx \n", abs(height), abs(width), DIV(abs(height), abs(width)));
+	}
+#endif
 
-//#ifdef VERBOSE_DRAW_LINE
-//	if (pixelCounter >= pixelStartPrintingAt)
-//	{
-//		if (!yIsPos)
-//		{
-//			printf("y is neg \n");
-//		}
-//	}
-//#endif
+#ifdef VERBOSE_DRAW_LINE
+	if (pixelCounter >= pixelStartPrintingAt)
+	{
+		if (!yIsPos)
+		{
+			printf("y is neg \n");
+		}
+	}
+#endif
 
 #ifdef VERBOSE_DRAW_LINE
 	if (pixelCounter >= pixelStartPrintingAt)
@@ -1194,19 +1195,11 @@ void b11DrawPic(byte* bankedData, int pLen, boolean okToClearScreen, byte picNum
 
 	memCpyBanked(&data[0], (byte*)loadedPicture.data, loadedPicture.bank, loadedPicture.size);
 
-	//asm("sei");
-
 	if (okToClearScreen) b11ClearPicture();
 
 #ifdef TEST_OK_TO_FILL
 	trampoline_0(&testOkToFill, FIRST_FLOOD_BANK);
 #endif
-
-	//asm("cli");
-
-	//trampoline_0(&b6DisableAndWaitForVsync, IRQ_BANK);
-
-	//asm("sei");
 
 	patCode = 0x00;
 
@@ -1251,10 +1244,6 @@ void b11DrawPic(byte* bankedData, int pLen, boolean okToClearScreen, byte picNum
 	} while ((data < (data + pLen)) && stillDrawing);
 
 	b11SplitPriority();
-
-	//asm("cli");
-
-	//trampoline_0(&b6DisableAndWaitForVsync, IRQ_BANK);
 
 	*zpTemp = 0;
 	*zpTemp2 = 0;
