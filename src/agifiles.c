@@ -13,6 +13,7 @@
 //#define VERBOSE_DISPLAY_OFFSETS
 //#define VERBOSE
 //#define VERBOSE_VIEW_LOAD_DEBUG
+//#define VERBOSE_PICTURE_LOAD_DEBUG
 //define VERBOSE_LOGIC_LOAD_DEBUG
 #include <stdint.h>
 #include <cbm.h>
@@ -55,6 +56,8 @@ void printMessages(AGIFile* AGIData)
 	byte previousRamBank = RAM_BANK;
 	RAM_BANK = AGIData->messageBank;
 
+	printf("Attempting to display messages at %p on bank %p\n", &AGIData->messageData[i], RAM_BANK);
+
 	for (i = 0; i < getMessageSectionSize; i++)
 	{
 		printf("%c", AGIData->messageData[i]);
@@ -94,7 +97,7 @@ void printMessagesFromOffsets(AGIFile* AGIData)
 #endif
 
 #pragma code-name (push, "BANKRAM06")
-byte cbm_openForSeeking(char* fileName)
+byte b6Cbm_openForSeeking(char* fileName)
 {
 	const char* OPEN_FLAGS = ",S,R";
 	byte lfn = SEQUENTIAL_LFN;
@@ -115,7 +118,7 @@ byte cbm_openForSeeking(char* fileName)
 	return lfn;
 }
 
-int8_t cx16_fseek(uint8_t channel, uint32_t offset) {
+int8_t b6Cx16_fseek(uint8_t channel, uint32_t offset) {
 	int8_t result = 0, status = 0, chkin = 0;
 #define SETNAM 0xFFBD
 	static struct cmd {
@@ -330,6 +333,7 @@ byte* b6ReadFileContentsIntoBankedRam(int size, byte* bank)
 	byte* result;
 	int i;
 	int copySize;
+	int debug;
 	result = banked_allocTrampoline(size, bank);
 
 #ifdef VERBOSE
@@ -363,7 +367,8 @@ byte* b6ReadFileContentsIntoBankedRam(int size, byte* bank)
 	}
 
 #ifdef VERBOSE
-	printf("Data is in bank %d at address %p and the first byte is %p and the size is %d \n", *bank, result, result[0], size);
+	memCpyBanked(&debug, &result[0], *bank, 1);
+	printf("Data is in bank %d at address %p and the first byte is %p and the size is %d \n", *bank, &result[0], debug, size);
 #endif // VERBOSE
 
 	return result;
@@ -426,7 +431,7 @@ boolean b6SeekAndCheckSignature(char* fileName, AGIFilePosType* location)
 	printf("----Attempting to open %s for seeking data\n", fileName);
 #endif // VERBOSE_DISPLAY_MESSAGES
 
-	cx16_fseek(FILE_OPEN_ADDRESS, location->filePos);
+	b6Cx16_fseek(FILE_OPEN_ADDRESS, location->filePos);
 
 	cbm_read(SEQUENTIAL_LFN, &currentByte, 1);
 	signatureValidationPassed = currentByte == 0x12;
@@ -491,7 +496,7 @@ byte b6SeekAndReadLogicIntoMemory(AGIFile* AGIData, int resType)
 
 
 //https://www.liquisearch.com/what_is_avis_durgan
-void xOrAvisDurgan(byte* toXOR, unsigned int* avisPos)
+void b6XOrAvisDurgan(byte* toXOR, unsigned int* avisPos)
 {
 	*toXOR ^= avisDurgan[*avisPos];
 	*avisPos = (*avisPos + 1) % 11;
@@ -524,9 +529,13 @@ void b6LoadAGIFile(int resType, AGIFilePosType* location, AGIFile* AGIData)
 	boolean lastCharacterSeparator = TRUE;
 	char fileName[FILE_NAME_SIZE];
 
+#ifdef VERBOSE
+		printf("Attempting to load resource %d from location %d file %d\n", resType, location->filePos, location->fileNum);
+#endif // VERBOSE
+
 	if (location->filePos == EMPTY) {
 #ifdef VERBOSE
-		printf("Could not find requested AGI file, as the filePos is empty.\n");
+			printf("Could not find requested AGI file, as the filePos is empty.\n");
 #endif // VERBOSE
 		exit(0);
 	}
@@ -537,20 +546,28 @@ void b6LoadAGIFile(int resType, AGIFilePosType* location, AGIFile* AGIData)
 #ifdef VERBOSE_VIEW_LOAD_DEBUG
 	if (resType == VIEW)
 #endif // VERBOSE_VIEW_LOAD_DEBUG
+#ifdef VERBOSE_PICTURE_LOAD_DEBUG
+		if (resType == PICTURE)
+#endif
 #ifdef VERBOSE_LOGIC_LOAD_DEBUG
 		if (resType == LOGIC)
 #endif // VERBOSE_LOGIC_LOAD_DEBUG
 
 		{
-			printf("---The file name is %s", &fileName[0]);
+			printf("---The file name is %s\n", &fileName[0]);
 		}
 #endif // VERBOSE
 
-	lfn = cbm_openForSeeking(&fileName[0]);
+	lfn = b6Cbm_openForSeeking(&fileName[0]);
 
 	b6SeekAndCheckSignature(&fileName[0], location);
 
 	AGIData->codeBank = b6SeekAndReadLogicIntoMemory(AGIData, resType);
+
+#ifdef VERBOSE
+		printf("Loaded resource type %d into bank %d address %p size %d\n", resType, AGIData->codeBank, AGIData->code, AGIData->totalSize);
+#endif // VERBOSE
+
 
 	if (resType == LOGIC) {
 		cbm_read(SEQUENTIAL_LFN, &byte1, 1);
@@ -582,7 +599,7 @@ void b6LoadAGIFile(int resType, AGIFilePosType* location, AGIFile* AGIData)
 			memCpyBanked(&GOLDEN_RAM_WORK_AREA[0], &AGIData->messageData[i], AGIData->messageBank, bufferSize);
 			for (j = 0; j < bufferSize; j++)
 			{
-				xOrAvisDurgan(&GOLDEN_RAM_WORK_AREA[j], &avisPos);
+				b6XOrAvisDurgan(&GOLDEN_RAM_WORK_AREA[j], &avisPos);
 
 				GOLDEN_RAM_WORK_AREA[j] = trampoline_1ByteRByte(&convertAsciiByteToPetsciiByte, GOLDEN_RAM_WORK_AREA[j], HELPERS_BANK);
 
@@ -682,11 +699,10 @@ void b6LoadAGIFile(int resType, AGIFilePosType* location, AGIFile* AGIData)
 	//   }
 	//}
 #ifdef VERBOSE
-	printf("Now closing the file");
+		printf("Now closing the file\n");
 #endif // VERBOSE
 
 	cbm_close(lfn);
-
 #ifdef VERBOSE
 	//printf("File closed");
 #endif // VERBOSE

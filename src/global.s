@@ -17,6 +17,7 @@ GLOBAL_INC = 1
 ZP_PTR_CODE = $69
 ;$08 is reserved for code window in codeWindow.s
 ZP_TMP = $66
+ZP_TMP_2 = $70
 ZP_PTR_LF = $74
 ZP_PTR_LE = $76
 ZP_PTR_PLF_HIGH = $78
@@ -36,10 +37,17 @@ GOLDEN_RAM = $400
 LOGIC_COMMANDS_BANK = $0F
 DEBUG_BANK = $05
 COMMAND_LOOP_HELPER_BANK = $0F
-MEKA_BANK = $07
-LOGIC_BANK = $3C
-LOGIC_ENTRY_ADDRESSES_BANK = $8
-LOGIC_CODE_BANK = $8
+MEKA_BANK = $06
+LOGIC_BANK = $3E
+LOGIC_ENTRY_ADDRESSES_BANK = $6
+LOGIC_CODE_BANK = $6
+PICTURE_BANK = $11
+
+FIRST_FLOOD_BANK = $27
+NO_FLOOD_BANKS = $0A
+LAST_FLOOD_BANK = FIRST_FLOOD_BANK + NO_FLOOD_BANKS - 1
+
+DIVISION_METADATA_BANK = $31
 
 ; Define offsets for different areas within golden RAM
 VARS_AREA_START_GOLDEN_OFFSET = 0
@@ -68,6 +76,30 @@ FALSE = 0
 ;Define struct sizes
 LOGIC_ENTRY_SIZE = 8
 LOGIC_FILE_SIZE = 2
+
+DISPLAY_SCALE     = 64 ; 2X zoom
+
+COLOR_BLACK      = $000
+COLOR_BLUE       = $00A
+COLOR_GREEN      = $0A0
+COLOR_CYAN       = $0AA
+COLOR_RED        = $A00
+COLOR_MAGENTA    = $A0A
+COLOR_BROWN      = $A50
+COLOR_LIGHT_GRAY = $AAA
+COLOR_DARK_GRAY  = $555
+COLOR_LIGHT_BLUE = $55F
+COLOR_LIGHT_GREEN= $5F5
+COLOR_LIGHT_CYAN = $5FF
+COLOR_LIGHT_RED  = $F55
+COLOR_LIGHT_MAGENTA = $F5F
+COLOR_YELLOW     = $FF5
+COLOR_WHITE      = $FFF
+
+
+MULT_TABLE_HALF_POINT = $80
+
+NEG_1_16 = $FFFF
 
 ; Macro for reading from an array
 .macro READ_ARRAY_POINTER arrayZeroPointer
@@ -193,6 +225,7 @@ LOGIC_FILE_SIZE = 2
 ; Macro for comparing two 16-bit words and branching if greater or equal
 .macro GREATER_THAN_OR_EQ_16 word1, word2, successBranch, failBranch
        .local @branch
+       .local @end
        lda word1 + 1
        cmp word2 + 1
        .ifblank failBranch
@@ -218,10 +251,85 @@ LOGIC_FILE_SIZE = 2
 
 .endmacro
 
+
+; Macro for comparing two 16-bit words and branching if greater or equal
+.macro GREATER_THAN_OR_EQ_16_LITERAL word1, literal, successBranch, failBranch
+       .local @branch
+       .local @end
+       lda word1 + 1
+       cmp #> literal
+       .ifblank failBranch
+       bcc @end
+       .endif
+       .ifnblank failBranch
+       jmp failBranch
+       .endif
+       bne @branch
+       lda word1
+       cmp #< literal
+       beq @branch
+       bcs @branch
+       .ifblank failBranch
+       bcc @end
+       .endif
+       .ifnblank failBranch
+       jmp failBranch
+       .endif
+       @branch:
+       jmp successBranch
+       @end:
+
+.endmacro
+
+; Macro for comparing two 16-bit words and branching if equal
+.macro EQ_16_WORD_TO_LITERAL word1, word2, successBranch, failBranch
+       .local @branch
+       .local @end
+       lda word1 + 1
+       cmp #>word2
+       bne @end
+       lda word1
+       cmp #< word2
+       bne @end
+       jmp successBranch
+       @end:
+       .ifnblank failBranch
+       jmp failBranch
+       .endif
+
+.endmacro
+
+.macro EQ_32_LONG_TO_LITERAL long1, word1, word2, successBranch, failBranch
+.local @higherBits
+EQ_16_WORD_TO_LITERAL long1, word1, @higherBits , failBranch
+@higherBits:
+EQ_16_WORD_TO_LITERAL long1 + 2, word2, successBranch , failBranch
+.endmacro
+
+
+;Macro for comparing two 16-bit words and branching if not equal
+.macro NEQ_16_WORD_TO_LITERAL word1, word2, successBranch, failBranch
+       .local @branch
+       .local @end
+       lda word1 + 1
+       cmp #> word2
+       bne successBranch
+       lda word1
+       cmp #< word2
+       beq @end
+       jmp successBranch
+       @end:
+       .ifnblank failBranch
+       jmp failBranch
+       .endif
+
+.endmacro
+
+
 ; Macro for comparing two 8-bit words and branching if less or equal
 .macro LESS_THAN_OR_EQ_8 word1, word2, successBranch, failBranch
        .local @branch
-              
+       .local @end
        lda word1
        cmp word2
        
@@ -244,7 +352,7 @@ LOGIC_FILE_SIZE = 2
 ; Macro for comparing two 8-bit words and branching if greater or equal
 .macro GREATER_THAN_OR_EQ_8 word1, word2, successBranch, failBranch
        .local @branch
-              
+       .local @end  
        lda word1
        cmp word2
        
@@ -263,7 +371,7 @@ LOGIC_FILE_SIZE = 2
 ; Macro for comparing two 8-bit words and branching if greater
 .macro GREATER_THAN_8 word1, word2, successBranch, failBranch
        .local @branch
-              
+       .local @end  
        lda word1
        cmp word2
        
@@ -283,7 +391,7 @@ LOGIC_FILE_SIZE = 2
 ; Macro for comparing two 8-bit words and branching if less
 .macro LESS_THAN_8 word1, word2, successBranch, failBranch
        .local @branch
-              
+       .local @end    
        lda word1
        cmp word2
        
@@ -303,7 +411,7 @@ LOGIC_FILE_SIZE = 2
 ; Macro for comparing two 16-bit words and branching if less or equal
 .macro LESS_THAN_OR_EQ_16 word1, word2, successBranch, failBranch
        .local @branch
-
+       .local @end
        lda word1 + 1
        cmp word2 + 1
        bcc @lowerBit
@@ -328,6 +436,81 @@ LOGIC_FILE_SIZE = 2
        jmp successBranch
        @end:
        
+.endmacro
+
+; Macro for comparing two 16-bit words and branching if less
+.macro LESS_THAN_16 word1, word2, successBranch, failBranch
+       .local @branch
+       .local @lowerBit
+       .local @end
+       lda word1 + 1
+       cmp word2 + 1
+       bcc @branch
+       .ifblank failBranch
+       bne @end
+       .endif
+       .ifnblank failBranch
+       bne failBranch
+       .endif
+       @lowerBit:
+       lda word1
+       cmp word2    
+        .ifblank failBranch
+       bcs @end
+       .endif
+       .ifnblank failBranch
+       bcs failBranch
+       .endif
+       @branch:
+       jmp successBranch
+       @end:
+       
+.endmacro
+
+.macro LESS_THAN_32 word1, word2, successBranch, failBranch
+       .local @checkIfHigherBitsAreEqual
+       .local @end
+
+       LESS_THAN_16 word1 + 2, word2 + 2, successBranch, @checkIfHigherBitsAreEqual
+       @checkIfHigherBitsAreEqual:
+       lda word1 + 3
+       cmp word2 + 3
+       .ifblank failBranch
+       bne @end
+       .endif
+       .ifnblank failBranch
+       bne failBranch
+       .endif
+
+
+       lda word1 + 2
+       cmp word2 + 2
+        .ifblank failBranch
+       bne @end
+       .endif
+       .ifnblank failBranch
+       bne failBranch
+       .endif
+
+       LESS_THAN_16 word1, word2, successBranch, failBranch
+
+       @end:
+.endmacro
+
+.macro INC_32 long
+lda #$1
+clc
+adc long
+sta long
+lda #$0
+adc long + 1
+sta long + 1
+lda #$0
+adc long + 2
+sta long + 2
+lda #$0
+adc long + 3
+sta long + 3
 .endmacro
 
 ; Macro for left shifting a 16-bit word by 8 bits
@@ -378,5 +561,16 @@ pla
 tax
 pla
 .endmacro
+
+;Global IRQ
+default_irq_vector: .addr 0
+VSYNC_BIT            = $01
+
+
+; Debugging related variables
+_logDebugVal1: .byte $0
+_logDebugVal2: .byte $0
+_logDebugVal3: .byte $0
+_logDebugVal4: .byte $0
 
 .endif

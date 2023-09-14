@@ -31,11 +31,13 @@ VERBOSE_ROOM_CHANGE = 1
 .segment "CODE"
 ; Import required functions
 .import _debugPrint
-.import _b8LoadLogicFile
+.import _b6LoadLogicFile
 ; Import required C variables
 .import _logicEntryAddressesLow
 .import _logicEntryAddressesHigh
 .import _currentLog
+.import popax
+.import popa
 
 ; Define variables
 jumpOffset: .byte $0
@@ -399,26 +401,6 @@ ifHandler:
 
 .segment "CODE"
 
-.macro STORE_LOGIC_ENTRY_ADDRESS
-.local @low
-.local @end
-    ldx #LOGIC_ENTRY_ADDRESSES_BANK
-    stx RAM_BANK
-    
-    cmp #$80
-    bcc @low
-    sec
-    sbc #$80
-    bra @high
-
-@low:
-  READ_ARRAY_POINTER ZP_PTR_PLF_LOW
-  bra @end
-@high:
-  READ_ARRAY_POINTER ZP_PTR_PLF_HIGH
-@end:
-.endmacro
-
 _executeLogic:
          bra start
          entryPoint: .word $0
@@ -429,15 +411,18 @@ _executeLogic:
          lastRoom: .byte $0
          currentRoom: .byte $0
          .endif
-         start:         
+         start:    
+
          ldy RAM_BANK
          sty previousRamBank
 
          sta _currentLog
          stx _currentLog + 1
-
-         STORE_LOGIC_ENTRY_ADDRESS
-
+         
+         jsr popax 
+         sta ZP_PTR_LE
+         stx ZP_PTR_LE + 1
+    
          .ifdef VERBOSE_SCRIPT_START
             JSRFAR _b5DebugPrintScriptStart, DEBUG_BANK
          .endif
@@ -456,19 +441,19 @@ _executeLogic:
         ;if (!currentLogic.loaded) {		
 		    ;trampoline_1Int(&b8LoadLogicFile, logNum, LOGIC_CODE_BANK);
         ;}
-         
          ldx #LOGIC_BANK
          stx RAM_BANK
 
          GET_STRUCT_8 LOGIC_LOADED_OFFSET, ZP_PTR_LE, ZP_TMP   
          lda ZP_TMP
          bne @endifLoaded
+
          lda #LOGIC_CODE_BANK
          sta RAM_BANK
          
          lda _currentLog
          ldx _currentLog + 1
-         jsr _b8LoadLogicFile
+         jsr _b6LoadLogicFile
          
          ldx #LOGIC_BANK
          stx RAM_BANK

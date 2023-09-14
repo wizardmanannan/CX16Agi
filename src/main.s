@@ -1,13 +1,30 @@
+    .importzp sreg
     .include "init.s"
     .include "commandLoop.s"
     .include "logicCommands.s"
     .include "codeWindow.s"
     .include "global.s"
+    .include "graphics.s"
+    .include "picture.s"
     .export _executeLogic
-    .export _b7InitAsm
+    .export _b6InitAsm
     .export _loadAndIncWinCode
     .export _incCodeBy
     .export codeWindow
     .export _codeBank
     .export _logDebugVal1
     .export _logDebugVal2
+    .export _logDebugVal3
+    .export _logDebugVal4
+    .export _b6DisableAndWaitForVsync
+    .export _b6ClearBackground
+    .export _toDraw
+    .export _drawWhere
+    .export _b11PSet
+    .export _bFloodQstore
+    .export _bFloodPicGetPixel
+    .export _floatDivision
+    .export _bFloodOkToFill
+    .export _bFloodAgiFill
+    .export _goNoFurtherLeft
+    .export _goNoFurtherRight

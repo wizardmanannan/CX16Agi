@@ -5,8 +5,9 @@
 #include "lruCache.h"
 #include "logic.h"
 #include "debugHelper.h"
+#include "picture.h"
 
-void executeLogic(int logNum);
+void executeLogic(LOGICEntry* logicEntry, int logNum);
 void b1Call(unsigned char** data);
 
 extern boolean _b1Greatern();

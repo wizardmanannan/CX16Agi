@@ -12,9 +12,26 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="..\.gitignore" />
+    <None Include="cx16-bank.cfg" />
     <None Include="makefile" />
+    <None Include="src\codeWindow.s" />
     <None Include="src\commandLoop.asm" />
+    <None Include="src\graphics.s" />
+    <None Include="src\picture.s" />
     <None Include="test.bat" />
+    <None Include="tools\New folder\DivisionTableCreater\DivisionTableCreater\bin\Debug\net7.0\DIV31.BIN" />
+    <None Include="tools\New folder\DivisionTableCreater\DivisionTableCreater\bin\Debug\net7.0\DIV32.BIN" />
+    <None Include="tools\New folder\DivisionTableCreater\DivisionTableCreater\bin\Debug\net7.0\DIV33.BIN" />
+    <None Include="tools\New folder\DivisionTableCreater\DivisionTableCreater\bin\Debug\net7.0\DIV34.BIN" />
+    <None Include="tools\New folder\DivisionTableCreater\DivisionTableCreater\bin\Debug\net7.0\DIV35.BIN" />
+    <None Include="tools\New folder\DivisionTableCreater\DivisionTableCreater\bin\Debug\net7.0\DIV36.BIN" />
+    <None Include="tools\New folder\DivisionTableCreater\DivisionTableCreater\bin\Debug\net7.0\DIV37.BIN" />
+    <None Include="tools\New folder\DivisionTableCreater\DivisionTableCreater\bin\Debug\net7.0\DIV38.BIN" />
+    <None Include="tools\New folder\DivisionTableCreater\DivisionTableCreater\bin\Debug\net7.0\DIV39.BIN" />
+    <None Include="tools\New folder\DivisionTableCreater\DivisionTableCreater\bin\Debug\net7.0\DIV3A.BIN" />
+    <None Include="tools\New folder\DivisionTableCreater\DivisionTableCreater\bin\Debug\net7.0\DIV3B.BIN" />
+    <None Include="tools\New folder\DivisionTableCreater\DivisionTableCreater\bin\Debug\net7.0\DIVA.BIN" />
+    <None Include="tools\New folder\DivisionTableCreater\DivisionTableCreater\bin\Debug\net7.0\DIVB.BIN" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\AGICODES.H" />
@@ -22,6 +39,7 @@
     <ClInclude Include="src\commands.h" />
     <ClInclude Include="src\debugHelper.h" />
     <ClInclude Include="src\DECOMP.H" />
+    <ClInclude Include="src\fixed.h" />
     <ClInclude Include="src\GENERAL.H" />
     <ClInclude Include="src\GUI.H" />
     <ClInclude Include="src\helpers.h" />
@@ -32,7 +50,7 @@
     <ClInclude Include="src\OBJECT.H" />
     <ClInclude Include="src\PALETTE.H" />
     <ClInclude Include="src\PARSER.H" />
-    <ClInclude Include="src\PICTURE.H" />
+    <ClInclude Include="src\picture.h" />
     <ClInclude Include="src\SOUND.H" />
     <ClInclude Include="src\stub.h" />
     <ClInclude Include="src\timer.h" />
@@ -44,8 +62,8 @@
     <ClCompile Include="src\commands.c" />
     <ClCompile Include="src\debugHelper.c" />
     <ClCompile Include="src\DECOMP.C" />
+    <ClCompile Include="src\fixed.c" />
     <ClCompile Include="src\general.c" />
-    <ClCompile Include="src\GRAPHICS.C" />
     <ClCompile Include="src\GUI.C" />
     <ClCompile Include="src\helpers.c" />
     <ClCompile Include="src\logic.c" />
@@ -54,7 +72,7 @@
     <ClCompile Include="src\memoryManager.c" />
     <ClCompile Include="src\OBJECT.C" />
     <ClCompile Include="src\PARSER.C" />
-    <ClCompile Include="src\PICTURE.C" />
+    <ClCompile Include="src\picture.c" />
     <ClCompile Include="src\PLAY.C" />
     <ClCompile Include="src\SHOWLOG.C" />
     <ClCompile Include="src\SOUND.C" />

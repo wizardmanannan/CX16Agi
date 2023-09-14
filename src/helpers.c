@@ -1,6 +1,7 @@
 #include "helpers.h"
 //#define VERBOSE
 //#define VERBOSE_CPY_CHECK
+//#define VERBOSE_MEMSET_CHECK
 
 boolean debugStop = FALSE;
 
@@ -60,6 +61,22 @@ byte trampoline_1ByteRByte(fnTrampoline_1ByteRByte func, byte data, byte bank)
 	RAM_BANK = previousRamBank;
 
 	return result;
+}
+
+void trampoline_2Byte(fnTrampoline_2Byte func, byte data1, byte data2, byte bank)
+{
+	byte previousRamBank = RAM_BANK;
+	RAM_BANK = bank;
+	func(data1, data2);
+	RAM_BANK = previousRamBank;
+}
+
+void trampoline_2Int(fnTrampoline_2Int func, int data1, int data2, int bank)
+{
+	byte previousRamBank = RAM_BANK;
+	RAM_BANK = bank;
+	func(data1, data2);
+	RAM_BANK = previousRamBank;
 }
 
 void trampoline_3Int(fnTrampoline_3Int func, int data1, int data2, int data3, int bank)
@@ -156,6 +173,10 @@ void getLogicDirectory(AGIFilePosType* returnedLogicDirectory, AGIFilePosType* l
 	RAM_BANK = DIRECTORY_BANK;
 
 	*returnedLogicDirectory = *logicDirectoryLocation;
+
+#ifdef VERBOSE
+	printf("Retrieving file no: %d, location %p\n", logicDirectoryLocation->fileNum, logicDirectoryLocation->filePos);
+#endif // VERBOSE
 
 	RAM_BANK = previousRamBank;
 }

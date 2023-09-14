@@ -25,6 +25,8 @@
 //#define VERBOSE_LOAD_VIEWS;
 //#define VERBOSE_UPDATE_OBJECTS
 
+//#define VERBOSE_ALLOC_WATCH
+
 View* loadedViews = (View*)&BANK_RAM[LOADED_VIEW_START];
 BITMAP* spriteScreen;
 
@@ -148,7 +150,8 @@ void getLocalCel(Loop* loadedLoop, Cel* returnedLocalCell, byte localCellNumber)
 
 	RAM_BANK = loadedLoop->celBank;
 
-	*returnedLocalCell = *(loadedLoop->cels + (localCellNumber * sizeof(Loop)));
+	//TODO: This deferenced address ends up in the wrong place. Investigate when we do sprites
+	//*returnedLocalCell = *(loadedLoop->cels + (localCellNumber * sizeof(Loop)));
 
 	RAM_BANK = previousRamBank;
 }
@@ -157,9 +160,11 @@ void setLocalCel(Loop* loadedLoop, Cel* localCell, byte localCellNumber)
 {
 	byte previousRamBank = RAM_BANK;
 
-	RAM_BANK = loadedLoop->celBank;
+	//printf("The cel bank is %d \n", loadedLoop->celBank);
+	//RAM_BANK = loadedLoop->celBank;
 
-	*(loadedLoop->cels + (localCellNumber * sizeof(Loop))) = *localCell;
+	//printf("Attempting to dereference %p. (%p + %d)\n", loadedLoop->cels + (localCellNumber * sizeof(Loop)), loadedLoop->cels, (localCellNumber * sizeof(Loop)));
+	//*(loadedLoop->cels + (localCellNumber * sizeof(Loop))) = *localCell;
 
 	RAM_BANK = previousRamBank;
 }
@@ -309,7 +314,7 @@ void b9LoadViewFile(byte viewNum)
 	Loop localLoop;
 	Cel localCel;
 	int i;
-	byte cellPositionBytes[NO_CODE_BANKS];
+	byte cellPositionBytes[NO_CODE_BANKS]; //TODO: Investigate seems like an odd choice for size
 	int loopHeaderOffset;
 	int cellHeaderOffset;
 	const char* description;
@@ -339,7 +344,12 @@ void b9LoadViewFile(byte viewNum)
 	{
 		description = (const char*)(tempAGI.code + viewStart[3] + viewStart[4] * 256);
 		descriptionLength = strlen(description);
+
 		localView.description = (char*)banked_allocTrampoline(descriptionLength, &localView.descriptionBank);
+#ifdef VERBOSE_ALLOC_WATCH
+		printf("Description length %d bank %p address %p\n", descriptionLength, localView.description, localView.descriptionBank);
+#endif // VERBOSE_ALLOC_WATCH
+
 
 		memCpyBanked(&GOLDEN_RAM[LOCAL_WORK_AREA_SIZE], (const char*)&description, tempAGI.codeBank, descriptionLength <= LOCAL_WORK_AREA_SIZE ? descriptionLength : LOCAL_WORK_AREA_SIZE);
 		memCpyBanked((byte*)localView.description, &GOLDEN_RAM[LOCAL_WORK_AREA_SIZE], localView.descriptionBank, descriptionLength <= LOCAL_WORK_AREA_SIZE ? descriptionLength : LOCAL_WORK_AREA_SIZE);
@@ -375,8 +385,11 @@ void b9LoadViewFile(byte viewNum)
 #endif
 
 	localView.numberOfLoops = viewStart[2];
-	localView.loops = (Loop*)banked_allocTrampoline(viewStart[2] * sizeof(Loop), &localView.loopsBank);
 
+	localView.loops = (Loop*)banked_allocTrampoline(viewStart[2] * sizeof(Loop), &localView.loopsBank);
+#ifdef VERBOSE_ALLOC_WATCH
+	printf("loop length %d bank %p address %p\n", viewStart[2] * sizeof(Loop), &localView.loopsBank, localView.loops);
+#endif // VERBOSE_ALLOC_WATCH
 
 	for (l = 0, viewIndex = POSITION_OF_LOOPS_OFFSET; l < localView.numberOfLoops; l++, viewIndex += 2) {
 		getLocalLoop(&localView, &localLoop, l);
@@ -387,8 +400,11 @@ void b9LoadViewFile(byte viewNum)
 #ifdef VERBOSE_LOAD_VIEWS
 		printf("You have %d loops and the num of cells is %d and a loop pos of %d", localView.numberOfLoops, localLoop.numberOfCels, loopHeaderOffset);
 #endif // VERBOSE_LOAD_VIEWS
-
+		
 		localLoop.cels = (Cel*)banked_allocTrampoline(localLoop.numberOfCels * sizeof(Cel), &localLoop.celBank);
+#ifdef VERBOSE_ALLOC_WATCH
+		printf("cels length %d bank %p address %p\n", localLoop.numberOfCels * sizeof(Cel), &localLoop.celBank, localLoop.cels);
+#endif // VERBOSE_ALLOC_WATCH
 
 		for (c = 0, loopIndex = 1; c < localLoop.numberOfCels; c++, loopIndex += 2) {
 
@@ -492,7 +508,10 @@ void b9DiscardView(byte viewNum)
 
 				setLocalCel(&localLoop, &localCel, c);
 			}
-			banked_deallocTrampoline((byte*)localLoop.cels, localLoop.celBank);
+#ifdef VERBOSE_ALLOC_WATCH
+			printf("dealloc cels bank %p address %p\n", localLoop.celBank, (byte*)localLoop.cels);
+#endif
+			banked_deallocTrampoline((byte*)localLoop.cels, localLoop.celBank); //TODO:FIX
 			localLoop.celBank = 0;
 			localLoop.cels = NULL;
 			localLoop.numberOfCels = 0;
@@ -502,9 +521,16 @@ void b9DiscardView(byte viewNum)
 
 		if (localView.description != _emptyDecription)
 		{
+#ifdef VERBOSE_ALLOC_WATCH
+			printf("dealloc desc bank %p address %p\n", localView.descriptionBank, localView.description);
+#endif // VERBOSE_ALLOC_WATCH
 			banked_deallocTrampoline((byte*)localView.description, localView.descriptionBank);
 		}
 
+
+#ifdef VERBOSE_ALLOC_WATCH
+		printf("dealloc loops bank %p address %p\n", localView.loopsBank, localView.loops);
+#endif // VERBOSE_ALLOC_WATCH
 		banked_deallocTrampoline((byte*)localView.loops, localView.loopsBank);
 		localView.loaded = FALSE;
 	}
@@ -1117,7 +1143,7 @@ void bAUpdateObj(int entryNum)
 	show_mouse(NULL);
 	stretch_sprite(agi_screen, spriteScreen, 0, 0, 640, 336);
 	show_mouse(screen);
-	//showPicture();
+	trampoline_0(&b11ShowPicture, PICTURE_CODE_BANK);
 }
 
 #pragma code-name (pop)
@@ -1301,7 +1327,7 @@ void bBUpdateObj2(int entryNum)
 	}
 
 	setViewTab(&localViewtab, entryNum);
-	showPicture();
+	trampoline_0(&b11ShowPicture, PICTURE_CODE_BANK);
 }
 
 void bBUpdateObjects()
@@ -1654,7 +1680,7 @@ void bCupdateObjects2()
 		setViewTab(&localViewtab, entryNum);
 	}
 
-	showPicture();
+	trampoline_0(&b11ShowPicture, PICTURE_CODE_BANK);
 }
 
 void bCCalcObjMotion()

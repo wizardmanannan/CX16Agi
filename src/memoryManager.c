@@ -1,12 +1,13 @@
 #include "memoryManager.h"
 MemoryArea* _memoryAreas;
 int _noSegments;
-
 //#define VERBOSE
 
 #ifdef _MSC_VER //Used for testing under windows
 byte* banked;
+byte ramBank;
 #define BANK_RAM banked
+#define RAM_BANK ramBank
 #endif 
 
 
@@ -14,10 +15,15 @@ byte* banked;
 void bankedRamInit()
 {
 #define FILE_NAME_LENGTH 13
+#define FLOOD_MESSAGE_LENGTH 30
+	
+	byte previousRamBank = RAM_BANK;
+	
 	int i, j = 0;
 	FILE* fp;
 	char fileName[FILE_NAME_LENGTH];
-	byte previousBank = RAM_BANK;
+	char openFloodFileMessage[FLOOD_MESSAGE_LENGTH];
+	char* openFloodFileMessageString = "Opening flood file %d of %d";
 
 	unsigned char fileByte;
 	int bankRamSizes[NO_CODE_BANKS] = {
@@ -36,15 +42,23 @@ void bankedRamInit()
 		(int)_BANKRAM0D_SIZE__,
 		(int)_BANKRAM0E_SIZE__,
 		(int)_BANKRAM0F_SIZE__,
-		(int )_BANKRAM10_SIZE__
+		(int)_BANKRAM10_SIZE__,
+		(int)_BANKRAM11_SIZE__
 	};
 
+	printf("Zeroing Banks\n");
+	for (i = 1; i < get_numbanks(); i++) //Don't do bank zero as it as a system bank
+	{
+		RAM_BANK = i;
+		memset(&BANK_RAM[0], 0, BANK_SIZE);
+	}
+	RAM_BANK = previousRamBank;
 
 	for (i = 0; i < NO_CODE_BANKS; i++)
 	{
 		printf("Loading MEKA Resource %d of %d\n", i + 1, NO_CODE_BANKS);
 #ifdef VERBOSE
-		printf("The bank ram size %d is %d\n", i + 1, bankRamSizes[i]);
+		printf("The bank ram size %p is %d\n", i + 1, bankRamSizes[i]);
 #endif // VERBOSE
 
 		if (i < 15)
@@ -80,12 +94,27 @@ void bankedRamInit()
 #endif // VERBOSE
 		}
 	}
-	RAM_BANK = previousBank;
+
+	for (i = 0; i < NO_FLOOD_BANKS; i++)
+	{
+		if ((fp = fopen(FLOODBANKFILENAME, "rb")) != NULL) {
+			sprintf(openFloodFileMessage, openFloodFileMessageString, i + 1, NO_FLOOD_BANKS);
+			printf("%s\n", openFloodFileMessage);
+			RAM_BANK = FIRST_FLOOD_BANK + i;
+			fread(&BANK_RAM[0], 1, _BANKRAMFLOOD_SIZE__, fp);
+		}
+		else {
+			printf("Cannot open flood bank file");
+		}
+		fclose(fp);
+	}
+
+	RAM_BANK = previousRamBank;
 }
 #endif //  __CX16__
 #pragma code-name (push, "BANKRAM10")
 
-void initSegments(byte segOrder, byte noBanks, int segmentSize, byte noSegments, byte firstBank)
+void b10InitSegments(byte segOrder, byte noBanks, int segmentSize, byte noSegments, byte firstBank)
 {
 	if (segOrder > 0)
 	{
@@ -93,7 +122,7 @@ void initSegments(byte segOrder, byte noBanks, int segmentSize, byte noSegments,
 		//printf("The address is %p \n", _segments[segOrder].start);
 	}
 	else {
-		_memoryAreas[segOrder].start = &BANK_RAM[0];
+		_memoryAreas[segOrder].start = &BANK_RAM[ALLOCATION_ARRAY_START];
 	}
 
 	_memoryAreas[segOrder].firstBank = firstBank;
@@ -116,13 +145,13 @@ void b10InitDynamicMemory()
 
 	_noSegments = TINY_NO_SEGMENTS + EXTRA_SMALL_NO_SEGMENTS + SMALL_NO_SEGMENTS + MEDIUM_NO_SEGMENTS + LARGE_NO_SEGMENTS;
 
-	_memoryAreas = (MemoryArea*) &BANK_RAM[MEMORY_AREA_START];
+	_memoryAreas = (MemoryArea*)&BANK_RAM[MEMORY_AREA_START];
 
-	initSegments(TINY_SEG_ORDER, TINY_NO_BANKS, TINY_SIZE, TINY_NO_SEGMENTS, TINY_FIRST_BANK);
-	initSegments(EXTRA_SMALL_SEG_ORDER, EXTRA_SMALL_NO_BANKS, EXTRA_SMALL_SIZE, EXTRA_SMALL_NO_SEGMENTS, EXTRA_SMALL_FIRST_BANK);
-	initSegments(SMALL_SEG_ORDER, SMALL_NO_BANKS, SMALL_SIZE, SMALL_NO_SEGMENTS, SMALL_FIRST_BANK);
-	initSegments(MEDIUM_SEG_ORDER, MEDIUM_NO_BANKS, MEDIUM_SIZE, MEDIUM_NO_SEGMENTS, MEDIUM_FIRST_BANK);
-	initSegments(LARGE_SEG_ORDER, LARGE_NO_BANKS, LARGE_SIZE, LARGE_NO_SEGMENTS, LARGE_FIRST_BANK);
+	b10InitSegments(TINY_SEG_ORDER, TINY_NO_BANKS, TINY_SIZE, TINY_NO_SEGMENTS, TINY_FIRST_BANK);
+	b10InitSegments(EXTRA_SMALL_SEG_ORDER, EXTRA_SMALL_NO_BANKS, EXTRA_SMALL_SIZE, EXTRA_SMALL_NO_SEGMENTS, EXTRA_SMALL_FIRST_BANK);
+	b10InitSegments(SMALL_SEG_ORDER, SMALL_NO_BANKS, SMALL_SIZE, SMALL_NO_SEGMENTS, SMALL_FIRST_BANK);
+	b10InitSegments(MEDIUM_SEG_ORDER, MEDIUM_NO_BANKS, MEDIUM_SIZE, MEDIUM_NO_SEGMENTS, MEDIUM_FIRST_BANK);
+	b10InitSegments(LARGE_SEG_ORDER, LARGE_NO_BANKS, LARGE_SIZE, LARGE_NO_SEGMENTS, LARGE_FIRST_BANK);
 
 	memset(_memoryAreas[0].start, 0, _noSegments);
 }
@@ -132,7 +161,7 @@ void b10InitDynamicMemory()
 //	return _memoryAreas[memoryArea].start - &[ALLOCATION_ARRAY_START_INDEX]
 //}
 
-byte* b8Bbanked_alloc(int size, byte* bank)
+byte* b10Banked_Alloc(int size, byte* bank)
 {
 
 	byte i, j;
@@ -147,29 +176,33 @@ byte* b8Bbanked_alloc(int size, byte* bank)
 			{
 				allocationByte = _memoryAreas[i].start + j;
 
+#ifdef VERBOSE
+				printf("The allocation byte %d (%p + %d) is %d\n", i, _memoryAreas[i].start, j, *allocationByte);
+#endif
+
 				if (!*(allocationByte))
 				{
 					*allocationByte = TRUE;
 
 #ifdef VERBOSE
 
-					printf("Bank Calc ((%d * %d) / %d + %d)\n", j, _memoryAreas[i].segmentSize, BANK_SIZE, _memoryAreas[i].firstBank);
+					printf("Bank Calc ((%d * %d) / %d + %d)\n", j, _memoryAreas[i].segmentSize, MEMORY_MANAGER_BANK_SIZE, _memoryAreas[i].firstBank);
 #endif
-					*bank = (byte)(((unsigned long)j * _memoryAreas[i].segmentSize) / BANK_SIZE + _memoryAreas[i].firstBank);
+					*bank = (byte)(((unsigned long)j * _memoryAreas[i].segmentSize) / MEMORY_MANAGER_BANK_SIZE + _memoryAreas[i].firstBank);
 
 					//printf("Size of unsigned long long %d, size of unsigned long %d", sizeof(unsigned long long), sizeof(unsigned long));
 
 #ifdef VERBOSE
-					printf("Result calc: (%d * %d) mod %d + %p;\n", _memoryAreas[i].segmentSize, j, BANK_SIZE, &BANK_RAM[0]);
+					printf("Result calc: (%d * %d) mod %d + %p;\n", _memoryAreas[i].segmentSize, j, MEMORY_MANAGER_BANK_SIZE, &BANK_RAM[0]);
 #endif
-					result = ((unsigned long)_memoryAreas[i].segmentSize * j) % BANK_SIZE + &BANK_RAM[0];
+					result = ((unsigned long)_memoryAreas[i].segmentSize * j) % MEMORY_MANAGER_BANK_SIZE + &BANK_RAM[0];
 #ifdef VERBOSE
 					printf("The result is %p, on bank %d size: %d, segment %d\n", result, *bank, i, j);
 #endif // VERBOSE
 				}
+				}
 			}
 		}
-	}
 
 	if (!result)
 	{
@@ -178,9 +211,10 @@ byte* b8Bbanked_alloc(int size, byte* bank)
 	}
 
 	return result;
-}
+	}
 
-boolean banked_dealloc(byte* ptr, byte bank)
+extern long opCounter;
+boolean b10Banked_Dealloc(byte* ptr, byte bank)
 {
 	int i;
 	byte size = 0;
@@ -196,9 +230,24 @@ boolean banked_dealloc(byte* ptr, byte bank)
 		}
 	}
 
+	if (bank == 0 || ptr == 0)
+	{
+#ifdef  VERBOSE
+		printf("Zero deallocation detected ptr %p bank %p on %lu \n", ptr, bank,  opCounter);
+#endif
+		return FALSE;
+	}
+
 	memoryArea = _memoryAreas[size];
 
-	allocationAddress = memoryArea.start + ((ptr - &BANK_RAM[0]) / memoryArea.segmentSize);
+	allocationAddress = memoryArea.start + ((ptr - &BANK_RAM[0]) / memoryArea.segmentSize) + ((bank - memoryArea.firstBank) * (memoryArea.noSegments / memoryArea.noBanks));
+
+#ifdef VERBOSE
+    printf("allocationAddressCalc: %p + ((%p - %p) / %d) + ((%p - %p) * (%d / %d) ) = %p\n", memoryArea.start, ptr, &BANK_RAM[0], memoryArea.segmentSize, bank, memoryArea.firstBank, memoryArea.noSegments, memoryArea.noBanks, allocationAddress);
+	
+	printf("allocationAddressCalc: %p + ((%p - %p) / %d) + ((%p - %p) * %d)\n", memoryArea.start, ptr, &BANK_RAM[0], memoryArea.segmentSize, bank, memoryArea.firstBank, memoryArea.noSegments);
+	printf("the allocation address is %p and the pointer is %p and the bank is %p\n", allocationAddress, ptr, bank);
+#endif
 
 	if (*(allocationAddress))
 	{
@@ -223,7 +272,7 @@ byte* banked_allocTrampoline(int size, byte* bank)
 
 	RAM_BANK = MEMORY_MANAGEMENT_BANK;
 
-	result = b8Bbanked_alloc(size, bank);
+	result = b10Banked_Alloc(size, bank);
 
 	RAM_BANK = previousRamBank;
 
@@ -237,7 +286,7 @@ boolean banked_deallocTrampoline(byte* ptr, byte bank)
 
 	RAM_BANK = MEMORY_MANAGEMENT_BANK;
 
-	result = banked_dealloc(ptr, bank);
+	result = b10Banked_Dealloc(ptr, bank);
 
 	RAM_BANK = previousRamBank;
 

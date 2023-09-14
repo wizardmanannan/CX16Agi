@@ -9,7 +9,7 @@ extern byte* banked;
 
 void cleanUp()
 {
-	memset(&banked[0], 0, _noSegments);
+	memset(_memoryAreas[0].start, 0, _noSegments);
 }
 
 void entireArrayCanBePopulatedAndFreed()
@@ -19,7 +19,9 @@ void entireArrayCanBePopulatedAndFreed()
 	for (int i = 0; i < _noSegments; i++)
 	{
 		int bank = 0;
-		assert(banked_alloc(testDataSize, &bank) > 0);
+
+		unsigned int result = b8Bbanked_alloc(testDataSize, &bank);
+		assert(result > 0);
 
 		assert(bank);
 		assert(banked[i]);
@@ -38,7 +40,7 @@ void ramOnFirstBankOfTinySegmentZeroCanBeFreed()
 	printf("Running ramOnFirstBankOfTinySegmentZeroCanBeFreed\n");
 	const testDataSize = TINY_SIZE;
 	int bank = 0;
-	byte* allocatedAddress = banked_alloc(testDataSize, &bank);
+	byte* allocatedAddress = b8Bbanked_alloc(testDataSize, &bank);
 	
 	assert(banked[0]);
 	assert(allocatedAddress);
@@ -58,18 +60,18 @@ void ramIsAllocatedToNextBankWhenOneBankIsFull()
 
 	for (int i = 0; i * _memoryAreas[SMALL_SEG_ORDER].segmentSize < BANK_SIZE; i++)
 	{
-		banked_alloc(testDataSize, &bank);
+		b8Bbanked_alloc(testDataSize, &bank);
 	}
 
-	byte* allocatedAddress = banked_alloc(testDataSize, &bank);
+	byte* allocatedAddress = b8Bbanked_alloc(testDataSize, &bank);
 
-	for (int i = 0; i * _memoryAreas[SMALL_SEG_ORDER].segmentSize < BANK_SIZE + 1; i++)
+	for (int i = _memoryAreas[SMALL_SEG_ORDER].start; i < _memoryAreas[SMALL_SEG_ORDER].noSegments + 1; i++)
 	{
-		assert(banked[getFirstSegment(SMALL_SEG_ORDER)]);
+		assert(banked[i]);
 	}
 	assert(allocatedAddress == &banked[0]);
 
-	allocatedAddress = banked_alloc(testDataSize, &bank);
+	allocatedAddress = b8Bbanked_alloc(testDataSize, &bank);
 	assert(allocatedAddress == &banked[0] + _memoryAreas[SMALL_SEG_ORDER].segmentSize);
 
 	cleanUp();
@@ -81,23 +83,23 @@ void allSizesCanBeAllocated()
 	int bank = 0;
 	
 
-	byte* allocatedAddress = banked_alloc(TINY_SEG_ORDER, &bank);
+	byte* allocatedAddress = b8Bbanked_alloc(TINY_SEG_ORDER, &bank);
 	assert(allocatedAddress == &banked[0]);
 	assert(bank == _memoryAreas[TINY_SEG_ORDER].firstBank);
 
-	allocatedAddress = banked_alloc(EXTRA_SMALL_SIZE, &bank);
+	allocatedAddress = b8Bbanked_alloc(EXTRA_SMALL_SIZE, &bank);
 	assert(allocatedAddress == &banked[0]);
 	assert(bank == _memoryAreas[EXTRA_SMALL_SEG_ORDER].firstBank);
 
-	allocatedAddress = banked_alloc(SMALL_SIZE, &bank);
+	allocatedAddress = b8Bbanked_alloc(SMALL_SIZE, &bank);
 	assert(allocatedAddress == &banked[0]);
 	assert(bank == _memoryAreas[SMALL_SEG_ORDER].firstBank);
 
-	allocatedAddress = banked_alloc(MEDIUM_SIZE, &bank);
+	allocatedAddress = b8Bbanked_alloc(MEDIUM_SIZE, &bank);
 	assert(allocatedAddress == &banked[0]);
 	assert(bank == _memoryAreas[MEDIUM_SEG_ORDER].firstBank);
 
-	allocatedAddress = banked_alloc(LARGE_SIZE, &bank);
+	allocatedAddress = b8Bbanked_alloc(LARGE_SIZE, &bank);
 	assert(allocatedAddress == &banked[0]);
 	assert(bank == _memoryAreas[LARGE_SEG_ORDER].firstBank);
 
@@ -109,11 +111,11 @@ void canAllocateToSecondLargeBank()
 	printf("can allocate to second large bank\n");
 	int bank = 0;
 
-	byte* allocatedAddress = banked_alloc(LARGE_SIZE, &bank);
+	byte* allocatedAddress = b8Bbanked_alloc(LARGE_SIZE, &bank);
 	assert(allocatedAddress == &banked[0]);
 	assert(bank == _memoryAreas[LARGE_SEG_ORDER].firstBank);
 
-	allocatedAddress = banked_alloc(LARGE_SIZE, &bank);
+	allocatedAddress = b8Bbanked_alloc(LARGE_SIZE, &bank);
 	assert(allocatedAddress == &banked[0]);
 	assert(bank == _memoryAreas[LARGE_SEG_ORDER].firstBank + 1);
 
