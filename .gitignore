@@ -13,3 +13,4 @@ AGI.CX16.*
 *.pdb
 *.filters
 cx16TesterConfig.json
+/tools
