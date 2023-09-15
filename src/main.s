@@ -4,8 +4,8 @@
     .include "logicCommands.s"
     .include "codeWindow.s"
     .include "global.s"
-    .include "graphics.s"
-    .include "picture.s"
+    .include "graphicsAsm.s"
+    .include "pictureAsm.s"
     .export _executeLogic
     .export _b6InitAsm
     .export _loadAndIncWinCode

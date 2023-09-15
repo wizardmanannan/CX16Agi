@@ -5,7 +5,7 @@ PICTURE_INC = 1
 
 .include "x16.inc"
 .include "global.s"
-.include "graphics.s"
+.include "graphicsAsm.s"
 
 
 .import _picColour
