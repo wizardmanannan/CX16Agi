@@ -1,5 +1,5 @@
 .include "codeWindow.s"
-.include "picture.s"
+.include "pictureAsm.s"
 .segment "BANKRAM05"
 .import _opCounter
 .import _pixelCounter
