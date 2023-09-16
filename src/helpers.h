@@ -72,4 +72,15 @@ extern long opCounter;
 
 #define abs_val(a) ((a) < 0 ? -(a) : (a))
 
+extern byte _previousRomBank;
+
+//Used in case of code with ROM Bank Switched
+#define PRINTF_ROM_BANK = 0;
+#define PRINTF(format, ...) do {  \
+    _previousRomBank = ROM_BANK; \
+    ROM_BANK = 0; \
+    printf(format, ##__VA_ARGS__); \
+    ROM_BANK = _previousRomBank; \
+} while (0)
+
 #endif

@@ -3,6 +3,8 @@
 
 .include "global.s"
 
+.import _b6InitCharset
+
 ; Set the value of include guard and define constants
 GRAPHICS_INC = 1
 
@@ -193,7 +195,7 @@ lda #$6   ; Bitmap mode 16 colors
 sta VERA_L0_config
 
 jsr _b6InitBackground
-
+jsr _b6InitCharset
 cli
 rts
 

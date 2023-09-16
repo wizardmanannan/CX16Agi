@@ -5,6 +5,8 @@
 
 boolean debugStop = FALSE;
 
+byte _previousRomBank = 0;
+
 #pragma code-name (push, "BANKRAM05")
 byte convertAsciiByteToPetsciiByte(byte toConvert)
 {

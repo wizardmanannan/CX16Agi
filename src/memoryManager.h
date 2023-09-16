@@ -78,6 +78,7 @@
 #define MEMORY_AREA_SIZE 7
 #define PICTURE_SIZE 6
 
+//RAM BANKS
 #define DIRECTORY_BANK 60
 #define LOGIC_BANK 0x3E
 #define MENU_BANK 61
@@ -91,7 +92,6 @@
 #define PICTURE_BANK 0x3E
 #define IRQ_BANK 6
 #define GRAPHICS_BANK 6
-
 
 #define FIRST_FLOOD_BANK 0x27
 #define NO_FLOOD_BANKS 0x0A
@@ -151,6 +151,14 @@
 #define VERA_addr_high 0x9F21
 #define VERA_addr_low 0x9F20
 #define VERA_data0 0x9F23
+
+//Char Set 
+#define CHAR_SET ((byte *)0xC400)
+#define CHARSET_ROM 6
+#define SIZE_PER_CHAR_CHAR_SET_ROM 8
+#define NO_CHARS 225
+
+
 
 //Zero Page Values 
 #define ZP_PTR_TEMP 0x66 //For Pre Mult Table
