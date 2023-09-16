@@ -3,6 +3,10 @@
 
 //#define VERBOSE_CHAR_SET_LOAD
 
+#ifdef VERBOSE_CHAR_SET_LOAD
+byte printOn = FALSE;
+#endif
+
 void b6ConvertOneBitPerPixCharToTwoBitPerPixelChar(byte* romAddress, byte** storeWhere)
 {
     byte i;
@@ -12,7 +16,10 @@ void b6ConvertOneBitPerPixCharToTwoBitPerPixelChar(byte* romAddress, byte** stor
     for (i = 0; i < SIZE_PER_CHAR_CHAR_SET_ROM; i++)
     {
 #ifdef VERBOSE_CHAR_SET_LOAD
-        PRINTF("set pixelrow = romAddress[i] (%d) (%p) \n", romAddress[i], &romAddress[i]);
+        if (printOn)
+        {
+            PRINTF("set pixelrow = romAddress[i] (%d) (%p) \n", romAddress[i], &romAddress[i]);
+        }
 #endif // VERBOSE
    
         romPixelRow = romAddress[i];
@@ -22,13 +29,19 @@ void b6ConvertOneBitPerPixCharToTwoBitPerPixelChar(byte* romAddress, byte** stor
             romPixel = romPixelRow >> j & 1;
 
 #ifdef VERBOSE_CHAR_SET_LOAD
-            PRINTF("&storewhere is %p\n", *storeWhere);
+            if (printOn)
+            {
+              PRINTF("&storewhere is %p\n", *storeWhere);
+            }
 #endif
 
             **storeWhere |= (romPixel << resultByteShift);
 
 #ifdef VERBOSE_CHAR_SET_LOAD
-            PRINTF("storewhere = %p << %p (%p)\n", romPixel, resultByteShift, **storeWhere);
+            if (printOn)
+            {
+              PRINTF("storewhere = %p << %p (%p)\n", romPixel, resultByteShift, **storeWhere);
+            }
 #endif // VERBOSE_CHAR_SET_LOAD
 
             resultByteShift++;
@@ -44,7 +57,7 @@ void b6ConvertOneBitPerPixCharToTwoBitPerPixelChar(byte* romAddress, byte** stor
 void b6InitCharset()
 {
     byte previousRomBank = ROM_BANK;
-    byte* newCharset = &GOLDEN_RAM_WORK_AREA[0];
+    byte* newCharset = malloc(CHARSET_TOTAL_SIZE);
     int i;
     //byte nonSequencedCharsToGet[9] = {31, 32, 38, 39, 40};
 
