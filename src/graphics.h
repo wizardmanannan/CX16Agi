@@ -7,6 +7,10 @@
 #include <stdlib.h>
 
 #define BYTES_PER_CHARACTER 16
-#define ROWS_PER_CHARACTER 8
-#define CHARSET_TOTAL_SIZE 1264
+#define TRANSPARENT_CHAR 0xAF
+#define NO_CHARS 160
+#define SIZE_OF_CHARSET (BYTES_PER_CHARACTER * NO_CHARS)
+
+byte* b6InitCharset();
+
 #endif

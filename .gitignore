@@ -23,3 +23,4 @@ cx16TesterConfig.json
 /tools/ToFixPointConverter/ConsoleApp1/obj/ConsoleApp1.csproj.nuget.g.targets
 /tools/ToFixPointConverter/ConsoleApp1/obj/project.assets.json
 /tools/ToFixPointConverter/ConsoleApp1/obj/project.nuget.cache
+/tools/CharacterRomPosCalc/CharacterRomPosCalc/obj
