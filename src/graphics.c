@@ -7,7 +7,7 @@
 byte printOn = TRUE;
 int byteCounter = 0;
 #endif
-void b6ConvertOneBitPerPixCharToTwoBitPerPixelChar(byte* romAddress, byte** storeWhere)
+void b6ConvertOneBitPerPixCharToTwoBitPerPixelChar(byte* romAddress, byte** buffer)
 {
     byte i;
     int j; //Must be int because it needs to be unsigned
@@ -56,7 +56,7 @@ void b6ConvertOneBitPerPixCharToTwoBitPerPixelChar(byte* romAddress, byte** stor
             }
 #endif
 
-            **storeWhere |= (romPixel << resultByteShift);
+            **buffer |= (romPixel << resultByteShift);
 
 #ifdef VERBOSE_CHAR_SET_LOAD
             if (printOn)
@@ -69,7 +69,7 @@ void b6ConvertOneBitPerPixCharToTwoBitPerPixelChar(byte* romAddress, byte** stor
             if (resultByteShift == 8)
             {
                 resultByteShift = 0;
-                (*storeWhere)++;
+                (*buffer)++;
 #ifdef VERBOSE_CHAR_LOAD
                 byteCounter++;
 #endif
@@ -78,16 +78,14 @@ void b6ConvertOneBitPerPixCharToTwoBitPerPixelChar(byte* romAddress, byte** stor
     }
 }
 
-byte* b6InitCharset()
+void b6InitCharset(byte* buffer, byte bank)
 {
     byte previousRomBank = ROM_BANK;
-    byte* newCharset = malloc(SIZE_OF_CHARSET);
     int i;
     //byte nonSequencedCharsToGet[9] = {31, 32, 38, 39, 40};
 
 
-    memset(newCharset, 0, SIZE_OF_CHARSET);
-    printf("mallocing : %p \n", newCharset);
+    memset(buffer, 0, SIZE_OF_CHARSET);
 
 #define SPACE (32 * SIZE_PER_CHAR_CHAR_SET_ROM)
 #define EQ_MARK (33 * SIZE_PER_CHAR_CHAR_SET_ROM)
@@ -106,23 +104,23 @@ byte* b6InitCharset()
     ROM_BANK = CHARSET_ROM;
 
 #ifdef VERBOSE_CHAR_SET_LOAD
-    PRINTF("The address of new charset buffer is %p\n", newCharset);
+    PRINTF("The address of new charset buffer is %p\n", buffer);
 #endif // VERBOSE_CHAR_SET_LOAD
 
     for (i = 0; i < NO_CHARS; i++)
     {
-        b6ConvertOneBitPerPixCharToTwoBitPerPixelChar(& CHAR_SET_ROM[i], &newCharset);
+        b6ConvertOneBitPerPixCharToTwoBitPerPixelChar(& CHAR_SET_ROM[i], &buffer);
     }
     ROM_BANK = previousRomBank;
 
-    newCharset -= SIZE_OF_CHARSET;
+    buffer -= SIZE_OF_CHARSET;
 
     //Transparent
-    memset(&newCharset[TRANSPARENT_CHAR * BYTES_PER_CHARACTER], 0, BYTES_PER_CHARACTER);
+    memset(&buffer[TRANSPARENT_CHAR * BYTES_PER_CHARACTER], 0, BYTES_PER_CHARACTER);
 
 #ifdef VERBOSE_CHAR_SET_LOAD
-    printf("returning : %p. The byte counter is %d\n.", newCharset, byteCounter);
+    printf("returning : %p. The byte counter is %d\n.", buffer, byteCounter);
 #endif // VERBOSE_CHAR_SET_LOAD
-    return newCharset;
+
 }
 #pragma code-name (pop)

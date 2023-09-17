@@ -47,6 +47,8 @@
 #define NO_SIZES 5
 
 #define BANK_SIZE (0xBFFF-0xA000 + 1)
+#define BANK_MAX 0xA000
+#define BANK_MIN 0xBFFF
 
 #define TOTAL_SIZE_OF_DIR 1275
 #define TOTAL_SIZE_OF_LOGIC_ENTRY 2040

@@ -4,6 +4,11 @@
 .include "global.s"
 
 .import _b6InitCharset
+.import _banked_allocTrampoline
+.import _banked_deallocTrampoline
+.import pushax
+.import pusha
+.import popa
 
 ; Set the value of include guard and define constants
 GRAPHICS_INC = 1
@@ -21,6 +26,11 @@ STARTING_BYTE = STARTING_ROW * BYTES_PER_ROW
 DEFAULT_BACKGROUND_COLOR = $FF
 LEFT_BORDER = $F0
 RIGHT_BORDER = $0F
+
+BYTES_PER_CHARACTER = 16
+TRANSPARENT_CHAR = $AF
+NO_CHARS = 160
+SIZE_OF_CHARSET = (BYTES_PER_CHARACTER * NO_CHARS)
 
 _b6ClearBackground:
 lda #$10 | ^STARTING_BYTE
@@ -195,7 +205,39 @@ lda #$6   ; Bitmap mode 16 colors
 sta VERA_L0_config
 
 jsr _b6InitBackground
-jsr _b6InitCharset
+
+;ZP_TMP CHARSET ADDRESS
+;ZP_PTR_B1 CHARSET BANK
+
+lda #< SIZE_OF_CHARSET
+ldx #> SIZE_OF_CHARSET
+jsr pushax
+lda #< ZP_PTR_B1
+ldx #> ZP_PTR_B1
+jsr _banked_allocTrampoline
+sta ZP_TMP 
+stx ZP_TMP + 1
+
+lda ZP_PTR_B1
+jsr pusha
+lda ZP_TMP
+ldx ZP_TMP + 1
+jsr _b6InitCharset 
+
+;Copy to vera here
+
+lda ZP_TMP
+ldx ZP_TMP + 1
+jsr pushax
+lda ZP_PTR_B1
+ldx #$0
+jsr _banked_deallocTrampoline
+
+stz ZP_TMP
+stz ZP_TMP + 1
+stz ZP_PTR_B1
+stz ZP_PTR_B1 + 1
+
 cli
 rts
 
