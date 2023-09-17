@@ -153,7 +153,7 @@
 #define VERA_data0 0x9F23
 
 //Char Set 
-#define CHAR_SET_ROM ((byte *)0xC400)
+#define CHAR_SET_ROM ((byte *)0xC800)
 #define CHARSET_ROM 6
 #define SIZE_PER_CHAR_CHAR_SET_ROM 8
 

@@ -5,8 +5,8 @@
 
 #ifdef VERBOSE_CHAR_SET_LOAD
 byte printOn = FALSE;
-#endif
 int byteCounter = 0;
+#endif
 void b6ConvertOneBitPerPixCharToTwoBitPerPixelChar(byte* romAddress, byte** storeWhere)
 {
     byte i;
@@ -29,6 +29,11 @@ void b6ConvertOneBitPerPixCharToTwoBitPerPixelChar(byte* romAddress, byte** stor
         {
             romPixel = romPixelRow >> j & 1;
 
+            if (!romPixel)
+            {
+                romPixel = 2; //Note: We have four colors trans:0,b:1,w:2,red:4. Therefore a value of 0 (white in the ROM needs to become 2)
+            }
+
 #ifdef VERBOSE_CHAR_SET_LOAD
             if (printOn)
             {
@@ -50,7 +55,9 @@ void b6ConvertOneBitPerPixCharToTwoBitPerPixelChar(byte* romAddress, byte** stor
             {
                 resultByteShift = 0;
                 (*storeWhere)++;
+#ifdef VERBOSE_CHAR_LOAD
                 byteCounter++;
+#endif
             }
         }
     }
