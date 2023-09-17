@@ -4,14 +4,14 @@
 //#define VERBOSE_CHAR_SET_LOAD
 
 #ifdef VERBOSE_CHAR_SET_LOAD
-byte printOn = FALSE;
+byte printOn = TRUE;
 int byteCounter = 0;
 #endif
 void b6ConvertOneBitPerPixCharToTwoBitPerPixelChar(byte* romAddress, byte** storeWhere)
 {
     byte i;
     int j; //Must be int because it needs to be unsigned
-    byte romPixel, romPixelRow;
+    byte romPixel;
     byte resultByteShift = 0;
 
     for (i = 0; i < SIZE_PER_CHAR_CHAR_SET_ROM; i++)
@@ -19,25 +19,40 @@ void b6ConvertOneBitPerPixCharToTwoBitPerPixelChar(byte* romAddress, byte** stor
 #ifdef VERBOSE_CHAR_SET_LOAD
         if (printOn)
         {
-            PRINTF("set pixelrow = romAddress[i] (%d) (%p) \n", romAddress[i], &romAddress[i]);
+            PRINTF("set rowPixel = romAddress[i] (%d) (%p) \n", romAddress[i], &romAddress[i]);
         }
 #endif // VERBOSE
    
-        romPixelRow = romAddress[i];
-
         for (j = 7; j >= 0; j--)
         {
-            romPixel = romPixelRow >> j & 1;
+            romPixel = romAddress[i];
+#ifdef VERBOSE_CHAR_SET_LOAD
+            if (printOn)
+            {
+                PRINTF("%p >> %d & 1 = %d\n", romPixel, j, romPixel >> j & 1);
+            }
+#endif // VERBOSE_CHAR_SET_LOAD
+            romPixel = romPixel >> j & 1;
 
             if (!romPixel)
             {
                 romPixel = 2; //Note: We have four colors trans:0,b:1,w:2,red:4. Therefore a value of 0 (white in the ROM needs to become 2)
+#ifdef VERBOSE_CHAR_SET_LOAD
+                if (printOn)
+                {
+                    PRINTF("Change to 2\n", 0);
+                }
+#endif // VERBOSE_CHAR_SET_LOAD
+
             }
 
 #ifdef VERBOSE_CHAR_SET_LOAD
             if (printOn)
             {
-              PRINTF("&storewhere is %p\n", *storeWhere);
+                if (printOn)
+                {
+                    PRINTF("&storewhere previously is %p. It's address is %p\n", **storeWhere, *storeWhere);
+                }
             }
 #endif
 
@@ -46,7 +61,7 @@ void b6ConvertOneBitPerPixCharToTwoBitPerPixelChar(byte* romAddress, byte** stor
 #ifdef VERBOSE_CHAR_SET_LOAD
             if (printOn)
             {
-              PRINTF("storewhere = %p << %p (%p)\n", romPixel, resultByteShift, **storeWhere);
+              PRINTF("storewhere or = %p << %p (%p)\n", romPixel, resultByteShift, **storeWhere);
             }
 #endif // VERBOSE_CHAR_SET_LOAD
 
@@ -98,17 +113,16 @@ byte* b6InitCharset()
     {
         b6ConvertOneBitPerPixCharToTwoBitPerPixelChar(& CHAR_SET_ROM[i], &newCharset);
     }
-       
-
     ROM_BANK = previousRomBank;
 
     newCharset -= SIZE_OF_CHARSET;
 
     //Transparent
-    memset(newCharset, TRANSPARENT_CHAR, BYTES_PER_CHARACTER);
+    memset(&newCharset[TRANSPARENT_CHAR * BYTES_PER_CHARACTER], 0, BYTES_PER_CHARACTER);
 
+#ifdef VERBOSE_CHAR_SET_LOAD
     printf("returning : %p. The byte counter is %d\n.", newCharset, byteCounter);
-
+#endif // VERBOSE_CHAR_SET_LOAD
     return newCharset;
 }
 #pragma code-name (pop)
