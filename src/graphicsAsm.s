@@ -4,8 +4,8 @@
 .include "global.s"
 
 .import _b6InitCharset
-.import _banked_allocTrampoline
-.import _banked_deallocTrampoline
+.import _malloc
+.import _free
 .import pushax
 .import pusha
 .import popa
@@ -207,19 +207,13 @@ sta VERA_L0_config
 jsr _b6InitBackground
 
 ;ZP_TMP CHARSET ADDRESS
-;ZP_PTR_B1 CHARSET BANK
 
 lda #< SIZE_OF_CHARSET
 ldx #> SIZE_OF_CHARSET
-jsr pushax
-lda #< ZP_PTR_B1
-ldx #> ZP_PTR_B1
-jsr _banked_allocTrampoline
+jsr _malloc
 sta ZP_TMP 
 stx ZP_TMP + 1
 
-lda ZP_PTR_B1
-jsr pusha
 lda ZP_TMP
 ldx ZP_TMP + 1
 jsr _b6InitCharset 
@@ -228,15 +222,10 @@ jsr _b6InitCharset
 
 lda ZP_TMP
 ldx ZP_TMP + 1
-jsr pushax
-lda ZP_PTR_B1
-ldx #$0
-jsr _banked_deallocTrampoline
+jsr _free
 
-stz ZP_TMP
+stz ZP_TMP ;Reset to Zero so as to not break interpreter
 stz ZP_TMP + 1
-stz ZP_PTR_B1
-stz ZP_PTR_B1 + 1
 
 cli
 rts

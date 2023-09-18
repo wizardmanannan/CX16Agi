@@ -51,7 +51,7 @@ void b6ConvertOneBitPerPixCharToTwoBitPerPixelChar(byte* romAddress, byte** buff
             {
                 if (printOn)
                 {
-                    PRINTF("&storewhere previously is %p. It's address is %p\n", **storeWhere, *storeWhere);
+                    PRINTF("&buffer previously is %p. It's address is %p\n", **buffer, *buffer);
                 }
             }
 #endif
@@ -61,7 +61,7 @@ void b6ConvertOneBitPerPixCharToTwoBitPerPixelChar(byte* romAddress, byte** buff
 #ifdef VERBOSE_CHAR_SET_LOAD
             if (printOn)
             {
-              PRINTF("storewhere or = %p << %p (%p)\n", romPixel, resultByteShift, **storeWhere);
+              PRINTF("buffer or = %p << %p (%p)\n", romPixel, resultByteShift, **buffer);
             }
 #endif // VERBOSE_CHAR_SET_LOAD
 
@@ -78,7 +78,7 @@ void b6ConvertOneBitPerPixCharToTwoBitPerPixelChar(byte* romAddress, byte** buff
     }
 }
 
-void b6InitCharset(byte* buffer, byte bank)
+void b6InitCharset(byte* buffer)
 {
     byte previousRomBank = ROM_BANK;
     int i;

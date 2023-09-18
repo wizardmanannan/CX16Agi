@@ -11,6 +11,6 @@
 #define NO_CHARS 160
 #define SIZE_OF_CHARSET (BYTES_PER_CHARACTER * NO_CHARS)
 
-void b6InitCharset(byte* buffer, byte bank);
+void b6InitCharset(byte* buffer);
 
 #endif
