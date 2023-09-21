@@ -28,3 +28,5 @@
     .export _bFloodAgiFill
     .export _goNoFurtherLeft
     .export _goNoFurtherRight
+    .export _b11SetVeraAddressChannel
+    .export _b11SetVeraAddress

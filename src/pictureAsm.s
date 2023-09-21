@@ -828,6 +828,12 @@ PRINT_PIXEL_MESSAGE _b5CheckPixelDrawn
 rts
 
 .segment "BANKRAM11"
+_b11SetVeraAddressChannel:
+sta @addressSel
+SET_VERA_ADDRESS_CHANNEL @addressSel
+rts
+@addressSel: .byte $0
+
 _b11PSet:
 sta @coY
 jsr popa
@@ -975,6 +981,8 @@ _bFloodAgiFill:
 sta fillY
 jsr popa 
 sta fillX
+
+SET_VERA_ADDRESS_CHANNEL #$0
 
 lda #< startOkToFillUpper
 sta _okToFillUpperCheckPoint

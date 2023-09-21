@@ -45,6 +45,8 @@ int* bitmapWidthPreMult = &BANK_RAM[BITMAP_WIDTH_PREMULT_START];
 
 extern void b11PSet(byte x, byte y);
 extern fix32 floatDivision(byte numerator, byte denominator);
+extern void b11SetVeraAddressChannel(byte addressSel);
+extern void b11SetVeraAddress(long address, byte stride, byte addressSel);
 
 #ifdef VERBOSE_FLOOD
 extern long pixelCounter;
@@ -780,6 +782,8 @@ void b11XCorner(byte** data)
 {
 	byte x1, x2, y1, y2;
 
+	b11SetVeraAddressChannel(0);
+
 	x1 = *((*data)++);
 	y1 = *((*data)++);
 
@@ -817,6 +821,8 @@ void b11XCorner(byte** data)
 void b11YCorner(byte** data)
 {
 	byte x1, x2, y1, y2;
+
+	b11SetVeraAddressChannel(0);
 
 	x1 = *((*data)++);
 	y1 = *((*data)++);
@@ -857,6 +863,8 @@ void b11RelativeDraw(byte** data)
 {
 	byte x1, y1, disp;
 	signed char dx, dy;
+
+	b11SetVeraAddressChannel(0);
 
 	x1 = *((*data)++);
 	y1 = *((*data)++);
@@ -943,6 +951,8 @@ void b11RelativeDraw(byte** data)
 void b11AbsoluteLine(byte** data)
 {
 	byte x1, y1, x2, y2;
+
+	b11SetVeraAddressChannel(0);
 
 	x1 = *((*data)++);
 	y1 = *((*data)++);
