@@ -161,6 +161,10 @@
 #define ZP_PTR_DISP 0xFE //For Div. Address Table
 
 
+//VERA
+#define VOLATILE_BUFFER 0x1D2AF
+
+
 
 #ifdef _MSC_VER //Used for testing under windows
 extern byte* banked;

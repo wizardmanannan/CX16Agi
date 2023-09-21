@@ -20,6 +20,31 @@ DEFAULT_BACKGROUND_COLOR = $FF
 LEFT_BORDER = $F0
 RIGHT_BORDER = $0F
 
+
+.macro SET_VERA_ADDRESS address, stride, highByte
+.ifnblank stride
+lda stride << 4
+.endif
+.ifblank stride
+lda #$10 ;High byte of address will always be 0
+.endif
+
+.ifnblank highByte
+ora highByte
+.endif
+
+sta VERA_addr_bank ; Stride 1. High byte of address will always be 0
+
+lda address + 1
+sta VERA_addr_high
+
+lda address
+sta VERA_addr_low
+
+.endmacro
+
+
+
 _b6ClearBackground:
 lda #$10 | ^STARTING_BYTE
 sta VERA_addr_bank

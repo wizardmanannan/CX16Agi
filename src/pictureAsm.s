@@ -239,7 +239,7 @@ jmp @endPSet
 @drawPictureScreen:
 SET_PICCOLOR
 
-SET_VERA_ADDRESS coX, coY
+SET_VERA_ADDRESS_BY_X_Y coX, coY
 
 lda _toDraw
 sta VERA_data0
@@ -265,7 +265,7 @@ _okToFillDebuggerCheckPoint: .word $0 ; Never used but needed to make the macro 
 ;DEBUG_PREPIXEL_DRAW
 
 
-SET_VERA_ADDRESS_ADDRESS address, #$0
+SET_VERA_ADDRESS address, #$0
 
 lda VERA_data0
 cmp #$FF
@@ -343,7 +343,7 @@ sta ZP_TMP+1
 .endmacro
 
 
-.macro SET_VERA_ADDRESS coX, coY
+.macro SET_VERA_ADDRESS_BY_X_Y coX, coY
 GET_VERA_ADDRESS coX, coY, _drawWhere
 
 lda #$10
@@ -353,24 +353,6 @@ lda _drawWhere + 1
 sta VERA_addr_high
 
 lda _drawWhere
-sta VERA_addr_low
-
-.endmacro
-
-.macro SET_VERA_ADDRESS_ADDRESS address, stride
-.ifnblank stride
-lda stride << 4
-.endif
-.ifblank stride
-lda #$10 ;High byte of address will always be 0
-.endif
-
-sta VERA_addr_bank ; Stride 1. High byte of address will always be 0
-
-lda address + 1
-sta VERA_addr_high
-
-lda address
 sta VERA_addr_low
 
 .endmacro
@@ -883,7 +865,7 @@ lda coY
 cmp #MAX_Y
 bcs @returnDefault
 
-SET_VERA_ADDRESS coX, coY
+SET_VERA_ADDRESS_BY_X_Y coX, coY
 lda VERA_data0
 lsr
 lsr
