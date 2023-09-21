@@ -51,7 +51,7 @@ lda #$10 ;High byte of address will always be 0
 ora highByte
 .endif
 
-sta VERA_addr_bank ; Stride 1. High byte of address will always be 0
+sta VERA_addr_bank 
 
 lda address + 1
 sta VERA_addr_high
@@ -243,6 +243,7 @@ rts
 .segment "BANKRAM11"
 
 _b11SetVeraAddress:
+stp
 sta @addressSel
 
 jsr popa

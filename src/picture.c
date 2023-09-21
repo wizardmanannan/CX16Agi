@@ -1195,6 +1195,8 @@ void b11DrawPic(byte* bankedData, int pLen, boolean okToClearScreen, byte picNum
 	printf("Preparing To Draw %d of size %d\n", picNum, loadedPicture.size);
 #endif // VERBOSE
 
+	b11SetVeraAddress(VOLATILE_BUFFER, 1, 0);
+
 	data = (byte*)malloc(loadedPicture.size);
 	originalPointer = data;
 
