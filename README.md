@@ -1,13 +1,14 @@
-# CX16Agi Iteration 2
+# CX16Agi Iteration 3 (Completed)
+Major Changes Since Version 3:
+- Now displaying background graphics (more optimisation needed)
+  
 
-Major Changes Since Iteration 2:
-- File Loading Cache Implemented Significantly Improving Speed
-- Core of interpreter has been rewritten in 6502 assembly improving speed
-- Size of executable has been reduced by shifting more code into banked RAM.
+# CX 16 Iteration 4 Goals (To Be Done)
+- Implement System Tick Replacing Inaccurate Inherited C One 
+- Support AGI Textboxes
+- Implement A Loading Screen For the Background Graphics Drawing to Prevent Screen Tearing 
 
 **Note: This Project Is Under Construction And Is Not Ready For General Use**
-
-**Currently, this program is too slow. Optimization will be required, but it is many times faster than iteration 1**
 
 **Only AGI 1 & 2 games are currently supported**
 
@@ -26,6 +27,8 @@ Permission to use his code has been obtained in written form: https://github.com
 The original MEKA source code is included in the root of this repo in an archive called Meka.zip
 
 MEKA is written in C, hence this project depends on CC65. KickC may be considered in a future enhancement.
+
+However extensive assembly is used where speed is required.
 
 ## Instructions For Building In Windows:
 1. Download WinMake and install WinMake from: https://gnuwin32.sourceforge.net/downlinks/make.php
@@ -62,10 +65,11 @@ Obvious things that need to be done:
 - String functions need to be uncommented out and retested
 - This code is currently slow. It takes 1:10 to execute the first intro screen of King's Quest III, when it should take 45 seconds
 - Import the rest of the MEKA code base. I have been importing it in a piecemeal fashion, and using a stub
-- Graphics, sound, and keyboard routines need to be implemented
+- Sprites and textbox, sound, and keyboard routines need to be implemented
 - Uncomment out routines for the support of AGI 3 games and put them into the BANKS
 - Review the implementation of dynamic memory as mentioned in memorymanager.h and the related C file. I am not a memory algorithm expert; there may be a much more efficient way of doing things. At least a review of the segment sizes I have chosen will be required.
 - Menu systems need to be built, one for game select (maybe BASIC) and another for the internal game menus
+- Implement a proper system tick function using IRQs. Currently I have using the C one inherited from Meka, which I don't think is very accurate on CX16.
 
 This project requires extensive use of Banked RAM, for both code and data as the Meka source code is quite large.
 

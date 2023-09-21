@@ -1718,7 +1718,7 @@ void b4Display() // 3, 0x00
 
 	messagePointer = getMessagePointer(currentLog, messNum - 1);
 
-	trampolineProcessString(messagePointer, 0, tempString);
+	//trampolineProcessString(messagePointer, 0, tempString);
 	drawBigString(screen, tempString, row * 16, 20 + (col * 16), agi_fg, agi_bg);
 	/*lprintf("info: display() %s, fg: %d bg: %d row: %d col: %d",
 	   tempString, agi_fg, agi_bg, row, col);*/
