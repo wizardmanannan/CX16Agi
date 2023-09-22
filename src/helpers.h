@@ -65,7 +65,7 @@ extern int sprintfBanked(const char* buffer, byte bank, char const* const format
 extern void getLogicDirectory(AGIFilePosType* returnedLogicDirectory, AGIFilePosType* logicDirectoryLocation);
 extern void setResourceDirectory(AGIFilePosType* newLogicDirectory, AGIFilePosType* logicDirectoryLocation);
 
-extern void setVeraAddress(long address, byte stride, byte addressSel);
+extern void b5SetVeraAddress(long address, byte stride, byte addressSel);
 
 
 extern void debugPrint(byte toPrint);

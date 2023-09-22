@@ -29,4 +29,5 @@
     .export _goNoFurtherLeft
     .export _goNoFurtherRight
     .export _b11SetVeraAddressChannel
-    .export _setVeraAddress
+    .export _b5SetVeraAddress
+    .export _b11SetVeraAddress

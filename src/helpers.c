@@ -39,7 +39,7 @@ void b5MemCpyVera(long veraDest, byte* src, byte bank, size_t len)
 	int i, j, copyAmount;
 
 	// Set VERA address at the beginning
-	setVeraAddress(veraDest, 1, 0);
+	b5SetVeraAddress(veraDest, 1, 0);
 
 	for (i = 0; i < len; i += LOCAL_WORK_AREA_SIZE)
 	{

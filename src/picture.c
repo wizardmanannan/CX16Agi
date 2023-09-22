@@ -46,7 +46,7 @@ int* bitmapWidthPreMult = &BANK_RAM[BITMAP_WIDTH_PREMULT_START];
 extern void b11PSet(byte x, byte y);
 extern fix32 floatDivision(byte numerator, byte denominator);
 extern void b11SetVeraAddressChannel(byte addressSel);
-extern void setVeraAddress(long address, byte stride, byte addressSel);
+extern void b11SetVeraAddress(long address, byte stride, byte addressSel);
 
 #ifdef VERBOSE_FLOOD
 extern long pixelCounter;

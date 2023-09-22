@@ -23,6 +23,27 @@ DEFAULT_BACKGROUND_COLOR = $FF
 LEFT_BORDER = $F0
 RIGHT_BORDER = $0F
 
+.macro SET_VERA_ADDRESS_CCALL
+sta @addressSel
+
+jsr popa
+sta @stride
+
+jsr popax
+sta @address
+stx @address + 1
+jsr popax ;Discard high byte of address
+sta @highByte
+
+SET_VERA_ADDRESS @address, @stride, @highByte, @addressSel
+
+rts
+@address: .word $0
+@stride:  .byte $0
+@highByte: .byte $0
+@addressSel: .byte $0
+.endmacro
+
 .macro SET_VERA_ADDRESS_CHANNEL addressSel
 lda addressSel
 and #$1
@@ -240,24 +261,12 @@ jsr _b6InitBackground
 cli
 rts
 
-.segment "CODE"
-_setVeraAddress:
-sta @addressSel
+.segment "BANKRAM05"
+_b5SetVeraAddress:
+SET_VERA_ADDRESS_CCALL
 
-jsr popa
-sta @stride
 
-jsr popax
-sta @address
-stx @address + 1
-jsr popax ;Discard high byte of address
-sta @highByte
-
-SET_VERA_ADDRESS @address, @stride, @highByte, @addressSel
-
-rts
-@address: .word $0
-@stride:  .byte $0
-@highByte: .byte $0
-@addressSel: .byte $0
+.segment "BANKRAM11"
+_b11SetVeraAddress:
+SET_VERA_ADDRESS_CCALL
 .endif
