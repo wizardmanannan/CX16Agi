@@ -11,6 +11,7 @@
 
 #define PIC_DEFAULT 15
 #define PRI_DEFAULT 4
+#define VERA_ADDRESS_SEL 1
 //#define VERBOSE
 //#define VERBOSE_REL_DRAW
 //#define TEST_QUEUE
@@ -1195,7 +1196,7 @@ void b11DrawPic(byte* bankedData, int pLen, boolean okToClearScreen, byte picNum
 	printf("Preparing To Draw %d of size %d\n", picNum, loadedPicture.size);
 #endif // VERBOSE
 
-	trampoline_memCpyVera(VOLATILE_BUFFER, loadedPicture.data, loadedPicture.bank, loadedPicture.size);
+	trampoline_memCpyVera(VOLATILE_BUFFER, loadedPicture.data, loadedPicture.bank, loadedPicture.size, 1);
 	asm("stp");
 
 

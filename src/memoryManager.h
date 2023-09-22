@@ -151,6 +151,8 @@
 #define VERA_addr_high 0x9F21
 #define VERA_addr_low 0x9F20
 #define VERA_data0 0x9F23
+#define VERA_data1 0x9F24
+
 
 //Zero Page Values 
 #define ZP_PTR_TEMP 0x66 //For Pre Mult Table

@@ -40,7 +40,7 @@ typedef void (*fnTrampoline_3Int)(int data1, int data2, int data3);
 
 byte convertAsciiByteToPetsciiByte(byte toConvert);
 
-void trampoline_memCpyVera(long veraDest, byte* src, byte bank, size_t len);
+void trampoline_memCpyVera(long veraDest, byte* src, byte bank, size_t len, boolean addressSel);
 
 extern void trampoline_0(fnTrampoline_0 func, byte bank);
 

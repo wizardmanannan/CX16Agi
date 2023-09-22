@@ -34,12 +34,11 @@ byte convertAsciiByteToPetsciiByte(byte toConvert)
 	return toConvert;
 }
 
-void b5MemCpyVera(long veraDest, byte* src, byte bank, size_t len)
+void b5MemCpyVera(long veraDest, byte* src, byte bank, size_t len, boolean addressSel)
 {
 	int i, j, copyAmount;
-
 	// Set VERA address at the beginning
-	b5SetVeraAddress(veraDest, 1, 0);
+	b5SetVeraAddress(veraDest, 1, addressSel);
 
 	for (i = 0; i < len; i += LOCAL_WORK_AREA_SIZE)
 	{
@@ -59,9 +58,15 @@ void b5MemCpyVera(long veraDest, byte* src, byte bank, size_t len)
 		// Copy from temporary area to VERA
 		for (j = 0; j < copyAmount; j++)
 		{
-			_ass = GOLDEN_RAM_WORK_AREA[j];
-			asm("lda %v", _ass);
-			asm("sta %w", VERA_data0);
+			if (addressSel)
+			{
+				_ass = GOLDEN_RAM_WORK_AREA[j];
+				asm("sta %w", VERA_data1);
+			}
+			else {
+				_ass = GOLDEN_RAM_WORK_AREA[j];
+				asm("sta %w", VERA_data0);
+			}
 		}
 	}
 }
@@ -122,12 +127,12 @@ void trampoline_3Int(fnTrampoline_3Int func, int data1, int data2, int data3, in
 	RAM_BANK = previousRamBank;
 }
 
-void trampoline_memCpyVera(long veraDest, byte* src, byte bank, size_t len)
+void trampoline_memCpyVera(long veraDest, byte* src, byte bank, size_t len, boolean addressSel)
 {
 	byte previousRamBank = RAM_BANK;
 	RAM_BANK = HELPERS_BANK;
 
-	b5MemCpyVera(veraDest, src, bank, len);
+	b5MemCpyVera(veraDest, src, bank, len, addressSel);
 
 	RAM_BANK = previousRamBank;
 }
