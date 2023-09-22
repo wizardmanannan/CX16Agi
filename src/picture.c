@@ -46,7 +46,7 @@ int* bitmapWidthPreMult = &BANK_RAM[BITMAP_WIDTH_PREMULT_START];
 extern void b11PSet(byte x, byte y);
 extern fix32 floatDivision(byte numerator, byte denominator);
 extern void b11SetVeraAddressChannel(byte addressSel);
-extern void b11SetVeraAddress(long address, byte stride, byte addressSel);
+extern void setVeraAddress(long address, byte stride, byte addressSel);
 
 #ifdef VERBOSE_FLOOD
 extern long pixelCounter;
@@ -1195,9 +1195,10 @@ void b11DrawPic(byte* bankedData, int pLen, boolean okToClearScreen, byte picNum
 	printf("Preparing To Draw %d of size %d\n", picNum, loadedPicture.size);
 #endif // VERBOSE
 
-	b11SetVeraAddress(VOLATILE_BUFFER, 1, 0);
+	trampoline_memCpyVera(VOLATILE_BUFFER, loadedPicture.data, loadedPicture.bank, loadedPicture.size);
+	asm("stp");
 
-	data = (byte*)malloc(loadedPicture.size);
+
 	originalPointer = data;
 
 	if (!data)
@@ -1263,8 +1264,6 @@ void b11DrawPic(byte* bankedData, int pLen, boolean okToClearScreen, byte picNum
 	*zpB2 = 0;
 	*zpCh = 0;
 	*zpDisp = 0;
-
-	free(originalPointer);
 }
 
 void b11InitPictures()

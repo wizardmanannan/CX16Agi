@@ -5,6 +5,8 @@
 
 boolean debugStop = FALSE;
 
+byte _ass = 0;
+
 #pragma code-name (push, "BANKRAM05")
 byte convertAsciiByteToPetsciiByte(byte toConvert)
 {
@@ -31,6 +33,39 @@ byte convertAsciiByteToPetsciiByte(byte toConvert)
 	}
 	return toConvert;
 }
+
+void b5MemCpyVera(long veraDest, byte* src, byte bank, size_t len)
+{
+	int i, j, copyAmount;
+
+	// Set VERA address at the beginning
+	setVeraAddress(veraDest, 1, 0);
+
+	for (i = 0; i < len; i += LOCAL_WORK_AREA_SIZE)
+	{
+		// Determine the amount of data to copy in this iteration
+		if (i + LOCAL_WORK_AREA_SIZE < len)
+		{
+			copyAmount = LOCAL_WORK_AREA_SIZE;
+		}
+		else
+		{
+			copyAmount = len - i;
+		}
+
+		// Copy from source to a temporary area
+		memCpyBanked(GOLDEN_RAM_WORK_AREA, src + i, bank, copyAmount);
+
+		// Copy from temporary area to VERA
+		for (j = 0; j < copyAmount; j++)
+		{
+			_ass = GOLDEN_RAM_WORK_AREA[j];
+			asm("lda %v", _ass);
+			asm("sta %w", VERA_data0);
+		}
+	}
+}
+
 #pragma code-name (pop);
 
 void trampoline_0(fnTrampoline_0 func, byte bank)
@@ -84,6 +119,16 @@ void trampoline_3Int(fnTrampoline_3Int func, int data1, int data2, int data3, in
 	byte previousRamBank = RAM_BANK;
 	RAM_BANK = bank;
 	func(data1, data2, data3);
+	RAM_BANK = previousRamBank;
+}
+
+void trampoline_memCpyVera(long veraDest, byte* src, byte bank, size_t len)
+{
+	byte previousRamBank = RAM_BANK;
+	RAM_BANK = HELPERS_BANK;
+
+	b5MemCpyVera(veraDest, src, bank, len);
+
 	RAM_BANK = previousRamBank;
 }
 

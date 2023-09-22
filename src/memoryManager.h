@@ -161,7 +161,7 @@
 #define ZP_PTR_DISP 0xFE //For Div. Address Table
 
 
-//VERA
+//VERA Mem Addresses
 #define VOLATILE_BUFFER 0x1D2AF
 
 

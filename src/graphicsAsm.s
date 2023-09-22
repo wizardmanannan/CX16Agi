@@ -240,10 +240,8 @@ jsr _b6InitBackground
 cli
 rts
 
-.segment "BANKRAM11"
-
-_b11SetVeraAddress:
-stp
+.segment "CODE"
+_setVeraAddress:
 sta @addressSel
 
 jsr popa

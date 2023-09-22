@@ -40,6 +40,8 @@ typedef void (*fnTrampoline_3Int)(int data1, int data2, int data3);
 
 byte convertAsciiByteToPetsciiByte(byte toConvert);
 
+void trampoline_memCpyVera(long veraDest, byte* src, byte bank, size_t len);
+
 extern void trampoline_0(fnTrampoline_0 func, byte bank);
 
 extern void trampoline_1Int(fnTrampoline_1Int func, int data, byte bank);
@@ -63,11 +65,16 @@ extern int sprintfBanked(const char* buffer, byte bank, char const* const format
 extern void getLogicDirectory(AGIFilePosType* returnedLogicDirectory, AGIFilePosType* logicDirectoryLocation);
 extern void setResourceDirectory(AGIFilePosType* newLogicDirectory, AGIFilePosType* logicDirectoryLocation);
 
+extern void setVeraAddress(long address, byte stride, byte addressSel);
+
+
 extern void debugPrint(byte toPrint);
 
 extern long opStopAt;
 extern long opExitAt;
 extern long opCounter;
+
+extern byte _ass;
 
 
 #define abs_val(a) ((a) < 0 ? -(a) : (a))

@@ -18,6 +18,7 @@ ZP_PTR_CODE = $69
 ;$08 is reserved for code window in codeWindow.s
 ZP_TMP = $66
 ZP_TMP_2 = $70
+ZP_TMP_3 = $D4
 ZP_PTR_LF = $74
 ZP_PTR_LE = $76
 ZP_PTR_PLF_HIGH = $78
