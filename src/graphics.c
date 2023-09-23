@@ -9,18 +9,18 @@ int byteCounter = 0;
 #endif
 void b6ConvertOneBitPerPixCharToTwoBitPerPixelChar()
 {
-    byte i;
-    int j; //Must be int because it needs to be unsigned
+    int i;
+    byte j; //Must be int because it needs to be unsigned
     byte romPixel, output = 0, romRow;
     byte resultByteShift = 6;
 
-    for (i = 0; i < SIZE_PER_CHAR_CHAR_SET_ROM; i++)
+    for (i = 0; i < NO_CHARS * SIZE_PER_CHAR_CHAR_SET_ROM; i++)
     {
         asm("lda %w", VERA_data0);
         asm("sta %v", _assm);
         romRow = _assm;
 
-        for (j = 7; j >= 0; j--)
+        for (j = 7; j != 255; j--) //Overflow means the loop is done
         {
 
             romPixel = romRow >> j & 1;
@@ -37,7 +37,7 @@ void b6ConvertOneBitPerPixCharToTwoBitPerPixelChar()
             {
                 resultByteShift = 6;
                
-                _assm = output;
+                _assm = output;        
                 asm("lda %v", _assm);
                 asm("sta %w", VERA_data1);
 
@@ -85,10 +85,7 @@ void b6InitCharset()
     SET_VERA_ADDRESS(MapBase, AddressSel1);
     
     asm("stp");
-    for (i = 0; i < NO_CHARS; i++)
-    {
-        b6ConvertOneBitPerPixCharToTwoBitPerPixelChar();
-    }
+    b6ConvertOneBitPerPixCharToTwoBitPerPixelChar();
     asm("stp");
 #ifdef VERBOSE_CHAR_SET_LOAD
     printf("returning : %p. The byte counter is %d\n.", buffer, byteCounter);
