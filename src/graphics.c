@@ -7,117 +7,89 @@
 byte printOn = TRUE;
 int byteCounter = 0;
 #endif
-void b6ConvertOneBitPerPixCharToTwoBitPerPixelChar(byte* romAddress, byte** buffer)
+void b6ConvertOneBitPerPixCharToTwoBitPerPixelChar()
 {
     byte i;
     int j; //Must be int because it needs to be unsigned
-    byte romPixel;
-    byte resultByteShift = 0;
+    byte romPixel, output = 0, romRow;
+    byte resultByteShift = 6;
 
     for (i = 0; i < SIZE_PER_CHAR_CHAR_SET_ROM; i++)
     {
-#ifdef VERBOSE_CHAR_SET_LOAD
-        if (printOn)
-        {
-            PRINTF("set rowPixel = romAddress[i] (%d) (%p) \n", romAddress[i], &romAddress[i]);
-        }
-#endif // VERBOSE
-   
+        asm("lda %w", VERA_data0);
+        asm("sta %v", _assm);
+        romRow = _assm;
+
         for (j = 7; j >= 0; j--)
         {
-            romPixel = romAddress[i];
-#ifdef VERBOSE_CHAR_SET_LOAD
-            if (printOn)
-            {
-                PRINTF("%p >> %d & 1 = %d\n", romPixel, j, romPixel >> j & 1);
-            }
-#endif // VERBOSE_CHAR_SET_LOAD
-            romPixel = romPixel >> j & 1;
+
+            romPixel = romRow >> j & 1;
 
             if (!romPixel)
             {
                 romPixel = 2; //Note: We have four colors trans:0,b:1,w:2,red:4. Therefore a value of 0 (white in the ROM needs to become 2)
-#ifdef VERBOSE_CHAR_SET_LOAD
-                if (printOn)
-                {
-                    PRINTF("Change to 2\n", 0);
-                }
-#endif // VERBOSE_CHAR_SET_LOAD
-
             }
 
-#ifdef VERBOSE_CHAR_SET_LOAD
-            if (printOn)
+            output  |= (romPixel << resultByteShift);
+            
+            resultByteShift -= 2;
+            if (resultByteShift == 254) //Underflow means we are ready to start again
             {
-                if (printOn)
-                {
-                    PRINTF("&buffer previously is %p. It's address is %p\n", **buffer, *buffer);
-                }
-            }
-#endif
+                resultByteShift = 6;
+               
+                _assm = output;
+                asm("lda %v", _assm);
+                asm("sta %w", VERA_data1);
 
-            **buffer |= (romPixel << resultByteShift);
-
-#ifdef VERBOSE_CHAR_SET_LOAD
-            if (printOn)
-            {
-              PRINTF("buffer or = %p << %p (%p)\n", romPixel, resultByteShift, **buffer);
-            }
-#endif // VERBOSE_CHAR_SET_LOAD
-
-            resultByteShift += 2;
-            if (resultByteShift == 8)
-            {
-                resultByteShift = 0;
-                (*buffer)++;
-#ifdef VERBOSE_CHAR_LOAD
-                byteCounter++;
-#endif
+                output = 0;
             }
         }
     }
 }
 
-void b6InitCharset(byte* buffer)
+#define AddressSel0 0 
+#define AddressSel1 1
+
+#define SET_VERA_ADDRESS(VeraAddress, AddressSel) \
+    do {                                           \
+        asm("lda #%w", AddressSel);                  \
+        asm("sta %w", VERA_ctrl);                  \
+        asm("lda #$10");                           \
+        asm("ora #^%l", VeraAddress);           \
+        asm("sta %w", VERA_addr_bank);             \
+        asm("lda #< %l", VeraAddress);          \
+        asm("sta %w", VERA_addr_low);             \
+        asm("lda #> %l", VeraAddress);          \
+        asm("sta %w", VERA_addr_high);              \
+    } while(0)
+
+void b6InitCharset()
 {
-    byte previousRomBank = ROM_BANK;
+#define OriginalCharsetAddress 0x1f000
+
     int i;
+    byte* veraData0, *veraData1;
+    
+    veraData0 = (byte*)VERA_data0;
+    veraData1 = (byte*)VERA_data1;
+
     //byte nonSequencedCharsToGet[9] = {31, 32, 38, 39, 40};
 
-
-    memset(buffer, 0, SIZE_OF_CHARSET);
-
-#define SPACE (32 * SIZE_PER_CHAR_CHAR_SET_ROM)
-#define EQ_MARK (33 * SIZE_PER_CHAR_CHAR_SET_ROM)
-#define QUOTE (34 * SIZE_PER_CHAR_CHAR_SET_ROM)
-#define OPEN_BRACKET (40 * SIZE_PER_CHAR_CHAR_SET_ROM)
-#define SEMI_COLON (60 * SIZE_PER_CHAR_CHAR_SET_ROM)
-#define QUESTION_MARK (64 * SIZE_PER_CHAR_CHAR_SET_ROM)
-#define AT 0
-#define UPPER_A (64 * SIZE_PER_CHAR_CHAR_SET_ROM)
-#define UPPER_Z (88 * SIZE_PER_CHAR_CHAR_SET_ROM)
-#define LOWER_A (1 * SIZE_PER_CHAR_CHAR_SET_ROM)
-#define LOWER_Z (24 * SIZE_PER_CHAR_CHAR_SET_ROM)
-
     printf("Initializing CharSet. . .\n");
-
-    ROM_BANK = CHARSET_ROM;
 
 #ifdef VERBOSE_CHAR_SET_LOAD
     PRINTF("The address of new charset buffer is %p\n", buffer);
 #endif // VERBOSE_CHAR_SET_LOAD
 
+    SET_VERA_ADDRESS(OriginalCharsetAddress, AddressSel0);
+    SET_VERA_ADDRESS(MapBase, AddressSel1);
+    
+    asm("stp");
     for (i = 0; i < NO_CHARS; i++)
     {
-        b6ConvertOneBitPerPixCharToTwoBitPerPixelChar(& CHAR_SET_ROM[i], &buffer);
+        b6ConvertOneBitPerPixCharToTwoBitPerPixelChar();
     }
-    ROM_BANK = previousRomBank;
-
-    buffer -= SIZE_OF_CHARSET;
-
-    //Transparent
-    memset(&buffer[TRANSPARENT_CHAR * BYTES_PER_CHARACTER], 0, BYTES_PER_CHARACTER);
-
+    asm("stp");
 #ifdef VERBOSE_CHAR_SET_LOAD
     printf("returning : %p. The byte counter is %d\n.", buffer, byteCounter);
 #endif // VERBOSE_CHAR_SET_LOAD

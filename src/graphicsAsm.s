@@ -206,23 +206,9 @@ sta VERA_L0_config
 
 jsr _b6InitBackground
 
-;ZP_TMP CHARSET ADDRESS
-
-lda #< SIZE_OF_CHARSET
-ldx #> SIZE_OF_CHARSET
-jsr _malloc
-sta ZP_TMP 
-stx ZP_TMP + 1
-
-lda ZP_TMP
-ldx ZP_TMP + 1
 jsr _b6InitCharset 
 
 ;Copy to vera here
-
-lda ZP_TMP
-ldx ZP_TMP + 1
-jsr _free
 
 stz ZP_TMP ;Reset to Zero so as to not break interpreter
 stz ZP_TMP + 1

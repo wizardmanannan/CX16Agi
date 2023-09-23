@@ -14,7 +14,7 @@ while (true)
     //Console.WriteLine("Address: {0:X}", ((row * 16 + col) * 8) + baseAddress);
 
 
-    int baseAddress = 0xC800;
+    int baseAddress = 0x1F000;
 
     Console.WriteLine("Please enter column \n");
     int codeNum = int.Parse(Console.ReadLine());

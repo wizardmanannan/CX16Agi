@@ -152,7 +152,10 @@
 #define VERA_addr_bank 0x9F22
 #define VERA_addr_high 0x9F21
 #define VERA_addr_low 0x9F20
+#define VERA_ctrl 0x9F25
 #define VERA_data0 0x9F23
+#define VERA_data1 0x9F24
+
 
 //Char Set 
 #define CHAR_SET_ROM ((byte *)0xC800)
@@ -168,6 +171,8 @@
 #define ZP_PTR_CH 0xF8 //For Div. Bank Table
 #define ZP_PTR_DISP 0xFE //For Div. Address Table
 
+//Vera
+#define MapBase 0xD000
 
 
 #ifdef _MSC_VER //Used for testing under windows

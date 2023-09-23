@@ -69,6 +69,8 @@ extern long opStopAt;
 extern long opExitAt;
 extern long opCounter;
 
+extern byte _assm;
+
 
 #define abs_val(a) ((a) < 0 ? -(a) : (a))
 

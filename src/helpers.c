@@ -6,6 +6,7 @@
 boolean debugStop = FALSE;
 
 byte _previousRomBank = 0;
+byte _assm = 0; //Used as a value to load things in and out of the registers
 
 #pragma code-name (push, "BANKRAM05")
 byte convertAsciiByteToPetsciiByte(byte toConvert)
