@@ -11,8 +11,8 @@
 
 #define PIC_DEFAULT 15
 #define PRI_DEFAULT 4
-#define VERA_ADDRESS_SEL 1
-//#define VERBOSE
+#define VERA_ADDRESS_SEL 0
+#define VERBOSE
 //#define VERBOSE_REL_DRAW
 //#define TEST_QUEUE
 //#define VERBOSE_FLOOD
@@ -81,54 +81,14 @@ void setLoadedPicture(PictureFile* loadedPicture, byte loadedPictureNumber)
 extern byte bFloodQretrieve();
 extern byte bFloodQstore(byte q);
 
-boolean isMultipleOf160(int toTest)
-{
-#ifdef TEST_IS_MULT_OF_160
-	printf("Slow called for %d\n", toTest);
-#endif // TEST_IS_MULT_OF_160
-
-	return toTest % 160 == 0;
-
-}
-
-extern boolean testIsMultipleOf160Asm(int toTest);
-#ifdef TEST_IS_MULT_OF_160
-void testIsMultOf160()
-{
-	int i;
-	for (i = 0; i <= 0x68FF; i++)
-	{
-		if (testIsMultipleOf160Asm(i) != i % 160 == 0)
-		{
-			printf("Fail test multiple on %d\n",i);
-		}
-	}
-
-	exit(0);
-}
-#endif // TEST_IS_MULT_OF_160
-
-
-/**************************************************************************
-** pset
-**
-** Draws a pixel in each screen depending on whether drawing in that
-** screen is enabled or not.
-**************************************************************************/
-#define PSETFLOOD(x, y) \
-    if (picDrawEnabled) { \
-if ((x) <= 159 && (y) <= 167) {  \
-            trampoline_2Byte(&b11PSet,x, y, PICTURE_CODE_BANK); \
-           } \
-    } 
-
-
 extern byte bFloodPicGetPixel(word x, word y);
 extern boolean bFloodOkToFill(byte* address);
 extern void bFloodAgiFill(byte x, byte y);
 
 extern byte goNoFurtherLeft;
 extern byte goNoFurtherRight;
+
+
 
 #ifdef TEST_OK_TO_FILL
 void testOkToFill()
@@ -403,7 +363,7 @@ void b11FloodBankFull() //Is on this bank to save room on flood bank
 **
 ** Agi flood fill.  (drawing action 0xF8)
 **************************************************************************/
-void b11FloodFill(byte** data)
+byte b11FloodFill(byte** data)
 {
 	byte x1, y1;
 	byte picColorOld = picColour;
@@ -413,12 +373,10 @@ void b11FloodFill(byte** data)
 	picColour = picColorOld;
 
 	for (;;) {
-		if ((x1 = *((*data)++)) >= 0xF0) break;
-		if ((y1 = *((*data)++)) >= 0xF0) break;
+		if ((x1 = *((*data)++)) >= 0xF0) return x1;
+		if ((y1 = *((*data)++)) >= 0xF0) return y1;
 		trampoline_2Byte(&bFloodAgiFill, x1, y1, FIRST_FLOOD_BANK);
 	}
-
-	(*data)--;
 }
 
 void b11LoadDivisionMetadata(const char* fileName, int metadataSize, byte* metadataLocation)
@@ -779,20 +737,18 @@ void b11Drawline(byte x1, byte y1, byte x2, byte y2)
 **
 ** Draws an xCorner  (drawing action 0xF5)
 **************************************************************************/
-void b11XCorner(byte** data)
+byte b11XCorner(byte** data)
 {
 	byte x1, x2, y1, y2;
 
-	b11SetVeraAddressChannel(0);
-
-	x1 = *((*data)++);
-	y1 = *((*data)++);
+	x1 = **data;
+	y1 = **data;
 
 	PSET(x1, y1);
 
 	for (;;) {
-		x2 = *((*data)++);
-		if (x2 >= 0xF0) break;
+		x2 = **data;
+		if (x2 >= 0xF0) return x2;
 
 
 #ifdef VERBOSE_X_CORNER
@@ -801,8 +757,8 @@ void b11XCorner(byte** data)
 
 		b11Drawline(x1, y1, x2, y1);
 		x1 = x2;
-		y2 = *((*data)++);
-		if (y2 >= 0xF0) break;
+		y2 = **data;
+		if (y2 >= 0xF0) return y2;
 
 #ifdef VERBOSE_X_CORNER
 		printf("x corner line 2: %d,%d : %d,%d\n", x1, y1, x2, y2);
@@ -810,8 +766,6 @@ void b11XCorner(byte** data)
 		b11Drawline(x1, y1, x1, y2);
 		y1 = y2;
 	}
-
-	(*data)--;
 }
 
 /**************************************************************************
@@ -819,20 +773,18 @@ void b11XCorner(byte** data)
 **
 ** Draws an yCorner  (drawing action 0xF4)
 **************************************************************************/
-void b11YCorner(byte** data)
+byte b11YCorner(byte** data)
 {
 	byte x1, x2, y1, y2;
 
-	b11SetVeraAddressChannel(0);
-
-	x1 = *((*data)++);
-	y1 = *((*data)++);
+	x1 = **data;
+	y1 = **data;
 
 	PSET(x1, y1);
 
 	for (;;) {
-		y2 = *((*data)++);
-		if (y2 >= 0xF0) break;
+		y2 = **data;
+		if (y2 >= 0xF0) return y2;
 
 
 
@@ -842,8 +794,8 @@ void b11YCorner(byte** data)
 
 		b11Drawline(x1, y1, x1, y2);
 		y1 = y2;
-		x2 = *((*data)++);
-		if (x2 >= 0xF0) break;
+		x2 = **data;
+		if (x2 >= 0xF0) return x2;
 
 #ifdef VERBOSE
 		printf("y Corner line 2: %d,%d : %d,%d\n", x1, y1, x2, y2);
@@ -851,8 +803,6 @@ void b11YCorner(byte** data)
 		b11Drawline(x1, y1, x2, y1);
 		x1 = x2;
 	}
-
-	(*data)--;
 }
 
 /**************************************************************************
@@ -860,26 +810,26 @@ void b11YCorner(byte** data)
 **
 ** Draws short lines relative to last position.  (drawing action 0xF7)
 **************************************************************************/
-void b11RelativeDraw(byte** data)
+byte b11RelativeDraw(byte** data)
 {
 	byte x1, y1, disp;
 	signed char dx, dy;
 
 	b11SetVeraAddressChannel(0);
 
-	x1 = *((*data)++);
-	y1 = *((*data)++);
+	x1 = **data;
+	y1 = **data;
 
 	PSET(x1, y1);
 
 	for (;;) {
-		disp = *((*data)++);
+		disp = **data;
 
 #ifdef VERBOSE_REL_DRAW
 		printf("Disp %u \n", disp);
 #endif // VERBOSE
 
-		if (disp >= 0xF0) break;
+		if (disp >= 0xF0) return disp;
 		dx = ((disp & 0xF0) >> 4) & 0x0F;
 #ifdef VERBOSE_REL_DRAW
 		printf("Prior dx: ((%u & 0xF0) >> 4) & 0x0f : %d\n", disp, dx);
@@ -940,8 +890,6 @@ void b11RelativeDraw(byte** data)
 		x1 += dx;
 		y1 += dy;
 	}
-
-	(*data)--;
 }
 
 /**************************************************************************
@@ -949,14 +897,14 @@ void b11RelativeDraw(byte** data)
 **
 ** Draws long lines to actual locations (cf. relative) (drawing action 0xF6)
 **************************************************************************/
-void b11AbsoluteLine(byte** data)
+byte b11AbsoluteLine(byte** data)
 {
 	byte x1, y1, x2, y2;
 
 	b11SetVeraAddressChannel(0);
 
-	x1 = *((*data)++);
-	y1 = *((*data)++);
+	x1 = **data;
+	y1 = **data;
 
 	PSET(x1, y1);
 
@@ -967,14 +915,14 @@ void b11AbsoluteLine(byte** data)
 			//            printf("Absolute Line Break\n");
 			//#endif // VERBOSE
 
-			break;
+			return x2;
 		}
 		if ((y2 = *((*data)++)) >= 0xF0)
 		{
 			//#ifdef VERBOSE
 			//            printf("Absolute Line Break\n");
 			//#endif // VERBOSE
-			break;
+			return y2;
 		}
 #ifdef VERBOSE
 		printf("abs line: %d,%d : %d,%d\n", x1, y1, x2, y2);
@@ -983,8 +931,6 @@ void b11AbsoluteLine(byte** data)
 		x1 = x2;
 		y1 = y2;
 	}
-
-	(*data)--;
 }
 
 
@@ -1080,21 +1026,19 @@ void b11PlotPattern(byte x, byte y)
 **
 ** Plots points and various brush patterns.
 **************************************************************************/
-void b11PlotBrush(byte** data)
+byte b11PlotBrush(byte** data)
 {
 	byte x1, y1, store;
 
 	for (;;) {
 		if (patCode & 0x20) {
-			if ((patNum = *((*data)++)) >= 0xF0) break;
+			if ((patNum = *((*data)++)) >= 0xF0) return patNum;
 			patNum = ((patNum >> 1) & 0x7f);
 		}
-		if ((x1 = *((*data)++)) >= 0xF0) break;
-		if ((y1 = *((*data)++)) >= 0xF0) break;
+		if ((x1 = *((*data)++)) >= 0xF0) return x1;
+		if ((y1 = *((*data)++)) >= 0xF0) return y1;
 		b11PlotPattern(x1, y1);
 	}
-
-	(*data)--;
 }
 
 /**************************************************************************
@@ -1144,7 +1088,7 @@ void b11SplitPriority()
 }
 
 int picFNum = 0;
-
+int** veraAddress = (int**)VERA_addr_low;
 /**************************************************************************
 ** drawPic
 **
@@ -1155,10 +1099,10 @@ int picFNum = 0;
 void b11DrawPic(byte* bankedData, int pLen, boolean okToClearScreen, byte picNum)
 {
 	unsigned long i;
-	byte action;
+	byte action, returnedAction = 0;
 	boolean stillDrawing = TRUE;
 	PictureFile loadedPicture;
-	byte* data;
+	byte* data = (int*)VERA_data0;
 	byte* originalPointer;
 	int** zpTemp = (int**)ZP_PTR_TEMP;
 	byte** zpTemp2 = (int**)ZP_PTR_TEMP_2;
@@ -1196,20 +1140,16 @@ void b11DrawPic(byte* bankedData, int pLen, boolean okToClearScreen, byte picNum
 	printf("Preparing To Draw %d of size %d\n", picNum, loadedPicture.size);
 #endif // VERBOSE
 
+	if (okToClearScreen) b11ClearPicture();
+
 	trampoline_memCpyVera(VOLATILE_BUFFER, loadedPicture.data, loadedPicture.bank, loadedPicture.size, 1);
+	b11SetVeraAddress(VOLATILE_BUFFER, 1, VERA_ADDRESS_SEL);
 	asm("stp");
 
-
-	originalPointer = data;
-
-	if (!data)
+	if (loadedPicture.size > TOTAL_SIZE_OF_VOLOTILE_BUFFER)
 	{
-		printf("Out of memory in picture code");
+		printf("Picture %d is too large for buffer of size %d", picNum, TOTAL_SIZE_OF_VOLOTILE_BUFFER);
 	}
-
-	memCpyBanked(&data[0], (byte*)loadedPicture.data, loadedPicture.bank, loadedPicture.size);
-
-	if (okToClearScreen) b11ClearPicture();
 
 #ifdef TEST_OK_TO_FILL
 	trampoline_0(&testOkToFill, FIRST_FLOOD_BANK);
@@ -1220,9 +1160,21 @@ void b11DrawPic(byte* bankedData, int pLen, boolean okToClearScreen, byte picNum
 #ifdef VERBOSE
 	printf("Plotting. . .\n");
 #endif // VERBOSE
+	
+	asm("stp");
 
 	do {
-		action = *(data++);
+		if (!returnedAction)
+		{
+			asm("stp");
+			asm("nop");
+			action = *data;
+		}
+		else
+		{
+			action = returnedAction;
+			returnedAction = 0;
+		}
 #ifdef VERBOSE
 		printf("Action: %p \n", action);
 #endif // VERBOSE
@@ -1230,21 +1182,25 @@ void b11DrawPic(byte* bankedData, int pLen, boolean okToClearScreen, byte picNum
 		case 0xFF:
 			stillDrawing = 0;
 			break;
-		case 0xF0: picColour = *(data++);
+		case 0xF0: picColour = *data;
+#ifdef VERBOSE
+			printf("The pic color is %d\n", picColour);
+#endif // VERBOSE
+
 			picDrawEnabled = TRUE;
 			break;
 		case 0xF1: picDrawEnabled = FALSE; break;
-		case 0xF2: priColour = *(data++);
+		case 0xF2: priColour = *data;
 			priDrawEnabled = TRUE;
 			break;
 		case 0xF3: priDrawEnabled = FALSE; break;
-		case 0xF4: b11YCorner(&data); break;
-		case 0xF5: b11XCorner(&data); break;
-		case 0xF6: b11AbsoluteLine(&data); break;
-		case 0xF7: b11RelativeDraw(&data); break;
-		case 0xF8: b11FloodFill(&data); break;
-		case 0xF9: patCode = *(data++); break;
-		case 0xFA: b11PlotBrush(&data); break;
+		case 0xF4: returnedAction = b11YCorner(&data); break;
+		case 0xF5: returnedAction = b11XCorner(&data); break;
+		case 0xF6: returnedAction = b11AbsoluteLine(&data); break;
+		case 0xF7: returnedAction = b11RelativeDraw(&data); break;
+		case 0xF8: returnedAction = b11FloodFill(&data); break;
+		case 0xF9: patCode = *data; break;
+		case 0xFA: returnedAction = b11PlotBrush(&data); break;
 		default: printf("Unknown picture code : %X\n", action); exit(0);
 		}
 
@@ -1255,7 +1211,7 @@ void b11DrawPic(byte* bankedData, int pLen, boolean okToClearScreen, byte picNum
 #ifdef VERBOSE
 		printf(" data %p pLen %d data + pLen %p stillDrawing %d \n", data, pLen, data + pLen, stillDrawing);
 #endif
-	} while ((data < (data + pLen)) && stillDrawing);
+	} while ((*veraAddress < (*veraAddress + pLen)) && stillDrawing);
 
 	b11SplitPriority();
 

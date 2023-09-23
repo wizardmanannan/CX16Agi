@@ -79,4 +79,10 @@ extern byte _ass;
 
 #define abs_val(a) ((a) < 0 ? -(a) : (a))
 
+#define DECVERA(ch)  \
+    {                                 \
+        printf("%d\n", arg1);         \
+        printf("%d\n", arg2);         \
+    }
+
 #endif

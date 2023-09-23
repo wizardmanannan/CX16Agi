@@ -79,7 +79,6 @@ sta VERA_addr_high
 
 lda address
 sta VERA_addr_low
-
 .endmacro
 
 

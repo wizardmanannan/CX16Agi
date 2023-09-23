@@ -838,6 +838,7 @@ _b11PSet:
 sta @coY
 jsr popa
 sta @coX
+
 PSET @coX, @coY
 rts
 @coX: .byte $0
