@@ -252,6 +252,33 @@ void testQueue()
 
 #pragma code-name (pop)
 #pragma code-name (push, "BANKRAM11")
+typedef struct BufferStatus
+{
+	byte* bankedData;
+	byte bank;
+	byte bufferCounter;
+} BufferStatus;
+
+#define GET_NEXT(storeLocation)  \
+    do {                              \
+        if(*data >= GOLDEN_RAM_WORK_AREA + LOCAL_WORK_AREA_SIZE) \
+		{ \
+			refreshBuffer(bufferStatus); \
+			*data = GOLDEN_RAM_WORK_AREA; \
+		} \
+		 storeLocation = *((*data)++); \
+		\
+    } while(0)
+
+void refreshBuffer(BufferStatus* bufferStatus)
+{
+	BufferStatus localBufferStatus;
+	localBufferStatus = *bufferStatus;
+	
+	bufferStatus->bufferCounter++;
+	memCpyBanked(GOLDEN_RAM_WORK_AREA, localBufferStatus.bankedData + localBufferStatus.bufferCounter * LOCAL_WORK_AREA_SIZE, localBufferStatus.bank, LOCAL_WORK_AREA_SIZE); //If it overflows the bank it isn't a big deal, the picture data is terminated by 0xFF so the rubbish data following will never be executed.
+}
+
 
 fix32 DIV(int numerator, int denominator) {
 	if (denominator == 0 || numerator == 0) {
@@ -1147,8 +1174,11 @@ void b11DrawPic(byte* bankedData, int pLen, boolean okToClearScreen, byte picNum
 	byte action;
 	boolean stillDrawing = TRUE;
 	PictureFile loadedPicture;
-	byte* data;
-	byte* originalPointer;
+	byte* buffer = GOLDEN_RAM_WORK_AREA; 
+	byte** data = &buffer; //Get_Next Macro works with pointer pointers so need this;
+	BufferStatus localBufferStatus;
+	BufferStatus* bufferStatus = &localBufferStatus;
+
 	int** zpTemp = (int**)ZP_PTR_TEMP;
 	byte** zpTemp2 = (int**)ZP_PTR_TEMP_2;
 	int** zpB1 = (int**)ZP_PTR_B1;
@@ -1185,15 +1215,16 @@ void b11DrawPic(byte* bankedData, int pLen, boolean okToClearScreen, byte picNum
 	printf("Preparing To Draw %d of size %d\n", picNum, loadedPicture.size);
 #endif // VERBOSE
 
-	data = (byte*)malloc(loadedPicture.size);
-	originalPointer = data;
-
 	if (!data)
 	{
 		printf("Out of memory in picture code");
 	}
 
-	memCpyBanked(&data[0], (byte*)loadedPicture.data, loadedPicture.bank, loadedPicture.size);
+	localBufferStatus.bank = loadedPicture.bank;
+	localBufferStatus.bankedData = loadedPicture.data;
+	localBufferStatus.bufferCounter = 0;
+
+	refreshBuffer(bufferStatus);
 
 	if (okToClearScreen) b11ClearPicture();
 
@@ -1208,7 +1239,7 @@ void b11DrawPic(byte* bankedData, int pLen, boolean okToClearScreen, byte picNum
 #endif // VERBOSE
 
 	do {
-		action = *(data++);
+		GET_NEXT(action);
 #ifdef VERBOSE
 		printf("Action: %p \n", action);
 #endif // VERBOSE
@@ -1216,21 +1247,21 @@ void b11DrawPic(byte* bankedData, int pLen, boolean okToClearScreen, byte picNum
 		case 0xFF:
 			stillDrawing = 0;
 			break;
-		case 0xF0: picColour = *(data++);
+		case 0xF0: GET_NEXT(picColour);
 			picDrawEnabled = TRUE;
 			break;
 		case 0xF1: picDrawEnabled = FALSE; break;
-		case 0xF2: priColour = *(data++);
+		case 0xF2: GET_NEXT(priColour);
 			priDrawEnabled = TRUE;
 			break;
 		case 0xF3: priDrawEnabled = FALSE; break;
-		case 0xF4: b11YCorner(&data); break;
-		case 0xF5: b11XCorner(&data); break;
-		case 0xF6: b11AbsoluteLine(&data); break;
-		case 0xF7: b11RelativeDraw(&data); break;
-		case 0xF8: b11FloodFill(&data); break;
-		case 0xF9: patCode = *(data++); break;
-		case 0xFA: b11PlotBrush(&data); break;
+		case 0xF4: b11YCorner(data); break;
+		case 0xF5: b11XCorner(data); break;
+		case 0xF6: b11AbsoluteLine(data); break;
+		case 0xF7: b11RelativeDraw(data); break;
+		case 0xF8: b11FloodFill(data); break;
+		case 0xF9: GET_NEXT(patCode); break;
+		case 0xFA: b11PlotBrush(data); break;
 		default: printf("Unknown picture code : %X\n", action); exit(0);
 		}
 
@@ -1251,8 +1282,6 @@ void b11DrawPic(byte* bankedData, int pLen, boolean okToClearScreen, byte picNum
 	*zpB2 = 0;
 	*zpCh = 0;
 	*zpDisp = 0;
-
-	free(originalPointer);
 }
 
 void b11InitPictures()

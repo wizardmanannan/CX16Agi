@@ -17,7 +17,7 @@
     <None Include="src\codeWindow.s" />
     <None Include="src\commandLoop.asm" />
     <None Include="src\graphics.s" />
-    <None Include="src\picture.s" />
+    <None Include="src\pictureAsm.s" />
     <None Include="test.bat" />
     <None Include="tools\New folder\DivisionTableCreater\DivisionTableCreater\bin\Debug\net7.0\DIV31.BIN" />
     <None Include="tools\New folder\DivisionTableCreater\DivisionTableCreater\bin\Debug\net7.0\DIV32.BIN" />
