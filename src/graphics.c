@@ -7,7 +7,7 @@
 byte printOn = TRUE;
 int byteCounter = 0;
 #endif
-void b6ConvertOneBitPerPixCharToTwoBitPerPixelChar()
+void b6ConvertsOneBitPerPixCharToTwoBitPerPixelChars()
 {
     int i;
     byte j; //Must be int because it needs to be unsigned
@@ -85,7 +85,7 @@ void b6InitCharset()
     SET_VERA_ADDRESS(MapBase, AddressSel1);
     
     asm("stp");
-    b6ConvertOneBitPerPixCharToTwoBitPerPixelChar();
+    b6ConvertsOneBitPerPixCharToTwoBitPerPixelChars();
     asm("stp");
 #ifdef VERBOSE_CHAR_SET_LOAD
     printf("returning : %p. The byte counter is %d\n.", buffer, byteCounter);
