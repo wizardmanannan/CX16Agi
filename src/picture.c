@@ -11,6 +11,7 @@
 
 #define PIC_DEFAULT 15
 #define PRI_DEFAULT 4
+//#define VERBOSE_LOAD_DIV
 //#define VERBOSE
 //#define VERBOSE_REL_DRAW
 //#define TEST_QUEUE
@@ -21,6 +22,7 @@
 //#define TEST_OK_TO_FILL
 //#define TEST_IS_MULT_OF_160 //Don't forget to enable TEST_IS_MULTIPLE_OF_160 in assembly
 //#define VERBOSE_X_CORNER
+//#define VERBOSE_ABS_LINE
 boolean okToShowPic = FALSE;
 PictureFile* loadedPictures = (PictureFile*)&BANK_RAM[PICTURE_START];
 int screenMode;
@@ -438,10 +440,10 @@ byte b11FloodFill(byte** data, BufferStatus* bufferStatus)
 
 	for (;;) {
 		GET_NEXT(x1);
-		if (x1) return x1;
+		if (x1 >= 0xF0) return x1;
 
 		GET_NEXT(y1);
-		if (y1) return y1;
+		if (y1 >= 0xF0) return y1;
 		trampoline_2Byte(&bFloodAgiFill, x1, y1, FIRST_FLOOD_BANK);
 	}
 }
@@ -452,7 +454,7 @@ void b11LoadDivisionMetadata(const char* fileName, int metadataSize, byte* metad
 	char fileNameBuffer[30];
 	size_t bytesRead;
 
-#ifdef VERBOSE
+#ifdef VERBOSE_LOAD_DIV
 	printf("The filename is %s and the metadata size is %d\n", fileName, metadataSize);
 #endif // VERBOSE
 
@@ -460,12 +462,12 @@ void b11LoadDivisionMetadata(const char* fileName, int metadataSize, byte* metad
 	if ((fp = fopen(fileName, "rb")) != NULL) {
      	bytesRead = fread(&GOLDEN_RAM_WORK_AREA[0], 1, metadataSize, fp);
 		
-#ifdef VERBOSE
+#ifdef VERBOSE_LOAD_DIV
 		printf("Read %d bytes. The first byte is %p\n", bytesRead);
 #endif // VERBOSE
 		
 		memCpyBanked(metadataLocation, &GOLDEN_RAM_WORK_AREA[0], DIV_METADATA_BANK, metadataSize);
-#ifdef VERBOSE
+#ifdef VERBOSE_LOAD_DIV
 		printf("Copy %d bytes to location %p \n", bytesRead, metadataLocation);
 #endif // VERBOSE
 
@@ -855,7 +857,7 @@ byte b11YCorner(byte** data, BufferStatus* bufferStatus)
 
 
 
-#ifdef VERBOSE
+#ifdef VERBOSE_Y_CORN
 		printf("y corner line 1: %d,%d : %d,%d\n", x1, y1, x2, y2);
 #endif
 
@@ -864,7 +866,7 @@ byte b11YCorner(byte** data, BufferStatus* bufferStatus)
 		GET_NEXT(x2);
 		if (x2 >= 0xF0) return x2;
 
-#ifdef VERBOSE
+#ifdef VERBOSE_Y_CORN
 		printf("y Corner line 2: %d,%d : %d,%d\n", x1, y1, x2, y2);
 #endif
 		b11Drawline(x1, y1, x2, y1);
@@ -947,7 +949,7 @@ byte b11RelativeDraw(byte** data, BufferStatus* bufferStatus)
 #endif // VERBOSE
 
 
-#ifdef VERBOSE
+#ifdef VERBOSE_REL_DRAW
 		printf("rel line: %d,%d : %d,%d\n", x1, y1, x1 + dx, y1 + dy);
 #endif
 
@@ -989,7 +991,7 @@ byte b11AbsoluteLine(byte** data, BufferStatus* bufferStatus)
 			//#endif // VERBOSE
 			return y2;
 		}
-#ifdef VERBOSE
+#ifdef VERBOSE_ABS_LINE
 		printf("abs line: %d,%d : %d,%d\n", x1, y1, x2, y2);
 #endif
 		b11Drawline(x1, y1, x2, y2);
@@ -1264,7 +1266,7 @@ void b11DrawPic(byte* bankedData, int pLen, boolean okToClearScreen, byte picNum
 		case 0xF4: returnedAction = b11YCorner(data, bufferStatus); break;
 		case 0xF5: returnedAction = b11XCorner(data, bufferStatus); break;
 		case 0xF6: returnedAction = b11AbsoluteLine(data, bufferStatus); break;
-		case 0xF7: b11RelativeDraw(data, bufferStatus); break;
+		case 0xF7: returnedAction = b11RelativeDraw(data, bufferStatus); break;
 		case 0xF8: returnedAction = b11FloodFill(data, bufferStatus); break;
 		case 0xF9: GET_NEXT(patCode); break;
 		case 0xFA: returnedAction = b11PlotBrush(data, bufferStatus); break;
