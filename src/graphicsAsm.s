@@ -33,6 +33,7 @@ NO_CHARS = 160
 SIZE_OF_CHARSET = (BYTES_PER_CHARACTER * NO_CHARS)
 
 _b6ClearBackground:
+stz VERA_ctrl
 lda #$10 | ^STARTING_BYTE
 sta VERA_addr_bank
 lda #> (STARTING_ROW * (BITMAP_WIDTH / 2) ) ;There are 320 bytes per row, but since each pixel is 4 bits we divide by 2

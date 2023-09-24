@@ -345,6 +345,7 @@ sta ZP_TMP+1
 
 .macro SET_VERA_ADDRESS coX, coY
 GET_VERA_ADDRESS coX, coY, _drawWhere
+stz VERA_ctrl
 
 lda #$10
 sta VERA_addr_bank ; Stride 1. High byte of address will always be 0
@@ -364,6 +365,8 @@ lda stride << 4
 .ifblank stride
 lda #$10 ;High byte of address will always be 0
 .endif
+
+stz VERA_ctrl
 
 sta VERA_addr_bank ; Stride 1. High byte of address will always be 0
 

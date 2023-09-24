@@ -84,9 +84,7 @@ void b6InitCharset()
     SET_VERA_ADDRESS(OriginalCharsetAddress, AddressSel0);
     SET_VERA_ADDRESS(MapBase, AddressSel1);
     
-    asm("stp");
     b6ConvertsOneBitPerPixCharToTwoBitPerPixelChars();
-    asm("stp");
 #ifdef VERBOSE_CHAR_SET_LOAD
     printf("returning : %p. The byte counter is %d\n.", buffer, byteCounter);
 #endif // VERBOSE_CHAR_SET_LOAD
