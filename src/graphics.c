@@ -20,12 +20,17 @@ void b6ConvertsOneBitPerPixCharToTwoBitPerPixelChars()
         asm("sta %v", _assm);
         romRow = _assm;
 
+
         for (j = 7; j != 255; j--) //Overflow means the loop is done
         {
 
             romPixel = romRow >> j & 1;
-
-            if (!romPixel)
+           
+            if (i >= TRANSPARENT_CHAR_BYTE && i <= LAST_BYTE_TRANSPARENT_CHAR)
+            {
+                romPixel = 0;
+            }
+            else if (!romPixel)
             {
                 romPixel = 2; //Note: We have four colors trans:0,b:1,w:2,red:4. Therefore a value of 0 (white in the ROM needs to become 2)
             }
@@ -46,9 +51,6 @@ void b6ConvertsOneBitPerPixCharToTwoBitPerPixelChars()
         }
     }
 }
-
-#define AddressSel0 0 
-#define AddressSel1 1
 
 #define SET_VERA_ADDRESS(VeraAddress, AddressSel) \
     do {                                           \
@@ -81,10 +83,13 @@ void b6InitCharset()
     PRINTF("The address of new charset buffer is %p\n", buffer);
 #endif // VERBOSE_CHAR_SET_LOAD
 
-    SET_VERA_ADDRESS(OriginalCharsetAddress, AddressSel0);
-    SET_VERA_ADDRESS(MapBase, AddressSel1);
+    SET_VERA_ADDRESS(OriginalCharsetAddress, ADDRESSSEL0);
+    SET_VERA_ADDRESS(MapBase, ADDRESSSEL1);
     
     b6ConvertsOneBitPerPixCharToTwoBitPerPixelChars();
+
+    asm("stp");
+
 #ifdef VERBOSE_CHAR_SET_LOAD
     printf("returning : %p. The byte counter is %d\n.", buffer, byteCounter);
 #endif // VERBOSE_CHAR_SET_LOAD

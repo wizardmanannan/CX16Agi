@@ -71,7 +71,6 @@ extern long opCounter;
 
 extern byte _assm;
 
-
 #define abs_val(a) ((a) < 0 ? -(a) : (a))
 
 extern byte _previousRomBank;
