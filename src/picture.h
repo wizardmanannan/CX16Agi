@@ -20,21 +20,19 @@
 #include "memoryManager.h"
 #include "fixed.h"
 #include "helpers.h"
+#include "graphics.h"
 
 #define DEFAULT_COLOR 0xF
 
 #define PICTURE_WIDTH   160  /* Picture resolution */
 #define PICTURE_HEIGHT  168
 
-#define BITMAP_WIDTH 320
-#define BITMAP_HEIGHT 240
-
 #define  AGI_GRAPHICS  0
 #define  AGI_TEXT      1
 
-#define STARTING_ROW ((BITMAP_HEIGHT / 2) - (PICTURE_HEIGHT / 2))
+#define STARTING_ROW ((SCREEN_HEIGHT / 2) - (PICTURE_HEIGHT / 2))
 #define STARTING_BYTE (STARTING_ROW * BYTES_PER_ROW)
-#define BYTES_PER_ROW (BITMAP_WIDTH / 2)
+#define BYTES_PER_ROW (SCREEN_WIDTH / 2)
 #define MULT_HALF_POINT 128
 
 typedef struct {

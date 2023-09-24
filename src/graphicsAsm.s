@@ -10,6 +10,7 @@
 .import pushax
 .import pusha
 .import popa
+.import _b6InitLayer1Mapbase
 
 ; Set the value of include guard and define constants
 GRAPHICS_INC = 1
@@ -115,6 +116,7 @@ lda #DISPLAY_SCALE
 sta VERA_dc_hscale
 sta VERA_dc_vscale
 
+stz VERA_ctrl
 lda #^VRAM_palette | $10
 sta VERA_addr_bank
 lda #>VRAM_palette
@@ -122,6 +124,7 @@ sta VERA_addr_high
 lda #<VRAM_palette
 sta VERA_addr_low
 
+;Bitmap Layer 0
 lda #<COLOR_BLACK
 sta VERA_data0
 lda #>COLOR_BLACK
@@ -202,14 +205,33 @@ sta VERA_data0
 lda #>COLOR_WHITE
 sta VERA_data0
 
+;TileSet Layer 1
+lda #<COLOR_BLACK ; Transparent ignored regardless of color
+sta VERA_data0
+lda #>COLOR_BLACK
+sta VERA_data0
+
+lda #<COLOR_BLACK ; Text Color
+sta VERA_data0
+lda #>COLOR_BLACK
+sta VERA_data0
+
+lda #<COLOR_WHITE ; Background Color
+sta VERA_data0
+lda #>COLOR_WHITE
+sta VERA_data0
+
+
 lda #$6   ; Bitmap mode 16 colors
 sta VERA_L0_config
+stz VERA_L0_tilebase ;A 320 * 240 pixel bitmap at the beginning of VRAM
+
 
 jsr _b6InitBackground
 
 jsr _b6InitCharset 
 
-;Copy to vera here
+;jsr _b6InitLayer1Mapbase
 
 SET_AND_WAIT_FOR_IRQ_STATE #IRQ_STATE_NORMAL
 rts

@@ -172,7 +172,8 @@
 #define ZP_PTR_DISP 0xFE //For Div. Address Table
 
 //Vera
-#define MapBase 0xD000
+#define TILEBASE 0xD000
+#define MAPBASE 0xDA00
 
 
 #ifdef _MSC_VER //Used for testing under windows

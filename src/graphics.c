@@ -16,10 +16,7 @@ void b6ConvertsOneBitPerPixCharToTwoBitPerPixelChars()
 
     for (i = 0; i < NO_CHARS * SIZE_PER_CHAR_CHAR_SET_ROM; i++)
     {
-        asm("lda %w", VERA_data0);
-        asm("sta %v", _assm);
-        romRow = _assm;
-
+        READ_BYTE_VAR_FROM_ASSM(romRow, VERA_data0);
 
         for (j = 7; j != 255; j--) //Overflow means the loop is done
         {
@@ -42,14 +39,13 @@ void b6ConvertsOneBitPerPixCharToTwoBitPerPixelChars()
             {
                 resultByteShift = 6;
                
-                _assm = output;        
-                asm("lda %v", _assm);
-                asm("sta %w", VERA_data1);
-
+                WRITE_BYTE_VAR_TO_ASSM(output, VERA_data1);
+ 
                 output = 0;
             }
         }
     }
+    asm("stp");
 }
 
 #define SET_VERA_ADDRESS(VeraAddress, AddressSel) \
@@ -67,7 +63,7 @@ void b6ConvertsOneBitPerPixCharToTwoBitPerPixelChars()
 
 void b6InitCharset()
 {
-#define OriginalCharsetAddress 0x1f000
+#define ORIGINAL_CHARSET_ADDRESS 0x1f000
 
     int i;
     byte* veraData0, *veraData1;
@@ -83,16 +79,31 @@ void b6InitCharset()
     PRINTF("The address of new charset buffer is %p\n", buffer);
 #endif // VERBOSE_CHAR_SET_LOAD
 
-    SET_VERA_ADDRESS(OriginalCharsetAddress, ADDRESSSEL0);
-    SET_VERA_ADDRESS(MapBase, ADDRESSSEL1);
+    SET_VERA_ADDRESS(ORIGINAL_CHARSET_ADDRESS, ADDRESSSEL0);
+    SET_VERA_ADDRESS(TILEBASE, ADDRESSSEL1);
     
     b6ConvertsOneBitPerPixCharToTwoBitPerPixelChars();
-
-    asm("stp");
 
 #ifdef VERBOSE_CHAR_SET_LOAD
     printf("returning : %p. The byte counter is %d\n.", buffer, byteCounter);
 #endif // VERBOSE_CHAR_SET_LOAD
 
 }
+
+void b6InitLayer1Mapbase()
+{
+    int i;
+#define BYTE1 TRANSPARENT_CHAR
+#define BYTE2 8 //1 Offset 0 v flip 0 h flip 0 tile index bit 8 and 9
+
+    SET_VERA_ADDRESS(MAPBASE, ADDRESSSEL0);
+
+    for (i = 0; i < TILE_LAYER_NO_TILES; i++)
+    {
+        WRITE_BYTE_DEF_TO_ASSM(BYTE1, VERA_data0);
+        WRITE_BYTE_DEF_TO_ASSM(BYTE2, VERA_data0);
+    }
+
+}
+
 #pragma code-name (pop)

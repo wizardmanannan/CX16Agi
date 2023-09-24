@@ -84,4 +84,26 @@ extern byte _previousRomBank;
     ROM_BANK = _previousRomBank; \
 } while (0)
 
+
+#define READ_BYTE_VAR_FROM_ASSM(byteVar, address) \
+    do {                                           \
+        asm("lda %w", address); \
+        asm("sta %v", _assm); \
+        byteVar = _assm; \
+    } while(0) \
+
+#define WRITE_BYTE_VAR_TO_ASSM(byteVar, address) \
+    do {                                           \
+        _assm = byteVar;  \
+        asm("lda %v", _assm);                  \
+        asm("sta %w", address);                  \
+    } while(0)
+
+//For writing things defined with a #define
+#define WRITE_BYTE_DEF_TO_ASSM(byteDef, address) \
+    do {                                           \
+        asm("lda %w", byteDef);                  \
+        asm("sta %w", address);                  \
+    } while(0)
+
 #endif
