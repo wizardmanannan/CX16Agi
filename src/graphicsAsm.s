@@ -2,6 +2,7 @@
 .ifndef GRAPHICS_INC
 
 .include "global.s"
+.include "irq.s"
 
 .import _b6InitCharset
 .import _malloc
@@ -108,9 +109,8 @@ rts
 @mapHeight: .byte $0
 
 b6InitGraphics:
-jsr _b6DisableAndWaitForVsync
+SET_AND_WAIT_FOR_IRQ_STATE #IRQ_STATE_BLACKSCREEN
 
-sei
 lda #DISPLAY_SCALE
 sta VERA_dc_hscale
 sta VERA_dc_vscale
@@ -211,10 +211,7 @@ jsr _b6InitCharset
 
 ;Copy to vera here
 
-stz ZP_TMP ;Reset to Zero so as to not break interpreter
-stz ZP_TMP + 1
-
-cli
+SET_AND_WAIT_FOR_IRQ_STATE #IRQ_STATE_NORMAL
 rts
 
 .endif

@@ -14,6 +14,21 @@ beq @wait
 .endmacro
 
 
+.macro SET_AND_WAIT_FOR_IRQ_STATE state
+.local @waitForBlank
+sei
+lda state
+sta setIrqState
+cli
+@waitForBlank:
+wai
+lda currentIrqState
+cmp state
+bne @waitForBlank
+
+.endmacro
+
+
 .segment "BANKRAM06"
 _b6InitIrq:
  ; backup default RAM IRQ vector
@@ -33,32 +48,66 @@ _b6InitIrq:
    cli ; enable IRQ now that vector is properly set
 rts
 
-_b6DisableAndWaitForVsync:
-stz VERA_dc_video
-WAIT_FOR_VSYNC
-rts
-
 .segment "CODE"
+IRQ_STATE_DONTCHANGE = 0
+IRQ_STATE_BLACKSCREEN = 1
+IRQ_STATE_LOADSCREEN = 2
+IRQ_STATE_NORMAL = 3
+;0 Don't Change
+;1 Blank Screen
+;2 Load Screen
+;3 Normal
+setIrqState: .byte $0
+
+;As above except it will never change to 0
+currentIrqState: .byte $0
+
 vSyncCounter: .byte $0
 debugVSyncCounter: .word $0
 custom_irq_handler:   
-   ; continue to default IRQ handler
-   lda VERA_isr
-   and #VSYNC_BIT
-   beq defaultIqr
-   lda #$11 ;Reenable the display after update
-   sta VERA_dc_video
-   inc vSyncCounter
-   
-   clc
-   lda debugVSyncCounter
-   adc #$1
-   sta debugVSyncCounter
-   lda #$0
-   sta debugVSyncCounter+1
-   
-   defaultIqr:
-   jmp (default_irq_vector)
-   ; RTI will happen after jump
+; continue to default IRQ handler
+lda VERA_isr
+and #VSYNC_BIT
+beq defaultIqr
+
+lda setIrqState
+beq @vSyncCounter
+
+@blankScreen:
+cmp #IRQ_STATE_BLACKSCREEN
+bne @normal
+lda #$1
+sta VERA_dc_video
+lda #IRQ_STATE_BLACKSCREEN
+sta currentIrqState
+bra @resetSetIrqState
+
+@normal:
+cmp #IRQ_STATE_NORMAL
+bne @resetSetIrqState
+lda #$11
+sta VERA_dc_video
+lda #IRQ_STATE_NORMAL
+sta currentIrqState
+
+
+@resetSetIrqState:
+lda IRQ_STATE_DONTCHANGE
+sta setIrqState
+
+@vSyncCounter:
+inc vSyncCounter
+
+@debugCounter:
+clc
+lda debugVSyncCounter
+adc #$1
+sta debugVSyncCounter
+lda #$0
+sta debugVSyncCounter+1
+
+defaultIqr:
+jmp (default_irq_vector)
+; RTI will happen after jump
 
 .endif ; IRQ_INC

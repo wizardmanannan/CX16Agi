@@ -16,7 +16,6 @@
     .export _logDebugVal2
     .export _logDebugVal3
     .export _logDebugVal4
-    .export _b6DisableAndWaitForVsync
     .export _b6ClearBackground
     .export _toDraw
     .export _drawWhere
