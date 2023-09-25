@@ -2,7 +2,7 @@
 #pragma code-name (push, "BANKRAM06")
 
 //#define VERBOSE_CHAR_SET_LOAD
-#define TEST_CHARSET
+//#define TEST_CHARSET
 #ifdef VERBOSE_CHAR_SET_LOAD
 byte printOn = TRUE;
 int byteCounter = 0;
@@ -46,12 +46,12 @@ void b6ConvertsOneBitPerPixCharToTwoBitPerPixelChars()
         }
     }
 }
-
-#define SET_VERA_ADDRESS(VeraAddress, AddressSel) \
-    do {                                           \
+//Stride must be constant
+#define SET_VERA_ADDRESS(VeraAddress, AddressSel, Stride) \
+    do {      \
         asm("lda #%w", AddressSel);                  \
         asm("sta %w", VERA_ctrl);                  \
-        asm("lda #$10");                           \
+        asm("lda #%w", Stride << 4);                           \
         asm("ora #^%l", VeraAddress);           \
         asm("sta %w", VERA_addr_bank);             \
         asm("lda #< %l", VeraAddress);          \
@@ -78,8 +78,8 @@ void b6InitCharset()
     PRINTF("The address of new charset buffer is %p\n", buffer);
 #endif // VERBOSE_CHAR_SET_LOAD
 
-    SET_VERA_ADDRESS(ORIGINAL_CHARSET_ADDRESS, ADDRESSSEL0);
-    SET_VERA_ADDRESS(TILEBASE, ADDRESSSEL1);
+    SET_VERA_ADDRESS(ORIGINAL_CHARSET_ADDRESS, ADDRESSSEL0, 1);
+    SET_VERA_ADDRESS(TILEBASE, ADDRESSSEL1, 1);
     
     b6ConvertsOneBitPerPixCharToTwoBitPerPixelChars();
 
@@ -89,13 +89,35 @@ void b6InitCharset()
  
 }
 
+#ifdef TEST_CHARSET
+void b6TestCharset()
+{
+    int i;
+    byte j;
+    SET_VERA_ADDRESS(MAPBASE, ADDRESSSEL0, 2);
+
+    for (i = 0; i < NO_CHARS; i++)
+    {
+        WRITE_BYTE_VAR_TO_ASSM(i, VERA_data0);
+
+        if (i && !((i + 1) % MAX_CHAR_ACROSS))
+        {
+            for (j = 0; j < TILE_LAYER_WIDTH - MAX_CHAR_ACROSS; j++)
+            {
+                WRITE_BYTE_VAR_TO_ASSM(TRANSPARENT_CHAR, VERA_data0);
+            }
+        }
+    }
+}
+#endif
+
 void b6InitLayer1Mapbase()
 {
     int i;
 #define BYTE1 TRANSPARENT_CHAR
 #define BYTE2 0x10 //1 Offset 0 v flip 0 h flip 0 tile index bit 8 and 9
 
-    SET_VERA_ADDRESS(MAPBASE, ADDRESSSEL0);
+    SET_VERA_ADDRESS(MAPBASE, ADDRESSSEL0, 1);
 
     for (i = 0; i < TILE_LAYER_NO_TILES; i++)
     {
@@ -103,19 +125,10 @@ void b6InitLayer1Mapbase()
         WRITE_BYTE_DEF_TO_ASSM(BYTE2, VERA_data0);
     }
 
-}
-
 #ifdef TEST_CHARSET
-void b6TestCharset()
-{
-    int i;
-    SET_VERA_ADDRESS(MAPBASE, ADDRESSSEL0);
+    b6TestCharset();
+#endif // TEST_CHARSET
 
-    for (i = 0; i < NO_CHARS; i++)
-    {
-
-    }
 }
-#endif
 
 #pragma code-name (pop)

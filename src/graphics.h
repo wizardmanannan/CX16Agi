@@ -24,6 +24,8 @@
 #define TILE_LAYER_NO_TILES (TILE_LAYER_WIDTH * TILE_LAYER_HEIGHT)
 #define TILE_MAP (TILE_LAYER_NO_TILES * 2) //Two bytes per tile
 
+#define MAX_CHAR_ACROSS 40
+
 
 void b6InitCharset();
 
