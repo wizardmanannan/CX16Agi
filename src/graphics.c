@@ -66,13 +66,11 @@ void b6InitCharset()
 
     int i;
     byte* veraData0, *veraData1;
-    
-    veraData0 = (byte*)VERA_data0;
-    veraData1 = (byte*)VERA_data1;
-
-    //byte nonSequencedCharsToGet[9] = {31, 32, 38, 39, 40};
-
+   
     printf("Initializing CharSet. . .\n");
+
+    asm("lda #%w", ISO);
+    asm("jsr %w", SCREEN_SET_CHAR_SET);
 
 #ifdef VERBOSE_CHAR_SET_LOAD
     PRINTF("The address of new charset buffer is %p\n", buffer);
