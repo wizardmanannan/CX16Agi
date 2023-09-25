@@ -102,7 +102,7 @@ extern byte _previousRomBank;
 //For writing things defined with a #define
 #define WRITE_BYTE_DEF_TO_ASSM(byteDef, address) \
     do {                                           \
-        asm("lda %w", byteDef);                  \
+        asm("lda #%w", byteDef);                  \
         asm("sta %w", address);                  \
     } while(0)
 

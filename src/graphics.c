@@ -2,7 +2,7 @@
 #pragma code-name (push, "BANKRAM06")
 
 //#define VERBOSE_CHAR_SET_LOAD
-
+#define TEST_CHARSET
 #ifdef VERBOSE_CHAR_SET_LOAD
 byte printOn = TRUE;
 int byteCounter = 0;
@@ -45,7 +45,6 @@ void b6ConvertsOneBitPerPixCharToTwoBitPerPixelChars()
             }
         }
     }
-    asm("stp");
 }
 
 #define SET_VERA_ADDRESS(VeraAddress, AddressSel) \
@@ -87,14 +86,14 @@ void b6InitCharset()
 #ifdef VERBOSE_CHAR_SET_LOAD
     printf("returning : %p. The byte counter is %d\n.", buffer, byteCounter);
 #endif // VERBOSE_CHAR_SET_LOAD
-
+ 
 }
 
 void b6InitLayer1Mapbase()
 {
     int i;
 #define BYTE1 TRANSPARENT_CHAR
-#define BYTE2 8 //1 Offset 0 v flip 0 h flip 0 tile index bit 8 and 9
+#define BYTE2 0x10 //1 Offset 0 v flip 0 h flip 0 tile index bit 8 and 9
 
     SET_VERA_ADDRESS(MAPBASE, ADDRESSSEL0);
 
@@ -105,5 +104,18 @@ void b6InitLayer1Mapbase()
     }
 
 }
+
+#ifdef TEST_CHARSET
+void b6TestCharset()
+{
+    int i;
+    SET_VERA_ADDRESS(MAPBASE, ADDRESSSEL0);
+
+    for (i = 0; i < NO_CHARS; i++)
+    {
+
+    }
+}
+#endif
 
 #pragma code-name (pop)

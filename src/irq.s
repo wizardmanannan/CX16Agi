@@ -53,6 +53,9 @@ IRQ_STATE_DONTCHANGE = 0
 IRQ_STATE_BLACKSCREEN = 1
 IRQ_STATE_LOADSCREEN = 2
 IRQ_STATE_NORMAL = 3
+
+LAYER_1_2_ENABLE = $31
+
 ;0 Don't Change
 ;1 Blank Screen
 ;2 Load Screen
@@ -85,7 +88,7 @@ bra @resetSetIrqState
 @normal:
 cmp #IRQ_STATE_NORMAL
 bne @resetSetIrqState
-lda #$11
+lda #LAYER_1_2_ENABLE
 sta VERA_dc_video
 lda #IRQ_STATE_NORMAL
 sta currentIrqState

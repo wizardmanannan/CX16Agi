@@ -221,19 +221,30 @@ sta VERA_data0
 lda #>COLOR_WHITE
 sta VERA_data0
 
+lda #<COLOR_RED ; Background Color
+sta VERA_data0
+lda #>COLOR_RED
+sta VERA_data0
+
 
 lda #$6   ; Bitmap mode 16 colors
 sta VERA_L0_config
 stz VERA_L0_tilebase ;A 320 * 240 pixel bitmap at the beginning of VRAM
 
-
 jsr _b6InitBackground
 
-jsr _b6InitCharset 
+lda #$11 ; 32 x 64 2bpp tiles
+sta VERA_L1_config
+lda #$68 ; 0xD000 Address 8x8 width
+sta VERA_L1_tilebase
+lda #$6D ; 0xDA00 
+sta VERA_L1_mapbase
 
-;jsr _b6InitLayer1Mapbase
+jsr _b6InitCharset 
+jsr _b6InitLayer1Mapbase
 
 SET_AND_WAIT_FOR_IRQ_STATE #IRQ_STATE_NORMAL
+
 rts
 
 .endif
