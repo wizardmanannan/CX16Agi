@@ -44,6 +44,7 @@
     <ClInclude Include="src\graphics.h" />
     <ClInclude Include="src\GUI.H" />
     <ClInclude Include="src\helpers.h" />
+    <ClInclude Include="src\kernal.h" />
     <ClInclude Include="src\LIST.H" />
     <ClInclude Include="src\logic.h" />
     <ClInclude Include="src\lruCache.h" />

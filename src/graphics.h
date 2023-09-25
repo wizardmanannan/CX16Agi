@@ -5,6 +5,7 @@
 #include "helpers.h"
 #include <cx16.h>
 #include <stdlib.h>
+#include "kernal.h"
 
 #define BYTES_PER_CHARACTER 16
 #define NO_CHARS 160

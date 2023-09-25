@@ -2,7 +2,7 @@
 #pragma code-name (push, "BANKRAM06")
 
 //#define VERBOSE_CHAR_SET_LOAD
-//#define TEST_CHARSET
+#define TEST_CHARSET
 #ifdef VERBOSE_CHAR_SET_LOAD
 byte printOn = TRUE;
 int byteCounter = 0;
@@ -69,8 +69,7 @@ void b6InitCharset()
    
     printf("Initializing CharSet. . .\n");
 
-    asm("lda #%w", ISO);
-    asm("jsr %w", SCREEN_SET_CHAR_SET);
+    SCREEN_SET_CHAR_SET(ISO);
 
 #ifdef VERBOSE_CHAR_SET_LOAD
     PRINTF("The address of new charset buffer is %p\n", buffer);

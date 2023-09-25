@@ -41,10 +41,4 @@ typedef struct {          /* DIR entry structure */
 
 extern byte callC1, callC2;
 
-//KernalFunctions
-
-#define SCREEN_SET_CHAR_SET 0xFF62
-//Args
-#define ISO 1
-
 #endif  /* _GENERAL_H_ */
