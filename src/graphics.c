@@ -2,11 +2,65 @@
 #pragma code-name (push, "BANKRAM06")
 
 //#define VERBOSE_CHAR_SET_LOAD
-#define TEST_CHARSET
+//#define TEST_CHARSET
 #ifdef VERBOSE_CHAR_SET_LOAD
 byte printOn = TRUE;
 int byteCounter = 0;
 #endif
+
+//Stride must be constant
+#define SET_VERA_ADDRESS(VeraAddress, AddressSel, Stride) \
+    do {      \
+        asm("lda #%w", AddressSel);                  \
+        asm("sta %w", VERA_ctrl);                  \
+        asm("lda #%w", Stride << 4);                           \
+        asm("ora #^%l", VeraAddress);           \
+        asm("sta %w", VERA_addr_bank);             \
+        asm("lda #< %l", VeraAddress);          \
+        asm("sta %w", VERA_addr_low);             \
+        asm("lda #> %l", VeraAddress);          \
+        asm("sta %w", VERA_addr_high);              \
+    } while(0)
+
+
+void b6MakeBottomBorder()
+{
+    byte i;
+
+    SET_VERA_ADDRESS(TILEBASE + (BOTTOM_BORDER - 1) * BYTES_PER_CHARACTER, ADDRESSSEL0, 1);
+
+    for (i = 0; i < BYTES_PER_CHARACTER; i++)
+    {
+        if (i < BYTES_PER_CHARACTER - BYTES_CHAR_PER_ROW)
+        {
+            WRITE_BYTE_DEF_TO_ASSM(0b10101010, VERA_data0); //White square
+        }
+        else
+        {
+            WRITE_BYTE_DEF_TO_ASSM(0b11111111, VERA_data0); //Red line
+        }
+    }
+}
+
+void b6MakeLeftBorder()
+{
+    byte i;
+
+    SET_VERA_ADDRESS(TILEBASE + (LEFT_BORDER - 1) * BYTES_PER_CHARACTER, ADDRESSSEL0, 1);
+
+    for (i = 0; i < BYTES_PER_CHARACTER; i++)
+    {
+        if (i % 2 == 0)
+        {
+            WRITE_BYTE_DEF_TO_ASSM(0b11101010, VERA_data0); //Red border
+        }
+        else
+        {
+            WRITE_BYTE_DEF_TO_ASSM(0b10101010, VERA_data0); //White square
+        }
+    }
+}
+
 void b6ConvertsOneBitPerPixCharToTwoBitPerPixelChars()
 {
     int i;
@@ -46,19 +100,6 @@ void b6ConvertsOneBitPerPixCharToTwoBitPerPixelChars()
         }
     }
 }
-//Stride must be constant
-#define SET_VERA_ADDRESS(VeraAddress, AddressSel, Stride) \
-    do {      \
-        asm("lda #%w", AddressSel);                  \
-        asm("sta %w", VERA_ctrl);                  \
-        asm("lda #%w", Stride << 4);                           \
-        asm("ora #^%l", VeraAddress);           \
-        asm("sta %w", VERA_addr_bank);             \
-        asm("lda #< %l", VeraAddress);          \
-        asm("sta %w", VERA_addr_low);             \
-        asm("lda #> %l", VeraAddress);          \
-        asm("sta %w", VERA_addr_high);              \
-    } while(0)
 
 void b6InitCharset()
 {
@@ -79,6 +120,9 @@ void b6InitCharset()
     SET_VERA_ADDRESS(TILEBASE, ADDRESSSEL1, 1);
     
     b6ConvertsOneBitPerPixCharToTwoBitPerPixelChars();
+
+    b6MakeBottomBorder();
+    b6MakeLeftBorder();
 
 #ifdef VERBOSE_CHAR_SET_LOAD
     printf("returning : %p. The byte counter is %d\n.", buffer, byteCounter);
