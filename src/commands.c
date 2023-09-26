@@ -1668,7 +1668,7 @@ void b3Print() // 1, 00
 	blit(agi_screen, temp, 0, 0, 0, 0, 640, 336);
 	show_mouse(screen);
 	while (key[KEY_ENTER] || key[KEY_ESC]) { /* Wait */ }
-	b3ProcessString(messagePointer, 0, tempString);
+	//b3ProcessString(messagePointer, 0, tempString);
 	printInBoxBig(tempString, -1, -1, 30);
 	while (!key[KEY_ENTER] && !key[KEY_ESC]) { /* Wait */ }
 	while (key[KEY_ENTER] || key[KEY_ESC]) { clear_keybuf(); }
@@ -1679,11 +1679,7 @@ void b3Print() // 1, 00
 	return;
 }
 
-
-#pragma code-name (pop)
-#pragma code-name (push, "BANKRAM04")
-
-void b4Print_v() // 1, 0x80 
+void b3Print_v() // 1, 0x80 
 {
 	char* tempString = (char*)&GOLDEN_RAM[LOCAL_WORK_AREA_START];
 	BITMAP* temp;
@@ -1706,7 +1702,7 @@ void b4Print_v() // 1, 0x80
 	return;
 }
 
-void b4Display() // 3, 0x00 
+void b3Display() // 3, 0x00 
 {
 	int row, col, messNum;
 	char* tempString = (char*)&GOLDEN_RAM[LOCAL_WORK_AREA_START];
@@ -1725,7 +1721,7 @@ void b4Display() // 3, 0x00
 	return;
 }
 
-void b4Display_v() // 3, 0xE0 
+void b3Display_v() // 3, 0xE0 
 {
 	int row, col, messNum;
 	char* tempString = (char*)&GOLDEN_RAM[LOCAL_WORK_AREA_START];
@@ -1745,7 +1741,7 @@ void b4Display_v() // 3, 0xE0
 	return;
 }
 
-void b4Clear_lines() // 3, 0x00 
+void b3Clear_lines() // 3, 0x00 
 {
 	int boxColour, startLine, endLine;
 
@@ -1759,6 +1755,10 @@ void b4Clear_lines() // 3, 0x00
 	show_mouse(screen);
 	return;
 }
+
+
+#pragma code-name (pop)
+#pragma code-name (push, "BANKRAM04")
 
 void b4Text_screen() // 0, 0x00 
 {
@@ -2410,7 +2410,7 @@ void b4Set_menu() // 1, 0x00
 #pragma code-name (pop)
 #pragma code-name (push, "BANKRAM05")
 
-void b4Set_menu_item() // 2, 0x00 
+void b5Set_menu_item() // 2, 0x00 
 {
 	int messNum, controllerNum, i;
 	MENU childMenu;
@@ -2511,18 +2511,6 @@ void b4Div_v() // 2, 0xC0
 //
 //}
 
-#pragma code-name (pop)
-#pragma code-name (push, "BANKRAM0F")
-
-int bFGotoFunc()
-{
-	short int disp;
-
-	disp = (callC2 << 8) | callC1;  /* Should be signed 16 bit */
-	return disp;
-}
-
-boolean hasSeen1 = FALSE;
 #pragma code-name (pop)
 
 

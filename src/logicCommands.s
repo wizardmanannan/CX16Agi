@@ -112,10 +112,10 @@ LOGICCOMMANDS_INC = 1
 .import _b3CharIsIn
 .import _b3ProcessString
 .import _b3Print
-.import _b4Print_v
-.import _b4Display
-.import _b4Display_v
-.import _b4Clear_lines
+.import _b3Print_v
+.import _b3Display
+.import _b3Display_v
+.import _b3Clear_lines
 .import _b4Text_screen
 .import _b4Graphics
 .import _b4Set_cursor_char
@@ -152,7 +152,7 @@ LOGICCOMMANDS_INC = 1
 .import _b4Discard_view_v
 .import _b4Clear_text_rect
 .import _b4Set_menu
-.import _b4Set_menu_item
+.import _b5Set_menu_item
 .import _b4Menu_input
 .import _b4Show_obj_v
 .import _b4Mul_n
@@ -718,10 +718,10 @@ jmpTableCommands1:
 .addr b3Play_soundCCall
 .addr b3Stop_soundCCall
 .addr b3PrintCCall
-.addr b4Print_vCCall
-.addr b4DisplayCCall
-.addr b4Display_vCCall
-.addr b4Clear_linesCCall
+.addr b3Print_vCCall
+.addr b3DisplayCCall
+.addr b3Display_vCCall
+.addr b3Clear_linesCCall
 .addr b4Text_screenCCall
 .addr b4GraphicsCCall
 .addr b4Set_cursor_charCCall
@@ -775,7 +775,7 @@ jmpTableCommands2:
 .addr _b4Clear_text_rect
 .addr b1NoOp_2
 .addr b4Set_menuCCall
-.addr b4Set_menu_itemCCall
+.addr b5Set_menu_itemCCall
 .addr b1NoOp_0
 .addr b1NoOp_1
 .addr b1NoOp_1
@@ -1523,19 +1523,19 @@ b3Stop_soundCCall:
 b3PrintCCall:
         jsr _b3Print
         jmp mainLoop
+b3Print_vCCall:
+        jsr _b3Print_v
+        jmp mainLoop
+b3DisplayCCall:
+        jsr _b3Display
+        jmp mainLoop
+b3Display_vCCall:
+        jsr _b3Display_v
+        jmp mainLoop
+b3Clear_linesCCall:
+        jsr _b3Clear_lines
+        jmp mainLoop
 .segment "BANKRAM04"
-b4Print_vCCall:
-        jsr _b4Print_v
-        jmp mainLoop
-b4DisplayCCall:
-        jsr _b4Display
-        jmp mainLoop
-b4Display_vCCall:
-        jsr _b4Display_v
-        jmp mainLoop
-b4Clear_linesCCall:
-        jsr _b4Clear_lines
-        jmp mainLoop
 b4Text_screenCCall:
         jsr _b4Text_screen
         jmp mainLoop
@@ -1645,8 +1645,8 @@ b4Set_menuCCall:
         jsr _b4Set_menu
         jmp mainLoop
 .segment "BANKRAM05"
-b4Set_menu_itemCCall:
-        jsr _b4Set_menu_item
+b5Set_menu_itemCCall:
+        jsr _b5Set_menu_item
         jmp mainLoop
 b4Menu_inputCCall:
         jsr _b4Menu_input

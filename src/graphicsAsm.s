@@ -5,8 +5,6 @@
 .include "irq.s"
 
 .import _b6InitCharset
-.import _malloc
-.import _free
 .import pushax
 .import pusha
 .import popa
