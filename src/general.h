@@ -41,4 +41,7 @@ typedef struct {          /* DIR entry structure */
 
 extern byte callC1, callC2;
 
+#define SCREEN_WIDTH 320
+#define SCREEN_HEIGHT 240
+
 #endif  /* _GENERAL_H_ */

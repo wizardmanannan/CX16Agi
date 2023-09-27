@@ -1,8 +1,8 @@
-#include "graphics.h"
+#include "textLayer.h"
 #pragma code-name (push, "BANKRAM06")
 
 //#define VERBOSE_CHAR_SET_LOAD
-//#define TEST_CHARSET
+#define TEST_CHARSET
 #ifdef VERBOSE_CHAR_SET_LOAD
 byte printOn = TRUE;
 int byteCounter = 0;
@@ -53,6 +53,44 @@ void b6MakeLeftBorder()
         if (i % 2 == 0)
         {
             WRITE_BYTE_DEF_TO_ASSM(0b11101010, VERA_data0); //Red border
+        }
+        else
+        {
+            WRITE_BYTE_DEF_TO_ASSM(0b10101010, VERA_data0); //White square
+        }
+    }
+}
+
+void b6MakeTopBorder()
+{
+    byte i;
+
+    SET_VERA_ADDRESS(TILEBASE + (TOP_BORDER - 1) * BYTES_PER_CHARACTER, ADDRESSSEL0, 1);
+
+    for (i = 0; i < BYTES_PER_CHARACTER; i++)
+    {
+        if (i < BYTES_CHAR_PER_ROW)
+        {
+            WRITE_BYTE_DEF_TO_ASSM(0b11111111, VERA_data0); //Red line
+        }
+        else
+        {
+            WRITE_BYTE_DEF_TO_ASSM(0b10101010, VERA_data0); //White square
+        }
+    }
+}
+
+void b6MakeRightBorder()
+{
+    byte i;
+
+    SET_VERA_ADDRESS(TILEBASE + (RIGHT_BORDER - 1) * BYTES_PER_CHARACTER, ADDRESSSEL0, 1);
+
+    for (i = 0; i < BYTES_PER_CHARACTER; i++)
+    {
+        if (i % 2 == 1)
+        {
+            WRITE_BYTE_DEF_TO_ASSM(0b10101011, VERA_data0); //Red border
         }
         else
         {
@@ -121,8 +159,11 @@ void b6InitCharset()
     
     b6ConvertsOneBitPerPixCharToTwoBitPerPixelChars();
 
+    //While we could just flip them it will take less cycles when we write text just to have chars for both, as that way our stride can be two
     b6MakeBottomBorder();
     b6MakeLeftBorder();
+    b6MakeTopBorder();
+    b6MakeRightBorder(); 
 
 #ifdef VERBOSE_CHAR_SET_LOAD
     printf("returning : %p. The byte counter is %d\n.", buffer, byteCounter);
