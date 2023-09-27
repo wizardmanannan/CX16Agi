@@ -60,46 +60,46 @@ LOGICCOMMANDS_INC = 1
 .import _b2Set_cel_v
 .import _b2Last_cel
 .import _b2Current_cel
-.import _b3Current_loop
-.import _b3Current_view
-.import _b3Number_of_loops
-.import _b3Set_priority
-.import _b3Set_priority_v
-.import _b3Release_priority
-.import _b3Get_priority
-.import _b3Stop_update
-.import _b3Start_update
-.import _b3Force_update
-.import _b3Ignore_horizon
-.import _b3Observe_horizon
-.import _b3Set_horizon
-.import _b3Object_on_water
-.import _b3Object_on_land
-.import _b3Object_on_anything
-.import _b3Ignore_objs
-.import _b3Observe_objs
-.import _b3Distance
-.import _b3Stop_cycling
-.import _b3Start_cycling
-.import _b3Normal_cycle
-.import _b3End_of_loop
-.import _b3Reverse_cycle
-.import _b3Reverse_loop
-.import _b3Cycle_time
-.import _b3Stop_motion
-.import _b3Start_motion
-.import _b3Step_size
-.import _b3Step_time
-.import _b3Move_obj
-.import _b3Move_obj
-.import _b3Move_obj_v
-.import _b3Follow_ego
-.import _b3Wander
-.import _b3Normal_motion
-.import _b3Set_dir
-.import _b3Get_dir
-.import _b3Ignore_blocks
-.import _b3Observe_blocks
+.import _b2Current_loop
+.import _b2Current_view
+.import _b2Number_of_loops
+.import _b2Set_priority
+.import _b2Set_priority_v
+.import _b2Release_priority
+.import _b2Get_priority
+.import _b2Stop_update
+.import _b2Start_update
+.import _b2Force_update
+.import _b2Ignore_horizon
+.import _b2Observe_horizon
+.import _b2Set_horizon
+.import _b2Object_on_water
+.import _b2Object_on_land
+.import _b2Object_on_anything
+.import _b2Ignore_objs
+.import _b2Observe_objs
+.import _b2Distance
+.import _b2Stop_cycling
+.import _b2Start_cycling
+.import _b2Normal_cycle
+.import _b2End_of_loop
+.import _b2Reverse_cycle
+.import _b2Reverse_loop
+.import _b2Cycle_time
+.import _b2Stop_motion
+.import _b2Start_motion
+.import _b2Step_size
+.import _b2Step_time
+.import _b2Move_obj
+.import _b2Move_obj
+.import _b2Move_obj_v
+.import _b2Follow_ego
+.import _b2Wander
+.import _b2Normal_motion
+.import _b2Set_dir
+.import _b2Get_dir
+.import _b2Ignore_blocks
+.import _b2Observe_blocks
 .import _b3Get
 .import _b3Get_v
 .import _b3Drop
@@ -153,12 +153,12 @@ LOGICCOMMANDS_INC = 1
 .import _b4Clear_text_rect
 .import _b4Set_menu
 .import _b5Set_menu_item
-.import _b4Menu_input
-.import _b4Show_obj_v
-.import _b4Mul_n
-.import _b4Mul_v
-.import _b4Div_n
-.import _b4Div_v
+.import _b5Menu_input
+.import _b5Show_obj_v
+.import _b5Mul_n
+.import _b5Mul_v
+.import _b5Div_n
+.import _b5Div_v
 
 .import _exitAllLogics
 .import _hasEnteredNewRoom
@@ -667,45 +667,45 @@ jmpTableCommands1:
 .addr b2Set_cel_vCCall
 .addr b2Last_celCCall
 .addr b2Current_celCCall
-.addr b3Current_loopCCall
-.addr b3Current_viewCCall
-.addr b3Number_of_loopsCCall
-.addr b3Set_priorityCCall
-.addr b3Set_priority_vCCall
-.addr b3Release_priorityCCall
-.addr b3Get_priorityCCall
-.addr b3Stop_updateCCall
-.addr b3Start_updateCCall
-.addr b3Force_updateCCall
-.addr b3Ignore_horizonCCall
-.addr b3Observe_horizonCCall
-.addr b3Set_horizonCCall
-.addr b3Object_on_waterCCall
-.addr b3Object_on_landCCall
-.addr b3Object_on_anythingCCall
-.addr b3Ignore_objsCCall
-.addr b3Observe_objsCCall
-.addr b3DistanceCCall
-.addr b3Stop_cyclingCCall
-.addr b3Start_cyclingCCall
-.addr b3Normal_cycleCCall
-.addr b3End_of_loopCCall
-.addr b3Reverse_cycleCCall
-.addr b3Reverse_loopCCall
-.addr b3Cycle_timeCCall
-.addr b3Stop_motionCCall
-.addr b3Start_motionCCall
-.addr b3Step_sizeCCall
-.addr b3Step_timeCCall
-.addr b3Move_objCCall
-.addr b3Move_obj_vCCall
-.addr b3Follow_egoCCall
-.addr b3WanderCCall
-.addr b3Normal_motionCCall
-.addr b3Set_dirCCall
-.addr b3Get_dirCCall
-.addr b3Ignore_blocksCCall
-.addr b3Observe_blocksCCall
+.addr b2Current_loopCCall
+.addr b2Current_viewCCall
+.addr b2Number_of_loopsCCall
+.addr b2Set_priorityCCall
+.addr b2Set_priority_vCCall
+.addr b2Release_priorityCCall
+.addr b2Get_priorityCCall
+.addr b2Stop_updateCCall
+.addr b2Start_updateCCall
+.addr b2Force_updateCCall
+.addr b2Ignore_horizonCCall
+.addr b2Observe_horizonCCall
+.addr b2Set_horizonCCall
+.addr b2Object_on_waterCCall
+.addr b2Object_on_landCCall
+.addr b2Object_on_anythingCCall
+.addr b2Ignore_objsCCall
+.addr b2Observe_objsCCall
+.addr b2DistanceCCall
+.addr b2Stop_cyclingCCall
+.addr b2Start_cyclingCCall
+.addr b2Normal_cycleCCall
+.addr b2End_of_loopCCall
+.addr b2Reverse_cycleCCall
+.addr b2Reverse_loopCCall
+.addr b2Cycle_timeCCall
+.addr b2Stop_motionCCall
+.addr b2Start_motionCCall
+.addr b2Step_sizeCCall
+.addr b2Step_timeCCall
+.addr b2Move_objCCall
+.addr b2Move_obj_vCCall
+.addr b2Follow_egoCCall
+.addr b2WanderCCall
+.addr b2Normal_motionCCall
+.addr b2Set_dirCCall
+.addr b2Get_dirCCall
+.addr b2Ignore_blocksCCall
+.addr b2Observe_blocksCCall
 .addr b1NoOp_4
 .addr b1NoOp_0
 .addr b3GetCCall
@@ -779,14 +779,14 @@ jmpTableCommands2:
 .addr b1NoOp_0
 .addr b1NoOp_1
 .addr b1NoOp_1
-.addr b4Menu_inputCCall
-.addr b4Show_obj_vCCall
+.addr b5Menu_inputCCall
+.addr b5Show_obj_vCCall
 .addr b1NoOp_0
 .addr b1NoOp_0
-.addr _b4Mul_n
-.addr _b4Mul_v
-.addr _b4Div_n
-.addr _b4Div_v
+.addr _b5Mul_n
+.addr _b5Mul_v
+.addr _b5Div_n
+.addr _b5Div_v
 .addr b1NoOp_0
 .addr b1NoOp_1
 .addr b1NoOp_0
@@ -1375,124 +1375,124 @@ b2Last_celCCall:
 b2Current_celCCall:
         jsr _b2Current_cel
         jmp mainLoop
+b2Current_loopCCall:
+        jsr _b2Current_loop
+        jmp mainLoop
+b2Current_viewCCall:
+        jsr _b2Current_view
+        jmp mainLoop
+b2Number_of_loopsCCall:
+        jsr _b2Number_of_loops
+        jmp mainLoop
+b2Set_priorityCCall:
+        jsr _b2Set_priority
+        jmp mainLoop
+b2Set_priority_vCCall:
+        jsr _b2Set_priority_v
+        jmp mainLoop
+b2Release_priorityCCall:
+        jsr _b2Release_priority
+        jmp mainLoop
+b2Get_priorityCCall:
+        jsr _b2Get_priority
+        jmp mainLoop
+b2Stop_updateCCall:
+        jsr _b2Stop_update
+        jmp mainLoop
+b2Start_updateCCall:
+        jsr _b2Start_update
+        jmp mainLoop
+b2Force_updateCCall:
+        jsr _b2Force_update
+        jmp mainLoop
+b2Ignore_horizonCCall:
+        jsr _b2Ignore_horizon
+        jmp mainLoop
+b2Observe_horizonCCall:
+        jsr _b2Observe_horizon
+        jmp mainLoop
+b2Set_horizonCCall:
+        jsr _b2Set_horizon
+        jmp mainLoop
+b2Object_on_waterCCall:
+        jsr _b2Object_on_water
+        jmp mainLoop
+b2Object_on_landCCall:
+        jsr _b2Object_on_land
+        jmp mainLoop
+b2Object_on_anythingCCall:
+        jsr _b2Object_on_anything
+        jmp mainLoop
+b2Ignore_objsCCall:
+        jsr _b2Ignore_objs
+        jmp mainLoop
+b2Observe_objsCCall:
+        jsr _b2Observe_objs
+        jmp mainLoop
+b2DistanceCCall:
+        jsr _b2Distance
+        jmp mainLoop
+b2Stop_cyclingCCall:
+        jsr _b2Stop_cycling
+        jmp mainLoop
+b2Start_cyclingCCall:
+        jsr _b2Start_cycling
+        jmp mainLoop
+b2Normal_cycleCCall:
+        jsr _b2Normal_cycle
+        jmp mainLoop
+b2End_of_loopCCall:
+        jsr _b2End_of_loop
+        jmp mainLoop
+b2Reverse_cycleCCall:
+        jsr _b2Reverse_cycle
+        jmp mainLoop
+b2Reverse_loopCCall:
+        jsr _b2Reverse_loop
+        jmp mainLoop
+b2Cycle_timeCCall:
+        jsr _b2Cycle_time
+        jmp mainLoop
+b2Stop_motionCCall:
+        jsr _b2Stop_motion
+        jmp mainLoop
+b2Start_motionCCall:
+        jsr _b2Start_motion
+        jmp mainLoop
+b2Step_sizeCCall:
+        jsr _b2Step_size
+        jmp mainLoop
+b2Step_timeCCall:
+        jsr _b2Step_time
+        jmp mainLoop
+b2Move_objCCall:
+        jsr _b2Move_obj
+        jmp mainLoop
+b2Move_obj_vCCall:
+        jsr _b2Move_obj_v
+        jmp mainLoop
+b2Follow_egoCCall:
+        jsr _b2Follow_ego
+        jmp mainLoop
+b2WanderCCall:
+        jsr _b2Wander
+        jmp mainLoop
+b2Normal_motionCCall:
+        jsr _b2Normal_motion
+        jmp mainLoop
+b2Set_dirCCall:
+        jsr _b2Set_dir
+        jmp mainLoop
+b2Get_dirCCall:
+        jsr _b2Get_dir
+        jmp mainLoop
+b2Ignore_blocksCCall:
+        jsr _b2Ignore_blocks
+        jmp mainLoop
+b2Observe_blocksCCall:
+        jsr _b2Observe_blocks
+        jmp mainLoop
 .segment "BANKRAM03"
-b3Current_loopCCall:
-        jsr _b3Current_loop
-        jmp mainLoop
-b3Current_viewCCall:
-        jsr _b3Current_view
-        jmp mainLoop
-b3Number_of_loopsCCall:
-        jsr _b3Number_of_loops
-        jmp mainLoop
-b3Set_priorityCCall:
-        jsr _b3Set_priority
-        jmp mainLoop
-b3Set_priority_vCCall:
-        jsr _b3Set_priority_v
-        jmp mainLoop
-b3Release_priorityCCall:
-        jsr _b3Release_priority
-        jmp mainLoop
-b3Get_priorityCCall:
-        jsr _b3Get_priority
-        jmp mainLoop
-b3Stop_updateCCall:
-        jsr _b3Stop_update
-        jmp mainLoop
-b3Start_updateCCall:
-        jsr _b3Start_update
-        jmp mainLoop
-b3Force_updateCCall:
-        jsr _b3Force_update
-        jmp mainLoop
-b3Ignore_horizonCCall:
-        jsr _b3Ignore_horizon
-        jmp mainLoop
-b3Observe_horizonCCall:
-        jsr _b3Observe_horizon
-        jmp mainLoop
-b3Set_horizonCCall:
-        jsr _b3Set_horizon
-        jmp mainLoop
-b3Object_on_waterCCall:
-        jsr _b3Object_on_water
-        jmp mainLoop
-b3Object_on_landCCall:
-        jsr _b3Object_on_land
-        jmp mainLoop
-b3Object_on_anythingCCall:
-        jsr _b3Object_on_anything
-        jmp mainLoop
-b3Ignore_objsCCall:
-        jsr _b3Ignore_objs
-        jmp mainLoop
-b3Observe_objsCCall:
-        jsr _b3Observe_objs
-        jmp mainLoop
-b3DistanceCCall:
-        jsr _b3Distance
-        jmp mainLoop
-b3Stop_cyclingCCall:
-        jsr _b3Stop_cycling
-        jmp mainLoop
-b3Start_cyclingCCall:
-        jsr _b3Start_cycling
-        jmp mainLoop
-b3Normal_cycleCCall:
-        jsr _b3Normal_cycle
-        jmp mainLoop
-b3End_of_loopCCall:
-        jsr _b3End_of_loop
-        jmp mainLoop
-b3Reverse_cycleCCall:
-        jsr _b3Reverse_cycle
-        jmp mainLoop
-b3Reverse_loopCCall:
-        jsr _b3Reverse_loop
-        jmp mainLoop
-b3Cycle_timeCCall:
-        jsr _b3Cycle_time
-        jmp mainLoop
-b3Stop_motionCCall:
-        jsr _b3Stop_motion
-        jmp mainLoop
-b3Start_motionCCall:
-        jsr _b3Start_motion
-        jmp mainLoop
-b3Step_sizeCCall:
-        jsr _b3Step_size
-        jmp mainLoop
-b3Step_timeCCall:
-        jsr _b3Step_time
-        jmp mainLoop
-b3Move_objCCall:
-        jsr _b3Move_obj
-        jmp mainLoop
-b3Move_obj_vCCall:
-        jsr _b3Move_obj_v
-        jmp mainLoop
-b3Follow_egoCCall:
-        jsr _b3Follow_ego
-        jmp mainLoop
-b3WanderCCall:
-        jsr _b3Wander
-        jmp mainLoop
-b3Normal_motionCCall:
-        jsr _b3Normal_motion
-        jmp mainLoop
-b3Set_dirCCall:
-        jsr _b3Set_dir
-        jmp mainLoop
-b3Get_dirCCall:
-        jsr _b3Get_dir
-        jmp mainLoop
-b3Ignore_blocksCCall:
-        jsr _b3Ignore_blocks
-        jmp mainLoop
-b3Observe_blocksCCall:
-        jsr _b3Observe_blocks
-        jmp mainLoop
 b3GetCCall:
         jsr _b3Get
         jmp mainLoop
@@ -1648,23 +1648,23 @@ b4Set_menuCCall:
 b5Set_menu_itemCCall:
         jsr _b5Set_menu_item
         jmp mainLoop
-b4Menu_inputCCall:
-        jsr _b4Menu_input
+b5Menu_inputCCall:
+        jsr _b5Menu_input
         jmp mainLoop
-b4Show_obj_vCCall:
-        jsr _b4Show_obj_v
+b5Show_obj_vCCall:
+        jsr _b5Show_obj_v
         jmp mainLoop
-b4Mul_nCCall:
-        jsr _b4Mul_n
+b5Mul_nCCall:
+        jsr _b5Mul_n
         jmp mainLoop
-b4Mul_vCCall:
-        jsr _b4Mul_v
+b5Mul_vCCall:
+        jsr _b5Mul_v
         jmp mainLoop
-b4Div_nCCall:
-        jsr _b4Div_n
+b5Div_nCCall:
+        jsr _b5Div_n
         jmp mainLoop
-b4Div_vCCall:
-        jsr _b4Div_v
+b5Div_vCCall:
+        jsr _b5Div_v
         jmp mainLoop
 
 

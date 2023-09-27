@@ -885,10 +885,7 @@ void b2Current_cel() // 2, 0x40
 	return;
 }
 
-#pragma code-name (pop)
-#pragma code-name (push, "BANKRAM03")
-
-void b3Current_loop() // 2, 0x40 
+void b2Current_loop() // 2, 0x40 
 {
 	int entryNum, varNum;
 	ViewTable localViewtab;
@@ -902,7 +899,7 @@ void b3Current_loop() // 2, 0x40
 	return;
 }
 
-void b3Current_view() // 2, 0x40 
+void b2Current_view() // 2, 0x40 
 {
 	int entryNum, varNum, i;
 	byte* mem;
@@ -919,7 +916,7 @@ void b3Current_view() // 2, 0x40
 	return;
 }
 
-void b3Number_of_loops() // 2, 0x40 
+void b2Number_of_loops() // 2, 0x40 
 {
 	int entryNum, varNum;
 	ViewTable localViewtab;
@@ -934,7 +931,7 @@ void b3Number_of_loops() // 2, 0x40
 	return;
 }
 
-void b3Set_priority() // 2, 0x00 
+void b2Set_priority() // 2, 0x00 
 {
 	int entryNum;
 	ViewTable localViewtab;
@@ -949,7 +946,7 @@ void b3Set_priority() // 2, 0x00
 	return;
 }
 
-void b3Set_priority_v() // 2, 0x40 
+void b2Set_priority_v() // 2, 0x40 
 {
 	int entryNum;
 	ViewTable localViewtab;
@@ -964,7 +961,7 @@ void b3Set_priority_v() // 2, 0x40
 	return;
 }
 
-void b3Release_priority() // 1, 0x00 
+void b2Release_priority() // 1, 0x00 
 {
 	int entryNum;
 	ViewTable localViewtab;
@@ -978,7 +975,7 @@ void b3Release_priority() // 1, 0x00
 	return;
 }
 
-void b3Get_priority() // 2, 0x40 
+void b2Get_priority() // 2, 0x40 
 {
 	int entryNum, varNum;
 	ViewTable localViewtab;
@@ -994,7 +991,7 @@ void b3Get_priority() // 2, 0x40
 	return;
 }
 
-void b3Stop_update() // 1, 0x00 
+void b2Stop_update() // 1, 0x00 
 {
 	int entryNum;
 	ViewTable localViewtab;
@@ -1008,7 +1005,7 @@ void b3Stop_update() // 1, 0x00
 	return;
 }
 
-void b3Start_update() // 1, 0x00 
+void b2Start_update() // 1, 0x00 
 {
 	int entryNum;
 	ViewTable localViewtab;
@@ -1023,7 +1020,7 @@ void b3Start_update() // 1, 0x00
 	return;
 }
 
-void b3Force_update() // 1, 0x00 
+void b2Force_update() // 1, 0x00 
 {
 	int entryNum;
 
@@ -1034,7 +1031,7 @@ void b3Force_update() // 1, 0x00
 	return;
 }
 
-void b3Ignore_horizon() // 1, 0x00 
+void b2Ignore_horizon() // 1, 0x00 
 {
 	int entryNum;
 	ViewTable localViewtab;
@@ -1049,7 +1046,7 @@ void b3Ignore_horizon() // 1, 0x00
 	return;
 }
 
-void b3Observe_horizon() // 1, 0x00 
+void b2Observe_horizon() // 1, 0x00 
 {
 	int entryNum;
 	ViewTable localViewtab;
@@ -1063,13 +1060,13 @@ void b3Observe_horizon() // 1, 0x00
 	return;
 }
 
-void b3Set_horizon() // 1, 0x00 
+void b2Set_horizon() // 1, 0x00 
 {
 	horizon = loadAndIncWinCode();
 	return;
 }
 
-void b3Object_on_water() // 1, 0x00 
+void b2Object_on_water() // 1, 0x00 
 {
 	int entryNum;
 	ViewTable localViewtab;
@@ -1083,7 +1080,7 @@ void b3Object_on_water() // 1, 0x00
 	return;
 }
 
-void b3Object_on_land() // 1, 0x00 
+void b2Object_on_land() // 1, 0x00 
 {
 	int entryNum;
 	ViewTable localViewtab;
@@ -1097,7 +1094,7 @@ void b3Object_on_land() // 1, 0x00
 	return;
 }
 
-void b3Object_on_anything() // 1, 0x00 
+void b2Object_on_anything() // 1, 0x00 
 {
 	int entryNum;
 	ViewTable localViewtab;
@@ -1111,7 +1108,7 @@ void b3Object_on_anything() // 1, 0x00
 	return;
 }
 
-void b3Ignore_objs() // 1, 0x00 
+void b2Ignore_objs() // 1, 0x00 
 {
 	int entryNum;
 	ViewTable localViewtab;
@@ -1125,7 +1122,7 @@ void b3Ignore_objs() // 1, 0x00
 	return;
 }
 
-void b3Observe_objs() // 1, 0x00 
+void b2Observe_objs() // 1, 0x00 
 {
 	int entryNum;
 	ViewTable localViewtab;
@@ -1139,7 +1136,7 @@ void b3Observe_objs() // 1, 0x00
 	return;
 }
 
-void b3Distance() // 3, 0x20 
+void b2Distance() // 3, 0x20 
 {
 	int o1, o2, varNum, x1, y1, x2, y2;
 	ViewTable localViewtab1, localViewtab2;
@@ -1165,7 +1162,7 @@ void b3Distance() // 3, 0x20
 	return;
 }
 
-void b3Stop_cycling() // 1, 0x00 
+void b2Stop_cycling() // 1, 0x00 
 {
 	int entryNum;
 	ViewTable localViewtab;
@@ -1179,7 +1176,7 @@ void b3Stop_cycling() // 1, 0x00
 	return;
 }
 
-void b3Start_cycling() // 1, 0x00 
+void b2Start_cycling() // 1, 0x00 
 {
 	int entryNum;
 	ViewTable localViewtab;
@@ -1193,7 +1190,7 @@ void b3Start_cycling() // 1, 0x00
 	return;
 }
 
-void b3Normal_cycle() // 1, 0x00 
+void b2Normal_cycle() // 1, 0x00 
 {
 	int entryNum;
 	ViewTable localViewtab;
@@ -1207,7 +1204,7 @@ void b3Normal_cycle() // 1, 0x00
 	return;
 }
 
-void b3End_of_loop() // 2, 0x00 
+void b2End_of_loop() // 2, 0x00 
 {
 	int entryNum;
 	ViewTable localViewtab;
@@ -1223,7 +1220,7 @@ void b3End_of_loop() // 2, 0x00
 	return;
 }
 
-void b3Reverse_cycle() // 1, 0x00
+void b2Reverse_cycle() // 1, 0x00
 {
 	int entryNum;
 	ViewTable localViewtab;
@@ -1238,7 +1235,7 @@ void b3Reverse_cycle() // 1, 0x00
 	return;
 }
 
-void b3Reverse_loop() // 2, 0x00 
+void b2Reverse_loop() // 2, 0x00 
 {
 	int entryNum;
 	ViewTable localViewtab;
@@ -1254,7 +1251,7 @@ void b3Reverse_loop() // 2, 0x00
 	return;
 }
 
-void b3Cycle_time() // 2, 0x40 
+void b2Cycle_time() // 2, 0x40 
 {
 	int entryNum;
 	ViewTable localViewtab;
@@ -1267,7 +1264,7 @@ void b3Cycle_time() // 2, 0x40
 	return;
 }
 
-void b3Stop_motion() // 1, 0x00 
+void b2Stop_motion() // 1, 0x00 
 {
 	int entryNum;
 	ViewTable localViewtab;
@@ -1283,7 +1280,7 @@ void b3Stop_motion() // 1, 0x00
 	return;
 }
 
-void b3Start_motion() // 1, 0x00 
+void b2Start_motion() // 1, 0x00 
 {
 	int entryNum;
 	ViewTable localViewtab;
@@ -1298,7 +1295,7 @@ void b3Start_motion() // 1, 0x00
 	return;
 }
 
-void b3Step_size() // 2, 0x40 
+void b2Step_size() // 2, 0x40 
 {
 	int entryNum;
 	ViewTable localViewtab;
@@ -1312,7 +1309,7 @@ void b3Step_size() // 2, 0x40
 	return;
 }
 
-void b3Step_time() // 2, 0x40 
+void b2Step_time() // 2, 0x40 
 {
 	int entryNum;
 	ViewTable localViewtab;
@@ -1326,7 +1323,7 @@ void b3Step_time() // 2, 0x40
 	return;
 }
 
-void b3Move_obj() // 5, 0x00 
+void b2Move_obj() // 5, 0x00 
 {
 	int entryNum;
 	byte stepVal;
@@ -1348,7 +1345,7 @@ void b3Move_obj() // 5, 0x00
 	return;
 }
 
-void b3Move_obj_v() // 5, 0x70 
+void b2Move_obj_v() // 5, 0x70 
 {
 	int entryNum;
 	byte stepVal;
@@ -1370,7 +1367,7 @@ void b3Move_obj_v() // 5, 0x70
 	return;
 }
 
-void b3Follow_ego() // 3, 0x00 
+void b2Follow_ego() // 3, 0x00 
 {
 	int entryNum, stepVal, flagNum;
 	ViewTable localViewtab;
@@ -1391,7 +1388,7 @@ void b3Follow_ego() // 3, 0x00
 	return;
 }
 
-void b3Wander() // 1, 0x00 
+void b2Wander() // 1, 0x00 
 {
 	int entryNum;
 	ViewTable localViewtab;
@@ -1407,7 +1404,7 @@ void b3Wander() // 1, 0x00
 	return;
 }
 
-void b3Normal_motion() // 1, 0x00 
+void b2Normal_motion() // 1, 0x00 
 {
 	int entryNum;
 	ViewTable localViewtab;
@@ -1422,7 +1419,7 @@ void b3Normal_motion() // 1, 0x00
 	return;
 }
 
-void b3Set_dir() // 2, 0x40 
+void b2Set_dir() // 2, 0x40 
 {
 	int entryNum;
 	ViewTable localViewtab;
@@ -1436,7 +1433,7 @@ void b3Set_dir() // 2, 0x40
 	return;
 }
 
-void b3Get_dir() // 2, 0x40 
+void b2Get_dir() // 2, 0x40 
 {
 	int entryNum;
 	ViewTable localViewtab;
@@ -1450,7 +1447,7 @@ void b3Get_dir() // 2, 0x40
 	return;
 }
 
-void b3Ignore_blocks() // 1, 0x00 
+void b2Ignore_blocks() // 1, 0x00 
 {
 	int entryNum;
 	ViewTable localViewtab;
@@ -1464,7 +1461,7 @@ void b3Ignore_blocks() // 1, 0x00
 	return;
 }
 
-void b3Observe_blocks() // 1, 0x00 
+void b2Observe_blocks() // 1, 0x00 
 {
 	int entryNum;
 	ViewTable localViewtab;
@@ -1488,6 +1485,9 @@ void b3Observe_blocks() // 1, 0x00
 //{
 //
 //}
+
+#pragma code-name (pop)
+#pragma code-name (push, "BANKRAM03")
 
 void b3Get() // 1, 00 
 {
@@ -2457,13 +2457,13 @@ void b5Set_menu_item() // 2, 0x00
 //}
 
 
-void b4Menu_input() // 0, 0x00 
+void b5Menu_input() // 0, 0x00 
 {
 	do_menu(the_menu, 10, 20);
 	return;
 }
 
-void b4Show_obj_v() // 1, 0x01 
+void b5Show_obj_v() // 1, 0x01 
 {
 	int objectNum;
 
@@ -2482,25 +2482,25 @@ void b4Show_obj_v() // 1, 0x01
 //
 //}
 
-void b4Mul_n() // 2, 0x80 
+void b5Mul_n() // 2, 0x80 
 {
 	var[loadAndIncWinCode()] *= loadAndIncWinCode();
 	return;
 }
 
-void b4Mul_v() // 2, 0xC0 
+void b5Mul_v() // 2, 0xC0 
 {
 	var[loadAndIncWinCode()] *= var[loadAndIncWinCode()];
 	return;
 }
 
-void b4Div_n() // 2, 0x80 
+void b5Div_n() // 2, 0x80 
 {
 	var[loadAndIncWinCode()] /= loadAndIncWinCode();
 	return;
 }
 
-void b4Div_v() // 2, 0xC0 
+void b5Div_v() // 2, 0xC0 
 {
 	var[loadAndIncWinCode()] /= var[loadAndIncWinCode()];
 	return;
