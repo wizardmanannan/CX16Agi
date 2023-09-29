@@ -54,19 +54,21 @@ rts
 @vSyncToCheck: .byte $0
 
 .segment "CODE"
-IRQ_STATE_DONTCHANGE = 0
-IRQ_STATE_BLACKSCREEN = 1
-IRQ_STATE_LOADSCREEN = 2
-IRQ_STATE_NORMAL = 3
-IRQ_STATE_DISPLAY_TEXT = 4
+IRQ_CMD_DONTCHANGE = 0
+IRQ_CMD_BLACKSCREEN = 1
+IRQ_CMD_LOADSCREEN = 2
+IRQ_CMD_NORMAL = 3
+IRQ_CMD_DISPLAY_TEXT = 4
 
 LAYER_1_2_ENABLE = $31
+LAYER_1_2_DISABLE = $1
 
 ;0 Don't Change
 ;1 Blank Screen
 ;2 Load Screen
 ;3 Normal
 ;4 Display Text
+
 sendIrqCommand: .byte $0
 
 ;As above except it will never change to 0
@@ -74,67 +76,72 @@ currentIrqState: .byte $0
 
 vSyncCounter: .byte $0
 debugVSyncCounter: .word $0
-custom_irq_handler:   
+custom_irq_handler:
+
 ; continue to default IRQ handler
 lda VERA_isr
 and #VSYNC_BIT
-beq defaultIqr
+beq @defaultIqr
 
 lda sendIrqCommand
-beq @vSyncCounter
-
-;Organised by slowest not in order of enumeration
-@displayText:
-cmp #IRQ_STATE_DISPLAY_TEXT
-bne @blankScreen
+tax
 lda RAM_BANK
 pha
-lda #TEXT_BANK
-sta RAM_BANK
-jsr handleDisplayText
-pla
-sta RAM_BANK
-lda #IRQ_STATE_DISPLAY_TEXT
-sta currentIrqState
 
+lda @jmpTableBank, x
+sta RAM_BANK
+txa
+clc
+asl
+tax
+jmp (@jmpTableIrq,x)
+
+
+@displayText:
+jsr handleDisplayText
 bra @resetSetIrqState
 
 @blankScreen:
-cmp #IRQ_STATE_BLACKSCREEN
-bne @normal
-lda #$1
+lda #LAYER_1_2_DISABLE
 sta VERA_dc_video
-lda #IRQ_STATE_BLACKSCREEN
+lda #IRQ_CMD_BLACKSCREEN
 sta currentIrqState
 bra @resetSetIrqState
 
 @normal:
-cmp #IRQ_STATE_NORMAL
-bne @resetSetIrqState
 lda #LAYER_1_2_ENABLE
 sta VERA_dc_video
-lda #IRQ_STATE_NORMAL
+lda #IRQ_CMD_NORMAL
 sta currentIrqState
+bra @resetSetIrqState
 
+@loadScreen:
+lda #LAYER_1_2_DISABLE
+lda #IRQ_CMD_LOADSCREEN ;Need to fill this in
+sta currentIrqState
+bra @resetSetIrqState
 
 @resetSetIrqState:
-lda #IRQ_STATE_DONTCHANGE
+lda #IRQ_CMD_DONTCHANGE
 sta sendIrqCommand
 
 @vSyncCounter:
 inc vSyncCounter
 
-@debugCounter:
-clc
-lda debugVSyncCounter
-adc #$1
-sta debugVSyncCounter
-lda #$0
-sta debugVSyncCounter+1
-
-defaultIqr:
+@defaultIqr:
+pla
+sta RAM_BANK
 jmp (default_irq_vector)
 ; RTI will happen after jump
+
+@jmpTableIrq: ;In order of IRQ_CMDS
+.addr @vSyncCounter
+.addr @blankScreen
+.addr @loadScreen
+.addr @normal
+.addr @displayText
+
+@jmpTableBank: .byte $0, $0, $0, $0, TEXT_BANK ;In order of IRQ_CMDS
 
 .endif ; IRQ_INC
 

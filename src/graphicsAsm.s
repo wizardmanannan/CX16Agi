@@ -108,7 +108,7 @@ rts
 @mapHeight: .byte $0
 
 b6InitGraphics:
-SEND_IRQ_COMMAND #IRQ_STATE_BLACKSCREEN, @vSyncToCheck
+SEND_IRQ_COMMAND #IRQ_CMD_BLACKSCREEN, @vSyncToCheck
 
 WAIT_FOR_NEXT_IRQ @vSyncToCheck
 
@@ -226,7 +226,6 @@ sta VERA_data0
 lda #>COLOR_RED
 sta VERA_data0
 
-
 lda #$6   ; Bitmap mode 16 colors
 sta VERA_L0_config
 stz VERA_L0_tilebase ;A 320 * 240 pixel bitmap at the beginning of VRAM
@@ -243,10 +242,9 @@ sta VERA_L1_mapbase
 jsr _b6InitCharset 
 jsr _b6InitLayer1Mapbase
 
-SEND_IRQ_COMMAND #IRQ_STATE_NORMAL, @vSyncToCheck
+SEND_IRQ_COMMAND #IRQ_CMD_NORMAL, @vSyncToCheck
 
 WAIT_FOR_NEXT_IRQ @vSyncToCheck
-
 rts
 @vSyncToCheck: .byte $0
 

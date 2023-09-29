@@ -9,8 +9,8 @@ typedef enum {
     LOAD_SCREEN = 2,
     NORMAL = 3,
     DISPLAY_TEXT = 4
-} IRQ_STATE;
+} IRQ_COMMAND;
 
-extern void b6SetAndWaitForIrqState(IRQ_STATE state);
+extern void b6SetAndWaitForIrqState(IRQ_COMMAND state);
 
 #endif
