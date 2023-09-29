@@ -107,6 +107,7 @@ char* strcpyBanked(char* dest, const char* src, byte bank)
 void* memCpyBanked(byte* dest, byte* src, byte bank, size_t len)
 {
 	byte previousRamBank = RAM_BANK;
+	void* returnVal;
 
 	RAM_BANK = bank;
 	
@@ -115,9 +116,25 @@ void* memCpyBanked(byte* dest, byte* src, byte bank, size_t len)
 #endif
 
 
-	memcpy(dest, src, len);
+	returnVal = memcpy(dest, src, len);
 
 	RAM_BANK = previousRamBank;
+
+	return returnVal;
+}
+
+void memCpyBankedBetween(byte* dest, byte bankDst, byte* src, byte bankSrc, size_t len)
+{
+	int i;
+	int copyAmount = 0;
+
+	for (i = 0; i < len; i += LOCAL_WORK_AREA_SIZE)
+	{
+		copyAmount = (i + LOCAL_WORK_AREA_SIZE <= len) ? LOCAL_WORK_AREA_SIZE : len - i;
+
+		memCpyBanked(GOLDEN_RAM_WORK_AREA, src + i, bankSrc, copyAmount);
+		memCpyBanked(dest + i, GOLDEN_RAM_WORK_AREA, bankDst, copyAmount);
+	}
 }
 
 void copyStringFromBanked(char* src, char* dest, int start, int chunk, byte sourceBank, boolean convertFromAsciiByteToPetscii)
@@ -156,6 +173,19 @@ int sprintfBanked(const char* buffer, byte bank, char const* const format,  ...)
 	va_end(list);
 
 	RAM_BANK = previousRamBank;
+}
+
+size_t strLenBanked(char* string, int bank)
+{
+	byte previousRamBank = RAM_BANK;
+	size_t len;
+	RAM_BANK = bank;
+
+	len = strlen(string);
+
+	RAM_BANK = previousRamBank;
+
+	return len;
 }
 
 void setResourceDirectory(AGIFilePosType* newLogicDirectory, AGIFilePosType* logicDirectoryLocation)

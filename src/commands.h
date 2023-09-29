@@ -6,6 +6,7 @@
 #include "logic.h"
 #include "debugHelper.h"
 #include "picture.h"
+#include "textLayer.h"
 
 void executeLogic(LOGICEntry* logicEntry, int logNum);
 void b1Call(unsigned char** data);

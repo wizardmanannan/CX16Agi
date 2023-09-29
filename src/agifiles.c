@@ -601,7 +601,6 @@ void b6LoadAGIFile(int resType, AGIFilePosType* location, AGIFile* AGIData)
 			{
 				b6XOrAvisDurgan(&GOLDEN_RAM_WORK_AREA[j], &avisPos);
 
-				GOLDEN_RAM_WORK_AREA[j] = trampoline_1ByteRByte(&convertAsciiByteToPetsciiByte, GOLDEN_RAM_WORK_AREA[j], HELPERS_BANK);
 
 #ifdef VERBOSE_DISPLAY_MESSAGES_PRE_COPY_BACK
 				printf("%c", GOLDEN_RAM_WORK_AREA[j]);

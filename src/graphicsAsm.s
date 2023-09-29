@@ -108,7 +108,9 @@ rts
 @mapHeight: .byte $0
 
 b6InitGraphics:
-SET_AND_WAIT_FOR_IRQ_STATE #IRQ_STATE_BLACKSCREEN
+SEND_IRQ_COMMAND #IRQ_STATE_BLACKSCREEN, @vSyncToCheck
+
+WAIT_FOR_NEXT_IRQ @vSyncToCheck
 
 lda #DISPLAY_SCALE
 sta VERA_dc_hscale
@@ -241,8 +243,11 @@ sta VERA_L1_mapbase
 jsr _b6InitCharset 
 jsr _b6InitLayer1Mapbase
 
-SET_AND_WAIT_FOR_IRQ_STATE #IRQ_STATE_NORMAL
+SEND_IRQ_COMMAND #IRQ_STATE_NORMAL, @vSyncToCheck
+
+WAIT_FOR_NEXT_IRQ @vSyncToCheck
 
 rts
+@vSyncToCheck: .byte $0
 
 .endif

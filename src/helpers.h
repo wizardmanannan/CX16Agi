@@ -52,8 +52,10 @@ extern byte trampoline_1ByteRByte(fnTrampoline_1ByteRByte func, byte data, byte 
 extern void trampoline_2Byte(fnTrampoline_2Byte func, byte data1, byte data2, byte bank);
 
 extern char* strcpyBanked(char* dest, const char* src, byte bank);
+extern size_t strLenBanked(char* string, int bank);
 
 extern void* memCpyBanked(byte* dest, byte* src, byte bank, size_t len);
+extern void memCpyBankedBetween(byte* dest, byte bankDst, byte* src, byte bankSrc, size_t len);
 
 #define COPY_EVERYTHING 32767
 extern void copyStringFromBanked(char* src, char* dest, int start, int chunk, byte sourceBank, boolean convertFromAsciiByteToPetscii);

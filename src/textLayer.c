@@ -2,7 +2,7 @@
 #pragma code-name (push, "BANKRAM06")
 
 //#define VERBOSE_CHAR_SET_LOAD
-#define TEST_CHARSET
+//#define TEST_CHARSET
 #ifdef VERBOSE_CHAR_SET_LOAD
 byte printOn = TRUE;
 int byteCounter = 0;
@@ -213,4 +213,23 @@ void b6InitLayer1Mapbase()
 
 }
 
+#pragma code-name (pop)
+
+#pragma code-name (push, "BANKRAM03")
+void b3DisplayMessageBox(char* message, byte messageBank, byte row, byte col) //Even though message is 
+{
+    char terminator = 0;
+    size_t messageSize = strLenBanked(message, messageBank) + 1;
+
+    if (messageSize > TEXTBUFFER_SIZE)
+    {
+        memCpyBanked((byte*)message + TEXTBUFFER_SIZE, (byte*) & terminator, messageBank, 1);
+        printf("Warning overflow on message\n");
+    }
+
+    memCpyBankedBetween(TEXTBUFFER, TEXT_BANK, (byte*)message, messageBank, messageSize);
+
+    ////TODO: Doesn't return anything but I don't want to add any more trampoline methods. Come up with a more memory efficient way of handling this then constanting adding them
+    trampoline_1ByteRByte(&b6SetAndWaitForIrqState, DISPLAY_TEXT, IRQ_BANK);
+}
 #pragma code-name (pop)

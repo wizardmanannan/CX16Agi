@@ -4,31 +4,28 @@ IRQ_INC = 1
 
 .include "global.s"
 
-.macro WAIT_FOR_VSYNC
-.local @wait
+.macro SEND_IRQ_COMMAND command, vSyncToCheck
+sei
+lda command
+sta sendIrqCommand
 lda vSyncCounter
-@wait:
-wai
-cmp vSyncCounter
-beq @wait
+sta vSyncToCheck
+cli
 .endmacro
 
-
-.macro SET_AND_WAIT_FOR_IRQ_STATE state
+.macro WAIT_FOR_NEXT_IRQ vSyncToCheck
 .local @waitForBlank
-sei
-lda state
-sta setIrqState
-cli
-@waitForBlank:
-wai
-lda currentIrqState
-cmp state
+@waitForBlank: ;May as well just busy wait wai will just take extra cycles, and we aren't going anywhere until the vSync happens and the counter increments
+lda vSyncToCheck
+cmp vSyncCounter
 bne @waitForBlank
 
 .endmacro
 
-
+;Handlers
+.segment "BANKRAM03"
+handleDisplayText:
+rts
 .segment "BANKRAM06"
 _b6InitIrq:
  ; backup default RAM IRQ vector
@@ -48,11 +45,20 @@ _b6InitIrq:
    cli ; enable IRQ now that vector is properly set
 rts
 
+_b6SetAndWaitForIrqState:
+sta @state
+SEND_IRQ_COMMAND @state, @vSyncToCheck
+WAIT_FOR_NEXT_IRQ @vSyncToCheck
+rts
+@state: .byte $0
+@vSyncToCheck: .byte $0
+
 .segment "CODE"
 IRQ_STATE_DONTCHANGE = 0
 IRQ_STATE_BLACKSCREEN = 1
 IRQ_STATE_LOADSCREEN = 2
 IRQ_STATE_NORMAL = 3
+IRQ_STATE_DISPLAY_TEXT = 4
 
 LAYER_1_2_ENABLE = $31
 
@@ -60,7 +66,8 @@ LAYER_1_2_ENABLE = $31
 ;1 Blank Screen
 ;2 Load Screen
 ;3 Normal
-setIrqState: .byte $0
+;4 Display Text
+sendIrqCommand: .byte $0
 
 ;As above except it will never change to 0
 currentIrqState: .byte $0
@@ -73,8 +80,24 @@ lda VERA_isr
 and #VSYNC_BIT
 beq defaultIqr
 
-lda setIrqState
+lda sendIrqCommand
 beq @vSyncCounter
+
+;Organised by slowest not in order of enumeration
+@displayText:
+cmp #IRQ_STATE_DISPLAY_TEXT
+bne @blankScreen
+lda RAM_BANK
+pha
+lda #TEXT_BANK
+sta RAM_BANK
+jsr handleDisplayText
+pla
+sta RAM_BANK
+lda #IRQ_STATE_DISPLAY_TEXT
+sta currentIrqState
+
+bra @resetSetIrqState
 
 @blankScreen:
 cmp #IRQ_STATE_BLACKSCREEN
@@ -95,8 +118,8 @@ sta currentIrqState
 
 
 @resetSetIrqState:
-lda IRQ_STATE_DONTCHANGE
-sta setIrqState
+lda #IRQ_STATE_DONTCHANGE
+sta sendIrqCommand
 
 @vSyncCounter:
 inc vSyncCounter
@@ -114,3 +137,4 @@ jmp (default_irq_vector)
 ; RTI will happen after jump
 
 .endif ; IRQ_INC
+

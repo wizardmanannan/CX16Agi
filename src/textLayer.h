@@ -6,6 +6,7 @@
 #include <cx16.h>
 #include <stdlib.h>
 #include "kernal.h"
+#include "irq.h"
 
 #define BYTES_PER_CHARACTER 16
 #define NO_CHARS 160
@@ -35,5 +36,7 @@
 #define TEXTBUFFER_SIZE 1000
 
 void b6InitCharset();
+
+void b3DisplayMessageBox(char* message, byte messageBank, byte row, byte col);
 
 #endif

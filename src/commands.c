@@ -39,7 +39,7 @@
 //#define VERBOSE_MESSAGE_TEXT
 //#define VERBOSE_GOTO
 //#define VERBOSE_ROOM_CHANGE
-
+#define VERBOSE_MESSAGE_PRINT
 
 
 extern byte* var;
@@ -211,7 +211,10 @@ char* getMessagePointer(byte logicFileNo, byte messageNo)
 	{
 		result = (char*)logicFile.messages[messageNo + i];
 	}
-
+	
+#ifdef VERBOSE_MESSAGE_PRINT
+	printf("Attempting to print message %d from address %p, from logic %d. The length is %d\n", messageNo, result, logicFileNo, strlen(result));
+#endif // VERBOSE_MESSAGE_PRINT
 #ifdef VERBOSE_MESSAGE_TEXT
 	printf("The menu is %s \n", result);
 #endif //VERBOSE_MENU
@@ -1581,79 +1584,7 @@ void b3ProcessString(char* stringPointer, byte stringBank, char* outputString)
 #define TEMP_SIZE 80
 #define NUM_STRING_SIZE 80
 #define INPUT_BUFFER_SIZE 10
-	int i, j, strPos = 0, tempNum, widthNum, count, sprintfLength;
-	char* temp, messagePointer;
-	byte tempBank, logicFileBank;
-	char inputString[INPUT_BUFFER_SIZE];
-	LOGICFile logicFile;
-
-	outputString[0] = 0;
-
-	for (i = 0, j = 0; i == 0 || inputString[i - 1] != '\0'; i = (i + 1) % INPUT_BUFFER_SIZE, j++) {
-		if (i == 0)
-		{
-			copyStringFromBanked(stringPointer, inputString, j, INPUT_BUFFER_SIZE, stringBank, FALSE);
-		}
-
-		if (inputString[i] == '%') {
-			i++;
-			switch (inputString[i++]) {
-				/* %% isn't actually supported */
-				//case '%': sprintf(outputString, "%s%%", outputString); break;
-			case 'v':
-				tempNum = getNum(inputString, &i, stringBank);
-				if (inputString[i + 1] == '|') {
-					i += 2;
-					temp = (char*)banked_allocTrampoline(NUM_STRING_SIZE, &tempBank);
-					widthNum = getNum(inputString, &i, stringBank);
-					sprintfLength = sprintfBanked(temp, tempBank, "%d", var[tempNum]);
-					for (count = sprintfLength; count < widthNum; count++) {
-						sprintf(outputString, "%s0", outputString);
-					}
-					sprintf(outputString, "%s%d", outputString, var[tempNum]);
-					banked_deallocTrampoline((byte*)temp, &tempBank);
-				}
-				else
-					sprintf(outputString, "%s%d", outputString, var[tempNum]);
-				break;
-			case 'm':
-				tempNum = getNum(inputString, &i, stringBank);
-				getLogicFile(&logicFile, currentLog);
-				messagePointer = getMessagePointer(currentLog, tempNum - 1);
-				sprintfBanked(outputString, logicFile.codeBank, "%s%s", outputString,
-					logics[currentLog].data->messages[tempNum - 1]);
-				break;
-			case 'g':
-				tempNum = getNum(inputString, &i, stringBank);
-				getLogicFile(&logicFile, currentLog);
-				messagePointer = getMessagePointer(0, tempNum - 1);
-				sprintfBanked(outputString, "%s%s", outputString, messagePointer);
-				break;
-			case 'w':
-				tempNum = getNum(inputString, &i, stringBank);
-				sprintf(outputString, "%s%s", outputString, wordText[tempNum]);
-				break;
-			case 's':
-				tempNum = getNum(inputString, &i, stringBank);
-				sprintf(outputString, "%s%s", outputString, string[tempNum]);
-				break;
-			default: /* ignore the second character */
-				break;
-			}
-		}
-		else {
-			sprintf(outputString, "%s%c", outputString, inputString[i]);
-		}
-	}
-
-	/* Recursive part to make sure all % formatting codes are dealt with */
-	if (b3CharIsIn('%', outputString)) {
-		temp = (char*)banked_allocTrampoline(TEMP_SIZE, &tempBank);
-		strcpyBanked(temp, outputString, tempBank);
-		b3ProcessString(temp, tempBank, outputString);
-
-		banked_deallocTrampoline((byte*)temp, tempBank);
-	}
+	
 }
 
 void b3Print() // 1, 00 
@@ -1707,6 +1638,9 @@ void b3Display() // 3, 0x00
 	int row, col, messNum;
 	char* tempString = (char*)&GOLDEN_RAM[LOCAL_WORK_AREA_START];
 	char* messagePointer;
+	
+	LOGICFile logicFile;
+	getLogicFile(&logicFile, currentLog);
 
 	col = loadAndIncWinCode();
 	row = loadAndIncWinCode();
@@ -1714,8 +1648,12 @@ void b3Display() // 3, 0x00
 
 	messagePointer = getMessagePointer(currentLog, messNum - 1);
 
+#ifdef VERBOSE_MESSAGE_PRINT
+	printf("Attempting to print %d from script %d. The length is %d. The message pointer is %p\n", messNum - 1, currentLog, strLenBanked(messagePointer, logicFile.messageBank), messagePointer);
+#endif
 	//trampolineProcessString(messagePointer, 0, tempString);
 	drawBigString(screen, tempString, row * 16, 20 + (col * 16), agi_fg, agi_bg);
+	b3DisplayMessageBox(messagePointer, logicFile.messageBank, row, col);
 	/*lprintf("info: display() %s, fg: %d bg: %d row: %d col: %d",
 	   tempString, agi_fg, agi_bg, row, col);*/
 	return;
@@ -1809,6 +1747,10 @@ void b4Set_text_attribute() // 2, 0x00
 {
 	agi_fg = (loadAndIncWinCode()) + 1;
 	agi_bg = (loadAndIncWinCode()) + 1;
+
+#ifdef VERBOSE_MESSAGE_PRINT
+	printf("Set foreground: %d background: %d\n", agi_fg, agi_bg);
+#endif // VERBOSE_MESSAGE_PRINT
 	return;
 }
 
