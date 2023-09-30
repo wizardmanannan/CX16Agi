@@ -187,24 +187,165 @@ lda #>COLOR_WHITE
 sta VERA_data0
 
 ;TileSet Layer 1
-lda #<COLOR_BLACK ; Transparent ignored regardless of color
+lda #<COLOR_BLACK
 sta VERA_data0
 lda #>COLOR_BLACK
 sta VERA_data0
 
-lda #<COLOR_BLACK ; Text Color
+lda #<COLOR_BLUE
 sta VERA_data0
-lda #>COLOR_BLACK
+lda #>COLOR_BLUE
 sta VERA_data0
 
-lda #<COLOR_WHITE ; Background Color
+lda #<COLOR_GREEN
+sta VERA_data0
+lda #>COLOR_GREEN
+sta VERA_data0
+
+lda #<COLOR_CYAN
+sta VERA_data0
+lda #>COLOR_CYAN
+sta VERA_data0
+
+lda #<COLOR_RED
+sta VERA_data0
+lda #>COLOR_RED
+sta VERA_data0
+
+lda #<COLOR_MAGENTA
+sta VERA_data0
+lda #>COLOR_MAGENTA
+sta VERA_data0
+
+lda #<COLOR_BROWN
+sta VERA_data0
+lda #>COLOR_BROWN
+sta VERA_data0
+
+lda #<COLOR_LIGHT_GRAY
+sta VERA_data0
+lda #>COLOR_LIGHT_GRAY
+sta VERA_data0
+
+lda #<COLOR_DARK_GRAY
+sta VERA_data0
+lda #>COLOR_DARK_GRAY
+sta VERA_data0
+
+lda #<COLOR_LIGHT_BLUE
+sta VERA_data0
+lda #>COLOR_LIGHT_BLUE
+sta VERA_data0
+
+lda #<COLOR_LIGHT_GREEN
+sta VERA_data0
+lda #>COLOR_LIGHT_GREEN
+sta VERA_data0
+
+lda #<COLOR_LIGHT_CYAN
+sta VERA_data0
+lda #>COLOR_LIGHT_CYAN
+sta VERA_data0
+
+lda #<COLOR_LIGHT_RED
+sta VERA_data0
+lda #>COLOR_LIGHT_RED
+sta VERA_data0
+
+lda #<COLOR_LIGHT_MAGENTA
+sta VERA_data0
+lda #>COLOR_LIGHT_MAGENTA
+sta VERA_data0
+
+lda #<COLOR_YELLOW
+sta VERA_data0
+lda #>COLOR_YELLOW
+sta VERA_data0
+
+lda #<COLOR_WHITE
 sta VERA_data0
 lda #>COLOR_WHITE
 sta VERA_data0
 
-lda #<COLOR_RED ; Background Color
+;TileSet Layer 2
+lda #<COLOR_BLACK
+sta VERA_data0
+lda #>COLOR_BLACK
+sta VERA_data0
+
+lda #<COLOR_WHITE
+sta VERA_data0
+lda #>COLOR_WHITE
+sta VERA_data0
+
+lda #<COLOR_BLACK
+sta VERA_data0
+lda #<COLOR_BLACK
+sta VERA_data0
+
+lda #<COLOR_RED
 sta VERA_data0
 lda #>COLOR_RED
+sta VERA_data0
+;Ignore the next 12 colors only the first four matter
+lda #<COLOR_RED
+sta VERA_data0
+lda #>COLOR_RED
+sta VERA_data0
+
+lda #<COLOR_MAGENTA
+sta VERA_data0
+lda #>COLOR_MAGENTA
+sta VERA_data0
+
+lda #<COLOR_BROWN
+sta VERA_data0
+lda #>COLOR_BROWN
+sta VERA_data0
+
+lda #<COLOR_LIGHT_GRAY
+sta VERA_data0
+lda #>COLOR_LIGHT_GRAY
+sta VERA_data0
+
+lda #<COLOR_DARK_GRAY
+sta VERA_data0
+lda #>COLOR_DARK_GRAY
+sta VERA_data0
+
+lda #<COLOR_LIGHT_BLUE
+sta VERA_data0
+lda #>COLOR_LIGHT_BLUE
+sta VERA_data0
+
+lda #<COLOR_LIGHT_GREEN
+sta VERA_data0
+lda #>COLOR_LIGHT_GREEN
+sta VERA_data0
+
+lda #<COLOR_LIGHT_CYAN
+sta VERA_data0
+lda #>COLOR_LIGHT_CYAN
+sta VERA_data0
+
+lda #<COLOR_LIGHT_RED
+sta VERA_data0
+lda #>COLOR_LIGHT_RED
+sta VERA_data0
+
+lda #<COLOR_LIGHT_MAGENTA
+sta VERA_data0
+lda #>COLOR_LIGHT_MAGENTA
+sta VERA_data0
+
+lda #<COLOR_YELLOW
+sta VERA_data0
+lda #>COLOR_YELLOW
+sta VERA_data0
+
+lda #<COLOR_WHITE
+sta VERA_data0
+lda #>COLOR_WHITE
 sta VERA_data0
 
 lda #$6   ; Bitmap mode 16 colors
