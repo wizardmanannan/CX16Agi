@@ -1642,8 +1642,8 @@ void b3Display() // 3, 0x00
 	LOGICFile logicFile;
 	getLogicFile(&logicFile, currentLog);
 
-	col = loadAndIncWinCode();
 	row = loadAndIncWinCode();
+	col = loadAndIncWinCode();
 	messNum = loadAndIncWinCode();
 
 	messagePointer = getMessagePointer(currentLog, messNum - 1);

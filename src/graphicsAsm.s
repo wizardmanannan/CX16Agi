@@ -3,6 +3,7 @@
 
 .include "global.s"
 .include "irq.s"
+.include "globalGraphics.s"
 
 .import _b6InitCharset
 .import pushax
@@ -12,26 +13,6 @@
 
 ; Set the value of include guard and define constants
 GRAPHICS_INC = 1
-
-BITMAP_WIDTH = 320
-BITMAP_HEIGHT = 240
-BYTES_PER_ROW = BITMAP_WIDTH / 2
-
-PICTURE_WIDTH =  160  
-PICTURE_HEIGHT =  168
-
-STARTING_ROW = (BITMAP_HEIGHT / 2) - (PICTURE_HEIGHT / 2)
-STARTING_BYTE = STARTING_ROW * BYTES_PER_ROW
-
-DEFAULT_BACKGROUND_COLOR = $FF
-LEFT_BORDER = $F0
-RIGHT_BORDER = $0F
-
-BYTES_PER_CHARACTER = 16
-TRANSPARENT_CHAR = $AF
-NO_CHARS = 160
-SIZE_OF_CHARSET = (BYTES_PER_CHARACTER * NO_CHARS)
-
 _b6ClearBackground:
 stz VERA_ctrl
 lda #$10 | ^STARTING_BYTE
@@ -238,6 +219,10 @@ lda #$68 ; 0xD000 Address 8x8 width
 sta VERA_L1_tilebase
 lda #$6D ; 0xDA00 
 sta VERA_L1_mapbase
+
+lda #$FC
+sta VERA_L1_vscroll_l
+stz VERA_L1_vscroll_h
 
 jsr _b6InitCharset 
 jsr _b6InitLayer1Mapbase

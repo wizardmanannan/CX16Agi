@@ -3,6 +3,7 @@
 IRQ_INC = 1
 
 .include "global.s"
+.include "globalGraphics.s"
 
 .macro SEND_IRQ_COMMAND command, vSyncToCheck
 sei
@@ -25,7 +26,37 @@ bne @waitForBlank
 ;Handlers
 .segment "BANKRAM03"
 handleDisplayText:
+SET_VERA_ADDRESS_ABSOLUTE _displayTextAddressToCopyTo, #$0, #$2
+
+lda #<DISPLAY_TEXT_BUFFER
+sta ZP_TMP
+lda #>DISPLAY_TEXT_BUFFER
+sta ZP_TMP + 1
+
+@outerLoop:
+ldy #$0
+@innerLoop:
+lda (ZP_TMP), y
+beq @end ; If we get a zero that means a terminator stop
+sta VERA_data0
+iny
+
+@innerLoopCondition:
+bne @innerLoop
+
+@incrementOuterLoop:
+clc ;Adding 256
+lda ZP_TMP + 1; Ignore the lower bit always static. 
+adc #$1
+bra @innerLoop
+
+@end:
+stz ZP_TMP
+stz ZP_TMP + 1
 rts
+
+_displayTextAddressToCopyTo: .word $0
+_displayTextAddressToCopyToHigh: .word $0
 .segment "BANKRAM06"
 _b6InitIrq:
  ; backup default RAM IRQ vector
@@ -116,9 +147,9 @@ sta currentIrqState
 bra @resetSetIrqState
 
 @loadScreen:
-lda #LAYER_1_2_DISABLE
-lda #IRQ_CMD_LOADSCREEN ;Need to fill this in
-sta currentIrqState
+; lda #LAYER_1_2_DISABLE
+; lda #IRQ_CMD_LOADSCREEN ;Need to fill this in
+; sta currentIrqState
 bra @resetSetIrqState
 
 @resetSetIrqState:

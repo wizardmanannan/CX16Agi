@@ -3,13 +3,14 @@
 
 //#define VERBOSE_CHAR_SET_LOAD
 //#define TEST_CHARSET
+//#define VERBOSE_DISPLAY_TEXT
 #ifdef VERBOSE_CHAR_SET_LOAD
 byte printOn = TRUE;
 int byteCounter = 0;
 #endif
 
 //Stride must be constant
-#define SET_VERA_ADDRESS(VeraAddress, AddressSel, Stride) \
+#define SET_VERA_ADDRESS_PICTURE(VeraAddress, AddressSel, Stride) \
     do {      \
         asm("lda #%w", AddressSel);                  \
         asm("sta %w", VERA_ctrl);                  \
@@ -27,11 +28,11 @@ void b6MakeBottomBorder()
 {
     byte i;
 
-    SET_VERA_ADDRESS(TILEBASE + (BOTTOM_BORDER - 1) * BYTES_PER_CHARACTER, ADDRESSSEL0, 1);
+    SET_VERA_ADDRESS_PICTURE(TILEBASE + (BOTTOM_BORDER - 1) * BYTES_PER_CHARACTER, ADDRESSSEL0, 1);
 
     for (i = 0; i < BYTES_PER_CHARACTER; i++)
     {
-        if (i < BYTES_PER_CHARACTER - BYTES_CHAR_PER_ROW)
+        if (i < BYTES_PER_CHARACTER - BYTES_PER_CELL)
         {
             WRITE_BYTE_DEF_TO_ASSM(0b10101010, VERA_data0); //White square
         }
@@ -46,7 +47,7 @@ void b6MakeLeftBorder()
 {
     byte i;
 
-    SET_VERA_ADDRESS(TILEBASE + (LEFT_BORDER - 1) * BYTES_PER_CHARACTER, ADDRESSSEL0, 1);
+    SET_VERA_ADDRESS_PICTURE(TILEBASE + (LEFT_BORDER - 1) * BYTES_PER_CHARACTER, ADDRESSSEL0, 1);
 
     for (i = 0; i < BYTES_PER_CHARACTER; i++)
     {
@@ -65,11 +66,11 @@ void b6MakeTopBorder()
 {
     byte i;
 
-    SET_VERA_ADDRESS(TILEBASE + (TOP_BORDER - 1) * BYTES_PER_CHARACTER, ADDRESSSEL0, 1);
+    SET_VERA_ADDRESS_PICTURE(TILEBASE + (TOP_BORDER - 1) * BYTES_PER_CHARACTER, ADDRESSSEL0, 1);
 
     for (i = 0; i < BYTES_PER_CHARACTER; i++)
     {
-        if (i < BYTES_CHAR_PER_ROW)
+        if (i < BYTES_PER_CELL)
         {
             WRITE_BYTE_DEF_TO_ASSM(0b11111111, VERA_data0); //Red line
         }
@@ -84,7 +85,7 @@ void b6MakeRightBorder()
 {
     byte i;
 
-    SET_VERA_ADDRESS(TILEBASE + (RIGHT_BORDER - 1) * BYTES_PER_CHARACTER, ADDRESSSEL0, 1);
+    SET_VERA_ADDRESS_PICTURE(TILEBASE + (RIGHT_BORDER - 1) * BYTES_PER_CHARACTER, ADDRESSSEL0, 1);
 
     for (i = 0; i < BYTES_PER_CHARACTER; i++)
     {
@@ -154,8 +155,8 @@ void b6InitCharset()
     PRINTF("The address of new charset buffer is %p\n", buffer);
 #endif // VERBOSE_CHAR_SET_LOAD
 
-    SET_VERA_ADDRESS(ORIGINAL_CHARSET_ADDRESS, ADDRESSSEL0, 1);
-    SET_VERA_ADDRESS(TILEBASE, ADDRESSSEL1, 1);
+    SET_VERA_ADDRESS_PICTURE(ORIGINAL_CHARSET_ADDRESS, ADDRESSSEL0, 1);
+    SET_VERA_ADDRESS_PICTURE(TILEBASE, ADDRESSSEL1, 1);
     
     b6ConvertsOneBitPerPixCharToTwoBitPerPixelChars();
 
@@ -176,7 +177,7 @@ void b6TestCharset()
 {
     int i;
     byte j;
-    SET_VERA_ADDRESS(MAPBASE, ADDRESSSEL0, 2);
+    SET_VERA_ADDRESS_PICTURE(MAPBASE, ADDRESSSEL0, 2);
 
     for (i = 0; i < NO_CHARS; i++)
     {
@@ -199,7 +200,7 @@ void b6InitLayer1Mapbase()
 #define BYTE1 TRANSPARENT_CHAR
 #define BYTE2 0x10 //1 Offset 0 v flip 0 h flip 0 tile index bit 8 and 9
 
-    SET_VERA_ADDRESS(MAPBASE, ADDRESSSEL0, 1);
+    SET_VERA_ADDRESS_PICTURE(MAPBASE, ADDRESSSEL0, 1);
 
     for (i = 0; i < TILE_LAYER_NO_TILES; i++)
     {
@@ -216,20 +217,42 @@ void b6InitLayer1Mapbase()
 #pragma code-name (pop)
 
 #pragma code-name (push, "BANKRAM03")
+extern unsigned long displayTextAddressToCopyTo;
 void b3DisplayMessageBox(char* message, byte messageBank, byte row, byte col) //Even though message is 
 {
+    //unsigned int i,j;
     char terminator = 0;
     size_t messageSize = strLenBanked(message, messageBank) + 1;
+    
+    int* vScroll = (int*)0x9F39;
 
-    if (messageSize > TEXTBUFFER_SIZE)
+    if (messageSize > 1) //Agi sometimes has empty messages. We say greater than 1 because of the terminator
     {
-        memCpyBanked((byte*)message + TEXTBUFFER_SIZE, (byte*) & terminator, messageBank, 1);
-        printf("Warning overflow on message\n");
+        displayTextAddressToCopyTo = MAPBASE + (FIRST_ROW + row - 1) * TILE_LAYER_BYTES_PER_ROW + col * BYTES_PER_CELL;
+
+#ifdef VERBOSE_DISPLAY_TEXT
+        printf("Address: %p + (%d + %d) * %d + %d * %d = %lx\n", MAPBASE, FIRST_ROW, row, TILE_LAYER_BYTES_PER_ROW, col, BYTES_PER_CELL, displayTextAddressToCopyTo);
+#endif
+        if (messageSize > TEXTBUFFER_SIZE)
+        {
+            memCpyBanked((byte*)message + TEXTBUFFER_SIZE, (byte*)&terminator, messageBank, 1);
+            printf("Warning overflow on message\n");
+        }
+
+#ifdef VERBOSE_DISPLAY_TEXT
+        printf("Copy message %p on bank of size %d\n", message, messageBank, messageSize);
+#endif // VERBOSE_DISPLAY_TEXT
+
+        memCpyBankedBetween(TEXTBUFFER, TEXT_BANK, (byte*)message, messageBank, messageSize);
+
+        ////TODO: Doesn't return anything but I don't want to add any more trampoline methods. Come up with a more memory efficient way of handling this then constanting adding them
+        trampoline_1ByteRByte(&b6SetAndWaitForIrqState, DISPLAY_TEXT, IRQ_BANK);
+
+        //for (i = 0; i <= 4095; i++)
+        //{
+        //    *vScroll = i;
+        //    for (j = 0; j < 8000; j++);
+        //}
     }
-
-    memCpyBankedBetween(TEXTBUFFER, TEXT_BANK, (byte*)message, messageBank, messageSize);
-
-    ////TODO: Doesn't return anything but I don't want to add any more trampoline methods. Come up with a more memory efficient way of handling this then constanting adding them
-    trampoline_1ByteRByte(&b6SetAndWaitForIrqState, DISPLAY_TEXT, IRQ_BANK);
 }
 #pragma code-name (pop)

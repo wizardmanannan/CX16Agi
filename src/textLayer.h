@@ -11,7 +11,7 @@
 #define BYTES_PER_CHARACTER 16
 #define NO_CHARS 160
 #define SIZE_OF_CHARSET (BYTES_PER_CHARACTER * NO_CHARS)
-#define BYTES_CHAR_PER_ROW 2
+#define BYTES_PER_CELL 2
 
 #define ADDRESSSEL0 0 
 #define ADDRESSSEL1 1
@@ -30,10 +30,14 @@
 #define TILE_LAYER_NO_TILES (TILE_LAYER_WIDTH * TILE_LAYER_HEIGHT)
 #define TILE_MAP (TILE_LAYER_NO_TILES * 2) //Two bytes per tile
 
+#define TILE_LAYER_BYTES_PER_ROW (BYTES_PER_CELL * TILE_LAYER_WIDTH)
+
 #define MAX_CHAR_ACROSS 40
 
 #define TEXTBUFFER        ((unsigned char *)0xB447)
 #define TEXTBUFFER_SIZE 1000
+
+#define FIRST_ROW 4
 
 void b6InitCharset();
 
