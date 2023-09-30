@@ -41,6 +41,6 @@
 
 void b6InitCharset();
 
-void b3DisplayMessageBox(char* message, byte messageBank, byte row, byte col);
+void b3DisplayMessageBox(char* message, byte messageBank, byte row, byte col, byte paletteNumber);
 
 #endif
