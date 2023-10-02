@@ -19,7 +19,7 @@ cli
 @waitForBlank: ;May as well just busy wait wai will just take extra cycles, and we aren't going anywhere until the vSync happens and the counter increments
 lda vSyncToCheck
 cmp vSyncCounter
-bne @waitForBlank
+beq @waitForBlank
 
 .endmacro
 

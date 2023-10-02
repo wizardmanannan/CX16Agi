@@ -39,7 +39,7 @@
 //#define VERBOSE_MESSAGE_TEXT
 //#define VERBOSE_GOTO
 //#define VERBOSE_ROOM_CHANGE
-#define VERBOSE_MESSAGE_PRINT
+//#define VERBOSE_MESSAGE_PRINT
 #define DISPLAY_PALETTE_NUMBER 2
 
 extern byte* var;
@@ -1635,7 +1635,7 @@ void b3Print_v() // 1, 0x80
 
 void b3Display() // 3, 0x00 
 {
-	int row, col, messNum;
+	int row, col, messNum, i;
 	char* tempString = (char*)&GOLDEN_RAM[LOCAL_WORK_AREA_START];
 	char* messagePointer;
 	
@@ -1654,6 +1654,7 @@ void b3Display() // 3, 0x00
 	//trampolineProcessString(messagePointer, 0, tempString);
 	drawBigString(screen, tempString, row * 16, 20 + (col * 16), agi_fg, agi_bg);
 	b3DisplayMessageBox(messagePointer, logicFile.messageBank, row, col, DISPLAY_PALETTE_NUMBER);
+
 	return;
 }
 
