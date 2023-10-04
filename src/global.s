@@ -13,6 +13,8 @@ _codeBank: .byte $0
 ; Set global definitions
 GLOBAL_INC = 1
 
+NEW_LINE = 10
+
 ; Define some zero page pointers
 ZP_PTR_CODE = $69
 ;$08 is reserved for code window in codeWindow.s

@@ -38,7 +38,16 @@ ldy #$0
 @innerLoop:
 lda (ZP_TMP), y
 beq @end ; If we get a zero that means a terminator stop
+
+cmp #NEW_LINE
+bne @storeToVera
+jsr b3DisplayTextNewLine
+bra @incrementInnerLoop ; If it is a new line we shouldn't store it to the VERA
+
+@storeToVera:
 sta VERA_data0
+
+@incrementInnerLoop:
 iny
 
 @innerLoopCondition:
@@ -49,10 +58,22 @@ clc ;Adding 256
 lda ZP_TMP + 1; Ignore the lower bit always static. 
 adc #$1
 bra @innerLoop
-
 @end:
 stz ZP_TMP
 stz ZP_TMP + 1
+rts
+
+b3DisplayTextNewLine: ;Goes to the start of the next line of the VERA but maintains the column number of the first character of the first line
+@newLine:
+clc
+lda #TILE_LAYER_WIDTH * 2
+adc _displayTextAddressToCopyTo
+sta _displayTextAddressToCopyTo
+lda #$0
+adc _displayTextAddressToCopyTo + 1
+sta _displayTextAddressToCopyTo + 1
+
+SET_VERA_ADDRESS_ABSOLUTE _displayTextAddressToCopyTo, #$0, #$2
 rts
 
 _displayTextAddressToCopyTo: .word $0

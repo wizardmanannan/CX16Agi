@@ -1680,17 +1680,38 @@ void b3Display_v() // 3, 0xE0
 
 void b3Clear_lines() // 3, 0x00 
 {
-	int boxColour, startLine, endLine;
-
+	int boxColour,startLine, endLine;
+	byte i, j;
+	char* clearBuffer = (char*)GOLDEN_RAM_WORK_AREA;
 	startLine = loadAndIncWinCode();
 	endLine = loadAndIncWinCode();
 	boxColour = loadAndIncWinCode();
-	if ((screenMode == AGI_GRAPHICS) && (boxColour > 0)) boxColour = 15;
-	boxColour++;
+	
 	show_mouse(NULL);
-	rectfill(agi_screen, 0, startLine * 16, 639, (endLine * 16) + 15, boxColour);
+
+	for (i = startLine; i <= endLine; i++)
+	{
+		for (j = 0; j < TILE_LAYER_WIDTH; j++)
+		{
+			*clearBuffer = TRANSPARENT_CHAR;
+			clearBuffer++; // Moved out from dereferencing for clarity
+		}
+
+		// It's a good idea to use brackets {} for multiline if-else statements
+		if (clearBuffer > &clearBuffer[LOCAL_WORK_AREA_SIZE] - TILE_LAYER_WIDTH - 1
+			|| i == endLine) // Minus one so the terminator can fit in
+		{
+			*clearBuffer = '\0';
+			b3DisplayMessageBox((char*)GOLDEN_RAM_WORK_AREA, 0, startLine, 0, DISPLAY_PALETTE_NUMBER);
+		}
+		else
+		{
+			*clearBuffer = 10;
+			clearBuffer++; // Increment the buffer after adding '\n' to avoid potential buffer overruns in the next iteration.
+		}
+	}
+
 	show_mouse(screen);
-	return;
 }
 
 
