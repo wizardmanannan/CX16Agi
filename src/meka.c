@@ -22,6 +22,8 @@
 //#include "object.h"
 //#include "words.h"
 #include "picture.h"
+#include "irq.h"
+#include "textLayer.h"
 //#include "parser.h"
 //#include "sound.h"
 
@@ -82,6 +84,14 @@ void b6DiscardResources()
     for (i = 0; i < 256; i++) discardSoundFile(i);
 }
 
+void b6Clear()
+{
+    b6SetAndWaitForIrqState(BLANK_SCREEN);
+    b6InitLayer1Mapbase();
+    trampoline_0(&b11ClearPicture, PICTURE_CODE_BANK);
+    b6SetAndWaitForIrqState(NORMAL);
+}
+
 /***************************************************************************
 ** new_room
 **
@@ -114,7 +124,7 @@ void b6NewRoom()
 
     memset(directions, 0, 9);
     /* rectfill(screen, 0, 20+(22*16), 639, 463, 0); */   /* Clear screen */
-    clear(screen);
+    b6Clear();
 #ifdef VERBOSE
     printf("New room code called");
 #endif // VERBOSE

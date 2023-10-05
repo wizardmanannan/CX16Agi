@@ -1710,7 +1710,6 @@ void b3Clear_lines() // 3, 0x00
 			clearBuffer++; // Increment the buffer after adding '\n' to avoid potential buffer overruns in the next iteration.
 		}
 	}
-
 	show_mouse(screen);
 }
 

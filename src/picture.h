@@ -57,6 +57,7 @@ extern void b6ClearBackground();
 void b11LoadPictureFile(int picFileNum);
 void b11ShowPicture();
 void b11DiscardPictureFile(int picFileNum);
+void b11ClearPicture();
 
 
 extern void getLoadedPicture(PictureFile* returnedloadedPicture, byte loadedPictureNumber);

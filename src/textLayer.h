@@ -39,7 +39,7 @@
 
 #define FIRST_ROW 4
 
-void b6InitCharset();
+void b6InitLayer1Mapbase();
 
 void b3DisplayMessageBox(char* message, byte messageBank, byte row, byte col, byte paletteNumber);
 
