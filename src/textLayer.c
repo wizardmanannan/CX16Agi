@@ -3,7 +3,7 @@
 
 //#define VERBOSE_CHAR_SET_LOAD
 //#define TEST_CHARSET
-//#define VERBOSE_DISPLAY_TEXT
+#define VERBOSE_DISPLAY_TEXT
 #ifdef VERBOSE_CHAR_SET_LOAD
 byte printOn = TRUE;
 int byteCounter = 0;
@@ -271,8 +271,6 @@ void b3DisplayMessageBox(char* message, byte messageBank, byte row, byte col, by
 	long displayAddressCopyPaletteTo;
 	byte paletteByte = paletteNumber << 4;
 
-	int* vScroll = (int*)0x9F39;
-
 	if (messageSize > 1) //Agi sometimes has empty messages. We say greater than 1 because of the terminator
 	{
 		displayTextAddressToCopyTo = MAPBASE + (FIRST_ROW + row - 1) * TILE_LAYER_BYTES_PER_ROW + col * BYTES_PER_CELL;
@@ -305,3 +303,23 @@ void b3DisplayMessageBox(char* message, byte messageBank, byte row, byte col, by
 	}
 }
 #pragma code-name (pop)
+
+void trampolinefillChar(byte startLine, byte endLine, byte paletteNumber, byte charToFill)
+{
+	byte previousRamBank = RAM_BANK;
+	RAM_BANK = TEXT_BANK;
+
+	b3FillChar(startLine, endLine, paletteNumber, charToFill);
+
+	RAM_BANK = previousRamBank;
+}
+
+void trampolineDisplayMessageBox(char* message, byte messageBank, byte row, byte col, byte paletteNumber)
+{
+	byte previousRamBank = RAM_BANK;
+	RAM_BANK = TEXT_BANK;
+
+	b3DisplayMessageBox(message, messageBank, row, col, paletteNumber);
+
+	RAM_BANK = previousRamBank;
+}

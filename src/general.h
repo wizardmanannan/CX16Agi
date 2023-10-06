@@ -44,4 +44,8 @@ extern byte callC1, callC2;
 #define SCREEN_WIDTH 320
 #define SCREEN_HEIGHT 240
 
+typedef enum {
+	PRINT_TIMEOUT = 21
+} FLAGS;
+
 #endif  /* _GENERAL_H_ */

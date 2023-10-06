@@ -192,14 +192,14 @@ sta VERA_data0
 lda #>COLOR_BLACK
 sta VERA_data0
 
-lda #<COLOR_BLUE
+lda #<COLOR_BLACK
 sta VERA_data0
-lda #>COLOR_BLUE
+lda #>COLOR_BLACK
 sta VERA_data0
 
-lda #<COLOR_GREEN
+lda #<COLOR_WHITE
 sta VERA_data0
-lda #>COLOR_GREEN
+lda #>COLOR_WHITE
 sta VERA_data0
 
 lda #<COLOR_CYAN

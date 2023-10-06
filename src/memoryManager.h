@@ -92,9 +92,6 @@
 #define VIEWTAB_BANK 61
 #define LOADED_VIEW_BANK 61
 #define PICTURE_BANK 0x3E
-#define IRQ_BANK 6
-#define GRAPHICS_BANK 6
-#define TEXT_BANK 3
 
 #define FIRST_FLOOD_BANK 0x27
 #define NO_FLOOD_BANKS 0x0A
@@ -137,6 +134,9 @@
 #define LRU_CACHE_LOGIC_BANK 0xE
 #define MEMORY_MANAGEMENT_BANK 0x10
 #define PICTURE_CODE_BANK 0x11
+#define IRQ_BANK 6
+#define GRAPHICS_BANK 6
+#define TEXT_BANK 3
 
 //Golden RAM
 #define VARS_AREA_START 0

@@ -57,6 +57,7 @@ bne @innerLoop
 clc ;Adding 256
 lda ZP_TMP + 1; Ignore the lower bit always static. 
 adc #$1
+sta ZP_TMP + 1
 bra @innerLoop
 @end:
 stz ZP_TMP

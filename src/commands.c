@@ -39,7 +39,8 @@
 //#define VERBOSE_MESSAGE_TEXT
 //#define VERBOSE_GOTO
 //#define VERBOSE_ROOM_CHANGE
-//#define VERBOSE_MESSAGE_PRINT
+#define VERBOSE_MESSAGE_PRINT
+#define TEXTBOX_PALETTE_NUMBER 1
 #define DISPLAY_PALETTE_NUMBER 2
 
 extern byte* var;
@@ -2152,26 +2153,39 @@ void b4Print_at() // 4, 0x00           /* 3 args for AGI versions before */
 	int messNum, x, y, l;
 	char* messagePointer;
 
+	LOGICFile logicFile;
+	getLogicFile(&logicFile, currentLog);
+
+#ifdef  VERBOSE_MESSAGE_PRINT
+	printf("The bank is %d\n", logicFile.messageBank);
+#endif
+
 	messNum = loadAndIncWinCode();
 	x = loadAndIncWinCode();
 	y = loadAndIncWinCode();
 	l = loadAndIncWinCode();
-	//show_mouse(NULL);
-	//temp = create_bitmap(640, 336);
-	//blit(agi_screen, temp, 0, 0, 0, 0, 640, 336);
-	//show_mouse(screen);
-	//while (key[KEY_ENTER] || key[KEY_ESC]) { /* Wait */ }
 
-	//messagePointer = getMessagePointer(currentLog, messNum - 1);
+#ifdef  VERBOSE_MESSAGE_PRINT
+	printf("Attempting to display message %d at %d,%d, length %d\n", messNum - 1, x, y, l);
+#endif
 
-	//trampolineProcessString(messagePointer, 0, tempString);
+	show_mouse(NULL);
+	show_mouse(screen);
+	
+	//while (key[KEY_ENTER] || key[KEY_ESC]) { /* Wait */ } //TODO: When keyboard control added put in wait
+
+	messagePointer = getMessagePointer(currentLog, messNum - 1);
+
+
+
+    trampolineDisplayMessageBox(messagePointer, logicFile.messageBank, x, y, TEXTBOX_PALETTE_NUMBER);
+
 	//printInBoxBig(tempString, x, y, l);
 	//while (!key[KEY_ENTER] && !key[KEY_ESC]) { /* Wait */ }
 	//while (key[KEY_ENTER] || key[KEY_ESC]) { clear_keybuf(); }
 	//show_mouse(NULL);
-	//blit(temp, agi_screen, 0, 0, 0, 0, 640, 336);
-	//show_mouse(screen);
-	//destroy_bitmap(temp);
+
+	show_mouse(screen);
 	return;
 }
 
