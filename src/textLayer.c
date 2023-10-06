@@ -232,6 +232,36 @@ void b6InitLayer1Mapbase()
 #pragma code-name (pop)
 
 #pragma code-name (push, "BANKRAM03")
+void b3FillChar(byte startLine, byte endLine, byte paletteNumber, byte charToFill)
+{
+	byte i,j;
+
+	char* clearBuffer = (char*)GOLDEN_RAM_WORK_AREA;
+
+	for (i = startLine; i <= endLine; i++)
+	{
+		for (j = 0; j < TILE_LAYER_WIDTH; j++)
+		{
+			*clearBuffer = charToFill;
+			clearBuffer++; // Moved out from dereferencing for clarity
+		}
+
+		// It's a good idea to use brackets {} for multiline if-else statements
+		if (clearBuffer > &clearBuffer[LOCAL_WORK_AREA_SIZE] - TILE_LAYER_WIDTH - 1
+			|| i == endLine) // Minus one so the terminator can fit in
+		{
+			*clearBuffer = '\0';
+			b3DisplayMessageBox((char*)GOLDEN_RAM_WORK_AREA, 0, startLine, 0, paletteNumber);
+		}
+		else
+		{
+			*clearBuffer = 10;
+			clearBuffer++; // Increment the buffer after adding '\n' to avoid potential buffer overruns in the next iteration.
+		}
+	}
+}
+
+
 extern unsigned long displayTextAddressToCopyTo;
 void b3DisplayMessageBox(char* message, byte messageBank, byte row, byte col, byte paletteNumber) //Even though message is 
 {

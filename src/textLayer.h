@@ -42,5 +42,6 @@
 void b6InitLayer1Mapbase();
 
 void b3DisplayMessageBox(char* message, byte messageBank, byte row, byte col, byte paletteNumber);
+void b3FillChar(byte startLine, byte endLine, byte paletteNumber, byte charToFill);
 
 #endif
