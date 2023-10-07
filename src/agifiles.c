@@ -712,7 +712,11 @@ void loadAGIFileTrampoline(int resType, AGIFilePosType* location, AGIFile* AGIDa
 {
 	byte previousRamBank = RAM_BANK;
 	RAM_BANK = FILE_LOADER_HELPERS;
+
+	printf("load file before\n");
 	b6LoadAGIFile(resType, location, AGIData);
+	printf("load file after\n");
+
 	RAM_BANK = previousRamBank;
 }
 

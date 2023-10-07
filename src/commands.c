@@ -40,8 +40,6 @@
 //#define VERBOSE_GOTO
 //#define VERBOSE_ROOM_CHANGE
 #define VERBOSE_MESSAGE_PRINT
-#define TEXTBOX_PALETTE_NUMBER 1
-#define DISPLAY_PALETTE_NUMBER 2
 
 extern byte* var;
 extern boolean* flag;
@@ -1654,8 +1652,10 @@ void b3Display() // 3, 0x00
 #endif
 	//trampolineProcessString(messagePointer, 0, tempString);
 	drawBigString(screen, tempString, row * 16, 20 + (col * 16), agi_fg, agi_bg);
+	
+	printf("In message box display\n");
 	b3DisplayMessageBox(messagePointer, logicFile.messageBank, row, col, DISPLAY_PALETTE_NUMBER, 0);
-
+	printf("Out message box display\n");
 	return;
 }
 
@@ -1689,8 +1689,10 @@ void b3Clear_lines() // 3, 0x00
 	
 	show_mouse(NULL);
 
+	printf("\nin fill char clear lines\n");
 	b3FillChar(startLine, endLine, DISPLAY_PALETTE_NUMBER, TRANSPARENT_CHAR);
-	
+	printf("\nout fill char clear lines\n");
+
 	show_mouse(screen);
 }
 
@@ -2180,9 +2182,9 @@ void b4Print_at() // 4, 0x00           /* 3 args for AGI versions before */
 	messagePointer = getMessagePointer(currentLog, messNum - 1);
 
 
-
+	printf("I in message box\n");
     trampolineDisplayMessageBox(messagePointer, logicFile.messageBank, x, y, TEXTBOX_PALETTE_NUMBER, l);
-
+	printf("I am out of message box\n");
 	if (timeoutFlagVal)
 	{
 		waitTicks = timeoutFlagVal * 30;  // The timeout value is given in half seconds and the TotalTicks in 1/60ths of a second.
@@ -2190,7 +2192,7 @@ void b4Print_at() // 4, 0x00           /* 3 args for AGI versions before */
 
 		while (vSyncCounter != vSyncToContinueAt);
 		
-		//trampolinefillChar(y, )
+		trampoline_0(&b3ClearLastPlacedText, TEXT_BANK);
 	}
 	else
 	{
