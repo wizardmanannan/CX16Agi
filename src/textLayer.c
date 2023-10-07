@@ -3,7 +3,7 @@
 
 //#define VERBOSE_CHAR_SET_LOAD
 //#define TEST_CHARSET
-#define VERBOSE_DISPLAY_TEXT
+//#define VERBOSE_DISPLAY_TEXT
 #ifdef VERBOSE_CHAR_SET_LOAD
 byte printOn = TRUE;
 int byteCounter = 0;
@@ -251,19 +251,40 @@ void b3FillChar(byte startLine, byte endLine, byte paletteNumber, byte charToFil
 			|| i == endLine) // Minus one so the terminator can fit in
 		{
 			*clearBuffer = '\0';
-			b3DisplayMessageBox((char*)GOLDEN_RAM_WORK_AREA, 0, startLine, 0, paletteNumber);
+			b3DisplayMessageBox((char*)GOLDEN_RAM_WORK_AREA, 0, startLine, 0, paletteNumber, 0);
 		}
 		else
 		{
-			*clearBuffer = 10;
+			*clearBuffer = NEW_LINE;
 			clearBuffer++; // Increment the buffer after adding '\n' to avoid potential buffer overruns in the next iteration.
 		}
 	}
 }
 
 
+void wrap_text(char* line_start, int width) {
+	char* last_space = 0;
+	char* p;
+
+	for (p = line_start; *p; p++) {
+		if (*p == '\n') {
+			line_start = p + 1;
+		}
+
+		if (*p == ' ') {
+			last_space = p;
+		}
+
+		if (p - line_start > width && last_space) {
+			*last_space = NEW_LINE;
+			line_start = last_space + 1;
+			last_space = 0;
+		}
+	}
+}
+
 extern unsigned long displayTextAddressToCopyTo;
-void b3DisplayMessageBox(char* message, byte messageBank, byte row, byte col, byte paletteNumber) //Even though message is 
+void b3DisplayMessageBox(char* message, byte messageBank, byte row, byte col, byte paletteNumber, byte boxWidth) //Even though message is 
 {
 	int i;
 	char terminator = 0;
@@ -293,12 +314,18 @@ void b3DisplayMessageBox(char* message, byte messageBank, byte row, byte col, by
 
 		memCpyBankedBetween(TEXTBUFFER, TEXT_BANK, (byte*)message, messageBank, messageSize);
 
+		if (messageSize - 1 > TILE_LAYER_WIDTH)
+		{
+			wrap_text((char*) TEXTBUFFER, boxWidth ? boxWidth : TILE_LAYER_WIDTH);
+		}
+
 		SET_VERA_ADDRESS_ABSOLUTE(displayAddressCopyPaletteTo, 0, 2);
 		for (i = 0; i < messageSize - 1; i++) //Ignore the terminator it doesn't print and doesn't have a palette byte
 		{
 			WRITE_BYTE_VAR_TO_ASSM(paletteByte, VERA_data0);
 		}
 		////TODO: Doesn't return anything but I don't want to add any more trampoline methods. Come up with a more memory efficient way of handling this then constanting adding them
+				
 		trampoline_1ByteRByte(&b6SetAndWaitForIrqState, DISPLAY_TEXT, IRQ_BANK);
 	}
 }
@@ -314,12 +341,12 @@ void trampolinefillChar(byte startLine, byte endLine, byte paletteNumber, byte c
 	RAM_BANK = previousRamBank;
 }
 
-void trampolineDisplayMessageBox(char* message, byte messageBank, byte row, byte col, byte paletteNumber)
+void trampolineDisplayMessageBox(char* message, byte messageBank, byte row, byte col, byte paletteNumber, byte boxWidth)
 {
 	byte previousRamBank = RAM_BANK;
 	RAM_BANK = TEXT_BANK;
 
-	b3DisplayMessageBox(message, messageBank, row, col, paletteNumber);
+	b3DisplayMessageBox(message, messageBank, row, col, paletteNumber, boxWidth);
 
 	RAM_BANK = previousRamBank;
 }

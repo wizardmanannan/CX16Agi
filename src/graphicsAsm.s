@@ -192,7 +192,7 @@ sta VERA_data0
 lda #>COLOR_BLACK
 sta VERA_data0
 
-lda #<COLOR_BLACK
+ lda #<COLOR_BLACK
 sta VERA_data0
 lda #>COLOR_BLACK
 sta VERA_data0
