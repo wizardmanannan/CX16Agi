@@ -9,7 +9,7 @@ IRQ_INC = 1
 sei
 lda command
 sta sendIrqCommand
-lda vSyncCounter
+lda _vSyncCounter
 sta vSyncToCheck
 cli
 .endmacro
@@ -18,7 +18,7 @@ cli
 .local @waitForBlank
 @waitForBlank: ;May as well just busy wait wai will just take extra cycles, and we aren't going anywhere until the vSync happens and the counter increments
 lda vSyncToCheck
-cmp vSyncCounter
+cmp _vSyncCounter
 beq @waitForBlank
 
 .endmacro
@@ -127,7 +127,7 @@ sendIrqCommand: .byte $0
 ;As above except it will never change to 0
 currentIrqState: .byte $0
 
-vSyncCounter: .byte $0
+_vSyncCounter: .byte $0
 debugVSyncCounter: .word $0
 custom_irq_handler:
 
@@ -179,7 +179,7 @@ lda #IRQ_CMD_DONTCHANGE
 sta sendIrqCommand
 
 @vSyncCounter:
-inc vSyncCounter
+inc _vSyncCounter
 
 @defaultIqr:
 pla

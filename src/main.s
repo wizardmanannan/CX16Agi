@@ -29,3 +29,4 @@
     .export _goNoFurtherRight
     .export _b6SetAndWaitForIrqState
     .export _displayTextAddressToCopyTo
+    .export _vSyncCounter

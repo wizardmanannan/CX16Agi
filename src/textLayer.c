@@ -283,28 +283,8 @@ void wrap_text(char* line_start, int width) {
 	}
 }
 
-void wrap_text(char* line_start, int width) {
-	char* last_space = 0;
-	char* p;
-
-	for (p = line_start; *p; p++) {
-		if (*p == '\n') {
-			line_start = p + 1;
-		}
-
-		if (*p == ' ') {
-			last_space = p;
-		}
-
-		if (p - line_start > width && last_space) {
-			*last_space = NEW_LINE;
-			line_start = last_space + 1;
-			last_space = 0;
-		}
-	}
-}
-
 extern unsigned long displayTextAddressToCopyTo;
+byte lastBoxSize;
 void b3DisplayMessageBox(char* message, byte messageBank, byte row, byte col, byte paletteNumber, byte boxWidth) //Even though message is 
 {
 	int i;

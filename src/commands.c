@@ -39,7 +39,7 @@
 //#define VERBOSE_MESSAGE_TEXT
 //#define VERBOSE_GOTO
 //#define VERBOSE_ROOM_CHANGE
-//#define VERBOSE_MESSAGE_PRINT
+#define VERBOSE_MESSAGE_PRINT
 #define TEXTBOX_PALETTE_NUMBER 1
 #define DISPLAY_PALETTE_NUMBER 2
 
@@ -2152,6 +2152,9 @@ void b4Print_at() // 4, 0x00           /* 3 args for AGI versions before */
 	BITMAP* temp;
 	int messNum, x, y, l;
 	char* messagePointer;
+	int timeoutFlagVal = var[PRINT_TIMEOUT];
+	byte waitTicks;
+	byte vSyncToContinueAt;
 
 	LOGICFile logicFile;
 	getLogicFile(&logicFile, currentLog);
@@ -2180,10 +2183,24 @@ void b4Print_at() // 4, 0x00           /* 3 args for AGI versions before */
 
     trampolineDisplayMessageBox(messagePointer, logicFile.messageBank, x, y, TEXTBOX_PALETTE_NUMBER, l);
 
-	//printInBoxBig(tempString, x, y, l);
-	//while (!key[KEY_ENTER] && !key[KEY_ESC]) { /* Wait */ }
+	if (timeoutFlagVal)
+	{
+		waitTicks = timeoutFlagVal * 30;  // The timeout value is given in half seconds and the TotalTicks in 1/60ths of a second.
+		vSyncToContinueAt = vSyncCounter + waitTicks;
+
+		while (vSyncCounter != vSyncToContinueAt);
+		
+		//trampolinefillChar(y, )
+	}
+	else
+	{
+		//TODO: Wait for key press
+			//while (!key[KEY_ENTER] && !key[KEY_ESC]) { /* Wait */ }
 	//while (key[KEY_ENTER] || key[KEY_ESC]) { clear_keybuf(); }
-	//show_mouse(NULL);
+	}
+	//printInBoxBig(tempString, x, y, l);
+
+	show_mouse(NULL);
 
 	show_mouse(screen);
 	return;
