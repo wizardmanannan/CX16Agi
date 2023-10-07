@@ -251,9 +251,7 @@ void b3FillChar(byte startLine, byte endLine, byte paletteNumber, byte charToFil
 			|| i == endLine) // Minus one so the terminator can fit in
 		{
 			*clearBuffer = '\0';
-			printf("in display message box fill char");
 			b3DisplayMessageBox((char*)GOLDEN_RAM_WORK_AREA, 0, startLine, 0, paletteNumber, 0);
-			printf("out display message box fill char");
 		}
 		else
 		{
@@ -263,8 +261,6 @@ void b3FillChar(byte startLine, byte endLine, byte paletteNumber, byte charToFil
 	}
 }
 
-extern byte lastBoxLines; 
-extern byte lastBoxStartLine;
 //Thanks to https://www.rosettacode.org/wiki/Word_wrap#In-place_greedy
 void wrap_text(char* line_start, int width) {
 	char* last_space = 0;
@@ -283,12 +279,12 @@ void wrap_text(char* line_start, int width) {
 			*last_space = NEW_LINE;
 			line_start = last_space + 1;
 			last_space = 0;
-			lastBoxLines++;
 		}
 	}
 }
 
 extern unsigned long displayTextAddressToCopyTo;
+byte lastBoxSize;
 void b3DisplayMessageBox(char* message, byte messageBank, byte row, byte col, byte paletteNumber, byte boxWidth) //Even though message is 
 {
 	int i;
@@ -296,9 +292,6 @@ void b3DisplayMessageBox(char* message, byte messageBank, byte row, byte col, by
 	size_t messageSize = strLenBanked(message, messageBank) + 1;
 	long displayAddressCopyPaletteTo;
 	byte paletteByte = paletteNumber << 4;
-
-	lastBoxStartLine = row;
-	lastBoxLines = 1;
 
 	if (messageSize > 1) //Agi sometimes has empty messages. We say greater than 1 because of the terminator
 	{
@@ -337,18 +330,6 @@ void b3DisplayMessageBox(char* message, byte messageBank, byte row, byte col, by
 		trampoline_1ByteRByte(&b6SetAndWaitForIrqState, DISPLAY_TEXT, IRQ_BANK);
 	}
 }
-
-void b3ClearLastPlacedText()
-{
-#ifdef VERBOSE_DISPLAY_TEXT
-	printf("Trying to clear at start line %d number of lines %d end line %d \n", lastBoxStartLine, lastBoxLines, lastBoxStartLine + lastBoxLines - 1);
-#endif
-
-	printf("In Fill char clear last placed");
-	b3FillChar(lastBoxStartLine, lastBoxStartLine + lastBoxLines - 1, TEXTBOX_PALETTE_NUMBER, TRANSPARENT_CHAR);
-	printf("Out Fill char clear last placed");
-}
-
 #pragma code-name (pop)
 
 void trampolinefillChar(byte startLine, byte endLine, byte paletteNumber, byte charToFill)
@@ -356,9 +337,7 @@ void trampolinefillChar(byte startLine, byte endLine, byte paletteNumber, byte c
 	byte previousRamBank = RAM_BANK;
 	RAM_BANK = TEXT_BANK;
 
-	printf("in fill char trampoline");
 	b3FillChar(startLine, endLine, paletteNumber, charToFill);
-	printf("out fill char trampoline");
 
 	RAM_BANK = previousRamBank;
 }

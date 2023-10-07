@@ -41,14 +41,10 @@
 
 #define NEW_LINE 10
 
-#define TEXTBOX_PALETTE_NUMBER 1
-#define DISPLAY_PALETTE_NUMBER 2
-
 void b6InitLayer1Mapbase();
 
 void b3DisplayMessageBox(char* message, byte messageBank, byte row, byte col, byte paletteNumber, byte boxWidth);
 void b3FillChar(byte startLine, byte endLine, byte paletteNumber, byte charToFill);
-void b3ClearLastPlacedText();
 
 void trampolinefillChar(byte startLine, byte endLine, byte paletteNumber, byte charToFill);
 void trampolineDisplayMessageBox(char* message, byte messageBank, byte row, byte col, byte paletteNumber, byte boxWidth);

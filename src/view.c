@@ -22,7 +22,7 @@
 #include "agifiles.h"
 #include "view.h"
 
-#define VERBOSE_LOAD_VIEWS;
+//#define VERBOSE_LOAD_VIEWS;
 //#define VERBOSE_UPDATE_OBJECTS
 
 //#define VERBOSE_ALLOC_WATCH
@@ -331,12 +331,13 @@ void b9LoadViewFile(byte viewNum)
 	printf("&localView is %p ", &localView);
 #endif
 	getLoadedView(&localView, viewNum);
-	printf("1.");
+
     loadAGIFileTrampoline(VIEW, &agiFilePosType, &tempAGI);
-	printf("2.");
+
 	memCpyBanked(&viewStart[0], tempAGI.code, tempAGI.codeBank, NO_VIEW_START_BYTES);
 
-	printf("3.");
+	//printf("View header bytes %d, %d, %d, %d, %d \n", viewStart[0], viewStart[1], viewStart[2], viewStart[3], viewStart[4]);
+
 	descriptionOffset = viewStart[3] || viewStart[4];
 
 	if (descriptionOffset)

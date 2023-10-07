@@ -30,5 +30,3 @@
     .export _b6SetAndWaitForIrqState
     .export _displayTextAddressToCopyTo
     .export _vSyncCounter
-    .export _lastBoxLines
-    .export _lastBoxStartLine
