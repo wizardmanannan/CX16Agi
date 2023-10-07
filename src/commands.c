@@ -2149,9 +2149,9 @@ void b4Print_at() // 4, 0x00           /* 3 args for AGI versions before */
 	BITMAP* temp;
 	int messNum, x, y, l;
 	char* messagePointer;
-	int timeoutFlagVal = var[PRINT_TIMEOUT];
-	byte waitTicks;
-	byte vSyncToContinueAt;
+	byte timeoutFlagVal = var[PRINT_TIMEOUT];
+	unsigned int waitTicks;
+	unsigned int vSyncToContinueAt;
 
 	LOGICFile logicFile;
 	getLogicFile(&logicFile, currentLog);

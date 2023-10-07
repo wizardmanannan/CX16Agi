@@ -11,7 +11,7 @@ typedef enum {
     DISPLAY_TEXT = 4
 } IRQ_COMMAND;
 
-extern byte vSyncCounter; //Updated by IRQ every 60ms
+extern unsigned int vSyncCounter; //Updated by IRQ every 60ms
 
 extern void b6SetAndWaitForIrqState(IRQ_COMMAND state);
 

@@ -127,7 +127,7 @@ sendIrqCommand: .byte $0
 ;As above except it will never change to 0
 currentIrqState: .byte $0
 
-_vSyncCounter: .byte $0
+_vSyncCounter: .word $0
 debugVSyncCounter: .word $0
 custom_irq_handler:
 
@@ -180,6 +180,8 @@ sta sendIrqCommand
 
 @vSyncCounter:
 inc _vSyncCounter
+bne @defaultIqr
+inc _vSyncCounter + 1
 
 @defaultIqr:
 pla
