@@ -39,7 +39,7 @@
 //#define VERBOSE_MESSAGE_TEXT
 //#define VERBOSE_GOTO
 //#define VERBOSE_ROOM_CHANGE
-#define VERBOSE_MESSAGE_PRINT
+//#define VERBOSE_MESSAGE_PRINT
 #define TEXTBOX_PALETTE_NUMBER 1
 #define DISPLAY_PALETTE_NUMBER 2
 
@@ -1654,7 +1654,7 @@ void b3Display() // 3, 0x00
 #endif
 	//trampolineProcessString(messagePointer, 0, tempString);
 	drawBigString(screen, tempString, row * 16, 20 + (col * 16), agi_fg, agi_bg);
-	b3DisplayMessageBox(messagePointer, logicFile.messageBank, row, col, DISPLAY_PALETTE_NUMBER);
+	b3DisplayMessageBox(messagePointer, logicFile.messageBank, row, col, DISPLAY_PALETTE_NUMBER, 0);
 
 	return;
 }
@@ -2178,7 +2178,7 @@ void b4Print_at() // 4, 0x00           /* 3 args for AGI versions before */
 
 
 
-    trampolineDisplayMessageBox(messagePointer, logicFile.messageBank, x, y, TEXTBOX_PALETTE_NUMBER);
+    trampolineDisplayMessageBox(messagePointer, logicFile.messageBank, x, y, TEXTBOX_PALETTE_NUMBER, l);
 
 	//printInBoxBig(tempString, x, y, l);
 	//while (!key[KEY_ENTER] && !key[KEY_ESC]) { /* Wait */ }
