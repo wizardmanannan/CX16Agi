@@ -234,9 +234,9 @@ void b6InitLayer1Mapbase()
 #pragma code-name (push, "BANKRAM03")
 void b3FillChar(byte startLine, byte endLine, byte paletteNumber, byte charToFill)
 {
-	byte i,j;
+	byte i, j;
 
-	char* clearBuffer = (char*)GOLDEN_RAM_WORK_AREA;
+	char* clearBuffer = (char*)TEXTBUFFER;
 
 	for (i = startLine; i <= endLine; i++)
 	{
@@ -251,7 +251,7 @@ void b3FillChar(byte startLine, byte endLine, byte paletteNumber, byte charToFil
 			|| i == endLine) // Minus one so the terminator can fit in
 		{
 			*clearBuffer = '\0';
-			b3DisplayMessageBox((char*)GOLDEN_RAM_WORK_AREA, 0, startLine, 0, paletteNumber, 0);
+			b3DisplayMessageBox((char*)TEXTBUFFER, TEXT_BANK, startLine, 0, paletteNumber, 0);
 		}
 		else
 		{
@@ -261,6 +261,8 @@ void b3FillChar(byte startLine, byte endLine, byte paletteNumber, byte charToFil
 	}
 }
 
+extern byte lastBoxLines;
+extern byte lastBoxStartLine;
 //Thanks to https://www.rosettacode.org/wiki/Word_wrap#In-place_greedy
 void wrap_text(char* line_start, int width) {
 	char* last_space = 0;
@@ -279,19 +281,22 @@ void wrap_text(char* line_start, int width) {
 			*last_space = NEW_LINE;
 			line_start = last_space + 1;
 			last_space = 0;
+			lastBoxLines++;
 		}
 	}
 }
 
 extern unsigned long displayTextAddressToCopyTo;
-byte lastBoxSize;
-void b3DisplayMessageBox(char* message, byte messageBank, byte row, byte col, byte paletteNumber, byte boxWidth) //Even though message is 
+void b3DisplayMessageBox(char* message, byte messageBank, byte row, byte col, byte paletteNumber, byte boxWidth) //Supports copying from banks or putting data directly into textbuffer
 {
 	int i;
 	char terminator = 0;
 	size_t messageSize = strLenBanked(message, messageBank) + 1;
 	long displayAddressCopyPaletteTo;
 	byte paletteByte = paletteNumber << 4;
+
+	lastBoxStartLine = row;
+	lastBoxLines = 1;
 
 	if (messageSize > 1) //Agi sometimes has empty messages. We say greater than 1 because of the terminator
 	{
@@ -313,11 +318,14 @@ void b3DisplayMessageBox(char* message, byte messageBank, byte row, byte col, by
 		printf("row %d and col is %d", row, col);
 #endif // VERBOSE_DISPLAY_TEXT
 
-		memCpyBankedBetween(TEXTBUFFER, TEXT_BANK, (byte*)message, messageBank, messageSize);
+		if (message != (char*) TEXTBUFFER)
+		{
+			memCpyBankedBetween(TEXTBUFFER, TEXT_BANK, (byte*)message, messageBank, messageSize);
+		}
 
 		if (messageSize - 1 > TILE_LAYER_WIDTH)
 		{
-			wrap_text((char*) TEXTBUFFER, boxWidth ? boxWidth : TILE_LAYER_WIDTH);
+			wrap_text((char*)TEXTBUFFER, boxWidth ? boxWidth : TILE_LAYER_WIDTH);
 		}
 
 		SET_VERA_ADDRESS_ABSOLUTE(displayAddressCopyPaletteTo, 0, 2);
@@ -326,10 +334,20 @@ void b3DisplayMessageBox(char* message, byte messageBank, byte row, byte col, by
 			WRITE_BYTE_VAR_TO_ASSM(paletteByte, VERA_data0);
 		}
 		////TODO: Doesn't return anything but I don't want to add any more trampoline methods. Come up with a more memory efficient way of handling this then constanting adding them
-				
+
 		trampoline_1ByteRByte(&b6SetAndWaitForIrqState, DISPLAY_TEXT, IRQ_BANK);
 	}
 }
+
+void b3ClearLastPlacedText()
+{
+#ifdef VERBOSE_DISPLAY_TEXT
+	printf("Trying to clear at start line %d number of lines %d end line %d \n", lastBoxStartLine, lastBoxLines, lastBoxStartLine + lastBoxLines - 1);
+#endif
+
+	b3FillChar(lastBoxStartLine, lastBoxStartLine + lastBoxLines - 1, TEXTBOX_PALETTE_NUMBER, TRANSPARENT_CHAR);
+}
+
 #pragma code-name (pop)
 
 void trampolinefillChar(byte startLine, byte endLine, byte paletteNumber, byte charToFill)

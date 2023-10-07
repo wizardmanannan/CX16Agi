@@ -39,9 +39,7 @@
 //#define VERBOSE_MESSAGE_TEXT
 //#define VERBOSE_GOTO
 //#define VERBOSE_ROOM_CHANGE
-#define VERBOSE_MESSAGE_PRINT
-#define TEXTBOX_PALETTE_NUMBER 1
-#define DISPLAY_PALETTE_NUMBER 2
+//#define VERBOSE_MESSAGE_PRINT
 
 extern byte* var;
 extern boolean* flag;
@@ -212,7 +210,7 @@ char* getMessagePointer(byte logicFileNo, byte messageNo)
 	{
 		result = (char*)logicFile.messages[messageNo + i];
 	}
-	
+
 #ifdef VERBOSE_MESSAGE_PRINT
 	printf("Attempting to print message %d from address %p, from logic %d. The length is %d\n", messageNo, result, logicFileNo, strlen(result));
 #endif // VERBOSE_MESSAGE_PRINT
@@ -535,7 +533,7 @@ void b2Draw_pic() // 1, 0x80
 
 	//picFNum = pNum;  // Debugging. Delete at some stage!!!
 
-    drawPicTrampoline(loadedPicture.data, loadedPicture.size, TRUE, pNum);
+	drawPicTrampoline(loadedPicture.data, loadedPicture.size, TRUE, pNum);
 
 	return;
 }
@@ -551,7 +549,7 @@ void b2Show_pic() // 0, 0x00
 
 void b2Discard_pic() // 1, 0x80 
 {
-	trampoline_1Int(&b11DiscardPictureFile,var[loadAndIncWinCode()], PICTURE_CODE_BANK);
+	trampoline_1Int(&b11DiscardPictureFile, var[loadAndIncWinCode()], PICTURE_CODE_BANK);
 
 	return;
 }
@@ -706,7 +704,7 @@ void b2Get_posn() // 3, 0x60
 {
 	int entryNum;
 	ViewTable localViewtab;
-	
+
 	entryNum = loadAndIncWinCode();
 	getViewTab(&localViewtab, entryNum);
 
@@ -778,7 +776,7 @@ void b2Set_loop() // 2, 0x00
 	getViewTab(&localViewtab, entryNum);
 	trampolineViewUpdater1Int(&b9SetLoop, &localViewtab, loopNum, VIEW_CODE_BANK_1);
 	trampolineViewUpdater1Int(&b9SetCel, &localViewtab, 0, VIEW_CODE_BANK_1);
-   
+
 	setViewTab(&localViewtab, entryNum);
 	return;
 }
@@ -916,7 +914,7 @@ void b2Current_view() // 2, 0x40
 	var[varNum] = localViewtab.currentView;
 
 	setViewTab(&localViewtab, entryNum);
-	
+
 	return;
 }
 
@@ -1170,7 +1168,7 @@ void b2Stop_cycling() // 1, 0x00
 {
 	int entryNum;
 	ViewTable localViewtab;
-	
+
 	entryNum = loadAndIncWinCode();
 	getViewTab(&localViewtab, entryNum);
 
@@ -1585,7 +1583,7 @@ void b3ProcessString(char* stringPointer, byte stringBank, char* outputString)
 #define TEMP_SIZE 80
 #define NUM_STRING_SIZE 80
 #define INPUT_BUFFER_SIZE 10
-	
+
 }
 
 void b3Print() // 1, 00 
@@ -1639,7 +1637,7 @@ void b3Display() // 3, 0x00
 	int row, col, messNum, i;
 	char* tempString = (char*)&GOLDEN_RAM[LOCAL_WORK_AREA_START];
 	char* messagePointer;
-	
+
 	LOGICFile logicFile;
 	getLogicFile(&logicFile, currentLog);
 
@@ -1655,7 +1653,6 @@ void b3Display() // 3, 0x00
 	//trampolineProcessString(messagePointer, 0, tempString);
 	drawBigString(screen, tempString, row * 16, 20 + (col * 16), agi_fg, agi_bg);
 	b3DisplayMessageBox(messagePointer, logicFile.messageBank, row, col, DISPLAY_PALETTE_NUMBER, 0);
-
 	return;
 }
 
@@ -1681,16 +1678,16 @@ void b3Display_v() // 3, 0xE0
 
 void b3Clear_lines() // 3, 0x00 
 {
-	int boxColour,startLine, endLine;
+	int boxColour, startLine, endLine;
 	byte i, j;
 	startLine = loadAndIncWinCode();
 	endLine = loadAndIncWinCode();
 	boxColour = loadAndIncWinCode();
-	
+
 	show_mouse(NULL);
 
 	b3FillChar(startLine, endLine, DISPLAY_PALETTE_NUMBER, TRANSPARENT_CHAR);
-	
+
 	show_mouse(screen);
 }
 
@@ -1903,11 +1900,11 @@ void b4Add_to_pic() // 7, 0x00
 	y = loadAndIncWinCode();
 	priNum = loadAndIncWinCode();
 	baseCol = loadAndIncWinCode();
-		
+
 	//printf("viewNum %d, loopNum %d, celNum %d, x %d, y %d priNum %d baseCol %d", viewNum, loopNum, celNum, x, y, priNum, baseCol);
-	
+
 	trampolineAddToPic(viewNum, loopNum, celNum, x, y, priNum, baseCol);
-	
+
 
 
 	return;
@@ -2174,14 +2171,13 @@ void b4Print_at() // 4, 0x00           /* 3 args for AGI versions before */
 
 	show_mouse(NULL);
 	show_mouse(screen);
-	
+
 	//while (key[KEY_ENTER] || key[KEY_ESC]) { /* Wait */ } //TODO: When keyboard control added put in wait
 
 	messagePointer = getMessagePointer(currentLog, messNum - 1);
 
 
-
-    trampolineDisplayMessageBox(messagePointer, logicFile.messageBank, x, y, TEXTBOX_PALETTE_NUMBER, l);
+	trampolineDisplayMessageBox(messagePointer, logicFile.messageBank, x, y, TEXTBOX_PALETTE_NUMBER, l);
 
 	if (timeoutFlagVal)
 	{
@@ -2189,8 +2185,8 @@ void b4Print_at() // 4, 0x00           /* 3 args for AGI versions before */
 		vSyncToContinueAt = vSyncCounter + waitTicks;
 
 		while (vSyncCounter != vSyncToContinueAt);
-		
-		//trampolinefillChar(y, )
+
+		trampoline_0(&b3ClearLastPlacedText, TEXT_BANK);
 	}
 	else
 	{

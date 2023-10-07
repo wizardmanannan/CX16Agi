@@ -1,5 +1,11 @@
-.segment "BANKRAM06"
 .ifndef GRAPHICS_INC
+; Set the value of include guard and define constants
+GRAPHICS_INC = 1
+
+.segment "BANKRAM03"
+_lastBoxLines: .byte $0 ; Wish I could have declared these in textLayer.c, but put it here to ensure it is in bank 3
+_lastBoxStartLine: .byte $0
+.segment "BANKRAM06"
 
 .include "global.s"
 .include "irq.s"
@@ -11,8 +17,6 @@
 .import popa
 .import _b6InitLayer1Mapbase
 
-; Set the value of include guard and define constants
-GRAPHICS_INC = 1
 _b6ClearBackground:
 stz VERA_ctrl
 lda #$10 | ^STARTING_BYTE
