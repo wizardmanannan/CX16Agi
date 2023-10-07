@@ -264,7 +264,7 @@ void b3FillChar(byte startLine, byte endLine, byte paletteNumber, byte charToFil
 extern byte lastBoxLines;
 extern byte lastBoxStartLine;
 //Thanks to https://www.rosettacode.org/wiki/Word_wrap#In-place_greedy
-void wrap_text(char* line_start, int width) {
+void b3WrapText(char* line_start, int width) {
 	char* last_space = 0;
 	char* p;
 
@@ -325,7 +325,7 @@ void b3DisplayMessageBox(char* message, byte messageBank, byte row, byte col, by
 
 		if (messageSize - 1 > TILE_LAYER_WIDTH)
 		{
-			wrap_text((char*)TEXTBUFFER, boxWidth ? boxWidth : TILE_LAYER_WIDTH);
+			b3WrapText((char*)TEXTBUFFER, boxWidth ? boxWidth : TILE_LAYER_WIDTH);
 		}
 
 		SET_VERA_ADDRESS_ABSOLUTE(displayAddressCopyPaletteTo, 0, 2);
