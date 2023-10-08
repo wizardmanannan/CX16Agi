@@ -28,9 +28,9 @@ beq @waitForBlank
 handleDisplayText:
 SET_VERA_ADDRESS_ABSOLUTE _displayTextAddressToCopyTo, #$0, #$2
 
-lda #<DISPLAY_TEXT_BUFFER
+lda #<_textBuffer1
 sta ZP_TMP
-lda #>DISPLAY_TEXT_BUFFER
+lda #>_textBuffer1
 sta ZP_TMP + 1
 
 @outerLoop:

@@ -5,6 +5,12 @@ GRAPHICS_INC = 1
 .segment "BANKRAM03"
 _lastBoxLines: .byte $0 ; Wish I could have declared these in textLayer.c, but put it here to ensure it is in bank 3
 _lastBoxStartLine: .byte $0
+
+
+_textBuffer1: .res 1000
+_textBuffer2: .res 1000
+_interpolationBuffer: .res 2000
+
 .segment "BANKRAM06"
 
 .include "global.s"

@@ -236,7 +236,7 @@ void b3FillChar(byte startLine, byte endLine, byte paletteNumber, byte charToFil
 {
 	byte i, j;
 
-	char* clearBuffer = (char*)TEXTBUFFER;
+	char* clearBuffer = textBuffer1;
 
 	for (i = startLine; i <= endLine; i++)
 	{
@@ -251,7 +251,7 @@ void b3FillChar(byte startLine, byte endLine, byte paletteNumber, byte charToFil
 			|| i == endLine) // Minus one so the terminator can fit in
 		{
 			*clearBuffer = '\0';
-			b3DisplayMessageBox((char*)TEXTBUFFER, TEXT_BANK, startLine, 0, paletteNumber, 0);
+			b3DisplayMessageBox(textBuffer1, TEXT_BANK, startLine, 0, paletteNumber, 0);
 		}
 		else
 		{
@@ -318,14 +318,14 @@ void b3DisplayMessageBox(char* message, byte messageBank, byte row, byte col, by
 		printf("row %d and col is %d", row, col);
 #endif // VERBOSE_DISPLAY_TEXT
 
-		if (message != (char*) TEXTBUFFER)
+		if (message != (char*) textBuffer1)
 		{
-			memCpyBankedBetween(TEXTBUFFER, TEXT_BANK, (byte*)message, messageBank, messageSize);
+			memCpyBankedBetween((byte*)textBuffer1, TEXT_BANK, (byte*)message, messageBank, messageSize);
 		}
 
 		if (messageSize - 1 > TILE_LAYER_WIDTH)
 		{
-			b3WrapText((char*)TEXTBUFFER, boxWidth ? boxWidth : TILE_LAYER_WIDTH);
+			b3WrapText(textBuffer1, boxWidth ? boxWidth : TILE_LAYER_WIDTH);
 		}
 
 		SET_VERA_ADDRESS_ABSOLUTE(displayAddressCopyPaletteTo, 0, 2);

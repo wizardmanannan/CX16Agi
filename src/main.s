@@ -32,3 +32,6 @@
     .export _vSyncCounter
     .export _lastBoxLines
     .export _lastBoxStartLine
+    .export _textBuffer1
+    .export _textBuffer2
+    .export _interpolationBuffer

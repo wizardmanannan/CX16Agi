@@ -34,7 +34,6 @@
 
 #define MAX_CHAR_ACROSS 40
 
-#define TEXTBUFFER        ((unsigned char *)0xB447)
 #define TEXTBUFFER_SIZE 1000
 
 #define FIRST_ROW 4
@@ -52,5 +51,9 @@ void b3ClearLastPlacedText();
 
 void trampolinefillChar(byte startLine, byte endLine, byte paletteNumber, byte charToFill);
 void trampolineDisplayMessageBox(char* message, byte messageBank, byte row, byte col, byte paletteNumber, byte boxWidth);
+
+extern char textBuffer1[TEXTBUFFER_SIZE];
+extern char textBuffer2[TEXTBUFFER_SIZE];
+
 
 #endif
