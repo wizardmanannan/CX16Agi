@@ -44,7 +44,7 @@ void b6MakeBottomBorder()
 {
 	byte i;
 
-	SET_VERA_ADDRESS(TILEBASE + (BOTTOM_BORDER - 1) * BYTES_PER_CHARACTER, ADDRESSSEL0, 1);
+	SET_VERA_ADDRESS(TILEBASE + BOTTOM_BORDER * BYTES_PER_CHARACTER, ADDRESSSEL0, 1);
 
 	for (i = 0; i < BYTES_PER_CHARACTER; i++)
 	{
@@ -63,7 +63,7 @@ void b6MakeLeftBorder()
 {
 	byte i;
 
-	SET_VERA_ADDRESS(TILEBASE + (LEFT_BORDER - 1) * BYTES_PER_CHARACTER, ADDRESSSEL0, 1);
+	SET_VERA_ADDRESS(TILEBASE + LEFT_BORDER * BYTES_PER_CHARACTER, ADDRESSSEL0, 1);
 
 	for (i = 0; i < BYTES_PER_CHARACTER; i++)
 	{
@@ -82,7 +82,7 @@ void b6MakeTopBorder()
 {
 	byte i;
 
-	SET_VERA_ADDRESS(TILEBASE + (TOP_BORDER - 1) * BYTES_PER_CHARACTER, ADDRESSSEL0, 1);
+	SET_VERA_ADDRESS(TILEBASE + TOP_BORDER * BYTES_PER_CHARACTER, ADDRESSSEL0, 1);
 
 	for (i = 0; i < BYTES_PER_CHARACTER; i++)
 	{
@@ -101,7 +101,7 @@ void b6MakeRightBorder()
 {
 	byte i;
 
-	SET_VERA_ADDRESS(TILEBASE + (RIGHT_BORDER - 1) * BYTES_PER_CHARACTER, ADDRESSSEL0, 1);
+	SET_VERA_ADDRESS(TILEBASE + RIGHT_BORDER * BYTES_PER_CHARACTER, ADDRESSSEL0, 1);
 
 	for (i = 0; i < BYTES_PER_CHARACTER; i++)
 	{
@@ -192,7 +192,13 @@ void b6TestCharset()
 {
 	int i;
 	byte j;
-	SET_VERA_ADDRESS_PICTURE(MAPBASE, ADDRESSSEL0, 2);
+	byte* veraDcVideo = (byte*) VERA_DCVIDEO;
+
+	#define LAYER_1_2_ENABLE 0x31;
+
+	*veraDcVideo = LAYER_1_2_ENABLE;
+
+	SET_VERA_ADDRESS(MAPBASE, ADDRESSSEL0, 2);
 
 	for (i = 0; i < NO_CHARS; i++)
 	{
@@ -206,6 +212,8 @@ void b6TestCharset()
 			}
 		}
 	}
+
+	while (1);
 }
 #endif
 
@@ -286,7 +294,62 @@ void b3WrapText(char* line_start, int width) {
 	}
 }
 
+void b3DrawBorder(byte boxWidth, size_t messageSize)
+{
+	byte i;
+	char* currentCharToWrite = &textBuffer2[0], *charToReadNext;
+	int segmentLength;
+	char* leftBarPosition;
+	char escape[2];
+
+	escape[0] = NEW_LINE;
+	escape[1] = '\0';
+
+	for (i = 0; i <= boxWidth; i++)
+	{
+		*currentCharToWrite++ = TOP_BORDER;
+	}
+
+	*currentCharToWrite++ = NEW_LINE;
+
+	charToReadNext = strtok(textBuffer1, escape);
+	
+	do
+	{
+		leftBarPosition = currentCharToWrite;
+		*currentCharToWrite++ = LEFT_BORDER;
+
+	    segmentLength = strlen(charToReadNext);
+		memcpy(currentCharToWrite, charToReadNext, segmentLength);
+
+		currentCharToWrite += segmentLength;
+
+		charToReadNext = strtok(NULL, escape);
+
+		while (currentCharToWrite < leftBarPosition + boxWidth)
+		{
+			*currentCharToWrite++ = SPACE;
+		}
+
+		*currentCharToWrite++ = RIGHT_BORDER;
+		*currentCharToWrite++ = NEW_LINE;
+
+	} while (charToReadNext);
+
+	for (i = 0; i <= boxWidth; i++)
+	{
+		*currentCharToWrite++ = BOTTOM_BORDER;
+	}
+	*currentCharToWrite++ = '\0';
+
+	if (currentCharToWrite > &textBuffer2[0] + TEXTBUFFER_SIZE - 1)
+	{
+		printf("Bounds check fail. Boxing function");
+	}
+}
+
 extern unsigned long displayTextAddressToCopyTo;
+extern char* currentTextBuffer;
 void b3DisplayMessageBox(char* message, byte messageBank, byte row, byte col, byte paletteNumber, byte boxWidth) //Supports copying from banks or putting data directly into textbuffer
 {
 	int i;
@@ -294,9 +357,17 @@ void b3DisplayMessageBox(char* message, byte messageBank, byte row, byte col, by
 	size_t messageSize = strLenBanked(message, messageBank) + 1;
 	long displayAddressCopyPaletteTo;
 	byte paletteByte = paletteNumber << 4;
+	byte textWidth = boxWidth;
+	
+	currentTextBuffer = textBuffer1;
 
 	lastBoxStartLine = row;
 	lastBoxLines = 1;
+
+	if (boxWidth)
+	{
+		lastBoxLines += 2; //Account for the top and bottom border
+	}
 
 	if (messageSize > 1) //Agi sometimes has empty messages. We say greater than 1 because of the terminator
 	{
@@ -325,7 +396,18 @@ void b3DisplayMessageBox(char* message, byte messageBank, byte row, byte col, by
 
 		if (messageSize - 1 > TILE_LAYER_WIDTH)
 		{
-			b3WrapText(textBuffer1, boxWidth ? boxWidth : TILE_LAYER_WIDTH);
+			if (boxWidth)
+			{
+				textWidth = boxWidth - 4;
+			}
+
+			b3WrapText(textBuffer1, boxWidth ? textWidth : TILE_LAYER_WIDTH);
+		}
+
+		if (boxWidth)
+		{
+			b3DrawBorder(boxWidth - 2, messageSize);
+			currentTextBuffer = textBuffer2;
 		}
 
 		SET_VERA_ADDRESS_ABSOLUTE(displayAddressCopyPaletteTo, 0, 2);

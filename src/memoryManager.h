@@ -156,6 +156,7 @@
 #define VERA_ctrl 0x9F25
 #define VERA_data0 0x9F23
 #define VERA_data1 0x9F24
+#define VERA_DCVIDEO 0x9F29
 
 
 //Char Set 

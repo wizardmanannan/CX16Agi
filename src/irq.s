@@ -28,9 +28,9 @@ beq @waitForBlank
 handleDisplayText:
 SET_VERA_ADDRESS_ABSOLUTE _displayTextAddressToCopyTo, #$0, #$2
 
-lda #<_textBuffer1
+lda _currentTextBuffer
 sta ZP_TMP
-lda #>_textBuffer1
+lda _currentTextBuffer + 1
 sta ZP_TMP + 1
 
 @outerLoop:
@@ -79,6 +79,7 @@ rts
 
 _displayTextAddressToCopyTo: .word $0
 _displayTextAddressToCopyToHigh: .word $0
+_currentTextBuffer: .word $0
 .segment "BANKRAM06"
 _b6InitIrq:
  ; backup default RAM IRQ vector

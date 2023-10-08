@@ -212,11 +212,6 @@ sta VERA_data0
 lda #>COLOR_WHITE
 sta VERA_data0
 
-lda #<COLOR_CYAN
-sta VERA_data0
-lda #>COLOR_CYAN
-sta VERA_data0
-
 lda #<COLOR_RED
 sta VERA_data0
 lda #>COLOR_RED
@@ -260,6 +255,11 @@ sta VERA_data0
 lda #<COLOR_LIGHT_RED
 sta VERA_data0
 lda #>COLOR_LIGHT_RED
+sta VERA_data0
+
+lda #<COLOR_CYAN
+sta VERA_data0
+lda #>COLOR_CYAN
 sta VERA_data0
 
 lda #<COLOR_LIGHT_MAGENTA
