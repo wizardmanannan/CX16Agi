@@ -3,12 +3,17 @@ Major Changes Since Version 3:
 - Now displaying background graphics (more optimisation needed)
   
 
-# CX 16 Iteration 4 Goals (To Be Done)
-- Implement System Tick Replacing Inaccurate Inherited C One 
+# CX 16 Iteration 4 Goals (Current)
 - Support AGI Textboxes
-- Implement A Loading Screen For the Background Graphics Drawing to Prevent Screen Tearing 
+- Implement A Loading Screen For the Background Graphics Drawing to Prevent Screen Tearing
+- Implement System Tick Replacing Inaccurate Inherited C One
+
+# CX 16 Iteration 5 Goals (Next)
+- Sprite support
 
 **Note: This Project Is Under Construction And Is Not Ready For General Use**
+
+Here is a quick demonstration video: https://youtu.be/IDdc890T_oY 
 
 **Only AGI 1 & 2 games are currently supported**
 
