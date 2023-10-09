@@ -12,4 +12,5 @@ lda _pixelCounter
 lda _logDebugVal1
 lda _okFillAddress
 lda debugVSyncCounter
+lda sendIrqCommand
 rts

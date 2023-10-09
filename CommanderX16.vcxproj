@@ -42,6 +42,7 @@
     <ClInclude Include="src\fixed.h" />
     <ClInclude Include="src\GENERAL.H" />
     <ClInclude Include="src\irq.h" />
+    <ClInclude Include="src\loadingScreen.h" />
     <ClInclude Include="src\textLayer.h" />
     <ClInclude Include="src\GUI.H" />
     <ClInclude Include="src\helpers.h" />
@@ -67,6 +68,7 @@
     <ClCompile Include="src\DECOMP.C" />
     <ClCompile Include="src\fixed.c" />
     <ClCompile Include="src\general.c" />
+    <ClCompile Include="src\loadingScreen.c" />
     <ClCompile Include="src\textLayer.c" />
     <ClCompile Include="src\GUI.C" />
     <ClCompile Include="src\helpers.c" />

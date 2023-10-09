@@ -6,7 +6,7 @@
 typedef enum {
     DONT_CHANGE = 0,
     BLANK_SCREEN = 1,
-    LOAD_SCREEN = 2,
+    TEXT_ONLY = 2,
     NORMAL = 3,
     DISPLAY_TEXT = 4
 } IRQ_COMMAND;

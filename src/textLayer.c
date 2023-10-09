@@ -259,7 +259,7 @@ void b3FillChar(byte startLine, byte endLine, byte paletteNumber, byte charToFil
 			|| i == endLine) // Minus one so the terminator can fit in
 		{
 			*clearBuffer = '\0';
-			b3DisplayMessageBox(textBuffer1, TEXT_BANK, startLine, 0, paletteNumber, 0);
+			b3DisplayMessageBox(textBuffer1, TEXT_CODE_BANK, startLine, 0, paletteNumber, 0);
 		}
 		else
 		{
@@ -414,7 +414,7 @@ void b3DisplayMessageBox(char* message, byte messageBank, byte row, byte col, by
 
 		if (message != (char*) textBuffer1)
 		{
-			memCpyBankedBetween((byte*)textBuffer1, TEXT_BANK, (byte*)message, messageBank, messageSize);
+			memCpyBankedBetween((byte*)textBuffer1, TEXT_CODE_BANK, (byte*)message, messageBank, messageSize);
 		}
 
 		if (messageSize - 1 > TILE_LAYER_WIDTH)
@@ -458,7 +458,7 @@ void b3ClearLastPlacedText()
 void trampolinefillChar(byte startLine, byte endLine, byte paletteNumber, byte charToFill)
 {
 	byte previousRamBank = RAM_BANK;
-	RAM_BANK = TEXT_BANK;
+	RAM_BANK = TEXT_CODE_BANK;
 
 	b3FillChar(startLine, endLine, paletteNumber, charToFill);
 
@@ -468,7 +468,7 @@ void trampolinefillChar(byte startLine, byte endLine, byte paletteNumber, byte c
 void trampolineDisplayMessageBox(char* message, byte messageBank, byte row, byte col, byte paletteNumber, byte boxWidth)
 {
 	byte previousRamBank = RAM_BANK;
-	RAM_BANK = TEXT_BANK;
+	RAM_BANK = TEXT_CODE_BANK;
 
 	b3DisplayMessageBox(message, messageBank, row, col, paletteNumber, boxWidth);
 

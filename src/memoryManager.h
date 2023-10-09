@@ -122,6 +122,8 @@
 #define FLOOD_QUEUE_START 0xA850
 
 //Code Banks
+#define TEXT_CODE_BANK 3
+#define LOADING_SCREEN_CODE_BANK 6
 #define LOAD_DIRS_BANK 0x6
 #define FILE_LOADER_HELPERS 0x6
 #define MEKA_BANK 0x6
@@ -136,7 +138,6 @@
 #define PICTURE_CODE_BANK 0x11
 #define IRQ_BANK 6
 #define GRAPHICS_BANK 6
-#define TEXT_BANK 3
 
 //Golden RAM
 #define VARS_AREA_START 0

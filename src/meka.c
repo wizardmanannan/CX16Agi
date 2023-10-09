@@ -24,6 +24,7 @@
 #include "picture.h"
 #include "irq.h"
 #include "textLayer.h"
+#include "loadingScreen.h"
 //#include "parser.h"
 //#include "sound.h"
 
@@ -86,10 +87,8 @@ void b6DiscardResources()
 
 void b6Clear()
 {
-    b6SetAndWaitForIrqState(BLANK_SCREEN);
-    b6InitLayer1Mapbase();
+    b6DisplayLoadingScreen();
     trampoline_0(&b11ClearPicture, PICTURE_CODE_BANK);
-    b6SetAndWaitForIrqState(NORMAL);
 }
 
 /***************************************************************************
@@ -276,7 +275,6 @@ void b6Initialise()
     loadWords();
     initEvents();
     b6InitAsm();
-
     horizon = 36;
 
     ///* Set up timer. The timer controls the interpreter speed. */

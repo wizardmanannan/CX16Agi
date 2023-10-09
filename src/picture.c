@@ -1184,6 +1184,8 @@ void b11DrawPic(byte* bankedData, int pLen, boolean okToClearScreen, byte picNum
 	int** zpB2 = (int**)ZP_PTR_B2;
 	byte** zpCh = (byte**)ZP_PTR_CH;
 	byte** zpDisp = (byte**)ZP_PTR_DISP;
+	
+	trampoline_0(&b6DisplayLoadingScreen, LOADING_SCREEN_CODE_BANK);
 
 	*zpTemp = &bitmapWidthPreMult[0];
 	*zpTemp2 = &DIVISION_AREA[0];
@@ -1290,6 +1292,7 @@ void b11DrawPic(byte* bankedData, int pLen, boolean okToClearScreen, byte picNum
 	*zpB2 = 0;
 	*zpCh = 0;
 	*zpDisp = 0;
+	trampoline_0(&b6DismissLoadingScreen, LOADING_SCREEN_CODE_BANK);
 }
 
 void b11InitPictures()

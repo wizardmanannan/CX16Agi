@@ -1621,7 +1621,7 @@ void b3PrintMessageInTextbox(byte messNum, byte x, byte y, byte length)
 
 		while (vSyncCounter != vSyncToContinueAt);
 
-		trampoline_0(&b3ClearLastPlacedText, TEXT_BANK);
+		trampoline_0(&b3ClearLastPlacedText, TEXT_CODE_BANK);
 	}
 	else
 	{
@@ -2400,7 +2400,7 @@ void b5Div_v() // 2, 0xC0
 void trampolinePrintMessageInTextbox(byte messNum, byte x, byte y, byte length)
 {
 	byte previousRamBank = RAM_BANK;
-	RAM_BANK = TEXT_BANK;
+	RAM_BANK = TEXT_CODE_BANK;
 
 	b3PrintMessageInTextbox(messNum, x, y, length);
 

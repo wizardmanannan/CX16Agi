@@ -20,6 +20,7 @@
 #include "memoryManager.h"
 #include "fixed.h"
 #include "helpers.h"
+#include "loadingScreen.h"
 
 #define DEFAULT_COLOR 0xF
 

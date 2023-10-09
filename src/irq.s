@@ -110,18 +110,19 @@ rts
 .segment "CODE"
 IRQ_CMD_DONTCHANGE = 0
 IRQ_CMD_BLACKSCREEN = 1
-IRQ_CMD_LOADSCREEN = 2
+IRQ_CMD_TEXT_ONLY = 2
 IRQ_CMD_NORMAL = 3
 IRQ_CMD_DISPLAY_TEXT = 4
 
-LAYER_1_2_ENABLE = $31
-LAYER_1_2_DISABLE = $1
+LAYER_0_1_ENABLE = $31
+LAYER_0_1_DISABLE = $1
+LAYER_0_DISABLE_1_ENABLE = $21
 
 ;0 Don't Change
 ;1 Blank Screen
-;2 Load Screen
-;3 Normal
-;4 Display Text
+;2 Text Only
+;3 Return To Normal Display (Both layers enabled)
+;4 Display Text (A command to display text, the text to display is stored in the buffer pointed to by _currentTextBuffer)
 
 sendIrqCommand: .byte $0
 
@@ -156,23 +157,22 @@ jsr handleDisplayText
 bra @resetSetIrqState
 
 @blankScreen:
-lda #LAYER_1_2_DISABLE
+lda #LAYER_0_1_DISABLE
 sta VERA_dc_video
 lda #IRQ_CMD_BLACKSCREEN
 sta currentIrqState
 bra @resetSetIrqState
 
 @normal:
-lda #LAYER_1_2_ENABLE
+lda #LAYER_0_1_ENABLE
 sta VERA_dc_video
 lda #IRQ_CMD_NORMAL
 sta currentIrqState
 bra @resetSetIrqState
 
-@loadScreen:
-; lda #LAYER_1_2_DISABLE
-; lda #IRQ_CMD_LOADSCREEN ;Need to fill this in
-; sta currentIrqState
+@textOnly:
+lda #LAYER_0_DISABLE_1_ENABLE
+sta VERA_dc_video
 bra @resetSetIrqState
 
 @resetSetIrqState:
@@ -193,7 +193,7 @@ jmp (default_irq_vector)
 @jmpTableIrq: ;In order of IRQ_CMDS
 .addr @vSyncCounter
 .addr @blankScreen
-.addr @loadScreen
+.addr @textOnly
 .addr @normal
 .addr @displayText
 

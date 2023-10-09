@@ -22,6 +22,7 @@ _interpolationBuffer: .res 2000
 .import pusha
 .import popa
 .import _b6InitLayer1Mapbase
+.import _b6DisplayLoadingScreen
 
 _b6ClearBackground:
 stz VERA_ctrl
@@ -378,9 +379,8 @@ stz VERA_L1_vscroll_h
 jsr _b6InitCharset 
 jsr _b6InitLayer1Mapbase
 
-SEND_IRQ_COMMAND #IRQ_CMD_NORMAL, @vSyncToCheck
+jsr _b6DisplayLoadingScreen
 
-WAIT_FOR_NEXT_IRQ @vSyncToCheck
 rts
 @vSyncToCheck: .byte $0
 
