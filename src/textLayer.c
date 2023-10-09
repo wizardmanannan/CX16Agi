@@ -40,17 +40,17 @@ int byteCounter = 0;
 	} while (0)
 
 
-void b6MakeBottomBorder()
+void b6MakeTopBorder()
 {
 	byte i;
 
-	SET_VERA_ADDRESS(TILEBASE + BOTTOM_BORDER * BYTES_PER_CHARACTER, ADDRESSSEL0, 1);
+	SET_VERA_ADDRESS(TILEBASE + TOP_BORDER * BYTES_PER_CHARACTER, ADDRESSSEL0, 1);
 
 	for (i = 0; i < BYTES_PER_CHARACTER; i++)
 	{
 		if (i < BYTES_PER_CHARACTER - BYTES_PER_CELL)
 		{
-			WRITE_BYTE_DEF_TO_ASSM(0b10101010, VERA_data0); //White square
+			WRITE_BYTE_DEF_TO_ASSM(0, VERA_data0); //White square
 		}
 		else
 		{
@@ -78,11 +78,11 @@ void b6MakeLeftBorder()
 	}
 }
 
-void b6MakeTopBorder()
+void b6MakeBottomBorder()
 {
 	byte i;
 
-	SET_VERA_ADDRESS(TILEBASE + TOP_BORDER * BYTES_PER_CHARACTER, ADDRESSSEL0, 1);
+	SET_VERA_ADDRESS(TILEBASE + BOTTOM_BORDER * BYTES_PER_CHARACTER, ADDRESSSEL0, 1);
 
 	for (i = 0; i < BYTES_PER_CHARACTER; i++)
 	{
@@ -92,7 +92,7 @@ void b6MakeTopBorder()
 		}
 		else
 		{
-			WRITE_BYTE_DEF_TO_ASSM(0b10101010, VERA_data0); //White square
+			WRITE_BYTE_DEF_TO_ASSM(0, VERA_data0); //White square
 		}
 	}
 }
@@ -176,9 +176,9 @@ void b6InitCharset()
 	b6ConvertsOneBitPerPixCharToTwoBitPerPixelChars();
 
 	//While we could just flip them it will take less cycles when we write text just to have chars for both, as that way our stride can be two
-	b6MakeBottomBorder();
-	b6MakeLeftBorder();
 	b6MakeTopBorder();
+	b6MakeLeftBorder();
+	b6MakeBottomBorder();
 	b6MakeRightBorder();
 
 #ifdef VERBOSE_CHAR_SET_LOAD
@@ -312,6 +312,17 @@ void b3DrawBorder(byte boxWidth, size_t messageSize)
 
 	*currentCharToWrite++ = NEW_LINE;
 
+	*currentCharToWrite++ = LEFT_BORDER;
+
+	for (i = 0; i <= boxWidth - 2; i++)
+	{
+		*currentCharToWrite++ = SPACE;
+	}
+
+	*currentCharToWrite++ = RIGHT_BORDER;
+
+	*currentCharToWrite++ = NEW_LINE;
+
 	charToReadNext = strtok(textBuffer1, escape);
 	
 	do
@@ -336,6 +347,18 @@ void b3DrawBorder(byte boxWidth, size_t messageSize)
 
 	} while (charToReadNext);
 
+
+	*currentCharToWrite++ = LEFT_BORDER;
+
+	for (i = 0; i <= boxWidth - 2; i++)
+	{
+		*currentCharToWrite++ = SPACE;
+	}
+
+	*currentCharToWrite++ = RIGHT_BORDER;
+
+	*currentCharToWrite++ = NEW_LINE;
+
 	for (i = 0; i <= boxWidth; i++)
 	{
 		*currentCharToWrite++ = BOTTOM_BORDER;
@@ -350,6 +373,7 @@ void b3DrawBorder(byte boxWidth, size_t messageSize)
 
 extern unsigned long displayTextAddressToCopyTo;
 extern char* currentTextBuffer;
+
 void b3DisplayMessageBox(char* message, byte messageBank, byte row, byte col, byte paletteNumber, byte boxWidth) //Supports copying from banks or putting data directly into textbuffer
 {
 	int i;
@@ -366,7 +390,7 @@ void b3DisplayMessageBox(char* message, byte messageBank, byte row, byte col, by
 
 	if (boxWidth)
 	{
-		lastBoxLines += 2; //Account for the top and bottom border
+		lastBoxLines += 4; //Account for the top and bottom border, plus padding at the top at the bottom
 	}
 
 	if (messageSize > 1) //Agi sometimes has empty messages. We say greater than 1 because of the terminator
