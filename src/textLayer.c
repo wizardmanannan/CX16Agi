@@ -272,15 +272,12 @@ void b3FillChar(byte startLine, byte endLine, byte paletteNumber, byte charToFil
 extern byte lastBoxLines;
 extern byte lastBoxStartLine;
 //Thanks to https://www.rosettacode.org/wiki/Word_wrap#In-place_greedy
+//Agi text does not have newlines and requires the programmer to manually wrap the text
 void b3WrapText(char* line_start, int width) {
 	char* last_space = 0;
 	char* p;
 
 	for (p = line_start; *p; p++) {
-		if (*p == '\n') {
-			line_start = p + 1;
-		}
-
 		if (*p == ' ') {
 			last_space = p;
 		}
@@ -300,10 +297,10 @@ void b3DrawBorder(byte boxWidth, size_t messageSize)
 	char* currentCharToWrite = &textBuffer2[0], *charToReadNext;
 	int segmentLength;
 	char* leftBarPosition;
-	char escape[2];
+	char delimiter[2];
 
-	escape[0] = NEW_LINE;
-	escape[1] = '\0';
+	delimiter[0] = NEW_LINE;
+	delimiter[1] = '\0';
 
 	for (i = 0; i <= boxWidth; i++)
 	{
@@ -323,7 +320,7 @@ void b3DrawBorder(byte boxWidth, size_t messageSize)
 
 	*currentCharToWrite++ = NEW_LINE;
 
-	charToReadNext = strtok(textBuffer1, escape);
+	charToReadNext = strtok(textBuffer1, delimiter);
 	
 	do
 	{
@@ -335,7 +332,7 @@ void b3DrawBorder(byte boxWidth, size_t messageSize)
 
 		currentCharToWrite += segmentLength;
 
-		charToReadNext = strtok(NULL, escape);
+		charToReadNext = strtok(NULL, delimiter);
 
 		while (currentCharToWrite < leftBarPosition + boxWidth)
 		{
@@ -374,7 +371,9 @@ void b3DrawBorder(byte boxWidth, size_t messageSize)
 extern unsigned long displayTextAddressToCopyTo;
 extern char* currentTextBuffer;
 
-void b3DisplayMessageBox(char* message, byte messageBank, byte row, byte col, byte paletteNumber, byte boxWidth) //Supports copying from banks or putting data directly into textbuffer
+//Box width is 0 for text that is not in a box, or the width of the box otherwise
+//Supports copying from banks or putting data directly into textbuffer, which is on bank 3
+void b3DisplayMessageBox(char* message, byte messageBank, byte row, byte col, byte paletteNumber, byte boxWidth)
 {
 	int i;
 	char terminator = 0;

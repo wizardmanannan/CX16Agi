@@ -2143,41 +2143,32 @@ void b4Reposition_to_v() // 3, 0x60
 //	*data += 3;  /* Ignore trace information at this stage. */
 //}
 
-void b4Print_at() // 4, 0x00           /* 3 args for AGI versions before */
+//Helper function not a command
+void b4PrintMessageInTextbox(byte messNum,byte x, byte y, byte length)
 {
-	char* tempString = (char*)&GOLDEN_RAM[LOCAL_WORK_AREA_START];
-	BITMAP* temp;
-	int messNum, x, y, l;
+
 	char* messagePointer;
 	byte timeoutFlagVal = var[PRINT_TIMEOUT];
 	unsigned int waitTicks;
 	unsigned int vSyncToContinueAt;
-
 	LOGICFile logicFile;
+
 	getLogicFile(&logicFile, currentLog);
 
+#ifdef  VERBOSE_MESSAGE_PRINT
+	printf("Attempting to display message %d at %d,%d, length %d\n", messNum - 1, x, y, length);
+#endif
 #ifdef  VERBOSE_MESSAGE_PRINT
 	printf("The bank is %d\n", logicFile.messageBank);
 #endif
 
-	messNum = loadAndIncWinCode();
-	x = loadAndIncWinCode();
-	y = loadAndIncWinCode();
-	l = loadAndIncWinCode();
-
-#ifdef  VERBOSE_MESSAGE_PRINT
-	printf("Attempting to display message %d at %d,%d, length %d\n", messNum - 1, x, y, l);
-#endif
 
 	show_mouse(NULL);
 	show_mouse(screen);
 
-	//while (key[KEY_ENTER] || key[KEY_ESC]) { /* Wait */ } //TODO: When keyboard control added put in wait
-
 	messagePointer = getMessagePointer(currentLog, messNum - 1);
 
-
-	trampolineDisplayMessageBox(messagePointer, logicFile.messageBank, x, y, TEXTBOX_PALETTE_NUMBER, l);
+	trampolineDisplayMessageBox(messagePointer, logicFile.messageBank, x, y, TEXTBOX_PALETTE_NUMBER, length);
 
 	if (timeoutFlagVal)
 	{
@@ -2194,7 +2185,6 @@ void b4Print_at() // 4, 0x00           /* 3 args for AGI versions before */
 			//while (!key[KEY_ENTER] && !key[KEY_ESC]) { /* Wait */ }
 	//while (key[KEY_ENTER] || key[KEY_ESC]) { clear_keybuf(); }
 	}
-	//printInBoxBig(tempString, x, y, l);
 
 	show_mouse(NULL);
 
@@ -2202,33 +2192,14 @@ void b4Print_at() // 4, 0x00           /* 3 args for AGI versions before */
 	return;
 }
 
+void b4Print_at() // 4, 0x00           /* 3 args for AGI versions before */
+{
+	b4PrintMessageInTextbox(loadAndIncWinCode(), loadAndIncWinCode(), loadAndIncWinCode(), loadAndIncWinCode());
+}
+
 void b4Print_at_v() // 4, 0x80         /* 2_440 (maybe laterz) */
 {
-	char* tempString = (char*)&GOLDEN_RAM[LOCAL_WORK_AREA_START];
-	BITMAP* temp;
-	int messNum, x, y, l;
-	char* messagePointer;
-
-	messNum = var[loadAndIncWinCode()];
-	x = loadAndIncWinCode();
-	y = loadAndIncWinCode();
-	l = loadAndIncWinCode();
-	show_mouse(NULL);
-	temp = create_bitmap(640, 336);
-	blit(agi_screen, temp, 0, 0, 0, 0, 640, 336);
-	show_mouse(screen);
-	while (key[KEY_ENTER] || key[KEY_ESC]) { /* Wait */ }
-
-	messagePointer = getMessagePointer(currentLog, messNum - 1);
-	trampolineProcessString(messagePointer, 0, tempString);
-	printInBoxBig(tempString, x, y, l);
-	while (!key[KEY_ENTER] && !key[KEY_ESC]) { /* Wait */ }
-	while (key[KEY_ENTER] || key[KEY_ESC]) { clear_keybuf(); }
-	show_mouse(NULL);
-	blit(temp, agi_screen, 0, 0, 0, 0, 640, 336);
-	show_mouse(screen);
-	destroy_bitmap(temp);
-	return;
+	b4PrintMessageInTextbox(var[loadAndIncWinCode()], loadAndIncWinCode(), loadAndIncWinCode(), loadAndIncWinCode());
 }
 
 void b4Discard_view_v() // 1, 0x80 
