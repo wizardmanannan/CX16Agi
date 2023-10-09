@@ -89,6 +89,7 @@ objectType* objects;
 //
 
 void trampolineProcessString(char* stringPointer, byte stringBank, char* outputString);
+void trampolinePrintMessageInTextbox(byte messNum, byte x, byte y, byte length);
 
 int getNum(char* inputString, int* i, int inputStringBank)
 {
@@ -1586,64 +1587,74 @@ void b3ProcessString(char* stringPointer, byte stringBank, char* outputString)
 
 }
 
+//Helper function not a command. Note there is an identical function on bank 4
+void b3PrintMessageInTextbox(byte messNum, byte x, byte y, byte length)
+{
+
+	char* messagePointer;
+	byte timeoutFlagVal = var[PRINT_TIMEOUT];
+	unsigned int waitTicks;
+	unsigned int vSyncToContinueAt;
+	LOGICFile logicFile;
+
+	getLogicFile(&logicFile, currentLog);
+
+#ifdef  VERBOSE_MESSAGE_PRINT
+	printf("Attempting to display message %d at %d,%d, length %d\n", messNum - 1, x, y, length);
+#endif
+#ifdef  VERBOSE_MESSAGE_PRINT
+	printf("The bank is %d\n", logicFile.messageBank);
+#endif
+
+
+	show_mouse(NULL);
+	show_mouse(screen);
+
+	messagePointer = getMessagePointer(currentLog, messNum - 1);
+
+	trampolineDisplayMessageBox(messagePointer, logicFile.messageBank, x, y, TEXTBOX_PALETTE_NUMBER, length);
+
+	if (timeoutFlagVal)
+	{
+		waitTicks = timeoutFlagVal * 30;  // The timeout value is given in half seconds and the TotalTicks in 1/60ths of a second.
+		vSyncToContinueAt = vSyncCounter + waitTicks;
+
+		while (vSyncCounter != vSyncToContinueAt);
+
+		trampoline_0(&b3ClearLastPlacedText, TEXT_BANK);
+	}
+	else
+	{
+		//TODO: Wait for key press
+			//while (!key[KEY_ENTER] && !key[KEY_ESC]) { /* Wait */ }
+	//while (key[KEY_ENTER] || key[KEY_ESC]) { clear_keybuf(); }
+	}
+
+	show_mouse(NULL);
+
+	show_mouse(screen);
+	return;
+}
+
 void b3Print() // 1, 00 
 {
-	char* tempString = (char*)&GOLDEN_RAM[LOCAL_WORK_AREA_START];
-	BITMAP* temp;
-
-	char* messagePointer = getMessagePointer(currentLog, (loadAndIncWinCode()) - 1);
-
-	show_mouse(NULL);
-	temp = create_bitmap(640, 336);
-	blit(agi_screen, temp, 0, 0, 0, 0, 640, 336);
-	show_mouse(screen);
-	while (key[KEY_ENTER] || key[KEY_ESC]) { /* Wait */ }
-	//b3ProcessString(messagePointer, 0, tempString);
-	printInBoxBig(tempString, -1, -1, 30);
-	while (!key[KEY_ENTER] && !key[KEY_ESC]) { /* Wait */ }
-	while (key[KEY_ENTER] || key[KEY_ESC]) { clear_keybuf(); }
-	show_mouse(NULL);
-	blit(temp, agi_screen, 0, 0, 0, 0, 640, 336);
-	show_mouse(screen);
-	destroy_bitmap(temp);
-	return;
+	b3PrintMessageInTextbox(loadAndIncWinCode(), TILE_LAYER_WIDTH / 2, TILE_LAYER_HEIGHT / 2, DEFAULT_BOX_WIDTH);
 }
 
 void b3Print_v() // 1, 0x80 
 {
-	char* tempString = (char*)&GOLDEN_RAM[LOCAL_WORK_AREA_START];
-	BITMAP* temp;
-
-	char* messagePointer = getMessagePointer(currentLog, (var[loadAndIncWinCode()]) - 1);
-
-	show_mouse(NULL);
-	temp = create_bitmap(640, 336);
-	blit(agi_screen, temp, 0, 0, 0, 0, 640, 336);
-	while (key[KEY_ENTER] || key[KEY_ESC]) { /* Wait */ }
-	trampolineProcessString(messagePointer, 0, tempString);
-	//printf("Warning Print In Bigbox Not Implemented Implement This");
-	//printInBoxBig2(tempString, -1, -1, 30);
-	while (!key[KEY_ENTER] && !key[KEY_ESC]) { /* Wait */ }
-	while (key[KEY_ENTER] || key[KEY_ESC]) { clear_keybuf(); }
-	blit(temp, agi_screen, 0, 0, 0, 0, 640, 336);
-	show_mouse(screen);
-	destroy_bitmap(temp);
-
-	return;
+	b3PrintMessageInTextbox(var[loadAndIncWinCode()], TILE_LAYER_WIDTH / 2, TILE_LAYER_HEIGHT / 2, DEFAULT_BOX_WIDTH);
 }
 
-void b3Display() // 3, 0x00 
+//A helper function not a command
+void b3DisplayWithoutTextbox(byte row, byte col, byte messNum)
 {
-	int row, col, messNum, i;
+	int i;
 	char* tempString = (char*)&GOLDEN_RAM[LOCAL_WORK_AREA_START];
 	char* messagePointer;
 
 	LOGICFile logicFile;
 	getLogicFile(&logicFile, currentLog);
-
-	row = loadAndIncWinCode();
-	col = loadAndIncWinCode();
-	messNum = loadAndIncWinCode();
 
 	messagePointer = getMessagePointer(currentLog, messNum - 1);
 
@@ -1651,29 +1662,18 @@ void b3Display() // 3, 0x00
 	printf("Attempting to print %d from script %d. The length is %d. The message pointer is %p\n", messNum - 1, currentLog, strLenBanked(messagePointer, logicFile.messageBank), messagePointer);
 #endif
 	//trampolineProcessString(messagePointer, 0, tempString);
-	drawBigString(screen, tempString, row * 16, 20 + (col * 16), agi_fg, agi_bg);
 	b3DisplayMessageBox(messagePointer, logicFile.messageBank, row, col, DISPLAY_PALETTE_NUMBER, 0);
 	return;
 }
 
+void b3Display() // 3, 0x00 
+{
+	b3DisplayWithoutTextbox(loadAndIncWinCode(), loadAndIncWinCode(), loadAndIncWinCode());
+}
+
 void b3Display_v() // 3, 0xE0 
 {
-	int row, col, messNum;
-	char* tempString = (char*)&GOLDEN_RAM[LOCAL_WORK_AREA_START];
-	char* messagePointer;
-
-	col = var[loadAndIncWinCode()];
-	row = var[loadAndIncWinCode()];
-	messNum = var[loadAndIncWinCode()];
-	//drawString(picture, logics[currentLog].data->messages[messNum-1],
-	//   row*8, col*8, agi_fg, agi_bg);
-
-	messagePointer = getMessagePointer(currentLog, messNum - 1);
-	trampolineProcessString(messagePointer, 0, tempString);
-	drawBigString(screen, tempString, row * 16, 20 + (col * 16), agi_fg, agi_bg);
-	/*lprintf("info: display.v() %s, foreground: %d background: %d",
-	   tempString, agi_fg, agi_bg);*/
-	return;
+	b3DisplayWithoutTextbox(loadAndIncWinCode(), loadAndIncWinCode(), var[loadAndIncWinCode()]);
 }
 
 void b3Clear_lines() // 3, 0x00 
@@ -2143,63 +2143,14 @@ void b4Reposition_to_v() // 3, 0x60
 //	*data += 3;  /* Ignore trace information at this stage. */
 //}
 
-//Helper function not a command
-void b4PrintMessageInTextbox(byte messNum,byte x, byte y, byte length)
-{
-
-	char* messagePointer;
-	byte timeoutFlagVal = var[PRINT_TIMEOUT];
-	unsigned int waitTicks;
-	unsigned int vSyncToContinueAt;
-	LOGICFile logicFile;
-
-	getLogicFile(&logicFile, currentLog);
-
-#ifdef  VERBOSE_MESSAGE_PRINT
-	printf("Attempting to display message %d at %d,%d, length %d\n", messNum - 1, x, y, length);
-#endif
-#ifdef  VERBOSE_MESSAGE_PRINT
-	printf("The bank is %d\n", logicFile.messageBank);
-#endif
-
-
-	show_mouse(NULL);
-	show_mouse(screen);
-
-	messagePointer = getMessagePointer(currentLog, messNum - 1);
-
-	trampolineDisplayMessageBox(messagePointer, logicFile.messageBank, x, y, TEXTBOX_PALETTE_NUMBER, length);
-
-	if (timeoutFlagVal)
-	{
-		waitTicks = timeoutFlagVal * 30;  // The timeout value is given in half seconds and the TotalTicks in 1/60ths of a second.
-		vSyncToContinueAt = vSyncCounter + waitTicks;
-
-		while (vSyncCounter != vSyncToContinueAt);
-
-		trampoline_0(&b3ClearLastPlacedText, TEXT_BANK);
-	}
-	else
-	{
-		//TODO: Wait for key press
-			//while (!key[KEY_ENTER] && !key[KEY_ESC]) { /* Wait */ }
-	//while (key[KEY_ENTER] || key[KEY_ESC]) { clear_keybuf(); }
-	}
-
-	show_mouse(NULL);
-
-	show_mouse(screen);
-	return;
-}
-
 void b4Print_at() // 4, 0x00           /* 3 args for AGI versions before */
 {
-	b4PrintMessageInTextbox(loadAndIncWinCode(), loadAndIncWinCode(), loadAndIncWinCode(), loadAndIncWinCode());
+	trampolinePrintMessageInTextbox(loadAndIncWinCode(), loadAndIncWinCode(), loadAndIncWinCode(), loadAndIncWinCode());
 }
 
 void b4Print_at_v() // 4, 0x80         /* 2_440 (maybe laterz) */
 {
-	b4PrintMessageInTextbox(var[loadAndIncWinCode()], loadAndIncWinCode(), loadAndIncWinCode(), loadAndIncWinCode());
+	trampolinePrintMessageInTextbox(var[loadAndIncWinCode()], loadAndIncWinCode(), loadAndIncWinCode(), loadAndIncWinCode());
 }
 
 void b4Discard_view_v() // 1, 0x80 
@@ -2445,6 +2396,16 @@ void b5Div_v() // 2, 0xC0
 	return;
 }
 #pragma code-name (pop)
+
+void trampolinePrintMessageInTextbox(byte messNum, byte x, byte y, byte length)
+{
+	byte previousRamBank = RAM_BANK;
+	RAM_BANK = TEXT_BANK;
+
+	b3PrintMessageInTextbox(messNum, x, y, length);
+
+	RAM_BANK = previousRamBank;
+}
 
 
 
