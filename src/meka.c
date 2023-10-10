@@ -173,7 +173,7 @@ void b6Interpret()
     localViewtab.direction = var[6];
     setViewTab(&localViewtab, 0);
 
-    trampoline_0(&bCCalcObjMotion, VIEW_CODE_BANK_4);
+    bCCalcObjMotion();
 
     // <<-- Update status line here (score & sound)
     b6UpdateStatusLine();

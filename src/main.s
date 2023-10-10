@@ -6,6 +6,7 @@
     .include "global.s"
     .include "graphicsAsm.s"
     .include "pictureAsm.s"
+    .include "helpersAsm.s"
     .export _executeLogic
     .export _b6InitAsm
     .export _loadAndIncWinCode
@@ -36,3 +37,4 @@
     .export _textBuffer2
     .export _interpolationBuffer
     .export _currentTextBuffer
+    .export _trampoline

@@ -66,6 +66,7 @@ extern void getLogicDirectory(AGIFilePosType* returnedLogicDirectory, AGIFilePos
 extern void setResourceDirectory(AGIFilePosType* newLogicDirectory, AGIFilePosType* logicDirectoryLocation);
 
 extern void debugPrint(byte toPrint);
+extern void trampoline();
 
 extern long opStopAt;
 extern long opExitAt;

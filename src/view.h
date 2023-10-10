@@ -118,7 +118,10 @@ extern void bADrawObject(int entryNum);
 extern void b9AddToPic(int vNum, int lNum, int cNum, int x, int y, int pNum, int bCol);
 extern void bDShowObjectState(int objNum);
 extern void b9ResetViews();
+
+#pragma wrapped-call (push, trampoline, VIEW_CODE_BANK_4)
 extern void bCCalcObjMotion();
+#pragma wrapped-call (pop)
 extern void b9InitViews();
 extern void b9InitObjects();
 extern void bBUpdateObjects();
