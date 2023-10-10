@@ -10,10 +10,10 @@ void b6DisplayLoadingScreen()
 
 	if (!loadingScreenDisplayed)
 	{
-		b6SetAndWaitForIrqState(BLANK_SCREEN);
+		b6SetAndWaitForIrqStateAsm(BLANK_SCREEN);
 		b6InitLayer1Mapbase();
 
-		b6SetAndWaitForIrqState(TEXT_ONLY);
+		b6SetAndWaitForIrqStateAsm(TEXT_ONLY);
 		trampolineDisplayMessageBox(&loadingText[0], 0, MAX_ROWS_DOWN / 2 - FIRST_ROW, MAX_CHAR_ACROSS / 2 - (LOADING_BOX_SIZE / 2), TEXTBOX_PALETTE_NUMBER, LOADING_BOX_SIZE);
 		loadingScreenDisplayed = TRUE;
 	}
@@ -23,9 +23,9 @@ void b6DismissLoadingScreen()
 {
 	if (loadingScreenDisplayed)
 	{
-		b6SetAndWaitForIrqState(BLANK_SCREEN);
+		b6SetAndWaitForIrqStateAsm(BLANK_SCREEN);
 		b6InitLayer1Mapbase();
-		b6SetAndWaitForIrqState(NORMAL);
+		b6SetAndWaitForIrqStateAsm(NORMAL);
 		loadingScreenDisplayed = FALSE;
 	}
 }

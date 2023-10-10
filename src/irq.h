@@ -2,6 +2,8 @@
 #define _IRQ_H_
 
 #include "general.h"
+#include "memoryManager.h"
+#include "helpers.h"
 
 typedef enum {
     DONT_CHANGE = 0,
@@ -13,6 +15,10 @@ typedef enum {
 
 extern unsigned int vSyncCounter; //Updated by IRQ every 60ms
 
-extern void b6SetAndWaitForIrqState(IRQ_COMMAND state);
+//Only to be called directly by bank 6
+extern void b6SetAndWaitForIrqStateAsm(IRQ_COMMAND state);
 
+#pragma wrapped-call (push, trampoline, IRQ_BANK)
+extern void b6SetAndWaitForIrqState(IRQ_COMMAND state);
+#pragma wrapped-call (pop)
 #endif

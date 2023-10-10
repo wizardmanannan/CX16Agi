@@ -28,7 +28,7 @@
     .export _bFloodAgiFill
     .export _goNoFurtherLeft
     .export _goNoFurtherRight
-    .export _b6SetAndWaitForIrqState
+    .export _b6SetAndWaitForIrqStateAsm
     .export _displayTextAddressToCopyTo
     .export _vSyncCounter
     .export _lastBoxLines

@@ -43,7 +43,6 @@ byte convertAsciiByteToPetsciiByte(byte toConvert);
 extern void trampoline_2Int(fnTrampoline_2Int func, int data1, int data2, int bank);
 extern void trampoline_3Int(fnTrampoline_3Int func, int data1, int data2, int data3, int bank);
 
-extern byte trampoline_1ByteRByte(fnTrampoline_1ByteRByte func, byte data, byte bank);
 extern void trampoline_2Byte(fnTrampoline_2Byte func, byte data1, byte data2, byte bank);
 
 extern char* strcpyBanked(char* dest, const char* src, byte bank);

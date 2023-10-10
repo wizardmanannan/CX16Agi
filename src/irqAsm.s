@@ -99,7 +99,7 @@ _b6InitIrq:
    cli ; enable IRQ now that vector is properly set
 rts
 
-_b6SetAndWaitForIrqState:
+_b6SetAndWaitForIrqStateAsm:
 sta @state
 SEND_IRQ_COMMAND @state, @vSyncToCheck
 WAIT_FOR_NEXT_IRQ @vSyncToCheck

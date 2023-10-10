@@ -14,7 +14,7 @@ _interpolationBuffer: .res 2000
 .segment "BANKRAM06"
 
 .include "global.s"
-.include "irq.s"
+.include "irqAsm.s"
 .include "globalGraphics.s"
 
 .import _b6InitCharset

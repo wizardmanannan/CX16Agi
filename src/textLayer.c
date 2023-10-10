@@ -440,7 +440,7 @@ void b3DisplayMessageBox(char* message, byte messageBank, byte row, byte col, by
 		}
 		////TODO: Doesn't return anything but I don't want to add any more trampoline methods. Come up with a more memory efficient way of handling this then constanting adding them
 
-		trampoline_1ByteRByte(&b6SetAndWaitForIrqState, DISPLAY_TEXT, IRQ_BANK);
+		b6SetAndWaitForIrqState(DISPLAY_TEXT);
 	}
 }
 

@@ -68,6 +68,7 @@
     <ClCompile Include="src\DECOMP.C" />
     <ClCompile Include="src\fixed.c" />
     <ClCompile Include="src\general.c" />
+    <ClCompile Include="src\irq.c" />
     <ClCompile Include="src\loadingScreen.c" />
     <ClCompile Include="src\textLayer.c" />
     <ClCompile Include="src\GUI.C" />

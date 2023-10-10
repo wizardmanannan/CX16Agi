@@ -1,7 +1,7 @@
 .include "global.s"
 .include "codeWindow.s"
 .include "debug.s"
-.include "irq.s"
+.include "irqAsm.s"
 .include "graphicsAsm.s"
 
 ; Import required C variables
