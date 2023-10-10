@@ -503,14 +503,14 @@ boolean b1Right_posn() // 5, 0x00
 
 void b2Load_logics() // 1, 0x00 
 {
-	trampoline_1Int(&b6LoadLogicFile, loadAndIncWinCode(), LOGIC_CODE_BANK);
+	b6LoadLogicFile(loadAndIncWinCode());
 
 	return;
 }
 
 void b2Load_logics_v() // 1, 0x80 
 {
-	trampoline_1Int(&b6LoadLogicFile, var[loadAndIncWinCode()], LOGIC_CODE_BANK);
+	b6LoadLogicFile(var[loadAndIncWinCode()]);
 
 	return;
 }

@@ -28,7 +28,11 @@ typedef struct {
 
 extern LOGICEntry* logics;
 void b6InitLogics();
+
+#pragma wrapped-call (push, trampoline, LOGIC_CODE_BANK)
 void b6LoadLogicFile(byte logFileNum);
+#pragma wrapped-call (pop)
+
 void b6DiscardLogicFile(byte logFileNum);
 
 extern void getLogicFile(LOGICFile* logicFile, byte logicFileNo);
