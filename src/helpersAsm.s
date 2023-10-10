@@ -9,20 +9,20 @@ HELPERS_INC = 1
 .import ptr4
 
 _trampoline:
-pha
+sta @aVal
 
 lda $0
-sta @previousRamBank
+pha
 
 lda tmp4
 sta $0
 
-pla
+lda @aVal
 jsr callptr4
 
-lda @previousRamBank
+pla
 sta $0
 rts
-@previousRamBank: .byte $0
+@aVal: .byte $0
 
 .endif

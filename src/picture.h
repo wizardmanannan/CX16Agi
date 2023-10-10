@@ -50,15 +50,20 @@ extern int min_print_line, user_input_line, status_line_num;
 extern boolean statusLineDisplayed, inputLineDisplayed;
 extern BITMAP *picture, *priority, *control, *agi_screen, *working_screen;
 
+extern void b6DisableAndWaitForVsync();
+
+#pragma wrapped-call (push, trampoline, GRAPHICS_BANK)
+extern void b6ClearBackground();
+#pragma wrapped-call (pop);
+
+#pragma wrapped-call (push, trampoline, PICTURE_CODE_BANK)
+void b11LoadPictureFile(int picFileNum);
 extern void b11InitPicture();
 extern void b11InitPictures();
-extern void b6DisableAndWaitForVsync();
-extern void b6ClearBackground();
-
-void b11LoadPictureFile(int picFileNum);
 void b11ShowPicture();
 void b11DiscardPictureFile(int picFileNum);
 void b11ClearPicture();
+#pragma wrapped-call (pop)
 
 
 extern void getLoadedPicture(PictureFile* returnedloadedPicture, byte loadedPictureNumber);

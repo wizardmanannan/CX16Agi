@@ -88,7 +88,7 @@ void b6DiscardResources()
 void b6Clear()
 {
     b6DisplayLoadingScreen();
-    trampoline_0(&b11ClearPicture, PICTURE_CODE_BANK);
+    b11ClearPicture();
 }
 
 /***************************************************************************
@@ -102,7 +102,7 @@ void b6Clear()
 ***************************************************************************/
 void b6NewRoom()
 {
-    trampoline_0(&b9ResetViews, VIEW_CODE_BANK_1);
+     b9ResetViews();
     //stop_update_all();
     //unanimate_all();
     b6DiscardResources();
@@ -199,7 +199,7 @@ void b6Interpret()
         flag[6] = FALSE;
         flag[12] = FALSE;
         if (!hasEnteredNewRoom) {
-            trampoline_0(&bBUpdateObjects, VIEW_CODE_BANK_3);
+            bBUpdateObjects();
         }
         if (hasEnteredNewRoom) b6NewRoom();
 
@@ -265,11 +265,11 @@ void b6Initialise()
     printf("Logics Inited\n");
 #endif
 
-    trampoline_0(&b11InitPicture, PICTURE_CODE_BANK);
+    b11InitPicture();
     initSound();
 
-    trampoline_0(&b9InitViews, VIEW_CODE_BANK_1);
-    trampoline_0(&b9InitObjects, VIEW_CODE_BANK_1);
+    b9InitViews();
+    b9InitObjects();
 
     loadObjectFile();
     loadWords();
@@ -296,7 +296,7 @@ void main()
     //chdir("..\\KQ2-2917");
 
     memoryMangerInit();
-    trampoline_0(b5CheckMemory, DEBUG_BANK);
+    b5CheckMemory();
 
     RAM_BANK = MEKA_BANK;
     b6Initialise();

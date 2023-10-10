@@ -563,7 +563,7 @@ void b11InitAGIScreen()
 **************************************************************************/
 void b11ClearPicture()
 {
-	trampoline_0(&b6ClearBackground, IRQ_BANK);
+	b6ClearBackground();
 	clear_to_color(priority, PRI_DEFAULT);
 	clear_to_color(control, PRI_DEFAULT);
 }

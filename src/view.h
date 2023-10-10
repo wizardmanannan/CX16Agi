@@ -107,24 +107,34 @@ extern void trampolineViewUpdater1Pointer(fnTrampolineViewUpdater1BytePtr func, 
 
 extern void trampolineAddToPic(int vNum, int lNum, int cNum, int x, int y, int pNum, int bCol);
 
+#pragma wrapped-call (push, trampoline, VIEW_CODE_BANK_1)
 void b9LoadViewFile(byte viewNum);
 void b9DiscardView(byte viewNum);
 void b9AddViewToTable(ViewTable* localViewtab, byte viewNum);
-
-extern void bAUpdateObj(int entryNum);
 extern void b9SetCel(ViewTable* localViewtab, byte celNum);
 extern void b9SetLoop(ViewTable* localViewtab, byte loopNum);
-extern void bADrawObject(int entryNum);
 extern void b9AddToPic(int vNum, int lNum, int cNum, int x, int y, int pNum, int bCol);
-extern void bDShowObjectState(int objNum);
 extern void b9ResetViews();
+extern void b9InitViews();
+extern void b9InitObjects();
+#pragma wrapped-call (pop)
+
+#pragma wrapped-call (push, trampoline, VIEW_CODE_BANK_2)
+extern void bAUpdateObj(int entryNum);
+extern void bADrawObject(int entryNum);
+#pragma wrapped-call (pop)
+
+#pragma wrapped-call (push, trampoline, VIEW_CODE_BANK_3)
+extern void bBUpdateObjects();
+#pragma wrapped-call (pop)
 
 #pragma wrapped-call (push, trampoline, VIEW_CODE_BANK_4)
 extern void bCCalcObjMotion();
 #pragma wrapped-call (pop)
-extern void b9InitViews();
-extern void b9InitObjects();
-extern void bBUpdateObjects();
+
+#pragma wrapped-call (push, trampoline, VIEW_CODE_BANK_5)
+extern void bDShowObjectState(int objNum);
+#pragma wrapped-call (pop)
 
 #endif   /* _VIEW_H_ */
 
