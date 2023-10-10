@@ -37,14 +37,6 @@ byte convertAsciiByteToPetsciiByte(byte toConvert)
 }
 #pragma code-name (pop);
 
-void trampoline_2Byte(fnTrampoline_2Byte func, byte data1, byte data2, byte bank)
-{
-	byte previousRamBank = RAM_BANK;
-	RAM_BANK = bank;
-	func(data1, data2);
-	RAM_BANK = previousRamBank;
-}
-
 void trampoline_2Int(fnTrampoline_2Int func, int data1, int data2, int bank)
 {
 	byte previousRamBank = RAM_BANK;

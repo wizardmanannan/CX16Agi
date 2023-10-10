@@ -45,6 +45,7 @@ byte rposBank = FIRST_FLOOD_BANK, sposBank = FIRST_FLOOD_BANK;
 int* bitmapWidthPreMult = &BANK_RAM[BITMAP_WIDTH_PREMULT_START];
 
 extern void b11PSet(byte x, byte y);
+
 extern fix32 floatDivision(byte numerator, byte denominator);
 
 #ifdef VERBOSE_FLOOD
@@ -76,26 +77,9 @@ void setLoadedPicture(PictureFile* loadedPicture, byte loadedPictureNumber)
 
 #pragma code-name (push, "BANKRAMFLOOD")
 
-extern byte bFloodQretrieve();
-extern byte bFloodQstore(byte q);
-
-/**************************************************************************
-** pset
-**
-** Draws a pixel in each screen depending on whether drawing in that
-** screen is enabled or not.
-**************************************************************************/
-#define PSETFLOOD(x, y) \
-    if (picDrawEnabled) { \
-if ((x) <= 159 && (y) <= 167) {  \
-            trampoline_2Byte(&b11PSet,x, y, PICTURE_CODE_BANK); \
-           } \
-    } 
-
-
-extern byte bFloodPicGetPixel(word x, word y);
-extern boolean bFloodOkToFill(byte* address);
+#pragma wrapped-call (push, trampoline, FIRST_FLOOD_BANK)
 extern void bFloodAgiFill(byte x, byte y);
+#pragma wrapped-call (pop)
 
 extern byte goNoFurtherLeft;
 extern byte goNoFurtherRight;
@@ -410,7 +394,7 @@ byte b11FloodFill(byte** data, BufferStatus* bufferStatus)
 
 		GET_NEXT(y1);
 		if (y1 >= 0xF0) return y1;
-		trampoline_2Byte(&bFloodAgiFill, x1, y1, FIRST_FLOOD_BANK);
+		bFloodAgiFill(x1, y1);
 	}
 }
 
