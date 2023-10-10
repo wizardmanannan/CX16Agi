@@ -37,22 +37,6 @@ byte convertAsciiByteToPetsciiByte(byte toConvert)
 }
 #pragma code-name (pop);
 
-void trampoline_2Int(fnTrampoline_2Int func, int data1, int data2, int bank)
-{
-	byte previousRamBank = RAM_BANK;
-	RAM_BANK = bank;
-	func(data1, data2);
-	RAM_BANK = previousRamBank;
-}
-
-void trampoline_3Int(fnTrampoline_3Int func, int data1, int data2, int data3, int bank)
-{
-	byte previousRamBank = RAM_BANK;
-	RAM_BANK = bank;
-	func(data1, data2, data3);
-	RAM_BANK = previousRamBank;
-}
-
 char* strcpyBanked(char* dest, const char* src, byte bank)
 {
 	char* result;

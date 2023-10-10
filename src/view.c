@@ -760,6 +760,7 @@ void bAUpdateEgoDirection(int oldX, int oldY, int newX, int newY)
 ** to the given position. The routine is similar to a line draw and is used
 ** for the move.obj. If the object is ego, then var[6] has to be updated.
 ***************************************************************************/
+#pragma wrapped-call (push, trampoline, VIEW_CODE_BANK_2)
 void bAAdjustPosition(ViewTable* localViewtab, int fx, int fy)
 {
 	//int height, width, startX, startY, x1, y1, x2, y2, count, stepVal, dx, dy;
@@ -864,6 +865,7 @@ void bAAdjustPosition(ViewTable* localViewtab, int fx, int fy)
 	//   updateEgoDirection(x1, y1, dx, dy);
 	//}
 }
+#pragma wrapped-call (pop)
 
 void bAFollowEgo(int entryNum) /* This needs to be more intelligent. */
 {
@@ -876,6 +878,7 @@ void bAFollowEgo(int entryNum) /* This needs to be more intelligent. */
 	setViewTab(&localViewtab, entryNum);
 }
 
+#pragma wrapped-call (push, trampoline, VIEW_CODE_BANK_2)
 void bANormalAdjust(int entryNum, int dx, int dy)
 {
 	int tempX, tempY, testX, startX, endX, waterCount = 0;
@@ -973,6 +976,7 @@ void bANormalAdjust(int entryNum, int dx, int dy)
 
 	setViewTab(&localViewtab, entryNum);
 }
+#pragma wrapped-call (pop)
 
 
 void bAUpdateObj(int entryNum)
@@ -1709,14 +1713,14 @@ void bCCalcObjMotion()
 				case 0: /* normal.motion */
 					switch (localViewtab.direction) {
 					case 0: break;
-					case 1: trampoline_3Int(&bANormalAdjust, entryNum, 0, -1, VIEW_CODE_BANK_2); break;
-					case 2: trampoline_3Int(&bANormalAdjust, entryNum, 0, -1, VIEW_CODE_BANK_2); break;
-					case 3: trampoline_3Int(&bANormalAdjust, entryNum, 1, 0, VIEW_CODE_BANK_2); break;
-					case 4: trampoline_3Int(&bANormalAdjust, entryNum, 1, 1, VIEW_CODE_BANK_2); break;
-					case 5: trampoline_3Int(&bANormalAdjust, entryNum, 0, 1, VIEW_CODE_BANK_2); break;
-					case 6: trampoline_3Int(&bANormalAdjust, entryNum, -1, 1, VIEW_CODE_BANK_2); break;
-					case 7: trampoline_3Int(&bANormalAdjust, entryNum, -1, 0, VIEW_CODE_BANK_2); break;
-					case 8: trampoline_3Int(&bANormalAdjust, entryNum, -1, -1, VIEW_CODE_BANK_2);
+					case 1: bANormalAdjust(entryNum, 0, -1); break;
+					case 2: bANormalAdjust(entryNum, 0, -1); break;
+					case 3: bANormalAdjust(entryNum, 1, 0); break;
+					case 4: bANormalAdjust(entryNum, 1, 1); break;
+					case 5: bANormalAdjust(entryNum, 0, 1); break;
+					case 6: bANormalAdjust(entryNum, -1, 1); break;
+					case 7: bANormalAdjust(entryNum, -1, 0); break;
+					case 8: bANormalAdjust(entryNum, -1, -1);
 					}
 					break;
 				case 1: /* wander */
@@ -1724,14 +1728,14 @@ void bCCalcObjMotion()
 					oldY = localViewtab.yPos;
 					switch (localViewtab.direction) {
 					case 0: break;
-					case 1: trampoline_3Int(&bANormalAdjust, entryNum, 0, -1, VIEW_CODE_BANK_2); break;
-					case 2: trampoline_3Int(&bANormalAdjust, entryNum, 0, -1, VIEW_CODE_BANK_2); break;
-					case 3: trampoline_3Int(&bANormalAdjust, entryNum, 1, 0, VIEW_CODE_BANK_2); break;
-					case 4: trampoline_3Int(&bANormalAdjust, entryNum, 1, 1, VIEW_CODE_BANK_2); break;
-					case 5: trampoline_3Int(&bANormalAdjust, entryNum, 0, 1, VIEW_CODE_BANK_2); break;
-					case 6: trampoline_3Int(&bANormalAdjust, entryNum, -1, 1, VIEW_CODE_BANK_2); break;
-					case 7: trampoline_3Int(&bANormalAdjust, entryNum, -1, 0, VIEW_CODE_BANK_2); break;
-					case 8: trampoline_3Int(&bANormalAdjust, entryNum, -1, -1, VIEW_CODE_BANK_2); break;
+					case 1: bANormalAdjust(entryNum, 0, -1); break;
+					case 2: bANormalAdjust(entryNum, 0, -1); break;
+					case 3: bANormalAdjust(entryNum, 1, 0); break;
+					case 4: bANormalAdjust(entryNum, 1, 1); break;
+					case 5: bANormalAdjust(entryNum, 0, 1); break;
+					case 6: bANormalAdjust(entryNum, -1, 1); break;
+					case 7: bANormalAdjust(entryNum, -1, 0); break;
+					case 8: bANormalAdjust(entryNum, -1, -1); break;
 					}
 					if ((localViewtab.xPos == oldX) &&
 						(localViewtab.yPos == oldY)) {
@@ -1753,8 +1757,8 @@ void bCCalcObjMotion()
 				case 3: /* move.obj */
 					if (flag[localViewtab.param4]) break;
 					for (steps = 0; steps < localViewtab.stepSize; steps++) {
-						trampoline_3Int(&bAAdjustPosition, entryNum, (int)localViewtab.param1,
-							(int)localViewtab.param2, VIEW_CODE_BANK_2);
+						bAAdjustPosition(entryNum, (int)localViewtab.param1,
+							(int)localViewtab.param2);
 						if ((localViewtab.xPos == localViewtab.param1) &&
 							(localViewtab.yPos == localViewtab.param2)) {
 							/* These lines really are guess work */

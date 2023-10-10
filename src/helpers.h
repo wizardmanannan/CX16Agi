@@ -40,9 +40,6 @@ typedef void (*fnTrampoline_3Int)(int data1, int data2, int data3);
 
 byte convertAsciiByteToPetsciiByte(byte toConvert);
 
-extern void trampoline_2Int(fnTrampoline_2Int func, int data1, int data2, int bank);
-extern void trampoline_3Int(fnTrampoline_3Int func, int data1, int data2, int data3, int bank);
-
 extern char* strcpyBanked(char* dest, const char* src, byte bank);
 extern size_t strLenBanked(char* string, int bank);
 
