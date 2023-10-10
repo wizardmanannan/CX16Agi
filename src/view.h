@@ -122,6 +122,7 @@ extern void b9InitObjects();
 #pragma wrapped-call (push, trampoline, VIEW_CODE_BANK_2)
 extern void bAUpdateObj(int entryNum);
 extern void bADrawObject(int entryNum);
+extern void bAFollowEgo(int entryNum);
 #pragma wrapped-call (pop)
 
 #pragma wrapped-call (push, trampoline, VIEW_CODE_BANK_3)

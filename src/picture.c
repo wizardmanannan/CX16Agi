@@ -20,7 +20,6 @@
 //#define TEST_ROUND
 //#define VERBOSE_DRAW_LINE
 //#define TEST_OK_TO_FILL
-//#define TEST_IS_MULT_OF_160 //Don't forget to enable TEST_IS_MULTIPLE_OF_160 in assembly
 //#define VERBOSE_X_CORNER
 //#define VERBOSE_ABS_LINE
 boolean okToShowPic = FALSE;
@@ -80,34 +79,6 @@ void setLoadedPicture(PictureFile* loadedPicture, byte loadedPictureNumber)
 extern byte bFloodQretrieve();
 extern byte bFloodQstore(byte q);
 
-boolean isMultipleOf160(int toTest)
-{
-#ifdef TEST_IS_MULT_OF_160
-	printf("Slow called for %d\n", toTest);
-#endif // TEST_IS_MULT_OF_160
-
-	return toTest % 160 == 0;
-
-}
-
-extern boolean testIsMultipleOf160Asm(int toTest);
-#ifdef TEST_IS_MULT_OF_160
-void testIsMultOf160()
-{
-	int i;
-	for (i = 0; i <= 0x68FF; i++)
-	{
-		if (testIsMultipleOf160Asm(i) != i % 160 == 0)
-		{
-			printf("Fail test multiple on %d\n",i);
-		}
-	}
-
-	exit(0);
-}
-#endif // TEST_IS_MULT_OF_160
-
-
 /**************************************************************************
 ** pset
 **
@@ -130,6 +101,7 @@ extern byte goNoFurtherLeft;
 extern byte goNoFurtherRight;
 
 #ifdef TEST_OK_TO_FILL
+#pragma wrapped-call (push, trampoline, FIRST_FLOOD_BANK)
 void testOkToFill()
 {
 	priDrawEnabled = FALSE;
@@ -220,6 +192,7 @@ void testOkToFill()
 	asm("stp");
 	exit(0);
 }
+#pragma wrapped-call (pop)
 #endif // TEST_OK_TO_FILL
 
 
@@ -416,13 +389,6 @@ void testDivision()
 
 }
 #endif // TEST_DIVISION
-
-
-void b11FloodBankFull() //Is on this bank to save room on flood bank 
-{
-	printf("warning Flood Bank Full\n");
-}
-
 
 /**************************************************************************
 ** fill
@@ -1185,7 +1151,7 @@ void b11DrawPic(byte* bankedData, int pLen, boolean okToClearScreen, byte picNum
 	byte** zpCh = (byte**)ZP_PTR_CH;
 	byte** zpDisp = (byte**)ZP_PTR_DISP;
 	
-	trampoline_0(&b6DisplayLoadingScreen, LOADING_SCREEN_CODE_BANK);
+	b6DisplayLoadingScreen();
 
 	*zpTemp = &bitmapWidthPreMult[0];
 	*zpTemp2 = &DIVISION_AREA[0];
@@ -1204,10 +1170,6 @@ void b11DrawPic(byte* bankedData, int pLen, boolean okToClearScreen, byte picNum
 
 #ifdef TEST_ROUND
 	testRound();
-#endif
-
-#ifdef TEST_IS_MULT_OF_160
-	trampoline_0(&testIsMultOf160, FIRST_FLOOD_BANK);
 #endif
 
 	getLoadedPicture(&loadedPicture, picNum);
@@ -1230,7 +1192,7 @@ void b11DrawPic(byte* bankedData, int pLen, boolean okToClearScreen, byte picNum
 	if (okToClearScreen) b11ClearPicture();
 
 #ifdef TEST_OK_TO_FILL
-	trampoline_0(&testOkToFill, FIRST_FLOOD_BANK);
+	testOkToFill();
 #endif
 
 	patCode = 0x00;
@@ -1292,7 +1254,7 @@ void b11DrawPic(byte* bankedData, int pLen, boolean okToClearScreen, byte picNum
 	*zpB2 = 0;
 	*zpCh = 0;
 	*zpDisp = 0;
-	trampoline_0(&b6DismissLoadingScreen, LOADING_SCREEN_CODE_BANK);
+	b6DismissLoadingScreen();
 }
 
 void b11InitPictures()

@@ -51,12 +51,7 @@ void bELruCacheGet(int resType, LRUCache* cache, byte key, AGIFilePosType* locat
     else {
         // cache is full, delete least recently used entry
         if (cache->evictionCallback) {
-#ifdef  __CX16__
-            trampoline_1Int(&cache->evictionCallback, cache->keys[cache->size - 1], cache->evictionCallbackBank);
-#endif
-#ifdef _MSC_VER
             cache->evictionCallback(cache->keys[cache->size - 1]);
-#endif // _MSC_VER
         }
     }
     for (i = cache->size - 1; i > 0; i--) {

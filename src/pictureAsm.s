@@ -18,7 +18,6 @@ PICTURE_INC = 1
 .import _rposBank
 .import _sposBank
 
-.import _trampoline_0
 .import _b11FloodBankFull
 
 .import popa
@@ -571,6 +570,7 @@ bra @start
 .segment "BANKRAMFLOOD"
 @floodQueueEnd: .word $0
 @start:
+
 lda _sposBank
 sta RAM_BANK
 
@@ -599,13 +599,6 @@ bne @incBank
 lda #FIRST_FLOOD_BANK
 sta RAM_BANK
 sta _sposBank
-
-ldx #> _b11FloodBankFull
-lda #< _b11FloodBankFull
-jsr pushax
-lda #PICTURE_BANK
-ldx #$0
-jsr _trampoline_0
 
 bra @end
 

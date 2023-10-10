@@ -519,7 +519,7 @@ void b2Load_logics_v() // 1, 0x80
 
 void b2Load_pic() // 1, 0x80 
 {
-	trampoline_1Int(&b11LoadPictureFile, var[loadAndIncWinCode()], PICTURE_CODE_BANK);
+	b11LoadPictureFile(var[loadAndIncWinCode()]);
 	return;
 }
 
@@ -550,7 +550,7 @@ void b2Show_pic() // 0, 0x00
 
 void b2Discard_pic() // 1, 0x80 
 {
-	trampoline_1Int(&b11DiscardPictureFile, var[loadAndIncWinCode()], PICTURE_CODE_BANK);
+	b11DiscardPictureFile(var[loadAndIncWinCode()]);
 
 	return;
 }
@@ -577,19 +577,19 @@ void b2Show_pri_screen() // 0, 0x00
 
 void b2Load_view() // 1, 0x00 
 {
-	trampoline_1Int(&b9LoadViewFile, (loadAndIncWinCode()), VIEW_CODE_BANK_1);
+    b9LoadViewFile(loadAndIncWinCode());
 	return;
 }
 
 void b2Load_view_v() // 1, 0x80 
 {
-	trampoline_1Int(&b9LoadViewFile, var[loadAndIncWinCode()], VIEW_CODE_BANK_1);
+	b9LoadViewFile(var[loadAndIncWinCode()]);
 	return;
 }
 
 void b2Discard_view() // 1, 0x00 
 {
-	trampoline_1Int(&b9DiscardView, loadAndIncWinCode(), VIEW_CODE_BANK_1);
+    b9DiscardView(loadAndIncWinCode());
 	return;
 }
 
@@ -648,7 +648,7 @@ void b2Draw() // 1, 0x00
 
 	trampolineViewUpdater1Int(&b9SetCel, &localViewtab, localViewtab.currentCel, VIEW_CODE_BANK_1);
 
-	trampoline_1Int(&bADrawObject, entryNum, VIEW_CODE_BANK_2);
+	bADrawObject(entryNum);
 
 	setViewTab(&localViewtab, entryNum);
 	return;
@@ -1030,7 +1030,7 @@ void b2Force_update() // 1, 0x00
 	entryNum = loadAndIncWinCode();
 	/* Do immediate update here. Call update(entryNum) */
 
-	trampoline_1Int(&bAUpdateObj, entryNum, VIEW_CODE_BANK_1);
+	bAUpdateObj(entryNum);
 	return;
 }
 
@@ -2000,7 +2000,7 @@ void b4Obj_status_v() // 1, 0x80
 	/* Not supported yet */
 
 	/* showView(viewtab[objectNum].currentView); */
-	trampoline_1Int(&bDShowObjectState, objectNum, VIEW_CODE_BANK_4);
+	bDShowObjectState(objectNum);
 	return;
 }
 
@@ -2155,7 +2155,7 @@ void b4Print_at_v() // 4, 0x80         /* 2_440 (maybe laterz) */
 
 void b4Discard_view_v() // 1, 0x80 
 {
-	trampoline_1Int(&b9DiscardView, var[loadAndIncWinCode()], VIEW_CODE_BANK_1);
+	b9DiscardView(var[loadAndIncWinCode()]);
 	return;
 }
 

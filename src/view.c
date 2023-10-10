@@ -1680,7 +1680,7 @@ void bCupdateObjects2()
 		setViewTab(&localViewtab, entryNum);
 	}
 
-	trampoline_0(&b11ShowPicture, PICTURE_CODE_BANK);
+	b11ShowPicture();
 }
 
 void bCCalcObjMotion()
@@ -1740,7 +1740,7 @@ void bCCalcObjMotion()
 					}
 					break;
 				case 2: /* follow.ego */
-					trampoline_1Int(&bAFollowEgo, entryNum, VIEW_CODE_BANK_2);
+					bAFollowEgo(entryNum);
 					if ((localViewtab.xPos == localViewtab0.xPos) &&
 						(localViewtab.yPos == localViewtab0.yPos)) {
 						localViewtab.motion = 0;

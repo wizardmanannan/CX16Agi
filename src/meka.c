@@ -80,8 +80,8 @@ void b6AdjustEgoPosition()
 void b6DiscardResources()
 {
     int i;
-    for (i = 0; i < 256; i++) trampoline_1Int(&b9DiscardView, i, VIEW_CODE_BANK_1);
-    for (i = 0; i < 256; i++) trampoline_1Int(&b11DiscardPictureFile, i, PICTURE_CODE_BANK);
+    for (i = 0; i < 256; i++) b9DiscardView(i);
+    for (i = 0; i < 256; i++) b11DiscardPictureFile(i);
     for (i = 0; i < 256; i++) discardSoundFile(i);
 }
 

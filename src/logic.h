@@ -31,9 +31,8 @@ void b6InitLogics();
 
 #pragma wrapped-call (push, trampoline, LOGIC_CODE_BANK)
 void b6LoadLogicFile(byte logFileNum);
-#pragma wrapped-call (pop)
-
 void b6DiscardLogicFile(byte logFileNum);
+#pragma wrapped-call (pop)
 
 extern void getLogicFile(LOGICFile* logicFile, byte logicFileNo);
 extern void getLogicEntry(LOGICEntry* logicEntry, byte logicFileNo);

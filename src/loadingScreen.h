@@ -5,6 +5,8 @@
 
 extern boolean loadingScreenDisplayed;
 
+#pragma wrapped-call (push, trampoline, LOADING_SCREEN_CODE_BANK)
 void b6DisplayLoadingScreen();
 void b6DismissLoadingScreen();
+#pragma wrapped-call (pop)
 #endif
