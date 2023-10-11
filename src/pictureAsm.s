@@ -13,11 +13,6 @@ PICTURE_INC = 1
 .import _priDrawEnabled
 .import _noSound
 
-.import _rpos
-.import _spos
-.import _rposBank
-.import _sposBank
-
 .import _b11FloodBankFull
 
 .import popa
@@ -542,7 +537,7 @@ bra endLabel
 ; void FLOOD_Q_STORE(unsigned short* ZP_PTR_B1) {
 ;     unsigned char q = 0;
 ;     unsigned short floodQueueEnd = 0;
-;     unsigned short RAM_BANK = _sposBank;
+;     unsigned short RAM_BANK = sposBank;
 
 ;     *ZP_PTR_B1 = q;
 ;     (*ZP_PTR_B1)++; // Increment the queue pointer
@@ -552,13 +547,14 @@ bra endLabel
 
 ;         if (RAM_BANK == LAST_FLOOD_BANK) {
 ;             RAM_BANK = FIRST_FLOOD_BANK;
-;             _sposBank = FIRST_FLOOD_BANK;
+;             sposBank = FIRST_FLOOD_BANK;
 ;         } else {
 ;             RAM_BANK++;
-;             _sposBank++;
+;             sposBank++;
 ;         }
 ;     }
 ; }
+;Store position bank (sposBank) ZP_TMP_3
 .macro FLOOD_Q_STORE
 .local @floodQueueEnd
 .local @start
@@ -570,7 +566,7 @@ bra endLabel
 .segment "BANKRAMFLOOD"
 @start:
 
-ldx _sposBank
+ldx ZP_TMP_3
 stx RAM_BANK
 
 sta (ZP_PTR_B1)
@@ -593,7 +589,7 @@ bne @incBank
 
 lda #FIRST_FLOOD_BANK
 sta RAM_BANK
-sta _sposBank
+sta ZP_TMP_3
 
 bra @end
 
@@ -606,7 +602,7 @@ bra @checkEnd
 
 @incBank:
 inc RAM_BANK ; The next flood bank will have identical code, so we can just increment the bank
-inc _sposBank
+inc ZP_TMP_3
 @end:
 .endmacro
 
@@ -618,11 +614,11 @@ inc _sposBank
 .local @serve
 .local @returnEmpty
 
-lda _rposBank
+lda ZP_TMP_4
 sta RAM_BANK
 
-lda _sposBank
-cmp _rposBank
+lda ZP_TMP_3
+cmp ZP_TMP_4
 bne @serve
 
 lda ZP_PTR_B1
@@ -648,17 +644,17 @@ sta ZP_PTR_B2
 lda #> FLOOD_QUEUE_START
 sta ZP_PTR_B2 + 1
 
-lda _rposBank
+lda ZP_TMP_4
 cmp #LAST_FLOOD_BANK
 beq @resetBank
 
 inc RAM_BANK
-inc _rposBank
+inc ZP_TMP_4
 bra @returnResult
 
 @resetBank:
 lda #FIRST_FLOOD_BANK
-sta _rposBank
+sta ZP_TMP_4
 bra @returnResult
 @returnEmpty:
 ldx #QEMPTY
@@ -1159,15 +1155,15 @@ rts
 QEMPTY = $FF
 
 ; void FLOOD_Q_RETRIEVE() {
-;     unsigned short RAM_BANK = _rposBank;
+;     unsigned short RAM_BANK = rposBank;
 ;     unsigned char X; // Using 'X' to represent 6502's X register
 
 ;     if (*ZP_PTR_B2 == FLOOD_QUEUE_END + 1) {
 ;         *ZP_PTR_B2 = FLOOD_QUEUE_START;
 
-;         _rposBank++;
-;         if (_rposBank == LAST_FLOOD_BANK + 1) {
-;             _rposBank = FIRST_FLOOD_BANK;
+;         rposBank++;
+;         if (rposBank == LAST_FLOOD_BANK + 1) {
+;             rposBank = FIRST_FLOOD_BANK;
 ;             return QEMPTY; // Assuming QEMPTY is a status indicating the queue is empty
 ;         }
 ;     }

@@ -36,8 +36,6 @@ BITMAP* agi_screen;      /* This is a subbitmap of the screen */
 boolean picDrawEnabled = FALSE, priDrawEnabled = FALSE;
 /* Not sure what the default patCode value is */
 byte picColour = 0, priColour = 0, patCode, patNum;
-word rpos = FLOOD_QUEUE_START, spos = FLOOD_QUEUE_START;
-byte rposBank = FIRST_FLOOD_BANK, sposBank = FIRST_FLOOD_BANK;
 
 
 /* QUEUE DEFINITIONS */
@@ -1134,6 +1132,8 @@ void b11DrawPic(byte* bankedData, int pLen, boolean okToClearScreen, byte picNum
 	int** zpB2 = (int**)ZP_PTR_B2;
 	byte** zpCh = (byte**)ZP_PTR_CH;
 	byte** zpDisp = (byte**)ZP_PTR_DISP;
+	int* zpTemp3 = (int*)ZP_PTR_TEMP_3;
+	int* zpTemp4 = (int*)ZP_PTR_TEMP_4;
 	
 	b6DisplayLoadingScreen();
 
@@ -1143,10 +1143,8 @@ void b11DrawPic(byte* bankedData, int pLen, boolean okToClearScreen, byte picNum
 	*zpB2 = (int*)FLOOD_QUEUE_START;
 	*zpCh = divBankMetadata;
 	*zpDisp = divAddressMetadata;
-	rpos = FLOOD_QUEUE_START;
-	spos = FLOOD_QUEUE_START;
-	rposBank = FIRST_FLOOD_BANK;
-	sposBank = FIRST_FLOOD_BANK;
+	*zpTemp3 = FIRST_FLOOD_BANK;
+	*zpTemp4 = FIRST_FLOOD_BANK;
 
 #ifdef TEST_DIVISION
 	testDivision();
