@@ -168,38 +168,6 @@ void setLocalCel(Loop* loadedLoop, Cel* localCell, byte localCellNumber)
 
 	RAM_BANK = previousRamBank;
 }
-
-
-void trampolineViewUpdater1Pointer(fnTrampolineViewUpdater1BytePtr func, ViewTable* localViewtab, byte* data, byte bank)
-{
-	byte previousRamBank = RAM_BANK;
-	RAM_BANK = bank;
-
-	func(localViewtab, data);
-
-	RAM_BANK = previousRamBank;
-}
-
-void trampolineViewUpdater0(fnTrampolineViewUpdater0 func, ViewTable* localViewtab, byte bank)
-{
-	byte previousRamBank = RAM_BANK;
-	RAM_BANK = bank;
-
-	func(localViewtab);
-
-	RAM_BANK = previousRamBank;
-}
-
-void viewUpdaterTrampoline2i(fnTrampolineViewUpdater2Int func, ViewTable* localViewtab, int data1, int data2, byte bank)
-{
-	byte previousRamBank = RAM_BANK;
-	RAM_BANK = bank;
-
-	func(&localViewtab, data1, data2);
-
-	RAM_BANK = previousRamBank;
-}
-
 #pragma code-name (push, "BANKRAM09")
 void b9InitViews()
 {
@@ -634,7 +602,7 @@ void b9Agi_blit(BITMAP* bmp, int x, int y, int w, int h, byte trans, byte pNum)
 }
 #pragma code-name (pop)
 #pragma code-name (push, "BANKRAM0A")
-
+#pragma wrapped-call (push, trampoline, VIEW_CODE_BANK_2)
 void bACalcDirection(ViewTable* localViewtab)
 {
 	if (!(localViewtab->flags & FIXLOOP)) {
@@ -666,6 +634,7 @@ void bACalcDirection(ViewTable* localViewtab)
 		}
 	}
 }
+#pragma wrapped-call (pop)
 
 /* Called by draw() */
 void bADrawObject(int entryNum)
@@ -1262,8 +1231,8 @@ void bBUpdateObj2(int entryNum)
 			case 2: /* follow.ego */
 				break;
 			case 3: /* move.obj */
-				viewUpdaterTrampoline2i(&bAAdjustPosition, &localViewtab, localViewtab.param1,
-					localViewtab.param2, VIEW_CODE_BANK_2);
+				bAAdjustPosition(&localViewtab, localViewtab.param1,
+					localViewtab.param2);
 				if ((localViewtab.xPos == localViewtab.param1) &&
 					(localViewtab.yPos == localViewtab.param2)) {
 					localViewtab.motion = 0;
@@ -1767,7 +1736,7 @@ void bCCalcObjMotion()
 		} /* MOTION */
 
 		/* Automatic change of direction if needed */
-		trampolineViewUpdater0(&bACalcDirection, &localViewtab, VIEW_CODE_BANK_2);
+		bACalcDirection(&localViewtab);
 
 		setViewTab(&localViewtab, entryNum);
 	}

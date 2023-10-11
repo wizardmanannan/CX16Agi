@@ -103,7 +103,6 @@ extern void setLoadedView(View* loadedView, byte loadedViewNumber);
 extern void trampolineViewUpdater0(fnTrampolineViewUpdater0 func, ViewTable* localViewtab, byte bank);
 
 extern void trampolineViewUpdater1Int(fnTrampolineViewUpdater1Int func, ViewTable* localViewtab, int celNum, byte bank);
-extern void trampolineViewUpdater1Pointer(fnTrampolineViewUpdater1BytePtr func, ViewTable* localViewtab, byte* data, byte bank);
 
 extern void trampolineAddToPic(int vNum, int lNum, int cNum, int x, int y, int pNum, int bCol);
 
