@@ -1654,7 +1654,7 @@ void b3DisplayWithoutTextbox(byte row, byte col, byte messNum)
 #ifdef VERBOSE_MESSAGE_PRINT
 	printf("Attempting to print %d from script %d. The length is %d. The message pointer is %p\n", messNum - 1, currentLog, strLenBanked(messagePointer, logicFile.messageBank), messagePointer);
 #endif
-	//trampolineProcessString(messagePointer, 0, tempString);
+	//b3ProcessString(messagePointer, 0, tempString);
 	b3DisplayMessageBox(messagePointer, logicFile.messageBank, row, col, DISPLAY_PALETTE_NUMBER, 0);
 	return;
 }
@@ -1723,7 +1723,7 @@ void b4Set_cursor_char() // 1, 0x00
 #endif // VERBOSE_STRING_CHECK
 
 
-	//trampolineProcessString(messagePointer, logicFile.messageBank, temp);
+	//b3ProcessString(messagePointer, logicFile.messageBank, temp);
 	cursorChar = temp[0];
 
 #ifdef VERBOSE_STRING_CHECK

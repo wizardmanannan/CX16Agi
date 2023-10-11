@@ -87,24 +87,11 @@ extern View* loadedViews;
 
 extern BITMAP* spriteScreen;
 
-typedef void (*fnTrampolineViewUpdater0)(ViewTable* localViewtab);
-
-typedef void (*fnTrampolineViewUpdater1Int)(ViewTable* localViewtab, int data);
-typedef void (*fnTrampolineViewUpdater1BytePtr)(ViewTable* localViewtab, byte* data1);
-
-typedef void (*fnTrampolineViewUpdater2Int)(ViewTable* localViewtab, int data1, int data2);
-
 extern void getViewTab(ViewTable* returnedViewTab, byte viewTabNumber);
 extern void setViewTab(ViewTable* viewTab, byte viewTabNumber);
 
 extern void getLoadedView(View* returnedLoadedView, byte loadedViewNumber);
 extern void setLoadedView(View* loadedView, byte loadedViewNumber);
-
-extern void trampolineViewUpdater0(fnTrampolineViewUpdater0 func, ViewTable* localViewtab, byte bank);
-
-extern void trampolineViewUpdater1Int(fnTrampolineViewUpdater1Int func, ViewTable* localViewtab, int celNum, byte bank);
-
-extern void trampolineAddToPic(int vNum, int lNum, int cNum, int x, int y, int pNum, int bCol);
 
 #pragma wrapped-call (push, trampoline, VIEW_CODE_BANK_1)
 void b9LoadViewFile(byte viewNum);
