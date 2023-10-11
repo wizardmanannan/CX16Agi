@@ -984,6 +984,7 @@ rts
 ;         }
 ;     }
 ; }
+TO_STORE = ZP_TMP_5 ; 8 bytes All the way to ZP_TMP_5
 _bFloodAgiFill:
 sta fillY
 jsr popa 
@@ -1051,38 +1052,38 @@ storeFillChecks:
 sec
 lda _okFillAddress
 sbc #< BYTES_PER_ROW
-sta toStore
+sta TO_STORE
 
 lda _okFillAddress + 1
 sbc #> BYTES_PER_ROW
-sta toStore + 1
+sta TO_STORE + 1
  
 sec
 lda _okFillAddress
 sbc #$1
-sta toStore + 2
+sta TO_STORE + 2
 
 lda _okFillAddress + 1
 sbc #$0
-sta toStore + 3
+sta TO_STORE + 3
 
 clc
 lda _okFillAddress
 adc #$1
-sta toStore + 4
+sta TO_STORE + 4
 
 lda _okFillAddress + 1
 adc #$0
-sta toStore + 5
+sta TO_STORE + 5
 
 clc
 lda _okFillAddress
 adc #< BYTES_PER_ROW
-sta toStore + 6
+sta TO_STORE + 6
 
 lda _okFillAddress + 1
 adc #> BYTES_PER_ROW
-sta toStore + 7
+sta TO_STORE + 7
 
 ldy #$0
 sty loopCounter
@@ -1105,10 +1106,10 @@ beq continue
 jmp checkNeighbourHoodLoopCounter
 
 continue:
-lda toStore,y
+lda TO_STORE,y
 sta _okFillAddress
 iny
-lda toStore,y
+lda TO_STORE,y
 sta _okFillAddress + 1
 
 OK_TO_FILL_LOWER
@@ -1143,7 +1144,6 @@ rts
 .segment "CODE"
 fillX: .byte $0
 fillY: .byte $0
-toStore: .res 8
 loopCounter: .byte $0
 storeCounter: .byte $0
 _okFillAddress: .word $0
