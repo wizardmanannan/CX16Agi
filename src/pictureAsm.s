@@ -251,8 +251,8 @@ DEBUG_PIXEL_DRAWN coX, coY
 
 .endmacro
 
-_goNoFurtherLeft: .byte $0 ;There is no equivalent for top, as the is a built in border
-_goNoFurtherRight: .byte $0
+GO_NO_FURTHER_LEFT = ZP_TMP_13
+GO_NO_FURTHER_RIGHT = ZP_TMP_14
 _okToFillUpperCheckPoint: .word $0
 _okToFillLowerCheckPoint: .word $0
 _okToFillDebuggerCheckPoint: .word $0 ; Never used but needed to make the macro work
@@ -273,13 +273,13 @@ beq @draw
 cmp #LEFT_BORDER
 bne @checkRightBorder
 lda #$1
-sta _goNoFurtherLeft
+sta GO_NO_FURTHER_LEFT
 bra @draw
 @checkRightBorder:
 cmp #RIGHT_BORDER
 bne @draw
 lda #$1
-sta _goNoFurtherRight
+sta GO_NO_FURTHER_RIGHT
 @draw:
 lda _toDraw
 sta VERA_data0
@@ -1022,8 +1022,8 @@ jmp initialStore
 fillLoop:
 
 ;Reset flags
-stz _goNoFurtherLeft
-stz _goNoFurtherRight
+stz GO_NO_FURTHER_LEFT
+stz GO_NO_FURTHER_RIGHT
 
 lda #$0
 sta LOOP_COUNTER
@@ -1095,7 +1095,7 @@ ldy LOOP_COUNTER
 check_goNoFurtherLeft:
 cpy #$2
 bne check_goNoFurtherRight
-lda _goNoFurtherLeft
+lda GO_NO_FURTHER_LEFT
 beq continue
 jmp checkNeighbourHoodLoopCounter
 
@@ -1103,7 +1103,7 @@ check_goNoFurtherRight:
 cpy #$4
 
 bne continue
-lda _goNoFurtherRight
+lda GO_NO_FURTHER_RIGHT
 beq continue
 jmp checkNeighbourHoodLoopCounter
 
