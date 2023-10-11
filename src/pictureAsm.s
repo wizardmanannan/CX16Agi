@@ -659,11 +659,7 @@ bra @returnResult
 @resetBank:
 lda #FIRST_FLOOD_BANK
 sta _rposBank
-@returnResult:
-tya
-DEBUG_FLOOD_QUEUE_RETRIEVE 
-ldx #$0
-bra @end
+bra @returnResult
 @returnEmpty:
 ldx #QEMPTY
 bra @end
@@ -671,6 +667,10 @@ bra @end
 inc ZP_PTR_B2 + 1
 bra @checkEnd
 
+@returnResult:
+tya
+DEBUG_FLOOD_QUEUE_RETRIEVE 
+ldx #$0
 @end:
 .endmacro
 
