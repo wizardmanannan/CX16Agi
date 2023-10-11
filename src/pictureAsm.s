@@ -984,7 +984,8 @@ rts
 ;         }
 ;     }
 ; }
-TO_STORE = ZP_TMP_5 ; 8 bytes All the way to ZP_TMP_5
+TO_STORE = ZP_TMP_5 ; 8 bytes All the way to ZP_TMP_8
+LOOP_COUNTER = ZP_TMP_9
 _bFloodAgiFill:
 sta fillY
 jsr popa 
@@ -1024,18 +1025,18 @@ stz _goNoFurtherLeft
 stz _goNoFurtherRight
 
 lda #$0
-sta loopCounter
+sta LOOP_COUNTER
 
 retrieveLoop:
 FLOOD_Q_RETRIEVE
-ldy loopCounter
+ldy LOOP_COUNTER
 sta _okFillAddress,y
 cpx #QEMPTY
 bne checkIfRetrieveLoopShouldContinue
 jmp fillEnd
 checkIfRetrieveLoopShouldContinue:
-inc loopCounter
-ldy loopCounter
+inc LOOP_COUNTER
+ldy LOOP_COUNTER
 cpy #$2
 bcs checkXYOKFill
 jmp retrieveLoop
@@ -1086,9 +1087,9 @@ adc #> BYTES_PER_ROW
 sta TO_STORE + 7
 
 ldy #$0
-sty loopCounter
+sty LOOP_COUNTER
 neighbourCheckLoop:
-ldy loopCounter
+ldy LOOP_COUNTER
 
 check_goNoFurtherLeft:
 cpy #$2
@@ -1130,9 +1131,9 @@ bcs checkNeighbourHoodLoopCounter
 jmp storeLoop
 checkNeighbourHoodLoopCounter:
 
-inc loopCounter
-inc loopCounter
-ldy loopCounter
+inc LOOP_COUNTER
+inc LOOP_COUNTER
+ldy LOOP_COUNTER
 cpy #8
 bne jmpBackToNeighbourCheckLoop
 jmp fillLoop
@@ -1144,7 +1145,6 @@ rts
 .segment "CODE"
 fillX: .byte $0
 fillY: .byte $0
-loopCounter: .byte $0
 storeCounter: .byte $0
 _okFillAddress: .word $0
 .segment "BANKRAMFLOOD"
