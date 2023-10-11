@@ -377,7 +377,7 @@ sta VERA_addr_low
 
 .endmacro
 
-; void OK_TO_FILL(int endLabel, int checkpoint) {
+; void OK_TO_FILL_ADDRESS(int endLabel, int checkpoint) {
 ;     int A = _picDrawEnabled ^ 1;
 ;     int X = A;
 ;     A = _priDrawEnabled ^ 1;
@@ -420,39 +420,39 @@ sta VERA_addr_low
     
 ;     end:
 ; }
-
+OK_TO_FILL_ADDRESS = ZP_TMP_12
 .macro OK_TO_FILL_UPPER
 .local endOkToFillUpper
 .local returnZeroUpper
-GREATER_THAN_OR_EQ_16_LITERAL _okFillAddress, MAX_ADDRESS + 1, returnZeroUpper
+GREATER_THAN_OR_EQ_16_LITERAL OK_TO_FILL_ADDRESS, MAX_ADDRESS + 1, returnZeroUpper
 jmp (_okToFillUpperCheckPoint)
 startOkToFillUpper:
-OK_TO_FILL endOkToFillUpper, _okToFillUpperCheckPoint
+OK_TO_FILL_ADDRESS endOkToFillUpper, _okToFillUpperCheckPoint
 returnZeroUpper:
 lda #$0
 endOkToFillUpper:
 .endmacro
 
 .macro OK_TO_FILL_LOWER
-GREATER_THAN_OR_EQ_16_LITERAL _okFillAddress, MAX_ADDRESS + 1, returnZeroLower
+GREATER_THAN_OR_EQ_16_LITERAL OK_TO_FILL_ADDRESS, MAX_ADDRESS + 1, returnZeroLower
 jmp (_okToFillLowerCheckPoint)
 startOkToFillLower:
-OK_TO_FILL endOkToFillLower, _okToFillLowerCheckPoint
+OK_TO_FILL_ADDRESS endOkToFillLower, _okToFillLowerCheckPoint
 returnZeroLower:
 lda #$0
 endOkToFillLower:
 .endmacro
 
 .macro OK_TO_FILL_DEBUG
-GREATER_THAN_OR_EQ_16_LITERAL _okFillAddress, MAX_ADDRESS + 1, returnZeroDebugger
+GREATER_THAN_OR_EQ_16_LITERAL OK_TO_FILL_ADDRESS, MAX_ADDRESS + 1, returnZeroDebugger
 startOkToFillDebugger:
-OK_TO_FILL endOkToFillDebugger, _okToFillDebuggerCheckPoint
+OK_TO_FILL_ADDRESS endOkToFillDebugger, _okToFillDebuggerCheckPoint
 returnZeroDebugger:
 lda #$0
 endOkToFillDebugger:
 .endmacro
 
-.macro OK_TO_FILL endLabel, checkpoint
+.macro OK_TO_FILL_ADDRESS endLabel, checkpoint
 .local @checkXBounds
 .local @checkYBounds
 .local @start
@@ -517,7 +517,7 @@ sta checkpoint
 lda #>@returnGetPixelResultCheckPoint
 sta checkpoint + 1
 @returnGetPixelResultCheckPoint:
-PIC_GET_PIXEL_ADDRESS _okFillAddress
+PIC_GET_PIXEL_ADDRESS OK_TO_FILL_ADDRESS
 cmp #PIC_DOUBLE_DEFAULT ; Expected to have $FF as each pixel is double width. Just compare it with this value to save a shift
 beq @returnOne
 cmp #RIGHT_BORDER
@@ -923,8 +923,8 @@ lda VERA_data0
 .endmacro
 
 _bFloodOkToFill:
-sta _okFillAddress
-stx _okFillAddress + 1
+sta OK_TO_FILL_ADDRESS
+stx OK_TO_FILL_ADDRESS + 1
 OK_TO_FILL_DEBUG
 rts
 @temp: .byte $0
@@ -961,7 +961,7 @@ rts
 ;         }
         
 ;         // checkXYOKFill
-;         ok = OK_TO_FILL();
+;         ok = OK_TO_FILL_ADDRESS();
 ;         if (!ok) {
 ;             continue;
 ;         }
@@ -970,22 +970,23 @@ rts
 ;         PSET_ADDRESS(_okFillAddress, &goNoFurtherLeft, &goNoFurtherRight);
 
 ;         // storeFillChecks
-;         if (OK_TO_FILL(_okFillAddress - NO_BYTES_PER_LINE)) {
+;         if (OK_TO_FILL_ADDRESS(_okFillAddress - NO_BYTES_PER_LINE)) {
 ;             _bFloodQstore(_okFillAddress - NO_BYTES_PER_LINE);
 ;         }
-;         if (OK_TO_FILL(_okFillAddress - 1) && !goNoFurtherLeft) {
+;         if (OK_TO_FILL_ADDRESS(_okFillAddress - 1) && !goNoFurtherLeft) {
 ;             _bFloodQstore(_okFillAddress - 1);
 ;         }
-;         if (OK_TO_FILL(_okFillAddress + 1) && !goNoFurtherRight) {
+;         if (OK_TO_FILL_ADDRESS(_okFillAddress + 1) && !goNoFurtherRight) {
 ;             _bFloodQstore(_okFillAddress + 1);
 ;         }
-;         if (OK_TO_FILL(_okFillAddress + NO_BYTES_PER_LINE)) {
+;         if (OK_TO_FILL_ADDRESS(_okFillAddress + NO_BYTES_PER_LINE)) {
 ;             _bFloodQstore(_okFillAddress + NO_BYTES_PER_LINE);
 ;         }
 ;     }
 ; }
 TO_STORE = ZP_TMP_5 ; 8 bytes All the way to ZP_TMP_8
 LOOP_COUNTER = ZP_TMP_9
+STORE_COUNTER = ZP_TMP_10
 _bFloodAgiFill:
 sta fillY
 jsr popa 
@@ -1003,15 +1004,15 @@ sta _okToFillLowerCheckPoint + 1
 
 ;Set initial values
 SET_PICCOLOR
-GET_VERA_ADDRESS fillX, fillY, _okFillAddress
+GET_VERA_ADDRESS fillX, fillY, OK_TO_FILL_ADDRESS
 
 ;InitialStore loop
 ldy #$0
 initialStore:
-lda _okFillAddress,y
-sty storeCounter
+lda OK_TO_FILL_ADDRESS,y
+sty STORE_COUNTER
 jsr _bFloodQstore
-ldy storeCounter
+ldy STORE_COUNTER
 iny
 cpy #$2
 bcs fillLoop
@@ -1030,7 +1031,7 @@ sta LOOP_COUNTER
 retrieveLoop:
 FLOOD_Q_RETRIEVE
 ldy LOOP_COUNTER
-sta _okFillAddress,y
+sta OK_TO_FILL_ADDRESS,y
 cpx #QEMPTY
 bne checkIfRetrieveLoopShouldContinue
 jmp fillEnd
@@ -1047,42 +1048,42 @@ bne @pSet
 jmp fillLoop
 
 @pSet:
-PSET_ADDRESS _okFillAddress
+PSET_ADDRESS OK_TO_FILL_ADDRESS
 
 storeFillChecks:
 sec
-lda _okFillAddress
+lda OK_TO_FILL_ADDRESS
 sbc #< BYTES_PER_ROW
 sta TO_STORE
 
-lda _okFillAddress + 1
+lda OK_TO_FILL_ADDRESS + 1
 sbc #> BYTES_PER_ROW
 sta TO_STORE + 1
  
 sec
-lda _okFillAddress
+lda OK_TO_FILL_ADDRESS
 sbc #$1
 sta TO_STORE + 2
 
-lda _okFillAddress + 1
+lda OK_TO_FILL_ADDRESS + 1
 sbc #$0
 sta TO_STORE + 3
 
 clc
-lda _okFillAddress
+lda OK_TO_FILL_ADDRESS
 adc #$1
 sta TO_STORE + 4
 
-lda _okFillAddress + 1
+lda OK_TO_FILL_ADDRESS + 1
 adc #$0
 sta TO_STORE + 5
 
 clc
-lda _okFillAddress
+lda OK_TO_FILL_ADDRESS
 adc #< BYTES_PER_ROW
 sta TO_STORE + 6
 
-lda _okFillAddress + 1
+lda OK_TO_FILL_ADDRESS + 1
 adc #> BYTES_PER_ROW
 sta TO_STORE + 7
 
@@ -1108,24 +1109,24 @@ jmp checkNeighbourHoodLoopCounter
 
 continue:
 lda TO_STORE,y
-sta _okFillAddress
+sta OK_TO_FILL_ADDRESS
 iny
 lda TO_STORE,y
-sta _okFillAddress + 1
+sta OK_TO_FILL_ADDRESS + 1
 
 OK_TO_FILL_LOWER
 bne storeInQueue
 jmp checkNeighbourHoodLoopCounter
 storeInQueue:
 ldy #$0
-sty storeCounter
+sty STORE_COUNTER
 
 storeLoop:
-lda _okFillAddress,y
+lda OK_TO_FILL_ADDRESS,y
 FLOOD_Q_STORE
 
-inc storeCounter
-ldy storeCounter
+inc STORE_COUNTER
+ldy STORE_COUNTER
 cpy #$2
 bcs checkNeighbourHoodLoopCounter
 jmp storeLoop
@@ -1145,8 +1146,6 @@ rts
 .segment "CODE"
 fillX: .byte $0
 fillY: .byte $0
-storeCounter: .byte $0
-_okFillAddress: .word $0
 .segment "BANKRAMFLOOD"
 
 _bFloodQstore:
