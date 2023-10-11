@@ -190,16 +190,6 @@ void trampolineViewUpdater0(fnTrampolineViewUpdater0 func, ViewTable* localViewt
 	RAM_BANK = previousRamBank;
 }
 
-void trampolineViewUpdater1Int(fnTrampolineViewUpdater1Int func, ViewTable* localViewtab, int data, byte bank)
-{
-	byte previousRamBank = RAM_BANK;
-	RAM_BANK = bank;
-
-	func(localViewtab, data);
-
-	RAM_BANK = previousRamBank;
-}
-
 void viewUpdaterTrampoline2i(fnTrampolineViewUpdater2Int func, ViewTable* localViewtab, int data1, int data2, byte bank)
 {
 	byte previousRamBank = RAM_BANK;
@@ -652,25 +642,25 @@ void bACalcDirection(ViewTable* localViewtab)
 
 			switch (localViewtab->direction) {
 			case 1: break;
-			case 2: trampolineViewUpdater1Int(&b9SetLoop, localViewtab, 0, VIEW_CODE_BANK_1); break;
-			case 3: trampolineViewUpdater1Int(&b9SetLoop, localViewtab, 0, VIEW_CODE_BANK_1); break;
-			case 4: trampolineViewUpdater1Int(&b9SetLoop, localViewtab, 0, VIEW_CODE_BANK_1); break;
+			case 2: b9SetLoop(localViewtab, 0); break;
+			case 3: b9SetLoop(localViewtab, 0); break;
+			case 4: b9SetLoop(localViewtab, 0); break;
 			case 5: break;
-			case 6: trampolineViewUpdater1Int(&b9SetLoop, localViewtab, 1, VIEW_CODE_BANK_1); break;
-			case 7: trampolineViewUpdater1Int(&b9SetLoop, localViewtab, 1, VIEW_CODE_BANK_1); break;
-			case 8: trampolineViewUpdater1Int(&b9SetLoop, localViewtab, 1, VIEW_CODE_BANK_1); break;
+			case 6: b9SetLoop(localViewtab, 1); break;
+			case 7: b9SetLoop(localViewtab, 1); break;
+			case 8: b9SetLoop(localViewtab, 1); break;
 			}
 		}
 		else {
 			switch (localViewtab->direction) {
-			case 1: trampolineViewUpdater1Int(&b9SetLoop, localViewtab, 3, VIEW_CODE_BANK_1); break;
-			case 2: trampolineViewUpdater1Int(&b9SetLoop, localViewtab, 0, VIEW_CODE_BANK_1); break;
-			case 3: trampolineViewUpdater1Int(&b9SetLoop, localViewtab, 0, VIEW_CODE_BANK_1);  break;
-			case 4: trampolineViewUpdater1Int(&b9SetLoop, localViewtab, 0, VIEW_CODE_BANK_1); break;
-			case 5: trampolineViewUpdater1Int(&b9SetLoop, localViewtab, 2, VIEW_CODE_BANK_1); break;
-			case 6: trampolineViewUpdater1Int(&b9SetLoop, localViewtab, 1, VIEW_CODE_BANK_1); break;
-			case 7: trampolineViewUpdater1Int(&b9SetLoop, localViewtab, 1, VIEW_CODE_BANK_1); break;
-			case 8: trampolineViewUpdater1Int(&b9SetLoop, localViewtab, 1, VIEW_CODE_BANK_1); break;
+			case 1: b9SetLoop(localViewtab, 3); break;
+			case 2: b9SetLoop(localViewtab, 0); break;
+			case 3: b9SetLoop(localViewtab, 0);  break;
+			case 4: b9SetLoop(localViewtab, 0); break;
+			case 5: b9SetLoop(localViewtab, 2); break;
+			case 6: b9SetLoop(localViewtab, 1); break;
+			case 7: b9SetLoop(localViewtab, 1); break;
+			case 8: b9SetLoop(localViewtab, 1); break;
 
 			}
 		}
@@ -1022,7 +1012,7 @@ void bAUpdateObj(int entryNum)
 				if (celNum >= localViewtab.numberOfCels)
 					celNum = 0;
 
-				trampolineViewUpdater1Int(&b9SetCel, &localViewtab, celNum, VIEW_CODE_BANK_1);
+				b9SetCel(&localViewtab, celNum);
 				break;
 			case 1: /* end.of.loop */
 				celNum++;
@@ -1031,7 +1021,7 @@ void bAUpdateObj(int entryNum)
 					/* localViewtab.flags &= ~CYCLING; */
 				}
 				else
-					trampolineViewUpdater1Int(&b9SetCel, &localViewtab, celNum, VIEW_CODE_BANK_1);
+					b9SetCel(&localViewtab, celNum);
 				break;
 			case 2: /* reverse.loop */
 				celNum--;
@@ -1040,13 +1030,13 @@ void bAUpdateObj(int entryNum)
 					/* localViewtab.flags &= ~CYCLING; */
 				}
 				else
-					trampolineViewUpdater1Int(&b9SetCel, &localViewtab, celNum, VIEW_CODE_BANK_1);
+					b9SetCel(&localViewtab, celNum);
 				break;
 			case 3: /* reverse.cycle */
 				celNum--;
 				if (celNum < 0)
 					celNum = localViewtab.numberOfCels - 1;
-				trampolineViewUpdater1Int(&b9SetCel, &localViewtab, celNum, VIEW_CODE_BANK_1);
+				b9SetCel(&localViewtab, celNum);
 				break;
 			}
 		}
@@ -1198,7 +1188,7 @@ void bBUpdateObj2(int entryNum)
 				celNum++;
 				if (celNum >= localViewtab.numberOfCels)
 					celNum = 0;
-				trampolineViewUpdater1Int(&b9SetCel, &localViewtab, celNum, VIEW_CODE_BANK_1);
+				b9SetCel(&localViewtab, celNum);
 				break;
 			case 1: /* end.of.loop */
 				celNum++;
@@ -1207,7 +1197,7 @@ void bBUpdateObj2(int entryNum)
 					localViewtab.flags &= ~CYCLING;
 				}
 				else
-					trampolineViewUpdater1Int(&b9SetCel, &localViewtab, celNum, VIEW_CODE_BANK_1);
+					b9SetCel(&localViewtab, celNum);
 				break;
 			case 2: /* reverse.loop */
 				celNum--;
@@ -1216,13 +1206,13 @@ void bBUpdateObj2(int entryNum)
 					localViewtab.flags &= ~CYCLING;
 				}
 				else
-					trampolineViewUpdater1Int(&b9SetCel, &localViewtab, celNum, VIEW_CODE_BANK_1);
+					b9SetCel(&localViewtab, celNum);
 				break;
 			case 3: /* reverse.cycle */
 				celNum--;
 				if (celNum < 0)
 					celNum = localViewtab.numberOfCels - 1;
-				trampolineViewUpdater1Int(&b9SetCel, &localViewtab, celNum, VIEW_CODE_BANK_1);
+				b9SetCel(&localViewtab, celNum);
 				break;
 			}
 			getViewTab(&localViewtab, entryNum);
@@ -1408,7 +1398,7 @@ void bBUpdateObjects()
 							celNum++;
 							if (celNum >= localViewtab.numberOfCels)
 								celNum = 0;
-							trampolineViewUpdater1Int(&b9SetCel, &localViewtab, celNum, VIEW_CODE_BANK_1);
+							b9SetCel(&localViewtab, celNum);
 							break;
 						case 1: /* end.of.loop */
 							//Debug Here
@@ -1419,7 +1409,7 @@ void bBUpdateObjects()
 								/* localViewtab.flags &= ~CYCLING; */
 							}
 							else
-								trampolineViewUpdater1Int(&b9SetCel, &localViewtab, celNum, VIEW_CODE_BANK_1);
+								b9SetCel(&localViewtab, celNum);
 							break;
 						case 2: /* reverse.loop */
 							celNum--;
@@ -1428,13 +1418,13 @@ void bBUpdateObjects()
 								/* localViewtab.flags &= ~CYCLING; */
 							}
 							else
-								trampolineViewUpdater1Int(&b9SetCel, &localViewtab, celNum, VIEW_CODE_BANK_1);
+								b9SetCel(&localViewtab, celNum);
 							break;
 						case 3: /* reverse.cycle */
 							celNum--;
 							if (celNum < 0)
 								celNum = localViewtab.numberOfCels - 1;
-							trampolineViewUpdater1Int(&b9SetCel, &localViewtab, celNum, VIEW_CODE_BANK_1);
+							b9SetCel(&localViewtab, celNum);
 							break;
 						}
 						setViewTab(&localViewtab, entryNum);
@@ -1545,7 +1535,7 @@ void bCupdateObjects2()
 							celNum++;
 							if (celNum >= localViewtab.numberOfCels)
 								celNum = 0;
-							trampolineViewUpdater1Int(&b9SetCel, &localViewtab, celNum, VIEW_CODE_BANK_1);
+							b9SetCel(&localViewtab, celNum);
 							break;
 						case 1: /* end.of.loop */
 							celNum++;
@@ -1554,7 +1544,7 @@ void bCupdateObjects2()
 								localViewtab.flags &= ~CYCLING;
 							}
 							else
-								trampolineViewUpdater1Int(&b9SetCel, &localViewtab, celNum, VIEW_CODE_BANK_1);
+								b9SetCel(&localViewtab, celNum);
 							break;
 						case 2: /* reverse.loop */
 							celNum--;
@@ -1563,13 +1553,13 @@ void bCupdateObjects2()
 								localViewtab.flags &= ~CYCLING;
 							}
 							else
-								trampolineViewUpdater1Int(&b9SetCel, &localViewtab, celNum, VIEW_CODE_BANK_1);
+								b9SetCel(&localViewtab, celNum);
 							break;
 						case 3: /* reverse.cycle */
 							celNum--;
 							if (celNum < 0)
 								celNum = localViewtab.numberOfCels - 1;
-							trampolineViewUpdater1Int(&b9SetCel, &localViewtab, celNum, VIEW_CODE_BANK_1);
+							b9SetCel(&localViewtab, celNum);
 							break;
 						}
 					}

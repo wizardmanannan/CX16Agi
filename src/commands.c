@@ -646,7 +646,7 @@ void b2Draw() // 1, 0x00
 
 
 
-	trampolineViewUpdater1Int(&b9SetCel, &localViewtab, localViewtab.currentCel, VIEW_CODE_BANK_1);
+	b9SetCel(&localViewtab, localViewtab.currentCel);
 
 	bADrawObject(entryNum);
 
@@ -744,7 +744,7 @@ void b2Set_view() // 2, 0x00
 
 	getViewTab(&localViewtab, entryNum);
 
-	trampolineViewUpdater1Int(&b9AddViewToTable, &localViewtab, viewNum, VIEW_CODE_BANK_1);
+	b9AddViewToTable(&localViewtab, viewNum);
 
 	setViewTab(&localViewtab, entryNum);
 	return;
@@ -760,7 +760,7 @@ void b2Set_view_v() // 2, 0x40
 
 	getViewTab(&localViewtab, entryNum);
 
-	trampolineViewUpdater1Int(&b9AddViewToTable, &localViewtab, viewNum, VIEW_CODE_BANK_1);
+	b9AddViewToTable(&localViewtab, viewNum);
 
 	getViewTab(&localViewtab, entryNum);
 	return;
@@ -775,8 +775,8 @@ void b2Set_loop() // 2, 0x00
 	loopNum = loadAndIncWinCode();
 
 	getViewTab(&localViewtab, entryNum);
-	trampolineViewUpdater1Int(&b9SetLoop, &localViewtab, loopNum, VIEW_CODE_BANK_1);
-	trampolineViewUpdater1Int(&b9SetCel, &localViewtab, 0, VIEW_CODE_BANK_1);
+	b9SetLoop(&localViewtab, loopNum);
+	b9SetCel(&localViewtab, 0);
 
 	setViewTab(&localViewtab, entryNum);
 	return;
@@ -792,8 +792,8 @@ void b2Set_loop_v() // 2, 0x40
 
 	loopNum = var[loadAndIncWinCode()];
 
-	trampolineViewUpdater1Int(&b9SetLoop, &localViewtab, loopNum, VIEW_CODE_BANK_1);
-	trampolineViewUpdater1Int(&b9SetCel, &localViewtab, loopNum, VIEW_CODE_BANK_1);
+	b9SetLoop(&localViewtab, loopNum);
+	b9SetCel(&localViewtab, loopNum);
 
 	setViewTab(&localViewtab, entryNum);
 	return;
@@ -838,7 +838,7 @@ void b2Set_cel() // 2, 0x00
 
 	getViewTab(&localViewtab, entryNum);
 
-	trampolineViewUpdater1Int(&b9SetCel, &localViewtab, celNum, VIEW_CODE_BANK_1);
+	b9SetCel(&localViewtab, celNum);
 
 	setViewTab(&localViewtab, entryNum);
 	return;
@@ -854,7 +854,7 @@ void b2Set_cel_v() // 2, 0x40
 
 	getViewTab(&localViewtab, entryNum);
 
-	trampolineViewUpdater1Int(&b9SetCel, &localViewtab, celNum, VIEW_CODE_BANK_1);
+	b9SetCel(&localViewtab, celNum);
 
 	setViewTab(&localViewtab, entryNum);
 	return;
