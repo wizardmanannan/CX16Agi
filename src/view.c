@@ -2055,16 +2055,6 @@ void bDShowObjectState(int objNum)
 
 #pragma code-name (pop)
 
-void trampolineAddToPic(int vNum, int lNum, int cNum, int x, int y, int pNum, int bCol)
-{
-	byte previousRamBank = RAM_BANK;
-
-	RAM_BANK = VIEW_CODE_BANK_1;
-	b9AddToPic(vNum, lNum, cNum, x, y, pNum, bCol);
-
-	RAM_BANK = previousRamBank;
-}
-
 void agi_blitTrampoline(BITMAP* bmp, int x, int y, int w, int h, byte trans, byte pNum)
 {
 	byte previousRamBank = RAM_BANK;

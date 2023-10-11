@@ -1896,7 +1896,7 @@ void b4Add_to_pic() // 7, 0x00
 
 	//printf("viewNum %d, loopNum %d, celNum %d, x %d, y %d priNum %d baseCol %d", viewNum, loopNum, celNum, x, y, priNum, baseCol);
 
-	trampolineAddToPic(viewNum, loopNum, celNum, x, y, priNum, baseCol);
+	b9AddToPic(viewNum, loopNum, celNum, x, y, priNum, baseCol);
 
 
 
@@ -1914,7 +1914,7 @@ void b4Add_to_pic_v() // 7, 0xFE
 	priNum = var[loadAndIncWinCode()];
 	baseCol = var[loadAndIncWinCode()];
 
-	trampolineAddToPic(viewNum, loopNum, celNum, x, y, priNum, baseCol);
+	b9AddToPic(viewNum, loopNum, celNum, x, y, priNum, baseCol);
 	return;
 }
 
