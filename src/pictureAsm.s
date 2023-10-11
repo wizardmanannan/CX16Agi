@@ -571,7 +571,6 @@ stx RAM_BANK
 
 sta (ZP_PTR_B1)
 
-clc
 inc ZP_PTR_B1
 beq @incrementHighByte
 
@@ -606,6 +605,7 @@ inc ZP_TMP_3
 @end:
 .endmacro
 
+;Retrieve position ZP_TMP_4 (rposBank)
 .macro FLOOD_Q_RETRIEVE
 .local @end
 .local @serve
@@ -628,6 +628,7 @@ bne @serve
 lda ZP_PTR_B1 + 1
 cmp ZP_PTR_B2 + 1
 bne @serve
+
 jmp @returnEmpty
 @serve:
 lda (ZP_PTR_B2)
