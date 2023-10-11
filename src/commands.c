@@ -88,9 +88,6 @@ objectType* objects;
 
 //
 
-void trampolineProcessString(char* stringPointer, byte stringBank, char* outputString);
-void trampolinePrintMessageInTextbox(byte messNum, byte x, byte y, byte length);
-
 int getNum(char* inputString, int* i, int inputStringBank)
 {
 	/* char strPos = 0;
@@ -259,17 +256,10 @@ void testMenus()
 #endif // VERBOSE_MENU
 
 #define PROCESS_STRING_BANK 3
+
+#pragma wrapped-call (push, trampoline, TEXT_CODE_BANK)
 void b3ProcessString(char* stringPointer, byte stringBank, char* outputString);
-void trampolineProcessString(char* stringPointer, byte stringBank, char* outputString)
-{
-	byte previousRamBank = RAM_BANK;
-
-	RAM_BANK = PROCESS_STRING_BANK;
-
-	b3ProcessString(stringPointer, stringBank, outputString);
-
-	RAM_BANK = previousRamBank;
-}
+#pragma wrapped-call (pop)
 
 #pragma code-name (push, "BANKRAM0F");
 /****************************************************************************
@@ -1587,6 +1577,8 @@ void b3ProcessString(char* stringPointer, byte stringBank, char* outputString)
 
 }
 
+
+#pragma wrapped-call (push, trampoline, TEXT_CODE_BANK)
 //Helper function not a command. Note there is an identical function on bank 4
 void b3PrintMessageInTextbox(byte messNum, byte x, byte y, byte length)
 {
@@ -1635,6 +1627,7 @@ void b3PrintMessageInTextbox(byte messNum, byte x, byte y, byte length)
 	show_mouse(screen);
 	return;
 }
+#pragma wrapped-call (pop)
 
 void b3Print() // 1, 00 
 {
@@ -1730,7 +1723,7 @@ void b4Set_cursor_char() // 1, 0x00
 #endif // VERBOSE_STRING_CHECK
 
 
-	trampolineProcessString(messagePointer, logicFile.messageBank, temp);
+	//trampolineProcessString(messagePointer, logicFile.messageBank, temp);
 	cursorChar = temp[0];
 
 #ifdef VERBOSE_STRING_CHECK
@@ -2145,12 +2138,12 @@ void b4Reposition_to_v() // 3, 0x60
 
 void b4Print_at() // 4, 0x00           /* 3 args for AGI versions before */
 {
-	trampolinePrintMessageInTextbox(loadAndIncWinCode(), loadAndIncWinCode(), loadAndIncWinCode(), loadAndIncWinCode());
+   b3PrintMessageInTextbox(loadAndIncWinCode(), loadAndIncWinCode(), loadAndIncWinCode(), loadAndIncWinCode());
 }
 
 void b4Print_at_v() // 4, 0x80         /* 2_440 (maybe laterz) */
 {
-	trampolinePrintMessageInTextbox(var[loadAndIncWinCode()], loadAndIncWinCode(), loadAndIncWinCode(), loadAndIncWinCode());
+	b3PrintMessageInTextbox(var[loadAndIncWinCode()], loadAndIncWinCode(), loadAndIncWinCode(), loadAndIncWinCode());
 }
 
 void b4Discard_view_v() // 1, 0x80 
@@ -2396,16 +2389,6 @@ void b5Div_v() // 2, 0xC0
 	return;
 }
 #pragma code-name (pop)
-
-void trampolinePrintMessageInTextbox(byte messNum, byte x, byte y, byte length)
-{
-	byte previousRamBank = RAM_BANK;
-	RAM_BANK = TEXT_CODE_BANK;
-
-	b3PrintMessageInTextbox(messNum, x, y, length);
-
-	RAM_BANK = previousRamBank;
-}
 
 
 
