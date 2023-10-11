@@ -1309,13 +1309,3 @@ void b11ShowPicture()
 
 #pragma code-name (pop)
 
-void drawPicTrampoline(byte* bankedData, int pLen, boolean okToClearScreen, byte picNum)
-{
-	byte previousBank = RAM_BANK;
-	RAM_BANK = PICTURE_CODE_BANK;
-
-	b11DrawPic(bankedData, pLen, okToClearScreen, picNum);
-
-	RAM_BANK = previousBank;
-}
-

@@ -57,6 +57,7 @@ extern void b6ClearBackground();
 #pragma wrapped-call (pop);
 
 #pragma wrapped-call (push, trampoline, PICTURE_CODE_BANK)
+void b11DrawPic(byte* bankedData, int pLen, boolean okToClearScreen, byte picNum);
 void b11LoadPictureFile(int picFileNum);
 extern void b11InitPicture();
 extern void b11InitPictures();
@@ -70,8 +71,6 @@ extern void getLoadedPicture(PictureFile* returnedloadedPicture, byte loadedPict
 
 extern byte toDraw;
 extern int* drawWhere;
-
-void drawPicTrampoline(byte* bankedData, int pLen, boolean okToClearScreen, byte picNum);
 
 
 #endif  /* _PICTURE_H_ */

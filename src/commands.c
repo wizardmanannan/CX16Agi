@@ -524,7 +524,7 @@ void b2Draw_pic() // 1, 0x80
 
 	//picFNum = pNum;  // Debugging. Delete at some stage!!!
 
-	drawPicTrampoline(loadedPicture.data, loadedPicture.size, TRUE, pNum);
+	b11DrawPic(loadedPicture.data, loadedPicture.size, TRUE, pNum);
 
 	return;
 }
@@ -553,7 +553,7 @@ void b2Overlay_pic() // 1, 0x80
 
 	getLoadedPicture(&loadedPicture, pNum);
 
-	drawPicTrampoline(loadedPicture.data, loadedPicture.size, FALSE, pNum);
+	b11DrawPic(loadedPicture.data, loadedPicture.size, FALSE, pNum);
 
 	return;
 }
