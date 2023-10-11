@@ -47,15 +47,13 @@
 
 void b6InitLayer1Mapbase();
 
+#pragma wrapped-call (push, trampoline, TEXT_CODE_BANK)
 void b3DisplayMessageBox(char* message, byte messageBank, byte row, byte col, byte paletteNumber, byte boxWidth);
 void b3FillChar(byte startLine, byte endLine, byte paletteNumber, byte charToFill);
-
-#pragma wrapped-call (push, trampoline, TEXT_CODE_BANK)
 void b3ClearLastPlacedText();
 #pragma wrapped-call(pop)
 
 void trampolinefillChar(byte startLine, byte endLine, byte paletteNumber, byte charToFill);
-void trampolineDisplayMessageBox(char* message, byte messageBank, byte row, byte col, byte paletteNumber, byte boxWidth);
 
 extern char textBuffer1[TEXTBUFFER_SIZE];
 extern char textBuffer2[TEXTBUFFER_SIZE];

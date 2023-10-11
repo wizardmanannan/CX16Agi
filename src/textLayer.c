@@ -464,13 +464,3 @@ void trampolinefillChar(byte startLine, byte endLine, byte paletteNumber, byte c
 
 	RAM_BANK = previousRamBank;
 }
-
-void trampolineDisplayMessageBox(char* message, byte messageBank, byte row, byte col, byte paletteNumber, byte boxWidth)
-{
-	byte previousRamBank = RAM_BANK;
-	RAM_BANK = TEXT_CODE_BANK;
-
-	b3DisplayMessageBox(message, messageBank, row, col, paletteNumber, boxWidth);
-
-	RAM_BANK = previousRamBank;
-}

@@ -1604,7 +1604,7 @@ void b3PrintMessageInTextbox(byte messNum, byte x, byte y, byte length)
 
 	messagePointer = getMessagePointer(currentLog, messNum - 1);
 
-	trampolineDisplayMessageBox(messagePointer, logicFile.messageBank, x, y, TEXTBOX_PALETTE_NUMBER, length);
+	b3DisplayMessageBox(messagePointer, logicFile.messageBank, x, y, TEXTBOX_PALETTE_NUMBER, length);
 
 	if (timeoutFlagVal)
 	{
