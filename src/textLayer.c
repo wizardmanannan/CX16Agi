@@ -454,13 +454,3 @@ void b3ClearLastPlacedText()
 }
 
 #pragma code-name (pop)
-
-void trampolinefillChar(byte startLine, byte endLine, byte paletteNumber, byte charToFill)
-{
-	byte previousRamBank = RAM_BANK;
-	RAM_BANK = TEXT_CODE_BANK;
-
-	b3FillChar(startLine, endLine, paletteNumber, charToFill);
-
-	RAM_BANK = previousRamBank;
-}

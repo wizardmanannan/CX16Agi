@@ -53,10 +53,7 @@ void b3FillChar(byte startLine, byte endLine, byte paletteNumber, byte charToFil
 void b3ClearLastPlacedText();
 #pragma wrapped-call(pop)
 
-void trampolinefillChar(byte startLine, byte endLine, byte paletteNumber, byte charToFill);
-
 extern char textBuffer1[TEXTBUFFER_SIZE];
 extern char textBuffer2[TEXTBUFFER_SIZE];
-
 
 #endif

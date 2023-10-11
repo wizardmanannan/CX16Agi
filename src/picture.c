@@ -149,7 +149,7 @@ void testOkToFill()
 		printf("fail both enabled (right border)\n");
 	}
 
-	trampoline_2Byte(&b11PSet, 0, 0, PICTURE_CODE_BANK);
+	b11PSet(0, 0);
 	picColour = 3;
 	priDrawEnabled = FALSE;
 	picDrawEnabled = TRUE;

@@ -25,19 +25,6 @@
 #define DIFF_ASCII_PETSCII_CAPS -128
 #define DIFF_ASCII_PETSCII_LOWER -32
 
-typedef void (*fnTrampoline_0)();
-
-typedef void (*fnTrampoline_1BytePointerPointer)(byte** data);
-typedef boolean (*fnTrampoline_1BytePointerPointerRetBool)(byte** data);
-typedef void (*fnTrampoline_1Int)(int data);
-typedef byte (*fnTrampoline_1ByteRByte)(byte data);
-typedef void (*fnTrampoline_1Int)(int data);
-
-typedef void (*fnTrampoline_2Int)(int data, int data2);
-typedef void (*fnTrampoline_2Byte)(byte data, byte data2);
-
-typedef void (*fnTrampoline_3Int)(int data1, int data2, int data3);
-
 byte convertAsciiByteToPetsciiByte(byte toConvert);
 
 extern char* strcpyBanked(char* dest, const char* src, byte bank);

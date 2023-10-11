@@ -77,8 +77,6 @@ FONT* font;
 
 //
 
-void agi_blitTrampoline(BITMAP* bmp, int x, int y, int w, int h, byte trans, byte pNum);
-
 void getViewTab(ViewTable* returnedViewTab, byte viewTabNumber)
 {
 	byte previousRamBank = RAM_BANK;
@@ -581,10 +579,11 @@ void b9AddToPic(int vNum, int lNum, int cNum, int x, int y, int pNum, int bCol)
 //	if (bCol < 4) rect(control, x, (y + h) - (boxWidth), (x + w) - 1, (y + h) - 1, bCol);
 }
 
+#pragma wrapped-call (push, trampoline, VIEW_CODE_BANK_1)
 /***************************************************************************
 ** agi_blit
 ***************************************************************************/
-void b9Agi_blit(BITMAP* bmp, int x, int y, int w, int h, byte trans, byte pNum)
+void b9AgiBlit(BITMAP* bmp, int x, int y, int w, int h, byte trans, byte pNum)
 {
 	int i, j, c;
 
@@ -602,6 +601,8 @@ void b9Agi_blit(BITMAP* bmp, int x, int y, int w, int h, byte trans, byte pNum)
 	//	}
 	//}
 }
+#pragma wrapped-call (pop)
+
 #pragma code-name (pop)
 #pragma code-name (push, "BANKRAM0A")
 #pragma wrapped-call (push, trampoline, VIEW_CODE_BANK_2)
@@ -675,7 +676,7 @@ void bADrawObject(int entryNum)
 
 	bACalcDirection(&localViewtab);
 
-	agi_blitTrampoline(localViewtab.celData->bmp,
+	b9AgiBlit(localViewtab.celData->bmp,
 		localViewtab.xPos,
 		(localViewtab.yPos - localViewtab.ysize) + 1,
 		localViewtab.xsize,
@@ -1095,7 +1096,7 @@ void bAUpdateObj(int entryNum)
 
 	if ((objFlags & ANIMATED) && (objFlags & DRAWN)) {
 		/* Draw new cel onto picture\priority bitmaps */
-		agi_blitTrampoline(localViewtab.celData->bmp,
+		b9AgiBlit(localViewtab.celData->bmp,
 			localViewtab.xPos,
 			(localViewtab.yPos - localViewtab.ysize) + 1,
 			localViewtab.xsize,
@@ -1282,7 +1283,7 @@ void bBUpdateObj2(int entryNum)
 
 	if ((objFlags & ANIMATED) && (objFlags & DRAWN)) {
 		/* Draw new cel onto picture\priority bitmaps */
-		agi_blitTrampoline(localViewtab.celData->bmp,
+		b9AgiBlit(localViewtab.celData->bmp,
 			localViewtab.xPos,
 			(localViewtab.yPos - localViewtab.ysize) + 1,
 			localViewtab.xsize,
@@ -1434,7 +1435,7 @@ void bBUpdateObjects()
 		objFlags = localViewtab.flags;
 		if ((objFlags & ANIMATED) && (objFlags & DRAWN)) {
 			/* Draw new cel onto picture\priority bitmaps */
-			agi_blitTrampoline(localViewtab.celData->bmp,
+			b9AgiBlit(localViewtab.celData->bmp,
 				localViewtab.xPos,
 				(localViewtab.yPos - localViewtab.ysize) + 1,
 				localViewtab.xsize,
@@ -1633,7 +1634,7 @@ void bCupdateObjects2()
 
 		if ((objFlags & ANIMATED) && (objFlags & DRAWN)) {
 			/* Draw new cel onto picture\priority bitmaps */
-			agi_blitTrampoline(localViewtab.celData->bmp,
+			b9AgiBlit(localViewtab.celData->bmp,
 				localViewtab.xPos,
 				(localViewtab.yPos - localViewtab.ysize) + 1,
 				localViewtab.xsize,
@@ -2054,13 +2055,3 @@ void bDShowObjectState(int objNum)
 }
 
 #pragma code-name (pop)
-
-void agi_blitTrampoline(BITMAP* bmp, int x, int y, int w, int h, byte trans, byte pNum)
-{
-	byte previousRamBank = RAM_BANK;
-
-	RAM_BANK = VIEW_CODE_BANK_1;
-	b9Agi_blit(bmp, x, y, w, h, trans, pNum);
-
-	RAM_BANK = previousRamBank;
-}
