@@ -186,16 +186,21 @@ lda _logDebugVal1
 .endif
 .endmacro
 
-.macro DEBUG_FLOOD_QUEUE_STORE var1, var2
-.local @end
+.macro DEBUG_FLOOD_QUEUE_STORE
+.local @increment
+.local @queue
 .ifdef DEBUG_PIXEL_DRAW
-EQ_32_LONG_TO_LITERAL _pixelCounter, NEG_1_16, NEG_1_16, @end
-LESS_THAN_32 _pixelCounter, _pixelStartPrintingAt, @end
+lda @queue
+EQ_32_LONG_TO_LITERAL _pixelCounter, NEG_1_16, NEG_1_16, @increment
+LESS_THAN_32 _pixelCounter, _pixelStartPrintingAt, @increment
 lda var1
 sta _logDebugVal1
 JSRFAR _b5DebugFloodQueueStore, DEBUG_BANK
-@end:
+@increment:
 INC_32 _queueAction
+bra @end
+@queue .byte $0
+@end:
 .endif
 .endmacro
 
@@ -561,20 +566,13 @@ bra endLabel
 .local @end
 .local @incBank
 .local @end
-sta _logDebugVal1
-sta @q
-DEBUG_FLOOD_QUEUE_STORE @q
-bra @start
-.segment "CODE"
-@q: .byte $0
+;DEBUG_FLOOD_QUEUE_STORE @q
 .segment "BANKRAMFLOOD"
-@floodQueueEnd: .word $0
 @start:
 
-lda _sposBank
-sta RAM_BANK
+ldx _sposBank
+stx RAM_BANK
 
-lda @q
 sta (ZP_PTR_B1)
 
 clc
@@ -602,6 +600,9 @@ bra @end
 @incrementHighByte:
 inc ZP_PTR_B1 + 1
 bra @checkEnd
+
+@variables:
+@floodQueueEnd: .word $0
 
 @incBank:
 inc RAM_BANK ; The next flood bank will have identical code, so we can just increment the bank
