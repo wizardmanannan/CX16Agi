@@ -516,6 +516,7 @@ void b6XOrAvisDurgan(byte* toXOR, unsigned int* avisPos)
 **
 ** In both cases the format that is easier to deal with is returned.
 **************************************************************************/
+
 void b6LoadAGIFile(int resType, AGIFilePosType* location, AGIFile* AGIData)
 {
 #define SEPARATOR 0
@@ -707,13 +708,6 @@ void b6LoadAGIFile(int resType, AGIFilePosType* location, AGIFile* AGIData)
 
 }
 #pragma code-name (pop)
-void loadAGIFileTrampoline(int resType, AGIFilePosType* location, AGIFile* AGIData)
-{
-	byte previousRamBank = RAM_BANK;
-	RAM_BANK = FILE_LOADER_HELPERS;
-	b6LoadAGIFile(resType, location, AGIData);
-	RAM_BANK = previousRamBank;
-}
 
 
 

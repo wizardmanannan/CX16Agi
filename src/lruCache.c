@@ -30,69 +30,56 @@ void bEInitLruCaches(CacheEvictionCallback evictionCallbackLogic, CacheEvictionC
 }
 
 
-void bELruCacheGet(int resType, LRUCache* cache, byte key, AGIFilePosType* location, AGIFile* AGIData) {
+void bELruCacheGet(int resType, byte key, AGIFilePosType* location, AGIFile* agiData)
+{
     int i, j;
     byte tmp;
-    for (i = 0; i < cache->size; i++) {
-        if (cache->keys[i] == key) {
-            // move this entry to the front
-            tmp = cache->keys[i];
-            for (j = i; j > 0; j--) {
-                cache->keys[j] = cache->keys[j - 1];
-            }
-            cache->keys[0] = tmp;
-            return;
-        }
-    }
-    // insert new entry at front
-    if (cache->size < cache->max_size) {
-        cache->size++;
-    }
-    else {
-        // cache is full, delete least recently used entry
-        if (cache->evictionCallback) {
-            cache->evictionCallback(cache->keys[cache->size - 1]);
-        }
-    }
-    for (i = cache->size - 1; i > 0; i--) {
-        cache->keys[i] = cache->keys[i - 1];
-    }
-    cache->keys[0] = key;
-#ifdef _MSC_VER
-    loadAGIFileTest(resType, location, AGIData);
-#endif // __CX16__
-
-#ifdef __CX16__
-    loadAGIFileTrampoline(resType, location, AGIData);
-#endif // __CX16__
-
-}
-
-
-#pragma code-name (pop)
-
-void lruCacheGetTrampoline(int resType, byte key, AGIFilePosType* location, AGIFile* agiData)
-{
-#ifdef  __CX16__
-    byte previousRamBank = RAM_BANK;
-#endif
     LRUCache* lruCache = NULL;
+    byte previousRamBank = RAM_BANK;
 
-#ifdef  __CX16__
-    RAM_BANK = 0xE;
-#endif
+    RAM_BANK = LRU_CACHE_LOGIC_BANK;
 
     if (resType == LOGIC)
     {
         lruCache = _logicCache;
     }
 
-    bELruCacheGet(resType, lruCache, key, location, agiData);
+    for (i = 0; i < lruCache->size; i++) {
+        if (lruCache->keys[i] == key) {
+            // move this entry to the front
+            tmp = lruCache->keys[i];
+            for (j = i; j > 0; j--) {
+                lruCache->keys[j] = lruCache->keys[j - 1];
+            }
+            lruCache->keys[0] = tmp;
+            return;
+        }
+    }
+    // insert new entry at front
+    if (lruCache->size < lruCache->max_size) {
+        lruCache->size++;
+    }
+    else {
+        // cache is full, delete least recently used entry
+        if (lruCache->evictionCallback) {
+            lruCache->evictionCallback(lruCache->keys[lruCache->size - 1]);
+        }
+    }
+    for (i = lruCache->size - 1; i > 0; i--) {
+        lruCache->keys[i] = lruCache->keys[i - 1];
+    }
+    lruCache->keys[0] = key;
+
+#ifdef __CX16__
+    b6LoadAGIFile(resType, location, agiData);
+#endif // __CX16__
 
 #ifdef  __CX16__
     RAM_BANK = previousRamBank;
 #endif
 }
+
+#pragma code-name (pop)
 
 void initLruCachesTrampoline(CacheEvictionCallback evictionCallbackLogic, CacheEvictionCallback evictionCallbackView)
 {

@@ -24,7 +24,10 @@ typedef struct LRUCache {
 extern LRUCache* _logicCache;
 extern LRUCache* _viewCache;
 
-extern void lruCacheGetTrampoline(int resType, byte key, AGIFilePosType* location, AGIFile* agiData);
+#pragma wrapped-call (push, trampoline, LRU_CACHE_LOGIC_BANK)
+extern void bELruCacheGet(int resType, byte key, AGIFilePosType* location, AGIFile* agiData);
+#pragma wrapped-call (pop)
+
 extern void initLruCachesTrampoline(CacheEvictionCallback evictionCallbackLogic, CacheEvictionCallback evictionCallbackView);
 
 #ifdef _MSC_VER

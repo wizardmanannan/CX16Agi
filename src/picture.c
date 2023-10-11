@@ -1273,7 +1273,7 @@ void b11LoadPictureFile(int picFileNum)
 	printf("The picture number is %d \n", picFileNum);
 	printf("Loading Picture file %d, position %d\n", agiFilePosType.fileNum, agiFilePosType.filePos);
 #endif
-	loadAGIFileTrampoline(PICTURE, &agiFilePosType, &tempAGI);
+	b6LoadAGIFile(PICTURE, &agiFilePosType, &tempAGI);
 
 
 	loadedPicture.size = tempAGI.totalSize;

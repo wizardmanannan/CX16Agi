@@ -38,8 +38,10 @@ extern AGIFilePosType* snddir;
 
 extern int numLogics, numPictures, numViews, numSounds;
 
+#pragma wrapped-call (push, trampoline, FILE_LOADER_HELPERS)
 void b6InitFiles();
 void b6LoadAGIDirs();
-void loadAGIFileTrampoline(int resType, AGIFilePosType* location, AGIFile *AGIData);
+void b6LoadAGIFile(int resType, AGIFilePosType* location, AGIFile *AGIData);
+#pragma wrapped-call (pop)
 
 #endif  /* _AGIFILES_H_ */
