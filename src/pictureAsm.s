@@ -578,13 +578,10 @@ lda @q
 sta (ZP_PTR_B1)
 
 clc
-lda #$1
-adc ZP_PTR_B1
-sta ZP_PTR_B1
+inc ZP_PTR_B1
+beq @incrementHighByte
 
-lda #$0
-adc ZP_PTR_B1 + 1
-sta ZP_PTR_B1 + 1
+@checkEnd:
 NEQ_16_WORD_TO_LITERAL ZP_PTR_B1, (FLOOD_QUEUE_END + 1), @end
 
 lda #< FLOOD_QUEUE_START
@@ -601,6 +598,10 @@ sta RAM_BANK
 sta _sposBank
 
 bra @end
+
+@incrementHighByte:
+inc ZP_PTR_B1 + 1
+bra @checkEnd
 
 @incBank:
 inc RAM_BANK ; The next flood bank will have identical code, so we can just increment the bank
