@@ -195,14 +195,14 @@ void b6DiscardLogicFile(byte logFileNum)
 
 	if (logicEntry.loaded) {
 
-		if (logicEntry.loaded && !banked_deallocTrampoline((byte*)logicData.messages, logicData.messageBank))
+		if (logicEntry.loaded && !b10BankedDealloc((byte*)logicData.messages, logicData.messageBank))
 		{
 #ifdef VERBOSE
 			printf("Failed to deallocate messages for logic %d in bank %d", logFileNum, logicData.codeBank);
 #endif // VERBOSE
 		}
 
-		if (logicEntry.loaded && !banked_deallocTrampoline((byte*)logicData.logicCode, logicData.codeBank))
+		if (logicEntry.loaded && !b10BankedDealloc((byte*)logicData.logicCode, logicData.codeBank))
 		{
 #ifdef VERBOSE
 			printf("Failed to deallocate messages for logic %d in bank %d", logFileNum, logicData.codeBank);

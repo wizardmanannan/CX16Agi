@@ -204,8 +204,13 @@ typedef struct {          /* DIR entry structure */
 void b10InitDynamicMemory();
 
 void memoryMangerInit();
-byte* banked_allocTrampoline(int size, byte* bank);
-boolean banked_deallocTrampoline(byte* ptr, byte bank);
+
+extern void trampoline(); //DOTO: Really should come from helpers but there would be a circular dependency if I included it. Split helpers up to make this possible
+
+#pragma wrapped-call (push, trampoline, MEMORY_MANAGEMENT_BANK)
+byte* b10BankedAlloc(int size, byte* bank);
+boolean b10BankedDealloc(byte* ptr, byte bank);
+#pragma wrapped-call (pop)
 
 #endif
 

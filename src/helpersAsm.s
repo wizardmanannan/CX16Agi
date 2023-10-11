@@ -2,6 +2,8 @@
 
 HELPERS_INC = 1
 
+.segment "CODE"
+
 .export _trampoline
 .import popa
 .importzp tmp4
@@ -9,7 +11,7 @@ HELPERS_INC = 1
 .import ptr4
 
 _trampoline:
-sta @aVal
+sta @aVal ;Preserve a argument
 
 lda $0
 pha
@@ -19,9 +21,12 @@ sta $0
 
 lda @aVal
 jsr callptr4
+sta @aVal ;Perserve return a
 
 pla
 sta $0
+
+lda @aVal
 rts
 @aVal: .byte $0
 

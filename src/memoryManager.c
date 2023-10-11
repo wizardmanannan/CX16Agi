@@ -161,7 +161,7 @@ void b10InitDynamicMemory()
 //	return _memoryAreas[memoryArea].start - &[ALLOCATION_ARRAY_START_INDEX]
 //}
 
-byte* b10Banked_Alloc(int size, byte* bank)
+byte* b10BankedAlloc(int size, byte* bank)
 {
 
 	byte i, j;
@@ -211,10 +211,10 @@ byte* b10Banked_Alloc(int size, byte* bank)
 	}
 
 	return result;
-	}
+}
 
 extern long opCounter;
-boolean b10Banked_Dealloc(byte* ptr, byte bank)
+boolean b10BankedDealloc(byte* ptr, byte bank)
 {
 	int i;
 	byte size = 0;
@@ -264,35 +264,6 @@ boolean b10Banked_Dealloc(byte* ptr, byte bank)
 }
 
 #pragma code-name (pop);
-
-byte* banked_allocTrampoline(int size, byte* bank)
-{
-	byte* result;
-	byte previousRamBank = RAM_BANK;
-
-	RAM_BANK = MEMORY_MANAGEMENT_BANK;
-
-	result = b10Banked_Alloc(size, bank);
-
-	RAM_BANK = previousRamBank;
-
-	return result;
-}
-
-boolean banked_deallocTrampoline(byte* ptr, byte bank)
-{
-	boolean result;
-	byte previousRamBank = RAM_BANK;
-
-	RAM_BANK = MEMORY_MANAGEMENT_BANK;
-
-	result = b10Banked_Dealloc(ptr, bank);
-
-	RAM_BANK = previousRamBank;
-
-	return result;
-}
-
 void memoryMangerInit()
 {
 	byte previousRamBank = RAM_BANK;

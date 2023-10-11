@@ -334,8 +334,7 @@ byte* b6ReadFileContentsIntoBankedRam(int size, byte* bank)
 	int i;
 	int copySize;
 	int debug;
-	result = banked_allocTrampoline(size, bank);
-
+	result = b10BankedAlloc(size, bank);
 #ifdef VERBOSE
 	printf("Attempting to code data of size %d to %p\n", size, result);
 #endif

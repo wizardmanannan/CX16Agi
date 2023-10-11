@@ -1296,7 +1296,7 @@ void b11DiscardPictureFile(int picFileNum)
 
 	if (loadedPicture.loaded) {
 		loadedPicture.loaded = FALSE;
-		banked_deallocTrampoline(loadedPicture.data, loadedPicture.bank);
+		b10BankedDealloc(loadedPicture.data, loadedPicture.bank);
 	}
 
 	setLoadedPicture(&loadedPicture, picFileNum);

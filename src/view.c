@@ -303,7 +303,7 @@ void b9LoadViewFile(byte viewNum)
 		description = (const char*)(tempAGI.code + viewStart[3] + viewStart[4] * 256);
 		descriptionLength = strlen(description);
 
-		localView.description = (char*)banked_allocTrampoline(descriptionLength, &localView.descriptionBank);
+		localView.description = (char*)b10BankedAlloc(descriptionLength, &localView.descriptionBank);
 #ifdef VERBOSE_ALLOC_WATCH
 		printf("Description length %d bank %p address %p\n", descriptionLength, localView.description, localView.descriptionBank);
 #endif // VERBOSE_ALLOC_WATCH
@@ -344,7 +344,7 @@ void b9LoadViewFile(byte viewNum)
 
 	localView.numberOfLoops = viewStart[2];
 
-	localView.loops = (Loop*)banked_allocTrampoline(viewStart[2] * sizeof(Loop), &localView.loopsBank);
+	localView.loops = (Loop*)b10BankedAlloc(viewStart[2] * sizeof(Loop), &localView.loopsBank);
 #ifdef VERBOSE_ALLOC_WATCH
 	printf("loop length %d bank %p address %p\n", viewStart[2] * sizeof(Loop), &localView.loopsBank, localView.loops);
 #endif // VERBOSE_ALLOC_WATCH
@@ -359,7 +359,9 @@ void b9LoadViewFile(byte viewNum)
 		printf("You have %d loops and the num of cells is %d and a loop pos of %d", localView.numberOfLoops, localLoop.numberOfCels, loopHeaderOffset);
 #endif // VERBOSE_LOAD_VIEWS
 		
-		localLoop.cels = (Cel*)banked_allocTrampoline(localLoop.numberOfCels * sizeof(Cel), &localLoop.celBank);
+		printf("Stop Here 4");
+		localLoop.cels = (Cel*)b10BankedAlloc(localLoop.numberOfCels * sizeof(Cel), &localLoop.celBank);
+		printf("Exit Here 4");
 #ifdef VERBOSE_ALLOC_WATCH
 		printf("cels length %d bank %p address %p\n", localLoop.numberOfCels * sizeof(Cel), &localLoop.celBank, localLoop.cels);
 #endif // VERBOSE_ALLOC_WATCH
@@ -432,7 +434,7 @@ void b9LoadViewFile(byte viewNum)
 
 	localView.loaded = TRUE;
 
-	banked_deallocTrampoline(tempAGI.code, tempAGI.codeBank);
+	b10BankedDealloc(tempAGI.code, tempAGI.codeBank);
 
 	setLoadedView(&localView, viewNum);
 }
@@ -469,7 +471,7 @@ void b9DiscardView(byte viewNum)
 #ifdef VERBOSE_ALLOC_WATCH
 			printf("dealloc cels bank %p address %p\n", localLoop.celBank, (byte*)localLoop.cels);
 #endif
-			banked_deallocTrampoline((byte*)localLoop.cels, localLoop.celBank); //TODO:FIX
+			b10BankedDealloc((byte*)localLoop.cels, localLoop.celBank); //TODO:FIX
 			localLoop.celBank = 0;
 			localLoop.cels = NULL;
 			localLoop.numberOfCels = 0;
@@ -482,14 +484,14 @@ void b9DiscardView(byte viewNum)
 #ifdef VERBOSE_ALLOC_WATCH
 			printf("dealloc desc bank %p address %p\n", localView.descriptionBank, localView.description);
 #endif // VERBOSE_ALLOC_WATCH
-			banked_deallocTrampoline((byte*)localView.description, localView.descriptionBank);
+			b10BankedDealloc((byte*)localView.description, localView.descriptionBank);
 		}
 
 
 #ifdef VERBOSE_ALLOC_WATCH
 		printf("dealloc loops bank %p address %p\n", localView.loopsBank, localView.loops);
 #endif // VERBOSE_ALLOC_WATCH
-		banked_deallocTrampoline((byte*)localView.loops, localView.loopsBank);
+		b10BankedDealloc((byte*)localView.loops, localView.loopsBank);
 		localView.loaded = FALSE;
 	}
 }
