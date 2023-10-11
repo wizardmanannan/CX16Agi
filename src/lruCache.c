@@ -80,15 +80,3 @@ void bELruCacheGet(int resType, byte key, AGIFilePosType* location, AGIFile* agi
 }
 
 #pragma code-name (pop)
-
-void initLruCachesTrampoline(CacheEvictionCallback evictionCallbackLogic, CacheEvictionCallback evictionCallbackView)
-{
-    byte previousRamBank = RAM_BANK;
-    
-    RAM_BANK = LRU_CACHE_LOGIC_BANK;
-
-    bEInitLruCaches(evictionCallbackLogic, evictionCallbackView);
-   
-
-    RAM_BANK = previousRamBank;
-}

@@ -26,9 +26,8 @@ extern LRUCache* _viewCache;
 
 #pragma wrapped-call (push, trampoline, LRU_CACHE_LOGIC_BANK)
 extern void bELruCacheGet(int resType, byte key, AGIFilePosType* location, AGIFile* agiData);
+extern void bEInitLruCaches(CacheEvictionCallback evictionCallbackLogic, CacheEvictionCallback evictionCallbackView);
 #pragma wrapped-call (pop)
-
-extern void initLruCachesTrampoline(CacheEvictionCallback evictionCallbackLogic, CacheEvictionCallback evictionCallbackView);
 
 #ifdef _MSC_VER
 extern void loadAGIFileTest(int resType, AGIFilePosType* location, AGIFile* AGIData);
