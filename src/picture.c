@@ -1185,6 +1185,7 @@ void b11DrawPic(byte* bankedData, int pLen, boolean okToClearScreen, byte picNum
 	printf("Plotting. . .\n");
 #endif // VERBOSE
 
+	asm("stp");
 	do {
 		if (!returnedAction)
 		{
@@ -1229,6 +1230,7 @@ void b11DrawPic(byte* bankedData, int pLen, boolean okToClearScreen, byte picNum
 		printf(" data %p pLen %d data + pLen %p stillDrawing %d \n", data, pLen, data + pLen, stillDrawing);
 #endif
 	} while ((data < (data + pLen)) && stillDrawing);
+	asm("stp");
 
 	b11SplitPriority();
 

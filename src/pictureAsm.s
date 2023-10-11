@@ -635,15 +635,10 @@ jmp @returnEmpty
 lda (ZP_PTR_B2)
 tay
 
-clc
-lda #$1
-adc ZP_PTR_B2
-sta ZP_PTR_B2
+inc ZP_PTR_B2
+beq @incrementHighByte
 
-lda #$0
-adc ZP_PTR_B2 + 1
-sta ZP_PTR_B2 + 1
-
+@checkEnd:
 NEQ_16_WORD_TO_LITERAL ZP_PTR_B2, (FLOOD_QUEUE_END + 1), @returnResult
 
 lda #< FLOOD_QUEUE_START
@@ -669,6 +664,11 @@ ldx #$0
 bra @end
 @returnEmpty:
 ldx #QEMPTY
+bra @end
+@incrementHighByte:
+inc ZP_PTR_B2 + 1
+bra @checkEnd
+
 @end:
 .endmacro
 
