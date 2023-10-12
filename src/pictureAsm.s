@@ -559,6 +559,7 @@ bra endLabel
 .local @floodQueueEnd
 .local @start
 .local @checkEnd
+.local @incrementHighByte
 .local @q
 .local @end
 .local @incBank
@@ -1117,18 +1118,14 @@ OK_TO_FILL_LOWER
 bne storeInQueue
 jmp checkNeighbourHoodLoopCounter
 storeInQueue:
-ldy #$0
-sty STORE_COUNTER
 
-storeLoop:
+ldy #$0
+lda OK_TO_FILL_ADDRESS,y
+FLOOD_Q_STORE
+ldy #$1
 lda OK_TO_FILL_ADDRESS,y
 FLOOD_Q_STORE
 
-inc STORE_COUNTER
-ldy STORE_COUNTER
-cpy #$2
-bcs checkNeighbourHoodLoopCounter
-jmp storeLoop
 checkNeighbourHoodLoopCounter:
 
 inc LOOP_COUNTER
