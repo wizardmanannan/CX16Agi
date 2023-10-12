@@ -1,4 +1,4 @@
-; Check if global definitions are included, if not, include them
+; Check if global definitions are included, if not, include them_picColour
 .ifndef  PICTURE_INC
 PICTURE_INC = 1
 ;TEST_IS_MULTIPLE_OF_160 = 1 
@@ -51,6 +51,49 @@ MAX_X = 160
 MAX_Y = 168
 
 MAX_ADDRESS = $7F7F
+
+.macro NEIGHBOURHOODCHECK OK_TO_FILL_LOWER
+.local check_goNoFurtherLeft
+.local check_goNoFurtherRight
+.local continueNCheck
+.local storeInQueue
+.local endNeighbourHoodCheck
+check_goNoFurtherLeft:
+cpy #$2 ; Only relevant for check two x - 1 skip overwise
+bne check_goNoFurtherRight
+lda GO_NO_FURTHER_LEFT
+beq continueNCheck
+jmp endNeighbourHoodCheck
+
+check_goNoFurtherRight:
+cpy #$4
+
+bne continueNCheck
+lda GO_NO_FURTHER_RIGHT
+beq continueNCheck
+jmp endNeighbourHoodCheck
+
+continueNCheck:
+lda TO_STORE,y
+sta OK_TO_FILL_ADDRESS
+iny
+lda TO_STORE,y
+sta OK_TO_FILL_ADDRESS + 1
+
+OK_TO_FILL_LOWER
+bne storeInQueue
+jmp endNeighbourHoodCheck
+storeInQueue:
+
+ldy #$0
+lda OK_TO_FILL_ADDRESS,y
+FLOOD_Q_STORE
+ldy #$1
+lda OK_TO_FILL_ADDRESS,y
+FLOOD_Q_STORE
+endNeighbourHoodCheck:
+.endmacro
+
 
 .macro STOP_AT_QUEUE_ACTION
 pha
@@ -254,7 +297,10 @@ DEBUG_PIXEL_DRAWN coX, coY
 GO_NO_FURTHER_LEFT = ZP_TMP_13
 GO_NO_FURTHER_RIGHT = ZP_TMP_14
 _okToFillUpperCheckPoint: .word $0
-_okToFillLowerCheckPoint: .word $0
+_okToFillLowerCheckPoint_1: .word $0
+_okToFillLowerCheckPoint_2: .word $0
+_okToFillLowerCheckPoint_3: .word $0
+_okToFillLowerCheckPoint_4: .word $0
 _okToFillDebuggerCheckPoint: .word $0 ; Never used but needed to make the macro work
 
 .macro PSET_ADDRESS address
@@ -433,15 +479,59 @@ lda #$0
 endOkToFillUpper:
 .endmacro
 
-.macro OK_TO_FILL_LOWER
+.macro OK_TO_FILL_LOWER_1
+.local returnZeroLower
+.local endOkToFillLower
 GREATER_THAN_OR_EQ_16_LITERAL OK_TO_FILL_ADDRESS, MAX_ADDRESS + 1, returnZeroLower
-jmp (_okToFillLowerCheckPoint)
-startOkToFillLower:
-OK_TO_FILL_ADDRESS endOkToFillLower, _okToFillLowerCheckPoint
+
+jmp (_okToFillLowerCheckPoint_1)
+startOkToFillLower_1:
+OK_TO_FILL_ADDRESS endOkToFillLower, _okToFillLowerCheckPoint_1
 returnZeroLower:
 lda #$0
 endOkToFillLower:
 .endmacro
+
+.macro OK_TO_FILL_LOWER_2
+.local returnZeroLower
+.local endOkToFillLower
+GREATER_THAN_OR_EQ_16_LITERAL OK_TO_FILL_ADDRESS, MAX_ADDRESS + 1, returnZeroLower
+
+jmp (_okToFillLowerCheckPoint_2)
+startOkToFillLower_2:
+OK_TO_FILL_ADDRESS endOkToFillLower, _okToFillLowerCheckPoint_2
+returnZeroLower:
+lda #$0
+endOkToFillLower:
+.endmacro
+
+.macro OK_TO_FILL_LOWER_3
+.local returnZeroLower
+.local endOkToFillLower
+GREATER_THAN_OR_EQ_16_LITERAL OK_TO_FILL_ADDRESS, MAX_ADDRESS + 1, returnZeroLower
+
+jmp (_okToFillLowerCheckPoint_3)
+startOkToFillLower_3:
+OK_TO_FILL_ADDRESS endOkToFillLower, _okToFillLowerCheckPoint_3
+returnZeroLower:
+lda #$0
+endOkToFillLower:
+.endmacro
+
+.macro OK_TO_FILL_LOWER_4
+.local returnZeroLower
+.local endOkToFillLower
+GREATER_THAN_OR_EQ_16_LITERAL OK_TO_FILL_ADDRESS, MAX_ADDRESS + 1, returnZeroLower
+
+jmp (_okToFillLowerCheckPoint_4)
+startOkToFillLower_4:
+OK_TO_FILL_ADDRESS endOkToFillLower, _okToFillLowerCheckPoint_4
+returnZeroLower:
+lda #$0
+endOkToFillLower:
+.endmacro
+
+
 
 .macro OK_TO_FILL_DEBUG
 GREATER_THAN_OR_EQ_16_LITERAL OK_TO_FILL_ADDRESS, MAX_ADDRESS + 1, returnZeroDebugger
@@ -986,10 +1076,9 @@ rts
 ;         }
 ;     }
 ; }
-TO_STORE = ZP_TMP_5 ; 8 bytes All the way to ZP_TMP_8
-LOOP_COUNTER = ZP_TMP_9
-STORE_COUNTER = ZP_TMP_10
-_bFloodAgiFill:
+
+.segment "CODE"
+initFlood:
 sta fillY
 jsr popa 
 sta fillX
@@ -999,14 +1088,40 @@ sta _okToFillUpperCheckPoint
 lda #> startOkToFillUpper
 sta _okToFillUpperCheckPoint + 1
 
-lda #< startOkToFillLower
-sta _okToFillLowerCheckPoint
-lda #> startOkToFillLower
-sta _okToFillLowerCheckPoint + 1
+lda #< startOkToFillLower_1
+sta _okToFillLowerCheckPoint_1
+lda #> startOkToFillLower_1
+sta _okToFillLowerCheckPoint_1 + 1
+
+lda #< startOkToFillLower_2
+sta _okToFillLowerCheckPoint_2
+lda #> startOkToFillLower_2
+sta _okToFillLowerCheckPoint_2 + 1
+
+lda #< startOkToFillLower_3
+sta _okToFillLowerCheckPoint_3
+lda #> startOkToFillLower_3
+sta _okToFillLowerCheckPoint_3 + 1
+
+lda #< startOkToFillLower_4
+sta _okToFillLowerCheckPoint_4
+lda #> startOkToFillLower_4
+sta _okToFillLowerCheckPoint_4 + 1
+
 
 ;Set initial values
 SET_PICCOLOR
 GET_VERA_ADDRESS fillX, fillY, OK_TO_FILL_ADDRESS
+rts
+
+.segment "BANKRAMFLOOD"
+
+TO_STORE = ZP_TMP_5 ; 8 bytes All the way to ZP_TMP_8
+LOOP_COUNTER = ZP_TMP_9
+STORE_COUNTER = ZP_TMP_10
+_bFloodAgiFill:
+
+jsr initFlood
 
 ;InitialStore loop
 ldy #$0
@@ -1088,54 +1203,14 @@ adc #> BYTES_PER_ROW
 sta TO_STORE + 7
 
 ldy #$0
-sty LOOP_COUNTER
-neighbourCheckLoop:
-ldy LOOP_COUNTER
-
-check_goNoFurtherLeft:
-cpy #$2 ; Only relevant for check two x - 1 skip overwise
-bne check_goNoFurtherRight
-lda GO_NO_FURTHER_LEFT
-beq continue
-jmp checkNeighbourHoodLoopCounter
-
-check_goNoFurtherRight:
-cpy #$4
-
-bne continue
-lda GO_NO_FURTHER_RIGHT
-beq continue
-jmp checkNeighbourHoodLoopCounter
-
-continue:
-lda TO_STORE,y
-sta OK_TO_FILL_ADDRESS
-iny
-lda TO_STORE,y
-sta OK_TO_FILL_ADDRESS + 1
-
-OK_TO_FILL_LOWER
-bne storeInQueue
-jmp checkNeighbourHoodLoopCounter
-storeInQueue:
-
-ldy #$0
-lda OK_TO_FILL_ADDRESS,y
-FLOOD_Q_STORE
-ldy #$1
-lda OK_TO_FILL_ADDRESS,y
-FLOOD_Q_STORE
-
-checkNeighbourHoodLoopCounter:
-
-inc LOOP_COUNTER
-inc LOOP_COUNTER
-ldy LOOP_COUNTER
-cpy #8
-bne jmpBackToNeighbourCheckLoop
+NEIGHBOURHOODCHECK OK_TO_FILL_LOWER_1
+ldy #$2
+NEIGHBOURHOODCHECK OK_TO_FILL_LOWER_2
+ldy #$4
+NEIGHBOURHOODCHECK OK_TO_FILL_LOWER_3
+ldy #$6
+NEIGHBOURHOODCHECK OK_TO_FILL_LOWER_4
 jmp fillLoop
-jmpBackToNeighbourCheckLoop:
-jmp neighbourCheckLoop
 fillEnd:
 
 rts

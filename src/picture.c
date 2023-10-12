@@ -1135,7 +1135,7 @@ void b11DrawPic(byte* bankedData, int pLen, boolean okToClearScreen, byte picNum
 	int* zpTemp3 = (int*)ZP_PTR_TEMP_3;
 	int* zpTemp4 = (int*)ZP_PTR_TEMP_4;
 	
-	b6DisplayLoadingScreen();
+	b6DismissLoadingScreen();
 
 	*zpTemp = &bitmapWidthPreMult[0];
 	*zpTemp2 = &DIVISION_AREA[0];
@@ -1183,7 +1183,6 @@ void b11DrawPic(byte* bankedData, int pLen, boolean okToClearScreen, byte picNum
 	printf("Plotting. . .\n");
 #endif // VERBOSE
 
-	asm("stp");
 	do {
 		if (!returnedAction)
 		{
@@ -1228,7 +1227,6 @@ void b11DrawPic(byte* bankedData, int pLen, boolean okToClearScreen, byte picNum
 		printf(" data %p pLen %d data + pLen %p stillDrawing %d \n", data, pLen, data + pLen, stillDrawing);
 #endif
 	} while ((data < (data + pLen)) && stillDrawing);
-	asm("stp");
 
 	b11SplitPriority();
 
