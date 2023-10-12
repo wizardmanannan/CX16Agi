@@ -421,7 +421,7 @@ sta VERA_addr_low
 ;     end:
 ; }
 OK_TO_FILL_ADDRESS = ZP_TMP_12
-.macro OK_TO_FILL_UPPER
+.macro OK_TO_FILL_UPPER ; We need an upper and lower for the sake of the checkpoint jmp, which are two different addresses
 .local endOkToFillUpper
 .local returnZeroUpper
 GREATER_THAN_OR_EQ_16_LITERAL OK_TO_FILL_ADDRESS, MAX_ADDRESS + 1, returnZeroUpper
@@ -595,9 +595,6 @@ bra @end
 @incrementHighByte:
 inc ZP_PTR_B1 + 1
 bra @checkEnd
-
-@variables:
-@floodQueueEnd: .word $0
 
 @incBank:
 inc RAM_BANK ; The next flood bank will have identical code, so we can just increment the bank
@@ -953,7 +950,7 @@ rts
 ;         _goNoFurtherRight = 0;
 ;         loopCounter = 0;
 ;         
-;    // RetrieveLoop           
+;    // RetrieveLoop. A loop in assembly as you need to get x and y        
 ;         bool isEmpty; 
 ;         _okFillAddress = FLOOD_Q_RETRIEVE(&isEmpty);
 ;         if (isEmpty) {
@@ -961,7 +958,7 @@ rts
 ;         }
         
 ;         // checkXYOKFill
-;         ok = OK_TO_FILL_ADDRESS();
+;         ok = OK_TO_FILL_ADDRESS(_okFillAddress);
 ;         if (!ok) {
 ;             continue;
 ;         }
@@ -1093,7 +1090,7 @@ neighbourCheckLoop:
 ldy LOOP_COUNTER
 
 check_goNoFurtherLeft:
-cpy #$2
+cpy #$2 ; Only relevant for check two x - 1 skip overwise
 bne check_goNoFurtherRight
 lda GO_NO_FURTHER_LEFT
 beq continue
