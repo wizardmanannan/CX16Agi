@@ -6,6 +6,7 @@ PICTURE_INC = 1
 .include "x16.inc"
 .include "global.s"
 .include "graphicsAsm.s"
+.include "helpersAsm.s"
 
 
 .import _picColour
@@ -21,6 +22,9 @@ PICTURE_INC = 1
 
 .import picDrawEnabled
 .import priDrawEnabled
+
+.importzp tmp4
+.importzp ptr4
 
 .segment "CODE"
 
@@ -1077,7 +1081,7 @@ rts
 ;     }
 ; }
 
-.segment "CODE"
+.segment "BANKRAM11"
 initFlood:
 sta fillY
 jsr popa 
@@ -1121,7 +1125,17 @@ LOOP_COUNTER = ZP_TMP_9
 STORE_COUNTER = ZP_TMP_10
 _bFloodAgiFill:
 
-jsr initFlood
+tax
+lda #PICTURE_BANK
+sta tmp4
+
+lda #< initFlood
+sta ptr4
+lda #> initFlood
+sta ptr4 + 1
+
+txa
+jsr _trampoline
 
 ;InitialStore loop
 ldy #$0

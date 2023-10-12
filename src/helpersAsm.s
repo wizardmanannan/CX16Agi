@@ -8,7 +8,6 @@ HELPERS_INC = 1
 .import popa
 .importzp tmp4
 .import callptr4
-.import ptr4
 
 _trampoline:
 sta @aVal ;Preserve a argument
