@@ -558,6 +558,7 @@ bra endLabel
 .macro FLOOD_Q_STORE
 .local @floodQueueEnd
 .local @start
+.local @checkEnd
 .local @q
 .local @end
 .local @incBank
@@ -609,7 +610,10 @@ inc ZP_TMP_3
 .local @resetBank
 .local @returnResult
 .local @serve
+.local @incrementHighByte
+.local @checkEnd
 .local @returnEmpty
+
 
 lda ZP_TMP_4
 sta RAM_BANK
@@ -1022,22 +1026,20 @@ fillLoop:
 stz GO_NO_FURTHER_LEFT
 stz GO_NO_FURTHER_RIGHT
 
-lda #$0
-sta LOOP_COUNTER
-
-retrieveLoop:
 FLOOD_Q_RETRIEVE
-ldy LOOP_COUNTER
+ldy #$0
 sta OK_TO_FILL_ADDRESS,y
 cpx #QEMPTY
-bne checkIfRetrieveLoopShouldContinue
+beq @goToEnd
+
+FLOOD_Q_RETRIEVE
+ldy #$1
+sta OK_TO_FILL_ADDRESS,y
+cpx #QEMPTY
+bne checkXYOKFill
+
+@goToEnd:
 jmp fillEnd
-checkIfRetrieveLoopShouldContinue:
-inc LOOP_COUNTER
-ldy LOOP_COUNTER
-cpy #$2
-bcs checkXYOKFill
-jmp retrieveLoop
 
 checkXYOKFill:
 OK_TO_FILL_UPPER
