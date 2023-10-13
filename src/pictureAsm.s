@@ -1080,7 +1080,7 @@ rts
 ;         }
 ;     }
 ; }
-
+;This won't fit on the flood bank
 .segment "BANKRAM11"
 initFlood:
 sta fillY
