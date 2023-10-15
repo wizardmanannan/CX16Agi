@@ -20,7 +20,6 @@
     .export _b6ClearBackground
     .export _toDraw
     .export _drawWhere
-    .export _b11PSet
     .export _bFloodQstore
     .export _bFloodPicGetPixel
     .export _floatDivision

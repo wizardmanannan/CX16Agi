@@ -1,5 +1,5 @@
-#ifndef _GRAPHICS_H_
-#define _GRAPHICS_H_
+#ifndef _TEXTLAYER_H_
+#define _TEXTLAYER_H_
 
 #include "memoryManager.h"
 #include "helpers.h"
@@ -7,6 +7,7 @@
 #include <stdlib.h>
 #include "kernal.h"
 #include "irq.h"
+#include "graphics.h"
 
 #define BYTES_PER_CHARACTER 16
 #define NO_CHARS 160

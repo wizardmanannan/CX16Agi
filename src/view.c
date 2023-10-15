@@ -1109,7 +1109,7 @@ void bAUpdateObj(int entryNum)
 	show_mouse(NULL);
 	stretch_sprite(agi_screen, spriteScreen, 0, 0, 640, 336);
 	show_mouse(screen);
-	b11ShowPicture();
+	b6ShowPicture();
 }
 
 #pragma code-name (pop)
@@ -1293,7 +1293,7 @@ void bBUpdateObj2(int entryNum)
 	}
 
 	setViewTab(&localViewtab, entryNum);
-	b11ShowPicture();
+	b6ShowPicture();
 }
 
 void bBUpdateObjects()
@@ -1646,7 +1646,7 @@ void bCupdateObjects2()
 		setViewTab(&localViewtab, entryNum);
 	}
 
-	b11ShowPicture();
+	b6ShowPicture();
 }
 
 void bCCalcObjMotion()

@@ -21,6 +21,7 @@
 #include "fixed.h"
 #include "helpers.h"
 #include "loadingScreen.h"
+#include "graphics.h"
 
 #define DEFAULT_COLOR 0xF
 
@@ -58,14 +59,16 @@ extern void b6ClearBackground();
 
 #pragma wrapped-call (push, trampoline, PICTURE_CODE_BANK)
 void b11DrawPic(byte* bankedData, int pLen, boolean okToClearScreen, byte picNum);
-void b11LoadPictureFile(int picFileNum);
-extern void b11InitPicture();
-extern void b11InitPictures();
-void b11ShowPicture();
-void b11DiscardPictureFile(int picFileNum);
 void b11ClearPicture();
 #pragma wrapped-call (pop)
-
+#pragma wrapped-call (push, trampoline, MEKA_BANK)
+extern void b6InitPicture();
+extern void b6InitPictures();
+void b6LoadPictureFile(int picFileNum);
+void b6ShowPicture();
+void b6DiscardPictureFile(int picFileNum);
+void b6ShowPicture();
+#pragma wrapped-call (pop)
 
 extern void getLoadedPicture(PictureFile* returnedloadedPicture, byte loadedPictureNumber);
 
