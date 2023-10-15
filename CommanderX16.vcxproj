@@ -41,6 +41,7 @@
     <ClInclude Include="src\DECOMP.H" />
     <ClInclude Include="src\fixed.h" />
     <ClInclude Include="src\GENERAL.H" />
+    <ClInclude Include="src\graphics.h" />
     <ClInclude Include="src\irq.h" />
     <ClInclude Include="src\loadingScreen.h" />
     <ClInclude Include="src\textLayer.h" />

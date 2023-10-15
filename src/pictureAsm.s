@@ -313,7 +313,6 @@ _okToFillDebuggerCheckPoint: .word $0 ; Never used but needed to make the macro 
 .local @checkYBounds
 ;DEBUG_PREPIXEL_DRAW
 
-
 SET_VERA_ADDRESS_PICTURE_ADDRESS address, #$0
 
 lda VERA_data0
@@ -936,16 +935,6 @@ stx _logDebugVal2
 PRINT_PIXEL_MESSAGE _b5CheckPixelDrawn
 rts
 
-.segment "BANKRAM11"
-_b11PSet:
-sta @coY
-jsr popa
-sta @coX
-PSET @coX, @coY
-rts
-@coX: .byte $0
-@coY: .byte $0
-
 .segment "BANKRAMFLOOD"
 .ifdef TEST_IS_MULTIPLE_OF_160
 _testIsMultipleOf160Asm:
@@ -1083,6 +1072,7 @@ rts
 ;This won't fit on the flood bank
 .segment "BANKRAM11"
 initFlood:
+
 sta fillY
 jsr popa 
 sta fillX

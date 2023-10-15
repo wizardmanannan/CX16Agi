@@ -42,8 +42,6 @@ byte picColour = 0, priColour = 0, patCode, patNum;
 #define QEMPTY 0xFF
 int* bitmapWidthPreMult = &BANK_RAM[BITMAP_WIDTH_PREMULT_START];
 
-extern void b11PSet(byte x, byte y);
-
 extern fix32 floatDivision(byte numerator, byte denominator);
 
 #ifdef VERBOSE_FLOOD
@@ -171,7 +169,6 @@ void testOkToFill()
 		printf("fail bound check x after\n");
 	}
 	
-	asm("stp");
 	exit(0);
 }
 #pragma wrapped-call (pop)
@@ -225,7 +222,7 @@ typedef struct BufferStatus
 		} \
 		 storeLocation = *((*data)++); \
 		\
-    } while(0)
+    } while(0);
 
 void refreshBuffer(BufferStatus* bufferStatus)
 {
@@ -396,7 +393,9 @@ byte b11FloodFill(byte** data, BufferStatus* bufferStatus)
 	}
 }
 
-void b11LoadDivisionMetadata(const char* fileName, int metadataSize, byte* metadataLocation)
+#pragma code-name (pop)
+#pragma code-name (push, "BANKRAM06")
+void b6LoadDivisionMetadata(const char* fileName, int metadataSize, byte* metadataLocation)
 {
 	FILE* fp;
 	char fileNameBuffer[30];
@@ -434,7 +433,7 @@ void b11LoadDivisionMetadata(const char* fileName, int metadataSize, byte* metad
 #define VWIDTH   640  /* Viewport size */
 #define VHEIGHT  336
 
-void b11LoadDivisionTables()
+void b6LoadDivisionTables()
 {
 	FILE* fp;
 	int bank, i;
@@ -462,9 +461,9 @@ void b11LoadDivisionTables()
 		}
 	}
 	printf("Loading Division Metdata 1 of 2\n");
-	b11LoadDivisionMetadata(bankfileName, DIV_BANK_METADATA_SIZE, &divBankMetadata[0]);
+	b6LoadDivisionMetadata(bankfileName, DIV_BANK_METADATA_SIZE, &divBankMetadata[0]);
 	printf("Loading Division Metdata 2 of 2\n");
-	b11LoadDivisionMetadata(addressfileName, DIV_ADDRESS_METADATA_SIZE, &divAddressMetadata[0]);
+	b6LoadDivisionMetadata(addressfileName, DIV_ADDRESS_METADATA_SIZE, &divAddressMetadata[0]);
 }
 
 /**************************************************************************
@@ -473,7 +472,7 @@ void b11LoadDivisionTables()
 ** Purpose: To initialize allegro and create the picture and priority
 ** bitmaps. This function gets called once at the start of an AGI program.
 **************************************************************************/
-void b11InitPicture()
+void b6InitPicture()
 {
 	int i;
 	int* tempbitmapWidthPreMult = (int*)GOLDEN_RAM_WORK_AREA;
@@ -483,15 +482,19 @@ void b11InitPicture()
 		tempbitmapWidthPreMult[i] = i * BYTES_PER_ROW;
 	}
 
-	memcpy(&bitmapWidthPreMult[0], &tempbitmapWidthPreMult[0], PICTURE_HEIGHT * 2);
+	memCpyBanked(&bitmapWidthPreMult[0], &tempbitmapWidthPreMult[0], PICTURE_CODE_BANK, PICTURE_HEIGHT * 2);
 
 	for (i = FIRST_FLOOD_BANK; i <= LAST_FLOOD_BANK; i++)
 	{
 		memCpyBanked(&bitmapWidthPreMult[0], &tempbitmapWidthPreMult[0], i, PICTURE_HEIGHT * 2);
 	}
 
-	b11LoadDivisionTables();
+	b6LoadDivisionTables();
 }
+
+#pragma code-name (pop)
+#pragma code-name (push, "BANKRAM11")
+
 /**************************************************************************
 ** initAGIScreen
 **
@@ -537,7 +540,11 @@ void b11PriPSet(word x, word y)
 #define PSET(x, y) \
     if (picDrawEnabled) { \
 if ((x) <= 159 && (y) <= 167) {  \
-             b11PSet(x, y); \
+             toDraw = picColour << 4 | picColour; \
+             drawWhere = (STARTING_BYTE + x) + (bitmapWidthPreMult[y]);  \
+			SET_VERA_ADDRESS_ABSOLUTE(drawWhere, ADDRESSSEL0, 0) \
+			 WRITE_BYTE_VAR_TO_ASSM(toDraw, VERA_data0); \
+            \
            } \
     }
 
@@ -551,6 +558,8 @@ void b11Drawline(byte x1, byte y1, byte x2, byte y2)
 	boolean xIsPos = TRUE, yIsPos = TRUE;
 	fix32 x, y, addX, addY;
 	word temp;
+	long drawWhere;
+	byte toDraw;
 	
 #ifdef VERBOSE_DRAW_LINE
 	if (pixelCounter >= pixelStartPrintingAt)
@@ -1239,7 +1248,7 @@ void b11DrawPic(byte* bankedData, int pLen, boolean okToClearScreen, byte picNum
 	b6DismissLoadingScreen();
 }
 
-void b11InitPictures()
+void b6InitPictures()
 {
 	int i;
 	PictureFile loadedPicture;
@@ -1250,12 +1259,14 @@ void b11InitPictures()
 	}
 }
 
+#pragma code-name (pop)
+#pragma code-name (push, "BANKRAM06")
 /***************************************************************************
 ** loadPictureFile
 **
 ** Purpose: To load the picture resource with the given number.
 ***************************************************************************/
-void b11LoadPictureFile(int picFileNum)
+void b6LoadPictureFile(int picFileNum)
 {
 	AGIFile tempAGI;
 	AGIFilePosType agiFilePosType;
@@ -1286,7 +1297,7 @@ void b11LoadPictureFile(int picFileNum)
 #endif // VERBOSE
 }
 
-void b11DiscardPictureFile(int picFileNum)
+void b6DiscardPictureFile(int picFileNum)
 {
 	PictureFile loadedPicture;
 
@@ -1300,7 +1311,7 @@ void b11DiscardPictureFile(int picFileNum)
 	setLoadedPicture(&loadedPicture, picFileNum);
 }
 
-void b11ShowPicture()
+void b6ShowPicture()
 {
 	//Doesn't need to do much since picture is stored straight in VRAM. Need to investigate whether we need to do this
 }
