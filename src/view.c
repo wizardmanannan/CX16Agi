@@ -357,9 +357,7 @@ void b9LoadViewFile(byte viewNum)
 		printf("You have %d loops and the num of cells is %d and a loop pos of %d", localView.numberOfLoops, localLoop.numberOfCels, loopHeaderOffset);
 #endif // VERBOSE_LOAD_VIEWS
 		
-		printf("Stop Here 4");
 		localLoop.cels = (Cel*)b10BankedAlloc(localLoop.numberOfCels * sizeof(Cel), &localLoop.celBank);
-		printf("Exit Here 4");
 #ifdef VERBOSE_ALLOC_WATCH
 		printf("cels length %d bank %p address %p\n", localLoop.numberOfCels * sizeof(Cel), &localLoop.celBank, localLoop.cels);
 #endif // VERBOSE_ALLOC_WATCH

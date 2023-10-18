@@ -584,11 +584,26 @@ pla
 default_irq_vector: .addr 0
 VSYNC_BIT            = $01
 
-
 ; Debugging related variables
 _logDebugVal1: .byte $0
 _logDebugVal2: .byte $0
 _logDebugVal3: .byte $0
 _logDebugVal4: .byte $0
+
+.macro PRESERVE_REG
+pha
+txa
+pha
+tya
+pha
+.endmacro
+
+.macro RESTORE_REG
+pla
+tay
+pla
+txa
+pla
+.endmacro
 
 .endif

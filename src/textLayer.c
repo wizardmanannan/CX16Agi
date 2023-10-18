@@ -131,7 +131,7 @@ void b6InitCharset()
 
 	int i;
 
-	printf("Initializing CharSet. . .\n");
+	//printf("Initializing CharSet. . .\n");
 
 	SCREEN_SET_CHAR_SET(ISO);
 

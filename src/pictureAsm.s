@@ -391,12 +391,19 @@ sta ZP_TMP+1
 .endmacro
 
 
-.macro SET_VERA_ADDRESS_PICTURE coX, coY
+.macro SET_VERA_ADDRESS_PICTURE coX, coY, stride
 GET_VERA_ADDRESS coX, coY, _drawWhere
+
+.ifnblank stride
+lda stride << 4
+.endif
+.ifblank stride
+lda #$10 ;High byte of address will always be 0
+.endif
+
 stz VERA_ctrl
 
-lda #$10
-sta VERA_addr_bank ; Stride 1. High byte of address will always be 0
+sta VERA_addr_bank
 
 lda _drawWhere + 1
 sta VERA_addr_high
@@ -416,7 +423,7 @@ lda #$10 ;High byte of address will always be 0
 
 stz VERA_ctrl
 
-sta VERA_addr_bank ; Stride 1. High byte of address will always be 0
+sta VERA_addr_bank ;High byte of address will always be 0
 
 lda address + 1
 sta VERA_addr_high
@@ -766,6 +773,25 @@ ldx #$0
 @end:
 .endmacro
 
+.macro DRAW_LINE_BETWEEN p1, p2 ;Assumes that the VERA address is already set to vera port 1
+.local @loop
+.local @checkLoop
+.local @end
+
+lda p2
+ldx _toDraw
+
+@loop:
+stx VERA_data0
+
+@checkLoop:
+cmp p1
+beq @end
+dec
+bra @loop
+@end:
+.endmacro
+
 
 _floatDivision:
 bra @start
@@ -917,7 +943,6 @@ EQ_32_LONG_TO_LITERAL _pixelStopAt, NEG_1_16, NEG_1_16, @checkFreeze
 LESS_THAN_32 _pixelCounter, _pixelStopAt, @checkFreeze, @stop
 @stop:
 nop ;There to make it clearer where we have stopped
-stp
 @checkFreeze:
 
 EQ_32_LONG_TO_LITERAL _pixelFreezeAt, NEG_1_16, NEG_1_16, @end
@@ -1069,7 +1094,36 @@ rts
 ;         }
 ;     }
 ; }
-;This won't fit on the flood bank
+;This won't fit on the picture bank
+.segment "BANKRAM02"
+_b2DrawStraightLineAlongY: 
+nop
+nop
+nop
+sta ZP_TMP_5 ;x The C which calls this function may invert it's own x1 and x2 depending on which is larger
+jsr popax
+sta ZP_TMP_7 ;y2
+stx ZP_TMP_6 ;y1
+
+SET_VERA_ADDRESS_PICTURE ZP_TMP_5 , ZP_TMP_6, #$D
+
+DRAW_LINE_BETWEEN ZP_TMP_6, ZP_TMP_7
+
+rts
+
+_b2DrawStraightLineAlongX:
+sta ZP_TMP_5 ;y1 The C which calls this function may invert it's own y1 and y2 depending on which is larger
+jsr popax
+sta ZP_TMP_7 ;x2
+stx ZP_TMP_6 ;x1
+
+SET_VERA_ADDRESS_PICTURE ZP_TMP_6 , ZP_TMP_5, #$1
+
+DRAW_LINE_BETWEEN ZP_TMP_6, ZP_TMP_7
+
+rts
+
+
 .segment "BANKRAM11"
 initFlood:
 

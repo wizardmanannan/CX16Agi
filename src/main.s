@@ -35,3 +35,5 @@
     .export _interpolationBuffer
     .export _currentTextBuffer
     .export _trampoline
+    .export _b2DrawStraightLineAlongX
+    .export _b2DrawStraightLineAlongY
