@@ -20,9 +20,6 @@ PICTURE_INC = 1
 .import popax
 .import pushax
 
-.import picDrawEnabled
-.import priDrawEnabled
-
 .importzp tmp4
 .importzp ptr4
 
@@ -1117,10 +1114,14 @@ jsr popax
 sta ZP_TMP_7 ;x2
 stx ZP_TMP_6 ;x1
 
+ldy _picDrawEnabled
+beq @end
+
 SET_VERA_ADDRESS_PICTURE ZP_TMP_6 , ZP_TMP_5, #$1
 
 DRAW_LINE_BETWEEN ZP_TMP_6, ZP_TMP_7
 
+@end:
 rts
 
 
