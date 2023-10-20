@@ -70,14 +70,14 @@ namespace Tester {
         ///timeout 3
         ///OSFMount -D -m %2:
         ///cd C:\Commander\ 
-        ///IF  %5==&quot;&quot; ( x16emu.exe -sdcard %~n1%~x1 -prg &quot;agi.cx16&quot; -run -debug d -echo &gt;c:\temp\output.txt ) else  ( x16emu.exe -sdcard %~n1%~x1 -prg &quot;agi.cx16&quot; -run -debug d -echo %5 &gt;c:\temp\output.txt )
+        ///IF  %5==&quot;&quot; ( x16emu.exe -sdcard %~n1%~x1 -prg &quot;agi.cx16&quot; -run -debug d -echo &gt;c:\temp\output.txt -dump CRBV  ) else  ( x16emu.exe -sdcard %~n1%~x1 -prg &quot;agi.cx16&quot; -run -debug d -echo %5 &gt;c:\temp\output.txt -dump CRBV )
         ///
         ///pause
         ///cd %4.
         /// </summary>
         internal static string test_bat {
             get {
-                return ResourceManager.GetString("test.bat", resourceCulture);
+                return ResourceManager.GetString("test_bat", resourceCulture);
             }
         }
     }
