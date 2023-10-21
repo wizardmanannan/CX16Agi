@@ -1190,7 +1190,7 @@ void b11DrawPic(byte* bankedData, int pLen, boolean okToClearScreen, byte picNum
 	int* zpTemp3 = (int*)ZP_PTR_TEMP_3;
 	int* zpTemp4 = (int*)ZP_PTR_TEMP_4;
 	
-	b6DismissLoadingScreen();
+	b6DisplayLoadingScreen();
 
 	*zpTemp = &bitmapWidthPreMult[0];
 	*zpTemp2 = &DIVISION_AREA[0];
