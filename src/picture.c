@@ -588,30 +588,19 @@ void b11Drawline(byte x1, byte y1, byte x2, byte y2)
 
 	if (x1 == x2)
 	{
-		//printf("x1 == x2");
 		if (yIsPos)
 		{
-			//printf("a");
-			//printf("x1 is %d x2 is %d", x1, x2);
 			b2DrawStraightLineAlongY(y1, y2, x1);
 		}
 		else
 		{
-			//printf("b");
-			//printf("x1 is %d x2 is %d", x2, x1);
 			b2DrawStraightLineAlongY(y2, y1, x1);
 		}
 	}
 	else if (y1 == y2)
 	{
 		if (xIsPos)
-		{
-			////printf("d");
-			//if (x2 == 159 && !x1)
-			//{
-			//	asm("stp");
-			//}
-		
+		{		
 			b2DrawStraightLineAlongX(x1, x2, y1);
 		}
 		else
