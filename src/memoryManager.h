@@ -180,6 +180,8 @@
 //Vera
 #define TILEBASE 0xD000
 #define MAPBASE 0xDA00
+#define BITMAP_START 0x0
+#define BITMAP_END 0x95FF
 
 
 #ifdef _MSC_VER //Used for testing under windows

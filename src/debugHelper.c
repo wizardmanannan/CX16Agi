@@ -71,6 +71,38 @@ void stopAtFunc()
 
 
 #pragma code-name (push, "BANKRAM05");
+void b5DumpBitmap()
+{
+#define JUMP_INTERVAL 10
+#define NUMBER_LENGTH 5
+#define BUFFER_SIZE JUMP_INTERVAL + 7 //5 for the number + 1 for the terminator + 1 for the newline
+	long i;
+	byte num, j;
+	char buffer[BUFFER_SIZE];
+
+	for (i = 0; i <= BITMAP_END; i++)
+	{
+		SET_VERA_ADDRESS_ABSOLUTE(BITMAP_START + i, ADDRESSSEL0, 1);
+		READ_BYTE_VAR_FROM_ASSM(num, VERA_data0);
+		printf("%lx - %x \n", i, num);
+
+		//memset(&buffer[0], 0, BUFFER_SIZE);
+		//buffer[BUFFER_SIZE - 2] = '\n';
+
+		//sprintf(buffer, "%ld", i);
+		//printf("--%ld\n", i);
+		////for (j = 0; j < JUMP_INTERVAL; j++)
+		////{
+		////	READ_BYTE_VAR_FROM_ASSM(num, VERA_data1);
+		////	buffer[NUMBER_LENGTH + j] = num; //The terminator is already there by virtual of the memset
+		////}
+
+		//printf("----%p\n", &buffer[0]);
+		//printf(buffer);
+	}
+
+}
+
 void b5CheckMemory()
 {
 #ifdef CHECK_MEM

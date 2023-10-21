@@ -1102,10 +1102,14 @@ jsr popax
 sta ZP_TMP_7 ;y2
 stx ZP_TMP_6 ;y1
 
+ldy _picDrawEnabled
+beq @end
+
 SET_VERA_ADDRESS_PICTURE ZP_TMP_5 , ZP_TMP_6, #$D
 
 DRAW_LINE_BETWEEN ZP_TMP_6, ZP_TMP_7
 
+@end:
 rts
 
 _b2DrawStraightLineAlongX:
