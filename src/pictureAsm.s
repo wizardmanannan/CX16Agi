@@ -633,18 +633,18 @@ bra endLabel
 @end:
 .endmacro
 
-ZP_PTR_FLOOD_QUEUE = ZP_TMP_21
+ZP_PTR_FLOOD_QUEUE_STORE = ZP_TMP_21
 
-; void FLOOD_Q_STORE(unsigned short* ZP_PTR_FLOOD_QUEUE) {
+; void FLOOD_Q_STORE(unsigned short* ZP_PTR_FLOOD_QUEUE_STORE) {
 ;     unsigned char q = 0;
 ;     unsigned short floodQueueEnd = 0;
 ;     unsigned short RAM_BANK = sposBank;
 
-;     *ZP_PTR_FLOOD_QUEUE = q;
-;     (*ZP_PTR_FLOOD_QUEUE)++; // Increment the queue pointer
+;     *ZP_PTR_FLOOD_QUEUE_STORE = q;
+;     (*ZP_PTR_FLOOD_QUEUE_STORE)++; // Increment the queue pointer
 
-;     if (*ZP_PTR_FLOOD_QUEUE == FLOOD_QUEUE_END) {
-;         *ZP_PTR_FLOOD_QUEUE = FLOOD_QUEUE_START; // Reset the queue pointer to the start
+;     if (*ZP_PTR_FLOOD_QUEUE_STORE == FLOOD_QUEUE_END) {
+;         *ZP_PTR_FLOOD_QUEUE_STORE = FLOOD_QUEUE_START; // Reset the queue pointer to the start
 
 ;         if (RAM_BANK == LAST_FLOOD_BANK) {
 ;             RAM_BANK = FIRST_FLOOD_BANK;
@@ -672,18 +672,18 @@ ZP_PTR_FLOOD_QUEUE = ZP_TMP_21
 ldx ZP_TMP_3
 stx RAM_BANK
 
-sta (ZP_PTR_FLOOD_QUEUE)
+sta (ZP_PTR_FLOOD_QUEUE_STORE)
 
-inc ZP_PTR_FLOOD_QUEUE
+inc ZP_PTR_FLOOD_QUEUE_STORE
 beq @incrementHighByte
 
 @checkEnd:
-NEQ_16_WORD_TO_LITERAL ZP_PTR_FLOOD_QUEUE, (FLOOD_QUEUE_END + 1), @end
+NEQ_16_WORD_TO_LITERAL ZP_PTR_FLOOD_QUEUE_STORE, (FLOOD_QUEUE_END + 1), @end
 
 lda #< FLOOD_QUEUE_START
-sta ZP_PTR_FLOOD_QUEUE
+sta ZP_PTR_FLOOD_QUEUE_STORE
 lda #> FLOOD_QUEUE_START
-sta ZP_PTR_FLOOD_QUEUE + 1
+sta ZP_PTR_FLOOD_QUEUE_STORE + 1
 
 lda #LAST_FLOOD_BANK
 cmp RAM_BANK
@@ -696,7 +696,7 @@ sta ZP_TMP_3
 bra @end
 
 @incrementHighByte:
-inc ZP_PTR_FLOOD_QUEUE + 1
+inc ZP_PTR_FLOOD_QUEUE_STORE + 1
 bra @checkEnd
 
 @incBank:
@@ -705,6 +705,7 @@ inc ZP_TMP_3
 @end:
 .endmacro
 
+ZP_PTR_FLOOD_QUEUE_RETRIEVE = ZP_TMP_22
 ;Retrieve position ZP_TMP_4 (rposBank)
 .macro FLOOD_Q_RETRIEVE
 .local @end
@@ -724,29 +725,29 @@ lda ZP_TMP_3
 cmp ZP_TMP_4
 bne @serve
 
-lda ZP_PTR_FLOOD_QUEUE
-cmp ZP_PTR_B2
+lda ZP_PTR_FLOOD_QUEUE_STORE
+cmp ZP_PTR_FLOOD_QUEUE_RETRIEVE
 bne @serve
 
-lda ZP_PTR_FLOOD_QUEUE + 1
-cmp ZP_PTR_B2 + 1
+lda ZP_PTR_FLOOD_QUEUE_STORE + 1
+cmp ZP_PTR_FLOOD_QUEUE_RETRIEVE + 1
 bne @serve
 
 jmp @returnEmpty
 @serve:
-lda (ZP_PTR_B2)
+lda (ZP_PTR_FLOOD_QUEUE_RETRIEVE)
 tay
 
-inc ZP_PTR_B2
+inc ZP_PTR_FLOOD_QUEUE_RETRIEVE
 beq @incrementHighByte
 
 @checkEnd:
-NEQ_16_WORD_TO_LITERAL ZP_PTR_B2, (FLOOD_QUEUE_END + 1), @returnResult
+NEQ_16_WORD_TO_LITERAL ZP_PTR_FLOOD_QUEUE_RETRIEVE, (FLOOD_QUEUE_END + 1), @returnResult
 
 lda #< FLOOD_QUEUE_START
-sta ZP_PTR_B2
+sta ZP_PTR_FLOOD_QUEUE_RETRIEVE
 lda #> FLOOD_QUEUE_START
-sta ZP_PTR_B2 + 1
+sta ZP_PTR_FLOOD_QUEUE_RETRIEVE + 1
 
 lda ZP_TMP_4
 cmp #LAST_FLOOD_BANK
@@ -764,7 +765,7 @@ bra @returnResult
 ldx #QEMPTY
 bra @end
 @incrementHighByte:
-inc ZP_PTR_B2 + 1
+inc ZP_PTR_FLOOD_QUEUE_RETRIEVE + 1
 bra @checkEnd
 
 @returnResult:
@@ -1298,8 +1299,8 @@ QEMPTY = $FF
 ;     unsigned short RAM_BANK = rposBank;
 ;     unsigned char X; // Using 'X' to represent 6502's X register
 
-;     if (*ZP_PTR_B2 == FLOOD_QUEUE_END + 1) {
-;         *ZP_PTR_B2 = FLOOD_QUEUE_START;
+;     if (*ZP_PTR_FLOOD_QUEUE_RETRIEVE == FLOOD_QUEUE_END + 1) {
+;         *ZP_PTR_FLOOD_QUEUE_RETRIEVE = FLOOD_QUEUE_START;
 
 ;         rposBank++;
 ;         if (rposBank == LAST_FLOOD_BANK + 1) {
@@ -1308,8 +1309,8 @@ QEMPTY = $FF
 ;         }
 ;     }
 
-;     X = *ZP_PTR_B2;
-;     (*ZP_PTR_B2)++;
+;     X = *ZP_PTR_FLOOD_QUEUE_RETRIEVE;
+;     (*ZP_PTR_FLOOD_QUEUE_RETRIEVE)++;
 
 ;     return X; // Assuming this function returns the value from the queue
 ; }

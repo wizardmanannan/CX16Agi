@@ -171,12 +171,12 @@
 #define ZP_PTR_TEMP_2 0xAD //For Pre Div Table
 #define ZP_PTR_TEMP_3 0xAF //For Pre Mult Table
 #define ZP_PTR_TEMP_4 0xB1 //For Pre Div Table
-#define ZP_PTR_B2 0xF3 //For Flood Queue Serve
 #define ZP_PTR_CH 0xEF //For Div. Bank Table
 #define ZP_PTR_DISP 0xF5 //For Div. Address Table
 
 #define ZP_PTR_TEMP_20 0xDD //For Pre Mult Table
-#define ZP_PTR_TEMP_21 0xDF //For Flood Queue
+#define ZP_PTR_TEMP_21 0xDF //For Flood Queue Store
+#define ZP_PTR_TEMP_22 0xE1 //For Flood Queue Service
 
 //Vera
 #define TILEBASE 0xD000
