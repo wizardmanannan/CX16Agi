@@ -53,6 +53,8 @@ MAX_Y = 168
 
 MAX_ADDRESS = $7F7F
 
+ZP_PREMULTIPLY_TABLE = ZP_TMP_20
+
 .macro NEIGHBOURHOODCHECK OK_TO_FILL_LOWER
 .local check_goNoFurtherLeft
 .local check_goNoFurtherRight
@@ -344,9 +346,9 @@ bra @start
 @originalZPTMP: .word $0
 
 @start:
-lda ZP_TMP 
+lda ZP_PREMULTIPLY_TABLE 
 sta @originalZPTMP  ; Save ZP_TMP
-lda ZP_TMP+1
+lda ZP_PREMULTIPLY_TABLE +1
 sta @originalZPTMP+1
 
 lda coX
@@ -359,31 +361,31 @@ sta outputVar+1
 
 clc
 lda coY
-adc ZP_TMP ;  Loading from preMultiplyTable populated in C (picture.c). Add twice as each entry is two bytes
-sta ZP_TMP
+adc ZP_PREMULTIPLY_TABLE ;  Loading from preMultiplyTable populated in C (picture.c). Add twice as each entry is two bytes
+sta ZP_PREMULTIPLY_TABLE
 lda #$0
-adc ZP_TMP+1 
-sta ZP_TMP+1 
+adc ZP_PREMULTIPLY_TABLE+1 
+sta ZP_PREMULTIPLY_TABLE+1 
 lda coY
-adc ZP_TMP
-sta ZP_TMP
+adc ZP_PREMULTIPLY_TABLE
+sta ZP_PREMULTIPLY_TABLE
 lda #$0
-adc ZP_TMP+1
-sta ZP_TMP+1 
+adc ZP_PREMULTIPLY_TABLE+1
+sta ZP_PREMULTIPLY_TABLE+1 
 
 clc
-lda (ZP_TMP)  ; y * BYTES_PER_ROW.
+lda (ZP_PREMULTIPLY_TABLE)  ; y * BYTES_PER_ROW.
 adc outputVar
 sta outputVar
 ldy #$1
-lda (ZP_TMP),y
+lda (ZP_PREMULTIPLY_TABLE),y
 adc outputVar+1
 sta outputVar+1
 
 lda @originalZPTMP
-sta ZP_TMP
+sta ZP_PREMULTIPLY_TABLE
 lda @originalZPTMP+1
-sta ZP_TMP+1
+sta ZP_PREMULTIPLY_TABLE+1
 
 .endmacro
 
