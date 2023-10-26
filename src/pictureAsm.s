@@ -792,6 +792,8 @@ bra @loop
 .endmacro
 
 
+ZP_DIV_AREA = ZP_TMP_2
+
 _floatDivision:
 bra @start
 @numerator: .word $0 ; Even though numerator is only one byte we double it for address looked up
@@ -859,10 +861,10 @@ adc ZP_PTR_DISP + 1
 sta ZP_PTR_DISP + 1
 
 lda (ZP_PTR_DISP)
-sta ZP_TMP_2
+sta ZP_DIV_AREA
 ldy #$1
 lda (ZP_PTR_DISP),y
-sta ZP_TMP_2+1
+sta ZP_DIV_AREA+1
 
 lda @originalZPDisp
 sta ZP_PTR_DISP
@@ -888,21 +890,21 @@ sta @denominator+1
 
 lda @denominator
 clc
-adc ZP_TMP_2
-sta ZP_TMP_2
+adc ZP_DIV_AREA
+sta ZP_DIV_AREA
 lda @denominator+1
-adc ZP_TMP_2+1
-sta ZP_TMP_2+1
+adc ZP_DIV_AREA+1
+sta ZP_DIV_AREA+1
 
 stx RAM_BANK
 stz sreg + 1
 ldy #$1
-lda (ZP_TMP_2),y
+lda (ZP_DIV_AREA),y
 tax
 ldy #$2
-lda (ZP_TMP_2),y
+lda (ZP_DIV_AREA),y
 sta sreg
-lda (ZP_TMP_2)
+lda (ZP_DIV_AREA)
 
 ldy @previousRamBank
 sty RAM_BANK
