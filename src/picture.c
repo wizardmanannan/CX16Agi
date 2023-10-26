@@ -1175,7 +1175,7 @@ void b11DrawPic(byte* bankedData, int pLen, boolean okToClearScreen, byte picNum
 	int** zpFloodQueueStore = (int**)ZP_PTR_TEMP_21;
 	int** zpFloodQueueServe = (int**)ZP_PTR_TEMP_22;
 	byte** zpDivBankMetadata = (byte**)ZP_PTR_TEMP_23;
-	byte** zpDisp = (byte**)ZP_PTR_DISP;
+	byte** zpDivAddressMetadata = (byte**)ZP_PTR_TEMP_24;
 	int* zpTemp3 = (int*)ZP_PTR_TEMP_3;
 	int* zpTemp4 = (int*)ZP_PTR_TEMP_4;
 	
@@ -1186,7 +1186,7 @@ void b11DrawPic(byte* bankedData, int pLen, boolean okToClearScreen, byte picNum
 	*zpFloodQueueStore = (int*)FLOOD_QUEUE_START;
 	*zpFloodQueueServe = (int*)FLOOD_QUEUE_START;
 	*zpDivBankMetadata = divBankMetadata;
-	*zpDisp = divAddressMetadata;
+	*zpDivAddressMetadata = divAddressMetadata;
 	*zpTemp3 = FIRST_FLOOD_BANK;
 	*zpTemp4 = FIRST_FLOOD_BANK;
 
@@ -1279,7 +1279,7 @@ void b11DrawPic(byte* bankedData, int pLen, boolean okToClearScreen, byte picNum
 	*zpFloodQueueStore = 0;
 	*zpFloodQueueServe = 0;
 	*zpDivBankMetadata = 0;
-	*zpDisp = 0;
+	*zpDivAddressMetadata = 0;
 	b6DismissLoadingScreen();
 }
 

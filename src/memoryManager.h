@@ -171,12 +171,12 @@
 #define ZP_PTR_TEMP_2 0xAD
 #define ZP_PTR_TEMP_3 0xAF
 #define ZP_PTR_TEMP_4 0xB1
-#define ZP_PTR_DISP 0xF5
 
 #define ZP_PTR_TEMP_20 0xDD
 #define ZP_PTR_TEMP_21 0xDF
 #define ZP_PTR_TEMP_22 0xE1
 #define ZP_PTR_TEMP_23 0xE3
+#define ZP_PTR_TEMP_24 0xE5
 
 //Vera
 #define TILEBASE 0xD000
