@@ -1170,14 +1170,14 @@ void b11DrawPic(byte* bankedData, int pLen, boolean okToClearScreen, byte picNum
 	BufferStatus localBufferStatus;
 	BufferStatus* bufferStatus = &localBufferStatus;
 
-	int** zpPremultTable = (int**)ZP_PTR_TEMP_20;
-	byte** zpDivisionArea = (byte**)ZP_PTR_TEMP_2;
-	int** zpFloodQueueStore = (int**)ZP_PTR_TEMP_21;
-	int** zpFloodQueueServe = (int**)ZP_PTR_TEMP_22;
-	byte** zpDivBankMetadata = (byte**)ZP_PTR_TEMP_23;
-	byte** zpDivAddressMetadata = (byte**)ZP_PTR_TEMP_24;
-	int* zpTemp3 = (int*)ZP_PTR_TEMP_3;
-	int* zpTemp4 = (int*)ZP_PTR_TEMP_4;
+	int** zpPremultTable = (int**)ZP_PTR_TMP_20;
+	byte** zpDivisionArea = (byte**)ZP_PTR_TMP_2;
+	int** zpFloodQueueStore = (int**)ZP_PTR_TMP_21;
+	int** zpFloodQueueServe = (int**)ZP_PTR_TMP_22;
+	byte** zpDivBankMetadata = (byte**)ZP_PTR_TMP_23;
+	byte** zpDivAddressMetadata = (byte**)ZP_PTR_TMP_24;
+	int* sPosBank = (int*)ZP_PTR_TMP_3;
+	int* rPosBank = (int*)ZP_PTR_TMP_4;
 	
 	b6DisplayLoadingScreen();
 
@@ -1187,8 +1187,8 @@ void b11DrawPic(byte* bankedData, int pLen, boolean okToClearScreen, byte picNum
 	*zpFloodQueueServe = (int*)FLOOD_QUEUE_START;
 	*zpDivBankMetadata = divBankMetadata;
 	*zpDivAddressMetadata = divAddressMetadata;
-	*zpTemp3 = FIRST_FLOOD_BANK;
-	*zpTemp4 = FIRST_FLOOD_BANK;
+	*sPosBank = FIRST_FLOOD_BANK;
+	*rPosBank = FIRST_FLOOD_BANK;
 
 #ifdef TEST_DIVISION
 	testDivision();

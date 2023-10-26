@@ -655,7 +655,8 @@ ZP_PTR_FLOOD_QUEUE_STORE = ZP_TMP_21
 ;         }
 ;     }
 ; }
-;Store position bank (sposBank) ZP_TMP_3
+;Store position bank (sposBank) ZP_SPOS_BANK
+ZP_SPOS_BANK = ZP_TMP_3
 .macro FLOOD_Q_STORE
 .local @floodQueueEnd
 .local @start
@@ -669,7 +670,7 @@ ZP_PTR_FLOOD_QUEUE_STORE = ZP_TMP_21
 .segment "BANKRAMFLOOD"
 @start:
 
-ldx ZP_TMP_3
+ldx ZP_SPOS_BANK
 stx RAM_BANK
 
 sta (ZP_PTR_FLOOD_QUEUE_STORE)
@@ -691,7 +692,7 @@ bne @incBank
 
 lda #FIRST_FLOOD_BANK
 sta RAM_BANK
-sta ZP_TMP_3
+sta ZP_SPOS_BANK
 
 bra @end
 
@@ -701,12 +702,13 @@ bra @checkEnd
 
 @incBank:
 inc RAM_BANK ; The next flood bank will have identical code, so we can just increment the bank
-inc ZP_TMP_3
+inc ZP_SPOS_BANK
 @end:
 .endmacro
 
 ZP_PTR_FLOOD_QUEUE_RETRIEVE = ZP_TMP_22
 ;Retrieve position ZP_TMP_4 (rposBank)
+ZP_RPOS_BANK = ZP_TMP_4
 .macro FLOOD_Q_RETRIEVE
 .local @end
 .local @serve
@@ -718,11 +720,11 @@ ZP_PTR_FLOOD_QUEUE_RETRIEVE = ZP_TMP_22
 .local @returnEmpty
 
 
-lda ZP_TMP_4
+lda ZP_RPOS_BANK
 sta RAM_BANK
 
-lda ZP_TMP_3
-cmp ZP_TMP_4
+lda ZP_SPOS_BANK
+cmp ZP_RPOS_BANK
 bne @serve
 
 lda ZP_PTR_FLOOD_QUEUE_STORE
@@ -749,17 +751,17 @@ sta ZP_PTR_FLOOD_QUEUE_RETRIEVE
 lda #> FLOOD_QUEUE_START
 sta ZP_PTR_FLOOD_QUEUE_RETRIEVE + 1
 
-lda ZP_TMP_4
+lda ZP_RPOS_BANK
 cmp #LAST_FLOOD_BANK
 beq @resetBank
 
 inc RAM_BANK
-inc ZP_TMP_4
+inc ZP_RPOS_BANK
 bra @returnResult
 
 @resetBank:
 lda #FIRST_FLOOD_BANK
-sta ZP_TMP_4
+sta ZP_RPOS_BANK
 bra @returnResult
 @returnEmpty:
 ldx #QEMPTY
