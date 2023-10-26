@@ -1172,7 +1172,7 @@ void b11DrawPic(byte* bankedData, int pLen, boolean okToClearScreen, byte picNum
 
 	int** zpPremultTable = (int**)ZP_PTR_TEMP_20;
 	byte** zpDivisionArea = (int**)ZP_PTR_TEMP_2;
-	int** zpB1 = (int**)ZP_PTR_B1;
+	int** zpFloodQueue = (int**)ZP_PTR_TEMP_21;
 	int** zpB2 = (int**)ZP_PTR_B2;
 	byte** zpCh = (byte**)ZP_PTR_CH;
 	byte** zpDisp = (byte**)ZP_PTR_DISP;
@@ -1183,7 +1183,7 @@ void b11DrawPic(byte* bankedData, int pLen, boolean okToClearScreen, byte picNum
 
 	*zpPremultTable = &bitmapWidthPreMult[0];
 	*zpDivisionArea = &DIVISION_AREA[0];
-	*zpB1 = (int*)FLOOD_QUEUE_START;
+	*zpFloodQueue = (int*)FLOOD_QUEUE_START;
 	*zpB2 = (int*)FLOOD_QUEUE_START;
 	*zpCh = divBankMetadata;
 	*zpDisp = divAddressMetadata;
@@ -1276,7 +1276,7 @@ void b11DrawPic(byte* bankedData, int pLen, boolean okToClearScreen, byte picNum
 
 	*zpPremultTable = 0;
 	*zpDivisionArea = 0;
-	*zpB1 = 0;
+	*zpFloodQueue = 0;
 	*zpB2 = 0;
 	*zpCh = 0;
 	*zpDisp = 0;

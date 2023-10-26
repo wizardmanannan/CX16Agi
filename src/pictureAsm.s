@@ -633,16 +633,18 @@ bra endLabel
 @end:
 .endmacro
 
-; void FLOOD_Q_STORE(unsigned short* ZP_PTR_B1) {
+ZP_PTR_FLOOD_QUEUE = ZP_TMP_21
+
+; void FLOOD_Q_STORE(unsigned short* ZP_PTR_FLOOD_QUEUE) {
 ;     unsigned char q = 0;
 ;     unsigned short floodQueueEnd = 0;
 ;     unsigned short RAM_BANK = sposBank;
 
-;     *ZP_PTR_B1 = q;
-;     (*ZP_PTR_B1)++; // Increment the queue pointer
+;     *ZP_PTR_FLOOD_QUEUE = q;
+;     (*ZP_PTR_FLOOD_QUEUE)++; // Increment the queue pointer
 
-;     if (*ZP_PTR_B1 == FLOOD_QUEUE_END) {
-;         *ZP_PTR_B1 = FLOOD_QUEUE_START; // Reset the queue pointer to the start
+;     if (*ZP_PTR_FLOOD_QUEUE == FLOOD_QUEUE_END) {
+;         *ZP_PTR_FLOOD_QUEUE = FLOOD_QUEUE_START; // Reset the queue pointer to the start
 
 ;         if (RAM_BANK == LAST_FLOOD_BANK) {
 ;             RAM_BANK = FIRST_FLOOD_BANK;
@@ -670,18 +672,18 @@ bra endLabel
 ldx ZP_TMP_3
 stx RAM_BANK
 
-sta (ZP_PTR_B1)
+sta (ZP_PTR_FLOOD_QUEUE)
 
-inc ZP_PTR_B1
+inc ZP_PTR_FLOOD_QUEUE
 beq @incrementHighByte
 
 @checkEnd:
-NEQ_16_WORD_TO_LITERAL ZP_PTR_B1, (FLOOD_QUEUE_END + 1), @end
+NEQ_16_WORD_TO_LITERAL ZP_PTR_FLOOD_QUEUE, (FLOOD_QUEUE_END + 1), @end
 
 lda #< FLOOD_QUEUE_START
-sta ZP_PTR_B1
+sta ZP_PTR_FLOOD_QUEUE
 lda #> FLOOD_QUEUE_START
-sta ZP_PTR_B1 + 1
+sta ZP_PTR_FLOOD_QUEUE + 1
 
 lda #LAST_FLOOD_BANK
 cmp RAM_BANK
@@ -694,7 +696,7 @@ sta ZP_TMP_3
 bra @end
 
 @incrementHighByte:
-inc ZP_PTR_B1 + 1
+inc ZP_PTR_FLOOD_QUEUE + 1
 bra @checkEnd
 
 @incBank:
@@ -722,11 +724,11 @@ lda ZP_TMP_3
 cmp ZP_TMP_4
 bne @serve
 
-lda ZP_PTR_B1
+lda ZP_PTR_FLOOD_QUEUE
 cmp ZP_PTR_B2
 bne @serve
 
-lda ZP_PTR_B1 + 1
+lda ZP_PTR_FLOOD_QUEUE + 1
 cmp ZP_PTR_B2 + 1
 bne @serve
 
