@@ -178,6 +178,9 @@
 #define ZP_PTR_TMP_23 0xE3
 #define ZP_PTR_TMP_24 0xE5
 
+#define NO_ZERO_PAGE_ENTRIES 87
+#define FIRST_ZERO_PAGE_ENTRY 0xA9
+
 //Vera
 #define TILEBASE 0xD000
 #define MAPBASE 0xDA00
@@ -208,6 +211,7 @@ typedef struct {          /* DIR entry structure */
 } MemoryArea;
 
 void b10InitDynamicMemory();
+void b10InitZeroPage();
 
 void memoryMangerInit();
 

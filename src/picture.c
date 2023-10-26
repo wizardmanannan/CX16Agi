@@ -1274,12 +1274,6 @@ void b11DrawPic(byte* bankedData, int pLen, boolean okToClearScreen, byte picNum
 
 	b11SplitPriority();
 
-	*zpPremultTable = 0;
-	*zpDivisionArea = 0;
-	*zpFloodQueueStore = 0;
-	*zpFloodQueueServe = 0;
-	*zpDivBankMetadata = 0;
-	*zpDivAddressMetadata = 0;
 	b6DismissLoadingScreen();
 }
 

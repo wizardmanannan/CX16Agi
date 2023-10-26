@@ -136,6 +136,11 @@ void b10InitSegments(byte segOrder, byte noBanks, int segmentSize, byte noSegmen
 	//printf("Segments: banks %p, noBanks %d, segmentSize %d, allocationArray %p, noSegments %d\n", _segments[segOrder].banks, _segments[segOrder].noBanks, _segments[segOrder].segmentSize, _segments[segOrder].allocationArray, _segments[segOrder].noSegments);
 }
 
+void b10InitZeroPage()
+{
+	memset((byte*)FIRST_ZERO_PAGE_ENTRY, 0, NO_ZERO_PAGE_ENTRIES);
+}
+
 void b10InitDynamicMemory()
 {
 #ifdef _MSC_VER
@@ -274,6 +279,7 @@ void memoryMangerInit()
 	RAM_BANK = MEMORY_MANAGEMENT_BANK;
 
 	b10InitDynamicMemory();
+	b10InitZeroPage();
 
 	RAM_BANK = previousRamBank;
 }
