@@ -796,7 +796,7 @@ bra @loop
 
 
 ZP_DIV_AREA = ZP_TMP_2
-
+ZP_DIV_BANK = ZP_TMP_23
 _floatDivision:
 bra @start
 @numerator: .word $0 ; Even though numerator is only one byte we double it for address looked up
@@ -816,9 +816,9 @@ sta @numerator
 lda RAM_BANK
 sta @previousRamBank
 
-lda ZP_PTR_CH
+lda ZP_DIV_BANK
 sta @originalZPCh
-lda ZP_PTR_CH+1
+lda ZP_DIV_BANK+1
 sta @originalZPCh+1
 
 lda ZP_PTR_DISP
@@ -828,23 +828,23 @@ sta @originalZPDisp+1
 
 lda @numerator
 clc
-adc ZP_PTR_CH
-sta ZP_PTR_CH
+adc ZP_DIV_BANK
+sta ZP_DIV_BANK
 lda #$0
-adc ZP_PTR_CH + 1
-sta ZP_PTR_CH + 1
+adc ZP_DIV_BANK + 1
+sta ZP_DIV_BANK + 1
 
 lda #DIVISION_METADATA_BANK
 sta RAM_BANK
 
-lda (ZP_PTR_CH)
+lda (ZP_DIV_BANK)
 tax
 
 lda @originalZPCh
-sta ZP_PTR_CH
+sta ZP_DIV_BANK
 
 lda @originalZPCh + 1
-sta ZP_PTR_CH + 1
+sta ZP_DIV_BANK + 1
 
 
 lda @numerator
