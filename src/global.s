@@ -39,14 +39,14 @@ ZP_TMP_20 = $DD
 ZP_TMP_21 = $DF
 ZP_TMP_22 = $E1
 ZP_TMP_23 = $E3
-ZP_PTR_LF = $74
-ZP_PTR_LE = $76
-ZP_PTR_PLF_HIGH = $78
-ZP_PTR_PLF_LOW = $80
-ZP_PTR_CH  = $F8
-ZP_PTR_B1  = $FA
-ZP_PTR_B2  = $FC
-ZP_PTR_DISP  = $FE
+ZP_PTR_LF = $E5
+ZP_PTR_LE = $E7
+ZP_PTR_PLF_HIGH = $E9
+ZP_PTR_PLF_LOW = $EB
+ZP_PTR_CH  = $ED
+ZP_PTR_B1  = $EF
+ZP_PTR_B2  = $F1
+ZP_PTR_DISP  = $F3
 ;System Reserved 82 and 83
 ; Set up zero page pointer (ZP_PTR_CODE_WIN) and other variables related to code window management.
 ZP_PTR_CODE_WIN = $84 ;Zero Pointer Page Pointer To Code Window
