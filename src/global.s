@@ -15,10 +15,21 @@ GLOBAL_INC = 1
 
 NEW_LINE = 10
 
+;Reserved For Interpreter
 ; Define some zero page pointers
 ZP_PTR_CODE = $A9
 ;$08 is reserved for code window in codeWindow.s
 ZP_TMP = $AB
+ZP_PTR_CH  = $EF
+ZP_PTR_B1  = $F1
+ZP_PTR_B2  = $F3
+ZP_PTR_DISP  = $F5
+
+;System Reserved 82 and 83
+; Set up zero page pointer (ZP_PTR_CODE_WIN) and other variables related to code window management.
+ZP_PTR_CODE_WIN = $84 ;Zero Pointer Page Pointer To Code Window
+
+
 ZP_TMP_2 = $AD
 ZP_TMP_3 = $AF
 ZP_TMP_4 = $B1
@@ -39,17 +50,11 @@ ZP_TMP_20 = $DD
 ZP_TMP_21 = $DF
 ZP_TMP_22 = $E1
 ZP_TMP_23 = $E3
-ZP_PTR_LF = $E5
-ZP_PTR_LE = $E7
-ZP_PTR_PLF_HIGH = $E9
-ZP_PTR_PLF_LOW = $EB
-ZP_PTR_CH  = $ED
-ZP_PTR_B1  = $EF
-ZP_PTR_B2  = $F1
-ZP_PTR_DISP  = $F3
-;System Reserved 82 and 83
-; Set up zero page pointer (ZP_PTR_CODE_WIN) and other variables related to code window management.
-ZP_PTR_CODE_WIN = $84 ;Zero Pointer Page Pointer To Code Window
+ZP_TMP_24 = $E5
+ZP_PTR_LF = $E7
+ZP_PTR_LE = $E9
+ZP_PTR_PLF_HIGH = $EB
+ZP_PTR_PLF_LOW = $ED
 
 ; Define the starting address for golden RAM
 GOLDEN_RAM = $400
