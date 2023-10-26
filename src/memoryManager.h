@@ -168,10 +168,10 @@
 
 
 //Zero Page Values 
-#define ZP_PTR_TEMP 0x66 //For Pre Mult Table
-#define ZP_PTR_TEMP_2 0x70 //For Pre Div Table
-#define ZP_PTR_TEMP_3 0xD4 //For Pre Mult Table
-#define ZP_PTR_TEMP_4 0xD6 //For Pre Div Table
+#define ZP_PTR_TEMP 0xAB //For Pre Mult Table
+#define ZP_PTR_TEMP_2 0xAD //For Pre Div Table
+#define ZP_PTR_TEMP_3 0xAF //For Pre Mult Table
+#define ZP_PTR_TEMP_4 0xB1 //For Pre Div Table
 #define ZP_PTR_B1 0xFA //For Flood Queue Queue
 #define ZP_PTR_B2 0xFC //For Flood Queue Serve
 #define ZP_PTR_CH 0xF8 //For Div. Bank Table
