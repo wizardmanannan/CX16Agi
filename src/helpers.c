@@ -10,6 +10,15 @@ byte _assm = 0; //Used as a value to load things in and out of the registers
 long _assmLong = 0; //Used as a value to load things in and out of the registers
 
 #pragma code-name (push, "BANKRAM05")
+void b5RefreshBuffer(BufferStatus* bufferStatus)
+{
+	BufferStatus localBufferStatus;
+	localBufferStatus = *bufferStatus;
+
+	bufferStatus->bufferCounter++;
+	memCpyBanked(GOLDEN_RAM_WORK_AREA, localBufferStatus.bankedData + localBufferStatus.bufferCounter * LOCAL_WORK_AREA_SIZE, localBufferStatus.bank, LOCAL_WORK_AREA_SIZE); //If it overflows the bank it isn't a big deal, the picture data is terminated by 0xFF so the rubbish data following will never be executed.
+}
+
 byte convertAsciiByteToPetsciiByte(byte toConvert)
 {
 	if (toConvert == ASCIIDASH)

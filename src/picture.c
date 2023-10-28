@@ -206,33 +206,6 @@ void testQueue()
 
 #pragma code-name (pop)
 #pragma code-name (push, "BANKRAM11")
-typedef struct BufferStatus
-{
-	byte* bankedData;
-	byte bank;
-	byte bufferCounter;
-} BufferStatus;
-
-#define GET_NEXT(storeLocation)  \
-    do {                              \
-        if(*data >= GOLDEN_RAM_WORK_AREA + LOCAL_WORK_AREA_SIZE) \
-		{ \
-			refreshBuffer(bufferStatus); \
-			*data = GOLDEN_RAM_WORK_AREA; \
-		} \
-		 storeLocation = *((*data)++); \
-		\
-    } while(0);
-
-void refreshBuffer(BufferStatus* bufferStatus)
-{
-	BufferStatus localBufferStatus;
-	localBufferStatus = *bufferStatus;
-	
-	bufferStatus->bufferCounter++;
-	memCpyBanked(GOLDEN_RAM_WORK_AREA, localBufferStatus.bankedData + localBufferStatus.bufferCounter * LOCAL_WORK_AREA_SIZE, localBufferStatus.bank, LOCAL_WORK_AREA_SIZE); //If it overflows the bank it isn't a big deal, the picture data is terminated by 0xFF so the rubbish data following will never be executed.
-}
-
 
 fix32 DIV(int numerator, int denominator) {
 	if (denominator == 0 || numerator == 0) {
@@ -493,33 +466,21 @@ void b6InitPicture()
 	b6LoadDivisionTables();
 }
 
-#pragma code-name (pop)
-#pragma code-name (push, "BANKRAM11")
-
-/**************************************************************************
-** initAGIScreen
-**
-** Purpose: Sets the screen mode to 640x480x256. This can be called a
-** number of times during the program, e.g. when switching back from a
-** text mode.
-**************************************************************************/
-void b11InitAGIScreen()
-{
-}
-
 /**************************************************************************
 ** clearPicture
 **
 ** Purpose: To clear the picture and priority bitmaps so that they are
 ** ready for drawing another PICTURE.
 **************************************************************************/
-void b11ClearPicture()
+void b6ClearPicture()
 {
 	b6ClearBackground();
 	clear_to_color(priority, PRI_DEFAULT);
 	clear_to_color(control, PRI_DEFAULT);
 }
 
+#pragma code-name (pop)
+#pragma code-name (push, "BANKRAM11")
 /**************************************************************************
 ** priPSet
 **
@@ -529,7 +490,7 @@ void b11PriPSet(word x, word y)
 {
 	if (x > 159) return;
 	if (y > 167) return;
-	priority->line[y][x] = priColour;
+	//priority->line[y][x] = priColour;
 }
 
 /**************************************************************************
@@ -1213,9 +1174,9 @@ void b11DrawPic(byte* bankedData, int pLen, boolean okToClearScreen, byte picNum
 	localBufferStatus.bankedData = loadedPicture.data;
 	localBufferStatus.bufferCounter = 0;
 
-	refreshBuffer(bufferStatus);
+	b5RefreshBuffer(bufferStatus);
 
-	if (okToClearScreen) b11ClearPicture();
+	if (okToClearScreen) b6ClearPicture();
 
 #ifdef TEST_OK_TO_FILL
 	testOkToFill();

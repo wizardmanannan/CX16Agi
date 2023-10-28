@@ -88,7 +88,7 @@ void b6DiscardResources()
 void b6Clear()
 {
     b6DisplayLoadingScreen();
-    b11ClearPicture();
+    b6ClearPicture();
 }
 
 /***************************************************************************

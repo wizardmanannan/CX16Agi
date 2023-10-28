@@ -25,6 +25,14 @@
 #define DIFF_ASCII_PETSCII_CAPS -128
 #define DIFF_ASCII_PETSCII_LOWER -32
 
+typedef struct BufferStatus
+{
+    byte* bankedData;
+    byte bank;
+    byte bufferCounter;
+} BufferStatus;
+
+
 byte convertAsciiByteToPetsciiByte(byte toConvert);
 
 extern char* strcpyBanked(char* dest, const char* src, byte bank);
@@ -43,6 +51,11 @@ extern void setResourceDirectory(AGIFilePosType* newLogicDirectory, AGIFilePosTy
 
 extern void debugPrint(byte toPrint);
 extern void trampoline();
+
+#pragma wrapped-call (push, trampoline, HELPERS_BANK)
+void b5RefreshBuffer(BufferStatus* bufferStatus);
+#pragma wrapped-call (pop)
+
 
 extern long opStopAt;
 extern long opExitAt;
@@ -85,5 +98,17 @@ extern byte _previousRomBank;
         asm("lda #%w", byteDef);                  \
         asm("sta %w", address);                  \
     } while(0)
+
+#define GET_NEXT(storeLocation)  \
+    do {                              \
+        if(*data >= GOLDEN_RAM_WORK_AREA + LOCAL_WORK_AREA_SIZE) \
+		{ \
+			b5RefreshBuffer(bufferStatus); \
+			*data = GOLDEN_RAM_WORK_AREA; \
+		} \
+		 storeLocation = *((*data)++); \
+		\
+    } while(0);
+
 
 #endif
