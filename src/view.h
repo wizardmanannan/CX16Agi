@@ -59,10 +59,6 @@ typedef struct {
 	byte currentCel;
 	byte numberOfCels;
 	Cel* celData;              /* ditto */
-	BITMAP* bgPic;             /* Storage for background behind drawn view */
-	BITMAP* bgPri;
-	word bgX;                  /* Position to place background bmp */
-	word bgY;
 	word xsize;
 	word ysize;
 	byte stepSize;

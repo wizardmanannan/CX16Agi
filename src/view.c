@@ -207,10 +207,6 @@ void b9InitObjects()
 		localViewtab.currentCel = 0;
 		localViewtab.numberOfCels = 0;
 		localViewtab.celData = NULL;
-		localViewtab.bgPic = NULL;
-		localViewtab.bgPri = NULL;
-		localViewtab.bgX = 0;
-		localViewtab.bgY = 0;
 		localViewtab.xsize = 0;
 		localViewtab.ysize = 0;
 		localViewtab.stepSize = 1;
@@ -234,10 +230,6 @@ void b9ResetViews()     /* Called after new.room */
 	for (entryNum = 0; entryNum < TABLESIZE; entryNum++) {
 		getViewTab(&localViewtab, entryNum);
 
-		destroy_bitmap(localViewtab.bgPic);
-		localViewtab.bgPic = NULL;
-		destroy_bitmap(localViewtab.bgPri);
-		localViewtab.bgPri = NULL;
 		localViewtab.flags &= ~(UPDATE | ANIMATED);
 
 		setViewTab(&localViewtab, entryNum);
@@ -320,11 +312,11 @@ void b9LoadViewFile(byte viewNum)
 		localView.descriptionBank = 0;
 	}
 
-	localView.description = ((viewStart[3] || viewStart[4]) ?
-		// strdup((byte *)(viewStart+viewStart[3]+viewStart[4]*256)) : strdup(""));
-		(const char*)(tempAGI.code + viewStart[3] + viewStart[4] * 256) : _emptyDecription);
+	//localView.description = ((viewStart[3] || viewStart[4]) ?
+	//	// strdup((byte *)(viewStart+viewStart[3]+viewStart[4]*256)) : strdup(""));
+	//	(const char*)(tempAGI.code + viewStart[3] + viewStart[4] * 256) : _emptyDecription);
 
-	copyStringFromBanked(localView.description, localView.description, 0, COPY_EVERYTHING, tempAGI.codeBank, TRUE);
+	//copyStringFromBanked(localView.description, localView.description, 0, COPY_EVERYTHING, tempAGI.codeBank, TRUE);
 
 #ifdef VERBOSE_LOAD_VIEWS
 	if (localView.description == _emptyDecription)
@@ -652,18 +644,6 @@ void bADrawObject(int entryNum)
 
 	objFlags = localViewtab.flags;
 
-	/* Store background */
-	localViewtab.bgPic = create_bitmap(localViewtab.xsize, localViewtab.ysize);
-	localViewtab.bgPri = create_bitmap(localViewtab.xsize, localViewtab.ysize);
-	blit(picture, localViewtab.bgPic, localViewtab.xPos,
-		localViewtab.yPos - localViewtab.ysize,
-		0, 0, localViewtab.xsize, localViewtab.ysize);
-	blit(priority, localViewtab.bgPri, localViewtab.xPos,
-		localViewtab.yPos - localViewtab.ysize,
-		0, 0, localViewtab.xsize, localViewtab.ysize);
-	localViewtab.bgX = localViewtab.xPos;
-	localViewtab.bgY = localViewtab.yPos - localViewtab.ysize;
-
 	/* Determine priority for unfixed priorities */
 	if (!(objFlags & FIXEDPRIORITY)) {
 		if (localViewtab.yPos < 60)
@@ -949,22 +929,6 @@ void bAUpdateObj(int entryNum)
 
 	objFlags = localViewtab.flags;
 
-	/* Add saved background to picture\priority bitmaps */
-	if (localViewtab.bgPic != NULL) {
-		blit(localViewtab.bgPic, spriteScreen, 0, 0,
-			localViewtab.bgX, localViewtab.bgY,
-			localViewtab.bgPic->w, localViewtab.bgPic->h);
-		destroy_bitmap(localViewtab.bgPic);
-		localViewtab.bgPic = NULL;
-	}
-	if (localViewtab.bgPri != NULL) {
-		blit(localViewtab.bgPri, priority, 0, 0,
-			localViewtab.bgX, localViewtab.bgY,
-			localViewtab.bgPri->w, localViewtab.bgPri->h);
-		destroy_bitmap(localViewtab.bgPri);
-		localViewtab.bgPri = NULL;
-	}
-
 
 	//if ((objFlags & ANIMATED) && (objFlags & DRAWN)) {
 
@@ -1071,18 +1035,7 @@ void bAUpdateObj(int entryNum)
 
  //} /* UPDATE */
 
- /* Store background */
-	localViewtab.bgPic = create_bitmap(localViewtab.xsize, localViewtab.ysize);
-	localViewtab.bgPri = create_bitmap(localViewtab.xsize, localViewtab.ysize);
-	blit(picture, localViewtab.bgPic, localViewtab.xPos,
-		localViewtab.yPos - localViewtab.ysize,
-		0, 0, localViewtab.xsize, localViewtab.ysize);
-	blit(priority, localViewtab.bgPri, localViewtab.xPos,
-		localViewtab.yPos - localViewtab.ysize,
-		0, 0, localViewtab.xsize, localViewtab.ysize);
-	localViewtab.bgX = localViewtab.xPos;
-	localViewtab.bgY = localViewtab.yPos - localViewtab.ysize;
-
+	
 	/* Determine priority for unfixed priorities */
 	if (!(objFlags & FIXEDPRIORITY)) {
 		if (localViewtab.yPos < 60)
@@ -1123,22 +1076,6 @@ void bBUpdateObj2(int entryNum)
 	getViewTab(&localViewtab, entryNum);
 
 	objFlags = localViewtab.flags;
-
-	/* Add saved background to picture\priority bitmaps */
-	if (localViewtab.bgPic != NULL) {
-		blit(localViewtab.bgPic, picture, 0, 0,
-			localViewtab.bgX, localViewtab.bgY,
-			localViewtab.bgPic->w, localViewtab.bgPic->h);
-		destroy_bitmap(localViewtab.bgPic);
-		localViewtab.bgPic = NULL;
-	}
-	if (localViewtab.bgPri != NULL) {
-		blit(localViewtab.bgPri, priority, 0, 0,
-			localViewtab.bgX, localViewtab.bgY,
-			localViewtab.bgPri->w, localViewtab.bgPri->h);
-		destroy_bitmap(localViewtab.bgPri);
-		localViewtab.bgPri = NULL;
-	}
 
 
 	//if ((objFlags & ANIMATED) && (objFlags & DRAWN)) {
@@ -1247,18 +1184,6 @@ void bBUpdateObj2(int entryNum)
 
  //} /* UPDATE */
 
- /* Store background */
-	localViewtab.bgPic = create_bitmap(localViewtab.xsize, localViewtab.ysize);
-	localViewtab.bgPri = create_bitmap(localViewtab.xsize, localViewtab.ysize);
-	blit(picture, localViewtab.bgPic, localViewtab.xPos,
-		localViewtab.yPos - localViewtab.ysize,
-		0, 0, localViewtab.xsize, localViewtab.ysize);
-	blit(priority, localViewtab.bgPri, localViewtab.xPos,
-		localViewtab.yPos - localViewtab.ysize,
-		0, 0, localViewtab.xsize, localViewtab.ysize);
-	localViewtab.bgX = localViewtab.xPos;
-	localViewtab.bgY = localViewtab.yPos - localViewtab.ysize;
-
 	/* Determine priority for unfixed priorities */
 	if (!(objFlags & FIXEDPRIORITY)) {
 		if (localViewtab.yPos < 60)
@@ -1319,20 +1244,6 @@ void bBUpdateObjects()
 		objFlags = localViewtab.flags;
 		//if ((objFlags & ANIMATED) && (objFlags & DRAWN)) {
 		   /* Add saved background to picture\priority bitmaps */
-		if (localViewtab.bgPic != NULL) {
-			blit(localViewtab.bgPic, spriteScreen, 0, 0,
-				localViewtab.bgX, localViewtab.bgY,
-				localViewtab.bgPic->w, localViewtab.bgPic->h);
-			destroy_bitmap(localViewtab.bgPic);
-			localViewtab.bgPic = NULL;
-		}
-		if (localViewtab.bgPri != NULL) {
-			blit(localViewtab.bgPri, priority, 0, 0,
-				localViewtab.bgX, localViewtab.bgY,
-				localViewtab.bgPri->w, localViewtab.bgPri->h);
-			destroy_bitmap(localViewtab.bgPri);
-			localViewtab.bgPri = NULL;
-		}
 		//}
 		setViewTab(&localViewtab, entryNum);
 	}
@@ -1402,18 +1313,6 @@ void bBUpdateObjects()
 				} /* CYCLING */
 			} /* UPDATE */
 
-			/* Store background */
-			localViewtab.bgPic = create_bitmap(localViewtab.xsize, localViewtab.ysize);
-			localViewtab.bgPri = create_bitmap(localViewtab.xsize, localViewtab.ysize);
-			blit(picture, localViewtab.bgPic, localViewtab.xPos,
-				(localViewtab.yPos + 1) - localViewtab.ysize,
-				0, 0, localViewtab.xsize, localViewtab.ysize);
-			blit(priority, localViewtab.bgPri, localViewtab.xPos,
-				(localViewtab.yPos + 1) - localViewtab.ysize,
-				0, 0, localViewtab.xsize, localViewtab.ysize);
-			localViewtab.bgX = localViewtab.xPos;
-			localViewtab.bgY = (localViewtab.yPos + 1) - localViewtab.ysize;
-
 			/* Determine priority for unfixed priorities */
 			if (!(objFlags & FIXEDPRIORITY)) {
 				if (localViewtab.yPos < 60)
@@ -1466,20 +1365,6 @@ void bCupdateObjects2()
 		objFlags = localViewtab.flags;
 		//if ((objFlags & ANIMATED) && (objFlags & DRAWN)) {
 		   /* Add saved background to picture\priority bitmaps */
-		if (localViewtab.bgPic != NULL) {
-			blit(localViewtab.bgPic, picture, 0, 0,
-				localViewtab.bgX, localViewtab.bgY,
-				localViewtab.bgPic->w, localViewtab.bgPic->h);
-			destroy_bitmap(localViewtab.bgPic);
-			localViewtab.bgPic = NULL;
-		}
-		if (localViewtab.bgPri != NULL) {
-			blit(localViewtab.bgPri, priority, 0, 0,
-				localViewtab.bgX, localViewtab.bgY,
-				localViewtab.bgPri->w, localViewtab.bgPri->h);
-			destroy_bitmap(localViewtab.bgPri);
-			localViewtab.bgPri = NULL;
-		}
 		//}
 
 		setViewTab(&localViewtab, entryNum);
@@ -1590,18 +1475,6 @@ void bCupdateObjects2()
 				} // MOTION
 	*/
 			} /* UPDATE */
-
-			/* Store background */
-			localViewtab.bgPic = create_bitmap(localViewtab.xsize, localViewtab.ysize);
-			localViewtab.bgPri = create_bitmap(localViewtab.xsize, localViewtab.ysize);
-			blit(picture, localViewtab.bgPic, localViewtab.xPos,
-				localViewtab.yPos - localViewtab.ysize,
-				0, 0, localViewtab.xsize, localViewtab.ysize);
-			blit(priority, localViewtab.bgPri, localViewtab.xPos,
-				localViewtab.yPos - localViewtab.ysize,
-				0, 0, localViewtab.xsize, localViewtab.ysize);
-			localViewtab.bgX = localViewtab.xPos;
-			localViewtab.bgY = localViewtab.yPos - localViewtab.ysize;
 
 			/* Determine priority for unfixed priorities */
 			if (!(objFlags & FIXEDPRIORITY)) {
