@@ -22,7 +22,9 @@
 #include "agifiles.h"
 #include "view.h"
 
-#define VERBOSE_LOAD_VIEWS;
+//#define VERBOSE_SET_VIEW;
+//#define VERBOSE_SET_LOOPS
+//#define VERBOSE_LOAD_VIEWS;
 //#define VERBOSE_UPDATE_OBJECTS
 
 //#define VERBOSE_ALLOC_WATCH
@@ -136,7 +138,7 @@ void setLocalLoop(View* loadedView, Loop* localLoop, byte localLoopNumber)
 	byte previousRamBank = RAM_BANK;
 
 	RAM_BANK = loadedView->loopsBank;
-
+	
 	loadedView->loops[localLoopNumber] = *localLoop;
 
 	RAM_BANK = previousRamBank;
@@ -146,7 +148,7 @@ void getLocalCel(Loop* loadedLoop, Cel* returnedLocalCell, byte localCellNumber)
 {
 	byte previousRamBank = RAM_BANK;
 
-	RAM_BANK = loadedLoop->celBank;
+	RAM_BANK = loadedLoop->celsBank;
 
 	*returnedLocalCell = loadedLoop->cels[localCellNumber];
 
@@ -157,8 +159,7 @@ void setLocalCel(Loop* loadedLoop, Cel* localCell, byte localCellNumber)
 {
 	byte previousRamBank = RAM_BANK;
 
-	//printf("The cel bank is %d \n", loadedLoop->celBank);
-	RAM_BANK = loadedLoop->celBank;
+	RAM_BANK = loadedLoop->celsBank;
 
 
 	loadedLoop->cels[localCellNumber] = *localCell;
@@ -238,23 +239,16 @@ void b9ResetViews()     /* Called after new.room */
 
 #define VIEW_HEADER_BUFFER_SIZE 501
 #define LOOP_HEADER_BUFFER_SIZE 501
-#define VIEW_HEADER_BUFFER_BANK 9
+#define VIEW_BUFFERS_BANK 9
 extern byte viewHeaderBuffer[VIEW_HEADER_BUFFER_SIZE];
 extern byte loopHeaderBuffer[LOOP_HEADER_BUFFER_SIZE];
 
 #define POSITION_OF_NO_LOOPS 2
-#define NO_VIEW_START_BYTES 5
 #define POSITION_OF_LOOPS_OFFSET 5
-#define LOOP_OFFSET_BYTES 2
-#define CEL_OFFSET_BYTES 2
-#define CEL_WIDTH_OFFSET 0
-#define CEL_HEIGHT_OFFSET 1
-#define CEL_TRANSPARENCY_OFFSET 2
-#define CEL_DATA_OFFSET 3
-#define DESCRIPTION_OFFSET 3
-#define OFFSET_SIZE 2
+#define POSITION_OF_DESCRIPTION 3
 
 #define NO_LOOPS_INDEX_BYTES_AVERAGE 14
+#define NO_CELLS_INDEX_BYTES_AVERAGE 14
 
 void setViewData(byte viewNum, AGIFile* tempAGI, View* localView)
 {
@@ -271,12 +265,12 @@ void setViewData(byte viewNum, AGIFile* tempAGI, View* localView)
 
 	if (!localView->loaded)
 	{
-		memCpyBankedBetween((byte*)&viewHeaderBuffer[0], VIEW_HEADER_BUFFER_BANK, tempAGI->code, tempAGI->codeBank, NO_LOOPS_INDEX_BYTES_AVERAGE + POSITION_OF_LOOPS_OFFSET); //Guessing at 7 loops, this should copy enough 99% of the time, and we can copy again once we have the first byte (loopCounter), is necessary . If there is less loops than we have just copied bytes which will be ignored
+		memCpyBankedBetween((byte*)&viewHeaderBuffer[0], VIEW_BUFFERS_BANK, tempAGI->code, tempAGI->codeBank, NO_LOOPS_INDEX_BYTES_AVERAGE + POSITION_OF_LOOPS_OFFSET); //Guessing at 7 loops, this should copy enough 99% of the time, and we can copy again once we have the first byte (loopCounter), is necessary . If there is less loops than we have just copied bytes which will be ignored
 		numberOfLoops = viewHeaderBuffer[POSITION_OF_NO_LOOPS];
 
 		if (numberOfLoops > NO_LOOPS_INDEX_BYTES_AVERAGE)
 		{
-			memCpyBankedBetween((byte*)&viewHeaderBuffer[0], VIEW_HEADER_BUFFER_BANK, tempAGI->code, tempAGI->codeBank, numberOfLoops * 2 + POSITION_OF_LOOPS_OFFSET);
+			memCpyBankedBetween((byte*)&viewHeaderBuffer[0], VIEW_BUFFERS_BANK, tempAGI->code, tempAGI->codeBank, numberOfLoops * 2 + POSITION_OF_LOOPS_OFFSET);
 		}
 
 
@@ -285,11 +279,11 @@ void setViewData(byte viewNum, AGIFile* tempAGI, View* localView)
 		printf("there are %d loops\n", numberOfLoops);
 #endif
 
-		isThereADescription = (const char*)viewHeaderBuffer[DESCRIPTION_OFFSET] || viewHeaderBuffer[DESCRIPTION_OFFSET + 1];
+		isThereADescription = (const char*)viewHeaderBuffer[POSITION_OF_DESCRIPTION] || viewHeaderBuffer[POSITION_OF_DESCRIPTION + 1];
 
 		if (isThereADescription)
 		{
-			description = (const char*)(tempAGI->code + viewHeaderBuffer[DESCRIPTION_OFFSET] + viewHeaderBuffer[DESCRIPTION_OFFSET] * 256);
+			description = (const char*)(tempAGI->code + viewHeaderBuffer[POSITION_OF_DESCRIPTION] + viewHeaderBuffer[POSITION_OF_DESCRIPTION] * 256);
 			descriptionLength = strLenBanked((char*)description, tempAGI->codeBank);
 
 #ifdef VERBOSE_SET_VIEWS
@@ -302,7 +296,7 @@ void setViewData(byte viewNum, AGIFile* tempAGI, View* localView)
 			printf("there is no description");
 #endif // VERBOSE_ALLOC_WATCH
 
-			description = (const char*)&tempAGI->code[DESCRIPTION_OFFSET]; //Going to be zero. We can do this even though we are not on the bank; there is no deference
+			description = (const char*)&tempAGI->code[POSITION_OF_DESCRIPTION]; //Going to be zero. We can do this even though we are not on the bank; there is no deference
 		}
 
 #ifdef VERBOSE_SET_VIEWS
@@ -320,19 +314,66 @@ void setViewData(byte viewNum, AGIFile* tempAGI, View* localView)
 
 		localView->loaded = TRUE;
 		localView->loops = (Loop*)b10BankedAlloc(numberOfLoops * sizeof(Loop), &loopsBank);
+
 		localView->numberOfLoops = numberOfLoops;
 		localView->description = description;
 		localView->loopsBank = loopsBank;
 	}
-#ifdef VERBOSE_LOAD_VIEWS
 	else
 	{
 		printf("View %d is already loaded\n", viewNum);
 	}
-#endif
 	setLoadedView(&localView, viewNum);
 }
 
+#define POSITION_OF_NO_CELS 0
+#define POSITION_OF_CELS_OFFSET 1
+void setLoopData(AGIFile* tempAGI, View* localView, Loop* localLoop, byte* loopHeaderData, byte viewNum, byte loopNum)
+{
+	byte numberOfCels;
+	boolean isThereADescription;
+	const char* description;
+	int descriptionLength;
+	byte celsBank;
+#ifdef VERBOSE_LOAD_VIEWS
+	byte tmp[10];
+#endif
+
+	if (localView->loaded) //If the view is loaded then so are all of the loops
+	{
+		getLocalLoop(localView, localLoop, loopNum);
+
+		memCpyBankedBetween(&loopHeaderBuffer[0], VIEW_BUFFERS_BANK, loopHeaderData, tempAGI->codeBank, NO_CELLS_INDEX_BYTES_AVERAGE + POSITION_OF_CELS_OFFSET); //Guessing at 7 cels, this should copy enough 99% of the time, and we can copy again once we have the first byte (loopCounter), is necessary . If there is less loops than we have just copied bytes which will be ignored
+		numberOfCels = loopHeaderBuffer[POSITION_OF_NO_CELS];
+
+		if (numberOfCels > NO_CELLS_INDEX_BYTES_AVERAGE)
+		{
+			memCpyBankedBetween((byte*)&loopHeaderData[0], VIEW_BUFFERS_BANK, loopHeaderData, tempAGI->codeBank, numberOfCels * 2 + POSITION_OF_CELS_OFFSET);
+		}
+	
+#ifdef VERBOSE_SET_LOOPS
+		printf("setting loop number %d on view %d\n", loopNum, viewNum);
+		printf("there are %d cels\n", numberOfCels);
+		printf("The address of loop header buffer is %p\n", &loopHeaderBuffer[0]);
+		printf("Loop header data is at %p, on bank %d\n", loopHeaderData, tempAGI->codeBank);
+#endif
+
+		localLoop->cels = (Cel*)b10BankedAlloc(numberOfCels * sizeof(Cel), &celsBank);
+		localLoop->numberOfCels = numberOfCels;
+		localLoop->celsBank = celsBank;
+
+		setLocalLoop(localView, localLoop, loopNum);
+	}
+	else
+	{
+		printf("Fail %d is not loaded\n", viewNum);
+	}
+}
+
+#define POSITION_OF_CEL_WIDTH 0
+#define POSTION_OF_CEL_HEIGHT 1
+#define POSTION_OF_CEL_TRANSPARENCY 2
+#define POSITION_OF_CEL_DATA 3
 
 /**************************************************************************
 ** loadViewFile
@@ -386,6 +427,12 @@ void b9LoadViewFile(byte viewNum)
 		printf("Loading loop %d at %x\n", l, loopOffsets[l]);
 #endif // VERBOSE_LOAD_VIEWS
 
+#ifdef VERBOSE_SET_LOOPS
+		printf("View code starts at %p. The loop offset is %x, we means we expect to find a loop at %x\n", tempAGI.code, loopOffsets[l], tempAGI.code + loopOffsets[l]);
+#endif // VERBOSE_SET_LOOPS
+
+		setLoopData(&tempAGI, &localView, &localLoop, tempAGI.code + loopOffsets[l], viewNum, l);
+		asm("stp");
 	//		
 	//		memCpyBanked(&loopPosition, &tempAGI.code[viewIndex], tempAGI.codeBank, POSITION_BYTES);
 	//		loopStart = (byte*)(viewStart + loopPosition);
@@ -484,7 +531,6 @@ void b9LoadViewFile(byte viewNum)
 	b10BankedDealloc(tempAGI.code, tempAGI.codeBank);
 
 	setLoadedView(&localView, viewNum);
-	asm("stp");
 }
 
 /***************************************************************************
@@ -522,8 +568,8 @@ void b9DiscardView(byte viewNum)
 #ifdef VERBOSE_ALLOC_WATCH
 			printf("dealloc cels bank %p address %p\n", localLoop.celBank, (byte*)localLoop.cels);
 #endif
-			b10BankedDealloc((byte*)localLoop.cels, localLoop.celBank); //TODO:FIX
-			localLoop.celBank = 0;
+			b10BankedDealloc((byte*)localLoop.cels, localLoop.celsBank);
+			localLoop.celsBank = 0;
 			localLoop.cels = NULL;
 			localLoop.numberOfCels = 0;
 

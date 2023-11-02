@@ -23,7 +23,7 @@ typedef struct {
 typedef struct {
 	byte numberOfCels;
 	Cel* cels;
-	byte celBank;
+	byte celsBank;
 } Loop;
 
 typedef struct {
