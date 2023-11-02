@@ -22,7 +22,7 @@
 #include "agifiles.h"
 #include "view.h"
 
-//#define VERBOSE_LOAD_VIEWS;
+#define VERBOSE_LOAD_VIEWS;
 //#define VERBOSE_UPDATE_OBJECTS
 
 //#define VERBOSE_ALLOC_WATCH
@@ -256,21 +256,20 @@ extern byte loopHeaderBuffer[LOOP_HEADER_BUFFER_SIZE];
 
 #define NO_LOOPS_INDEX_BYTES_AVERAGE 14
 
-void setViewData(byte viewNum, AGIFile* tempAGI)
+void setViewData(byte viewNum, AGIFile* tempAGI, View* localView)
 {
 	byte numberOfLoops;
 	boolean isThereADescription;
 	const char* description;
 	int descriptionLength;
 	byte loopsBank;
-	View localView;
 #ifdef VERBOSE_LOAD_VIEWS
 	byte tmp[10];
 #endif
 
-	getLoadedView(&localView, viewNum);
+	getLoadedView(localView, viewNum);
 
-	if (!localView.loaded)
+	if (!localView->loaded)
 	{
 		memCpyBankedBetween((byte*)&viewHeaderBuffer[0], VIEW_HEADER_BUFFER_BANK, tempAGI->code, tempAGI->codeBank, NO_LOOPS_INDEX_BYTES_AVERAGE + POSITION_OF_LOOPS_OFFSET); //Guessing at 7 loops, this should copy enough 99% of the time, and we can copy again once we have the first byte (loopCounter), is necessary . If there is less loops than we have just copied bytes which will be ignored
 		numberOfLoops = viewHeaderBuffer[POSITION_OF_NO_LOOPS];
@@ -281,7 +280,7 @@ void setViewData(byte viewNum, AGIFile* tempAGI)
 		}
 
 
-#ifdef VERBOSE_LOAD_VIEWS
+#ifdef VERBOSE_SET_VIEW
 		printf("setting view number %d\n", viewNum);
 		printf("there are %d loops\n", numberOfLoops);
 #endif
@@ -293,21 +292,21 @@ void setViewData(byte viewNum, AGIFile* tempAGI)
 			description = (const char*)(tempAGI->code + viewHeaderBuffer[DESCRIPTION_OFFSET] + viewHeaderBuffer[DESCRIPTION_OFFSET] * 256);
 			descriptionLength = strLenBanked((char*)description, tempAGI->codeBank);
 
-#ifdef VERBOSE_LOAD_VIEWS
+#ifdef VERBOSE_SET_VIEWS
 			printf("Description length %d. The description is %s\n", descriptionLength, description);
 #endif // VERBOSE_ALLOC_WATCH
 		}
 		else {
 
-#ifdef VERBOSE_LOAD_VIEWS
+#ifdef VERBOSE_SET_VIEWS
 			printf("there is no description");
 #endif // VERBOSE_ALLOC_WATCH
 
 			description = (const char*)&tempAGI->code[DESCRIPTION_OFFSET]; //Going to be zero. We can do this even though we are not on the bank; there is no deference
 		}
 
-#ifdef VERBOSE_LOAD_VIEWS
-		memCpyBanked(&tmp[0], (byte*)localView.description, localView.loopsBank, descriptionLength);
+#ifdef VERBOSE_SET_VIEWS
+		memCpyBanked(&tmp[0], (byte*)localView->description, localView->loopsBank, descriptionLength);
 		if (tmp[0] == 0)
 		{
 			printf("The description is empty\n");
@@ -319,11 +318,11 @@ void setViewData(byte viewNum, AGIFile* tempAGI)
 		}
 #endif
 
-		localView.loaded = TRUE;
-		localView.loops = (Loop*)b10BankedAlloc(numberOfLoops * sizeof(Loop), &loopsBank);
-		localView.numberOfLoops = numberOfLoops;
-		localView.description = description;
-		localView.loopsBank = loopsBank;
+		localView->loaded = TRUE;
+		localView->loops = (Loop*)b10BankedAlloc(numberOfLoops * sizeof(Loop), &loopsBank);
+		localView->numberOfLoops = numberOfLoops;
+		localView->description = description;
+		localView->loopsBank = loopsBank;
 	}
 #ifdef VERBOSE_LOAD_VIEWS
 	else
@@ -362,31 +361,31 @@ void b9LoadViewFile(byte viewNum)
 	BufferStatus* bufferStatus = &localBufferStatus;
 	byte* buffer = GOLDEN_RAM_WORK_AREA;
 	byte** data = &buffer; //Get_Next Macro works with pointer pointers so need this;;
-	byte* viewBufferPtr;
-
-#ifdef VERBOSE_LOAD_VIEW_FILE
+	int* loopOffsets = (int*)(viewHeaderBuffer + POSITION_OF_LOOPS_OFFSET);
+#ifdef VERBOSE_LOAD_VIEWS
 	printf("Attempt to load viewNum %d\n", viewNum);
-#endif // VERBOSE_LOAD_VIEW_FILE
+#endif // VERBOSE_LOAD_VIEWS
 
 	getLogicDirectory(&agiFilePosType, &viewdir[viewNum]);
 	b6LoadAGIFile(VIEW, &agiFilePosType, &tempAGI);
 
-#ifdef VERBOSE_LOAD_VIEW_FILE
-	printf("loaded agiFile of total size %u", tempAGI.totalSize);
+#ifdef VERBOSE_LOAD_VIEWS
+	printf("loaded agiFile of total size %u\n", tempAGI.totalSize);
 #endif
 
-	setViewData(viewNum, &tempAGI);
-	getLoadedView(&localView, viewNum);
+	setViewData(viewNum, &tempAGI, &localView);
 
-#ifdef VERBOSE_LOAD_VIEW_FILE
+#ifdef VERBOSE_LOAD_VIEWS
 	printf("The view desc %s, loaded %d, loops %p, loopsBank %d, numberOfLoops %d\n", localView.description, localView.loaded, localView.loops, localView.loopsBank, localView.numberOfLoops);
 	printf("The address of viewHeaderBuffer is %p", &viewHeaderBuffer[0]);
-#endif // VERBOSE_LOAD_VIEW_FILE
+#endif // VERBOSE_LOAD_VIEWS
 
-	asm("stp");
+	#define POSITION_BYTES 2
+	for (l = 0; l < localView.numberOfLoops; l++) {
+#ifdef VERBOSE_LOAD_VIEWS
+		printf("Loading loop %d at %x\n", l, loopOffsets[l]);
+#endif // VERBOSE_LOAD_VIEWS
 
-	//#define POSITION_BYTES 2
-	//	for (l = 0, viewIndex = POSITION_OF_LOOPS_OFFSET; l < localView.numberOfLoops; l++, viewIndex += 2) {
 	//		
 	//		memCpyBanked(&loopPosition, &tempAGI.code[viewIndex], tempAGI.codeBank, POSITION_BYTES);
 	//		loopStart = (byte*)(viewStart + loopPosition);
@@ -477,7 +476,7 @@ void b9LoadViewFile(byte viewNum)
 	//
 	//		setLocalLoop(&localView, &localLoop, l);
 	//		setLocalCel(&localLoop, &localCel, c);
-	//	}
+		}
 
 
 	localView.loaded = TRUE;
@@ -485,6 +484,7 @@ void b9LoadViewFile(byte viewNum)
 	b10BankedDealloc(tempAGI.code, tempAGI.codeBank);
 
 	setLoadedView(&localView, viewNum);
+	asm("stp");
 }
 
 /***************************************************************************
