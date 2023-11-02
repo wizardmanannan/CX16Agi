@@ -7,6 +7,7 @@
     .include "graphicsAsm.s"
     .include "pictureAsm.s"
     .include "helpersAsm.s"
+    .include "viewAsm.s"
     .export _executeLogic
     .export _b6InitAsm
     .export _loadAndIncWinCode
@@ -37,3 +38,5 @@
     .export _trampoline
     .export _b2DrawStraightLineAlongX
     .export _b2DrawStraightLineAlongY
+    .export _viewHeaderBuffer
+    .export _loopHeaderBuffer

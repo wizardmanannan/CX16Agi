@@ -69,7 +69,7 @@ void* memCpyBanked(byte* dest, byte* src, byte bank, size_t len)
 	
 #ifdef VERBOSE_CPY_CHECK
 	printf("Attempting to copy to %p from %p on bank %d length %d and the first byte is %d\n", dest, src, bank, len, *src);
-#endif
+#endif 
 
 
 	returnVal = memcpy(dest, src, len);
@@ -81,15 +81,17 @@ void* memCpyBanked(byte* dest, byte* src, byte bank, size_t len)
 
 void memCpyBankedBetween(byte* dest, byte bankDst, byte* src, byte bankSrc, size_t len)
 {
+#define BUFFER_SIZE 50
 	int i;
 	int copyAmount = 0;
+	byte buffer[BUFFER_SIZE];
 
-	for (i = 0; i < len; i += LOCAL_WORK_AREA_SIZE)
+	for (i = 0; i < len; i += BUFFER_SIZE)
 	{
-		copyAmount = (i + LOCAL_WORK_AREA_SIZE <= len) ? LOCAL_WORK_AREA_SIZE : len - i;
+		copyAmount = (i + BUFFER_SIZE <= len) ? BUFFER_SIZE : len - i;
 
-		memCpyBanked(GOLDEN_RAM_WORK_AREA, src + i, bankSrc, copyAmount);
-		memCpyBanked(dest + i, GOLDEN_RAM_WORK_AREA, bankDst, copyAmount);
+		memCpyBanked(buffer, src + i, bankSrc, copyAmount);
+		memCpyBanked(dest + i, buffer, bankDst, copyAmount);
 	}
 }
 

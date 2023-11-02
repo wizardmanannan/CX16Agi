@@ -15,7 +15,9 @@ typedef struct {
 	byte width;
 	byte height;
 	byte transparency;
-	BITMAP* bmp;
+	byte* bmp;
+	byte bitmapBank;
+	boolean flipped;
 } Cel;
 
 typedef struct {
@@ -29,8 +31,7 @@ typedef struct {
 	byte numberOfLoops;
 	Loop* loops;
 	byte loopsBank;
-	char* description;
-	byte descriptionBank;
+	const char* description; //Always on the same bank as code
 } View;
 
 #define DRAWN         0x0001
