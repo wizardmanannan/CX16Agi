@@ -388,20 +388,10 @@ void b9LoadViewFile(byte viewNum)
 {
 	AGIFile tempAGI;
 	AGIFilePosType agiFilePosType;
-	byte* loopStart, * celStart, cWidth;
-	byte l, c, x, y, chunk, xTotal, colour, len, loopIndex, viewIndex, trans;
+	byte l, c, trans;
 	View localView;
 	Loop localLoop;
 	Cel localCel;
-	int i;
-	byte cellPositionBytes[NO_CODE_BANKS]; //TODO: Investigate seems like an odd choice for size
-	int loopHeaderOffset;
-	int cellHeaderOffset;
-	const char* description;
-	int descriptionOffset;
-	int descriptionLength;
-	BufferStatus localBufferStatus;
-	BufferStatus* bufferStatus = &localBufferStatus;
 	byte* cellPosition;
 	int* loopOffsets = (int*)(viewHeaderBuffer + POSITION_OF_LOOPS_OFFSET);
 	int* cellOffsets;
