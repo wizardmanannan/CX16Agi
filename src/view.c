@@ -24,6 +24,7 @@
 
 //#define VERBOSE_SET_VIEW;
 //#define VERBOSE_SET_LOOPS
+//#define VERBOSE_SET_CEL
 //#define VERBOSE_LOAD_VIEWS;
 //#define VERBOSE_UPDATE_OBJECTS
 
@@ -138,19 +139,19 @@ void setLocalLoop(View* loadedView, Loop* localLoop, byte localLoopNumber)
 	byte previousRamBank = RAM_BANK;
 
 	RAM_BANK = loadedView->loopsBank;
-	
+
 	loadedView->loops[localLoopNumber] = *localLoop;
 
 	RAM_BANK = previousRamBank;
 }
 
-void getLocalCel(Loop* loadedLoop, Cel* returnedLocalCell, byte localCellNumber)
+void getLocalCel(Loop* loadedLoop, Cel* localCell, byte localCellNumber)
 {
 	byte previousRamBank = RAM_BANK;
 
 	RAM_BANK = loadedLoop->celsBank;
 
-	*returnedLocalCell = loadedLoop->cels[localCellNumber];
+	*localCell = loadedLoop->cels[localCellNumber];
 
 	RAM_BANK = previousRamBank;
 }
@@ -178,6 +179,8 @@ void b9InitViews()
 		localView.loops = 0;
 		localView.loopsBank = 0;
 		localView.numberOfLoops = 0;
+		localView.codeBlock = NULL;
+		localView.codeBlockBank = 0;
 
 		setLoadedView(&localView, i);
 	}
@@ -323,6 +326,9 @@ void setViewData(byte viewNum, AGIFile* tempAGI, View* localView)
 	{
 		printf("View %d is already loaded\n", viewNum);
 	}
+
+	localView->codeBlock = tempAGI->code;
+	localView->codeBlockBank = tempAGI->codeBank;
 	setLoadedView(&localView, viewNum);
 }
 
@@ -331,9 +337,6 @@ void setViewData(byte viewNum, AGIFile* tempAGI, View* localView)
 void setLoopData(AGIFile* tempAGI, View* localView, Loop* localLoop, byte* loopHeaderData, byte viewNum, byte loopNum)
 {
 	byte numberOfCels;
-	boolean isThereADescription;
-	const char* description;
-	int descriptionLength;
 	byte celsBank;
 #ifdef VERBOSE_LOAD_VIEWS
 	byte tmp[10];
@@ -350,7 +353,7 @@ void setLoopData(AGIFile* tempAGI, View* localView, Loop* localLoop, byte* loopH
 		{
 			memCpyBankedBetween((byte*)&loopHeaderData[0], VIEW_BUFFERS_BANK, loopHeaderData, tempAGI->codeBank, numberOfCels * 2 + POSITION_OF_CELS_OFFSET);
 		}
-	
+
 #ifdef VERBOSE_SET_LOOPS
 		printf("setting loop number %d on view %d\n", loopNum, viewNum);
 		printf("there are %d cels\n", numberOfCels);
@@ -371,10 +374,10 @@ void setLoopData(AGIFile* tempAGI, View* localView, Loop* localLoop, byte* loopH
 }
 
 #define POSITION_OF_CEL_WIDTH 0
-#define POSTION_OF_CEL_HEIGHT 1
-#define POSTION_OF_CEL_TRANSPARENCY 2
+#define POSITION_OF_CEL_HEIGHT 1
+#define POSTION_OF_CEL_TRANSPARENCY_AND_MIRRORING 2
 #define POSITION_OF_CEL_DATA 3
-
+#define CEL_HEADER_SIZE 3
 /**************************************************************************
 ** loadViewFile
 **
@@ -391,7 +394,6 @@ void b9LoadViewFile(byte viewNum)
 	Loop localLoop;
 	Cel localCel;
 	int i;
-	unsigned int loopPosition, cellPosition;
 	byte cellPositionBytes[NO_CODE_BANKS]; //TODO: Investigate seems like an odd choice for size
 	int loopHeaderOffset;
 	int cellHeaderOffset;
@@ -400,9 +402,10 @@ void b9LoadViewFile(byte viewNum)
 	int descriptionLength;
 	BufferStatus localBufferStatus;
 	BufferStatus* bufferStatus = &localBufferStatus;
-	byte* buffer = GOLDEN_RAM_WORK_AREA;
-	byte** data = &buffer; //Get_Next Macro works with pointer pointers so need this;;
+	byte* cellPosition;
 	int* loopOffsets = (int*)(viewHeaderBuffer + POSITION_OF_LOOPS_OFFSET);
+	int* cellOffsets;
+	byte celHeader[CEL_HEADER_SIZE];
 #ifdef VERBOSE_LOAD_VIEWS
 	printf("Attempt to load viewNum %d\n", viewNum);
 #endif // VERBOSE_LOAD_VIEWS
@@ -421,7 +424,7 @@ void b9LoadViewFile(byte viewNum)
 	printf("The address of viewHeaderBuffer is %p", &viewHeaderBuffer[0]);
 #endif // VERBOSE_LOAD_VIEWS
 
-	#define POSITION_BYTES 2
+#define POSITION_BYTES 2
 	for (l = 0; l < localView.numberOfLoops; l++) {
 #ifdef VERBOSE_LOAD_VIEWS
 		printf("Loading loop %d at %x\n", l, loopOffsets[l]);
@@ -432,103 +435,34 @@ void b9LoadViewFile(byte viewNum)
 #endif // VERBOSE_SET_LOOPS
 
 		setLoopData(&tempAGI, &localView, &localLoop, tempAGI.code + loopOffsets[l], viewNum, l);
-		asm("stp");
-	//		
-	//		memCpyBanked(&loopPosition, &tempAGI.code[viewIndex], tempAGI.codeBank, POSITION_BYTES);
-	//		loopStart = (byte*)(viewStart + loopPosition);
-	//		
-	//		getLocalLoop(&localView, &localLoop, l);
-	//		memCpyBanked(&loopHeaderOffset, tempAGI.code + POSITION_OF_LOOPS_OFFSET + (l * LOOP_OFFSET_BYTES), tempAGI.codeBank, LOOP_OFFSET_BYTES);
-	//
-	//		memCpyBanked(&localLoop.numberOfCels, tempAGI.code + loopHeaderOffset, tempAGI.codeBank, 1);
-	//
-	//#ifdef VERBOSE_LOAD_VIEWS
-	//		printf("You have %d loops and the num of cells is %d and a loop pos of %d", localView.numberOfLoops, localLoop.numberOfCels, loopHeaderOffset);
-	//#endif // VERBOSE_LOAD_VIEWS
-	//		
-	//		localLoop.cels = (Cel*)b10BankedAlloc(localLoop.numberOfCels * sizeof(Cel), &localLoop.celBank);
-	//#ifdef VERBOSE_ALLOC_WATCH
-	//		printf("cels length %d bank %p address %p\n", localLoop.numberOfCels * sizeof(Cel), &localLoop.celBank, localLoop.cels);
-	//#endif // VERBOSE_ALLOC_WATCH
-	//
-	//		for (c = 0, loopIndex = 1; c < localLoop.numberOfCels; c++, loopIndex += 2) {
-	//			memCpyBanked(&cellPosition, &loopStart[loopIndex], tempAGI.codeBank, 2);
-	//			celStart = (byte*)(loopStart + loopStart[loopIndex] + loopStart[loopIndex + 1] * 256);
-	//
-	//			getLocalCel(&localLoop, &localCel, c);
-	//
-	//			memCpyBanked(&cellHeaderOffset, tempAGI.code + loopHeaderOffset + (c * CEL_OFFSET_BYTES) + 1, tempAGI.codeBank, LOOP_OFFSET_BYTES);
-	//
-	//#ifdef VERBOSE_LOAD_VIEWS
-	//			printf("The address of tempAGI.code plus offset is %p it is on bank %d and the cell header offset is %d\n", tempAGI.code + cellHeaderOffset, tempAGI.codeBank, cellHeaderOffset);
-	//#endif
-	//
-	//			memCpyBanked(&localCel.width, tempAGI.code + loopHeaderOffset + cellHeaderOffset + CEL_WIDTH_OFFSET, tempAGI.codeBank, 1);
-	//			memCpyBanked(&localCel.height, tempAGI.code + loopHeaderOffset + cellHeaderOffset + CEL_HEIGHT_OFFSET, tempAGI.codeBank, 1);
-	//			memCpyBanked(&localCel.transparency, tempAGI.code + loopHeaderOffset + cellHeaderOffset + CEL_TRANSPARENCY_OFFSET, tempAGI.codeBank, 1);
-	//
-	//#ifdef VERBOSE_LOAD_VIEWS
-	//			printf("The cell has w: %d, h: %d t: %d \n", localCel.width, localCel.height, localCel.transparency);
-	//#endif
-	//			
-	//			localBufferStatus.bank = tempAGI.codeBank;
-	//			localBufferStatus.bankedData = tempAGI.code + loopHeaderOffset + cellHeaderOffset + CEL_WIDTH_OFFSET;
-	//			localBufferStatus.bufferCounter = 0;
-	//			b5RefreshBuffer(bufferStatus);
-	//			
-	//			localCel.bmp = b10BankedAlloc(localCel.width * localCel.height, &localCel.bitmapBank);
-	//
-	//			viewBufferPtr = viewBuffer;
-	//			
-	//			
-	//			for (y=0; y<localCel.height; y++) {
-	//		           xTotal=0;
-	//						
-	//				      GET_NEXT(chunk);
-	//					  
-	//#ifdef VERBOSE_LOAD_VIEWS
-	//					  printf("%p\n", chunk);
-	//#endif
-	//
-	//				      while (chunk) { /* Until the end of the line */
-	//						
-	//						 colour = ((chunk & 0xF0) >> 4);
-	//				         len = (chunk & 0x0F);
-	//				         for (x=xTotal; x<(xTotal+len); x++) {
-	//				            if (colour != localCel.transparency)
-	//				               *viewBufferPtr++ = colour + 1;
-	//				            else
-	//								*viewBufferPtr++ = 0;
-	//				         }
-	//				         xTotal += len;
-	//						 GET_NEXT(chunk);
-	//				      }
-	//	
-	//		           if ((trans & 0x80) && (((trans & 0x70) >> 4) != l)) { /* Flip */
-	//		              
-	//					   localCel.flipped = TRUE;
-	//		           }
-	//		           else {
-	//					   localCel.flipped = FALSE;
-	//		           }
-	//		        }
-	//
-	//			printf("The address of viewbuffer %p\n", &viewBuffer);
-	//			asm("stp");
-	//
-	//			memCpyBankedBetween(localCel.bmp, localCel.bitmapBank, viewBuffer, VIEW_CODE_BANK_1, localCel.width* localCel.height);
-	//			setLocalCel(&localLoop, &localCel, c);
-	//		}
-	//
-	//
-	//		setLocalLoop(&localView, &localLoop, l);
-	//		setLocalCel(&localLoop, &localCel, c);
+		cellOffsets = (int*)(loopHeaderBuffer + POSITION_OF_CELS_OFFSET);
+
+		for (c = 0; c < localLoop.numberOfCels; c++) {
+			cellPosition = tempAGI.code + loopOffsets[l] + cellOffsets[c];
+			memCpyBanked(celHeader, cellPosition, tempAGI.codeBank, CEL_HEADER_SIZE);
+
+			getLocalCel(&localLoop, &localCel, c);
+			trans = celHeader[POSTION_OF_CEL_TRANSPARENCY_AND_MIRRORING];
+			
+			localCel.bitmapBank = tempAGI.codeBank;
+			localCel.bmp = cellPosition + POSITION_OF_CEL_DATA;
+			localCel.width = celHeader[POSITION_OF_CEL_WIDTH];
+			localCel.height = celHeader[POSITION_OF_CEL_HEIGHT];
+			localCel.flipped = (trans & 0x80) && (((trans & 0x70) >> 4) != l);
+
+#ifdef VERBOSE_SET_CEL
+			printf("The viewNum is %d\n", viewNum);
+			printf("The address of celHeader is %p\n", celHeader);
+			printf("bitmapBank %d, bmp %p, height %d, width %d, flipped %d \n", localCel.bitmapBank, localCel.bmp, localCel.height, localCel.width, localCel.flipped);
+#endif // VERBOSE_SET_CEL
+
 		}
 
+		setLocalCel(&localLoop, &localCel, c);
+}
 
-	localView.loaded = TRUE;
 
-	b10BankedDealloc(tempAGI.code, tempAGI.codeBank);
+
 
 	setLoadedView(&localView, viewNum);
 }
@@ -554,10 +488,6 @@ void b9DiscardView(byte viewNum)
 
 			for (c = 0; c < localLoop.numberOfCels; c++) {
 				getLocalCel(&localLoop, &localCel, c);
-				if (localCel.bmp != NULL)
-				{
-					b10BankedDealloc(localCel.bmp, localCel.bitmapBank);
-				}
 				localCel.bmp = NULL;
 				localCel.height = 0;
 				localCel.transparency = 0;
@@ -582,9 +512,13 @@ void b9DiscardView(byte viewNum)
 		b10BankedDealloc((byte*)localView.loops, localView.loopsBank);
 		localView.loaded = FALSE;
 
+		b10BankedDealloc(localView.codeBlock, localView.codeBlockBank);
+		localView.codeBlock = NULL;
+		localView.codeBlockBank = 0;
+
 		setLoadedView(&localView, viewNum);
-		}
 	}
+}
 
 void b9SetCel(ViewTable* localViewtab, byte celNum)
 {

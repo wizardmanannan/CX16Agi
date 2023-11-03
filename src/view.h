@@ -31,7 +31,9 @@ typedef struct {
 	byte numberOfLoops;
 	Loop* loops;
 	byte loopsBank;
-	const char* description; //Always on the same bank as code
+	char* description; //Always on the same bank as code
+	byte* codeBlock;
+	byte codeBlockBank;
 } View;
 
 #define DRAWN         0x0001
