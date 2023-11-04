@@ -100,7 +100,7 @@ SET_COLOR CEL_TRANS
 sta CEL_TRANS
 
 @setVeraAddress:
-SET_VERA_ADDRESS_PICTURE_ADDRESS VERA_ADDRESS, #$1 ;Ignore the high as it will always be zero. This macro takes that into account
+SET_VERA_ADDRESS VERA_ADDRESS, #$1, VERA_ADDRESS_HIGH
 
 @getNextChunk:
 GET_NEXT BUFFER_POINTER, BUFFER_STATUS

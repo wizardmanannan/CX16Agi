@@ -41,4 +41,38 @@ TILE_LAYER_HEIGHT = 32
         sta VERA_addr_high
 .endmacro
 
+.macro SET_VERA_ADDRESS address, stride, highbyte, ctrl
+.ifnblank stride
+lda stride << 4
+.endif
+.ifblank stride
+lda #$10 
+.endif
+sta VERA_addr_bank 
+
+.ifnblank highbyte
+lda highbyte
+and #$1 ; We only care about the first bit
+ora VERA_addr_bank
+sta VERA_addr_bank
+.endif
+
+.ifblank ctrl
+stz VERA_ctrl
+.endif
+.ifnblank ctrl
+lda ctrl
+and #$1
+ora VERA_ctrl
+sta VERA_ctrl
+.endif
+
+lda address + 1
+sta VERA_addr_high
+
+lda address
+sta VERA_addr_low
+
+.endmacro
+
 .endif
