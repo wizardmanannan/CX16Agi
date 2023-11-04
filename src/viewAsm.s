@@ -2,9 +2,11 @@
 .ifndef VIEW_INC
 ; Set the value of include guard and define constants
 VIEW_INC = 1
+DEBUG_VIEW_DRAW = 1
 
 .include "globalViews.s"
 .include "global.s"
+.include "pictureAsm.s"
 
 .import _b5RefreshBuffer
 .import _getLoadedView
@@ -16,41 +18,109 @@ VIEW_INC = 1
 _viewHeaderBuffer: .res VIEW_HEADER_BUFFER_SIZE
 _loopHeaderBuffer: .res LOOP_HEADER_BUFFER_SIZE
 
-;View* localView , byte* localLoop, byte* localCel, byte x, byte y, byte pNum, byte bCol
-CNUM = ZP_TMP
-XCO = ZP_TMP_2
-YCO = ZP_TMP_3
-PNUM = ZP_TMP_4
-BCOL = ZP_TMP_5
-LOCAL_CEL = ZP_TMP_8
-BUFFER_STATUS = ZP_TMP_9 ;Takes Up 10 as well
-BUFFER_POINTER = ZP_TMP_12
+;byte* localCel, long veraAddress, byte pNum, byte bCol, byte drawingAreaWidth
+VERA_BYTES_PER_ROW = ZP_TMP
+BCOL = ZP_TMP_2
+PNUM = ZP_TMP_3
+VERA_ADDRESS = ZP_TMP_4
+VERA_ADDRESS_HIGH = ZP_TMP_5
+LOCAL_CEL = ZP_TMP_6
+BUFFER_STATUS = ZP_TMP_7 ;Takes Up 8 as well
+BUFFER_POINTER = ZP_TMP_9
+CEL_HEIGHT = ZP_TMP_10
+CEL_TRANS = ZP_TMP_12
+COLOUR = ZP_TMP_13
 CEL_BMP_OFFSET = 3
 CEL_BANK_OFFSET = 5
+CEL_HEIGHT_OFFSET = 1
+CEL_TRANS_OFFSET = 2
 
+
+.macro SET_COLOR COLOUR
+lsr a           ; Shift left 4 times to multiply by 16
+lsr a  
+lsr a  
+lsr a  
+ora COLOUR
+.endmacro
 
 _b9ViewToVera:
+sta BYTES_PER_ROW
+jsr popax
 sta BCOL
+stx PNUM
 jsr popax
-sta PNUM
-stx YCO
+sta VERA_ADDRESS
+stx VERA_ADDRESS + 1
 jsr popax
-sta XCO
-stx LOCAL_CEL
-jsr popa
-sta LOCAL_CEL + 1
+sta VERA_ADDRESS_HIGH
+stx VERA_ADDRESS_HIGH + 1
+jsr popax
+sta LOCAL_CEL
+stx LOCAL_CEL + 1
 
 GET_STRUCT_16 CEL_BMP_OFFSET, LOCAL_CEL, BUFFER_STATUS
 GET_STRUCT_8 CEL_BANK_OFFSET, LOCAL_CEL, BUFFER_STATUS + 2
+GET_STRUCT_8 CEL_HEIGHT_OFFSET, LOCAL_CEL, CEL_HEIGHT
+GET_STRUCT_8 CEL_TRANS_OFFSET, LOCAL_CEL, CEL_TRANS
 
 stz BUFFER_STATUS + 3
 
 REFRESH_BUFFER BUFFER_POINTER, BUFFER_STATUS
 
-;GET_NEXT BUFFER_POINTER, BUFFER_STATUS
+lda CEL_TRANS
+SET_COLOR CEL_TRANS
+sta CEL_TRANS
 
-stp
+@setVeraAddress:
+SET_VERA_ADDRESS_PICTURE_ADDRESS VERA_ADDRESS, #$1 ;Ignore the high as it will always be zero. This macro takes that into account
 
+@getNextChunk:
+GET_NEXT BUFFER_POINTER, BUFFER_STATUS
+
+cmp #$0
+beq @increment
+tax
+and #$0F
+tay
+txa
+and #$F0
+sta COLOUR
+SET_COLOR COLOUR
+
+cmp CEL_TRANS
+bne @draw
+
+@skip:
+ldx VERA_data0 ;We are not changing this one so we load load in order to increment and ignore the value
+dey
+beq @getNextChunk
+bra @skip
+
+@draw:
+sta VERA_data0
+dey
+beq @getNextChunk
+bra @draw
+
+@increment:
+dec CEL_HEIGHT
+beq @end
+
+clc
+lda BYTES_PER_ROW
+adc VERA_ADDRESS
+sta VERA_ADDRESS
+lda #$0
+adc VERA_ADDRESS + 1
+sta VERA_ADDRESS + 1
+lda #$0
+adc VERA_ADDRESS_HIGH
+sta VERA_ADDRESS_HIGH
+
+bra @setVeraAddress
+
+@end:
 rts
 .endif
 

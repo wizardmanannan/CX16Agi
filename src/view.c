@@ -80,7 +80,7 @@ FONT* font;
 
 //
 
-extern void b9ViewToVera(Cel* localCel, byte x, byte y, byte pNum, byte bCol);
+extern void b9ViewToVera(Cel* localCel, long veraAddress, byte pNum, byte bCol, byte drawingAreaWidth);
 
 void getViewTab(ViewTable* returnedViewTab, byte viewTabNumber)
 {
@@ -559,7 +559,7 @@ void b9AddViewToTable(ViewTable* localViewtab, byte viewNum)
 
 void b9AddToPic(int vNum, int lNum, int cNum, int x, int y, int pNum, int bCol)
 {
-	int i, j, w, h, trans, c, boxWidth;
+	int i, j, trans, c, boxWidth;
 	View localView;
 	Loop localLoop;
 	Cel localCel;
@@ -567,11 +567,13 @@ void b9AddToPic(int vNum, int lNum, int cNum, int x, int y, int pNum, int bCol)
 	getLoadedView(&localView, vNum);
 	getLoadedLoop(&localView, &localLoop, lNum);
 	getLoadedCel(&localLoop, &localCel, cNum);
+	
 
 	printf("view %p loop %p cel %p\n", &localView, &localLoop, &localCel);
 	printf("cel %d loaded %d bmp %p. View %d. Loop %d, Cel %d\n", cNum, localView.loaded, localCel.bmp, vNum, lNum, cNum);
-
-	b9ViewToVera(&localCel, x, y, pNum, bCol);
+	printf("x and y are (%d,%d). Adjusted Height %d. The address is %lx.\n ", x, y, y - localCel.height + 1, b2GetVeraPictureAddress(x, (y - localCel.height) + 1));
+	printf("w %d h %d\n", localCel.width, localCel.height);
+	b9ViewToVera(&localCel, b2GetVeraPictureAddress(x, (y - localCel.height) + 1), pNum, bCol, BYTES_PER_ROW);
 
 	//TODO: Fix
 //

@@ -70,6 +70,10 @@ void b6DiscardPictureFile(int picFileNum);
 void b6ShowPicture();
 #pragma wrapped-call (pop)
 
+#pragma wrapped-call (push, trampoline, PICTURE_CODE_OVERFLOW_BANK)
+extern long b2GetVeraPictureAddress(int x, int y);
+#pragma wrapped-call (pop)
+
 extern void getLoadedPicture(PictureFile* returnedloadedPicture, byte loadedPictureNumber);
 
 extern byte toDraw;

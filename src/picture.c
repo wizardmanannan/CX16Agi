@@ -205,6 +205,13 @@ void testQueue()
 #endif // TEST_QUEUE
 
 #pragma code-name (pop)
+
+#pragma code-name (push, "BANKRAM02")
+long b2GetVeraPictureAddress(int x, int y)
+{
+	return (STARTING_BYTE + x) + (bitmapWidthPreMult[y]);
+}
+#pragma code-name (pop)
 #pragma code-name (push, "BANKRAM11")
 
 fix32 DIV(int numerator, int denominator) {
