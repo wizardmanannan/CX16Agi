@@ -24,6 +24,7 @@ sta BUFFER_POINTER + 1
 lda BUFFER_POINTER
 cmp #<(GOLDEN_RAM_WORK_AREA_END + 1)
 bne @getNext
+lda BUFFER_POINTER + 1
 cmp #>(GOLDEN_RAM_WORK_AREA_END + 1)
 bne @getNext
 

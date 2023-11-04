@@ -2,7 +2,7 @@
 .ifndef VIEW_INC
 ; Set the value of include guard and define constants
 VIEW_INC = 1
-DEBUG_VIEW_DRAW = 1
+;DEBUG_VIEW_DRAW = 1
 
 .include "globalViews.s"
 .include "global.s"
@@ -13,6 +13,10 @@ DEBUG_VIEW_DRAW = 1
 .import popax
 .import popa
 .import pushax
+
+.ifdef DEBUG_VIEW_DRAW
+.import _b5PrintChunk
+.endif
 
 .segment "BANKRAM09"
 _viewHeaderBuffer: .res VIEW_HEADER_BUFFER_SIZE
@@ -44,6 +48,25 @@ lsr a
 ora COLOUR
 .endmacro
 
+.macro DEBUG_VIEW_DRAW
+.ifdef DEBUG_VIEW_DRAW
+sta _logDebugVal1
+pha
+txa
+pha
+tya
+pha
+
+JSRFAR _b5PrintChunk, DEBUG_BANK
+
+pla
+tay
+pla
+tax
+pla
+.endif
+.endmacro
+
 _b9ViewToVera:
 sta BYTES_PER_ROW
 jsr popax
@@ -68,6 +91,10 @@ stz BUFFER_STATUS + 3
 
 REFRESH_BUFFER BUFFER_POINTER, BUFFER_STATUS
 
+.ifdef DEBUG_VIEW_DRAW
+stz _logDebugVal1
+.endif
+
 lda CEL_TRANS
 SET_COLOR CEL_TRANS
 sta CEL_TRANS
@@ -77,6 +104,7 @@ SET_VERA_ADDRESS_PICTURE_ADDRESS VERA_ADDRESS, #$1 ;Ignore the high as it will a
 
 @getNextChunk:
 GET_NEXT BUFFER_POINTER, BUFFER_STATUS
+DEBUG_VIEW_DRAW
 
 cmp #$0
 beq @increment
@@ -118,7 +146,7 @@ lda #$0
 adc VERA_ADDRESS_HIGH
 sta VERA_ADDRESS_HIGH
 
-bra @setVeraAddress
+jmp @setVeraAddress
 
 @end:
 rts

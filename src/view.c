@@ -29,6 +29,7 @@
 //#define VERBOSE_UPDATE_OBJECTS
 
 //#define VERBOSE_ALLOC_WATCH
+//#define VERBOSE_ADD_TO_PIC;
 
 View* loadedViews = (View*)&BANK_RAM[LOADED_VIEW_START];
 BITMAP* spriteScreen;
@@ -568,14 +569,16 @@ void b9AddToPic(int vNum, int lNum, int cNum, int x, int y, int pNum, int bCol)
 	getLoadedLoop(&localView, &localLoop, lNum);
 	getLoadedCel(&localLoop, &localCel, cNum);
 	
-
+#ifdef VERBOSE_ADD_TO_PIC
 	printf("view %p loop %p cel %p\n", &localView, &localLoop, &localCel);
 	printf("cel %d loaded %d bmp %p. View %d. Loop %d, Cel %d\n", cNum, localView.loaded, localCel.bmp, vNum, lNum, cNum);
 	printf("x and y are (%d,%d). Adjusted Height %d. The address is %lx.\n ", x, y, y - localCel.height + 1, b2GetVeraPictureAddress(x, (y - localCel.height) + 1));
 	printf("w %d h %d\n", localCel.width, localCel.height);
+#endif // VERBOSE_ADD_TO_PIC
+
 	b9ViewToVera(&localCel, b2GetVeraPictureAddress(x, (y - localCel.height) + 1), pNum, bCol, BYTES_PER_ROW);
 
-	//TODO: Fix
+	//TODO: Finish implementing the priority and control line stuff
 //
 //	for (i = 0; i < w; i++) {
 //		for (j = 0; j < h; j++) {
