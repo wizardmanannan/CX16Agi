@@ -80,6 +80,8 @@ FONT* font;
 
 //
 
+extern void b9ViewToVera(Cel* localCel, byte x, byte y, byte pNum, byte bCol);
+
 void getViewTab(ViewTable* returnedViewTab, byte viewTabNumber)
 {
 	byte previousRamBank = RAM_BANK;
@@ -123,7 +125,7 @@ void setLoadedView(View* loadedView, byte loadedViewNumber)
 	RAM_BANK = previousRamBank;
 }
 
-void getLocalLoop(View* loadedView, Loop* returnedLocalLoop, byte localLoopNumber)
+void getLoadedLoop(View* loadedView, Loop* returnedLocalLoop, byte localLoopNumber)
 {
 	byte previousRamBank = RAM_BANK;
 
@@ -134,7 +136,7 @@ void getLocalLoop(View* loadedView, Loop* returnedLocalLoop, byte localLoopNumbe
 	RAM_BANK = previousRamBank;
 }
 
-void setLocalLoop(View* loadedView, Loop* localLoop, byte localLoopNumber)
+void setLoadedLoop(View* loadedView, Loop* localLoop, byte localLoopNumber)
 {
 	byte previousRamBank = RAM_BANK;
 
@@ -145,7 +147,7 @@ void setLocalLoop(View* loadedView, Loop* localLoop, byte localLoopNumber)
 	RAM_BANK = previousRamBank;
 }
 
-void getLocalCel(Loop* loadedLoop, Cel* localCell, byte localCellNumber)
+void getLoadedCel(Loop* loadedLoop, Cel* localCell, byte localCellNumber)
 {
 	byte previousRamBank = RAM_BANK;
 
@@ -156,7 +158,7 @@ void getLocalCel(Loop* loadedLoop, Cel* localCell, byte localCellNumber)
 	RAM_BANK = previousRamBank;
 }
 
-void setLocalCel(Loop* loadedLoop, Cel* localCell, byte localCellNumber)
+void setLoadedCel(Loop* loadedLoop, Cel* localCell, byte localCellNumber)
 {
 	byte previousRamBank = RAM_BANK;
 
@@ -298,7 +300,7 @@ void setViewData(byte viewNum, AGIFile* tempAGI, View* localView)
 #ifdef VERBOSE_SET_VIEWS
 			printf("there is no description");
 #endif // VERBOSE_ALLOC_WATCH
-
+			//TODO: Use /0
 			description = (const char*)&tempAGI->code[POSITION_OF_DESCRIPTION]; //Going to be zero. We can do this even though we are not on the bank; there is no deference
 		}
 
@@ -344,7 +346,7 @@ void setLoopData(AGIFile* tempAGI, View* localView, Loop* localLoop, byte* loopH
 
 	if (localView->loaded) //If the view is loaded then so are all of the loops
 	{
-		getLocalLoop(localView, localLoop, loopNum);
+		getLoadedLoop(localView, localLoop, loopNum);
 
 		memCpyBankedBetween(&loopHeaderBuffer[0], VIEW_BUFFERS_BANK, loopHeaderData, tempAGI->codeBank, NO_CELLS_INDEX_BYTES_AVERAGE + POSITION_OF_CELS_OFFSET); //Guessing at 7 cels, this should copy enough 99% of the time, and we can copy again once we have the first byte (loopCounter), is necessary . If there is less loops than we have just copied bytes which will be ignored
 		numberOfCels = loopHeaderBuffer[POSITION_OF_NO_CELS];
@@ -365,7 +367,7 @@ void setLoopData(AGIFile* tempAGI, View* localView, Loop* localLoop, byte* loopH
 		localLoop->numberOfCels = numberOfCels;
 		localLoop->celsBank = celsBank;
 
-		setLocalLoop(localView, localLoop, loopNum);
+		setLoadedLoop(localView, localLoop, loopNum);
 	}
 	else
 	{
@@ -431,7 +433,7 @@ void b9LoadViewFile(byte viewNum)
 			cellPosition = tempAGI.code + loopOffsets[l] + cellOffsets[c];
 			memCpyBanked(celHeader, cellPosition, tempAGI.codeBank, CEL_HEADER_SIZE);
 
-			getLocalCel(&localLoop, &localCel, c);
+			getLoadedCel(&localLoop, &localCel, c);
 			trans = celHeader[POSTION_OF_CEL_TRANSPARENCY_AND_MIRRORING];
 			
 			localCel.bitmapBank = tempAGI.codeBank;
@@ -445,10 +447,8 @@ void b9LoadViewFile(byte viewNum)
 			printf("The address of celHeader is %p\n", celHeader);
 			printf("bitmapBank %d, bmp %p, height %d, width %d, flipped %d \n", localCel.bitmapBank, localCel.bmp, localCel.height, localCel.width, localCel.flipped);
 #endif // VERBOSE_SET_CEL
-
+			setLoadedCel(&localLoop, &localCel, c);
 		}
-
-		setLocalCel(&localLoop, &localCel, c);
 }
 	setLoadedView(&localView, viewNum);
 }
@@ -470,16 +470,16 @@ void b9DiscardView(byte viewNum)
 	if (localView.loaded) {
 		for (l = 0; l < localView.numberOfLoops; l++) {
 
-			getLocalLoop(&localView, &localLoop, l);
+			getLoadedLoop(&localView, &localLoop, l);
 
 			for (c = 0; c < localLoop.numberOfCels; c++) {
-				getLocalCel(&localLoop, &localCel, c);
+				getLoadedCel(&localLoop, &localCel, c);
 				localCel.bmp = NULL;
 				localCel.height = 0;
 				localCel.transparency = 0;
 				localCel.width = 0;
 
-				setLocalCel(&localLoop, &localCel, c);
+				setLoadedCel(&localLoop, &localCel, c);
 			}
 #ifdef VERBOSE_ALLOC_WATCH
 			printf("dealloc cels bank %p address %p\n", localLoop.celBank, (byte*)localLoop.cels);
@@ -489,7 +489,7 @@ void b9DiscardView(byte viewNum)
 			localLoop.cels = NULL;
 			localLoop.numberOfCels = 0;
 
-			setLocalLoop(&localView, &localLoop, l);
+			setLoadedLoop(&localView, &localLoop, l);
 		}
 
 #ifdef VERBOSE_ALLOC_WATCH
@@ -513,8 +513,8 @@ void b9SetCel(ViewTable* localViewtab, byte celNum)
 	Cel localCel;
 
 	getLoadedView(&localLoadedView, localViewtab->currentView);
-	getLocalLoop(&localLoadedView, &temp, localViewtab->currentLoop);
-	getLocalCel(&temp, &localCel, celNum);
+	getLoadedLoop(&localLoadedView, &temp, localViewtab->currentLoop);
+	getLoadedCel(&temp, &localCel, celNum);
 
 	localViewtab->currentCel = celNum;
 	localViewtab->xsize = localCel.width;
@@ -526,7 +526,7 @@ void b9SetLoop(ViewTable* localViewtab, byte loopNum)
 	View temp;
 	Loop loop;
 	getLoadedView(&temp, localViewtab->currentView);
-	getLocalLoop(&temp, &loop, loopNum);
+	getLoadedLoop(&temp, &loop, loopNum);
 
 	localViewtab->currentLoop = loopNum;
 	localViewtab->numberOfCels = loop.numberOfCels;
@@ -546,7 +546,7 @@ void b9AddViewToTable(ViewTable* localViewtab, byte viewNum)
 	Loop localLoop;
 
 	getLoadedView(&localView, viewNum);
-	getLocalLoop(&localView, &localLoop, 0);
+	getLoadedLoop(&localView, &localLoop, 0);
 
 	localViewtab->currentView = viewNum;
 	localViewtab->numberOfLoops = localView.numberOfLoops;
@@ -560,18 +560,18 @@ void b9AddViewToTable(ViewTable* localViewtab, byte viewNum)
 void b9AddToPic(int vNum, int lNum, int cNum, int x, int y, int pNum, int bCol)
 {
 	int i, j, w, h, trans, c, boxWidth;
-	View localLoadedView;
+	View localView;
 	Loop localLoop;
-	Cel localCell;
+	Cel localCel;
 
-	getLoadedView(&localLoadedView, vNum);
-	getLocalLoop(&localLoadedView, &localLoop, lNum);
-	getLocalCel(&localLoop, &localCell, cNum);
+	getLoadedView(&localView, vNum);
+	getLoadedLoop(&localView, &localLoop, lNum);
+	getLoadedCel(&localLoop, &localCel, cNum);
 
-	trans = localCell.transparency & 0x0F;
-	w = localCell.width;
-	h = localCell.height;
-	y = (y - h) + 1;
+	printf("view %p loop %p cel %p\n", &localView, &localLoop, &localCel);
+	printf("cel %d loaded %d bmp %p. View %d. Loop %d, Cel %d\n", cNum, localView.loaded, localCel.bmp, vNum, lNum, cNum);
+
+	b9ViewToVera(&localCel, x, y, pNum, bCol);
 
 	//TODO: Fix
 //

@@ -40,3 +40,4 @@
     .export _b2DrawStraightLineAlongY
     .export _viewHeaderBuffer
     .export _loopHeaderBuffer
+    .export _b9ViewToVera

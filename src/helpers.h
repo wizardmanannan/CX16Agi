@@ -25,7 +25,7 @@
 #define DIFF_ASCII_PETSCII_CAPS -128
 #define DIFF_ASCII_PETSCII_LOWER -32
 
-typedef struct BufferStatus
+typedef struct BufferStatus //Note: Also used in viewAsm.s b9ViewToVera. Don't change without adjusting this
 {
     byte* bankedData;
     byte bank;

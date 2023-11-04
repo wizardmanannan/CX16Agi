@@ -11,7 +11,7 @@
 #include "agifiles.h"
 #include "picture.h"
 
-typedef struct {
+typedef struct { //Careful about changing order _b9ViewToVera depends on this order
 	byte width;
 	byte height;
 	byte transparency;
