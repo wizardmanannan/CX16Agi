@@ -44,3 +44,4 @@
     .export _b6InitGraphics
     .export _b6InitIrq
     .export _b6TellMeTheAddressPlease
+    .export _spritesUpdatedBuffer

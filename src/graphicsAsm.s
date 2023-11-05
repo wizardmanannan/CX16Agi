@@ -23,6 +23,7 @@ _interpolationBuffer: .res 2000
 .import popa
 .import _b6InitLayer1Mapbase
 .import _b6DisplayLoadingScreen
+.import _b6InitVeraMemory
 
 _b6ClearBackground:
 stz VERA_ctrl
@@ -103,6 +104,8 @@ _b6InitGraphics:
 SEND_IRQ_COMMAND #IRQ_CMD_BLACKSCREEN, @vSyncToCheck
 
 WAIT_FOR_NEXT_IRQ @vSyncToCheck
+
+jsr _b6InitVeraMemory
 
 lda #DISPLAY_SCALE
 sta VERA_dc_hscale
@@ -380,7 +383,6 @@ jsr _b6InitCharset
 jsr _b6InitLayer1Mapbase
 
 jsr _b6DisplayLoadingScreen
-
 rts
 @vSyncToCheck: .byte $0
 

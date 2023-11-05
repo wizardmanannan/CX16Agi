@@ -21,6 +21,7 @@ VIEW_INC = 1
 .segment "BANKRAM09"
 _viewHeaderBuffer: .res VIEW_HEADER_BUFFER_SIZE
 _loopHeaderBuffer: .res LOOP_HEADER_BUFFER_SIZE
+_spritesUpdatedBuffer: .res SPRITES_UPDATED_BUFFER_SIZE
 
 VERA_BYTES_PER_ROW = ZP_TMP
 BCOL = ZP_TMP_2
