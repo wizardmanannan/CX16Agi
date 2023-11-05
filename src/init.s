@@ -9,7 +9,7 @@
 .import _logicEntryAddressesHigh
 
 .segment "BANKRAM06"
-_b6InitAsm:
+_b6InitInterpreter:
     stz ZP_TMP
     stz ZP_TMP + 1
     stz ZP_PTR_LF 
@@ -27,8 +27,6 @@ _b6InitAsm:
     stz ZP_PTR_DISP
     stz ZP_PTR_DISP + 1
 
-
-    JSRFAR b5TellMeTheAddressPlease, DEBUG_BANK
     jsr b6CodeWindowInit
     
     lda _logicEntryAddressesLow

@@ -1,10 +1,10 @@
 .include "codeWindow.s"
 .include "pictureAsm.s"
 .include "irqAsm.s"
-.segment "BANKRAM05"
+.segment "BANKRAM06"
 .import _opCounter
 .import _pixelCounter
-b5TellMeTheAddressPlease:
+_b6TellMeTheAddressPlease:
 stp
 lda codeWindow
 lda cwCurrentCode
