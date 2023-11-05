@@ -9,7 +9,7 @@
 .import _logicEntryAddressesHigh
 
 .segment "BANKRAM06"
-_b6InitAsm:
+_b6InitInterpreter:
     stz ZP_TMP
     stz ZP_TMP + 1
     stz ZP_PTR_LF 

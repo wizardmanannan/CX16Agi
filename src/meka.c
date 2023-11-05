@@ -48,7 +48,6 @@ int controlMode = PLAYER_CONTROL;    /* player.control or program.control */
 int dirnOfEgo, newRoomNum, score;
 
 extern int picFNum;    // Debugging. Delete at some stage!!
-extern void b6InitAsm();
 
 #pragma code-name (push, "BANKRAM06")
 void b6AdjustEgoPosition()
@@ -236,6 +235,7 @@ void b6Closedown()
 
 extern void b6InitGraphics();
 extern void b6InitIrq();
+extern void b6InitInterpreter();
 void b6Initialise()
 {
     int i;
@@ -276,7 +276,7 @@ void b6Initialise()
     loadObjectFile();
     loadWords();
     initEvents();
-    b6InitAsm();
+    b6InitInterpreter();
     b6InitIrq();
     b6InitGraphics();
 

@@ -9,7 +9,7 @@
     .include "helpersAsm.s"
     .include "viewAsm.s"
     .export _executeLogic
-    .export _b6InitAsm
+    .export _b6InitInterpreter
     .export _loadAndIncWinCode
     .export _incCodeBy
     .export codeWindow
