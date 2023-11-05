@@ -36,8 +36,8 @@
     .export _interpolationBuffer
     .export _currentTextBuffer
     .export _trampoline
-    .export _b2DrawStraightLineAlongX
-    .export _b2DrawStraightLineAlongY
+    .export _b4DrawStraightLineAlongX
+    .export _b4DrawStraightLineAlongY
     .export _viewHeaderBuffer
     .export _loopHeaderBuffer
     .export _b9ViewToVera

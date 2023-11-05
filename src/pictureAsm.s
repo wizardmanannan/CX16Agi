@@ -1082,8 +1082,8 @@ rts
 ;     }
 ; }
 ;This won't fit on the picture bank
-.segment "BANKRAM02"
-_b2DrawStraightLineAlongY: 
+.segment "BANKRAM04"
+_b4DrawStraightLineAlongY: 
 nop
 nop
 nop
@@ -1102,7 +1102,7 @@ DRAW_LINE_BETWEEN ZP_TMP_6, ZP_TMP_7
 @end:
 rts
 
-_b2DrawStraightLineAlongX:
+_b4DrawStraightLineAlongX:
 sta ZP_TMP_5 ;y1 The C which calls this function may invert it's own y1 and y2 depending on which is larger
 jsr popax
 sta ZP_TMP_7 ;x2

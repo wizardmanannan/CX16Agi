@@ -206,8 +206,8 @@ void testQueue()
 
 #pragma code-name (pop)
 
-#pragma code-name (push, "BANKRAM02")
-long b2GetVeraPictureAddress(int x, int y)
+#pragma code-name (push, "BANKRAM04")
+long b4GetVeraPictureAddress(int x, int y)
 {
 	return (STARTING_BYTE + x) + (bitmapWidthPreMult[y]);
 }
@@ -523,8 +523,8 @@ extern long pixelCounter;
 extern long pixelStartPrintingAt;
 
 #pragma wrapped-call (push, trampoline, PICTURE_CODE_OVERFLOW_BANK)
-extern void b2DrawStraightLineAlongX(byte x1, byte x2, byte y);
-extern void b2DrawStraightLineAlongY(byte x1, byte x2, byte y);
+extern void b4DrawStraightLineAlongX(byte x1, byte x2, byte y);
+extern void b4DrawStraightLineAlongY(byte x1, byte x2, byte y);
 #pragma wrapped-call (pop)
 
 
@@ -558,22 +558,22 @@ void b11Drawline(byte x1, byte y1, byte x2, byte y2)
 	{
 		if (yIsPos)
 		{
-			b2DrawStraightLineAlongY(y1, y2, x1);
+			b4DrawStraightLineAlongY(y1, y2, x1);
 		}
 		else
 		{
-			b2DrawStraightLineAlongY(y2, y1, x1);
+			b4DrawStraightLineAlongY(y2, y1, x1);
 		}
 	}
 	else if (y1 == y2)
 	{
 		if (xIsPos)
 		{		
-			b2DrawStraightLineAlongX(x1, x2, y1);
+			b4DrawStraightLineAlongX(x1, x2, y1);
 		}
 		else
 		{
-			b2DrawStraightLineAlongX(x2, x1, y1);
+			b4DrawStraightLineAlongX(x2, x1, y1);
 		}
 	}
 	else
