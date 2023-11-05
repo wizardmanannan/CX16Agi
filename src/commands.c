@@ -613,7 +613,7 @@ void b2Unanimate_all() // 0, 0x00
 	ViewTable localViewtab;
 
 	/* Mark all objects as unanimated and not drawn */
-	for (entryNum = 0; entryNum < TABLESIZE; entryNum++)
+	for (entryNum = 0; entryNum < VIEW_TABLE_SIZE; entryNum++)
 	{
 		getViewTab(&localViewtab, entryNum);
 

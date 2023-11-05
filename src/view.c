@@ -41,7 +41,9 @@ extern byte horizon;
 extern int dirnOfEgo;
 
 #pragma bss-name (push, "BANKRAM09")
-ViewTable viewtab[TABLESIZE];
+ViewTable viewtab[VIEW_TABLE_SIZE];
+long nextSpriteData;
+long nextSpriteAttribute;
 #pragma bss-name (pop)
 
 //Temp From Allogro
@@ -174,10 +176,18 @@ void setLoadedCel(Loop* loadedLoop, Cel* localCell, byte localCellNumber)
 }
 
 #pragma code-name (push, "BANKRAM09")
-extern byte spritesUpdatedBuffer[TOTAL_SIZE_SPRITES_UPDATED_BUFFER];
+extern byte spritesUpdatedBuffer[VIEW_TABLE_SIZE];
+
+void b9ResetSpritePointers()
+{
+	nextSpriteAttribute = SPRITE_ATTRIBUTES_START;
+	nextSpriteData = SPRITES_DATA_START;
+}
+
 void b9InitSpriteData()
 {
-	memset(spritesUpdatedBuffer, 0, TOTAL_SIZE_SPRITES_UPDATED_BUFFER);
+	memset(spritesUpdatedBuffer, 0, VIEW_TABLE_SIZE);
+	b9ResetSpritePointers();
 }
 
 
@@ -207,7 +217,7 @@ void b9InitObjects()
 
 	//spriteScreen = create_bitmap(160, 168);
 
-	for (entryNum = 0; entryNum < TABLESIZE; entryNum++) {
+	for (entryNum = 0; entryNum < VIEW_TABLE_SIZE; entryNum++) {
 		getViewTab(&localViewtab, entryNum);
 
 		localViewtab.stepTime = 1;
@@ -232,6 +242,8 @@ void b9InitObjects()
 		localViewtab.cycleStatus = 0;
 		localViewtab.priority = 0;
 		localViewtab.flags = 0;
+		localViewtab.veraSpriteAttributeAddress = NULL;
+		localViewtab.veraSpriteDataAddress = NULL;
 
 		setViewTab(&localViewtab, entryNum);
 	}
@@ -242,13 +254,16 @@ void b9ResetViews()     /* Called after new.room */
 	int entryNum;
 	ViewTable localViewtab;
 
-	for (entryNum = 0; entryNum < TABLESIZE; entryNum++) {
+	for (entryNum = 0; entryNum < VIEW_TABLE_SIZE; entryNum++) {
 		getViewTab(&localViewtab, entryNum);
 
 		localViewtab.flags &= ~(UPDATE | ANIMATED);
-
+		localViewtab.veraSpriteAttributeAddress = NULL;
+		localViewtab.veraSpriteDataAddress = NULL;
 		setViewTab(&localViewtab, entryNum);
 	}
+
+	b9ResetSpritePointers();
 }
 
 
@@ -1274,7 +1289,7 @@ void bBUpdateObjects()
 	clear(spriteScreen);
 
 	/******************* Place all background bitmaps *******************/
-	for (entryNum = 0; entryNum < TABLESIZE; entryNum++) {
+	for (entryNum = 0; entryNum < VIEW_TABLE_SIZE; entryNum++) {
 		getViewTab(&localViewtab, entryNum);
 
 		objFlags = localViewtab.flags;
@@ -1284,7 +1299,7 @@ void bBUpdateObjects()
 		setViewTab(&localViewtab, entryNum);
 	}
 
-	for (entryNum = 0; entryNum < TABLESIZE; entryNum++) {
+	for (entryNum = 0; entryNum < VIEW_TABLE_SIZE; entryNum++) {
 		objFlags = localViewtab.flags;
 		getViewTab(&localViewtab, entryNum);
 
@@ -1362,7 +1377,7 @@ void bBUpdateObjects()
 }
 
 	/* Draw all cels */
-	for (entryNum = 0; entryNum < TABLESIZE; entryNum++) {
+	for (entryNum = 0; entryNum < VIEW_TABLE_SIZE; entryNum++) {
 		getViewTab(&localViewtab, entryNum);
 
 		objFlags = localViewtab.flags;
@@ -1395,7 +1410,7 @@ void bCupdateObjects2()
 	ViewTable localViewtab;
 
 	/* Place all background bitmaps */
-	for (entryNum = 0; entryNum < TABLESIZE; entryNum++) {
+	for (entryNum = 0; entryNum < VIEW_TABLE_SIZE; entryNum++) {
 		getViewTab(&localViewtab, entryNum);
 
 		objFlags = localViewtab.flags;
@@ -1406,7 +1421,7 @@ void bCupdateObjects2()
 		setViewTab(&localViewtab, entryNum);
 	}
 
-	for (entryNum = 0; entryNum < TABLESIZE; entryNum++) {
+	for (entryNum = 0; entryNum < VIEW_TABLE_SIZE; entryNum++) {
 		getViewTab(&localViewtab, entryNum);
 
 		objFlags = localViewtab.flags;
@@ -1535,7 +1550,7 @@ void bCupdateObjects2()
 	}
 
 	/* Draw all cels */
-	for (entryNum = 0; entryNum < TABLESIZE; entryNum++) {
+	for (entryNum = 0; entryNum < VIEW_TABLE_SIZE; entryNum++) {
 		objFlags = localViewtab.flags;
 		getViewTab(&localViewtab, entryNum);
 
@@ -1566,7 +1581,7 @@ void bCCalcObjMotion()
 
 	getViewTab(&localViewtab0, 0);
 
-	for (entryNum = 0; entryNum < TABLESIZE; entryNum++) {
+	for (entryNum = 0; entryNum < VIEW_TABLE_SIZE; entryNum++) {
 
 		getViewTab(&localViewtab, entryNum);
 

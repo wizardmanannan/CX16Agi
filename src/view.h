@@ -76,10 +76,12 @@ typedef struct {
 	byte param2;
 	byte param3;
 	byte param4;
+	unsigned long veraSpriteDataAddress; //These two on a modern system would be pointers, but CX16 doesn't support three byte pointers
+	unsigned long veraSpriteAttributeAddress;
 } ViewTable;
 
-#define TABLESIZE  20  // 100
-extern ViewTable viewtab[TABLESIZE];
+#define VIEW_TABLE_SIZE  20  // 100
+extern ViewTable viewtab[VIEW_TABLE_SIZE];
 
 #define MAXVIEW  256
 extern View* loadedViews;
