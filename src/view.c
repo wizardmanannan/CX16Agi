@@ -40,7 +40,9 @@ extern char string[12][40];
 extern byte horizon;
 extern int dirnOfEgo;
 
-ViewTable* viewtab = (ViewTable*)&BANK_RAM[VIEWTAB_START];
+#pragma bss-name (push, "BANKRAM09")
+ViewTable viewtab[TABLESIZE];
+#pragma bss-name (pop)
 
 //Temp From Allogro
 #define FONT_SIZE    224  

@@ -79,7 +79,7 @@ typedef struct {
 } ViewTable;
 
 #define TABLESIZE  20  // 100
-extern ViewTable* viewtab;
+extern ViewTable viewtab[TABLESIZE];
 
 #define MAXVIEW  256
 extern View* loadedViews;
