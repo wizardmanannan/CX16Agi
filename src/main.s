@@ -40,4 +40,6 @@
     .export _b4DrawStraightLineAlongY
     .export _viewHeaderBuffer
     .export _loopHeaderBuffer
-    .export _b9ViewToVera
+    .export _b9CelToVera
+    .export _b6InitGraphics
+    .export _b6InitIrq

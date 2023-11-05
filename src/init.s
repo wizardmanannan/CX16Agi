@@ -40,8 +40,5 @@ _b6InitAsm:
     sta ZP_PTR_PLF_HIGH
     lda _logicEntryAddressesHigh + 1
     sta ZP_PTR_PLF_HIGH + 1
-
-    jsr _b6InitIrq
-    jsr b6InitGraphics
 rts
 .segment "CODE" ;Not sure why this is needed TODO:Fix
