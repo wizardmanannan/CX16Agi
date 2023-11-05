@@ -16,6 +16,7 @@ _interpolationBuffer: .res 2000
 .include "global.s"
 .include "irqAsm.s"
 .include "globalGraphics.s"
+.include "helpersAsm.s"
 
 .import _b6InitCharset
 .import pushax
@@ -24,6 +25,7 @@ _interpolationBuffer: .res 2000
 .import _b6InitLayer1Mapbase
 .import _b6DisplayLoadingScreen
 .import _b6InitVeraMemory
+.import _b9InitSpriteData
 
 _b6ClearBackground:
 stz VERA_ctrl
@@ -381,6 +383,8 @@ stz VERA_L1_vscroll_h
 
 jsr _b6InitCharset 
 jsr _b6InitLayer1Mapbase
+
+TRAMPOLINE #SPRITE_MANAGER_BANK, _b9InitSpriteData
 
 jsr _b6DisplayLoadingScreen
 rts

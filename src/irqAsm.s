@@ -114,9 +114,9 @@ IRQ_CMD_TEXT_ONLY = 2
 IRQ_CMD_NORMAL = 3
 IRQ_CMD_DISPLAY_TEXT = 4
 
-LAYER_0_1_ENABLE = $31
-LAYER_0_1_DISABLE = $1
-LAYER_0_DISABLE_1_ENABLE = $21
+LAYER_0_1_SPRITES_ENABLE = $71
+LAYER_0_1_SPRITES_DISABLE = $1
+LAYER_0_SPRITES_DISABLE_1_ENABLE = $21
 
 ;0 Don't Change
 ;1 Blank Screen
@@ -157,21 +157,21 @@ jsr handleDisplayText
 bra @resetSetIrqState
 
 @blankScreen:
-lda #LAYER_0_1_DISABLE
+lda #LAYER_0_1_SPRITES_DISABLE
 sta VERA_dc_video
 lda #IRQ_CMD_BLACKSCREEN
 sta currentIrqState
 bra @resetSetIrqState
 
 @normal:
-lda #LAYER_0_1_ENABLE
+lda #LAYER_0_1_SPRITES_ENABLE
 sta VERA_dc_video
 lda #IRQ_CMD_NORMAL
 sta currentIrqState
 bra @resetSetIrqState
 
 @textOnly:
-lda #LAYER_0_DISABLE_1_ENABLE
+lda #LAYER_0_SPRITES_DISABLE_1_ENABLE
 sta VERA_dc_video
 bra @resetSetIrqState
 

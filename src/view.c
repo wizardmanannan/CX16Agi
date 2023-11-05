@@ -174,9 +174,10 @@ void setLoadedCel(Loop* loadedLoop, Cel* localCell, byte localCellNumber)
 }
 
 #pragma code-name (push, "BANKRAM09")
+extern byte spritesUpdatedBuffer[TOTAL_SIZE_SPRITES_UPDATED_BUFFER];
 void b9InitSpriteData()
 {
-
+	memset(spritesUpdatedBuffer, 0, TOTAL_SIZE_SPRITES_UPDATED_BUFFER);
 }
 
 
