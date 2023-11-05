@@ -234,6 +234,7 @@ void b6Closedown()
     discardWords();
 }
 
+extern void b6InitGraphics();
 void b6Initialise()
 {
     int i;
@@ -275,6 +276,8 @@ void b6Initialise()
     loadWords();
     initEvents();
     b6InitAsm();
+    b6InitGraphics();
+
     horizon = 36;
 
     ///* Set up timer. The timer controls the interpreter speed. */

@@ -99,7 +99,7 @@ sta @mapHeight
 rts
 @mapHeight: .byte $0
 
-b6InitGraphics:
+_b6InitGraphics:
 SEND_IRQ_COMMAND #IRQ_CMD_BLACKSCREEN, @vSyncToCheck
 
 WAIT_FOR_NEXT_IRQ @vSyncToCheck

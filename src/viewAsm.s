@@ -22,7 +22,6 @@ VIEW_INC = 1
 _viewHeaderBuffer: .res VIEW_HEADER_BUFFER_SIZE
 _loopHeaderBuffer: .res LOOP_HEADER_BUFFER_SIZE
 
-;byte* localCel, long veraAddress, byte pNum, byte bCol, byte drawingAreaWidth
 VERA_BYTES_PER_ROW = ZP_TMP
 BCOL = ZP_TMP_2
 PNUM = ZP_TMP_3
@@ -67,7 +66,13 @@ pla
 .endif
 .endmacro
 
-_b9ViewToVera:
+;byte* localCel, long veraAddress, byte pNum, byte bCol, byte drawingAreaWidth
+;Writes a cel to the Vera. The cel must be preloaded at the localCel pointer
+;The view (and by extension the cel) must preloaded.
+;This view data on the cel is run encoded eg. AX (X instances of colour A)
+;Each line is terminated with a 0
+;The function stops when it has counted height number of zeros
+_b9CelToVera:
 sta BYTES_PER_ROW
 jsr popax
 sta BCOL
@@ -82,14 +87,14 @@ jsr popax
 sta LOCAL_CEL
 stx LOCAL_CEL + 1
 
-GET_STRUCT_16 CEL_BMP_OFFSET, LOCAL_CEL, BUFFER_STATUS
+GET_STRUCT_16 CEL_BMP_OFFSET, LOCAL_CEL, BUFFER_STATUS ;Buffer status holds the C struct to be passed to b5RefreshBuffer
 GET_STRUCT_8 CEL_BANK_OFFSET, LOCAL_CEL, BUFFER_STATUS + 2
 GET_STRUCT_8 CEL_HEIGHT_OFFSET, LOCAL_CEL, CEL_HEIGHT
 GET_STRUCT_8 CEL_TRANS_OFFSET, LOCAL_CEL, CEL_TRANS
 
 stz BUFFER_STATUS + 3
 
-REFRESH_BUFFER BUFFER_POINTER, BUFFER_STATUS
+REFRESH_BUFFER BUFFER_POINTER, BUFFER_STATUS ;Uses the work area to buffer the run encoded data. Using the b5RefreshBuffer function from C
 
 .ifdef DEBUG_VIEW_DRAW
 stz _logDebugVal1
@@ -109,17 +114,17 @@ DEBUG_VIEW_DRAW
 cmp #$0
 beq @increment
 tax
-and #$0F
+and #$0F; The number of pixels is the lower 4 bits
 tay
 txa
-and #$F0
+and #$F0; The colour is the upper 4 bits
 sta COLOUR
 SET_COLOR COLOUR
 
 cmp CEL_TRANS
 bne @draw
 
-@skip:
+@skip: ;When 'drawing' transparent pixels we still need to increment the address
 ldx VERA_data0 ;We are not changing this one so we load load in order to increment and ignore the value
 dey
 beq @getNextChunk
@@ -136,7 +141,7 @@ dec CEL_HEIGHT
 beq @end
 
 clc
-lda BYTES_PER_ROW
+lda BYTES_PER_ROW ;Ready for the next line
 adc VERA_ADDRESS
 sta VERA_ADDRESS
 lda #$0

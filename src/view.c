@@ -83,7 +83,7 @@ FONT* font;
 
 //
 
-extern void b9ViewToVera(Cel* localCel, long veraAddress, byte pNum, byte bCol, byte drawingAreaWidth);
+extern void b9CelToVera(Cel* localCel, long veraAddress, byte pNum, byte bCol, byte drawingAreaWidth);
 
 void getViewTab(ViewTable* returnedViewTab, byte viewTabNumber)
 {
@@ -174,6 +174,12 @@ void setLoadedCel(Loop* loadedLoop, Cel* localCell, byte localCellNumber)
 }
 
 #pragma code-name (push, "BANKRAM09")
+void b9InitSpriteData()
+{
+
+}
+
+
 void b9InitViews()
 {
 	int i;
@@ -578,7 +584,7 @@ void b9AddToPic(int vNum, int lNum, int cNum, int x, int y, int pNum, int bCol)
 	printf("w %d h %d\n", localCel.width, localCel.height);
 #endif // VERBOSE_ADD_TO_PIC
 
-	b9ViewToVera(&localCel, b4GetVeraPictureAddress(x, (y - localCel.height) + 1), pNum, bCol, BYTES_PER_ROW);
+	b9CelToVera(&localCel, b4GetVeraPictureAddress(x, (y - localCel.height) + 1), pNum, bCol, BYTES_PER_ROW);
 
 	//TODO: Finish implementing the priority and control line stuff
 //
