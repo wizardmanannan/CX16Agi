@@ -49,6 +49,7 @@ typedef struct {
 #define ONLAND        0x0800
 #define FIXLOOP       0x2000
 
+#define MAX_SPRITES_SLOTS 4
 typedef struct {
 	byte stepTime;
 	byte stepTimeCount;
@@ -76,12 +77,24 @@ typedef struct {
 	byte param2;
 	byte param3;
 	byte param4;
-	unsigned long veraSpriteDataAddress; //These two on a modern system would be pointers, but CX16 doesn't support three byte pointers
-	unsigned long veraSpriteAttributeAddress;
+	byte spriteSlot[MAX_SPRITES_SLOTS];
+	byte hasBlitted;
+	byte* extraRunEncoded[MAX_SPRITES_SLOTS - 1]; //When a big sprite is split this will have the extra run encoded data
+	byte extraRunEncodedBanks[MAX_SPRITES_SLOTS - 1];
 } ViewTable;
 
+typedef struct {
+	byte x;
+	byte y;
+	byte currentLoop;
+	unsigned long veraSpriteDataAddress[MAX_SPRITES_SLOTS]; //These two on a modern system would be pointers, but CX16 doesn't support three byte pointers
+	unsigned long veraSpriteAttributeAddress[MAX_SPRITES_SLOTS];
+} SpriteSlot;
+
 #define VIEW_TABLE_SIZE  20  // 100
+#define SPRITE_SLOTS 30
 extern ViewTable viewtab[VIEW_TABLE_SIZE];
+extern SpriteSlot spriteSlots[SPRITE_SLOTS];
 
 #define MAXVIEW  256
 extern View* loadedViews;
