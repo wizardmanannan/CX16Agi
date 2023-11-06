@@ -42,8 +42,9 @@ extern int dirnOfEgo;
 
 #pragma bss-name (push, "BANKRAM09")
 ViewTable viewtab[VIEW_TABLE_SIZE];
-long nextSpriteData;
+SpriteSlot spriteSlots[SPRITE_SLOTS];
 long nextSpriteAttribute;
+byte nextSpriteSlot;
 #pragma bss-name (pop)
 
 //Temp From Allogro
@@ -181,7 +182,7 @@ extern byte spritesUpdatedBuffer[VIEW_TABLE_SIZE];
 void b9ResetSpritePointers()
 {
 	nextSpriteAttribute = SPRITE_ATTRIBUTES_START;
-	nextSpriteData = SPRITES_DATA_START;
+	nextSpriteSlot = 0;
 }
 
 void b9InitSpriteData()
@@ -210,9 +211,26 @@ void b9InitViews()
 	spriteScreen = create_bitmap(160, 168);
 }
 
+void b9ResetSpriteSlots()
+{
+	byte i, j;
+	for (i = 0; i < MAX_SPRITES_SLOTS; i++)
+	{
+		spriteSlots[i].x = 0;
+		spriteSlots[i].y = 0;
+		spriteSlots[i].currentLoop = 0;
+		for (j = 0; j < MAX_SPRITES_SLOTS; j++)
+		{
+			spriteSlots[i].veraSpriteDataAddress[j] = NULL;
+			spriteSlots[i].veraSpriteAttributeAddress[j] = NULL;
+		}
+	}
+}
+
 void b9InitObjects()
 {
 	int entryNum;
+	byte i,j;
 	ViewTable localViewtab;
 
 	//spriteScreen = create_bitmap(160, 168);
@@ -242,11 +260,13 @@ void b9InitObjects()
 		localViewtab.cycleStatus = 0;
 		localViewtab.priority = 0;
 		localViewtab.flags = 0;
-		localViewtab.veraSpriteAttributeAddress = NULL;
-		localViewtab.veraSpriteDataAddress = NULL;
+		localViewtab.hasBlitted = FALSE;
+		memset(&localViewtab.spriteSlot[0], 0, MAX_SPRITES_SLOTS);
 
 		setViewTab(&localViewtab, entryNum);
 	}
+
+	b9ResetSpriteSlots();
 }
 
 void b9ResetViews()     /* Called after new.room */
@@ -258,11 +278,12 @@ void b9ResetViews()     /* Called after new.room */
 		getViewTab(&localViewtab, entryNum);
 
 		localViewtab.flags &= ~(UPDATE | ANIMATED);
-		localViewtab.veraSpriteAttributeAddress = NULL;
-		localViewtab.veraSpriteDataAddress = NULL;
+		localViewtab.hasBlitted = FALSE;
 		setViewTab(&localViewtab, entryNum);
+		memset(&localViewtab.spriteSlot[0], 0, MAX_SPRITES_SLOTS);
 	}
 
+	b9ResetSpriteSlots();
 	b9ResetSpritePointers();
 }
 
@@ -624,9 +645,10 @@ void b9AddToPic(int vNum, int lNum, int cNum, int x, int y, int pNum, int bCol)
 /***************************************************************************
 ** agi_blit
 ***************************************************************************/
-void b9AgiBlit(byte* bmp, int x, int y, int w, int h, byte trans, byte pNum)
+void b9AgiBlit(ViewTable* viewTable)
 {
-	int i, j, c;
+
+
 
 	//for (i = 0; i < w; i++) {
 	//	for (j = 0; j < h; j++) {
@@ -705,13 +727,7 @@ void bADrawObject(int entryNum)
 
 	bACalcDirection(&localViewtab);
 
-	b9AgiBlit(localViewtab.celData->bmp,
-		localViewtab.xPos,
-		(localViewtab.yPos - localViewtab.ysize) + 1,
-		localViewtab.xsize,
-		localViewtab.ysize,
-		localViewtab.celData->transparency & 0x0f,
-		localViewtab.priority);
+	b9AgiBlit(&localViewtab);
 
 	setViewTab(&localViewtab, entryNum);
 }
@@ -1098,13 +1114,7 @@ void bAUpdateObj(int entryNum)
 
 	if ((objFlags & ANIMATED) && (objFlags & DRAWN)) {
 		/* Draw new cel onto picture\priority bitmaps */
-		b9AgiBlit(localViewtab.celData->bmp,
-			localViewtab.xPos,
-			(localViewtab.yPos - localViewtab.ysize) + 1,
-			localViewtab.xsize,
-			localViewtab.ysize,
-			localViewtab.celData->transparency & 0x0f,
-			localViewtab.priority);
+		b9AgiBlit(&localViewtab);
 	}
 
 	setViewTab(&localViewtab, entryNum);
@@ -1257,13 +1267,7 @@ void bBUpdateObj2(int entryNum)
 
 	if ((objFlags & ANIMATED) && (objFlags & DRAWN)) {
 		/* Draw new cel onto picture\priority bitmaps */
-		b9AgiBlit(localViewtab.celData->bmp,
-			localViewtab.xPos,
-			(localViewtab.yPos - localViewtab.ysize) + 1,
-			localViewtab.xsize,
-			localViewtab.ysize,
-			localViewtab.celData->transparency & 0x0f,
-			localViewtab.priority);
+		b9AgiBlit(&localViewtab);
 	}
 
 	setViewTab(&localViewtab, entryNum);
@@ -1383,13 +1387,7 @@ void bBUpdateObjects()
 		objFlags = localViewtab.flags;
 		if ((objFlags & ANIMATED) && (objFlags & DRAWN)) {
 			/* Draw new cel onto picture\priority bitmaps */
-			b9AgiBlit(localViewtab.celData->bmp,
-				localViewtab.xPos,
-				(localViewtab.yPos - localViewtab.ysize) + 1,
-				localViewtab.xsize,
-				localViewtab.ysize,
-				localViewtab.celData->transparency & 0x0f,
-				localViewtab.priority);
+			b9AgiBlit(&localViewtab);
 		}
 
 		setViewTab(&localViewtab, entryNum);
@@ -1556,13 +1554,7 @@ void bCupdateObjects2()
 
 		if ((objFlags & ANIMATED) && (objFlags & DRAWN)) {
 			/* Draw new cel onto picture\priority bitmaps */
-			b9AgiBlit(localViewtab.celData->bmp,
-				localViewtab.xPos,
-				(localViewtab.yPos - localViewtab.ysize) + 1,
-				localViewtab.xsize,
-				localViewtab.ysize,
-				localViewtab.celData->transparency & 0x0f,
-				localViewtab.priority);
+			b9AgiBlit(&localViewtab);
 		}
 
 		setViewTab(&localViewtab, entryNum);
