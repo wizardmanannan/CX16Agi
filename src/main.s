@@ -48,3 +48,4 @@
     .export _spritesUpdatedBuffer
     .export _bESpriteAddressTableMiddle
     .export _bESpriteHighByteStart
+    .export _bESpriteAllocTable

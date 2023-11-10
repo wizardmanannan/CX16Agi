@@ -4,11 +4,17 @@
 #define SPRITE_ALLOC_TABLE_SIZE (SPRITES_DATA_END - SPRITES_DATA_START) / SEGMENT_SMALL
 
 extern byte bESpriteAddressTableMiddle[SPRITE_ALLOC_TABLE_SIZE];
+extern byte bESpriteAllocTable[SPRITE_ALLOC_TABLE_SIZE];
 extern byte bESpriteHighByteStart;
 
 #pragma code-name (push, "BANKRAM0E")
 
 //#define VERBOSE_MEMORY_INIT 
+
+void bEResetSpriteMemoryManager()
+{
+	memset(bESpriteAllocTable, 0, SPRITE_ALLOC_TABLE_SIZE);
+}
 
 void bEInitSpriteMemoryManager()
 {
@@ -19,6 +25,8 @@ void bEInitSpriteMemoryManager()
 	byte middleByte;
 
 	printf("Initing Sprite Memory Manager");
+
+	bEResetSpriteMemoryManager();
 
 #ifdef VERBOSE_MEMORY_INIT
 	printf("The address of address is %p\n", &address);

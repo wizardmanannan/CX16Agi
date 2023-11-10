@@ -289,6 +289,7 @@ void b9ResetViews()     /* Called after new.room */
 
 	b9ResetSpriteSlots();
 	b9ResetSpritePointers();
+	bEResetSpriteMemoryManager();
 }
 
 

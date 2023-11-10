@@ -5,6 +5,7 @@
 #include "memoryManager.h"
 
 #pragma wrapped-call (push, trampoline, SPRITE_MEMORY_MANAGER_BANK)
+void bEResetSpriteMemoryManager();
 void bEInitSpriteMemoryManager();
 #pragma wrapped-call (pop)
 

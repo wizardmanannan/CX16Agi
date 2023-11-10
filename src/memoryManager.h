@@ -196,7 +196,6 @@
 
 #define SIZE_OF_SPRITE_ATTRIBUTE 8
 
-
 #ifdef _MSC_VER //Used for testing under windows
 extern byte* banked;
 #endif 
