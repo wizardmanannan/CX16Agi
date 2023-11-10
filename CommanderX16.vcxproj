@@ -46,6 +46,7 @@
     <ClInclude Include="src\graphics.h" />
     <ClInclude Include="src\irq.h" />
     <ClInclude Include="src\loadingScreen.h" />
+    <ClInclude Include="src\spriteMemoryManager.h" />
     <ClInclude Include="src\textLayer.h" />
     <ClInclude Include="src\GUI.H" />
     <ClInclude Include="src\helpers.h" />
@@ -74,6 +75,7 @@
     <ClCompile Include="src\graphics.c" />
     <ClCompile Include="src\irq.c" />
     <ClCompile Include="src\loadingScreen.c" />
+    <ClCompile Include="src\spriteMemoryManager.c" />
     <ClCompile Include="src\textLayer.c" />
     <ClCompile Include="src\GUI.C" />
     <ClCompile Include="src\helpers.c" />

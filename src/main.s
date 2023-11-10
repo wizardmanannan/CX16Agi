@@ -8,6 +8,7 @@
     .include "pictureAsm.s"
     .include "helpersAsm.s"
     .include "viewAsm.s"
+    .include "spriteMemoryManagerAsm.s"
     .export _executeLogic
     .export _b6InitInterpreter
     .export _loadAndIncWinCode
@@ -45,3 +46,5 @@
     .export _b6InitIrq
     .export _b6TellMeTheAddressPlease
     .export _spritesUpdatedBuffer
+    .export _bESpriteAddressTableMiddle
+    .export _bESpriteHighByteStart

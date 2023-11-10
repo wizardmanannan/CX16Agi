@@ -28,6 +28,16 @@ SIZE_OF_CHARSET = (BYTES_PER_CHARACTER * NO_CHARS)
 TILE_LAYER_WIDTH = 64
 TILE_LAYER_HEIGHT = 32
 
+;Sprite Layer
+SPRITE_START = $EA00
+SPRITE_END = $1F9BE
+SPRITES_PIXELS_PER_BYTE = $2
+
+
+;Sprite Memory Manager
+SEGMENT_SMALL = (32 * 32) / 2
+SEGMENT_LARGE = SEGMENT_SMALL * 2 * SEGMENT_SMALL * 2
+
 .macro SET_VERA_ADDRESS_ABSOLUTE VeraAddress, AddressSel, Stride ;Vera Address is a 4 bit number instead of three to make it easier to work with C
         lda AddressSel
         sta VERA_ctrl  

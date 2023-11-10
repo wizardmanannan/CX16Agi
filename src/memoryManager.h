@@ -135,6 +135,7 @@
 #define VIEW_CODE_BANK_4 0xC
 #define VIEW_CODE_BANK_5 0xD
 #define LRU_CACHE_LOGIC_BANK 0xE
+#define SPRITE_MEMORY_MANAGER_BANK 0xE
 #define MEMORY_MANAGEMENT_BANK 0x10
 #define PICTURE_CODE_BANK 0x11
 #define PICTURE_CODE_OVERFLOW_BANK 0x4
@@ -191,8 +192,10 @@
 #define SPRITES_DATA_END 0x1F9BE
 #define SPRITE_ATTRIBUTES_START 0x1FC00
 #define VERA_END 0x1FFFF
+#define SPRITES_PIXELS_PER_BYTE 0x2
 
 #define SIZE_OF_SPRITE_ATTRIBUTE 8
+
 
 #ifdef _MSC_VER //Used for testing under windows
 extern byte* banked;

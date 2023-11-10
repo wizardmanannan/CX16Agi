@@ -189,6 +189,7 @@ void b9InitSpriteData()
 {
 	memset(spritesUpdatedBuffer, 0, VIEW_TABLE_SIZE);
 	b9ResetSpritePointers();
+	bEInitSpriteMemoryManager();
 }
 
 

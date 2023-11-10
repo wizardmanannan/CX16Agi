@@ -108,6 +108,7 @@ SEND_IRQ_COMMAND #IRQ_CMD_BLACKSCREEN, @vSyncToCheck
 WAIT_FOR_NEXT_IRQ @vSyncToCheck
 
 jsr _b6InitVeraMemory
+TRAMPOLINE #SPRITE_MANAGER_BANK, _b9InitSpriteData
 
 lda #DISPLAY_SCALE
 sta VERA_dc_hscale
@@ -383,8 +384,6 @@ stz VERA_L1_vscroll_h
 
 jsr _b6InitCharset 
 jsr _b6InitLayer1Mapbase
-
-TRAMPOLINE #SPRITE_MANAGER_BANK, _b9InitSpriteData
 
 jsr _b6DisplayLoadingScreen
 rts

@@ -10,6 +10,7 @@
 #include "memoryManager.h"
 #include "agifiles.h"
 #include "picture.h"
+#include "spriteMemoryManager.h"
 
 typedef struct { //Careful about changing order _b9ViewToVera depends on this order
 	byte width;
