@@ -23,6 +23,9 @@ void bEResetSpriteMemoryManager()
 
 	*((byte*)ZP_PTR_SEG_32) = 0;
 	*((byte*)ZP_PTR_SEG_64) = SPRITE_ALLOC_TABLE_SIZE - 2; //64 allocator starts two from the end
+
+	*((byte*)ZP_PTR_WALL_32) = 0;
+	*((byte*)ZP_PTR_WALL_64) = SPRITE_ALLOC_TABLE_SIZE - 2; //64 allocator starts two from the end
 }
 
 void bETestSpriteAllocateSpriteMemory32()

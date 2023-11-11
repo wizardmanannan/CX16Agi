@@ -17,6 +17,8 @@ _bESpriteAddressTableMiddle: .res SPRITE_ALLOC_TABLE_SIZE, $0 ; Low will always 
 .macro ALLOCATE_SPRITE_MEMORY_32
 .local @loop
 .local @found
+.local @prepareResult
+.local @increaseWall
 .local @greater
 .local @lesser
 .local @nonEmpty
@@ -25,14 +27,23 @@ _bESpriteAddressTableMiddle: .res SPRITE_ALLOC_TABLE_SIZE, $0 ; Low will always 
 
 ldx #$0 ;Indicates never reset to zero
 ldy ZP_PTR_SEG_32
+lda ZP_PTR_WALL_32
 
 @loop:
-cpy ZP_PTR_SEG_64
+cpy ZP_PTR_WALL_64
 beq @resetAtZero
 lda _bESpriteAllocTable, y
 bne @nonEmpty
 
 @found:
+lda ZP_PTR_WALL_32
+cmp ZP_PTR_SEG_32 ;If the segment is equal to the wall then that mean we have never reached the end before, or extra space has since become available, so we should just increase it
+bne @prepareResult
+
+@increaseWall:
+inc ZP_PTR_WALL_32
+
+@prepareResult:
 lda #$1
 sta _bESpriteAllocTable, y
 
@@ -82,6 +93,8 @@ lda #$0 ;Low byte is always zero
 .macro ALLOCATE_SPRITE_MEMORY_64
 .local @loop
 .local @found
+.local @prepareResult
+.local @increaseWall
 .local @greater
 .local @lesser
 .local @nonEmpty
@@ -92,13 +105,21 @@ ldx #$0 ;Indicates never reset to zero
 ldy ZP_PTR_SEG_64
 
 @loop:
-stp
-cpy ZP_PTR_SEG_32
+cpy ZP_PTR_WALL_32
 beq @resetToEnd
 lda _bESpriteAllocTable, y
 bne @nonEmpty
 
 @found:
+lda ZP_PTR_WALL_64
+cmp ZP_PTR_SEG_64 ;If the segment is equal to the wall then that mean we have never reached the end before, or extra space has since become available, so we should just increase it
+bne @prepareResult
+
+@increaseWall:
+inc ZP_PTR_WALL_64
+
+@prepareResult:
+
 lda #$1
 sta _bESpriteAllocTable, y
 
