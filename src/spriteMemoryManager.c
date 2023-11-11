@@ -5,7 +5,6 @@
 
 extern byte bESpriteAddressTableMiddle[SPRITE_ALLOC_TABLE_SIZE];
 extern byte bESpriteAllocTable[SPRITE_ALLOC_TABLE_SIZE];
-extern byte bESpriteHighByteStart;
 
 #pragma code-name (push, "BANKRAM0E")
 
@@ -14,11 +13,35 @@ extern byte bESpriteHighByteStart;
 
 #ifdef TEST_ALLOCATE_SPRITE_MEMORY
 
-extern void bEAllocateSpriteMemory();
+extern unsigned long bEAllocateSpriteMemory();
 
 void bETestSpriteAllocateSpriteMemory()
 {
-	bEAllocateSpriteMemory();
+	byte i;
+	unsigned long expected = SPRITES_DATA_START, actual;
+
+	//1. Should allocate every block in sequence
+	for (i = 0; i < SPRITE_ALLOC_TABLE_SIZE - 2; i++) //Last two positions is where the 64 allocator starts don't check those
+	{
+		actual = bEAllocateSpriteMemory();
+
+		if (actual != expected)
+		{
+			printf("Fail 1 on i = %d. The result was %lx\n", i, actual);
+		}
+
+		expected += SEGMENT_SMALL;
+	}
+
+	actual = bEAllocateSpriteMemory(); 
+
+	//2. Don't allocate when full
+	if (actual)
+	{
+		printf("Fail 2. Expected 0 got %lx\n", actual);
+	}
+
+	asm("stp");
 }
 #endif // TEST_ALLOCATE_SPRITE_MEMORY
 
@@ -33,7 +56,7 @@ void bEInitSpriteMemoryManager()
 	byte i;
 	unsigned long address;
 	
-	byte highByte;
+	byte highByte = 0;
 	byte middleByte;
 
 	printf("Initing Sprite Memory Manager");
@@ -53,7 +76,7 @@ void bEInitSpriteMemoryManager()
 		printf("Address ((%d * %d) /2) * %d + %p = %lx \n", 32, 32, i, SPRITES_DATA_START, address);
 #endif
 
-		if (!bESpriteHighByteStart)
+		if (!highByte)
 		{
 			highByte = (byte)(address >> 16);
 
@@ -63,7 +86,7 @@ void bEInitSpriteMemoryManager()
 
 			if (highByte)
 			{
-				bESpriteHighByteStart = i;
+				*((byte*)ZP_PTR_HIGH_BYTE_START) = i;
 			}
 		}
 
@@ -82,8 +105,8 @@ void bEInitSpriteMemoryManager()
 	asm("stp");
 #endif
 
-	*((byte**)ZP_PTR_SPR_ALLOC) = &bESpriteAllocTable[0];
-	*((byte**)ZP_PTR_SPR_ADDR) = &bESpriteAddressTableMiddle[0];
+	* ((byte*)ZP_PTR_SEG_32) = 0;
+	*((byte*)ZP_PTR_SEG_64) = SPRITE_ALLOC_TABLE_SIZE - 2; //64 allocator starts two from the end
 
 #ifdef  TEST_ALLOCATE_SPRITE_MEMORY
 	bETestSpriteAllocateSpriteMemory();

@@ -179,8 +179,11 @@
 #define ZP_PTR_TMP_22 0xE1
 #define ZP_PTR_TMP_23 0xE3
 #define ZP_PTR_TMP_24 0xE5
-#define ZP_PTR_SPR_ALLOC 0xEF
-#define ZP_PTR_SPR_ADDR 0xF1
+
+//Sprite Allocation
+#define ZP_PTR_SEG_32 0xEF
+#define ZP_PTR_SEG_64 0xF0
+#define  ZP_PTR_HIGH_BYTE_START 0xF1
 
 #define NO_ZERO_PAGE_ENTRIES 87
 #define FIRST_ZERO_PAGE_ENTRY 0xA9

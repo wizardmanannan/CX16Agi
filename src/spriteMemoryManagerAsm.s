@@ -12,75 +12,75 @@ RESULT_SIZE = 20
 _bESpriteAllocTable: .res SPRITE_ALLOC_TABLE_SIZE, $0
 
 _bESpriteAddressTableMiddle: .res SPRITE_ALLOC_TABLE_SIZE, $0 ; Low will always be zero, hence no need for a table
-_bESpriteHighByteStart: .byte $0
 
-_bE32SegmentPointer: .byte $0
-_bE64SegmentPointer: .byte SPRITE_ALLOC_TABLE_SIZE - $1
-
-
+;low a middle x high y
 .macro ALLOCATE_SPRITE_MEMORY_32
 .local @loop
 .local @found
 .local @greater
-.local @lowerBits
+.local @lesser
 .local @nonEmpty
 .local @return
 .local @returnFail
-ldy _bE32SegmentPointer
-stz sreg
-stz sreg + 1
 
-stp
+ldy ZP_PTR_SEG_32
+
 @loop:
+cpy ZP_PTR_SEG_64
+beq @resetAtZero
 lda _bESpriteAllocTable, y
 bne @nonEmpty
 
 @found:
 lda #$1
 sta _bESpriteAllocTable, y
-cpy _bESpriteHighByteStart
+
+ldx _bESpriteAddressTableMiddle,y
+
+tya 
+iny 
+sty ZP_PTR_SEG_32
+
+cmp ZP_PTR_HIGH_BYTE_START
 bcs @greater
 
-@lowerBits:
-ldx _bESpriteAddressTableMiddle,y
-lda #$0 ; Low byte is always zero
-iny 
-sty _bE32SegmentPointer
+@lesser:
+ldy #$0
 bra @return
 
 @greater:
-lda #$1
-sta sreg
-bra @lowerBits
+ldy #$1
+bra @return
 
 
 @nonEmpty:
 iny 
-cpy _bE32SegmentPointer
+cpy ZP_PTR_SEG_32
 beq @returnFail
 
-cpy _bE64SegmentPointer
-bne @loop
+bra @loop
 
 @resetAtZero:
+cpy ZP_PTR_SEG_32 ;If we've looped back to the start, we've failed
+beq @returnFail
 ldy #$0
 bra @loop
 
 @returnFail:
-lda #0
+sty ZP_PTR_SEG_32
+ldy #0
 ldx #0
-stz sreg
-stz sreg + 1
-
 
 @return:
-sty _bE32SegmentPointer
+lda #$0 ;Low byte is always zero
 .endmacro
 
 ;.scope ALLOCATE_SPR_MEM
 ;LOOP_COUNTER = ZP_TMP_14
 _bEAllocateSpriteMemory:
 ALLOCATE_SPRITE_MEMORY_32
+sty sreg
+stz sreg + 1
 rts
 ;.endscope
 

@@ -52,12 +52,16 @@ ZP_TMP_21 = $DF
 ZP_TMP_22 = $E1
 ZP_TMP_23 = $E3
 ZP_TMP_24 = $E5
+
 ZP_PTR_LF = $E7
 ZP_PTR_LE = $E9
 ZP_PTR_PLF_HIGH = $EB
 ZP_PTR_PLF_LOW = $ED
-ZP_PTR_SPR_ALLOC = $EF
-ZP_PTR_SPR_ADDR = $F1
+
+;Sprite Memory Manager These are 8 bit values
+ZP_PTR_SEG_32 = $EF 
+ZP_PTR_SEG_64 = $F0
+ZP_PTR_HIGH_BYTE_START = $F1
 
 ; Define the starting address for golden RAM
 GOLDEN_RAM = $400
