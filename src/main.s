@@ -48,4 +48,5 @@
     .export _spritesUpdatedBuffer
     .export _bESpriteAddressTableMiddle
     .export _bESpriteAllocTable
-    .export _bEAllocateSpriteMemory
+    .export _bEAllocateSpriteMemory32
+    .export _bEAllocateSpriteMemory64

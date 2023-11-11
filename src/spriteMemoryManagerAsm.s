@@ -23,6 +23,7 @@ _bESpriteAddressTableMiddle: .res SPRITE_ALLOC_TABLE_SIZE, $0 ; Low will always 
 .local @return
 .local @returnFail
 
+ldx #$0 ;Indicates never reset to zero
 ldy ZP_PTR_SEG_32
 
 @loop:
@@ -61,8 +62,10 @@ beq @returnFail
 bra @loop
 
 @resetAtZero:
-cpy ZP_PTR_SEG_32 ;If we've looped back to the start, we've failed
-beq @returnFail
+cpx #$0
+bne @returnFail ;We have also reset to zero before if this branch is followed
+ldx #$1
+
 ldy #$0
 bra @loop
 
@@ -75,13 +78,88 @@ ldx #0
 lda #$0 ;Low byte is always zero
 .endmacro
 
-;.scope ALLOCATE_SPR_MEM
-;LOOP_COUNTER = ZP_TMP_14
-_bEAllocateSpriteMemory:
+;low a middle x high y
+.macro ALLOCATE_SPRITE_MEMORY_64
+.local @loop
+.local @found
+.local @greater
+.local @lesser
+.local @nonEmpty
+.local @return
+.local @returnFail
+.local @resetToEnd
+ldx #$0 ;Indicates never reset to zero
+ldy ZP_PTR_SEG_64
+
+@loop:
+stp
+cpy ZP_PTR_SEG_32
+beq @resetToEnd
+lda _bESpriteAllocTable, y
+bne @nonEmpty
+
+@found:
+lda #$1
+sta _bESpriteAllocTable, y
+
+ldx _bESpriteAddressTableMiddle,y
+
+tya 
+dey
+dey
+sty ZP_PTR_SEG_64
+
+cmp ZP_PTR_HIGH_BYTE_START
+bcs @greater
+
+@lesser:
+ldy #$0
+bra @return
+
+@greater:
+ldy #$1
+bra @return
+
+
+@nonEmpty:
+dey
+dey
+cpy ZP_PTR_SEG_64
+beq @returnFail
+
+bra @loop
+
+@resetToEnd:
+cpx #$0
+bne @returnFail ;We have also reset to end before if this branch is followed
+ldx #$1
+
+ldy #$0
+bra @loop
+
+@returnFail:
+sty ZP_PTR_SEG_64
+ldy #0
+ldx #0
+
+@return:
+lda #$0 ;Low byte is always zero
+.endmacro
+
+
+
+
+
+_bEAllocateSpriteMemory32:
 ALLOCATE_SPRITE_MEMORY_32
 sty sreg
 stz sreg + 1
 rts
-;.endscope
+
+_bEAllocateSpriteMemory64:
+ALLOCATE_SPRITE_MEMORY_64
+sty sreg
+stz sreg + 1
+rts
 
 .endif

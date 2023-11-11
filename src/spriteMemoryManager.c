@@ -13,17 +13,29 @@ extern byte bESpriteAllocTable[SPRITE_ALLOC_TABLE_SIZE];
 
 #ifdef TEST_ALLOCATE_SPRITE_MEMORY
 
-extern unsigned long bEAllocateSpriteMemory();
+extern unsigned long bEAllocateSpriteMemory32();
+extern unsigned long bEAllocateSpriteMemory64();
 
-void bETestSpriteAllocateSpriteMemory()
+void bEResetSpriteMemoryManager()
+{
+	memset(bESpriteAllocTable, 0, SPRITE_ALLOC_TABLE_SIZE);
+
+
+	*((byte*)ZP_PTR_SEG_32) = 0;
+	*((byte*)ZP_PTR_SEG_64) = SPRITE_ALLOC_TABLE_SIZE - 2; //64 allocator starts two from the end
+}
+
+void bETestSpriteAllocateSpriteMemory32()
 {
 	byte i;
 	unsigned long expected = SPRITES_DATA_START, actual;
 
+	printf("Test Allocate Sprite Memory 32");
+
 	//1. Should allocate every block in sequence
 	for (i = 0; i < SPRITE_ALLOC_TABLE_SIZE - 2; i++) //Last two positions is where the 64 allocator starts don't check those
 	{
-		actual = bEAllocateSpriteMemory();
+		actual = bEAllocateSpriteMemory32();
 
 		if (actual != expected)
 		{
@@ -33,7 +45,7 @@ void bETestSpriteAllocateSpriteMemory()
 		expected += SEGMENT_SMALL;
 	}
 
-	actual = bEAllocateSpriteMemory(); 
+	actual = bEAllocateSpriteMemory32(); 
 
 	//2. Don't allocate when full
 	if (actual)
@@ -41,15 +53,52 @@ void bETestSpriteAllocateSpriteMemory()
 		printf("Fail 2. Expected 0 got %lx\n", actual);
 	}
 
-	asm("stp");
+	bEResetSpriteMemoryManager();
 }
+
+void bETestSpriteAllocateSpriteMemory64()
+{
+	byte i;
+	unsigned long expected = SPRITE_ALLOC_TABLE_SIZE - 2, actual;
+
+	printf("Test Allocate Sprite Memory 64");
+
+	//1. Should allocate every block in sequence
+	for (i = 0; i < SPRITE_ALLOC_TABLE_SIZE - 1; i++) //First position is for 32 bit allocator
+	{
+		actual = bEAllocateSpriteMemory64();
+
+		if (actual != expected)
+		{
+			printf("Fail 1 on i = %d. The result was %lx\n", i, actual);
+		}
+
+		expected -= SEGMENT_SMALL * 2;
+	}
+
+	actual = bEAllocateSpriteMemory64();
+
+	//2. Don't allocate when full
+	if (actual)
+	{
+		printf("Fail 2. Expected 0 got %lx\n", actual);
+	}
+
+	bEResetSpriteMemoryManager();
+}
+//
+//void bETestSpriteAllocateSpriteMemory32()
+//{
+//}
+
+void bETestSpriteAllocateSpriteMemory()
+{
+	bEAllocateSpriteMemory32();
+	bEAllocateSpriteMemory64();
+}
+
 #endif // TEST_ALLOCATE_SPRITE_MEMORY
 
-
-void bEResetSpriteMemoryManager()
-{
-	memset(bESpriteAllocTable, 0, SPRITE_ALLOC_TABLE_SIZE);
-}
 
 void bEInitSpriteMemoryManager()
 {
@@ -105,11 +154,9 @@ void bEInitSpriteMemoryManager()
 	asm("stp");
 #endif
 
-	* ((byte*)ZP_PTR_SEG_32) = 0;
-	*((byte*)ZP_PTR_SEG_64) = SPRITE_ALLOC_TABLE_SIZE - 2; //64 allocator starts two from the end
-
 #ifdef  TEST_ALLOCATE_SPRITE_MEMORY
 	bETestSpriteAllocateSpriteMemory();
+	asm("stp");
 #endif //  TEST_ALLOCATE_SPRITE_MEMORY
 
 }
