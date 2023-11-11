@@ -92,6 +92,7 @@ lda #$0 ;Low byte is always zero
 ;low a middle x high y
 .macro ALLOCATE_SPRITE_MEMORY_64
 .local @loop
+.local @checkResultTable
 .local @found
 .local @prepareResult
 .local @increaseWall
@@ -107,6 +108,13 @@ ldy ZP_PTR_SEG_64
 @loop:
 cpy ZP_PTR_WALL_32
 beq @resetToEnd
+
+bcs @checkResultTable ;As 64 allocator is going in twos, we could jump over
+dey ;We have jumped over go back two bytes and reset to end
+dey
+bra @resetToEnd
+
+@checkResultTable:
 lda _bESpriteAllocTable, y
 bne @nonEmpty
 
