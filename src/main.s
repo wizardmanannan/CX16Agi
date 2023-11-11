@@ -49,3 +49,4 @@
     .export _bESpriteAddressTableMiddle
     .export _bESpriteHighByteStart
     .export _bESpriteAllocTable
+    .export _bEAllocateSpriteMemory

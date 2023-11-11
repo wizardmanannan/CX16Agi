@@ -1,7 +1,7 @@
 #include "spriteMemoryManager.h"
 
 #define SEGMENT_SMALL ((32 * 32) / 2)
-#define SPRITE_ALLOC_TABLE_SIZE (SPRITES_DATA_END - SPRITES_DATA_START) / SEGMENT_SMALL
+#define SPRITE_ALLOC_TABLE_SIZE ((SPRITES_DATA_END - SPRITES_DATA_START) / SEGMENT_SMALL)
 
 extern byte bESpriteAddressTableMiddle[SPRITE_ALLOC_TABLE_SIZE];
 extern byte bESpriteAllocTable[SPRITE_ALLOC_TABLE_SIZE];
@@ -10,6 +10,18 @@ extern byte bESpriteHighByteStart;
 #pragma code-name (push, "BANKRAM0E")
 
 //#define VERBOSE_MEMORY_INIT 
+#define TEST_ALLOCATE_SPRITE_MEMORY
+
+#ifdef TEST_ALLOCATE_SPRITE_MEMORY
+
+extern void bEAllocateSpriteMemory();
+
+void bETestSpriteAllocateSpriteMemory()
+{
+	bEAllocateSpriteMemory();
+}
+#endif // TEST_ALLOCATE_SPRITE_MEMORY
+
 
 void bEResetSpriteMemoryManager()
 {
@@ -30,14 +42,16 @@ void bEInitSpriteMemoryManager()
 
 #ifdef VERBOSE_MEMORY_INIT
 	printf("The address of address is %p\n", &address);
-	printf("The allocation table size is %d \n", (byte) ((0x1F9BE - 0xEA00) / (32 * 32)) * 2);
+	printf("alloc size %d\n", (byte)SPRITE_ALLOC_TABLE_SIZE);
 #endif
 
 	for (i = 0; i < SPRITE_ALLOC_TABLE_SIZE; i++)
 	{
 		address = (unsigned long)SEGMENT_SMALL * i + SPRITES_DATA_START;
 
+#ifdef VERBOSE_MEMORY_INIT
 		printf("Address ((%d * %d) /2) * %d + %p = %lx \n", 32, 32, i, SPRITES_DATA_START, address);
+#endif
 
 		if (!bESpriteHighByteStart)
 		{
@@ -67,6 +81,14 @@ void bEInitSpriteMemoryManager()
 
 	asm("stp");
 #endif
+
+	*((byte**)ZP_PTR_SPR_ALLOC) = &bESpriteAllocTable[0];
+	*((byte**)ZP_PTR_SPR_ADDR) = &bESpriteAddressTableMiddle[0];
+
+#ifdef  TEST_ALLOCATE_SPRITE_MEMORY
+	bETestSpriteAllocateSpriteMemory();
+#endif //  TEST_ALLOCATE_SPRITE_MEMORY
+
 }
 
 #pragma code-name (pop)
