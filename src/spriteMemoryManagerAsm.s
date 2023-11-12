@@ -124,8 +124,8 @@ cmp ZP_PTR_SEG_64 ;If the segment is equal to the wall then that mean we have ne
 bne @prepareResult
 
 @increaseWall:
-inc ZP_PTR_WALL_64
-
+dec ZP_PTR_WALL_64
+dec ZP_PTR_WALL_64
 @prepareResult:
 
 lda #$1

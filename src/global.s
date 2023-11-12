@@ -62,8 +62,9 @@ ZP_PTR_PLF_LOW = $ED
 ZP_PTR_SEG_32 = $EF 
 ZP_PTR_SEG_64 = $F0
 ZP_PTR_HIGH_BYTE_START = $F1
-ZP_PTR_WALL_32 = $F4
-ZP_PTR_WALL_64 = $F3
+;Skip F2 seems to be reserved. Using it causes strange crashes
+ZP_PTR_WALL_32 = $F3
+ZP_PTR_WALL_64 = $F4
 
 ; Define the starting address for golden RAM
 GOLDEN_RAM = $400
