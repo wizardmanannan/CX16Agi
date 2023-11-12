@@ -184,7 +184,7 @@
 #define ZP_PTR_SEG_32 0xEF
 #define ZP_PTR_SEG_64 0xF0
 #define  ZP_PTR_HIGH_BYTE_START 0xF1
-#define ZP_PTR_WALL_32 0xF2
+#define ZP_PTR_WALL_32 0xF4
 #define ZP_PTR_WALL_64 0xF3
 
 #define NO_ZERO_PAGE_ENTRIES 87

@@ -1,7 +1,7 @@
 #include "spriteMemoryManager.h"
 
 #define SEGMENT_SMALL ((32 * 32) / 2)
-#define SPRITE_ALLOC_TABLE_SIZE ((SPRITES_DATA_END - SPRITES_DATA_START) / SEGMENT_SMALL)
+#define SPRITE_ALLOC_TABLE_SIZE (((unsigned long) SPRITES_DATA_END - SPRITES_DATA_START) / SEGMENT_SMALL)
 
 extern byte bESpriteAddressTableMiddle[SPRITE_ALLOC_TABLE_SIZE];
 extern byte bESpriteAllocTable[SPRITE_ALLOC_TABLE_SIZE];
@@ -11,29 +11,29 @@ extern byte bESpriteAllocTable[SPRITE_ALLOC_TABLE_SIZE];
 //#define VERBOSE_MEMORY_INIT 
 #define TEST_ALLOCATE_SPRITE_MEMORY
 
-#ifdef TEST_ALLOCATE_SPRITE_MEMORY
-
-extern unsigned long bEAllocateSpriteMemory32();
-extern unsigned long bEAllocateSpriteMemory64();
-
 void bEResetSpriteMemoryManager()
 {
 	memset(bESpriteAllocTable, 0, SPRITE_ALLOC_TABLE_SIZE);
 
 
-	*((byte*)ZP_PTR_SEG_32) = 0;
+	 *((byte*)ZP_PTR_SEG_32) = 0;
 	*((byte*)ZP_PTR_SEG_64) = SPRITE_ALLOC_TABLE_SIZE - 2; //64 allocator starts two from the end
 
 	*((byte*)ZP_PTR_WALL_32) = 0;
 	*((byte*)ZP_PTR_WALL_64) = SPRITE_ALLOC_TABLE_SIZE - 2; //64 allocator starts two from the end
 }
 
+#ifdef TEST_ALLOCATE_SPRITE_MEMORY
+
+extern unsigned long bEAllocateSpriteMemory32();
+extern unsigned long bEAllocateSpriteMemory64();
+
 void bETestSpriteAllocateSpriteMemory32()
 {
 	byte i;
 	unsigned long expected = SPRITES_DATA_START, actual;
 
-	printf("Test Allocate Sprite Memory 32");
+	printf("1. test allocate sprite nemory 32\n");
 
 	//1. Should allocate every block in sequence
 	for (i = 0; i < SPRITE_ALLOC_TABLE_SIZE - 2; i++) //Last two positions is where the 64 allocator starts don't check those
@@ -50,7 +50,7 @@ void bETestSpriteAllocateSpriteMemory32()
 
 	actual = bEAllocateSpriteMemory32(); 
 
-	//2. Don't allocate when full
+	////2. Don't allocate when full
 	if (actual)
 	{
 		printf("Fail 2. Expected 0 got %lx\n", actual);
@@ -62,18 +62,18 @@ void bETestSpriteAllocateSpriteMemory32()
 void bETestSpriteAllocateSpriteMemory64()
 {
 	byte i;
-	unsigned long expected = SPRITE_ALLOC_TABLE_SIZE - 2, actual;
+	unsigned long expected = (SPRITE_ALLOC_TABLE_SIZE - 2) * SEGMENT_SMALL + SPRITES_DATA_START, actual;
 
-	printf("Test Allocate Sprite Memory 64");
+	printf("2 test allocate sprite nemory 64\n");
 
 	//1. Should allocate every block in sequence
-	for (i = 0; i < SPRITE_ALLOC_TABLE_SIZE - 1; i++) //First position is for 32 bit allocator
+	for (i = 0; i < (byte) SPRITE_ALLOC_TABLE_SIZE - 1; i += 2) //First position is for 32 bit allocator
 	{
 		actual = bEAllocateSpriteMemory64();
 
 		if (actual != expected)
 		{
-			printf("Fail 1 on i = %d. The result was %lx\n", i, actual);
+			printf("Fail 2 on i = %d. The result was %lx. We expected %lx\n", i, actual, expected);
 		}
 
 		expected -= SEGMENT_SMALL * 2;
@@ -89,15 +89,44 @@ void bETestSpriteAllocateSpriteMemory64()
 
 	bEResetSpriteMemoryManager();
 }
-//
-//void bETestSpriteAllocateSpriteMemory32()
-//{
-//}
+
+void bETestSpriteAllocate64NotGoOver32Wall()
+{
+	byte i;
+	unsigned long expected = (SPRITE_ALLOC_TABLE_SIZE - 2) * SEGMENT_SMALL + SPRITES_DATA_START, actual;
+
+	//64 does not go over 32's wall
+
+	printf("3 64 does not go over 32's wall. We will go %lx times. Divided by 2 is %lx\n", SPRITE_ALLOC_TABLE_SIZE - 2, (SPRITE_ALLOC_TABLE_SIZE - 2) /2);
+
+	bEAllocateSpriteMemory32();
+
+	for (i = 0; i < (byte)SPRITE_ALLOC_TABLE_SIZE - 3; i += 2) //1 less than last test to account for space taken by 32
+	{
+		actual = bEAllocateSpriteMemory64();
+
+		printf("i %d  segment %d\n", i, *((byte*)ZP_PTR_SEG_64));
+
+		if (actual != expected)
+		{
+			printf("Fail 3 on i = %d. The result was %lx. We expected %lx\n", i, actual, expected);
+		}
+
+		expected -= SEGMENT_SMALL * 2;
+	}
+
+
+	if (bEAllocateSpriteMemory64())
+	{
+		printf("fail 3, 64 has gone over 32's wall\n");
+	}
+}
 
 void bETestSpriteAllocateSpriteMemory()
 {
-	bEAllocateSpriteMemory32();
-	bEAllocateSpriteMemory64();
+	bETestSpriteAllocateSpriteMemory32();
+	bETestSpriteAllocateSpriteMemory64();
+	bETestSpriteAllocate64NotGoOver32Wall();
 }
 
 #endif // TEST_ALLOCATE_SPRITE_MEMORY
@@ -159,7 +188,7 @@ void bEInitSpriteMemoryManager()
 
 #ifdef  TEST_ALLOCATE_SPRITE_MEMORY
 	bETestSpriteAllocateSpriteMemory();
-	asm("stp");
+	//asm("stp");
 #endif //  TEST_ALLOCATE_SPRITE_MEMORY
 
 }

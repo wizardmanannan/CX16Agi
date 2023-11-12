@@ -167,7 +167,6 @@ ldy #SPRITE_ALLOC_TABLE_SIZE - 2
 bra @loop
 
 @returnFail:
-stp
 ldy #SPRITE_ALLOC_TABLE_SIZE - 2
 sty ZP_PTR_SEG_64
 ldy #0
