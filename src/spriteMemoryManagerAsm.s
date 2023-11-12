@@ -163,10 +163,12 @@ cpx #$0
 bne @returnFail ;We have also reset to end before if this branch is followed
 ldx #$1
 
-ldy #$0
+ldy #SPRITE_ALLOC_TABLE_SIZE - 2
 bra @loop
 
 @returnFail:
+stp
+ldy #SPRITE_ALLOC_TABLE_SIZE - 2
 sty ZP_PTR_SEG_64
 ldy #0
 ldx #0
