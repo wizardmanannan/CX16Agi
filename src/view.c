@@ -40,9 +40,21 @@ extern char string[12][40];
 extern byte horizon;
 extern int dirnOfEgo;
 
+#define VIEWTABLE_METADATA_BYTE_TERMINATOR 0xFF
+#define VIEWTABLE_METADATA_WORD_TERMINATOR 0xFFFF
+typedef struct {
+	unsigned long* currentVeraSpriteDataAddresses; //These two on a modern system would be pointers, but CX16 doesn't support three byte pointers. Zero terminated
+	unsigned long** veraAddresses;
+	byte veraAddressesBank;
+	word x[MAX_SPRITES_SLOTS_PER_VIEW_TAB + 1]; //FFFF Terminated
+	word y[MAX_SPRITES_SLOTS_PER_VIEW_TAB + 1]; //FFFF Terminated
+	byte veraSlots[MAX_SPRITES_SLOTS_PER_VIEW_TAB + 1]; //FF Terminated
+} ViewTableMetadata;
+
 #pragma bss-name (push, "BANKRAM09")
 ViewTable viewtab[VIEW_TABLE_SIZE];
- SpriteSlot spriteSlots[SPRITE_SLOTS];
+ViewTableMetadata viewTableMetadata[SPRITE_SLOTS];
+
 long nextSpriteAttribute;
 byte nextSpriteSlot;
 #pragma bss-name (pop)
@@ -212,20 +224,24 @@ void b9InitViews()
 	spriteScreen = create_bitmap(160, 168);
 }
 
-void b9ResetSpriteSlots()
+void b9ResetViewTableMetadata()
 {
 	byte i, j;
-	for (i = 0; i < MAX_SPRITES_SLOTS; i++)
+	for (i = 0; i < SPRITE_SLOTS; i++)
 	{
-		spriteSlots[i].x = 0;
-		spriteSlots[i].y = 0;
-		spriteSlots[i].currentLoop = 0;
-		for (j = 0; j < MAX_SPRITES_SLOTS; j++)
+		viewTableMetadata[i].currentVeraSpriteDataAddresses = NULL;
+		viewTableMetadata[i].veraAddresses = NULL;
+		viewTableMetadata[i].veraAddressesBank = NULL;
+		
+		for (j = 0; j < MAX_SPRITES_SLOTS_PER_VIEW_TAB + 1; j++)
 		{
-			spriteSlots[i].veraSpriteDataAddress[j] = NULL;
-			spriteSlots[i].veraSpriteAttributeAddress[j] = NULL;
+			viewTableMetadata[i].veraSlots[j] = VIEWTABLE_METADATA_BYTE_TERMINATOR;
+			viewTableMetadata[i].x[0] = VIEWTABLE_METADATA_WORD_TERMINATOR;
+			viewTableMetadata[i].y[0] = VIEWTABLE_METADATA_WORD_TERMINATOR;
 		}
 	}
+
+
 }
 
 void b9InitObjects()
@@ -261,14 +277,10 @@ void b9InitObjects()
 		localViewtab.cycleStatus = 0;
 		localViewtab.priority = 0;
 		localViewtab.flags = 0;
-		localViewtab.hasBlitted = FALSE;
-		memset(&localViewtab.spriteSlot[0], 0, MAX_SPRITES_SLOTS);
-		memset(&localViewtab.extraRunEncoded[0], 0, MAX_SPRITES_SLOTS - 1);
-		memset(&localViewtab.extraRunEncodedBanks[0], 0, MAX_SPRITES_SLOTS - 1);
 		setViewTab(&localViewtab, entryNum);
 	}
 
-	b9ResetSpriteSlots();
+	b9ResetViewTableMetadata();
 }
 
 void b9ResetViews()     /* Called after new.room */
@@ -280,14 +292,10 @@ void b9ResetViews()     /* Called after new.room */
 		getViewTab(&localViewtab, entryNum);
 
 		localViewtab.flags &= ~(UPDATE | ANIMATED);
-		localViewtab.hasBlitted = FALSE;
 		setViewTab(&localViewtab, entryNum);
-		memset(&localViewtab.spriteSlot[0], 0, MAX_SPRITES_SLOTS);
-		memset(&localViewtab.extraRunEncoded[0], 0, MAX_SPRITES_SLOTS - 1);
-		memset(&localViewtab.extraRunEncodedBanks[0], 0, MAX_SPRITES_SLOTS - 1);
 	}
 
-	b9ResetSpriteSlots();
+	b9ResetViewTableMetadata();
 	b9ResetSpritePointers();
 	bEResetSpriteMemoryManager();
 }
