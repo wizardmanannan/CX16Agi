@@ -13,167 +13,220 @@ _bESpriteAllocTable: .res SPRITE_ALLOC_TABLE_SIZE, $0
 
 _bESpriteAddressTableMiddle: .res SPRITE_ALLOC_TABLE_SIZE, $0 ; Low will always be zero, hence no need for a table
 
-;low a middle x high y
+
+
+; Macro: ALLOCATE_SPRITE_MEMORY_32
+; Purpose: Allocate 32-byte segments for sprite memory in a CommanderX16 environment.
+; This macro searches through a sprite allocation table to find an empty slot.
+; Upon finding one, it sets up the sprite allocation and updates relevant pointers.
+; Handles cases where the allocation slot is already filled and wraps around the allocation table if necessary.
+; It returns with appropriate values to indicate successful or failed allocation.
 .macro ALLOCATE_SPRITE_MEMORY_32
-.local @loop
-.local @found
-.local @prepareResult
-.local @increaseWall
-.local @greater
-.local @lesser
-.local @nonEmpty
-.local @return
-.local @returnFail
+    .local @loop, @found, @prepareResult, @increaseWall, @greater, @lesser
+    .local @nonEmpty, @return, @returnFail
 
-ldx #$0 ;Indicates never reset to zero
-ldy ZP_PTR_SEG_32
-lda ZP_PTR_WALL_32
+    ; Initialize X and Y registers
+    ldx #$0 ; X register: Indicates never reset to zero
+    ldy ZP_PTR_SEG_32 ; Y register: Load segment pointer for 32-byte allocation
+    lda ZP_PTR_WALL_32 ; A register: Load wall pointer for 32-byte allocation
 
-@loop:
-cpy ZP_PTR_WALL_64
-beq @resetAtZero
-lda _bESpriteAllocTable, y
-bne @nonEmpty
+    ; Initialize X and Y registers
+    ldx #$0 ; X register: Indicates never reset to zero
+    ldy ZP_PTR_SEG_32 ; Y register: Load segment pointer for 32-byte allocation
+    lda ZP_PTR_WALL_32 ; A register: Load wall pointer for 32-byte allocation
 
-@found:
-lda ZP_PTR_WALL_32
-cmp ZP_PTR_SEG_32 ;If the segment is equal to the wall then that mean we have never reached the end before, or extra space has since become available, so we should just increase it
-bne @prepareResult
+    @loop:
+        cpy ZP_PTR_WALL_64
+        beq @resetAtZero
+        lda _bESpriteAllocTable, y
+        bne @nonEmpty
 
-@increaseWall:
-inc ZP_PTR_WALL_32
+    @found:
+        ; Allocation found, prepare for return
+        lda ZP_PTR_WALL_32
+        cmp ZP_PTR_SEG_32
+        bne @prepareResult
 
-@prepareResult:
-lda #$1
-sta _bESpriteAllocTable, y
+    @increaseWall:
+        ; Increase wall pointer if at end of allocation table
+        inc ZP_PTR_WALL_32
 
-ldx _bESpriteAddressTableMiddle,y
+    @prepareResult:
+        ; Set allocation table entry to indicate allocated
+        lda #$1
+        sta _bESpriteAllocTable, y
 
-tya 
-iny 
-sty ZP_PTR_SEG_32
+        ; Load sprite address into X register
+        ldx _bESpriteAddressTableMiddle, y
 
-cmp ZP_PTR_HIGH_BYTE_START
-bcs @greater
+        ; Update segment pointer
+        tya 
+        iny 
+        sty ZP_PTR_SEG_32
 
-@lesser:
-ldy #$0
-bra @return
+        ; Check if high byte start is reached
+        cmp ZP_PTR_HIGH_BYTE_START
+        bcs @greater
 
-@greater:
-ldy #$1
-bra @return
+    @lesser:
+        ; If not reached, set Y to 0 and return
+        ldy #$0
+        bra @return
 
+    @greater:
+        ; If reached, set Y to 1 and return
+        ldy #$1
+        bra @return
 
-@nonEmpty:
-iny 
-cpy ZP_PTR_SEG_32
-beq @returnFail
+    @nonEmpty:
+        ; If current slot is not empty, check next slot
+        iny 
+        cpy ZP_PTR_SEG_32
+        beq @returnFail
 
-bra @loop
+        bra @loop
 
-@resetAtZero:
-cpx #$0
-bne @returnFail ;We have also reset to zero before if this branch is followed
-ldx #$1
+    @resetAtZero:
+        ; Reset to start of allocation table if needed
+        cpx #$0
+        bne @returnFail
+        ldx #$1
 
-ldy #$0
-bra @loop
+        ldy #$0
+        bra @loop
 
-@returnFail:
-sty ZP_PTR_SEG_32
-ldy #0
-ldx #0
+    @returnFail:
+        ; Return failure
+        sty ZP_PTR_SEG_32
+        ldy #0
+        ldx #0
 
-@return:
-lda #$0 ;Low byte is always zero
+    @return:
+        ; Return, low byte is always zero
+        lda #$0
 .endmacro
 
+
 ;low a middle x high y
+
+ZP_PTR_WALL_32_PLUS_1 = ZP_TMP_2
+; Macro: ALLOCATE_SPRITE_MEMORY_64
+; Purpose: Allocate 64-byte segments for sprite memory in a CommanderX16 environment.
+; Similar to the 32-byte allocator but handles 64-byte segments.
+; Searches the sprite allocation table for an empty slot and prepares it for sprite allocation.
+; Adjusts the wall pointer as necessary and manages wrapping around the table.
+; Returns with values indicating the outcome of the allocation attempt (success or failure).
 .macro ALLOCATE_SPRITE_MEMORY_64
-.local @loop
-.local @checkResultTable
-.local @found
-.local @prepareResult
-.local @increaseWall
-.local @greater
-.local @lesser
-.local @nonEmpty
-.local @return
-.local @returnFail
-.local @resetToEnd
-ldx #$0 ;Indicates never reset to zero
-ldy ZP_PTR_SEG_64
+    .local @loop, @goBack, @checkResultTable, @found, @prepareResult, @storeSegmentPointer, @increaseWall, @zeroWall
+    .local @greater, @lesser, @nonEmpty, @return, @returnFail, @resetToEnd
 
-@loop:
-cpy ZP_PTR_WALL_32
-beq @resetToEnd
+    lda ZP_PTR_WALL_32
+    inc 
+    sta ZP_PTR_WALL_32_PLUS_1
 
-bcs @checkResultTable ;As 64 allocator is going in twos, we could jump over
-dey ;We have jumped over go back two bytes and reset to end
-dey
-bra @resetToEnd
+    ; Initialize X and Y registers
+    ldx #$0 ; X register: Indicates never reset to zero
+    ldy ZP_PTR_SEG_64 ; Y register: Load segment pointer for 64-byte allocation
 
-@checkResultTable:
-lda _bESpriteAllocTable, y
-bne @nonEmpty
+    @loop:
+        cpy ZP_PTR_WALL_32 ; Check if wall pointer is at end of allocation table
+        beq @resetToEnd
+        
+        cpy ZP_PTR_WALL_32_PLUS_1 ; If ZP_PTR_WALL_32_PLUS + 1 = ZP_PTR_WALL_64 then ZP_PTR_WALL_64 - 2 < ZP_PTR_WALL_32
+        bne @checkResultTable ; If we have jumped over the 32 wall we need to go back two. This is a unique problem for 64 bit alloc, as we jump in 2s
+        
+        lda ZP_PTR_WALL_32 ;Special case if ZP_PTR_WALL_32 is zero then we are perfectly entitled to allocated ourselves and 1 and 2, because it means 32 hasn't allocated anything yet and we won't overwrite anything
+        beq @checkResultTable
 
-@found:
-lda ZP_PTR_WALL_64
-cmp ZP_PTR_SEG_64 ;If the segment is equal to the wall then that mean we have never reached the end before, or extra space has since become available, so we should just increase it
-bne @prepareResult
+        @goBack:
+        iny 
+        iny
+        bra @resetToEnd
 
-@increaseWall:
-dec ZP_PTR_WALL_64
-dec ZP_PTR_WALL_64
-@prepareResult:
+    @checkResultTable:
+        ; Check if current slot is empty
+        lda _bESpriteAllocTable, y
+        bne @nonEmpty
 
-lda #$1
-sta _bESpriteAllocTable, y
+    @found:
+        ; Allocation found, prepare for return
+        lda ZP_PTR_WALL_64
+        cmp ZP_PTR_SEG_64
+        bne @prepareResult
 
-ldx _bESpriteAddressTableMiddle,y
+    @increaseWall:
+        ; Decrease wall pointer if at end of allocation table
+        dec ;Note a already holds ZP_PTR_WALL_64
+        dec
+        sta ZP_PTR_WALL_64
+        cmp #$FF ;If the wall has gone below 0 then the wall should be set to zero
+        bne @prepareResult
 
-tya 
-dey
-dey
-sty ZP_PTR_SEG_64
+    @zeroWall:
+        lda #$1 ;We cannot use zero, as there are an odd number number of allocation bytes. We use 134 and 133 ... 2 and 1
+        sta ZP_PTR_WALL_64
+    @prepareResult:
+        ; Set allocation table entry to indicate allocated
+        lda #$1
+        sta _bESpriteAllocTable, y
 
-cmp ZP_PTR_HIGH_BYTE_START
-bcs @greater
+        ; Load sprite address into X register
+        ldx _bESpriteAddressTableMiddle, y
 
-@lesser:
-ldy #$0
-bra @return
+        ; Update segment pointer
+        tya 
+        dey
+        dey
 
-@greater:
-ldy #$1
-bra @return
+        cpy #$FF ; If we have gone below 0 then we need to wrap around
+        bne @storeSegmentPointer
+        ldy #SPRITE_ALLOC_TABLE_SIZE - 2
 
+    @storeSegmentPointer:
+        sty ZP_PTR_SEG_64
 
-@nonEmpty:
-dey
-dey
-cpy ZP_PTR_SEG_64
-beq @returnFail
+        ; Check if high byte start is reached
+        cmp ZP_PTR_HIGH_BYTE_START
+        bcs @greater
 
-bra @loop
+    @lesser:
+        ; If not reached, set Y to 0 and return
+        ldy #$0
+        bra @return
 
-@resetToEnd:
-cpx #$0
-bne @returnFail ;We have also reset to end before if this branch is followed
-ldx #$1
+    @greater:
+        ; If reached, set Y to 1 and return
+        ldy #$1
+        bra @return
 
-ldy #SPRITE_ALLOC_TABLE_SIZE - 2
-bra @loop
+    @nonEmpty:
+        ; If current slot is not empty, check next slot
+        dey
+        dey
+        cpy ZP_PTR_SEG_64
+        beq @returnFail
 
-@returnFail:
-ldy #SPRITE_ALLOC_TABLE_SIZE - 2
-sty ZP_PTR_SEG_64
-ldy #0
-ldx #0
+        bra @loop
 
-@return:
-lda #$0 ;Low byte is always zero
+    @resetToEnd:
+        ; Reset to end of allocation table if needed
+        cpx #$0
+        bne @returnFail
+        ldx #$1
+
+        ldy #SPRITE_ALLOC_TABLE_SIZE - 2
+        bra @loop
+
+    @returnFail:
+        ; Return failure
+        ldy #SPRITE_ALLOC_TABLE_SIZE - 2
+        sty ZP_PTR_SEG_64
+        ldy #0
+        ldx #0
+
+    @return:
+        ; Return, low byte is always zero
+        lda #$0
 .endmacro
 
 

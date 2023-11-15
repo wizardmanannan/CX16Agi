@@ -9,7 +9,7 @@ extern byte bESpriteAllocTable[SPRITE_ALLOC_TABLE_SIZE];
 #pragma code-name (push, "BANKRAM0E")
 
 //#define VERBOSE_MEMORY_INIT 
-//#define TEST_ALLOCATE_SPRITE_MEMORY
+#define TEST_ALLOCATE_SPRITE_MEMORY
 
 void bEResetSpriteMemoryManager()
 {
@@ -100,9 +100,13 @@ void bETestSpriteAllocateSpriteMemory64()
 			printf("Fail 2 on i = %d. The result was %lx. We expected %lx\n", i, actual, expected);
 		}
 
-		if (*((byte*)ZP_PTR_SEG_64) != *((byte*)ZP_PTR_WALL_64))
+		if (*((byte*)ZP_PTR_SEG_64) != *((byte*)ZP_PTR_WALL_64) && i != SPRITE_ALLOC_TABLE_SIZE - 3)
 		{
-			printf("fail on 2, 64 wall %d doesn't track the segment %d\n", *((byte*)ZP_PTR_WALL_64), *((byte*)ZP_PTR_SEG_64)); //Note we can only put this test here, because there won't be any reset to zero
+			printf("fail on 2 (i : %d), 64 wall %d doesn't track the segment %d\n", i, *((byte*)ZP_PTR_WALL_64), *((byte*)ZP_PTR_SEG_64)); //Note we can only put this test here, because there won't be any reset to zero
+		}
+		else if (i == SPRITE_ALLOC_TABLE_SIZE - 3 && (*((byte*)ZP_PTR_WALL_64) != 1 || *((byte*)ZP_PTR_SEG_64) != SPRITE_ALLOC_TABLE_SIZE - 2))
+		{
+			printf("fail on 2 (i : %d), 64 wall %d doesn't reset to 1 and segment %d isn't at %d\n", i, *((byte*)ZP_PTR_WALL_64), *((byte*)ZP_PTR_SEG_64), SPRITE_ALLOC_TABLE_SIZE - 2);
 		}
 
 		bETestOverlap(2, FALSE);
@@ -134,8 +138,9 @@ void bETestSpriteAllocate64NotGoOver32Wall()
 	printf("3 64 does not go over 32's wall. We will go %lx times. Divided by 2 is %lx\n", SPRITE_ALLOC_TABLE_SIZE - 2, (SPRITE_ALLOC_TABLE_SIZE - 2) /2);
 
 	bEAllocateSpriteMemory32();
+	bEAllocateSpriteMemory32();
 
-	for (i = 0; i < (byte)SPRITE_ALLOC_TABLE_SIZE - 3; i += 2) //1 less than last test to account for space taken by 32
+	for (i = 0; i < (byte)SPRITE_ALLOC_TABLE_SIZE - 4; i += 2) //1 less than last test to account for space taken by 32
 	{
 		actual = bEAllocateSpriteMemory64();
 
@@ -148,7 +153,7 @@ void bETestSpriteAllocate64NotGoOver32Wall()
 
 		if (*((byte*)ZP_PTR_SEG_64) != *((byte*)ZP_PTR_WALL_64))
 		{
-			printf("fail on 4, 64 wall %d doesn't track the segment %d\n", *((byte*)ZP_PTR_WALL_64), *((byte*)ZP_PTR_SEG_64)); //Note we can only put this test here, because there won't be any reset to zero
+			printf("fail on 3, 64 wall %d doesn't track the segment %d\n", *((byte*)ZP_PTR_WALL_64), *((byte*)ZP_PTR_SEG_64)); //Note we can only put this test here, because there won't be any reset to zero
 		}
 
 		bETestOverlap(3, FALSE);
