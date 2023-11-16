@@ -9,7 +9,7 @@ extern byte bESpriteAllocTable[SPRITE_ALLOC_TABLE_SIZE];
 #pragma code-name (push, "BANKRAM0E")
 
 //#define VERBOSE_MEMORY_INIT 
-#define TEST_ALLOCATE_SPRITE_MEMORY
+//#define TEST_ALLOCATE_SPRITE_MEMORY
 
 void bEResetSpriteMemoryManager()
 {
@@ -128,7 +128,7 @@ void bETestSpriteAllocateSpriteMemory64()
 	bEResetSpriteMemoryManager();
 }
 
-void bETestSpriteAllocate64NotGoOver32Wall()
+void bETestSpriteAllocate64NotGoOver32WallWhenEven()
 {
 	byte i;
 	unsigned long expected = (SPRITE_ALLOC_TABLE_SIZE - 2) * SEGMENT_SMALL + SPRITES_DATA_START, actual;
@@ -140,7 +140,53 @@ void bETestSpriteAllocate64NotGoOver32Wall()
 	bEAllocateSpriteMemory32();
 	bEAllocateSpriteMemory32();
 
-	for (i = 0; i < (byte)SPRITE_ALLOC_TABLE_SIZE - 4; i += 2) //1 less than last test to account for space taken by 32
+	for (i = 0; i < (byte)SPRITE_ALLOC_TABLE_SIZE - 6; i += 2) //1 less than last test to account for space taken by 32
+	{
+		actual = bEAllocateSpriteMemory64();
+
+		printf("i %d  segment %d\n", i, *((byte*)ZP_PTR_SEG_64));
+
+		if (actual != expected)
+		{
+			printf("Fail 3 on i = %d. The result was %lx. We expected %lx\n", i, actual, expected);
+		}
+
+		if (*((byte*)ZP_PTR_SEG_64) != *((byte*)ZP_PTR_WALL_64))
+		{
+			printf("fail on 3, 64 wall %d doesn't track the segment %d\n", *((byte*)ZP_PTR_WALL_64), *((byte*)ZP_PTR_SEG_64)); //Note we can only put this test here, because there won't be any reset to zero
+		}
+
+		bETestOverlap(3, FALSE);
+
+		expected -= SEGMENT_SMALL * 2;
+	}
+	bETestOverlap(3, TRUE);
+
+	if (bEAllocateSpriteMemory64())
+	{
+		printf("fail 3, 64 has gone over 32's wall\n");
+	}
+
+	bEResetSpriteMemoryManager();
+}
+
+//Almost the same as the even one. We expect to allocate the SAME amount of 64 segments even though there is one extra 32. That is because in the first
+//one 32 takes up to space 2 preventing 64 from allocating to 3 & 2. Keep in mind that 64 allocates always take two consecutive slots
+//In the second one 32 takes up to space 3 also prevent 64 from taking spots 3 & 2.
+void bETestSpriteAllocate64NotGoOver32WallWhenOdd()
+{
+	byte i;
+	unsigned long expected = (SPRITE_ALLOC_TABLE_SIZE - 2) * SEGMENT_SMALL + SPRITES_DATA_START, actual;
+
+	//64 does not go over 32's wall
+
+	printf("3 64 does not go over 32's wall. We will go %lx times. Divided by 2 is %lx\n", SPRITE_ALLOC_TABLE_SIZE - 2, (SPRITE_ALLOC_TABLE_SIZE - 2) / 2);
+
+	bEAllocateSpriteMemory32();
+	bEAllocateSpriteMemory32();
+	bEAllocateSpriteMemory32();
+
+	for (i = 0; i < (byte)SPRITE_ALLOC_TABLE_SIZE - 6; i += 2) //1 less than last test to account for space taken by 32
 	{
 		actual = bEAllocateSpriteMemory64();
 
@@ -215,7 +261,8 @@ void bETestSpriteAllocateSpriteMemory()
 {
 	bETestSpriteAllocateSpriteMemory32();
 	bETestSpriteAllocateSpriteMemory64();
-	bETestSpriteAllocate64NotGoOver32Wall();
+	bETestSpriteAllocate64NotGoOver32WallWhenEven();
+	bETestSpriteAllocate64NotGoOver32WallWhenOdd();
 	bETestSpriteAllocate32NotGoOver64Wall();
 }
 
