@@ -168,29 +168,29 @@ rts
 
 ;Used in bulk
 NO_TO_BLIT = ZP_TMP_14
-TO_BLIT_ARRAY_INDEX = ZP_TMP_16
+TO_BLIT_CEL_ARRAY_INDEX = ZP_TMP_16
 BULK_ADDRESS_INDEX = ZP_TMP_17
 .segment "BANKRAM0E"
 ;byte bytesPerRow, byte noToBlit
-_bEToBlitArray: .res VIEW_TABLE_SIZE * 2, $0
+_bEToBlitCelArray: .res VIEW_TABLE_SIZE * 2, $0
 _bECellToVeraBulk:
 sta NO_TO_BLIT
 jsr popa
 sta BYTES_PER_ROW
 lda #NO_MARGIN
 sta BCOL
-stz TO_BLIT_ARRAY_INDEX
+stz TO_BLIT_CEL_ARRAY_INDEX
 stz BULK_ADDRESS_INDEX
 
 @loop:
-ldy TO_BLIT_ARRAY_INDEX
-lda _bEToBlitArray, y
+ldy TO_BLIT_CEL_ARRAY_INDEX
+lda _bEToBlitCelArray, y
 sta LOCAL_CEL
-lda _bEToBlitArray + 1, y
+lda _bEToBlitCelArray + 1, y
 sta LOCAL_CEL + 1
 iny
 iny
-sty TO_BLIT_ARRAY_INDEX
+sty TO_BLIT_CEL_ARRAY_INDEX
 
 ldy BULK_ADDRESS_INDEX
 lda _bEBulkAllocatedAddresses, y
