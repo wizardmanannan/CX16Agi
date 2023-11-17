@@ -145,7 +145,7 @@ void b6LoadLogicFile(byte logFileNum)
 #ifdef VERBOSE
 	printf("Loading Logic %d\n", logFileNum);
 #endif // VERBOSE
-	bELruCacheGet(LOGIC, logFileNum, &agiFilePosType, &tempAGI);
+	b4LruCacheGet(LOGIC, logFileNum, &agiFilePosType, &tempAGI);
 
 	getLogicFile(&logicData, logFileNum);
 	logicData.codeBank = tempAGI.codeBank;

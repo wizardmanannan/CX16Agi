@@ -1,16 +1,19 @@
 #include "lruCache.h"
 
-LRUCache* _logicCache;
-LRUCache* _viewCache;
+#pragma bss-name (push, "BANKRAM04")
+LRUCache _logicCache;
+LRUCache _viewCache;
+byte logicKeys[MAX_CACHE_SIZE];
+#pragma bss-name (pop)
 
 #ifdef _MSC_VER
 byte _bankedRam[8196];
 #define BANK_RAM _bankedRam
 #endif
 
-#pragma code-name (push, "BANKRAM0E")
+#pragma code-name (push, "BANKRAM04")
 
-void bENewLruCache(byte max_size, byte* keys, LRUCache* cache, CacheEvictionCallback evictionCallback, byte evictionCallbackBank) {
+void b4NewLruCache(byte max_size, byte* keys, LRUCache* cache, CacheEvictionCallback evictionCallback, byte evictionCallbackBank) {
     int i;
     cache->size = 0;
     cache->max_size = max_size;
@@ -23,14 +26,13 @@ void bENewLruCache(byte max_size, byte* keys, LRUCache* cache, CacheEvictionCall
     }
 }
 
-void bEInitLruCaches(CacheEvictionCallback evictionCallbackLogic, CacheEvictionCallback evictionCallbackView)
+void b4InitLruCaches(CacheEvictionCallback evictionCallbackLogic, CacheEvictionCallback evictionCallbackView)
 {
-    _logicCache = (LRUCache*)&BANK_RAM[LRU_CACHE_LOGIC_STRUCT_START];
-    bENewLruCache(LRU_CACHE_LOGIC_DATA_SIZE, &BANK_RAM[LRU_CACHE_VIEW_STRUCT_START], (LRUCache*)&BANK_RAM[LRU_CACHE_LOGIC_STRUCT_START], evictionCallbackLogic, LOGIC_CODE_BANK);
+    b4NewLruCache(LRU_CACHE_LOGIC_DATA_SIZE, &logicKeys[0], &_logicCache, evictionCallbackLogic, LOGIC_CODE_BANK);
 }
 
 
-void bELruCacheGet(int resType, byte key, AGIFilePosType* location, AGIFile* agiData)
+void b4LruCacheGet(int resType, byte key, AGIFilePosType* location, AGIFile* agiData)
 {
     int i, j;
     byte tmp;
@@ -41,7 +43,7 @@ void bELruCacheGet(int resType, byte key, AGIFilePosType* location, AGIFile* agi
 
     if (resType == LOGIC)
     {
-        lruCache = _logicCache;
+        lruCache = &_logicCache;
     }
 
     for (i = 0; i < lruCache->size; i++) {
