@@ -50,3 +50,5 @@
     .export _bESpriteAllocTable
     .export _bEAllocateSpriteMemory32
     .export _bEAllocateSpriteMemory64
+    .export _bEAllocateSpriteMemoryBulk
+    .export _bEBulkAllocatedAddresses

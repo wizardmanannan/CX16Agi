@@ -2,8 +2,11 @@
 SPRITE_MEMORY_MANAGER_INC = 1
 
 .include "globalGraphics.s"
+.include "globalViews.s"
 
 .importzp sreg
+
+.import popa
 
 .segment "BANKRAM0E"
 SPRITE_ALLOC_TABLE_SIZE = (SPRITE_END - SPRITE_START) / SEGMENT_SMALL
@@ -243,6 +246,54 @@ _bEAllocateSpriteMemory64:
 ALLOCATE_SPRITE_MEMORY_64
 sty sreg
 stz sreg + 1
+rts
+
+ZP_SIZE = ZP_TMP_3 ;Starting from 3 as allocate functions use one tmp ZP
+ZP_NUMBER_TO_ALLOCATE = ZP_TMP_4
+ZP_ARRAY_COUNTER = ZP_TMP_5
+;Puts the returned memory addresses on the system stack. Note as the lower byte is always zero only the high and middle bytes (in that order) are pushed onto the stack
+; void bEAllocateSpriteMemoryBulk(AllocationSize size, byte number) AllocationSize is 0 for 32 and 1 for 64
+_bEBulkAllocatedAddresses: .res VIEW_TABLE_SIZE * VERA_ADDRESS_SIZE * ALLOCATOR_BLOCK_SIZE_64, $0 ;64 is the biggest size, so if we have enough room for that the others will fit anyway
+
+_bEAllocateSpriteMemoryBulk:
+stp
+sta ZP_NUMBER_TO_ALLOCATE ;Save the number of sprites to allocate
+jsr popa
+sta ZP_SIZE ;Save the size of the allocation
+
+stz ZP_ARRAY_COUNTER
+
+@loop:
+lda ZP_SIZE
+bne @64Alloc
+@32Alloc:
+ALLOCATE_SPRITE_MEMORY_32
+;To Do if we cannot find a 32 slot we should ask for a 64 slot. But to test that we really need delete first, otherwise there will be guaranteed to be no 64 slots anyway
+bra @storeAndDecrementCounter
+@64Alloc:
+ALLOCATE_SPRITE_MEMORY_64
+
+@storeAndDecrementCounter:
+tya
+ldy ZP_ARRAY_COUNTER
+
+sta _bEBulkAllocatedAddresses + 2, y
+txa
+sta _bEBulkAllocatedAddresses + 1, y
+lda #$0
+sta _bEBulkAllocatedAddresses, y
+
+iny
+iny
+iny
+
+sty ZP_ARRAY_COUNTER
+
+dec ZP_NUMBER_TO_ALLOCATE
+beq @return
+jmp @loop
+
+@return:
 rts
 
 .endif

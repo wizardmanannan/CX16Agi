@@ -82,7 +82,6 @@ typedef struct {
 	byte param4;
 } ViewTable;
 
-#define VIEW_TABLE_SIZE  20  // 100
 #define SPRITE_SLOTS VIEW_TABLE_SIZE * MAX_SPRITES_SLOTS_PER_VIEW_TAB
 extern ViewTable viewtab[VIEW_TABLE_SIZE];
 

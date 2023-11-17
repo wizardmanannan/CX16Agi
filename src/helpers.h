@@ -111,4 +111,12 @@ extern byte _previousRomBank;
     } while(0);
 
 
+#define READ_STACK_FROM_ASSM(byteVar) \
+     do {                                           \
+        asm("pla"); \
+        asm("sta %v", _assm); \
+        byteVar = _assm; \
+    } while(0) \
+
+
 #endif
