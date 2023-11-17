@@ -42,18 +42,50 @@ extern int dirnOfEgo;
 
 #define VIEWTABLE_METADATA_BYTE_TERMINATOR 0xFF
 #define VIEWTABLE_METADATA_WORD_TERMINATOR 0xFFFF
-typedef struct {
+
+//The data is the top two fields are all stored at the same bank alloced address on the bank in the bank field
+typedef struct { 
 	unsigned long* currentVeraSpriteDataAddresses; //These two on a modern system would be pointers, but CX16 doesn't support three byte pointers. Zero terminated
 	unsigned long** veraAddresses;
-	byte veraAddressesBank;
+	byte viewTableMetadataBank;
 	word x[MAX_SPRITES_SLOTS_PER_VIEW_TAB + 1]; //FFFF Terminated
 	word y[MAX_SPRITES_SLOTS_PER_VIEW_TAB + 1]; //FFFF Terminated
 	byte veraSlots[MAX_SPRITES_SLOTS_PER_VIEW_TAB + 1]; //FF Terminated
 } ViewTableMetadata;
 
+
+
+
+/***************************************************************************
+** agi_blit
+***************************************************************************/
+void agiBlit(ViewTable* viewTable)
+{
+
+	//for (i = 0; i < w; i++) {
+	//	for (j = 0; j < h; j++) {
+	//		c = bmp->line[j][i];
+	//		 Next line will be removed when error is found.
+	//		if (((y + j) < 168) && ((x + i) < 160) && ((y + j) >= 0) && ((x + i) >= 0))
+
+	//			if ((c != (trans + 1)) && (pNum >= priority->line[y + j][x + i])) {
+	//				priority->line[y + j][x + i] = pNum;
+	//				picture->line[y+j][x+i] = c;
+	//				spriteScreen->line[y + j][x + i] = c;
+	//			}
+	//	}
+	//}
+}
+
 #pragma bss-name (push, "BANKRAM09")
 ViewTable viewtab[VIEW_TABLE_SIZE];
+#pragma bss-name (pop)
+#pragma bss-name (push, "BANKRAM0E")
 ViewTableMetadata viewTableMetadata[SPRITE_SLOTS];
+
+#define VIEWNO_TO_METADATA_NO_SET SPRITE_SLOTS + 1
+byte viewNoToMetaData[MAXVIEW];
+
 
 long nextSpriteAttribute;
 byte nextSpriteSlot;
@@ -188,19 +220,42 @@ void setLoadedCel(Loop* loadedLoop, Cel* localCell, byte localCellNumber)
 	RAM_BANK = previousRamBank;
 }
 
-#pragma code-name (push, "BANKRAM09")
-extern byte spritesUpdatedBuffer[VIEW_TABLE_SIZE];
+#pragma code-name (push, "BANKRAM0E")
+#pragma wrapped-call (push, trampoline, SPRITE_METADATA_BANK)
+void bEResetViewTableMetadata()
+{
+	byte i, j;
 
-void b9ResetSpritePointers()
+	for (i = 0; i < SPRITE_SLOTS; i++)
+	{
+		viewTableMetadata[i].currentVeraSpriteDataAddresses = NULL;
+		viewTableMetadata[i].veraAddresses = NULL;
+		viewTableMetadata[i].viewTableMetadataBank = NULL;
+
+		for (j = 0; j < MAX_SPRITES_SLOTS_PER_VIEW_TAB + 1; j++)
+		{
+			viewTableMetadata[i].veraSlots[j] = VIEWTABLE_METADATA_BYTE_TERMINATOR;
+			viewTableMetadata[i].x[0] = VIEWTABLE_METADATA_WORD_TERMINATOR;
+			viewTableMetadata[i].y[0] = VIEWTABLE_METADATA_WORD_TERMINATOR;
+		}
+	}
+
+	memset(&viewNoToMetaData[0], VIEWNO_TO_METADATA_NO_SET, MAXVIEW);
+}
+void bEResetSpritePointers()
 {
 	nextSpriteAttribute = SPRITE_ATTRIBUTES_START;
 	nextSpriteSlot = 0;
 }
+#pragma wrapped-call (pop)
+#pragma code-name (pop)
+#pragma code-name (push, "BANKRAM09")
+extern byte spritesUpdatedBuffer[VIEW_TABLE_SIZE];
 
 void b9InitSpriteData()
 {
 	memset(spritesUpdatedBuffer, 0, VIEW_TABLE_SIZE);
-	b9ResetSpritePointers();
+	bEResetSpritePointers();
 	bEInitSpriteMemoryManager();
 }
 
@@ -222,26 +277,6 @@ void b9InitViews()
 	}
 
 	spriteScreen = create_bitmap(160, 168);
-}
-
-void b9ResetViewTableMetadata()
-{
-	byte i, j;
-	for (i = 0; i < SPRITE_SLOTS; i++)
-	{
-		viewTableMetadata[i].currentVeraSpriteDataAddresses = NULL;
-		viewTableMetadata[i].veraAddresses = NULL;
-		viewTableMetadata[i].veraAddressesBank = NULL;
-		
-		for (j = 0; j < MAX_SPRITES_SLOTS_PER_VIEW_TAB + 1; j++)
-		{
-			viewTableMetadata[i].veraSlots[j] = VIEWTABLE_METADATA_BYTE_TERMINATOR;
-			viewTableMetadata[i].x[0] = VIEWTABLE_METADATA_WORD_TERMINATOR;
-			viewTableMetadata[i].y[0] = VIEWTABLE_METADATA_WORD_TERMINATOR;
-		}
-	}
-
-
 }
 
 void b9InitObjects()
@@ -280,7 +315,7 @@ void b9InitObjects()
 		setViewTab(&localViewtab, entryNum);
 	}
 
-	b9ResetViewTableMetadata();
+	bEResetViewTableMetadata();
 }
 
 void b9ResetViews()     /* Called after new.room */
@@ -295,8 +330,8 @@ void b9ResetViews()     /* Called after new.room */
 		setViewTab(&localViewtab, entryNum);
 	}
 
-	b9ResetViewTableMetadata();
-	b9ResetSpritePointers();
+	bEResetViewTableMetadata();
+	bEResetSpritePointers();
 	bEResetSpriteMemoryManager();
 }
 
@@ -559,7 +594,6 @@ void b9DiscardView(byte viewNum)
 			localLoop.celsBank = 0;
 			localLoop.cels = NULL;
 			localLoop.numberOfCels = 0;
-
 			setLoadedLoop(&localView, &localLoop, l);
 		}
 
@@ -572,7 +606,6 @@ void b9DiscardView(byte viewNum)
 		b10BankedDealloc(localView.codeBlock, localView.codeBlockBank);
 		localView.codeBlock = NULL;
 		localView.codeBlockBank = 0;
-
 		setLoadedView(&localView, viewNum);
 	}
 }
@@ -665,32 +698,6 @@ void b9AddToPic(int vNum, int lNum, int cNum, int x, int y, int pNum, int bCol)
 //	boxWidth = ((h >= 7) ? 7 : h);
 //	if (bCol < 4) rect(control, x, (y + h) - (boxWidth), (x + w) - 1, (y + h) - 1, bCol);
 }
-
-#pragma wrapped-call (push, trampoline, VIEW_CODE_BANK_1)
-/***************************************************************************
-** agi_blit
-***************************************************************************/
-void b9AgiBlit(ViewTable* viewTable)
-{
-
-
-
-	//for (i = 0; i < w; i++) {
-	//	for (j = 0; j < h; j++) {
-	//		c = bmp->line[j][i];
-	//		 Next line will be removed when error is found.
-	//		if (((y + j) < 168) && ((x + i) < 160) && ((y + j) >= 0) && ((x + i) >= 0))
-
-	//			if ((c != (trans + 1)) && (pNum >= priority->line[y + j][x + i])) {
-	//				priority->line[y + j][x + i] = pNum;
-	//				picture->line[y+j][x+i] = c;
-	//				spriteScreen->line[y + j][x + i] = c;
-	//			}
-	//	}
-	//}
-}
-#pragma wrapped-call (pop)
-
 #pragma code-name (pop)
 #pragma code-name (push, "BANKRAM0A")
 #pragma wrapped-call (push, trampoline, VIEW_CODE_BANK_2)
@@ -752,7 +759,7 @@ void bADrawObject(int entryNum)
 
 	bACalcDirection(&localViewtab);
 
-	b9AgiBlit(&localViewtab);
+	agiBlit(&localViewtab);
 
 	setViewTab(&localViewtab, entryNum);
 }
@@ -1139,7 +1146,7 @@ void bAUpdateObj(int entryNum)
 
 	if ((objFlags & ANIMATED) && (objFlags & DRAWN)) {
 		/* Draw new cel onto picture\priority bitmaps */
-		b9AgiBlit(&localViewtab);
+		agiBlit(&localViewtab);
 	}
 
 	setViewTab(&localViewtab, entryNum);
@@ -1292,7 +1299,7 @@ void bBUpdateObj2(int entryNum)
 
 	if ((objFlags & ANIMATED) && (objFlags & DRAWN)) {
 		/* Draw new cel onto picture\priority bitmaps */
-		b9AgiBlit(&localViewtab);
+		agiBlit(&localViewtab);
 	}
 
 	setViewTab(&localViewtab, entryNum);
@@ -1412,7 +1419,7 @@ void bBUpdateObjects()
 		objFlags = localViewtab.flags;
 		if ((objFlags & ANIMATED) && (objFlags & DRAWN)) {
 			/* Draw new cel onto picture\priority bitmaps */
-			b9AgiBlit(&localViewtab);
+			agiBlit(&localViewtab);
 		}
 
 		setViewTab(&localViewtab, entryNum);
@@ -1579,7 +1586,7 @@ void bCupdateObjects2()
 
 		if ((objFlags & ANIMATED) && (objFlags & DRAWN)) {
 			/* Draw new cel onto picture\priority bitmaps */
-			b9AgiBlit(&localViewtab);
+			agiBlit(&localViewtab);
 		}
 
 		setViewTab(&localViewtab, entryNum);
