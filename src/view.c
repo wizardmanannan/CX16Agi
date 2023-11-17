@@ -98,7 +98,7 @@ FONT* font;
 
 //
 
-extern void b9CelToVera(Cel* localCel, long veraAddress, byte pNum, byte bCol, byte drawingAreaWidth);
+extern void b9CelToVera(Cel* localCel, long veraAddress, byte bCol, byte drawingAreaWidth);
 
 void getViewTab(ViewTable* returnedViewTab, byte viewTabNumber)
 {
@@ -646,7 +646,7 @@ void b9AddToPic(int vNum, int lNum, int cNum, int x, int y, int pNum, int bCol)
 	printf("w %d h %d\n", localCel.width, localCel.height);
 #endif // VERBOSE_ADD_TO_PIC
 
-	b9CelToVera(&localCel, b4GetVeraPictureAddress(x, (y - localCel.height) + 1), pNum, bCol, BYTES_PER_ROW);
+	b9CelToVera(&localCel, b4GetVeraPictureAddress(x, (y - localCel.height) + 1), bCol, BYTES_PER_ROW);
 
 	//TODO: Finish implementing the priority and control line stuff
 //

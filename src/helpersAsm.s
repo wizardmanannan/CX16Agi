@@ -21,6 +21,7 @@ sta BUFFER_POINTER + 1
 
 .macro GET_NEXT BUFFER_POINTER, BUFFER_STATUS
 .local @getNext
+.local @return
 lda BUFFER_POINTER
 cmp #<(GOLDEN_RAM_WORK_AREA_END + 1)
 bne @getNext

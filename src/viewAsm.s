@@ -7,6 +7,7 @@ VIEW_INC = 1
 .include "globalViews.s"
 .include "global.s"
 .include "pictureAsm.s"
+.include "spriteMemoryManagerAsm.s"
 
 .import _b5RefreshBuffer
 .import _getLoadedView
@@ -22,23 +23,6 @@ VIEW_INC = 1
 _viewHeaderBuffer: .res VIEW_HEADER_BUFFER_SIZE
 _loopHeaderBuffer: .res LOOP_HEADER_BUFFER_SIZE
 _spritesUpdatedBuffer: .res VIEW_TABLE_SIZE
-
-VERA_BYTES_PER_ROW = ZP_TMP
-BCOL = ZP_TMP_2
-PNUM = ZP_TMP_3
-VERA_ADDRESS = ZP_TMP_4
-VERA_ADDRESS_HIGH = ZP_TMP_5
-LOCAL_CEL = ZP_TMP_6
-BUFFER_STATUS = ZP_TMP_7 ;Takes Up 8 as well
-BUFFER_POINTER = ZP_TMP_9
-CEL_HEIGHT = ZP_TMP_10
-CEL_TRANS = ZP_TMP_12
-COLOUR = ZP_TMP_13
-CEL_BMP_OFFSET = 3
-CEL_BANK_OFFSET = 5
-CEL_HEIGHT_OFFSET = 1
-CEL_TRANS_OFFSET = 2
-
 
 .macro SET_COLOR COLOUR
 lsr a           ; Shift left 4 times to multiply by 16
@@ -67,27 +51,33 @@ pla
 .endif
 .endmacro
 
-;byte* localCel, long veraAddress, byte pNum, byte bCol, byte drawingAreaWidth
+
+;Used in both single and bulk
+VERA_BYTES_PER_ROW = ZP_TMP_2
+BCOL = ZP_TMP_3
+VERA_ADDRESS = ZP_TMP_4
+VERA_ADDRESS_HIGH = ZP_TMP_5
+LOCAL_CEL = ZP_TMP_6
+BUFFER_STATUS = ZP_TMP_7 ;Takes Up 8 as well
+BUFFER_POINTER = ZP_TMP_9
+CEL_HEIGHT = ZP_TMP_10
+CEL_TRANS = ZP_TMP_12
+COLOUR = ZP_TMP_13
+
+;Constants
+CEL_BMP_OFFSET = 3
+CEL_BANK_OFFSET = 5
+CEL_HEIGHT_OFFSET = 1
+CEL_TRANS_OFFSET = 2
+NO_MARGIN = 4
+;byte* localCel, long veraAddress, byte bCol, byte drawingAreaWidth
 ;Writes a cel to the Vera. The cel must be preloaded at the localCel pointer
 ;The view (and by extension the cel) must preloaded.
 ;This view data on the cel is run encoded eg. AX (X instances of colour A)
 ;Each line is terminated with a 0
 ;The function stops when it has counted height number of zeros
-_b9CelToVera:
-sta BYTES_PER_ROW
-jsr popax
-sta BCOL
-stx PNUM
-jsr popax
-sta VERA_ADDRESS
-stx VERA_ADDRESS + 1
-jsr popax
-sta VERA_ADDRESS_HIGH
-stx VERA_ADDRESS_HIGH + 1
-jsr popax
-sta LOCAL_CEL
-stx LOCAL_CEL + 1
 
+.macro CEL_TO_VERA
 GET_STRUCT_16 CEL_BMP_OFFSET, LOCAL_CEL, BUFFER_STATUS ;Buffer status holds the C struct to be passed to b5RefreshBuffer
 GET_STRUCT_8 CEL_BANK_OFFSET, LOCAL_CEL, BUFFER_STATUS + 2
 GET_STRUCT_8 CEL_HEIGHT_OFFSET, LOCAL_CEL, CEL_HEIGHT
@@ -155,7 +145,76 @@ sta VERA_ADDRESS_HIGH
 jmp @setVeraAddress
 
 @end:
+.endmacro
+
+;byte* localCel, long veraAddress, byte pNum, byte bCol, byte drawingAreaWidth
+_b9CelToVera:
+sta BYTES_PER_ROW
+jsr popa
+sta BCOL
+jsr popax
+sta VERA_ADDRESS
+stx VERA_ADDRESS + 1
+jsr popax
+sta VERA_ADDRESS_HIGH
+stx VERA_ADDRESS_HIGH + 1
+jsr popax
+sta LOCAL_CEL
+stx LOCAL_CEL + 1
+
+CEL_TO_VERA
+
 rts
+
+;Used in bulk
+NO_TO_BLIT = ZP_TMP_14
+TO_BLIT_ARRAY_INDEX = ZP_TMP_16
+BULK_ADDRESS_INDEX = ZP_TMP_17
+.segment "BANKRAM0E"
+;byte bytesPerRow, byte noToBlit
+_bEToBlitArray: .res VIEW_TABLE_SIZE * 2, $0
+_bECellToVeraBulk:
+sta NO_TO_BLIT
+jsr popa
+sta BYTES_PER_ROW
+lda #NO_MARGIN
+sta BCOL
+stz TO_BLIT_ARRAY_INDEX
+stz BULK_ADDRESS_INDEX
+
+@loop:
+ldy TO_BLIT_ARRAY_INDEX
+lda _bEToBlitArray, y
+sta LOCAL_CEL
+lda _bEToBlitArray + 1, y
+sta LOCAL_CEL + 1
+iny
+iny
+sty TO_BLIT_ARRAY_INDEX
+
+ldy BULK_ADDRESS_INDEX
+lda _bEBulkAllocatedAddresses, y
+sta VERA_ADDRESS
+lda _bEBulkAllocatedAddresses + 1, y
+sta VERA_ADDRESS + 1
+lda _bEBulkAllocatedAddresses + 2, y
+sta VERA_ADDRESS_HIGH
+stz VERA_ADDRESS_HIGH + 1 ;Always zero
+iny
+iny
+iny
+sty BULK_ADDRESS_INDEX
+
+CEL_TO_VERA
+
+@checkLoop:
+dec NO_TO_BLIT
+beq @return
+jmp @loop
+
+@return:
+rts
+
 .endif
 
 
