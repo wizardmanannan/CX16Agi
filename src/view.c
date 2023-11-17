@@ -333,6 +333,7 @@ void b9ResetViews()     /* Called after new.room */
 	bEResetViewTableMetadata();
 	bEResetSpritePointers();
 	bEResetSpriteMemoryManager();
+	printf("\nOut of reset\n");
 }
 
 
