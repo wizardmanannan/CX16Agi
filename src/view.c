@@ -425,6 +425,8 @@ void setLoopData(AGIFile* tempAGI, View* localView, Loop* localLoop, byte* loopH
 		localLoop->cels = (Cel*)b10BankedAlloc(numberOfCels * sizeof(Cel), &celsBank);
 		localLoop->numberOfCels = numberOfCels;
 		localLoop->celsBank = celsBank;
+		localLoop->maxWidth = 0;
+		localLoop->maxHeight = 0;
 
 		setLoadedLoop(localView, localLoop, loopNum);
 	}
@@ -500,6 +502,16 @@ void b9LoadViewFile(byte viewNum)
 			localCel.width = celHeader[POSITION_OF_CEL_WIDTH];
 			localCel.height = celHeader[POSITION_OF_CEL_HEIGHT];
 			localCel.flipped = (trans & 0x80) && (((trans & 0x70) >> 4) != l);
+
+			if (localLoop.maxWidth < localCel.width)
+			{
+				localLoop.maxWidth = localCel.width;
+			}
+
+			if (localLoop.maxHeight < localCel.height)
+			{
+				localLoop.maxHeight = localCel.height;
+			}
 
 #ifdef VERBOSE_SET_CEL
 			printf("The viewNum is %d\n", viewNum);

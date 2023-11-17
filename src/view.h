@@ -27,6 +27,8 @@ typedef struct {
 	byte numberOfCels;
 	Cel* cels;
 	byte celsBank;
+	byte maxWidth;
+	byte maxHeight;
 } Loop;
 
 typedef struct {
