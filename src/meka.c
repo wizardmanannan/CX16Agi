@@ -243,7 +243,7 @@ void b6Initialise()
 
     b6InitTimer(&b6Timing_proc);
 
-    bEInitLruCaches(&b6DiscardLogicFile, &b9DiscardView);
+    b4InitLruCaches(&b6DiscardLogicFile, &b9DiscardView);
 
     b6InitFiles();             /* Load resource directories */
 
