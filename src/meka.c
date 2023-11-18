@@ -25,6 +25,7 @@
 #include "irq.h"
 #include "textLayer.h"
 #include "loadingScreen.h"
+#include "structMetadata.h"
 //#include "parser.h"
 //#include "sound.h"
 

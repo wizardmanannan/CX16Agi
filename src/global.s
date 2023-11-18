@@ -178,9 +178,26 @@ NEG_1_16 = $FFFF
          STA   result + 1
 .endmacro
 
+; Macro for getting a 16-bit struct value
+.macro   GET_STRUCT_16_STORED_OFFSET offset, pointer, result ;Where offset in stored in memory rather than constant
+         LDY   offset
+         LDA   (pointer),y
+         STA   result
+         INY
+         LDA   (pointer),y
+         STA   result + 1
+.endmacro
+
 ; Macro for getting an 8-bit struct value
 .macro   GET_STRUCT_8 offset, pointer, result
          LDY   #offset
+         LDA   (pointer),y
+         STA   result
+.endmacro
+
+; Macro for getting an 8-bit struct value
+.macro   GET_STRUCT_8_STORED_OFFSET offset, pointer, result
+         LDY   offset
          LDA   (pointer),y
          STA   result
 .endmacro

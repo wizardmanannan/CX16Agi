@@ -47,6 +47,7 @@
     <ClInclude Include="src\irq.h" />
     <ClInclude Include="src\loadingScreen.h" />
     <ClInclude Include="src\spriteMemoryManager.h" />
+    <ClInclude Include="src\structMetadata.h" />
     <ClInclude Include="src\textLayer.h" />
     <ClInclude Include="src\GUI.H" />
     <ClInclude Include="src\helpers.h" />

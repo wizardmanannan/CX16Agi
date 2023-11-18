@@ -14,7 +14,7 @@
 
 #define MAXVIEW  256
 
-typedef struct { //Careful about changing order _b9ViewToVera depends on this order
+typedef struct Cel {
 	byte width;
 	byte height;
 	byte transparency;

@@ -15,6 +15,11 @@ VIEW_INC = 1
 .import popa
 .import pushax
 
+.import _offsetOfBmp
+.import _offsetOfBmpBank
+.import _offsetOfCelHeight
+.import _offsetOfCelTrans
+
 .ifdef DEBUG_VIEW_DRAW
 .import _b5PrintChunk
 .endif
@@ -65,8 +70,6 @@ CEL_TRANS = ZP_TMP_12
 COLOUR = ZP_TMP_13
 
 ;Constants
-CEL_BMP_OFFSET = 3
-CEL_BANK_OFFSET = 5
 CEL_HEIGHT_OFFSET = 1
 CEL_TRANS_OFFSET = 2
 NO_MARGIN = 4
@@ -78,10 +81,10 @@ NO_MARGIN = 4
 ;The function stops when it has counted height number of zeros
 
 .macro CEL_TO_VERA
-GET_STRUCT_16 CEL_BMP_OFFSET, LOCAL_CEL, BUFFER_STATUS ;Buffer status holds the C struct to be passed to b5RefreshBuffer
-GET_STRUCT_8 CEL_BANK_OFFSET, LOCAL_CEL, BUFFER_STATUS + 2
-GET_STRUCT_8 CEL_HEIGHT_OFFSET, LOCAL_CEL, CEL_HEIGHT
-GET_STRUCT_8 CEL_TRANS_OFFSET, LOCAL_CEL, CEL_TRANS
+GET_STRUCT_16_STORED_OFFSET _offsetOfBmp, LOCAL_CEL, BUFFER_STATUS ;Buffer status holds the C struct to be passed to b5RefreshBuffer
+GET_STRUCT_8_STORED_OFFSET _offsetOfBmpBank, LOCAL_CEL, BUFFER_STATUS + 2
+GET_STRUCT_8_STORED_OFFSET _offsetOfCelHeight, LOCAL_CEL, CEL_HEIGHT
+GET_STRUCT_8_STORED_OFFSET _offsetOfCelTrans, LOCAL_CEL, CEL_TRANS
 
 stz BUFFER_STATUS + 3
 
