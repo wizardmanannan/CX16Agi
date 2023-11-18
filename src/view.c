@@ -27,6 +27,8 @@
 //#define VERBOSE_SET_CEL
 //#define VERBOSE_LOAD_VIEWS;
 //#define VERBOSE_UPDATE_OBJECTS
+//#define VERBOSE_DEBUG_SET_METADATA
+//#define VERBOSE_DEBUG_BLIT
 
 //#define VERBOSE_ALLOC_WATCH
 //#define VERBOSE_ADD_TO_PIC;
@@ -46,36 +48,15 @@ extern int dirnOfEgo;
 //The data is the top two fields are all stored at the same bank alloced address on the bank in the bank field
 typedef struct { 
 	unsigned long* currentVeraSpriteDataAddresses; //These two on a modern system would be pointers, but CX16 doesn't support three byte pointers. Zero terminated
-	unsigned long** veraAddresses;
+	unsigned long** loopVeraAddressesPointers;
+	unsigned long* veraAddresses;
 	byte viewTableMetadataBank;
 	word x[MAX_SPRITES_SLOTS_PER_VIEW_TAB + 1]; //FFFF Terminated
 	word y[MAX_SPRITES_SLOTS_PER_VIEW_TAB + 1]; //FFFF Terminated
 	byte veraSlots[MAX_SPRITES_SLOTS_PER_VIEW_TAB + 1]; //FF Terminated
+	byte veraSlotsPerCel;
+
 } ViewTableMetadata;
-
-
-
-
-/***************************************************************************
-** agi_blit
-***************************************************************************/
-void agiBlit(ViewTable* viewTable)
-{
-
-	//for (i = 0; i < w; i++) {
-	//	for (j = 0; j < h; j++) {
-	//		c = bmp->line[j][i];
-	//		 Next line will be removed when error is found.
-	//		if (((y + j) < 168) && ((x + i) < 160) && ((y + j) >= 0) && ((x + i) >= 0))
-
-	//			if ((c != (trans + 1)) && (pNum >= priority->line[y + j][x + i])) {
-	//				priority->line[y + j][x + i] = pNum;
-	//				picture->line[y+j][x+i] = c;
-	//				spriteScreen->line[y + j][x + i] = c;
-	//			}
-	//	}
-	//}
-}
 
 #pragma bss-name (push, "BANKRAM09")
 ViewTable viewtab[VIEW_TABLE_SIZE];
@@ -84,11 +65,12 @@ ViewTable viewtab[VIEW_TABLE_SIZE];
 ViewTableMetadata viewTableMetadata[SPRITE_SLOTS];
 
 #define VIEWNO_TO_METADATA_NO_SET SPRITE_SLOTS + 1
-byte viewNoToMetaData[MAXVIEW];
+byte viewTabNoToMetaData[MAXVIEW];
 
 
 long nextSpriteAttribute;
 byte nextSpriteSlot;
+byte nextViewMetadataSlot;
 #pragma bss-name (pop)
 
 //Temp From Allogro
@@ -131,6 +113,168 @@ FONT* font;
 //
 
 extern void b9CelToVera(Cel* localCel, long veraAddress, byte bCol, byte drawingAreaWidth);
+
+#pragma code-name (push, "BANKRAM0E")
+#pragma wrapped-call (push, trampoline, SPRITE_METADATA_BANK)
+void bEResetViewTableMetadata()
+{
+	byte i, j;
+
+	for (i = 0; i < SPRITE_SLOTS; i++)
+	{
+		if (viewTableMetadata[i].currentVeraSpriteDataAddresses != NULL)
+		{
+			b10BankedDealloc((byte*)viewTableMetadata[i].currentVeraSpriteDataAddresses, viewTableMetadata[i].viewTableMetadataBank);
+		}
+
+		viewTableMetadata[i].currentVeraSpriteDataAddresses = NULL;
+		viewTableMetadata[i].loopVeraAddressesPointers = NULL;
+		viewTableMetadata[i].viewTableMetadataBank = NULL;
+
+		for (j = 0; j < MAX_SPRITES_SLOTS_PER_VIEW_TAB + 1; j++)
+		{
+			viewTableMetadata[i].veraSlots[j] = VIEWTABLE_METADATA_BYTE_TERMINATOR;
+			viewTableMetadata[i].x[0] = VIEWTABLE_METADATA_WORD_TERMINATOR;
+			viewTableMetadata[i].y[0] = VIEWTABLE_METADATA_WORD_TERMINATOR;
+		}
+	}
+
+	memset(&viewTabNoToMetaData[0], VIEWNO_TO_METADATA_NO_SET, MAXVIEW);
+}
+void bEResetSpritePointers()
+{
+	nextSpriteAttribute = SPRITE_ATTRIBUTES_START;
+	nextSpriteSlot = 0;
+	nextViewMetadataSlot = 0;
+}
+#pragma wrapped-call (pop)
+
+#define MAX_SLOT_1_SIZED_SPRITE 64
+#define MAX_SPRITE_SIZE 128
+void bESetViewMetadata(View* localView, ViewTable* viewTable, byte viewNum, byte viewTabNo)
+{
+	byte i;
+	byte viewMetadataSlot;
+	byte noSlots;
+	ViewTableMetadata metadata;
+	int currentVeraSpriteDataAddressesSize;
+	int loopVeraAddressesPointersSize;
+	int veraAddressesSize;
+
+#ifdef VERBOSE_DEBUG_SET_METADATA
+	printf("The viewNum is %d\n", viewNum);
+#endif
+
+	if (nextSpriteSlot > SPRITE_SLOTS)
+	{
+		printf("Fail: Sprite slot too big");
+	}
+
+#ifdef VERBOSE_DEBUG_SET_METADATA
+	printf("The maxWidth is %d and the maxHeight is %d\n", localView->maxWidth, localView->maxHeight);
+#endif
+	if (localView->maxWidth <= MAX_SLOT_1_SIZED_SPRITE && localView->maxHeight <= MAX_SLOT_1_SIZED_SPRITE)
+	{
+		noSlots = 1;
+	}
+	else
+	{
+		printf("Big slots yet supported");
+		noSlots = 1; //TODO: Support big slots
+	}
+
+
+	viewMetadataSlot = nextViewMetadataSlot++;
+
+	metadata = viewTableMetadata[viewTabNo];
+
+	viewTabNoToMetaData[viewTabNo] = viewMetadataSlot;
+
+	if (metadata.currentVeraSpriteDataAddresses != NULL)
+	{
+		b10BankedDealloc((byte*)metadata.currentVeraSpriteDataAddresses, metadata.viewTableMetadataBank);
+
+		//TODO: Deallocate vera as well
+	}
+
+	currentVeraSpriteDataAddressesSize = noSlots * sizeof(unsigned long);
+	loopVeraAddressesPointersSize = localView->numberOfLoops * sizeof(unsigned long*);
+	veraAddressesSize = noSlots * localView->maxCels * sizeof(unsigned long);
+
+#ifdef VERBOSE_DEBUG_SET_METADATA
+	printf("There are %d loops and %d maxCels\n", localView->numberOfLoops, localView->maxCels);
+#endif
+
+	metadata.currentVeraSpriteDataAddresses = (unsigned long*)b10BankedAlloc(currentVeraSpriteDataAddressesSize + loopVeraAddressesPointersSize + veraAddressesSize, &metadata.viewTableMetadataBank);
+	metadata.loopVeraAddressesPointers = (unsigned long**)metadata.currentVeraSpriteDataAddresses + currentVeraSpriteDataAddressesSize;
+	metadata.veraAddresses = (unsigned long*)metadata.loopVeraAddressesPointers + loopVeraAddressesPointersSize;
+
+#ifdef VERBOSE_DEBUG_SET_METADATA
+	printf("Allocated the following address %p, %p, %p. The size is %d + %d + %d = %d. The bank is %d\n", metadata.currentVeraSpriteDataAddresses, metadata.loopVeraAddressesPointers, metadata.veraAddresses, currentVeraSpriteDataAddressesSize, loopVeraAddressesPointersSize, veraAddressesSize, currentVeraSpriteDataAddressesSize + loopVeraAddressesPointersSize + veraAddressesSize, metadata.viewTableMetadataBank);
+#endif
+
+	for (i = 0; i < noSlots; i++)
+	{
+		//TODO move across or down if more than one slot and it is not the first
+		metadata.x[i] = viewTable->xPos;
+		metadata.y[i] = viewTable->yPos;
+	}
+	viewTableMetadata->veraSlotsPerCel = noSlots;
+
+	viewTableMetadata[viewTabNo] = metadata;
+
+#ifdef VERBOSE_DEBUG_SET_METADATA
+	printf("The address of the viewTableMD is %p\n", &viewTableMetadata[viewTabNo]);
+	asm("stp");
+#endif
+}
+
+#pragma code-name (pop)
+
+/***************************************************************************
+** agi_blit
+***************************************************************************/
+void agiBlit(ViewTable* localViewTab, byte entryNum)
+{
+	View localView;
+	byte viewNum;
+	byte previousBank;
+		
+	previousBank = RAM_BANK;
+
+	RAM_BANK = SPRITE_METADATA_BANK;
+
+	viewNum = localViewTab->currentView;
+	
+#ifdef VERBOSE_DEBUG_BLIT
+	printf("The viewNum is %d\n", viewNum);
+#endif // VERBOSE_DEBUG_BLIT
+
+
+	getLoadedView(&localView, viewNum);
+
+	if (viewTabNoToMetaData[entryNum] == VIEWNO_TO_METADATA_NO_SET)
+	{
+		bESetViewMetadata(&localView, localViewTab, viewNum, entryNum);
+	}
+
+		//for (i = 0; i < w; i++) {
+		//	for (j = 0; j < h; j++) {
+		//		c = bmp->line[j][i];
+		//		 Next line will be removed when error is found.
+		//		if (((y + j) < 168) && ((x + i) < 160) && ((y + j) >= 0) && ((x + i) >= 0))
+
+		//			if ((c != (trans + 1)) && (pNum >= priority->line[y + j][x + i])) {
+		//				priority->line[y + j][x + i] = pNum;
+		//				picture->line[y+j][x+i] = c;
+		//				spriteScreen->line[y + j][x + i] = c;
+		//			}
+		//	}
+		//}
+
+	RAM_BANK = previousBank;
+}
+
 
 void getViewTab(ViewTable* returnedViewTab, byte viewTabNumber)
 {
@@ -219,36 +363,6 @@ void setLoadedCel(Loop* loadedLoop, Cel* localCell, byte localCellNumber)
 
 	RAM_BANK = previousRamBank;
 }
-
-#pragma code-name (push, "BANKRAM0E")
-#pragma wrapped-call (push, trampoline, SPRITE_METADATA_BANK)
-void bEResetViewTableMetadata()
-{
-	byte i, j;
-
-	for (i = 0; i < SPRITE_SLOTS; i++)
-	{
-		viewTableMetadata[i].currentVeraSpriteDataAddresses = NULL;
-		viewTableMetadata[i].veraAddresses = NULL;
-		viewTableMetadata[i].viewTableMetadataBank = NULL;
-
-		for (j = 0; j < MAX_SPRITES_SLOTS_PER_VIEW_TAB + 1; j++)
-		{
-			viewTableMetadata[i].veraSlots[j] = VIEWTABLE_METADATA_BYTE_TERMINATOR;
-			viewTableMetadata[i].x[0] = VIEWTABLE_METADATA_WORD_TERMINATOR;
-			viewTableMetadata[i].y[0] = VIEWTABLE_METADATA_WORD_TERMINATOR;
-		}
-	}
-
-	memset(&viewNoToMetaData[0], VIEWNO_TO_METADATA_NO_SET, MAXVIEW);
-}
-void bEResetSpritePointers()
-{
-	nextSpriteAttribute = SPRITE_ATTRIBUTES_START;
-	nextSpriteSlot = 0;
-}
-#pragma wrapped-call (pop)
-#pragma code-name (pop)
 #pragma code-name (push, "BANKRAM09")
 extern byte spritesUpdatedBuffer[VIEW_TABLE_SIZE];
 
@@ -418,6 +532,9 @@ void setViewData(byte viewNum, AGIFile* tempAGI, View* localView)
 		localView->numberOfLoops = numberOfLoops;
 		localView->description = description;
 		localView->loopsBank = loopsBank;
+		localView->maxCels = 0;
+		localView->maxWidth = 0;
+		localView->maxHeight = 0;
 	}
 	else
 	{
@@ -461,9 +578,6 @@ void setLoopData(AGIFile* tempAGI, View* localView, Loop* localLoop, byte* loopH
 		localLoop->cels = (Cel*)b10BankedAlloc(numberOfCels * sizeof(Cel), &celsBank);
 		localLoop->numberOfCels = numberOfCels;
 		localLoop->celsBank = celsBank;
-		localLoop->maxWidth = 0;
-		localLoop->maxHeight = 0;
-
 		setLoadedLoop(localView, localLoop, loopNum);
 	}
 	else
@@ -539,14 +653,14 @@ void b9LoadViewFile(byte viewNum)
 			localCel.height = celHeader[POSITION_OF_CEL_HEIGHT];
 			localCel.flipped = (trans & 0x80) && (((trans & 0x70) >> 4) != l);
 
-			if (localLoop.maxWidth < localCel.width)
+			if (localView.maxWidth < localCel.width)
 			{
-				localLoop.maxWidth = localCel.width;
+				localView.maxWidth = localCel.width;
 			}
 
-			if (localLoop.maxHeight < localCel.height)
+			if (localView.maxHeight < localCel.height)
 			{
-				localLoop.maxHeight = localCel.height;
+				localView.maxHeight = localCel.height;
 			}
 
 #ifdef VERBOSE_SET_CEL
@@ -555,6 +669,11 @@ void b9LoadViewFile(byte viewNum)
 			printf("bitmapBank %d, bmp %p, height %d, width %d, flipped %d \n", localCel.bitmapBank, localCel.bmp, localCel.height, localCel.width, localCel.flipped);
 #endif // VERBOSE_SET_CEL
 			setLoadedCel(&localLoop, &localCel, c);
+		}
+
+		if (localLoop.numberOfCels > localView.maxCels)
+		{
+			localView.maxCels = localLoop.numberOfCels;
 		}
 }
 	setLoadedView(&localView, viewNum);
@@ -760,7 +879,11 @@ void bADrawObject(int entryNum)
 
 	bACalcDirection(&localViewtab);
 
-	agiBlit(&localViewtab);
+#ifdef VERBOSE_DEBUG_BLIT
+	printf("Called from draw object");
+#endif // DEBUG
+
+	agiBlit(&localViewtab, entryNum);
 
 	setViewTab(&localViewtab, entryNum);
 }
@@ -1147,7 +1270,12 @@ void bAUpdateObj(int entryNum)
 
 	if ((objFlags & ANIMATED) && (objFlags & DRAWN)) {
 		/* Draw new cel onto picture\priority bitmaps */
-		agiBlit(&localViewtab);
+		
+#ifdef VERBOSE_DEBUG_BLIT
+		printf("Called from update obj ");
+#endif // DEBUG
+
+		agiBlit(&localViewtab, entryNum);
 	}
 
 	setViewTab(&localViewtab, entryNum);
@@ -1300,7 +1428,12 @@ void bBUpdateObj2(int entryNum)
 
 	if ((objFlags & ANIMATED) && (objFlags & DRAWN)) {
 		/* Draw new cel onto picture\priority bitmaps */
-		agiBlit(&localViewtab);
+		
+#ifdef VERBOSE_DEBUG_BLIT
+		printf("Called from update obj 2");
+#endif // DEBUG
+		
+		agiBlit(&localViewtab, entryNum);
 	}
 
 	setViewTab(&localViewtab, entryNum);
@@ -1420,7 +1553,12 @@ void bBUpdateObjects()
 		objFlags = localViewtab.flags;
 		if ((objFlags & ANIMATED) && (objFlags & DRAWN)) {
 			/* Draw new cel onto picture\priority bitmaps */
-			agiBlit(&localViewtab);
+			
+#ifdef VERBOSE_DEBUG_BLIT
+			printf("Called from update objs");
+#endif // DEBUG
+			
+			agiBlit(&localViewtab, entryNum);
 		}
 
 		setViewTab(&localViewtab, entryNum);
@@ -1587,7 +1725,7 @@ void bCupdateObjects2()
 
 		if ((objFlags & ANIMATED) && (objFlags & DRAWN)) {
 			/* Draw new cel onto picture\priority bitmaps */
-			agiBlit(&localViewtab);
+			agiBlit(&localViewtab, entryNum);
 		}
 
 		setViewTab(&localViewtab, entryNum);

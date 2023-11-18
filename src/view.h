@@ -27,8 +27,6 @@ typedef struct {
 	byte numberOfCels;
 	Cel* cels;
 	byte celsBank;
-	byte maxWidth;
-	byte maxHeight;
 } Loop;
 
 typedef struct {
@@ -39,6 +37,9 @@ typedef struct {
 	char* description; //Always on the same bank as code
 	byte* codeBlock;
 	byte codeBlockBank;
+	byte maxCels;
+	byte maxWidth;
+	byte maxHeight;
 } View;
 
 #define DRAWN         0x0001

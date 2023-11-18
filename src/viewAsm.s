@@ -19,6 +19,7 @@ VIEW_INC = 1
 .import _offsetOfBmpBank
 .import _offsetOfCelHeight
 .import _offsetOfCelTrans
+.import _sizeofCel
 
 .ifdef DEBUG_VIEW_DRAW
 .import _b5PrintChunk
@@ -173,9 +174,10 @@ rts
 NO_TO_BLIT = ZP_TMP_14
 TO_BLIT_CEL_ARRAY_INDEX = ZP_TMP_16
 BULK_ADDRESS_INDEX = ZP_TMP_17
+SIZE_OF_CEL = ZP_TMP_18
 .segment "BANKRAM0E"
 ;byte bytesPerRow, byte noToBlit
-_bEToBlitCelArray: .res VIEW_TABLE_SIZE * 2, $0
+_bEToBlitCelArray: .res 300
 _bECellToVeraBulk:
 sta NO_TO_BLIT
 jsr popa
@@ -185,15 +187,21 @@ sta BCOL
 stz TO_BLIT_CEL_ARRAY_INDEX
 stz BULK_ADDRESS_INDEX
 
+lda _sizeofCel
+sta SIZE_OF_CEL
+
 @loop:
 ldy TO_BLIT_CEL_ARRAY_INDEX
 lda _bEToBlitCelArray, y
 sta LOCAL_CEL
 lda _bEToBlitCelArray + 1, y
 sta LOCAL_CEL + 1
-iny
-iny
-sty TO_BLIT_CEL_ARRAY_INDEX
+
+clc
+tya
+adc SIZE_OF_CEL
+sta TO_BLIT_CEL_ARRAY_INDEX
+
 
 ldy BULK_ADDRESS_INDEX
 lda _bEBulkAllocatedAddresses, y
