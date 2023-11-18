@@ -11,6 +11,7 @@
 #include "agifiles.h"
 #include "picture.h"
 #include "spriteMemoryManager.h"
+#include "helpers.h"
 
 #define MAXVIEW  256
 
@@ -85,7 +86,7 @@ typedef struct {
 	byte param4;
 } ViewTable;
 
-#define SPRITE_SLOTS (VIEW_TABLE_SIZE * MAX_SPRITES_SLOTS_PER_VIEW_TAB)
+#define SPRITE_SLOTS (VIEW_TABLE_SIZE)
 extern ViewTable viewtab[VIEW_TABLE_SIZE];
 
 extern View* loadedViews;

@@ -40,6 +40,7 @@ extern size_t strLenBanked(char* string, int bank);
 
 extern void* memCpyBanked(byte* dest, byte* src, byte bank, size_t len);
 extern void memCpyBankedBetween(byte* dest, byte bankDst, byte* src, byte bankSrc, size_t len);
+extern void memsetBanked(void* _Dst, int _Val, size_t _Size, byte bank);
 
 #define COPY_EVERYTHING 32767
 extern void copyStringFromBanked(char* src, char* dest, int start, int chunk, byte sourceBank, boolean convertFromAsciiByteToPetscii);

@@ -82,6 +82,17 @@ void* memCpyBanked(byte* dest, byte* src, byte bank, size_t len)
 	return returnVal;
 }
 
+void memsetBanked(void* _Dst, int _Val, size_t _Size, byte bank)
+{
+	byte previousRamBank = RAM_BANK;
+	
+	RAM_BANK = bank;
+
+	memset(_Dst, _Val, _Size);
+
+	RAM_BANK = previousRamBank;
+}
+
 void memCpyBankedBetween(byte* dest, byte bankDst, byte* src, byte bankSrc, size_t len)
 {
 #define BUFFER_SIZE 50

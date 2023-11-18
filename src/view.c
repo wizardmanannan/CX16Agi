@@ -42,18 +42,12 @@ extern char string[12][40];
 extern byte horizon;
 extern int dirnOfEgo;
 
-#define VIEWTABLE_METADATA_BYTE_TERMINATOR 0xFF
-#define VIEWTABLE_METADATA_WORD_TERMINATOR 0xFFFF
-
 //The data is the top two fields are all stored at the same bank alloced address on the bank in the bank field
 typedef struct { 
-	unsigned long* currentVeraSpriteDataAddresses; //These two on a modern system would be pointers, but CX16 doesn't support three byte pointers. Zero terminated
 	unsigned long** loopVeraAddressesPointers;
 	unsigned long* veraAddresses;
 	byte viewTableMetadataBank;
-	word x[MAX_SPRITES_SLOTS_PER_VIEW_TAB + 1]; //FFFF Terminated
-	word y[MAX_SPRITES_SLOTS_PER_VIEW_TAB + 1]; //FFFF Terminated
-	byte veraSlots[MAX_SPRITES_SLOTS_PER_VIEW_TAB + 1]; //FF Terminated
+	int veraSlots[MAX_SPRITES_SLOTS_PER_VIEW_TAB]; //Only storing the first two bytes of the sprite attributes as the 3rd byte is always 1
 	byte veraSlotsPerCel;
 
 } ViewTableMetadata;
@@ -122,21 +116,13 @@ void bEResetViewTableMetadata()
 
 	for (i = 0; i < SPRITE_SLOTS; i++)
 	{
-		if (viewTableMetadata[i].currentVeraSpriteDataAddresses != NULL)
+		if (viewTableMetadata[i].loopVeraAddressesPointers != NULL)
 		{
-			b10BankedDealloc((byte*)viewTableMetadata[i].currentVeraSpriteDataAddresses, viewTableMetadata[i].viewTableMetadataBank);
+			b10BankedDealloc((byte*)viewTableMetadata[i].loopVeraAddressesPointers, viewTableMetadata[i].viewTableMetadataBank);
 		}
 
-		viewTableMetadata[i].currentVeraSpriteDataAddresses = NULL;
 		viewTableMetadata[i].loopVeraAddressesPointers = NULL;
 		viewTableMetadata[i].viewTableMetadataBank = NULL;
-
-		for (j = 0; j < MAX_SPRITES_SLOTS_PER_VIEW_TAB + 1; j++)
-		{
-			viewTableMetadata[i].veraSlots[j] = VIEWTABLE_METADATA_BYTE_TERMINATOR;
-			viewTableMetadata[i].x[0] = VIEWTABLE_METADATA_WORD_TERMINATOR;
-			viewTableMetadata[i].y[0] = VIEWTABLE_METADATA_WORD_TERMINATOR;
-		}
 	}
 
 	memset(&viewTabNoToMetaData[0], VIEWNO_TO_METADATA_NO_SET, MAXVIEW);
@@ -157,9 +143,9 @@ void bESetViewMetadata(View* localView, ViewTable* viewTable, byte viewNum, byte
 	byte viewMetadataSlot;
 	byte noSlots;
 	ViewTableMetadata metadata;
-	int currentVeraSpriteDataAddressesSize;
 	int loopVeraAddressesPointersSize;
 	int veraAddressesSize;
+	int totalAllocationSize;
 
 #ifdef VERBOSE_DEBUG_SET_METADATA
 	printf("The viewNum is %d\n", viewNum);
@@ -179,8 +165,7 @@ void bESetViewMetadata(View* localView, ViewTable* viewTable, byte viewNum, byte
 	}
 	else
 	{
-		printf("Big slots yet supported");
-		noSlots = 1; //TODO: Support big slots
+		noSlots = MAX_SPRITES_SLOTS_PER_VIEW_TAB; //TODO: Support big slots
 	}
 
 
@@ -190,42 +175,38 @@ void bESetViewMetadata(View* localView, ViewTable* viewTable, byte viewNum, byte
 
 	viewTabNoToMetaData[viewTabNo] = viewMetadataSlot;
 
-	if (metadata.currentVeraSpriteDataAddresses != NULL)
+	if (metadata.loopVeraAddressesPointers != NULL)
 	{
-		b10BankedDealloc((byte*)metadata.currentVeraSpriteDataAddresses, metadata.viewTableMetadataBank);
+		b10BankedDealloc((byte*)metadata.loopVeraAddressesPointers, metadata.viewTableMetadataBank);
 
 		//TODO: Deallocate vera as well
 	}
 
-	currentVeraSpriteDataAddressesSize = noSlots * sizeof(unsigned long);
 	loopVeraAddressesPointersSize = localView->numberOfLoops * sizeof(unsigned long*);
 	veraAddressesSize = noSlots * localView->maxCels * sizeof(unsigned long);
+	totalAllocationSize = loopVeraAddressesPointersSize + veraAddressesSize;
 
 #ifdef VERBOSE_DEBUG_SET_METADATA
 	printf("There are %d loops and %d maxCels\n", localView->numberOfLoops, localView->maxCels);
 #endif
 
-	metadata.currentVeraSpriteDataAddresses = (unsigned long*)b10BankedAlloc(currentVeraSpriteDataAddressesSize + loopVeraAddressesPointersSize + veraAddressesSize, &metadata.viewTableMetadataBank);
-	metadata.loopVeraAddressesPointers = (unsigned long**)metadata.currentVeraSpriteDataAddresses + currentVeraSpriteDataAddressesSize;
+	metadata.loopVeraAddressesPointers = (unsigned long**)b10BankedAlloc(totalAllocationSize, &metadata.viewTableMetadataBank);
 	metadata.veraAddresses = (unsigned long*)metadata.loopVeraAddressesPointers + loopVeraAddressesPointersSize;
 
 #ifdef VERBOSE_DEBUG_SET_METADATA
-	printf("Allocated the following address %p, %p, %p. The size is %d + %d + %d = %d. The bank is %d\n", metadata.currentVeraSpriteDataAddresses, metadata.loopVeraAddressesPointers, metadata.veraAddresses, currentVeraSpriteDataAddressesSize, loopVeraAddressesPointersSize, veraAddressesSize, currentVeraSpriteDataAddressesSize + loopVeraAddressesPointersSize + veraAddressesSize, metadata.viewTableMetadataBank);
+	printf("Allocated the following address %p, %p. The size is %d + %d = %d. The bank is %d\n", metadata.loopVeraAddressesPointers, metadata.veraAddresses, loopVeraAddressesPointersSize, veraAddressesSize, totalAllocationSize, metadata.viewTableMetadataBank);
 #endif
-
-	for (i = 0; i < noSlots; i++)
-	{
-		//TODO move across or down if more than one slot and it is not the first
-		metadata.x[i] = viewTable->xPos;
-		metadata.y[i] = viewTable->yPos;
-	}
 	viewTableMetadata->veraSlotsPerCel = noSlots;
 
 	viewTableMetadata[viewTabNo] = metadata;
 
 #ifdef VERBOSE_DEBUG_SET_METADATA
+	printf("Setting %p on bank %d to size %d\n", metadata.loopVeraAddressesPointers, metadata.viewTableMetadataBank, totalAllocationSize);
+#endif
+	memsetBanked(metadata.loopVeraAddressesPointers, 0, totalAllocationSize, metadata.viewTableMetadataBank);
+
+#ifdef VERBOSE_DEBUG_SET_METADATA
 	printf("The address of the viewTableMD is %p\n", &viewTableMetadata[viewTabNo]);
-	asm("stp");
 #endif
 }
 
@@ -368,15 +349,19 @@ extern byte spritesUpdatedBuffer[VIEW_TABLE_SIZE];
 
 void b9InitSpriteData()
 {
+	byte i;
+
 	memset(spritesUpdatedBuffer, 0, VIEW_TABLE_SIZE);
 	bEResetSpritePointers();
 	bEInitSpriteMemoryManager();
+
+
 }
 
 
 void b9InitViews()
 {
-	int i;
+	int i,j;
 	View localView;
 	for (i = 0; i < 256; i++) {
 		localView.description = 0;
@@ -391,6 +376,15 @@ void b9InitViews()
 	}
 
 	spriteScreen = create_bitmap(160, 168);
+
+	for (i = 0; i < SPRITE_SLOTS; i++)
+	{
+		for (j = 0; j < MAX_SPRITES_SLOTS_PER_VIEW_TAB; j++)
+		{
+			viewTableMetadata[i].veraSlots[j] = i * MAX_SPRITES_SLOTS_PER_VIEW_TAB + j + (SPRITE_ATTRIBUTES_START & 0xFFFF);
+		}
+	}
+
 }
 
 void b9InitObjects()
@@ -447,7 +441,6 @@ void b9ResetViews()     /* Called after new.room */
 	bEResetViewTableMetadata();
 	bEResetSpritePointers();
 	bEResetSpriteMemoryManager();
-	printf("\nOut of reset\n");
 }
 
 
