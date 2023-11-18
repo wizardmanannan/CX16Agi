@@ -142,10 +142,13 @@ void bESetViewMetadata(View* localView, ViewTable* viewTable, byte viewNum, byte
 	byte i;
 	byte viewMetadataSlot;
 	byte noSlots;
+	byte maxVeraAddresses;
 	ViewTableMetadata metadata;
 	int loopVeraAddressesPointersSize;
 	int veraAddressesSize;
 	int totalAllocationSize;
+	unsigned long** addressBuffer = (unsigned long**)GOLDEN_RAM_PARAMS_AREA;
+	unsigned long* veraAddressCounter;
 
 #ifdef VERBOSE_DEBUG_SET_METADATA
 	printf("The viewNum is %d\n", viewNum);
@@ -168,6 +171,11 @@ void bESetViewMetadata(View* localView, ViewTable* viewTable, byte viewNum, byte
 		noSlots = MAX_SPRITES_SLOTS_PER_VIEW_TAB; //TODO: Support big slots
 	}
 
+	maxVeraAddresses = noSlots * localView->maxCels;
+	
+#ifdef VERBOSE_DEBUG_SET_METADATA
+	printf("Max vera addresses is %d\n", maxVeraAddresses);
+#endif
 
 	viewMetadataSlot = nextViewMetadataSlot++;
 
@@ -183,7 +191,7 @@ void bESetViewMetadata(View* localView, ViewTable* viewTable, byte viewNum, byte
 	}
 
 	loopVeraAddressesPointersSize = localView->numberOfLoops * sizeof(unsigned long*);
-	veraAddressesSize = noSlots * localView->maxCels * sizeof(unsigned long);
+	veraAddressesSize = maxVeraAddresses * sizeof(unsigned long);
 	totalAllocationSize = loopVeraAddressesPointersSize + veraAddressesSize;
 
 #ifdef VERBOSE_DEBUG_SET_METADATA
@@ -194,18 +202,29 @@ void bESetViewMetadata(View* localView, ViewTable* viewTable, byte viewNum, byte
 	metadata.veraAddresses = (unsigned long*)metadata.loopVeraAddressesPointers + loopVeraAddressesPointersSize;
 
 #ifdef VERBOSE_DEBUG_SET_METADATA
-	printf("Allocated the following address %p, %p. The size is %d + %d = %d. The bank is %d\n", metadata.loopVeraAddressesPointers, metadata.veraAddresses, loopVeraAddressesPointersSize, veraAddressesSize, totalAllocationSize, metadata.viewTableMetadataBank);
+	printf("Allocated the following addresses %p, %p. The size is %d + %d = %d. The bank is %d\n", metadata.loopVeraAddressesPointers, metadata.veraAddresses, loopVeraAddressesPointersSize, veraAddressesSize, totalAllocationSize, metadata.viewTableMetadataBank);
 #endif
 	viewTableMetadata->veraSlotsPerCel = noSlots;
 
 	viewTableMetadata[viewTabNo] = metadata;
 
 #ifdef VERBOSE_DEBUG_SET_METADATA
-	printf("Setting %p on bank %d to size %d\n", metadata.loopVeraAddressesPointers, metadata.viewTableMetadataBank, totalAllocationSize);
+	printf("Setting %p on bank %d to size %d\n", metadata.veraAddresses, metadata.viewTableMetadataBank, veraAddressesSize);
 #endif
-	memsetBanked(metadata.loopVeraAddressesPointers, 0, totalAllocationSize, metadata.viewTableMetadataBank);
+	memsetBanked(metadata.veraAddresses, 0, veraAddressesSize, metadata.viewTableMetadataBank);
+
+	veraAddressCounter = metadata.veraAddresses;
+	for (i = 0; i < localView->numberOfLoops; i++)
+	{
+		addressBuffer[i] = veraAddressCounter;
+		veraAddressCounter += maxVeraAddresses;
+	}
+
+	memCpyBanked((byte*)metadata.loopVeraAddressesPointers, (byte*)addressBuffer, metadata.viewTableMetadataBank, localView->numberOfLoops * sizeof(long**));
 
 #ifdef VERBOSE_DEBUG_SET_METADATA
+	printf("The address of the buffer is %p\n", addressBuffer);
+	asm("stp");
 	printf("The address of the viewTableMD is %p\n", &viewTableMetadata[viewTabNo]);
 #endif
 }
