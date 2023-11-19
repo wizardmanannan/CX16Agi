@@ -256,7 +256,6 @@ ZP_ARRAY_COUNTER = ZP_TMP_5
 _bEBulkAllocatedAddresses: .res VIEW_TABLE_SIZE * VERA_ADDRESS_SIZE * ALLOCATOR_BLOCK_SIZE_64, $0 ;64 is the biggest size, so if we have enough room for that the others will fit anyway
 
 _bEAllocateSpriteMemoryBulk:
-stp
 sta ZP_NUMBER_TO_ALLOCATE ;Save the number of sprites to allocate
 jsr popa
 sta ZP_SIZE ;Save the size of the allocation

@@ -43,7 +43,7 @@ extern byte horizon;
 extern int dirnOfEgo;
 
 //The data is the top two fields are all stored at the same bank alloced address on the bank in the bank field
-typedef struct { 
+typedef struct {
 	unsigned long** loopVeraAddressesPointers;
 	unsigned long* veraAddresses;
 	byte viewTableMetadataBank;
@@ -161,7 +161,7 @@ void bESetViewMetadata(View* localView, ViewTable* viewTable, byte viewNum, byte
 #endif
 
 	maxVeraAddresses = localView->maxVeraSlots * localView->maxCels;
-	
+
 #ifdef VERBOSE_DEBUG_SET_METADATA
 	printf("Max vera addresses is %d\n", maxVeraAddresses);
 #endif
@@ -204,6 +204,14 @@ void bESetViewMetadata(View* localView, ViewTable* viewTable, byte viewNum, byte
 	for (i = 0; i < localView->numberOfLoops; i++)
 	{
 		addressBuffer[i] = veraAddressCounter;
+
+#ifdef VERBOSE_DEBUG_SET_METADATA
+		printf("Address Setting %p to be %p\n", addressBuffer[i], veraAddressCounter);
+#endif
+#ifdef VERBOSE_DEBUG_BLIT
+		printf("Address Setting %p to be %p\n", addressBuffer[i], veraAddressCounter);
+#endif
+
 		veraAddressCounter += maxVeraAddresses;
 	}
 
@@ -214,53 +222,9 @@ void bESetViewMetadata(View* localView, ViewTable* viewTable, byte viewNum, byte
 	printf("The address of the viewTableMD is %p\n", &viewTableMetadata[viewTabNo]);
 #endif
 }
-
 #pragma code-name (pop)
 
-/***************************************************************************
-** agi_blit
-***************************************************************************/
-void agiBlit(ViewTable* localViewTab, byte entryNum)
-{
-	View localView;
-	byte viewNum;
-	byte previousBank;
-		
-	previousBank = RAM_BANK;
-
-	RAM_BANK = SPRITE_METADATA_BANK;
-
-	viewNum = localViewTab->currentView;
-	
-#ifdef VERBOSE_DEBUG_BLIT
-	printf("The viewNum is %d\n", viewNum);
-#endif // VERBOSE_DEBUG_BLIT
-
-
-	getLoadedView(&localView, viewNum);
-
-	if (viewTabNoToMetaData[entryNum] == VIEWNO_TO_METADATA_NO_SET)
-	{
-		bESetViewMetadata(&localView, localViewTab, viewNum, entryNum);
-	}
-
-		//for (i = 0; i < w; i++) {
-		//	for (j = 0; j < h; j++) {
-		//		c = bmp->line[j][i];
-		//		 Next line will be removed when error is found.
-		//		if (((y + j) < 168) && ((x + i) < 160) && ((y + j) >= 0) && ((x + i) >= 0))
-
-		//			if ((c != (trans + 1)) && (pNum >= priority->line[y + j][x + i])) {
-		//				priority->line[y + j][x + i] = pNum;
-		//				picture->line[y+j][x+i] = c;
-		//				spriteScreen->line[y + j][x + i] = c;
-		//			}
-		//	}
-		//}
-
-	RAM_BANK = previousBank;
-}
-
+extern byte bEBulkAllocatedAddresses[VIEW_TABLE_SIZE * VERA_ADDRESS_SIZE * ALLOCATOR_BLOCK_SIZE_64];
 
 void getViewTab(ViewTable* returnedViewTab, byte viewTabNumber)
 {
@@ -349,6 +313,88 @@ void setLoadedCel(Loop* loadedLoop, Cel* localCell, byte localCellNumber)
 
 	RAM_BANK = previousRamBank;
 }
+
+
+/***************************************************************************
+** agi_blit
+***************************************************************************/
+void agiBlit(ViewTable* localViewTab, byte entryNum)
+{
+	View localView;
+	Loop localLoop;
+	byte viewNum;
+	byte previousBank;
+	ViewTableMetadata localMetadata;
+	byte veraSpriteAddresses;
+
+	previousBank = RAM_BANK;
+
+	RAM_BANK = SPRITE_METADATA_BANK;
+
+	viewNum = localViewTab->currentView;
+
+#ifdef VERBOSE_DEBUG_BLIT
+	printf("The viewNum is %d and the loop is %d\n", viewNum, localViewTab->currentLoop);
+#endif // VERBOSE_DEBUG_BLIT
+
+
+	getLoadedView(&localView, viewNum);
+	getLoadedLoop(&localView, &localLoop, localViewTab->currentLoop);
+
+	if (viewTabNoToMetaData[entryNum] == VIEWNO_TO_METADATA_NO_SET)
+	{
+		bESetViewMetadata(&localView, localViewTab, viewNum, entryNum);
+	}
+
+	localMetadata = viewTableMetadata[entryNum];
+
+	RAM_BANK = localMetadata.viewTableMetadataBank;
+
+	veraSpriteAddresses = localLoop.numberOfCels * localLoop.veraSlotsWidth * localLoop.veraSlotsHeight;
+
+#ifdef VERBOSE_DEBUG_BLIT
+	printf("vera Sprite addresses %d * %d * %d = %d (%d)\n", localLoop.numberOfCels, localLoop.veraSlotsWidth, localLoop.veraSlotsHeight, localLoop.numberOfCels * localLoop.veraSlotsWidth * localLoop.veraSlotsHeight, veraSpriteAddresses);
+#endif
+
+#ifdef VERBOSE_DEBUG_BLIT
+	printf("Address %p. The bank is %d\n", localMetadata.loopVeraAddressesPointers[localViewTab->currentLoop], localMetadata.viewTableMetadataBank);
+	printf("Checking %d.\n", localMetadata.loopVeraAddressesPointers[localViewTab->currentLoop][0]);
+#endif
+
+	if (!localMetadata.loopVeraAddressesPointers[localViewTab->currentLoop][0])
+	{
+		RAM_BANK = SPRITE_METADATA_BANK;
+		printf("Trying to allocate %d. Number %d\n", localLoop.allocationSize, veraSpriteAddresses);
+		bEAllocateSpriteMemoryBulk(localLoop.allocationSize, veraSpriteAddresses);
+		RAM_BANK = localMetadata.viewTableMetadataBank;
+
+#ifdef VERBOSE_DEBUG_BLIT
+		printf("Trying to copy to %p from %p. Number %d. \n ", localMetadata.loopVeraAddressesPointers[localViewTab->currentLoop], bEBulkAllocatedAddresses, veraSpriteAddresses);
+#endif // VERBOSE_DEBUG_BLIT
+
+		memCpyBankedBetween(localMetadata.loopVeraAddressesPointers[localViewTab->currentLoop], localMetadata.viewTableMetadataBank, &bEBulkAllocatedAddresses, SPRITE_METADATA_BANK, veraSpriteAddresses);
+
+	}
+
+	RAM_BANK = SPRITE_METADATA_BANK;
+
+	//for (i = 0; i < w; i++) {
+	//	for (j = 0; j < h; j++) {
+	//		c = bmp->line[j][i];
+	//		 Next line will be removed when error is found.
+	//		if (((y + j) < 168) && ((x + i) < 160) && ((y + j) >= 0) && ((x + i) >= 0))
+
+	//			if ((c != (trans + 1)) && (pNum >= priority->line[y + j][x + i])) {
+	//				priority->line[y + j][x + i] = pNum;
+	//				picture->line[y+j][x+i] = c;
+	//				spriteScreen->line[y + j][x + i] = c;
+	//			}
+	//	}
+	//}
+
+	RAM_BANK = previousBank;
+}
+
 #pragma code-name (push, "BANKRAM09")
 extern byte spritesUpdatedBuffer[VIEW_TABLE_SIZE];
 
@@ -366,7 +412,7 @@ void b9InitSpriteData()
 
 void b9InitViews()
 {
-	int i,j;
+	int i, j;
 	View localView;
 	for (i = 0; i < 256; i++) {
 		localView.description = 0;
@@ -395,7 +441,7 @@ void b9InitViews()
 void b9InitObjects()
 {
 	int entryNum;
-	byte i,j;
+	byte i, j;
 	ViewTable localViewtab;
 
 	//spriteScreen = create_bitmap(160, 168);
@@ -670,7 +716,7 @@ void b9LoadViewFile(byte viewNum)
 
 			getLoadedCel(&localLoop, &localCel, c);
 			trans = celHeader[POSTION_OF_CEL_TRANSPARENCY_AND_MIRRORING];
-			
+
 			localCel.bitmapBank = tempAGI.codeBank;
 			localCel.bmp = cellPosition + POSITION_OF_CEL_DATA;
 			localCel.width = celHeader[POSITION_OF_CEL_WIDTH];
@@ -710,7 +756,7 @@ void b9LoadViewFile(byte viewNum)
 #endif // VERBOSE_SET_CEL
 			setLoadedCel(&localLoop, &localCel, c);
 		}
-		
+
 		if (localLoop.numberOfCels > localView.maxCels)
 		{
 			localView.maxCels = localLoop.numberOfCels;
@@ -726,7 +772,9 @@ void b9LoadViewFile(byte viewNum)
 		{
 			localView.maxVeraSlots = currentLoopVeraSlots;
 		}
-}
+
+		setLoadedLoop(&localView, &localLoop, l);
+	}
 	setLoadedView(&localView, viewNum);
 }
 
@@ -842,7 +890,7 @@ void b9AddToPic(int vNum, int lNum, int cNum, int x, int y, int pNum, int bCol)
 	getLoadedView(&localView, vNum);
 	getLoadedLoop(&localView, &localLoop, lNum);
 	getLoadedCel(&localLoop, &localCel, cNum);
-	
+
 #ifdef VERBOSE_ADD_TO_PIC
 	printf("view %p loop %p cel %p\n", &localView, &localLoop, &localCel);
 	printf("cel %d loaded %d bmp %p. View %d. Loop %d, Cel %d\n", cNum, localView.loaded, localCel.bmp, vNum, lNum, cNum);
@@ -1321,7 +1369,7 @@ void bAUpdateObj(int entryNum)
 
 	if ((objFlags & ANIMATED) && (objFlags & DRAWN)) {
 		/* Draw new cel onto picture\priority bitmaps */
-		
+
 #ifdef VERBOSE_DEBUG_BLIT
 		printf("Called from update obj ");
 #endif // DEBUG
@@ -1479,11 +1527,11 @@ void bBUpdateObj2(int entryNum)
 
 	if ((objFlags & ANIMATED) && (objFlags & DRAWN)) {
 		/* Draw new cel onto picture\priority bitmaps */
-		
+
 #ifdef VERBOSE_DEBUG_BLIT
 		printf("Called from update obj 2");
 #endif // DEBUG
-		
+
 		agiBlit(&localViewtab, entryNum);
 	}
 
@@ -1582,20 +1630,20 @@ void bBUpdateObjects()
 						}
 						setViewTab(&localViewtab, entryNum);
 					}
-			} /* CYCLING */
-		} /* UPDATE */
+				} /* CYCLING */
+			} /* UPDATE */
 
-		/* Determine priority for unfixed priorities */
+			/* Determine priority for unfixed priorities */
 			if (!(objFlags & FIXEDPRIORITY)) {
 				if (localViewtab.yPos < 60)
 					localViewtab.priority = 4;
 				else
 					localViewtab.priority = (localViewtab.yPos / 12 + 1);
 			}
-	}
+		}
 
 		setViewTab(&localViewtab, entryNum);
-}
+	}
 
 	/* Draw all cels */
 	for (entryNum = 0; entryNum < VIEW_TABLE_SIZE; entryNum++) {
@@ -1604,11 +1652,11 @@ void bBUpdateObjects()
 		objFlags = localViewtab.flags;
 		if ((objFlags & ANIMATED) && (objFlags & DRAWN)) {
 			/* Draw new cel onto picture\priority bitmaps */
-			
+
 #ifdef VERBOSE_DEBUG_BLIT
 			printf("Called from update objs");
 #endif // DEBUG
-			
+
 			agiBlit(&localViewtab, entryNum);
 		}
 
