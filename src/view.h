@@ -60,7 +60,7 @@ typedef struct {
 #define ONLAND        0x0800
 #define FIXLOOP       0x2000
 
-#define MAX_SPRITES_SLOTS_PER_VIEW_TAB 4
+#define MAX_SPRITES_SLOTS_PER_VIEW_TAB 6
 typedef struct {
 	byte stepTime;
 	byte stepTimeCount;
