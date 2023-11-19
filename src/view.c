@@ -583,6 +583,27 @@ void setLoopData(AGIFile* tempAGI, View* localView, Loop* localLoop, byte* loopH
 	}
 }
 
+
+byte b9VeraSlotsForWidthOrHeight(byte widthOrHeight)
+{
+	byte i;
+
+	for (i = 1; i <= MAX_SPRITES_ROW_OR_COLUMN_SIZE; i++)
+	{
+		if (widthOrHeight <= MAX_64_WIDTH_OR_HEIGHT * i)
+		{
+			return  i;
+		}
+	}
+
+	printf("H/W too big\n");
+
+	exit(0);
+
+	return 0;
+}
+
+
 #define POSITION_OF_CEL_WIDTH 0
 #define POSITION_OF_CEL_HEIGHT 1
 #define POSTION_OF_CEL_TRANSPARENCY_AND_MIRRORING 2
@@ -598,7 +619,7 @@ void b9LoadViewFile(byte viewNum)
 {
 	AGIFile tempAGI;
 	AGIFilePosType agiFilePosType;
-	byte l, c, trans;
+	byte l, c, trans, i;
 	View localView;
 	Loop localLoop;
 	Cel localCel;
@@ -658,10 +679,10 @@ void b9LoadViewFile(byte viewNum)
 
 
 #ifdef VERBOSE_LOAD_VIEWS
-			printf("Local view %d.%d.%d is %d x %d, when doubled %d x %d\n", viewNum, l, c, localCel.width, localCel.height, localCel.width * 2, localCel.height * 2);
+			printf("Local view %d.%d.%d is %d x %d, when width doubled %d x %d\n", viewNum, l, c, localCel.width, localCel.height, localCel.width * 2, localCel.height);
 #endif
 
-			if (localCel.width * 2 > MAX_32_WIDTH_OR_HEIGHT)
+			if (localCel.width * 2 > MAX_32_WIDTH_OR_HEIGHT) //Height isn't doubled only width
 			{
 				localLoop.allocationSize = SIZE_64;
 
@@ -670,7 +691,7 @@ void b9LoadViewFile(byte viewNum)
 #endif
 			}
 
-			if (localCel.height * 2 > MAX_32_WIDTH_OR_HEIGHT)
+			if (localCel.height > MAX_32_WIDTH_OR_HEIGHT)
 			{
 				localLoop.allocationSize = SIZE_64;
 #ifdef VERBOSE_LOAD_VIEWS
@@ -678,23 +699,9 @@ void b9LoadViewFile(byte viewNum)
 #endif
 			}
 
-			if (localCel.width * 2 > MAX_64_WIDTH_OR_HEIGHT)
-			{
-				localLoop.veraSlotsWidth = MAX_JOINED_SPRITES;
+			localLoop.veraSlotsWidth = b9VeraSlotsForWidthOrHeight(localCel.width * 2);
 
-#ifdef VERBOSE_LOAD_VIEWS
-				printf("Width set max join sprites to 2");
-#endif
-			}
-
-			if (localCel.height * 2 > MAX_64_WIDTH_OR_HEIGHT)
-			{
-				localLoop.veraSlotsHeight = MAX_JOINED_SPRITES;
-
-#ifdef VERBOSE_LOAD_VIEWS
-				printf("Height set max join sprites to 2");
-#endif
-			}
+			localLoop.veraSlotsHeight = b9VeraSlotsForWidthOrHeight(localCel.height);
 
 #ifdef VERBOSE_SET_CEL
 			printf("The viewNum is %d\n", viewNum);
@@ -709,10 +716,10 @@ void b9LoadViewFile(byte viewNum)
 			localView.maxCels = localLoop.numberOfCels;
 		}
 
-		currentLoopVeraSlots = localLoop.veraSlotsWidth + localLoop.veraSlotsHeight;
+		currentLoopVeraSlots = localLoop.veraSlotsWidth * localLoop.veraSlotsHeight;
 
 #ifdef VERBOSE_LOAD_VIEWS
-		printf("Current loop slots %d + %d = %d\n", localLoop.veraSlotsWidth, localLoop.veraSlotsHeight, currentLoopVeraSlots);
+		printf("Current loop slots %d * %d = %d\n", localLoop.veraSlotsWidth, localLoop.veraSlotsHeight, currentLoopVeraSlots);
 #endif
 
 		if (currentLoopVeraSlots > localView.maxVeraSlots)

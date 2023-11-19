@@ -14,7 +14,8 @@
 #include "helpers.h"
 
 #define MAXVIEW  256
-#define MAX_JOINED_SPRITES 2 //2 in either direction max so could be 4
+#define MAX_JOINED_SPRITES 6
+#define MAX_SPRITES_ROW_OR_COLUMN_SIZE 4
 
 typedef struct Cel {
 	byte width;
