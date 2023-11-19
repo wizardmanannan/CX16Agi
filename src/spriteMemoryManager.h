@@ -8,6 +8,8 @@
 #define ALLOCATE_BLOCK_SIZE_32 1
 #define ALLOCATOR_BLOCK_SIZE_64 2
 
+#define MAX_32_WIDTH_OR_HEIGHT 32
+#define MAX_64_WIDTH_OR_HEIGHT 64
 
 #pragma wrapped-call (push, trampoline, SPRITE_MEMORY_MANAGER_BANK)
 void bEResetSpriteMemoryManager();

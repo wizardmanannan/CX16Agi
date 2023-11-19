@@ -14,6 +14,7 @@
 #include "helpers.h"
 
 #define MAXVIEW  256
+#define MAX_JOINED_SPRITES 2 //2 in either direction max so could be 4
 
 typedef struct Cel {
 	byte width;
@@ -28,6 +29,9 @@ typedef struct {
 	byte numberOfCels;
 	Cel* cels;
 	byte celsBank;
+	AllocationSize allocationSize;
+	byte veraSlotsWidth;
+	byte veraSlotsHeight;
 } Loop;
 
 typedef struct {
@@ -39,8 +43,7 @@ typedef struct {
 	byte* codeBlock;
 	byte codeBlockBank;
 	byte maxCels;
-	byte maxWidth;
-	byte maxHeight;
+	byte maxVeraSlots;
 } View;
 
 #define DRAWN         0x0001

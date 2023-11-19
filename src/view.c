@@ -47,9 +47,7 @@ typedef struct {
 	unsigned long** loopVeraAddressesPointers;
 	unsigned long* veraAddresses;
 	byte viewTableMetadataBank;
-	int veraSlots[MAX_SPRITES_SLOTS_PER_VIEW_TAB]; //Only storing the first two bytes of the sprite attributes as the 3rd byte is always 1
-	byte veraSlotsPerCel;
-
+	int maxVeraSlots[MAX_SPRITES_SLOTS_PER_VIEW_TAB]; //Only storing the first two bytes of the sprite attributes as the 3rd byte is always 1
 } ViewTableMetadata;
 
 #pragma bss-name (push, "BANKRAM09")
@@ -141,7 +139,6 @@ void bESetViewMetadata(View* localView, ViewTable* viewTable, byte viewNum, byte
 {
 	byte i;
 	byte viewMetadataSlot;
-	byte noSlots;
 	byte maxVeraAddresses;
 	ViewTableMetadata metadata;
 	int loopVeraAddressesPointersSize;
@@ -160,18 +157,10 @@ void bESetViewMetadata(View* localView, ViewTable* viewTable, byte viewNum, byte
 	}
 
 #ifdef VERBOSE_DEBUG_SET_METADATA
-	printf("The maxWidth is %d and the maxHeight is %d\n", localView->maxWidth, localView->maxHeight);
+	printf("The max number of vera slots is %d \n", localView->maxVeraSlots);
 #endif
-	if (localView->maxWidth <= MAX_SLOT_1_SIZED_SPRITE && localView->maxHeight <= MAX_SLOT_1_SIZED_SPRITE)
-	{
-		noSlots = 1;
-	}
-	else
-	{
-		noSlots = MAX_SPRITES_SLOTS_PER_VIEW_TAB; //TODO: Support big slots
-	}
 
-	maxVeraAddresses = noSlots * localView->maxCels;
+	maxVeraAddresses = localView->maxVeraSlots * localView->maxCels;
 	
 #ifdef VERBOSE_DEBUG_SET_METADATA
 	printf("Max vera addresses is %d\n", maxVeraAddresses);
@@ -204,8 +193,6 @@ void bESetViewMetadata(View* localView, ViewTable* viewTable, byte viewNum, byte
 #ifdef VERBOSE_DEBUG_SET_METADATA
 	printf("Allocated the following addresses %p, %p. The size is %d + %d = %d. The bank is %d\n", metadata.loopVeraAddressesPointers, metadata.veraAddresses, loopVeraAddressesPointersSize, veraAddressesSize, totalAllocationSize, metadata.viewTableMetadataBank);
 #endif
-	viewTableMetadata->veraSlotsPerCel = noSlots;
-
 	viewTableMetadata[viewTabNo] = metadata;
 
 #ifdef VERBOSE_DEBUG_SET_METADATA
@@ -224,7 +211,6 @@ void bESetViewMetadata(View* localView, ViewTable* viewTable, byte viewNum, byte
 
 #ifdef VERBOSE_DEBUG_SET_METADATA
 	printf("The address of the buffer is %p\n", addressBuffer);
-	asm("stp");
 	printf("The address of the viewTableMD is %p\n", &viewTableMetadata[viewTabNo]);
 #endif
 }
@@ -400,7 +386,7 @@ void b9InitViews()
 	{
 		for (j = 0; j < MAX_SPRITES_SLOTS_PER_VIEW_TAB; j++)
 		{
-			viewTableMetadata[i].veraSlots[j] = i * MAX_SPRITES_SLOTS_PER_VIEW_TAB + j + (SPRITE_ATTRIBUTES_START & 0xFFFF);
+			viewTableMetadata[i].maxVeraSlots[j] = i * MAX_SPRITES_SLOTS_PER_VIEW_TAB + j + (SPRITE_ATTRIBUTES_START & 0xFFFF);
 		}
 	}
 
@@ -545,8 +531,7 @@ void setViewData(byte viewNum, AGIFile* tempAGI, View* localView)
 		localView->description = description;
 		localView->loopsBank = loopsBank;
 		localView->maxCels = 0;
-		localView->maxWidth = 0;
-		localView->maxHeight = 0;
+		localView->maxVeraSlots = 1;
 	}
 	else
 	{
@@ -621,6 +606,9 @@ void b9LoadViewFile(byte viewNum)
 	int* loopOffsets = (int*)(viewHeaderBuffer + POSITION_OF_LOOPS_OFFSET);
 	int* cellOffsets;
 	byte celHeader[CEL_HEADER_SIZE];
+	byte maxLoopVeraSlots = 1;
+	byte currentLoopVeraSlots;
+
 #ifdef VERBOSE_LOAD_VIEWS
 	printf("Attempt to load viewNum %d\n", viewNum);
 #endif // VERBOSE_LOAD_VIEWS
@@ -645,12 +633,15 @@ void b9LoadViewFile(byte viewNum)
 		printf("Loading loop %d at %x\n", l, loopOffsets[l]);
 #endif // VERBOSE_LOAD_VIEWS
 
-#ifdef VERBOSE_SET_LOOPS
+#ifdef VERBOSE_LOAD_VIEWS
 		printf("View code starts at %p. The loop offset is %x, we means we expect to find a loop at %x\n", tempAGI.code, loopOffsets[l], tempAGI.code + loopOffsets[l]);
 #endif // VERBOSE_SET_LOOPS
 
 		setLoopData(&tempAGI, &localView, &localLoop, tempAGI.code + loopOffsets[l], viewNum, l);
 		cellOffsets = (int*)(loopHeaderBuffer + POSITION_OF_CELS_OFFSET);
+		localLoop.allocationSize = SIZE_32;
+		localLoop.veraSlotsWidth = 1;
+		localLoop.veraSlotsHeight = 1;
 
 		for (c = 0; c < localLoop.numberOfCels; c++) {
 			cellPosition = tempAGI.code + loopOffsets[l] + cellOffsets[c];
@@ -665,14 +656,44 @@ void b9LoadViewFile(byte viewNum)
 			localCel.height = celHeader[POSITION_OF_CEL_HEIGHT];
 			localCel.flipped = (trans & 0x80) && (((trans & 0x70) >> 4) != l);
 
-			if (localView.maxWidth < localCel.width)
+
+#ifdef VERBOSE_LOAD_VIEWS
+			printf("Local view %d.%d.%d is %d x %d, when doubled %d x %d\n", viewNum, l, c, localCel.width, localCel.height, localCel.width * 2, localCel.height * 2);
+#endif
+
+			if (localCel.width * 2 > MAX_32_WIDTH_OR_HEIGHT)
 			{
-				localView.maxWidth = localCel.width;
+				localLoop.allocationSize = SIZE_64;
+
+#ifdef VERBOSE_LOAD_VIEWS
+				printf("Width 64 sprite required\n");
+#endif
 			}
 
-			if (localView.maxHeight < localCel.height)
+			if (localCel.height * 2 > MAX_32_WIDTH_OR_HEIGHT)
 			{
-				localView.maxHeight = localCel.height;
+				localLoop.allocationSize = SIZE_64;
+#ifdef VERBOSE_LOAD_VIEWS
+				printf("Height 64 sprite required\n");
+#endif
+			}
+
+			if (localCel.width * 2 > MAX_64_WIDTH_OR_HEIGHT)
+			{
+				localLoop.veraSlotsWidth = MAX_JOINED_SPRITES;
+
+#ifdef VERBOSE_LOAD_VIEWS
+				printf("Width set max join sprites to 2");
+#endif
+			}
+
+			if (localCel.height * 2 > MAX_64_WIDTH_OR_HEIGHT)
+			{
+				localLoop.veraSlotsHeight = MAX_JOINED_SPRITES;
+
+#ifdef VERBOSE_LOAD_VIEWS
+				printf("Height set max join sprites to 2");
+#endif
 			}
 
 #ifdef VERBOSE_SET_CEL
@@ -682,10 +703,21 @@ void b9LoadViewFile(byte viewNum)
 #endif // VERBOSE_SET_CEL
 			setLoadedCel(&localLoop, &localCel, c);
 		}
-
+		
 		if (localLoop.numberOfCels > localView.maxCels)
 		{
 			localView.maxCels = localLoop.numberOfCels;
+		}
+
+		currentLoopVeraSlots = localLoop.veraSlotsWidth + localLoop.veraSlotsHeight;
+
+#ifdef VERBOSE_LOAD_VIEWS
+		printf("Current loop slots %d + %d = %d\n", localLoop.veraSlotsWidth, localLoop.veraSlotsHeight, currentLoopVeraSlots);
+#endif
+
+		if (currentLoopVeraSlots > localView.maxVeraSlots)
+		{
+			localView.maxVeraSlots = currentLoopVeraSlots;
 		}
 }
 	setLoadedView(&localView, viewNum);
