@@ -276,11 +276,15 @@ ALLOCATE_SPRITE_MEMORY_64
 tya
 ldy ZP_ARRAY_COUNTER
 
-sta _bEBulkAllocatedAddresses + 2, y
+sta _bEBulkAllocatedAddresses + 2, y ;Store the high byte
 txa
-sta _bEBulkAllocatedAddresses + 1, y
+sta _bEBulkAllocatedAddresses + 1, y ;Store the middle byte
+
+ora _bEBulkAllocatedAddresses + 2 ;Oring middle and high byte together
+beq @returnFail ;If the high byte is zero and the middle byte is also zero then we have failed to allocate, due lack of memory
+
 lda #$0
-sta _bEBulkAllocatedAddresses, y
+sta _bEBulkAllocatedAddresses, y ;Store the low byte
 
 iny
 iny
@@ -292,7 +296,12 @@ dec ZP_NUMBER_TO_ALLOCATE
 beq @return
 jmp @loop
 
+
 @return:
+lda #$1
 rts
 
+@returnFail:
+lda #$0
+rts
 .endif
