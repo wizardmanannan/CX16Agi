@@ -44,7 +44,7 @@ extern int dirnOfEgo;
 
 //The data is the top two fields are all stored at the same bank alloced address on the bank in the bank field
 typedef struct {
-	unsigned long** loopVeraAddressesPointers;
+	unsigned long** loopsVeraAddressesPointers;
 	unsigned long* veraAddresses;
 	byte viewTableMetadataBank;
 	int maxVeraSlots[MAX_SPRITES_SLOTS_PER_VIEW_TAB]; //Only storing the first two bytes of the sprite attributes as the 3rd byte is always 1
@@ -114,12 +114,12 @@ void bEResetViewTableMetadata()
 
 	for (i = 0; i < SPRITE_SLOTS; i++)
 	{
-		if (viewTableMetadata[i].loopVeraAddressesPointers != NULL)
+		if (viewTableMetadata[i].loopsVeraAddressesPointers != NULL)
 		{
-			b10BankedDealloc((byte*)viewTableMetadata[i].loopVeraAddressesPointers, viewTableMetadata[i].viewTableMetadataBank);
+			b10BankedDealloc((byte*)viewTableMetadata[i].loopsVeraAddressesPointers, viewTableMetadata[i].viewTableMetadataBank);
 		}
 
-		viewTableMetadata[i].loopVeraAddressesPointers = NULL;
+		viewTableMetadata[i].loopsVeraAddressesPointers = NULL;
 		viewTableMetadata[i].viewTableMetadataBank = NULL;
 	}
 
@@ -172,9 +172,9 @@ void bESetViewMetadata(View* localView, ViewTable* viewTable, byte viewNum, byte
 
 	viewTabNoToMetaData[viewTabNo] = viewMetadataSlot;
 
-	if (metadata.loopVeraAddressesPointers != NULL)
+	if (metadata.loopsVeraAddressesPointers != NULL)
 	{
-		b10BankedDealloc((byte*)metadata.loopVeraAddressesPointers, metadata.viewTableMetadataBank);
+		b10BankedDealloc((byte*)metadata.loopsVeraAddressesPointers, metadata.viewTableMetadataBank);
 
 		//TODO: Deallocate vera as well
 	}
@@ -187,8 +187,8 @@ void bESetViewMetadata(View* localView, ViewTable* viewTable, byte viewNum, byte
 	printf("There are %d loops and %d maxCels\n", localView->numberOfLoops, localView->maxCels);
 #endif
 
-	metadata.loopVeraAddressesPointers = (unsigned long**)b10BankedAlloc(totalAllocationSize, &metadata.viewTableMetadataBank);
-	metadata.veraAddresses = (unsigned long*)metadata.loopVeraAddressesPointers + loopVeraAddressesPointersSize;
+	metadata.loopsVeraAddressesPointers = (unsigned long**)b10BankedAlloc(totalAllocationSize, &metadata.viewTableMetadataBank);
+	metadata.veraAddresses = (unsigned long*)metadata.loopsVeraAddressesPointers + loopVeraAddressesPointersSize;
 
 #ifdef VERBOSE_DEBUG_SET_METADATA
 	printf("Allocated the following addresses %p, %p. The size is %d + %d = %d. The bank is %d\n", metadata.loopVeraAddressesPointers, metadata.veraAddresses, loopVeraAddressesPointersSize, veraAddressesSize, totalAllocationSize, metadata.viewTableMetadataBank);
@@ -215,7 +215,7 @@ void bESetViewMetadata(View* localView, ViewTable* viewTable, byte viewNum, byte
 		veraAddressCounter += maxVeraAddresses;
 	}
 
-	memCpyBanked((byte*)metadata.loopVeraAddressesPointers, (byte*)addressBuffer, metadata.viewTableMetadataBank, localView->numberOfLoops * sizeof(long**));
+	memCpyBanked((byte*)metadata.loopsVeraAddressesPointers, (byte*)addressBuffer, metadata.viewTableMetadataBank, localView->numberOfLoops * sizeof(long**));
 
 #ifdef VERBOSE_DEBUG_SET_METADATA
 	printf("The address of the buffer is %p\n", addressBuffer);
@@ -314,6 +314,36 @@ void setLoadedCel(Loop* loadedLoop, Cel* localCell, byte localCellNumber)
 	RAM_BANK = previousRamBank;
 }
 
+void bESetLoop(ViewTable* localViewTab, ViewTableMetadata* localMetadata, View* localView, unsigned long* loopVeraAddresses)
+{
+	Loop localLoop;
+	byte veraSpriteAddresses;
+	
+	getLoadedLoop(localView, &localLoop, localViewTab->currentLoop);
+
+	veraSpriteAddresses = localLoop.numberOfCels * localLoop.veraSlotsWidth * localLoop.veraSlotsHeight;
+
+#ifdef VERBOSE_DEBUG_BLIT
+	printf("Trying to copy to %p from %p. Number %d. \n ", localMetadata->loopsVeraAddressesPointers[localViewTab->currentLoop], bEBulkAllocatedAddresses, veraSpriteAddresses);
+#endif // VERBOSE_DEBUG_BLIT
+
+#ifdef VERBOSE_DEBUG_BLIT
+	printf("vera Sprite addresses %d * %d * %d = %d (%d)\n", localLoop.numberOfCels, localLoop.veraSlotsWidth, localLoop.veraSlotsHeight, localLoop.numberOfCels * localLoop.veraSlotsWidth * localLoop.veraSlotsHeight, veraSpriteAddresses);
+#endif
+
+#ifdef VERBOSE_DEBUG_BLIT
+	printf("Trying to allocate %d. Number %d\n", localLoop.allocationSize, veraSpriteAddresses);
+#endif
+
+	bEAllocateSpriteMemoryBulk(localLoop.allocationSize, veraSpriteAddresses);
+
+#ifdef VERBOSE_DEBUG_BLIT
+	printf("The address of the buffer is %p\n ", bEBulkAllocatedAddresses);
+	printf("loop vera is %p", loopVeraAddresses);
+	printf("Trying to copy to %p on bank %d from %p on bank %d number %d", (byte*)loopVeraAddresses, localMetadata->viewTableMetadataBank, bEBulkAllocatedAddresses, SPRITE_METADATA_BANK, veraSpriteAddresses);
+#endif
+	memCpyBankedBetween((byte*)loopVeraAddresses, localMetadata->viewTableMetadataBank, bEBulkAllocatedAddresses, SPRITE_METADATA_BANK, veraSpriteAddresses);
+}
 
 /***************************************************************************
 ** agi_blit
@@ -325,7 +355,7 @@ void agiBlit(ViewTable* localViewTab, byte entryNum)
 	byte viewNum;
 	byte previousBank;
 	ViewTableMetadata localMetadata;
-	byte veraSpriteAddresses;
+	unsigned long* loopVeraAddresses;
 
 	previousBank = RAM_BANK;
 
@@ -339,7 +369,6 @@ void agiBlit(ViewTable* localViewTab, byte entryNum)
 
 
 	getLoadedView(&localView, viewNum);
-	getLoadedLoop(&localView, &localLoop, localViewTab->currentLoop);
 
 	if (viewTabNoToMetaData[entryNum] == VIEWNO_TO_METADATA_NO_SET)
 	{
@@ -348,32 +377,17 @@ void agiBlit(ViewTable* localViewTab, byte entryNum)
 
 	localMetadata = viewTableMetadata[entryNum];
 
+#ifdef VERBOSE_DEBUG_BLIT
+	printf("Address %p. The bank is %d\n", localMetadata.loopsVeraAddressesPointers[localViewTab->currentLoop], localMetadata.viewTableMetadataBank);
+	printf("Checking %d.\n", localMetadata.loopsVeraAddressesPointers[localViewTab->currentLoop][0]);
+#endif
 	RAM_BANK = localMetadata.viewTableMetadataBank;
-
-	veraSpriteAddresses = localLoop.numberOfCels * localLoop.veraSlotsWidth * localLoop.veraSlotsHeight;
-
-#ifdef VERBOSE_DEBUG_BLIT
-	printf("vera Sprite addresses %d * %d * %d = %d (%d)\n", localLoop.numberOfCels, localLoop.veraSlotsWidth, localLoop.veraSlotsHeight, localLoop.numberOfCels * localLoop.veraSlotsWidth * localLoop.veraSlotsHeight, veraSpriteAddresses);
-#endif
-
-#ifdef VERBOSE_DEBUG_BLIT
-	printf("Address %p. The bank is %d\n", localMetadata.loopVeraAddressesPointers[localViewTab->currentLoop], localMetadata.viewTableMetadataBank);
-	printf("Checking %d.\n", localMetadata.loopVeraAddressesPointers[localViewTab->currentLoop][0]);
-#endif
-
-	if (!localMetadata.loopVeraAddressesPointers[localViewTab->currentLoop][0])
+	loopVeraAddresses = localMetadata.loopsVeraAddressesPointers[localViewTab->currentLoop];
+	if (!loopVeraAddresses[0])
 	{
 		RAM_BANK = SPRITE_METADATA_BANK;
-		printf("Trying to allocate %d. Number %d\n", localLoop.allocationSize, veraSpriteAddresses);
-		bEAllocateSpriteMemoryBulk(localLoop.allocationSize, veraSpriteAddresses);
-		RAM_BANK = localMetadata.viewTableMetadataBank;
 
-#ifdef VERBOSE_DEBUG_BLIT
-		printf("Trying to copy to %p from %p. Number %d. \n ", localMetadata.loopVeraAddressesPointers[localViewTab->currentLoop], bEBulkAllocatedAddresses, veraSpriteAddresses);
-#endif // VERBOSE_DEBUG_BLIT
-
-		memCpyBankedBetween(localMetadata.loopVeraAddressesPointers[localViewTab->currentLoop], localMetadata.viewTableMetadataBank, &bEBulkAllocatedAddresses, SPRITE_METADATA_BANK, veraSpriteAddresses);
-
+		bESetLoop(localViewTab, &localMetadata, &localView, loopVeraAddresses);
 	}
 
 	RAM_BANK = SPRITE_METADATA_BANK;
