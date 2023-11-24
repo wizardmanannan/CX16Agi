@@ -32,6 +32,7 @@
 
 //#define VERBOSE_ALLOC_WATCH
 //#define VERBOSE_ADD_TO_PIC;
+//#define VERBOSE_DEBUG_NO_BLIT_CACHE TODO: Weird print statement corruption fix
 
 View* loadedViews = (View*)&BANK_RAM[LOADED_VIEW_START];
 BITMAP* spriteScreen;
@@ -348,7 +349,9 @@ void bESetLoop(ViewTable* localViewTab, ViewTableMetadata* localMetadata, View* 
 	printf("loop vera is %p", loopVeraAddresses);
 	printf("Trying to copy to %p on bank %d from %p on bank %d number %d.", (byte*)loopVeraAddresses, localMetadata->viewTableMetadataBank, bEBulkAllocatedAddresses, SPRITE_METADATA_BANK, noToBlit * sizeof(long));
 #endif
+	enableHelpersDebugging = TRUE;
 	memCpyBankedBetween((byte*)loopVeraAddresses, localMetadata->viewTableMetadataBank, bEBulkAllocatedAddresses, SPRITE_METADATA_BANK, noToBlit * sizeof(long));
+	enableHelpersDebugging = FALSE;
 
 	memCpyBankedBetween(bEToBlitCelArray, SPRITE_METADATA_BANK, (byte*)localLoop.cels, localLoop.celsBank, localLoop.numberOfCels * sizeof(Cel));
 	
@@ -399,7 +402,7 @@ void agiBlit(ViewTable* localViewTab, byte entryNum)
 	loopVeraAddresses = localMetadata.loopsVeraAddressesPointers[localViewTab->currentLoop];
 
 #ifdef VERBOSE_DEBUG_NO_BLIT_CACHE	
-	printf("We are checking %p. It has a value of %u. The bank is %d and it should be %d\n", &loopVeraAddresses[0], loopVeraAddresses[0], RAM_BANK, localMetadata.viewTableMetadataBank);
+	printf("We are checking %p. It has a value of %u. The bank is %p and it should be %d\n", &loopVeraAddresses[0], loopVeraAddresses[0], RAM_BANK, localMetadata.viewTableMetadataBank);
 	printf("The bank is %d\n", RAM_BANK);
 #endif
 
@@ -415,7 +418,7 @@ void agiBlit(ViewTable* localViewTab, byte entryNum)
 
 #ifdef VERBOSE_DEBUG_NO_BLIT_CACHE	
 	RAM_BANK = localMetadata.viewTableMetadataBank;
-	printf("we haved checked %p. It has a value of %p. The bank is %u and it should be %d\n", &loopVeraAddresses[0], loopVeraAddresses[0], RAM_BANK, localMetadata.viewTableMetadataBank);
+	printf("we haved checked %p. It has a value of %p. The bank is %p and it should be %d\n", &loopVeraAddresses[0], loopVeraAddresses[0], RAM_BANK, localMetadata.viewTableMetadataBank);
 	printf("The bank is %d\n", RAM_BANK);
 #endif
 

@@ -8,6 +8,7 @@ boolean debugStop = FALSE;
 byte _previousRomBank = 0;
 byte _assm = 0; //Used as a value to load things in and out of the registers
 long _assmLong = 0; //Used as a value to load things in and out of the registers
+boolean enableHelpersDebugging = FALSE; //This is so you can debug helpers at a certain area and not be bogged down when they are called elsewhere.
 
 #pragma code-name (push, "BANKRAM05")
 void b5RefreshBuffer(BufferStatus* bufferStatus)
@@ -70,12 +71,14 @@ void* memCpyBanked(byte* dest, byte* src, byte bank, size_t len)
 
 	RAM_BANK = bank;
 	
-#ifdef VERBOSE_CPY_CHECK
-	printf("Attempting to copy to %p from %p on bank %d length %d and the first byte is %d\n", dest, src, bank, len, *src);
-#endif 
-
-
 	returnVal = memcpy(dest, src, len);
+
+#ifdef VERBOSE_CPY_CHECK
+	if (enableHelpersDebugging)
+	{
+		printf("Attempting to copy to %p from %p on bank %d length %d and the first byte is %p\n", dest, src, bank, len, *src);
+	}
+#endif 
 
 	RAM_BANK = previousRamBank;
 
@@ -107,6 +110,7 @@ void memCpyBankedBetween(byte* dest, byte bankDst, byte* src, byte bankSrc, size
 		memCpyBanked(buffer, src + i, bankSrc, copyAmount);
 		memCpyBanked(dest + i, buffer, bankDst, copyAmount);
 	}
+
 }
 
 void copyStringFromBanked(char* src, char* dest, int start, int chunk, byte sourceBank, boolean convertFromAsciiByteToPetscii)

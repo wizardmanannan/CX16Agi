@@ -65,6 +65,8 @@ extern long opCounter;
 extern byte _assm;
 extern long _assmLong;
 
+extern boolean enableHelpersDebugging;
+
 #define abs_val(a) ((a) < 0 ? -(a) : (a))
 
 extern byte _previousRomBank;
