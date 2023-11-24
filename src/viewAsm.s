@@ -225,6 +225,7 @@ stz VERA_ADDRESS_HIGH + 1 ;Always zero
 iny
 iny
 iny
+iny
 sty BULK_ADDRESS_INDEX
 
 GET_STRUCT_8_STORED_OFFSET _offsetOfCelTrans, LOCAL_CEL, CEL_TRANS

@@ -346,10 +346,9 @@ void bESetLoop(ViewTable* localViewTab, ViewTableMetadata* localMetadata, View* 
 #ifdef VERBOSE_DEBUG_BLIT
 	printf("The address of the buffer is %p\n ", bEBulkAllocatedAddresses);
 	printf("loop vera is %p", loopVeraAddresses);
-	printf("Trying to copy to %p on bank %d from %p on bank %d number %d", (byte*)loopVeraAddresses, localMetadata->viewTableMetadataBank, bEBulkAllocatedAddresses, SPRITE_METADATA_BANK, noToBlit);
+	printf("Trying to copy to %p on bank %d from %p on bank %d number %d.", (byte*)loopVeraAddresses, localMetadata->viewTableMetadataBank, bEBulkAllocatedAddresses, SPRITE_METADATA_BANK, noToBlit * sizeof(long));
 #endif
-	memCpyBankedBetween((byte*)loopVeraAddresses, localMetadata->viewTableMetadataBank, bEBulkAllocatedAddresses, SPRITE_METADATA_BANK, noToBlit);
-
+	memCpyBankedBetween((byte*)loopVeraAddresses, localMetadata->viewTableMetadataBank, bEBulkAllocatedAddresses, SPRITE_METADATA_BANK, noToBlit * sizeof(long));
 
 	memCpyBankedBetween(bEToBlitCelArray, SPRITE_METADATA_BANK, (byte*)localLoop.cels, localLoop.celsBank, localLoop.numberOfCels * sizeof(Cel));
 	
@@ -383,6 +382,10 @@ void agiBlit(ViewTable* localViewTab, byte entryNum)
 
 	if (viewTabNoToMetaData[entryNum] == VIEWNO_TO_METADATA_NO_SET)
 	{
+#ifdef VERBOSE_DEBUG_NO_BLIT_CACHE
+		printf("set Metadata %d. The vt is %d\n", localViewTab->viewData, entryNum);
+#endif
+
 		bESetViewMetadata(&localView, localViewTab, viewNum, entryNum);
 	}
 
@@ -394,12 +397,27 @@ void agiBlit(ViewTable* localViewTab, byte entryNum)
 #endif
 	RAM_BANK = localMetadata.viewTableMetadataBank;
 	loopVeraAddresses = localMetadata.loopsVeraAddressesPointers[localViewTab->currentLoop];
+
+#ifdef VERBOSE_DEBUG_NO_BLIT_CACHE	
+	printf("We are checking %p. It has a value of %u. The bank is %d and it should be %d\n", &loopVeraAddresses[0], loopVeraAddresses[0], RAM_BANK, localMetadata.viewTableMetadataBank);
+	printf("The bank is %d\n", RAM_BANK);
+#endif
+
 	if (!loopVeraAddresses[0])
 	{
 		RAM_BANK = SPRITE_METADATA_BANK;
 
+#ifdef VERBOSE_DEBUG_NO_BLIT_CACHE
+		printf("loading view %d loop %d. The vt %p\n", localViewTab->viewData, localViewTab->currentLoop, entryNum);
+#endif
 		bESetLoop(localViewTab, &localMetadata, &localView, loopVeraAddresses);
 	}
+
+#ifdef VERBOSE_DEBUG_NO_BLIT_CACHE	
+	RAM_BANK = localMetadata.viewTableMetadataBank;
+	printf("we haved checked %p. It has a value of %p. The bank is %u and it should be %d\n", &loopVeraAddresses[0], loopVeraAddresses[0], RAM_BANK, localMetadata.viewTableMetadataBank);
+	printf("The bank is %d\n", RAM_BANK);
+#endif
 
 	RAM_BANK = SPRITE_METADATA_BANK;
 
