@@ -30,12 +30,13 @@ _viewHeaderBuffer: .res VIEW_HEADER_BUFFER_SIZE
 _loopHeaderBuffer: .res LOOP_HEADER_BUFFER_SIZE
 _spritesUpdatedBuffer: .res VIEW_TABLE_SIZE
 
-.macro SET_COLOR COLOUR
+;Color must be loaded into A
+.macro SET_COLOR TMP
 lsr a           ; Shift left 4 times to multiply by 16
 lsr a  
 lsr a  
 lsr a  
-ora COLOUR
+ora TMP
 .endmacro
 
 .macro DEBUG_VIEW_DRAW
@@ -57,7 +58,6 @@ pla
 .endif
 .endmacro
 
-
 ;Used in both single and bulk
 VERA_BYTES_PER_ROW = ZP_TMP_2
 BCOL = ZP_TMP_3
@@ -68,7 +68,7 @@ BUFFER_STATUS = ZP_TMP_7 ;Takes Up 8 as well
 BUFFER_POINTER = ZP_TMP_9
 CEL_HEIGHT = ZP_TMP_10
 CEL_TRANS = ZP_TMP_12
-COLOUR = ZP_TMP_13
+OUTPUT_COLOUR = ZP_TMP_13
 
 ;Constants
 CEL_HEIGHT_OFFSET = 1
@@ -113,8 +113,8 @@ and #$0F; The number of pixels is the lower 4 bits
 tay
 txa
 and #$F0; The colour is the upper 4 bits
-sta COLOUR
-SET_COLOR COLOUR
+sta OUTPUT_COLOUR
+SET_COLOR OUTPUT_COLOUR
 
 cmp CEL_TRANS
 bne @draw
@@ -172,51 +172,73 @@ rts
 
 ;Used in bulk
 NO_TO_BLIT = ZP_TMP_14
-TO_BLIT_CEL_ARRAY_INDEX = ZP_TMP_16
-BULK_ADDRESS_INDEX = ZP_TMP_17
-SIZE_OF_CEL = ZP_TMP_18
+BULK_ADDRESS_INDEX = ZP_TMP_16
+SIZE_OF_CEL = ZP_TMP_17
+CLEAR_COLOR = ZP_TMP_18
+TOTAL_ROWS = ZP_TMP_19
 .segment "BANKRAM0E"
-;byte bytesPerRow, byte noToBlit
-_bEToBlitCelArray: .res 300
+;byte allocationSize, byte noToBlit Note 32 is 0 allocation size and 64 is 1
+_bEToBlitCelArray: .res 500
 _bECellToVeraBulk:
 sta NO_TO_BLIT
-jsr popa
-sta BYTES_PER_ROW
 lda #NO_MARGIN
 sta BCOL
-stz TO_BLIT_CEL_ARRAY_INDEX
 stz BULK_ADDRESS_INDEX
 
 lda _sizeofCel
 sta SIZE_OF_CEL
 
-@loop:
-ldy TO_BLIT_CEL_ARRAY_INDEX
-lda _bEToBlitCelArray, y
+lda #<_bEToBlitCelArray
 sta LOCAL_CEL
-lda _bEToBlitCelArray + 1, y
+lda #>_bEToBlitCelArray
 sta LOCAL_CEL + 1
 
-clc
-tya
-adc SIZE_OF_CEL
-sta TO_BLIT_CEL_ARRAY_INDEX
+jsr popa
+cmp #$0
 
+bne @totalBytes64
 
+@totalBytes32:
+lda #BYTES_PER_ROW_32
+sta BYTES_PER_ROW
+lda #SPRITE_TOTAL_ROWS_32
+sta TOTAL_ROWS
+
+bra @loop
+
+@totalBytes64:
+lda #BYTES_PER_ROW_64
+sta BYTES_PER_ROW
+lda #SPRITE_TOTAL_ROWS_64
+sta TOTAL_ROWS
+
+@loop:
 ldy BULK_ADDRESS_INDEX
-lda _bEBulkAllocatedAddresses, y
-sta VERA_ADDRESS
+
+stz VERA_ADDRESS ; Always zero
 lda _bEBulkAllocatedAddresses + 1, y
 sta VERA_ADDRESS + 1
 lda _bEBulkAllocatedAddresses + 2, y
 sta VERA_ADDRESS_HIGH
 stz VERA_ADDRESS_HIGH + 1 ;Always zero
+
 iny
 iny
 iny
 sty BULK_ADDRESS_INDEX
 
-CEL_TO_VERA
+GET_STRUCT_8_STORED_OFFSET _offsetOfCelTrans, LOCAL_CEL, CEL_TRANS
+CLEAR_VERA VERA_ADDRESS, TOTAL_ROWS, BYTES_PER_ROW, CEL_TRANS
+
+;CEL_TO_VERA
+
+clc
+lda LOCAL_CEL
+adc SIZE_OF_CEL
+sta LOCAL_CEL
+lda LOCAL_CEL + 1
+adc #$0
+sta LOCAL_CEL + 1
 
 @checkLoop:
 dec NO_TO_BLIT

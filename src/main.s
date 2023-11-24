@@ -52,3 +52,5 @@
     .export _bEAllocateSpriteMemory64
     .export _bEAllocateSpriteMemoryBulk
     .export _bEBulkAllocatedAddresses
+    .export _bECellToVeraBulk
+    .export _bEToBlitCelArray
