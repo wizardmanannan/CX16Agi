@@ -314,35 +314,48 @@ void setLoadedCel(Loop* loadedLoop, Cel* localCell, byte localCellNumber)
 	RAM_BANK = previousRamBank;
 }
 
+
+
+#define TO_BLIT_CEL_ARRAY_LENGTH 500
+extern byte bEToBlitCelArray[TO_BLIT_CEL_ARRAY_LENGTH];
+//Copy cels into array above first
+extern void bECellToVeraBulk(AllocationSize allocationSize, byte noToBlit);
+
 void bESetLoop(ViewTable* localViewTab, ViewTableMetadata* localMetadata, View* localView, unsigned long* loopVeraAddresses)
 {
 	Loop localLoop;
-	byte veraSpriteAddresses;
+	byte noToBlit;
+	byte veraSpriteWidthAndHeight;
 	
 	getLoadedLoop(localView, &localLoop, localViewTab->currentLoop);
 
-	veraSpriteAddresses = localLoop.numberOfCels * localLoop.veraSlotsWidth * localLoop.veraSlotsHeight;
+	noToBlit = localLoop.numberOfCels * localLoop.veraSlotsWidth * localLoop.veraSlotsHeight;
 
 #ifdef VERBOSE_DEBUG_BLIT
-	printf("Trying to copy to %p from %p. Number %d. \n ", localMetadata->loopsVeraAddressesPointers[localViewTab->currentLoop], bEBulkAllocatedAddresses, veraSpriteAddresses);
+	printf("Trying to copy to %p from %p. Number %d. \n ", localMetadata->loopsVeraAddressesPointers[localViewTab->currentLoop], bEBulkAllocatedAddresses, noToBlit);
 #endif // VERBOSE_DEBUG_BLIT
 
 #ifdef VERBOSE_DEBUG_BLIT
-	printf("vera Sprite addresses %d * %d * %d = %d (%d)\n", localLoop.numberOfCels, localLoop.veraSlotsWidth, localLoop.veraSlotsHeight, localLoop.numberOfCels * localLoop.veraSlotsWidth * localLoop.veraSlotsHeight, veraSpriteAddresses);
+	printf("vera Sprite addresses %d * %d * %d = %d (%d)\n", localLoop.numberOfCels, localLoop.veraSlotsWidth, localLoop.veraSlotsHeight, localLoop.numberOfCels * localLoop.veraSlotsWidth * localLoop.veraSlotsHeight, noToBlit);
 #endif
 
 #ifdef VERBOSE_DEBUG_BLIT
-	printf("Trying to allocate %d. Number %d\n", localLoop.allocationSize, veraSpriteAddresses);
+	printf("Trying to allocate %d. Number %d\n", localLoop.allocationSize, noToBlit);
 #endif
 
-	bEAllocateSpriteMemoryBulk(localLoop.allocationSize, veraSpriteAddresses);
+	bEAllocateSpriteMemoryBulk(localLoop.allocationSize, noToBlit);
 
 #ifdef VERBOSE_DEBUG_BLIT
 	printf("The address of the buffer is %p\n ", bEBulkAllocatedAddresses);
 	printf("loop vera is %p", loopVeraAddresses);
-	printf("Trying to copy to %p on bank %d from %p on bank %d number %d", (byte*)loopVeraAddresses, localMetadata->viewTableMetadataBank, bEBulkAllocatedAddresses, SPRITE_METADATA_BANK, veraSpriteAddresses);
+	printf("Trying to copy to %p on bank %d from %p on bank %d number %d", (byte*)loopVeraAddresses, localMetadata->viewTableMetadataBank, bEBulkAllocatedAddresses, SPRITE_METADATA_BANK, noToBlit);
 #endif
-	memCpyBankedBetween((byte*)loopVeraAddresses, localMetadata->viewTableMetadataBank, bEBulkAllocatedAddresses, SPRITE_METADATA_BANK, veraSpriteAddresses);
+	memCpyBankedBetween((byte*)loopVeraAddresses, localMetadata->viewTableMetadataBank, bEBulkAllocatedAddresses, SPRITE_METADATA_BANK, noToBlit);
+
+
+	memCpyBankedBetween(bEToBlitCelArray, SPRITE_METADATA_BANK, (byte*)localLoop.cels, localLoop.celsBank, localLoop.numberOfCels * sizeof(Cel));
+	
+	bECellToVeraBulk(localLoop.allocationSize, noToBlit);
 }
 
 /***************************************************************************

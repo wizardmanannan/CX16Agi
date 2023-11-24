@@ -34,6 +34,14 @@ SPRITE_END = $1F9BE
 SPRITES_PIXELS_PER_BYTE = $2
 
 VERA_ADDRESS_SIZE = $3
+SPRITE_TOTAL_BYTES_32 = 512
+SPRITE_TOTAL_BYTES_64 = 2048
+
+BYTES_PER_ROW_32 = 16
+BYTES_PER_ROW_64 = 32
+
+SPRITE_TOTAL_ROWS_32 = 32
+SPRITE_TOTAL_ROWS_64 = 64
 
 
 ;Sprite Memory Manager
@@ -86,5 +94,32 @@ lda address
 sta VERA_addr_low
 
 .endmacro
+
+.macro CLEAR_VERA VERA_ADDRESS, NO_ROWS, BYTES_PER_ROW, COLOUR
+.local @loop
+.local @loopCheck
+
+SET_VERA_ADDRESS_ABSOLUTE VERA_ADDRESS, #$0, #$1
+
+lda COLOUR
+SET_COLOR COLOUR
+
+ldx NO_ROWS
+@loopOuter:
+
+ldy BYTES_PER_ROW
+@loopInner:
+sta VERA_data0
+
+@loopInnerCheck:
+dey
+bne @loopInner
+
+@loopOuterCheck:
+dex
+bne @loopOuter
+
+.endmacro
+
 
 .endif

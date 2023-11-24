@@ -59,12 +59,11 @@ ZP_PTR_PLF_HIGH = $EB
 ZP_PTR_PLF_LOW = $ED
 
 ;Sprite Memory Manager These are 8 bit values
-ZP_PTR_SEG_32 = $EF 
-ZP_PTR_SEG_64 = $F0
-ZP_PTR_HIGH_BYTE_START = $F1
-;Skip F2 seems to be reserved. Using it causes strange crashes
-ZP_PTR_WALL_32 = $F3
-ZP_PTR_WALL_64 = $F4
+ZP_PTR_SEG_32 = $F7 
+ZP_PTR_SEG_64 = $F8
+ZP_PTR_HIGH_BYTE_START = $F9
+ZP_PTR_WALL_32 = $FA
+ZP_PTR_WALL_64 = $FB
 
 ; Define the starting address for golden RAM
 GOLDEN_RAM = $400
