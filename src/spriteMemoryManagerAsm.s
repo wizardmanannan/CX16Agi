@@ -123,6 +123,8 @@ ZP_PTR_WALL_32_PLUS_1 = ZP_TMP_2
     .local @loop, @goBack, @checkResultTable, @found, @prepareResult, @storeSegmentPointer, @increaseWall, @zeroWall
     .local @greater, @lesser, @nonEmpty, @return, @returnFail, @resetToEnd
 
+    stp
+
     lda ZP_PTR_WALL_32
     inc 
     sta ZP_PTR_WALL_32_PLUS_1
