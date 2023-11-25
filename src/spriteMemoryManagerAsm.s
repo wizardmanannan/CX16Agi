@@ -287,7 +287,7 @@ sta _bEBulkAllocatedAddresses + 1, y ;Store the high byte
 txa
 sta _bEBulkAllocatedAddresses, y ;Store the middle byte
 
-ora _bEBulkAllocatedAddresses + 1 ;Oring middle and high byte together
+ora _bEBulkAllocatedAddresses + 1,y ;Oring middle and high byte together
 beq @returnFail ;If the high byte is zero and the middle byte is also zero then we have failed to allocate, due lack of memory
 
 iny

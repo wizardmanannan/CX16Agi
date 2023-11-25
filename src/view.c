@@ -342,7 +342,11 @@ void bESetLoop(ViewTable* localViewTab, ViewTableMetadata* localMetadata, View* 
 	printf("Trying to allocate %d. Number %d\n", localLoop.allocationSize, noToBlit);
 #endif
 
-	bEAllocateSpriteMemoryBulk(localLoop.allocationSize, noToBlit);
+	if (!bEAllocateSpriteMemoryBulk(localLoop.allocationSize, noToBlit))
+	{
+		printf("No sprite mem");
+		exit(0);
+	}
 
 #ifdef VERBOSE_DEBUG_BLIT
 	printf("The address of the buffer is %p\n ", bEBulkAllocatedAddresses);
