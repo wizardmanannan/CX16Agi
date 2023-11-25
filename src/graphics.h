@@ -35,3 +35,5 @@
 	} while (0);
 
 #endif
+
+typedef unsigned int VeraSpriteAddress; //actually three bytes lower byte is always zero, so we don't store that

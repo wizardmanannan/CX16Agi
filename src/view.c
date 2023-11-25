@@ -45,8 +45,8 @@ extern int dirnOfEgo;
 
 //The data is the top two fields are all stored at the same bank alloced address on the bank in the bank field
 typedef struct {
-	unsigned long** loopsVeraAddressesPointers;
-	unsigned long* veraAddresses;
+	VeraSpriteAddress** loopsVeraAddressesPointers;
+	VeraSpriteAddress* veraAddresses;
 	byte viewTableMetadataBank;
 	int maxVeraSlots[MAX_SPRITES_SLOTS_PER_VIEW_TAB]; //Only storing the first two bytes of the sprite attributes as the 3rd byte is always 1
 } ViewTableMetadata;
@@ -145,8 +145,8 @@ void bESetViewMetadata(View* localView, ViewTable* viewTable, byte viewNum, byte
 	int loopVeraAddressesPointersSize;
 	int veraAddressesSize;
 	int totalAllocationSize;
-	unsigned long** addressBuffer = (unsigned long**)GOLDEN_RAM_PARAMS_AREA;
-	unsigned long* veraAddressCounter;
+	VeraSpriteAddress** addressBuffer = (VeraSpriteAddress**)GOLDEN_RAM_PARAMS_AREA;
+	VeraSpriteAddress* veraAddressCounter;
 
 #ifdef VERBOSE_DEBUG_SET_METADATA
 	printf("The viewNum is %d\n", viewNum);
@@ -180,16 +180,16 @@ void bESetViewMetadata(View* localView, ViewTable* viewTable, byte viewNum, byte
 		//TODO: Deallocate vera as well
 	}
 
-	loopVeraAddressesPointersSize = localView->numberOfLoops * sizeof(unsigned long*);
-	veraAddressesSize = maxVeraAddresses * sizeof(unsigned long);
+	loopVeraAddressesPointersSize = localView->numberOfLoops * sizeof(VeraSpriteAddress*);
+	veraAddressesSize = maxVeraAddresses * sizeof(VeraSpriteAddress);
 	totalAllocationSize = loopVeraAddressesPointersSize + veraAddressesSize;
 
 #ifdef VERBOSE_DEBUG_SET_METADATA
 	printf("There are %d loops and %d maxCels\n", localView->numberOfLoops, localView->maxCels);
 #endif
 
-	metadata.loopsVeraAddressesPointers = (unsigned long**)b10BankedAlloc(totalAllocationSize, &metadata.viewTableMetadataBank);
-	metadata.veraAddresses = (unsigned long*)metadata.loopsVeraAddressesPointers + loopVeraAddressesPointersSize;
+	metadata.loopsVeraAddressesPointers = (VeraSpriteAddress**)b10BankedAlloc(totalAllocationSize, &metadata.viewTableMetadataBank);
+	metadata.veraAddresses = (VeraSpriteAddress*)metadata.loopsVeraAddressesPointers + loopVeraAddressesPointersSize;
 
 #ifdef VERBOSE_DEBUG_SET_METADATA
 	printf("Allocated the following addresses %p, %p. The size is %d + %d = %d. The bank is %d\n", metadata.loopVeraAddressesPointers, metadata.veraAddresses, loopVeraAddressesPointersSize, veraAddressesSize, totalAllocationSize, metadata.viewTableMetadataBank);
@@ -225,7 +225,7 @@ void bESetViewMetadata(View* localView, ViewTable* viewTable, byte viewNum, byte
 }
 #pragma code-name (pop)
 
-extern byte bEBulkAllocatedAddresses[VIEW_TABLE_SIZE * VERA_ADDRESS_SIZE * ALLOCATOR_BLOCK_SIZE_64];
+extern byte bEBulkAllocatedAddresses[VIEW_TABLE_SIZE * sizeof(VeraSpriteAddress) * ALLOCATOR_BLOCK_SIZE_64];
 
 void getViewTab(ViewTable* returnedViewTab, byte viewTabNumber)
 {
@@ -320,7 +320,7 @@ extern byte bEToBlitCelArray[TO_BLIT_CEL_ARRAY_LENGTH];
 //Copy cels into array above first
 extern void bECellToVeraBulk(AllocationSize allocationSize, byte noToBlit);
 
-void bESetLoop(ViewTable* localViewTab, ViewTableMetadata* localMetadata, View* localView, unsigned long* loopVeraAddresses)
+void bESetLoop(ViewTable* localViewTab, ViewTableMetadata* localMetadata, View* localView, VeraSpriteAddress* loopVeraAddresses)
 {
 	Loop localLoop;
 	byte noToBlit;
@@ -368,7 +368,7 @@ void agiBlit(ViewTable* localViewTab, byte entryNum)
 	byte viewNum;
 	byte previousBank;
 	ViewTableMetadata localMetadata;
-	unsigned long* loopVeraAddresses;
+	VeraSpriteAddress* loopVeraAddresses;
 
 	previousBank = RAM_BANK;
 

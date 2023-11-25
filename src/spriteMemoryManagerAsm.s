@@ -261,7 +261,7 @@ ZP_NUMBER_TO_ALLOCATE = ZP_TMP_4
 ZP_ARRAY_COUNTER = ZP_TMP_5
 ;Puts the returned memory addresses on the system stack. Note as the lower byte is always zero only the high and middle bytes (in that order) are pushed onto the stack
 ; void bEAllocateSpriteMemoryBulk(AllocationSize size, byte number) AllocationSize is 0 for 32 and 1 for 64
-_bEBulkAllocatedAddresses: .res VIEW_TABLE_SIZE * VERA_ADDRESS_SIZE + 1 * ALLOCATOR_BLOCK_SIZE_64, $0 ;64 is the biggest size, so if we have enough room for that the others will fit anyway. Add 1 as C will read these as longs
+_bEBulkAllocatedAddresses: .res VIEW_TABLE_SIZE * VERA_SPRITE_ADDRESS_SIZE + 1 * ALLOCATOR_BLOCK_SIZE_64, $0 ;64 is the biggest size, so if we have enough room for that the others will fit anyway. Add 1 as C will read these as longs
 
 _bEAllocateSpriteMemoryBulk:
 sta ZP_NUMBER_TO_ALLOCATE ;Save the number of sprites to allocate
@@ -284,19 +284,13 @@ ALLOCATE_SPRITE_MEMORY_64
 tya
 ldy ZP_ARRAY_COUNTER
 
-sta _bEBulkAllocatedAddresses + 2, y ;Store the high byte
+sta _bEBulkAllocatedAddresses + 1, y ;Store the high byte
 txa
-sta _bEBulkAllocatedAddresses + 1, y ;Store the middle byte
+sta _bEBulkAllocatedAddresses, y ;Store the middle byte
 
-ora _bEBulkAllocatedAddresses + 2 ;Oring middle and high byte together
+ora _bEBulkAllocatedAddresses + 1 ;Oring middle and high byte together
 beq @returnFail ;If the high byte is zero and the middle byte is also zero then we have failed to allocate, due lack of memory
 
-lda #$0
-sta _bEBulkAllocatedAddresses, y ;Store the low byte
-sta _bEBulkAllocatedAddresses + 3, y ;Store high byte of the C long. This is always zero
-
-iny
-iny
 iny
 iny
 

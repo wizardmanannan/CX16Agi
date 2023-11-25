@@ -215,15 +215,12 @@ sta TOTAL_ROWS
 @loop:
 ldy BULK_ADDRESS_INDEX
 
-stz VERA_ADDRESS ; Always zero
-lda _bEBulkAllocatedAddresses + 1, y
+stz VERA_ADDRESS ; Low byte Always zero
+lda _bEBulkAllocatedAddresses, y ;Middle byte
 sta VERA_ADDRESS + 1
-lda _bEBulkAllocatedAddresses + 2, y
+lda _bEBulkAllocatedAddresses + 1, y
 sta VERA_ADDRESS_HIGH
-stz VERA_ADDRESS_HIGH + 1 ;Always zero
 
-iny
-iny
 iny
 iny
 sty BULK_ADDRESS_INDEX
