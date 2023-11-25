@@ -112,7 +112,7 @@ _bESpriteAddressTableMiddle: .res SPRITE_ALLOC_TABLE_SIZE, $0 ; Low will always 
 
 ;low a middle x high y
 
-ZP_PTR_WALL_32_PLUS_1 = ZP_TMP_2
+ZP_PTR_WALL_32_PLUS_3 = ZP_TMP_2
 ; Macro: ALLOCATE_SPRITE_MEMORY_64
 ; Purpose: Allocate 64-byte segments for sprite memory in a CommanderX16 environment.
 ; Similar to the 32-byte allocator but handles 64-byte segments.
@@ -124,8 +124,10 @@ ZP_PTR_WALL_32_PLUS_1 = ZP_TMP_2
     .local @greater, @lesser, @nonEmpty, @return, @returnFail, @resetToEnd
 
     lda ZP_PTR_WALL_32
+    inc
+    inc
     inc 
-    sta ZP_PTR_WALL_32_PLUS_1
+    sta ZP_PTR_WALL_32_PLUS_3
 
     ; Initialize X and Y registers
     ldx #$0 ; X register: Indicates never reset to zero
@@ -135,14 +137,16 @@ ZP_PTR_WALL_32_PLUS_1 = ZP_TMP_2
         cpy ZP_PTR_WALL_32 ; Check if wall pointer is at end of allocation table
         beq @resetToEnd
         
-        cpy ZP_PTR_WALL_32_PLUS_1 ; If ZP_PTR_WALL_32_PLUS + 1 = ZP_PTR_WALL_64 then ZP_PTR_WALL_64 - 2 < ZP_PTR_WALL_32
-        bne @checkResultTable ; If we have jumped over the 32 wall we need to go back two. This is a unique problem for 64 bit alloc, as we jump in 2s
+        cpy ZP_PTR_WALL_32_PLUS_3 ; As we are four in size non of our 4 segments can be less than 32
+        bcc @checkResultTable ; If we have jumped over the 32 wall we need to go back two. This is a unique problem for 64 bit alloc, as we jump in 2s
         
         lda ZP_PTR_WALL_32 ;Special case if ZP_PTR_WALL_32 is zero then we are perfectly entitled to allocated ourselves and 1 and 2, because it means 32 hasn't allocated anything yet and we won't overwrite anything
         beq @checkResultTable
 
         @goBack:
         iny 
+        iny
+        iny
         iny
         bra @resetToEnd
 
@@ -161,6 +165,8 @@ ZP_PTR_WALL_32_PLUS_1 = ZP_TMP_2
         ; Decrease wall pointer if at end of allocation table
         dec ;Note a already holds ZP_PTR_WALL_64
         dec
+        dec
+        dec
         sta ZP_PTR_WALL_64
         cmp #$FF ;If the wall has gone below 0 then the wall should be set to zero
         bne @prepareResult
@@ -178,6 +184,8 @@ ZP_PTR_WALL_32_PLUS_1 = ZP_TMP_2
 
         ; Update segment pointer
         tya 
+        dey
+        dey
         dey
         dey
 
@@ -217,12 +225,12 @@ ZP_PTR_WALL_32_PLUS_1 = ZP_TMP_2
         bne @returnFail
         ldx #$1
 
-        ldy #SPRITE_ALLOC_TABLE_SIZE - 2
+        ldy #SPRITE_ALLOC_TABLE_SIZE - 4
         bra @loop
 
     @returnFail:
         ; Return failure
-        ldy #SPRITE_ALLOC_TABLE_SIZE - 2
+        ldy #SPRITE_ALLOC_TABLE_SIZE - 4
         sty ZP_PTR_SEG_64
         ldy #0
         ldx #0
