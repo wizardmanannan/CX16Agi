@@ -45,7 +45,7 @@
     .export _b6InitGraphics
     .export _b6InitIrq
     .export _b6TellMeTheAddressPlease
-    .export _spritesUpdatedBuffer
+    .export _bESpritesUpdatedBuffer
     .export _bESpriteAddressTableMiddle
     .export _bESpriteAllocTable
     .export _bEAllocateSpriteMemory32
@@ -54,3 +54,4 @@
     .export _bEBulkAllocatedAddresses
     .export _bECellToVeraBulk
     .export _bEToBlitCelArray
+    .export _bESpritesUpdatedBufferPointer

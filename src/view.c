@@ -34,6 +34,11 @@
 //#define VERBOSE_ADD_TO_PIC;
 //#define VERBOSE_DEBUG_NO_BLIT_CACHE TODO: Weird print statement corruption fix
 
+#define BYTES_PER_SPRITE_UPDATE 8
+#define SPRITE_UPDATED_BUFFER_SIZE  VIEW_TABLE_SIZE * BYTES_PER_SPRITE_UPDATE * 2
+extern byte bESpritesUpdatedBuffer[SPRITE_UPDATED_BUFFER_SIZE];
+extern byte* bESpritesUpdatedBufferPointer;
+
 View* loadedViews = (View*)&BANK_RAM[LOADED_VIEW_START];
 BITMAP* spriteScreen;
 
@@ -132,6 +137,12 @@ void bEResetSpritePointers()
 	nextSpriteSlot = 0;
 	nextViewMetadataSlot = 0;
 }
+void bEResetSpritesUpdatedBuffer()
+{
+	memsetBanked(bESpritesUpdatedBuffer, 0, VIEW_TABLE_SIZE, SPRITE_UPDATED_BUFFER_BANK);
+	bESpritesUpdatedBufferPointer = bESpritesUpdatedBuffer;
+}
+
 #pragma wrapped-call (pop)
 
 #define MAX_SLOT_1_SIZED_SPRITE 64
@@ -446,13 +457,11 @@ void agiBlit(ViewTable* localViewTab, byte entryNum)
 }
 
 #pragma code-name (push, "BANKRAM09")
-extern byte spritesUpdatedBuffer[VIEW_TABLE_SIZE];
-
 void b9InitSpriteData()
 {
 	byte i;
 
-	memset(spritesUpdatedBuffer, 0, VIEW_TABLE_SIZE);
+	bEResetSpritesUpdatedBuffer();
 	bEResetSpritePointers();
 	bEInitSpriteMemoryManager();
 
@@ -539,6 +548,7 @@ void b9ResetViews()     /* Called after new.room */
 		setViewTab(&localViewtab, entryNum);
 	}
 
+	bEResetSpritesUpdatedBuffer();
 	bEResetViewTableMetadata();
 	bEResetSpritePointers();
 	bEResetSpriteMemoryManager();
