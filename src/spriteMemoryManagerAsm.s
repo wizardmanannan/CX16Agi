@@ -122,7 +122,6 @@ ZP_PTR_WALL_32_PLUS_3 = ZP_TMP_2
 .macro ALLOCATE_SPRITE_MEMORY_64
     .local @loop, @goBack, @checkResultTable, @found, @prepareResult, @storeSegmentPointer, @increaseWall, @zeroWall
     .local @greater, @lesser, @nonEmpty, @return, @returnFail, @resetToEnd
-
     lda ZP_PTR_WALL_32
     inc
     inc
@@ -138,7 +137,7 @@ ZP_PTR_WALL_32_PLUS_3 = ZP_TMP_2
         beq @resetToEnd
         
         cpy ZP_PTR_WALL_32_PLUS_3 ; As we are four in size non of our 4 segments can be less than 32
-        bcc @checkResultTable ; If we have jumped over the 32 wall we need to go back two. This is a unique problem for 64 bit alloc, as we jump in 2s
+        bcs @checkResultTable ; If we have jumped over the 32 wall we need to go back two. This is a unique problem for 64 bit alloc, as we jump in 2s
         
         lda ZP_PTR_WALL_32 ;Special case if ZP_PTR_WALL_32 is zero then we are perfectly entitled to allocated ourselves and 1 and 2, because it means 32 hasn't allocated anything yet and we won't overwrite anything
         beq @checkResultTable
