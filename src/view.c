@@ -34,7 +34,7 @@
 //#define VERBOSE_ADD_TO_PIC;
 //#define VERBOSE_DEBUG_NO_BLIT_CACHE TODO: Weird print statement corruption fix
 
-#define BYTES_PER_SPRITE_UPDATE 8
+#define BYTES_PER_SPRITE_UPDATE 7
 #define SPRITE_UPDATED_BUFFER_SIZE  VIEW_TABLE_SIZE * BYTES_PER_SPRITE_UPDATE * 2
 extern byte bESpritesUpdatedBuffer[SPRITE_UPDATED_BUFFER_SIZE];
 extern byte* bESpritesUpdatedBufferPointer;
@@ -53,7 +53,7 @@ typedef struct {
 	VeraSpriteAddress** loopsVeraAddressesPointers;
 	VeraSpriteAddress* veraAddresses;
 	byte viewTableMetadataBank;
-	int maxVeraSlots[MAX_SPRITES_SLOTS_PER_VIEW_TAB]; //Only storing the first two bytes of the sprite attributes as the 3rd byte is always 1
+	VeraSpriteAddress veraSlots[MAX_SPRITES_SLOTS_PER_VIEW_TAB]; //Only storing the first two bytes of the sprite attributes as the 3rd byte is always 1
 } ViewTableMetadata;
 
 #pragma bss-name (push, "BANKRAM09")
@@ -143,6 +143,22 @@ void bEResetSpritesUpdatedBuffer()
 	bESpritesUpdatedBufferPointer = bESpritesUpdatedBuffer;
 }
 
+void bESetVeraSlotsOnMetadata()
+{
+	byte i, j;
+	for (i = 0; i < SPRITE_SLOTS; i++)
+	{
+		for (j = 0; j < MAX_SPRITES_SLOTS_PER_VIEW_TAB; j++)
+		{
+
+			viewTableMetadata[i].veraSlots[j] = i * MAX_SPRITES_SLOTS_PER_VIEW_TAB * SIZE_OF_SPRITE_ATTRIBUTE + j * SIZE_OF_SPRITE_ATTRIBUTE + (unsigned int)(SPRITE_ATTRIBUTES_START & (unsigned long)0xFFFF) + SIZE_OF_SPRITE_ATTRIBUTE; //Skip over first 0 it is for the mouse
+#ifdef VERBOSE_SP_ATTR_SETUP
+			printf("%d + %d + %p + %d = %x\n", i * MAX_SPRITES_SLOTS_PER_VIEW_TAB * SIZE_OF_SPRITE_ATTRIBUTE, j * SIZE_OF_SPRITE_ATTRIBUTE, (unsigned int)(SPRITE_ATTRIBUTES_START & (unsigned long)0xFFFF), SIZE_OF_SPRITE_ATTRIBUTE, viewTableMetadata[i].veraSlots[j]);
+#endif // VERBOSE_SP_ATTR_SETUP
+		}
+	}
+}
+
 #pragma wrapped-call (pop)
 
 #define MAX_SLOT_1_SIZED_SPRITE 64
@@ -169,7 +185,7 @@ void bESetViewMetadata(View* localView, ViewTable* viewTable, byte viewNum, byte
 	}
 
 #ifdef VERBOSE_DEBUG_SET_METADATA
-	printf("The max number of vera slots is %d \n", localView->maxVeraSlots);
+	printf("The max number of vera slots is %d \n", localView->veraSlots);
 #endif
 
 	maxVeraAddresses = localView->maxVeraSlots * localView->maxCels;
@@ -336,7 +352,7 @@ void bESetLoop(ViewTable* localViewTab, ViewTableMetadata* localMetadata, View* 
 	Loop localLoop;
 	byte noToBlit;
 	byte veraSpriteWidthAndHeight;
-	
+
 	getLoadedLoop(localView, &localLoop, localViewTab->currentLoop);
 
 	noToBlit = localLoop.numberOfCels * localLoop.veraSlotsWidth * localLoop.veraSlotsHeight;
@@ -369,10 +385,11 @@ void bESetLoop(ViewTable* localViewTab, ViewTableMetadata* localMetadata, View* 
 	enableHelpersDebugging = FALSE;
 
 	memCpyBankedBetween(bEToBlitCelArray, SPRITE_METADATA_BANK, (byte*)localLoop.cels, localLoop.celsBank, localLoop.numberOfCels * sizeof(Cel));
-	
+
 	bECellToVeraBulk(localLoop.allocationSize, noToBlit);
 }
 
+#define ZP_SPRITE_STORE_PTR ZP_PTR_TMP_2
 /***************************************************************************
 ** agi_blit
 ***************************************************************************/
@@ -384,6 +401,7 @@ void agiBlit(ViewTable* localViewTab, byte entryNum)
 	byte previousBank;
 	ViewTableMetadata localMetadata;
 	VeraSpriteAddress* loopVeraAddresses;
+	VeraSpriteAddress loopVeraAddress; //Put out here so it can be accessed by inline assembly without going via a C variable
 
 	previousBank = RAM_BANK;
 
@@ -394,7 +412,6 @@ void agiBlit(ViewTable* localViewTab, byte entryNum)
 #ifdef VERBOSE_DEBUG_BLIT
 	printf("The viewNum is %d and the loop is %d\n", viewNum, localViewTab->currentLoop);
 #endif // VERBOSE_DEBUG_BLIT
-
 
 	getLoadedView(&localView, viewNum);
 
@@ -437,7 +454,53 @@ void agiBlit(ViewTable* localViewTab, byte entryNum)
 	printf("The bank is %d\n", RAM_BANK);
 #endif
 
-	RAM_BANK = SPRITE_METADATA_BANK;
+	RAM_BANK = localMetadata.viewTableMetadataBank;
+	loopVeraAddress = loopVeraAddresses[localViewTab->currentCel];
+
+	RAM_BANK = SPRITE_UPDATED_BUFFER_BANK;
+
+	asm("sei");
+
+	WRITE_INT_VAR_TO_ASSM((unsigned int)bESpritesUpdatedBufferPointer, ZP_SPRITE_STORE_PTR);
+	_assmUInt = loopVeraAddress;
+
+	asm("lda %v", _assmUInt);
+	asm("sta (%w)", ZP_SPRITE_STORE_PTR);
+	asm("ldy #$1");
+	asm("lda %v + 1", _assmUInt);
+	asm("sta (%w),y", ZP_SPRITE_STORE_PTR);
+
+	_assmUInt = localMetadata.veraSlots[0];
+	asm("ldy #$2");
+	asm("lda %v", _assmUInt);
+	asm("sta (%w),y", ZP_SPRITE_STORE_PTR);
+	asm("iny");
+	asm("lda %v + 1", _assmUInt);
+	asm("sta (%w),y", ZP_SPRITE_STORE_PTR);
+	_assmByte = (byte)localViewTab->xPos;
+
+	asm("ldy #$4");
+	asm("lda %v", _assmByte);
+	asm("sta (%w),y", ZP_SPRITE_STORE_PTR);
+	_assmByte = (byte)localViewTab->yPos;
+
+	asm("ldy #$5");
+	asm("lda %v", _assmByte);
+	asm("sta (%w),y", ZP_SPRITE_STORE_PTR);
+
+	asm("ldy #$6");
+	asm("lda #$0"); //TODO: Will be the reblit flag, zero for now will revisit
+	asm("sta (%w),y", ZP_SPRITE_STORE_PTR);
+
+	asm("ldy #$7"); //Stop
+	asm("lda #$0");
+	asm("sta (%w),y", ZP_SPRITE_STORE_PTR);
+	asm("iny");
+	asm("sta (%w),y", ZP_SPRITE_STORE_PTR);
+
+	bESpritesUpdatedBufferPointer += BYTES_PER_SPRITE_UPDATE;
+
+	asm("cli");
 
 	//for (i = 0; i < w; i++) {
 	//	for (j = 0; j < h; j++) {
@@ -487,14 +550,7 @@ void b9InitViews()
 
 	spriteScreen = create_bitmap(160, 168);
 
-	for (i = 0; i < SPRITE_SLOTS; i++)
-	{
-		for (j = 0; j < MAX_SPRITES_SLOTS_PER_VIEW_TAB; j++)
-		{
-			viewTableMetadata[i].maxVeraSlots[j] = i * MAX_SPRITES_SLOTS_PER_VIEW_TAB + j + (SPRITE_ATTRIBUTES_START & 0xFFFF);
-		}
-	}
-
+	bESetVeraSlotsOnMetadata();
 }
 
 void b9InitObjects()
