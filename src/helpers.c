@@ -6,7 +6,8 @@
 boolean debugStop = FALSE;
 
 byte _previousRomBank = 0;
-byte _assm = 0; //Used as a value to load things in and out of the registers
+byte _assmByte = 0; //Used as a value to load things in and out of the registers
+unsigned int _assmUInt = 0;
 long _assmLong = 0; //Used as a value to load things in and out of the registers
 boolean enableHelpersDebugging = FALSE; //This is so you can debug helpers at a certain area and not be bogged down when they are called elsewhere.
 
@@ -17,8 +18,8 @@ void b5RefreshBuffer(BufferStatus* bufferStatus)
 	localBufferStatus = *bufferStatus;
 
 	bufferStatus->bufferCounter++;
-   
-	
+
+
 
 	memCpyBanked(GOLDEN_RAM_WORK_AREA, localBufferStatus.bankedData + localBufferStatus.bufferCounter * LOCAL_WORK_AREA_SIZE, localBufferStatus.bank, LOCAL_WORK_AREA_SIZE); //If it overflows the bank it isn't a big deal, the picture data is terminated by 0xFF so the rubbish data following will never be executed.
 }
@@ -57,10 +58,10 @@ char* strcpyBanked(char* dest, const char* src, byte bank)
 
 	RAM_BANK = bank;
 
-    strcpy(dest, src);
+	strcpy(dest, src);
 
 	RAM_BANK = previousRamBank;
-	
+
 	return result;
 }
 
@@ -70,7 +71,7 @@ void* memCpyBanked(byte* dest, byte* src, byte bank, size_t len)
 	void* returnVal;
 
 	RAM_BANK = bank;
-	
+
 	returnVal = memcpy(dest, src, len);
 
 #ifdef VERBOSE_CPY_CHECK
@@ -88,7 +89,7 @@ void* memCpyBanked(byte* dest, byte* src, byte bank, size_t len)
 void memsetBanked(void* _Dst, int _Val, size_t _Size, byte bank)
 {
 	byte previousRamBank = RAM_BANK;
-	
+
 	RAM_BANK = bank;
 
 	memset(_Dst, _Val, _Size);
@@ -136,7 +137,7 @@ void copyStringFromBanked(char* src, char* dest, int start, int chunk, byte sour
 	RAM_BANK = previousRamBank;
 }
 
-int sprintfBanked(const char* buffer, byte bank, char const* const format,  ...) {
+int sprintfBanked(const char* buffer, byte bank, char const* const format, ...) {
 	va_list list;
 	int result;
 	byte previousRamBank = RAM_BANK;

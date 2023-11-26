@@ -62,8 +62,9 @@ extern long opStopAt;
 extern long opExitAt;
 extern long opCounter;
 
-extern byte _assm;
+extern byte _assmByte;
 extern long _assmLong;
+extern unsigned int _assmUInt;
 
 extern boolean enableHelpersDebugging;
 
@@ -84,15 +85,24 @@ extern byte _previousRomBank;
 #define READ_BYTE_VAR_FROM_ASSM(byteVar, address) \
     do {                                           \
         asm("lda %w", address); \
-        asm("sta %v", _assm); \
-        byteVar = _assm; \
+        asm("sta %v", _assmByte); \
+        byteVar = _assmByte; \
     } while(0) \
 
 #define WRITE_BYTE_VAR_TO_ASSM(byteVar, address) \
     do {                                           \
-        _assm = byteVar;  \
-        asm("lda %v", _assm);                  \
+        _assmByte = byteVar;  \
+        asm("lda %v", _assmByte);                  \
         asm("sta %w", address);                  \
+    } while(0)
+
+#define WRITE_INT_VAR_TO_ASSM(intVar, address) \
+    do {                                           \
+        _assmUInt = intVar;  \
+        asm("lda %v", _assmUInt);                  \
+        asm("sta %w", address);                  \
+        asm("lda %v + 1", _assmUInt);                  \
+        asm("sta %w + 1", address);                  \
     } while(0)
 
 //For writing things defined with a #define
@@ -117,8 +127,8 @@ extern byte _previousRomBank;
 #define READ_STACK_FROM_ASSM(byteVar) \
      do {                                           \
         asm("pla"); \
-        asm("sta %v", _assm); \
-        byteVar = _assm; \
+        asm("sta %v", _assmByte); \
+        byteVar = _assmByte; \
     } while(0) \
 
 
