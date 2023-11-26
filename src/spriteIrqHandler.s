@@ -13,11 +13,10 @@ SPRITE_UPDATED_BUFFER_SIZE = VIEW_TABLE_SIZE * BYTES_PER_SPRITE_UPDATE * 2 ;View
 ;Define Insertion Order:
 ;0 Vera Address Sprite Data Middle (Low will always be 0) (If both the first two bytes are zero that indicates the end of the buffer)
 ;1 Vera Address Sprite Data High
-;2 Sprite Attribute Address Low (High will always be 1)
-;3 Sprite Attribute Address Middle 
-;4 x
-;5 y
-;6 Reblit on IRQ
+;2 x
+;3 y
+;4 Sprite Attr Size
+;5 Reblit on IRQ
 
 _bESpritesUpdatedBuffer: .res SPRITE_UPDATED_BUFFER_SIZE
 _bESpritesUpdatedBufferPointer: .word _bESpritesUpdatedBuffer

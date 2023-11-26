@@ -390,6 +390,11 @@ void bESetLoop(ViewTable* localViewTab, ViewTableMetadata* localMetadata, View* 
 }
 
 #define ZP_SPRITE_STORE_PTR ZP_PTR_TMP_2
+
+typedef enum {
+	SPR_ATTR_32 = 2,
+	SPR_ATTR_64 = 3
+} SpriteAttributeSize;
 /***************************************************************************
 ** agi_blit
 ***************************************************************************/
@@ -462,37 +467,42 @@ void agiBlit(ViewTable* localViewTab, byte entryNum)
 	asm("sei");
 
 	WRITE_INT_VAR_TO_ASSM((unsigned int)bESpritesUpdatedBufferPointer, ZP_SPRITE_STORE_PTR);
+	
 	_assmUInt = loopVeraAddress;
-
 	asm("lda %v", _assmUInt);
 	asm("sta (%w)", ZP_SPRITE_STORE_PTR);
 	asm("ldy #$1");
 	asm("lda %v + 1", _assmUInt);
 	asm("sta (%w),y", ZP_SPRITE_STORE_PTR);
 
-	_assmUInt = localMetadata.veraSlots[0];
-	asm("ldy #$2");
-	asm("lda %v", _assmUInt);
-	asm("sta (%w),y", ZP_SPRITE_STORE_PTR);
-	asm("iny");
-	asm("lda %v + 1", _assmUInt);
-	asm("sta (%w),y", ZP_SPRITE_STORE_PTR);
 	_assmByte = (byte)localViewTab->xPos;
+	asm("ldy #$2");
+	asm("lda %v", _assmByte);
+	asm("sta (%w),y", ZP_SPRITE_STORE_PTR);
+
+	_assmByte = (byte)localViewTab->yPos;
+	asm("ldy #$3");
+	asm("lda %v", _assmByte);
+	asm("sta (%w),y", ZP_SPRITE_STORE_PTR);
+
+	if (localLoop.allocationSize == SIZE_32)
+	{
+		_assmByte = SPR_ATTR_32;
+	}
+	else
+	{
+		_assmByte = SPR_ATTR_64;
+	}
 
 	asm("ldy #$4");
 	asm("lda %v", _assmByte);
 	asm("sta (%w),y", ZP_SPRITE_STORE_PTR);
-	_assmByte = (byte)localViewTab->yPos;
 
 	asm("ldy #$5");
-	asm("lda %v", _assmByte);
-	asm("sta (%w),y", ZP_SPRITE_STORE_PTR);
-
-	asm("ldy #$6");
 	asm("lda #$0"); //TODO: Will be the reblit flag, zero for now will revisit
 	asm("sta (%w),y", ZP_SPRITE_STORE_PTR);
 
-	asm("ldy #$7"); //Stop
+	asm("ldy #$6"); //Stop
 	asm("lda #$0");
 	asm("sta (%w),y", ZP_SPRITE_STORE_PTR);
 	asm("iny");
