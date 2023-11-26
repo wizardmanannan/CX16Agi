@@ -530,15 +530,18 @@ void agiBlit(ViewTable* localViewTab, byte entryNum)
 }
 
 #pragma code-name (push, "BANKRAM09")
+void b9Reset()
+{
+	bEResetSpritesUpdatedBuffer();
+	bEResetViewTableMetadata();
+	bEResetSpritePointers();
+	bEResetSpriteMemoryManager();
+}
 void b9InitSpriteData()
 {
 	byte i;
 
-	bEResetSpritesUpdatedBuffer();
-	bEResetSpritePointers();
-	bEInitSpriteMemoryManager();
-
-
+	b9Reset();
 }
 
 
@@ -614,10 +617,7 @@ void b9ResetViews()     /* Called after new.room */
 		setViewTab(&localViewtab, entryNum);
 	}
 
-	bEResetSpritesUpdatedBuffer();
-	bEResetViewTableMetadata();
-	bEResetSpritePointers();
-	bEResetSpriteMemoryManager();
+	b9Reset();
 }
 
 
