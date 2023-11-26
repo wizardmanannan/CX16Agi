@@ -4,6 +4,7 @@ IRQ_INC = 1
 
 .include "global.s"
 .include "globalGraphics.s"
+;.include "spriteIrqHandler.s"
 
 .macro SEND_IRQ_COMMAND command, vSyncToCheck
 sei
@@ -131,7 +132,10 @@ currentIrqState: .byte $0
 
 _vSyncCounter: .word $0
 debugVSyncCounter: .word $0
+
 custom_irq_handler:
+lda RAM_BANK
+sta @previousRamBank 
 
 ; continue to default IRQ handler
 lda VERA_isr
@@ -140,8 +144,6 @@ beq @defaultIqr
 
 lda sendIrqCommand
 tax
-lda RAM_BANK
-pha
 
 lda @jmpTableBank, x
 sta RAM_BANK
@@ -181,11 +183,16 @@ sta sendIrqCommand
 
 @vSyncCounter:
 inc _vSyncCounter
-bne @defaultIqr
+bne @handleSpriteUpdates
 inc _vSyncCounter + 1
 
+@handleSpriteUpdates:
+lda #SPRITE_UPDATES_BANK
+sta RAM_BANK
+;jsr bEHandleSpriteUpdates
+
 @defaultIqr:
-pla
+lda @previousRamBank
 sta RAM_BANK
 jmp (default_irq_vector)
 ; RTI will happen after jump
@@ -198,6 +205,7 @@ jmp (default_irq_vector)
 .addr @displayText
 
 @jmpTableBank: .byte $0, $0, $0, $0, TEXT_BANK ;In order of IRQ_CMDS
+@previousRamBank: .byte $0
 
 .endif ; IRQ_INC
 
