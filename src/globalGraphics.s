@@ -1,5 +1,6 @@
 .ifndef GLOBAL_GRAPHICS_INC
 GLOBAL_GRAPHICS_INC = 1
+
 ; Vera Address
 
 ;BITMAP
@@ -43,7 +44,12 @@ BYTES_PER_ROW_64 = 32
 
 SPRITE_TOTAL_ROWS_32 = 32
 SPRITE_TOTAL_ROWS_64 = 64
+SPRITE_ATTR_START = $1FC00
+SPRITE_ATTR_SIZE = 8
 
+SPRITE_SLOTS = VIEW_TABLE_SIZE
+MAX_SPRITES_SLOTS_PER_VIEW_TAB = 6
+MAX_SPRITE_SLOTS = (MAX_SPRITES_SLOTS_PER_VIEW_TAB * SPRITE_SLOTS)
 
 ;Sprite Memory Manager
 SEGMENT_SMALL = (32 * 32) / 2
@@ -96,9 +102,25 @@ sta VERA_addr_low
 
 .endmacro
 
+
+.macro SET_VERA_ADDRESS_IMMEDIATE VERA_ADDRESS, ADDRESS_SEL, STRIDE ;Vera Address is a 4 bit number instead of three to make it easier to work with C
+        lda ADDRESS_SEL
+        sta VERA_ctrl  
+        lda #^VERA_ADDRESS              
+        and #$1 ; We only care about the first bit
+        ora STRIDE << 4
+        sta VERA_addr_bank
+        lda #<VERA_ADDRESS
+        sta VERA_addr_low
+        lda #>VERA_ADDRESS
+        sta VERA_addr_high
+.endmacro
+
 .macro CLEAR_VERA VERA_ADDRESS, NO_ROWS, BYTES_PER_ROW, COLOUR
 .local @loop
 .local @loopCheck
+
+sei
 
 SET_VERA_ADDRESS_ABSOLUTE VERA_ADDRESS, #$0, #$1
 
@@ -120,6 +142,7 @@ bne @loopInner
 dex
 bne @loopOuter
 
+cli
 .endmacro
 
 

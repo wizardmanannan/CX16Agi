@@ -192,6 +192,8 @@ void b6InitLayer1Mapbase()
 #define BYTE1 TRANSPARENT_CHAR
 #define BYTE2 0x10 //1 Offset 0 v flip 0 h flip 0 tile index bit 8 and 9
 
+	asm("sei");
+
 	SET_VERA_ADDRESS(MAPBASE, ADDRESSSEL0, 1);
 
 	for (i = 0; i < TILE_LAYER_NO_TILES; i++)
@@ -204,6 +206,7 @@ void b6InitLayer1Mapbase()
 	b6TestCharset();
 #endif // TEST_CHARSET
 
+	asm("cli");
 }
 
 #pragma code-name (pop)
@@ -402,11 +405,13 @@ void b3DisplayMessageBox(char* message, byte messageBank, byte row, byte col, by
 			currentTextBuffer = textBuffer2;
 		}
 
+		asm("sei");
 		SET_VERA_ADDRESS_ABSOLUTE(displayAddressCopyPaletteTo, 0, 2);
 		for (i = 0; i < messageSize - 1; i++) //Ignore the terminator it doesn't print and doesn't have a palette byte
 		{
 			WRITE_BYTE_VAR_TO_ASSM(paletteByte, VERA_data0);
 		}
+		asm("cli");
 		////TODO: Doesn't return anything but I don't want to add any more trampoline methods. Come up with a more memory efficient way of handling this then constanting adding them
 
 		b6SetAndWaitForIrqState(DISPLAY_TEXT);

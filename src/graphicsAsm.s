@@ -28,6 +28,8 @@ _interpolationBuffer: .res 2000
 .import _b9InitSpriteData
 
 _b6ClearBackground:
+sei
+
 stz VERA_ctrl
 lda #$10 | ^STARTING_BYTE
 sta VERA_addr_bank
@@ -73,6 +75,7 @@ sta @mapWidth
 
     dex  ; Decrement X
     bne @loopOuter  ; If X is not 0, continue loop
+cli
 rts
 @mapWidth: .byte $0
 @isFirstPixel: .byte $0
@@ -384,6 +387,8 @@ stz VERA_L1_vscroll_h
 
 jsr _b6InitCharset 
 jsr _b6InitLayer1Mapbase
+
+TRAMPOLINE #SPRITE_UPDATES_BANK, _bEClearSpriteAttributes 
 
 jsr _b6DisplayLoadingScreen
 rts

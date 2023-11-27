@@ -106,7 +106,7 @@ extern void setLoadedView(View* loadedView, byte loadedViewNumber);
 #pragma wrapped-call (push, trampoline, VIEW_CODE_BANK_1)
 void b9LoadViewFile(byte viewNum);
 void b9DiscardView(byte viewNum);
-void b9AddViewToTable(ViewTable* localViewtab, byte viewNum);
+void b9AddViewToTable(ViewTable* localViewtab, byte viewNum, byte entryNum);
 extern void b9SetCel(ViewTable* localViewtab, byte celNum);
 extern void b9SetLoop(ViewTable* localViewtab, byte loopNum);
 extern void b9AddToPic(int vNum, int lNum, int cNum, int x, int y, int pNum, int bCol);
@@ -131,6 +131,10 @@ extern void bCCalcObjMotion();
 
 #pragma wrapped-call (push, trampoline, VIEW_CODE_BANK_5)
 extern void bDShowObjectState(int objNum);
+#pragma wrapped-call (pop)
+
+#pragma wrapped-call (push, trampoline, SPRITE_UPDATED_BANK)
+extern void bEClearSpriteAttributes();
 #pragma wrapped-call (pop)
 
 #endif   /* _VIEW_H_ */

@@ -1183,6 +1183,8 @@ void b11DrawPic(byte* bankedData, int pLen, boolean okToClearScreen, byte picNum
 
 	b5RefreshBuffer(bufferStatus);
 
+	asm("sei");
+
 	if (okToClearScreen) b6ClearPicture();
 
 #ifdef TEST_OK_TO_FILL
@@ -1241,6 +1243,8 @@ void b11DrawPic(byte* bankedData, int pLen, boolean okToClearScreen, byte picNum
 	} while ((data < (data + pLen)) && stillDrawing);
 
 	b11SplitPriority();
+
+	asm("cli");
 
 	b6DismissLoadingScreen();
 }

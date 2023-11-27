@@ -89,6 +89,7 @@ void b6Clear()
 {
     b6DisplayLoadingScreen();
     b6ClearPicture();
+    bEClearSpriteAttributes();
 }
 
 /***************************************************************************
@@ -280,7 +281,10 @@ void b6Initialise()
     initEvents();
     b6InitInterpreter();
     b6InitIrq();
+
+    asm("sei");
     b6InitGraphics();
+    asm("cli");
 
     horizon = 36;
 

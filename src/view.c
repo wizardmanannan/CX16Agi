@@ -48,6 +48,8 @@ extern char string[12][40];
 extern byte horizon;
 extern int dirnOfEgo;
 
+byte maxViewTable = 0;
+
 //The data is the top two fields are all stored at the same bank alloced address on the bank in the bank field
 typedef struct {
 	VeraSpriteAddress** loopsVeraAddressesPointers;
@@ -139,7 +141,7 @@ void bEResetSpritePointers()
 }
 void bEResetSpritesUpdatedBuffer()
 {
-	memsetBanked(bESpritesUpdatedBuffer, 0, VIEW_TABLE_SIZE, SPRITE_UPDATED_BUFFER_BANK);
+	memsetBanked(bESpritesUpdatedBuffer, 0, VIEW_TABLE_SIZE, SPRITE_UPDATED_BANK);
 	bESpritesUpdatedBufferPointer = bESpritesUpdatedBuffer;
 }
 
@@ -462,7 +464,7 @@ void agiBlit(ViewTable* localViewTab, byte entryNum)
 	RAM_BANK = localMetadata.viewTableMetadataBank;
 	loopVeraAddress = loopVeraAddresses[localViewTab->currentCel];
 
-	RAM_BANK = SPRITE_UPDATED_BUFFER_BANK;
+	RAM_BANK = SPRITE_UPDATED_BANK;
 
 	asm("sei");
 
@@ -536,6 +538,7 @@ void b9Reset()
 	bEResetViewTableMetadata();
 	bEResetSpritePointers();
 	bEResetSpriteMemoryManager();
+	maxViewTable = 0;
 }
 void b9InitSpriteData()
 {
@@ -982,14 +985,12 @@ void b9SetLoop(ViewTable* localViewtab, byte loopNum)
 	/* Might have to set the cel as well */
 	/* It's probably better to do that in the set_loop function */
 }
-
-
 /**************************************************************************
 ** addViewToTable
 **
 ** Purpose: To add a loaded VIEW to the VIEW table.
 **************************************************************************/
-void b9AddViewToTable(ViewTable* localViewtab, byte viewNum)
+void b9AddViewToTable(ViewTable* localViewtab, byte viewNum, byte entryNum)
 {
 	View localView;
 	Loop localLoop;
@@ -1004,6 +1005,11 @@ void b9AddViewToTable(ViewTable* localViewtab, byte viewNum)
 	localViewtab->numberOfCels = localLoop.numberOfCels;
 	b9SetCel(localViewtab, 0);
 	/* Might need to set some more defaults here */
+
+	if (maxViewTable < entryNum)
+	{
+		maxViewTable = entryNum;
+	}
 }
 
 void b9AddToPic(int vNum, int lNum, int cNum, int x, int y, int pNum, int bCol)

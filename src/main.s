@@ -55,3 +55,4 @@
     .export _bECellToVeraBulk
     .export _bEToBlitCelArray
     .export _bESpritesUpdatedBufferPointer
+    .export _bEClearSpriteAttributes

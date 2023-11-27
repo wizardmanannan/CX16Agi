@@ -98,6 +98,7 @@ lda CEL_TRANS
 SET_COLOR CEL_TRANS
 sta CEL_TRANS
 
+sei
 @setVeraAddress:
 SET_VERA_ADDRESS VERA_ADDRESS, #$1, VERA_ADDRESS_HIGH
 
@@ -147,6 +148,7 @@ sta VERA_ADDRESS_HIGH
 
 jmp @setVeraAddress
 
+cli
 @end:
 .endmacro
 

@@ -734,7 +734,7 @@ void b2Set_view() // 2, 0x00
 
 	getViewTab(&localViewtab, entryNum);
 
-	b9AddViewToTable(&localViewtab, viewNum);
+	b9AddViewToTable(&localViewtab, viewNum, entryNum);
 
 	setViewTab(&localViewtab, entryNum);
 	return;
@@ -750,7 +750,7 @@ void b2Set_view_v() // 2, 0x40
 
 	getViewTab(&localViewtab, entryNum);
 
-	b9AddViewToTable(&localViewtab, viewNum);
+	b9AddViewToTable(&localViewtab, viewNum, entryNum);
 
 	getViewTab(&localViewtab, entryNum);
 	return;
