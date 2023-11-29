@@ -37,7 +37,7 @@
 #define BYTES_PER_SPRITE_UPDATE 7
 #define SPRITE_UPDATED_BUFFER_SIZE  VIEW_TABLE_SIZE * BYTES_PER_SPRITE_UPDATE * 2
 extern byte bESpritesUpdatedBuffer[SPRITE_UPDATED_BUFFER_SIZE];
-extern byte* bESpritesUpdatedBufferPointer;
+extern boolean bESpritesUpdated;
 
 View* loadedViews = (View*)&BANK_RAM[LOADED_VIEW_START];
 BITMAP* spriteScreen;
@@ -142,7 +142,7 @@ void bEResetSpritePointers()
 void bEResetSpritesUpdatedBuffer()
 {
 	memsetBanked(bESpritesUpdatedBuffer, 0, VIEW_TABLE_SIZE, SPRITE_UPDATED_BANK);
-	bESpritesUpdatedBufferPointer = bESpritesUpdatedBuffer;
+	bESpritesUpdated = FALSE;
 }
 
 void bESetVeraSlotsOnMetadata()
@@ -468,12 +468,29 @@ void agiBlit(ViewTable* localViewTab, byte entryNum)
 
 	asm("sei");
 
-	WRITE_INT_VAR_TO_ASSM((unsigned int)bESpritesUpdatedBufferPointer, ZP_SPRITE_STORE_PTR);
+	bESpritesUpdated = TRUE;
+
+	WRITE_INT_VAR_TO_ASSM((unsigned int)bESpritesUpdatedBuffer, ZP_SPRITE_STORE_PTR);
 	
 	_assmUInt = loopVeraAddress;
+	printf("Loop vera address %p \n", _assmUInt);
 	asm("lda %v", _assmUInt);
+	asm("and #$1F"); //Gets you the address bits 12:5, which is the lowest three bytes of the middle byte highest three bytes of the low byte (always zero)
+	asm("asl");
+	asm("asl");
+	asm("asl");
 	asm("sta (%w)", ZP_SPRITE_STORE_PTR);
-	asm("ldy #$1");
+	
+	asm("lda %v", _assmUInt);
+	asm("lsr");
+	asm("lsr");
+	asm("lsr");
+	asm("lsr");
+	asm("lsr");
+	asm("ldx %v + 1", _assmUInt);
+	asm("beq @store"); //If the high byte is zero we don't need to worry about it
+	asm("ora #$8"); //Keep the last three bits of the middle byte and have the forth byte high
+	asm("@store: ldy #$1");
 	asm("lda %v + 1", _assmUInt);
 	asm("sta (%w),y", ZP_SPRITE_STORE_PTR);
 
@@ -509,8 +526,6 @@ void agiBlit(ViewTable* localViewTab, byte entryNum)
 	asm("sta (%w),y", ZP_SPRITE_STORE_PTR);
 	asm("iny");
 	asm("sta (%w),y", ZP_SPRITE_STORE_PTR);
-
-	bESpritesUpdatedBufferPointer += BYTES_PER_SPRITE_UPDATE;
 
 	asm("cli");
 

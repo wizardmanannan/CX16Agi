@@ -6,6 +6,10 @@
 
 .segment "BANKRAM0E"
 
+.macro SET_VERA_START_SPRITE_ATTRS
+SET_VERA_ADDRESS_IMMEDIATE (SPRITE_ATTR_START + SPRITE_ATTR_SIZE), #$0, #$1 ;Skips first which is for mouse
+.endmacro
+
 SPRITE_IRQ_HANDLER_INC = 1
 
 
@@ -22,7 +26,7 @@ SPRITE_UPDATED_BUFFER_SIZE = VIEW_TABLE_SIZE * BYTES_PER_SPRITE_UPDATE * 2 ;View
 ldx NO_TO_CLEAR
 beq @end
 
-SET_VERA_ADDRESS_IMMEDIATE (SPRITE_ATTR_START + SPRITE_ATTR_SIZE), #$0, #$1
+SET_VERA_START_SPRITE_ATTRS
 
 @outerLoop:
 ldy #SPRITE_ATTR_SIZE
@@ -40,16 +44,10 @@ bne @outerLoop
 
 @end:
 .endmacro
-;Define Insertion Order:
-;0 Vera Address Sprite Data Middle (Low will always be 0) (If both the first two bytes are zero that indicates the end of the buffer)
-;1 Vera Address Sprite Data High
-;2 x
-;3 y
-;4 Sprite Attr Size
-;5 Reblit on IRQ
 
-_bESpritesUpdatedBuffer: .res SPRITE_UPDATED_BUFFER_SIZE
-_bESpritesUpdatedBufferPointer: .word _bESpritesUpdatedBuffer
+_bESpritesUpdatedBuffer: .res 256
+_bESpritesUpdatedBufferHigh: .byte SPRITE_UPDATED_BUFFER_SIZE - 256
+_bESpritesUpdated: .byte $0
 
 ;void bEClearSpriteAttributes()
 _bEClearSpriteAttributes:
@@ -61,14 +59,81 @@ sta @numToClear
 rts
 @numToClear: .byte $0
 
-bEHandleSpriteUpdates:
+;Define Insertion Order:
+;0 Vera Address Sprite Data Middle (Low will always be 0) (If both the first two bytes are zero that indicates the end of the buffer)
+;1 Vera Address Sprite Data High
+;2 x
+;3 y
+;4 Sprite Attr Size
+;5 Reblit on IRQ
 
+
+
+ZP_SIZE = ZP_TMP_2
+ZP_LOW_BYTE = ZP_TMP_ 2 + 1
+bEHandleSpriteUpdates:
+lda _bESpritesUpdated
+beq @end
+
+@start:
 CLEAR_SPRITE_ATTRS _maxViewTable
 
-lda #<_bESpritesUpdatedBuffer
-sta _bESpritesUpdatedBufferPointer
-lda #>_bESpritesUpdatedBuffer
-sta _bESpritesUpdatedBufferPointer + 1
+SET_VERA_START_SPRITE_ATTRS
+
+ldx _maxViewTable
+ldy #$0
+
+@loop:
+
+lda _bESpritesUpdatedBuffer,y ;Address 12:5 0
+iny
+beq @loopHigh
+sta VERA_data0
+sta ZP_LOW_BYTE
+
+lda _bESpritesUpdatedBuffer,y ;Address 16:13 1
+iny
+beq @loopHigh
+sta VERA_data0
+
+ora ZP_LOW_BYTE
+beq @end
+
+lda _bESpritesUpdatedBuffer,y ;X Low 2
+iny
+beq @loopHigh
+sta VERA_data0
+
+stz VERA_data0 ;X High Always 0 3
+
+lda _bESpritesUpdatedBuffer,y ;Y Low 4
+iny
+beq @loopHigh
+sta VERA_data0
+
+stz VERA_data0 ;Y High Always 5
+
+lda #$C ; Collision ZLvl and Flip 6 (C means in front of layers and not flipped, with a zero collision mask)
+sta VERA_data0
+
+lda _bESpritesUpdatedBuffer,y ;Sprite Attr Size 7
+tax
+sta ZP_SIZE
+iny
+beq @loopHigh
+
+asl
+asl
+asl
+asl
+sta ZP_SIZE
+asl
+asl
+ora ZP_SIZE
+sta VERA_data0
+
+bra @loop
+@end:
 rts
 
 .endif
