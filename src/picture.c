@@ -1245,7 +1245,6 @@ void b11DrawPic(byte* bankedData, int pLen, boolean okToClearScreen, byte picNum
 	b11SplitPriority();
 
 	asm("cli");
-
 	b6DismissLoadingScreen();
 }
 

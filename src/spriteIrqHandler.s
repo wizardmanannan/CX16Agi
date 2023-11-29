@@ -24,20 +24,19 @@ beq @end
 
 SET_VERA_ADDRESS_IMMEDIATE (SPRITE_ATTR_START + SPRITE_ATTR_SIZE), #$0, #$1
 
-; @outerLoop:
+@outerLoop:
+ldy #SPRITE_ATTR_SIZE
+@innerLoop:
+stz VERA_data0
 
-; ldy #SPRITE_ATTR_SIZE
-; @innerLoop:
-; stz VERA_data0
 
+@innerLoopCheck:
+dey
+bne @innerLoop
 
-; @innerLoopCheck:
-; dey
-; bne @innerLoop
-
-; @outerLoopCheck:
-; dex 
-; bne @outerLoop
+@outerLoopCheck:
+dex 
+bne @outerLoop
 
 @end:
 .endmacro
