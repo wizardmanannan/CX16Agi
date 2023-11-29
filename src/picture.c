@@ -1127,6 +1127,9 @@ int picFNum = 0;
 **
 **  pLen = length of PICTURE data
 **************************************************************************/
+
+byte firstRun = TRUE;
+
 void b11DrawPic(byte* bankedData, int pLen, boolean okToClearScreen, byte picNum)
 {
 	unsigned long i;
@@ -1196,6 +1199,13 @@ void b11DrawPic(byte* bankedData, int pLen, boolean okToClearScreen, byte picNum
 #ifdef VERBOSE
 	printf("Plotting. . .\n");
 #endif // VERBOSE
+
+	if (!firstRun)
+	{
+		asm("sei");
+		while (TRUE);
+	}
+	firstRun = FALSE;
 
 	do {
 		if (!returnedAction)
