@@ -69,29 +69,34 @@ rts
 
 
 
-ZP_SIZE = ZP_TMP_2
-ZP_LOW_BYTE = ZP_TMP_ 2 + 1
+ZP_SPR_ATTR_SIZE = ZP_TMP_5
+ZP_LOW_BYTE = ZP_TMP_5 + 1
+ZP_ADDRESS = ZP_TMP_6
 bEHandleSpriteUpdates:
 lda _bESpritesUpdated
-beq @end
+bne @start
+jmp @end
 
 @start:
 CLEAR_SPRITE_ATTRS _maxViewTable
 
 SET_VERA_START_SPRITE_ATTRS
 
-ldx _maxViewTable
 ldy #$0
 
-@loop:
+lda #< _bESpritesUpdatedBuffer
+sta ZP_ADDRESS
+lda #> _bESpritesUpdatedBuffer
+sta ZP_ADDRESS + 1
 
-lda _bESpritesUpdatedBuffer,y ;Address 12:5 0
+@loop:
+lda (ZP_ADDRESS),y ;Address 12:5 0 (buffer 0)
 iny
 beq @loopHigh
 sta VERA_data0
 sta ZP_LOW_BYTE
 
-lda _bESpritesUpdatedBuffer,y ;Address 16:13 1
+lda (ZP_ADDRESS),y ;Address 16:13 1 (buffer 1)
 iny
 beq @loopHigh
 sta VERA_data0
@@ -99,14 +104,14 @@ sta VERA_data0
 ora ZP_LOW_BYTE
 beq @end
 
-lda _bESpritesUpdatedBuffer,y ;X Low 2
+lda (ZP_ADDRESS),y ;X Low 2 (buffer 2)
 iny
 beq @loopHigh
 sta VERA_data0
 
 stz VERA_data0 ;X High Always 0 3
 
-lda _bESpritesUpdatedBuffer,y ;Y Low 4
+lda (ZP_ADDRESS),y ;Y Low 4 (buffer 3)
 iny
 beq @loopHigh
 sta VERA_data0
@@ -116,24 +121,30 @@ stz VERA_data0 ;Y High Always 5
 lda #$C ; Collision ZLvl and Flip 6 (C means in front of layers and not flipped, with a zero collision mask)
 sta VERA_data0
 
-lda _bESpritesUpdatedBuffer,y ;Sprite Attr Size 7
+lda (ZP_ADDRESS),y ;Sprite Attr Size 7 (buffer 4)
 tax
-sta ZP_SIZE
+sta ZP_SPR_ATTR_SIZE
 iny
 beq @loopHigh
 
+lda (ZP_ADDRESS),y ;Y Low 4 (buffer 5) Reblit ignore for now
+iny
+beq @loopHigh
+sta VERA_data0
+
 asl
 asl
 asl
 asl
-sta ZP_SIZE
+sta ZP_SPR_ATTR_SIZE
 asl
 asl
-ora ZP_SIZE
+ora ZP_SPR_ATTR_SIZE
 sta VERA_data0
 
 bra @loop
+@loopHigh:
 @end:
+stz _bESpritesUpdated
 rts
-
 .endif
