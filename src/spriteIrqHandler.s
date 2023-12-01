@@ -47,7 +47,7 @@ bne @outerLoop
 
 _bESpritesUpdatedBuffer: .res 256
 _bESpritesUpdatedBufferHigh: .byte SPRITE_UPDATED_BUFFER_SIZE - 256
-_bESpritesUpdated: .byte $0
+_bESpritesUpdatedBufferPointer: .word _bESpritesUpdatedBuffer
 
 ;void bEClearSpriteAttributes()
 _bEClearSpriteAttributes:
@@ -73,8 +73,14 @@ ZP_SPR_ATTR_SIZE = ZP_TMP_5
 ZP_LOW_BYTE = ZP_TMP_5 + 1
 ZP_ADDRESS = ZP_TMP_6
 bEHandleSpriteUpdates:
-lda _bESpritesUpdated
+lda _bESpritesUpdatedBufferPointer
+cmp #< _bESpritesUpdatedBuffer
 bne @start
+lda _bESpritesUpdatedBufferPointer + 1
+cmp #> _bESpritesUpdatedBuffer
+bne @start
+
+
 jmp @end
 
 @start:
@@ -102,7 +108,7 @@ beq @loopHigh
 sta VERA_data0
 
 ora ZP_LOW_BYTE
-beq @end
+beq @addressReset
 
 lda (ZP_ADDRESS),y ;X Low 2 (buffer 2)
 iny
@@ -122,15 +128,8 @@ lda #$C ; Collision ZLvl and Flip 6 (C means in front of layers and not flipped,
 sta VERA_data0
 
 lda (ZP_ADDRESS),y ;Sprite Attr Size 7 (buffer 4)
-tax
-sta ZP_SPR_ATTR_SIZE
 iny
 beq @loopHigh
-
-lda (ZP_ADDRESS),y ;Y Low 4 (buffer 5) Reblit ignore for now
-iny
-beq @loopHigh
-sta VERA_data0
 
 asl
 asl
@@ -142,9 +141,19 @@ asl
 ora ZP_SPR_ATTR_SIZE
 sta VERA_data0
 
+lda (ZP_ADDRESS),y ;Reblit (buffer 5) Reblit ignore for now
+iny
+beq @loopHigh
+sta VERA_data0
+
 bra @loop
 @loopHigh:
+@addressReset:
+lda #< _bESpritesUpdatedBuffer
+sta _bESpritesUpdatedBufferPointer
+lda #> _bESpritesUpdatedBuffer
+sta _bESpritesUpdatedBufferPointer + 1
+
 @end:
-stz _bESpritesUpdated
 rts
 .endif

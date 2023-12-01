@@ -37,7 +37,7 @@
 #define BYTES_PER_SPRITE_UPDATE 7
 #define SPRITE_UPDATED_BUFFER_SIZE  VIEW_TABLE_SIZE * BYTES_PER_SPRITE_UPDATE * 2
 extern byte bESpritesUpdatedBuffer[SPRITE_UPDATED_BUFFER_SIZE];
-extern boolean bESpritesUpdated;
+extern byte* bESpritesUpdatedBufferPointer;
 
 View* loadedViews = (View*)&BANK_RAM[LOADED_VIEW_START];
 BITMAP* spriteScreen;
@@ -142,7 +142,7 @@ void bEResetSpritePointers()
 void bEResetSpritesUpdatedBuffer()
 {
 	memsetBanked(bESpritesUpdatedBuffer, 0, VIEW_TABLE_SIZE, SPRITE_UPDATED_BANK);
-	bESpritesUpdated = FALSE;
+	bESpritesUpdatedBufferPointer = bESpritesUpdatedBuffer;
 }
 
 void bESetVeraSlotsOnMetadata()
@@ -377,11 +377,11 @@ void bESetLoop(ViewTable* localViewTab, ViewTableMetadata* localMetadata, View* 
 		exit(0);
 	}
 
-#ifdef VERBOSE_DEBUG_BLIT
+//#ifdef VERBOSE_DEBUG_BLIT
 	printf("The address of the buffer is %p\n ", bEBulkAllocatedAddresses);
 	printf("loop vera is %p", loopVeraAddresses);
 	printf("Trying to copy to %p on bank %d from %p on bank %d number %d.", (byte*)loopVeraAddresses, localMetadata->viewTableMetadataBank, bEBulkAllocatedAddresses, SPRITE_METADATA_BANK, noToBlit * sizeof(long));
-#endif
+//#endif
 	enableHelpersDebugging = TRUE;
 	memCpyBankedBetween((byte*)loopVeraAddresses, localMetadata->viewTableMetadataBank, bEBulkAllocatedAddresses, SPRITE_METADATA_BANK, noToBlit * sizeof(long));
 	enableHelpersDebugging = FALSE;
@@ -397,6 +397,7 @@ typedef enum {
 	SPR_ATTR_32 = 2,
 	SPR_ATTR_64 = 3
 } SpriteAttributeSize;
+extern byte* var;
 /***************************************************************************
 ** agi_blit
 ***************************************************************************/
@@ -449,9 +450,9 @@ void agiBlit(ViewTable* localViewTab, byte entryNum)
 	{
 		RAM_BANK = SPRITE_METADATA_BANK;
 
-#ifdef VERBOSE_DEBUG_NO_BLIT_CACHE
-		printf("loading view %d loop %d. The vt %p\n", localViewTab->viewData, localViewTab->currentLoop, entryNum);
-#endif
+//#ifdef VERBOSE_DEBUG_NO_BLIT_CACHE
+		printf("loading view %d loop %d. The vt %p. It's position is %d,%d. v36 is %d\n", localViewTab->currentView, localViewTab->currentLoop, entryNum, localViewTab->xPos, localViewTab->yPos, var[36]);
+//#endif
 		bESetLoop(localViewTab, &localMetadata, &localView, loopVeraAddresses);
 	}
 
@@ -468,21 +469,19 @@ void agiBlit(ViewTable* localViewTab, byte entryNum)
 
 	asm("sei");
 
-	bESpritesUpdated = TRUE;
-
 	WRITE_INT_VAR_TO_ASSM((unsigned int)bESpritesUpdatedBuffer, ZP_SPRITE_STORE_PTR);
 	
 	_assmUInt = loopVeraAddress;
 	printf("Loop vera address %p \n", _assmUInt);
 	asm("lda %v", _assmUInt);
-	asm("and #$1F"); //Gets you the address bits 12:5, which is the lowest three bytes of the middle byte highest three bytes of the low byte (always zero)
-	asm("asl");
+	asm("and #$1F"); //Gets you the address bits 12:8 Which are the parts of the medium byte we need
+	asm("asl"); //Gets bits 5:7 which are always zero
 	asm("asl");
 	asm("asl");
 	asm("sta (%w)", ZP_SPRITE_STORE_PTR);
 	
 	asm("lda %v", _assmUInt);
-	asm("lsr");
+	asm("and #$70");
 	asm("lsr");
 	asm("lsr");
 	asm("lsr");
@@ -491,7 +490,6 @@ void agiBlit(ViewTable* localViewTab, byte entryNum)
 	asm("beq @store"); //If the high byte is zero we don't need to worry about it
 	asm("ora #$8"); //Keep the last three bits of the middle byte and have the forth byte high
 	asm("@store: ldy #$1");
-	asm("lda %v + 1", _assmUInt);
 	asm("sta (%w),y", ZP_SPRITE_STORE_PTR);
 
 	_assmByte = (byte)localViewTab->xPos;
@@ -526,6 +524,8 @@ void agiBlit(ViewTable* localViewTab, byte entryNum)
 	asm("sta (%w),y", ZP_SPRITE_STORE_PTR);
 	asm("iny");
 	asm("sta (%w),y", ZP_SPRITE_STORE_PTR);
+
+	bESpritesUpdatedBufferPointer += BYTES_PER_SPRITE_UPDATE;
 
 	asm("cli");
 
