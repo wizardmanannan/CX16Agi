@@ -471,6 +471,9 @@ void agiBlit(ViewTable* localViewTab, byte entryNum)
 
 	WRITE_INT_VAR_TO_ASSM((unsigned int)bESpritesUpdatedBuffer, ZP_SPRITE_STORE_PTR);
 	
+	/*localViewTab->xPos = 168;
+	localViewTab->yPos = 160;*/
+
 	_assmUInt = loopVeraAddress;
 	printf("Loop vera address %p \n", _assmUInt);
 	asm("lda %v", _assmUInt);
@@ -500,6 +503,8 @@ void agiBlit(ViewTable* localViewTab, byte entryNum)
 	_assmByte = (byte)localViewTab->yPos;
 	asm("ldy #$3");
 	asm("lda %v", _assmByte);
+	asm("clc");
+	asm("adc #%w", STARTING_ROW);
 	asm("sta (%w),y", ZP_SPRITE_STORE_PTR);
 
 	if (localLoop.allocationSize == SIZE_32)
