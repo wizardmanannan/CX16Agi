@@ -426,13 +426,6 @@ void agiBlit(ViewTable* localViewTab, byte entryNum, boolean disableInterupts)
 	{
 		viewSeen = TRUE;
 	}
-	
-	if (viewSeen)
-	{
-		asm("stp");
-		asm("nop");
-	}
-
 	//#endif // VERBOSE_DEBUG_BLIT
 
 	getLoadedView(&localView, viewNum);
@@ -486,10 +479,19 @@ void agiBlit(ViewTable* localViewTab, byte entryNum, boolean disableInterupts)
 		asm("sei");
 	}
 
-	WRITE_INT_VAR_TO_ASSM((unsigned int)bESpritesUpdatedBuffer, ZP_SPRITE_STORE_PTR);
+	WRITE_INT_VAR_TO_ASSM((unsigned int)bESpritesUpdatedBufferPointer, ZP_SPRITE_STORE_PTR);
 
 
 	_assmUInt = loopVeraAddress;
+	
+	//if (viewSeen)
+	//{
+	//	_assmByte = viewNum;
+	//	asm("stp");
+	//	asm("lda %v", _assmByte);
+	//	asm("nop");
+	//}
+	
 	asm("lda %v", _assmUInt);
 	asm("and #$1F"); //Gets you the address bits 12:8 Which are the parts of the medium byte we need
 	asm("asl"); //Gets bits 5:7 which are always zero
@@ -498,7 +500,8 @@ void agiBlit(ViewTable* localViewTab, byte entryNum, boolean disableInterupts)
 	asm("sta (%w)", ZP_SPRITE_STORE_PTR);
 
 	asm("lda %v", _assmUInt);
-	asm("and #$70");
+	asm("and #$E0");
+	asm("lsr");
 	asm("lsr");
 	asm("lsr");
 	asm("lsr");

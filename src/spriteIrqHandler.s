@@ -68,12 +68,13 @@ rts
 ;5 Sprite Attr Size
 ;6 Reblit on IRQ
 
-
+.import _viewSeen
 
 ZP_SPR_ATTR_SIZE = ZP_TMP_5
 ZP_LOW_BYTE = ZP_TMP_5 + 1
 ZP_ADDRESS = ZP_TMP_6
 bEHandleSpriteUpdates:
+
 lda _bESpritesUpdatedBufferPointer
 cmp #< _bESpritesUpdatedBuffer
 bne @start
@@ -89,7 +90,11 @@ CLEAR_SPRITE_ATTRS _maxViewTable
 
 SET_VERA_START_SPRITE_ATTRS
 
-ldy #$0
+; lda _viewSeen
+; beq @abc
+; stp
+; @abc:
+; ldy #$0
 
 lda #< _bESpritesUpdatedBuffer
 sta ZP_ADDRESS
