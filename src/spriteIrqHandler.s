@@ -62,10 +62,11 @@ rts
 ;Define Insertion Order:
 ;0 Vera Address Sprite Data Middle (Low will always be 0) (If both the first two bytes are zero that indicates the end of the buffer)
 ;1 Vera Address Sprite Data High
-;2 x
-;3 y
-;4 Sprite Attr Size
-;5 Reblit on IRQ
+;2 x low
+;3 x high
+;4 y
+;5 Sprite Attr Size
+;6 Reblit on IRQ
 
 
 
@@ -115,19 +116,22 @@ iny
 beq @loopHigh
 sta VERA_data0
 
-stz VERA_data0 ;X High Always 0 3
-
-lda (ZP_ADDRESS),y ;Y Low 4 (buffer 3)
+lda (ZP_ADDRESS),y ;X Low 3 (buffer 3)
 iny
 beq @loopHigh
 sta VERA_data0
 
-stz VERA_data0 ;Y High Always 5
+lda (ZP_ADDRESS),y ;Y Low 4 (buffer 4)
+iny
+beq @loopHigh
+sta VERA_data0
+
+stz VERA_data0 ;Y High 5 Always 0
 
 lda #$C ; Collision ZLvl and Flip 6 (C means in front of layers and not flipped, with a zero collision mask)
 sta VERA_data0
 
-lda (ZP_ADDRESS),y ;Sprite Attr Size 7 (buffer 4)
+lda (ZP_ADDRESS),y ;Sprite Attr Size 7 (buffer 5)
 iny
 beq @loopHigh
 
@@ -141,7 +145,7 @@ asl
 ora ZP_SPR_ATTR_SIZE
 sta VERA_data0
 
-lda (ZP_ADDRESS),y ;Reblit (buffer 5) Reblit ignore for now
+lda (ZP_ADDRESS),y ;Reblit (buffer 6) Reblit ignore for now
 iny
 beq @loopHigh
 sta VERA_data0

@@ -470,9 +470,7 @@ void agiBlit(ViewTable* localViewTab, byte entryNum)
 	asm("sei");
 
 	WRITE_INT_VAR_TO_ASSM((unsigned int)bESpritesUpdatedBuffer, ZP_SPRITE_STORE_PTR);
-	
-	/*localViewTab->xPos = 168;
-	localViewTab->yPos = 160;*/
+
 
 	_assmUInt = loopVeraAddress;
 	printf("Loop vera address %p \n", _assmUInt);
@@ -495,13 +493,19 @@ void agiBlit(ViewTable* localViewTab, byte entryNum)
 	asm("@store: ldy #$1");
 	asm("sta (%w),y", ZP_SPRITE_STORE_PTR);
 
-	_assmByte = (byte)localViewTab->xPos;
+	_assmUInt = (byte)localViewTab->xPos;
 	asm("ldy #$2");
-	asm("lda %v", _assmByte);
+	asm("lda %v", _assmUInt);
+	asm("clc");
+	asm("asl");
+	asm("sta (%w),y", ZP_SPRITE_STORE_PTR);
+	asm("lda #$0");
+	asm("rol");
+	asm("ldy #$3");
 	asm("sta (%w),y", ZP_SPRITE_STORE_PTR);
 
 	_assmByte = (byte)localViewTab->yPos;
-	asm("ldy #$3");
+	asm("ldy #$4");
 	asm("lda %v", _assmByte);
 	asm("clc");
 	asm("adc #%w", STARTING_ROW);
@@ -516,15 +520,15 @@ void agiBlit(ViewTable* localViewTab, byte entryNum)
 		_assmByte = SPR_ATTR_64;
 	}
 
-	asm("ldy #$4");
+	asm("ldy #$5");
 	asm("lda %v", _assmByte);
 	asm("sta (%w),y", ZP_SPRITE_STORE_PTR);
 
-	asm("ldy #$5");
+	asm("ldy #$6");
 	asm("lda #$0"); //TODO: Will be the reblit flag, zero for now will revisit
 	asm("sta (%w),y", ZP_SPRITE_STORE_PTR);
 
-	asm("ldy #$6"); //Stop
+	asm("ldy #$7"); //Stop
 	asm("lda #$0");
 	asm("sta (%w),y", ZP_SPRITE_STORE_PTR);
 	asm("iny");
