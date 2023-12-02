@@ -90,11 +90,11 @@ CLEAR_SPRITE_ATTRS _maxViewTable
 
 SET_VERA_START_SPRITE_ATTRS
 
-; lda _viewSeen
-; beq @abc
-; stp
-; @abc:
-; ldy #$0
+lda _viewSeen
+beq @abc
+stp
+@abc:
+ldy #$0
 
 lda #< _bESpritesUpdatedBuffer
 sta ZP_ADDRESS
