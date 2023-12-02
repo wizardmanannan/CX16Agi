@@ -281,6 +281,7 @@ void b6Initialise()
     initEvents();
     b6InitInterpreter();
     b6InitIrq();
+    bEInitSpriteMemoryManager();
 
     asm("sei");
     b6InitGraphics();
