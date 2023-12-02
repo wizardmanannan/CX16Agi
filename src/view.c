@@ -377,11 +377,11 @@ void bESetLoop(ViewTable* localViewTab, ViewTableMetadata* localMetadata, View* 
 		exit(0);
 	}
 
-//#ifdef VERBOSE_DEBUG_BLIT
+	#ifdef VERBOSE_DEBUG_BLIT
 	printf("The address of the buffer is %p\n ", bEBulkAllocatedAddresses);
 	printf("loop vera is %p", loopVeraAddresses);
 	printf("Trying to copy to %p on bank %d from %p on bank %d number %d.", (byte*)loopVeraAddresses, localMetadata->viewTableMetadataBank, bEBulkAllocatedAddresses, SPRITE_METADATA_BANK, noToBlit * sizeof(long));
-//#endif
+	#endif
 	enableHelpersDebugging = TRUE;
 	memCpyBankedBetween((byte*)loopVeraAddresses, localMetadata->viewTableMetadataBank, bEBulkAllocatedAddresses, SPRITE_METADATA_BANK, noToBlit * sizeof(long));
 	enableHelpersDebugging = FALSE;
@@ -398,10 +398,11 @@ typedef enum {
 	SPR_ATTR_64 = 3
 } SpriteAttributeSize;
 extern byte* var;
+boolean viewSeen = FALSE;
 /***************************************************************************
 ** agi_blit
 ***************************************************************************/
-void agiBlit(ViewTable* localViewTab, byte entryNum)
+void agiBlit(ViewTable* localViewTab, byte entryNum, boolean disableInterupts)
 {
 	View localView;
 	Loop localLoop;
@@ -420,6 +421,19 @@ void agiBlit(ViewTable* localViewTab, byte entryNum)
 #ifdef VERBOSE_DEBUG_BLIT
 	printf("The viewNum is %d and the loop is %d\n", viewNum, localViewTab->currentLoop);
 #endif // VERBOSE_DEBUG_BLIT
+	
+	if (viewNum == 0)
+	{
+		viewSeen = TRUE;
+	}
+	
+	if (viewSeen)
+	{
+		asm("stp");
+		asm("nop");
+	}
+
+	//#endif // VERBOSE_DEBUG_BLIT
 
 	getLoadedView(&localView, viewNum);
 
@@ -450,9 +464,9 @@ void agiBlit(ViewTable* localViewTab, byte entryNum)
 	{
 		RAM_BANK = SPRITE_METADATA_BANK;
 
-//#ifdef VERBOSE_DEBUG_NO_BLIT_CACHE
+		#ifdef VERBOSE_DEBUG_NO_BLIT_CACHE
 		printf("loading view %d loop %d. The vt %p. It's position is %d,%d. v36 is %d\n", localViewTab->currentView, localViewTab->currentLoop, entryNum, localViewTab->xPos, localViewTab->yPos, var[36]);
-//#endif
+		#endif
 		bESetLoop(localViewTab, &localMetadata, &localView, loopVeraAddresses);
 	}
 
@@ -464,23 +478,25 @@ void agiBlit(ViewTable* localViewTab, byte entryNum)
 
 	RAM_BANK = localMetadata.viewTableMetadataBank;
 	loopVeraAddress = loopVeraAddresses[localViewTab->currentCel];
-
+		
 	RAM_BANK = SPRITE_UPDATED_BANK;
 
-	asm("sei");
+	if (disableInterupts)
+	{
+		asm("sei");
+	}
 
 	WRITE_INT_VAR_TO_ASSM((unsigned int)bESpritesUpdatedBuffer, ZP_SPRITE_STORE_PTR);
 
 
 	_assmUInt = loopVeraAddress;
-	printf("Loop vera address %p \n", _assmUInt);
 	asm("lda %v", _assmUInt);
 	asm("and #$1F"); //Gets you the address bits 12:8 Which are the parts of the medium byte we need
 	asm("asl"); //Gets bits 5:7 which are always zero
 	asm("asl");
 	asm("asl");
 	asm("sta (%w)", ZP_SPRITE_STORE_PTR);
-	
+
 	asm("lda %v", _assmUInt);
 	asm("and #$70");
 	asm("lsr");
@@ -536,7 +552,10 @@ void agiBlit(ViewTable* localViewTab, byte entryNum)
 
 	bESpritesUpdatedBufferPointer += BYTES_PER_SPRITE_UPDATE;
 
-	asm("cli");
+	if (disableInterupts)
+	{
+		asm("cli");
+	}
 
 	//for (i = 0; i < w; i++) {
 	//	for (j = 0; j < h; j++) {
@@ -927,9 +946,9 @@ void b9LoadViewFile(byte viewNum)
 		}
 
 		setLoadedLoop(&localView, &localLoop, l);
-	}
+			}
 	setLoadedView(&localView, viewNum);
-}
+			}
 
 /***************************************************************************
 ** discardView
@@ -1138,7 +1157,7 @@ void bADrawObject(int entryNum)
 	printf("Called from draw object");
 #endif // DEBUG
 
-	agiBlit(&localViewtab, entryNum);
+	agiBlit(&localViewtab, entryNum, TRUE);
 
 	setViewTab(&localViewtab, entryNum);
 }
@@ -1530,7 +1549,7 @@ void bAUpdateObj(int entryNum)
 		printf("Called from update obj ");
 #endif // DEBUG
 
-		agiBlit(&localViewtab, entryNum);
+		agiBlit(&localViewtab, entryNum, TRUE);
 	}
 
 	setViewTab(&localViewtab, entryNum);
@@ -1688,7 +1707,7 @@ void bBUpdateObj2(int entryNum)
 		printf("Called from update obj 2");
 #endif // DEBUG
 
-		agiBlit(&localViewtab, entryNum);
+		agiBlit(&localViewtab, entryNum, TRUE);
 	}
 
 	setViewTab(&localViewtab, entryNum);
@@ -1796,12 +1815,14 @@ void bBUpdateObjects()
 				else
 					localViewtab.priority = (localViewtab.yPos / 12 + 1);
 			}
-		}
-
-		setViewTab(&localViewtab, entryNum);
 	}
 
+		setViewTab(&localViewtab, entryNum);
+}
+
 	/* Draw all cels */
+
+	asm("sei");
 	for (entryNum = 0; entryNum < VIEW_TABLE_SIZE; entryNum++) {
 		getViewTab(&localViewtab, entryNum);
 
@@ -1812,12 +1833,12 @@ void bBUpdateObjects()
 #ifdef VERBOSE_DEBUG_BLIT
 			printf("Called from update objs");
 #endif // DEBUG
-
-			agiBlit(&localViewtab, entryNum);
+			agiBlit(&localViewtab, entryNum, FALSE);
 		}
 
 		setViewTab(&localViewtab, entryNum);
 	}
+	asm("cli");
 
 	show_mouse(NULL);
 	stretch_sprite(agi_screen, spriteScreen, 0, 0, 640, 336);
@@ -1974,17 +1995,23 @@ void bCupdateObjects2()
 	}
 
 	/* Draw all cels */
+	asm("sei");
 	for (entryNum = 0; entryNum < VIEW_TABLE_SIZE; entryNum++) {
 		objFlags = localViewtab.flags;
 		getViewTab(&localViewtab, entryNum);
 
 		if ((objFlags & ANIMATED) && (objFlags & DRAWN)) {
 			/* Draw new cel onto picture\priority bitmaps */
-			agiBlit(&localViewtab, entryNum);
+#ifdef VERBOSE_DEBUG_BLIT
+			printf("Called from calc motion\n");
+#endif
+			agiBlit(&localViewtab, entryNum, FALSE);
+
 		}
 
 		setViewTab(&localViewtab, entryNum);
 	}
+	asm("cli");
 
 	b6ShowPicture();
 }
