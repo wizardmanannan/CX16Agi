@@ -422,7 +422,7 @@ void agiBlit(ViewTable* localViewTab, byte entryNum, boolean disableInterupts)
 	printf("The viewNum is %d and the loop is %d\n", viewNum, localViewTab->currentLoop);
 #endif // VERBOSE_DEBUG_BLIT
 	
-	if (viewNum == 205 || viewNum == 206)
+	if (viewNum == 0)
 	{
 		viewSeen = TRUE;
 	}
@@ -484,13 +484,13 @@ void agiBlit(ViewTable* localViewTab, byte entryNum, boolean disableInterupts)
 
 	_assmUInt = loopVeraAddress;
 	
-	if (viewSeen)
-	{
-		_assmByte = viewNum;
-		asm("stp");
-		asm("lda %v", _assmByte);
-		asm("nop");
-	}
+	//if (viewSeen)
+	//{
+	//	_assmByte = viewNum;
+	//	asm("stp");
+	//	asm("lda %v", _assmByte);
+	//	asm("nop");
+	//}
 	
 	asm("lda %v", _assmUInt);
 	asm("and #$1F"); //Gets you the address bits 12:8 Which are the parts of the medium byte we need
