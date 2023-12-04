@@ -90,12 +90,6 @@ CLEAR_SPRITE_ATTRS _maxViewTable
 
 SET_VERA_START_SPRITE_ATTRS
 
-; lda _viewSeen
-; beq @abc
-; stp
-; @abc:
-; ldy #$0
-
 lda #< _bESpritesUpdatedBuffer
 sta ZP_ADDRESS
 lda #> _bESpritesUpdatedBuffer
@@ -121,7 +115,7 @@ iny
 beq @loopHigh
 sta VERA_data0
 
-lda (ZP_ADDRESS),y ;X Low 3 (buffer 3)
+lda (ZP_ADDRESS),y ;X High 3 (buffer 3)
 iny
 beq @loopHigh
 sta VERA_data0
@@ -153,7 +147,6 @@ sta VERA_data0
 lda (ZP_ADDRESS),y ;Reblit (buffer 6) Reblit ignore for now
 iny
 beq @loopHigh
-sta VERA_data0
 
 bra @loop
 @loopHigh:
@@ -164,5 +157,10 @@ lda #> _bESpritesUpdatedBuffer
 sta _bESpritesUpdatedBufferPointer + 1
 
 @end:
+lda _viewSeen
+beq @abc
+stp
+@abc:
+ldy #$0
 rts
 .endif
