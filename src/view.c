@@ -422,13 +422,10 @@ void agiBlit(ViewTable* localViewTab, byte entryNum, boolean disableInterupts)
 	printf("The viewNum is %d and the loop is %d\n", viewNum, localViewTab->currentLoop);
 #endif // VERBOSE_DEBUG_BLIT
 	
-	if (viewNum == 0)
-	{
-		viewSeen = TRUE;
-	}
 	//#endif // VERBOSE_DEBUG_BLIT
 
 	getLoadedView(&localView, viewNum);
+	getLoadedLoop(&localView, &localLoop, localViewTab->currentLoop);
 
 	if (viewTabNoToMetaData[entryNum] == VIEWNO_TO_METADATA_NO_SET)
 	{	
@@ -483,8 +480,6 @@ void agiBlit(ViewTable* localViewTab, byte entryNum, boolean disableInterupts)
 
 
 	_assmUInt = loopVeraAddress;
-	
-
 	
 	asm("lda %v", _assmUInt);
 	asm("and #$1F"); //Gets you the address bits 12:8 Which are the parts of the medium byte we need
@@ -900,10 +895,6 @@ void b9LoadViewFile(byte viewNum)
 			if (localCel.width * 2 > MAX_32_WIDTH_OR_HEIGHT) //Height isn't doubled only width
 			{
 				localLoop.allocationSize = SIZE_64;
-
-#ifdef VERBOSE_LOAD_VIEWS
-				printf("Width 64 sprite required\n");
-#endif
 			}
 
 			if (localCel.height > MAX_32_WIDTH_OR_HEIGHT)
