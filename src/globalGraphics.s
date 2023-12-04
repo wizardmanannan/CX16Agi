@@ -120,8 +120,6 @@ sta VERA_addr_low
 .local @loop
 .local @loopCheck
 
-sei
-
 SET_VERA_ADDRESS_ABSOLUTE VERA_ADDRESS, #$0, #$1
 
 lda COLOUR
@@ -142,7 +140,6 @@ bne @loopInner
 dex
 bne @loopOuter
 
-cli
 .endmacro
 
 

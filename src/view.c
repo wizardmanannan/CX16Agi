@@ -162,7 +162,7 @@ void bESetVeraSlotsOnMetadata()
 }
 
 #pragma wrapped-call (pop)
-
+boolean viewSeen = FALSE;
 #define MAX_SLOT_1_SIZED_SPRITE 64
 #define MAX_SPRITE_SIZE 128
 void bESetViewMetadata(View* localView, ViewTable* viewTable, byte viewNum, byte viewTabNo)
@@ -210,7 +210,7 @@ void bESetViewMetadata(View* localView, ViewTable* viewTable, byte viewNum, byte
 	}
 
 	loopVeraAddressesPointersSize = localView->numberOfLoops * sizeof(VeraSpriteAddress*);
-	veraAddressesSize = maxVeraAddresses * sizeof(VeraSpriteAddress);
+	veraAddressesSize = maxVeraAddresses * sizeof(VeraSpriteAddress) * localView->numberOfLoops;
 	totalAllocationSize = loopVeraAddressesPointersSize + veraAddressesSize;
 
 #ifdef VERBOSE_DEBUG_SET_METADATA
@@ -246,6 +246,8 @@ void bESetViewMetadata(View* localView, ViewTable* viewTable, byte viewNum, byte
 	}
 
 	memCpyBanked((byte*)metadata.loopsVeraAddressesPointers, (byte*)addressBuffer, metadata.viewTableMetadataBank, localView->numberOfLoops * sizeof(long**));
+
+	viewTableMetadata[viewTabNo] = metadata;
 
 #ifdef VERBOSE_DEBUG_SET_METADATA
 	printf("The address of the buffer is %p\n", addressBuffer);
@@ -348,7 +350,6 @@ void setLoadedCel(Loop* loadedLoop, Cel* localCell, byte localCellNumber)
 extern byte bEToBlitCelArray[TO_BLIT_CEL_ARRAY_LENGTH];
 //Copy cels into array above first
 extern void bECellToVeraBulk(AllocationSize allocationSize, byte noToBlit);
-
 void bESetLoop(ViewTable* localViewTab, ViewTableMetadata* localMetadata, View* localView, VeraSpriteAddress* loopVeraAddresses)
 {
 	Loop localLoop;
@@ -378,9 +379,9 @@ void bESetLoop(ViewTable* localViewTab, ViewTableMetadata* localMetadata, View* 
 	}
 
 	#ifdef VERBOSE_DEBUG_BLIT
-	printf("The address of the buffer is %p\n ", bEBulkAllocatedAddresses);
-	printf("loop vera is %p", loopVeraAddresses);
-	printf("Trying to copy to %p on bank %d from %p on bank %d number %d.", (byte*)loopVeraAddresses, localMetadata->viewTableMetadataBank, bEBulkAllocatedAddresses, SPRITE_METADATA_BANK, noToBlit * sizeof(long));
+		printf("The address of the buffer is %p\n ", bEBulkAllocatedAddresses);
+		printf("loop vera is %p", loopVeraAddresses);
+		printf("Trying to copy to %p on bank %d from %p on bank %d number %d.", (byte*)loopVeraAddresses, localMetadata->viewTableMetadataBank, bEBulkAllocatedAddresses, SPRITE_METADATA_BANK, noToBlit * sizeof(long));
 	#endif
 	enableHelpersDebugging = TRUE;
 	memCpyBankedBetween((byte*)loopVeraAddresses, localMetadata->viewTableMetadataBank, bEBulkAllocatedAddresses, SPRITE_METADATA_BANK, noToBlit * sizeof(long));
@@ -398,7 +399,6 @@ typedef enum {
 	SPR_ATTR_64 = 3
 } SpriteAttributeSize;
 extern byte* var;
-boolean viewSeen = FALSE;
 /***************************************************************************
 ** agi_blit
 ***************************************************************************/
@@ -431,7 +431,7 @@ void agiBlit(ViewTable* localViewTab, byte entryNum, boolean disableInterupts)
 	getLoadedView(&localView, viewNum);
 
 	if (viewTabNoToMetaData[entryNum] == VIEWNO_TO_METADATA_NO_SET)
-	{
+	{	
 #ifdef VERBOSE_DEBUG_NO_BLIT_CACHE
 		printf("set Metadata %d. The vt is %d\n", localViewTab->viewData, entryNum);
 #endif
@@ -462,7 +462,7 @@ void agiBlit(ViewTable* localViewTab, byte entryNum, boolean disableInterupts)
 		#endif
 		bESetLoop(localViewTab, &localMetadata, &localView, loopVeraAddresses);
 	}
-
+	
 #ifdef VERBOSE_DEBUG_NO_BLIT_CACHE	
 	RAM_BANK = localMetadata.viewTableMetadataBank;
 	printf("we haved checked %p. It has a value of %p. The bank is %p and it should be %d\n", &loopVeraAddresses[0], loopVeraAddresses[0], RAM_BANK, localMetadata.viewTableMetadataBank);
@@ -484,13 +484,7 @@ void agiBlit(ViewTable* localViewTab, byte entryNum, boolean disableInterupts)
 
 	_assmUInt = loopVeraAddress;
 	
-	//if (viewSeen)
-	//{
-	//	_assmByte = viewNum;
-	//	asm("stp");
-	//	asm("lda %v", _assmByte);
-	//	asm("nop");
-	//}
+
 	
 	asm("lda %v", _assmUInt);
 	asm("and #$1F"); //Gets you the address bits 12:8 Which are the parts of the medium byte we need
@@ -1160,8 +1154,6 @@ void bADrawObject(int entryNum)
 	printf("Called from draw object");
 #endif // DEBUG
 
-	agiBlit(&localViewtab, entryNum, TRUE);
-
 	setViewTab(&localViewtab, entryNum);
 }
 
@@ -1552,7 +1544,6 @@ void bAUpdateObj(int entryNum)
 		printf("Called from update obj ");
 #endif // DEBUG
 
-		agiBlit(&localViewtab, entryNum, TRUE);
 	}
 
 	setViewTab(&localViewtab, entryNum);
@@ -1709,8 +1700,6 @@ void bBUpdateObj2(int entryNum)
 #ifdef VERBOSE_DEBUG_BLIT
 		printf("Called from update obj 2");
 #endif // DEBUG
-
-		agiBlit(&localViewtab, entryNum, TRUE);
 	}
 
 	setViewTab(&localViewtab, entryNum);

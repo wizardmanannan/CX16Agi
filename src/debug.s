@@ -18,4 +18,5 @@ lda _vSyncCounter
 lda _maxViewTable
 lda _toDraw
 lda _picColour
+lda _bEBulkAllocatedAddresses
 rts
