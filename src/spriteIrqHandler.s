@@ -157,10 +157,5 @@ lda #> _bESpritesUpdatedBuffer
 sta _bESpritesUpdatedBufferPointer + 1
 
 @end:
-lda _viewSeen
-beq @abc
-stp
-@abc:
-ldy #$0
 rts
 .endif

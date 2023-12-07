@@ -162,7 +162,6 @@ void bESetVeraSlotsOnMetadata()
 }
 
 #pragma wrapped-call (pop)
-boolean viewSeen = FALSE;
 #define MAX_SLOT_1_SIZED_SPRITE 64
 #define MAX_SPRITE_SIZE 128
 void bESetViewMetadata(View* localView, ViewTable* viewTable, byte viewNum, byte viewTabNo)
@@ -512,9 +511,11 @@ void agiBlit(ViewTable* localViewTab, byte entryNum, boolean disableInterupts)
 	asm("ldy #$3");
 	asm("sta (%w),y", ZP_SPRITE_STORE_PTR);
 
-	_assmByte = (byte)localViewTab->yPos;
+	_assmByte = (byte)localViewTab->yPos;// - 33;
+		
 	asm("ldy #$4");
 	asm("lda %v", _assmByte);
+	
 	asm("clc");
 	asm("adc #%w", STARTING_ROW);
 	asm("sta (%w),y", ZP_SPRITE_STORE_PTR);
