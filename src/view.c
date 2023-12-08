@@ -405,6 +405,7 @@ void agiBlit(ViewTable* localViewTab, byte entryNum, boolean disableInterupts)
 {
 	View localView;
 	Loop localLoop;
+	Cel localCel;
 	byte viewNum;
 	byte previousBank;
 	ViewTableMetadata localMetadata;
@@ -425,6 +426,7 @@ void agiBlit(ViewTable* localViewTab, byte entryNum, boolean disableInterupts)
 
 	getLoadedView(&localView, viewNum);
 	getLoadedLoop(&localView, &localLoop, localViewTab->currentLoop);
+	getLoadedCel(&localLoop, &localCel, localViewTab->currentCel);
 
 	if (viewTabNoToMetaData[entryNum] == VIEWNO_TO_METADATA_NO_SET)
 	{	
@@ -511,14 +513,20 @@ void agiBlit(ViewTable* localViewTab, byte entryNum, boolean disableInterupts)
 	asm("ldy #$3");
 	asm("sta (%w),y", ZP_SPRITE_STORE_PTR);
 
-	_assmByte = (byte)localViewTab->yPos;// - 33;
-		
+	_assmByte = (byte)localViewTab->yPos;
+	_assmByte2 = localCel.height - 1;
+
 	asm("ldy #$4");
 	asm("lda %v", _assmByte);
 	
 	asm("clc");
 	asm("adc #%w", STARTING_ROW);
+
+	asm("sec"); //Take away the height, as position in agi is the bottom left corner
+	asm("sbc %v", _assmByte2);
+
 	asm("sta (%w),y", ZP_SPRITE_STORE_PTR);
+
 
 	if (localLoop.allocationSize == SIZE_32)
 	{

@@ -63,6 +63,7 @@ extern long opExitAt;
 extern long opCounter;
 
 extern byte _assmByte;
+extern byte _assmByte2;
 extern long _assmLong;
 extern unsigned int _assmUInt;
 
