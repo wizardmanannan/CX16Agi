@@ -50,8 +50,11 @@ ZP_TMP_19 = $DB
 ZP_TMP_20 = $DD
 ZP_TMP_21 = $DF
 ZP_TMP_22 = $E1
-ZP_TMP_23 = $E3
-ZP_TMP_24 = $E5
+
+;Float Division
+ZP_DIV_AREA = $E3
+ZP_DIV_BANK = $E5
+ZP_DIV_ADDR = $FC 
 
 ZP_PTR_LF = $E7
 ZP_PTR_LE = $E9
@@ -64,6 +67,8 @@ ZP_PTR_SEG_64 = $F8
 ZP_PTR_HIGH_BYTE_START = $F9
 ZP_PTR_WALL_32 = $FA
 ZP_PTR_WALL_64 = $FB
+
+
 
 ; Define the starting address for golden RAM
 GOLDEN_RAM = $400

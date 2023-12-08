@@ -777,9 +777,6 @@ bra @loop
 .endmacro
 
 
-ZP_DIV_AREA = ZP_TMP_2
-ZP_DIV_BANK = ZP_TMP_23
-ZP_DIV_ADDR = ZP_TMP_24 
 _floatDivision:
 bra @start
 @numerator: .word $0 ; Even though numerator is only one byte we double it for address looked up

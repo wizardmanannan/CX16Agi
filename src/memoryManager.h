@@ -185,6 +185,12 @@
 #define ZP_PTR_WALL_32 0xFA
 #define ZP_PTR_WALL_64 0xFB
 
+//Float Division Zero Page
+#define ZP_DIV_AREA 0xE3
+#define ZP_DIV_BANK 0xE5
+#define ZP_DIV_ADDR 0xFC
+
+
 #define NO_ZERO_PAGE_ENTRIES 87
 #define FIRST_ZERO_PAGE_ENTRY 0xA9
 

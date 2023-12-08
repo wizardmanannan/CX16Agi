@@ -26,6 +26,7 @@
 #include "textLayer.h"
 #include "loadingScreen.h"
 #include "structMetadata.h"
+#include "floatDivision.h"
 //#include "parser.h"
 //#include "sound.h"
 
@@ -292,7 +293,9 @@ void b6Initialise()
     ///* Set up timer. The timer controls the interpreter speed. */
     counter = 0;
 
+    b6InitFloatDivision();
     b6TellMeTheAddressPlease();
+
 }
 
 
