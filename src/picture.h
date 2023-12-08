@@ -22,6 +22,7 @@
 #include "helpers.h"
 #include "loadingScreen.h"
 #include "graphics.h"
+#include "floatDivision.h"
 
 #define DEFAULT_COLOR 0xF
 
