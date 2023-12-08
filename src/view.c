@@ -1311,22 +1311,19 @@ void bAFollowEgo(int entryNum) /* This needs to be more intelligent. */
 }
 
 #pragma wrapped-call (push, trampoline, VIEW_CODE_BANK_2)
-void bANormalAdjust(int entryNum, int dx, int dy)
+void bANormalAdjust(int entryNum, ViewTable* viewTab, int dx, int dy)
 {
 	int tempX, tempY, testX, startX, endX, waterCount = 0;
-	ViewTable localViewtab;
 
-	getViewTab(&localViewtab, entryNum);
-
-	tempX = (localViewtab.xPos + dx);
-	tempY = (localViewtab.yPos + dy);
+	tempX = (viewTab->xPos + dx);
+	tempY = (viewTab->yPos + dy);
 
 	if (entryNum == 0) {
 		if (tempX < 0) {   /* Hit left edge */
 			var[2] = 4;
 			return;
 		}
-		if (tempX > (160 - localViewtab.xsize)) {   /* Hit right edge */
+		if (tempX > (160 - viewTab->xsize)) {   /* Hit right edge */
 			var[2] = 2;
 			return;
 		}
@@ -1345,7 +1342,7 @@ void bANormalAdjust(int entryNum, int dx, int dy)
 			var[4] = entryNum;
 			return;
 		}
-		if (tempX > (160 - localViewtab.xsize)) {   /* Hit right edge */
+		if (tempX > (160 - viewTab->xsize)) {   /* Hit right edge */
 			var[5] = 2;
 			var[4] = entryNum;
 			return;
@@ -1368,25 +1365,25 @@ void bANormalAdjust(int entryNum, int dx, int dy)
 
 		/* End points of the base line */
 		startX = tempX;
-		endX = startX + localViewtab.xsize;
+		endX = startX + viewTab->xsize;
 		for (testX = startX; testX < endX; testX++) {
 			switch (control->line[tempY][testX]) {
 			case 0: return;   /* Unconditional obstacle */
 			case 1:
-				if (localViewtab.flags & IGNOREBLOCKS) break;
+				if (viewTab->flags & IGNOREBLOCKS) break;
 				return;    /* Conditional obstacle */
 			case 3:
 				waterCount++;
 				break;
 			case 2: flag[3] = 1; /* Trigger */
-				localViewtab.xPos = tempX;
-				localViewtab.yPos = tempY;
+				viewTab->xPos = tempX;
+				viewTab->yPos = tempY;
 				return;
 			}
 		}
-		if (waterCount == localViewtab.xsize) {
-			localViewtab.xPos = tempX;
-			localViewtab.yPos = tempY;
+		if (waterCount == viewTab->xsize) {
+			viewTab->xPos = tempX;
+			viewTab->yPos = tempY;
 			flag[0] = 1;
 			return;
 		}
@@ -1394,19 +1391,17 @@ void bANormalAdjust(int entryNum, int dx, int dy)
 	else {
 		/* End points of the base line */
 		startX = tempX;
-		endX = startX + localViewtab.xsize;
+		endX = startX + viewTab->xsize;
 		for (testX = startX; testX < endX; testX++) {
-			if ((localViewtab.flags & ONWATER) &&
+			if ((viewTab->flags & ONWATER) &&
 				(control->line[tempY][testX] != 3)) {
 				return;
 			}
 		}
 	}
 
-	localViewtab.xPos = tempX;
-	localViewtab.yPos = tempY;
-
-	setViewTab(&localViewtab, entryNum);
+	viewTab->xPos = tempX;
+	viewTab->yPos = tempY;
 }
 #pragma wrapped-call (pop)
 
@@ -1477,14 +1472,14 @@ void bAUpdateObj(int entryNum)
 			case 0: /* normal.motion */
 				switch (localViewtab.direction) {
 				case 0: break;
-				case 1: bANormalAdjust(entryNum, 0, -1); break;
-				case 2: bANormalAdjust(entryNum, 1, -1); break;
-				case 3: bANormalAdjust(entryNum, 1, 0); break;
-				case 4: bANormalAdjust(entryNum, 1, 1); break;
-				case 5: bANormalAdjust(entryNum, 0, 1); break;
-				case 6: bANormalAdjust(entryNum, -1, 1); break;
-				case 7: bANormalAdjust(entryNum, -1, 0); break;
-				case 8: bANormalAdjust(entryNum, -1, -1); break;
+				case 1:bANormalAdjust(entryNum, &localViewtab, 0, -1); break;
+				case 2:bANormalAdjust(entryNum, &localViewtab, 1, -1); break;
+				case 3:bANormalAdjust(entryNum, &localViewtab, 1, 0); break;
+				case 4:bANormalAdjust(entryNum, &localViewtab, 1, 1); break;
+				case 5:bANormalAdjust(entryNum, &localViewtab, 0, 1); break;
+				case 6:bANormalAdjust(entryNum, &localViewtab, -1, 1); break;
+				case 7:bANormalAdjust(entryNum, &localViewtab, -1, 0); break;
+				case 8:bANormalAdjust(entryNum, &localViewtab, -1, -1); break;
 				}
 				getViewTab(&localViewtab, entryNum);
 				break;
@@ -1493,14 +1488,14 @@ void bAUpdateObj(int entryNum)
 				oldY = localViewtab.yPos;
 				switch (localViewtab.direction) {
 				case 0: break;
-				case 1: bANormalAdjust(entryNum, 0, -1); break;
-				case 2: bANormalAdjust(entryNum, 1, -1); break;
-				case 3: bANormalAdjust(entryNum, 1, 0); break;
-				case 4: bANormalAdjust(entryNum, 1, 1); break;
-				case 5: bANormalAdjust(entryNum, 0, 1); break;
-				case 6: bANormalAdjust(entryNum, -1, 1); break;
-				case 7: bANormalAdjust(entryNum, -1, 0); break;
-				case 8: bANormalAdjust(entryNum, -1, -1); break;
+				case 1:bANormalAdjust(entryNum, &localViewtab, 0, -1); break;
+				case 2:bANormalAdjust(entryNum, &localViewtab, 1, -1); break;
+				case 3:bANormalAdjust(entryNum, &localViewtab, 1, 0); break;
+				case 4:bANormalAdjust(entryNum, &localViewtab, 1, 1); break;
+				case 5:bANormalAdjust(entryNum, &localViewtab, 0, 1); break;
+				case 6:bANormalAdjust(entryNum, &localViewtab, -1, 1); break;
+				case 7:bANormalAdjust(entryNum, &localViewtab, -1, 0); break;
+				case 8:bANormalAdjust(entryNum, &localViewtab, -1, -1); break;
 				}
 				getViewTab(&localViewtab, entryNum);
 				if ((localViewtab.xPos == oldX) &&
@@ -1627,14 +1622,14 @@ void bBUpdateObj2(int entryNum)
 			case 0: /* normal.motion */
 				switch (localViewtab.direction) {
 				case 0: break;
-				case 1: bANormalAdjust(entryNum, 0, -1); break;
-				case 2: bANormalAdjust(entryNum, 1, -1); break;
-				case 3: bANormalAdjust(entryNum, 1, 0); break;
-				case 4: bANormalAdjust(entryNum, 1, 1); break;
-				case 5: bANormalAdjust(entryNum, 0, 1); break;
-				case 6: bANormalAdjust(entryNum, -1, 1); break;
-				case 7: bANormalAdjust(entryNum, -1, 0); break;
-				case 8: bANormalAdjust(entryNum, -1, -1); break;
+				case 1:bANormalAdjust(entryNum, &localViewtab, 0, -1); break;
+				case 2:bANormalAdjust(entryNum, &localViewtab, 1, -1); break;
+				case 3:bANormalAdjust(entryNum, &localViewtab, 1, 0); break;
+				case 4:bANormalAdjust(entryNum, &localViewtab, 1, 1); break;
+				case 5:bANormalAdjust(entryNum, &localViewtab, 0, 1); break;
+				case 6:bANormalAdjust(entryNum, &localViewtab, -1, 1); break;
+				case 7:bANormalAdjust(entryNum, &localViewtab, -1, 0); break;
+				case 8:bANormalAdjust(entryNum, &localViewtab, -1, -1); break;
 				}
 				break;
 			case 1: /* wander */
@@ -1642,14 +1637,14 @@ void bBUpdateObj2(int entryNum)
 				oldY = localViewtab.yPos;
 				switch (localViewtab.direction) {
 				case 0: break;
-				case 1: bANormalAdjust(entryNum, 0, -1); break;
-				case 2: bANormalAdjust(entryNum, 1, -1); break;
-				case 3: bANormalAdjust(entryNum, 1, 0); break;
-				case 4: bANormalAdjust(entryNum, 1, 1); break;
-				case 5: bANormalAdjust(entryNum, 0, 1); break;
-				case 6: bANormalAdjust(entryNum, -1, 1); break;
-				case 7: bANormalAdjust(entryNum, -1, 0); break;
-				case 8: bANormalAdjust(entryNum, -1, -1); break;
+				case 1:bANormalAdjust(entryNum, &localViewtab, 0, -1); break;
+				case 2:bANormalAdjust(entryNum, &localViewtab, 1, -1); break;
+				case 3:bANormalAdjust(entryNum, &localViewtab, 1, 0); break;
+				case 4:bANormalAdjust(entryNum, &localViewtab, 1, 1); break;
+				case 5:bANormalAdjust(entryNum, &localViewtab, 0, 1); break;
+				case 6:bANormalAdjust(entryNum, &localViewtab, -1, 1); break;
+				case 7:bANormalAdjust(entryNum, &localViewtab, -1, 0); break;
+				case 8:bANormalAdjust(entryNum, &localViewtab, -1, -1); break;
 				}
 				if ((localViewtab.xPos == oldX) &&
 					(localViewtab.yPos == oldY)) {
@@ -2025,7 +2020,9 @@ void bCCalcObjMotion()
 		objFlags = localViewtab.flags;
 		//Warning
 		if ((objFlags & MOTION) && (objFlags & UPDATE)) {
+
 			localViewtab.stepTimeCount++;
+
 			if (localViewtab.stepTimeCount >
 				localViewtab.stepTime) {
 				localViewtab.stepTimeCount = 1;
@@ -2034,14 +2031,14 @@ void bCCalcObjMotion()
 				case 0: /* normal.motion */
 					switch (localViewtab.direction) {
 					case 0: break;
-					case 1: bANormalAdjust(entryNum, 0, -1); break;
-					case 2: bANormalAdjust(entryNum, 0, -1); break;
-					case 3: bANormalAdjust(entryNum, 1, 0); break;
-					case 4: bANormalAdjust(entryNum, 1, 1); break;
-					case 5: bANormalAdjust(entryNum, 0, 1); break;
-					case 6: bANormalAdjust(entryNum, -1, 1); break;
-					case 7: bANormalAdjust(entryNum, -1, 0); break;
-					case 8: bANormalAdjust(entryNum, -1, -1);
+					case 1:bANormalAdjust(entryNum, &localViewtab, 0, -1); break;
+					case 2:bANormalAdjust(entryNum, &localViewtab, 0, -1); break;
+					case 3:bANormalAdjust(entryNum, &localViewtab, 1, 0); break;
+					case 4:bANormalAdjust(entryNum, &localViewtab, 1, 1); break;
+					case 5:bANormalAdjust(entryNum, &localViewtab, 0, 1); break;
+					case 6:bANormalAdjust(entryNum, &localViewtab, -1, 1); break;
+					case 7:bANormalAdjust(entryNum, &localViewtab, -1, 0); break;
+					case 8:bANormalAdjust(entryNum, &localViewtab, -1, -1);
 					}
 					break;
 				case 1: /* wander */
@@ -2049,14 +2046,14 @@ void bCCalcObjMotion()
 					oldY = localViewtab.yPos;
 					switch (localViewtab.direction) {
 					case 0: break;
-					case 1: bANormalAdjust(entryNum, 0, -1); break;
-					case 2: bANormalAdjust(entryNum, 0, -1); break;
-					case 3: bANormalAdjust(entryNum, 1, 0); break;
-					case 4: bANormalAdjust(entryNum, 1, 1); break;
-					case 5: bANormalAdjust(entryNum, 0, 1); break;
-					case 6: bANormalAdjust(entryNum, -1, 1); break;
-					case 7: bANormalAdjust(entryNum, -1, 0); break;
-					case 8: bANormalAdjust(entryNum, -1, -1); break;
+					case 1:bANormalAdjust(entryNum, &localViewtab, 0, -1); break;
+					case 2:bANormalAdjust(entryNum, &localViewtab, 0, -1); break;
+					case 3:bANormalAdjust(entryNum, &localViewtab, 1, 0); break;
+					case 4:bANormalAdjust(entryNum, &localViewtab, 1, 1); break;
+					case 5:bANormalAdjust(entryNum, &localViewtab, 0, 1); break;
+					case 6:bANormalAdjust(entryNum, &localViewtab, -1, 1); break;
+					case 7:bANormalAdjust(entryNum, &localViewtab, -1, 0); break;
+					case 8:bANormalAdjust(entryNum, &localViewtab, -1, -1); break;
 					}
 					if ((localViewtab.xPos == oldX) &&
 						(localViewtab.yPos == oldY)) {
