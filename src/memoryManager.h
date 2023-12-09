@@ -139,6 +139,7 @@
 #define PICTURE_CODE_OVERFLOW_BANK 0x4
 #define IRQ_BANK 6
 #define GRAPHICS_BANK 6
+#define FLOAT_BANK 0x1
 
 //Golden RAM
 #define VARS_AREA_START 0

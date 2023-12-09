@@ -2,6 +2,7 @@
 #define FIXED_POINT_H
 
 #include "general.h"
+#include "memoryManager.h"
 
 // Define the fixed point number representation
 typedef long fix32;
@@ -11,10 +12,15 @@ typedef long fix32;
 #define FP_MASK 0xFFFF // Mask to extract the mantissa
 
 // Function prototypes
+
+#pragma wrapped-call (push, trampoline, FLOAT_BANK)
+
 extern fix32 floatDivision(byte numerator, byte denominator);
 extern fix32 fp_fromInt(unsigned int integer);
 extern int fp_toInt(fix32 fixed);
 extern int getMantissa(fix32 fp);
 extern int floor_fix_32(fix32 fp);
 extern int ceil_fix_32(fix32 fp);
+
+#pragma wrapped-call (pop)
 #endif // FIXED_POINT_H

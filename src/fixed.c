@@ -1,6 +1,6 @@
 #include "fixed.h"
 
-#pragma code-name (push, "BANKRAM11")
+#pragma code-name (push, "BANKRAM01")
 // Convert a standard integer to fixed-point representation
 fix32 fp_fromInt(unsigned int integer) {
     return (long) integer << FP_SHIFT; // Shift left by the mantissa size
