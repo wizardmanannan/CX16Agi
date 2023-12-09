@@ -1020,7 +1020,7 @@ void b2Force_update() // 1, 0x00
 	entryNum = loadAndIncWinCode();
 	/* Do immediate update here. Call update(entryNum) */
 
-	bAUpdateObj(entryNum);
+	bBUpdateObj(entryNum);
 	return;
 }
 

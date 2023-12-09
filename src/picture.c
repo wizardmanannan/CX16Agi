@@ -222,7 +222,7 @@ int b11Round(fix32 aNumber, boolean isPos)
 		printf("%u < %u = %d\n", getMantissa(aNumber), ROUND_THRESHOLD_POS, getMantissa(aNumber) < ROUND_THRESHOLD_POS);
 		printf("The address of aNumber is %p", &aNumber);
 #endif
-		return getMantissa(aNumber) < ROUND_THRESHOLD_POS ? floor_fix_32(aNumber) : ceil_fix_32(aNumber);
+		return b1GetMantissa(aNumber) < ROUND_THRESHOLD_POS ? b1FloorFix32(aNumber) : b1CeilFix32(aNumber);
 	}
 	else
 	{
@@ -230,7 +230,7 @@ int b11Round(fix32 aNumber, boolean isPos)
 		printf("%lu Neg True %d result %p %d < %d\n", aNumber, getMantissa(aNumber), getMantissa(aNumber) <= ROUND_THRESHOLD_NEG ? floor_fix_32(aNumber) : ceil_fix_32(aNumber), getMantissa(aNumber), ROUND_THRESHOLD_POS);
 		printf("%u < %u = %d\n", getMantissa(aNumber), ROUND_THRESHOLD_POS, getMantissa(aNumber) < ROUND_THRESHOLD_POS);
 #endif
-		return getMantissa(aNumber) <= ROUND_THRESHOLD_NEG ? floor_fix_32(aNumber) : ceil_fix_32(aNumber);
+		return b1GetMantissa(aNumber) <= ROUND_THRESHOLD_NEG ? b1FloorFix32(aNumber) : b1CeilFix32(aNumber);
 	}
 }
 
@@ -460,7 +460,7 @@ void b11Drawline(byte x1, byte y1, byte x2, byte y2)
 		}
 #endif
 
-		addX = height == 0 ? height : b11Div(abs(width), abs(height));
+		addX = height == 0 ? height : b1Div(abs(width), abs(height));
 
 #ifdef VERBOSE_DRAW_LINE
 		if (pixelCounter >= pixelStartPrintingAt)
@@ -480,7 +480,7 @@ void b11Drawline(byte x1, byte y1, byte x2, byte y2)
 		}
 #endif // VERBOSE_DRAW_LINE
 
-		addY = width == 0 ? width : b11Div(abs(height), abs(width));
+		addY = width == 0 ? width : b1Div(abs(height), abs(width));
 #ifdef VERBOSE_DRAW_LINE
 		if (pixelCounter >= pixelStartPrintingAt)
 		{
@@ -506,7 +506,7 @@ void b11Drawline(byte x1, byte y1, byte x2, byte y2)
 #endif // VERBOSE
 
 		if (abs(width) > abs(height)) {
-			y = fp_fromInt(y1);
+			y = b1FpFromInt(y1);
 
 
 #ifdef VERBOSE_DRAW_LINE
@@ -516,7 +516,7 @@ void b11Drawline(byte x1, byte y1, byte x2, byte y2)
 			}
 #endif // VERBOSE
 
-			addX = (width == 0 ? 0 : fp_fromInt(1));
+			addX = (width == 0 ? 0 : b1FpFromInt(1));
 
 #ifdef VERBOSE_DRAW_LINE
 			if (pixelCounter >= pixelStartPrintingAt)
@@ -525,7 +525,7 @@ void b11Drawline(byte x1, byte y1, byte x2, byte y2)
 			}
 #endif // VERBOSE
 
-			for (x = fp_fromInt(x1); xIsPos ? x < fp_fromInt(x2) : x > fp_fromInt(x2); xIsPos ? x += addX : x -= addX) {
+			for (x = b1FpFromInt(x1); xIsPos ? x < b1FpFromInt(x2) : x > b1FpFromInt(x2); xIsPos ? x += addX : x -= addX) {
 #ifdef VERBOSE_DRAW_LINE
 				if (pixelCounter >= pixelStartPrintingAt)
 				{
@@ -561,7 +561,7 @@ void b11Drawline(byte x1, byte y1, byte x2, byte y2)
 			PSET(x2, y2);
 		}
 		else {
-			x = fp_fromInt(x1);
+			x = b1FpFromInt(x1);
 #ifdef VERBOSE_DRAW_LINE
 			if (pixelCounter >= pixelStartPrintingAt)
 			{
@@ -570,7 +570,7 @@ void b11Drawline(byte x1, byte y1, byte x2, byte y2)
 #endif // VERBOSE
 
 
-			addY = (height == 0 ? 0 : fp_fromInt(1));
+			addY = (height == 0 ? 0 : b1FpFromInt(1));
 
 
 #ifdef VERBOSE_DRAW_LINE
@@ -582,7 +582,7 @@ void b11Drawline(byte x1, byte y1, byte x2, byte y2)
 
 
 
-			for (y = fp_fromInt(y1); y != fp_fromInt(y2); yIsPos ? y += addY : y -= addY) {
+			for (y = b1FpFromInt(y1); y != b1FpFromInt(y2); yIsPos ? y += addY : y -= addY) {
 
 #ifdef VERBOSE_DRAW_LINE
 				if (pixelCounter >= pixelStartPrintingAt)

@@ -22,6 +22,7 @@
 #include "agifiles.h"
 #include "view.h"
 
+//#define VERBOSE_MOVE
 //#define VERBOSE_SET_VIEW;
 //#define VERBOSE_SET_LOOPS
 //#define VERBOSE_SET_CEL
@@ -377,11 +378,11 @@ void bESetLoop(ViewTable* localViewTab, ViewTableMetadata* localMetadata, View* 
 		exit(0);
 	}
 
-	#ifdef VERBOSE_DEBUG_BLIT
-		printf("The address of the buffer is %p\n ", bEBulkAllocatedAddresses);
-		printf("loop vera is %p", loopVeraAddresses);
-		printf("Trying to copy to %p on bank %d from %p on bank %d number %d.", (byte*)loopVeraAddresses, localMetadata->viewTableMetadataBank, bEBulkAllocatedAddresses, SPRITE_METADATA_BANK, noToBlit * sizeof(long));
-	#endif
+#ifdef VERBOSE_DEBUG_BLIT
+	printf("The address of the buffer is %p\n ", bEBulkAllocatedAddresses);
+	printf("loop vera is %p", loopVeraAddresses);
+	printf("Trying to copy to %p on bank %d from %p on bank %d number %d.", (byte*)loopVeraAddresses, localMetadata->viewTableMetadataBank, bEBulkAllocatedAddresses, SPRITE_METADATA_BANK, noToBlit * sizeof(long));
+#endif
 	enableHelpersDebugging = TRUE;
 	memCpyBankedBetween((byte*)loopVeraAddresses, localMetadata->viewTableMetadataBank, bEBulkAllocatedAddresses, SPRITE_METADATA_BANK, noToBlit * sizeof(long));
 	enableHelpersDebugging = FALSE;
@@ -421,7 +422,7 @@ void agiBlit(ViewTable* localViewTab, byte entryNum, boolean disableInterupts)
 #ifdef VERBOSE_DEBUG_BLIT
 	printf("The viewNum is %d and the loop is %d\n", viewNum, localViewTab->currentLoop);
 #endif // VERBOSE_DEBUG_BLIT
-	
+
 	//#endif // VERBOSE_DEBUG_BLIT
 
 	getLoadedView(&localView, viewNum);
@@ -429,7 +430,7 @@ void agiBlit(ViewTable* localViewTab, byte entryNum, boolean disableInterupts)
 	getLoadedCel(&localLoop, &localCel, localViewTab->currentCel);
 
 	if (viewTabNoToMetaData[entryNum] == VIEWNO_TO_METADATA_NO_SET)
-	{	
+	{
 #ifdef VERBOSE_DEBUG_NO_BLIT_CACHE
 		printf("set Metadata %d. The vt is %d\n", localViewTab->viewData, entryNum);
 #endif
@@ -455,12 +456,12 @@ void agiBlit(ViewTable* localViewTab, byte entryNum, boolean disableInterupts)
 	{
 		RAM_BANK = SPRITE_METADATA_BANK;
 
-		#ifdef VERBOSE_DEBUG_NO_BLIT_CACHE
+#ifdef VERBOSE_DEBUG_NO_BLIT_CACHE
 		printf("loading view %d loop %d. The vt %p. It's position is %d,%d. v36 is %d\n", localViewTab->currentView, localViewTab->currentLoop, entryNum, localViewTab->xPos, localViewTab->yPos, var[36]);
-		#endif
+#endif
 		bESetLoop(localViewTab, &localMetadata, &localView, loopVeraAddresses);
 	}
-	
+
 #ifdef VERBOSE_DEBUG_NO_BLIT_CACHE	
 	RAM_BANK = localMetadata.viewTableMetadataBank;
 	printf("we haved checked %p. It has a value of %p. The bank is %p and it should be %d\n", &loopVeraAddresses[0], loopVeraAddresses[0], RAM_BANK, localMetadata.viewTableMetadataBank);
@@ -469,7 +470,7 @@ void agiBlit(ViewTable* localViewTab, byte entryNum, boolean disableInterupts)
 
 	RAM_BANK = localMetadata.viewTableMetadataBank;
 	loopVeraAddress = loopVeraAddresses[localViewTab->currentCel];
-		
+
 	RAM_BANK = SPRITE_UPDATED_BANK;
 
 	if (disableInterupts)
@@ -481,7 +482,7 @@ void agiBlit(ViewTable* localViewTab, byte entryNum, boolean disableInterupts)
 
 
 	_assmUInt = loopVeraAddress;
-	
+
 	asm("lda %v", _assmUInt);
 	asm("and #$1F"); //Gets you the address bits 12:8 Which are the parts of the medium byte we need
 	asm("asl"); //Gets bits 5:7 which are always zero
@@ -518,7 +519,7 @@ void agiBlit(ViewTable* localViewTab, byte entryNum, boolean disableInterupts)
 
 	asm("ldy #$4");
 	asm("lda %v", _assmByte);
-	
+
 	asm("clc");
 	asm("adc #%w", STARTING_ROW);
 
@@ -943,9 +944,9 @@ void b9LoadViewFile(byte viewNum)
 		}
 
 		setLoadedLoop(&localView, &localLoop, l);
-			}
+	}
 	setLoadedView(&localView, viewNum);
-			}
+}
 
 /***************************************************************************
 ** discardView
@@ -1157,18 +1158,16 @@ void bADrawObject(int entryNum)
 	setViewTab(&localViewtab, entryNum);
 }
 
+#pragma wrapped-call (push, trampoline, VIEW_CODE_BANK_2)
 /***************************************************************************
 ** updateEgoDirection
 **
 ** Purpose: To update var[6] when ego is moved with adjustPosition().
 ***************************************************************************/
-void bAUpdateEgoDirection(int oldX, int oldY, int newX, int newY)
+void bAUpdateEgoDirection(int oldX, int oldY, int newX, int newY, ViewTable* viewTab)
 {
 	int dx = (newX - oldX);
 	int dy = (newY - oldY);
-	ViewTable localViewtab;
-
-	getViewTab(&localViewtab, 0);
 
 	if ((dx == 0) && (dy == 0)) var[6] = dirnOfEgo = 0;
 	if ((dx == 0) && (dy == -1)) var[6] = dirnOfEgo = 1;
@@ -1180,9 +1179,7 @@ void bAUpdateEgoDirection(int oldX, int oldY, int newX, int newY)
 	if ((dx == -1) && (dy == 0)) var[6] = dirnOfEgo = 7;
 	if ((dx == -1) && (dy == -1)) var[6] = dirnOfEgo = 8;
 
-	bACalcDirection(&localViewtab);
-
-	setViewTab(&localViewtab, 0);
+	bACalcDirection(viewTab);
 }
 
 /***************************************************************************
@@ -1192,110 +1189,280 @@ void bAUpdateEgoDirection(int oldX, int oldY, int newX, int newY)
 ** to the given position. The routine is similar to a line draw and is used
 ** for the move.obj. If the object is ego, then var[6] has to be updated.
 ***************************************************************************/
-#pragma wrapped-call (push, trampoline, VIEW_CODE_BANK_2)
-void bAAdjustPosition(ViewTable* localViewtab, int fx, int fy)
+void bAAdjustPosition(ViewTable* viewTab, int fx, int fy, byte entryNum)
 {
-	//int height, width, startX, startY, x1, y1, x2, y2, count, stepVal, dx, dy;
-	//float x, y, addX, addY;
-	//int dummy;
+	int height, width, count, stepVal, dx, dy;
+	fix32 x, y, addX, addY, x1, y1, x2, y2;
+	int dummy;
 
-	///* Set up start and end points */
-	//x1 = localViewtab.xPos;
-	//y1 = localViewtab.yPos;
-	//x2 = fx;
-	//y2 = fy;
+	/* Set up start and end points */
+	x1 = b1FpFromInt(viewTab->xPos);
+	y1 = b1FpFromInt(viewTab->yPos);
+	x2 = b1FpFromInt(fx);
+	y2 = b1FpFromInt(fy);
 
-	//height = (y2 - y1);
-	//width = (x2 - x1);
-	//addX = (height==0?height:(float)width/abs(height));
-	//addY = (width==0?width:(float)height/abs(width));
+#ifdef VERBOSE_MOVE
+	if (opCounter > 0x466D9 && entryNum == 0)
+	{
+		printf("x1 is %d, y1 is %d, x2 is %d, y2 is %d\n", x1, y1, x2, y2);
+	}
+#endif // VERBOSE_MOVE
 
-	///* Will find the point on the line that is stepSize pixels away */
-	//if (abs(width) > abs(height)) {
-	//   y = y1;
-	//   addX = (width == 0? 0 : (width/abs(width)));
-	//   switch ((int)addX) {
-	//      case 0:
-	//         if (addY < 0)
-	//            localViewtab.direction = 1;
-	//         else
-	//            localViewtab.direction = 5;
-	//         break;
-	//      case -1:
-	//         if (addY < 0)
-	//            localViewtab.direction = 8;
-	//         else if (addY > 0)
-	//            localViewtab.direction = 6;
-	//         else
-	//            localViewtab.direction = 7;
-	//         break;
-	//      case 1:
-	//         if (addY < 0)
-	//            localViewtab.direction = 2;
-	//         else if (addY > 0)
-	//            localViewtab.direction = 4;
-	//         else
-	//            localViewtab.direction = 3;
-	//         break;
-	//   }
-	//   count = 0;
-	//   stepVal = localViewtab.stepSize;
-	//   for (x=x1; (x!=x2) && (count<(stepVal+1)); x+=addX, count++) {
-	//      dx = ceil(x);
-	//      dy = ceil(y);
-	   //    y+=addY;
-	//   }
-	//   if ((x == x2) && (count < (stepVal+1))) {
-	//      dx = ceil(x);
-	//      dy = ceil(y);
-	//   }
-	//}
-	//else {
-	//   x = x1;
-	//   addY = (height == 0? 0 : (height/abs(height)));
-	//   switch ((int)addY) {
-	//      case 0:
-	//         if (addX < 0)
-	//            localViewtab.direction = 7;
-	//         else
-	//            localViewtab.direction = 3;
-	//         break;
-	//      case -1:
-	//         if (addX < 0)
-	//            localViewtab.direction = 8;
-	//         else if (addX > 0)
-	//            localViewtab.direction = 2;
-	//         else
-	//            localViewtab.direction = 1;
-	//         break;
-	//      case 1:
-	//         if (addX < 0)
-	//            localViewtab.direction = 6;
-	//         else if (addX > 0)
-	//            localViewtab.direction = 4;
-	//         else
-	//            localViewtab.direction = 5;
-	//         break;
-	//   }
-	//   count = 0;
-	//   stepVal = localViewtab.stepSize;
-	//   for (y=y1; (y!=y2) && (count<(stepVal+1)); y+=addY, count++) {
-	//      dx = ceil(x);
-	//      dy = ceil(y);
-	   //    x+=addX;
-	//   }
-	//   if ((y == y2) && (count < (stepVal+1))) {
-	//      dx = ceil(x);
-	//      dy = ceil(y);
-	//   }
-	//}
+	height = b1fpToInt(y2 - y1);
+	width = b1fpToInt(x2 - x1);
 
-	//localViewtab.xPos = dx;
-	//localViewtab.yPos = dy;
+#ifdef VERBOSE_MOVE
+	if (opCounter > 0x466D9 && entryNum == 0)
+	{
+		printf("height is %d width is %d\n", height, width);
+	}
+#endif // VERBOSE_MOVE
 
-	//if (entryNum == 0) {
-	//   updateEgoDirection(x1, y1, dx, dy);
-	//}
+	addX = (height == 0 ? b1FpFromInt(height) : b1Div(width,abs(height)));
+	addY = (width == 0 ? b1FpFromInt(width) : b1Div(height , abs(width)));
+
+#ifdef VERBOSE_MOVE
+	if (opCounter > 0x466D9 && entryNum == 0)
+	{
+		printf("add x is %lu add y is %lu\n", addX, addY);
+	}
+#endif // VERBOSE_MOVE
+
+	/* Will find the point on the line that is stepSize pixels away */
+	if (abs(width) > abs(height)) {
+		y = y1;
+
+#ifdef VERBOSE_MOVE
+		if (opCounter > 0x466D9 && entryNum == 0)
+		{
+			printf("width %d greater than height %d\n", width, height);
+		}
+#endif // VERBOSE_MOVE
+
+		addX = (width == 0 ? 0 : b1Div(width,abs(width)));
+		
+#ifdef VERBOSE_MOVE
+		if (opCounter > 0x466D9 && entryNum == 0)
+		{
+			printf("add x is %lu\n", addX);
+		}
+#endif // VERBOSE_MOVE
+
+
+		switch (b1FloorFix32(addX)) {
+		
+		case 0:
+			if (addY < 0)
+				viewTab->direction = 1;
+			else
+				viewTab->direction = 5;
+			break;
+		case -1:
+			if (addY < 0)
+				viewTab->direction = 8;
+			else if (addY > 0)
+				viewTab->direction = 6;
+			else
+				viewTab->direction = 7;
+			break;
+		case 1:
+			if (addY < 0)
+				viewTab->direction = 2;
+			else if (addY > 0)
+				viewTab->direction = 4;
+			else
+				viewTab->direction = 3;
+			break;
+		}
+
+#ifdef VERBOSE_MOVE
+		if (opCounter > 0x466D9 && entryNum == 0)
+		{
+			printf("add x is %lu add y is %lu. Direction is %d\n", addX, addY, viewTab ->direction);
+		}
+#endif // VERBOSE_MOVE
+
+		count = 0;
+		stepVal = viewTab->stepSize;
+
+#ifdef VERBOSE_MOVE
+		if (opCounter > 0x466D9 && entryNum == 0)
+		{
+			printf("x1 is %lu, (%lu != %lu) && (%d < (%d + 1)) result: %d\n", x1, x, x2, count, stepVal, (x != x2) && (count < (stepVal + 1)));
+		}
+#endif // VERBOSE_MOVE
+
+		for (x = x1; (x != x2) && (count < (stepVal + 1)); x += addX, count++) {
+			
+#ifdef VERBOSE_MOVE
+			if (opCounter > 0x466D9 && entryNum == 0)
+			{
+				printf("before ceil x is %lu and y is %lu\n", x, y);
+			}
+#endif
+			
+			dx = b1CeilFix32(x);
+			dy = b1CeilFix32(y);
+			y += addY;
+
+#ifdef VERBOSE_MOVE
+			if (opCounter > 0x466D9 && entryNum == 0)
+			{
+				printf("in loop x1 is %lu, (%lu != %lu) && (%d < (%d + 1)) result: %d\n", x1, x, x2, count, stepVal, (x != x2) && (count < (stepVal + 1)));
+				printf("x is %lu\n", x);
+				printf("In loop dx is %d and dy is %d\n", dx, dy);
+			}
+
+#endif // VERBOSE_MOVE
+		}
+#ifdef VERBOSE_MOVE
+		if (opCounter > 0x466D9 && entryNum == 0)
+		{
+			printf("out loop x1 is %lu, (%lu != %lu) && (%d < (%d + 1)) result: %d\n", x1, x, x2, count, stepVal, (x != x2) && (count < (stepVal + 1)));
+			printf("x is %lu and y is %lu\n", x, y);
+		}
+
+#endif // VERBOSE_MOVE
+
+#ifdef VERBOSE_MOVE
+		if (opCounter > 0x466D9 && entryNum == 0)
+		{
+			printf("(%lu == %lu) && (%d < (%d + 1)) result %d\n", x, x2, count, stepVal, (x == x2) && (count < (stepVal + 1)));
+		}
+#endif // VERBOSE_MOVE
+
+		if ((x == x2) && (count < (stepVal + 1))) {
+			dx = b1CeilFix32(x);
+			dy = b1CeilFix32(y);
+		}
+	}
+	else {
+		x = x1;
+
+#ifdef VERBOSE_MOVE
+		if (opCounter > 0x466D9 && entryNum == 0)
+		{
+			printf("width %d less than or equal height %d", width, height);
+		}
+#endif // VERBOSE_MOVE
+
+
+		addY = (height == 0 ? 0 : b1Div(height , abs(height)));
+
+#ifdef VERBOSE_MOVE
+		if (opCounter > 0x466D9 && entryNum == 0)
+		{
+			printf("add y is %lu\n", addY);
+		}
+#endif // VERBOSE_MOVE
+
+		switch ((int)addY) {
+		case 0:
+			if (addX < 0)
+				viewTab->direction = 7;
+			else
+				viewTab->direction = 3;
+#ifdef VERBOSE_MOVE
+			if (opCounter > 0x466D9 && entryNum == 0)
+			{
+				printf("view tab direction is %d\n", viewTab->direction);
+			}
+#endif // VERBOSE_MOVE
+
+			break;
+		case -1:
+			if (addX < 0)
+				viewTab->direction = 8;
+			else if (addX > 0)
+				viewTab->direction = 2;
+			else
+				viewTab->direction = 1;
+			break;
+		case 1:
+			if (addX < 0)
+				viewTab->direction = 6;
+			else if (addX > 0)
+				viewTab->direction = 4;
+			else
+				viewTab->direction = 5;
+			break;
+		}
+#ifdef VERBOSE_MOVE
+		if (opCounter > 0x466D9 && entryNum == 0)
+		{
+			printf("add x is %lu add y is %lu\n", addX, addY);
+		}
+#endif // VERBOSE_MOVE
+
+		count = 0;
+		stepVal = viewTab->stepSize;
+
+
+#ifdef VERBOSE_MOVE
+		if (opCounter > 0x466D9 && entryNum == 0)
+		{
+			printf("y1 is %lu, (%lu != %lu) && (%d < (%d + 1)) result: %d\n", y1, y, y2, count, stepVal, (y != y2) && (count < (stepVal + 1)));
+		}
+#endif // VERBOSE_MOVE
+
+		for (y = y1; (y != y2) && (count < (stepVal + 1)); y += addY, count++) {
+			dx = b1CeilFix32(x);
+			
+#ifdef VERBOSE_MOVE
+			if (opCounter > 0x466D9 && entryNum == 0)
+			{
+				printf("before ceil x is %lu and y is %lu\n", x,y);
+			}
+#endif
+			dy = b1CeilFix32(y);
+			x += addX;
+
+#ifdef VERBOSE_MOVE
+			if (opCounter > 0x466D9 && entryNum == 0)
+			{
+				printf("in loop y1 is %lu, (%lu != %lu) && (%d < (%d + 1)) result: %d\n", y1, y, y2, count, stepVal, (y != y2) && (count < (stepVal + 1)));
+				printf("x is %lu\n", x);
+				printf("In loop dx is %d and dy is %d\n", dx, dy);
+			}
+
+#endif // VERBOSE_MOVE
+		}
+#ifdef VERBOSE_MOVE
+		if (opCounter > 0x466D9 && entryNum == 0)
+		{
+			printf("out loop y1 is %lu, (%lu != %lu) && (%d < (%d + 1)) result: %d\n", y1, y, y2, count, stepVal, (y != y2) && (count < (stepVal + 1)));
+			printf("x is %lu and y is %lu\n", x, y);
+		}
+
+#endif // VERBOSE_MOVE
+
+#ifdef VERBOSE_MOVE
+		if (opCounter > 0x466D9 && entryNum == 0)
+		{
+			printf("(%lu == %lu) && (%d < (%d + 1)) result %d", y, y2, count, stepVal, (y == y2) && (count < (stepVal + 1)));
+		}
+#endif // VERBOSE_MOVE
+
+
+		if ((y == y2) && (count < (stepVal + 1))) {
+			dx = b1CeilFix32(x);
+			dy = b1CeilFix32(y);
+		}
+	}
+
+	viewTab->xPos = dx;
+	viewTab->yPos = dy;
+
+#ifdef VERBOSE_MOVE
+	if (opCounter > 0x466D9 && entryNum == 0)
+	{
+		printf("dx is %d and dy is %d\n", dx, dy);
+	}
+#endif
+
+	if (entryNum == 0) {
+		bAUpdateEgoDirection(b1fpToInt(x1), b1fpToInt(y1), dx, dy, viewTab);
+	}
 }
 #pragma wrapped-call (pop)
 
@@ -1305,7 +1472,7 @@ void bAFollowEgo(int entryNum) /* This needs to be more intelligent. */
 
 	getViewTab(&localViewtab, entryNum);
 
-	bAAdjustPosition(&localViewtab, localViewtab.xPos, localViewtab.yPos);
+	bAAdjustPosition(&localViewtab, localViewtab.xPos, localViewtab.yPos, entryNum);
 
 	setViewTab(&localViewtab, entryNum);
 }
@@ -1405,8 +1572,11 @@ void bANormalAdjust(int entryNum, ViewTable* viewTab, int dx, int dy)
 }
 #pragma wrapped-call (pop)
 
+#pragma code-name (pop)
+#pragma code-name (push, "BANKRAM0B")
 
-void bAUpdateObj(int entryNum)
+#pragma wrapped-call (push, trampoline, VIEW_CODE_BANK_3)
+void bBUpdateObj(int entryNum)
 {
 	int oldX, oldY, celNum;
 	word objFlags;
@@ -1507,7 +1677,7 @@ void bAUpdateObj(int entryNum)
 				break;
 			case 3: /* move.obj */
 				bAAdjustPosition(&localViewtab, localViewtab.param1,
-					localViewtab.param2);
+					localViewtab.param2, entryNum);
 
 				if ((localViewtab.xPos == localViewtab.param1) &&
 					(localViewtab.yPos == localViewtab.param2)) {
@@ -1547,9 +1717,7 @@ void bAUpdateObj(int entryNum)
 	show_mouse(screen);
 	b6ShowPicture();
 }
-
-#pragma code-name (pop)
-#pragma code-name (push, "BANKRAM0B")
+#pragma wrapped-call (pop)
 
 /* Called by force.update */
 void bBUpdateObj2(int entryNum)
@@ -1655,7 +1823,7 @@ void bBUpdateObj2(int entryNum)
 				break;
 			case 3: /* move.obj */
 				bAAdjustPosition(&localViewtab, localViewtab.param1,
-					localViewtab.param2);
+					localViewtab.param2, entryNum);
 				if ((localViewtab.xPos == localViewtab.param1) &&
 					(localViewtab.yPos == localViewtab.param2)) {
 					localViewtab.motion = 0;
@@ -1802,10 +1970,10 @@ void bBUpdateObjects()
 				else
 					localViewtab.priority = (localViewtab.yPos / 12 + 1);
 			}
-	}
+		}
 
 		setViewTab(&localViewtab, entryNum);
-}
+	}
 
 	/* Draw all cels */
 
@@ -2075,8 +2243,8 @@ void bCCalcObjMotion()
 				case 3: /* move.obj */
 					if (flag[localViewtab.param4]) break;
 					for (steps = 0; steps < localViewtab.stepSize; steps++) {
-						bAAdjustPosition(entryNum, (int)localViewtab.param1,
-							(int)localViewtab.param2);
+						bAAdjustPosition(&localViewtab,(int)localViewtab.param1,
+							(int)localViewtab.param2, entryNum);
 						if ((localViewtab.xPos == localViewtab.param1) &&
 							(localViewtab.yPos == localViewtab.param2)) {
 							/* These lines really are guess work */

@@ -97,17 +97,19 @@ void b6InitFloatDivision()
 }
 #pragma code-name (pop)
 
-#pragma code-name (push, "BANKRAM11")
+#pragma code-name (push, "BANKRAM01")
 
-fix32 b11Div(int numerator, int denominator) {
+extern fix32 floatDivision(byte numerator, byte denominator);
+
+fix32 b1Div(int numerator, int denominator) {
 	if (denominator == 0 || numerator == 0) {
 		return (fix32)0;
 	}
 	else if (denominator == 1) {
-		return fp_fromInt(numerator);
+		return b1FpFromInt(numerator);
 	}
 	else if (numerator == denominator) {
-		return fp_fromInt(1);
+		return b1FpFromInt(1);
 	}
 	else {
 		return floatDivision(numerator, denominator);

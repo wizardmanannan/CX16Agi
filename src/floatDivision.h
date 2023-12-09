@@ -5,6 +5,6 @@
 
 void b6InitFloatDivision();
 
-extern fix32 floatDivision(byte numerator, byte denominator);
-
-extern fix32 b11Div(int numerator, int denominator);
+#pragma wrapped-call (push, trampoline, FLOAT_BANK)
+extern fix32 b1Div(int numerator, int denominator);
+#pragma wrapped-call (pop)
