@@ -597,6 +597,7 @@ void agiBlit(ViewTable* localViewTab, byte entryNum, boolean disableInterupts)
 	{
 		_assmByte = SPR_ATTR_64;
 	}
+	_assmByte2 = localLoop.palette;
 
 	asm("ldy #$5");
 	asm("lda %v", _assmByte);
@@ -608,6 +609,8 @@ void agiBlit(ViewTable* localViewTab, byte entryNum, boolean disableInterupts)
 	asm("asl");
 	asm("asl");
 	asm("ora %v", _assmByte);
+	asm("clc");
+	asm("adc %v", _assmByte2);
 
 	asm("sta (%w),y", ZP_SPRITE_STORE_PTR);
 
