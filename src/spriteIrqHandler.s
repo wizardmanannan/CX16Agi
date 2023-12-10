@@ -65,7 +65,7 @@ rts
 ;2 x low
 ;3 x high
 ;4 y
-;5 Sprite Attr Size
+;5 Sprite Attr Size/Palette Offset
 ;6 Reblit on IRQ
 
 .import _viewSeen
@@ -133,15 +133,6 @@ sta VERA_data0
 lda (ZP_ADDRESS),y ;Sprite Attr Size 7 (buffer 5)
 iny
 beq @loopHigh
-
-asl
-asl
-asl
-asl
-sta ZP_SPR_ATTR_SIZE
-asl
-asl
-ora ZP_SPR_ATTR_SIZE
 sta VERA_data0
 
 lda (ZP_ADDRESS),y ;Reblit (buffer 6) Reblit ignore for now

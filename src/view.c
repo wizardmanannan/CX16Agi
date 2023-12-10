@@ -600,6 +600,15 @@ void agiBlit(ViewTable* localViewTab, byte entryNum, boolean disableInterupts)
 
 	asm("ldy #$5");
 	asm("lda %v", _assmByte);
+	asm("asl");
+	asm("asl");
+	asm("asl");
+	asm("asl");
+	asm("sta %v", _assmByte);
+	asm("asl");
+	asm("asl");
+	asm("ora %v", _assmByte);
+
 	asm("sta (%w),y", ZP_SPRITE_STORE_PTR);
 
 	asm("ldy #$6");
