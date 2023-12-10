@@ -896,7 +896,7 @@ void b9LoadViewFile(byte viewNum)
 			localCel.width = celHeader[POSITION_OF_CEL_WIDTH];
 			localCel.height = celHeader[POSITION_OF_CEL_HEIGHT];
 			localCel.flipped = (trans & 0x80) && (((trans & 0x70) >> 4) != l);
-
+			localCel.transparency = trans << 4;
 
 #ifdef VERBOSE_LOAD_VIEWS
 			printf("Local view %d.%d.%d is %d x %d, when width doubled %d x %d\n", viewNum, l, c, localCel.width, localCel.height, localCel.width * 2, localCel.height);
