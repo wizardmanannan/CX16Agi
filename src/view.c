@@ -22,6 +22,7 @@
 #include "agifiles.h"
 #include "view.h"
 
+//#define VERBOSE_GET_PALETTE
 //#define VERBOSE_MOVE
 //#define VERBOSE_SET_VIEW;
 //#define VERBOSE_SET_LOOPS
@@ -346,6 +347,65 @@ void setLoadedCel(Loop* loadedLoop, Cel* localCell, byte localCellNumber)
 	RAM_BANK = previousRamBank;
 }
 
+byte bECreateSpritePalette(byte transparentColor)
+{
+	PaletteGetResult palleteGetResult;
+	byte i;
+	byte paletteColourLow, paletteColourHigh, paletteBlackLow, paletteBlackHigh;
+	byte paletteSlot = bEGetPalette(BASE_SPRITE_ID + transparentColor, &palleteGetResult);
+	long paletteWriteAddress = PALETTE_START + COLOURS_PER_PALETTE * BYTES_PER_PALETTE_COLOUR * paletteSlot + BASE_MANAGED_PALETTE * COLOURS_PER_PALETTE * BYTES_PER_PALETTE_COLOUR;
+
+	if (palleteGetResult == FailToAllocate)
+	{
+		return 0; //If we are out of palettes the best we can do is use the default
+	}
+
+	if (palleteGetResult == Allocated)
+	{
+		asm("sei");
+		SET_VERA_ADDRESS(PALETTE_START, 0, 1);
+
+		SET_VERA_ADDRESS_ABSOLUTE(paletteWriteAddress, 1, 1);
+
+		for (i = 0; i < COLOURS_PER_PALETTE; i++)
+		{
+
+			READ_BYTE_VAR_FROM_ASSM(paletteColourLow, VERA_data0);
+			READ_BYTE_VAR_FROM_ASSM(paletteColourHigh, VERA_data0);
+
+#ifdef VERBOSE_GET_PALETTE
+			printf("Read byte %p and %p\n", paletteColourLow, paletteColourHigh);
+#endif
+
+			if (i == 0)
+			{
+				paletteBlackLow = paletteColourLow;
+				paletteBlackHigh = paletteColourHigh;
+			}
+
+			if (i == transparentColor)
+			{
+#ifdef VERBOSE_GET_PALETTE
+				printf("The transparent colour is %d\n",i);
+#endif
+          		WRITE_BYTE_VAR_TO_ASSM(paletteBlackLow, VERA_data1);
+				WRITE_BYTE_VAR_TO_ASSM(paletteBlackHigh, VERA_data1);
+			}
+			else
+			{
+				WRITE_BYTE_VAR_TO_ASSM(paletteColourLow, VERA_data1);
+				WRITE_BYTE_VAR_TO_ASSM(paletteColourHigh, VERA_data1);
+			}
+
+		}
+
+		SET_VERA_ADDRESS(PALETTE_START, 0, 1); //Setting back to channel zero as if we don't printf can screw up our memory. This is a possible framework bug
+		asm("cli");
+	}
+
+	return paletteSlot;
+}
+
 #define TO_BLIT_CEL_ARRAY_LENGTH 500
 extern byte bEToBlitCelArray[TO_BLIT_CEL_ARRAY_LENGTH];
 //Copy cels into array above first
@@ -583,6 +643,7 @@ void b9Reset()
 	bEResetViewTableMetadata();
 	bEResetSpritePointers();
 	bEResetSpriteMemoryManager();
+	bEInitPaletteManager();
 	maxViewTable = 0;
 }
 void b9InitSpriteData()
@@ -829,6 +890,9 @@ byte b9VeraSlotsForWidthOrHeight(byte widthOrHeight)
 #define POSTION_OF_CEL_TRANSPARENCY_AND_MIRRORING 2
 #define POSITION_OF_CEL_DATA 3
 #define CEL_HEADER_SIZE 3
+
+byte halt = FALSE;
+
 /**************************************************************************
 ** loadViewFile
 **
@@ -883,6 +947,7 @@ void b9LoadViewFile(byte viewNum)
 		localLoop.allocationSize = SIZE_32;
 		localLoop.veraSlotsWidth = 1;
 		localLoop.veraSlotsHeight = 1;
+		localLoop.palette = PALETTE_NOT_SET;
 
 		for (c = 0; c < localLoop.numberOfCels; c++) {
 			cellPosition = tempAGI.code + loopOffsets[l] + cellOffsets[c];
@@ -897,6 +962,14 @@ void b9LoadViewFile(byte viewNum)
 			localCel.height = celHeader[POSITION_OF_CEL_HEIGHT];
 			localCel.flipped = (trans & 0x80) && (((trans & 0x70) >> 4) != l);
 			localCel.transparency = trans << 4;
+
+			if (localLoop.palette == PALETTE_NOT_SET)
+			{
+
+				localLoop.palette = bECreateSpritePalette(localCel.transparency);
+				halt = TRUE;
+
+		    }
 
 #ifdef VERBOSE_LOAD_VIEWS
 			printf("Local view %d.%d.%d is %d x %d, when width doubled %d x %d\n", viewNum, l, c, localCel.width, localCel.height, localCel.width * 2, localCel.height);

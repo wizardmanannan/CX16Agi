@@ -11,6 +11,7 @@
 #include "agifiles.h"
 #include "picture.h"
 #include "spriteMemoryManager.h"
+#include "paletteManager.h"
 #include "helpers.h"
 
 #define MAXVIEW  256
@@ -26,6 +27,7 @@ typedef struct Cel {
 	boolean flipped;
 } Cel;
 
+#define PALETTE_NOT_SET 255
 typedef struct {
 	byte numberOfCels;
 	Cel* cels;
@@ -33,6 +35,7 @@ typedef struct {
 	AllocationSize allocationSize;
 	byte veraSlotsWidth;
 	byte veraSlotsHeight;
+	byte palette;
 } Loop;
 
 typedef struct {

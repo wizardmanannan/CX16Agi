@@ -60,6 +60,7 @@
     <ClInclude Include="src\graphics.h" />
     <ClInclude Include="src\irq.h" />
     <ClInclude Include="src\loadingScreen.h" />
+    <ClInclude Include="src\paletteManager.h" />
     <ClInclude Include="src\spriteMemoryManager.h" />
     <ClInclude Include="src\structMetadata.h" />
     <ClInclude Include="src\textLayer.h" />
@@ -91,6 +92,7 @@
     <ClCompile Include="src\graphics.c" />
     <ClCompile Include="src\irq.c" />
     <ClCompile Include="src\loadingScreen.c" />
+    <ClCompile Include="src\paletteManager.c" />
     <ClCompile Include="src\spriteMemoryManager.c" />
     <ClCompile Include="src\textLayer.c" />
     <ClCompile Include="src\GUI.C" />

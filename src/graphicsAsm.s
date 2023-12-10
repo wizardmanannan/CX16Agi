@@ -224,6 +224,8 @@ sta VERA_data0
 lda #>COLOR_RED
 sta VERA_data0
 
+;Ignore the next 12 colors only the first four matter
+
 lda #<COLOR_MAGENTA
 sta VERA_data0
 lda #>COLOR_MAGENTA
