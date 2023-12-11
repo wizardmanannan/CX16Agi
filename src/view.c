@@ -352,8 +352,18 @@ byte bECreateSpritePalette(byte transparentColor)
 	PaletteGetResult palleteGetResult;
 	byte i;
 	byte paletteColourLow, paletteColourHigh, paletteBlackLow, paletteBlackHigh;
-	byte paletteSlot = bEGetPalette(BASE_SPRITE_ID + transparentColor, &palleteGetResult);
-	long paletteWriteAddress = PALETTE_START + COLOURS_PER_PALETTE * BYTES_PER_PALETTE_COLOUR * paletteSlot + BASE_MANAGED_PALETTE * COLOURS_PER_PALETTE * BYTES_PER_PALETTE_COLOUR;
+	byte paletteSlot;
+	long paletteWriteAddress;
+
+#ifdef VERBOSE_GET_PALETTE
+	printf("cs 1. trans color is %d\n", transparentColor);
+#endif
+	paletteSlot = bEGetPalette(BASE_SPRITE_ID + transparentColor, &palleteGetResult);
+
+#ifdef VERBOSE_GET_PALETTE
+	printf("cs 2. The palette slot is %d and the result is %d\n", paletteSlot, palleteGetResult);
+#endif
+	paletteWriteAddress = PALETTE_START + COLOURS_PER_PALETTE * BYTES_PER_PALETTE_COLOUR * paletteSlot;
 
 	if (palleteGetResult == FailToAllocate)
 	{
@@ -472,7 +482,7 @@ void agiBlit(ViewTable* localViewTab, byte entryNum, boolean disableInterupts)
 	ViewTableMetadata localMetadata;
 	VeraSpriteAddress* loopVeraAddresses;
 	VeraSpriteAddress loopVeraAddress; //Put out here so it can be accessed by inline assembly without going via a C variable
-		
+	
 	previousBank = RAM_BANK;
 
 	RAM_BANK = SPRITE_METADATA_BANK;
@@ -903,8 +913,6 @@ byte b9VeraSlotsForWidthOrHeight(byte widthOrHeight)
 #define POSITION_OF_CEL_DATA 3
 #define CEL_HEADER_SIZE 3
 
-byte halt = FALSE;
-
 /**************************************************************************
 ** loadViewFile
 **
@@ -977,9 +985,14 @@ void b9LoadViewFile(byte viewNum)
 
 			if (localLoop.palette == PALETTE_NOT_SET)
 			{
+#ifdef VERBOSE_GET_PALETTE
+				printf("lv 1. create palette for view %d loop %d\n", viewNum, l);
+#endif
 				localLoop.palette = bECreateSpritePalette(localCel.transparency);
-				halt = TRUE;
 
+#ifdef VERBOSE_GET_PALETTE
+				printf("lv 1. set palette for view %d loop %d. palette %d\n", viewNum, l, localLoop.palette);
+#endif
 		    }
 
 #ifdef VERBOSE_LOAD_VIEWS

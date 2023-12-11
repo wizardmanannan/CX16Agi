@@ -17,6 +17,11 @@ byte bEInitPaletteManager()
 byte bEGetPalette(byte id, PaletteGetResult* result)
 {
 	byte i;
+	byte allocatedPalette;
+
+#ifdef VERBOSE_PALETTE_MANAGER
+	printf("gp1. the id is %d\n", id);
+#endif // VERBOSE_PALETTE_MANAGER
 
 	if (palettesAllocated == NO_MANAGED_PALETTES)
 	{
@@ -26,7 +31,7 @@ byte bEGetPalette(byte id, PaletteGetResult* result)
 	}
 
 #ifdef VERBOSE_PALETTE_MANAGER
-	printf("The number of available palettes are %d", NO_MANAGED_PALETTES - palettesAllocated);
+	printf("gp2. the number of available palettes are %d\n", NO_MANAGED_PALETTES - palettesAllocated);
 #endif // VERBOSE_PALETTE_MANAGER
 
 
@@ -34,17 +39,24 @@ byte bEGetPalette(byte id, PaletteGetResult* result)
 	{
 		if (allocatedPaletteOwners[i] == id)
 		{
+#ifdef VERBOSE_PALETTE_MANAGER
+			printf("gp3. we are now returning %d\n",i);
+#endif // VERBOSE_PALETTE_MANAGER
+
 			*result = AlreadyAllocated;
-			return i;
+			return i + BASE_MANAGED_PALETTE;
 		}
 	}
 	
 	*result = Allocated;
 
 #ifdef VERBOSE_PALETTE_MANAGER
-	printf("Allocating %d\n", palettesAllocated);
+	printf("gp4. allocating %d\n", palettesAllocated);
 #endif
 
-	return palettesAllocated++;
+	allocatedPalette = palettesAllocated++;
+	allocatedPaletteOwners[i] = id;
+
+	return allocatedPalette + BASE_MANAGED_PALETTE;
 }
 #pragma code-name (pop)
