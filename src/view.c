@@ -472,7 +472,7 @@ void agiBlit(ViewTable* localViewTab, byte entryNum, boolean disableInterupts)
 	ViewTableMetadata localMetadata;
 	VeraSpriteAddress* loopVeraAddresses;
 	VeraSpriteAddress loopVeraAddress; //Put out here so it can be accessed by inline assembly without going via a C variable
-
+		
 	previousBank = RAM_BANK;
 
 	RAM_BANK = SPRITE_METADATA_BANK;
@@ -973,11 +973,10 @@ void b9LoadViewFile(byte viewNum)
 			localCel.width = celHeader[POSITION_OF_CEL_WIDTH];
 			localCel.height = celHeader[POSITION_OF_CEL_HEIGHT];
 			localCel.flipped = (trans & 0x80) && (((trans & 0x70) >> 4) != l);
-			localCel.transparency = trans << 4;
+			localCel.transparency = trans & 0xF;
 
 			if (localLoop.palette == PALETTE_NOT_SET)
 			{
-
 				localLoop.palette = bECreateSpritePalette(localCel.transparency);
 				halt = TRUE;
 

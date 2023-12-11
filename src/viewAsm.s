@@ -30,7 +30,16 @@ _viewHeaderBuffer: .res VIEW_HEADER_BUFFER_SIZE
 _loopHeaderBuffer: .res LOOP_HEADER_BUFFER_SIZE
 
 ;Color must be loaded into A
-.macro SET_COLOR TMP
+.macro SET_COLOR_LEFT TMP
+asl a           ; Shift left 4 times to multiply by 16
+asl a  
+asl a  
+asl a  
+ora TMP
+.endmacro
+
+;Color must be loaded into A
+.macro SET_COLOR_RIGHT TMP
 lsr a           ; Shift left 4 times to multiply by 16
 lsr a  
 lsr a  
@@ -95,7 +104,7 @@ stz _logDebugVal1
 .endif
 
 lda CEL_TRANS
-SET_COLOR CEL_TRANS
+SET_COLOR_LEFT CEL_TRANS
 sta CEL_TRANS
 
 @setVeraAddress:
@@ -113,7 +122,7 @@ tay
 txa
 and #$F0; The colour is the upper 4 bits
 sta OUTPUT_COLOUR
-SET_COLOR OUTPUT_COLOUR
+SET_COLOR_RIGHT OUTPUT_COLOUR
 
 cmp CEL_TRANS
 bne @draw
@@ -125,7 +134,15 @@ beq @getNextChunk
 bra @skip
 
 @draw:
+@drawBlack:
+cmp #BLACK_COLOR
+bne @drawColor
+lda CEL_TRANS ;Black is swapped with the transparent colour in the case the transparent colour is not black
+
+@drawColor:
 sta VERA_data0
+
+@decrementColorCounter:
 dey
 beq @getNextChunk
 bra @draw
