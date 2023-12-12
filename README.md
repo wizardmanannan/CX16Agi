@@ -10,9 +10,14 @@
 - Support AGI Textboxes
 - Implement A Loading Screen For the Background Graphics Drawing to Prevent Screen Tearing
 
-# CX 16 Iteration 5 Goals (Next)
+# CX 16 Iteration 5 Goals (Current)
 - Sprite support
 - Implement System Tick Replacing Inaccurate Inherited C One
+
+# CX 16 Iteration 6 Goals (Next)
+- Use a scanline screen drawing method to improve loading screen
+- Draw priority screen
+- Sprites priority with background image will be determined by the priority screen
 
 **Note: This Project Is Under Construction And Is Not Ready For General Use**
 
