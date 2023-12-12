@@ -1,19 +1,17 @@
 
+![image](https://github.com/wizardmanannan/CX16Agi/assets/58645812/9ed06d79-c4a0-4dc0-8b38-60443c7ac64f)
+
+
 ![image](https://github.com/wizardmanannan/CX16Agi/assets/58645812/82744d24-7eec-4106-b7bf-e81a02a4226e)
-
-
-# CX16Agi Iteration 3 (Completed)
-Major Changes Since Version 3:
-- Now displaying background graphics (more optimisation needed)
   
 
-# CX 16 Iteration 4 Goals (Current)
+# CX 16 Iteration 4 Goals (Completed)
 - Support AGI Textboxes
 - Implement A Loading Screen For the Background Graphics Drawing to Prevent Screen Tearing
-- Implement System Tick Replacing Inaccurate Inherited C One
 
 # CX 16 Iteration 5 Goals (Next)
 - Sprite support
+- Implement System Tick Replacing Inaccurate Inherited C One
 
 **Note: This Project Is Under Construction And Is Not Ready For General Use**
 
