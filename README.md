@@ -2,7 +2,8 @@
 ![image](https://github.com/wizardmanannan/CX16Agi/assets/58645812/9ed06d79-c4a0-4dc0-8b38-60443c7ac64f)
 
 
-![image](https://github.com/wizardmanannan/CX16Agi/assets/58645812/82744d24-7eec-4106-b7bf-e81a02a4226e)
+![image](https://github.com/wizardmanannan/CX16Agi/assets/58645812/a06b9c0d-888e-4b68-929a-458aa8f09392)
+
   
 
 # CX 16 Iteration 4 Goals (Completed)
