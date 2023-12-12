@@ -1,3 +1,7 @@
+
+![image](https://github.com/wizardmanannan/CX16Agi/assets/58645812/82744d24-7eec-4106-b7bf-e81a02a4226e)
+
+
 # CX16Agi Iteration 3 (Completed)
 Major Changes Since Version 3:
 - Now displaying background graphics (more optimisation needed)
