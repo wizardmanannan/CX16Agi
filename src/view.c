@@ -57,7 +57,6 @@ typedef struct {
 	VeraSpriteAddress** loopsVeraAddressesPointers;
 	VeraSpriteAddress* veraAddresses;
 	byte viewTableMetadataBank;
-	VeraSpriteAddress veraSlots[MAX_SPRITES_SLOTS_PER_VIEW_TAB]; //Only storing the first two bytes of the sprite attributes as the 3rd byte is always 1
 } ViewTableMetadata;
 
 #pragma bss-name (push, "BANKRAM09")
@@ -145,22 +144,6 @@ void bEResetSpritesUpdatedBuffer()
 {
 	memsetBanked(bESpritesUpdatedBuffer, 0, VIEW_TABLE_SIZE, SPRITE_UPDATED_BANK);
 	bESpritesUpdatedBufferPointer = bESpritesUpdatedBuffer;
-}
-
-void bESetVeraSlotsOnMetadata()
-{
-	byte i, j;
-	for (i = 0; i < SPRITE_SLOTS; i++)
-	{
-		for (j = 0; j < MAX_SPRITES_SLOTS_PER_VIEW_TAB; j++)
-		{
-
-			viewTableMetadata[i].veraSlots[j] = i * MAX_SPRITES_SLOTS_PER_VIEW_TAB * SIZE_OF_SPRITE_ATTRIBUTE + j * SIZE_OF_SPRITE_ATTRIBUTE + (unsigned int)(SPRITE_ATTRIBUTES_START & (unsigned long)0xFFFF) + SIZE_OF_SPRITE_ATTRIBUTE; //Skip over first 0 it is for the mouse
-#ifdef VERBOSE_SP_ATTR_SETUP
-			printf("%d + %d + %p + %d = %x\n", i * MAX_SPRITES_SLOTS_PER_VIEW_TAB * SIZE_OF_SPRITE_ATTRIBUTE, j * SIZE_OF_SPRITE_ATTRIBUTE, (unsigned int)(SPRITE_ATTRIBUTES_START & (unsigned long)0xFFFF), SIZE_OF_SPRITE_ATTRIBUTE, viewTableMetadata[i].veraSlots[j]);
-#endif // VERBOSE_SP_ATTR_SETUP
-		}
-	}
 }
 
 #pragma wrapped-call (pop)
@@ -693,8 +676,6 @@ void b9InitViews()
 	}
 
 	spriteScreen = create_bitmap(160, 168);
-
-	bESetVeraSlotsOnMetadata();
 }
 
 void b9InitObjects()
