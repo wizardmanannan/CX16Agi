@@ -1,3 +1,6 @@
+#Commander X16 AGI (Under Construction)
+
+##An AGI Interpreter For The CommanderX 16 Based On Meka By Lance Ewing
 
 ![image](https://github.com/wizardmanannan/CX16Agi/assets/58645812/9ed06d79-c4a0-4dc0-8b38-60443c7ac64f)
 
