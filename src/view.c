@@ -149,10 +149,9 @@ void bEResetSpritesUpdatedBuffer()
 #pragma wrapped-call (pop)
 #define MAX_SLOT_1_SIZED_SPRITE 64
 #define MAX_SPRITE_SIZE 128
-void bESetViewMetadata(View* localView, ViewTable* viewTable, byte viewNum, byte viewTabNo)
+void bESetViewMetadata(View* localView, ViewTable* viewTable, byte viewNum, byte viewTabNo, byte viewMetadataSlot)
 {
 	byte i;
-	byte viewMetadataSlot;
 	byte maxVeraAddresses;
 	ViewTableMetadata metadata;
 	int loopVeraAddressesPointersSize;
@@ -180,7 +179,10 @@ void bESetViewMetadata(View* localView, ViewTable* viewTable, byte viewNum, byte
 	printf("Max vera addresses is %d\n", maxVeraAddresses);
 #endif
 
-	viewMetadataSlot = nextViewMetadataSlot++;
+	if (viewMetadataSlot == VIEWNO_TO_METADATA_NO_SET)
+	{
+		viewMetadataSlot = nextViewMetadataSlot++;
+	}
 
 	metadata = viewTableMetadata[viewTabNo];
 
@@ -488,7 +490,7 @@ void agiBlit(ViewTable* localViewTab, byte entryNum, boolean disableInterupts)
 		printf("set Metadata %d. The vt is %d\n", localViewTab->viewData, entryNum);
 #endif
 
-		bESetViewMetadata(&localView, localViewTab, viewNum, entryNum);
+		bESetViewMetadata(&localView, localViewTab, viewNum, entryNum, VIEWNO_TO_METADATA_NO_SET);
 	}
 
 	localMetadata = viewTableMetadata[entryNum];
