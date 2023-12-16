@@ -16,6 +16,22 @@ SPRITE_IRQ_HANDLER_INC = 1
 BYTES_PER_SPRITE_UPDATE = 7
 SPRITE_UPDATED_BUFFER_SIZE = VIEW_TABLE_SIZE * BYTES_PER_SPRITE_UPDATE * 2 ;Viewtab may be updated more than once, hence times two for safety
 
+.macro GET_NEXT_FROM_SPRITE_UPDATE_BUFFER noStore
+.local @continue
+
+lda (ZP_ADDRESS),y
+iny
+.ifblank noStore
+  sta VERA_data0
+.endif
+cpy #$0
+bne @continue
+jsr _bEGotoHighAddresses
+
+@continue:
+.endmacro
+
+
 .macro CLEAR_SPRITE_ATTRS NO_TO_CLEAR
 .local @outerLoop
 .local @outerLoopCheck
@@ -73,6 +89,20 @@ rts
 ZP_SPR_ATTR_SIZE = ZP_TMP_5
 ZP_LOW_BYTE = ZP_TMP_5 + 1
 ZP_ADDRESS = ZP_TMP_6
+
+_bEGotoHighAddresses:
+clc
+lda ZP_ADDRESS
+adc #$FF
+sta ZP_ADDRESS
+lda ZP_ADDRESS + 1
+adc #0
+sta ZP_ADDRESS + 1
+
+ldy #$0
+
+rts
+
 bEHandleSpriteUpdates:
 
 lda _bESpritesUpdatedBufferPointer
@@ -96,51 +126,30 @@ lda #> _bESpritesUpdatedBuffer
 sta ZP_ADDRESS + 1
 
 @loop:
-lda (ZP_ADDRESS),y ;Address 12:5 0 (buffer 0)
-iny
-beq @loopHigh
-sta VERA_data0
+GET_NEXT_FROM_SPRITE_UPDATE_BUFFER ;Address 12:5 0 (buffer 0)
 sta ZP_LOW_BYTE
 
-lda (ZP_ADDRESS),y ;Address 16:13 1 (buffer 1)
-iny
-beq @loopHigh
-sta VERA_data0
+GET_NEXT_FROM_SPRITE_UPDATE_BUFFER ;Address 16:13 1 (buffer 1)
 
 ora ZP_LOW_BYTE
 beq @addressReset
 
-lda (ZP_ADDRESS),y ;X Low 2 (buffer 2)
-iny
-beq @loopHigh
-sta VERA_data0
+GET_NEXT_FROM_SPRITE_UPDATE_BUFFER ;X Low 2 (buffer 2)
 
-lda (ZP_ADDRESS),y ;X High 3 (buffer 3)
-iny
-beq @loopHigh
-sta VERA_data0
+GET_NEXT_FROM_SPRITE_UPDATE_BUFFER ;X High 3 (buffer 3)
 
-lda (ZP_ADDRESS),y ;Y Low 4 (buffer 4)
-iny
-beq @loopHigh
-sta VERA_data0
+GET_NEXT_FROM_SPRITE_UPDATE_BUFFER ;Y Low 4 (buffer 4)
 
 stz VERA_data0 ;Y High 5 Always 0
 
-lda #$C ; Collision ZLvl and Flip 6 (C means in front of layers and not flipped, with a zero collision mask)
+lda #$8 ; Collision Z Lvl 2 and Flip 6 (8 means in front of bitmap but behind text layers and not flipped, with a zero collision mask)
 sta VERA_data0
 
-lda (ZP_ADDRESS),y ;Sprite Attr Size 7 (buffer 5)
-iny
-beq @loopHigh
-sta VERA_data0
+GET_NEXT_FROM_SPRITE_UPDATE_BUFFER ;Sprite Attr Size 7 (buffer 5)
 
-lda (ZP_ADDRESS),y ;Reblit (buffer 6) Reblit ignore for now
-iny
-beq @loopHigh
+GET_NEXT_FROM_SPRITE_UPDATE_BUFFER #$1 ;Reblit (buffer 6) Reblit ignore for now
 
 bra @loop
-@loopHigh:
 @addressReset:
 lda #< _bESpritesUpdatedBuffer
 sta _bESpritesUpdatedBufferPointer
