@@ -22,6 +22,7 @@
 #include "agifiles.h"
 #include "view.h"
 
+//#define VERBOSE_SWITCH_METADATA
 //#define VERBOSE_GET_PALETTE
 //#define VERBOSE_MOVE
 //#define VERBOSE_SET_VIEW;
@@ -52,11 +53,17 @@ extern int dirnOfEgo;
 
 byte maxViewTable = 0;
 
+#define MAX_INACTIVE_METADATA 10
+
 //The data is the top two fields are all stored at the same bank alloced address on the bank in the bank field
 typedef struct {
 	VeraSpriteAddress** loopsVeraAddressesPointers;
 	VeraSpriteAddress* veraAddresses;
 	byte viewTableMetadataBank;
+	byte viewNum;
+	void* inactive; //Sometimes a single viewtab can have views swapped rapidly, we keep the previous ones here so we can easily switch between them
+	byte inactiveBank;
+
 } ViewTableMetadata;
 
 #pragma bss-name (push, "BANKRAM09")
@@ -119,7 +126,9 @@ extern void b9CelToVera(Cel* localCel, long veraAddress, byte bCol, byte drawing
 #pragma wrapped-call (push, trampoline, SPRITE_METADATA_BANK)
 void bEResetViewTableMetadata()
 {
-	byte i, j;
+	byte i, j, stop;
+	ViewTableMetadata localInactiveMetadata;
+	ViewTableMetadata* inActivePtr;
 
 	for (i = 0; i < SPRITE_SLOTS; i++)
 	{
@@ -130,6 +139,32 @@ void bEResetViewTableMetadata()
 
 		viewTableMetadata[i].loopsVeraAddressesPointers = NULL;
 		viewTableMetadata[i].viewTableMetadataBank = NULL;
+		viewTableMetadata[i].viewNum = 0;
+
+		if (viewTableMetadata[i].inactive != NULL)
+		{
+			inActivePtr = (ViewTableMetadata*)viewTableMetadata[i].inactive;
+			
+			stop = FALSE;
+			for (j = 0; j < MAX_INACTIVE_METADATA && !stop; j++)
+			{
+				memCpyBanked(&localInactiveMetadata, (byte*) &inActivePtr[j], viewTableMetadata[i].inactiveBank, sizeof(ViewTableMetadata));
+
+				if (localInactiveMetadata.loopsVeraAddressesPointers)
+				{
+					b10BankedDealloc((byte*)localInactiveMetadata.loopsVeraAddressesPointers, localInactiveMetadata.inactiveBank);
+				}
+				else
+				{
+					stop = TRUE;
+				}
+			}
+
+			b10BankedDealloc((byte*)viewTableMetadata[i].inactive, viewTableMetadata[i].inactiveBank);
+		}
+
+		viewTableMetadata[i].inactive = NULL;
+		viewTableMetadata[i].inactiveBank = NULL;
 	}
 
 	memset(&viewTabNoToMetaData[0], VIEWNO_TO_METADATA_NO_SET, MAXVIEW);
@@ -205,6 +240,7 @@ void bESetViewMetadata(View* localView, ViewTable* viewTable, byte viewNum, byte
 
 	metadata.loopsVeraAddressesPointers = (VeraSpriteAddress**)b10BankedAlloc(totalAllocationSize, &metadata.viewTableMetadataBank);
 	metadata.veraAddresses = (VeraSpriteAddress*)metadata.loopsVeraAddressesPointers + loopVeraAddressesPointersSize;
+	metadata.viewNum = viewNum;
 
 #ifdef VERBOSE_DEBUG_SET_METADATA
 	printf("Allocated the following addresses %p, %p. The size is %d + %d = %d. The bank is %d\n", metadata.loopVeraAddressesPointers, metadata.veraAddresses, loopVeraAddressesPointersSize, veraAddressesSize, totalAllocationSize, metadata.viewTableMetadataBank);
@@ -401,6 +437,138 @@ byte bECreateSpritePalette(byte transparentColor)
 	return paletteSlot;
 }
 
+void bESwitchMetadata(ViewTable* localViewTab, View* localView, byte viewNum, byte entryNum)
+{
+	byte i, inactiveMetadataSlot, activeMetadataSlot;
+	byte end = FALSE;
+	ViewTableMetadata inActive, active;
+	ViewTableMetadata* inActiveMetadataPointer;
+	ViewTableMetadata localMetadata;
+
+	localMetadata = viewTableMetadata[entryNum];
+	inActiveMetadataPointer = (ViewTableMetadata*)localMetadata.inactive;
+
+#ifdef  VERBOSE_SWITCH_METADATA
+	printf("switch to %d\n", viewNum);
+#endif
+
+#ifdef  VERBOSE_SWITCH_METADATA
+	printf("At the start the inactive is %p\n", localMetadata.inactive);
+#endif
+
+	if (localMetadata.inactive == NULL) //We have never done a metadata swap for this viewtab before
+	{
+		localMetadata.inactive = b10BankedAlloc(MAX_INACTIVE_METADATA * sizeof(ViewTableMetadata), &localMetadata.inactiveBank);
+		
+		inActiveMetadataPointer = (ViewTableMetadata*)localMetadata.inactive;
+
+#ifdef  VERBOSE_SWITCH_METADATA
+		printf("allocating %d bytes for extra metadata on bank %d\n", MAX_INACTIVE_METADATA * sizeof(ViewTableMetadata), localMetadata.inactiveBank);
+#endif //  VERBOSE_SWITCH_METADATA
+
+		
+		memsetBanked(localMetadata.inactive, NULL, sizeof(ViewTableMetadata), localMetadata.inactiveBank);
+	}
+
+	for (i = 0; i < MAX_INACTIVE_METADATA && !end; i++) //Search through the inactive metadata list and see if the view we are trying to switch to is already there. When we reach the end of the list or we reach an entry with null loop pointers we know it doesn't exist
+	{
+		memCpyBanked((byte*)&inActive,(byte*) &(inActiveMetadataPointer)[i], localMetadata.inactiveBank, sizeof(ViewTableMetadata));
+#ifdef  VERBOSE_SWITCH_METADATA
+		printf("inactive copy copying to %p from %p on bank %d size %d\n", (byte*)&inActive, (byte*)&(inActiveMetadataPointer)[i], localMetadata.inactiveBank, sizeof(ViewTableMetadata));
+#endif
+
+		end = !inActive.loopsVeraAddressesPointers || inActive.viewNum == viewNum;
+
+#ifdef  VERBOSE_SWITCH_METADATA
+		printf("end check %d or %d = %d (%d)\n", !inActive.loopsVeraAddressesPointers, inActive.viewNum == viewNum, !inActive.loopsVeraAddressesPointers || inActive.viewNum == viewNum, end);
+#endif
+		inactiveMetadataSlot = i;
+	}
+
+	if (!end) //Is full
+	{
+		if (localMetadata.inactive != NULL)
+		{
+			b10BankedDealloc((byte*)inActiveMetadataPointer, localMetadata.inactiveBank);
+			localMetadata.inactive = NULL;
+			localMetadata.inactiveBank = NULL;
+
+			bESwitchMetadata(localViewTab, localView, viewNum, entryNum); //Call itself with clear inactive metadata
+
+			//TODO: Deallocate vera addresses
+
+			return;
+		}
+	}
+
+	end = FALSE;
+	for (i = 0; i < MAX_INACTIVE_METADATA && !end; i++) //Search for inactive metadata in the list with the same rules as the active
+	{
+		memCpyBanked((byte*)&active, (byte*) &inActiveMetadataPointer[i], localMetadata.inactiveBank, sizeof(ViewTableMetadata));
+
+#ifdef  VERBOSE_SWITCH_METADATA
+		printf("copy to active. Copy to %p from  %p on bank %d size %d\n", &active, (byte*)&inActiveMetadataPointer[i], localMetadata.inactiveBank, sizeof(ViewTableMetadata));
+#endif
+
+		end = !active.loopsVeraAddressesPointers || active.loopsVeraAddressesPointers && active.viewNum == localMetadata.viewNum;
+
+#ifdef  VERBOSE_SWITCH_METADATA
+		printf("%d == %d\n", active.viewNum, localMetadata.viewNum);
+		printf("end copy active %d or %d = %d (%d)\n", !active.loopsVeraAddressesPointers, active.loopsVeraAddressesPointers && active.viewNum == localMetadata.viewNum, !active.loopsVeraAddressesPointers || active.loopsVeraAddressesPointers && active.viewNum == localMetadata.viewNum, end);
+#endif
+
+		activeMetadataSlot = i;
+	}
+
+	if (!active.loopsVeraAddressesPointers) //If the active metadata is not currently in the list add it. If it is we don't need to do anymore
+	{
+		memCpyBanked((byte*)&inActiveMetadataPointer[activeMetadataSlot], (byte*)&localMetadata, localMetadata.inactiveBank, sizeof(ViewTableMetadata));
+
+#ifdef  VERBOSE_SWITCH_METADATA
+		printf("copy to inactive. copy to %p on bank %d  from %p size %d\n", &inActiveMetadataPointer[activeMetadataSlot], localMetadata.inactiveBank, (byte*)&localMetadata, sizeof(ViewTableMetadata));
+#endif
+
+	}
+
+	if (!inActive.loopsVeraAddressesPointers) //If the inactive is not in the list we will clear the metadata so it can be allocated. However we keep the inactive list and bank
+	{
+		localMetadata.loopsVeraAddressesPointers = NULL;
+		localMetadata.veraAddresses = NULL;
+		localMetadata.viewNum = viewNum;
+		localMetadata.viewTableMetadataBank = 0;
+#ifdef  VERBOSE_SWITCH_METADATA
+		printf("enacting clear\n");
+#endif
+
+		viewTableMetadata[entryNum] = localMetadata;
+		bESetViewMetadata(localView, localViewTab, viewNum, entryNum, viewTabNoToMetaData[entryNum]);
+		localMetadata = viewTableMetadata[entryNum];
+	}
+	else
+	{
+		memCpyBanked((byte*)&localMetadata, (byte*) &inActiveMetadataPointer[inactiveMetadataSlot], localMetadata.inactiveBank, sizeof(ViewTableMetadata));
+
+#ifdef  VERBOSE_SWITCH_METADATA
+		printf("in active exists. copy to %p from %p on bank %d size %d \n", &localMetadata, (byte*)&inActiveMetadataPointer[inactiveMetadataSlot], localMetadata.inactiveBank, sizeof(ViewTableMetadata));
+#endif
+	}
+
+	viewTableMetadata[entryNum] = localMetadata;
+	
+#ifdef  VERBOSE_SWITCH_METADATA
+	printf("the entryNum is %d\n", entryNum);
+	printf("Setting %p on bank %p to be %p \n", &viewTableMetadata[entryNum], RAM_BANK, localMetadata);
+#endif
+
+#ifdef  VERBOSE_SWITCH_METADATA
+	printf("At the end the inactive is %p\n", localMetadata.inactive);
+#endif
+
+#ifdef  VERBOSE_SWITCH_METADATA
+	printf("End\n");
+#endif
+}
+
 #define TO_BLIT_CEL_ARRAY_LENGTH 500
 extern byte bEToBlitCelArray[TO_BLIT_CEL_ARRAY_LENGTH];
 //Copy cels into array above first
@@ -429,7 +597,7 @@ void bESetLoop(ViewTable* localViewTab, ViewTableMetadata* localMetadata, View* 
 
 	if (!bEAllocateSpriteMemoryBulk(localLoop.allocationSize, noToBlit))
 	{
-		printf("No sprite mem");
+		printf("no sprite mem");
 		exit(0);
 	}
 
@@ -467,7 +635,7 @@ void agiBlit(ViewTable* localViewTab, byte entryNum, boolean disableInterupts)
 	ViewTableMetadata localMetadata;
 	VeraSpriteAddress* loopVeraAddresses;
 	VeraSpriteAddress loopVeraAddress; //Put out here so it can be accessed by inline assembly without going via a C variable
-	
+
 	previousBank = RAM_BANK;
 
 	RAM_BANK = SPRITE_METADATA_BANK;
@@ -484,7 +652,16 @@ void agiBlit(ViewTable* localViewTab, byte entryNum, boolean disableInterupts)
 	getLoadedLoop(&localView, &localLoop, localViewTab->currentLoop);
 	getLoadedCel(&localLoop, &localCel, localViewTab->currentCel);
 
-	if (viewTabNoToMetaData[entryNum] == VIEWNO_TO_METADATA_NO_SET)
+	if (viewTabNoToMetaData[entryNum] != VIEWNO_TO_METADATA_NO_SET && viewTableMetadata[entryNum].viewNum != viewNum)
+	{
+#ifdef VERBOSE_SWITCH_METADATA
+		printf("switching to %d for entry %d\n", viewNum, entryNum);
+#endif
+
+		bESwitchMetadata(localViewTab, &localView, viewNum, entryNum);
+    }
+    
+	if (viewTabNoToMetaData[entryNum] == VIEWNO_TO_METADATA_NO_SET) //Second part of the statement will be true if switched to another view for the first time in bESwitchMetadata
 	{
 #ifdef VERBOSE_DEBUG_NO_BLIT_CACHE
 		printf("set Metadata %d. The vt is %d\n", localViewTab->viewData, entryNum);
@@ -716,7 +893,7 @@ void b9InitObjects()
 		setViewTab(&localViewtab, entryNum);
 	}
 
-	bEResetViewTableMetadata();
+	memsetBanked(viewTableMetadata, NULL, sizeof(ViewTableMetadata) * SPRITE_SLOTS, SPRITE_METADATA_BANK);
 }
 
 void b9ResetViews()     /* Called after new.room */
