@@ -20,13 +20,14 @@
 #define TINY_NO_SEGMENTS  80
 #define EXTRA_SMALL_NO_SEGMENTS 50
 #define SMALL_NO_SEGMENTS 30
-#define MEDIUM_NO_SEGMENTS 15
+#define MEDIUM_NO_SEGMENTS 12
 #define LARGE_NO_SEGMENTS 5
 
+//Warning: All of these sizes must be multiples of 8000, otherwise the program will crash
 #define TINY_SIZE  100
 #define EXTRA_SMALL_SIZE 160
 #define SMALL_SIZE 1600
-#define MEDIUM_SIZE 3200
+#define MEDIUM_SIZE 4000 
 #define LARGE_SIZE 8000
 #define MEMORY_MANAGER_BANK_SIZE 8000
 

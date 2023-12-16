@@ -995,7 +995,7 @@ void b11DrawPic(byte* bankedData, int pLen, boolean okToClearScreen, byte picNum
 	byte action, returnedAction = 0;
 	boolean stillDrawing = TRUE;
 	PictureFile loadedPicture;
-	byte* buffer = GOLDEN_RAM_WORK_AREA; 
+	byte* buffer = GOLDEN_RAM_WORK_AREA;
 	byte** data = &buffer; //Get_Next Macro works with pointer pointers so need this;
 	BufferStatus localBufferStatus;
 	BufferStatus* bufferStatus = &localBufferStatus;
@@ -1005,7 +1005,7 @@ void b11DrawPic(byte* bankedData, int pLen, boolean okToClearScreen, byte picNum
 	int** zpFloodQueueServe = (int**)ZP_PTR_TMP_22;
 	int* sPosBank = (int*)ZP_PTR_TMP_3;
 	int* rPosBank = (int*)ZP_PTR_TMP_4;
-	
+
 	b6DisplayLoadingScreen();
 
 	*zpPremultTable = &bitmapWidthPreMult[0];
@@ -1078,7 +1078,12 @@ void b11DrawPic(byte* bankedData, int pLen, boolean okToClearScreen, byte picNum
 		case 0xF8: returnedAction = b11FloodFill(data, bufferStatus); break;
 		case 0xF9: GET_NEXT(patCode); break;
 		case 0xFA: returnedAction = b11PlotBrush(data, bufferStatus); break;
-		default: printf("Unknown picture code : %X\n", action); exit(0);
+		default: 
+			printf("Unknown picture code : %X\n", action); 
+			printf("The buffer status bank is %p, buffer status banked data is %p and the buffer counter is %d. The loaded picture is %d\n", bufferStatus->bank, bufferStatus->bankedData, bufferStatus->bufferCounter, picNum);
+			printf("Loaded picture data %p, bank %d, size %d\n", loadedPicture.data, loadedPicture.bank, loadedPicture.size);
+				for (;;);
+			exit(0);
 		}
 
 		//if (picFNum == 3) {
