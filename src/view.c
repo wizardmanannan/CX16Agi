@@ -66,6 +66,96 @@ typedef struct {
 
 } ViewTableMetadata;
 
+extern byte bEBulkAllocatedAddresses[VIEW_TABLE_SIZE * sizeof(VeraSpriteAddress) * ALLOCATOR_BLOCK_SIZE_64];
+
+void getViewTab(ViewTable* returnedViewTab, byte viewTabNumber)
+{
+	byte previousRamBank = RAM_BANK;
+
+	RAM_BANK = VIEWTAB_BANK;
+
+	*returnedViewTab = viewtab[viewTabNumber];
+
+	RAM_BANK = previousRamBank;
+}
+
+void setViewTab(ViewTable* localViewtab, byte viewTabNumber)
+{
+	byte previousRamBank = RAM_BANK;
+	RAM_BANK = VIEWTAB_BANK;
+
+	viewtab[viewTabNumber] = *localViewtab;
+
+	RAM_BANK = previousRamBank;
+}
+
+void getLoadedView(View* returnedLoadedView, byte loadedViewNumber)
+{
+	byte previousRamBank = RAM_BANK;
+
+	RAM_BANK = LOADED_VIEW_BANK;
+
+	*returnedLoadedView = loadedViews[loadedViewNumber];
+
+	RAM_BANK = previousRamBank;
+}
+
+void setLoadedView(View* loadedView, byte loadedViewNumber)
+{
+	byte previousRamBank = RAM_BANK;
+
+	RAM_BANK = LOADED_VIEW_BANK;
+
+	loadedViews[loadedViewNumber] = *loadedView;
+
+	RAM_BANK = previousRamBank;
+}
+
+void getLoadedLoop(View* loadedView, Loop* returnedLocalLoop, byte localLoopNumber)
+{
+	byte previousRamBank = RAM_BANK;
+
+	RAM_BANK = loadedView->loopsBank;
+
+	*returnedLocalLoop = loadedView->loops[localLoopNumber];
+
+	RAM_BANK = previousRamBank;
+}
+
+void setLoadedLoop(View* loadedView, Loop* localLoop, byte localLoopNumber)
+{
+	byte previousRamBank = RAM_BANK;
+
+	RAM_BANK = loadedView->loopsBank;
+
+	loadedView->loops[localLoopNumber] = *localLoop;
+
+	RAM_BANK = previousRamBank;
+}
+
+void getLoadedCel(Loop* loadedLoop, Cel* localCell, byte localCellNumber)
+{
+	byte previousRamBank = RAM_BANK;
+
+	RAM_BANK = loadedLoop->celsBank;
+
+	*localCell = loadedLoop->cels[localCellNumber];
+
+	RAM_BANK = previousRamBank;
+}
+
+void setLoadedCel(Loop* loadedLoop, Cel* localCell, byte localCellNumber)
+{
+	byte previousRamBank = RAM_BANK;
+
+	RAM_BANK = loadedLoop->celsBank;
+
+
+	loadedLoop->cels[localCellNumber] = *localCell;
+
+	RAM_BANK = previousRamBank;
+}
+
 #pragma bss-name (push, "BANKRAM09")
 ViewTable viewtab[VIEW_TABLE_SIZE];
 #pragma bss-name (pop)
@@ -286,98 +376,8 @@ void bESetViewMetadata(View* localView, ViewTable* viewTable, byte viewNum, byte
 	printf("The address of the viewTableMD is %p\n", &viewTableMetadata[viewTabNo]);
 #endif
 }
-#pragma code-name (pop)
 
-extern byte bEBulkAllocatedAddresses[VIEW_TABLE_SIZE * sizeof(VeraSpriteAddress) * ALLOCATOR_BLOCK_SIZE_64];
-
-void getViewTab(ViewTable* returnedViewTab, byte viewTabNumber)
-{
-	byte previousRamBank = RAM_BANK;
-
-	RAM_BANK = VIEWTAB_BANK;
-
-	*returnedViewTab = viewtab[viewTabNumber];
-
-	RAM_BANK = previousRamBank;
-}
-
-void setViewTab(ViewTable* localViewtab, byte viewTabNumber)
-{
-	byte previousRamBank = RAM_BANK;
-	RAM_BANK = VIEWTAB_BANK;
-
-	viewtab[viewTabNumber] = *localViewtab;
-
-	RAM_BANK = previousRamBank;
-}
-
-void getLoadedView(View* returnedLoadedView, byte loadedViewNumber)
-{
-	byte previousRamBank = RAM_BANK;
-
-	RAM_BANK = LOADED_VIEW_BANK;
-
-	*returnedLoadedView = loadedViews[loadedViewNumber];
-
-	RAM_BANK = previousRamBank;
-}
-
-void setLoadedView(View* loadedView, byte loadedViewNumber)
-{
-	byte previousRamBank = RAM_BANK;
-
-	RAM_BANK = LOADED_VIEW_BANK;
-
-	loadedViews[loadedViewNumber] = *loadedView;
-
-	RAM_BANK = previousRamBank;
-}
-
-void getLoadedLoop(View* loadedView, Loop* returnedLocalLoop, byte localLoopNumber)
-{
-	byte previousRamBank = RAM_BANK;
-
-	RAM_BANK = loadedView->loopsBank;
-
-	*returnedLocalLoop = loadedView->loops[localLoopNumber];
-
-	RAM_BANK = previousRamBank;
-}
-
-void setLoadedLoop(View* loadedView, Loop* localLoop, byte localLoopNumber)
-{
-	byte previousRamBank = RAM_BANK;
-
-	RAM_BANK = loadedView->loopsBank;
-
-	loadedView->loops[localLoopNumber] = *localLoop;
-
-	RAM_BANK = previousRamBank;
-}
-
-void getLoadedCel(Loop* loadedLoop, Cel* localCell, byte localCellNumber)
-{
-	byte previousRamBank = RAM_BANK;
-
-	RAM_BANK = loadedLoop->celsBank;
-
-	*localCell = loadedLoop->cels[localCellNumber];
-
-	RAM_BANK = previousRamBank;
-}
-
-void setLoadedCel(Loop* loadedLoop, Cel* localCell, byte localCellNumber)
-{
-	byte previousRamBank = RAM_BANK;
-
-	RAM_BANK = loadedLoop->celsBank;
-
-
-	loadedLoop->cels[localCellNumber] = *localCell;
-
-	RAM_BANK = previousRamBank;
-}
-
+#pragma wrapped-call (push, trampoline, SPRITE_METADATA_BANK)
 byte bECreateSpritePalette(byte transparentColor)
 {
 	PaletteGetResult palleteGetResult;
@@ -446,6 +446,7 @@ byte bECreateSpritePalette(byte transparentColor)
 
 	return paletteSlot;
 }
+#pragma wrapped-call (pop)
 
 void bESwitchMetadata(ViewTable* localViewTab, View* localView, byte viewNum, byte entryNum)
 {
@@ -627,6 +628,7 @@ void bESetLoop(ViewTable* localViewTab, ViewTableMetadata* localMetadata, View* 
 
 	bECellToVeraBulk(localLoop.allocationSize, noToBlit);
 }
+#pragma code-name (pop)
 
 #define ZP_SPRITE_STORE_PTR ZP_PTR_TMP_2
 
