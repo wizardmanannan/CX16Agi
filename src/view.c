@@ -124,6 +124,29 @@ extern void b9CelToVera(Cel* localCel, long veraAddress, byte bCol, byte drawing
 
 #pragma code-name (push, "BANKRAM0E")
 #pragma wrapped-call (push, trampoline, SPRITE_METADATA_BANK)
+void bEResetInactiveViewTableMetadata(ViewTableMetadata* localViewTableMetadata)
+{
+	boolean stop;
+	byte i;
+	ViewTableMetadata* inActivePtr = (ViewTableMetadata*)localViewTableMetadata->inactive;
+	ViewTableMetadata localInactiveMetadata;
+
+	stop = FALSE;
+	for (i = 0; i < MAX_INACTIVE_METADATA && !stop; i++)
+	{
+		memCpyBanked((byte*) &localInactiveMetadata, (byte*)&inActivePtr[i], localViewTableMetadata->inactiveBank, sizeof(ViewTableMetadata));
+
+		if (localInactiveMetadata.loopsVeraAddressesPointers)
+		{
+			b10BankedDealloc((byte*)localInactiveMetadata.loopsVeraAddressesPointers, localInactiveMetadata.inactiveBank);
+		}
+		else
+		{
+			stop = TRUE;
+		}
+	}
+}
+
 void bEResetViewTableMetadata()
 {
 	byte i, j, stop;
@@ -145,20 +168,7 @@ void bEResetViewTableMetadata()
 		{
 			inActivePtr = (ViewTableMetadata*)viewTableMetadata[i].inactive;
 			
-			stop = FALSE;
-			for (j = 0; j < MAX_INACTIVE_METADATA && !stop; j++)
-			{
-				memCpyBanked(&localInactiveMetadata, (byte*) &inActivePtr[j], viewTableMetadata[i].inactiveBank, sizeof(ViewTableMetadata));
-
-				if (localInactiveMetadata.loopsVeraAddressesPointers)
-				{
-					b10BankedDealloc((byte*)localInactiveMetadata.loopsVeraAddressesPointers, localInactiveMetadata.inactiveBank);
-				}
-				else
-				{
-					stop = TRUE;
-				}
-			}
+			bEResetInactiveViewTableMetadata(&viewTableMetadata[i]);
 
 			b10BankedDealloc((byte*)viewTableMetadata[i].inactive, viewTableMetadata[i].inactiveBank);
 		}
@@ -489,6 +499,8 @@ void bESwitchMetadata(ViewTable* localViewTab, View* localView, byte viewNum, by
 	{
 		if (localMetadata.inactive != NULL)
 		{
+			bEResetInactiveViewTableMetadata(&localMetadata);
+
 			b10BankedDealloc((byte*)inActiveMetadataPointer, localMetadata.inactiveBank);
 			localMetadata.inactive = NULL;
 			localMetadata.inactiveBank = NULL;
@@ -510,6 +522,7 @@ void bESwitchMetadata(ViewTable* localViewTab, View* localView, byte viewNum, by
 		printf("copy to active. Copy to %p from  %p on bank %d size %d\n", &active, (byte*)&inActiveMetadataPointer[i], localMetadata.inactiveBank, sizeof(ViewTableMetadata));
 #endif
 
+		//Inactive search and active search may find the same empty slot, but if they do it doesn't matter because if the inactive slot is blank it will never be copied back to the inActiveMetadataPointer list. It will trigger the if (!inActive.loopsVeraAddressesPointers) if statement
 		end = !active.loopsVeraAddressesPointers || active.loopsVeraAddressesPointers && active.viewNum == localMetadata.viewNum;
 
 #ifdef  VERBOSE_SWITCH_METADATA
