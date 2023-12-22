@@ -129,16 +129,6 @@ void debugPrint(byte toPrint)
 {
 	int time;
 	int clockVal = (int)clock();
-	ViewTable localViewTab;
-
-	getViewTab(&localViewTab, 15);
-
-	if (localViewTab.direction == 2)
-	{
-		printf("We found it at %lu\n", opCounter);
-		asm("stp");
-	}
-
 	if (opCounter >= opStartPrintingAt && opStartPrintingAt != 0 && opStartPrintingAt != 0)
 	{
 		if (clockVal > _clockBefore)
