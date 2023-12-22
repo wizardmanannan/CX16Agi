@@ -672,7 +672,6 @@ void agiBlit(ViewTable* localViewTab, byte entryNum, boolean disableInterupts)
 #ifdef VERBOSE_SWITCH_METADATA
 		printf("switching to %d for entry %d\n", viewNum, entryNum);
 #endif
-
 		bESwitchMetadata(localViewTab, &localView, viewNum, entryNum);
     }
     
@@ -1038,9 +1037,13 @@ void setLoopData(AGIFile* tempAGI, View* localView, Loop* localLoop, byte* loopH
 		memCpyBankedBetween(&loopHeaderBuffer[0], VIEW_BUFFERS_BANK, loopHeaderData, tempAGI->codeBank, NO_CELLS_INDEX_BYTES_AVERAGE + POSITION_OF_CELS_OFFSET); //Guessing at 7 cels, this should copy enough 99% of the time, and we can copy again once we have the first byte (loopCounter), is necessary . If there is less loops than we have just copied bytes which will be ignored
 		numberOfCels = loopHeaderBuffer[POSITION_OF_NO_CELS];
 
-		if (numberOfCels > NO_CELLS_INDEX_BYTES_AVERAGE)
+#ifdef VERBOSE_SET_LOOPS
+		printf("The numberOfCels is %d\n", numberOfCels);
+#endif
+
+		if (numberOfCels * 2 > NO_CELLS_INDEX_BYTES_AVERAGE)
 		{
-			memCpyBankedBetween((byte*)&loopHeaderData[0], VIEW_BUFFERS_BANK, loopHeaderData, tempAGI->codeBank, numberOfCels * 2 + POSITION_OF_CELS_OFFSET);
+			memCpyBankedBetween((byte*)&loopHeaderBuffer[0], VIEW_BUFFERS_BANK, loopHeaderData, tempAGI->codeBank, numberOfCels * 2 + POSITION_OF_CELS_OFFSET);
 		}
 
 #ifdef VERBOSE_SET_LOOPS
@@ -1153,6 +1156,12 @@ void b9LoadViewFile(byte viewNum)
 
 			localCel.bitmapBank = tempAGI.codeBank;
 			localCel.bmp = cellPosition + POSITION_OF_CEL_DATA;
+
+#ifdef VERBOSE_LOAD_VIEWS
+			printf("The address of the data is %p and the bank is %d\n", localCel.bmp, localCel.bitmapBank);
+			printf("The cel is %d. The loop off is %p and the cell of is %d. The total is %p and the address is %p\n", c, loopOffsets[l], cellOffsets[c], loopOffsets[l] + cellOffsets[c], cellPosition);
+#endif
+
 			localCel.width = celHeader[POSITION_OF_CEL_WIDTH];
 			localCel.height = celHeader[POSITION_OF_CEL_HEIGHT];
 			localCel.flipped = (trans & 0x80) && (((trans & 0x70) >> 4) != l);
