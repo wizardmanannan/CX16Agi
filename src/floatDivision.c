@@ -2,6 +2,55 @@
 //#define VERBOSE_LOAD_DIV
 //#define TEST_DIVISION 
 
+#ifdef TEST_DIVISION
+void testDivision()
+{
+	long result;
+
+	// Adjusted Tests
+
+	result = b1Div(0, 0xA7); // 0 and 167
+	if (result != b1FpFromInt(0))
+	{
+		printf("Fail Division 1. Expected %lx got %lx\n", b1FpFromInt(0), result);
+	}
+
+	result = b1Div(0xA7, 0); // 167 and 0
+	if (result != b1FpFromInt(0))
+	{
+		printf("Fail Division 2. Expected %lx got %lx\n", b1FpFromInt(0), result);
+	}
+
+	result = b1Div(0xA7, 1); // 167 and 1
+	if (result != b1FpFromInt(0xA7))
+	{
+		printf("Fail Division 3. Expected %lx got %lx\n", b1FpFromInt(0xA7), result);
+	}
+
+	result = b1Div(0xA7, 0xA7); // 167 and 167
+	if (result != b1FpFromInt(1))
+	{
+		printf("Fail Division 4. Expected %lx got %lx\n", b1FpFromInt(1), result);
+	}
+
+	// New Tests
+
+	result = b1Div(1, 2); // 1 divided by 2
+	if (result != b1FpFromInt(0) + 0x8000) // should be 0.5 in fixed point format
+	{
+		printf("Fail Division 5. Expected %lx got %lx\n", b1FpFromInt(0) + 0x8000, result);
+	}
+
+	result = b1Div(1, 3); // 1 divided by 3
+	if (result != b1FpFromInt(0) + 0x5555) // should be 0.5 in fixed point format
+	{
+		printf("Fail Division 5. Expected %lx got %lx\n", b1FpFromInt(0) + 0x553F, result);
+	}
+
+	asm("stp");
+}
+#endif // TEST_DIVISION
+
 #pragma code-name (push, "BANKRAM06")
 void b6LoadDivisionMetadata(const char* fileName, int metadataSize, byte* metadataLocation)
 {
@@ -115,51 +164,3 @@ fix32 b1Div(int numerator, int denominator) {
 		return floatDivision(numerator, denominator);
 	}
 }
-
-#ifdef TEST_DIVISION
-void testDivision()
-{
-	long result;
-
-	// Adjusted Tests
-
-	result = DIV(0, 0xA7); // 0 and 167
-	if (result != fp_fromInt(0))
-	{
-		printf("Fail Division 1. Expected %lx got %lx\n", fp_fromInt(0), result);
-	}
-
-	result = DIV(0xA7, 0); // 167 and 0
-	if (result != fp_fromInt(0))
-	{
-		printf("Fail Division 2. Expected %lx got %lx\n", fp_fromInt(0), result);
-	}
-
-	result = DIV(0xA7, 1); // 167 and 1
-	if (result != fp_fromInt(0xA7))
-	{
-		printf("Fail Division 3. Expected %lx got %lx\n", fp_fromInt(0xA7), result);
-	}
-
-	result = DIV(0xA7, 0xA7); // 167 and 167
-	if (result != fp_fromInt(1))
-	{
-		printf("Fail Division 4. Expected %lx got %lx\n", fp_fromInt(1), result);
-	}
-
-	// New Tests
-
-	result = DIV(1, 2); // 1 divided by 2
-	if (result != fp_fromInt(0) + 0x8000) // should be 0.5 in fixed point format
-	{
-		printf("Fail Division 5. Expected %lx got %lx\n", fp_fromInt(0) + 0x8000, result);
-	}
-
-	result = DIV(1, 3); // 1 divided by 3
-	if (result != fp_fromInt(0) + 0x5555) // should be 0.5 in fixed point format
-	{
-		printf("Fail Division 5. Expected %lx got %lx\n", fp_fromInt(0) + 0x553F, result);
-	}
-
-}
-#endif // TEST_DIVISION
