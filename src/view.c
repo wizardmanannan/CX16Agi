@@ -1475,6 +1475,7 @@ void bAAdjustPosition(ViewTable* viewTab, int fx, int fy, byte entryNum)
 	int height, width, count, stepVal, dx, dy;
 	fix32 x, y, addX, addY, x1, y1, x2, y2;
 	int dummy;
+	boolean xIsPos = TRUE, yIsPos = TRUE;
 
 	/* Set up start and end points */
 	x1 = b1FpFromInt(viewTab->xPos);
@@ -1486,11 +1487,21 @@ void bAAdjustPosition(ViewTable* viewTab, int fx, int fy, byte entryNum)
 	if (opCounter > 0x466D9 && entryNum == 0)
 	{
 		printf("x1 is %d, y1 is %d, x2 is %d, y2 is %d\n", x1, y1, x2, y2);
-	}
+}
 #endif // VERBOSE_MOVE
 
-	height = b1fpToInt(y2 - y1);
-	width = b1fpToInt(x2 - x1);
+	if (x1 > x2)
+	{
+		xIsPos = FALSE;
+	}
+
+	if (y1 > y2)
+	{
+		yIsPos = FALSE;
+	}
+	height = abs(fx - viewTab->xPos);
+	width = abs(fy - viewTab->yPos);
+
 
 #ifdef VERBOSE_MOVE
 	if (opCounter > 0x466D9 && entryNum == 0)
@@ -1499,8 +1510,8 @@ void bAAdjustPosition(ViewTable* viewTab, int fx, int fy, byte entryNum)
 	}
 #endif // VERBOSE_MOVE
 
-	addX = (height == 0 ? b1FpFromInt(height) : b1Div(width,abs(height)));
-	addY = (width == 0 ? b1FpFromInt(width) : b1Div(height , abs(width)));
+	addX = (height == 0 ? b1FpFromInt(height) : b1Div(width, abs(height)));
+	addY = (width == 0 ? b1FpFromInt(width) : b1Div(height, abs(width)));
 
 #ifdef VERBOSE_MOVE
 	if (opCounter > 0x466D9 && entryNum == 0)
@@ -1517,11 +1528,11 @@ void bAAdjustPosition(ViewTable* viewTab, int fx, int fy, byte entryNum)
 		if (opCounter > 0x466D9 && entryNum == 0)
 		{
 			printf("width %d greater than height %d\n", width, height);
-		}
+	}
 #endif // VERBOSE_MOVE
 
-		addX = (width == 0 ? 0 : b1Div(width,abs(width)));
-		
+		addX = (width == 0 ? 0 : b1Div(width, abs(width)));
+
 #ifdef VERBOSE_MOVE
 		if (opCounter > 0x466D9 && entryNum == 0)
 		{
@@ -1531,7 +1542,7 @@ void bAAdjustPosition(ViewTable* viewTab, int fx, int fy, byte entryNum)
 
 
 		switch (b1FloorFix32(addX)) {
-		
+
 		case 0:
 			if (addY < 0)
 				viewTab->direction = 1;
@@ -1559,7 +1570,7 @@ void bAAdjustPosition(ViewTable* viewTab, int fx, int fy, byte entryNum)
 #ifdef VERBOSE_MOVE
 		if (opCounter > 0x466D9 && entryNum == 0)
 		{
-			printf("add x is %lu add y is %lu. Direction is %d\n", addX, addY, viewTab ->direction);
+			printf("add x is %lu add y is %lu. Direction is %d\n", addX, addY, viewTab->direction);
 		}
 #endif // VERBOSE_MOVE
 
@@ -1573,18 +1584,25 @@ void bAAdjustPosition(ViewTable* viewTab, int fx, int fy, byte entryNum)
 		}
 #endif // VERBOSE_MOVE
 
-		for (x = x1; (x != x2) && (count < (stepVal + 1)); x += addX, count++) {
-			
+#ifdef VERBOSE_MOVE
+		if (opCounter > 0x466D9 && entryNum == 0)
+		{
+			printf("x loop start\n");
+			printf("the value of addX is %lu. which is roughly %d\n", addX, b11fpToInt(addX));
+		}
+#endif // VERBOSE_MOVE
+		for (x = x1; (x != x2) && (count < (stepVal + 1)); xIsPos ? x += addX : x -= addX, count++) {
+
 #ifdef VERBOSE_MOVE
 			if (opCounter > 0x466D9 && entryNum == 0)
 			{
 				printf("before ceil x is %lu and y is %lu\n", x, y);
 			}
 #endif
-			
+
 			dx = b1CeilFix32(x);
 			dy = b1CeilFix32(y);
-			y += addY;
+			yIsPos ? y += addY : y -= addY;
 
 #ifdef VERBOSE_MOVE
 			if (opCounter > 0x466D9 && entryNum == 0)
@@ -1595,7 +1613,7 @@ void bAAdjustPosition(ViewTable* viewTab, int fx, int fy, byte entryNum)
 			}
 
 #endif // VERBOSE_MOVE
-		}
+			}
 #ifdef VERBOSE_MOVE
 		if (opCounter > 0x466D9 && entryNum == 0)
 		{
@@ -1628,7 +1646,7 @@ void bAAdjustPosition(ViewTable* viewTab, int fx, int fy, byte entryNum)
 #endif // VERBOSE_MOVE
 
 
-		addY = (height == 0 ? 0 : b1Div(height , abs(height)));
+		addY = (height == 0 ? 0 : b1Div(height, abs(height)));
 
 #ifdef VERBOSE_MOVE
 		if (opCounter > 0x466D9 && entryNum == 0)
@@ -1688,15 +1706,15 @@ void bAAdjustPosition(ViewTable* viewTab, int fx, int fy, byte entryNum)
 
 		for (y = y1; (y != y2) && (count < (stepVal + 1)); y += addY, count++) {
 			dx = b1CeilFix32(x);
-			
+
 #ifdef VERBOSE_MOVE
 			if (opCounter > 0x466D9 && entryNum == 0)
 			{
-				printf("before ceil x is %lu and y is %lu\n", x,y);
+				printf("before ceil x is %lu and y is %lu\n", x, y);
 			}
 #endif
 			dy = b1CeilFix32(y);
-			x += addX;
+			xIsPos ? x += addX : x -= addX;
 
 #ifdef VERBOSE_MOVE
 			if (opCounter > 0x466D9 && entryNum == 0)
@@ -1729,7 +1747,7 @@ void bAAdjustPosition(ViewTable* viewTab, int fx, int fy, byte entryNum)
 			dx = b1CeilFix32(x);
 			dy = b1CeilFix32(y);
 		}
-	}
+		}
 
 	viewTab->xPos = dx;
 	viewTab->yPos = dy;
