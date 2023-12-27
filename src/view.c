@@ -835,6 +835,41 @@ void agiBlit(ViewTable* localViewTab, byte entryNum, boolean disableInterupts)
 }
 
 #pragma code-name (push, "BANKRAM09")
+#pragma code-name (push, "BANKRAM09")
+void b9ResetViewtabs()
+{
+	int entryNum;
+	byte i;
+	ViewTable localViewtab;
+
+	for (entryNum = 0; entryNum < VIEW_TABLE_SIZE; entryNum++) {
+		getViewTab(&localViewtab, entryNum);
+
+		localViewtab.stepTime = 1;
+		localViewtab.stepTimeCount = 1;
+		localViewtab.xPos = 0;
+		localViewtab.yPos = 0;
+		localViewtab.currentView = 0;
+		localViewtab.viewData = NULL;
+		localViewtab.currentLoop = 0;
+		localViewtab.numberOfLoops = 0;
+		localViewtab.loopData = NULL;
+		localViewtab.currentCel = 0;
+		localViewtab.numberOfCels = 0;
+		localViewtab.celData = NULL;
+		localViewtab.xsize = 0;
+		localViewtab.ysize = 0;
+		localViewtab.stepSize = 1;
+		localViewtab.cycleTime = 1;
+		localViewtab.cycleTimeCount = 1;
+		localViewtab.direction = 0;
+		localViewtab.motion = 0;
+		localViewtab.cycleStatus = 0;
+		localViewtab.priority = 0;
+		localViewtab.flags = 0;
+		setViewTab(&localViewtab, entryNum);
+	}
+}
 void b9Reset()
 {
 	bEResetSpritesUpdatedBuffer();
@@ -842,6 +877,7 @@ void b9Reset()
 	bEResetSpritePointers();
 	bEResetSpriteMemoryManager();
 	bEInitPaletteManager();
+	b9ResetViewtabs();
 	maxViewTable = 0;
 }
 void b9InitSpriteData()
@@ -873,40 +909,7 @@ void b9InitViews()
 
 void b9InitObjects()
 {
-	int entryNum;
-	byte i, j;
-	ViewTable localViewtab;
-
-	//spriteScreen = create_bitmap(160, 168);
-
-	for (entryNum = 0; entryNum < VIEW_TABLE_SIZE; entryNum++) {
-		getViewTab(&localViewtab, entryNum);
-
-		localViewtab.stepTime = 1;
-		localViewtab.stepTimeCount = 1;
-		localViewtab.xPos = 0;
-		localViewtab.yPos = 0;
-		localViewtab.currentView = 0;
-		localViewtab.viewData = NULL;
-		localViewtab.currentLoop = 0;
-		localViewtab.numberOfLoops = 0;
-		localViewtab.loopData = NULL;
-		localViewtab.currentCel = 0;
-		localViewtab.numberOfCels = 0;
-		localViewtab.celData = NULL;
-		localViewtab.xsize = 0;
-		localViewtab.ysize = 0;
-		localViewtab.stepSize = 1;
-		localViewtab.cycleTime = 1;
-		localViewtab.cycleTimeCount = 1;
-		localViewtab.direction = 0;
-		localViewtab.motion = 0;
-		localViewtab.cycleStatus = 0;
-		localViewtab.priority = 0;
-		localViewtab.flags = 0;
-		setViewTab(&localViewtab, entryNum);
-	}
-
+	b9ResetViewtabs();
 	memsetBanked(viewTableMetadata, NULL, sizeof(ViewTableMetadata) * SPRITE_SLOTS, SPRITE_METADATA_BANK);
 }
 
