@@ -2249,6 +2249,10 @@ void bBUpdateObjects()
 							if (celNum < 0) {
 								flag[localViewtab.param1] = 1;
 								/* localViewtab.flags &= ~CYCLING; */
+
+
+								localViewtab.cycleStatus = 0;
+								setViewTab(&localViewtab, entryNum);
 							}
 							else
 								b9SetCel(&localViewtab, celNum);
@@ -2258,6 +2262,9 @@ void bBUpdateObjects()
 							if (celNum < 0)
 								celNum = localViewtab.numberOfCels - 1;
 							b9SetCel(&localViewtab, celNum);
+							
+							localViewtab.cycleStatus = 0;
+							setViewTab(&localViewtab, entryNum);
 							break;
 						}
 						setViewTab(&localViewtab, entryNum);
