@@ -2201,8 +2201,8 @@ void bBUpdateObjects()
 	}
 
 	for (entryNum = 0; entryNum < VIEW_TABLE_SIZE; entryNum++) {
-		objFlags = localViewtab.flags;
 		getViewTab(&localViewtab, entryNum);
+		objFlags = localViewtab.flags;
 
 #ifdef VERBOSE_UPDATE_OBJECTS
 		printf("Checking entry num %d it has objFlags of %d \n", entryNum, objFlags);
