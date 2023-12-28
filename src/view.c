@@ -1475,12 +1475,10 @@ void bAUpdateEgoDirection(int oldX, int oldY, int newX, int newY, ViewTable* vie
 ***************************************************************************/
 void bAAdjustPosition(ViewTable* viewTab, int fx, int fy, byte entryNum)
 {
-	int height, width, count, stepVal, dx, dy, fp1;
+	int height, width, count, stepVal, dx, dy;
 	fix32 x, y, addX, addY, x1, y1, x2, y2;
 	int dummy;
 	boolean xIsPos = TRUE, yIsPos = TRUE;
-
-	fp1 = b1FpFromInt(1);
 
 	/* Set up start and end points */
 	x1 = b1FpFromInt(viewTab->xPos);
@@ -1553,7 +1551,7 @@ void bAAdjustPosition(ViewTable* viewTab, int fx, int fy, byte entryNum)
 			else
 				viewTab->direction = 5;
 		}
-		else if (!xIsPos && addX == fp1)
+		else if (!xIsPos && addX == b1FpFromInt(1))
 		{
 			if (!yIsPos)
 				viewTab->direction = 8;
@@ -1668,7 +1666,7 @@ void bAAdjustPosition(ViewTable* viewTab, int fx, int fy, byte entryNum)
 			else
 				viewTab->direction = 3;
 		}
-		else if (!yIsPos && addY == fp1)
+		else if (!yIsPos && addY == b1FpFromInt(1))
 		{
 			if (!xIsPos)
 				viewTab->direction = 8;
