@@ -618,10 +618,10 @@ void bESetLoop(ViewTable* localViewTab, ViewTableMetadata* localMetadata, View* 
 #ifdef VERBOSE_DEBUG_BLIT
 	printf("The address of the buffer is %p\n ", bEBulkAllocatedAddresses);
 	printf("loop vera is %p", loopVeraAddresses);
-	printf("Trying to copy to %p on bank %d from %p on bank %d number %d.", (byte*)loopVeraAddresses, localMetadata->viewTableMetadataBank, bEBulkAllocatedAddresses, SPRITE_METADATA_BANK, noToBlit * sizeof(long));
+	printf("Trying to copy to %p on bank %d from %p on bank %d number %d.", (byte*)loopVeraAddresses, localMetadata->viewTableMetadataBank, bEBulkAllocatedAddresses, SPRITE_METADATA_BANK, noToBlit * sizeof(VeraSpriteAddress));
 #endif
 	enableHelpersDebugging = TRUE;
-	memCpyBankedBetween((byte*)loopVeraAddresses, localMetadata->viewTableMetadataBank, bEBulkAllocatedAddresses, SPRITE_METADATA_BANK, noToBlit * sizeof(long));
+	memCpyBankedBetween((byte*)loopVeraAddresses, localMetadata->viewTableMetadataBank, bEBulkAllocatedAddresses, SPRITE_METADATA_BANK, noToBlit * sizeof(VeraSpriteAddress));
 	enableHelpersDebugging = FALSE;
 
 	memCpyBankedBetween(bEToBlitCelArray, SPRITE_METADATA_BANK, (byte*)localLoop.cels, localLoop.celsBank, localLoop.numberOfCels * sizeof(Cel));
@@ -1711,7 +1711,7 @@ void bAAdjustPosition(ViewTable* viewTab, int fx, int fy, byte entryNum)
 		}
 #endif // VERBOSE_MOVE
 
-		for (y = y1; (y != y2) && (count < (stepVal + 1)); y += addY, count++) {
+		for (y = y1; (y != y2) && (count < (stepVal + 1)); yIsPos ? y += addY : y -= addY, count++) {
 			dx = b1CeilFix32(x);
 
 #ifdef VERBOSE_MOVE
