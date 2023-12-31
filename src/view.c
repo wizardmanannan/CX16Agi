@@ -478,7 +478,7 @@ void bESwitchMetadata(ViewTable* localViewTab, View* localView, byte viewNum, by
 #endif //  VERBOSE_SWITCH_METADATA
 
 		
-		memsetBanked(localMetadata.inactive, NULL, sizeof(ViewTableMetadata), localMetadata.inactiveBank);
+		memsetBanked(localMetadata.inactive, NULL, MAX_INACTIVE_METADATA * sizeof(ViewTableMetadata), localMetadata.inactiveBank);
 	}
 
 	for (i = 0; i < MAX_INACTIVE_METADATA && !end; i++) //Search through the inactive metadata list and see if the view we are trying to switch to is already there. When we reach the end of the list or we reach an entry with null loop pointers we know it doesn't exist
