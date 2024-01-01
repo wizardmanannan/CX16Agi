@@ -17,21 +17,17 @@ SET_VERA_ADDRESS_IMMEDIATE (SPRITE_ATTR_START + SPRITE_ATTR_SIZE + 1), CHANNEL, 
 SPRITE_IRQ_HANDLER_INC = 1
 
 
-BYTES_PER_SPRITE_UPDATE = 7
-SPRITE_UPDATED_BUFFER_SIZE = VIEW_TABLE_SIZE * BYTES_PER_SPRITE_UPDATE * 2 ;Viewtab may be updated more than once, hence times two for safety
+BYTES_PER_SPRITE_UPDATE = 6
+SPRITE_UPDATED_BUFFER_SIZE = 256 ;Viewtab may be updated more than once, hence times two for safety
 
 .macro GET_NEXT_FROM_SPRITE_UPDATE_BUFFER noStore
 .local @continue
 
-lda (ZP_ADDRESS),y
+lda _bESpritesUpdatedBuffer,y
 iny
 .ifblank noStore
   sta VERA_data0
 .endif
-cpy #$0
-bne @continue
-jsr _bEGotoHighAddresses
-
 @continue:
 .endmacro
 
@@ -60,8 +56,7 @@ bne @outerLoop
 @end:
 .endmacro
 
-_bESpritesUpdatedBuffer: .res 256
-_bESpritesUpdatedBufferHigh: .byte SPRITE_UPDATED_BUFFER_SIZE - 256
+_bESpritesUpdatedBuffer: .res SPRITE_UPDATED_BUFFER_SIZE
 _bESpritesUpdatedBufferPointer: .word _bESpritesUpdatedBuffer
 
 ;void bEClearSpriteAttributes()
@@ -89,19 +84,6 @@ ZP_SPR_ATTR_SIZE = ZP_TMP_5
 ZP_LOW_BYTE = ZP_TMP_5 + 1
 ZP_ADDRESS = ZP_TMP_6
 
-_bEGotoHighAddresses:
-clc
-lda ZP_ADDRESS
-adc #$FF
-sta ZP_ADDRESS
-lda ZP_ADDRESS + 1
-adc #0
-sta ZP_ADDRESS + 1
-
-ldy #$0
-
-rts
-
 bEHandleSpriteUpdates:
 
 lda _bESpritesUpdatedBufferPointer
@@ -118,11 +100,6 @@ jmp @end
 CLEAR_SPRITE_ATTRS _maxViewTable
 
 SET_VERA_START_SPRITE_ATTRS #$0, #$1
-
-lda #< _bESpritesUpdatedBuffer
-sta ZP_ADDRESS
-lda #> _bESpritesUpdatedBuffer
-sta ZP_ADDRESS + 1
 
 @loop:
 GET_NEXT_FROM_SPRITE_UPDATE_BUFFER ;Address 12:5 0 (buffer 0)
