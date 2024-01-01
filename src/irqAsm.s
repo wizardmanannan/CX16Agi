@@ -142,6 +142,11 @@ lda VERA_isr
 and #VSYNC_BIT
 beq @defaultIqr
 
+@handleSpriteUpdates:
+lda #SPRITE_UPDATES_BANK
+sta RAM_BANK
+jsr bEHandleSpriteUpdates
+
 lda sendIrqCommand
 tax
 
@@ -183,13 +188,8 @@ sta sendIrqCommand
 
 @vSyncCounter:
 inc _vSyncCounter
-bne @handleSpriteUpdates
+bne @defaultIqr
 inc _vSyncCounter + 1
-
-@handleSpriteUpdates:
-lda #SPRITE_UPDATES_BANK
-sta RAM_BANK
-jsr bEHandleSpriteUpdates
 
 @defaultIqr:
 lda @previousRamBank
