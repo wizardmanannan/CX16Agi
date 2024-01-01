@@ -37,7 +37,7 @@
 //#define VERBOSE_ADD_TO_PIC;
 //#define VERBOSE_DEBUG_NO_BLIT_CACHE TODO: Weird print statement corruption fix
 
-#define BYTES_PER_SPRITE_UPDATE 7
+#define BYTES_PER_SPRITE_UPDATE 6
 #define SPRITE_UPDATED_BUFFER_SIZE  VIEW_TABLE_SIZE * BYTES_PER_SPRITE_UPDATE * 2
 extern byte bESpritesUpdatedBuffer[SPRITE_UPDATED_BUFFER_SIZE];
 extern byte* bESpritesUpdatedBufferPointer;
@@ -800,11 +800,7 @@ void agiBlit(ViewTable* localViewTab, byte entryNum, boolean disableInterupts)
 
 	asm("sta (%w),y", ZP_SPRITE_STORE_PTR);
 
-	asm("ldy #$6");
-	asm("lda #$0"); //TODO: Will be the reblit flag, zero for now will revisit
-	asm("sta (%w),y", ZP_SPRITE_STORE_PTR);
-
-	asm("ldy #$7"); //Stop
+	asm("ldy #$6"); //Stop
 	asm("lda #$0");
 	asm("sta (%w),y", ZP_SPRITE_STORE_PTR);
 	asm("iny");

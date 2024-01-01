@@ -76,7 +76,6 @@ rts
 ;3 x high
 ;4 y
 ;5 Sprite Attr Size/Palette Offset
-;6 Reblit on IRQ
 
 .import _viewSeen
 
@@ -122,8 +121,6 @@ lda #$8 ; Collision Z Lvl 2 and Flip 6 (8 means in front of bitmap but behind te
 sta VERA_data0
 
 GET_NEXT_FROM_SPRITE_UPDATE_BUFFER ;Sprite Attr Size 7 (buffer 5)
-
-GET_NEXT_FROM_SPRITE_UPDATE_BUFFER #$1 ;Reblit (buffer 6) Reblit ignore for now
 
 bra @loop
 @addressReset:
