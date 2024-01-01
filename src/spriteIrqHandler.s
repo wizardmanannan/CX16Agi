@@ -6,8 +6,12 @@
 
 .segment "BANKRAM0E"
 
-.macro SET_VERA_START_SPRITE_ATTRS
-SET_VERA_ADDRESS_IMMEDIATE (SPRITE_ATTR_START + SPRITE_ATTR_SIZE), #$0, #$1 ;Skips first which is for mouse
+.macro SET_VERA_START_SPRITE_ATTRS CHANNEL, STRIDE
+SET_VERA_ADDRESS_IMMEDIATE (SPRITE_ATTR_START + SPRITE_ATTR_SIZE), CHANNEL, STRIDE ;Skips first which is for mouse
+.endmacro
+
+.macro SET_VERA_START_SPRITE_ATTRS_HIGH CHANNEL, STRIDE ;Starts on the first high byte address of the first sprite attribute
+SET_VERA_ADDRESS_IMMEDIATE (SPRITE_ATTR_START + SPRITE_ATTR_SIZE + 1), CHANNEL, STRIDE ;Skips first which is for mouse
 .endmacro
 
 SPRITE_IRQ_HANDLER_INC = 1
@@ -39,23 +43,18 @@ jsr _bEGotoHighAddresses
 .local @innerLoopCheck
 .local @end
 
-ldx NO_TO_CLEAR
+ldy NO_TO_CLEAR
 beq @end
 
-SET_VERA_START_SPRITE_ATTRS
+SET_VERA_START_SPRITE_ATTRS #$0, #$4
+SET_VERA_START_SPRITE_ATTRS_HIGH #$1, #$4
 
 @outerLoop:
-ldy #SPRITE_ATTR_SIZE
-@innerLoop:
 stz VERA_data0
-
-
-@innerLoopCheck:
-dey
-bne @innerLoop
+stz VERA_data1
 
 @outerLoopCheck:
-dex 
+dey
 bne @outerLoop
 
 @end:
@@ -118,7 +117,7 @@ jmp @end
 @start:
 CLEAR_SPRITE_ATTRS _maxViewTable
 
-SET_VERA_START_SPRITE_ATTRS
+SET_VERA_START_SPRITE_ATTRS #$0, #$1
 
 lda #< _bESpritesUpdatedBuffer
 sta ZP_ADDRESS
