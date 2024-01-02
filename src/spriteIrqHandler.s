@@ -98,7 +98,7 @@ jmp @end
 @start:
 CLEAR_SPRITE_ATTRS _maxViewTable
 
-SET_VERA_START_SPRITE_ATTRS #$0, #$1
+SET_VERA_START_SPRITE_ATTRS #$0, #$1 ; Sets VERA channel 0 to the start of the sprites attributes table with a stride of 1
 
 @loop:
 GET_NEXT_FROM_SPRITE_UPDATE_BUFFER ;Address 12:5 0 (buffer 0)
