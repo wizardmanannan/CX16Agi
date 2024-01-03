@@ -11,17 +11,32 @@ sei
 lda command
 sta sendIrqCommand
 lda _vSyncCounter
+ldx _vSyncCounter + 1
 sta vSyncToCheck
 cli
 .endmacro
 
 .macro WAIT_FOR_NEXT_IRQ vSyncToCheck
-.local @waitForBlank
-@waitForBlank: ;May as well just busy wait wai will just take extra cycles, and we aren't going anywhere until the vSync happens and the counter increments
-lda vSyncToCheck
-cmp _vSyncCounter
-beq @waitForBlank
+.local @waitForIrq
+.local @end
+php
 
+sei
+lda vSyncToCheck
+ldx vSyncToCheck + 1
+
+@waitForIrq:
+cli
+wai
+
+sei
+cmp _vSyncCounter
+bne @end
+cpx _vSyncCounter + 1
+beq @waitForIrq
+
+@end:
+plp
 .endmacro
 
 ;Handlers
@@ -106,7 +121,7 @@ SEND_IRQ_COMMAND @state, @vSyncToCheck
 WAIT_FOR_NEXT_IRQ @vSyncToCheck
 rts
 @state: .byte $0
-@vSyncToCheck: .byte $0
+@vSyncToCheck: .word $0
 
 .segment "CODE"
 IRQ_CMD_DONTCHANGE = 0

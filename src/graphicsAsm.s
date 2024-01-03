@@ -391,6 +391,6 @@ TRAMPOLINE #SPRITE_UPDATES_BANK, _bEClearSpriteAttributes
 
 jsr _b6DisplayLoadingScreen
 rts
-@vSyncToCheck: .byte $0
+@vSyncToCheck: .word $0
 
 .endif
