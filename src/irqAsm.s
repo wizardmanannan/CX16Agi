@@ -206,6 +206,9 @@ inc _vSyncCounter
 bne @defaultIqr
 inc _vSyncCounter + 1
 
+lda #(VSYNC_BIT)
+sta VERA_isr ; reset latches
+
 @defaultIqr:
 lda @previousRamBank
 sta RAM_BANK
