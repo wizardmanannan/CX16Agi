@@ -19,7 +19,6 @@ cli
 .macro WAIT_FOR_NEXT_IRQ vSyncToCheck
 .local @waitForIrq
 .local @end
-php
 
 sei
 lda vSyncToCheck
@@ -36,7 +35,7 @@ cpx _vSyncCounter + 1
 beq @waitForIrq
 
 @end:
-plp
+cli
 .endmacro
 
 ;Handlers
@@ -203,9 +202,10 @@ sta sendIrqCommand
 
 @vSyncCounter:
 inc _vSyncCounter
-bne @defaultIqr
+bne @resetLatches
 inc _vSyncCounter + 1
 
+@resetLatches:
 lda #(VSYNC_BIT)
 sta VERA_isr ; reset latches
 
