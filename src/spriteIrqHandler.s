@@ -6,12 +6,8 @@
 
 .segment "BANKRAM0E"
 
-.macro SET_VERA_START_SPRITE_ATTRS CHANNEL, STRIDE
-SET_VERA_ADDRESS_IMMEDIATE (SPRITE_ATTR_START + SPRITE_ATTR_SIZE), CHANNEL, STRIDE ;Skips first which is for mouse
-.endmacro
-
-.macro SET_VERA_START_SPRITE_ATTRS_HIGH CHANNEL, STRIDE ;Starts on the first high byte address of the first sprite attribute
-SET_VERA_ADDRESS_IMMEDIATE (SPRITE_ATTR_START + SPRITE_ATTR_SIZE + 1), CHANNEL, STRIDE ;Skips first which is for mouse
+.macro SET_VERA_START_SPRITE_ATTRS CHANNEL, STRIDE, OFFSET
+SET_VERA_ADDRESS_IMMEDIATE (SPRITE_ATTR_START + SPRITE_ATTR_SIZE + OFFSET), CHANNEL, STRIDE ;Skips first which is for mouse
 .endmacro
 
 SPRITE_IRQ_HANDLER_INC = 1
@@ -42,8 +38,8 @@ iny
 ldy NO_TO_CLEAR
 beq @end
 
-SET_VERA_START_SPRITE_ATTRS #$0, #$4
-SET_VERA_START_SPRITE_ATTRS_HIGH #$1, #$4
+SET_VERA_START_SPRITE_ATTRS #$0, #$4, SP_VERA_ADDRESS_LOW ;Set VERA channel 0 to the start of the sprites attributes table with a stride of 4
+SET_VERA_START_SPRITE_ATTRS #$1, #$4, SP_VERA_ADDRESS_LOW + 1 ;Set VERA channel 1 to the start of the sprites attributes table + 1 with a stride of 4
 
 @outerLoop:
 stz VERA_data0
@@ -85,7 +81,7 @@ ZP_ADDRESS = ZP_TMP_6
 
 bEHandleSpriteUpdates:
 
-lda _bESpritesUpdatedBufferPointer
+lda _bESpritesUpdatedBufferPointer ; If there is nothing in the buffer do nothing, leave the sprites as is
 cmp #< _bESpritesUpdatedBuffer
 bne @start
 lda _bESpritesUpdatedBufferPointer + 1
@@ -98,7 +94,7 @@ jmp @end
 @start:
 CLEAR_SPRITE_ATTRS _maxViewTable
 
-SET_VERA_START_SPRITE_ATTRS #$0, #$1 ; Sets VERA channel 0 to the start of the sprites attributes table with a stride of 1
+SET_VERA_START_SPRITE_ATTRS #$0, #$1, SP_VERA_ADDRESS_LOW ; Sets VERA channel 0 to the start of the sprites attributes table with a stride of 1
 
 @loop:
 GET_NEXT_FROM_SPRITE_UPDATE_BUFFER ;Address 12:5 0 (buffer 0)
