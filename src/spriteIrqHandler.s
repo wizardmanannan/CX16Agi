@@ -38,11 +38,10 @@ iny
 ldy NO_TO_CLEAR
 beq @end
 
-SET_VERA_START_SPRITE_ATTRS #$0, #$4, SP_VERA_ADDRESS_LOW ;Set VERA channel 0 to the start of the sprites attributes table with a stride of 4
-SET_VERA_START_SPRITE_ATTRS #$1, #$4, SP_VERA_ADDRESS_LOW + 1 ;Set VERA channel 1 to the start of the sprites attributes table + 1 with a stride of 4
+SET_VERA_START_SPRITE_ATTRS #$0, #4, SA_VERA_ZORDER ;Set VERA channel 0 to first zorder attribute with a stride of 4.
 
 @outerLoop:
-stz VERA_data0
+stz VERA_data0 ; A zorder of zero means disabled
 stz VERA_data1
 
 @outerLoopCheck:
@@ -94,7 +93,7 @@ jmp @end
 @start:
 CLEAR_SPRITE_ATTRS _maxViewTable
 
-SET_VERA_START_SPRITE_ATTRS #$0, #$1, SP_VERA_ADDRESS_LOW ; Sets VERA channel 0 to the start of the sprites attributes table with a stride of 1
+SET_VERA_START_SPRITE_ATTRS #$0, #$1, SA_VERA_ADDRESS_LOW ; Sets VERA channel 0 to the start of the sprites attributes table with a stride of 1
 
 @loop:
 GET_NEXT_FROM_SPRITE_UPDATE_BUFFER ;Address 12:5 0 (buffer 0)
