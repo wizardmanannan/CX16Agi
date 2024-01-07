@@ -13,6 +13,6 @@ void b6InitVeraMemory()
 	{
 		WRITE_BYTE_DEF_TO_ASSM(0, VERA_data0);
 	}
-	 asm("cli");
+	 REENABLE_INTERRUPTS();
 }
 #pragma code-name (pop);

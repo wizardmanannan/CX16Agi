@@ -655,4 +655,10 @@ txa
 pla
 .endmacro
 
+.macro REENABLE_INTERRUPTS
+ lda VSYNC_BIT
+ sta VERA_isr
+ cli
+.endmacro
+
 .endif

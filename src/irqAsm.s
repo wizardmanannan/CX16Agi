@@ -13,7 +13,7 @@ sta sendIrqCommand
 lda _vSyncCounter
 ldx _vSyncCounter + 1
 sta vSyncToCheck
-cli
+REENABLE_INTERRUPTS
 .endmacro
 
 .macro WAIT_FOR_NEXT_IRQ vSyncToCheck
@@ -25,7 +25,7 @@ lda vSyncToCheck
 ldx vSyncToCheck + 1
 
 @waitForIrq:
-cli
+REENABLE_INTERRUPTS
 wai
 
 sei
@@ -35,7 +35,7 @@ cpx _vSyncCounter + 1
 beq @waitForIrq
 
 @end:
-cli
+REENABLE_INTERRUPTS
 .endmacro
 
 ;Handlers
@@ -111,7 +111,7 @@ _b6InitIrq:
    sta IRQVec+1
    lda #VSYNC_BIT ; make VERA only generate VSYNC IRQs
    sta VERA_ien
-   cli ; enable IRQ now that vector is properly set
+   REENABLE_INTERRUPTS ; enable IRQ now that vector is properly set
 rts
 
 _b6SetAndWaitForIrqStateAsm:

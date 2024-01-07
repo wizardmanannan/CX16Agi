@@ -286,7 +286,7 @@ void b6Initialise()
 
     asm("sei");
     b6InitGraphics();
-    asm("cli");
+    REENABLE_INTERRUPTS();
 
     horizon = 36;
 

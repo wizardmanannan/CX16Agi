@@ -13,6 +13,7 @@
 #include "spriteMemoryManager.h"
 #include "paletteManager.h"
 #include "helpers.h"
+#include "irq.h"
 
 #define MAXVIEW  256
 #define MAX_JOINED_SPRITES 6

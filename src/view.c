@@ -441,7 +441,7 @@ byte bECreateSpritePalette(byte transparentColor)
 		}
 
 		SET_VERA_ADDRESS(PALETTE_START, 0, 1); //Setting back to channel zero as if we don't printf can screw up our memory. This is a possible framework bug
-		asm("cli");
+		REENABLE_INTERRUPTS();
 	}
 
 	return paletteSlot;
@@ -810,7 +810,7 @@ void agiBlit(ViewTable* localViewTab, byte entryNum, boolean disableInterupts)
 
 	if (disableInterupts)
 	{
-		asm("cli");
+		REENABLE_INTERRUPTS();
 	}
 
 	//for (i = 0; i < w; i++) {
@@ -2295,7 +2295,7 @@ void bBUpdateObjects()
 
 		setViewTab(&localViewtab, entryNum);
 	}
-	asm("cli");
+	REENABLE_INTERRUPTS();
 
 	show_mouse(NULL);
 	stretch_sprite(agi_screen, spriteScreen, 0, 0, 640, 336);
@@ -2468,7 +2468,7 @@ void bCupdateObjects2()
 
 		setViewTab(&localViewtab, entryNum);
 	}
-	asm("cli");
+	REENABLE_INTERRUPTS();
 
 	b6ShowPicture();
 }

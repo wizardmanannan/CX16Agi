@@ -21,4 +21,16 @@ extern void b6SetAndWaitForIrqStateAsm(IRQ_COMMAND state);
 #pragma wrapped-call (push, trampoline, IRQ_BANK)
 extern void b6SetAndWaitForIrqState(IRQ_COMMAND state);
 #pragma wrapped-call (pop)
+
+#define VSYNC_BIT 1
+#define VERA_ISR 0x9F27
+
+#define REENABLE_INTERRUPTS() \
+do { \
+    asm("lda #%w", VSYNC_BIT); \
+    asm("sta %w", VERA_ISR); \
+    asm("cli"); \
+  \
+} while (0);
+
 #endif

@@ -206,7 +206,7 @@ void b6InitLayer1Mapbase()
 	b6TestCharset();
 #endif // TEST_CHARSET
 
-	asm("cli");
+	REENABLE_INTERRUPTS();
 }
 
 #pragma code-name (pop)
@@ -411,7 +411,7 @@ void b3DisplayMessageBox(char* message, byte messageBank, byte row, byte col, by
 		{
 			WRITE_BYTE_VAR_TO_ASSM(paletteByte, VERA_data0);
 		}
-		asm("cli");
+		REENABLE_INTERRUPTS();
 		////TODO: Doesn't return anything but I don't want to add any more trampoline methods. Come up with a more memory efficient way of handling this then constanting adding them
 
 		b6SetAndWaitForIrqState(DISPLAY_TEXT);

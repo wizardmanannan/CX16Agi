@@ -3,6 +3,7 @@
 
 #include "graphics.h"
 #include "helpers.h"
+#include "irq.h"
 
 //must be constants
 #define SET_VERA_ADDRESS(VeraAddress, AddressSel, Stride) \
@@ -34,6 +35,6 @@
 		asm("sta %w", VERA_addr_high); \
 	} while (0);
 
-#endif
-
 typedef unsigned int VeraSpriteAddress; //actually three bytes lower byte is always zero, so we don't store that
+
+#endif
