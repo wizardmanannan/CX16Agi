@@ -37,7 +37,7 @@
 //#define VERBOSE_ADD_TO_PIC;
 //#define VERBOSE_DEBUG_NO_BLIT_CACHE TODO: Weird print statement corruption fix
 
-#define BYTES_PER_SPRITE_UPDATE 6
+#define BYTES_PER_SPRITE_UPDATE 7
 #define SPRITE_UPDATED_BUFFER_SIZE  VIEW_TABLE_SIZE * BYTES_PER_SPRITE_UPDATE * 2
 extern byte bESpritesUpdatedBuffer[SPRITE_UPDATED_BUFFER_SIZE];
 extern byte* bESpritesUpdatedBufferPointer;
@@ -771,9 +771,13 @@ void agiBlit(ViewTable* localViewTab, byte entryNum, boolean disableInterupts)
 
 	asm("sec"); //Take away the height, as position in agi is the bottom left corner
 	asm("sbc %v", _assmByte2);
-
 	asm("sta (%w),y", ZP_SPRITE_STORE_PTR);
 
+	_assmUInt = (byte)localCel.flipped;
+	asm("ldy #$5");
+	asm("lda %v", _assmUInt);
+	asm("ora #8"); //8 means in front of bitmap but behind text layers and not flipped, with a zero collision mask)
+	asm("sta (%w),y", ZP_SPRITE_STORE_PTR);
 
 	if (localLoop.allocationSize == SIZE_32)
 	{
@@ -785,7 +789,7 @@ void agiBlit(ViewTable* localViewTab, byte entryNum, boolean disableInterupts)
 	}
 	_assmByte2 = localLoop.palette;
 
-	asm("ldy #$5");
+	asm("ldy #$6");
 	asm("lda %v", _assmByte);
 	asm("asl");
 	asm("asl");
@@ -800,7 +804,7 @@ void agiBlit(ViewTable* localViewTab, byte entryNum, boolean disableInterupts)
 
 	asm("sta (%w),y", ZP_SPRITE_STORE_PTR);
 
-	asm("ldy #$6"); //Stop
+	asm("ldy #$7"); //Stop
 	asm("lda #$0");
 	asm("sta (%w),y", ZP_SPRITE_STORE_PTR);
 	asm("iny");

@@ -70,7 +70,8 @@ rts
 ;2 x low
 ;3 x high
 ;4 y
-;5 Sprite Attr Size/Palette Offset
+;5 Flipped
+;6 Sprite Attr Size/Palette Offset
 
 .import _viewSeen
 
@@ -112,10 +113,9 @@ GET_NEXT_FROM_SPRITE_UPDATE_BUFFER ;Y Low 4 (buffer 4)
 
 stz VERA_data0 ;Y High 5 Always 0
 
-lda #$8 ; Collision Z Lvl 2 and Flip 6 (8 means in front of bitmap but behind text layers and not flipped, with a zero collision mask)
-sta VERA_data0
+GET_NEXT_FROM_SPRITE_UPDATE_BUFFER ; 6 Collison ZDepth and Flip (buffer 5)
 
-GET_NEXT_FROM_SPRITE_UPDATE_BUFFER ;Sprite Attr Size 7 (buffer 5)
+GET_NEXT_FROM_SPRITE_UPDATE_BUFFER ;Sprite Attr Size 7 (buffer 6)
 
 bra @loop
 @addressReset:
