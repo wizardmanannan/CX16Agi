@@ -727,8 +727,11 @@ void agiBlit(ViewTable* localViewTab, byte entryNum, boolean disableInterupts)
 	WRITE_INT_VAR_TO_ASSM((unsigned int)bESpritesUpdatedBufferPointer, ZP_SPRITE_STORE_PTR);
 
 
+	//Put bytes into a buffer to be picked up by the irq see spriteIrqHandler.s (bEHandleSpriteUpdates)
+
 	_assmUInt = loopVeraAddress;
 
+	//0 Vera Address Sprite Data Middle (Low will always be 0) (If both the first two bytes are zero that indicates the end of the buffer)
 	asm("lda %v", _assmUInt);
 	asm("and #$1F"); //Gets you the address bits 12:8 Which are the parts of the medium byte we need
 	asm("asl"); //Gets bits 5:7 which are always zero
@@ -736,6 +739,7 @@ void agiBlit(ViewTable* localViewTab, byte entryNum, boolean disableInterupts)
 	asm("asl");
 	asm("sta (%w)", ZP_SPRITE_STORE_PTR);
 
+	//1 Vera Address Sprite Data High
 	asm("lda %v", _assmUInt);
 	asm("and #$E0");
 	asm("lsr");
@@ -749,18 +753,64 @@ void agiBlit(ViewTable* localViewTab, byte entryNum, boolean disableInterupts)
 	asm("@store: ldy #$1");
 	asm("sta (%w),y", ZP_SPRITE_STORE_PTR);
 
+	//2 x low
 	_assmUInt = (byte)localViewTab->xPos;
+	_assmByte = localCel.flipped;
 	asm("ldy #$2");
 	asm("lda %v", _assmUInt);
 	asm("clc");
 	asm("asl");
+	asm("ldx %v", _assmByte);
+	asm("bne @storeOnStackLow");
 	asm("sta (%w),y", ZP_SPRITE_STORE_PTR);
-	asm("lda #$0");
+	asm("bra @calculateHigh");
+	asm("@storeOnStackLow: pha");
+
+	//;3 x high
+	asm("@calculateHigh: lda #$0");
 	asm("rol");
+	asm("ldy #$3");
+	asm("cpx #$0");
+	asm("bne @storeOnStackHigh");
+	asm("sta (%w),y", ZP_SPRITE_STORE_PTR);
+	asm("bra %g", yPos);
+	asm("@storeOnStackHigh: pha");
+
+//x low and high if flipped (used in addition to what is above, if flipped the code above will put x on the stack so that further calculation can be done below)
+moveXDueToFlipped:
+	_assmByte = localCel.width;
+	_assmByte2 = localLoop.allocationSize;	
+
+	asm("lda %v", _assmByte);
+	asm("asl");
+	asm("sta %v", _assmByte);
+
+	asm("lda %v", _assmByte2);
+	asm("cmp #%w", SIZE_32);
+	asm("bne @load64");
+	asm("lda #%w", MAX_32_WIDTH_OR_HEIGHT);
+	asm("bra @takeWidthFromMaxWidth");
+	asm("@load64: lda #%w", MAX_64_WIDTH_OR_HEIGHT);
+	
+	asm("@takeWidthFromMaxWidth: sec");
+	asm("sbc %v", _assmByte); //Can't unset carry as we expect only 8 bit subtraction
+	asm("sta %v", _assmByte);
+	
+	asm("pla");
+	asm("tax");
+	asm("pla");
+
+	asm("sbc %v", _assmByte);
+	asm("ldy #$2");
+	asm("sta (%w),y", ZP_SPRITE_STORE_PTR);
+
+	asm("txa");
+	asm("sbc #$0");//Max width is only 8 bit
 	asm("ldy #$3");
 	asm("sta (%w),y", ZP_SPRITE_STORE_PTR);
 
-	_assmByte = (byte)localViewTab->yPos;
+//4 y low (x high is always zero)
+	yPos: _assmByte = (byte)localViewTab->yPos;
 	_assmByte2 = localCel.height - 1;
 
 	asm("ldy #$4");
@@ -773,6 +823,7 @@ void agiBlit(ViewTable* localViewTab, byte entryNum, boolean disableInterupts)
 	asm("sbc %v", _assmByte2);
 	asm("sta (%w),y", ZP_SPRITE_STORE_PTR);
 
+//5 Flipped
 	_assmUInt = (byte)localCel.flipped;
 	asm("ldy #$5");
 	asm("lda %v", _assmUInt);
@@ -789,6 +840,7 @@ void agiBlit(ViewTable* localViewTab, byte entryNum, boolean disableInterupts)
 	}
 	_assmByte2 = localLoop.palette;
 
+//6 Sprite Attr Size/Palette Offset
 	asm("ldy #$6");
 	asm("lda %v", _assmByte);
 	asm("asl");
