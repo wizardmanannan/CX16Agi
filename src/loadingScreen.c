@@ -19,10 +19,15 @@ void b6DisplayLoadingScreen()
 	}
 }
 
+#pragma wrapped-call (push, trampoline, VIEW_CODE_BANK_3)
+extern void bBUpdateObjects();
+#pragma wrapped-call (pop)
+
 void b6DismissLoadingScreen()
 {
 	if (loadingScreenDisplayed)
 	{
+		bBUpdateObjects();
 		b6SetAndWaitForIrqStateAsm(BLANK_SCREEN);
 		b6InitLayer1Mapbase();
 		b6SetAndWaitForIrqStateAsm(NORMAL);
