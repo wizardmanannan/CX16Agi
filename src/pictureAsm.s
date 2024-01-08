@@ -7,6 +7,7 @@ PICTURE_INC = 1
 .include "global.s"
 .include "graphicsAsm.s"
 .include "helpersAsm.s"
+.include "floatDivisionAsm.s"
 
 
 .import _picColour
@@ -312,7 +313,7 @@ _okToFillDebuggerCheckPoint: .word $0 ; Never used but needed to make the macro 
 .local @checkYBounds
 ;DEBUG_PREPIXEL_DRAW
 
-SET_VERA_ADDRESS_PICTURE_ADDRESS address, #$0
+SET_VERA_ADDRESS address, #$0
 
 lda VERA_data0
 cmp #$FF
@@ -408,26 +409,6 @@ lda _drawWhere + 1
 sta VERA_addr_high
 
 lda _drawWhere
-sta VERA_addr_low
-
-.endmacro
-
-.macro SET_VERA_ADDRESS_PICTURE_ADDRESS address, stride
-.ifnblank stride
-lda stride << 4
-.endif
-.ifblank stride
-lda #$10 ;High byte of address will always be 0
-.endif
-
-stz VERA_ctrl
-
-sta VERA_addr_bank ;High byte of address will always be 0
-
-lda address + 1
-sta VERA_addr_high
-
-lda address
 sta VERA_addr_low
 
 .endmacro
@@ -796,127 +777,6 @@ bra @loop
 @end:
 .endmacro
 
-
-ZP_DIV_AREA = ZP_TMP_2
-ZP_DIV_BANK = ZP_TMP_23
-ZP_DIV_ADDR = ZP_TMP_24 
-_floatDivision:
-bra @start
-@numerator: .word $0 ; Even though numerator is only one byte we double it for address looked up
-@denominator: .word $0 ; Even though denominator is only one byte we double it for address looked up
-@originalZPCh: .word $0 ;For Division Bank Table
-@originalZPDisp: .word $0 ;For Division Address Table
-@previousRamBank: .byte $0
-@start:
-dec
-dec
-sta @denominator
-
-jsr popa
-dec
-sta @numerator
-
-lda RAM_BANK
-sta @previousRamBank
-
-lda ZP_DIV_BANK
-sta @originalZPCh
-lda ZP_DIV_BANK+1
-sta @originalZPCh+1
-
-lda ZP_DIV_ADDR
-sta @originalZPDisp
-lda ZP_DIV_ADDR+1
-sta @originalZPDisp+1
-
-lda @numerator
-clc
-adc ZP_DIV_BANK
-sta ZP_DIV_BANK
-lda #$0
-adc ZP_DIV_BANK + 1
-sta ZP_DIV_BANK + 1
-
-lda #DIVISION_METADATA_BANK
-sta RAM_BANK
-
-lda (ZP_DIV_BANK)
-tax
-
-lda @originalZPCh
-sta ZP_DIV_BANK
-
-lda @originalZPCh + 1
-sta ZP_DIV_BANK + 1
-
-
-lda @numerator
-clc
-asl 
-sta @numerator
-lda #$0 ; always zero
-rol
-sta @numerator+1
-
-lda @numerator
-clc
-adc ZP_DIV_ADDR
-sta ZP_DIV_ADDR
-lda @numerator+1
-adc ZP_DIV_ADDR + 1
-sta ZP_DIV_ADDR + 1
-
-lda (ZP_DIV_ADDR)
-sta ZP_DIV_AREA
-ldy #$1
-lda (ZP_DIV_ADDR),y
-sta ZP_DIV_AREA+1
-
-lda @originalZPDisp
-sta ZP_DIV_ADDR
-lda @originalZPDisp + 1
-sta ZP_DIV_ADDR + 1
-
-lda @denominator
-pha
-clc
-asl 
-sta @denominator
-lda #$0 ; always zero
-rol
-sta @denominator+1
-
-pla
-clc
-adc @denominator
-sta @denominator
-lda #$0
-adc @denominator+1
-sta @denominator+1
-
-lda @denominator
-clc
-adc ZP_DIV_AREA
-sta ZP_DIV_AREA
-lda @denominator+1
-adc ZP_DIV_AREA+1
-sta ZP_DIV_AREA+1
-
-stx RAM_BANK
-stz sreg + 1
-ldy #$1
-lda (ZP_DIV_AREA),y
-tax
-ldy #$2
-lda (ZP_DIV_AREA),y
-sta sreg
-lda (ZP_DIV_AREA)
-
-ldy @previousRamBank
-sty RAM_BANK
-
-rts
-
 .segment "BANKRAM05"
 _b5DebugPixelDrawAddressAsm:
 sta _logDebugVal1
@@ -1102,8 +962,8 @@ rts
 ;     }
 ; }
 ;This won't fit on the picture bank
-.segment "BANKRAM02"
-_b2DrawStraightLineAlongY: 
+.segment "BANKRAM04"
+_b4DrawStraightLineAlongY: 
 nop
 nop
 nop
@@ -1122,7 +982,7 @@ DRAW_LINE_BETWEEN ZP_TMP_6, ZP_TMP_7
 @end:
 rts
 
-_b2DrawStraightLineAlongX:
+_b4DrawStraightLineAlongX:
 sta ZP_TMP_5 ;y1 The C which calls this function may invert it's own y1 and y2 depending on which is larger
 jsr popax
 sta ZP_TMP_7 ;x2

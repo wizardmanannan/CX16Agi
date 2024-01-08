@@ -613,7 +613,7 @@ void b2Unanimate_all() // 0, 0x00
 	ViewTable localViewtab;
 
 	/* Mark all objects as unanimated and not drawn */
-	for (entryNum = 0; entryNum < TABLESIZE; entryNum++)
+	for (entryNum = 0; entryNum < VIEW_TABLE_SIZE; entryNum++)
 	{
 		getViewTab(&localViewtab, entryNum);
 
@@ -651,10 +651,7 @@ void b2Erase() // 1, 0x00
 
 	entryNum = loadAndIncWinCode();
 	getViewTab(&localViewtab, entryNum);
-
-
 	localViewtab.flags &= ~DRAWN;
-
 	setViewTab(&localViewtab, entryNum);
 	return;
 }
@@ -734,7 +731,7 @@ void b2Set_view() // 2, 0x00
 
 	getViewTab(&localViewtab, entryNum);
 
-	b9AddViewToTable(&localViewtab, viewNum);
+	b9AddViewToTable(&localViewtab, viewNum, entryNum);
 
 	setViewTab(&localViewtab, entryNum);
 	return;
@@ -750,7 +747,7 @@ void b2Set_view_v() // 2, 0x40
 
 	getViewTab(&localViewtab, entryNum);
 
-	b9AddViewToTable(&localViewtab, viewNum);
+	b9AddViewToTable(&localViewtab, viewNum, entryNum);
 
 	getViewTab(&localViewtab, entryNum);
 	return;
@@ -1020,7 +1017,7 @@ void b2Force_update() // 1, 0x00
 	entryNum = loadAndIncWinCode();
 	/* Do immediate update here. Call update(entryNum) */
 
-	bAUpdateObj(entryNum);
+	bBUpdateObj(entryNum);
 	return;
 }
 
@@ -1969,7 +1966,7 @@ void b4Random_num() // 3, 0x20  random() renamed to avoid clash
 
 	startValue = loadAndIncWinCode();
 	endValue = loadAndIncWinCode();
-	var[loadAndIncWinCode()] = 4;  (rand() % ((endValue - startValue) + 1)) + startValue;
+	var[loadAndIncWinCode()] = (rand() % ((endValue - startValue) + 1)) + startValue;
 	return;
 }
 

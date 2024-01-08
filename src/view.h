@@ -10,18 +10,33 @@
 #include "memoryManager.h"
 #include "agifiles.h"
 #include "picture.h"
+#include "spriteMemoryManager.h"
+#include "paletteManager.h"
+#include "helpers.h"
+#include "irq.h"
 
-typedef struct {
+#define MAXVIEW  256
+#define MAX_JOINED_SPRITES 6
+#define MAX_SPRITES_ROW_OR_COLUMN_SIZE 4
+
+typedef struct Cel {
 	byte width;
 	byte height;
 	byte transparency;
-	BITMAP* bmp;
+	byte* bmp;
+	byte bitmapBank;
+	boolean flipped;
 } Cel;
 
+#define PALETTE_NOT_SET 255
 typedef struct {
 	byte numberOfCels;
 	Cel* cels;
-	byte celBank;
+	byte celsBank;
+	AllocationSize allocationSize;
+	byte veraSlotsWidth;
+	byte veraSlotsHeight;
+	byte palette;
 } Loop;
 
 typedef struct {
@@ -29,8 +44,11 @@ typedef struct {
 	byte numberOfLoops;
 	Loop* loops;
 	byte loopsBank;
-	char* description;
-	byte descriptionBank;
+	char* description; //Always on the same bank as code
+	byte* codeBlock;
+	byte codeBlockBank;
+	byte maxCels;
+	byte maxVeraSlots;
 } View;
 
 #define DRAWN         0x0001
@@ -46,6 +64,7 @@ typedef struct {
 #define ONLAND        0x0800
 #define FIXLOOP       0x2000
 
+#define MAX_SPRITES_SLOTS_PER_VIEW_TAB 6
 typedef struct {
 	byte stepTime;
 	byte stepTimeCount;
@@ -59,10 +78,6 @@ typedef struct {
 	byte currentCel;
 	byte numberOfCels;
 	Cel* celData;              /* ditto */
-	BITMAP* bgPic;             /* Storage for background behind drawn view */
-	BITMAP* bgPri;
-	word bgX;                  /* Position to place background bmp */
-	word bgY;
 	word xsize;
 	word ysize;
 	byte stepSize;
@@ -79,10 +94,9 @@ typedef struct {
 	byte param4;
 } ViewTable;
 
-#define TABLESIZE  20  // 100
-extern ViewTable* viewtab;
+#define SPRITE_SLOTS (VIEW_TABLE_SIZE)
+extern ViewTable viewtab[VIEW_TABLE_SIZE];
 
-#define MAXVIEW  256
 extern View* loadedViews;
 
 extern BITMAP* spriteScreen;
@@ -96,7 +110,7 @@ extern void setLoadedView(View* loadedView, byte loadedViewNumber);
 #pragma wrapped-call (push, trampoline, VIEW_CODE_BANK_1)
 void b9LoadViewFile(byte viewNum);
 void b9DiscardView(byte viewNum);
-void b9AddViewToTable(ViewTable* localViewtab, byte viewNum);
+void b9AddViewToTable(ViewTable* localViewtab, byte viewNum, byte entryNum);
 extern void b9SetCel(ViewTable* localViewtab, byte celNum);
 extern void b9SetLoop(ViewTable* localViewtab, byte loopNum);
 extern void b9AddToPic(int vNum, int lNum, int cNum, int x, int y, int pNum, int bCol);
@@ -106,7 +120,7 @@ extern void b9InitObjects();
 #pragma wrapped-call (pop)
 
 #pragma wrapped-call (push, trampoline, VIEW_CODE_BANK_2)
-extern void bAUpdateObj(int entryNum);
+extern void bBUpdateObj(int entryNum);
 extern void bADrawObject(int entryNum);
 extern void bAFollowEgo(int entryNum);
 #pragma wrapped-call (pop)
@@ -121,6 +135,10 @@ extern void bCCalcObjMotion();
 
 #pragma wrapped-call (push, trampoline, VIEW_CODE_BANK_5)
 extern void bDShowObjectState(int objNum);
+#pragma wrapped-call (pop)
+
+#pragma wrapped-call (push, trampoline, SPRITE_UPDATED_BANK)
+extern void bEClearSpriteAttributes();
 #pragma wrapped-call (pop)
 
 #endif   /* _VIEW_H_ */

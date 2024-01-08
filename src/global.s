@@ -25,6 +25,7 @@ ZP_PTR_B1  = $F1
 ZP_PTR_B2  = $F3
 ZP_PTR_DISP  = $F5
 
+
 ;System Reserved 82 and 83
 ; Set up zero page pointer (ZP_PTR_CODE_WIN) and other variables related to code window management.
 ZP_PTR_CODE_WIN = $84 ;Zero Pointer Page Pointer To Code Window
@@ -49,12 +50,25 @@ ZP_TMP_19 = $DB
 ZP_TMP_20 = $DD
 ZP_TMP_21 = $DF
 ZP_TMP_22 = $E1
-ZP_TMP_23 = $E3
-ZP_TMP_24 = $E5
+
+;Float Division
+ZP_DIV_AREA = $E3
+ZP_DIV_BANK = $E5
+ZP_DIV_ADDR = $FC 
+
 ZP_PTR_LF = $E7
 ZP_PTR_LE = $E9
 ZP_PTR_PLF_HIGH = $EB
 ZP_PTR_PLF_LOW = $ED
+
+;Sprite Memory Manager These are 8 bit values
+ZP_PTR_SEG_32 = $F7 
+ZP_PTR_SEG_64 = $F8
+ZP_PTR_HIGH_BYTE_START = $F9
+ZP_PTR_WALL_32 = $FA
+ZP_PTR_WALL_64 = $FB
+
+
 
 ; Define the starting address for golden RAM
 GOLDEN_RAM = $400
@@ -62,6 +76,7 @@ GOLDEN_RAM = $400
 ; Define banks for various purposes
 LOGIC_COMMANDS_BANK = $0F
 DEBUG_BANK = $05
+HELPERS_BANK = $05
 COMMAND_LOOP_HELPER_BANK = $0F
 MEKA_BANK = $06
 LOGIC_BANK = $3E
@@ -69,10 +84,12 @@ LOGIC_ENTRY_ADDRESSES_BANK = $6
 LOGIC_CODE_BANK = $6
 PICTURE_BANK = $11
 TEXT_BANK = $3
+SPRITE_MANAGER_BANK = $9
 
 FIRST_FLOOD_BANK = $27
 NO_FLOOD_BANKS = $0A
 LAST_FLOOD_BANK = FIRST_FLOOD_BANK + NO_FLOOD_BANKS - 1
+SPRITE_UPDATES_BANK = $0E
 
 DIVISION_METADATA_BANK = $31
 
@@ -100,9 +117,15 @@ JSRFAR_KERNAL_ADDR = $FF6E
 TRUE = 1
 FALSE = 0
 
-;Define struct sizes
+;Define sizes
 LOGIC_ENTRY_SIZE = 8
 LOGIC_FILE_SIZE = 2
+
+;Work Area
+
+GOLDEN_RAM_WORK_AREA = $400 + LOCAL_WORK_AREA_GOLDEN_OFFSET
+LOCAL_WORK_AREA_SIZE = 500
+GOLDEN_RAM_WORK_AREA_END = GOLDEN_RAM_WORK_AREA + LOCAL_WORK_AREA_SIZE - 1
 
 DISPLAY_SCALE     = 64 ; 2X zoom
 
@@ -160,9 +183,26 @@ NEG_1_16 = $FFFF
          STA   result + 1
 .endmacro
 
+; Macro for getting a 16-bit struct value
+.macro   GET_STRUCT_16_STORED_OFFSET offset, pointer, result ;Where offset in stored in memory rather than constant
+         LDY   offset
+         LDA   (pointer),y
+         STA   result
+         INY
+         LDA   (pointer),y
+         STA   result + 1
+.endmacro
+
 ; Macro for getting an 8-bit struct value
 .macro   GET_STRUCT_8 offset, pointer, result
          LDY   #offset
+         LDA   (pointer),y
+         STA   result
+.endmacro
+
+; Macro for getting an 8-bit struct value
+.macro   GET_STRUCT_8_STORED_OFFSET offset, pointer, result
+         LDY   offset
          LDA   (pointer),y
          STA   result
 .endmacro
@@ -613,6 +653,12 @@ tay
 pla
 txa
 pla
+.endmacro
+
+.macro REENABLE_INTERRUPTS
+ lda VSYNC_BIT
+ sta VERA_isr
+ cli
 .endmacro
 
 .endif

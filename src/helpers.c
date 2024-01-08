@@ -6,10 +6,25 @@
 boolean debugStop = FALSE;
 
 byte _previousRomBank = 0;
-byte _assm = 0; //Used as a value to load things in and out of the registers
+byte _assmByte = 0; //Used as a value to load things in and out of the registers
+byte _assmByte2 = 0; //Used as a value to load things in and out of the registers
+unsigned int _assmUInt = 0;
 long _assmLong = 0; //Used as a value to load things in and out of the registers
+boolean enableHelpersDebugging = FALSE; //This is so you can debug helpers at a certain area and not be bogged down when they are called elsewhere.
 
 #pragma code-name (push, "BANKRAM05")
+void b5RefreshBuffer(BufferStatus* bufferStatus)
+{
+	BufferStatus localBufferStatus;
+	localBufferStatus = *bufferStatus;
+
+	bufferStatus->bufferCounter++;
+
+
+
+	memCpyBanked(GOLDEN_RAM_WORK_AREA, localBufferStatus.bankedData + localBufferStatus.bufferCounter * LOCAL_WORK_AREA_SIZE, localBufferStatus.bank, LOCAL_WORK_AREA_SIZE); //If it overflows the bank it isn't a big deal, the picture data is terminated by 0xFF so the rubbish data following will never be executed.
+}
+
 byte convertAsciiByteToPetsciiByte(byte toConvert)
 {
 	if (toConvert == ASCIIDASH)
@@ -44,10 +59,10 @@ char* strcpyBanked(char* dest, const char* src, byte bank)
 
 	RAM_BANK = bank;
 
-    strcpy(dest, src);
+	strcpy(dest, src);
 
 	RAM_BANK = previousRamBank;
-	
+
 	return result;
 }
 
@@ -57,31 +72,47 @@ void* memCpyBanked(byte* dest, byte* src, byte bank, size_t len)
 	void* returnVal;
 
 	RAM_BANK = bank;
-	
-#ifdef VERBOSE_CPY_CHECK
-	printf("Attempting to copy to %p from %p on bank %d length %d and the first byte is %d\n", dest, src, bank, len, *src);
-#endif
-
 
 	returnVal = memcpy(dest, src, len);
+
+#ifdef VERBOSE_CPY_CHECK
+	if (enableHelpersDebugging)
+	{
+		printf("Attempting to copy to %p from %p on bank %d length %d and the first byte is %p\n", dest, src, bank, len, *src);
+	}
+#endif 
 
 	RAM_BANK = previousRamBank;
 
 	return returnVal;
 }
 
+void memsetBanked(void* _Dst, int _Val, size_t _Size, byte bank)
+{
+	byte previousRamBank = RAM_BANK;
+
+	RAM_BANK = bank;
+
+	memset(_Dst, _Val, _Size);
+
+	RAM_BANK = previousRamBank;
+}
+
 void memCpyBankedBetween(byte* dest, byte bankDst, byte* src, byte bankSrc, size_t len)
 {
+#define BUFFER_SIZE 50
 	int i;
 	int copyAmount = 0;
+	byte buffer[BUFFER_SIZE];
 
-	for (i = 0; i < len; i += LOCAL_WORK_AREA_SIZE)
+	for (i = 0; i < len; i += BUFFER_SIZE)
 	{
-		copyAmount = (i + LOCAL_WORK_AREA_SIZE <= len) ? LOCAL_WORK_AREA_SIZE : len - i;
+		copyAmount = (i + BUFFER_SIZE <= len) ? BUFFER_SIZE : len - i;
 
-		memCpyBanked(GOLDEN_RAM_WORK_AREA, src + i, bankSrc, copyAmount);
-		memCpyBanked(dest + i, GOLDEN_RAM_WORK_AREA, bankDst, copyAmount);
+		memCpyBanked(buffer, src + i, bankSrc, copyAmount);
+		memCpyBanked(dest + i, buffer, bankDst, copyAmount);
 	}
+
 }
 
 void copyStringFromBanked(char* src, char* dest, int start, int chunk, byte sourceBank, boolean convertFromAsciiByteToPetscii)
@@ -107,7 +138,7 @@ void copyStringFromBanked(char* src, char* dest, int start, int chunk, byte sour
 	RAM_BANK = previousRamBank;
 }
 
-int sprintfBanked(const char* buffer, byte bank, char const* const format,  ...) {
+int sprintfBanked(const char* buffer, byte bank, char const* const format, ...) {
 	va_list list;
 	int result;
 	byte previousRamBank = RAM_BANK;

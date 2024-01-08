@@ -25,6 +25,8 @@
 #include "irq.h"
 #include "textLayer.h"
 #include "loadingScreen.h"
+#include "structMetadata.h"
+#include "floatDivision.h"
 //#include "parser.h"
 //#include "sound.h"
 
@@ -48,7 +50,6 @@ int controlMode = PLAYER_CONTROL;    /* player.control or program.control */
 int dirnOfEgo, newRoomNum, score;
 
 extern int picFNum;    // Debugging. Delete at some stage!!
-extern void b6InitAsm();
 
 #pragma code-name (push, "BANKRAM06")
 void b6AdjustEgoPosition()
@@ -88,7 +89,8 @@ void b6DiscardResources()
 void b6Clear()
 {
     b6DisplayLoadingScreen();
-    b11ClearPicture();
+    b6ClearPicture();
+    bEClearSpriteAttributes();
 }
 
 /***************************************************************************
@@ -234,13 +236,17 @@ void b6Closedown()
     discardWords();
 }
 
+extern void b6InitGraphics();
+extern void b6InitIrq();
+extern void b6InitInterpreter();
+extern void b6TellMeTheAddressPlease();
 void b6Initialise()
 {
     int i;
 
     b6InitTimer(&b6Timing_proc);
 
-    bEInitLruCaches(&b6DiscardLogicFile, &b9DiscardView);
+    b4InitLruCaches(&b6DiscardLogicFile, &b9DiscardView);
 
     b6InitFiles();             /* Load resource directories */
 
@@ -274,11 +280,22 @@ void b6Initialise()
     loadObjectFile();
     loadWords();
     initEvents();
-    b6InitAsm();
+    b6InitInterpreter();
+    b6InitIrq();
+    bEInitSpriteMemoryManager();
+
+    asm("sei");
+    b6InitGraphics();
+    REENABLE_INTERRUPTS();
+
     horizon = 36;
 
     ///* Set up timer. The timer controls the interpreter speed. */
     counter = 0;
+
+    b6InitFloatDivision();
+    b6TellMeTheAddressPlease();
+    bEInitPaletteManager();
 }
 
 

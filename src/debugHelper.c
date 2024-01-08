@@ -453,6 +453,20 @@ void b5DebugPixelDrawAddress()
 	printf("Drawing at %p\n", result);
 }
 
+void b5PrintChunk()
+{
+	if (!logDebugVal1)
+	{
+		logDebugVal2++;
+		printf("%x - %d\n", logDebugVal1, logDebugVal2);
+	}
+	else
+	{
+		printf("%x\n", logDebugVal1);
+	}
+
+}
+
 #pragma code-name (pop);
 
 

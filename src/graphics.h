@@ -1,5 +1,10 @@
 #ifndef _GRAPHICS_H_
 #define _GRAPHICS_H_
+
+#include "graphics.h"
+#include "helpers.h"
+#include "irq.h"
+
 //must be constants
 #define SET_VERA_ADDRESS(VeraAddress, AddressSel, Stride) \
     do {      \
@@ -29,4 +34,7 @@
 		asm("lda %v + 1", _assmLong); \
 		asm("sta %w", VERA_addr_high); \
 	} while (0);
+
+typedef unsigned int VeraSpriteAddress; //actually three bytes lower byte is always zero, so we don't store that
+
 #endif

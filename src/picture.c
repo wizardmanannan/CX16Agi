@@ -11,12 +11,11 @@
 
 #define PIC_DEFAULT 15
 #define PRI_DEFAULT 4
-//#define VERBOSE_LOAD_DIV
+
 //#define VERBOSE
 //#define VERBOSE_REL_DRAW
 //#define TEST_QUEUE
 //#define VERBOSE_FLOOD
-//#define TEST_DIVISION 
 //#define TEST_ROUND
 //#define VERBOSE_DRAW_LINE
 //#define TEST_OK_TO_FILL
@@ -41,8 +40,6 @@ byte picColour = 0, priColour = 0, patCode, patNum;
 /* QUEUE DEFINITIONS */
 #define QEMPTY 0xFF
 int* bitmapWidthPreMult = &BANK_RAM[BITMAP_WIDTH_PREMULT_START];
-
-extern fix32 floatDivision(byte numerator, byte denominator);
 
 #ifdef VERBOSE_FLOOD
 extern long pixelCounter;
@@ -205,62 +202,27 @@ void testQueue()
 #endif // TEST_QUEUE
 
 #pragma code-name (pop)
+
+#pragma code-name (push, "BANKRAM04")
+long b4GetVeraPictureAddress(int x, int y)
+{
+	return (STARTING_BYTE + x) + (bitmapWidthPreMult[y]);
+}
+#pragma code-name (pop)
 #pragma code-name (push, "BANKRAM11")
-typedef struct BufferStatus
-{
-	byte* bankedData;
-	byte bank;
-	byte bufferCounter;
-} BufferStatus;
-
-#define GET_NEXT(storeLocation)  \
-    do {                              \
-        if(*data >= GOLDEN_RAM_WORK_AREA + LOCAL_WORK_AREA_SIZE) \
-		{ \
-			refreshBuffer(bufferStatus); \
-			*data = GOLDEN_RAM_WORK_AREA; \
-		} \
-		 storeLocation = *((*data)++); \
-		\
-    } while(0);
-
-void refreshBuffer(BufferStatus* bufferStatus)
-{
-	BufferStatus localBufferStatus;
-	localBufferStatus = *bufferStatus;
-	
-	bufferStatus->bufferCounter++;
-	memCpyBanked(GOLDEN_RAM_WORK_AREA, localBufferStatus.bankedData + localBufferStatus.bufferCounter * LOCAL_WORK_AREA_SIZE, localBufferStatus.bank, LOCAL_WORK_AREA_SIZE); //If it overflows the bank it isn't a big deal, the picture data is terminated by 0xFF so the rubbish data following will never be executed.
-}
-
-
-fix32 DIV(int numerator, int denominator) {
-	if (denominator == 0 || numerator == 0) {
-		return (fix32)0;
-	}
-	else if (denominator == 1) {
-		return fp_fromInt(numerator);
-	}
-	else if (numerator == denominator) {
-		return fp_fromInt(1);
-	}
-	else {
-		return floatDivision(numerator, denominator);
-	}
-}
 
 #define ROUND_THRESHOLD_POS ((unsigned int) 0x7FBE)
 #define ROUND_THRESHOLD_NEG ((unsigned int) 0x8041)
-int round(fix32 aNumber, boolean isPos)
+int b11Round(fix32 aNumber, boolean isPos)
 {
-	if(isPos)
+	if (isPos)
 	{
 #ifdef TEST_ROUND
-	printf("%lu Pos True %d result %d\n", aNumber, getMantissa(aNumber), getMantissa(aNumber) < ROUND_THRESHOLD_POS ? floor_fix_32(aNumber) : ceil_fix_32(aNumber));
-	printf("%u < %u = %d\n", getMantissa(aNumber), ROUND_THRESHOLD_POS, getMantissa(aNumber) < ROUND_THRESHOLD_POS);
-	printf("The address of aNumber is %p", &aNumber);
+		printf("%lu Pos True %d result %d\n", aNumber, getMantissa(aNumber), getMantissa(aNumber) < ROUND_THRESHOLD_POS ? floor_fix_32(aNumber) : ceil_fix_32(aNumber));
+		printf("%u < %u = %d\n", getMantissa(aNumber), ROUND_THRESHOLD_POS, getMantissa(aNumber) < ROUND_THRESHOLD_POS);
+		printf("The address of aNumber is %p", &aNumber);
 #endif
-		return getMantissa(aNumber) < ROUND_THRESHOLD_POS ? floor_fix_32(aNumber) : ceil_fix_32(aNumber);
+		return b1GetMantissa(aNumber) < ROUND_THRESHOLD_POS ? b1FloorFix32(aNumber) : b1CeilFix32(aNumber);
 	}
 	else
 	{
@@ -268,7 +230,7 @@ int round(fix32 aNumber, boolean isPos)
 		printf("%lu Neg True %d result %p %d < %d\n", aNumber, getMantissa(aNumber), getMantissa(aNumber) <= ROUND_THRESHOLD_NEG ? floor_fix_32(aNumber) : ceil_fix_32(aNumber), getMantissa(aNumber), ROUND_THRESHOLD_POS);
 		printf("%u < %u = %d\n", getMantissa(aNumber), ROUND_THRESHOLD_POS, getMantissa(aNumber) < ROUND_THRESHOLD_POS);
 #endif
-		return getMantissa(aNumber) <= ROUND_THRESHOLD_NEG ? floor_fix_32(aNumber) : ceil_fix_32(aNumber);
+		return b1GetMantissa(aNumber) <= ROUND_THRESHOLD_NEG ? b1FloorFix32(aNumber) : b1CeilFix32(aNumber);
 	}
 }
 
@@ -321,53 +283,6 @@ void testRound()
 #endif // TEST_ROUND
 
 
-#ifdef TEST_DIVISION
-void testDivision()
-{
-	long result;
-
-	// Adjusted Tests
-
-	result = DIV(0, 0xA7); // 0 and 167
-	if (result != fp_fromInt(0))
-	{
-		printf("Fail Division 1. Expected %lx got %lx\n", fp_fromInt(0), result);
-	}
-
-	result = DIV(0xA7, 0); // 167 and 0
-	if (result != fp_fromInt(0))
-	{
-		printf("Fail Division 2. Expected %lx got %lx\n", fp_fromInt(0), result);
-	}
-
-	result = DIV(0xA7, 1); // 167 and 1
-	if (result != fp_fromInt(0xA7))
-	{
-		printf("Fail Division 3. Expected %lx got %lx\n", fp_fromInt(0xA7), result);
-	}
-
-	result = DIV(0xA7, 0xA7); // 167 and 167
-	if (result != fp_fromInt(1))
-	{
-		printf("Fail Division 4. Expected %lx got %lx\n", fp_fromInt(1), result);
-	}
-
-	// New Tests
-
-	result = DIV(1, 2); // 1 divided by 2
-	if (result != fp_fromInt(0) + 0x8000) // should be 0.5 in fixed point format
-	{
-		printf("Fail Division 5. Expected %lx got %lx\n", fp_fromInt(0) + 0x8000, result);
-	}
-
-	result = DIV(1, 3); // 1 divided by 3
-	if (result != fp_fromInt(0) + 0x5555) // should be 0.5 in fixed point format
-	{
-		printf("Fail Division 5. Expected %lx got %lx\n", fp_fromInt(0) + 0x553F, result);
-	}
-
-}
-#endif // TEST_DIVISION
 
 /**************************************************************************
 ** fill
@@ -395,77 +310,6 @@ byte b11FloodFill(byte** data, BufferStatus* bufferStatus)
 
 #pragma code-name (pop)
 #pragma code-name (push, "BANKRAM06")
-void b6LoadDivisionMetadata(const char* fileName, int metadataSize, byte* metadataLocation)
-{
-	FILE* fp;
-	char fileNameBuffer[30];
-	size_t bytesRead;
-
-#ifdef VERBOSE_LOAD_DIV
-	printf("The filename is %s and the metadata size is %d\n", fileName, metadataSize);
-#endif // VERBOSE
-
-
-	if ((fp = fopen(fileName, "rb")) != NULL) {
-     	bytesRead = fread(&GOLDEN_RAM_WORK_AREA[0], 1, metadataSize, fp);
-		
-#ifdef VERBOSE_LOAD_DIV
-		printf("Read %d bytes. The first byte is %p\n", bytesRead);
-#endif // VERBOSE
-		
-		memCpyBanked(metadataLocation, &GOLDEN_RAM_WORK_AREA[0], DIV_METADATA_BANK, metadataSize);
-#ifdef VERBOSE_LOAD_DIV
-		printf("Copy %d bytes to location %p \n", bytesRead, metadataLocation);
-#endif // VERBOSE
-
-		fclose(fp);
-	}
-	else {
-		printf("Failed to open %s\n", fileName);
-	}
-}
-
-
-#define SWIDTH   640  /* Screen resolution */
-#define SHEIGHT  480
-#define PWIDTH   160  /* Picture resolution */
-#define PHEIGHT  168
-#define VWIDTH   640  /* Viewport size */
-#define VHEIGHT  336
-
-void b6LoadDivisionTables()
-{
-	FILE* fp;
-	int bank, i;
-	char fileNameBuffer[30];
-	const char* divFileName = "div%x.bin";
-	const char* bankfileName = "divb.bin";
-	const char* addressfileName = "diva.bin";
-
-	for (bank = FIRST_DIVISION_BANK; bank <= LAST_DIVISION_BANK; bank++)
-	{
-		sprintf(&fileNameBuffer[0], divFileName, bank);
-
-		printf("Loading division tables %d of %d \n", bank - FIRST_DIVISION_BANK + 1, LAST_DIVISION_BANK - FIRST_DIVISION_BANK + 1);
-		if ((fp = fopen(&fileNameBuffer[0], "rb")) != NULL) {
-			size_t bytesRead;
-			i = 0;
-			while ((bytesRead = fread(&GOLDEN_RAM_WORK_AREA[0], 1, LOCAL_WORK_AREA_SIZE, fp)) > 0) {
-				memCpyBanked(DIVISION_AREA + LOCAL_WORK_AREA_SIZE * i++, &GOLDEN_RAM_WORK_AREA[0], bank, bytesRead);
-			}
-
-			fclose(fp);
-		}
-		else {
-			printf("failed to division table file %s\n", &fileNameBuffer[0]);
-		}
-	}
-	printf("Loading Division Metdata 1 of 2\n");
-	b6LoadDivisionMetadata(bankfileName, DIV_BANK_METADATA_SIZE, &divBankMetadata[0]);
-	printf("Loading Division Metdata 2 of 2\n");
-	b6LoadDivisionMetadata(addressfileName, DIV_ADDRESS_METADATA_SIZE, &divAddressMetadata[0]);
-}
-
 /**************************************************************************
 ** initPicture
 **
@@ -489,22 +333,6 @@ void b6InitPicture()
 	{
 		memCpyBanked(&bitmapWidthPreMult[0], &tempbitmapWidthPreMult[0], i, PICTURE_HEIGHT * 2);
 	}
-
-	b6LoadDivisionTables();
-}
-
-#pragma code-name (pop)
-#pragma code-name (push, "BANKRAM11")
-
-/**************************************************************************
-** initAGIScreen
-**
-** Purpose: Sets the screen mode to 640x480x256. This can be called a
-** number of times during the program, e.g. when switching back from a
-** text mode.
-**************************************************************************/
-void b11InitAGIScreen()
-{
 }
 
 /**************************************************************************
@@ -513,13 +341,15 @@ void b11InitAGIScreen()
 ** Purpose: To clear the picture and priority bitmaps so that they are
 ** ready for drawing another PICTURE.
 **************************************************************************/
-void b11ClearPicture()
+void b6ClearPicture()
 {
 	b6ClearBackground();
 	clear_to_color(priority, PRI_DEFAULT);
 	clear_to_color(control, PRI_DEFAULT);
 }
 
+#pragma code-name (pop)
+#pragma code-name (push, "BANKRAM11")
 /**************************************************************************
 ** priPSet
 **
@@ -529,7 +359,7 @@ void b11PriPSet(word x, word y)
 {
 	if (x > 159) return;
 	if (y > 167) return;
-	priority->line[y][x] = priColour;
+	//priority->line[y][x] = priColour;
 }
 
 /**************************************************************************
@@ -555,8 +385,8 @@ extern long pixelCounter;
 extern long pixelStartPrintingAt;
 
 #pragma wrapped-call (push, trampoline, PICTURE_CODE_OVERFLOW_BANK)
-extern void b2DrawStraightLineAlongX(byte x1, byte x2, byte y);
-extern void b2DrawStraightLineAlongY(byte x1, byte x2, byte y);
+extern void b4DrawStraightLineAlongX(byte x1, byte x2, byte y);
+extern void b4DrawStraightLineAlongY(byte x1, byte x2, byte y);
 #pragma wrapped-call (pop)
 
 
@@ -590,22 +420,22 @@ void b11Drawline(byte x1, byte y1, byte x2, byte y2)
 	{
 		if (yIsPos)
 		{
-			b2DrawStraightLineAlongY(y1, y2, x1);
+			b4DrawStraightLineAlongY(y1, y2, x1);
 		}
 		else
 		{
-			b2DrawStraightLineAlongY(y2, y1, x1);
+			b4DrawStraightLineAlongY(y2, y1, x1);
 		}
 	}
 	else if (y1 == y2)
 	{
 		if (xIsPos)
 		{		
-			b2DrawStraightLineAlongX(x1, x2, y1);
+			b4DrawStraightLineAlongX(x1, x2, y1);
 		}
 		else
 		{
-			b2DrawStraightLineAlongX(x2, x1, y1);
+			b4DrawStraightLineAlongX(x2, x1, y1);
 		}
 	}
 	else
@@ -630,7 +460,7 @@ void b11Drawline(byte x1, byte y1, byte x2, byte y2)
 		}
 #endif
 
-		addX = height == 0 ? height : DIV(abs(width), abs(height));
+		addX = height == 0 ? height : b1Div(abs(width), abs(height));
 
 #ifdef VERBOSE_DRAW_LINE
 		if (pixelCounter >= pixelStartPrintingAt)
@@ -650,7 +480,7 @@ void b11Drawline(byte x1, byte y1, byte x2, byte y2)
 		}
 #endif // VERBOSE_DRAW_LINE
 
-		addY = width == 0 ? width : DIV(abs(height), abs(width));
+		addY = width == 0 ? width : b1Div(abs(height), abs(width));
 #ifdef VERBOSE_DRAW_LINE
 		if (pixelCounter >= pixelStartPrintingAt)
 		{
@@ -676,7 +506,7 @@ void b11Drawline(byte x1, byte y1, byte x2, byte y2)
 #endif // VERBOSE
 
 		if (abs(width) > abs(height)) {
-			y = fp_fromInt(y1);
+			y = b1FpFromInt(y1);
 
 
 #ifdef VERBOSE_DRAW_LINE
@@ -686,7 +516,7 @@ void b11Drawline(byte x1, byte y1, byte x2, byte y2)
 			}
 #endif // VERBOSE
 
-			addX = (width == 0 ? 0 : fp_fromInt(1));
+			addX = (width == 0 ? 0 : b1FpFromInt(1));
 
 #ifdef VERBOSE_DRAW_LINE
 			if (pixelCounter >= pixelStartPrintingAt)
@@ -695,7 +525,7 @@ void b11Drawline(byte x1, byte y1, byte x2, byte y2)
 			}
 #endif // VERBOSE
 
-			for (x = fp_fromInt(x1); xIsPos ? x < fp_fromInt(x2) : x > fp_fromInt(x2); xIsPos ? x += addX : x -= addX) {
+			for (x = b1FpFromInt(x1); xIsPos ? x < b1FpFromInt(x2) : x > b1FpFromInt(x2); xIsPos ? x += addX : x -= addX) {
 #ifdef VERBOSE_DRAW_LINE
 				if (pixelCounter >= pixelStartPrintingAt)
 				{
@@ -704,7 +534,7 @@ void b11Drawline(byte x1, byte y1, byte x2, byte y2)
 				}
 #endif // VERBOSE
 
-				PSET(round(x, xIsPos), round(y, yIsPos));
+				PSET(b11Round(x, xIsPos), b11Round(y, yIsPos));
 
 #ifdef VERBOSE_DRAW_LINE
 				if (pixelCounter >= pixelStartPrintingAt)
@@ -731,7 +561,7 @@ void b11Drawline(byte x1, byte y1, byte x2, byte y2)
 			PSET(x2, y2);
 		}
 		else {
-			x = fp_fromInt(x1);
+			x = b1FpFromInt(x1);
 #ifdef VERBOSE_DRAW_LINE
 			if (pixelCounter >= pixelStartPrintingAt)
 			{
@@ -740,7 +570,7 @@ void b11Drawline(byte x1, byte y1, byte x2, byte y2)
 #endif // VERBOSE
 
 
-			addY = (height == 0 ? 0 : fp_fromInt(1));
+			addY = (height == 0 ? 0 : b1FpFromInt(1));
 
 
 #ifdef VERBOSE_DRAW_LINE
@@ -752,7 +582,7 @@ void b11Drawline(byte x1, byte y1, byte x2, byte y2)
 
 
 
-			for (y = fp_fromInt(y1); y != fp_fromInt(y2); yIsPos ? y += addY : y -= addY) {
+			for (y = b1FpFromInt(y1); y != b1FpFromInt(y2); yIsPos ? y += addY : y -= addY) {
 
 #ifdef VERBOSE_DRAW_LINE
 				if (pixelCounter >= pixelStartPrintingAt)
@@ -760,7 +590,7 @@ void b11Drawline(byte x1, byte y1, byte x2, byte y2)
 					printf("pset bottom in loop %lx, %d (isPos), %lx, %d (isPos)  round %d %d\n", x, xIsPos, y, yIsPos, round(x, xIsPos), round(y, yIsPos));
 				}
 #endif // VERBOSE
-				PSET(round(x, xIsPos), round(y, yIsPos));
+				PSET(b11Round(x, xIsPos), b11Round(y, yIsPos));
 
 
 #ifdef VERBOSE_DRAW_LINE
@@ -1165,38 +995,24 @@ void b11DrawPic(byte* bankedData, int pLen, boolean okToClearScreen, byte picNum
 	byte action, returnedAction = 0;
 	boolean stillDrawing = TRUE;
 	PictureFile loadedPicture;
-	byte* buffer = GOLDEN_RAM_WORK_AREA; 
+	byte* buffer = GOLDEN_RAM_WORK_AREA;
 	byte** data = &buffer; //Get_Next Macro works with pointer pointers so need this;
 	BufferStatus localBufferStatus;
 	BufferStatus* bufferStatus = &localBufferStatus;
 
 	int** zpPremultTable = (int**)ZP_PTR_TMP_20;
-	byte** zpDivisionArea = (byte**)ZP_PTR_TMP_2;
 	int** zpFloodQueueStore = (int**)ZP_PTR_TMP_21;
 	int** zpFloodQueueServe = (int**)ZP_PTR_TMP_22;
-	byte** zpDivBankMetadata = (byte**)ZP_PTR_TMP_23;
-	byte** zpDivAddressMetadata = (byte**)ZP_PTR_TMP_24;
 	int* sPosBank = (int*)ZP_PTR_TMP_3;
 	int* rPosBank = (int*)ZP_PTR_TMP_4;
-	
+
 	b6DisplayLoadingScreen();
 
 	*zpPremultTable = &bitmapWidthPreMult[0];
-	*zpDivisionArea = &DIVISION_AREA[0];
 	*zpFloodQueueStore = (int*)FLOOD_QUEUE_START;
 	*zpFloodQueueServe = (int*)FLOOD_QUEUE_START;
-	*zpDivBankMetadata = divBankMetadata;
-	*zpDivAddressMetadata = divAddressMetadata;
 	*sPosBank = FIRST_FLOOD_BANK;
 	*rPosBank = FIRST_FLOOD_BANK;
-
-#ifdef TEST_DIVISION
-	testDivision();
-#endif
-
-#ifdef TEST_ROUND
-	testRound();
-#endif
 
 	getLoadedPicture(&loadedPicture, picNum);
 
@@ -1213,9 +1029,11 @@ void b11DrawPic(byte* bankedData, int pLen, boolean okToClearScreen, byte picNum
 	localBufferStatus.bankedData = loadedPicture.data;
 	localBufferStatus.bufferCounter = 0;
 
-	refreshBuffer(bufferStatus);
+	b5RefreshBuffer(bufferStatus);
 
-	if (okToClearScreen) b11ClearPicture();
+	asm("sei");
+
+	if (okToClearScreen) b6ClearPicture();
 
 #ifdef TEST_OK_TO_FILL
 	testOkToFill();
@@ -1260,7 +1078,12 @@ void b11DrawPic(byte* bankedData, int pLen, boolean okToClearScreen, byte picNum
 		case 0xF8: returnedAction = b11FloodFill(data, bufferStatus); break;
 		case 0xF9: GET_NEXT(patCode); break;
 		case 0xFA: returnedAction = b11PlotBrush(data, bufferStatus); break;
-		default: printf("Unknown picture code : %X\n", action); exit(0);
+		default: 
+			printf("Unknown picture code : %X\n", action); 
+			printf("The buffer status bank is %p, buffer status banked data is %p and the buffer counter is %d. The loaded picture is %d\n", bufferStatus->bank, bufferStatus->bankedData, bufferStatus->bufferCounter, picNum);
+			printf("Loaded picture data %p, bank %d, size %d\n", loadedPicture.data, loadedPicture.bank, loadedPicture.size);
+				for (;;);
+			exit(0);
 		}
 
 		//if (picFNum == 3) {
@@ -1274,7 +1097,7 @@ void b11DrawPic(byte* bankedData, int pLen, boolean okToClearScreen, byte picNum
 
 	b11SplitPriority();
 
-	b6DismissLoadingScreen();
+	REENABLE_INTERRUPTS(); //Loading screen stays on until showPic command
 }
 
 void b6InitPictures()
@@ -1342,7 +1165,7 @@ void b6DiscardPictureFile(int picFileNum)
 
 void b6ShowPicture()
 {
-	//Doesn't need to do much since picture is stored straight in VRAM. Need to investigate whether we need to do this
+	b6DismissLoadingScreen();
 }
 
 #pragma code-name (pop)

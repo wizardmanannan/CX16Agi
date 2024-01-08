@@ -19,10 +19,15 @@ void b6DisplayLoadingScreen()
 	}
 }
 
+#pragma wrapped-call (push, trampoline, VIEW_CODE_BANK_3)
+extern void bBUpdateObjects();
+#pragma wrapped-call (pop)
+
 void b6DismissLoadingScreen()
 {
 	if (loadingScreenDisplayed)
 	{
+		bBUpdateObjects(); //This is a little unorthodox but if we don't do this objects that should /should not display wait until the VBLANK after
 		b6SetAndWaitForIrqStateAsm(BLANK_SCREEN);
 		b6InitLayer1Mapbase();
 		b6SetAndWaitForIrqStateAsm(NORMAL);

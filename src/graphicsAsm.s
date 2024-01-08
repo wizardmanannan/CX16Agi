@@ -16,6 +16,7 @@ _interpolationBuffer: .res 2000
 .include "global.s"
 .include "irqAsm.s"
 .include "globalGraphics.s"
+.include "helpersAsm.s"
 
 .import _b6InitCharset
 .import pushax
@@ -23,6 +24,8 @@ _interpolationBuffer: .res 2000
 .import popa
 .import _b6InitLayer1Mapbase
 .import _b6DisplayLoadingScreen
+.import _b6InitVeraMemory
+.import _b9InitSpriteData
 
 _b6ClearBackground:
 stz VERA_ctrl
@@ -99,10 +102,13 @@ sta @mapHeight
 rts
 @mapHeight: .byte $0
 
-b6InitGraphics:
+_b6InitGraphics:
 SEND_IRQ_COMMAND #IRQ_CMD_BLACKSCREEN, @vSyncToCheck
 
 WAIT_FOR_NEXT_IRQ @vSyncToCheck
+
+jsr _b6InitVeraMemory
+TRAMPOLINE #SPRITE_MANAGER_BANK, _b9InitSpriteData
 
 lda #DISPLAY_SCALE
 sta VERA_dc_hscale
@@ -217,6 +223,8 @@ lda #<COLOR_RED
 sta VERA_data0
 lda #>COLOR_RED
 sta VERA_data0
+
+;Ignore the next 12 colors only the first four matter
 
 lda #<COLOR_MAGENTA
 sta VERA_data0
@@ -379,9 +387,10 @@ stz VERA_L1_vscroll_h
 jsr _b6InitCharset 
 jsr _b6InitLayer1Mapbase
 
-jsr _b6DisplayLoadingScreen
+TRAMPOLINE #SPRITE_UPDATES_BANK, _bEClearSpriteAttributes 
 
+jsr _b6DisplayLoadingScreen
 rts
-@vSyncToCheck: .byte $0
+@vSyncToCheck: .word $0
 
 .endif

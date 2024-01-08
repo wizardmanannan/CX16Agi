@@ -12,7 +12,7 @@ LOGIC_ENTRY_PARAMETERS_OFFSET = 0
 .import _b5DebugPrintScriptStart
 .endif
 
-VERBOSE_ROOM_CHANGE = 1
+;VERBOSE_ROOM_CHANGE = 1
 .ifdef VERBOSE_ROOM_CHANGE
 .import _b5DebugPrintRoomChange
 .endif

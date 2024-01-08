@@ -4,23 +4,38 @@ IRQ_INC = 1
 
 .include "global.s"
 .include "globalGraphics.s"
+.include "spriteIrqHandler.s"
 
 .macro SEND_IRQ_COMMAND command, vSyncToCheck
 sei
 lda command
 sta sendIrqCommand
 lda _vSyncCounter
+ldx _vSyncCounter + 1
 sta vSyncToCheck
-cli
+REENABLE_INTERRUPTS
 .endmacro
 
 .macro WAIT_FOR_NEXT_IRQ vSyncToCheck
-.local @waitForBlank
-@waitForBlank: ;May as well just busy wait wai will just take extra cycles, and we aren't going anywhere until the vSync happens and the counter increments
-lda vSyncToCheck
-cmp _vSyncCounter
-beq @waitForBlank
+.local @waitForIrq
+.local @end
 
+sei
+lda vSyncToCheck
+ldx vSyncToCheck + 1
+
+@waitForIrq:
+REENABLE_INTERRUPTS
+wai
+
+sei
+cmp _vSyncCounter
+bne @end
+cpx _vSyncCounter + 1
+beq @waitForIrq
+
+@end:
+REENABLE_INTERRUPTS
 .endmacro
 
 ;Handlers
@@ -96,7 +111,7 @@ _b6InitIrq:
    sta IRQVec+1
    lda #VSYNC_BIT ; make VERA only generate VSYNC IRQs
    sta VERA_ien
-   cli ; enable IRQ now that vector is properly set
+   REENABLE_INTERRUPTS ; enable IRQ now that vector is properly set
 rts
 
 _b6SetAndWaitForIrqStateAsm:
@@ -105,7 +120,7 @@ SEND_IRQ_COMMAND @state, @vSyncToCheck
 WAIT_FOR_NEXT_IRQ @vSyncToCheck
 rts
 @state: .byte $0
-@vSyncToCheck: .byte $0
+@vSyncToCheck: .word $0
 
 .segment "CODE"
 IRQ_CMD_DONTCHANGE = 0
@@ -114,9 +129,9 @@ IRQ_CMD_TEXT_ONLY = 2
 IRQ_CMD_NORMAL = 3
 IRQ_CMD_DISPLAY_TEXT = 4
 
-LAYER_0_1_ENABLE = $31
-LAYER_0_1_DISABLE = $1
-LAYER_0_DISABLE_1_ENABLE = $21
+LAYER_0_1_SPRITES_ENABLE = $71
+LAYER_0_1_SPRITES_DISABLE = $1
+LAYER_0_SPRITES_DISABLE_1_ENABLE = $21
 
 ;0 Don't Change
 ;1 Blank Screen
@@ -131,17 +146,23 @@ currentIrqState: .byte $0
 
 _vSyncCounter: .word $0
 debugVSyncCounter: .word $0
+
 custom_irq_handler:
+lda RAM_BANK
+sta @previousRamBank 
 
 ; continue to default IRQ handler
 lda VERA_isr
 and #VSYNC_BIT
 beq @defaultIqr
 
+@handleSpriteUpdates:
+lda #SPRITE_UPDATES_BANK
+sta RAM_BANK
+jsr bEHandleSpriteUpdates
+
 lda sendIrqCommand
 tax
-lda RAM_BANK
-pha
 
 lda @jmpTableBank, x
 sta RAM_BANK
@@ -157,21 +178,21 @@ jsr handleDisplayText
 bra @resetSetIrqState
 
 @blankScreen:
-lda #LAYER_0_1_DISABLE
+lda #LAYER_0_1_SPRITES_DISABLE
 sta VERA_dc_video
 lda #IRQ_CMD_BLACKSCREEN
 sta currentIrqState
 bra @resetSetIrqState
 
 @normal:
-lda #LAYER_0_1_ENABLE
+lda #LAYER_0_1_SPRITES_ENABLE
 sta VERA_dc_video
 lda #IRQ_CMD_NORMAL
 sta currentIrqState
 bra @resetSetIrqState
 
 @textOnly:
-lda #LAYER_0_DISABLE_1_ENABLE
+lda #LAYER_0_SPRITES_DISABLE_1_ENABLE
 sta VERA_dc_video
 bra @resetSetIrqState
 
@@ -181,11 +202,15 @@ sta sendIrqCommand
 
 @vSyncCounter:
 inc _vSyncCounter
-bne @defaultIqr
+bne @resetLatches
 inc _vSyncCounter + 1
 
+@resetLatches:
+lda #(VSYNC_BIT)
+sta VERA_isr ; reset latches
+
 @defaultIqr:
-pla
+lda @previousRamBank
 sta RAM_BANK
 jmp (default_irq_vector)
 ; RTI will happen after jump
@@ -198,6 +223,7 @@ jmp (default_irq_vector)
 .addr @displayText
 
 @jmpTableBank: .byte $0, $0, $0, $0, TEXT_BANK ;In order of IRQ_CMDS
+@previousRamBank: .byte $0
 
 .endif ; IRQ_INC
 

@@ -25,6 +25,14 @@
 #define DIFF_ASCII_PETSCII_CAPS -128
 #define DIFF_ASCII_PETSCII_LOWER -32
 
+typedef struct BufferStatus //Note: Also used in viewAsm.s b9ViewToVera. Don't change without adjusting this
+{
+    byte* bankedData;
+    byte bank;
+    byte bufferCounter;
+} BufferStatus;
+
+
 byte convertAsciiByteToPetsciiByte(byte toConvert);
 
 extern char* strcpyBanked(char* dest, const char* src, byte bank);
@@ -32,6 +40,7 @@ extern size_t strLenBanked(char* string, int bank);
 
 extern void* memCpyBanked(byte* dest, byte* src, byte bank, size_t len);
 extern void memCpyBankedBetween(byte* dest, byte bankDst, byte* src, byte bankSrc, size_t len);
+extern void memsetBanked(void* _Dst, int _Val, size_t _Size, byte bank);
 
 #define COPY_EVERYTHING 32767
 extern void copyStringFromBanked(char* src, char* dest, int start, int chunk, byte sourceBank, boolean convertFromAsciiByteToPetscii);
@@ -44,12 +53,21 @@ extern void setResourceDirectory(AGIFilePosType* newLogicDirectory, AGIFilePosTy
 extern void debugPrint(byte toPrint);
 extern void trampoline();
 
+#pragma wrapped-call (push, trampoline, HELPERS_BANK)
+void b5RefreshBuffer(BufferStatus* bufferStatus);
+#pragma wrapped-call (pop)
+
+
 extern long opStopAt;
 extern long opExitAt;
 extern long opCounter;
 
-extern byte _assm;
+extern byte _assmByte;
+extern byte _assmByte2;
 extern long _assmLong;
+extern unsigned int _assmUInt;
+
+extern boolean enableHelpersDebugging;
 
 #define abs_val(a) ((a) < 0 ? -(a) : (a))
 
@@ -68,15 +86,24 @@ extern byte _previousRomBank;
 #define READ_BYTE_VAR_FROM_ASSM(byteVar, address) \
     do {                                           \
         asm("lda %w", address); \
-        asm("sta %v", _assm); \
-        byteVar = _assm; \
+        asm("sta %v", _assmByte); \
+        byteVar = _assmByte; \
     } while(0) \
 
 #define WRITE_BYTE_VAR_TO_ASSM(byteVar, address) \
     do {                                           \
-        _assm = byteVar;  \
-        asm("lda %v", _assm);                  \
+        _assmByte = byteVar;  \
+        asm("lda %v", _assmByte);                  \
         asm("sta %w", address);                  \
+    } while(0)
+
+#define WRITE_INT_VAR_TO_ASSM(intVar, address) \
+    do {                                           \
+        _assmUInt = intVar;  \
+        asm("lda %v", _assmUInt);                  \
+        asm("sta %w", address);                  \
+        asm("lda %v + 1", _assmUInt);                  \
+        asm("sta %w + 1", address);                  \
     } while(0)
 
 //For writing things defined with a #define
@@ -85,5 +112,25 @@ extern byte _previousRomBank;
         asm("lda #%w", byteDef);                  \
         asm("sta %w", address);                  \
     } while(0)
+
+#define GET_NEXT(storeLocation)  \
+    do {                              \
+        if(*data >= GOLDEN_RAM_WORK_AREA + LOCAL_WORK_AREA_SIZE) \
+		{ \
+			b5RefreshBuffer(bufferStatus); \
+			*data = GOLDEN_RAM_WORK_AREA; \
+		} \
+		 storeLocation = *((*data)++); \
+		\
+    } while(0);
+
+
+#define READ_STACK_FROM_ASSM(byteVar) \
+     do {                                           \
+        asm("pla"); \
+        asm("sta %v", _assmByte); \
+        byteVar = _assmByte; \
+    } while(0) \
+
 
 #endif
