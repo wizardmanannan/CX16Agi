@@ -214,6 +214,13 @@ extern void b9CelToVera(Cel* localCel, long veraAddress, byte bCol, byte drawing
 
 #pragma code-name (push, "BANKRAM0E")
 #pragma wrapped-call (push, trampoline, SPRITE_METADATA_BANK)
+
+void bETerminateSpriteBuffer()
+{
+	*bESpritesUpdatedBufferPointer++ = 0;
+	*bESpritesUpdatedBufferPointer++ = 0;
+}
+
 void bEResetInactiveViewTableMetadata(ViewTableMetadata* localViewTableMetadata)
 {
 	boolean stop;
@@ -854,12 +861,6 @@ moveXDueToFlipped:
 	asm("clc");
 	asm("adc %v", _assmByte2);
 
-	asm("sta (%w),y", ZP_SPRITE_STORE_PTR);
-
-	asm("ldy #$7"); //Stop
-	asm("lda #$0");
-	asm("sta (%w),y", ZP_SPRITE_STORE_PTR);
-	asm("iny");
 	asm("sta (%w),y", ZP_SPRITE_STORE_PTR);
 
 	bESpritesUpdatedBufferPointer += BYTES_PER_SPRITE_UPDATE;
@@ -2348,9 +2349,9 @@ void bBUpdateObjects()
 #endif // DEBUG
 			agiBlit(&localViewtab, entryNum, FALSE);
 		}
-
 		setViewTab(&localViewtab, entryNum);
 	}
+	bETerminateSpriteBuffer();
 	REENABLE_INTERRUPTS();
 
 	show_mouse(NULL);
@@ -2521,12 +2522,10 @@ void bCupdateObjects2()
 			agiBlit(&localViewtab, entryNum, FALSE);
 
 		}
-
 		setViewTab(&localViewtab, entryNum);
 	}
+	bETerminateSpriteBuffer();
 	REENABLE_INTERRUPTS();
-
-	b6ShowPicture();
 }
 
 void bCCalcObjMotion()
