@@ -42,7 +42,6 @@ SET_VERA_START_SPRITE_ATTRS #$0, #4, SA_VERA_ZORDER ;Set VERA channel 0 to first
 
 @outerLoop:
 stz VERA_data0 ; A zorder of zero means disabled
-stz VERA_data1
 
 @outerLoopCheck:
 dey
@@ -58,8 +57,7 @@ _bESpritesUpdatedBufferPointer: .word _bESpritesUpdatedBuffer
 _bEClearSpriteAttributes:
 lda #MAX_SPRITE_SLOTS
 sta @numToClear
-
-;CLEAR_SPRITE_ATTRS @numToClear
+CLEAR_SPRITE_ATTRS @numToClear
 
 rts
 @numToClear: .byte $0
