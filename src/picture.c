@@ -1097,8 +1097,7 @@ void b11DrawPic(byte* bankedData, int pLen, boolean okToClearScreen, byte picNum
 
 	b11SplitPriority();
 
-	REENABLE_INTERRUPTS();
-	b6DismissLoadingScreen();
+	REENABLE_INTERRUPTS(); //Loading screen stays on until showPic command
 }
 
 void b6InitPictures()
@@ -1166,7 +1165,7 @@ void b6DiscardPictureFile(int picFileNum)
 
 void b6ShowPicture()
 {
-	//Doesn't need to do much since picture is stored straight in VRAM. Need to investigate whether we need to do this
+	b6DismissLoadingScreen();
 }
 
 #pragma code-name (pop)
