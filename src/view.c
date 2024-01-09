@@ -25,7 +25,7 @@
 //#define VERBOSE_SWITCH_METADATA
 //#define VERBOSE_GET_PALETTE
 //#define VERBOSE_MOVE
-//#define VERBOSE_SET_VIEW;
+///#define VERBOSE_SET_VIEW;
 //#define VERBOSE_SET_LOOPS
 //#define VERBOSE_SET_CEL
 //#define VERBOSE_LOAD_VIEWS;
@@ -1265,29 +1265,29 @@ void b9LoadViewFile(byte viewNum)
 #endif
 
 			//8 Is Default
-			if (localCel.width * 2 > MAX_32_WIDTH_OR_HEIGHT) 
+			if (localCel.width * 2 > MAX_32_WIDTH_OR_HEIGHT && localLoop.allocationWidth < MAX_64_WIDTH_OR_HEIGHT)
 			{
 				localLoop.allocationWidth = SPR_ATTR_64;
 			}
-			else if (localCel.width * 2 > MAX_16_WIDTH_OR_HEIGHT) 
+			else if (localCel.width * 2 > MAX_16_WIDTH_OR_HEIGHT && localLoop.allocationWidth < MAX_32_WIDTH_OR_HEIGHT)
 			{
 				localLoop.allocationWidth = SPR_ATTR_32;
 			}
-			else if (localCel.width * 2 > MAX_8_WIDTH_OR_HEIGHT) 
+			else if (localCel.width * 2 > MAX_8_WIDTH_OR_HEIGHT && localLoop.allocationWidth < MAX_16_WIDTH_OR_HEIGHT)
 			{
 				localLoop.allocationWidth = SPR_ATTR_16;
 			}
 
 			////Height isn't doubled only width
-			if (localCel.height > MAX_32_WIDTH_OR_HEIGHT) 
+			if (localCel.height > MAX_32_WIDTH_OR_HEIGHT && localLoop.allocationHeight < MAX_64_WIDTH_OR_HEIGHT)
 			{
 				localLoop.allocationHeight = SPR_ATTR_64;
 			}
-			else if (localCel.height > MAX_16_WIDTH_OR_HEIGHT) 
+			else if (localCel.height > MAX_16_WIDTH_OR_HEIGHT && localLoop.allocationHeight < MAX_32_WIDTH_OR_HEIGHT)
 			{
 				localLoop.allocationHeight = SPR_ATTR_32;
 			}
-			else if (localCel.height > MAX_8_WIDTH_OR_HEIGHT) 
+			else if (localCel.height > MAX_8_WIDTH_OR_HEIGHT && localLoop.allocationHeight < MAX_16_WIDTH_OR_HEIGHT)
 			{
 				localLoop.allocationHeight = SPR_ATTR_16;
 			}
@@ -1296,7 +1296,7 @@ void b9LoadViewFile(byte viewNum)
 
 			localLoop.veraSlotsHeight = b9VeraSlotsForWidthOrHeight(localCel.height);
 
-#ifdef VERBOSE_SET_CEL
+#ifdef VERBOSE_LOAD_VIEWS
 			printf("The viewNum is %d\n", viewNum);
 			printf("The address of celHeader is %p\n", celHeader);
 			printf("bitmapBank %d, bmp %p, height %d, width %d, flipped %d \n", localCel.bitmapBank, localCel.bmp, localCel.height, localCel.width, localCel.flipped);
@@ -1319,6 +1319,11 @@ void b9LoadViewFile(byte viewNum)
 		{
 			localView.maxVeraSlots = currentLoopVeraSlots;
 		}
+
+#ifdef VERBOSE_LOAD_VIEWS
+		printf("view %d loop %d is allocated width and %d height %d\n", viewNum, l, localLoop.allocationWidth, localLoop.allocationHeight);
+#endif
+
 
 		setLoadedLoop(&localView, &localLoop, l);
 	}
