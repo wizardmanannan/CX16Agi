@@ -2554,25 +2554,6 @@ void bCupdateObjects2()
 			setViewTab(&localViewtab, entryNum);
 		}
 	}
-
-	/* Draw all cels */
-	asm("sei");
-	for (entryNum = 0; entryNum < VIEW_TABLE_SIZE; entryNum++) {
-		objFlags = localViewtab.flags;
-		getViewTab(&localViewtab, entryNum);
-
-		if ((objFlags & ANIMATED) && (objFlags & DRAWN)) {
-			/* Draw new cel onto picture\priority bitmaps */
-#ifdef VERBOSE_DEBUG_BLIT
-			printf("Called from calc motion\n");
-#endif
-			agiBlit(&localViewtab, entryNum, FALSE);
-
-		}
-		setViewTab(&localViewtab, entryNum);
-	}
-	bETerminateSpriteBuffer();
-	REENABLE_INTERRUPTS();
 }
 
 void bCCalcObjMotion()
