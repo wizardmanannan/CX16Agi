@@ -209,24 +209,76 @@ sta LOCAL_CEL
 lda #>_bEToBlitCelArray
 sta LOCAL_CEL + 1
 
+;Height:
 jsr popa
-cmp #$0
+cmp #SPR_ATTR_8
 
-bne @totalBytes64
+bne @check16H
 
-@totalBytes32:
-lda #BYTES_PER_ROW_32
-sta BYTES_PER_ROW
+@setWidth8H:
+lda #SPRITE_TOTAL_ROWS_8
+sta TOTAL_ROWS
+
+bra @setWidth
+
+@check16H:
+cmp #SPR_ATTR_16
+bne @check32H
+
+@setWidth16H:
+lda #SPRITE_TOTAL_ROWS_16
+sta TOTAL_ROWS
+bra @setWidth
+
+@check32H:
+cmp #SPR_ATTR_32
+bne @setWidth64H
+
+@setWidth32H:
 lda #SPRITE_TOTAL_ROWS_32
 sta TOTAL_ROWS
+bra @setWidth
+
+@setWidth64H:
+lda #SPRITE_TOTAL_ROWS_64
+sta TOTAL_ROWS
+bra @setWidth
+
+;Width
+@setWidth:
+jsr popa
+cmp #SPR_ATTR_8
+
+bne @check16W
+
+@setWidth8W:
+lda #BYTES_PER_ROW_8
+sta BYTES_PER_ROW
 
 bra @loop
 
-@totalBytes64:
+@check16W:
+cmp #SPR_ATTR_16
+bne @check32W
+
+@setWidth16W:
+lda #BYTES_PER_ROW_16
+sta BYTES_PER_ROW
+bra @loop
+
+@check32W:
+cmp #SPR_ATTR_32
+bne @setWidth64W
+
+@setWidth32W:
+lda #BYTES_PER_ROW_32
+sta BYTES_PER_ROW
+bra @loop
+
+@setWidth64W:
 lda #BYTES_PER_ROW_64
 sta BYTES_PER_ROW
-lda #SPRITE_TOTAL_ROWS_64
-sta TOTAL_ROWS
+bra @loop
 
 @loop:
 ldy BULK_ADDRESS_INDEX

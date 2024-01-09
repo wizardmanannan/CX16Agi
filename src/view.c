@@ -643,7 +643,9 @@ void bESetLoop(ViewTable* localViewTab, ViewTableMetadata* localMetadata, View* 
 
 	memCpyBankedBetween(bEToBlitCelArray, SPRITE_METADATA_BANK, (byte*)localLoop.cels, localLoop.celsBank, localLoop.numberOfCels * sizeof(Cel));
 
-	
+#ifdef VERBOSE_DEBUG_BLIT
+	printf("You are allocating %d.%d. It has a width of %d and height of %d. There are %d to blit\n", localViewTab->currentView, localViewTab->currentLoop, localLoop.allocationWidth, localLoop.allocationHeight, noToBlit);
+#endif
 	bECellToVeraBulk(localLoop.allocationWidth, localLoop.allocationHeight, noToBlit);
 }
 #pragma code-name (pop)
@@ -860,11 +862,11 @@ moveXDueToFlipped:
 	asm("ora #8"); //8 means in front of bitmap but behind text layers and not flipped, with a zero collision mask)
 	asm("sta (%w),y", ZP_SPRITE_STORE_PTR);
 
+	//6 Sprite Attr Size/Palette Offset
 	_assmByte = localLoop.allocationWidth;
 	_assmByte2 = localLoop.allocationHeight;
 	_assmByte3 = localLoop.palette;
 
-//6 Sprite Attr Size/Palette Offset
 	asm("ldy #$6");
 	asm("lda %v", _assmByte);
 	asm("asl");
