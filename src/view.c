@@ -593,12 +593,13 @@ void bESwitchMetadata(ViewTable* localViewTab, View* localView, byte viewNum, by
 #define TO_BLIT_CEL_ARRAY_LENGTH 500
 extern byte bEToBlitCelArray[TO_BLIT_CEL_ARRAY_LENGTH];
 //Copy cels into array above first
-extern void bECellToVeraBulk(AllocationSize allocationSize, byte noToBlit);
+extern void bECellToVeraBulk(SpriteAttributeSize allocationWidth, SpriteAttributeSize allocationHeight, byte noToBlit);
 void bESetLoop(ViewTable* localViewTab, ViewTableMetadata* localMetadata, View* localView, VeraSpriteAddress* loopVeraAddresses)
 {
 	Loop localLoop;
 	byte noToBlit;
 	byte veraSpriteWidthAndHeight;
+	AllocationSize allocationSize;
 
 	getLoadedLoop(localView, &localLoop, localViewTab->currentLoop);
 
@@ -616,7 +617,16 @@ void bESetLoop(ViewTable* localViewTab, ViewTableMetadata* localMetadata, View* 
 	printf("Trying to allocate %d. Number %d\n", localLoop.allocationSize, noToBlit);
 #endif
 
-	if (!bEAllocateSpriteMemoryBulk(localLoop.allocationSize, noToBlit))
+	if (localLoop.allocationHeight == SPR_ATTR_64 || localLoop.allocationWidth == SPR_ATTR_64)
+	{
+		allocationSize = SIZE_64;
+	}
+	else
+	{
+		allocationSize = SIZE_32;
+	}
+
+	if (!bEAllocateSpriteMemoryBulk(allocationSize, noToBlit))
 	{
 		printf("no sprite mem");
 		exit(0);
@@ -633,17 +643,13 @@ void bESetLoop(ViewTable* localViewTab, ViewTableMetadata* localMetadata, View* 
 
 	memCpyBankedBetween(bEToBlitCelArray, SPRITE_METADATA_BANK, (byte*)localLoop.cels, localLoop.celsBank, localLoop.numberOfCels * sizeof(Cel));
 
-	bECellToVeraBulk(localLoop.allocationSize, noToBlit);
+	
+	bECellToVeraBulk(localLoop.allocationWidth, localLoop.allocationHeight, noToBlit);
 }
 #pragma code-name (pop)
 
 #define ZP_SPRITE_STORE_PTR ZP_PTR_TMP_2
 
-typedef enum {
-	SPR_ATTR_32 = 2,
-	SPR_ATTR_64 = 3
-} SpriteAttributeSize;
-extern byte* var;
 /***************************************************************************
 ** agi_blit
 ***************************************************************************/
@@ -786,18 +792,35 @@ void agiBlit(ViewTable* localViewTab, byte entryNum, boolean disableInterupts)
 //x low and high if flipped (used in addition to what is above, if flipped the code above will put x on the stack so that further calculation can be done below)
 moveXDueToFlipped:
 	_assmByte = localCel.width;
-	_assmByte2 = localLoop.allocationSize;	
+	_assmByte2 = localLoop.allocationWidth;
 
 	asm("lda %v", _assmByte);
 	asm("asl");
 	asm("sta %v", _assmByte);
 
+	//Width 8
 	asm("lda %v", _assmByte2);
-	asm("cmp #%w", SIZE_32);
-	asm("bne @load64");
+	asm("cmp #%w", SPR_ATTR_8);
+	asm("bne @check16");
+	asm("lda #%w", MAX_8_WIDTH_OR_HEIGHT);
+	asm("bra @takeWidthFromMaxWidth");
+
+	//Width16
+	asm("@check16: lda %v", _assmByte2);
+	asm("cmp #%w", SPR_ATTR_16);
+	asm("bne @check32");
+	asm("lda #%w", MAX_16_WIDTH_OR_HEIGHT);
+	asm("bra @takeWidthFromMaxWidth");
+	
+	//Width32
+	asm("@check32: lda %v", _assmByte2);
+	asm("cmp #%w", SPR_ATTR_32);
+	asm("bne @set64");
 	asm("lda #%w", MAX_32_WIDTH_OR_HEIGHT);
 	asm("bra @takeWidthFromMaxWidth");
-	asm("@load64: lda #%w", MAX_64_WIDTH_OR_HEIGHT);
+
+	//Width64
+	asm("@set64: lda #%w", MAX_64_WIDTH_OR_HEIGHT);
 	
 	asm("@takeWidthFromMaxWidth: sec");
 	asm("sbc %v", _assmByte); //Can't unset carry as we expect only 8 bit subtraction
@@ -837,15 +860,9 @@ moveXDueToFlipped:
 	asm("ora #8"); //8 means in front of bitmap but behind text layers and not flipped, with a zero collision mask)
 	asm("sta (%w),y", ZP_SPRITE_STORE_PTR);
 
-	if (localLoop.allocationSize == SIZE_32)
-	{
-		_assmByte = SPR_ATTR_32;
-	}
-	else
-	{
-		_assmByte = SPR_ATTR_64;
-	}
-	_assmByte2 = localLoop.palette;
+	_assmByte = localLoop.allocationWidth;
+	_assmByte2 = localLoop.allocationHeight;
+	_assmByte3 = localLoop.palette;
 
 //6 Sprite Attr Size/Palette Offset
 	asm("ldy #$6");
@@ -854,12 +871,19 @@ moveXDueToFlipped:
 	asm("asl");
 	asm("asl");
 	asm("asl");
-	asm("sta %v", _assmByte);
+	asm("tax");
+	asm("lda %v", _assmByte2);
 	asm("asl");
 	asm("asl");
-	asm("ora %v", _assmByte);
-	asm("clc");
-	asm("adc %v", _assmByte2);
+	asm("asl");
+	asm("asl");
+	asm("asl");
+	asm("asl");
+	asm("sta %v", _assmByte2);
+	asm("txa");
+	asm("ora %v", _assmByte2);
+	asm("clc"); //Might be less cycles to ora assmbyte 3 in instead. Investigate
+	asm("adc %v", _assmByte3);
 
 	asm("sta (%w),y", ZP_SPRITE_STORE_PTR);
 
@@ -1198,7 +1222,8 @@ void b9LoadViewFile(byte viewNum)
 
 		setLoopData(&tempAGI, &localView, &localLoop, tempAGI.code + loopOffsets[l], viewNum, l);
 		cellOffsets = (int*)(loopHeaderBuffer + POSITION_OF_CELS_OFFSET);
-		localLoop.allocationSize = SIZE_32;
+		localLoop.allocationWidth = SPR_ATTR_8;
+		localLoop.allocationHeight = SPR_ATTR_8;
 		localLoop.veraSlotsWidth = 1;
 		localLoop.veraSlotsHeight = 1;
 		localLoop.palette = PALETTE_NOT_SET;
@@ -1239,17 +1264,32 @@ void b9LoadViewFile(byte viewNum)
 			printf("Local view %d.%d.%d is %d x %d, when width doubled %d x %d\n", viewNum, l, c, localCel.width, localCel.height, localCel.width * 2, localCel.height);
 #endif
 
-			if (localCel.width * 2 > MAX_32_WIDTH_OR_HEIGHT) //Height isn't doubled only width
+			//8 Is Default
+			if (localCel.width * 2 > MAX_32_WIDTH_OR_HEIGHT) 
 			{
-				localLoop.allocationSize = SIZE_64;
+				localLoop.allocationWidth = SPR_ATTR_64;
+			}
+			else if (localCel.width * 2 > MAX_16_WIDTH_OR_HEIGHT) 
+			{
+				localLoop.allocationWidth = SPR_ATTR_32;
+			}
+			else if (localCel.width * 2 > MAX_8_WIDTH_OR_HEIGHT) 
+			{
+				localLoop.allocationWidth = SPR_ATTR_16;
 			}
 
-			if (localCel.height > MAX_32_WIDTH_OR_HEIGHT)
+			////Height isn't doubled only width
+			if (localCel.height > MAX_32_WIDTH_OR_HEIGHT) 
 			{
-				localLoop.allocationSize = SIZE_64;
-#ifdef VERBOSE_LOAD_VIEWS
-				printf("Height 64 sprite required\n");
-#endif
+				localLoop.allocationHeight = SPR_ATTR_64;
+			}
+			else if (localCel.height > MAX_16_WIDTH_OR_HEIGHT) 
+			{
+				localLoop.allocationHeight = SPR_ATTR_32;
+			}
+			else if (localCel.height > MAX_8_WIDTH_OR_HEIGHT) 
+			{
+				localLoop.allocationHeight = SPR_ATTR_16;
 			}
 
 			localLoop.veraSlotsWidth = b9VeraSlotsForWidthOrHeight(localCel.width * 2);

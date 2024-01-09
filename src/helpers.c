@@ -8,6 +8,7 @@ boolean debugStop = FALSE;
 byte _previousRomBank = 0;
 byte _assmByte = 0; //Used as a value to load things in and out of the registers
 byte _assmByte2 = 0; //Used as a value to load things in and out of the registers
+byte _assmByte3 = 0; //Used as a value to load things in and out of the registers
 unsigned int _assmUInt = 0;
 long _assmLong = 0; //Used as a value to load things in and out of the registers
 boolean enableHelpersDebugging = FALSE; //This is so you can debug helpers at a certain area and not be bogged down when they are called elsewhere.
