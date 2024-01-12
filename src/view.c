@@ -2593,7 +2593,7 @@ void bCCalcObjMotion()
 
 		objFlags = localViewtab.flags;
 		//Warning
-		if ((objFlags & MOTION) && (objFlags & UPDATE)) {
+		if ((objFlags & MOTION) && (objFlags & UPDATE) && (objFlags & DRAWN)) {
 
 			localViewtab.stepTimeCount++;
 
