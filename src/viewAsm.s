@@ -21,6 +21,8 @@ VIEW_INC = 1
 .import _offsetOfCelTrans
 .import _sizeofCel
 
+.import _b10BankedAlloc
+
 .ifdef DEBUG_VIEW_DRAW
 .import _b5PrintChunk
 .endif
@@ -324,7 +326,11 @@ CEL_DATA_BANK = ZP_TMP_7
 SPLIT_BUFFER_STATUS = ZP_TMP_8 ;Takes Up 9 as well
 NO_BYTES_SIZE = ZP_TMP_12
 SPLIT_BUFFER_POINTER = ZP_TMP_13
+;14 used for temp storage here
+SPLIT_DATA = ZP_TMP_15
 
+MAX_SPRITES_ROW_OR_COLUMN_SIZE = 4
+POINTER_TO_SPLIT_DATA_SIZE = (MAX_SPRITES_ROW_OR_COLUMN_SIZE * MAX_SPRITES_ROW_OR_COLUMN_SIZE * 2) + MAX_SPRITES_ROW_OR_COLUMN_SIZE
 .macro PREPARE_BUFFER_SPLIT_CEL
 stz BUFFER_STATUS + 3
 
@@ -381,6 +387,64 @@ dey ;We stop when we have counted every line
 bne @loopStart
 
 @endCount:
+
+;Allow enough space for extra line terminators when we split the cel horizontally. There are a maximum of 4 extra terminators (max split is 4) per line
+clc ; Height * 4 gets maxiumum number of extra horizontal terminators
+lda SPLIT_CEL_HEIGHT 
+asl
+sta ZP_TMP_14
+lda #$0
+rol
+sta ZP_TMP_14 + 1
+clc
+lda ZP_TMP_14
+asl
+sta ZP_TMP_14
+lda #$0
+rol
+sta ZP_TMP_14 + 1
+
+;Double that value, because when we split there will be an extra byte. This will be for whatever couldn't fit in the first segment per line
+clc
+lda ZP_TMP_14
+asl
+sta ZP_TMP_14
+lda ZP_TMP_14 + 1
+rol
+sta ZP_TMP_14 + 1
+
+clc 
+lda ZP_TMP_14
+adc NO_BYTES_SIZE
+sta NO_BYTES_SIZE
+lda ZP_TMP_14 + 1
+adc NO_BYTES_SIZE + 1
+sta NO_BYTES_SIZE + 1
+
+;Add the vertical terminators there can be a maximum of 4, since we split vertically a maximum of 4 times
+;Also add enough space for MAX_SPRITES_ROW_OR_COLUMN_SIZE * MAX_SPRITES_ROW_OR_COLUMN_SIZE pointers (which are two bytes each) at the very start
+clc
+lda NO_BYTES_SIZE
+adc #POINTER_TO_SPLIT_DATA_SIZE
+sta NO_BYTES_SIZE
+lda #$0
+adc NO_BYTES_SIZE + 1
+sta NO_BYTES_SIZE + 1
+
+;Now call banked allocate to get the memory
+
+lda NO_BYTES_SIZE
+ldx NO_BYTES_SIZE + 1
+jsr pushax
+
+lda SPLIT_BANK
+ldx SPLIT_BANK + 1
+TRAMPOLINE #BANKED_ALLOC_BANK, _b10BankedAlloc
+
+sta SPLIT_DATA
+stx SPLIT_DATA + 1
+
+stp
 
 rts
 .endif
