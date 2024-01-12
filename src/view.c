@@ -650,6 +650,7 @@ void bESetLoop(ViewTable* localViewTab, ViewTableMetadata* localMetadata, View* 
 #ifdef VERBOSE_DEBUG_BLIT
 	printf("You are allocating %d.%d. It has a width of %d and height of %d. There are %d to blit\n", localViewTab->currentView, localViewTab->currentLoop, localLoop.allocationWidth, localLoop.allocationHeight, noToBlit);
 #endif
+	//Change this method
 	bECellToVeraBulk(localLoop.allocationWidth, localLoop.allocationHeight, noToBlit);
 }
 #pragma code-name (pop)
@@ -694,7 +695,7 @@ void agiBlit(ViewTable* localViewTab, byte entryNum, boolean disableInterupts)
 		bESwitchMetadata(localViewTab, &localView, viewNum, entryNum);
 	}
 
-	if (viewTabNoToMetaData[entryNum] == VIEWNO_TO_METADATA_NO_SET) //Second part of the statement will be true if switched to another view for the first time in bESwitchMetadata
+	if (viewTabNoToMetaData[entryNum] == VIEWNO_TO_METADATA_NO_SET) //Statement will be true if switched to another view for the first time in bESwitchMetadata
 	{
 #ifdef VERBOSE_DEBUG_NO_BLIT_CACHE
 		printf("set Metadata %d. The vt is %d\n", localViewTab->viewData, entryNum);
@@ -749,6 +750,8 @@ void agiBlit(ViewTable* localViewTab, byte entryNum, boolean disableInterupts)
 	//Put bytes into a buffer to be picked up by the irq see spriteIrqHandler.s (bEHandleSpriteUpdates)
 
 	_assmUInt = loopVeraAddress;
+
+	//Update here for blitting all parts
 
 	//0 Vera Address Sprite Data Middle (Low will always be 0) (If both the first two bytes are zero that indicates the end of the buffer)
 	asm("lda %v", _assmUInt);
@@ -1361,6 +1364,12 @@ void b9DiscardView(byte viewNum)
 				localCel.height = 0;
 				localCel.transparency = 0;
 				localCel.width = 0;
+
+				if (localCel.splitCelPointers)
+				{
+					b10BankedDealloc((byte*)localCel.splitCelPointers, localCel.splitCelBank);
+				}
+				localCel.splitCelPointers = NULL;
 
 				setLoadedCel(&localLoop, &localCel, c);
 			}

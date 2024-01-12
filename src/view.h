@@ -1,3 +1,4 @@
+
 /**************************************************************************
 ** VIEW.H
 **************************************************************************/
@@ -26,6 +27,9 @@ typedef struct Cel {
 	byte* bmp;
 	byte bitmapBank;
 	boolean flipped;
+	byte** splitCelPointers; //Some cels may have sprites that larger than the maximum 64x64 the CX16 allows. 
+	//In this case the sprite is split and this array points to the places in the bmp where the indiviual segments are.  If the cel is not large enough this value is null. Note if split the cel data may be on a different bank to the view file data, hence the bank
+	byte splitCelBank;
 } Cel;
 
 #define PALETTE_NOT_SET 255

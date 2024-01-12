@@ -138,17 +138,17 @@ void b6NewRoom()
 ***************************************************************************/
 void b6UpdateStatusLine()
 {
-    char scoreStr[256], soundStr[256];
+    //char scoreStr[256], soundStr[256];
 
-    if (statusLineDisplayed) {
-        sprintf(scoreStr, "Score: %d of %d", var[3], var[7]);
-        sprintf(soundStr, "Sound:%-3s", (flag[9] ? "on" : "off"));
-        drawBigString(screen, scoreStr, 16, 0, 8, 1);
-        drawBigString(screen, soundStr, 496, 0, 8, 1);
-    }
-    else {
-        rectfill(screen, 0, 0, 639, 15, 0);   /* Clear status line */
-    }
+    //if (statusLineDisplayed) {
+    //    sprintf(scoreStr, "Score: %d of %d", var[3], var[7]);
+    //    sprintf(soundStr, "Sound:%-3s", (flag[9] ? "on" : "off"));
+    //    drawBigString(screen, scoreStr, 16, 0, 8, 1);
+    //    drawBigString(screen, soundStr, 496, 0, 8, 1);
+    //}
+    //else {
+    //    rectfill(screen, 0, 0, 639, 15, 0);   /* Clear status line */
+    //}
 }
 
 /***************************************************************************
