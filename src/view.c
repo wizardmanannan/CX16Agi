@@ -37,6 +37,10 @@
 //#define VERBOSE_ADD_TO_PIC;
 //#define VERBOSE_DEBUG_NO_BLIT_CACHE TODO: Weird print statement corruption fix
 
+#define MIN_SPRITE_PRIORITY 4
+#define MAX_SPRITE_PRIORITY 15
+#define NO_PRIORITIES (MAX_SPRITE_PRIORITY - MIN_SPRITE_PRIORITY)
+
 #define BYTES_PER_SPRITE_UPDATE 7
 #define SPRITE_UPDATED_BUFFER_SIZE  VIEW_TABLE_SIZE * BYTES_PER_SPRITE_UPDATE * 2
 extern byte bESpritesUpdatedBuffer[SPRITE_UPDATED_BUFFER_SIZE];
@@ -231,7 +235,7 @@ void bEResetInactiveViewTableMetadata(ViewTableMetadata* localViewTableMetadata)
 	stop = FALSE;
 	for (i = 0; i < MAX_INACTIVE_METADATA && !stop; i++)
 	{
-		memCpyBanked((byte*) &localInactiveMetadata, (byte*)&inActivePtr[i], localViewTableMetadata->inactiveBank, sizeof(ViewTableMetadata));
+		memCpyBanked((byte*)&localInactiveMetadata, (byte*)&inActivePtr[i], localViewTableMetadata->inactiveBank, sizeof(ViewTableMetadata));
 
 		if (localInactiveMetadata.loopsVeraAddressesPointers)
 		{
@@ -264,7 +268,7 @@ void bEResetViewTableMetadata()
 		if (viewTableMetadata[i].inactive != NULL)
 		{
 			inActivePtr = (ViewTableMetadata*)viewTableMetadata[i].inactive;
-			
+
 			bEResetInactiveViewTableMetadata(&viewTableMetadata[i]);
 
 			b10BankedDealloc((byte*)viewTableMetadata[i].inactive, viewTableMetadata[i].inactiveBank);
@@ -436,7 +440,7 @@ byte bECreateSpritePalette(byte transparentColor)
 #ifdef VERBOSE_GET_PALETTE
 				printf("The transparent colour is %d\n",i);
 #endif
-          		WRITE_BYTE_VAR_TO_ASSM(paletteBlackLow, VERA_data1);
+				WRITE_BYTE_VAR_TO_ASSM(paletteBlackLow, VERA_data1);
 				WRITE_BYTE_VAR_TO_ASSM(paletteBlackHigh, VERA_data1);
 			}
 			else
@@ -477,20 +481,20 @@ void bESwitchMetadata(ViewTable* localViewTab, View* localView, byte viewNum, by
 	if (localMetadata.inactive == NULL) //We have never done a metadata swap for this viewtab before
 	{
 		localMetadata.inactive = b10BankedAlloc(MAX_INACTIVE_METADATA * sizeof(ViewTableMetadata), &localMetadata.inactiveBank);
-		
+
 		inActiveMetadataPointer = (ViewTableMetadata*)localMetadata.inactive;
 
 #ifdef  VERBOSE_SWITCH_METADATA
 		printf("allocating %d bytes for extra metadata on bank %d\n", MAX_INACTIVE_METADATA * sizeof(ViewTableMetadata), localMetadata.inactiveBank);
 #endif //  VERBOSE_SWITCH_METADATA
 
-		
+
 		memsetBanked(localMetadata.inactive, NULL, MAX_INACTIVE_METADATA * sizeof(ViewTableMetadata), localMetadata.inactiveBank);
 	}
 
 	for (i = 0; i < MAX_INACTIVE_METADATA && !end; i++) //Search through the inactive metadata list and see if the view we are trying to switch to is already there. When we reach the end of the list or we reach an entry with null loop pointers we know it doesn't exist
 	{
-		memCpyBanked((byte*)&inActive,(byte*) &(inActiveMetadataPointer)[i], localMetadata.inactiveBank, sizeof(ViewTableMetadata));
+		memCpyBanked((byte*)&inActive, (byte*)&(inActiveMetadataPointer)[i], localMetadata.inactiveBank, sizeof(ViewTableMetadata));
 #ifdef  VERBOSE_SWITCH_METADATA
 		printf("inactive copy copying to %p from %p on bank %d size %d\n", (byte*)&inActive, (byte*)&(inActiveMetadataPointer)[i], localMetadata.inactiveBank, sizeof(ViewTableMetadata));
 #endif
@@ -524,7 +528,7 @@ void bESwitchMetadata(ViewTable* localViewTab, View* localView, byte viewNum, by
 	end = FALSE;
 	for (i = 0; i < MAX_INACTIVE_METADATA && !end; i++) //Search for inactive metadata in the list with the same rules as the active
 	{
-		memCpyBanked((byte*)&active, (byte*) &inActiveMetadataPointer[i], localMetadata.inactiveBank, sizeof(ViewTableMetadata));
+		memCpyBanked((byte*)&active, (byte*)&inActiveMetadataPointer[i], localMetadata.inactiveBank, sizeof(ViewTableMetadata));
 
 #ifdef  VERBOSE_SWITCH_METADATA
 		printf("copy to active. Copy to %p from  %p on bank %d size %d\n", &active, (byte*)&inActiveMetadataPointer[i], localMetadata.inactiveBank, sizeof(ViewTableMetadata));
@@ -567,7 +571,7 @@ void bESwitchMetadata(ViewTable* localViewTab, View* localView, byte viewNum, by
 	}
 	else
 	{
-		memCpyBanked((byte*)&localMetadata, (byte*) &inActiveMetadataPointer[inactiveMetadataSlot], localMetadata.inactiveBank, sizeof(ViewTableMetadata));
+		memCpyBanked((byte*)&localMetadata, (byte*)&inActiveMetadataPointer[inactiveMetadataSlot], localMetadata.inactiveBank, sizeof(ViewTableMetadata));
 
 #ifdef  VERBOSE_SWITCH_METADATA
 		printf("in active exists. copy to %p from %p on bank %d size %d \n", &localMetadata, (byte*)&inActiveMetadataPointer[inactiveMetadataSlot], localMetadata.inactiveBank, sizeof(ViewTableMetadata));
@@ -575,7 +579,7 @@ void bESwitchMetadata(ViewTable* localViewTab, View* localView, byte viewNum, by
 	}
 
 	viewTableMetadata[entryNum] = localMetadata;
-	
+
 #ifdef  VERBOSE_SWITCH_METADATA
 	printf("the entryNum is %d\n", entryNum);
 	printf("Setting %p on bank %p to be %p \n", &viewTableMetadata[entryNum], RAM_BANK, localMetadata);
@@ -593,12 +597,13 @@ void bESwitchMetadata(ViewTable* localViewTab, View* localView, byte viewNum, by
 #define TO_BLIT_CEL_ARRAY_LENGTH 500
 extern byte bEToBlitCelArray[TO_BLIT_CEL_ARRAY_LENGTH];
 //Copy cels into array above first
-extern void bECellToVeraBulk(AllocationSize allocationSize, byte noToBlit);
+extern void bECellToVeraBulk(SpriteAttributeSize allocationWidth, SpriteAttributeSize allocationHeight, byte noToBlit);
 void bESetLoop(ViewTable* localViewTab, ViewTableMetadata* localMetadata, View* localView, VeraSpriteAddress* loopVeraAddresses)
 {
 	Loop localLoop;
 	byte noToBlit;
 	byte veraSpriteWidthAndHeight;
+	AllocationSize allocationSize;
 
 	getLoadedLoop(localView, &localLoop, localViewTab->currentLoop);
 
@@ -616,7 +621,16 @@ void bESetLoop(ViewTable* localViewTab, ViewTableMetadata* localMetadata, View* 
 	printf("Trying to allocate %d. Number %d\n", localLoop.allocationSize, noToBlit);
 #endif
 
-	if (!bEAllocateSpriteMemoryBulk(localLoop.allocationSize, noToBlit))
+	if (localLoop.allocationHeight == SPR_ATTR_64 || localLoop.allocationWidth == SPR_ATTR_64)
+	{
+		allocationSize = SIZE_64;
+	}
+	else
+	{
+		allocationSize = SIZE_32;
+	}
+
+	if (!bEAllocateSpriteMemoryBulk(allocationSize, noToBlit))
 	{
 		printf("no sprite mem");
 		exit(0);
@@ -633,17 +647,15 @@ void bESetLoop(ViewTable* localViewTab, ViewTableMetadata* localMetadata, View* 
 
 	memCpyBankedBetween(bEToBlitCelArray, SPRITE_METADATA_BANK, (byte*)localLoop.cels, localLoop.celsBank, localLoop.numberOfCels * sizeof(Cel));
 
-	bECellToVeraBulk(localLoop.allocationSize, noToBlit);
+#ifdef VERBOSE_DEBUG_BLIT
+	printf("You are allocating %d.%d. It has a width of %d and height of %d. There are %d to blit\n", localViewTab->currentView, localViewTab->currentLoop, localLoop.allocationWidth, localLoop.allocationHeight, noToBlit);
+#endif
+	bECellToVeraBulk(localLoop.allocationWidth, localLoop.allocationHeight, noToBlit);
 }
 #pragma code-name (pop)
 
 #define ZP_SPRITE_STORE_PTR ZP_PTR_TMP_2
 
-typedef enum {
-	SPR_ATTR_32 = 2,
-	SPR_ATTR_64 = 3
-} SpriteAttributeSize;
-extern byte* var;
 /***************************************************************************
 ** agi_blit
 ***************************************************************************/
@@ -680,8 +692,8 @@ void agiBlit(ViewTable* localViewTab, byte entryNum, boolean disableInterupts)
 		printf("switching to %d for entry %d\n", viewNum, entryNum);
 #endif
 		bESwitchMetadata(localViewTab, &localView, viewNum, entryNum);
-    }
-    
+	}
+
 	if (viewTabNoToMetaData[entryNum] == VIEWNO_TO_METADATA_NO_SET) //Second part of the statement will be true if switched to another view for the first time in bESwitchMetadata
 	{
 #ifdef VERBOSE_DEBUG_NO_BLIT_CACHE
@@ -783,26 +795,43 @@ void agiBlit(ViewTable* localViewTab, byte entryNum, boolean disableInterupts)
 	asm("bra %g", yPos);
 	asm("@storeOnStackHigh: pha");
 
-//x low and high if flipped (used in addition to what is above, if flipped the code above will put x on the stack so that further calculation can be done below)
+	//x low and high if flipped (used in addition to what is above, if flipped the code above will put x on the stack so that further calculation can be done below)
 moveXDueToFlipped:
 	_assmByte = localCel.width;
-	_assmByte2 = localLoop.allocationSize;	
+	_assmByte2 = localLoop.allocationWidth;
 
 	asm("lda %v", _assmByte);
 	asm("asl");
 	asm("sta %v", _assmByte);
 
+	//Width 8
 	asm("lda %v", _assmByte2);
-	asm("cmp #%w", SIZE_32);
-	asm("bne @load64");
+	asm("cmp #%w", SPR_ATTR_8);
+	asm("bne @check16");
+	asm("lda #%w", MAX_8_WIDTH_OR_HEIGHT);
+	asm("bra @takeWidthFromMaxWidth");
+
+	//Width16
+	asm("@check16: lda %v", _assmByte2);
+	asm("cmp #%w", SPR_ATTR_16);
+	asm("bne @check32");
+	asm("lda #%w", MAX_16_WIDTH_OR_HEIGHT);
+	asm("bra @takeWidthFromMaxWidth");
+
+	//Width32
+	asm("@check32: lda %v", _assmByte2);
+	asm("cmp #%w", SPR_ATTR_32);
+	asm("bne @set64");
 	asm("lda #%w", MAX_32_WIDTH_OR_HEIGHT);
 	asm("bra @takeWidthFromMaxWidth");
-	asm("@load64: lda #%w", MAX_64_WIDTH_OR_HEIGHT);
-	
+
+	//Width64
+	asm("@set64: lda #%w", MAX_64_WIDTH_OR_HEIGHT);
+
 	asm("@takeWidthFromMaxWidth: sec");
 	asm("sbc %v", _assmByte); //Can't unset carry as we expect only 8 bit subtraction
 	asm("sta %v", _assmByte);
-	
+
 	asm("pla");
 	asm("tax");
 	asm("pla");
@@ -816,8 +845,8 @@ moveXDueToFlipped:
 	asm("ldy #$3");
 	asm("sta (%w),y", ZP_SPRITE_STORE_PTR);
 
-//4 y low (y high is always zero)
-	yPos: _assmByte = (byte)localViewTab->yPos;
+	//4 y low (y high is always zero)
+yPos: _assmByte = (byte)localViewTab->yPos;
 	_assmByte2 = localCel.height - 1;
 
 	asm("ldy #$4");
@@ -830,36 +859,37 @@ moveXDueToFlipped:
 	asm("sbc %v", _assmByte2);
 	asm("sta (%w),y", ZP_SPRITE_STORE_PTR);
 
-//5 Flipped
+	//5 Flipped
 	_assmUInt = (byte)localCel.flipped;
 	asm("ldy #$5");
 	asm("lda %v", _assmUInt);
 	asm("ora #8"); //8 means in front of bitmap but behind text layers and not flipped, with a zero collision mask)
 	asm("sta (%w),y", ZP_SPRITE_STORE_PTR);
 
-	if (localLoop.allocationSize == SIZE_32)
-	{
-		_assmByte = SPR_ATTR_32;
-	}
-	else
-	{
-		_assmByte = SPR_ATTR_64;
-	}
-	_assmByte2 = localLoop.palette;
+	//6 Sprite Attr Size/Palette Offset
+	_assmByte = localLoop.allocationWidth;
+	_assmByte2 = localLoop.allocationHeight;
+	_assmByte3 = localLoop.palette;
 
-//6 Sprite Attr Size/Palette Offset
 	asm("ldy #$6");
 	asm("lda %v", _assmByte);
 	asm("asl");
 	asm("asl");
 	asm("asl");
 	asm("asl");
-	asm("sta %v", _assmByte);
+	asm("tax");
+	asm("lda %v", _assmByte2);
 	asm("asl");
 	asm("asl");
-	asm("ora %v", _assmByte);
-	asm("clc");
-	asm("adc %v", _assmByte2);
+	asm("asl");
+	asm("asl");
+	asm("asl");
+	asm("asl");
+	asm("sta %v", _assmByte2);
+	asm("txa");
+	asm("ora %v", _assmByte2);
+	asm("clc"); //Might be less cycles to ora assmbyte 3 in instead. Investigate
+	asm("adc %v", _assmByte3);
 
 	asm("sta (%w),y", ZP_SPRITE_STORE_PTR);
 
@@ -1198,7 +1228,8 @@ void b9LoadViewFile(byte viewNum)
 
 		setLoopData(&tempAGI, &localView, &localLoop, tempAGI.code + loopOffsets[l], viewNum, l);
 		cellOffsets = (int*)(loopHeaderBuffer + POSITION_OF_CELS_OFFSET);
-		localLoop.allocationSize = SIZE_32;
+		localLoop.allocationWidth = SPR_ATTR_8;
+		localLoop.allocationHeight = SPR_ATTR_8;
 		localLoop.veraSlotsWidth = 1;
 		localLoop.veraSlotsHeight = 1;
 		localLoop.palette = PALETTE_NOT_SET;
@@ -1233,30 +1264,45 @@ void b9LoadViewFile(byte viewNum)
 #ifdef VERBOSE_GET_PALETTE
 				printf("lv 1. set palette for view %d loop %d. palette %d\n", viewNum, l, localLoop.palette);
 #endif
-		    }
+			}
 
 #ifdef VERBOSE_LOAD_VIEWS
 			printf("Local view %d.%d.%d is %d x %d, when width doubled %d x %d\n", viewNum, l, c, localCel.width, localCel.height, localCel.width * 2, localCel.height);
 #endif
 
-			if (localCel.width * 2 > MAX_32_WIDTH_OR_HEIGHT) //Height isn't doubled only width
+			//8 Is Default
+			if (localCel.width * 2 > MAX_32_WIDTH_OR_HEIGHT && localLoop.allocationWidth < MAX_64_WIDTH_OR_HEIGHT)
 			{
-				localLoop.allocationSize = SIZE_64;
+				localLoop.allocationWidth = SPR_ATTR_64;
+			}
+			else if (localCel.width * 2 > MAX_16_WIDTH_OR_HEIGHT && localLoop.allocationWidth < MAX_32_WIDTH_OR_HEIGHT)
+			{
+				localLoop.allocationWidth = SPR_ATTR_32;
+			}
+			else if (localCel.width * 2 > MAX_8_WIDTH_OR_HEIGHT && localLoop.allocationWidth < MAX_16_WIDTH_OR_HEIGHT)
+			{
+				localLoop.allocationWidth = SPR_ATTR_16;
 			}
 
-			if (localCel.height > MAX_32_WIDTH_OR_HEIGHT)
+			////Height isn't doubled only width
+			if (localCel.height > MAX_32_WIDTH_OR_HEIGHT && localLoop.allocationHeight < MAX_64_WIDTH_OR_HEIGHT)
 			{
-				localLoop.allocationSize = SIZE_64;
-#ifdef VERBOSE_LOAD_VIEWS
-				printf("Height 64 sprite required\n");
-#endif
+				localLoop.allocationHeight = SPR_ATTR_64;
+			}
+			else if (localCel.height > MAX_16_WIDTH_OR_HEIGHT && localLoop.allocationHeight < MAX_32_WIDTH_OR_HEIGHT)
+			{
+				localLoop.allocationHeight = SPR_ATTR_32;
+			}
+			else if (localCel.height > MAX_8_WIDTH_OR_HEIGHT && localLoop.allocationHeight < MAX_16_WIDTH_OR_HEIGHT)
+			{
+				localLoop.allocationHeight = SPR_ATTR_16;
 			}
 
 			localLoop.veraSlotsWidth = b9VeraSlotsForWidthOrHeight(localCel.width * 2);
 
 			localLoop.veraSlotsHeight = b9VeraSlotsForWidthOrHeight(localCel.height);
 
-#ifdef VERBOSE_SET_CEL
+#ifdef VERBOSE_LOAD_VIEWS
 			printf("The viewNum is %d\n", viewNum);
 			printf("The address of celHeader is %p\n", celHeader);
 			printf("bitmapBank %d, bmp %p, height %d, width %d, flipped %d \n", localCel.bitmapBank, localCel.bmp, localCel.height, localCel.width, localCel.flipped);
@@ -1279,6 +1325,11 @@ void b9LoadViewFile(byte viewNum)
 		{
 			localView.maxVeraSlots = currentLoopVeraSlots;
 		}
+
+#ifdef VERBOSE_LOAD_VIEWS
+		printf("view %d loop %d is allocated width and %d height %d\n", viewNum, l, localLoop.allocationWidth, localLoop.allocationHeight);
+#endif
+
 
 		setLoadedLoop(&localView, &localLoop, l);
 	}
@@ -1543,7 +1594,7 @@ void bAAdjustPosition(ViewTable* viewTab, int fx, int fy, byte entryNum)
 	if (opCounter > 0x55c00 && entryNum == 0)
 	{
 		printf("x1 is %lu, y1 is %lu, x2 is %lu, y2 is %lu\n", x1, y1, x2, y2);
-}
+	}
 #endif // VERBOSE_MOVE
 
 	if (x1 > x2)
@@ -1584,7 +1635,7 @@ void bAAdjustPosition(ViewTable* viewTab, int fx, int fy, byte entryNum)
 		if (opCounter > 0x55c00 && entryNum == 0)
 		{
 			printf("width %d greater than height %d\n", width, height);
-	}
+		}
 #endif // VERBOSE_MOVE
 
 		addX = (width == 0 ? 0 : b1Div(width, abs(width)));
@@ -1669,7 +1720,7 @@ void bAAdjustPosition(ViewTable* viewTab, int fx, int fy, byte entryNum)
 			}
 
 #endif // VERBOSE_MOVE
-			}
+		}
 #ifdef VERBOSE_MOVE
 		if (opCounter > 0x55c00 && entryNum == 0)
 		{
@@ -1807,7 +1858,7 @@ void bAAdjustPosition(ViewTable* viewTab, int fx, int fy, byte entryNum)
 			dx = b1CeilFix32(x);
 			dy = b1CeilFix32(y);
 		}
-		}
+	}
 
 	viewTab->xPos = dx;
 	viewTab->yPos = dy;
@@ -2228,9 +2279,14 @@ void bBUpdateObj2(int entryNum)
 	b6ShowPicture();
 }
 
+#pragma bss-name (push, "BANKRAM0B")
+boolean prioritiesSeen[NO_PRIORITIES - 1];
+#pragma bss-name (pop)
+
 void bBUpdateObjects()
 {
 	int entryNum, celNum, oldX, oldY;
+	byte i;
 	word objFlags;
 	ViewTable localViewtab;
 
@@ -2336,20 +2392,32 @@ void bBUpdateObjects()
 
 	/* Draw all cels */
 
+	memset(prioritiesSeen, FALSE, NO_PRIORITIES - 1);
+
 	asm("sei");
-	for (entryNum = 0; entryNum < VIEW_TABLE_SIZE; entryNum++) {
-		getViewTab(&localViewtab, entryNum);
+	for (i = MAX_SPRITE_PRIORITY; i >= MIN_SPRITE_PRIORITY; i--)
+	{
+		if (i == MAX_SPRITE_PRIORITY || prioritiesSeen[i - MIN_SPRITE_PRIORITY - 1])
+		{
+			for (entryNum = 0; entryNum < VIEW_TABLE_SIZE; entryNum++) {
+				getViewTab(&localViewtab, entryNum);
 
-		objFlags = localViewtab.flags;
-		if ((objFlags & ANIMATED) && (objFlags & DRAWN)) {
-			/* Draw new cel onto picture\priority bitmaps */
+				objFlags = localViewtab.flags;
+				if ((objFlags & ANIMATED) && (objFlags & DRAWN)) {
+					/* Draw new cel onto picture\priority bitmaps */
 
-#ifdef VERBOSE_DEBUG_BLIT
-			printf("Called from update objs");
-#endif // DEBUG
-			agiBlit(&localViewtab, entryNum, FALSE);
+					if (i == localViewtab.priority)
+					{
+						agiBlit(&localViewtab, entryNum, FALSE);
+					}
+					else if (i == MAX_SPRITE_PRIORITY)
+					{
+						prioritiesSeen[localViewtab.priority - MIN_SPRITE_PRIORITY - 1] = TRUE;
+					}
+				}
+				setViewTab(&localViewtab, entryNum);
+			}
 		}
-		setViewTab(&localViewtab, entryNum);
 	}
 	bETerminateSpriteBuffer();
 	REENABLE_INTERRUPTS();
@@ -2507,25 +2575,6 @@ void bCupdateObjects2()
 			setViewTab(&localViewtab, entryNum);
 		}
 	}
-
-	/* Draw all cels */
-	asm("sei");
-	for (entryNum = 0; entryNum < VIEW_TABLE_SIZE; entryNum++) {
-		objFlags = localViewtab.flags;
-		getViewTab(&localViewtab, entryNum);
-
-		if ((objFlags & ANIMATED) && (objFlags & DRAWN)) {
-			/* Draw new cel onto picture\priority bitmaps */
-#ifdef VERBOSE_DEBUG_BLIT
-			printf("Called from calc motion\n");
-#endif
-			agiBlit(&localViewtab, entryNum, FALSE);
-
-		}
-		setViewTab(&localViewtab, entryNum);
-	}
-	bETerminateSpriteBuffer();
-	REENABLE_INTERRUPTS();
 }
 
 void bCCalcObjMotion()
@@ -2544,7 +2593,7 @@ void bCCalcObjMotion()
 
 		objFlags = localViewtab.flags;
 		//Warning
-		if ((objFlags & MOTION) && (objFlags & UPDATE)) {
+		if ((objFlags & MOTION) && (objFlags & UPDATE) && (objFlags & DRAWN)) {
 
 			localViewtab.stepTimeCount++;
 

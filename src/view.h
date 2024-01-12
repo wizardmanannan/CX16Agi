@@ -29,11 +29,21 @@ typedef struct Cel {
 } Cel;
 
 #define PALETTE_NOT_SET 255
+
+typedef enum {
+	SPR_ATTR_8 = 0,
+	SPR_ATTR_16 = 1,
+	SPR_ATTR_32 = 2,
+	SPR_ATTR_64 = 3
+} SpriteAttributeSize;
+extern byte* var;
+
 typedef struct {
 	byte numberOfCels;
 	Cel* cels;
 	byte celsBank;
-	AllocationSize allocationSize;
+	SpriteAttributeSize allocationHeight;
+	SpriteAttributeSize allocationWidth;
 	byte veraSlotsWidth;
 	byte veraSlotsHeight;
 	byte palette;
