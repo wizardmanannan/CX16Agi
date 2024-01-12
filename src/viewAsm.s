@@ -315,6 +315,74 @@ jmp @loop
 @return:
 rts
 
+SPLIT_CEL_POINTERS = ZP_TMP_2
+SPLIT_CEL_WIDTH = ZP_TMP_3
+SPLIT_CEL_HEIGHT = ZP_TMP_4
+SPLIT_BANK = ZP_TMP_5
+CEL_DATA = ZP_TMP_6
+CEL_DATA_BANK = ZP_TMP_7
+SPLIT_BUFFER_STATUS = ZP_TMP_8 ;Takes Up 9 as well
+NO_BYTES_SIZE = ZP_TMP_12
+SPLIT_BUFFER_POINTER = ZP_TMP_13
+
+.macro PREPARE_BUFFER_SPLIT_CEL
+stz BUFFER_STATUS + 3
+
+lda CEL_DATA
+sta SPLIT_BUFFER_STATUS
+lda CEL_DATA + 1
+sta SPLIT_BUFFER_STATUS + 1
+lda CEL_DATA_BANK
+sta SPLIT_BUFFER_STATUS + 2
+
+REFRESH_BUFFER SPLIT_BUFFER_POINTER, SPLIT_BUFFER_STATUS ;Uses the work area to buffer the run encoded data. Using the b5RefreshBuffer function from C
+
+.endmacro
+
+;byte* bESplitCel (byte*** splitCelPointers, byte celWidth, byte celHeight, byte* splitBank, byte* celData, byte celDataBank)
+_bESplitCel:
+;Read Arguments
+sta CEL_DATA_BANK
+
+jsr popax
+sta CEL_DATA
+stx CEL_DATA + 1
+
+jsr popax
+sta SPLIT_BANK
+stx SPLIT_BANK + 1
+
+jsr popax
+sta SPLIT_CEL_HEIGHT
+stx SPLIT_CEL_WIDTH
+
+jsr popax
+sta SPLIT_CEL_POINTERS
+stx SPLIT_CEL_POINTERS + 1
+
+;Count the number of bytes in the cel data, so we know how much to allocate
+PREPARE_BUFFER_SPLIT_CEL
+
+ldy SPLIT_CEL_HEIGHT
+
+stz NO_BYTES_SIZE
+stz NO_BYTES_SIZE + 1
+@loopStart:
+GET_NEXT SPLIT_BUFFER_POINTER, SPLIT_BUFFER_STATUS
+
+inc NO_BYTES_SIZE
+bne @countCheckNextLine
+inc NO_BYTES_SIZE + 1
+@countCheckNextLine:
+cmp #$0 ;Zero means a new line, but we need to still count it, and then decrement y
+bne @loopStart
+
+dey ;We stop when we have counted every line
+bne @loopStart
+
+@endCount:
+
+rts
 .endif
 
 

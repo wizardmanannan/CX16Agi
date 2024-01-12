@@ -56,3 +56,4 @@
     .export _bEToBlitCelArray
     .export _bESpritesUpdatedBufferPointer
     .export _bEClearSpriteAttributes
+    .export _bESplitCel

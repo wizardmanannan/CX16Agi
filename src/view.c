@@ -219,6 +219,8 @@ extern void b9CelToVera(Cel* localCel, long veraAddress, byte bCol, byte drawing
 #pragma code-name (push, "BANKRAM0E")
 #pragma wrapped-call (push, trampoline, SPRITE_METADATA_BANK)
 
+extern byte* bESplitCel(byte*** splitCelPointers, byte celWidth, byte celHeight, byte* splitBank, byte* celData, byte celDataBank);
+
 void bETerminateSpriteBuffer()
 {
 	*bESpritesUpdatedBufferPointer++ = 0;
@@ -1304,6 +1306,12 @@ void b9LoadViewFile(byte viewNum)
 			localLoop.veraSlotsWidth = b9VeraSlotsForWidthOrHeight(localCel.width * 2);
 
 			localLoop.veraSlotsHeight = b9VeraSlotsForWidthOrHeight(localCel.height);
+
+			if (localLoop.veraSlotsWidth > 1 || localLoop.veraSlotsHeight > 1)
+			{
+				printf("you are splitting view %d loop %d cel %d. The data is %p on bank %p\n", viewNum, l, c, localCel.bmp, localCel.bitmapBank);
+			 localCel.bmp =	bESplitCel(&localCel.splitCelPointers, localCel.width, localCel.height, &localCel.splitCelBank, localCel.bmp, localCel.bitmapBank);
+			}
 
 #ifdef VERBOSE_LOAD_VIEWS
 			printf("The viewNum is %d\n", viewNum);
