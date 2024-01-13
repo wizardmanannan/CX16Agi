@@ -14,6 +14,7 @@ VIEW_INC = 1
 .import popax
 .import popa
 .import pushax
+.import _memCpyBanked
 
 .import _offsetOfBmp
 .import _offsetOfBmpBank
@@ -329,11 +330,13 @@ NO_BYTES_SIZE = ZP_TMP_8
 SPLIT_BUFFER_POINTER = ZP_TMP_9
 SPLIT_DATA = ZP_TMP_10
 CEL_DATA = ZP_TMP_12
+SEGMENT_SIZE = ZP_TMP_13
+NO_SEGMENTS = ZP_TMP_13 + 1
 ;14 and 15 used for temp storage here
 
 
 MAX_SPRITES_ROW_OR_COLUMN_SIZE = 4
-POINTER_TO_SPLIT_DATA_SIZE = (MAX_SPRITES_ROW_OR_COLUMN_SIZE * MAX_SPRITES_ROW_OR_COLUMN_SIZE * 2) + MAX_SPRITES_ROW_OR_COLUMN_SIZE
+POINTER_TO_SPLIT_DATA_SIZE = MAX_SPRITES_ROW_OR_COLUMN_SIZE * MAX_SPRITES_ROW_OR_COLUMN_SIZE * 2
 .macro PREPARE_BUFFER_SPLIT_CEL
 stz SPLIT_BUFFER_STATUS + 3
 
@@ -428,7 +431,7 @@ sta NO_BYTES_SIZE + 1
 ;Also add enough space for MAX_SPRITES_ROW_OR_COLUMN_SIZE * MAX_SPRITES_ROW_OR_COLUMN_SIZE pointers (which are two bytes each) at the very start
 clc
 lda NO_BYTES_SIZE
-adc #POINTER_TO_SPLIT_DATA_SIZE
+adc #POINTER_TO_SPLIT_DATA_SIZE + MAX_SPRITES_ROW_OR_COLUMN_SIZE
 sta NO_BYTES_SIZE
 lda #$0
 adc NO_BYTES_SIZE + 1
@@ -483,7 +486,7 @@ lda #$1
 ldx #$0
 
 cmp #1
-beq @divideMemoryBySegments ;Height is 1 we can skip the multiply as we would just be multiply width by 1. We already have width in ZP_TMP_14
+beq @storeSegmentSize ;Height is 1 we can skip the multiply as we would just be multiply width by 1. We already have width in ZP_TMP_14
 
 ldy #$1
 cpy ZP_TMP_14 ;If width is 1 we can also skip the multiply, as we would just be multiplying height by 1
@@ -495,31 +498,62 @@ beq @storeMultiplyResult
 @multiply:
 jsr pushax ;We already have the height in a and x
 lda ZP_TMP_14 ; Get Width
-ldx ZP_TMP_14 + 1
+ldx #$0
 TRAMPOLINE #HELPERS_BANK, _b5Multiply
 
 @storeMultiplyResult:
 sta ZP_TMP_14
-stx ZP_TMP_14 + 1
 
+@storeSegmentSize:
+lda ZP_TMP_14
+sta NO_SEGMENTS
 @divideMemoryBySegments:
 sec
-lda NO_BYTES_SIZE ;We don't could the part of the memory reserved for the pointers in the segment division
+lda NO_BYTES_SIZE ;We don't count the part of the memory reserved for the pointers in the segment division
 sbc POINTER_TO_SPLIT_DATA_SIZE
 tay
 lda NO_BYTES_SIZE + 1
 sbc POINTER_TO_SPLIT_DATA_SIZE + 1
 tax
 tya
-stp
 jsr pushax
 
+lda NO_SEGMENTS
+ldx #$0
+
+TRAMPOLINE #HELPERS_BANK, _b5Divide ;Divide the total amount of memory by the number of segments
+sta SEGMENT_SIZE
+lda SPLIT_DATA 
+sta ZP_TMP_14
+lda SPLIT_DATA + 1
+sta ZP_TMP_14 + 1
+
+ldy #$0
+ldx NO_SEGMENTS
+@createSegmentPointersLoop: ;Now partition the memory into segments. Store initially in the golden ram and then copy to the banked memory
 lda ZP_TMP_14
-ldx ZP_TMP_14 + 1
+sta GOLDEN_RAM_WORK_AREA, y
+iny
+lda ZP_TMP_14 + 1
+sta GOLDEN_RAM_WORK_AREA, y
+iny
 
-TRAMPOLINE #HELPERS_BANK, _b5Divide
+dex
+cpx #$0
+beq @end
 
+clc
 stp
+lda SEGMENT_SIZE
+adc ZP_TMP_14
+sta ZP_TMP_14
+lda ZP_TMP_14 + 1
+adc #$0
+sta ZP_TMP_14 + 1
+bra @createSegmentPointersLoop
+
+
+@end:
 rts
 .endif
 
