@@ -22,6 +22,8 @@ VIEW_INC = 1
 .import _sizeofCel
 
 .import _b10BankedAlloc
+.import _b5Multiply
+.import _b5Divide
 
 .ifdef DEBUG_VIEW_DRAW
 .import _b5PrintChunk
@@ -319,25 +321,27 @@ rts
 
 SPLIT_CEL_POINTERS = ZP_TMP_2
 SPLIT_CEL_WIDTH = ZP_TMP_3
-SPLIT_CEL_HEIGHT = ZP_TMP_4
-SPLIT_BANK = ZP_TMP_5
-CEL_DATA = ZP_TMP_6
-CEL_DATA_BANK = ZP_TMP_7
-SPLIT_BUFFER_STATUS = ZP_TMP_8 ;Takes Up 9 as well
-NO_BYTES_SIZE = ZP_TMP_12
-SPLIT_BUFFER_POINTER = ZP_TMP_13
-;14 used for temp storage here
-SPLIT_DATA = ZP_TMP_15
+SPLIT_CEL_HEIGHT = ZP_TMP_3 + 1
+SPLIT_BANK = ZP_TMP_4
+CEL_DATA_BANK = ZP_TMP_5
+SPLIT_BUFFER_STATUS = ZP_TMP_6 ;Takes Up 7 as well
+NO_BYTES_SIZE = ZP_TMP_8
+SPLIT_BUFFER_POINTER = ZP_TMP_9
+SPLIT_DATA = ZP_TMP_10
+CEL_DATA = ZP_TMP_12
+;14 and 15 used for temp storage here
+
 
 MAX_SPRITES_ROW_OR_COLUMN_SIZE = 4
 POINTER_TO_SPLIT_DATA_SIZE = (MAX_SPRITES_ROW_OR_COLUMN_SIZE * MAX_SPRITES_ROW_OR_COLUMN_SIZE * 2) + MAX_SPRITES_ROW_OR_COLUMN_SIZE
 .macro PREPARE_BUFFER_SPLIT_CEL
-stz BUFFER_STATUS + 3
+stz SPLIT_BUFFER_STATUS + 3
 
 lda CEL_DATA
 sta SPLIT_BUFFER_STATUS
 lda CEL_DATA + 1
 sta SPLIT_BUFFER_STATUS + 1
+
 lda CEL_DATA_BANK
 sta SPLIT_BUFFER_STATUS + 2
 
@@ -368,7 +372,6 @@ stx SPLIT_CEL_POINTERS + 1
 
 ;Count the number of bytes in the cel data, so we know how much to allocate
 PREPARE_BUFFER_SPLIT_CEL
-
 ldy SPLIT_CEL_HEIGHT
 
 stz NO_BYTES_SIZE
@@ -440,12 +443,83 @@ jsr pushax
 lda SPLIT_BANK
 ldx SPLIT_BANK + 1
 TRAMPOLINE #BANKED_ALLOC_BANK, _b10BankedAlloc
-
 sta SPLIT_DATA
 stx SPLIT_DATA + 1
 
-stp
+lda SPLIT_CEL_WIDTH ;Divide width by 64 to know how many segments across we need
+cmp #64
+bcc @widthLessThan64
+lsr
+lsr
+lsr
+lsr
+lsr
+lsr 
+bra @loadWidth
 
+@widthLessThan64:
+lda #$1
+
+@loadWidth:
+ldx #$0
+sta ZP_TMP_14
+stx ZP_TMP_14 + 1
+
+lda SPLIT_CEL_HEIGHT
+cmp #64
+bcc @heightLessThan64
+lsr
+lsr
+lsr
+lsr
+lsr
+lsr 
+bra @loadHeight
+
+@heightLessThan64:
+lda #$1
+
+@loadHeight:
+ldx #$0
+
+cmp #1
+beq @divideMemoryBySegments ;Height is 1 we can skip the multiply as we would just be multiply width by 1. We already have width in ZP_TMP_14
+
+ldy #$1
+cpy ZP_TMP_14 ;If width is 1 we can also skip the multiply, as we would just be multiplying height by 1
+
+bne @multiply
+beq @storeMultiplyResult
+
+
+@multiply:
+jsr pushax ;We already have the height in a and x
+lda ZP_TMP_14 ; Get Width
+ldx ZP_TMP_14 + 1
+TRAMPOLINE #HELPERS_BANK, _b5Multiply
+
+@storeMultiplyResult:
+sta ZP_TMP_14
+stx ZP_TMP_14 + 1
+
+@divideMemoryBySegments:
+sec
+lda NO_BYTES_SIZE ;We don't could the part of the memory reserved for the pointers in the segment division
+sbc POINTER_TO_SPLIT_DATA_SIZE
+tay
+lda NO_BYTES_SIZE + 1
+sbc POINTER_TO_SPLIT_DATA_SIZE + 1
+tax
+tya
+stp
+jsr pushax
+
+lda ZP_TMP_14
+ldx ZP_TMP_14 + 1
+
+TRAMPOLINE #HELPERS_BANK, _b5Divide
+
+stp
 rts
 .endif
 

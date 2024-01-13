@@ -51,6 +51,17 @@ byte convertAsciiByteToPetsciiByte(byte toConvert)
 	}
 	return toConvert;
 }
+
+int b5Multiply(int a, int b)
+{
+	return a * b;
+}
+
+int b5Divide(int a, int b)
+{
+	return a / b;
+}
+
 #pragma code-name (pop);
 
 char* strcpyBanked(char* dest, const char* src, byte bank)

@@ -1309,8 +1309,8 @@ void b9LoadViewFile(byte viewNum)
 
 			if (localLoop.veraSlotsWidth > 1 || localLoop.veraSlotsHeight > 1)
 			{
-				printf("you are splitting view %d loop %d cel %d. The data is %p on bank %p\n", viewNum, l, c, localCel.bmp, localCel.bitmapBank);
-			 localCel.bmp =	bESplitCel(&localCel.splitCelPointers, localCel.width, localCel.height, &localCel.splitCelBank, localCel.bmp, localCel.bitmapBank);
+				printf("you are splitting view %d loop %d cel %d. The data is %p on bank %p. It's width doubled is %d\n", viewNum, l, c, localCel.bmp, localCel.bitmapBank, localCel.width * 2);
+			 localCel.bmp =	bESplitCel(&localCel.splitCelPointers, localCel.width * 2, localCel.height, &localCel.splitCelBank, localCel.bmp, localCel.bitmapBank);
 			}
 
 #ifdef VERBOSE_LOAD_VIEWS
