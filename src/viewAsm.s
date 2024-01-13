@@ -351,7 +351,6 @@ sta SPLIT_BUFFER_STATUS + 2
 REFRESH_BUFFER SPLIT_BUFFER_POINTER, SPLIT_BUFFER_STATUS ;Uses the work area to buffer the run encoded data. Using the b5RefreshBuffer function from C
 
 .endmacro
-
 ;byte* bESplitCel (byte*** splitCelPointers, byte celWidth, byte celHeight, byte* splitBank, byte* celData, byte celDataBank)
 _bESplitCel:
 ;Read Arguments
@@ -540,10 +539,9 @@ iny
 
 dex
 cpx #$0
-beq @end
+beq @endDivideSegments
 
 clc
-stp
 lda SEGMENT_SIZE
 adc ZP_TMP_14
 sta ZP_TMP_14
@@ -552,6 +550,22 @@ adc #$0
 sta ZP_TMP_14 + 1
 bra @createSegmentPointersLoop
 
+@endDivideSegments:
+lda SPLIT_DATA
+ldx SPLIT_DATA + 1
+jsr pushax
+
+lda #<GOLDEN_RAM_WORK_AREA
+ldx #>GOLDEN_RAM_WORK_AREA
+jsr pushax
+
+lda (SPLIT_BANK)
+jsr pusha
+
+lda NO_SEGMENTS
+asl
+ldx #$0
+jsr _memCpyBanked
 
 @end:
 rts

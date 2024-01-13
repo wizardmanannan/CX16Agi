@@ -32,6 +32,7 @@
 //#define VERBOSE_UPDATE_OBJECTS
 //#define VERBOSE_DEBUG_SET_METADATA
 //#define VERBOSE_DEBUG_BLIT
+//#define VERBOSE_SPLIT
 
 //#define VERBOSE_ALLOC_WATCH
 //#define VERBOSE_ADD_TO_PIC;
@@ -1309,7 +1310,9 @@ void b9LoadViewFile(byte viewNum)
 
 			if (localLoop.veraSlotsWidth > 1 || localLoop.veraSlotsHeight > 1)
 			{
-				printf("you are splitting view %d loop %d cel %d. The data is %p on bank %p. It's width doubled is %d\n", viewNum, l, c, localCel.bmp, localCel.bitmapBank, localCel.width * 2);
+				#ifdef VERBOSE_SPLIT
+				printf("you are splitting view %d loop %d cel %d. the data is %p on bank %p. it's width doubled is %d\n", viewNum, l, c, localCel.bmp, localCel.bitmapBank, localCel.width * 2);
+				#endif
 			 localCel.bmp =	bESplitCel(&localCel.splitCelPointers, localCel.width * 2, localCel.height, &localCel.splitCelBank, localCel.bmp, localCel.bitmapBank);
 			}
 
