@@ -15,11 +15,19 @@ VIEW_INC = 1
 .import popa
 .import pushax
 .import _memCpyBanked
+.import _b1DivAndCeil
 
 .import _offsetOfBmp
 .import _offsetOfBmpBank
 .import _offsetOfCelHeight
 .import _offsetOfCelTrans
+.import _offsetOfSplitCelBank
+.import _offsetOfCelWidth
+.import _offsetOfCelHeight
+.import _offsetOfSplitCelPointers
+.import _offsetOfSplitSegments
+
+
 .import _sizeofCel
 
 .import _b10BankedAlloc
@@ -320,7 +328,6 @@ jmp @loop
 @return:
 rts
 
-SPLIT_CEL_POINTERS = ZP_TMP_2
 SPLIT_CEL_WIDTH = ZP_TMP_3
 SPLIT_CEL_HEIGHT = ZP_TMP_3 + 1
 SPLIT_BANK = ZP_TMP_4
@@ -332,6 +339,7 @@ SPLIT_DATA = ZP_TMP_10
 CEL_DATA = ZP_TMP_12
 SEGMENT_SIZE = ZP_TMP_13
 NO_SEGMENTS = ZP_TMP_13 + 1
+CEL_STRUCT_POINTER = ZP_TMP_16
 ;14 and 15 used for temp storage here
 
 
@@ -351,37 +359,27 @@ sta SPLIT_BUFFER_STATUS + 2
 REFRESH_BUFFER SPLIT_BUFFER_POINTER, SPLIT_BUFFER_STATUS ;Uses the work area to buffer the run encoded data. Using the b5RefreshBuffer function from C
 
 .endmacro
-;byte* bESplitCel (byte*** splitCelPointers, byte celWidth, byte celHeight, byte* splitBank, byte* celData, byte celDataBank)
+;void bESplitCel(Cel* cel);
 _bESplitCel:
-;Read Arguments
-sta CEL_DATA_BANK
+sta CEL_STRUCT_POINTER
+stx CEL_STRUCT_POINTER + 1
 
-jsr popax
-sta CEL_DATA
-stx CEL_DATA + 1
+;Read struct
 
-jsr popax
-sta SPLIT_BANK
-stx SPLIT_BANK + 1
-
-jsr popax
-sta SPLIT_CEL_HEIGHT
-stx SPLIT_CEL_WIDTH
-
-jsr popax
-sta SPLIT_CEL_POINTERS
-stx SPLIT_CEL_POINTERS + 1
-
+GET_STRUCT_16_STORED_OFFSET _offsetOfBmp, CEL_STRUCT_POINTER, CEL_DATA
+GET_STRUCT_8_STORED_OFFSET _offsetOfCelWidth, CEL_STRUCT_POINTER, SPLIT_CEL_WIDTH
+GET_STRUCT_8_STORED_OFFSET _offsetOfCelHeight, CEL_STRUCT_POINTER, SPLIT_CEL_HEIGHT
+GET_STRUCT_8_STORED_OFFSET _offsetOfBmpBank, CEL_STRUCT_POINTER, CEL_DATA_BANK
 ;Count the number of bytes in the cel data, so we know how much to allocate
 PREPARE_BUFFER_SPLIT_CEL
 ldy SPLIT_CEL_HEIGHT
 
 stz NO_BYTES_SIZE
 stz NO_BYTES_SIZE + 1
+ldx #$0
 @loopStart:
 GET_NEXT SPLIT_BUFFER_POINTER, SPLIT_BUFFER_STATUS
-
-inc NO_BYTES_SIZE
+inx
 bne @countCheckNextLine
 inc NO_BYTES_SIZE + 1
 @countCheckNextLine:
@@ -392,6 +390,7 @@ dey ;We stop when we have counted every line
 bne @loopStart
 
 @endCount:
+stx NO_BYTES_SIZE
 
 ;Allow enough space for extra line terminators when we split the cel horizontally. There are a maximum of 4 extra terminators (max split is 4) per line
 clc ; Height * 4 gets maxiumum number of extra horizontal terminators
@@ -442,15 +441,22 @@ lda NO_BYTES_SIZE
 ldx NO_BYTES_SIZE + 1
 jsr pushax
 
-lda SPLIT_BANK
-ldx SPLIT_BANK + 1
+lda #< SPLIT_BANK
+ldx #$0
 TRAMPOLINE #BANKED_ALLOC_BANK, _b10BankedAlloc
 sta SPLIT_DATA
 stx SPLIT_DATA + 1
 
+SET_STRUCT_16_STORED_OFFSET_VALUE_IN_REG _offsetOfSplitCelPointers, CEL_STRUCT_POINTER
+
+lda SPLIT_BANK
+SET_STRUCT_8_STORED_OFFSET_VALUE_IN_REG _offsetOfSplitCelBank, CEL_STRUCT_POINTER
+
 lda SPLIT_CEL_WIDTH ;Divide width by 64 to know how many segments across we need
 cmp #64
 bcc @widthLessThan64
+clc
+adc #63 ; Adding 63 to the width will ensure we round up when we divide by 64
 lsr
 lsr
 lsr
@@ -470,6 +476,8 @@ stx ZP_TMP_14 + 1
 lda SPLIT_CEL_HEIGHT
 cmp #64
 bcc @heightLessThan64
+clc
+adc #63 ; Adding 63 to the height will ensure we round up when we divide by 64
 lsr
 lsr
 lsr
@@ -520,8 +528,11 @@ jsr pushax
 lda NO_SEGMENTS
 ldx #$0
 
+SET_STRUCT_8_STORED_OFFSET_VALUE_IN_REG _offsetOfSplitSegments, CEL_STRUCT_POINTER
+
 TRAMPOLINE #HELPERS_BANK, _b5Divide ;Divide the total amount of memory by the number of segments
 sta SEGMENT_SIZE
+
 lda SPLIT_DATA 
 sta ZP_TMP_14
 lda SPLIT_DATA + 1
@@ -559,7 +570,7 @@ lda #<GOLDEN_RAM_WORK_AREA
 ldx #>GOLDEN_RAM_WORK_AREA
 jsr pushax
 
-lda (SPLIT_BANK)
+lda SPLIT_BANK
 jsr pusha
 
 lda NO_SEGMENTS

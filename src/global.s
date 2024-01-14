@@ -194,6 +194,20 @@ NEG_1_16 = $FFFF
          STA   result + 1
 .endmacro
 
+.macro  SET_STRUCT_16_STORED_OFFSET_VALUE_IN_REG offset, pointer
+         LDY  offset
+         STA   (pointer),y
+         TXA
+         INY
+         STA   (pointer),y
+
+.endmacro
+
+.macro  SET_STRUCT_8_STORED_OFFSET_VALUE_IN_REG offset, pointer
+         LDY  offset
+         STA   (pointer),y
+.endmacro
+
 ; Macro for getting an 8-bit struct value
 .macro   GET_STRUCT_8 offset, pointer, result
          LDY   #offset
