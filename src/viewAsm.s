@@ -343,15 +343,15 @@ CEL_STRUCT_POINTER = ZP_TMP_16
 ;14 and 15 used for temp storage here
 
 
-.macro PARTITON_MEMORY
+.macro PARTITION_MEMORY
 .local @endDivideSegments
 .local @createSegmentPointersLoop
 
 ldy #$0
-ldx NO_SEGMENTS
-@createSegmentPointersLoop: ;Now partition the memory into segments. Store initially in the golden ram and then copy to the banked memory
+ldx NO_SEGMENTS ;x is serving as our counter
+@createSegmentPointersLoop: ;This is for partioning memory into segments. It assumes that the first address in already store in ZP_TMP_14
 lda ZP_TMP_14
-sta GOLDEN_RAM_WORK_AREA, y
+sta GOLDEN_RAM_WORK_AREA, y ; Store the address in the golden ram work area
 iny
 lda ZP_TMP_14 + 1
 sta GOLDEN_RAM_WORK_AREA, y
@@ -362,7 +362,7 @@ cpx #$0
 beq @endDivideSegments
 
 clc
-lda SEGMENT_SIZE
+lda SEGMENT_SIZE ;Work out the next address by adding segment_size to the previous address
 adc ZP_TMP_14
 sta ZP_TMP_14
 lda ZP_TMP_14 + 1
@@ -390,25 +390,38 @@ REFRESH_BUFFER SPLIT_BUFFER_POINTER, SPLIT_BUFFER_STATUS ;Uses the work area to 
 
 .endmacro
 ;void bESplitCel(Cel* cel);
-_bESplitCel:
+_bESplitCel: ;The goal of this function is to PREPARE to split a cel into segments that can be drawn to the vera. The segments are stored in banked memory, and the pointers to the segments are stored in the cel struct
+;There are two split cel methods, this one for preparation and bCSplitCel for spliting.
+;This method has several steps, in this order.
+; 1. Read the cel struct to get the width, height, and cel data address and bank
+; 2. Count the number of bytes in the cel data, so we know how much to allocate
+; 3. Allocate memory for the split cel data
+; 4. Divide the memory by the number of segments
+; 5. Store those divisions prior calling split
+; 6. Now partition the bCSplitBuffer buffer into equal sized segments to the allocated memory. Note even though this buffer is larger then the allocated memory, any excess space will be discounted. This allows for the pointers to both buffers to point to the same data eg. the first pointer in the allocated memory will point to the first segment in the buffer will point the same data as the first pointer for the buffer and so on
+; 7. Store the pointers to the divisions of bCSplitBuffer buffer in bCSplitBufferSegments
+; 8. Call bCSplitCel
+; 9. Copy the data from bCSplitBuffer to the allocated memory
+
 sta CEL_STRUCT_POINTER
 stx CEL_STRUCT_POINTER + 1
 
-;Read struct
+;1. Read cel struct data
 
 GET_STRUCT_16_STORED_OFFSET _offsetOfBmp, CEL_STRUCT_POINTER, CEL_DATA
 GET_STRUCT_8_STORED_OFFSET _offsetOfCelWidth, CEL_STRUCT_POINTER, SPLIT_CEL_WIDTH
 GET_STRUCT_8_STORED_OFFSET _offsetOfCelHeight, CEL_STRUCT_POINTER, SPLIT_CEL_HEIGHT
 GET_STRUCT_8_STORED_OFFSET _offsetOfBmpBank, CEL_STRUCT_POINTER, CEL_DATA_BANK
-;Count the number of bytes in the cel data, so we know how much to allocate
-PREPARE_BUFFER_SPLIT_CEL
+
+ ;2. Count the number of bytes
+PREPARE_BUFFER_SPLIT_CEL ;This will set the buffering mechanism to the start of the cel data
 ldy SPLIT_CEL_HEIGHT
 
-stz NO_BYTES_SIZE
+stz NO_BYTES_SIZE ;Count number of bytes in the cel data
 stz NO_BYTES_SIZE + 1
 ldx #$0
 @loopStart:
-GET_NEXT SPLIT_BUFFER_POINTER, SPLIT_BUFFER_STATUS
+GET_NEXT SPLIT_BUFFER_POINTER, SPLIT_BUFFER_STATUS ;Retrieves the next byte from the buffer
 inx
 bne @countCheckNextLine
 inc NO_BYTES_SIZE + 1
@@ -423,7 +436,7 @@ bne @loopStart
 stx NO_BYTES_SIZE
 
 ;Allow enough space for extra line terminators when we split the cel horizontally. There are a maximum of 4 extra terminators (max split is 4) per line
-clc ; Height * 4 gets maxiumum number of extra horizontal terminators
+clc ; Height * 4 equals maximum number of extra horizontal terminators
 lda SPLIT_CEL_HEIGHT 
 asl
 sta ZP_TMP_14
@@ -447,6 +460,7 @@ lda ZP_TMP_14 + 1
 rol
 sta ZP_TMP_14 + 1
 
+;Add this doubled value to the number of bytes count
 clc 
 lda ZP_TMP_14
 adc NO_BYTES_SIZE
@@ -465,7 +479,7 @@ lda #$0
 adc NO_BYTES_SIZE + 1
 sta NO_BYTES_SIZE + 1
 
-;Now call banked allocate to get the memory
+; 3. Allocate memory
 
 lda NO_BYTES_SIZE
 ldx NO_BYTES_SIZE + 1
@@ -476,17 +490,17 @@ ldx #$0
 TRAMPOLINE #BANKED_ALLOC_BANK, _b10BankedAlloc
 sta SPLIT_DATA
 stx SPLIT_DATA + 1
-
 SET_STRUCT_16_STORED_OFFSET_VALUE_IN_REG _offsetOfSplitCelPointers, CEL_STRUCT_POINTER
 
 lda SPLIT_BANK
 SET_STRUCT_8_STORED_OFFSET_VALUE_IN_REG _offsetOfSplitCelBank, CEL_STRUCT_POINTER
 
+; 4. Divide the memory by the number of segments
 lda SPLIT_CEL_WIDTH ;Divide width by 64 to know how many segments across we need
 cmp #64
 bcc @widthLessThan64
 clc
-adc #63 ; Adding 63 to the width will ensure we round up when we divide by 64
+adc #63 ; Adding 63 to the width will ensure we round up when we divide by 64. This is an optimisation trick that saves us calling the C float division function
 lsr
 lsr
 lsr
@@ -496,10 +510,10 @@ lsr
 bra @loadWidth
 
 @widthLessThan64:
-lda #$1
+lda #$1 ;If width is less than 64 we only need one segment
 
 @loadWidth:
-ldx #$0
+ldx #$0; High byte is always zero
 sta ZP_TMP_14
 stx ZP_TMP_14 + 1
 
@@ -517,16 +531,16 @@ lsr
 bra @loadHeight
 
 @heightLessThan64:
-lda #$1
+lda #$1 ;If height is less than 64 we only need one segment
 
 @loadHeight:
-ldx #$0
+ldx #$0 ;High byte is always zero
 
 cmp #1
 beq @storeSegmentSize ;Height is 1 we can skip the multiply as we would just be multiply width by 1. We already have width in ZP_TMP_14
 
 ldy #$1
-cpy ZP_TMP_14 ;If width is 1 we can also skip the multiply, as we would just be multiplying height by 1
+cpy ZP_TMP_14 ;If width is 1 we can also skip the multiply, as we would just be multiplying height by 1. Note if both values were 1 we would never have gotten into the split function in the first place
 
 bne @multiply
 beq @storeMultiplyResult
@@ -541,18 +555,19 @@ TRAMPOLINE #HELPERS_BANK, _b5Multiply
 @storeMultiplyResult:
 sta ZP_TMP_14
 
-@storeSegmentSize:
+@storeSegmentSize: 
 lda ZP_TMP_14
 sta NO_SEGMENTS
-@divideMemoryBySegments:
+
+@divideMemoryBySegments: ;Now we know width and height we can divide the memory by the number of segments to get the segment size
 sec
 lda NO_BYTES_SIZE ;We don't count the part of the memory reserved for the pointers in the segment division
 sbc POINTER_TO_SPLIT_DATA_SIZE
-tay
+tay ;Store the low byte in y as we will need this when we call divide, but we need a to do the high byte of the subtraction
 lda NO_BYTES_SIZE + 1
 sbc POINTER_TO_SPLIT_DATA_SIZE + 1
-tax
-tya
+tax ;The high byte must be in x prior to the call to the division function
+tya ;The low byte must be in a prior to the call to the division function
 jsr pushax
 
 lda NO_SEGMENTS
@@ -568,8 +583,9 @@ sta ZP_TMP_14
 lda SPLIT_DATA + 1
 sta ZP_TMP_14 + 1
 
-PARTITON_MEMORY
+PARTITION_MEMORY ;Now partition the memory into segments. Store initially in the golden ram and then copy to the banked memory
 
+;5. Store those divisions
 lda SPLIT_DATA
 ldx SPLIT_DATA + 1
 jsr pushax
@@ -586,13 +602,15 @@ asl
 ldx #$0
 jsr _memCpyBanked
 
+;6. Now partition the bCSplitBuffer buffer into equal sized segments to the allocated memory
 lda #<bCSplitBuffer 
 sta ZP_TMP_14
 lda #>bCSplitBuffer 
 sta ZP_TMP_14 + 1
 
-PARTITON_MEMORY
+PARTITION_MEMORY
 
+;7. Store the pointers to the divisions of bCSplitBuffer buffer
 lda #< bCSplitBufferSegments
 ldx #> bCSplitBufferSegments
 jsr pushax
@@ -614,6 +632,13 @@ sta ZP_TMP_14
 lda #>bCSplitBuffer 
 sta ZP_TMP_14 + 1
 
+;8. Call bCSplitCel
+PREPARE_BUFFER_SPLIT_CEL ;While in a perfect world this would live in bCSplitCel, it is here because there isn't much room left on C
+TRAMPOLINE #SPLIT_BUFFER_BANK, _bCSplitCel
+
+; 9. Copy the data from bCSplitBuffer to the allocated memory
+;TODO
+
 @end:
 rts
 .endif
@@ -622,4 +647,8 @@ rts
 bCSplitBuffer: .res 5000
 bCSplitBufferSegments: .res 32
 
+_bCSplitCel: ;Must be called by bESplitCel, which does all of the prepartion, as this depends on the data in the zero page values set up by bESplitCel and the buffer prepare macro being called
 
+@heightLoop
+
+rts
