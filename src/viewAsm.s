@@ -328,19 +328,19 @@ jmp @loop
 @return:
 rts
 
-SPLIT_CEL_WIDTH = ZP_TMP_3
-SPLIT_CEL_HEIGHT = ZP_TMP_3 + 1
-SPLIT_BANK = ZP_TMP_4
-CEL_DATA_BANK = ZP_TMP_5
-SPLIT_BUFFER_STATUS = ZP_TMP_6 ;Takes Up 7 as well
-NO_BYTES_SIZE = ZP_TMP_8
-SPLIT_BUFFER_POINTER = ZP_TMP_9
-SPLIT_DATA = ZP_TMP_10
-CEL_DATA = ZP_TMP_12
-SEGMENT_SIZE = ZP_TMP_13
-NO_SEGMENTS = ZP_TMP_13 + 1
-CEL_STRUCT_POINTER = ZP_TMP_16
-;14 and 15 used for temp storage here
+SPLIT_CEL_WIDTH = ZP_TMP_2
+SPLIT_CEL_HEIGHT = ZP_TMP_2 + 1
+SPLIT_BANK = ZP_TMP_3
+CEL_DATA_BANK = ZP_TMP_4
+SPLIT_BUFFER_STATUS = ZP_TMP_5 ;Takes Up 6 as well
+NO_BYTES_SIZE = ZP_TMP_7
+SPLIT_BUFFER_POINTER = ZP_TMP_8
+SPLIT_DATA = ZP_TMP_9
+CEL_DATA = ZP_TMP_10
+SEGMENT_SIZE = ZP_TMP_12
+NO_SEGMENTS = ZP_TMP_12 + 1
+CEL_STRUCT_POINTER = ZP_TMP_13
+;14 is temp storage here
 
 
 .macro PARTITION_MEMORY
@@ -647,8 +647,150 @@ rts
 bCSplitBuffer: .res 5000
 bCSplitBufferSegments: .res 32
 
-_bCSplitCel: ;Must be called by bESplitCel, which does all of the prepartion, as this depends on the data in the zero page values set up by bESplitCel and the buffer prepare macro being called
+;Still uses Uses ZP_TMP_14 as temp
+WIDTH_SEG_COUNTER = ZP_TMP_16
+HEIGHT_SEG_COUNTER = ZP_TMP_16 + 1
+SEGMENT_POINTER = ZP_TMP_17
+PIXELS_WIDTH_COUNTED_SO_FAR = ZP_TMP_18
+SEGMENT_POINTER_COUNTER = ZP_TMP_18 + 1 ; Which segment pointer we are currently using
+PREVIOUS_PIXEL_AMOUNT = ZP_TMP_19
+;Uses ZP_TMP_14 and ZP_TMP_20 as tmp
+ROWS_SO_FAR = ZP_TMP_21
 
-@heightLoop
+;void bCSplitCel() ;Don't take any arguments, because all of the data is stored in the zero page
+_bCSplitCel: ;Must be called by bESplitCel, which does all of the prepartion, as this depends on the data in the zero page values set up by bESplitCel and the buffer prepare macro being called
+lda SPLIT_CEL_HEIGHT
+sta HEIGHT_SEG_COUNTER
+
+stz WIDTH_SEG_COUNTER
+stz HEIGHT_SEG_COUNTER
+stz PIXELS_WIDTH_COUNTED_SO_FAR
+stz SEGMENT_POINTER_COUNTER
+stz ROWS_SO_FAR
+jsr _bCSetSegmentPointer
+
+@heightLoop:
+
+ldy #$0
+@widthLoop:
+GET_NEXT SPLIT_BUFFER_POINTER, SPLIT_BUFFER_STATUS
+beq @checkHeightLoopCondition
+
+tax
+and #$0F; The number of pixels is the lower 4 bits
+sta PREVIOUS_PIXEL_AMOUNT
+clc
+adc PIXELS_WIDTH_COUNTED_SO_FAR
+cmp #64 / 2 ;Divide by two because in Sierra AGI pixels are double width, so 32 agi pixels fit in 64
+bcc @widthWithinSegment
+
+@widthOverflow:
+sec
+sbc #64 / 2 ;Divide by two because in Sierra AGI pixels are double width, so 32 agi pixels fit in 64
+sta ZP_TMP_14 ;Amount over stored in ZP_TMP_14
+
+lda PREVIOUS_PIXEL_AMOUNT
+sec
+sbc ZP_TMP_14 ;Take away the amount over
+sta ZP_TMP_20 ; Amount under stored in ZP_TMP_20
+
+txa; Bring back the whole byte
+and #$F0; The colour is the upper 4 bits
+sta ZP_TMP_14 + 1 ;Store the colour in ZP_TMP_14 + 1
+
+lda ZP_TMP_20 ; Bring the amount under back into a
+clc
+adc ZP_TMP_14 + 1 ;Add the colour to the amount under
+
+sta (SEGMENT_POINTER), y ;Store amount under and colour in the segment
+iny
+lda #$0
+sta (SEGMENT_POINTER), y ;Store 0 to indicate a new line
+
+tya ;We will return this segment for the next line and we don't want to clobber what we have written we want to write after it
+ldy SEGMENT_POINTER_COUNTER
+clc
+adc SEGMENT_POINTER
+sta bCSplitBufferSegments,y
+iny
+lda #$0
+adc SEGMENT_POINTER + 1
+sta bCSplitBufferSegments,y
+
+inc WIDTH_SEG_COUNTER
+jsr _bCSetSegmentPointer
+ldy #$0 
+
+lda ZP_TMP_14 ; Bring the amount over back into a
+sta PIXELS_WIDTH_COUNTED_SO_FAR ;Reset the amount counted so far
+
+clc
+adc ZP_TMP_14 + 1 ;Add the colour to the amount over
+
+sta (SEGMENT_POINTER) ;y will always be zero here, so we can just store the amount over in the segment
+
+bra @widthLoop
+
+@widthWithinSegment:
+sta PIXELS_WIDTH_COUNTED_SO_FAR
+txa
+sta (SEGMENT_POINTER), y
+iny
+jmp @widthLoop
+
+@checkHeightLoopCondition:
+inc ROWS_SO_FAR
+lda ROWS_SO_FAR
+cmp SPLIT_CEL_HEIGHT
+beq @end
+
+cmp #64
+beq @increaseHeightSegment
+cmp #64 * 2
+beq @increaseHeightSegment
+cmp #64 * 3
+
+@increaseHeightSegment:
+
+jmp @heightLoop
+@end:
 
 rts
+;byte* bCGetSegmentPointer()
+_bCSetSegmentPointer:
+@checkIfHeightIs0: 
+lda HEIGHT_SEG_COUNTER
+bne @checkIfHeightIs1
+bra @addWidthCounter
+
+@checkIfHeightIs1: 
+cmp #$1
+bne @addWidthCounter
+lda SPLIT_CEL_WIDTH
+bra @addWidthCounter
+
+@multiply:
+ldx #$0
+jsr popax
+lda HEIGHT_SEG_COUNTER
+ldx #$0
+TRAMPOLINE #HELPERS_BANK, _b5Multiply
+tay
+
+@addWidthCounter:
+clc 
+adc WIDTH_SEG_COUNTER
+tay
+
+@getSegmentPointer:
+asl
+sty SEGMENT_POINTER_COUNTER
+
+lda bCSplitBufferSegments, y
+sta SEGMENT_POINTER
+iny
+lda bCSplitBufferSegments, y
+sta SEGMENT_POINTER + 1
+
+rts
+

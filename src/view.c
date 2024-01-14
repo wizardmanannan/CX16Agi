@@ -1313,7 +1313,6 @@ void b9LoadViewFile(byte viewNum)
 				#ifdef VERBOSE_SPLIT
 				printf("you are splitting view %d loop %d cel %d. the data is %p on bank %p. it's width doubled is %d\n", viewNum, l, c, localCel.bmp, localCel.bitmapBank, localCel.width * 2);
 				#endif
-			 //localCel.bmp =	
 				 bESplitCel(&localCel);
 			}
 
