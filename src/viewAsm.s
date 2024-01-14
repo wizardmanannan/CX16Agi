@@ -343,6 +343,36 @@ CEL_STRUCT_POINTER = ZP_TMP_16
 ;14 and 15 used for temp storage here
 
 
+.macro PARTITON_MEMORY
+.local @endDivideSegments
+.local @createSegmentPointersLoop
+
+ldy #$0
+ldx NO_SEGMENTS
+@createSegmentPointersLoop: ;Now partition the memory into segments. Store initially in the golden ram and then copy to the banked memory
+lda ZP_TMP_14
+sta GOLDEN_RAM_WORK_AREA, y
+iny
+lda ZP_TMP_14 + 1
+sta GOLDEN_RAM_WORK_AREA, y
+iny
+
+dex
+cpx #$0
+beq @endDivideSegments
+
+clc
+lda SEGMENT_SIZE
+adc ZP_TMP_14
+sta ZP_TMP_14
+lda ZP_TMP_14 + 1
+adc #$0
+sta ZP_TMP_14 + 1
+bra @createSegmentPointersLoop
+
+@endDivideSegments:
+.endmacro
+
 MAX_SPRITES_ROW_OR_COLUMN_SIZE = 4
 POINTER_TO_SPLIT_DATA_SIZE = MAX_SPRITES_ROW_OR_COLUMN_SIZE * MAX_SPRITES_ROW_OR_COLUMN_SIZE * 2
 .macro PREPARE_BUFFER_SPLIT_CEL
@@ -538,30 +568,8 @@ sta ZP_TMP_14
 lda SPLIT_DATA + 1
 sta ZP_TMP_14 + 1
 
-ldy #$0
-ldx NO_SEGMENTS
-@createSegmentPointersLoop: ;Now partition the memory into segments. Store initially in the golden ram and then copy to the banked memory
-lda ZP_TMP_14
-sta GOLDEN_RAM_WORK_AREA, y
-iny
-lda ZP_TMP_14 + 1
-sta GOLDEN_RAM_WORK_AREA, y
-iny
+PARTITON_MEMORY
 
-dex
-cpx #$0
-beq @endDivideSegments
-
-clc
-lda SEGMENT_SIZE
-adc ZP_TMP_14
-sta ZP_TMP_14
-lda ZP_TMP_14 + 1
-adc #$0
-sta ZP_TMP_14 + 1
-bra @createSegmentPointersLoop
-
-@endDivideSegments:
 lda SPLIT_DATA
 ldx SPLIT_DATA + 1
 jsr pushax
@@ -578,8 +586,40 @@ asl
 ldx #$0
 jsr _memCpyBanked
 
+lda #<bCSplitBuffer 
+sta ZP_TMP_14
+lda #>bCSplitBuffer 
+sta ZP_TMP_14 + 1
+
+PARTITON_MEMORY
+
+lda #< bCSplitBufferSegments
+ldx #> bCSplitBufferSegments
+jsr pushax
+
+lda #<GOLDEN_RAM_WORK_AREA
+ldx #>GOLDEN_RAM_WORK_AREA
+jsr pushax
+
+lda #SPLIT_BUFFER_BANK
+jsr pusha
+
+lda NO_SEGMENTS
+asl
+ldx #$0
+jsr _memCpyBanked
+
+lda #<bCSplitBuffer 
+sta ZP_TMP_14
+lda #>bCSplitBuffer 
+sta ZP_TMP_14 + 1
+
 @end:
 rts
 .endif
+
+.segment "BANKRAM0C"
+bCSplitBuffer: .res 5000
+bCSplitBufferSegments: .res 32
 
 
