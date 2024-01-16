@@ -669,11 +669,11 @@ ROWS_SO_FAR = ZP_TMP_21
 tya ;We will return this segment for the next line and we don't want to clobber what we have written we want to write after it
 ldy SEGMENT_POINTER_COUNTER
 clc
-adc SEGMENT_POINTER
+adc bCSplitBufferSegments,y
 sta bCSplitBufferSegments,y
 iny
 lda #$0
-adc SEGMENT_POINTER + 1
+adc bCSplitBufferSegments,y
 sta bCSplitBufferSegments,y
 
 inc WIDTH_SEG_COUNTER
@@ -683,7 +683,6 @@ ldy #$0
 
 ;void bCSplitCel() ;Don't take any arguments, because all of the data is stored in the zero page
 _bCSplitCel: ;Must be called by bESplitCel, which does all of the prepartion, as this depends on the data in the zero page values set up by bESplitCel and the buffer prepare macro being called
-stp
 lda SPLIT_CEL_HEIGHT
 sta HEIGHT_SEG_COUNTER
 
@@ -700,8 +699,10 @@ ldy #$0
 @widthLoop:
 GET_NEXT SPLIT_BUFFER_POINTER, SPLIT_BUFFER_STATUS
 cmp #$0
-beq @checkHeightLoopCondition
+bne @countPixels
+jmp @checkHeightLoopCondition
 
+@countPixels:
 tax
 and #$0F; The number of pixels is the lower 4 bits
 sta PREVIOUS_PIXEL_AMOUNT
@@ -792,6 +793,7 @@ lda #$0
 sta WIDTH_SEG_COUNTER
 jsr _bCSetSegmentPointer
 stz PIXELS_WIDTH_COUNTED_SO_FAR
+stp
 jmp @heightLoop
 @end:
 
