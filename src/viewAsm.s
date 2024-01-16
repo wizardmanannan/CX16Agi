@@ -521,6 +521,8 @@ lda #$1 ;If width is less than 64 we only need one segment
 ldx #$0; High byte is always zero
 sta SEGMENTS_ACROSS
 stx SEGMENTS_ACROSS + 1
+sta ZP_TMP_14
+stx ZP_TMP_14 + 1
 
 lda SPLIT_CEL_HEIGHT
 cmp #64
@@ -681,6 +683,7 @@ ldy #$0
 
 ;void bCSplitCel() ;Don't take any arguments, because all of the data is stored in the zero page
 _bCSplitCel: ;Must be called by bESplitCel, which does all of the prepartion, as this depends on the data in the zero page values set up by bESplitCel and the buffer prepare macro being called
+stp
 lda SPLIT_CEL_HEIGHT
 sta HEIGHT_SEG_COUNTER
 
@@ -832,7 +835,6 @@ sta SEGMENT_POINTER + 1
 rts
 
 bCPadUnusedSegmentsForLine:
-stp
 @padUnusedSegmentLoop:
 inc WIDTH_SEG_COUNTER
 lda SEGMENTS_ACROSS
