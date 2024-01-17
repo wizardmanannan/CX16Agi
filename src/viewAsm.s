@@ -3,6 +3,7 @@
 ; Set the value of include guard and define constants
 VIEW_INC = 1
 ;DEBUG_VIEW_DRAW = 1
+DEBUG_SPLIT = 1
 
 .include "globalViews.s"
 .include "global.s"
@@ -665,9 +666,14 @@ HEIGHEST_SEGMENT_PER_ROW = ZP_TMP_19 + 1
 ;Uses ZP_TMP_14 and ZP_TMP_20 as tmp
 ROWS_SO_FAR = ZP_TMP_21
 
-.macro GO_TO_NEXT_SEGMENT
-tya ;We will return this segment for the next line and we don't want to clobber what we have written we want to write after it
-ldy SEGMENT_POINTER_COUNTER
+.macro INCREMENT_SEGMENT
+tya
+tax ;We will return this segment for the next line and we don't want to clobber what we have written we want to write after it
+lda SEGMENT_POINTER_COUNTER
+asl
+tay
+txa
+
 clc
 adc bCSplitBufferSegments,y
 sta bCSplitBufferSegments,y
@@ -675,6 +681,10 @@ iny
 lda #$0
 adc bCSplitBufferSegments,y
 sta bCSplitBufferSegments,y
+.endmacro
+
+.macro GO_TO_NEXT_SEGMENT
+INCREMENT_SEGMENT
 
 inc WIDTH_SEG_COUNTER
 jsr _bCSetSegmentPointer
@@ -683,6 +693,9 @@ ldy #$0
 
 ;void bCSplitCel() ;Don't take any arguments, because all of the data is stored in the zero page
 _bCSplitCel: ;Must be called by bESplitCel, which does all of the prepartion, as this depends on the data in the zero page values set up by bESplitCel and the buffer prepare macro being called
+.ifdef DEBUG_SPLIT
+lda debugCounter
+.endif
 lda SPLIT_CEL_HEIGHT
 sta HEIGHT_SEG_COUNTER
 
@@ -698,6 +711,14 @@ jsr _bCSetSegmentPointer
 ldy #$0
 @widthLoop:
 GET_NEXT SPLIT_BUFFER_POINTER, SPLIT_BUFFER_STATUS
+.ifdef DEBUG_SPLIT
+inc debugCounter
+ldx debugCounter
+cpx #$1C ;#$2C ;#$E8 ;#$C7
+bcc @continue
+;stp
+@continue:
+.endif
 cmp #$0
 bne @countPixels
 jmp @checkHeightLoopCondition
@@ -738,6 +759,9 @@ iny
 
 GO_TO_NEXT_SEGMENT
 
+lda ZP_TMP_20
+beq @gotoWidthLoop ;This is an edge case where there is nothing under, so we can just go to the next width loop
+
 lda ZP_TMP_14 ; Bring the amount over back into a
 sta PIXELS_WIDTH_COUNTED_SO_FAR ;Reset the amount counted so far
 
@@ -746,6 +770,7 @@ adc ZP_TMP_14 + 1 ;Add the colour to the amount over
 
 sta (SEGMENT_POINTER) ;y will always be zero here, so we can just store the amount over in the segment
 
+@gotoWidthLoop:
 jmp @widthLoop
 
 @widthWithinSegment:
@@ -757,17 +782,19 @@ jmp @widthLoop
 
 @widthEqualToSegment:
 lda #$0
-sta (SEGMENT_POINTER), y
 sta PIXELS_WIDTH_COUNTED_SO_FAR
+txa
+sta (SEGMENT_POINTER), y
+iny
 
-nop
 GO_TO_NEXT_SEGMENT
 
 jmp @widthLoop
 
 @checkHeightLoopCondition:
-lda #$0
-sta (SEGMENT_POINTER), y
+iny
+
+INCREMENT_SEGMENT
 
 inc ROWS_SO_FAR
 lda ROWS_SO_FAR
@@ -793,13 +820,24 @@ lda #$0
 sta WIDTH_SEG_COUNTER
 jsr _bCSetSegmentPointer
 stz PIXELS_WIDTH_COUNTED_SO_FAR
-stp
+.ifdef DEBUG_SPLIT
+;stp
+lda debugCounter
 jmp @heightLoop
+.endif
 @end:
-
+stp
 rts
+.ifdef DEBUG_SPLIT
+debugCounter: .byte $0
+.endif
 ;byte* bCGetSegmentPointer()
 _bCSetSegmentPointer:
+lda debugCounter
+cmp #$E8
+bne @checkIfHeightIs0
+;stp
+
 @checkIfHeightIs0: 
 lda HEIGHT_SEG_COUNTER
 bne @checkIfHeightIs1
