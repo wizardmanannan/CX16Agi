@@ -424,21 +424,36 @@ PREPARE_BUFFER_SPLIT_CEL ;This will set the buffering mechanism to the start of 
 lda SPLIT_CEL_HEIGHT
 sta ZP_TMP_14
 
-stz NO_BYTES_SIZE ;Count number of bytes in the cel data
-stz NO_BYTES_SIZE + 1
+stz @heightCounter
+stz ZP_TMP_14
+stz ZP_TMP_14 + 1 ;Count number of bytes in the cel data
+lda SPLIT_CEL_HEIGHT
 ldx #$0
 @loopStart:
 GET_NEXT SPLIT_BUFFER_POINTER, SPLIT_BUFFER_STATUS ;Retrieves the next byte from the buffer. The registers x/y are overidden in here, so we can't use them as counters
-inc NO_BYTES_SIZE
-bne @countCheckNextLine
-inc NO_BYTES_SIZE + 1
+inc ZP_TMP_14
 @countCheckNextLine:
 cmp #$0 ;Zero means a new line, but we need to still count it, and then decrement y
 bne @loopStart
-dec ZP_TMP_14 ;We stop when we have counted every line
+
+lda ZP_TMP_14
+cmp ZP_TMP_14 + 1
+bcc @continue 
+sta ZP_TMP_14 + 1
+@continue:
+stz ZP_TMP_14
+dec @heightCounter ;We stop when we have counted every line
 bne @loopStart
 
 @endCount:
+lda SPLIT_CEL_HEIGHT 
+ldx #$0
+jsr pushax
+lda ZP_TMP_14 + 1
+ldx #$0
+TRAMPOLINE #HELPERS_BANK, _b5Multiply
+sta NO_BYTES_SIZE
+stx NO_BYTES_SIZE + 1
 
 ;Allow enough space for extra line terminators when we split the cel horizontally. There are a maximum of 8 extra terminators (max split is 8) per line
 clc ; Height * 4 equals maximum number of extra horizontal terminators
@@ -476,7 +491,6 @@ sta NO_BYTES_SIZE + 1
 
 ;Add the vertical terminators there can be a maximum of 4 * height, since we split vertically a maximum of 4 times
 ;Also add enough space for MAX_SPRITES_ROW_OR_COLUMN_SIZE * MAX_SPRITES_ROW_OR_COLUMN_SIZE pointers (which are two bytes each) at the very start
-stp
 clc
 lda SPLIT_CEL_HEIGHT
 asl
@@ -599,7 +613,6 @@ lda NO_BYTES_SIZE + 1
 sbc POINTER_TO_SPLIT_DATA_SIZE + 1
 tax ;The high byte must be in x prior to the call to the division function
 tya ;The low byte must be in a prior to the call to the division function
-stp
 jsr pushax
 
 lda NO_SEGMENTS
@@ -674,6 +687,7 @@ TRAMPOLINE #SPLIT_BUFFER_BANK, _bCSplitCel
 
 @end:
 rts
+@heightCounter: .byte $0
 .endif
 
 .segment "BANKRAM0C"
@@ -845,11 +859,12 @@ sta WIDTH_SEG_COUNTER
 jsr _bCSetSegmentPointer
 stz PIXELS_WIDTH_COUNTED_SO_FAR
 .ifdef DEBUG_SPLIT
-stp
+;stp
 lda debugCounter
 jmp @heightLoop
 .endif
 @end:
+stp
 rts
 .ifdef DEBUG_SPLIT
 debugCounter: .byte $0
