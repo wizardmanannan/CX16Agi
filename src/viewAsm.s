@@ -339,9 +339,9 @@ SPLIT_BUFFER_POINTER = ZP_TMP_8
 SPLIT_DATA = ZP_TMP_9
 CEL_DATA = ZP_TMP_10
 SEGMENT_SIZE = ZP_TMP_12
-NO_SEGMENTS = ZP_TMP_12 + 1
 CEL_STRUCT_POINTER = ZP_TMP_13
 SEGMENTS_ACROSS = ZP_TMP_22
+NO_SEGMENTS = ZP_TMP_22 + 1
 ;14 is temp storage here
 
 
@@ -368,7 +368,7 @@ lda SEGMENT_SIZE ;Work out the next address by adding segment_size to the previo
 adc ZP_TMP_14
 sta ZP_TMP_14
 lda ZP_TMP_14 + 1
-adc #$0
+adc SEGMENT_SIZE + 1
 sta ZP_TMP_14 + 1
 bra @createSegmentPointersLoop
 
@@ -599,6 +599,7 @@ lda NO_BYTES_SIZE + 1
 sbc POINTER_TO_SPLIT_DATA_SIZE + 1
 tax ;The high byte must be in x prior to the call to the division function
 tya ;The low byte must be in a prior to the call to the division function
+stp
 jsr pushax
 
 lda NO_SEGMENTS
@@ -608,6 +609,7 @@ SET_STRUCT_8_STORED_OFFSET_VALUE_IN_REG _offsetOfSplitSegments, CEL_STRUCT_POINT
 
 TRAMPOLINE #HELPERS_BANK, _b5Divide ;Divide the total amount of memory by the number of segments
 sta SEGMENT_SIZE
+stx SEGMENT_SIZE + 1
 
 lda SPLIT_DATA 
 sta ZP_TMP_14
