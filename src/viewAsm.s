@@ -667,6 +667,7 @@ HEIGHEST_SEGMENT_PER_ROW = ZP_TMP_19 + 1
 ROWS_SO_FAR = ZP_TMP_21
 
 .macro INCREMENT_SEGMENT
+iny ;We need to add a single zero on the end, and this is the easiest way to do it
 tya
 tax ;We will return this segment for the next line and we don't want to clobber what we have written we want to write after it
 lda SEGMENT_POINTER_COUNTER
@@ -714,7 +715,7 @@ GET_NEXT SPLIT_BUFFER_POINTER, SPLIT_BUFFER_STATUS
 .ifdef DEBUG_SPLIT
 inc debugCounter
 ldx debugCounter
-cpx #$1C ;#$2C ;#$E8 ;#$C7
+cpx #$C1
 bcc @continue
 ;stp
 @continue:
@@ -752,9 +753,6 @@ clc
 adc ZP_TMP_14 + 1 ;Add the colour to the amount under
 
 sta (SEGMENT_POINTER), y ;Store amount under and colour in the segment
-iny
-lda #$0
-sta (SEGMENT_POINTER), y ;Store 0 to indicate a new line
 iny
 
 GO_TO_NEXT_SEGMENT
@@ -821,7 +819,7 @@ sta WIDTH_SEG_COUNTER
 jsr _bCSetSegmentPointer
 stz PIXELS_WIDTH_COUNTED_SO_FAR
 .ifdef DEBUG_SPLIT
-;stp
+stp
 lda debugCounter
 jmp @heightLoop
 .endif
@@ -876,13 +874,21 @@ rts
 
 bCPadUnusedSegmentsForLine:
 @padUnusedSegmentLoop:
+.ifdef DEBUG_SPLIT
+lda debugCounter
+cmp #$C2
+bcc @continue
+;stp
+@continue:
+.endif
+
 inc WIDTH_SEG_COUNTER
 lda SEGMENTS_ACROSS
 dec
 cmp WIDTH_SEG_COUNTER
 bcc @end
 
-
+lda WIDTH_SEG_COUNTER
 asl
 tay
 
