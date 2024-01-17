@@ -474,14 +474,39 @@ lda ZP_TMP_14 + 1
 adc NO_BYTES_SIZE + 1
 sta NO_BYTES_SIZE + 1
 
-;Add the vertical terminators there can be a maximum of 4, since we split vertically a maximum of 4 times
+;Add the vertical terminators there can be a maximum of 4 * height, since we split vertically a maximum of 4 times
 ;Also add enough space for MAX_SPRITES_ROW_OR_COLUMN_SIZE * MAX_SPRITES_ROW_OR_COLUMN_SIZE pointers (which are two bytes each) at the very start
+stp
 clc
-lda NO_BYTES_SIZE
-adc #POINTER_TO_SPLIT_DATA_SIZE + MAX_SPRITES_ROW_OR_COLUMN_SIZE
+lda SPLIT_CEL_HEIGHT
+asl
+sta ZP_TMP_14
+lda #$0
+rol
+sta ZP_TMP_14 + 1
+clc
+lda ZP_TMP_14
+asl
+sta ZP_TMP_14
+lda ZP_TMP_14 + 1
+rol
+sta ZP_TMP_14 + 1
+
+clc
+lda ZP_TMP_14
+adc NO_BYTES_SIZE
+sta NO_BYTES_SIZE
+lda ZP_TMP_14 + 1
+adc NO_BYTES_SIZE + 1
+sta NO_BYTES_SIZE + 1
+
+lda MAX_SPRITES_ROW_OR_COLUMN_SIZE
+asl
+clc
+adc NO_BYTES_SIZE
 sta NO_BYTES_SIZE
 lda #$0
-adc NO_BYTES_SIZE + 1
+adc NO_BYTES_SIZE + 1   
 sta NO_BYTES_SIZE + 1
 
 ; 3. Allocate memory
