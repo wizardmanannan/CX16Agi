@@ -421,25 +421,24 @@ GET_STRUCT_8_STORED_OFFSET _offsetOfBmpBank, CEL_STRUCT_POINTER, CEL_DATA_BANK
 
  ;2. Count the number of bytes
 PREPARE_BUFFER_SPLIT_CEL ;This will set the buffering mechanism to the start of the cel data
-ldy SPLIT_CEL_HEIGHT
+lda SPLIT_CEL_HEIGHT
+sta ZP_TMP_14
 
 stz NO_BYTES_SIZE ;Count number of bytes in the cel data
 stz NO_BYTES_SIZE + 1
 ldx #$0
 @loopStart:
-GET_NEXT SPLIT_BUFFER_POINTER, SPLIT_BUFFER_STATUS ;Retrieves the next byte from the buffer
-inx
+GET_NEXT SPLIT_BUFFER_POINTER, SPLIT_BUFFER_STATUS ;Retrieves the next byte from the buffer. The registers x/y are overidden in here, so we can't use them as counters
+inc NO_BYTES_SIZE
 bne @countCheckNextLine
 inc NO_BYTES_SIZE + 1
 @countCheckNextLine:
 cmp #$0 ;Zero means a new line, but we need to still count it, and then decrement y
 bne @loopStart
-
-dey ;We stop when we have counted every line
+dec ZP_TMP_14 ;We stop when we have counted every line
 bne @loopStart
 
 @endCount:
-stx NO_BYTES_SIZE
 
 ;Allow enough space for extra line terminators when we split the cel horizontally. There are a maximum of 8 extra terminators (max split is 8) per line
 clc ; Height * 4 equals maximum number of extra horizontal terminators
@@ -562,7 +561,6 @@ TRAMPOLINE #HELPERS_BANK, _b5Multiply
 
 @storeMultiplyResult:
 sta ZP_TMP_14
-
 @storeSegmentSize: 
 lda ZP_TMP_14
 sta NO_SEGMENTS
@@ -697,6 +695,7 @@ _bCSplitCel: ;Must be called by bESplitCel, which does all of the prepartion, as
 .ifdef DEBUG_SPLIT
 lda debugCounter
 .endif
+
 lda SPLIT_CEL_HEIGHT
 sta HEIGHT_SEG_COUNTER
 
@@ -824,7 +823,6 @@ lda debugCounter
 jmp @heightLoop
 .endif
 @end:
-stp
 rts
 .ifdef DEBUG_SPLIT
 debugCounter: .byte $0
