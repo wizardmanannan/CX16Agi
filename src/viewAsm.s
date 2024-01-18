@@ -3,7 +3,7 @@
 ; Set the value of include guard and define constants
 VIEW_INC = 1
 ;DEBUG_VIEW_DRAW = 1
-DEBUG_SPLIT = 1
+;DEBUG_SPLIT = 1
 
 .include "globalViews.s"
 .include "global.s"
@@ -629,6 +629,22 @@ sta ZP_TMP_14
 lda SPLIT_DATA + 1
 sta ZP_TMP_14 + 1
 
+clc ; Don't clobber the pointers at the beginning of the allocated memory
+lda #POINTER_TO_SPLIT_DATA_SIZE
+adc ZP_TMP_14
+sta ZP_TMP_14
+lda #$0
+adc ZP_TMP_14 + 1
+sta ZP_TMP_14 + 1
+
+clc ; Don't clobber the pointers at the beginning of the allocated memory
+lda #POINTER_TO_SPLIT_DATA_SIZE
+adc ZP_TMP_14
+sta ZP_TMP_14
+lda #$0
+adc ZP_TMP_14 + 1
+sta ZP_TMP_14 + 1
+
 PARTITION_MEMORY ;Now partition the memory into segments. Store initially in the golden ram and then copy to the banked memory
 
 ;5. Store those divisions
@@ -859,22 +875,23 @@ sta WIDTH_SEG_COUNTER
 jsr _bCSetSegmentPointer
 stz PIXELS_WIDTH_COUNTED_SO_FAR
 .ifdef DEBUG_SPLIT
-;stp
+stp
 lda debugCounter
 jmp @heightLoop
 .endif
 @end:
-stp
 rts
 .ifdef DEBUG_SPLIT
 debugCounter: .byte $0
 .endif
 ;byte* bCGetSegmentPointer()
 _bCSetSegmentPointer:
+.ifdef DEBUG_SPLIT
 lda debugCounter
 cmp #$E8
 bne @checkIfHeightIs0
 ;stp
+.endif
 
 @checkIfHeightIs0: 
 lda HEIGHT_SEG_COUNTER
