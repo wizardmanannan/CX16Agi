@@ -21,7 +21,7 @@
 #define EXTRA_SMALL_NO_SEGMENTS 50
 #define SMALL_NO_SEGMENTS 30
 #define MEDIUM_NO_SEGMENTS 12
-#define LARGE_NO_SEGMENTS 5
+#define LARGE_NO_SEGMENTS 6
 
 //Warning: All of these sizes must be multiples of 8000, otherwise the program will crash
 #define TINY_SIZE  100
