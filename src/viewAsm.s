@@ -16,6 +16,7 @@ VIEW_INC = 1
 .import popa
 .import pushax
 .import _memCpyBanked
+.import _memsetBanked
 .import _b1DivAndCeil
 
 .import _offsetOfBmp
@@ -524,7 +525,6 @@ adc NO_BYTES_SIZE + 1
 sta NO_BYTES_SIZE + 1
 
 ; 3. Allocate memory
-
 lda NO_BYTES_SIZE
 ldx NO_BYTES_SIZE + 1
 jsr pushax
@@ -753,6 +753,24 @@ _bCSplitCel: ;Must be called by bESplitCel, which does all of the prepartion, as
 lda debugCounter
 .endif
 
+;Clear out the portion of the buffer we will be using
+; lda #< bCSplitBuffer
+; ldx #> bCSplitBuffer
+; jsr pushax
+
+; lda #$0
+; ldx #$0
+; jsr pushax
+
+; lda NO_BYTES_SIZE
+; ldx NO_BYTES_SIZE + 1
+; jsr pushax
+
+; lda #SPLIT_BUFFER_BANK
+; ldx #$0
+
+; jsr _memsetBanked
+
 lda SPLIT_CEL_HEIGHT
 sta HEIGHT_SEG_COUNTER
 
@@ -877,8 +895,8 @@ stz PIXELS_WIDTH_COUNTED_SO_FAR
 .ifdef DEBUG_SPLIT
 stp
 lda debugCounter
-jmp @heightLoop
 .endif
+jmp @heightLoop
 @end:
 rts
 .ifdef DEBUG_SPLIT
