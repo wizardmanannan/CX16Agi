@@ -18,6 +18,7 @@ VIEW_INC = 1
 .import _memCpyBanked
 .import _memsetBanked
 .import _b1DivAndCeil
+.import _memCpyBankedBetween
 
 .import _offsetOfBmp
 .import _offsetOfBmpBank
@@ -633,17 +634,11 @@ clc ; Don't clobber the pointers at the beginning of the allocated memory
 lda #POINTER_TO_SPLIT_DATA_SIZE
 adc ZP_TMP_14
 sta ZP_TMP_14
+pha ;We need this later keep on the stack
 lda #$0
 adc ZP_TMP_14 + 1
 sta ZP_TMP_14 + 1
-
-clc ; Don't clobber the pointers at the beginning of the allocated memory
-lda #POINTER_TO_SPLIT_DATA_SIZE
-adc ZP_TMP_14
-sta ZP_TMP_14
-lda #$0
-adc ZP_TMP_14 + 1
-sta ZP_TMP_14 + 1
+pha
 
 PARTITION_MEMORY ;Now partition the memory into segments. Store initially in the golden ram and then copy to the banked memory
 
@@ -695,11 +690,47 @@ lda #>bCSplitBuffer
 sta ZP_TMP_14 + 1
 
 ;8. Call bCSplitCel
-PREPARE_BUFFER_SPLIT_CEL ;While in a perfect world this would live in bCSplitCel, it is here because there isn't much room left on C
+PREPARE_BUFFER_SPLIT_CEL ;While in a perfect world the prep steps would live in bCSplitCel, it is here because there isn't much room left on C
+;Clear out the portion of the buffer we will be using
+lda #< bCSplitBuffer
+ldx #> bCSplitBuffer
+jsr pushax
+
+lda #$0
+ldx #$0
+jsr pushax
+
+lda NO_BYTES_SIZE
+ldx NO_BYTES_SIZE + 1
+jsr pushax
+
+lda #SPLIT_BUFFER_BANK
+ldx #$0
+
+jsr _memsetBanked
+
 TRAMPOLINE #SPLIT_BUFFER_BANK, _bCSplitCel
 
 ; 9. Copy the data from bCSplitBuffer to the allocated memory
-;TODO
+pla
+tax
+pla
+jsr pushax
+
+lda SPLIT_BANK
+jsr pusha
+
+lda #<bCSplitBuffer 
+ldx #>bCSplitBuffer 
+jsr pushax
+
+lda #SPLIT_BUFFER_BANK
+jsr pusha
+
+lda NO_BYTES_SIZE
+ldx NO_BYTES_SIZE + 1
+
+jsr _memCpyBankedBetween
 
 @end:
 rts
@@ -752,24 +783,6 @@ _bCSplitCel: ;Must be called by bESplitCel, which does all of the prepartion, as
 .ifdef DEBUG_SPLIT
 lda debugCounter
 .endif
-
-;Clear out the portion of the buffer we will be using
-; lda #< bCSplitBuffer
-; ldx #> bCSplitBuffer
-; jsr pushax
-
-; lda #$0
-; ldx #$0
-; jsr pushax
-
-; lda NO_BYTES_SIZE
-; ldx NO_BYTES_SIZE + 1
-; jsr pushax
-
-; lda #SPLIT_BUFFER_BANK
-; ldx #$0
-
-; jsr _memsetBanked
 
 lda SPLIT_CEL_HEIGHT
 sta HEIGHT_SEG_COUNTER
@@ -841,6 +854,7 @@ clc
 adc ZP_TMP_14 + 1 ;Add the colour to the amount over
 
 sta (SEGMENT_POINTER) ;y will always be zero here, so we can just store the amount over in the segment
+iny
 
 @gotoWidthLoop:
 jmp @widthLoop
