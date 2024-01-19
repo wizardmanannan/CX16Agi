@@ -690,6 +690,15 @@ void agiBlit(ViewTable* localViewTab, byte entryNum, boolean disableInterupts)
 	getLoadedLoop(&localView, &localLoop, localViewTab->currentLoop);
 	getLoadedCel(&localLoop, &localCel, localViewTab->currentCel);
 
+	if (!localCel.splitSegments && localLoop.veraSlotsWidth > 1 || localLoop.veraSlotsHeight > 1)
+	{
+#ifdef VERBOSE_SPLIT
+		printf("you are splitting view %d loop %d cel %d. the data is %p on bank %p. it's width doubled is %d\n", viewNum, localViewTab->currentLoop, localViewTab->currentCel, localCel.bmp, localCel.bitmapBank, localCel.width * 2);
+#endif
+		bESplitCel(&localCel);
+		setLoadedCel(&localLoop, &localCel, localViewTab->currentCel);
+	}
+
 	if (viewTabNoToMetaData[entryNum] != VIEWNO_TO_METADATA_NO_SET && viewTableMetadata[entryNum].viewNum != viewNum)
 	{
 #ifdef VERBOSE_SWITCH_METADATA
@@ -1307,14 +1316,6 @@ void b9LoadViewFile(byte viewNum)
 			localLoop.veraSlotsWidth = b9VeraSlotsForWidthOrHeight(localCel.width * 2);
 
 			localLoop.veraSlotsHeight = b9VeraSlotsForWidthOrHeight(localCel.height);
-
-			if (localLoop.veraSlotsWidth > 1 || localLoop.veraSlotsHeight > 1)
-			{
-				#ifdef VERBOSE_SPLIT
-				printf("you are splitting view %d loop %d cel %d. the data is %p on bank %p. it's width doubled is %d\n", viewNum, l, c, localCel.bmp, localCel.bitmapBank, localCel.width * 2);
-				#endif
-				 bESplitCel(&localCel);
-			}
 
 #ifdef VERBOSE_LOAD_VIEWS
 			printf("The viewNum is %d\n", viewNum);
