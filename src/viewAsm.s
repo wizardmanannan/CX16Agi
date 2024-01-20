@@ -425,7 +425,7 @@ GET_STRUCT_8_STORED_OFFSET _offsetOfBmpBank, CEL_STRUCT_POINTER, CEL_DATA_BANK
 PREPARE_BUFFER_SPLIT_CEL ;This will set the buffering mechanism to the start of the cel data
 
 lda SPLIT_CEL_HEIGHT
-sta @heightCounter
+sta ZP_TMP_14 + 1
 ldx #$0
 ldy #$0 ;Count number of bytes in the cel data
 
@@ -443,11 +443,12 @@ txa
 tay
 @continue:
 ldx #$0
-dec @heightCounter ;We stop when we have counted every line
+dec ZP_TMP_14 + 1 ;We stop when we have counted every line
 bne @loopStart
+@endCount:
 
 sty ZP_TMP_14
-@endCount:
+
 lda SPLIT_CEL_HEIGHT 
 ldx #$0
 jsr pushax
@@ -734,7 +735,6 @@ jsr _memCpyBankedBetween
 
 @end:
 rts
-@heightCounter: .byte $0
 .endif
 
 .segment "BANKRAM0C"
