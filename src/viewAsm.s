@@ -751,7 +751,7 @@ PIXEL_AMOUNT = ZP_TMP_19 ;How many pixels was the byte trying to draw
 ;Uses ZP_TMP_14 and ZP_TMP_20 as tmp
 ROWS_SO_FAR = ZP_TMP_21 ;How many rows have been processed so far
 
-.macro INCREMENT_SEGMENT
+.macro INCREMENT_SEGMENT ;When we have finished with a segment we need to add to it the number of the times we wrote to it, as we will return to it the next line. Also we should pad it with one zero
 iny ;We need to add a single zero on the end, and this is the easiest way to do it
 tya
 tax ;We will return this segment for the next line and we don't want to clobber what we have written we want to write after it
@@ -844,7 +844,7 @@ iny
 
 GO_TO_NEXT_SEGMENT ;We have stored the portion of this byte that belongs in this segment, now the remainder will be stored in the next segment
 
-lda ZP_TMP_20
+cmp #$0 ;Check the return value of bCSetSegmentPointer to see if we are under the maximum number of segments
 beq @gotoWidthLoop ;This is an edge case where there is nothing under, so we can just go to the next width loop
 
 lda ZP_TMP_14 ; Bring the amount over back into a
@@ -859,35 +859,35 @@ iny
 @gotoWidthLoop:
 jmp @widthLoop
 
-@widthWithinSegment:
-sta PIXELS_WIDTH_COUNTED_SO_FAR
-txa
-sta (SEGMENT_POINTER), y
-iny
+@widthWithinSegment: ;We still have room to store this value in the segment
+sta PIXELS_WIDTH_COUNTED_SO_FAR ;Add the number of pixels to the number of pixels counted so far
+txa ;Bring back the whole byte
+sta (SEGMENT_POINTER), y ;Store it
+iny ;Increment for the next byte
 jmp @widthLoop
 
-@widthEqualToSegment:
-lda #$0
-sta PIXELS_WIDTH_COUNTED_SO_FAR
-txa
-sta (SEGMENT_POINTER), y
+@widthEqualToSegment: ;We have exactly the right amount of pixels to fill the segment
+lda #$0 
+sta PIXELS_WIDTH_COUNTED_SO_FAR ;Reset the amount counted so far
+txa ;Bring back the whole byte
+sta (SEGMENT_POINTER), y ;Store the value
 iny
 
 GO_TO_NEXT_SEGMENT
 
 jmp @widthLoop
 
-@checkHeightLoopCondition:
+@checkHeightLoopCondition: ;Getting ready for the next line
 iny
 
-INCREMENT_SEGMENT
+INCREMENT_SEGMENT ;Add a zero on the end of the line
 
-inc ROWS_SO_FAR
+inc ROWS_SO_FAR ;Stop when we have processed all of the rows
 lda ROWS_SO_FAR
 cmp SPLIT_CEL_HEIGHT
 beq @end
 
-cmp #64
+cmp #64 ;Checking to see if we have reached the end of the height segment
 beq @increaseHeightSegment
 cmp #64 * 2
 beq @increaseHeightSegment
@@ -900,23 +900,26 @@ inc HEIGHT_SEG_COUNTER
 
 @repeatForNextRow:
 
-jsr bCPadUnusedSegmentsForLine
+jsr bCPadUnusedSegmentsForLine ; Pad unused segments for this row with zeros
 
 lda #$0
-sta WIDTH_SEG_COUNTER
-jsr _bCSetSegmentPointer
-stz PIXELS_WIDTH_COUNTED_SO_FAR
+sta WIDTH_SEG_COUNTER ;Go back to the first width segment, for a new row
+jsr _bCSetSegmentPointer ;Set the segment pointer for this new row, and column 0
+stz PIXELS_WIDTH_COUNTED_SO_FAR ;Reset the number of pixels counted so far
 .ifdef DEBUG_SPLIT
 stp
 lda debugCounter
 .endif
 jmp @heightLoop
 @end:
+stp
 rts
 .ifdef DEBUG_SPLIT
 debugCounter: .byte $0
 .endif
-;byte* bCGetSegmentPointer()
+;boolean bCSetSegmentPointer()
+;Figures out which segment we should be in based upon width and height seg counters
+;Returns 1 if we are under the maximum number of segments, 0 if we are over
 _bCSetSegmentPointer:
 .ifdef DEBUG_SPLIT
 lda debugCounter
@@ -925,18 +928,18 @@ bne @checkIfHeightIs0
 ;stp
 .endif
 
-@checkIfHeightIs0: 
+@checkIfHeightIs0: ;If height height is zero instead of multiplying the segments will just be the width seg counter
 lda HEIGHT_SEG_COUNTER
 bne @checkIfHeightIs1
 bra @addWidthCounter
 
-@checkIfHeightIs1: 
+@checkIfHeightIs1: ;If then the segment will be the width seg counter + the height seg counter
 cmp #$1
 bne @addWidthCounter
 lda SPLIT_CEL_WIDTH
 bra @addWidthCounter
 
-@multiply:
+@multiply: ;If height is greater than 1 then we need to multiply the height seg counter by the entire width eg. the old formula (y * width) + x
 ldx #$0
 jsr popax
 lda HEIGHT_SEG_COUNTER
@@ -945,23 +948,37 @@ TRAMPOLINE #HELPERS_BANK, _b5Multiply
 tay
 
 @addWidthCounter:
-clc 
+clc ;Add the width seg counter to the result of the multiplication, or just the height seg counter if height is 0 or 1
 adc WIDTH_SEG_COUNTER
 
 @getSegmentPointer:
-sta SEGMENT_POINTER_COUNTER
-asl
-tay
+sta SEGMENT_POINTER_COUNTER ;Store the result in the segment pointer counter
 
-lda bCSplitBufferSegments, y
+asl ;Now we need to retrieve the pointer to the segment we are going to write to. Two bytes per address so we multiply by 2
+tay 
+
+lda bCSplitBufferSegments, y ;Get the low byte of the address 
 sta SEGMENT_POINTER
 iny
-lda bCSplitBufferSegments, y
+lda bCSplitBufferSegments, y; Ando now get the high
 sta SEGMENT_POINTER + 1
 
+lda SEGMENT_POINTER_COUNTER ;Figure out if we are under the maximum number of segments
+cmp NO_SEGMENTS
+bcc @underMax
+
+@overMax:
+lda #$0 ;Return 0 for over
+bra @end
+
+@underMax:
+lda #$1; Return 1 for under
+
+@end:
+ldx #$0; High byte of return value is always zero
 rts
 
-bCPadUnusedSegmentsForLine:
+bCPadUnusedSegmentsForLine: ;If we reach a new line without having used all of the horizontal segments we need to pad the unused segments with zeros
 @padUnusedSegmentLoop:
 .ifdef DEBUG_SPLIT
 lda debugCounter
@@ -971,17 +988,17 @@ bcc @continue
 @continue:
 .endif
 
-inc WIDTH_SEG_COUNTER
-lda SEGMENTS_ACROSS
+inc WIDTH_SEG_COUNTER ;The segment we are currently on has definalty been used, so we can increment the counter
+lda SEGMENTS_ACROSS ;Minus one from segments across because seg counter is zero indexed
 dec
 cmp WIDTH_SEG_COUNTER
-bcc @end
+bcc @end ;If the width seg counter is greater than or equal to the number of segments across we have used all of the segments for this row
 
 lda WIDTH_SEG_COUNTER
-asl
+asl ;Double the width seg counter to get the index of the segment pointer we need to pad
 tay
 
-lda #$1
+lda #$1 ;Increment the segment by 1
 clc
 adc bCSplitBufferSegments, y
 sta bCSplitBufferSegments, y
