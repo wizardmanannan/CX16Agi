@@ -742,15 +742,14 @@ bCSplitBuffer: .res 5000
 bCSplitBufferSegments: .res 32
 
 ;Still uses Uses ZP_TMP_14 as temp
-WIDTH_SEG_COUNTER = ZP_TMP_16
-HEIGHT_SEG_COUNTER = ZP_TMP_16 + 1
-SEGMENT_POINTER = ZP_TMP_17
-PIXELS_WIDTH_COUNTED_SO_FAR = ZP_TMP_18
+WIDTH_SEG_COUNTER = ZP_TMP_16 ;Counter for which width segment we are currently using
+HEIGHT_SEG_COUNTER = ZP_TMP_16 + 1 ;Counter for which height segment we are currently using
+SEGMENT_POINTER = ZP_TMP_17 ;Stores a pointer to the current segment we are writing to
+PIXELS_WIDTH_COUNTED_SO_FAR = ZP_TMP_18 ;Counter for the number of pixels we have counted so far. Note this resets when we reach the maximum of 32
 SEGMENT_POINTER_COUNTER = ZP_TMP_18 + 1 ; Which segment pointer we are currently using
-PREVIOUS_PIXEL_AMOUNT = ZP_TMP_19
-HEIGHEST_SEGMENT_PER_ROW = ZP_TMP_19 + 1
+PIXEL_AMOUNT = ZP_TMP_19 ;How many pixels was the byte trying to draw
 ;Uses ZP_TMP_14 and ZP_TMP_20 as tmp
-ROWS_SO_FAR = ZP_TMP_21
+ROWS_SO_FAR = ZP_TMP_21 ;How many rows have been processed so far
 
 .macro INCREMENT_SEGMENT
 iny ;We need to add a single zero on the end, and this is the easiest way to do it
@@ -779,15 +778,14 @@ ldy #$0
 .endmacro
 
 ;void bCSplitCel() ;Don't take any arguments, because all of the data is stored in the zero page
+;This method will split the cel into segments and store the segments in the bCSplitBuffer buffer
 _bCSplitCel: ;Must be called by bESplitCel, which does all of the prepartion, as this depends on the data in the zero page values set up by bESplitCel and the buffer prepare macro being called
 .ifdef DEBUG_SPLIT
 lda debugCounter
 .endif
 
-lda SPLIT_CEL_HEIGHT
-sta HEIGHT_SEG_COUNTER
-
-stz WIDTH_SEG_COUNTER
+;Initialize data
+stz WIDTH_SEG_COUNTER 
 stz HEIGHT_SEG_COUNTER
 stz PIXELS_WIDTH_COUNTED_SO_FAR
 stz SEGMENT_POINTER_COUNTER
@@ -798,7 +796,8 @@ jsr _bCSetSegmentPointer
 
 ldy #$0
 @widthLoop:
-GET_NEXT SPLIT_BUFFER_POINTER, SPLIT_BUFFER_STATUS
+GET_NEXT SPLIT_BUFFER_POINTER, SPLIT_BUFFER_STATUS ;Get the next byte from the run encoded data. The byte will be in the format AX where A is the colour and X is the number of pixels
+
 .ifdef DEBUG_SPLIT
 inc debugCounter
 ldx debugCounter
@@ -807,16 +806,17 @@ bcc @continue
 ;stp
 @continue:
 .endif
-cmp #$0
+
+cmp #$0 ;We have reached the end of the line if we see zero
 bne @countPixels
 jmp @checkHeightLoopCondition
 
 @countPixels:
 tax
 and #$0F; The number of pixels is the lower 4 bits
-sta PREVIOUS_PIXEL_AMOUNT
+sta PIXEL_AMOUNT
 clc
-adc PIXELS_WIDTH_COUNTED_SO_FAR
+adc PIXELS_WIDTH_COUNTED_SO_FAR ;We will go into the next width segment if we have counted 32 pixels
 cmp #64 / 2 ;Divide by two because in Sierra AGI pixels are double width, so 32 agi pixels fit in 64
 beq @widthEqualToSegment
 bcc @widthWithinSegment
@@ -826,7 +826,7 @@ sec
 sbc #64 / 2 ;Divide by two because in Sierra AGI pixels are double width, so 32 agi pixels fit in 64
 sta ZP_TMP_14 ;Amount over stored in ZP_TMP_14
 
-lda PREVIOUS_PIXEL_AMOUNT
+lda PIXEL_AMOUNT
 sec
 sbc ZP_TMP_14 ;Take away the amount over
 sta ZP_TMP_20 ; Amount under stored in ZP_TMP_20
@@ -842,7 +842,7 @@ adc ZP_TMP_14 + 1 ;Add the colour to the amount under
 sta (SEGMENT_POINTER), y ;Store amount under and colour in the segment
 iny
 
-GO_TO_NEXT_SEGMENT
+GO_TO_NEXT_SEGMENT ;We have stored the portion of this byte that belongs in this segment, now the remainder will be stored in the next segment
 
 lda ZP_TMP_20
 beq @gotoWidthLoop ;This is an edge case where there is nothing under, so we can just go to the next width loop
