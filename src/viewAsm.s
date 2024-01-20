@@ -951,8 +951,6 @@ GO_TO_NEXT_SEGMENT
 jmp @widthLoop
 
 @checkHeightLoopCondition: ;Getting ready for the next line
-iny
-
 INCREMENT_SEGMENT ;Add a zero on the end of the line
 
 inc ROWS_SO_FAR ;Stop when we have processed all of the rows
