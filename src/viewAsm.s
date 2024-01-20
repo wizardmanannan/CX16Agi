@@ -94,6 +94,12 @@ CEL_HEIGHT = ZP_TMP_10
 CEL_TRANS = ZP_TMP_12
 OUTPUT_COLOUR = ZP_TMP_13
 
+;Leaving a gap for the bulk specific zero page values
+SPLIT_CEL_SEGMENTS = ZP_TMP_20
+SPLIT_CEL_BANK = ZP_TMP_21
+SPLIT_SEGMENTS = ZP_TMP_21 + 1
+SPLIT_COUNTER = ZP_TMP_22
+
 ;Constants
 CEL_HEIGHT_OFFSET = 1
 CEL_TRANS_OFFSET = 2
@@ -106,13 +112,34 @@ NO_MARGIN = 4
 ;The function stops when it has counted height number of zeros
 
 .macro CEL_TO_VERA
-GET_STRUCT_16_STORED_OFFSET _offsetOfBmp, LOCAL_CEL, BUFFER_STATUS ;Buffer status holds the C struct to be passed to b5RefreshBuffer
-GET_STRUCT_8_STORED_OFFSET _offsetOfBmpBank, LOCAL_CEL, BUFFER_STATUS + 2
 GET_STRUCT_8_STORED_OFFSET _offsetOfCelHeight, LOCAL_CEL, CEL_HEIGHT
 GET_STRUCT_8_STORED_OFFSET _offsetOfCelTrans, LOCAL_CEL, CEL_TRANS
-
 stz BUFFER_STATUS + 3
 
+lda SPLIT_SEGMENTS
+cmp #$1
+bne @split
+
+@nonSplit:
+GET_STRUCT_16_STORED_OFFSET _offsetOfBmp, LOCAL_CEL, BUFFER_STATUS ;Buffer status holds the C struct to be passed to b5RefreshBuffer
+GET_STRUCT_8_STORED_OFFSET _offsetOfBmpBank, LOCAL_CEL, BUFFER_STATUS + 2
+bra @start
+
+@split:
+lda SPLIT_COUNTER
+asl
+tay
+
+lda bESplitAddressesBuffer, y
+sta BUFFER_STATUS 
+iny
+lda bESplitAddressesBuffer, y
+sta BUFFER_STATUS + 1
+
+lda SPLIT_CEL_BANK
+sta BUFFER_STATUS + 2
+
+@start:
 REFRESH_BUFFER BUFFER_POINTER, BUFFER_STATUS ;Uses the work area to buffer the run encoded data. Using the b5RefreshBuffer function from C
 
 .ifdef DEBUG_VIEW_DRAW
@@ -197,7 +224,8 @@ stx VERA_ADDRESS_HIGH + 1
 jsr popax
 sta LOCAL_CEL
 stx LOCAL_CEL + 1
-
+lda #$1
+sta SPLIT_SEGMENTS ;When we draw directly to the bitmap we don't need to split the cel into segments
 CEL_TO_VERA
 
 rts
@@ -211,6 +239,7 @@ TOTAL_ROWS = ZP_TMP_19
 .segment "BANKRAM0E"
 ;byte allocationSize, byte noToBlit Note 32 is 0 allocation size and 64 is 1
 _bEToBlitCelArray: .res 500
+;bECellToVeraBulk(SpriteAttributeSize allocationWidth, SpriteAttributeSize allocationHeight, byte noToBlit);
 _bECellToVeraBulk:
 sta NO_TO_BLIT
 lda #NO_MARGIN
@@ -297,6 +326,39 @@ sta BYTES_PER_ROW
 bra @loop
 
 @loop:
+lda #$0
+sta SPLIT_COUNTER
+
+GET_STRUCT_16_STORED_OFFSET _offsetOfSplitCelPointers, LOCAL_CEL, SPLIT_CEL_SEGMENTS
+GET_STRUCT_8_STORED_OFFSET _offsetOfSplitCelBank, LOCAL_CEL, SPLIT_CEL_BANK
+
+lda SPLIT_CEL_SEGMENTS
+ora SPLIT_CEL_SEGMENTS + 1
+
+beq @splitLoop ;If the cel is not split we don't need this copy
+
+lda #< bESplitAddressesBuffer
+ldx #> bESplitAddressesBuffer
+jsr pushax
+
+lda #SPRITE_UPDATES_BANK
+jsr pusha
+
+lda SPLIT_CEL_SEGMENTS
+ldx SPLIT_CEL_SEGMENTS + 1
+jsr pushax
+
+lda SPLIT_CEL_BANK
+jsr pusha
+
+lda #POINTER_TO_SPLIT_DATA_SIZE
+ldx #$0
+
+jsr _memCpyBankedBetween
+
+@splitLoop: ;Will always iterate once if the cell is not split
+GET_STRUCT_8_STORED_OFFSET _offsetOfSplitSegments, LOCAL_CEL, SPLIT_SEGMENTS
+
 ldy BULK_ADDRESS_INDEX
 
 stz VERA_ADDRESS ; Low byte Always zero
@@ -315,6 +377,16 @@ CLEAR_VERA VERA_ADDRESS, TOTAL_ROWS, BYTES_PER_ROW, #$0
 
 CEL_TO_VERA
 
+@checkSplitLoop:
+inc SPLIT_COUNTER
+
+lda SPLIT_COUNTER
+cmp SPLIT_SEGMENTS
+
+beq @getNextCel
+jmp @splitLoop
+
+@getNextCel:
 clc
 lda LOCAL_CEL
 adc SIZE_OF_CEL
@@ -330,6 +402,7 @@ jmp @loop
 
 @return:
 rts
+bESplitAddressesBuffer: .res 32
 
 SPLIT_CEL_WIDTH = ZP_TMP_2
 SPLIT_CEL_HEIGHT = ZP_TMP_2 + 1
@@ -754,13 +827,13 @@ ROWS_SO_FAR = ZP_TMP_21 ;How many rows have been processed so far
 .macro INCREMENT_SEGMENT ;When we have finished with a segment we need to add to it the number of the times we wrote to it, as we will return to it the next line. Also we should pad it with one zero
 iny ;We need to add a single zero on the end, and this is the easiest way to do it
 tya
-tax ;We will return this segment for the next line and we don't want to clobber what we have written we want to write after it
-lda SEGMENT_POINTER_COUNTER
+tax ;Where we are in the current segment in preserved in x
+lda SEGMENT_POINTER_COUNTER ;Double the segment pointer counter, as there are two bytes per address
 asl
-tay
-txa
+tay ;Put the doubled segment pointer into y to be an index
+txa ;Bring were we are in the current segment back into a
 
-clc
+clc ;Add where we are in the current segment to the segment pointer
 adc bCSplitBufferSegments,y
 sta bCSplitBufferSegments,y
 iny
@@ -770,11 +843,11 @@ sta bCSplitBufferSegments,y
 .endmacro
 
 .macro GO_TO_NEXT_SEGMENT
-INCREMENT_SEGMENT
+INCREMENT_SEGMENT ;Increment the current segment pointer, so when we write to it again we won't clobber what we have written
 
-inc WIDTH_SEG_COUNTER
-jsr _bCSetSegmentPointer
-ldy #$0 
+inc WIDTH_SEG_COUNTER ;Ready to do the next width segment
+jsr _bCSetSegmentPointer ;Calculate the segment pointer for the next width segment
+ldy #$0 ;Reset the counter for where we are in the next segment
 .endmacro
 
 ;void bCSplitCel() ;Don't take any arguments, because all of the data is stored in the zero page
@@ -912,7 +985,6 @@ lda debugCounter
 .endif
 jmp @heightLoop
 @end:
-stp
 rts
 .ifdef DEBUG_SPLIT
 debugCounter: .byte $0
