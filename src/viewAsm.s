@@ -423,35 +423,35 @@ GET_STRUCT_8_STORED_OFFSET _offsetOfBmpBank, CEL_STRUCT_POINTER, CEL_DATA_BANK
 
  ;2. Count the number of bytes
 PREPARE_BUFFER_SPLIT_CEL ;This will set the buffering mechanism to the start of the cel data
-lda SPLIT_CEL_HEIGHT
-sta ZP_TMP_14
 
-stz @heightCounter
-stz ZP_TMP_14
-stz ZP_TMP_14 + 1 ;Count number of bytes in the cel data
 lda SPLIT_CEL_HEIGHT
+sta @heightCounter
 ldx #$0
+ldy #$0 ;Count number of bytes in the cel data
+
 @loopStart:
 GET_NEXT SPLIT_BUFFER_POINTER, SPLIT_BUFFER_STATUS ;Retrieves the next byte from the buffer. The registers x/y are overidden in here, so we can't use them as counters
-inc ZP_TMP_14
+inx
 @countCheckNextLine:
 cmp #$0 ;Zero means a new line, but we need to still count it, and then decrement y
 bne @loopStart
 
-lda ZP_TMP_14
-cmp ZP_TMP_14 + 1
+sty ZP_TMP_14
+cpx ZP_TMP_14
 bcc @continue 
-sta ZP_TMP_14 + 1
+txa
+tay
 @continue:
-stz ZP_TMP_14
+ldx #$0
 dec @heightCounter ;We stop when we have counted every line
 bne @loopStart
 
+sty ZP_TMP_14
 @endCount:
 lda SPLIT_CEL_HEIGHT 
 ldx #$0
 jsr pushax
-lda ZP_TMP_14 + 1
+lda ZP_TMP_14
 ldx #$0
 TRAMPOLINE #HELPERS_BANK, _b5Multiply
 sta NO_BYTES_SIZE
