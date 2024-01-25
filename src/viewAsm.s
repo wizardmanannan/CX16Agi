@@ -870,13 +870,23 @@ jsr _bCSetSegmentPointer
 ldy #$0
 @widthLoop:
 GET_NEXT SPLIT_BUFFER_POINTER, SPLIT_BUFFER_STATUS ;Get the next byte from the run encoded data. The byte will be in the format AX where A is the colour and X is the number of pixels
-
 .ifdef DEBUG_SPLIT
-inc debugCounter
 ldx debugCounter
-cpx #$C1
+inc debugCounter
+bne @compare
+@debugHigh:
+inc debugCounter + 1
+
+@compare:
+ldx debugCounter
+cpx #$F4
 bcc @continue
-;stp
+ldx debugCounter + 1
+cpx #$1
+bcc @continue
+stp
+nop
+ldx debugCounter
 @continue:
 .endif
 
@@ -978,14 +988,14 @@ sta WIDTH_SEG_COUNTER ;Go back to the first width segment, for a new row
 jsr _bCSetSegmentPointer ;Set the segment pointer for this new row, and column 0
 stz PIXELS_WIDTH_COUNTED_SO_FAR ;Reset the number of pixels counted so far
 .ifdef DEBUG_SPLIT
-stp
+
 lda debugCounter
 .endif
 jmp @heightLoop
 @end:
 rts
 .ifdef DEBUG_SPLIT
-debugCounter: .byte $0
+debugCounter: .word $0
 .endif
 ;boolean bCSetSegmentPointer()
 ;Figures out which segment we should be in based upon width and height seg counters

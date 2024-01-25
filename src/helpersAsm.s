@@ -24,7 +24,7 @@ lda #> GOLDEN_RAM_WORK_AREA
 sta BUFFER_POINTER + 1
 
 pla
-tya ;Restore x and y
+tay ;Restore x and y
 pla
 tax
 
