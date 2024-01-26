@@ -174,6 +174,7 @@
 #define ZP_PTR_TMP_2 0xAD
 #define ZP_PTR_TMP_3 0xAF
 #define ZP_PTR_TMP_4 0xB1
+#define ZP_PTR_TMP_5 0xB3
 
 #define ZP_PTR_TMP_20 0xDD
 #define ZP_PTR_TMP_21 0xDF

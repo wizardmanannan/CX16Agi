@@ -659,7 +659,9 @@ void bESetLoop(ViewTable* localViewTab, ViewTableMetadata* localMetadata, View* 
 #pragma code-name (pop)
 
 #define ZP_SPRITE_STORE_PTR ZP_PTR_TMP_2
-
+#define SPLIT_COUNTER ZP_PTR_TMP_3
+#define SPLIT_SEGMENTS ZP_PTR_TMP_4
+#define SPLIT_OFFSET ZP_PTR_TMP_5
 /***************************************************************************
 ** agi_blit
 ***************************************************************************/
@@ -746,8 +748,14 @@ void agiBlit(ViewTable* localViewTab, byte entryNum, boolean disableInterupts)
 	printf("The bank is %d\n", RAM_BANK);
 #endif
 
-	RAM_BANK = localMetadata.viewTableMetadataBank;
-	loopVeraAddress = loopVeraAddresses[localViewTab->currentCel];
+	*((byte*)SPLIT_COUNTER) = 1;
+	*((byte*)SPLIT_SEGMENTS) = localCel.splitSegments;
+
+	asm("stz %w", SPLIT_OFFSET);
+
+splitLoop: RAM_BANK = localMetadata.viewTableMetadataBank;
+
+	loopVeraAddress = loopVeraAddresses[localViewTab->currentCel + *((byte*)SPLIT_COUNTER) - 1];
 
 	RAM_BANK = SPRITE_UPDATED_BANK;
 
@@ -790,6 +798,17 @@ void agiBlit(ViewTable* localViewTab, byte entryNum, boolean disableInterupts)
 	//2 x low
 	_assmUInt = (byte)localViewTab->xPos;
 	_assmByte = localCel.flipped;
+
+	asm("lda %w", SPLIT_OFFSET);
+	asm("beq %g", doubleWidthForScreen);
+	
+	asm("clc");
+	asm("adc %v", _assmUInt);
+	asm("sta %v", _assmUInt);
+	asm("bcc %g", doubleWidthForScreen);
+	asm("inc %v + 1", _assmUInt); //The high byte of both things we are adding are zero, therefore we can just increment if there is a carry and ignore this step otherwise
+
+	doubleWidthForScreen:
 	asm("ldy #$2");
 	asm("lda %v", _assmUInt);
 	asm("clc");
@@ -801,7 +820,7 @@ void agiBlit(ViewTable* localViewTab, byte entryNum, boolean disableInterupts)
 	asm("@storeOnStackLow: pha");
 
 	//;3 x high
-	asm("@calculateHigh: lda #$0");
+	asm("@calculateHigh: lda %v + 1", _assmUInt);
 	asm("rol");
 	asm("ldy #$3");
 	asm("cpx #$0");
@@ -910,6 +929,19 @@ yPos: _assmByte = (byte)localViewTab->yPos;
 
 	bESpritesUpdatedBufferPointer += BYTES_PER_SPRITE_UPDATE;
 
+	asm("clc");
+	asm("lda #%w", MAX_64_WIDTH_OR_HEIGHT / 2);
+	asm("adc %w", SPLIT_OFFSET);
+	asm("sta %w", SPLIT_OFFSET);
+
+	asm("lda %w", SPLIT_COUNTER);
+	asm("cmp %w", SPLIT_SEGMENTS);
+	asm("bcs %g", endBlit);
+
+	asm("inc %w", SPLIT_COUNTER);
+	asm("jmp %g", splitLoop);
+
+	endBlit:
 	if (disableInterupts)
 	{
 		REENABLE_INTERRUPTS();
