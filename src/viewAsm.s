@@ -231,7 +231,7 @@ CEL_TO_VERA
 rts
 
 ;Used in bulk
-NO_TO_BLIT = ZP_TMP_14
+NO_OF_CELS = ZP_TMP_14
 BULK_ADDRESS_INDEX = ZP_TMP_16
 SIZE_OF_CEL = ZP_TMP_17
 CLEAR_COLOR = ZP_TMP_18
@@ -241,7 +241,7 @@ TOTAL_ROWS = ZP_TMP_19
 _bEToBlitCelArray: .res 500
 ;bECellToVeraBulk(SpriteAttributeSize allocationWidth, SpriteAttributeSize allocationHeight, byte noToBlit);
 _bECellToVeraBulk:
-sta NO_TO_BLIT
+sta NO_OF_CELS
 lda #NO_MARGIN
 sta BCOL
 stz BULK_ADDRESS_INDEX
@@ -396,7 +396,7 @@ adc #$0
 sta LOCAL_CEL + 1
 
 @checkLoop:
-dec NO_TO_BLIT
+dec NO_OF_CELS
 beq @return
 jmp @loop
 
