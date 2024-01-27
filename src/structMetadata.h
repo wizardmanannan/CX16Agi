@@ -11,6 +11,11 @@ byte sizeofCel = sizeof(Cel);
 
 byte offsetOfBmp = offsetof(struct Cel, bmp);
 byte offsetOfBmpBank = offsetof(struct Cel, bitmapBank);
-byte offsetOfCelHeight = offsetof(struct Cel, height);
 byte offsetOfCelTrans = offsetof(struct Cel, transparency);
+byte offsetOfCelWidth = offsetof(struct Cel, width);
+byte offsetOfCelHeight = offsetof(struct Cel, height);
+byte offsetOfSplitCelPointers = offsetof(struct Cel, splitCelPointers);
+byte offsetOfSplitCelBank = offsetof(struct Cel, splitCelBank);
+byte offsetOfSplitSegments = offsetof(struct Cel, splitSegments);
+
 #endif

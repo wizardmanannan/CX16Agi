@@ -10,6 +10,11 @@ HELPERS_INC = 1
 .import callptr4
 
 .macro REFRESH_BUFFER BUFFER_POINTER, BUFFER_STATUS
+txa
+pha ;Preserve x and y
+tya
+pha
+
 lda #< BUFFER_STATUS
 ldx #> BUFFER_STATUS
 TRAMPOLINE #HELPERS_BANK, _b5RefreshBuffer
@@ -17,6 +22,12 @@ lda #< GOLDEN_RAM_WORK_AREA
 sta BUFFER_POINTER
 lda #> GOLDEN_RAM_WORK_AREA
 sta BUFFER_POINTER + 1
+
+pla
+tay ;Restore x and y
+pla
+tax
+
 .endmacro
 
 .macro GET_NEXT BUFFER_POINTER, BUFFER_STATUS

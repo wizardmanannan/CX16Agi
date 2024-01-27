@@ -32,6 +32,7 @@
 //#define VERBOSE_UPDATE_OBJECTS
 //#define VERBOSE_DEBUG_SET_METADATA
 //#define VERBOSE_DEBUG_BLIT
+//#define VERBOSE_SPLIT
 
 //#define VERBOSE_ALLOC_WATCH
 //#define VERBOSE_ADD_TO_PIC;
@@ -218,6 +219,8 @@ extern void b9CelToVera(Cel* localCel, long veraAddress, byte bCol, byte drawing
 
 #pragma code-name (push, "BANKRAM0E")
 #pragma wrapped-call (push, trampoline, SPRITE_METADATA_BANK)
+
+extern void bESplitCel(Cel* cel);
 
 void bETerminateSpriteBuffer()
 {
@@ -597,7 +600,7 @@ void bESwitchMetadata(ViewTable* localViewTab, View* localView, byte viewNum, by
 #define TO_BLIT_CEL_ARRAY_LENGTH 500
 extern byte bEToBlitCelArray[TO_BLIT_CEL_ARRAY_LENGTH];
 //Copy cels into array above first
-extern void bECellToVeraBulk(SpriteAttributeSize allocationWidth, SpriteAttributeSize allocationHeight, byte noToBlit);
+extern void bECellToVeraBulk(SpriteAttributeSize allocationWidth, SpriteAttributeSize allocationHeight, byte noCels);
 void bESetLoop(ViewTable* localViewTab, ViewTableMetadata* localMetadata, View* localView, VeraSpriteAddress* loopVeraAddresses)
 {
 	Loop localLoop;
@@ -650,12 +653,15 @@ void bESetLoop(ViewTable* localViewTab, ViewTableMetadata* localMetadata, View* 
 #ifdef VERBOSE_DEBUG_BLIT
 	printf("You are allocating %d.%d. It has a width of %d and height of %d. There are %d to blit\n", localViewTab->currentView, localViewTab->currentLoop, localLoop.allocationWidth, localLoop.allocationHeight, noToBlit);
 #endif
-	bECellToVeraBulk(localLoop.allocationWidth, localLoop.allocationHeight, noToBlit);
+	//Change this method
+	bECellToVeraBulk(localLoop.allocationWidth, localLoop.allocationHeight, localLoop.numberOfCels);
 }
 #pragma code-name (pop)
 
 #define ZP_SPRITE_STORE_PTR ZP_PTR_TMP_2
-
+#define SPLIT_COUNTER ZP_PTR_TMP_3
+#define SPLIT_SEGMENTS ZP_PTR_TMP_4
+#define SPLIT_OFFSET ZP_PTR_TMP_5
 /***************************************************************************
 ** agi_blit
 ***************************************************************************/
@@ -686,6 +692,15 @@ void agiBlit(ViewTable* localViewTab, byte entryNum, boolean disableInterupts)
 	getLoadedLoop(&localView, &localLoop, localViewTab->currentLoop);
 	getLoadedCel(&localLoop, &localCel, localViewTab->currentCel);
 
+	if (!localCel.splitCelPointers && (localLoop.veraSlotsWidth > 1 || localLoop.veraSlotsHeight > 1))
+	{
+#ifdef VERBOSE_SPLIT
+		printf("you are splitting view %d loop %d cel %d. the data is %p on bank %p. it's width doubled is %d\n", viewNum, localViewTab->currentLoop, localViewTab->currentCel, localCel.bmp, localCel.bitmapBank, localCel.width * 2);
+#endif
+		bESplitCel(&localCel);
+		setLoadedCel(&localLoop, &localCel, localViewTab->currentCel);
+	}
+
 	if (viewTabNoToMetaData[entryNum] != VIEWNO_TO_METADATA_NO_SET && viewTableMetadata[entryNum].viewNum != viewNum)
 	{
 #ifdef VERBOSE_SWITCH_METADATA
@@ -694,7 +709,7 @@ void agiBlit(ViewTable* localViewTab, byte entryNum, boolean disableInterupts)
 		bESwitchMetadata(localViewTab, &localView, viewNum, entryNum);
 	}
 
-	if (viewTabNoToMetaData[entryNum] == VIEWNO_TO_METADATA_NO_SET) //Second part of the statement will be true if switched to another view for the first time in bESwitchMetadata
+	if (viewTabNoToMetaData[entryNum] == VIEWNO_TO_METADATA_NO_SET) //Statement will be true if switched to another view for the first time in bESwitchMetadata
 	{
 #ifdef VERBOSE_DEBUG_NO_BLIT_CACHE
 		printf("set Metadata %d. The vt is %d\n", localViewTab->viewData, entryNum);
@@ -733,8 +748,14 @@ void agiBlit(ViewTable* localViewTab, byte entryNum, boolean disableInterupts)
 	printf("The bank is %d\n", RAM_BANK);
 #endif
 
-	RAM_BANK = localMetadata.viewTableMetadataBank;
-	loopVeraAddress = loopVeraAddresses[localViewTab->currentCel];
+	*((byte*)SPLIT_COUNTER) = 1;
+	*((byte*)SPLIT_SEGMENTS) = localCel.splitSegments;
+
+	asm("stz %w", SPLIT_OFFSET);
+
+splitLoop: RAM_BANK = localMetadata.viewTableMetadataBank;
+
+	loopVeraAddress = loopVeraAddresses[localViewTab->currentCel + *((byte*)SPLIT_COUNTER) - 1];
 
 	RAM_BANK = SPRITE_UPDATED_BANK;
 
@@ -749,6 +770,8 @@ void agiBlit(ViewTable* localViewTab, byte entryNum, boolean disableInterupts)
 	//Put bytes into a buffer to be picked up by the irq see spriteIrqHandler.s (bEHandleSpriteUpdates)
 
 	_assmUInt = loopVeraAddress;
+
+	//Update here for blitting all parts
 
 	//0 Vera Address Sprite Data Middle (Low will always be 0) (If both the first two bytes are zero that indicates the end of the buffer)
 	asm("lda %v", _assmUInt);
@@ -775,6 +798,17 @@ void agiBlit(ViewTable* localViewTab, byte entryNum, boolean disableInterupts)
 	//2 x low
 	_assmUInt = (byte)localViewTab->xPos;
 	_assmByte = localCel.flipped;
+
+	asm("lda %w", SPLIT_OFFSET);
+	asm("beq %g", doubleWidthForScreen);
+	
+	asm("clc");
+	asm("adc %v", _assmUInt);
+	asm("sta %v", _assmUInt);
+	asm("bcc %g", doubleWidthForScreen);
+	asm("inc %v + 1", _assmUInt); //The high byte of both things we are adding are zero, therefore we can just increment if there is a carry and ignore this step otherwise
+
+	doubleWidthForScreen:
 	asm("ldy #$2");
 	asm("lda %v", _assmUInt);
 	asm("clc");
@@ -786,7 +820,7 @@ void agiBlit(ViewTable* localViewTab, byte entryNum, boolean disableInterupts)
 	asm("@storeOnStackLow: pha");
 
 	//;3 x high
-	asm("@calculateHigh: lda #$0");
+	asm("@calculateHigh: lda %v + 1", _assmUInt);
 	asm("rol");
 	asm("ldy #$3");
 	asm("cpx #$0");
@@ -895,6 +929,19 @@ yPos: _assmByte = (byte)localViewTab->yPos;
 
 	bESpritesUpdatedBufferPointer += BYTES_PER_SPRITE_UPDATE;
 
+	asm("clc");
+	asm("lda #%w", MAX_64_WIDTH_OR_HEIGHT / 2);
+	asm("adc %w", SPLIT_OFFSET);
+	asm("sta %w", SPLIT_OFFSET);
+
+	asm("lda %w", SPLIT_COUNTER);
+	asm("cmp %w", SPLIT_SEGMENTS);
+	asm("bcs %g", endBlit);
+
+	asm("inc %w", SPLIT_COUNTER);
+	asm("jmp %g", splitLoop);
+
+	endBlit:
 	if (disableInterupts)
 	{
 		REENABLE_INTERRUPTS();
@@ -1089,6 +1136,7 @@ void setViewData(byte viewNum, AGIFile* tempAGI, View* localView)
 
 		localView->loaded = TRUE;
 		localView->loops = (Loop*)b10BankedAlloc(numberOfLoops * sizeof(Loop), &loopsBank);
+		memsetBanked((byte*)localView->loops, 0, numberOfLoops * sizeof(Loop), loopsBank);
 
 		localView->numberOfLoops = numberOfLoops;
 		localView->description = description;
@@ -1140,6 +1188,8 @@ void setLoopData(AGIFile* tempAGI, View* localView, Loop* localLoop, byte* loopH
 #endif
 
 		localLoop->cels = (Cel*)b10BankedAlloc(numberOfCels * sizeof(Cel), &celsBank);
+		memsetBanked((byte*)localLoop->cels, 0, numberOfCels * sizeof(Cel), celsBank);
+
 		localLoop->numberOfCels = numberOfCels;
 		localLoop->celsBank = celsBank;
 		setLoadedLoop(localView, localLoop, loopNum);
@@ -1302,6 +1352,8 @@ void b9LoadViewFile(byte viewNum)
 
 			localLoop.veraSlotsHeight = b9VeraSlotsForWidthOrHeight(localCel.height);
 
+			localCel.splitSegments = localLoop.veraSlotsWidth * localLoop.veraSlotsHeight;
+
 #ifdef VERBOSE_LOAD_VIEWS
 			printf("The viewNum is %d\n", viewNum);
 			printf("The address of celHeader is %p\n", celHeader);
@@ -1361,6 +1413,12 @@ void b9DiscardView(byte viewNum)
 				localCel.height = 0;
 				localCel.transparency = 0;
 				localCel.width = 0;
+
+				if (localCel.splitCelPointers)
+				{
+					b10BankedDealloc((byte*)localCel.splitCelPointers, localCel.splitCelBank);
+				}
+				localCel.splitCelPointers = NULL;
 
 				setLoadedCel(&localLoop, &localCel, c);
 			}

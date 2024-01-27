@@ -19,4 +19,6 @@ lda _maxViewTable
 lda _toDraw
 lda _picColour
 lda _bEBulkAllocatedAddresses
+lda bCSplitBufferSegments
+lda bCSplitBuffer
 rts

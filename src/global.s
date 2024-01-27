@@ -85,11 +85,13 @@ LOGIC_CODE_BANK = $6
 PICTURE_BANK = $11
 TEXT_BANK = $3
 SPRITE_MANAGER_BANK = $9
+BANKED_ALLOC_BANK = $10
 
 FIRST_FLOOD_BANK = $27
 NO_FLOOD_BANKS = $0A
 LAST_FLOOD_BANK = FIRST_FLOOD_BANK + NO_FLOOD_BANKS - 1
 SPRITE_UPDATES_BANK = $0E
+SPLIT_BUFFER_BANK = $0C
 
 DIVISION_METADATA_BANK = $31
 
@@ -191,6 +193,20 @@ NEG_1_16 = $FFFF
          INY
          LDA   (pointer),y
          STA   result + 1
+.endmacro
+
+.macro  SET_STRUCT_16_STORED_OFFSET_VALUE_IN_REG offset, pointer
+         LDY  offset
+         STA   (pointer),y
+         TXA
+         INY
+         STA   (pointer),y
+
+.endmacro
+
+.macro  SET_STRUCT_8_STORED_OFFSET_VALUE_IN_REG offset, pointer
+         LDY  offset
+         STA   (pointer),y
 .endmacro
 
 ; Macro for getting an 8-bit struct value
