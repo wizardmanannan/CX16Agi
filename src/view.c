@@ -692,7 +692,7 @@ void agiBlit(ViewTable* localViewTab, byte entryNum, boolean disableInterupts)
 	getLoadedLoop(&localView, &localLoop, localViewTab->currentLoop);
 	getLoadedCel(&localLoop, &localCel, localViewTab->currentCel);
 
-	if (!localCel.splitCelPointers && localLoop.veraSlotsWidth > 1 || localLoop.veraSlotsHeight > 1)
+	if (!localCel.splitCelPointers && (localLoop.veraSlotsWidth > 1 || localLoop.veraSlotsHeight > 1))
 	{
 #ifdef VERBOSE_SPLIT
 		printf("you are splitting view %d loop %d cel %d. the data is %p on bank %p. it's width doubled is %d\n", viewNum, localViewTab->currentLoop, localViewTab->currentCel, localCel.bmp, localCel.bitmapBank, localCel.width * 2);
@@ -1136,6 +1136,7 @@ void setViewData(byte viewNum, AGIFile* tempAGI, View* localView)
 
 		localView->loaded = TRUE;
 		localView->loops = (Loop*)b10BankedAlloc(numberOfLoops * sizeof(Loop), &loopsBank);
+		memsetBanked((byte*)localView->loops, 0, numberOfLoops * sizeof(Loop), loopsBank);
 
 		localView->numberOfLoops = numberOfLoops;
 		localView->description = description;
@@ -1187,6 +1188,8 @@ void setLoopData(AGIFile* tempAGI, View* localView, Loop* localLoop, byte* loopH
 #endif
 
 		localLoop->cels = (Cel*)b10BankedAlloc(numberOfCels * sizeof(Cel), &celsBank);
+		memsetBanked((byte*)localLoop->cels, 0, numberOfCels * sizeof(Cel), celsBank);
+
 		localLoop->numberOfCels = numberOfCels;
 		localLoop->celsBank = celsBank;
 		setLoadedLoop(localView, localLoop, loopNum);
