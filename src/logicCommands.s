@@ -359,7 +359,7 @@ lda var
 sta _logDebugVal1
 .endif
 
-JSRFAR _debugPostCheckVar, DEBUG_BANK
+;JSRFAR _debugPostCheckVar, DEBUG_BANK
 .endif
 .endmacro
 
@@ -544,7 +544,7 @@ jmp returnFromOpCodeFalse
 
 ; Macro: EXIT_ALL_LOGICS_IF_SET
 .macro EXIT_ALL_LOGICS_IF_SET
-DEBUG_EXIT_ALL_LOGICS
+;DEBUG_EXIT_ALL_LOGICS
 lda _exitAllLogics
 beq @dontExit
 ; Jump to the end of the main loop if the flag is set
@@ -855,7 +855,7 @@ b1Increment:
          inc @value
          SET_VAR_OR_FLAG VARS_AREA_START_GOLDEN_OFFSET, @value, @var
          @end:        
-         DEBUG_POST_CHECK_VAR
+         ;DEBUG_POST_CHECK_VAR
          jmp mainLoop
 
 
@@ -1823,6 +1823,7 @@ b1Isset:
     DEBUG_IS_SET
 
     INC_CODE
+
     lda var1
     beq @fail
     jmp returnFromOpCodeTrue
@@ -1832,7 +1833,7 @@ b1Isset:
 b1Issetv:
     GET_VAR_OR_FLAG_VAR_OFFSET FLAGS_AREA_START_GOLDEN_OFFSET, var1
 
-    DEBUG_IS_SET
+   DEBUG_IS_SET
 
     INC_CODE
     lda var1

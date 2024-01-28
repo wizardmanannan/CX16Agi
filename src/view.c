@@ -1072,6 +1072,8 @@ extern byte loopHeaderBuffer[LOOP_HEADER_BUFFER_SIZE];
 #define NO_LOOPS_INDEX_BYTES_AVERAGE 14
 #define NO_CELLS_INDEX_BYTES_AVERAGE 14
 
+extern int currentLog;
+
 void setViewData(byte viewNum, AGIFile* tempAGI, View* localView)
 {
 	byte numberOfLoops;
@@ -1146,7 +1148,7 @@ void setViewData(byte viewNum, AGIFile* tempAGI, View* localView)
 	}
 	else
 	{
-		printf("View %d is already loaded\n", viewNum);
+		printf("View %d is already loaded. The opcounter is %lu. The logic num is %d\n", viewNum, opCounter, currentLog);
 	}
 
 	localView->codeBlock = tempAGI->code;

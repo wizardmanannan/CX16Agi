@@ -61,9 +61,10 @@ void stopAtQueueAction()
 
 void stopAtFunc()
 {
-	if (opCounter >= 51)
+	if (opCounter >= 133)
 	{
 		asm("stp"); //Two pointless nops follow in order to make it clear where we have stopped
+		asm("nop");
 		asm("nop");
 		asm("nop");
 	}
@@ -142,7 +143,7 @@ void debugPrint(byte toPrint)
 
 
 
-		printf("op %lu, %d, var 0 is %d. Time taken %d. The RAM Bank is %p\n", opCounter, toPrint, var[0], time, *((byte*)(0x1d4b)));
+		printf("op %lu, %d, var 0 is %d.\n", opCounter, toPrint, var[0]);
 		_clockBefore = clockVal;
 #ifdef CHECK_MEM
 		b5CheckMemory();
@@ -287,7 +288,7 @@ void debugAddV()
 {
 	if (opCounter >= opStartPrintingAt && opStartPrintingAt != 0)
 	{
-		printf("add var %d (%d) to %d (%d) which is\n", logDebugVal1, var[logDebugVal1], logDebugVal2, var[logDebugVal2], var[logDebugVal1] + var[logDebugVal2]);
+		printf("add var %d (%d) to %d (%d) which is %d\n", logDebugVal1, var[logDebugVal1], logDebugVal2, var[logDebugVal2], var[logDebugVal1] + var[logDebugVal2]);
 	}
 }
 
@@ -295,14 +296,14 @@ void debugSubN()
 {
 	if (opCounter >= opStartPrintingAt && opStartPrintingAt != 0)
 	{
-		printf("sub var %d (%d) to %d which is\n", logDebugVal1, var[logDebugVal1], logDebugVal2, var[logDebugVal1] - logDebugVal2);
+		printf("sub var %d (%d) to %d which is %d\n", logDebugVal1, var[logDebugVal1], logDebugVal2, var[logDebugVal1] - logDebugVal2);
 	}
 }
 
 void debugSubV()
 {
 	if (opCounter >= opStartPrintingAt && opStartPrintingAt != 0) {
-		printf("sub var %d (%d) to %d (%d) which is\n", logDebugVal1, var[logDebugVal1], logDebugVal2, var[logDebugVal2], var[logDebugVal1] - var[logDebugVal2]);
+		printf("sub var %d (%d) to %d (%d) which is %d\n", logDebugVal1, var[logDebugVal1], logDebugVal2, var[logDebugVal2], var[logDebugVal1] - var[logDebugVal2]);
 	}
 }
 
@@ -318,7 +319,7 @@ void debugAssignV()
 {
 	if (opCounter >= opStartPrintingAt && opStartPrintingAt != 0)
 	{
-		printf("assign var %d (%d) to %d (%d) which is\n", logDebugVal1, var[logDebugVal1], logDebugVal2, var[logDebugVal2], logDebugVal2);
+		printf("assign var %d (%d) to %d (%d) which is %d\n", logDebugVal1, var[logDebugVal1], logDebugVal2, var[logDebugVal2], logDebugVal2);
 	}
 }
 
@@ -359,7 +360,7 @@ void codeJumpDebug()
 {
 	if (opCounter >= opStartPrintingAt && opStartPrintingAt != 0)
 	{
-		printf("b1 is %d b2 is %d, Shift %u and the jump result is %u.\n", logDebugVal1, logDebugVal2, (logDebugVal2 << 8), (logDebugVal2 << 8) | logDebugVal1);
+		printf("b1 is %d b2 is %d, shift %u and the jump result is %u.\n", logDebugVal1, logDebugVal2, (logDebugVal2 << 8), (logDebugVal2 << 8) | logDebugVal1);
 	}
 }
 
@@ -367,7 +368,7 @@ void debugNewRoom()
 {
 	if (opCounter >= opStartPrintingAt && opStartPrintingAt != 0)
 	{
-		printf("Attempting to enter new room %d\n", logDebugVal1);
+		printf("attempting to enter new room %d\n", logDebugVal1);
 	}
 }
 
@@ -384,7 +385,7 @@ void debugPrintCurrentCodeState(byte* code)
 	byte codeValue;
 	memCpyBanked(&codeValue, code, codeBank, 1);
 	if (opCounter >= opStartPrintingAt && opStartPrintingAt != 0) {
-		printf("the code is now %u and the address is %p\n", codeValue, code);
+		//printf("the code is now %u and the address is %p\n", codeValue, code);
 	}
 }
 

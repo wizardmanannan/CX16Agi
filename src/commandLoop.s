@@ -151,7 +151,7 @@ sta RAM_BANK
 
     DEBUG_JUMP ZP_PTR_B1, ZP_PTR_B2
     LEFT_SHIFT_BY_8 ZP_PTR_B2, ZP_PTR_DISP
-
+    
     ORA_16 ZP_PTR_B1, ZP_PTR_DISP, ZP_PTR_DISP
 
     INC_CODE_BY ZP_PTR_DISP
@@ -189,6 +189,8 @@ checkOrMode:
     jmp endIfHandlerLoop
     
     @orModeFalse:
+        DEBUG_PRINT ZP_PTR_CH
+        DEBUG_PRINT_OR_MODE
         lda #TRUE
         sta orMode
         jmp ifHandlerLoop
@@ -283,7 +285,6 @@ ifHandler:
         bra @default
 
         @closingIfBracketJmp:
-            DEBUG_PRINT ZP_PTR_CH ;/* Closing if bracket. Expression must be true. */
             jmp closingIfBracket
         
         @toggleNotModeJmp:
@@ -291,8 +292,6 @@ ifHandler:
             jmp toggleNotMode
 
         @checkOrModeJmp:
-            DEBUG_PRINT ZP_PTR_CH
-            DEBUG_PRINT_OR_MODE
             jmp checkOrMode
 
         @default:
@@ -315,7 +314,7 @@ ifHandler:
                 DEBUG_PRINT_NOT
                 stz notMode
                 lda orMode  ;if (!orMode) stillProcessing = FALSE;
-                
+
                 beq endIfHandlerLoop
                 jmp ifHandlerLoop  
 
