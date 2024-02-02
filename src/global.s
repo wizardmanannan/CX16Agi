@@ -3,7 +3,7 @@
 
 ; Include the x16.inc file
 .include "x16.inc"
-;DEBUG = 0
+DEBUG = 0
 
 ; Define some start and end positions and code bank
 startPos: .word $0
@@ -632,6 +632,7 @@ sta result + 1
 .endmacro
 
 .macro STOP_AT_FUNC
+php
 pha
 txa
 pha
@@ -643,6 +644,7 @@ tay
 pla
 tax
 pla
+plp
 .endmacro
 
 ;Global IRQ

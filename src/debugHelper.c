@@ -9,9 +9,9 @@ extern boolean hasEnteredNewRoom, exitAllLogics;
 extern int currentLog;
 
 long opCounter = 1;
-long opStopAt = 0;
+long opStopAt = 5000;
 long opExitAt = 0;
-long opStartPrintingAt = 0;
+long opStartPrintingAt = 1;
 boolean opStopEvery = FALSE;
 int _clockBefore = 0;
 
@@ -224,7 +224,7 @@ void debugLessThan_8N()
 {
 	if (opCounter >= opStartPrintingAt && opStartPrintingAt != 0)
 	{
-		printf("Checking that %d is < %d and the result should be %d\n", logDebugVal1, var[logDebugVal1], logDebugVal2, var[logDebugVal1] < logDebugVal2);
+		printf("checking that %d is < %d and the result should be %d\n", logDebugVal1, logDebugVal2, logDebugVal1 < logDebugVal2);
 	}
 }
 

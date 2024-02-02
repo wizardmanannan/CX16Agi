@@ -500,7 +500,7 @@ sta startPos
         sta ZP_TMP 
         lda ZP_TMP + 1
         adc #$0
-
+        
         lda (ZP_TMP)
 
         sta result
@@ -1756,7 +1756,7 @@ b1Lessn:
     sta var2
     INC_CODE
 
-    DEBUG_LESS_THAN_8_N _logDebugVal1, var2
+    DEBUG_LESS_THAN_8_N var1, var2
     LESS_THAN_8 var1, var2, returnFromOpCodeTrue, returnFromOpCodeFalse
 
 b1Lessv:
