@@ -347,7 +347,7 @@ JSRFAR _debugAssignN, DEBUG_BANK
 .macro DEBUG_ASSIGN_V var
 .ifdef DEBUG
 
-JSRFAR _debugAddV, DEBUG_BANK
+JSRFAR _debugAssignN, DEBUG_BANK
 .endif
 .endmacro
 
