@@ -9,7 +9,7 @@ extern boolean hasEnteredNewRoom, exitAllLogics;
 extern int currentLog;
 
 long opCounter = 1;
-long opStopAt = 5000;
+long opStopAt = 0;
 long opExitAt = 0;
 long opStartPrintingAt = 1;
 boolean opStopEvery = FALSE;
@@ -143,7 +143,7 @@ void debugPrint(byte toPrint)
 
 
 
-		printf("op %lu, %d, var 0 is %d.\n", opCounter, toPrint, var[0]);
+		printf("op %lu, %d, var 73 is %d.\n", opCounter, toPrint, var[73]);
 		_clockBefore = clockVal;
 #ifdef CHECK_MEM
 		b5CheckMemory();
@@ -270,9 +270,16 @@ void debugInc()
 
 void debugDec()
 {
+	byte actual = var[logDebugVal1];
+
+	if (actual)
+	{
+		actual--;
+	}
+
 	if (opCounter >= opStartPrintingAt && opStartPrintingAt != 0)
 	{
-		printf("decrementing var %d(%d) to %d\n", logDebugVal1, var[logDebugVal1], var[logDebugVal1] - 1);
+		printf("decrementing var %d to %d\n", logDebugVal1, actual);
 	}
 }
 
@@ -280,7 +287,7 @@ void debugAddN()
 {
 	if (opCounter >= opStartPrintingAt && opStartPrintingAt != 0)
 	{
-		printf("add var %d (%d) to %d which is %d", logDebugVal1, var[logDebugVal1], logDebugVal2, var[logDebugVal1] + logDebugVal2);
+		printf("add var %d (%d) to %d", logDebugVal1, var[logDebugVal1], logDebugVal2);
 	}
 }
 
@@ -288,7 +295,7 @@ void debugAddV()
 {
 	if (opCounter >= opStartPrintingAt && opStartPrintingAt != 0)
 	{
-		printf("add var %d (%d) to %d (%d) which is %d\n", logDebugVal1, var[logDebugVal1], logDebugVal2, var[logDebugVal2], var[logDebugVal1] + var[logDebugVal2]);
+		printf("add var %d (%d) to %d\n", logDebugVal1, var[logDebugVal1], logDebugVal2);
 	}
 }
 
@@ -319,7 +326,7 @@ void debugAssignV()
 {
 	if (opCounter >= opStartPrintingAt && opStartPrintingAt != 0)
 	{
-		printf("assign var %d (%d) to %d (%d) which is %d\n", logDebugVal1, var[logDebugVal1], logDebugVal2, var[logDebugVal2], logDebugVal2);
+		printf("assign var %d (%d) to %d (%d)\n", logDebugVal1, var[logDebugVal1], logDebugVal2, var[logDebugVal2]);
 	}
 }
 
