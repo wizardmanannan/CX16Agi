@@ -966,7 +966,7 @@ yPos: _assmByte = (byte)localViewTab->yPos;
 
 #pragma code-name (push, "BANKRAM09")
 #pragma code-name (push, "BANKRAM09")
-void b9ResetViewtabs()
+void b9ResetViewtabs(boolean fullReset)
 {
 	int entryNum;
 	byte i;
@@ -977,27 +977,31 @@ void b9ResetViewtabs()
 
 		localViewtab.stepTime = 1;
 		localViewtab.stepTimeCount = 1;
-		localViewtab.xPos = 0;
-		localViewtab.yPos = 0;
-		localViewtab.currentView = 0;
-		localViewtab.viewData = NULL;
-		localViewtab.currentLoop = 0;
-		localViewtab.numberOfLoops = 0;
-		localViewtab.loopData = NULL;
-		localViewtab.currentCel = 0;
-		localViewtab.numberOfCels = 0;
-		localViewtab.celData = NULL;
-		localViewtab.xsize = 0;
-		localViewtab.ysize = 0;
 		localViewtab.stepSize = 1;
 		localViewtab.cycleTime = 1;
 		localViewtab.cycleTimeCount = 1;
-		localViewtab.direction = 0;
-		localViewtab.motion = 0;
-		localViewtab.cycleStatus = 0;
-		localViewtab.priority = 0;
-		localViewtab.flags = 0;
-		setViewTab(&localViewtab, entryNum);
+
+		if (fullReset)
+		{
+			localViewtab.xPos = 0;
+			localViewtab.yPos = 0;
+			localViewtab.currentView = 0;
+			localViewtab.viewData = NULL;
+			localViewtab.currentLoop = 0;
+			localViewtab.numberOfLoops = 0;
+			localViewtab.loopData = NULL;
+			localViewtab.currentCel = 0;
+			localViewtab.numberOfCels = 0;
+			localViewtab.celData = NULL;
+			localViewtab.xsize = 0;
+			localViewtab.ysize = 0;
+			localViewtab.direction = 0;
+			localViewtab.motion = 0;
+			localViewtab.cycleStatus = 0;
+			localViewtab.priority = 0;
+			localViewtab.flags = 0;
+			setViewTab(&localViewtab, entryNum);
+		}
 	}
 }
 void b9Reset()
@@ -1007,7 +1011,7 @@ void b9Reset()
 	bEResetSpritePointers();
 	bEResetSpriteMemoryManager();
 	bEInitPaletteManager();
-	b9ResetViewtabs();
+	b9ResetViewtabs(FALSE);
 	maxViewTable = 0;
 }
 void b9InitSpriteData()
@@ -1039,7 +1043,7 @@ void b9InitViews()
 
 void b9InitObjects()
 {
-	b9ResetViewtabs();
+	b9ResetViewtabs(TRUE);
 	memsetBanked(viewTableMetadata, NULL, sizeof(ViewTableMetadata) * SPRITE_SLOTS, SPRITE_METADATA_BANK);
 }
 
