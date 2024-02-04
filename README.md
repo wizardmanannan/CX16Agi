@@ -2,6 +2,8 @@
 
 ## An AGI Interpreter For The CommanderX 16 Based On Meka By Lance Ewing
 
+**Note: This Project Is Under Construction And Is Not Ready For General Use**
+
 ## See it running here on YouTube: https://youtu.be/yd_LWDhv8RI
 
 ![image](https://github.com/wizardmanannan/CX16Agi/assets/58645812/ae1417c7-953b-4d7c-8789-2586a4abcd43)
@@ -14,8 +16,6 @@
 # CX 16 Iteration 5 Goals (Completed)
 - Sprite support
 - Implement System Tick Replacing Inaccurate Inherited C One
-
-**Note: This Project Is Under Construction And Is Not Ready For General Use**
 
 Here is a quick demonstration video: https://youtu.be/IDdc890T_oY 
 
