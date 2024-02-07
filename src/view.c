@@ -2106,64 +2106,6 @@ void bBUpdateObj(int entryNum)
 			}
 		}
 	} /* CYCLING */
-
-	if (objFlags & MOTION) {
-		localViewtab.stepTimeCount++;
-		if (localViewtab.stepTimeCount >
-			localViewtab.stepTime) {
-			localViewtab.stepTimeCount = 1;
-			switch (localViewtab.motion) {
-			case 0: /* normal.motion */
-				switch (localViewtab.direction) {
-				case 0: break;
-				case 1:bANormalAdjust(entryNum, &localViewtab, 0, -1); break;
-				case 2:bANormalAdjust(entryNum, &localViewtab, 1, -1); break;
-				case 3:bANormalAdjust(entryNum, &localViewtab, 1, 0); break;
-				case 4:bANormalAdjust(entryNum, &localViewtab, 1, 1); break;
-				case 5:bANormalAdjust(entryNum, &localViewtab, 0, 1); break;
-				case 6:bANormalAdjust(entryNum, &localViewtab, -1, 1); break;
-				case 7:bANormalAdjust(entryNum, &localViewtab, -1, 0); break;
-				case 8:bANormalAdjust(entryNum, &localViewtab, -1, -1); break;
-				}
-				getViewTab(&localViewtab, entryNum);
-				break;
-			case 1: /* wander */
-				oldX = localViewtab.xPos;
-				oldY = localViewtab.yPos;
-				switch (localViewtab.direction) {
-				case 0: break;
-				case 1:bANormalAdjust(entryNum, &localViewtab, 0, -1); break;
-				case 2:bANormalAdjust(entryNum, &localViewtab, 1, -1); break;
-				case 3:bANormalAdjust(entryNum, &localViewtab, 1, 0); break;
-				case 4:bANormalAdjust(entryNum, &localViewtab, 1, 1); break;
-				case 5:bANormalAdjust(entryNum, &localViewtab, 0, 1); break;
-				case 6:bANormalAdjust(entryNum, &localViewtab, -1, 1); break;
-				case 7:bANormalAdjust(entryNum, &localViewtab, -1, 0); break;
-				case 8:bANormalAdjust(entryNum, &localViewtab, -1, -1); break;
-				}
-				getViewTab(&localViewtab, entryNum);
-				if ((localViewtab.xPos == oldX) &&
-					(localViewtab.yPos == oldY)) {
-					localViewtab.direction = (rand() % 8) + 1;
-				}
-				break;
-			case 2: /* follow.ego */
-				break;
-			case 3: /* move.obj */
-				bAAdjustPosition(&localViewtab, localViewtab.param1,
-					localViewtab.param2, entryNum);
-
-				if ((localViewtab.xPos == localViewtab.param1) &&
-					(localViewtab.yPos == localViewtab.param2)) {
-					localViewtab.motion = 0;
-					localViewtab.flags &= ~MOTION;
-					flag[localViewtab.param4] = 1;
-				}
-				break;
-			}
-		}
-	} /* MOTION */
-
  //} /* UPDATE */
 
 
@@ -2712,7 +2654,6 @@ void bCCalcObjMotion()
 					break;
 				case 3: /* move.obj */
 					if (flag[localViewtab.param4]) break;
-					for (steps = 0; steps < localViewtab.stepSize; steps++) {
 						bAAdjustPosition(&localViewtab,(int)localViewtab.param1,
 							(int)localViewtab.param2, entryNum);
 						if ((localViewtab.xPos == localViewtab.param1) &&
@@ -2726,7 +2667,6 @@ void bCCalcObjMotion()
 							localViewtab.stepSize = localViewtab.param3;
 							break;
 						}
-					}
 					break;
 				}
 			}
