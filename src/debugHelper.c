@@ -61,7 +61,7 @@ void stopAtQueueAction()
 
 void stopAtFunc()
 {
-	if (opCounter >= 133)
+	if (opCounter >= 2361)
 	{
 		asm("stp"); //Two pointless nops follow in order to make it clear where we have stopped
 		asm("nop");

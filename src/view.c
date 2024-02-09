@@ -1000,6 +1000,8 @@ void b9ResetViewtabs(boolean fullReset)
 			localViewtab.cycleStatus = 0;
 			localViewtab.priority = 0;
 			localViewtab.flags = 0;
+			localViewtab.repositioned = FALSE;
+
 			setViewTab(&localViewtab, entryNum);
 		}
 	}
@@ -1503,6 +1505,8 @@ void b9AddViewToTable(ViewTable* localViewtab, byte viewNum, byte entryNum)
 	{
 		maxViewTable = entryNum;
 	}
+
+	localViewtab->repositioned = TRUE;
 }
 
 void b9AddToPic(int vNum, int lNum, int cNum, int x, int y, int pNum, int bCol)
@@ -1738,6 +1742,13 @@ void bAAdjustPosition(ViewTable* viewTab, int fx, int fy, byte entryNum)
 				viewTab->direction = 3;
 		}
 
+		if (viewTab->repositioned)
+		{
+			viewTab->repositioned = FALSE; //Don't move on first reposition
+
+			return;
+		}
+
 #ifdef VERBOSE_MOVE
 		if (opCounter > 0x55c00 && entryNum == 0)
 		{
@@ -1853,6 +1864,12 @@ void bAAdjustPosition(ViewTable* viewTab, int fx, int fy, byte entryNum)
 				viewTab->direction = 5;
 		}
 
+		if (viewTab->repositioned)
+		{
+			viewTab->repositioned = FALSE; //Don't move on first position
+			return;
+		}
+
 #ifdef VERBOSE_MOVE
 		if (opCounter > 0x55c00 && entryNum == 0)
 		{
@@ -1936,6 +1953,11 @@ void bAAdjustPosition(ViewTable* viewTab, int fx, int fy, byte entryNum)
 
 	if (entryNum == 0) {
 		bAUpdateEgoDirection(b1fpToInt(x1), b1fpToInt(y1), dx, dy, viewTab);
+	}
+
+	if (entryNum == 1)
+	{
+		printf("%lu moved to :%d,%d\n", opCounter, viewTab->xPos, viewTab->yPos);
 	}
 }
 #pragma wrapped-call (pop)

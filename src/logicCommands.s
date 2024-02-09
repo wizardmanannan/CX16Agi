@@ -531,6 +531,8 @@ sta startPos
 .macro HANDLE_C_IF_RESULT
 .local @success
 
+cmp #$0
+
 ; Branch if not equal
 bne @success
 
@@ -538,7 +540,7 @@ bne @success
 jmp returnFromOpCodeFalse
 @success:
 ; Jump to return address if true
-jmp returnFromOpCodeFalse
+jmp returnFromOpCodeTrue
 
 .endmacro
 

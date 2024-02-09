@@ -106,6 +106,7 @@ typedef struct {
 	byte param2;
 	byte param3;
 	byte param4;
+	boolean repositioned;
 } ViewTable;
 
 #define SPRITE_SLOTS (VIEW_TABLE_SIZE)

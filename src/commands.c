@@ -601,6 +601,8 @@ void b2Animate_obj() // 1, 0x00
 	localViewTab.flags |= MOTION;
 	if (entryNum != 0) localViewTab.direction = 0;
 
+	localViewTab.repositioned = FALSE;
+
 	setViewTab(&localViewTab, entryNum);
 
 	getViewTab(&localViewTab, entryNum);
@@ -715,6 +717,7 @@ void b2Reposition() // 3, 0x60
 	dy = (signed char)var[loadAndIncWinCode()];
 	localViewtab.xPos += dx;
 	localViewtab.yPos += dy;
+	localViewtab.repositioned = TRUE;
 
 	setViewTab(&localViewtab, entryNum);
 	return;
@@ -749,7 +752,7 @@ void b2Set_view_v() // 2, 0x40
 
 	b9AddViewToTable(&localViewtab, viewNum, entryNum);
 
-	getViewTab(&localViewtab, entryNum);
+	setViewTab(&localViewtab, entryNum);
 	return;
 }
 
@@ -2103,8 +2106,10 @@ void b4Reposition_to() // 3, 0x00
 
 	localViewtab.xPos = loadAndIncWinCode();
 	localViewtab.yPos = loadAndIncWinCode();
+	localViewtab.repositioned = TRUE;
 
 	setViewTab(&localViewtab, entryNum);
+
 	return;
 }
 
@@ -2118,6 +2123,7 @@ void b4Reposition_to_v() // 3, 0x60
 
 	localViewtab.xPos = var[loadAndIncWinCode()];
 	localViewtab.yPos = var[loadAndIncWinCode()];
+	localViewtab.repositioned = TRUE;
 
 	setViewTab(&localViewtab, entryNum);
 	return;
