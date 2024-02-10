@@ -1955,10 +1955,6 @@ void bAAdjustPosition(ViewTable* viewTab, int fx, int fy, byte entryNum)
 		bAUpdateEgoDirection(b1fpToInt(x1), b1fpToInt(y1), dx, dy, viewTab);
 	}
 
-	if (entryNum == 1)
-	{
-		printf("%lu moved to :%d,%d\n", opCounter, viewTab->xPos, viewTab->yPos);
-	}
 }
 #pragma wrapped-call (pop)
 
