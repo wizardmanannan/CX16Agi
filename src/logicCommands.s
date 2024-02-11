@@ -183,6 +183,7 @@ LOGICCOMMANDS_INC = 1
 .import _debugSubN
 .import _debugSubV
 .import _debugAssignN
+.import _debugAssignV
 .import _debugPostCheckVar
 .import _debugPostCheckFlag
 .import _debugIndirect
@@ -347,7 +348,7 @@ JSRFAR _debugAssignN, DEBUG_BANK
 .macro DEBUG_ASSIGN_V var
 .ifdef DEBUG
 
-JSRFAR _debugAssignN, DEBUG_BANK
+JSRFAR _debugAssignV, DEBUG_BANK
 .endif
 .endmacro
 

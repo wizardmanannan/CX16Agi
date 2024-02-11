@@ -441,7 +441,7 @@ byte bECreateSpritePalette(byte transparentColor)
 			if (i == transparentColor)
 			{
 #ifdef VERBOSE_GET_PALETTE
-				printf("The transparent colour is %d\n",i);
+				printf("The transparent colour is %d\n", i);
 #endif
 				WRITE_BYTE_VAR_TO_ASSM(paletteBlackLow, VERA_data1);
 				WRITE_BYTE_VAR_TO_ASSM(paletteBlackHigh, VERA_data1);
@@ -748,7 +748,7 @@ void agiBlit(ViewTable* localViewTab, byte entryNum, boolean disableInterupts)
 	printf("The bank is %d\n", RAM_BANK);
 #endif
 
-	*((byte*)SPLIT_COUNTER) = 1;
+	* ((byte*)SPLIT_COUNTER) = 1;
 	*((byte*)SPLIT_SEGMENTS) = localCel.splitSegments;
 
 	asm("stz %w", SPLIT_OFFSET);
@@ -801,14 +801,14 @@ splitLoop: RAM_BANK = localMetadata.viewTableMetadataBank;
 
 	asm("lda %w", SPLIT_OFFSET);
 	asm("beq %g", doubleWidthForScreen);
-	
+
 	asm("clc");
 	asm("adc %v", _assmUInt);
 	asm("sta %v", _assmUInt);
 	asm("bcc %g", doubleWidthForScreen);
 	asm("inc %v + 1", _assmUInt); //The high byte of both things we are adding are zero, therefore we can just increment if there is a carry and ignore this step otherwise
 
-	doubleWidthForScreen:
+doubleWidthForScreen:
 	asm("ldy #$2");
 	asm("lda %v", _assmUInt);
 	asm("clc");
@@ -941,7 +941,7 @@ yPos: _assmByte = (byte)localViewTab->yPos;
 	asm("inc %w", SPLIT_COUNTER);
 	asm("jmp %g", splitLoop);
 
-	endBlit:
+endBlit:
 	if (disableInterupts)
 	{
 		REENABLE_INTERRUPTS();
@@ -2409,7 +2409,7 @@ void bBUpdateObjects()
 				else
 					localViewtab.priority = (localViewtab.yPos / 12 + 1);
 			}
-		}
+	}
 
 		setViewTab(&localViewtab, entryNum);
 	}
@@ -2672,19 +2672,21 @@ void bCCalcObjMotion()
 					break;
 				case 3: /* move.obj */
 					if (flag[localViewtab.param4]) break;
-						bAAdjustPosition(&localViewtab,(int)localViewtab.param1,
-							(int)localViewtab.param2, entryNum);
-						if ((localViewtab.xPos == localViewtab.param1) &&
-							(localViewtab.yPos == localViewtab.param2)) {
-							/* These lines really are guess work */
-							localViewtab.motion = 0;
-							//localViewtab.flags &= ~MOTION;
-							localViewtab.direction = 0;
-							if (entryNum == 0) var[6] = 0;
-							flag[localViewtab.param4] = 1;
-							localViewtab.stepSize = localViewtab.param3;
-							break;
-						}
+					bAAdjustPosition(&localViewtab, (int)localViewtab.param1,
+						(int)localViewtab.param2, entryNum);
+				
+					if ((localViewtab.xPos == localViewtab.param1 || abs((int)localViewtab.xPos - localViewtab.param1) < localViewtab.stepSize) &&
+						(localViewtab.yPos == localViewtab.param2 || abs((int)localViewtab.yPos - localViewtab.param2) < localViewtab.stepSize)
+						) {
+						/* These lines really are guess work */
+						localViewtab.motion = 0;
+						//localViewtab.flags &= ~MOTION;
+						localViewtab.direction = 0;
+						if (entryNum == 0) var[6] = 0;
+						flag[localViewtab.param4] = 1;
+						localViewtab.stepSize = localViewtab.param3;
+						break;
+					}
 					break;
 				}
 			}

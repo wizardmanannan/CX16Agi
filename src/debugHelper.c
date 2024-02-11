@@ -130,6 +130,7 @@ void debugPrint(byte toPrint)
 {
 	int time;
 	int clockVal = (int)clock();
+
 	if (opCounter >= opStartPrintingAt && opStartPrintingAt != 0 && opStartPrintingAt != 0)
 	{
 		if (clockVal > _clockBefore)
@@ -142,8 +143,7 @@ void debugPrint(byte toPrint)
 		}
 
 
-
-		printf("op %lu, %d, var 73 is %d.\n", opCounter, toPrint, var[73]);
+		printf("op %lu, %d\n", opCounter, toPrint);
 		_clockBefore = clockVal;
 #ifdef CHECK_MEM
 		b5CheckMemory();
