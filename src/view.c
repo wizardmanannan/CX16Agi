@@ -1356,9 +1356,15 @@ void b9LoadViewFile(byte viewNum)
 				localLoop.allocationHeight = SPR_ATTR_16;
 			}
 
-			localLoop.veraSlotsWidth = b9VeraSlotsForWidthOrHeight(localCel.width * 2);
+			if (localLoop.veraSlotsWidth == 1)
+			{
+				localLoop.veraSlotsWidth = b9VeraSlotsForWidthOrHeight(localCel.width * 2);
+			}
 
-			localLoop.veraSlotsHeight = b9VeraSlotsForWidthOrHeight(localCel.height);
+			if (localLoop.veraSlotsWidth == 1)
+			{
+				localLoop.veraSlotsHeight = b9VeraSlotsForWidthOrHeight(localCel.height);
+			}
 
 			localCel.splitSegments = localLoop.veraSlotsWidth * localLoop.veraSlotsHeight;
 
