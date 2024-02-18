@@ -526,6 +526,7 @@ lda SPLIT_CEL_HEIGHT
 ldx #$0
 jsr pushax
 lda ZP_TMP_14
+inc
 ldx #$0
 TRAMPOLINE #HELPERS_BANK, _b5Multiply
 sta NO_BYTES_SIZE
