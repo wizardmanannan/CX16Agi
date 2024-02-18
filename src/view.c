@@ -604,13 +604,15 @@ extern void bECellToVeraBulk(SpriteAttributeSize allocationWidth, SpriteAttribut
 void bESetLoop(ViewTable* localViewTab, ViewTableMetadata* localMetadata, View* localView, VeraSpriteAddress* loopVeraAddresses)
 {
 	Loop localLoop;
+	Cel localCel;
 	byte noToBlit;
 	byte veraSpriteWidthAndHeight;
 	AllocationSize allocationSize;
 
 	getLoadedLoop(localView, &localLoop, localViewTab->currentLoop);
+	getLoadedCel(&localLoop, &localCel, localViewTab->currentCel);
 
-	noToBlit = localLoop.numberOfCels * localLoop.veraSlotsWidth * localLoop.veraSlotsHeight;
+	noToBlit = localLoop.numberOfCels * localCel.veraSlotsWidth * localCel.veraSlotsHeight;
 
 #ifdef VERBOSE_DEBUG_BLIT
 	printf("Trying to copy to %p from %p. Number %d. \n ", localMetadata->loopsVeraAddressesPointers[localViewTab->currentLoop], bEBulkAllocatedAddresses, noToBlit);
@@ -692,7 +694,7 @@ void agiBlit(ViewTable* localViewTab, byte entryNum, boolean disableInterupts)
 	getLoadedLoop(&localView, &localLoop, localViewTab->currentLoop);
 	getLoadedCel(&localLoop, &localCel, localViewTab->currentCel);
 
-	if (!localCel.splitCelPointers && (localLoop.veraSlotsWidth > 1 || localLoop.veraSlotsHeight > 1))
+	if (!localCel.splitCelPointers && (localCel.veraSlotsWidth > 1 || localCel.veraSlotsHeight > 1))
 	{
 #ifdef VERBOSE_SPLIT
 		printf("you are splitting view %d loop %d cel %d. the data is %p on bank %p. it's width doubled is %d\n", viewNum, localViewTab->currentLoop, localViewTab->currentCel, localCel.bmp, localCel.bitmapBank, localCel.width * 2);
@@ -1150,7 +1152,6 @@ void setViewData(byte viewNum, AGIFile* tempAGI, View* localView)
 		localView->description = description;
 		localView->loopsBank = loopsBank;
 		localView->maxCels = 0;
-		localView->maxVeraSlots = 1;
 	}
 	else
 	{
@@ -1254,7 +1255,7 @@ void b9LoadViewFile(byte viewNum)
 	int* cellOffsets;
 	byte celHeader[CEL_HEADER_SIZE];
 	byte maxLoopVeraSlots = 1;
-	byte currentLoopVeraSlots;
+	byte currentCelVeraSlots;
 
 #ifdef VERBOSE_LOAD_VIEWS
 	printf("Attempt to load viewNum %d\n", viewNum);
@@ -1288,8 +1289,6 @@ void b9LoadViewFile(byte viewNum)
 		cellOffsets = (int*)(loopHeaderBuffer + POSITION_OF_CELS_OFFSET);
 		localLoop.allocationWidth = SPR_ATTR_8;
 		localLoop.allocationHeight = SPR_ATTR_8;
-		localLoop.veraSlotsWidth = 1;
-		localLoop.veraSlotsHeight = 1;
 		localLoop.palette = PALETTE_NOT_SET;
 
 		for (c = 0; c < localLoop.numberOfCels; c++) {
@@ -1301,6 +1300,8 @@ void b9LoadViewFile(byte viewNum)
 
 			localCel.bitmapBank = tempAGI.codeBank;
 			localCel.bmp = cellPosition + POSITION_OF_CEL_DATA;
+			localCel.veraSlotsWidth = 1;
+			localCel.veraSlotsHeight = 1;
 
 #ifdef VERBOSE_LOAD_VIEWS
 			printf("The address of the data is %p and the bank is %d\n", localCel.bmp, localCel.bitmapBank);
@@ -1356,40 +1357,34 @@ void b9LoadViewFile(byte viewNum)
 				localLoop.allocationHeight = SPR_ATTR_16;
 			}
 
-			if (localLoop.veraSlotsWidth == 1)
-			{
-				localLoop.veraSlotsWidth = b9VeraSlotsForWidthOrHeight(localCel.width * 2);
-			}
+			 localCel.veraSlotsWidth = b9VeraSlotsForWidthOrHeight(localCel.width * 2);
+			 localCel.veraSlotsHeight = b9VeraSlotsForWidthOrHeight(localCel.height);
 
-			if (localLoop.veraSlotsWidth == 1)
-			{
-				localLoop.veraSlotsHeight = b9VeraSlotsForWidthOrHeight(localCel.height);
-			}
-
-			localCel.splitSegments = localLoop.veraSlotsWidth * localLoop.veraSlotsHeight;
+			localCel.splitSegments = localCel.veraSlotsWidth * localCel.veraSlotsHeight;
 
 #ifdef VERBOSE_LOAD_VIEWS
 			printf("The viewNum is %d\n", viewNum);
 			printf("The address of celHeader is %p\n", celHeader);
 			printf("bitmapBank %d, bmp %p, height %d, width %d, flipped %d \n", localCel.bitmapBank, localCel.bmp, localCel.height, localCel.width, localCel.flipped);
 #endif // VERBOSE_SET_CEL
+
+			currentCelVeraSlots = localCel.veraSlotsWidth * localCel.veraSlotsHeight;
+
+#ifdef VERBOSE_LOAD_VIEWS
+			printf("Current cel slots %d * %d = %d\n", localCel.veraSlotsWidth, localCel.veraSlotsHeight, currentCelVeraSlots);
+#endif
+
+			if (currentCelVeraSlots > localView.maxVeraSlots)
+			{
+				localView.maxVeraSlots = currentCelVeraSlots;
+			}
+
 			setLoadedCel(&localLoop, &localCel, c);
 		}
 
 		if (localLoop.numberOfCels > localView.maxCels)
 		{
 			localView.maxCels = localLoop.numberOfCels;
-		}
-
-		currentLoopVeraSlots = localLoop.veraSlotsWidth * localLoop.veraSlotsHeight;
-
-#ifdef VERBOSE_LOAD_VIEWS
-		printf("Current loop slots %d * %d = %d\n", localLoop.veraSlotsWidth, localLoop.veraSlotsHeight, currentLoopVeraSlots);
-#endif
-
-		if (currentLoopVeraSlots > localView.maxVeraSlots)
-		{
-			localView.maxVeraSlots = currentLoopVeraSlots;
 		}
 
 #ifdef VERBOSE_LOAD_VIEWS

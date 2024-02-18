@@ -30,6 +30,8 @@ typedef struct Cel {
 	//In this case the sprite is split and this array points to the places in the bmp where the indiviual segments are.  If the cel is not large enough this value is null. Note if split the cel data may be on a different bank to the view file data, hence the bank
 	byte splitCelBank;
 	byte splitSegments; //If this is not split it will be 1
+	byte veraSlotsWidth;
+	byte veraSlotsHeight;
 } Cel;
 
 #define PALETTE_NOT_SET 255
@@ -48,8 +50,6 @@ typedef struct {
 	byte celsBank;
 	SpriteAttributeSize allocationHeight;
 	SpriteAttributeSize allocationWidth;
-	byte veraSlotsWidth;
-	byte veraSlotsHeight;
 	byte palette;
 } Loop;
 
