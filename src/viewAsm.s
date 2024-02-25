@@ -234,15 +234,21 @@ BULK_ADDRESS_INDEX = ZP_TMP_14 + 1
 SIZE_OF_CEL = ZP_TMP_16
 CLEAR_COLOR = ZP_TMP_16 + 1
 TOTAL_ROWS = ZP_TMP_17
+MAX_VERA_SLOTS = ZP_TMP_17 + 1
+CEL_COUNTER = ZP_TMP_18
 .segment "BANKRAM0E"
 ;byte allocationSize, byte noToBlit Note 32 is 0 allocation size and 64 is 1
 _bEToBlitCelArray: .res 500
-;bECellToVeraBulk(SpriteAttributeSize allocationWidth, SpriteAttributeSize allocationHeight, byte noToBlit);
+;bECellToVeraBulk(SpriteAttributeSize allocationWidth, SpriteAttributeSize allocationHeight, byte noCels, byte maxVeraSlots);
 _bECellToVeraBulk:
+sta MAX_SPRITE_SLOTS
+
+jsr popa
 sta NO_OF_CELS
 lda #NO_MARGIN
 sta BCOL
 stz BULK_ADDRESS_INDEX
+stz CEL_COUNTER
 
 lda _sizeofCel
 sta SIZE_OF_CEL
@@ -392,6 +398,20 @@ sta LOCAL_CEL
 lda LOCAL_CEL + 1
 adc #$0
 sta LOCAL_CEL + 1
+
+
+inc CEL_COUNTER
+
+lda MAX_SPRITE_SLOTS
+cmp #$1 
+beq @checkLoop ;Skip multiply where this view is not split, for efficiency 
+ldx #$0
+jsr pushax
+lda CEL_COUNTER
+ldx #$0
+TRAMPOLINE #HELPERS_BANK, _b5Multiply
+asl
+sta BULK_ADDRESS_INDEX
 
 @checkLoop:
 dec NO_OF_CELS

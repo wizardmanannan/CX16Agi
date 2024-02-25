@@ -600,7 +600,7 @@ void bESwitchMetadata(ViewTable* localViewTab, View* localView, byte viewNum, by
 #define TO_BLIT_CEL_ARRAY_LENGTH 500
 extern byte bEToBlitCelArray[TO_BLIT_CEL_ARRAY_LENGTH];
 //Copy cels into array above first
-extern void bECellToVeraBulk(SpriteAttributeSize allocationWidth, SpriteAttributeSize allocationHeight, byte noCels);
+extern void bECellToVeraBulk(SpriteAttributeSize allocationWidth, SpriteAttributeSize allocationHeight, byte noCels, byte maxVeraSlots);
 void bESetLoop(ViewTable* localViewTab, ViewTableMetadata* localMetadata, View* localView, VeraSpriteAddress* loopVeraAddresses)
 {
 	Loop localLoop;
@@ -612,7 +612,7 @@ void bESetLoop(ViewTable* localViewTab, ViewTableMetadata* localMetadata, View* 
 	getLoadedLoop(localView, &localLoop, localViewTab->currentLoop);
 	getLoadedCel(&localLoop, &localCel, localViewTab->currentCel);
 
-	noToBlit = localLoop.numberOfCels * localCel.veraSlotsWidth * localCel.veraSlotsHeight;
+	noToBlit = localLoop.numberOfCels * localView->maxVeraSlots;
 
 #ifdef VERBOSE_DEBUG_BLIT
 	printf("Trying to copy to %p from %p. Number %d. \n ", localMetadata->loopsVeraAddressesPointers[localViewTab->currentLoop], bEBulkAllocatedAddresses, noToBlit);
@@ -656,7 +656,7 @@ void bESetLoop(ViewTable* localViewTab, ViewTableMetadata* localMetadata, View* 
 	printf("You are allocating %d.%d. It has a width of %d and height of %d. There are %d to blit\n", localViewTab->currentView, localViewTab->currentLoop, localLoop.allocationWidth, localLoop.allocationHeight, noToBlit);
 #endif
 	//Change this method
-	bECellToVeraBulk(localLoop.allocationWidth, localLoop.allocationHeight, localLoop.numberOfCels);
+	bECellToVeraBulk(localLoop.allocationWidth, localLoop.allocationHeight, localLoop.numberOfCels, localView->maxVeraSlots);
 }
 #pragma code-name (pop)
 
@@ -757,7 +757,7 @@ void agiBlit(ViewTable* localViewTab, byte entryNum, boolean disableInterupts)
 
 splitLoop: RAM_BANK = localMetadata.viewTableMetadataBank;
 
-	loopVeraAddress = loopVeraAddresses[localViewTab->currentCel + *((byte*)SPLIT_COUNTER) - 1];
+	loopVeraAddress = loopVeraAddresses[*((byte*)SPLIT_COUNTER) - 1 + (localView.maxVeraSlots * localViewTab->currentCel)];
 
 	RAM_BANK = SPRITE_UPDATED_BANK;
 
@@ -1152,6 +1152,7 @@ void setViewData(byte viewNum, AGIFile* tempAGI, View* localView)
 		localView->description = description;
 		localView->loopsBank = loopsBank;
 		localView->maxCels = 0;
+		localView->maxVeraSlots = 0;
 	}
 	else
 	{
