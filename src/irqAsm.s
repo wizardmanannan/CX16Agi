@@ -128,9 +128,11 @@ IRQ_CMD_BLACKSCREEN = 1
 IRQ_CMD_TEXT_ONLY = 2
 IRQ_CMD_NORMAL = 3
 IRQ_CMD_DISPLAY_TEXT = 4
+IRQ_CMD_L0_L1_ONLY = 5
 
 LAYER_0_1_SPRITES_ENABLE = $71
 LAYER_0_1_SPRITES_DISABLE = $1
+LAYER_0_1_ENABLE_SPRITES_SPRITES_DISABLE = $19
 LAYER_0_SPRITES_DISABLE_1_ENABLE = $21
 
 ;0 Don't Change
@@ -196,6 +198,13 @@ lda #LAYER_0_SPRITES_DISABLE_1_ENABLE
 sta VERA_dc_video
 bra @resetSetIrqState
 
+@l12Only:
+lda #LAYER_0_1_ENABLE_SPRITES_SPRITES_DISABLE
+sta VERA_dc_video
+lda #IRQ_CMD_L0_L1_ONLY
+sta currentIrqState
+bra @resetSetIrqState
+
 @resetSetIrqState:
 lda #IRQ_CMD_DONTCHANGE
 sta sendIrqCommand
@@ -221,8 +230,9 @@ jmp (default_irq_vector)
 .addr @textOnly
 .addr @normal
 .addr @displayText
+.addr @l12Only
 
-@jmpTableBank: .byte $0, $0, $0, $0, TEXT_BANK ;In order of IRQ_CMDS
+@jmpTableBank: .byte $0, $0, $0, $0, TEXT_BANK, $0 ;In order of IRQ_CMDS
 @previousRamBank: .byte $0
 
 .endif ; IRQ_INC

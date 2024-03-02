@@ -389,7 +389,10 @@ jsr _b6InitLayer1Mapbase
 
 TRAMPOLINE #SPRITE_UPDATES_BANK, _bEClearSpriteAttributes 
 
-jsr _b6DisplayLoadingScreen
+lda #IRQ_CMD_NORMAL
+ldx #$0
+jsr _b6SetAndWaitForIrqStateAsm
+
 rts
 @vSyncToCheck: .word $0
 

@@ -88,9 +88,9 @@ void b6DiscardResources()
 
 void b6Clear()
 {
-    b6DisplayLoadingScreen();
-    b6ClearPicture();
+    b6InitLayer1Mapbase();
     bEClearSpriteAttributes();
+    b6ClearPicture();
 }
 
 /***************************************************************************

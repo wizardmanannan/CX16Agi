@@ -444,6 +444,10 @@ void b6InitPicture()
 	}
 }
 
+#pragma wrapped-call (push, trampoline, MEKA_BANK)
+extern void b6Clear();
+#pragma wrapped-call (pop)
+
 /**************************************************************************
 ** clearPicture
 **
@@ -1010,8 +1014,6 @@ void b11DrawPic(byte* bankedData, int pLen, boolean okToClearScreen, byte picNum
 	int* sPosBank = (int*)ZP_PTR_TMP_3;
 	int* rPosBank = (int*)ZP_PTR_TMP_4;
 
-	b6DisplayLoadingScreen();
-
 	*zpPremultTable = &bitmapWidthPreMult[0];
 	*zpFloodQueueStore = (int*)FLOOD_QUEUE_START;
 	*zpFloodQueueServe = (int*)FLOOD_QUEUE_START;
@@ -1037,7 +1039,9 @@ void b11DrawPic(byte* bankedData, int pLen, boolean okToClearScreen, byte picNum
 
 	asm("sei");
 
-	if (okToClearScreen) b6ClearPicture();
+	if (okToClearScreen) {
+		b6Clear();
+	}
 
 #ifdef TEST_OK_TO_FILL
 	testOkToFill();
@@ -1169,7 +1173,6 @@ void b6DiscardPictureFile(int picFileNum)
 
 void b6ShowPicture()
 {
-	b6DismissLoadingScreen();
 }
 
 #pragma code-name (pop)
