@@ -9,6 +9,7 @@
     .include "helpersAsm.s"
     .include "viewAsm.s"
     .include "spriteMemoryManagerAsm.s"
+    .include "pictureAsm.s"
     .export _executeLogic
     .export _b6InitInterpreter
     .export _loadAndIncWinCode
@@ -57,3 +58,4 @@
     .export _bESpritesUpdatedBufferPointer
     .export _bEClearSpriteAttributes
     .export _bESplitCel
+    .export _b11FillClean

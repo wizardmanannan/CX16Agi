@@ -392,16 +392,17 @@ void testRound()
 #endif // TEST_ROUND
 
 
-
+extern void b11FillClean();
 /**************************************************************************
 ** fill
 **
 ** Agi flood fill.  (drawing action 0xF8)
 **************************************************************************/
-byte b11FloodFill(byte** data, BufferStatus* bufferStatus)
+byte b11FloodFill(byte** data, BufferStatus* bufferStatus, boolean* cleanPic)
 {
 	byte x1, y1;
 	byte picColorOld = picColour;
+
 	picColour = 0xE;
 
 	//b11PSet(90, 43);
@@ -413,7 +414,16 @@ byte b11FloodFill(byte** data, BufferStatus* bufferStatus)
 
 		GET_NEXT(y1);
 		if (y1 >= 0xF0) return y1;
-		bFloodAgiFill(x1, y1);
+
+		if (*cleanPic && picDrawEnabled)
+		{
+			b11FillClean();
+			*cleanPic = FALSE;
+		}
+		else
+		{
+			bFloodAgiFill(x1, y1);
+		}
 	}
 }
 
@@ -1007,6 +1017,7 @@ void b11DrawPic(byte* bankedData, int pLen, boolean okToClearScreen, byte picNum
 	byte** data = &buffer; //Get_Next Macro works with pointer pointers so need this;
 	BufferStatus localBufferStatus;
 	BufferStatus* bufferStatus = &localBufferStatus;
+	boolean cleanPic = TRUE;
 
 	int** zpPremultTable = (int**)ZP_PTR_TMP_20;
 	int** zpFloodQueueStore = (int**)ZP_PTR_TMP_21;
@@ -1037,11 +1048,14 @@ void b11DrawPic(byte* bankedData, int pLen, boolean okToClearScreen, byte picNum
 
 	b5RefreshBuffer(bufferStatus);
 
-	asm("sei");
-
 	if (okToClearScreen) {
-		b6Clear();
+		b6InitLayer1Mapbase();
+		
+		asm("sei");
+		b6ClearPicture();
 	}
+	
+	asm("sei");
 
 #ifdef TEST_OK_TO_FILL
 	testOkToFill();
@@ -1079,13 +1093,44 @@ void b11DrawPic(byte* bankedData, int pLen, boolean okToClearScreen, byte picNum
 			priDrawEnabled = TRUE;
 			break;
 		case 0xF3: priDrawEnabled = FALSE; break;
-		case 0xF4: returnedAction = b11YCorner(data, bufferStatus); break;
-		case 0xF5: returnedAction = b11XCorner(data, bufferStatus); break;
-		case 0xF6: returnedAction = b11AbsoluteLine(data, bufferStatus); break;
-		case 0xF7: returnedAction = b11RelativeDraw(data, bufferStatus); break;
-		case 0xF8: returnedAction = b11FloodFill(data, bufferStatus); break;
+		case 0xF4: 
+			if (picDrawEnabled)
+			{
+				cleanPic = FALSE;
+			}
+			returnedAction = b11YCorner(data, bufferStatus); 
+			break;
+		case 0xF5: 
+			if (picDrawEnabled)
+			{
+				cleanPic = FALSE;
+			}
+			returnedAction = b11XCorner(data, bufferStatus); 
+		break;
+		case 0xF6: 
+			if (picDrawEnabled)
+			{
+				cleanPic = FALSE;
+			}
+			returnedAction = b11AbsoluteLine(data, bufferStatus); 
+			break;
+		case 0xF7: 
+			if (picDrawEnabled)
+			{
+				cleanPic = FALSE;
+			}
+			returnedAction = b11RelativeDraw(data, bufferStatus); 
+			break;
+		case 0xF8: 
+			returnedAction = b11FloodFill(data, bufferStatus, &cleanPic);
+			break;
 		case 0xF9: GET_NEXT(patCode); break;
-		case 0xFA: returnedAction = b11PlotBrush(data, bufferStatus); break;
+		case 0xFA: 
+			if (picDrawEnabled)
+			{
+				cleanPic = FALSE;
+			}
+			returnedAction = b11PlotBrush(data, bufferStatus); break;
 		default: 
 			printf("Unknown picture code : %X\n", action); 
 			printf("The buffer status bank is %p, buffer status banked data is %p and the buffer counter is %d. The loaded picture is %d\n", bufferStatus->bank, bufferStatus->bankedData, bufferStatus->bufferCounter, picNum);

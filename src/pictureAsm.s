@@ -1037,6 +1037,38 @@ SET_PICCOLOR
 GET_VERA_ADDRESS fillX, fillY, OK_TO_FILL_ADDRESS
 rts
 
+
+CLEAN_FILL_ADDR = ZP_TMP_2
+_b11FillClean: ;Fills screen with one colour, for use when there is nothing on the screen
+
+stz CLEAN_FILL_ADDR
+stz CLEAN_FILL_ADDR + 1
+
+GET_VERA_ADDRESS #$0, #$0, CLEAN_FILL_ADDR
+SET_VERA_ADDRESS CLEAN_FILL_ADDR, #$1
+
+SET_PICCOLOR
+
+ldx #<(PICTURE_WIDTH * PICTURE_HEIGHT)
+ldy #>(PICTURE_WIDTH * PICTURE_HEIGHT)
+
+@loop:
+sta VERA_data0
+
+@decCounter:
+dex
+cpx #$FF
+bne @checkLoop
+
+@highByte:
+dey
+
+@checkLoop:
+cpx #$0
+bne @loop
+cpy #$0
+bne @loop
+rts
 .segment "BANKRAMFLOOD"
 
 TO_STORE = ZP_TMP_5 ; 8 bytes All the way to ZP_TMP_8
