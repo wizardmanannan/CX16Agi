@@ -211,7 +211,7 @@ byte* b10BankedAlloc(int size, byte* bank)
 
 	if (!result)
 	{
-		printf("Out of dynamic memory");
+		printf("Out of dynamic memory. Amount %d\n",size);
 		exit(0);
 	}
 
