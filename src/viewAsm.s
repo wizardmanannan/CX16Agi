@@ -504,13 +504,11 @@ _bESplitCel: ;The goal of this function is to PREPARE to split a cel into segmen
 ; of dynamic memory allocated as the permanent storage location of the data.
 ;This method has several steps, in this order.
 ; 1. Read the cel struct to get the width, height, and cel data address and bank
-; 2. Allocate memory for the split cel data
-; 3. Divide the memory by the number of segments
-; 4. Store those divisions prior calling split
-; 5. Now partition the bCSplitBuffer buffer into equal sized segments to the allocated memory. Note even though this buffer is larger then the allocated memory, any excess space will be discounted. This allows for the pointers to both buffers to point to the same data eg. the first pointer in the allocated memory will point to the first segment in the buffer will point the same data as the first pointer for the buffer and so on
-; 6. Store the pointers to the divisions of bCSplitBuffer buffer in bCSplitBufferSegments
-; 7. Call bCSplitCel
-; 8. Copy the data from bCSplitBuffer to the allocated memory
+; 2. Divide the memory by the number of segments
+; 3. Now partition the bCSplitBuffer buffer into equal sized segments to the allocated memory. Note even though this buffer is larger then the allocated memory, any excess space will be discounted. This allows for the pointers to both buffers to point to the same data eg. the first pointer in the allocated memory will point to the first segment in the buffer will point the same data as the first pointer for the buffer and so on
+; 4. Store the pointers to the divisions of bCSplitBuffer buffer in bCSplitBufferSegments
+; 5. Call bCSplitCel
+; 6. Determine how much dynamic memory needs to be allocated to permanently store the data, we can't just copy the data from the buffer because there are huge gaps. Then copy to the allocated memory
 
 sta CEL_STRUCT_POINTER
 stx CEL_STRUCT_POINTER + 1
@@ -531,7 +529,7 @@ ldx #$C
 sta NO_BYTES_SIZE
 stx NO_BYTES_SIZE + 1
 
-; 3. Divide the memory by the number of segments
+; 2. Divide the memory by the number of segments
 lda SPLIT_CEL_WIDTH ;Divide width by 64 to know how many segments across we need
 cmp #64
 bcc @widthLessThan64
@@ -616,7 +614,7 @@ TRAMPOLINE #HELPERS_BANK, _b5Divide ;Divide the total amount of memory by the nu
 sta SEGMENT_SIZE
 stx SEGMENT_SIZE + 1
 
-;5. Now partition the bCSplitBuffer buffer into equal sized segments to the allocated memory
+;3. Now partition the bCSplitBuffer buffer into equal sized segments to the allocated memory
 lda #<bCSplitBuffer 
 sta ZP_TMP_14
 lda #>bCSplitBuffer 
@@ -624,7 +622,7 @@ sta ZP_TMP_14 + 1
 
 PARTITION_MEMORY
 
-;6. Store the pointers to the divisions of bCSplitBuffer buffer
+;4. Store the pointers to the divisions of bCSplitBuffer buffer
 lda #< bCSplitBufferSegments
 ldx #> bCSplitBufferSegments
 jsr pushax
@@ -646,7 +644,7 @@ sta ZP_TMP_14
 lda #>bCSplitBuffer 
 sta ZP_TMP_14 + 1
 
-;7. Call bCSplitCel
+;5. Call bCSplitCel
 PREPARE_BUFFER_SPLIT_CEL ;While in a perfect world the prep steps would live in bCSplitCel, it is here because there isn't much room left on C
 ;Clear out the portion of the buffer we will be using
 lda #< bCSplitBuffer
@@ -668,18 +666,17 @@ jsr _memsetBanked
 
 TRAMPOLINE #SPLIT_BUFFER_BANK, _bCSplitCel
 
-;8 Determine how much dynamic memory needs to be allocated to permanently store the data, we can't just copy the data from the buffer because there are huge gaps
+;6 Determine how much dynamic memory needs to be allocated to permanently store the data, we can't just copy the data from the buffer because there are huge gaps. Then copy to the allocated memory
 ;Important to note while reading. 
 ;The start addresses of the segments of the buffer will have been placed on top of the stack with the high byte of the address of the
 ;last segment at the top down to the low byte of the first segment at the bottom. Therefore if you start with a pointer to the low of the first, you need to use the subtraction
 ;operator to get up to the other bytes.
-;The 
 lda NO_SEGMENTS
 asl
 sta DBL_SEGMENTS
 stz DBL_SEGMENTS + 1 ;Double the number of segments because each address is two bytes
 
-;8.1 Get the end addresses, from the buffer
+;6.1 Get the end addresses, from the buffer
 ;Get the addresses from the beginning of the split buffer. Note addresses won't be the start of the data, but the end (plus a byte for each which is where the splitter function would have put the next byte had there been one)
 lda #< GOLDEN_RAM_WORK_AREA
 ldx #> GOLDEN_RAM_WORK_AREA
@@ -696,7 +693,7 @@ lda DBL_SEGMENTS
 ldx DBL_SEGMENTS + 1
 jsr _memCpyBanked
 
-;8.2 Get the start addresses from the buffer, and and the end addresses to calculate how much dynamic memory we need to allocate
+;6.2 Get the start addresses from the buffer, and and the end addresses to calculate how much dynamic memory we need to allocate
 tsx ;The stack pointer - DBL_SEGMENTS will point to the start of the first segment, and two bytes after the next address and so on. These were put onto the stack in partition
 txa
 clc
@@ -735,7 +732,7 @@ iny
 cpy DBL_SEGMENTS
 bne @sizeAddLoop
 
-;8.3 Add DBL_SEGMENTS to the total size to allow space for pointers at the beginning
+;6.3 Add DBL_SEGMENTS to the total size to allow space for pointers at the beginning
 clc
 lda ACCUMULATED_SIZE
 adc DBL_SEGMENTS
@@ -744,7 +741,7 @@ lda ACCUMULATED_SIZE + 1
 adc DBL_SEGMENTS + 1
 sta ACCUMULATED_SIZE + 1
 
-;8.4 Call banked alloc to actually allocate the memory
+;6.4 Call banked alloc to actually allocate the memory
 lda ACCUMULATED_SIZE
 ldx ACCUMULATED_SIZE + 1
 jsr pushax
@@ -760,7 +757,7 @@ lda SPLIT_BANK
 SET_STRUCT_8_STORED_OFFSET_VALUE_IN_REG _offsetOfSplitCelBank, CEL_STRUCT_POINTER
 
 
-; 8.5 Copy the data from bCSplitBuffer to the allocated memory
+; 6.5 Copy the data from bCSplitBuffer to the allocated memory
 clc ;Calculate the end address + 1 of the allocated memory
 lda SPLIT_DATA
 adc ACCUMULATED_SIZE
@@ -786,14 +783,14 @@ lda ZP_TMP_14 + 1
 sbc SIZES + 1,y
 sta ZP_TMP_14 + 1
 
-tax
-lda ZP_TMP_14
+tax ;Keep the high byte in x
+lda ZP_TMP_14 ;Get the low byte again from a
 jsr pushax
 
 lda SPLIT_BANK
 jsr pusha
 
-pla
+pla ;The address to copy from is stored on the stack. It is the start of the segments
 tax
 pla
 jsr pushax
@@ -807,7 +804,8 @@ ldx SIZES + 1,y
 
 jsr _memCpyBankedBetween
 
-clc
+; 6.6 add data pointers to the beginning of the segment. It will be the start of the split data plus the segment we are up to x2
+clc 
 lda DBL_SEGMENTS
 adc SPLIT_DATA
 tay
