@@ -436,7 +436,11 @@ CEL_STRUCT_POINTER = ZP_TMP_13
 SEGMENTS_ACROSS = ZP_TMP_22
 NO_SEGMENTS = ZP_TMP_22 + 1
 ;14 is temp storage here
+ACCUMULATED_SIZE = ZP_TMP_5 ; Reusing a ZP that is finished with when this one is used
+STACK_ZP = ZP_TMP_6 ; Reusing a ZP that is finished with when this one is used
+DBL_SEGMENTS = ZP_TMP_2 ; Reusing a ZP that is finished with when this one is used
 
+SIZES = GOLDEN_RAM_WORK_AREA + 50 ;Stores the sizes of the various segments, the fifty is just arbitrary; all it has to be is a number that is big enough to avoid clashing with the addresses
 
 .macro PARTITION_MEMORY
 .local @endDivideSegments
@@ -447,9 +451,13 @@ ldx NO_SEGMENTS ;x is serving as our counter
 @createSegmentPointersLoop: ;This is for partioning memory into segments. It assumes that the first address in already store in ZP_TMP_14
 lda ZP_TMP_14
 sta GOLDEN_RAM_WORK_AREA, y ; Store the address in the golden ram work area
+pha ;Store the starting low byte for use later when we allocate the storage memory
+
 iny
 lda ZP_TMP_14 + 1
 sta GOLDEN_RAM_WORK_AREA, y
+pha ;Store the high byte for later
+
 iny
 
 dex
@@ -486,7 +494,14 @@ REFRESH_BUFFER SPLIT_BUFFER_POINTER, SPLIT_BUFFER_STATUS ;Uses the work area to 
 .endmacro
 ;void bESplitCel(Cel* cel);
 _bESplitCel: ;The goal of this function is to PREPARE to split a cel into segments that can be drawn to the vera. The segments are stored in banked memory, and the pointers to the segments are stored in the cel struct
-;There are two split cel methods, this one for preparation and bCSplitCel for spliting.
+;There are two split cel methods, this one for preparation and bCSplitCel for splitting.
+;;There are two main area of memory dealt with here. The buffer refers to the large temp. buffer on bank C used by the split function. The buffer is never cleared, only overwritten with new data, so there may be stale data on the end. 
+;The code knows when to stop reading the buffer by the end addresses as calculated during the execution of bCSplitCel.
+;The format of the buffer and allocated memory is: address of segment 0 (two bytes) . . . address of no segments - 1, data. 
+;The addresses point to somewhere in the data.
+; Note the buffer is never cleared so not all of the data is used
+;Allocated memory refers to the block
+; of dynamic memory allocated as the permanent storage location of the data.
 ;This method has several steps, in this order.
 ; 1. Read the cel struct to get the width, height, and cel data address and bank
 ; 2. Allocate memory for the split cel data
@@ -510,22 +525,11 @@ sta SPLIT_CEL_WIDTH
 
 GET_STRUCT_8_STORED_OFFSET _offsetOfCelHeight, CEL_STRUCT_POINTER, SPLIT_CEL_HEIGHT
 GET_STRUCT_8_STORED_OFFSET _offsetOfBmpBank, CEL_STRUCT_POINTER, CEL_DATA_BANK
-; 2. Allocate memory
+
 lda #$80
 ldx #$C
 sta NO_BYTES_SIZE
 stx NO_BYTES_SIZE + 1
-jsr pushax
-
-lda #< SPLIT_BANK
-ldx #$0
-TRAMPOLINE #BANKED_ALLOC_BANK, _b10BankedAlloc
-sta SPLIT_DATA
-stx SPLIT_DATA + 1
-SET_STRUCT_16_STORED_OFFSET_VALUE_IN_REG _offsetOfSplitCelPointers, CEL_STRUCT_POINTER
-
-lda SPLIT_BANK
-SET_STRUCT_8_STORED_OFFSET_VALUE_IN_REG _offsetOfSplitCelBank, CEL_STRUCT_POINTER
 
 ; 3. Divide the memory by the number of segments
 lda SPLIT_CEL_WIDTH ;Divide width by 64 to know how many segments across we need
@@ -612,40 +616,6 @@ TRAMPOLINE #HELPERS_BANK, _b5Divide ;Divide the total amount of memory by the nu
 sta SEGMENT_SIZE
 stx SEGMENT_SIZE + 1
 
-lda SPLIT_DATA 
-sta ZP_TMP_14
-lda SPLIT_DATA + 1
-sta ZP_TMP_14 + 1
-
-clc ; Don't clobber the pointers at the beginning of the allocated memory
-lda #POINTER_TO_SPLIT_DATA_SIZE
-adc ZP_TMP_14
-sta ZP_TMP_14
-pha ;We need this later keep on the stack
-lda #$0
-adc ZP_TMP_14 + 1
-sta ZP_TMP_14 + 1
-pha
-
-PARTITION_MEMORY ;Now partition the memory into segments. Store initially in the golden ram and then copy to the banked memory
-
-;4. Store those divisions
-lda SPLIT_DATA
-ldx SPLIT_DATA + 1
-jsr pushax
-
-lda #<GOLDEN_RAM_WORK_AREA
-ldx #>GOLDEN_RAM_WORK_AREA
-jsr pushax
-
-lda SPLIT_BANK
-jsr pusha
-
-lda NO_SEGMENTS
-asl
-ldx #$0
-jsr _memCpyBanked
-
 ;5. Now partition the bCSplitBuffer buffer into equal sized segments to the allocated memory
 lda #<bCSplitBuffer 
 sta ZP_TMP_14
@@ -698,26 +668,170 @@ jsr _memsetBanked
 
 TRAMPOLINE #SPLIT_BUFFER_BANK, _bCSplitCel
 
-; 8. Copy the data from bCSplitBuffer to the allocated memory
-pla
-tax
-pla
+;8 Determine how much dynamic memory needs to be allocated to permanently store the data, we can't just copy the data from the buffer because there are huge gaps
+;Important to note while reading. 
+;The start addresses of the segments of the buffer will have been placed on top of the stack with the high byte of the address of the
+;last segment at the top down to the low byte of the first segment at the bottom. Therefore if you start with a pointer to the low of the first, you need to use the subtraction
+;operator to get up to the other bytes.
+;The 
+lda NO_SEGMENTS
+asl
+sta DBL_SEGMENTS
+stz DBL_SEGMENTS + 1 ;Double the number of segments because each address is two bytes
+
+;8.1 Get the end addresses, from the buffer
+;Get the addresses from the beginning of the split buffer. Note addresses won't be the start of the data, but the end (plus a byte for each which is where the splitter function would have put the next byte had there been one)
+lda #< GOLDEN_RAM_WORK_AREA
+ldx #> GOLDEN_RAM_WORK_AREA
 jsr pushax
 
-lda SPLIT_BANK
-jsr pusha
-
-lda #<bCSplitBuffer 
-ldx #>bCSplitBuffer 
+lda #< bCSplitBufferSegments
+ldx #> bCSplitBufferSegments
 jsr pushax
 
 lda #SPLIT_BUFFER_BANK
 jsr pusha
 
-lda NO_BYTES_SIZE
-ldx NO_BYTES_SIZE + 1
+lda DBL_SEGMENTS
+ldx DBL_SEGMENTS + 1
+jsr _memCpyBanked
+
+;8.2 Get the start addresses from the buffer, and and the end addresses to calculate how much dynamic memory we need to allocate
+tsx ;The stack pointer - DBL_SEGMENTS will point to the start of the first segment, and two bytes after the next address and so on. These were put onto the stack in partition
+txa
+clc
+adc DBL_SEGMENTS ; the stack plus the number of segments times 2 gets us the first original segment address
+sta STACK_ZP
+lda #$1 ;Stack always has 1 for a high byte
+sta STACK_ZP + 1
+
+ldy #$0
+stz ACCUMULATED_SIZE ;These variable will keep track of how much size we have counted
+stz ACCUMULATED_SIZE + 1
+
+@sizeAddLoop: ;Loop number of segment times calculating the size of each segment and the size of all segments in total
+sec
+lda GOLDEN_RAM_WORK_AREA,y ;Get the buffer ending address and subtract it from the buffer starting address to calcuate the size
+sbc (STACK_ZP)
+dec STACK_ZP
+sta SIZES,y
+lda GOLDEN_RAM_WORK_AREA + 1,y
+sbc (STACK_ZP)
+sta SIZES + 1, y
+dec STACK_ZP
+
+clc ;Keep cumulative track of the size  
+lda SIZES,y
+adc ACCUMULATED_SIZE
+sta ACCUMULATED_SIZE
+lda SIZES + 1,y
+adc ACCUMULATED_SIZE + 1
+sta ACCUMULATED_SIZE + 1
+
+iny ;Each address is two bytes
+iny
+
+@checkSizeAddLoop:
+cpy DBL_SEGMENTS
+bne @sizeAddLoop
+
+;8.3 Add DBL_SEGMENTS to the total size to allow space for pointers at the beginning
+clc
+lda ACCUMULATED_SIZE
+adc DBL_SEGMENTS
+sta ACCUMULATED_SIZE
+lda ACCUMULATED_SIZE + 1
+adc DBL_SEGMENTS + 1
+sta ACCUMULATED_SIZE + 1
+
+;8.4 Call banked alloc to actually allocate the memory
+lda ACCUMULATED_SIZE
+ldx ACCUMULATED_SIZE + 1
+jsr pushax
+
+lda #< SPLIT_BANK
+ldx #$0
+TRAMPOLINE #BANKED_ALLOC_BANK, _b10BankedAlloc
+sta SPLIT_DATA
+stx SPLIT_DATA + 1
+SET_STRUCT_16_STORED_OFFSET_VALUE_IN_REG _offsetOfSplitCelPointers, CEL_STRUCT_POINTER
+
+lda SPLIT_BANK
+SET_STRUCT_8_STORED_OFFSET_VALUE_IN_REG _offsetOfSplitCelBank, CEL_STRUCT_POINTER
+
+
+; 8.5 Copy the data from bCSplitBuffer to the allocated memory
+clc ;Calculate the end address + 1 of the allocated memory
+lda SPLIT_DATA
+adc ACCUMULATED_SIZE
+sta ZP_TMP_14
+lda SPLIT_DATA + 1
+adc ACCUMULATED_SIZE + 1
+sta ZP_TMP_14 + 1
+
+@storeFinalResultLoop: ;Iterate no of segments times backwards to copy the segments 1 at a time into the allocated banked memory. We start at 'no segments' (1 out of range) go backwards by two immediately to get back into range
+@checkFinalResultStoreLoop:
+ldy DBL_SEGMENTS ;Can't just keep this in y permanently as the jsr calls destroy it 
+dey
+dey
+sty DBL_SEGMENTS
+
+bmi @endStoreFinalResultLoop ;When DBL_SEGMENTS reaches 0xFF it is negative 
+
+sec
+lda ZP_TMP_14 ;Minus the indexed size will get you to the start of that size
+sbc SIZES,y
+sta ZP_TMP_14
+lda ZP_TMP_14 + 1
+sbc SIZES + 1,y
+sta ZP_TMP_14 + 1
+
+tax
+lda ZP_TMP_14
+jsr pushax
+
+lda SPLIT_BANK
+jsr pusha
+
+pla
+tax
+pla
+jsr pushax
+
+lda #SPLIT_BUFFER_BANK
+jsr pusha
+
+ldy DBL_SEGMENTS
+lda SIZES,y
+ldx SIZES + 1,y
 
 jsr _memCpyBankedBetween
+
+clc
+lda DBL_SEGMENTS
+adc SPLIT_DATA
+tay
+lda #$0
+adc SPLIT_DATA + 1
+tax
+tya
+
+jsr pushax
+
+lda #ZP_TMP_14 ; Copy the address pointer to the beginning of the data
+ldx #$0
+jsr pushax
+
+lda SPLIT_BANK
+jsr pusha
+
+lda #$2
+ldx #$0
+
+jsr _memCpyBanked
+
+bra @storeFinalResultLoop
+@endStoreFinalResultLoop:
 
 @end:
 rts

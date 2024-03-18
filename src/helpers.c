@@ -91,7 +91,7 @@ void* memCpyBanked(byte* dest, byte* src, byte bank, size_t len)
 #ifdef VERBOSE_CPY_CHECK
 	if (enableHelpersDebugging)
 	{
-		printf("Attempting to copy to %p from %p on bank %d length %d and the first byte is %p\n", dest, src, bank, len, *src);
+		printf("Attempting to copy to %p from %p on bank %p length %d and the first byte is %p\n", dest, src, bank, len, *src);
 	}
 #endif 
 
