@@ -601,7 +601,7 @@ void bESwitchMetadata(ViewTable* localViewTab, View* localView, byte viewNum, by
 extern byte bEToBlitCelArray[TO_BLIT_CEL_ARRAY_LENGTH];
 //Copy cels into array above first
 extern void bECellToVeraBulk(SpriteAttributeSize allocationWidth, SpriteAttributeSize allocationHeight, byte noCels, byte maxVeraSlots);
-void bESetLoop(ViewTable* localViewTab, ViewTableMetadata* localMetadata, View* localView, VeraSpriteAddress* loopVeraAddresses)
+boolean bESetLoop(ViewTable* localViewTab, ViewTableMetadata* localMetadata, View* localView, VeraSpriteAddress* loopVeraAddresses)
 {
 	Loop localLoop;
 	Cel localCel;
@@ -637,8 +637,7 @@ void bESetLoop(ViewTable* localViewTab, ViewTableMetadata* localMetadata, View* 
 
 	if (!bEAllocateSpriteMemoryBulk(allocationSize, noToBlit))
 	{
-		printf("no sprite mem");
-		exit(0);
+		return FALSE;
 	}
 
 #ifdef VERBOSE_DEBUG_BLIT
@@ -657,9 +656,10 @@ void bESetLoop(ViewTable* localViewTab, ViewTableMetadata* localMetadata, View* 
 #endif
 	//Change this method
 	bECellToVeraBulk(localLoop.allocationWidth, localLoop.allocationHeight, localLoop.numberOfCels, localView->maxVeraSlots);
+
+	return TRUE;
 }
 #pragma code-name (pop)
-
 #define ZP_SPRITE_STORE_PTR ZP_PTR_TMP_2
 #define SPLIT_COUNTER ZP_PTR_TMP_3
 #define SPLIT_SEGMENTS ZP_PTR_TMP_4
@@ -667,7 +667,7 @@ void bESetLoop(ViewTable* localViewTab, ViewTableMetadata* localMetadata, View* 
 /***************************************************************************
 ** agi_blit
 ***************************************************************************/
-void agiBlit(ViewTable* localViewTab, byte entryNum, boolean disableInterupts)
+boolean agiBlit(ViewTable* localViewTab, byte entryNum, boolean disableInterupts)
 {
 	View localView;
 	Loop localLoop;
@@ -756,7 +756,12 @@ void agiBlit(ViewTable* localViewTab, byte entryNum, boolean disableInterupts)
 #ifdef VERBOSE_DEBUG_NO_BLIT_CACHE
 		printf("loading view %d loop %d. The vt %p. It's position is %d,%d. v36 is %d\n", localViewTab->currentView, localViewTab->currentLoop, entryNum, localViewTab->xPos, localViewTab->yPos, var[36]);
 #endif
-		bESetLoop(localViewTab, &localMetadata, &localView, loopVeraAddresses);
+		if (!bESetLoop(localViewTab, &localMetadata, &localView, loopVeraAddresses))
+		{
+			RAM_BANK = previousBank;
+			
+			return FALSE;
+		}
 	}
 
 #ifdef VERBOSE_DEBUG_NO_BLIT_CACHE	
@@ -979,6 +984,8 @@ endBlit:
 	//}
 
 	RAM_BANK = previousBank;
+
+	return TRUE;
 }
 
 #pragma code-name (push, "BANKRAM09")
@@ -1023,16 +1030,25 @@ void b9ResetViewtabs(boolean fullReset)
 		}
 	}
 }
-void b9Reset()
+
+#pragma wrapped-call (push, trampoline, VIEW_CODE_BANK_1)
+void b9ResetSpriteMemory()
 {
-	bEResetSpritesUpdatedBuffer();
+	bEResetSpritesUpdatedBuffer();	
 	bEResetViewTableMetadata();
 	bEResetSpritePointers();
 	bEResetSpriteMemoryManager();
+}
+#pragma wrapped-call (pop)
+
+void b9Reset()
+{
+	b9ResetSpriteMemory();
 	bEInitPaletteManager();
 	b9ResetViewtabs(FALSE);
 	maxViewTable = 0;
 }
+
 void b9InitSpriteData()
 {
 	byte i;
@@ -2330,6 +2346,7 @@ void bBUpdateObjects()
 	byte i;
 	word objFlags;
 	ViewTable localViewtab;
+	boolean blitFailed = FALSE;
 
 	/* If the show.pic() command was executed, display the picture
 	** with this object update.
@@ -2449,7 +2466,24 @@ void bBUpdateObjects()
 
 					if (i == localViewtab.priority)
 					{
-						agiBlit(&localViewtab, entryNum, FALSE);
+						if (!agiBlit(&localViewtab, entryNum, FALSE))
+						{
+							if (blitFailed)
+							{
+								printf("no sprite memory");
+								exit(0);
+							}
+							else
+							{
+								i = MAX_SPRITE_PRIORITY;
+								blitFailed = TRUE;
+								memset(prioritiesSeen, FALSE, NO_PRIORITIES - 1);
+								b9ResetSpriteMemory();
+								break;
+							}
+						}
+
+				 //Blit may fail if we run out of sprite memory, if that is the case clear everything as there is likely to be stuff we are no longer using. If it fails more than once, we know there is not point continuing
 					}
 					else if (i == MAX_SPRITE_PRIORITY)
 					{
