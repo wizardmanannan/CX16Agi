@@ -56,8 +56,6 @@ extern char string[12][40];
 extern byte horizon;
 extern int dirnOfEgo;
 
-byte maxViewTable = 0;
-
 #define MAX_INACTIVE_METADATA 10
 
 //The data is the top two fields are all stored at the same bank alloced address on the bank in the bank field
@@ -1046,7 +1044,6 @@ void b9Reset()
 	b9ResetSpriteMemory();
 	bEInitPaletteManager();
 	b9ResetViewtabs(FALSE);
-	maxViewTable = 0;
 }
 
 void b9InitSpriteData()
@@ -1534,10 +1531,6 @@ void b9AddViewToTable(ViewTable* localViewtab, byte viewNum, byte entryNum)
 	b9SetCel(localViewtab, 0);
 	/* Might need to set some more defaults here */
 
-	if (maxViewTable < entryNum)
-	{
-		maxViewTable = entryNum;
-	}
 
 	localViewtab->repositioned = TRUE;
 }

@@ -3,8 +3,6 @@
 .include "globalViews.s"
 .include "helpersAsm.s"
 
-.import _maxViewTable
-
 .segment "BANKRAM0E"
 
 .macro SET_VERA_START_SPRITE_ATTRS CHANNEL, STRIDE, OFFSET
@@ -56,13 +54,13 @@ bne @outerLoop
 .local @end
 
 SET_VERA_START_SPRITE_ATTRS #$0, #4, SA_VERA_ZORDER ;Set VERA channel 0 to first zorder attribute with a stride of 4.
-;SET_VERA_START_SPRITE_ATTRS #$1, #4, SA_VERA_ZORDER ;Set VERA channel 1 so we can see if we have reached the end
+SET_VERA_START_SPRITE_ATTRS #$1, #4, SA_VERA_ZORDER ;Set VERA channel 1 so we can see if we have reached the end
 ldy #$0
 
 @loop:
-; lda VERA_data1
-; and #$C ;Mask out non zorder bits
-; beq @end
+lda VERA_data1
+and #$C ;Mask out non zorder bits
+beq @end
 
 stz VERA_data0 ; A zorder of zero means disabled
 iny
@@ -129,13 +127,6 @@ SET_VERA_START_SPRITE_ATTRS #$0, #$1, SA_VERA_ADDRESS_LOW ; Sets VERA channel 0 
 
 ldy #$0
 @loop:
-
-; lda _sResetCounter
-; cmp #$2
-; bcc @endFunc
-; stp
-; lda _maxViewTable
-; @endFunc:
 
 GET_NEXT_FROM_SPRITE_UPDATE_BUFFER ;Address 12:5 0 (buffer 0)
 sta ZP_LOW_BYTE
