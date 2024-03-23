@@ -21,4 +21,5 @@ lda _picColour
 lda _bEBulkAllocatedAddresses
 lda bCSplitBufferSegments
 lda bCSplitBuffer
+lda _bESpritesUpdatedBuffer
 rts

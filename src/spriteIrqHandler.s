@@ -51,6 +51,29 @@ bne @outerLoop
 @end:
 .endmacro
 
+.macro CLEAR_ACTIVE_SPRITE_ATTRS ;Excludes mouse
+.local @loop
+.local @end
+
+SET_VERA_START_SPRITE_ATTRS #$0, #4, SA_VERA_ZORDER ;Set VERA channel 0 to first zorder attribute with a stride of 4.
+;SET_VERA_START_SPRITE_ATTRS #$1, #4, SA_VERA_ZORDER ;Set VERA channel 1 so we can see if we have reached the end
+ldy #$0
+
+@loop:
+; lda VERA_data1
+; and #$C ;Mask out non zorder bits
+; beq @end
+
+stz VERA_data0 ; A zorder of zero means disabled
+iny
+cpy #NO_SPRITES
+beq @end ;Make sure we don't overrun
+
+bra @loop
+
+@end:
+.endmacro
+
 _bESpritesUpdatedBuffer: .res SPRITE_UPDATED_BUFFER_SIZE
 _bESpritesUpdatedBufferPointer: .word _bESpritesUpdatedBuffer
 
@@ -63,7 +86,6 @@ lda #IRQ_CMD_L0_L1_ONLY
 ldx #$0
 TRAMPOLINE #IRQ_BANK, _b6SetAndWaitForIrqStateAsm
 CLEAR_SPRITE_ATTRS @numToClear
-
 lda #IRQ_CMD_NORMAL
 ldx #$0
 TRAMPOLINE #IRQ_BANK, _b6SetAndWaitForIrqStateAsm
@@ -99,11 +121,22 @@ bne @start
 jmp @end
 
 @start:
-CLEAR_SPRITE_ATTRS _maxViewTable
+
+CLEAR_ACTIVE_SPRITE_ATTRS
+.import _sResetCounter
 
 SET_VERA_START_SPRITE_ATTRS #$0, #$1, SA_VERA_ADDRESS_LOW ; Sets VERA channel 0 to the start of the sprites attributes table with a stride of 1
 
+ldy #$0
 @loop:
+
+; lda _sResetCounter
+; cmp #$2
+; bcc @endFunc
+; stp
+; lda _maxViewTable
+; @endFunc:
+
 GET_NEXT_FROM_SPRITE_UPDATE_BUFFER ;Address 12:5 0 (buffer 0)
 sta ZP_LOW_BYTE
 
@@ -132,5 +165,6 @@ lda #> _bESpritesUpdatedBuffer
 sta _bESpritesUpdatedBufferPointer + 1
 
 @end:
+
 rts
 .endif

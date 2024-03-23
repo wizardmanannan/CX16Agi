@@ -68,6 +68,7 @@ BLACK_COLOR = $0
 SA_VERA_ADDRESS_LOW = $0
 SA_VERA_ZORDER = $6
 SA_VERA_TOTAL = $8
+NO_SPRITES = 127 ;Not including the mouse at 0
 
 
 ;Sprite Memory Manager
