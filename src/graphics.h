@@ -25,7 +25,7 @@
 				_assmLong = VeraAddress; \
         asm("lda #%w", AddressSel); \
 		asm("sta %w", VERA_ctrl); \
-		asm("lda %v + 2", _assmLong); \
+        asm("lda %v + 2", _assmLong); \
 		asm("and #$1"); \
 		asm("ora #%w", Stride << 4); \
 		asm("sta %w", VERA_addr_bank); \
@@ -36,5 +36,9 @@
 	} while (0);
 
 typedef unsigned int VeraSpriteAddress; //actually three bytes lower byte is always zero, so we don't store that
+
+#pragma wrapped-call (push, trampoline, GRAPHICS_BANK)
+unsigned int b6SetPaletteToInt(byte paletteReference);
+#pragma wrapped-call (pop);
 
 #endif

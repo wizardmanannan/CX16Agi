@@ -1655,7 +1655,7 @@ void b3DisplayWithoutTextbox(byte row, byte col, byte messNum)
 	printf("Attempting to print %d from script %d. The length is %d. The message pointer is %p\n", messNum - 1, currentLog, strLenBanked(messagePointer, logicFile.messageBank), messagePointer);
 #endif
 	//b3ProcessString(messagePointer, 0, tempString);
-	b3DisplayMessageBox(messagePointer, logicFile.messageBank, row, col, DISPLAY_PALETTE_NUMBER, 0);
+	b3DisplayMessageBox(messagePointer, logicFile.messageBank, row, col, b3SetTextColor(_currentForegroundColour, _currentBackgroundColour), 0);
 	return;
 }
 
@@ -1679,7 +1679,7 @@ void b3Clear_lines() // 3, 0x00
 
 	show_mouse(NULL);
 
-	b3FillChar(startLine, endLine, DISPLAY_PALETTE_NUMBER, TRANSPARENT_CHAR);
+	b3FillChar(startLine, endLine, 0, TRANSPARENT_CHAR); //When clearing the palette is not important as entry 0 is always transparent
 
 	show_mouse(screen);
 }
@@ -1741,6 +1741,9 @@ void b4Set_text_attribute() // 2, 0x00
 #ifdef VERBOSE_MESSAGE_PRINT
 	printf("Set foreground: %d background: %d\n", agi_fg, agi_bg);
 #endif // VERBOSE_MESSAGE_PRINT
+
+	b3SetTextColor(agi_fg, agi_bg);
+
 	return;
 }
 

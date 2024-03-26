@@ -4,10 +4,16 @@
 //#define VERBOSE_CHAR_SET_LOAD
 //#define TEST_CHARSET
 //#define VERBOSE_DISPLAY_TEXT
+//#define VERBOSE_SET_PALETTE
 #ifdef VERBOSE_CHAR_SET_LOAD
 byte printOn = TRUE;
 int byteCounter = 0;
 #endif
+
+#pragma bss-name (push, "BANKRAM03")
+byte _currentForegroundColour;
+byte _currentBackgroundColour;
+#pragma bss-name (pop)
 
 void b6MakeTopBorder()
 {
@@ -416,6 +422,54 @@ void b3DisplayMessageBox(char* message, byte messageBank, byte row, byte col, by
 
 		b6SetAndWaitForIrqState(DISPLAY_TEXT);
 	}
+}
+
+byte b3SetTextColor(byte foreground, byte background)
+{
+	int textId = (int)foreground << 4 + background;
+	unsigned int foreColorBytes, backColorBytes;
+	long paletteWriteAddress;
+	byte paletteSlot;
+    PaletteGetResult palleteGetResult;
+	int textPalette;
+
+	paletteSlot = bEGetPalette(BASE_TEXT_ID + textId, &palleteGetResult);
+
+	#ifdef VERBOSE_SET_PALETTE
+	printf("fore of %d and back of %d\n", foreground, background);
+	printf("\n1. the palette slot is %d. the get palette result is %d\n", paletteSlot, palleteGetResult);
+    #endif
+
+	paletteWriteAddress = PALETTE_START + COLOURS_PER_PALETTE * BYTES_PER_PALETTE_COLOUR * paletteSlot;
+	textPalette = paletteSlot;
+
+	_currentBackgroundColour = background;
+	_currentForegroundColour = foreground;
+
+	if (palleteGetResult == Allocated)
+	{
+		asm("sei");
+		foreColorBytes = b6SetPaletteToInt(foreground);
+		backColorBytes = b6SetPaletteToInt(background);
+
+#ifdef VERBOSE_SET_PALETTE
+		printf("1 the palette slot is %d. the fore color is %p and back is %p. the address of background is %p\n", paletteSlot, foreColorBytes, backColorBytes, &backColorBytes);
+#endif
+
+		SET_VERA_ADDRESS_ABSOLUTE(paletteWriteAddress + 2, 0, 1); //Skip the transparen
+		WRITE_BYTE_VAR_TO_ASSM(foreColorBytes, VERA_data0);
+		WRITE_BYTE_VAR_TO_ASSM(foreColorBytes >> 8, VERA_data0);
+		WRITE_BYTE_VAR_TO_ASSM(backColorBytes, VERA_data0);
+		WRITE_BYTE_VAR_TO_ASSM(backColorBytes >> 8, VERA_data0);
+
+		REENABLE_INTERRUPTS();
+	}
+
+	#ifdef VERBOSE_SET_PALETTE
+	printf("3 the palette slot is %d. the fore color is %p and back is %p\n", paletteSlot, foreColorBytes, backColorBytes);
+    #endif
+
+	return paletteSlot;
 }
 
 void b3ClearLastPlacedText()

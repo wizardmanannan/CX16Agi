@@ -15,4 +15,20 @@ void b6InitVeraMemory()
 	}
 	 REENABLE_INTERRUPTS();
 }
+
+unsigned int b6SetPaletteToInt(byte paletteReference)
+{
+	int result;
+	byte low,high;
+
+	SET_VERA_ADDRESS_ABSOLUTE(PALETTE_START + (paletteReference * 2), 0, 1);
+	READ_BYTE_VAR_FROM_ASSM(low, VERA_data0);
+	READ_BYTE_VAR_FROM_ASSM(high, VERA_data0);
+
+	result = low;
+	*(((byte*)&result) + 1) = high;
+
+	return result;
+}
+
 #pragma code-name (pop);

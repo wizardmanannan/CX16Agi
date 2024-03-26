@@ -8,11 +8,13 @@
 #include "kernal.h"
 #include "irq.h"
 #include "graphics.h"
+#include "paletteManager.h"
 
 #define BYTES_PER_CHARACTER 16
 #define NO_CHARS 160
 #define SIZE_OF_CHARSET (BYTES_PER_CHARACTER * NO_CHARS)
 #define BYTES_PER_CELL 2
+
 
 #define ADDRESSSEL0 0 
 #define ADDRESSSEL1 1
@@ -44,7 +46,6 @@
 #define FIRST_ROW 4
 
 #define TEXTBOX_PALETTE_NUMBER 1
-#define DISPLAY_PALETTE_NUMBER 2
 
 #pragma wrapped-call (push, trampoline, MEKA_BANK)
 void b6InitLayer1Mapbase();
@@ -54,9 +55,13 @@ void b6InitLayer1Mapbase();
 void b3DisplayMessageBox(char* message, byte messageBank, byte row, byte col, byte paletteNumber, byte boxWidth);
 void b3FillChar(byte startLine, byte endLine, byte paletteNumber, byte charToFill);
 void b3ClearLastPlacedText();
+byte b3SetTextColor(byte foreground, byte background);
 #pragma wrapped-call(pop)
 
 extern char textBuffer1[TEXTBUFFER_SIZE];
 extern char textBuffer2[TEXTBUFFER_SIZE];
+
+extern byte _currentForegroundColour;
+extern byte _currentBackgroundColour;
 
 #endif

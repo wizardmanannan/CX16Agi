@@ -26,6 +26,7 @@ _interpolationBuffer: .res 2000
 .import _b6DisplayLoadingScreen
 .import _b6InitVeraMemory
 .import _b9InitSpriteData
+.import _b3SetTextColor
 
 _b6ClearBackground:
 stz VERA_ctrl
@@ -388,6 +389,16 @@ jsr _b6InitCharset
 jsr _b6InitLayer1Mapbase
 
 TRAMPOLINE #SPRITE_UPDATES_BANK, _bEClearSpriteAttributes 
+
+lda #DEFAULT_TEXT_FOREGROUND
+ldx #$0
+jsr pushax
+
+lda #DEFAULT_TEXT_BACKGROUND
+ldx #$0
+TRAMPOLINE #TEXT_BANK, _b3SetTextColor 
+
+
 
 lda #IRQ_CMD_NORMAL
 ldx #$0

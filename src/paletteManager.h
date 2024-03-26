@@ -1,7 +1,12 @@
+#ifndef _PALETTE_MANAGER_H_
+#define _PALETTE_MANAGER_H_
+
+
 #include "general.h"
 #include "memoryManager.h"
 
 #define BASE_SPRITE_ID 0
+#define BASE_TEXT_ID 16
 
 #define BASE_MANAGED_PALETTE 3 //First 3 entries are hard coded
 #define NO_PALETTES 16
@@ -19,6 +24,8 @@ typedef enum
 
 #pragma wrapped-call (push, trampoline, PALETTE_MANAGER_BANK)
 byte bEInitPaletteManager();
-byte bEGetPalette(byte id, PaletteGetResult* result);
+byte bEGetPalette(int id, PaletteGetResult* result);
 #pragma wrapped-call (pop)
+
+#endif
 

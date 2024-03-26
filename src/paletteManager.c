@@ -1,7 +1,7 @@
 #include "paletteManager.h"
 
 #pragma bss-name (push, "BANKRAM0E")
-byte allocatedPaletteOwners[NO_MANAGED_PALETTES];
+int allocatedPaletteOwners[NO_MANAGED_PALETTES];
 byte palettesAllocated;
 #pragma bss-name (pop)
 
@@ -14,7 +14,7 @@ byte bEInitPaletteManager()
 	palettesAllocated = 0;
 }
 
-byte bEGetPalette(byte id, PaletteGetResult* result)
+byte bEGetPalette(int id, PaletteGetResult* result)
 {
 	byte i;
 	byte allocatedPalette;
