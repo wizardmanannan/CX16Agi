@@ -8,7 +8,7 @@
 #define BASE_SPRITE_ID 0
 #define BASE_TEXT_ID 16
 
-#define BASE_MANAGED_PALETTE 3 //First 3 entries are hard coded
+#define BASE_MANAGED_PALETTE 2 //First 2 entries 0 and 1 are hard coded
 #define NO_PALETTES 16
 #define COLOURS_PER_PALETTE 16
 #define NO_MANAGED_PALETTES NO_PALETTES - BASE_MANAGED_PALETTE
