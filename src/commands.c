@@ -1735,8 +1735,8 @@ void b4Set_cursor_char() // 1, 0x00
 
 void b4Set_text_attribute() // 2, 0x00 
 {
-	agi_fg = (loadAndIncWinCode()) + 1;
-	agi_bg = (loadAndIncWinCode()) + 1;
+	agi_fg = loadAndIncWinCode();
+	agi_bg = loadAndIncWinCode();
 
 #ifdef VERBOSE_MESSAGE_PRINT
 	printf("Set foreground: %d background: %d\n", agi_fg, agi_bg);
