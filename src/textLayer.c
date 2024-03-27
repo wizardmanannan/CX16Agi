@@ -249,24 +249,34 @@ void b3FillChar(byte startLine, byte endLine, byte paletteNumber, byte charToFil
 
 extern byte lastBoxLines;
 extern byte lastBoxStartLine;
+
 //Thanks to https://www.rosettacode.org/wiki/Word_wrap#In-place_greedy
 //Agi text does not have newlines and requires the programmer to manually wrap the text
-void b3WrapText(char* line_start, int width) {
+byte b3WrapText(char* line_start, int width) {
 	char* last_space = 0;
 	char* p;
+	byte numberOfLines = 1;
 
 	for (p = line_start; *p; p++) {
 		if (*p == ' ') {
 			last_space = p;
 		}
 
-		if (p - line_start > width && last_space) {
-			*last_space = NEW_LINE;
+		if (p - line_start > width && last_space || *p == NEW_LINE) {
+			if (*p != NEW_LINE)
+			{
+				*last_space = NEW_LINE;
+			}
+			
 			line_start = last_space + 1;
 			last_space = 0;
 			lastBoxLines++;
+
+		    numberOfLines++;
 		}
 	}
+
+	return numberOfLines;
 }
 
 void b3DrawBorder(byte boxWidth, size_t messageSize)
@@ -359,6 +369,7 @@ void b3DisplayMessageBox(char* message, byte messageBank, byte row, byte col, by
 	long displayAddressCopyPaletteTo;
 	byte paletteByte = paletteNumber << 4;
 	byte textWidth = boxWidth;
+	byte numberOfLines = 1;
 	
 	currentTextBuffer = textBuffer1;
 
@@ -402,7 +413,7 @@ void b3DisplayMessageBox(char* message, byte messageBank, byte row, byte col, by
 				textWidth = boxWidth - 4;
 			}
 
-			b3WrapText(textBuffer1, boxWidth ? textWidth : TILE_LAYER_WIDTH);
+			numberOfLines = b3WrapText(textBuffer1, boxWidth ? textWidth : TILE_LAYER_WIDTH);
 		}
 
 		if (boxWidth)
@@ -413,9 +424,10 @@ void b3DisplayMessageBox(char* message, byte messageBank, byte row, byte col, by
 
 		asm("sei");
 		SET_VERA_ADDRESS_ABSOLUTE(displayAddressCopyPaletteTo, 0, 2);
-		for (i = 0; i < messageSize - 1; i++) //Ignore the terminator it doesn't print and doesn't have a palette byte
+		
+		for (i = 0; i < (int) numberOfLines * TILE_LAYER_WIDTH; i++) //Ignore the terminator it doesn't print and doesn't have a palette byte
 		{
-			WRITE_BYTE_VAR_TO_ASSM(paletteByte, VERA_data0);
+		  WRITE_BYTE_VAR_TO_ASSM(paletteByte, VERA_data0);
 		}
 		REENABLE_INTERRUPTS();
 		////TODO: Doesn't return anything but I don't want to add any more trampoline methods. Come up with a more memory efficient way of handling this then constanting adding them
