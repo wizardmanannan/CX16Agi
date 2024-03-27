@@ -224,7 +224,7 @@ lda #<COLOR_RED
 sta VERA_data0
 lda #>COLOR_RED
 sta VERA_data0
-
+;Other palettes are dynamic created in paletteManager.c
 
 lda #$6   ; Bitmap mode 16 colors
 sta VERA_L0_config
