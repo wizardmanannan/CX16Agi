@@ -1653,16 +1653,21 @@ b4VersionCCall:
         jsr _b4Version
         jmp mainLoop
 b4ScanStart:
+        ;Sets the interpreter to begin execution at the next statement the next time the script is loaded,
+        ;by updating the entry point.
+        ;The entry point is not an address but a byte number, the first byte being zero
         ZP_ENTRY_POINT = ZP_TMP_2
         
-        clc
+        clc ;We need to know the address of next opcode, which we obtain by adding the code zp to the code window
+            ;counter. Note this address will be of the instruction after the scan start, as by this point it has already
+            ;been incremented
         lda ZP_PTR_CODE
         adc cwCurrentCode
         tax
-        lda ZP_PTR_CODE + 1
+        lda ZP_PTR_CODE + 1 
         adc cwCurrentCode + 1
         
-        tay
+        tay ;By deducting the start position address (first instruction) from the value above you get the new entry point
         txa
         sec
         sbc startPos
@@ -1671,9 +1676,10 @@ b4ScanStart:
         sbc startPos + 1
         sta ZP_ENTRY_POINT + 1
 
-        SET_STRUCT_16 LOGIC_ENTRY_POINT_OFFSET, ZP_PTR_LE, ZP_ENTRY_POINT
 
-        lda ZP_PTR_LE
+        SET_STRUCT_16 LOGIC_ENTRY_POINT_OFFSET, ZP_PTR_LE, ZP_ENTRY_POINT ;Update the local copy of logic entry with new entry point
+
+        lda ZP_PTR_LE ;Comit the updated logic entry
         ldx ZP_PTR_LE + 1
         jsr pushax
         lda _currentLog
