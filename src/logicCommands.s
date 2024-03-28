@@ -143,7 +143,6 @@ LOGICCOMMANDS_INC = 1
 .import _b4Quit
 .import _b4Pause
 .import _b4Version
-.import _b4Set_scan_start
 .import _b4Reset_scan_start
 .import _b4Reposition_to
 .import _b4Reposition_to_v
@@ -166,6 +165,8 @@ LOGICCOMMANDS_INC = 1
 .import _getLogicFile
 .import _getLogicEntry
 .import pushax
+
+.import _setLogicEntry
 
 ; Debugging related imports (only included if DEBUG is defined)
 .ifdef DEBUG
@@ -190,6 +191,8 @@ LOGICCOMMANDS_INC = 1
 .import _debugIndirectV
 .import _debugNewRoom
 .import _debugExitAllLogics
+.import _b5DebugScanStart
+.import _b5DebugResetScanStart
 .import _stopAtFunc
 .endif 
 
@@ -410,6 +413,35 @@ JSRFAR _debugNewRoom, DEBUG_BANK
 .macro DEBUG_EXIT_ALL_LOGICS
 .ifdef DEBUG
 JSRFAR _debugExitAllLogics, DEBUG_BANK
+.endif
+.endmacro
+
+.macro DEBUG_SCAN_START
+.ifdef DEBUG
+
+lda ZP_PTR_CODE
+sta _logDebugVal1
+lda ZP_PTR_CODE + 1
+sta _logDebugVal2
+
+lda cwCurrentCode
+sta _logDebugVal3
+lda cwCurrentCode + 1
+sta _logDebugVal4
+
+lda startPos
+sta _logDebugVal5
+lda startPos + 1
+sta _logDebugVal6
+
+JSRFAR _b5DebugScanStart, DEBUG_BANK
+.endif
+.endmacro
+
+.macro DEBUG_RESET_SCAN
+.ifdef DEBUG
+
+JSRFAR _b5DebugResetScanStart, DEBUG_BANK
 .endif
 .endmacro
 
@@ -766,7 +798,7 @@ jmpTableCommands2:
 .addr b1NoOp_1
 .addr b1NoOp_1
 .addr b1NoOp_1
-.addr b4Set_scan_startCCall
+.addr b4ScanStart
 .addr b4Reset_scan_startCCall
 .addr b4Reposition_toCCall
 .addr b4Reposition_to_vCCall
@@ -1620,11 +1652,40 @@ b4PauseCCall:
 b4VersionCCall:
         jsr _b4Version
         jmp mainLoop
-b4Set_scan_startCCall:
-        jsr _b4Set_scan_start
+b4ScanStart:
+        ZP_ENTRY_POINT = ZP_TMP_2
+        
+        clc
+        lda ZP_PTR_CODE
+        adc cwCurrentCode
+        tax
+        lda ZP_PTR_CODE + 1
+        adc cwCurrentCode + 1
+        
+        tay
+        txa
+        sec
+        sbc startPos
+        sta ZP_ENTRY_POINT
+        tya
+        sbc startPos + 1
+        sta ZP_ENTRY_POINT + 1
+
+        SET_STRUCT_16 LOGIC_ENTRY_POINT_OFFSET, ZP_PTR_LE, ZP_ENTRY_POINT
+
+        lda ZP_PTR_LE
+        ldx ZP_PTR_LE + 1
+        jsr pushax
+        lda _currentLog
+        ldx #$0
+        jsr _setLogicEntry
+
+        DEBUG_SCAN_START
+
         jmp mainLoop
 b4Reset_scan_startCCall:
         jsr _b4Reset_scan_start
+        DEBUG_RESET_SCAN
         jmp mainLoop
 b4Reposition_toCCall:
         jsr _b4Reposition_to

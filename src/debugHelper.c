@@ -203,6 +203,8 @@ extern byte logDebugVal1;
 extern byte logDebugVal2;
 extern byte logDebugVal3;
 extern byte logDebugVal4;
+extern byte logDebugVal5;
+extern byte logDebugVal6;
 
 void debugIsSet()
 {
@@ -335,6 +337,34 @@ void debugIndirect()
 	if (opCounter >= opStartPrintingAt && opStartPrintingAt != 0)
 	{
 		printf("indir %d (%d) value %d\n", logDebugVal1, var[logDebugVal1], logDebugVal2);
+	}
+}
+
+void b5DebugScanStart()
+{
+	LOGICEntry logicEntry;
+
+	if (opCounter >= opStartPrintingAt && opStartPrintingAt != 0)
+	{
+		int zpCode = (int)logDebugVal1 + ((int)*(&logDebugVal1 + 1) << 8);
+		int cwCurrentCode = (int)logDebugVal3 + ((int)*(&logDebugVal3 + 1) << 8);
+		int startPos = (int)logDebugVal5 + ((int)*(&logDebugVal5 + 1) << 8);
+
+		getLogicEntry(&logicEntry, currentLog);
+
+		printf("lognum: %d scan start: zp_code ((%p) + cwCurrentcode (%p)) - startpos (%p) = %p. actual %p", currentLog, (int)zpCode, (int)cwCurrentCode, (int)startPos, (int)(zpCode + cwCurrentCode) - startPos, logicEntry.entryPoint);
+	}
+}
+
+void b5DebugResetScanStart()
+{
+	LOGICEntry logicEntry;
+
+	if (opCounter >= opStartPrintingAt && opStartPrintingAt != 0)
+	{
+		getLogicEntry(&logicEntry, currentLog);
+
+		printf("resetting scan for logic %d. it %s reset.\n", currentLog, logicEntry.entryPoint == 0 ? "" : "not");
 	}
 }
 

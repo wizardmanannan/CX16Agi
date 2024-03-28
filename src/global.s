@@ -3,7 +3,7 @@
 
 ; Include the x16.inc file
 .include "x16.inc"
-DEBUG = 0
+;DEBUG = 0
 
 ; Define some start and end positions and code bank
 startPos: .word $0
@@ -657,6 +657,8 @@ _logDebugVal1: .byte $0
 _logDebugVal2: .byte $0
 _logDebugVal3: .byte $0
 _logDebugVal4: .byte $0
+_logDebugVal5: .byte $0
+_logDebugVal6: .byte $0
 
 .macro PRESERVE_REG
 pha

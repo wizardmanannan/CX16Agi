@@ -5,6 +5,7 @@
 #include "helpers.h"
 #include "view.h"
 #include "graphics.h"
+#include "logic.h"
 #include <time.h>
 
 

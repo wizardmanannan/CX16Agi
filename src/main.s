@@ -20,6 +20,8 @@
     .export _logDebugVal2
     .export _logDebugVal3
     .export _logDebugVal4
+    .export _logDebugVal5
+    .export _logDebugVal6
     .export _b6ClearBackground
     .export _toDraw
     .export _drawWhere

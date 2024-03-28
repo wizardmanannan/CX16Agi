@@ -2072,21 +2072,6 @@ void b4Version() // 0, 0x00
 //	(*data)++;  /* Ignore log message. Not important */
 //}
 
-void b4Set_scan_start() // 0, 0x00 
-{
-	LOGICEntry logicEntry;
-
-	getLogicEntry(&logicEntry, currentLog);
-
-	/* currentPoint is set in executeLogic() */
-	logicEntry.entryPoint = logicEntry.currentPoint + 1;
-	/* Does it return() at this point, or does it execute to the end?? */
-
-	setLogicEntry(&logicEntry, currentLog);
-	return;
-}
-
-
 void b4Reset_scan_start() // 0, 0x00 
 {
 	LOGICEntry logicEntry;
