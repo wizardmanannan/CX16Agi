@@ -999,6 +999,7 @@ void b11SplitPriority()
 }
 
 int picFNum = 0;
+boolean showPicCalled = FALSE;
 
 /**************************************************************************
 ** drawPic
@@ -1151,6 +1152,8 @@ void b11DrawPic(byte* bankedData, int pLen, boolean okToClearScreen, byte picNum
 	b11SplitPriority();
 
 	REENABLE_INTERRUPTS(); //Loading screen stays on until showPic command
+
+	showPicCalled = FALSE;
 }
 
 void b6InitPictures()
@@ -1218,6 +1221,11 @@ void b6DiscardPictureFile(int picFileNum)
 
 void b6ShowPicture()
 {
+	if (showPicCalled)
+	{
+		b6InitLayer1Mapbase();
+	}
+	showPicCalled = TRUE;
 }
 
 #pragma code-name (pop)
