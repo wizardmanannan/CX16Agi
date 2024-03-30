@@ -258,9 +258,10 @@ rts
 ZP_SIZE = ZP_TMP_3 ;Starting from 3 as allocate functions use one tmp ZP
 ZP_NUMBER_TO_ALLOCATE = ZP_TMP_4
 ZP_ARRAY_COUNTER = ZP_TMP_5
+MAX_BULK_ALLOCATED_SIZE = 256
 ;Puts the returned memory addresses on the system stack. Note as the lower byte is always zero only the high and middle bytes (in that order) are pushed onto the stack
 ; void bEAllocateSpriteMemoryBulk(AllocationSize size, byte number) AllocationSize is 0 for 32 and 1 for 64
-_bEBulkAllocatedAddresses: .res VIEW_TABLE_SIZE * VERA_SPRITE_ADDRESS_SIZE + 1 * ALLOCATOR_BLOCK_SIZE_64, $0 ;64 is the biggest size, so if we have enough room for that the others will fit anyway. Add 1 as C will read these as longs
+_bEBulkAllocatedAddresses: .res MAX_BULK_ALLOCATED_SIZE, $0
 
 _bEAllocateSpriteMemoryBulk:
 sta ZP_NUMBER_TO_ALLOCATE ;Save the number of sprites to allocate
