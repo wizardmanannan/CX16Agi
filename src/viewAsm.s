@@ -524,10 +524,11 @@ sta SPLIT_CEL_WIDTH
 GET_STRUCT_8_STORED_OFFSET _offsetOfCelHeight, CEL_STRUCT_POINTER, SPLIT_CEL_HEIGHT
 GET_STRUCT_8_STORED_OFFSET _offsetOfBmpBank, CEL_STRUCT_POINTER, CEL_DATA_BANK
 
-lda #$80
-ldx #$C
+lda #< SPLIT_BUFFER_SIZE 
+ldx #> SPLIT_BUFFER_SIZE 
 sta NO_BYTES_SIZE
 stx NO_BYTES_SIZE + 1
+
 
 ; 2. Divide the memory by the number of segments
 lda SPLIT_CEL_WIDTH ;Divide width by 64 to know how many segments across we need
@@ -535,7 +536,15 @@ cmp #64
 bcc @widthLessThan64
 clc
 adc #63 ; Adding 63 to the width will ensure we round up when we divide by 64. This is an optimisation trick that saves us calling the C float division function
-lsr
+tay ; May be higher than 255 because we are adding the 63, but when we divide it will go away again. 
+lda #$0
+adc #$0
+
+clc
+lsr;Divide the high byte, we only need to do this once has the max number is 318
+
+tya ;Bring the low byte back, we can lose the high byte because after the shift it will always be zero
+ror; Divide by 64 If the number is greater than 255 we will expect a roll over from the high byte once, but only once  
 lsr
 lsr
 lsr
@@ -558,7 +567,7 @@ cmp #64
 bcc @heightLessThan64
 clc
 adc #63 ; Adding 63 to the height will ensure we round up when we divide by 64
-lsr
+lsr ;To do: cater for number being temporarily higher than 255 like height 
 lsr
 lsr
 lsr
@@ -836,7 +845,8 @@ rts
 .endif
 
 .segment "BANKRAM0C"
-bCSplitBuffer: .res 4000
+SPLIT_BUFFER_SIZE = 4000
+bCSplitBuffer: .res SPLIT_BUFFER_SIZE
 bCSplitBufferSegments: .res 32
 
 ;Still uses Uses ZP_TMP_14 as temp
