@@ -370,6 +370,7 @@ void b3DisplayMessageBox(char* message, byte messageBank, byte row, byte col, by
 	byte paletteByte = paletteNumber << 4;
 	byte textWidth = boxWidth;
 	byte numberOfLines = 1;
+	size_t maxMessageSize = boxWidth ? TEXTBUFFER_SIZE : TEXTBUFFER_SIZE * 2; //If there is no box, we can overflow into buffer 2 for a bigger message.
 	
 	currentTextBuffer = textBuffer1;
 
@@ -390,9 +391,9 @@ void b3DisplayMessageBox(char* message, byte messageBank, byte row, byte col, by
 		printf("Address: %p + (%d + %d) * %d + %d * %d = %lx\n", MAPBASE, FIRST_ROW, row, TILE_LAYER_BYTES_PER_ROW, col, BYTES_PER_CELL, displayTextAddressToCopyTo);
 		printf("displayAddressCopyPaletteTo = %lx\n", displayAddressCopyPaletteTo);
 #endif
-		if (messageSize > TEXTBUFFER_SIZE)
+		if (messageSize > maxMessageSize)
 		{
-			memCpyBanked((byte*)message + TEXTBUFFER_SIZE, (byte*)&terminator, messageBank, 1);
+			memCpyBanked((byte*)message + maxMessageSize - 1, (byte*)&terminator, messageBank, 1);
 			printf("warning overflow on message. the message size is %d.\n", messageSize);
 		}
 
