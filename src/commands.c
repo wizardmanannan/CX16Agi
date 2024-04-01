@@ -204,10 +204,10 @@ char* getMessagePointer(byte logicFileNo, byte messageNo)
 
 	result = (char*)logicFile.messages[messageNo];
 
-	for (i = 1; i < strlen(result) && *result == ' '; i++) //Skip tabbing
-	{
-		result = (char*)logicFile.messages[messageNo + i];
-	}
+	//for (i = 1; i < strlen(result) && *result == ' '; i++) //Skip tabbing
+	//{
+	//	result = (char*)logicFile.messages[messageNo + i];
+	//}
 
 #ifdef VERBOSE_MESSAGE_PRINT
 	printf("Attempting to print message %d from address %p, from logic %d. The length is %d\n", messageNo, result, logicFileNo, strlen(result));
@@ -1652,10 +1652,11 @@ void b3DisplayWithoutTextbox(byte row, byte col, byte messNum)
 	messagePointer = getMessagePointer(currentLog, messNum - 1);
 
 #ifdef VERBOSE_MESSAGE_PRINT
-	printf("Attempting to print %d from script %d. The length is %d. The message pointer is %p\n", messNum - 1, currentLog, strLenBanked(messagePointer, logicFile.messageBank), messagePointer);
+	printf("attempting to print %d from script %d. The length is %d. The message pointer is %p and the bank is %p\n", messNum, currentLog, strLenBanked(messagePointer, logicFile.messageBank), messagePointer, logicFile.messageBank);
+	printf("the messages live at %p on bank %p\n", logicFile.messages, logicFile.messageBank);
 #endif
 	//b3ProcessString(messagePointer, 0, tempString);
-	b3DisplayMessageBox(messagePointer, logicFile.messageBank, row, col, b3SetTextColor(_currentForegroundColour, _currentBackgroundColour), 0);
+	b3DisplayMessageBox(messagePointer, logicFile.messageBank, row, col, b3SetTextColor(_currentForegroundColour, _currentBackgroundColour), 0);	
 	return;
 }
 
@@ -1666,7 +1667,7 @@ void b3Display() // 3, 0x00
 
 void b3Display_v() // 3, 0xE0 
 {
-	b3DisplayWithoutTextbox(loadAndIncWinCode(), loadAndIncWinCode(), var[loadAndIncWinCode()]);
+	b3DisplayWithoutTextbox(var[loadAndIncWinCode()], var[loadAndIncWinCode()], var[loadAndIncWinCode()]);
 }
 
 void b3Clear_lines() // 3, 0x00 
