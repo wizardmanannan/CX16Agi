@@ -61,3 +61,6 @@
     .export _bEClearSpriteAttributes
     .export _bESplitCel
     .export _b11FillClean
+    .export _b3PaletteAddress
+    .export _b3PaletteRows
+    .export _b3PaletteNumber

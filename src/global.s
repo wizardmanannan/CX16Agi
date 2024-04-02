@@ -257,6 +257,20 @@ NEG_1_16 = $FFFF
 .endmacro
 
 
+;Load the value into a/x first, and then call this macro the number of times to multiply
+;Output: low both a and y high: x
+
+.macro PW2_MULT_16_CHAIN
+clc ;Multiply By 2
+asl
+tay
+txa
+rol
+tax
+tya
+
+.endmacro
+
 ; Macro for adding two 16-bit words
 .macro ADD_WORD_16 firstAddress, secondAddress, result
         clc

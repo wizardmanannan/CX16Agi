@@ -358,6 +358,9 @@ void b3DrawBorder(byte boxWidth, size_t messageSize)
 
 extern unsigned long displayTextAddressToCopyTo;
 extern char* currentTextBuffer;
+extern long b3PaletteAddress;
+extern byte b3PaletteRows;
+extern byte b3PaletteNumber;
 
 //Box width is 0 for text that is not in a box, or the width of the box otherwise
 //Supports copying from banks or putting data directly into textbuffer, which is on bank 3
@@ -367,7 +370,6 @@ void b3DisplayMessageBox(char* message, byte messageBank, byte row, byte col, by
 	char terminator = 0;
 	size_t messageSize = strLenBanked(message, messageBank) + 1;
 	long displayAddressCopyPaletteTo;
-	byte paletteByte = paletteNumber << 4;
 	byte textWidth = boxWidth;
 	byte numberOfLines = 1;
 	size_t maxMessageSize = boxWidth ? TEXTBUFFER_SIZE : TEXTBUFFER_SIZE * 2; //If there is no box, we can overflow into buffer 2 for a bigger message.
@@ -423,15 +425,9 @@ void b3DisplayMessageBox(char* message, byte messageBank, byte row, byte col, by
 			currentTextBuffer = textBuffer2;
 		}
 
-		asm("sei");
-		SET_VERA_ADDRESS_ABSOLUTE(displayAddressCopyPaletteTo, 0, 2);
-		
-		for (i = 0; i < (int) numberOfLines * TILE_LAYER_WIDTH; i++) //Ignore the terminator it doesn't print and doesn't have a palette byte
-		{
-		  WRITE_BYTE_VAR_TO_ASSM(paletteByte, VERA_data0);
-		}
-		REENABLE_INTERRUPTS();
-		////TODO: Doesn't return anything but I don't want to add any more trampoline methods. Come up with a more memory efficient way of handling this then constanting adding them
+		b3PaletteAddress = MAPBASE + (FIRST_ROW + row - 1) * TILE_LAYER_BYTES_PER_ROW + 1; //We will set the same palette for the whole row
+		b3PaletteRows = numberOfLines;
+		b3PaletteNumber = paletteNumber;
 
 		b6SetAndWaitForIrqState(DISPLAY_TEXT);
 	}

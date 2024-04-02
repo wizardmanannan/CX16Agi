@@ -40,6 +40,46 @@ REENABLE_INTERRUPTS
 
 ;Handlers
 .segment "BANKRAM03"
+_b3PaletteAddress: .res 4 ;Should be three bytes, but there is no data type in C for handling 3 byte values
+_b3PaletteRows: .byte $0
+_b3PaletteNumber: .byte $0
+
+ZP_PALETTE_BYTE = ZP_TMP_2
+
+
+b3SetPalette:
+lda _b3PaletteNumber
+asl
+asl
+asl
+asl
+sta ZP_PALETTE_BYTE
+
+SET_VERA_ADDRESS_ABSOLUTE _b3PaletteAddress, #$0, #$2
+
+lda _b3PaletteRows
+ldx #$0
+
+PW2_MULT_16_CHAIN
+PW2_MULT_16_CHAIN
+PW2_MULT_16_CHAIN
+PW2_MULT_16_CHAIN
+PW2_MULT_16_CHAIN
+PW2_MULT_16_CHAIN
+;Low Byte Y, High Byte X
+
+lda ZP_PALETTE_BYTE
+@loop:
+sta VERA_data0
+@checkLoopLow:
+dey
+bne @loop
+@checkLoopHigh:
+dex
+bpl @loop
+
+rts
+
 handleDisplayText:
 SET_VERA_ADDRESS_ABSOLUTE _displayTextAddressToCopyTo, #$0, #$2
 
@@ -77,6 +117,8 @@ bra @innerLoop
 @end:
 stz ZP_TMP
 stz ZP_TMP + 1
+
+jsr b3SetPalette
 rts
 
 b3DisplayTextNewLine: ;Goes to the start of the next line of the VERA but maintains the column number of the first character of the first line
