@@ -64,3 +64,4 @@
     .export _b3PaletteAddress
     .export _b3PaletteRows
     .export _b3PaletteNumber
+    .export _b6InitLayer1Mapbase

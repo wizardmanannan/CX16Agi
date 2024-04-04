@@ -22,7 +22,6 @@ _interpolationBuffer: .res 2000
 .import pushax
 .import pusha
 .import popa
-.import _b6InitLayer1Mapbase
 .import _b6DisplayLoadingScreen
 .import _b6InitVeraMemory
 .import _b9InitSpriteData

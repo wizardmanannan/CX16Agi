@@ -1689,13 +1689,20 @@ void b3Clear_lines() // 3, 0x00
 #pragma code-name (pop)
 #pragma code-name (push, "BANKRAM04")
 
+#pragma wrapped-call (push, trampoline, MEKA_BANK)
+extern void b6Clear();
+#pragma wrapped-call (pop)
+
 void b4Text_screen() // 0, 0x00 
 {
 	screenMode = AGI_TEXT;
 	/* Do something else here */
 	inputLineDisplayed = FALSE;
 	statusLineDisplayed = FALSE;
-	clear(screen);
+	b6SetAndWaitForIrqState(BLANK_SCREEN);
+	b6Clear();
+	b6SetAndWaitForIrqState(TEXT_ONLY);
+
 	return;
 }
 
@@ -1706,7 +1713,10 @@ void b4Graphics() // 0, 0x00
 	inputLineDisplayed = TRUE;
 	statusLineDisplayed = TRUE;
 	okToShowPic = TRUE;
-	clear(screen);
+	b6SetAndWaitForIrqState(BLANK_SCREEN);
+	b6Clear();
+	b6SetAndWaitForIrqState(NORMAL);
+
 	return;
 }
 

@@ -156,6 +156,32 @@ _b6InitIrq:
    REENABLE_INTERRUPTS ; enable IRQ now that vector is properly set
 rts
 
+
+ZP_TILE_LAYER_NO_TILES_HIGH = ZP_TMP_2
+_b6InitLayer1Mapbase:
+SET_VERA_ADDRESS_IMMEDIATE MAP_BASE, #$0, #$1
+
+ldx #< TILE_LAYER_NO_TILES
+
+lda #> TILE_LAYER_NO_TILES
+sta ZP_TILE_LAYER_NO_TILES_HIGH
+
+lda #TRANSPARENT_CHAR
+ldy #TILE_BYTE_2
+
+@loop:
+sta VERA_data0
+sty VERA_data0
+
+@loopCheck:
+dex ;Low Byte
+cpx #$FF
+bne @loop
+
+dec ZP_TILE_LAYER_NO_TILES_HIGH
+bpl @loop
+rts
+
 _b6SetAndWaitForIrqStateAsm:
 sta @state
 SEND_IRQ_COMMAND @state, @vSyncToCheck

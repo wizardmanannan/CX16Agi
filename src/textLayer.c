@@ -192,28 +192,7 @@ void b6TestCharset()
 }
 #endif
 
-void b6InitLayer1Mapbase()
-{
-	int i;
-#define BYTE1 TRANSPARENT_CHAR
-#define BYTE2 0x10 //1 Offset 0 v flip 0 h flip 0 tile index bit 8 and 9
 
-	asm("sei");
-
-	SET_VERA_ADDRESS(MAPBASE, ADDRESSSEL0, 1);
-
-	for (i = 0; i < TILE_LAYER_NO_TILES; i++)
-	{
-		WRITE_BYTE_DEF_TO_ASSM(BYTE1, VERA_data0);
-		WRITE_BYTE_DEF_TO_ASSM(BYTE2, VERA_data0);
-	}
-
-#ifdef TEST_CHARSET
-	b6TestCharset();
-#endif // TEST_CHARSET
-
-	REENABLE_INTERRUPTS();
-}
 
 #pragma code-name (pop)
 
