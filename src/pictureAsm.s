@@ -963,44 +963,7 @@ rts
 ; }
 ;This won't fit on the picture bank
 .segment "BANKRAM04"
-_b4DrawStraightLineAlongY: 
-nop
-nop
-nop
-sta ZP_TMP_5 ;x The C which calls this function may invert it's own x1 and x2 depending on which is larger
-jsr popax
-sta ZP_TMP_7 ;y2
-stx ZP_TMP_6 ;y1
-
-ldy _picDrawEnabled
-beq @end
-
-SET_VERA_ADDRESS_PICTURE ZP_TMP_5 , ZP_TMP_6, #$D
-
-DRAW_LINE_BETWEEN ZP_TMP_6, ZP_TMP_7
-
-@end:
-rts
-
-_b4DrawStraightLineAlongX:
-sta ZP_TMP_5 ;y1 The C which calls this function may invert it's own y1 and y2 depending on which is larger
-jsr popax
-sta ZP_TMP_7 ;x2
-stx ZP_TMP_6 ;x1
-
-ldy _picDrawEnabled
-beq @end
-
-SET_VERA_ADDRESS_PICTURE ZP_TMP_6 , ZP_TMP_5, #$1
-
-DRAW_LINE_BETWEEN ZP_TMP_6, ZP_TMP_7
-
-@end:
-rts
-
-
-.segment "BANKRAM11"
-initFlood:
+b4InitFlood:
 
 sta fillY
 jsr popa 
@@ -1038,6 +1001,43 @@ GET_VERA_ADDRESS fillX, fillY, OK_TO_FILL_ADDRESS
 rts
 
 
+_b4DrawStraightLineAlongY: 
+nop
+nop
+nop
+sta ZP_TMP_5 ;x The C which calls this function may invert it's own x1 and x2 depending on which is larger
+jsr popax
+sta ZP_TMP_7 ;y2
+stx ZP_TMP_6 ;y1
+
+ldy _picDrawEnabled
+beq @end
+
+SET_VERA_ADDRESS_PICTURE ZP_TMP_5 , ZP_TMP_6, #$D
+
+DRAW_LINE_BETWEEN ZP_TMP_6, ZP_TMP_7
+
+@end:
+rts
+
+_b4DrawStraightLineAlongX:
+sta ZP_TMP_5 ;y1 The C which calls this function may invert it's own y1 and y2 depending on which is larger
+jsr popax
+sta ZP_TMP_7 ;x2
+stx ZP_TMP_6 ;x1
+
+ldy _picDrawEnabled
+beq @end
+
+SET_VERA_ADDRESS_PICTURE ZP_TMP_6 , ZP_TMP_5, #$1
+
+DRAW_LINE_BETWEEN ZP_TMP_6, ZP_TMP_7
+
+@end:
+rts
+
+
+.segment "BANKRAM11"
 CLEAN_FILL_ADDR = ZP_TMP_2
 _b11FillClean: ;Fills screen with one colour, for use when there is nothing on the screen
 
@@ -1077,12 +1077,12 @@ STORE_COUNTER = ZP_TMP_10
 _bFloodAgiFill:
 
 tax
-lda #PICTURE_BANK
+lda #PICTURE_CODE_OVERFLOW_BANK
 sta tmp4
 
-lda #< initFlood
+lda #< b4InitFlood
 sta ptr4
-lda #> initFlood
+lda #> b4InitFlood
 sta ptr4 + 1
 
 txa
