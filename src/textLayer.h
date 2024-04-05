@@ -47,11 +47,8 @@
 
 #define TEXTBOX_PALETTE_NUMBER 1
 
-#pragma wrapped-call (push, trampoline, MEKA_BANK)
-void b6InitLayer1Mapbase();
-#pragma wrapped-call (pop)
-
 #pragma wrapped-call (push, trampoline, TEXT_CODE_BANK)
+void b3InitLayer1Mapbase();
 void b3DisplayMessageBox(char* message, byte messageBank, byte row, byte col, byte paletteNumber, byte boxWidth);
 void b3FillChar(byte startLine, byte endLine, byte paletteNumber, byte charToFill);
 void b3ClearLastPlacedText();

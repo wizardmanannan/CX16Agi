@@ -11,7 +11,7 @@ void b6DisplayLoadingScreen()
 	if (!loadingScreenDisplayed)
 	{
 		b6SetAndWaitForIrqStateAsm(BLANK_SCREEN);
-		b6InitLayer1Mapbase();
+		b3InitLayer1Mapbase();
 
 		b6SetAndWaitForIrqStateAsm(TEXT_ONLY);
 		b3DisplayMessageBox(&loadingText[0], 0, MAX_ROWS_DOWN / 2 - FIRST_ROW, MAX_CHAR_ACROSS / 2 - (LOADING_BOX_SIZE / 2), TEXTBOX_PALETTE_NUMBER, LOADING_BOX_SIZE);
@@ -29,7 +29,7 @@ void b6DismissLoadingScreen()
 	{
 		bBUpdateObjects(); //This is a little unorthodox but if we don't do this objects that should /should not display wait until the VBLANK after
 		b6SetAndWaitForIrqStateAsm(BLANK_SCREEN);
-		b6InitLayer1Mapbase();
+		b3InitLayer1Mapbase();
 		b6SetAndWaitForIrqStateAsm(NORMAL);
 		loadingScreenDisplayed = FALSE;
 	}

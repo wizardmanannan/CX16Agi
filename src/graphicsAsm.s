@@ -243,7 +243,8 @@ sta VERA_L1_vscroll_l
 stz VERA_L1_vscroll_h
 
 jsr _b6InitCharset 
-jsr _b6InitLayer1Mapbase
+
+TRAMPOLINE #TEXT_BANK, _b3InitLayer1Mapbase
 
 TRAMPOLINE #SPRITE_UPDATES_BANK, _bEClearSpriteAttributes 
 
