@@ -466,7 +466,7 @@ extern void b6Clear();
 **************************************************************************/
 void b6ClearPicture()
 {
-	b6ClearBackground();
+	b4ClearBackground();
 	clear_to_color(priority, PRI_DEFAULT);
 	clear_to_color(control, PRI_DEFAULT);
 }

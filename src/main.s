@@ -22,7 +22,7 @@
     .export _logDebugVal4
     .export _logDebugVal5
     .export _logDebugVal6
-    .export _b6ClearBackground
+    .export _b4ClearBackground
     .export _toDraw
     .export _drawWhere
     .export _bFloodQstore
