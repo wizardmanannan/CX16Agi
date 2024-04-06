@@ -1000,6 +1000,12 @@ SET_PICCOLOR
 GET_VERA_ADDRESS fillX, fillY, OK_TO_FILL_ADDRESS
 rts
 
+ _b4ClearPicture:
+ jsr _b4ClearBackground
+ ;To Do Clear Priority and control
+ rts
+
+
 _b4ClearBackground:
 stz VERA_ctrl
 lda #$10 | ^STARTING_BYTE

@@ -90,7 +90,7 @@ void b6Clear()
 {
     b3InitLayer1Mapbase();
     bEClearSpriteAttributes();
-    b6ClearPicture();
+    b4ClearPicture();
 }
 
 /***************************************************************************

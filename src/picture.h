@@ -56,6 +56,7 @@ extern void b6DisableAndWaitForVsync();
 
 #pragma wrapped-call (push, trampoline, PICTURE_CODE_OVERFLOW_BANK)
 extern void b4ClearBackground();
+extern void b4ClearPicture();
 #pragma wrapped-call (pop);
 
 #pragma wrapped-call (push, trampoline, PICTURE_CODE_BANK)
@@ -64,7 +65,6 @@ void b11DrawPic(byte* bankedData, int pLen, boolean okToClearScreen, byte picNum
 #pragma wrapped-call (push, trampoline, MEKA_BANK)
 extern void b6InitPicture();
 extern void b6InitPictures();
-extern void b6ClearPicture();
 void b6LoadPictureFile(int picFileNum);
 void b6ShowPicture();
 void b6DiscardPictureFile(int picFileNum);

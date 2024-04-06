@@ -458,19 +458,6 @@ void b6InitPicture()
 extern void b6Clear();
 #pragma wrapped-call (pop)
 
-/**************************************************************************
-** clearPicture
-**
-** Purpose: To clear the picture and priority bitmaps so that they are
-** ready for drawing another PICTURE.
-**************************************************************************/
-void b6ClearPicture()
-{
-	b4ClearBackground();
-	clear_to_color(priority, PRI_DEFAULT);
-	clear_to_color(control, PRI_DEFAULT);
-}
-
 #pragma code-name (pop)
 #pragma code-name (push, "BANKRAM11")
 /**************************************************************************
@@ -1053,7 +1040,7 @@ void b11DrawPic(byte* bankedData, int pLen, boolean okToClearScreen, byte picNum
 		b3InitLayer1Mapbase();
 		
 		asm("sei");
-		b6ClearPicture();
+		b4ClearPicture();
 	}
 	
 	asm("sei");
