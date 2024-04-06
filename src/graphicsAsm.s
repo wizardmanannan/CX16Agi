@@ -27,6 +27,13 @@ _interpolationBuffer: .res 2000
 .import _b9InitSpriteData
 .import _b3SetTextColor
 
+
+_b6Clear:
+TRAMPOLINE #TEXT_BANK, _b3InitLayer1Mapbase
+TRAMPOLINE #SPRITE_UPDATES_BANK, _bEClearSpriteAttributes
+TRAMPOLINE #PICTURE_CODE_OVERFLOW_BANK, _b4ClearPicture
+rts
+
 @mapWidth: .byte $0
 @isFirstPixel: .byte $0
 @loopCounter: .byte $0

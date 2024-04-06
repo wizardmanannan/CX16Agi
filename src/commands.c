@@ -1689,10 +1689,6 @@ void b3Clear_lines() // 3, 0x00
 #pragma code-name (pop)
 #pragma code-name (push, "BANKRAM04")
 
-#pragma wrapped-call (push, trampoline, MEKA_BANK)
-extern void b6Clear();
-#pragma wrapped-call (pop)
-
 void b4Text_screen() // 0, 0x00 
 {
 	screenMode = AGI_TEXT;

@@ -86,13 +86,6 @@ void b6DiscardResources()
     for (i = 0; i < 256; i++) discardSoundFile(i);
 }
 
-void b6Clear()
-{
-    b3InitLayer1Mapbase();
-    bEClearSpriteAttributes();
-    b4ClearPicture();
-}
-
 /***************************************************************************
 ** new_room
 **

@@ -454,10 +454,6 @@ void b6InitPicture()
 	}
 }
 
-#pragma wrapped-call (push, trampoline, MEKA_BANK)
-extern void b6Clear();
-#pragma wrapped-call (pop)
-
 #pragma code-name (pop)
 #pragma code-name (push, "BANKRAM11")
 /**************************************************************************
