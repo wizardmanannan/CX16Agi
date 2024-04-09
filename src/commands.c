@@ -1695,8 +1695,6 @@ void b4Text_screen() // 0, 0x00
 	/* Do something else here */
 	inputLineDisplayed = FALSE;
 	statusLineDisplayed = FALSE;
-	b6SetAndWaitForIrqState(BLANK_SCREEN);
-	b6Clear();
 	b6SetAndWaitForIrqState(TEXT_ONLY);
 
 	return;

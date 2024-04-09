@@ -265,6 +265,10 @@ bra @resetSetIrqState
 @textOnly:
 lda #LAYER_0_SPRITES_DISABLE_1_ENABLE
 sta VERA_dc_video
+
+lda #GRAPHICS_BANK
+sta RAM_BANK
+jsr _b6Clear
 bra @resetSetIrqState
 
 @l12Only:

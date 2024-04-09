@@ -79,15 +79,7 @@ _bESpritesUpdatedBufferPointer: .word _bESpritesUpdatedBuffer
 _bEClearSpriteAttributes:
 lda #MAX_SPRITE_SLOTS
 sta @numToClear
-
-lda #IRQ_CMD_L0_L1_ONLY
-ldx #$0
-TRAMPOLINE #IRQ_BANK, _b6SetAndWaitForIrqStateAsm
 CLEAR_SPRITE_ATTRS @numToClear
-lda #IRQ_CMD_NORMAL
-ldx #$0
-TRAMPOLINE #IRQ_BANK, _b6SetAndWaitForIrqStateAsm
- 
 rts
 @numToClear: .byte $0
 
