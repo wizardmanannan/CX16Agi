@@ -205,7 +205,9 @@ IRQ_CMD_TEXT_ONLY = 2
 IRQ_CMD_NORMAL = 3
 IRQ_CMD_DISPLAY_TEXT = 4
 IRQ_CMD_L0_L1_ONLY = 5
-CLEAR = 6
+IRQ_CMD_CLEAR = 6
+IRQ_CMD_GRAPHICS = 7
+
 
 LAYER_0_1_SPRITES_ENABLE = $71
 LAYER_0_1_SPRITES_DISABLE = $1
@@ -268,6 +270,11 @@ lda #LAYER_0_1_SPRITES_ENABLE
 sta VERA_dc_video
 lda #IRQ_CMD_NORMAL
 sta currentIrqState
+
+lda sendIrqCommand
+cmp #IRQ_CMD_GRAPHICS
+bne @resetSetIrqState
+CALL_CLEAR
 bra @resetSetIrqState
 
 @textOnly:
@@ -314,6 +321,7 @@ jmp (default_irq_vector)
 .addr @displayText
 .addr @l12Only
 .addr @clear
+.addr @normal ;Graphics command goes to the same place as normal, it just clears while normal does not
 
 @jmpTableBank: .byte $0, $0, $0, $0, TEXT_BANK, $0 ;In order of IRQ_CMDS
 @previousRamBank: .byte $0

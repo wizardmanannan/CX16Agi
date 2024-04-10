@@ -1707,9 +1707,7 @@ void b4Graphics() // 0, 0x00
 	inputLineDisplayed = TRUE;
 	statusLineDisplayed = TRUE;
 	okToShowPic = TRUE;
-	b6SetAndWaitForIrqState(BLANK_SCREEN);
-	b6Clear();
-	b6SetAndWaitForIrqState(NORMAL);
+	b6SetAndWaitForIrqState(DISPLAY_GRAPHICS);
 
 	return;
 }
