@@ -39,7 +39,6 @@ typedef unsigned int VeraSpriteAddress; //actually three bytes lower byte is alw
 
 #pragma wrapped-call (push, trampoline, GRAPHICS_BANK)
 unsigned int b6SetPaletteToInt(byte paletteReference);
-extern void b6Clear();
 #pragma wrapped-call (pop);
 
 #endif
