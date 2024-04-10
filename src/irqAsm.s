@@ -192,12 +192,20 @@ rts
 @vSyncToCheck: .word $0
 
 .segment "CODE"
+
+.macro CALL_CLEAR
+lda #GRAPHICS_BANK
+sta RAM_BANK
+jsr _b6Clear
+.endmacro
+
 IRQ_CMD_DONTCHANGE = 0
 IRQ_CMD_BLACKSCREEN = 1
 IRQ_CMD_TEXT_ONLY = 2
 IRQ_CMD_NORMAL = 3
 IRQ_CMD_DISPLAY_TEXT = 4
 IRQ_CMD_L0_L1_ONLY = 5
+CLEAR = 6
 
 LAYER_0_1_SPRITES_ENABLE = $71
 LAYER_0_1_SPRITES_DISABLE = $1
@@ -266,9 +274,7 @@ bra @resetSetIrqState
 lda #LAYER_0_SPRITES_DISABLE_1_ENABLE
 sta VERA_dc_video
 
-lda #GRAPHICS_BANK
-sta RAM_BANK
-jsr _b6Clear
+CALL_CLEAR
 bra @resetSetIrqState
 
 @l12Only:
@@ -277,6 +283,9 @@ sta VERA_dc_video
 lda #IRQ_CMD_L0_L1_ONLY
 sta currentIrqState
 bra @resetSetIrqState
+
+@clear:
+CALL_CLEAR
 
 @resetSetIrqState:
 lda #IRQ_CMD_DONTCHANGE
@@ -304,6 +313,7 @@ jmp (default_irq_vector)
 .addr @normal
 .addr @displayText
 .addr @l12Only
+.addr @clear
 
 @jmpTableBank: .byte $0, $0, $0, $0, TEXT_BANK, $0 ;In order of IRQ_CMDS
 @previousRamBank: .byte $0

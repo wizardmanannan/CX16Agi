@@ -10,7 +10,9 @@ typedef enum {
     BLANK_SCREEN = 1,
     TEXT_ONLY = 2,
     NORMAL = 3,
-    DISPLAY_TEXT = 4
+    DISPLAY_TEXT = 4,
+    IRQ_CMD_L0_L1_ONLY = 5,
+    CLEAR = 6
 } IRQ_COMMAND;
 
 extern unsigned int vSyncCounter; //Updated by IRQ every 60ms

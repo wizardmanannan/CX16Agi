@@ -118,7 +118,7 @@ void b6NewRoom()
 
     memset(directions, 0, 9);
     /* rectfill(screen, 0, 20+(22*16), 639, 463, 0); */   /* Clear screen */
-    b6Clear();
+    b6SetAndWaitForIrqState(CLEAR);
 #ifdef VERBOSE
     printf("New room code called");
 #endif // VERBOSE
