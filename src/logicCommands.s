@@ -1040,6 +1040,7 @@ b2Subn:
       @existingVal: .byte $0
       @val: .byte $0
       @var: .byte $0
+      @toDecrement: .byte $0
     @start:
          LOAD_CODE_WIN_CODE
          sta @var
@@ -1048,13 +1049,17 @@ b2Subn:
          INC_CODE
 
          LOAD_CODE_WIN_CODE
+         sta @toDecrement
          
          DEBUG_SUB_N @var
-
+         
          sec
-         sbc @existingVal
-         INC_CODE
+         lda @existingVal
+         sbc @toDecrement
          sta @val
+         
+         INC_CODE
+ 
 
          SET_VAR_OR_FLAG VARS_AREA_START_GOLDEN_OFFSET, @val, @var
 
@@ -1089,7 +1094,8 @@ b2Subv:
 
          DEBUG_SUB_V
 
-         clc
+         sec
+         lda @val
          sbc @existingVal
          INC_CODE
          sta @val
