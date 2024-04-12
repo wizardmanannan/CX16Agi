@@ -1,29 +1,21 @@
-#Commander X16 AGI (Under Construction)
+# Commander X16 AGI (Under Construction)
 
-##An AGI Interpreter For The CommanderX 16 Based On Meka By Lance Ewing
-
-![image](https://github.com/wizardmanannan/CX16Agi/assets/58645812/9ed06d79-c4a0-4dc0-8b38-60443c7ac64f)
-
-![image](https://github.com/wizardmanannan/CX16Agi/assets/58645812/a06b9c0d-888e-4b68-929a-458aa8f09392)
-
-![image](https://github.com/wizardmanannan/CX16Agi/assets/58645812/84e8819f-1fd3-4fc7-8b91-3298c6a7d34f)
-
-  
-
-# CX 16 Iteration 4 Goals (Completed)
-- Support AGI Textboxes
-- Implement A Loading Screen For the Background Graphics Drawing to Prevent Screen Tearing
-
-# CX 16 Iteration 5 Goals (Current)
-- Sprite support
-- Implement System Tick Replacing Inaccurate Inherited C One
-
-# CX 16 Iteration 6 Goals (Next)
-- Use a scanline screen drawing method to improve loading screen
-- Draw priority screen
-- Sprites priority with background image will be determined by the priority screen
+## An AGI Interpreter For The CommanderX 16 Based On Meka By Lance Ewing
 
 **Note: This Project Is Under Construction And Is Not Ready For General Use**
+
+## See it running here on YouTube: https://youtu.be/yd_LWDhv8RI
+
+![image](https://github.com/wizardmanannan/CX16Agi/assets/58645812/ae1417c7-953b-4d7c-8789-2586a4abcd43)
+![image](https://github.com/wizardmanannan/CX16Agi/assets/58645812/186fa2c7-33c1-491f-af3a-dabc6c6d560d)
+![image](https://github.com/wizardmanannan/CX16Agi/assets/58645812/9e1d5f64-26f9-42b3-a706-09f752398636)
+  
+# CX 16 Iteration 6 Goals (Current)
+- Support more games than just King's Quest 3. There should be two more commerical ones and a free one
+
+# CX 16 Iteration 5 Goals (Completed)
+- Sprite support
+- Implement System Tick Replacing Inaccurate Inherited C One
 
 Here is a quick demonstration video: https://youtu.be/IDdc890T_oY 
 
@@ -80,13 +72,11 @@ Obvious things that need to be done:
 - Test more games, I have only tested one game thus far King's Quest III
 - I have been building this under Windows, and the deployment tool I threw together for the purpose is Windows dependent. A Linux build tool should be developed
 - String functions need to be uncommented out and retested
-- This code is currently slow. It takes 1:10 to execute the first intro screen of King's Quest III, when it should take 45 seconds
 - Import the rest of the MEKA code base. I have been importing it in a piecemeal fashion, and using a stub
-- Sprites and textbox, sound, and keyboard routines need to be implemented
+- Sound, and keyboard routines need to be implemented
 - Uncomment out routines for the support of AGI 3 games and put them into the BANKS
 - Review the implementation of dynamic memory as mentioned in memorymanager.h and the related C file. I am not a memory algorithm expert; there may be a much more efficient way of doing things. At least a review of the segment sizes I have chosen will be required.
 - Menu systems need to be built, one for game select (maybe BASIC) and another for the internal game menus
-- Implement a proper system tick function using IRQs. Currently I have using the C one inherited from Meka, which I don't think is very accurate on CX16.
 
 This project requires extensive use of Banked RAM, for both code and data as the Meka source code is quite large.
 
