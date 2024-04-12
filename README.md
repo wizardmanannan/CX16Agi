@@ -4,7 +4,17 @@
 
 **Note: This Project Is Under Construction And Is Not Ready For General Use**
 
-## See it running here on YouTube: https://youtu.be/yd_LWDhv8RI
+## See it running here on YouTube: 
+https://youtu.be/NFPKbLQBAso
+https://youtu.be/30RIplYHT70
+https://youtu.be/1QQPcwJxzV4
+https://youtu.be/yd_LWDhv8RI
+
+![image](https://github.com/wizardmanannan/CX16Agi/assets/58645812/3fdfeadf-2016-48f1-a2fb-0f577838c710)
+![image](https://github.com/wizardmanannan/CX16Agi/assets/58645812/3df45e82-c7d4-4b29-ae96-cdc5e560ff09)
+![image](https://github.com/wizardmanannan/CX16Agi/assets/58645812/13d73012-a379-47b4-b18f-87e80225c55e)
+
+
 
 ![image](https://github.com/wizardmanannan/CX16Agi/assets/58645812/ae1417c7-953b-4d7c-8789-2586a4abcd43)
 ![image](https://github.com/wizardmanannan/CX16Agi/assets/58645812/186fa2c7-33c1-491f-af3a-dabc6c6d560d)
