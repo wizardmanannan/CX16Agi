@@ -10,9 +10,9 @@ https://youtu.be/30RIplYHT70
 https://youtu.be/1QQPcwJxzV4
 https://youtu.be/yd_LWDhv8RI
 
-![image](https://github.com/wizardmanannan/CX16Agi/assets/58645812/3fdfeadf-2016-48f1-a2fb-0f577838c710)
-![image](https://github.com/wizardmanannan/CX16Agi/assets/58645812/3df45e82-c7d4-4b29-ae96-cdc5e560ff09)
-![image](https://github.com/wizardmanannan/CX16Agi/assets/58645812/13d73012-a379-47b4-b18f-87e80225c55e)
+![image](https://github.com/wizardmanannan/CX16Agi/assets/58645812/3fdfeadf-2016-48f1-a2fb-0f577838c710)  
+![image](https://github.com/wizardmanannan/CX16Agi/assets/58645812/3df45e82-c7d4-4b29-ae96-cdc5e560ff09)  
+![image](https://github.com/wizardmanannan/CX16Agi/assets/58645812/13d73012-a379-47b4-b18f-87e80225c55e)  
 
 
 
@@ -79,7 +79,6 @@ Thus far the project:
 - Prints the script executing to the screen. There is a DEBUG define variable in global.s which can be uncommented out which means that individual instructions and results are printed to screen but that is SLOW
 
 Obvious things that need to be done:
-- Test more games, I have only tested one game thus far King's Quest III
 - I have been building this under Windows, and the deployment tool I threw together for the purpose is Windows dependent. A Linux build tool should be developed
 - String functions need to be uncommented out and retested
 - Import the rest of the MEKA code base. I have been importing it in a piecemeal fashion, and using a stub
