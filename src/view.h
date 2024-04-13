@@ -112,7 +112,7 @@ typedef struct {
 #define SPRITE_SLOTS (VIEW_TABLE_SIZE)
 extern ViewTable viewtab[VIEW_TABLE_SIZE];
 
-extern View* loadedViews;
+extern View loadedViews[MAXVIEW];
 
 extern BITMAP* spriteScreen;
 

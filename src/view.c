@@ -46,8 +46,6 @@
 #define SPRITE_UPDATED_BUFFER_SIZE  VIEW_TABLE_SIZE * BYTES_PER_SPRITE_UPDATE * 2
 extern byte bESpritesUpdatedBuffer[SPRITE_UPDATED_BUFFER_SIZE];
 extern byte* bESpritesUpdatedBufferPointer;
-
-View* loadedViews = (View*)&BANK_RAM[LOADED_VIEW_START];
 BITMAP* spriteScreen;
 
 extern byte* var;
@@ -162,6 +160,11 @@ void setLoadedCel(Loop* loadedLoop, Cel* localCell, byte localCellNumber)
 #pragma bss-name (push, "BANKRAM09")
 ViewTable viewtab[VIEW_TABLE_SIZE];
 #pragma bss-name (pop)
+
+#pragma bss-name (push, "BANKRAM0D")
+View loadedViews[MAXVIEW];
+#pragma bss-name (pop)
+
 #pragma bss-name (push, "BANKRAM0E")
 ViewTableMetadata viewTableMetadata[SPRITE_SLOTS];
 
