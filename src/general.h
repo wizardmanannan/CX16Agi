@@ -51,4 +51,8 @@ typedef enum {
 #define VIEW_TABLE_SIZE  20  // Needs to be here and not in views to prevent circular depedencies
 #define VERA_ADDRESS_SIZE 3
 
+#define BANK_SIZE (0xBFFF-0xA000 + 1)
+#define BANK_MAX 0xA000
+#define BANK_MIN 0xBFFF
+
 #endif  /* _GENERAL_H_ */

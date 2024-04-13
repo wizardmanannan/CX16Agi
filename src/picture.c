@@ -12,6 +12,8 @@
 #define PIC_DEFAULT 15
 #define PRI_DEFAULT 4
 
+#define TOTAL_SIZE_OF_BITMAP_WIDTH_PREMULT 168 * 2
+
 //#define VERBOSE
 //#define VERBOSE_REL_DRAW
 //#define TEST_QUEUE
