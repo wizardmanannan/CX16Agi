@@ -30,10 +30,12 @@ byte avisDurgan[11] = { 0x41, 0x76, 0x69, 0x73, 0x20, 0x44, 0x75, 0x72, 0x67, 0x
 #define NO_BYTES_PER_MESSAGE 2
 #define FILE_NAME_SIZE 10
 
-AGIFilePosType* logdir = (AGIFilePosType*)&BANK_RAM[LOGDIR_START];
-AGIFilePosType* picdir = (AGIFilePosType*)&BANK_RAM[PICDIR_START];
-AGIFilePosType* viewdir = (AGIFilePosType*)&BANK_RAM[VIEWDIR_START];
-AGIFilePosType* snddir = (AGIFilePosType*)&BANK_RAM[SOUNDDIR_START];
+#pragma bss-name (push, "BANKRAM01")
+AGIFilePosType logdir[NO_RESOURCES];
+AGIFilePosType picdir[NO_RESOURCES];
+AGIFilePosType viewdir[NO_RESOURCES];
+AGIFilePosType snddir[NO_RESOURCES];
+#pragma bss-name (pop)
 
 int numLogics, numPictures, numViews, numSounds;
 boolean version3 = FALSE;

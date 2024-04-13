@@ -18,6 +18,8 @@
 #define  VIEW     2
 #define  SOUND    3
 
+#define NO_RESOURCES 255
+
 #define  EMPTY  0xFFFFF   /* Empty DIR entry */
 
 typedef struct {          /* AGI data file structure */
@@ -31,10 +33,10 @@ typedef struct {          /* AGI data file structure */
    byte* messageData;
 } AGIFile;
 
-extern AGIFilePosType* logdir;
-extern AGIFilePosType* picdir; 
-extern AGIFilePosType* viewdir;
-extern AGIFilePosType* snddir;
+extern AGIFilePosType logdir[NO_RESOURCES];
+extern AGIFilePosType picdir[NO_RESOURCES];
+extern AGIFilePosType viewdir[NO_RESOURCES];
+extern AGIFilePosType snddir[NO_RESOURCES];
 
 extern int numLogics, numPictures, numViews, numSounds;
 
