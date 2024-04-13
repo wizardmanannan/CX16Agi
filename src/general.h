@@ -55,4 +55,7 @@ typedef enum {
 #define BANK_MAX 0xA000
 #define BANK_MIN 0xBFFF
 
+#define MAX_MENUS 20
+#define MAX_MENU_CHILDREN (MAX_MENUS * MAX_MENUS)
+
 #endif  /* _GENERAL_H_ */

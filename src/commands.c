@@ -57,8 +57,11 @@ boolean oldQuit = FALSE;
 
 
 int numOfMenus = 0;
-MENU* the_menu = (MENU*)&BANK_RAM[MENU_START];
-MENU* the_menuChildren = (MENU*)&BANK_RAM[MENU_CHILD_START];
+
+#pragma bss-name (push, "BANKRAM0B")
+MENU the_menu[MAX_MENUS];
+MENU the_menuChildren[MAX_MENU_CHILDREN];
+#pragma bss-name (pop)
 
 int printCounter = 1;
 byte lastRoom = 0;
