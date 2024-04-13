@@ -24,7 +24,11 @@
 //#define VERBOSE_X_CORNER
 //#define VERBOSE_ABS_LINE
 boolean okToShowPic = FALSE;
-PictureFile* loadedPictures = (PictureFile*)&BANK_RAM[PICTURE_START];
+
+#pragma bss-name (push, "BANKRAM0D")
+PictureFile loadedPictures[MAX_RESOURCE_NUMBER];
+#pragma bss-name (pop)
+
 int screenMode;
 int min_print_line = 1, user_input_line = 23, status_line_num = 0;
 boolean statusLineDisplayed = FALSE, inputLineDisplayed = FALSE;

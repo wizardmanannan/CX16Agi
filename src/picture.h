@@ -44,7 +44,7 @@ typedef struct {
    byte bank; //6
 } PictureFile;
 
-extern PictureFile* loadedPictures;
+extern PictureFile loadedPictures[MAX_RESOURCE_NUMBER];
 
 extern boolean okToShowPic;
 extern int screenMode;

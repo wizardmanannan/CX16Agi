@@ -15,7 +15,6 @@
 #include "helpers.h"
 #include "irq.h"
 
-#define MAXVIEW  256
 #define MAX_JOINED_SPRITES 6
 #define MAX_SPRITES_ROW_OR_COLUMN_SIZE 4
 
@@ -112,7 +111,7 @@ typedef struct {
 #define SPRITE_SLOTS (VIEW_TABLE_SIZE)
 extern ViewTable viewtab[VIEW_TABLE_SIZE];
 
-extern View loadedViews[MAXVIEW];
+extern View loadedViews[MAX_RESOURCE_NUMBER];
 
 extern BITMAP* spriteScreen;
 
