@@ -1,6 +1,4 @@
 #include "memoryManager.h"
-MemoryArea* _memoryAreas;
-int _noSegments;
 //#define VERBOSE
 
 #ifdef _MSC_VER //Used for testing under windows
@@ -114,6 +112,11 @@ void bankedRamInit()
 #endif //  __CX16__
 #pragma code-name (push, "BANKRAM10")
 
+#pragma bss-name (push, "BANKRAM10")
+byte _allocationArray[NO_SEGMENTS];
+MemoryArea _memoryAreas[NO_SEGMENTS];
+#pragma bss-name (pop)
+
 void b10InitSegments(byte segOrder, byte noBanks, int segmentSize, byte noSegments, byte firstBank)
 {
 	if (segOrder > 0)
@@ -122,7 +125,7 @@ void b10InitSegments(byte segOrder, byte noBanks, int segmentSize, byte noSegmen
 		//printf("The address is %p \n", _segments[segOrder].start);
 	}
 	else {
-		_memoryAreas[segOrder].start = &BANK_RAM[ALLOCATION_ARRAY_START];
+		_memoryAreas[segOrder].start = &_allocationArray[0];
 	}
 
 	_memoryAreas[segOrder].firstBank = firstBank;
@@ -148,17 +151,13 @@ void b10InitDynamicMemory()
 #define BANK_RAM banked
 #endif // _MSC_VER
 
-	_noSegments = TINY_NO_SEGMENTS + EXTRA_SMALL_NO_SEGMENTS + SMALL_NO_SEGMENTS + MEDIUM_NO_SEGMENTS + LARGE_NO_SEGMENTS;
-
-	_memoryAreas = (MemoryArea*)&BANK_RAM[MEMORY_AREA_START];
-
 	b10InitSegments(TINY_SEG_ORDER, TINY_NO_BANKS, TINY_SIZE, TINY_NO_SEGMENTS, TINY_FIRST_BANK);
 	b10InitSegments(EXTRA_SMALL_SEG_ORDER, EXTRA_SMALL_NO_BANKS, EXTRA_SMALL_SIZE, EXTRA_SMALL_NO_SEGMENTS, EXTRA_SMALL_FIRST_BANK);
 	b10InitSegments(SMALL_SEG_ORDER, SMALL_NO_BANKS, SMALL_SIZE, SMALL_NO_SEGMENTS, SMALL_FIRST_BANK);
 	b10InitSegments(MEDIUM_SEG_ORDER, MEDIUM_NO_BANKS, MEDIUM_SIZE, MEDIUM_NO_SEGMENTS, MEDIUM_FIRST_BANK);
 	b10InitSegments(LARGE_SEG_ORDER, LARGE_NO_BANKS, LARGE_SIZE, LARGE_NO_SEGMENTS, LARGE_FIRST_BANK);
 
-	memset(_memoryAreas[0].start, 0, _noSegments);
+	memset(_memoryAreas[0].start, 0, NO_SEGMENTS);
 }
 
 //int getMemoryAreaAllocationStartIndex(int memoryArea)

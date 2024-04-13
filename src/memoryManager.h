@@ -22,6 +22,7 @@
 #define SMALL_NO_SEGMENTS 30
 #define MEDIUM_NO_SEGMENTS 12
 #define LARGE_NO_SEGMENTS 6
+#define NO_SEGMENTS (TINY_NO_SEGMENTS + EXTRA_SMALL_NO_SEGMENTS + SMALL_NO_SEGMENTS + MEDIUM_NO_SEGMENTS + LARGE_NO_SEGMENTS)
 
 //Warning: All of these sizes must be multiples of 8000, otherwise the program will crash
 #define TINY_SIZE  100
@@ -47,7 +48,6 @@
 
 #define NO_SIZES 5
 
-#define ALLOCATION_ARRAY_START 7971
 #define LOGDIR_START 186
 #define PICDIR_START 1462
 #define SOUNDDIR_START 2738
@@ -205,8 +205,6 @@ extern byte* banked;
 #define GOLDEN_RAM        ((unsigned char *)0x0400)
 #define GOLDEN_RAM_WORK_AREA        ((unsigned char *)0x0400 + LOCAL_WORK_AREA_START)
 #define GOLDEN_RAM_PARAMS_AREA &GOLDEN_RAM[PARAMETERS_START]
-
-extern int _noSegments;
 
 #ifndef _MSC_VER
 extern void _BANKRAM01_SIZE__[], _BANKRAM02_SIZE__[], _BANKRAM03_SIZE__[], _BANKRAM04_SIZE__[], _BANKRAM05_SIZE__[], _BANKRAM06_SIZE__[], _BANKRAM07_SIZE__[], _BANKRAM08_SIZE__[], _BANKRAM09_SIZE__[], _BANKRAM0A_SIZE__[], _BANKRAM0B_SIZE__[], _BANKRAM0C_SIZE__[], _BANKRAM0D_SIZE__[], _BANKRAM0E_SIZE__[], _BANKRAM0F_SIZE__[], _BANKRAM10_SIZE__[], _BANKRAM11_SIZE__[], _BANKRAMFLOOD_SIZE__[];
