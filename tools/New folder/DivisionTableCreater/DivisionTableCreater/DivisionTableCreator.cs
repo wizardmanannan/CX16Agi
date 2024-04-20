@@ -10,7 +10,7 @@ namespace DividingNumbers
             string divisionTableFilePrefix = "DIV";
             string divisionAddressTableFilePath = "DIVA.BIN";
             string divisionBankTableFilePath = "DIVB.BIN";
-            int currentBank = 0x1C;
+            int currentBank = 0x31;
             int currentByteCount = 0;
             int[] iGroupsPerFile = { 15, 15, 15, 15, 15, 15, 16, 16, 16, 16, 16 }; // 167 'i' groups across 11 files
 
