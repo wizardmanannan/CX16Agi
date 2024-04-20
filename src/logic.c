@@ -16,15 +16,13 @@
 #include "logic.h"
 #include "memoryManager.h"
 
-
-#pragma bss-name (push, "BANKRAM10")
 /* The logics array is the array that holds all the information about the
 ** logic files. A boolean flag determines whether the logic is loaded or
 ** not. If it isn't loaded, then the data is not in memory. */
-LOGICEntry logics[MAX_RESOURCE_NUMBER];
-LOGICFile logicFiles[MAX_RESOURCE_NUMBER];
-#pragma bss-name (pop)
+LOGICEntry* logics = (LOGICEntry*)&BANK_RAM[LOGIC_ENTRY_START];
 
+LOGICEntry** logicEntryAddressesLow = (LOGICEntry**)&BANK_RAM[LOGIC_ENTRY_ADDRESSES_START];
+LOGICEntry** logicEntryAddressesHigh = &((LOGICEntry**)&BANK_RAM[LOGIC_ENTRY_ADDRESSES_START])[128];
 void getLogicFile(LOGICFile* logicFile, byte logicFileNo)
 {
 	byte previousBank = RAM_BANK;
@@ -108,7 +106,7 @@ void b6InitLogics()
 		logicEntry.loaded = FALSE;
 		logicEntry.entryPoint = 0;
 		logicEntry.currentPoint = 0;
-		logicEntry.data = &logicFiles[i];
+		logicEntry.data = &((LOGICFile*)&BANK_RAM[LOGIC_FILE_START])[i];
 		setLogicEntry(&logicEntry, i);
 #ifdef VERBOSE
 		printf("%d: currentPoint: %p, data: %p, dataBank: %d, loaded %d  &logics[i] %p\n",i, logicEntry.currentPoint, logicEntry.data, logicEntry.dataBank, logicEntry.loaded, &logics[i]);

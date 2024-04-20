@@ -26,7 +26,7 @@ typedef struct {
 	byte dataBank; //7
 } LOGICEntry;
 
-extern LOGICEntry logics[MAX_RESOURCE_NUMBER];
+extern LOGICEntry* logics;
 void b6InitLogics();
 
 #pragma wrapped-call (push, trampoline, LOGIC_CODE_BANK)
