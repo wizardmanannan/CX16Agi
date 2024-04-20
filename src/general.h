@@ -58,6 +58,4 @@ typedef enum {
 #define MAX_MENUS 20
 #define MAX_MENU_CHILDREN (MAX_MENUS * MAX_MENUS)
 
-#define MAX_RESOURCE_NUMBER 256
-
 #endif  /* _GENERAL_H_ */

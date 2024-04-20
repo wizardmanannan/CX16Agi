@@ -162,14 +162,14 @@ ViewTable viewtab[VIEW_TABLE_SIZE];
 #pragma bss-name (pop)
 
 #pragma bss-name (push, "BANKRAM0D")
-View loadedViews[MAX_RESOURCE_NUMBER];
+View loadedViews[MAXVIEW];
 #pragma bss-name (pop)
 
 #pragma bss-name (push, "BANKRAM0E")
 ViewTableMetadata viewTableMetadata[SPRITE_SLOTS];
 
 #define VIEWNO_TO_METADATA_NO_SET SPRITE_SLOTS + 1
-byte viewTabNoToMetaData[MAX_RESOURCE_NUMBER];
+byte viewTabNoToMetaData[MAXVIEW];
 
 
 long nextSpriteAttribute;
@@ -282,7 +282,7 @@ void bEResetViewTableMetadata()
 		viewTableMetadata[i].inactiveBank = NULL;
 	}
 
-	memset(&viewTabNoToMetaData[0], VIEWNO_TO_METADATA_NO_SET, MAX_RESOURCE_NUMBER);
+	memset(&viewTabNoToMetaData[0], VIEWNO_TO_METADATA_NO_SET, MAXVIEW);
 }
 void bEResetSpritePointers()
 {
