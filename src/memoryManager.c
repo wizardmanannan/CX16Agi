@@ -1,5 +1,5 @@
 #include "memoryManager.h"
-//#define VERBOSE
+#define VERBOSE
 #define boolean unsigned char
 
 #ifdef  __CX16__
@@ -14,8 +14,6 @@ void bankedRamInit()
 	int i, j = 0;
 	FILE* fp;
 	char fileName[FILE_NAME_LENGTH];
-	char openFloodFileMessage[FLOOD_MESSAGE_LENGTH];
-	char* openFloodFileMessageString = "Opening flood file %d of %d";
 
 	unsigned char fileByte;
 	int bankRamSizes[NO_CODE_BANKS] = {
@@ -76,6 +74,8 @@ void bankedRamInit()
 				fgetc(fp);
 			}
 
+			printf("the bank is %d\n", RAM_BANK);
+
 			fread(&BANK_RAM[0], 1, bankRamSizes[i], fp);
 
 			fclose(fp);
@@ -87,29 +87,9 @@ void bankedRamInit()
 		}
 	}
 
-	for (i = 0; i < NO_FLOOD_BANKS; i++)
-	{
-		if ((fp = fopen(FLOODBANKFILENAME, "rb")) != NULL) {
-			sprintf(openFloodFileMessage, openFloodFileMessageString, i + 1, NO_FLOOD_BANKS);
-			printf("%s\n", openFloodFileMessage);
-			RAM_BANK = FIRST_FLOOD_BANK + i;
-			fread(&BANK_RAM[0], 1, 1, fp);
-		}
-		else {
-			printf("Cannot open flood bank file");
-		}
-		fclose(fp);
-	}
-
 	RAM_BANK = previousRamBank;
 }
 
-//#pragma bss-name (push, "BANKRAM10")
-//void Dummy2()
-//{
-//
-//}
-//#pragma bss-name (pop)
 
 #endif //  __CX16__
 #pragma code-name (push, "BANKRAM10")
@@ -138,24 +118,11 @@ void b10InitDynamicMemory()
 
 #pragma code-name (pop);
 
-#pragma code-name (push, "BANKRAM07")
-byte* b10BankedAlloc(int size, byte* bank)
-{
-
-
-}
-
-extern long opCounter;
-boolean b10BankedDealloc(byte* ptr, byte bank)
-{
-	
-}
-#pragma code-name (pop)
-
 void memoryMangerInit()
 {
 	byte previousRamBank = RAM_BANK;
 #ifdef __CX16__
+	asm("stp");
 	bankedRamInit();
 #endif // __CX16__
 
