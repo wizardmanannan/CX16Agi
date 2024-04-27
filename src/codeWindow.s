@@ -26,15 +26,10 @@ codeWindowInvalid: .byte TRUE
 .endif
 .endmacro
 
-; Load code window address into the accumulator and store it in ZP_PTR_CODE_WIN + 1.
-lda codeWindowAddress + 1
-sta ZP_PTR_CODE_WIN + 1
-rts
-
 ; Macro for loading code from the window without incrementing.
 .macro LOAD_CODE_WIN_CODE
         ldy cwCurrentCode
-        lda (ZP_PTR_CODE_WIN),y
+        lda codeWindow,y
 .endmacro
 
 ; Macro for incrementing code and refreshing the code window if necessary.
@@ -142,15 +137,6 @@ _incCodeBy:
 
     INC_CODE_BY @jumpAmount ; Increment code pointer by jump amount
     rts                     ; Return from subroutine
-
-.SEGMENT "BANKRAM06"
-b6CodeWindowInit:
-lda codeWindowAddress      ; Load the code window address
-sta ZP_PTR_CODE_WIN        ; Store it in ZP_PTR_CODE_WIN
-
-lda codeWindowAddress + 1  ; Load the high byte of the code window address
-sta ZP_PTR_CODE_WIN + 1    ; Store it in ZP_PTR_CODE_WIN + 1
-rts                         ; Return from subroutine
 
 .SEGMENT "BANKRAM05"
 .ifdef DEBUG
