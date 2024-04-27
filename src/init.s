@@ -26,9 +26,7 @@ _b6InitInterpreter:
     stz ZP_PTR_B2 + 1
     stz ZP_PTR_DISP
     stz ZP_PTR_DISP + 1
-
-    jsr b6CodeWindowInit
-    
+   
     lda _logicEntryAddressesLow
     sta ZP_PTR_PLF_LOW
     lda _logicEntryAddressesLow + 1
