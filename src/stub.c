@@ -133,16 +133,6 @@ void discardObjects() {
 int numInputWords, inputWords[10];
 char wordText[10][80];
 
-void loadWords()
-{
-
-}
-
-void discardWords()
-{
-
-}
-
 //Sound
 int soundEndFlag;
 

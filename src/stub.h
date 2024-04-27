@@ -297,10 +297,6 @@ void lookupWords(char* inputLine);
 //Object
 void loadObjectFile();
 
-//Words
-void loadWords();
-void discardWords();
-
 //Unknown 
 extern byte* key;
 

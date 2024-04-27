@@ -20,7 +20,7 @@
 #include "lruCache.h"
 #include "debugHelper.h"
 //#include "object.h"
-//#include "words.h"
+#include "words.h"
 #include "picture.h"
 #include "irq.h"
 #include "textLayer.h"
@@ -226,7 +226,7 @@ void b6Timing_proc()
 void b6Closedown()
 {
     discardObjects();
-    discardWords();
+    b1DiscardWords();
 }
 
 extern void b6InitGraphics();
@@ -271,7 +271,7 @@ void b6Initialise()
     b9InitObjects();
 
     loadObjectFile();
-    loadWords();
+    b1LoadWords();
     initEvents();
     b6InitInterpreter();
     b6InitIrq();
