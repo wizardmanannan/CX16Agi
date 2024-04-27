@@ -20,22 +20,22 @@ REENABLE_INTERRUPTS
 .local @waitForIrq
 .local @end
 
-sei
-lda vSyncToCheck
-ldx vSyncToCheck + 1
+; sei
+; lda vSyncToCheck
+; ldx vSyncToCheck + 1
 
-@waitForIrq:
-REENABLE_INTERRUPTS
-wai
+; @waitForIrq:
+; REENABLE_INTERRUPTS
+; wai
 
-sei
-cmp _vSyncCounter
-bne @end
-cpx _vSyncCounter + 1
-beq @waitForIrq
+; sei
+; cmp _vSyncCounter
+; bne @end
+; cpx _vSyncCounter + 1
+; beq @waitForIrq
 
-@end:
-REENABLE_INTERRUPTS
+; @end:
+; REENABLE_INTERRUPTS
 .endmacro
 
 ;Handlers
@@ -163,21 +163,21 @@ _displayTextAddressToCopyToHigh: .word $0
 _currentTextBuffer: .word $0
 .segment "BANKRAM06"
 _b6InitIrq:
- ; backup default RAM IRQ vector
-   lda IRQVec
-   sta default_irq_vector
-   lda IRQVec+1
-   sta default_irq_vector+1
+;  ; backup default RAM IRQ vector
+;    lda IRQVec
+;    sta default_irq_vector
+;    lda IRQVec+1
+;    sta default_irq_vector+1
 
-   ; overwrite RAM IRQ vector with custom handler address
-   sei ; disable IRQ while vector is changing
-   lda #<custom_irq_handler
-   sta IRQVec
-   lda #>custom_irq_handler
-   sta IRQVec+1
-   lda #VSYNC_BIT ; make VERA only generate VSYNC IRQs
-   sta VERA_ien
-   REENABLE_INTERRUPTS ; enable IRQ now that vector is properly set
+;    ; overwrite RAM IRQ vector with custom handler address
+;    sei ; disable IRQ while vector is changing
+;    lda #<custom_irq_handler
+;    sta IRQVec
+;    lda #>custom_irq_handler
+;    sta IRQVec+1
+;    lda #VSYNC_BIT ; make VERA only generate VSYNC IRQs
+;    sta VERA_ien
+;    REENABLE_INTERRUPTS ; enable IRQ now that vector is properly set
 rts
 
 
@@ -229,6 +229,8 @@ _vSyncCounter: .word $0
 debugVSyncCounter: .word $0
 
 custom_irq_handler:
+jmp (default_irq_vector)
+
 lda RAM_BANK
 sta @previousRamBank 
 

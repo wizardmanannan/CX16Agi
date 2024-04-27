@@ -520,40 +520,40 @@ void b2Draw_pic() // 1, 0x80
 	PictureFile loadedPicture;
 	pNum = var[loadAndIncWinCode()];
 
-	getLoadedPicture(&loadedPicture, pNum);
+	//getLoadedPicture(&loadedPicture, pNum);
 
-	//picFNum = pNum;  // Debugging. Delete at some stage!!!
+	////picFNum = pNum;  // Debugging. Delete at some stage!!!
 
-	b11DrawPic(loadedPicture.data, loadedPicture.size, TRUE, pNum);
+	//b11DrawPic(loadedPicture.data, loadedPicture.size, TRUE, pNum);
 
 	return;
 }
 
 void b2Show_pic() // 0, 0x00 
 {
-	okToShowPic = TRUE;   /* Says draw picture with next object update */
-	/*stretch_blit(picture, working_screen, 0, 0, 160, 168, 0, 20, 640, 336);*/
-	b6ShowPicture();
+	//okToShowPic = TRUE;   /* Says draw picture with next object update */
+	///*stretch_blit(picture, working_screen, 0, 0, 160, 168, 0, 20, 640, 336);*/
+	//b6ShowPicture();
 
 	return;
 }
 
 void b2Discard_pic() // 1, 0x80 
 {
-	b6DiscardPictureFile(var[loadAndIncWinCode()]);
+	//b6DiscardPictureFile(var[loadAndIncWinCode()]);
 
 	return;
 }
 
 void b2Overlay_pic() // 1, 0x80 
 {
-	int pNum;
-	PictureFile loadedPicture;
-	pNum = var[loadAndIncWinCode()];
+	//int pNum;
+	//PictureFile loadedPicture;
+	//pNum = var[loadAndIncWinCode()];
 
-	getLoadedPicture(&loadedPicture, pNum);
+	//getLoadedPicture(&loadedPicture, pNum);
 
-	b11DrawPic(loadedPicture.data, loadedPicture.size, FALSE, pNum);
+	//b11DrawPic(loadedPicture.data, loadedPicture.size, FALSE, pNum);
 
 	return;
 }

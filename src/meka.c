@@ -155,6 +155,9 @@ void b6Interpret()
     ViewTable localViewtab;
     LOGICFile logicFile;
     LOGICEntry logicEntry;
+    
+    printf("interpret start\n");
+    
     flag[2] = FALSE;   //The player has issued a command line
     flag[4] = FALSE;   //The 'said' command has accepted the input
     pollKeyboard();
@@ -277,9 +280,9 @@ void b6Initialise()
     b6InitIrq();
     bEInitSpriteMemoryManager();
 
-    asm("sei");
-    b6InitGraphics();
-    REENABLE_INTERRUPTS();
+    //asm("sei");
+    //b6InitGraphics();
+    //REENABLE_INTERRUPTS();
 
     horizon = 36;
 
@@ -310,16 +313,17 @@ void main()
 
     RAM_BANK = MEKA_BANK;
     b6Initialise();
+    printf("init done");
 
     while (TRUE) {
         /* Cycle initiator. Controlled by delay variable (var[10). */
-        if (counter >= var[10]) {
-#ifdef VERBOSE
+        //if (counter >= var[10]) {
+//#ifdef VERBOSE
             printf("Interpret Runs\n");
-#endif // VERBOSE
+//#endif // VERBOSE
             b6Interpret();
             counter = 0;
-        }
+        //}
         b6CheckTimer(TIMER_WAIT_MS);
     }
 

@@ -676,6 +676,8 @@ boolean agiBlit(ViewTable* localViewTab, byte entryNum, boolean disableInterupts
 	VeraSpriteAddress* loopVeraAddresses;
 	VeraSpriteAddress loopVeraAddress; //Put out here so it can be accessed by inline assembly without going via a C variable
 
+	return 1;
+
 	previousBank = RAM_BANK;
 
 	RAM_BANK = SPRITE_METADATA_BANK;
@@ -1541,6 +1543,8 @@ void b9AddToPic(int vNum, int lNum, int cNum, int x, int y, int pNum, int bCol)
 	View localView;
 	Loop localLoop;
 	Cel localCel;
+
+	return;
 
 	getLoadedView(&localView, vNum);
 	getLoadedLoop(&localView, &localLoop, lNum);

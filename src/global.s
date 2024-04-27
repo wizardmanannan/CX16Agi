@@ -28,7 +28,7 @@ ZP_PTR_DISP  = $F5
 
 ;System Reserved 82 and 83
 ; Set up zero page pointer (ZP_PTR_CODE_WIN) and other variables related to code window management.
-ZP_PTR_CODE_WIN = $84 ;Zero Pointer Page Pointer To Code Window
+ZP_PTR_CODE_WIN = $e1 ;Zero Pointer Page Pointer To Code Window
 
 
 ZP_TMP_2 = $AD

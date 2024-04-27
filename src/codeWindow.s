@@ -33,6 +33,8 @@ rts
 
 ; Macro for loading code from the window without incrementing.
 .macro LOAD_CODE_WIN_CODE
+        STOP_AT_FUNC
+        
         ldy cwCurrentCode
         lda (ZP_PTR_CODE_WIN),y
 .endmacro

@@ -1009,6 +1009,8 @@ void b11DrawPic(byte* bankedData, int pLen, boolean okToClearScreen, byte picNum
 	int* sPosBank = (int*)ZP_PTR_TMP_3;
 	int* rPosBank = (int*)ZP_PTR_TMP_4;
 
+	return;
+
 	*zpPremultTable = &bitmapWidthPreMult[0];
 	*zpFloodQueueStore = (int*)FLOOD_QUEUE_START;
 	*zpFloodQueueServe = (int*)FLOOD_QUEUE_START;

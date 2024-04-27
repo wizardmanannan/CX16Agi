@@ -353,6 +353,8 @@ void b3DisplayMessageBox(char* message, byte messageBank, byte row, byte col, by
 	byte numberOfLines = 1;
 	size_t maxMessageSize = boxWidth ? TEXTBUFFER_SIZE : TEXTBUFFER_SIZE * 2; //If there is no box, we can overflow into buffer 2 for a bigger message.
 	
+	return;
+
 	currentTextBuffer = textBuffer1;
 
 	lastBoxStartLine = row;

@@ -9,9 +9,9 @@ extern boolean hasEnteredNewRoom, exitAllLogics;
 extern int currentLog;
 
 long opCounter = 1;
-long opStopAt = 0;
+long opStopAt = 500;
 long opExitAt = 0;
-long opStartPrintingAt = 0;
+long opStartPrintingAt = 1;
 boolean opStopEvery = FALSE;
 int _clockBefore = 0;
 
@@ -61,7 +61,7 @@ void stopAtQueueAction()
 
 void stopAtFunc()
 {
-	if (opCounter >= 2361)
+	if (opCounter >= 500)
 	{
 		asm("stp"); //Two pointless nops follow in order to make it clear where we have stopped
 		asm("nop");
