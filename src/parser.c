@@ -127,38 +127,42 @@ void b7GetString(char* promptStr, byte promptStringBank, char* returnStr, byte r
     sprintf(b7OutputString, "%s%s%c", b7Temp, b7CurrentInputStr, cursorChar);
     drawBigString(screen, b7OutputString, gx, gy, 8, 1);
 
-    while (stillInputing) {
-        ch = readkey();
-        if ((ch >> 8) == 0x1C) ch |= 0x0D; /* Handle keypad ENTER */
-        switch (ch & 0xff) {
-        case 0:     /* Ignore these when building input string */
-        case 0x09:
-        case 0x1B:
-            break;
-        case 0x0D:  /* ENTER */
-            strcpy(returnStr, b7CurrentInputStr);
-            drawBigString(screen, "                                       ", gx, gy, 7, 0);
-            while (key[KEY_ENTER]) { /* Wait until ENTER released */ }
-            return;
-        case 0x08: /* Backspace */
-            if (strPos > 0) {
-                strPos--;
+    do {
+        GET_IN(ch);
+
+        if (ch)
+        {
+            if ((ch >> 8) == 0x1C) ch |= 0x0D; /* Handle keypad ENTER */
+            switch (ch & 0xff) {
+            case 0:     /* Ignore these when building input string */
+            case 0x09:
+            case 0x1B:
+                break;
+            case 0x0D:  /* ENTER */
+                strcpy(returnStr, b7CurrentInputStr);
+                drawBigString(screen, "                                       ", gx, gy, 7, 0);
+                while (key[KEY_ENTER]) { /* Wait until ENTER released */ }
+                return;
+            case 0x08: /* Backspace */
+                if (strPos > 0) {
+                    strPos--;
+                    b7CurrentInputStr[strPos] = 0;
+                    sprintf(b7OutputString, "%s%s%c ", b7Temp, b7CurrentInputStr, cursorChar);
+                    drawBigString(screen, b7OutputString, gx, gy, 8, 1);
+                }
+                break;
+            case 0x0A: break;
+            default:
+                if (strPos == l) break;
+                b7CurrentInputStr[strPos] = (ch & 0xff);
+                strPos++;
                 b7CurrentInputStr[strPos] = 0;
-                sprintf(b7OutputString, "%s%s%c ", b7Temp, b7CurrentInputStr, cursorChar);
+                sprintf(b7OutputString, "%s%s%c", b7Temp, b7CurrentInputStr, cursorChar);
                 drawBigString(screen, b7OutputString, gx, gy, 8, 1);
+                break;
             }
-            break;
-        case 0x0A: break;
-        default:
-            if (strPos == l) break;
-            b7CurrentInputStr[strPos] = (ch & 0xff);
-            strPos++;
-            b7CurrentInputStr[strPos] = 0;
-            sprintf(b7OutputString, "%s%s%c", b7Temp, b7CurrentInputStr, cursorChar);
-            drawBigString(screen, b7OutputString, gx, gy, 8, 1);
-            break;
         }
-    }
+    } while (ch);
 }
 
 /* used by get.string and get.num */
@@ -193,77 +197,81 @@ void b7PollKeyboard()
         drawBigString(screen, "                                       ", gx, gy, 7, 0);
     }
 
-    while (keypressed()) {
-        haveKey = TRUE;
-        ch = readkey();
-        lastKey = (ch >> 8);  /* Store key value for have.key() cmd */
-        if ((ch >> 8) == 0x1C) ch |= 0x0D; /* Handle keypad ENTER */
-        b7KeyState[ch >> 8] = 1;     /* Mark scancode as activated */
-        /* if ((ch & 0x00) != 0x00) asciiState[ch & 0xff] = 1; */
-        b7AsciiState[ch & 0xff] = 1;
+    do {
+        GET_IN(ch);
 
-        //if ((ch >> 8) == KEY_F11) saveSnapShot();
+        if (ch) {
+            haveKey = TRUE;
 
-        /* Handle arrow keys */
-        if (controlMode == PLAYER_CONTROL) {
-            switch (ch >> 8) {
-            case KEY_UP: b7HandleDirection(1); return;
-            case KEY_PGUP: b7HandleDirection(2); return;
-            case KEY_RIGHT: b7HandleDirection(3); return;
-            case KEY_PGDN: b7HandleDirection(4); return;
-            case KEY_DOWN: b7HandleDirection(5); return;
-            case KEY_END: b7HandleDirection(6); return;
-            case KEY_LEFT: b7HandleDirection(7); return;
-            case KEY_HOME: b7HandleDirection(8); return;
-            }
-        }
+            lastKey = (ch >> 8);  /* Store key value for have.key() cmd */
+            if ((ch >> 8) == 0x1C) ch |= 0x0D; /* Handle keypad ENTER */
+            b7KeyState[ch >> 8] = 1;     /* Mark scancode as activated */
+            /* if ((ch & 0x00) != 0x00) asciiState[ch & 0xff] = 1; */
+            b7AsciiState[ch & 0xff] = 1;
 
-        if (inputLineDisplayed) {
-            switch (ch & 0xff) {
-            case 0:
-            case 3:
-                return;
-            case 0x09:  /* Ignore these when building input string */
-            case 0x1B:
-                /* closedown(); */
-                break;
-            case 0x0D:  /* ENTER */
-                b7LookupWords(b7CurrentInputStr);
-                b7CurrentInputStr[0] = 0;
-                strPos = 0;
-                drawBigString(screen, "                                       ", gx, gy, 7, 0);
-                sprintf(b7OutputString, "%s%s%c", b7Temp, b7CurrentInputStr, cursorChar);
-                drawBigString(screen, b7OutputString, gx, gy, 8, 1);
-                while (key[KEY_ENTER]) { /* Wait until ENTER released */ }
-                strcpy(b7LastLine, b7CurrentInputStr);
-                break;
-            case 0x08:
-                if (ch == 0x0E08) {   /* Backspace */
-                    if (strPos > 0) {
-                        strPos--;
-                        b7CurrentInputStr[strPos] = 0;
-                        sprintf(b7OutputString, "%s%s%c ", b7Temp, b7CurrentInputStr, cursorChar);
-                        drawBigString(screen, b7OutputString, gx, gy, 8, 1);
-                        //drawBigString(screen, " ", (strPos*16), 448, 7, 0);
-                    }
+            //if ((ch >> 8) == KEY_F11) saveSnapShot();
+
+            /* Handle arrow keys */
+            if (controlMode == PLAYER_CONTROL) {
+                switch (ch >> 8) {
+                case KEY_UP: b7HandleDirection(1); return;
+                case KEY_PGUP: b7HandleDirection(2); return;
+                case KEY_RIGHT: b7HandleDirection(3); return;
+                case KEY_PGDN: b7HandleDirection(4); return;
+                case KEY_DOWN: b7HandleDirection(5); return;
+                case KEY_END: b7HandleDirection(6); return;
+                case KEY_LEFT: b7HandleDirection(7); return;
+                case KEY_HOME: b7HandleDirection(8); return;
                 }
-                else
+            }
+
+            if (inputLineDisplayed) {
+                switch (ch & 0xff) {
+                case 0:
+                case 3:
                     return;
-                break;
-            case 0x0A: break;
-            default:
-                b7CurrentInputStr[strPos] = (ch & 0xff);
-                strPos++;
-                b7CurrentInputStr[strPos] = 0;
-                sprintf(b7OutputString, "%s%s%c", b7Temp, b7CurrentInputStr, cursorChar);
-                drawBigString(screen, b7OutputString, gx, gy, 8, 1);
-                break;
+                case 0x09:  /* Ignore these when building input string */
+                case 0x1B:
+                    /* closedown(); */
+                    break;
+                case 0x0D:  /* ENTER */
+                    b7LookupWords(b7CurrentInputStr);
+                    b7CurrentInputStr[0] = 0;
+                    strPos = 0;
+                    drawBigString(screen, "                                       ", gx, gy, 7, 0);
+                    sprintf(b7OutputString, "%s%s%c", b7Temp, b7CurrentInputStr, cursorChar);
+                    drawBigString(screen, b7OutputString, gx, gy, 8, 1);
+                    while (key[KEY_ENTER]) { /* Wait until ENTER released */ }
+                    strcpy(b7LastLine, b7CurrentInputStr);
+                    break;
+                case 0x08:
+                    if (ch == 0x0E08) {   /* Backspace */
+                        if (strPos > 0) {
+                            strPos--;
+                            b7CurrentInputStr[strPos] = 0;
+                            sprintf(b7OutputString, "%s%s%c ", b7Temp, b7CurrentInputStr, cursorChar);
+                            drawBigString(screen, b7OutputString, gx, gy, 8, 1);
+                            //drawBigString(screen, " ", (strPos*16), 448, 7, 0);
+                        }
+                    }
+                    else
+                        return;
+                    break;
+                case 0x0A: break;
+                default:
+                    b7CurrentInputStr[strPos] = (ch & 0xff);
+                    strPos++;
+                    b7CurrentInputStr[strPos] = 0;
+                    sprintf(b7OutputString, "%s%s%c", b7Temp, b7CurrentInputStr, cursorChar);
+                    drawBigString(screen, b7OutputString, gx, gy, 8, 1);
+                    break;
+                }
+            }
+            else {
+                drawBigString(screen, "                                       ", gx, gy, 7, 0);
             }
         }
-        else {
-            drawBigString(screen, "                                       ", gx, gy, 7, 0);
-        }
-    }
+    } while (ch);
 }
 
 /***************************************************************************

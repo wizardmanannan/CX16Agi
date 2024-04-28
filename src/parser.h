@@ -10,6 +10,7 @@
 #include "view.h"
 #include "picture.h"
 #include "words.h"
+#include "kernal.h"
 
 #ifndef _PARSER_H_
 #define _PARSER_H_

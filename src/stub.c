@@ -21,16 +21,6 @@ void show_mouse(BITMAP* bmp) {
 
 }
 
-int readkey()
-{
-	return 0;
-}
-
-int keypressed()
-{
-	return 0;
-}
-
 void blit(BITMAP* source, BITMAP* dest, int source_x, int source_y, int dest_x, int dest_y, int width, int height)
 {
 }

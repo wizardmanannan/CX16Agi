@@ -3,6 +3,7 @@
 #include "general.h"
 #include "memoryManager.h"
 #include <stdarg.h>
+#include "kernal.h"
 #ifdef  __CX16__
 #include <cx16.h>
 #endif
@@ -55,6 +56,7 @@ extern void trampoline();
 
 #pragma wrapped-call (push, trampoline, HELPERS_BANK)
 void b5RefreshBuffer(BufferStatus* bufferStatus);
+void b5WaitOnKey();
 #pragma wrapped-call (pop)
 
 

@@ -2960,10 +2960,11 @@ void bDShowObjectState(int objNum)
 	char* tempStr = (char*)&GOLDEN_RAM[LOCAL_WORK_AREA_START];
 	BITMAP* temp = create_bitmap(640, 480);
 	ViewTable localViewtab;
+	byte ch;
 
 	getViewTab(&localViewtab, objNum);
 
-	while (keypressed()) { /* Wait */ }
+	b5WaitOnKey();
 
 	show_mouse(NULL);
 	blit(screen, temp, 0, 0, 0, 0, 640, 480);
@@ -3045,7 +3046,7 @@ void bDShowObjectState(int objNum)
 	}
 	textout(screen, font, tempStr, 18, 198, 8);
 
-	while (!keypressed()) { /* Wait */ }
+	b5WaitOnKey();
 
 	blit(temp, screen, 0, 0, 0, 0, 640, 480);
 	destroy_bitmap(temp);

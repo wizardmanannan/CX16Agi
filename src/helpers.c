@@ -14,6 +14,15 @@ long _assmLong = 0; //Used as a value to load things in and out of the registers
 boolean enableHelpersDebugging = FALSE; //This is so you can debug helpers at a certain area and not be bogged down when they are called elsewhere.
 
 #pragma code-name (push, "BANKRAM05")
+void b5WaitOnKey()
+{
+	byte ch;
+
+	do {
+		GET_IN(ch);
+	} while (!ch);
+}
+
 void b5RefreshBuffer(BufferStatus* bufferStatus)
 {
 	BufferStatus localBufferStatus;
