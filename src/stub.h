@@ -14,7 +14,6 @@ extern void stretch_sprite(BITMAP* bmp, BITMAP* sprite, int x, int y, int w, int
 extern void clear_to_color(BITMAP* bitmap, int color);
 extern void stretch_blit(BITMAP* s, BITMAP* d, int s_x, int s_y, int s_w, int s_h, int d_x, int d_y, int d_w, int d_h);
 
-int keypressed();
 extern BITMAP* create_bitmap(int width, int height);
 extern void rect(BITMAP* bmp, int x1, int y1, int x2, int y2, int color);
 
@@ -27,8 +26,6 @@ typedef struct MENU
 	int flags;                    /* flags about the menu state */
 	void* dp;                     /* any data the menu might require */
 } MENU;
-
-int readkey();
 
 #define DIGI_VOICES           32       /* Theoretical maximums: */
 #define MIDI_VOICES           32       /* actual drivers may not be */

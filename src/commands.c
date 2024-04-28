@@ -358,11 +358,13 @@ boolean b1Controller() // 1, 0x00
 
 boolean b1Have_key() // 0, 0x00
 {
+	byte ch;
 	/* return (TRUE); */
 	/* return (haveKey); */
 	/* return (keypressed() || haveKey); */
 	if (haveKey && key[lastKey]) return TRUE;
-	return keypressed();
+	GET_IN(ch);
+	return ch;
 }
 
 boolean b1Said()
@@ -2024,7 +2026,8 @@ void b4Quit() // 1, 0x00                     /* 0 args for AGI version 2_089 */
 	else { /* Prompt for exit */
 		printInBoxBig("Press ENTER to quit.\nPress ESC to keep playing.", -1, -1, 30);
 		do {
-			ch = (readkey() >> 8);
+			GET_IN(ch);
+			ch >> 8;
 		} while ((ch != KEY_ESC) && (ch != KEY_ENTER));
 		if (ch == KEY_ENTER) exit(0);
 		b6ShowPicture();
@@ -2180,7 +2183,9 @@ void b4Clear_text_rect() // 5, 0x00
 
 void b4WaitKeyRelease()
 {
-	while (keypressed()) { /* Wait */ }
+	byte ch;
+
+	b5WaitOnKey();
 	return;
 }
 
