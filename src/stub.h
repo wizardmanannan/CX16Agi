@@ -96,9 +96,6 @@ extern int soundEndFlag;
 //View
 
 //Logic 
-extern byte directions[9];
-
-
 #define SCANCODE_TO_KEY(c)       (((c)<<8) + (int)key_ascii_table[c])
 #define SCANCODE_TO_CAPS(c)      (((c)<<8) + (int)key_capslock_table[c])
 #define SCANCODE_TO_SHIFT(c)     (((c)<<8) + (int)key_shift_table[c])
@@ -268,31 +265,14 @@ extern void drawChar(BITMAP* scn, byte charNum, int x, int y, int foreColour, in
 #endif
 
 //Parser
-boolean said(byte** data);
-
-void getString(char* promptStr, char* returnStr, int x, int y, int l);
-
-extern char cursorChar;
+boolean b7Said(byte** data);
 
 #define  NO_EVENT         0
 #define  ASCII_KEY_EVENT  1
 #define  SCAN_KEY_EVENT   2
 #define  MENU_EVENT       3
 
-extern int numInputWords, inputWords[];
-extern char wordText[10][80];
-
-extern byte keyState[], asciiState[];
-extern int lastKey;
-
-
-extern byte directions[9];
-extern boolean haveKey;
-
-void pollKeyboard();
-void initEvents();
-
-void lookupWords(char* inputLine);
+void b7LookupWords(char* inputLine);
 
 //Object
 void loadObjectFile();

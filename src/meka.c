@@ -27,13 +27,13 @@
 #include "loadingScreen.h"
 #include "structMetadata.h"
 #include "floatDivision.h"
-//#include "parser.h"
+#include "parser.h"
 //#include "sound.h"
 
 boolean stillRunning = TRUE, hasEnteredNewRoom = FALSE, exitAllLogics = FALSE;
 byte* var = (byte*)&GOLDEN_RAM[VARS_AREA_START];
 boolean* flag = &GOLDEN_RAM[FLAGS_AREA_START];
-char string[12][40];
+char string[12][40]; //TODO: Move onto a bank
 byte horizon;
 
 #define  PLAYER_CONTROL   0
@@ -116,7 +116,7 @@ void b6NewRoom()
     flag[5] = 1;
     score = var[3];
 
-    memset(directions, 0, 9);
+    memsetBanked(directions, 0, 9, WORD_BANK);
     /* rectfill(screen, 0, 20+(22*16), 639, 463, 0); */   /* Clear screen */
     b6SetAndWaitForIrqState(CLEAR);
 #ifdef VERBOSE
@@ -157,7 +157,7 @@ void b6Interpret()
     LOGICEntry logicEntry;
     flag[2] = FALSE;   //The player has issued a command line
     flag[4] = FALSE;   //The 'said' command has accepted the input
-    pollKeyboard();
+    b7PollKeyboard();
     //if (controlMode == PROGRAM_CONTROL)
     //   dirnOfEgo = var[6];
     //else
@@ -226,7 +226,7 @@ void b6Timing_proc()
 void b6Closedown()
 {
     discardObjects();
-    b1DiscardWords();
+    b7DiscardWords();
 }
 
 extern void b6InitGraphics();
@@ -271,8 +271,8 @@ void b6Initialise()
     b9InitObjects();
 
     loadObjectFile();
-    b1LoadWords();
-    initEvents();
+    b7LoadWords();
+    b7InitEvents();
     b6InitInterpreter();
     b6InitIrq();
     bEInitSpriteMemoryManager();

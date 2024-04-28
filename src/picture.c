@@ -484,7 +484,7 @@ void b11Drawline(byte x1, byte y1, byte x2, byte y2)
 	int height, width, startX, startY;
 	boolean xIsPos = TRUE, yIsPos = TRUE;
 	fix32 x, y, addX, addY;
-	word temp;
+	word b7Temp;
 	long drawWhere;
 	byte toDraw;
 	

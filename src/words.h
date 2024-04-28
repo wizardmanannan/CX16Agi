@@ -8,7 +8,7 @@
 #include "helpers.h"
 
 typedef struct {
-	char* wordText;
+	char* b7WordText;
 	int synonymNum;
 } wordType;
 
@@ -17,9 +17,10 @@ extern int numWords;
 extern int numSynonyms;
 
 #pragma wrapped-call (push, trampoline, WORD_BANK)
-extern void b1LoadWords();
-extern void b1DiscardWords();
+extern void b7LoadWords();
+extern void b7DiscardWords();
 #pragma wrapped-call (pop)
+int b7FindSynonymNum(char* userWord); //Leaving out of the tramp as it is on the same bank
 
 
 #endif /* _WORDS_H_ */

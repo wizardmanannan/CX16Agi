@@ -94,7 +94,7 @@
 #define LOADED_VIEW_BANK 61
 #define PICTURE_BANK 0x3E
 #define VIEW_DRAW_BUFFER_BANK 9
-#define WORD_BANK 1
+#define WORD_BANK 7
 
 #define FIRST_FLOOD_BANK 0x27
 #define NO_FLOOD_BANKS 0x0A

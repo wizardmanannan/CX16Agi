@@ -62,13 +62,6 @@ void rectfill(BITMAP* bmp, int x1, int y1, int x2, int y2, int color)
 {
 }
 
-void lookupWords(char* inputLine)
-{
-
-}
-
-
-
 //Graphics
 void drawString(BITMAP* scn, char* data, int x, int y, int foreColour, int backColour)
 {
@@ -85,9 +78,6 @@ void drawBigString(BITMAP* scn, char* data, int x, int y, int foreColour, int ba
 
 }
 
-//Directions
-byte directions[9] = { 0, 0, 0, 0, 0, 0, 0, 0, 0 };
-
 //allgero
 BITMAP* screen;
 void rect(BITMAP* bmp, int x1, int y1, int x2, int y2, int color)
@@ -100,26 +90,6 @@ void stretch_sprite(BITMAP* bmp, BITMAP* sprite, int x, int y, int w, int h)
 
 }
 
-//Parser
-boolean haveKey = FALSE;
-char cursorChar = '_';
-byte keyState[256], asciiState[256];
-int lastKey;
-
-void pollKeyboard()
-{
-
-}
-
-void initEvents()
-{
-
-}
-
-void getString(char* promptStr, char* returnStr, int x, int y, int l) {
-
-}
-
 //Object
 void loadObjectFile() {
 
@@ -128,10 +98,6 @@ void loadObjectFile() {
 void discardObjects() {
 
 }
-
-//Words
-int numInputWords, inputWords[10];
-char wordText[10][80];
 
 //Sound
 int soundEndFlag;

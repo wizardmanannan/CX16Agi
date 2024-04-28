@@ -14,19 +14,19 @@
 #include "general.h"
 #include "words.h"
 
-#pragma bss-name (push, "BANKRAM01")
+#pragma bss-name (push, "BANKRAM07")
 wordType* words;
 int numWords, numSynonyms;  /* Big difference between the two */
 byte wordBank;
 #pragma bss-name (pop)
 
-#pragma code-name (push, "BANKRAM01")
+#pragma code-name (push, "BANKRAM07")
 /**************************************************************************
 ** loadWords
 **
 ** Purpose: Load words in from the WORDS.TOK file.
 **************************************************************************/
-void b1LoadWords()
+void b7LoadWords()
 {
     //FILE* wordFile;
     //byte data, wordPos, newWord[80], temp[80];
@@ -69,7 +69,7 @@ void b1LoadWords()
 ** words list. The number of synonyms will be used to check against the
 ** parameters to said() to determine whether those synonyms exist.
 **************************************************************************/
-int b1CalcNumWords(FILE* wordFile)
+int b7CalcNumWords(FILE* wordFile)
 {
     //byte data;
     //long startPos;
@@ -101,7 +101,7 @@ int b1CalcNumWords(FILE* wordFile)
 **
 ** Purpose: To deallocate all memory associated with the words array.
 ***************************************************************************/
-void b1DiscardWords()
+void b7DiscardWords()
 {
     /*int wordNum;
 
@@ -119,14 +119,14 @@ void b1DiscardWords()
 ** a binary search to locate the correct word entry. Some games would have
 ** a search depth of about 10 or 11 (1000+ words).
 ***************************************************************************/
-int b1FindSynonymNum(char* userWord)
+int b7FindSynonymNum(char* userWord)
 {
     boolean found = FALSE;
     int top = numWords - 1, bottom = 0, mid, strCompVal;
 
     while ((!found) && (bottom <= top)) {
         mid = (top + bottom) / 2;
-        strCompVal = strcmp(userWord, words[mid].wordText);
+        strCompVal = strcmp(userWord, words[mid].b7WordText);
         if (strCompVal == 0)
             found = TRUE;
         else if (strCompVal < 0)
@@ -139,12 +139,12 @@ int b1FindSynonymNum(char* userWord)
     else return (-1);
 }
 
-void b1ShowWords()
+void b7ShowWords()
 {
     int wordNum;
 
     for (wordNum = 0; wordNum < numWords; wordNum++)
-        printf("%-14s%5d ", words[wordNum].wordText, words[wordNum].synonymNum);
+        printf("%-14s%5d ", words[wordNum].b7WordText, words[wordNum].synonymNum);
 }
 
 #pragma code-name (pop)

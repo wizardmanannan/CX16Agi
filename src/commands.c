@@ -20,6 +20,7 @@
 #include "view.h"
 #include "stub.h"
 #include "helpers.h"
+#include "parser.h"
 
 #define HIGHEST_BANK1_FUNC 36
 #define HIGHEST_BANK2_FUNC 91
@@ -64,17 +65,6 @@ int printCounter = 1;
 byte lastRoom = 0;
 
 void executeLogic(LOGICEntry* logicEntry, int logNum);
-
-//TEMP Should Be In Events
-typedef struct {
-	byte type;     /* either key or menu item */
-	byte eventID;  /* either scancode or menu item ID */
-	byte asciiValue;
-	byte scanCodeValue;
-	boolean activated;
-} eventType;
-
-eventType events[256];
 
 //
 
@@ -257,10 +247,6 @@ void testMenus()
 
 #define PROCESS_STRING_BANK 3
 
-#pragma wrapped-call (push, trampoline, TEXT_CODE_BANK)
-void b3ProcessString(char* stringPointer, byte stringBank, char* outputString);
-#pragma wrapped-call (pop)
-
 #pragma code-name (push, "BANKRAM0F");
 /****************************************************************************
 ** addLogLine
@@ -338,29 +324,32 @@ boolean b1Posn() // 5, 0x00
 
 boolean b1Controller() // 1, 0x00 
 {
+	EventType event;
 	int eventNum = loadAndIncWinCode(), retVal = 0;
+
+	b7GetEvent(&event, eventNum);
 
 	/* Some events can be activated by menu input or key input. */
 
 	/* Following code detects key presses at the current time */
-	switch (events[eventNum].type) {
+	switch (event.type) {
 	case ASCII_KEY_EVENT:
-		if (events[eventNum].activated) {
-			events[eventNum].activated = FALSE;
+		if (event.activated) {
+			event.activated = FALSE;
 			return TRUE;
 		}
-		return (asciiState[events[eventNum].eventID]);
+		return b7GetAsciiState(event.eventID);
 	case SCAN_KEY_EVENT:
-		if (events[eventNum].activated) {
-			events[eventNum].activated = FALSE;
+		if (event.activated) {
+			event.activated = FALSE;
 			return TRUE;
 		}
-		if ((events[eventNum].eventID < 59) &&
-			(asciiState[0] == 0)) return FALSE;   /* ALT Combinations */
-		return (keyState[events[eventNum].eventID]);
+		if ((event.eventID < 59) &&
+			(b7GetAsciiState(0) == 0)) return FALSE;   /* ALT Combinations */
+		return (b7GetKeyState(event.eventID));
 	case MENU_EVENT:
-		retVal = events[eventNum].activated;
-		events[eventNum].activated = 0;
+		retVal = event.activated;
+		event.activated = 0;
 		return (retVal);
 	default:
 		return (FALSE);
@@ -396,7 +385,7 @@ boolean b1Said()
 		argValue = (argLo + (argHi << 8));
 		if (argValue == 9999) break; /* Should always be last argument */
 		if (argValue == 1) continue; /* Word comparison does not matter */
-		if (inputWords[wordNum] != argValue) wordsMatch = FALSE;
+		if (b7GetInputWord(wordNum) != argValue) wordsMatch = FALSE;
 	}
 
 	if ((numInputWords != numOfArgs) && (argValue != 9999)) return FALSE;
@@ -1569,15 +1558,6 @@ boolean b3CharIsIn(char testChar, char* testString)
 	return FALSE;
 }
 
-void b3ProcessString(char* stringPointer, byte stringBank, char* outputString)
-{
-#define TEMP_SIZE 80
-#define NUM_STRING_SIZE 80
-#define INPUT_BUFFER_SIZE 10
-
-}
-
-
 #pragma wrapped-call (push, trampoline, TEXT_CODE_BANK)
 //Helper function not a command. Note there is an identical function on bank 4
 void b3PrintMessageInTextbox(byte messNum, byte x, byte y, byte length)
@@ -1714,7 +1694,7 @@ void b4Graphics() // 0, 0x00
 
 void b4Set_cursor_char() // 1, 0x00 
 {
-	char* temp = (char*)&GOLDEN_RAM[LOCAL_WORK_AREA_START];
+	char* b7Temp = (char*)&GOLDEN_RAM[LOCAL_WORK_AREA_START];
 	byte msgNo = loadAndIncWinCode() - 1;
 	char* messagePointer = getMessagePointer(currentLog, msgNo);
 	LOGICFile logicFile;
@@ -1727,7 +1707,8 @@ void b4Set_cursor_char() // 1, 0x00
 
 
 	//b3ProcessString(messagePointer, logicFile.messageBank, temp);
-	cursorChar = temp[0];
+	
+	memCpyBanked((byte*) &cursorChar, (byte*)b7Temp, WORD_BANK, 1);
 
 #ifdef VERBOSE_STRING_CHECK
 	printf("Your cursor char is %c\n", cursorChar);
@@ -1788,7 +1769,12 @@ void b4Set_string() // 2, 0x00
 	messNum = loadAndIncWinCode();
 	messagePointer = getMessagePointer(currentLog, messNum - 1);
 
+	/*printf("attempting to %p on bank %p to %p. the length is %d\n", string[stringNum - 1], messagePointer, logicFile.messageBank, strLenBanked(messagePointer, logicFile.messageBank));
+
 	strcpyBanked(string[stringNum - 1], messagePointer, logicFile.messageBank);
+
+	asm("stp");*/
+
 	return;
 }
 
@@ -1796,6 +1782,9 @@ void b4Get_string() // 5, 0x00
 {
 	int strNum, messNum, row, col, l;
 	char* messagePointer;
+	LOGICFile logicFile;
+
+	getLogicFile(&logicFile, currentLog);
 
 	strNum = loadAndIncWinCode();
 	messNum = loadAndIncWinCode();
@@ -1805,7 +1794,7 @@ void b4Get_string() // 5, 0x00
 
 	messagePointer = getMessagePointer(currentLog, messNum - 1);
 
-	getString(messagePointer, string[strNum], row, col, l);
+	b7GetString(messagePointer, logicFile.messageBank,  string[strNum], 0, row, col, l);
 	return;
 }
 
@@ -1815,7 +1804,7 @@ void b4Word_to_string() // 2, 0x00
 
 	stringNum = loadAndIncWinCode();
 	wordNum = loadAndIncWinCode();
-	strcpy(string[stringNum], wordText[wordNum]);
+	memCpyBankedBetween((byte*)&b7WordText[wordNum], WORD_BANK, (byte*)&string[stringNum], 0, strlen(string[stringNum])); //Strings to be moved to a bank sometime
 	return;
 }
 
@@ -1824,22 +1813,31 @@ void b4Parse() // 1, 0x00
 	int stringNum;
 
 	stringNum = loadAndIncWinCode();
-	lookupWords(string[stringNum]);
+	b7LookupWords(string[stringNum]);
 	return;
 }
 
 void b4Get_num() // 2, 0x40 
 {
 	int messNum, varNum;
-	char temp[80];
+	char* b7Temp;
 	char* messagePointer;
+	LOGICFile logicFile;
+	byte tempBank;
+
+	b7Temp = (char*) b10BankedAlloc(80, &tempBank);
+
+	getLogicFile(&logicFile, currentLog);
 
 	messNum = loadAndIncWinCode();
 	varNum = loadAndIncWinCode();
 
 	messagePointer = getMessagePointer(currentLog, messNum - 1);
-	getString(messagePointer, temp, 1, 23, 3);
-	var[varNum] = atoi(temp);
+	b7GetString(messagePointer, logicFile.messageBank, b7Temp, tempBank, 1, 23, 3);
+	var[varNum] = atoi(b7Temp);
+
+	b10BankedDealloc((byte*)b7Temp, tempBank);
+
 	return;
 }
 
@@ -1861,10 +1859,13 @@ void b4Set_key() // 3, 0x00
 {
 	int asciiCode, scanCode, eventCode;
 	char* tempStr = (char*)&GOLDEN_RAM[LOCAL_WORK_AREA_START];
+	EventType event;
 
 	asciiCode = loadAndIncWinCode();
 	scanCode = loadAndIncWinCode();
 	eventCode = loadAndIncWinCode();
+
+	b7GetEvent(&event, eventCode);
 
 	/* Ignore cases which have both values set for now. They seem to behave
 	** differently than normal and often specify controllers that have
@@ -1873,18 +1874,18 @@ void b4Set_key() // 3, 0x00
 	if (scanCode && asciiCode) return;
 
 	if (scanCode) {
-		events[eventCode].type = SCAN_KEY_EVENT;
-		events[eventCode].eventID = scanCode;
-		events[eventCode].asciiValue = asciiCode;
-		events[eventCode].scanCodeValue = scanCode;
-		events[eventCode].activated = FALSE;
+		event.type = SCAN_KEY_EVENT;
+		event.eventID = scanCode;
+		event.asciiValue = asciiCode;
+		event.scanCodeValue = scanCode;
+		event.activated = FALSE;
 	}
 	else if (asciiCode) {
-		events[eventCode].type = ASCII_KEY_EVENT;
-		events[eventCode].eventID = asciiCode;
-		events[eventCode].asciiValue = asciiCode;
-		events[eventCode].scanCodeValue = scanCode;
-		events[eventCode].activated = FALSE;
+		event.type = ASCII_KEY_EVENT;
+		event.eventID = asciiCode;
+		event.asciiValue = asciiCode;
+		event.scanCodeValue = scanCode;
+		event.activated = FALSE;
 	}
 }
 
@@ -2174,56 +2175,63 @@ void b4WaitKeyRelease()
 	return;
 }
 
-int menuEvent0() { b4WaitKeyRelease(); events[0].activated = 1; return D_O_K; }
-int menuEvent1() { b4WaitKeyRelease(); events[1].activated = 1; return D_O_K; }
-int menuEvent2() { b4WaitKeyRelease(); events[2].activated = 1; return D_O_K; }
-int menuEvent3() { b4WaitKeyRelease(); events[3].activated = 1; return D_O_K; }
-int menuEvent4() { b4WaitKeyRelease(); events[4].activated = 1; return D_O_K; }
-int menuEvent5() { b4WaitKeyRelease(); events[5].activated = 1; return D_O_K; }
-int menuEvent6() { b4WaitKeyRelease(); events[6].activated = 1; return D_O_K; }
-int menuEvent7() { b4WaitKeyRelease(); events[7].activated = 1; return D_O_K; }
-int menuEvent8() { b4WaitKeyRelease(); events[8].activated = 1; return D_O_K; }
-int menuEvent9() { b4WaitKeyRelease(); events[9].activated = 1; return D_O_K; }
-int menuEvent10() { b4WaitKeyRelease(); events[10].activated = 1; return D_O_K; }
-int menuEvent11() { b4WaitKeyRelease(); events[11].activated = 1; return D_O_K; }
-int menuEvent12() { b4WaitKeyRelease(); events[12].activated = 1; return D_O_K; }
-int menuEvent13() { b4WaitKeyRelease(); events[13].activated = 1; return D_O_K; }
-int menuEvent14() { b4WaitKeyRelease(); events[14].activated = 1; return D_O_K; }
-int menuEvent15() { b4WaitKeyRelease(); events[15].activated = 1; return D_O_K; }
-int menuEvent16() { b4WaitKeyRelease(); events[16].activated = 1; return D_O_K; }
-int menuEvent17() { b4WaitKeyRelease(); events[17].activated = 1; return D_O_K; }
-int menuEvent18() { b4WaitKeyRelease(); events[18].activated = 1; return D_O_K; }
-int menuEvent19() { b4WaitKeyRelease(); events[19].activated = 1; return D_O_K; }
-int menuEvent20() { b4WaitKeyRelease(); events[20].activated = 1; return D_O_K; }
-int menuEvent21() { b4WaitKeyRelease(); events[21].activated = 1; return D_O_K; }
-int menuEvent22() { b4WaitKeyRelease(); events[22].activated = 1; return D_O_K; }
-int menuEvent23() { b4WaitKeyRelease(); events[23].activated = 1; return D_O_K; }
-int menuEvent24() { b4WaitKeyRelease(); events[24].activated = 1; return D_O_K; }
-int menuEvent25() { b4WaitKeyRelease(); events[25].activated = 1; return D_O_K; }
-int menuEvent26() { b4WaitKeyRelease(); events[26].activated = 1; return D_O_K; }
-int menuEvent27() { b4WaitKeyRelease(); events[27].activated = 1; return D_O_K; }
-int menuEvent28() { b4WaitKeyRelease(); events[28].activated = 1; return D_O_K; }
-int menuEvent29() { b4WaitKeyRelease(); events[29].activated = 1; return D_O_K; }
-int menuEvent30() { b4WaitKeyRelease(); events[30].activated = 1; return D_O_K; }
-int menuEvent31() { b4WaitKeyRelease(); events[31].activated = 1; return D_O_K; }
-int menuEvent32() { b4WaitKeyRelease(); events[32].activated = 1; return D_O_K; }
-int menuEvent33() { b4WaitKeyRelease(); events[33].activated = 1; return D_O_K; }
-int menuEvent34() { b4WaitKeyRelease(); events[34].activated = 1; return D_O_K; }
-int menuEvent35() { b4WaitKeyRelease(); events[35].activated = 1; return D_O_K; }
-int menuEvent36() { b4WaitKeyRelease(); events[36].activated = 1; return D_O_K; }
-int menuEvent37() { b4WaitKeyRelease(); events[37].activated = 1; return D_O_K; }
-int menuEvent38() { b4WaitKeyRelease(); events[38].activated = 1; return D_O_K; }
-int menuEvent39() { b4WaitKeyRelease(); events[39].activated = 1; return D_O_K; }
-int menuEvent40() { b4WaitKeyRelease(); events[40].activated = 1; return D_O_K; }
-int menuEvent41() { b4WaitKeyRelease(); events[41].activated = 1; return D_O_K; }
-int menuEvent42() { b4WaitKeyRelease(); events[42].activated = 1; return D_O_K; }
-int menuEvent43() { b4WaitKeyRelease(); events[43].activated = 1; return D_O_K; }
-int menuEvent44() { b4WaitKeyRelease(); events[44].activated = 1; return D_O_K; }
-int menuEvent45() { b4WaitKeyRelease(); events[45].activated = 1; return D_O_K; }
-int menuEvent46() { b4WaitKeyRelease(); events[46].activated = 1; return D_O_K; }
-int menuEvent47() { b4WaitKeyRelease(); events[47].activated = 1; return D_O_K; }
-int menuEvent48() { b4WaitKeyRelease(); events[48].activated = 1; return D_O_K; }
-int menuEvent49() { b4WaitKeyRelease(); events[49].activated = 1; return D_O_K; }
+int b4MenuUpdate(byte eventNo)
+{
+	b4WaitKeyRelease(); 
+	b7ActivateEvent(eventNo);
+	return D_O_K;
+}
+
+int menuEvent0() { return b4MenuUpdate(0); }
+int menuEvent1() { return b4MenuUpdate(1); }
+int menuEvent2() { return b4MenuUpdate(2); }
+int menuEvent3() { return b4MenuUpdate(3); }
+int menuEvent4() { return b4MenuUpdate(4); }
+int menuEvent5() { return b4MenuUpdate(5); }
+int menuEvent6() { return b4MenuUpdate(6); }
+int menuEvent7() { return b4MenuUpdate(7); }
+int menuEvent8() { return b4MenuUpdate(8); }
+int menuEvent9() { return b4MenuUpdate(9); }
+int menuEvent10() { return b4MenuUpdate(10); }
+int menuEvent11() { return b4MenuUpdate(11); }
+int menuEvent12() { return b4MenuUpdate(12); }
+int menuEvent13() { return b4MenuUpdate(13); }
+int menuEvent14() { return b4MenuUpdate(14); }
+int menuEvent15() { return b4MenuUpdate(15); }
+int menuEvent16() { return b4MenuUpdate(16); }
+int menuEvent17() { return b4MenuUpdate(17); }
+int menuEvent18() { return b4MenuUpdate(18); }
+int menuEvent19() { return b4MenuUpdate(19); }
+int menuEvent20() { return b4MenuUpdate(20); }
+int menuEvent21() { return b4MenuUpdate(21); }
+int menuEvent22() { return b4MenuUpdate(22); }
+int menuEvent23() { return b4MenuUpdate(23); }
+int menuEvent24() { return b4MenuUpdate(24); }
+int menuEvent25() { return b4MenuUpdate(25); }
+int menuEvent26() { return b4MenuUpdate(26); }
+int menuEvent27() { return b4MenuUpdate(27); }
+int menuEvent28() { return b4MenuUpdate(28); }
+int menuEvent29() { return b4MenuUpdate(29); }
+int menuEvent30() { return b4MenuUpdate(30); }
+int menuEvent31() { return b4MenuUpdate(31); }
+int menuEvent32() { return b4MenuUpdate(32); }
+int menuEvent33() { return b4MenuUpdate(33); }
+int menuEvent34() { return b4MenuUpdate(34); }
+int menuEvent35() { return b4MenuUpdate(35); }
+int menuEvent36() { return b4MenuUpdate(36); }
+int menuEvent37() { return b4MenuUpdate(37); }
+int menuEvent38() { return b4MenuUpdate(38); }
+int menuEvent39() { return b4MenuUpdate(39); }
+int menuEvent40() { return b4MenuUpdate(40); }
+int menuEvent41() { return b4MenuUpdate(41); }
+int menuEvent42() { return b4MenuUpdate(42); }
+int menuEvent43() { return b4MenuUpdate(43); }
+int menuEvent44() { return b4MenuUpdate(44); }
+int menuEvent45() { return b4MenuUpdate(45); }
+int menuEvent46() { return b4MenuUpdate(46); }
+int menuEvent47() { return b4MenuUpdate(47); }
+int menuEvent48() { return b4MenuUpdate(48); }
+int menuEvent49() { return b4MenuUpdate(49); }
 
 int (*(menuFunctions[50]))() = {
 	menuEvent0, menuEvent1, menuEvent2, menuEvent3, menuEvent4,
@@ -2292,17 +2300,18 @@ void b5Set_menu_item() // 2, 0x00
 	int messNum, controllerNum, i;
 	MENU childMenu;
 	LOGICFile currentLogicFile;
+	EventType event;
 
 	getLogicFile(&currentLogicFile, currentLog);
-
+	b7GetEvent(&event, controllerNum);
 
 	messNum = loadAndIncWinCode();
 	controllerNum = loadAndIncWinCode();
 
-	if (events[controllerNum].type == NO_EVENT) {
-		events[controllerNum].type = MENU_EVENT;
+	if (event.type == NO_EVENT) {
+		event.type = MENU_EVENT;
 	}
-	events[controllerNum].activated = 0;
+	event.activated = 0;
 
 	childMenu.text = getMessagePointer(currentLog, messNum - 1);
 	childMenu.proc = menuFunctions[controllerNum];
