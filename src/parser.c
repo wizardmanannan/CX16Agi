@@ -25,6 +25,7 @@ char cursorChar = '_';
 #pragma bss-name (push, "BANKRAM07")
 int b7InputWords[10];
 char b7WordText[10][80], b7CurrentInputStr[80] = "", strPos = 0, b7OutputString[80], b7Temp[256];
+char string[12][40]; //TODO: Move onto a bank
 //boolean wordsAreWaiting=FALSE;
 
 byte b7KeyState[256], b7AsciiState[256];
@@ -34,6 +35,12 @@ byte directions[9] = { 0, 0, 0, 0, 0, 0, 0, 0, 0 };
 #pragma bss-name (pop)
 
 #pragma code-name (push, "BANKRAM07")
+int b7Strcmp(char const* _Str1,char const* _Str2)
+{
+   strcmp(_Str1,_Str2);
+}
+
+
 void b7GetEvent(EventType* event, byte eventNumber)
 {
     *event = b7Events[eventNumber];
@@ -62,6 +69,12 @@ byte b7GetKeyState(byte number)
 byte b7GetInputWord(byte number)
 {
     return b7InputWords[number];
+}
+
+char* b7GetInternalStringPtr(byte number, size_t* length)
+{
+    *length = strlen(string[number]);
+    return string[number];
 }
 
 void b7LookupWords(char* inputLine);
@@ -103,8 +116,7 @@ void b7HandleDirection(int dirn)
     }
 }
 
-/* used by get.string and get.num */
-void b7GetString(char* promptStr,byte promptStringBank, char* returnStr, byte returnStrBank, int x, int y, int l)
+void b7GetString(char* promptStr, byte promptStringBank, char* returnStr, byte returnStrBank, int x, int y, int l)
 {
     int ch, gx, gy;
     boolean stillInputing = TRUE;
@@ -148,6 +160,15 @@ void b7GetString(char* promptStr,byte promptStringBank, char* returnStr, byte re
         }
     }
 }
+
+/* used by get.string and get.num */
+void b7GetInternalString(char* promptStr, byte promptStringBank, byte stringNumber, int x, int y, int l)
+{
+    char* inputString = string[stringNumber];
+    b7GetString(promptStr, promptStringBank, inputString, WORD_BANK, x, y, l);
+}
+
+
 
 /***************************************************************************
 ** pollKeyboard

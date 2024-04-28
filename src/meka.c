@@ -33,7 +33,6 @@
 boolean stillRunning = TRUE, hasEnteredNewRoom = FALSE, exitAllLogics = FALSE;
 byte* var = (byte*)&GOLDEN_RAM[VARS_AREA_START];
 boolean* flag = &GOLDEN_RAM[FLAGS_AREA_START];
-char string[12][40]; //TODO: Move onto a bank
 byte horizon;
 
 #define  PLAYER_CONTROL   0

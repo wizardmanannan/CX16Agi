@@ -412,7 +412,7 @@ boolean b1Compare_strings() // 2, 0x00
 
 	s1 = loadAndIncWinCode();
 	s2 = loadAndIncWinCode();
-	if (strcmp(string[s1], string[s2]) == 0) return TRUE;
+	if (b7Strcmp(string[s1], string[s2]) == 0) return TRUE;
 	return FALSE;
 }
 
@@ -1794,26 +1794,35 @@ void b4Get_string() // 5, 0x00
 
 	messagePointer = getMessagePointer(currentLog, messNum - 1);
 
-	b7GetString(messagePointer, logicFile.messageBank,  string[strNum], 0, row, col, l);
+	b7GetInternalString(messagePointer, logicFile.messageBank, strNum, row, col, l);
 	return;
 }
 
 void b4Word_to_string() // 2, 0x00 
 {
 	int stringNum, wordNum;
+	char* stringPtr;
+	size_t length;
 
 	stringNum = loadAndIncWinCode();
 	wordNum = loadAndIncWinCode();
-	memCpyBankedBetween((byte*)&b7WordText[wordNum], WORD_BANK, (byte*)&string[stringNum], 0, strlen(string[stringNum])); //Strings to be moved to a bank sometime
+
+	stringPtr = b7GetInternalStringPtr(stringNum, &length);
+
+	memCpyBanked((byte*)&b7WordText[wordNum], (byte*) stringPtr, WORD_BANK, length); 
 	return;
 }
 
 void b4Parse() // 1, 0x00 
 {
 	int stringNum;
+	size_t length;
+	char* stringToParse;
+
+	stringToParse = b7GetInternalStringPtr(stringNum, &length);
 
 	stringNum = loadAndIncWinCode();
-	b7LookupWords(string[stringNum]);
+	b7LookupWords(stringToParse);
 	return;
 }
 
