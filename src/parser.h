@@ -11,6 +11,7 @@
 #include "picture.h"
 #include "words.h"
 #include "kernal.h"
+#include "keyboard.h"
 
 #ifndef _PARSER_H_
 #define _PARSER_H_
@@ -36,7 +37,7 @@ extern int numInputWords, b7InputWords[];
 extern char b7WordText[10][80];
 extern boolean haveKey;
 extern byte b7KeyState[256], b7AsciiState[256];
-extern byte directions[9];
+extern byte b7Directions[9];
 extern int lastKey;
 
 #pragma wrapped-call (push, trampoline, WORD_BANK)

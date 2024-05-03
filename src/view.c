@@ -2048,24 +2048,24 @@ void bANormalAdjust(int entryNum, ViewTable* viewTab, int dx, int dy)
 		flag[3] = 0;
 		flag[0] = 0;
 
-		/* End points of the base line */
-		startX = tempX;
-		endX = startX + viewTab->xsize;
-		for (testX = startX; testX < endX; testX++) {
-			switch (control->line[tempY][testX]) {
-			case 0: return;   /* Unconditional obstacle */
-			case 1:
-				if (viewTab->flags & IGNOREBLOCKS) break;
-				return;    /* Conditional obstacle */
-			case 3:
-				waterCount++;
-				break;
-			case 2: flag[3] = 1; /* Trigger */
-				viewTab->xPos = tempX;
-				viewTab->yPos = tempY;
-				return;
-			}
-		}
+		///* End points of the base line */ //TODO: Put back in once we have pri screen loaded
+		//startX = tempX;
+		//endX = startX + viewTab->xsize;
+		//for (testX = startX; testX < endX; testX++) {
+		//	switch (control->line[tempY][testX]) {
+		//	case 0: return;   /* Unconditional obstacle */
+		//	case 1:
+		//		if (viewTab->flags & IGNOREBLOCKS) break;
+		//		return;    /* Conditional obstacle */
+		//	case 3:
+		//		waterCount++;
+		//		break;
+		//	case 2: flag[3] = 1; /* Trigger */
+		//		viewTab->xPos = tempX;
+		//		viewTab->yPos = tempY;
+		//		return;
+		//	}
+		//}
 		if (waterCount == viewTab->xsize) {
 			viewTab->xPos = tempX;
 			viewTab->yPos = tempY;

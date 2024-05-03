@@ -115,7 +115,7 @@ void b6NewRoom()
     flag[5] = 1;
     score = var[3];
 
-    memsetBanked(directions, 0, 9, WORD_BANK);
+    memsetBanked(b7Directions, 0, 9, WORD_BANK);
     /* rectfill(screen, 0, 20+(22*16), 639, 463, 0); */   /* Clear screen */
     b6SetAndWaitForIrqState(CLEAR);
 #ifdef VERBOSE
