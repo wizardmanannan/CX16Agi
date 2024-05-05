@@ -633,6 +633,8 @@ void b2Draw() // 1, 0x00
 
 	bADrawObject(entryNum);
 
+	bAFindPosition(entryNum, &localViewtab);
+
 	setViewTab(&localViewtab, entryNum);
 	return;
 }

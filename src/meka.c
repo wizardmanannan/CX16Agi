@@ -167,8 +167,6 @@ void b6Interpret()
     localViewtab.direction = var[6];
     setViewTab(&localViewtab, 0);
 
-    bCCalcObjMotion();
-
     // <<-- Update status line here (score & sound)
     b6UpdateStatusLine();
 
@@ -178,9 +176,6 @@ void b6Interpret()
 
         executeLogic(&logicEntry, 0);
 
-#ifdef VERBOSE
-        printf("Back To Meka");
-#endif // VERBOSE
         //dirnOfEgo = var[6];
         getViewTab(&localViewtab, 0);
         localViewtab.direction = var[6];
@@ -195,6 +190,9 @@ void b6Interpret()
         if (!hasEnteredNewRoom) {
             bBUpdateObjects();
         }
+
+        bCCalcObjMotion();
+
         if (hasEnteredNewRoom) b6NewRoom();
 
     } while (hasEnteredNewRoom);

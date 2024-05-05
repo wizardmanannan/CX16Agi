@@ -1995,6 +1995,15 @@ void bAFollowEgo(int entryNum) /* This needs to be more intelligent. */
 	setViewTab(&localViewtab, entryNum);
 }
 
+void bAFindPosition(int entryNum, ViewTable* viewTab)
+{
+	// Place Y below horizon if it is above it and is not ignoring the horizon.
+	if ((viewTab->yPos <= horizon) && !(viewTab->flags & IGNOREHORIZON))
+	{
+		viewTab->yPos = horizon + 1;
+	}
+}
+
 #pragma wrapped-call (push, trampoline, VIEW_CODE_BANK_2)
 void bANormalAdjust(int entryNum, ViewTable* viewTab, int dx, int dy)
 {
@@ -2016,6 +2025,7 @@ void bANormalAdjust(int entryNum, ViewTable* viewTab, int dx, int dy)
 			var[2] = 3;
 			return;
 		}
+
 		if (tempY < horizon) {   /* Hit horizon */
 			var[2] = 1;
 			return;
