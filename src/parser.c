@@ -108,13 +108,11 @@ void b7HandleDirection(int dirn)
 			memset(b7Directions, 0, 9);
 			b7Directions[dirn] = 1;
 			viewTab.direction = dirn;
-			viewTab.flags |= MOTION;
 			var[6] = dirnOfEgo = dirn;
 		}
 		else {
 			memset(b7Directions, 0, 9);
 			viewTab.direction = 0;
-			viewTab.flags &= ~MOTION;
 			var[6] = dirnOfEgo = 0;
 		}
 
