@@ -1609,35 +1609,25 @@ void bACalcDirection(ViewTable* localViewtab)
 #pragma wrapped-call (pop)
 
 /* Called by draw() */
-void bADrawObject(int entryNum)
+void bADrawObject(ViewTable* localViewtab)
 {
 	word objFlags;
-	int dummy;
-	ViewTable localViewtab;
 
-	if (entryNum == 4) {
-		dummy = 1;
-	}
-
-	getViewTab(&localViewtab, entryNum);
-
-	objFlags = localViewtab.flags;
+	objFlags = localViewtab->flags;
 
 	/* Determine priority for unfixed priorities */
 	if (!(objFlags & FIXEDPRIORITY)) {
-		if (localViewtab.yPos < 60)
-			localViewtab.priority = 4;
+		if (localViewtab->yPos < 60)
+			localViewtab->priority = 4;
 		else
-			localViewtab.priority = (localViewtab.yPos / 12 + 1);
+			localViewtab->priority = (localViewtab->yPos / 12 + 1);
 	}
 
-	bACalcDirection(&localViewtab);
+	bACalcDirection(localViewtab);
 
 #ifdef VERBOSE_DEBUG_BLIT
 	printf("Called from draw object");
 #endif // DEBUG
-
-	setViewTab(&localViewtab, entryNum);
 }
 
 #pragma wrapped-call (push, trampoline, VIEW_CODE_BANK_2)

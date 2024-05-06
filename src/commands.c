@@ -631,7 +631,7 @@ void b2Draw() // 1, 0x00
 
 	b9SetCel(&localViewtab, localViewtab.currentCel);
 
-	bADrawObject(entryNum);
+	bADrawObject(&localViewtab);
 
 	bAFindPosition(entryNum, &localViewtab);
 
