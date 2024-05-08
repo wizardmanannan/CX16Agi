@@ -757,7 +757,7 @@ boolean agiBlit(ViewTable* localViewTab, byte entryNum, boolean disableInterupts
 		if (!bESetLoop(localViewTab, &localMetadata, &localView, loopVeraAddresses))
 		{
 			RAM_BANK = previousBank;
-			
+
 			return FALSE;
 		}
 	}
@@ -1032,7 +1032,7 @@ void b9ResetViewtabs(boolean fullReset)
 #pragma wrapped-call (push, trampoline, VIEW_CODE_BANK_1)
 void b9ResetSpriteMemory()
 {
-	bEResetSpritesUpdatedBuffer();	
+	bEResetSpritesUpdatedBuffer();
 	bEResetViewTableMetadata();
 	bEResetSpritePointers();
 	bEResetSpriteMemoryManager();
@@ -1120,73 +1120,62 @@ void setViewData(byte viewNum, AGIFile* tempAGI, View* localView)
 #ifdef VERBOSE_LOAD_VIEWS
 	byte tmp[10];
 #endif
+	memCpyBankedBetween((byte*)&viewHeaderBuffer[0], VIEW_BUFFERS_BANK, tempAGI->code, tempAGI->codeBank, NO_LOOPS_INDEX_BYTES_AVERAGE + POSITION_OF_LOOPS_OFFSET); //Guessing at 7 loops, this should copy enough 99% of the time, and we can copy again once we have the first byte (loopCounter), is necessary . If there is less loops than we have just copied bytes which will be ignored
+	numberOfLoops = viewHeaderBuffer[POSITION_OF_NO_LOOPS];
 
-	getLoadedView(localView, viewNum);
-
-	if (!localView->loaded)
+	if (numberOfLoops > NO_LOOPS_INDEX_BYTES_AVERAGE)
 	{
-		memCpyBankedBetween((byte*)&viewHeaderBuffer[0], VIEW_BUFFERS_BANK, tempAGI->code, tempAGI->codeBank, NO_LOOPS_INDEX_BYTES_AVERAGE + POSITION_OF_LOOPS_OFFSET); //Guessing at 7 loops, this should copy enough 99% of the time, and we can copy again once we have the first byte (loopCounter), is necessary . If there is less loops than we have just copied bytes which will be ignored
-		numberOfLoops = viewHeaderBuffer[POSITION_OF_NO_LOOPS];
-
-		if (numberOfLoops > NO_LOOPS_INDEX_BYTES_AVERAGE)
-		{
-			memCpyBankedBetween((byte*)&viewHeaderBuffer[0], VIEW_BUFFERS_BANK, tempAGI->code, tempAGI->codeBank, numberOfLoops * 2 + POSITION_OF_LOOPS_OFFSET);
-		}
+		memCpyBankedBetween((byte*)&viewHeaderBuffer[0], VIEW_BUFFERS_BANK, tempAGI->code, tempAGI->codeBank, numberOfLoops * 2 + POSITION_OF_LOOPS_OFFSET);
+	}
 
 
 #ifdef VERBOSE_SET_VIEW
-		printf("setting view number %d\n", viewNum);
-		printf("there are %d loops\n", numberOfLoops);
+	printf("setting view number %d\n", viewNum);
+	printf("there are %d loops\n", numberOfLoops);
 #endif
 
-		isThereADescription = (const char*)viewHeaderBuffer[POSITION_OF_DESCRIPTION] || viewHeaderBuffer[POSITION_OF_DESCRIPTION + 1];
+	isThereADescription = (const char*)viewHeaderBuffer[POSITION_OF_DESCRIPTION] || viewHeaderBuffer[POSITION_OF_DESCRIPTION + 1];
 
-		if (isThereADescription)
-		{
-			description = (const char*)(tempAGI->code + viewHeaderBuffer[POSITION_OF_DESCRIPTION] + viewHeaderBuffer[POSITION_OF_DESCRIPTION] * 256);
-			descriptionLength = strLenBanked((char*)description, tempAGI->codeBank);
+	if (isThereADescription)
+	{
+		description = (const char*)(tempAGI->code + viewHeaderBuffer[POSITION_OF_DESCRIPTION] + viewHeaderBuffer[POSITION_OF_DESCRIPTION] * 256);
+		descriptionLength = strLenBanked((char*)description, tempAGI->codeBank);
 
 #ifdef VERBOSE_SET_VIEWS
-			printf("Description length %d. The description is %s\n", descriptionLength, description);
+		printf("Description length %d. The description is %s\n", descriptionLength, description);
 #endif // VERBOSE_ALLOC_WATCH
-		}
-		else {
+	}
+	else {
 
 #ifdef VERBOSE_SET_VIEWS
-			printf("there is no description");
+		printf("there is no description");
 #endif // VERBOSE_ALLOC_WATCH
-			//TODO: Use /0
-			description = (const char*)&tempAGI->code[POSITION_OF_DESCRIPTION]; //Going to be zero. We can do this even though we are not on the bank; there is no deference
-		}
+		//TODO: Use /0
+		description = (const char*)&tempAGI->code[POSITION_OF_DESCRIPTION]; //Going to be zero. We can do this even though we are not on the bank; there is no deference
+	}
 
 #ifdef VERBOSE_SET_VIEWS
-		memCpyBanked(&tmp[0], (byte*)localView->description, localView->loopsBank, descriptionLength);
-		if (tmp[0] == 0)
-		{
-			printf("The description is empty\n");
-		}
-		else
-		{
-			printf("The description is not empty\n");
-			printf("It has a value of %s ", description);
-		}
-#endif
-
-		localView->loaded = TRUE;
-		localView->loops = (Loop*)b10BankedAlloc(numberOfLoops * sizeof(Loop), &loopsBank);
-		memsetBanked((byte*)localView->loops, 0, numberOfLoops * sizeof(Loop), loopsBank);
-
-		localView->numberOfLoops = numberOfLoops;
-		localView->description = description;
-		localView->loopsBank = loopsBank;
-		localView->maxCels = 0;
-		localView->maxVeraSlots = 0;
+	memCpyBanked(&tmp[0], (byte*)localView->description, localView->loopsBank, descriptionLength);
+	if (tmp[0] == 0)
+	{
+		printf("The description is empty\n");
 	}
 	else
 	{
-		printf("View %d is already loaded. The opcounter is %lu. The logic num is %d\n", viewNum, opCounter, currentLog);
+		printf("The description is not empty\n");
+		printf("It has a value of %s ", description);
 	}
+#endif
 
+	localView->loaded = TRUE;
+	localView->loops = (Loop*)b10BankedAlloc(numberOfLoops * sizeof(Loop), &loopsBank);
+	memsetBanked((byte*)localView->loops, 0, numberOfLoops * sizeof(Loop), loopsBank);
+
+	localView->numberOfLoops = numberOfLoops;
+	localView->description = description;
+	localView->loopsBank = loopsBank;
+	localView->maxCels = 0;
+	localView->maxVeraSlots = 0;
 	localView->codeBlock = tempAGI->code;
 	localView->codeBlockBank = tempAGI->codeBank;
 	setLoadedView(&localView, viewNum);
@@ -1286,144 +1275,153 @@ void b9LoadViewFile(byte viewNum)
 	byte maxLoopVeraSlots = 1;
 	byte currentCelVeraSlots;
 
+	getLoadedView(&localView, viewNum);
+
+	if (!localView.loaded)
+	{
 #ifdef VERBOSE_LOAD_VIEWS
-	printf("Attempt to load viewNum %d\n", viewNum);
+		printf("Attempt to load viewNum %d\n", viewNum);
 #endif // VERBOSE_LOAD_VIEWS
 
-	getLogicDirectory(&agiFilePosType, &viewdir[viewNum]);
-	b6LoadAGIFile(VIEW, &agiFilePosType, &tempAGI);
+		getLogicDirectory(&agiFilePosType, &viewdir[viewNum]);
+		b6LoadAGIFile(VIEW, &agiFilePosType, &tempAGI);
 
 #ifdef VERBOSE_LOAD_VIEWS
-	printf("loaded agiFile of total size %u\n", tempAGI.totalSize);
+		printf("loaded agiFile of total size %u\n", tempAGI.totalSize);
 #endif
 
-	setViewData(viewNum, &tempAGI, &localView);
+		setViewData(viewNum, &tempAGI, &localView);
 
 #ifdef VERBOSE_LOAD_VIEWS
-	printf("The view desc %s, loaded %d, loops %p, loopsBank %d, numberOfLoops %d\n", localView.description, localView.loaded, localView.loops, localView.loopsBank, localView.numberOfLoops);
-	printf("The address of viewHeaderBuffer is %p", &viewHeaderBuffer[0]);
+		printf("The view desc %s, loaded %d, loops %p, loopsBank %d, numberOfLoops %d\n", localView.description, localView.loaded, localView.loops, localView.loopsBank, localView.numberOfLoops);
+		printf("The address of viewHeaderBuffer is %p", &viewHeaderBuffer[0]);
 #endif // VERBOSE_LOAD_VIEWS
 
 #define POSITION_BYTES 2
-	for (l = 0; l < localView.numberOfLoops; l++) {
+		for (l = 0; l < localView.numberOfLoops; l++) {
 #ifdef VERBOSE_LOAD_VIEWS
-		printf("Loading loop %d at %x\n", l, loopOffsets[l]);
+			printf("Loading loop %d at %x\n", l, loopOffsets[l]);
 #endif // VERBOSE_LOAD_VIEWS
 
 #ifdef VERBOSE_LOAD_VIEWS
-		printf("View code starts at %p. The loop offset is %x, we means we expect to find a loop at %x\n", tempAGI.code, loopOffsets[l], tempAGI.code + loopOffsets[l]);
+			printf("View code starts at %p. The loop offset is %x, we means we expect to find a loop at %x\n", tempAGI.code, loopOffsets[l], tempAGI.code + loopOffsets[l]);
 #endif // VERBOSE_SET_LOOPS
 
-		setLoopData(&tempAGI, &localView, &localLoop, tempAGI.code + loopOffsets[l], viewNum, l);
-		cellOffsets = (int*)(loopHeaderBuffer + POSITION_OF_CELS_OFFSET);
-		localLoop.allocationWidth = SPR_ATTR_8;
-		localLoop.allocationHeight = SPR_ATTR_8;
-		localLoop.palette = PALETTE_NOT_SET;
+			setLoopData(&tempAGI, &localView, &localLoop, tempAGI.code + loopOffsets[l], viewNum, l);
+			cellOffsets = (int*)(loopHeaderBuffer + POSITION_OF_CELS_OFFSET);
+			localLoop.allocationWidth = SPR_ATTR_8;
+			localLoop.allocationHeight = SPR_ATTR_8;
+			localLoop.palette = PALETTE_NOT_SET;
 
-		for (c = 0; c < localLoop.numberOfCels; c++) {
-			cellPosition = tempAGI.code + loopOffsets[l] + cellOffsets[c];
-			memCpyBanked(celHeader, cellPosition, tempAGI.codeBank, CEL_HEADER_SIZE);
+			for (c = 0; c < localLoop.numberOfCels; c++) {
+				cellPosition = tempAGI.code + loopOffsets[l] + cellOffsets[c];
+				memCpyBanked(celHeader, cellPosition, tempAGI.codeBank, CEL_HEADER_SIZE);
 
-			getLoadedCel(&localLoop, &localCel, c);
-			trans = celHeader[POSTION_OF_CEL_TRANSPARENCY_AND_MIRRORING];
+				getLoadedCel(&localLoop, &localCel, c);
+				trans = celHeader[POSTION_OF_CEL_TRANSPARENCY_AND_MIRRORING];
 
-			localCel.bitmapBank = tempAGI.codeBank;
-			localCel.bmp = cellPosition + POSITION_OF_CEL_DATA;
-			localCel.veraSlotsWidth = 1;
-			localCel.veraSlotsHeight = 1;
+				localCel.bitmapBank = tempAGI.codeBank;
+				localCel.bmp = cellPosition + POSITION_OF_CEL_DATA;
+				localCel.veraSlotsWidth = 1;
+				localCel.veraSlotsHeight = 1;
 
 #ifdef VERBOSE_LOAD_VIEWS
-			printf("The address of the data is %p and the bank is %d\n", localCel.bmp, localCel.bitmapBank);
-			printf("The cel is %d. The loop off is %p and the cell of is %d. The total is %p and the address is %p\n", c, loopOffsets[l], cellOffsets[c], loopOffsets[l] + cellOffsets[c], cellPosition);
+				printf("The address of the data is %p and the bank is %d\n", localCel.bmp, localCel.bitmapBank);
+				printf("The cel is %d. The loop off is %p and the cell of is %d. The total is %p and the address is %p\n", c, loopOffsets[l], cellOffsets[c], loopOffsets[l] + cellOffsets[c], cellPosition);
 #endif
 
-			localCel.width = celHeader[POSITION_OF_CEL_WIDTH];
-			localCel.height = celHeader[POSITION_OF_CEL_HEIGHT];
-			localCel.flipped = (trans & 0x80) && (((trans & 0x70) >> 4) != l);
-			localCel.transparency = trans & 0xF;
+				localCel.width = celHeader[POSITION_OF_CEL_WIDTH];
+				localCel.height = celHeader[POSITION_OF_CEL_HEIGHT];
+				localCel.flipped = (trans & 0x80) && (((trans & 0x70) >> 4) != l);
+				localCel.transparency = trans & 0xF;
 
-			if (localLoop.palette == PALETTE_NOT_SET)
-			{
+				if (localLoop.palette == PALETTE_NOT_SET)
+				{
 #ifdef VERBOSE_GET_PALETTE
-				printf("lv 1. create palette for view %d loop %d\n", viewNum, l);
+					printf("lv 1. create palette for view %d loop %d\n", viewNum, l);
 #endif
-				localLoop.palette = bECreateSpritePalette(localCel.transparency);
+					localLoop.palette = bECreateSpritePalette(localCel.transparency);
 
 #ifdef VERBOSE_GET_PALETTE
-				printf("lv 1. set palette for view %d loop %d. palette %d\n", viewNum, l, localLoop.palette);
+					printf("lv 1. set palette for view %d loop %d. palette %d\n", viewNum, l, localLoop.palette);
 #endif
-			}
+				}
 
 #ifdef VERBOSE_LOAD_VIEWS
-			printf("Local view %d.%d.%d is %d x %d, when width doubled %d x %d\n", viewNum, l, c, localCel.width, localCel.height, localCel.width * 2, localCel.height);
+				printf("Local view %d.%d.%d is %d x %d, when width doubled %d x %d\n", viewNum, l, c, localCel.width, localCel.height, localCel.width * 2, localCel.height);
 #endif
 
-			//8 Is Default
-			if (localCel.width * 2 > MAX_32_WIDTH_OR_HEIGHT && localLoop.allocationWidth < MAX_64_WIDTH_OR_HEIGHT)
-			{
-				localLoop.allocationWidth = SPR_ATTR_64;
-			}
-			else if (localCel.width * 2 > MAX_16_WIDTH_OR_HEIGHT && localLoop.allocationWidth < MAX_32_WIDTH_OR_HEIGHT)
-			{
-				localLoop.allocationWidth = SPR_ATTR_32;
-			}
-			else if (localCel.width * 2 > MAX_8_WIDTH_OR_HEIGHT && localLoop.allocationWidth < MAX_16_WIDTH_OR_HEIGHT)
-			{
-				localLoop.allocationWidth = SPR_ATTR_16;
-			}
+				//8 Is Default
+				if (localCel.width * 2 > MAX_32_WIDTH_OR_HEIGHT && localLoop.allocationWidth < MAX_64_WIDTH_OR_HEIGHT)
+				{
+					localLoop.allocationWidth = SPR_ATTR_64;
+				}
+				else if (localCel.width * 2 > MAX_16_WIDTH_OR_HEIGHT && localLoop.allocationWidth < MAX_32_WIDTH_OR_HEIGHT)
+				{
+					localLoop.allocationWidth = SPR_ATTR_32;
+				}
+				else if (localCel.width * 2 > MAX_8_WIDTH_OR_HEIGHT && localLoop.allocationWidth < MAX_16_WIDTH_OR_HEIGHT)
+				{
+					localLoop.allocationWidth = SPR_ATTR_16;
+				}
 
-			////Height isn't doubled only width
-			if (localCel.height > MAX_32_WIDTH_OR_HEIGHT && localLoop.allocationHeight < MAX_64_WIDTH_OR_HEIGHT)
-			{
-				localLoop.allocationHeight = SPR_ATTR_64;
-			}
-			else if (localCel.height > MAX_16_WIDTH_OR_HEIGHT && localLoop.allocationHeight < MAX_32_WIDTH_OR_HEIGHT)
-			{
-				localLoop.allocationHeight = SPR_ATTR_32;
-			}
-			else if (localCel.height > MAX_8_WIDTH_OR_HEIGHT && localLoop.allocationHeight < MAX_16_WIDTH_OR_HEIGHT)
-			{
-				localLoop.allocationHeight = SPR_ATTR_16;
-			}
+				////Height isn't doubled only width
+				if (localCel.height > MAX_32_WIDTH_OR_HEIGHT && localLoop.allocationHeight < MAX_64_WIDTH_OR_HEIGHT)
+				{
+					localLoop.allocationHeight = SPR_ATTR_64;
+				}
+				else if (localCel.height > MAX_16_WIDTH_OR_HEIGHT && localLoop.allocationHeight < MAX_32_WIDTH_OR_HEIGHT)
+				{
+					localLoop.allocationHeight = SPR_ATTR_32;
+				}
+				else if (localCel.height > MAX_8_WIDTH_OR_HEIGHT && localLoop.allocationHeight < MAX_16_WIDTH_OR_HEIGHT)
+				{
+					localLoop.allocationHeight = SPR_ATTR_16;
+				}
 
-			 localCel.veraSlotsWidth = b9VeraSlotsForWidthOrHeight(localCel.width * 2);
-			 localCel.veraSlotsHeight = b9VeraSlotsForWidthOrHeight(localCel.height);
+				localCel.veraSlotsWidth = b9VeraSlotsForWidthOrHeight(localCel.width * 2);
+				localCel.veraSlotsHeight = b9VeraSlotsForWidthOrHeight(localCel.height);
 
-			localCel.splitSegments = localCel.veraSlotsWidth * localCel.veraSlotsHeight;
+				localCel.splitSegments = localCel.veraSlotsWidth * localCel.veraSlotsHeight;
 
 #ifdef VERBOSE_LOAD_VIEWS
-			printf("The viewNum is %d\n", viewNum);
-			printf("The address of celHeader is %p\n", celHeader);
-			printf("bitmapBank %d, bmp %p, height %d, width %d, flipped %d \n", localCel.bitmapBank, localCel.bmp, localCel.height, localCel.width, localCel.flipped);
+				printf("The viewNum is %d\n", viewNum);
+				printf("The address of celHeader is %p\n", celHeader);
+				printf("bitmapBank %d, bmp %p, height %d, width %d, flipped %d \n", localCel.bitmapBank, localCel.bmp, localCel.height, localCel.width, localCel.flipped);
 #endif // VERBOSE_SET_CEL
 
-			currentCelVeraSlots = localCel.veraSlotsWidth * localCel.veraSlotsHeight;
+				currentCelVeraSlots = localCel.veraSlotsWidth * localCel.veraSlotsHeight;
 
 #ifdef VERBOSE_LOAD_VIEWS
-			printf("Current cel slots %d * %d = %d\n", localCel.veraSlotsWidth, localCel.veraSlotsHeight, currentCelVeraSlots);
+				printf("Current cel slots %d * %d = %d\n", localCel.veraSlotsWidth, localCel.veraSlotsHeight, currentCelVeraSlots);
 #endif
 
-			if (currentCelVeraSlots > localView.maxVeraSlots)
-			{
-				localView.maxVeraSlots = currentCelVeraSlots;
+				if (currentCelVeraSlots > localView.maxVeraSlots)
+				{
+					localView.maxVeraSlots = currentCelVeraSlots;
+				}
+
+				setLoadedCel(&localLoop, &localCel, c);
 			}
 
-			setLoadedCel(&localLoop, &localCel, c);
-		}
-
-		if (localLoop.numberOfCels > localView.maxCels)
-		{
-			localView.maxCels = localLoop.numberOfCels;
-		}
+			if (localLoop.numberOfCels > localView.maxCels)
+			{
+				localView.maxCels = localLoop.numberOfCels;
+			}
 
 #ifdef VERBOSE_LOAD_VIEWS
-		printf("view %d loop %d is allocated width and %d height %d\n", viewNum, l, localLoop.allocationWidth, localLoop.allocationHeight);
+			printf("view %d loop %d is allocated width and %d height %d\n", viewNum, l, localLoop.allocationWidth, localLoop.allocationHeight);
 #endif
 
 
-		setLoadedLoop(&localView, &localLoop, l);
+			setLoadedLoop(&localView, &localLoop, l);
+		}
+		setLoadedView(&localView, viewNum);
 	}
-	setLoadedView(&localView, viewNum);
+	else
+	{
+		printf("View %d is already loaded. The opcounter is %lu. The logic num is %d\n", viewNum, opCounter, currentLog);
+	}
 }
 
 /***************************************************************************
@@ -2436,7 +2434,7 @@ void bBUpdateObjects()
 				else
 					localViewtab.priority = (localViewtab.yPos / 12 + 1);
 			}
-	}
+		}
 
 		setViewTab(&localViewtab, entryNum);
 	}
@@ -2476,7 +2474,7 @@ void bBUpdateObjects()
 							}
 						}
 
-				 //Blit may fail if we run out of sprite memory, if that is the case clear everything as there is likely to be stuff we are no longer using. If it fails more than once, we know there is not point continuing
+						//Blit may fail if we run out of sprite memory, if that is the case clear everything as there is likely to be stuff we are no longer using. If it fails more than once, we know there is not point continuing
 					}
 					else if (i == MAX_SPRITE_PRIORITY)
 					{
@@ -2718,7 +2716,7 @@ void bCCalcObjMotion()
 					if (flag[localViewtab.param4]) break;
 					bAAdjustPosition(&localViewtab, (int)localViewtab.param1,
 						(int)localViewtab.param2, entryNum);
-				
+
 					if ((localViewtab.xPos == localViewtab.param1 || abs((int)localViewtab.xPos - localViewtab.param1) < localViewtab.stepSize) &&
 						(localViewtab.yPos == localViewtab.param2 || abs((int)localViewtab.yPos - localViewtab.param2) < localViewtab.stepSize)
 						) {
