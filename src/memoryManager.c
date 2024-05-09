@@ -43,7 +43,8 @@ void bankedRamInit()
 		(int)_BANKRAM0E_SIZE__,
 		(int)_BANKRAM0F_SIZE__,
 		(int)_BANKRAM10_SIZE__,
-		(int)_BANKRAM11_SIZE__
+		(int)_BANKRAM11_SIZE__,
+		(int)_BANKRAM12_SIZE__
 	};
 
 	printf("Zeroing Banks\n");
