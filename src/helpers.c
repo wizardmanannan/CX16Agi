@@ -150,7 +150,7 @@ void copyStringFromBanked(char* src, char* dest, int start, int chunk, byte sour
 		dest[i - start] = src[i];
 		if (convertFromAsciiByteToPetscii)
 		{
-			RAM_BANK = HELPERS_BANK;
+			RAM_BANK = HELPERS_BANK_1;
 			convertResult = convertAsciiByteToPetsciiByte(dest[i - start]);
 			RAM_BANK = sourceBank;
 			dest[i - start] = convertResult;
@@ -214,7 +214,25 @@ void getLogicDirectory(AGIFilePosType* returnedLogicDirectory, AGIFilePosType* l
 	RAM_BANK = previousRamBank;
 }
 
+#pragma code-name (push, "BANKRAM06")
+void b6WaitOnSpecificKeys(byte* keys, byte length)
+{
+	byte ch, i;
+	boolean keyPressed = FALSE;
 
+	do {
+		GET_IN(ch);
+
+		if (ch)
+		{
+			for (i = 0; i < length && !keyPressed; i++)
+			{
+				keyPressed = ch == keys[i];
+			}
+		}
+	} while (!keyPressed);
+}
+#pragma code-name (pop)
 
 
 
