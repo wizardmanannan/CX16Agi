@@ -54,9 +54,13 @@ extern void setResourceDirectory(AGIFilePosType* newLogicDirectory, AGIFilePosTy
 extern void debugPrint(byte toPrint);
 extern void trampoline();
 
-#pragma wrapped-call (push, trampoline, HELPERS_BANK)
+#pragma wrapped-call (push, trampoline, HELPERS_BANK_1)
 void b5RefreshBuffer(BufferStatus* bufferStatus);
 void b5WaitOnKey();
+#pragma wrapped-call (pop)
+
+#pragma wrapped-call (push, trampoline, HELPERS_BANK_2)
+void b6WaitOnSpecificKeys(byte* keys, byte length);
 #pragma wrapped-call (pop)
 
 

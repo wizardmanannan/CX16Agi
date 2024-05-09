@@ -1566,12 +1566,14 @@ boolean b3CharIsIn(char testChar, char* testString)
 //Helper function not a command. Note there is an identical function on bank 4
 void b3PrintMessageInTextbox(byte messNum, byte x, byte y, byte length)
 {
+#define NO_KEYS_TO_WAIT 2
 
 	char* messagePointer;
 	byte timeoutFlagVal = var[PRINT_TIMEOUT];
 	unsigned int waitTicks;
 	unsigned int vSyncToContinueAt;
 	LOGICFile logicFile;
+	byte keysToWait[NO_KEYS_TO_WAIT] = {KEY_ESC, KEY_ENTER};
 
 	getLogicFile(&logicFile, currentLog);
 
@@ -1588,7 +1590,7 @@ void b3PrintMessageInTextbox(byte messNum, byte x, byte y, byte length)
 
 	messagePointer = getMessagePointer(currentLog, messNum - 1);
 
-	b3DisplayMessageBox(messagePointer, logicFile.messageBank, x, y, TEXTBOX_PALETTE_NUMBER, length);
+	b3DisplayMessageBox(messagePointer, logicFile.messageBank, y, x, TEXTBOX_PALETTE_NUMBER, length);
 
 	if (timeoutFlagVal)
 	{
@@ -1596,15 +1598,13 @@ void b3PrintMessageInTextbox(byte messNum, byte x, byte y, byte length)
 		vSyncToContinueAt = vSyncCounter + waitTicks;
 
 		while (vSyncCounter != vSyncToContinueAt);
-
-		b3ClearLastPlacedText();
 	}
 	else
 	{
-		//TODO: Wait for key press
-			//while (!key[KEY_ENTER] && !key[KEY_ESC]) { /* Wait */ }
-	//while (key[KEY_ENTER] || key[KEY_ESC]) { clear_keybuf(); }
+		b6WaitOnSpecificKeys(keysToWait, NO_KEYS_TO_WAIT);
 	}
+
+	b3ClearLastPlacedText();
 
 	show_mouse(NULL);
 
@@ -1615,12 +1615,12 @@ void b3PrintMessageInTextbox(byte messNum, byte x, byte y, byte length)
 
 void b3Print() // 1, 00 
 {
-	b3PrintMessageInTextbox(loadAndIncWinCode(), TILE_LAYER_WIDTH / 2, TILE_LAYER_HEIGHT / 2, DEFAULT_BOX_WIDTH);
+	b3PrintMessageInTextbox(loadAndIncWinCode(), DEFAULT_TEXTBOX_X, DEFAULT_TEXTBOX_Y, DEFAULT_BOX_WIDTH);
 }
 
 void b3Print_v() // 1, 0x80 
 {
-	b3PrintMessageInTextbox(var[loadAndIncWinCode()], TILE_LAYER_WIDTH / 2, TILE_LAYER_HEIGHT / 2, DEFAULT_BOX_WIDTH);
+	b3PrintMessageInTextbox(var[loadAndIncWinCode()], DEFAULT_TEXTBOX_X, DEFAULT_TEXTBOX_Y, DEFAULT_BOX_WIDTH);
 }
 
 //A helper function not a command
