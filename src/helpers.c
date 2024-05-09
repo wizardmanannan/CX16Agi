@@ -23,6 +23,8 @@ void b5WaitOnKey()
 	} while (!ch);
 }
 
+
+
 void b5RefreshBuffer(BufferStatus* bufferStatus)
 {
 	BufferStatus localBufferStatus;
