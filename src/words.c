@@ -17,6 +17,7 @@
 //#define VERBOSE_CALC_WORDS
 //#define VERBOSE_LETTERS
 //#define VERBOSE_WORDS
+//#define VERBOSE_COMPRESS
 
 
 #pragma bss-name (push, "BANKRAM12")
@@ -24,7 +25,7 @@
 wordType wordsMetadata[WORDS_METADATA_SIZE];
 int numWords, numSynonyms;  /* Big difference between the two */
 byte wordBank;
-byte* wordsData;
+char* wordsData;
 byte wordsDataBank;
 #pragma bss-name (pop)
 
@@ -106,6 +107,38 @@ byte b12OpenWords()
     return lfn;
 }
 
+extern MemoryArea* _memoryAreas;
+//Doesn't compress the data but rather moves to the smallest allocation slot practical
+void b12CompressWordsAllocation(int wordsLength)
+{
+    int secondBiggestSegment;
+    byte i;
+    byte* newWordsSegment;
+    byte newWordsSegmentBank;
+
+    //If the words are small enough to fit into the second biggest segment, then that is our justification to call bankedAlloc and move them to a smaller segment. Note, bankedAlloc will take care of figuring out which segment the words belong in
+    memCpyBanked((byte*)&secondBiggestSegment, (byte*)&_memoryAreas[NO_SIZES - 2].segmentSize, MEMORY_MANAGEMENT_BANK, sizeof(int));
+
+    if (wordsLength <= secondBiggestSegment) //Check to 
+    {
+#ifdef VERBOSE_COMPRESS
+        printf("wordsLength %d < %d (%d)\n", wordsLength, secondBiggestSegment, wordsLength <= secondBiggestSegment);
+#endif
+
+            newWordsSegment = b10BankedAlloc(wordsLength, &newWordsSegmentBank);
+            memCpyBankedBetween((byte*)newWordsSegment, newWordsSegmentBank, (byte*) wordsData, wordsDataBank, wordsLength);
+
+            b10BankedDealloc((byte*)wordsData, wordsDataBank);
+
+            wordsData = newWordsSegment;
+            wordsDataBank = newWordsSegmentBank;
+
+#ifdef VERBOSE_COMPRESS
+            printf("compressed down to size %d address %p bank %p\n", secondBiggestSegment, wordsData, wordsDataBank);
+#endif
+        }
+}
+
 /**************************************************************************
 ** loadWords
 **
@@ -133,7 +166,7 @@ void b12LoadWords()
     startPos = b12CalculateStartPosition();
 
     b12CalcNumWords(startPos);
-    wordsData = b10BankedAlloc(LARGE_SIZE, data);
+    wordsData = b10BankedAlloc(LARGE_SIZE, data); //This allocation will be swapped by a smaller one if practical in b12CompressAllocation
     wordsDataBank = data[0];
 
     printf("the words are stored at %p on bank %p\n", wordsData, wordsDataBank);
@@ -186,6 +219,8 @@ void b12LoadWords()
             printf("Words overflow");
         }
     }
+
+    b12CompressWordsAllocation(wordsDataPointer - wordsData - 1); //Words data pointer is pointing to a blank byte read for another word. Therefore -1 from the length
 
 #ifdef VERBOSE_WORDS
     printf("end of function reached\n");

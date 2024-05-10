@@ -7,6 +7,7 @@
 
 #include "helpers.h"
 #include "agifiles.h"
+#include "helpers.h"
 #include <cx16.h>
 #include <cbm.h>
 
