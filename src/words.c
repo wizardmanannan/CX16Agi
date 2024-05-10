@@ -14,7 +14,10 @@
 #include "general.h"
 #include "words.h"
 
-#define VERBOSE_WORDS
+//#define VERBOSE_CALC_WORDS
+//#define VERBOSE_LETTERS
+//#define VERBOSE_WORDS
+
 
 #pragma bss-name (push, "BANKRAM12")
 #define WORDS_METADATA_SIZE 1500
@@ -26,6 +29,32 @@ byte wordsDataBank;
 #pragma bss-name (pop)
 
 #pragma code-name (push, "BANKRAM12")
+long b12CalculateStartPosition()
+{
+    byte data[2];
+
+    b6Cx16_fseek(FILE_OPEN_ADDRESS, 0);
+    if (!cbm_read(SEQUENTIAL_LFN, &data[0], 2))
+    {
+        printf("Failed to read from file");
+        exit(0);
+    }
+
+#ifdef VERBOSE_CALC_WORDS
+    printf("the contents of data is %d and %d\n", data[0], data[1]);
+#endif
+
+#ifdef VERBOSE_CALC_WORDS
+    printf("the start pos calc (%d * 256 + %d)\n", data[0], data[1]);
+#endif
+
+#ifdef VERBOSE_CALC_WORDS
+    printf("start pos is %lu\n", (byte)data[0] * (long)256 + (byte)data[1]);
+#endif
+
+    return (byte)data[0] * (long)256 + (byte)data[1];
+}
+
 /**************************************************************************
 ** calcNumWords
 **
@@ -35,51 +64,16 @@ byte wordsDataBank;
 ** words list. The number of synonyms will be used to check against the
 ** parameters to said() to determine whether those synonyms exist.
 **************************************************************************/
-int b12CalcNumWords()
+int b12CalcNumWords(long startPos)
 {
     byte data[2];
-    long startPos;
     int synMax, synNum, wordCount = 0;
 
-    b6Cx16_fseek(FILE_OPEN_ADDRESS, 0);
-    if (!cbm_read(SEQUENTIAL_LFN, &data[0], 2))
-    {
-        printf("Failed to read from file");
-        exit(0);
-    }
-
-#ifdef VERBOSE_WORDS
-    printf("the contents of data is %d and %d\n", data[0], data[1]);
-#endif
-
-#ifdef VERBOSE_WORDS
-    printf("the start pos calc (%d * 256 + %d)\n", data[0], data[1]);
-#endif
-
-    startPos = (byte)data[0] * (long)256 + (byte)data[1];  
-
-#ifdef VERBOSE_WORDS
-    printf("start pos is %lu\n", startPos);
-#endif
-
+    
     b6Cx16_fseek(FILE_OPEN_ADDRESS, startPos);
 
-
-
-
-
-    //data = fgetc(wordFile);
-    //while (!feof(wordFile)) {
-    //    if (data > 0x80) {  /* Top bit set marks the end of a word */
-    //        wordCount++;
-    //        synNum = (byte)fgetc(wordFile) * 256 + (byte)fgetc(wordFile);
-    //        if ((synNum > synMax) && (synNum != 9999)) synMax = synNum;
-    //    }
-    //    data = fgetc(wordFile);
-    //}
-
     while (cbm_read(SEQUENTIAL_LFN, &data, 1)) {
-#ifdef VERBOSE_WORDS
+#ifdef VERBOSE_CALC_WORDS
         printf("data[0] is %p\n", data[0]);
 #endif
         if (data[0] > 0x80) {  /* Top bit set marks the end of a word */
@@ -94,12 +88,24 @@ int b12CalcNumWords()
     numSynonyms = synMax;
 
 
-#ifdef VERBOSE_WORDS
+#ifdef VERBOSE_CALC_WORDS
     printf("there are %d words\n", numWords);
 #endif
 
     return 0;
 }
+
+byte b12OpenWords()
+{
+    byte lfn = b6Cbm_openForSeeking("words.tok");
+    if (lfn == NULL) {
+        printf("Cannot find file : WORDS.TOK\n");
+        exit(1);
+    }
+
+    return lfn;
+}
+
 /**************************************************************************
 ** loadWords
 **
@@ -118,37 +124,57 @@ void b12LoadWords()
     char* newWord = (char*) NEW_WORD_ADDRESS;
     byte wordLength, lfn;
 
-    lfn = b6Cbm_openForSeeking("words.tok");
-    if (lfn == NULL) {
-        printf("Cannot find file : WORDS.TOK\n");
-        exit(1);
-    }
+    lfn = b12OpenWords();
 
-#ifdef VERBOSE_WORDS
+#ifdef VERBOSE_CALC_WORDS
     printf("the lfn is %d\n", lfn);
 #endif // VERBOSE_WORDS
 
+    startPos = b12CalculateStartPosition();
 
-    b12CalcNumWords();
-    wordsData = b10BankedAlloc(LARGE_SIZE, &wordsDataBank);
+    b12CalcNumWords(startPos);
+    wordsData = b10BankedAlloc(LARGE_SIZE, data);
+    wordsDataBank = data[0];
+
+    printf("the words are stored at %p on bank %p\n", wordsData, wordsDataBank);
+
     wordsDataPointer = wordsData;
 
-    b6Cx16_fseek(FILE_OPEN_ADDRESS, 0);
-    cbm_read(SEQUENTIAL_LFN, &data, 2);
-    startPos = (byte)data[0] * (long)256 + (byte)data[1];
+    cbm_close(SEQUENTIAL_LFN);
+
+    lfn = b12OpenWords();
     b6Cx16_fseek(FILE_OPEN_ADDRESS, startPos);
+
+#ifdef VERBOSE_WORDS
+    printf("the start pos is %lu\n", startPos);
+#endif
 
     for (wordNum = 0; wordNum < numWords; wordNum++) {
         cbm_read(SEQUENTIAL_LFN, &wordPos, 1);
         do {
-            cbm_read(SEQUENTIAL_LFN, &data, 1);
+            cbm_read(SEQUENTIAL_LFN, &data[0], 1);
             newWord[wordPos++] = ((data[0] ^ 0x7F) & 0x7F);
+
+#ifdef VERBOSE_LETTERS
+            printf("we read %d\n", ((data[0] ^ 0x7F) & 0x7F));
+#endif
+
         } while (data[0] < 0x80);
         newWord[wordPos] = NULL;
+
+#ifdef VERBOSE_WORDS
+        printf("word: %s\n", newWord);
+#endif
+
         synNum = (byte)cbm_read(SEQUENTIAL_LFN, &wordPos, 1) * 256 + (byte)cbm_read(SEQUENTIAL_LFN, &wordPos, 1);
         
-        wordLength = strlen(newWord);
-        memCpyBanked((byte*)wordsDataPointer, (byte*)&newWord, wordsDataBank, wordLength);
+        wordLength = strlen(newWord) + 1;
+
+
+//#ifdef VERBOSE_WORDS
+//        printf("copying from %p to %p on bank %p length %p\n", &newWord);
+//#endif
+        memCpyBanked((byte*)wordsDataPointer, (byte*)newWord, wordsDataBank, wordLength);
         
         wordsMetadata[wordNum].wordText = wordsDataPointer;
         wordsMetadata[wordNum].synonymNum = synNum;
@@ -160,6 +186,10 @@ void b12LoadWords()
             printf("Words overflow");
         }
     }
+
+#ifdef VERBOSE_WORDS
+    printf("end of function reached\n");
+#endif
 
     cbm_close(SEQUENTIAL_LFN);
 }
