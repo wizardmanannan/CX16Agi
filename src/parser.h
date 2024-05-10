@@ -40,7 +40,7 @@ extern byte b7KeyState[256], b7AsciiState[256];
 extern byte b7Directions[9];
 extern int lastKey;
 
-#pragma wrapped-call (push, trampoline, WORD_BANK)
+#pragma wrapped-call (push, trampoline, STRING_BANK)
 extern int b7Strcmp(char const* _Str1,char const* _Str2);
 extern void b7ProcessString(char* stringPointer, byte stringBank, char* b7OutputString, byte outputStringBank);
 extern char* b7GetInternalStringPtr(byte number, size_t* length);

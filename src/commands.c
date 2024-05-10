@@ -1712,7 +1712,7 @@ void b4Set_cursor_char() // 1, 0x00
 
 	//b3ProcessString(messagePointer, logicFile.messageBank, temp);
 	
-	memCpyBanked((byte*) &cursorChar, (byte*)b7Temp, WORD_BANK, 1);
+	memCpyBanked((byte*) &cursorChar, (byte*)b7Temp, STRING_BANK, 1);
 
 #ifdef VERBOSE_STRING_CHECK
 	printf("Your cursor char is %c\n", cursorChar);
@@ -1813,7 +1813,7 @@ void b4Word_to_string() // 2, 0x00
 
 	stringPtr = b7GetInternalStringPtr(stringNum, &length);
 
-	memCpyBanked((byte*)&b7WordText[wordNum], (byte*) stringPtr, WORD_BANK, length); 
+	memCpyBanked((byte*)&b7WordText[wordNum], (byte*) stringPtr, STRING_BANK, length); 
 	return;
 }
 
