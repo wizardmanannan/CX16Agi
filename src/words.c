@@ -20,6 +20,11 @@ int numWords, numSynonyms;  /* Big difference between the two */
 byte wordBank;
 #pragma bss-name (pop)
 
+#pragma code-name (push, "BANKRAM12")
+void b12Dummy() {}
+#pragma code-name (pop)
+
+
 #pragma code-name (push, "BANKRAM07")
 /**************************************************************************
 ** loadWords
