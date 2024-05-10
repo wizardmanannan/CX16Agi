@@ -27,6 +27,9 @@ int numWords, numSynonyms;  /* Big difference between the two */
 byte wordBank;
 char* wordsData;
 byte wordsDataBank;
+char** wordPointers; //This will be used to store pointers to all of the words, in the same order as the words metadata
+byte wordsPointersBank;
+
 #pragma bss-name (pop)
 
 #pragma code-name (push, "BANKRAM12")
@@ -155,6 +158,7 @@ void b12LoadWords()
     word wordNum, synNum;
     char* wordsDataPointer;
     char* newWord = (char*) NEW_WORD_ADDRESS;
+    char** wordPointersPointer;
     byte wordLength, lfn;
 
     lfn = b12OpenWords();
@@ -169,7 +173,15 @@ void b12LoadWords()
     wordsData = b10BankedAlloc(LARGE_SIZE, data); //This allocation will be swapped by a smaller one if practical in b12CompressAllocation
     wordsDataBank = data[0];
 
+    wordPointers = (char**)b10BankedAlloc(numWords * sizeof(char*), data);
+
+    wordsPointersBank = data[0];
+    wordPointersPointer = wordPointers;
+
+#ifdef VERBOSE_WORDS
+    printf("the word pointers are at %p on bank %p\n", wordPointersPointer, wordsPointersBank);
     printf("the words are stored at %p on bank %p\n", wordsData, wordsDataBank);
+#endif
 
     wordsDataPointer = wordsData;
 
@@ -209,10 +221,15 @@ void b12LoadWords()
 //#endif
         memCpyBanked((byte*)wordsDataPointer, (byte*)newWord, wordsDataBank, wordLength);
         
-        wordsMetadata[wordNum].wordText = wordsDataPointer;
+        wordsMetadata[wordNum].wordTextStart[0] = newWord[0];
+        wordsMetadata[wordNum].wordTextStart[1] = newWord[1];
+
         wordsMetadata[wordNum].synonymNum = synNum;
 
+        memCpyBanked((byte*)wordPointersPointer, (byte*)&wordsDataPointer, wordsPointersBank, 2);
+
         wordsDataPointer += wordLength;
+        wordPointersPointer++;
 
         if (wordsDataPointer > (char*)BANK_MAX)
         {
@@ -220,12 +237,11 @@ void b12LoadWords()
         }
     }
 
-    b12CompressWordsAllocation(wordsDataPointer - wordsData - 1); //Words data pointer is pointing to a blank byte read for another word. Therefore -1 from the length
+    //b12CompressWordsAllocation(wordsDataPointer - wordsData - 1); //Words data pointer is pointing to a blank byte read for another word. Therefore -1 from the length
 
 #ifdef VERBOSE_WORDS
     printf("end of function reached\n");
 #endif
-
     cbm_close(SEQUENTIAL_LFN);
 }
 
@@ -256,7 +272,7 @@ int b12FindSynonymNum(char* userWord)
 
     while ((!found) && (bottom <= top)) {
         mid = (top + bottom) / 2;
-        strCompVal = strcmp(userWord, wordsMetadata[mid].wordText);
+        strCompVal = strcmp(userWord, wordsMetadata[mid].wordTextStart);
         if (strCompVal == 0)
             found = TRUE;
         else if (strCompVal < 0)
@@ -274,7 +290,7 @@ void b12ShowWords()
     int wordNum;
 
     for (wordNum = 0; wordNum < numWords; wordNum++)
-        printf("%-14s%5d ", wordsMetadata[wordNum].wordText, wordsMetadata[wordNum].synonymNum);
+        printf("%-14s%5d ", wordsMetadata[wordNum].wordTextStart, wordsMetadata[wordNum].synonymNum);
 }
 
 #pragma code-name (pop)

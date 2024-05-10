@@ -12,7 +12,7 @@
 #include <cbm.h>
 
 typedef struct {
-	char* wordText;
+	char wordTextStart[2];
 	int synonymNum;
 } wordType;
 
