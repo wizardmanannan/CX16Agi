@@ -339,7 +339,7 @@ void b7LookupWords(char* inputLine)
 
 	//while (allWordsFound && ((token = strtok(userInput, " ")) != NULL)) {
 	for (token = strtok(userInput, " "); (token && allWordsFound); token = strtok(0, " ")) {
-		switch (synNum = b12FindSynonymNum(token)) {
+		switch (synNum = b7FindSynonymNum(token)) {
 		case -1: /* Word not found */
 			var[9] = numInputWords;
 			allWordsFound = FALSE;

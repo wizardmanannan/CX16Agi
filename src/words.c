@@ -14,18 +14,52 @@
 #include "general.h"
 #include "words.h"
 
-#define VERBOSE_WORDS
-
-#pragma bss-name (push, "BANKRAM12")
-#define WORDS_METADATA_SIZE 1500
-wordType wordsMetadata[WORDS_METADATA_SIZE];
+#pragma bss-name (push, "BANKRAM07")
+wordType* words;
 int numWords, numSynonyms;  /* Big difference between the two */
 byte wordBank;
-byte* wordsData;
-byte wordsDataBank;
 #pragma bss-name (pop)
 
-#pragma code-name (push, "BANKRAM12")
+#pragma code-name (push, "BANKRAM07")
+/**************************************************************************
+** loadWords
+**
+** Purpose: Load words in from the WORDS.TOK file.
+**************************************************************************/
+void b7LoadWords()
+{
+    //FILE* wordFile;
+    //byte data, wordPos, newWord[80], temp[80];
+    //long startPos;
+    //word wordNum, synNum;
+
+    //if ((wordFile = fopen("WORDS.TOK", "rb")) == NULL) {
+    //    printf("Cannot find file : WORDS.TOK\n");
+    //    exit(1);
+    //}
+
+    //calcNumWords(wordFile);
+    //words = (wordType*)malloc(sizeof(wordType) * numWords);
+
+    //startPos = (byte)fgetc(wordFile) * (long)256 + (byte)fgetc(wordFile);
+    //fseek(wordFile, startPos, SEEK_SET);
+
+    //for (wordNum = 0; wordNum < numWords; wordNum++) {
+    //    data = fgetc(wordFile);
+    //    wordPos = data;
+    //    do {
+    //        data = fgetc(wordFile);
+    //        newWord[wordPos++] = ((data ^ 0x7F) & 0x7F);
+    //    } while (data < 0x80);
+    //    newWord[wordPos] = NULL;
+    //    synNum = (byte)fgetc(wordFile) * 256 + (byte)fgetc(wordFile);
+    //    words[wordNum].wordText = (char*)strdup(newWord);
+    //    words[wordNum].synonymNum = synNum;
+    //}
+
+    //fclose(wordFile);
+}
+
 /**************************************************************************
 ** calcNumWords
 **
@@ -35,38 +69,15 @@ byte wordsDataBank;
 ** words list. The number of synonyms will be used to check against the
 ** parameters to said() to determine whether those synonyms exist.
 **************************************************************************/
-int b12CalcNumWords()
+int b7CalcNumWords(FILE* wordFile)
 {
-    byte data[2];
-    long startPos;
-    int synMax, synNum, wordCount = 0;
+    //byte data;
+    //long startPos;
+    //int synMax, synNum, wordCount = 0;
 
-    b6Cx16_fseek(FILE_OPEN_ADDRESS, 0);
-    if (!cbm_read(SEQUENTIAL_LFN, &data[0], 2))
-    {
-        printf("Failed to read from file");
-        exit(0);
-    }
-
-#ifdef VERBOSE_WORDS
-    printf("the contents of data is %d and %d\n", data[0], data[1]);
-#endif
-
-#ifdef VERBOSE_WORDS
-    printf("the start pos calc (%d * 256 + %d)\n", data[0], data[1]);
-#endif
-
-    startPos = (byte)data[0] * (long)256 + (byte)data[1];  
-
-#ifdef VERBOSE_WORDS
-    printf("start pos is %lu\n", startPos);
-#endif
-
-    b6Cx16_fseek(FILE_OPEN_ADDRESS, startPos);
-
-
-
-
+    //fseek(wordFile, 0, SEEK_SET);
+    //startPos = (byte)fgetc(wordFile) * (long)256 + (byte)fgetc(wordFile);
+    //fseek(wordFile, startPos, SEEK_SET);
 
     //data = fgetc(wordFile);
     //while (!feof(wordFile)) {
@@ -78,102 +89,26 @@ int b12CalcNumWords()
     //    data = fgetc(wordFile);
     //}
 
-    while (cbm_read(SEQUENTIAL_LFN, &data, 1)) {
-#ifdef VERBOSE_WORDS
-        printf("data[0] is %p\n", data[0]);
-#endif
-        if (data[0] > 0x80) {  /* Top bit set marks the end of a word */
-            cbm_read(SEQUENTIAL_LFN, &data, 2);
-            wordCount++;
-            synNum = (byte)data[0] * 256 + (byte)data[1];
-            if ((synNum > synMax) && (synNum != 9999)) synMax = synNum;
-        }
-    }
-
-    numWords = wordCount;
-    numSynonyms = synMax;
-
-
-#ifdef VERBOSE_WORDS
-    printf("there are %d words\n", numWords);
-#endif
+    //numWords = wordCount;
+    //numSynonyms = synMax;
+    //fseek(wordFile, 0, SEEK_SET);
 
     return 0;
 }
-/**************************************************************************
-** loadWords
-**
-** Purpose: Load words in from the WORDS.TOK file.
-**************************************************************************/
-void b12LoadWords()
-{
-#define NEW_WORD_ADDRESS GOLDEN_RAM_WORK_AREA
-#define NEW_WORD_SIZE 80
-
-    byte wordPos;
-    byte data[2];
-    long startPos;
-    word wordNum, synNum;
-    char* wordsDataPointer;
-    char* newWord = (char*) NEW_WORD_ADDRESS;
-    byte wordLength, lfn;
-
-    lfn = b6Cbm_openForSeeking("words.tok");
-    if (lfn == NULL) {
-        printf("Cannot find file : WORDS.TOK\n");
-        exit(1);
-    }
-
-#ifdef VERBOSE_WORDS
-    printf("the lfn is %d\n", lfn);
-#endif // VERBOSE_WORDS
-
-
-    b12CalcNumWords();
-    wordsData = b10BankedAlloc(LARGE_SIZE, &wordsDataBank);
-    wordsDataPointer = wordsData;
-
-    b6Cx16_fseek(FILE_OPEN_ADDRESS, 0);
-    cbm_read(SEQUENTIAL_LFN, &data, 2);
-    startPos = (byte)data[0] * (long)256 + (byte)data[1];
-    b6Cx16_fseek(FILE_OPEN_ADDRESS, startPos);
-
-    for (wordNum = 0; wordNum < numWords; wordNum++) {
-        cbm_read(SEQUENTIAL_LFN, &wordPos, 1);
-        do {
-            cbm_read(SEQUENTIAL_LFN, &data, 1);
-            newWord[wordPos++] = ((data[0] ^ 0x7F) & 0x7F);
-        } while (data[0] < 0x80);
-        newWord[wordPos] = NULL;
-        synNum = (byte)cbm_read(SEQUENTIAL_LFN, &wordPos, 1) * 256 + (byte)cbm_read(SEQUENTIAL_LFN, &wordPos, 1);
-        
-        wordLength = strlen(newWord);
-        memCpyBanked((byte*)wordsDataPointer, (byte*)&newWord, wordsDataBank, wordLength);
-        
-        wordsMetadata[wordNum].wordText = wordsDataPointer;
-        wordsMetadata[wordNum].synonymNum = synNum;
-
-        wordsDataPointer += wordLength;
-
-        if (wordsDataPointer > (char*)BANK_MAX)
-        {
-            printf("Words overflow");
-        }
-    }
-
-    cbm_close(SEQUENTIAL_LFN);
-}
-
-
 
 /***************************************************************************
 ** discardWords
 **
 ** Purpose: To deallocate all memory associated with the words array.
 ***************************************************************************/
-void b12DiscardWords()
+void b7DiscardWords()
 {
-    b10BankedDealloc((byte*)wordsData, wordsDataBank);
+    /*int wordNum;
+
+    for (wordNum = 0; wordNum < numWords; wordNum++)
+        free(words[wordNum].wordText);
+
+    free(words);*/
 }
 
 /***************************************************************************
@@ -184,14 +119,14 @@ void b12DiscardWords()
 ** a binary search to locate the correct word entry. Some games would have
 ** a search depth of about 10 or 11 (1000+ words).
 ***************************************************************************/
-int b12FindSynonymNum(char* userWord)
+int b7FindSynonymNum(char* userWord)
 {
     boolean found = FALSE;
     int top = numWords - 1, bottom = 0, mid, strCompVal;
 
     while ((!found) && (bottom <= top)) {
         mid = (top + bottom) / 2;
-        strCompVal = strcmp(userWord, wordsMetadata[mid].wordText);
+        strCompVal = strcmp(userWord, words[mid].wordText);
         if (strCompVal == 0)
             found = TRUE;
         else if (strCompVal < 0)
@@ -200,16 +135,16 @@ int b12FindSynonymNum(char* userWord)
             bottom = mid + 1;
     }
 
-    if (found) return (wordsMetadata[mid].synonymNum);
+    if (found) return (words[mid].synonymNum);
     else return (-1);
 }
 
-void b12ShowWords()
+void b7ShowWords()
 {
     int wordNum;
 
     for (wordNum = 0; wordNum < numWords; wordNum++)
-        printf("%-14s%5d ", wordsMetadata[wordNum].wordText, wordsMetadata[wordNum].synonymNum);
+        printf("%-14s%5d ", words[wordNum].wordText, words[wordNum].synonymNum);
 }
 
 #pragma code-name (pop)

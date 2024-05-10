@@ -113,7 +113,7 @@
 
 #define FLOODBANKFILENAME "agi.cx16.flood"
 
-#define NO_CODE_BANKS 18
+#define NO_CODE_BANKS 17
 
 #define LRU_CACHE_LOGIC_DATA_SIZE 10
 #define LRU_CACHE_LOGIC_VIEW_SIZE 20
