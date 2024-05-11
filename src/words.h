@@ -12,8 +12,7 @@
 #include <cbm.h>
 
 typedef struct {
-	char wordTextStart[2];
-	int synonymNum;
+	char wordTextStart[3];
 } wordType;
 
 extern int numWords;

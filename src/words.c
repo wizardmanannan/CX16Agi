@@ -30,6 +30,8 @@ char* wordsData;
 byte wordsDataBank;
 char** wordPointers; //This will be used to store pointers to all of the words, in the same order as the words metadata
 byte wordsPointersBank;
+word* synonymsList;
+byte synonymsListBank;
 
 #pragma bss-name (pop)
 
@@ -249,11 +251,12 @@ void b12LoadWords()
     byte wordPos;
     byte data[2];
     long startPos;
-    word wordNum, synNum;
+    word wordNum,synNum;
     char* wordsDataPointer;
     char* newWord = (char*) NEW_WORD_ADDRESS;
     char** wordPointersPointer;
     byte wordLength, lfn;
+    word* synonymsListPointer;
 
     lfn = b12OpenWords();
 
@@ -271,6 +274,10 @@ void b12LoadWords()
 
     wordsPointersBank = data[0];
     wordPointersPointer = wordPointers;
+
+    synonymsList = (word*) b10BankedAlloc(numWords * sizeof(int), data);
+    synonymsListBank = data[0];
+    synonymsListPointer = synonymsList;
 
 #ifdef VERBOSE_WORDS
     printf("the word pointers are at %p on bank %p\n", wordPointersPointer, wordsPointersBank);
@@ -305,8 +312,12 @@ void b12LoadWords()
         printf("word: %s\n", newWord);
 #endif
 
-        synNum = (byte)cbm_read(SEQUENTIAL_LFN, &wordPos, 1) * 256 + (byte)cbm_read(SEQUENTIAL_LFN, &wordPos, 1);
-        
+        cbm_read(SEQUENTIAL_LFN, &data[0], 1);
+        synNum = (word) data[0] * 256;
+
+        cbm_read(SEQUENTIAL_LFN, &data[0], 1);
+        synNum += data[0];
+
         wordLength = strlen(newWord) + 1;
 
 
@@ -318,12 +329,13 @@ void b12LoadWords()
         wordsMetadata[wordNum].wordTextStart[0] = newWord[0];
         wordsMetadata[wordNum].wordTextStart[1] = newWord[1];
 
-        wordsMetadata[wordNum].synonymNum = synNum;
-
         memCpyBanked((byte*)wordPointersPointer, (byte*)&wordsDataPointer, wordsPointersBank, 2);
 
         wordsDataPointer += wordLength;
         wordPointersPointer++;
+        
+        memCpyBanked((byte*)synonymsListPointer, (byte*)&synNum, synonymsListBank, sizeof(word));
+        synonymsListPointer++;
 
         if (wordsDataPointer > (char*)BANK_MAX)
         {
@@ -363,6 +375,7 @@ int b12FindSynonymNum(char* userWord)
 {
     boolean found = FALSE;
     int top = numWords - 1, bottom = 0, mid, strCompVal;
+    word synonymNumber;
 
     while ((!found) && (bottom <= top)) {
         mid = (top + bottom) / 2;
@@ -375,7 +388,11 @@ int b12FindSynonymNum(char* userWord)
             bottom = mid + 1;
     }
 
-    if (found) return (wordsMetadata[mid].synonymNum);
+    if (found)
+    {
+        return 0;
+        //return (wordsMetadata[mid].synonymNum);
+    }
     else return (-1);
 }
 
