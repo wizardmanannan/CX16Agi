@@ -35,61 +35,37 @@ byte synonymsListBank;
 
 #pragma bss-name (pop)
 
-#pragma code-name (push, "BANKRAM07")
-#pragma wrapped-call (push, trampoline, 7)
-
+#pragma code-name (push, "BANKRAM12")
 //Putting this here saves two hundred bytes on bank 12
-wordType* b7SwapWordTypeWithWordPointers(byte* tempWordTypeBank) //WordType is stored in a temp place on the bank, and wordPointers is stored in its place
+wordType* b12SwapWordTypeWithWordPointers(byte* tempWordTypeBank) //WordType is stored in a temp place on the bank, and wordPointers is stored in its place
 {
     byte wordsMetadataSize = WORDS_METADATA_SIZE * sizeof(wordType);
     wordType* tempWordStore;
     char** tempWordsPointersStore = (char**)&wordsMetadata[0];
-    int wordPointersSize;
-    byte* localWordPointers;
-    byte localWordPointersBank;
-    int localNumWords;
-
-    memCpyBanked((byte*) & localWordPointers, (byte*)&wordPointers, WORD_BANK, sizeof(char**));
-    memCpyBanked(&localWordPointersBank, (byte*)&wordsPointersBank, WORD_BANK, sizeof(byte));
-    memCpyBanked(&localNumWords, (byte*)&numWords, WORD_BANK, sizeof(int));
-
-    wordPointersSize = localNumWords * sizeof(char*);
+    int wordPointersSize = numWords * sizeof(char*);
 
     tempWordStore = (wordType*)b10BankedAlloc(wordsMetadataSize, tempWordTypeBank);
     memCpyBankedBetween((byte*)tempWordStore, *tempWordTypeBank, &wordsMetadata[0], WORD_BANK, wordsMetadataSize);
 
-    memCpyBankedBetween((byte*)tempWordsPointersStore, WORD_BANK, (byte*)localWordPointers, localWordPointersBank, wordPointersSize);
+    memCpyBankedBetween((byte*)tempWordsPointersStore, WORD_BANK, (byte*)wordPointers, wordsPointersBank, wordPointersSize);
 
     return tempWordStore;
 }
 
-void b7RecoverWordType(wordType* tempWordType, byte tempWordTypeBank)
+void b12RecoverWordType(wordType* tempWordType, byte tempWordTypeBank)
 {
     byte wordsMetadataSize = WORDS_METADATA_SIZE * sizeof(wordType);
     wordType* tempWordStore;
     char** tempWordsPointersStore = (char**)&wordsMetadata[0];
-    int wordPointersSize;
-    byte* localWordPointers;
-    byte localWordPointersBank;
-    int localNumWords;
+    int wordPointersSize = numWords * sizeof(char*);
 
-    memCpyBanked((byte*)&localWordPointers, (byte*)&wordPointers, WORD_BANK, sizeof(char**));
-    memCpyBanked(&localWordPointersBank, (byte*)&wordsPointersBank, WORD_BANK, sizeof(byte));
-    memCpyBanked(&localNumWords, (byte*)&numWords, WORD_BANK, sizeof(int));
-
-    wordPointersSize = localNumWords * sizeof(char*);
-
-    memCpyBankedBetween((byte*)localWordPointers, localWordPointersBank, (byte*)tempWordsPointersStore, WORD_BANK, wordPointersSize);
+    memCpyBankedBetween((byte*)wordPointers, wordsPointersBank, (byte*)tempWordsPointersStore, WORD_BANK, wordPointersSize);
     
     memCpyBankedBetween(&wordsMetadata[0], WORD_BANK, (byte*)tempWordType, tempWordTypeBank, wordsMetadataSize);
 
     b10BankedDealloc((byte*)tempWordType, tempWordTypeBank);
 }
 
-#pragma wrapped-call (pop)
-#pragma code-name (pop)
-
-#pragma code-name (push, "BANKRAM12")
 long b12CalculateStartPosition()
 {
     byte data[2];
@@ -182,7 +158,7 @@ void b12UpdateWordPointersAfterCompress(char* oldWordsAddress, char* newWordsAdd
     printf("the difference is %p - %p = %p\n", oldWordsAddress, newWordsAddress, oldWordsAddress - newWordsAddress);
 #endif
 
-    tempWordType = b7SwapWordTypeWithWordPointers(&tempWordTypeBank);
+    tempWordType = b12SwapWordTypeWithWordPointers(&tempWordTypeBank);
 
     for (i = 0; i < numWords; i++, tempWordsPointersStore++)
     {
@@ -196,7 +172,7 @@ void b12UpdateWordPointersAfterCompress(char* oldWordsAddress, char* newWordsAdd
 #endif
     }
 
-    b7RecoverWordType(tempWordType, tempWordTypeBank);
+    b12RecoverWordType(tempWordType, tempWordTypeBank);
 }
 
 extern MemoryArea* _memoryAreas;
