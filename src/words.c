@@ -18,6 +18,7 @@
 //#define VERBOSE_LETTERS
 //#define VERBOSE_WORDS
 //#define VERBOSE_COMPRESS
+//#define VERBOSE_UPDATE_WORD_POINTERS
 
 
 #pragma bss-name (push, "BANKRAM12")
@@ -31,6 +32,60 @@ char** wordPointers; //This will be used to store pointers to all of the words, 
 byte wordsPointersBank;
 
 #pragma bss-name (pop)
+
+#pragma code-name (push, "BANKRAM07")
+#pragma wrapped-call (push, trampoline, 7)
+
+//Putting this here saves two hundred bytes on bank 12
+wordType* b7SwapWordTypeWithWordPointers(byte* tempWordTypeBank) //WordType is stored in a temp place on the bank, and wordPointers is stored in its place
+{
+    byte wordsMetadataSize = WORDS_METADATA_SIZE * sizeof(wordType);
+    wordType* tempWordStore;
+    char** tempWordsPointersStore = (char**)&wordsMetadata[0];
+    int wordPointersSize;
+    byte* localWordPointers;
+    byte localWordPointersBank;
+    int localNumWords;
+
+    memCpyBanked((byte*) & localWordPointers, (byte*)&wordPointers, WORD_BANK, sizeof(char**));
+    memCpyBanked(&localWordPointersBank, (byte*)&wordsPointersBank, WORD_BANK, sizeof(byte));
+    memCpyBanked(&localNumWords, (byte*)&numWords, WORD_BANK, sizeof(int));
+
+    wordPointersSize = localNumWords * sizeof(char*);
+
+    tempWordStore = (wordType*)b10BankedAlloc(wordsMetadataSize, tempWordTypeBank);
+    memCpyBankedBetween((byte*)tempWordStore, *tempWordTypeBank, &wordsMetadata[0], WORD_BANK, wordsMetadataSize);
+
+    memCpyBankedBetween((byte*)tempWordsPointersStore, WORD_BANK, (byte*)localWordPointers, localWordPointersBank, wordPointersSize);
+
+    return tempWordStore;
+}
+
+void b7RecoverWordType(wordType* tempWordType, byte tempWordTypeBank)
+{
+    byte wordsMetadataSize = WORDS_METADATA_SIZE * sizeof(wordType);
+    wordType* tempWordStore;
+    char** tempWordsPointersStore = (char**)&wordsMetadata[0];
+    int wordPointersSize;
+    byte* localWordPointers;
+    byte localWordPointersBank;
+    int localNumWords;
+
+    memCpyBanked((byte*)&localWordPointers, (byte*)&wordPointers, WORD_BANK, sizeof(char**));
+    memCpyBanked(&localWordPointersBank, (byte*)&wordsPointersBank, WORD_BANK, sizeof(byte));
+    memCpyBanked(&localNumWords, (byte*)&numWords, WORD_BANK, sizeof(int));
+
+    wordPointersSize = localNumWords * sizeof(char*);
+
+    memCpyBankedBetween((byte*)localWordPointers, localWordPointersBank, (byte*)tempWordsPointersStore, WORD_BANK, wordPointersSize);
+    
+    memCpyBankedBetween(&wordsMetadata[0], WORD_BANK, (byte*)tempWordType, tempWordTypeBank, wordsMetadataSize);
+
+    b10BankedDealloc((byte*)tempWordType, tempWordTypeBank);
+}
+
+#pragma wrapped-call (pop)
+#pragma code-name (pop)
 
 #pragma code-name (push, "BANKRAM12")
 long b12CalculateStartPosition()
@@ -110,14 +165,47 @@ byte b12OpenWords()
     return lfn;
 }
 
+void b12UpdateWordPointersAfterCompress(char* oldWordsAddress, char* newWordsAddress)
+{
+#define BUFFER_SIZE (LOCAL_WORK_AREA_SIZE / 2) //Half will be a buffer for writing to and the other half a buffer for reading from
+    int difference = newWordsAddress - oldWordsAddress;
+    
+    //This method will temporarily clobber the words metadata store so we can have the word pointers on this bank to update them.
+    //It will store them somewhere else and then put them back
+    wordType* tempWordType;
+    byte tempWordTypeBank;
+    char** tempWordsPointersStore = (char**) & wordsMetadata[0];
+    int i;
+    
+#ifdef VERBOSE_UPDATE_WORD_POINTERS
+    printf("the difference is %p - %p = %p\n", oldWordsAddress, newWordsAddress, oldWordsAddress - newWordsAddress);
+#endif
+
+    tempWordType = b7SwapWordTypeWithWordPointers(&tempWordTypeBank);
+
+    for (i = 0; i < numWords; i++, tempWordsPointersStore++)
+    {
+#ifdef VERBOSE_UPDATE_WORD_POINTERS
+        printf("we will update %p by %d\n", tempWordsPointersStore, difference);
+#endif
+        *tempWordsPointersStore += difference;
+
+#ifdef VERBOSE_UPDATE_WORD_POINTERS
+        printf("we updated %p by %d\n", tempWordsPointersStore, difference);
+#endif
+    }
+
+    b7RecoverWordType(tempWordType, tempWordTypeBank);
+}
+
 extern MemoryArea* _memoryAreas;
 //Doesn't compress the data but rather moves to the smallest allocation slot practical
 void b12CompressWordsAllocation(int wordsLength)
 {
     int secondBiggestSegment;
     byte i;
-    byte* newWordsSegment;
-    byte newWordsSegmentBank;
+    char* newWordsData;
+    byte newWordsDataBank;
 
     //If the words are small enough to fit into the second biggest segment, then that is our justification to call bankedAlloc and move them to a smaller segment. Note, bankedAlloc will take care of figuring out which segment the words belong in
     memCpyBanked((byte*)&secondBiggestSegment, (byte*)&_memoryAreas[NO_SIZES - 2].segmentSize, MEMORY_MANAGEMENT_BANK, sizeof(int));
@@ -128,19 +216,28 @@ void b12CompressWordsAllocation(int wordsLength)
         printf("wordsLength %d < %d (%d)\n", wordsLength, secondBiggestSegment, wordsLength <= secondBiggestSegment);
 #endif
 
-            newWordsSegment = b10BankedAlloc(wordsLength, &newWordsSegmentBank);
-            memCpyBankedBetween((byte*)newWordsSegment, newWordsSegmentBank, (byte*) wordsData, wordsDataBank, wordsLength);
+            newWordsData = b10BankedAlloc(wordsLength, &newWordsDataBank);
+            memCpyBankedBetween((byte*)newWordsData, newWordsDataBank, (byte*) wordsData, wordsDataBank, wordsLength);
+
+#ifdef VERBOSE_UPDATE_WORD_POINTERS
+            printf("the address of wordTypes is %p and the address of wordPointers is %p on bank %p and the the address of word data is %p on bank %p\n", &wordsMetadata[0], wordPointers, wordsPointersBank, newWordsData, newWordsDataBank);
+#endif // VERBOSE_UPDATE_WORD_POINTERS
+            b12UpdateWordPointersAfterCompress(wordsData, newWordsData);
+
+            printf("new words segment %p on bank %p wordpointers %d on bank %d, wordTypeAddress %p\n", newWordsData, newWordsDataBank, wordPointers, wordsPointersBank, &wordsMetadata[0]);
 
             b10BankedDealloc((byte*)wordsData, wordsDataBank);
 
-            wordsData = newWordsSegment;
-            wordsDataBank = newWordsSegmentBank;
+            wordsData = newWordsData;
+            wordsDataBank = newWordsDataBank;
 
 #ifdef VERBOSE_COMPRESS
             printf("compressed down to size %d address %p bank %p\n", secondBiggestSegment, wordsData, wordsDataBank);
 #endif
         }
 }
+
+
 
 /**************************************************************************
 ** loadWords
@@ -237,7 +334,7 @@ void b12LoadWords()
         }
     }
 
-    //b12CompressWordsAllocation(wordsDataPointer - wordsData - 1); //Words data pointer is pointing to a blank byte read for another word. Therefore -1 from the length
+    b12CompressWordsAllocation(wordsDataPointer - wordsData - 1); //Words data pointer is pointing to a blank byte read for another word. Therefore -1 from the length
 
 #ifdef VERBOSE_WORDS
     printf("end of function reached\n");
@@ -283,14 +380,6 @@ int b12FindSynonymNum(char* userWord)
 
     if (found) return (wordsMetadata[mid].synonymNum);
     else return (-1);
-}
-
-void b12ShowWords()
-{
-    int wordNum;
-
-    for (wordNum = 0; wordNum < numWords; wordNum++)
-        printf("%-14s%5d ", wordsMetadata[wordNum].wordTextStart, wordsMetadata[wordNum].synonymNum);
 }
 
 #pragma code-name (pop)
