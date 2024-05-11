@@ -22,8 +22,8 @@
 
 
 #pragma bss-name (push, "BANKRAM12")
-#define WORDS_METADATA_SIZE 1500
-wordType wordsMetadata[WORDS_METADATA_SIZE];
+#define WORDS_METADATA_SIZE 4500
+char wordTextStart[WORDS_METADATA_SIZE];
 int numWords, numSynonyms;  /* Big difference between the two */
 byte wordBank;
 char* wordsData;
@@ -37,33 +37,33 @@ byte synonymsListBank;
 
 #pragma code-name (push, "BANKRAM12")
 //Putting this here saves two hundred bytes on bank 12
-wordType* b12SwapWordTypeWithWordPointers(byte* tempWordTypeBank) //WordType is stored in a temp place on the bank, and wordPointers is stored in its place
+char* b12SwapWordTextStartWithWordPointers(byte* tempWordTextStartBank) //WordTextStart is stored in a temp place on the bank, and wordPointers is stored in its place
 {
-    byte wordsMetadataSize = WORDS_METADATA_SIZE * sizeof(wordType);
-    wordType* tempWordStore;
-    char** tempWordsPointersStore = (char**)&wordsMetadata[0];
+    int wordsMetadataSize = WORDS_METADATA_SIZE;
+    char* tempWordStore;
+    char** tempWordsPointersStore = (char**)&wordTextStart[0];
     int wordPointersSize = numWords * sizeof(char*);
 
-    tempWordStore = (wordType*)b10BankedAlloc(wordsMetadataSize, tempWordTypeBank);
-    memCpyBankedBetween((byte*)tempWordStore, *tempWordTypeBank, &wordsMetadata[0], WORD_BANK, wordsMetadataSize);
+    tempWordStore = (char*)b10BankedAlloc(wordsMetadataSize, tempWordTextStartBank);
+    memCpyBankedBetween((byte*)tempWordStore, *tempWordTextStartBank, (byte*)wordTextStart, WORD_BANK, wordsMetadataSize);
 
     memCpyBankedBetween((byte*)tempWordsPointersStore, WORD_BANK, (byte*)wordPointers, wordsPointersBank, wordPointersSize);
 
     return tempWordStore;
 }
 
-void b12RecoverWordType(wordType* tempWordType, byte tempWordTypeBank)
+void b12RecoverWordTextStart(char* tempWordTextStart, byte tempWordTextStartBank)
 {
-    byte wordsMetadataSize = WORDS_METADATA_SIZE * sizeof(wordType);
-    wordType* tempWordStore;
-    char** tempWordsPointersStore = (char**)&wordsMetadata[0];
+    int wordTextStartSize = WORDS_METADATA_SIZE;
+    char* tempWordStore;
+    char** tempWordsPointersStore = (char**)&wordTextStart[0];
     int wordPointersSize = numWords * sizeof(char*);
 
     memCpyBankedBetween((byte*)wordPointers, wordsPointersBank, (byte*)tempWordsPointersStore, WORD_BANK, wordPointersSize);
     
-    memCpyBankedBetween(&wordsMetadata[0], WORD_BANK, (byte*)tempWordType, tempWordTypeBank, wordsMetadataSize);
+    memCpyBankedBetween((byte*)wordTextStart, WORD_BANK, (byte*)tempWordTextStart, tempWordTextStartBank, wordTextStartSize);
 
-    b10BankedDealloc((byte*)tempWordType, tempWordTypeBank);
+    b10BankedDealloc((byte*)tempWordTextStart, tempWordTextStartBank);
 }
 
 long b12CalculateStartPosition()
@@ -149,16 +149,16 @@ void b12UpdateWordPointersAfterCompress(char* oldWordsAddress, char* newWordsAdd
     
     //This method will temporarily clobber the words metadata store so we can have the word pointers on this bank to update them.
     //It will store them somewhere else and then put them back
-    wordType* tempWordType;
-    byte tempWordTypeBank;
-    char** tempWordsPointersStore = (char**) & wordsMetadata[0];
+    char* tempWordTextStart;
+    byte tempWordTextStartBank;
+    char** tempWordsPointersStore = (char**) & wordTextStart[0];
     int i;
     
 #ifdef VERBOSE_UPDATE_WORD_POINTERS
     printf("the difference is %p - %p = %p\n", oldWordsAddress, newWordsAddress, oldWordsAddress - newWordsAddress);
 #endif
 
-    tempWordType = b12SwapWordTypeWithWordPointers(&tempWordTypeBank);
+    tempWordTextStart = b12SwapWordTextStartWithWordPointers(&tempWordTextStartBank);
 
     for (i = 0; i < numWords; i++, tempWordsPointersStore++)
     {
@@ -172,7 +172,7 @@ void b12UpdateWordPointersAfterCompress(char* oldWordsAddress, char* newWordsAdd
 #endif
     }
 
-    b12RecoverWordType(tempWordType, tempWordTypeBank);
+    b12RecoverWordTextStart(tempWordTextStart, tempWordTextStartBank);
 }
 
 extern MemoryArea* _memoryAreas;
@@ -201,7 +201,7 @@ void b12CompressWordsAllocation(int wordsLength)
 #endif // VERBOSE_UPDATE_WORD_POINTERS
             b12UpdateWordPointersAfterCompress(wordsData, newWordsData);
 
-            printf("new words segment %p on bank %p wordpointers %d on bank %d, wordTypeAddress %p\n", newWordsData, newWordsDataBank, wordPointers, wordsPointersBank, &wordsMetadata[0]);
+            //printf("new words segment %p on bank %p wordpointers %d on bank %d, wordTypeAddress %p\n", newWordsData, newWordsDataBank, wordPointers, wordsPointersBank, &wordTextStart[0]);
 
             b10BankedDealloc((byte*)wordsData, wordsDataBank);
 
@@ -302,8 +302,9 @@ void b12LoadWords()
 //#endif
         memCpyBanked((byte*)wordsDataPointer, (byte*)newWord, wordsDataBank, wordLength);
         
-        wordsMetadata[wordNum].wordTextStart[0] = newWord[0];
-        wordsMetadata[wordNum].wordTextStart[1] = newWord[1];
+        wordTextStart[wordNum * 3] = newWord[0];
+        wordTextStart[wordNum * 3 + 1] = newWord[1];
+        wordTextStart[wordNum * 3 + 2] = '\0';
 
         memCpyBanked((byte*)wordPointersPointer, (byte*)&wordsDataPointer, wordsPointersBank, 2);
 
@@ -320,6 +321,8 @@ void b12LoadWords()
     }
 
     b12CompressWordsAllocation(wordsDataPointer - wordsData - 1); //Words data pointer is pointing to a blank byte read for another word. Therefore -1 from the length
+
+    //printf("wordTextStart %p wordsPointers %p on bank %p wordData %p on bank %p\n", wordTextStart, wordPointers, wordsPointersBank, wordsData, wordsDataBank);
 
 #ifdef VERBOSE_WORDS
     printf("end of function reached\n");
@@ -355,7 +358,7 @@ int b12FindSynonymNum(char* userWord)
 
     while ((!found) && (bottom <= top)) {
         mid = (top + bottom) / 2;
-        strCompVal = strcmp(userWord, wordsMetadata[mid].wordTextStart);
+        strCompVal = strcmp(userWord, (const char*) wordTextStart[mid]);
         if (strCompVal == 0)
             found = TRUE;
         else if (strCompVal < 0)

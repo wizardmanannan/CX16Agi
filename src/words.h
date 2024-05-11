@@ -11,10 +11,6 @@
 #include <cx16.h>
 #include <cbm.h>
 
-typedef struct {
-	char wordTextStart[3];
-} wordType;
-
 extern int numWords;
 extern int numSynonyms;
 
