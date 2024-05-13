@@ -24,8 +24,7 @@
 //Requires lowercase asscii
 extern int b12FindSynonymNumSearch(char* userWord);
 
-//#define TEST_SYN
-
+#define TEST_SYN
 
 #pragma bss-name (push, "BANKRAM12")
 #define WORDS_METADATA_SIZE 4500

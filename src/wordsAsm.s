@@ -18,7 +18,8 @@ lda USER_WORD_FIX_THREE_BYTES,y
 beq @checkByteTerminator
 
 @checkByteNonTerminated:
-cmp (WORDS_TEXT_START),y
+stx WORDS_TEXT_START_CACHE
+cmp WORDS_TEXT_START_CACHE
 beq BYTE_EQUAL_LABEL
 bcc @less
 bra @greater
@@ -40,6 +41,7 @@ TMP = ZP_TMP_6
 WORDS_TEXT_START = ZP_TMP_7
 USER_WORD_FIX_THREE_BYTES = ZP_TMP_8 ;Takes three bytes
 SYN = ZP_TMP_10
+WORDS_TEXT_START_CACHE = ZP_TMP_12
 
 _b12FindSynonymNumSearch:
 sta USER_WORD_ADDR
