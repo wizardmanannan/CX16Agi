@@ -10,7 +10,7 @@
 #include "memoryManager.h"
 #include <cx16.h>
 #include <cbm.h>
-#define MAX_WORD_SIZE 20
+#define MAX_WORD_SIZE 41
 extern int numWords;
 extern int numSynonyms;
 
@@ -18,7 +18,7 @@ extern int numSynonyms;
 extern void b12LoadWords();
 extern void b12DiscardWords();
 #pragma wrapped-call (pop)
-int b12FindSynonymNum(char* userWord); //Leaving out of the tramp as it is on the same bank
+int b12FindSynonymNum(char* userWord, byte userWordBank); //Leaving out of the tramp as it is on the same bank
 
 
 #endif /* _WORDS_H_ */

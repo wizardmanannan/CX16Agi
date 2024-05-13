@@ -37,7 +37,6 @@ char** wordPointers; //This will be used to store pointers to all of the words, 
 byte wordsPointersBank;
 word* synonymsList;
 byte synonymsListBank;
-char b12UserWord[MAX_WORD_SIZE];
 
 #pragma bss-name (pop)
 
@@ -222,6 +221,8 @@ void b12CompressWordsAllocation(int wordsLength)
 #ifdef TEST_SYN //Designed for King's Quest 1
 void b12TestSyn()
 {
+    char* testBuffer;
+    byte testBufferBank;
     char test1[5] = { 0x67, 0x69, 0x72, 0x6C, 0x0 }; //girl 
     char test2[5] = { 0x73, 0x70, 0x0 }; //sp
     char test3[6] = { 0x67, 0x69, 0x72, 0x6C, 0x70, 0x0 }; //girlp Note: should fail
@@ -285,7 +286,15 @@ void b12TestSyn()
         printf("fail test 12\n");
     }
 
+    testBuffer = (char*) b10BankedAlloc(strlen(test1) + 1, &testBufferBank);
+    strcpyBanked(testBuffer, test1, testBufferBank);
 
+    if (b12FindSynonymNum(testBuffer, testBufferBank) != 178)
+    {
+        printf("fail test wrapper test\n");
+    }
+
+    b10BankedDealloc((byte*)testBuffer, testBufferBank);
 }
 #endif
 /**************************************************************************
@@ -418,6 +427,7 @@ void b12DiscardWords()
     b10BankedDealloc((byte*)wordsData, wordsDataBank);
 }
 
+#define USER_WORD_BUFFER ((char*) GOLDEN_RAM_WORK_AREA)
 #define WORD_TO_COMPARE_BUFFER GOLDEN_RAM_WORK_AREA + MAX_WORD_SIZE
 
 signed char b12CompareWithWordNumber(int wordNum, char* toCompare, int* synNum) //Performs a comparison between a word at a word number and a char string. This is called by _b12FindSynonymNumSearch in assembly which after completing its binary search on the first three letters calls this to know if it has found the right match. Returns the synNum through output param
@@ -470,22 +480,11 @@ signed char b12CompareWithWordNumber(int wordNum, char* toCompare, int* synNum) 
 ** a binary search to locate the correct word entry. Some games would have
 ** a search depth of about 10 or 11 (1000+ words).
 ***************************************************************************/
-int b12FindSynonymNum(char* b7UserWord)
+int b12FindSynonymNum(char* userWord, byte userWordBank)
 {
-    boolean found = FALSE;
-    byte i = 0;
-    int top = numWords - 1, bottom = 0, mid, strCompVal;
+    memCpyBanked((byte*)USER_WORD_BUFFER, (byte*)userWord, userWordBank, MAX_WORD_SIZE);
 
-    memCpyBankedBetween((byte*)b12UserWord, WORD_BANK, (byte*) b7UserWord, PARSER_BANK, MAX_WORD_SIZE);
-    
-    found = b12FindSynonymNumSearch(b12UserWord);
-
-
-    if (found)
-    {
-        return 0;
-    }
-    else return (-1);
+    return b12FindSynonymNumSearch(USER_WORD_BUFFER);
 }
 
 #pragma code-name (pop)
