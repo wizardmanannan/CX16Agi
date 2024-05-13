@@ -10,7 +10,7 @@
 #include "memoryManager.h"
 #include <cx16.h>
 #include <cbm.h>
-
+#define MAX_WORD_SIZE 20
 extern int numWords;
 extern int numSynonyms;
 

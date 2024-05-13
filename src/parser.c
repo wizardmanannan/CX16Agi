@@ -127,7 +127,7 @@ void b7GetString(char* promptStr, byte promptStringBank, char* returnStr, byte r
 
 	gx = (x - 1) * 16;
 	gy = ((y - 1) * 16) + 20;
-	b7ProcessString(promptStr, promptStringBank, b7Temp, STRING_BANK);
+	b7ProcessString(promptStr, promptStringBank, b7Temp, PARSER_BANK);
 	sprintf(b7OutputString, "%s%s%c", b7Temp, b7CurrentInputStr, cursorChar);
 	drawBigString(screen, b7OutputString, gx, gy, 8, 1);
 
@@ -173,7 +173,7 @@ void b7GetString(char* promptStr, byte promptStringBank, char* returnStr, byte r
 void b7GetInternalString(char* promptStr, byte promptStringBank, byte stringNumber, int x, int y, int l)
 {
 	char* inputString = string[stringNumber];
-	b7GetString(promptStr, promptStringBank, inputString, STRING_BANK, x, y, l);
+	b7GetString(promptStr, promptStringBank, inputString, PARSER_BANK, x, y, l);
 }
 
 
@@ -190,7 +190,7 @@ void b7PollKeyboard()
 	haveKey = FALSE;
 	memset(b7KeyState, 0, 256);
 	memset(b7AsciiState, 0, 256);
-	//b1ProcessString(temp, STRING_BANK, outputString );
+	//b1ProcessString(temp, PARSER_BANK, outputString );
 	gx = 0;
 	gy = ((user_input_line - 1) * 16) + 20;
 	if (inputLineDisplayed) {
@@ -329,9 +329,10 @@ void b7StripExtraChars(char* userInput)
 ***************************************************************************/
 void b7LookupWords(char* inputLine)
 {
-	char* token, userInput[41];
+	char* token;
 	int synNum;
 	boolean allWordsFound = TRUE;
+	char* userInput = b7Temp;
 
 	strcpy(userInput, inputLine);
 	b7StripExtraChars(userInput);

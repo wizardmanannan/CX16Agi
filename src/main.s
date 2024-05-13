@@ -10,6 +10,7 @@
     .include "viewAsm.s"
     .include "spriteMemoryManagerAsm.s"
     .include "pictureAsm.s"
+    .include "wordsAsm.s"
     .export _executeLogic
     .export _b6InitInterpreter
     .export _loadAndIncWinCode
@@ -66,3 +67,4 @@
     .export _b3PaletteNumber
     .export _b3InitLayer1Mapbase
     .export _b4ClearPicture
+    .export _b12FindSynonymNumSearch

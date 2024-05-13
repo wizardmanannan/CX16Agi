@@ -96,6 +96,7 @@
 #define PICTURE_BANK 0x3E
 #define VIEW_DRAW_BUFFER_BANK 9
 #define STRING_BANK 0x7
+#define PARSER_BANK 0x7
 #define WORD_BANK 0x12
 
 #define FIRST_FLOOD_BANK 0x27

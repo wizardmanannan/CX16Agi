@@ -19,6 +19,12 @@
 //#define VERBOSE_WORDS
 //#define VERBOSE_COMPRESS
 //#define VERBOSE_UPDATE_WORD_POINTERS
+//#define VERBOSE_COMPARE_WITH_WORD_NUMBER
+
+//Requires lowercase asscii
+extern int b12FindSynonymNumSearch(char* userWord);
+
+//#define TEST_SYN
 
 
 #pragma bss-name (push, "BANKRAM12")
@@ -32,6 +38,7 @@ char** wordPointers; //This will be used to store pointers to all of the words, 
 byte wordsPointersBank;
 word* synonymsList;
 byte synonymsListBank;
+char b12UserWord[MAX_WORD_SIZE];
 
 #pragma bss-name (pop)
 
@@ -214,6 +221,75 @@ void b12CompressWordsAllocation(int wordsLength)
         }
 }
 
+#ifdef TEST_SYN //Designed for King's Quest 1
+void b12TestSyn()
+{
+    char test1[5] = { 0x67, 0x69, 0x72, 0x6C, 0x0 }; //girl 
+    char test2[5] = { 0x73, 0x70, 0x0 }; //sp
+    char test3[6] = { 0x67, 0x69, 0x72, 0x6C, 0x70, 0x0 }; //girlp Note: should fail
+    char test4[2] = { 0x61, 0x0 }; //a
+    char test5[4] = { 0x6C, 0x6D, 0x6E, 0x0 }; //lmn Note: should fail
+    char test6[3] = { 0x61, 0x6E, 0x0 }; //an
+    char test7[5] = { 0x79, 0x6f, 0x75, 0x72, 0x0 }; //your
+    char test8[6] = { 0x79, 0x6f, 0x75, 0x72, 0x72, 0x0 }; //yourr Note: should fail
+    char test9[2] = { 0x80, 0x0 }; //z Note: should fail
+    char test10[3] = { 0x79, 0x79, 0x0 }; //yy Note: should fail
+    char test11[4] = { 0x79, 0x75, 0x61, 0x0 }; //yoa Note: should fail
+    char test12[2] = { 0x60, 0x0 }; // ` Note: should fail
+
+        
+    if (b12FindSynonymNumSearch(test1) != 178)
+    {
+        printf("fail test 1\n");
+    }
+    if (b12FindSynonymNumSearch(test2) != 226)
+    {
+        printf("fail test 2\n");
+    }
+    if (b12FindSynonymNumSearch(test3) != -1)
+    {
+        printf("fail test 3\n");
+    }
+    if (b12FindSynonymNumSearch(test4) != 0)
+    {
+        printf("fail test 4\n");
+    }
+    if (b12FindSynonymNumSearch(test5) != -1)
+    {
+        printf("fail test 5\n");
+    }
+    if (b12FindSynonymNumSearch(test6) != 0)
+    {
+        printf("fail test 6\n");
+    }
+    if (b12FindSynonymNumSearch(test7) != 0)
+    {
+        printf("fail test 7\n");
+    }
+    if (b12FindSynonymNumSearch(test8) != -1)
+    {
+        printf("fail test 8\n");
+    }
+    if (b12FindSynonymNumSearch(test9) != -1)
+    {
+        printf("fail test 9\n");
+    }
+    if (b12FindSynonymNumSearch(test10) != -1)
+    {
+        printf("fail test 10\n");
+    }
+    if (b12FindSynonymNumSearch(test11) != -1)
+    {
+        printf("fail test 11\n");
+    }
+    if (b12FindSynonymNumSearch(test12) != -1)
+    {
+        printf("fail test 12\n");
+    }
+
+
+}
+#endif
 /**************************************************************************
 ** loadWords
 **
@@ -304,7 +380,7 @@ void b12LoadWords()
         
         wordTextStart[wordNum * 3] = newWord[0];
         wordTextStart[wordNum * 3 + 1] = newWord[1];
-        wordTextStart[wordNum * 3 + 2] = '\0';
+        wordTextStart[wordNum * 3 + 2] = newWord[2];
 
         memCpyBanked((byte*)wordPointersPointer, (byte*)&wordsDataPointer, wordsPointersBank, 2);
 
@@ -328,9 +404,11 @@ void b12LoadWords()
     printf("end of function reached\n");
 #endif
     cbm_close(SEQUENTIAL_LFN);
+
+#ifdef TEST_SYN
+    b12TestSyn();
+#endif
 }
-
-
 
 /***************************************************************************
 ** discardWords
@@ -342,6 +420,50 @@ void b12DiscardWords()
     b10BankedDealloc((byte*)wordsData, wordsDataBank);
 }
 
+#define WORD_TO_COMPARE_BUFFER GOLDEN_RAM_WORK_AREA + MAX_WORD_SIZE
+
+signed char b12CompareWithWordNumber(int wordNum, char* toCompare, int* synNum) //Performs a comparison between a word at a word number and a char string. This is called by _b12FindSynonymNumSearch in assembly which after completing its binary search on the first three letters calls this to know if it has found the right match. Returns the synNum through output param
+{
+    char* wordPointer;
+    char* wordToCompareBuffer = (char*) WORD_TO_COMPARE_BUFFER;
+    int compareResult;
+
+#ifdef VERBOSE_COMPARE_WITH_WORD_NUMBER
+    printf("copying pointer to %p from %p on bank %p\n", (byte*)&wordPointer,(byte*)wordPointers + wordNum * 2, wordsPointersBank);
+#endif // DEBUG
+    
+    memCpyBanked((byte*)&wordPointer,wordPointers + wordNum, wordsPointersBank, sizeof(char*));
+
+#ifdef VERBOSE_COMPARE_WITH_WORD_NUMBER
+    printf("copying word to %p from %p on bank %p\n", wordToCompareBuffer, wordPointer, wordsDataBank);
+#endif // DEBUG
+    
+    strcpyBanked(wordToCompareBuffer, wordPointer, wordsDataBank);
+  
+#ifdef VERBOSE_COMPARE_WITH_WORD_NUMBER
+    printf("copying syn to %p from %p on bank %p\n", synNum, synonymsList, synonymsListBank);
+#endif // DEBUG
+    memCpyBanked(synNum, synonymsList + wordNum, synonymsListBank, sizeof(int));
+#ifdef VERBOSE_COMPARE_WITH_WORD_NUMBER
+    printf("the syn is %d\n", *synNum);
+#endif
+
+#ifdef VERBOSE_COMPARE_WITH_WORD_NUMBER
+    printf("comparing %p with %p and the result is %d\n", toCompare, wordToCompareBuffer, strcmp(toCompare, wordToCompareBuffer));
+#endif
+    compareResult = strcmp(toCompare, wordToCompareBuffer);
+
+    if (compareResult)
+    {
+        if (compareResult > 0)
+        {
+            return 1;
+        }
+        return - 1;
+    }
+    return 0;
+}
+
 /***************************************************************************
 ** findSynonymNum
 **
@@ -350,22 +472,16 @@ void b12DiscardWords()
 ** a binary search to locate the correct word entry. Some games would have
 ** a search depth of about 10 or 11 (1000+ words).
 ***************************************************************************/
-int b12FindSynonymNum(char* userWord)
+int b12FindSynonymNum(char* b7UserWord)
 {
     boolean found = FALSE;
+    byte i = 0;
     int top = numWords - 1, bottom = 0, mid, strCompVal;
-    word synonymNumber;
 
-    while ((!found) && (bottom <= top)) {
-        mid = (top + bottom) / 2;
-        strCompVal = strcmp(userWord, (const char*) wordTextStart[mid]);
-        if (strCompVal == 0)
-            found = TRUE;
-        else if (strCompVal < 0)
-            top = mid - 1;
-        else
-            bottom = mid + 1;
-    }
+    memCpyBankedBetween((byte*)b12UserWord, WORD_BANK, (byte*) b7UserWord, PARSER_BANK, MAX_WORD_SIZE);
+    
+    found = b12FindSynonymNumSearch(b12UserWord);
+
 
     if (found)
     {
