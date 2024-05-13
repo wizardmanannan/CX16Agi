@@ -1,6 +1,6 @@
 .segment "BANKRAM12"
 .import _numWords
-.import _wordTextStart
+.import _wordsTextStart
 .import _memcpyBanked
 .import _b12CompareWithWordNumber
 
@@ -108,10 +108,10 @@ sta TMP + 1
 
 clc
 lda TMP
-adc #<_wordTextStart
+adc #<_wordsTextStart
 sta WORDS_TEXT_START
 lda TMP + 1
-adc #>_wordTextStart
+adc #>_wordsTextStart
 sta WORDS_TEXT_START + 1
 
 @checkByte1:
