@@ -103,6 +103,7 @@ bne @loop
 
 dec ZP_TILE_LAYER_NO_TILES_HIGH
 bpl @loop
+stp
 rts
 
 handleDisplayText:
