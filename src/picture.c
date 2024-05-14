@@ -1033,9 +1033,8 @@ void b11DrawPic(byte* bankedData, int pLen, boolean okToClearScreen, byte picNum
 	b5RefreshBuffer(bufferStatus);
 
 	if (okToClearScreen) {
-		b3InitLayer1Mapbase();
-		
 		asm("sei");
+		b3InitLayer1Mapbase();
 		b4ClearPicture();
 	}
 	

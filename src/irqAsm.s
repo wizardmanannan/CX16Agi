@@ -82,6 +82,7 @@ bpl @loop
 rts
 
 _b3InitLayer1Mapbase:
+stp
 SET_VERA_ADDRESS_IMMEDIATE MAP_BASE, #$0, #$1
 
 ldx #< TILE_LAYER_NO_TILES
@@ -103,6 +104,7 @@ bne @loop
 
 dec ZP_TILE_LAYER_NO_TILES_HIGH
 bpl @loop
+stp
 rts
 
 handleDisplayText:
