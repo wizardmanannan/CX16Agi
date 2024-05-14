@@ -70,6 +70,7 @@ WAIT_FOR_NEXT_IRQ @vSyncToCheck
 jsr _b6InitVeraMemory
 TRAMPOLINE #SPRITE_MANAGER_BANK, _b9InitSpriteData
 
+sei
 lda #DISPLAY_SCALE
 sta VERA_dc_hscale
 sta VERA_dc_vscale
@@ -214,6 +215,9 @@ jsr pushax
 
 lda #DEFAULT_TEXT_BACKGROUND
 ldx #$0
+
+cli
+
 TRAMPOLINE #TEXT_BANK, _b3SetTextColor 
 
 

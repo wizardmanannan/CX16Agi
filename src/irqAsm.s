@@ -5,6 +5,7 @@ IRQ_INC = 1
 .include "global.s"
 .include "globalGraphics.s"
 .include "spriteIrqHandler.s"
+.include "inputIrqHandler.s"
 
 .macro SEND_IRQ_COMMAND command, vSyncToCheck
 sei
@@ -236,6 +237,11 @@ sta @previousRamBank
 lda VERA_isr
 and #VSYNC_BIT
 beq @defaultIqr
+
+@handleDisplayInputLine:
+lda #PARSER_BANK
+sta RAM_BANK
+jsr b7HandleInputLine
 
 @handleSpriteUpdates:
 lda #SPRITE_UPDATES_BANK
