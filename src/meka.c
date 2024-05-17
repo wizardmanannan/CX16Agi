@@ -96,6 +96,7 @@ void b6DiscardResources()
 ***************************************************************************/
 void b6NewRoom()
 {
+    asm("stp");
      b9ResetViews();
     //stop_update_all();
     //unanimate_all();
@@ -121,6 +122,7 @@ void b6NewRoom()
 #ifdef VERBOSE
     printf("New room code called");
 #endif // VERBOSE
+    asm("stp");
 }
 
 /***************************************************************************

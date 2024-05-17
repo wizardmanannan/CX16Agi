@@ -2,7 +2,7 @@
 #pragma code-name (push, "BANKRAM06")
 
 //#define VERBOSE_CHAR_SET_LOAD
-//#define TEST_CHARSET
+#define TEST_CHARSET
 //#define VERBOSE_DISPLAY_TEXT
 //#define VERBOSE_SET_PALETTE
 #ifdef VERBOSE_CHAR_SET_LOAD

@@ -1037,7 +1037,6 @@ void b11DrawPic(byte* bankedData, int pLen, boolean okToClearScreen, byte picNum
 		b3InitLayer1Mapbase();
 		b4ClearPicture();
 	}
-	
 	asm("sei");
 
 #ifdef TEST_OK_TO_FILL
@@ -1205,7 +1204,9 @@ void b6ShowPicture()
 {
 	if (showPicCalled)
 	{
+		asm("sei");
 		b3InitLayer1Mapbase();
+		asm("cli");
 	}
 	showPicCalled = TRUE;
 }
