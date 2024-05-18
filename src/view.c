@@ -1418,10 +1418,6 @@ void b9LoadViewFile(byte viewNum)
 		}
 		setLoadedView(&localView, viewNum);
 	}
-	else
-	{
-		printf("View %d is already loaded. The opcounter is %lu. The logic num is %d\n", viewNum, opCounter, currentLog);
-	}
 }
 
 /***************************************************************************
