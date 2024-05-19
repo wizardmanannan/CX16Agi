@@ -134,7 +134,7 @@ void b6ConvertsOneBitPerPixCharToTwoBitPerPixelChars()
 void b6InitCharset()
 {
 #define ORIGINAL_CHARSET_ADDRESS 0x1f000
-
+	
 	int i;
 
 	//printf("Initializing CharSet. . .\n");

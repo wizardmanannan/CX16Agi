@@ -85,6 +85,16 @@ NO_SPRITES = 127 ;Not including the mouse at 0
 SEGMENT_SMALL = (32 * 32) / 2
 SEGMENT_LARGE = SEGMENT_SMALL * 2 * SEGMENT_SMALL * 2
 
+;Input Line
+INPUT_BYTE_1 = $20
+INPUT_LINE_NUMBER = 22
+INPUT_LINE_COL = 0
+MAX_BUFFER_SIZE = 80 
+MAX_WORD_SIZE = 41
+INPUT_PROMPT_CHAR = $3E
+INPUT_STRING_ADDRESS = (MAP_BASE + (FIRST_ROW + INPUT_LINE_NUMBER - 1) * TILE_LAYER_BYTES_PER_ROW + INPUT_LINE_COL * BYTES_PER_CELL)
+
+
 
 .macro SET_VERA_ADDRESS_ABSOLUTE VeraAddress, AddressSel, Stride ;Vera Address is a 4 bit number instead of three to make it easier to work with C
         lda AddressSel
@@ -144,6 +154,19 @@ sta VERA_addr_low
         lda #<VERA_ADDRESS
         sta VERA_addr_low
         lda #>VERA_ADDRESS
+        sta VERA_addr_high
+.endmacro
+
+.macro SET_VERA_ADDRESS_IMMEDIATE_SPLIT VERA_ADDRESS_LOW, VERA_ADDRESS_HIGH, VERA_ADDRESS_BANK, ADDRESS_SEL, STRIDE ;Vera Address is a 4 bit number instead of three to make it easier to work with C
+        lda ADDRESS_SEL
+        sta VERA_ctrl  
+        lda VERA_ADDRESS_BANK             
+        and #$1 ; We only care about the first bit
+        ora STRIDE << 4
+        sta VERA_addr_bank
+        lda VERA_ADDRESS_LOW
+        sta VERA_addr_low
+        lda VERA_ADDRESS_HIGH
         sta VERA_addr_high
 .endmacro
 
