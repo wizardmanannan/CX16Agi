@@ -47,7 +47,6 @@ void bankedRamInit()
 		(int)_BANKRAM12_SIZE__
 	};
 
-	printf("Zeroing Banks\n");
 	for (i = 1; i < get_numbanks(); i++) //Don't do bank zero as it as a system bank
 	{
 		RAM_BANK = i;
