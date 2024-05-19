@@ -224,7 +224,10 @@ sta LOCAL_CEL
 stx LOCAL_CEL + 1
 lda #$1
 sta SPLIT_SEGMENTS ;When we draw directly to the bitmap we don't need to split the cel into segments
+
+sei
 CEL_TO_VERA
+REENABLE_INTERRUPTS
 
 rts
 
