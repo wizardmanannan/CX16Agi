@@ -318,15 +318,14 @@ rts
 _b6InitInput:
 SET_VERA_ADDRESS_IMMEDIATE_SPLIT #<INPUT_STRING_ADDRESS + 1, #>INPUT_STRING_ADDRESS, #$0, #$0, #$2 ;To to the first tile byte 1
 ldx #INPUT_BYTE_1
-lda #MAX_WORD_SIZE
+lda #MAX_INPUT_STRING_LENGTH
 
 @initLoop:
 stx VERA_data0
 
 @checkCondition:
 dec
-beq @initLoop 
-
+bne @initLoop 
 rts
 
 .endif
