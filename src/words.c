@@ -235,8 +235,10 @@ void b12TestSyn()
     char test10[3] = { 0x79, 0x79, 0x0 }; //yy Note: should fail
     char test11[4] = { 0x79, 0x75, 0x61, 0x0 }; //yoa Note: should fail
     char test12[2] = { 0x60, 0x0 }; // ` Note: should fail
+    char test13[5] = { 0x6C, 0x6F, 0x6F, 0x6B, 0x0 };
+    char test14[9] = { 0x6C, 0x6F, 0x6F, 0x6B, 0x20, 0x66, 0x6F, 0x72, 0x0 }; //Look for 
+    char test15[12] = { 0x6C, 0x6F, 0x6F, 0x6B, 0x20, 0x61, 0x72, 0x6F, 0x75, 0x6E, 0x64, 0x0 }; //Look around
 
-        
     if (b12FindSynonymNumSearch(test1) != 178)
     {
         printf("fail test 1\n");
@@ -285,6 +287,18 @@ void b12TestSyn()
     {
         printf("fail test 12\n");
     }
+    if (b12FindSynonymNumSearch(test13) != 2)
+    {
+        printf("fail test 13\n");
+    }
+    if (b12FindSynonymNumSearch(test14) != 2)
+    {
+        printf("fail test 14\n");
+    }
+    if (b12FindSynonymNumSearch(test15) != 2)
+    {
+        printf("fail test 15\n");
+    }
 
     testBuffer = (char*) b10BankedAlloc(strlen(test1) + 1, &testBufferBank);
     strcpyBanked(testBuffer, test1, testBufferBank);
@@ -295,6 +309,8 @@ void b12TestSyn()
     }
 
     b10BankedDealloc((byte*)testBuffer, testBufferBank);
+
+    asm("stp");
 }
 #endif
 /**************************************************************************
@@ -384,7 +400,7 @@ void b12LoadWords()
 //        printf("copying from %p to %p on bank %p length %p\n", &newWord);
 //#endif
         memCpyBanked((byte*)wordsDataPointer, (byte*)newWord, wordsDataBank, wordLength);
-        
+      
         wordsTextStart[wordNum * 3] = newWord[0];
         wordsTextStart[wordNum * 3 + 1] = newWord[1];
         wordsTextStart[wordNum * 3 + 2] = newWord[2];
@@ -455,11 +471,11 @@ signed char b12CompareWithWordNumber(int wordNum, char* toCompare, int* synNum) 
 #ifdef VERBOSE_COMPARE_WITH_WORD_NUMBER
     printf("the syn is %d\n", *synNum);
 #endif
-
 #ifdef VERBOSE_COMPARE_WITH_WORD_NUMBER
-    printf("comparing %p with %p and the result is %d\n", toCompare, wordToCompareBuffer, strcmp(toCompare, wordToCompareBuffer));
+    printf("comparing %s with %s and the result is %d\n", toCompare, wordToCompareBuffer, strcmpIgnoreSpace(toCompare, wordToCompareBuffer));
+    printf("comparing %p with %p and the result is %d\n", toCompare, wordToCompareBuffer, strcmpIgnoreSpace(toCompare, wordToCompareBuffer));
 #endif
-    compareResult = strcmp(toCompare, wordToCompareBuffer);
+    compareResult = strcmpIgnoreSpace(toCompare, wordToCompareBuffer);
 
     if (compareResult)
     {
@@ -483,8 +499,8 @@ signed char b12CompareWithWordNumber(int wordNum, char* toCompare, int* synNum) 
 int b12FindSynonymNum(char* userWord, byte userWordBank)
 {
     memCpyBanked((byte*)USER_WORD_BUFFER, (byte*)userWord, userWordBank, MAX_WORD_SIZE);
-
-    return b12FindSynonymNumSearch(USER_WORD_BUFFER);
+    
+   return b12FindSynonymNumSearch(USER_WORD_BUFFER);
 }
 
 #pragma code-name (pop)

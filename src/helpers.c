@@ -76,6 +76,32 @@ int b5Divide(int a, int b)
 
 #pragma code-name (pop);
 
+int strcmpIgnoreSpace(const char* str1, const char* str2) {
+	while (*str1 || *str2) {
+		// Skip spaces in both strings
+		while (*str1 == ' ') str1++;
+		while (*str2 == ' ') str2++;
+
+		// If we reached the end of both strings, they are equal
+		if (!*str1 && !*str2) return 0;
+
+		// If one string ends while the other continues
+		if (!*str1) return -1; // str1 is shorter
+		if (!*str2) return 1;  // str2 is shorter
+
+		// Compare the current characters
+		if (*str1 != *str2) {
+			return *(unsigned char*)str1 - *(unsigned char*)str2;
+		}
+
+		// Move to the next character
+		str1++;
+		str2++;
+	}
+
+	return 0;
+}
+
 char* strcpyBanked(char* dest, const char* src, byte bank)
 {
 	char* result;

@@ -171,7 +171,7 @@ ldx #>SYN
 jsr _b12CompareWithWordNumber
 cmp #$0
 beq @foundWord
-bcc @less
+bmi @less
 bra @greater
 
 jmp @while
