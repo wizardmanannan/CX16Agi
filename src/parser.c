@@ -187,12 +187,6 @@ void b7PollKeyboard()
 	static char strPos = 0;
 	int ch, dummy, gx, gy;
 
-
-	//TEMP REMOVE
-	char* test = "rqzyjebwkfulxnapmdovcsnlvqzethxrdwigjfo";
-	memcpy(b7CurrentInputStr, test, strlen(test));
-	//
-
 	/* Clear keyboard buffers */
 	haveKey = FALSE;
 	memset(b7KeyState, 0, 256);
@@ -242,13 +236,13 @@ void b7PollKeyboard()
 				case KEY_ESC:
 					/* closedown(); */
 					break;
+				case KEY_ENTER:
 					b7LookupWords(b7CurrentInputStr);
 					b7CurrentInputStr[0] = 0;
 					strPos = 0;
 					drawBigString(screen, "                                       ", gx, gy, 7, 0);
 					sprintf(b7OutputString, "%s%s%c", b7Temp, b7CurrentInputStr, cursorChar);
 					drawBigString(screen, b7OutputString, gx, gy, 8, 1);
-					while (key[KEY_ENTER]) { /* Wait until ENTER released */ }
 					strcpy(b7LastLine, b7CurrentInputStr);
 					break;
 				case KEY_BACK_SPACE:   /* Backspace */
@@ -263,9 +257,18 @@ void b7PollKeyboard()
 						return;
 					break;
 				default:
+					if (ch >= 0x41 && ch <= 0x5A)
+					{
+						ch += 0x20;
+					}
+					if (ch >= 193 && ch <= 218)
+					{
+						ch -= 128;
+					}
+
 					b7CurrentInputStr[strPos] = (ch);
 					strPos++;
-					b7CurrentInputStr[strPos] = 0;
+					b7CurrentInputStr[strPos] = 0;					
 					sprintf(b7OutputString, "%s%s%c", b7Temp, b7CurrentInputStr, cursorChar);
 					drawBigString(screen, b7OutputString, gx, gy, 8, 1);
 					break;

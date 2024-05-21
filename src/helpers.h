@@ -36,6 +36,7 @@ typedef struct BufferStatus //Note: Also used in viewAsm.s b9ViewToVera. Don't c
 
 byte convertAsciiByteToPetsciiByte(byte toConvert);
 
+extern int strcmpIgnoreSpace(const char* str1, const char* str2);
 extern char* strcpyBanked(char* dest, const char* src, byte bank);
 extern size_t strLenBanked(char* string, int bank);
 
