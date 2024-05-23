@@ -11,7 +11,7 @@
 
 #include "parser.h"
 
-extern boolean* flag[];
+extern boolean* flag;
 extern byte* var;
 extern char string[12][40];
 extern int dirnOfEgo;

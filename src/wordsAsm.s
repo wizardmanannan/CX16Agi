@@ -169,7 +169,6 @@ jsr pushax
 lda #<SYN
 ldx #>SYN
 jsr _b12CompareWithWordNumber
-stp
 cmp #$0
 beq @foundWord
 bmi @less
