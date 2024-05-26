@@ -155,7 +155,6 @@ sta RAM_BANK
     ORA_16 ZP_PTR_B1, ZP_PTR_DISP, ZP_PTR_DISP
 
     INC_CODE_BY ZP_PTR_DISP
-    DEBUG_CODE_STATE
 .endmacro
 
 ; Debug print trampoline function
@@ -498,7 +497,6 @@ _executeLogic:
          jmp @default
          @FE:
          DEBUG_PRINT
-         DEBUG_CODE_STATE
          INC_CODE
          lda #COMMAND_LOOP_HELPER_BANK
          sta RAM_BANK
