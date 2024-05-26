@@ -8,12 +8,20 @@ MAX_INPUT_STRING_LENGTH = 40 ;Includes terminator
 .segment "BANKRAM07"
 b7HandleInputLine:
 SET_VERA_ADDRESS_IMMEDIATE INPUT_STRING_ADDRESS, #$0, #$2
+@clearInputLine:
+lda #TRANSPARENT_CHAR
 
-ldx #$0
+@clearLoop:
+sta VERA_data0
+inx
+cpx #MAX_INPUT_STRING_LENGTH
+bne @clearLoop
 
 lda _inputLineDisplayed
-beq @clearInputLine
+beq @end
+ldx #$0
 
+SET_VERA_ADDRESS_IMMEDIATE INPUT_STRING_ADDRESS, #$0, #$2
 @drawInput:
 lda #INPUT_PROMPT_CHAR
 sta VERA_data0
@@ -29,16 +37,11 @@ beq @exitInputLoop
 bra @drawInputLoop
 @exitInputLoop:
 
-bra @end
-
-@clearInputLine:
-lda #TRANSPARENT_CHAR
-
-@clearLoop:
+@drawCursor:
+cpx #MAX_INPUT_STRING_LENGTH ;Don't draw if we are at the end
+beq @end
+lda #CURSOR_CHAR
 sta VERA_data0
-inx
-cpx #MAX_INPUT_STRING_LENGTH
-bne @clearLoop
 
 @end:
 rts

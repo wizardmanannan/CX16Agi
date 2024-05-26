@@ -257,20 +257,23 @@ void b7PollKeyboard()
 						return;
 					break;
 				default:
-					if (ch >= 0x41 && ch <= 0x5A)
+					if (strlen(b7CurrentInputStr) < MAX_INPUT_STRING_LENGTH)
 					{
-						ch += 0x20;
-					}
-					if (ch >= 193 && ch <= 218)
-					{
-						ch -= 128;
-					}
+						if (ch >= 0x41 && ch <= 0x5A)
+						{
+							ch += 0x20;
+						}
+						if (ch >= 193 && ch <= 218)
+						{
+							ch -= 128;
+						}
 
-					b7CurrentInputStr[strPos] = (ch);
-					strPos++;
-					b7CurrentInputStr[strPos] = 0;					
-					sprintf(b7OutputString, "%s%s%c", b7Temp, b7CurrentInputStr, cursorChar);
-					drawBigString(screen, b7OutputString, gx, gy, 8, 1);
+						b7CurrentInputStr[strPos] = (ch);
+						strPos++;
+						b7CurrentInputStr[strPos] = 0;
+						sprintf(b7OutputString, "%s%s%c", b7Temp, b7CurrentInputStr, cursorChar);
+						drawBigString(screen, b7OutputString, gx, gy, 8, 1);
+					}
 					break;
 				}
 			}
@@ -352,10 +355,8 @@ void b7LookupWords(char* inputLine)
 	//while (allWordsFound && ((token = strtok(userInput, " ")) != NULL)) {
 	for (token = strtok(userInput, " "); (token && allWordsFound); token = strtok(0, " ")) {
 		switch (synNum = b12FindSynonymNum(token, PARSER_BANK)) {
-			printf("synNum is %d\n", synNum);
 		case -1: /* Word not found */
 			var[9] = numInputWords + 1;
-
 			allWordsFound = FALSE;
 			break;
 		case 0:  /* Ignore words with synonym number zero */
