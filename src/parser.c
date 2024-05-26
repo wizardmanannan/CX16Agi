@@ -329,6 +329,7 @@ void b7StripExtraChars(char* userInput)
 	strcpy(userInput, tempString);
 }
 
+extern long opStartPrintingAt;
 /***************************************************************************
 ** lookupWords
 **
@@ -351,8 +352,10 @@ void b7LookupWords(char* inputLine)
 	//while (allWordsFound && ((token = strtok(userInput, " ")) != NULL)) {
 	for (token = strtok(userInput, " "); (token && allWordsFound); token = strtok(0, " ")) {
 		switch (synNum = b12FindSynonymNum(token, PARSER_BANK)) {
+			printf("synNum is %d\n", synNum);
 		case -1: /* Word not found */
-			var[9] = numInputWords;
+			var[9] = numInputWords + 1;
+
 			allWordsFound = FALSE;
 			break;
 		case 0:  /* Ignore words with synonym number zero */
@@ -365,7 +368,7 @@ void b7LookupWords(char* inputLine)
 		}
 	}
 
-	if (allWordsFound && (numInputWords > 0)) {
+	if (strlen(inputLine)) {
 		flag[2] = TRUE;  /* The user has entered an input line */
 		flag[4] = FALSE; /* Said command has not yet accepted the line */
 	}
