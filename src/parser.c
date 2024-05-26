@@ -25,7 +25,7 @@ char cursorChar = '_';
 #define MAX_INPUT_STRING_LENGTH 40 //Includes terminator 
 #pragma bss-name (push, "BANKRAM07")
 int b7InputWords[10];
-char b7WordText[10][80], b7CurrentInputStr[MAX_INPUT_STRING_LENGTH], strPos = 0, b7OutputString[80], b7Temp[256];
+char b7WordText[10][80], b7CurrentInputStr[MAX_INPUT_STRING_LENGTH + 1], strPos = 0, b7OutputString[80], b7Temp[256];
 char string[12][40]; //TODO: Move onto a bank
 //boolean wordsAreWaiting=FALSE;
 
