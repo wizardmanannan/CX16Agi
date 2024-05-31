@@ -362,6 +362,3 @@ void main2()
     //strcpy(string1, "Variable 1: %v1|2 %%");
     //processString(string1, string2);
 }
-#pragma code-name (push, "BANKRAM07")
-void Dummy() {};
-#pragma code-name (pop)

@@ -23,6 +23,9 @@ int numInputWords;
 char cursorChar = '_';
 
 #define MAX_INPUT_STRING_LENGTH 40 //Includes terminator 
+
+//#define VERBOSE_DEBUG_LOOKUP_WORDS
+
 #pragma bss-name (push, "BANKRAM07")
 int b7InputWords[10];
 char b7WordText[10][80], b7CurrentInputStr[MAX_INPUT_STRING_LENGTH + 1], strPos = 0, b7OutputString[80], b7Temp[256];
@@ -38,7 +41,7 @@ byte b7Directions[9] = { 0, 0, 0, 0, 0, 0, 0, 0, 0 };
 #pragma code-name (push, "BANKRAM07")
 int b7Strcmp(char const* _Str1, char const* _Str2)
 {
-	strcmp(_Str1, _Str2);
+	return strcmp(_Str1, _Str2);
 }
 
 
@@ -332,6 +335,18 @@ void b7StripExtraChars(char* userInput)
 	strcpy(userInput, tempString);
 }
 
+char** b7TokenizeWords(char* inputLine, char** tokens)
+{
+	char* token;
+
+	for (token = strtok(inputLine, " "); token; token = strtok(0, " ")) {
+		*tokens++ = token;
+	}
+
+	return tokens - 1;
+}
+
+
 extern long opStartPrintingAt;
 /***************************************************************************
 ** lookupWords
@@ -343,31 +358,81 @@ extern long opStartPrintingAt;
 ***************************************************************************/
 void b7LookupWords(char* inputLine)
 {
-	char* token;
 	int synNum;
 	boolean allWordsFound = TRUE;
 	char* userInput = b7Temp;
+	char** start = (char**)GOLDEN_RAM_PARAMS_AREA, **end, **originalEnd;
+	char* strBuf = (char*) start + MAX_WORD_SIZE * sizeof(char*) + sizeof(char**);
+	byte stringLength;
+	
+#ifdef VERBOSE_DEBUG_LOOKUP_WORDS
+	byte i;
+#endif
 
 	strcpy(userInput, inputLine);
 	b7StripExtraChars(userInput);
+
+	end = b7TokenizeWords(userInput, start);
+	originalEnd = end;
+
+#ifdef VERBOSE_DEBUG_LOOKUP_WORDS
+	printf("start %p end %p\n", start, end);
+#endif
+
+	strcpy(userInput, inputLine); //We want to remove the terminators added by strtok afterwards
+
 	numInputWords = 0;
 
-	//while (allWordsFound && ((token = strtok(userInput, " ")) != NULL)) {
-	for (token = strtok(userInput, " "); (token && allWordsFound); token = strtok(0, " ")) {
-		switch (synNum = b12FindSynonymNum(token, PARSER_BANK)) {
-		case -1: /* Word not found */
-			var[9] = numInputWords + 1;
-			allWordsFound = FALSE;
-			break;
-		case 0:  /* Ignore words with synonym number zero */
-			break;
-		default:
-			b7InputWords[numInputWords] = synNum;
-			strcpy(b7WordText[numInputWords], token);
-			numInputWords++;
-			break;
-		}
+	stringLength = strlen(inputLine);
+	while (start <= end && allWordsFound)
+	{
+		memcpy(strBuf, *start, stringLength);
+		strBuf[stringLength] = '\0';
+
+#ifdef VERBOSE_DEBUG_LOOKUP_WORDS
+		printf("s. %p e. %p sBuf %p\n", start, end, strBuf);
+		asm("stp");
+#endif
+		
+		   switch (synNum = b12FindSynonymNum(strBuf, PARSER_BANK)) {
+			case -1: /* Word not found */
+				if (start == end)
+				{
+					var[9] = numInputWords + 1;
+					allWordsFound = FALSE;
+				}
+				stringLength = *end - *start;
+				*end--;
+				break;
+			default:
+				start = end + 1;
+				end = originalEnd;
+
+				if (start <= end)
+				{
+					stringLength = strlen(*start);
+				}
+				
+#ifdef VERBOSE_DEBUG_LOOKUP_WORDS
+				printf("2 s. %p e. %p sBuf %p. stringLength is %d\n", start, end, strBuf, stringLength);
+				asm("stp");
+#endif
+				if (synNum)
+				{
+					b7InputWords[numInputWords] = synNum;
+					strcpy(b7WordText[numInputWords], strBuf);
+					numInputWords++;
+				}
+				break;
+			}
 	}
+
+#ifdef VERBOSE_DEBUG_LOOKUP_WORDS
+	for (i = 0; i < numInputWords; i++)
+	{
+		printf("%d \n", b7InputWords[i]);
+	}
+#endif
 
 	if (strlen(inputLine)) {
 		flag[2] = TRUE;  /* The user has entered an input line */
