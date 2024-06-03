@@ -5,7 +5,7 @@
 .import _opCounter
 .import _pixelCounter
 _b6TellMeTheAddressPlease:
-stp
+;stp
 lda codeWindow
 lda cwCurrentCode
 lda _opCounter
