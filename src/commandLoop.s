@@ -1,3 +1,4 @@
+.import _stopAtFunc
 ; Define the include guard for command loop
 .ifndef COMMAND_LOOP_INC
 
@@ -383,7 +384,6 @@ ifHandler:
                         sta ZP_PTR_CH
                         INC_CODE
                         LEFT_SHIFT_BY_1 ZP_PTR_CH, ZP_PTR_DISP
-                        sta ZP_PTR_DISP
                         INC_CODE_BY ZP_PTR_DISP
 
                         jmp @startFindBracketLoop
