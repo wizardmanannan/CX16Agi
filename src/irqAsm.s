@@ -283,6 +283,7 @@ cmp #IRQ_CMD_NORMAL
 beq @resetSetIrqState
 
 TRAMPOLINE #TEXT_BANK, _b3InitLayer1Mapbase
+TRAMPOLINE #GRAPHICS_BANK, _b6InitInput
 
 bra @resetSetIrqState
 
