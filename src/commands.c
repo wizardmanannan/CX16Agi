@@ -358,13 +358,7 @@ boolean b1Controller() // 1, 0x00
 
 boolean b1Have_key() // 0, 0x00
 {
-	byte ch;
-	/* return (TRUE); */
-	/* return (haveKey); */
-	/* return (keypressed() || haveKey); */
-	if (haveKey && key[lastKey]) return TRUE;
-	GET_IN(ch);
-	return ch;
+	return haveKey;
 }
 
 boolean b1Said()
@@ -2029,6 +2023,10 @@ void b4Quit() // 1, 0x00                     /* 0 args for AGI version 2_089 */
 		printInBoxBig("Press ENTER to quit.\nPress ESC to keep playing.", -1, -1, 30);
 		do {
 			GET_IN(ch);
+			if (ch)
+			{
+				haveKey = TRUE;
+			}
 			ch >> 8;
 		} while ((ch != KEY_ESC) && (ch != KEY_ENTER));
 		if (ch == KEY_ENTER) exit(0);

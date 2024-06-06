@@ -2,6 +2,9 @@
 ** parser.h
 ***************************************************************************/
 
+#ifndef _PARSER_H_
+#define _PARSER_H_
+
 #include <string.h>
 #include <stdio.h>
 
@@ -12,9 +15,6 @@
 #include "words.h"
 #include "kernal.h"
 #include "keyboard.h"
-
-#ifndef _PARSER_H_
-#define _PARSER_H_
 
 #define  NO_EVENT         0
 #define  ASCII_KEY_EVENT  1

@@ -1,6 +1,3 @@
-#include <stdio.h>
-#include <string.h>
-#include <stdlib.h>
 /**************************************************************************
 ** GENERAL.H
 **
@@ -9,6 +6,10 @@
 
 #ifndef _GENERAL_H_
 #define _GENERAL_H_
+
+#include <stdio.h>
+#include <string.h>
+#include <stdlib.h>
 
 #ifndef TRUE
 #define  TRUE    1

@@ -137,9 +137,9 @@ void b7GetString(char* promptStr, byte promptStringBank, char* returnStr, byte r
 
 	do {
 		GET_IN(ch);
-
 		if (ch)
 		{
+			haveKey = TRUE;
 			if ((ch >> 8) == 0x1C) ch |= 0x0D; /* Handle keypad ENTER */
 			switch (ch & 0xff) {
 			case 0:     /* Ignore these when building input string */

@@ -3,6 +3,8 @@
 //#define VERBOSE_CPY_CHECK
 //#define VERBOSE_MEMSET_CHECK
 
+extern boolean haveKey;
+
 boolean debugStop = FALSE;
 
 byte _previousRomBank = 0;
@@ -20,6 +22,12 @@ void b5WaitOnKey()
 
 	do {
 		GET_IN(ch);
+		
+		if (haveKey)
+		{
+			haveKey = TRUE;
+		}
+
 	} while (!ch);
 }
 
@@ -250,9 +258,10 @@ void b6WaitOnSpecificKeys(byte* keys, byte length)
 
 	do {
 		GET_IN(ch);
-
+		
 		if (ch)
 		{
+			haveKey = TRUE;
 			for (i = 0; i < length && !keyPressed; i++)
 			{
 				keyPressed = ch == keys[i];
