@@ -43,10 +43,10 @@ void bankedRamInit()
 		(int)_BANKRAM0E_SIZE__,
 		(int)_BANKRAM0F_SIZE__,
 		(int)_BANKRAM10_SIZE__,
-		(int)_BANKRAM11_SIZE__
+		(int)_BANKRAM11_SIZE__,
+		(int)_BANKRAM12_SIZE__
 	};
 
-	printf("Zeroing Banks\n");
 	for (i = 1; i < get_numbanks(); i++) //Don't do bank zero as it as a system bank
 	{
 		RAM_BANK = i;

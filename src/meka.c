@@ -20,20 +20,19 @@
 #include "lruCache.h"
 #include "debugHelper.h"
 //#include "object.h"
-//#include "words.h"
+#include "words.h"
 #include "picture.h"
 #include "irq.h"
 #include "textLayer.h"
 #include "loadingScreen.h"
 #include "structMetadata.h"
 #include "floatDivision.h"
-//#include "parser.h"
+#include "parser.h"
 //#include "sound.h"
 
 boolean stillRunning = TRUE, hasEnteredNewRoom = FALSE, exitAllLogics = FALSE;
 byte* var = (byte*)&GOLDEN_RAM[VARS_AREA_START];
 boolean* flag = &GOLDEN_RAM[FLAGS_AREA_START];
-char string[12][40];
 byte horizon;
 
 #define  PLAYER_CONTROL   0
@@ -116,7 +115,7 @@ void b6NewRoom()
     flag[5] = 1;
     score = var[3];
 
-    memset(directions, 0, 9);
+    memsetBanked(b7Directions, 0, 9, STRING_BANK);
     /* rectfill(screen, 0, 20+(22*16), 639, 463, 0); */   /* Clear screen */
     b6SetAndWaitForIrqState(CLEAR);
 #ifdef VERBOSE
@@ -157,7 +156,7 @@ void b6Interpret()
     LOGICEntry logicEntry;
     flag[2] = FALSE;   //The player has issued a command line
     flag[4] = FALSE;   //The 'said' command has accepted the input
-    pollKeyboard();
+    b7PollKeyboard();
     //if (controlMode == PROGRAM_CONTROL)
     //   dirnOfEgo = var[6];
     //else
@@ -168,8 +167,6 @@ void b6Interpret()
     localViewtab.direction = var[6];
     setViewTab(&localViewtab, 0);
 
-    bCCalcObjMotion();
-
     // <<-- Update status line here (score & sound)
     b6UpdateStatusLine();
 
@@ -179,9 +176,6 @@ void b6Interpret()
 
         executeLogic(&logicEntry, 0);
 
-#ifdef VERBOSE
-        printf("Back To Meka");
-#endif // VERBOSE
         //dirnOfEgo = var[6];
         getViewTab(&localViewtab, 0);
         localViewtab.direction = var[6];
@@ -196,6 +190,9 @@ void b6Interpret()
         if (!hasEnteredNewRoom) {
             bBUpdateObjects();
         }
+
+        bCCalcObjMotion();
+
         if (hasEnteredNewRoom) b6NewRoom();
 
     } while (hasEnteredNewRoom);
@@ -226,7 +223,7 @@ void b6Timing_proc()
 void b6Closedown()
 {
     discardObjects();
-    discardWords();
+    b12DiscardWords();
 }
 
 extern void b6InitGraphics();
@@ -271,8 +268,8 @@ void b6Initialise()
     b9InitObjects();
 
     loadObjectFile();
-    loadWords();
-    initEvents();
+    b12LoadWords();
+    b7InitEvents();
     b6InitInterpreter();
     b6InitIrq();
     bEInitSpriteMemoryManager();
@@ -310,7 +307,7 @@ void main()
 
     RAM_BANK = MEKA_BANK;
     b6Initialise();
-
+ 
     while (TRUE) {
         /* Cycle initiator. Controlled by delay variable (var[10). */
         if (counter >= var[10]) {
@@ -365,6 +362,3 @@ void main2()
     //strcpy(string1, "Variable 1: %v1|2 %%");
     //processString(string1, string2);
 }
-#pragma code-name (push, "BANKRAM07")
-void Dummy() {};
-#pragma code-name (pop)

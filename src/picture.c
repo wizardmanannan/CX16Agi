@@ -184,7 +184,7 @@ void testOkToFill()
 	{
 		printf("fail bound check x after\n");
 	}
-	
+
 	exit(0);
 }
 #pragma wrapped-call (pop)
@@ -484,10 +484,10 @@ void b11Drawline(byte x1, byte y1, byte x2, byte y2)
 	int height, width, startX, startY;
 	boolean xIsPos = TRUE, yIsPos = TRUE;
 	fix32 x, y, addX, addY;
-	word temp;
+	word b7Temp;
 	long drawWhere;
 	byte toDraw;
-	
+
 #ifdef VERBOSE_DRAW_LINE
 	if (pixelCounter >= pixelStartPrintingAt)
 	{
@@ -519,7 +519,7 @@ void b11Drawline(byte x1, byte y1, byte x2, byte y2)
 	else if (y1 == y2)
 	{
 		if (xIsPos)
-		{		
+		{
 			b4DrawStraightLineAlongX(x1, x2, y1);
 		}
 		else
@@ -984,6 +984,9 @@ void b11SplitPriority()
 int picFNum = 0;
 boolean showPicCalled = FALSE;
 
+#pragma wrapped-call (push, trampoline, GRAPHICS_BANK)
+extern void b6Clear();
+#pragma wrapped-call (pop)
 /**************************************************************************
 ** drawPic
 **
@@ -1033,12 +1036,9 @@ void b11DrawPic(byte* bankedData, int pLen, boolean okToClearScreen, byte picNum
 	b5RefreshBuffer(bufferStatus);
 
 	if (okToClearScreen) {
-		b3InitLayer1Mapbase();
-		
 		asm("sei");
-		b4ClearPicture();
+		b6Clear();
 	}
-	
 	asm("sei");
 
 #ifdef TEST_OK_TO_FILL
@@ -1055,7 +1055,7 @@ void b11DrawPic(byte* bankedData, int pLen, boolean okToClearScreen, byte picNum
 		if (!returnedAction)
 		{
 			GET_NEXT(action);
-	    }
+		}
 		else
 		{
 			action = returnedAction;
@@ -1077,49 +1077,49 @@ void b11DrawPic(byte* bankedData, int pLen, boolean okToClearScreen, byte picNum
 			priDrawEnabled = TRUE;
 			break;
 		case 0xF3: priDrawEnabled = FALSE; break;
-		case 0xF4: 
+		case 0xF4:
 			if (picDrawEnabled)
 			{
 				cleanPic = FALSE;
 			}
-			returnedAction = b11YCorner(data, bufferStatus); 
+			returnedAction = b11YCorner(data, bufferStatus);
 			break;
-		case 0xF5: 
+		case 0xF5:
 			if (picDrawEnabled)
 			{
 				cleanPic = FALSE;
 			}
-			returnedAction = b11XCorner(data, bufferStatus); 
-		break;
-		case 0xF6: 
-			if (picDrawEnabled)
-			{
-				cleanPic = FALSE;
-			}
-			returnedAction = b11AbsoluteLine(data, bufferStatus); 
+			returnedAction = b11XCorner(data, bufferStatus);
 			break;
-		case 0xF7: 
+		case 0xF6:
 			if (picDrawEnabled)
 			{
 				cleanPic = FALSE;
 			}
-			returnedAction = b11RelativeDraw(data, bufferStatus); 
+			returnedAction = b11AbsoluteLine(data, bufferStatus);
 			break;
-		case 0xF8: 
+		case 0xF7:
+			if (picDrawEnabled)
+			{
+				cleanPic = FALSE;
+			}
+			returnedAction = b11RelativeDraw(data, bufferStatus);
+			break;
+		case 0xF8:
 			returnedAction = b11FloodFill(data, bufferStatus, &cleanPic);
 			break;
 		case 0xF9: GET_NEXT(patCode); break;
-		case 0xFA: 
+		case 0xFA:
 			if (picDrawEnabled)
 			{
 				cleanPic = FALSE;
 			}
 			returnedAction = b11PlotBrush(data, bufferStatus); break;
-		default: 
-			printf("Unknown picture code : %X\n", action); 
+		default:
+			printf("Unknown picture code : %X\n", action);
 			printf("The buffer status bank is %p, buffer status banked data is %p and the buffer counter is %d. The loaded picture is %d\n", bufferStatus->bank, bufferStatus->bankedData, bufferStatus->bufferCounter, picNum);
 			printf("Loaded picture data %p, bank %d, size %d\n", loadedPicture.data, loadedPicture.bank, loadedPicture.size);
-				for (;;);
+			for (;;);
 			exit(0);
 		}
 
@@ -1206,7 +1206,9 @@ void b6ShowPicture()
 {
 	if (showPicCalled)
 	{
+		asm("sei");
 		b3InitLayer1Mapbase();
+		asm("cli");
 	}
 	showPicCalled = TRUE;
 }

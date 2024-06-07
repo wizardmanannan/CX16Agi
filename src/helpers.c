@@ -3,6 +3,8 @@
 //#define VERBOSE_CPY_CHECK
 //#define VERBOSE_MEMSET_CHECK
 
+extern boolean haveKey;
+
 boolean debugStop = FALSE;
 
 byte _previousRomBank = 0;
@@ -14,6 +16,23 @@ long _assmLong = 0; //Used as a value to load things in and out of the registers
 boolean enableHelpersDebugging = FALSE; //This is so you can debug helpers at a certain area and not be bogged down when they are called elsewhere.
 
 #pragma code-name (push, "BANKRAM05")
+void b5WaitOnKey()
+{
+	byte ch;
+
+	do {
+		GET_IN(ch);
+		
+		if (haveKey)
+		{
+			haveKey = TRUE;
+		}
+
+	} while (!ch);
+}
+
+
+
 void b5RefreshBuffer(BufferStatus* bufferStatus)
 {
 	BufferStatus localBufferStatus;
@@ -64,6 +83,32 @@ int b5Divide(int a, int b)
 }
 
 #pragma code-name (pop);
+
+int strcmpIgnoreSpace(const char* str1, const char* str2) {
+	while (*str1 || *str2) {
+		// Skip spaces in both strings
+		while (*str1 == ' ') str1++;
+		while (*str2 == ' ') str2++;
+
+		// If we reached the end of both strings, they are equal
+		if (!*str1 && !*str2) return 0;
+
+		// If one string ends while the other continues
+		if (!*str1) return -1; // str1 is shorter
+		if (!*str2) return 1;  // str2 is shorter
+
+		// Compare the current characters
+		if (*str1 != *str2) {
+			return *(unsigned char*)str1 - *(unsigned char*)str2;
+		}
+
+		// Move to the next character
+		str1++;
+		str2++;
+	}
+
+	return 0;
+}
 
 char* strcpyBanked(char* dest, const char* src, byte bank)
 {
@@ -141,7 +186,7 @@ void copyStringFromBanked(char* src, char* dest, int start, int chunk, byte sour
 		dest[i - start] = src[i];
 		if (convertFromAsciiByteToPetscii)
 		{
-			RAM_BANK = HELPERS_BANK;
+			RAM_BANK = HELPERS_BANK_1;
 			convertResult = convertAsciiByteToPetsciiByte(dest[i - start]);
 			RAM_BANK = sourceBank;
 			dest[i - start] = convertResult;
@@ -205,7 +250,26 @@ void getLogicDirectory(AGIFilePosType* returnedLogicDirectory, AGIFilePosType* l
 	RAM_BANK = previousRamBank;
 }
 
+#pragma code-name (push, "BANKRAM06")
+void b6WaitOnSpecificKeys(byte* keys, byte length)
+{
+	byte ch, i;
+	boolean keyPressed = FALSE;
 
+	do {
+		GET_IN(ch);
+		
+		if (ch)
+		{
+			haveKey = TRUE;
+			for (i = 0; i < length && !keyPressed; i++)
+			{
+				keyPressed = ch == keys[i];
+			}
+		}
+	} while (!keyPressed);
+}
+#pragma code-name (pop)
 
 
 

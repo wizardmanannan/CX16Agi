@@ -29,13 +29,7 @@ PICTURE_INC = 1
 ;DEBUG_PIXEL_DRAW = 1
 
 
-.import _b5DebugPixelDraw
-.import _b5DebugPrePixelDraw
-.import _b5CheckPixelDrawn
-.import _b5DebugPixelDrawAddress
 .import _stopAtPixel
-.import _b5DebugFloodQueueRetrieve
-.import _b5DebugFloodQueueStore
 .import _pixelCounter
 .import _pixelStartPrintingAt
 .import _pixelStopAt
@@ -776,56 +770,6 @@ dec
 bra @loop
 @end:
 .endmacro
-
-.segment "BANKRAM05"
-_b5DebugPixelDrawAddressAsm:
-sta _logDebugVal1
-stx _logDebugVal2
-PRINT_PIXEL_MESSAGE _b5DebugPixelDrawAddress
-rts
-
-
-_b5DebugPixelDrawAsm:
-sta _logDebugVal1
-stx _logDebugVal2
-PRINT_PIXEL_MESSAGE _b5DebugPixelDraw
-rts
-
-_b5DebugPrePixelDrawAsm:
-clc
-lda #$1
-adc _pixelCounter
-sta _pixelCounter
-lda #$0
-adc _pixelCounter + 1
-sta _pixelCounter + 1
-lda #$0
-adc _pixelCounter + 2
-sta _pixelCounter + 2
-lda #$0
-adc _pixelCounter + 3
-sta _pixelCounter + 3
-
-EQ_32_LONG_TO_LITERAL _pixelStopAt, NEG_1_16, NEG_1_16, @checkFreeze
-LESS_THAN_32 _pixelCounter, _pixelStopAt, @checkFreeze, @stop
-@stop:
-nop ;There to make it clearer where we have stopped
-@checkFreeze:
-
-EQ_32_LONG_TO_LITERAL _pixelFreezeAt, NEG_1_16, NEG_1_16, @end
-LESS_THAN_32 _pixelCounter, _pixelFreezeAt, @end, @freeze
-@freeze:
-lda var1 ;Pointless instruction to make it clearer what the points are on freeze
-lda var2
-bra @freeze
-@end:
-rts
-
-_b5DebugPixelDrawnAsm:
-sta _logDebugVal1
-stx _logDebugVal2
-PRINT_PIXEL_MESSAGE _b5CheckPixelDrawn
-rts
 
 .segment "BANKRAMFLOOD"
 .ifdef TEST_IS_MULTIPLE_OF_160

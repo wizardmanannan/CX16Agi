@@ -5,6 +5,7 @@ IRQ_INC = 1
 .include "global.s"
 .include "globalGraphics.s"
 .include "spriteIrqHandler.s"
+.include "inputIrqHandler.s"
 
 .macro SEND_IRQ_COMMAND command, vSyncToCheck
 sei
@@ -235,7 +236,13 @@ sta @previousRamBank
 ; continue to default IRQ handler
 lda VERA_isr
 and #VSYNC_BIT
-beq @defaultIqr
+bne @handleDisplayInputLine
+jmp @defaultIqr
+
+@handleDisplayInputLine:
+lda #PARSER_BANK
+sta RAM_BANK
+jsr b7HandleInputLine
 
 @handleSpriteUpdates:
 lda #SPRITE_UPDATES_BANK
@@ -272,16 +279,19 @@ lda #IRQ_CMD_NORMAL
 sta currentIrqState
 
 lda sendIrqCommand
-cmp #IRQ_CMD_GRAPHICS
-bne @resetSetIrqState
-CALL_CLEAR
+cmp #IRQ_CMD_NORMAL
+beq @resetSetIrqState
+
+TRAMPOLINE #TEXT_BANK, _b3InitLayer1Mapbase
+TRAMPOLINE #GRAPHICS_BANK, _b6InitInput
+
 bra @resetSetIrqState
 
 @textOnly:
 lda #LAYER_0_SPRITES_DISABLE_1_ENABLE
 sta VERA_dc_video
 
-CALL_CLEAR
+TRAMPOLINE #TEXT_BANK, _b3InitLayer1Mapbase
 bra @resetSetIrqState
 
 @l12Only:

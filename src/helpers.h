@@ -3,6 +3,7 @@
 #include "general.h"
 #include "memoryManager.h"
 #include <stdarg.h>
+#include "kernal.h"
 #ifdef  __CX16__
 #include <cx16.h>
 #endif
@@ -35,6 +36,7 @@ typedef struct BufferStatus //Note: Also used in viewAsm.s b9ViewToVera. Don't c
 
 byte convertAsciiByteToPetsciiByte(byte toConvert);
 
+extern int strcmpIgnoreSpace(const char* str1, const char* str2);
 extern char* strcpyBanked(char* dest, const char* src, byte bank);
 extern size_t strLenBanked(char* string, int bank);
 
@@ -53,8 +55,13 @@ extern void setResourceDirectory(AGIFilePosType* newLogicDirectory, AGIFilePosTy
 extern void debugPrint(byte toPrint);
 extern void trampoline();
 
-#pragma wrapped-call (push, trampoline, HELPERS_BANK)
+#pragma wrapped-call (push, trampoline, HELPERS_BANK_1)
 void b5RefreshBuffer(BufferStatus* bufferStatus);
+void b5WaitOnKey();
+#pragma wrapped-call (pop)
+
+#pragma wrapped-call (push, trampoline, HELPERS_BANK_2)
+void b6WaitOnSpecificKeys(byte* keys, byte length);
 #pragma wrapped-call (pop)
 
 

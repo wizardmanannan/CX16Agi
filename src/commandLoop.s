@@ -1,3 +1,4 @@
+.import _stopAtFunc
 ; Define the include guard for command loop
 .ifndef COMMAND_LOOP_INC
 
@@ -155,7 +156,6 @@ sta RAM_BANK
     ORA_16 ZP_PTR_B1, ZP_PTR_DISP, ZP_PTR_DISP
 
     INC_CODE_BY ZP_PTR_DISP
-    DEBUG_CODE_STATE
 .endmacro
 
 ; Debug print trampoline function
@@ -384,7 +384,6 @@ ifHandler:
                         sta ZP_PTR_CH
                         INC_CODE
                         LEFT_SHIFT_BY_1 ZP_PTR_CH, ZP_PTR_DISP
-                        sta ZP_PTR_DISP
                         INC_CODE_BY ZP_PTR_DISP
 
                         jmp @startFindBracketLoop
@@ -498,7 +497,6 @@ _executeLogic:
          jmp @default
          @FE:
          DEBUG_PRINT
-         DEBUG_CODE_STATE
          INC_CODE
          lda #COMMAND_LOOP_HELPER_BANK
          sta RAM_BANK

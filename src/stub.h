@@ -14,7 +14,6 @@ extern void stretch_sprite(BITMAP* bmp, BITMAP* sprite, int x, int y, int w, int
 extern void clear_to_color(BITMAP* bitmap, int color);
 extern void stretch_blit(BITMAP* s, BITMAP* d, int s_x, int s_y, int s_w, int s_h, int d_x, int d_y, int d_w, int d_h);
 
-int keypressed();
 extern BITMAP* create_bitmap(int width, int height);
 extern void rect(BITMAP* bmp, int x1, int y1, int x2, int y2, int color);
 
@@ -27,8 +26,6 @@ typedef struct MENU
 	int flags;                    /* flags about the menu state */
 	void* dp;                     /* any data the menu might require */
 } MENU;
-
-int readkey();
 
 #define DIGI_VOICES           32       /* Theoretical maximums: */
 #define MIDI_VOICES           32       /* actual drivers may not be */
@@ -96,9 +93,6 @@ extern int soundEndFlag;
 //View
 
 //Logic 
-extern byte directions[9];
-
-
 #define SCANCODE_TO_KEY(c)       (((c)<<8) + (int)key_ascii_table[c])
 #define SCANCODE_TO_CAPS(c)      (((c)<<8) + (int)key_capslock_table[c])
 #define SCANCODE_TO_SHIFT(c)     (((c)<<8) + (int)key_shift_table[c])
@@ -123,102 +117,6 @@ extern byte directions[9];
 
 #define KB_NORMAL             1
 #define KB_EXTENDED           2
-
-#define KEY_ESC               1     /* keyboard scan codes  */
-#define KEY_1                 2 
-#define KEY_2                 3 
-#define KEY_3                 4
-#define KEY_4                 5
-#define KEY_5                 6
-#define KEY_6                 7
-#define KEY_7                 8
-#define KEY_8                 9
-#define KEY_9                 10
-#define KEY_0                 11
-#define KEY_MINUS             12
-#define KEY_EQUALS            13
-#define KEY_BACKSPACE         14
-#define KEY_TAB               15 
-#define KEY_Q                 16
-#define KEY_W                 17
-#define KEY_E                 18
-#define KEY_R                 19
-#define KEY_T                 20
-#define KEY_Y                 21
-#define KEY_U                 22
-#define KEY_I                 23
-#define KEY_O                 24
-#define KEY_P                 25
-#define KEY_OPENBRACE         26
-#define KEY_CLOSEBRACE        27
-#define KEY_ENTER             28
-#define KEY_CONTROL           29
-#define KEY_LCONTROL          29
-#define KEY_A                 30
-#define KEY_S                 31
-#define KEY_D                 32
-#define KEY_F                 33
-#define KEY_G                 34
-#define KEY_H                 35
-#define KEY_J                 36
-#define KEY_K                 37
-#define KEY_L                 38
-#define KEY_COLON             39
-#define KEY_QUOTE             40
-#define KEY_TILDE             41
-#define KEY_LSHIFT            42
-#define KEY_BACKSLASH         43
-#define KEY_Z                 44
-#define KEY_X                 45
-#define KEY_C                 46
-#define KEY_V                 47
-#define KEY_B                 48
-#define KEY_N                 49
-#define KEY_M                 50
-#define KEY_COMMA             51
-#define KEY_STOP              52
-#define KEY_SLASH             53
-#define KEY_RSHIFT            54
-#define KEY_ASTERISK          55
-#define KEY_ALT               56
-#define KEY_SPACE             57
-#define KEY_CAPSLOCK          58
-#define KEY_F1                59
-#define KEY_F2                60
-#define KEY_F3                61
-#define KEY_F4                62
-#define KEY_F5                63
-#define KEY_F6                64
-#define KEY_F7                65
-#define KEY_F8                66
-#define KEY_F9                67
-#define KEY_F10               68
-#define KEY_NUMLOCK           69
-#define KEY_SCRLOCK           70
-#define KEY_HOME              71
-#define KEY_UP                72
-#define KEY_PGUP              73
-#define KEY_MINUS_PAD         74
-#define KEY_LEFT              75
-#define KEY_5_PAD             76
-#define KEY_RIGHT             77
-#define KEY_PLUS_PAD          78
-#define KEY_END               79
-#define KEY_DOWN              80
-#define KEY_PGDN              81
-#define KEY_INSERT            82
-#define KEY_DEL               83
-#define KEY_PRTSCR            84
-#define KEY_F11               87
-#define KEY_F12               88
-#define KEY_LWIN              91
-#define KEY_RWIN              92
-#define KEY_MENU              93
-#define KEY_PAD               100
-#define KEY_RCONTROL          120
-#define KEY_ALTGR             121
-#define KEY_SLASH2            122
-#define KEY_PAUSE             123
 
 #define SEND_MESSAGE(d, msg, c)  (d)->proc(msg, d, c)
 
@@ -268,38 +166,17 @@ extern void drawChar(BITMAP* scn, byte charNum, int x, int y, int foreColour, in
 #endif
 
 //Parser
-boolean said(byte** data);
-
-void getString(char* promptStr, char* returnStr, int x, int y, int l);
-
-extern char cursorChar;
+boolean b7Said(byte** data);
 
 #define  NO_EVENT         0
 #define  ASCII_KEY_EVENT  1
 #define  SCAN_KEY_EVENT   2
 #define  MENU_EVENT       3
 
-extern int numInputWords, inputWords[];
-extern char wordText[10][80];
-
-extern byte keyState[], asciiState[];
-extern int lastKey;
-
-
-extern byte directions[9];
-extern boolean haveKey;
-
-void pollKeyboard();
-void initEvents();
-
-void lookupWords(char* inputLine);
+void b7LookupWords(char* inputLine);
 
 //Object
 void loadObjectFile();
-
-//Words
-void loadWords();
-void discardWords();
 
 //Unknown 
 extern byte* key;

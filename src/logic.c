@@ -129,9 +129,13 @@ void b6LoadLogicFile(byte logFileNum)
 	LOGICEntry logicEntry;
 	LOGICFile logicData;
 
-	int dummy;
-
 	getLogicEntry(&logicEntry, logFileNum);
+	
+	if (logicEntry.loaded)
+	{
+		return;
+	}
+	
 	getLogicDirectory(&agiFilePosType, &logdir[logFileNum]);
 
 #ifdef VERBOSE

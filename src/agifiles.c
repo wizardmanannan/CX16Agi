@@ -15,7 +15,6 @@
 //#define VERBOSE_VIEW_LOAD_DEBUG
 //#define VERBOSE_PICTURE_LOAD_DEBUG
 //define VERBOSE_LOGIC_LOAD_DEBUG
-#include <stdint.h>
 #include <cbm.h>
 
 
@@ -26,9 +25,6 @@
 
 
 byte avisDurgan[11] = { 0x41, 0x76, 0x69, 0x73, 0x20, 0x44, 0x75, 0x72, 0x67, 0x61, 0x6E };//https://www.liquisearch.com/what_is_avis_durgan
-#define FILE_OPEN_ADDRESS 2
-#define NO_BYTES_PER_MESSAGE 2
-#define FILE_NAME_SIZE 10
 
 AGIFilePosType* logdir = (AGIFilePosType*)&BANK_RAM[LOGDIR_START];
 AGIFilePosType* picdir = (AGIFilePosType*)&BANK_RAM[PICDIR_START];

@@ -134,7 +134,7 @@ void b6ConvertsOneBitPerPixCharToTwoBitPerPixelChars()
 void b6InitCharset()
 {
 #define ORIGINAL_CHARSET_ADDRESS 0x1f000
-
+	
 	int i;
 
 	//printf("Initializing CharSet. . .\n");
@@ -388,7 +388,7 @@ void b3DisplayMessageBox(char* message, byte messageBank, byte row, byte col, by
 			memCpyBankedBetween((byte*)textBuffer1, TEXT_CODE_BANK, (byte*)message, messageBank, messageSize);
 		}
 
-		if (messageSize - 1 > TILE_LAYER_WIDTH)
+		if (messageSize - 1 > TILE_LAYER_WIDTH / 2)
 		{
 			if (boxWidth)
 			{

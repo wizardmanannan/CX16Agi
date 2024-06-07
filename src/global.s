@@ -83,6 +83,7 @@ GRAPHICS_BANK = $6
 SPRITE_MANAGER_BANK = $9
 IRQ_BANK = $6
 BANKED_ALLOC_BANK = $10
+PARSER_BANK = $7
 
 FIRST_FLOOD_BANK = $27
 NO_FLOOD_BANKS = $0A
@@ -502,13 +503,15 @@ EQ_16_WORD_TO_LITERAL long1 + 2, word2, successBranch , failBranch
        
 .endmacro
 
+
 ; Macro for comparing two 16-bit words and branching if less or equal
 .macro LESS_THAN_OR_EQ_16 word1, word2, successBranch, failBranch
        .local @branch
        .local @end
        lda word1 + 1
        cmp word2 + 1
-       bcc @lowerBit
+       beq @lowerBit
+       bcc @branch
        .ifblank failBranch
        bcc @end
        .endif
@@ -548,7 +551,8 @@ EQ_16_WORD_TO_LITERAL long1 + 2, word2, successBranch , failBranch
        .endif
        @lowerBit:
        lda word1
-       cmp word2    
+       cmp word2
+       beq successBranch    
         .ifblank failBranch
        bcs @end
        .endif

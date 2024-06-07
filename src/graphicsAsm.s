@@ -32,6 +32,7 @@ _b6Clear:
 TRAMPOLINE #TEXT_BANK, _b3InitLayer1Mapbase
 TRAMPOLINE #SPRITE_UPDATES_BANK, _bEClearSpriteAttributes
 TRAMPOLINE #PICTURE_CODE_OVERFLOW_BANK, _b4ClearPicture
+TRAMPOLINE #GRAPHICS_BANK, _b6InitInput
 rts
 
 @mapWidth: .byte $0
@@ -70,6 +71,7 @@ WAIT_FOR_NEXT_IRQ @vSyncToCheck
 jsr _b6InitVeraMemory
 TRAMPOLINE #SPRITE_MANAGER_BANK, _b9InitSpriteData
 
+sei
 lda #DISPLAY_SCALE
 sta VERA_dc_hscale
 sta VERA_dc_vscale
@@ -183,6 +185,92 @@ lda #<COLOR_RED
 sta VERA_data0
 lda #>COLOR_RED
 sta VERA_data0
+
+;The rest of this palette is junk
+lda #<COLOR_BLACK
+sta VERA_data0
+lda #>COLOR_BLACK
+sta VERA_data0
+
+lda #<COLOR_BLACK
+sta VERA_data0
+lda #>COLOR_BLACK
+sta VERA_data0
+
+lda #<COLOR_BLACK
+sta VERA_data0
+lda #>COLOR_BLACK
+sta VERA_data0
+
+lda #<COLOR_BLACK
+sta VERA_data0
+lda #>COLOR_BLACK
+sta VERA_data0
+
+lda #<COLOR_BLACK
+sta VERA_data0
+lda #>COLOR_BLACK
+sta VERA_data0
+
+lda #<COLOR_BLACK
+sta VERA_data0
+lda #>COLOR_BLACK
+sta VERA_data0
+
+lda #<COLOR_BLACK
+sta VERA_data0
+lda #>COLOR_BLACK
+sta VERA_data0
+
+lda #<COLOR_BLACK
+sta VERA_data0
+lda #>COLOR_BLACK
+sta VERA_data0
+
+lda #<COLOR_BLACK
+sta VERA_data0
+lda #>COLOR_BLACK
+sta VERA_data0
+
+lda #<COLOR_BLACK
+sta VERA_data0
+lda #>COLOR_BLACK
+sta VERA_data0
+
+lda #<COLOR_BLACK
+sta VERA_data0
+lda #>COLOR_BLACK
+sta VERA_data0
+
+lda #<COLOR_BLACK
+sta VERA_data0
+lda #>COLOR_BLACK
+sta VERA_data0
+
+;TileSet Layer 2
+lda #<COLOR_BLACK
+sta VERA_data0
+lda #>COLOR_BLACK
+sta VERA_data0
+
+lda #<COLOR_WHITE
+sta VERA_data0
+lda #>COLOR_WHITE
+sta VERA_data0
+
+
+lda #<COLOR_BLACK
+sta VERA_data0
+lda #>COLOR_BLACK
+sta VERA_data0
+
+
+lda #<COLOR_RED
+sta VERA_data0
+lda #>COLOR_RED
+sta VERA_data0
+
+
 ;Other palettes are dynamic created in paletteManager.c
 
 lda #$6   ; Bitmap mode 16 colors
@@ -203,10 +291,9 @@ sta VERA_L1_vscroll_l
 stz VERA_L1_vscroll_h
 
 jsr _b6InitCharset 
-
 TRAMPOLINE #TEXT_BANK, _b3InitLayer1Mapbase
-
 TRAMPOLINE #SPRITE_UPDATES_BANK, _bEClearSpriteAttributes 
+jsr _b6InitInput
 
 lda #DEFAULT_TEXT_FOREGROUND
 ldx #$0
@@ -214,6 +301,9 @@ jsr pushax
 
 lda #DEFAULT_TEXT_BACKGROUND
 ldx #$0
+
+cli
+
 TRAMPOLINE #TEXT_BANK, _b3SetTextColor 
 
 
@@ -224,5 +314,18 @@ jsr _b6SetAndWaitForIrqStateAsm
 
 rts
 @vSyncToCheck: .word $0
+
+_b6InitInput:
+SET_VERA_ADDRESS_IMMEDIATE_SPLIT #<INPUT_STRING_ADDRESS + 1, #>INPUT_STRING_ADDRESS, #$0, #$0, #$2 ;To to the first tile byte 1
+ldx #INPUT_BYTE_1
+lda #MAX_INPUT_STRING_LENGTH
+
+@initLoop:
+stx VERA_data0
+
+@checkCondition:
+dec
+bne @initLoop 
+rts
 
 .endif

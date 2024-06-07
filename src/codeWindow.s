@@ -19,13 +19,6 @@ cwCurrentCode: .word $0 ;A counter
 codeWindowAddress: .addr codeWindow
 codeWindowInvalid: .byte TRUE
 
-; Macro for debugging the current code state.
-.macro DEBUG_CODE_STATE
-.ifdef DEBUG
- JSRFAR b5DebugCodeState, DEBUG_BANK
-.endif
-.endmacro
-
 ; Macro for loading code from the window without incrementing.
 .macro LOAD_CODE_WIN_CODE
         ldy cwCurrentCode
@@ -137,24 +130,5 @@ _incCodeBy:
 
     INC_CODE_BY @jumpAmount ; Increment code pointer by jump amount
     rts                     ; Return from subroutine
-
-.SEGMENT "BANKRAM05"
-.ifdef DEBUG
-b5DebugCodeState:
-    bra @start
-    @result: .word $0
-    @start:
-    clc                      ; Clear carry flag
-    lda ZP_PTR_CODE          ; Load the zero page pointer to code
-    adc cwCurrentCode        ; Add the current code value
-    sta @result              ; Store the result
-
-    ldx ZP_PTR_CODE + 1      ; Load the high byte of the zero page pointer to code
-    adc #$0                  ; Add zero (carry from previous addition)
-    stx @result + 1          ; Store the high byte of the result
-
-    jsr _debugPrintCurrentCodeState  ; Call debug print subroutine for current code state
-    rts                              ; Return from subroutine
-.endif
 
 .endif

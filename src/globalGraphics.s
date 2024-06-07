@@ -24,8 +24,9 @@ MAP_BASE = $DA00
 LEFT_BORDER = $F0
 RIGHT_BORDER = $0F
 
-BYTES_PER_CHARACTER = 16
+BYTES_PER_CHARACTER = 16 ; Titlebase
 TRANSPARENT_CHAR = $80
+CURSOR_CHAR = $5F
 NO_CHARS = 160
 SIZE_OF_CHARSET = (BYTES_PER_CHARACTER * NO_CHARS)
 
@@ -33,6 +34,11 @@ TILE_LAYER_WIDTH = 64
 TILE_LAYER_HEIGHT = 32
 TILE_LAYER_NO_TILES = (TILE_LAYER_WIDTH * TILE_LAYER_HEIGHT)
 TILE_BYTE_2 = $10
+
+FIRST_ROW = 4
+
+BYTES_PER_CELL = 2 ;Mapbase
+TILE_LAYER_BYTES_PER_ROW = (BYTES_PER_CELL * TILE_LAYER_WIDTH)
 
 ;Sprite Layer
 SPRITE_START = $EA00
@@ -79,6 +85,17 @@ NO_SPRITES = 127 ;Not including the mouse at 0
 ;Sprite Memory Manager
 SEGMENT_SMALL = (32 * 32) / 2
 SEGMENT_LARGE = SEGMENT_SMALL * 2 * SEGMENT_SMALL * 2
+
+;Input Line
+INPUT_BYTE_1 = $20
+INPUT_LINE_NUMBER = 22
+INPUT_LINE_COL = 0
+MAX_BUFFER_SIZE = 80 
+MAX_WORD_SIZE = 41
+INPUT_PROMPT_CHAR = $3E
+INPUT_STRING_ADDRESS = (MAP_BASE + (FIRST_ROW + INPUT_LINE_NUMBER - 1) * TILE_LAYER_BYTES_PER_ROW + INPUT_LINE_COL * BYTES_PER_CELL)
+
+
 
 .macro SET_VERA_ADDRESS_ABSOLUTE VeraAddress, AddressSel, Stride ;Vera Address is a 4 bit number instead of three to make it easier to work with C
         lda AddressSel
@@ -141,10 +158,22 @@ sta VERA_addr_low
         sta VERA_addr_high
 .endmacro
 
+.macro SET_VERA_ADDRESS_IMMEDIATE_SPLIT VERA_ADDRESS_LOW, VERA_ADDRESS_HIGH, VERA_ADDRESS_BANK, ADDRESS_SEL, STRIDE ;Vera Address is a 4 bit number instead of three to make it easier to work with C
+        lda ADDRESS_SEL
+        sta VERA_ctrl  
+        lda VERA_ADDRESS_BANK             
+        and #$1 ; We only care about the first bit
+        ora STRIDE << 4
+        sta VERA_addr_bank
+        lda VERA_ADDRESS_LOW
+        sta VERA_addr_low
+        lda VERA_ADDRESS_HIGH
+        sta VERA_addr_high
+.endmacro
+
 .macro CLEAR_VERA VERA_ADDRESS, NO_ROWS, BYTES_PER_ROW, COLOUR
 .local @loop
 .local @loopCheck
-
 SET_VERA_ADDRESS_ABSOLUTE VERA_ADDRESS, #$0, #$1
 
 lda COLOUR
@@ -166,6 +195,5 @@ dex
 bne @loopOuter
 
 .endmacro
-
 
 .endif
