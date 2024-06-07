@@ -17,7 +17,6 @@ extern char string[12][40];
 extern int dirnOfEgo;
 extern int controlMode;
 
-boolean haveKey = FALSE;
 int lastKey;
 int numInputWords;
 char cursorChar = '_';
@@ -139,7 +138,6 @@ void b7GetString(char* promptStr, byte promptStringBank, char* returnStr, byte r
 		GET_IN(ch);
 		if (ch)
 		{
-			haveKey = TRUE;
 			if ((ch >> 8) == 0x1C) ch |= 0x0D; /* Handle keypad ENTER */
 			switch (ch & 0xff) {
 			case 0:     /* Ignore these when building input string */
@@ -190,8 +188,9 @@ void b7PollKeyboard()
 	static char strPos = 0;
 	int ch, dummy, gx, gy;
 
+	var[19] = 0;
+
 	/* Clear keyboard buffers */
-	haveKey = FALSE;
 	memset(b7KeyState, 0, 256);
 	memset(b7AsciiState, 0, 256);
 	//b1ProcessString(temp, PARSER_BANK, outputString );
@@ -209,8 +208,7 @@ void b7PollKeyboard()
 		GET_IN(ch);
 
 		if (ch) {
-			haveKey = TRUE;
-
+			var[19] = ch;
 			lastKey = ch;  /* Store key value for have.key() cmd */
 			if (ch == 0x1C) ch |= 0x0D; /* Handle keypad ENTER */
 			b7KeyState[ch] = 1;     /* Mark scancode as activated */
