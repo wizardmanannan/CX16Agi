@@ -80,15 +80,6 @@ void stretch_sprite(BITMAP* bmp, BITMAP* sprite, int x, int y, int w, int h)
 
 }
 
-//Object
-void loadObjectFile() {
-
-}
-
-void discardObjects() {
-
-}
-
 //Sound
 int soundEndFlag;
 
@@ -115,11 +106,6 @@ void discardSoundFile(int soundNum)
 void loadSoundFile(int soundNum) {
 
 }
-
-
-//objects
-int numObjects;
-//objectType* objects;
 
 //Text
 void printInBoxBig2(char* theString) {

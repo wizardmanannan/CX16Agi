@@ -9,7 +9,6 @@ _lastBoxStartLine: .byte $0
 
 _textBuffer1: .res 1000
 _textBuffer2: .res 1000
-_interpolationBuffer: .res 2000
 
 .segment "BANKRAM06"
 

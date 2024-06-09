@@ -5,6 +5,8 @@
 #ifndef _AGIFILES_H_
 #define _AGIFILES_H_
 
+#define FILE_DEVICE 8
+
 #include "memoryManager.h"
 #include "helpers.h"
 #include "general.h"
@@ -50,6 +52,9 @@ extern void b6LoadAGIDirs();
 extern void b6LoadAGIFile(int resType, AGIFilePosType* location, AGIFile *AGIData);
 extern byte b6Cbm_openForSeeking(char* fileName);
 extern int8_t b6Cx16_fseek(uint8_t channel, uint32_t offset);
+extern void b6XOrAvisDurgan(byte* toXOR, unsigned int* avisPos);
 #pragma wrapped-call (pop)
+
+extern byte avisDurgan[11];
 
 #endif  /* _AGIFILES_H_ */

@@ -66,18 +66,6 @@ byte lastRoom = 0;
 
 void executeLogic(LOGICEntry* logicEntry, int logNum);
 
-//
-
-//Temp Should Be In Objects
-typedef struct {
-	int roomNum;
-	char* name;
-} objectType;
-
-objectType* objects;
-
-//
-
 int getNum(char* inputString, int* i, int inputStringBank)
 {
 	/* char strPos = 0;
@@ -293,16 +281,23 @@ int b1Lprintf(char* fmt, ...)
 
 boolean b1Has() // 1, 0x00 
 {
-	return (objects[loadAndIncWinCode()].roomNum == 255);
+	objectType objectType;
+	
+	bFGetObject(loadAndIncWinCode(), &objectType);
+	
+	return (objectType.roomNum == 255);
 }
 
 boolean b1Obj_in_room() // 2, 0x40 
 {
 	int objNum, varNum;
-
+	objectType objectType;
+	
 	objNum = loadAndIncWinCode();
+	bFGetObject(objNum, &objectType);
+
 	varNum = var[loadAndIncWinCode()];
-	return (objects[objNum].roomNum == varNum);
+	return (objectType.roomNum == varNum);
 }
 
 boolean b1Posn() // 5, 0x00 
@@ -1481,19 +1476,42 @@ void b2Observe_blocks() // 1, 0x00
 
 void b3Get() // 1, 00 
 {
-	objects[loadAndIncWinCode()].roomNum = 255;
+	objectType objectType;
+	byte objNum = loadAndIncWinCode();
+
+	bFGetObject(objNum, &objectType);
+
+	objectType.roomNum = 255;
+
+	bFSetObject(objNum, &objectType);
+
 	return;
 }
 
 void b3Get_v() // 1, 0x80 
 {
-	objects[var[loadAndIncWinCode()]].roomNum = 255;
+	objectType objectType;
+	byte objNum = var[loadAndIncWinCode()];
+	
+	bFGetObject(objNum, &objectType);
+
+	objectType.roomNum = 255;
+
+	bFSetObject(objNum, &objectType);
+
 	return;
 }
 
 void b3Drop() // 1, 0x00 
 {
-	objects[loadAndIncWinCode()].roomNum = 0;
+	objectType objectType;
+	byte objNum = loadAndIncWinCode();
+
+	bFGetObject(objNum, &objectType);
+
+	objectType.roomNum = 0;
+
+	bFSetObject(objNum, &objectType);
 	return;
 }
 
@@ -1501,29 +1519,45 @@ void b3Drop() // 1, 0x00
 void b3Put() // 2, 0x00 
 {
 	int objNum, room;
+	objectType objectType;
 
 	objNum = loadAndIncWinCode();
 	room = loadAndIncWinCode();
-	objects[objNum].roomNum = room;
+
+	bFGetObject(objNum, &objectType);
+
+	objectType.roomNum = room;
+
+	bFSetObject(objNum, &objectType);
 	return;
 }
 
-void b3Put_v() // 2, 0x40 
+void b3Put_v() // 2, 0x00 
 {
 	int objNum, room;
+	objectType objectType;
 
 	objNum = loadAndIncWinCode();
 	room = var[loadAndIncWinCode()];
-	objects[objNum].roomNum = room;
+
+	bFGetObject(objNum, &objectType);
+
+	objectType.roomNum = room;
+
+	bFSetObject(objNum, &objectType);
 	return;
 }
 
 void b3Get_room_v() // 2, 0xC0 
 {
 	int objNum, room;
+	objectType objectType;
 
 	objNum = var[loadAndIncWinCode()];
-	var[loadAndIncWinCode()] = objects[objNum].roomNum;
+
+	bFGetObject(objNum, &objectType);
+
+	var[loadAndIncWinCode()] = objectType.roomNum;
 	return;
 }
 

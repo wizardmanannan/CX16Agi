@@ -97,7 +97,6 @@ byte b6Cbm_openForSeeking(char* fileName)
 {
 	const char* OPEN_FLAGS = ",S,R";
 	byte lfn = SEQUENTIAL_LFN;
-	byte dev = 8;
 
 	char fileNameAndFlags[FILE_NAME_SIZE + 4];
 	byte sec_addr = FILE_OPEN_ADDRESS;
@@ -109,7 +108,7 @@ byte b6Cbm_openForSeeking(char* fileName)
 #endif // VERBOSE
 
 
-	cbm_open(lfn, dev, sec_addr, fileNameAndFlags);
+	cbm_open(lfn, FILE_DEVICE, sec_addr, fileNameAndFlags);
 
 	return lfn;
 }

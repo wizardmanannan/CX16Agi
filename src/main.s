@@ -38,7 +38,6 @@
     .export _lastBoxStartLine
     .export _textBuffer1
     .export _textBuffer2
-    .export _interpolationBuffer
     .export _currentTextBuffer
     .export _trampoline
     .export _b4DrawStraightLineAlongX

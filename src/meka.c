@@ -222,7 +222,6 @@ void b6Timing_proc()
 
 void b6Closedown()
 {
-    discardObjects();
     b12DiscardWords();
 }
 
@@ -267,7 +266,7 @@ void b6Initialise()
     b9InitViews();
     b9InitObjects();
 
-    loadObjectFile();
+    bFLoadObjectFile();
     b12LoadWords();
     b7InitEvents();
     b6InitInterpreter();

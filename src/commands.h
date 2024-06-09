@@ -7,6 +7,7 @@
 #include "debugHelper.h"
 #include "picture.h"
 #include "textLayer.h"
+#include "object.h"
 
 void executeLogic(LOGICEntry* logicEntry, int logNum);
 void b1Call(unsigned char** data);

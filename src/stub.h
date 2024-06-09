@@ -175,16 +175,9 @@ boolean b7Said(byte** data);
 
 void b7LookupWords(char* inputLine);
 
-//Object
-void loadObjectFile();
-
 //Unknown 
 extern byte* key;
 
-//Objects
-extern int numObjects;
-
-extern void discardObjects();
 
 //Text
 void printInBoxBig(char* theString, int x, int y, int lineLen);
