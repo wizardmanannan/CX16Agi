@@ -297,6 +297,7 @@ JSRFAR _debugDec, DEBUG_BANK
 
 .macro DEBUG_ADD_N var
 .ifdef DEBUG
+LOAD_CODE_WIN_CODE
 sta _logDebugVal2
 lda var
 sta _logDebugVal1
@@ -975,22 +976,23 @@ b1Addn:
     @start:
          LOAD_CODE_WIN_CODE
          sta @var
-         
+        
          GET_VAR_OR_FLAG VARS_AREA_START_GOLDEN_OFFSET, @existingVal
+        
          INC_CODE
-         LOAD_CODE_WIN_CODE
-         
+        
          DEBUG_ADD_N @var 
-
+         
+         LOAD_CODE_WIN_CODE
          clc
          adc @existingVal
-         INC_CODE
          sta @resultVal
+
+         INC_CODE 
 
          SET_VAR_OR_FLAG VARS_AREA_START_GOLDEN_OFFSET, @resultVal, @var
 
-        DEBUG_POST_CHECK_VAR @var 
-        
+         DEBUG_POST_CHECK_VAR @var 
          jmp mainLoop
 
 b1Addv:
