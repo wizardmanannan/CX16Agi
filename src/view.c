@@ -2398,6 +2398,7 @@ void bBUpdateObjects()
 
 								flag[localViewtab.param1] = 1;
 								localViewtab.flags &= ~CYCLING;
+								localViewtab.cycleStatus = 0; //Normal
 							}
 							else
 								b9SetCel(&localViewtab, celNum);
@@ -2407,6 +2408,7 @@ void bBUpdateObjects()
 							if (celNum < 0) {
 								flag[localViewtab.param1] = 1;
 								localViewtab.flags &= ~CYCLING;
+								localViewtab.cycleStatus = 0; //Normal
 							}
 							else
 								b9SetCel(&localViewtab, celNum);
