@@ -1639,7 +1639,7 @@ void b3PrintMessageInTextbox(byte messNum, byte x, byte y, byte length)
 	}
 	else
 	{
-		b6WaitOnSpecificKeys(keysToWait, NO_KEYS_TO_WAIT);
+		b5WaitOnSpecificKeys(keysToWait, NO_KEYS_TO_WAIT);
 	}
 
 	b3ClearLastPlacedText();
