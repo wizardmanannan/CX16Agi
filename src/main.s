@@ -11,6 +11,7 @@
     .include "spriteMemoryManagerAsm.s"
     .include "pictureAsm.s"
     .include "wordsAsm.s"
+    .include "debug.s"
     .export _executeLogic
     .export _b6InitInterpreter
     .export _loadAndIncWinCode
@@ -68,3 +69,4 @@
     .export _b4ClearPicture
     .export _b12FindSynonymNumSearch
     .export _b6Clear
+    .export _b5IsDebuggingEnabled

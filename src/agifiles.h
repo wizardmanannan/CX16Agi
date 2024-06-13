@@ -24,7 +24,7 @@
 
 #define FILE_OPEN_ADDRESS 2
 #define NO_BYTES_PER_MESSAGE 2
-#define FILE_NAME_SIZE 10
+#define FILE_NAME_SIZE 15
 
 #define  EMPTY  0xFFFFF   /* Empty DIR entry */
 

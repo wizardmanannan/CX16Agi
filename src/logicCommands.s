@@ -170,29 +170,29 @@ LOGICCOMMANDS_INC = 1
 
 ; Debugging related imports (only included if DEBUG is defined)
 .ifdef DEBUG
-.import _debugGreaterThan_8N
-.import _debugLessThan_8N
-.import _debugGreaterThan_8V
-.import _debugLessThan_8V
-.import _debugIsSet
-.import _debugEqualN
-.import _debugEqualV
-.import _debugInc
-.import _debugDec
-.import _debugAddN
-.import _debugAddV
-.import _debugSubN
-.import _debugSubV
-.import _debugAssignN
-.import _debugAssignV
-.import _debugPostCheckVar
-.import _debugPostCheckFlag
-.import _debugIndirect
-.import _debugIndirectV
-.import _debugNewRoom
-.import _debugExitAllLogics
-.import _b5DebugScanStart
-.import _b5DebugResetScanStart
+.import _bDbgGreaterThan_8N
+.import _bDbgLessThan_8N
+.import _bDbgGreaterThan_8V
+.import _bDbgLessThan_8V
+.import _bDbgIsSet
+.import _bDbgEqualN
+.import _bDbgEqualV
+.import _bDbgInc
+.import _bDbgDec
+.import _bDbgAddN
+.import _bDbgAddV
+.import _bDbgSubN
+.import _bDbgSubV
+.import _bDbgAssignN
+.import _bDbgAssignV
+.import _bDbgPostCheckVar
+.import _bDbgPostCheckFlag
+.import _bDbgIndirect
+.import _bDbgIndirectV
+.import _bDbgNewRoom
+.import _bDbgExitAllLogics
+.import _bDbgScanStart
+.import _bDbgResetScanStart
 .import _stopAtFunc
 .endif 
 
@@ -203,7 +203,7 @@ lda var1
 sta _logDebugVal1
 lda var2
 sta _logDebugVal2
-JSRFAR _debugGreaterThan_8N, DEBUG_BANK
+TRAMPOLINE _debugBank, _bDbgGreaterThan_8N
 .endif
 .endmacro
 
@@ -214,7 +214,7 @@ sta _logDebugVal1
 lda var2
 sta _logDebugVal2
 
-JSRFAR _debugLessThan_8N, DEBUG_BANK
+TRAMPOLINE _debugBank, _bDbgLessThan_8N
 
 .endif
 .endmacro
@@ -225,7 +225,7 @@ lda var1
 sta _logDebugVal1
 lda var2
 sta _logDebugVal2
-JSRFAR _debugGreaterThan_8V, DEBUG_BANK
+TRAMPOLINE _debugBank, _bDbgGreaterThan_8V
 .endif
 .endmacro
 
@@ -236,7 +236,7 @@ sta _logDebugVal1
 lda var2
 sta _logDebugVal2
 
-JSRFAR _debugLessThan_8V, DEBUG_BANK
+TRAMPOLINE _debugBank, _bDbgLessThan_8V
 
 .endif
 .endmacro
@@ -246,7 +246,7 @@ JSRFAR _debugLessThan_8V, DEBUG_BANK
 LOAD_CODE_WIN_CODE
 sta _logDebugVal1
 
-JSRFAR _debugIsSet, DEBUG_BANK
+TRAMPOLINE _debugBank, _bDbgIsSet
 .endif
 .endmacro
 
@@ -257,7 +257,7 @@ sta _logDebugVal1
 lda var2
 sta _logDebugVal2
 
-JSRFAR _debugEqualN, DEBUG_BANK
+TRAMPOLINE _debugBank, _bDbgEqualN
 .endif
 .endmacro
 
@@ -268,7 +268,7 @@ sta _logDebugVal1
 lda var2
 sta _logDebugVal2
 
-JSRFAR _debugEqualV, DEBUG_BANK
+TRAMPOLINE _debugBank, _bDbgEqualV
 .endif
 .endmacro
 
@@ -277,7 +277,7 @@ JSRFAR _debugEqualV, DEBUG_BANK
 LOAD_CODE_WIN_CODE
 sta _logDebugVal1
 
-JSRFAR _debugInc, DEBUG_BANK
+TRAMPOLINE _debugBank, _bDbgInc
 
 .endif
 .endmacro
@@ -287,10 +287,10 @@ JSRFAR _debugInc, DEBUG_BANK
 LOAD_CODE_WIN_CODE
 sta _logDebugVal1
 
-lda #< _debugDec
-ldx #> _debugDec
+lda #< _bDbgDec
+ldx #> _bDbgDec
 
-JSRFAR _debugDec, DEBUG_BANK
+TRAMPOLINE _debugBank, _bDbgDec
 
 .endif
 .endmacro
@@ -302,7 +302,7 @@ sta _logDebugVal2
 lda var
 sta _logDebugVal1
 
-JSRFAR _debugAddN, DEBUG_BANK
+TRAMPOLINE _debugBank, _bDbgAddN
 
 .endif
 .endmacro
@@ -310,7 +310,7 @@ JSRFAR _debugAddN, DEBUG_BANK
 .macro DEBUG_ADD_V var
 .ifdef DEBUG
 
-JSRFAR _debugAddV, DEBUG_BANK
+TRAMPOLINE _debugBank, _bDbgAddV
 .endif
 .endmacro
 
@@ -320,17 +320,17 @@ sta _logDebugVal2
 lda var
 sta _logDebugVal1
 
-JSRFAR _debugSubN, DEBUG_BANK
+TRAMPOLINE _debugBank, _bDbgSubN
 .endif
 .endmacro
 
 .macro DEBUG_SUB_V var
 .ifdef DEBUG
 
-lda #< _debugSubV
-ldx #> _debugSubV
+lda #< _bDbgSubV
+ldx #> _bDbgSubV
 
-JSRFAR _debugSubV, DEBUG_BANK
+TRAMPOLINE _debugBank, _bDbgSubV
 .endif
 .endmacro
 
@@ -341,10 +341,10 @@ sta _logDebugVal1
 lda var2
 sta _logDebugVal2
 
-lda #< _debugAssignN
-ldx #> _debugAssignN
+lda #< _bDbgAssignN
+ldx #> _bDbgAssignN
 
-JSRFAR _debugAssignN, DEBUG_BANK
+TRAMPOLINE _debugBank, _bDbgAssignN
 
 .endif
 .endmacro
@@ -352,7 +352,7 @@ JSRFAR _debugAssignN, DEBUG_BANK
 .macro DEBUG_ASSIGN_V var
 .ifdef DEBUG
 
-JSRFAR _debugAssignV, DEBUG_BANK
+TRAMPOLINE _debugBank, _bDbgAssignV
 .endif
 .endmacro
 
@@ -364,7 +364,7 @@ lda var
 sta _logDebugVal1
 .endif
 
-;JSRFAR _debugPostCheckVar, DEBUG_BANK
+;TRAMPOLINE _debugBank, _bDbgPostCheckVar
 .endif
 .endmacro
 
@@ -377,7 +377,7 @@ lda var
 lda _logDebugVal1
 .endif
 
-JSRFAR _debugPostCheckFlag, DEBUG_BANK
+TRAMPOLINE _debugBank, _bDbgPostCheckFlag
 .endif
 .endmacro
 
@@ -386,19 +386,19 @@ JSRFAR _debugPostCheckFlag, DEBUG_BANK
 lda value
 sta _logDebugVal2
 
-lda #< _debugIndirect
-ldx #> _debugIndirect
+lda #< _bDbgIndirect
+ldx #> _bDbgIndirect
 
-JSRFAR _debugIndirect, DEBUG_BANK
+TRAMPOLINE _debugBank, _bDbgIndirect
 .endif
 .endmacro
 
 .macro DEBUG_INDIRECT_V value
 .ifdef DEBUG
-lda #<  _debugIndirectV
-ldx #>  _debugIndirectV
+lda #<  _bDbgIndirectV
+ldx #>  _bDbgIndirectV
 
-JSRFAR _debugIndirectV, DEBUG_BANK
+TRAMPOLINE _debugBank, _bDbgIndirectV
 .endif
 .endmacro
 
@@ -407,13 +407,13 @@ JSRFAR _debugIndirectV, DEBUG_BANK
 LOAD_CODE_WIN_CODE
 sta _logDebugVal1
 
-JSRFAR _debugNewRoom, DEBUG_BANK
+TRAMPOLINE _debugBank, _bDbgNewRoom
 .endif
 .endmacro
 
 .macro DEBUG_EXIT_ALL_LOGICS
 .ifdef DEBUG
-JSRFAR _debugExitAllLogics, DEBUG_BANK
+TRAMPOLINE _debugBank, _bDbgExitAllLogics
 .endif
 .endmacro
 
@@ -435,14 +435,14 @@ sta _logDebugVal5
 lda startPos + 1
 sta _logDebugVal6
 
-JSRFAR _b5DebugScanStart, DEBUG_BANK
+TRAMPOLINE _debugBank, _bDbgScanStart
 .endif
 .endmacro
 
 .macro DEBUG_RESET_SCAN
 .ifdef DEBUG
 
-JSRFAR _b5DebugResetScanStart, DEBUG_BANK
+TRAMPOLINE _debugBank, _bDbgResetScanStart
 .endif
 .endmacro
 

@@ -9,11 +9,14 @@ extern byte newRoomNum;
 extern boolean hasEnteredNewRoom, exitAllLogics;
 extern int currentLog;
 
+byte debugBank;
+
+#pragma bss-name (push, "BANKRAMDEBUG")
 long opCounter = 1;
 long opStopAt = 0;
 long opExitAt = 0;
 long opStartPrintingAt = 0;
-int opPrintOnlyOnScript = 102;
+int opPrintOnlyOnScript = PRINT_ALL_SCRIPTS;
 boolean opStopEvery = FALSE;
 int _clockBefore = 0;
 
@@ -24,11 +27,85 @@ long pixelFreezeAt = -1;
 
 unsigned long queueAction = 0;
 
+#pragma bss-name (pop)
 
+#pragma rodata-name (push, "BANKRAMDEBUG")
+const char bDbgPrintMessage[] = "op %lu, %d\n";
+const char bDbgRemainingMemoryMessage[] = "Your remaining memory is approx: %d \n";
+const char bDbgFalseResultMessage[] = "the result is false\n";
+const char bDbgTrueResultMessage[] = "the result is true\n";
+const char bDbgInvertedResultMessage[] = "the result is inverted by not\n";
+const char bDbgIsSetMessage[] = "checking that %d is set and it %d\n";
+const char bDbgGreaterThan_8N_Message[] = "checking that %d (%d) is > %d and the result should be %d\n";
+const char bDbgLessThan_8N_Message[] = "checking that %d is < %d and the result should be %d\n";
+const char bDbgGreaterThan_8V_Message[] = "checking that %d (%d) is > %d (%d) and the result should be %d\n";
+const char bDbgLessThan_8V_Message[] = "checking that %d (%d) is < %d (%d) and the result should be %d\n";
+const char bDbgEqualN_Message[] = "checking that %d (%d) is equal to %d and it %d\n";
+const char bDbgEqualV_Message[] = "checking that %d (%d) is equal to %d (%d) and it %d\n";
+const char bDbgIncrementingMessage[] = "incrementing var %d(%d) to %d\n";
+const char bDbgDecrementingMessage[] = "decrementing var %d to %d\n";
+const char bDbgAddN_Message[] = "add var %d (%d) to %d";
+const char bDbgAddV_Message[] = "add var %d (%d) to %d\n";
+const char bDbgSubN_Message[] = "sub var %d (%d) to %d which is %d\n";
+const char bDbgSubV_Message[] = "sub var %d (%d) to %d (%d) which is %d\n";
+const char bDbgAssignN_Message[] = "assign var %d (%d) to %d\n";
+const char bDbgAssignV_Message[] = "assign var %d (%d) to %d (%d)\n";
+const char bDbgIndirectMessage[] = "indir %d (%d) value %d\n";
+const char bDbgScanStartMessage[] = "lognum: %d scan start: zp_code ((%p) + cwCurrentcode (%p)) - startpos (%p) = %p. actual %p";
+const char bDbgResetScanStartMessage[] = "resetting scan for logic %d. it %s reset.\n";
+const char bDbgIndirectV_Message[] = "indir V %d (%d) value %d (%d)\n";
+const char bDbgPostCheckVarMessage[] = "post check var %d (%d)\n";
+const char bDbgPostCheckFlagMessage[] = "post check flag %d (%d)\n";
+const char bDbgCodeJumpMessage[] = "b1 is %d b2 is %d, shift %u and the jump result is %u.\n";
+const char bDbgNewRoomMessage[] = "attempting to enter new room %d\n";
+const char bDbgExitAllLogicsMessage[] = "----------Exit Debug: Attempting to enter new room %d. Has entered new Room: %d. Has exited all logics %d\n";
+const char bDbgScriptStartMessage[] = "ex s. %d counter op %lu, var 0 is %d\n";
+const char bDbgRoomChangeMessage[] = "We are at %d, counter %lu\n";
+#pragma rodata-name (pop)
 
+#pragma rodata-name (push, "BANKRAM05")
+const char b5InitializingDebug[] = "debug now initializing on bank %d\n";
+#pragma rodata-name (pop)
+
+#pragma rodata-name (push, "BANKRAM06")
+char b6DebugFileName[] = "agi.cx16.debug";
+#pragma rodata-name (pop)
 
 #pragma code-name (push, "BANKRAM05");
-void b5CheckMemory()
+extern boolean b5IsDebuggingEnabled();
+
+void b5InitializeDebugging()
+{
+#define NO_READ_SIZES 4
+	byte lfn;
+	byte i;
+	int bytesRead;
+	int readSizes[4] = { LOCAL_WORK_AREA_SIZE, 100, 10, 1 };
+	byte* debugBankPtr;
+
+	if (b5IsDebuggingEnabled())
+	{
+		lfn = b6Cbm_openForSeeking(b6DebugFileName);
+
+		debugBankPtr = b10BankedAlloc(LARGE_SIZE, &debugBank);
+
+		printf(b5InitializingDebug, debugBank);
+		for (i = 0; i < NO_READ_SIZES; i++)
+		{
+			while (cbm_read(lfn, GOLDEN_RAM_WORK_AREA, readSizes[i]))
+			{
+				memCpyBanked(debugBankPtr, GOLDEN_RAM_WORK_AREA, debugBank, readSizes[i]);
+				
+				debugBankPtr += readSizes[i];
+			}
+		}
+		cbm_close(lfn);
+	}
+}
+#pragma code-name (pop);
+
+#pragma code-name (push, "BANKRAMDEBUG");
+void bDbgCheckMemory()
 {
 #ifdef CHECK_MEM
 	int i;
@@ -38,7 +115,7 @@ void b5CheckMemory()
 		mem = (byte*)malloc(i);
 		if (!mem)
 		{
-			printf("Your remaining memory is approx: %d \n", i);
+			printf(bDbgRemainingMemoryMessage, i);
 			i = -1;
 		}
 		else
@@ -50,12 +127,12 @@ void b5CheckMemory()
 #endif // CHECK_MEM
 }
 
-void debugPrint(byte toPrint)
+void bDbgDebugPrint(byte toPrint)
 {
 	int time;
 	int clockVal = (int)clock();
 
-	if (opCounter >= opStartPrintingAt && opStartPrintingAt != 0 && opStartPrintingAt != 0 && (opPrintOnlyOnScript == PRINT_ALL_SCRIPTS || opPrintOnlyOnScript == currentLog))
+	if (opCounter >= opStartPrintingAt && opStartPrintingAt != 0 && (opPrintOnlyOnScript == PRINT_ALL_SCRIPTS || opPrintOnlyOnScript == currentLog))
 	{
 		if (clockVal > _clockBefore)
 		{
@@ -67,10 +144,10 @@ void debugPrint(byte toPrint)
 		}
 
 
-		printf("op %lu, %d\n", opCounter, toPrint);
+		printf(bDbgPrintMessage, opCounter, toPrint);
 		_clockBefore = clockVal;
 #ifdef CHECK_MEM
-		b5CheckMemory();
+		bDbgCheckMemory();
 #endif
 	}
 	if (opStopEvery)
@@ -93,31 +170,31 @@ void debugPrint(byte toPrint)
 	opCounter++;
 }
 
-void debugPrintFalse()
+void bDbgPrintFalse()
 {
 	if (opCounter >= opStartPrintingAt && opStartPrintingAt != 0 && (opPrintOnlyOnScript == PRINT_ALL_SCRIPTS || opPrintOnlyOnScript == currentLog))
 	{
-		printf("the result is false\n");
+		printf(bDbgFalseResultMessage);
 	}
 }
 
-void debugPrintTrue()
+void bDbgPrintTrue()
 {
 	if (opCounter >= opStartPrintingAt && opStartPrintingAt != 0 && (opPrintOnlyOnScript == PRINT_ALL_SCRIPTS || opPrintOnlyOnScript == currentLog))
 	{
-		printf("the result is true\n");
+		printf(bDbgTrueResultMessage);
 	}
 }
 
-void debugPrintNot()
+void bDbgPrintNot()
 {
 	if (opCounter >= opStartPrintingAt && opStartPrintingAt != 0 && (opPrintOnlyOnScript == PRINT_ALL_SCRIPTS || opPrintOnlyOnScript == currentLog))
 	{
-		printf("the result is inverted by not\n");
+		printf(bDbgInvertedResultMessage);
 	}
 }
 
-void debugPrintOrMode()
+void bDbgPrintOrMode()
 {
 	//printf("or mode started\n");
 }
@@ -130,71 +207,71 @@ extern byte logDebugVal4;
 extern byte logDebugVal5;
 extern byte logDebugVal6;
 
-void debugIsSet()
+void bDbgIsSet()
 {
 	if (opCounter >= opStartPrintingAt && opStartPrintingAt != 0 && (opPrintOnlyOnScript == PRINT_ALL_SCRIPTS || opPrintOnlyOnScript == currentLog))
 	{
-		printf("checking that %d is set and it %d\n", logDebugVal1, flag[logDebugVal1]);
+		printf(bDbgIsSetMessage, logDebugVal1, flag[logDebugVal1]);
 	}
 }
 
-void debugGreaterThan_8N()
+void bDbgGreaterThan_8N()
 {
 	if (opCounter >= opStartPrintingAt && opStartPrintingAt != 0 && (opPrintOnlyOnScript == PRINT_ALL_SCRIPTS || opPrintOnlyOnScript == currentLog))
 	{
-		printf("checking that %d (%d) is > %d and the result should be %d\n", logDebugVal1, var[logDebugVal1], logDebugVal2, var[logDebugVal1] > logDebugVal2);
+		printf(bDbgGreaterThan_8N_Message, logDebugVal1, var[logDebugVal1], logDebugVal2, var[logDebugVal1] > logDebugVal2);
 	}
 }
 
-void debugLessThan_8N()
+void bDbgLessThan_8N()
 {
 	if (opCounter >= opStartPrintingAt && opStartPrintingAt != 0 && (opPrintOnlyOnScript == PRINT_ALL_SCRIPTS || opPrintOnlyOnScript == currentLog))
 	{
-		printf("checking that %d is < %d and the result should be %d\n", logDebugVal1, logDebugVal2, logDebugVal1 < logDebugVal2);
+		printf(bDbgLessThan_8N_Message, logDebugVal1, logDebugVal2, logDebugVal1 < logDebugVal2);
 	}
 }
 
-void debugGreaterThan_8V()
+void bDbgGreaterThan_8V()
 {
 	if (opCounter >= opStartPrintingAt && opStartPrintingAt != 0 && (opPrintOnlyOnScript == PRINT_ALL_SCRIPTS || opPrintOnlyOnScript == currentLog))
 	{
-		printf("checking that %d (%d) is > %d and the result should be %d\n", logDebugVal1, var[logDebugVal1], logDebugVal2, var[logDebugVal2], var[logDebugVal1] > var[logDebugVal2]);
+		printf(bDbgGreaterThan_8V_Message, logDebugVal1, var[logDebugVal1], logDebugVal2, var[logDebugVal2], var[logDebugVal1] > var[logDebugVal2]);
 	}
 }
 
-void debugLessThan_8V()
+void bDbgLessThan_8V()
 {
 	if (opCounter >= opStartPrintingAt && opStartPrintingAt != 0 && (opPrintOnlyOnScript == PRINT_ALL_SCRIPTS || opPrintOnlyOnScript == currentLog))
 	{
-		printf("checking that %d is < %d and the result should be %d\n", logDebugVal1, var[logDebugVal1], logDebugVal2, var[logDebugVal2], var[logDebugVal1] < var[logDebugVal2]);
+		printf(bDbgLessThan_8V_Message, logDebugVal1, var[logDebugVal1], logDebugVal2, var[logDebugVal2], var[logDebugVal1] < var[logDebugVal2]);
 	}
 }
 
-void debugEqualN()
+void bDbgEqualN()
 {
 	if (opCounter >= opStartPrintingAt && opStartPrintingAt != 0 && (opPrintOnlyOnScript == PRINT_ALL_SCRIPTS || opPrintOnlyOnScript == currentLog))
 	{
-		printf("checking that %d (%d) is equal to %d and it %d\n", logDebugVal1, var[logDebugVal1], logDebugVal2, var[logDebugVal1] == logDebugVal2);
+		printf(bDbgEqualN_Message, logDebugVal1, var[logDebugVal1], logDebugVal2, var[logDebugVal1] == logDebugVal2);
 	}
 }
 
-void debugEqualV()
+void bDbgEqualV()
 {
 	if (opCounter >= opStartPrintingAt && opStartPrintingAt != 0 && (opPrintOnlyOnScript == PRINT_ALL_SCRIPTS || opPrintOnlyOnScript == currentLog))
 	{
-		printf("checking that %d (%d) is equal to %d (%d) and it %d\n", logDebugVal1, var[logDebugVal1], logDebugVal2, var[logDebugVal2], var[logDebugVal1] == var[logDebugVal2]);
+		printf(bDbgEqualV_Message, logDebugVal1, var[logDebugVal1], logDebugVal2, var[logDebugVal2], var[logDebugVal1] == var[logDebugVal2]);
 	}
 }
 
-void debugInc()
+void bDbgInc()
 {
 	if (opCounter >= opStartPrintingAt && opStartPrintingAt != 0 && (opPrintOnlyOnScript == PRINT_ALL_SCRIPTS || opPrintOnlyOnScript == currentLog))
 	{
-		printf("incrementing var %d(%d) to %d\n", logDebugVal1, var[logDebugVal1], var[logDebugVal1] + 1);
+		printf(bDbgIncrementingMessage, logDebugVal1, var[logDebugVal1], var[logDebugVal1] + 1);
 	}
 }
 
-void debugDec()
+void bDbgDec()
 {
 	byte actual = var[logDebugVal1];
 
@@ -205,66 +282,66 @@ void debugDec()
 
 	if (opCounter >= opStartPrintingAt && opStartPrintingAt != 0 && (opPrintOnlyOnScript == PRINT_ALL_SCRIPTS || opPrintOnlyOnScript == currentLog))
 	{
-		printf("decrementing var %d to %d\n", logDebugVal1, actual);
+		printf(bDbgDecrementingMessage, logDebugVal1, actual);
 	}
 }
 
-void debugAddN()
+void bDbgAddN()
 {
 	if (opCounter >= opStartPrintingAt && opStartPrintingAt != 0 && (opPrintOnlyOnScript == PRINT_ALL_SCRIPTS || opPrintOnlyOnScript == currentLog))
 	{
-		printf("add var %d (%d) to %d", logDebugVal1, var[logDebugVal1], logDebugVal2);
+		printf(bDbgAddN_Message, logDebugVal1, var[logDebugVal1], logDebugVal2);
 	}
 }
 
-void debugAddV()
+void bDbgAddV()
 {
 	if (opCounter >= opStartPrintingAt && opStartPrintingAt != 0 && (opPrintOnlyOnScript == PRINT_ALL_SCRIPTS || opPrintOnlyOnScript == currentLog))
 	{
-		printf("add var %d (%d) to %d\n", logDebugVal1, var[logDebugVal1], logDebugVal2);
+		printf(bDbgAddV_Message, logDebugVal1, var[logDebugVal1], logDebugVal2);
 	}
 }
 
-void debugSubN()
+void bDbgSubN()
 {
 	if (opCounter >= opStartPrintingAt && opStartPrintingAt != 0 && (opPrintOnlyOnScript == PRINT_ALL_SCRIPTS || opPrintOnlyOnScript == currentLog))
 	{
-		printf("sub var %d (%d) to %d which is %d\n", logDebugVal1, var[logDebugVal1], logDebugVal2, var[logDebugVal1] - logDebugVal2);
+		printf(bDbgSubN_Message, logDebugVal1, var[logDebugVal1], logDebugVal2, var[logDebugVal1] - logDebugVal2);
 	}
 }
 
-void debugSubV()
+void bDbgSubV()
 {
 	if (opCounter >= opStartPrintingAt && opStartPrintingAt != 0 && (opPrintOnlyOnScript == PRINT_ALL_SCRIPTS || opPrintOnlyOnScript == currentLog)) {
-		printf("sub var %d (%d) to %d (%d) which is %d\n", logDebugVal1, var[logDebugVal1], logDebugVal2, var[logDebugVal2], var[logDebugVal1] - var[logDebugVal2]);
+		printf(bDbgSubV_Message, logDebugVal1, var[logDebugVal1], logDebugVal2, var[logDebugVal2], var[logDebugVal1] - var[logDebugVal2]);
 	}
 }
 
-void debugAssignN()
+void bDbgAssignN()
 {
 	if (opCounter >= opStartPrintingAt && opStartPrintingAt != 0 && (opPrintOnlyOnScript == PRINT_ALL_SCRIPTS || opPrintOnlyOnScript == currentLog))
 	{
-		printf("assign var %d (%d) to %d\n", logDebugVal1, var[logDebugVal1], logDebugVal2);
+		printf(bDbgAssignN_Message, logDebugVal1, var[logDebugVal1], logDebugVal2);
 	}
 }
 
-void debugAssignV()
+void bDbgAssignV()
 {
 	if (opCounter >= opStartPrintingAt && opStartPrintingAt != 0 && (opPrintOnlyOnScript == PRINT_ALL_SCRIPTS || opPrintOnlyOnScript == currentLog))
 	{
-		printf("assign var %d (%d) to %d (%d)\n", logDebugVal1, var[logDebugVal1], logDebugVal2, var[logDebugVal2]);
+		printf(bDbgAssignV_Message, logDebugVal1, var[logDebugVal1], logDebugVal2, var[logDebugVal2]);
 	}
 }
 
-void debugIndirect()
+void bDbgIndirect()
 {
 	if (opCounter >= opStartPrintingAt && opStartPrintingAt != 0 && (opPrintOnlyOnScript == PRINT_ALL_SCRIPTS || opPrintOnlyOnScript == currentLog))
 	{
-		printf("indir %d (%d) value %d\n", logDebugVal1, var[logDebugVal1], logDebugVal2);
+		printf(bDbgIndirectMessage, logDebugVal1, var[logDebugVal1], logDebugVal2);
 	}
 }
 
-void b5DebugScanStart()
+void bDbgScanStart()
 {
 	LOGICEntry logicEntry;
 
@@ -276,11 +353,11 @@ void b5DebugScanStart()
 
 		getLogicEntry(&logicEntry, currentLog);
 
-		printf("lognum: %d scan start: zp_code ((%p) + cwCurrentcode (%p)) - startpos (%p) = %p. actual %p", currentLog, (int)zpCode, (int)cwCurrentCode, (int)startPos, (int)(zpCode + cwCurrentCode) - startPos, logicEntry.entryPoint);
+		printf(bDbgScanStartMessage, currentLog, (int)zpCode, (int)cwCurrentCode, (int)startPos, (int)(zpCode + cwCurrentCode) - startPos, logicEntry.entryPoint);
 	}
 }
 
-void b5DebugResetScanStart()
+void bDbgResetScanStart()
 {
 	LOGICEntry logicEntry;
 
@@ -288,71 +365,66 @@ void b5DebugResetScanStart()
 	{
 		getLogicEntry(&logicEntry, currentLog);
 
-		printf("resetting scan for logic %d. it %s reset.\n", currentLog, logicEntry.entryPoint == 0 ? "" : "not");
+		printf(bDbgResetScanStartMessage, currentLog, logicEntry.entryPoint == 0 ? "" : "not");
 	}
 }
 
-void debugIndirectV()
+void bDbgIndirectV()
 {
 	if (opCounter >= opStartPrintingAt && opStartPrintingAt != 0 && (opPrintOnlyOnScript == PRINT_ALL_SCRIPTS || opPrintOnlyOnScript == currentLog))
 	{
-		printf("indir V %d (%d) value %d (%d)\n", logDebugVal1, var[logDebugVal1], logDebugVal2, var[logDebugVal2]);
+		printf(bDbgIndirectV_Message, logDebugVal1, var[logDebugVal1], logDebugVal2, var[logDebugVal2]);
 	}
 }
 
 
-void debugPostCheckVar()
+void bDbgPostCheckVar()
 {
 	if (opCounter >= opStartPrintingAt && opStartPrintingAt != 0 && (opPrintOnlyOnScript == PRINT_ALL_SCRIPTS || opPrintOnlyOnScript == currentLog))
 	{
-		printf("post check var %d (%d)\n", logDebugVal1, var[logDebugVal1]);
+		printf(bDbgPostCheckVarMessage, logDebugVal1, var[logDebugVal1]);
 	}
 }
 
-void debugPostCheckFlag()
+void bDbgPostCheckFlag()
 {
 	if (opCounter >= opStartPrintingAt && opStartPrintingAt != 0 && (opPrintOnlyOnScript == PRINT_ALL_SCRIPTS || opPrintOnlyOnScript == currentLog))
 	{
-		printf("post check flag %d (%d)\n", logDebugVal1, flag[logDebugVal1]);
+		printf(bDbgPostCheckFlagMessage, logDebugVal1, flag[logDebugVal1]);
 	}
 }
 
-void codeJumpDebug()
+void bDbgCodeJump()
 {
 	if (opCounter >= opStartPrintingAt && opStartPrintingAt != 0 && (opPrintOnlyOnScript == PRINT_ALL_SCRIPTS || opPrintOnlyOnScript == currentLog))
 	{
-		printf("b1 is %d b2 is %d, shift %u and the jump result is %u.\n", logDebugVal1, logDebugVal2, (logDebugVal2 << 8), (logDebugVal2 << 8) | logDebugVal1);
+		printf(bDbgCodeJumpMessage, logDebugVal1, logDebugVal2, (logDebugVal2 << 8), (logDebugVal2 << 8) | logDebugVal1);
 	}
 }
 
-void debugNewRoom()
+void bDbgNewRoom()
 {
 	if (opCounter >= opStartPrintingAt && opStartPrintingAt != 0 && (opPrintOnlyOnScript == PRINT_ALL_SCRIPTS || opPrintOnlyOnScript == currentLog))
 	{
-		printf("attempting to enter new room %d\n", logDebugVal1);
+		printf(bDbgNewRoomMessage, logDebugVal1);
 	}
 }
 
-void debugExitAllLogics()
+void bDbgExitAllLogics()
 {
 	if (opCounter >= opStartPrintingAt && opStartPrintingAt != 0 && (opPrintOnlyOnScript == PRINT_ALL_SCRIPTS || opPrintOnlyOnScript == currentLog))
 	{
-		printf("----------Exit Debug: Attempting to enter new room %d. Has entered new Room: %d. Has exited all logics %d\n", newRoomNum, hasEnteredNewRoom, exitAllLogics);
+		printf(bDbgExitAllLogicsMessage, newRoomNum, hasEnteredNewRoom, exitAllLogics);
 	}
 }
 
-void b5DebugPrintScriptStart()
+void bDbgPrintScriptStart()
 {
-	printf("ex s. %d counter op %lu, var 0 is %d\n", currentLog, opCounter, var[0]);
+	printf(bDbgScriptStartMessage, currentLog, opCounter, var[0]);
 }
 
-void b5DebugPrintRoomChange()
+void bDbgPrintRoomChange()
 {
-	printf("We are at %d, counter %lu\n", var[0], opCounter);
+	printf(bDbgRoomChangeMessage, var[0], opCounter);
 }
 #pragma code-name (pop);
-
-
-
-
-

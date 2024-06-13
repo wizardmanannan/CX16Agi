@@ -1,4 +1,5 @@
 .import _stopAtFunc
+.import _bDbgDebugPrint
 ; Define the include guard for command loop
 .ifndef COMMAND_LOOP_INC
 
@@ -47,13 +48,14 @@ numArgs: .byte $0,$2,$2,$2,$2,$2,$2,$1,$1,$1,$2,$5,$1,$0,$0,$2,$5,$5,$5
 ; Define the codeBankArray, which stores the bank of every opcode (excluding return and boolean operators like greater than) starting from opcode 1 and going to 182
 codeBankArray: .byte $5,$1,$1,$1,$1,$1,$1,$2,$2,$2,$2,$2,$2,$2,$2,$2,$2,$2,$2,$2,$2,$2,$2,$2,$2,$2,$2,$2,$2,$2,$2,$2,$2,$2,$2,$2,$2,$2,$2,$2,$2,$2,$2,$2,$2,$2,$2,$2,$2,$2,$2,$2,$2,$2,$2,$2,$2,$2,$2,$2,$2,$2,$2,$2,$2,$2,$2,$2,$2,$2,$2,$2,$2,$2,$2,$2,$2,$2,$2,$2,$2,$2,$2,$2,$2,$2,$2,$2,$2,$2,$1,$1,$3,$3,$3,$3,$3,$3,$3,$3,$3,$3,$3,$3,$3,$3,$4,$4,$4,$4,$1,$4,$4,$4,$4,$4,$4,$4,$4,$4,$4,$4,$4,$4,$4,$1,$1,$1,$4,$4,$4,$4,$4,$4,$4,$1,$4,$1,$1,$1,$1,$4,$1,$1,$1,$4,$4,$4,$4,$1,$1,$4,$4,$4,$4,$1,$4,$5,$1,$1,$1,$5,$5,$1,$1,$5,$5,$5,$5,$1,$1,$1,$1,$1,$1,$1,$1,$1,$1,$1,$1,$1,$1  ; Import debug functions if DEBUG is defined
 .ifdef DEBUG
-.import _debugPrintTrue
-.import _debugPrintFalse
-.import _debugPrintNot
-.import _debugPrintOrMode
-.import _codeJumpDebug
+.import _bDbgPrintTrue
+.import _bDbgPrintFalse
+.import _bDbgPrintNot
+.import _bDbgPrintOrMode
+.import _bDbgCodeJump
 .import _opCounter
 .import _stopAtFunc
+.import _debugBank
 .endif
 
 ; Import more required functions
@@ -73,7 +75,7 @@ sta _logDebugVal1
 lda val2
 sta _logDebugVal2
 
-JSRFAR _codeJumpDebug, DEBUG_BANK
+TRAMPOLINE _debugBank, _bDbgCodeJump
 
 .endif
 .endmacro
@@ -81,13 +83,13 @@ JSRFAR _codeJumpDebug, DEBUG_BANK
 ; Debugging macros for printing true, false, and not values
 .macro DEBUG_PRINT_TRUE
 .ifdef DEBUG
-    JSRFAR _debugPrintTrue, DEBUG_BANK
+    TRAMPOLINE _debugBank, _bDbgPrintTrue
 .endif
 .endmacro
 
 .macro DEBUG_PRINT_FALSE
 .ifdef DEBUG
-    JSRFAR _debugPrintFalse, DEBUG_BANK  
+    TRAMPOLINE _debugBank, _bDbgPrintFalse  
 .endif
 .endmacro
 
@@ -95,7 +97,7 @@ JSRFAR _codeJumpDebug, DEBUG_BANK
 .ifdef DEBUG
     lda notMode
     beq @exit
-    JSRFAR _debugPrintNot, DEBUG_BANK  
+    TRAMPOLINE _debugBank, _bDbgPrintNot  
     @exit:
 .endif
 .endmacro
@@ -105,7 +107,7 @@ JSRFAR _codeJumpDebug, DEBUG_BANK
 .ifdef DEBUG
     lda orMode
     beq @exit
-    JSRFAR _debugPrintOrMode, DEBUG_BANK
+    TRAMPOLINE _debugBank, _bDbgPrintOrMode
     @exit:
 .endif
 .endmacro
@@ -158,16 +160,18 @@ sta RAM_BANK
     INC_CODE_BY ZP_PTR_DISP
 .endmacro
 
+.ifdef DEBUG
 ; Debug print trampoline function
 debugPrintTrampoline:
 ldx RAM_BANK
 phx
-ldx #DEBUG_BANK
+ldx _debugBank
 stx RAM_BANK
-jsr _debugPrint
+jsr _bDbgDebugPrint
 pla
 sta RAM_BANK
 rts
+.endif
 
 ; Helper functions for if statement processing
 .segment "BANKRAM0F"
@@ -420,7 +424,7 @@ _executeLogic:
          stx ZP_PTR_LE + 1
     
          .ifdef VERBOSE_SCRIPT_START
-            JSRFAR _b5DebugPrintScriptStart, DEBUG_BANK
+            TRAMPOLINE _debugBank, _b5DebugPrintScriptStart
          .endif
 
          .ifdef VERBOSE_ROOM_CHANGE
@@ -428,7 +432,7 @@ _executeLogic:
             lda currentRoom
             cmp lastRoom
             beq @endif
-            JSRFAR _b5DebugPrintRoomChange, DEBUG_BANK
+            TRAMPOLINE _debugBank, _b5DebugPrintRoomChange
             @endif:
             lda currentRoom
             sta lastRoom

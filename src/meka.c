@@ -302,7 +302,9 @@ void main()
     //chdir("..\\KQ2-2917");
 
     memoryMangerInit();
-    b5CheckMemory();
+
+    RAM_BANK = DEBUG_INIT_BANK;
+    b5InitializeDebugging();
 
     RAM_BANK = MEKA_BANK;
     b6Initialise();
