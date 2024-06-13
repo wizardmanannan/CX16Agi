@@ -104,7 +104,7 @@ void printMessagesFromOffsets(AGIFile* AGIData)
 #endif
 
 #pragma code-name (push, "BANKRAM06")
-byte b6Cbm_openForSeeking(char* fileName)
+byte b6Cbm_openForSeeking(const char* fileName)
 {
 	byte lfn = SEQUENTIAL_LFN;
 

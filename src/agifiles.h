@@ -50,7 +50,7 @@ extern int numLogics, numPictures, numViews, numSounds;
 extern void b6InitFiles();
 extern void b6LoadAGIDirs();
 extern void b6LoadAGIFile(int resType, AGIFilePosType* location, AGIFile *AGIData);
-extern byte b6Cbm_openForSeeking(char* fileName);
+extern byte b6Cbm_openForSeeking(const char* fileName);
 extern int8_t b6Cx16_fseek(uint8_t channel, uint32_t offset);
 extern void b6XOrAvisDurgan(byte* toXOR, unsigned int* avisPos);
 #pragma wrapped-call (pop)
