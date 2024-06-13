@@ -23,6 +23,17 @@
 #include "decomp.h"
 #include "memoryManager.h"
 
+#pragma rodata-name (push, "BANKRAM06")
+const char OPEN_FLAGS[] = ",S,R";
+const char FILE_AND_FLAGS[] = "%s%s";
+const char FILE_FLAGS[] = "rb";
+const char NO_FILE[] = "no file : % s.\n";
+const char LOG_DIR[] = "logdir";
+const char PIC_DIR[] = "picdir";
+const char VIEW_DIR[] = "viewdir";
+const char SND_DIR[] = "snddir";
+const char VOL[] = "vol.%d";
+#pragma rodata-name (pop)
 
 byte avisDurgan[11] = { 0x41, 0x76, 0x69, 0x73, 0x20, 0x44, 0x75, 0x72, 0x67, 0x61, 0x6E };//https://www.liquisearch.com/what_is_avis_durgan
 
@@ -95,13 +106,12 @@ void printMessagesFromOffsets(AGIFile* AGIData)
 #pragma code-name (push, "BANKRAM06")
 byte b6Cbm_openForSeeking(char* fileName)
 {
-	const char* OPEN_FLAGS = ",S,R";
 	byte lfn = SEQUENTIAL_LFN;
 
 	char fileNameAndFlags[FILE_NAME_SIZE + 4];
 	byte sec_addr = FILE_OPEN_ADDRESS;
 
-	sprintf(&fileNameAndFlags[0], "%s%s", &fileName[0], OPEN_FLAGS);
+	sprintf(&fileNameAndFlags[0], FILE_AND_FLAGS, &fileName[0], OPEN_FLAGS);
 
 #ifdef VERBOSE
 	printf("Attempting to load file %s", fileNameAndFlags);
@@ -156,7 +166,7 @@ int8_t b6Cx16_fseek(uint8_t channel, uint32_t offset) {
 ** Purpose: To read in an individual AGI directory file. This function
 ** should only be called by loadAGIDirs() below.
 ***************************************************************************/
-void b6LoadAGIDir(int dirNum, char* fName, int* count)
+void b6LoadAGIDir(int dirNum, const char* fName, int* count)
 {
 	FILE* fp;
 	unsigned char byte1, byte2, byte3;
@@ -164,8 +174,8 @@ void b6LoadAGIDir(int dirNum, char* fName, int* count)
 	AGIFilePosType tempPos;
 	int value;
 
-	if ((fp = fopen(fName, "rb")) == NULL) {
-		printf("no file : %s.\n", fName);
+	if ((fp = fopen(fName, FILE_FLAGS)) == NULL) {
+		printf(NO_FILE, fName);
 		exit(0);
 	}
 
@@ -306,10 +316,10 @@ void b6LoadAGIDirs()
 #ifdef VERBOSE
 		printf("Loading Indexes");
 #endif // VERBOSE
-		b6LoadAGIDir(0, "logdir", &numLogics);
-		b6LoadAGIDir(1, "picdir", &numPictures);
-		b6LoadAGIDir(2, "viewdir", &numViews);
-		b6LoadAGIDir(3, "snddir", &numSounds);
+		b6LoadAGIDir(0, LOG_DIR, &numLogics);
+		b6LoadAGIDir(1, PIC_DIR, &numPictures);
+		b6LoadAGIDir(2, VIEW_DIR, &numViews);
+		b6LoadAGIDir(3, SND_DIR, &numSounds);
 #ifdef VERBOSE
 		printf("Indexs Loaded\n");
 #endif
@@ -536,7 +546,7 @@ void b6LoadAGIFile(int resType, AGIFilePosType* location, AGIFile* AGIData)
 		exit(0);
 	}
 
-	sprintf(&fileName[0], "vol.%d", location->fileNum);
+	sprintf(&fileName[0], VOL, location->fileNum);
 
 #ifdef VERBOSE
 #ifdef VERBOSE_VIEW_LOAD_DEBUG
