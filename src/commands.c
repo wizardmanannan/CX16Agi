@@ -51,7 +51,7 @@ const char B4_VERSION_MESSAGE[] = "MEKA AGI Interpreter\n    Version 1.0";
 
 extern byte* var;
 extern boolean* flag;
-extern char string[12][40];
+
 extern int newRoomNum;
 extern boolean hasEnteredNewRoom, exitAllLogics;
 extern byte horizon;

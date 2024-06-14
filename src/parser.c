@@ -28,7 +28,7 @@ char cursorChar = '_';
 #pragma bss-name (push, "BANKRAM07")
 int b7InputWords[10];
 char b7WordText[10][80], b7CurrentInputStr[MAX_INPUT_STRING_LENGTH + 1], strPos = 0, b7OutputString[80], b7Temp[256];
-char string[12][40]; //TODO: Move onto a bank
+char string[12][40];
 //boolean wordsAreWaiting=FALSE;
 
 byte b7KeyState[256], b7AsciiState[256];
