@@ -2,6 +2,16 @@
 //#define VERBOSE_LOAD_DIV
 //#define TEST_DIVISION 
 
+#pragma rodata (push, "BANKRAM06");
+const char FAILED_OPEN_DIVISION[] = "failed to division table file %s\n";
+const char LOAD_DIVISION[] = "Loading Division Metdata %d of 2\n";
+const char DIV_FILE_NAME[] = "div%x.bin";
+const char BANK_FILE_NAME[] = "divb.bin";
+const char ADDRESS_FILE_NAME[] = "diva.bin";
+const char LOAD_DIV_TABLES[] = "Loading division tables %d of %d \n";
+const char FAILED_TO_OPEN[] = "Failed to open %s\n";
+#pragma rodata (pop)
+
 #ifdef TEST_DIVISION
 void testDivision()
 {
@@ -95,15 +105,12 @@ void b6LoadDivisionTables()
 	FILE* fp;
 	int bank, i;
 	char fileNameBuffer[30];
-	const char* divFileName = "div%x.bin";
-	const char* bankfileName = "divb.bin";
-	const char* addressfileName = "diva.bin";
 
 	for (bank = FIRST_DIVISION_BANK; bank <= LAST_DIVISION_BANK; bank++)
 	{
-		sprintf(&fileNameBuffer[0], divFileName, bank);
+		sprintf(&fileNameBuffer[0], DIV_FILE_NAME, bank);
 
-		printf("Loading division tables %d of %d \n", bank - FIRST_DIVISION_BANK + 1, LAST_DIVISION_BANK - FIRST_DIVISION_BANK + 1);
+		printf(LOAD_DIV_TABLES, bank - FIRST_DIVISION_BANK + 1, LAST_DIVISION_BANK - FIRST_DIVISION_BANK + 1);
 		if ((fp = fopen(&fileNameBuffer[0], "rb")) != NULL) {
 			size_t bytesRead;
 			i = 0;
@@ -114,13 +121,13 @@ void b6LoadDivisionTables()
 			fclose(fp);
 		}
 		else {
-			printf("failed to division table file %s\n", &fileNameBuffer[0]);
+			printf(FAILED_OPEN_DIVISION, &fileNameBuffer[0]);
 		}
 	}
-	printf("Loading Division Metdata 1 of 2\n");
-	b6LoadDivisionMetadata(bankfileName, DIV_BANK_METADATA_SIZE, &divBankMetadata[0]);
-	printf("Loading Division Metdata 2 of 2\n");
-	b6LoadDivisionMetadata(addressfileName, DIV_ADDRESS_METADATA_SIZE, &divAddressMetadata[0]);
+	printf(LOAD_DIVISION, 1);
+	b6LoadDivisionMetadata(BANK_FILE_NAME, DIV_BANK_METADATA_SIZE, &divBankMetadata[0]);
+	printf(LOAD_DIVISION, 2);
+	b6LoadDivisionMetadata(ADDRESS_FILE_NAME, DIV_ADDRESS_METADATA_SIZE, &divAddressMetadata[0]);
 }
 
 

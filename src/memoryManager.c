@@ -12,7 +12,7 @@ byte ramBank;
 
 #define MEM_MANAGER_STRINGS 6;
 #pragma rodata-name (push, "BANKRAM06")
-const char CANNOT_OPN_FLOOD[] = "Cannot open flood bank file";
+const char CANNOT_OPN_FLOOD[] = "Cannot open flood bank file\n";
 const char OPEN_FLOOD_FILE_MESSAGE_STRING[] = "Opening flood file %d of %d\n";
 #pragma rodata-name (pop)
 #pragma rodata-name (push, "BANKRAM10")
@@ -103,7 +103,7 @@ void bankedRamInit()
 
 	for (i = 0; i < NO_FLOOD_BANKS; i++)
 	{
-		if ((fp = fopen(FLOODBANKFILENAME, "rb")) != NULL) {
+		if ((fp = fopen("agi.cx16.flood", "rb")) != NULL) {
 			RAM_BANK = MEM_MANAGER_STRINGS;
 			sprintf(openFloodFileMessage, OPEN_FLOOD_FILE_MESSAGE_STRING, i + 1, NO_FLOOD_BANKS);
 			printf(openFloodFileMessage);
