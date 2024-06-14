@@ -11,7 +11,7 @@ void b6InitTimer(timer_proc timerProc)
 	previousVSyncCounter = vSyncCounter;
 }
 
-void b6CheckTimer(int intervalMs)
+void b6CheckTimer()
 {
 	if (previousVSyncCounter != vSyncCounter)
 	{

@@ -6,16 +6,7 @@
 
 //A temporary file so that references to yet to be imported files can resolved
 
-//allgero
-void stop_midi();
 void show_mouse(BITMAP* bmp);
-void nosound();
-extern void stretch_sprite(BITMAP* bmp, BITMAP* sprite, int x, int y, int w, int h);
-extern void clear_to_color(BITMAP* bitmap, int color);
-extern void stretch_blit(BITMAP* s, BITMAP* d, int s_x, int s_y, int s_w, int s_h, int d_x, int d_y, int d_w, int d_h);
-
-extern BITMAP* create_bitmap(int width, int height);
-extern void rect(BITMAP* bmp, int x1, int y1, int x2, int y2, int color);
 
 
 typedef struct MENU
@@ -32,11 +23,6 @@ typedef struct MENU
 #define MIDI_TRACKS           32       /* able to handle this many */
 
 extern BITMAP* screen;
-void clear(BITMAP* bitmap);
-void rectfill(BITMAP* bmp, int x1, int y1, int x2, int y2, int color);
-void blit(BITMAP* source, BITMAP* dest, int source_x, int source_y, int dest_x, int dest_y, int width, int height);
-void clear_keybuf();
-BITMAP* create_bitmap(int width, int height);
 
 typedef struct MIDI                    /* a midi file */
 {
@@ -47,7 +33,6 @@ typedef struct MIDI                    /* a midi file */
 	} track[MIDI_TRACKS];
 } MIDI;
 
-void destroy_bitmap(BITMAP* bitmap);
 int do_menu(MENU* menu, int x, int y);
 
 //Agi Codes
@@ -60,9 +45,6 @@ typedef struct {
 	int numArgs;
 	int argTypeMask;
 } agiCommandType;
-
-
-extern agiCommandType testCommands[];
 
 //Picture
 //#define  AGI_GRAPHICS  0
@@ -155,25 +137,12 @@ extern int soundEndFlag;
 #define MSG_RADIO       15       /* clear radio buttons */
 #define MSG_USER        16       /* from here on are free... */
 
-
-
-
-
-//Graphics
-extern void drawString(BITMAP* scn, char* data, int x, int y, int foreColour, int backColour);
-void drawBigString(BITMAP* scn, char* data, int x, int y, int foreColour, int backColour);
-extern void drawChar(BITMAP* scn, byte charNum, int x, int y, int foreColour, int backColour);
 #endif
-
-//Parser
-boolean b7Said(byte** data);
 
 #define  NO_EVENT         0
 #define  ASCII_KEY_EVENT  1
 #define  SCAN_KEY_EVENT   2
 #define  MENU_EVENT       3
-
-void b7LookupWords(char* inputLine);
 
 //Unknown 
 extern byte* key;

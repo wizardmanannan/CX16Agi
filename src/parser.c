@@ -132,7 +132,6 @@ void b7GetString(char* promptStr, byte promptStringBank, char* returnStr, byte r
 	gy = ((y - 1) * 16) + 20;
 	b7ProcessString(promptStr, promptStringBank, b7Temp, PARSER_BANK);
 	sprintf(b7OutputString, "%s%s%c", b7Temp, b7CurrentInputStr, cursorChar);
-	drawBigString(screen, b7OutputString, gx, gy, 8, 1);
 
 	do {
 		GET_IN(ch);
@@ -146,15 +145,12 @@ void b7GetString(char* promptStr, byte promptStringBank, char* returnStr, byte r
 				break;
 			case 0x0D:  /* ENTER */
 				strcpy(returnStr, b7CurrentInputStr);
-				drawBigString(screen, "                                       ", gx, gy, 7, 0);
 				while (key[KEY_ENTER]) { /* Wait until ENTER released */ }
 				return;
 			case 0x08: /* Backspace */
 				if (strPos > 0) {
 					strPos--;
 					b7CurrentInputStr[strPos] = 0;
-					sprintf(b7OutputString, "%s%s%c ", b7Temp, b7CurrentInputStr, cursorChar);
-					drawBigString(screen, b7OutputString, gx, gy, 8, 1);
 				}
 				break;
 			case 0x0A: break;
@@ -164,7 +160,6 @@ void b7GetString(char* promptStr, byte promptStringBank, char* returnStr, byte r
 				strPos++;
 				b7CurrentInputStr[strPos] = 0;
 				sprintf(b7OutputString, "%s%s%c", b7Temp, b7CurrentInputStr, cursorChar);
-				drawBigString(screen, b7OutputString, gx, gy, 8, 1);
 				break;
 			}
 		}
@@ -198,10 +193,6 @@ void b7PollKeyboard()
 	gy = ((user_input_line - 1) * 16) + 20;
 	if (inputLineDisplayed) {
 		sprintf(b7OutputString, "%s%s%c", b7Temp, b7CurrentInputStr, cursorChar);
-		drawBigString(screen, b7OutputString, gx, gy, 8, 1);
-	}
-	else {
-		drawBigString(screen, "                                       ", gx, gy, 7, 0);
 	}
 
 	do {
@@ -241,9 +232,7 @@ void b7PollKeyboard()
 					b7LookupWords(b7CurrentInputStr);
 					b7CurrentInputStr[0] = 0;
 					strPos = 0;
-					drawBigString(screen, "                                       ", gx, gy, 7, 0);
 					sprintf(b7OutputString, "%s%s%c", b7Temp, b7CurrentInputStr, cursorChar);
-					drawBigString(screen, b7OutputString, gx, gy, 8, 1);
 					strcpy(b7LastLine, b7CurrentInputStr);
 					break;
 				case KEY_BACK_SPACE:   /* Backspace */
@@ -251,7 +240,6 @@ void b7PollKeyboard()
 						strPos--;
 						b7CurrentInputStr[strPos] = 0;
 						sprintf(b7OutputString, "%s%s%c ", b7Temp, b7CurrentInputStr, cursorChar);
-						drawBigString(screen, b7OutputString, gx, gy, 8, 1);
 						//drawBigString(screen, " ", (strPos*16), 448, 7, 0);
 					}
 					else
@@ -273,13 +261,9 @@ void b7PollKeyboard()
 						strPos++;
 						b7CurrentInputStr[strPos] = 0;
 						sprintf(b7OutputString, "%s%s%c", b7Temp, b7CurrentInputStr, cursorChar);
-						drawBigString(screen, b7OutputString, gx, gy, 8, 1);
 					}
 					break;
 				}
-			}
-			else {
-				drawBigString(screen, "                                       ", gx, gy, 7, 0);
 			}
 		}
 	} while (ch);

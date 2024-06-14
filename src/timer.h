@@ -3,5 +3,5 @@
 #include "irq.h"
 typedef void (*timer_proc)();
 void b6InitTimer(timer_proc timerProc);
-void b6CheckTimer(int intervalMs);
+void b6CheckTimer();
 #endif /* _TIMER_H_ */

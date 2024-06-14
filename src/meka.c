@@ -30,7 +30,7 @@
 #include "parser.h"
 //#include "sound.h"
 
-boolean stillRunning = TRUE, hasEnteredNewRoom = FALSE, exitAllLogics = FALSE;
+boolean hasEnteredNewRoom = FALSE, exitAllLogics = FALSE;
 byte* var = (byte*)&GOLDEN_RAM[VARS_AREA_START];
 boolean* flag = &GOLDEN_RAM[FLAGS_AREA_START];
 byte horizon;
@@ -39,8 +39,6 @@ byte horizon;
 #define  PROGRAM_CONTROL  1
 #define DEBUG 1
 //#define VERBOSE
-
-const unsigned int TIMER_WAIT_MS = 0;
 
 volatile int counter;              /* Used for timer control */
 volatile int hund;                 /* Used for interpreters clock */
@@ -318,7 +316,7 @@ void main()
             b6Interpret();
             counter = 0;
         }
-        b6CheckTimer(TIMER_WAIT_MS);
+        b6CheckTimer();
     }
 
     //chdir("\\HACK\\AGI\\D\\AGI\\MEKA");

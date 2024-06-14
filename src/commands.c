@@ -43,7 +43,7 @@
 //#define VERBOSE_MESSAGE_PRINT
 
 #pragma rodata-name (push, "BANKRAM04")
-const char B4_QUIT_MESSAGE[] = "Press ENTER to quit.\nPress ESC to keep playing.";
+const char B4_QUIT_MESSAGE[] = "Press ENTER to quit. Press ESC to keep playing.";
 const char B4_PAUSE_MESSAGE[] = "      Game paused.\nPress ENTER to continue.";
 const char B4_MEKA_MESSAGE[] = "MEKA AGI Interpreter\n    Version 1.0";
 const char B4_VERSION_MESSAGE[] = "MEKA AGI Interpreter\n    Version 1.0";
@@ -2071,6 +2071,7 @@ void b4Quit() // 1, 0x00                     /* 0 args for AGI version 2_089 */
 		exit(0);
 	else { /* Prompt for exit */
 #define QUIT_BOX_SIZE 15
+		//TODO: Fix display of quit message
 		b3DisplayMessageBox(B4_QUIT_MESSAGE, 4, MAX_ROWS_DOWN / 2 - FIRST_ROW, MAX_CHAR_ACROSS / 2, TEXTBOX_PALETTE_NUMBER, QUIT_BOX_SIZE);
 		do {
 			GET_IN(ch);

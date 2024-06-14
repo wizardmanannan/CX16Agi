@@ -1069,8 +1069,6 @@ void b9InitViews()
 
 		setLoadedView(&localView, i);
 	}
-
-	spriteScreen = create_bitmap(160, 168);
 }
 
 void b9InitObjects()
@@ -2167,7 +2165,6 @@ void bBUpdateObj(int entryNum)
 
 	setViewTab(&localViewtab, entryNum);
 	show_mouse(NULL);
-	stretch_sprite(agi_screen, spriteScreen, 0, 0, 640, 336);
 	show_mouse(screen);
 	b6ShowPicture();
 }
@@ -2345,7 +2342,6 @@ void bBUpdateObjects()
 	} else {
 	   clear(spriteScreen);
 	}*/
-	clear(spriteScreen);
 
 	/******************* Place all background bitmaps *******************/
 	for (entryNum = 0; entryNum < VIEW_TABLE_SIZE; entryNum++) {
@@ -2487,7 +2483,6 @@ void bBUpdateObjects()
 	REENABLE_INTERRUPTS();
 
 	show_mouse(NULL);
-	stretch_sprite(agi_screen, spriteScreen, 0, 0, 640, 336);
 	show_mouse(screen);
 }
 
@@ -2953,100 +2948,7 @@ void bCCalcObjMotion()
 ***************************************************************************/
 void bDShowObjectState(int objNum)
 {
-	char* tempStr = (char*)&GOLDEN_RAM[LOCAL_WORK_AREA_START];
-	BITMAP* temp = create_bitmap(640, 480);
-	ViewTable localViewtab;
-	byte ch;
-
-	getViewTab(&localViewtab, objNum);
-
-	b5WaitOnKey();
-
-	show_mouse(NULL);
-	blit(screen, temp, 0, 0, 0, 0, 640, 480);
-	rectfill(screen, 10, 10, 630, 470, 0);
-	rect(screen, 10, 10, 630, 470, 16);
-
-	stretch_blit(localViewtab.celData->bmp, screen, 0, 0,
-		localViewtab.xsize, localViewtab.ysize, 200, 18,
-		localViewtab.xsize * 4, localViewtab.ysize * 4);
-
-	sprintf(tempStr, "objNum: %d", objNum);
-	textout(screen, font, tempStr, 18, 18, 8);
-	sprintf(tempStr, "xPos: %d", localViewtab.xPos);
-	textout(screen, font, tempStr, 18, 28, 8);
-	sprintf(tempStr, "yPos: %d", localViewtab.yPos);
-	textout(screen, font, tempStr, 18, 38, 8);
-	sprintf(tempStr, "xSize: %d", localViewtab.xsize);
-	textout(screen, font, tempStr, 18, 48, 8);
-	sprintf(tempStr, "ySize: %d", localViewtab.ysize);
-	textout(screen, font, tempStr, 18, 58, 8);
-	sprintf(tempStr, "currentView: %d", localViewtab.currentView);
-	textout(screen, font, tempStr, 18, 68, 8);
-	sprintf(tempStr, "numOfLoops: %d", localViewtab.numberOfLoops);
-	textout(screen, font, tempStr, 18, 78, 8);
-	sprintf(tempStr, "currentLoop: %d", localViewtab.currentLoop);
-	textout(screen, font, tempStr, 18, 88, 8);
-	sprintf(tempStr, "numberOfCels: %d", localViewtab.numberOfCels);
-	textout(screen, font, tempStr, 18, 98, 8);
-	sprintf(tempStr, "currentCel: %d", localViewtab.currentCel);
-	textout(screen, font, tempStr, 18, 108, 8);
-	sprintf(tempStr, "stepSize: %d", localViewtab.stepSize);
-	textout(screen, font, tempStr, 18, 118, 8);
-	sprintf(tempStr, "stepTime: %d", localViewtab.stepTime);
-	textout(screen, font, tempStr, 18, 128, 8);
-	sprintf(tempStr, "stepTimeCount: %d", localViewtab.stepTimeCount);
-	textout(screen, font, tempStr, 18, 138, 8);
-	sprintf(tempStr, "cycleTime: %d", localViewtab.cycleTime);
-	textout(screen, font, tempStr, 18, 148, 8);
-	sprintf(tempStr, "cycleTimeCount: %d", localViewtab.cycleTimeCount);
-	textout(screen, font, tempStr, 18, 158, 8);
-	sprintf(tempStr, "direction: %d", localViewtab.direction);
-	textout(screen, font, tempStr, 18, 168, 8);
-	sprintf(tempStr, "priority: %d", localViewtab.priority);
-	textout(screen, font, tempStr, 18, 178, 8);
-	switch (localViewtab.motion) {
-	case 0: /* Normal motion */
-		sprintf(tempStr, "motion: normal motion");
-		break;
-	case 1: /* Wander */
-		sprintf(tempStr, "motion: wander");
-		break;
-	case 2: /* Follow ego */
-		sprintf(tempStr, "motion: follow ego");
-		break;
-	case 3: /* Move object */
-		sprintf(tempStr, "motion: move object");
-		break;
-	default:
-		sprintf(tempStr, "motion: unknown");
-		break;
-	}
-	textout(screen, font, tempStr, 18, 188, 8);
-	switch (localViewtab.cycleStatus) {
-	case 0: /* Normal cycle */
-		sprintf(tempStr, "cycleStatus: normal cycle");
-		break;
-	case 1: /* End of loop */
-		sprintf(tempStr, "cycleStatus: end of loop");
-		break;
-	case 2: /* Reverse loop */
-		sprintf(tempStr, "cycleStatus: reverse loop");
-		break;
-	case 3: /* Reverse cycle */
-		sprintf(tempStr, "cycleStatus: reverse cycle");
-		break;
-	default:
-		sprintf(tempStr, "cycleStatus: unknown");
-		break;
-	}
-	textout(screen, font, tempStr, 18, 198, 8);
-
-	b5WaitOnKey();
-
-	blit(temp, screen, 0, 0, 0, 0, 640, 480);
-	destroy_bitmap(temp);
-	show_mouse(screen);
+	
 }
 
 #pragma code-name (pop)
