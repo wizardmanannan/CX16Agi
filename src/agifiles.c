@@ -24,15 +24,15 @@
 #include "memoryManager.h"
 
 #pragma rodata-name (push, "BANKRAM06")
-const char OPEN_FLAGS[] = ",S,R";
-const char FILE_AND_FLAGS[] = "%s%s";
-const char FILE_FLAGS[] = "rb";
-const char NO_FILE[] = "no file : % s.\n";
-const char LOG_DIR[] = "logdir";
-const char PIC_DIR[] = "picdir";
-const char VIEW_DIR[] = "viewdir";
-const char SND_DIR[] = "snddir";
-const char VOL[] = "vol.%d";
+const char B6_OPEN_FLAGS[] = ",S,R";
+const char B6_FILE_AND_FLAGS[] = "%s%s";
+const char B6_FILE_FLAGS[] = "rb";
+const char B6_NO_FILE[] = "no file : % s.\n";
+const char B6_LOG_DIR[] = "logdir";
+const char B6_PIC_DIR[] = "picdir";
+const char B6_VIEW_DIR[] = "viewdir";
+const char B6_SND_DIR[] = "snddir";
+const char B6_VOL[] = "vol.%d";
 #pragma rodata-name (pop)
 
 byte avisDurgan[11] = { 0x41, 0x76, 0x69, 0x73, 0x20, 0x44, 0x75, 0x72, 0x67, 0x61, 0x6E };//https://www.liquisearch.com/what_is_avis_durgan
@@ -111,7 +111,7 @@ byte b6Cbm_openForSeeking(const char* fileName)
 	char fileNameAndFlags[FILE_NAME_SIZE + 4];
 	byte sec_addr = FILE_OPEN_ADDRESS;
 
-	sprintf(&fileNameAndFlags[0], FILE_AND_FLAGS, &fileName[0], OPEN_FLAGS);
+	sprintf(&fileNameAndFlags[0], B6_FILE_AND_FLAGS, &fileName[0], B6_OPEN_FLAGS);
 
 #ifdef VERBOSE
 	printf("Attempting to load file %s", fileNameAndFlags);
@@ -174,8 +174,8 @@ void b6LoadAGIDir(int dirNum, const char* fName, int* count)
 	AGIFilePosType tempPos;
 	int value;
 
-	if ((fp = fopen(fName, FILE_FLAGS)) == NULL) {
-		printf(NO_FILE, fName);
+	if ((fp = fopen(fName, B6_FILE_FLAGS)) == NULL) {
+		printf(B6_NO_FILE, fName);
 		exit(0);
 	}
 
@@ -316,10 +316,10 @@ void b6LoadAGIDirs()
 #ifdef VERBOSE
 		printf("Loading Indexes");
 #endif // VERBOSE
-		b6LoadAGIDir(0, LOG_DIR, &numLogics);
-		b6LoadAGIDir(1, PIC_DIR, &numPictures);
-		b6LoadAGIDir(2, VIEW_DIR, &numViews);
-		b6LoadAGIDir(3, SND_DIR, &numSounds);
+		b6LoadAGIDir(0, B6_LOG_DIR, &numLogics);
+		b6LoadAGIDir(1, B6_PIC_DIR, &numPictures);
+		b6LoadAGIDir(2, B6_VIEW_DIR, &numViews);
+		b6LoadAGIDir(3, B6_SND_DIR, &numSounds);
 #ifdef VERBOSE
 		printf("Indexs Loaded\n");
 #endif
@@ -546,7 +546,7 @@ void b6LoadAGIFile(int resType, AGIFilePosType* location, AGIFile* AGIData)
 		exit(0);
 	}
 
-	sprintf(&fileName[0], VOL, location->fileNum);
+	sprintf(&fileName[0], B6_VOL, location->fileNum);
 
 #ifdef VERBOSE
 #ifdef VERBOSE_VIEW_LOAD_DEBUG

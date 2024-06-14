@@ -12,11 +12,11 @@ byte ramBank;
 
 #define MEM_MANAGER_STRINGS 6;
 #pragma rodata-name (push, "BANKRAM06")
-const char CANNOT_OPN_FLOOD[] = "Cannot open flood bank file\n";
-const char OPEN_FLOOD_FILE_MESSAGE_STRING[] = "Opening flood file %d of %d\n";
+const char B6_CANNOT_OPN_FLOOD[] = "Cannot open flood bank file\n";
+const char B6_OPEN_FLOOD_FILE_MESSAGE_STRING[] = "Opening flood file %d of %d\n";
 #pragma rodata-name (pop)
 #pragma rodata-name (push, "BANKRAM10")
-const char OUT_DYNAMIC[] = "Out of dynamic memory. Amount %d\n";
+const char B10_OUT_DYNAMIC[] = "Out of dynamic memory. Amount %d\n";
 #pragma rodata-name (pop)
 #ifdef  __CX16__
 void bankedRamInit()
@@ -105,14 +105,14 @@ void bankedRamInit()
 	{
 		if ((fp = fopen("agi.cx16.flood", "rb")) != NULL) {
 			RAM_BANK = MEM_MANAGER_STRINGS;
-			sprintf(openFloodFileMessage, OPEN_FLOOD_FILE_MESSAGE_STRING, i + 1, NO_FLOOD_BANKS);
+			sprintf(openFloodFileMessage, B6_OPEN_FLOOD_FILE_MESSAGE_STRING, i + 1, NO_FLOOD_BANKS);
 			printf(openFloodFileMessage);
 			RAM_BANK = FIRST_FLOOD_BANK + i;
 			fread(&BANK_RAM[0], 1, _BANKRAMFLOOD_SIZE__, fp);
 		}
 		else {
 			RAM_BANK = MEM_MANAGER_STRINGS
-			printf(CANNOT_OPN_FLOOD);
+			printf(B6_CANNOT_OPN_FLOOD);
 		}
 		fclose(fp);
 	}
@@ -219,7 +219,7 @@ byte* b10BankedAlloc(int size, byte* bank)
 
 	if (!result)
 	{
-		printf(OUT_DYNAMIC,size);
+		printf(B10_OUT_DYNAMIC,size);
 		exit(0);
 	}
 

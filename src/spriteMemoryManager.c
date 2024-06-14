@@ -6,6 +6,10 @@
 extern byte bESpriteAddressTableMiddle[SPRITE_ALLOC_TABLE_SIZE];
 extern byte bESpriteAllocTable[SPRITE_ALLOC_TABLE_SIZE];
 
+#pragma rodata-name (push, "BANKRAM0E")
+const char BE_INIT[] = "Initing Sprite Memory Manager";
+#pragma rodata-name (pop)
+
 #pragma code-name (push, "BANKRAM0E")
 
 //#define VERBOSE_MEMORY_INIT 
@@ -374,7 +378,7 @@ void bEInitSpriteMemoryManager()
 	byte highByte = 0;
 	byte middleByte;
 
-	printf("Initing Sprite Memory Manager");
+	printf(BE_INIT);
 
 	bEResetSpriteMemoryManager();
 

@@ -27,10 +27,10 @@ extern int b12FindSynonymNumSearch(char* userWord);
 //#define TEST_SYN
 
 #pragma rodata (push, "BANKRAM12")
-const char WORDS_FILE[] = "words.tok";
-const char LOADING_WORDS[] = "Loading Words\n";
-const char CANNOT_FIND_FILE[] = "Cannot find file : WORDS.TOK\n";
-const char WORDS_OVERFLOW[] = "Too many words, overflowed\n";
+const char B12_WORDS_FILE[] = "words.tok";
+const char B12_LOADING_WORDS[] = "Loading Words\n";
+const char B12_CANNOT_FIND_FILE[] = "Cannot find file : WORDS.TOK\n";
+const char B12_WORDS_OVERFLOW[] = "Too many words, overflowed\n";
 #pragma rodata (pop)
 
 #pragma bss-name (push, "BANKRAM12")
@@ -145,10 +145,10 @@ int b12CalcNumWords(long startPos)
 
 byte b12OpenWords()
 {
-    byte lfn = b6Cbm_openForSeeking(WORDS_FILE);
+    byte lfn = b6Cbm_openForSeeking(B12_WORDS_FILE);
 
     if (lfn == NULL) {
-        printf(CANNOT_FIND_FILE);
+        printf(B12_CANNOT_FIND_FILE);
         exit(1);
     }
 
@@ -341,7 +341,7 @@ void b12LoadWords()
     byte wordLength, lfn;
     word* synonymsListPointer;
     
-    printf(LOADING_WORDS);
+    printf(B12_LOADING_WORDS);
 
     lfn = b12OpenWords();
 
@@ -425,7 +425,7 @@ void b12LoadWords()
 
         if (wordsDataPointer > (char*)BANK_MAX)
         {
-            printf(WORDS_OVERFLOW);
+            printf(B12_WORDS_OVERFLOW);
         }
     }
 

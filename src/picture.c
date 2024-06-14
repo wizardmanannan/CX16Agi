@@ -46,6 +46,11 @@ extern long pixelCounter;
 extern long pixelStartPrintingAt;
 #endif // VERBOSE_FLOOD
 
+#pragma rodata-name (push, "BANKRAM11")
+const char B11_UNKNOWN_PIC[] = "Unknown picture code : %X\n";
+const char B11_THE_BUFFER_STATUS[] = "The buffer status bank is %p, buffer status banked data is %p and the buffer counter is %d. The loaded picture is %d\n";
+const char B11_LOADED_PIC[] = "Loaded picture data %p, bank %d, size %d\n";
+#pragma rodata-name (pop)
 
 /**************************************************************************
 ** pset
@@ -1116,9 +1121,9 @@ void b11DrawPic(byte* bankedData, int pLen, boolean okToClearScreen, byte picNum
 			}
 			returnedAction = b11PlotBrush(data, bufferStatus); break;
 		default:
-			printf("Unknown picture code : %X\n", action);
-			printf("The buffer status bank is %p, buffer status banked data is %p and the buffer counter is %d. The loaded picture is %d\n", bufferStatus->bank, bufferStatus->bankedData, bufferStatus->bufferCounter, picNum);
-			printf("Loaded picture data %p, bank %d, size %d\n", loadedPicture.data, loadedPicture.bank, loadedPicture.size);
+			printf(B11_UNKNOWN_PIC, action);
+			printf(B11_THE_BUFFER_STATUS, bufferStatus->bank, bufferStatus->bankedData, bufferStatus->bufferCounter, picNum);
+			printf(B11_LOADED_PIC, loadedPicture.data, loadedPicture.bank, loadedPicture.size);
 			for (;;);
 			exit(0);
 		}

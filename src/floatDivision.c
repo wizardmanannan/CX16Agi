@@ -3,13 +3,13 @@
 //#define TEST_DIVISION 
 
 #pragma rodata (push, "BANKRAM06");
-const char FAILED_OPEN_DIVISION[] = "failed to division table file %s\n";
-const char LOAD_DIVISION[] = "Loading Division Metdata %d of 2\n";
-const char DIV_FILE_NAME[] = "div%x.bin";
-const char BANK_FILE_NAME[] = "divb.bin";
-const char ADDRESS_FILE_NAME[] = "diva.bin";
-const char LOAD_DIV_TABLES[] = "Loading division tables %d of %d \n";
-const char FAILED_TO_OPEN[] = "Failed to open %s\n";
+const char B6_FAILED_OPEN_DIVISION[] = "failed to division table file %s\n";
+const char B6_LOAD_DIVISION[] = "Loading Division Metdata %d of 2\n";
+const char B6_DIV_FILE_NAME[] = "div%x.bin";
+const char B6_BANK_FILE_NAME[] = "divb.bin";
+const char B6_ADDRESS_FILE_NAME[] = "diva.bin";
+const char B6_LOAD_DIV_TABLES[] = "Loading division tables %d of %d \n";
+const char B6_FAILED_TO_OPEN[] = "Failed to open %s\n";
 #pragma rodata (pop)
 
 #ifdef TEST_DIVISION
@@ -108,9 +108,9 @@ void b6LoadDivisionTables()
 
 	for (bank = FIRST_DIVISION_BANK; bank <= LAST_DIVISION_BANK; bank++)
 	{
-		sprintf(&fileNameBuffer[0], DIV_FILE_NAME, bank);
+		sprintf(&fileNameBuffer[0], B6_DIV_FILE_NAME, bank);
 
-		printf(LOAD_DIV_TABLES, bank - FIRST_DIVISION_BANK + 1, LAST_DIVISION_BANK - FIRST_DIVISION_BANK + 1);
+		printf(B6_LOAD_DIV_TABLES, bank - FIRST_DIVISION_BANK + 1, LAST_DIVISION_BANK - FIRST_DIVISION_BANK + 1);
 		if ((fp = fopen(&fileNameBuffer[0], "rb")) != NULL) {
 			size_t bytesRead;
 			i = 0;
@@ -121,13 +121,13 @@ void b6LoadDivisionTables()
 			fclose(fp);
 		}
 		else {
-			printf(FAILED_OPEN_DIVISION, &fileNameBuffer[0]);
+			printf(B6_FAILED_OPEN_DIVISION, &fileNameBuffer[0]);
 		}
 	}
-	printf(LOAD_DIVISION, 1);
-	b6LoadDivisionMetadata(BANK_FILE_NAME, DIV_BANK_METADATA_SIZE, &divBankMetadata[0]);
-	printf(LOAD_DIVISION, 2);
-	b6LoadDivisionMetadata(ADDRESS_FILE_NAME, DIV_ADDRESS_METADATA_SIZE, &divAddressMetadata[0]);
+	printf(B6_LOAD_DIVISION, 1);
+	b6LoadDivisionMetadata(B6_BANK_FILE_NAME, DIV_BANK_METADATA_SIZE, &divBankMetadata[0]);
+	printf(B6_LOAD_DIVISION, 2);
+	b6LoadDivisionMetadata(B6_ADDRESS_FILE_NAME, DIV_ADDRESS_METADATA_SIZE, &divAddressMetadata[0]);
 }
 
 

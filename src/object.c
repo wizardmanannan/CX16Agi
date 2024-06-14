@@ -16,6 +16,11 @@
 
 #pragma code-name (push, "BANKRAM0F")
 
+#pragma rodata (push, "BANKRAM0F")
+const char BF_OBJECT_FILE_NAME[] = "object";
+const char BF_CANNOT_OPEN[] = "Cannot find file : object\n";
+#pragma rodata (pop)
+
 #pragma bss-name (push, "BANKRAM0F")
 int bFNumObjects;
 objectType bBObjects[MAX_OBJECTS];
@@ -61,8 +66,8 @@ boolean bFIsObjCrypt(long fileLen, byte* objData)
 
 byte bFLoadFile(int* fileLen, byte* buffer)
 {
-    byte lfn = b6Cbm_openForSeeking("object");
-   
+    byte lfn = b6Cbm_openForSeeking(BF_OBJECT_FILE_NAME);
+  
     if (lfn == NULL) {
         printf("Cannot find file : object\n");
         exit(1);
@@ -72,7 +77,7 @@ byte bFLoadFile(int* fileLen, byte* buffer)
     {
         if (*fileLen > OBJ_NAME_CACHE_SIZE)
         {
-            printf("objects too large");
+            printf(BF_CANNOT_OPEN);
             exit(0);
         }
     }
