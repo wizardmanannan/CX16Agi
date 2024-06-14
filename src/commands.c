@@ -42,6 +42,13 @@
 //#define VERBOSE_ROOM_CHANGE
 //#define VERBOSE_MESSAGE_PRINT
 
+#pragma rodata-name (push, "BANKRAM04")
+const char B4_QUIT_MESSAGE[] = "Press ENTER to quit.\nPress ESC to keep playing.";
+const char B4_PAUSE_MESSAGE[] = "      Game paused.\nPress ENTER to continue.";
+const char B4_MEKA_MESSAGE[] = "MEKA AGI Interpreter\n    Version 1.0";
+const char B4_VERSION_MESSAGE[] = "MEKA AGI Interpreter\n    Version 1.0";
+#pragma rodata-name (pop)
+
 extern byte* var;
 extern boolean* flag;
 extern char string[12][40];
@@ -1585,7 +1592,6 @@ void b3Play_sound() // 2, 00  sound() renamed to avoid clash
 void b3Stop_sound() // 0, 0x00 
 {
 	checkForEnd = FALSE;
-	stop_midi();
 	return;
 }
 
@@ -2064,7 +2070,8 @@ void b4Quit() // 1, 0x00                     /* 0 args for AGI version 2_089 */
 	if (quitType == 1) /* Immediate quit */
 		exit(0);
 	else { /* Prompt for exit */
-		printInBoxBig("Press ENTER to quit.\nPress ESC to keep playing.", -1, -1, 30);
+#define QUIT_BOX_SIZE 15
+		b3DisplayMessageBox(B4_QUIT_MESSAGE, 4, MAX_ROWS_DOWN / 2 - FIRST_ROW, MAX_CHAR_ACROSS / 2, TEXTBOX_PALETTE_NUMBER, QUIT_BOX_SIZE);
 		do {
 			GET_IN(ch);
 			ch >> 8;
@@ -2077,8 +2084,9 @@ void b4Quit() // 1, 0x00                     /* 0 args for AGI version 2_089 */
 
 void b4Pause() // 0, 0x00 
 {
+#define PAUSE_BOX_SIZE 15
 	while (key[KEY_ENTER]) { /* Wait */ }
-	printInBoxBig("      Game paused.\nPress ENTER to continue.", -1, -1, 30);
+	b3DisplayMessageBox(B4_PAUSE_MESSAGE, 4, MAX_ROWS_DOWN / 2 - FIRST_ROW, MAX_CHAR_ACROSS / 2, TEXTBOX_PALETTE_NUMBER, PAUSE_BOX_SIZE);
 	while (!key[KEY_ENTER]) { /* Wait */ }
 	b6ShowPicture();
 	okToShowPic = TRUE;
@@ -2105,8 +2113,9 @@ void b4Pause() // 0, 0x00
 
 void b4Version() // 0, 0x00 
 {
+#define VERSION_BOX_SIZE 15
 	while (key[KEY_ENTER] || key[KEY_ESC]) { /* Wait */ }
-	printInBoxBig("MEKA AGI Interpreter\n    Version 1.0", -1, -1, 30);
+	b3DisplayMessageBox(B4_VERSION_MESSAGE, 4, MAX_ROWS_DOWN / 2 - FIRST_ROW, MAX_CHAR_ACROSS / 2, TEXTBOX_PALETTE_NUMBER, VERSION_BOX_SIZE);
 	while (!key[KEY_ENTER] && !key[KEY_ESC]) { /* Wait */ }
 	b6ShowPicture();
 	okToShowPic = TRUE;
@@ -2211,7 +2220,6 @@ void b4Clear_text_rect() // 5, 0x00
 	if ((screenMode == AGI_GRAPHICS) && (boxColour > 0)) boxColour = 15;
 	if (screenMode == AGI_TEXT) boxColour = 0;
 	show_mouse(NULL);
-	rectfill(agi_screen, x1 * 16, y1 * 16, (x2 * 16) + 15, (y2 * 16) + 15, boxColour);
 	show_mouse(screen);
 	return;
 }
