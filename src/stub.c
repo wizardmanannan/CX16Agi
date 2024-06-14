@@ -120,28 +120,5 @@ void printInBox(char* theString) {
 
 }
 
-//AGI Codes
-agiCommandType testCommands[NUM_TEST_COMMANDS] = {
- { "", 0, 0x00 },
- { "equaln", 2, 0x80 },
- { "equalv", 2, 0xC0 },
- { "lessn", 2, 0x80 },
- { "lessv", 2, 0xC0 },
- { "greatern", 2, 0x80 },
- { "greaterv", 2, 0xC0 },
- { "isset", 1, 0x00 },
- { "issetv", 1, 0x80 },
- { "has", 1, 0x00 },
- { "obj.in.room", 2, 0x40 },
- { "posn", 5, 0x00 },
- { "controller", 1, 0x00 },
- { "have.key", 0, 0x00 },
- { "said", 0, 0x00 },                /* Not 0 args. Has variable number. */
- { "compare.strings", 2, 0x00 },
- { "obj.in.box", 5, 0x00 },
- { "center.posn", 5, 0x00 },
- { "right.posn", 5, 0x00 }
-};
-
 //unknown
 byte* key;
