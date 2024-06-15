@@ -14,5 +14,11 @@
 #define KEY_ESC 0x1B
 #define KEY_BACK_SPACE 0x14
 #define KEY_ENTER 0xD
-
+#define KEY_CAP_A 0xC1
+#define KEY_LOWER_A 0x41
+#define KEY_CAP_Z 0xDA
+#define KEY_LOWER_Z 0x5A
+#define KEY_1 0x31
+#define KEY_9 0x39
+#define ASCII_DIFF 0x20 //Difference between Petscii lower letter and Ascii lower letter
 #endif

@@ -246,17 +246,18 @@ void b7PollKeyboard()
 						return;
 					break;
 				default:
-					if (strlen(b7CurrentInputStr) < MAX_INPUT_STRING_LENGTH)
+					if (strlen(b7CurrentInputStr) < MAX_INPUT_STRING_LENGTH && (ch >= KEY_CAP_A && ch <= KEY_CAP_Z || ch >= KEY_LOWER_A && ch <= KEY_LOWER_Z || ch >= KEY_1 && ch <= KEY_9))
 					{
-						if (ch >= 0x41 && ch <= 0x5A)
+						if (ch >= KEY_CAP_A && ch <= KEY_CAP_Z)
 						{
-							ch += 0x20;
+							ch -= KEY_CAP_A - KEY_LOWER_A;
+							ch += ASCII_DIFF;
 						}
-						if (ch >= 193 && ch <= 218)
+						else if (ch >= KEY_LOWER_A && ch <= KEY_LOWER_Z)
 						{
-							ch -= 128;
+							ch += ASCII_DIFF;
 						}
-
+						
 						b7CurrentInputStr[strPos] = (ch);
 						strPos++;
 						b7CurrentInputStr[strPos] = 0;
