@@ -5,25 +5,29 @@
 **Note: This Project Is Under Construction And Is Not Ready For General Use**
 
 ## See it running here on YouTube: 
+https://youtu.be/mmCgzXV5TwY
 https://youtu.be/NFPKbLQBAso  
 https://youtu.be/30RIplYHT70  
 https://youtu.be/1QQPcwJxzV4  
 https://youtu.be/yd_LWDhv8RI  
 
+![image](https://github.com/wizardmanannan/CX16Agi/assets/58645812/95672f9e-32c5-4775-9ee3-5145495f0f11)
 ![image](https://github.com/wizardmanannan/CX16Agi/assets/58645812/3fdfeadf-2016-48f1-a2fb-0f577838c710)  
 ![image](https://github.com/wizardmanannan/CX16Agi/assets/58645812/3df45e82-c7d4-4b29-ae96-cdc5e560ff09)  
 ![image](https://github.com/wizardmanannan/CX16Agi/assets/58645812/13d73012-a379-47b4-b18f-87e80225c55e)  
-
-
 
 ![image](https://github.com/wizardmanannan/CX16Agi/assets/58645812/ae1417c7-953b-4d7c-8789-2586a4abcd43)
 ![image](https://github.com/wizardmanannan/CX16Agi/assets/58645812/186fa2c7-33c1-491f-af3a-dabc6c6d560d)
 ![image](https://github.com/wizardmanannan/CX16Agi/assets/58645812/9e1d5f64-26f9-42b3-a706-09f752398636)
 
-# CX 16 Iteration 7 Goals (Current)
-- Implement a fast scanline drawing algorithm
-- Draw the priority screen
-- Implement basic keyboard controls (arrows and enter, so we can break out the intro). 
+# CX 16 Iteration 8 Goals (Current)
+- Incorporate CosmicR's fast drawing algorithm for both main and priority screen
+- Sprite to background priority
+
+# CX 16 Iteration 7 Goals (Completed)
+- Allow the user to walk around the map
+- Implement a parser and keyboard controls
+- Objects
 
 # CX 16 Iteration 6 Goals (Completed)
 - Support more games than just King's Quest 3. 
@@ -31,8 +35,6 @@ https://youtu.be/yd_LWDhv8RI
 # CX 16 Iteration 5 Goals (Completed)
 - Sprite support
 - Implement System Tick Replacing Inaccurate Inherited C One
-
-Here is a quick demonstration video: https://youtu.be/IDdc890T_oY 
 
 **Only AGI 1 & 2 games are currently supported**
 
