@@ -95,7 +95,8 @@ MAX_WORD_SIZE = 41
 INPUT_PROMPT_CHAR = $3E
 INPUT_STRING_ADDRESS = (MAP_BASE + (FIRST_ROW + INPUT_LINE_NUMBER - 1) * TILE_LAYER_BYTES_PER_ROW + INPUT_LINE_COL * BYTES_PER_CELL)
 
-
+;Line Drawing
+LINE_LENGTH = 160
 
 .macro SET_VERA_ADDRESS_ABSOLUTE VeraAddress, AddressSel, Stride ;Vera Address is a 4 bit number instead of three to make it easier to work with C
         lda AddressSel

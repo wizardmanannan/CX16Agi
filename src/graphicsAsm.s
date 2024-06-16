@@ -6,6 +6,7 @@ GRAPHICS_INC = 1
 .include "globalGraphics.s"
 .include "helpersAsm.s"
 .include "irqAsm.s"
+.include "lineDrawing.s"
 
 .segment "BANKRAM03"
 _lastBoxLines: .byte $0 ; Wish I could have declared these in textLayer.c, but put it here to ensure it is in bank 3
@@ -279,6 +280,7 @@ lda #$6   ; Bitmap mode 16 colors
 sta VERA_L0_config
 stz VERA_L0_tilebase ;A 320 * 240 pixel bitmap at the beginning of VRAM
 
+TRAMPOLINE #LINE_DRAWING_BANK, b8SetupLineTable
 jsr _b6InitBackground
 
 lda #$11 ; 32 x 64 2bpp tiles
