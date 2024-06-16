@@ -15,7 +15,8 @@ byte _currentForegroundColour;
 byte _currentBackgroundColour;
 #pragma bss-name (pop)
 
-void b6MakeTopBorder()
+#pragma code-name (push, "BANKRAM03")
+void b3MakeTopBorder()
 {
 	byte i;
 
@@ -34,7 +35,7 @@ void b6MakeTopBorder()
 	}
 }
 
-void b6MakeLeftBorder()
+void b3MakeLeftBorder()
 {
 	byte i;
 
@@ -53,7 +54,7 @@ void b6MakeLeftBorder()
 	}
 }
 
-void b6MakeBottomBorder()
+void b3MakeBottomBorder()
 {
 	byte i;
 
@@ -72,7 +73,7 @@ void b6MakeBottomBorder()
 	}
 }
 
-void b6MakeRightBorder()
+void b3MakeRightBorder()
 {
 	byte i;
 
@@ -91,7 +92,7 @@ void b6MakeRightBorder()
 	}
 }
 
-void b6ConvertsOneBitPerPixCharToTwoBitPerPixelChars()
+void b3ConvertsOneBitPerPixCharToTwoBitPerPixelChars()
 {
 	int i;
 	byte j; //Must be int because it needs to be unsigned
@@ -131,7 +132,7 @@ void b6ConvertsOneBitPerPixCharToTwoBitPerPixelChars()
 	}
 }
 
-void b6InitCharset()
+void b3InitCharset()
 {
 #define ORIGINAL_CHARSET_ADDRESS 0x1f000
 	
@@ -148,13 +149,13 @@ void b6InitCharset()
 	SET_VERA_ADDRESS(ORIGINAL_CHARSET_ADDRESS, ADDRESSSEL0, 1);
 	SET_VERA_ADDRESS(TILEBASE, ADDRESSSEL1, 1);
 
-	b6ConvertsOneBitPerPixCharToTwoBitPerPixelChars();
+	b3ConvertsOneBitPerPixCharToTwoBitPerPixelChars();
 
 	//While we could just flip them it will take less cycles when we write text just to have chars for both, as that way our stride can be two
-	b6MakeTopBorder();
-	b6MakeLeftBorder();
-	b6MakeBottomBorder();
-	b6MakeRightBorder();
+	b3MakeTopBorder();
+	b3MakeLeftBorder();
+	b3MakeBottomBorder();
+	b3MakeRightBorder();
 
 #ifdef VERBOSE_CHAR_SET_LOAD
 	printf("returning : %p. The byte counter is %d\n.", buffer, byteCounter);
@@ -192,11 +193,6 @@ void b6TestCharset()
 }
 #endif
 
-
-
-#pragma code-name (pop)
-
-#pragma code-name (push, "BANKRAM03")
 void b3FillChar(byte startLine, byte endLine, byte paletteNumber, byte charToFill)
 {
 	byte i, j;

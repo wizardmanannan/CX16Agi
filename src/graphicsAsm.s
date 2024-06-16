@@ -2,6 +2,11 @@
 ; Set the value of include guard and define constants
 GRAPHICS_INC = 1
 
+.include "global.s"
+.include "globalGraphics.s"
+.include "helpersAsm.s"
+.include "irqAsm.s"
+
 .segment "BANKRAM03"
 _lastBoxLines: .byte $0 ; Wish I could have declared these in textLayer.c, but put it here to ensure it is in bank 3
 _lastBoxStartLine: .byte $0
@@ -10,14 +15,12 @@ _lastBoxStartLine: .byte $0
 _textBuffer1: .res 1000
 _textBuffer2: .res 1000
 
-.segment "BANKRAM06"
 
-.include "global.s"
-.include "irqAsm.s"
-.include "globalGraphics.s"
-.include "helpersAsm.s"
+ .segment "BANKRAM06"
 
-.import _b6InitCharset
+
+
+.import _b3InitCharset
 .import pushax
 .import pusha
 .import popa
@@ -289,7 +292,7 @@ lda #$FC
 sta VERA_L1_vscroll_l
 stz VERA_L1_vscroll_h
 
-jsr _b6InitCharset 
+TRAMPOLINE #TEXT_BANK, _b3InitCharset
 TRAMPOLINE #TEXT_BANK, _b3InitLayer1Mapbase
 TRAMPOLINE #SPRITE_UPDATES_BANK, _bEClearSpriteAttributes 
 jsr _b6InitInput
