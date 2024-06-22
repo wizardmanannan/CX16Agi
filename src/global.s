@@ -25,6 +25,7 @@ ZP_PTR_B1  = $F1
 ZP_PTR_B2  = $F3
 ZP_PTR_DISP  = $F5
 
+;Free to use
 ZP_TMP_2 = $AD
 ZP_TMP_3 = $AF
 ZP_TMP_4 = $B1

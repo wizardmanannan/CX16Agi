@@ -8,6 +8,9 @@
 **************************************************************************/
 
 #include "picture.h"
+#define TEST_LINE_DRAW
+
+extern void b8AsmDrawLine(unsigned short x1, unsigned char y1, unsigned short x2, unsigned char y2);
 
 #define PIC_DEFAULT 15
 #define PRI_DEFAULT 4
@@ -36,6 +39,25 @@ boolean picDrawEnabled = FALSE, priDrawEnabled = FALSE;
 /* Not sure what the default patCode value is */
 byte picColour = 0, priColour = 0, patCode, patNum;
 
+#ifdef TEST_LINE_DRAW
+
+#pragma code-name (push, "BANKRAM08")
+#pragma wrapped-call (push, trampoline, LINE_DRAW_BANK)
+void b8TestDrawLine()
+{
+	int i = 0;
+#define LOOP_AMOUNT 10000
+	picDrawEnabled = TRUE;
+	priDrawEnabled = FALSE;
+	picColour = 5;
+	b8AsmDrawLine(50,0,50,167);
+	while (1) {}
+}
+#pragma wrapped-call (pop)
+#pragma code-name (pop)
+
+#endif // VERBOSE_LINE_DRAW
+
 
 /* QUEUE DEFINITIONS */
 #define QEMPTY 0xFF
@@ -48,7 +70,7 @@ extern long pixelStartPrintingAt;
 
 #pragma rodata-name (push, "BANKRAM11")
 const char B11_UNKNOWN_PIC[] = "Unknown picture code : %X\n";
-const char B11_THE_BUFFER_STATUS[] = "The buffer status bank is %p, buffer status banked data is %p and the buffer counter is %d. The loaded picture is %d\n";
+const char B11_THE_BUFFER_STATUS[] = "";
 const char B11_LOADED_PIC[] = "Loaded picture data %p, bank %d, size %d\n";
 #pragma rodata-name (pop)
 
@@ -1019,6 +1041,10 @@ void b11DrawPic(byte* bankedData, int pLen, boolean okToClearScreen, byte picNum
 	int** zpFloodQueueServe = (int**)ZP_PTR_TMP_22;
 	int* sPosBank = (int*)ZP_PTR_TMP_3;
 	int* rPosBank = (int*)ZP_PTR_TMP_4;
+	
+#ifdef TEST_LINE_DRAW
+	b8TestDrawLine();
+#endif
 
 	*zpPremultTable = &bitmapWidthPreMult[0];
 	*zpFloodQueueStore = (int*)FLOOD_QUEUE_START;
@@ -1222,4 +1248,3 @@ void b6ShowPicture()
 }
 
 #pragma code-name (pop)
-
