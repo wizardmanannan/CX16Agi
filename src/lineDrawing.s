@@ -102,10 +102,10 @@ rts
     ; Define temporary storage locations and labels
     Y1_VAL          = ZP_TMP_2
     Y2_VAL          = ZP_TMP_2 + 1
-    DX_LOW          = ZP_TMP_3
-    DX_HIGH         = ZP_TMP_3 + 1
-    DY_LOW          = ZP_TMP_4
-    DY_HIGH         = ZP_TMP_4 + 1
+    DX_LOW          = ZP_TMP_14
+    DX_HIGH         = ZP_TMP_14 + 1
+    DY_LOW          = ZP_TMP_16
+    DY_HIGH         = ZP_TMP_16 + 1
     SX_LOW          = ZP_TMP_5
     SX_HIGH         = ZP_TMP_5 + 1
     SY_LOW          = ZP_TMP_6
@@ -162,7 +162,6 @@ start:
     sta DX_HIGH           ; DX_HIGH = 0xFE
     inc DX_LOW            ; DX_LOW = 1, DX_HIGH:DX_LOW = 0x00:0x01
 @dx_positive:
-
     ; dy = -abs(y2 - y1);
     lda Y2_VAL
     sec
@@ -207,7 +206,7 @@ start:
     ; sy = y1 < y2 ? 1 : -1;
     lda Y1_VAL
     cmp Y2_VAL
-    bpl @y1_greater_than_equal_y2
+    bcs @y1_greater_than_equal_y2
     lda #1
     sta SY_LOW
     lda #0
@@ -243,7 +242,7 @@ loop_start:
     rol
     sta X_HIGH_TEMP
     calc_vram_addr X_LOW_TEMP, X_HIGH_TEMP, Y1_VAL, Y_VAL_TEMP
-    
+
     clc ;Skip Over the non drawable section
     lda VERA_addr_low
     adc #<STARTING_BYTE
@@ -284,7 +283,7 @@ skip_vis:
     sta VERA_addr_bank
     ldy _priColour
     lda b8ColorTable,y
-    sta VERA_data0         ; Write the color to VRAM
+    ;sta VERA_data0         ; Write the color to VRAM
 
 skip_pri:
 

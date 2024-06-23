@@ -14,8 +14,7 @@
 extern void b8AsmDrawLine(unsigned short x1, unsigned char y1, unsigned short x2, unsigned char y2);
 void b8DrawLine(unsigned short x1, unsigned char y1, unsigned short x2, unsigned char y2)
 {
-	printf("x is %d, y is %d, x2 is %d, y2 is %d\n", x1, y1, x2, y2);
-	b8AsmDrawLine(x1, y1, x2, y2);
+	b8AsmDrawLine(x1, y1, x2, y2);	
 }
 #pragma wrapped-call (pop)
 
@@ -57,7 +56,7 @@ void b8TestDrawLine()
 	picDrawEnabled = TRUE;
 	priDrawEnabled = FALSE;
 	picColour = 5;
-	b8DrawLine(6, 116, 4, 118);
+	b8DrawLine(159, 0, 159, 167);
 	while (1) {}
 }
 #pragma wrapped-call (pop)
