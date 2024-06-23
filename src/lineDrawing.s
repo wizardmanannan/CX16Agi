@@ -97,8 +97,8 @@ rts
 .import _picColour, _priColour, _picDrawEnabled, _priDrawEnabled
 
 ;void b8AsmDrawLine(unsigned short x1, unsigned char y1, unsigned short x2, unsigned char y2)
-.export _b8AsmDrawLine
-.proc _b8AsmDrawLine
+.export _b8DrawLine
+.proc _b8DrawLine
     ; Define temporary storage locations and labels
     Y1_VAL          = ZP_TMP_2
     Y2_VAL          = ZP_TMP_2 + 1
