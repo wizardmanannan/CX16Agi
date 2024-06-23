@@ -8,9 +8,16 @@
 **************************************************************************/
 
 #include "picture.h"
-#define TEST_LINE_DRAW
+//#define TEST_LINE_DRAW
 
+#pragma wrapped-call (push, trampoline, LINE_DRAW_BANK)
 extern void b8AsmDrawLine(unsigned short x1, unsigned char y1, unsigned short x2, unsigned char y2);
+void b8DrawLine(unsigned short x1, unsigned char y1, unsigned short x2, unsigned char y2)
+{
+	printf("x is %d, y is %d, x2 is %d, y2 is %d\n", x1, y1, x2, y2);
+	b8AsmDrawLine(x1, y1, x2, y2);
+}
+#pragma wrapped-call (pop)
 
 #define PIC_DEFAULT 15
 #define PRI_DEFAULT 4
@@ -50,7 +57,7 @@ void b8TestDrawLine()
 	picDrawEnabled = TRUE;
 	priDrawEnabled = FALSE;
 	picColour = 5;
-	b8AsmDrawLine(50,0,50,167);
+	b8DrawLine(6, 116, 4, 118);
 	while (1) {}
 }
 #pragma wrapped-call (pop)
@@ -765,7 +772,7 @@ byte b11XCorner(byte** data, BufferStatus* bufferStatus)
 		printf("x corner line 1: %d,%d : %d,%d. Address data %p\n", x1, y1, x2, y2, *data);
 #endif
 
-		b11Drawline(x1, y1, x2, y1);
+		b8DrawLine(x1, y1, x2, y1);
 		x1 = x2;
 		GET_NEXT(y2);
 		if (y2 >= 0xF0) return y2;
@@ -773,7 +780,7 @@ byte b11XCorner(byte** data, BufferStatus* bufferStatus)
 #ifdef VERBOSE_X_CORNER
 		printf("x corner line 2: %d,%d : %d,%d\n", x1, y1, x2, y2);
 #endif
-		b11Drawline(x1, y1, x1, y2);
+		b8DrawLine(x1, y1, x1, y2);
 		y1 = y2;
 	}
 }
@@ -802,7 +809,7 @@ byte b11YCorner(byte** data, BufferStatus* bufferStatus)
 		printf("y corner line 1: %d,%d : %d,%d\n", x1, y1, x2, y2);
 #endif
 
-		b11Drawline(x1, y1, x1, y2);
+		b8DrawLine(x1, y1, x1, y2);
 		y1 = y2;
 		GET_NEXT(x2);
 		if (x2 >= 0xF0) return x2;
@@ -810,7 +817,7 @@ byte b11YCorner(byte** data, BufferStatus* bufferStatus)
 #ifdef VERBOSE_Y_CORN
 		printf("y Corner line 2: %d,%d : %d,%d\n", x1, y1, x2, y2);
 #endif
-		b11Drawline(x1, y1, x2, y1);
+		b8DrawLine(x1, y1, x2, y1);
 		x1 = x2;
 	}
 }
@@ -894,7 +901,7 @@ byte b11RelativeDraw(byte** data, BufferStatus* bufferStatus)
 		printf("rel line: %d,%d : %d,%d\n", x1, y1, x1 + dx, y1 + dy);
 #endif
 
-		b11Drawline(x1, y1, x1 + dx, y1 + dy);
+		b8DrawLine(x1, y1, x1 + dx, y1 + dy);
 		x1 += dx;
 		y1 += dy;
 	}
@@ -935,7 +942,7 @@ byte b11AbsoluteLine(byte** data, BufferStatus* bufferStatus)
 #ifdef VERBOSE_ABS_LINE
 		printf("abs line: %d,%d : %d,%d\n", x1, y1, x2, y2);
 #endif
-		b11Drawline(x1, y1, x2, y2);
+		b8DrawLine(x1, y1, x2, y2);
 		x1 = x2;
 		y1 = y2;
 	}

@@ -365,10 +365,18 @@ skip_pri:
     sta ERR_HIGH
     ; y1 += sy;
     lda Y1_VAL
-    sec
-    sbc SY_LOW
+    ldx SY_HIGH
+    bne @negative_slope
+@positive_slope:
+    clc
+    adc #$1
     sta Y1_VAL
+    jmp loop_start
 
+@negative_slope:
+    sec
+    sbc #$1
+    sta Y1_VAL
     jmp loop_start
 
 @end_loop:
