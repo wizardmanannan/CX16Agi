@@ -1,5 +1,5 @@
 .segment "BANKRAM08"
-b8LineTable: .res (PICTURE_HEIGHT + STARTING_ROW) * 2
+b8LineTable: .res PICTURE_HEIGHT * 2
 
 b8ColorTable:
     .byte $00, $11, $22, $33, $44, $55, $66, $77, $88, $99, $AA, $BB, $CC, $DD, $EE, $FF
@@ -24,7 +24,7 @@ b8ColorTable:
     sta b8LineTable+1,x
     tay                 ; load previous value for next iteration
     lda b8LineTable,x
-    cpx #PICTURE_HEIGHT + STARTING_ROW - 2          ; did we reach 168 lines? 
+    cpx #PICTURE_HEIGHT - 2          ; did we reach 168 lines? 
     bcc @loop1
     ldx #0
 @loop2:
@@ -32,13 +32,13 @@ b8ColorTable:
     inx
     inx
     adc #<LINE_LENGTH   ; add LINE_LENGTH
-    sta b8LineTable+PICTURE_HEIGHT + STARTING_ROW - 2,x
+    sta b8LineTable+PICTURE_HEIGHT - 2,x
     tya
     adc #>LINE_LENGTH   ; add carry
-    sta b8LineTable+PICTURE_HEIGHT  + STARTING_ROW - 2 + 1,x
+    sta b8LineTable+PICTURE_HEIGHT - 2 + 1,x
     tay                 ; load previous value for next iteration
-    lda b8LineTable+PICTURE_HEIGHT + STARTING_ROW - 2,x
-    cpx #PICTURE_HEIGHT + STARTING_ROW - 1            ; did we reach 168 lines?
+    lda b8LineTable+PICTURE_HEIGHT - 2,x
+    cpx #PICTURE_HEIGHT - 1            ; did we reach 168 lines?
     bcc @loop2
 rts
 .endproc
