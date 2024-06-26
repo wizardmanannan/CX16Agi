@@ -26,3 +26,8 @@ cx16TesterConfig.json
 /tools/CharacterRomPosCalc/CharacterRomPosCalc/obj
 /mapfile.txt
 /agi.cx16
+/tools/Address Calc Pri/Address Calc Pri/obj/Address Calc Pri.csproj.nuget.dgspec.json
+/tools/Address Calc Pri/Address Calc Pri/obj/Address Calc Pri.csproj.nuget.g.props
+/tools/Address Calc Pri/Address Calc Pri/obj/Address Calc Pri.csproj.nuget.g.targets
+/tools/Address Calc Pri/Address Calc Pri/obj/project.assets.json
+/tools/Address Calc Pri/Address Calc Pri/obj/project.nuget.cache
