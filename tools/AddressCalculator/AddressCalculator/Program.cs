@@ -17,8 +17,4 @@ while (true)
 
     int result = (STARTING_BYTE + x) + (y * PICTURE_WIDTH);
     Console.WriteLine($"The address is {result:x} \n");
-
-    int priResult = (SCREEN_WIDTH * SCREEN_HEIGHT) / 2 + (int) Math.Floor(((float)x + (y * PICTURE_WIDTH)) / 2);
-    string evenOrOdd = ((float)x + (y * PICTURE_WIDTH)) % 2 == 0 ? "even" : "odd";
-    Console.WriteLine($"The priority address is {priResult:x}. It is {evenOrOdd}\n");
 }
