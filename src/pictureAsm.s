@@ -946,9 +946,37 @@ rts
 
  _b4ClearPicture:
  jsr _b4ClearBackground
- ;To Do Clear Priority and control
+ jsr _b4ClearPriority
  rts
 
+_b4ClearPriority:
+PRIORITY_COUNTER = ZP_TMP_2
+
+stz VERA_ctrl
+lda #$10 ;Always going to be zero on byte 17
+sta VERA_addr_bank
+
+lda #> PRIORITY_START ;There are 320 bytes per row, but since each pixel is 4 bits we divide by 2
+sta VERA_addr_high
+lda #< PRIORITY_START
+sta VERA_addr_low
+
+ldy #<(PRIORITY_SIZE - 1)
+
+ldx #>(PRIORITY_SIZE - 1)
+@loopOuter:
+@loopInner:
+stz VERA_data0
+@loopInnerCheck:
+dey
+cpy #$FF
+bne @loopInner
+@loopOuterCheck:
+dex
+cpx #$FF
+bne @loopOuter
+
+rts
 
 _b4ClearBackground:
 stz VERA_ctrl
