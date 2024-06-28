@@ -4,6 +4,13 @@ b8LineTable: .res PICTURE_HEIGHT * 2
 b8ColorTable:
     .byte $00, $11, $22, $33, $44, $55, $66, $77, $88, $99, $AA, $BB, $CC, $DD, $EE, $FF
 
+.macro ADD_PRIORITY_OFFSET
+clc
+lda VERA_addr_high
+adc #>PRIORITY_START
+sta VERA_addr_high
+.endmacro
+
 .proc b8SetupLineTable 
     ; each entry is a 16 bit value
     stz b8LineTable
@@ -102,10 +109,6 @@ rts
     ; Define temporary storage locations and labels
     Y1_VAL          = ZP_TMP_2
     Y2_VAL          = ZP_TMP_2 + 1
-    DX_LOW          = ZP_TMP_14
-    DX_HIGH         = ZP_TMP_14 + 1
-    DY_LOW          = ZP_TMP_16
-    DY_HIGH         = ZP_TMP_16 + 1
     SX_LOW          = ZP_TMP_5
     SX_HIGH         = ZP_TMP_5 + 1
     SY_LOW          = ZP_TMP_6
@@ -123,8 +126,14 @@ rts
     X2_HIGH         = ZP_TMP_12 + 1
     Y_VAL_TEMP      = ZP_TMP_13
     Y_VAL_TEMP_HIGH      = ZP_TMP_13 + 1
-
-
+    DX_LOW          = ZP_TMP_14
+    DX_HIGH         = ZP_TMP_14 + 1
+    DY_LOW          = ZP_TMP_16
+    DY_HIGH         = ZP_TMP_16 + 1
+    PIC_COLOUR = ZP_TMP_17
+    PRI_COLOUR = ZP_TMP_17 + 1
+    PIC_DRAW_ENABLED = ZP_TMP_18
+    PRI_DRAW_ENABLED = ZP_TMP_18 + 1
 start:
     clc
     sta Y2_VAL
@@ -142,6 +151,18 @@ start:
     sta X1_LOW
     jsr popa
     sta X1_HIGH
+
+    lda _picColour
+    sta PIC_COLOUR
+
+    lda _priColour
+    sta PRI_COLOUR
+
+    lda _picDrawEnabled
+    sta PIC_DRAW_ENABLED
+
+    lda _priDrawEnabled
+    sta PRI_DRAW_ENABLED
 
     ; dx = abs(x2 - x1);
     lda X2_LOW
@@ -230,9 +251,9 @@ start:
 loop_start:
     ; if (vis_enabled)
     ;     asm_plot_vis_pixel((x1 << 1), y1 + STATUSBAR_OFFSET, vis_colour);
-    lda _picDrawEnabled
+    lda PIC_DRAW_ENABLED
     bne @plot_vis  ; Invert the condition
-    jmp skip_vis  ; Jump to @skip_vis if _picDrawEnabled is zero
+    jmp skip_vis  ; Jump to @skip_vis if PIC_DRAW_ENABLED is zero
 
 @plot_vis:
     lda X1_LOW
@@ -251,7 +272,7 @@ loop_start:
     adc #>STARTING_BYTE
     sta VERA_addr_high
 
-    ldy _picColour
+    ldy PIC_COLOUR
     lda b8ColorTable,y
     sta VERA_data0         ; Write the color to VRAM
 
@@ -259,11 +280,11 @@ skip_vis:
 
     ; if (pri_enabled)
     ;     asm_plot_pri_pixel((x1 << 1), y1 + STATUSBAR_OFFSET, pri_colour);
-    lda _priDrawEnabled
+    lda PRI_DRAW_ENABLED
     bne @plot_pri  ; Invert the condition
-    jmp skip_pri  ; Jump to @skip_pri if _priDrawEnabled is zero
+    jmp skip_pri  ; Jump to @skip_pri if PRI_DRAW_ENABLED is zero
 
-@plot_pri:
+@plot_pri: 
     lda X1_LOW
     asl
     sta X_LOW_TEMP
@@ -271,19 +292,37 @@ skip_vis:
     rol
     sta X_HIGH_TEMP
     calc_vram_addr X_LOW_TEMP, X_HIGH_TEMP, Y1_VAL, Y_VAL_TEMP
-    ; Add 0x9800 to the VERA::ADDR
-    lda VERA_addr_high
-    clc
-    adc #$80
+    
     stz VERA_ctrl
-    sta VERA_addr_high
-    lda VERA_addr_bank
-    adc #$00
-    and #%00000001            ; Throw away any other bits
-    sta VERA_addr_bank
-    ldy _priColour
-    lda b8ColorTable,y
-    ;sta VERA_data0         ; Write the color to VRAM
+    stz VERA_addr_bank
+    
+    clc
+    lsr VERA_addr_high
+    ror VERA_addr_low
+    bcc @evenPriority
+    
+    @oddPriority:
+    ADD_PRIORITY_OFFSET
+    lda VERA_data0
+    ;stp
+    and #$F0
+    ora PRI_COLOUR
+    sta VERA_data0
+    bra skip_pri
+    
+    @evenPriority:
+    ADD_PRIORITY_OFFSET
+    lda VERA_data0
+    ;stp
+    and #$F
+    sta VERA_data0
+    lda PRI_COLOUR
+    asl
+    asl
+    asl
+    asl
+    ora VERA_data0
+    sta VERA_data0
 
 skip_pri:
 
