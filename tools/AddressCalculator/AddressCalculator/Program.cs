@@ -16,5 +16,5 @@ while (true)
     byte y = byte.Parse(Console.ReadLine());
 
     int result = (STARTING_BYTE + x) + (y * PICTURE_WIDTH);
-    Console.WriteLine($"The address is {result:x} \n");
+    Console.WriteLine($"The address is {result:x}. Minus the starting byte is {result - STARTING_BYTE:x}. The starting byte is {STARTING_BYTE:x} \n");
 }
