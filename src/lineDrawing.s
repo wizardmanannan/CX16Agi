@@ -50,7 +50,56 @@ sta VERA_addr_high
 rts
 .endproc
 
-.macro calc_vram_addr xpos_low, xpos_high, ypos, tmpZP
+.macro PLOT_VIS PIC_COLOUR
+clc ;Skip Over the non drawable section
+lda VERA_addr_low
+adc #<STARTING_BYTE
+sta VERA_addr_low
+lda VERA_addr_high
+adc #>STARTING_BYTE
+sta VERA_addr_high
+ldy PIC_COLOUR
+lda b8ColorTable,y
+sta VERA_data0         ; Write the color to VRAM
+
+.endmacro
+
+.macro PLOT_PRIORITY PRI_COLOUR
+.local @end
+stz VERA_ctrl
+    stz VERA_addr_bank
+    
+    clc
+    lsr VERA_addr_high
+    ror VERA_addr_low
+    bcc @evenPriority
+    
+    @oddPriority:
+    ADD_PRIORITY_OFFSET
+    lda VERA_data0
+    ;stp
+    and #$F0
+    ora PRI_COLOUR
+    sta VERA_data0
+    bra @end
+    
+    @evenPriority:
+    ADD_PRIORITY_OFFSET
+    lda VERA_data0
+    ;stp
+    and #$F
+    sta VERA_data0
+    lda PRI_COLOUR
+    asl
+    asl
+    asl
+    asl
+    ora VERA_data0
+    sta VERA_data0
+@end:
+.endmacro
+
+.macro CALC_VRAM_ADDR_LINE_DRAW xpos_low, xpos_high, ypos, tmpZP
 .scope
     ; set bank to 30 TODO: use rodata or somewhere else?
     ; lda #$30
@@ -99,9 +148,74 @@ rts
     sta VERA_addr_low
     stz VERA_addr_bank ; Disable auto-increment, set address bank to 0
 .endscope
-.endmacro ; calc_vram_addr
+.endmacro ; CALC_VRAM_ADDR
+
+.macro CALC_VRAM_ADDR XPOS, YPOS, TMP
+    ; make use of the lookup table
+    stz VERA_ctrl
+    clc
+    lda YPOS
+    asl                ; (y << 1)
+    bcc @lower_bound    ; if carry is clear, then the result is less than 256
+    tax
+    lda b8LineTable+256,x     ; Get the low byte of the address
+    sta TMP
+    lda b8LineTable+256+1,x   ; Get the high byte of the address
+    sta TMP + 1
+    bra @done
+    @lower_bound:
+    tax
+    lda b8LineTable,x         ; Get the low byte of the address
+    sta TMP
+    lda b8LineTable+1,x         ; Get the high byte of the address
+    sta TMP + 1
+    @done:
+    lda XPOS
+    ; Add (y << 5) + (y << 7) + (x0 >> 1)
+    clc
+    adc TMP
+    sta TMP
+    lda #$0
+    adc TMP + 1           ; keep result in A
+
+    ; Store the result in the VRAM address register
+    sta VERA_addr_high
+    lda TMP
+
+    sta VERA_addr_low
+    stz VERA_addr_bank ; Disable auto-increment, set address bank to 0
+.endmacro ; CALC_VRAM_ADDR
 
 .import _picColour, _priColour, _picDrawEnabled, _priDrawEnabled
+ X_POS = ZP_TMP_2
+ Y_POS = ZP_TMP_2 + 1
+ ;void drawVisualPixel(byte x, byte y)
+ _b8DrawPixel:
+    nop
+    nop
+    nop
+    sta Y_POS
+    jsr popa
+    sta X_POS
+
+    @visual:
+    lda _picDrawEnabled
+    beq priority
+
+    CALC_VRAM_ADDR X_POS, Y_POS, ZP_TMP_5
+
+    PLOT_VIS _picColour
+
+    priority:
+    lda _priDrawEnabled
+    beq @end
+
+    CALC_VRAM_ADDR X_POS, Y_POS, ZP_TMP_5
+
+    PLOT_PRIORITY _priColour
+
+    @end:
+    rts
 
 ;void b8AsmDrawLine(unsigned short x1, unsigned char y1, unsigned short x2, unsigned char y2)
 .export _b8DrawLine
@@ -262,19 +376,9 @@ loop_start:
     lda X1_HIGH
     rol
     sta X_HIGH_TEMP
-    calc_vram_addr X_LOW_TEMP, X_HIGH_TEMP, Y1_VAL, Y_VAL_TEMP
+    CALC_VRAM_ADDR_LINE_DRAW X_LOW_TEMP, X_HIGH_TEMP, Y1_VAL, Y_VAL_TEMP
 
-    clc ;Skip Over the non drawable section
-    lda VERA_addr_low
-    adc #<STARTING_BYTE
-    sta VERA_addr_low
-    lda VERA_addr_high
-    adc #>STARTING_BYTE
-    sta VERA_addr_high
-
-    ldy PIC_COLOUR
-    lda b8ColorTable,y
-    sta VERA_data0         ; Write the color to VRAM
+    PLOT_VIS PIC_COLOUR
 
 skip_vis:
 
@@ -291,38 +395,9 @@ skip_vis:
     lda X1_HIGH
     rol
     sta X_HIGH_TEMP
-    calc_vram_addr X_LOW_TEMP, X_HIGH_TEMP, Y1_VAL, Y_VAL_TEMP
+    CALC_VRAM_ADDR_LINE_DRAW X_LOW_TEMP, X_HIGH_TEMP, Y1_VAL, Y_VAL_TEMP
     
-    stz VERA_ctrl
-    stz VERA_addr_bank
-    
-    clc
-    lsr VERA_addr_high
-    ror VERA_addr_low
-    bcc @evenPriority
-    
-    @oddPriority:
-    ADD_PRIORITY_OFFSET
-    lda VERA_data0
-    ;stp
-    and #$F0
-    ora PRI_COLOUR
-    sta VERA_data0
-    bra skip_pri
-    
-    @evenPriority:
-    ADD_PRIORITY_OFFSET
-    lda VERA_data0
-    ;stp
-    and #$F
-    sta VERA_data0
-    lda PRI_COLOUR
-    asl
-    asl
-    asl
-    asl
-    ora VERA_data0
-    sta VERA_data0
+    PLOT_PRIORITY PRI_COLOUR
 
 skip_pri:
 

@@ -115,6 +115,10 @@ const byte B4_SPLATTER_START[128] = { /* starting bit position */
 };
 #pragma rodata-name (pop)
 
+#pragma wrapped-call (push, trampoline, LINE_DRAW_BANK)
+extern void b8DrawPixel(byte x, byte y);
+#pragma wrapped-call (pop)
+
 /**************************************************************************
 ** pset
 **
@@ -522,7 +526,7 @@ byte b11XCorner(byte** data, BufferStatus* bufferStatus)
 	GET_NEXT(x1);
 	GET_NEXT(y1);
 
-	PSET(x1, y1);
+	b8DrawPixel(x1, y1);
 
 	for (;;) {
 		GET_NEXT(x2);
@@ -558,7 +562,7 @@ byte b11YCorner(byte** data, BufferStatus* bufferStatus)
 	GET_NEXT(x1);
 	GET_NEXT(y1);
 
-	PSET(x1, y1);
+	b8DrawPixel(x1, y1);
 
 	for (;;) {
 		GET_NEXT(y2);
@@ -596,7 +600,7 @@ byte b11RelativeDraw(byte** data, BufferStatus* bufferStatus)
 	GET_NEXT(x1);
 	GET_NEXT(y1);
 
-	PSET(x1, y1);
+	b8DrawPixel(x1, y1);
 
 	for (;;) {
 		GET_NEXT(disp);
@@ -680,7 +684,7 @@ byte b11AbsoluteLine(byte** data, BufferStatus* bufferStatus)
 	GET_NEXT(x1);
 	GET_NEXT(y1);
 
-	PSET(x1, y1);
+	b8DrawPixel(x1, y1);
 
 	for (;;) {
 		GET_NEXT(x2);
