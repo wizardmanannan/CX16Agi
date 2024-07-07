@@ -32,3 +32,5 @@ cx16TesterConfig.json
 /tools/Address Calc Pri/Address Calc Pri/obj/project.assets.json
 /tools/Address Calc Pri/Address Calc Pri/obj/project.nuget.cache
 /tools/PriPixelCalculator/PriPixelCalculator
+/tools/LinePlotter/WinFormsApp1/obj
+/tools/LinePlotter/LinePlotter/obj
