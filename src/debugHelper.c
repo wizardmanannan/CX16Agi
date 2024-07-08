@@ -105,6 +105,32 @@ void b5InitializeDebugging()
 #pragma code-name (pop);
 
 #pragma code-name (push, "BANKRAMDEBUG");
+void bDbgShowPriority()
+{
+	unsigned long i,j;
+	byte priByte;
+
+	asm("sei");
+	SET_VERA_ADDRESS(BITMAP_START, 0, 1);
+	SET_VERA_ADDRESS(PRIORITY_START, 1, 1);
+
+	for (i = 0; i < PICTURE_HEIGHT; i++)
+	{
+		for (j = 0; j < BITMAP_WIDTH / 2; j++)
+		{
+			if (j < PICTURE_WIDTH / 2)
+			{
+				READ_BYTE_VAR_FROM_ASSM(priByte, VERA_data1);
+				WRITE_BYTE_VAR_TO_ASSM(priByte, VERA_data0);
+			}
+			else
+			{
+				READ_BYTE_VAR_FROM_ASSM(priByte, VERA_data0); //Skip Over accords for bitmap being larger than priority
+			}
+		}
+	} 
+	asm("cli");
+}
 void bDbgCheckMemory()
 {
 #ifdef CHECK_MEM

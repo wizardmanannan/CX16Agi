@@ -66,6 +66,20 @@ sty ptr4 + 1
 jsr _trampoline
 .endmacro
 
+.import _debugBank
+;void trampolineDebug(void* callPtr)
+;Used to allow C code to trampoline to the debug bank. Make sure debugging is enabled when calling otherwise you will jump into space. It is done deliberately so as to not waste low RAM
+_trampolineDebug:
+.ifdef DEBUG
+sta ptr4
+stx ptr4 + 1
+
+lda _debugBank
+sta tmp4
+jsr _trampoline
+rts
+.endif
+
 ;Assumes args are in a/x and C stack
 _trampoline:
 sta @aVal ;Preserve a argument

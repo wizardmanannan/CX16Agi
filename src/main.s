@@ -71,3 +71,4 @@
     .export _b6Clear
     .export _b5IsDebuggingEnabled
     .export _b8DrawPixel
+    .export _trampolineDebug

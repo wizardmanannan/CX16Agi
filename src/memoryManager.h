@@ -212,7 +212,8 @@
 #define VERA_END 0x1FFFF
 #define SPRITES_PIXELS_PER_BYTE 0x2
 #define PALETTE_START 0x1FA00
-
+#define PRIORITY_START (((unsigned long)BITMAP_WIDTH * BITMAP_HEIGHT) / 2)
+#define PRIORITY_SIZE (((unsigned long) PICTURE_WIDTH * PICTURE_HEIGHT) / 2)
 #define SIZE_OF_SPRITE_ATTRIBUTE 8
 
 #ifdef _MSC_VER //Used for testing under windows

@@ -60,6 +60,7 @@ void b5RefreshBuffer(BufferStatus* bufferStatus);
 void b5WaitOnKey();
 void b5WaitOnSpecificKeys(byte* keys, byte length);
 #pragma wrapped-call (pop)
+extern void trampolineDebug(void (*trampolineDebug)()); //Only to be called when debugging is enabled (b5IsDebuggingEnabled), otherwise a crash is likely.
 
 
 extern long opStopAt;

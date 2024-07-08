@@ -24,7 +24,9 @@ char cursorChar = '_';
 #define MAX_INPUT_STRING_LENGTH 40 //Includes terminator 
 
 //#define VERBOSE_DEBUG_LOOKUP_WORDS
-
+#pragma rodata-name (push, "BANKRAM07")
+char SHOW_PRIORITY[] = {0X73, 0X68, 0X6F, 0X77, 0X20, 0X70, 0X72, 0X69, 0X6F, 0X72, 0X69, 0X74, 0X79 };
+#pragma rodata-name (pop)
 #pragma bss-name (push, "BANKRAM07")
 int b7InputWords[10];
 char b7WordText[10][80], b7CurrentInputStr[MAX_INPUT_STRING_LENGTH + 1], strPos = 0, b7OutputString[80], b7Temp[256];
@@ -173,7 +175,11 @@ void b7GetInternalString(char* promptStr, byte promptStringBank, byte stringNumb
 	b7GetString(promptStr, promptStringBank, inputString, PARSER_BANK, x, y, l);
 }
 
-
+#pragma wrapped-call (push, trampoline, DEBUG_INIT_BANK)
+extern boolean b5IsDebuggingEnabled();
+#pragma wrapped-call (pop)
+extern void bDbgShowPriority();
+extern byte debugBank;
 
 /***************************************************************************
 ** pollKeyboard
@@ -229,6 +235,10 @@ void b7PollKeyboard()
 					/* closedown(); */
 					break;
 				case KEY_ENTER:
+					if (b5IsDebuggingEnabled() && !strcmp(b7CurrentInputStr, SHOW_PRIORITY))
+					{
+						trampolineDebug(bDbgShowPriority);
+					}
 					b7LookupWords(b7CurrentInputStr);
 					b7CurrentInputStr[0] = 0;
 					strPos = 0;
@@ -246,7 +256,7 @@ void b7PollKeyboard()
 						return;
 					break;
 				default:
-					if (strlen(b7CurrentInputStr) < MAX_INPUT_STRING_LENGTH && (ch >= KEY_CAP_A && ch <= KEY_CAP_Z || ch >= KEY_LOWER_A && ch <= KEY_LOWER_Z || ch >= KEY_1 && ch <= KEY_9))
+					if (strlen(b7CurrentInputStr) < MAX_INPUT_STRING_LENGTH && (ch >= KEY_CAP_A && ch <= KEY_CAP_Z || ch >= KEY_LOWER_A && ch <= KEY_LOWER_Z || ch >= KEY_1 && ch <= KEY_9 || ch == SPACE))
 					{
 						if (ch >= KEY_CAP_A && ch <= KEY_CAP_Z)
 						{

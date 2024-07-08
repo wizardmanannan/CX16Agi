@@ -28,6 +28,8 @@
 
 #define PICTURE_WIDTH   160  /* Picture resolution */
 #define PICTURE_HEIGHT  168
+#define BITMAP_WIDTH 320
+#define BITMAP_HEIGHT 240
 
 #define  AGI_GRAPHICS  0
 #define  AGI_TEXT      1
