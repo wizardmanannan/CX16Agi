@@ -962,11 +962,13 @@ lda #< PRIORITY_START
 sta VERA_addr_low
 
 ldy #<(PRIORITY_SIZE - 1)
-
 ldx #>(PRIORITY_SIZE - 1)
+
+lda #PRIORITY_DEF
+
 @loopOuter:
 @loopInner:
-stz VERA_data0
+sta VERA_data0
 @loopInnerCheck:
 dey
 cpy #$FF
