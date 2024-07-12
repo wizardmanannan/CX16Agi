@@ -54,6 +54,7 @@
     <ClInclude Include="src\commands.h" />
     <ClInclude Include="src\debugHelper.h" />
     <ClInclude Include="src\DECOMP.H" />
+    <ClInclude Include="src\fillStack.h" />
     <ClInclude Include="src\fixed.h" />
     <ClInclude Include="src\floatDivision.h" />
     <ClInclude Include="src\GENERAL.H" />
@@ -87,6 +88,7 @@
     <ClCompile Include="src\commands.c" />
     <ClCompile Include="src\debugHelper.c" />
     <ClCompile Include="src\DECOMP.C" />
+    <ClCompile Include="src\fillStack.c" />
     <ClCompile Include="src\fixed.c" />
     <ClCompile Include="src\floatDivision.c" />
     <ClCompile Include="src\general.c" />

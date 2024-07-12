@@ -3,7 +3,7 @@
 
 ; Include the x16.inc file
 .include "x16.inc"
-;DEBUG = 0
+DEBUG = 0
 
 ; Define some start and end positions and code bank
 startPos: .word $0
@@ -14,6 +14,9 @@ _codeBank: .byte $0
 GLOBAL_INC = 1
 
 NEW_LINE = 10
+
+
+C_STACK_ADDR = $20
 
 ;Reserved For Interpreter
 ; Define some zero page pointers
@@ -696,5 +699,6 @@ pla
  sta VERA_isr
  cli
 .endmacro
+
 
 .endif
