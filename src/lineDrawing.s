@@ -1,4 +1,11 @@
 .segment "BANKRAM08"
+.ifndef  LINE_INC
+
+LINE_INC = 1
+
+.include "lineDrawing.s"
+
+
 b8LineTable: .res PICTURE_HEIGHT * 2
 
 b8ColorTable:
@@ -495,3 +502,5 @@ skip_pri:
 @end_loop:
     rts
 .endproc ; _asm_drawline
+
+.endif

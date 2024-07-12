@@ -12,6 +12,7 @@
     .include "pictureAsm.s"
     .include "wordsAsm.s"
     .include "debug.s"
+    .include "fillAsm.s"
     .export _executeLogic
     .export _b6InitInterpreter
     .export _loadAndIncWinCode
