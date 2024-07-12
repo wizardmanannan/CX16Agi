@@ -30,8 +30,131 @@ mask_table:
     inc C_STACK_ADDR + 1
 .endmacro
 
-; .export _asm_plot_vis_hline_fast
-.proc _asm_plot_vis_hline_fast
+.import _picColour
+.import _priDrawEnabled
+.macro can_fill x_val, y_val
+.scope
+    ; registers X and Y contain pixel coordinates
+    ; returns 0 in A register if the pixel cannot be filled (early exit)
+    ; returns 1 in A register if the pixel can be filled
+    VIS_PIXEL = ZP_TMP_16
+    PRI_PIXEL = ZP_TMP_16 + 1
+    TMP = ZP_TMP_17
+
+    ; get the vis pixel at the current x and y
+    CALC_VRAM_ADDR_LINE_DRAW x_val, #$0, y_val, TMP, #1
+    lda VERA_data0
+    and #$0F ; mask out the top 4 bits
+    sta VIS_PIXEL
+
+    ; get the pri pixel at the current x and y
+    ; Add 0x8000 to the VERA::ADDR
+    lda VERA_addr_high
+    clc
+    adc #$80
+    sta VERA_addr_high
+    lda VERA_addr_bank
+    adc #$00
+    sta VERA_addr_bank
+    lda VERA_data0
+    and #$0F ; mask out the top 4 bits
+    sta PRI_PIXEL
+
+    ; is the current vis colour 15 (white)?
+    ; if (vis_colour == 15) return 0;
+    lda _picColour
+    cmp #15
+    beq @cannot_fill
+
+    ; is priority disabled and the current vis pixel not white?
+    ; if (!pri_enabled && (asm_get_vis_pixel(x, y) != 15)) return 0;
+    lda _priDrawEnabled
+    bne @pri_enabled_check ; if priority is enabled, skip this check
+    lda VIS_PIXEL
+    cmp #15
+    bne @cannot_fill
+
+@pri_enabled_check:
+    ; is priority enabled and vis disabled and the current pri pixel not red?
+    ; if (pri_enabled && !vis_enabled && (asm_get_pri_pixel(x, y) != 4)) return 0;
+    lda _picDrawEnabled
+    bne @vis_enabled_check
+    lda PRI_PIXEL
+    cmp #4
+    bne @cannot_fill
+
+@vis_enabled_check:
+    ; is priority enabled and the current vis pixel not white?
+    ; if (pri_enabled && (asm_get_vis_pixel(x, y) != 15)) return 0;
+    lda _priDrawEnabled
+    beq @can_fill
+    lda VIS_PIXEL
+    cmp #15
+    bne @cannot_fill
+
+@can_fill:
+    lda #1 ; return 1 (pixel can be filled)
+    ldx #0 ; clear X register
+    bra @end_macro
+
+@cannot_fill:
+    lda #0 ; return 0 (pixel cannot be filled)
+
+@end_macro: 
+
+.endscope
+.endmacro
+
+; asm_plot_vis_hline(unsigned short x0, unsigned short x1, unsigned char y, unsigned char color);
+; plots 2 pixels at a time for 160x200 mode
+.proc b8AsmPlotVisHLine
+    color           = ZP_TMP_10
+    Y0              = ZP_TMP_10 + 1
+    X1_LOW          = ZP_TMP_12
+    X1_HIGH         = ZP_TMP_12 + 1
+    X0_LOW          = ZP_TMP_13
+    X0_HIGH         = ZP_TMP_13 + 1
+    TMP = ZP_TMP_13
+    
+    ; color is in A register
+    sta color
+
+    pop_c_stack Y0
+    pop_c_stack X1_LOW
+    pop_c_stack X1_HIGH
+    pop_c_stack X0_LOW
+    pop_c_stack X0_HIGH
+
+    ; *** call the vram address calculation routine ***
+    CALC_VRAM_ADDR_LINE_DRAW X0_LOW, X0_HIGH, Y0, TMP
+    
+    lda #1      ; Enable auto-increment
+    sta VERA_addr_bank
+
+    ; Calculate the line length and the loop count / 2
+    lda X1_LOW
+    sec
+    sbc X0_LOW
+    tax
+    lda X1_HIGH
+    sbc X0_HIGH
+    lsr             ; shift right but throw away result
+    txa
+    ror             ; rotate into low byte
+    tax
+
+    ldy color
+    lda color_table, y
+    @loop:
+        ; Plotting action
+        sta VERA_data0
+        dex
+        bne @loop
+
+    rts                     ; Return from subroutine
+.endproc ; _plot_vis_hline
+
+.proc _b8AsmPlotVisHLineFast
     temp            = ZP_TMP_2
     color           = ZP_TMP_2 + 1
     start_mask      = ZP_TMP_5
@@ -84,7 +207,7 @@ mask_table:
     sbc #0
     sta C_STACK_ADDR + 1
     lda color
-    ;;jsr asm_plot_vis_hline
+    jsr _b8AsmPlotVisHLineFast
     rts ; Return from subroutine
 
 long_line:
@@ -172,5 +295,19 @@ done_plotting:
 
     rts                     ; Return from subroutine
 .endproc ; _plot_vis_hline_fast
+
+.import _b8CanFill
+.proc b8AsmCanFill
+    X_VAL = ZP_TMP_14
+    Y_VAL = ZP_TMP_14 + 1
+
+    sta Y_VAL
+    jsr popa
+    sta X_VAL
+
+    can_fill X_VAL, Y_VAL
+
+    rts ; return
+.endproc
 
 .endif

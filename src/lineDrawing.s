@@ -106,7 +106,7 @@ stz VERA_ctrl
 @end:
 .endmacro
 
-.macro CALC_VRAM_ADDR_LINE_DRAW xpos_low, xpos_high, ypos, tmpZP
+.macro CALC_VRAM_ADDR_LINE_DRAW xpos_low, xpos_high, ypos, tmpZP, disableXTimes2 ;Set any value to the last param to disable xTimes2
 .scope
     ; set bank to 30 TODO: use rodata or somewhere else?
     ; lda #$30
@@ -135,11 +135,13 @@ stz VERA_ctrl
     ; set bank back to 0
     ; stz $00
 
+    .ifblank disableXTimes2
     ; Calculate (x0 >> 1)
     lda xpos_high
     lsr
     lda xpos_low
     ror                 ; keep result in A
+    .endif
 
     ; Add (y << 5) + (y << 7) + (x0 >> 1)
     clc
