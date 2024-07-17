@@ -106,7 +106,7 @@ stz VERA_ctrl
 @end:
 .endmacro
 
-.macro CALC_VRAM_ADDR_LINE_DRAW xpos_low, xpos_high, ypos, tmpZP, disableXTimes2 ;Set any value to the last param to disable xTimes2
+.macro CALC_VRAM_ADDR_LINE_DRAW xpos_low, xpos_high, ypos, tmpZP ;Set any value to the last param to disable xTimes2
 .scope
     ; set bank to 30 TODO: use rodata or somewhere else?
     ; lda #$30
@@ -135,14 +135,15 @@ stz VERA_ctrl
     ; set bank back to 0
     ; stz $00
 
-    .ifblank disableXTimes2
     ; Calculate (x0 >> 1)
     lda xpos_high
     lsr
     lda xpos_low
     ror                 ; keep result in A
-    .endif
 
+    nop
+    nop
+    nop
     ; Add (y << 5) + (y << 7) + (x0 >> 1)
     clc
     adc tmpZP
@@ -158,6 +159,53 @@ stz VERA_ctrl
     stz VERA_addr_bank ; Disable auto-increment, set address bank to 0
 .endscope
 .endmacro ; CALC_VRAM_ADDR
+
+
+.macro CALC_VRAM_ADDR_LINE_DRAW_160 xpos, ypos
+    ; same as calc_vram_addr without the (x >> 1) part
+    vram_addr_l     =  ZP_TMP_21
+    vram_addr_h     = ZP_TMP_21 + 1 
+
+    ; set bank to 30
+    ; lda #$30
+    ; sta $00
+
+    ; make use of the lookup table at $30A000
+    lda ypos
+    asl                 ; (y << 1)
+    bcc @lower_bound    ; if carry is clear, then the result is less than 256
+    tax
+    lda b8LineTable+256,x     ; Get the low byte of the address
+    sta vram_addr_l
+    lda b8LineTable+256+1,x   ; Get the high byte of the address
+    sta vram_addr_h
+    bra @done
+    @lower_bound:
+    tax
+    lda b8LineTable,x         ; Get the low byte of the address
+    sta vram_addr_l
+    lda b8LineTable+1,x         ; Get the high byte of the address
+    sta vram_addr_h
+    @done:
+
+    ; set bank back to 0
+    ; stz $00
+    
+    ; Add vram_addr + x
+    lda xpos
+    clc
+    adc vram_addr_l            ; add low byte of (y << 5) + (y << 7)
+    sta vram_addr_l            ; store low byte result (because 160<0xff)
+    lda vram_addr_h
+    adc #$00                   ; add carry
+    sta vram_addr_h            ; store high byte result
+
+    ; Store the result in the VRAM address register
+    sta VERA_addr_high
+    lda vram_addr_l
+    sta VERA_addr_low
+    stz VERA_addr_bank ; clear the upper byte of the VRAM address and any auto increment
+.endmacro ; calc_vram_addr_160
 
 .macro CALC_VRAM_ADDR XPOS, YPOS, TMP
     ; make use of the lookup table

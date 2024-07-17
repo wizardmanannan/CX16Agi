@@ -3,29 +3,35 @@
 #pragma code-name (push, "BANKRAM08")
 
 #pragma bss-name (push, "BANKRAM08")
+uint8_t b8FillStackPointer;
 static Span fill_stack[MAX_STACK_SIZE];
-uint8_t fill_stack_pointer = 0;
 #pragma bss-name (pop)
 
 /*
     Push a span onto the stack
 */
-void push(uint8_t lx, uint8_t rx, uint8_t y)
+void b8Push(uint8_t lx, uint8_t rx, uint8_t y)
 {
-    //if (fill_stack_pointer < MAX_STACK_SIZE) {
-    fill_stack[fill_stack_pointer].lx = lx;
-    fill_stack[fill_stack_pointer].rx = rx;
-    fill_stack[fill_stack_pointer].y = y;
-    ++fill_stack_pointer;
-    //}
+    printf("called push %d %d %d\n", lx, rx, y);
+    if (b8FillStackPointer < MAX_STACK_SIZE) {
+    fill_stack[b8FillStackPointer].lx = lx;
+    fill_stack[b8FillStackPointer].rx = rx;
+    fill_stack[b8FillStackPointer].y = y;
+    }
+    else
+    {
+        printf("overflow at %d \n", b8FillStackPointer);
+    }
+    ++b8FillStackPointer;
 }
 
 /*
     Pop a span from the stack
 */
-bool pop(uint8_t* lx, uint8_t* rx, uint8_t* y) {
-    if (fill_stack_pointer > 0) {
-        Span* item = &fill_stack[--fill_stack_pointer];
+bool b8Pop(uint8_t* lx, uint8_t* rx, uint8_t* y) {
+    printf("called pop %d %d %d\n", *lx, *rx, *y);
+    if (b8FillStackPointer > 0) {
+        Span* item = &fill_stack[--b8FillStackPointer];
         *lx = item->lx;
         *rx = item->rx;
         *y = item->y;

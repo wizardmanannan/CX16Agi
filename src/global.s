@@ -16,7 +16,7 @@ GLOBAL_INC = 1
 NEW_LINE = 10
 
 
-C_STACK_ADDR = $20
+C_STACK_ADDR = $22
 
 ;Reserved For Interpreter
 ; Define some zero page pointers

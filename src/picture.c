@@ -427,8 +427,10 @@ void testRound()
 }
 #endif // TEST_ROUND
 
-
+int xCounter = 0;
 extern void b11FillClean();
+extern void b8AsmFloodFill(uint8_t x, uint8_t y);
+boolean called = FALSE;
 /**************************************************************************
 ** fill
 **
@@ -444,6 +446,7 @@ byte b11FloodFill(byte** data, BufferStatus* bufferStatus, boolean* cleanPic)
 	//b11PSet(90, 43);
 	picColour = picColorOld;
 
+	printf("xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx %d\n", xCounter++);
 	for (;;) {
 		GET_NEXT(x1);
 		if (x1 >= 0xF0) return x1;
@@ -458,9 +461,15 @@ byte b11FloodFill(byte** data, BufferStatus* bufferStatus, boolean* cleanPic)
 		}
 		else
 		{
-			bFloodAgiFill(x1, y1);
+			//if (!called)
+			{
+				//	printf("1 %d y %d. the fill stack pointer address is %p. the stack address is %p\n", x1, y1, &b8FillStackPointer, &fill_stack);
+				b8AsmFloodFill(x1, y1);
+				called = TRUE;
+			}
 		}
 	}
+	printf("xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx %d\n", xCounter);
 }
 
 #pragma code-name (pop)
@@ -880,7 +889,7 @@ void b11DrawPic(byte* bankedData, int pLen, boolean okToClearScreen, byte picNum
 			break;
 		case 0xF1: picDrawEnabled = FALSE; break;
 		case 0xF2: GET_NEXT(priColour);
-			priDrawEnabled = TRUE;
+			priDrawEnabled = FALSE;
 			break;
 		case 0xF3: priDrawEnabled = FALSE; break;
 		case 0xF4:

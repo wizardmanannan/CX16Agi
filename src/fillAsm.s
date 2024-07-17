@@ -41,8 +41,19 @@ mask_table:
     PRI_PIXEL = ZP_TMP_16 + 1
     TMP = ZP_TMP_17
 
+    lda x_val 
+    ldy y_val
     ; get the vis pixel at the current x and y
-    CALC_VRAM_ADDR_LINE_DRAW x_val, #$0, y_val, TMP, #1
+    CALC_VRAM_ADDR_LINE_DRAW_160 x_val, y_val
+
+    clc
+    lda #<STARTING_BYTE
+    adc VERA_addr_low
+    sta VERA_addr_low
+    lda #>STARTING_BYTE
+    adc VERA_addr_high
+    sta VERA_addr_high
+
     lda VERA_data0
     and #$0F ; mask out the top 4 bits
     sta VIS_PIXEL
@@ -125,28 +136,37 @@ mask_table:
     pop_c_stack X0_LOW
     pop_c_stack X0_HIGH
 
+    lda X0_LOW
+    lda X1_LOW
     ; *** call the vram address calculation routine ***
-    CALC_VRAM_ADDR_LINE_DRAW X0_LOW, X0_HIGH, Y0, TMP
+    CALC_VRAM_ADDR_LINE_DRAW_160 X0_LOW, Y0
+    clc
+    lda #<STARTING_BYTE
+    adc VERA_addr_low
+    sta VERA_addr_low
+    lda #>STARTING_BYTE
+    adc VERA_addr_high
+    sta VERA_addr_high
     
-    lda #1      ; Enable auto-increment
+    lda #$10    ; Enable auto-increment
     sta VERA_addr_bank
 
-    ; Calculate the line length and the loop count / 2
+    ; Calculate the line length and the loop count / 2      
     lda X1_LOW
     sec
     sbc X0_LOW
     tax
-    lda X1_HIGH
-    sbc X0_HIGH
-    lsr             ; shift right but throw away result
-    txa
-    ror             ; rotate into low byte
-    tax
+    ; lda X1_HIGH
+    ; sbc X0_HIGH
+    ; lsr             ; shift right but throw away result
+    ; txa
+    ; ror             ; rotate into low byte
+    ; tax
 
     ldy color
     lda color_table, y
     @loop:
-        ; Plotting action
+        ; Plotting action 
         sta VERA_data0
         dex
         bne @loop
@@ -167,7 +187,7 @@ mask_table:
     X0_LOW          = ZP_TMP_8 + 1
     X0_HIGH         = ZP_TMP_9
     TMP = ZP_TMP_9 + 1
-        
+    
     ; color is in A register
     sta color
 
@@ -207,7 +227,7 @@ mask_table:
     sbc #0
     sta C_STACK_ADDR + 1
     lda color
-    jsr _b8AsmPlotVisHLineFast
+    jsr b8AsmPlotVisHLine
     rts ; Return from subroutine
 
 long_line:
@@ -264,7 +284,15 @@ long_line:
     dec length_low ; length is never higher than 40
 
     ; *** call the vram address calculation routine ***
-    CALC_VRAM_ADDR_LINE_DRAW X0_LOW, X0_HIGH, Y0, TMP
+    CALC_VRAM_ADDR_LINE_DRAW_160 X0_LOW, Y0
+    clc
+    lda #<STARTING_BYTE
+    adc VERA_addr_low
+    sta VERA_addr_low
+    lda #>STARTING_BYTE
+    adc VERA_addr_high
+    sta VERA_addr_high
+    
 
     ; Set address auto-increment to 4 bytes
     lda #%00110000
@@ -296,8 +324,7 @@ done_plotting:
     rts                     ; Return from subroutine
 .endproc ; _plot_vis_hline_fast
 
-.import _b8CanFill
-.proc b8AsmCanFill
+.proc _b8AsmCanFill
     X_VAL = ZP_TMP_14
     Y_VAL = ZP_TMP_14 + 1
 
@@ -309,5 +336,100 @@ done_plotting:
 
     rts ; return
 .endproc
+
+.import _b8Pop
+.import _b8ScanAndFill
+.import _b8FillStackPointer
+.proc _b8AsmFloodFill
+    LX      = ZP_TMP_17 + 1
+    RX      = ZP_TMP_18
+    Y1      = ZP_TMP_18 + 1
+    NX      = ZP_TMP_19 
+    DY      = ZP_TMP_19 + 1
+    X_VAL   = ZP_TMP_20
+    Y_VAL   = ZP_TMP_20 + 1
+
+    sta Y_VAL ; y is in A register
+    jsr popa
+    sta X_VAL 
+
+    ; can_fill X_VAL, Y_VAL
+    ; bne @ok_fill
+    ; rts
+@ok_fill:
+
+    ; fill_stack_pointer = 0;
+    stz _b8FillStackPointer
+
+    ; scan_and_fill(x, y);
+    lda X_VAL
+    jsr pusha
+    lda Y_VAL
+    jsr _b8ScanAndFill
+
+    ; while (pop(&lx, &rx, &y1)) {
+pop_loop:
+    ldx #$00
+    lda #LX
+    jsr pushax
+    lda #RX
+    jsr pushax
+    lda #Y1
+    jsr _b8Pop
+    bne @pop_not_done ; bne branches if Z flag is clear (ie not equal to zero)
+    jmp pop_done
+@pop_not_done:
+    ; nx = lx;
+    lda LX
+    sta NX
+    ; while (nx <= rx) {
+outer_loop_start:
+    lda RX
+    ;This instruction subtracts the contents of memory from the contents of the accumulator.
+    ;The use of the CMP affects the following flags: 
+    ; Z flag is set on an equal comparison, reset otherwise (ie M==A Z=1)
+    ; the N flag is set or reset by the result bit 7, (ie M-A<0 N=1)
+    ; the carry flag is set when the value in memory is less than or equal to the accumulator, (ie M<=A C=1)
+    cmp NX ; compare NX to RX
+    bcs @nx_less_than_rx ; bcc branches if C flag is set (ie NX <= RX)
+    jmp outer_loop_end
+@nx_less_than_rx:
+    ; if (can_fill(nx, y1)) {
+    can_fill NX, Y1
+    cmp #0
+    bne @start_fill ; branch if can_fill returned true
+    jmp else_increment_nx
+    @start_fill:
+    ; scan_and_fill(nx, y1);
+    lda NX
+    jsr pusha
+    lda Y1
+    jsr _b8ScanAndFill
+    ; while (nx <= rx && can_fill(nx, y1)) {
+inner_loop_start:
+    lda NX
+    cmp RX
+    ; bcs outer_loop_start ; bcs branches if C flag is set (ie NX > RX)
+    bcc @nx_less_than_rx_inner
+    jmp else_increment_nx
+@nx_less_than_rx_inner:
+    can_fill NX, Y1
+    bne @can_fill_inner
+    jmp outer_loop_start
+@can_fill_inner:
+    ; ++nx;
+    inc NX
+    jmp inner_loop_start
+else_increment_nx:
+    ; ++nx;
+    inc NX
+    jmp outer_loop_start
+outer_loop_end:
+    jmp pop_loop
+pop_done:
+    rts
+.endproc ; _asm_flood_fill
+
+
 
 .endif

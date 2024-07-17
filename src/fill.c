@@ -3,49 +3,66 @@
 /*
     Fills current scanline and pushes adjacent scanlines onto the stack.
 */
+extern boolean picDrawEnabled, priDrawEnabled, picColour, priColour;
+extern boolean b8AsmCanFill(uint8_t x, uint8_t y);
 
+extern void b8AsmPlotVisHLineFast(unsigned short x0, unsigned short x1, unsigned char y, unsigned char color);
 void b8ScanAndFill(uint8_t x, uint8_t y)
 {
-    //static uint8_t lx, rx;
+    static uint8_t lx, rx;
 
-    //// Inline can_fill logic at the start to avoid unnecessary function calls
-    //if (asm_can_fill(x, y) == false) {
-    //    return;
-    //}
+    //printf("in. trying to fill %d, %d\n", x,y);
 
-    //lx = x;
-    //rx = x;
+    // Inline can_fill logic at the start to avoid unnecessary function calls
+    if (b8AsmCanFill(x, y) == false) {
+        //printf("l1\n");
+        return;
+    }
 
-    //// Inline can_fill logic for left expansion
-    //while (lx != 0) {
-    //    if (asm_can_fill(lx - 1, y) == false) {
-    //        break;
-    //    }
-    //    --lx;
-    //}
+    lx = x;
+    rx = x;
 
-    //// Inline can_fill logic for right expansion
-    //while (rx != 159) {
-    //    if (asm_can_fill(rx + 1, y) == false) {
-    //        break;
-    //    }
-    //    ++rx;
-    //}
+    //printf("at 1\n");
 
-    //// pset_hline(lx, rx, y);
-    //if (vis_enabled)
-    //    asm_plot_vis_hline_fast((lx << 1), (rx << 1) + 2, y + STATUSBAR_OFFSET, vis_colour);
-    //if (pri_enabled)
-    //    asm_plot_pri_hline_fast((lx << 1), (rx << 1) + 2, y + STATUSBAR_OFFSET, pri_colour);
+    // Inline can_fill logic for left expansion
+    while (lx != 0) {
+        if (b8AsmCanFill(lx - 1, y) == false) {
+            break;
+        }
+        --lx;
+    }
 
-    //// if (y != 167) {
-    ////     push(lx, rx, y + 1, 1); // push below
-    //// }
-    //// if (y != 0) {
-    ////     push(lx, rx, y - 1, -1); // push above
-    //// }
-    //push(lx, rx, y + 1); // push below
-    //push(lx, rx, y - 1); // push above
+    //printf("at 2\n");
+
+    // Inline can_fill logic for right expansion
+    while (rx != 159) {
+        if (b8AsmCanFill(rx + 1, y) == false) {
+            //printf("l2 rx %d\n", rx);
+            break;
+        }
+        ++rx;
+        //printf("l2 rx %d\n", rx);
+    }
+
+    //printf("at 3. x0 %d x1 %d y %d color %d\n", lx, rx + 1, y, picColour);
+
+    // pset_hline(lx, rx, y);
+    if (picDrawEnabled)
+        b8AsmPlotVisHLineFast(lx,  rx + 1, y, picColour);
+
+    //printf("at 4\n");
+
+   /* if (priDrawEnabled)
+        asm_plot_pri_hline_fast((lx << 1), (rx << 1) + 2, y + STARTING_BYTE, priColour);*/
+
+    // if (y != 167) {
+    //     push(lx, rx, y + 1, 1); // push below
+    // }
+    // if (y != 0) {
+    //     push(lx, rx, y - 1, -1); // push above
+    // }
+    b8Push(lx, rx, y + 1); // push below
+    b8Push(lx, rx, y - 1); // push above
 }
 
 #pragma code-name (pop)
