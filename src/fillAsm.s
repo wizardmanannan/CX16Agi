@@ -277,8 +277,6 @@ long_line:
     ror length_low    ; Rotate right the low byte through carry
     lsr length_high   ; Shift right again, further dividing the high byte
     ror length_low    ; Rotate right again
-    lsr length_high   ; Final shift right
-    ror length_low    ; Final rotate right
 
     ; Subtract 1 from length
     dec length_low ; length is never higher than 40
