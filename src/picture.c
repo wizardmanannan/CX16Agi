@@ -52,7 +52,7 @@ void b8TestDrawLine()
 	picDrawEnabled = TRUE;
 	priDrawEnabled = FALSE;
 	picColour = 5;
-	b8DrawLine(159, 0, 159, 167);
+	//b8DrawLine(159, 0, 159, 167);
 	while (1) {}
 }
 #pragma wrapped-call (pop)
@@ -233,7 +233,7 @@ void testOkToFill()
 		printf("fail both enabled (right border)\n");
 	}
 
-	b11PSet(0, 0);
+	////b11PSet(0, 0);
 	picColour = 3;
 	priDrawEnabled = FALSE;
 	picDrawEnabled = TRUE;
@@ -443,10 +443,9 @@ byte b11FloodFill(byte** data, BufferStatus* bufferStatus, boolean* cleanPic)
 
 	picColour = 0xE;
 
-	//b11PSet(90, 43);
+	////b11PSet(90, 43);
 	picColour = picColorOld;
 
-	printf("xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx %d\n", xCounter++);
 	for (;;) {
 		GET_NEXT(x1);
 		if (x1 >= 0xF0) return x1;
@@ -461,7 +460,7 @@ byte b11FloodFill(byte** data, BufferStatus* bufferStatus, boolean* cleanPic)
 		}
 		else
 		{
-			//if (!called)
+			if (!called)
 			{
 				//	printf("1 %d y %d. the fill stack pointer address is %p. the stack address is %p\n", x1, y1, &b8FillStackPointer, &fill_stack);
 				b8AsmFloodFill(x1, y1);
@@ -469,7 +468,6 @@ byte b11FloodFill(byte** data, BufferStatus* bufferStatus, boolean* cleanPic)
 			}
 		}
 	}
-	printf("xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx %d\n", xCounter);
 }
 
 #pragma code-name (pop)
@@ -535,7 +533,7 @@ byte b11XCorner(byte** data, BufferStatus* bufferStatus)
 	GET_NEXT(x1);
 	GET_NEXT(y1);
 
-	b8DrawPixel(x1, y1);
+	//b8DrawPixel(x1, y1);
 
 	for (;;) {
 		GET_NEXT(x2);
@@ -546,7 +544,7 @@ byte b11XCorner(byte** data, BufferStatus* bufferStatus)
 		printf("x corner line 1: %d,%d : %d,%d. Address data %p\n", x1, y1, x2, y2, *data);
 #endif
 
-		b8DrawLine(x1, y1, x2, y1);
+		//b8DrawLine(x1, y1, x2, y1);
 		x1 = x2;
 		GET_NEXT(y2);
 		if (y2 >= 0xF0) return y2;
@@ -554,7 +552,7 @@ byte b11XCorner(byte** data, BufferStatus* bufferStatus)
 #ifdef VERBOSE_X_CORNER
 		printf("x corner line 2: %d,%d : %d,%d\n", x1, y1, x2, y2);
 #endif
-		b8DrawLine(x1, y1, x1, y2);
+		//b8DrawLine(x1, y1, x1, y2);
 		y1 = y2;
 	}
 }
@@ -571,7 +569,7 @@ byte b11YCorner(byte** data, BufferStatus* bufferStatus)
 	GET_NEXT(x1);
 	GET_NEXT(y1);
 
-	b8DrawPixel(x1, y1);
+	//b8DrawPixel(x1, y1);
 
 	for (;;) {
 		GET_NEXT(y2);
@@ -583,7 +581,7 @@ byte b11YCorner(byte** data, BufferStatus* bufferStatus)
 		printf("y corner line 1: %d,%d : %d,%d\n", x1, y1, x2, y2);
 #endif
 
-		b8DrawLine(x1, y1, x1, y2);
+		//b8DrawLine(x1, y1, x1, y2);
 		y1 = y2;
 		GET_NEXT(x2);
 		if (x2 >= 0xF0) return x2;
@@ -591,7 +589,7 @@ byte b11YCorner(byte** data, BufferStatus* bufferStatus)
 #ifdef VERBOSE_Y_CORN
 		printf("y Corner line 2: %d,%d : %d,%d\n", x1, y1, x2, y2);
 #endif
-		b8DrawLine(x1, y1, x2, y1);
+		//b8DrawLine(x1, y1, x2, y1);
 		x1 = x2;
 	}
 }
@@ -609,7 +607,7 @@ byte b11RelativeDraw(byte** data, BufferStatus* bufferStatus)
 	GET_NEXT(x1);
 	GET_NEXT(y1);
 
-	b8DrawPixel(x1, y1);
+	//b8DrawPixel(x1, y1);
 
 	for (;;) {
 		GET_NEXT(disp);
@@ -675,7 +673,7 @@ byte b11RelativeDraw(byte** data, BufferStatus* bufferStatus)
 		printf("rel line: %d,%d : %d,%d\n", x1, y1, x1 + dx, y1 + dy);
 #endif
 
-		b8DrawLine(x1, y1, x1 + dx, y1 + dy);
+		//b8DrawLine(x1, y1, x1 + dx, y1 + dy);
 		x1 += dx;
 		y1 += dy;
 	}
@@ -693,7 +691,7 @@ byte b11AbsoluteLine(byte** data, BufferStatus* bufferStatus)
 	GET_NEXT(x1);
 	GET_NEXT(y1);
 
-	b8DrawPixel(x1, y1);
+	//b8DrawPixel(x1, y1);
 
 	for (;;) {
 		GET_NEXT(x2);
@@ -716,7 +714,7 @@ byte b11AbsoluteLine(byte** data, BufferStatus* bufferStatus)
 #ifdef VERBOSE_ABS_LINE
 		printf("abs line: %d,%d : %d,%d\n", x1, y1, x2, y2);
 #endif
-		b8DrawLine(x1, y1, x2, y2);
+		//b8DrawLine(x1, y1, x2, y2);
 		x1 = x2;
 		y1 = y2;
 	}

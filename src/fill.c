@@ -7,6 +7,12 @@ extern boolean picDrawEnabled, priDrawEnabled, picColour, priColour;
 extern boolean b8AsmCanFill(uint8_t x, uint8_t y);
 
 extern void b8AsmPlotVisHLineFast(unsigned short x0, unsigned short x1, unsigned char y, unsigned char color);
+
+boolean enableStop = FALSE;
+int drawCounter = 0;
+
+//#define VERBOSE_FILL
+
 void b8ScanAndFill(uint8_t x, uint8_t y)
 {
     static uint8_t lx, rx;
@@ -15,9 +21,15 @@ void b8ScanAndFill(uint8_t x, uint8_t y)
 
     // Inline can_fill logic at the start to avoid unnecessary function calls
     if (b8AsmCanFill(x, y) == false) {
-        //printf("l1\n");
+#ifdef VERBOSE_FILL
+        printf("blocked on %d %d\n", x, y);
+#endif // VERBOSE_FILL
         return;
     }
+
+#ifdef VERBOSE_FILL
+    printf("can fill true %d %d\n", x, y);
+#endif
 
     lx = x;
     rx = x;
@@ -37,7 +49,10 @@ void b8ScanAndFill(uint8_t x, uint8_t y)
     // Inline can_fill logic for right expansion
     while (rx != 159) {
         if (b8AsmCanFill(rx + 1, y) == false) {
-            //printf("l2 rx %d\n", rx);
+            
+#ifdef VERBOSE_FILL
+            printf("stopping at %d\n", rx);
+#endif
             break;
         }
         ++rx;
@@ -48,7 +63,17 @@ void b8ScanAndFill(uint8_t x, uint8_t y)
 
     // pset_hline(lx, rx, y);
     if (picDrawEnabled)
+#ifdef VERBOSE_FILL
+        printf("%d drawing a line %d, %d to %d %d\n",drawCounter++, lx, y, rx + 1, y);
+#endif
+        
+        if (drawCounter == 84)
+        {
+            enableStop = TRUE;
+        }
+    
         b8AsmPlotVisHLineFast(lx,  rx + 1, y, picColour);
+        enableStop = FALSE;
 
     //printf("at 4\n");
 
@@ -61,8 +86,16 @@ void b8ScanAndFill(uint8_t x, uint8_t y)
     // if (y != 0) {
     //     push(lx, rx, y - 1, -1); // push above
     // }
-    b8Push(lx, rx, y + 1); // push below
-    b8Push(lx, rx, y - 1); // push above
+
+        if (y < PICTURE_HEIGHT)
+        {
+            b8Push(lx, rx, y + 1); // push below
+        }
+
+        if (y > 0)
+        {
+            b8Push(lx, rx, y - 1); // push above
+        }
 }
 
 #pragma code-name (pop)
