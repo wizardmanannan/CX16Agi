@@ -260,6 +260,38 @@ void getLogicDirectory(AGIFilePosType* returnedLogicDirectory, AGIFilePosType* l
 	RAM_BANK = previousRamBank;
 }
 
+extern byte disableIrq;
+void printfSafe(const char* format, ...) {
+	va_list args;
+	boolean isInterruptsDisabled;
+
+	asm("php");
+	asm("pla");
+	asm("and #$4 ");
+	asm("sta %v", _assmByte);
+	
+	isInterruptsDisabled = _assmByte;
+	
+	asm("sei");
+	disableIrq = TRUE;
+	asm("cli");
+
+	va_start(args, format);
+
+	// Forward the arguments to vprintf
+	vprintf(format, args);
+
+	va_end(args);
+
+	asm("sei");
+	disableIrq = FALSE;
+
+	if (!isInterruptsDisabled)
+	{
+		asm("cli");
+	}
+}
+
 
 
 

@@ -228,10 +228,15 @@ currentIrqState: .byte $0
 
 _vSyncCounter: .word $0
 debugVSyncCounter: .word $0
+_disableIrq: .byte $0
 
 custom_irq_handler:
 lda RAM_BANK
 sta @previousRamBank 
+
+lda _disableIrq
+beq @handleDisplayInputLine ;Still allow printf to run
+jmp @defaultIqr
 
 ; continue to default IRQ handler
 lda VERA_isr
