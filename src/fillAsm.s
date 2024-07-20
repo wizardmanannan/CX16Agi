@@ -10,14 +10,11 @@ color_table:
     .byte $00, $11, $22, $33, $44, $55, $66, $77, $88, $99, $AA, $BB, $CC, $DD, $EE, $FF
 
 mask_table:
-    .byte %11111111 ; 0 $FF
-    .byte %11111111 ; 1 $FD
-    .byte %11111100 ; 2 $FC
-    .byte %11111100 ; 3 $F4
-    .byte %11110000 ; 4 $F0
-    .byte %11110000 ; 5 $D0
-    .byte %11000000 ; 6 $C0
-    .byte %11000000 ; 7 $40
+    .byte %11111111 ; 0 $00
+    .byte %11111100 ; 1 $03
+    .byte %11110000 ; 2 $0F
+    .byte %11000000 ; 3 $3F
+    .byte %11111111; 0 $00
 
 
 .macro pop_c_stack addr
@@ -199,6 +196,7 @@ mask_table:
     
     ; Calculate the line length and the loop count
     ; Ensure X1 >= X0 
+    inc X1_LOW
     lda X1_LOW
     sec
     sbc X0_LOW
@@ -247,39 +245,19 @@ long_line:
     sta VERA_ctrl
     lda #%01000000  ; Enable cache writing
     sta VERA_dc_video
-
+            
     ; Calculate the mask for ending chunk
     lda X1_LOW
-    and #$7
+    and #$3
     tax
     lda mask_table, x
     sta end_mask
-
-    ; Calculate the mask for starting chunk
-    lda X0_LOW
-    and #$7
-    tax
-    lda mask_table, x
-    eor #$FF ; Invert the mask
-    sta start_mask  
-
-    ; Add pixels from start mask to length
-    txa ; start length from above
-    clc
-    adc length_low
-    sta length_low
-    lda length_high
-    adc #0
-    sta length_high
 
     ; Calculate the number of full 8-pixel (32-bit) chunks by dividing by 8 (shift right 3 times)
     lsr length_high   ; Shift right, dividing the high byte by 2
     ror length_low    ; Rotate right the low byte through carry
     lsr length_high   ; Shift right again, further dividing the high byte
     ror length_low    ; Rotate right again
-
-    ; Subtract 1 from length
-    dec length_low ; length is never higher than 40
 
     ; *** call the vram address calculation routine ***
     CALC_VRAM_ADDR_LINE_DRAW_160 X0_LOW, Y0
@@ -295,10 +273,6 @@ long_line:
     ; Set address auto-increment to 4 bytes
     lda #%00110000
     sta VERA_addr_bank
-
-    ; draw the starting chunk
-    lda start_mask
-    sta VERA_data0
 
     ; Loop counter
     lda #0 ; clear the mask

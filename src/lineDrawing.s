@@ -84,7 +84,6 @@ stz VERA_ctrl
     @oddPriority:
     ADD_PRIORITY_OFFSET
     lda VERA_data0
-    ;stp
     and #$F0
     ora PRI_COLOUR
     sta VERA_data0
@@ -93,7 +92,6 @@ stz VERA_ctrl
     @evenPriority:
     ADD_PRIORITY_OFFSET
     lda VERA_data0
-    ;stp
     and #$F
     sta VERA_data0
     lda PRI_COLOUR
