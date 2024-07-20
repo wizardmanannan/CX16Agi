@@ -15,7 +15,7 @@ static Span fill_stack[MAX_STACK_SIZE];
 void b8Push(uint8_t lx, uint8_t rx, uint8_t y)
 {
 #ifdef VERBOSE_STACK
-    printf("called push %d %d y%d\n", lx, rx, y);
+    printfSafe("called push %d %d y%d\n", lx, rx, y);
 #endif // VERBOSE_STACK
     if (b8FillStackPointer < MAX_STACK_SIZE) {
     fill_stack[b8FillStackPointer].lx = lx;
@@ -25,7 +25,7 @@ void b8Push(uint8_t lx, uint8_t rx, uint8_t y)
 #ifdef VERBOSE_STACK
     else
     {
-        printf("overflow at %d \n", b8FillStackPointer);
+        printfSafe("overflow at %d \n", b8FillStackPointer);
     }
 #endif
     ++b8FillStackPointer;
@@ -36,7 +36,7 @@ void b8Push(uint8_t lx, uint8_t rx, uint8_t y)
 */
 bool b8Pop(uint8_t* lx, uint8_t* rx, uint8_t* y) {
 #ifdef VERBOSE_STACK
-    printf("called pop %d %d %d\n", *lx, *rx, *y);
+    printfSafe("called pop %d %d %d\n", *lx, *rx, *y);
 #endif
     if (b8FillStackPointer > 0) {
         Span* item = &fill_stack[--b8FillStackPointer];
