@@ -233,12 +233,41 @@ long_line:
     lda #%00001100
     sta VERA_ctrl
 
+    ; *** call the vram address calculation routine ***
+    CALC_VRAM_ADDR_LINE_DRAW_160 X0_LOW, Y0
+    clc
+    lda #<STARTING_BYTE
+    adc VERA_addr_low
+    sta VERA_addr_low
+    sta temp
+    lda #>STARTING_BYTE 
+    adc VERA_addr_high
+    sta VERA_addr_high
+
     ldx color
     lda color_table, x
+    tay
     sta $9f29
     sta $9f2A
     sta $9f2B
     sta $9f2C
+
+    stz VERA_ctrl
+    lda #%10000
+    sta VERA_addr_bank
+
+    ldx temp
+    @nonDivideByFourLoopCheck: 
+    txa
+    and #3
+    beq @endLoop
+    sty VERA_data0
+    inx
+    dec length_low
+    bne @nonDivideByFourLoopCheck
+    dec length_high
+    bra @nonDivideByFourLoopCheck
+    @endLoop:
 
     ; Set up VERA for cache operations
     lda #%00000100  ; DCSEL = Mode 2 for enabling cache
@@ -246,12 +275,6 @@ long_line:
     lda #%01000000  ; Enable cache writing
     sta VERA_dc_video
             
-    ; Calculate the mask for ending chunk
-    lda X1_LOW
-    and #$3
-    tax
-    lda mask_table, x
-    sta end_mask
 
     ; Calculate the number of full 8-pixel (32-bit) chunks by dividing by 8 (shift right 3 times)
     lsr length_high   ; Shift right, dividing the high byte by 2
@@ -259,23 +282,13 @@ long_line:
     lsr length_high   ; Shift right again, further dividing the high byte
     ror length_low    ; Rotate right again
 
-    ; *** call the vram address calculation routine ***
-    CALC_VRAM_ADDR_LINE_DRAW_160 X0_LOW, Y0
-    clc
-    lda #<STARTING_BYTE
-    adc VERA_addr_low
-    sta VERA_addr_low
-    lda #>STARTING_BYTE
-    adc VERA_addr_high
-    sta VERA_addr_high
-    
 
     ; Set address auto-increment to 4 bytes
     lda #%00110000
     sta VERA_addr_bank
 
     ; Loop counter
-    lda #0 ; clear the mask
+    lda #%0 ; clear the mask
     ldx length_low
 
 @loop:
@@ -286,13 +299,11 @@ long_line:
 
 done_plotting:
     ; Handle the last partial chunk 
-    lda end_mask
-    sta VERA_data0
 
     lda #%00000100  ; DCSEL = Mode 2 for enabling cache
     sta VERA_ctrl
     stz VERA_dc_video ; Disable cache writing
-
+    
     rts                     ; Return from subroutine
 .endproc ; _plot_vis_hline_fast
 
