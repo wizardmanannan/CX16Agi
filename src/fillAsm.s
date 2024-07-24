@@ -147,7 +147,7 @@ mask_table:
     
     lda #$10    ; Enable auto-increment
     sta VERA_addr_bank
-
+    
     ; Calculate the line length and the loop count / 2      
     lda X1_LOW
     sec
@@ -162,6 +162,8 @@ mask_table:
 
     ldy color
     lda color_table, y
+    
+    inx
     @loop:
         ; Plotting action 
         sta VERA_data0
@@ -169,6 +171,7 @@ mask_table:
         bne @loop
 
     rts                     ; Return from subroutine
+
 .endproc ; _plot_vis_hline
 
 .proc _b8AsmPlotVisHLineFast
