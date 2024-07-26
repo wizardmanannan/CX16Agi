@@ -62,7 +62,6 @@ void b8ScanAndFill(uint8_t x, uint8_t y)
     //printfSafe("at 3. x0 %d x1 %d y %d color %d\n", lx, rx + 1, y, picColour);
 
     // pset_hline(lx, rx, y);
-    if (picDrawEnabled)
 #ifdef VERBOSE_FILL
         printfSafe("%d drawing a line %d, %d to %d %d\n",drawCounter++, lx, y, rx, y);
 #endif
@@ -71,8 +70,11 @@ void b8ScanAndFill(uint8_t x, uint8_t y)
         {
             enableStop = TRUE;
         }
-    
-        b8AsmPlotVisHLineFast(lx,  rx, y, picColour);
+        
+        if (picDrawEnabled)
+        {
+            b8AsmPlotVisHLineFast(lx, rx, y, picColour);
+        }
         enableStop = FALSE;
 
     //printfSafe("at 4\n");

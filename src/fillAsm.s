@@ -339,6 +339,11 @@ done_plotting:
     jsr popa
     sta X_VAL 
 
+    lda _picDrawEnabled
+    ora _priDrawEnabled
+    bne @ok_fill
+    jmp pop_done
+
     ; can_fill X_VAL, Y_VAL
     ; bne @ok_fill
     ; rts
