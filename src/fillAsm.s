@@ -177,6 +177,7 @@ mask_table:
 .proc _b8AsmPlotVisHLineFast
     temp            = ZP_TMP_2
     color           = ZP_TMP_2 + 1
+    start_amount    = ZP_TMP_3
     start_mask      = ZP_TMP_5
     end_mask        = ZP_TMP_5 + 1
     length_low      = ZP_TMP_6
@@ -277,14 +278,19 @@ long_line:
     sta VERA_ctrl
     lda #%01000000  ; Enable cache writing
     sta VERA_dc_video
-            
+
+    lda length_low
+    and #3
+    tax 
+    lda mask_table,x
+    sta end_mask
 
     ; Calculate the number of full 8-pixel (32-bit) chunks by dividing by 8 (shift right 3 times)
     lsr length_high   ; Shift right, dividing the high byte by 2
     ror length_low    ; Rotate right the low byte through carry
     lsr length_high   ; Shift right again, further dividing the high byte
     ror length_low    ; Rotate right again
-
+  
 
     ; Set address auto-increment to 4 bytes
     lda #%00110000
@@ -302,6 +308,9 @@ long_line:
 
 done_plotting:
     ; Handle the last partial chunk 
+
+    lda end_mask
+    sta VERA_data0
 
     lda #%00000100  ; DCSEL = Mode 2 for enabling cache
     sta VERA_ctrl
