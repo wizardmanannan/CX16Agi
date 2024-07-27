@@ -20,7 +20,6 @@ void b5WaitOnKey()
 
 	do {
 		GET_IN(ch);
-		printfSafe("");
 	} while (!ch);
 }
 

@@ -13,7 +13,6 @@ int drawCounter = 0;
 
 //#define VERBOSE_FILL
 
-extern boolean stopAtFill;
 void b8ScanAndFill(uint8_t x, uint8_t y)
 {
     static uint8_t lx, rx;
@@ -66,10 +65,6 @@ void b8ScanAndFill(uint8_t x, uint8_t y)
 #ifdef VERBOSE_FILL
         printfSafe("%d drawing a line %d, %d to %d %d\n",drawCounter++, lx, y, rx, y);
 #endif
-        if (stopAtFill)
-        {
-            printfSafe("%d drawing a line %d, %d to %d %d\n", drawCounter++, lx, y, rx, y);
-        }
         
         if (drawCounter == 84)
         {
