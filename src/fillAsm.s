@@ -181,7 +181,6 @@ mask_table:
     start_mask      = ZP_TMP_5
     end_mask        = ZP_TMP_5 + 1
     length_low      = ZP_TMP_6
-    length_high     = ZP_TMP_6 + 1
     Y0              = ZP_TMP_7
     X1_LOW          = ZP_TMP_7 + 1
     X1_HIGH         = ZP_TMP_8
@@ -207,7 +206,6 @@ mask_table:
     sta length_low
     lda X1_HIGH
     sbc X0_HIGH
-    sta length_high
 
     ; Is length less than or equal to 16?
     bne long_line ; length_high is in A
@@ -268,8 +266,6 @@ long_line:
     sty VERA_data0
     inx
     dec length_low
-    bne @nonDivideByFourLoopCheck
-    dec length_high
     bra @nonDivideByFourLoopCheck
     @endLoop:
 
@@ -286,10 +282,8 @@ long_line:
     sta end_mask
 
     ; Calculate the number of full 8-pixel (32-bit) chunks by dividing by 8 (shift right 3 times)
-    lsr length_high   ; Shift right, dividing the high byte by 2
-    ror length_low    ; Rotate right the low byte through carry
-    lsr length_high   ; Shift right again, further dividing the high byte
-    ror length_low    ; Rotate right again
+    lsr length_low    ; Rotate right the low byte through carry
+    lsr length_low    ; Rotate right again
   
 
     ; Set address auto-increment to 4 bytes
