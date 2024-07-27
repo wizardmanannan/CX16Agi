@@ -203,7 +203,7 @@ mask_table:
     lda X1_LOW
     sec
     sbc X0_LOW
-    sta length_low
+    sta length_low 
     lda X1_HIGH
     sbc X0_HIGH
 
