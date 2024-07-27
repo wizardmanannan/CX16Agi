@@ -120,7 +120,6 @@ mask_table:
     Y0              = ZP_TMP_10 + 1
     X1_LOW          = ZP_TMP_12
     X0_LOW          = ZP_TMP_13
-    X0_HIGH         = ZP_TMP_13 + 1
     TMP = ZP_TMP_13
     
     ; color is in A register
@@ -129,7 +128,6 @@ mask_table:
     pop_c_stack Y0
     pop_c_stack X1_LOW
     pop_c_stack X0_LOW
-    pop_c_stack X0_HIGH
 
     lda X0_LOW
     lda X1_LOW
@@ -182,7 +180,6 @@ mask_table:
     Y0              = ZP_TMP_7
     X1_LOW          = ZP_TMP_7 + 1
     X0_LOW          = ZP_TMP_8 + 1
-    X0_HIGH         = ZP_TMP_9
     TMP = ZP_TMP_9 + 1
     
     ; color is in A register
@@ -191,7 +188,6 @@ mask_table:
     pop_c_stack Y0
     pop_c_stack X1_LOW
     pop_c_stack X0_LOW
-    pop_c_stack X0_HIGH
     
     ; Calculate the line length and the loop count
     ; Ensure X1 >= X0 
@@ -211,7 +207,7 @@ mask_table:
     ; subtract 5 bytes from c_stack_addr
     lda C_STACK_ADDR
     sec
-    sbc #4
+    sbc #3
     sta C_STACK_ADDR
     lda C_STACK_ADDR + 1
     sbc #0
