@@ -428,9 +428,12 @@ void testRound()
 #endif // TEST_ROUND
 
 int xCounter = 0;
+int fillCounter = 0;
+extern byte* var;
 extern void b11FillClean();
 extern void b8AsmFloodFill(uint8_t x, uint8_t y);
 boolean called = FALSE;
+boolean stopAtFill = FALSE;
 /**************************************************************************
 ** fill
 **
@@ -463,8 +466,17 @@ byte b11FloodFill(byte** data, BufferStatus* bufferStatus, boolean* cleanPic)
 			//if (!called)
 			{
 				//	printf("1 %d y %d. the fill stack pointer address is %p. the stack address is %p\n", x1, y1, &b8FillStackPointer, &fill_stack);
+				
+				if (var[0] == 1 )
+				{
+					printfSafe("%d x1 is %d and y1 is %d\n", ++fillCounter, x1, y1);
+				}
+				if (fillCounter == 84)
+				{
+					stopAtFill = TRUE;
+				}
 				b8AsmFloodFill(x1, y1);
-				called = TRUE;
+			    called = TRUE;
 			}
 		}
 	}
