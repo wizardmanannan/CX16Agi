@@ -6,6 +6,7 @@
 #include <stdint.h>
 #include <stdbool.h>
 #include <stdio.h>
+#include "helpers.h"
 
 // After testing, the highest required I have found has been about 160
 #define MAX_STACK_SIZE 255
