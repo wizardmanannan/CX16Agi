@@ -5,6 +5,7 @@
 FILL_INC = 1
 
 .include "lineDrawing.s"
+.include "fillStack.s"
 
 color_table:
     .byte $00, $11, $22, $33, $44, $55, $66, $77, $88, $99, $AA, $BB, $CC, $DD, $EE, $FF
@@ -201,21 +202,8 @@ mask_table:
 ;}
 
 ;VERBOSE_FILL = 1
-.import _b8Push
 .import _printfSafe
 .ifdef VERBOSE_FILL
-newLine: .byte $D,0
-.macro PRINT_NEW_LINE
-lda #<newLine
-ldx #>newLine
-jsr pushax
-
-ldy #2
-
-jsr _printfSafe
-
-.endmacro
-
 tryingToFill: .asciiz "in. trying to fill %d, %d"
 blockedOn: .asciiz "blocked on %d %d"
 canFillTrue: .asciiz "can fill true %d %d"
@@ -383,39 +371,33 @@ jsr pusha
 lda _picColour
 
 jsr _b8AsmPlotVisHLineFast
+
+;JSRFAR _b5WaitOnKey, 5
+
 @pushBelow:
 ;        if (y < PICTURE_HEIGHT - 1)
 ;        {
 ;            b8Push(lx, rx, y + 1); ; push below
 ;        }
 ;
-lda Y_VAL
-cmp #PICTURE_HEIGHT - 1
+ldy Y_VAL
+cpy #PICTURE_HEIGHT - 1
 bcs @pushAbove
-ldx LX
-lda RX
-jsr pushax
-
-lda Y_VAL
-inc
-jsr _b8Push
-
-
+lda LX
+ldx RX
+iny
+FILL_STACK_PUSH
 @pushAbove:
 ;        if (y > 0)
 ;        {
 ;            b8Push(lx, rx, y - 1); ; push above
 ;        }
-lda Y_VAL
+ldy Y_VAL
 beq @return
-ldx LX
-lda RX
-jsr pushax
-
-lda Y_VAL
-dec
-
-jsr _b8Push
+lda LX
+ldx RX
+dey
+FILL_STACK_PUSH
 
 @return:
 .import _b5WaitOnKey
@@ -623,8 +605,6 @@ done_plotting:
     rts ; return
 .endproc
 
-.import _b8Pop
-.import _b8FillStackPointer
 .proc _b8AsmFloodFill
     LX      = ZP_TMP_17 + 1
     RX      = ZP_TMP_18
@@ -648,7 +628,7 @@ done_plotting:
 @ok_fill:
 
     ; fill_stack_pointer = 0;
-    stz _b8FillStackPointer
+    stz FILL_STACK_POINTER
 
     ; scan_and_fill(x, y);
     ldx X_VAL
@@ -657,13 +637,7 @@ done_plotting:
 
     ; while (pop(&lx, &rx, &y1)) {
 pop_loop:
-    ldx #$00
-    lda #LX
-    jsr pushax
-    lda #RX
-    jsr pushax
-    lda #Y1
-    jsr _b8Pop
+    FILL_STACK_POP LX, RX, Y1
     bne @pop_not_done ; bne branches if Z flag is clear (ie not equal to zero)
     jmp pop_done
 @pop_not_done:

@@ -14,6 +14,7 @@ _codeBank: .byte $0
 GLOBAL_INC = 1
 
 NEW_LINE = 10
+STACK_POINTER = $100
 
 
 C_STACK_ADDR = $22
@@ -700,5 +701,17 @@ pla
  cli
 .endmacro
 
+
+newLine: .byte $D,0
+.macro PRINT_NEW_LINE
+lda #<newLine
+ldx #>newLine
+jsr pushax
+
+ldy #2
+
+jsr _printfSafe
+
+.endmacro
 
 .endif
