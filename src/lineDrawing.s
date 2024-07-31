@@ -20,8 +20,10 @@ sta VERA_addr_high
 
 .proc b8SetupLineTable 
     ; each entry is a 16 bit value
-    stz b8LineTable
-    stz b8LineTable+1
+    lda #<STARTING_BYTE
+    sta b8LineTable
+    lda #>STARTING_BYTE
+    sta b8LineTable+1
     ldx #0
     ; load the previous value
     lda b8LineTable+1,x
@@ -58,13 +60,6 @@ rts
 .endproc
 
 .macro PLOT_VIS PIC_COLOUR
-clc ;Skip Over the non drawable section
-lda VERA_addr_low
-adc #<STARTING_BYTE
-sta VERA_addr_low
-lda VERA_addr_high
-adc #>STARTING_BYTE
-sta VERA_addr_high
 ldy PIC_COLOUR
 lda b8ColorTable,y
 sta VERA_data0         ; Write the color to VRAM

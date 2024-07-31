@@ -44,14 +44,6 @@ mask_table:
     ; get the vis pixel at the current x and y
     CALC_VRAM_ADDR_LINE_DRAW_160 x_val, y_val
 
-    clc
-    lda #<STARTING_BYTE
-    adc VERA_addr_low
-    sta VERA_addr_low
-    lda #>STARTING_BYTE
-    adc VERA_addr_high
-    sta VERA_addr_high
-
     lda VERA_data0
     and #$0F ; mask out the top 4 bits
     sta VIS_PIXEL
@@ -449,14 +441,7 @@ X0_LOW          = ZP_TMP_8 + 1
     ; *** call the vram address calculation routine ***
     CALC_VRAM_ADDR_LINE_DRAW_160 X0_LOW, Y0
 
-    clc
-    lda #<STARTING_BYTE
-    adc VERA_addr_low
-    sta VERA_addr_low
-    lda #>STARTING_BYTE
-    adc VERA_addr_high
-    sta VERA_addr_high
-    
+
     lda #$10    ; Enable auto-increment
     sta VERA_addr_bank
 
@@ -516,15 +501,7 @@ long_line:
 
     ; *** call the vram address calculation routine ***
     CALC_VRAM_ADDR_LINE_DRAW_160 X0_LOW, Y0
-    clc
-    lda #<STARTING_BYTE
-    adc VERA_addr_low
-    sta VERA_addr_low
-    sta temp
-    lda #>STARTING_BYTE 
-    adc VERA_addr_high
-    sta VERA_addr_high
-
+    
     ldx color
     lda color_table, x
     tay
@@ -537,7 +514,7 @@ long_line:
     lda #%10000
     sta VERA_addr_bank
 
-    ldx temp
+    ldx VERA_addr_low
     @nonDivideByFourLoopCheck: 
     txa
     and #3
@@ -569,7 +546,7 @@ long_line:
     lda #%00110000
     sta VERA_addr_bank
 
-    ; Loop counter
+      ; Loop counter
     lda #%0 ; clear the mask
     ldx length_low
 
