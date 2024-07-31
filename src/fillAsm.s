@@ -418,9 +418,7 @@ end:
 .endscope
 .endmacro
 
-temp            = ZP_TMP_2
-color           = ZP_TMP_2 + 1
-start_amount    = ZP_TMP_3
+color           = ZP_TMP_3
 start_mask      = ZP_TMP_5
 end_mask        = ZP_TMP_5 + 1
 length_low      = ZP_TMP_6
