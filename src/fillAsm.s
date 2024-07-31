@@ -39,8 +39,7 @@ mask_table:
     PRI_PIXEL = ZP_TMP_16 + 1
     TMP = ZP_TMP_17
 
-    lda x_val 
-    ldy y_val
+
     ; get the vis pixel at the current x and y
     CALC_VRAM_ADDR_LINE_DRAW_160 x_val, y_val
 
