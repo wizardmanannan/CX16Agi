@@ -63,7 +63,7 @@ void b8ScanAndFill(uint8_t x, uint8_t y)
 
     // pset_hline(lx, rx, y);
 #ifdef VERBOSE_FILL
-        printfSafe("%d drawing a line %p, %p to %p, %p\n",drawCounter++, lx, y, rx, y);
+        printfSafe("%d drawing a line %d, %d to %d %d\n",drawCounter++, lx, y, rx, y);
 #endif
         
         if (drawCounter == 84)

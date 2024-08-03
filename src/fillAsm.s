@@ -113,30 +113,26 @@ mask_table:
 .endscope
 .endmacro
 
-
-temp            = ZP_TMP_2
-color           = ZP_TMP_2 + 1
-start_amount    = ZP_TMP_3
-start_mask      = ZP_TMP_5
-end_mask        = ZP_TMP_5 + 1
-length_low      = ZP_TMP_6
-Y0              = ZP_TMP_7
-X1_LOW          = ZP_TMP_7 + 1
-X0_LOW          = ZP_TMP_8 + 1
 ; asm_plot_vis_hline(unsigned short x0, unsigned short x1, unsigned char y, unsigned char color);
 ; plots 2 pixels at a time for 160x200 mode
-.macro b8AsmPlotVisHLine
+.proc b8AsmPlotVisHLine
+    color           = ZP_TMP_10
+    Y0              = ZP_TMP_10 + 1
+    X1_LOW          = ZP_TMP_12
+    X0_LOW          = ZP_TMP_13
+    TMP = ZP_TMP_13
     
-    ; Line is a short line
-    lda #%00000100  ; DCSEL = Mode 2 
-    sta VERA_ctrl
-    stz VERA_dc_video ; Disable cache writing
+    ; color is in A register
+    sta color
+
+    pop_c_stack Y0
+    pop_c_stack X1_LOW
+    pop_c_stack X0_LOW
 
     lda X0_LOW
     lda X1_LOW
     ; *** call the vram address calculation routine ***
     CALC_VRAM_ADDR_LINE_DRAW_160 X0_LOW, Y0
-
     clc
     lda #<STARTING_BYTE
     adc VERA_addr_low
@@ -147,7 +143,7 @@ X0_LOW          = ZP_TMP_8 + 1
     
     lda #$10    ; Enable auto-increment
     sta VERA_addr_bank
-
+    
     ; Calculate the line length and the loop count / 2      
     lda X1_LOW
     sec
@@ -163,23 +159,29 @@ X0_LOW          = ZP_TMP_8 + 1
     ldy color
     lda color_table, y
     
+    inx
     @loop:
         ; Plotting action 
         sta VERA_data0
         dex
         bne @loop
 
-.endmacro ; _plot_vis_hline
+    rts                     ; Return from subroutine
 
-shortLine:
-b8AsmPlotVisHLine
-rts ; Return from subroutine
-b8AsmPlotVisHLineJump:
-jmp shortLine
+.endproc ; _plot_vis_hline
 
 .proc _b8AsmPlotVisHLineFast
+    temp            = ZP_TMP_2
+    color           = ZP_TMP_2 + 1
+    start_amount    = ZP_TMP_3
+    start_mask      = ZP_TMP_5
+    end_mask        = ZP_TMP_5 + 1
+    length_low      = ZP_TMP_6
+    Y0              = ZP_TMP_7
+    X1_LOW          = ZP_TMP_7 + 1
+    X0_LOW          = ZP_TMP_8 + 1
     TMP = ZP_TMP_9 + 1
-
+    
     ; color is in A register
     sta color
 
@@ -196,7 +198,24 @@ jmp shortLine
     sta length_low 
     lda length_low
     cmp #$10
-    bcc b8AsmPlotVisHLineJump
+    bcs long_line
+
+    ; Line is a short line
+    lda #%00000100  ; DCSEL = Mode 2 
+    sta VERA_ctrl
+    stz VERA_dc_video ; Disable cache writing
+    ; subtract 5 bytes from c_stack_addr
+    lda C_STACK_ADDR
+    sec
+    sbc #3
+    sta C_STACK_ADDR
+    lda C_STACK_ADDR + 1
+    sbc #0
+    sta C_STACK_ADDR + 1
+    lda color
+    jsr b8AsmPlotVisHLine
+    rts ; Return from subroutine
+
 long_line:
     ; Change DCSEL to mode 6 for cache write operations
     lda #%00001100
