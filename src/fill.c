@@ -6,7 +6,7 @@
 extern boolean picDrawEnabled, priDrawEnabled, picColour, priColour;
 extern boolean b8AsmCanFill(uint8_t x, uint8_t y);
 
-extern void b8AsmPlotVisHLineFast(unsigned short x0, unsigned short x1, unsigned char y, unsigned char color);
+extern void b8AsmPlotVisHLineFast(unsigned short x0, byte x1, unsigned char y, unsigned char color);
 
 boolean enableStop = FALSE;
 int drawCounter = 0;

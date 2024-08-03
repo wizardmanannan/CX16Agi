@@ -803,6 +803,7 @@ extern void b6Clear();
 **
 **  pLen = length of PICTURE data
 **************************************************************************/
+extern boolean disableIrq;
 void b11DrawPic(byte* bankedData, int pLen, boolean okToClearScreen, byte picNum)
 {
 	unsigned long i;
@@ -820,6 +821,7 @@ void b11DrawPic(byte* bankedData, int pLen, boolean okToClearScreen, byte picNum
 	int** zpFloodQueueServe = (int**)ZP_PTR_TMP_22;
 	int* sPosBank = (int*)ZP_PTR_TMP_3;
 	int* rPosBank = (int*)ZP_PTR_TMP_4;
+	int vSyncBefore, vSyncAfter;
 
 #ifdef TEST_LINE_DRAW
 	b8TestDrawLine();
@@ -849,10 +851,10 @@ void b11DrawPic(byte* bankedData, int pLen, boolean okToClearScreen, byte picNum
 	b5RefreshBuffer(bufferStatus);
 
 	if (okToClearScreen) {
-		asm("sei");
+		disableIrq = TRUE;
 		b6Clear();
 	}
-	asm("sei");
+	disableIrq = TRUE;
 
 #ifdef TEST_OK_TO_FILL
 	testOkToFill();
@@ -863,6 +865,8 @@ void b11DrawPic(byte* bankedData, int pLen, boolean okToClearScreen, byte picNum
 #ifdef VERBOSE
 	printf("Plotting. . .\n");
 #endif // VERBOSE
+
+	vSyncBefore = vSyncCounter;
 
 	do {
 		if (!returnedAction)
@@ -945,9 +949,13 @@ void b11DrawPic(byte* bankedData, int pLen, boolean okToClearScreen, byte picNum
 #endif
 	} while ((data < (data + pLen)) && stillDrawing);
 
+	vSyncAfter = vSyncCounter;
+
+	printfSafe("you took %d (%d - %d) jiffies\n", vSyncAfter - vSyncBefore, vSyncAfter, vSyncBefore);
+
 	b11SplitPriority();
 
-	REENABLE_INTERRUPTS(); //Loading screen stays on until showPic command
+	disableIrq = FALSE;
 
 	showPicCalled = FALSE;
 }
