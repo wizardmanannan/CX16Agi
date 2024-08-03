@@ -119,6 +119,7 @@ mask_table:
     color           = ZP_TMP_10
     Y0              = ZP_TMP_10 + 1
     X1_LOW          = ZP_TMP_12
+    X1_HIGH         = ZP_TMP_12 + 1
     X0_LOW          = ZP_TMP_13
     X0_HIGH         = ZP_TMP_13 + 1
     TMP = ZP_TMP_13
@@ -128,6 +129,7 @@ mask_table:
 
     pop_c_stack Y0
     pop_c_stack X1_LOW
+    pop_c_stack X1_HIGH
     pop_c_stack X0_LOW
     pop_c_stack X0_HIGH
 
@@ -181,6 +183,7 @@ mask_table:
     length_low      = ZP_TMP_6
     Y0              = ZP_TMP_7
     X1_LOW          = ZP_TMP_7 + 1
+    X1_HIGH         = ZP_TMP_8
     X0_LOW          = ZP_TMP_8 + 1
     X0_HIGH         = ZP_TMP_9
     TMP = ZP_TMP_9 + 1
@@ -190,6 +193,7 @@ mask_table:
 
     pop_c_stack Y0
     pop_c_stack X1_LOW
+    pop_c_stack X1_HIGH
     pop_c_stack X0_LOW
     pop_c_stack X0_HIGH
     
@@ -200,7 +204,13 @@ mask_table:
     sec
     sbc X0_LOW
     sta length_low 
+    lda X1_HIGH
+    sbc X0_HIGH
+
+    ; Is length less than or equal to 16?
+    bne long_line ; length_high is in A
     lda length_low
+    clc
     cmp #$10
     bcs long_line
 
@@ -211,7 +221,7 @@ mask_table:
     ; subtract 5 bytes from c_stack_addr
     lda C_STACK_ADDR
     sec
-    sbc #4
+    sbc #5
     sta C_STACK_ADDR
     lda C_STACK_ADDR + 1
     sbc #0
