@@ -8,10 +8,6 @@ LINE_INC = 1
 
 b8LineTable: .res PICTURE_HEIGHT * 2
 
-b8LineTableLow: .res PICTURE_HEIGHT
-b8LineTableHigh: .res PICTURE_HEIGHT
-
-
 b8ColorTable:
     .byte $00, $11, $22, $33, $44, $55, $66, $77, $88, $99, $AA, $BB, $CC, $DD, $EE, $FF
 
@@ -60,35 +56,6 @@ sta VERA_addr_high
     lda b8LineTable+PICTURE_HEIGHT - 2,x
     cpx #PICTURE_HEIGHT - 1            ; did we reach 168 lines?
     bcc @loop2
-
-    lda b8LineTable
-    lda b8LineTableLow
-    lda b8LineTableHigh
- ; each entry is a 16 bit value
-    lda #<STARTING_BYTE
-    sta b8LineTableLow
-    lda #>STARTING_BYTE
-    sta b8LineTableHigh
-    ldx #0
-    ; load the previous value
-    lda b8LineTableHigh,x
-    tay
-    lda b8LineTableLow,x
-
-    inx
-@lineTableLoop:
-    clc
-    adc #<LINE_LENGTH   ; add LINE_LENGTH
-    sta b8LineTableLow,x
-    tya
-    adc #>LINE_LENGTH   ; add carry
-    sta b8LineTableHigh,x
-    tay                 ; load previous value for next iteration
-    lda b8LineTableLow,x
-    
-    inx
-    cpx #168          ; did we reach 168 lines? 
-    bne @lineTableLoop
 rts
 .endproc
 
@@ -197,11 +164,22 @@ stz VERA_ctrl
     ; sta $00
 
     ; make use of the lookup table at $30A000
-    ldx ypos
-    lda b8LineTableLow,x     ; Get the low byte of the address
+    lda ypos
+    asl                 ; (y << 1)
+    bcc @lower_bound    ; if carry is clear, then the result is less than 256
+    tax
+    lda b8LineTable+256,x     ; Get the low byte of the address
     sta vram_addr_l
-    lda b8LineTableHigh,x   ; Get the high byte of the address
+    lda b8LineTable+256+1,x   ; Get the high byte of the address
     sta vram_addr_h
+    bra @done
+    @lower_bound:
+    tax
+    lda b8LineTable,x         ; Get the low byte of the address
+    sta vram_addr_l
+    lda b8LineTable+1,x         ; Get the high byte of the address
+    sta vram_addr_h
+    @done:
 
     ; set bank back to 0
     ; stz $00

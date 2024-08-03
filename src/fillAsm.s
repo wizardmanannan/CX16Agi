@@ -37,6 +37,7 @@ mask_table:
     ; returns 1 in A register if the pixel can be filled
     VIS_PIXEL = ZP_TMP_16
     PRI_PIXEL = ZP_TMP_16 + 1
+    TMP = ZP_TMP_17
 
 
     ; get the vis pixel at the current x and y
