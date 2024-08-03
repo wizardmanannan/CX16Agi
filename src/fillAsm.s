@@ -669,6 +669,40 @@ pop_done:
     rts
 .endproc ; _asm_flood_fill
 
+b8FillClean: ;Fills screen with one colour, for use when there is nothing on the screen
+
+stz GENERAL_TMP
+stz GENERAL_TMP + 1
+
+CALC_VRAM_ADDR #$0, #$0, GENERAL_TMP
+lda #$10
+sta VERA_addr_bank
+
+ldy _picColour
+lda color_table, y
+
+ldx #<(PICTURE_WIDTH * PICTURE_HEIGHT)
+ldy #>(PICTURE_WIDTH * PICTURE_HEIGHT)
+
+@loop:
+sta VERA_data0
+
+@decCounter:
+dex
+cpx #$FF
+bne @checkLoop
+
+@highByte:
+dey
+
+@checkLoop:
+cpx #$0
+bne @loop
+cpy #$0
+bne @loop
+rts
+
+
 .import _fCounter
 _b8AsmFloodFillSections:
 .scope
@@ -709,9 +743,13 @@ jsr _b8AsmFloodFill
 
 jmp @loop
 
-@return:
-
 @cleanPic:
+jsr b8FillClean
+lda #$1
+sta (CLEAN_PIC)
+lda #$0
+
+@return:
 rts
 @bufferStatus: .word $0
 .endscope
