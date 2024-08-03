@@ -243,8 +243,7 @@ stz VERA_ctrl
     X1_HIGH         = ZP_TMP_10 + 1
     X2_LOW          = ZP_TMP_12
     X2_HIGH         = ZP_TMP_12 + 1
-    Y_VAL_TEMP      = ZP_TMP_13
-    Y_VAL_TEMP_HIGH      = ZP_TMP_13 + 1
+    Y_VAL_TEMP      = ZP_TMP_19 + 1
     DX_LOW          = ZP_TMP_14
     DX_HIGH         = ZP_TMP_14 + 1
     DY_LOW          = ZP_TMP_16

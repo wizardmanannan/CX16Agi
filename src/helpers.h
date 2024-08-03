@@ -124,7 +124,7 @@ extern byte _previousRomBank;
         if(*data >= GOLDEN_RAM_WORK_AREA + LOCAL_WORK_AREA_SIZE) \
 		{ \
 			b5RefreshBuffer(bufferStatus); \
-			*data = GOLDEN_RAM_WORK_AREA; \
+            *data = GOLDEN_RAM_WORK_AREA; \
 		} \
 		 storeLocation = *((*data)++); \
 		\

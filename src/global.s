@@ -49,6 +49,7 @@ ZP_TMP_19 = $DB
 ZP_TMP_20 = $DD
 ZP_TMP_21 = $DF
 ZP_TMP_22 = $E1
+ZP_TMP_23 = $FE
 
 ;Float Division
 ZP_DIV_AREA = $E3
