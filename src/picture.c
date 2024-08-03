@@ -41,8 +41,6 @@ boolean picDrawEnabled = FALSE, priDrawEnabled = FALSE;
 /* Not sure what the default patCode value is */
 byte picColour = 0, priColour = 0, patCode, patNum;
 
-#define PICTURE_DATA_ZP (byte**) 0xE1;
-
 #ifdef TEST_LINE_DRAW
 
 #pragma code-name (push, "BANKRAM08")
@@ -812,16 +810,14 @@ void b11DrawPic(byte* bankedData, int pLen, boolean okToClearScreen, byte picNum
 	byte action, returnedAction = 0;
 	boolean stillDrawing = TRUE;
 	PictureFile loadedPicture;
-	byte** data;
-
+	byte* buffer = GOLDEN_RAM_WORK_AREA;
+	byte** data = &buffer; //Get_Next Macro works with pointer pointers so need this;
 	BufferStatus localBufferStatus;
 	BufferStatus* bufferStatus = &localBufferStatus;
 	boolean cleanPic = TRUE;
 
 	int vSyncBefore, vSyncAfter;
 
-	data = PICTURE_DATA_ZP;
-	*data = GOLDEN_RAM_WORK_AREA;
 #ifdef TEST_LINE_DRAW
 	b8TestDrawLine();
 #endif
@@ -832,6 +828,10 @@ void b11DrawPic(byte* bankedData, int pLen, boolean okToClearScreen, byte picNum
 	printf("Preparing To Draw %d of size %d\n", picNum, loadedPicture.size);
 #endif // VERBOSE
 
+	if (!data)
+	{
+		printf("Out of memory in picture code");
+	}
 
 	localBufferStatus.bank = loadedPicture.bank;
 	localBufferStatus.bankedData = loadedPicture.data;
@@ -869,8 +869,7 @@ void b11DrawPic(byte* bankedData, int pLen, boolean okToClearScreen, byte picNum
 		}
 
 #ifdef VERBOSE
-		printfSafe("Action: %p \n", action);
-		printfSafe("Work area address %p\n", GOLDEN_RAM_WORK_AREA);
+		printf("Action: %p \n", action);
 #endif // VERBOSE
 		switch (action) {
 		case 0xFF:
