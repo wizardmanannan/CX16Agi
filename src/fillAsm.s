@@ -4,8 +4,6 @@
 
 FILL_INC = 1
 
-GENERAL_TMP = ZP_TMP_13
-
 .include "lineDrawing.s"
 .include "fillStack.s"
 
@@ -209,6 +207,7 @@ drawCounter: .word $0
 .local Y_VAL
 .local LX
 .local RX
+.local SCAN_FILL_TMP
 .local leftExpansionLoop
 .local endLeftExpansionLoop
 .local rightExpansionLoop
@@ -221,6 +220,7 @@ X_VAL = ZP_TMP_10
 Y_VAL = ZP_TMP_10 + 1
 LX = ZP_TMP_12
 RX = ZP_TMP_12 + 1
+SCAN_FILL_TMP = ZP_TMP_13
 
 sty Y_VAL
 stx X_VAL
@@ -264,8 +264,8 @@ leftExpansionLoop:
 
 lda LX
 dec
-sta GENERAL_TMP
-can_fill GENERAL_TMP, Y_VAL
+sta SCAN_FILL_TMP
+can_fill SCAN_FILL_TMP, Y_VAL
 cmp #$0
 beq endLeftExpansionLoop
 
@@ -307,9 +307,9 @@ rightExpansionLoop:
 ;if (b8AsmCanFill(rx + 1, y) == false) break
 lda RX
 inc
-sta GENERAL_TMP
+sta SCAN_FILL_TMP
 nop
-can_fill GENERAL_TMP,Y_VAL
+can_fill SCAN_FILL_TMP,Y_VAL
 cmp #$0
 beq endRightExpansionLoop
 inc RX ;rx++
