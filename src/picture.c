@@ -816,11 +816,22 @@ void b11DrawPic(byte* bankedData, int pLen, boolean okToClearScreen, byte picNum
 	BufferStatus* bufferStatus = &localBufferStatus;
 	boolean cleanPic = TRUE;
 
+	int** zpPremultTable = (int**)ZP_PTR_TMP_20;
+	int** zpFloodQueueStore = (int**)ZP_PTR_TMP_21;
+	int** zpFloodQueueServe = (int**)ZP_PTR_TMP_22;
+	int* sPosBank = (int*)ZP_PTR_TMP_3;
+	int* rPosBank = (int*)ZP_PTR_TMP_4;
 	int vSyncBefore, vSyncAfter;
 
 #ifdef TEST_LINE_DRAW
 	b8TestDrawLine();
 #endif
+
+	* zpPremultTable = &bitmapWidthPreMult[0];
+	*zpFloodQueueStore = (int*)FLOOD_QUEUE_START;
+	*zpFloodQueueServe = (int*)FLOOD_QUEUE_START;
+	*sPosBank = FIRST_FLOOD_BANK;
+	*rPosBank = FIRST_FLOOD_BANK;
 
 	getLoadedPicture(&loadedPicture, picNum);
 
