@@ -234,11 +234,6 @@ custom_irq_handler:
 lda RAM_BANK
 sta @previousRamBank 
 
-inc _vSyncCounter
-bne @checkIrqDisabled
-inc _vSyncCounter + 1
-
-@checkIrqDisabled:
 lda _disableIrq
 beq @handleDisplayInputLine ;Still allow printf to run
 jmp @defaultIqr
@@ -319,7 +314,9 @@ lda #IRQ_CMD_DONTCHANGE
 sta sendIrqCommand
 
 @vSyncCounter:
-
+inc _vSyncCounter
+bne @resetLatches
+inc _vSyncCounter + 1
 
 @resetLatches:
 lda #(VSYNC_BIT)
