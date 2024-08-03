@@ -483,8 +483,7 @@ rts ; Return from subroutine
 b8AsmPlotVisHLineJump:
 jmp shortLine
 
-.proc _b8AsmPlotVisHLineFast
-    TMP = ZP_TMP_9 + 1   
+.proc _b8AsmPlotVisHLineFast 
     ; Calculate the line length and the loop count
     ; Ensure X1 >= X0 
     inc X1_LOW
@@ -583,17 +582,18 @@ done_plotting:
     rts ; return
 .endproc
 
+.import _fCounter;
 .proc _b8AsmFloodFill
     LX      = ZP_TMP_17 + 1
     RX      = ZP_TMP_18
     Y1      = ZP_TMP_18 + 1
     NX      = ZP_TMP_19 
-    DY      = ZP_TMP_19 + 1
+    ; DY      = ZP_TMP_19 + 1
     X_VAL   = ZP_TMP_20
     Y_VAL   = ZP_TMP_20 + 1
-    sta Y_VAL ; y is in A register
+    sta X_VAL ; x is in A register
     jsr popa
-    sta X_VAL 
+    sta Y_VAL 
 
     lda _picDrawEnabled
     ora _priDrawEnabled
@@ -669,6 +669,50 @@ pop_done:
     rts
 .endproc ; _asm_flood_fill
 
+.import _fCounter
+_b8AsmFloodFillSections:
+.scope
+DATA = ZP_TMP_22
+X_VAL = ZP_TMP_9 + 1
+CLEAN_PIC = ZP_TMP_23
 
+@continue:
+sta CLEAN_PIC
+stx CLEAN_PIC + 1
 
+jsr popax 
+sta @bufferStatus
+stx @bufferStatus + 1
+
+@loop:
+@getX:
+GET_NEXT_ABS DATA, @bufferStatus, #$1
+sta X_VAL
+cmp #$F0
+bcs @return
+
+@getY:
+GET_NEXT_ABS DATA, @bufferStatus, #$1
+tay
+cmp #$F0
+bcs @return
+
+@checkCleanPic:
+lda (CLEAN_PIC)
+and _picDrawEnabled
+bne @cleanPic
+
+tya
+jsr pusha
+lda X_VAL
+jsr _b8AsmFloodFill
+
+jmp @loop
+
+@return:
+
+@cleanPic:
+rts
+@bufferStatus: .word $0
+.endscope
 .endif

@@ -119,6 +119,7 @@ const byte B4_SPLATTER_START[128] = { /* starting bit position */
 
 #pragma wrapped-call (push, trampoline, LINE_DRAW_BANK)
 extern void b8DrawPixel(byte x, byte y);
+extern byte b8AsmFloodFillSections(BufferStatus* bufferStatus, boolean* cleanPic);
 #pragma wrapped-call (pop)
 
 /**************************************************************************
@@ -913,7 +914,7 @@ void b11DrawPic(byte* bankedData, int pLen, boolean okToClearScreen, byte picNum
 			returnedAction = b11RelativeDraw(data, bufferStatus);
 			break;
 		case 0xF8:
-			returnedAction = b11FloodFill(data, bufferStatus, &cleanPic);
+			returnedAction = b8AsmFloodFillSections(bufferStatus, &cleanPic);
 			break;
 		case 0xF9: GET_NEXT(patCode); break;
 		case 0xFA:
