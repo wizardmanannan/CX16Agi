@@ -203,19 +203,7 @@ drawCounter: .word $0
 .endif
 
 .macro b8ScanAndFill
-.local X_VAL
-.local Y_VAL
-.local LX
-.local RX
-.local SCAN_FILL_TMP
-.local leftExpansionLoop
-.local endLeftExpansionLoop
-.local rightExpansionLoop
-.local rightExpansionLoopCheck
-.local endRightExpansionLoop
-.local cannot_fill
-.local end
-
+.scope
 X_VAL = ZP_TMP_10
 Y_VAL = ZP_TMP_10 + 1
 LX = ZP_TMP_12
@@ -365,14 +353,12 @@ inc drawCounter + 1
 
 lda _picDrawEnabled
 beq @pushBelow
-lda LX
-sta X0_LOW
+ldx LX
 lda RX
-sta X1_LOW
+jsr pushax
 lda Y_VAL
-sta Y0
+jsr pusha 
 lda _picColour
-sta color
 
 jsr _b8AsmPlotVisHLineFast
 
@@ -427,6 +413,7 @@ jsr _printfSafe
 PRINT_NEW_LINE
 .endif
 end:
+.endscope
 .endmacro
 
 color           = ZP_TMP_3
@@ -484,7 +471,15 @@ b8AsmPlotVisHLineJump:
 jmp shortLine
 
 .proc _b8AsmPlotVisHLineFast
-    TMP = ZP_TMP_9 + 1   
+    TMP = ZP_TMP_9 + 1
+
+    ; color is in A register
+    sta color
+
+    pop_c_stack Y0
+    pop_c_stack X1_LOW
+    pop_c_stack X0_LOW
+    
     ; Calculate the line length and the loop count
     ; Ensure X1 >= X0 
     inc X1_LOW
