@@ -77,5 +77,3 @@
     .export _b8AsmCanFill
     .export _b8AsmFloodFill
     .export _disableIrq
-    .export _b8AsmFloodFill
-    .export _b8AsmFloodFillSections
