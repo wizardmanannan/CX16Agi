@@ -224,16 +224,17 @@ drawLine: .asciiz "%d drawing a line %p, %p to %p, %p"
 drawCounter: .word $0
 .endif
 
-.macro b8ScanAndFill
-.scope
+.proc _b8ScanAndFill
 X_VAL = ZP_TMP_10
 Y_VAL = ZP_TMP_10 + 1
 LX = ZP_TMP_12
 RX = ZP_TMP_12 + 1
 SCAN_FILL_TMP = ZP_TMP_13
 
-sty Y_VAL
-stx X_VAL
+sta Y_VAL
+
+jsr popa
+sta X_VAL
 
 .ifdef VERBOSE_FILL
 lda #<tryingToFill
@@ -419,7 +420,7 @@ jsr _b8Push
 
 @return:
 .import _b5WaitOnKey
-jmp end
+rts
 cannot_fill:
 
 .ifdef VERBOSE_FILL
@@ -440,9 +441,8 @@ ldy #6
 jsr _printfSafe
 PRINT_NEW_LINE
 .endif
-end:
-.endscope
-.endmacro
+rts
+.endproc
 
 temp            = ZP_TMP_2
 color           = ZP_TMP_2 + 1
@@ -633,6 +633,7 @@ done_plotting:
     DY      = ZP_TMP_19 + 1
     X_VAL   = ZP_TMP_20
     Y_VAL   = ZP_TMP_20 + 1
+
     sta Y_VAL ; y is in A register
     jsr popa
     sta X_VAL 
@@ -651,9 +652,10 @@ done_plotting:
     stz _b8FillStackPointer
 
     ; scan_and_fill(x, y);
-    ldx X_VAL
-    ldy Y_VAL
-    b8ScanAndFill
+    lda X_VAL
+    jsr pusha
+    lda Y_VAL
+    jsr _b8ScanAndFill
 
     ; while (pop(&lx, &rx, &y1)) {
 pop_loop:
@@ -689,9 +691,10 @@ outer_loop_start:
     jmp else_increment_nx
     @start_fill:
     ; scan_and_fill(nx, y1);
-    ldx NX
-    ldy Y1
-    b8ScanAndFill
+    lda NX
+    jsr pusha
+    lda Y1
+    jsr _b8ScanAndFill
     ; while (nx <= rx && can_fill(nx, y1)) {
 inner_loop_start:
     lda NX
