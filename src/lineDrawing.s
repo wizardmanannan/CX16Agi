@@ -5,6 +5,9 @@ LINE_INC = 1
 
 .include "lineDrawing.s"
 
+
+b8LineTable: .res PICTURE_HEIGHT * 2
+
 b8LineTableLow: .res PICTURE_HEIGHT
 b8LineTableHigh: .res PICTURE_HEIGHT
 
@@ -20,6 +23,47 @@ sta VERA_addr_high
 .endmacro
 
 .proc b8SetupLineTable 
+    ; each entry is a 16 bit value
+    lda #<STARTING_BYTE
+    sta b8LineTable
+    lda #>STARTING_BYTE
+    sta b8LineTable+1
+    ldx #0
+    ; load the previous value
+    lda b8LineTable+1,x
+    tay
+    lda b8LineTable,x
+@loop1:
+    clc
+    inx
+    inx
+    adc #<LINE_LENGTH   ; add LINE_LENGTH
+    sta b8LineTable,x
+    tya
+    adc #>LINE_LENGTH   ; add carry
+    sta b8LineTable+1,x
+    tay                 ; load previous value for next iteration
+    lda b8LineTable,x
+    cpx #PICTURE_HEIGHT - 2          ; did we reach 168 lines? 
+    bcc @loop1
+    ldx #0
+@loop2:
+    clc
+    inx
+    inx
+    adc #<LINE_LENGTH   ; add LINE_LENGTH
+    sta b8LineTable+PICTURE_HEIGHT - 2,x
+    tya
+    adc #>LINE_LENGTH   ; add carry
+    sta b8LineTable+PICTURE_HEIGHT - 2 + 1,x
+    tay                 ; load previous value for next iteration
+    lda b8LineTable+PICTURE_HEIGHT - 2,x
+    cpx #PICTURE_HEIGHT - 1            ; did we reach 168 lines?
+    bcc @loop2
+
+    lda b8LineTable
+    lda b8LineTableLow
+    lda b8LineTableHigh
  ; each entry is a 16 bit value
     lda #<STARTING_BYTE
     sta b8LineTableLow
@@ -96,12 +140,24 @@ stz VERA_ctrl
 
     ; make use of the lookup table
     stz VERA_ctrl
-    ldx ypos
-    lda b8LineTableLow,x     ; Get the low byte of the address
+    clc
+    lda ypos
+    asl                 ; (y << 1)
+    bcc @lower_bound    ; if carry is clear, then the result is less than 256
+    tax
+    lda b8LineTable+256,x     ; Get the low byte of the address
     sta tmpZP
-    lda b8LineTableHigh,x   ; Get the high byte of the address
+    lda b8LineTable+256+1,x   ; Get the high byte of the address
     sta tmpZP + 1
-    
+    bra @done
+    @lower_bound:
+    tax
+    lda b8LineTable,x         ; Get the low byte of the address
+    sta tmpZP
+    lda b8LineTable+1,x         ; Get the high byte of the address
+    sta tmpZP + 1
+    @done:
+
     ; set bank back to 0
     ; stz $00
 
@@ -111,6 +167,9 @@ stz VERA_ctrl
     lda xpos_low
     ror                 ; keep result in A
 
+    nop
+    nop
+    nop
     ; Add (y << 5) + (y << 7) + (x0 >> 1)
     clc
     adc tmpZP
@@ -167,14 +226,22 @@ stz VERA_ctrl
     ; make use of the lookup table
     stz VERA_ctrl
     clc
-    ldx YPOS
-  
-    lda b8LineTableLow,x     ; Get the low byte of the address
+    lda YPOS
+    asl                ; (y << 1)
+    bcc @lower_bound    ; if carry is clear, then the result is less than 256
+    tax
+    lda b8LineTable+256,x     ; Get the low byte of the address
     sta TMP
-    lda b8LineTableHigh,x   ; Get the high byte of the address
+    lda b8LineTable+256+1,x   ; Get the high byte of the address
     sta TMP + 1
-        
-    
+    bra @done
+    @lower_bound:
+    tax
+    lda b8LineTable,x         ; Get the low byte of the address
+    sta TMP
+    lda b8LineTable+1,x         ; Get the high byte of the address
+    sta TMP + 1
+    @done:
     lda XPOS
     ; Add (y << 5) + (y << 7) + (x0 >> 1)
     clc
