@@ -133,31 +133,14 @@ stz VERA_ctrl
     vram_addr_l     =  ZP_TMP_21
     vram_addr_h     = ZP_TMP_21 + 1 
 
-    ; set bank to 30
-    ; lda #$30
-    ; sta $00
 
-    lda b8LineTableLow,y     ; Get the low byte of the address
-    sta vram_addr_l
-    lda b8LineTableHigh,y   ; Get the high byte of the address
-    sta vram_addr_h
-
-    ; set bank back to 0
-    ; stz $00
-    
-    ; Add vram_addr + x
     lda xpos
     clc
-    adc vram_addr_l            ; add low byte of (y << 5) + (y << 7)
-    sta vram_addr_l            ; store low byte result (because 160<0xff)
-    lda vram_addr_h
+    adc b8LineTableLow,y             ; add low byte of (y << 5) + (y << 7)
+    sta VERA_addr_low         ; store low byte result (because 160<0xff)
+    lda b8LineTableHigh,y 
     adc #$00                   ; add carry
-    sta vram_addr_h            ; store high byte result
-
-    ; Store the result in the VRAM address register
     sta VERA_addr_high
-    lda vram_addr_l
-    sta VERA_addr_low
     stz VERA_addr_bank ; clear the upper byte of the VRAM address and any auto increment
 .endmacro ; calc_vram_addr_160
 
