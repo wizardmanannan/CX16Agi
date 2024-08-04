@@ -427,6 +427,25 @@ PRINT_NEW_LINE
 end:
 .endmacro
 
+
+lsrTable:
+.byte $00, $00, $00, $00, $01, $01, $01, $01, $02, $02, $02, $02, $03, $03, $03, $03
+.byte $04, $04, $04, $04, $05, $05, $05, $05, $06, $06, $06, $06, $07, $07, $07, $07
+.byte $08, $08, $08, $08, $09, $09, $09, $09, $0A, $0A, $0A, $0A, $0B, $0B, $0B, $0B
+.byte $0C, $0C, $0C, $0C, $0D, $0D, $0D, $0D, $0E, $0E, $0E, $0E, $0F, $0F, $0F, $0F
+.byte $10, $10, $10, $10, $11, $11, $11, $11, $12, $12, $12, $12, $13, $13, $13, $13
+.byte $14, $14, $14, $14, $15, $15, $15, $15, $16, $16, $16, $16, $17, $17, $17, $17
+.byte $18, $18, $18, $18, $19, $19, $19, $19, $1A, $1A, $1A, $1A, $1B, $1B, $1B, $1B
+.byte $1C, $1C, $1C, $1C, $1D, $1D, $1D, $1D, $1E, $1E, $1E, $1E, $1F, $1F, $1F, $1F
+.byte $20, $20, $20, $20, $21, $21, $21, $21, $22, $22, $22, $22, $23, $23, $23, $23
+.byte $24, $24, $24, $24, $25, $25, $25, $25, $26, $26, $26, $26, $27, $27, $27, $27
+.byte $28, $28, $28, $28, $29, $29, $29, $29, $2A, $2A, $2A, $2A, $2B, $2B, $2B, $2B
+.byte $2C, $2C, $2C, $2C, $2D, $2D, $2D, $2D, $2E, $2E, $2E, $2E, $2F, $2F, $2F, $2F
+.byte $30, $30, $30, $30, $31, $31, $31, $31, $32, $32, $32, $32, $33, $33, $33, $33
+.byte $34, $34, $34, $34, $35, $35, $35, $35, $36, $36, $36, $36, $37, $37, $37, $37
+.byte $38, $38, $38, $38, $39, $39, $39, $39, $3A, $3A, $3A, $3A, $3B, $3B, $3B, $3B
+.byte $3C, $3C, $3C, $3C, $3D, $3D, $3D, $3D, $3E, $3E, $3E, $3E, $3F, $3F, $3F, $3F
+
 color           = ZP_TMP_3
 start_mask      = ZP_TMP_5
 end_mask        = ZP_TMP_5 + 1
@@ -482,7 +501,6 @@ jmp shortLine
     sec
     sbc X0_LOW
     sta length_low 
-    lda length_low
     cmp #$10
     bcc b8AsmPlotVisHLineJump
 long_line:
@@ -522,15 +540,11 @@ long_line:
     sta VERA_dc_video
 
     lda length_low
+    tax
+    ldy lsrTable,x
+
     and #3
     tax 
-    lda mask_table,x
-    sta end_mask
-
-    ; Calculate the number of full 8-pixel (32-bit) chunks by dividing by 8 (shift right 3 times)
-    lsr length_low    ; Rotate right the low byte through carry
-    lsr length_low    ; Rotate right again
-  
 
     ; Set address auto-increment to 4 bytes
     lda #%00110000
@@ -538,18 +552,17 @@ long_line:
 
       ; Loop counter
     lda #%0 ; clear the mask
-    ldx length_low
 
 @loop:
     ; Plotting action
     sta VERA_data0
-    dex
+    dey
     bne @loop 
 
 done_plotting:
     ; Handle the last partial chunk 
 
-    lda end_mask
+    lda mask_table,x
     sta VERA_data0
 
     lda #%00000100  ; DCSEL = Mode 2 for enabling cache
