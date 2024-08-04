@@ -494,12 +494,11 @@ long_line:
     CALC_VRAM_ADDR_LINE_DRAW_160 X0_LOW
     
     ldx color
-    lda color_table, x
-    tay
-    sta $9f29
-    sta $9f2A
-    sta $9f2B
-    sta $9f2C
+    ldy color_table, x
+    sty $9f29
+    sty $9f2A
+    sty $9f2B
+    sty $9f2C
 
     stz VERA_ctrl
     lda #%10000
