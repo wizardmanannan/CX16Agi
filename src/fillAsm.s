@@ -367,8 +367,7 @@ lda _picDrawEnabled
 beq @pushBelow
 lda LX
 sta X0_LOW
-lda Y_VAL
-sta Y0
+ldy Y_VAL
 lda _picColour
 sta color
 lda RX
@@ -446,7 +445,7 @@ X0_LOW          = ZP_TMP_8 + 1
 
     stx X1_LOW
     ; *** call the vram address calculation routine ***
-    CALC_VRAM_ADDR_LINE_DRAW_160 X0_LOW, Y0
+    CALC_VRAM_ADDR_LINE_DRAW_160_YREG X0_LOW
 
 
     lda #$10    ; Enable auto-increment
@@ -457,12 +456,6 @@ X0_LOW          = ZP_TMP_8 + 1
     sec
     sbc X0_LOW
     tax
-    ; lda X1_HIGH
-    ; sbc X0_HIGH
-    ; lsr             ; shift right but throw away result
-    ; txa
-    ; ror             ; rotate into low byte
-    ; tax
 
     ldy color
     lda color_table, y
@@ -498,7 +491,7 @@ long_line:
     sta VERA_ctrl
 
     ; *** call the vram address calculation routine ***
-    CALC_VRAM_ADDR_LINE_DRAW_160 X0_LOW, Y0
+    CALC_VRAM_ADDR_LINE_DRAW_160_YREG X0_LOW
     
     ldx color
     lda color_table, x
