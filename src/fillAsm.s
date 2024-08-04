@@ -367,12 +367,11 @@ lda _picDrawEnabled
 beq @pushBelow
 lda LX
 sta X0_LOW
-lda RX
-sta X1_LOW
 lda Y_VAL
 sta Y0
 lda _picColour
 sta color
+lda RX
 
 jsr _b8AsmPlotVisHLineFast
 
@@ -445,8 +444,7 @@ X0_LOW          = ZP_TMP_8 + 1
     sta VERA_ctrl
     stz VERA_dc_video ; Disable cache writing
 
-    lda X0_LOW
-    lda X1_LOW
+    stx X1_LOW
     ; *** call the vram address calculation routine ***
     CALC_VRAM_ADDR_LINE_DRAW_160 X0_LOW, Y0
 
@@ -486,8 +484,8 @@ jmp shortLine
 .proc _b8AsmPlotVisHLineFast 
     ; Calculate the line length and the loop count
     ; Ensure X1 >= X0 
-    inc X1_LOW
-    lda X1_LOW
+    inc
+    tax
     sec
     sbc X0_LOW
     sta length_low 
