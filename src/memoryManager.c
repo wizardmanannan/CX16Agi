@@ -101,22 +101,6 @@ void bankedRamInit()
 		}
 	}
 
-	for (i = 0; i < NO_FLOOD_BANKS; i++)
-	{
-		if ((fp = fopen("agi.cx16.flood", "rb")) != NULL) {
-			RAM_BANK = MEM_MANAGER_STRINGS;
-			sprintf(openFloodFileMessage, B6_OPEN_FLOOD_FILE_MESSAGE_STRING, i + 1, NO_FLOOD_BANKS);
-			printf(openFloodFileMessage);
-			RAM_BANK = FIRST_FLOOD_BANK + i;
-			fread(&BANK_RAM[0], 1, _BANKRAMFLOOD_SIZE__, fp);
-		}
-		else {
-			RAM_BANK = MEM_MANAGER_STRINGS
-			printf(B6_CANNOT_OPN_FLOOD);
-		}
-		fclose(fp);
-	}
-
 	RAM_BANK = previousRamBank;
 }
 #endif //  __CX16__

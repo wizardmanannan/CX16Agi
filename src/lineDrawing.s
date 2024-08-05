@@ -5,8 +5,11 @@ LINE_INC = 1
 
 .include "lineDrawing.s"
 
-b8LineTableLow: .res PICTURE_HEIGHT
-b8LineTableHigh: .res PICTURE_HEIGHT
+b8LineTableVisualLow: .res PICTURE_HEIGHT
+b8LineTableVisualHigh: .res PICTURE_HEIGHT
+
+b8LineTablePriorityLow: .res PICTURE_HEIGHT
+b8LineTablePriorityHigh: .res PICTURE_HEIGHT
 
 
 b8ColorTable:
@@ -19,32 +22,77 @@ adc #>PRIORITY_START
 sta VERA_addr_high
 .endmacro
 
-.proc b8SetupLineTable 
- ; each entry is a 16 bit value
-    lda #<STARTING_BYTE
-    sta b8LineTableLow
-    lda #>STARTING_BYTE
-    sta b8LineTableHigh
-    ldx #0
-    ; load the previous value
-    lda b8LineTableHigh,x
-    tay
-    lda b8LineTableLow,x
-
-    inx
+;starting byte a/x
+TABLE_LOW = ZP_TMP_2
+TABLE_HIGH = ZP_TMP_3
+LINE_LENGTH_ZP = ZP_TMP_4
+.proc b8SetupLineTable
+ ; each entry is a 16 bit value   
+    ldy #$0
+    
+    sta (TABLE_LOW),y
+    pha
+    txa
+    sta (TABLE_HIGH),y
+    pla
+ 
+    iny
 @lineTableLoop:
     clc
-    adc #<LINE_LENGTH   ; add LINE_LENGTH
-    sta b8LineTableLow,x
-    tya
-    adc #>LINE_LENGTH   ; add carry
-    sta b8LineTableHigh,x
-    tay                 ; load previous value for next iteration
-    lda b8LineTableLow,x
+    adc LINE_LENGTH_ZP   ; add LINE_LENGTH
+    sta (TABLE_LOW),y
+    pha
+    txa
+    adc #$0 ; add carry
+    sta (TABLE_HIGH),y
+    tax                 ; load previous value for next iteration
+    pla
     
-    inx
-    cpx #168          ; did we reach 168 lines? 
+    iny
+    cpy #PICTURE_HEIGHT         ; did we reach 168 lines? 
     bne @lineTableLoop
+rts
+.endproc
+
+.proc b8SetupLineTables
+;Setup Visual
+lda #< b8LineTableVisualLow
+sta TABLE_LOW
+lda #> b8LineTableVisualLow
+sta TABLE_LOW + 1
+
+;Setup Visual
+lda #< b8LineTableVisualHigh
+sta TABLE_HIGH
+lda #> b8LineTableVisualHigh
+sta TABLE_HIGH + 1
+
+lda #LINE_LENGTH
+sta LINE_LENGTH_ZP
+
+lda #<STARTING_BYTE
+ldx #>STARTING_BYTE
+jsr b8SetupLineTable
+
+;Setup Priority
+stp
+lda #< b8LineTablePriorityLow
+sta TABLE_LOW
+lda #> b8LineTablePriorityLow
+sta TABLE_LOW + 1
+
+lda #< b8LineTablePriorityHigh
+sta TABLE_HIGH
+lda #> b8LineTablePriorityHigh
+sta TABLE_HIGH + 1
+
+lda #LINE_LENGTH / 2
+sta LINE_LENGTH_ZP
+
+lda #<PRIORITY_START
+ldx #>PRIORITY_START
+jsr b8SetupLineTable
+
 rts
 .endproc
 
@@ -97,9 +145,9 @@ stz VERA_ctrl
     ; make use of the lookup table
     stz VERA_ctrl
     ldx ypos
-    lda b8LineTableLow,x     ; Get the low byte of the address
+    lda b8LineTableVisualLow,x     ; Get the low byte of the address
     sta tmpZP
-    lda b8LineTableHigh,x   ; Get the high byte of the address
+    lda b8LineTableVisualHigh,x   ; Get the high byte of the address
     sta tmpZP + 1
     
     ; set bank back to 0
@@ -136,9 +184,9 @@ stz VERA_ctrl
 
     lda xpos
     clc
-    adc b8LineTableLow,y             ; add low byte of (y << 5) + (y << 7)
+    adc b8LineTableVisualLow,y             ; add low byte of (y << 5) + (y << 7)
     sta VERA_addr_low         ; store low byte result (because 160<0xff)
-    lda b8LineTableHigh,y 
+    lda b8LineTableVisualHigh,y 
     adc #$00                   ; add carry
     sta VERA_addr_high
     stz VERA_addr_bank ; clear the upper byte of the VRAM address and any auto increment
@@ -151,9 +199,9 @@ stz VERA_ctrl
     clc
     ldx YPOS
   
-    lda b8LineTableLow,x     ; Get the low byte of the address
+    lda b8LineTableVisualLow,x     ; Get the low byte of the address
     sta TMP
-    lda b8LineTableHigh,x   ; Get the high byte of the address
+    lda b8LineTableVisualHigh,x   ; Get the high byte of the address
     sta TMP + 1
         
     
