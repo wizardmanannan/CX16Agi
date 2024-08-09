@@ -487,11 +487,11 @@ X0_LOW          = ZP_TMP_8 + 1
 
 .endmacro ; _plot_vis_hline
 
-shortLine:
+shortVisLine:
 b8AsmPlotVisHLine
 rts ; Return from subroutine
 b8AsmPlotVisHLineJump:
-jmp shortLine
+jmp shortVisLine
 
 .proc _b8AsmPlotVisHLineFast 
     ; Calculate the line length and the loop count
@@ -571,6 +571,126 @@ done_plotting:
     
     rts                     ; Return from subroutine
 .endproc ; _plot_vis_hline_fast
+
+; asm_plot_pri_hline(unsigned short x0, unsigned short x1, unsigned char y, unsigned char color);
+; plots 2 pixels at a time for 160x200 mode
+.macro b8AsmPlotPriHLine
+    
+    ; Line is a short line
+    lda #%00000100  ; DCSEL = Mode 2 
+    sta VERA_ctrl
+    stz VERA_dc_video ; Disable cache writing
+
+    stx X1_LOW
+    ; *** call the vram address calculation routine ***
+    CALC_VRAM_ADDR_LINE_DRAW_160 X0_LOW
+
+
+    lda #$10    ; Enable auto-increment
+    sta VERA_addr_bank
+
+    ; Calculate the line length and the loop count / 2      
+    lda X1_LOW
+    sec
+    sbc X0_LOW
+    tax
+
+    ldy color
+    lda color_table, y
+    
+    @loop:
+        ; Plotting action 
+        sta VERA_data0
+        dex
+        bne @loop
+
+.endmacro ; _plot_pri_hline
+
+shortPriLine:
+b8AsmPlotPriHLine
+rts ; Return from subroutine
+b8AsmPlotPriHLineJump:
+jmp shortPriLine
+
+.proc _b8AsmPlotPriHLineFast 
+    ; Calculate the line length and the loop count
+    ; Ensure X1 >= X0 
+    inc
+    tax
+    sec
+    sbc X0_LOW
+    sta length_low 
+    cmp #$10
+    bcc b8AsmPlotPriHLineJump
+long_line:
+    ; Change DCSEL to mode 6 for cache write operations
+    lda #%00001100
+    sta VERA_ctrl
+
+    ; *** call the vram address calculation routine ***
+    CALC_VRAM_ADDR_LINE_DRAW_160 X0_LOW
+    
+    ldx color
+    ldy color_table, x
+    sty $9f29
+    sty $9f2A
+    sty $9f2B
+    sty $9f2C
+
+    stz VERA_ctrl
+    lda #%10000
+    sta VERA_addr_bank
+
+    ldx VERA_addr_low
+    @nonDivideByFourLoopCheck: 
+    txa
+    and #3
+    beq @endLoop
+    sty VERA_data0
+    inx
+    dec length_low
+    bra @nonDivideByFourLoopCheck
+    @endLoop:
+
+    ; Set up VERA for cache operations
+    lda #%00000100  ; DCSEL = Mode 2 for enabling cache
+    sta VERA_ctrl
+    lda #%01000000  ; Enable cache writing
+    sta VERA_dc_video
+
+    lda length_low
+    tax
+    ldy lsrTable,x
+
+    and #3
+    tax 
+
+    ; Set address auto-increment to 4 bytes
+    lda #%00110000
+    sta VERA_addr_bank
+
+      ; Loop counter
+    lda #%0 ; clear the mask
+
+@loop:
+    ; Plotting action
+    sta VERA_data0
+    dey
+    bne @loop 
+
+done_plotting:
+    ; Handle the last partial chunk 
+
+    lda mask_table,x
+    sta VERA_data0
+
+    lda #%00000100  ; DCSEL = Mode 2 for enabling cache
+    sta VERA_ctrl
+    stz VERA_dc_video ; Disable cache writing
+    
+    rts                     ; Return from subroutine
+.endproc ; _plot_pri_hline_fast
+
 
 .proc _b8AsmCanFill
     X_VAL = ZP_TMP_14

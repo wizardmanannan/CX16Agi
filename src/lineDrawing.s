@@ -176,6 +176,9 @@ stz VERA_ctrl
 
 
 .macro CALC_VRAM_ADDR_LINE_DRAW_160 xpos
+    .local vram_addr_l
+    .local vram_addr_h
+    
     ; same as calc_vram_addr without the (x >> 1) part
     vram_addr_l     =  ZP_TMP_21
     vram_addr_h     = ZP_TMP_21 + 1 
