@@ -75,7 +75,6 @@ ldx #>STARTING_BYTE
 jsr b8SetupLineTable
 
 ;Setup Priority
-stp
 lda #< b8LineTablePriorityLow
 sta TABLE_LOW
 lda #> b8LineTablePriorityLow
