@@ -102,18 +102,16 @@ sta VERA_data0         ; Write the color to VRAM
 
 .endmacro
 
-.macro PLOT_PRIORITY PRI_COLOUR
+.macro PLOT_PRIORITY PRI_COLOUR, X_POS
 .local @end
 stz VERA_ctrl
     stz VERA_addr_bank
     
-    clc
-    lsr VERA_addr_high
-    ror VERA_addr_low
+    lda X_POS
+    lsr 
     bcc @evenPriority
     
     @oddPriority:
-    ADD_PRIORITY_OFFSET
     lda VERA_data0
     and #$F0
     ora PRI_COLOUR
@@ -121,7 +119,6 @@ stz VERA_ctrl
     bra @end
     
     @evenPriority:
-    ADD_PRIORITY_OFFSET
     lda VERA_data0
     and #$F
     sta VERA_data0
@@ -131,6 +128,7 @@ stz VERA_ctrl
     asl
     asl
     ora VERA_data0
+
     sta VERA_data0
 @end:
 .endmacro
@@ -147,6 +145,46 @@ stz VERA_ctrl
     lda b8LineTableVisualLow,x     ; Get the low byte of the address
     sta tmpZP
     lda b8LineTableVisualHigh,x   ; Get the high byte of the address
+    sta tmpZP + 1
+    
+    ; set bank back to 0
+    ; stz $00
+
+    ; Calculate (x0 >> 1)
+    lda xpos_high
+    lsr
+    lda xpos_low
+    ror                 ; keep result in A
+
+    ; Add (y << 5) + (y << 7) + (x0 >> 1)
+    clc
+    adc tmpZP
+    sta tmpZP
+    lda tmpZP + 1
+    adc #$00            ; keep result in A
+
+    ; Store the result in the VRAM address register
+    sta VERA_addr_high
+    lda tmpZP
+
+    sta VERA_addr_low
+    stz VERA_addr_bank ; Disable auto-increment, set address bank to 0
+.endscope
+.endmacro ; CALC_VRAM_ADDR
+
+
+.macro CALC_VRAM_ADDR_PRI_LINE_DRAW xpos_low, xpos_high, ypos, tmpZP ;Set any value to the last param to disable xTimes2
+.scope
+    ; set bank to 30 TODO: use rodata or somewhere else?
+    ; lda #$30
+    ; sta $00
+
+    ; make use of the lookup table
+    stz VERA_ctrl
+    ldx ypos
+    lda b8LineTablePriorityLow,x     ; Get the low byte of the address
+    sta tmpZP
+    lda b8LineTablePriorityHigh,x   ; Get the high byte of the address
     sta tmpZP + 1
     
     ; set bank back to 0
@@ -223,14 +261,40 @@ stz VERA_ctrl
     stz VERA_addr_bank ; Disable auto-increment, set address bank to 0
 .endmacro ; CALC_VRAM_ADDR
 
+
+.macro CALC_VRAM_ADDR_PRIORITY XPOS, YPOS, TMP
+    ; make use of the lookup table
+    stz VERA_ctrl
+    clc
+    ldx YPOS
+    
+    lda b8LineTablePriorityLow,x     ; Get the low byte of the address
+    sta TMP
+    lda b8LineTablePriorityHigh,x   ; Get the high byte of the address
+    sta TMP + 1
+        
+    
+    lda XPOS
+    lsr
+    clc
+    adc TMP
+    sta TMP
+    lda #$0
+    adc TMP + 1           ; keep result in A
+
+    ; Store the result in the VRAM address register
+    sta VERA_addr_high
+    lda TMP
+
+    sta VERA_addr_low
+    stz VERA_addr_bank ; Disable auto-increment, set address bank to 0
+.endmacro ; CALC_VRAM_ADDR
+
 .import _picColour, _priColour, _picDrawEnabled, _priDrawEnabled
  X_POS = ZP_TMP_2
  Y_POS = ZP_TMP_2 + 1
  ;void drawVisualPixel(byte x, byte y)
  _b8DrawPixel:
-    nop
-    nop
-    nop
     sta Y_POS
     jsr popa
     sta X_POS
@@ -247,9 +311,9 @@ stz VERA_ctrl
     lda _priDrawEnabled
     beq @end
 
-    CALC_VRAM_ADDR X_POS, Y_POS, ZP_TMP_5
+    CALC_VRAM_ADDR_PRIORITY X_POS, Y_POS, ZP_TMP_5
 
-    PLOT_PRIORITY _priColour
+    PLOT_PRIORITY _priColour, X_POS
 
     @end:
     rts
@@ -431,9 +495,9 @@ skip_vis:
     lda X1_HIGH
     rol
     sta X_HIGH_TEMP
-    CALC_VRAM_ADDR_LINE_DRAW X_LOW_TEMP, X_HIGH_TEMP, Y1_VAL, Y_VAL_TEMP
-    
-    PLOT_PRIORITY PRI_COLOUR
+    CALC_VRAM_ADDR_PRI_LINE_DRAW X_LOW_TEMP, X_HIGH_TEMP, Y1_VAL, Y_VAL_TEMP
+
+    PLOT_PRIORITY PRI_COLOUR, X_LOW_TEMP
 
 skip_pri:
 
