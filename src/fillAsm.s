@@ -860,9 +860,9 @@ and _picDrawEnabled
 bne @cleanPic
 
 tya
-;jsr pusha
-;lda X_VAL
-;jsr _b8AsmFloodFill
+jsr pusha
+lda X_VAL
+jsr _b8AsmFloodFill
 
 jmp @loop
 

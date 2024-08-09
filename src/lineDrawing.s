@@ -133,7 +133,7 @@ stz VERA_ctrl
 @end:
 .endmacro
 
-.macro CALC_VRAM_ADDR_LINE_DRAW xpos_low, xpos_high, ypos, tmpZP ;Set any value to the last param to disable xTimes2
+.macro CALC_VRAM_ADDR_LINE_DRAW xpos_low, ypos, tmpZP ;Set any value to the last param to disable xTimes2
 .scope
     ; set bank to 30 TODO: use rodata or somewhere else?
     ; lda #$30
@@ -150,9 +150,6 @@ stz VERA_ctrl
     ; set bank back to 0
     ; stz $00
 
-    ; Calculate (x0 >> 1)
-    lda xpos_high
-    lsr
     lda xpos_low
     ror                 ; keep result in A
 
@@ -333,7 +330,6 @@ stz VERA_ctrl
     E2_LOW          = ZP_TMP_8 
     E2_HIGH         = ZP_TMP_8 + 1
     X_LOW_TEMP      = ZP_TMP_9
-    X_HIGH_TEMP     = ZP_TMP_9 + 1
 
     X1_LOW          = ZP_TMP_10
     X1_HIGH         = ZP_TMP_10 + 1
@@ -473,10 +469,7 @@ loop_start:
     lda X1_LOW
     asl
     sta X_LOW_TEMP
-    lda X1_HIGH
-    rol
-    sta X_HIGH_TEMP
-    CALC_VRAM_ADDR_LINE_DRAW X_LOW_TEMP, X_HIGH_TEMP, Y1_VAL, Y_VAL_TEMP
+    CALC_VRAM_ADDR_LINE_DRAW X_LOW_TEMP, Y1_VAL, Y_VAL_TEMP
 
     PLOT_VIS PIC_COLOUR
 
