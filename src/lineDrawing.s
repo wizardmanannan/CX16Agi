@@ -178,7 +178,7 @@ stz VERA_ctrl
     ; set bank to 30 TODO: use rodata or somewhere else?
     ; lda #$30
     ; sta $00
-
+    
     ; make use of the lookup table
     stz VERA_ctrl
     ldx ypos
@@ -186,10 +186,9 @@ stz VERA_ctrl
     sta tmpZP
     lda b8LineTablePriorityHigh,x   ; Get the high byte of the address
     sta tmpZP + 1
-    
+
     ; set bank back to 0
     ; stz $00
-
     ; Calculate (x0 >> 1)
     lda xpos_high
     lsr
@@ -209,6 +208,7 @@ stz VERA_ctrl
 
     sta VERA_addr_low
     stz VERA_addr_bank ; Disable auto-increment, set address bank to 0
+
 .endscope
 .endmacro ; CALC_VRAM_ADDR
 
@@ -489,15 +489,9 @@ skip_vis:
     jmp skip_pri  ; Jump to @skip_pri if PRI_DRAW_ENABLED is zero
 
 @plot_pri: 
-    lda X1_LOW
-    asl
-    sta X_LOW_TEMP
-    lda X1_HIGH
-    rol
-    sta X_HIGH_TEMP
-    CALC_VRAM_ADDR_PRI_LINE_DRAW X_LOW_TEMP, X_HIGH_TEMP, Y1_VAL, Y_VAL_TEMP
+    CALC_VRAM_ADDR_PRI_LINE_DRAW X1_LOW, X1_HIGH, Y1_VAL, Y_VAL_TEMP
 
-    PLOT_PRIORITY PRI_COLOUR, X_LOW_TEMP
+    PLOT_PRIORITY PRI_COLOUR, X1_LOW
 
 skip_pri:
 
