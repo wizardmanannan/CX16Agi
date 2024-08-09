@@ -170,7 +170,7 @@ stz VERA_ctrl
 .endmacro ; CALC_VRAM_ADDR
 
 
-.macro CALC_VRAM_ADDR_PRI_LINE_DRAW xpos_low, xpos_high, ypos, tmpZP ;Set any value to the last param to disable xTimes2
+.macro CALC_VRAM_ADDR_PRI_LINE_DRAW xpos_low, ypos, tmpZP ;Set any value to the last param to disable xTimes2
 .scope
     ; set bank to 30 TODO: use rodata or somewhere else?
     ; lda #$30
@@ -184,13 +184,8 @@ stz VERA_ctrl
     lda b8LineTablePriorityHigh,x   ; Get the high byte of the address
     sta tmpZP + 1
 
-    ; set bank back to 0
-    ; stz $00
-    ; Calculate (x0 >> 1)
-    lda xpos_high
-    lsr
     lda xpos_low
-    ror                 ; keep result in A
+    lsr                 ; keep result in A
 
     ; Add (y << 5) + (y << 7) + (x0 >> 1)
     clc
@@ -482,7 +477,7 @@ skip_vis:
     jmp skip_pri  ; Jump to @skip_pri if PRI_DRAW_ENABLED is zero
 
 @plot_pri: 
-    CALC_VRAM_ADDR_PRI_LINE_DRAW X1_LOW, X1_HIGH, Y1_VAL, Y_VAL_TEMP
+    CALC_VRAM_ADDR_PRI_LINE_DRAW X1_LOW, Y1_VAL, Y_VAL_TEMP
 
     PLOT_PRIORITY PRI_COLOUR, X1_LOW
 
