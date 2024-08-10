@@ -632,9 +632,9 @@ jmp shortPriLine
 _b8TestAsmPlotPriHLineFast:
  lda #5
  sta color
- lda #0
+ lda #2
  sta $ba
- lda #167
+ lda #159
  ldy #$0
  jsr _b8AsmPlotPriHLineFast
  stp
@@ -670,7 +670,6 @@ rts
     ldx #%10000
     stx VERA_addr_bank
     
-    dec length_low
     sta VERA_data0
     
     @lineLengthCheck:
@@ -702,7 +701,6 @@ long_line:
     sty VERA_data0
     inx
     dec length_low
-    dec length_low
     bra @nonDivideByFourLoopCheck
     @endLoop:
 
@@ -714,6 +712,7 @@ long_line:
 
     lda length_low
     tax
+    stp
     ldy lsrTable,x
     and #3
     tax 
@@ -739,8 +738,7 @@ done_plotting:
     sta VERA_ctrl
     stz VERA_dc_video ; Disable cache writing
     
-    stp
-
+    STP
     rts                     ; Return from subroutine
 .endproc ; _plot_pri_hline_fast
 
