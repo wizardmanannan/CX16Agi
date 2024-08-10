@@ -602,11 +602,6 @@ done_plotting:
     sta VERA_ctrl
     stz VERA_dc_video ; Disable cache writing
 
-    stx X1_LOW
-    ; *** call the vram address calculation routine ***
-    CALC_VRAM_ADDR_LINE_DRAW_160 X0_LOW
-
-
     lda #$10    ; Enable auto-increment
     sta VERA_addr_bank
 
@@ -637,7 +632,7 @@ jmp shortPriLine
 _b8TestAsmPlotPriHLineFast:
  lda #5
  sta color
- lda #1
+ lda #0
  sta $ba
  lda #167
  ldy #$0
@@ -650,12 +645,14 @@ rts
 .proc _b8AsmPlotPriHLineFast 
     ; Calculate the line length and the loop count
     ; Ensure X1 >= X0    
-    tax
+    sta X1_LOW
     sec
     sbc X0_LOW
-
     inc
-    lsr ;Half a priority lines takes half as many bytes
+
+    lsr
+
+    lsr X0_LOW ;Half a priority lines takes half as many bytes
     php
 
     sta length_low 
@@ -669,11 +666,13 @@ rts
     lda VERA_data0
     and #$F0
     ora color
+    
     ldx #%10000
     stx VERA_addr_bank
-    sta VERA_data0  
-
-
+    
+    dec length_low
+    sta VERA_data0
+    
     @lineLengthCheck:
     cmp #$10
     bcc b8AsmPlotPriHLineJump
@@ -715,8 +714,7 @@ long_line:
 
     lda length_low
     tax
-    lda lsrTable,x
-    tay
+    ldy lsrTable,x
     and #3
     tax 
 
@@ -726,16 +724,14 @@ long_line:
 
       ; Loop counter
     lda #%0 ; clear the mask
-    
+
 @loop:
     ; Plotting action
     sta VERA_data0
     dey
     bne @loop 
-
 done_plotting:
     ; Handle the last partial chunk 
-    stp
     lda pri_mask_table,x
     sta VERA_data0
 
@@ -743,6 +739,8 @@ done_plotting:
     sta VERA_ctrl
     stz VERA_dc_video ; Disable cache writing
     
+    stp
+
     rts                     ; Return from subroutine
 .endproc ; _plot_pri_hline_fast
 
