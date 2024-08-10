@@ -307,7 +307,7 @@ void main()
 
     RAM_BANK = MEKA_BANK;
     b6Initialise();
- 
+    
     while (TRUE) {
         /* Cycle initiator. Controlled by delay variable (var[10). */
         if (counter >= var[10]) {

@@ -224,6 +224,28 @@ stz VERA_ctrl
     stz VERA_addr_bank ; clear the upper byte of the VRAM address and any auto increment
 .endmacro ; calc_vram_addr_160
 
+.macro CALC_VRAM_ADDR_PRIORITY_160 xpos
+    .local vram_addr_l
+    .local vram_addr_h
+    
+    ; same as calc_vram_addr without the (x >> 1) part
+    vram_addr_l     =  ZP_TMP_21
+    vram_addr_h     = ZP_TMP_21 + 1 
+
+
+    lda xpos
+    lsr
+
+    clc
+    adc b8LineTablePriorityLow,y             ; add low byte of (y << 5) + (y << 7)
+    sta VERA_addr_low         ; store low byte result (because 160<0xff)
+    lda b8LineTablePriorityHigh,y 
+    adc #$00                   ; add carry
+    sta VERA_addr_high
+    stz VERA_addr_bank ; clear the upper byte of the VRAM address and any auto increment
+.endmacro ; calc_vram_addr_160
+
+
 
 .macro CALC_VRAM_ADDR XPOS, YPOS, TMP
     ; make use of the lookup table

@@ -12,6 +12,9 @@
 
 #pragma wrapped-call (push, trampoline, LINE_DRAW_BANK)
 extern void b8DrawLine(unsigned short x1, unsigned char y1, unsigned short x2, unsigned char y2);
+
+extern void b8TestAsmPlotPriHLineFast();
+
 #pragma wrapped-call (pop)
 
 #define PIC_DEFAULT 15
@@ -846,6 +849,8 @@ void b11DrawPic(byte* bankedData, int pLen, boolean okToClearScreen, byte picNum
 	}
 	disableIrq = TRUE;
 
+	b8TestAsmPlotPriHLineFast();
+
 #ifdef TEST_OK_TO_FILL
 	testOkToFill();
 #endif
@@ -882,7 +887,7 @@ void b11DrawPic(byte* bankedData, int pLen, boolean okToClearScreen, byte picNum
 			break;
 		case 0xF1: picDrawEnabled = FALSE; break;
 		case 0xF2: GET_NEXT(priColour);
-			priDrawEnabled = FALSE;
+			priDrawEnabled = TRUE;
 			break;
 		case 0xF3: priDrawEnabled = FALSE; break;
 		case 0xF4:

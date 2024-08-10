@@ -19,6 +19,13 @@ mask_table:
     .byte %11000000 ; 3 $3F
     .byte %11111111; 0 $00
 
+pri_mask_table:
+    .byte %11111111 ; 0 $00
+    .byte %11111101 ; 1 $03
+    .byte %00111111; 2 $0F
+    .byte %11110100; 3 $3F
+    .byte %11111111; 0 $00
+
 
 .macro pop_c_stack addr
     ldy #$00
@@ -364,7 +371,7 @@ inc drawCounter + 1
 ;        }
 
 lda _picDrawEnabled
-beq @pushBelow
+beq @priDraw
 lda LX
 sta X0_LOW
 ldy Y_VAL
@@ -373,6 +380,19 @@ sta color
 lda RX
 
 jsr _b8AsmPlotVisHLineFast
+
+@priDraw:
+lda _priDrawEnabled
+beq @pushBelow
+lda LX
+sta X0_LOW
+ldy Y_VAL
+lda _priColour
+sta color
+lda RX
+
+jsr _b8AsmPlotPriHLineFast
+
 
 ;JSRFAR _b5WaitOnKey, 5
 
@@ -493,6 +513,7 @@ rts ; Return from subroutine
 b8AsmPlotVisHLineJump:
 jmp shortVisLine
 
+;X1: a Y0: y color: color X0: X0_LOW
 .proc _b8AsmPlotVisHLineFast 
     ; Calculate the line length and the loop count
     ; Ensure X1 >= X0 
@@ -541,7 +562,7 @@ long_line:
 
     lda length_low
     tax
-    ldy lsrTable,x
+    ldy lsrTable,x ;To Do check if we shouldn't instead by anding the result of this with 3
 
     and #3
     tax 
@@ -612,14 +633,48 @@ rts ; Return from subroutine
 b8AsmPlotPriHLineJump:
 jmp shortPriLine
 
+.export _b8TestAsmPlotPriHLineFast
+_b8TestAsmPlotPriHLineFast:
+ lda #5
+ sta color
+ lda #1
+ sta $ba
+ lda #167
+ ldy #$0
+ jsr _b8AsmPlotPriHLineFast
+ stp
+rts
+
+
+;X1: a Y0: y color: color X0: X0_LOW
 .proc _b8AsmPlotPriHLineFast 
     ; Calculate the line length and the loop count
-    ; Ensure X1 >= X0 
-    inc
+    ; Ensure X1 >= X0    
     tax
     sec
     sbc X0_LOW
+
+    inc
+    lsr ;Half a priority lines takes half as many bytes
+    php
+
     sta length_low 
+
+    CALC_VRAM_ADDR_PRIORITY_160 X0_LOW
+    
+    plp
+    bcc @lineLengthCheck
+
+    stz VERA_addr_bank
+    lda VERA_data0
+    and #$F0
+    ora color
+    ldx #%10000
+    stx VERA_addr_bank
+    sta VERA_data0  
+
+
+    @lineLengthCheck:
     cmp #$10
     bcc b8AsmPlotPriHLineJump
 long_line:
@@ -628,7 +683,6 @@ long_line:
     sta VERA_ctrl
 
     ; *** call the vram address calculation routine ***
-    CALC_VRAM_ADDR_LINE_DRAW_160 X0_LOW
     
     ldx color
     ldy color_table, x
@@ -649,6 +703,7 @@ long_line:
     sty VERA_data0
     inx
     dec length_low
+    dec length_low
     bra @nonDivideByFourLoopCheck
     @endLoop:
 
@@ -660,8 +715,8 @@ long_line:
 
     lda length_low
     tax
-    ldy lsrTable,x
-
+    lda lsrTable,x
+    tay
     and #3
     tax 
 
@@ -671,7 +726,7 @@ long_line:
 
       ; Loop counter
     lda #%0 ; clear the mask
-
+    
 @loop:
     ; Plotting action
     sta VERA_data0
@@ -680,8 +735,8 @@ long_line:
 
 done_plotting:
     ; Handle the last partial chunk 
-
-    lda mask_table,x
+    stp
+    lda pri_mask_table,x
     sta VERA_data0
 
     lda #%00000100  ; DCSEL = Mode 2 for enabling cache
@@ -859,10 +914,10 @@ lda (CLEAN_PIC)
 and _picDrawEnabled
 bne @cleanPic
 
-tya
-jsr pusha
-lda X_VAL
-jsr _b8AsmFloodFill
+; tya
+; jsr pusha
+; lda X_VAL
+; jsr _b8AsmFloodFill
 
 jmp @loop
 
