@@ -632,9 +632,9 @@ jmp shortPriLine
 _b8TestAsmPlotPriHLineFast:
  lda #5
  sta color
- lda #2
+ lda #0
  sta $ba
- lda #159
+ lda #158
  ldy #$0
  jsr _b8AsmPlotPriHLineFast
  stp
@@ -646,6 +646,10 @@ rts
     ; Calculate the line length and the loop count
     ; Ensure X1 >= X0    
     sta X1_LOW
+    
+    CALC_VRAM_ADDR_PRIORITY_160 X0_LOW
+    
+    lda X1_LOW
     sec
     sbc X0_LOW
     inc
@@ -656,8 +660,6 @@ rts
     php
 
     sta length_low 
-
-    CALC_VRAM_ADDR_PRIORITY_160 X0_LOW
     
     plp
     bcc @lineLengthCheck
@@ -712,7 +714,6 @@ long_line:
 
     lda length_low
     tax
-    stp
     ldy lsrTable,x
     and #3
     tax 
@@ -729,9 +730,10 @@ long_line:
     sta VERA_data0
     dey
     bne @loop 
+    stp
 done_plotting:
     ; Handle the last partial chunk 
-    lda pri_mask_table,x
+    lda mask_table,x
     sta VERA_data0
 
     lda #%00000100  ; DCSEL = Mode 2 for enabling cache
