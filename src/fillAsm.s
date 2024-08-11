@@ -19,12 +19,20 @@ mask_table:
     .byte %11000000 ; 3 $3F
     .byte %11111111; 0 $00
 
-pri_mask_table:
-    .byte %11111111 ; 0 $00
-    .byte %11111101 ; 1 $03
-    .byte %00111111; 2 $0F
-    .byte %11110100; 3 $3F
-    .byte %11111111; 0 $00
+
+pri_mask_table_odd_ending:
+    .byte %11111101 ; 0 $00
+    .byte %11110100 ; 1 $03
+    .byte %11010000 ; 2 $0F
+    .byte %01000000 ; 3 $3F
+    .byte %11111101; 0 $00
+
+; pri_mask_table:
+;     .byte %11111111 ; 0 $00
+;     .byte %11111101 ; 1 $03
+;     .byte %00111111; 2 $0F
+;     .byte %11110100; 3 $3F
+;     .byte %11111111; 0 $00
 
 
 .macro pop_c_stack addr
@@ -634,7 +642,7 @@ _b8TestAsmPlotPriHLineFast:
  sta color
  lda #0
  sta $ba
- lda #158
+ lda #154
  ldy #$0
  jsr _b8AsmPlotPriHLineFast
  stp
@@ -655,13 +663,12 @@ rts
     inc
 
     lsr
+    php
 
     lsr X0_LOW ;Half a priority lines takes half as many bytes
-    php
 
     sta length_low 
     
-    plp
     bcc @lineLengthCheck
 
     stz VERA_addr_bank
@@ -730,16 +737,24 @@ long_line:
     sta VERA_data0
     dey
     bne @loop 
-    stp
 done_plotting:
     ; Handle the last partial chunk 
+
+    plp
+    bcs @oddEnding
+
+    @evenEnding:
     lda mask_table,x
+    bra @writeMask
+    @oddEnding:
+    lda pri_mask_table_odd_ending,x
+    @writeMask:
     sta VERA_data0
 
     lda #%00000100  ; DCSEL = Mode 2 for enabling cache
     sta VERA_ctrl
     stz VERA_dc_video ; Disable cache writing
-    
+     
     STP
     rts                     ; Return from subroutine
 .endproc ; _plot_pri_hline_fast
