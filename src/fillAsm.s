@@ -640,9 +640,9 @@ jmp shortPriLine
 _b8TestAsmPlotPriHLineFast:
  lda #5
  sta color
- lda #0
+ lda #1
  sta $ba
- lda #154
+ lda #158
  ldy #$0
  jsr _b8AsmPlotPriHLineFast
  stp
@@ -662,24 +662,29 @@ rts
     sbc X0_LOW
     inc
 
-    lsr
-    php
-
     lsr X0_LOW ;Half a priority lines takes half as many bytes
+    bcc @length_half
 
-    sta length_low 
-    
-    bcc @lineLengthCheck
+    tay
 
     stz VERA_addr_bank
     lda VERA_data0
     and #$F0
     ora color
-    
+   
     ldx #%10000
     stx VERA_addr_bank
-    
+    dey    
     sta VERA_data0
+
+    tya
+
+@length_half:
+    lsr
+    php
+    sta length_low 
+    
+    bcc @lineLengthCheck
     
     @lineLengthCheck:
     cmp #$10
