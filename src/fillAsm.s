@@ -12,6 +12,13 @@ GENERAL_TMP = ZP_TMP_13
 color_table:
     .byte $00, $11, $22, $33, $44, $55, $66, $77, $88, $99, $AA, $BB, $CC, $DD, $EE, $FF
 
+;Useful when updating only one nibble for the priority 
+odd_color_table:
+    .byte $00, $01, $02, $03, $04, $05, $06, $07, $08, $09, $0A, $0B, $0C, $0D, $0E, $0F
+
+even_color_table:
+    .byte $F0, $10, $20, $30, $40, $50, $60, $70, $80, $90, $A0, $B0, $C0, $D0, $E0, $F0
+
 mask_table:
     .byte %11111111 ; 0 $00
     .byte %11111100 ; 1 $03
@@ -606,27 +613,51 @@ done_plotting:
 .macro b8AsmPlotPriHLine
     
     ; Line is a short line
-    lda #%00000100  ; DCSEL = Mode 2 
-    sta VERA_ctrl
+    ldx #%00000100  ; DCSEL = Mode 2 
+    stx VERA_ctrl
     stz VERA_dc_video ; Disable cache writing
 
-    lda #$10    ; Enable auto-increment
-    sta VERA_addr_bank
+    lsr X0_LOW
+    bcc @autoIncrement
 
-    ; Calculate the line length and the loop count / 2      
-    lda X1_LOW
-    sec
-    sbc X0_LOW
-    tax
+    stz VERA_addr_bank
+    tay
+    lda VERA_data0
+    and #$F0
+    ora color
+    ldx #$10    ; Enable auto-increment
+    stx VERA_addr_bank
+    sta VERA_data0
+    dey
+    cpy #1
+    beq @lastNibble
+    tya
+    bra @setColor
 
+    @autoIncrement:
+    ldy #$10    ; Enable auto-increment
+    sty VERA_addr_bank
+
+    @setColor:
     ldy color
-    lda color_table, y
-    
+    ldx color_table, y
+
     @loop:
         ; Plotting action 
-        sta VERA_data0
-        dex
+        stx VERA_data0
+        dec
+        dec
+        beq @end
+        cmp #$1
         bne @loop
+    @lastNibble:
+        stz VERA_addr_bank
+        lda VERA_data0
+        and #$0F
+        ldy color
+        ora even_color_table,y
+        sta VERA_data0       
+    @end:
 
 .endmacro ; _plot_pri_hline
 
@@ -635,6 +666,9 @@ b8AsmPlotPriHLine
 rts ; Return from subroutine
 b8AsmPlotPriHLineJump:
 jmp shortPriLine
+singlePriPixelJump:
+PLOT_PRIORITY color, X0_LOW
+rts
 
 .export _b8TestAsmPlotPriHLineFast
 _b8TestAsmPlotPriHLineFast:
@@ -642,7 +676,7 @@ _b8TestAsmPlotPriHLineFast:
  sta color
  lda #1
  sta $ba
- lda #158
+ lda #1
  ldy #$0
  jsr _b8AsmPlotPriHLineFast
  stp
@@ -661,6 +695,12 @@ rts
     sec
     sbc X0_LOW
     inc
+    stp
+
+    cmp #1
+    beq singlePriPixelJump
+    cmp #7
+    bcc b8AsmPlotPriHLineJump
 
     lsr X0_LOW ;Half a priority lines takes half as many bytes
     bcc @length_half
@@ -684,11 +724,6 @@ rts
     php
     sta length_low 
     
-    bcc @lineLengthCheck
-    
-    @lineLengthCheck:
-    cmp #$10
-    bcc b8AsmPlotPriHLineJump
 long_line:
     ; Change DCSEL to mode 6 for cache write operations
     lda #%00001100
