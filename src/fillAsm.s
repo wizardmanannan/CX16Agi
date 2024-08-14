@@ -103,17 +103,26 @@ rts
     and #$0F ; mask out the top 4 bits
     sta VIS_PIXEL
 
-    ; get the pri pixel at the current x and y
-    ; Add 0x8000 to the VERA::ADDR
-    lda VERA_addr_high
-    clc
-    adc #$80
-    sta VERA_addr_high
-    lda VERA_addr_bank
-    adc #$00
-    sta VERA_addr_bank
+    CALC_VRAM_ADDR_PRIORITY_160 X0_LOW
+    lda X_VAL
+    lsr 
+    bcc @even
+    
+    @odd:
     lda VERA_data0
-    and #$0F ; mask out the top 4 bits
+    and #$0F
+    sta PRI_PIXEL
+    bra @storePriority
+
+    @even:
+    lda VERA_data0
+    and #$F0
+    lsr
+    lsr
+    lsr
+    lsr
+    sta PRI_PIXEL
+    @storePriority:
     sta PRI_PIXEL
 
     ; is the current vis colour 15 (white)?
