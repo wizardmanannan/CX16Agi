@@ -727,7 +727,7 @@ rts
 
     cmp #1
     beq singlePriPixelJump
-    cmp #8
+    cmp #$F
     bcc b8AsmPlotPriHLineJump
 
     lsr X0_LOW ;Half a priority lines takes half as many bytes
