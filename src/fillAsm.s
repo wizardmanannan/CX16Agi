@@ -985,10 +985,10 @@ lda (CLEAN_PIC)
 and _picDrawEnabled
 bne @cleanPic
 
-; tya
-; jsr pusha
-; lda X_VAL
-; jsr _b8AsmFloodFill
+tya
+jsr pusha
+lda X_VAL
+jsr _b8AsmFloodFill
 
 jmp @loop
 
