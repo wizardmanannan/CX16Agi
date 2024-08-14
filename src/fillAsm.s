@@ -9,6 +9,8 @@ GENERAL_TMP = ZP_TMP_13
 .include "lineDrawing.s"
 .include "fillStack.s"
 
+.import _bDbgShowPriority
+
 color_table:
     .byte $00, $11, $22, $33, $44, $55, $66, $77, $88, $99, $AA, $BB, $CC, $DD, $EE, $FF
 
@@ -40,6 +42,37 @@ pri_mask_table_odd_ending:
 ;     .byte %00111111; 2 $0F
 ;     .byte %11110100; 3 $3F
 ;     .byte %11111111; 0 $00
+
+.ifdef DEBUG
+.export _b8TestAsmPlotPriHLineFast
+_b8TestAsmPlotPriHLineFast:
+ lda #5
+ sta color
+
+ ldx #$0
+ ldy #$0
+@loop:
+ txa
+ sta $ba
+ 
+ phx
+ phy
+ lda #159
+ jsr _b8AsmPlotPriHLineFast
+ ply
+ plx
+ inx
+ iny
+ cpx #160
+ bne @loop
+
+ TRAMPOLINE _debugBank, _bDbgShowPriority
+
+  @loopForever:
+ bra @loopForever
+
+rts
+.endif
 
 
 .macro pop_c_stack addr
@@ -670,19 +703,6 @@ singlePriPixelJump:
 PLOT_PRIORITY color, X0_LOW
 rts
 
-.export _b8TestAsmPlotPriHLineFast
-_b8TestAsmPlotPriHLineFast:
- lda #5
- sta color
- lda #1
- sta $ba
- lda #1
- ldy #$0
- jsr _b8AsmPlotPriHLineFast
- stp
-rts
-
-
 ;X1: a Y0: y color: color X0: X0_LOW
 .proc _b8AsmPlotPriHLineFast 
     ; Calculate the line length and the loop count
@@ -695,11 +715,10 @@ rts
     sec
     sbc X0_LOW
     inc
-    stp
 
     cmp #1
     beq singlePriPixelJump
-    cmp #7
+    cmp #8
     bcc b8AsmPlotPriHLineJump
 
     lsr X0_LOW ;Half a priority lines takes half as many bytes
@@ -795,7 +814,6 @@ done_plotting:
     sta VERA_ctrl
     stz VERA_dc_video ; Disable cache writing
      
-    STP
     rts                     ; Return from subroutine
 .endproc ; _plot_pri_hline_fast
 

@@ -9,11 +9,14 @@
 
 #include "picture.h"
 //#define TEST_LINE_DRAW
+//#define TEST_PRIORITY_DRAW_LINES;
 
 #pragma wrapped-call (push, trampoline, LINE_DRAW_BANK)
 extern void b8DrawLine(unsigned short x1, unsigned char y1, unsigned short x2, unsigned char y2);
 
+#ifdef TEST_PRIORITY_DRAW_LINES
 extern void b8TestAsmPlotPriHLineFast();
+#endif // TEST_PRIORITY_DRAW_LINES
 
 #pragma wrapped-call (pop)
 
@@ -849,7 +852,9 @@ void b11DrawPic(byte* bankedData, int pLen, boolean okToClearScreen, byte picNum
 	}
 	disableIrq = TRUE;
 
+#ifdef TEST_PRIORITY_DRAW_LINES
 	b8TestAsmPlotPriHLineFast();
+#endif // b8TestAsmPlotPriHLineFast
 
 #ifdef TEST_OK_TO_FILL
 	testOkToFill();
