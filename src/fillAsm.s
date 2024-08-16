@@ -104,7 +104,7 @@ rts
     sta VIS_PIXEL
 
     CALC_VRAM_ADDR_PRIORITY_160 x_val
-    lda X_VAL
+    lda x_val
     lsr 
     bcc @even
     
