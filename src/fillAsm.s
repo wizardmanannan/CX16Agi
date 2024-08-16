@@ -103,6 +103,26 @@ rts
     and #$0F ; mask out the top 4 bits
     sta VIS_PIXEL
 
+    ; is the current vis colour 15 (white)?
+    ; if (vis_colour == 15) return 0;
+    lda _picColour
+    cmp #15
+    beq cannot_fill
+
+    ; is priority disabled and the current vis pixel not white?
+    ; if (!pri_enabled && (asm_get_vis_pixel(x, y) != 15)) return 0;
+    lda _priDrawEnabled
+    bne @pri_enabled_check ; if priority is enabled, skip this check
+    lda VIS_PIXEL
+    cmp #15
+    bne cannot_fill
+
+@pri_enabled_check:
+    ; is priority enabled and vis disabled and the current pri pixel not red?
+    ; if (pri_enabled && !vis_enabled && (asm_get_pri_pixel(x, y) != 4)) return 0;
+    lda _picDrawEnabled
+    bne vis_enabled_check
+    
     CALC_VRAM_ADDR_PRIORITY_160 x_val
     lda x_val
     lsr 
@@ -111,8 +131,7 @@ rts
     @odd:
     lda VERA_data0
     and #$0F
-    sta PRI_PIXEL
-    bra @storePriority
+    bra @comparePriority
 
     @even:
     lda VERA_data0
@@ -121,51 +140,29 @@ rts
     lsr
     lsr
     lsr
-    sta PRI_PIXEL
-    @storePriority:
-    sta PRI_PIXEL
-
-    ; is the current vis colour 15 (white)?
-    ; if (vis_colour == 15) return 0;
-    lda _picColour
-    cmp #15
-    beq @cannot_fill
-
-    ; is priority disabled and the current vis pixel not white?
-    ; if (!pri_enabled && (asm_get_vis_pixel(x, y) != 15)) return 0;
-    lda _priDrawEnabled
-    bne @pri_enabled_check ; if priority is enabled, skip this check
-    lda VIS_PIXEL
-    cmp #15
-    bne @cannot_fill
-
-@pri_enabled_check:
-    ; is priority enabled and vis disabled and the current pri pixel not red?
-    ; if (pri_enabled && !vis_enabled && (asm_get_pri_pixel(x, y) != 4)) return 0;
-    lda _picDrawEnabled
-    bne @vis_enabled_check
-    lda PRI_PIXEL
+    
+    @comparePriority:
     cmp #4
-    bne @cannot_fill
+    bne cannot_fill
 
-@vis_enabled_check:
+vis_enabled_check:
     ; is priority enabled and the current vis pixel not white?
     ; if (pri_enabled && (asm_get_vis_pixel(x, y) != 15)) return 0;
     lda _priDrawEnabled
     beq @can_fill
     lda VIS_PIXEL
     cmp #15
-    bne @cannot_fill
+    bne cannot_fill
 
 @can_fill:
     lda #1 ; return 1 (pixel can be filled)
     ldx #0 ; clear X register
-    bra @end_macro
+    bra end_macro
 
-@cannot_fill:
+cannot_fill:
     lda #0 ; return 0 (pixel cannot be filled)
 
-@end_macro: 
+end_macro: 
 
 .endscope
 .endmacro
