@@ -103,7 +103,7 @@ rts
     and #$0F ; mask out the top 4 bits
     sta VIS_PIXEL
 
-    CALC_VRAM_ADDR_PRIORITY_160 X0_LOW
+    CALC_VRAM_ADDR_PRIORITY_160 x_val
     lda X_VAL
     lsr 
     bcc @even
