@@ -834,7 +834,7 @@ rts
     ; Ensure X1 >= X0    
     sta X1_LOW
     
-    CALC_VRAM_ADDR_PRIORITY_160 X0_LOW
+    CALC_VRAM_ADDR_PRIORITY_160 X0_LOW, #$0
     
     lda X1_LOW
     sec
