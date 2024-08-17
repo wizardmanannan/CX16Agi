@@ -103,12 +103,6 @@ rts
     and #$0F ; mask out the top 4 bits
     sta VIS_PIXEL
 
-    ; is the current vis colour 15 (white)?
-    ; if (vis_colour == 15) return 0;
-    lda _picColour
-    cmp #15
-    beq cannot_fill
-
     ; is priority disabled and the current vis pixel not white?
     ; if (!pri_enabled && (asm_get_vis_pixel(x, y) != 15)) return 0;
     lda _priDrawEnabled
@@ -850,6 +844,14 @@ done_plotting:
     jsr popa
     sta Y_VAL 
 
+ ; is the current vis colour 15 (white)?
+; if (vis_colour == 15) return 0;
+lda _picColour
+cmp #15
+bne @checkEnabled
+jmp pop_done
+
+@checkEnabled:
     lda _picDrawEnabled
     ora _priDrawEnabled
     bne @ok_fill
