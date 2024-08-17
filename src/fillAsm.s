@@ -293,7 +293,7 @@ sta VERA_addr_bank
 lda _priDrawEnabled
 beq skipPriorityLabel
 lda VERA_addr_bank
-eor %10000
+eor #%10000
 sta VERA_addr_bank
 .endmacro
 
