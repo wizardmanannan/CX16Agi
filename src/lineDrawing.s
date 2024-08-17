@@ -205,14 +205,11 @@ stz VERA_ctrl
 .endmacro ; CALC_VRAM_ADDR
 
 
-.macro CALC_VRAM_ADDR_LINE_DRAW_160 xpos
-    .local vram_addr_l
-    .local vram_addr_h
-    
-    ; same as calc_vram_addr without the (x >> 1) part
-    vram_addr_l     =  ZP_TMP_21
-    vram_addr_h     = ZP_TMP_21 + 1 
-
+.macro CALC_VRAM_ADDR_LINE_DRAW_160 xpos, vera_ctrl_value
+    .ifnblank vera_ctrl_value
+    lda vera_ctrl_value
+    sta VERA_ctrl
+    .endif
 
     lda xpos
     clc
@@ -224,14 +221,11 @@ stz VERA_ctrl
     stz VERA_addr_bank ; clear the upper byte of the VRAM address and any auto increment
 .endmacro ; calc_vram_addr_160
 
-.macro CALC_VRAM_ADDR_PRIORITY_160 xpos
-    .local vram_addr_l
-    .local vram_addr_h
-    
-    ; same as calc_vram_addr without the (x >> 1) part
-    vram_addr_l     =  ZP_TMP_21
-    vram_addr_h     = ZP_TMP_21 + 1 
-
+.macro CALC_VRAM_ADDR_PRIORITY_160 xpos, vera_ctrl_value    
+    .ifnblank vera_ctrl_value
+    lda vera_ctrl_value
+    sta VERA_ctrl
+    .endif
 
     lda xpos
     lsr

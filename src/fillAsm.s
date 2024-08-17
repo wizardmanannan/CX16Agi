@@ -259,11 +259,112 @@ drawLine: .asciiz "%d drawing a line %p, %p to %p, %p"
 drawCounter: .word $0
 .endif
 
+BACKWARD_DIRECTION = %11000
+.macro SETUP_AUTO_INC_CAN_FILL direction, x_val, y_val
+.scope
+.local @end
+.local @incrementOn
+.local @noIncrement
+
+ldy y_val
+CALC_VRAM_ADDR_LINE_DRAW_160 x_val, #$0
+lda #BACKWARD_DIRECTION
+sta VERA_addr_bank
+
+lda _priDrawEnabled
+beq @end
+ldy y_val
+CALC_VRAM_ADDR_PRIORITY_160 x_val, #$1
+lda x_val
+lsr 
+bcs @incrementOn
+@noIncrement:
+stz VERA_addr_bank
+bra @end
+@incrementOn:
+lda #BACKWARD_DIRECTION
+sta VERA_addr_bank
+
+@end:
+.endscope
+.endmacro
+
+.macro POST_CAN_FILL skipPriorityLabel
+lda _priDrawEnabled
+beq skipPriorityLabel
+lda VERA_addr_bank
+eor %10000
+sta VERA_addr_bank
+.endmacro
+
+.macro can_fill_auto_increment x_val
+.scope
+    ; returns 0 in A register if the pixel cannot be filled (early exit)
+    ; returns 1 in A register if the pixel can be filled
+    ldx VERA_data0
+    ldy VERA_data1
+
+    ; is priority disabled and the current vis pixel not white?
+    ; if (!pri_enabled && (asm_get_vis_pixel(x, y) != 15)) return 0;
+    lda _priDrawEnabled
+    bne @pri_enabled_check ; if priority is enabled, skip this check
+    cpx #$FF
+    bne cannot_fill
+
+@pri_enabled_check:
+    ; is priority enabled and vis disabled and the current pri pixel not red?
+    ; if (pri_enabled && !vis_enabled && (asm_get_pri_pixel(x, y) != 4)) return 0;
+    lda _picDrawEnabled
+    bne vis_enabled_check
+    
+    lda x_val
+    lsr 
+    bcc @even
+    
+    @odd:
+    tya
+    and #$0F
+    bra @comparePriority
+
+    @even:
+    tya
+    and #$F0
+    lsr
+    lsr
+    lsr
+    lsr
+    
+    @comparePriority:
+    cmp #4
+    bne cannot_fill
+
+vis_enabled_check:
+    ; is priority enabled and the current vis pixel not white?
+    ; if (pri_enabled && (asm_get_vis_pixel(x, y) != 15)) return 0;
+    lda _priDrawEnabled
+    beq @can_fill
+    cpx #$FF
+    bne cannot_fill
+
+@can_fill:
+    lda #1 ; return 1 (pixel can be filled)
+    ldx #0 ; clear X register
+    bra end_macro
+
+cannot_fill:
+    lda #0 ; return 0 (pixel cannot be filled)
+
+end_macro: 
+
+.endscope
+.endmacro
+
 .macro b8ScanAndFill
 .local X_VAL
 .local Y_VAL
 .local LX
 .local RX
+.local @setupLeftExpansion
 .local leftExpansionLoop
 .local endLeftExpansionLoop
 .local rightExpansionLoop
@@ -310,20 +411,28 @@ sta LX
 sta RX
 
 ;while (lx != 0)
-bne leftExpansionLoop
+bne @setupLeftExpansion
 jmp endLeftExpansionLoop
 
-leftExpansionLoop:
-
-; if (b8AsmCanFill(lx - 1, y) == false break;
-
+@setupLeftExpansion:
 lda LX
 dec
 sta GENERAL_TMP
-can_fill GENERAL_TMP, Y_VAL
+
+SETUP_AUTO_INC_CAN_FILL BACKWARD_DIRECTION, GENERAL_TMP, Y_VAL
+leftExpansionLoop:
+
+; if (b8AsmCanFill(lx - 1, y) == false break;
+ 
+lda LX
+dec
+sta GENERAL_TMP
+can_fill_auto_increment GENERAL_TMP
 cmp #$0
 beq endLeftExpansionLoop
+POST_CAN_FILL @decrementLX
 
+@decrementLX:
 ;--lx
 lda LX
 dec
