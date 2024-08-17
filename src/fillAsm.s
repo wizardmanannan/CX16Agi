@@ -265,6 +265,7 @@ drawCounter: .word $0
 .endif
 
 BACKWARD_DIRECTION = %11000
+FORWARD_DIRECTION = %10000
 .macro SETUP_AUTO_INC_CAN_FILL direction, x_val, y_val
 .scope
 .local @end
@@ -273,7 +274,7 @@ BACKWARD_DIRECTION = %11000
 
 ldy y_val
 CALC_VRAM_ADDR_LINE_DRAW_160 x_val, #$0
-lda #BACKWARD_DIRECTION
+lda direction
 sta VERA_addr_bank
 
 lda _priDrawEnabled
@@ -424,7 +425,7 @@ lda LX
 dec
 sta GENERAL_TMP
 
-SETUP_AUTO_INC_CAN_FILL BACKWARD_DIRECTION, GENERAL_TMP, Y_VAL
+SETUP_AUTO_INC_CAN_FILL #BACKWARD_DIRECTION, GENERAL_TMP, Y_VAL
 leftExpansionLoop:
 
 ; if (b8AsmCanFill(lx - 1, y) == false break;
@@ -470,17 +471,27 @@ PRINT_NEW_LINE
 lda RX
 rightExpansionLoopCheck:
 cmp #PICTURE_WIDTH - 1
-bne rightExpansionLoop
+bne @setupRightExpansion
 jmp endRightExpansionLoop
+
+@setupRightExpansion:
+lda RX
+inc
+sta GENERAL_TMP
+SETUP_AUTO_INC_CAN_FILL #FORWARD_DIRECTION, GENERAL_TMP, Y_VAL
 rightExpansionLoop:
 ;if (b8AsmCanFill(rx + 1, y) == false) break
 lda RX
 inc
 sta GENERAL_TMP
 nop
-can_fill GENERAL_TMP,Y_VAL, #$0
+can_fill_auto_increment GENERAL_TMP
 cmp #$0
 beq endRightExpansionLoop
+
+POST_CAN_FILL @incrementRX
+
+@incrementRX:
 inc RX ;rx++
 
 lda RX
