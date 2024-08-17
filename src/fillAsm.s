@@ -87,13 +87,18 @@ rts
 
 .import _picColour
 .import _priDrawEnabled
-.macro can_fill x_val, y_val
+.macro can_fill x_val, y_val, vera_ctrl_value
 .scope
     ; registers X and Y contain pixel coordinates
     ; returns 0 in A register if the pixel cannot be filled (early exit)
     ; returns 1 in A register if the pixel can be filled
     VIS_PIXEL = ZP_TMP_16
     PRI_PIXEL = ZP_TMP_16 + 1
+
+    .ifnblank vera_ctrl_value
+    lda vera_ctrl_value
+    sta VERA_ctrl
+    .endif
 
     ldy y_val
     ; get the vis pixel at the current x and y
@@ -473,7 +478,7 @@ lda RX
 inc
 sta GENERAL_TMP
 nop
-can_fill GENERAL_TMP,Y_VAL
+can_fill GENERAL_TMP,Y_VAL, #$0
 cmp #$0
 beq endRightExpansionLoop
 inc RX ;rx++
