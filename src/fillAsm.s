@@ -103,7 +103,7 @@ rts
     ldy y_val
     ; get the vis pixel at the current x and y
     CALC_VRAM_ADDR_LINE_DRAW_160 x_val
-
+    
     lda VERA_data0
     and #$0F ; mask out the top 4 bits
     sta VIS_PIXEL
@@ -164,6 +164,155 @@ end_macro:
 
 .endscope
 .endmacro
+
+.macro can_fill_debug x_val, y_val, vera_ctrl_value
+.scope
+    ; registers X and Y contain pixel coordinates
+    ; returns 0 in A register if the pixel cannot be filled (early exit)
+    ; returns 1 in A register if the pixel can be filled
+    VIS_PIXEL = ZP_TMP_16
+    PRI_PIXEL = ZP_TMP_16 + 1
+
+    .ifnblank vera_ctrl_value
+    lda vera_ctrl_value
+    sta VERA_ctrl
+    .endif
+
+    ldy y_val
+    ; get the vis pixel at the current x and y
+    CALC_VRAM_ADDR_LINE_DRAW_160 x_val
+
+    php
+    pha
+    phx
+    phy
+    lda floodCounter
+    cmp #$2
+    bne @continue
+    .import _b5WaitOnKey
+    stp
+    ;JSRFAR _b5WaitOnKey, 5
+    lda x_val
+    lda y_val
+    nop
+
+    @continue:
+    ply
+    plx
+    pla
+    plp
+
+    
+    lda VERA_data0
+    and #$0F ; mask out the top 4 bits
+    sta VIS_PIXEL
+
+    ; is priority disabled and the current vis pixel not white?
+    ; if (!pri_enabled && (asm_get_vis_pixel(x, y) != 15)) return 0;
+    lda _priDrawEnabled
+    bne @pri_enabled_check ; if priority is enabled, skip this check
+    lda VIS_PIXEL
+    cmp #15
+    bne cannot_fill
+
+@pri_enabled_check:
+    ; is priority enabled and vis disabled and the current pri pixel not red?
+    ; if (pri_enabled && !vis_enabled && (asm_get_pri_pixel(x, y) != 4)) return 0;
+    lda _picDrawEnabled
+    bne vis_enabled_check
+    
+    CALC_VRAM_ADDR_PRIORITY_160 x_val
+    lda x_val
+    lsr 
+    bcc @even
+    
+    @odd:
+    lda VERA_data0
+    and #$0F
+    cmp #4
+    bne cannot_fill
+    bra vis_enabled_check
+
+    @even:
+    lda VERA_data0
+    and #$F0
+    cmp #$40
+    bne cannot_fill
+    
+    @comparePriority:
+
+
+vis_enabled_check:
+    ; is priority enabled and the current vis pixel not white?
+    ; if (pri_enabled && (asm_get_vis_pixel(x, y) != 15)) return 0;
+    lda _priDrawEnabled
+    beq @can_fill
+    lda VIS_PIXEL
+    cmp #15
+    bne cannot_fill
+
+@can_fill:
+
+     php
+    pha
+    phx
+    phy
+    lda floodCounter
+    cmp #$2
+    bne @continue
+    .import _b5WaitOnKey
+    stp
+    ;JSRFAR _b5WaitOnKey, 5
+    lda x_val
+    lda y_val
+    nop
+    nop
+    nop
+
+    @continue:
+    ply
+    plx
+    pla
+    plp
+
+    lda #1 ; return 1 (pixel can be filled)
+    ldx #0 ; clear X register
+    bra end_macro
+
+cannot_fill:
+    php
+    pha
+    phx
+    phy
+    lda floodCounter
+    cmp #$2
+    bne @continue
+    .import _b5WaitOnKey
+    stp
+    ;JSRFAR _b5WaitOnKey, 5
+    lda x_val
+    lda y_val
+    nop
+    nop
+    nop
+    nop
+
+    @continue:
+    ply
+    plx
+    pla
+    plp
+
+
+
+    lda #0 ; return 0 (pixel cannot be filled)
+
+end_macro: 
+
+.endscope
+.endmacro
+
+
 
 ;void b8ScanAndFill(uint8_t x, uint8_t y)
 ;{
@@ -954,6 +1103,7 @@ done_plotting:
 .endproc
 
 floodCounter: .byte $0
+innerFloodCounter: .byte $0
 .import _fCounter;
 .proc _b8AsmFloodFill
     LX      = ZP_TMP_17 + 1
@@ -1026,13 +1176,33 @@ outer_loop_start:
     b8ScanAndFill
     ; while (nx <= rx && can_fill(nx, y1)) {
 inner_loop_start:
+    
+    php
+    pha
+    phx
+    phy
+    lda floodCounter
+    cmp #$2
+    bne @continue
+    stp
+    lda _picDrawEnabled
+    lda _priDrawEnabled
+    ;JSRFAR _b5WaitOnKey, 5
+    lda NX
+    lda RX
+    @continue:
+    ply
+    plx
+    pla
+    plp
+    
     lda NX
     cmp RX
     ; bcs outer_loop_start ; bcs branches if C flag is set (ie NX > RX)
     bcc @nx_less_than_rx_inner
     jmp else_increment_nx
 @nx_less_than_rx_inner:
-    can_fill NX, Y1
+    can_fill_debug NX, Y1
     bne @can_fill_inner
     jmp outer_loop_start
 @can_fill_inner:
@@ -1046,7 +1216,7 @@ else_increment_nx:
 outer_loop_end:
     jmp pop_loop
 pop_done:
-    JSRFAR _b5WaitOnKey, 5
+    ;JSRFAR _b5WaitOnKey, 5
     inc floodCounter
     rts
 .endproc ; _asm_flood_fill
