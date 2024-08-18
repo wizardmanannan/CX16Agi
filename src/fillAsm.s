@@ -953,6 +953,7 @@ done_plotting:
     rts ; return
 .endproc
 
+floodCounter: .byte $0
 .import _fCounter;
 .proc _b8AsmFloodFill
     LX      = ZP_TMP_17 + 1
@@ -1045,6 +1046,8 @@ else_increment_nx:
 outer_loop_end:
     jmp pop_loop
 pop_done:
+    JSRFAR _b5WaitOnKey, 5
+    inc floodCounter
     rts
 .endproc ; _asm_flood_fill
 
