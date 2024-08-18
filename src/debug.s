@@ -3,12 +3,14 @@ DEBUG_INC = 1
 .include "codeWindow.s"
 .include "pictureAsm.s"
 .include "irqAsm.s"
+.include "fillAsm.s"
 .segment "BANKRAM06"
 .import _opCounter
 .import _pixelCounter
 _b6TellMeTheAddressPlease:
 ;stp
 lda _opCounter
+lda floodCounter
 rts
 
 .segment "BANKRAM05"
