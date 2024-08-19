@@ -374,6 +374,7 @@ end_macro:
     lda floodCounter
     cmp #$1
     bne @continue1
+    stp
     .import _b5WaitOnKey
     ;JSRFAR _b5WaitOnKey, 5
     lda x_val
@@ -454,7 +455,8 @@ vis_enabled_check:
     ; plp
 
 
-
+    nop
+    nop
     lda #1 ; return 1 (pixel can be filled)
     ldx #0 ; clear X register
     bra end_macro
@@ -1158,7 +1160,6 @@ outer_loop_start:
 
 SETUP_AUTO_INC_CAN_FILL #FORWARD_DIRECTION, NX, Y1
 inner_loop_start:
-    
     php
     pha
     phx
@@ -1169,9 +1170,9 @@ inner_loop_start:
     stp
     lda _picDrawEnabled
     lda _priDrawEnabled
-    ;JSRFAR _b5WaitOnKey, 5
     lda NX
     lda RX
+    ;JSRFAR _b5WaitOnKey, 5
     @continue:
     ply
     plx
