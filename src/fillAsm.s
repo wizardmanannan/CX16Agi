@@ -187,7 +187,7 @@ end_macro:
     phx
     phy
     lda floodCounter
-    cmp #$2
+    cmp #$1
     bne @continue
     .import _b5WaitOnKey
     stp
@@ -1182,7 +1182,7 @@ inner_loop_start:
     phx
     phy
     lda floodCounter
-    cmp #$2
+    cmp #$1
     bne @continue
     stp
     lda _picDrawEnabled
