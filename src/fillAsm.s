@@ -432,7 +432,6 @@ vis_enabled_check:
 
 @can_fill:
     nop
-    nop
     ; php
     ; pha
     ; phx
@@ -486,7 +485,7 @@ cannot_fill:
     ; plp
 
 
-    ; lda #0 ; return 0 (pixel cannot be filled)
+    lda #0 ; return 0 (pixel cannot be filled)
 
 end_macro: 
 
