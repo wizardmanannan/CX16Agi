@@ -1175,9 +1175,8 @@ outer_loop_start:
     ldy Y1
     b8ScanAndFill
     ; while (nx <= rx && can_fill(nx, y1)) {
-inner_loop_start:
-    
-    php
+
+php
     pha
     phx
     phy
@@ -1188,14 +1187,13 @@ inner_loop_start:
     lda _picDrawEnabled
     lda _priDrawEnabled
     ;JSRFAR _b5WaitOnKey, 5
-    lda NX
-    lda RX
+    lda #$7
     @continue:
     ply
     plx
     pla
     plp
-    
+inner_loop_start:
     lda NX
     cmp RX
     ; bcs outer_loop_start ; bcs branches if C flag is set (ie NX > RX)
