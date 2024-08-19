@@ -1157,9 +1157,7 @@ outer_loop_start:
     b8ScanAndFill
     ; while (nx <= rx && can_fill(nx, y1)) {
 
-SETUP_AUTO_INC_CAN_FILL #FORWARD_DIRECTION, NX, Y1
-inner_loop_start:
-    php
+php
     pha
     phx
     phy
@@ -1169,14 +1167,33 @@ inner_loop_start:
     stp
     lda _picDrawEnabled
     lda _priDrawEnabled
-    lda NX
-    lda RX
+    lda #$7
     ;JSRFAR _b5WaitOnKey, 5
     @continue:
     ply
     plx
     pla
     plp
+SETUP_AUTO_INC_CAN_FILL #FORWARD_DIRECTION, NX, Y1
+inner_loop_start:
+    ; php
+    ; pha
+    ; phx
+    ; phy
+    ; lda floodCounter
+    ; cmp #$1
+    ; bne @continue
+    ; stp
+    ; lda _picDrawEnabled
+    ; lda _priDrawEnabled
+    ; lda NX
+    ; lda RX
+    ; ;JSRFAR _b5WaitOnKey, 5
+    ; @continue:
+    ; ply
+    ; plx
+    ; pla
+    ; plp
     
     lda NX
     cmp RX
@@ -1190,6 +1207,7 @@ inner_loop_start:
 @can_fill_inner:
     ; ++nx;
     inc NX
+
     POST_CAN_FILL inner_loop_start
     jmp inner_loop_start
 else_increment_nx:
