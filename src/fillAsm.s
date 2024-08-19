@@ -372,7 +372,7 @@ end_macro:
     phx
     phy
     lda floodCounter
-    cmp #$2
+    cmp #$1
     bne @continue1
     .import _b5WaitOnKey
     ;JSRFAR _b5WaitOnKey, 5
@@ -1164,7 +1164,7 @@ inner_loop_start:
     phx
     phy
     lda floodCounter
-    cmp #$2
+    cmp #$1
     bne @continue
     stp
     lda _picDrawEnabled
