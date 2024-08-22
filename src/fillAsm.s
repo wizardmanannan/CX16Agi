@@ -295,7 +295,7 @@ sta VERA_addr_bank
 .endmacro
 
 .macro POST_CAN_FILL skipPriorityLabel
-lda _priDrawEnabled
+ldx _priDrawEnabled
 beq skipPriorityLabel
 lda VERA_addr_bank
 eor #%10000
