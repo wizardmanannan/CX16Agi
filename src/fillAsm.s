@@ -1082,6 +1082,7 @@ jmp pop_done
     ldx X_VAL
     ldy Y_VAL
     b8ScanAndFill
+    inc floodCounter
 
     ; while (pop(&lx, &rx, &y1)) {
 pop_loop:
@@ -1093,8 +1094,11 @@ pop_loop:
     lda LX
     sta NX
     ; while (nx <= rx) {
+
+SETUP_AUTO_INC_CAN_FILL #FORWARD_DIRECTION, NX, Y1
 outer_loop_start:
     lda RX
+
     ;This instruction subtracts the contents of memory from the contents of the accumulator.
     ;The use of the CMP affects the following flags: 
     ; Z flag is set on an equal comparison, reset otherwise (ie M==A Z=1)
@@ -1105,21 +1109,21 @@ outer_loop_start:
     jmp outer_loop_end
 @nx_less_than_rx:
     ; if (can_fill(nx, y1)) {
-    can_fill NX, Y1, #$0
+    can_fill_auto_increment_debug NX
     cmp #0
     bne @start_fill ; branch if can_fill returned true
+    POST_CAN_FILL @skipPostCanFill  
+    @skipPostCanFill:
     jmp else_increment_nx
     @start_fill:
-    ; scan_and_fill(nx, y1);
+    ; scan_and_fill(nx, y1);    
     ldx NX
     ldy Y1
     b8ScanAndFill
+    SETUP_AUTO_INC_CAN_FILL #FORWARD_DIRECTION, NX, Y1
     ; while (nx <= rx && can_fill(nx, y1)) {
 
-SETUP_AUTO_INC_CAN_FILL #FORWARD_DIRECTION, NX, Y1
 inner_loop_start:
-
-    
     lda NX
     cmp RX
     ; bcs outer_loop_start ; bcs branches if C flag is set (ie NX > RX)
@@ -1128,12 +1132,13 @@ inner_loop_start:
 @nx_less_than_rx_inner:
     can_fill_auto_increment_debug NX
     bne @can_fill_inner
+    POST_CAN_FILL @skipPostCanFillInner
+    @skipPostCanFillInner:
     jmp outer_loop_start
 @can_fill_inner:
+    POST_CAN_FILL inner_loop_start
     ; ++nx;
     inc NX
-
-    POST_CAN_FILL inner_loop_start
     jmp inner_loop_start
 else_increment_nx:
     ; ++nx;
