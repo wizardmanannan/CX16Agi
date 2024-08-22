@@ -1110,6 +1110,7 @@ outer_loop_start:
 @nx_less_than_rx:
     ; if (can_fill(nx, y1)) {
     can_fill_auto_increment_debug NX
+
     cmp #0
     bne @start_fill ; branch if can_fill returned true
     POST_CAN_FILL @skipPostCanFill  
@@ -1131,14 +1132,18 @@ inner_loop_start:
     jmp else_increment_nx
 @nx_less_than_rx_inner:
     can_fill_auto_increment_debug NX
-    bne @can_fill_inner
+    beq dontEnterInnerLoop
+    jmp can_fill_inner
+dontEnterInnerLoop:
     POST_CAN_FILL @skipPostCanFillInner
     @skipPostCanFillInner:
+    SETUP_AUTO_INC_CAN_FILL #FORWARD_DIRECTION, NX, Y1
     jmp outer_loop_start
-@can_fill_inner:
-    POST_CAN_FILL inner_loop_start
+    can_fill_inner:
+    POST_CAN_FILL jumpInnerLoop
     ; ++nx;
     inc NX
+jumpInnerLoop:
     jmp inner_loop_start
 else_increment_nx:
     ; ++nx;
