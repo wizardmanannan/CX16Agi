@@ -367,24 +367,7 @@ end_macro:
 .scope
     ; returns 0 in A register if the pixel cannot be filled (early exit)
     ; returns 1 in A register if the pixel can be filled
-    php
-    pha
-    phx
-    phy
-    lda floodCounter
-    cmp #$1
-    bne @continue1
-    stp
-    .import _b5WaitOnKey
-    ;JSRFAR _b5WaitOnKey, 5
-    lda x_val
-    nop
-
-    @continue1:
-    ply
-    plx
-    pla
-    plp
+   
     
     
     ldx VERA_data0
@@ -431,31 +414,7 @@ vis_enabled_check:
     bne cannot_fill
 
 @can_fill:
-    nop
-    ; php
-    ; pha
-    ; phx
-    ; phy
-    ; lda floodCounter
-    ; cmp #$2
-    ; bne @continue3
-    ; .import _b5WaitOnKey
-    ; stp
-    ; ;JSRFAR _b5WaitOnKey, 5
-    ; lda x_val   
-    ; nop
-    ; nop
-    ; nop
-
-    ; @continue3:
-    ; ply
-    ; plx
-    ; pla
-    ; plp
-
-
-    nop
-    nop
+   
     lda #1 ; return 1 (pixel can be filled)
     ldx #0 ; clear X register
     bra end_macro
@@ -1146,7 +1105,7 @@ outer_loop_start:
     jmp outer_loop_end
 @nx_less_than_rx:
     ; if (can_fill(nx, y1)) {
-    can_fill NX, Y1
+    can_fill NX, Y1, #$0
     cmp #0
     bne @start_fill ; branch if can_fill returned true
     jmp else_increment_nx
@@ -1157,43 +1116,9 @@ outer_loop_start:
     b8ScanAndFill
     ; while (nx <= rx && can_fill(nx, y1)) {
 
-php
-    pha
-    phx
-    phy
-    lda floodCounter
-    cmp #$1
-    bne @continue
-    stp
-    lda _picDrawEnabled
-    lda _priDrawEnabled
-    lda #$7
-    ;JSRFAR _b5WaitOnKey, 5
-    @continue:
-    ply
-    plx
-    pla
-    plp
 SETUP_AUTO_INC_CAN_FILL #FORWARD_DIRECTION, NX, Y1
 inner_loop_start:
-    ; php
-    ; pha
-    ; phx
-    ; phy
-    ; lda floodCounter
-    ; cmp #$1
-    ; bne @continue
-    ; stp
-    ; lda _picDrawEnabled
-    ; lda _priDrawEnabled
-    ; lda NX
-    ; lda RX
-    ; ;JSRFAR _b5WaitOnKey, 5
-    ; @continue:
-    ; ply
-    ; plx
-    ; pla
-    ; plp
+
     
     lda NX
     cmp RX
