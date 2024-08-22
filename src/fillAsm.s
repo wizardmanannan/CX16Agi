@@ -130,18 +130,19 @@ rts
     @odd:
     lda VERA_data0
     and #$0F
-    cmp #4
-    bne cannot_fill
-    bra vis_enabled_check
+    bra @comparePriority
 
     @even:
     lda VERA_data0
     and #$F0
-    cmp #$40
-    bne cannot_fill
+    lsr
+    lsr
+    lsr
+    lsr
     
     @comparePriority:
-
+    cmp #4
+    bne cannot_fill
 
 vis_enabled_check:
     ; is priority enabled and the current vis pixel not white?
@@ -329,17 +330,19 @@ sta VERA_addr_bank
     @odd:
     tya
     and #$0F
-    cmp #4
-    bne cannot_fill
-    bra vis_enabled_check
+    bra @comparePriority
 
     @even:
     tya
     and #$F0
-    cmp #$40
-    bne cannot_fill
+    lsr
+    lsr
+    lsr
+    lsr
     
-
+    @comparePriority:
+    cmp #4
+    bne cannot_fill
 
 vis_enabled_check:
     ; is priority enabled and the current vis pixel not white?
