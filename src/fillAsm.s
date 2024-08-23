@@ -1147,6 +1147,7 @@ inner_loop_start:
     pla
     plp 
     
+    cmp #$0
     beq dontEnterInnerLoop
     jmp can_fill_inner
 dontEnterInnerLoop:
