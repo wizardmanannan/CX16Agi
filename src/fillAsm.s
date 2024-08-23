@@ -1132,6 +1132,7 @@ inner_loop_start:
     jmp else_increment_nx
 @nx_less_than_rx_inner:
     can_fill_auto_increment_debug NX
+    cmp #$0
     beq dontEnterInnerLoop
     jmp can_fill_inner
 dontEnterInnerLoop:
