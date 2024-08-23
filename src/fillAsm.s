@@ -1082,8 +1082,6 @@ jmp pop_done
     ldx X_VAL
     ldy Y_VAL
     b8ScanAndFill
-    inc floodCounter
-
     ; while (pop(&lx, &rx, &y1)) {
 pop_loop:
     FILL_STACK_POP LX, RX, Y1
@@ -1121,7 +1119,9 @@ outer_loop_start:
     ldx NX
     ldy Y1
     b8ScanAndFill
+
     SETUP_AUTO_INC_CAN_FILL #FORWARD_DIRECTION, NX, Y1
+
     ; while (nx <= rx && can_fill(nx, y1)) {
 
 inner_loop_start:
@@ -1132,6 +1132,21 @@ inner_loop_start:
     jmp else_increment_nx
 @nx_less_than_rx_inner:
     can_fill_auto_increment_debug NX
+
+    php
+    pha
+    phx 
+    phy
+    lda floodCounter
+    cmp #$1
+    bne @continue
+    stp
+    @continue:
+    ply
+    plx
+    pla
+    plp 
+    
     beq dontEnterInnerLoop
     jmp can_fill_inner
 dontEnterInnerLoop:
@@ -1153,6 +1168,7 @@ outer_loop_end:
     jmp pop_loop
 pop_done:
     ;JSRFAR _b5WaitOnKey, 5
+
     inc floodCounter
     rts
 .endproc ; _asm_flood_fill
