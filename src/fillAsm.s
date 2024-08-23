@@ -265,6 +265,39 @@ drawCounter: .word $0
 
 BACKWARD_DIRECTION = %11000
 FORWARD_DIRECTION = %10000
+.macro SETUP_AUTO_INC_CAN_FILL_CANCEL direction, x_val, y_val
+.scope
+.local @end
+.local @incrementOn
+.local @noIncrement
+
+stz VERA_ctrl
+dec VERA_addr_low
+lda VERA_addr_low
+cmp #$FF
+bne @checkPriority
+@highByteVisual:
+dec VERA_addr_high
+
+@checkPriority:
+lda _priDrawEnabled
+beq @end
+ldy y_val
+CALC_VRAM_ADDR_PRIORITY_160 x_val, #$1
+lda x_val
+lsr 
+bcs @incrementOn
+@noIncrement:
+stz VERA_addr_bank
+bra @end
+@incrementOn:
+lda #BACKWARD_DIRECTION
+sta VERA_addr_bank
+
+@end:
+.endscope
+.endmacro
+
 .macro SETUP_AUTO_INC_CAN_FILL direction, x_val, y_val
 .scope
 .local @end
@@ -1138,7 +1171,7 @@ inner_loop_start:
 dontEnterInnerLoop:
     POST_CAN_FILL @skipPostCanFillInner
     @skipPostCanFillInner:
-    SETUP_AUTO_INC_CAN_FILL #FORWARD_DIRECTION, NX, Y1
+    SETUP_AUTO_INC_CAN_FILL_CANCEL #FORWARD_DIRECTION, NX, Y1
     jmp outer_loop_start
     can_fill_inner:
     POST_CAN_FILL jumpInnerLoop
