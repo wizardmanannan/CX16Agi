@@ -492,6 +492,20 @@ jsr _printfSafe
 PRINT_NEW_LINE
 .endif
 
+    
+    php
+    pha
+    phx 
+    phy
+    lda floodCounter
+    cmp #$56
+    bcc @continue
+    stp
+    @continue:
+    ply
+    plx
+    pla
+    plp 
 can_fill X_VAL, Y_VAL
 cmp #$0
 bne @expansion
@@ -628,7 +642,6 @@ inc drawCounter + 1
 ;        {
 ;            b8AsmPlotVisHLineFast(lx, rx, y, picColour);
 ;        }
-
 lda _picDrawEnabled
 beq @priDraw
 lda LX
@@ -656,6 +669,7 @@ jsr _b8AsmPlotPriHLineFast
 ;JSRFAR _b5WaitOnKey, 5
 
 @pushBelow:
+
 ;        if (y < PICTURE_HEIGHT - 1)
 ;        {
 ;            b8Push(lx, rx, y + 1); ; push below
@@ -1077,11 +1091,11 @@ jmp pop_done
 
     ; fill_stack_pointer = 0;
     stz FILL_STACK_POINTER
-
     ; scan_and_fill(x, y);
     ldx X_VAL
     ldy Y_VAL
-    b8ScanAndFill
+
+    b8ScanAndFill    
     ; while (pop(&lx, &rx, &y1)) {
 pop_loop:
     FILL_STACK_POP LX, RX, Y1
@@ -1094,7 +1108,7 @@ pop_loop:
     ; while (nx <= rx) {
 
 SETUP_AUTO_INC_CAN_FILL #FORWARD_DIRECTION, NX, Y1
-outer_loop_start:
+outer_loop_start:    
     lda RX
 
     ;This instruction subtracts the contents of memory from the contents of the accumulator.
@@ -1108,7 +1122,6 @@ outer_loop_start:
 @nx_less_than_rx:
     ; if (can_fill(nx, y1)) {
     can_fill_auto_increment_debug NX
-
     cmp #0
     bne @start_fill ; branch if can_fill returned true
     POST_CAN_FILL @skipPostCanFill  
@@ -1133,20 +1146,7 @@ inner_loop_start:
 @nx_less_than_rx_inner:
     can_fill_auto_increment_debug NX
 
-    php
-    pha
-    phx 
-    phy
-    lda floodCounter
-    cmp #$1
-    bne @continue
-    stp
-    @continue:
-    ply
-    plx
-    pla
-    plp 
-    
+  
     cmp #$0
     beq dontEnterInnerLoop
     jmp can_fill_inner
