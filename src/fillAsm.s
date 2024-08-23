@@ -492,7 +492,7 @@ jsr _printfSafe
 PRINT_NEW_LINE
 .endif
 
-can_fill X_VAL, Y_VAL
+can_fill X_VAL, Y_VAL, #$0
 cmp #$0
 bne @expansion
 jmp cannot_fill
