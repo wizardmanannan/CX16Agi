@@ -272,24 +272,18 @@ FORWARD_DIRECTION = %10000
 .local @noIncrement
 
 stz VERA_ctrl
-dec VERA_addr_low
-lda VERA_addr_low
-cmp #$FF
-bne @checkPriority
-@highByteVisual:
-dec VERA_addr_high
+lda #%10000
+sta VERA_addr_bank
+
 
 @checkPriority:
 lda _priDrawEnabled
 beq @end
-ldy y_val
-CALC_VRAM_ADDR_PRIORITY_160 x_val, #$1
+lda #$1
+sta VERA_ctrl
 lda x_val
 lsr 
-bcs @incrementOn
-@noIncrement:
-stz VERA_addr_bank
-bra @end
+bcc @end
 @incrementOn:
 lda #BACKWARD_DIRECTION
 sta VERA_addr_bank
@@ -988,6 +982,8 @@ done_plotting:
 
 floodCounter: .byte $0
 innerFloodCounter: .byte $0
+oneCounter: .word $0
+twoCounter: .word $0
 .import _fCounter;
 .proc _b8AsmFloodFill
     LX      = ZP_TMP_17 + 1
@@ -1075,11 +1071,22 @@ inner_loop_start:
     bcc @nx_less_than_rx_inner
     jmp else_increment_nx
 @nx_less_than_rx_inner:
+    stz VERA_ctrl
+    stz VERA_addr_bank
+    lda #$1
+    sta VERA_ctrl
+    stz VERA_addr_bank
     can_fill_auto_increment NX
     cmp #$0
     beq dontEnterInnerLoop
+    
+    SETUP_AUTO_INC_CAN_FILL #FORWARD_DIRECTION, NX, Y1
+
     jmp can_fill_inner
 dontEnterInnerLoop:
+    
+    ;two
+
     POST_CAN_FILL @skipPostCanFillInner
     @skipPostCanFillInner:
     SETUP_AUTO_INC_CAN_FILL_CANCEL #FORWARD_DIRECTION, NX, Y1
