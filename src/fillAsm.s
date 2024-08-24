@@ -1032,6 +1032,7 @@ pop_loop:
     ; while (nx <= rx) {
 
 SETUP_AUTO_INC_CAN_FILL #FORWARD_DIRECTION, NX, Y1
+stp
 outer_loop_start:
     ;This instruction subtracts the contents of memory from the contents of the accumulator.
     ;The use of the CMP affects the following flags: 
