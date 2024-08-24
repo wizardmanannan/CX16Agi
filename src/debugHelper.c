@@ -454,3 +454,16 @@ void bDbgPrintRoomChange()
 	printf(bDbgRoomChangeMessage, var[0], opCounter);
 }
 #pragma code-name (pop);
+
+
+#pragma bss-name (push, "BANKRAM08")
+byte* writeTo = (byte*) 0xB457;
+extern int floodCounter;
+void b8PrintScanAndFillArgs()
+{
+	*writeTo++ = *((int*)0xdb);
+	*writeTo++ = *((int*)0xca);
+	*((int*)writeTo++) = floodCounter;
+
+}
+#pragma bss-name (pop)

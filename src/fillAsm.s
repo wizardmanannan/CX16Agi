@@ -977,7 +977,8 @@ done_plotting:
     rts ; return
 .endproc
 
-floodCounter: .word $0
+.export _floodCounter
+_floodCounter: .word $0
 innerFloodCounter: .byte $0
 oneCounter: .word $0
 twoCounter: .word $0
@@ -1077,18 +1078,21 @@ outer_loop_start:
     pha
     phx
     phy
-    inc floodCounter
+    inc _floodCounter
     bne @skipHigh
-    inc floodCounter + 1
+    inc _floodCounter + 1
     @skipHigh:
-    lda floodCounter + 1
+    lda _floodCounter + 1
     cmp #$0
     bcc @continue
-    lda floodCounter
+    lda _floodCounter
     cmp #$0
     bcc @continue    
-    JSRFAR _b5WaitOnKey, 5
+    stp
     @continue:
+    
+    .import _b8PrintScanAndFillArgs
+    jsr _b8PrintScanAndFillArgs
     ply
     plx
     pla
