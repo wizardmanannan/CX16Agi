@@ -395,95 +395,6 @@ end_macro:
 .endscope
 .endmacro
 
-
-.macro can_fill_auto_increment_debug x_val
-.scope
-    ; returns 0 in A register if the pixel cannot be filled (early exit)
-    ; returns 1 in A register if the pixel can be filled
-   
-    
-    
-    ldx VERA_data0
-    ldy VERA_data1
-
-    ; is priority disabled and the current vis pixel not white?
-    ; if (!pri_enabled && (asm_get_vis_pixel(x, y) != 15)) return 0;
-    lda _priDrawEnabled
-    bne @pri_enabled_check ; if priority is enabled, skip this check
-    cpx #$FF
-    bne cannot_fill
-
-@pri_enabled_check:
-    ; is priority enabled and vis disabled and the current pri pixel not red?
-    ; if (pri_enabled && !vis_enabled && (asm_get_pri_pixel(x, y) != 4)) return 0;
-    lda _picDrawEnabled
-    bne vis_enabled_check
-    
-    lda x_val
-    lsr 
-    bcc @even
-    
-    @odd:
-    tya
-    and #$0F
-    cmp #4
-    bne cannot_fill
-    bra vis_enabled_check
-
-    @even:
-    tya
-    and #$F0
-    cmp #$40
-    bne cannot_fill
-    
-
-
-vis_enabled_check:
-    ; is priority enabled and the current vis pixel not white?
-    ; if (pri_enabled && (asm_get_vis_pixel(x, y) != 15)) return 0;
-    lda _priDrawEnabled
-    beq @can_fill
-    cpx #$FF
-    bne cannot_fill
-
-@can_fill:
-   
-    lda #1 ; return 1 (pixel can be filled)
-    ldx #0 ; clear X register
-    bra end_macro
-
-cannot_fill:
-    nop
-    ; php
-    ; pha
-    ; phx
-    ; phy
-    ; lda floodCounter
-    ; cmp #$2
-    ; bne @continue4
-    ; .import _b5WaitOnKey
-    ; stp
-    ; ;JSRFAR _b5WaitOnKey, 5
-    ; lda x_val
-    ; nop
-    ; nop
-    ; nop
-    ; nop
-
-    ; @continue4:
-    ; ply
-    ; plx
-    ; pla
-    ; plp
-
-
-    lda #0 ; return 0 (pixel cannot be filled)
-
-end_macro: 
-
-.endscope
-.endmacro
-
 .macro b8ScanAndFill
 .local X_VAL
 .local Y_VAL
@@ -1142,7 +1053,7 @@ outer_loop_start:
     jmp outer_loop_end
 @nx_less_than_rx:
     ; if (can_fill(nx, y1)) {
-    can_fill_auto_increment_debug NX
+    can_fill_auto_increment NX
 
     cmp #0
     bne @start_fill ; branch if can_fill returned true
@@ -1164,7 +1075,7 @@ inner_loop_start:
     bcc @nx_less_than_rx_inner
     jmp else_increment_nx
 @nx_less_than_rx_inner:
-    can_fill_auto_increment_debug NX
+    can_fill_auto_increment NX
     cmp #$0
     beq dontEnterInnerLoop
     jmp can_fill_inner
