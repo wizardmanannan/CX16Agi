@@ -10,7 +10,7 @@ DEBUG_INC = 1
 _b6TellMeTheAddressPlease:
 stp
 lda _opCounter
-lda floodCounter
+lda _floodCounter
 lda oneCounter
 lda twoCounter
 rts

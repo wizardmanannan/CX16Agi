@@ -980,7 +980,8 @@ done_plotting:
     rts ; return
 .endproc
 
-floodCounter: .byte $0
+.export _floodCounter
+_floodCounter: .byte $0
 innerFloodCounter: .byte $0
 oneCounter: .word $0
 twoCounter: .word $0
@@ -1022,7 +1023,6 @@ jmp pop_done
     ldx X_VAL
     ldy Y_VAL
     b8ScanAndFill
-    inc floodCounter
 
     ; while (pop(&lx, &rx, &y1)) {
 pop_loop:
@@ -1058,10 +1058,58 @@ outer_loop_start:
     jmp else_increment_nx
     @start_fill:
     ; scan_and_fill(nx, y1);    
+    
+    stz VERA_ctrl
+    lda VERA_addr_low
+    pha
+    lda VERA_addr_high
+    pha
+
+    lda _priDrawEnabled
+    beq @runScanAndFill
+    lda #$1
+    sta VERA_ctrl
+    lda VERA_addr_low
+    pha
+    lda VERA_addr_high
+    pha
+    
+    @runScanAndFill:
     ldx NX
     ldy Y1
+
+    php
+    pha
+    phx
+    phy
+    .import _b8PrintScanAndFillArgs
+
+    jsr _b8PrintScanAndFillArgs
+    ply
+    plx
+    pla
+    plp
+
+
     b8ScanAndFill
-    SETUP_AUTO_INC_CAN_FILL #FORWARD_DIRECTION, NX, Y1
+    
+    lda _priDrawEnabled
+    beq @retrieveVis
+    lda #$1
+    sta VERA_ctrl
+    pla
+    sta VERA_addr_high
+    pla
+    sta VERA_addr_low
+
+    @retrieveVis:
+    stz VERA_ctrl
+    pla
+    sta VERA_addr_high
+    pla
+    sta VERA_addr_low
+
+    SETUP_AUTO_INC_CAN_FILL_CANCEL #FORWARD_DIRECTION, NX, Y1
     ; while (nx <= rx && can_fill(nx, y1)) {
 
 inner_loop_start:
@@ -1079,7 +1127,6 @@ inner_loop_start:
     can_fill_auto_increment NX
     cmp #$0
     beq dontEnterInnerLoop
-    
     SETUP_AUTO_INC_CAN_FILL #FORWARD_DIRECTION, NX, Y1
 
     jmp can_fill_inner
@@ -1105,7 +1152,7 @@ outer_loop_end:
     jmp pop_loop
 pop_done:
     ;JSRFAR _b5WaitOnKey, 5
-    inc floodCounter
+    inc _floodCounter
     rts
 .endproc ; _asm_flood_fill
 
