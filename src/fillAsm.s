@@ -1053,6 +1053,23 @@ outer_loop_start:
     jmp else_increment_nx
     @start_fill:
     ; scan_and_fill(nx, y1);    
+    
+    stz VERA_ctrl
+    lda VERA_addr_low
+    pha
+    lda VERA_addr_high
+    pha
+
+    lda _priDrawEnabled
+    beq @runScanAndFill
+    lda #$1
+    sta VERA_ctrl
+    lda VERA_addr_low
+    pha
+    lda VERA_addr_high
+    pha
+    
+    @runScanAndFill:
     ldx NX
     ldy Y1
     
@@ -1065,13 +1082,12 @@ outer_loop_start:
     inc floodCounter + 1
     @skipHigh:
     lda floodCounter + 1
-    cmp #$3
+    cmp #$0
     bcc @continue
     lda floodCounter
-    cmp #$E1
+    cmp #$0
     bcc @continue    
-    stp
-    
+    JSRFAR _b5WaitOnKey, 5
     @continue:
     ply
     plx
@@ -1079,9 +1095,24 @@ outer_loop_start:
     plp
 
     b8ScanAndFill
+    
+    lda _priDrawEnabled
+    beq @retrieveVis
+    lda #$1
+    sta VERA_ctrl
+    lda VERA_addr_high
+    pla
+    lda VERA_addr_low
+    pla
 
+    @retrieveVis:
+    stz VERA_ctrl
+    lda VERA_addr_high
+    pla
+    lda VERA_addr_low
+    pla
 
-    SETUP_AUTO_INC_CAN_FILL #FORWARD_DIRECTION, NX, Y1
+    SETUP_AUTO_INC_CAN_FILL_CANCEL #FORWARD_DIRECTION_CANCEL, NX, Y1
     ; while (nx <= rx && can_fill(nx, y1)) {
 
 inner_loop_start:
@@ -1099,7 +1130,6 @@ inner_loop_start:
     can_fill_auto_increment NX
     cmp #$0
     beq dontEnterInnerLoop
-    
     SETUP_AUTO_INC_CAN_FILL #FORWARD_DIRECTION, NX, Y1
 
     jmp can_fill_inner
