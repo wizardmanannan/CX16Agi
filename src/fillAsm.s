@@ -1032,9 +1032,8 @@ pop_loop:
     ; while (nx <= rx) {
 
 SETUP_AUTO_INC_CAN_FILL #FORWARD_DIRECTION, NX, Y1
+stp
 outer_loop_start:
-    lda RX
-
     ;This instruction subtracts the contents of memory from the contents of the accumulator.
     ;The use of the CMP affects the following flags: 
     ; Z flag is set on an equal comparison, reset otherwise (ie M==A Z=1)
@@ -1046,6 +1045,7 @@ outer_loop_start:
 @nx_less_than_rx:
     ; if (can_fill(nx, y1)) {
     can_fill_auto_increment NX
+        lda RX
 
     cmp #0
     bne @start_fill ; branch if can_fill returned true
@@ -1054,7 +1054,8 @@ outer_loop_start:
     jmp else_increment_nx
     @start_fill:
     ; scan_and_fill(nx, y1);    
-    
+      
+
     stz VERA_ctrl
     lda VERA_addr_low
     pha
@@ -1088,7 +1089,7 @@ outer_loop_start:
     lda _floodCounter
     cmp #$0
     bcc @continue    
-    stp
+    ; stp
     @continue:
     
     .import _b8PrintScanAndFillArgs
@@ -1099,7 +1100,7 @@ outer_loop_start:
     plp
 
     b8ScanAndFill
-    
+     
     lda _priDrawEnabled
     beq @retrieveVis
     lda #$1
@@ -1117,6 +1118,7 @@ outer_loop_start:
     pla
 
     SETUP_AUTO_INC_CAN_FILL_CANCEL #FORWARD_DIRECTION_CANCEL, NX, Y1
+
     ; while (nx <= rx && can_fill(nx, y1)) {
 
 inner_loop_start:
@@ -1138,7 +1140,6 @@ inner_loop_start:
 
     jmp can_fill_inner
 dontEnterInnerLoop:
-    
     ;two
 
     POST_CAN_FILL @skipPostCanFillInner
@@ -1154,7 +1155,7 @@ jumpInnerLoop:
 else_increment_nx:
     ; ++nx;
     inc NX
-    jmp outer_loop_start
+      jmp outer_loop_start
 outer_loop_end:
     jmp pop_loop
 pop_done:
