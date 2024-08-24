@@ -590,9 +590,6 @@ lda RX
 
 jsr _b8AsmPlotPriHLineFast
 
-
-;JSRFAR _b5WaitOnKey, 5
-
 @pushBelow:
 ;        if (y < PICTURE_HEIGHT - 1)
 ;        {
@@ -980,7 +977,7 @@ done_plotting:
     rts ; return
 .endproc
 
-floodCounter: .byte $0
+floodCounter: .word $0
 innerFloodCounter: .byte $0
 oneCounter: .word $0
 twoCounter: .word $0
@@ -1022,8 +1019,6 @@ jmp pop_done
     ldx X_VAL
     ldy Y_VAL
     b8ScanAndFill
-    inc floodCounter
-
     ; while (pop(&lx, &rx, &y1)) {
 pop_loop:
     FILL_STACK_POP LX, RX, Y1
@@ -1060,7 +1055,32 @@ outer_loop_start:
     ; scan_and_fill(nx, y1);    
     ldx NX
     ldy Y1
+    
+    php
+    pha
+    phx
+    phy
+    inc floodCounter
+    bne @skipHigh
+    inc floodCounter + 1
+    @skipHigh:
+    lda floodCounter + 1
+    cmp #$0
+    bcc @continue
+    lda floodCounter
+    cmp #$0
+    bcc @continue    
+    JSRFAR _b5WaitOnKey, 5
+    
+    @continue:
+    ply
+    plx
+    pla
+    plp
+
     b8ScanAndFill
+
+
     SETUP_AUTO_INC_CAN_FILL #FORWARD_DIRECTION, NX, Y1
     ; while (nx <= rx && can_fill(nx, y1)) {
 
@@ -1104,8 +1124,9 @@ else_increment_nx:
 outer_loop_end:
     jmp pop_loop
 pop_done:
-    ;JSRFAR _b5WaitOnKey, 5
-    inc floodCounter
+    ; ;JSRFAR _b5WaitOnKey, 5
+    ; inc floodCounter
+    ; ;JSRFAR _b5WaitOnKey, 5
     rts
 .endproc ; _asm_flood_fill
 

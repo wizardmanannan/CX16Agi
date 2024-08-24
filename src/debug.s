@@ -11,6 +11,7 @@ _b6TellMeTheAddressPlease:
 stp
 lda _opCounter
 lda floodCounter
+lda innerFloodCounter
 lda oneCounter
 lda twoCounter
 rts
