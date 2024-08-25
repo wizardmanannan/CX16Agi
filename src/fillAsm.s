@@ -966,20 +966,6 @@ done_plotting:
     rts                     ; Return from subroutine
 .endproc ; _plot_pri_hline_fast
 
-
-.proc _b8AsmCanFill
-    X_VAL = ZP_TMP_14
-    Y_VAL = ZP_TMP_14 + 1
-
-    sta Y_VAL
-    jsr popa
-    sta X_VAL
-
-    can_fill X_VAL, Y_VAL
-
-    rts ; return
-.endproc
-
 floodCounter: .byte $0
 innerFloodCounter: .byte $0
 oneCounter: .word $0
