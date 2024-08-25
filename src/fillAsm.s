@@ -321,6 +321,36 @@ sta VERA_addr_bank
 .endscope
 .endmacro
 
+
+.macro SETUP_AUTO_INC_CAN_FILL_AND_STORE direction, x_val, y_val, ZP_VIS, ZP_PRI
+.scope
+.local @end
+.local @incrementOn
+.local @noIncrement
+
+ldy y_val
+CALC_VRAM_ADDR_LINE_DRAW_160 x_val, #$0
+lda direction
+sta VERA_addr_bank
+
+lda _priDrawEnabled
+beq @end
+ldy y_val
+CALC_VRAM_ADDR_PRIORITY_160 x_val, #$1
+lda x_val
+lsr 
+bcs @incrementOn
+@noIncrement:
+stz VERA_addr_bank
+bra @end
+@incrementOn:
+lda #BACKWARD_DIRECTION
+sta VERA_addr_bank
+
+@end:
+.endscope
+.endmacro
+
 .macro POST_CAN_FILL skipPriorityLabel
 ldx _priDrawEnabled
 beq skipPriorityLabel
@@ -972,6 +1002,8 @@ oneCounter: .word $0
 twoCounter: .word $0
 .import _fCounter;
 .proc _b8AsmFloodFill
+    VIS_ADDRESS = ZP_TMP_14
+    PRI_ADDRESS = ZP_TMP_21
     LX      = ZP_TMP_17 + 1
     RX      = ZP_TMP_18
     Y1      = ZP_TMP_18 + 1
@@ -1041,7 +1073,8 @@ outer_loop_start:
     bne @start_fill ; branch if can_fill returned true
     POST_CAN_FILL @skipPostCanFill  
     @skipPostCanFill:
-    jmp else_increment_nx
+    inc NX
+    jmp outer_loop_start
     @start_fill:
     ; scan_and_fill(nx, y1);    
     ldx NX
