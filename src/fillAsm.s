@@ -76,7 +76,7 @@ rts
 .endproc
 .endif
 
-.macro CAN_FILL x_val, y_val, vera_ctrl_value
+.macro CAN_FILL X_VAL, Y_VAL, VERA_CTRL_VALUE
 .scope
     ; registers X and Y contain pixel coordinates
     ; returns 0 in A register if the pixel cannot be filled (early exit)
@@ -84,14 +84,14 @@ rts
     VIS_PIXEL = ZP_TMP_16
     PRI_PIXEL = ZP_TMP_16 + 1
 
-    .ifnblank vera_ctrl_value
-    lda vera_ctrl_value
+    .ifnblank VERA_CTRL_VALUE
+    lda VERA_CTRL_VALUE
     sta VERA_ctrl
     .endif
 
-    ldy y_val
+    ldy Y_VAL
     ; get the vis pixel at the current x and y
-    CALC_VRAM_ADDR_LINE_DRAW_160 x_val
+    CALC_VRAM_ADDR_LINE_DRAW_160 X_VAL
     
     lda VERA_data0
     and #$0F ; mask out the top 4 bits
@@ -111,8 +111,8 @@ rts
     lda _picDrawEnabled
     bne vis_enabled_check
     
-    CALC_VRAM_ADDR_PRIORITY_160 x_val
-    lda x_val
+    CALC_VRAM_ADDR_PRIORITY_160 X_VAL
+    lda X_VAL
     lsr 
     bcc @even
     
@@ -156,7 +156,7 @@ end_macro:
 
 BACKWARD_DIRECTION = %11000
 FORWARD_DIRECTION = %10000
-.macro SETUP_AUTO_INC_CAN_FILL_CANCEL direction, x_val, y_val
+.macro SETUP_AUTO_INC_CAN_FILL_CANCEL direction, X_VAL, Y_VAL
 .scope
 .local @end
 .local @incrementOn
@@ -172,7 +172,7 @@ lda _priDrawEnabled
 beq @end
 lda #$1
 sta VERA_ctrl
-lda x_val
+lda X_VAL
 lsr 
 bcc @end
 @incrementOn:
@@ -183,22 +183,22 @@ sta VERA_addr_bank
 .endscope
 .endmacro
 
-.macro SETUP_AUTO_INC_CAN_FILL direction, x_val, y_val
+.macro SETUP_AUTO_INC_CAN_FILL direction, X_VAL, Y_VAL
 .scope
 .local @end
 .local @incrementOn
 .local @noIncrement
 
-ldy y_val
-CALC_VRAM_ADDR_LINE_DRAW_160 x_val, #$0
+ldy Y_VAL
+CALC_VRAM_ADDR_LINE_DRAW_160 X_VAL, #$0
 lda direction
 sta VERA_addr_bank
 
 lda _priDrawEnabled
 beq @end
-ldy y_val
-CALC_VRAM_ADDR_PRIORITY_160 x_val, #$1
-lda x_val
+ldy Y_VAL
+CALC_VRAM_ADDR_PRIORITY_160 X_VAL, #$1
+lda X_VAL
 lsr 
 bcs @incrementOn
 @noIncrement:
@@ -212,15 +212,15 @@ sta VERA_addr_bank
 .endscope
 .endmacro
 
-.macro POST_CAN_FILL skipPriorityLabel
+.macro POST_CAN_FILL SKIP_PRIORITY_LABEL
 ldx _priDrawEnabled
-beq skipPriorityLabel
+beq SKIP_PRIORITY_LABEL
 lda VERA_addr_bank
 eor #%10000
 sta VERA_addr_bank
 .endmacro
 
-.macro can_fill_auto_increment x_val
+.macro can_fill_auto_increment X_VAL
 .scope
     ; returns 0 in A register if the pixel cannot be filled (early exit)
     ; returns 1 in A register if the pixel can be filled
@@ -240,7 +240,7 @@ sta VERA_addr_bank
     lda _picDrawEnabled
     bne vis_enabled_check
     
-    lda x_val
+    lda X_VAL
     lsr 
     bcc @even
     
