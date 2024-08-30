@@ -16,9 +16,9 @@ GENERAL_TMP = ZP_TMP_13
 .macro PLOT_LINE_VARS
 COLOR           = ZP_TMP_3
 LENGTH_LOW      = ZP_TMP_6
-Y0              = ZP_TMP_7
-X1_LOW          = ZP_TMP_7 + 1
-X0_LOW          = ZP_TMP_8 + 1
+Y_VAL              = ZP_TMP_7
+X1_VAL          = ZP_TMP_7 + 1
+X0_VAL          = ZP_TMP_8 + 1
 .endmacro
 
 color_table:
@@ -552,18 +552,18 @@ PLOT_LINE_X0_LOW          = ZP_TMP_8 + 1
     sta VERA_ctrl
     stz VERA_dc_video ; Disable cache writing
 
-    stx X1_LOW
+    stx X1_VAL
     ; *** call the vram address calculation routine ***
-    CALC_VRAM_ADDR_LINE_DRAW_160 X0_LOW
+    CALC_VRAM_ADDR_LINE_DRAW_160 X0_VAL
 
 
     lda #$10    ; Enable auto-increment
     sta VERA_addr_bank
 
     ; Calculate the line length and the loop count / 2      
-    lda X1_LOW
+    lda X1_VAL
     sec
-    sbc X0_LOW
+    sbc X0_VAL
     tax
 
     ldy COLOR
@@ -583,7 +583,7 @@ rts ; Return from subroutine
 b8AsmPlotVisHLineJump:
 jmp shortVisLine
 
-;X1: a Y0: y color: color X0: X0_LOW
+;X1: a Y_VAL: y color: color X0: X0_VAL
 .proc _b8AsmPlotVisHLineFast 
     PLOT_LINE_VARS
 
@@ -593,7 +593,7 @@ jmp shortVisLine
     inc
     tax
     sec
-    sbc X0_LOW
+    sbc X0_VAL
     sta LENGTH_LOW 
     cmp #$10
     bcc b8AsmPlotVisHLineJump
@@ -603,7 +603,7 @@ long_line:
     sta VERA_ctrl
 
     ; *** call the vram address calculation routine ***
-    CALC_VRAM_ADDR_LINE_DRAW_160 X0_LOW
+    CALC_VRAM_ADDR_LINE_DRAW_160 X0_VAL
     
     ldx COLOR
     ldy color_table, x
@@ -669,7 +669,7 @@ done_plotting:
 .macro PLOT_PRIORITY_PLOT_LINE_VARS
 .scope
 PLOT_LINE_VARS
-PLOT_PRIORITY COLOR, X0_LOW
+PLOT_PRIORITY COLOR, X0_VAL
 .endscope
 .endmacro
 
@@ -685,7 +685,7 @@ PLOT_PRIORITY COLOR, X0_LOW
     stx VERA_ctrl
     stz VERA_dc_video ; Disable cache writing
 
-    lsr X0_LOW
+    lsr X0_VAL
     bcc @autoIncrement
 
     stz VERA_addr_bank
@@ -740,20 +740,20 @@ PLOT_PRIORITY_PLOT_LINE_VARS
 
 rts
 
-;X1: a Y0: y color: color X0: X0_LOW
+;X1: a Y_VAL: y color: color X0: X0_VAL
 .proc _b8AsmPlotPriHLineFast 
     
     PLOT_LINE_VARS
     
     ; Calculate the line length and the loop count
     ; Ensure X1 >= X0    
-    sta X1_LOW
+    sta X1_VAL
     
-    CALC_VRAM_ADDR_PRIORITY_160 X0_LOW, #$0
+    CALC_VRAM_ADDR_PRIORITY_160 X0_VAL, #$0
     
-    lda X1_LOW
+    lda X1_VAL
     sec
-    sbc X0_LOW
+    sbc X0_VAL
     inc
 
     cmp #1
@@ -761,7 +761,7 @@ rts
     cmp #$F
     bcc b8AsmPlotPriHLineJump
 
-    lsr X0_LOW ;Half a priority lines takes half as many bytes
+    lsr X0_VAL ;Half a priority lines takes half as many bytes
     bcc @length_half
 
     tay
