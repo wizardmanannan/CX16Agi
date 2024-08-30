@@ -10,13 +10,11 @@ GENERAL_TMP = ZP_TMP_13
 .include "fillStack.s"
 
 .import _bDbgShowPriority
+.import _picColour
+.import _priDrawEnabled
 
 color_table:
     .byte $00, $11, $22, $33, $44, $55, $66, $77, $88, $99, $AA, $BB, $CC, $DD, $EE, $FF
-
-;Useful when updating only one nibble for the priority 
-odd_color_table:
-    .byte $00, $01, $02, $03, $04, $05, $06, $07, $08, $09, $0A, $0B, $0C, $0D, $0E, $0F
 
 even_color_table:
     .byte $F0, $10, $20, $30, $40, $50, $60, $70, $80, $90, $A0, $B0, $C0, $D0, $E0, $F0
@@ -35,13 +33,6 @@ pri_mask_table_odd_ending:
     .byte %11010000 ; 2 $0F
     .byte %01000000 ; 3 $3F
     .byte %11111101; 0 $00
-
-; pri_mask_table:
-;     .byte %11111111 ; 0 $00
-;     .byte %11111101 ; 1 $03
-;     .byte %00111111; 2 $0F
-;     .byte %11110100; 3 $3F
-;     .byte %11111111; 0 $00
 
 .ifdef DEBUG
 .export _b8TestAsmPlotPriHLineFast
@@ -74,19 +65,6 @@ _b8TestAsmPlotPriHLineFast:
 rts
 .endif
 
-
-.macro pop_c_stack addr
-    ldy #$00
-    lda (C_STACK_ADDR),y  ; Get the parameter from the C-Stack
-    sta addr
-    ; move the C-Stack pointer up by 1
-    inc C_STACK_ADDR
-    bne *+4  ; If no overflow, skip the next instruction
-    inc C_STACK_ADDR + 1
-.endmacro
-
-.import _picColour
-.import _priDrawEnabled
 .macro can_fill x_val, y_val, vera_ctrl_value
 .scope
     ; registers X and Y contain pixel coordinates
@@ -164,104 +142,6 @@ end_macro:
 
 .endscope
 .endmacro
-
-;void b8ScanAndFill(uint8_t x, uint8_t y)
-;{
-;    static uint8_t lx, rx;
-;
-;    ;printfSafe("in. trying to fill %d, %d\n", x,y);
-;
-;    ; Inline can_fill logic at the start to avoid unnecessary function calls
-;    if (b8AsmCanFill(x, y) == false) {
-;#ifdef VERBOSE_FILL
-;        printfSafe("blocked on %d %d\n", x, y);
-;#endif ; VERBOSE_FILL
-;        return;
-;    }
-;
-;#ifdef VERBOSE_FILL
-;    printfSafe("can fill true %d %d\n", x, y);
-;#endif
-;
-;    lx = x;
-;    rx = x;
-;
-;    ;printfSafe("at 1\n");
-;
-;    ; Inline can_fill logic for left expansion
-;    while (lx != 0) {
-;        if (b8AsmCanFill(lx - 1, y) == false) {
-;            break;
-;        }
-;        --lx;
-;    }
-;
-;    ;printfSafe("at 2\n");
-;
-;    ; Inline can_fill logic for right expansion
-;    while (rx != 159) {
-;        if (b8AsmCanFill(rx + 1, y) == false) {
-;            
-;#ifdef VERBOSE_FILL
-;            printfSafe("stopping at %d\n", rx);
-;#endif
-;            break;
-;        }
-;        ++rx;
-;        ;printfSafe("l2 rx %d\n", rx);
-;    }
-;
-;    ;printfSafe("at 3. x0 %d x1 %d y %d color %d\n", lx, rx + 1, y, picColour);
-;
-;    ; pset_hline(lx, rx, y);
-;#ifdef VERBOSE_FILL
-;        printfSafe("%d drawing a line %p, %p to %p, %p\n",drawCounter++, lx, y, rx, y);
-;#endif
-;        
-;        if (drawCounter == 84)
-;        {
-;            enableStop = TRUE;
-;        }
-;        
-;        if (picDrawEnabled)
-;        {
-;            b8AsmPlotVisHLineFast(lx, rx, y, picColour);
-;        }
-;        enableStop = FALSE;
-;
-;    ;printfSafe("at 4\n");
-;
-;   /* if (priDrawEnabled)
-;        asm_plot_pri_hline_fast((lx << 1), (rx << 1) + 2, y + STARTING_BYTE, priColour);*/
-;
-;    ; if (y != 167) {
-;    ;     push(lx, rx, y + 1, 1); ; push below
-;    ; }
-;    ; if (y != 0) {
-;    ;     push(lx, rx, y - 1, -1); ; push above
-;    ; }
-;
-;        if (y < PICTURE_HEIGHT - 1)
-;        {
-;            b8Push(lx, rx, y + 1); ; push below
-;        }
-;
-;        if (y > 0)
-;        {
-;            b8Push(lx, rx, y - 1); ; push above
-;        }
-;}
-
-;VERBOSE_FILL = 1
-.import _printfSafe
-.ifdef VERBOSE_FILL
-tryingToFill: .asciiz "in. trying to fill %d, %d"
-blockedOn: .asciiz "blocked on %d %d"
-canFillTrue: .asciiz "can fill true %d %d"
-drawLine: .asciiz "%d drawing a line %p, %p to %p, %p"
-
-drawCounter: .word $0
-.endif
 
 BACKWARD_DIRECTION = %11000
 FORWARD_DIRECTION = %10000
@@ -419,6 +299,78 @@ end_macro:
 .endscope
 .endmacro
 
+
+;void b8ScanAndFill(uint8_t x, uint8_t y)
+;{
+;    static uint8_t lx, rx;
+;
+;    ;printfSafe("in. trying to fill %d, %d\n", x,y);
+;
+;    ; Inline can_fill logic at the start to avoid unnecessary function calls
+;    if (b8AsmCanFill(x, y) == false) {
+;        return;
+;    }
+
+;    lx = x;
+;    rx = x;
+;
+;
+;    ; Inline can_fill logic for left expansion
+;    while (lx != 0) {
+;        if (b8AsmCanFill(lx - 1, y) == false) {
+;            break;
+;        }
+;        --lx;
+;    }
+;
+;
+;    ; Inline can_fill logic for right expansion
+;    while (rx != 159) {
+;        if (b8AsmCanFill(rx + 1, y) == false) {
+;            
+;            break;
+;        }
+;        ++rx;
+;        ;printfSafe("l2 rx %d\n", rx);
+;    }
+;
+;    ;printfSafe("at 3. x0 %d x1 %d y %d color %d\n", lx, rx + 1, y, picColour);
+;
+;    ; pset_hline(lx, rx, y);
+;        
+;        if (drawCounter == 84)
+;        {
+;            enableStop = TRUE;
+;        }
+;        
+;        if (picDrawEnabled)
+;        {
+;            b8AsmPlotVisHLineFast(lx, rx, y, picColour);
+;        }
+;        enableStop = FALSE;
+;
+;    ;printfSafe("at 4\n");
+;
+;   /* if (priDrawEnabled)
+;        asm_plot_pri_hline_fast((lx << 1), (rx << 1) + 2, y + STARTING_BYTE, priColour);*/
+;
+;    ; if (y != 167) {
+;    ;     push(lx, rx, y + 1, 1); ; push below
+;    ; }
+;    ; if (y != 0) {
+;    ;     push(lx, rx, y - 1, -1); ; push above
+;    ; }
+;
+;        if (y < PICTURE_HEIGHT - 1)
+;        {
+;            b8Push(lx, rx, y + 1); ; push below
+;        }
+;
+;        if (y > 0)
+;        {
+;            b8Push(lx, rx, y - 1); ; push above
+;        }
+;}
 .macro b8ScanAndFill
 .local X_VAL
 .local Y_VAL
@@ -440,25 +392,6 @@ RX = ZP_TMP_12 + 1
 
 sty Y_VAL
 stx X_VAL
-
-.ifdef VERBOSE_FILL
-lda #<tryingToFill
-ldx #>tryingToFill
-jsr pushax
-
-lda X_VAL
-ldx #$0
-jsr pushax
-
-lda Y_VAL
-ldx #$0
-jsr pushax
-
-ldy #6
-
-jsr _printfSafe
-PRINT_NEW_LINE
-.endif
 
 can_fill X_VAL, Y_VAL, #$0
 cmp #$0
@@ -502,25 +435,6 @@ beq endLeftExpansionLoop
 jmp leftExpansionLoop
 endLeftExpansionLoop:
 
-.ifdef VERBOSE_FILL
-lda #< canFillTrue
-ldx #> canFillTrue
-jsr pushax
-
-lda X_VAL
-ldx #$0
-jsr pushax
-
-lda Y_VAL
-ldx #$0
-jsr pushax
-
-ldy #6
-
-jsr _printfSafe
-PRINT_NEW_LINE
-.endif
-
 ;while (rx != 159) {
 lda RX
 rightExpansionLoopCheck:
@@ -555,43 +469,6 @@ beq endRightExpansionLoop
 jmp rightExpansionLoop
 endRightExpansionLoop:
 
-.ifdef VERBOSE_FILL
-lda #< drawLine
-ldx #> drawLine
-jsr pushax
-
-lda drawCounter
-ldx drawCounter + 1
-jsr pushax
-
-lda LX
-ldx #$0
-jsr pushax
-
-lda Y_VAL
-ldx #$0
-jsr pushax
-
-lda RX
-ldx #$0
-jsr pushax
-
-lda Y_VAL
-ldx #$0
-jsr pushax
-
-ldy #12
-
-jsr _printfSafe
-PRINT_NEW_LINE
-
-inc drawCounter
-bne @afterDrawCounterInc
-@drawCounterHighByte:
-inc drawCounter + 1
-
-@afterDrawCounterInc:
-.endif
 ;if (picDrawEnabled)
 ;        {
 ;            b8AsmPlotVisHLineFast(lx, rx, y, picColour);
@@ -652,25 +529,6 @@ FILL_STACK_PUSH
 .import _b5WaitOnKey
 jmp end
 cannot_fill:
-
-.ifdef VERBOSE_FILL
-lda #< blockedOn
-ldx #> blockedOn
-jsr pushax
-
-lda X_VAL
-ldx #$0
-jsr pushax
-
-lda Y_VAL
-ldx #$0
-jsr pushax
-
-ldy #6
-
-jsr _printfSafe
-PRINT_NEW_LINE
-.endif
 end:
 .endmacro
 
