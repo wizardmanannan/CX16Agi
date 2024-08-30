@@ -342,6 +342,7 @@ end_macro:
 ;        }
 ;}
 .macro b8ScanAndFill
+.scope
 .local X_VAL
 .local Y_VAL
 .local LX
@@ -500,6 +501,7 @@ FILL_STACK_PUSH
 jmp end
 cannot_fill:
 end:
+.endscope
 .endmacro
 
 
@@ -521,6 +523,7 @@ lsrTable:
 .byte $38, $38, $38, $38, $39, $39, $39, $39, $3A, $3A, $3A, $3A, $3B, $3B, $3B, $3B
 .byte $3C, $3C, $3C, $3C, $3D, $3D, $3D, $3D, $3E, $3E, $3E, $3E, $3F, $3F, $3F, $3F
 
+.macro PLOT_LINE_VARS
 color           = ZP_TMP_3
 start_mask      = ZP_TMP_5
 end_mask        = ZP_TMP_5 + 1
@@ -528,10 +531,14 @@ length_low      = ZP_TMP_6
 Y0              = ZP_TMP_7
 X1_LOW          = ZP_TMP_7 + 1
 X0_LOW          = ZP_TMP_8 + 1
+.endmacro
+
 ; asm_plot_vis_hline(unsigned short x0, unsigned short x1, unsigned char y, unsigned char color);
 ; plots 2 pixels at a time for 160x200 mode
 .macro b8AsmPlotVisHLine
-    
+.scope
+    PLOT_LINE_VARS
+
     ; Line is a short line
     lda #%00000100  ; DCSEL = Mode 2 
     sta VERA_ctrl
@@ -559,7 +566,7 @@ X0_LOW          = ZP_TMP_8 + 1
         sta VERA_data0
         dex
         bne @loop
-
+.endscope
 .endmacro ; _plot_vis_hline
 
 shortVisLine:
@@ -570,6 +577,9 @@ jmp shortVisLine
 
 ;X1: a Y0: y color: color X0: X0_LOW
 .proc _b8AsmPlotVisHLineFast 
+    PLOT_LINE_VARS
+
+
     ; Calculate the line length and the loop count
     ; Ensure X1 >= X0 
     inc
@@ -648,10 +658,18 @@ done_plotting:
     rts                     ; Return from subroutine
 .endproc ; _plot_vis_hline_fast
 
+.macro PLOT_PRIORITY_PLOT_LINE_VARS
+PLOT_LINE_VARS
+PLOT_PRIORITY color, X0_LOW
+.endmacro
+
 ; asm_plot_pri_hline(unsigned short x0, unsigned short x1, unsigned char y, unsigned char color);
 ; plots 2 pixels at a time for 160x200 mode
 .macro b8AsmPlotPriHLine
-    
+.scope
+
+    PLOT_LINE_VARS
+
     ; Line is a short line
     ldx #%00000100  ; DCSEL = Mode 2 
     stx VERA_ctrl
@@ -698,7 +716,7 @@ done_plotting:
         ora even_color_table,y
         sta VERA_data0       
     @end:
-
+.endscope
 .endmacro ; _plot_pri_hline
 
 shortPriLine:
@@ -707,11 +725,16 @@ rts ; Return from subroutine
 b8AsmPlotPriHLineJump:
 jmp shortPriLine
 singlePriPixelJump:
-PLOT_PRIORITY color, X0_LOW
+
+PLOT_PRIORITY_PLOT_LINE_VARS
+
 rts
 
 ;X1: a Y0: y color: color X0: X0_LOW
 .proc _b8AsmPlotPriHLineFast 
+    
+    PLOT_LINE_VARS
+    
     ; Calculate the line length and the loop count
     ; Ensure X1 >= X0    
     sta X1_LOW
