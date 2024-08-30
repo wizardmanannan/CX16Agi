@@ -65,7 +65,7 @@ _b8TestAsmPlotPriHLineFast:
 rts
 .endif
 
-.macro can_fill x_val, y_val, vera_ctrl_value
+.macro CAN_FILL x_val, y_val, vera_ctrl_value
 .scope
     ; registers X and Y contain pixel coordinates
     ; returns 0 in A register if the pixel cannot be filled (early exit)
@@ -363,7 +363,7 @@ RX = ZP_TMP_12 + 1
 sty Y_VAL
 stx X_VAL
 
-can_fill X_VAL, Y_VAL, #$0
+CAN_FILL X_VAL, Y_VAL, #$0
 cmp #$0
 bne @expansion
 jmp cannot_fill
@@ -851,7 +851,7 @@ jmp pop_done
     bne @ok_fill
     jmp pop_done
 
-    ; can_fill X_VAL, Y_VAL
+    ; CAN_FILL X_VAL, Y_VAL
     ; bne @ok_fill
     ; rts
 @ok_fill:
