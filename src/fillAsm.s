@@ -543,7 +543,7 @@ PLOT_LINE_X0_LOW          = ZP_TMP_8 + 1
 
 ; asm_plot_vis_hline(unsigned short x0, unsigned short x1, unsigned char y, unsigned char color);
 ; plots 2 pixels at a time for 160x200 mode
-.macro b8AsmPlotVisHLine
+.macro PLOT_VIS_H_LINE
 .scope
     PLOT_LINE_VARS
 
@@ -578,7 +578,7 @@ PLOT_LINE_X0_LOW          = ZP_TMP_8 + 1
 .endmacro ; _plot_vis_hline
 
 shortVisLine:
-b8AsmPlotVisHLine
+PLOT_VIS_H_LINE
 rts ; Return from subroutine
 b8AsmPlotVisHLineJump:
 jmp shortVisLine
@@ -675,7 +675,7 @@ PLOT_PRIORITY COLOR, X0_VAL
 
 ; asm_plot_pri_hline(unsigned short x0, unsigned short x1, unsigned char y, unsigned char color);
 ; plots 2 pixels at a time for 160x200 mode
-.macro b8AsmPlotPriHLine
+.macro PLOT_PRI_H_LINE
 .scope
 
     PLOT_LINE_VARS
@@ -730,7 +730,7 @@ PLOT_PRIORITY COLOR, X0_VAL
 .endmacro ; _plot_pri_hline
 
 shortPriLine:
-b8AsmPlotPriHLine
+PLOT_PRI_H_LINE
 rts ; Return from subroutine
 b8AsmPlotPriHLineJump:
 jmp shortPriLine
