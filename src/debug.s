@@ -10,9 +10,6 @@ DEBUG_INC = 1
 _b6TellMeTheAddressPlease:
 stp
 lda _opCounter
-lda floodCounter
-lda oneCounter
-lda twoCounter
 rts
 
 .segment "BANKRAM05"

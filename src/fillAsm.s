@@ -201,36 +201,6 @@ sta VERA_addr_bank
 .endscope
 .endmacro
 
-
-.macro SETUP_AUTO_INC_CAN_FILL_AND_STORE direction, x_val, y_val, ZP_VIS, ZP_PRI
-.scope
-.local @end
-.local @incrementOn
-.local @noIncrement
-
-ldy y_val
-CALC_VRAM_ADDR_LINE_DRAW_160 x_val, #$0
-lda direction
-sta VERA_addr_bank
-
-lda _priDrawEnabled
-beq @end
-ldy y_val
-CALC_VRAM_ADDR_PRIORITY_160 x_val, #$1
-lda x_val
-lsr 
-bcs @incrementOn
-@noIncrement:
-stz VERA_addr_bank
-bra @end
-@incrementOn:
-lda #BACKWARD_DIRECTION
-sta VERA_addr_bank
-
-@end:
-.endscope
-.endmacro
-
 .macro POST_CAN_FILL skipPriorityLabel
 ldx _priDrawEnabled
 beq skipPriorityLabel
@@ -854,11 +824,6 @@ done_plotting:
     rts                     ; Return from subroutine
 .endproc ; _plot_pri_hline_fast
 
-floodCounter: .byte $0
-innerFloodCounter: .byte $0
-oneCounter: .word $0
-twoCounter: .word $0
-.import _fCounter;
 .proc _b8AsmFloodFill
     VIS_ADDRESS = ZP_TMP_14
     PRI_ADDRESS = ZP_TMP_21
@@ -898,7 +863,6 @@ jmp pop_done
     ldx X_VAL
     ldy Y_VAL
     b8ScanAndFill
-    inc floodCounter
 
     ; while (pop(&lx, &rx, &y1)) {
 pop_loop:
@@ -982,7 +946,6 @@ outer_loop_end:
     jmp pop_loop
 pop_done:
     ;JSRFAR _b5WaitOnKey, 5
-    inc floodCounter
     rts
 .endproc ; _asm_flood_fill
 
