@@ -281,7 +281,7 @@ end_macro:
 .endmacro
 
 
-;void b8ScanAndFill(uint8_t x, uint8_t y)
+;void SCAN_AND_FILL(uint8_t x, uint8_t y)
 ;{
 ;    static uint8_t lx, rx;
 ;
@@ -352,7 +352,7 @@ end_macro:
 ;            b8Push(lx, rx, y - 1); ; push above
 ;        }
 ;}
-.macro b8ScanAndFill
+.macro SCAN_AND_FILL
 .scope
 .local X_VAL
 .local Y_VAL
@@ -895,7 +895,7 @@ jmp pop_done
     ; scan_and_fill(x, y);
     ldx X_VAL
     ldy Y_VAL
-    b8ScanAndFill
+    SCAN_AND_FILL
 
     ; while (pop(&lx, &rx, &y1)) {
 pop_loop:
@@ -934,7 +934,7 @@ outer_loop_start:
     ; scan_and_fill(nx, y1);    
     ldx NX
     ldy Y1
-    b8ScanAndFill
+    SCAN_AND_FILL
     SETUP_AUTO_INC_CAN_FILL #FORWARD_DIRECTION, NX, Y1
     ; while (nx <= rx && can_fill(nx, y1)) {
 
