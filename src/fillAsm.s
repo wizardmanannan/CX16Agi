@@ -13,6 +13,16 @@ GENERAL_TMP = ZP_TMP_13
 .import _picColour
 .import _priDrawEnabled
 
+.macro PLOT_LINE_VARS
+COLOR           = ZP_TMP_3
+start_mask      = ZP_TMP_5
+end_mask        = ZP_TMP_5 + 1
+length_low      = ZP_TMP_6
+Y0              = ZP_TMP_7
+X1_LOW          = ZP_TMP_7 + 1
+X0_LOW          = ZP_TMP_8 + 1
+.endmacro
+
 color_table:
     .byte $00, $11, $22, $33, $44, $55, $66, $77, $88, $99, $AA, $BB, $CC, $DD, $EE, $FF
 
@@ -36,9 +46,11 @@ pri_mask_table_odd_ending:
 
 .ifdef DEBUG
 .export _b8TestAsmPlotPriHLineFast
-_b8TestAsmPlotPriHLineFast:
+.proc _b8TestAsmPlotPriHLineFast
+ PLOT_LINE_VARS
+ 
  lda #5
- sta color
+ sta COLOR
 
  ldx #$0
  ldy #$0
@@ -63,6 +75,7 @@ _b8TestAsmPlotPriHLineFast:
  bra @loopForever
 
 rts
+.endproc
 .endif
 
 .macro CAN_FILL x_val, y_val, vera_ctrl_value
@@ -356,6 +369,8 @@ end_macro:
 .local cannot_fill
 .local end
 
+CALL_PLOT_LINE_VARS
+
 X_VAL = ZP_TMP_10
 Y_VAL = ZP_TMP_10 + 1
 LX = ZP_TMP_12
@@ -448,10 +463,10 @@ endRightExpansionLoop:
 lda _picDrawEnabled
 beq @priDraw
 lda LX
-sta X0_LOW
+sta PLOT_LINE_X0_LOW
 ldy Y_VAL
 lda _picColour
-sta color
+sta PLOT_LINE_COLOR
 lda RX
 
 jsr _b8AsmPlotVisHLineFast
@@ -460,10 +475,10 @@ jsr _b8AsmPlotVisHLineFast
 lda _priDrawEnabled
 beq @pushBelow
 lda LX
-sta X0_LOW
+sta PLOT_LINE_X0_LOW
 ldy Y_VAL
 lda _priColour
-sta color
+sta PLOT_LINE_COLOR
 lda RX
 
 jsr _b8AsmPlotPriHLineFast
@@ -523,14 +538,9 @@ lsrTable:
 .byte $38, $38, $38, $38, $39, $39, $39, $39, $3A, $3A, $3A, $3A, $3B, $3B, $3B, $3B
 .byte $3C, $3C, $3C, $3C, $3D, $3D, $3D, $3D, $3E, $3E, $3E, $3E, $3F, $3F, $3F, $3F
 
-.macro PLOT_LINE_VARS
-color           = ZP_TMP_3
-start_mask      = ZP_TMP_5
-end_mask        = ZP_TMP_5 + 1
-length_low      = ZP_TMP_6
-Y0              = ZP_TMP_7
-X1_LOW          = ZP_TMP_7 + 1
-X0_LOW          = ZP_TMP_8 + 1
+.macro CALL_PLOT_LINE_VARS
+PLOT_LINE_COLOR           = ZP_TMP_3
+PLOT_LINE_X0_LOW          = ZP_TMP_8 + 1
 .endmacro
 
 ; asm_plot_vis_hline(unsigned short x0, unsigned short x1, unsigned char y, unsigned char color);
@@ -558,7 +568,7 @@ X0_LOW          = ZP_TMP_8 + 1
     sbc X0_LOW
     tax
 
-    ldy color
+    ldy COLOR
     lda color_table, y
     
     @loop:
@@ -597,7 +607,7 @@ long_line:
     ; *** call the vram address calculation routine ***
     CALC_VRAM_ADDR_LINE_DRAW_160 X0_LOW
     
-    ldx color
+    ldx COLOR
     ldy color_table, x
     sty $9f29
     sty $9f2A
@@ -659,8 +669,10 @@ done_plotting:
 .endproc ; _plot_vis_hline_fast
 
 .macro PLOT_PRIORITY_PLOT_LINE_VARS
+.scope
 PLOT_LINE_VARS
-PLOT_PRIORITY color, X0_LOW
+PLOT_PRIORITY COLOR, X0_LOW
+.endscope
 .endmacro
 
 ; asm_plot_pri_hline(unsigned short x0, unsigned short x1, unsigned char y, unsigned char color);
@@ -682,7 +694,7 @@ PLOT_PRIORITY color, X0_LOW
     tay
     lda VERA_data0
     and #$F0
-    ora color
+    ora COLOR
     ldx #$10    ; Enable auto-increment
     stx VERA_addr_bank
     sta VERA_data0
@@ -697,7 +709,7 @@ PLOT_PRIORITY color, X0_LOW
     sty VERA_addr_bank
 
     @setColor:
-    ldy color
+    ldy COLOR
     ldx color_table, y
 
     @loop:
@@ -712,7 +724,7 @@ PLOT_PRIORITY color, X0_LOW
         stz VERA_addr_bank
         lda VERA_data0
         and #$0F
-        ldy color
+        ldy COLOR
         ora even_color_table,y
         sta VERA_data0       
     @end:
@@ -759,7 +771,7 @@ rts
     stz VERA_addr_bank
     lda VERA_data0
     and #$F0
-    ora color
+    ora COLOR
    
     ldx #%10000
     stx VERA_addr_bank
@@ -780,7 +792,7 @@ long_line:
 
     ; *** call the vram address calculation routine ***
     
-    ldx color
+    ldx COLOR
     ldy color_table, x
     sty $9f29
     sty $9f2A
