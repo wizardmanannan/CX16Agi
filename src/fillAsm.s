@@ -15,9 +15,7 @@ GENERAL_TMP = ZP_TMP_13
 
 .macro PLOT_LINE_VARS
 COLOR           = ZP_TMP_3
-start_mask      = ZP_TMP_5
-end_mask        = ZP_TMP_5 + 1
-length_low      = ZP_TMP_6
+LENGTH_LOW      = ZP_TMP_6
 Y0              = ZP_TMP_7
 X1_LOW          = ZP_TMP_7 + 1
 X0_LOW          = ZP_TMP_8 + 1
@@ -596,7 +594,7 @@ jmp shortVisLine
     tax
     sec
     sbc X0_LOW
-    sta length_low 
+    sta LENGTH_LOW 
     cmp #$10
     bcc b8AsmPlotVisHLineJump
 long_line:
@@ -625,7 +623,7 @@ long_line:
     beq @endLoop
     sty VERA_data0
     inx
-    dec length_low
+    dec LENGTH_LOW
     bra @nonDivideByFourLoopCheck
     @endLoop:
 
@@ -635,7 +633,7 @@ long_line:
     lda #%01000000  ; Enable cache writing
     sta VERA_dc_video
 
-    lda length_low
+    lda LENGTH_LOW
     tax
     ldy lsrTable,x ;To Do check if we shouldn't instead by anding the result of this with 3
 
@@ -783,7 +781,7 @@ rts
 @length_half:
     lsr
     php
-    sta length_low 
+    sta LENGTH_LOW 
     
 long_line:
     ; Change DCSEL to mode 6 for cache write operations
@@ -810,7 +808,7 @@ long_line:
     beq @endLoop
     sty VERA_data0
     inx
-    dec length_low
+    dec LENGTH_LOW
     bra @nonDivideByFourLoopCheck
     @endLoop:
 
@@ -820,7 +818,7 @@ long_line:
     lda #%01000000  ; Enable cache writing
     sta VERA_dc_video
 
-    lda length_low
+    lda LENGTH_LOW
     tax
     ldy lsrTable,x
     and #3
