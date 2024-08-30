@@ -220,7 +220,7 @@ eor #%10000
 sta VERA_addr_bank
 .endmacro
 
-.macro can_fill_auto_increment X_VAL
+.macro CAN_FILL_AUTO_INCREMENT X_VAL
 .scope
     ; returns 0 in A register if the pixel cannot be filled (early exit)
     ; returns 1 in A register if the pixel can be filled
@@ -404,7 +404,7 @@ leftExpansionLoop:
 lda LX
 dec
 sta GENERAL_TMP
-can_fill_auto_increment GENERAL_TMP
+CAN_FILL_AUTO_INCREMENT GENERAL_TMP
 cmp #$0
 beq endLeftExpansionLoop
 POST_CAN_FILL @decrementLX
@@ -437,7 +437,7 @@ lda RX
 inc
 sta GENERAL_TMP
 nop
-can_fill_auto_increment GENERAL_TMP
+CAN_FILL_AUTO_INCREMENT GENERAL_TMP
 cmp #$0
 beq endRightExpansionLoop
 
@@ -922,7 +922,7 @@ outer_loop_start:
     jmp outer_loop_end
 @nx_less_than_rx:
     ; if (can_fill(nx, y1)) {
-    can_fill_auto_increment NX
+    CAN_FILL_AUTO_INCREMENT NX
 
     cmp #0
     bne @start_fill ; branch if can_fill returned true
@@ -950,7 +950,7 @@ inner_loop_start:
     lda #$1
     sta VERA_ctrl
     stz VERA_addr_bank
-    can_fill_auto_increment NX
+    CAN_FILL_AUTO_INCREMENT NX
     cmp #$0
     beq dontEnterInnerLoop
     
