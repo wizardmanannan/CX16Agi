@@ -182,12 +182,21 @@ stz VERA_ctrl
 .endscope
 .endmacro ; CALC_VRAM_ADDR
 
+.macro VERA_CTRL_SET vera_ctrl_value
+.ifnblank vera_ctrl_value
+        lda vera_ctrl_value
+        .if (.xmatch (#0, vera_ctrl_value))
+            stz VERA_ctrl
+        .else 
+            lda vera_ctrl_value
+            sta VERA_ctrl
+        .endif
+    .endif
+.endmacro
 
 .macro CALC_VRAM_ADDR_VISUAL xpos, vera_ctrl_value
-    .ifnblank vera_ctrl_value
-    lda vera_ctrl_value
-    sta VERA_ctrl
-    .endif
+    
+    VERA_CTRL_SET vera_ctrl_value
 
     lda xpos
     clc
@@ -200,10 +209,9 @@ stz VERA_ctrl
 .endmacro ; calc_vram_addr_160
 
 .macro CALC_VRAM_ADDR_PRIORITY xpos, vera_ctrl_value    
-    .ifnblank vera_ctrl_value
-    lda vera_ctrl_value
-    sta VERA_ctrl
-    .endif
+    
+    VERA_CTRL_SET vera_ctrl_value
+
 
     lda xpos
     lsr
