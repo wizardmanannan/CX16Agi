@@ -15,13 +15,6 @@ b8LineTablePriorityHigh: .res PICTURE_HEIGHT
 b8ColorTable:
     .byte $00, $11, $22, $33, $44, $55, $66, $77, $88, $99, $AA, $BB, $CC, $DD, $EE, $FF
 
-.macro ADD_PRIORITY_OFFSET
-clc
-lda VERA_addr_high
-adc #>PRIORITY_START
-sta VERA_addr_high
-.endmacro
-
 ;starting byte a/x
 TABLE_LOW = ZP_TMP_2
 TABLE_HIGH = ZP_TMP_3
@@ -139,32 +132,24 @@ stz VERA_ctrl
     ; lda #$30
     ; sta $00
 
-    ; make use of the lookup table
     stz VERA_ctrl
-    ldx ypos
-    lda b8LineTableVisualLow,x     ; Get the low byte of the address
-    sta tmpZP
-    lda b8LineTableVisualHigh,x   ; Get the high byte of the address
-    sta tmpZP + 1
-    
-    ; set bank back to 0
+        ; set bank back to 0
     ; stz $00
 
     lda xpos_low
     ror                 ; keep result in A
 
+    ; make use of the lookup table
     ; Add (y << 5) + (y << 7) + (x0 >> 1)
+    ldx ypos
     clc
-    adc tmpZP
-    sta tmpZP
-    lda tmpZP + 1
+    adc b8LineTableVisualLow,x   ; Get the high byte of the address
+    sta VERA_addr_low
+    lda b8LineTableVisualHigh,x   ; Get the high byte of the address
     adc #$00            ; keep result in A
-
     ; Store the result in the VRAM address register
     sta VERA_addr_high
-    lda tmpZP
 
-    sta VERA_addr_low
     stz VERA_addr_bank ; Disable auto-increment, set address bank to 0
 .endscope
 .endmacro ; CALC_VRAM_ADDR
@@ -176,29 +161,22 @@ stz VERA_ctrl
     ; lda #$30
     ; sta $00
     
-    ; make use of the lookup table
     stz VERA_ctrl
-    ldx ypos
-    lda b8LineTablePriorityLow,x     ; Get the low byte of the address
-    sta tmpZP
-    lda b8LineTablePriorityHigh,x   ; Get the high byte of the address
-    sta tmpZP + 1
-
+    
     lda xpos_low
     lsr                 ; keep result in A
 
     ; Add (y << 5) + (y << 7) + (x0 >> 1)
+    ; make use of the lookup table
+    ldx ypos
     clc
-    adc tmpZP
-    sta tmpZP
-    lda tmpZP + 1
+    adc b8LineTablePriorityLow,x  
+    sta VERA_addr_low
+    lda b8LineTablePriorityHigh,x
     adc #$00            ; keep result in A
-
     ; Store the result in the VRAM address register
     sta VERA_addr_high
-    lda tmpZP
 
-    sta VERA_addr_low
     stz VERA_addr_bank ; Disable auto-increment, set address bank to 0
 
 .endscope
