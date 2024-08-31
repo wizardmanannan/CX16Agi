@@ -156,7 +156,8 @@ end_macro:
 
 BACKWARD_DIRECTION = %11000
 FORWARD_DIRECTION = %10000
-.macro SETUP_AUTO_INC_CAN_FILL_CANCEL direction, X_VAL, Y_VAL
+;If NX ever gets ahead of auto increment, we recalcuate it. There are some routes where we check can fill but then don't increment NX
+.macro SETUP_AUTO_INC_CAN_FILL_RECALC direction, X_VAL, Y_VAL
 .scope
 .local @end
 .local @incrementOn
@@ -963,7 +964,7 @@ dontEnterInnerLoop:
 
     POST_CAN_FILL @skipPostCanFillInner
     @skipPostCanFillInner:
-    SETUP_AUTO_INC_CAN_FILL_CANCEL #FORWARD_DIRECTION, NX, Y1
+    SETUP_AUTO_INC_CAN_FILL_RECALC #FORWARD_DIRECTION, NX, Y1
     jmp outer_loop_start
     can_fill_inner:
     POST_CAN_FILL jumpInnerLoop
