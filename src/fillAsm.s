@@ -4,7 +4,7 @@
 
 FILL_INC = 1
 
-GENERAL_TMP = ZP_TMP_13
+GENERAL_TMP = ZP_TMP_2
 
 .include "lineDrawing.s"
 .include "fillStack.s"
@@ -15,10 +15,10 @@ GENERAL_TMP = ZP_TMP_13
 
 .macro PLOT_LINE_VARS
 COLOR           = ZP_TMP_3
-LENGTH_LOW      = ZP_TMP_6
-Y_VAL              = ZP_TMP_7
-X1_VAL          = ZP_TMP_7 + 1
-X0_VAL          = ZP_TMP_8 + 1
+LENGTH_LOW      = ZP_TMP_3 + 1
+Y_VAL              = ZP_TMP_4
+X1_VAL          = ZP_TMP_4 + 1
+X0_VAL          = ZP_TMP_5
 .endmacro
 
 color_table:
@@ -81,8 +81,8 @@ rts
     ; registers X and Y contain pixel coordinates
     ; returns 0 in A register if the pixel cannot be filled (early exit)
     ; returns 1 in A register if the pixel can be filled
-    VIS_PIXEL = ZP_TMP_16
-    PRI_PIXEL = ZP_TMP_16 + 1
+    VIS_PIXEL = GENERAL_TMP
+    PRI_PIXEL = GENERAL_TMP + 1
 
     .ifnblank VERA_CTRL_VALUE
     lda VERA_CTRL_VALUE
@@ -371,10 +371,10 @@ end_macro:
 
 CALL_PLOT_LINE_VARS
 
-X_VAL = ZP_TMP_10
-Y_VAL = ZP_TMP_10 + 1
-LX = ZP_TMP_12
-RX = ZP_TMP_12 + 1
+X_VAL = ZP_TMP_6
+Y_VAL = ZP_TMP_6 + 1
+LX = ZP_TMP_7
+RX = ZP_TMP_7 + 1
 
 sty Y_VAL
 stx X_VAL
@@ -538,9 +538,10 @@ lsrTable:
 .byte $38, $38, $38, $38, $39, $39, $39, $39, $3A, $3A, $3A, $3A, $3B, $3B, $3B, $3B
 .byte $3C, $3C, $3C, $3C, $3D, $3D, $3D, $3D, $3E, $3E, $3E, $3E, $3F, $3F, $3F, $3F
 
+;These zp numbers must match thir namesakes in PLOT_LINE_VARS
 .macro CALL_PLOT_LINE_VARS
 PLOT_LINE_COLOR           = ZP_TMP_3
-PLOT_LINE_X0_LOW          = ZP_TMP_8 + 1
+PLOT_LINE_X0_LOW          = ZP_TMP_5
 .endmacro
 
 ; asm_plot_vis_hline(unsigned short x0, unsigned short x1, unsigned char y, unsigned char color);
@@ -860,14 +861,14 @@ done_plotting:
 .endproc ; _plot_pri_hline_fast
 
 .proc _b8AsmFloodFill
-    VIS_ADDRESS = ZP_TMP_14
-    PRI_ADDRESS = ZP_TMP_21
-    LX      = ZP_TMP_17 + 1
-    RX      = ZP_TMP_18
-    Y1      = ZP_TMP_18 + 1
-    NX      = ZP_TMP_19 
-    X_VAL   = ZP_TMP_20
-    Y_VAL   = ZP_TMP_20 + 1
+    VIS_ADDRESS = ZP_TMP_8
+    PRI_ADDRESS = ZP_TMP_9
+    LX      = ZP_TMP_10
+    RX      = ZP_TMP_10 + 1
+    Y1      = ZP_TMP_12
+    NX      = ZP_TMP_12 + 1 
+    X_VAL   = ZP_TMP_13
+    Y_VAL   = ZP_TMP_13 + 1
     sta X_VAL ; x is in A register
     jsr popa
     sta Y_VAL 
@@ -1007,12 +1008,11 @@ bne @loop
 rts
 
 
-.import _fCounter
 _b8AsmFloodFillSections:
 .scope
-DATA = ZP_TMP_22
-X_VAL = ZP_TMP_9 + 1
-CLEAN_PIC = ZP_TMP_23
+CLEAN_PIC = ZP_TMP_16
+X_VAL = GENERAL_TMP
+DATA = ZP_TMP_23 ; This must not conflict with any from _b8DrawLine, that is why it is set so high. Must match PICTURE_DATA_ZP in picture.c as well
 
 @continue:
 sta CLEAN_PIC

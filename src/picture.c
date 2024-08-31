@@ -47,7 +47,7 @@ boolean picDrawEnabled = FALSE, priDrawEnabled = FALSE;
 /* Not sure what the default patCode value is */
 byte picColour = 0, priColour = 0, patCode, patNum;
 
-#define PICTURE_DATA_ZP (byte**) 0xE1;
+#define PICTURE_DATA_ZP (byte**) 0xFE; //This must not conflict with any from _b8DrawLine, that is why it is set so high. Must match DATA zp in _b8AsmFloodFillSections (fillAsm.s)
 
 #ifdef TEST_LINE_DRAW
 
