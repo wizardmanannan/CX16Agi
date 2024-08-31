@@ -977,7 +977,8 @@ b8FillClean: ;Fills screen with one colour, for use when there is nothing on the
 stz GENERAL_TMP
 stz GENERAL_TMP + 1
 
-CALC_VRAM_ADDR #$0, #$0, GENERAL_TMP
+ldy #$0
+CALC_VRAM_ADDR_LINE_DRAW_160 #$0, #$0
 lda #$10
 sta VERA_addr_bank
 
