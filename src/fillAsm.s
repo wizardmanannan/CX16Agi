@@ -164,7 +164,7 @@ FORWARD_DIRECTION = %10000
 .local @noIncrement
 
 stz VERA_ctrl
-lda #%10000
+lda direction
 sta VERA_addr_bank
 
 
@@ -177,7 +177,7 @@ lda X_VAL
 lsr 
 bcc @end
 @incrementOn:
-lda #BACKWARD_DIRECTION
+lda direction
 sta VERA_addr_bank
 
 @end:
@@ -206,7 +206,7 @@ bcs @incrementOn
 stz VERA_addr_bank
 bra @end
 @incrementOn:
-lda #BACKWARD_DIRECTION
+lda direction
 sta VERA_addr_bank
 
 @end:
