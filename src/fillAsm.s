@@ -91,7 +91,7 @@ rts
 
     ldy Y_VAL
     ; get the vis pixel at the current x and y
-    CALC_VRAM_ADDR_LINE_DRAW_160 X_VAL
+    CALC_VRAM_ADDR_VISUAL X_VAL
     
     lda VERA_data0
     and #$0F ; mask out the top 4 bits
@@ -111,7 +111,7 @@ rts
     lda _picDrawEnabled
     bne vis_enabled_check
     
-    CALC_VRAM_ADDR_PRIORITY_160 X_VAL
+    CALC_VRAM_ADDR_PRIORITY X_VAL
     lda X_VAL
     lsr 
     bcc @even
@@ -192,14 +192,14 @@ sta VERA_addr_bank
 .local @noIncrement
 
 ldy Y_VAL
-CALC_VRAM_ADDR_LINE_DRAW_160 X_VAL, #$0
+CALC_VRAM_ADDR_VISUAL X_VAL, #$0
 lda direction
 sta VERA_addr_bank
 
 lda _priDrawEnabled
 beq @end
 ldy Y_VAL
-CALC_VRAM_ADDR_PRIORITY_160 X_VAL, #$1
+CALC_VRAM_ADDR_PRIORITY X_VAL, #$1
 lda X_VAL
 lsr 
 bcs @incrementOn
@@ -556,7 +556,7 @@ PLOT_LINE_X0_LOW          = ZP_TMP_8 + 1
 
     stx X1_VAL
     ; *** call the vram address calculation routine ***
-    CALC_VRAM_ADDR_LINE_DRAW_160 X0_VAL
+    CALC_VRAM_ADDR_VISUAL X0_VAL
 
 
     lda #$10    ; Enable auto-increment
@@ -605,7 +605,7 @@ long_line:
     sta VERA_ctrl
 
     ; *** call the vram address calculation routine ***
-    CALC_VRAM_ADDR_LINE_DRAW_160 X0_VAL
+    CALC_VRAM_ADDR_VISUAL X0_VAL
     
     ldx COLOR
     ldy color_table, x
@@ -751,7 +751,7 @@ rts
     ; Ensure X1 >= X0    
     sta X1_VAL
     
-    CALC_VRAM_ADDR_PRIORITY_160 X0_VAL, #$0
+    CALC_VRAM_ADDR_PRIORITY X0_VAL, #$0
     
     lda X1_VAL
     sec
@@ -977,7 +977,8 @@ b8FillClean: ;Fills screen with one colour, for use when there is nothing on the
 stz GENERAL_TMP
 stz GENERAL_TMP + 1
 
-CALC_VRAM_ADDR #$0, #$0, GENERAL_TMP
+ldy #$0
+CALC_VRAM_ADDR_VISUAL #$0, #$0
 lda #$10
 sta VERA_addr_bank
 

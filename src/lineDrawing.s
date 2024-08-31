@@ -183,7 +183,7 @@ stz VERA_ctrl
 .endmacro ; CALC_VRAM_ADDR
 
 
-.macro CALC_VRAM_ADDR_LINE_DRAW_160 xpos, vera_ctrl_value
+.macro CALC_VRAM_ADDR_VISUAL xpos, vera_ctrl_value
     .ifnblank vera_ctrl_value
     lda vera_ctrl_value
     sta VERA_ctrl
@@ -199,7 +199,7 @@ stz VERA_ctrl
     stz VERA_addr_bank ; clear the upper byte of the VRAM address and any auto increment
 .endmacro ; calc_vram_addr_160
 
-.macro CALC_VRAM_ADDR_PRIORITY_160 xpos, vera_ctrl_value    
+.macro CALC_VRAM_ADDR_PRIORITY xpos, vera_ctrl_value    
     .ifnblank vera_ctrl_value
     lda vera_ctrl_value
     sta VERA_ctrl
@@ -217,65 +217,6 @@ stz VERA_ctrl
     stz VERA_addr_bank ; clear the upper byte of the VRAM address and any auto increment
 .endmacro ; calc_vram_addr_160
 
-
-
-.macro CALC_VRAM_ADDR XPOS, YPOS, TMP
-    ; make use of the lookup table
-    stz VERA_ctrl
-    clc
-    ldx YPOS
-  
-    lda b8LineTableVisualLow,x     ; Get the low byte of the address
-    sta TMP
-    lda b8LineTableVisualHigh,x   ; Get the high byte of the address
-    sta TMP + 1
-        
-    
-    lda XPOS
-    ; Add (y << 5) + (y << 7) + (x0 >> 1)
-    clc
-    adc TMP
-    sta TMP
-    lda #$0
-    adc TMP + 1           ; keep result in A
-
-    ; Store the result in the VRAM address register
-    sta VERA_addr_high
-    lda TMP
-
-    sta VERA_addr_low
-    stz VERA_addr_bank ; Disable auto-increment, set address bank to 0
-.endmacro ; CALC_VRAM_ADDR
-
-
-.macro CALC_VRAM_ADDR_PRIORITY XPOS, YPOS, TMP
-    ; make use of the lookup table
-    stz VERA_ctrl
-    clc
-    ldx YPOS
-    
-    lda b8LineTablePriorityLow,x     ; Get the low byte of the address
-    sta TMP
-    lda b8LineTablePriorityHigh,x   ; Get the high byte of the address
-    sta TMP + 1
-        
-    
-    lda XPOS
-    lsr
-    clc
-    adc TMP
-    sta TMP
-    lda #$0
-    adc TMP + 1           ; keep result in A
-
-    ; Store the result in the VRAM address register
-    sta VERA_addr_high
-    lda TMP
-
-    sta VERA_addr_low
-    stz VERA_addr_bank ; Disable auto-increment, set address bank to 0
-.endmacro ; CALC_VRAM_ADDR
-
 .import _picColour, _priColour, _picDrawEnabled, _priDrawEnabled
  X_POS = ZP_TMP_2
  Y_POS = ZP_TMP_2 + 1
@@ -289,7 +230,8 @@ stz VERA_ctrl
     lda _picDrawEnabled
     beq priority
 
-    CALC_VRAM_ADDR X_POS, Y_POS, ZP_TMP_5
+    ldy Y_POS
+    CALC_VRAM_ADDR_VISUAL X_POS, #$0
 
     PLOT_VIS _picColour
 
@@ -297,7 +239,8 @@ stz VERA_ctrl
     lda _priDrawEnabled
     beq @end
 
-    CALC_VRAM_ADDR_PRIORITY X_POS, Y_POS, ZP_TMP_5
+    ldy Y_POS
+    CALC_VRAM_ADDR_PRIORITY X_POS, #$0
 
     PLOT_PRIORITY _priColour, X_POS
 
