@@ -872,19 +872,6 @@ done_plotting:
     jsr popa
     sta Y_VAL 
 
- ; is the current vis colour 15 (white)?
-; if (vis_colour == 15) return 0;
-lda _picColour
-cmp #15
-bne @checkEnabled
-jmp pop_done
-
-@checkEnabled:
-    lda _picDrawEnabled
-    ora _priDrawEnabled
-    bne @checkCanFill
-    jmp pop_done
-
 @checkCanFill:
     CAN_FILL X_VAL, Y_VAL, #$0
     cmp #$0
@@ -1033,6 +1020,20 @@ stx CLEAN_PIC + 1
 jsr popax 
 sta @bufferStatus
 stx @bufferStatus + 1
+
+
+ ; is the current vis colour 15 (white)?
+; if (vis_colour == 15) return 0;
+lda _picColour
+cmp #15
+bne @checkEnabled
+rts
+
+@checkEnabled:
+lda _picDrawEnabled
+ora _priDrawEnabled
+bne @loop
+rts
 
 @loop:
 @getX:
