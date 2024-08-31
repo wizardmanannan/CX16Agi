@@ -156,18 +156,19 @@ end_macro:
 
 BACKWARD_DIRECTION = %11000
 FORWARD_DIRECTION = %10000
-;If NX ever gets ahead of auto increment, we recalcuate it. There are some routes where we check can fill but then don't increment NX
+;Turns auto increment back on after switch off
 .macro SETUP_AUTO_INC direction, X_VAL, Y_VAL
 .scope
 .local @end
 .local @incrementOn
 .local @noIncrement
 
+;Visual screen controlled with channel 0        
 stz VERA_ctrl
 lda direction
 sta VERA_addr_bank
 
-
+;Priority Screen controlled with channel 1
 @checkPriority:
 lda _priDrawEnabled
 beq @end
@@ -865,7 +866,6 @@ done_plotting:
     RX      = ZP_TMP_18
     Y1      = ZP_TMP_18 + 1
     NX      = ZP_TMP_19 
-    ; DY      = ZP_TMP_19 + 1
     X_VAL   = ZP_TMP_20
     Y_VAL   = ZP_TMP_20 + 1
     sta X_VAL ; x is in A register
@@ -882,13 +882,15 @@ jmp pop_done
 @checkEnabled:
     lda _picDrawEnabled
     ora _priDrawEnabled
-    bne @ok_fill
+    bne @checkCanFill
     jmp pop_done
 
-    ; CAN_FILL X_VAL, Y_VAL
-    ; bne @ok_fill
-    ; rts
-@ok_fill:
+@checkCanFill:
+    CAN_FILL X_VAL, Y_VAL, #$0
+    cmp #$0
+    bne ok_fill
+    rts
+ok_fill:
 
     ; fill_stack_pointer = 0;
     stz FILL_STACK_POINTER
