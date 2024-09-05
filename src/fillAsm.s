@@ -760,7 +760,7 @@ rts
     tya
 
 @length_half:
-    lsr
+    lsr ;The length of priority is half of the line length as the data is 4bpp. From this point on we can treat the line as 8bpp, because the length is halved 
     php
     sta LENGTH_LOW 
     
@@ -771,14 +771,15 @@ long_line:
 
     ; *** call the vram address calculation routine ***
     
-    ldx COLOR
+    ldx COLOR ; Store the color in the cache for filling
     ldy color_table, x
     sty $9f29
     sty $9f2A
     sty $9f2B
     sty $9f2C
 
-    stz VERA_ctrl
+    stz VERA_ctrl ;As cache fill can only fill on multiple of 4 boundaries we first need to draw single pixels until we are on a multiple of 4
+;TODO: Replace this with a start mask to save time
     lda #%10000
     sta VERA_addr_bank
 
@@ -799,10 +800,10 @@ long_line:
     lda #%01000000  ; Enable cache writing
     sta VERA_dc_video
 
-    lda LENGTH_LOW
+    lda LENGTH_LOW ;Get the end mask. As cache fill can only fill on addresses which are multiples of 4, there is going to be some remainder.
     tax
-    ldy lsrTable,x
-    and #3
+    ldy lsrTable,x ;Divide by 4 by calling the table
+    and #3 ;Get the remainder, which can be determined by checking the last 2 bits of the number
     tax 
 
     ; Set address auto-increment to 4 bytes
@@ -826,7 +827,7 @@ done_plotting:
     @evenEnding:
     lda mask_table,x
     bra @writeMask
-    @oddEnding:
+    @oddEnding: ;If the original non halved length was an odd ending then we have one extra pixel to plot, so we used a different mask table
     lda pri_mask_table_odd_ending,x
     @writeMask:
     sta VERA_data0
