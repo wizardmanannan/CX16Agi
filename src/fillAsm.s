@@ -287,9 +287,8 @@ end_macro:
 ;{
 ;    static uint8_t lx, rx;
 ;
-;    ;printfSafe("in. trying to fill %d, %d\n", x,y);
 ;
-;    ; Inline can_fill logic at the start to avoid unnecessary function calls
+;    ;A
 ;    if (b8AsmCanFill(x, y) == false) {
 ;        return;
 ;    }
@@ -297,7 +296,7 @@ end_macro:
 ;    lx = x;
 ;    rx = x;
 ;
-;
+;    ;B
 ;    ; Inline can_fill logic for left expansion
 ;    while (lx != 0) {
 ;        if (b8AsmCanFill(lx - 1, y) == false) {
@@ -306,7 +305,7 @@ end_macro:
 ;        --lx;
 ;    }
 ;
-;
+;    ;C
 ;    ; Inline can_fill logic for right expansion
 ;    while (rx != 159) {
 ;        if (b8AsmCanFill(rx + 1, y) == false) {
@@ -314,45 +313,31 @@ end_macro:
 ;            break;
 ;        }
 ;        ++rx;
-;        ;printfSafe("l2 rx %d\n", rx);
 ;    }
 ;
-;    ;printfSafe("at 3. x0 %d x1 %d y %d color %d\n", lx, rx + 1, y, picColour);
 ;
-;    ; pset_hline(lx, rx, y);
-;        
-;        if (drawCounter == 84)
-;        {
-;            enableStop = TRUE;
-;        }
-;        
-;        if (picDrawEnabled)
-;        {
+;   ;D  
+;   if (picDrawEnabled)
+;   {
 ;            b8AsmPlotVisHLineFast(lx, rx, y, picColour);
-;        }
-;        enableStop = FALSE;
+;   }
 ;
-;    ;printfSafe("at 4\n");
-;
-;   /* if (priDrawEnabled)
-;        asm_plot_pri_hline_fast((lx << 1), (rx << 1) + 2, y + STARTING_BYTE, priColour);*/
-;
-;    ; if (y != 167) {
-;    ;     push(lx, rx, y + 1, 1); ; push below
-;    ; }
-;    ; if (y != 0) {
-;    ;     push(lx, rx, y - 1, -1); ; push above
-;    ; }
-;
-;        if (y < PICTURE_HEIGHT - 1)
-;        {
-;            b8Push(lx, rx, y + 1); ; push below
-;        }
-;
-;        if (y > 0)
-;        {
-;            b8Push(lx, rx, y - 1); ; push above
-;        }
+;   ;E
+;   if (priDrawEnabled)
+;   {
+;        asm_plot_pri_hline_fast((lx << 1), (rx << 1) + 2, y + STARTING_BYTE, priColour);
+;   }
+;   ;F
+;   if (y < PICTURE_HEIGHT - 1)
+;   {
+;     b8Push(lx, rx, y + 1); ; push below
+;   }
+;         
+;   ;G
+;   if (y > 0)
+;   {
+;    b8Push(lx, rx, y - 1); ; push above
+;   }
 ;}
 .macro SCAN_AND_FILL
 .scope
@@ -379,17 +364,18 @@ RX = ZP_TMP_7 + 1
 sty Y_VAL
 stx X_VAL
 
+;A
 CAN_FILL X_VAL, Y_VAL, #$0
 cmp #$0
 bne @expansion
 jmp cannot_fill
 
+;B
 @expansion:
 lda X_VAL
 sta LX
 sta RX
 
-;while (lx != 0)
 bne @setupLeftExpansion
 jmp endLeftExpansionLoop
 
@@ -400,8 +386,6 @@ sta GENERAL_TMP
 
 SETUP_AUTO_INC_CAN_FILL #BACKWARD_DIRECTION, GENERAL_TMP, Y_VAL
 leftExpansionLoop:
-
-; if (b8AsmCanFill(lx - 1, y) == false break;
  
 lda LX
 dec
@@ -421,7 +405,7 @@ beq endLeftExpansionLoop
 jmp leftExpansionLoop
 endLeftExpansionLoop:
 
-;while (rx != 159) {
+;C
 lda RX
 rightExpansionLoopCheck:
 cmp #PICTURE_WIDTH - 1
@@ -434,7 +418,6 @@ inc
 sta GENERAL_TMP
 SETUP_AUTO_INC_CAN_FILL #FORWARD_DIRECTION, GENERAL_TMP, Y_VAL
 rightExpansionLoop:
-;if (b8AsmCanFill(rx + 1, y) == false) break
 lda RX
 inc
 sta GENERAL_TMP
@@ -455,11 +438,8 @@ beq endRightExpansionLoop
 jmp rightExpansionLoop
 endRightExpansionLoop:
 
-;if (picDrawEnabled)
-;        {
-;            b8AsmPlotVisHLineFast(lx, rx, y, picColour);
-;        }
 
+;D
 lda _picDrawEnabled
 beq @priDraw
 lda LX
@@ -468,10 +448,10 @@ ldy Y_VAL
 lda _picColour
 sta PLOT_LINE_COLOR
 lda RX
-
 jsr _b8AsmPlotVisHLineFast
 
 @priDraw:
+;E
 lda _priDrawEnabled
 beq @pushBelow
 lda LX
@@ -484,14 +464,8 @@ lda RX
 jsr _b8AsmPlotPriHLineFast
 
 
-;JSRFAR _b5WaitOnKey, 5
-
 @pushBelow:
-;        if (y < PICTURE_HEIGHT - 1)
-;        {
-;            b8Push(lx, rx, y + 1); ; push below
-;        }
-;
+;F
 ldy Y_VAL
 cpy #PICTURE_HEIGHT - 1
 bcs @pushAbove
@@ -499,11 +473,9 @@ lda LX
 ldx RX
 iny
 FILL_STACK_PUSH
+
+
 @pushAbove:
-;        if (y > 0)
-;        {
-;            b8Push(lx, rx, y - 1); ; push above
-;        }
 ldy Y_VAL
 beq @return
 lda LX
@@ -598,7 +570,7 @@ jmp shortVisLine
     sec
     sbc X0_VAL
     sta LENGTH_LOW 
-    cmp #$10
+    cmp #8
     bcc b8AsmPlotVisHLineJump
 long_line:
     ; Change DCSEL to mode 6 for cache write operations
