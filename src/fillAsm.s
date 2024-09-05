@@ -517,7 +517,7 @@ PLOT_LINE_X0_LOW          = ZP_TMP_5
 .endmacro
 
 ; asm_plot_vis_hline(unsigned short x0, unsigned short x1, unsigned char y, unsigned char color);
-; plots 2 pixels at a time for 160x200 mode
+;Short line drawing function, called by _b8AsmPlotVisHLineFast when the line is to short to justify cache fill plotting
 .macro PLOT_VIS_H_LINE
 .scope
     PLOT_LINE_VARS
@@ -535,7 +535,7 @@ PLOT_LINE_X0_LOW          = ZP_TMP_5
     lda #$10    ; Enable auto-increment
     sta VERA_addr_bank
 
-    ; Calculate the line length and the loop count / 2      
+    ; Calculate the line length   
     lda X1_VAL
     sec
     sbc X0_VAL
@@ -559,18 +559,17 @@ b8AsmPlotVisHLineJump:
 jmp shortVisLine
 
 ;X1: a Y_VAL: y color: color X0: X0_VAL
-.proc _b8AsmPlotVisHLineFast 
+.proc _b8AsmPlotVisHLineFast ;Faster for longer lines, note if the line length is less than $10 then this algorithm defers to the short line length, algorithm above
     PLOT_LINE_VARS
 
 
-    ; Calculate the line length and the loop count
-    ; Ensure X1 >= X0 
+    ; If the line length is less than $10 then the drawing is deferred to the short drawing algorithm
     inc
     tax
     sec
     sbc X0_VAL
     sta LENGTH_LOW 
-    cmp #8
+    cmp #$10
     bcc b8AsmPlotVisHLineJump
 long_line:
     ; Change DCSEL to mode 6 for cache write operations
@@ -580,6 +579,7 @@ long_line:
     ; *** call the vram address calculation routine ***
     CALC_VRAM_ADDR_VISUAL X0_VAL
     
+    ;Store the color in the cache in preparation for cache fill
     ldx COLOR
     ldy color_table, x
     sty $9f29
@@ -587,6 +587,8 @@ long_line:
     sty $9f2B
     sty $9f2C
 
+;As cache fill can only fill on multiple of 4 boundaries we first need to draw single pixels until we are on a multiple of 4
+;TODO: Replace this with a start mask to save time
     stz VERA_ctrl
     lda #%10000
     sta VERA_addr_bank
@@ -716,30 +718,34 @@ PLOT_PRIORITY_PLOT_LINE_VARS
 rts
 
 ;X1: a Y_VAL: y color: color X0: X0_VAL
+;Faster for longer lines, note if the line length is less than $10 then this algorithm defers to the short line length, algorithm above
 .proc _b8AsmPlotPriHLineFast 
     
     PLOT_LINE_VARS
     
-    ; Calculate the line length and the loop count
-    ; Ensure X1 >= X0    
+    ; Calculate the line length and the loop count 
     sta X1_VAL
     
+    ;The y val is used here in this calculation and then is no longer required
     CALC_VRAM_ADDR_PRIORITY X0_VAL, #$0
     
     lda X1_VAL
     sec
     sbc X0_VAL
-    inc
+    inc ;We always add one when calculating a line length for example if we drew from 0 to 0 then the length is 1
 
+    ;If there is only one pixel defer to single pixel drawing function
     cmp #1
     beq singlePriPixelJump
+    ;If less than $F bytes defer to short line drawing function
     cmp #$F
     bcc b8AsmPlotPriHLineJump
 
     lsr X0_VAL ;Half a priority lines takes half as many bytes
     bcc @length_half
 
-    tay
+    ;If X is odd then we need to draw a single pixel on the right hand side first preserving the other side
+    tay ;Keep length in y
 
     stz VERA_addr_bank
     lda VERA_data0
@@ -748,7 +754,7 @@ rts
    
     ldx #%10000
     stx VERA_addr_bank
-    dey    
+    dey   ;Take away one, as we have accounted for 1 pixel 
     sta VERA_data0
 
     tya
