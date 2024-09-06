@@ -154,6 +154,42 @@ end_macro:
 .endscope
 .endmacro
 
+
+.macro CAN_FILL_VIS_ONLY X_VAL, Y_VAL, VERA_CTRL_VALUE
+.scope
+    ; registers X and Y contain pixel coordinates
+    ; returns 0 in A register if the pixel cannot be filled (early exit)
+    ; returns 1 in A register if the pixel can be filled
+    VIS_PIXEL = GENERAL_TMP
+    PRI_PIXEL = GENERAL_TMP + 1
+
+    .ifnblank VERA_CTRL_VALUE
+    lda VERA_CTRL_VALUE
+    sta VERA_ctrl
+    .endif
+
+    ldy Y_VAL
+    ; get the vis pixel at the current x and y
+    CALC_VRAM_ADDR_VISUAL X_VAL
+    
+    lda VERA_data0
+    and #$0F ; mask out the top 4 bits
+    cmp #15
+    bne cannot_fill
+
+@can_fill:
+    lda #1 ; return 1 (pixel can be filled)
+    ldx #0 ; clear X register
+    bra end_macro
+
+cannot_fill:
+    lda #0 ; return 0 (pixel cannot be filled)
+
+end_macro: 
+
+.endscope
+.endmacro
+
 BACKWARD_DIRECTION = %11000
 FORWARD_DIRECTION = %10000
 ;Turns auto increment back on after switch off
@@ -185,6 +221,7 @@ sta VERA_addr_bank
 .endscope
 .endmacro
 
+;Turns on auto increment and recalcuates 
 .macro SETUP_AUTO_INC_RECALC direction, X_VAL, Y_VAL
 .scope
 .local @end
@@ -947,6 +984,112 @@ pop_done:
     rts
 .endproc ; _asm_flood_fill
 
+
+.proc _b8AsmFloodFillVisOnly
+    VIS_ADDRESS = ZP_TMP_8
+    PRI_ADDRESS = ZP_TMP_9
+    LX      = ZP_TMP_10
+    RX      = ZP_TMP_10 + 1
+    Y1      = ZP_TMP_12
+    NX      = ZP_TMP_12 + 1 
+    X_VAL   = ZP_TMP_13
+    Y_VAL   = ZP_TMP_13 + 1
+    sta X_VAL ; x is in A register
+    jsr popa
+    sta Y_VAL 
+
+@checkCanFill:
+    CAN_FILL_VIS_ONLY X_VAL, Y_VAL, #$0 ;An initial fill check, if we can't fill an the very first point, abort immediately 
+    cmp #$0
+    bne ok_fill
+    rts
+ok_fill:
+
+    ; fill_stack_pointer = 0;
+    stz FILL_STACK_POINTER
+
+    ; scan_and_fill(x, y);
+    ldx X_VAL
+    ldy Y_VAL
+    SCAN_AND_FILL
+
+    ; while (pop(&lx, &rx, &y1)) {
+pop_loop:
+    FILL_STACK_POP LX, RX, Y1
+    bne @pop_not_done ; bne branches if Z flag is clear (ie not equal to zero)
+    jmp pop_done
+@pop_not_done:
+    ; nx = lx;
+    lda LX
+    sta NX
+    ; while (nx <= rx) {
+
+SETUP_AUTO_INC_RECALC #FORWARD_DIRECTION, NX, Y1 ;Enable auto increment for the loop
+outer_loop_start:
+    lda RX
+
+    ;This instruction subtracts the contents of memory from the contents of the accumulator.
+    ;The use of the CMP affects the following flags: 
+    ; Z flag is set on an equal comparison, reset otherwise (ie M==A Z=1)
+    ; the N flag is set or reset by the result bit 7, (ie M-A<0 N=1)
+    ; the carry flag is set when the value in memory is less than or equal to the accumulator, (ie M<=A C=1)
+    cmp NX ; compare NX to RX
+    bcs @nx_less_than_rx ; bcc branches if C flag is set (ie NX <= RX)
+    jmp outer_loop_end
+@nx_less_than_rx:
+    ; if (can_fill(nx, y1)) {
+    CAN_FILL_AUTO_INCREMENT NX
+
+    cmp #0
+    bne @start_fill ; branch if can_fill returned true 
+    @skipPostCanFill:
+    inc NX
+    jmp outer_loop_start
+    @start_fill:
+    ; scan_and_fill(nx, y1);    
+    ldx NX
+    ldy Y1
+    SCAN_AND_FILL
+    SETUP_AUTO_INC_RECALC #FORWARD_DIRECTION, NX, Y1
+    ; while (nx <= rx && can_fill(nx, y1)) {
+
+inner_loop_start:
+    lda NX
+    cmp RX
+    ; bcs outer_loop_start ; bcs branches if C flag is set (ie NX > RX)
+    bcc @nx_less_than_rx_inner
+    jmp else_increment_nx
+@nx_less_than_rx_inner:
+    stz VERA_ctrl ;We disable auto increment for this check as this check is true we don't increment nx, and therefore should auto increment
+    stz VERA_addr_bank
+    lda #$1
+    sta VERA_ctrl
+    stz VERA_addr_bank
+    CAN_FILL_AUTO_INCREMENT NX
+    cmp #$0
+    beq dontEnterInnerLoop
+    
+    SETUP_AUTO_INC_RECALC #FORWARD_DIRECTION, NX, Y1
+
+    jmp can_fill_inner
+dontEnterInnerLoop:
+    SETUP_AUTO_INC #FORWARD_DIRECTION, NX, Y1
+    jmp outer_loop_start
+
+    can_fill_inner:
+    inc NX
+jumpInnerLoop:
+    jmp inner_loop_start
+else_increment_nx:
+    inc NX
+    jmp outer_loop_start
+outer_loop_end:
+    jmp pop_loop
+pop_done:
+    ;JSRFAR _b5WaitOnKey, 5
+    rts
+.endproc ; _asm_flood_fill
+
 b8FillClean: ;Fills screen with one colour, for use when there is nothing on the screen
 
 stz GENERAL_TMP
@@ -1045,4 +1188,70 @@ lda #$0
 rts
 @bufferStatus: .word $0
 .endscope
+
+
+_b8AsmFloodFillSectionsVisOnly:
+.scope
+CLEAN_PIC = ZP_TMP_16
+X_VAL = GENERAL_TMP
+DATA = ZP_TMP_23 ; This must not conflict with any from _b8DrawLine, that is why it is set so high. Must match PICTURE_DATA_ZP in picture.c as well
+
+@continue:
+sta CLEAN_PIC
+stx CLEAN_PIC + 1
+
+jsr popax 
+sta @bufferStatus
+stx @bufferStatus + 1
+
+
+ ; is the current vis colour 15 (white)?
+; if (vis_colour == 15) return 0;
+lda _picColour
+cmp #15
+bne @checkEnabled
+rts
+
+@checkEnabled:
+lda _picDrawEnabled
+ora _priDrawEnabled
+bne @loop
+rts
+
+@loop:
+@getX:
+GET_NEXT_ABS DATA, @bufferStatus, #$1
+sta X_VAL
+cmp #$F0
+bcs @return
+
+@getY:
+GET_NEXT_ABS DATA, @bufferStatus, #$1
+tay
+cmp #$F0
+bcs @return
+
+@checkCleanPic:
+lda (CLEAN_PIC)
+and _picDrawEnabled
+bne @cleanPic
+
+tya
+jsr pusha
+lda X_VAL
+jsr _b8AsmFloodFillVisOnly
+
+jmp @loop
+
+@cleanPic:
+jsr b8FillClean
+lda #$1
+sta (CLEAN_PIC)
+lda #$0
+
+@return:
+rts
+@bufferStatus: .word $0
+.endscope
+
 .endif
