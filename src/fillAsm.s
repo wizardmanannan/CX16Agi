@@ -155,18 +155,13 @@ end_macro:
 .endmacro
 
 
-.macro CAN_FILL_VIS_ONLY X_VAL, Y_VAL, VERA_CTRL_VALUE
+.macro CAN_FILL_VIS_ONLY X_VAL, Y_VAL
 .scope
     ; registers X and Y contain pixel coordinates
     ; returns 0 in A register if the pixel cannot be filled (early exit)
     ; returns 1 in A register if the pixel can be filled
     VIS_PIXEL = GENERAL_TMP
     PRI_PIXEL = GENERAL_TMP + 1
-
-    .ifnblank VERA_CTRL_VALUE
-    lda VERA_CTRL_VALUE
-    sta VERA_ctrl
-    .endif
 
     ldy Y_VAL
     ; get the vis pixel at the current x and y
@@ -273,7 +268,7 @@ sta VERA_addr_bank
 .local @noIncrement
 
 ldy Y_VAL
-CALC_VRAM_ADDR_VISUAL X_VAL, #$0
+CALC_VRAM_ADDR_VISUAL X_VAL
 lda direction
 sta VERA_addr_bank
 
@@ -609,7 +604,7 @@ sty Y_VAL
 stx X_VAL
 
 ;A
-CAN_FILL_VIS_ONLY X_VAL, Y_VAL, #$0
+CAN_FILL_VIS_ONLY X_VAL, Y_VAL
 cmp #$0
 bne @expansion
 jmp cannot_fill
@@ -1191,7 +1186,7 @@ pop_done:
     sta Y_VAL 
 
 @checkCanFill:
-    CAN_FILL_VIS_ONLY X_VAL, Y_VAL, #$0 ;An initial fill check, if we can't fill an the very first point, abort immediately 
+    CAN_FILL_VIS_ONLY X_VAL, Y_VAL
     cmp #$0
     bne ok_fill
     rts
@@ -1252,7 +1247,6 @@ inner_loop_start:
     bcc @nx_less_than_rx_inner
     jmp else_increment_nx
 @nx_less_than_rx_inner:
-    stz VERA_ctrl ;We disable auto increment for this check as this check is true we don't increment nx, and therefore should auto increment
     stz VERA_addr_bank
     CAN_FILL_AUTO_INCREMENT_VIS_ONLY NX
     cmp #$0
@@ -1386,6 +1380,8 @@ X_VAL = GENERAL_TMP
 DATA = ZP_TMP_23 ; This must not conflict with any from _b8DrawLine, that is why it is set so high. Must match PICTURE_DATA_ZP in picture.c as well
 
 @continue:
+ stz VERA_ctrl 
+
 sta CLEAN_PIC
 stx CLEAN_PIC + 1
 
