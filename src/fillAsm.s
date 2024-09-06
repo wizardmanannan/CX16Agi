@@ -185,7 +185,7 @@ sta VERA_addr_bank
 .endscope
 .endmacro
 
-.macro SETUP_AUTO_INC_CAN_FILL direction, X_VAL, Y_VAL
+.macro SETUP_AUTO_INC_RECALC direction, X_VAL, Y_VAL
 .scope
 .local @end
 .local @incrementOn
@@ -384,7 +384,7 @@ lda LX
 dec
 sta GENERAL_TMP
 
-SETUP_AUTO_INC_CAN_FILL #BACKWARD_DIRECTION, GENERAL_TMP, Y_VAL
+SETUP_AUTO_INC_RECALC #BACKWARD_DIRECTION, GENERAL_TMP, Y_VAL
 leftExpansionLoop:
  
 lda LX
@@ -416,7 +416,7 @@ jmp endRightExpansionLoop
 lda RX
 inc
 sta GENERAL_TMP
-SETUP_AUTO_INC_CAN_FILL #FORWARD_DIRECTION, GENERAL_TMP, Y_VAL
+SETUP_AUTO_INC_RECALC #FORWARD_DIRECTION, GENERAL_TMP, Y_VAL
 rightExpansionLoop:
 lda RX
 inc
@@ -853,7 +853,7 @@ done_plotting:
     sta Y_VAL 
 
 @checkCanFill:
-    CAN_FILL X_VAL, Y_VAL, #$0
+    CAN_FILL X_VAL, Y_VAL, #$0 ;An initial fill check, if we can't fill an the very first point, abort immediately 
     cmp #$0
     bne ok_fill
     rts
@@ -878,7 +878,7 @@ pop_loop:
     sta NX
     ; while (nx <= rx) {
 
-SETUP_AUTO_INC_CAN_FILL #FORWARD_DIRECTION, NX, Y1
+SETUP_AUTO_INC_RECALC #FORWARD_DIRECTION, NX, Y1 ;Enable auto increment for the loop
 outer_loop_start:
     lda RX
 
@@ -905,7 +905,7 @@ outer_loop_start:
     ldx NX
     ldy Y1
     SCAN_AND_FILL
-    SETUP_AUTO_INC_CAN_FILL #FORWARD_DIRECTION, NX, Y1
+    SETUP_AUTO_INC_RECALC #FORWARD_DIRECTION, NX, Y1
     ; while (nx <= rx && can_fill(nx, y1)) {
 
 inner_loop_start:
@@ -915,7 +915,7 @@ inner_loop_start:
     bcc @nx_less_than_rx_inner
     jmp else_increment_nx
 @nx_less_than_rx_inner:
-    stz VERA_ctrl
+    stz VERA_ctrl ;We disable auto increment for this check as this check is true we don't increment nx, and therefore should auto increment
     stz VERA_addr_bank
     lda #$1
     sta VERA_ctrl
@@ -924,25 +924,19 @@ inner_loop_start:
     cmp #$0
     beq dontEnterInnerLoop
     
-    SETUP_AUTO_INC_CAN_FILL #FORWARD_DIRECTION, NX, Y1
+    SETUP_AUTO_INC_RECALC #FORWARD_DIRECTION, NX, Y1
 
     jmp can_fill_inner
 dontEnterInnerLoop:
-    
-    ;two
-
-    POST_CAN_FILL @skipPostCanFillInner
-    @skipPostCanFillInner:
     SETUP_AUTO_INC #FORWARD_DIRECTION, NX, Y1
     jmp outer_loop_start
+
     can_fill_inner:
     POST_CAN_FILL jumpInnerLoop
-    ; ++nx;
     inc NX
 jumpInnerLoop:
     jmp inner_loop_start
 else_increment_nx:
-    ; ++nx;
     inc NX
     jmp outer_loop_start
 outer_loop_end:
