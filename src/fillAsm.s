@@ -251,6 +251,23 @@ sta VERA_addr_bank
 .endscope
 .endmacro
 
+;Turns on auto increment and recalcuates 
+.macro SETUP_AUTO_INC_RECALC_VIS_ONLY direction, X_VAL, Y_VAL
+.scope
+.local @end
+.local @incrementOn
+.local @noIncrement
+
+ldy Y_VAL
+CALC_VRAM_ADDR_VISUAL X_VAL, #$0
+lda direction
+sta VERA_addr_bank
+
+@end:
+.endscope
+.endmacro
+
+
 .macro POST_CAN_FILL SKIP_PRIORITY_LABEL
 ldx _priDrawEnabled
 beq SKIP_PRIORITY_LABEL
@@ -307,6 +324,28 @@ vis_enabled_check:
     cpx #$FF
     bne cannot_fill
 
+@can_fill:
+    lda #1 ; return 1 (pixel can be filled)
+    ldx #0 ; clear X register
+    bra end_macro
+
+cannot_fill:
+    lda #0 ; return 0 (pixel cannot be filled)
+
+end_macro: 
+
+.endscope
+.endmacro
+
+.macro CAN_FILL_AUTO_INCREMENT_VIS_ONLY X_VAL
+.scope
+    ; returns 0 in A register if the pixel cannot be filled (early exit)
+    ; returns 1 in A register if the pixel can be filled
+    ldx VERA_data0
+
+    cpx #$FF
+    bne cannot_fill
+    
 @can_fill:
     lda #1 ; return 1 (pixel can be filled)
     ldx #0 ; clear X register
@@ -528,6 +567,146 @@ cannot_fill:
 end:
 .endscope
 .endmacro
+
+
+
+.macro SCAN_AND_FILL_VIS_ONLY
+.scope
+.local X_VAL
+.local Y_VAL
+.local LX
+.local RX
+.local @setupLeftExpansion
+.local leftExpansionLoop
+.local endLeftExpansionLoop
+.local rightExpansionLoop
+.local rightExpansionLoopCheck
+.local endRightExpansionLoop
+.local cannot_fill
+.local end
+
+CALL_PLOT_LINE_VARS
+
+X_VAL = ZP_TMP_6
+Y_VAL = ZP_TMP_6 + 1
+LX = ZP_TMP_7
+RX = ZP_TMP_7 + 1
+
+sty Y_VAL
+stx X_VAL
+
+;A
+CAN_FILL_VIS_ONLY X_VAL, Y_VAL, #$0
+cmp #$0
+bne @expansion
+jmp cannot_fill
+
+;B
+@expansion:
+lda X_VAL
+sta LX
+sta RX
+
+bne @setupLeftExpansion
+jmp endLeftExpansionLoop
+
+@setupLeftExpansion:
+lda LX
+dec
+sta GENERAL_TMP
+
+SETUP_AUTO_INC_RECALC_VIS_ONLY #BACKWARD_DIRECTION, GENERAL_TMP, Y_VAL
+leftExpansionLoop:
+ 
+lda LX
+dec
+sta GENERAL_TMP
+CAN_FILL_AUTO_INCREMENT_VIS_ONLY GENERAL_TMP
+cmp #$0
+beq endLeftExpansionLoop
+POST_CAN_FILL @decrementLX
+
+@decrementLX:
+;--lx
+lda LX
+dec
+sta LX
+
+beq endLeftExpansionLoop
+jmp leftExpansionLoop
+endLeftExpansionLoop:
+
+;C
+lda RX
+rightExpansionLoopCheck:
+cmp #PICTURE_WIDTH - 1
+bne @setupRightExpansion
+jmp endRightExpansionLoop
+
+@setupRightExpansion:
+lda RX
+inc
+sta GENERAL_TMP
+
+SETUP_AUTO_INC_RECALC_VIS_ONLY #FORWARD_DIRECTION, GENERAL_TMP, Y_VAL
+rightExpansionLoop:
+lda RX
+inc
+sta GENERAL_TMP
+nop
+CAN_FILL_AUTO_INCREMENT_VIS_ONLY GENERAL_TMP
+cmp #$0
+beq endRightExpansionLoop
+
+POST_CAN_FILL @incrementRX
+
+@incrementRX:
+inc RX ;rx++
+
+lda RX
+cmp #PICTURE_WIDTH - 1 ;A duplicate of the while loop condition which saves a jump
+beq endRightExpansionLoop
+
+jmp rightExpansionLoop
+endRightExpansionLoop:
+
+
+;D
+lda LX
+sta PLOT_LINE_X0_LOW
+ldy Y_VAL
+lda _picColour
+sta PLOT_LINE_COLOR
+lda RX
+jsr _b8AsmPlotVisHLineFast
+
+@pushBelow:
+;F
+ldy Y_VAL
+cpy #PICTURE_HEIGHT - 1
+bcs @pushAbove
+lda LX
+ldx RX
+iny
+FILL_STACK_PUSH
+
+
+@pushAbove:
+ldy Y_VAL
+beq @return
+lda LX
+ldx RX
+dey
+FILL_STACK_PUSH
+
+@return:
+.import _b5WaitOnKey
+jmp end
+cannot_fill:
+end:
+.endscope
+.endmacro
+
 
 
 lsrTable:
@@ -1049,7 +1228,7 @@ outer_loop_start:
     ; scan_and_fill(nx, y1);    
     ldx NX
     ldy Y1
-    SCAN_AND_FILL
+    SCAN_AND_FILL_VIS_ONLY
     SETUP_AUTO_INC_RECALC #FORWARD_DIRECTION, NX, Y1
     ; while (nx <= rx && can_fill(nx, y1)) {
 
