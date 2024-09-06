@@ -222,6 +222,7 @@ eor #%10000
 sta VERA_addr_bank
 .endmacro
 
+;An implementation of can fill that relies on auto increment
 .macro CAN_FILL_AUTO_INCREMENT X_VAL
 .scope
     ; returns 0 in A register if the pixel cannot be filled (early exit)
