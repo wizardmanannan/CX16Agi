@@ -221,6 +221,20 @@ sta VERA_addr_bank
 .endscope
 .endmacro
 
+.macro SETUP_AUTO_INC_VIS_ONLY direction, X_VAL, Y_VAL
+.scope
+.local @end
+.local @incrementOn
+.local @noIncrement
+
+;Visual screen controlled with channel 0        
+stz VERA_ctrl
+lda direction
+sta VERA_addr_bank
+
+.endscope
+.endmacro
+
 ;Turns on auto increment and recalcuates 
 .macro SETUP_AUTO_INC_RECALC direction, X_VAL, Y_VAL
 .scope
@@ -266,7 +280,6 @@ sta VERA_addr_bank
 @end:
 .endscope
 .endmacro
-
 
 .macro POST_CAN_FILL SKIP_PRIORITY_LABEL
 ldx _priDrawEnabled
@@ -1203,7 +1216,7 @@ pop_loop:
     sta NX
     ; while (nx <= rx) {
 
-SETUP_AUTO_INC_RECALC #FORWARD_DIRECTION, NX, Y1 ;Enable auto increment for the loop
+SETUP_AUTO_INC_RECALC_VIS_ONLY #FORWARD_DIRECTION, NX, Y1 ;Enable auto increment for the loop
 outer_loop_start:
     lda RX
 
@@ -1229,7 +1242,7 @@ outer_loop_start:
     ldx NX
     ldy Y1
     SCAN_AND_FILL_VIS_ONLY
-    SETUP_AUTO_INC_RECALC #FORWARD_DIRECTION, NX, Y1
+    SETUP_AUTO_INC_RECALC_VIS_ONLY #FORWARD_DIRECTION, NX, Y1
     ; while (nx <= rx && can_fill(nx, y1)) {
 
 inner_loop_start:
@@ -1241,18 +1254,15 @@ inner_loop_start:
 @nx_less_than_rx_inner:
     stz VERA_ctrl ;We disable auto increment for this check as this check is true we don't increment nx, and therefore should auto increment
     stz VERA_addr_bank
-    lda #$1
-    sta VERA_ctrl
-    stz VERA_addr_bank
     CAN_FILL_AUTO_INCREMENT_VIS_ONLY NX
     cmp #$0
     beq dontEnterInnerLoop
     
-    SETUP_AUTO_INC_RECALC #FORWARD_DIRECTION, NX, Y1
+    SETUP_AUTO_INC_RECALC_VIS_ONLY #FORWARD_DIRECTION, NX, Y1
 
     jmp can_fill_inner
 dontEnterInnerLoop:
-    SETUP_AUTO_INC #FORWARD_DIRECTION, NX, Y1
+    SETUP_AUTO_INC_VIS_ONLY #FORWARD_DIRECTION, NX, Y1
     jmp outer_loop_start
 
     can_fill_inner:
