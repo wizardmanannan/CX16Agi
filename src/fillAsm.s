@@ -1190,7 +1190,7 @@ ok_fill:
     ; scan_and_fill(x, y);
     ldx X_VAL
     ldy Y_VAL
-    SCAN_AND_FILL
+    SCAN_AND_FILL_VIS_ONLY
 
     ; while (pop(&lx, &rx, &y1)) {
 pop_loop:
@@ -1217,7 +1217,7 @@ outer_loop_start:
     jmp outer_loop_end
 @nx_less_than_rx:
     ; if (can_fill(nx, y1)) {
-    CAN_FILL_AUTO_INCREMENT NX
+    CAN_FILL_AUTO_INCREMENT_VIS_ONLY NX
 
     cmp #0
     bne @start_fill ; branch if can_fill returned true 
@@ -1244,7 +1244,7 @@ inner_loop_start:
     lda #$1
     sta VERA_ctrl
     stz VERA_addr_bank
-    CAN_FILL_AUTO_INCREMENT NX
+    CAN_FILL_AUTO_INCREMENT_VIS_ONLY NX
     cmp #$0
     beq dontEnterInnerLoop
     
