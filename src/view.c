@@ -1544,8 +1544,7 @@ void b9AddToPic(int vNum, int lNum, int cNum, int x, int y, int pNum, int bCol)
 	printf("x and y are (%d,%d). Adjusted Height %d. The address is %lx.\n ", x, y, y - localCel.height + 1, b2GetVeraPictureAddress(x, (y - localCel.height) + 1));
 	printf("w %d h %d\n", localCel.width, localCel.height);
 #endif // VERBOSE_ADD_TO_PIC
-
-	b9CelToVera(&localCel, b4GetVeraPictureAddress(x, (y - localCel.height) + 1), bCol, BYTES_PER_ROW);
+	b9CelToVera(&localCel, b8GetVeraPictureAddress(x, (y - localCel.height) + 1), bCol, BYTES_PER_ROW);
 
 	//TODO: Finish implementing the priority and control line stuff
 //
@@ -2948,7 +2947,7 @@ void bCCalcObjMotion()
 ***************************************************************************/
 void bDShowObjectState(int objNum)
 {
-	
+
 }
 
 #pragma code-name (pop)

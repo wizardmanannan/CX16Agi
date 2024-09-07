@@ -5,6 +5,8 @@ LINE_INC = 1
 
 .include "lineDrawing.s"
 
+.importzp sreg
+
 b8LineTableVisualLow: .res PICTURE_HEIGHT
 b8LineTableVisualHigh: .res PICTURE_HEIGHT
 
@@ -223,6 +225,21 @@ stz VERA_ctrl
     sta VERA_addr_high
     stz VERA_addr_bank ; clear the upper byte of the VRAM address and any auto increment
 .endmacro ; calc_vram_addr_160
+
+;long b8GetVeraPictureAddress(byte x, byte y)
+;Vera address in a 3 byte value a C long is 4 bytes
+;Byte 3 will always be zero because of where the picture is in memory
+ _b8GetVeraPictureAddress:
+ pha
+ jsr popa
+ sta GENERAL_TMP
+ ply
+ CALC_VRAM_ADDR_VISUAL GENERAL_TMP, #$0
+ lda VERA_addr_low
+ ldx VERA_addr_high
+ stz sreg 
+ stz sreg + 1
+ rts
 
 .import _picColour, _priColour, _picDrawEnabled, _priDrawEnabled
  X_POS = ZP_TMP_2

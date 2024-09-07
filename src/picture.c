@@ -357,12 +357,6 @@ void b4PlotPattern(byte x, byte y)
 
 }
 #pragma wrapped-call (pop)
-
-
-long b4GetVeraPictureAddress(int x, int y)
-{
-	return (STARTING_BYTE + x) + (bitmapWidthPreMult[y]);
-}
 #pragma code-name (pop)
 #pragma code-name (push, "BANKRAM11")
 

@@ -33,10 +33,10 @@
 #define MULT_HALF_POINT 128
 
 typedef struct {
-   int loaded; //0
-   unsigned int size; //2
-   byte *data; //4
-   byte bank; //6
+	int loaded; //0
+	unsigned int size; //2
+	byte* data; //4
+	byte bank; //6
 } PictureFile;
 
 extern PictureFile* loadedPictures;
@@ -45,7 +45,7 @@ extern boolean okToShowPic;
 extern int screenMode;
 extern int min_print_line, user_input_line, status_line_num;
 extern boolean statusLineDisplayed, inputLineDisplayed;
-extern BITMAP *picture, *priority, *control, *agi_screen, *working_screen;
+extern BITMAP* picture, * priority, * control, * agi_screen, * working_screen;
 
 extern void b6DisableAndWaitForVsync();
 
@@ -69,6 +69,11 @@ void b6ShowPicture();
 #pragma wrapped-call (push, trampoline, PICTURE_CODE_OVERFLOW_BANK)
 extern long b4GetVeraPictureAddress(int x, int y);
 #pragma wrapped-call (pop)
+
+#pragma wrapped-call(push, trampoline, LINE_DRAW_BANK)
+extern long b8GetVeraPictureAddress(byte x, byte y);
+#pragma wrapped-call (pop)
+
 
 extern void getLoadedPicture(PictureFile* returnedloadedPicture, byte loadedPictureNumber);
 
