@@ -184,7 +184,6 @@ stz VERA_ctrl
 
 .macro VERA_CTRL_SET vera_ctrl_value
 .ifnblank vera_ctrl_value
-        lda vera_ctrl_value
         .if (.xmatch (#0, vera_ctrl_value))
             stz VERA_ctrl
         .else 

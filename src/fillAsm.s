@@ -511,7 +511,6 @@ rightExpansionLoop:
 lda RX
 inc
 sta GENERAL_TMP
-nop
 CAN_FILL_AUTO_INCREMENT GENERAL_TMP
 cmp #$0
 beq endRightExpansionLoop
@@ -666,7 +665,6 @@ rightExpansionLoop:
 lda RX
 inc
 sta GENERAL_TMP
-nop
 CAN_FILL_AUTO_INCREMENT_VIS_ONLY GENERAL_TMP
 cmp #$0
 beq endRightExpansionLoop
