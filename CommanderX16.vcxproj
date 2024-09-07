@@ -28,7 +28,6 @@
     <None Include="src\irqAsm.s" />
     <None Include="src\logicCommands.s" />
     <None Include="src\main.s" />
-    <None Include="src\pictureAsm.s" />
     <None Include="src\spriteIrqHandler.s" />
     <None Include="src\spriteMemoryManagerAsm.s" />
     <None Include="src\viewAsm.s" />

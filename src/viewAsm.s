@@ -7,7 +7,6 @@ VIEW_INC = 1
 
 .include "globalViews.s"
 .include "global.s"
-.include "pictureAsm.s"
 .include "spriteMemoryManagerAsm.s"
 
 .import _b5RefreshBuffer

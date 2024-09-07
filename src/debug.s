@@ -1,7 +1,6 @@
 .ifndef DEBUG_INC
 DEBUG_INC = 1
 .include "codeWindow.s"
-.include "pictureAsm.s"
 .include "irqAsm.s"
 .include "fillAsm.s"
 .segment "BANKRAM06"

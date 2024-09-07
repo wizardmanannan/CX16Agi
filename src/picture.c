@@ -309,10 +309,10 @@ void testQueue()
 
 #define plotPatternPoint() \
    if (patCode & 0x20) { \
-      if ((B4_SPLATTER_MAP[bitPos>>3] >> (7-(bitPos&7))) & 1) PSET(x1, y1); \
+      if ((B4_SPLATTER_MAP[bitPos>>3] >> (7-(bitPos&7))) & 1) b8DrawPixel(x1, y1); \
       bitPos++; \
       if (bitPos == 0xff) bitPos=0; \
-   } else PSET(x1, y1)
+   } else b8DrawPixel(x1, y1)
 
 #pragma wrapped-call (push, trampoline, PICTURE_CODE_OVERFLOW_BANK)
 /**************************************************************************
@@ -438,48 +438,7 @@ void testRound()
 #endif // TEST_ROUND
 
 int xCounter = 0;
-extern void b11FillClean();
 extern void b8AsmFloodFill(uint8_t x, uint8_t y);
-boolean called = FALSE;
-/**************************************************************************
-** fill
-**
-** Agi flood fill.  (drawing action 0xF8)
-**************************************************************************/
-byte b11FloodFill(byte** data, BufferStatus* bufferStatus, boolean* cleanPic)
-{
-	byte x1, y1;
-	byte picColorOld = picColour;
-
-	picColour = 0xE;
-
-	//b11PSet(90, 43);
-	picColour = picColorOld;
-
-	for (;;) {
-		GET_NEXT(x1);
-		if (x1 >= 0xF0) return x1;
-
-		GET_NEXT(y1);
-		if (y1 >= 0xF0) return y1;
-
-		if (*cleanPic && picDrawEnabled)
-		{
-			b11FillClean();
-			*cleanPic = FALSE;
-		}
-		else
-		{
-			//if (!called)
-			{
-				//	printf("1 %d y %d. the fill stack pointer address is %p. the stack address is %p\n", x1, y1, &b8FillStackPointer, &fill_stack);
-				b8AsmFloodFill(x1, y1);
-				called = TRUE;
-			}
-		}
-	}
-}
-
 #pragma code-name (pop)
 #pragma code-name (push, "BANKRAM06")
 /**************************************************************************
