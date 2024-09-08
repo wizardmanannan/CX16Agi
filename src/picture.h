@@ -41,7 +41,6 @@ typedef struct {
 
 extern PictureFile* loadedPictures;
 
-extern boolean okToShowPic;
 extern int screenMode;
 extern int min_print_line, user_input_line, status_line_num;
 extern boolean statusLineDisplayed, inputLineDisplayed;
@@ -58,7 +57,6 @@ extern void b4ClearPicture();
 void b11DrawPic(byte* bankedData, int pLen, boolean okToClearScreen, byte picNum);
 #pragma wrapped-call (pop)
 #pragma wrapped-call (push, trampoline, MEKA_BANK)
-extern void b6InitPicture();
 extern void b6InitPictures();
 void b6LoadPictureFile(int picFileNum);
 void b6ShowPicture();
@@ -76,9 +74,6 @@ extern long b8GetVeraPictureAddress(byte x, byte y);
 
 
 extern void getLoadedPicture(PictureFile* returnedloadedPicture, byte loadedPictureNumber);
-
-extern byte toDraw;
-extern int* drawWhere;
 
 
 #endif  /* _PICTURE_H_ */

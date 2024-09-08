@@ -528,7 +528,6 @@ void b2Draw_pic() // 1, 0x80
 
 void b2Show_pic() // 0, 0x00 
 {
-	okToShowPic = TRUE;   /* Says draw picture with next object update */
 	/*stretch_blit(picture, working_screen, 0, 0, 160, 168, 0, 20, 640, 336);*/
 	b6ShowPicture();
 
@@ -1734,7 +1733,6 @@ void b4Graphics() // 0, 0x00
 	/* Do something else here */
 	inputLineDisplayed = TRUE;
 	statusLineDisplayed = TRUE;
-	okToShowPic = TRUE;
 	b6SetAndWaitForIrqState(DISPLAY_GRAPHICS);
 
 	return;
@@ -2090,7 +2088,6 @@ void b4Pause() // 0, 0x00
 	b3DisplayMessageBox(B4_PAUSE_MESSAGE, 4, MAX_ROWS_DOWN / 2 - FIRST_ROW, MAX_CHAR_ACROSS / 2, TEXTBOX_PALETTE_NUMBER, PAUSE_BOX_SIZE);
 	while (!key[KEY_ENTER]) { /* Wait */ }
 	b6ShowPicture();
-	okToShowPic = TRUE;
 	return;
 }
 
@@ -2119,7 +2116,6 @@ void b4Version() // 0, 0x00
 	b3DisplayMessageBox(B4_VERSION_MESSAGE, 4, MAX_ROWS_DOWN / 2 - FIRST_ROW, MAX_CHAR_ACROSS / 2, TEXTBOX_PALETTE_NUMBER, VERSION_BOX_SIZE);
 	while (!key[KEY_ENTER] && !key[KEY_ESC]) { /* Wait */ }
 	b6ShowPicture();
-	okToShowPic = TRUE;
 	return;
 }
 

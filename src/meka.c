@@ -258,7 +258,6 @@ void b6Initialise()
     printf("Logics Inited\n");
 #endif
 
-    b6InitPicture();
     initSound();
 
     b9InitViews();

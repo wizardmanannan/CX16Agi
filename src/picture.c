@@ -25,14 +25,9 @@ extern void b8TestAsmPlotPriHLineFast();
 
 //#define VERBOSE
 //#define VERBOSE_REL_DRAW
-//#define TEST_QUEUE
-//#define VERBOSE_FLOOD
-//#define TEST_ROUND
 //#define VERBOSE_DRAW_LINE
-//#define TEST_OK_TO_FILL
 //#define VERBOSE_X_CORNER
 //#define VERBOSE_ABS_LINE
-boolean okToShowPic = FALSE;
 PictureFile* loadedPictures = (PictureFile*)&BANK_RAM[PICTURE_START];
 int screenMode;
 int min_print_line = 1, user_input_line = 23, status_line_num = 0;
@@ -71,12 +66,6 @@ void b8TestDrawLine()
 
 /* QUEUE DEFINITIONS */
 #define QEMPTY 0xFF
-int* bitmapWidthPreMult = &BANK_RAM[BITMAP_WIDTH_PREMULT_START];
-
-#ifdef VERBOSE_FLOOD
-extern long pixelCounter;
-extern long pixelStartPrintingAt;
-#endif // VERBOSE_FLOOD
 
 #pragma rodata-name (push, "BANKRAM11")
 const char B11_UNKNOWN_PIC[] = "Unknown picture code : %X\n";
@@ -129,24 +118,6 @@ extern byte b8AsmFloodFillSections(BufferStatus* bufferStatus, boolean* cleanPic
 extern byte b8AsmFloodFillSectionsVisOnly(BufferStatus* bufferStatus, boolean* cleanPic);
 #pragma wrapped-call (pop)
 
-/**************************************************************************
-** pset
-**
-** Draws a pixel in each screen depending on whether drawing in that
-** screen is enabled or not.
-**************************************************************************/
-#define PSET(x, y) \
-    if (picDrawEnabled) { \
-if ((x) <= 159 && (y) <= 167) {  \
-             toDraw = picColour << 4 | picColour; \
-             drawWhere = (STARTING_BYTE + x) + (bitmapWidthPreMult[y]);  \
-			SET_VERA_ADDRESS_ABSOLUTE(drawWhere, ADDRESSSEL0, 0) \
-			 WRITE_BYTE_VAR_TO_ASSM(toDraw, VERA_data0); \
-            \
-           } \
-    }
-
-
 void getLoadedPicture(PictureFile* returnedloadedPicture, byte loadedPictureNumber)
 {
 	byte previousRamBank = RAM_BANK;
@@ -174,133 +145,6 @@ void setLoadedPicture(PictureFile* loadedPicture, byte loadedPictureNumber)
 #pragma wrapped-call (push, trampoline, FIRST_FLOOD_BANK)
 extern void bFloodAgiFill(byte x, byte y);
 #pragma wrapped-call (pop)
-
-extern byte goNoFurtherLeft;
-extern byte goNoFurtherRight;
-
-#ifdef TEST_OK_TO_FILL
-#pragma wrapped-call (push, trampoline, FIRST_FLOOD_BANK)
-void testOkToFill()
-{
-	priDrawEnabled = FALSE;
-	picDrawEnabled = FALSE;
-	if (bFloodOkToFill((byte*)0x1680))
-	{
-		printf("fail pri false pic false\n");
-	}
-
-	picColour = DEFAULT_COLOR;
-	priDrawEnabled = FALSE;
-	picDrawEnabled = TRUE;
-	if (bFloodOkToFill((byte*)0x1680))
-	{
-		printf("fail color default test\n");
-	}
-
-	picColour = 3;
-	priDrawEnabled = FALSE;
-	picDrawEnabled = TRUE;
-	if (!bFloodOkToFill((byte*)0x1680))
-	{
-		printf("fail pri disabled pic enabled (left border)\n");
-	}
-
-	priDrawEnabled = FALSE;
-	picDrawEnabled = TRUE;
-	if (!bFloodOkToFill((byte*)0x171F))
-	{
-		printf("fail pri disabled pic enabled (right border)\n");
-	}
-
-	priDrawEnabled = FALSE;
-	picDrawEnabled = TRUE;
-	if (!bFloodOkToFill((byte*)0x1681))
-	{
-		printf("fail pri disabled pic enabled (non border)\n");
-	}
-
-	picColour = 3;
-	priDrawEnabled = TRUE;
-	picDrawEnabled = FALSE;
-	if (bFloodOkToFill((byte*)0x1680))
-	{
-		printf("fail pri enabled pic disabled (left border)\n");
-	}
-
-	picColour = 3;
-	priDrawEnabled = TRUE;
-	picDrawEnabled = TRUE;
-	if (!bFloodOkToFill((byte*)0x1680))
-	{
-		printf("fail both enabled (left border)\n");
-	}
-
-	picColour = 3;
-	priDrawEnabled = TRUE;
-	picDrawEnabled = TRUE;
-	if (!bFloodOkToFill((byte*)0x171F))
-	{
-		printf("fail both enabled (right border)\n");
-	}
-
-	b11PSet(0, 0);
-	picColour = 3;
-	priDrawEnabled = FALSE;
-	picDrawEnabled = TRUE;
-
-	if (bFloodOkToFill((byte*)0x1680))
-	{
-		printf("fail both enabled\n");
-	}
-
-	priDrawEnabled = FALSE;
-	picDrawEnabled = TRUE;
-	if (!bFloodOkToFill((byte*)0x7F7F)) //One before boundary
-	{
-		printf("fail bound check x before\n");
-	}
-
-	priDrawEnabled = FALSE;
-	picDrawEnabled = TRUE;
-	if (bFloodOkToFill((byte*)0x7F80)) //One over boundary
-	{
-		printf("fail bound check x after\n");
-	}
-
-	exit(0);
-}
-#pragma wrapped-call (pop)
-#endif // TEST_OK_TO_FILL
-
-
-#ifdef TEST_QUEUE
-void testQueue()
-{
-	int testAmount = 40103;
-	byte testVal;
-	unsigned int i;
-	printf("The address of i %p and the address of testVal is %p\n", &i, &testVal);
-
-	for (i = 0; i <= testAmount; i++)
-	{
-		bFloodQstore(i);
-	}
-
-
-	for (i = 0; i <= testAmount; i++)
-	{
-		testVal = bFloodQretrieve();
-		if ((byte)i != testVal)
-		{
-			asm("stp");
-			asm("lda #4"); //This is a deliberately pointless instruction. It is there so we can see where we have stopped in the debugger
-		}
-	}
-
-	asm("stp");
-	asm("lda #$19");
-}
-#endif // TEST_QUEUE
 
 #pragma code-name (pop)
 
@@ -359,121 +203,10 @@ void b4PlotPattern(byte x, byte y)
 #pragma wrapped-call (pop)
 #pragma code-name (pop)
 #pragma code-name (push, "BANKRAM11")
-
-#define ROUND_THRESHOLD_POS ((unsigned int) 0x7FBE)
-#define ROUND_THRESHOLD_NEG ((unsigned int) 0x8041)
-int b11Round(fix32 aNumber, boolean isPos)
-{
-	if (isPos)
-	{
-#ifdef TEST_ROUND
-		printf("%lu Pos True %d result %d\n", aNumber, getMantissa(aNumber), getMantissa(aNumber) < ROUND_THRESHOLD_POS ? floor_fix_32(aNumber) : ceil_fix_32(aNumber));
-		printf("%u < %u = %d\n", getMantissa(aNumber), ROUND_THRESHOLD_POS, getMantissa(aNumber) < ROUND_THRESHOLD_POS);
-		printf("The address of aNumber is %p", &aNumber);
-#endif
-		return b1GetMantissa(aNumber) < ROUND_THRESHOLD_POS ? b1FloorFix32(aNumber) : b1CeilFix32(aNumber);
-	}
-	else
-	{
-#ifdef TEST_ROUND
-		printf("%lu Neg True %d result %p %d < %d\n", aNumber, getMantissa(aNumber), getMantissa(aNumber) <= ROUND_THRESHOLD_NEG ? floor_fix_32(aNumber) : ceil_fix_32(aNumber), getMantissa(aNumber), ROUND_THRESHOLD_POS);
-		printf("%u < %u = %d\n", getMantissa(aNumber), ROUND_THRESHOLD_POS, getMantissa(aNumber) < ROUND_THRESHOLD_POS);
-#endif
-		return b1GetMantissa(aNumber) <= ROUND_THRESHOLD_NEG ? b1FloorFix32(aNumber) : b1CeilFix32(aNumber);
-	}
-}
-
-#ifdef TEST_ROUND
-void testRound()
-{
-	int result;
-	result = round(0x0F7FBE, TRUE);
-
-	if (result != 0x10)
-	{
-		printf("Fail Round 1 Pos (Equal). Expected %p got %p \n", 0x10, result);
-	}
-
-	result = round(0x0F7F7C, TRUE);
-
-	if (result != 0x0F)
-	{
-		printf("Fail Round 2 Pos (Less). Expected %p got %p \n", 0xF, result);
-	}
-
-	result = round(0x0F8000, TRUE);
-
-	if (result != 0x10)
-	{
-		printf("Fail Round 3 Pos (Greater). Expected %p got %p \n", 0x10, result);
-	}
-
-	result = round(0x0F8041, FALSE);
-
-	if (result != 0xF)
-	{
-		printf("Fail Round 1 Neg (Equal). Expected %p got %p \n", 0xF, result);
-	}
-
-	result = round(0x0F8000, FALSE);
-
-	if (result != 0xF)
-	{
-		printf("Fail Round 2 Neg (Less). Expected %p got %p \n", 0xF, result);
-	}
-
-	result = round(0x0F8083, FALSE);
-
-	if (result != 0x10)
-	{
-		printf("Fail Round 3 Neg (Greater). Expected %p got %p \n", 0x10, result);
-	}
-}
-#endif // TEST_ROUND
-
 int xCounter = 0;
 extern void b8AsmFloodFill(uint8_t x, uint8_t y);
 #pragma code-name (pop)
-#pragma code-name (push, "BANKRAM06")
-/**************************************************************************
-** initPicture
-**
-** Purpose: To initialize allegro and create the picture and priority
-** bitmaps. This function gets called once at the start of an AGI program.
-**************************************************************************/
-void b6InitPicture()
-{
-	int i;
-	int* tempbitmapWidthPreMult = (int*)GOLDEN_RAM_WORK_AREA;
-
-	for (i = 0; i < PICTURE_HEIGHT; i++)
-	{
-		tempbitmapWidthPreMult[i] = i * BYTES_PER_ROW;
-	}
-
-	memCpyBanked(&bitmapWidthPreMult[0], &tempbitmapWidthPreMult[0], PICTURE_CODE_BANK, PICTURE_HEIGHT * 2);
-	memCpyBanked(&bitmapWidthPreMult[0], &tempbitmapWidthPreMult[0], PICTURE_CODE_OVERFLOW_BANK, PICTURE_HEIGHT * 2);
-
-	for (i = FIRST_FLOOD_BANK; i <= LAST_FLOOD_BANK; i++)
-	{
-		memCpyBanked(&bitmapWidthPreMult[0], &tempbitmapWidthPreMult[0], i, PICTURE_HEIGHT * 2);
-	}
-}
-
-#pragma code-name (pop)
 #pragma code-name (push, "BANKRAM11")
-/**************************************************************************
-** priPSet
-**
-** Draws a pixel in the priority screen.
-**************************************************************************/
-void b11PriPSet(word x, word y)
-{
-	if (x > 159) return;
-	if (y > 167) return;
-	//priority->line[y][x] = priColour;
-}
-
 unsigned long lineDrawCounter = 0;
 
 extern long pixelCounter;

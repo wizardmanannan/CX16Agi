@@ -2331,17 +2331,6 @@ void bBUpdateObjects()
 	ViewTable localViewtab;
 	boolean blitFailed = FALSE;
 
-	/* If the show.pic() command was executed, display the picture
-	** with this object update.
-	*/
-	/*
-	if (okToShowPic) {
-	   okToShowPic = FALSE;
-	   blit(picture, spriteScreen, 0, 0, 0, 0, 160, 168);
-	} else {
-	   clear(spriteScreen);
-	}*/
-
 	/******************* Place all background bitmaps *******************/
 	for (entryNum = 0; entryNum < VIEW_TABLE_SIZE; entryNum++) {
 		getViewTab(&localViewtab, entryNum);
