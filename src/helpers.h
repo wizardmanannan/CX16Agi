@@ -138,5 +138,5 @@ extern byte _previousRomBank;
         byteVar = _assmByte; \
     } while(0) \
 
-void printfSafe(const char* format, ...);
+
 #endif
