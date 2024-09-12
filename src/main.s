@@ -64,7 +64,6 @@
     .export _trampolineDebug
     .export _b8AsmPlotVisHLineFast
     .export _b8AsmFloodFill
-    .export _disableIrq
     .export _b8AsmFloodFill
     .export _b8AsmFloodFillSections
     .export _b8AsmFloodFillSectionsVisOnly
