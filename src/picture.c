@@ -512,6 +512,8 @@ void b11DrawPic(byte* bankedData, int pLen, boolean okToClearScreen, byte picNum
 	BufferStatus* bufferStatus = &localBufferStatus;
 	boolean cleanPic = TRUE;
 
+	int vSyncBefore, vSyncAfter;
+
 	data = PICTURE_DATA_ZP;
 	*data = GOLDEN_RAM_WORK_AREA;
 #ifdef TEST_LINE_DRAW
@@ -532,10 +534,10 @@ void b11DrawPic(byte* bankedData, int pLen, boolean okToClearScreen, byte picNum
 	b5RefreshBuffer(bufferStatus);
 
 	if (okToClearScreen) {
-		asm("sei");
+		disableIrq = TRUE;
 		b6Clear();
 	}
-	asm("sei");
+	disableIrq = TRUE;
 
 #ifdef TEST_PRIORITY_DRAW_LINES
 	b8TestAsmPlotPriHLineFast();
@@ -550,6 +552,8 @@ void b11DrawPic(byte* bankedData, int pLen, boolean okToClearScreen, byte picNum
 #ifdef VERBOSE
 	printf("Plotting. . .\n");
 #endif // VERBOSE
+
+	vSyncBefore = vSyncCounter;
 
 	do {
 		if (!returnedAction)
@@ -640,9 +644,13 @@ void b11DrawPic(byte* bankedData, int pLen, boolean okToClearScreen, byte picNum
 #endif
 	} while ((data < (data + pLen)) && stillDrawing);
 
+	vSyncAfter = vSyncCounter;
+
+	printfSafe("you took %d (%d - %d) jiffies\n", vSyncAfter - vSyncBefore, vSyncAfter, vSyncBefore);
+
 	b11SplitPriority();
 
-	REENABLE_INTERRUPTS(); //Loading screen stays on until showPic command
+	disableIrq = FALSE;
 
 	showPicCalled = FALSE;
 }
