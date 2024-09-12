@@ -500,6 +500,8 @@ extern void b6Clear();
 **  pLen = length of PICTURE data
 **************************************************************************/
 extern boolean disableIrq;
+byte* actionPointer = (byte*)0xa000;
+byte picNumber;
 void b11DrawPic(byte* bankedData, int pLen, boolean okToClearScreen, byte picNum)
 {
 	unsigned long i;
@@ -507,11 +509,11 @@ void b11DrawPic(byte* bankedData, int pLen, boolean okToClearScreen, byte picNum
 	boolean stillDrawing = TRUE;
 	PictureFile loadedPicture;
 	byte** data;
-
 	BufferStatus localBufferStatus;
 	BufferStatus* bufferStatus = &localBufferStatus;
 	boolean cleanPic = TRUE;
 
+	picNumber = picNum;
 	data = PICTURE_DATA_ZP;
 	*data = GOLDEN_RAM_WORK_AREA;
 #ifdef TEST_LINE_DRAW
@@ -558,6 +560,24 @@ void b11DrawPic(byte* bankedData, int pLen, boolean okToClearScreen, byte picNum
 		}
 		else
 		{
+			/*if ((int)actionPointer >= 0xa06d && picNum == 55)
+			{
+				_assmUInt = (unsigned int)actionPointer;
+
+				_assmUInt = actionPointer;
+				asm("stp");
+				asm("lda %v", _assmUInt);
+				asm("lda %v + 1", _assmUInt);
+
+				_assmByte = returnedAction;
+				asm("nop");
+				asm("nop");
+				asm("nop");
+				asm("lda %v", _assmByte);
+				asm("lda %v", picDrawEnabled);
+				asm("lda %v", priDrawEnabled);
+			}*/
+
 			action = returnedAction;
 			returnedAction = 0;
 		}
@@ -566,6 +586,10 @@ void b11DrawPic(byte* bankedData, int pLen, boolean okToClearScreen, byte picNum
 		printfSafe("Action: %p \n", action);
 		printfSafe("Work area address %p\n", GOLDEN_RAM_WORK_AREA);
 #endif // VERBOSE
+		if (picNum == 55)
+		{
+			memCpyBanked(actionPointer++, &action, 0x27, 1);
+		}
 		switch (action) {
 		case 0xFF:
 			stillDrawing = 0;

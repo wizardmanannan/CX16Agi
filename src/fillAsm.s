@@ -1377,6 +1377,22 @@ rts
 .endscope
 
 
+.macro CONTINUE_UNTIL_F
+.local @continue
+.local @checkFirstValue
+@continue:
+GET_NEXT_ABS DATA, @bufferStatus, #$1
+tay
+lsr
+lsr 
+lsr 
+lsr  
+cmp #$F
+stp
+bne @continue
+tya
+.endmacro
+
 _b8AsmFloodFillSectionsVisOnly:
 .scope
 CLEAN_PIC = ZP_TMP_16
@@ -1397,12 +1413,36 @@ stx @bufferStatus + 1
 lda _picColour
 cmp #15
 bne @checkEnabled
+
+php
+pha
+phx
+phy
+.import _actionPointer
+lda _actionPointer
+cmp #$6c
+bcc @continue2
+lda _actionPointer + 1
+cmp #$A0
+bcc @continue2
+.import _picNumber
+lda _picNumber
+cmp #55
+bne @continue2
+lda _actionPointer
+@continue2:
+ply
+plx
+pla
+plp
+CONTINUE_UNTIL_F
 rts
 
 @checkEnabled:
 lda _picDrawEnabled
 ora _priDrawEnabled
 bne @loop
+CONTINUE_UNTIL_F
 rts
 
 @loop:
