@@ -26,3 +26,6 @@ cx16TesterConfig.json
 /tools/CharacterRomPosCalc/CharacterRomPosCalc/obj
 /mapfile.txt
 /agi.cx16
+/tools/PixelAddressCalculator/PriPixelCalculator/.vs/PriPixelCalculator
+/tools/PixelAddressCalculator/PriPixelCalculator/ConsoleApp1/obj
+/tools/PixelAddressCalculator/PriPixelCalculator/PriPixelCalculator/obj
