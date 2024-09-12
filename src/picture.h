@@ -26,31 +26,24 @@
 
 #define DEFAULT_COLOR 0xF
 
-#define PICTURE_WIDTH   160  /* Picture resolution */
-#define PICTURE_HEIGHT  168
-
 #define  AGI_GRAPHICS  0
 #define  AGI_TEXT      1
 
-#define STARTING_ROW ((SCREEN_HEIGHT / 2) - (PICTURE_HEIGHT / 2))
-#define STARTING_BYTE (STARTING_ROW * BYTES_PER_ROW)
-#define BYTES_PER_ROW (SCREEN_WIDTH / 2)
 #define MULT_HALF_POINT 128
 
 typedef struct {
-   int loaded; //0
-   unsigned int size; //2
-   byte *data; //4
-   byte bank; //6
+	int loaded; //0
+	unsigned int size; //2
+	byte* data; //4
+	byte bank; //6
 } PictureFile;
 
 extern PictureFile* loadedPictures;
 
-extern boolean okToShowPic;
 extern int screenMode;
 extern int min_print_line, user_input_line, status_line_num;
 extern boolean statusLineDisplayed, inputLineDisplayed;
-extern BITMAP *picture, *priority, *control, *agi_screen, *working_screen;
+extern BITMAP* picture, * priority, * control, * agi_screen, * working_screen;
 
 extern void b6DisableAndWaitForVsync();
 
@@ -63,7 +56,6 @@ extern void b4ClearPicture();
 void b11DrawPic(byte* bankedData, int pLen, boolean okToClearScreen, byte picNum);
 #pragma wrapped-call (pop)
 #pragma wrapped-call (push, trampoline, MEKA_BANK)
-extern void b6InitPicture();
 extern void b6InitPictures();
 void b6LoadPictureFile(int picFileNum);
 void b6ShowPicture();
@@ -75,10 +67,12 @@ void b6ShowPicture();
 extern long b4GetVeraPictureAddress(int x, int y);
 #pragma wrapped-call (pop)
 
-extern void getLoadedPicture(PictureFile* returnedloadedPicture, byte loadedPictureNumber);
+#pragma wrapped-call(push, trampoline, LINE_DRAW_BANK)
+extern long b8GetVeraPictureAddress(byte x, byte y);
+#pragma wrapped-call (pop)
 
-extern byte toDraw;
-extern int* drawWhere;
+
+extern void getLoadedPicture(PictureFile* returnedloadedPicture, byte loadedPictureNumber);
 
 
 #endif  /* _PICTURE_H_ */

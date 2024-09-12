@@ -1544,8 +1544,7 @@ void b9AddToPic(int vNum, int lNum, int cNum, int x, int y, int pNum, int bCol)
 	printf("x and y are (%d,%d). Adjusted Height %d. The address is %lx.\n ", x, y, y - localCel.height + 1, b2GetVeraPictureAddress(x, (y - localCel.height) + 1));
 	printf("w %d h %d\n", localCel.width, localCel.height);
 #endif // VERBOSE_ADD_TO_PIC
-
-	b9CelToVera(&localCel, b4GetVeraPictureAddress(x, (y - localCel.height) + 1), bCol, BYTES_PER_ROW);
+	b9CelToVera(&localCel, b8GetVeraPictureAddress(x, (y - localCel.height) + 1), bCol, BYTES_PER_ROW);
 
 	//TODO: Finish implementing the priority and control line stuff
 //
@@ -2332,17 +2331,6 @@ void bBUpdateObjects()
 	ViewTable localViewtab;
 	boolean blitFailed = FALSE;
 
-	/* If the show.pic() command was executed, display the picture
-	** with this object update.
-	*/
-	/*
-	if (okToShowPic) {
-	   okToShowPic = FALSE;
-	   blit(picture, spriteScreen, 0, 0, 0, 0, 160, 168);
-	} else {
-	   clear(spriteScreen);
-	}*/
-
 	/******************* Place all background bitmaps *******************/
 	for (entryNum = 0; entryNum < VIEW_TABLE_SIZE; entryNum++) {
 		getViewTab(&localViewtab, entryNum);
@@ -2948,7 +2936,7 @@ void bCCalcObjMotion()
 ***************************************************************************/
 void bDShowObjectState(int objNum)
 {
-	
+
 }
 
 #pragma code-name (pop)

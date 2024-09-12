@@ -258,7 +258,6 @@ void b6Initialise()
     printf("Logics Inited\n");
 #endif
 
-    b6InitPicture();
     initSound();
 
     b9InitViews();
@@ -291,6 +290,7 @@ void b6Initialise()
 void main()
 {
     int ret, oldCount = 0;
+
     //chdir("..\\KQ1-2917");
     //chdir("..\\COMPILER\\NEW\\SAMPLE\\TEMPLATE");
     //chdir("\\GAMES\\SIERRA\\MH2");
@@ -306,7 +306,7 @@ void main()
 
     RAM_BANK = MEKA_BANK;
     b6Initialise();
- 
+    
     while (TRUE) {
         /* Cycle initiator. Controlled by delay variable (var[10). */
         if (counter >= var[10]) {

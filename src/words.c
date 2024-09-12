@@ -145,8 +145,7 @@ int b12CalcNumWords(long startPos)
 
 byte b12OpenWords()
 {
-    byte lfn = b6Cbm_openForSeeking(B12_WORDS_FILE);
-
+    byte lfn = b6Cbm_openForSeeking(B12_WORDS_FILE);    
     if (lfn == NULL) {
         printf(B12_CANNOT_FIND_FILE);
         exit(1);

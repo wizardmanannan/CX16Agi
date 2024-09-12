@@ -14,6 +14,10 @@ _codeBank: .byte $0
 GLOBAL_INC = 1
 
 NEW_LINE = 10
+STACK_POINTER = $100
+
+
+C_STACK_ADDR = $22
 
 ;Reserved For Interpreter
 ; Define some zero page pointers
@@ -25,6 +29,7 @@ ZP_PTR_B1  = $F1
 ZP_PTR_B2  = $F3
 ZP_PTR_DISP  = $F5
 
+;Free to use
 ZP_TMP_2 = $AD
 ZP_TMP_3 = $AF
 ZP_TMP_4 = $B1
@@ -44,6 +49,7 @@ ZP_TMP_19 = $DB
 ZP_TMP_20 = $DD
 ZP_TMP_21 = $DF
 ZP_TMP_22 = $E1
+ZP_TMP_23 = $FE
 
 ;Float Division
 ZP_DIV_AREA = $E3
@@ -83,6 +89,7 @@ SPRITE_MANAGER_BANK = $9
 IRQ_BANK = $6
 BANKED_ALLOC_BANK = $10
 PARSER_BANK = $7
+LINE_DRAWING_BANK = $8
 
 FIRST_FLOOD_BANK = $27
 NO_FLOOD_BANKS = $0A
@@ -693,6 +700,19 @@ pla
  lda VSYNC_BIT
  sta VERA_isr
  cli
+.endmacro
+
+
+newLine: .byte $D,0
+.macro PRINT_NEW_LINE
+lda #<newLine
+ldx #>newLine
+jsr pushax
+
+ldy #2
+
+jsr _printfSafe
+
 .endmacro
 
 .endif

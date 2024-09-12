@@ -26,6 +26,24 @@ cx16TesterConfig.json
 /tools/CharacterRomPosCalc/CharacterRomPosCalc/obj
 /mapfile.txt
 /agi.cx16
+<<<<<<< HEAD
 /tools/PixelAddressCalculator/PriPixelCalculator/.vs/PriPixelCalculator
 /tools/PixelAddressCalculator/PriPixelCalculator/ConsoleApp1/obj
 /tools/PixelAddressCalculator/PriPixelCalculator/PriPixelCalculator/obj
+=======
+/tools/Address Calc Pri/Address Calc Pri/obj/Address Calc Pri.csproj.nuget.dgspec.json
+/tools/Address Calc Pri/Address Calc Pri/obj/Address Calc Pri.csproj.nuget.g.props
+/tools/Address Calc Pri/Address Calc Pri/obj/Address Calc Pri.csproj.nuget.g.targets
+/tools/Address Calc Pri/Address Calc Pri/obj/project.assets.json
+/tools/Address Calc Pri/Address Calc Pri/obj/project.nuget.cache
+/tools/PriPixelCalculator/PriPixelCalculator
+/tools/LinePlotter/WinFormsApp1/obj
+/tools/LinePlotter/LinePlotter/obj
+/tools/PixelAddressCalculator/PriPixelCalculator/.vs/PriPixelCalculator/FileContentIndex
+/tools/PixelAddressCalculator/PriPixelCalculator/ConsoleApp1/obj
+/tools/PixelAddressCalculator/PriPixelCalculator/PriPixelCalculator/obj
+/tools/PixelAddressCalculator/PriPixelCalculator/.vs/PriPixelCalculator/v17/.suo
+/tools/PixelAddressCalculator/PriPixelCalculator/.vs/PriPixelCalculator/DesignTimeBuild/.dtbcache.v2
+>>>>>>> graphicsAlgorithmRemovedOld
+/tools/AddressCalculator/AddressCalculator/obj
+/docs/~$w To Setup Meka For Cx16.docx

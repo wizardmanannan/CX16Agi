@@ -41,4 +41,12 @@ typedef unsigned int VeraSpriteAddress; //actually three bytes lower byte is alw
 unsigned int b6SetPaletteToInt(byte paletteReference);
 #pragma wrapped-call (pop);
 
+#define PICTURE_WIDTH   160  /* Picture resolution */
+#define PICTURE_HEIGHT  168
+#define BITMAP_WIDTH 320
+#define BITMAP_HEIGHT 240
+#define BYTES_PER_ROW (SCREEN_WIDTH / 2)
+#define STARTING_ROW ((SCREEN_HEIGHT / 2) - (PICTURE_HEIGHT / 2))
+#define STARTING_BYTE (STARTING_ROW * BYTES_PER_ROW)
+
 #endif
