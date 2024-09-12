@@ -12,9 +12,8 @@ https://youtu.be/NFPKbLQBAso
 
 https://youtu.be/30RIplYHT70
 
-https://youtu.be/1QQPcwJxzV4
 
-https://youtu.be/yd_LWDhv8RI
+[King's Quest III](https://youtu.be/BYunlA-CIlE)
 
 ![image](https://github.com/wizardmanannan/CX16Agi/assets/58645812/95672f9e-32c5-4775-9ee3-5145495f0f11)
 ![image](https://github.com/wizardmanannan/CX16Agi/assets/58645812/3fdfeadf-2016-48f1-a2fb-0f577838c710)  
