@@ -18,9 +18,12 @@ See it running here on YouTube: \
 ![image](https://github.com/wizardmanannan/CX16Agi/assets/58645812/186fa2c7-33c1-491f-af3a-dabc6c6d560d)
 ![image](https://github.com/wizardmanannan/CX16Agi/assets/58645812/9e1d5f64-26f9-42b3-a706-09f752398636)
 
-# CX 16 Iteration 8 Goals (Current)
-- Incorporate CosmicR's fast drawing algorithm for both main and priority screen
+# CX 16 Iteration 9 Goals (Current)
 - Sprite to background priority
+- Using priority screen in interpreter
+
+# CX 16 Iteration 8 Goals (Completed)
+- Incorporate CosmicR's fast drawing algorithm for both main and priority screen
 
 # CX 16 Iteration 7 Goals (Completed)
 - Allow the user to walk around the map
