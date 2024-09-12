@@ -704,7 +704,7 @@ lda DBL_SEGMENTS
 ldx DBL_SEGMENTS + 1
 jsr _memCpyBanked
 
-;6.2 Get the start addresses from the buffer, and and the end addresses to calculate how much dynamic memory we need to allocate
+;6.2 Get the start addresses from the buffer, and the end addresses to calculate how much dynamic memory we need to allocate
 tsx ;The stack pointer - DBL_SEGMENTS will point to the start of the first segment, and two bytes after the next address and so on. These were put onto the stack in partition
 txa
 clc
