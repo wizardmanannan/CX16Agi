@@ -1376,6 +1376,20 @@ rts
 @bufferStatus: .word $0
 .endscope
 
+.macro CONTINUE_UNTIL_F
+.local @continue
+.local @checkFirstValue
+@continue:
+GET_NEXT_ABS DATA, @bufferStatus, #$1
+tay
+lsr
+lsr 
+lsr 
+lsr  
+cmp #$F
+bne @continue
+tya
+.endmacro
 
 _b8AsmFloodFillSectionsVisOnly:
 .scope
@@ -1397,12 +1411,14 @@ stx @bufferStatus + 1
 lda _picColour
 cmp #15
 bne @checkEnabled
+CONTINUE_UNTIL_F
 rts
 
 @checkEnabled:
 lda _picDrawEnabled
 ora _priDrawEnabled
 bne @loop
+CONTINUE_UNTIL_F
 rts
 
 @loop:
