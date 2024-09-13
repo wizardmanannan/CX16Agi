@@ -26,15 +26,15 @@ bcc @getEvenValue
 
 @getOddValue:
 txa 
-lsr
-lsr
-lsr
-lsr
+and #$0F
 bra @checkValue
 
 @getEvenValue:
 txa
-and #$F
+lsr
+lsr
+lsr
+lsr
 
 @checkValue:
 cmp #$4
