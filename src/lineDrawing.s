@@ -157,7 +157,7 @@ stz VERA_ctrl
 .endmacro ; CALC_VRAM_ADDR
 
 
-.macro CALC_VRAM_ADDR_PRI_LINE_DRAW xpos_low, ypos, tmpZP ;Set any value to the last param to disable xTimes2
+.macro CALC_VRAM_ADDR_PRI_LINE_DRAW xpos_low, ypos ;Set any value to the last param to disable xTimes2
 .scope
     ; set bank to 30 TODO: use rodata or somewhere else?
     ; lda #$30
@@ -438,7 +438,7 @@ skip_vis:
     jmp skip_pri  ; Jump to @skip_pri if PRI_DRAW_ENABLED is zero
 
 @plot_pri: 
-    CALC_VRAM_ADDR_PRI_LINE_DRAW X1_LOW, Y1_VAL, Y_VAL_TEMP
+    CALC_VRAM_ADDR_PRI_LINE_DRAW X1_LOW, Y1_VAL
 
     PLOT_PRIORITY PRI_COLOUR, X1_LOW
 

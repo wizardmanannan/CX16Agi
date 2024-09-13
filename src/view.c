@@ -1985,6 +1985,10 @@ void bAFindPosition(int entryNum, ViewTable* viewTab)
 	}
 }
 
+#pragma wrapped-call (push, trampoline, FILL_BANK)
+extern byte b8GetControl(byte X, byte Y);
+#pragma wrapped-called(pop)
+
 #pragma wrapped-call (push, trampoline, VIEW_CODE_BANK_2)
 void bANormalAdjust(int entryNum, ViewTable* viewTab, int dx, int dy)
 {
@@ -2039,24 +2043,25 @@ void bANormalAdjust(int entryNum, ViewTable* viewTab, int dx, int dy)
 		flag[3] = 0;
 		flag[0] = 0;
 
-		///* End points of the base line */ //TODO: Put back in once we have pri screen loaded
-		//startX = tempX;
-		//endX = startX + viewTab->xsize;
-		//for (testX = startX; testX < endX; testX++) {
-		//	switch (control->line[tempY][testX]) {
-		//	case 0: return;   /* Unconditional obstacle */
-		//	case 1:
-		//		if (viewTab->flags & IGNOREBLOCKS) break;
-		//		return;    /* Conditional obstacle */
-		//	case 3:
-		//		waterCount++;
-		//		break;
-		//	case 2: flag[3] = 1; /* Trigger */
-		//		viewTab->xPos = tempX;
-		//		viewTab->yPos = tempY;
-		//		return;
-		//	}
-		//}
+		/* End points of the base line */ //TODO: Put back in once we have pri screen loaded
+		startX = tempX;
+		endX = startX + viewTab->xsize;
+
+		for (testX = startX; testX < endX; testX++) {
+			switch (b8GetControl(tempX, tempY)) {
+			case 0: return;   /* Unconditional obstacle */
+			case 1:
+				if (viewTab->flags & IGNOREBLOCKS) break;
+				return;    /* Conditional obstacle */
+			case 3:
+				waterCount++;
+				break;
+			case 2: flag[3] = 1; /* Trigger */
+				viewTab->xPos = tempX;
+				viewTab->yPos = tempY;
+				return;
+			}
+		}
 		if (waterCount == viewTab->xsize) {
 			viewTab->xPos = tempX;
 			viewTab->yPos = tempY;
@@ -2070,7 +2075,7 @@ void bANormalAdjust(int entryNum, ViewTable* viewTab, int dx, int dy)
 		endX = startX + viewTab->xsize;
 		for (testX = startX; testX < endX; testX++) {
 			if ((viewTab->flags & ONWATER) &&
-				(control->line[tempY][testX] != 3)) {
+				(b8GetControl(tempY,testX) != 3)) {
 				return;
 			}
 		}

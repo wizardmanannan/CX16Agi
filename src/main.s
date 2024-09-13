@@ -12,6 +12,7 @@
     .include "debug.s"
     .include "fillAsm.s"
     .include "floatDivisionAsm.s"
+    .include "priority.s"
     .export _executeLogic
     .export _b6InitInterpreter
     .export _loadAndIncWinCode
@@ -68,3 +69,4 @@
     .export _b8AsmFloodFillSections
     .export _b8AsmFloodFillSectionsVisOnly
     .export _b8GetVeraPictureAddress
+    .export _b8GetControl
