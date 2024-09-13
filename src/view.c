@@ -2075,7 +2075,7 @@ void bANormalAdjust(int entryNum, ViewTable* viewTab, int dx, int dy)
 		endX = startX + viewTab->xsize;
 		for (testX = startX; testX < endX; testX++) {
 			if ((viewTab->flags & ONWATER) &&
-				(b8GetControl(testX,testX) != 3)) {
+				(b8GetControl(testX,tempY) != 3)) {
 				return;
 			}
 		}
