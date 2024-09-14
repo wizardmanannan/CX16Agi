@@ -42,7 +42,7 @@
 #define MAX_SPRITE_PRIORITY 15
 #define NO_PRIORITIES (MAX_SPRITE_PRIORITY - MIN_SPRITE_PRIORITY)
 
-#define BYTES_PER_SPRITE_UPDATE 7
+#define BYTES_PER_SPRITE_UPDATE 8
 #define SPRITE_UPDATED_BUFFER_SIZE  VIEW_TABLE_SIZE * BYTES_PER_SPRITE_UPDATE * 2
 extern byte bESpritesUpdatedBuffer[SPRITE_UPDATED_BUFFER_SIZE];
 extern byte* bESpritesUpdatedBufferPointer;
@@ -945,6 +945,13 @@ yPos: _assmByte = (byte)localViewTab->yPos;
 	asm("clc"); //Might be less cycles to ora assmbyte 3 in instead. Investigate
 	asm("adc %v", _assmByte3);
 
+	asm("sta (%w),y", ZP_SPRITE_STORE_PTR);
+
+	//Reblit
+	_assmByte = localViewTab->flags & MOTION;
+
+	asm("ldy #$7");
+	asm("lda %v", _assmByte);
 	asm("sta (%w),y", ZP_SPRITE_STORE_PTR);
 
 	bESpritesUpdatedBufferPointer += BYTES_PER_SPRITE_UPDATE;
