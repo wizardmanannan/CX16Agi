@@ -4,7 +4,14 @@
 
 PRIORITY_INC = 1
 
+NOT_AN_OBSTACLE = 4
 ;byte b8GetPriority(byte X, byte Y)
+;Note that all AGI implementations draw the control lines over the top of the priority screen
+;Original MEKA splits the priority screen into priority and control screens, but in a limited memory system this is wasteful.
+;Therefore we calculate the control value at the very time it is needed.
+;Here is the algorithm, regarding the pixel at priority screen x, y:
+;If the pixel is >= 4 (priority not control) => Return NOT_AN_OBSTACLE
+;If the pixel is < 4 (control) => pixel
 _b8GetControl:
 .scope
 X_VAL = ZP_TMP_2
@@ -37,7 +44,7 @@ lsr
 lsr
 
 @checkValue:
-cmp #$4
+cmp #NOT_AN_OBSTACLE ;Any thing greater than or equal to this value is a priority value and not a control value and therefore not an obstacle 
 
 bcc @return
 lda #4
