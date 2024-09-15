@@ -116,6 +116,19 @@ LINE_LENGTH = 160
 .endmacro
 
 .macro SET_VERA_ADDRESS address, stride, highbyte, ctrl
+.ifblank ctrl
+stz VERA_ctrl
+.endif
+.ifnblank ctrl
+lda VERA_ctrl
+and #$FE
+sta VERA_ctrl
+lda ctrl
+and #$1
+ora VERA_ctrl
+sta VERA_ctrl
+.endif
+
 .ifnblank stride
 lda stride << 4
 .endif
@@ -129,16 +142,6 @@ lda highbyte
 and #$1 ; We only care about the first bit
 ora VERA_addr_bank
 sta VERA_addr_bank
-.endif
-
-.ifblank ctrl
-stz VERA_ctrl
-.endif
-.ifnblank ctrl
-lda ctrl
-and #$1
-ora VERA_ctrl
-sta VERA_ctrl
 .endif
 
 lda address + 1
