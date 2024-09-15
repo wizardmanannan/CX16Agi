@@ -213,7 +213,7 @@ FONT* font;
 
 //
 
-extern void b9CelToVera(Cel* localCel, long veraAddress, byte bCol, byte drawingAreaWidth);
+extern void b9CelToVera(Cel* localCel, long veraAddress, byte bCol, byte drawingAreaWidth, byte x, byte y);
 
 #pragma code-name (push, "BANKRAM0E")
 #pragma wrapped-call (push, trampoline, SPRITE_METADATA_BANK)
@@ -1551,7 +1551,7 @@ void b9AddToPic(int vNum, int lNum, int cNum, int x, int y, int pNum, int bCol)
 	printf("x and y are (%d,%d). Adjusted Height %d. The address is %lx.\n ", x, y, y - localCel.height + 1, b2GetVeraPictureAddress(x, (y - localCel.height) + 1));
 	printf("w %d h %d\n", localCel.width, localCel.height);
 #endif // VERBOSE_ADD_TO_PIC
-	b9CelToVera(&localCel, b8GetVeraPictureAddress(x, (y - localCel.height) + 1), bCol, BYTES_PER_ROW);
+	b9CelToVera(&localCel, b8GetVeraPictureAddress(x, (y - localCel.height) + 1), bCol, BYTES_PER_ROW, x, y);
 
 	//TODO: Finish implementing the priority and control line stuff
 //

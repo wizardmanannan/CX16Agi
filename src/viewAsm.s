@@ -96,6 +96,9 @@ SPLIT_CEL_BANK = ZP_TMP_10 + 1
 SPLIT_SEGMENTS = ZP_TMP_12
 SPLIT_COUNTER = ZP_TMP_12 + 1
 SPLIT_CEL_SEGMENTS = ZP_TMP_13
+PRIORITY_VERA_ADDRESS = ZP_TMP_14
+X_VAL = ZP_TMP_16
+Y_VAL = ZP_TMP_16 + 1
 
 ;Constants
 CEL_HEIGHT_OFFSET = 1
@@ -148,7 +151,7 @@ SET_COLOR_LEFT CEL_TRANS
 sta CEL_TRANS
 
 @setVeraAddress:
-SET_VERA_ADDRESS VERA_ADDRESS, #$1, VERA_ADDRESS_HIGH
+SET_VERA_ADDRESS VERA_ADDRESS, #$1, VERA_ADDRESS_HIGH, #$0
 
 @getNextChunk:
 GET_NEXT BUFFER_POINTER, BUFFER_STATUS
@@ -207,9 +210,12 @@ jmp @setVeraAddress
 @end:
 .endmacro
 
-;byte* localCel, long veraAddress, byte pNum, byte bCol, byte drawingAreaWidth
+;void b9CelToVera(Cel* localCel, long veraAddress, byte bCol, byte drawingAreaWidth, byte x, byte y)
 _b9CelToVera:
-sta BYTES_PER_ROW
+sta Y_VAL
+jsr popax
+sta X_VAL
+stx BYTES_PER_ROW
 jsr popa
 sta BCOL
 jsr popax
