@@ -8,6 +8,7 @@ VIEW_INC = 1
 .include "globalViews.s"
 .include "global.s"
 .include "spriteMemoryManagerAsm.s"
+.include "lineDrawing.s"
 
 .import _b5RefreshBuffer
 .import _getLoadedView
@@ -99,6 +100,15 @@ SPLIT_CEL_SEGMENTS = ZP_TMP_13
 PRIORITY_VERA_ADDRESS = ZP_TMP_14
 X_VAL = ZP_TMP_16
 Y_VAL = ZP_TMP_16 + 1
+P_NUM = ZP_TMP_17
+
+.macro TOGGLE_PRIORITY_AUTO_INC
+pha
+lda #%10000
+eor VERA_addr_bank
+sta VERA_addr_bank
+pla
+.endmacro
 
 ;Constants
 CEL_HEIGHT_OFFSET = 1
@@ -110,7 +120,6 @@ NO_MARGIN = 4
 ;This view data on the cel is run encoded eg. AX (X instances of colour A)
 ;Each line is terminated with a 0
 ;The function stops when it has counted height number of zeros
-
 .macro CEL_TO_VERA
 GET_STRUCT_8_STORED_OFFSET _offsetOfCelHeight, LOCAL_CEL, CEL_HEIGHT
 GET_STRUCT_8_STORED_OFFSET _offsetOfCelTrans, LOCAL_CEL, CEL_TRANS
@@ -152,11 +161,24 @@ sta CEL_TRANS
 
 @setVeraAddress:
 SET_VERA_ADDRESS VERA_ADDRESS, #$1, VERA_ADDRESS_HIGH, #$0
+ldy Y_VAL
+CALC_VRAM_ADDR_PRIORITY X_VAL, #$1
+@calculatePriorityAutoInc: ;If X even auto inc should be off, because we need to read the same byte for the off next turn
+lda X_VAL
+lsr
+bcs @oddValue
+
+@evenValue:
+stz VERA_addr_bank
+bra @getNextChunk
+
+@oddValue:
+lda #%10000
+sta VERA_addr_bank
 
 @getNextChunk:
 GET_NEXT BUFFER_POINTER, BUFFER_STATUS
 DEBUG_VIEW_DRAW
-
 cmp #$0
 beq @increment
 tax
@@ -172,6 +194,8 @@ bne @draw
 
 @skip: ;When 'drawing' transparent pixels we still need to increment the address
 ldx VERA_data0 ;We are not changing this one so we load load in order to increment and ignore the value
+ldx VERA_data1
+TOGGLE_PRIORITY_AUTO_INC
 dey
 beq @getNextChunk
 bra @skip
@@ -179,16 +203,50 @@ bra @skip
 @draw:
 @drawBlack:
 cmp #BLACK_COLOR
-bne @drawColor
+bne @checkPriority
 lda CEL_TRANS ;Black is swapped with the transparent colour in the case the transparent colour is not black
 
+@checkPriority:
+ldx VERA_data1
+pha
+lda #%10000
+eor VERA_addr_bank
+sta VERA_addr_bank
+
+beq @getEvenValue
+
+@getOddValue:
+txa 
+and #$0F
+bra @comparePriority
+
+@getEvenValue:
+txa
+lsr
+lsr
+lsr
+lsr
+
+@comparePriority:
+cmp #4
+beq @drawColor
+bcc @drawColor ;TODO: Is a control value need to use the rules in split priority to figure out what the priority is
+cmp P_NUM
+beq @drawColor
+bcc @drawColor
+
+lda VERA_data0
+pla
+bra @decrementColorCounter
+
 @drawColor:
+pla
 sta VERA_data0
 
 @decrementColorCounter:
 dey
-beq @getNextChunk
-bra @draw
+bne @draw
+jmp @getNextChunk
 
 @increment:
 dec CEL_HEIGHT
@@ -205,19 +263,22 @@ lda #$0
 adc VERA_ADDRESS_HIGH
 sta VERA_ADDRESS_HIGH
 
+inc Y_VAL
+
 jmp @setVeraAddress
 
 @end:
 .endmacro
 
-;void b9CelToVera(Cel* localCel, long veraAddress, byte bCol, byte drawingAreaWidth, byte x, byte y)
+;void b9CelToVera(Cel* localCel, long veraAddress, byte bCol, byte drawingAreaWidth, byte x, byte y, byte pNum)
 _b9CelToVera:
-sta Y_VAL
+sta P_NUM
 jsr popax
-sta X_VAL
-stx BYTES_PER_ROW
-jsr popa
-sta BCOL
+sta Y_VAL
+stx X_VAL
+jsr popax
+sta BYTES_PER_ROW
+stx BCOL
 jsr popax
 sta VERA_ADDRESS
 stx VERA_ADDRESS + 1
@@ -387,7 +448,7 @@ GET_STRUCT_8_STORED_OFFSET _offsetOfCelTrans, LOCAL_CEL, CEL_TRANS
 
 CLEAR_VERA VERA_ADDRESS, TOTAL_ROWS, BYTES_PER_ROW, #$0
 
-CEL_TO_VERA
+;CEL_TO_VERA
 
 @checkSplitLoop:
 inc SPLIT_COUNTER

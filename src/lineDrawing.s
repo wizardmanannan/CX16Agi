@@ -195,6 +195,7 @@ stz VERA_ctrl
     .endif
 .endmacro
 
+;Y: Y_VAL
 .macro CALC_VRAM_ADDR_VISUAL xpos, vera_ctrl_value
     
     VERA_CTRL_SET vera_ctrl_value
@@ -209,6 +210,7 @@ stz VERA_ctrl
     stz VERA_addr_bank ; clear the upper byte of the VRAM address and any auto increment
 .endmacro ; calc_vram_addr_160
 
+;Y: Y_VAL
 .macro CALC_VRAM_ADDR_PRIORITY xpos, vera_ctrl_value    
     
     VERA_CTRL_SET vera_ctrl_value

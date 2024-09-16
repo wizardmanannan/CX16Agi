@@ -213,7 +213,7 @@ FONT* font;
 
 //
 
-extern void b9CelToVera(Cel* localCel, long veraAddress, byte bCol, byte drawingAreaWidth, byte x, byte y);
+extern void b9CelToVera(Cel* localCel, long veraAddress, byte bCol, byte drawingAreaWidth, byte x, byte y, byte pNum);
 
 #pragma code-name (push, "BANKRAM0E")
 #pragma wrapped-call (push, trampoline, SPRITE_METADATA_BANK)
@@ -1537,6 +1537,7 @@ void b9AddViewToTable(ViewTable* localViewtab, byte viewNum, byte entryNum)
 void b9AddToPic(int vNum, int lNum, int cNum, int x, int y, int pNum, int bCol)
 {
 	int i, j, trans, c, boxWidth;
+	byte calcYCoord;
 	View localView;
 	Loop localLoop;
 	Cel localCel;
@@ -1545,13 +1546,10 @@ void b9AddToPic(int vNum, int lNum, int cNum, int x, int y, int pNum, int bCol)
 	getLoadedLoop(&localView, &localLoop, lNum);
 	getLoadedCel(&localLoop, &localCel, cNum);
 
-#ifdef VERBOSE_ADD_TO_PIC
-	printf("view %p loop %p cel %p\n", &localView, &localLoop, &localCel);
-	printf("cel %d loaded %d bmp %p. View %d. Loop %d, Cel %d\n", cNum, localView.loaded, localCel.bmp, vNum, lNum, cNum);
-	printf("x and y are (%d,%d). Adjusted Height %d. The address is %lx.\n ", x, y, y - localCel.height + 1, b2GetVeraPictureAddress(x, (y - localCel.height) + 1));
-	printf("w %d h %d\n", localCel.width, localCel.height);
-#endif // VERBOSE_ADD_TO_PIC
-	b9CelToVera(&localCel, b8GetVeraPictureAddress(x, (y - localCel.height) + 1), bCol, BYTES_PER_ROW, x, y);
+	calcYCoord = (y - localCel.height) + 1;
+
+	//printf("x and y are %p, %p, %d, %d. the height is %d %p\n", x, calcYCoord, x, calcYCoord, localCel.height, localCel.height);
+	b9CelToVera(&localCel, b8GetVeraPictureAddress(x, calcYCoord), bCol, BYTES_PER_ROW, x, calcYCoord, pNum);
 
 	//TODO: Finish implementing the priority and control line stuff
 //
