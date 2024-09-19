@@ -213,7 +213,7 @@ lda #%10000
 eor VERA_addr_bank
 sta VERA_addr_bank
 
-beq @getEvenValue
+bne @getEvenValue
 
 @getOddValue:
 txa 
