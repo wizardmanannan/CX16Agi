@@ -102,23 +102,18 @@ X_VAL = ZP_TMP_16
 Y_VAL = ZP_TMP_16 + 1
 P_NUM = ZP_TMP_17
 
-.macro TOGGLE_PRIORITY_AUTO_INC
-pha
-lda #%10000
-eor VERA_addr_bank
-sta VERA_addr_bank
-pla
-.endmacro
-
 ;Constants
 CEL_HEIGHT_OFFSET = 1
 CEL_TRANS_OFFSET = 2
 NO_MARGIN = 4
-;byte* localCel, long veraAddress, byte bCol, byte drawingAreaWidth
+;byte* localCel, long veraAddress, byte bCol, byte drawingAreaWidth, byte x, byte y, byte pNum
 ;Writes a cel to the Vera. The cel must be preloaded at the localCel pointer
 ;The view (and by extension the cel) must preloaded.
 ;This view data on the cel is run encoded eg. AX (X instances of colour A)
 ;Each line is terminated with a 0
+;This function is priority screen aware, each pixel will only show through if the pNum >= the priority screen pixel at x,y.
+;Note, as each priority byte on the priority screen stores two pixels, the auto increment bit is
+;alternated after every read
 ;The function stops when it has counted height number of zeros
 .macro CEL_TO_VERA
 GET_STRUCT_8_STORED_OFFSET _offsetOfCelHeight, LOCAL_CEL, CEL_HEIGHT
@@ -163,23 +158,23 @@ sta CEL_TRANS
 SET_VERA_ADDRESS VERA_ADDRESS, #$1, VERA_ADDRESS_HIGH, #$0
 ldy Y_VAL
 CALC_VRAM_ADDR_PRIORITY X_VAL, #$1
-@calculatePriorityAutoInc: ;If X even auto inc should be off, because we need to read the same byte for the off next turn
+@calculatePriorityAutoInc: ;This calculates whether the priority auto incrementment should be initially switched on or not. If X even auto inc should be off, because we need to read the same byte for the next turn
 lda X_VAL
 lsr
 bcs @oddValue
 
 @evenValue:
-stz VERA_addr_bank
+stz VERA_addr_bank ;Disable, we need to read this byte again
 bra @getNextChunk
 
 @oddValue:
-lda #%10000
+lda #%10000 ;Odd on the next read we should move onto the next byte
 sta VERA_addr_bank
 
 @getNextChunk:
-GET_NEXT BUFFER_POINTER, BUFFER_STATUS
+GET_NEXT BUFFER_POINTER, BUFFER_STATUS ;Get the next section of run encoded data
 DEBUG_VIEW_DRAW
-cmp #$0
+cmp #$0 ;If its zero we are finished with this line
 beq @increment
 tax
 and #$0F; The number of pixels is the lower 4 bits
@@ -187,7 +182,7 @@ tay
 txa
 and #$F0; The colour is the upper 4 bits
 sta OUTPUT_COLOUR
-SET_COLOR_RIGHT OUTPUT_COLOUR
+SET_COLOR_RIGHT OUTPUT_COLOUR ;Output color must be 'doubled up', because AGI pixels are doubled across
 
 cmp CEL_TRANS
 bne @draw
@@ -195,8 +190,14 @@ bne @draw
 @skip: ;When 'drawing' transparent pixels we still need to increment the address
 ldx VERA_data0 ;We are not changing this one so we load load in order to increment and ignore the value
 ldx VERA_data1
-TOGGLE_PRIORITY_AUTO_INC
-dey
+
+pha ;Toggle the priority auto increment and preserve the color
+lda #%10000
+eor VERA_addr_bank
+sta VERA_addr_bank
+pla
+
+dey ;Have we handled every pixel in this run encoded byte
 beq @getNextChunk
 bra @skip
 
@@ -207,53 +208,54 @@ bne @checkPriority
 lda CEL_TRANS ;Black is swapped with the transparent colour in the case the transparent colour is not black
 
 @checkPriority:
-ldx VERA_data1
-pha
+ldx VERA_data1 ;Get the next priority byte and toggle
+pha ;Preserve the color
 lda #%10000
 eor VERA_addr_bank
 sta VERA_addr_bank
 
-bne @getEvenValue
+bne @getEvenValue ;If we toggled this to be on then that means we will read the byte one more time, and then increment. This must mean that this time we are reading the even nibble
 
 @getOddValue:
-txa 
+txa ;Read the right hand side
 and #$0F
 bra @comparePriority
 
 @getEvenValue:
-txa
-lsr
+txa ;Read the left hand side
+lsr 
 lsr
 lsr
 lsr
 
 @comparePriority:
-cmp #4
-beq @drawColor
+cmp #NOT_AN_OBSTACLE
+beq @drawColor ;4 is the lowest priority and the object always has precedence 
 bcc @drawColor ;TODO: Is a control value need to use the rules in split priority to figure out what the priority is
 cmp P_NUM
-beq @drawColor
-bcc @drawColor
+beq @drawColor ;If the object and screen priority is equal the object has precedence
+bcc @drawColor ;If the object screen priority < object priority the object has precedence
 
+@skipBasedOnPriority: ;This means that the screen priority > object priority, so we don't draw
 lda VERA_data0
-pla
+pla ;Retrieve the color
 bra @decrementColorCounter
 
-@drawColor:
-pla
+@drawColor: ;This means that the screen priority <= object priority, so we do draw
+pla ;Retrieve the color
 sta VERA_data0
 
 @decrementColorCounter:
 dey
-bne @draw
+bne @draw ;If y is not zero we are not yet finished with this run encoded byte
 jmp @getNextChunk
 
 @increment:
-dec CEL_HEIGHT
+dec CEL_HEIGHT ;Ready for the next line
 beq @end
 
 clc
-lda BYTES_PER_ROW ;Ready for the next line
+lda BYTES_PER_ROW 
 adc VERA_ADDRESS
 sta VERA_ADDRESS
 lda #$0
