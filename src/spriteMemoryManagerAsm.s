@@ -213,6 +213,8 @@ ZP_PTR_WALL_32_PLUS_3 = ZP_TMP_2
         ; If current slot is not empty, check next slot
         dey
         dey
+        dey
+        dey
         cpy ZP_PTR_SEG_64
         beq @returnFail
 

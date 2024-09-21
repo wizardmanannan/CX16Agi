@@ -4,17 +4,10 @@
 
 **Note: This Project Is Under Construction And Is Not Ready For General Use**
 
-See it running here on YouTube:
-
-https://youtu.be/mmCgzXV5TwY
-
-https://youtu.be/NFPKbLQBAso
-
-https://youtu.be/30RIplYHT70
-
-https://youtu.be/1QQPcwJxzV4
-
-https://youtu.be/yd_LWDhv8RI
+See it running here on YouTube: \
+[King's Quest I](https://youtu.be/bicWkybRZSg) \
+[Space Quest II](https://youtu.be/Pxg_op2dU8Q) \
+[King's Quest III](https://youtu.be/BYunlA-CIlE)
 
 ![image](https://github.com/wizardmanannan/CX16Agi/assets/58645812/95672f9e-32c5-4775-9ee3-5145495f0f11)
 ![image](https://github.com/wizardmanannan/CX16Agi/assets/58645812/3fdfeadf-2016-48f1-a2fb-0f577838c710)  
@@ -25,9 +18,12 @@ https://youtu.be/yd_LWDhv8RI
 ![image](https://github.com/wizardmanannan/CX16Agi/assets/58645812/186fa2c7-33c1-491f-af3a-dabc6c6d560d)
 ![image](https://github.com/wizardmanannan/CX16Agi/assets/58645812/9e1d5f64-26f9-42b3-a706-09f752398636)
 
-# CX 16 Iteration 8 Goals (Current)
-- Incorporate CosmicR's fast drawing algorithm for both main and priority screen
+# CX 16 Iteration 9 Goals (Current)
 - Sprite to background priority
+- Using priority screen in interpreter
+
+# CX 16 Iteration 8 Goals (Completed)
+- Incorporate CosmicR's fast drawing algorithm for both main and priority screen
 
 # CX 16 Iteration 7 Goals (Completed)
 - Allow the user to walk around the map

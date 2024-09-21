@@ -1037,9 +1037,12 @@ void b9ResetViewtabs(boolean fullReset)
 }
 
 #pragma wrapped-call (push, trampoline, VIEW_CODE_BANK_1)
-void b9ResetSpriteMemory()
+void b9ResetSpriteMemory(boolean clearBuffer)
 {
-	bEResetSpritesUpdatedBuffer();
+	if (clearBuffer)
+	{
+		bEResetSpritesUpdatedBuffer();
+	}
 	bEResetViewTableMetadata();
 	bEResetSpritePointers();
 	bEResetSpriteMemoryManager();
@@ -1048,7 +1051,7 @@ void b9ResetSpriteMemory()
 
 void b9Reset()
 {
-	b9ResetSpriteMemory();
+	b9ResetSpriteMemory(TRUE);
 	bEInitPaletteManager();
 	b9ResetViewtabs(FALSE);
 }
@@ -2461,7 +2464,7 @@ void bBUpdateObjects()
 								i = MAX_SPRITE_PRIORITY;
 								blitFailed = TRUE;
 								memset(prioritiesSeen, FALSE, NO_PRIORITIES - 1);
-								b9ResetSpriteMemory();
+								b9ResetSpriteMemory(FALSE);
 								break;
 							}
 						}
