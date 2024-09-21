@@ -42,7 +42,7 @@
 #define MAX_SPRITE_PRIORITY 15
 #define NO_PRIORITIES (MAX_SPRITE_PRIORITY - MIN_SPRITE_PRIORITY)
 
-#define BYTES_PER_SPRITE_UPDATE 7
+#define BYTES_PER_SPRITE_UPDATE 8
 #define SPRITE_UPDATED_BUFFER_SIZE  VIEW_TABLE_SIZE * BYTES_PER_SPRITE_UPDATE * 2
 extern byte bESpritesUpdatedBuffer[SPRITE_UPDATED_BUFFER_SIZE];
 extern byte* bESpritesUpdatedBufferPointer;
@@ -945,6 +945,13 @@ yPos: _assmByte = (byte)localViewTab->yPos;
 	asm("clc"); //Might be less cycles to ora assmbyte 3 in instead. Investigate
 	asm("adc %v", _assmByte3);
 
+	asm("sta (%w),y", ZP_SPRITE_STORE_PTR);
+
+	//Reblit
+	_assmByte = localViewTab->flags & MOTION;
+
+	asm("ldy #$7");
+	asm("lda %v", _assmByte);
 	asm("sta (%w),y", ZP_SPRITE_STORE_PTR);
 
 	bESpritesUpdatedBufferPointer += BYTES_PER_SPRITE_UPDATE;
@@ -1988,6 +1995,10 @@ void bAFindPosition(int entryNum, ViewTable* viewTab)
 	}
 }
 
+#pragma wrapped-call (push, trampoline, FILL_BANK)
+extern byte b8GetControl(byte X, byte Y);
+#pragma wrapped-called(pop)
+
 #pragma wrapped-call (push, trampoline, VIEW_CODE_BANK_2)
 void bANormalAdjust(int entryNum, ViewTable* viewTab, int dx, int dy)
 {
@@ -2042,24 +2053,25 @@ void bANormalAdjust(int entryNum, ViewTable* viewTab, int dx, int dy)
 		flag[3] = 0;
 		flag[0] = 0;
 
-		///* End points of the base line */ //TODO: Put back in once we have pri screen loaded
-		//startX = tempX;
-		//endX = startX + viewTab->xsize;
-		//for (testX = startX; testX < endX; testX++) {
-		//	switch (control->line[tempY][testX]) {
-		//	case 0: return;   /* Unconditional obstacle */
-		//	case 1:
-		//		if (viewTab->flags & IGNOREBLOCKS) break;
-		//		return;    /* Conditional obstacle */
-		//	case 3:
-		//		waterCount++;
-		//		break;
-		//	case 2: flag[3] = 1; /* Trigger */
-		//		viewTab->xPos = tempX;
-		//		viewTab->yPos = tempY;
-		//		return;
-		//	}
-		//}
+		/* End points of the base line */ //TODO: Put back in once we have pri screen loaded
+		startX = tempX;
+		endX = startX + viewTab->xsize;
+
+		for (testX = startX; testX < endX; testX++) {
+			switch (b8GetControl(testX, tempY)) {
+			case 0: return;   /* Unconditional obstacle */
+			case 1:
+				if (viewTab->flags & IGNOREBLOCKS) break;
+				return;    /* Conditional obstacle */
+			case 3:
+				waterCount++;
+				break;
+			case 2: flag[3] = 1; /* Trigger */
+				viewTab->xPos = tempX;
+				viewTab->yPos = tempY;
+				return;
+			}
+		}
 		if (waterCount == viewTab->xsize) {
 			viewTab->xPos = tempX;
 			viewTab->yPos = tempY;
@@ -2073,7 +2085,7 @@ void bANormalAdjust(int entryNum, ViewTable* viewTab, int dx, int dy)
 		endX = startX + viewTab->xsize;
 		for (testX = startX; testX < endX; testX++) {
 			if ((viewTab->flags & ONWATER) &&
-				(control->line[tempY][testX] != 3)) {
+				(b8GetControl(testX,tempY) != 3)) {
 				return;
 			}
 		}

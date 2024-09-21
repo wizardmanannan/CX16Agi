@@ -12,7 +12,7 @@ SET_VERA_ADDRESS_IMMEDIATE (SPRITE_ATTR_START + SPRITE_ATTR_SIZE + OFFSET), CHAN
 SPRITE_IRQ_HANDLER_INC = 1
 
 
-BYTES_PER_SPRITE_UPDATE = 6
+BYTES_PER_SPRITE_UPDATE = 8
 SPRITE_UPDATED_BUFFER_SIZE = 256 ;Viewtab may be updated more than once, hence times two for safety
 
 .macro GET_NEXT_FROM_SPRITE_UPDATE_BUFFER noStore
@@ -91,6 +91,7 @@ rts
 ;4 y
 ;5 Flipped
 ;6 Sprite Attr Size/Palette Offset
+;7 Reblit
 
 .import _viewSeen
 
@@ -139,6 +140,8 @@ stz VERA_data0 ;Y High 5 Always 0
 GET_NEXT_FROM_SPRITE_UPDATE_BUFFER ; 6 Collison ZDepth and Flip (buffer 5)
 
 GET_NEXT_FROM_SPRITE_UPDATE_BUFFER ;Sprite Attr Size 7 (buffer 6)
+
+GET_NEXT_FROM_SPRITE_UPDATE_BUFFER #$1 ; Reblit
 
 bra @loop
 @addressReset:
