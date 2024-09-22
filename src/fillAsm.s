@@ -121,27 +121,26 @@ rts
     and #$0F
     cmp #4
     bne cannot_fill
-    bra vis_enabled_check
+    bra can_fill
 
     @even:
     lda VERA_data0
     and #$F0
     cmp #$40
     bne cannot_fill
-    
-    @comparePriority:
+    bra can_fill    
 
 
 vis_enabled_check:
     ; is priority enabled and the current vis pixel not white?
     ; if (pri_enabled && (asm_get_vis_pixel(x, y) != 15)) return 0;
     lda _priDrawEnabled
-    beq @can_fill
+    beq can_fill
     lda VIS_PIXEL
     cmp #15
     bne cannot_fill
 
-@can_fill:
+can_fill:
     lda #1 ; return 1 (pixel can be filled)
     ldx #0 ; clear X register
     bra end_macro
@@ -319,13 +318,14 @@ sta VERA_addr_bank
     and #$0F
     cmp #4
     bne cannot_fill
-    bra vis_enabled_check
+    bra can_fill
 
     @even:
     tya
     and #$F0
     cmp #$40
     bne cannot_fill
+    bra can_fill
     
 
 
@@ -333,11 +333,11 @@ vis_enabled_check:
     ; is priority enabled and the current vis pixel not white?
     ; if (pri_enabled && (asm_get_vis_pixel(x, y) != 15)) return 0;
     lda _priDrawEnabled
-    beq @can_fill
+    beq can_fill
     cpx #$FF
     bne cannot_fill
 
-@can_fill:
+can_fill:
     lda #1 ; return 1 (pixel can be filled)
     ldx #0 ; clear X register
     bra end_macro
