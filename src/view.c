@@ -598,7 +598,7 @@ void bESwitchMetadata(ViewTable* localViewTab, View* localView, byte viewNum, by
 #define TO_BLIT_CEL_ARRAY_LENGTH 500
 extern byte bEToBlitCelArray[TO_BLIT_CEL_ARRAY_LENGTH];
 //Copy cels into array above first
-extern void bECellToVeraBulk(SpriteAttributeSize allocationWidth, SpriteAttributeSize allocationHeight, byte noCels, byte maxVeraSlots);
+extern void bECellToVeraBulk(SpriteAttributeSize allocationWidth, SpriteAttributeSize allocationHeight, byte noCels, byte maxVeraSlots, byte xVal, byte yVal, byte pNum);
 boolean bESetLoop(ViewTable* localViewTab, ViewTableMetadata* localMetadata, View* localView, VeraSpriteAddress* loopVeraAddresses)
 {
 	Loop localLoop;
@@ -653,7 +653,7 @@ boolean bESetLoop(ViewTable* localViewTab, ViewTableMetadata* localMetadata, Vie
 	printf("You are allocating %d.%d. It has a width of %d and height of %d. There are %d to blit\n", localViewTab->currentView, localViewTab->currentLoop, localLoop.allocationWidth, localLoop.allocationHeight, noToBlit);
 #endif
 	//Change this method
-	bECellToVeraBulk(localLoop.allocationWidth, localLoop.allocationHeight, localLoop.numberOfCels, localView->maxVeraSlots);
+	bECellToVeraBulk(localLoop.allocationWidth, localLoop.allocationHeight, localLoop.numberOfCels, localView->maxVeraSlots, localViewTab->xPos, localViewTab->yPos, localViewTab->priority);
 
 	return TRUE;
 }

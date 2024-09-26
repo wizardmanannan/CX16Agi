@@ -98,9 +98,10 @@ SPLIT_SEGMENTS = ZP_TMP_12
 SPLIT_COUNTER = ZP_TMP_12 + 1
 SPLIT_CEL_SEGMENTS = ZP_TMP_13
 PRIORITY_VERA_ADDRESS = ZP_TMP_14
-X_VAL = ZP_TMP_16
-Y_VAL = ZP_TMP_16 + 1
-P_NUM = ZP_TMP_17
+X_VAL = ZP_TMP_18 + 1 ;Ideally we would start from ZP_TMP_16 by TOTAL_ROWS cannot be moved for some reason TODO: Investigate
+Y_VAL = ZP_TMP_19
+P_NUM = ZP_TMP_19 + 1
+
 
 ;Constants
 CEL_HEIGHT_OFFSET = 1
@@ -190,7 +191,6 @@ bne @draw
 @skip: ;When 'drawing' transparent pixels we still need to increment the address
 ldx VERA_data0 ;We are not changing this one so we load load in order to increment and ignore the value
 ldx VERA_data1
-
 pha ;Toggle the priority auto increment and preserve the color
 lda #%10000
 eor VERA_addr_bank
@@ -308,10 +308,15 @@ TOTAL_ROWS = ZP_TMP_17
 MAX_VERA_SLOTS = ZP_TMP_17 + 1
 CEL_COUNTER = ZP_TMP_18
 .segment "BANKRAM0E"
-;byte allocationSize, byte noToBlit Note 32 is 0 allocation size and 64 is 1
+;bECellToVeraBulk(SpriteAttributeSize allocationWidth, SpriteAttributeSize allocationHeight, byte noCels, byte maxVeraSlots, byte xVal, byte yVal, byte pNum);
 _bEToBlitCelArray: .res 500
-;bECellToVeraBulk(SpriteAttributeSize allocationWidth, SpriteAttributeSize allocationHeight, byte noCels, byte maxVeraSlots);
 _bECellToVeraBulk:
+sta P_NUM
+jsr popax
+sta Y_VAL
+stx X_VAL
+
+jsr popa
 sta MAX_SPRITE_SLOTS
 
 jsr popa
@@ -450,7 +455,11 @@ GET_STRUCT_8_STORED_OFFSET _offsetOfCelTrans, LOCAL_CEL, CEL_TRANS
 
 CLEAR_VERA VERA_ADDRESS, TOTAL_ROWS, BYTES_PER_ROW, #$0
 
+lda Y_VAL
+pha
 CEL_TO_VERA
+pla
+sta Y_VAL
 
 @checkSplitLoop:
 inc SPLIT_COUNTER
