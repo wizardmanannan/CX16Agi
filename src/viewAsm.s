@@ -101,6 +101,7 @@ PRIORITY_VERA_ADDRESS = ZP_TMP_14
 X_VAL = ZP_TMP_18 + 1 ;Ideally we would start from ZP_TMP_16 by TOTAL_ROWS cannot be moved for some reason TODO: Investigate
 Y_VAL = ZP_TMP_19
 P_NUM = ZP_TMP_19 + 1
+X_VAL_ORIG = ZP_TMP_20 
 
 
 ;Constants
@@ -115,8 +116,13 @@ NO_MARGIN = 4
 ;This function is priority screen aware, each pixel will only show through if the pNum >= the priority screen pixel at x,y.
 ;Note, as each priority byte on the priority screen stores two pixels, the auto increment bit is
 ;alternated after every read
-;The function stops when it has counted height number of zeros
+;If the object is partially off screen in the X direction the individual line drawing will stop at the screen boundary.
+;The function stops when it has counted height number of zeros, or the line would not be in the drawable area, vertically.
 .macro CEL_TO_VERA
+lda X_VAL 
+sta X_VAL_ORIG ;Keep track of the original X value
+
+
 GET_STRUCT_8_STORED_OFFSET _offsetOfCelHeight, LOCAL_CEL, CEL_HEIGHT
 GET_STRUCT_8_STORED_OFFSET _offsetOfCelTrans, LOCAL_CEL, CEL_TRANS
 stz BUFFER_STATUS + 3
@@ -154,6 +160,10 @@ stz _logDebugVal1
 lda CEL_TRANS
 SET_COLOR_LEFT CEL_TRANS
 sta CEL_TRANS
+
+@resetXCounter:
+lda X_VAL_ORIG ;Restore the original X value
+sta X_VAL
 
 @setVeraAddress:
 SET_VERA_ADDRESS VERA_ADDRESS, #$1, VERA_ADDRESS_HIGH, #$0
@@ -197,11 +207,16 @@ eor VERA_addr_bank
 sta VERA_addr_bank
 pla
 
+inc X_VAL ;Increment the x val. Note this is not used in calculations only for bounds checks
 dey ;Have we handled every pixel in this run encoded byte
 beq @getNextChunk
 bra @skip
 
 @draw:
+ldx X_VAL
+cpx #PICTURE_WIDTH ;If X is larger than the width, the object is at least partially off screen we skip drawing the rest of the pixels on this line
+bcs @skip 
+
 @drawBlack:
 cmp #BLACK_COLOR
 bne @checkPriority
@@ -267,7 +282,11 @@ sta VERA_ADDRESS_HIGH
 
 inc Y_VAL
 
-jmp @setVeraAddress
+lda Y_VAL ;If Y_VAL is greater than the height then the object is partially off screen, stop drawing altogether
+cmp #PICTURE_HEIGHT
+bcs @end
+
+jmp @resetXCounter
 
 @end:
 .endmacro
