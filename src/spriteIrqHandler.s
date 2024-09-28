@@ -2,6 +2,9 @@
 .include "globalGraphics.s"
 .include "globalViews.s"
 .include "helpersAsm.s"
+.include "viewCommon.s"
+.include "celToVera.s"
+.include "lineDrawing.s"
 
 .segment "BANKRAM0E"
 
