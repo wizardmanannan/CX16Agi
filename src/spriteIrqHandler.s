@@ -200,15 +200,16 @@ SET_VERA_START_SPRITE_ATTRS #$0, #$1, SA_VERA_ADDRESS_LOW ; Sets VERA channel 0 
 
 ldy #$0
 @loop:
-
 GET_NEXT_FROM_SPRITE_UPDATE_BUFFER ;Address 12:5 0 (buffer 0)
 sta ZP_LOW_BYTE
 
 GET_NEXT_FROM_SPRITE_UPDATE_BUFFER ;Address 16:13 1 (buffer 1)
 
 ora ZP_LOW_BYTE
-beq @addressReset
+bne @displaySprites
+jmp @addressReset
 
+@displaySprites:
 GET_NEXT_FROM_SPRITE_UPDATE_BUFFER ;X Low 2 (buffer 2)
 
 GET_NEXT_FROM_SPRITE_UPDATE_BUFFER ;X High 3 (buffer 3)
@@ -247,12 +248,26 @@ jsr bESetBytesPerRow
 GET_NEXT_FROM_SPRITE_UPDATE_BUFFER #$1 ;Allocation Height
 jsr bECalculateTotalRows
 
+lda VERA_addr_low
+pha
+lda VERA_addr_high
+pha
+lda VERA_addr_bank
+pha
 phy
 jsr bEClearVera
 jsr celToVeraLowRam
-ply
 
-bra @loop
+ply
+stz VERA_ctrl
+pla
+sta VERA_addr_bank
+pla 
+sta VERA_addr_high
+pla
+sta VERA_addr_low
+
+jmp @loop
 @addressReset:
 lda #< _bESpritesUpdatedBuffer
 sta _bESpritesUpdatedBufferPointer

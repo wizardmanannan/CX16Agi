@@ -678,8 +678,7 @@ boolean agiBlit(ViewTable* localViewTab, byte entryNum, boolean disableInterupts
 
 	previousBank = RAM_BANK;
 
-
-	if (entryNum != 0)
+	if (localViewTab->currentView == 97)
 	{
 		return TRUE;
 	}
