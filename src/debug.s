@@ -7,7 +7,9 @@ DEBUG_INC = 1
 .import _opCounter
 .import _pixelCounter
 _b6TellMeTheAddressPlease:
+stp
 lda _opCounter
+lda _bESpritesUpdatedBuffer
 rts
 
 .segment "BANKRAM05"

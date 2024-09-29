@@ -6,7 +6,6 @@ CELTOVERA_INC = 1
 .include "lineDrawing.s"
 .segment "CODE"
 
-
 .macro READ_NEXT_BYTE
 .local @increment
 .local @end
@@ -24,13 +23,20 @@ inc BMP_DATA + 1 ;Adding 256 0x100 which is adding zero to the low byte and 1 to
 
 celToVeraLowRam:
 .scope
-lda X_VAL 
-sta X_VAL_ORIG ;Keep track of the original X value
-
 stz NEXT_DATA_INDEX
 
 lda RAM_BANK
 pha
+
+lda #VIEW_TAB_BANK
+sta RAM_BANK
+
+GET_STRUCT_8_STORED_OFFSET _offsetOfXPos, VIEW_TAB_ADDRESS, X_VAL
+GET_STRUCT_8_STORED_OFFSET _offsetOfYPos, VIEW_TAB_ADDRESS, Y_VAL
+GET_STRUCT_8_STORED_OFFSET _offsetOfPriority, VIEW_TAB_ADDRESS, P_NUM
+
+lda X_VAL 
+sta X_VAL_ORIG ;Keep track of the original X value
 
 lda CEL_BANK
 sta RAM_BANK
@@ -38,7 +44,13 @@ sta RAM_BANK
 GET_STRUCT_8_STORED_OFFSET _offsetOfCelHeight, CEL_ADDR, CEL_HEIGHT
 GET_STRUCT_8_STORED_OFFSET _offsetOfCelTrans, CEL_ADDR, CEL_TRANS
 GET_STRUCT_8_STORED_OFFSET _offsetOfSplitSegments, CEL_ADDR, SPLIT_SEGMENTS
-stz BUFFER_STATUS + 3
+
+lda Y_VAL ;Position is in the bottom left corner, therefore y_val = y_val - (height - 1)
+sec
+sbc CEL_HEIGHT
+clc
+inc
+sta Y_VAL
 
 lda SPLIT_SEGMENTS
 cmp #$1

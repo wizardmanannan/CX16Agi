@@ -21,17 +21,6 @@ VIEW_INC = 1
 .import _b1DivAndCeil
 .import _memCpyBankedBetween
 
-.import _offsetOfBmp
-.import _offsetOfBmpBank
-.import _offsetOfCelHeight
-.import _offsetOfCelTrans
-.import _offsetOfSplitCelBank
-.import _offsetOfCelWidth
-.import _offsetOfCelHeight
-.import _offsetOfSplitCelPointers
-.import _offsetOfSplitSegments
-
-
 .import _sizeofCel
 
 .import _b10BankedAlloc

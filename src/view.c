@@ -977,18 +977,13 @@ yPos: _assmByte = (byte)localViewTab->yPos;
 	asm("lda %v", _assmByte);
 	asm("sta (%w),y", ZP_SPRITE_STORE_PTR);
 
-	_assmByte = localViewTab->xPos;
+	_assmUInt = (unsigned int) &viewtab[entryNum];
 	asm("ldy #$C");
-	asm("lda %v", _assmByte);
+	asm("lda %v", _assmUInt);
 	asm("sta (%w),y", ZP_SPRITE_STORE_PTR);
 
-	_assmByte = localViewTab->yPos;
-	_assmByte2 = localCel.height - 1;
-
 	asm("ldy #$D");
-	asm("lda %v", _assmByte);
-	asm("sec");
-	asm("sbc %v", _assmByte2);
+	asm("lda %v + 1", _assmUInt);
 	asm("sta (%w),y", ZP_SPRITE_STORE_PTR);
 
 	_assmByte = localLoop.allocationWidth;
@@ -1001,7 +996,7 @@ yPos: _assmByte = (byte)localViewTab->yPos;
 	asm("lda %v", _assmByte);
 	asm("sta (%w),y", ZP_SPRITE_STORE_PTR);
 
-	//printf("loop vera address %x, cel address %p cel bank %p x %p y %p Height %p trans %p split segments %p viewNum %d bitmap %p bitmap bank %p\n", loopVeraAddress, &localLoop.cels[localViewTab->currentCel], localLoop.celsBank, localViewTab->xPos, localViewTab->yPos, localCel.height, localCel.transparency, localCel.splitSegments, localViewTab->currentView, localCel.bmp, localCel.bitmapBank);
+	//printf("loop vera address %x, cel address %p cel bank %p x %p y %p Height %p trans %p split segments %p viewNum %d bitmap %p bitmap bank %p view Tab address %p\n", loopVeraAddress, &localLoop.cels[localViewTab->currentCel], localLoop.celsBank, localViewTab->xPos, localViewTab->yPos, localCel.height, localCel.transparency, localCel.splitSegments, localViewTab->currentView, localCel.bmp, localCel.bitmapBank, &viewtab[entryNum]);
 
 
 	bESpritesUpdatedBufferPointer += BYTES_PER_SPRITE_UPDATE;

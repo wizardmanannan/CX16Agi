@@ -183,7 +183,6 @@ sta VERA_addr_low
 .local @loop
 .local @loopCheck
 SET_VERA_ADDRESS_ABSOLUTE VERA_ADDRESS, #$0, #$1
-
 lda COLOUR
 SET_COLOR_LEFT COLOUR
 
