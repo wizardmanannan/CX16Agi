@@ -42,7 +42,7 @@
 #define MAX_SPRITE_PRIORITY 15
 #define NO_PRIORITIES (MAX_SPRITE_PRIORITY - MIN_SPRITE_PRIORITY)
 
-#define BYTES_PER_SPRITE_UPDATE 8
+#define BYTES_PER_SPRITE_UPDATE 16
 #define SPRITE_UPDATED_BUFFER_SIZE  VIEW_TABLE_SIZE * BYTES_PER_SPRITE_UPDATE * 2
 extern byte bESpritesUpdatedBuffer[SPRITE_UPDATED_BUFFER_SIZE];
 extern byte* bESpritesUpdatedBufferPointer;
@@ -678,6 +678,12 @@ boolean agiBlit(ViewTable* localViewTab, byte entryNum, boolean disableInterupts
 
 	previousBank = RAM_BANK;
 
+
+	if (entryNum != 0)
+	{
+		return TRUE;
+	}
+
 	RAM_BANK = SPRITE_METADATA_BANK;
 
 	viewNum = localViewTab->currentView;
@@ -948,11 +954,55 @@ yPos: _assmByte = (byte)localViewTab->yPos;
 	asm("sta (%w),y", ZP_SPRITE_STORE_PTR);
 
 	//Reblit
-	_assmByte = localViewTab->flags & MOTION;
+	_assmUInt = loopVeraAddress;
 
 	asm("ldy #$7");
+	asm("lda %v", _assmUInt);
+	asm("sta (%w),y", ZP_SPRITE_STORE_PTR);
+	asm("ldy #$8");
+	asm("lda %v + 1", _assmUInt);
+	asm("sta (%w),y", ZP_SPRITE_STORE_PTR);
+
+	_assmUInt = (unsigned int) &localLoop.cels[localViewTab->currentCel];
+
+	asm("ldy #$9");
+	asm("lda %v", _assmUInt);
+	asm("sta (%w),y", ZP_SPRITE_STORE_PTR);
+	asm("ldy #$A");
+	asm("lda %v + 1", _assmUInt);
+	asm("sta (%w),y", ZP_SPRITE_STORE_PTR);
+
+	_assmByte = localLoop.celsBank;
+	asm("ldy #$B");
 	asm("lda %v", _assmByte);
 	asm("sta (%w),y", ZP_SPRITE_STORE_PTR);
+
+	_assmByte = localViewTab->xPos;
+	asm("ldy #$C");
+	asm("lda %v", _assmByte);
+	asm("sta (%w),y", ZP_SPRITE_STORE_PTR);
+
+	_assmByte = localViewTab->yPos;
+	_assmByte2 = localCel.height - 1;
+
+	asm("ldy #$D");
+	asm("lda %v", _assmByte);
+	asm("sec");
+	asm("sbc %v", _assmByte2);
+	asm("sta (%w),y", ZP_SPRITE_STORE_PTR);
+
+	_assmByte = localLoop.allocationWidth;
+	asm("ldy #$E");
+	asm("lda %v", _assmByte);
+	asm("sta (%w),y", ZP_SPRITE_STORE_PTR);
+
+	_assmByte = localLoop.allocationHeight;
+	asm("ldy #$F");
+	asm("lda %v", _assmByte);
+	asm("sta (%w),y", ZP_SPRITE_STORE_PTR);
+
+	//printf("loop vera address %x, cel address %p cel bank %p x %p y %p Height %p trans %p split segments %p viewNum %d bitmap %p bitmap bank %p\n", loopVeraAddress, &localLoop.cels[localViewTab->currentCel], localLoop.celsBank, localViewTab->xPos, localViewTab->yPos, localCel.height, localCel.transparency, localCel.splitSegments, localViewTab->currentView, localCel.bmp, localCel.bitmapBank);
+
 
 	bESpritesUpdatedBufferPointer += BYTES_PER_SPRITE_UPDATE;
 

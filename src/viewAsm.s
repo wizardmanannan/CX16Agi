@@ -276,7 +276,6 @@ sta SPLIT_SEGMENTS ;When we draw directly to the bitmap we don't need to split t
 sei
 CEL_TO_VERA_BANKED_BUFFER
 REENABLE_INTERRUPTS
-
 rts
 
 .segment "BANKRAM0E"
@@ -971,7 +970,6 @@ bcc @continue
 ldx debugCounter + 1
 cpx #$1
 bcc @continue
-stp
 nop
 ldx debugCounter
 @continue:

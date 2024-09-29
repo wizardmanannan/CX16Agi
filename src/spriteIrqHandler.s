@@ -78,6 +78,84 @@ bra @loop
 _bESpritesUpdatedBuffer: .res SPRITE_UPDATED_BUFFER_SIZE
 _bESpritesUpdatedBufferPointer: .word _bESpritesUpdatedBuffer
 
+bEClearVera:
+CLEAR_VERA VERA_ADDRESS, TOTAL_ROWS, BYTES_PER_ROW, #$0
+rts
+
+bECalculateTotalRows:
+cmp #SPR_ATTR_8
+
+bne @check16H
+
+@setWidth8H:
+lda #SPRITE_TOTAL_ROWS_8
+sta TOTAL_ROWS
+
+bra @end
+
+@check16H:
+cmp #SPR_ATTR_16
+bne @check32H
+
+@setWidth16H:
+lda #SPRITE_TOTAL_ROWS_16
+sta TOTAL_ROWS
+bra @end
+
+@check32H:
+cmp #SPR_ATTR_32
+bne @setWidth64H
+
+@setWidth32H:
+lda #SPRITE_TOTAL_ROWS_32
+sta TOTAL_ROWS
+bra @end
+
+@setWidth64H:
+lda #SPRITE_TOTAL_ROWS_64
+sta TOTAL_ROWS
+bra @end
+
+@end:
+rts
+
+bESetBytesPerRow:
+cmp #SPR_ATTR_8
+
+bne @check16W
+
+@setWidth8W:
+lda #BYTES_PER_ROW_8
+sta BYTES_PER_ROW
+
+bra @end
+
+@check16W:
+cmp #SPR_ATTR_16
+bne @check32W
+
+@setWidth16W:
+lda #BYTES_PER_ROW_16
+sta BYTES_PER_ROW
+bra @end
+
+@check32W:
+cmp #SPR_ATTR_32
+bne @setWidth64W
+
+@setWidth32W:
+lda #BYTES_PER_ROW_32
+sta BYTES_PER_ROW
+bra @end
+
+@setWidth64W:
+lda #BYTES_PER_ROW_64
+sta BYTES_PER_ROW
+
+@end:
+rts
+
+
 ;void bEClearSpriteAttributes()
 _bEClearSpriteAttributes:
 lda #MAX_SPRITE_SLOTS
@@ -144,7 +222,37 @@ GET_NEXT_FROM_SPRITE_UPDATE_BUFFER ; 6 Collison ZDepth and Flip (buffer 5)
 
 GET_NEXT_FROM_SPRITE_UPDATE_BUFFER ;Sprite Attr Size 7 (buffer 6)
 
-GET_NEXT_FROM_SPRITE_UPDATE_BUFFER #$1 ; Reblit
+;Reblit
+stz VERA_ADDRESS ;Always zero
+GET_NEXT_FROM_SPRITE_UPDATE_BUFFER #$1 ; LoopVeraAddress
+sta VERA_ADDRESS + 1
+GET_NEXT_FROM_SPRITE_UPDATE_BUFFER #$1 
+sta VERA_ADDRESS_HIGH
+
+GET_NEXT_FROM_SPRITE_UPDATE_BUFFER #$1 ; Address of the Cel 
+sta CEL_ADDR
+GET_NEXT_FROM_SPRITE_UPDATE_BUFFER #$1
+sta CEL_ADDR + 1
+
+GET_NEXT_FROM_SPRITE_UPDATE_BUFFER #$1 ; Cel Bank
+sta CEL_BANK 
+
+GET_NEXT_FROM_SPRITE_UPDATE_BUFFER #$1 ; X_POS
+sta X_VAL
+
+GET_NEXT_FROM_SPRITE_UPDATE_BUFFER #$1 ; Y_POS
+sta Y_VAL
+
+GET_NEXT_FROM_SPRITE_UPDATE_BUFFER #$1 ;Allocation Width
+jsr bESetBytesPerRow
+
+GET_NEXT_FROM_SPRITE_UPDATE_BUFFER #$1 ;Allocation Height
+jsr bECalculateTotalRows
+
+phy
+jsr bEClearVera
+jsr celToVeraLowRam
+ply
 
 bra @loop
 @addressReset:

@@ -10,16 +10,15 @@ CELTOVERA_INC = 1
 .macro READ_NEXT_BYTE
 .local @increment
 .local @end
-
 ldy NEXT_DATA_INDEX
-lda (CEL_DATA), y
+lda (BMP_DATA), y
 
 inc NEXT_DATA_INDEX
 
 bne @end
 
 @increment:
-inc CEL_DATA + 1 ;Adding 256 0x100 which is adding zero to the low byte and 1 to the high
+inc BMP_DATA + 1 ;Adding 256 0x100 which is adding zero to the low byte and 1 to the high
 @end:
 .endmacro
 
@@ -38,6 +37,7 @@ sta RAM_BANK
 
 GET_STRUCT_8_STORED_OFFSET _offsetOfCelHeight, CEL_ADDR, CEL_HEIGHT
 GET_STRUCT_8_STORED_OFFSET _offsetOfCelTrans, CEL_ADDR, CEL_TRANS
+GET_STRUCT_8_STORED_OFFSET _offsetOfSplitSegments, CEL_ADDR, SPLIT_SEGMENTS
 stz BUFFER_STATUS + 3
 
 lda SPLIT_SEGMENTS
@@ -45,9 +45,10 @@ cmp #$1
 bne @split
 
 @nonSplit:
-GET_STRUCT_16_STORED_OFFSET _offsetOfBmp, CEL_ADDR, CEL_DATA ;Buffer status holds the C struct to be passed to b5RefreshBuffer
-GET_STRUCT_8_STORED_OFFSET _offsetOfBmpBank, CEL_ADDR, CEL_DATA_BANK
+GET_STRUCT_16_STORED_OFFSET _offsetOfBmp, CEL_ADDR, BMP_DATA ;Buffer status holds the C struct to be passed to b5RefreshBuffer
+GET_STRUCT_8_STORED_OFFSET _offsetOfBmpBank, CEL_ADDR, BMP_BANK
 bra @start
+
 
 @split:
 lda SPLIT_COUNTER
@@ -64,7 +65,6 @@ lda SPLIT_CEL_BANK
 sta BUFFER_STATUS + 2
 
 @start:
-
 .ifdef DEBUG_VIEW_DRAW
 stz _logDebugVal1
 .endif
@@ -73,7 +73,7 @@ lda CEL_TRANS
 SET_COLOR_LEFT CEL_TRANS
 sta CEL_TRANS
 
-lda CEL_DATA_BANK
+lda BMP_BANK
 sta RAM_BANK
 
 @resetXCounter:
@@ -195,7 +195,6 @@ adc VERA_ADDRESS_HIGH
 sta VERA_ADDRESS_HIGH
 
 inc Y_VAL
-
 lda Y_VAL ;If Y_VAL is greater than the height then the object is partially off screen, stop drawing altogether
 cmp #PICTURE_HEIGHT
 bcs @end
