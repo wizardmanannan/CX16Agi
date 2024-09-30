@@ -42,7 +42,7 @@
 #define MAX_SPRITE_PRIORITY 15
 #define NO_PRIORITIES (MAX_SPRITE_PRIORITY - MIN_SPRITE_PRIORITY)
 
-#define BYTES_PER_SPRITE_UPDATE 16
+#define BYTES_PER_SPRITE_UPDATE 17
 #define SPRITE_UPDATED_BUFFER_SIZE  VIEW_TABLE_SIZE * BYTES_PER_SPRITE_UPDATE * 2
 extern byte bESpritesUpdatedBuffer[SPRITE_UPDATED_BUFFER_SIZE];
 extern byte* bESpritesUpdatedBufferPointer;
@@ -976,22 +976,28 @@ yPos: _assmByte = (byte)localViewTab->yPos;
 	asm("lda %v", _assmByte);
 	asm("sta (%w),y", ZP_SPRITE_STORE_PTR);
 
-	_assmUInt = (unsigned int) &viewtab[entryNum];
+	_assmUInt = (unsigned int)localViewTab->xPos;
 	asm("ldy #$C");
 	asm("lda %v", _assmUInt);
 	asm("sta (%w),y", ZP_SPRITE_STORE_PTR);
 
+	_assmUInt = (unsigned int)localViewTab->yPos;
 	asm("ldy #$D");
-	asm("lda %v + 1", _assmUInt);
+	asm("lda %v", _assmUInt);
+	asm("sta (%w),y", ZP_SPRITE_STORE_PTR);
+
+	_assmUInt = (unsigned int)localViewTab->priority;
+	asm("ldy #$E");
+	asm("lda %v", _assmUInt);
 	asm("sta (%w),y", ZP_SPRITE_STORE_PTR);
 
 	_assmByte = localLoop.allocationWidth;
-	asm("ldy #$E");
+	asm("ldy #$F");
 	asm("lda %v", _assmByte);
 	asm("sta (%w),y", ZP_SPRITE_STORE_PTR);
 
 	_assmByte = localLoop.allocationHeight;
-	asm("ldy #$F");
+	asm("ldy #$10");
 	asm("lda %v", _assmByte);
 	asm("sta (%w),y", ZP_SPRITE_STORE_PTR);
 
