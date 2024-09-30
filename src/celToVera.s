@@ -125,7 +125,7 @@ cmp CEL_TRANS
 bne @draw
 
 @skip: ;When 'drawing' transparent pixels we still need to increment the address
-ldx VERA_data0 ;We are not changing this one so we load load in order to increment and ignore the value
+stz VERA_data0 ;We are not changing this one so we load load in order to increment and ignore the value
 ldx VERA_data1
 pha ;Toggle the priority auto increment and preserve the color
 lda #%10000
@@ -178,7 +178,7 @@ beq @drawColor ;If the object and screen priority is equal the object has preced
 bcc @drawColor ;If the object screen priority < object priority the object has precedence
 
 @skipBasedOnPriority: ;This means that the screen priority > object priority, so we don't draw
-lda VERA_data0
+stz VERA_data0
 pla ;Retrieve the color
 bra @decrementColorCounter
 

@@ -78,9 +78,7 @@ bra @loop
 _bESpritesUpdatedBuffer: .res SPRITE_UPDATED_BUFFER_SIZE
 _bESpritesUpdatedBufferPointer: .word _bESpritesUpdatedBuffer
 
-bEClearVera:
-CLEAR_VERA VERA_ADDRESS, TOTAL_ROWS, BYTES_PER_ROW, #$0
-rts
+
 
 bECalculateTotalRows:
 cmp #SPR_ATTR_8
@@ -255,7 +253,6 @@ pha
 lda VERA_addr_bank
 pha
 phy
-jsr bEClearVera
 jsr celToVeraLowRam
 
 ply
