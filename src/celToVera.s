@@ -57,17 +57,20 @@ bra @start
 
 @split:
 lda SPLIT_COUNTER
+dec
 asl
+
 tay
 
-lda bESplitAddressesBuffer, y
-sta BUFFER_STATUS 
-iny
-lda bESplitAddressesBuffer, y
-sta BUFFER_STATUS + 1
-
 lda SPLIT_CEL_BANK
-sta BUFFER_STATUS + 2
+sta BMP_BANK
+sta RAM_BANK
+
+lda (SPLIT_CEL_SEGMENTS), y
+sta BMP_DATA 
+iny
+lda (SPLIT_CEL_SEGMENTS), y
+sta BMP_DATA + 1
 
 @start:
 .ifdef DEBUG_VIEW_DRAW

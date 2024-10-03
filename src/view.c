@@ -42,7 +42,7 @@
 #define MAX_SPRITE_PRIORITY 15
 #define NO_PRIORITIES (MAX_SPRITE_PRIORITY - MIN_SPRITE_PRIORITY)
 
-#define BYTES_PER_SPRITE_UPDATE 17
+#define BYTES_PER_SPRITE_UPDATE 21
 #define SPRITE_UPDATED_BUFFER_SIZE  VIEW_TABLE_SIZE * BYTES_PER_SPRITE_UPDATE * 2
 extern byte bESpritesUpdatedBuffer[SPRITE_UPDATED_BUFFER_SIZE];
 extern byte* bESpritesUpdatedBufferPointer;
@@ -678,11 +678,6 @@ boolean agiBlit(ViewTable* localViewTab, byte entryNum, boolean disableInterupts
 
 	previousBank = RAM_BANK;
 
-	if (localViewTab->currentView == 97)
-	{
-		return TRUE;
-	}
-
 	RAM_BANK = SPRITE_METADATA_BANK;
 
 	viewNum = localViewTab->currentView;
@@ -699,16 +694,17 @@ boolean agiBlit(ViewTable* localViewTab, byte entryNum, boolean disableInterupts
 
 	if (localView.maxVeraSlots > 1)
 	{
+		getLoadedCel(&localLoop, &tempCel, i);
+
 #ifdef VERBOSE_SPLIT
-		printf("you are splitting view %d loop %d cel %d. the data is %p on bank %p. it's width doubled is %d\n", viewNum, localViewTab->currentLoop, localViewTab->currentCel, localCel.bmp, localCel.bitmapBank, localCel.width * 2);
+		printf("you are splitting view %d loop %d cel %d. the data is %p on bank %p. it's width doubled is %d\n", viewNum, localViewTab->currentLoop, localViewTab->currentCel, tempCel.bmp, tempCel.bitmapBank, tempCel.width * 2);
 #endif
 		i = 0;
-		getLoadedCel(&localLoop, &tempCel, i);
 		do
 		{
 			if (!tempCel.splitCelPointers && (tempCel.veraSlotsWidth > 1 && tempCel.veraSlotsWidth > 1))
 			{
-				bESplitCel(&tempCel);
+			    bESplitCel(&tempCel);
 				setLoadedCel(&localLoop, &tempCel, i);
 			}
 
@@ -777,6 +773,8 @@ boolean agiBlit(ViewTable* localViewTab, byte entryNum, boolean disableInterupts
 	*((byte*)SPLIT_SEGMENTS) = localCel.splitSegments;
 
 	asm("stz %w", SPLIT_OFFSET);
+
+getLoadedCel(&localLoop, &localCel, localViewTab->currentCel); //If the cel has being split our data would be stale
 
 splitLoop: RAM_BANK = localMetadata.viewTableMetadataBank;
 
@@ -1001,8 +999,23 @@ yPos: _assmByte = (byte)localViewTab->yPos;
 	asm("lda %v", _assmByte);
 	asm("sta (%w),y", ZP_SPRITE_STORE_PTR);
 
-	//printf("loop vera address %x, cel address %p cel bank %p x %p y %p Height %p trans %p split segments %p viewNum %d bitmap %p bitmap bank %p view Tab address %p\n", loopVeraAddress, &localLoop.cels[localViewTab->currentCel], localLoop.celsBank, localViewTab->xPos, localViewTab->yPos, localCel.height, localCel.transparency, localCel.splitSegments, localViewTab->currentView, localCel.bmp, localCel.bitmapBank, &viewtab[entryNum]);
+	_assmUInt = (unsigned int) localCel.splitCelPointers;
+	asm("ldy #$11");
+	asm("lda %v", _assmUInt);
+	asm("sta (%w),y", ZP_SPRITE_STORE_PTR);
 
+	asm("ldy #$12");
+	asm("lda %v + 1", _assmUInt);
+	asm("sta (%w),y", ZP_SPRITE_STORE_PTR);
+
+	_assmByte = localCel.splitCelBank;
+	asm("ldy #$13");
+	asm("lda %v", _assmByte);
+	asm("sta (%w),y", ZP_SPRITE_STORE_PTR);
+
+	asm("ldy #$14");
+	asm("lda %w", SPLIT_COUNTER);
+	asm("sta (%w),y", ZP_SPRITE_STORE_PTR);
 
 	bESpritesUpdatedBufferPointer += BYTES_PER_SPRITE_UPDATE;
 
