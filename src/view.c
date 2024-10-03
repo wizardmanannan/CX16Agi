@@ -694,12 +694,12 @@ boolean agiBlit(ViewTable* localViewTab, byte entryNum, boolean disableInterupts
 
 	if (localView.maxVeraSlots > 1)
 	{
+		i = 0;
 		getLoadedCel(&localLoop, &tempCel, i);
 
 #ifdef VERBOSE_SPLIT
 		printf("you are splitting view %d loop %d cel %d. the data is %p on bank %p. it's width doubled is %d\n", viewNum, localViewTab->currentLoop, localViewTab->currentCel, tempCel.bmp, tempCel.bitmapBank, tempCel.width * 2);
 #endif
-		i = 0;
 		do
 		{
 			if (!tempCel.splitCelPointers && (tempCel.veraSlotsWidth > 1 && tempCel.veraSlotsWidth > 1))
