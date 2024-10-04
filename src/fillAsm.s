@@ -574,9 +574,10 @@ FILL_STACK_PUSH
 
 @return:
 .import _b5WaitOnKey
-jmp end
+jmp end ;TODO: Remove
 cannot_fill:
 end:
+
 .endscope
 .endmacro
 
@@ -1094,10 +1095,27 @@ ok_fill:
     ldx X_VAL
     ldy Y_VAL
     SCAN_AND_FILL
-
     ; while (pop(&lx, &rx, &y1)) {
 pop_loop:
     FILL_STACK_POP LX, RX, Y1
+
+    php
+pha
+phx
+phy
+.import _stopHere
+lda _stopHere
+beq @continue
+.import _displayPriority
+;jsr _displayPriority
+stp
+@continue:
+ply
+plx
+pla
+plp
+
+
     bne @pop_not_done ; bne branches if Z flag is clear (ie not equal to zero)
     jmp pop_done
 @pop_not_done:

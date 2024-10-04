@@ -44,6 +44,15 @@ byte picColour = 0, priColour = 0, patCode, patNum;
 
 #define PICTURE_DATA_ZP (byte**) 0xFE; //This must not conflict with any from _b8DrawLine, that is why it is set so high. Must match DATA zp in _b8AsmFloodFillSections (fillAsm.s)
 
+void bDbgShowPriority();
+
+void displayPriority()
+{
+	unsigned long i;
+	trampolineDebug(bDbgShowPriority);
+	for (i = 0; i < 10000;);
+}
+
 #ifdef TEST_LINE_DRAW
 
 #pragma code-name (push, "BANKRAM08")
@@ -500,6 +509,8 @@ extern void b6Clear();
 **  pLen = length of PICTURE data
 **************************************************************************/
 extern boolean disableIrq;
+
+boolean stopHere = FALSE;
 void b11DrawPic(byte* bankedData, int pLen, boolean okToClearScreen, byte picNum)
 {
 	unsigned long i;
@@ -507,6 +518,7 @@ void b11DrawPic(byte* bankedData, int pLen, boolean okToClearScreen, byte picNum
 	boolean stillDrawing = TRUE;
 	PictureFile loadedPicture;
 	byte** data;
+	int actionNum = 0;
 
 	BufferStatus localBufferStatus;
 	BufferStatus* bufferStatus = &localBufferStatus;
@@ -607,6 +619,12 @@ void b11DrawPic(byte* bankedData, int pLen, boolean okToClearScreen, byte picNum
 			returnedAction = b11RelativeDraw(data, bufferStatus);
 			break;
 		case 0xF8:
+
+			if (priDrawEnabled && picNum == 34 && actionNum == 28)
+			{
+				stopHere = TRUE;
+			}
+
 			if (priDrawEnabled)
 			{
 				returnedAction = b8AsmFloodFillSections(bufferStatus, &cleanPic);
@@ -615,6 +633,12 @@ void b11DrawPic(byte* bankedData, int pLen, boolean okToClearScreen, byte picNum
 			{
 				returnedAction = b8AsmFloodFillSectionsVisOnly(bufferStatus, &cleanPic);
 			}
+
+			if (priDrawEnabled && picNum == 34)
+			{
+				//printf("action %d\n", actionNum);
+			}
+
 			break;
 		case 0xF9: GET_NEXT(patCode); break;
 		case 0xFA:
@@ -631,6 +655,13 @@ void b11DrawPic(byte* bankedData, int pLen, boolean okToClearScreen, byte picNum
 			exit(0);
 		}
 
+
+		/*if (picNum == 34 && actionNum == 10 && priDrawEnabled)
+		{
+			trampolineDebug(bDbgShowPriority);
+			for (;;);
+		}*/
+
 		//if (picFNum == 3) {
 		//   showPicture();
 		//   if ((readkey() >> 8) == KEY_ESC) closedown();
@@ -638,6 +669,10 @@ void b11DrawPic(byte* bankedData, int pLen, boolean okToClearScreen, byte picNum
 #ifdef VERBOSE
 		printf(" data %p pLen %d data + pLen %p stillDrawing %d \n", data, pLen, data + pLen, stillDrawing);
 #endif
+		if (priDrawEnabled && picNum == 34)
+		{
+			actionNum++;
+		}
 	} while ((data < (data + pLen)) && stillDrawing);
 
 	b11SplitPriority();

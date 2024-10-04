@@ -8,6 +8,9 @@ DEBUG_INC = 1
 .import _pixelCounter
 _b6TellMeTheAddressPlease:
 lda _opCounter
+lda _bESpritesUpdatedBuffer
+lda _picDrawEnabled
+lda _priDrawEnabled
 rts
 
 .segment "BANKRAM05"
