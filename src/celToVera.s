@@ -131,6 +131,7 @@ bra @skip
 cmp #BLACK_COLOR
 bne @checkPriority
 lda CEL_TRANS ;Black is swapped with the transparent colour in the case the transparent colour is not black
+sta COLOR
 
 @checkPriority:
 ldx VERA_data1 ;Get the next priority byte and toggle
@@ -171,7 +172,7 @@ sta VERA_data0
 
 @decrementColorCounter:
 dey
-bne @draw ;If y is not zero we are not yet finished with this run encoded byte
+bne @checkPriority ;If y is not zero we are not yet finished with this run encoded byte. Note: If the color is black, then its swapped position is at this point already stored in COLOR, so we don't need to do a draw black check again
 jmp @getNextChunk
 
 @increment:

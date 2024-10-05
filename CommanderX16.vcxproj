@@ -14,6 +14,7 @@
     <None Include="..\.gitignore" />
     <None Include="cx16-bank.cfg" />
     <None Include="makefile" />
+    <None Include="src\celToVera.s" />
     <None Include="src\codeWindow.s" />
     <None Include="src\commandLoop.asm" />
     <None Include="src\commandLoop.s" />
