@@ -44,12 +44,14 @@ ZP_TMP_13 = $C1
 ZP_TMP_14 = $C3
 ZP_TMP_16 = $C5
 ZP_TMP_17 = $C7
-ZP_TMP_18 = $C9;TODO: Where is CA - DA? Why aren't we using them?
-ZP_TMP_19 = $DB
-ZP_TMP_20 = $DD
-ZP_TMP_21 = $DF
-ZP_TMP_22 = $E1
-ZP_TMP_23 = $FE
+ZP_TMP_18 = $C9;TODO: Where is CB - DA? Why aren't we using them?
+ZP_TMP_19 = $CB
+ZP_TMP_20 = $CD
+ZP_TMP_21 = $CF
+ZP_TMP_22 = $D1
+ZP_TMP_23 = $D3
+ZP_TMP_24 = $D5
+ZP_TMP_25 = $D7
 
 ;Float Division
 ZP_DIV_AREA = $E3
