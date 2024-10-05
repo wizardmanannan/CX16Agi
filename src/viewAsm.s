@@ -142,8 +142,8 @@ and #$0F; The number of pixels is the lower 4 bits
 tay
 txa
 and #$F0; The colour is the upper 4 bits
-sta OUTPUT_COLOUR
-SET_COLOR_RIGHT OUTPUT_COLOUR ;Output color must be 'doubled up', because AGI pixels are doubled across
+sta COLOR
+SET_COLOR_RIGHT COLOR ;Output color must be 'doubled up', because AGI pixels are doubled across
 
 cmp CEL_TRANS
 bne @draw

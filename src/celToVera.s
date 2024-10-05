@@ -107,8 +107,9 @@ and #$0F; The number of pixels is the lower 4 bits
 tay
 txa
 and #$F0; The colour is the upper 4 bits
-sta OUTPUT_COLOUR
-SET_COLOR_RIGHT OUTPUT_COLOUR ;Output color must be 'doubled up', because AGI pixels are doubled across
+sta COLOR
+SET_COLOR_RIGHT COLOR ;Output color must be 'doubled up', because AGI pixels are doubled across
+sta COLOR
 
 cmp CEL_TRANS
 bne @draw
@@ -116,11 +117,9 @@ bne @draw
 @skip: ;When 'drawing' transparent pixels we still need to increment the address
 stz VERA_data0 ;Set to CX16 transparent which is always zero, not this may be different to the sprite transparent color
 ldx VERA_data1 ;Ignore the priority we don't need it as we are skipping
-pha ;Toggle the priority auto increment and preserve the color
 lda #%10000
 eor VERA_addr_bank
 sta VERA_addr_bank
-pla
 
 dey ;Have we handled every pixel in this run encoded byte
 beq @getNextChunk
@@ -135,7 +134,6 @@ lda CEL_TRANS ;Black is swapped with the transparent colour in the case the tran
 
 @checkPriority:
 ldx VERA_data1 ;Get the next priority byte and toggle
-pha ;Preserve the color
 lda #%10000
 eor VERA_addr_bank
 sta VERA_addr_bank
@@ -164,11 +162,11 @@ bcc @drawColor ;If the object screen priority < object priority the object has p
 
 @skipBasedOnPriority: ;This means that the screen priority > object priority, so we don't draw
 stz VERA_data0
-pla ;Retrieve the color
+lda COLOR
 bra @decrementColorCounter
 
 @drawColor: ;This means that the screen priority <= object priority, so we do draw
-pla ;Retrieve the color
+lda COLOR
 sta VERA_data0
 
 @decrementColorCounter:
