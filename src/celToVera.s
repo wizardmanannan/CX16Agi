@@ -28,9 +28,6 @@ stz NEXT_DATA_INDEX
 lda RAM_BANK
 pha
 
-lda X_VAL 
-sta X_VAL_ORIG ;Keep track of the original X value
-
 lda CEL_BANK
 sta RAM_BANK
 
@@ -84,10 +81,6 @@ sta CEL_TRANS
 lda BMP_BANK
 sta RAM_BANK
 
-@resetXCounter:
-lda X_VAL_ORIG ;Restore the original X value
-sta X_VAL
-
 @setVeraAddress:
 SET_VERA_ADDRESS VERA_ADDRESS, #$1, VERA_ADDRESS_HIGH, #$0
 ldy Y_VAL
@@ -121,23 +114,19 @@ cmp CEL_TRANS
 bne @draw
 
 @skip: ;When 'drawing' transparent pixels we still need to increment the address
-stz VERA_data0 ;We are not changing this one so we load load in order to increment and ignore the value
-ldx VERA_data1
+stz VERA_data0 ;Set to CX16 transparent which is always zero, not this may be different to the sprite transparent color
+ldx VERA_data1 ;Ignore the priority we don't need it as we are skipping
 pha ;Toggle the priority auto increment and preserve the color
 lda #%10000
 eor VERA_addr_bank
 sta VERA_addr_bank
 pla
 
-inc X_VAL ;Increment the x val. Note this is not used in calculations only for bounds checks
 dey ;Have we handled every pixel in this run encoded byte
 beq @getNextChunk
 bra @skip
 
 @draw:
-ldx X_VAL
-cpx #PICTURE_WIDTH ;If X is larger than the width, the object is at least partially off screen we skip drawing the rest of the pixels on this line
-bcs @skip 
 
 @drawBlack:
 cmp #BLACK_COLOR
@@ -212,7 +201,7 @@ lda Y_VAL ;If Y_VAL is greater than the height then the object is partially off 
 cmp #PICTURE_HEIGHT
 bcs @end
 
-jmp @resetXCounter
+jmp @setVeraAddress
 
 @end:
 pla 
