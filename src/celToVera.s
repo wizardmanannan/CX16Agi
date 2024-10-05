@@ -195,13 +195,18 @@ clc
 lda BYTES_PER_ROW 
 adc VERA_ADDRESS
 sta VERA_ADDRESS
+bcc @incrementY
+
 lda #$0
 adc VERA_ADDRESS + 1
 sta VERA_ADDRESS + 1
+bcc @incrementY
+
 lda #$0
 adc VERA_ADDRESS_HIGH
 sta VERA_ADDRESS_HIGH
 
+@incrementY:
 inc Y_VAL
 lda Y_VAL ;If Y_VAL is greater than the height then the object is partially off screen, stop drawing altogether
 cmp #PICTURE_HEIGHT
