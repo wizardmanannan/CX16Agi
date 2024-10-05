@@ -317,10 +317,8 @@ sta VERA_addr_bank
 
 lda X_VAL
 lsr 
-bcc @end ;If going backwards this is the opposite way to normal
+bcs @end ;If going backwards this is the opposite way to normal
 @noIncrement:
-stz VERA_addr_bank
-stz VERA_ctrl
 stz VERA_addr_bank
 @end:
 .endscope
@@ -570,7 +568,7 @@ jmp endRightExpansionLoop
 lda RX
 inc
 sta GENERAL_TMP
-SETUP_AUTO_INC_RECALC #FORWARD_DIRECTION, GENERAL_TMP, Y_VAL
+SETUP_AUTO_INC_RECALC_FORWARDS GENERAL_TMP, Y_VAL
 rightExpansionLoop:
 lda RX
 inc
@@ -1168,7 +1166,7 @@ pop_loop:
     sta NX
     ; while (nx <= rx) {
 
-SETUP_AUTO_INC_RECALC #FORWARD_DIRECTION, NX, Y1 ;Enable auto increment for the loop
+SETUP_AUTO_INC_RECALC_FORWARDS NX, Y1 ;Enable auto increment for the loop
 outer_loop_start:
     lda RX
 
@@ -1195,7 +1193,7 @@ outer_loop_start:
     ldx NX
     ldy Y1
     SCAN_AND_FILL
-    SETUP_AUTO_INC_RECALC #FORWARD_DIRECTION, NX, Y1
+    SETUP_AUTO_INC_RECALC_FORWARDS NX, Y1
     ; while (nx <= rx && can_fill(nx, y1)) {
 
 inner_loop_start:
@@ -1214,7 +1212,7 @@ inner_loop_start:
     cmp #$0
     beq dontEnterInnerLoop
     
-    SETUP_AUTO_INC_RECALC #FORWARD_DIRECTION, NX, Y1
+    SETUP_AUTO_INC_RECALC_FORWARDS NX, Y1
 
     jmp can_fill_inner
 dontEnterInnerLoop:
