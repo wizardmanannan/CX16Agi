@@ -512,6 +512,9 @@ void b11DrawPic(byte* bankedData, int pLen, boolean okToClearScreen, byte picNum
 	BufferStatus* bufferStatus = &localBufferStatus;
 	boolean cleanPic = TRUE;
 
+	picDrawEnabled = FALSE;
+	priDrawEnabled = FALSE;
+
 	data = PICTURE_DATA_ZP;
 	*data = GOLDEN_RAM_WORK_AREA;
 #ifdef TEST_LINE_DRAW
