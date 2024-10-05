@@ -30,25 +30,25 @@ iny
 .endmacro
 
 
-.macro CLEAR_SPRITE_ATTRS NO_TO_CLEAR
-.local @outerLoop
-.local @outerLoopCheck
-.local @innerLoop
-.local @innerLoopCheck
+.macro CLEAR_SPRITE_ATTRS
+.local @loop
 .local @end
 
-ldy NO_TO_CLEAR
+
+SET_VERA_START_SPRITE_ATTRS #$1, #4, SA_VERA_ZORDER ;Set VERA channel 0 to first zorder attribute with a stride of 4.
+lda VERA_addr_low
+ldx VERA_addr_high
+ldy VERA_addr_bank
+stz VERA_ctrl
+sta VERA_addr_low
+stx VERA_addr_high
+sty VERA_addr_bank
+
+@loop:
+lda VERA_data0 ; A zorder of zero means disabled
 beq @end
-
-SET_VERA_START_SPRITE_ATTRS #$0, #4, SA_VERA_ZORDER ;Set VERA channel 0 to first zorder attribute with a stride of 4.
-
-@outerLoop:
-stz VERA_data0 ; A zorder of zero means disabled
-
-@outerLoopCheck:
-dey
-bne @outerLoop
-
+stz VERA_data1
+bra @loop
 @end:
 .endmacro
 
@@ -156,9 +156,7 @@ rts
 
 ;void bEClearSpriteAttributes()
 _bEClearSpriteAttributes:
-lda #MAX_SPRITE_SLOTS
-sta @numToClear
-CLEAR_SPRITE_ATTRS @numToClear
+CLEAR_SPRITE_ATTRS
 rts
 @numToClear: .byte $0
 
@@ -191,7 +189,7 @@ jmp @end
 
 @start:
 
-CLEAR_ACTIVE_SPRITE_ATTRS
+CLEAR_SPRITE_ATTRS
 .import _sResetCounter
 
 SET_VERA_START_SPRITE_ATTRS #$0, #$1, SA_VERA_ADDRESS_LOW ; Sets VERA channel 0 to the start of the sprites attributes table with a stride of 1
