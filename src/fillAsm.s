@@ -84,7 +84,7 @@ rts
     VIS_PIXEL = GENERAL_TMP
     PRI_PIXEL = GENERAL_TMP + 1
 
-    .ifnblank VERA_CTRL_VALUE
+      .ifnblank VERA_CTRL_VALUE
     lda VERA_CTRL_VALUE
     sta VERA_ctrl
     .endif
@@ -191,6 +191,8 @@ end_macro:
 
 BACKWARD_DIRECTION = %11000
 FORWARD_DIRECTION = %10000
+BACKWARD_DIRECTION_NO_INCREMENT = %1000
+
 ;Turns auto increment back on after switch off
 .macro SETUP_AUTO_INC direction, X_VAL, Y_VAL
 .scope
@@ -264,6 +266,67 @@ sta VERA_addr_bank
 .endscope
 .endmacro
 
+
+;Turns on auto increment and recalcuates 
+.macro SETUP_AUTO_INC_RECALC_BACKWARDS X_VAL, Y_VAL
+.scope
+.local @end
+.local @incrementOn
+.local @noIncrement
+
+ldy Y_VAL
+CALC_VRAM_ADDR_VISUAL X_VAL, #$0
+lda #BACKWARD_DIRECTION
+sta VERA_addr_bank
+
+lda _priDrawEnabled
+beq @end
+ldy Y_VAL
+CALC_VRAM_ADDR_PRIORITY X_VAL, #$1
+lda #BACKWARD_DIRECTION
+sta VERA_addr_bank
+
+lda X_VAL
+lsr 
+bcc @end ;If going backwards this is the opposite way to normal
+@noIncrement:
+lda #BACKWARD_DIRECTION_NO_INCREMENT ;This will keep backward direction turned on if its already on, but turn off address increment. If it is forward this will not turn on backwards mode.
+sta VERA_addr_bank
+@end:
+.endscope
+.endmacro
+
+;Turns on auto increment and recalcuates 
+.macro SETUP_AUTO_INC_RECALC_FORWARDS X_VAL, Y_VAL
+.scope
+.local @end
+.local @incrementOn
+.local @noIncrement
+
+ldy Y_VAL
+CALC_VRAM_ADDR_VISUAL X_VAL, #$0
+lda #FORWARD_DIRECTION
+sta VERA_addr_bank
+
+lda _priDrawEnabled
+beq @end
+ldy Y_VAL
+CALC_VRAM_ADDR_PRIORITY X_VAL, #$1
+lda #FORWARD_DIRECTION
+sta VERA_addr_bank
+
+lda X_VAL
+lsr 
+bcc @end ;If going backwards this is the opposite way to normal
+@noIncrement:
+stz VERA_addr_bank
+stz VERA_ctrl
+stz VERA_addr_bank
+@end:
+.endscope
+.endmacro
+
+
 ;Turns on auto increment and recalcuates 
 .macro SETUP_AUTO_INC_RECALC_VIS_ONLY direction, X_VAL, Y_VAL
 .scope
@@ -326,7 +389,7 @@ sta VERA_addr_bank
     cmp #$40
     bne cannot_fill
     bra can_fill
-    
+       
 
 
 vis_enabled_check:
@@ -474,12 +537,13 @@ lda LX
 dec
 sta GENERAL_TMP
 
-SETUP_AUTO_INC_RECALC #BACKWARD_DIRECTION, GENERAL_TMP, Y_VAL
+SETUP_AUTO_INC_RECALC_BACKWARDS GENERAL_TMP, Y_VAL 
 leftExpansionLoop:
  
 lda LX
 dec
 sta GENERAL_TMP
+
 CAN_FILL_AUTO_INCREMENT GENERAL_TMP
 cmp #$0
 beq endLeftExpansionLoop
@@ -551,7 +615,6 @@ sta PLOT_LINE_COLOR
 lda RX
 
 jsr _b8AsmPlotPriHLineFast
-
 
 @pushBelow:
 ;F
@@ -1094,7 +1157,6 @@ ok_fill:
     ldx X_VAL
     ldy Y_VAL
     SCAN_AND_FILL
-
     ; while (pop(&lx, &rx, &y1)) {
 pop_loop:
     FILL_STACK_POP LX, RX, Y1
