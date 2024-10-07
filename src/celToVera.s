@@ -160,6 +160,10 @@ bcc @determineIncrementValue
 lda #$0
 adc VERA_addr_high
 sta VERA_addr_high
+bcc @determineIncrementValue
+lda #$0 
+adc VERA_addr_bank
+sta VERA_addr_bank
 
 @determineIncrementValue:
 lda newIncrementValue,x
