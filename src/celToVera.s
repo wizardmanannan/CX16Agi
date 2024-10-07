@@ -103,9 +103,6 @@ lda #%10000 ;Odd on the next read we should move onto the next byte
 sta VERA_addr_bank
 
 @getNextChunk:
-lda #$1
-sta VERA_ctrl
-
 READ_NEXT_BYTE
 cmp #$0 ;If its zero we are finished with this line
 bne @processChunk
@@ -123,8 +120,20 @@ sta COLOR
 cmp CEL_TRANS
 bne @draw
 
-;stp
 @skip: ;When 'drawing' transparent pixels we still need to increment the address
+@spriteMemoryAdd:
+stz VERA_ctrl
+tya
+clc
+adc VERA_addr_low
+sta VERA_addr_low
+
+bcc @prepareForPriorityAdd
+lda #$0
+adc VERA_addr_high
+sta VERA_addr_high
+
+@prepareForPriorityAdd:
 lda #$1
 sta VERA_ctrl
 
@@ -163,17 +172,6 @@ sta VERA_addr_bank
 lda newIncrementValue,x
 sta VERA_addr_bank
 
-@spriteMemoryAdd:
-stz VERA_ctrl
-tya
-clc
-adc VERA_addr_low
-sta VERA_addr_low
-
-bcc @getNextChunk
-lda #$0
-adc VERA_addr_high
-sta VERA_addr_high
 jmp @getNextChunk
 
 @draw:
