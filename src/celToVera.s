@@ -21,6 +21,10 @@ inc BMP_DATA + 1 ;Adding 256 0x100 which is adding zero to the low byte and 1 to
 @end:
 .endmacro
 
+newIncrementValue: .byte $00, %10000, $00, $00, $00, $00, $00, $00  ; 8 zeros
+    .byte $00, $00, $00, $00, $00, $00, $00, $00 ; 8 more zeros
+    .byte %10000, $00
+
 celToVeraLowRam:
 .scope
 stz NEXT_DATA_INDEX
@@ -99,9 +103,14 @@ lda #%10000 ;Odd on the next read we should move onto the next byte
 sta VERA_addr_bank
 
 @getNextChunk:
+lda #$1
+sta VERA_ctrl
+
 READ_NEXT_BYTE
 cmp #$0 ;If its zero we are finished with this line
-beq @increment
+bne @processChunk
+jmp @increment
+@processChunk:
 tax
 and #$0F; The number of pixels is the lower 4 bits
 tay
@@ -114,16 +123,58 @@ sta COLOR
 cmp CEL_TRANS
 bne @draw
 
+;stp
 @skip: ;When 'drawing' transparent pixels we still need to increment the address
-stz VERA_data0 ;Set to CX16 transparent which is always zero, not this may be different to the sprite transparent color
-ldx VERA_data1 ;Ignore the priority we don't need it as we are skipping
-lda #%10000
-eor VERA_addr_bank
+lda #$1
+sta VERA_ctrl
+
+tya
+and #1
+sta CEL_TO_VERA_GENERAL_TMP
+lda VERA_addr_bank
+and #%10000
+ora CEL_TO_VERA_GENERAL_TMP
+tax
+cmp #17
+bne @noExtraAddRequired
+@extraAddRequired:
+tya
+inc
+lsr
+bra @addPriority
+@noExtraAddRequired:
+tya
+lsr
+
+@addPriority:
+clc
+adc VERA_addr_low
+sta VERA_addr_low
+bcc @determineIncrementValue
+lda #$0
+adc VERA_addr_high
+sta VERA_addr_high
+bcc @determineIncrementValue
+lda #$0 
+adc VERA_addr_bank
 sta VERA_addr_bank
 
-dey ;Have we handled every pixel in this run encoded byte
-beq @getNextChunk
-bra @skip
+@determineIncrementValue:
+lda newIncrementValue,x
+sta VERA_addr_bank
+
+@spriteMemoryAdd:
+stz VERA_ctrl
+tya
+clc
+adc VERA_addr_low
+sta VERA_addr_low
+
+bcc @getNextChunk
+lda #$0
+adc VERA_addr_high
+sta VERA_addr_high
+jmp @getNextChunk
 
 @draw:
 
