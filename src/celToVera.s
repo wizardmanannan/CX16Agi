@@ -129,6 +129,7 @@ adc VERA_addr_low
 sta VERA_addr_low
 
 bcc @prepareForPriorityAdd
+
 lda #$0
 adc VERA_addr_high
 sta VERA_addr_high
@@ -138,11 +139,7 @@ lda #$1
 sta VERA_ctrl
 
 tya
-and #1
-sta CEL_TO_VERA_GENERAL_TMP
-lda VERA_addr_bank
-and #%10000
-ora CEL_TO_VERA_GENERAL_TMP
+and #17
 tax
 cmp #17
 bne @noExtraAddRequired
