@@ -139,7 +139,8 @@ lda #$1
 sta VERA_ctrl
 
 tya
-and #17
+and #1
+ora VERA_addr_bank
 tax
 cmp #17
 bne @noExtraAddRequired
