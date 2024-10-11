@@ -2,6 +2,9 @@
 .include "globalGraphics.s"
 .include "globalViews.s"
 .include "helpersAsm.s"
+.include "viewCommon.s"
+.include "celToVera.s"
+.include "lineDrawing.s"
 
 .segment "BANKRAM0E"
 
@@ -27,25 +30,25 @@ iny
 .endmacro
 
 
-.macro CLEAR_SPRITE_ATTRS NO_TO_CLEAR
-.local @outerLoop
-.local @outerLoopCheck
-.local @innerLoop
-.local @innerLoopCheck
+.macro CLEAR_SPRITE_ATTRS
+.local @loop
 .local @end
 
-ldy NO_TO_CLEAR
+
+SET_VERA_START_SPRITE_ATTRS #$1, #4, SA_VERA_ZORDER ;Set VERA channel 0 to first zorder attribute with a stride of 4.
+lda VERA_addr_low
+ldx VERA_addr_high
+ldy VERA_addr_bank
+stz VERA_ctrl
+sta VERA_addr_low
+stx VERA_addr_high
+sty VERA_addr_bank
+
+@loop:
+lda VERA_data0 ; A zorder of zero means disabled
 beq @end
-
-SET_VERA_START_SPRITE_ATTRS #$0, #4, SA_VERA_ZORDER ;Set VERA channel 0 to first zorder attribute with a stride of 4.
-
-@outerLoop:
-stz VERA_data0 ; A zorder of zero means disabled
-
-@outerLoopCheck:
-dey
-bne @outerLoop
-
+stz VERA_data1
+bra @loop
 @end:
 .endmacro
 
@@ -75,11 +78,85 @@ bra @loop
 _bESpritesUpdatedBuffer: .res SPRITE_UPDATED_BUFFER_SIZE
 _bESpritesUpdatedBufferPointer: .word _bESpritesUpdatedBuffer
 
+
+
+bECalculateTotalRows:
+cmp #SPR_ATTR_8
+
+bne @check16H
+
+@setWidth8H:
+lda #SPRITE_TOTAL_ROWS_8
+sta TOTAL_ROWS
+
+bra @end
+
+@check16H:
+cmp #SPR_ATTR_16
+bne @check32H
+
+@setWidth16H:
+lda #SPRITE_TOTAL_ROWS_16
+sta TOTAL_ROWS
+bra @end
+
+@check32H:
+cmp #SPR_ATTR_32
+bne @setWidth64H
+
+@setWidth32H:
+lda #SPRITE_TOTAL_ROWS_32
+sta TOTAL_ROWS
+bra @end
+
+@setWidth64H:
+lda #SPRITE_TOTAL_ROWS_64
+sta TOTAL_ROWS
+bra @end
+
+@end:
+rts
+
+bESetBytesPerRow:
+cmp #SPR_ATTR_8
+
+bne @check16W
+
+@setWidth8W:
+lda #BYTES_PER_ROW_8
+sta BYTES_PER_ROW
+
+bra @end
+
+@check16W:
+cmp #SPR_ATTR_16
+bne @check32W
+
+@setWidth16W:
+lda #BYTES_PER_ROW_16
+sta BYTES_PER_ROW
+bra @end
+
+@check32W:
+cmp #SPR_ATTR_32
+bne @setWidth64W
+
+@setWidth32W:
+lda #BYTES_PER_ROW_32
+sta BYTES_PER_ROW
+bra @end
+
+@setWidth64W:
+lda #BYTES_PER_ROW_64
+sta BYTES_PER_ROW
+
+@end:
+rts
+
+
 ;void bEClearSpriteAttributes()
 _bEClearSpriteAttributes:
-lda #MAX_SPRITE_SLOTS
-sta @numToClear
-CLEAR_SPRITE_ATTRS @numToClear
+CLEAR_SPRITE_ATTRS
 rts
 @numToClear: .byte $0
 
@@ -97,7 +174,6 @@ rts
 
 ZP_SPR_ATTR_SIZE = ZP_TMP_5
 ZP_LOW_BYTE = ZP_TMP_5 + 1
-ZP_ADDRESS = ZP_TMP_6
 
 bEHandleSpriteUpdates:
 
@@ -113,22 +189,23 @@ jmp @end
 
 @start:
 
-CLEAR_ACTIVE_SPRITE_ATTRS
+CLEAR_SPRITE_ATTRS
 .import _sResetCounter
 
 SET_VERA_START_SPRITE_ATTRS #$0, #$1, SA_VERA_ADDRESS_LOW ; Sets VERA channel 0 to the start of the sprites attributes table with a stride of 1
 
 ldy #$0
 @loop:
-
 GET_NEXT_FROM_SPRITE_UPDATE_BUFFER ;Address 12:5 0 (buffer 0)
 sta ZP_LOW_BYTE
 
 GET_NEXT_FROM_SPRITE_UPDATE_BUFFER ;Address 16:13 1 (buffer 1)
 
 ora ZP_LOW_BYTE
-beq @addressReset
+bne @displaySprites
+jmp @addressReset
 
+@displaySprites:
 GET_NEXT_FROM_SPRITE_UPDATE_BUFFER ;X Low 2 (buffer 2)
 
 GET_NEXT_FROM_SPRITE_UPDATE_BUFFER ;X High 3 (buffer 3)
@@ -141,9 +218,64 @@ GET_NEXT_FROM_SPRITE_UPDATE_BUFFER ; 6 Collison ZDepth and Flip (buffer 5)
 
 GET_NEXT_FROM_SPRITE_UPDATE_BUFFER ;Sprite Attr Size 7 (buffer 6)
 
-GET_NEXT_FROM_SPRITE_UPDATE_BUFFER #$1 ; Reblit
+;Reblit
+stz VERA_ADDRESS ;Always zero
+GET_NEXT_FROM_SPRITE_UPDATE_BUFFER #$1 ; LoopVeraAddress
+sta VERA_ADDRESS + 1
+GET_NEXT_FROM_SPRITE_UPDATE_BUFFER #$1 
+sta VERA_ADDRESS_HIGH
 
-bra @loop
+GET_NEXT_FROM_SPRITE_UPDATE_BUFFER #$1 ; Address of the Cel 
+sta CEL_ADDR
+GET_NEXT_FROM_SPRITE_UPDATE_BUFFER #$1
+sta CEL_ADDR + 1
+
+GET_NEXT_FROM_SPRITE_UPDATE_BUFFER #$1 ; Cel Bank
+sta CEL_BANK 
+
+GET_NEXT_FROM_SPRITE_UPDATE_BUFFER #$1 ; X VAL
+sta X_VAL
+GET_NEXT_FROM_SPRITE_UPDATE_BUFFER #$1 ; Y VAL
+sta Y_VAL
+GET_NEXT_FROM_SPRITE_UPDATE_BUFFER #$1 ; Priority
+sta P_NUM
+
+GET_NEXT_FROM_SPRITE_UPDATE_BUFFER #$1 ;Allocation Width
+jsr bESetBytesPerRow
+
+GET_NEXT_FROM_SPRITE_UPDATE_BUFFER #$1 ;Allocation Height
+jsr bECalculateTotalRows
+
+GET_NEXT_FROM_SPRITE_UPDATE_BUFFER #$1 ;Split Cel Pointers
+sta SPLIT_CEL_SEGMENTS
+GET_NEXT_FROM_SPRITE_UPDATE_BUFFER #$1 ;Split Cel Pointers + 1
+sta SPLIT_CEL_SEGMENTS + 1
+
+GET_NEXT_FROM_SPRITE_UPDATE_BUFFER #$1 
+sta SPLIT_CEL_BANK
+
+GET_NEXT_FROM_SPRITE_UPDATE_BUFFER #$1 
+sta SPLIT_COUNTER
+
+lda VERA_addr_low
+pha
+lda VERA_addr_high
+pha
+lda VERA_addr_bank
+pha
+phy
+jsr celToVeraLowRam
+
+ply
+stz VERA_ctrl
+pla
+sta VERA_addr_bank
+pla 
+sta VERA_addr_high
+pla
+sta VERA_addr_low
+
+jmp @loop
 @addressReset:
 lda #< _bESpritesUpdatedBuffer
 sta _bESpritesUpdatedBufferPointer

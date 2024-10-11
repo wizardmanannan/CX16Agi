@@ -42,7 +42,7 @@
 #define MAX_SPRITE_PRIORITY 15
 #define NO_PRIORITIES (MAX_SPRITE_PRIORITY - MIN_SPRITE_PRIORITY)
 
-#define BYTES_PER_SPRITE_UPDATE 8
+#define BYTES_PER_SPRITE_UPDATE 21
 #define SPRITE_UPDATED_BUFFER_SIZE  VIEW_TABLE_SIZE * BYTES_PER_SPRITE_UPDATE * 2
 extern byte bESpritesUpdatedBuffer[SPRITE_UPDATED_BUFFER_SIZE];
 extern byte* bESpritesUpdatedBufferPointer;
@@ -213,7 +213,7 @@ FONT* font;
 
 //
 
-extern void b9CelToVera(Cel* localCel, long veraAddress, byte bCol, byte drawingAreaWidth);
+extern void b9CelToVera(Cel* localCel, long veraAddress, byte bCol, byte drawingAreaWidth, byte x, byte y, byte pNum);
 
 #pragma code-name (push, "BANKRAM0E")
 #pragma wrapped-call (push, trampoline, SPRITE_METADATA_BANK)
@@ -598,7 +598,7 @@ void bESwitchMetadata(ViewTable* localViewTab, View* localView, byte viewNum, by
 #define TO_BLIT_CEL_ARRAY_LENGTH 500
 extern byte bEToBlitCelArray[TO_BLIT_CEL_ARRAY_LENGTH];
 //Copy cels into array above first
-extern void bECellToVeraBulk(SpriteAttributeSize allocationWidth, SpriteAttributeSize allocationHeight, byte noCels, byte maxVeraSlots);
+extern void bECellToVeraBulk(SpriteAttributeSize allocationWidth, SpriteAttributeSize allocationHeight, byte noCels, byte maxVeraSlots, byte xVal, byte yVal, byte pNum);
 boolean bESetLoop(ViewTable* localViewTab, ViewTableMetadata* localMetadata, View* localView, VeraSpriteAddress* loopVeraAddresses)
 {
 	Loop localLoop;
@@ -653,7 +653,7 @@ boolean bESetLoop(ViewTable* localViewTab, ViewTableMetadata* localMetadata, Vie
 	printf("You are allocating %d.%d. It has a width of %d and height of %d. There are %d to blit\n", localViewTab->currentView, localViewTab->currentLoop, localLoop.allocationWidth, localLoop.allocationHeight, noToBlit);
 #endif
 	//Change this method
-	bECellToVeraBulk(localLoop.allocationWidth, localLoop.allocationHeight, localLoop.numberOfCels, localView->maxVeraSlots);
+	bECellToVeraBulk(localLoop.allocationWidth, localLoop.allocationHeight, localLoop.numberOfCels, localView->maxVeraSlots, localViewTab->xPos, localViewTab->yPos, localViewTab->priority);
 
 	return TRUE;
 }
@@ -694,16 +694,17 @@ boolean agiBlit(ViewTable* localViewTab, byte entryNum, boolean disableInterupts
 
 	if (localView.maxVeraSlots > 1)
 	{
-#ifdef VERBOSE_SPLIT
-		printf("you are splitting view %d loop %d cel %d. the data is %p on bank %p. it's width doubled is %d\n", viewNum, localViewTab->currentLoop, localViewTab->currentCel, localCel.bmp, localCel.bitmapBank, localCel.width * 2);
-#endif
 		i = 0;
 		getLoadedCel(&localLoop, &tempCel, i);
+
+#ifdef VERBOSE_SPLIT
+		printf("you are splitting view %d loop %d cel %d. the data is %p on bank %p. it's width doubled is %d\n", viewNum, localViewTab->currentLoop, localViewTab->currentCel, tempCel.bmp, tempCel.bitmapBank, tempCel.width * 2);
+#endif
 		do
 		{
 			if (!tempCel.splitCelPointers && (tempCel.veraSlotsWidth > 1 && tempCel.veraSlotsWidth > 1))
 			{
-				bESplitCel(&tempCel);
+			    bESplitCel(&tempCel);
 				setLoadedCel(&localLoop, &tempCel, i);
 			}
 
@@ -772,6 +773,8 @@ boolean agiBlit(ViewTable* localViewTab, byte entryNum, boolean disableInterupts
 	*((byte*)SPLIT_SEGMENTS) = localCel.splitSegments;
 
 	asm("stz %w", SPLIT_OFFSET);
+
+getLoadedCel(&localLoop, &localCel, localViewTab->currentCel); //If the cel has being split our data would be stale
 
 splitLoop: RAM_BANK = localMetadata.viewTableMetadataBank;
 
@@ -948,10 +951,70 @@ yPos: _assmByte = (byte)localViewTab->yPos;
 	asm("sta (%w),y", ZP_SPRITE_STORE_PTR);
 
 	//Reblit
-	_assmByte = localViewTab->flags & MOTION;
+	_assmUInt = loopVeraAddress;
 
 	asm("ldy #$7");
+	asm("lda %v", _assmUInt);
+	asm("sta (%w),y", ZP_SPRITE_STORE_PTR);
+	asm("ldy #$8");
+	asm("lda %v + 1", _assmUInt);
+	asm("sta (%w),y", ZP_SPRITE_STORE_PTR);
+
+	_assmUInt = (unsigned int) &localLoop.cels[localViewTab->currentCel];
+
+	asm("ldy #$9");
+	asm("lda %v", _assmUInt);
+	asm("sta (%w),y", ZP_SPRITE_STORE_PTR);
+	asm("ldy #$A");
+	asm("lda %v + 1", _assmUInt);
+	asm("sta (%w),y", ZP_SPRITE_STORE_PTR);
+
+	_assmByte = localLoop.celsBank;
+	asm("ldy #$B");
 	asm("lda %v", _assmByte);
+	asm("sta (%w),y", ZP_SPRITE_STORE_PTR);
+
+	_assmUInt = (unsigned int)localViewTab->xPos;
+	asm("ldy #$C");
+	asm("lda %v", _assmUInt);
+	asm("sta (%w),y", ZP_SPRITE_STORE_PTR);
+
+	_assmUInt = (unsigned int)localViewTab->yPos;
+	asm("ldy #$D");
+	asm("lda %v", _assmUInt);
+	asm("sta (%w),y", ZP_SPRITE_STORE_PTR);
+
+	_assmUInt = (unsigned int)localViewTab->priority;
+	asm("ldy #$E");
+	asm("lda %v", _assmUInt);
+	asm("sta (%w),y", ZP_SPRITE_STORE_PTR);
+
+	_assmByte = localLoop.allocationWidth;
+	asm("ldy #$F");
+	asm("lda %v", _assmByte);
+	asm("sta (%w),y", ZP_SPRITE_STORE_PTR);
+
+	_assmByte = localLoop.allocationHeight;
+	asm("ldy #$10");
+	asm("lda %v", _assmByte);
+	asm("sta (%w),y", ZP_SPRITE_STORE_PTR);
+
+	_assmUInt = (unsigned int) localCel.splitCelPointers;
+	asm("ldy #$11");
+	asm("lda %v", _assmUInt);
+	asm("sta (%w),y", ZP_SPRITE_STORE_PTR);
+
+	asm("ldy #$12");
+	asm("lda %v + 1", _assmUInt);
+	asm("sta (%w),y", ZP_SPRITE_STORE_PTR);
+
+	_assmByte = localCel.splitCelBank;
+	asm("ldy #$13");
+	asm("lda %v", _assmByte);
+	asm("sta (%w),y", ZP_SPRITE_STORE_PTR);
+
+	asm("ldy #$14");
+	asm("lda %w", SPLIT_COUNTER);
 	asm("sta (%w),y", ZP_SPRITE_STORE_PTR);
 
 	bESpritesUpdatedBufferPointer += BYTES_PER_SPRITE_UPDATE;
@@ -1540,6 +1603,7 @@ void b9AddViewToTable(ViewTable* localViewtab, byte viewNum, byte entryNum)
 void b9AddToPic(int vNum, int lNum, int cNum, int x, int y, int pNum, int bCol)
 {
 	int i, j, trans, c, boxWidth;
+	byte calcYCoord;
 	View localView;
 	Loop localLoop;
 	Cel localCel;
@@ -1548,13 +1612,10 @@ void b9AddToPic(int vNum, int lNum, int cNum, int x, int y, int pNum, int bCol)
 	getLoadedLoop(&localView, &localLoop, lNum);
 	getLoadedCel(&localLoop, &localCel, cNum);
 
-#ifdef VERBOSE_ADD_TO_PIC
-	printf("view %p loop %p cel %p\n", &localView, &localLoop, &localCel);
-	printf("cel %d loaded %d bmp %p. View %d. Loop %d, Cel %d\n", cNum, localView.loaded, localCel.bmp, vNum, lNum, cNum);
-	printf("x and y are (%d,%d). Adjusted Height %d. The address is %lx.\n ", x, y, y - localCel.height + 1, b2GetVeraPictureAddress(x, (y - localCel.height) + 1));
-	printf("w %d h %d\n", localCel.width, localCel.height);
-#endif // VERBOSE_ADD_TO_PIC
-	b9CelToVera(&localCel, b8GetVeraPictureAddress(x, (y - localCel.height) + 1), bCol, BYTES_PER_ROW);
+	calcYCoord = (y - localCel.height) + 1;
+
+	//printf("x and y are %p, %p, %d, %d. the height is %d %p\n", x, calcYCoord, x, calcYCoord, localCel.height, localCel.height);
+	b9CelToVera(&localCel, b8GetVeraPictureAddress(x, calcYCoord), bCol, BYTES_PER_ROW, x, calcYCoord, pNum);
 
 	//TODO: Finish implementing the priority and control line stuff
 //

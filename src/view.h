@@ -79,7 +79,7 @@ typedef struct {
 #define FIXLOOP       0x2000
 
 #define MAX_SPRITES_SLOTS_PER_VIEW_TAB 6
-typedef struct {
+typedef struct ViewTable {
 	byte stepTime;
 	byte stepTimeCount;
 	word xPos;
