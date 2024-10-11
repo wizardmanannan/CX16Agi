@@ -264,7 +264,7 @@ pha
 lda VERA_addr_bank
 pha
 phy
-jsr celToVeraLowRam
+;jsr celToVeraLowRam
 
 ply
 stz VERA_ctrl

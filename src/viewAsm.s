@@ -68,7 +68,7 @@ NO_MARGIN = 4
 ;alternated after every read
 ;If the object is partially off screen in the X direction the individual line drawing will stop at the screen boundary.
 ;The function stops when it has counted height number of zeros, or the line would not be in the drawable area, vertically.
-.macro CEL_TO_VERA_BANKED_BUFFER
+.macro CEL_TO_VERA_BANKED_BUFFER ZERO_OVERRIDE
 lda X_VAL 
 sta X_VAL_ORIG ;Keep track of the original X value
 
@@ -144,6 +144,7 @@ txa
 and #$F0; The colour is the upper 4 bits
 sta COLOR
 SET_COLOR_RIGHT COLOR ;Output color must be 'doubled up', because AGI pixels are doubled across
+sta COLOR
 
 cmp CEL_TRANS
 bne @draw
@@ -151,11 +152,11 @@ bne @draw
 @skip: ;When 'drawing' transparent pixels we still need to increment the address
 ldx VERA_data0 ;We are not changing this one so we load load in order to increment and ignore the value
 ldx VERA_data1
-pha ;Toggle the priority auto increment and preserve the color
+sta COLOR ;Toggle the priority auto increment and preserve the color
 lda #%10000
 eor VERA_addr_bank
 sta VERA_addr_bank
-pla
+
 
 inc X_VAL ;Increment the x val. Note this is not used in calculations only for bounds checks
 dey ;Have we handled every pixel in this run encoded byte
@@ -171,10 +172,11 @@ bcs @skip
 cmp #BLACK_COLOR
 bne @checkPriority
 lda CEL_TRANS ;Black is swapped with the transparent colour in the case the transparent colour is not black
+sta COLOR
 
 @checkPriority:
 ldx VERA_data1 ;Get the next priority byte and toggle
-pha ;Preserve the color
+
 lda #%10000
 eor VERA_addr_bank
 sta VERA_addr_bank
@@ -202,17 +204,27 @@ beq @drawColor ;If the object and screen priority is equal the object has preced
 bcc @drawColor ;If the object screen priority < object priority the object has precedence
 
 @skipBasedOnPriority: ;This means that the screen priority > object priority, so we don't draw
-lda VERA_data0
-pla ;Retrieve the color
+
+.ifnblank ZERO_OVERRIDE
+    .if (.xmatch (#0, ZERO_OVERRIDE))
+        lda VERA_data0    ; Load VERA_data0 if ZERO_OVERRIDE equals zero
+    .else
+        stz VERA_data0    ; Store zero into VERA_data0 if ZERO_OVERRIDE is non-zero
+    .endif
+.else
+    lda VERA_data0        ; Load VERA_data0 if ZERO_OVERRIDE is blank
+.endif
+
+lda COLOR
 bra @decrementColorCounter
 
 @drawColor: ;This means that the screen priority <= object priority, so we do draw
-pla ;Retrieve the color
+lda COLOR
 sta VERA_data0
 
 @decrementColorCounter:
 dey
-bne @draw ;If y is not zero we are not yet finished with this run encoded byte
+bne @checkPriority ;If y is not zero we are not yet finished with this run encoded byte. Note: If the color is black, then its swapped position is at this point already stored in COLOR, so we don't need to do a draw black check again
 jmp @getNextChunk
 
 @increment:
@@ -417,7 +429,7 @@ CLEAR_VERA VERA_ADDRESS, TOTAL_ROWS, BYTES_PER_ROW, #$0
 
 lda Y_VAL
 pha
-CEL_TO_VERA_BANKED_BUFFER
+CEL_TO_VERA_BANKED_BUFFER #$1
 pla
 sta Y_VAL
 

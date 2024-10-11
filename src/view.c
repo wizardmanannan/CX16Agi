@@ -678,6 +678,11 @@ boolean agiBlit(ViewTable* localViewTab, byte entryNum, boolean disableInterupts
 
 	previousBank = RAM_BANK;
 
+	if (localViewTab->currentView != 190 || localViewTab->currentLoop != 1)
+	{
+		return TRUE;
+	}
+
 	RAM_BANK = SPRITE_METADATA_BANK;
 
 	viewNum = localViewTab->currentView;
