@@ -84,7 +84,7 @@ rts
     VIS_PIXEL = GENERAL_TMP
     PRI_PIXEL = GENERAL_TMP + 1
 
-    .ifnblank VERA_CTRL_VALUE
+      .ifnblank VERA_CTRL_VALUE
     lda VERA_CTRL_VALUE
     sta VERA_ctrl
     .endif
@@ -121,27 +121,26 @@ rts
     and #$0F
     cmp #4
     bne cannot_fill
-    bra vis_enabled_check
+    bra can_fill
 
     @even:
     lda VERA_data0
     and #$F0
     cmp #$40
     bne cannot_fill
-    
-    @comparePriority:
+    bra can_fill    
 
 
 vis_enabled_check:
     ; is priority enabled and the current vis pixel not white?
     ; if (pri_enabled && (asm_get_vis_pixel(x, y) != 15)) return 0;
     lda _priDrawEnabled
-    beq @can_fill
+    beq can_fill
     lda VIS_PIXEL
     cmp #15
     bne cannot_fill
 
-@can_fill:
+can_fill:
     lda #1 ; return 1 (pixel can be filled)
     ldx #0 ; clear X register
     bra end_macro
@@ -192,6 +191,8 @@ end_macro:
 
 BACKWARD_DIRECTION = %11000
 FORWARD_DIRECTION = %10000
+BACKWARD_DIRECTION_NO_INCREMENT = %1000
+
 ;Turns auto increment back on after switch off
 .macro SETUP_AUTO_INC direction, X_VAL, Y_VAL
 .scope
@@ -265,6 +266,65 @@ sta VERA_addr_bank
 .endscope
 .endmacro
 
+
+;Turns on auto increment and recalcuates 
+.macro SETUP_AUTO_INC_RECALC_BACKWARDS X_VAL, Y_VAL
+.scope
+.local @end
+.local @incrementOn
+.local @noIncrement
+
+ldy Y_VAL
+CALC_VRAM_ADDR_VISUAL X_VAL, #$0
+lda #BACKWARD_DIRECTION
+sta VERA_addr_bank
+
+lda _priDrawEnabled
+beq @end
+ldy Y_VAL
+CALC_VRAM_ADDR_PRIORITY X_VAL, #$1
+lda #BACKWARD_DIRECTION
+sta VERA_addr_bank
+
+lda X_VAL
+lsr 
+bcc @end ;If going backwards this is the opposite way to normal
+@noIncrement:
+lda #BACKWARD_DIRECTION_NO_INCREMENT ;This will keep backward direction turned on if its already on, but turn off address increment. If it is forward this will not turn on backwards mode.
+sta VERA_addr_bank
+@end:
+.endscope
+.endmacro
+
+;Turns on auto increment and recalcuates 
+.macro SETUP_AUTO_INC_RECALC_FORWARDS X_VAL, Y_VAL
+.scope
+.local @end
+.local @incrementOn
+.local @noIncrement
+
+ldy Y_VAL
+CALC_VRAM_ADDR_VISUAL X_VAL, #$0
+lda #FORWARD_DIRECTION
+sta VERA_addr_bank
+
+lda _priDrawEnabled
+beq @end
+ldy Y_VAL
+CALC_VRAM_ADDR_PRIORITY X_VAL, #$1
+lda #FORWARD_DIRECTION
+sta VERA_addr_bank
+
+lda X_VAL
+lsr 
+bcs @end ;If going backwards this is the opposite way to normal
+@noIncrement:
+stz VERA_addr_bank
+@end:
+.endscope
+.endmacro
+
+
 ;Turns on auto increment and recalcuates 
 .macro SETUP_AUTO_INC_RECALC_VIS_ONLY direction, X_VAL, Y_VAL
 .scope
@@ -319,25 +379,26 @@ sta VERA_addr_bank
     and #$0F
     cmp #4
     bne cannot_fill
-    bra vis_enabled_check
+    bra can_fill
 
     @even:
     tya
     and #$F0
     cmp #$40
     bne cannot_fill
-    
+    bra can_fill
+       
 
 
 vis_enabled_check:
     ; is priority enabled and the current vis pixel not white?
     ; if (pri_enabled && (asm_get_vis_pixel(x, y) != 15)) return 0;
     lda _priDrawEnabled
-    beq @can_fill
+    beq can_fill
     cpx #$FF
     bne cannot_fill
 
-@can_fill:
+can_fill:
     lda #1 ; return 1 (pixel can be filled)
     ldx #0 ; clear X register
     bra end_macro
@@ -474,12 +535,13 @@ lda LX
 dec
 sta GENERAL_TMP
 
-SETUP_AUTO_INC_RECALC #BACKWARD_DIRECTION, GENERAL_TMP, Y_VAL
+SETUP_AUTO_INC_RECALC_BACKWARDS GENERAL_TMP, Y_VAL 
 leftExpansionLoop:
  
 lda LX
 dec
 sta GENERAL_TMP
+
 CAN_FILL_AUTO_INCREMENT GENERAL_TMP
 cmp #$0
 beq endLeftExpansionLoop
@@ -506,7 +568,7 @@ jmp endRightExpansionLoop
 lda RX
 inc
 sta GENERAL_TMP
-SETUP_AUTO_INC_RECALC #FORWARD_DIRECTION, GENERAL_TMP, Y_VAL
+SETUP_AUTO_INC_RECALC_FORWARDS GENERAL_TMP, Y_VAL
 rightExpansionLoop:
 lda RX
 inc
@@ -551,7 +613,6 @@ sta PLOT_LINE_COLOR
 lda RX
 
 jsr _b8AsmPlotPriHLineFast
-
 
 @pushBelow:
 ;F
@@ -1094,7 +1155,6 @@ ok_fill:
     ldx X_VAL
     ldy Y_VAL
     SCAN_AND_FILL
-
     ; while (pop(&lx, &rx, &y1)) {
 pop_loop:
     FILL_STACK_POP LX, RX, Y1
@@ -1106,7 +1166,7 @@ pop_loop:
     sta NX
     ; while (nx <= rx) {
 
-SETUP_AUTO_INC_RECALC #FORWARD_DIRECTION, NX, Y1 ;Enable auto increment for the loop
+SETUP_AUTO_INC_RECALC_FORWARDS NX, Y1 ;Enable auto increment for the loop
 outer_loop_start:
     lda RX
 
@@ -1133,7 +1193,7 @@ outer_loop_start:
     ldx NX
     ldy Y1
     SCAN_AND_FILL
-    SETUP_AUTO_INC_RECALC #FORWARD_DIRECTION, NX, Y1
+    SETUP_AUTO_INC_RECALC_FORWARDS NX, Y1
     ; while (nx <= rx && can_fill(nx, y1)) {
 
 inner_loop_start:
@@ -1152,7 +1212,7 @@ inner_loop_start:
     cmp #$0
     beq dontEnterInnerLoop
     
-    SETUP_AUTO_INC_RECALC #FORWARD_DIRECTION, NX, Y1
+    SETUP_AUTO_INC_RECALC_FORWARDS NX, Y1
 
     jmp can_fill_inner
 dontEnterInnerLoop:
