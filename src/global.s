@@ -716,4 +716,7 @@ jsr _printfSafe
 
 .endmacro
 
+;OpCode Values (For self modifying code)
+LDX_ABS = $AE
+
 .endif

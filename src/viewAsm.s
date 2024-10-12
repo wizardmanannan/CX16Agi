@@ -241,7 +241,7 @@ jmp @resetXCounter
 @end:
 .endmacro
 
-;void b9CelToVera(Cel* localCel, long veraAddress, byte bCol, byte drawingAreaWidth, byte x, byte y, byte pNum)
+;void b9CelToVera(Cel* localCel, byte celBank, long veraAddress, byte bCol, byte drawingAreaWidth, byte x, byte y, byte pNum)
 _b9CelToVera:
 sta P_NUM
 jsr popax
@@ -256,6 +256,8 @@ stx VERA_ADDRESS + 1
 jsr popax
 sta VERA_ADDRESS_HIGH
 stx VERA_ADDRESS_HIGH + 1
+jsr popa
+sta CEL_BANK
 jsr popax
 sta CEL_ADDR
 stx CEL_ADDR + 1
@@ -263,7 +265,13 @@ lda #$1
 sta SPLIT_SEGMENTS ;When we draw directly to the bitmap we don't need to split the cel into segments
 
 sei
-CEL_TO_VERA_BANKED_BUFFER
+lda celToVeraLowRam_skipBasedOnPriority
+pha
+lda #LDX_ABS
+sta celToVeraLowRam_skipBasedOnPriority
+jsr celToVeraLowRam
+pla
+sta celToVeraLowRam_skipBasedOnPriority
 REENABLE_INTERRUPTS
 rts
 
