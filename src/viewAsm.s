@@ -269,7 +269,7 @@ lda celToVeraLowRam_skipBasedOnPriority
 pha
 lda #LDX_ABS
 sta celToVeraLowRam_skipBasedOnPriority
-jsr celToVeraLowRam
+jsr celToVera
 pla
 sta celToVeraLowRam_skipBasedOnPriority
 REENABLE_INTERRUPTS
@@ -280,6 +280,10 @@ rts
 _bEToBlitCelArray: .res 500
 _bECellToVeraBulk:
 sta P_NUM
+
+lda RAM_BANK
+sta CEL_BANK
+
 jsr popax
 sta Y_VAL
 stx X_VAL
@@ -374,7 +378,7 @@ sta BYTES_PER_ROW
 bra @loop
 
 @loop:
-lda #$0
+lda #$1
 sta SPLIT_COUNTER
 
 GET_STRUCT_16_STORED_OFFSET _offsetOfSplitCelPointers, CEL_ADDR, SPLIT_CEL_SEGMENTS
@@ -425,7 +429,7 @@ CLEAR_VERA VERA_ADDRESS, TOTAL_ROWS, BYTES_PER_ROW, #$0
 
 lda Y_VAL
 pha
-CEL_TO_VERA_BANKED_BUFFER
+jsr celToVera
 pla
 sta Y_VAL
 
@@ -435,7 +439,7 @@ inc SPLIT_COUNTER
 lda SPLIT_COUNTER
 cmp SPLIT_SEGMENTS
 
-beq @getNextCel
+bcs @getNextCel
 jmp @splitLoop
 
 @getNextCel:

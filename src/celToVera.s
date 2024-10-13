@@ -25,7 +25,7 @@ newIncrementValue: .byte $00, %10000, $00, $00, $00, $00, $00, $00  ; 8 zeros
     .byte $00, $00, $00, $00, $00, $00, $00, $00 ; 8 more zeros
     .byte %10000, $00
 
-celToVeraLowRam:
+celToVera:
 stz NEXT_DATA_INDEX
 
 lda RAM_BANK
@@ -45,7 +45,6 @@ celToVeraLowRam_nonSplit:
 GET_STRUCT_16_STORED_OFFSET _offsetOfBmp, CEL_ADDR, BMP_DATA ;Buffer status holds the C struct to be passed to b5RefreshBuffer
 GET_STRUCT_8_STORED_OFFSET _offsetOfBmpBank, CEL_ADDR, BMP_BANK
 bra celToVeraLowRam_start
-
 
 celToVeraLowRam_split:
 lda SPLIT_COUNTER 
