@@ -434,12 +434,11 @@ pla
 sta Y_VAL
 
 @checkSplitLoop:
-inc SPLIT_COUNTER
-
 lda SPLIT_COUNTER
 cmp SPLIT_SEGMENTS
 
 bcs @getNextCel
+inc SPLIT_COUNTER
 jmp @splitLoop
 
 @getNextCel:
