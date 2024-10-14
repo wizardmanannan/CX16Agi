@@ -2,8 +2,247 @@
 
 CELTOVERA_INC = 1
 
-.include "viewCommon.s"
+.include "celToVeraConstants.s"
 .include "lineDrawing.s"
+
+.segment "BANKRAM09"
+_viewHeaderBuffer: .res VIEW_HEADER_BUFFER_SIZE
+_loopHeaderBuffer: .res LOOP_HEADER_BUFFER_SIZE
+
+;Constants
+NO_MARGIN = 4
+;void b9CelToVera(Cel* localCel, byte celBank, long veraAddress, byte bCol, byte drawingAreaWidth, byte x, byte y, byte pNum)
+_b9CelToVera:
+sta P_NUM
+jsr popax
+sta Y_VAL
+stx X_VAL
+jsr popax
+sta BYTES_PER_ROW
+stx BCOL
+jsr popax
+sta VERA_ADDRESS
+stx VERA_ADDRESS + 1
+jsr popax
+sta VERA_ADDRESS_HIGH
+stx VERA_ADDRESS_HIGH + 1
+jsr popa
+sta CEL_BANK
+jsr popax
+sta CEL_ADDR
+stx CEL_ADDR + 1
+lda #$1
+sta SPLIT_SEGMENTS ;When we draw directly to the bitmap we don't need to split the cel into segments
+
+sei
+lda celToVeraLowRam_skipBasedOnPriority
+pha
+lda #LDX_ABS
+sta celToVeraLowRam_skipBasedOnPriority
+jsr celToVera
+pla
+sta celToVeraLowRam_skipBasedOnPriority
+REENABLE_INTERRUPTS
+rts
+
+.segment "BANKRAM0E"
+;bECellToVeraBulk(SpriteAttributeSize allocationWidth, SpriteAttributeSize allocationHeight, byte noCels, byte maxVeraSlots, byte xVal, byte yVal, byte pNum);
+_bEToBlitCelArray: .res 500
+_bECellToVeraBulk:
+sta P_NUM
+
+lda RAM_BANK
+sta CEL_BANK
+
+jsr popax
+sta Y_VAL
+stx X_VAL
+
+jsr popa
+sta MAX_SPRITE_SLOTS
+
+jsr popa
+sta NO_OF_CELS
+lda #NO_MARGIN
+sta BCOL
+stz BULK_ADDRESS_INDEX
+stz CEL_COUNTER
+
+lda _sizeofCel
+sta SIZE_OF_CEL
+
+lda #<_bEToBlitCelArray
+sta CEL_ADDR
+lda #>_bEToBlitCelArray
+sta CEL_ADDR + 1
+
+;Height:
+jsr popa
+cmp #SPR_ATTR_8
+
+bne @check16H
+
+@setWidth8H:
+lda #SPRITE_TOTAL_ROWS_8
+sta TOTAL_ROWS
+
+bra @setWidth
+
+@check16H:
+cmp #SPR_ATTR_16
+bne @check32H
+
+@setWidth16H:
+lda #SPRITE_TOTAL_ROWS_16
+sta TOTAL_ROWS
+bra @setWidth
+
+@check32H:
+cmp #SPR_ATTR_32
+bne @setWidth64H
+
+@setWidth32H:
+lda #SPRITE_TOTAL_ROWS_32
+sta TOTAL_ROWS
+bra @setWidth
+
+@setWidth64H:
+lda #SPRITE_TOTAL_ROWS_64
+sta TOTAL_ROWS
+bra @setWidth
+
+;Width
+@setWidth:
+jsr popa
+cmp #SPR_ATTR_8
+
+bne @check16W
+
+@setWidth8W:
+lda #BYTES_PER_ROW_8
+sta BYTES_PER_ROW
+
+bra @loop
+
+@check16W:
+cmp #SPR_ATTR_16
+bne @check32W
+
+@setWidth16W:
+lda #BYTES_PER_ROW_16
+sta BYTES_PER_ROW
+bra @loop
+
+@check32W:
+cmp #SPR_ATTR_32
+bne @setWidth64W
+
+@setWidth32W:
+lda #BYTES_PER_ROW_32
+sta BYTES_PER_ROW
+bra @loop
+
+@setWidth64W:
+lda #BYTES_PER_ROW_64
+sta BYTES_PER_ROW
+bra @loop
+
+@loop:
+lda #$1
+sta SPLIT_COUNTER
+
+GET_STRUCT_16_STORED_OFFSET _offsetOfSplitCelPointers, CEL_ADDR, SPLIT_CEL_SEGMENTS
+GET_STRUCT_8_STORED_OFFSET _offsetOfSplitCelBank, CEL_ADDR, SPLIT_CEL_BANK
+
+lda SPLIT_CEL_SEGMENTS
+ora SPLIT_CEL_SEGMENTS + 1
+
+beq @splitLoop ;If the cel is not split we don't need this copy
+
+lda #< bESplitAddressesBuffer
+ldx #> bESplitAddressesBuffer
+jsr pushax
+
+lda #SPRITE_UPDATES_BANK
+jsr pusha
+
+lda SPLIT_CEL_SEGMENTS
+ldx SPLIT_CEL_SEGMENTS + 1
+jsr pushax
+
+lda SPLIT_CEL_BANK
+jsr pusha
+
+lda #POINTER_TO_SPLIT_DATA_SIZE
+ldx #$0
+
+jsr _memCpyBankedBetween
+
+@splitLoop: ;Will always iterate once if the cell is not split
+GET_STRUCT_8_STORED_OFFSET _offsetOfSplitSegments, CEL_ADDR, SPLIT_SEGMENTS
+
+ldy BULK_ADDRESS_INDEX
+
+stz VERA_ADDRESS ; Low byte Always zero
+lda _bEBulkAllocatedAddresses, y ;Middle byte
+sta VERA_ADDRESS + 1
+lda _bEBulkAllocatedAddresses + 1, y
+sta VERA_ADDRESS_HIGH
+
+iny
+iny
+sty BULK_ADDRESS_INDEX
+
+GET_STRUCT_8_STORED_OFFSET _offsetOfCelTrans, CEL_ADDR, CEL_TRANS
+
+CLEAR_VERA VERA_ADDRESS, TOTAL_ROWS, BYTES_PER_ROW, #$0
+
+lda Y_VAL
+pha
+jsr celToVera
+pla
+sta Y_VAL
+
+@checkSplitLoop:
+lda SPLIT_COUNTER
+cmp SPLIT_SEGMENTS
+
+bcs @getNextCel
+inc SPLIT_COUNTER
+jmp @splitLoop
+
+@getNextCel:
+clc
+lda CEL_ADDR
+adc SIZE_OF_CEL
+sta CEL_ADDR
+lda CEL_ADDR + 1
+adc #$0
+sta CEL_ADDR + 1
+
+
+inc CEL_COUNTER
+
+lda MAX_SPRITE_SLOTS
+cmp #$1 
+beq @checkLoop ;Skip multiply where this view is not split, for efficiency 
+ldx #$0
+jsr pushax
+lda CEL_COUNTER
+ldx #$0
+TRAMPOLINE #HELPERS_BANK, _b5Multiply
+asl
+sta BULK_ADDRESS_INDEX
+
+@checkLoop:
+dec NO_OF_CELS
+beq @return
+jmp @loop
+
+@return:
+rts
+
+
 .segment "CODE"
 
 .macro READ_NEXT_BYTE
@@ -25,6 +264,17 @@ newIncrementValue: .byte $00, %10000, $00, $00, $00, $00, $00, $00  ; 8 zeros
     .byte $00, $00, $00, $00, $00, $00, $00, $00 ; 8 more zeros
     .byte %10000, $00
 
+
+;byte* localCel, long veraAddress, byte bCol, byte drawingAreaWidth, byte x, byte y, byte pNum
+;Writes a cel to the Vera. The cel must be preloaded at the localCel pointer
+;The view (and by extension the cel) must preloaded.
+;This view data on the cel is run encoded eg. AX (X instances of colour A)
+;Each line is terminated with a 0
+;This function is priority screen aware, each pixel will only show through if the pNum >= the priority screen pixel at x,y.
+;Note, as each priority byte on the priority screen stores two pixels, the auto increment bit is
+;alternated after every read
+;If the object is partially off screen in the X direction the individual line drawing will stop at the screen boundary.
+;The function stops when it has counted height number of zeros, or the line would not be in the drawable area, vertically.
 celToVera:
 stz NEXT_DATA_INDEX
 
@@ -64,10 +314,6 @@ lda (SPLIT_CEL_SEGMENTS), y
 sta BMP_DATA + 1
 
 celToVeraLowRam_start:
-.ifdef DEBUG_VIEW_DRAW
-stz _logDebugVal1
-.endif
-
 lda CEL_TRANS
 SET_COLOR_LEFT CEL_TRANS
 sta CEL_TRANS
