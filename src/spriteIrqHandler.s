@@ -257,6 +257,9 @@ sta SPLIT_CEL_BANK
 GET_NEXT_FROM_SPRITE_UPDATE_BUFFER #$1 
 sta SPLIT_COUNTER
 
+GET_NEXT_FROM_SPRITE_UPDATE_BUFFER #$1 
+sta SPLIT_SEGMENTS
+
 lda VERA_addr_low
 pha
 lda VERA_addr_high
@@ -264,7 +267,7 @@ pha
 lda VERA_addr_bank
 pha
 phy
-;jsr celToVeraLowRam
+jsr celToVera
 
 ply
 stz VERA_ctrl

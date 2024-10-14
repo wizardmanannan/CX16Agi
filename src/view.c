@@ -42,7 +42,7 @@
 #define MAX_SPRITE_PRIORITY 15
 #define NO_PRIORITIES (MAX_SPRITE_PRIORITY - MIN_SPRITE_PRIORITY)
 
-#define BYTES_PER_SPRITE_UPDATE 21
+#define BYTES_PER_SPRITE_UPDATE 22
 #define SPRITE_UPDATED_BUFFER_SIZE  VIEW_TABLE_SIZE * BYTES_PER_SPRITE_UPDATE * 2
 extern byte bESpritesUpdatedBuffer[SPRITE_UPDATED_BUFFER_SIZE];
 extern byte* bESpritesUpdatedBufferPointer;
@@ -841,7 +841,6 @@ doubleWidthForScreen:
 	asm("sta (%w),y", ZP_SPRITE_STORE_PTR);
 	asm("bra @calculateHigh");
 	asm("@storeOnStackLow: pha");
-
 	//;3 x high
 	asm("@calculateHigh: lda %v + 1", _assmUInt);
 	asm("rol");
@@ -908,12 +907,13 @@ yPos: _assmByte = (byte)localViewTab->yPos;
 
 	asm("ldy #$4");
 	asm("lda %v", _assmByte);
+	
+	asm("sec"); //Take away the height, as position in agi is the bottom left corner
+	asm("sbc %v", _assmByte2);
+	asm("pha");
 
 	asm("clc");
 	asm("adc #%w", STARTING_ROW);
-
-	asm("sec"); //Take away the height, as position in agi is the bottom left corner
-	asm("sbc %v", _assmByte2);
 	asm("sta (%w),y", ZP_SPRITE_STORE_PTR);
 
 	//5 Flipped
@@ -979,9 +979,8 @@ yPos: _assmByte = (byte)localViewTab->yPos;
 	asm("lda %v", _assmUInt);
 	asm("sta (%w),y", ZP_SPRITE_STORE_PTR);
 
-	_assmUInt = (unsigned int)localViewTab->yPos;
 	asm("ldy #$D");
-	asm("lda %v", _assmUInt);
+	asm("pla");
 	asm("sta (%w),y", ZP_SPRITE_STORE_PTR);
 
 	_assmUInt = (unsigned int)localViewTab->priority;
@@ -1015,6 +1014,11 @@ yPos: _assmByte = (byte)localViewTab->yPos;
 
 	asm("ldy #$14");
 	asm("lda %w", SPLIT_COUNTER);
+	asm("sta (%w),y", ZP_SPRITE_STORE_PTR);
+
+	_assmByte = localCel.splitSegments;
+	asm("ldy #$15");
+	asm("lda %v", _assmByte);
 	asm("sta (%w),y", ZP_SPRITE_STORE_PTR);
 
 	bESpritesUpdatedBufferPointer += BYTES_PER_SPRITE_UPDATE;
