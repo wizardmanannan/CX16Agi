@@ -260,6 +260,12 @@ sta SPLIT_COUNTER
 GET_NEXT_FROM_SPRITE_UPDATE_BUFFER #$1 
 sta SPLIT_SEGMENTS
 
+GET_NEXT_FROM_SPRITE_UPDATE_BUFFER #$1 
+cmp #$1
+beq @reblitMotion
+jmp @loop
+
+@reblitMotion:
 lda VERA_addr_low
 pha
 lda VERA_addr_high
