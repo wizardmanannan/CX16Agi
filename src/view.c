@@ -1022,7 +1022,7 @@ yPos: _assmByte = (byte)localViewTab->yPos;
 	asm("sta (%w),y", ZP_SPRITE_STORE_PTR);
 
 
-	_assmByte = localViewTab->motion > 0;
+	_assmByte = (localViewTab->flags & MOTION > 0) && localViewTab->direction > 0; //Non moving sprites can have motion, but won't have direction
 	
 	asm("ldy #$16");
 	asm("lda %v", _assmByte);
