@@ -356,29 +356,35 @@ sta COLOR
 cmp CEL_TRANS
 bne celToVeraLowRam_draw
 
-celToVeraLowRam_skip: ;When 'drawing' transparent pixels we still need to increment the address
+celToVeraLowRam_skip: ;Skip a certain number of transparent pixels, which where is is more than about 4 in a row, is faster than just iterating 'number of transparant pixel' times
 celToVeraLowRam_spriteMemoryAdd:
-stz VERA_ctrl
+stz VERA_ctrl ;Skipping visual pixels is easy, just add the skip amount
 tya
 clc
 adc VERA_addr_low
 sta VERA_addr_low
 
-bcc celToVeraLowRam_prepareForPriorityAdd
+bcc celToVeraLowRam_prepareForPriorityAdd ;Skipping high byte, if not needed
 
 lda #$0
 adc VERA_addr_high
 sta VERA_addr_high
 
-celToVeraLowRam_prepareForPriorityAdd:
-lda #$1
+celToVeraLowRam_prepareForPriorityAdd: ;Skipping priority is much harder. We need to add half of the skip value, but we may also need to turn on or off the increment, and/or add an additional 1. Whether we do hinges on two values the partity of the amount being skipped (even or odd) and whether the increment on initially.
+;There are tables in an Excel file called tableForAdder at the route of the repo, which indicates the action. 
+;Why we might need to take away an additional amount, this happens only if we start with increment on, and take away an odd amount.
+;If we half an odd skip value, it rounds down. Therefore is the increment is turned on initially we need to add an additional 1. 
+;Say for example the increment is on and the skip value is three. We need to add two, the 1 from the halving of three plus the additional 1 from the increment value.
+;See the table in  'tableForAdder.xls'
+;As for whether we need to turn on the increment or not. We use a simple rule (odd + odd = even (increment off)) (odd + even  = odd increment off) (even + even = even (increment on))
+lda #$1 ;
 sta VERA_ctrl
 
-tya
+tya ;Form a number which we will use to determine whether amount to add is even or odd (bit 0) and whether the incrementor is initially on (bit 5). If they are both on that is 0x11 or 17
 and #1
 ora VERA_addr_bank
 tax
-cmp #17
+cmp #17 
 bne celToVeraLowRam_noExtraAddRequired
 celToVeraLowRam_extraAddRequired:
 tya
