@@ -10,10 +10,6 @@ LINE_INC = 1
 lineTablePriorityLow: .res PICTURE_HEIGHT ;These need to be read from different banks
 lineTablePriorityHigh: .res PICTURE_HEIGHT
 
-lineTablePriorityLowEnd: .res PICTURE_HEIGHT ;These need to be read from different banks
-lineTablePriorityHighEnd: .res PICTURE_HEIGHT
-
-
 .segment "BANKRAM08"
 b8LineTableVisualLow: .res PICTURE_HEIGHT
 b8LineTableVisualHigh: .res PICTURE_HEIGHT
@@ -53,27 +49,6 @@ LINE_LENGTH_ZP = ZP_TMP_4
 rts
 .endproc
 
-
-; .proc b8SetupPriorityBackwards:
-; X_VAL = ZP_TMP_2
-; Y_VAL = ZP_TMP_2 + 1
-
-; lda #(PICTURE_WIDTH - 1)
-; sta X_VAL
-; ldy #$0
-; CALC_VRAM_ADDR_PRIORITY, X_VAL, #$0
-; lda VERA_addr_low
-; sta 
-
-; @loop:
-
-; lda VERA_addr_low
-; sta lineTablePriorityLowEnd,y
-
-
-; .endproc
-
-
 .proc b8SetupLineTables
 ;Setup Visual
 lda #< b8LineTableVisualLow
@@ -112,33 +87,6 @@ lda #<PRIORITY_START
 ldx #>PRIORITY_START
 jsr b8SetupLineTable
 
-
-;Setup Priority Backwards
-lda #< lineTablePriorityLowEnd
-sta TABLE_LOW
-lda #> lineTablePriorityLowEnd
-sta TABLE_LOW + 1
-
-lda #< lineTablePriorityHighEnd
-sta TABLE_HIGH
-lda #> lineTablePriorityHighEnd
-sta TABLE_HIGH + 1
-
-lda #LINE_LENGTH / 2
-sta LINE_LENGTH_ZP
-
-sec
-ldx #$1
-lda lineTablePriorityLow,x
-sbc #$1
-pha
-lda lineTablePriorityHigh,x
-sbc #$0
-
-tax ;First High Byte
-pla ;First Low Byte
-
-jsr b8SetupLineTable
 rts
 .endproc
 
