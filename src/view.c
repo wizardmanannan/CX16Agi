@@ -1022,7 +1022,7 @@ yPos: _assmByte = (byte)localViewTab->yPos;
 	asm("sta (%w),y", ZP_SPRITE_STORE_PTR);
 
 
-	_assmByte = (localViewTab->flags & MOTION > 0) && localViewTab->direction > 0; //Non moving sprites can have motion, but won't have direction
+	_assmByte = ((localViewTab->flags & MOTION > 0) && localViewTab->direction > 0) || localViewTab->wasMoving; //Non moving sprites can have motion, but won't have direction
 	
 	asm("ldy #$16");
 	asm("lda %v", _assmByte);
@@ -1083,7 +1083,7 @@ void b9ResetViewtabs(boolean fullReset)
 		localViewtab.stepSize = 1;
 		localViewtab.cycleTime = 1;
 		localViewtab.cycleTimeCount = 1;
-
+		localViewtab.wasMoving = FALSE;
 		if (fullReset)
 		{
 			localViewtab.xPos = 0;
@@ -2725,6 +2725,7 @@ void bCCalcObjMotion()
 	for (entryNum = 0; entryNum < VIEW_TABLE_SIZE; entryNum++) {
 
 		getViewTab(&localViewtab, entryNum);
+		localViewtab.wasMoving = FALSE;
 
 		objFlags = localViewtab.flags;
 		//Warning
