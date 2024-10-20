@@ -42,7 +42,7 @@
 #define MAX_SPRITE_PRIORITY 15
 #define NO_PRIORITIES (MAX_SPRITE_PRIORITY - MIN_SPRITE_PRIORITY)
 
-#define BYTES_PER_SPRITE_UPDATE 23
+#define BYTES_PER_SPRITE_UPDATE 24
 #define SPRITE_UPDATED_BUFFER_SIZE  VIEW_TABLE_SIZE * BYTES_PER_SPRITE_UPDATE * 2
 extern byte bESpritesUpdatedBuffer[SPRITE_UPDATED_BUFFER_SIZE];
 extern byte* bESpritesUpdatedBufferPointer;
@@ -1021,10 +1021,14 @@ yPos: _assmByte = (byte)localViewTab->yPos;
 	asm("lda %v", _assmByte);
 	asm("sta (%w),y", ZP_SPRITE_STORE_PTR);
 
+	_assmByte = localCel.width;
+	asm("ldy #$16");
+	asm("lda %v", _assmByte);
+	asm("sta (%w),y", ZP_SPRITE_STORE_PTR);
 
 	_assmByte = ((localViewTab->flags & MOTION > 0) && localViewTab->direction > 0) || localViewTab->wasMoving; //Non moving sprites can have motion, but won't have direction
 	
-	asm("ldy #$16");
+	asm("ldy #$17");
 	asm("lda %v", _assmByte);
 	asm("sta (%w),y", ZP_SPRITE_STORE_PTR);
 

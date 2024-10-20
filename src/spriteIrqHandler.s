@@ -263,6 +263,9 @@ GET_NEXT_FROM_SPRITE_UPDATE_BUFFER #$1
 sta SPLIT_SEGMENTS
 
 GET_NEXT_FROM_SPRITE_UPDATE_BUFFER #$1 
+sta CEL_WIDTH
+
+GET_NEXT_FROM_SPRITE_UPDATE_BUFFER #$1 
 cmp #$1
 beq @reblitMotion
 jmp @loop
@@ -278,10 +281,10 @@ phy
 
 lda @flipped
 bne @celToVeraBackwards
-;jsr celToVera
+jsr celToVera
 bra @returnFromCelToVera
 @celToVeraBackwards:
-jsr bECelToVeraBackwards
+jsr celToVera
 
 @returnFromCelToVera:
 ply

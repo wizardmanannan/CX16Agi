@@ -39,7 +39,7 @@ lda celToVeraLowRam_skipBasedOnPriority
 pha
 lda #LDX_ABS
 sta celToVeraLowRam_skipBasedOnPriority
-;jsr celToVera
+jsr celToVera
 pla
 sta celToVeraLowRam_skipBasedOnPriority
 REENABLE_INTERRUPTS
@@ -47,24 +47,6 @@ rts
 
 .segment "BANKRAM0E"
 bECelToVeraBackwards:
-lda celToVeraLowRam_setPriorityAddLow + 1
-pha
-lda #<lineTablePriorityLowEnd
-sta celToVeraLowRam_setPriorityAddLow + 1
-lda celToVeraLowRam_setPriorityAddLow + 2
-pha
-lda #>lineTablePriorityLowEnd
-sta celToVeraLowRam_setPriorityAddLow + 2
-
-lda celToVeraLowRam_setPriorityAddHigh + 1
-pha
-lda #<lineTablePriorityHighEnd
-sta celToVeraLowRam_setPriorityAddHigh + 1
-lda celToVeraLowRam_setPriorityAddHigh + 2
-pha
-lda #>lineTablePriorityHighEnd
-sta celToVeraLowRam_setPriorityAddHigh + 2
-
 lda celToVeraLowRam_setPrioritySetDirection + 1
 pha
 lda #%1000
@@ -121,16 +103,6 @@ sta celToVeraLowRam_evenValue + 1
 
 pla 
 sta celToVeraLowRam_setPrioritySetDirection + 1
-
-pla 
-sta celToVeraLowRam_setPriorityAddHigh + 2
-pla
-sta celToVeraLowRam_setPriorityAddHigh + 1
-
-pla 
-sta celToVeraLowRam_setPriorityAddLow + 2
-pla
-sta celToVeraLowRam_setPriorityAddLow + 1
 rts
 
 
@@ -287,7 +259,7 @@ CLEAR_VERA VERA_ADDRESS, TOTAL_ROWS, BYTES_PER_ROW, #$0
 
 lda Y_VAL
 pha
-;jsr celToVera
+jsr celToVera
 pla
 sta Y_VAL
 
@@ -422,12 +394,11 @@ lda X_VAL
 lsr
 
 clc
-
 celToVeraLowRam_setPriorityAddLow:
-adc lineTablePriorityLow,y             ;Self Modify add low byte of (y << 5) + (y << 7)
+adc lineTablePriorityLow,y             ;add low byte of (y << 5) + (y << 7)
 sta VERA_addr_low         ; store low byte result (because 160<0xff) 
 celToVeraLowRam_setPriorityAddHigh:
-lda lineTablePriorityHigh,y ;Self Modify
+lda lineTablePriorityHigh,y 
 adc #$00                   ; add carry
 sta VERA_addr_high
 celToVeraLowRam_setPrioritySetDirection:
