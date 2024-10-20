@@ -262,7 +262,12 @@ inc BMP_DATA + 1 ;Adding 256 0x100 which is adding zero to the low byte and 1 to
 
 newIncrementValue: .byte $00, %10000, $00, $00, $00, $00, $00, $00  ; 8 zeros
     .byte $00, $00, $00, $00, $00, $00, $00, $00 ; 8 more zeros
-    .byte %10000, $00
+    .byte %10000, $00 ;Make Backwards version
+
+newIncrementBackwards: .byte %1000, %1000, %1000, %1000, %1000, %1000, %1000, %1000  ; 8 zeros
+    .byte %11000, %1000, %1000, %1000, %1000, %1000, %1000, %1000 ; 8 more zeros
+    .byte %1000, %1000, %1000, %1000, %1000, %1000, %1000, %1000 ;8 more zeros
+    .byte %11000 ;Make Backwards version
 
 
 ;byte* localCel, long veraAddress, byte bCol, byte drawingAreaWidth, byte x, byte y, byte pNum
@@ -332,29 +337,30 @@ lsr
 
 clc
 
-celToVeraLowRam_addLow:
-adc lineTablePriorityLow,y             ; add low byte of (y << 5) + (y << 7)
-sta VERA_addr_low         ; store low byte result (because 160<0xff)
-celToVeraLowRam_addHigh:
-lda lineTablePriorityHigh,y 
+celToVeraLowRam_setPriorityAddLow:
+adc lineTablePriorityLow,y             ;Self Modify add low byte of (y << 5) + (y << 7)
+sta VERA_addr_low         ; store low byte result (because 160<0xff) 
+celToVeraLowRam_setPriorityAddHigh:
+lda lineTablePriorityHigh,y ;Self Modify
 adc #$00                   ; add carry
 sta VERA_addr_high
-lda #$0 ; clear the upper byte of the VRAM address and any auto increment
+@celToVeraLowRam_setPrioritySetDirection:
+lda #$0 ; Self Modify
 sta VERA_addr_bank
 
 
 celToVeraLowRam_calculatePriorityAutoInc: ;This calculates whether the priority auto incrementment should be initially switched on or not. If X even auto inc should be off, because we need to read the same byte for the next turn
 lda X_VAL
 lsr
-bcs celToVeraLowRam_oddValue
+bcs celToVeraLowRam_oddValue ;Self Modify
 
 celToVeraLowRam_evenValue:
-lda #$0 ;Can't using stz here, as self modifying code is using to change the value
+lda #$0 ;Can't using stz here, as self modifying code is using to change the value ;Self Modify
 sta VERA_addr_bank ;Disable, we need to read this byte again
 bra celToVeraLowRam_getNextChunk
 
 celToVeraLowRam_oddValue:
-lda #%10000 ;Odd on the next read we should move onto the next byte
+lda #%10000 ;Odd on the next read we should move onto the next byte ;Self Modify
 sta VERA_addr_bank
 
 celToVeraLowRam_getNextChunk:
@@ -400,10 +406,10 @@ lda #$1 ;
 sta VERA_ctrl
 
 tya ;Form a number which we will use to determine whether amount to add is even or odd (bit 0) and whether the incrementor is initially on (bit 5). If they are both on that is 0x11 or 17
-and #1
+and #1 ;Self Modify (Change to 8)
 ora VERA_addr_bank
 tax
-cmp #17 
+cmp #17 ;Self Modify (Change To 19)
 bne celToVeraLowRam_noExtraAddRequired
 celToVeraLowRam_extraAddRequired:
 tya
