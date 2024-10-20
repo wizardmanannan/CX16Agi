@@ -53,27 +53,6 @@ LINE_LENGTH_ZP = ZP_TMP_4
 rts
 .endproc
 
-
-; .proc b8SetupPriorityBackwards:
-; X_VAL = ZP_TMP_2
-; Y_VAL = ZP_TMP_2 + 1
-
-; lda #(PICTURE_WIDTH - 1)
-; sta X_VAL
-; ldy #$0
-; CALC_VRAM_ADDR_PRIORITY, X_VAL, #$0
-; lda VERA_addr_low
-; sta 
-
-; @loop:
-
-; lda VERA_addr_low
-; sta lineTablePriorityLowEnd,y
-
-
-; .endproc
-
-
 .proc b8SetupLineTables
 ;Setup Visual
 lda #< b8LineTableVisualLow
@@ -113,7 +92,7 @@ ldx #>PRIORITY_START
 jsr b8SetupLineTable
 
 
-;Setup Priority Backwards
+;Setup Priority End
 lda #< lineTablePriorityLowEnd
 sta TABLE_LOW
 lda #> lineTablePriorityLowEnd

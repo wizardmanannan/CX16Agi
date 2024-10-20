@@ -324,14 +324,33 @@ sta RAM_BANK
 celToVeraLowRam_setVeraAddress:
 SET_VERA_ADDRESS VERA_ADDRESS, #$1, VERA_ADDRESS_HIGH, #$0
 ldy Y_VAL
-CALC_VRAM_ADDR_PRIORITY X_VAL, #$1
+
+celToVeraLowRam_setPriorityAddress:
+VERA_CTRL_SET #$1
+lda X_VAL
+lsr
+
+clc
+
+celToVeraLowRam_addLow:
+adc lineTablePriorityLow,y             ; add low byte of (y << 5) + (y << 7)
+sta VERA_addr_low         ; store low byte result (because 160<0xff)
+celToVeraLowRam_addHigh:
+lda lineTablePriorityHigh,y 
+adc #$00                   ; add carry
+sta VERA_addr_high
+lda #$0 ; clear the upper byte of the VRAM address and any auto increment
+sta VERA_addr_bank
+
+
 celToVeraLowRam_calculatePriorityAutoInc: ;This calculates whether the priority auto incrementment should be initially switched on or not. If X even auto inc should be off, because we need to read the same byte for the next turn
 lda X_VAL
 lsr
 bcs celToVeraLowRam_oddValue
 
 celToVeraLowRam_evenValue:
-stz VERA_addr_bank ;Disable, we need to read this byte again
+lda #$0 ;Can't using stz here, as self modifying code is using to change the value
+sta VERA_addr_bank ;Disable, we need to read this byte again
 bra celToVeraLowRam_getNextChunk
 
 celToVeraLowRam_oddValue:
