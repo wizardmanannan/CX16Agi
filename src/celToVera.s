@@ -39,13 +39,101 @@ lda celToVeraLowRam_skipBasedOnPriority
 pha
 lda #LDX_ABS
 sta celToVeraLowRam_skipBasedOnPriority
-jsr celToVera
+;jsr celToVera
 pla
 sta celToVeraLowRam_skipBasedOnPriority
 REENABLE_INTERRUPTS
 rts
 
 .segment "BANKRAM0E"
+bECelToVeraBackwards:
+lda celToVeraLowRam_setPriorityAddLow + 1
+pha
+lda #<lineTablePriorityLowEnd
+sta celToVeraLowRam_setPriorityAddLow + 1
+lda celToVeraLowRam_setPriorityAddLow + 2
+pha
+lda #>lineTablePriorityLowEnd
+sta celToVeraLowRam_setPriorityAddLow + 2
+
+lda celToVeraLowRam_setPriorityAddHigh + 1
+pha
+lda #<lineTablePriorityHighEnd
+sta celToVeraLowRam_setPriorityAddHigh + 1
+lda celToVeraLowRam_setPriorityAddHigh + 2
+pha
+lda #>lineTablePriorityHighEnd
+sta celToVeraLowRam_setPriorityAddHigh + 2
+
+lda celToVeraLowRam_setPrioritySetDirection + 1
+pha
+lda #%1000
+sta celToVeraLowRam_setPrioritySetDirection + 1
+
+lda celToVeraLowRam_evenValue + 1
+pha 
+lda #%11000
+sta celToVeraLowRam_evenValue + 1
+
+lda celToVeraLowRam_oddValue + 1
+pha
+lda #%1000
+sta celToVeraLowRam_oddValue + 1
+
+lda celToVeraLowRam_prepareForPriorityAnd + 1
+pha
+lda #%1001
+sta celToVeraLowRam_prepareForPriorityAnd + 1
+
+lda celToVeraLowRam_prepareForPriorityCmp + 1
+pha
+lda #%10011
+sta celToVeraLowRam_prepareForPriorityCmp + 1
+
+lda celToVeraLowRam_determineIncrementValue + 1
+pha
+lda #<newIncrementBackwards
+sta celToVeraLowRam_determineIncrementValue + 1
+
+lda celToVeraLowRam_determineIncrementValue + 2
+pha
+lda #>newIncrementBackwards
+sta celToVeraLowRam_determineIncrementValue + 2
+
+jsr celToVera
+
+pla 
+sta celToVeraLowRam_determineIncrementValue + 2
+pla
+sta celToVeraLowRam_determineIncrementValue + 1 
+
+pla
+sta celToVeraLowRam_prepareForPriorityCmp
+
+pla 
+sta celToVeraLowRam_prepareForPriorityAnd + 1
+
+pla 
+sta celToVeraLowRam_oddValue + 1
+
+pla 
+sta celToVeraLowRam_evenValue + 1
+
+pla 
+sta celToVeraLowRam_setPrioritySetDirection + 1
+
+pla 
+sta celToVeraLowRam_setPriorityAddHigh + 2
+pla
+sta celToVeraLowRam_setPriorityAddHigh + 1
+
+pla 
+sta celToVeraLowRam_setPriorityAddLow + 2
+pla
+sta celToVeraLowRam_setPriorityAddLow + 1
+rts
+
+
 ;bECellToVeraBulk(SpriteAttributeSize allocationWidth, SpriteAttributeSize allocationHeight, byte noCels, byte maxVeraSlots, byte xVal, byte yVal, byte pNum);
 _bEToBlitCelArray: .res 500
 _bECellToVeraBulk:
@@ -199,7 +287,7 @@ CLEAR_VERA VERA_ADDRESS, TOTAL_ROWS, BYTES_PER_ROW, #$0
 
 lda Y_VAL
 pha
-jsr celToVera
+;jsr celToVera
 pla
 sta Y_VAL
 
@@ -268,8 +356,6 @@ newIncrementBackwards: .byte %1000, %1000, %1000, %1000, %1000, %1000, %1000, %1
     .byte %11000, %1000, %1000, %1000, %1000, %1000, %1000, %1000 ; 8 more zeros
     .byte %1000, %1000, %1000, %1000, %1000, %1000, %1000, %1000 ;8 more zeros
     .byte %11000 ;Make Backwards version
-
-
 ;byte* localCel, long veraAddress, byte bCol, byte drawingAreaWidth, byte x, byte y, byte pNum
 ;Writes a cel to the Vera. The cel must be preloaded at the localCel pointer
 ;The view (and by extension the cel) must preloaded.
@@ -344,7 +430,7 @@ celToVeraLowRam_setPriorityAddHigh:
 lda lineTablePriorityHigh,y ;Self Modify
 adc #$00                   ; add carry
 sta VERA_addr_high
-@celToVeraLowRam_setPrioritySetDirection:
+celToVeraLowRam_setPrioritySetDirection:
 lda #$0 ; Self Modify
 sta VERA_addr_bank
 
@@ -352,7 +438,7 @@ sta VERA_addr_bank
 celToVeraLowRam_calculatePriorityAutoInc: ;This calculates whether the priority auto incrementment should be initially switched on or not. If X even auto inc should be off, because we need to read the same byte for the next turn
 lda X_VAL
 lsr
-bcs celToVeraLowRam_oddValue ;Self Modify
+bcs celToVeraLowRam_oddValue
 
 celToVeraLowRam_evenValue:
 lda #$0 ;Can't using stz here, as self modifying code is using to change the value ;Self Modify
@@ -406,9 +492,12 @@ lda #$1 ;
 sta VERA_ctrl
 
 tya ;Form a number which we will use to determine whether amount to add is even or odd (bit 0) and whether the incrementor is initially on (bit 5). If they are both on that is 0x11 or 17
-and #1 ;Self Modify (Change to 8)
+
+celToVeraLowRam_prepareForPriorityAnd:
+and #1 ;Self Modify (Change to 9)
 ora VERA_addr_bank
 tax
+celToVeraLowRam_prepareForPriorityCmp:
 cmp #17 ;Self Modify (Change To 19)
 bne celToVeraLowRam_noExtraAddRequired
 celToVeraLowRam_extraAddRequired:
@@ -430,7 +519,7 @@ adc VERA_addr_high
 sta VERA_addr_high
 
 celToVeraLowRam_determineIncrementValue:
-lda newIncrementValue,x
+lda newIncrementValue,x ;Self modify
 sta VERA_addr_bank
 
 jmp celToVeraLowRam_getNextChunk

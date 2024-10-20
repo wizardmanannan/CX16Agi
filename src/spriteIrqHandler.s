@@ -215,6 +215,8 @@ GET_NEXT_FROM_SPRITE_UPDATE_BUFFER ;Y Low 4 (buffer 4)
 stz VERA_data0 ;Y High 5 Always 0
 
 GET_NEXT_FROM_SPRITE_UPDATE_BUFFER ; 6 Collison ZDepth and Flip (buffer 5)
+and #1
+sta @flipped
 
 GET_NEXT_FROM_SPRITE_UPDATE_BUFFER ;Sprite Attr Size 7 (buffer 6)
 
@@ -273,8 +275,15 @@ pha
 lda VERA_addr_bank
 pha
 phy
-jsr celToVera
 
+lda @flipped
+bne @celToVeraBackwards
+;jsr celToVera
+bra @returnFromCelToVera
+@celToVeraBackwards:
+jsr bECelToVeraBackwards
+
+@returnFromCelToVera:
 ply
 stz VERA_ctrl
 pla
@@ -294,4 +303,5 @@ sta _bESpritesUpdatedBufferPointer + 1
 @end:
 
 rts
+@flipped: .byte $0
 .endif
