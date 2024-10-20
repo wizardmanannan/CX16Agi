@@ -2780,6 +2780,8 @@ void bCCalcObjMotion()
 						flag[localViewtab.param2] = 1;
 						/* Not sure about this next line */
 						localViewtab.stepSize = localViewtab.param1;
+
+						localViewtab.wasMoving = TRUE;
 					}
 					break;
 				case 3: /* move.obj */
@@ -2797,6 +2799,9 @@ void bCCalcObjMotion()
 						if (entryNum == 0) var[6] = 0;
 						flag[localViewtab.param4] = 1;
 						localViewtab.stepSize = localViewtab.param3;
+
+						localViewtab.wasMoving = TRUE;
+
 						break;
 					}
 					break;
