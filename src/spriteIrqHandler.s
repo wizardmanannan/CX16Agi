@@ -281,10 +281,10 @@ phy
 
 lda @flipped
 bne @celToVeraBackwards
-jsr celToVera
+;jsr celToVera
 bra @returnFromCelToVera
 @celToVeraBackwards:
-jsr celToVera
+jsr bECelToVeraBackwards
 
 @returnFromCelToVera:
 ply
