@@ -60,13 +60,18 @@ sta celToVeraLowRam_addPriority
 
 lda celToVeraLowRam_addPriorityLow
 pha
-lda #SBC_ABS
+lda #SBC_ZP
 sta celToVeraLowRam_addPriorityLow
 
 lda celToVeraLowRam_addPriorityHigh
 pha
-lda #SBC_ABS
+lda #SBC_ZP
 sta celToVeraLowRam_addPriorityHigh
+
+lda celToVeraLowRam_branchAfterLowByte
+pha
+lda #BCS_IMP
+sta celToVeraLowRam_branchAfterLowByte
 
 lda celToVeraLowRam_setPrioritySetDirection + 1
 pha
@@ -116,6 +121,9 @@ sta celToVeraLowRam_evenValue + 1
 
 pla 
 sta celToVeraLowRam_setPrioritySetDirection + 1
+
+pla
+sta celToVeraLowRam_branchAfterLowByte
 
 pla 
 sta celToVeraLowRam_addPriorityHigh
@@ -445,7 +453,6 @@ sta VERA_addr_bank
 
 celToVeraLowRam_getNextChunk:
 READ_NEXT_BYTE
-stp
 cmp #$0 ;If its zero we are finished with this line
 bne celToVeraLowRam_processChunk
 jmp celToVeraLowRam_increment
@@ -506,13 +513,16 @@ lsr
 
 celToVeraLowRam_addPriority: ;Self Modify To sec
 clc
+sta CEL_TO_VERA_GENERAL_TMP
+lda VERA_addr_low
 celToVeraLowRam_addPriorityLow:
-adc VERA_addr_low ;Self Modify To sbc
+adc CEL_TO_VERA_GENERAL_TMP ;Self Modify To sbc
 sta VERA_addr_low
-bcc celToVeraLowRam_determineIncrementValue
-lda #$0
+celToVeraLowRam_branchAfterLowByte:
+bcc celToVeraLowRam_determineIncrementValue ;Self Modify to bcs
+lda VERA_addr_high
 celToVeraLowRam_addPriorityHigh:
-adc VERA_addr_high ;Self Modify to SBC
+adc #$0 ;Self Modify to SBC
 sta VERA_addr_high
 
 celToVeraLowRam_determineIncrementValue:

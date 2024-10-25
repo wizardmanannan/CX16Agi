@@ -719,6 +719,7 @@ jsr _printfSafe
 ;OpCode Values (For self modifying code)
 LDX_ABS = $AE
 SEC_IMP = $38
-SBC_ABS = $ED
+SBC_ZP = $E5
+BCS_IMP = $B0
 
 .endif
