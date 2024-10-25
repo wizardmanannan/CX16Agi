@@ -111,7 +111,7 @@ pla
 sta celToVeraLowRam_determineIncrementValue + 1 
 
 pla
-sta celToVeraLowRam_prepareForPriorityCmp
+sta celToVeraLowRam_prepareForPriorityCmp + 1
 
 pla 
 sta celToVeraLowRam_oddValue + 1
