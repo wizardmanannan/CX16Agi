@@ -177,11 +177,27 @@ clc
 lda VERA_addr_low
 adc #PRIORITY_WIDTH
 sta VERA_addr_low
-bcc @getValue
+bcc @checkBoundsHigh
 @highByte:
 lda #$0 ;Odd
-adc VERA_addr_low
-sta VERA_addr_low
+adc VERA_addr_high
+sta VERA_addr_high
+
+@checkBoundsHigh:
+lda #>PRIORITY_END
+cmp VERA_addr_high
+beq @checkBoundsLower
+bcs @getValue
+bra @outOfBounds
+
+@checkBoundsLower:
+lda #<PRIORITY_END 
+cmp VERA_addr_low
+bcs @getValue
+
+@outOfBounds:
+lda #NOT_AN_OBSTACLE
+bra @return
 
 @getValue:
 cpy #$0
