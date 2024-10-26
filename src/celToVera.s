@@ -144,6 +144,70 @@ sta celToVeraLowRam_addPriority
 
 rts
 
+bEFindPriorityFromCtrlLineFowards:
+lda #$1
+sta VERA_ctrl
+
+lda VERA_addr_low
+pha
+lda VERA_addr_high
+pha
+lda VERA_addr_bank
+pha
+beq @backOne
+
+ldy #$1 ;Even
+bra @findCtrlValue
+
+@backOne:
+ldy #$0 ;Odd
+lda #%11000
+sta VERA_addr_bank
+lda VERA_data1
+
+@findCtrlValue:
+stz VERA_addr_bank
+lda #LOWEST_BOUNDARY
+
+@loop:
+cmp #CONTROL_LINES + 1
+bcs @return
+
+clc
+lda VERA_addr_low
+adc #PRIORITY_WIDTH
+sta VERA_addr_low
+bcc @getValue
+@highByte:
+lda #$0 ;Odd
+adc VERA_addr_low
+sta VERA_addr_low
+
+@getValue:
+cpy #$0
+beq @getOddValue
+
+@getEvenValue:
+lda VERA_data1
+lsr
+lsr
+lsr
+lsr
+bra @loop
+
+@getOddValue:
+lda VERA_data1
+and #$F
+bra @loop
+
+@return:
+plx
+stx VERA_addr_bank
+plx
+stx VERA_addr_high
+plx
+stx VERA_addr_low
+rts
 
 ;bECellToVeraBulk(SpriteAttributeSize allocationWidth, SpriteAttributeSize allocationHeight, byte noCels, byte maxVeraSlots, byte xVal, byte yVal, byte pNum);
 _bEToBlitCelArray: .res 500
@@ -586,7 +650,23 @@ lsr
 celToVeraLowRam_comparePriority:
 cmp #NOT_AN_OBSTACLE
 beq celToVeraLowRam_drawColor ;4 is the lowest priority and the object always has precedence 
-bcc celToVeraLowRam_drawColor ;TODO: Is a control value need to use the rules in split priority to figure out what the priority is
+cmp #WATER
+beq celToVeraLowRam_drawColor
+bcs celToVeraLowRam_cmpPNum
+celToVeraLowRam_FindPriorityFromCtrlLine:
+lda RAM_BANK
+pha
+phy 
+
+lda #SPRITE_UPDATES_BANK
+sta RAM_BANK
+jsr bEFindPriorityFromCtrlLineFowards
+ply
+plx 
+stx RAM_BANK
+bra celToVeraLowRam_comparePriority
+
+celToVeraLowRam_cmpPNum:
 cmp P_NUM
 beq celToVeraLowRam_drawColor ;If the object and screen priority is equal the object has precedence
 bcc celToVeraLowRam_drawColor ;If the object screen priority < object priority the object has precedence
@@ -636,4 +716,5 @@ celToVeraLowRam_end:
 pla 
 sta RAM_BANK
 rts
+
 .endif

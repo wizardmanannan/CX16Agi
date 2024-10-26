@@ -5,6 +5,10 @@
 PRIORITY_INC = 1
 
 NOT_AN_OBSTACLE = 4
+WATER = 3
+CONTROL_LINES = 2
+HIGHEST_BOUNDARY = 1
+LOWEST_BOUNDARY = 0
 ;byte b8GetPriority(byte X, byte Y)
 ;Note that all AGI implementations draw the control lines over the top of the priority screen
 ;Original MEKA splits the priority screen into priority and control screens, but in a limited memory system this is wasteful.
