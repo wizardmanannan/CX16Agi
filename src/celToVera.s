@@ -39,7 +39,7 @@ lda celToVeraLowRam_skipBasedOnPriority
 pha
 lda #LDX_ABS
 sta celToVeraLowRam_skipBasedOnPriority
-;jsr celToVera
+jsr celToVera
 pla
 sta celToVeraLowRam_skipBasedOnPriority
 REENABLE_INTERRUPTS
@@ -103,7 +103,15 @@ pha
 lda #>newIncrementBackwards
 sta celToVeraLowRam_determineIncrementValue + 2
 
+lda celToVeraLowRam_checkPriorityCmp + 1
+pha
+lda #%11000
+sta celToVeraLowRam_checkPriorityCmp + 1
+
 jsr celToVera
+
+pla
+sta celToVeraLowRam_checkPriorityCmp + 1
 
 pla 
 sta celToVeraLowRam_determineIncrementValue + 2
@@ -290,7 +298,7 @@ CLEAR_VERA VERA_ADDRESS, TOTAL_ROWS, BYTES_PER_ROW, #$0
 
 lda Y_VAL
 pha
-;jsr celToVera
+jsr celToVera
 pla
 sta Y_VAL
 
@@ -544,6 +552,9 @@ ldx VERA_data1 ;Get the next priority byte and toggle
 lda #%10000
 eor VERA_addr_bank
 sta VERA_addr_bank
+
+celToVeraLowRam_checkPriorityCmp:
+cmp #$0; Self modify. We need the cmp #$0 as we need a placeholder for replacement
 
 bne celToVeraLowRam_getEvenValue ;If we toggled this to be on then that means we will read the byte one more time, and then increment. This must mean that this time we are reading the even nibble
 
