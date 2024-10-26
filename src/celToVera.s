@@ -252,6 +252,8 @@ sta SPLIT_COUNTER
 
 GET_STRUCT_16_STORED_OFFSET _offsetOfSplitCelPointers, CEL_ADDR, SPLIT_CEL_SEGMENTS
 GET_STRUCT_8_STORED_OFFSET _offsetOfSplitCelBank, CEL_ADDR, SPLIT_CEL_BANK
+GET_STRUCT_8_STORED_OFFSET _offsetOfFlipped, CEL_ADDR, CEL_FLIPPED
+GET_STRUCT_8_STORED_OFFSET _offsetOfCelWidth, CEL_ADDR, CEL_WIDTH
 
 lda SPLIT_CEL_SEGMENTS
 ora SPLIT_CEL_SEGMENTS + 1
@@ -298,7 +300,18 @@ CLEAR_VERA VERA_ADDRESS, TOTAL_ROWS, BYTES_PER_ROW, #$0
 
 lda Y_VAL
 pha
+
+ldx CEL_FLIPPED
+bne @celToVeraBackwards
+
+@celToVeraForwards:
 jsr celToVera
+bra @restoreStack
+
+@celToVeraBackwards:
+jsr bECelToVeraBackwards
+
+@restoreStack:
 pla
 sta Y_VAL
 

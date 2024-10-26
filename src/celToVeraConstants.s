@@ -11,6 +11,7 @@ VIEWCOMMON_INC = 1
 .import _offsetOfCelHeight
 .import _offsetOfSplitCelPointers
 .import _offsetOfSplitSegments
+.import _offsetOfFlipped
 
 ;Used in both single and bulk
 VERA_BYTES_PER_ROW = ZP_TMP_2
@@ -20,7 +21,7 @@ VERA_ADDRESS_HIGH = ZP_TMP_4
 CEL_ADDR = ZP_TMP_5
 CEL_WIDTH = ZP_TMP_6
 CEL_TO_VERA_GENERAL_TMP = ZP_TMP_7
-BUFFER_POINTER = ZP_TMP_8
+CEL_FLIPPED = ZP_TMP_8 ;8+1 Vacant
 CEL_HEIGHT = ZP_TMP_9
 CEL_TRANS = ZP_TMP_9 + 1
 COLOR = ZP_TMP_10
