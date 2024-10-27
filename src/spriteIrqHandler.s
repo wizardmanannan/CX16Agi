@@ -281,6 +281,8 @@ phy
 
 lda @flipped
 bne @celToVeraBackwards
+lda #$1
+sta CEL_TO_VERA_IS_FORWARD_DIRECTION
 jsr celToVera
 bra @returnFromCelToVera
 @celToVeraBackwards:

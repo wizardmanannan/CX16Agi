@@ -39,6 +39,8 @@ lda celToVeraLowRam_skipBasedOnPriority
 pha
 lda #LDX_ABS
 sta celToVeraLowRam_skipBasedOnPriority
+lda #$1
+sta CEL_TO_VERA_IS_FORWARD_DIRECTION
 jsr celToVera
 pla
 sta celToVeraLowRam_skipBasedOnPriority
@@ -108,6 +110,7 @@ pha
 lda #%11000
 sta celToVeraLowRam_checkPriorityCmp + 1
 
+stz CEL_TO_VERA_IS_FORWARD_DIRECTION
 jsr celToVera
 
 pla
@@ -144,7 +147,11 @@ sta celToVeraLowRam_addPriority
 
 rts
 
+bEFindPriorityFromCtrlLineGoBackIncrementer: .byte %10000, %11000
+bEIncrementorOffValue: .byte %1000, %0
+
 bEFindPriorityFromCtrlLineFowards:
+
 lda #$1
 sta VERA_ctrl
 
@@ -154,14 +161,23 @@ lda VERA_addr_high
 pha
 lda VERA_addr_bank
 pha
+
+ldx CEL_TO_VERA_IS_FORWARD_DIRECTION
+
+lda bEIncrementorOffValue,x
+cmp VERA_addr_bank
+
 beq @backOne
 
-ldy #$1 ;Even
+ldy CEL_TO_VERA_IS_FORWARD_DIRECTION
 bra @findCtrlValue
 
 @backOne:
-ldy #$0 ;Odd
-lda #%11000
+
+lda CEL_TO_VERA_IS_FORWARD_DIRECTION
+eor #$1
+tay
+lda bEFindPriorityFromCtrlLineGoBackIncrementer,x
 sta VERA_addr_bank
 lda VERA_data1
 
@@ -385,6 +401,8 @@ ldx CEL_FLIPPED
 bne @celToVeraBackwards
 
 @celToVeraForwards:
+lda #$1
+sta CEL_TO_VERA_IS_FORWARD_DIRECTION
 jsr celToVera
 bra @restoreStack
 
