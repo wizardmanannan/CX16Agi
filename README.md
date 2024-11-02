@@ -5,7 +5,7 @@
 **Note: This Project Is Under Construction And Is Not Ready For General Use**
 
 See it running here on YouTube: \
-[King's Quest I](https://youtu.be/bicWkybRZSg) \
+[King's Quest I](https://youtu.be/N0JRAPeKvf0) \
 [Space Quest II](https://youtu.be/Pxg_op2dU8Q) \
 [King's Quest III](https://youtu.be/BYunlA-CIlE)
 
