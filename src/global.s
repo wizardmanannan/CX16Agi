@@ -720,6 +720,7 @@ jsr _printfSafe
 LDX_ABS = $AE
 SEC_IMP = $38
 SBC_ZP = $E5
+SBC_IMM = $E9
 BCS_IMP = $B0
 
 .endif
