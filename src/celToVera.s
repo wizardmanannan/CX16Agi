@@ -67,7 +67,7 @@ sta celToVeraLowRam_addPriorityLow
 
 lda celToVeraLowRam_addPriorityHigh
 pha
-lda #SBC_ZP
+lda #SBC_IMM
 sta celToVeraLowRam_addPriorityHigh
 
 lda celToVeraLowRam_branchAfterLowByte
