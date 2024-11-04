@@ -65,15 +65,15 @@ pha
 lda #SBC_ZP
 sta celToVeraLowRam_addPriorityLow
 
-lda celToVeraLowRam_addPriorityHigh
-pha
-lda #SBC_IMM
-sta celToVeraLowRam_addPriorityHigh
-
 lda celToVeraLowRam_branchAfterLowByte
 pha
 lda #BCS_IMP
 sta celToVeraLowRam_branchAfterLowByte
+
+lda celToVeraLowRam_addPriorityHigh
+pha
+lda #SBC_IMM
+sta celToVeraLowRam_addPriorityHigh
 
 lda celToVeraLowRam_setPrioritySetDirection + 1
 pha
@@ -87,7 +87,7 @@ sta celToVeraLowRam_evenValue + 1
 
 lda celToVeraLowRam_oddValue + 1
 pha
-lda #%1000
+lda #%1000 ;self modify 2 to lda #%1000
 sta celToVeraLowRam_oddValue + 1
 
 lda celToVeraLowRam_prepareForPriorityCmp + 1
@@ -133,11 +133,12 @@ sta celToVeraLowRam_evenValue + 1
 pla 
 sta celToVeraLowRam_setPrioritySetDirection + 1
 
+pla 
+sta celToVeraLowRam_addPriorityHigh
+
 pla
 sta celToVeraLowRam_branchAfterLowByte
 
-pla 
-sta celToVeraLowRam_addPriorityHigh
 
 pla 
 sta celToVeraLowRam_addPriorityLow
@@ -150,7 +151,7 @@ rts
 bEFindPriorityFromCtrlLineGoBackIncrementer: .byte %10000, %11000
 bEIncrementorOffValue: .byte %1000, %0
 
-bEFindPriorityFromCtrlLineFowards:
+bEFindPriorityFromCtrlLine:
 
 lda #$1
 sta VERA_ctrl
@@ -478,16 +479,27 @@ newIncrementBackwards: .byte %1000, %1000, %1000, %1000, %1000, %1000, %1000, %1
     .byte %1000, %11000, %1000, %1000, %1000, %1000, %1000, %1000 ; 8 more zeros
     .byte %1000, %1000, %1000, %1000, %1000, %1000, %1000, %1000 ;8 more zeros
     .byte %11000, %1000  
-;byte* localCel, long veraAddress, byte bCol, byte drawingAreaWidth, byte x, byte y, byte pNum
 ;Writes a cel to the Vera. The cel must be preloaded at the localCel pointer
 ;The view (and by extension the cel) must preloaded.
 ;This view data on the cel is run encoded eg. AX (X instances of colour A)
 ;Each line is terminated with a 0
-;This function is priority screen aware, each pixel will only show through if the pNum >= the priority screen pixel at x,y.
+;This function is priority screen aware, each pixel will show through according to the following table
+
+;Pixel Priority                  | Result
+; 3 (Water)                      | Show through
+; 4 (Lowest Priority Background) | Show through
+; > 4                            | Show if the sprite priority >= the priority screen pixel at x,y
+; < 3 (Control Line)             | Search for nearest upward priority pixel using bEFindPriorityFromCtrlLine and search again
+
+
 ;Note, as each priority byte on the priority screen stores two pixels, the auto increment bit is
 ;alternated after every read
-;If the object is partially off screen in the X direction the individual line drawing will stop at the screen boundary.
 ;The function stops when it has counted height number of zeros, or the line would not be in the drawable area, vertically.
+;Note: This function features self modifying code. It is modified by two functions:
+;1. bECelToVeraBackwards
+;2. b9CelToVera
+;These functions restore this function back to original state after completion. 
+;The points of self modification are marked with self modified 1, 2 or 1 & 2, along with what the line is self modified to 
 celToVera:
 stz NEXT_DATA_INDEX
 
@@ -497,20 +509,20 @@ pha
 lda CEL_BANK
 sta RAM_BANK
 
-GET_STRUCT_8_STORED_OFFSET _offsetOfCelHeight, CEL_ADDR, CEL_HEIGHT
+GET_STRUCT_8_STORED_OFFSET _offsetOfCelHeight, CEL_ADDR, CEL_HEIGHT ;Load required attributes from cel
 GET_STRUCT_8_STORED_OFFSET _offsetOfCelTrans, CEL_ADDR, CEL_TRANS
 
-lda SPLIT_SEGMENTS
+lda SPLIT_SEGMENTS ;If the cel is non split then we get the cel data from the bitmap
 cmp #$1
 bne celToVeraLowRam_split
 
 celToVeraLowRam_nonSplit:
-GET_STRUCT_16_STORED_OFFSET _offsetOfBmp, CEL_ADDR, BMP_DATA ;Buffer status holds the C struct to be passed to b5RefreshBuffer
+GET_STRUCT_16_STORED_OFFSET _offsetOfBmp, CEL_ADDR, BMP_DATA  
 GET_STRUCT_8_STORED_OFFSET _offsetOfBmpBank, CEL_ADDR, BMP_BANK
 bra celToVeraLowRam_start
 
 celToVeraLowRam_split:
-lda SPLIT_COUNTER 
+lda SPLIT_COUNTER ;The counter would have being set by the calling method
 dec
 asl
 
@@ -520,7 +532,7 @@ lda SPLIT_CEL_BANK
 sta BMP_BANK
 sta RAM_BANK
 
-lda (SPLIT_CEL_SEGMENTS), y
+lda (SPLIT_CEL_SEGMENTS), y ;Otherwise we get it from the split segments
 sta BMP_DATA 
 iny
 lda (SPLIT_CEL_SEGMENTS), y
@@ -528,16 +540,16 @@ sta BMP_DATA + 1
 
 celToVeraLowRam_start:
 lda CEL_TRANS
-SET_COLOR_LEFT CEL_TRANS
+SET_COLOR_LEFT CEL_TRANS ;Double up the color (eg turn 0xF into 0xFF as agi pixels are doubled)
 sta CEL_TRANS
 
 lda BMP_BANK
 sta RAM_BANK
 
-celToVeraLowRam_setVeraAddress:
-SET_VERA_ADDRESS VERA_ADDRESS, #$1, VERA_ADDRESS_HIGH, #$0
-ldy Y_VAL
+celToVeraLowRam_setVeraAddress: ;Begin plot line/next line
+SET_VERA_ADDRESS VERA_ADDRESS, #$1, VERA_ADDRESS_HIGH, #$0 ;Set the vera address of the first point on this line on the sprite
 
+ldy Y_VAL ;Work out the priority address of the first point in this line. Make use of the priority line table
 celToVeraLowRam_setPriorityAddress:
 VERA_CTRL_SET #$1
 lda X_VAL
@@ -553,7 +565,7 @@ lda lineTablePriorityHigh,y
 adc #$00                   ; add carry
 sta VERA_addr_high
 celToVeraLowRam_setPrioritySetDirection:
-lda #$0
+lda #$0 ;self modify 2 to lda #%1000
 sta VERA_addr_bank
 
 celToVeraLowRam_calculatePriorityAutoInc: ;This calculates whether the priority auto incrementment should be initially switched on or not. If X even auto inc should be off, because we need to read the same byte for the next turn
@@ -561,17 +573,18 @@ lda X_VAL
 lsr
 bcs celToVeraLowRam_oddValue
 
+;For forward direction if we are on an even nibble, don't auto increment as we need to read the odd nibble of the same byte next. This is the opposite for backwards
 celToVeraLowRam_evenValue:
-lda #$0 ;Can't using stz here, as self modifying code is using to change the value ;Self Modify
+lda #$0 ;Can't using stz here, as self modifying code is using to change the value ;Self Modify 2 to lda #%11000
 sta VERA_addr_bank ;Disable, we need to read this byte again
 bra celToVeraLowRam_getNextChunk
 
 celToVeraLowRam_oddValue:
-lda #%10000 ;Odd on the next read we should move onto the next byte ;Self Modify
+lda #%10000 ;Odd on the next read we should move onto the next byte ;Self Modify 2 to #%1000
 sta VERA_addr_bank
 
 celToVeraLowRam_getNextChunk:
-READ_NEXT_BYTE
+READ_NEXT_BYTE ;Read the next run encoded byte
 cmp #$0 ;If its zero we are finished with this line
 bne celToVeraLowRam_processChunk
 jmp celToVeraLowRam_increment
@@ -585,7 +598,7 @@ sta COLOR
 SET_COLOR_RIGHT COLOR ;Output color must be 'doubled up', because AGI pixels are doubled across
 sta COLOR
 
-cmp CEL_TRANS
+cmp CEL_TRANS ;We can skip drawing if the pixel color is equal to the transparent color
 bne celToVeraLowRam_draw
 
 celToVeraLowRam_skip: ;Skip a certain number of transparent pixels, which where is is more than about 4 in a row, is faster than just iterating 'number of transparant pixel' times
@@ -619,7 +632,7 @@ and #1
 ora VERA_addr_bank
 tax
 celToVeraLowRam_prepareForPriorityCmp:
-cmp #17 ;Self Modify (Change To 25)
+cmp #%10001 ;Self Modify 2 to #%11001
 bne celToVeraLowRam_noExtraAddRequired
 celToVeraLowRam_extraAddRequired:
 tya
@@ -630,22 +643,22 @@ celToVeraLowRam_noExtraAddRequired:
 tya
 lsr
 
-celToVeraLowRam_addPriority: ;Self Modify To sec
+celToVeraLowRam_addPriority: ;Self Modify 2 To sec
 clc
 sta CEL_TO_VERA_GENERAL_TMP
 lda VERA_addr_low
 celToVeraLowRam_addPriorityLow:
-adc CEL_TO_VERA_GENERAL_TMP ;Self Modify To sbc
+adc CEL_TO_VERA_GENERAL_TMP ;Self Modify 2 To sbc zp
 sta VERA_addr_low
 celToVeraLowRam_branchAfterLowByte:
-bcc celToVeraLowRam_determineIncrementValue ;Self Modify to bcs
+bcc celToVeraLowRam_determineIncrementValue ;Self Modify 2 to bcs implied
 lda VERA_addr_high
 celToVeraLowRam_addPriorityHigh:
-adc #$0 ;Self Modify to SBC
+adc #$0 ;Self Modify 2 to sbc immediate
 sta VERA_addr_high
 
 celToVeraLowRam_determineIncrementValue:
-lda newIncrementValue,x ;Self modify
+lda newIncrementValue,x ;Self modify 2 to #newIncrementBackwards
 sta VERA_addr_bank
 
 jmp celToVeraLowRam_getNextChunk
@@ -665,7 +678,7 @@ eor VERA_addr_bank
 sta VERA_addr_bank
 
 celToVeraLowRam_checkPriorityCmp:
-cmp #$0; Self modify. We need the cmp #$0 as we need a placeholder for replacement
+cmp #$0; Self modify 2 to #%11000. We need the cmp #$0 as we need a placeholder for replacement
 
 bne celToVeraLowRam_getEvenValue ;If we toggled this to be on then that means we will read the byte one more time, and then increment. This must mean that this time we are reading the even nibble
 
@@ -684,9 +697,9 @@ lsr
 celToVeraLowRam_comparePriority:
 cmp #NOT_AN_OBSTACLE
 beq celToVeraLowRam_drawColor ;4 is the lowest priority and the object always has precedence 
-cmp #WATER
+cmp #WATER ;The object always has precedence over water
 beq celToVeraLowRam_drawColor
-bcs celToVeraLowRam_cmpPNum
+bcs celToVeraLowRam_cmpPNum ;If the priority screen has a 1 or a 2 then that means that are on a control line, we need to work out the priority from neighbouring pixels. bEFindPriorityFromCtrlLine does that job.
 celToVeraLowRam_FindPriorityFromCtrlLine:
 lda RAM_BANK
 pha
@@ -694,7 +707,7 @@ phy
 
 lda #SPRITE_UPDATES_BANK
 sta RAM_BANK
-jsr bEFindPriorityFromCtrlLineFowards
+jsr bEFindPriorityFromCtrlLine
 ply
 plx 
 stx RAM_BANK
@@ -706,7 +719,7 @@ beq celToVeraLowRam_drawColor ;If the object and screen priority is equal the ob
 bcc celToVeraLowRam_drawColor ;If the object screen priority < object priority the object has precedence
 
 celToVeraLowRam_skipBasedOnPriority: ;This means that the screen priority > object priority, so we don't draw
-stz VERA_data0 ;Warning: _b9CelToVera self modifies this line to ldx
+stz VERA_data0 ;Self modify 1 to ldx
 lda COLOR
 bra celToVeraLowRam_decrementColorCounter
 
@@ -724,7 +737,7 @@ dec CEL_HEIGHT ;Ready for the next line
 beq celToVeraLowRam_end
 
 clc
-lda BYTES_PER_ROW 
+lda BYTES_PER_ROW  ;Work out VERA address for the next line of the sprite
 adc VERA_ADDRESS
 sta VERA_ADDRESS
 bcc celToVeraLowRam_incrementY
