@@ -9,17 +9,14 @@ CELTOVERA_INC = 1
 _viewHeaderBuffer: .res VIEW_HEADER_BUFFER_SIZE
 _loopHeaderBuffer: .res LOOP_HEADER_BUFFER_SIZE
 
-;Constants
-NO_MARGIN = 4
-;void b9CelToVera(Cel* localCel, byte celBank, long veraAddress, byte bCol, byte drawingAreaWidth, byte x, byte y, byte pNum)
+;void b9CelToVera(Cel* localCel, byte celBank, long veraAddress, byte drawingAreaWidth, byte x, byte y, byte pNum)
 _b9CelToVera:
 sta P_NUM
 jsr popax
 sta Y_VAL
 stx X_VAL
-jsr popax
+jsr popa
 sta BYTES_PER_ROW
-stx BCOL
 jsr popax
 sta VERA_ADDRESS
 stx VERA_ADDRESS + 1
@@ -151,6 +148,7 @@ rts
 bEFindPriorityFromCtrlLineGoBackIncrementer: .byte %10000, %11000
 bEIncrementorOffValue: .byte %1000, %0
 
+;When a control line is encountered when checking for the priority byte, we obtain the priority by searching down the screen (+) until we find a priority pixel. 
 bEFindPriorityFromCtrlLine:
 
 lda #$1
@@ -500,6 +498,29 @@ newIncrementBackwards: .byte %1000, %1000, %1000, %1000, %1000, %1000, %1000, %1
 ;2. b9CelToVera
 ;These functions restore this function back to original state after completion. 
 ;The points of self modification are marked with self modified 1, 2 or 1 & 2, along with what the line is self modified to 
+;Important Zero Pointers
+;Must Be Set Before Calling
+;CEL_BANK: Data bank where the cel object is stored
+;CEL_ADDR: Address where cel object is stored
+;VERA_ADDRESS and VERA_ADDRESS_HIGH: The VERA address of the sprites allocated memory
+;X_VAL: The X coord of the sprite (Note AGI blit doubles this value because each pixel is double width)
+;Y_VAL: The Y coord of the sprite (Note AGI deducts the height of the sprite as the Y is from the bottom left hand )
+;P_NUM: The priority of the sprite being drawn
+;CEL_HEIGHT: The height of the cel
+;CEL_TO_VERA_IS_FORWARD_DIRECTION: Boolean, Is Operating In Forward Mode 
+
+;Must Be Set For Split Sprites:
+;SPLIT_CEL_BANK: Bank where the split bitmaps are stored
+;SPLIT_CEL_SEGMENTS: Points to a data structure which begins with a list of addresses of the split bitmaps, and is followed by the split bitmaps themselves
+;SPLIT_COUNTER: Which split bitmap are we up to drawing
+
+;Set by this function:
+;NEXT_DATA_INDEX: Used as an index into the run encoded data
+;BMP_DATA: Used to hold the run encoded bitmap data. Can be either the split data if split or the cel bitmap data otherwise
+;BMP_BANK: Bank for the above, can be updated to equal split bank if split
+;CEL_TRANS: Cel transparent color
+;COLOR: The current current being drawn doubled up (eg. FF instead of F due to pixel doubling)
+;NEXT_DATA_INDEX: Index into the BMP_DATA, starts are zero, and incremented after each read. BMP_DATA is incremented by 255 when this resets
 celToVera:
 stz NEXT_DATA_INDEX
 
