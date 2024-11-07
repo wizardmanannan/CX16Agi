@@ -9,6 +9,8 @@ CELTOVERA_INC = 1
 _viewHeaderBuffer: .res VIEW_HEADER_BUFFER_SIZE
 _loopHeaderBuffer: .res LOOP_HEADER_BUFFER_SIZE
 
+;Constants
+NO_MARGIN = 4
 ;void b9CelToVera(Cel* localCel, byte celBank, long veraAddress, byte drawingAreaWidth, byte x, byte y, byte pNum)
 _b9CelToVera:
 sta P_NUM
