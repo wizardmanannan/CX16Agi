@@ -147,51 +147,53 @@ sta celToVeraLowRam_addPriority
 
 rts
 
-bEFindPriorityFromCtrlLineGoBackIncrementer: .byte %10000, %11000
-bEIncrementorOffValue: .byte %1000, %0
+bEFindPriorityFromCtrlLineGoBackIncrementer: .byte %10000, %11000 
 
 ;When a control line is encountered when checking for the priority byte, we obtain the priority by searching down the screen (+) until we find a priority pixel. 
+;If the incrementor is off then that means we have just advanced, and we will need to so we will have to either subtract (forwards direction) or add one to the address (backwards direction).
+;We preserve VERA initially and restore it afterwards
+
 bEFindPriorityFromCtrlLine:
 
-lda #$1
+lda #$1 
 sta VERA_ctrl
 
-lda VERA_addr_low
+lda VERA_addr_low ;Preserve the VERA
 pha
 lda VERA_addr_high
 pha
 lda VERA_addr_bank
 pha
 
-ldx CEL_TO_VERA_IS_FORWARD_DIRECTION
+lda VERA_addr_bank ;If the incrementor is off we need to go back one. The incrementor is bit 4, so if it is on and you EOR with 1 you get zero. Hence we don't go back one on zero
+eor #%10000
+bne @backOne
 
-lda bEIncrementorOffValue,x
-cmp VERA_addr_bank
-
-beq @backOne
-
-ldy CEL_TO_VERA_IS_FORWARD_DIRECTION
+@dontGoBackOne
+ldy CEL_TO_VERA_IS_FORWARD_DIRECTION ;Store in Y whether we are in forward direction mode or not. Later on if we are going forward, then that means we will read the even nibble otherwise the odd nibble
 bra @findCtrlValue
 
 @backOne:
-
 lda CEL_TO_VERA_IS_FORWARD_DIRECTION
-eor #$1
+tax
+eor #$1 ;Store in y the inverse of forward direction. Later on if we are going forward, then that means we will read the odd nibble otherwise the even nibble
 tay
-lda bEFindPriorityFromCtrlLineGoBackIncrementer,x
+
+lda bEFindPriorityFromCtrlLineGoBackIncrementer,x ;Go back one using auto increment. If we are in forwards mode backwards means -1, otherwise the opposite.
 sta VERA_addr_bank
 lda VERA_data1
 
+;This loop will check to see whether the current priority value is control, and if it is 
 @findCtrlValue:
-stz VERA_addr_bank
-lda #LOWEST_BOUNDARY
+stz VERA_addr_bank ;Disable auto increment, we need to manually increment the vera to jump up one line if it isn't. The first value that is not control is ultimately returned by this function
+lda #LOWEST_BOUNDARY ;Set a default value of zero, which is a control, and will trigger the search for the next value
 
 @loop:
-cmp #CONTROL_LINES + 1
-bcs @return
+cmp #CONTROL_LINES + 1 ;Check to see whether we have a priority value, go to control if we have
+bcs @return 
 
 clc
-lda VERA_addr_low
+lda VERA_addr_low ;Go up one line
 adc #PRIORITY_WIDTH
 sta VERA_addr_low
 bcc @checkBoundsHigh
@@ -200,7 +202,7 @@ lda #$0 ;Odd
 adc VERA_addr_high
 sta VERA_addr_high
 
-@checkBoundsHigh:
+@checkBoundsHigh: ;If we have out of bounds (upper bounds of course) return #NOT_AN_OBSTACLE, the lowest priority value, otherwise go to get the next value
 lda #>PRIORITY_END
 cmp VERA_addr_high
 beq @checkBoundsLower
@@ -217,7 +219,7 @@ lda #NOT_AN_OBSTACLE
 bra @return
 
 @getValue:
-cpy #$0
+cpy #$0 ;If we are going forward, then that means we will read the even nibble otherwise the odd nibble
 beq @getOddValue
 
 @getEvenValue:
@@ -234,7 +236,7 @@ and #$F
 bra @loop
 
 @return:
-plx
+plx ;Restore VERA
 stx VERA_addr_bank
 plx
 stx VERA_addr_high
