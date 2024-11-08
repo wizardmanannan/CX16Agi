@@ -47,13 +47,21 @@ REENABLE_INTERRUPTS
 rts
 
 .segment "BANKRAM0E"
+
+;When calling celToVera on a flipped cel the celToVera priority byte order must be backwards.
+;This means that for a sprite which is 6 wide, when drawing pixel zero priority pixel 5 must be check, and when drawing 1 4 must be checked and so on. 
+;This function is a helper function which modifies the code of celToVera to run backwards.
+;All of the spots in celToVera requiring modification, are labelled and commented with self modify and the value it is modified to. 
+;This function backs the old instructions up using the stack.
+;We also need to modify X value to be at the right side of the sprite, not the left.
 bECelToVeraBackwards:
-clc
-lda X_VAL ;We work from the end
+clc ;Add the cel width and take 1 to set X to the right hand side of the sprite.
+lda X_VAL 
 adc CEL_WIDTH
 dec
 sta X_VAL
 
+;Store the old instructions on the stack and self modify the celToVera function to make it run backwards
 lda celToVeraLowRam_addPriority
 pha
 lda #SEC_IMP
@@ -109,9 +117,11 @@ pha
 lda #%11000
 sta celToVeraLowRam_checkPriorityCmp + 1
 
-stz CEL_TO_VERA_IS_FORWARD_DIRECTION
+stz CEL_TO_VERA_IS_FORWARD_DIRECTION ;Disable the forward flag
+
 jsr celToVera
 
+;Restore the old code back
 pla
 sta celToVeraLowRam_checkPriorityCmp + 1
 
