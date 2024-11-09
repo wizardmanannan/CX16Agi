@@ -5,7 +5,7 @@
 **Note: This Project Is Under Construction And Is Not Ready For General Use**
 
 See it running here on YouTube: \
-[King's Quest I](https://youtu.be/bicWkybRZSg) \
+[King's Quest I](https://youtu.be/N0JRAPeKvf0) \
 [Space Quest II](https://youtu.be/Pxg_op2dU8Q) \
 [King's Quest III](https://youtu.be/BYunlA-CIlE)
 
@@ -18,7 +18,11 @@ See it running here on YouTube: \
 ![image](https://github.com/wizardmanannan/CX16Agi/assets/58645812/186fa2c7-33c1-491f-af3a-dabc6c6d560d)
 ![image](https://github.com/wizardmanannan/CX16Agi/assets/58645812/9e1d5f64-26f9-42b3-a706-09f752398636)
 
-# CX 16 Iteration 9 Goals (Current)
+# CX 16 Iteration 10 Goals (Current)
+- Implement sprite garbage collection so that the backbuffer (see below) will fit.
+- Implement backbuffer for '3D Affect' sprites, which will eliminate IRQ overruns for very large sprites
+
+# CX 16 Iteration 9 Goals (Completed)
 - Sprite to background priority
 - Using priority screen in interpreter
 
@@ -63,13 +67,13 @@ See: https://github.com/wizardmanannan/CX16Agi/blob/main/How%20To%20Setup%20Meka
 
 Obvious things that need to be done:
 - I have been building this under Windows, and the deployment tool I threw together for the purpose is Windows dependent. A Linux build tool should be developed
-- String functions need to be uncommented out and retested
+- String functions need to be uncommented out and made to work
 - Import the rest of the MEKA code base. I have been importing it in a piecemeal fashion, and using a stub
 - Sound need to be implemented
 - Uncomment out routines for the support of AGI 3 games and put them into the BANKS
 - Review the implementation of dynamic memory as mentioned in memorymanager.h and the related C file. I am not a memory algorithm expert; there may be a much more efficient way of doing things. At least a review of the segment sizes I have chosen will be required.
 - Menu systems need to be built, one for game select (maybe BASIC) and another for the internal game menus
-- Priority screens and sprite to background priority
+- <s>Priority screens and sprite to background priority</s>
 
 This project requires extensive use of Banked RAM, for both code and data as the Meka source code is quite large.
 
