@@ -23,8 +23,8 @@ typedef enum
 } PaletteGetResult;
 
 #pragma wrapped-call (push, trampoline, PALETTE_MANAGER_BANK)
-byte bEInitPaletteManager();
-byte bEGetPalette(int id, PaletteGetResult* result);
+byte bFInitPaletteManager();
+byte bFGetPalette(int id, PaletteGetResult* result);
 #pragma wrapped-call (pop)
 
 #endif

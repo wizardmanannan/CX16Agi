@@ -281,7 +281,7 @@ void b6Initialise()
 
     b6InitFloatDivision();
     b6TellMeTheAddressPlease();
-    bEInitPaletteManager();
+    bFInitPaletteManager();
 }
 
 

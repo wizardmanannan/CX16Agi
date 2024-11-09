@@ -417,7 +417,7 @@ byte b3SetTextColor(byte foreground, byte background)
     PaletteGetResult palleteGetResult;
 	int textPalette;
 
-	paletteSlot = bEGetPalette(BASE_TEXT_ID + textId, &palleteGetResult);
+	paletteSlot = bFGetPalette(BASE_TEXT_ID + textId, &palleteGetResult);
 
 	#ifdef VERBOSE_SET_PALETTE
 	printf("fore of %d and back of %d\n", foreground, background);

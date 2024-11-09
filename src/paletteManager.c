@@ -1,20 +1,20 @@
 #include "paletteManager.h"
 
-#pragma bss-name (push, "BANKRAM0E")
+#pragma bss-name (push, "BANKRAM0F")
 int allocatedPaletteOwners[NO_MANAGED_PALETTES];
 byte palettesAllocated;
 #pragma bss-name (pop)
 
 //#define VERBOSE_PALETTE_MANAGER
 
-#pragma code-name (push, "BANKRAM0E")
-byte bEInitPaletteManager()
+#pragma code-name (push, "BANKRAM0F")
+byte bFInitPaletteManager()
 {
 	memset(allocatedPaletteOwners, 0, NO_MANAGED_PALETTES);
 	palettesAllocated = 0;
 }
 
-byte bEGetPalette(int id, PaletteGetResult* result)
+byte bFGetPalette(int id, PaletteGetResult* result)
 {
 	byte i;
 	byte allocatedPalette;
