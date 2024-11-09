@@ -11,14 +11,15 @@ _loopHeaderBuffer: .res LOOP_HEADER_BUFFER_SIZE
 
 ;Constants
 NO_MARGIN = 4
-;void b9CelToVera(Cel* localCel, byte celBank, long veraAddress, byte drawingAreaWidth, byte x, byte y, byte pNum)
+;void b9CelToVera(Cel* localCel, byte celBank, long veraAddress, byte bCol, byte drawingAreaWidth, byte x, byte y, byte pNum)
 _b9CelToVera:
 sta P_NUM
 jsr popax
 sta Y_VAL
 stx X_VAL
-jsr popa
+jsr popax
 sta BYTES_PER_ROW
+stx BCOL
 jsr popax
 sta VERA_ADDRESS
 stx VERA_ADDRESS + 1

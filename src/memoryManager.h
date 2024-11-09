@@ -141,7 +141,7 @@
 #define IRQ_BANK 6
 #define GRAPHICS_BANK 6
 #define FLOAT_BANK 0x1
-#define PALETTE_MANAGER_BANK 0xE
+#define PALETTE_MANAGER_BANK 0xF
 #define OBJECT_BANK 0xF
 
 //Golden RAM
