@@ -6,7 +6,7 @@
     .include "global.s"
     .include "graphicsAsm.s"
     .include "helpersAsm.s"
-    .include "viewAsm.s"
+    .include "splitView.s"
     .include "spriteMemoryManagerAsm.s"
     .include "wordsAsm.s"
     .include "debug.s"

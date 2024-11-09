@@ -1,4 +1,3 @@
-.segment "BANKRAM08"
 .ifndef  LINE_INC
 
 LINE_INC = 1
@@ -7,12 +6,17 @@ LINE_INC = 1
 
 .importzp sreg
 
+.segment "CODE"
+lineTablePriorityLow: .res PICTURE_HEIGHT ;These need to be read from different banks
+lineTablePriorityHigh: .res PICTURE_HEIGHT
+
+lineTablePriorityLowEnd: .res PICTURE_HEIGHT ;These need to be read from different banks
+lineTablePriorityHighEnd: .res PICTURE_HEIGHT
+
+
+.segment "BANKRAM08"
 b8LineTableVisualLow: .res PICTURE_HEIGHT
 b8LineTableVisualHigh: .res PICTURE_HEIGHT
-
-b8LineTablePriorityLow: .res PICTURE_HEIGHT
-b8LineTablePriorityHigh: .res PICTURE_HEIGHT
-
 
 b8ColorTable:
     .byte $00, $11, $22, $33, $44, $55, $66, $77, $88, $99, $AA, $BB, $CC, $DD, $EE, $FF
@@ -70,14 +74,14 @@ ldx #>STARTING_BYTE
 jsr b8SetupLineTable
 
 ;Setup Priority
-lda #< b8LineTablePriorityLow
+lda #< lineTablePriorityLow
 sta TABLE_LOW
-lda #> b8LineTablePriorityLow
+lda #> lineTablePriorityLow
 sta TABLE_LOW + 1
 
-lda #< b8LineTablePriorityHigh
+lda #< lineTablePriorityHigh
 sta TABLE_HIGH
-lda #> b8LineTablePriorityHigh
+lda #> lineTablePriorityHigh
 sta TABLE_HIGH + 1
 
 lda #LINE_LENGTH / 2
@@ -87,6 +91,33 @@ lda #<PRIORITY_START
 ldx #>PRIORITY_START
 jsr b8SetupLineTable
 
+
+;Setup Priority End
+lda #< lineTablePriorityLowEnd
+sta TABLE_LOW
+lda #> lineTablePriorityLowEnd
+sta TABLE_LOW + 1
+
+lda #< lineTablePriorityHighEnd
+sta TABLE_HIGH
+lda #> lineTablePriorityHighEnd
+sta TABLE_HIGH + 1
+
+lda #LINE_LENGTH / 2
+sta LINE_LENGTH_ZP
+
+sec
+ldx #$1
+lda lineTablePriorityLow,x
+sbc #$1
+pha
+lda lineTablePriorityHigh,x
+sbc #$0
+
+tax ;First High Byte
+pla ;First Low Byte
+
+jsr b8SetupLineTable
 rts
 .endproc
 
@@ -172,9 +203,9 @@ stz VERA_ctrl
     ; make use of the lookup table
     ldx ypos
     clc
-    adc b8LineTablePriorityLow,x  
+    adc lineTablePriorityLow,x  
     sta VERA_addr_low
-    lda b8LineTablePriorityHigh,x
+    lda lineTablePriorityHigh,x
     adc #$00            ; keep result in A
     ; Store the result in the VRAM address register
     sta VERA_addr_high
@@ -195,6 +226,7 @@ stz VERA_ctrl
     .endif
 .endmacro
 
+;Y: Y_VAL
 .macro CALC_VRAM_ADDR_VISUAL xpos, vera_ctrl_value
     
     VERA_CTRL_SET vera_ctrl_value
@@ -209,6 +241,7 @@ stz VERA_ctrl
     stz VERA_addr_bank ; clear the upper byte of the VRAM address and any auto increment
 .endmacro ; calc_vram_addr_160
 
+;Y: Y_VAL
 .macro CALC_VRAM_ADDR_PRIORITY xpos, vera_ctrl_value    
     
     VERA_CTRL_SET vera_ctrl_value
@@ -218,9 +251,9 @@ stz VERA_ctrl
     lsr
 
     clc
-    adc b8LineTablePriorityLow,y             ; add low byte of (y << 5) + (y << 7)
+    adc lineTablePriorityLow,y             ; add low byte of (y << 5) + (y << 7)
     sta VERA_addr_low         ; store low byte result (because 160<0xff)
-    lda b8LineTablePriorityHigh,y 
+    lda lineTablePriorityHigh,y 
     adc #$00                   ; add carry
     sta VERA_addr_high
     stz VERA_addr_bank ; clear the upper byte of the VRAM address and any auto increment

@@ -79,7 +79,7 @@ typedef struct {
 #define FIXLOOP       0x2000
 
 #define MAX_SPRITES_SLOTS_PER_VIEW_TAB 6
-typedef struct {
+typedef struct ViewTable {
 	byte stepTime;
 	byte stepTimeCount;
 	word xPos;
@@ -107,6 +107,7 @@ typedef struct {
 	byte param3;
 	byte param4;
 	boolean repositioned;
+	boolean wasMoving; //Required as we need to blit a moving object one more time after it stops moving to prevent screen glitches
 } ViewTable;
 
 #define SPRITE_SLOTS (VIEW_TABLE_SIZE)

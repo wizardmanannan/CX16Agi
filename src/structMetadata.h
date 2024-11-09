@@ -17,5 +17,10 @@ byte offsetOfCelHeight = offsetof(struct Cel, height);
 byte offsetOfSplitCelPointers = offsetof(struct Cel, splitCelPointers);
 byte offsetOfSplitCelBank = offsetof(struct Cel, splitCelBank);
 byte offsetOfSplitSegments = offsetof(struct Cel, splitSegments);
+byte offsetOfFlipped = offsetof(struct Cel, flipped);
 
+//ViewTab
+byte offsetOfXPos = offsetof(struct ViewTable, xPos);
+byte offsetOfYPos = offsetof(struct ViewTable, yPos);
+byte offsetOfPriority = offsetof(struct ViewTable, priority);
 #endif

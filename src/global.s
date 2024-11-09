@@ -44,7 +44,7 @@ ZP_TMP_13 = $C1
 ZP_TMP_14 = $C3
 ZP_TMP_16 = $C5
 ZP_TMP_17 = $C7
-ZP_TMP_18 = $C9
+ZP_TMP_18 = $C9;TODO: Where is CA - DA? Why aren't we using them?
 ZP_TMP_19 = $DB
 ZP_TMP_20 = $DD
 ZP_TMP_21 = $DF
@@ -96,6 +96,7 @@ NO_FLOOD_BANKS = $0A
 LAST_FLOOD_BANK = FIRST_FLOOD_BANK + NO_FLOOD_BANKS - 1
 SPRITE_UPDATES_BANK = $0E
 SPLIT_BUFFER_BANK = $0C
+VIEW_TAB_BANK = $09
 
 DIVISION_METADATA_BANK = $31
 
@@ -714,5 +715,12 @@ ldy #2
 jsr _printfSafe
 
 .endmacro
+
+;OpCode Values (For self modifying code)
+LDX_ABS = $AE
+SEC_IMP = $38
+SBC_ZP = $E5
+SBC_IMM = $E9
+BCS_IMP = $B0
 
 .endif

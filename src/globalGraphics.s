@@ -17,7 +17,9 @@ DEFAULT_BACKGROUND_COLOR = $FF
 
 PRIORITY_START = ((BITMAP_WIDTH * BITMAP_HEIGHT) / 2)
 PRIORITY_SIZE =  ((PICTURE_WIDTH * PICTURE_HEIGHT) / 2)
+PRIORITY_END = PRIORITY_START + PRIORITY_SIZE - 1;
 PRIORITY_DEF = $44
+PRIORITY_WIDTH = (PICTURE_WIDTH / 2)
 
 ;Tile Layer
 
@@ -116,6 +118,19 @@ LINE_LENGTH = 160
 .endmacro
 
 .macro SET_VERA_ADDRESS address, stride, highbyte, ctrl
+.ifblank ctrl
+stz VERA_ctrl
+.endif
+.ifnblank ctrl
+lda VERA_ctrl
+and #$FE
+sta VERA_ctrl
+lda ctrl
+and #$1
+ora VERA_ctrl
+sta VERA_ctrl
+.endif
+
 .ifnblank stride
 lda stride << 4
 .endif
@@ -129,16 +144,6 @@ lda highbyte
 and #$1 ; We only care about the first bit
 ora VERA_addr_bank
 sta VERA_addr_bank
-.endif
-
-.ifblank ctrl
-stz VERA_ctrl
-.endif
-.ifnblank ctrl
-lda ctrl
-and #$1
-ora VERA_ctrl
-sta VERA_ctrl
 .endif
 
 lda address + 1
@@ -180,7 +185,6 @@ sta VERA_addr_low
 .local @loop
 .local @loopCheck
 SET_VERA_ADDRESS_ABSOLUTE VERA_ADDRESS, #$0, #$1
-
 lda COLOUR
 SET_COLOR_LEFT COLOUR
 
