@@ -401,7 +401,7 @@ byte bECreateSpritePalette(byte transparentColor)
 #ifdef VERBOSE_GET_PALETTE
 	printf("cs 1. trans color is %d\n", transparentColor);
 #endif
-	paletteSlot = bEGetPalette(BASE_SPRITE_ID + transparentColor, &palleteGetResult);
+	paletteSlot = bFGetPalette(BASE_SPRITE_ID + transparentColor, &palleteGetResult);
 
 #ifdef VERBOSE_GET_PALETTE
 	printf("cs 2. The palette slot is %d and the result is %d\n", paletteSlot, palleteGetResult);
@@ -1130,7 +1130,7 @@ void b9ResetSpriteMemory(boolean clearBuffer)
 void b9Reset()
 {
 	b9ResetSpriteMemory(TRUE);
-	bEInitPaletteManager();
+	bFInitPaletteManager();
 	b9ResetViewtabs(FALSE);
 }
 
