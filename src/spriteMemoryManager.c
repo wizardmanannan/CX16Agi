@@ -27,6 +27,11 @@ void bEResetSpriteMemoryManager()
 	*((byte*)ZP_PTR_WALL_64) = SPRITE_ALLOC_TABLE_SIZE - 4; //64 allocator starts four from the end
 }
 
+void bEDeleteFromAllocationTable(VeraSpriteAddress addressToDelete)
+{
+	bESpriteAllocTable[((((unsigned long)addressToDelete) << 8) - SPRITES_DATA_START) / SEGMENT_SMALL] = 0;
+}
+
 #ifdef TEST_ALLOCATE_SPRITE_MEMORY
 
 extern unsigned long bEAllocateSpriteMemory32();

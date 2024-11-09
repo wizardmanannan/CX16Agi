@@ -16,10 +16,6 @@ _bESpriteAllocTable: .res SPRITE_ALLOC_TABLE_SIZE, $0
 
 _bESpriteAddressTableMiddle: .res SPRITE_ALLOC_TABLE_SIZE, $0 ; Low will always be zero, hence no need for a table
 
-_bESpriteAddressTableReverse: .res 247
-_bESpriteAddressTableMiddleReverse: .res 12
-
-
 ; Macro: ALLOCATE_SPRITE_MEMORY_32
 ; Purpose: Allocate 32-byte segments for sprite memory in a CommanderX16 environment.
 ; This macro searches through a sprite allocation table to find an empty slot.

@@ -4,6 +4,7 @@
 #include "general.h"
 #include "memoryManager.h"
 #include "helpers.h"
+#include "graphics.h"
 
 #define ALLOCATE_BLOCK_SIZE_32 1
 #define ALLOCATOR_BLOCK_SIZE_64 2
@@ -12,6 +13,7 @@
 #pragma wrapped-call (push, trampoline, SPRITE_MEMORY_MANAGER_BANK)
 void bEResetSpriteMemoryManager();
 void bEInitSpriteMemoryManager();
+void bEDeleteFromAllocationTable(VeraSpriteAddress addressToDelete);
 
 typedef enum {
 	SIZE_8 = 1,
