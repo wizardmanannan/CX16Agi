@@ -1174,19 +1174,9 @@ boolean b9ClearInActiveLoops()
 							asm("stp");
 							//}
 
-							for (k = 0; k < noToErase; k++, loopVeraAddressPtr++)
-							{
-								bEDeleteFromAllocationTable(loopVeraAddr);
+							bEDeleteFromAllocationTable(loopVeraAddr, noToErase);
 
-								memsetBanked(loopVeraAddressPtr, 0, sizeof(VeraSpriteAddress), localMetadata.viewTableMetadataBank);
-
-								if (k != noToErase - 1)
-								{
-									memCpyBanked((byte*)&loopVeraAddr, (byte*)loopVeraAddressPtr, localMetadata.viewTableMetadataBank, sizeof(VeraSpriteAddress));
-								}
-
-
-							}
+							memsetBanked(loopVeraAddressPtr, 0, sizeof(VeraSpriteAddress) * noToErase, localMetadata.viewTableMetadataBank);
 
 							//if (localViewTab.currentView == 60 && localViewTab.currentLoop == 2)
 							//{
