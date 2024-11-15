@@ -20,7 +20,7 @@ void bEResetSpriteMemoryManager()
 	memset(bESpriteAllocTable, 0, SPRITE_ALLOC_TABLE_SIZE);
 
 
-	 *((byte*)ZP_PTR_SEG_32) = 0;
+	*((byte*)ZP_PTR_SEG_32) = 0;
 	*((byte*)ZP_PTR_SEG_64) = SPRITE_ALLOC_TABLE_SIZE - 4; //64 allocator starts four from the end
 
 	*((byte*)ZP_PTR_WALL_32) = 0;
@@ -79,7 +79,7 @@ void bETestSpriteAllocateSpriteMemory32()
 		expected += SEGMENT_SMALL;
 	}
 
-	actual = bEAllocateSpriteMemory32(); 
+	actual = bEAllocateSpriteMemory32();
 
 	bETestOverlap(1, TRUE);
 
@@ -100,7 +100,7 @@ void bETestSpriteAllocateSpriteMemory64()
 	printf("2 test allocate sprite nemory 64\n");
 
 	//1. Should allocate every block in sequence
-	for (i = 0; i < (byte) SPRITE_ALLOC_TABLE_SIZE - 1; i += 2) //First position is for 32 bit allocator
+	for (i = 0; i < (byte)SPRITE_ALLOC_TABLE_SIZE - 1; i += 2) //First position is for 32 bit allocator
 	{
 		actual = bEAllocateSpriteMemory64();
 
@@ -144,7 +144,7 @@ void bETestSpriteAllocate64NotGoOver32WallWhenEven()
 
 	//64 does not go over 32's wall
 
-	printf("3 64 does not go over 32's wall. We will go %lx times. Divided by 2 is %lx\n", SPRITE_ALLOC_TABLE_SIZE - 2, (SPRITE_ALLOC_TABLE_SIZE - 2) /2);
+	printf("3 64 does not go over 32's wall. We will go %lx times. Divided by 2 is %lx\n", SPRITE_ALLOC_TABLE_SIZE - 2, (SPRITE_ALLOC_TABLE_SIZE - 2) / 2);
 
 	bEAllocateSpriteMemory32();
 	bEAllocateSpriteMemory32();
@@ -271,18 +271,18 @@ void bETestAllocateSpriteMemoryBulk32()
 {
 	const byte TEST_NUM = 5;
 	byte i, addressVal, spriteDataHighMin = SPRITES_DATA_START >> 16, spriteDataHighMax = SPRITES_DATA_END >> 16, expectedMiddleByte = SPRITES_DATA_START >> 8, arrayCounter;
-	
+
 	printf("6 Bulk 32 tests\n");
-	
+
 	bEAllocateSpriteMemoryBulk(SIZE_32, TEST_NUM);
 
-	for (i = 0, arrayCounter = 0; i < TEST_NUM; i++, arrayCounter+= VERA_ADDRESS_SIZE)
+	for (i = 0, arrayCounter = 0; i < TEST_NUM; i++, arrayCounter += VERA_ADDRESS_SIZE)
 	{
 		addressVal = bEBulkAllocatedAddresses[arrayCounter];
 
-		
+
 		printf("low %d\n", addressVal);
-		
+
 		if (addressVal)
 		{
 			printf("Fail on 6 Low. i %d Low Byte %p is not equal to expected %p\n", i, addressVal, 0);
@@ -296,7 +296,7 @@ void bETestAllocateSpriteMemoryBulk32()
 
 		printf("middle %d\n", addressVal);
 
-		expectedMiddleByte+= 2;
+		expectedMiddleByte += 2;
 
 		addressVal = bEBulkAllocatedAddresses[arrayCounter];
 
@@ -379,7 +379,7 @@ void bEInitSpriteMemoryManager()
 {
 	byte i;
 	unsigned long address;
-	
+
 	byte highByte = 0;
 	byte middleByte;
 
@@ -405,7 +405,7 @@ void bEInitSpriteMemoryManager()
 			highByte = (byte)(address >> 16);
 
 #ifdef VERBOSE_MEMORY_INIT
-			printf("The highByte is %lx >> 16 = %p\n", address, (byte) highByte);
+			printf("The highByte is %lx >> 16 = %p\n", address, (byte)highByte);
 #endif
 
 			if (highByte)
@@ -414,7 +414,7 @@ void bEInitSpriteMemoryManager()
 			}
 		}
 
-		middleByte = (byte) ((address >> 8) & 0xFF);
+		middleByte = (byte)((address >> 8) & 0xFF);
 		bESpriteAddressTableMiddle[i] = middleByte;
 
 #ifdef VERBOSE_MEMORY_INIT

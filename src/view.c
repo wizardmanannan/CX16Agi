@@ -217,8 +217,17 @@ extern void b9CelToVera(Cel* localCel, byte celBank, long veraAddress, byte bCol
 
 #pragma code-name (push, "BANKRAM0E")
 #pragma wrapped-call (push, trampoline, SPRITE_METADATA_BANK)
-
 extern void bESplitCel(Cel* cel);
+
+void getViewTableMetadata(ViewTableMetadata* localViewTableMetadata, byte viewTableMetadataNo)
+{
+	*localViewTableMetadata = viewTableMetadata[viewTableMetadataNo];
+}
+
+void setViewTableMetadata(ViewTableMetadata* localViewTableMetadata, byte viewTableMetadataNo)
+{
+	viewTableMetadata[viewTableMetadataNo] = *localViewTableMetadata;
+}
 
 void bETerminateSpriteBuffer()
 {
@@ -704,7 +713,7 @@ boolean agiBlit(ViewTable* localViewTab, byte entryNum, boolean disableInterupts
 		{
 			if (!tempCel.splitCelPointers && (tempCel.veraSlotsWidth > 1 && tempCel.veraSlotsWidth > 1))
 			{
-			    bESplitCel(&tempCel);
+				bESplitCel(&tempCel);
 				setLoadedCel(&localLoop, &tempCel, i);
 			}
 
@@ -774,7 +783,7 @@ boolean agiBlit(ViewTable* localViewTab, byte entryNum, boolean disableInterupts
 
 	asm("stz %w", SPLIT_OFFSET);
 
-getLoadedCel(&localLoop, &localCel, localViewTab->currentCel); //If the cel has being split our data would be stale
+	getLoadedCel(&localLoop, &localCel, localViewTab->currentCel); //If the cel has being split our data would be stale
 
 splitLoop: RAM_BANK = localMetadata.viewTableMetadataBank;
 
@@ -907,7 +916,7 @@ yPos: _assmByte = (byte)localViewTab->yPos;
 
 	asm("ldy #$4");
 	asm("lda %v", _assmByte);
-	
+
 	asm("sec"); //Take away the height, as position in agi is the bottom left corner
 	asm("sbc %v", _assmByte2);
 	asm("pha");
@@ -960,7 +969,7 @@ yPos: _assmByte = (byte)localViewTab->yPos;
 	asm("lda %v + 1", _assmUInt);
 	asm("sta (%w),y", ZP_SPRITE_STORE_PTR);
 
-	_assmUInt = (unsigned int) &localLoop.cels[localViewTab->currentCel];
+	_assmUInt = (unsigned int)&localLoop.cels[localViewTab->currentCel];
 
 	asm("ldy #$9");
 	asm("lda %v", _assmUInt);
@@ -998,7 +1007,7 @@ yPos: _assmByte = (byte)localViewTab->yPos;
 	asm("lda %v", _assmByte);
 	asm("sta (%w),y", ZP_SPRITE_STORE_PTR);
 
-	_assmUInt = (unsigned int) localCel.splitCelPointers;
+	_assmUInt = (unsigned int)localCel.splitCelPointers;
 	asm("ldy #$11");
 	asm("lda %v", _assmUInt);
 	asm("sta (%w),y", ZP_SPRITE_STORE_PTR);
@@ -1027,7 +1036,7 @@ yPos: _assmByte = (byte)localViewTab->yPos;
 	asm("sta (%w),y", ZP_SPRITE_STORE_PTR);
 
 	_assmByte = ((localViewTab->flags & MOTION > 0) && localViewTab->direction > 0) || localViewTab->wasMoving; //Non moving sprites can have motion, but won't have direction
-	
+
 	asm("ldy #$17");
 	asm("lda %v", _assmByte);
 	asm("sta (%w),y", ZP_SPRITE_STORE_PTR);
@@ -1115,6 +1124,83 @@ void b9ResetViewtabs(boolean fullReset)
 }
 
 #pragma wrapped-call (push, trampoline, VIEW_CODE_BANK_1)
+boolean b9ClearInActiveLoops()
+{
+	ViewTable localViewTab;
+	ViewTableMetadata localMetadata;
+	View localView;
+	Loop localLoop;
+	VeraSpriteAddress* loopVeraAddressPtr;
+	VeraSpriteAddress loopVeraAddr;
+	byte i, j, k;
+	word objFlags;
+	byte noToErase;
+
+	for (i = 0; i < VIEW_TABLE_SIZE; i++)
+	{
+		getViewTab(&localViewTab, i);
+		getLoadedView(&localView, localViewTab.currentView);
+		getLoadedLoop(&localView, &localLoop, localViewTab.currentLoop);
+
+
+		if (viewTabNoToMetaData[i] != VIEWNO_TO_METADATA_NO_SET)
+		{
+			getViewTableMetadata(&localMetadata, i);
+
+			for (j = 0; j < localViewTab.numberOfLoops; j++)
+			{
+				memCpyBanked((byte*)&loopVeraAddressPtr, (byte*)localMetadata.loopsVeraAddressesPointers + (sizeof(VeraSpriteAddress*) * j), localMetadata.viewTableMetadataBank, sizeof(VeraSpriteAddress*));
+
+				if (loopVeraAddressPtr)
+				{
+					memCpyBanked((byte*)&loopVeraAddr, (byte*)loopVeraAddressPtr, localMetadata.viewTableMetadataBank, sizeof(VeraSpriteAddress));
+
+					printf("copying %p to %p on bank %p\n", loopVeraAddressPtr, &loopVeraAddr, localMetadata.viewTableMetadataBank);
+
+					objFlags = localViewTab.flags;
+					if (loopVeraAddr && (!((objFlags & ANIMATED) && (objFlags & DRAWN)) || localViewTab.currentLoop != j))
+					{
+						noToErase = localLoop.numberOfCels * localView.maxVeraSlots;
+
+						printf("no to erase %d * %d\n", localLoop.numberOfCels, localView.maxVeraSlots);
+
+						//printf("i is %d, j is %d, k is %p and lva is %p on bank %p for %d %d. local lva %p. local md address %p vera addresses %p", i, j, &k, loopVeraAddr, localView.loopsBank, localViewTab.currentView, localViewTab.currentLoop, &loopVeraAddr, &localMetadata, localMetadata.veraAddresses);
+						printf("i is %d, j is %d, k is %d, vera address pointers %p metadata bank %p for view %d loop %d on lva %p no to erase %d\n", i, j, k, localMetadata.loopsVeraAddressesPointers, localMetadata.viewTableMetadataBank, localViewTab.currentView, localViewTab.currentLoop, loopVeraAddr, noToErase);
+
+						//if (localViewTab.currentView == 60 && localViewTab.currentLoop == 2)
+						//{
+							asm("stp");
+						//}
+
+						for (k = 0; k < noToErase; k++, loopVeraAddressPtr++)
+						{
+							bEDeleteFromAllocationTable(loopVeraAddr);
+
+							memsetBanked(loopVeraAddressPtr, 0, sizeof(VeraSpriteAddress), localMetadata.viewTableMetadataBank);
+
+							if (k != noToErase - 1)
+							{
+								memCpyBanked((byte*)&loopVeraAddr, (byte*)loopVeraAddressPtr, localMetadata.viewTableMetadataBank, sizeof(VeraSpriteAddress));
+							}
+
+
+						}
+
+						//if (localViewTab.currentView == 60 && localViewTab.currentLoop == 2)
+						//{
+							asm("stp");
+						//}
+
+						//memsetBanked(localMetadata.loopsVeraAddressesPointers, 0, sizeof(VeraSpriteAddress) * noToErase, localView.loopsBank);
+
+					}
+				}
+			}
+		}
+	}
+}
+
+
 void b9ResetSpriteMemory(boolean clearBuffer)
 {
 	if (clearBuffer)
@@ -1265,7 +1351,7 @@ void setViewData(byte viewNum, AGIFile* tempAGI, View* localView)
 	localView->codeBlock = tempAGI->code;
 	localView->codeBlockBank = tempAGI->codeBank;
 	setLoadedView(&localView, viewNum);
-}
+	}
 
 #define POSITION_OF_NO_CELS 0
 #define POSITION_OF_CELS_OFFSET 1
@@ -1306,12 +1392,12 @@ void setLoopData(AGIFile* tempAGI, View* localView, Loop* localLoop, byte* loopH
 		localLoop->numberOfCels = numberOfCels;
 		localLoop->celsBank = celsBank;
 		setLoadedLoop(localView, localLoop, loopNum);
-	}
+		}
 	else
 	{
 		printf("Fail %d is not loaded\n", viewNum);
 	}
-}
+	}
 
 
 byte b9VeraSlotsForWidthOrHeight(byte widthOrHeight)
@@ -1488,7 +1574,7 @@ void b9LoadViewFile(byte viewNum)
 				}
 
 				setLoadedCel(&localLoop, &localCel, c);
-			}
+				}
 
 			if (localLoop.numberOfCels > localView.maxCels)
 			{
@@ -1501,10 +1587,10 @@ void b9LoadViewFile(byte viewNum)
 
 
 			setLoadedLoop(&localView, &localLoop, l);
-		}
+			}
 		setLoadedView(&localView, viewNum);
-	}
-}
+			}
+		}
 
 /***************************************************************************
 ** discardView
@@ -1560,8 +1646,8 @@ void b9DiscardView(byte viewNum)
 		localView.codeBlock = NULL;
 		localView.codeBlockBank = 0;
 		setLoadedView(&localView, viewNum);
+		}
 	}
-}
 
 void b9SetCel(ViewTable* localViewtab, byte celNum)
 {
@@ -1630,7 +1716,7 @@ void b9AddToPic(int vNum, int lNum, int cNum, int x, int y, int pNum, int bCol)
 	calcYCoord = (y - localCel.height) + 1;
 
 	//printf("x and y are %p, %p, %d, %d. the height is %d %p\n", x, calcYCoord, x, calcYCoord, localCel.height, localCel.height);
-	
+
 	b9CelToVera(&localCel, localLoop.celsBank, b8GetVeraPictureAddress(x, calcYCoord), bCol, BYTES_PER_ROW, x, calcYCoord, pNum);
 
 	//TODO: Finish implementing the priority and control line stuff
@@ -1886,7 +1972,7 @@ void bAAdjustPosition(ViewTable* viewTab, int fx, int fy, byte entryNum)
 				printf("in loop x1 is %lu, (%lu != %lu) && (%d < (%d + 1)) result: %d\n", x1, x, x2, count, stepVal, (x != x2) && (count < (stepVal + 1)));
 				printf("x is %lu\n", x);
 				printf("In loop dx is %d and dy is %d\n", dx, dy);
-			}
+		}
 
 #endif // VERBOSE_MOVE
 		}
@@ -1895,7 +1981,7 @@ void bAAdjustPosition(ViewTable* viewTab, int fx, int fy, byte entryNum)
 		{
 			printf("out loop x1 is %lu, (%lu != %lu) && (%d < (%d + 1)) result: %d\n", x1, x, x2, count, stepVal, (x != x2) && (count < (stepVal + 1)));
 			printf("x is %lu and y is %lu\n", x, y);
-		}
+}
 
 #endif // VERBOSE_MOVE
 
@@ -1910,7 +1996,7 @@ void bAAdjustPosition(ViewTable* viewTab, int fx, int fy, byte entryNum)
 			dx = b1CeilFix32(x);
 			dy = b1CeilFix32(y);
 		}
-	}
+}
 	else {
 		x = x1;
 
@@ -2008,7 +2094,7 @@ void bAAdjustPosition(ViewTable* viewTab, int fx, int fy, byte entryNum)
 				printf("in loop y1 is %lu, (%lu != %lu) && (%d < (%d + 1)) result: %d\n", y1, y, y2, count, stepVal, (y != y2) && (count < (stepVal + 1)));
 				printf("x is %lu\n", x);
 				printf("In loop dx is %d and dy is %d\n", dx, dy);
-			}
+		}
 
 #endif // VERBOSE_MOVE
 		}
@@ -2017,7 +2103,7 @@ void bAAdjustPosition(ViewTable* viewTab, int fx, int fy, byte entryNum)
 		{
 			printf("out loop y1 is %lu, (%lu != %lu) && (%d < (%d + 1)) result: %d\n", y1, y, y2, count, stepVal, (y != y2) && (count < (stepVal + 1)));
 			printf("x is %lu and y is %lu\n", x, y);
-		}
+	}
 
 #endif // VERBOSE_MOVE
 
@@ -2033,7 +2119,7 @@ void bAAdjustPosition(ViewTable* viewTab, int fx, int fy, byte entryNum)
 			dx = b1CeilFix32(x);
 			dy = b1CeilFix32(y);
 		}
-	}
+}
 
 	viewTab->xPos = dx;
 	viewTab->yPos = dy;
@@ -2162,7 +2248,7 @@ void bANormalAdjust(int entryNum, ViewTable* viewTab, int dx, int dy)
 		endX = startX + viewTab->xsize;
 		for (testX = startX; testX < endX; testX++) {
 			if ((viewTab->flags & ONWATER) &&
-				(b8GetControl(testX,tempY) != 3)) {
+				(b8GetControl(testX, tempY) != 3)) {
 				return;
 			}
 		}
@@ -2252,7 +2338,7 @@ void bBUpdateObj(int entryNum)
 		printf("Called from update obj ");
 #endif // DEBUG
 
-	}
+}
 
 	setViewTab(&localViewtab, entryNum);
 	show_mouse(NULL);
@@ -2405,7 +2491,7 @@ void bBUpdateObj2(int entryNum)
 #ifdef VERBOSE_DEBUG_BLIT
 		printf("Called from update obj 2");
 #endif // DEBUG
-	}
+}
 
 	setViewTab(&localViewtab, entryNum);
 	b6ShowPicture();
@@ -2414,7 +2500,6 @@ void bBUpdateObj2(int entryNum)
 #pragma bss-name (push, "BANKRAM0B")
 boolean prioritiesSeen[NO_PRIORITIES - 1];
 #pragma bss-name (pop)
-
 void bBUpdateObjects()
 {
 	int entryNum, celNum, oldX, oldY;
@@ -2498,20 +2583,20 @@ void bBUpdateObjects()
 						}
 						setViewTab(&localViewtab, entryNum);
 					}
-				} /* CYCLING */
-			} /* UPDATE */
+			} /* CYCLING */
+		} /* UPDATE */
 
-			/* Determine priority for unfixed priorities */
+		/* Determine priority for unfixed priorities */
 			if (!(objFlags & FIXEDPRIORITY)) {
 				if (localViewtab.yPos < 60)
 					localViewtab.priority = 4;
 				else
 					localViewtab.priority = (localViewtab.yPos / 12 + 1);
 			}
-		}
+	}
 
 		setViewTab(&localViewtab, entryNum);
-	}
+}
 
 	/* Draw all cels */
 
@@ -2542,8 +2627,11 @@ void bBUpdateObjects()
 							{
 								i = MAX_SPRITE_PRIORITY;
 								blitFailed = TRUE;
-								memset(prioritiesSeen, FALSE, NO_PRIORITIES - 1);
-								b9ResetSpriteMemory(FALSE);
+								setViewTab(&localViewtab, entryNum);
+
+								printf("entry num %d\n", entryNum);
+								b9ClearInActiveLoops();
+								getViewTab(&localViewtab, entryNum);
 								break;
 							}
 						}

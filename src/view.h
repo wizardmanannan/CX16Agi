@@ -85,7 +85,7 @@ typedef struct ViewTable {
 	word xPos;
 	word yPos;
 	byte currentView;
-	View* viewData;             /* This pointer points to the loaded view */
+	View* viewData; //Don't think this is used
 	byte currentLoop;
 	byte numberOfLoops;
 	Loop* loopData;             /* ditto */
