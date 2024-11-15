@@ -1147,52 +1147,55 @@ boolean b9ClearInActiveLoops()
 		{
 			getViewTableMetadata(&localMetadata, i);
 
-			for (j = 0; j < localViewTab.numberOfLoops; j++)
+			if (localMetadata.loopsVeraAddressesPointers)
 			{
-				memCpyBanked((byte*)&loopVeraAddressPtr, (byte*)localMetadata.loopsVeraAddressesPointers + (sizeof(VeraSpriteAddress*) * j), localMetadata.viewTableMetadataBank, sizeof(VeraSpriteAddress*));
-
-				if (loopVeraAddressPtr)
+				for (j = 0; j < localViewTab.numberOfLoops; j++)
 				{
-					memCpyBanked((byte*)&loopVeraAddr, (byte*)loopVeraAddressPtr, localMetadata.viewTableMetadataBank, sizeof(VeraSpriteAddress));
+					memCpyBanked((byte*)&loopVeraAddressPtr, (byte*)localMetadata.loopsVeraAddressesPointers + (sizeof(VeraSpriteAddress*) * j), localMetadata.viewTableMetadataBank, sizeof(VeraSpriteAddress*));
 
-					printf("copying %p to %p on bank %p\n", loopVeraAddressPtr, &loopVeraAddr, localMetadata.viewTableMetadataBank);
-
-					objFlags = localViewTab.flags;
-					if (loopVeraAddr && (!((objFlags & ANIMATED) && (objFlags & DRAWN)) || localViewTab.currentLoop != j))
+					if (loopVeraAddressPtr)
 					{
-						noToErase = localLoop.numberOfCels * localView.maxVeraSlots;
+						memCpyBanked((byte*)&loopVeraAddr, (byte*)loopVeraAddressPtr, localMetadata.viewTableMetadataBank, sizeof(VeraSpriteAddress));
 
-						printf("no to erase %d * %d\n", localLoop.numberOfCels, localView.maxVeraSlots);
+						printf("copying %p to %p on bank %p\n", loopVeraAddressPtr, &loopVeraAddr, localMetadata.viewTableMetadataBank);
 
-						//printf("i is %d, j is %d, k is %p and lva is %p on bank %p for %d %d. local lva %p. local md address %p vera addresses %p", i, j, &k, loopVeraAddr, localView.loopsBank, localViewTab.currentView, localViewTab.currentLoop, &loopVeraAddr, &localMetadata, localMetadata.veraAddresses);
-						printf("i is %d, j is %d, k is %d, vera address pointers %p metadata bank %p for view %d loop %d on lva %p no to erase %d\n", i, j, k, localMetadata.loopsVeraAddressesPointers, localMetadata.viewTableMetadataBank, localViewTab.currentView, localViewTab.currentLoop, loopVeraAddr, noToErase);
-
-						//if (localViewTab.currentView == 60 && localViewTab.currentLoop == 2)
-						//{
-							asm("stp");
-						//}
-
-						for (k = 0; k < noToErase; k++, loopVeraAddressPtr++)
+						objFlags = localViewTab.flags;
+						if (loopVeraAddr && (!((objFlags & ANIMATED) && (objFlags & DRAWN)) || localViewTab.currentLoop != j))
 						{
-							bEDeleteFromAllocationTable(loopVeraAddr);
+							noToErase = localLoop.numberOfCels * localView.maxVeraSlots;
 
-							memsetBanked(loopVeraAddressPtr, 0, sizeof(VeraSpriteAddress), localMetadata.viewTableMetadataBank);
+							printf("no to erase %d * %d\n", localLoop.numberOfCels, localView.maxVeraSlots);
 
-							if (k != noToErase - 1)
+							//printf("i is %d, j is %d, k is %p and lva is %p on bank %p for %d %d. local lva %p. local md address %p vera addresses %p", i, j, &k, loopVeraAddr, localView.loopsBank, localViewTab.currentView, localViewTab.currentLoop, &loopVeraAddr, &localMetadata, localMetadata.veraAddresses);
+							printf("i is %d, j is %d, k is %d, vera address pointers %p metadata bank %p for view %d loop %d on lva %p no to erase %d\n", i, j, k, localMetadata.loopsVeraAddressesPointers, localMetadata.viewTableMetadataBank, localViewTab.currentView, localViewTab.currentLoop, loopVeraAddr, noToErase);
+
+							//if (localViewTab.currentView == 60 && localViewTab.currentLoop == 2)
+							//{
+							asm("stp");
+							//}
+
+							for (k = 0; k < noToErase; k++, loopVeraAddressPtr++)
 							{
-								memCpyBanked((byte*)&loopVeraAddr, (byte*)loopVeraAddressPtr, localMetadata.viewTableMetadataBank, sizeof(VeraSpriteAddress));
+								bEDeleteFromAllocationTable(loopVeraAddr);
+
+								memsetBanked(loopVeraAddressPtr, 0, sizeof(VeraSpriteAddress), localMetadata.viewTableMetadataBank);
+
+								if (k != noToErase - 1)
+								{
+									memCpyBanked((byte*)&loopVeraAddr, (byte*)loopVeraAddressPtr, localMetadata.viewTableMetadataBank, sizeof(VeraSpriteAddress));
+								}
+
+
 							}
 
+							//if (localViewTab.currentView == 60 && localViewTab.currentLoop == 2)
+							//{
+							asm("stp");
+							//}
+
+							//memsetBanked(localMetadata.loopsVeraAddressesPointers, 0, sizeof(VeraSpriteAddress) * noToErase, localView.loopsBank);
 
 						}
-
-						//if (localViewTab.currentView == 60 && localViewTab.currentLoop == 2)
-						//{
-							asm("stp");
-						//}
-
-						//memsetBanked(localMetadata.loopsVeraAddressesPointers, 0, sizeof(VeraSpriteAddress) * noToErase, localView.loopsBank);
-
 					}
 				}
 			}
