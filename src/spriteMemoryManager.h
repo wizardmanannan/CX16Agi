@@ -13,7 +13,7 @@
 #pragma wrapped-call (push, trampoline, SPRITE_MEMORY_MANAGER_BANK)
 void bEResetSpriteMemoryManager();
 void bEInitSpriteMemoryManager();
-void bEDeleteFromAllocationTable(VeraSpriteAddress addressToDelete, byte noToDelete);
+void bEDeleteFromAllocationTable(VeraSpriteAddress addressToDelete);
 
 typedef enum {
 	SIZE_8 = 1,
