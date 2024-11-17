@@ -124,6 +124,7 @@ extern void getLoadedView(View* returnedLoadedView, byte loadedViewNumber);
 extern void setLoadedView(View* loadedView, byte loadedViewNumber);
 
 #pragma wrapped-call (push, trampoline, VIEW_CODE_BANK_1)
+void b9ResetSpriteMemory(boolean clearBuffer);
 void b9LoadViewFile(byte viewNum);
 void b9DiscardView(byte viewNum);
 void b9AddViewToTable(ViewTable* localViewtab, byte viewNum, byte entryNum);

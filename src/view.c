@@ -1114,7 +1114,6 @@ void b9ResetViewtabs(boolean fullReset)
 	}
 }
 
-#pragma wrapped-call (push, trampoline, VIEW_CODE_BANK_1)
 void b9ResetSpriteMemory(boolean clearBuffer)
 {
 	if (clearBuffer)
@@ -1125,7 +1124,6 @@ void b9ResetSpriteMemory(boolean clearBuffer)
 	bEResetSpritePointers();
 	bEResetSpriteMemoryManager();
 }
-#pragma wrapped-call (pop)
 
 void b9Reset()
 {
