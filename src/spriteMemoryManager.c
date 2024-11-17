@@ -29,6 +29,7 @@ void bEResetSpriteMemoryManager()
 
 void bEDeleteFromAllocationTable(VeraSpriteAddress addressToDelete)
 {
+	//printf("deleting %p\n", &bESpriteAllocTable[((((unsigned long)addressToDelete) << 8) - SPRITES_DATA_START) / SEGMENT_SMALL]);
 	bESpriteAllocTable[((((unsigned long)addressToDelete) << 8) - SPRITES_DATA_START) / SEGMENT_SMALL] = 0;
 }
 
