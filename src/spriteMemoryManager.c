@@ -2,6 +2,7 @@
 
 #define SEGMENT_SMALL ((32 * 32) / 2)
 #define SPRITE_ALLOC_TABLE_SIZE (((unsigned long) SPRITES_DATA_END - SPRITES_DATA_START) / SEGMENT_SMALL)
+#define SIXTY_FOUR_SEG_SIZE 4
 
 extern byte bESpriteAddressTableMiddle[SPRITE_ALLOC_TABLE_SIZE];
 extern byte bESpriteAllocTable[SPRITE_ALLOC_TABLE_SIZE];
@@ -21,16 +22,35 @@ void bEResetSpriteMemoryManager()
 
 
 	*((byte*)ZP_PTR_SEG_32) = 0;
-	*((byte*)ZP_PTR_SEG_64) = SPRITE_ALLOC_TABLE_SIZE - 4; //64 allocator starts four from the end
+	*((byte*)ZP_PTR_SEG_64) = SPRITE_ALLOC_TABLE_SIZE - SIXTY_FOUR_SEG_SIZE; //64 allocator starts four from the end
 
 	*((byte*)ZP_PTR_WALL_32) = 0;
-	*((byte*)ZP_PTR_WALL_64) = SPRITE_ALLOC_TABLE_SIZE - 4; //64 allocator starts four from the end
+	*((byte*)ZP_PTR_WALL_64) = SPRITE_ALLOC_TABLE_SIZE - SIXTY_FOUR_SEG_SIZE; //64 allocator starts four from the end
 }
 
 void bEDeleteFromAllocationTable(VeraSpriteAddress addressToDelete)
 {
+	byte allocTableVal = ((((unsigned long)addressToDelete) << 8) - SPRITES_DATA_START) / SEGMENT_SMALL;
+	byte* thirtyTwoWallPtr = (byte*)ZP_PTR_WALL_32, thirtyTwoWall;
+	byte* sixtyFourWallPtr = (byte*)ZP_PTR_WALL_64, sixtyFourWall;
+	byte* thirtyTwoSeg = (byte*)ZP_PTR_SEG_32, *sixtyFourSeg = (byte*)ZP_PTR_SEG_64;
+
+	thirtyTwoWall = *thirtyTwoWallPtr;
+	sixtyFourWall = *sixtyFourWallPtr;
+
 	//printf("deleting %p\n", &bESpriteAllocTable[((((unsigned long)addressToDelete) << 8) - SPRITES_DATA_START) / SEGMENT_SMALL]);
-	bESpriteAllocTable[((((unsigned long)addressToDelete) << 8) - SPRITES_DATA_START) / SEGMENT_SMALL] = 0;
+	bESpriteAllocTable[allocTableVal] = 0;
+
+	if (allocTableVal == thirtyTwoWall && allocTableVal)
+	{
+		thirtyTwoWall = *(thirtyTwoWallPtr)--;
+		*thirtyTwoSeg = thirtyTwoWall;
+	}
+	else if (allocTableVal == sixtyFourWall && allocTableVal < SPRITE_ALLOC_TABLE_SIZE - SIXTY_FOUR_SEG_SIZE - 1)
+	{
+		sixtyFourWall = *(sixtyFourWallPtr)+= SIXTY_FOUR_SEG_SIZE;
+		*sixtyFourSeg = sixtyFourWall;
+	}
 }
 
 #ifdef TEST_ALLOCATE_SPRITE_MEMORY
