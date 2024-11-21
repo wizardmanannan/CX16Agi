@@ -70,7 +70,7 @@ namespace Tester {
         ///timeout 3
         ///OSFMount -D -m %2:
         ///cd C:\Commander\ 
-        ///IF  %5==&quot;&quot; ( x16emu.exe -sdcard %~n1%~x1 -prg &quot;agi.cx16&quot; -run -debug d -echo &gt;c:\temp\output.txt -dump V -zeroram ) else  ( x16emu.exe -sdcard %~n1%~x1 -prg &quot;agi.cx16&quot; -run -debug d -echo %5 &gt;c:\temp\output.txt -dump V -zeroram )
+        ///IF  %5==&quot;&quot; ( x16emu.exe -sdcard %~n1%~x1 -prg &quot;agi.cx16&quot; -run -debug d -echo &gt;c:\temp\output.txt -dump V ) else  ( x16emu.exe -sdcard %~n1%~x1 -prg &quot;agi.cx16&quot; -run -debug d -echo %5 &gt;c:\temp\output.txt -dump V )
         ///
         ///pause
         ///cd %4.
