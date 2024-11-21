@@ -119,7 +119,7 @@ void b7HandleDirection(int dirn)
 			memset(b7Directions, 0, 9);
 			viewTab.direction = 0;
 			var[6] = dirnOfEgo = 0;
-			viewTab.wasMoving = TRUE;
+			viewTab.staleCounter = 1;
 		}
 
 		setViewTab(&viewTab, 0);

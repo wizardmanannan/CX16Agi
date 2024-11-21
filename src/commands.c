@@ -1268,7 +1268,7 @@ void b2Stop_motion() // 1, 0x00
 	localViewtab.flags &= ~MOTION;
 	localViewtab.direction = 0;
 	localViewtab.motion = 0;
-	localViewtab.wasMoving = TRUE;
+	localViewtab.staleCounter = TRUE;
 
 	setViewTab(&localViewtab, entryNum);
 	return;

@@ -723,6 +723,7 @@ boolean agiBlit(ViewTable* localViewTab, byte entryNum, boolean disableInterupts
 		printf("switching to %d for entry %d\n", viewNum, entryNum);
 #endif
 		bESwitchMetadata(localViewTab, &localView, viewNum, entryNum);
+		localViewTab->staleCounter = localLoop.numberOfCels;
 	}
 
 	if (viewTabNoToMetaData[entryNum] == VIEWNO_TO_METADATA_NO_SET) //Statement will be true if switched to another view for the first time in bESwitchMetadata
@@ -1026,7 +1027,7 @@ yPos: _assmByte = (byte)localViewTab->yPos;
 	asm("lda %v", _assmByte);
 	asm("sta (%w),y", ZP_SPRITE_STORE_PTR);
 
-	_assmByte = ((localViewTab->flags & MOTION > 0) && localViewTab->direction > 0) || localViewTab->wasMoving; //Non moving sprites can have motion, but won't have direction
+	_assmByte = ((localViewTab->flags & MOTION > 0) && localViewTab->direction > 0) || localViewTab->staleCounter; //Non moving sprites can have motion, but won't have direction
 	
 	asm("ldy #$17");
 	asm("lda %v", _assmByte);
@@ -1087,7 +1088,7 @@ void b9ResetViewtabs(boolean fullReset)
 		localViewtab.stepSize = 1;
 		localViewtab.cycleTime = 1;
 		localViewtab.cycleTimeCount = 1;
-		localViewtab.wasMoving = FALSE;
+		localViewtab.staleCounter = 0;
 		if (fullReset)
 		{
 			localViewtab.xPos = 0;
@@ -2727,7 +2728,11 @@ void bCCalcObjMotion()
 	for (entryNum = 0; entryNum < VIEW_TABLE_SIZE; entryNum++) {
 
 		getViewTab(&localViewtab, entryNum);
-		localViewtab.wasMoving = FALSE;
+		
+		if (localViewtab.staleCounter)
+		{
+			localViewtab.staleCounter--;
+		}
 
 		objFlags = localViewtab.flags;
 		//Warning
@@ -2783,7 +2788,7 @@ void bCCalcObjMotion()
 						/* Not sure about this next line */
 						localViewtab.stepSize = localViewtab.param1;
 
-						localViewtab.wasMoving = TRUE;
+						localViewtab.staleCounter = 1;
 					}
 					break;
 				case 3: /* move.obj */
@@ -2802,7 +2807,7 @@ void bCCalcObjMotion()
 						flag[localViewtab.param4] = 1;
 						localViewtab.stepSize = localViewtab.param3;
 
-						localViewtab.wasMoving = TRUE;
+						localViewtab.staleCounter = 1;
 
 						break;
 					}
