@@ -32,7 +32,7 @@ jsr popax
 sta CEL_ADDR
 stx CEL_ADDR + 1
 lda #$1
-sta SPLIT_SEGMENTS ;When we draw directly to the bitmap we don't need to split the cel into segments
+sta NO_SPLIT_SEGMENTS ;When we draw directly to the bitmap we don't need to split the cel into segments
 
 sei
 lda celToVeraLowRam_skipBasedOnPriority
@@ -390,7 +390,7 @@ ldx #$0
 jsr _memCpyBankedBetween
 
 @splitLoop: ;Will always iterate once if the cell is not split
-GET_STRUCT_8_STORED_OFFSET _offsetOfSplitSegments, CEL_ADDR, SPLIT_SEGMENTS
+GET_STRUCT_8_STORED_OFFSET _offsetOfSplitSegments, CEL_ADDR, NO_SPLIT_SEGMENTS
 
 ldy BULK_ADDRESS_INDEX
 
@@ -429,7 +429,7 @@ sta Y_VAL
 
 @checkSplitLoop:
 lda SPLIT_COUNTER
-cmp SPLIT_SEGMENTS
+cmp NO_SPLIT_SEGMENTS
 
 bcs @getNextCel
 inc SPLIT_COUNTER
@@ -548,7 +548,7 @@ sta RAM_BANK
 GET_STRUCT_8_STORED_OFFSET _offsetOfCelHeight, CEL_ADDR, CEL_HEIGHT ;Load required attributes from cel
 GET_STRUCT_8_STORED_OFFSET _offsetOfCelTrans, CEL_ADDR, CEL_TRANS
 
-lda SPLIT_SEGMENTS ;If the cel is non split then we get the cel data from the bitmap
+lda NO_SPLIT_SEGMENTS ;If the cel is non split then we get the cel data from the bitmap
 cmp #$1
 bne celToVeraLowRam_split
 

@@ -14,6 +14,7 @@
 #include "paletteManager.h"
 #include "helpers.h"
 #include "irq.h"
+#include "celToVeraZp.h"
 
 #define MAXVIEW  256
 #define MAX_JOINED_SPRITES 6

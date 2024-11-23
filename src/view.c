@@ -662,7 +662,7 @@ boolean bESetLoop(ViewTable* localViewTab, ViewTableMetadata* localMetadata, Vie
 }
 #pragma code-name (pop)
 #define ZP_SPRITE_STORE_PTR ZP_PTR_TMP_2
-#define SPLIT_COUNTER ZP_PTR_TMP_3
+#define SPLIT_COUNTER ZP_TMP_12 + 1
 #define SPLIT_SEGMENTS ZP_PTR_TMP_4
 #define SPLIT_OFFSET ZP_PTR_TMP_5
 /***************************************************************************
