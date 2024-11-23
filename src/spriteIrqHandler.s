@@ -220,85 +220,8 @@ sta @flipped
 
 GET_NEXT_FROM_SPRITE_UPDATE_BUFFER ;Sprite Attr Size 7 (buffer 6)
 
-;Reblit
-stz VERA_ADDRESS ;Always zero
-GET_NEXT_FROM_SPRITE_UPDATE_BUFFER #$1 ; LoopVeraAddress
-sta VERA_ADDRESS + 1
-GET_NEXT_FROM_SPRITE_UPDATE_BUFFER #$1 
-sta VERA_ADDRESS_HIGH
-
-GET_NEXT_FROM_SPRITE_UPDATE_BUFFER #$1 ; Address of the Cel 
-sta CEL_ADDR
-GET_NEXT_FROM_SPRITE_UPDATE_BUFFER #$1
-sta CEL_ADDR + 1
-
-GET_NEXT_FROM_SPRITE_UPDATE_BUFFER #$1 ; Cel Bank
-sta CEL_BANK 
-
-GET_NEXT_FROM_SPRITE_UPDATE_BUFFER #$1 ; X VAL
-sta X_VAL
-GET_NEXT_FROM_SPRITE_UPDATE_BUFFER #$1 ; Y VAL
-sta Y_VAL
-GET_NEXT_FROM_SPRITE_UPDATE_BUFFER #$1 ; Priority
-sta P_NUM
-
-GET_NEXT_FROM_SPRITE_UPDATE_BUFFER #$1 ;Allocation Width
-jsr bESetBytesPerRow
-
-GET_NEXT_FROM_SPRITE_UPDATE_BUFFER #$1 ;Allocation Height
-jsr bECalculateTotalRows
-
-GET_NEXT_FROM_SPRITE_UPDATE_BUFFER #$1 ;Split Cel Pointers
-sta SPLIT_CEL_SEGMENTS
-GET_NEXT_FROM_SPRITE_UPDATE_BUFFER #$1 ;Split Cel Pointers + 1
-sta SPLIT_CEL_SEGMENTS + 1
-
-GET_NEXT_FROM_SPRITE_UPDATE_BUFFER #$1 
-sta SPLIT_CEL_BANK
-
-GET_NEXT_FROM_SPRITE_UPDATE_BUFFER #$1 
-sta SPLIT_COUNTER
-
-GET_NEXT_FROM_SPRITE_UPDATE_BUFFER #$1 
-sta SPLIT_SEGMENTS
-
-GET_NEXT_FROM_SPRITE_UPDATE_BUFFER #$1 
-sta CEL_WIDTH
-
-GET_NEXT_FROM_SPRITE_UPDATE_BUFFER #$1 
-cmp #$1
-beq @reblitMotion
 jmp @loop
 
-@reblitMotion:
-lda VERA_addr_low
-pha
-lda VERA_addr_high
-pha
-lda VERA_addr_bank
-pha
-phy
-
-lda @flipped
-bne @celToVeraBackwards
-lda #$1
-sta CEL_TO_VERA_IS_FORWARD_DIRECTION
-jsr celToVera
-bra @returnFromCelToVera
-@celToVeraBackwards:
-jsr bECelToVeraBackwards
-
-@returnFromCelToVera:
-ply
-stz VERA_ctrl
-pla
-sta VERA_addr_bank
-pla 
-sta VERA_addr_high
-pla
-sta VERA_addr_low
-
-jmp @loop
 @addressReset:
 lda #< _bESpritesUpdatedBuffer
 sta _bESpritesUpdatedBufferPointer

@@ -42,7 +42,7 @@
 #define MAX_SPRITE_PRIORITY 15
 #define NO_PRIORITIES (MAX_SPRITE_PRIORITY - MIN_SPRITE_PRIORITY)
 
-#define BYTES_PER_SPRITE_UPDATE 24
+#define BYTES_PER_SPRITE_UPDATE 7
 #define SPRITE_UPDATED_BUFFER_SIZE  VIEW_TABLE_SIZE * BYTES_PER_SPRITE_UPDATE * 2
 extern byte bESpritesUpdatedBuffer[SPRITE_UPDATED_BUFFER_SIZE];
 extern byte* bESpritesUpdatedBufferPointer;
@@ -952,90 +952,12 @@ yPos: _assmByte = (byte)localViewTab->yPos;
 	asm("clc"); //Might be less cycles to ora assmbyte 3 in instead. Investigate
 	asm("adc %v", _assmByte3);
 
+
 	asm("sta (%w),y", ZP_SPRITE_STORE_PTR);
 
-	//Reblit
-	_assmUInt = loopVeraAddress;
 
-	asm("ldy #$7");
-	asm("lda %v", _assmUInt);
-	asm("sta (%w),y", ZP_SPRITE_STORE_PTR);
-	asm("ldy #$8");
-	asm("lda %v + 1", _assmUInt);
-	asm("sta (%w),y", ZP_SPRITE_STORE_PTR);
 
-	_assmUInt = (unsigned int) &localLoop.cels[localViewTab->currentCel];
-
-	asm("ldy #$9");
-	asm("lda %v", _assmUInt);
-	asm("sta (%w),y", ZP_SPRITE_STORE_PTR);
-	asm("ldy #$A");
-	asm("lda %v + 1", _assmUInt);
-	asm("sta (%w),y", ZP_SPRITE_STORE_PTR);
-
-	_assmByte = localLoop.celsBank;
-	asm("ldy #$B");
-	asm("lda %v", _assmByte);
-	asm("sta (%w),y", ZP_SPRITE_STORE_PTR);
-
-	_assmUInt = (unsigned int)localViewTab->xPos;
-	asm("ldy #$C");
-	asm("lda %v", _assmUInt);
-	asm("sta (%w),y", ZP_SPRITE_STORE_PTR);
-
-	asm("ldy #$D");
-	asm("pla");
-	asm("sta (%w),y", ZP_SPRITE_STORE_PTR);
-
-	_assmUInt = (unsigned int)localViewTab->priority;
-	asm("ldy #$E");
-	asm("lda %v", _assmUInt);
-	asm("sta (%w),y", ZP_SPRITE_STORE_PTR);
-
-	_assmByte = localLoop.allocationWidth;
-	asm("ldy #$F");
-	asm("lda %v", _assmByte);
-	asm("sta (%w),y", ZP_SPRITE_STORE_PTR);
-
-	_assmByte = localLoop.allocationHeight;
-	asm("ldy #$10");
-	asm("lda %v", _assmByte);
-	asm("sta (%w),y", ZP_SPRITE_STORE_PTR);
-
-	_assmUInt = (unsigned int) localCel.splitCelPointers;
-	asm("ldy #$11");
-	asm("lda %v", _assmUInt);
-	asm("sta (%w),y", ZP_SPRITE_STORE_PTR);
-
-	asm("ldy #$12");
-	asm("lda %v + 1", _assmUInt);
-	asm("sta (%w),y", ZP_SPRITE_STORE_PTR);
-
-	_assmByte = localCel.splitCelBank;
-	asm("ldy #$13");
-	asm("lda %v", _assmByte);
-	asm("sta (%w),y", ZP_SPRITE_STORE_PTR);
-
-	asm("ldy #$14");
-	asm("lda %w", SPLIT_COUNTER);
-	asm("sta (%w),y", ZP_SPRITE_STORE_PTR);
-
-	_assmByte = localCel.splitSegments;
-	asm("ldy #$15");
-	asm("lda %v", _assmByte);
-	asm("sta (%w),y", ZP_SPRITE_STORE_PTR);
-
-	_assmByte = localCel.width;
-	asm("ldy #$16");
-	asm("lda %v", _assmByte);
-	asm("sta (%w),y", ZP_SPRITE_STORE_PTR);
-
-	_assmByte = ((localViewTab->flags & MOTION > 0) && localViewTab->direction > 0) || localViewTab->staleCounter; //Non moving sprites can have motion, but won't have direction
-	
-	asm("ldy #$17");
-	asm("lda %v", _assmByte);
-	asm("sta (%w),y", ZP_SPRITE_STORE_PTR);
-
+	asm("pla"); //Height we will need this later
 	bESpritesUpdatedBufferPointer += BYTES_PER_SPRITE_UPDATE;
 
 	asm("clc");
@@ -1071,7 +993,6 @@ endBlit:
 	//}
 
 	RAM_BANK = previousBank;
-
 	return TRUE;
 }
 
@@ -2549,7 +2470,6 @@ void bBUpdateObjects()
 								break;
 							}
 						}
-
 						//Blit may fail if we run out of sprite memory, if that is the case clear everything as there is likely to be stuff we are no longer using. If it fails more than once, we know there is not point continuing
 					}
 					else if (i == MAX_SPRITE_PRIORITY)
