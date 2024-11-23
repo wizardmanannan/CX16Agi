@@ -66,7 +66,8 @@ typedef struct {
 	byte viewNum;
 	void* inactive; //Sometimes a single viewtab can have views swapped rapidly, we keep the previous ones here so we can easily switch between them
 	byte inactiveBank;
-
+	VeraSpriteAddress backBuffer;
+	boolean isOnBackBuffer;
 } ViewTableMetadata;
 
 extern byte bEBulkAllocatedAddresses[VIEW_TABLE_SIZE * sizeof(VeraSpriteAddress) * ALLOCATOR_BLOCK_SIZE_64];
@@ -277,6 +278,8 @@ void bEResetViewTableMetadata()
 
 		viewTableMetadata[i].inactive = NULL;
 		viewTableMetadata[i].inactiveBank = NULL;
+		viewTableMetadata[i].backBuffer = 0;
+		viewTableMetadata[i].isOnBackBuffer = FALSE;
 	}
 
 	memset(&viewTabNoToMetaData[0], VIEWNO_TO_METADATA_NO_SET, MAXVIEW);

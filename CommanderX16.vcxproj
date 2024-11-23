@@ -51,6 +51,7 @@
   <ItemGroup>
     <ClInclude Include="src\AGICODES.H" />
     <ClInclude Include="src\agiFiles.h" />
+    <ClInclude Include="src\celToVeraZp.h" />
     <ClInclude Include="src\commands.h" />
     <ClInclude Include="src\debugHelper.h" />
     <ClInclude Include="src\DECOMP.H" />
@@ -82,6 +83,7 @@
     <ClInclude Include="src\timer.h" />
     <ClInclude Include="src\view.h" />
     <ClInclude Include="src\WORDS.H" />
+    <ClInclude Include="src\zeroPointer.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\agiFiles.c" />
