@@ -66,7 +66,7 @@ typedef struct {
 	byte viewNum;
 	void* inactive; //Sometimes a single viewtab can have views swapped rapidly, we keep the previous ones here so we can easily switch between them
 	byte inactiveBank;
-	VeraSpriteAddress backBuffer;
+	VeraSpriteAddress* backBuffers;
 	boolean isOnBackBuffer;
 } ViewTableMetadata;
 
@@ -278,7 +278,7 @@ void bEResetViewTableMetadata()
 
 		viewTableMetadata[i].inactive = NULL;
 		viewTableMetadata[i].inactiveBank = NULL;
-		viewTableMetadata[i].backBuffer = 0;
+		viewTableMetadata[i].backBuffers = NULL;
 		viewTableMetadata[i].isOnBackBuffer = FALSE;
 	}
 
@@ -306,6 +306,7 @@ void bESetViewMetadata(View* localView, ViewTable* viewTable, byte viewNum, byte
 	ViewTableMetadata metadata;
 	int loopVeraAddressesPointersSize;
 	int veraAddressesSize;
+	int backBufferAllocationSize;
 	int totalAllocationSize;
 	VeraSpriteAddress** addressBuffer = (VeraSpriteAddress**)GOLDEN_RAM_PARAMS_AREA;
 	VeraSpriteAddress* veraAddressCounter;
@@ -347,7 +348,8 @@ void bESetViewMetadata(View* localView, ViewTable* viewTable, byte viewNum, byte
 
 	loopVeraAddressesPointersSize = localView->numberOfLoops * sizeof(VeraSpriteAddress*);
 	veraAddressesSize = maxVeraAddresses * sizeof(VeraSpriteAddress) * localView->numberOfLoops;
-	totalAllocationSize = loopVeraAddressesPointersSize + veraAddressesSize;
+	backBufferAllocationSize = localView->maxVeraSlots * sizeof(VeraSpriteAddress);
+	totalAllocationSize = loopVeraAddressesPointersSize + veraAddressesSize + backBufferAllocationSize;
 
 #ifdef VERBOSE_DEBUG_SET_METADATA
 	printf("There are %d loops and %d maxCels\n", localView->numberOfLoops, localView->maxCels);
@@ -355,6 +357,7 @@ void bESetViewMetadata(View* localView, ViewTable* viewTable, byte viewNum, byte
 
 	metadata.loopsVeraAddressesPointers = (VeraSpriteAddress**)b10BankedAlloc(totalAllocationSize, &metadata.viewTableMetadataBank);
 	metadata.veraAddresses = (VeraSpriteAddress*)metadata.loopsVeraAddressesPointers + loopVeraAddressesPointersSize;
+	metadata.backBuffers = metadata.veraAddresses + veraAddressesSize;
 	metadata.viewNum = viewNum;
 
 #ifdef VERBOSE_DEBUG_SET_METADATA
@@ -365,7 +368,7 @@ void bESetViewMetadata(View* localView, ViewTable* viewTable, byte viewNum, byte
 #ifdef VERBOSE_DEBUG_SET_METADATA
 	printf("Setting %p on bank %d to size %d\n", metadata.veraAddresses, metadata.viewTableMetadataBank, veraAddressesSize);
 #endif
-	memsetBanked(metadata.veraAddresses, 0, veraAddressesSize, metadata.viewTableMetadataBank);
+	memsetBanked(metadata.loopsVeraAddressesPointers, 0, totalAllocationSize, metadata.viewTableMetadataBank);
 
 	veraAddressCounter = metadata.veraAddresses;
 	for (i = 0; i < localView->numberOfLoops; i++)
@@ -598,6 +601,27 @@ void bESwitchMetadata(ViewTable* localViewTab, View* localView, byte viewNum, by
 #endif
 }
 
+boolean bEAllocateSpriteMemory(Loop* localLoop, byte noToBlit)
+{
+	AllocationSize allocationSize;
+
+	if (localLoop->allocationHeight == SPR_ATTR_64 || localLoop->allocationWidth == SPR_ATTR_64)
+	{
+		allocationSize = SIZE_64;
+	}
+	else
+	{
+		allocationSize = SIZE_32;
+	}
+
+	if (!bEAllocateSpriteMemoryBulk(allocationSize, noToBlit))
+	{
+		return FALSE;
+	}
+
+	return TRUE;
+}
+
 #define TO_BLIT_CEL_ARRAY_LENGTH 500
 extern byte bEToBlitCelArray[TO_BLIT_CEL_ARRAY_LENGTH];
 //Copy cels into array above first
@@ -608,7 +632,6 @@ boolean bESetLoop(ViewTable* localViewTab, ViewTableMetadata* localMetadata, Vie
 	Cel localCel;
 	byte noToBlit;
 	byte veraSpriteWidthAndHeight;
-	AllocationSize allocationSize;
 
 	getLoadedLoop(localView, &localLoop, localViewTab->currentLoop);
 	getLoadedCel(&localLoop, &localCel, localViewTab->currentCel);
@@ -627,16 +650,7 @@ boolean bESetLoop(ViewTable* localViewTab, ViewTableMetadata* localMetadata, Vie
 	printf("Trying to allocate %d. Number %d\n", localLoop.allocationSize, noToBlit);
 #endif
 
-	if (localLoop.allocationHeight == SPR_ATTR_64 || localLoop.allocationWidth == SPR_ATTR_64)
-	{
-		allocationSize = SIZE_64;
-	}
-	else
-	{
-		allocationSize = SIZE_32;
-	}
-
-	if (!bEAllocateSpriteMemoryBulk(allocationSize, noToBlit))
+	if (!bEAllocateSpriteMemory(&localLoop, noToBlit))
 	{
 		return FALSE;
 	}
@@ -677,7 +691,14 @@ boolean agiBlit(ViewTable* localViewTab, byte entryNum, boolean disableInterupts
 	byte previousBank;
 	ViewTableMetadata localMetadata;
 	VeraSpriteAddress* loopVeraAddresses;
-	VeraSpriteAddress loopVeraAddress; //Put out here so it can be accessed by inline assembly without going via a C variable
+	VeraSpriteAddress loopVeraAddress, tempVeraAddress; //Put out here so it can be accessed by inline assembly without going via a C variable
+	boolean isAllocated = FALSE;
+	byte splitCounter; //Store the SPLIT_COUNTER ZP in here as this makes it easier for C to access it 
+
+	if (localViewTab->currentView != 0)
+	{
+		return TRUE;
+	}
 
 	previousBank = RAM_BANK;
 
@@ -780,10 +801,66 @@ boolean agiBlit(ViewTable* localViewTab, byte entryNum, boolean disableInterupts
 
 getLoadedCel(&localLoop, &localCel, localViewTab->currentCel); //If the cel has being split our data would be stale
 
-splitLoop: RAM_BANK = localMetadata.viewTableMetadataBank;
+splitLoop: 
+	splitCounter = *((byte*)SPLIT_COUNTER);
+	RAM_BANK = localMetadata.viewTableMetadataBank;
 
-	loopVeraAddress = loopVeraAddresses[*((byte*)SPLIT_COUNTER) - 1 + (localView.maxVeraSlots * localViewTab->currentCel)];
+	loopVeraAddress = loopVeraAddresses[splitCounter + (localView.maxVeraSlots * localViewTab->currentCel) - 1];
 
+	_assmByte = ((localViewTab->flags & MOTION > 0) && localViewTab->direction > 0) || localViewTab->staleCounter || localMetadata.isOnBackBuffer;
+	asm("lda %v", _assmByte);
+	asm("bne %g", animatedSprite);
+	asm("jmp %g", setSpritesUpdatedBank);
+
+animatedSprite:
+	RAM_BANK = localMetadata.viewTableMetadataBank;
+	_assmUInt = localMetadata.backBuffers[splitCounter - 1];
+	
+	RAM_BANK = SPRITE_METADATA_BANK;
+	asm("lda %v", _assmUInt);
+	asm("bne %g", jumpInvert);
+	asm("lda %v + 1", _assmUInt);
+	asm("bne %g", jumpInvert);
+	asm("jmp %g", initialise);
+	
+jumpInvert:
+	asm("jmp %g", invert);
+
+	initialise:
+	localMetadata.isOnBackBuffer = TRUE;
+	
+	if (!isAllocated)
+	{
+		bEAllocateSpriteMemory(&localLoop, localView.maxVeraSlots);
+		
+		isAllocated = TRUE;
+	}
+
+	tempVeraAddress= *((VeraSpriteAddress*)&bEBulkAllocatedAddresses[(splitCounter - 1) * sizeof(VeraSpriteAddress)]);
+	RAM_BANK = localMetadata.viewTableMetadataBank;
+	localMetadata.backBuffers[splitCounter - 1] = tempVeraAddress;
+	RAM_BANK = SPRITE_MEMORY_MANAGER_BANK;
+	loopVeraAddress = tempVeraAddress;
+		
+	goto saveMetadata;
+
+invert:
+_assmByte = localMetadata.isOnBackBuffer;
+asm("lda #$1");
+asm("eor %v", _assmByte);
+asm("pha");
+asm("sta %v", _assmByte);
+localMetadata.isOnBackBuffer = _assmByte;
+asm("pla");
+asm("beq %g", saveMetadata);
+RAM_BANK = localMetadata.viewTableMetadataBank;
+loopVeraAddress = localMetadata.backBuffers[splitCounter - 1];
+asm("lda #%w", SPRITE_METADATA_BANK);
+asm("sta 0");
+saveMetadata:
+viewTableMetadata[entryNum] = localMetadata;
+
+setSpritesUpdatedBank:
 	RAM_BANK = SPRITE_UPDATED_BANK;
 
 	if (disableInterupts)
