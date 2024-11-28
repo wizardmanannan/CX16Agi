@@ -48,6 +48,79 @@ REENABLE_INTERRUPTS
 rts
 
 .segment "BANKRAM0E"
+bECalculateTotalRows:
+cmp #SPR_ATTR_8
+
+bne @check16H
+
+@setWidth8H:
+lda #SPRITE_TOTAL_ROWS_8
+sta TOTAL_ROWS
+
+bra @end
+
+@check16H:
+cmp #SPR_ATTR_16
+bne @check32H
+
+@setWidth16H:
+lda #SPRITE_TOTAL_ROWS_16
+sta TOTAL_ROWS
+bra @end
+
+@check32H:
+cmp #SPR_ATTR_32
+bne @setWidth64H
+
+@setWidth32H:
+lda #SPRITE_TOTAL_ROWS_32
+sta TOTAL_ROWS
+bra @end
+
+@setWidth64H:
+lda #SPRITE_TOTAL_ROWS_64
+sta TOTAL_ROWS
+bra @end
+
+@end:
+rts
+
+bECalculateBytesPerRow:
+cmp #SPR_ATTR_8
+
+bne @check16W
+
+@setWidth8W:
+lda #BYTES_PER_ROW_8
+sta BYTES_PER_ROW
+
+bra @end
+
+@check16W:
+cmp #SPR_ATTR_16
+bne @check32W
+
+@setWidth16W:
+lda #BYTES_PER_ROW_16
+sta BYTES_PER_ROW
+bra @end
+
+@check32W:
+cmp #SPR_ATTR_32
+bne @setWidth64W
+
+@setWidth32W:
+lda #BYTES_PER_ROW_32
+sta BYTES_PER_ROW
+bra @end
+
+@setWidth64W:
+lda #BYTES_PER_ROW_64
+sta BYTES_PER_ROW
+
+@end:
+rts
+
 
 ;When calling celToVera on a flipped cel the celToVera priority byte order must be backwards.
 ;This means that for a sprite which is 6 wide, when drawing pixel zero priority pixel 5 must be check, and when drawing 1 4 must be checked and so on. 
@@ -287,74 +360,10 @@ sta CEL_ADDR + 1
 
 ;Height:
 jsr popa
-cmp #SPR_ATTR_8
+jsr bECalculateTotalRows
 
-bne @check16H
-
-@setWidth8H:
-lda #SPRITE_TOTAL_ROWS_8
-sta TOTAL_ROWS
-
-bra @setWidth
-
-@check16H:
-cmp #SPR_ATTR_16
-bne @check32H
-
-@setWidth16H:
-lda #SPRITE_TOTAL_ROWS_16
-sta TOTAL_ROWS
-bra @setWidth
-
-@check32H:
-cmp #SPR_ATTR_32
-bne @setWidth64H
-
-@setWidth32H:
-lda #SPRITE_TOTAL_ROWS_32
-sta TOTAL_ROWS
-bra @setWidth
-
-@setWidth64H:
-lda #SPRITE_TOTAL_ROWS_64
-sta TOTAL_ROWS
-bra @setWidth
-
-;Width
-@setWidth:
 jsr popa
-cmp #SPR_ATTR_8
-
-bne @check16W
-
-@setWidth8W:
-lda #BYTES_PER_ROW_8
-sta BYTES_PER_ROW
-
-bra @loop
-
-@check16W:
-cmp #SPR_ATTR_16
-bne @check32W
-
-@setWidth16W:
-lda #BYTES_PER_ROW_16
-sta BYTES_PER_ROW
-bra @loop
-
-@check32W:
-cmp #SPR_ATTR_32
-bne @setWidth64W
-
-@setWidth32W:
-lda #BYTES_PER_ROW_32
-sta BYTES_PER_ROW
-bra @loop
-
-@setWidth64W:
-lda #BYTES_PER_ROW_64
-sta BYTES_PER_ROW
-bra @loop
+jsr bECalculateBytesPerRow
 
 @loop:
 lda #$1
