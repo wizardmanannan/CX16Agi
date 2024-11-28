@@ -70,3 +70,5 @@
     .export _b8AsmFloodFillSectionsVisOnly
     .export _b8GetVeraPictureAddress
     .export _b8GetControl
+    .export _celToVera
+    .export _bECelToVeraBackwards

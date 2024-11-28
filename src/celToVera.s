@@ -41,7 +41,7 @@ lda #LDX_ABS
 sta celToVeraLowRam_skipBasedOnPriority
 lda #$1
 sta CEL_TO_VERA_IS_FORWARD_DIRECTION
-jsr celToVera
+;jsr _celToVera
 pla
 sta celToVeraLowRam_skipBasedOnPriority
 REENABLE_INTERRUPTS
@@ -55,7 +55,7 @@ rts
 ;All of the spots in celToVera requiring modification, are labelled and commented with self modify and the value it is modified to. 
 ;This function backs the old instructions up using the stack.
 ;We also need to modify X value to be at the right side of the sprite, not the left.
-bECelToVeraBackwards:
+_bECelToVeraBackwards:
 clc ;Add the cel width and take 1 to set X to the right hand side of the sprite.
 lda X_VAL 
 adc CEL_WIDTH
@@ -120,7 +120,7 @@ sta celToVeraLowRam_checkPriorityCmp + 1
 
 stz CEL_TO_VERA_IS_FORWARD_DIRECTION ;Disable the forward flag
 
-jsr celToVera
+;jsr _celToVera
 
 ;Restore the old code back
 pla
@@ -417,11 +417,11 @@ bne @celToVeraBackwards
 @celToVeraForwards:
 lda #$1
 sta CEL_TO_VERA_IS_FORWARD_DIRECTION
-jsr celToVera
+;jsr _celToVera
 bra @restoreStack
 
 @celToVeraBackwards:
-jsr bECelToVeraBackwards
+jsr _bECelToVeraBackwards
 
 @restoreStack:
 pla
@@ -536,7 +536,7 @@ newIncrementBackwards: .byte %1000, %1000, %1000, %1000, %1000, %1000, %1000, %1
 ;CEL_TRANS: Cel transparent color
 ;COLOR: The current current being drawn doubled up (eg. FF instead of F due to pixel doubling)
 ;NEXT_DATA_INDEX: Index into the BMP_DATA, starts are zero, and incremented after each read. BMP_DATA is incremented by 255 when this resets
-celToVera:
+_celToVera:
 stz NEXT_DATA_INDEX
 
 lda RAM_BANK
@@ -608,7 +608,6 @@ celToVeraLowRam_calculatePriorityAutoInc: ;This calculates whether the priority 
 lda X_VAL
 lsr
 bcs celToVeraLowRam_oddValue
-
 ;For forward direction if we are on an even nibble, don't auto increment as we need to read the odd nibble of the same byte next. This is the opposite for backwards
 celToVeraLowRam_evenValue:
 lda #$0 ;Can't using stz here, as self modifying code is using to change the value ;Self Modify 2 to lda #%11000

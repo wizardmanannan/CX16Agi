@@ -675,6 +675,12 @@ boolean bESetLoop(ViewTable* localViewTab, ViewTableMetadata* localMetadata, Vie
 	return TRUE;
 }
 #pragma code-name (pop)
+
+//Expect ZP to be properly set up. See celToVera function in assembly for further details.
+extern void celToVera();
+extern void bECelToVeraBackwards();
+
+
 #define ZP_SPRITE_STORE_PTR ZP_PTR_TMP_2
 #define SPLIT_COUNTER ZP_TMP_12 + 1
 #define SPLIT_SEGMENTS ZP_PTR_TMP_4
@@ -809,6 +815,7 @@ splitLoop:
 
 	_assmByte = ((localViewTab->flags & MOTION > 0) && localViewTab->direction > 0) || localViewTab->staleCounter || localMetadata.isOnBackBuffer;
 	asm("lda %v", _assmByte);
+	asm("pha"); //Store whether this is animated for later
 	asm("bne %g", animatedSprite);
 	asm("jmp %g", setSpritesUpdatedBank);
 
@@ -854,6 +861,7 @@ localMetadata.isOnBackBuffer = _assmByte;
 asm("pla");
 asm("beq %g", saveMetadata);
 RAM_BANK = localMetadata.viewTableMetadataBank;
+//printf("invert\n");
 loopVeraAddress = localMetadata.backBuffers[splitCounter - 1];
 asm("lda #%w", SPRITE_METADATA_BANK);
 asm("sta 0");
@@ -874,6 +882,11 @@ setSpritesUpdatedBank:
 	//Put bytes into a buffer to be picked up by the irq see spriteIrqHandler.s (bEHandleSpriteUpdates)
 
 	_assmUInt = loopVeraAddress;
+
+	if (((localViewTab->flags & MOTION > 0) && localViewTab->direction > 0) || localViewTab->staleCounter || localMetadata.isOnBackBuffer)
+	{
+		//printf("loop vera address %p\n", loopVeraAddress);
+	}
 
 	//Update here for blitting all parts
 
@@ -991,7 +1004,7 @@ yPos: _assmByte = (byte)localViewTab->yPos;
 	
 	asm("sec"); //Take away the height, as position in agi is the bottom left corner
 	asm("sbc %v", _assmByte2);
-	asm("pha");
+	asm("sta %w", Y_VAL);
 
 	asm("clc");
 	asm("adc #%w", STARTING_ROW);
@@ -1031,10 +1044,53 @@ yPos: _assmByte = (byte)localViewTab->yPos;
 
 
 	asm("sta (%w),y", ZP_SPRITE_STORE_PTR);
+	
+	asm("pla"); //Is this an animated sprite or not
+	asm("bne %g", callCelToVera);
+	asm("jmp %g", updateBufferPointer);
+	callCelToVera:
+	_assmByte = 0;
+	asm("lda %v", _assmByte);
+	asm("sta %w", CEL_BANK);
+	_assmUInt = (unsigned int) &localCel;
+	asm("lda %v", _assmUInt);
+	asm("sta %w", CEL_ADDR);
+	asm("lda %v + 1", _assmUInt);
+	asm("sta %w + 1", CEL_ADDR);
+	
+	_assmUInt = loopVeraAddress;
+	asm("stz %w", VERA_ADDRESS);
+	asm("lda %v", _assmUInt);
+	asm("sta %w + 1", VERA_ADDRESS);
+	asm("lda %v + 1", _assmUInt);
+	asm("sta %w", VERA_ADDRESS_HIGH);
+	
+	_assmByte = localViewTab->xPos;
+	asm("lda %v", _assmByte);
+	asm("sta %w", X_VAL);
 
+	_assmByte = localViewTab->priority;
+	asm("lda %v", _assmByte);
+	asm("sta %w", P_NUM);
 
+	_assmByte = localCel.splitCelBank;
+	asm("lda %v", _assmByte);
+	asm("sta %w", SPLIT_CEL_BANK);
+		
+	_assmByte = localCel.splitSegments;
+	asm("lda %v", _assmByte);
+	asm("sta %w", SPLIT_CEL_SEGMENTS);
+	
+	_assmByte = !localCel.flipped;
+	asm("lda %v", _assmByte);
+	asm("sta %w", CEL_TO_VERA_IS_FORWARD_DIRECTION);
+	asm("beq %g", celToVeraBackwards);
+	celToVera();
+	asm("bra %g", updateBufferPointer);
+	celToVeraBackwards:
+	bECelToVeraBackwards();
 
-	asm("pla"); //Height we will need this later
+	updateBufferPointer:
 	bESpritesUpdatedBufferPointer += BYTES_PER_SPRITE_UPDATE;
 
 	asm("clc");
