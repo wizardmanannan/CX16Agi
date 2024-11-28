@@ -78,82 +78,6 @@ bra @loop
 _bESpritesUpdatedBuffer: .res SPRITE_UPDATED_BUFFER_SIZE
 _bESpritesUpdatedBufferPointer: .word _bESpritesUpdatedBuffer
 
-
-
-bECalculateTotalRows:
-cmp #SPR_ATTR_8
-
-bne @check16H
-
-@setWidth8H:
-lda #SPRITE_TOTAL_ROWS_8
-sta TOTAL_ROWS
-
-bra @end
-
-@check16H:
-cmp #SPR_ATTR_16
-bne @check32H
-
-@setWidth16H:
-lda #SPRITE_TOTAL_ROWS_16
-sta TOTAL_ROWS
-bra @end
-
-@check32H:
-cmp #SPR_ATTR_32
-bne @setWidth64H
-
-@setWidth32H:
-lda #SPRITE_TOTAL_ROWS_32
-sta TOTAL_ROWS
-bra @end
-
-@setWidth64H:
-lda #SPRITE_TOTAL_ROWS_64
-sta TOTAL_ROWS
-bra @end
-
-@end:
-rts
-
-bESetBytesPerRow:
-cmp #SPR_ATTR_8
-
-bne @check16W
-
-@setWidth8W:
-lda #BYTES_PER_ROW_8
-sta BYTES_PER_ROW
-
-bra @end
-
-@check16W:
-cmp #SPR_ATTR_16
-bne @check32W
-
-@setWidth16W:
-lda #BYTES_PER_ROW_16
-sta BYTES_PER_ROW
-bra @end
-
-@check32W:
-cmp #SPR_ATTR_32
-bne @setWidth64W
-
-@setWidth32W:
-lda #BYTES_PER_ROW_32
-sta BYTES_PER_ROW
-bra @end
-
-@setWidth64W:
-lda #BYTES_PER_ROW_64
-sta BYTES_PER_ROW
-
-@end:
-rts
-
-
 ;void bEClearSpriteAttributes()
 _bEClearSpriteAttributes:
 CLEAR_SPRITE_ATTRS
@@ -243,7 +167,7 @@ GET_NEXT_FROM_SPRITE_UPDATE_BUFFER #$1 ; Priority
 sta P_NUM
 
 GET_NEXT_FROM_SPRITE_UPDATE_BUFFER #$1 ;Allocation Width
-jsr bESetBytesPerRow
+jsr bECalculateBytesPerRow
 
 GET_NEXT_FROM_SPRITE_UPDATE_BUFFER #$1 ;Allocation Height
 jsr bECalculateTotalRows
