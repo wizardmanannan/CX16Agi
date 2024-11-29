@@ -681,6 +681,18 @@ extern void celToVera();
 extern void bECelToVeraBackwards();
 
 
+extern void bEClearVeraSprite(byte celWidth, byte celHeight);
+
+#define SET_VERA_ADDRESS_ZP(loopVeraAddress, VERA_ADDRESS, VERA_ADDRESS_HIGH) \
+    do { \
+        _assmUInt = loopVeraAddress; \
+		asm("stz %w", VERA_ADDRESS); \
+        asm("lda %v", _assmUInt); \
+        asm("sta %w + 1", VERA_ADDRESS); \
+        asm("lda %v + 1", _assmUInt); \
+        asm("sta %w", VERA_ADDRESS_HIGH); \
+    } while (0)
+
 #define ZP_SPRITE_STORE_PTR ZP_PTR_TMP_2
 #define SPLIT_COUNTER ZP_TMP_12 + 1
 #define SPLIT_SEGMENTS ZP_PTR_TMP_4
@@ -846,7 +858,13 @@ jumpInvert:
 	tempVeraAddress= *((VeraSpriteAddress*)&bEBulkAllocatedAddresses[(splitCounter - 1) * sizeof(VeraSpriteAddress)]);
 	RAM_BANK = localMetadata.viewTableMetadataBank;
 	localMetadata.backBuffers[splitCounter - 1] = tempVeraAddress;
+	
 	RAM_BANK = SPRITE_MEMORY_MANAGER_BANK;
+
+	SET_VERA_ADDRESS_ZP(tempVeraAddress, VERA_ADDRESS, VERA_ADDRESS_HIGH);
+	
+	
+	bEClearVeraSprite(localLoop.allocationWidth, localLoop.allocationHeight);
 	loopVeraAddress = tempVeraAddress;
 		
 	goto saveMetadata;
@@ -859,12 +877,21 @@ asm("pha");
 asm("sta %v", _assmByte);
 localMetadata.isOnBackBuffer = _assmByte;
 asm("pla");
-asm("beq %g", saveMetadata);
+asm("bne %g", switchToBackBuffer);
+asm("jmp %g", saveMetadata);
+switchToBackBuffer:
 RAM_BANK = localMetadata.viewTableMetadataBank;
 //printf("invert\n");
 loopVeraAddress = localMetadata.backBuffers[splitCounter - 1];
+_assmUInt = loopVeraAddress;
+//printf("2. your local loop has an allocated height of %d\n", localLoop.allocationHeight);
+
 asm("lda #%w", SPRITE_METADATA_BANK);
 asm("sta 0");
+
+SET_VERA_ADDRESS_ZP(loopVeraAddress, VERA_ADDRESS, VERA_ADDRESS_HIGH);
+_assmByte = localLoop.allocationWidth;
+bEClearVeraSprite(localLoop.allocationWidth, localLoop.allocationHeight);
 saveMetadata:
 viewTableMetadata[entryNum] = localMetadata;
 

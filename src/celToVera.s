@@ -121,6 +121,15 @@ sta BYTES_PER_ROW
 @end:
 rts
 
+.segment "BANKRAM0E"
+;void bEClearVeraSprite(byte width, byte height) ;Note expects VERA_ADDRESS to already be set
+_bEClearVeraSprite:
+jsr bECalculateTotalRows ;A should hold height at this point
+jsr popa
+jsr bECalculateBytesPerRow
+CLEAR_VERA VERA_ADDRESS, TOTAL_ROWS, VERA_BYTES_PER_ROW, #$0
+rts
+
 
 ;When calling celToVera on a flipped cel the celToVera priority byte order must be backwards.
 ;This means that for a sprite which is 6 wide, when drawing pixel zero priority pixel 5 must be check, and when drawing 1 4 must be checked and so on. 

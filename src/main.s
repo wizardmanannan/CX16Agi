@@ -72,3 +72,4 @@
     .export _b8GetControl
     .export _celToVera
     .export _bECelToVeraBackwards
+    .export _bEClearVeraSprite
