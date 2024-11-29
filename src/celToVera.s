@@ -18,7 +18,7 @@ jsr popax
 sta Y_VAL
 stx X_VAL
 jsr popax
-sta BYTES_PER_ROW
+sta VERA_BYTES_PER_ROW
 stx BCOL
 jsr popax
 sta VERA_ADDRESS
@@ -92,7 +92,7 @@ bne @check16W
 
 @setWidth8W:
 lda #BYTES_PER_ROW_8
-sta BYTES_PER_ROW
+sta VERA_BYTES_PER_ROW
 
 bra @end
 
@@ -102,7 +102,7 @@ bne @check32W
 
 @setWidth16W:
 lda #BYTES_PER_ROW_16
-sta BYTES_PER_ROW
+sta VERA_BYTES_PER_ROW
 bra @end
 
 @check32W:
@@ -111,12 +111,12 @@ bne @setWidth64W
 
 @setWidth32W:
 lda #BYTES_PER_ROW_32
-sta BYTES_PER_ROW
+sta VERA_BYTES_PER_ROW
 bra @end
 
 @setWidth64W:
 lda #BYTES_PER_ROW_64
-sta BYTES_PER_ROW
+sta VERA_BYTES_PER_ROW
 
 @end:
 rts
@@ -424,7 +424,7 @@ sty BULK_ADDRESS_INDEX
 
 GET_STRUCT_8_STORED_OFFSET _offsetOfCelTrans, CEL_ADDR, CEL_TRANS
 
-CLEAR_VERA VERA_ADDRESS, TOTAL_ROWS, BYTES_PER_ROW, #$0
+CLEAR_VERA VERA_ADDRESS, TOTAL_ROWS, VERA_BYTES_PER_ROW, #$0
 
 lda Y_VAL
 pha
@@ -790,7 +790,7 @@ dec CEL_HEIGHT ;Ready for the next line
 beq celToVeraLowRam_end
 
 clc
-lda BYTES_PER_ROW  ;Work out VERA address for the next line of the sprite
+lda VERA_BYTES_PER_ROW  ;Work out VERA address for the next line of the sprite
 adc VERA_ADDRESS
 sta VERA_ADDRESS
 bcc celToVeraLowRam_incrementY
