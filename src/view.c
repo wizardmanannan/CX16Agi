@@ -1109,11 +1109,11 @@ yPos: _assmByte = (byte)localViewTab->yPos;
 	asm("lda %v", _assmByte);
 	asm("sta %w", SPLIT_CEL_SEGMENTS);
 	
+	bECalculateBytesPerRow(localLoop.allocationWidth);
 	_assmByte = !localCel.flipped;
 	asm("lda %v", _assmByte);
 	asm("sta %w", CEL_TO_VERA_IS_FORWARD_DIRECTION);
 	asm("beq %g", celToVeraBackwards);
-	bECalculateBytesPerRow(localLoop.allocationWidth);
 	celToVera();
 	asm("bra %g", updateBufferPointer);
 	celToVeraBackwards:

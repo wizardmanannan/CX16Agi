@@ -41,7 +41,7 @@ lda #LDX_ABS
 sta celToVeraLowRam_skipBasedOnPriority
 lda #$1
 sta CEL_TO_VERA_IS_FORWARD_DIRECTION
-;jsr _celToVera
+jsr _celToVera
 pla
 sta celToVeraLowRam_skipBasedOnPriority
 REENABLE_INTERRUPTS
@@ -203,7 +203,7 @@ sta celToVeraLowRam_checkPriorityCmp + 1
 
 stz CEL_TO_VERA_IS_FORWARD_DIRECTION ;Disable the forward flag
 
-;jsr _celToVera
+jsr _celToVera
 
 ;Restore the old code back
 pla
@@ -436,7 +436,7 @@ bne @celToVeraBackwards
 @celToVeraForwards:
 lda #$1
 sta CEL_TO_VERA_IS_FORWARD_DIRECTION
-;jsr _celToVera
+jsr _celToVera
 bra @restoreStack
 
 @celToVeraBackwards:
