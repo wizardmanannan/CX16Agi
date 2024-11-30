@@ -346,10 +346,10 @@ void bESetViewMetadata(View* localView, ViewTable* viewTable, byte viewNum, byte
 		//TODO: Deallocate vera as well
 	}
 
-	loopVeraAddressesPointersSize = localView->numberOfLoops * sizeof(VeraSpriteAddress*);
-	veraAddressesSize = maxVeraAddresses * sizeof(VeraSpriteAddress) * localView->numberOfLoops;
-	backBufferAllocationSize = localView->maxVeraSlots * sizeof(VeraSpriteAddress);
-	totalAllocationSize = loopVeraAddressesPointersSize + veraAddressesSize + backBufferAllocationSize;
+	loopVeraAddressesPointersSize = localView->numberOfLoops;
+	veraAddressesSize = maxVeraAddresses * localView->numberOfLoops;
+	backBufferAllocationSize = localView->maxVeraSlots;
+	totalAllocationSize = (loopVeraAddressesPointersSize + veraAddressesSize + backBufferAllocationSize) * sizeof(VeraSpriteAddress*);
 
 #ifdef VERBOSE_DEBUG_SET_METADATA
 	printf("There are %d loops and %d maxCels\n", localView->numberOfLoops, localView->maxCels);
