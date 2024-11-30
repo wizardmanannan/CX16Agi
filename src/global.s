@@ -50,6 +50,14 @@ ZP_TMP_20 = $DD
 ZP_TMP_21 = $DF
 ZP_TMP_22 = $E1
 ZP_TMP_23 = $FE
+ZP_TMP_24 = $CB
+ZP_TMP_25 = $CD
+ZP_TMP_26 = $CF
+ZP_TMP_27 = $D1
+ZP_TMP_28 = $D3
+ZP_TMP_29 = $D5
+ZP_TMP_30 = $D7
+ZP_TMP_31 = $D9
 
 ;Float Division
 ZP_DIV_AREA = $E3
