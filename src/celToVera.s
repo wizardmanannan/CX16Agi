@@ -85,7 +85,8 @@ bra @end
 @end:
 rts
 
-bECalculateBytesPerRow:
+;void bECalculateBytesPerRow(byte celWidth)
+_bECalculateBytesPerRow:
 cmp #SPR_ATTR_8
 
 bne @check16W
@@ -126,7 +127,7 @@ rts
 _bEClearVeraSprite:
 jsr bECalculateTotalRows ;A should hold height at this point
 jsr popa
-jsr bECalculateBytesPerRow
+jsr _bECalculateBytesPerRow
 CLEAR_VERA VERA_ADDRESS, TOTAL_ROWS, VERA_BYTES_PER_ROW, #$0
 rts
 
@@ -372,7 +373,7 @@ jsr popa
 jsr bECalculateTotalRows
 
 jsr popa
-jsr bECalculateBytesPerRow
+jsr _bECalculateBytesPerRow
 
 @loop:
 lda #$1

@@ -73,3 +73,4 @@
     .export _celToVera
     .export _bECelToVeraBackwards
     .export _bEClearVeraSprite
+    .export _bECalculateBytesPerRow

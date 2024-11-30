@@ -679,7 +679,7 @@ boolean bESetLoop(ViewTable* localViewTab, ViewTableMetadata* localMetadata, Vie
 //Expect ZP to be properly set up. See celToVera function in assembly for further details.
 extern void celToVera();
 extern void bECelToVeraBackwards();
-
+extern void bECalculateBytesPerRow(byte celWidth);
 
 extern void bEClearVeraSprite(byte celWidth, byte celHeight);
 
@@ -1077,6 +1077,7 @@ yPos: _assmByte = (byte)localViewTab->yPos;
 	asm("jmp %g", updateBufferPointer);
 	callCelToVera:
 	_assmByte = 0;
+
 	asm("lda %v", _assmByte);
 	asm("sta %w", CEL_BANK);
 	_assmUInt = (unsigned int) &localCel;
@@ -1112,6 +1113,7 @@ yPos: _assmByte = (byte)localViewTab->yPos;
 	asm("lda %v", _assmByte);
 	asm("sta %w", CEL_TO_VERA_IS_FORWARD_DIRECTION);
 	asm("beq %g", celToVeraBackwards);
+	bECalculateBytesPerRow(localLoop.allocationWidth);
 	celToVera();
 	asm("bra %g", updateBufferPointer);
 	celToVeraBackwards:
