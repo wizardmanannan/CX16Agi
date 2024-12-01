@@ -541,6 +541,7 @@ newIncrementBackwards: .byte %1000, %1000, %1000, %1000, %1000, %1000, %1000, %1
 ;Y_VAL: The Y coord of the sprite (Note AGI deducts the height of the sprite as the Y is from the bottom left hand )
 ;P_NUM: The priority of the sprite being drawn
 ;CEL_HEIGHT: The height of the cel
+;CEL_WIDTH: The width of the cel (used in bECelToVeraBackwards)
 ;CEL_TO_VERA_IS_FORWARD_DIRECTION: Boolean, Is Operating In Forward Mode 
 
 ;Must Be Set For Split Sprites:
