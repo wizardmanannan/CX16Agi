@@ -712,7 +712,7 @@ boolean agiBlit(ViewTable* localViewTab, byte entryNum, boolean disableInterupts
 	VeraSpriteAddress loopVeraAddress, tempVeraAddress; //Put out here so it can be accessed by inline assembly without going via a C variable
 	boolean isAllocated = FALSE;
 	byte splitCounter; //Store the SPLIT_COUNTER ZP in here as this makes it easier for C to access it 
-
+	
 	previousBank = RAM_BANK;
 
 	RAM_BANK = SPRITE_METADATA_BANK;
@@ -849,18 +849,17 @@ jumpInvert:
 		
 		isAllocated = TRUE;
 	}
-
-	tempVeraAddress= *((VeraSpriteAddress*)&bEBulkAllocatedAddresses[(splitCounter - 1) * sizeof(VeraSpriteAddress)]);
-	RAM_BANK = localMetadata.viewTableMetadataBank;
-	localMetadata.backBuffers[splitCounter - 1] = tempVeraAddress;
 	
+	memCpyBankedBetween((byte*)localMetadata.backBuffers, localMetadata.viewTableMetadataBank, (byte*)bEBulkAllocatedAddresses, SPRITE_METADATA_BANK, localView.maxVeraSlots * sizeof(VeraSpriteAddress));
+	RAM_BANK = localMetadata.viewTableMetadataBank;
+	loopVeraAddress = localMetadata.backBuffers[0];
+
 	RAM_BANK = SPRITE_MEMORY_MANAGER_BANK;
 
-	SET_VERA_ADDRESS_ZP(tempVeraAddress, VERA_ADDRESS, VERA_ADDRESS_HIGH);
+	SET_VERA_ADDRESS_ZP(loopVeraAddress, VERA_ADDRESS, VERA_ADDRESS_HIGH);
 	
 	
 	bEClearVeraSprite(localLoop.allocationWidth, localLoop.allocationHeight);
-	loopVeraAddress = tempVeraAddress;
 		
 	goto saveMetadata;
 
