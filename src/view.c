@@ -713,11 +713,6 @@ boolean agiBlit(ViewTable* localViewTab, byte entryNum, boolean disableInterupts
 	boolean isAllocated = FALSE;
 	byte splitCounter; //Store the SPLIT_COUNTER ZP in here as this makes it easier for C to access it 
 
-	if (localViewTab->currentView != 0)
-	{
-		return TRUE;
-	}
-
 	previousBank = RAM_BANK;
 
 	RAM_BANK = SPRITE_METADATA_BANK;
@@ -1110,6 +1105,11 @@ yPos: _assmByte = (byte)localViewTab->yPos;
 	asm("sta %w", SPLIT_CEL_SEGMENTS);
 	
 	bECalculateBytesPerRow(localLoop.allocationWidth);
+	
+	_assmByte = localCel.width;
+	asm("lda %v", _assmByte);
+	asm("sta %w", CEL_WIDTH);
+	
 	_assmByte = !localCel.flipped;
 	asm("lda %v", _assmByte);
 	asm("sta %w", CEL_TO_VERA_IS_FORWARD_DIRECTION);
