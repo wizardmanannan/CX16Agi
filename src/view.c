@@ -712,8 +712,14 @@ boolean agiBlit(ViewTable* localViewTab, byte entryNum, boolean disableInterupts
 	VeraSpriteAddress loopVeraAddress, tempVeraAddress; //Put out here so it can be accessed by inline assembly without going via a C variable
 	boolean isAllocated = FALSE;
 	byte splitCounter; //Store the SPLIT_COUNTER ZP in here as this makes it easier for C to access it 
+	byte isAnimated = FALSE;
 	
 	previousBank = RAM_BANK;
+
+	if (localViewTab->currentView != 0)
+	{
+		return TRUE;
+	}
 
 	RAM_BANK = SPRITE_METADATA_BANK;
 
@@ -814,54 +820,52 @@ boolean agiBlit(ViewTable* localViewTab, byte entryNum, boolean disableInterupts
 
 getLoadedCel(&localLoop, &localCel, localViewTab->currentCel); //If the cel has being split our data would be stale
 
-splitLoop: 
-	splitCounter = *((byte*)SPLIT_COUNTER);
-	RAM_BANK = localMetadata.viewTableMetadataBank;
+RAM_BANK = localMetadata.viewTableMetadataBank;
+loopVeraAddress = loopVeraAddresses[localView.maxVeraSlots * localViewTab->currentCel];
 
-	loopVeraAddress = loopVeraAddresses[splitCounter + (localView.maxVeraSlots * localViewTab->currentCel) - 1];
+_assmByte = ((localViewTab->flags & MOTION > 0) && localViewTab->direction > 0) || localViewTab->staleCounter || localMetadata.isOnBackBuffer;
+isAnimated = _assmByte;
 
-	_assmByte = ((localViewTab->flags & MOTION > 0) && localViewTab->direction > 0) || localViewTab->staleCounter || localMetadata.isOnBackBuffer;
-	asm("lda %v", _assmByte);
-	asm("pha"); //Store whether this is animated for later
-	asm("bne %g", animatedSprite);
-	asm("jmp %g", setSpritesUpdatedBank);
+asm("lda %v", _assmByte);
+asm("bne %g", animatedSprite);
+asm("jmp %g", splitLoop);
 
 animatedSprite:
-	RAM_BANK = localMetadata.viewTableMetadataBank;
-	_assmUInt = localMetadata.backBuffers[splitCounter - 1];
-	
-	RAM_BANK = SPRITE_METADATA_BANK;
-	asm("lda %v", _assmUInt);
-	asm("bne %g", jumpInvert);
-	asm("lda %v + 1", _assmUInt);
-	asm("bne %g", jumpInvert);
-	asm("jmp %g", initialise);
-	
+RAM_BANK = localMetadata.viewTableMetadataBank;
+_assmUInt = localMetadata.backBuffers[splitCounter - 1];
+
+RAM_BANK = SPRITE_METADATA_BANK;
+asm("lda %v", _assmUInt);
+asm("bne %g", jumpInvert);
+asm("lda %v + 1", _assmUInt);
+asm("bne %g", jumpInvert);
+asm("jmp %g", initialise);
+
 jumpInvert:
-	asm("jmp %g", invert);
+asm("jmp %g", invert);
 
-	initialise:
-	localMetadata.isOnBackBuffer = TRUE;
-	
-	if (!isAllocated)
-	{
-		bEAllocateSpriteMemory(&localLoop, localView.maxVeraSlots);
-		
-		isAllocated = TRUE;
-	}
-	
-	memCpyBankedBetween((byte*)localMetadata.backBuffers, localMetadata.viewTableMetadataBank, (byte*)bEBulkAllocatedAddresses, SPRITE_METADATA_BANK, localView.maxVeraSlots * sizeof(VeraSpriteAddress));
-	RAM_BANK = localMetadata.viewTableMetadataBank;
-	loopVeraAddress = localMetadata.backBuffers[0];
+initialise:
+localMetadata.isOnBackBuffer = TRUE;
 
-	RAM_BANK = SPRITE_MEMORY_MANAGER_BANK;
+if (!isAllocated)
+{
+	bEAllocateSpriteMemory(&localLoop, localView.maxVeraSlots);
 
-	SET_VERA_ADDRESS_ZP(loopVeraAddress, VERA_ADDRESS, VERA_ADDRESS_HIGH);
-	
-	
-	bEClearVeraSprite(localLoop.allocationWidth, localLoop.allocationHeight);
-		
-	goto saveMetadata;
+	isAllocated = TRUE;
+}
+
+memCpyBankedBetween((byte*)localMetadata.backBuffers, localMetadata.viewTableMetadataBank, (byte*)bEBulkAllocatedAddresses, SPRITE_METADATA_BANK, localView.maxVeraSlots * sizeof(VeraSpriteAddress));
+RAM_BANK = localMetadata.viewTableMetadataBank;
+loopVeraAddress = localMetadata.backBuffers[0];
+
+RAM_BANK = SPRITE_MEMORY_MANAGER_BANK;
+
+SET_VERA_ADDRESS_ZP(loopVeraAddress, VERA_ADDRESS, VERA_ADDRESS_HIGH);
+
+
+bEClearVeraSprite(localLoop.allocationWidth, localLoop.allocationHeight);
+
+goto saveMetadata;
 
 invert:
 _assmByte = localMetadata.isOnBackBuffer;
@@ -889,6 +893,10 @@ bEClearVeraSprite(localLoop.allocationWidth, localLoop.allocationHeight);
 saveMetadata:
 viewTableMetadata[entryNum] = localMetadata;
 
+splitLoop: 
+	splitCounter = *((byte*)SPLIT_COUNTER);
+	RAM_BANK = localMetadata.viewTableMetadataBank;
+
 setSpritesUpdatedBank:
 	RAM_BANK = SPRITE_UPDATED_BANK;
 
@@ -902,7 +910,33 @@ setSpritesUpdatedBank:
 
 	//Put bytes into a buffer to be picked up by the irq see spriteIrqHandler.s (bEHandleSpriteUpdates)
 
+	//marker
+	asm("lda %w", SPLIT_COUNTER);
+	asm("dec");
+	asm("bne %g", checkWhetherOnBackBuffer); //loopVera address will always be correct on the first iteration, it was set at the beginning
+	asm("jmp %g", updateSpriteBuffer);
+
+checkWhetherOnBackBuffer:
+	_assmByte = isAnimated & localMetadata.isOnBackBuffer;
+	asm("lda %v", _assmByte);
+
+
+	asm("beq %g", notOnBackBuffer);
+	asm("jmp %g", onBackBuffer);
+	
+notOnBackBuffer:
+	RAM_BANK = localMetadata.viewTableMetadataBank;
+	loopVeraAddress = loopVeraAddresses[splitCounter + (localView.maxVeraSlots * localViewTab->currentCel) - 1];
 	_assmUInt = loopVeraAddress;
+
+	SET_VERA_ADDRESS_ZP(loopVeraAddress, VERA_ADDRESS, VERA_ADDRESS_HIGH);
+
+	RAM_BANK = SPRITE_UPDATED_BANK;
+	asm("jmp %g", updateSpriteBuffer);
+	
+	onBackBuffer:
+	loopVeraAddress = localMetadata.backBuffers[splitCounter - 1];
+
 
 	if (((localViewTab->flags & MOTION > 0) && localViewTab->direction > 0) || localViewTab->staleCounter || localMetadata.isOnBackBuffer)
 	{
@@ -911,7 +945,10 @@ setSpritesUpdatedBank:
 
 	//Update here for blitting all parts
 
+	updateSpriteBuffer:
 	//0 Vera Address Sprite Data Middle (Low will always be 0) (If both the first two bytes are zero that indicates the end of the buffer)
+	_assmUInt = loopVeraAddress;
+	
 	asm("lda %v", _assmUInt);
 	asm("and #$1F"); //Gets you the address bits 12:8 Which are the parts of the medium byte we need
 	asm("asl"); //Gets bits 5:7 which are always zero
@@ -1065,8 +1102,8 @@ yPos: _assmByte = (byte)localViewTab->yPos;
 
 
 	asm("sta (%w),y", ZP_SPRITE_STORE_PTR);
-	
-	asm("pla"); //Is this an animated sprite or not
+	_assmByte = isAnimated;
+	asm("lda %v", _assmByte);
 	asm("bne %g", callCelToVera);
 	asm("jmp %g", updateBufferPointer);
 	callCelToVera:
