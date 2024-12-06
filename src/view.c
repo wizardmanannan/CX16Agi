@@ -715,12 +715,6 @@ boolean agiBlit(ViewTable* localViewTab, byte entryNum, boolean disableInterupts
 	byte isAnimated = FALSE;
 	
 	previousBank = RAM_BANK;
-
-	if (localViewTab->currentView != 0)
-	{
-		return TRUE;
-	}
-
 	RAM_BANK = SPRITE_METADATA_BANK;
 
 	viewNum = localViewTab->currentView;
@@ -832,7 +826,7 @@ asm("jmp %g", splitLoop);
 
 animatedSprite:
 RAM_BANK = localMetadata.viewTableMetadataBank;
-_assmUInt = localMetadata.backBuffers[splitCounter - 1];
+_assmUInt = localMetadata.backBuffers[0];
 
 RAM_BANK = SPRITE_METADATA_BANK;
 asm("lda %v", _assmUInt);
@@ -880,7 +874,7 @@ asm("jmp %g", saveMetadata);
 switchToBackBuffer:
 RAM_BANK = localMetadata.viewTableMetadataBank;
 //printf("invert\n");
-loopVeraAddress = localMetadata.backBuffers[splitCounter - 1];
+loopVeraAddress = localMetadata.backBuffers[0];
 _assmUInt = loopVeraAddress;
 //printf("2. your local loop has an allocated height of %d\n", localLoop.allocationHeight);
 
