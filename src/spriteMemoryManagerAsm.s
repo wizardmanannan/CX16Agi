@@ -258,8 +258,8 @@ stz sreg + 1
 rts
 
 ZP_SIZE = ZP_TMP_24 ;Starting from 3 as allocate functions use one tmp ZP
-ZP_NUMBER_TO_ALLOCATE = ZP_TMP_25
-ZP_ARRAY_COUNTER = ZP_TMP_26
+ZP_NUMBER_TO_ALLOCATE = ZP_TMP_24 + 1
+ZP_ARRAY_COUNTER = ZP_TMP_25
 MAX_BULK_ALLOCATED_SIZE = 256
 ;Puts the returned memory addresses on the system stack. Note as the lower byte is always zero only the high and middle bytes (in that order) are pushed onto the stack
 ; void bEAllocateSpriteMemoryBulk(AllocationSize size, byte number) AllocationSize is 0 for 32 and 1 for 64
