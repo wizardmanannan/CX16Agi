@@ -1131,7 +1131,7 @@ yPos: _assmByte = (byte)localViewTab->yPos;
 	asm("lda %v", _assmByte);
 	asm("sta %w", SPLIT_CEL_BANK);
 		
-	_assmByte = localCel.splitSegments;
+	_assmByte = localCel.splitCelPointers;
 	asm("lda %v", _assmByte);
 	asm("sta %w", SPLIT_CEL_SEGMENTS);
 	
