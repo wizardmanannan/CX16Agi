@@ -909,6 +909,7 @@ setSpritesUpdatedBank:
 	asm("jmp %g", updateSpriteBuffer);
 
 checkWhetherOnBackBuffer:
+	RAM_BANK = localMetadata.viewTableMetadataBank;
 	_assmByte = isAnimated & localMetadata.isOnBackBuffer;
 	asm("lda %v", _assmByte);
 
@@ -938,6 +939,8 @@ notOnBackBuffer:
 	//Update here for blitting all parts
 
 	updateSpriteBuffer:
+	RAM_BANK = SPRITE_UPDATED_BANK;
+
 	//0 Vera Address Sprite Data Middle (Low will always be 0) (If both the first two bytes are zero that indicates the end of the buffer)
 	_assmUInt = loopVeraAddress;
 	
