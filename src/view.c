@@ -712,6 +712,11 @@ boolean agiBlit(ViewTable* localViewTab, byte entryNum, boolean disableInterupts
 	byte splitCounter; //Store the SPLIT_COUNTER ZP in here as this makes it easier for C to access it 
 	byte isAnimated = FALSE;
 	
+	if (localViewTab->currentLoop != 0 || localViewTab->currentView != 60)
+	{
+		return TRUE;
+	}
+
 	previousBank = RAM_BANK;
 	RAM_BANK = SPRITE_METADATA_BANK;
 
@@ -909,6 +914,7 @@ setSpritesUpdatedBank:
 	asm("jmp %g", updateSpriteBuffer);
 
 checkWhetherOnBackBuffer:
+	RAM_BANK = localMetadata.viewTableMetadataBank;
 	_assmByte = isAnimated & localMetadata.isOnBackBuffer;
 	asm("lda %v", _assmByte);
 
@@ -938,6 +944,8 @@ notOnBackBuffer:
 	//Update here for blitting all parts
 
 	updateSpriteBuffer:
+	RAM_BANK = SPRITE_UPDATED_BANK;
+
 	//0 Vera Address Sprite Data Middle (Low will always be 0) (If both the first two bytes are zero that indicates the end of the buffer)
 	_assmUInt = loopVeraAddress;
 	
@@ -1142,9 +1150,13 @@ yPos: _assmByte = (byte)localViewTab->yPos;
 	asm("lda %v", _assmByte);
 	asm("sta %w", CEL_TO_VERA_IS_FORWARD_DIRECTION);
 	asm("beq %g", celToVeraBackwards);
+	
+	//printf("at cel to vera the address is %p\n", loopVeraAddress);
+	//asm("stp");
 	celToVera();
 	asm("bra %g", updateBufferPointer);
-	celToVeraBackwards:
+	//printf("at cel to vera the address is %p\n", loopVeraAddress);
+celToVeraBackwards:
 	bECelToVeraBackwards();
 
 	updateBufferPointer:
@@ -1160,6 +1172,7 @@ yPos: _assmByte = (byte)localViewTab->yPos;
 	asm("bcs %g", endBlit);
 
 	asm("inc %w", SPLIT_COUNTER);
+	
 	asm("jmp %g", splitLoop);
 
 endBlit:
