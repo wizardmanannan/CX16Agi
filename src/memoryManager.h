@@ -182,6 +182,13 @@
 #define ZP_PTR_TMP_22 0xE1
 #define ZP_PTR_TMP_23 0xE3
 #define ZP_PTR_TMP_24 0xE5
+#define  ZP_PTR_TMP_25 0xCD
+#define ZP_PTR_TMP_26 0xCF
+#define ZP_PTR_TMP_27 0xD1
+#define ZP_PTR_TMP_28 0xD3
+#define ZP_PTR_TMP_29 = 0xD5
+#define ZP_PTR_TMP_30 = 0xD7
+#define ZP_PTR_TMP_31 = 0xD9
 
 //Sprite Allocation
 #define ZP_PTR_SEG_32 0xF7

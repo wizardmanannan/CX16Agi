@@ -27,5 +27,8 @@
 #define NEXT_DATA_INDEX  ZP_TMP_21
 #define BMP_BANK  ZP_TMP_21 + 1
 #define BMP_DATA  ZP_TMP_22
-
+//DO NOT USE 24 or 25 + 0 used in vera sprite memory allocator
+#define IS_ON_BACKBUFFER ZP_TMP_25 + 1
+#define SPLIT_OFFSET ZP_PTR_TMP_26
+#define ZP_SPRITE_STORE_PTR ZP_PTR_TMP_27
 #endif

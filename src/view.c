@@ -693,9 +693,8 @@ extern void bEClearVeraSprite(byte celWidth, byte celHeight);
         asm("sta %w", VERA_ADDRESS_HIGH); \
     } while (0)
 
-#define ZP_SPRITE_STORE_PTR ZP_PTR_TMP_2
-#define SPLIT_COUNTER ZP_TMP_12 + 1
-#define SPLIT_OFFSET ZP_PTR_TMP_5
+
+
 /***************************************************************************
 ** agi_blit
 ***************************************************************************/

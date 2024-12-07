@@ -49,6 +49,13 @@ TOTAL_ROWS = ZP_TMP_17
 MAX_VERA_SLOTS = ZP_TMP_17 + 1
 CEL_COUNTER = ZP_TMP_18
 
+;DO NOT USE 24 or 25 + 0 used in vera sprite memory allocator
+IS_ON_BACKBUFFER = ZP_TMP_25 + 1
+
+;Used in agiBlit marked so they don't get overwritten
+SPLIT_OFFSET = ZP_TMP_26
+ZP_SPRITE_STORE_PTR = ZP_TMP_27
+
 ;Color must be loaded into A
 .macro SET_COLOR_LEFT TMP
 asl a           ; Shift left 4 times to multiply by 16
