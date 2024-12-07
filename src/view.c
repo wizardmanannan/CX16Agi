@@ -695,7 +695,6 @@ extern void bEClearVeraSprite(byte celWidth, byte celHeight);
 
 #define ZP_SPRITE_STORE_PTR ZP_PTR_TMP_2
 #define SPLIT_COUNTER ZP_TMP_12 + 1
-#define SPLIT_SEGMENTS ZP_PTR_TMP_4
 #define SPLIT_OFFSET ZP_PTR_TMP_5
 /***************************************************************************
 ** agi_blit
@@ -808,7 +807,7 @@ boolean agiBlit(ViewTable* localViewTab, byte entryNum, boolean disableInterupts
 #endif
 
 	* ((byte*)SPLIT_COUNTER) = 1;
-	*((byte*)SPLIT_SEGMENTS) = localCel.splitSegments;
+	*((byte*)NO_SPLIT_SEGMENTS) = localCel.splitSegments;
 
 	asm("stz %w", SPLIT_OFFSET);
 
@@ -1158,7 +1157,7 @@ yPos: _assmByte = (byte)localViewTab->yPos;
 	asm("sta %w", SPLIT_OFFSET);
 
 	asm("lda %w", SPLIT_COUNTER);
-	asm("cmp %w", SPLIT_SEGMENTS);
+	asm("cmp %w", NO_SPLIT_SEGMENTS);
 	asm("bcs %g", endBlit);
 
 	asm("inc %w", SPLIT_COUNTER);
