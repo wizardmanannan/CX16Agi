@@ -923,24 +923,26 @@ notOnBackBuffer:
 	_assmUInt = loopVeraAddress;
 
 	SET_VERA_ADDRESS_ZP(loopVeraAddress, VERA_ADDRESS, VERA_ADDRESS_HIGH);
-
 	RAM_BANK = SPRITE_UPDATED_BANK;
+	
 	asm("jmp %g", updateSpriteBuffer);
 	
 	onBackBuffer:
 	loopVeraAddress = localMetadata.backBuffers[splitCounter - 1];
-
 
 	if (((localViewTab->flags & MOTION > 0) && localViewTab->direction > 0) || localViewTab->staleCounter || localMetadata.isOnBackBuffer)
 	{
 		//printf("loop vera address %p\n", loopVeraAddress);
 	}
 
+	RAM_BANK = SPRITE_UPDATED_BANK;
+	SET_VERA_ADDRESS_ZP(loopVeraAddress, VERA_ADDRESS, VERA_ADDRESS_HIGH);
+	bEClearVeraSprite(localLoop.allocationWidth, localLoop.allocationHeight);
+
 	//Update here for blitting all parts
 
 	updateSpriteBuffer:
 	RAM_BANK = SPRITE_UPDATED_BANK;
-
 	//0 Vera Address Sprite Data Middle (Low will always be 0) (If both the first two bytes are zero that indicates the end of the buffer)
 	_assmUInt = loopVeraAddress;
 	
