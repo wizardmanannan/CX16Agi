@@ -473,6 +473,8 @@ void bESwitchMetadata(ViewTable* localViewTab, View* localView, byte viewNum, by
 	ViewTableMetadata inActive, active;
 	ViewTableMetadata* inActiveMetadataPointer;
 	ViewTableMetadata localMetadata;
+	VeraSpriteAddress* backBuffers;
+	byte backBuffersBank;
 
 	localMetadata = viewTableMetadata[entryNum];
 	inActiveMetadataPointer = (ViewTableMetadata*)localMetadata.inactive;
@@ -564,6 +566,9 @@ void bESwitchMetadata(ViewTable* localViewTab, View* localView, byte viewNum, by
 
 	if (!inActive.loopsVeraAddressesPointers) //If the inactive is not in the list we will clear the metadata so it can be allocated. However we keep the inactive list and bank
 	{
+		backBuffers = localMetadata.backBuffers;
+		backBuffersBank = localMetadata.viewTableMetadataBank;
+
 		localMetadata.loopsVeraAddressesPointers = NULL;
 		localMetadata.veraAddresses = NULL;
 		localMetadata.viewNum = viewNum;
@@ -575,6 +580,12 @@ void bESwitchMetadata(ViewTable* localViewTab, View* localView, byte viewNum, by
 		viewTableMetadata[entryNum] = localMetadata;
 		bESetViewMetadata(localView, localViewTab, viewNum, entryNum, viewTabNoToMetaData[entryNum]);
 		localMetadata = viewTableMetadata[entryNum];
+
+		if (backBuffers)
+		{
+			memCpyBankedBetween((byte*)localMetadata.backBuffers, localMetadata.viewTableMetadataBank, (byte*) backBuffers, backBuffersBank, localView->maxVeraSlots * sizeof(VeraSpriteAddress));
+			viewTableMetadata[entryNum] = localMetadata;
+	}
 	}
 	else
 	{
