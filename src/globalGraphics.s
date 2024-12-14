@@ -91,6 +91,9 @@ NO_SPRITES = 127 ;Not including the mouse at 0
 ;Sprite Memory Manager
 SEGMENT_SMALL = (32 * 32) / 2
 SEGMENT_LARGE = SEGMENT_SMALL * 2 * SEGMENT_SMALL * 2
+SEGMENT_SMALL_SPACES = 1
+SEGMENT_LARGE_SPACES = 4
+
 
 ;Input Line
 INPUT_BYTE_1 = $20
