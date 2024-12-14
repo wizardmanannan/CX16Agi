@@ -96,6 +96,7 @@
 #define WORD_BANK 0x12
 #define LINE_DRAW_BANK 8
 #define FILL_BANK 8
+#define SPRITE_GARBAGE_BANK 0xC
 
 #define FIRST_FLOOD_BANK 0x27
 #define NO_FLOOD_BANKS 0x0A

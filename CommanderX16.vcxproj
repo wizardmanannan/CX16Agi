@@ -58,6 +58,7 @@
     <ClInclude Include="src\fillStack.h" />
     <ClInclude Include="src\fixed.h" />
     <ClInclude Include="src\floatDivision.h" />
+    <ClInclude Include="src\spriteGarbage.h" />
     <ClInclude Include="src\GENERAL.H" />
     <ClInclude Include="src\graphics.h" />
     <ClInclude Include="src\irq.h" />

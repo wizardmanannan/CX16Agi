@@ -2,9 +2,13 @@
 
 #define SEGMENT_SMALL ((32 * 32) / 2)
 #define SPRITE_ALLOC_TABLE_SIZE (((unsigned long) SPRITES_DATA_END - SPRITES_DATA_START) / SEGMENT_SMALL)
+#define SPRITE_ADDRESS_REVERSE_HIGH_NOT_SET_SIZE 15
+#define SPRITE_ADDRESS_REVERSE_HIGH_SET_SIZE 0xF6
 
 extern byte bESpriteAddressTableMiddle[SPRITE_ALLOC_TABLE_SIZE];
 extern byte bESpriteAllocTable[SPRITE_ALLOC_TABLE_SIZE];
+extern byte bCSpriteAddressReverseHighNotSet[SPRITE_ADDRESS_REVERSE_HIGH_NOT_SET_SIZE];
+extern byte bCSpriteAddressReverseHighSet[SPRITE_ADDRESS_REVERSE_HIGH_SET_SIZE];
 
 #pragma rodata-name (push, "BANKRAM0E")
 const char BE_INIT[] = "Initing Sprite Memory Manager";
@@ -20,7 +24,7 @@ void bEResetSpriteMemoryManager()
 	memset(bESpriteAllocTable, 0, SPRITE_ALLOC_TABLE_SIZE);
 
 
-	 *((byte*)ZP_PTR_SEG_32) = 0;
+	*((byte*)ZP_PTR_SEG_32) = 0;
 	*((byte*)ZP_PTR_SEG_64) = SPRITE_ALLOC_TABLE_SIZE - 4; //64 allocator starts four from the end
 
 	*((byte*)ZP_PTR_WALL_32) = 0;
@@ -74,7 +78,7 @@ void bETestSpriteAllocateSpriteMemory32()
 		expected += SEGMENT_SMALL;
 	}
 
-	actual = bEAllocateSpriteMemory32(); 
+	actual = bEAllocateSpriteMemory32();
 
 	bETestOverlap(1, TRUE);
 
@@ -266,18 +270,18 @@ void bETestAllocateSpriteMemoryBulk32()
 {
 	const byte TEST_NUM = 5;
 	byte i, addressVal, spriteDataHighMin = SPRITES_DATA_START >> 16, spriteDataHighMax = SPRITES_DATA_END >> 16, expectedMiddleByte = SPRITES_DATA_START >> 8, arrayCounter;
-	
+
 	printf("6 Bulk 32 tests\n");
-	
+
 	bEAllocateSpriteMemoryBulk(SIZE_32, TEST_NUM);
 
 	for (i = 0, arrayCounter = 0; i < TEST_NUM; i++, arrayCounter+= VERA_ADDRESS_SIZE)
 	{
 		addressVal = bEBulkAllocatedAddresses[arrayCounter];
 
-		
+
 		printf("low %d\n", addressVal);
-		
+
 		if (addressVal)
 		{
 			printf("Fail on 6 Low. i %d Low Byte %p is not equal to expected %p\n", i, addressVal, 0);
@@ -374,9 +378,12 @@ void bEInitSpriteMemoryManager()
 {
 	byte i;
 	unsigned long address;
-	
+
 	byte highByte = 0;
 	byte middleByte;
+
+	byte* tempSpriteAddressReverseHighNotSet = GOLDEN_RAM_WORK_AREA;
+	byte* tempSpriteAddressReverseHighSet = GOLDEN_RAM_WORK_AREA + SPRITE_ADDRESS_REVERSE_HIGH_NOT_SET_SIZE;
 
 	printf(BE_INIT);
 
@@ -400,7 +407,7 @@ void bEInitSpriteMemoryManager()
 			highByte = (byte)(address >> 16);
 
 #ifdef VERBOSE_MEMORY_INIT
-			printf("The highByte is %lx >> 16 = %p\n", address, (byte) highByte);
+			printf("The highByte is %lx >> 16 = %p\n", address, (byte)highByte);
 #endif
 
 			if (highByte)
@@ -411,6 +418,15 @@ void bEInitSpriteMemoryManager()
 
 		middleByte = (byte) ((address >> 8) & 0xFF);
 		bESpriteAddressTableMiddle[i] = middleByte;
+
+		if (highByte)
+		{
+			tempSpriteAddressReverseHighSet[middleByte] = i;
+		}
+		else
+		{
+			tempSpriteAddressReverseHighNotSet[middleByte - (SPRITES_DATA_START >> 8)] = i;
+		}
 
 #ifdef VERBOSE_MEMORY_INIT
 		printf("The middle byte is (%lx >> 8) & 0xff = %p. The address of middlebyte is %p\n", address, (byte)(address >> 8) & 0xFF, &middleByte);
@@ -428,7 +444,9 @@ void bEInitSpriteMemoryManager()
 	bETestSpriteAllocateSpriteMemory();
 	//asm("stp");
 #endif //  TEST_ALLOCATE_SPRITE_MEMORY
-
+	
+	memCpyBanked(bCSpriteAddressReverseHighNotSet, tempSpriteAddressReverseHighNotSet, GARBAGE_BANK, SPRITE_ADDRESS_REVERSE_HIGH_NOT_SET_SIZE);
+	memCpyBanked(bCSpriteAddressReverseHighSet, tempSpriteAddressReverseHighSet, GARBAGE_BANK, SPRITE_ADDRESS_REVERSE_HIGH_SET_SIZE);
 }
 
 #pragma code-name (pop)

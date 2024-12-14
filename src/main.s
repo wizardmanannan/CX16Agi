@@ -74,3 +74,6 @@
     .export _bECelToVeraBackwards
     .export _bEClearVeraSprite
     .export _bECalculateBytesPerRow
+    .export _bCSpriteAddressReverseHighNotSet
+    .export _bCSpriteAddressReverseHighSet
+    .export _bCDeallocSpriteMemory
