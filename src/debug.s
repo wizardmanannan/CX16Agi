@@ -12,6 +12,7 @@ lda _opCounter
 stp
 lda _bESpritesUpdatedBuffer
 lda _bCSpriteAddressReverseHighNotSet
+lda _bCSpriteAddressReverseHighSet
 rts
 
 .segment "BANKRAM05"

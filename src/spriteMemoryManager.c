@@ -381,10 +381,6 @@ void bEInitSpriteMemoryManager()
 
 	byte highByte = 0;
 	byte middleByte;
-
-	byte* tempSpriteAddressReverseHighNotSet = GOLDEN_RAM_WORK_AREA;
-	byte* tempSpriteAddressReverseHighSet = GOLDEN_RAM_WORK_AREA + SPRITE_ADDRESS_REVERSE_HIGH_NOT_SET_SIZE;
-
 	printf(BE_INIT);
 
 	bEResetSpriteMemoryManager();
@@ -421,11 +417,11 @@ void bEInitSpriteMemoryManager()
 
 		if (highByte)
 		{
-			tempSpriteAddressReverseHighSet[middleByte] = i;
+			memCpyBanked(&bCSpriteAddressReverseHighSet[middleByte], &i, SPRITE_GARBAGE_BANK, 1);
 		}
 		else
 		{
-			tempSpriteAddressReverseHighNotSet[middleByte - (SPRITES_DATA_START >> 8)] = i;
+			memCpyBanked(&bCSpriteAddressReverseHighNotSet[middleByte - (SPRITES_DATA_START >> 8)], &i, SPRITE_GARBAGE_BANK, 1);
 		}
 
 #ifdef VERBOSE_MEMORY_INIT
@@ -444,9 +440,6 @@ void bEInitSpriteMemoryManager()
 	bETestSpriteAllocateSpriteMemory();
 	//asm("stp");
 #endif //  TEST_ALLOCATE_SPRITE_MEMORY
-	
-	memCpyBanked(bCSpriteAddressReverseHighNotSet, tempSpriteAddressReverseHighNotSet, GARBAGE_BANK, SPRITE_ADDRESS_REVERSE_HIGH_NOT_SET_SIZE);
-	memCpyBanked(bCSpriteAddressReverseHighSet, tempSpriteAddressReverseHighSet, GARBAGE_BANK, SPRITE_ADDRESS_REVERSE_HIGH_SET_SIZE);
 }
 
 #pragma code-name (pop)

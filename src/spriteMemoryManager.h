@@ -9,7 +9,6 @@
 #define ALLOCATE_BLOCK_SIZE_32 1
 #define ALLOCATOR_BLOCK_SIZE_64 2
 
-extern void bCDeallocSpriteMemory(VeraSpriteAddress address);
 #pragma wrapped-call (push, trampoline, SPRITE_MEMORY_MANAGER_BANK)
 void bEResetSpriteMemoryManager();
 void bEInitSpriteMemoryManager();

@@ -15,6 +15,7 @@
 #include "helpers.h"
 #include "irq.h"
 #include "celToVeraZp.h"
+#include "spriteGarbage.h"
 
 #define MAXVIEW  256
 #define MAX_JOINED_SPRITES 6
