@@ -49,4 +49,60 @@ unsigned int b6SetPaletteToInt(byte paletteReference);
 #define STARTING_ROW ((SCREEN_HEIGHT / 2) - (PICTURE_HEIGHT / 2))
 #define STARTING_BYTE (STARTING_ROW * BYTES_PER_ROW)
 
+//The data is the top two fields are all stored at the same bank alloced address on the bank in the bank field
+typedef struct ViewTableMetadata {
+	VeraSpriteAddress** loopsVeraAddressesPointers;
+	VeraSpriteAddress* veraAddresses;
+	byte viewTableMetadataBank;
+	byte viewNum;
+	void* inactive; //Sometimes a single viewtab can have views swapped rapidly, we keep the previous ones here so we can easily switch between them
+	byte inactiveBank;
+	VeraSpriteAddress* backBuffers;
+	boolean isOnBackBuffer;
+} ViewTableMetadata;
+
+typedef struct Cel {
+	byte width;
+	byte height;
+	byte transparency;
+	byte* bmp;
+	byte bitmapBank;
+	boolean flipped;
+	byte** splitCelPointers; //Some cels may have sprites that larger than the maximum 64x64 the CX16 allows. 
+	//In this case the sprite is split and this array points to the places in the bmp where the indiviual segments are.  If the cel is not large enough this value is null. Note if split the cel data may be on a different bank to the view file data, hence the bank
+	byte splitCelBank;
+	byte splitSegments; //If this is not split it will be 1
+	byte veraSlotsWidth;
+	byte veraSlotsHeight;
+} Cel;
+
+typedef enum {
+	SPR_ATTR_8 = 0,
+	SPR_ATTR_16 = 1,
+	SPR_ATTR_32 = 2,
+	SPR_ATTR_64 = 3
+} SpriteAttributeSize;
+
+typedef struct {
+	byte numberOfCels;
+	Cel* cels;
+	byte celsBank;
+	SpriteAttributeSize allocationHeight;
+	SpriteAttributeSize allocationWidth;
+	byte palette;
+} Loop;
+
+typedef struct View {
+	boolean loaded;
+	byte numberOfLoops;
+	Loop* loops;
+	byte loopsBank;
+	char* description; //Always on the same bank as code
+	byte* codeBlock;
+	byte codeBlockBank;
+	byte maxCels;
+	byte maxVeraSlots;
+} View;
+
+
 #endif

@@ -76,4 +76,4 @@
     .export _bECalculateBytesPerRow
     .export _bCSpriteAddressReverseHighNotSet
     .export _bCSpriteAddressReverseHighSet
-    .export _bCDeallocSpriteMemory
+    .export _bCDeleteSpriteMemoryForViewTab

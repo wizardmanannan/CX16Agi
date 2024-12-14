@@ -58,18 +58,6 @@ extern int dirnOfEgo;
 
 #define MAX_INACTIVE_METADATA 10
 
-//The data is the top two fields are all stored at the same bank alloced address on the bank in the bank field
-typedef struct {
-	VeraSpriteAddress** loopsVeraAddressesPointers;
-	VeraSpriteAddress* veraAddresses;
-	byte viewTableMetadataBank;
-	byte viewNum;
-	void* inactive; //Sometimes a single viewtab can have views swapped rapidly, we keep the previous ones here so we can easily switch between them
-	byte inactiveBank;
-	VeraSpriteAddress* backBuffers;
-	boolean isOnBackBuffer;
-} ViewTableMetadata;
-
 extern byte bEBulkAllocatedAddresses[VIEW_TABLE_SIZE * sizeof(VeraSpriteAddress) * ALLOCATOR_BLOCK_SIZE_64];
 
 void getViewTab(ViewTable* returnedViewTab, byte viewTabNumber)
@@ -663,6 +651,8 @@ boolean bESetLoop(ViewTable* localViewTab, ViewTableMetadata* localMetadata, Vie
 
 	if (!bEAllocateSpriteMemory(&localLoop, noToBlit))
 	{
+		//printf("local md %p  current loop %d local view %p lvp %p bank %d no loops %d  number cels %d\n", localMetadata, localViewTab->currentLoop, localView, localMetadata->loopsVeraAddressesPointers, localMetadata->viewTableMetadataBank, localView->numberOfLoops, localView->maxCels);
+		bCDeleteSpriteMemoryForViewTab(localMetadata, localViewTab->currentLoop, localView, TRUE);		
 		return FALSE;
 	}
 

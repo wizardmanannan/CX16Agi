@@ -57,7 +57,19 @@ ZP_TMP_27 = $D1
 ZP_TMP_28 = $D3
 ZP_TMP_29 = $D5
 ZP_TMP_30 = $D7
-ZP_TMP_31 = $D9
+
+;Reserved For Sprite Garbage Collector
+SGC_LOOP_VERA_ADDR = $D3
+SGC_VIEW_METADATA = $D5
+SGC_CEL_VERA_ADDR = $D7
+
+;Used In By Sprite Garbage Collector. Uses some of the same ZPs are CelToVeraBulk due to lack of ZP space
+SGC_LOOP_VERA_ADDR_BANK = ZP_TMP_14
+SGC_CURRENT_LOOP = ZP_TMP_14 + 1
+SGC_INACTIVE_ONLY = ZP_TMP_16
+SGC_LOCAL_VIEW = ZP_TMP_17
+SGC_NO_LOOPS = ZP_TMP_18
+SGC_MAX_CELS = ZP_TMP_18 + 1
 
 ;Float Division
 ZP_DIV_AREA = $E3

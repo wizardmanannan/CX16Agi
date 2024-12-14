@@ -20,52 +20,9 @@
 #define MAXVIEW  256
 #define MAX_JOINED_SPRITES 6
 #define MAX_SPRITES_ROW_OR_COLUMN_SIZE 4
-
-typedef struct Cel {
-	byte width;
-	byte height;
-	byte transparency;
-	byte* bmp;
-	byte bitmapBank;
-	boolean flipped;
-	byte** splitCelPointers; //Some cels may have sprites that larger than the maximum 64x64 the CX16 allows. 
-	//In this case the sprite is split and this array points to the places in the bmp where the indiviual segments are.  If the cel is not large enough this value is null. Note if split the cel data may be on a different bank to the view file data, hence the bank
-	byte splitCelBank;
-	byte splitSegments; //If this is not split it will be 1
-	byte veraSlotsWidth;
-	byte veraSlotsHeight;
-} Cel;
-
 #define PALETTE_NOT_SET 255
 
-typedef enum {
-	SPR_ATTR_8 = 0,
-	SPR_ATTR_16 = 1,
-	SPR_ATTR_32 = 2,
-	SPR_ATTR_64 = 3
-} SpriteAttributeSize;
 extern byte* var;
-
-typedef struct {
-	byte numberOfCels;
-	Cel* cels;
-	byte celsBank;
-	SpriteAttributeSize allocationHeight;
-	SpriteAttributeSize allocationWidth;
-	byte palette;
-} Loop;
-
-typedef struct {
-	boolean loaded;
-	byte numberOfLoops;
-	Loop* loops;
-	byte loopsBank;
-	char* description; //Always on the same bank as code
-	byte* codeBlock;
-	byte codeBlockBank;
-	byte maxCels;
-	byte maxVeraSlots;
-} View;
 
 #define DRAWN         0x0001
 #define IGNOREBLOCKS  0x0002

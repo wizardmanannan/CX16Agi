@@ -23,4 +23,13 @@ byte offsetOfFlipped = offsetof(struct Cel, flipped);
 byte offsetOfXPos = offsetof(struct ViewTable, xPos);
 byte offsetOfYPos = offsetof(struct ViewTable, yPos);
 byte offsetOfPriority = offsetof(struct ViewTable, priority);
+
+//View Metadata
+byte offsetOfloopsVeraAddressesPointers = offsetof(struct ViewTableMetadata, loopsVeraAddressesPointers);
+byte offsetOfViewMetadataBank = offsetof(struct ViewTableMetadata, viewTableMetadataBank);
+
+//View
+byte offsetOfNumberOfLoops = offsetof(struct View, numberOfLoops);
+byte offsetOfMaxCels = offsetof(struct View, maxCels);
+
 #endif
