@@ -245,7 +245,9 @@ NEG_1_16 = $FFFF
 .macro   GET_STRUCT_8_STORED_OFFSET offset, pointer, result
          LDY   offset
          LDA   (pointer),y
+.ifnblank result
          STA   result
+.endif
 .endmacro
 
 ; Macro for saving zero page values

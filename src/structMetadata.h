@@ -31,5 +31,6 @@ byte offsetOfViewMetadataBank = offsetof(struct ViewTableMetadata, viewTableMeta
 //View
 byte offsetOfNumberOfLoops = offsetof(struct View, numberOfLoops);
 byte offsetOfMaxCels = offsetof(struct View, maxCels);
+byte offsetOfMaxVeraSlots = offsetof(struct View, maxVeraSlots);
 
 #endif

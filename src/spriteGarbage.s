@@ -2,10 +2,14 @@
 
 GARBAGE_INC = 1
 
+.include "helpersAsm.s"
+
 .import _offsetOfloopsVeraAddressesPointers
 .import _offsetOfViewMetadataBank
 .import _offsetOfNumberOfLoops
 .import _offsetOfMaxCels
+.import _offsetOfMaxVeraSlots
+.import _b5Multiply
 
 .macro DEALLOC_SPRITE_MEMORY
 .local @highSet
@@ -14,8 +18,6 @@ GARBAGE_INC = 1
 .local @pushBackWall32
 .local @pushBackWall64
 .local @end
-
-stp
 
 cpx #$0
 beq @highNotSet
@@ -59,20 +61,21 @@ sta ZP_PTR_WALL_64
 
 .segment "CODE"
 
-;void deleteSpriteMemoryForViewTab(ViewTab* viewTab, byte currentView boolean inActiveOnly)
-_deleteSpriteMemoryForViewTab:
-sta SGC_INACTIVE_ONLY
-jsr popax
-sta SGC_VIEW_METADATA
-stx SGC_VIEW_METADATA + 1
+;Ensure the the Zps are set up first
+deleteSpriteMemoryForViewTab:
+lda RAM_BANK
+sta @previousRamBank
 
+lda @previousRamBank
+sta RAM_BANK
+rts
+@previousRamBank: .byte $0
 .segment "BANKRAM0C"
 _bCSpriteAddressReverseHighNotSet: .res 22, $0
 _bCSpriteAddressReverseHighSet: .res $F8, $0
 
 ;void bCDeleteSpriteMemoryForViewTab(ViewTableMetadata* viewMetadata, byte currentLoop, View* localView, boolean inActiveOnly)
 _bCDeleteSpriteMemoryForViewTab:
-stp
 sta SGC_INACTIVE_ONLY
 
 jsr popax 
@@ -90,9 +93,15 @@ stx SGC_VIEW_METADATA + 1
 GET_STRUCT_16_STORED_OFFSET _offsetOfloopsVeraAddressesPointers, SGC_VIEW_METADATA, SGC_LOOP_VERA_ADDR
 GET_STRUCT_8_STORED_OFFSET _offsetOfViewMetadataBank, SGC_VIEW_METADATA, SGC_LOOP_VERA_ADDR_BANK
 GET_STRUCT_16_STORED_OFFSET _offsetOfNumberOfLoops, SGC_LOCAL_VIEW, SGC_NO_LOOPS
-GET_STRUCT_8_STORED_OFFSET _offsetOfMaxCels, SGC_LOCAL_VIEW, SGC_MAX_CELS
 
-stp
+GET_STRUCT_8_STORED_OFFSET _offsetOfMaxCels, SGC_LOCAL_VIEW
+tax
+GET_STRUCT_8_STORED_OFFSET _offsetOfMaxVeraSlots, SGC_LOCAL_VIEW
+tay
+txa
+jsr mul8x8to8
+sta SGC_MAX_CELS
+
 
 rts
 .endif
