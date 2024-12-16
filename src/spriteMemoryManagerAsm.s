@@ -8,12 +8,12 @@ SPRITE_MEMORY_MANAGER_INC = 1
 
 .import popa
 
-.segment "BANKRAM0E"
 SPRITE_ALLOC_TABLE_SIZE = (SPRITE_END - SPRITE_START) / SEGMENT_SMALL
-RESULT_SIZE = 20
-
+.segment "CODE"
 _bESpriteAllocTable: .res SPRITE_ALLOC_TABLE_SIZE, $0
 
+.segment "BANKRAM0E"
+RESULT_SIZE = 20
 _bESpriteAddressTableMiddle: .res SPRITE_ALLOC_TABLE_SIZE, $0 ; Low will always be zero, hence no need for a table
 ; Macro: ALLOCATE_SPRITE_MEMORY_32
 ; Purpose: Allocate 32-byte segments for sprite memory in a CommanderX16 environment.

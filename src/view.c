@@ -629,7 +629,7 @@ boolean bESetLoop(ViewTable* localViewTab, ViewTableMetadata* localMetadata, Vie
 {
 	Loop localLoop;
 	Cel localCel;
-	byte noToBlit;
+	byte noToBlit, i;
 	byte veraSpriteWidthAndHeight;
 
 	getLoadedLoop(localView, &localLoop, localViewTab->currentLoop);
@@ -649,11 +649,18 @@ boolean bESetLoop(ViewTable* localViewTab, ViewTableMetadata* localMetadata, Vie
 	printf("Trying to allocate %d. Number %d\n", localLoop.allocationSize, noToBlit);
 #endif
 
-	if (!bEAllocateSpriteMemory(&localLoop, noToBlit))
+	for (i = 0; !bEAllocateSpriteMemory(&localLoop, noToBlit); i++)
 	{
 		//printf("local md %p  current loop %d local view %p lvp %p bank %d no loops %d  number cels %d\n", localMetadata, localViewTab->currentLoop, localView, localMetadata->loopsVeraAddressesPointers, localMetadata->viewTableMetadataBank, localView->numberOfLoops, localView->maxCels);
-		bCDeleteSpriteMemoryForViewTab(localMetadata, localViewTab->currentLoop, localView, TRUE);		
-		return FALSE;
+		//printf("the max slots are %d for view %d\n", localView->maxVeraSlots, localViewTab->currentView);
+		
+		if (i == 0)
+		{
+			bCDeleteSpriteMemoryForViewTab(localMetadata, localViewTab->currentLoop, localView, TRUE);
+		}
+		else {
+			return FALSE;
+		}
 	}
 
 #ifdef VERBOSE_DEBUG_BLIT
@@ -1586,7 +1593,6 @@ void b9LoadViewFile(byte viewNum)
 
 				localCel.veraSlotsWidth = b9VeraSlotsForWidthOrHeight(localCel.width * 2);
 				localCel.veraSlotsHeight = b9VeraSlotsForWidthOrHeight(localCel.height);
-
 				localCel.splitSegments = localCel.veraSlotsWidth * localCel.veraSlotsHeight;
 
 #ifdef VERBOSE_LOAD_VIEWS

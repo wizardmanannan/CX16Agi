@@ -11,14 +11,88 @@ GARBAGE_INC = 1
 .import _offsetOfMaxVeraSlots
 .import _b5Multiply
 
-.macro DEALLOC_SPRITE_MEMORY
-.local @highSet
-.local @highNotSet
-.local @clearEntry
-.local @pushBackWall32
-.local @pushBackWall64
-.local @end
+.segment "CODE"
 
+;Ensure the the Zps are set up first
+deleteSpriteMemoryForViewTab:
+lda RAM_BANK
+sta @previousRamBank
+
+lda SGC_CURRENT_LOOP
+inc
+asl
+sec
+sbc #3
+sta SGC_CURRENT_LOOP
+
+
+@initLoopsLoop:
+lda SGC_LOOP_VERA_ADDR_BANK
+sta RAM_BANK
+
+lda SGC_NO_LOOPS
+asl
+dec
+@loopsLoop:
+tay
+lda (SGC_LOOP_VERA_ADDR),y
+sta SGC_CEL_VERA_ADDR + 1
+dey
+lda (SGC_LOOP_VERA_ADDR),y
+sta SGC_CEL_VERA_ADDR
+dey
+sty LOOPS_COUNTER_ADDRESS
+
+cpy SGC_CURRENT_LOOP
+beq @checkLoopsLoop
+
+@initCelsLoop:
+lda SGC_MAX_CELS
+asl
+dec
+@celsLoop:
+tay
+lda (SGC_CEL_VERA_ADDR),y
+tax
+lda #$0
+sta (SGC_CEL_VERA_ADDR),y
+dey
+
+lda (SGC_CEL_VERA_ADDR),y
+sta sreg
+lda #$0
+sta (SGC_CEL_VERA_ADDR),y
+
+dey
+sty CEL_COUNTER_ADDRESS
+
+txa ;If we have two zero bytes then there is nothing to do skip
+ora sreg
+beq @checkCelsLoop
+
+lda sreg
+ldy #GARBAGE_BANK
+sty RAM_BANK
+jsr bCDeallocSpriteMemory
+lda SGC_LOOP_VERA_ADDR_BANK
+sta RAM_BANK
+
+@checkCelsLoop:
+lda CEL_COUNTER_ADDRESS
+bpl @celsLoop
+
+
+@checkLoopsLoop:
+lda LOOPS_COUNTER_ADDRESS
+bpl @loopsLoop
+
+lda @previousRamBank
+sta RAM_BANK
+rts
+@previousRamBank: .byte $0
+.segment "BANKRAM0C"
+
+bCDeallocSpriteMemory:
 cpx #$0
 beq @highNotSet
 
@@ -57,20 +131,10 @@ sta ZP_PTR_WALL_64
 
 @end:
 
-.endmacro
-
-.segment "CODE"
-
-;Ensure the the Zps are set up first
-deleteSpriteMemoryForViewTab:
-lda RAM_BANK
-sta @previousRamBank
-
-lda @previousRamBank
-sta RAM_BANK
 rts
-@previousRamBank: .byte $0
-.segment "BANKRAM0C"
+
+
+
 _bCSpriteAddressReverseHighNotSet: .res 22, $0
 _bCSpriteAddressReverseHighSet: .res $F8, $0
 
@@ -89,7 +153,6 @@ jsr popax
 sta SGC_VIEW_METADATA
 stx SGC_VIEW_METADATA + 1
 
-
 GET_STRUCT_16_STORED_OFFSET _offsetOfloopsVeraAddressesPointers, SGC_VIEW_METADATA, SGC_LOOP_VERA_ADDR
 GET_STRUCT_8_STORED_OFFSET _offsetOfViewMetadataBank, SGC_VIEW_METADATA, SGC_LOOP_VERA_ADDR_BANK
 GET_STRUCT_16_STORED_OFFSET _offsetOfNumberOfLoops, SGC_LOCAL_VIEW, SGC_NO_LOOPS
@@ -102,6 +165,6 @@ txa
 jsr mul8x8to8
 sta SGC_MAX_CELS
 
-
+jsr deleteSpriteMemoryForViewTab
 rts
 .endif
