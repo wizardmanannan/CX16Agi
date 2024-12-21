@@ -6,7 +6,7 @@
 #define SPRITE_ADDRESS_REVERSE_HIGH_SET_SIZE 0xF6
 
 extern byte bESpriteAddressTableMiddle[SPRITE_ALLOC_TABLE_SIZE];
-extern byte bESpriteAllocTable[SPRITE_ALLOC_TABLE_SIZE];
+extern byte spriteAllocTable[SPRITE_ALLOC_TABLE_SIZE];
 extern byte bCSpriteAddressReverseHighNotSet[SPRITE_ADDRESS_REVERSE_HIGH_NOT_SET_SIZE];
 extern byte bCSpriteAddressReverseHighSet[SPRITE_ADDRESS_REVERSE_HIGH_SET_SIZE];
 
@@ -21,7 +21,7 @@ const char BE_INIT[] = "Initing Sprite Memory Manager";
 
 void bEResetSpriteMemoryManager()
 {
-	memset(bESpriteAllocTable, 0, SPRITE_ALLOC_TABLE_SIZE);
+	memset(spriteAllocTable, 0, SPRITE_ALLOC_TABLE_SIZE);
 
 
 	*((byte*)ZP_PTR_SEG_32) = 0;

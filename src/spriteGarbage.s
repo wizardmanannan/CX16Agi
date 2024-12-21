@@ -115,7 +115,7 @@ tay
 ldx _bCSpriteAddressReverseHighNotSet,y 
 
 @clearEntry:
-stz _bESpriteAllocTable,x
+stz _spriteAllocTable,x
 
 @pushBackWall32:
 txa 

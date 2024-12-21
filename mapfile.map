@@ -728,7 +728,7 @@ _bEAllocateSpriteMemoryBulk 00B56A RLA    _bEBulkAllocatedAddresses 00B46A RLA
 _bECellToVeraBulk         00B84E RLA    _bEGetPalette             00A031 RLA    
 _bEInitPaletteManager     00A01B RLA    _bEInitSpriteMemoryManager 00A166 RLA    
 _bEResetSpriteMemoryManager 00A13F RLA    _bESplitCel               00BAA9 RLA    
-_bESpriteAddressTableMiddle 00B318 RLA    _bESpriteAllocTable       00B291 RLA    
+_bESpriteAddressTableMiddle 00B318 RLA    _spriteAllocTable       00B291 RLA    
 _bESpritesUpdatedBuffer   00B0B0 RLA    _bESpritesUpdatedBufferPointer 00B1B0 RLA    
 _bEToBlitCelArray         00B65A RLA    _bFGetObject              00B408 RLA    
 _bFLoadObjectFile         00B45E RLA    _bFSetObject              00B433 RLA    
@@ -1174,7 +1174,7 @@ _b6DiscardLogicFile       00B0EA RLA    _b2Stop_motion            00B0F4 RLA
 _b7GetString              00B12D RLA    _b2Start_motion           00B146 RLA    
 _b2Step_size              00B190 RLA    _b12LoadWords             00B1A2 RLA    
 _bESpritesUpdatedBufferPointer 00B1B0 RLA    _b2Step_time              00B1DE RLA    
-_b2Move_obj               00B22C RLA    _bESpriteAllocTable       00B291 RLA    
+_b2Move_obj               00B22C RLA    _spriteAllocTable       00B291 RLA    
 _viewHeaderBuffer         00B295 RLA    _b2Move_obj_v             00B2B6 RLA    
 _b4InitLruCaches          00B2B8 RLA    _bESpriteAddressTableMiddle 00B318 RLA    
 _b7GetEvent               00B320 RLA    _textBuffer2              00B32C RLA    
@@ -1954,7 +1954,7 @@ _bESplitCel (main.o):
     view.o                    src/view.s:89
 _bESpriteAddressTableMiddle (main.o):
     spriteMemoryManager.o     src/spriteMemoryManager.s:18
-_bESpriteAllocTable (main.o):
+_spriteAllocTable (main.o):
     spriteMemoryManager.o     src/spriteMemoryManager.s:19
 _bESpritesUpdatedBuffer (main.o):
     view.o                    src/view.s:71

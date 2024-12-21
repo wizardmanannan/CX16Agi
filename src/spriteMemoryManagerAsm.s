@@ -10,7 +10,7 @@ SPRITE_MEMORY_MANAGER_INC = 1
 
 SPRITE_ALLOC_TABLE_SIZE = (SPRITE_END - SPRITE_START) / SEGMENT_SMALL
 .segment "CODE"
-_bESpriteAllocTable: .res SPRITE_ALLOC_TABLE_SIZE, $0
+_spriteAllocTable: .res SPRITE_ALLOC_TABLE_SIZE, $0
 
 .segment "BANKRAM0E"
 RESULT_SIZE = 20
@@ -38,7 +38,7 @@ _bESpriteAddressTableMiddle: .res SPRITE_ALLOC_TABLE_SIZE, $0 ; Low will always 
     @loop:
         cpy ZP_PTR_WALL_64
         beq @resetAtZero
-        lda _bESpriteAllocTable, y
+        lda _spriteAllocTable, y
         bne @nonEmpty
 
     @found:
@@ -54,7 +54,7 @@ _bESpriteAddressTableMiddle: .res SPRITE_ALLOC_TABLE_SIZE, $0 ; Low will always 
     @prepareResult:
         ; Set allocation table entry to indicate allocated
         lda #$1
-        sta _bESpriteAllocTable, y
+        sta _spriteAllocTable, y
 
         ; Load sprite address into X register
         ldx _bESpriteAddressTableMiddle, y
@@ -148,7 +148,7 @@ ZP_PTR_WALL_32_PLUS_3 = ZP_TMP_2
 
     @checkResultTable:
         ; Check if current slot is empty
-        lda _bESpriteAllocTable, y
+        lda _spriteAllocTable, y
         bne @nonEmpty
 
     @found:
@@ -173,7 +173,7 @@ ZP_PTR_WALL_32_PLUS_3 = ZP_TMP_2
     @prepareResult:
         ; Set allocation table entry to indicate allocated
         lda #$1
-        sta _bESpriteAllocTable, y
+        sta _spriteAllocTable, y
 
         ; Load sprite address into X register
         ldx _bESpriteAddressTableMiddle, y

@@ -43,7 +43,7 @@
     .export _b6TellMeTheAddressPlease
     .export _bESpritesUpdatedBuffer
     .export _bESpriteAddressTableMiddle
-    .export _bESpriteAllocTable
+    .export _spriteAllocTable
     .export _bEAllocateSpriteMemory32
     .export _bEAllocateSpriteMemory64
     .export _bEAllocateSpriteMemoryBulk
