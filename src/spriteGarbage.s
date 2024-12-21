@@ -18,6 +18,9 @@ deleteSpriteMemoryForViewTab:
 lda RAM_BANK
 sta @previousRamBank
 
+lda SGC_INACTIVE_ONLY
+beq @initLoopsLoop
+
 lda SGC_CURRENT_LOOP
 inc
 asl
@@ -42,6 +45,9 @@ lda (SGC_LOOP_VERA_ADDR),y
 sta SGC_CEL_VERA_ADDR
 dey
 sty LOOPS_COUNTER_ADDRESS
+
+lda SGC_INACTIVE_ONLY
+beq @initCelsLoop
 
 cpy SGC_CURRENT_LOOP
 beq @checkLoopsLoop
