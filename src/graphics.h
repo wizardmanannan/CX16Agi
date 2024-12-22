@@ -139,10 +139,10 @@ typedef struct ViewTable {
 
 #define VIEW_TABLE_SIZE  20 
 #define SPRITE_SLOTS (VIEW_TABLE_SIZE)
-
+#define MAXVIEW  256
 
 extern ViewTable viewtab[VIEW_TABLE_SIZE];
-extern View* loadedViews;
+extern View loadedViews[MAXVIEW];
 extern ViewTableMetadata viewTableMetadata[SPRITE_SLOTS];
 
 #endif

@@ -17,7 +17,6 @@
 #include "celToVeraZp.h"
 #include "spriteGarbage.h"
 
-#define MAXVIEW  256
 #define MAX_JOINED_SPRITES 6
 #define MAX_SPRITES_ROW_OR_COLUMN_SIZE 4
 #define PALETTE_NOT_SET 255
