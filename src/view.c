@@ -47,7 +47,10 @@
 extern byte bESpritesUpdatedBuffer[SPRITE_UPDATED_BUFFER_SIZE];
 extern byte* bESpritesUpdatedBufferPointer;
 
-View* loadedViews = (View*)&BANK_RAM[LOADED_VIEW_START];
+#pragma bss-name (push, "BANKRAM11")
+View loadedViews[MAXVIEW];
+#pragma bss-name (pop)
+
 BITMAP* spriteScreen;
 
 extern byte* var;
