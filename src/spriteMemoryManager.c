@@ -7,8 +7,8 @@
 
 extern byte bESpriteAddressTableMiddle[SPRITE_ALLOC_TABLE_SIZE];
 extern byte spriteAllocTable[SPRITE_ALLOC_TABLE_SIZE];
-extern byte bCSpriteAddressReverseHighNotSet[SPRITE_ADDRESS_REVERSE_HIGH_NOT_SET_SIZE];
-extern byte bCSpriteAddressReverseHighSet[SPRITE_ADDRESS_REVERSE_HIGH_SET_SIZE];
+extern byte bASpriteAddressReverseHighNotSet[SPRITE_ADDRESS_REVERSE_HIGH_NOT_SET_SIZE];
+extern byte bASpriteAddressReverseHighSet[SPRITE_ADDRESS_REVERSE_HIGH_SET_SIZE];
 
 #pragma rodata-name (push, "BANKRAM0E")
 const char BE_INIT[] = "Initing Sprite Memory Manager";
@@ -417,11 +417,11 @@ void bEInitSpriteMemoryManager()
 
 		if (highByte)
 		{
-			memCpyBanked(&bCSpriteAddressReverseHighSet[middleByte], &i, SPRITE_GARBAGE_BANK, 1);
+			memCpyBanked(&bASpriteAddressReverseHighSet[middleByte], &i, SPRITE_GARBAGE_BANK, 1);
 		}
 		else
 		{
-			memCpyBanked(&bCSpriteAddressReverseHighNotSet[middleByte - (SPRITES_DATA_START >> 8)], &i, SPRITE_GARBAGE_BANK, 1);
+			memCpyBanked(&bASpriteAddressReverseHighNotSet[middleByte - (SPRITES_DATA_START >> 8)], &i, SPRITE_GARBAGE_BANK, 1);
 		}
 
 #ifdef VERBOSE_MEMORY_INIT

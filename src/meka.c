@@ -28,6 +28,7 @@
 #include "structMetadata.h"
 #include "floatDivision.h"
 #include "parser.h"
+#include "graphics.h"
 //#include "sound.h"
 
 boolean hasEnteredNewRoom = FALSE, exitAllLogics = FALSE;
@@ -140,7 +141,6 @@ void b6UpdateStatusLine()
     //    rectfill(screen, 0, 0, 639, 15, 0);   /* Clear status line */
     //}
 }
-
 /***************************************************************************
 ** interpret
 **
@@ -253,6 +253,7 @@ void b6Initialise()
     ///* var[86] = 1; var[87] = 2; var[88] = 3; */
 
     b6InitLogics();
+    bAGarbageCollectorInit();
 
 #ifdef VERBOSE
     printf("Logics Inited\n");

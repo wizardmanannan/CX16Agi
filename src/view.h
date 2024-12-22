@@ -38,42 +38,6 @@ extern byte* var;
 #define FIXLOOP       0x2000
 
 #define MAX_SPRITES_SLOTS_PER_VIEW_TAB 6
-typedef struct ViewTable {
-	byte stepTime;
-	byte stepTimeCount;
-	word xPos;
-	word yPos;
-	byte currentView;
-	View* viewData;             /* This pointer points to the loaded view */
-	byte currentLoop;
-	byte numberOfLoops;
-	Loop* loopData;             /* ditto */
-	byte currentCel;
-	byte numberOfCels;
-	Cel* celData;              /* ditto */
-	word xsize;
-	word ysize;
-	byte stepSize;
-	byte cycleTime;
-	byte cycleTimeCount;
-	byte direction;
-	byte motion;
-	byte cycleStatus;
-	byte priority;
-	word flags;
-	byte param1;
-	byte param2;
-	byte param3;
-	byte param4;
-	boolean repositioned;
-	byte staleCounter; //Required as we need to blit a moving object one more time after it stops moving to prevent screen glitches
-} ViewTable;
-
-#define SPRITE_SLOTS (VIEW_TABLE_SIZE)
-extern ViewTable viewtab[VIEW_TABLE_SIZE];
-
-extern View* loadedViews;
-
 extern BITMAP* spriteScreen;
 
 extern void getViewTab(ViewTable* returnedViewTab, byte viewTabNumber);
