@@ -656,7 +656,7 @@ boolean bESetLoop(ViewTable* localViewTab, ViewTableMetadata* localMetadata, Vie
 		
 		if (i == 0)
 		{
-			bCDeleteSpriteMemoryForViewTab(localMetadata, localViewTab->currentLoop, localView, TRUE);
+			bADeleteSpriteMemoryForViewTab(localMetadata, localViewTab->currentLoop, localView, TRUE);
 		}
 		else {
 			return FALSE;

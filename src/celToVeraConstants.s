@@ -30,11 +30,9 @@ SPLIT_CEL_BANK = ZP_TMP_10 + 1
 NO_SPLIT_SEGMENTS = ZP_TMP_12
 SPLIT_COUNTER = ZP_TMP_12 + 1
 SPLIT_CEL_SEGMENTS = ZP_TMP_13
-;ZP_TMP_14 Vacant
 X_VAL = ZP_TMP_18 + 1 ;Ideally we would start from ZP_TMP_16 by TOTAL_ROWS cannot be moved for some reason TODO: Investigate
 Y_VAL = ZP_TMP_19
 P_NUM = ZP_TMP_19 + 1
-;ZP_TMP_20 + 1 Vacant
 CEL_BANK = ZP_TMP_20 + 1
 NEXT_DATA_INDEX = ZP_TMP_21
 BMP_BANK = ZP_TMP_21 + 1

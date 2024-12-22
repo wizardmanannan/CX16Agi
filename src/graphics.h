@@ -4,6 +4,7 @@
 #include "graphics.h"
 #include "helpers.h"
 #include "irq.h"
+#include "general.h"
 
 //must be constants
 #define SET_VERA_ADDRESS(VeraAddress, AddressSel, Stride) \
@@ -104,5 +105,44 @@ typedef struct View {
 	byte maxVeraSlots;
 } View;
 
+
+typedef struct ViewTable {
+	byte stepTime;
+	byte stepTimeCount;
+	word xPos;
+	word yPos;
+	byte currentView;
+	View* viewData;             /* This pointer points to the loaded view */
+	byte currentLoop;
+	byte numberOfLoops;
+	Loop* loopData;             /* ditto */
+	byte currentCel;
+	byte numberOfCels;
+	Cel* celData;              /* ditto */
+	word xsize;
+	word ysize;
+	byte stepSize;
+	byte cycleTime;
+	byte cycleTimeCount;
+	byte direction;
+	byte motion;
+	byte cycleStatus;
+	byte priority;
+	word flags;
+	byte param1;
+	byte param2;
+	byte param3;
+	byte param4;
+	boolean repositioned;
+	byte staleCounter; //Required as we need to blit a moving object one more time after it stops moving to prevent screen glitches
+} ViewTable;
+
+#define VIEW_TABLE_SIZE  20 
+#define SPRITE_SLOTS (VIEW_TABLE_SIZE)
+
+
+extern ViewTable viewtab[VIEW_TABLE_SIZE];
+extern View* loadedViews;
+extern ViewTableMetadata viewTableMetadata[SPRITE_SLOTS];
 
 #endif
