@@ -20,6 +20,15 @@ GARBAGE_INC = 1
 .import _viewTableMetadata
 .import _loadedViews
 
+.import _bAViewTableQuickLookupLow
+.import _bAViewTableQuickLookupHigh
+.import _bAViewTableMetdataQuickLookupLow
+.import _bAViewTableMetdataQuickLookupHigh
+.import _bAViewQuickLookupLow
+.import _bAViewQuickLookupHigh
+
+.import _viewTabNoToMetaData
+
 .segment "CODE"
 
 ;Ensure the the Zps are set up first
@@ -125,90 +134,63 @@ pha
 lda #HELPERS_BANK
 sta RAM_BANK
 
-sec
-lda @end
-sbc @start
-sta VIEW_TAB_COUNTER
-
-stp
-LOAD_FROM_16_ARRAY @start, #$0, SGC_SIZE_VIEW_TAB, _viewtab, SGC_VIEW_TAB
-LOAD_FROM_16_ARRAY @start, #$0, SGC_SIZE_VIEW_TAB_MD, _viewTableMetadata, SGC_VIEW_METADATA
-
-bra @viewTabLoop
-
-@calculateNextViewTabAndMd:
-clc
-lda SGC_VIEW_TAB
-adc SGC_SIZE_VIEW_TAB
-sta SGC_VIEW_TAB
-lda SGC_VIEW_TAB + 1
-adc #$0
-sta SGC_VIEW_TAB + 1
-
-clc
-lda SGC_VIEW_METADATA
-adc SGC_SIZE_VIEW_TAB_MD
-sta SGC_VIEW_METADATA
-lda SGC_VIEW_METADATA + 1
-adc #$0
-sta SGC_VIEW_METADATA + 1
-
-clc
-lda SGC_LOCAL_VIEW
-adc SGC_SIZE_VIEW
-sta SGC_LOCAL_VIEW
-lda SGC_LOCAL_VIEW + 1
-adc #$0
-sta SGC_LOCAL_VIEW + 1
-
+ldx @end
+stx VIEW_TAB_COUNTER
 
 @viewTabLoop:
-;TODO: This a stop gap measure for loading view. As it is still using the old fashion manual memory management, (see view.c line 50) you can access it with the macro. Once we automatically assign in using BSS segments we can use the macro above
-lda _loadedViews
-sta sreg
-lda _loadedViews + 1
-sta sreg + 1
-
-GET_STRUCT_8_STORED_OFFSET _offsetOfCurrentView, SGC_VIEW_TAB
-; ldx #$0
-; jsr pushax
-; lda SGC_SIZE_VIEW
-; ldx #$0
-; jsr _b5Multiply
-; clc
-; adc sreg
-; sta SGC_LOCAL_VIEW
-; txa
-; adc sreg + 1
-; sta SGC_LOCAL_VIEW + 1
-
-
 lda #VIEW_TAB_BANK
 sta RAM_BANK
+lda _bAViewTableQuickLookupLow,x
+sta SGC_VIEW_TAB
+lda _bAViewTableQuickLookupHigh,x
+sta SGC_VIEW_TAB + 1
 
 GET_STRUCT_8_STORED_OFFSET _offsetOfCurrentLoop, SGC_VIEW_TAB, SGC_CURRENT_LOOP
 
 lda #SPRITE_METADATA_BANK
 sta RAM_BANK
+lda _bAViewTableMetdataQuickLookupLow,x
+sta SGC_VIEW_METADATA
+lda _bAViewTableMetdataQuickLookupHigh,x
+sta SGC_VIEW_METADATA + 1
+
 GET_STRUCT_16_STORED_OFFSET _offsetOfloopsVeraAddressesPointers, SGC_VIEW_METADATA, SGC_LOOP_VERA_ADDR
 GET_STRUCT_8_STORED_OFFSET _offsetOfViewMetadataBank, SGC_VIEW_METADATA, SGC_LOOP_VERA_ADDR_BANK
 
+lda #VIEW_TAB_BANK
+sta RAM_BANK
+GET_STRUCT_8_STORED_OFFSET _offsetOfCurrentView, SGC_VIEW_TAB
+
+tay
 lda #LOADED_VIEW_BANK
 sta RAM_BANK
+lda _bAViewQuickLookupLow,y
+sta SGC_LOCAL_VIEW
+lda _bAViewQuickLookupHigh,y
+sta SGC_LOCAL_VIEW + 1
 GET_STRUCT_16_STORED_OFFSET _offsetOfNumberOfLoops, SGC_LOCAL_VIEW, SGC_NO_LOOPS
+
 GET_STRUCT_8_STORED_OFFSET _offsetOfMaxCels, SGC_LOCAL_VIEW
-tay
+tax
 GET_STRUCT_8_STORED_OFFSET _offsetOfMaxVeraSlots, SGC_LOCAL_VIEW
+tay
+txa
 jsr mul8x8to8
 sta SGC_MAX_CELS
 
 jsr deleteSpriteMemoryForViewTab
 
-dec VIEW_TAB_COUNTER
-bpl @calculateNextViewTabAndMd
+lda VIEW_TAB_COUNTER
+dec
+cmp @start
+sta VIEW_TAB_COUNTER
+bcc @endViewTabLoop
+jmp @viewTabLoop
+
 @endViewTabLoop:
 pla 
 sta RAM_BANK
+
 rts
 @start: .byte $0
 @end: .byte $0
