@@ -721,6 +721,11 @@ boolean agiBlit(ViewTable* localViewTab, byte entryNum, boolean disableInterupts
 	byte splitCounter; //Store the SPLIT_COUNTER ZP in here as this makes it easier for C to access it 
 	byte isAnimated = FALSE;
 
+	if (entryNum == 7)
+	{
+		trapSet = TRUE;
+	}
+
 	previousBank = RAM_BANK;
 	RAM_BANK = SPRITE_METADATA_BANK;
 
