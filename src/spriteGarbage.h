@@ -9,6 +9,7 @@ extern void bAGarbageCollectorInit();
 extern void bADeleteSpriteMemoryForViewTab(ViewTableMetadata* viewMetadata, byte currentLoop, View* localView, boolean inActiveOnly);
 #pragma wrapped-call (pop)
 
+extern void runIncrementalGarbageCollector();
 extern void runSpriteGarbageCollector(byte start, byte end);
 
 #endif

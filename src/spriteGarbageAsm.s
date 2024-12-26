@@ -115,12 +115,52 @@ sta RAM_BANK
 rts
 @previousRamBank: .byte $0
 
+START = 1
+INCREMENT = 5
+_runIncrementalGarbageCollector:
+lda @nextStart
+sta sgc_startNo
+
+lda @nextEnd
+sta sgc_endNo
+
+jsr runSpriteGarbageCollectorAsmStart
+
+clc
+lda @nextStart
+adc #INCREMENT
+sta @nextStart
+
+lda @nextEnd
+adc #INCREMENT
+cmp #SPRITE_SLOTS
+
+bcc @store
+bne @reset
+@decrement:
+dec
+@store:
+sta @nextEnd
+bra @end
+
+@reset:
+lda #START
+sta @nextStart
+lda #INCREMENT
+sta @nextEnd
+
+@end:
+rts
+@nextStart: .byte START
+@nextEnd: .byte INCREMENT
+
 ;void runSpriteGarbageCollector(byte start, byte end)
 _runSpriteGarbageCollector:
-sta @end
+sta sgc_endNo
 jsr popa
-sta @start
+sta sgc_startNo
 
+runSpriteGarbageCollectorAsmStart:
 lda _sizeOfViewTab
 sta SGC_SIZE_VIEW_TAB
 lda _sizeOfViewTableMetadata
@@ -134,10 +174,11 @@ pha
 lda #HELPERS_BANK
 sta RAM_BANK
 
-ldx @end
+ldx sgc_endNo
 stx VIEW_TAB_COUNTER
 
 @viewTabLoop:
+ldx VIEW_TAB_COUNTER
 lda #VIEW_TAB_BANK
 sta RAM_BANK
 lda _bAViewTableQuickLookupLow,x
@@ -155,6 +196,10 @@ lda _bAViewTableMetdataQuickLookupHigh,x
 sta SGC_VIEW_METADATA + 1
 
 GET_STRUCT_16_STORED_OFFSET _offsetOfloopsVeraAddressesPointers, SGC_VIEW_METADATA, SGC_LOOP_VERA_ADDR
+lda SGC_LOOP_VERA_ADDR 
+ora SGC_LOOP_VERA_ADDR + 1
+beq @incrementCounter
+
 GET_STRUCT_8_STORED_OFFSET _offsetOfViewMetadataBank, SGC_VIEW_METADATA, SGC_LOOP_VERA_ADDR_BANK
 
 lda #VIEW_TAB_BANK
@@ -180,11 +225,12 @@ sta SGC_MAX_CELS
 
 jsr deleteSpriteMemoryForViewTab
 
+@incrementCounter: 
 lda VIEW_TAB_COUNTER
 dec
-cmp @start
+cmp sgc_startNo
 sta VIEW_TAB_COUNTER
-bcc @endViewTabLoop
+bmi @endViewTabLoop
 jmp @viewTabLoop
 
 @endViewTabLoop:
@@ -192,8 +238,8 @@ pla
 sta RAM_BANK
 
 rts
-@start: .byte $0
-@end: .byte $0
+sgc_startNo: .byte $0
+sgc_endNo: .byte $0
 
 .segment "BANKRAM0A"
 
