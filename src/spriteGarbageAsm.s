@@ -117,12 +117,22 @@ rts
 
 START = 1
 INCREMENT = 5
+MINIMUM_GAP = 5 * SEGMENT_LARGE_SPACES
 _runIncrementalGarbageCollector:
 lda @nextStart
-sta sgc_startNo
+tax
+
+sec ;If we have plenty of space free there is no need to run the collector
+lda ZP_PTR_WALL_64
+sbc ZP_PTR_WALL_32
+cmp #MINIMUM_GAP + 1
+bcs @end
+
+stx sgc_startNo
 
 lda @nextEnd
 sta sgc_endNo
+
 
 jsr runSpriteGarbageCollectorAsmStart
 
