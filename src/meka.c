@@ -315,6 +315,7 @@ void main()
             printf("Interpret Runs\n");
 #endif // VERBOSE
             b6Interpret();
+            runIncrementalGarbageCollector();
             counter = 0;
         }
         b6CheckTimer();

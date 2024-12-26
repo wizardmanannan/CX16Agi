@@ -659,7 +659,7 @@ boolean bESetLoop(ViewTable* localViewTab, ViewTableMetadata* localMetadata, Vie
 
 		if (i == 0)
 		{
-			runSpriteGarbageCollector(7, 7);
+			//runSpriteGarbageCollector(7, 7);
 			//bCDeleteSpriteMemoryForViewTab(localMetadata, localViewTab->currentLoop, localView, TRUE);
 		}
 		else {
@@ -704,9 +704,6 @@ extern void bEClearVeraSprite(byte celWidth, byte celHeight);
         asm("lda %v + 1", _assmUInt); \
         asm("sta %w", VERA_ADDRESS_HIGH); \
     } while (0)
-
-
-
 /***************************************************************************
 ** agi_blit
 ***************************************************************************/
@@ -723,6 +720,11 @@ boolean agiBlit(ViewTable* localViewTab, byte entryNum, boolean disableInterupts
 	boolean isAllocated = FALSE;
 	byte splitCounter; //Store the SPLIT_COUNTER ZP in here as this makes it easier for C to access it 
 	byte isAnimated = FALSE;
+
+	if (entryNum == 7)
+	{
+		trapSet = TRUE;
+	}
 
 	previousBank = RAM_BANK;
 	RAM_BANK = SPRITE_METADATA_BANK;
