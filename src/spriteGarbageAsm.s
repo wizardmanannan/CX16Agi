@@ -280,7 +280,7 @@ stz _spriteAllocTable,x
 
 @pushBackWall32:
 txa 
-beq @pushBackWall32 ;Don't push back if already at zero
+beq @pushBackWall64 ;Don't push back if already at zero
 cpx ZP_PTR_WALL_32
 bne @pushBackWall64
 dec ZP_PTR_WALL_32
