@@ -1143,9 +1143,11 @@ callCelToVera:
 	asm("lda %v", _assmByte);
 	asm("sta %w", SPLIT_CEL_BANK);
 
-	_assmByte = localCel.splitCelPointers;
-	asm("lda %v", _assmByte);
+	_assmUInt = localCel.splitCelPointers;
+	asm("lda %v", _assmUInt);
 	asm("sta %w", SPLIT_CEL_SEGMENTS);
+	asm("lda %v + 1", _assmUInt);
+	asm("sta %w + 1", SPLIT_CEL_SEGMENTS);
 
 	bECalculateBytesPerRow(localLoop.allocationWidth);
 
