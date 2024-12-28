@@ -26,6 +26,7 @@ byte offsetOfPriority = offsetof(struct ViewTable, priority);
 byte offsetOfCurrentView = offsetof(struct ViewTable, currentView);
 byte offsetOfCurrentLoop = offsetof(struct ViewTable, currentLoop);
 byte sizeOfViewTab = sizeof(ViewTable);
+byte offsetOfFlags = offsetof(struct ViewTable, flags);
 
 //View Metadata
 byte offsetOfloopsVeraAddressesPointers = offsetof(struct ViewTableMetadata, loopsVeraAddressesPointers);

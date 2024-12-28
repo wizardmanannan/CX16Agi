@@ -11,6 +11,7 @@ GARBAGE_INC = 1
 .import _offsetOfMaxVeraSlots
 .import _offsetOfCurrentView
 .import _offsetOfCurrentLoop
+.import _offsetOfFlags
 .import _b5Multiply
 
 .import _sizeOfViewTab
@@ -31,13 +32,18 @@ GARBAGE_INC = 1
 
 .segment "CODE"
 
+ANIMATED_AND_DRAWN = ANIMATED | DRAWN
+
 ;Ensure the the Zps are set up first
 deleteSpriteMemoryForViewTab:
 lda RAM_BANK
 sta @previousRamBank
 
-lda SGC_INACTIVE_ONLY
-beq @initLoopsLoop
+GET_STRUCT_8_STORED_OFFSET _offsetOfFlags, SGC_VIEW_TAB
+and #ANIMATED_AND_DRAWN
+sec
+sbc #ANIMATED_AND_DRAWN
+bne @initLoopsLoop
 
 lda SGC_CURRENT_LOOP
 inc
