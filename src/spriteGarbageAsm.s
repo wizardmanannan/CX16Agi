@@ -104,10 +104,10 @@ lda sreg
 ldy #GARBAGE_BANK
 sty RAM_BANK
 jsr bADeallocSpriteMemory
-lda SGC_LOOP_VERA_ADDR_BANK
-sta RAM_BANK
 
 @checkCelsLoop:
+lda SGC_LOOP_VERA_ADDR_BANK
+sta RAM_BANK
 lda CEL_COUNTER_ADDRESS
 bpl @celsLoop
 
