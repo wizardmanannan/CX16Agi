@@ -49,6 +49,9 @@ _bESpriteAddressTableMiddle: .res SPRITE_ALLOC_TABLE_SIZE, $0 ; Low will always 
 
     @increaseWall:
         ; Increase wall pointer if at end of allocation table
+        cmp ZP_PTR_WALL_64
+        bcs @prepareResult 
+
         inc ZP_PTR_WALL_32
 
     @prepareResult:
@@ -128,19 +131,16 @@ ZP_PTR_WALL_32_PLUS_3 = ZP_TMP_2
     ; Initialize X and Y registers
     ldx #$0 ; X register: Indicates never reset to zero
     ldy ZP_PTR_SEG_64 ; Y register: Load segment pointer for 64-byte allocation
-
     @loop:
-        cpy ZP_PTR_WALL_32 ; Check if wall pointer is at end of allocation table
+        cpy ZP_PTR_WALL_32_PLUS_3 ; Check if wall pointer is at end of allocation table
         beq @resetToEnd
-        
-        cpy ZP_PTR_WALL_32_PLUS_3 ; As we are four in size non of our 4 segments can be less than 32
-        bcs @checkResultTable ; If we have jumped over the 32 wall we need to go back two. This is a unique problem for 64 bit alloc, as we jump in 2s
-        
-        lda ZP_PTR_WALL_32 ;Special case if ZP_PTR_WALL_32 is zero then we are perfectly entitled to allocated ourselves and 1 and 2, because it means 32 hasn't allocated anything yet and we won't overwrite anything
-        beq @checkResultTable
+        bcs @checkResultTable
+
+; As we are four in size non of our 4 segments can be less than 32
+; If we have jumped over the 32 wall we need to go back two. This is a unique problem for 64 bit alloc, as we jump in 2s
 
         @goBack:
-        iny 
+        iny
         iny
         iny
         iny
@@ -156,7 +156,9 @@ ZP_PTR_WALL_32_PLUS_3 = ZP_TMP_2
         lda ZP_PTR_WALL_64
         cmp ZP_PTR_SEG_64
         bne @prepareResult
-
+        cmp ZP_PTR_WALL_32_PLUS_3
+        beq @prepareResult
+        bcc @prepareResult 
     @increaseWall:
         ; Decrease wall pointer if at end of allocation table
         dec ;Note a already holds ZP_PTR_WALL_64
@@ -277,7 +279,6 @@ ALLOCATE_SPRITE_MEMORY_32
 bra @storeAndDecrementCounter
 @64Alloc:
 ALLOCATE_SPRITE_MEMORY_64
-
 @storeAndDecrementCounter:
 tya
 ldy ZP_ARRAY_COUNTER
