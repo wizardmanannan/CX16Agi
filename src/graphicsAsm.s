@@ -422,4 +422,74 @@ rts
 @isFirstPixel: .byte $0
 @loopCounter: .byte $0
 
+
+.segment "CODE"
+checkOverlapCounter: .byte $0
+_checkOverlap:
+php
+pha
+phx
+phy
+
+; @checkWall:
+lda ZP_PTR_WALL_32
+cmp ZP_PTR_WALL_64
+beq @continue
+bcc @continue
+stp
+@continue:
+ply
+plx
+pla
+plp
+
+inc checkOverlapCounter
+
+rts
+.export _checkOverlap
+
+.segment "BANKRAM0D"
+findZero:
+php
+pha
+phx
+phy
+lda VERA_ctrl
+pha
+lda VERA_addr_low
+pha
+lda VERA_addr_high
+pha
+lda VERA_addr_bank
+pha
+.import _trap
+ldx _trap
+beq @continue2
+lda #$2E
+sta VERA_addr_low
+lda #$FC
+sta VERA_addr_high
+lda VERA_data0
+bne @continue2
+stp
+nop
+dey
+lda _bESpritesUpdatedBuffer,y
+@continue2:
+pla
+sta VERA_addr_bank
+pla
+sta VERA_addr_high
+pla
+sta VERA_addr_low
+pla
+sta VERA_ctrl
+ply
+plx
+pla
+plp
+
+rts
+
+
 .endif
