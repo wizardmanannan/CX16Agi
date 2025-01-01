@@ -847,12 +847,15 @@ jumpInvert:
 	asm("jmp %g", invert);
 
 initialise:
-	localMetadata.isOnBackBuffer = TRUE;
-
 	if (!isAllocated)
 	{
-		bEAllocateSpriteMemory(&localLoop, localView.maxVeraSlots);
-
+		if (!bEAllocateSpriteMemory(&localLoop, localView.maxVeraSlots))
+		{
+			return FALSE;
+		}
+		
+		localMetadata.isOnBackBuffer = TRUE;
+		
 		isAllocated = TRUE;
 	}
 
@@ -2667,14 +2670,14 @@ void bBUpdateObjects()
 							}
 							else
 							{
-								i = MAX_SPRITE_PRIORITY + 1;
 								blitFailed = TRUE;
-								memset(prioritiesSeen, FALSE, NO_PRIORITIES - 1);
-								bESpritesUpdatedBufferPointer = bESpritesUpdatedBuffer;
 								bARunSpriteGarbageCollectorAll();
-								bEResetSpritesUpdatedBuffer();
-								entryNum = 0;							
-								break;
+								
+								if (entryNum)
+								{
+									entryNum--;
+								}
+								continue;
 							}
 						}
 						//Blit may fail if we run out of sprite memory, if that is the case clear everything as there is likely to be stuff we are no longer using. If it fails more than once, we know there is not point continuing
