@@ -258,6 +258,14 @@ sgc_startNo: .byte $0
 sgc_endNo: .byte $0
 
 .segment "BANKRAM0A"
+;void bARunSpriteGarbageCollectorAll()
+_bARunSpriteGarbageCollectorAll:
+lda VIEW_TABLE_SIZE - 1
+sta sgc_endNo
+lda #$0
+sta sgc_endNo
+jmp runSpriteGarbageCollectorAsmStart
+
 
 bADeallocSpriteMemory:
 cpx #$0

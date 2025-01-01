@@ -909,7 +909,6 @@ setSpritesUpdatedBank:
 
 	WRITE_INT_VAR_TO_ASSM((unsigned int)bESpritesUpdatedBufferPointer, ZP_SPRITE_STORE_PTR);
 
-
 	//Put bytes into a buffer to be picked up by the irq see spriteIrqHandler.s (bEHandleSpriteUpdates)
 
 	//marker
@@ -2543,7 +2542,6 @@ void bBUpdateObj2(int entryNum)
 #pragma bss-name (push, "BANKRAM0B")
 boolean prioritiesSeen[NO_PRIORITIES - 1];
 #pragma bss-name (pop)
-
 void bBUpdateObjects()
 {
 	int entryNum, celNum, oldX, oldY;
@@ -2669,10 +2667,13 @@ void bBUpdateObjects()
 							}
 							else
 							{
-								i = MAX_SPRITE_PRIORITY;
+								i = MAX_SPRITE_PRIORITY + 1;
 								blitFailed = TRUE;
 								memset(prioritiesSeen, FALSE, NO_PRIORITIES - 1);
-								b9ResetSpriteMemory(FALSE);
+								bESpritesUpdatedBufferPointer = bESpritesUpdatedBuffer;
+								bARunSpriteGarbageCollectorAll();
+								bEResetSpritesUpdatedBuffer();
+								entryNum = 0;							
 								break;
 							}
 						}
