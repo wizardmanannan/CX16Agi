@@ -7,6 +7,7 @@
 #pragma wrapped-call (push, trampoline, SPRITE_GARBAGE_BANK)
 extern void bAGarbageCollectorInit();
 extern void bADeleteSpriteMemoryForViewTab(ViewTableMetadata* viewMetadata, byte currentLoop, View* localView, boolean inActiveOnly);
+extern void bARunSpriteGarbageCollectorAll();
 #pragma wrapped-call (pop)
 
 extern void runIncrementalGarbageCollector();
