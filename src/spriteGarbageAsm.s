@@ -39,6 +39,8 @@ deleteSpriteMemoryForViewTab:
 lda RAM_BANK
 sta @previousRamBank
 
+lda #VIEW_TAB_BANK
+sta RAM_BANK
 GET_STRUCT_8_STORED_OFFSET _offsetOfFlags, SGC_VIEW_TAB
 and #ANIMATED_AND_DRAWN
 sec
@@ -47,10 +49,8 @@ sta SGC_CLEAR_ACTIVE_LOOP
 bne @initLoopsLoop
 
 lda SGC_CURRENT_LOOP
-inc
 asl
-sec
-sbc #3
+inc
 sta SGC_CURRENT_LOOP
 
 
@@ -63,6 +63,7 @@ asl
 dec
 @loopsLoop:
 tay
+tax
 lda (SGC_LOOP_VERA_ADDR),y
 sta SGC_CEL_VERA_ADDR + 1
 dey
@@ -72,9 +73,8 @@ dey
 sty LOOPS_COUNTER_ADDRESS
 
 lda SGC_CLEAR_ACTIVE_LOOP
-beq @initCelsLoop
-
-cpy SGC_CURRENT_LOOP
+bne @initCelsLoop
+cpx SGC_CURRENT_LOOP
 beq @checkLoopsLoop
 
 @initCelsLoop:
