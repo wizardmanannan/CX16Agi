@@ -43,6 +43,7 @@ GET_STRUCT_8_STORED_OFFSET _offsetOfFlags, SGC_VIEW_TAB
 and #ANIMATED_AND_DRAWN
 sec
 sbc #ANIMATED_AND_DRAWN
+sta SGC_CLEAR_ACTIVE_LOOP
 bne @initLoopsLoop
 
 lda SGC_CURRENT_LOOP
@@ -70,7 +71,7 @@ sta SGC_CEL_VERA_ADDR
 dey
 sty LOOPS_COUNTER_ADDRESS
 
-lda SGC_INACTIVE_ONLY
+lda SGC_CLEAR_ACTIVE_LOOP
 beq @initCelsLoop
 
 cpy SGC_CURRENT_LOOP
@@ -311,9 +312,9 @@ rts
 _bASpriteAddressReverseHighNotSet: .res 22, $0
 _bASpriteAddressReverseHighSet: .res $F8, $0
 
-;void bCDeleteSpriteMemoryForViewTab(ViewTableMetadata* viewMetadata, byte currentLoop, View* localView, boolean inActiveOnly)
+;void bADeleteSpriteMemoryForViewTab(ViewTableMetadata* viewMetadata, byte currentLoop, View* localView, boolean clearActiveLoop)
 _bADeleteSpriteMemoryForViewTab:
-sta SGC_INACTIVE_ONLY
+sta SGC_CLEAR_ACTIVE_LOOP
 
 jsr popax 
 sta SGC_LOCAL_VIEW
