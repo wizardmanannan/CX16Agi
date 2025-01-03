@@ -12,6 +12,11 @@ GARBAGE_INC = 1
 .import _offsetOfCurrentView
 .import _offsetOfCurrentLoop
 .import _offsetOfFlags
+.import _offsetOfBackBuffers
+.import _offsetOfDirection
+.import _offsetOfIsOnBackBuffer
+.import _offsetOfDirection
+
 .import _b5Multiply
 
 .import _sizeOfViewTab
@@ -53,7 +58,8 @@ SGC_SIZE_VIEW: .res 1
 SGC_FLAGS: .res 2
 SGC_BACKBUFFERS: .res 2 ;Reusing this, as they should not be used at the same time
 SGC_BACKBUFFER_VERA_ADDRESS: .res 2
-
+SGC_MAX_VERA_SLOTS: .res 1
+SGC_BACK_BUFFER_COUNTER: .res 1
 .segment "CODE"
 
 ANIMATED_AND_DRAWN = ANIMATED | DRAWN
@@ -79,15 +85,16 @@ sta SGC_CURRENT_LOOP
 
 
 @initLoopsLoop:
-lda SGC_LOOP_VERA_ADDR_BANK
-sta RAM_BANK
-
 lda SGC_NO_LOOPS
 asl
 dec
 @loopsLoop:
 tay
 tax
+
+lda SGC_LOOP_VERA_ADDR_BANK
+sta RAM_BANK
+
 lda (SGC_LOOP_VERA_ADDR),y
 sta SGC_CEL_VERA_ADDR + 1
 dey
@@ -99,7 +106,7 @@ sty LOOPS_COUNTER_ADDRESS
 lda SGC_CLEAR_ACTIVE_LOOP
 bne @initCelsLoop
 cpx SGC_CURRENT_LOOP
-beq @checkLoopsLoop
+beq @checkForBackBuffer
 
 @initCelsLoop:
 lda SGC_MAX_CELS
@@ -137,6 +144,25 @@ lda CEL_COUNTER_ADDRESS
 bpl @celsLoop
 
 
+@checkForBackBuffer:
+lda #SPRITE_METADATA_BANK
+sta RAM_BANK
+
+GET_STRUCT_16_STORED_OFFSET _offsetOfBackBuffers, SGC_VIEW_METADATA, SGC_BACKBUFFERS  
+ora SGC_BACKBUFFERS
+beq @checkLoopsLoop
+
+lda SGC_LOOP_VERA_ADDR_BANK
+sta RAM_BANK
+
+lda (SGC_BACKBUFFERS)
+ldy #$1
+ora (SGC_BACKBUFFERS),y
+beq @checkLoopsLoop
+
+lda SGC_BACKBUFFERS
+jmp @checkIfBackBufferCanBeDeleted
+
 @checkLoopsLoop:
 lda LOOPS_COUNTER_ADDRESS
 bpl @loopsLoop
@@ -145,6 +171,63 @@ lda @previousRamBank
 sta RAM_BANK
 rts
 @previousRamBank: .byte $0
+
+@checkIfBackBufferCanBeDeleted:
+
+lda SGC_CLEAR_ACTIVE_LOOP
+bne @initBackBufferLoop
+
+lda SGC_CURRENT_LOOP
+cmp LOOPS_COUNTER_ADDRESS
+bne @initBackBufferLoop
+
+lda SGC_FLAGS
+and #MOTION
+bne @checkLoopsLoop
+
+GET_STRUCT_8_STORED_OFFSET _offsetOfIsOnBackBuffer, SGC_VIEW_METADATA
+bne @checkLoopsLoop
+
+lda #VIEW_TAB_BANK
+sta RAM_BANK
+GET_STRUCT_8_STORED_OFFSET _offsetOfDirection, SGC_VIEW_TAB
+bne @checkLoopsLoop
+
+@initBackBufferLoop:
+lda SGC_MAX_VERA_SLOTS
+asl
+dec
+tay
+sta SGC_BACK_BUFFER_COUNTER
+@backBufferLoop:
+lda (SGC_BACKBUFFERS),y
+sta sreg
+dey
+lda (SGC_BACKBUFFERS),y
+ldx sreg
+
+ldy #GARBAGE_BANK
+sty RAM_BANK
+
+jsr bADeallocSpriteMemory
+
+lda SGC_LOOP_VERA_ADDR_BANK
+sta RAM_BANK
+
+ldy SGC_BACK_BUFFER_COUNTER
+lda #$0
+sta (SGC_BACKBUFFERS),y
+dey
+sta (SGC_BACKBUFFERS),y
+dey
+
+sty SGC_BACK_BUFFER_COUNTER
+
+@checkBackbufferLoop:
+bpl @backBufferLoop
+
+jmp @checkLoopsLoop
+
 
 START = 1
 INCREMENT = 5
@@ -259,6 +342,7 @@ GET_STRUCT_16_STORED_OFFSET _offsetOfNumberOfLoops, SGC_LOCAL_VIEW, SGC_NO_LOOPS
 GET_STRUCT_8_STORED_OFFSET _offsetOfMaxCels, SGC_LOCAL_VIEW
 tax
 GET_STRUCT_8_STORED_OFFSET _offsetOfMaxVeraSlots, SGC_LOCAL_VIEW
+sta SGC_MAX_VERA_SLOTS
 tay
 txa
 jsr mul8x8to8
