@@ -30,6 +30,30 @@ GARBAGE_INC = 1
 
 .import _viewTabNoToMetaData
 
+.segment "ZEROPAGE"
+SGC_LOOP_VERA_ADDR: .res 2
+SGC_CEL_VERA_ADDR: .res 2
+
+VIEW_TAB_COUNTER: .res 1
+LOOPS_COUNTER_ADDRESS: .res 1
+CEL_COUNTER_ADDRESS: .res 1
+
+;Used In By Sprite Garbage Collector. Uses some of the same ZPs are CelToVeraBulk due to lack of ZP space
+SGC_VIEW_METADATA: .res 2
+SGC_LOOP_VERA_ADDR_BANK: .res 1
+SGC_CURRENT_LOOP: .res 1
+SGC_CLEAR_ACTIVE_LOOP: .res 1
+SGC_LOCAL_VIEW: .res 2
+SGC_NO_LOOPS: .res 1
+SGC_MAX_CELS: .res 1
+SGC_VIEW_TAB: .res 2
+SGC_SIZE_VIEW_TAB: .res 1
+SGC_SIZE_VIEW_TAB_MD: .res 1
+SGC_SIZE_VIEW: .res 1
+SGC_FLAGS: .res 2
+SGC_BACKBUFFERS: .res 2 ;Reusing this, as they should not be used at the same time
+SGC_BACKBUFFER_VERA_ADDRESS: .res 2
+
 .segment "CODE"
 
 ANIMATED_AND_DRAWN = ANIMATED | DRAWN
