@@ -2,7 +2,7 @@
 #define _GARBAGE_H_
 
 #include "graphics.h"
-
+#include "zeroPointer.h"
 
 #pragma wrapped-call (push, trampoline, SPRITE_GARBAGE_BANK)
 extern void bAGarbageCollectorInit();

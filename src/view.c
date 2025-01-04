@@ -45,6 +45,9 @@
 #define BYTES_PER_SPRITE_UPDATE 7
 #define SPRITE_UPDATED_BUFFER_SIZE  VIEW_TABLE_SIZE * BYTES_PER_SPRITE_UPDATE * 2
 extern byte bESpritesUpdatedBuffer[SPRITE_UPDATED_BUFFER_SIZE];
+
+boolean viewsWithSpriteMem[VIEW_TABLE_SIZE];
+
 extern byte* bESpritesUpdatedBufferPointer;
 
 #pragma bss-name (push, "BANKRAM11")
@@ -627,12 +630,14 @@ boolean bEAllocateSpriteMemory(Loop* localLoop, byte noToBlit)
 extern byte bEToBlitCelArray[TO_BLIT_CEL_ARRAY_LENGTH];
 //Copy cels into array above first
 extern void bECellToVeraBulk(SpriteAttributeSize allocationWidth, SpriteAttributeSize allocationHeight, byte noCels, byte maxVeraSlots, byte xVal, byte yVal, byte pNum);
-boolean bESetLoop(ViewTable* localViewTab, ViewTableMetadata* localMetadata, View* localView, VeraSpriteAddress* loopVeraAddresses)
+boolean bESetLoop(ViewTable* localViewTab, ViewTableMetadata* localMetadata, View* localView, VeraSpriteAddress* loopVeraAddresses, byte entryNum)
 {
 	Loop localLoop;
 	Cel localCel;
 	byte noToBlit, i;
 	byte veraSpriteWidthAndHeight;
+
+	viewsWithSpriteMem[entryNum] = TRUE;
 
 	getLoadedLoop(localView, &localLoop, localViewTab->currentLoop);
 	getLoadedCel(&localLoop, &localCel, localViewTab->currentCel);
@@ -775,7 +780,6 @@ boolean agiBlit(ViewTable* localViewTab, byte entryNum, boolean disableInterupts
 #ifdef VERBOSE_DEBUG_NO_BLIT_CACHE
 		printf("set Metadata %d. The vt is %d\n", localViewTab->viewData, entryNum);
 #endif
-
 		bESetViewMetadata(&localView, localViewTab, viewNum, entryNum, VIEWNO_TO_METADATA_NO_SET);
 	}
 
@@ -801,7 +805,7 @@ boolean agiBlit(ViewTable* localViewTab, byte entryNum, boolean disableInterupts
 #ifdef VERBOSE_DEBUG_NO_BLIT_CACHE
 		printf("loading view %d loop %d. The vt %p. It's position is %d,%d. v36 is %d\n", localViewTab->currentView, localViewTab->currentLoop, entryNum, localViewTab->xPos, localViewTab->yPos, var[36]);
 #endif
-		if (!bESetLoop(localViewTab, &localMetadata, &localView, loopVeraAddresses))
+		if (!bESetLoop(localViewTab, &localMetadata, &localView, loopVeraAddresses, entryNum))
 		{
 			RAM_BANK = previousBank;
 
@@ -849,6 +853,7 @@ jumpInvert:
 initialise:
 	if (!isAllocated)
 	{
+		viewsWithSpriteMem[entryNum] = TRUE;
 		if (!bEAllocateSpriteMemory(&localLoop, localView.maxVeraSlots))
 		{
 			return FALSE;
@@ -1301,6 +1306,8 @@ void b9ResetViews()     /* Called after new.room */
 {
 	int entryNum;
 	ViewTable localViewtab;
+
+	memset(viewsWithSpriteMem, 0, VIEW_TABLE_SIZE);
 
 	for (entryNum = 0; entryNum < VIEW_TABLE_SIZE; entryNum++) {
 		getViewTab(&localViewtab, entryNum);

@@ -24,6 +24,7 @@ void bAGarbageCollectorInit()
 	View* view;
 	byte tempLow, tempHigh;
 	
+	SGC_LAST_LOCATION_GC_CHECKED = 0; //This means we start searching from 1
 	for (i = 0; i < VIEW_TABLE_SIZE; i++)
 	{
 		viewTable = &viewtab[i];

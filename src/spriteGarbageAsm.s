@@ -60,6 +60,9 @@ SGC_BACKBUFFERS: .res 2 ;Reusing this, as they should not be used at the same ti
 SGC_BACKBUFFER_VERA_ADDRESS: .res 2
 SGC_MAX_VERA_SLOTS: .res 1
 SGC_BACK_BUFFER_COUNTER: .res 1
+SGC_MEMORY_CLEARED: .res 1
+_SGC_LAST_LOCATION_GC_CHECKED: .res 1
+INCREMENTAL_GARBAGE_COLLECTOR_COUNTER: .res 1
 .segment "CODE"
 
 ANIMATED_AND_DRAWN = ANIMATED | DRAWN
@@ -137,6 +140,9 @@ ldy #GARBAGE_BANK
 sty RAM_BANK
 jsr bADeallocSpriteMemory
 
+lda #$1
+sta SGC_MEMORY_CLEARED
+
 @checkCelsLoop:
 lda SGC_LOOP_VERA_ADDR_BANK
 sta RAM_BANK
@@ -166,6 +172,9 @@ jmp @checkIfBackBufferCanBeDeleted
 @checkLoopsLoop:
 lda LOOPS_COUNTER_ADDRESS
 bpl @loopsLoop
+
+ldx VIEW_TAB_COUNTER
+stz _viewsWithSpriteMem,x
 
 lda @previousRamBank
 sta RAM_BANK
@@ -211,6 +220,9 @@ sty RAM_BANK
 
 jsr bADeallocSpriteMemory
 
+lda #$1
+sta SGC_MEMORY_CLEARED
+
 lda SGC_LOOP_VERA_ADDR_BANK
 sta RAM_BANK
 
@@ -232,51 +244,54 @@ jmp @checkLoopsLoop
 START = 1
 INCREMENT = 5
 MINIMUM_GAP = 5 * SEGMENT_LARGE_SPACES
-_runIncrementalGarbageCollector:
-lda @nextStart
-tax
 
+.import _viewsWithSpriteMem
+_runIncrementalGarbageCollector:
 sec ;If we have plenty of space free there is no need to run the collector
 lda ZP_PTR_WALL_64
 sbc ZP_PTR_WALL_32
 cmp #MINIMUM_GAP + 1
-bcs @end
+bcs @return
 
+@initRunCollectorLoop:
+ldy #VIEW_TABLE_SIZE
+ldx _SGC_LAST_LOCATION_GC_CHECKED
+
+
+@checkRunCollectorLoop:
+dey
+beq @end
+
+@runCollectorLoop:
+inx
+cpx #VIEW_TABLE_SIZE
+bcs @resetLastLocationGCChecked
+
+@checkViewsWithSpriteMem:
+lda _viewsWithSpriteMem,x
+beq @checkRunCollectorLoop
+
+stx _SGC_LAST_LOCATION_GC_CHECKED
+sty INCREMENTAL_GARBAGE_COLLECTOR_COUNTER
 stx sgc_startNo
-
-lda @nextEnd
-sta sgc_endNo
-
-
+stx sgc_endNo
 jsr runSpriteGarbageCollectorAsmStart
+bne @end
 
-clc
-lda @nextStart
-adc #INCREMENT
-sta @nextStart
+ldx _SGC_LAST_LOCATION_GC_CHECKED
+ldy INCREMENTAL_GARBAGE_COLLECTOR_COUNTER
 
-lda @nextEnd
-adc #INCREMENT
-cmp #SPRITE_SLOTS
-
-bcc @store
-bne @reset
-@decrement:
-dec
-@store:
-sta @nextEnd
-bra @end
-
-@reset:
-lda #START
-sta @nextStart
-lda #INCREMENT
-sta @nextEnd
+bra @checkRunCollectorLoop
 
 @end:
+stx _SGC_LAST_LOCATION_GC_CHECKED
+
+@return:
 rts
-@nextStart: .byte START
-@nextEnd: .byte INCREMENT
+@resetLastLocationGCChecked:
+ldx #$1
+bra @checkViewsWithSpriteMem
+
 
 ;void runSpriteGarbageCollector(byte start, byte end)
 _runSpriteGarbageCollector:
@@ -285,6 +300,7 @@ jsr popa
 sta sgc_startNo
 
 runSpriteGarbageCollectorAsmStart:
+stz SGC_MEMORY_CLEARED
 lda _sizeOfViewTab
 sta SGC_SIZE_VIEW_TAB
 lda _sizeOfViewTableMetadata
@@ -362,6 +378,7 @@ jmp @viewTabLoop
 pla 
 sta RAM_BANK
 
+lda SGC_MEMORY_CLEARED
 rts
 sgc_startNo: .byte $0
 sgc_endNo: .byte $0

@@ -80,3 +80,4 @@
     .export _runSpriteGarbageCollector
     .export _runIncrementalGarbageCollector
     .export _bARunSpriteGarbageCollectorAll
+    .export _SGC_LAST_LOCATION_GC_CHECKED
