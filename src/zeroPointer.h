@@ -24,3 +24,7 @@
 
 #endif
 
+extern byte SGC_LAST_LOCATION_GC_CHECKED;
+#pragma zpsym("SGC_LAST_LOCATION_GC_CHECKED")
+
+
