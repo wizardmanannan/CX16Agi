@@ -109,7 +109,7 @@ sty LOOPS_COUNTER_ADDRESS
 lda SGC_CLEAR_ACTIVE_LOOP
 bne @initCelsLoop
 cpx SGC_CURRENT_LOOP
-beq @checkForBackBuffer
+beq @checkLoopsLoop
 
 @initCelsLoop:
 lda SGC_MAX_CELS
@@ -182,13 +182,12 @@ rts
 @previousRamBank: .byte $0
 
 @checkIfBackBufferCanBeDeleted:
-
 lda SGC_CLEAR_ACTIVE_LOOP
 bne @initBackBufferLoop
 
 lda SGC_CURRENT_LOOP
 cmp LOOPS_COUNTER_ADDRESS
-bne @initBackBufferLoop
+beq @checkLoopsLoop
 
 lda SGC_FLAGS
 and #MOTION
@@ -412,23 +411,42 @@ ldx _bASpriteAddressReverseHighNotSet,y
 @clearEntry:
 stz _spriteAllocTable,x
 
+cpx #SPRITE_ALLOC_TABLE_SIZE - SEGMENT_LARGE_SPACES  ;If the allocation is right on the very end, it must be a 32 allocation, as 64 never allocates there
+bcs @pushBackWall32
+
+cpx ZP_PTR_WALL_64
+bcs @pushBackWall64
+
 @pushBackWall32:
 txa 
-beq @pushBackWall64 ;Don't push back if already at zero
+beq @end ;Don't push back if already at zero
 cpx ZP_PTR_WALL_32
-bne @pushBackWall64
+bne @reduceSegment32
 dec ZP_PTR_WALL_32
+
+@reduceSegment32:
+cpx ZP_PTR_SEG_32 ;If we have just deleted something move the segment to the spot we just deleted, if the segment is greater, that way we will allocate to it and not keep increasing the wall
+bcs @end
+stx ZP_PTR_SEG_32
+bra @end
 
 @pushBackWall64:
 cpx #SPRITE_ALLOC_TABLE_SIZE - SEGMENT_LARGE_SPACES ;Don't push back if already at end
-beq @end
+beq @reduceSegment64
 cpx ZP_PTR_WALL_64
-bne @end
+bne @reduceSegment64
 
 clc
 lda ZP_PTR_WALL_64
 adc #SEGMENT_LARGE_SPACES
 sta ZP_PTR_WALL_64
+
+@reduceSegment64: 
+cpx ZP_PTR_SEG_64 ;If we have just deleted something move the segment to the spot we just deleted, if the segment is less, that way we will allocate to it and not keep increasing the wall
+bcc @end
+beq @end
+
+stx ZP_PTR_SEG_64
 
 @end:
 
