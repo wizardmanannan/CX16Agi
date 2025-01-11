@@ -270,17 +270,16 @@ void b6Initialise()
     b6InitInterpreter();
     b6InitIrq();
     bEInitSpriteMemoryManager();
+    b6InitFloatDivision();
 
     asm("sei");
     b6InitGraphics();
     REENABLE_INTERRUPTS();
-
     horizon = 36;
 
     ///* Set up timer. The timer controls the interpreter speed. */
     counter = 0;
 
-    b6InitFloatDivision();
     b6TellMeTheAddressPlease();
     bFInitPaletteManager();
 }

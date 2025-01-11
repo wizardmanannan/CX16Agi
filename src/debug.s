@@ -9,7 +9,6 @@ DEBUG_INC = 1
 .import _pixelCounter
 _b6TellMeTheAddressPlease:
 lda _opCounter
-stp
 lda _bESpritesUpdatedBuffer
 lda _bASpriteAddressReverseHighNotSet
 lda _bASpriteAddressReverseHighSet
