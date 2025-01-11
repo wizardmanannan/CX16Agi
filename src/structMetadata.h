@@ -25,14 +25,12 @@ byte offsetOfYPos = offsetof(struct ViewTable, yPos);
 byte offsetOfPriority = offsetof(struct ViewTable, priority);
 byte offsetOfCurrentView = offsetof(struct ViewTable, currentView);
 byte offsetOfCurrentLoop = offsetof(struct ViewTable, currentLoop);
-byte sizeOfViewTab = sizeof(ViewTable);
 byte offsetOfFlags = offsetof(struct ViewTable, flags);
 byte offsetOfDirection = offsetof(struct ViewTable, direction);
 
 //View Metadata
 byte offsetOfloopsVeraAddressesPointers = offsetof(struct ViewTableMetadata, loopsVeraAddressesPointers);
 byte offsetOfViewMetadataBank = offsetof(struct ViewTableMetadata, viewTableMetadataBank);
-byte sizeOfViewTableMetadata = sizeof(ViewTableMetadata);
 byte offsetOfBackBuffers = offsetof(struct ViewTableMetadata, backBuffers);
 byte offsetOfIsOnBackBuffer = offsetof(struct ViewTableMetadata, isOnBackBuffer);
 //View

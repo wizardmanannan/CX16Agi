@@ -11,7 +11,7 @@ extern byte bASpriteAddressReverseHighNotSet[SPRITE_ADDRESS_REVERSE_HIGH_NOT_SET
 extern byte bASpriteAddressReverseHighSet[SPRITE_ADDRESS_REVERSE_HIGH_SET_SIZE];
 
 #pragma rodata-name (push, "BANKRAM0E")
-const char BE_INIT[] = "Initing Sprite Memory Manager";
+const char BE_INIT[] = "Initing Sprite Memory Manager\n";
 #pragma rodata-name (pop)
 
 #pragma code-name (push, "BANKRAM0E")

@@ -76,7 +76,6 @@
     .export _bECalculateBytesPerRow
     .export _bASpriteAddressReverseHighNotSet
     .export _bASpriteAddressReverseHighSet
-    .export _bADeleteSpriteMemoryForViewTab
     .export _runSpriteGarbageCollector
     .export _runIncrementalGarbageCollector
     .export _bARunSpriteGarbageCollectorAll
