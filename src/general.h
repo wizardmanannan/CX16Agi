@@ -11,6 +11,8 @@
 #include <string.h>
 #include <stdlib.h>
 
+#define C_STACK 0x22
+
 #ifndef TRUE
 #define  TRUE    1
 #endif

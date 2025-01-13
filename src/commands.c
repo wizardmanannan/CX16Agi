@@ -1363,15 +1363,15 @@ void b2Move_obj_v() // 5, 0x70
 
 void b2Follow_ego() // 3, 0x00 
 {
-	int entryNum, stepVal, flagNum;
+	int entryNum, dist, flagNum;
 	ViewTable localViewtab;
 
 	entryNum = loadAndIncWinCode();
 	getViewTab(&localViewtab, entryNum);
 
-	stepVal = loadAndIncWinCode();
+	dist = loadAndIncWinCode();
 	flagNum = loadAndIncWinCode();
-	localViewtab.param1 = localViewtab.stepSize;
+	localViewtab.param1 = dist > localViewtab.stepSize ? dist : localViewtab.stepSize;
 	/* Might need to put 'if (stepVal != 0)' */
 	//localViewtab.stepSize = stepVal;
 	localViewtab.param2 = flagNum;

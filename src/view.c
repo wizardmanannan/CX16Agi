@@ -51,6 +51,9 @@ boolean viewsWithSpriteMem[VIEW_TABLE_SIZE];
 
 extern byte* bESpritesUpdatedBufferPointer;
 
+
+extern void bAFollowEgoAsmSec(ViewTable* localViewTab, ViewTable* egoViewTab, byte egoWidth, byte localCelWidth);
+
 #pragma bss-name (push, "BANKRAM11")
 View loadedViews[MAXVIEW];
 #pragma bss-name (pop)
@@ -2189,18 +2192,28 @@ void bAAdjustPosition(ViewTable* viewTab, int fx, int fy, byte entryNum)
 	}
 
 }
-#pragma wrapped-call (pop)
 
-void bAFollowEgo(int entryNum) /* This needs to be more intelligent. */
+void bAFollowEgo(ViewTable* localViewTab)
 {
-	ViewTable localViewtab;
+	byte ecx; 
+	short ocx;
+	ViewTable egoViewTab;
+	View egoView, localView;
+	Loop egoLoop, localLoop;
+	Cel egoCel, localCel;
 
-	getViewTab(&localViewtab, entryNum);
+	getViewTab(&egoViewTab, 0);
+	getLoadedView(&egoView, 0);
+	getLoadedLoop(&egoView, &egoLoop, egoViewTab.currentLoop);
+	getLoadedCel(&egoLoop, &egoCel, egoViewTab.currentCel);
 
-	bAAdjustPosition(&localViewtab, localViewtab.xPos, localViewtab.yPos, entryNum);
+	getLoadedView(&localView, localViewTab->currentView);
+	getLoadedLoop(&localView, &localLoop, localViewTab->currentLoop);
+	getLoadedCel(&localLoop, &localCel, localViewTab->currentCel);
 
-	setViewTab(&localViewtab, entryNum);
+	bAFollowEgoAsmSec(localViewTab, &egoViewTab, egoCel.width, localCel.width);
 }
+#pragma wrapped-call (pop)
 
 void bAFindPosition(int entryNum, ViewTable* viewTab)
 {
@@ -2399,156 +2412,6 @@ void bBUpdateObj(int entryNum)
 	b6ShowPicture();
 }
 #pragma wrapped-call (pop)
-
-/* Called by force.update */
-void bBUpdateObj2(int entryNum)
-{
-	int oldX, oldY, celNum;
-	word objFlags;
-	ViewTable localViewtab;
-
-	getViewTab(&localViewtab, entryNum);
-
-	objFlags = localViewtab.flags;
-
-
-	//if ((objFlags & ANIMATED) && (objFlags & DRAWN)) {
-
-	   //if (objFlags & UPDATE) {
-
-	if (objFlags & CYCLING) {
-		localViewtab.cycleTimeCount++;
-		if (localViewtab.cycleTimeCount >
-			localViewtab.cycleTime) {
-			localViewtab.cycleTimeCount = 1;
-			celNum = localViewtab.currentCel;
-
-			setViewTab(&localViewtab, entryNum);
-			switch (localViewtab.cycleStatus) {
-			case 0: /* normal.cycle */
-				celNum++;
-				if (celNum >= localViewtab.numberOfCels)
-					celNum = 0;
-				b9SetCel(&localViewtab, celNum);
-				break;
-			case 1: /* end.of.loop */
-				celNum++;
-				if (celNum >= localViewtab.numberOfCels) {
-					flag[localViewtab.param1] = 1;
-					localViewtab.flags &= ~CYCLING;
-				}
-				else
-					b9SetCel(&localViewtab, celNum);
-				break;
-			case 2: /* reverse.loop */
-				celNum--;
-				if (celNum < 0) {
-					flag[localViewtab.param1] = 1;
-					localViewtab.flags &= ~CYCLING;
-				}
-				else
-					b9SetCel(&localViewtab, celNum);
-				break;
-			case 3: /* reverse.cycle */
-				celNum--;
-				if (celNum < 0)
-					celNum = localViewtab.numberOfCels - 1;
-				b9SetCel(&localViewtab, celNum);
-				break;
-			}
-			getViewTab(&localViewtab, entryNum);
-		}
-	} /* CYCLING */
-
-	if (objFlags & MOTION) {
-		localViewtab.stepTimeCount++;
-		if (localViewtab.stepTimeCount >
-			localViewtab.stepTime) {
-			localViewtab.stepTimeCount = 1;
-
-			setViewTab(&localViewtab, entryNum);
-			switch (localViewtab.motion) {
-			case 0: /* normal.motion */
-				switch (localViewtab.direction) {
-				case 0: break;
-				case 1:bANormalAdjust(entryNum, &localViewtab, 0, -1); break;
-				case 2:bANormalAdjust(entryNum, &localViewtab, 1, -1); break;
-				case 3:bANormalAdjust(entryNum, &localViewtab, 1, 0); break;
-				case 4:bANormalAdjust(entryNum, &localViewtab, 1, 1); break;
-				case 5:bANormalAdjust(entryNum, &localViewtab, 0, 1); break;
-				case 6:bANormalAdjust(entryNum, &localViewtab, -1, 1); break;
-				case 7:bANormalAdjust(entryNum, &localViewtab, -1, 0); break;
-				case 8:bANormalAdjust(entryNum, &localViewtab, -1, -1); break;
-				}
-				break;
-			case 1: /* wander */
-				oldX = localViewtab.xPos;
-				oldY = localViewtab.yPos;
-				switch (localViewtab.direction) {
-				case 0: break;
-				case 1:bANormalAdjust(entryNum, &localViewtab, 0, -1); break;
-				case 2:bANormalAdjust(entryNum, &localViewtab, 1, -1); break;
-				case 3:bANormalAdjust(entryNum, &localViewtab, 1, 0); break;
-				case 4:bANormalAdjust(entryNum, &localViewtab, 1, 1); break;
-				case 5:bANormalAdjust(entryNum, &localViewtab, 0, 1); break;
-				case 6:bANormalAdjust(entryNum, &localViewtab, -1, 1); break;
-				case 7:bANormalAdjust(entryNum, &localViewtab, -1, 0); break;
-				case 8:bANormalAdjust(entryNum, &localViewtab, -1, -1); break;
-				}
-				if ((localViewtab.xPos == oldX) &&
-					(localViewtab.yPos == oldY)) {
-					localViewtab.direction = (rand() % 8) + 1;
-				}
-				break;
-			case 2: /* follow.ego */
-				break;
-			case 3: /* move.obj */
-				bAAdjustPosition(&localViewtab, localViewtab.param1,
-					localViewtab.param2, entryNum);
-				if ((localViewtab.xPos == localViewtab.param1) &&
-					(localViewtab.yPos == localViewtab.param2)) {
-					localViewtab.motion = 0;
-					localViewtab.flags &= ~MOTION;
-					flag[localViewtab.param4] = 1;
-				}
-				break;
-			}
-		}
-	} /* MOTION */
-
- //} /* UPDATE */
-
-	/* Determine priority for unfixed priorities */
-	if (!(objFlags & FIXEDPRIORITY)) {
-		if (localViewtab.yPos < 60)
-			localViewtab.priority = 4;
-		else
-			localViewtab.priority = (localViewtab.yPos / 12 + 1);
-	}
-
-	/* Draw new cel onto picture\priority bitmaps */
-	/*
-	agi_blit(localViewtab.celData->bmp,
-	   localViewtab.xPos,
-	   (localViewtab.yPos - localViewtab.ysize) + 1,
-	   localViewtab.xsize,
-	   localViewtab.ysize,
-	   localViewtab.celData->transparency & 0x0f,
-	   localViewtab.priority);
-	*/
-	//}
-
-	if ((objFlags & ANIMATED) && (objFlags & DRAWN)) {
-		/* Draw new cel onto picture\priority bitmaps */
-
-#ifdef VERBOSE_DEBUG_BLIT
-		printf("Called from update obj 2");
-#endif // DEBUG
-	}
-
-	setViewTab(&localViewtab, entryNum);
-	b6ShowPicture();
-}
 
 #pragma bss-name (push, "BANKRAM0B")
 boolean prioritiesSeen[NO_PRIORITIES - 1];
@@ -2855,7 +2718,6 @@ void bCupdateObjects2()
 		}
 	}
 }
-
 void bCCalcObjMotion()
 {
 	int entryNum, celNum, oldX, oldY, steps = 0;
@@ -2869,7 +2731,7 @@ void bCCalcObjMotion()
 	for (entryNum = 0; entryNum < VIEW_TABLE_SIZE; entryNum++) {
 
 		getViewTab(&localViewtab, entryNum);
-
+		
 		if (localViewtab.staleCounter)
 		{
 			localViewtab.staleCounter--;

@@ -13,6 +13,7 @@
     .include "fillAsm.s"
     .include "floatDivisionAsm.s"
     .include "priority.s"
+    .include "movement.s"
     .export _executeLogic
     .export _b6InitInterpreter
     .export _loadAndIncWinCode
@@ -80,3 +81,4 @@
     .export _runIncrementalGarbageCollector
     .export _bARunSpriteGarbageCollectorAll
     .export _SGC_LAST_LOCATION_GC_CHECKED
+    .export _bAFollowEgoAsmSec
