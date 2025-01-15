@@ -1376,6 +1376,7 @@ void b2Follow_ego() // 3, 0x00
 	//localViewtab.stepSize = stepVal;
 	localViewtab.param2 = flagNum;
 	localViewtab.motion = 2;
+	localViewtab.param3 = -1;
 	localViewtab.flags |= MOTION;
 
 	setViewTab(&localViewtab, entryNum);

@@ -7,6 +7,7 @@ MOVEMENT_INC = 1
 .import _offsetOfYPos
 .import _offsetOfParam1
 .import _offsetOfParam2
+.import _offsetOfParam3
 .import _offsetOfDirection
 .import _offsetOfMotion
 
@@ -131,6 +132,13 @@ sta MVT_DIR
 beq @collision
 
 @checkIsFirstTime:
+GET_STRUCT_8_STORED_OFFSET _offsetOfParam3, MVT_LOCAL_VIEW_TAB
+cmp #$FF ;(-1)
+beq @firstTime
+
+@checkStopped:
+
+@checkZeroMotionParam:
 
 @end:
 rts
@@ -144,6 +152,10 @@ lda #TRUE
 SET_STRUCT_8_STORED_OFFSET_VALUE_IN_REG _offsetOfParam2, MVT_LOCAL_VIEW_TAB
 
 bra @end
+@firstTime:
+lda #$0
+SET_STRUCT_8_STORED_OFFSET_VALUE_IN_REG _offsetOfParam3, MVT_LOCAL_VIEW_TAB
+bra @checkZeroMotionParam
 
 .endscope
 
