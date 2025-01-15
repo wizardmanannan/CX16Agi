@@ -2741,6 +2741,11 @@ void bCCalcObjMotion()
 		//Warning
 		if ((objFlags & MOTION) && (objFlags & UPDATE) && (objFlags & DRAWN)) {
 
+			//if (entryNum != 0)
+			//{
+			//	bAFollowEgo(&localViewtab); //Temporary for testing
+			//}
+
 			localViewtab.stepTimeCount++;
 
 			if (localViewtab.stepTimeCount >
@@ -2782,7 +2787,7 @@ void bCCalcObjMotion()
 					}
 					break;
 				case 2: /* follow.ego */
-					bAFollowEgo(entryNum);
+					bAFollowEgo(&localViewtab);
 					if ((localViewtab.xPos == localViewtab0.xPos) &&
 						(localViewtab.yPos == localViewtab0.yPos)) {
 						localViewtab.motion = 0;
