@@ -6,6 +6,9 @@ MOVEMENT_INC = 1
 .import _offsetOfXPos
 .import _offsetOfYPos
 .import _offsetOfParam1
+.import _offsetOfParam2
+.import _offsetOfDirection
+.import _offsetOfMotion
 
 .segment "BANKRAM0A"
 
@@ -57,7 +60,6 @@ newdir_row_addresses:
 
 _bAFollowEgoAsmSec:
 ;void bAFollowEgoAsmSec(ViewTable* localViewTab, ViewTable* egoViewTab, byte egoWidth, byte localCelWidth)
-stp
 .scope
 MVT_LOCAL_VIEW_TAB = ZP_TMP_2
 MVT_EGO_VIEW_TAB = ZP_TMP_3
@@ -113,23 +115,6 @@ jsr bAMoveDirection
 sta MVT_DIFF_Y
 stx MVT_DIR_VAL_Y
 
-; php
-; pha
-; phx
-; phy
-
-; lda MVT_DIR_VAL_Y
-; cmp #$1
-; beq @continue
-; stp
-
-; @continue:
-; ply
-; plx
-; pla
-; plp
-
-
 txa
 asl
 tax
@@ -142,8 +127,25 @@ ldy MVT_DIR_VAL_X
 lda (sreg),y
 sta MVT_DIR
 
-stp
+@checkCollision:
+beq @collision
+
+
+
+@checkIsFirstTime:
+
+@end:
 rts
+@collision:
+
+lda #$0
+SET_STRUCT_8_STORED_OFFSET_VALUE_IN_REG _offsetOfDirection, MVT_LOCAL_VIEW_TAB
+lda #MOTION_NORMAL
+SET_STRUCT_8_STORED_OFFSET_VALUE_IN_REG _offsetOfMotion, MVT_LOCAL_VIEW_TAB
+lda #TRUE
+SET_STRUCT_8_STORED_OFFSET_VALUE_IN_REG _offsetOfParam2, MVT_LOCAL_VIEW_TAB
+
+bra @end
 
 .endscope
 
