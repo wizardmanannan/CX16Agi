@@ -135,6 +135,9 @@ typedef struct ViewTable {
 	byte param4;
 	boolean repositioned;
 	byte staleCounter; //Required as we need to blit a moving object one more time after it stops moving to prevent screen glitches
+	boolean stopped;
+	byte previousX;
+	byte previousY;
 } ViewTable;
 
 #define VIEW_TABLE_SIZE  20 

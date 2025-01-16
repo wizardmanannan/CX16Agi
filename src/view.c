@@ -1251,6 +1251,9 @@ void b9ResetViewtabs(boolean fullReset)
 			localViewtab.priority = 0;
 			localViewtab.flags = 0;
 			localViewtab.repositioned = FALSE;
+			localViewtab.stopped = FALSE;
+			localViewtab.previousX = 0;
+			localViewtab.previousY = 0;
 
 			setViewTab(&localViewtab, entryNum);
 		}
@@ -1834,6 +1837,7 @@ void bADrawObject(ViewTable* localViewtab)
 	word objFlags;
 
 	objFlags = localViewtab->flags;
+	//Previous x and y may be needed here see Agile animated obj 1701
 
 	/* Determine priority for unfixed priorities */
 	if (!(objFlags & FIXEDPRIORITY)) {
@@ -2550,6 +2554,17 @@ void bBUpdateObjects()
 								}
 								continue;
 							}
+						}
+						else if (localViewtab.xPos == localViewtab.previousX && localViewtab.yPos == localViewtab.yPos)
+						{
+							localViewtab.stopped = TRUE;
+						}
+						else
+						{
+							localViewtab.previousX = localViewtab.xPos;
+							localViewtab.previousY = localViewtab.yPos;
+
+							localViewtab.stopped = FALSE;
 						}
 						//Blit may fail if we run out of sprite memory, if that is the case clear everything as there is likely to be stuff we are no longer using. If it fails more than once, we know there is not point continuing
 					}

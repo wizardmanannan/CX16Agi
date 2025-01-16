@@ -600,10 +600,15 @@ void b2Animate_obj() // 1, 0x00
 	if (entryNum != 0) localViewTab.direction = 0;
 
 	localViewTab.repositioned = FALSE;
+	localViewTab.stopped = FALSE;
 
 	setViewTab(&localViewTab, entryNum);
 
 	getViewTab(&localViewTab, entryNum);
+
+
+
+
 	return;
 }
 
@@ -631,6 +636,12 @@ void b2Draw() // 1, 0x00
 
 	entryNum = loadAndIncWinCode();
 	getViewTab(&localViewtab, entryNum);
+
+	if (!localViewtab.flags & DRAWN)
+	{
+		localViewtab.previousX = localViewtab.xPos;
+		localViewtab.previousY = localViewtab.yPos;
+	}
 
 	localViewtab.flags |= (DRAWN | UPDATE);   /* Not sure about update */
 
@@ -668,6 +679,8 @@ void b2Position() // 3, 0x00
 
 	localViewtab.xPos = loadAndIncWinCode();
 	localViewtab.yPos = loadAndIncWinCode();
+	localViewtab.previousX = localViewtab.xPos;
+	localViewtab.previousY = localViewtab.yPos;
 
 	setViewTab(&localViewtab, entryNum);
 	/* Need to check that it hasn't been draw()n yet. */
@@ -684,6 +697,8 @@ void b2Position_v() // 3, 0x60
 
 	localViewtab.xPos = var[loadAndIncWinCode()];
 	localViewtab.yPos = var[loadAndIncWinCode()];
+	localViewtab.previousX = localViewtab.xPos;
+	localViewtab.previousY = localViewtab.yPos;
 
 	setViewTab(&localViewtab, entryNum);
 	/* Need to check that it hasn't been draw()n yet. */
@@ -1963,7 +1978,7 @@ void b4Add_to_pic() // 7, 0x00
 	//printf("viewNum %d, loopNum %d, celNum %d, x %d, y %d priNum %d baseCol %d", viewNum, loopNum, celNum, x, y, priNum, baseCol);
 
 	b9AddToPic(viewNum, loopNum, celNum, x, y, priNum, baseCol);
-
+	//TODO: Update previous x and y and x and y. See Agile animated object 1264
 
 
 	return;
