@@ -14,6 +14,8 @@
     .include "floatDivisionAsm.s"
     .include "priority.s"
     .include "movement.s"
+    .include "randomAsm.s"
+    .include "modulus.s"
     .export _executeLogic
     .export _b6InitInterpreter
     .export _loadAndIncWinCode
@@ -82,3 +84,4 @@
     .export _bARunSpriteGarbageCollectorAll
     .export _SGC_LAST_LOCATION_GC_CHECKED
     .export _bAFollowEgoAsmSec
+    .export _rand8Bit

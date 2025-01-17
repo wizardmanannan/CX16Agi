@@ -107,6 +107,8 @@ VIEW_TAB_BANK = $09
 SPRITE_METADATA_BANK = $0E
 
 DIVISION_METADATA_BANK = $31
+RANDOM_BANK = $6
+
 
 ; Define offsets for different areas within golden RAM
 VARS_AREA_START_GOLDEN_OFFSET = 0
@@ -747,5 +749,8 @@ SEC_IMP = $38
 SBC_ZP = $E5
 SBC_IMM = $E9
 BCS_IMP = $B0
+
+.segment "ZEROPAGE"
+sreg2: .res 2
 
 .endif

@@ -29,6 +29,7 @@
 #include "floatDivision.h"
 #include "parser.h"
 #include "graphics.h"
+#include "random.h"
 //#include "sound.h"
 
 boolean hasEnteredNewRoom = FALSE, exitAllLogics = FALSE;
@@ -236,6 +237,7 @@ void b6Initialise()
     b4InitLruCaches(&b6DiscardLogicFile, &b9DiscardView);
 
     b6InitFiles();             /* Load resource directories */
+    b6InitRandom();
 
     //// <<--  Determine exact version in here
     for (i = 0; i < 255; i++) {  /* Initialize variables and flags */
@@ -298,6 +300,9 @@ void main()
     //chdir("\\GAMES\\SIERRA\\SQ2");
     //chdir("\\GAMES\\SIERRA\\LSL1");
     //chdir("..\\KQ2-2917");
+
+    RAM_BANK = 7;
+    srand(*((unsigned int*)0xA000)); //Memory starts as random gibberish
 
     memoryMangerInit();
 

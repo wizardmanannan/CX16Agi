@@ -145,6 +145,7 @@
 #define FLOAT_BANK 0x1
 #define PALETTE_MANAGER_BANK 0xF
 #define OBJECT_BANK 0xF
+#define RANDOM_BANK 0x6
 
 //Golden RAM
 #define VARS_AREA_START 0
