@@ -29,4 +29,26 @@ stx RAM_BANK
 rts
 @randomCounter: .byte $0
 
+;byte randBetween(byte min, byte max)
+_randBetween:
+pha
+jsr popa
+plx
+
+;a min x max
+randBetweenAsmCall:
+sta sreg
+pha
+
+sec
+txa
+sbc sreg
+jsr _rand8Bit
+
+plx
+stx sreg
+
+clc
+adc sreg
+rts
 .endif

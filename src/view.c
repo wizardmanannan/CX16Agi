@@ -22,6 +22,8 @@
 #include "agifiles.h"
 #include "view.h"
 
+byte seen = FALSE;
+
 //#define VERBOSE_SWITCH_METADATA
 //#define VERBOSE_GET_PALETTE
 //#define VERBOSE_MOVE
@@ -1809,22 +1811,21 @@ void bACalcDirection(ViewTable* localViewtab)
 			case 3: b9SetLoop(localViewtab, 0); break;
 			case 4: b9SetLoop(localViewtab, 0); break;
 			case 5: break;
-			case 6: b9SetLoop(localViewtab, 1); break;
-			case 7: b9SetLoop(localViewtab, 1); break;
-			case 8: b9SetLoop(localViewtab, 1); break;
+			case 6: if(localViewtab->numberOfLoops > 1) b9SetLoop(localViewtab, 1); break;
+			case 7: if (localViewtab->numberOfLoops > 1) b9SetLoop(localViewtab, 1); break;
+			case 8: if (localViewtab->numberOfLoops > 1) b9SetLoop(localViewtab, 1); break;
 			}
 		}
 		else {
 			switch (localViewtab->direction) {
-			case 1: b9SetLoop(localViewtab, 3); break;
+			case 1: if (localViewtab->numberOfLoops > 3) b9SetLoop(localViewtab, 3); break;
 			case 2: b9SetLoop(localViewtab, 0); break;
 			case 3: b9SetLoop(localViewtab, 0);  break;
 			case 4: b9SetLoop(localViewtab, 0); break;
-			case 5: b9SetLoop(localViewtab, 2); break;
-			case 6: b9SetLoop(localViewtab, 1); break;
-			case 7: b9SetLoop(localViewtab, 1); break;
-			case 8: b9SetLoop(localViewtab, 1); break;
-
+			case 5: if (localViewtab->numberOfLoops > 2) b9SetLoop(localViewtab, 2); break;
+			case 6: if (localViewtab->numberOfLoops > 1) b9SetLoop(localViewtab, 1); break;
+			case 7: if (localViewtab->numberOfLoops > 1) b9SetLoop(localViewtab, 1); break;
+			case 8: if (localViewtab->numberOfLoops > 1) b9SetLoop(localViewtab, 1); break;
 			}
 		}
 	}
@@ -1846,6 +1847,7 @@ void bADrawObject(ViewTable* localViewtab)
 		else
 			localViewtab->priority = (localViewtab->yPos / 12 + 1);
 	}
+
 
 	bACalcDirection(localViewtab);
 
@@ -2215,7 +2217,11 @@ void bAFollowEgo(ViewTable* localViewTab)
 	getLoadedLoop(&localView, &localLoop, localViewTab->currentLoop);
 	getLoadedCel(&localLoop, &localCel, localViewTab->currentCel);
 
-	bAFollowEgoAsmSec(localViewTab, &egoViewTab, egoCel.width, localCel.width);
+	if (!seen)
+	{
+		bAFollowEgoAsmSec(localViewTab, &egoViewTab, egoCel.width, localCel.width);
+		seen = TRUE;
+	}
 }
 #pragma wrapped-call (pop)
 
@@ -2803,16 +2809,17 @@ void bCCalcObjMotion()
 					break;
 				case 2: /* follow.ego */
 					bAFollowEgo(&localViewtab);
-					if ((localViewtab.xPos == localViewtab0.xPos) &&
-						(localViewtab.yPos == localViewtab0.yPos)) {
-						localViewtab.motion = 0;
-						localViewtab.flags &= ~MOTION;
-						flag[localViewtab.param2] = 1;
-						/* Not sure about this next line */
-						localViewtab.stepSize = localViewtab.param1;
-
-						localViewtab.staleCounter = 1;
-					}
+					/*switch (localViewtab.direction) {
+					case 0: break;
+					case 1:bANormalAdjust(entryNum, &localViewtab, 0, -1); break;
+					case 2:bANormalAdjust(entryNum, &localViewtab, 0, -1); break;
+					case 3:bANormalAdjust(entryNum, &localViewtab, 1, 0); break;
+					case 4:bANormalAdjust(entryNum, &localViewtab, 1, 1); break;
+					case 5:bANormalAdjust(entryNum, &localViewtab, 0, 1); break;
+					case 6:bANormalAdjust(entryNum, &localViewtab, -1, 1); break;
+					case 7:bANormalAdjust(entryNum, &localViewtab, -1, 0); break;
+					case 8:bANormalAdjust(entryNum, &localViewtab, -1, -1);
+					}*/
 					break;
 				case 3: /* move.obj */
 					if (flag[localViewtab.param4]) break;
@@ -2842,7 +2849,16 @@ void bCCalcObjMotion()
 		/* Automatic change of direction if needed */
 		bACalcDirection(&localViewtab);
 
+		if (seen)
+		{
+			printf("local current loop %p\n", &localViewtab.currentLoop);
+			asm("stp");
+		}
 		setViewTab(&localViewtab, entryNum);
+		if (seen)
+		{
+			asm("stp");
+		}
 	}
 }
 

@@ -31,6 +31,8 @@ byte offsetOfParam1 = offsetof(struct ViewTable, param1);
 byte offsetOfParam2 = offsetof(struct ViewTable, param2);
 byte offsetOfParam3 = offsetof(struct ViewTable, param3);
 byte offsetOfMotion = offsetof(struct ViewTable, motion);
+byte offsetOfStopped = offsetof(struct ViewTable, stopped);
+byte offsetOfStepSize = offsetof(struct ViewTable, stepSize);
 
 //View Metadata
 byte offsetOfloopsVeraAddressesPointers = offsetof(struct ViewTableMetadata, loopsVeraAddressesPointers);
