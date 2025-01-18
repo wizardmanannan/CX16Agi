@@ -1,4 +1,3 @@
-.import _stopAtFunc
 .import _bDbgDebugPrint
 ; Define the include guard for command loop
 .ifndef COMMAND_LOOP_INC
@@ -54,7 +53,6 @@ codeBankArray: .byte $5,$1,$1,$1,$1,$1,$1,$2,$2,$2,$2,$2,$2,$2,$2,$2,$2,$2,$2,$2
 .import _bDbgPrintOrMode
 .import _bDbgCodeJump
 .import _opCounter
-.import _stopAtFunc
 .import _debugBank
 .endif
 

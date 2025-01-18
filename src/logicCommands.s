@@ -193,7 +193,6 @@ LOGICCOMMANDS_INC = 1
 .import _bDbgExitAllLogics
 .import _bDbgScanStart
 .import _bDbgResetScanStart
-.import _stopAtFunc
 .endif 
 
 ; Debugging related macros (for debugging comparisons, flag checking, arithmetic operations, etc.)

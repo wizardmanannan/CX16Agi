@@ -9,7 +9,6 @@ CODE_WINDOW_INC = 1
 ; Import debug functions if in DEBUG mode.
 .ifdef DEBUG
 .import _debugPrintCurrentCodeState
-.import _stopAtFunc 
 .endif
 
 CODE_WINDOW_SIZE = 50

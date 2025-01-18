@@ -329,33 +329,32 @@ boolean b1Controller() // 1, 0x00
 	EventType event;
 	int eventNum = loadAndIncWinCode(), retVal = 0;
 
-	b7GetEvent(&event, eventNum);
+	//b7GetEvent(&event, eventNum);
 
-	/* Some events can be activated by menu input or key input. */
+	///* Some events can be activated by menu input or key input. */
 
-	/* Following code detects key presses at the current time */
-	switch (event.type) {
-	case ASCII_KEY_EVENT:
-		if (event.activated) {
-			event.activated = FALSE;
-			return TRUE;
-		}
-		return b7GetAsciiState(event.eventID);
-	case SCAN_KEY_EVENT:
-		if (event.activated) {
-			event.activated = FALSE;
-			return TRUE;
-		}
-		if ((event.eventID < 59) &&
-			(b7GetAsciiState(0) == 0)) return FALSE;   /* ALT Combinations */
-		return (b7GetKeyState(event.eventID));
-	case MENU_EVENT:
-		retVal = event.activated;
-		event.activated = 0;
-		return (retVal);
-	default:
-		return (FALSE);
-	}
+	///* Following code detects key presses at the current time */
+	//switch (event.type) {
+	//case ASCII_KEY_EVENT:
+	//	if (event.activated) {
+	//		event.activated = FALSE;
+	//		return TRUE;
+	//	}
+	//	return b7GetAsciiState(event.eventID);
+	//case SCAN_KEY_EVENT:
+	//	if (event.activated) {
+	//		event.activated = FALSE;
+	//		return TRUE;
+	//	}
+	//	if ((event.eventID < 59) &&
+	//		(b7GetAsciiState(0) == 0)) return FALSE;   /* ALT Combinations */
+	//	return (b7GetKeyState(event.eventID));
+	//case MENU_EVENT:
+	//	retVal = event.activated;
+	//	event.activated = 0;
+	//	return (retVal);
+	//default:
+		return FALSE;
 }
 
 boolean b1Have_key() // 0, 0x00
