@@ -7,7 +7,6 @@
 
 extern void b6InitRandom();
 extern byte rand8Bit(byte max);
-extern byte randBetween(byte min, byte max);
 
 extern byte randomSeed;
 

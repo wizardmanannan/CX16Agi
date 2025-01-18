@@ -10,11 +10,7 @@ MOVEMENT_INC = 1
 .import _offsetOfParam3
 .import _offsetOfDirection
 .import _offsetOfMotion
-.import _offsetOfStopped
-.import _offsetOfStepSize
 
-.segment "CODE"
-debugCounter: .byte $0
 .segment "BANKRAM0A"
 
 ;bAMoveDirection Inputs (a (local position (x coord or y coord not both))/sreg ego position) Returns a/x (distance/direction)
@@ -63,7 +59,6 @@ newdir_row_addresses:
     .addr newdir + 3         
     .addr newdir + 6         
 
-MAX_DIRECTION = 8
 _bAFollowEgoAsmSec:
 ;void bAFollowEgoAsmSec(ViewTable* localViewTab, ViewTable* egoViewTab, byte egoWidth, byte localCelWidth)
 .scope
@@ -131,7 +126,6 @@ sta sreg + 1
 
 ldy MVT_DIR_VAL_X
 lda (sreg),y
-
 sta MVT_DIR
 
 @checkCollision:
@@ -143,18 +137,10 @@ cmp #$FF ;(-1)
 beq @firstTime
 
 @checkStopped:
-GET_STRUCT_8_STORED_OFFSET _offsetOfStopped, MVT_LOCAL_VIEW_TAB
-bne @stopped
 
-@checkNonZeroMotionParam:
-GET_STRUCT_8_STORED_OFFSET _offsetOfParam3, MVT_LOCAL_VIEW_TAB
-bne @nonZeroMotionParam
-
-lda MVT_DIR
-SET_STRUCT_8_STORED_OFFSET_VALUE_IN_REG _offsetOfDirection, MVT_LOCAL_VIEW_TAB
+@checkZeroMotionParam:
 
 @end:
-inc debugCounter
 rts
 @collision:
 
@@ -169,42 +155,7 @@ bra @end
 @firstTime:
 lda #$0
 SET_STRUCT_8_STORED_OFFSET_VALUE_IN_REG _offsetOfParam3, MVT_LOCAL_VIEW_TAB
-bra @checkNonZeroMotionParam
-
-@stopped:
-lda #MAX_DIRECTION + 1
-jsr _rand8Bit
-sta MVT_DIR
-
-clc
-lda MVT_DIFF_X
-adc MVT_DIFF_Y
-lsr
-inc
-tax
-
-GET_STRUCT_8_STORED_OFFSET _offsetOfStepSize, MVT_LOCAL_VIEW_TAB,sreg
-cpx sreg
-bcc @storeParam3
-@distBiggerThanStepSize:
-jsr randBetweenAsmCall
-@storeParam3:
-SET_STRUCT_8_STORED_OFFSET_VALUE_IN_REG _offsetOfParam3, MVT_LOCAL_VIEW_TAB
-
-bra @end
-
-@nonZeroMotionParam:
-tax
-GET_STRUCT_8_STORED_OFFSET _offsetOfStepSize, MVT_LOCAL_VIEW_TAB,sreg
-
-txa
-sec
-sbc sreg
-bvc @storeMotionParam3
-lda #$0
-@storeMotionParam3:
-SET_STRUCT_8_STORED_OFFSET_VALUE_IN_REG _offsetOfParam3, MVT_LOCAL_VIEW_TAB
-bra @end
+bra @checkZeroMotionParam
 
 .endscope
 

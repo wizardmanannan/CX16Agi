@@ -8,14 +8,10 @@ DEBUG_INC = 1
 .import _opCounter
 .import _pixelCounter
 _b6TellMeTheAddressPlease:
-stp
 lda _opCounter
 lda _bESpritesUpdatedBuffer
 lda _bASpriteAddressReverseHighNotSet
 lda _bASpriteAddressReverseHighSet
-lda debugCounter
-lda cwCurrentCode
-lda codeWindow
 rts
 
 .segment "BANKRAM05"

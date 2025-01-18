@@ -148,8 +148,6 @@ void b6UpdateStatusLine()
 ** The main routine that gets called everytime the timing procedure is
 ** activated.
 ***************************************************************************/
-
-extern boolean seen;
 void b6Interpret()
 {
     ViewTable localViewtab;
@@ -176,14 +174,6 @@ void b6Interpret()
         exitAllLogics = FALSE;
 
         executeLogic(&logicEntry, 0);
-        
-
-        //if (seen)
-        //{
-        //    asm("stp");
-        //    asm("lda %v", _codeBank);
-        //    asm("nop");
-        //}
 
         //dirnOfEgo = var[6];
         getViewTab(&localViewtab, 0);
@@ -311,8 +301,8 @@ void main()
     //chdir("\\GAMES\\SIERRA\\LSL1");
     //chdir("..\\KQ2-2917");
 
-    //RAM_BANK = 7;
-    //srand(*((unsigned int*)0xA000)); //Memory starts as random gibberish
+    RAM_BANK = 7;
+    srand(*((unsigned int*)0xA000)); //Memory starts as random gibberish
 
     memoryMangerInit();
 
