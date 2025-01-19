@@ -28,7 +28,7 @@ sty sreg
 cmp sreg
 bcc @dontMove
 
-ldx #$2
+ldx #$0
 bra @end
 
 @dontMove:
@@ -47,7 +47,7 @@ cmp sreg
 beq @successLocalIsSmaller
 bcc @dontMove
 @successLocalIsSmaller:
-ldx #$0
+ldx #$2
 @end:
 rts
 
@@ -104,8 +104,9 @@ sta MVT_LCX
 
 GET_STRUCT_8_STORED_OFFSET _offsetOfParam1, MVT_LOCAL_VIEW_TAB, MVT_DELTA
 
-GET_STRUCT_8_STORED_OFFSET _offsetOfXPos, MVT_EGO_VIEW_TAB,sreg
-GET_STRUCT_8_STORED_OFFSET _offsetOfXPos, MVT_LOCAL_VIEW_TAB
+lda MVT_ECX
+sta sreg
+lda MVT_LCX
 
 ldy MVT_DELTA
 jsr bAMoveDirection
@@ -129,6 +130,7 @@ sta sreg + 1
 
 ldy MVT_DIR_VAL_X
 lda (sreg),y
+
 sta MVT_DIR
 
 @checkCollision:
@@ -147,6 +149,7 @@ bne @stopped
 GET_STRUCT_8_STORED_OFFSET _offsetOfParam3, MVT_LOCAL_VIEW_TAB
 bne @nonZeroMotionParam
 
+@updateDirection:
 lda MVT_DIR
 SET_STRUCT_8_STORED_OFFSET_VALUE_IN_REG _offsetOfDirection, MVT_LOCAL_VIEW_TAB
 
@@ -187,7 +190,7 @@ jsr randBetweenAsmCall
 @storeParam3:
 SET_STRUCT_8_STORED_OFFSET_VALUE_IN_REG _offsetOfParam3, MVT_LOCAL_VIEW_TAB
 
-bra @end
+bra @updateDirection
 
 @nonZeroMotionParam:
 tax

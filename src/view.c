@@ -2231,10 +2231,13 @@ void bAFindPosition(int entryNum, ViewTable* viewTab)
 extern byte b8GetControl(byte X, byte Y);
 #pragma wrapped-called(pop)
 
+boolean testVal = FALSE;
+
 #pragma wrapped-call (push, trampoline, VIEW_CODE_BANK_2)
 void bANormalAdjust(int entryNum, ViewTable* viewTab, int dx, int dy)
 {
 	int tempX, tempY, testX, startX, endX, waterCount = 0;
+	byte priorityValue;
 
 	tempX = (viewTab->xPos + dx);
 	tempY = (viewTab->yPos + dy);
@@ -2316,8 +2319,22 @@ void bANormalAdjust(int entryNum, ViewTable* viewTab, int dx, int dy)
 		startX = tempX;
 		endX = startX + viewTab->xsize;
 		for (testX = startX; testX < endX; testX++) {
+			priorityValue = b8GetControl(testX, tempY);
 			if ((viewTab->flags & ONWATER) &&
-				(b8GetControl(testX, tempY) != 3)) {
+				(priorityValue != 3)) {
+				return;
+			}
+			else if (!priorityValue)
+			{
+				return;
+			}
+			else if (!(viewTab->flags & IGNOREBLOCKS) && priorityValue == 1) {
+				
+		//		/*testVal = TRUE;
+		//b8GetControl(testX, tempY);*/
+		//		printf("we block at %d %d therefore we remain at %d %d", testX, tempY, viewTab->xPos, viewTab->yPos);
+		//		asm("stp");
+				
 				return;
 			}
 		}
@@ -2804,14 +2821,14 @@ void bCCalcObjMotion()
 					bAFollowEgo(&localViewtab);
 					switch (localViewtab.direction) {
 					case 0: break;
-					case 1:bANormalAdjust(entryNum, &localViewtab, 0, -1); break;
-					case 2:bANormalAdjust(entryNum, &localViewtab, 0, -1); break;
-					case 3:bANormalAdjust(entryNum, &localViewtab, 1, 0); break;
-					case 4:bANormalAdjust(entryNum, &localViewtab, 1, 1); break;
-					case 5:bANormalAdjust(entryNum, &localViewtab, 0, 1); break;
-					case 6:bANormalAdjust(entryNum, &localViewtab, -1, 1); break;
-					case 7:bANormalAdjust(entryNum, &localViewtab, -1, 0); break;
-					case 8:bANormalAdjust(entryNum, &localViewtab, -1, -1);
+					case 1:bANormalAdjust(entryNum, &localViewtab, 0, -1 * localViewtab.stepSize); break;
+					case 2:bANormalAdjust(entryNum, &localViewtab, localViewtab.stepSize, -1 * localViewtab.stepSize); break;
+					case 3:bANormalAdjust(entryNum, &localViewtab, localViewtab.stepSize, 0); break;
+					case 4:bANormalAdjust(entryNum, &localViewtab, localViewtab.stepSize, localViewtab.stepSize); break;
+					case 5:bANormalAdjust(entryNum, &localViewtab, 0, localViewtab.stepSize); break;
+					case 6:bANormalAdjust(entryNum, &localViewtab, -1 * localViewtab.stepSize, localViewtab.stepSize); break;
+					case 7:bANormalAdjust(entryNum, &localViewtab, -1 * localViewtab.stepSize, 0); break;
+					case 8:bANormalAdjust(entryNum, &localViewtab, -1 * localViewtab.stepSize, -1 * localViewtab.stepSize);
 					}
 					break;
 				case 3: /* move.obj */
