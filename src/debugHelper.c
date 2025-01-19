@@ -13,9 +13,9 @@ byte debugBank;
 
 #pragma bss-name (push, "BANKRAMDEBUG")
 long opCounter = 1;
-long opStopAt = 0;
-long opExitAt = 0;
-long opStartPrintingAt = 0;
+long opStopAt = -1;
+long opExitAt = -1;
+long opStartPrintingAt = -1;
 int opPrintOnlyOnScript = PRINT_ALL_SCRIPTS;
 boolean opStopEvery = FALSE;
 int _clockBefore = 0;

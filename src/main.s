@@ -85,3 +85,4 @@
     .export _SGC_LAST_LOCATION_GC_CHECKED
     .export _bAFollowEgoAsmSec
     .export _rand8Bit
+    .export _randBetween
