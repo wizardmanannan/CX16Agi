@@ -2573,12 +2573,23 @@ void bBUpdateObjects()
 						}
 						else if (localViewtab.xPos == localViewtab.previousX && localViewtab.yPos == localViewtab.yPos)
 						{
+							/*if (entryNum == 11)
+							{
+								asm("stp");
+								asm("lda #$2");
+							}*/
 							localViewtab.stopped = TRUE;
 						}
 						else
 						{
 							localViewtab.previousX = localViewtab.xPos;
 							localViewtab.previousY = localViewtab.yPos;
+
+							/*if (entryNum == 11)
+							{
+								asm("stp");
+								asm("lda #$3");
+							}*/
 
 							localViewtab.stopped = FALSE;
 						}
