@@ -225,12 +225,9 @@ stx LOCAL_VIEW_TAB + 1
 GET_STRUCT_8_STORED_OFFSET _offsetOfParam1, LOCAL_VIEW_TAB
 beq @selectDirection
 dec
-SET_STRUCT_8_STORED_OFFSET_VALUE_IN_REG _offsetOfParam1, LOCAL_VIEW_TAB
+sta  (LOCAL_VIEW_TAB),y ;Not calling usual set function as y already holds the right offset
 
 GET_STRUCT_8_STORED_OFFSET _offsetOfStopped, LOCAL_VIEW_TAB
-beq @end
-
-ora sreg
 beq @end
 
 @selectDirection:
