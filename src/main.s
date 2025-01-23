@@ -86,3 +86,4 @@
     .export _bAFollowEgoAsmSec
     .export _rand8Bit
     .export _randBetween
+    .export _bAWander

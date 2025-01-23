@@ -59,6 +59,7 @@ extern void b9InitObjects();
 #pragma wrapped-call (pop)
 
 #pragma wrapped-call (push, trampoline, VIEW_CODE_BANK_2)
+extern void bAWander(ViewTable* localViewTab, byte entryNum);
 extern void bAFindPosition(int entryNum, ViewTable* viewTab);
 extern void bBUpdateObj(int entryNum);
 extern void bADrawObject(ViewTable* viewTab);

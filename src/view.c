@@ -2800,21 +2800,17 @@ void bCCalcObjMotion()
 				case 1: /* wander */
 					oldX = localViewtab.xPos;
 					oldY = localViewtab.yPos;
+ 					bAWander(&localViewtab, entryNum);
 					switch (localViewtab.direction) {
 					case 0: break;
 					case 1:bANormalAdjust(entryNum, &localViewtab, 0, -1); break;
-					case 2:bANormalAdjust(entryNum, &localViewtab, 0, -1); break;
+					case 2:bANormalAdjust(entryNum, &localViewtab, 1, -1); break;
 					case 3:bANormalAdjust(entryNum, &localViewtab, 1, 0); break;
 					case 4:bANormalAdjust(entryNum, &localViewtab, 1, 1); break;
 					case 5:bANormalAdjust(entryNum, &localViewtab, 0, 1); break;
 					case 6:bANormalAdjust(entryNum, &localViewtab, -1, 1); break;
 					case 7:bANormalAdjust(entryNum, &localViewtab, -1, 0); break;
 					case 8:bANormalAdjust(entryNum, &localViewtab, -1, -1); break;
-					}
-					if ((localViewtab.xPos == oldX) &&
-						(localViewtab.yPos == oldY)) {
-						randomNum = (byte)(rand() % 8) + 1;
-						localViewtab.direction = 5;
 					}
 					break;
 				case 2: /* follow.ego */
