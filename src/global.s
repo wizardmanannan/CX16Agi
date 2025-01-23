@@ -743,12 +743,32 @@ jsr _printfSafe
 
 .endmacro
 
+SET_VAR_OFFSET = GOLDEN_RAM + VARS_AREA_START_GOLDEN_OFFSET
+;For setting a var, outside of the interpreter. Can still be called by an interpreter command, but doesn't affect or know about the current interpreter state.
+;Requires the value to be set to be in 'X', and the variable number in 'A'
+;Requires a ZP passed in as a param, which will be used internally to set the address of the var
+.macro SET_VAR_NON_INTERPRETER ZP
+        clc
+        adc #<SET_VAR_OFFSET
+        sta ZP
+        lda #$0
+        adc #>SET_VAR_OFFSET
+        sty ZP + 1
+
+        txa
+        sta (ZP)    
+.endmacro
+
+
 ;OpCode Values (For self modifying code)
 LDX_ABS = $AE
 SEC_IMP = $38
 SBC_ZP = $E5
 SBC_IMM = $E9
 BCS_IMP = $B0
+
+;System Variables
+EGODIR = 6
 
 .segment "ZEROPAGE"
 sreg2: .res 2

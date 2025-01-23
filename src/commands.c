@@ -1404,10 +1404,8 @@ void b2Wander() // 1, 0x00
 
 	entryNum = loadAndIncWinCode();
 	getViewTab(&localViewtab, entryNum);
-
-
 	localViewtab.motion = 1;
-	localViewtab.flags |= MOTION;
+	localViewtab.flags |= MOTION | UPDATE;
 
 	setViewTab(&localViewtab, entryNum);
 	return;

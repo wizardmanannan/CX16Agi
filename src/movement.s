@@ -207,4 +207,51 @@ bra @end
 
 .endscope
 
+_bAWander:
+;void bAWander(ViewTable* localViewTab, byte entryNum)
+.scope
+LOCAL_VIEW_TAB = ZP_TMP_2
+ENTRY_NUM = ZP_TMP_3
+
+MIN_WANDER_DISTANCE = 6
+MAX_WANDER_DISTANCE = 50
+
+sta ENTRY_NUM
+
+jsr popax
+sta LOCAL_VIEW_TAB
+stx LOCAL_VIEW_TAB + 1
+
+GET_STRUCT_8_STORED_OFFSET _offsetOfParam1, LOCAL_VIEW_TAB
+beq @selectDirection
+dec
+SET_STRUCT_8_STORED_OFFSET_VALUE_IN_REG _offsetOfParam1, LOCAL_VIEW_TAB
+
+GET_STRUCT_8_STORED_OFFSET _offsetOfStopped, LOCAL_VIEW_TAB
+beq @end
+
+ora sreg
+beq @end
+
+@selectDirection:
+lda #MAX_DIRECTION + 1
+jsr _rand8Bit
+tax
+SET_STRUCT_8_STORED_OFFSET_VALUE_IN_REG _offsetOfDirection, LOCAL_VIEW_TAB
+
+lda ENTRY_NUM
+bne @setMotionParam1
+
+lda #EGODIR
+SET_VAR_NON_INTERPRETER sreg
+
+@setMotionParam1:
+lda #MIN_WANDER_DISTANCE
+ldx #MAX_WANDER_DISTANCE
+jsr randBetweenAsmCall
+SET_STRUCT_8_STORED_OFFSET_VALUE_IN_REG _offsetOfParam1, LOCAL_VIEW_TAB
+
+@end:
+rts
+.endscope
 .endif
