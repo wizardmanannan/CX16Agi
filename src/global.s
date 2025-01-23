@@ -753,11 +753,29 @@ SET_VAR_OFFSET = GOLDEN_RAM + VARS_AREA_START_GOLDEN_OFFSET
         sta ZP
         lda #$0
         adc #>SET_VAR_OFFSET
-        sty ZP + 1
+        sta ZP + 1
 
         txa
         sta (ZP)    
 .endmacro
+
+SET_FLAG_OFFSET = GOLDEN_RAM + FLAGS_AREA_START_GOLDEN_OFFSET
+;For setting a flag, outside of the interpreter. Can still be called by an interpreter command, but doesn't affect or know about the current interpreter state.
+;Requires the flag number in 'A'
+;Requires a ZP passed in as a param, which will be used internally to set the address of the var
+.macro SET_FLAG_NON_INTERPRETER ZP
+        stp
+        tay
+        lda #<SET_FLAG_OFFSET
+        sta ZP
+        lda #>SET_FLAG_OFFSET
+        sta ZP + 1
+
+        lda #$1
+        sta (ZP),y
+        stp
+.endmacro
+
 
 
 ;OpCode Values (For self modifying code)
