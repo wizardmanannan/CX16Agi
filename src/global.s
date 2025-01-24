@@ -755,7 +755,7 @@ SET_VAR_OFFSET = GOLDEN_RAM + VARS_AREA_START_GOLDEN_OFFSET
         sta ZP + 1
 
         txa
-        sta (ZP)    
+        sta (ZP),y    
 .endmacro
 
 SET_FLAG_OFFSET = GOLDEN_RAM + FLAGS_AREA_START_GOLDEN_OFFSET

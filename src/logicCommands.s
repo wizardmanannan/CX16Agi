@@ -136,7 +136,6 @@ LOGICCOMMANDS_INC = 1
 .import _b4Status
 .import _b4Restart_game
 .import _b4Show_obj
-.import _b4Random_num
 .import _b4Program_control
 .import _b4Player_control
 .import _b4Obj_status_v
@@ -588,6 +587,8 @@ jmp endMainLoop
 .endmacro
 
 ; Main code segment
+.segment "ZEROPAGE"
+OPCODE_FUNC_TMP: .res 2 ;Reserved for interpreter opcode functions
 .segment "CODE"
 callLogic: ; A subroutine for making calls, not an instruction
 bra @start
@@ -783,7 +784,7 @@ jmpTableCommands1:
 jmpTableCommands2:
 .addr b4Restart_gameCCall
 .addr b4Show_objCCall
-.addr b4Random_numCCall
+.addr b4Random_num
 .addr b4Program_controlCCall
 .addr b4Player_controlCCall
 .addr b4Obj_status_vCCall
@@ -1638,8 +1639,25 @@ b4Restart_gameCCall:
 b4Show_objCCall:
         jsr _b4Show_obj
         jmp mainLoop
-b4Random_numCCall:
-        jsr _b4Random_num
+b4Random_num:
+        LOAD_CODE_WIN_CODE
+        sta OPCODE_FUNC_TMP
+        INC_CODE
+        LOAD_CODE_WIN_CODE
+        sta OPCODE_FUNC_TMP + 1
+        INC_CODE
+
+        lda OPCODE_FUNC_TMP
+        ldx OPCODE_FUNC_TMP + 1
+        jsr randBetweenAsmCall
+        sta OPCODE_FUNC_TMP
+
+        LOAD_CODE_WIN_CODE
+        sta OPCODE_FUNC_TMP + 1
+        INC_CODE
+
+        SET_VAR_OR_FLAG VARS_AREA_START_GOLDEN_OFFSET, OPCODE_FUNC_TMP, OPCODE_FUNC_TMP + 1
+        
         jmp mainLoop
 b4Program_controlCCall:
         jsr _b4Program_control
