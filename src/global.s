@@ -748,11 +748,10 @@ SET_VAR_OFFSET = GOLDEN_RAM + VARS_AREA_START_GOLDEN_OFFSET
 ;Requires the value to be set to be in 'X', and the variable number in 'A'
 ;Requires a ZP passed in as a param, which will be used internally to set the address of the var
 .macro SET_VAR_NON_INTERPRETER ZP
-        clc
-        adc #<SET_VAR_OFFSET
+        tay
+        lda #<SET_VAR_OFFSET
         sta ZP
-        lda #$0
-        adc #>SET_VAR_OFFSET
+        lda #>SET_VAR_OFFSET
         sta ZP + 1
 
         txa
