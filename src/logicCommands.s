@@ -588,6 +588,8 @@ jmp endMainLoop
 .segment "ZEROPAGE"
 OPCODE_FUNC_TMP: .res 2 ;Reserved for interpreter opcode functions
 ; Main code segment
+.segment "ZEROPAGE"
+OPCODE_FUNC_TMP: .res 2 ;Reserved for interpreter opcode functions
 .segment "CODE"
 callLogic: ; A subroutine for making calls, not an instruction
 bra @start
