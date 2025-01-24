@@ -2041,16 +2041,6 @@ void b4Show_obj() // 1, 0x00
 	return;
 }
 
-void b4Random_num() // 3, 0x20  random() renamed to avoid clash
-{
-	int startValue, endValue;
-
-	startValue = loadAndIncWinCode();
-	endValue = loadAndIncWinCode();
-	var[loadAndIncWinCode()] = (rand() % ((endValue - startValue) + 1)) + startValue;
-	return;
-}
-
 void b4Program_control() // 0, 0x00 
 {
 	controlMode = PROGRAM_CONTROL;
