@@ -764,7 +764,6 @@ SET_FLAG_OFFSET = GOLDEN_RAM + FLAGS_AREA_START_GOLDEN_OFFSET
 ;Requires the flag number in 'A'
 ;Requires a ZP passed in as a param, which will be used internally to set the address of the var
 .macro SET_FLAG_NON_INTERPRETER ZP
-        stp
         tay
         lda #<SET_FLAG_OFFSET
         sta ZP
@@ -773,7 +772,6 @@ SET_FLAG_OFFSET = GOLDEN_RAM + FLAGS_AREA_START_GOLDEN_OFFSET
 
         lda #$1
         sta (ZP),y
-        stp
 .endmacro
 
 
