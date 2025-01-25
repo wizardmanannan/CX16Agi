@@ -50,6 +50,13 @@ int dirnOfEgo, newRoomNum, score;
 
 extern int picFNum;    // Debugging. Delete at some stage!!
 
+#pragma code-name(push, "BANKRAM04")
+void b4DiscardLogicFileWrapper(byte logFileNum)
+{
+    b6DiscardLogicFile(logFileNum);
+}
+#pragma code-name(pop)
+
 #pragma code-name (push, "BANKRAM06")
 void b6AdjustEgoPosition()
 {
@@ -234,7 +241,7 @@ void b6Initialise()
 
     b6InitTimer(&b6Timing_proc);
 
-    b4InitLruCaches(&b6DiscardLogicFile, &b9DiscardView);
+    b4InitLruCaches(&b4DiscardLogicFileWrapper, &b9DiscardView);
 
     b6InitFiles();             /* Load resource directories */
     b6InitRandom();

@@ -31,7 +31,6 @@ void b4InitLruCaches(CacheEvictionCallback evictionCallbackLogic, CacheEvictionC
     b4NewLruCache(LRU_CACHE_LOGIC_DATA_SIZE, &logicKeys[0], &_logicCache, evictionCallbackLogic, LOGIC_CODE_BANK);
 }
 
-
 void b4LruCacheGet(int resType, byte key, AGIFilePosType* location, AGIFile* agiData)
 {
     int i, j;
