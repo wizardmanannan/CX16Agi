@@ -1,7 +1,7 @@
 
-.ifndef VIEW_INC
+.ifndef SPLIT_VIEW_INC
 ; Set the value of include guard and define constants
-VIEW_INC = 1
+SPLIT_VIEW_INC = 1
 .include "global.s"
 
 .import _b5RefreshBuffer

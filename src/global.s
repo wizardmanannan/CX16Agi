@@ -225,6 +225,16 @@ sta RESULT + 1
          STA   result + 1
 .endmacro
 
+; Macro for getting a 16-bit struct value
+.macro   GET_STRUCT_16_STORED_OFFSET_X_OFFSET_RESULT offset, pointer, result ;Where offset in stored in memory rather than constant
+         LDY   offset
+         LDA   (pointer),y
+         STA   result,x
+         INY
+         LDA   (pointer),y
+         STA   result + 1,x
+.endmacro
+
 .macro  SET_STRUCT_16_STORED_OFFSET_VALUE_IN_REG offset, pointer
          LDY  offset
          STA   (pointer),y
@@ -255,6 +265,13 @@ sta RESULT + 1
 .endif
 .endmacro
 
+.macro   GET_STRUCT_8_STORED_OFFSET_X_OFFSET_RESULT offset, pointer, result
+         LDY   offset
+         LDA   (pointer),y
+.ifnblank result
+         STA   result,x
+.endif
+.endmacro
 ; Macro for saving zero page values
 .macro   SAVE_ZERO_PAGE firstPointer, saveLocation, noValues
          PHA

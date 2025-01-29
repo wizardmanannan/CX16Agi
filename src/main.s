@@ -16,6 +16,8 @@
     .include "movement.s"
     .include "randomAsm.s"
     .include "modulus.s"
+    .include "viewAsm.s"
+    
     .export _executeLogic
     .export _b6InitInterpreter
     .export _loadAndIncWinCode
@@ -87,3 +89,5 @@
     .export _rand8Bit
     .export _randBetween
     .export _bAWander
+    .export _bESwitchMetadata
+    .export _bEGarbageCollectSwitchedView

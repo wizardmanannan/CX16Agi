@@ -503,6 +503,18 @@ _runSpriteGarbageCollector:
     sta sgc_startNo       ; Store the popped 'start' value
     ; Fall through => no RTS => we jump directly into the next label:
 
+
+.macro CALCULATE_MAX_CELS VIEW
+    GET_STRUCT_8_STORED_OFFSET  _offsetOfMaxCels, VIEW
+    tax
+    GET_STRUCT_8_STORED_OFFSET  _offsetOfMaxVeraSlots, VIEW
+    sta  SGC_MAX_VERA_SLOTS
+    tay
+    txa
+    jsr  mul8x8to8               ; Multiply (maxCels * maxVeraSlots) => A
+    sta  SGC_MAX_CELS
+.endmacro
+
 ;------------------------------------------------------------------------------
 ; runSpriteGarbageCollectorAsmStart (ENTRY POINT #2 - The actual GC logic)
 ;
