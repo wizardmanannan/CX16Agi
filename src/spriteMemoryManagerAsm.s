@@ -64,8 +64,7 @@ _bESpriteAddressTableMiddle: .res SPRITE_ALLOC_TABLE_SIZE, $0 ; Low will always 
 
         ; Update segment pointer
         tya 
-
-        cpy ZP_PTR_WALL_32
+        cpy ZP_PTR_WALL_32_PLUS_3 ;Don't intrude into 64 bit space by iny
         beq @storeSeg
         iny 
         @storeSeg:
@@ -195,9 +194,14 @@ ZP_PTR_WALL_32_PLUS_3 = ZP_TMP_2
         bne @storeSegmentPointer
         ldy #SPRITE_ALLOC_TABLE_SIZE - 2
 
+        cpy ZP_PTR_WALL_32_PLUS_3 ;Don't let the segment pointer intrude into 32 space
+        bcs @storeSegmentPointer
+        ldy #SPRITE_ALLOC_TABLE_SIZE - 4
+
     @storeSegmentPointer:
         sty ZP_PTR_SEG_64
 
+    @checkForHighByte:
         ; Check if high byte start is reached
         cmp ZP_PTR_HIGH_BYTE_START
         bcs @greater
