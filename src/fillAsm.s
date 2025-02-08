@@ -1378,21 +1378,12 @@ CLEAN_PIC = ZP_TMP_16
 X_VAL = GENERAL_TMP
 DATA = ZP_TMP_23 ; This must not conflict with any from _b8DrawLine, that is why it is set so high. Must match PICTURE_DATA_ZP in picture.c as well
 
-@continue:
 sta CLEAN_PIC
 stx CLEAN_PIC + 1
 
 jsr popax 
 sta @bufferStatus
 stx @bufferStatus + 1
-
-
- ; is the current vis colour 15 (white)?
-; if (vis_colour == 15) return 0;
-lda _picColour
-cmp #15
-bne @checkEnabled
-rts
 
 @checkEnabled:
 lda _picDrawEnabled
