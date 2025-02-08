@@ -40,34 +40,33 @@ sta _viewTabNoToMetaData,x
 
 inc deadToBeCleared
 ldx deadToBeCleared
-GET_STRUCT_8_STORED_OFFSET_X_OFFSET_RESULT _offsetOfViewMetadataBank, LOCAL_METADATA, deadViewTableMetadataBank
-GET_STRUCT_16_STORED_OFFSET_X_OFFSET_RESULT _offsetOfloopsVeraAddressesPointers, LOCAL_METADATA, deadLoopVeraAddressPointers
-GET_STRUCT_16_STORED_OFFSET_X_OFFSET_RESULT _offsetOfBackBuffers, LOCAL_METADATA, deadBackBuffers
-GET_STRUCT_8_STORED_OFFSET_X_OFFSET_RESULT _offsetOfNumberOfLoops, LOCAL_VIEW, deadNumOfLoops
+GET_STRUCT_8_STORED_OFFSET_X_OFFSET_RESULT _offsetOfViewMetadataBank, LOCAL_METADATA, bEDeadViewTableMetadataBank
+GET_STRUCT_16_STORED_OFFSET_X_OFFSET_RESULT _offsetOfloopsVeraAddressesPointers, LOCAL_METADATA, bEDeadLoopVeraAddressPointers
+GET_STRUCT_16_STORED_OFFSET_X_OFFSET_RESULT _offsetOfBackBuffers, LOCAL_METADATA, bEDeadBackBuffers
+GET_STRUCT_8_STORED_OFFSET_X_OFFSET_RESULT _offsetOfNumberOfLoops, LOCAL_VIEW, bEDeadNumOfLoops
 
 GET_STRUCT_8_STORED_OFFSET  _offsetOfMaxCels, LOCAL_VIEW
 tax
 GET_STRUCT_8_STORED_OFFSET  _offsetOfMaxVeraSlots, LOCAL_VIEW
 ldy deadToBeCleared
-sta  deadMaxVeraSlots,y
+sta  bEDeadMaxVeraSlots,y
 tay
 txa
 jsr  mul8x8to8               ; Multiply (maxCels * maxVeraSlots) => A
 ldy deadToBeCleared
-sta  deadMaxCels,y
+sta  bEDeadMaxCels,y
 
 rts
 .endscope 
 
 NOTHING_TO_BE_CLEARED = $FF
 
-deadViewTableMetadataBank: .res VIEW_TABLE_SIZE
-deadLoopVeraAddressPointers: .res VIEW_TABLE_SIZE * 2
-deadBackBuffers: .res VIEW_TABLE_SIZE * 2
-deadMaxCels: .res VIEW_TABLE_SIZE 
-deadMaxVeraSlots: .res VIEW_TABLE_SIZE
-deadNumOfLoops: .res VIEW_TABLE_SIZE
-deadIsOnBackBuffer: .byte $0
+bEDeadViewTableMetadataBank: .res VIEW_TABLE_SIZE
+bEDeadLoopVeraAddressPointers: .res VIEW_TABLE_SIZE * 2
+bEDeadBackBuffers: .res VIEW_TABLE_SIZE * 2
+bEDeadMaxCels: .res VIEW_TABLE_SIZE 
+bEDeadMaxVeraSlots: .res VIEW_TABLE_SIZE
+bEDeadNumOfLoops: .res VIEW_TABLE_SIZE
 deadToBeCleared: .byte NOTHING_TO_BE_CLEARED
 
 
@@ -76,21 +75,21 @@ ldx deadToBeCleared
 bmi @end
 
 @deadToBeClearedLoop:
-lda deadViewTableMetadataBank,x
+lda bEDeadViewTableMetadataBank,x
 sta SGC_LOOP_VERA_ADDR_BANK
-lda deadLoopVeraAddressPointers,x
+lda bEDeadLoopVeraAddressPointers,x
 sta SGC_LOOP_VERA_ADDR
-lda deadLoopVeraAddressPointers + 1,x
+lda bEDeadLoopVeraAddressPointers + 1,x
 sta SGC_LOOP_VERA_ADDR + 1
-lda deadBackBuffers,x
+lda bEDeadBackBuffers,x
 sta SGC_BACKBUFFERS
-lda deadBackBuffers + 1,x
+lda bEDeadBackBuffers + 1,x
 sta SGC_BACKBUFFERS + 1
-lda deadMaxCels,x
+lda bEDeadMaxCels,x
 sta SGC_MAX_CELS
-lda deadMaxVeraSlots,x
+lda bEDeadMaxVeraSlots,x
 sta SGC_MAX_VERA_SLOTS
-lda deadNumOfLoops
+lda bEDeadNumOfLoops
 sta SGC_NO_LOOPS
 
 stp
@@ -103,10 +102,10 @@ dex
 bpl @deadToBeClearedLoop
 
 ; sta SGC_LOOP_VERA_ADDR_BANK
-; lda deadLoopVeraAddressPointers
+; lda bEDeadLoopVeraAddressPointers
 ; sta SGC_LOOP_VERA_ADDR
-; lda deadLoopVeraAddressPointers 
-; lda deadBackBuffers
+; lda bEDeadLoopVeraAddressPointers 
+; lda bEDeadBackBuffers
 ; sta SGC_BACKBUFFERS
 
 stx deadToBeCleared
