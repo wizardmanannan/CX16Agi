@@ -1396,12 +1396,17 @@ rts
 GET_NEXT_ABS DATA, @bufferStatus, #$1
 sta X_VAL
 cmp #$F0
+
+nop
 bcs @return
 
 @getY:
 GET_NEXT_ABS DATA, @bufferStatus, #$1
 tay
 cmp #$F0
+
+nop
+nop
 bcs @return
 
 @checkCleanPic:
