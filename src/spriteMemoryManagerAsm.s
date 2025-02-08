@@ -35,14 +35,14 @@ _bESpriteAddressTableMiddle: .res SPRITE_ALLOC_TABLE_SIZE, $0 ; Low will always 
     ldy ZP_PTR_SEG_32 ; Y register: Load segment pointer for 32-byte allocation
     lda ZP_PTR_WALL_32 ; A register: Load wall pointer for 32-byte allocation
 
-    @loop:
+    @loop:        
         cpy ZP_PTR_WALL_64
         beq @resetAtZero
         lda _spriteAllocTable, y
         bne @nonEmpty
 
     @found:
-        ; Allocation found, prepare for return
+        ; Allocation found, prepare for return        
         lda ZP_PTR_WALL_32
         cmp ZP_PTR_SEG_32
         bne @prepareResult
@@ -64,7 +64,10 @@ _bESpriteAddressTableMiddle: .res SPRITE_ALLOC_TABLE_SIZE, $0 ; Low will always 
 
         ; Update segment pointer
         tya 
+        cpy ZP_PTR_WALL_32_PLUS_3 ;Don't intrude into 64 bit space by iny
+        beq @storeSeg
         iny 
+        @storeSeg:
         sty ZP_PTR_SEG_32
 
         ; Check if high byte start is reached
@@ -191,9 +194,14 @@ ZP_PTR_WALL_32_PLUS_3 = ZP_TMP_2
         bne @storeSegmentPointer
         ldy #SPRITE_ALLOC_TABLE_SIZE - 2
 
+        cpy ZP_PTR_WALL_32_PLUS_3 ;Don't let the segment pointer intrude into 32 space
+        bcs @storeSegmentPointer
+        ldy #SPRITE_ALLOC_TABLE_SIZE - 4
+
     @storeSegmentPointer:
         sty ZP_PTR_SEG_64
 
+    @checkForHighByte:
         ; Check if high byte start is reached
         cmp ZP_PTR_HIGH_BYTE_START
         bcs @greater
@@ -272,11 +280,13 @@ stz ZP_ARRAY_COUNTER
 
 @loop:
 lda ZP_SIZE
-bne @64Alloc
+beq @32Alloc
+jmp @64Alloc
 @32Alloc:
 ALLOCATE_SPRITE_MEMORY_32
-;To Do if we cannot find a 32 slot we should ask for a 64 slot. But to test that we really need delete first, otherwise there will be guaranteed to be no 64 slots anyway
-bra @storeAndDecrementCounter
+stx sreg
+ora sreg
+bne @storeAndDecrementCounter
 @64Alloc:
 ALLOCATE_SPRITE_MEMORY_64
 @storeAndDecrementCounter:

@@ -103,7 +103,7 @@ void b6DiscardResources()
 ***************************************************************************/
 void b6NewRoom()
 {
-     b9ResetViews();
+    b9ResetViews();
     //stop_update_all();
     //unanimate_all();
     b6DiscardResources();
@@ -184,6 +184,16 @@ void b6Interpret()
 
         //dirnOfEgo = var[6];
         getViewTab(&localViewtab, 0);
+
+        if (controlMode == PLAYER_CONTROL)
+        {
+            localViewtab.direction = var[6];
+        }
+        else
+        {
+            var[6] = localViewtab.direction;
+        }
+
         localViewtab.direction = var[6];
         setViewTab(&localViewtab, 0);
         // <<-- Update status line here (score & sound)
@@ -318,7 +328,7 @@ void main()
 
     RAM_BANK = MEKA_BANK;
     b6Initialise();
-    
+
     while (TRUE) {
         /* Cycle initiator. Controlled by delay variable (var[10). */
         if (counter >= var[10]) {
