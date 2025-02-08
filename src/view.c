@@ -308,8 +308,6 @@ void bESetViewMetadata(View* localView, ViewTable* viewTable, byte viewNum, byte
 	VeraSpriteAddress** addressBuffer = (VeraSpriteAddress**)GOLDEN_RAM_PARAMS_AREA;
 	VeraSpriteAddress* veraAddressCounter;
 
-	asm("stp");
-
 #ifdef VERBOSE_DEBUG_SET_METADATA
 	printf("The viewNum is %d\n", viewNum);
 #endif
@@ -544,15 +542,11 @@ boolean bESetLoop(ViewTable* localViewTab, ViewTableMetadata* localMetadata, Vie
 	memCpyBankedBetween((byte*)loopVeraAddresses, localMetadata->viewTableMetadataBank, bEBulkAllocatedAddresses, SPRITE_METADATA_BANK, noToBlit * sizeof(VeraSpriteAddress));
 	enableHelpersDebugging = FALSE;
 
-	asm("stp");
-	asm("nop");
 	memCpyBankedBetween(bEToBlitCelArray, SPRITE_METADATA_BANK, (byte*)localLoop.cels, localLoop.celsBank, localLoop.numberOfCels * sizeof(Cel));
-	asm("stp");
 
 #ifdef VERBOSE_DEBUG_BLIT
 	printf("You are allocating %d.%d. It has a width of %d and height of %d. There are %d to blit\n", localViewTab->currentView, localViewTab->currentLoop, localLoop.allocationWidth, localLoop.allocationHeight, noToBlit);
 #endif
-
 	//Change this method
 	bECellToVeraBulk(localLoop.allocationWidth, localLoop.allocationHeight, localLoop.numberOfCels, localView->maxVeraSlots, localViewTab->xPos, (localViewTab->yPos - localCel.height) + 1, localViewTab->priority);
 	return TRUE;
@@ -730,9 +724,9 @@ initialise:
 		{
 			return FALSE;
 		}
-		
+
 		localMetadata.isOnBackBuffer = TRUE;
-		
+
 		isAllocated = TRUE;
 	}
 
@@ -1677,7 +1671,7 @@ void bACalcDirection(ViewTable* localViewtab)
 			case 3: b9SetLoop(localViewtab, 0); break;
 			case 4: b9SetLoop(localViewtab, 0); break;
 			case 5: break;
-			case 6: if(localViewtab->numberOfLoops > 1) b9SetLoop(localViewtab, 1); break;
+			case 6: if (localViewtab->numberOfLoops > 1) b9SetLoop(localViewtab, 1); break;
 			case 7: if (localViewtab->numberOfLoops > 1) b9SetLoop(localViewtab, 1); break;
 			case 8: if (localViewtab->numberOfLoops > 1) b9SetLoop(localViewtab, 1); break;
 			}
@@ -2066,7 +2060,7 @@ void bAAdjustPosition(ViewTable* viewTab, int fx, int fy, byte entryNum)
 
 void bAFollowEgo(ViewTable* localViewTab)
 {
-	byte ecx; 
+	byte ecx;
 	short ocx;
 	ViewTable egoViewTab;
 	View egoView, localView;
@@ -2197,12 +2191,12 @@ void bANormalAdjust(int entryNum, ViewTable* viewTab, int dx, int dy)
 				return;
 			}
 			else if (!(viewTab->flags & IGNOREBLOCKS) && priorityValue == 1) {
-				
-		//		/*testVal = TRUE;
-		//b8GetControl(testX, tempY);*/
-		//		printf("we block at %d %d therefore we remain at %d %d", testX, tempY, viewTab->xPos, viewTab->yPos);
-		//		asm("stp");
-				
+
+				//		/*testVal = TRUE;
+				//b8GetControl(testX, tempY);*/
+				//		printf("we block at %d %d therefore we remain at %d %d", testX, tempY, viewTab->xPos, viewTab->yPos);
+				//		asm("stp");
+
 				return;
 			}
 		}
@@ -2644,7 +2638,7 @@ void bCCalcObjMotion()
 	for (entryNum = 0; entryNum < VIEW_TABLE_SIZE; entryNum++) {
 
 		getViewTab(&localViewtab, entryNum);
-		
+
 		if (localViewtab.staleCounter)
 		{
 			localViewtab.staleCounter--;
@@ -2682,7 +2676,7 @@ void bCCalcObjMotion()
 				case 1: /* wander */
 					oldX = localViewtab.xPos;
 					oldY = localViewtab.yPos;
- 					bAWander(&localViewtab, entryNum);
+					bAWander(&localViewtab, entryNum);
 					switch (localViewtab.direction) {
 					case 0: break;
 					case 1:bANormalAdjust(entryNum, &localViewtab, 0, -1); break;
