@@ -353,6 +353,7 @@ void bESetViewMetadata(View* localView, ViewTable* viewTable, byte viewNum, byte
 #endif
 
 	metadata.loopsVeraAddressesPointers = (VeraSpriteAddress**)b10BankedAlloc(totalAllocationSize, &metadata.viewTableMetadataBank);
+	
 	metadata.veraAddresses = (VeraSpriteAddress*)metadata.loopsVeraAddressesPointers + loopVeraAddressesPointersSize;
 	metadata.backBuffers = metadata.veraAddresses + veraAddressesSize;
 	metadata.viewNum = viewNum;
@@ -463,7 +464,7 @@ byte bECreateSpritePalette(byte transparentColor)
 }
 #pragma wrapped-call (pop)
 
-extern void bESwitchMetadata(ViewTableMetadata* localMetadata, View* localView, byte entryNum);
+extern void bESwitchMetadata(ViewTableMetadata* localMetadata, View* localView, byte currentLoop, byte entryNum);
 
 
 boolean bEAllocateSpriteMemory(Loop* localLoop, byte noToBlit)
@@ -591,6 +592,7 @@ boolean agiBlit(ViewTable* localViewTab, byte entryNum, boolean disableInterupts
 	boolean isAllocated = FALSE;
 	byte splitCounter; //Store the SPLIT_COUNTER ZP in here as this makes it easier for C to access it 
 	byte isAnimated = FALSE;
+	View oldView;
 
 	previousBank = RAM_BANK;
 	RAM_BANK = SPRITE_METADATA_BANK;
@@ -637,7 +639,10 @@ boolean agiBlit(ViewTable* localViewTab, byte entryNum, boolean disableInterupts
 #ifdef VERBOSE_SWITCH_METADATA
 		printf("switching to %d for entry %d\n", viewNum, entryNum);
 #endif
-		bESwitchMetadata(&localMetadata, &localView, entryNum);
+		//printf("current view %d loop vera address %p loop vera bank %p\n", localViewTab->currentView, localMetadata.loopsVeraAddressesPointers, localView.loopsBank);
+
+		getLoadedView(&oldView, viewTableMetadata[entryNum].viewNum);
+		bESwitchMetadata(&viewTableMetadata[entryNum], &oldView, localViewTab->currentLoop, entryNum);
 		localViewTab->staleCounter = localLoop.numberOfCels;
 	}
 
@@ -650,6 +655,13 @@ boolean agiBlit(ViewTable* localViewTab, byte entryNum, boolean disableInterupts
 	}
 
 	localMetadata = viewTableMetadata[entryNum];
+	
+	//if (viewNum == 60)
+	//{
+	//	printf("you are setting %p %p", localMetadata.loopsVeraAddressesPointers, localMetadata.viewTableMetadataBank);
+	//	asm("stp");
+	//}
+	
 	//printf("local md from %d %p %p\n", entryNum, &viewTableMetadata[entryNum], viewTableMetadata[entryNum]);
 
 #ifdef VERBOSE_DEBUG_BLIT
@@ -677,6 +689,12 @@ boolean agiBlit(ViewTable* localViewTab, byte entryNum, boolean disableInterupts
 
 			return FALSE;
 		}
+
+		//if (localViewTab->currentView == 60 && localViewTab->currentLoop == 2)
+		//{
+		//	printf("the address is %p on bank %p backbuffers %p\n", localMetadata.loopsVeraAddressesPointers, localMetadata.viewTableMetadataBank, localMetadata.backBuffers);
+		//	asm("stp");
+		//}
 	}
 
 #ifdef VERBOSE_DEBUG_NO_BLIT_CACHE	

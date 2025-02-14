@@ -11,13 +11,16 @@ VIEW_INC = 1
 
 .segment "BANKRAM0E"
 
-;bESwitchMetadata(ViewTableMetadata* localMetadata, View* localView, byte entryNum)
+;bESwitchMetadata(ViewTableMetadata* localMetadata, View* localView, byte currentLoop, byte entryNum)
 LOCAL_VIEW = ZP_TMP_2
 LOCAL_METADATA = ZP_TMP_3
 ENTRY_NUM = ZP_TMP_4
 _bESwitchMetadata:
 .scope
 sta ENTRY_NUM
+
+jsr popa
+sta @currentLoop
 
 jsr popax
 sta LOCAL_VIEW
@@ -26,10 +29,6 @@ stx LOCAL_VIEW + 1
 jsr popax
 sta LOCAL_METADATA
 stx LOCAL_METADATA + 1
-
-lda #$0
-ldx #$0
-SET_STRUCT_16_STORED_OFFSET_VALUE_IN_REG _offsetOfBackBuffers, LOCAL_METADATA
 
 lda #$0
 SET_STRUCT_8_STORED_OFFSET_VALUE_IN_REG _offsetOfIsOnBackBuffer, LOCAL_METADATA
@@ -42,8 +41,14 @@ inc deadToBeCleared
 ldx deadToBeCleared
 GET_STRUCT_8_STORED_OFFSET_X_OFFSET_RESULT _offsetOfViewMetadataBank, LOCAL_METADATA, bEDeadViewTableMetadataBank
 GET_STRUCT_16_STORED_OFFSET_X_OFFSET_RESULT _offsetOfloopsVeraAddressesPointers, LOCAL_METADATA, bEDeadLoopVeraAddressPointers
+
 GET_STRUCT_16_STORED_OFFSET_X_OFFSET_RESULT _offsetOfBackBuffers, LOCAL_METADATA, bEDeadBackBuffers
+
 GET_STRUCT_8_STORED_OFFSET_X_OFFSET_RESULT _offsetOfNumberOfLoops, LOCAL_VIEW, bEDeadNumOfLoops
+
+lda @currentLoop
+sta bEDeadCurrentLoop,x
+
 
 GET_STRUCT_8_STORED_OFFSET  _offsetOfMaxCels, LOCAL_VIEW
 tax
@@ -57,6 +62,7 @@ ldy deadToBeCleared
 sta  bEDeadMaxCels,y
 
 rts
+@currentLoop: .byte $0
 .endscope 
 
 NOTHING_TO_BE_CLEARED = $FF
@@ -67,8 +73,10 @@ bEDeadBackBuffers: .res VIEW_TABLE_SIZE * 2
 bEDeadMaxCels: .res VIEW_TABLE_SIZE 
 bEDeadMaxVeraSlots: .res VIEW_TABLE_SIZE
 bEDeadNumOfLoops: .res VIEW_TABLE_SIZE
+bEDeadCurrentLoop: .res VIEW_TABLE_SIZE
 deadToBeCleared: .byte NOTHING_TO_BE_CLEARED
 
+.segment "BANKRAM0E"
 
 _bEGarbageCollectSwitchedView:
 ldx deadToBeCleared 
@@ -92,9 +100,19 @@ sta SGC_MAX_VERA_SLOTS
 lda bEDeadNumOfLoops
 sta SGC_NO_LOOPS
 
-stp
+lda bEDeadCurrentLoop,x
+sta SGC_CURRENT_LOOP
+
+lda #$1
+sta SGC_CLEAR_ACTIVE_LOOP
+
+lda #$1
+sta SGC_PREPROVIDED_BACKBUFFERS_ADDRESS
+
 phx
-jsr deleteSpriteMemoryForViewTab
+lda RAM_BANK
+sta deleteSpriteMemoryForViewTab_PreviousRamBank
+jsr deleteSpriteMemoryForViewTab_ManualClearActiveLoop
 plx
 
 @checkDeadToBeCleared:

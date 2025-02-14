@@ -47,8 +47,6 @@ SGC_CEL_VERA_ADDR:        .res 2  ; Pointer to current cel’s VERA address
 VIEW_TAB_COUNTER:         .res 1  ; Index/counter for the view table
 LOOPS_COUNTER_ADDRESS:    .res 1  ; Counter for loop iteration
 CEL_COUNTER_ADDRESS:      .res 1  ; Counter for cel iteration
-
-; These are also used in "CelToVeraBulk" due to limited ZP space
 SGC_VIEW_METADATA:        .res 2
 SGC_LOOP_VERA_ADDR_BANK:  .res 1
 SGC_CURRENT_LOOP:         .res 1
@@ -65,6 +63,7 @@ SGC_BACK_BUFFER_COUNTER:  .res 1
 SGC_MEMORY_CLEARED:       .res 1
 _SGC_LAST_LOCATION_GC_CHECKED: .res 1
 INCREMENTAL_GARBAGE_COLLECTOR_COUNTER: .res 1
+SGC_PREPROVIDED_BACKBUFFERS_ADDRESS: .res 1
 
 .segment "CODE"
 
@@ -85,7 +84,7 @@ ANIMATED_AND_DRAWN = ANIMATED | DRAWN
 deleteSpriteMemoryForViewTab:
     ; Save current RAM bank to restore later
     lda RAM_BANK
-    sta @previousRamBank
+    sta deleteSpriteMemoryForViewTab_PreviousRamBank
 
     ; Switch to VIEW_TAB_BANK to read from the view table
     lda #VIEW_TAB_BANK
@@ -97,15 +96,16 @@ deleteSpriteMemoryForViewTab:
     sec
     sbc #ANIMATED_AND_DRAWN
     sta SGC_CLEAR_ACTIVE_LOOP
-    bne @initLoopsLoop
+    bne deleteSpriteMemoryForViewTabManualClearActiveLoop_InitLoopsLoop
 
+deleteSpriteMemoryForViewTab_ManualClearActiveLoop: 
     ; If SGC_CLEAR_ACTIVE_LOOP == 0, we increment SGC_CURRENT_LOOP.
     ; Since each loop address is two bytes, we ASL (multiply by 2) before INC.
     lda SGC_CURRENT_LOOP
     asl          ; multiply the loop index by 2 (each loop is two bytes)
     inc          ; move to the next 2-byte entry
     sta SGC_CURRENT_LOOP
-@initLoopsLoop:
+deleteSpriteMemoryForViewTabManualClearActiveLoop_InitLoopsLoop:    
     lda SGC_NO_LOOPS ;Load the loop count to prepare for backwards iteration
     asl ;Double it as there are two bytes per loop address         
     dec ;Zero indexed -1
@@ -145,7 +145,7 @@ deleteSpriteMemoryForViewTab:
 
     ;-----------------------------------------
     ; HIGH BYTE OF CURRENT CEL POINTER
-    ;-----------------------------------------
+    ;-----------------------------------------        
     lda (SGC_CEL_VERA_ADDR),y        ; Read the high byte of the cel pointer
     tax                              ; Store it in X for check if cel pointer was zero check AND for deallocation of sprite memory
     lda #$0                          ; Prepare to zero it out
@@ -189,14 +189,19 @@ deleteSpriteMemoryForViewTab:
     ; Check if we still have cels left to process
     lda CEL_COUNTER_ADDRESS
     bpl @celsLoop
-    
+
 @checkForBackBuffer: ;Remove backbuffer for cels
     ; Switch to SPRITE_METADATA_BANK for reading back-buffers
     lda #SPRITE_METADATA_BANK
     sta RAM_BANK
 
+    
+    lda SGC_PREPROVIDED_BACKBUFFERS_ADDRESS
+    bne @skipReadBackBuffer
     ; Load the back-buffer pointer from the view metadata
-    GET_STRUCT_16_STORED_OFFSET _offsetOfBackBuffers, SGC_VIEW_METADATA, SGC_BACKBUFFERS
+    GET_STRUCT_16_STORED_OFFSET _offsetOfBackBuffers, SGC_VIEW_METADATA, SGC_BACKBUFFERS   
+    
+    @skipReadBackBuffer:
     ora SGC_BACKBUFFERS
     beq @checkLoopsLoop
 
@@ -214,18 +219,19 @@ deleteSpriteMemoryForViewTab:
 @checkLoopsLoop:
     ; We are done with this loop
     lda LOOPS_COUNTER_ADDRESS
-    bpl @loopsLoop
+    
+    bmi @clearViewsWithSpriteMem
+    jmp @loopsLoop
 
+    @clearViewsWithSpriteMem:
     ; Mark the view tab as free in _viewsWithSpriteMem
     ldx VIEW_TAB_COUNTER
     stz _viewsWithSpriteMem,x
 
     ; Restore original RAM bank and exit
-    lda @previousRamBank
+    lda deleteSpriteMemoryForViewTab_PreviousRamBank
     sta RAM_BANK
     rts
-
-@previousRamBank: .byte $0
 
 ;------------------------------------------------------------------------------
 ; @checkIfBackBufferCanBeDeleted
@@ -315,7 +321,7 @@ deleteSpriteMemoryForViewTab:
 ;------------------------------------------------------------------------------
 ; Loop that processes each VERA slot pointer in SGC_BACKBUFFERS.
 ;------------------------------------------------------------------------------
-@backBufferLoop:
+@backBufferLoop:   
     ;------------------------------------------------------------------
     ; READ A TWO-BYTE POINTER FROM THE BACK-BUFFERS ARRAY
     ;   - LDA (SGC_BACKBUFFERS),y => Low byte of pointer
@@ -373,7 +379,7 @@ deleteSpriteMemoryForViewTab:
     ;------------------------------------------------------------------
     jmp @checkLoopsLoop
 
-
+deleteSpriteMemoryForViewTab_PreviousRamBank: .byte $0
 ;------------------------------------------------------------------------------
 ; _runIncrementalGarbageCollector
 ;
@@ -621,6 +627,7 @@ runSpriteGarbageCollectorAsmStart:
     ;----------------------------------------------------------------------
     ; Actually free the loop/cel memory by calling our core deallocation routine.
     ;----------------------------------------------------------------------
+    stz SGC_PREPROVIDED_BACKBUFFERS_ADDRESS
     jsr  deleteSpriteMemoryForViewTab
 
 @incrementCounter:
