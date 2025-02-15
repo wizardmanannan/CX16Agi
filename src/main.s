@@ -16,6 +16,8 @@
     .include "movement.s"
     .include "randomAsm.s"
     .include "modulus.s"
+    .include "spriteAllocatorNewAsm.s"
+    
     .export _executeLogic
     .export _b6InitInterpreter
     .export _loadAndIncWinCode
@@ -87,3 +89,5 @@
     .export _rand8Bit
     .export _randBetween
     .export _bAWander
+    .export _bDFindFreeVramBlock
+    .export _bDBlocksBySizeFastLookup

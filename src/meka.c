@@ -30,6 +30,7 @@
 #include "parser.h"
 #include "graphics.h"
 #include "random.h"
+#include "spriteAllocatorNew.h"
 //#include "sound.h"
 
 boolean hasEnteredNewRoom = FALSE, exitAllLogics = FALSE;
@@ -246,6 +247,8 @@ void b6Initialise()
     b6InitFiles();             /* Load resource directories */
     b6InitRandom();
 
+    bDInitSpriteMemoryManager();
+
     //// <<--  Determine exact version in here
     for (i = 0; i < 255; i++) {  /* Initialize variables and flags */
         var[i] = 0;
@@ -318,6 +321,9 @@ void main()
 
     RAM_BANK = MEKA_BANK;
     b6Initialise();
+
+        bDFindFreeVramBlock(64, 64);
+
     
     while (TRUE) {
         /* Cycle initiator. Controlled by delay variable (var[10). */
