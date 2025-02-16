@@ -17,7 +17,11 @@ See it running here on YouTube: \
 ![image](https://github.com/user-attachments/assets/c1cdc287-a795-44fb-946b-8e7155d80fa1)
 ![image](https://github.com/user-attachments/assets/96817fbb-d173-4ca7-98f6-d2cb1458ef55)
 
-# CX 16 Iteration 10 Goals (Current)
+# CX 16 Iteration 11 Goals (Current)
+- Build a reliable, fast and efficient sprite memory allocator
+- Fix object placement bugs, but trying to make code function exactly the same and a known good interpreter
+
+# CX 16 Iteration 10 Goals (Complete)
 - Implement sprite garbage collection so that the backbuffer (see below) will fit.
 - Implement backbuffer for '3D Affect' sprites, which will eliminate IRQ overruns for very large sprites
 
