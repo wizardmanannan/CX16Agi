@@ -14,9 +14,8 @@ See it running here on YouTube: \
 ![image](https://github.com/wizardmanannan/CX16Agi/assets/58645812/3df45e82-c7d4-4b29-ae96-cdc5e560ff09)  
 ![image](https://github.com/wizardmanannan/CX16Agi/assets/58645812/13d73012-a379-47b4-b18f-87e80225c55e)  
 
-![image](https://github.com/wizardmanannan/CX16Agi/assets/58645812/ae1417c7-953b-4d7c-8789-2586a4abcd43)
-![image](https://github.com/wizardmanannan/CX16Agi/assets/58645812/186fa2c7-33c1-491f-af3a-dabc6c6d560d)
-![image](https://github.com/wizardmanannan/CX16Agi/assets/58645812/9e1d5f64-26f9-42b3-a706-09f752398636)
+![image](https://github.com/user-attachments/assets/c1cdc287-a795-44fb-946b-8e7155d80fa1)
+![image](https://github.com/user-attachments/assets/96817fbb-d173-4ca7-98f6-d2cb1458ef55)
 
 # CX 16 Iteration 10 Goals (Current)
 - Implement sprite garbage collection so that the backbuffer (see below) will fit.
