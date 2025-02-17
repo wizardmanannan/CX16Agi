@@ -14,6 +14,7 @@ FAST_LOOKUP_SIZE = 130
 LAST_BLOCK_CHECKED: .byte $0
 BLOCKS_CHECKED_COUNTER: .word $0
 BLOCKS_TO_FIND: .byte $0
+CONSECUTIVE_BLOCKS: .byte $0
 .segment "BANKRAM0D"
 
 bDSpriteAllocTable: .res TOTAL_REAL_BLOCKS, $0
@@ -26,7 +27,6 @@ stx sreg
 adc sreg
 tax
 lda _bDBlocksBySizeFastLookup,x
-stp
 sta BLOCKS_TO_FIND
 .endmacro
 
@@ -37,50 +37,98 @@ sta @lowByteLoop + 2
 
 ;void bDFindFreeVramBlock(SprSizes width, SprSizes height)
 _bDFindFreeVramBlock:
-
-stp
-
 pha
 jsr popa
 plx
 
 bDFindFreeVramBlockAsmCall:
+stp
 
 CALC_BLOCKS_TO_ALLOCATE
+tay
 
 lda #<TOTAL_BLOCKS
 sta BLOCKS_CHECKED_COUNTER
 lda #>TOTAL_BLOCKS
 sta BLOCKS_CHECKED_COUNTER + 1
+stz CONSECUTIVE_BLOCKS
 
 @highByteLoop:
 
 ldx #$0
 @lowByteLoop:
-.repeat 4
 lda bDSpriteAllocTable,x
 bmi @handleTerminator
 
+@notOccupied:
+dey
+bne @incrementX
+
+jmp @occupy
+
+@occupied:
+ldy BLOCKS_TO_FIND
+@incrementX:
 inx
 
-.endrepeat
 
 bne @lowByteLoop
 
 @highByteCheckLoop:
 dec BLOCKS_CHECKED_COUNTER + 1
-bmi @end
+bmi @endFail
 
 inc @lowByteLoop + 2
 bra @highByteLoop
 
-@end:
-stp
-RESET_SPRITE_TABLE_POINTER
+@endFail:
+lda #$0
+ldx #$0
+
+@endSuccess:
 
 rts
 @handleTerminator:
 RESET_SPRITE_TABLE_POINTER
+stz CONSECUTIVE_BLOCKS
 bra @highByteCheckLoop
+
+@occupy:
+
+clc
+txa
+adc @lowByteLoop + 1
+sta @lowByteLoop + 1
+sta @occupyLoop + 1
+lda #$0
+adc @lowByteLoop + 2
+sta @lowByteLoop + 2
+sta @occupyLoop + 2
+
+sec
+lda @occupyLoop + 1
+sbc BLOCKS_TO_FIND
+sta @occupyLoop + 1
+lda @occupyLoop + 2
+sbc #$0
+sta @occupyLoop + 2
+
+lda #$1
+ldy BLOCKS_TO_FIND
+dey
+@occupyLoop:
+sta bDSpriteAllocTable,y
+@checkOccupyLoop:
+dey
+bpl @occupyLoop
+
+inc @lowByteLoop + 1
+bne @calculateAddress
+inc @lowByteLoop + 2
+
+@calculateAddress:
+
+stp
+rts
 
 .endif
