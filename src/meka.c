@@ -322,7 +322,9 @@ void main()
     RAM_BANK = MEKA_BANK;
     b6Initialise();
 
-        bDFindFreeVramBlock(8, 16);
+        bDFindFreeVramBlock(8, 8);
+        bDFindFreeVramBlock(8, 8);
+        
 
     
     while (TRUE) {

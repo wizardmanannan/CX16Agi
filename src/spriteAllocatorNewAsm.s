@@ -42,8 +42,6 @@ jsr popa
 plx
 
 bDFindFreeVramBlockAsmCall:
-stp
-
 CALC_BLOCKS_TO_ALLOCATE
 tay
 
@@ -105,9 +103,13 @@ adc @lowByteLoop + 2
 sta @lowByteLoop + 2
 sta @occupyLoop + 2
 
+lda BLOCKS_TO_FIND
+dec
+sta sreg
+
 sec
 lda @occupyLoop + 1
-sbc BLOCKS_TO_FIND
+sbc sreg
 sta @occupyLoop + 1
 lda @occupyLoop + 2
 sbc #$0
@@ -129,6 +131,32 @@ inc @lowByteLoop + 2
 @calculateAddress:
 
 stp
+sec
+lda @occupyLoop + 1
+sbc #<bDSpriteAllocTable
+tay
+lda @occupyLoop + 2
+sbc #>bDSpriteAllocTable
+tax
+
+.repeat 5
+tya
+asl
+tay
+txa
+rol
+tax
+.endrepeat
+
+clc
+tya 
+adc #<SPRITE_START
+tay
+txa
+adc #>SPRITE_START
+tax
+tya
+
 rts
 
 .endif
