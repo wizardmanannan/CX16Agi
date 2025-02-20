@@ -5,9 +5,9 @@ SPRITE_MEMORY_MANAGER_NEW_INC = 1
 
 VRAM_START = $EA00        ;Base VRAM address
 VRAM_SIZE = 69120         ;Total available VRAM for sprites
-BLOCK_SIZE = 64           ;8x8 block size (64 bytes)
+BLOCK_SIZE = 32           ;8x8 block size (64 bytes)
 TOTAL_REAL_BLOCKS = (VRAM_SIZE / BLOCK_SIZE)
-TOTAL_BLOCKS = 1280
+TOTAL_BLOCKS = 2304
 SPRITE_ALLOC_TERMINATOR = $FF
 FAST_LOOKUP_SIZE = 130
 .segment "ZEROPAGE"
@@ -42,6 +42,7 @@ jsr popa
 plx
 
 bDFindFreeVramBlockAsmCall:
+stp
 CALC_BLOCKS_TO_ALLOCATE
 tay
 
@@ -129,8 +130,6 @@ bne @calculateAddress
 inc @lowByteLoop + 2
 
 @calculateAddress:
-
-stp
 sec
 lda @occupyLoop + 1
 sbc #<bDSpriteAllocTable
@@ -157,6 +156,7 @@ adc #>SPRITE_START
 tax
 tya
 
+stp
 rts
 
 .endif
