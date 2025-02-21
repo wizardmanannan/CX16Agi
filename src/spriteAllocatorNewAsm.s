@@ -147,16 +147,6 @@ rol
 tax
 .endrepeat
 
-clc
-tya 
-adc #<SPRITE_START
-tay
-txa
-adc #>SPRITE_START
-tax
-tya
-
-stp
 rts
 
 .endif
