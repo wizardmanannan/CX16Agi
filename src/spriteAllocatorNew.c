@@ -17,6 +17,9 @@ boolean trap = FALSE;
 
 
 extern byte bDSpriteAllocTable[TOTAL_REAL_BLOCKS];
+extern byte blocksBySize[4][4];
+
+
 void checkAllocationTableFilledWithValue(byte value)
 {
 	int i;
@@ -44,7 +47,7 @@ void checkAllocationTableFilledWithValue(byte value)
 }
 
 
-void canFillWith8SizeBlocks()
+void canFillWithBlocks(SpriteAllocationSize width, SpriteAllocationSize height)
 {
 	VeraSpriteAddress i;
 	unsigned long result;
@@ -52,11 +55,11 @@ void canFillWith8SizeBlocks()
 
 	printf("run canFillWith8SizeBlocks\n");
 
-	for (i = 0; i < TOTAL_REAL_BLOCKS; i++)
+	for (i = 0; i < TOTAL_REAL_BLOCKS / blocksBySize[width / 8 - 1][height / 8 - 1]; i++)
 	{
 #define EXPECTED (i * 32 + VRAM_START)
 
-		result = bDFindFreeVramBlock(SPR_SIZE_8, SPR_SIZE_8);
+		result = bDFindFreeVramBlock(width, height);
 		pass = result == EXPECTED;
 
 		printf("result: %d on %lu expected %lu got %lu\n", pass, i, EXPECTED, result);
@@ -86,7 +89,7 @@ void canFillWith8SizeBlocks()
 void runTests()
 {
 	RAM_BANK = SPRITE_MEMORY_MANAGER_NEW_BANK;
-	canFillWith8SizeBlocks();
+	canFillWithBlocks(SPR_SIZE_8, SPR_SIZE_8);
 
 	exit(0);
 }
