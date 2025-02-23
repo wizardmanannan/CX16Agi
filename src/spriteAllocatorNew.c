@@ -1,5 +1,7 @@
 #include "spriteAllocatorNew.h"
 
+#define RUN_TESTS 1
+
 /*
 
 
@@ -8,6 +10,54 @@
 64 × 32	8	4	32
 64 × 64	8	8	64
 */
+
+#ifdef RUN_TESTS
+
+boolean trap = FALSE;
+void canFillWith8SizeBlocks()
+{
+	VeraSpriteAddress i;
+	unsigned long result;
+	boolean pass;
+
+	printf("run canFillWith8SizeBlocks\n");
+
+	for (i = 0; i < TOTAL_REAL_BLOCKS; i++)
+	{
+#define EXPECTED (i * 32 + VRAM_START)
+
+		result = bDFindFreeVramBlock(SPR_SIZE_8, SPR_SIZE_8);
+		pass = result == EXPECTED;
+
+		printf("result: %d on %lu expected %lu got %lu\n", pass, i, EXPECTED, result);
+
+		if (!pass)
+		{
+			exit(0);
+		}
+	}
+
+	trap = TRUE;
+	result = bDFindFreeVramBlock(SPR_SIZE_8, SPR_SIZE_8);
+	if (result != 0)
+	{
+		printf("failed to get get zero result after fill up, we got %lu\n", result);
+		exit(0);
+	}
+	else
+	{
+		printf("got zero result after trying to allocate when full");
+	}
+}
+
+void runTests()
+{
+	RAM_BANK = SPRITE_MEMORY_MANAGER_NEW_BANK;
+	canFillWith8SizeBlocks();
+
+	exit(0);
+}
+#endif // RUN_TESTS
 
 #pragma rodata-name (push, "BANKRAM0D")
 
@@ -33,5 +83,10 @@ void bDInitSpriteMemoryManager()
 			bDBlocksBySizeFastLookup[blockSize + 1] = blocksBySize[i][j];
 
 		}
+
+#ifdef RUN_TESTS
+		runTests();
+#endif // RUN_TESTS
+
 	}
 }

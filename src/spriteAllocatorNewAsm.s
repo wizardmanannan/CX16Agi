@@ -15,6 +15,7 @@ LAST_BLOCK_CHECKED: .byte $0
 BLOCKS_CHECKED_COUNTER: .word $0
 BLOCKS_TO_FIND: .byte $0
 CONSECUTIVE_BLOCKS: .byte $0
+FIRST_THREE_BYTE_ALLOC_NUMBER = 176
 .segment "BANKRAM0D"
 
 bDSpriteAllocTable: .res TOTAL_REAL_BLOCKS, $0
@@ -31,6 +32,8 @@ sta BLOCKS_TO_FIND
 .endmacro
 
 .macro RESET_SPRITE_TABLE_POINTER
+lda #<bDSpriteAllocTable
+sta @lowByteLoop + 1
 lda #>bDSpriteAllocTable
 sta @lowByteLoop + 2
 .endmacro
@@ -42,7 +45,6 @@ jsr popa
 plx
 
 bDFindFreeVramBlockAsmCall:
-stp
 CALC_BLOCKS_TO_ALLOCATE
 tay
 
@@ -53,11 +55,14 @@ sta BLOCKS_CHECKED_COUNTER + 1
 stz CONSECUTIVE_BLOCKS
 
 @highByteLoop:
-
 ldx #$0
+
+@lowByteLoop_DebugPoint:
 @lowByteLoop:
 lda bDSpriteAllocTable,x
 bmi @handleTerminator
+bne @occupied
+
 
 @notOccupied:
 dey
@@ -70,26 +75,42 @@ ldy BLOCKS_TO_FIND
 @incrementX:
 inx
 
+bne @lowByteLoop_DebugPoint
 
-bne @lowByteLoop
+@highByteIncLoopCounter:
+inc @lowByteLoop + 2
 
 @highByteCheckLoop:
-dec BLOCKS_CHECKED_COUNTER + 1
-bmi @endFail
 
-inc @lowByteLoop + 2
+php
+pha
+phx
+phy
+.import _trap
+lda _trap
+beq @continue
+@continue:
+ply
+plx
+pla
+plp
+
+dec BLOCKS_CHECKED_COUNTER + 1
+beq @endFail
+
 bra @highByteLoop
 
 @endFail:
+stz sreg 
+stz sreg + 1
 lda #$0
 ldx #$0
-
-@endSuccess:
 
 rts
 @handleTerminator:
 RESET_SPRITE_TABLE_POINTER
 stz CONSECUTIVE_BLOCKS
+
 bra @highByteCheckLoop
 
 @occupy:
@@ -138,6 +159,16 @@ lda @occupyLoop + 2
 sbc #>bDSpriteAllocTable
 tax
 
+stz sreg
+bne @activateHigh
+cpy #FIRST_THREE_BYTE_ALLOC_NUMBER
+bcc @multBy32
+
+@activateHigh:
+inc sreg
+
+@multBy32:
+
 .repeat 5
 tya
 asl
@@ -147,6 +178,16 @@ rol
 tax
 .endrepeat
 
+clc
+tya 
+adc #<SPRITE_START
+tay
+txa
+adc #>SPRITE_START
+tax
+tya
+
+stz sreg + 1
 rts
 
 .endif

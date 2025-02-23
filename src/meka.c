@@ -322,11 +322,6 @@ void main()
     RAM_BANK = MEKA_BANK;
     b6Initialise();
 
-        bDFindFreeVramBlock(8, 8);
-        bDFindFreeVramBlock(8, 8);
-        
-
-    
     while (TRUE) {
         /* Cycle initiator. Controlled by delay variable (var[10). */
         if (counter >= var[10]) {
