@@ -91,3 +91,4 @@
     .export _bAWander
     .export _bDFindFreeVramBlock
     .export _bDBlocksBySizeFastLookup
+    .export _bDSpriteAllocTable

@@ -14,6 +14,36 @@
 #ifdef RUN_TESTS
 
 boolean trap = FALSE;
+
+
+extern byte bDSpriteAllocTable[TOTAL_REAL_BLOCKS];
+void checkAllocationTableFilledWithValue(byte value)
+{
+	int i;
+	boolean result = TRUE;
+
+	printf("checking allocation table is filled with %d\n", value);
+	for (i = 0; i < TOTAL_REAL_BLOCKS && result; i++)
+	{
+		result = bDSpriteAllocTable[i] == value;
+
+		if (!result)
+		{
+			printf("Check allocation table filled with value expected %d at %d got %d. Result %d \n", value, i, bDSpriteAllocTable[i], result);
+		}
+	}
+
+	if (!result)
+	{
+		exit(0);
+	}
+	else
+	{
+		printf("pass");
+	}
+}
+
+
 void canFillWith8SizeBlocks()
 {
 	VeraSpriteAddress i;
@@ -48,6 +78,9 @@ void canFillWith8SizeBlocks()
 	{
 		printf("got zero result after trying to allocate when full");
 	}
+
+	printf("checking the table is fulling allocated\n");
+	checkAllocationTableFilledWithValue(1);
 }
 
 void runTests()

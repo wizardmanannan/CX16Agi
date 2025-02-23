@@ -18,7 +18,7 @@ CONSECUTIVE_BLOCKS: .byte $0
 FIRST_THREE_BYTE_ALLOC_NUMBER = 176
 .segment "BANKRAM0D"
 
-bDSpriteAllocTable: .res TOTAL_REAL_BLOCKS, $0
+_bDSpriteAllocTable: .res TOTAL_REAL_BLOCKS, $0
 bDSpriteAllocTableTerminator: .byte SPRITE_ALLOC_TERMINATOR
 
 _bDBlocksBySizeFastLookup: .res FAST_LOOKUP_SIZE
@@ -32,9 +32,9 @@ sta BLOCKS_TO_FIND
 .endmacro
 
 .macro RESET_SPRITE_TABLE_POINTER
-lda #<bDSpriteAllocTable
+lda #<_bDSpriteAllocTable
 sta @lowByteLoop + 1
-lda #>bDSpriteAllocTable
+lda #>_bDSpriteAllocTable
 sta @lowByteLoop + 2
 .endmacro
 
@@ -59,7 +59,7 @@ ldx #$0
 
 @lowByteLoop_DebugPoint:
 @lowByteLoop:
-lda bDSpriteAllocTable,x
+lda _bDSpriteAllocTable,x
 bmi @handleTerminator
 bne @occupied
 
@@ -141,7 +141,7 @@ lda #$1
 ldy BLOCKS_TO_FIND
 dey
 @occupyLoop:
-sta bDSpriteAllocTable,y
+sta _bDSpriteAllocTable,y
 @checkOccupyLoop:
 dey
 bpl @occupyLoop
@@ -153,10 +153,10 @@ inc @lowByteLoop + 2
 @calculateAddress:
 sec
 lda @occupyLoop + 1
-sbc #<bDSpriteAllocTable
+sbc #<_bDSpriteAllocTable
 tay
 lda @occupyLoop + 2
-sbc #>bDSpriteAllocTable
+sbc #>_bDSpriteAllocTable
 tax
 
 stz sreg
