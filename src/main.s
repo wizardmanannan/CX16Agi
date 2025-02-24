@@ -92,3 +92,4 @@
     .export _bDFindFreeVramBlock
     .export _bDBlocksBySizeFastLookup
     .export _bDSpriteAllocTable
+    .export _bDResetSpriteTablePointer

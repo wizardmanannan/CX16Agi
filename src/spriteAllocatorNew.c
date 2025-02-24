@@ -18,7 +18,9 @@ boolean trap = FALSE;
 
 extern byte bDSpriteAllocTable[TOTAL_REAL_BLOCKS];
 extern byte blocksBySize[4][4];
-
+extern void bDResetSpriteMemoryManager();
+extern unsigned long findFreeVRamLowByteLoop;
+extern void bDResetSpriteTablePointer();
 
 void checkAllocationTableFilledWithValue(byte value)
 {
@@ -42,7 +44,7 @@ void checkAllocationTableFilledWithValue(byte value)
 	}
 	else
 	{
-		printf("pass");
+		printf("pass\n");
 	}
 }
 
@@ -53,16 +55,21 @@ void canFillWithBlocks(SpriteAllocationSize width, SpriteAllocationSize height)
 	unsigned long result;
 	boolean pass;
 
-	printf("run canFillWith8SizeBlocks\n");
+	printf("run canFillWithBlocks width height %d %d\n", width, height);
 
 	for (i = 0; i < TOTAL_REAL_BLOCKS / blocksBySize[width / 8 - 1][height / 8 - 1]; i++)
 	{
-#define EXPECTED (i * 32 + VRAM_START)
+#define EXPECTED (i * 32 * blocksBySize[width / 8 - 1][height / 8 - 1]  + VRAM_START)
+	
+		if (height == SPR_ATTR_16 && i == 1)
+		{
+			trap = TRUE;
+		}
 
 		result = bDFindFreeVramBlock(width, height);
 		pass = result == EXPECTED;
 
-		printf("result: %d on %lu expected %lu got %lu\n", pass, i, EXPECTED, result);
+		printf("result: %d on %lu expected %lx got %lx\n", pass, i, EXPECTED, result);
 
 		if (!pass)
 		{
@@ -79,7 +86,7 @@ void canFillWithBlocks(SpriteAllocationSize width, SpriteAllocationSize height)
 	}
 	else
 	{
-		printf("got zero result after trying to allocate when full");
+		printf("got zero result after trying to allocate when full\n");
 	}
 
 	printf("checking the table is fulling allocated\n");
@@ -89,7 +96,11 @@ void canFillWithBlocks(SpriteAllocationSize width, SpriteAllocationSize height)
 void runTests()
 {
 	RAM_BANK = SPRITE_MEMORY_MANAGER_NEW_BANK;
+		
 	canFillWithBlocks(SPR_SIZE_8, SPR_SIZE_8);
+	bDResetSpriteMemoryManager();
+	
+	canFillWithBlocks(SPR_SIZE_8, SPR_SIZE_16);
 
 	exit(0);
 }
@@ -103,6 +114,12 @@ byte blocksBySize[4][4] = { {1, 2, 4, 8}, {2, 4, 8, 16}, {4, 8, 16, 32}, {8, 16,
 extern byte bDBlocksBySizeFastLookup[FAST_LOOKUP_SIZE];
 
 #pragma rodata-name (pop)
+
+void bDResetSpriteMemoryManager()
+{
+	memset(bDSpriteAllocTable, 0, TOTAL_REAL_BLOCKS);
+	bDResetSpriteTablePointer();
+}
 
 void bDInitSpriteMemoryManager()
 {

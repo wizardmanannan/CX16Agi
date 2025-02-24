@@ -33,9 +33,9 @@ sta BLOCKS_TO_FIND
 
 .macro RESET_SPRITE_TABLE_POINTER
 lda #<_bDSpriteAllocTable
-sta @lowByteLoop + 1
+sta findFreeVRamLowByteLoop + 1
 lda #>_bDSpriteAllocTable
-sta @lowByteLoop + 2
+sta findFreeVRamLowByteLoop + 2
 .endmacro
 
 ;void bDFindFreeVramBlock(SprSizes width, SprSizes height)
@@ -54,120 +54,106 @@ lda #>TOTAL_BLOCKS
 sta BLOCKS_CHECKED_COUNTER + 1
 stz CONSECUTIVE_BLOCKS
 
-@highByteLoop:
+findFirstFreeVRamBlock_highByteLoop:
 ldx #$0
 
-@lowByteLoop_DebugPoint:
-@lowByteLoop:
+findFirstFreeVRamBlock_lowByteLoop_DebugPoint:
+findFreeVRamLowByteLoop:
 lda _bDSpriteAllocTable,x
-bmi @handleTerminator
-bne @occupied
+bmi findFirstFreeVRamBlock_handleTerminator
+bne findFirstFreeVRamBlock_occupied
 
 
-@notOccupied:
+findFirstFreeVRamBlock_notOccupied:
 dey
-bne @incrementX
+bne findFirstFreeVRamBlock_incrementX
 
-jmp @occupy
+jmp findFirstFreeVRamBlock_occupy
 
-@occupied:
+findFirstFreeVRamBlock_occupied:
 ldy BLOCKS_TO_FIND
-@incrementX:
+findFirstFreeVRamBlock_incrementX:
 inx
 
-bne @lowByteLoop_DebugPoint
+bne findFirstFreeVRamBlock_lowByteLoop_DebugPoint
 
-@highByteIncLoopCounter:
-inc @lowByteLoop + 2
+findFirstFreeVRamBlock_highByteIncLoopCounter:
+inc findFreeVRamLowByteLoop + 2
 
-@highByteCheckLoop:
-
-php
-pha
-phx
-phy
-.import _trap
-lda _trap
-beq @continue
-@continue:
-ply
-plx
-pla
-plp
-
+findFirstFreeVRamBlock_highByteCheckLoop:
 dec BLOCKS_CHECKED_COUNTER + 1
-beq @endFail
+beq findFirstFreeVRamBlock_endFail
 
-bra @highByteLoop
+bra findFirstFreeVRamBlock_highByteLoop
 
-@endFail:
+findFirstFreeVRamBlock_endFail:
 stz sreg 
 stz sreg + 1
 lda #$0
 ldx #$0
 
 rts
-@handleTerminator:
+findFirstFreeVRamBlock_handleTerminator:
 RESET_SPRITE_TABLE_POINTER
 stz CONSECUTIVE_BLOCKS
 
-bra @highByteCheckLoop
+bra findFirstFreeVRamBlock_highByteCheckLoop
 
-@occupy:
+findFirstFreeVRamBlock_occupy:
 
 clc
 txa
-adc @lowByteLoop + 1
-sta @lowByteLoop + 1
-sta @occupyLoop + 1
+adc findFreeVRamLowByteLoop + 1
+sta findFreeVRamLowByteLoop + 1
+sta findFirstFreeVRamBlock_occupyLoop + 1
 lda #$0
-adc @lowByteLoop + 2
-sta @lowByteLoop + 2
-sta @occupyLoop + 2
+adc findFreeVRamLowByteLoop + 2
+sta findFreeVRamLowByteLoop + 2
+sta findFirstFreeVRamBlock_occupyLoop + 2
 
 lda BLOCKS_TO_FIND
 dec
 sta sreg
 
 sec
-lda @occupyLoop + 1
+lda findFirstFreeVRamBlock_occupyLoop + 1
 sbc sreg
-sta @occupyLoop + 1
-lda @occupyLoop + 2
+sta findFirstFreeVRamBlock_occupyLoop + 1
+lda findFirstFreeVRamBlock_occupyLoop + 2
 sbc #$0
-sta @occupyLoop + 2
+sta findFirstFreeVRamBlock_occupyLoop + 2
 
 lda #$1
 ldy BLOCKS_TO_FIND
 dey
-@occupyLoop:
+findFirstFreeVRamBlock_occupyLoop:
 sta _bDSpriteAllocTable,y
-@checkOccupyLoop:
+findFirstFreeVRamBlock_checkOccupyLoop:
 dey
-bpl @occupyLoop
+bpl findFirstFreeVRamBlock_occupyLoop
 
-inc @lowByteLoop + 1
-bne @calculateAddress
-inc @lowByteLoop + 2
+inc findFreeVRamLowByteLoop + 1
+bne findFirstFreeVRamBlock_calculateAddress
+inc findFreeVRamLowByteLoop + 2
 
-@calculateAddress:
+findFirstFreeVRamBlock_calculateAddress:
 sec
-lda @occupyLoop + 1
+lda findFirstFreeVRamBlock_occupyLoop + 1
 sbc #<_bDSpriteAllocTable
 tay
-lda @occupyLoop + 2
+lda findFirstFreeVRamBlock_occupyLoop + 2
 sbc #>_bDSpriteAllocTable
 tax
 
 stz sreg
-bne @activateHigh
+bne findFirstFreeVRamBlock_activateHigh
 cpy #FIRST_THREE_BYTE_ALLOC_NUMBER
-bcc @multBy32
+bcc findFirstFreeVRamBlock_multBy32
 
-@activateHigh:
+findFirstFreeVRamBlock_activateHigh:
 inc sreg
 
-@multBy32:
+findFirstFreeVRamBlock_multBy32:
 
 .repeat 5
 tya
@@ -188,6 +174,10 @@ tax
 tya
 
 stz sreg + 1
+rts
+
+_bDResetSpriteTablePointer:
+RESET_SPRITE_TABLE_POINTER
 rts
 
 .endif
