@@ -55,21 +55,20 @@ void canFillWithBlocks(SpriteAllocationSize width, SpriteAllocationSize height)
 	unsigned long result;
 	boolean pass;
 
-	printf("run canFillWithBlocks width height %d %d\n", width, height);
+	
 
 	for (i = 0; i < TOTAL_REAL_BLOCKS / blocksBySize[width / 8 - 1][height / 8 - 1]; i++)
 	{
 #define EXPECTED (i * 32 * blocksBySize[width / 8 - 1][height / 8 - 1]  + VRAM_START)
-	
-		if (height == SPR_ATTR_16 && i == 1)
+		if (width == SPR_SIZE_16 && height == SPR_SIZE_16)
 		{
-			trap = TRUE;
+			printf("-- %lx\n", i * 32 * blocksBySize[width / 8 - 1][height / 8 - 1] + VRAM_START);
 		}
 
 		result = bDFindFreeVramBlock(width, height);
 		pass = result == EXPECTED;
 
-		printf("result: %d on %lu expected %lx got %lx\n", pass, i, EXPECTED, result);
+		printf("result: %d on %lu for %d by %d expected %lx got %lx\n", pass, i, width, height, EXPECTED, result);
 
 		if (!pass)
 		{
@@ -95,13 +94,17 @@ void canFillWithBlocks(SpriteAllocationSize width, SpriteAllocationSize height)
 
 void runTests()
 {
+	byte i, j, powI, powJ;
 	RAM_BANK = SPRITE_MEMORY_MANAGER_NEW_BANK;
 		
-	canFillWithBlocks(SPR_SIZE_8, SPR_SIZE_8);
-	bDResetSpriteMemoryManager();
-	
-	canFillWithBlocks(SPR_SIZE_8, SPR_SIZE_16);
-
+	for (i = 0, powI = 1; i < 4; i++, powI*=2)
+	{
+		for (j = 0, powJ = 1; j < 4; j++, powJ=j*=2)
+		{
+			canFillWithBlocks((SpriteAllocationSize)(powI * 8), (SpriteAllocationSize)(powJ * 8));
+			bDResetSpriteMemoryManager();
+		}
+	}
 	exit(0);
 }
 #endif // RUN_TESTS
@@ -136,10 +139,8 @@ void bDInitSpriteMemoryManager()
 			bDBlocksBySizeFastLookup[blockSize + 1] = blocksBySize[i][j];
 
 		}
-
+	}
 #ifdef RUN_TESTS
 		runTests();
 #endif // RUN_TESTS
-
-	}
 }
