@@ -48,22 +48,36 @@ void checkAllocationTableFilledWithValue(byte value)
 	}
 }
 
-
+byte fastLookupLookUp[9] = { 0xFF,0,1,0xF,2,0xF,0xF,0xF,3 };
 void canFillWithBlocks(SpriteAllocationSize width, SpriteAllocationSize height)
 {
 	VeraSpriteAddress i;
 	unsigned long result;
 	boolean pass;
+	byte log2Width = fastLookupLookUp[width / 8], log2Height = fastLookupLookUp[height / 8];
 
-	
 
-	for (i = 0; i < TOTAL_REAL_BLOCKS / blocksBySize[width / 8 - 1][height / 8 - 1]; i++)
+	//if (width != 32 || height != 8)
+	//{
+	//	return;
+	//}
+
+	for (i = 0; i < TOTAL_REAL_BLOCKS / blocksBySize[log2Width][log2Height]; i++)
 	{
-#define EXPECTED (i * 32 * blocksBySize[width / 8 - 1][height / 8 - 1]  + VRAM_START)
+#define EXPECTED (i * 32 * blocksBySize[log2Width][log2Height] + VRAM_START)
+		printf("--%d\n", i);
+		printf("%lu * 32 * %d = %lu \n", i, blocksBySize[fastLookupLookUp[width / 8]][fastLookupLookUp[height / 8]], i * 32 * blocksBySize[width / 8 - 1][height / 8 - 1]);
+		//printf("reading from %d, %d width %d height %d\n", width / 8 - 1, height / 8 - 1, width, height);
+
 		if (width == SPR_SIZE_16 && height == SPR_SIZE_16)
 		{
 			printf("-- %lx\n", i * 32 * blocksBySize[width / 8 - 1][height / 8 - 1] + VRAM_START);
 		}
+
+		//if (i == 1)
+		//{
+		//	trap = TRUE;
+		//}
 
 		result = bDFindFreeVramBlock(width, height);
 		pass = result == EXPECTED;
@@ -77,7 +91,7 @@ void canFillWithBlocks(SpriteAllocationSize width, SpriteAllocationSize height)
 	}
 
 	trap = TRUE;
-	result = bDFindFreeVramBlock(SPR_SIZE_8, SPR_SIZE_8);
+	result = bDFindFreeVramBlock(width, height);
 	if (result != 0)
 	{
 		printf("failed to get get zero result after fill up, we got %lu\n", result);
@@ -101,6 +115,7 @@ void runTests()
 	{
 		for (j = 0, powJ = 1; j < 4; j++, powJ=j*=2)
 		{
+			printf("%d %d\n", powI * 8, powJ * 8);
 			canFillWithBlocks((SpriteAllocationSize)(powI * 8), (SpriteAllocationSize)(powJ * 8));
 			bDResetSpriteMemoryManager();
 		}
@@ -138,6 +153,7 @@ void bDInitSpriteMemoryManager()
 
 			bDBlocksBySizeFastLookup[blockSize + 1] = blocksBySize[i][j];
 
+			printf("ssi %d ssj %d blockSize %d bbs %d i, j %d %d, bbsaddr %p bbsp1Addr %p\n", spritesizes[i], spritesizes[j], blockSize, blocksBySize[i][j], i, j,&bDBlocksBySizeFastLookup[blockSize], &bDBlocksBySizeFastLookup[blockSize + 1]);
 		}
 	}
 #ifdef RUN_TESTS
