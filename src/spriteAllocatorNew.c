@@ -22,19 +22,19 @@ extern void bDResetSpriteMemoryManager();
 extern unsigned long findFreeVRamLowByteLoop;
 extern void bDResetSpriteTablePointer();
 
-void checkAllocationTableFilledWithValue(byte value)
+void checkAllocationTableFilledWithValue(byte value, byte blockSize)
 {
 	int i;
 	boolean result = TRUE;
 
 	printf("checking allocation table is filled with %d\n", value);
-	for (i = 0; i < TOTAL_REAL_BLOCKS && result; i++)
+	for (i = 0; i < TOTAL_REAL_BLOCKS && result && i + blockSize < TOTAL_REAL_BLOCKS; i++)
 	{
 		result = bDSpriteAllocTable[i] == value;
 
 		if (!result)
 		{
-			printf("Check allocation table filled with value expected %d at %d got %d. Result %d \n", value, i, bDSpriteAllocTable[i], result);
+			printf("check allocation table filled with value expected %d at %d got %d. Result %d \n", value, i, bDSpriteAllocTable[i], result);
 		}
 	}
 
@@ -56,22 +56,16 @@ void canFillWithBlocks(SpriteAllocationSize width, SpriteAllocationSize height)
 	boolean pass;
 	byte log2Width = fastLookupLookUp[width / 8], log2Height = fastLookupLookUp[height / 8];
 
-
-	//if (width != 32 || height != 8)
-	//{
-	//	return;
-	//}
-
 	for (i = 0; i < TOTAL_REAL_BLOCKS / blocksBySize[log2Width][log2Height]; i++)
 	{
 #define EXPECTED (i * 32 * blocksBySize[log2Width][log2Height] + VRAM_START)
-		printf("--%d\n", i);
-		printf("%lu * 32 * %d = %lu \n", i, blocksBySize[fastLookupLookUp[width / 8]][fastLookupLookUp[height / 8]], i * 32 * blocksBySize[width / 8 - 1][height / 8 - 1]);
+		//printf("--%d\n", i);
+		//printf("%lu * 32 * %d = %lu \n", i, blocksBySize[fastLookupLookUp[width / 8]][fastLookupLookUp[height / 8]], i * 32 * blocksBySize[width / 8 - 1][height / 8 - 1]);
 		//printf("reading from %d, %d width %d height %d\n", width / 8 - 1, height / 8 - 1, width, height);
 
 		if (width == SPR_SIZE_16 && height == SPR_SIZE_16)
 		{
-			printf("-- %lx\n", i * 32 * blocksBySize[width / 8 - 1][height / 8 - 1] + VRAM_START);
+			//printf("-- %lx\n", i * 32 * blocksBySize[width / 8 - 1][height / 8 - 1] + VRAM_START);
 		}
 
 		//if (i == 1)
@@ -88,6 +82,8 @@ void canFillWithBlocks(SpriteAllocationSize width, SpriteAllocationSize height)
 		{
 			exit(0);
 		}
+
+		printf("%lu %lu, %lu\n", i, TOTAL_REAL_BLOCKS / blocksBySize[log2Width][log2Height], i < TOTAL_REAL_BLOCKS / blocksBySize[log2Width][log2Height]);
 	}
 
 	trap = TRUE;
@@ -103,7 +99,7 @@ void canFillWithBlocks(SpriteAllocationSize width, SpriteAllocationSize height)
 	}
 
 	printf("checking the table is fulling allocated\n");
-	checkAllocationTableFilledWithValue(1);
+	checkAllocationTableFilledWithValue(1, blocksBySize[log2Width][log2Height]);
 }
 
 void runTests()
@@ -113,9 +109,8 @@ void runTests()
 		
 	for (i = 0, powI = 1; i < 4; i++, powI*=2)
 	{
-		for (j = 0, powJ = 1; j < 4; j++, powJ=j*=2)
+		for (j = 0, powJ = 1; j < 4; j++, powJ*=2)
 		{
-			printf("%d %d\n", powI * 8, powJ * 8);
 			canFillWithBlocks((SpriteAllocationSize)(powI * 8), (SpriteAllocationSize)(powJ * 8));
 			bDResetSpriteMemoryManager();
 		}
@@ -153,7 +148,7 @@ void bDInitSpriteMemoryManager()
 
 			bDBlocksBySizeFastLookup[blockSize + 1] = blocksBySize[i][j];
 
-			printf("ssi %d ssj %d blockSize %d bbs %d i, j %d %d, bbsaddr %p bbsp1Addr %p\n", spritesizes[i], spritesizes[j], blockSize, blocksBySize[i][j], i, j,&bDBlocksBySizeFastLookup[blockSize], &bDBlocksBySizeFastLookup[blockSize + 1]);
+			//printf("ssi %d ssj %d blockSize %d bbs %d i, j %d %d, bbsaddr %p bbsp1Addr %p\n", spritesizes[i], spritesizes[j], blockSize, blocksBySize[i][j], i, j,&bDBlocksBySizeFastLookup[blockSize], &bDBlocksBySizeFastLookup[blockSize + 1]);
 		}
 	}
 #ifdef RUN_TESTS
