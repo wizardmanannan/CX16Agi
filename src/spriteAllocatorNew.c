@@ -21,6 +21,7 @@ extern byte blocksBySize[4][4];
 extern void bDResetSpriteMemoryManager();
 extern unsigned long findFreeVRamLowByteLoop;
 extern void bDResetSpriteTablePointer();
+extern boolean OPTIMISTIC_MODE;
 
 void checkAllocationTableFilledWithValue(byte value, byte blockSize)
 {
@@ -128,10 +129,13 @@ extern byte bDBlocksBySizeFastLookup[FAST_LOOKUP_SIZE];
 
 #pragma rodata-name (pop)
 
+extern void bDReenableOptimisticMode();
+
 void bDResetSpriteMemoryManager()
 {
 	memset(bDSpriteAllocTable, 0, TOTAL_REAL_BLOCKS);
 	bDResetSpriteTablePointer();
+	bDReenableOptimisticMode();
 }
 
 void bDInitSpriteMemoryManager()
