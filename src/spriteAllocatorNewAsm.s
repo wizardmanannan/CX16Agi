@@ -46,6 +46,7 @@ jsr popa
 plx
 
 bDFindFreeVramBlockAsmCall:
+stp
 CALC_BLOCKS_TO_ALLOCATE
 
 ldx #$0

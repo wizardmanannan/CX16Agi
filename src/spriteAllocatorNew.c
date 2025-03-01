@@ -21,6 +21,7 @@ extern byte blocksBySize[4][4];
 extern void bDResetSpriteMemoryManager();
 extern unsigned long findFreeVRamLowByteLoop;
 extern void bDResetSpriteTablePointer();
+extern boolean OPTIMISTIC_MODE;
 
 void checkAllocationTableFilledWithValue(byte value, byte blockSize)
 {
