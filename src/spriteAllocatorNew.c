@@ -128,10 +128,13 @@ extern byte bDBlocksBySizeFastLookup[FAST_LOOKUP_SIZE];
 
 #pragma rodata-name (pop)
 
+extern void bDReenableOptimisticMode();
+
 void bDResetSpriteMemoryManager()
 {
 	memset(bDSpriteAllocTable, 0, TOTAL_REAL_BLOCKS);
 	bDResetSpriteTablePointer();
+	bDReenableOptimisticMode();
 }
 
 void bDInitSpriteMemoryManager()

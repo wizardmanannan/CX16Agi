@@ -93,3 +93,4 @@
     .export _bDBlocksBySizeFastLookup
     .export _bDSpriteAllocTable
     .export _bDResetSpriteTablePointer
+    .export _bDReenableOptimisticMode

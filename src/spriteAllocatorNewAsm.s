@@ -20,6 +20,7 @@ FIRST_THREE_BYTE_ALLOC_NUMBER = 176
 
 _bDSpriteAllocTable: .res TOTAL_REAL_BLOCKS, $0
 bDSpriteAllocTableTerminator: .byte SPRITE_ALLOC_TERMINATOR
+stopBeingOptimistic = _bDSpriteAllocTable + TOTAL_REAL_BLOCKS - 64 - 1
 
 _bDBlocksBySizeFastLookup: .res FAST_LOOKUP_SIZE
 
@@ -46,13 +47,20 @@ plx
 
 bDFindFreeVramBlockAsmCall:
 CALC_BLOCKS_TO_ALLOCATE
-tay
+
+ldx #$0
+findFirstFreeVRamBlock_optimisticSkip:
+bra findFirstFreeVRamBlock_occupy
+
+ldy BLOCKS_TO_FIND
+ldx #$0
 
 lda #<TOTAL_BLOCKS
 sta BLOCKS_CHECKED_COUNTER
 lda #>TOTAL_BLOCKS
 sta BLOCKS_CHECKED_COUNTER + 1
 stz CONSECUTIVE_BLOCKS
+
 
 findFirstFreeVRamBlock_highByteLoop:
 ldx #$0
@@ -100,7 +108,6 @@ stz CONSECUTIVE_BLOCKS
 bra findFirstFreeVRamBlock_highByteCheckLoop
 
 findFirstFreeVRamBlock_occupy:
-
 clc
 txa
 adc findFreeVRamLowByteLoop + 1
@@ -174,10 +181,50 @@ tax
 tya
 
 stz sreg + 1
+
+ldy findFreeVRamLowByteLoop + 2
+cpy #>stopBeingOptimistic
+bcs findFreeVRamStopBeingOptimisticCheckAlreadyStopped
+stp
+rts
+
+findFreeVRamStopBeingOptimisticCheckAlreadyStopped:
+ldy findFirstFreeVRamBlock_optimisticSkip
+cmp #NOP_IMP
+bne findFreeVRamStopBeingOptimisticCheckLow
+rts
+
+findFreeVRamStopBeingOptimisticCheckLow:
+ldy findFreeVRamLowByteLoop + 1
+cpy #<stopBeingOptimistic
+bcs findFreeVRamStopBeingOptimistic
+rts
+
+findFreeVRamStopBeingOptimistic:
+ldy #NOP_IMP
+sty findFirstFreeVRamBlock_optimisticSkip
+sty findFirstFreeVRamBlock_optimisticSkip + 1
+
+findFreeVRamOccupyReturn:
+rts
+findFreeVRamOccupyStopBeingOptimistic:
+ldy #NOP_IMP
+sty findFirstFreeVRamBlock_optimisticSkip
+sty findFirstFreeVRamBlock_optimisticSkip + 1
+
 rts
 
 _bDResetSpriteTablePointer:
 RESET_SPRITE_TABLE_POINTER
+
+rts
+
+_bDReenableOptimisticMode:
+lda #BRA_ABS
+sta findFirstFreeVRamBlock_optimisticSkip
+
+lda #findFirstFreeVRamBlock_occupy - findFirstFreeVRamBlock_optimisticSkip
+sta findFirstFreeVRamBlock_optimisticSkip
 rts
 
 .endif

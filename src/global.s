@@ -781,6 +781,8 @@ SEC_IMP = $38
 SBC_ZP = $E5
 SBC_IMM = $E9
 BCS_IMP = $B0
+NOP_IMP = $EA
+BRA_ABS = $80
 
 ;System Variables
 EGODIR = 6
