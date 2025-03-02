@@ -94,3 +94,4 @@
     .export _bDSpriteAllocTable
     .export _bDResetSpriteTablePointer
     .export _bDReenableOptimisticMode
+    .export _bDDeleteAllocation

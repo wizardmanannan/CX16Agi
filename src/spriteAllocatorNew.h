@@ -19,4 +19,5 @@ typedef enum {
 #pragma wrapped-call (push, trampoline, SPRITE_MEMORY_MANAGER_NEW_BANK)
 void bDInitSpriteMemoryManager();
 unsigned long bDFindFreeVramBlock(SpriteAllocationSize width, SpriteAllocationSize height);
+extern void bDDeleteAllocation(VeraSpriteAddress address, SpriteAllocationSize width, SpriteAllocationSize height);
 #pragma wrapped-call (pop)
