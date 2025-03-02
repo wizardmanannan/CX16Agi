@@ -361,6 +361,11 @@ adc #>_bDSpriteAllocTable
 sta sreg + 1
 
 lda BLOCKS_TO_FIND
+cmp #16
+bcs @largeDelete
+jmp @smallDelete
+
+@largeDelete:
 asl
 tax
 lda #$0
@@ -479,7 +484,15 @@ jmp (sreg2)
 @1:
     ldy #0
     sta (sreg),y
-
+rts
+@smallDelete:
+tay
+dey
+lda #$0
+@smallDeleteLoop:
+sta (sreg),y
+dey
+bpl @smallDeleteLoop
 
 rts
 

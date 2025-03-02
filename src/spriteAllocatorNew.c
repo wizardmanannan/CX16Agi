@@ -108,7 +108,7 @@ void runTests()
 	byte i, j, powI, powJ;
 	RAM_BANK = SPRITE_MEMORY_MANAGER_NEW_BANK;
 	
-	bDDeleteAllocation(0xEA20, SPR_SIZE_64, SPR_SIZE_64);
+	bDDeleteAllocation(0xEA20, SPR_SIZE_8, SPR_SIZE_8);
 
 	for (i = 0, powI = 1; i < 4; i++, powI*=2)
 	{
