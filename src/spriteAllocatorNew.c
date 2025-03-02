@@ -50,7 +50,8 @@ void checkAllocationTableFilledWithValue(byte value, byte blockSize)
 }
 
 byte fastLookupLookUp[9] = { 0xFF,0,1,0xF,2,0xF,0xF,0xF,3 };
-void canFillWithBlocks(SpriteAllocationSize width, SpriteAllocationSize height)
+
+void fillWithBlocks(SpriteAllocationSize width, SpriteAllocationSize height, boolean printSuccessResult)
 {
 	VeraSpriteAddress i;
 	unsigned long result;
@@ -60,34 +61,29 @@ void canFillWithBlocks(SpriteAllocationSize width, SpriteAllocationSize height)
 	for (i = 0; i < TOTAL_REAL_BLOCKS / blocksBySize[log2Width][log2Height]; i++)
 	{
 #define EXPECTED (i * 32 * blocksBySize[log2Width][log2Height] + VRAM_START)
-		//printf("--%d\n", i);
-		//printf("%lu * 32 * %d = %lu \n", i, blocksBySize[fastLookupLookUp[width / 8]][fastLookupLookUp[height / 8]], i * 32 * blocksBySize[width / 8 - 1][height / 8 - 1]);
-		//printf("reading from %d, %d width %d height %d\n", width / 8 - 1, height / 8 - 1, width, height);
-
-		if (width == SPR_SIZE_16 && height == SPR_SIZE_16)
-		{
-			//printf("-- %lx\n", i * 32 * blocksBySize[width / 8 - 1][height / 8 - 1] + VRAM_START);
-		}
-
-		//if (i == 1)
-		//{
-		//	trap = TRUE;
-		//}
-
+	
 		result = bDFindFreeVramBlock(width, height);
 		pass = result == EXPECTED;
 
-		printf("result: %d on %lu for %d by %d expected %lx got %lx\n", pass, i, width, height, EXPECTED, result);
+		if (!result || printSuccessResult)
+		{
+			printf("result: %d on %lu for %d by %d expected %lx got %lx\n", pass, i, width, height, EXPECTED, result);
+		}
 
 		if (!pass)
 		{
 			exit(0);
 		}
-
-		printf("%lu %lu, %lu\n", i, TOTAL_REAL_BLOCKS / blocksBySize[log2Width][log2Height], i < TOTAL_REAL_BLOCKS / blocksBySize[log2Width][log2Height]);
 	}
+}
 
-	trap = TRUE;
+void canFillWithBlocks(SpriteAllocationSize width, SpriteAllocationSize height)
+{
+	boolean result;
+	byte log2Width = fastLookupLookUp[width / 8], log2Height = fastLookupLookUp[height / 8];
+	
+	fillWithBlocks(width, height, TRUE);
+
 	result = bDFindFreeVramBlock(width, height);
 	if (result != 0)
 	{
@@ -108,8 +104,6 @@ void runTests()
 	byte i, j, powI, powJ;
 	RAM_BANK = SPRITE_MEMORY_MANAGER_NEW_BANK;
 	
-	bDDeleteAllocation(0xEA20, SPR_SIZE_8, SPR_SIZE_8);
-
 	for (i = 0, powI = 1; i < 4; i++, powI*=2)
 	{
 		for (j = 0, powJ = 1; j < 4; j++, powJ*=2)

@@ -186,7 +186,6 @@ stz sreg + 1
 ldy findFreeVRamLowByteLoop + 2
 cpy #>stopBeingOptimistic
 bcs findFreeVRamStopBeingOptimisticCheckAlreadyStopped
-stp
 rts
 
 findFreeVRamStopBeingOptimisticCheckAlreadyStopped:
