@@ -99,19 +99,55 @@ void canFillWithBlocks(SpriteAllocationSize width, SpriteAllocationSize height)
 	checkAllocationTableFilledWithValue(1, blocksBySize[log2Width][log2Height]);
 }
 
+void canRepopulateAfterDelete()
+{
+	byte i, j, powI, powJ;
+	VeraSpriteAddress result;
+	for (i = 0, powI = 1; i < 4; i++, powI *= 2)
+	{
+		for (j = 0, powJ = 1; j < 4; j++, powJ *= 2)
+		{
+			bDResetSpriteMemoryManager();
+
+			fillWithBlocks((SpriteAllocationSize)(powI * 8), (SpriteAllocationSize)(powJ * 8), FALSE);
+					
+			bDDeleteAllocation(SPRITES_DATA_START, (SpriteAllocationSize)(powI * 8), (SpriteAllocationSize)(powJ * 8));
+				
+			result = bDFindFreeVramBlock((SpriteAllocationSize)(powI * 8), (SpriteAllocationSize)(powJ * 8));
+			
+			//asm("stp");
+			printf("can repopulate after delete for %d,%d expected %lx got %lx.", (SpriteAllocationSize)(powI * 8), (SpriteAllocationSize)(powJ * 8), (VeraSpriteAddress) SPRITES_DATA_START, result);
+			if (result == SPRITES_DATA_START)
+			{
+				printf("pass \n");
+			}
+			else
+			{
+				printf("fail \n");
+				exit(0);
+			}
+
+			bDResetSpriteMemoryManager();
+		}
+	}
+}
+
 void runTests()
 {
 	byte i, j, powI, powJ;
 	RAM_BANK = SPRITE_MEMORY_MANAGER_NEW_BANK;
 	
-	for (i = 0, powI = 1; i < 4; i++, powI*=2)
-	{
-		for (j = 0, powJ = 1; j < 4; j++, powJ*=2)
-		{
-			canFillWithBlocks((SpriteAllocationSize)(powI * 8), (SpriteAllocationSize)(powJ * 8));
-			bDResetSpriteMemoryManager();
-		}
-	}
+	//for (i = 0, powI = 1; i < 4; i++, powI*=2)
+	//{
+	//	for (j = 0, powJ = 1; j < 4; j++, powJ*=2)
+	//	{
+	//		canFillWithBlocks((SpriteAllocationSize)(powI * 8), (SpriteAllocationSize)(powJ * 8));
+	//		bDResetSpriteMemoryManager();
+	//	}
+	//}
+
+	canRepopulateAfterDelete();
+
 	exit(0);
 }
 #endif // RUN_TESTS

@@ -241,7 +241,9 @@ jsr popax
 stx sreg ;high
 tax ;middle
 lda sreg + 1
-
+tay
+jsr popa ;Discard forth byte
+tya
 
 bDDeleteAllocationAsmCall:
 jmp @start
