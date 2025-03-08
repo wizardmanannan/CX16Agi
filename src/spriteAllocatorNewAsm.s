@@ -104,12 +104,14 @@ ldx #$0
 rts
 findFirstFreeVRamBlock_handleTerminator:
 ldy BLOCKS_TO_FIND
+
 RESET_SPRITE_TABLE_POINTER
 stz CONSECUTIVE_BLOCKS
 
 bra findFirstFreeVRamBlock_highByteCheckLoop
 
 findFirstFreeVRamBlock_occupy:
+
 clc
 txa
 adc findFreeVRamLowByteLoop + 1
@@ -410,7 +412,44 @@ jmp (sreg2)
     sta (sreg),y
     ldy #48
     sta (sreg),y
-
+    ldy #48
+    sta (sreg),y
+    ldy #47
+    sta (sreg),y
+    ldy #46
+    sta (sreg),y
+    ldy #45
+    sta (sreg),y
+    ldy #44
+    sta (sreg),y
+    ldy #43
+    sta (sreg),y
+    ldy #42
+    sta (sreg),y
+    ldy #41
+    sta (sreg),y
+    ldy #40
+    sta (sreg),y
+    ldy #39
+    sta (sreg),y
+    ldy #38
+    sta (sreg),y
+    ldy #39
+    sta (sreg),y
+    ldy #38
+    sta (sreg),y
+    ldy #37
+    sta (sreg),y
+    ldy #36
+    sta (sreg),y
+    ldy #35
+    sta (sreg),y
+    ldy #34
+    sta (sreg),y
+    ldy #33
+    sta (sreg),y
+    ldy #32
+    sta (sreg),y
 @32:
     ldy #31
     sta (sreg),y

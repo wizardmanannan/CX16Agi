@@ -110,13 +110,13 @@ void canRepopulateAfterDelete()
 			bDResetSpriteMemoryManager();
 
 			fillWithBlocks((SpriteAllocationSize)(powI * 8), (SpriteAllocationSize)(powJ * 8), FALSE);
-					
+			
 			bDDeleteAllocation(SPRITES_DATA_START, (SpriteAllocationSize)(powI * 8), (SpriteAllocationSize)(powJ * 8));
 				
 			result = bDFindFreeVramBlock((SpriteAllocationSize)(powI * 8), (SpriteAllocationSize)(powJ * 8));
-			
-			//asm("stp");
-			printf("can repopulate after delete for %d,%d expected %lx got %lx.", (SpriteAllocationSize)(powI * 8), (SpriteAllocationSize)(powJ * 8), (VeraSpriteAddress) SPRITES_DATA_START, result);
+
+
+						printf("can repopulate after delete for %d,%d expected %lx got %lx.", (SpriteAllocationSize)(powI * 8), (SpriteAllocationSize)(powJ * 8), (VeraSpriteAddress) SPRITES_DATA_START, result);
 			if (result == SPRITES_DATA_START)
 			{
 				printf("pass \n");
