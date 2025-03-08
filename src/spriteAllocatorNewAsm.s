@@ -19,6 +19,8 @@ CONSECUTIVE_BLOCKS: .byte $0
 FIRST_THREE_BYTE_ALLOC_NUMBER = 176
 .segment "BANKRAM0D"
 
+trap2: .byte $0
+
 _bDSpriteAllocTable: .res TOTAL_REAL_BLOCKS, $0
 bDSpriteAllocTableTerminator: .byte SPRITE_ALLOC_TERMINATOR
 stopBeingOptimistic = _bDSpriteAllocTable + TOTAL_REAL_BLOCKS - 64 - 1
@@ -103,13 +105,16 @@ ldx #$0
 
 rts
 findFirstFreeVRamBlock_handleTerminator:
+
 ldy BLOCKS_TO_FIND
+
 RESET_SPRITE_TABLE_POINTER
 stz CONSECUTIVE_BLOCKS
 
 bra findFirstFreeVRamBlock_highByteCheckLoop
 
 findFirstFreeVRamBlock_occupy:
+
 clc
 txa
 adc findFreeVRamLowByteLoop + 1
@@ -375,6 +380,23 @@ ldy @clearUnrolledInstructions,x
 sty sreg2
 ldy @clearUnrolledInstructions + 1,x
 sty sreg2 + 1
+
+
+; php
+; pha
+; phx
+; phy
+; .import _trap
+; lda _trap
+; beq @continue
+; stp
+; @continue:
+; ply
+; plx
+; pla
+; plp
+
+
 jmp (sreg2)
 
 @64:
@@ -410,7 +432,44 @@ jmp (sreg2)
     sta (sreg),y
     ldy #48
     sta (sreg),y
-
+    ldy #48
+    sta (sreg),y
+    ldy #47
+    sta (sreg),y
+    ldy #46
+    sta (sreg),y
+    ldy #45
+    sta (sreg),y
+    ldy #44
+    sta (sreg),y
+    ldy #43
+    sta (sreg),y
+    ldy #42
+    sta (sreg),y
+    ldy #41
+    sta (sreg),y
+    ldy #40
+    sta (sreg),y
+    ldy #39
+    sta (sreg),y
+    ldy #38
+    sta (sreg),y
+    ldy #39
+    sta (sreg),y
+    ldy #38
+    sta (sreg),y
+    ldy #37
+    sta (sreg),y
+    ldy #36
+    sta (sreg),y
+    ldy #35
+    sta (sreg),y
+    ldy #34
+    sta (sreg),y
+    ldy #33
+    sta (sreg),y
+    ldy #32
+    sta (sreg),y
 @32:
     ldy #31
     sta (sreg),y
