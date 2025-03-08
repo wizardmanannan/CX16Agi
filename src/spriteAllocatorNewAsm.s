@@ -19,6 +19,8 @@ CONSECUTIVE_BLOCKS: .byte $0
 FIRST_THREE_BYTE_ALLOC_NUMBER = 176
 .segment "BANKRAM0D"
 
+trap2: .byte $0
+
 _bDSpriteAllocTable: .res TOTAL_REAL_BLOCKS, $0
 bDSpriteAllocTableTerminator: .byte SPRITE_ALLOC_TERMINATOR
 stopBeingOptimistic = _bDSpriteAllocTable + TOTAL_REAL_BLOCKS - 64 - 1
@@ -103,6 +105,7 @@ ldx #$0
 
 rts
 findFirstFreeVRamBlock_handleTerminator:
+
 ldy BLOCKS_TO_FIND
 
 RESET_SPRITE_TABLE_POINTER
@@ -377,6 +380,23 @@ ldy @clearUnrolledInstructions,x
 sty sreg2
 ldy @clearUnrolledInstructions + 1,x
 sty sreg2 + 1
+
+
+; php
+; pha
+; phx
+; phy
+; .import _trap
+; lda _trap
+; beq @continue
+; stp
+; @continue:
+; ply
+; plx
+; pla
+; plp
+
+
 jmp (sreg2)
 
 @64:
