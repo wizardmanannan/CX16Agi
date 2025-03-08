@@ -103,6 +103,7 @@ ldx #$0
 
 rts
 findFirstFreeVRamBlock_handleTerminator:
+ldy BLOCKS_TO_FIND
 RESET_SPRITE_TABLE_POINTER
 stz CONSECUTIVE_BLOCKS
 

@@ -137,14 +137,14 @@ void runTests()
 	byte i, j, powI, powJ;
 	RAM_BANK = SPRITE_MEMORY_MANAGER_NEW_BANK;
 	
-	//for (i = 0, powI = 1; i < 4; i++, powI*=2)
-	//{
-	//	for (j = 0, powJ = 1; j < 4; j++, powJ*=2)
-	//	{
-	//		canFillWithBlocks((SpriteAllocationSize)(powI * 8), (SpriteAllocationSize)(powJ * 8));
-	//		bDResetSpriteMemoryManager();
-	//	}
-	//}
+	for (i = 0, powI = 1; i < 4; i++, powI*=2)
+	{
+		for (j = 0, powJ = 1; j < 4; j++, powJ*=2)
+		{
+			canFillWithBlocks((SpriteAllocationSize)(powI * 8), (SpriteAllocationSize)(powJ * 8));
+			bDResetSpriteMemoryManager();
+		}
+	}
 
 	canRepopulateAfterDelete();
 
