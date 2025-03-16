@@ -51,7 +51,8 @@ plx
 bDFindFreeVramBlockAsmCall:
 CALC_BLOCKS_TO_ALLOCATE
 
-ldx #$0
+ldx BLOCKS_TO_FIND
+dex
 findFirstFreeVRamBlock_optimisticSkip:
 bra findFirstFreeVRamBlock_occupy
 
@@ -229,8 +230,8 @@ _bDReenableOptimisticMode:
 lda #BRA_ABS
 sta findFirstFreeVRamBlock_optimisticSkip
 
-lda #findFirstFreeVRamBlock_occupy - findFirstFreeVRamBlock_optimisticSkip
-sta findFirstFreeVRamBlock_optimisticSkip
+lda #findFirstFreeVRamBlock_occupy - findFirstFreeVRamBlock_optimisticSkip - 2
+sta findFirstFreeVRamBlock_optimisticSkip + 1
 rts
 
 ;void _bDDeleteAllocation(VeraSpriteAddress address, SpriteAllocationSize width, SpriteAllocationSize height)

@@ -61,8 +61,8 @@ void fillWithBlocks(SpriteAllocationSize width, SpriteAllocationSize height, boo
 	for (i = 0; i < TOTAL_REAL_BLOCKS / blocksBySize[log2Width][log2Height]; i++)
 	{
 #define EXPECTED (i * 32 * blocksBySize[log2Width][log2Height] + VRAM_START)
-	
-		result = bDFindFreeVramBlock(width, height);
+
+	result = bDFindFreeVramBlock(width, height);
 		pass = result == EXPECTED;
 
 		if (!result || printSuccessResult)
@@ -81,7 +81,7 @@ void canFillWithBlocks(SpriteAllocationSize width, SpriteAllocationSize height)
 {
 	boolean result;
 	byte log2Width = fastLookupLookUp[width / 8], log2Height = fastLookupLookUp[height / 8];
-	
+
 	fillWithBlocks(width, height, TRUE);
 
 	result = bDFindFreeVramBlock(width, height);
