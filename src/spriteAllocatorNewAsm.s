@@ -94,7 +94,7 @@ inc findFreeVRamLowByteLoop + 2
 
 findFirstFreeVRamBlock_highByteCheckLoop:
 dec BLOCKS_CHECKED_COUNTER + 1
-beq findFirstFreeVRamBlock_endFail
+bmi findFirstFreeVRamBlock_endFail
 
 bra findFirstFreeVRamBlock_highByteLoop
 

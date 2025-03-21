@@ -5,10 +5,10 @@
 /*
 
 
-64 � 8	8	1	8
-64 � 16	8	2	16
-64 � 32	8	4	32
-64 � 64	8	8	64
+64 x � 8	8	1	8
+64 x � 16	8	2	16
+64 x � 32	8	4	32
+64 x � 64	8	8	64
 */
 
 #ifdef RUN_TESTS
@@ -62,7 +62,7 @@ void fillWithBlocks(SpriteAllocationSize width, SpriteAllocationSize height, boo
 	{
 #define EXPECTED (i * 32 * blocksBySize[log2Width][log2Height] + VRAM_START)
 
-	result = bDFindFreeVramBlock(width, height);
+		result = bDFindFreeVramBlock(width, height);
 		pass = result == EXPECTED;
 
 		if (!result || printSuccessResult)
@@ -101,33 +101,68 @@ void canFillWithBlocks(SpriteAllocationSize width, SpriteAllocationSize height)
 
 void canRepopulateAfterDelete()
 {
-	byte i, j, powI, powJ;
+	byte i, j, k, powJ, powK;
 	VeraSpriteAddress result;
-	for (i = 0, powI = 1; i < 4; i++, powI *= 2)
+	VeraSpriteAddress testValues[3][4][4] = {
+		// Group 1: Beginning of memory (unchanged)
+		{{SPRITES_DATA_START, SPRITES_DATA_START, SPRITES_DATA_START, SPRITES_DATA_START},
+		 {SPRITES_DATA_START, SPRITES_DATA_START, SPRITES_DATA_START, SPRITES_DATA_START},
+		 {SPRITES_DATA_START, SPRITES_DATA_START, SPRITES_DATA_START, SPRITES_DATA_START},
+		 {SPRITES_DATA_START, SPRITES_DATA_START, SPRITES_DATA_START, SPRITES_DATA_START}},
+
+		 // Group 2: Middle of memory (aligned properly for different sprite sizes)
+		 {{0x15000, 0x15040, 0x15080, 0x150C0},  /* 8×8,  8×16,  8×32,  8×64  */
+		  {0x15100, 0x15180, 0x15200, 0x15280},  /* 16×8, 16×16, 16×32, 16×64 */
+		  {0x15400, 0x15480, 0x15500, 0x15580},  /* 32×8, 32×16, 32×32, 32×64 */
+		  {0x15800, 0x15880, 0x15900, 0x15980}}, /* 64×8, 64×16, 64×32, 64×64 */
+
+		  // Group 3: End of memory (smallest → largest, respecting width/height order)
+		{{0x1F7E0, 0x1F7C0, 0x1F780, 0x1F700},  /*  8x8,   8x16,   8x32,   8x64  */
+			{0x1F760, 0x1F740, 0x1F700, 0x1F600},  /* 16x8,  16x16,  16x32,  16x64 */
+			{0x1F6A0, 0x1F680, 0x1F600, 0x1F400},  /* 32x8,  32x16,  32x32,  32x64 */
+			{0x1F200, 0x1F300, 0x1F400, 0x1F000}   /* 64x8,  64x16,  64x32,  64x64 */}
+	};
+
+	VeraSpriteAddress expectedValue;
+
+	for (i = 0; i < 3; i++)
 	{
 		for (j = 0, powJ = 1; j < 4; j++, powJ *= 2)
 		{
-			bDResetSpriteMemoryManager();
-
-			fillWithBlocks((SpriteAllocationSize)(powI * 8), (SpriteAllocationSize)(powJ * 8), FALSE);
-			
-			bDDeleteAllocation(SPRITES_DATA_START, (SpriteAllocationSize)(powI * 8), (SpriteAllocationSize)(powJ * 8));
-				
-			result = bDFindFreeVramBlock((SpriteAllocationSize)(powI * 8), (SpriteAllocationSize)(powJ * 8));
-
-
-						printf("can repopulate after delete for %d,%d expected %lx got %lx.", (SpriteAllocationSize)(powI * 8), (SpriteAllocationSize)(powJ * 8), (VeraSpriteAddress) SPRITES_DATA_START, result);
-			if (result == SPRITES_DATA_START)
+			for (k = 0, powK = 1; k < 4; k++, powK *= 2)
 			{
-				printf("pass \n");
-			}
-			else
-			{
-				printf("fail \n");
-				exit(0);
-			}
+				expectedValue = testValues[i][j][k];
 
-			bDResetSpriteMemoryManager();
+				bDResetSpriteMemoryManager();
+
+				fillWithBlocks((SpriteAllocationSize)(powJ * 8), (SpriteAllocationSize)(powK * 8), FALSE);
+
+				bDDeleteAllocation(expectedValue, (SpriteAllocationSize)(powJ * 8), (SpriteAllocationSize)(powK * 8));
+
+				if (i == 2 && j == 0 && k == 0)
+				{
+					trap = TRUE;
+				}
+
+				if (i == 2)
+				{
+					trap = TRUE;
+				}
+				result = bDFindFreeVramBlock((SpriteAllocationSize)(powJ * 8), (SpriteAllocationSize)(powK * 8));
+
+				printf("can repopulate after delete for %d,%d,%d expected %lx got %lx.", i, (SpriteAllocationSize)(powJ * 8), (SpriteAllocationSize)(powK * 8), expectedValue, result);
+				if (result == expectedValue)
+				{
+					printf("pass \n");
+				}
+				else
+				{
+					printf("fail \n");
+					exit(0);
+				}
+
+				bDResetSpriteMemoryManager();
+			}
 		}
 	}
 }
@@ -136,7 +171,7 @@ void runTests()
 {
 	byte i, j, powI, powJ;
 	RAM_BANK = SPRITE_MEMORY_MANAGER_NEW_BANK;
-	
+
 	for (i = 0, powI = 1; i < 4; i++, powI*=2)
 	{
 		for (j = 0, powJ = 1; j < 4; j++, powJ*=2)
@@ -188,6 +223,6 @@ void bDInitSpriteMemoryManager()
 		}
 	}
 #ifdef RUN_TESTS
-		runTests();
+	runTests();
 #endif // RUN_TESTS
 }
