@@ -730,6 +730,11 @@ boolean agiBlit(ViewTable* localViewTab, byte entryNum, boolean disableInterupts
 	byte splitCounter; //Store the SPLIT_COUNTER ZP in here as this makes it easier for C to access it 
 	byte isAnimated = FALSE;
 
+	if (localViewTab->currentView != 0)
+	{
+		return TRUE;
+	}
+
 	previousBank = RAM_BANK;
 	RAM_BANK = SPRITE_METADATA_BANK;
 
@@ -965,24 +970,29 @@ onBackBuffer:
 updateSpriteBuffer:
 	RAM_BANK = SPRITE_UPDATED_BANK;
 	//0 Vera Address Sprite Data Middle (Low will always be 0) (If both the first two bytes are zero that indicates the end of the buffer)
-	_assmUInt = loopVeraAddress;
+	_assmULong = loopVeraAddress;
+	//printf("loopVeraAddress is %lx, the address is %p\n", loopVeraAddress, &loopVeraAddress);
 
-	asm("lda %v", _assmUInt);
-	asm("and #$1F"); //Gets you the address bits 12:8 Which are the parts of the medium byte we need
-	asm("asl"); //Gets bits 5:7 which are always zero
+	asm("lda %v", _assmULong);
+	asm("and #$E0"); //Gets you the address bits 12:8 Which are the parts of the medium byte we need
+	asm("sta sreg");
+	asm("lda %v + 1", _assmULong);
+	asm("tax");
+	asm("asl"); //Gets bits 5:7
 	asm("asl");
 	asm("asl");
+	asm("ora sreg");
 	asm("sta (%w)", ZP_SPRITE_STORE_PTR);
 
 	//1 Vera Address Sprite Data High
-	asm("lda %v", _assmUInt);
+	asm("txa");
 	asm("and #$E0");
 	asm("lsr");
 	asm("lsr");
 	asm("lsr");
 	asm("lsr");
 	asm("lsr");
-	asm("ldx %v + 1", _assmUInt);
+	asm("ldx %v + 2", _assmULong);
 	asm("beq @store"); //If the high byte is zero we don't need to worry about it
 	asm("ora #$8"); //Keep the last three bits of the middle byte and have the forth byte high
 	asm("@store: ldy #$1");
@@ -1136,6 +1146,7 @@ callCelToVera:
 	asm("sta %w + 1", CEL_ADDR);
 
 	_assmUInt = loopVeraAddress;
+	
 	asm("stz %w", VERA_ADDRESS);
 	asm("lda %v", _assmUInt);
 	asm("sta %w + 1", VERA_ADDRESS);

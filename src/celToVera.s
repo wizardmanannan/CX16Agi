@@ -413,14 +413,18 @@ GET_STRUCT_8_STORED_OFFSET _offsetOfSplitSegments, CEL_ADDR, NO_SPLIT_SEGMENTS
 
 ldy BULK_ADDRESS_INDEX
 
-stz VERA_ADDRESS ; Low byte Always zero
-lda _bEBulkAllocatedAddresses, y ;Middle byte
+lda _bEBulkAllocatedAddresses, y ;Low Byte
+sta VERA_ADDRESS ; Low byte Always zero
+lda _bEBulkAllocatedAddresses + 1, y ;Middle byte
 sta VERA_ADDRESS + 1
-lda _bEBulkAllocatedAddresses + 1, y
+lda _bEBulkAllocatedAddresses + 2, y;High byte
 sta VERA_ADDRESS_HIGH
 
 iny
 iny
+iny
+iny ;Skip byte 4 which is always zero
+
 sty BULK_ADDRESS_INDEX
 
 GET_STRUCT_8_STORED_OFFSET _offsetOfCelTrans, CEL_ADDR, CEL_TRANS

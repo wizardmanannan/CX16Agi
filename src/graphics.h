@@ -36,7 +36,7 @@
 		asm("sta %w", VERA_addr_high); \
 	} while (0);
 
-typedef unsigned int VeraSpriteAddress; //actually three bytes lower byte is always zero, so we don't store that
+typedef unsigned long VeraSpriteAddress; //actually three bytes lower byte is always zero, so we don't store that
 
 #pragma wrapped-call (push, trampoline, GRAPHICS_BANK)
 unsigned int b6SetPaletteToInt(byte paletteReference);

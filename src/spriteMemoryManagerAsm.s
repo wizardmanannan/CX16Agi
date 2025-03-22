@@ -110,7 +110,6 @@ _bESpriteAddressTableMiddle: .res SPRITE_ALLOC_TABLE_SIZE, $0 ; Low will always 
 
     @return:
         ; Return, low byte is always zero
-        stp
         lda #$0
 .endmacro
 
@@ -291,16 +290,19 @@ bra @storeAndDecrementCounter
 ALLOCATE_SPRITE_MEMORY_64
 @storeAndDecrementCounter:
 
-stp
 sty sreg
 ldy ZP_ARRAY_COUNTER
-
 sta _bEBulkAllocatedAddresses,y
+
+lda #$0
+sta _bEBulkAllocatedAddresses + 3,y ;Forth byte is always zero, this means we can use a long in C to store the result
+
 txa
 sta _bEBulkAllocatedAddresses + 1,y 
 lda sreg
-sta _bEBulkAllocatedAddresses + 2,y ;If at least one byte is not zero we know that we have a result back
-bne @incrementCounter 
+sta _bEBulkAllocatedAddresses + 2,y
+
+bne @incrementCounter ;If at least one byte is not zero we know that we have a result back
 txa 
 bne @incrementCounter
 lda _bEBulkAllocatedAddresses,y
@@ -308,6 +310,7 @@ bne @incrementCounter
 bra @returnFail ;If the high byte is zero and the middle byte is also zero then we have failed to allocate, due lack of memory
 
 @incrementCounter:
+iny
 iny
 iny
 iny
