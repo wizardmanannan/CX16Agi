@@ -706,11 +706,12 @@ extern void bEClearVeraSprite(byte celWidth, byte celHeight);
 
 #define SET_VERA_ADDRESS_ZP(loopVeraAddress, VERA_ADDRESS, VERA_ADDRESS_HIGH) \
     do { \
-        _assmUInt = loopVeraAddress; \
-		asm("stz %w", VERA_ADDRESS); \
-        asm("lda %v", _assmUInt); \
+        _assmULong = loopVeraAddress; \
+		asm("lda %v", _assmULong); \
+		asm("sta %w", VERA_ADDRESS); \
+        asm("lda %v + 1", _assmULong); \
         asm("sta %w + 1", VERA_ADDRESS); \
-        asm("lda %v + 1", _assmUInt); \
+        asm("lda %v + 1", _assmULong); \
         asm("sta %w", VERA_ADDRESS_HIGH); \
     } while (0)
 /***************************************************************************
@@ -729,11 +730,6 @@ boolean agiBlit(ViewTable* localViewTab, byte entryNum, boolean disableInterupts
 	boolean isAllocated = FALSE;
 	byte splitCounter; //Store the SPLIT_COUNTER ZP in here as this makes it easier for C to access it 
 	byte isAnimated = FALSE;
-
-	if (localViewTab->currentView != 0)
-	{
-		return TRUE;
-	}
 
 	previousBank = RAM_BANK;
 	RAM_BANK = SPRITE_METADATA_BANK;
@@ -900,7 +896,7 @@ switchToBackBuffer:
 	RAM_BANK = localMetadata.viewTableMetadataBank;
 	//printf("invert\n");
 	loopVeraAddress = localMetadata.backBuffers[0];
-	_assmUInt = loopVeraAddress;
+	_assmULong = loopVeraAddress;
 	//printf("2. your local loop has an allocated height of %d\n", localLoop.allocationHeight);
 
 	asm("lda #%w", SPRITE_METADATA_BANK);
@@ -946,7 +942,7 @@ checkWhetherOnBackBuffer:
 notOnBackBuffer:
 	RAM_BANK = localMetadata.viewTableMetadataBank;
 	loopVeraAddress = loopVeraAddresses[splitCounter + (localView.maxVeraSlots * localViewTab->currentCel) - 1];
-	_assmUInt = loopVeraAddress;
+	_assmULong = loopVeraAddress;
 
 	SET_VERA_ADDRESS_ZP(loopVeraAddress, VERA_ADDRESS, VERA_ADDRESS_HIGH);
 	RAM_BANK = SPRITE_UPDATED_BANK;
@@ -1145,12 +1141,13 @@ callCelToVera:
 	asm("lda %v + 1", _assmUInt);
 	asm("sta %w + 1", CEL_ADDR);
 
-	_assmUInt = loopVeraAddress;
+	_assmULong = loopVeraAddress;
 	
-	asm("stz %w", VERA_ADDRESS);
-	asm("lda %v", _assmUInt);
+	asm("lda %v", _assmULong);
+	asm("sta %w", VERA_ADDRESS);
+	asm("lda %v + 1", _assmULong);
 	asm("sta %w + 1", VERA_ADDRESS);
-	asm("lda %v + 1", _assmUInt);
+	asm("lda %v + 2", _assmULong);
 	asm("sta %w", VERA_ADDRESS_HIGH);
 
 	_assmByte = localViewTab->xPos;
