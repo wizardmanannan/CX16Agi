@@ -301,9 +301,9 @@ void bESetViewMetadata(View* localView, ViewTable* viewTable, byte viewNum, byte
 	byte i;
 	byte maxVeraAddresses;
 	ViewTableMetadata metadata;
-	int loopVeraAddressesPointersSize;
-	int veraAddressesSize;
-	int backBufferAllocationSize;
+	int numberLoopVeraAddressPointers;
+	int numberVeraAddresses;
+	int numberBackBuffers;
 	int totalAllocationSize;
 	VeraSpriteAddress** addressBuffer = (VeraSpriteAddress**)GOLDEN_RAM_PARAMS_AREA;
 	VeraSpriteAddress* veraAddressCounter;
@@ -343,18 +343,26 @@ void bESetViewMetadata(View* localView, ViewTable* viewTable, byte viewNum, byte
 		//TODO: Deallocate vera as well
 	}
 
-	loopVeraAddressesPointersSize = localView->numberOfLoops;
-	veraAddressesSize = maxVeraAddresses * localView->numberOfLoops;
-	backBufferAllocationSize = localView->maxVeraSlots;
-	totalAllocationSize = (loopVeraAddressesPointersSize + veraAddressesSize + backBufferAllocationSize) * sizeof(VeraSpriteAddress*);
+	numberLoopVeraAddressPointers = localView->numberOfLoops;
+	numberVeraAddresses = maxVeraAddresses * localView->numberOfLoops;
+	numberBackBuffers = localView->maxVeraSlots;
+	totalAllocationSize = numberLoopVeraAddressPointers * sizeof(VeraSpriteAddress*) + (numberVeraAddresses + numberBackBuffers) * sizeof(VeraSpriteAddress);
 
 #ifdef VERBOSE_DEBUG_SET_METADATA
 	printf("There are %d loops and %d maxCels\n", localView->numberOfLoops, localView->maxCels);
 #endif
 
 	metadata.loopsVeraAddressesPointers = (VeraSpriteAddress**)b10BankedAlloc(totalAllocationSize, &metadata.viewTableMetadataBank);
-	metadata.veraAddresses = (VeraSpriteAddress*)metadata.loopsVeraAddressesPointers + loopVeraAddressesPointersSize;
-	metadata.backBuffers = metadata.veraAddresses + veraAddressesSize;
+	
+	
+	metadata.veraAddresses = (VeraSpriteAddress*)(metadata.loopsVeraAddressesPointers + numberLoopVeraAddressPointers);
+
+	/*if (trap && viewTabNo == 11)
+	{
+		printf("va at %p %d %p\n", (VeraSpriteAddress*)metadata.loopsVeraAddressesPointers, numberLoopVeraAddressPointers, (VeraSpriteAddress*)metadata.loopsVeraAddressesPointers + numberLoopVeraAddressPointers);
+	}*/
+
+	metadata.backBuffers = (VeraSpriteAddress*) ((unsigned int)metadata.veraAddresses + numberVeraAddresses * sizeof(VeraSpriteAddress));	
 	metadata.viewNum = viewNum;
 
 #ifdef VERBOSE_DEBUG_SET_METADATA
@@ -711,7 +719,7 @@ extern void bEClearVeraSprite(byte celWidth, byte celHeight);
 		asm("sta %w", VERA_ADDRESS); \
         asm("lda %v + 1", _assmULong); \
         asm("sta %w + 1", VERA_ADDRESS); \
-        asm("lda %v + 1", _assmULong); \
+        asm("lda %v + 2", _assmULong); \
         asm("sta %w", VERA_ADDRESS_HIGH); \
     } while (0)
 /***************************************************************************
@@ -843,12 +851,15 @@ boolean agiBlit(ViewTable* localViewTab, byte entryNum, boolean disableInterupts
 
 animatedSprite:
 	RAM_BANK = localMetadata.viewTableMetadataBank;
-	_assmUInt = localMetadata.backBuffers[0];
+	_assmULong = localMetadata.backBuffers[0];
 
 	RAM_BANK = SPRITE_METADATA_BANK;
-	asm("lda %v", _assmUInt);
+		
+	asm("lda %v", _assmULong);
 	asm("bne %g", jumpInvert);
-	asm("lda %v + 1", _assmUInt);
+	asm("lda %v + 1", _assmULong);
+	asm("bne %g", jumpInvert);
+	asm("lda %v + 2", _assmULong);
 	asm("bne %g", jumpInvert);
 	asm("jmp %g", initialise);
 
