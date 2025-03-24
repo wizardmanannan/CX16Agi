@@ -21,6 +21,7 @@ _bESpriteAddressTableMiddle: .res SPRITE_ALLOC_TABLE_SIZE, $0 ; Low will always 
 ; Upon finding one, it sets up the sprite allocation and updates relevant pointers.
 ; Handles cases where the allocation slot is already filled and wraps around the allocation table if necessary.
 ; It returns with appropriate values to indicate successful or failed allocation.
+;Return a/x/y little endian
 .macro ALLOCATE_SPRITE_MEMORY_32
     .local @loop, @found, @prepareResult, @increaseWall, @greater, @lesser
     .local @nonEmpty, @return, @returnFail
@@ -284,25 +285,35 @@ beq @32Alloc
 jmp @64Alloc
 @32Alloc:
 ALLOCATE_SPRITE_MEMORY_32
-stx sreg
-ora sreg
-bne @storeAndDecrementCounter
+bra @storeAndDecrementCounter
 @64Alloc:
 ALLOCATE_SPRITE_MEMORY_64
 @storeAndDecrementCounter:
-tya
+
+sty sreg
 ldy ZP_ARRAY_COUNTER
+sta _bEBulkAllocatedAddresses,y
 
-sta _bEBulkAllocatedAddresses + 1, y ;Store the high byte
+lda #$0
+sta _bEBulkAllocatedAddresses + 3,y ;Forth byte is always zero, this means we can use a long in C to store the result
+
 txa
-sta _bEBulkAllocatedAddresses, y ;Store the middle byte
+sta _bEBulkAllocatedAddresses + 1,y 
+lda sreg
+sta _bEBulkAllocatedAddresses + 2,y
 
-ora _bEBulkAllocatedAddresses + 1,y ;Oring middle and high byte together
-beq @returnFail ;If the high byte is zero and the middle byte is also zero then we have failed to allocate, due lack of memory
+bne @incrementCounter ;If at least one byte is not zero we know that we have a result back
+txa 
+bne @incrementCounter
+lda _bEBulkAllocatedAddresses,y
+bne @incrementCounter
+bra @returnFail ;If the high byte is zero and the middle byte is also zero then we have failed to allocate, due lack of memory
 
+@incrementCounter:
 iny
 iny
-
+iny
+iny
 sty ZP_ARRAY_COUNTER
 
 dec ZP_NUMBER_TO_ALLOCATE

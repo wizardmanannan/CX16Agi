@@ -412,15 +412,18 @@ jsr _memCpyBankedBetween
 GET_STRUCT_8_STORED_OFFSET _offsetOfSplitSegments, CEL_ADDR, NO_SPLIT_SEGMENTS
 
 ldy BULK_ADDRESS_INDEX
-
-stz VERA_ADDRESS ; Low byte Always zero
-lda _bEBulkAllocatedAddresses, y ;Middle byte
+lda _bEBulkAllocatedAddresses, y ;Low Byte
+sta VERA_ADDRESS ; Low byte Always zero
+lda _bEBulkAllocatedAddresses + 1, y ;Middle byte
 sta VERA_ADDRESS + 1
-lda _bEBulkAllocatedAddresses + 1, y
+lda _bEBulkAllocatedAddresses + 2, y;High byte
 sta VERA_ADDRESS_HIGH
 
 iny
 iny
+iny
+iny ;Skip byte 4 which is always zero
+
 sty BULK_ADDRESS_INDEX
 
 GET_STRUCT_8_STORED_OFFSET _offsetOfCelTrans, CEL_ADDR, CEL_TRANS
@@ -436,6 +439,8 @@ bne @celToVeraBackwards
 @celToVeraForwards:
 lda #$1
 sta CEL_TO_VERA_IS_FORWARD_DIRECTION
+nop
+
 jsr _celToVera
 bra @restoreStack
 
@@ -465,17 +470,6 @@ sta CEL_ADDR + 1
 
 
 inc CEL_COUNTER
-
-lda MAX_SPRITE_SLOTS
-cmp #$1 
-beq @checkLoop ;Skip multiply where this view is not split, for efficiency 
-ldx #$0
-jsr pushax
-lda CEL_COUNTER
-ldx #$0
-TRAMPOLINE #HELPERS_BANK, _b5Multiply
-asl
-sta BULK_ADDRESS_INDEX
 
 @checkLoop:
 dec NO_OF_CELS
