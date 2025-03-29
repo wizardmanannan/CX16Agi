@@ -115,7 +115,6 @@ stz CONSECUTIVE_BLOCKS
 bra findFirstFreeVRamBlock_highByteCheckLoop
 
 findFirstFreeVRamBlock_occupy:
-
 clc
 txa
 adc findFreeVRamLowByteLoop + 1

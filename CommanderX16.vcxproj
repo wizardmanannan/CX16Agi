@@ -68,7 +68,6 @@
     <ClInclude Include="src\loadingScreen.h" />
     <ClInclude Include="src\object.h" />
     <ClInclude Include="src\paletteManager.h" />
-    <ClInclude Include="src\spriteMemoryManager.h" />
     <ClInclude Include="src\structMetadata.h" />
     <ClInclude Include="src\textLayer.h" />
     <ClInclude Include="src\GUI.H" />
@@ -105,7 +104,6 @@
     <ClCompile Include="src\random.c" />
     <ClCompile Include="src\spriteAllocatorNew.c" />
     <ClCompile Include="src\spriteGarbage.c" />
-    <ClCompile Include="src\spriteMemoryManager.c" />
     <ClCompile Include="src\textLayer.c" />
     <ClCompile Include="src\GUI.C" />
     <ClCompile Include="src\helpers.c" />

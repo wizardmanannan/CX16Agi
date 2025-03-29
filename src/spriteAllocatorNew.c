@@ -1,6 +1,6 @@
 #include "spriteAllocatorNew.h"
 
-#define RUN_TESTS 1
+//#define RUN_TESTS 1
 
 /*
 
@@ -11,16 +11,16 @@
 64 x — 64	8	8	64
 */
 
+extern byte bDSpriteAllocTable[TOTAL_REAL_BLOCKS];
+extern void bDResetSpriteMemoryManager();
+extern void bDResetSpriteTablePointer();
+
 #ifdef RUN_TESTS
 
 boolean trap = FALSE;
 
-
-extern byte bDSpriteAllocTable[TOTAL_REAL_BLOCKS];
 extern byte blocksBySize[4][4];
-extern void bDResetSpriteMemoryManager();
 extern unsigned long findFreeVRamLowByteLoop;
-extern void bDResetSpriteTablePointer();
 extern boolean OPTIMISTIC_MODE;
 
 void checkAllocationTableFilledWithValue(byte value, byte blockSize)

@@ -68,7 +68,7 @@ extern int dirnOfEgo;
 
 #define MAX_INACTIVE_METADATA 10
 
-extern byte bEBulkAllocatedAddresses[VIEW_TABLE_SIZE * sizeof(VeraSpriteAddress) * ALLOCATOR_BLOCK_SIZE_64];
+extern byte bEBulkAllocatedAddresses[VIEW_TABLE_SIZE * sizeof(VeraSpriteAddress) * MAX_BULK_ALLOCATED_SIZE];
 
 void getViewTab(ViewTable* returnedViewTab, byte viewTabNumber)
 {
@@ -619,18 +619,44 @@ void bESwitchMetadata(ViewTable* localViewTab, View* localView, byte viewNum, by
 
 boolean bEAllocateSpriteMemory(Loop* localLoop, byte noToBlit)
 {
-	AllocationSize allocationSize;
+	SpriteAllocationSize allocationWidth, allocationHeight;
 
-	if (localLoop->allocationHeight == SPR_ATTR_64 || localLoop->allocationWidth == SPR_ATTR_64)
+	//printf("the local loop width is %d %d\n", localLoop->allocationWidth, localLoop->allocationHeight);
+
+	switch (localLoop->allocationWidth)
 	{
-		allocationSize = SIZE_64;
-	}
-	else
-	{
-		allocationSize = SIZE_32;
+	case SPR_ATTR_8:
+		allocationWidth = SPR_SIZE_8;
+		break;
+	case SPR_ATTR_16:
+		allocationWidth = SPR_SIZE_16;
+		break;
+	case SPR_ATTR_32:
+		allocationWidth = SPR_SIZE_32;
+		break;
+	case SPR_ATTR_64:
+		allocationWidth = SPR_SIZE_64;
+		break;
 	}
 
-	if (!bEAllocateSpriteMemoryBulk(allocationSize, noToBlit))
+	switch (localLoop->allocationHeight)
+	{
+	case SPR_ATTR_8:
+		allocationHeight = SPR_SIZE_8;
+		break;
+	case SPR_ATTR_16:
+		allocationHeight = SPR_SIZE_16;
+		break;
+	case SPR_ATTR_32:
+		allocationHeight = SPR_SIZE_32;
+		break;
+	case SPR_ATTR_64:
+		allocationHeight = SPR_SIZE_64;
+		break;
+	}
+
+	//printf("we pass in %d %d\n", allocationWidth, allocationHeight);
+	if (!bEAllocateSpriteMemoryBulk(allocationWidth, allocationHeight, noToBlit))
 	{
 		return FALSE;
 	}
@@ -738,6 +764,12 @@ boolean agiBlit(ViewTable* localViewTab, byte entryNum, boolean disableInterupts
 	boolean isAllocated = FALSE;
 	byte splitCounter; //Store the SPLIT_COUNTER ZP in here as this makes it easier for C to access it 
 	byte isAnimated = FALSE;
+	
+	//if (entryNum != 0)
+	//{
+	//	return TRUE;
+	//}
+
 
 	previousBank = RAM_BANK;
 	RAM_BANK = SPRITE_METADATA_BANK;
@@ -1051,25 +1083,25 @@ moveXDueToFlipped:
 	asm("lda %v", _assmByte2);
 	asm("cmp #%w", SPR_ATTR_8);
 	asm("bne @check16");
-	asm("lda #%w", MAX_8_WIDTH_OR_HEIGHT);
+	asm("lda #%w", SPR_SIZE_8);
 	asm("bra @takeWidthFromMaxWidth");
 
 	//Width16
 	asm("@check16: lda %v", _assmByte2);
 	asm("cmp #%w", SPR_ATTR_16);
 	asm("bne @check32");
-	asm("lda #%w", MAX_16_WIDTH_OR_HEIGHT);
+	asm("lda #%w", SPR_SIZE_16);
 	asm("bra @takeWidthFromMaxWidth");
 
 	//Width32
 	asm("@check32: lda %v", _assmByte2);
 	asm("cmp #%w", SPR_ATTR_32);
 	asm("bne @set64");
-	asm("lda #%w", MAX_32_WIDTH_OR_HEIGHT);
+	asm("lda #%w", SPR_SIZE_32);
 	asm("bra @takeWidthFromMaxWidth");
 
 	//Width64
-	asm("@set64: lda #%w", MAX_64_WIDTH_OR_HEIGHT);
+	asm("@set64: lda #%w", SPR_SIZE_64);
 
 	asm("@takeWidthFromMaxWidth: sec");
 	asm("sbc %v", _assmByte); //Can't unset carry as we expect only 8 bit subtraction
@@ -1198,7 +1230,7 @@ updateBufferPointer:
 	bESpritesUpdatedBufferPointer += BYTES_PER_SPRITE_UPDATE;
 
 	asm("clc");
-	asm("lda #%w", MAX_64_WIDTH_OR_HEIGHT / 2);
+	asm("lda #%w", SPR_SIZE_64 / 2);
 	asm("adc %w", SPLIT_OFFSET);
 	asm("sta %w", SPLIT_OFFSET);
 
@@ -1287,7 +1319,7 @@ void b9ResetSpriteMemory(boolean clearBuffer)
 	}
 	bEResetViewTableMetadata();
 	bEResetSpritePointers();
-	bEResetSpriteMemoryManager();
+	bDResetSpriteMemoryManager();
 }
 
 void b9Reset()
@@ -1485,7 +1517,7 @@ byte b9VeraSlotsForWidthOrHeight(byte widthOrHeight)
 
 	for (i = 1; i <= MAX_SPRITES_ROW_OR_COLUMN_SIZE; i++)
 	{
-		if (widthOrHeight <= MAX_64_WIDTH_OR_HEIGHT * i)
+		if (widthOrHeight <= SPR_SIZE_64 * i)
 		{
 			return  i;
 		}
@@ -1603,29 +1635,29 @@ void b9LoadViewFile(byte viewNum)
 #endif
 
 				//8 Is Default
-				if (localCel.width * 2 > MAX_32_WIDTH_OR_HEIGHT && localLoop.allocationWidth < MAX_64_WIDTH_OR_HEIGHT)
+				if (localCel.width * 2 > SPR_SIZE_32 && localLoop.allocationWidth < SPR_SIZE_64)
 				{
 					localLoop.allocationWidth = SPR_ATTR_64;
 				}
-				else if (localCel.width * 2 > MAX_16_WIDTH_OR_HEIGHT && localLoop.allocationWidth < MAX_32_WIDTH_OR_HEIGHT)
+				else if (localCel.width * 2 > SPR_SIZE_16 && localLoop.allocationWidth < SPR_SIZE_32)
 				{
 					localLoop.allocationWidth = SPR_ATTR_32;
 				}
-				else if (localCel.width * 2 > MAX_8_WIDTH_OR_HEIGHT && localLoop.allocationWidth < MAX_16_WIDTH_OR_HEIGHT)
+				else if (localCel.width * 2 > SPR_SIZE_8 && localLoop.allocationWidth < SPR_SIZE_16)
 				{
 					localLoop.allocationWidth = SPR_ATTR_16;
 				}
 
 				////Height isn't doubled only width
-				if (localCel.height > MAX_32_WIDTH_OR_HEIGHT && localLoop.allocationHeight < MAX_64_WIDTH_OR_HEIGHT)
+				if (localCel.height > SPR_SIZE_32 && localLoop.allocationHeight < SPR_SIZE_64)
 				{
 					localLoop.allocationHeight = SPR_ATTR_64;
 				}
-				else if (localCel.height > MAX_16_WIDTH_OR_HEIGHT && localLoop.allocationHeight < MAX_32_WIDTH_OR_HEIGHT)
+				else if (localCel.height > SPR_SIZE_16 && localLoop.allocationHeight < SPR_SIZE_32)
 				{
 					localLoop.allocationHeight = SPR_ATTR_32;
 				}
-				else if (localCel.height > MAX_8_WIDTH_OR_HEIGHT && localLoop.allocationHeight < MAX_16_WIDTH_OR_HEIGHT)
+				else if (localCel.height > SPR_ATTR_8 && localLoop.allocationHeight < SPR_SIZE_16)
 				{
 					localLoop.allocationHeight = SPR_ATTR_16;
 				}

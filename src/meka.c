@@ -247,8 +247,6 @@ void b6Initialise()
     b6InitFiles();             /* Load resource directories */
     b6InitRandom();
 
-    bDInitSpriteMemoryManager();
-
     //// <<--  Determine exact version in here
     for (i = 0; i < 255; i++) {  /* Initialize variables and flags */
         var[i] = 0;
@@ -281,7 +279,7 @@ void b6Initialise()
     b7InitEvents();
     b6InitInterpreter();
     b6InitIrq();
-    bEInitSpriteMemoryManager();
+    bDInitSpriteMemoryManager();
     b6InitFloatDivision();
 
     asm("sei");
@@ -329,7 +327,7 @@ void main()
             printf("Interpret Runs\n");
 #endif // VERBOSE
             b6Interpret();
-            runIncrementalGarbageCollector();
+            // runIncrementalGarbageCollector();
             counter = 0;
         }
         b6CheckTimer();
