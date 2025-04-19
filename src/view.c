@@ -585,12 +585,6 @@ void bESwitchMetadata(ViewTable* localViewTab, View* localView, byte viewNum, by
 		viewTableMetadata[entryNum] = localMetadata;
 		bESetViewMetadata(localView, localViewTab, viewNum, entryNum, viewTabNoToMetaData[entryNum]);
 		localMetadata = viewTableMetadata[entryNum];
-
-		/*if (backBuffers)
-		{
-			memCpyBankedBetween((byte*)localMetadata.backBuffers, localMetadata.viewTableMetadataBank, (byte*)backBuffers, backBuffersBank, localView->maxVeraSlots * sizeof(VeraSpriteAddress));
-			viewTableMetadata[entryNum] = localMetadata;
-		}*/
 	}
 	else
 	{
