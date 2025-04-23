@@ -60,6 +60,7 @@ typedef struct ViewTableMetadata {
 	byte inactiveBank;
 	VeraSpriteAddress* backBuffers;
 	boolean isOnBackBuffer;
+	byte backBufferSize;
 } ViewTableMetadata;
 
 typedef struct Cel {
