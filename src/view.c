@@ -277,6 +277,7 @@ void bEResetViewTableMetadata()
 		viewTableMetadata[i].inactiveBank = NULL;
 		viewTableMetadata[i].backBuffers = NULL;
 		viewTableMetadata[i].isOnBackBuffer = FALSE;
+		viewTableMetadata[i].backBufferSize = 0;
 	}
 
 	memset(&viewTabNoToMetaData[0], VIEWNO_TO_METADATA_NO_SET, MAXVIEW);
@@ -758,6 +759,8 @@ boolean agiBlit(ViewTable* localViewTab, byte entryNum, boolean disableInterupts
 	boolean isAllocated = FALSE;
 	byte splitCounter; //Store the SPLIT_COUNTER ZP in here as this makes it easier for C to access it 
 	byte isAnimated = FALSE;
+	SpriteAllocationSize allocationWidth, allocationHeight;
+	byte combinedSpriteAllocationSize;
 	
 	//if (entryNum != 0)
 	//{
@@ -876,11 +879,51 @@ boolean agiBlit(ViewTable* localViewTab, byte entryNum, boolean disableInterupts
 	asm("jmp %g", splitLoop);
 
 animatedSprite:
+	switch (localLoop.allocationWidth)
+	{
+	case SPR_ATTR_8:
+		allocationWidth = SPR_SIZE_8;
+		break;
+	case SPR_ATTR_16:
+		allocationWidth = SPR_SIZE_16;
+		break;
+	case SPR_ATTR_32:
+		allocationWidth = SPR_SIZE_32;
+		break;
+	case SPR_ATTR_64:
+		allocationWidth = SPR_SIZE_64;
+		break;
+	}
+
+	switch (localLoop.allocationHeight)
+	{
+	case SPR_ATTR_8:
+		allocationHeight = SPR_SIZE_8;
+		break;
+	case SPR_ATTR_16:
+		allocationHeight = SPR_SIZE_16;
+		break;
+	case SPR_ATTR_32:
+		allocationHeight = SPR_SIZE_32;
+		break;
+	case SPR_ATTR_64:
+		allocationHeight = SPR_SIZE_64;
+		break;
+	}
+
+	combinedSpriteAllocationSize = allocationWidth + allocationHeight;
+	
 	RAM_BANK = localMetadata.viewTableMetadataBank;
 	_assmULong = localMetadata.backBuffers[0];
 
 	RAM_BANK = SPRITE_METADATA_BANK;
-		
+	
+	if (localMetadata.backBufferSize != combinedSpriteAllocationSize)
+	{
+		_assmULong = NULL;
+		//TODO: Add old backbuffer to delete queue
+	}
+
 	asm("lda %v", _assmULong);
 	asm("bne %g", jumpInvert);
 	asm("lda %v + 1", _assmULong);
@@ -902,7 +945,8 @@ initialise:
 		}
 		
 		localMetadata.isOnBackBuffer = TRUE;
-		
+		localMetadata.backBufferSize = combinedSpriteAllocationSize;
+
 		isAllocated = TRUE;
 	}
 
