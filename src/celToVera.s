@@ -413,6 +413,23 @@ GET_STRUCT_8_STORED_OFFSET _offsetOfSplitSegments, CEL_ADDR, NO_SPLIT_SEGMENTS
 
 ldy BULK_ADDRESS_INDEX
 lda _bEBulkAllocatedAddresses, y ;Low Byte
+
+; php
+; pha
+; phx
+; phy
+; .import _pictureTrap
+; lda _pictureTrap
+; cmp #$2
+; bne @continue
+; stp
+; @continue:
+; ply
+; plx
+; pla
+; plp
+
+
 sta VERA_ADDRESS ; Low byte Always zero
 lda _bEBulkAllocatedAddresses + 1, y ;Middle byte
 sta VERA_ADDRESS + 1
@@ -452,6 +469,7 @@ pla
 sta Y_VAL
 
 @checkSplitLoop:
+
 lda SPLIT_COUNTER
 cmp NO_SPLIT_SEGMENTS
 
@@ -470,6 +488,19 @@ sta CEL_ADDR + 1
 
 
 inc CEL_COUNTER
+
+lda MAX_SPRITE_SLOTS
+cmp #$1 
+beq @checkLoop ;Skip multiply where this view is not split, for efficiency 
+ldx #$0
+jsr pushax
+lda CEL_COUNTER
+ldx #$0
+TRAMPOLINE #HELPERS_BANK, _b5Multiply
+asl
+asl
+sta BULK_ADDRESS_INDEX
+
 
 @checkLoop:
 dec NO_OF_CELS
