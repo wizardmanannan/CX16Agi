@@ -168,21 +168,6 @@ MULT_TABLE_HALF_POINT = $80
 
 NEG_1_16 = $FFFF
 
-.macro LOAD_FROM_16_ARRAY INDEX_LOW, INDEX_HIGH, SIZE, BASE, RESULT
-lda INDEX_LOW
-ldx INDEX_HIGH
-jsr pushax
-lda SIZE
-ldx #$0
-jsr _b5Multiply
-clc
-adc #<BASE
-sta RESULT
-txa
-adc #>BASE
-sta RESULT + 1
-.endmacro
-
 ; Macro for reading from an array
 .macro READ_ARRAY_POINTER arrayZeroPointer
     clc

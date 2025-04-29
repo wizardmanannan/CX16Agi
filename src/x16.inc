@@ -80,7 +80,13 @@ VERA_ctrl         = $9F25
 VERA_ien          = $9F26
 VERA_isr          = $9F27
 VERA_irqline_l    = $9F28
+VERA_fx_ctrl = $9F29
 VERA_dc_video     = $9F29 ; VERA_ctrl(1) (DCSEL) = 0
+VERA_fx_cache_l = $9F29
+VERA_fx_cache_m = $9F2A
+VERA_fx_cache_h = $9F2B
+VERA_fx_cache_u = $9F2C 
+VERA_fx_mult = $9F2C
 VERA_dc_hscale    = $9F2A ; VERA_ctrl(1) (DCSEL) = 0
 VERA_dc_vscale    = $9F2B ; VERA_ctrl(1) (DCSEL) = 0
 VERA_dc_border    = $9F2C ; VERA_ctrl(1) (DCSEL) = 0

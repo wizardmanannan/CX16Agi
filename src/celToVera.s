@@ -351,7 +351,8 @@ sta Y_VAL
 stx X_VAL
 
 jsr popa
-sta MAX_SPRITE_SLOTS
+sta MAX_SPRITE_SLOTS_FOR_VIEW
+stz MAX_SPRITE_SLOTS_FOR_VIEW + 1
 
 jsr popa
 sta NO_OF_CELS
@@ -487,20 +488,19 @@ adc #$0
 sta CEL_ADDR + 1
 
 
-inc CEL_COUNTER
+ldy CEL_COUNTER
+iny
+sty CEL_COUNTER
 
-lda MAX_SPRITE_SLOTS
+lda MAX_SPRITE_SLOTS_FOR_VIEW
 cmp #$1 
 beq @checkLoop ;Skip multiply where this view is not split, for efficiency 
-ldx #$0
-jsr pushax
-lda CEL_COUNTER
-ldx #$0
-TRAMPOLINE #HELPERS_BANK, _b5Multiply
+lda MAX_SPRITE_SLOTS_FOR_VIEW
+ldy CEL_COUNTER
+MULT_8x8_16
 asl
 asl
 sta BULK_ADDRESS_INDEX
-
 
 @checkLoop:
 dec NO_OF_CELS
