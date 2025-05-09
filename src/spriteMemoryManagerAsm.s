@@ -32,7 +32,7 @@ stz ZP_ARRAY_COUNTER
 @loop:
 lda ZP_WIDTH
 ldx ZP_HEIGHT
-TRAMPOLINE #$D, bDFindFreeVramBlockAsmCall
+TRAMPOLINE #$D, bDFindFreeVramBlock
 ldy ZP_ARRAY_COUNTER
 sta _bEBulkAllocatedAddresses,y
 

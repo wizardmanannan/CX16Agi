@@ -1,175 +1,182 @@
+; SpriteMemoryManager.asm
+; Manages allocation and deallocation of sprite VRAM blocks on the Commander X16
 
+.ifndef SPRITE_MEMORY_MANAGER_NEW_INC       ; Include guard start
+SPRITE_MEMORY_MANAGER_NEW_INC = 1           ; Define guard to prevent re-inclusion
+.importzp       sp                          ; Use zero-page stack pointer register
 
-.ifndef SPRITE_MEMORY_MANAGER_NEW_INC
-SPRITE_MEMORY_MANAGER_NEW_INC = 1
-.importzp       sp
+VRAM_START = $EA00        ; Base VRAM address for sprite data
+VRAM_SIZE = 69120         ; Total VRAM bytes available for sprites
+BLOCK_SIZE = 32           ; Size of one 8×8 sprite block (bytes)
+TOTAL_REAL_BLOCKS = (VRAM_SIZE / BLOCK_SIZE)  ; Total actual blocks we have to allocate 
+TOTAL_BLOCKS = 2304       ; The number of block MUST be a multiple of 256, so this number is the total number of usable blocks rounded up to the next factor of 256.
+SPRITE_ALLOC_TERMINATOR = $FF  ; Terminator value in allocation table.
+FAST_LOOKUP_SIZE = 130     ; Fast lookup table length for block counts
 
-VRAM_START = $EA00        ;Base VRAM address
-VRAM_SIZE = 69120         ;Total available VRAM for sprites
-BLOCK_SIZE = 32           ;8x8 block size (64 bytes)
-TOTAL_REAL_BLOCKS = (VRAM_SIZE / BLOCK_SIZE)  ;0x10E00 (2610)
-TOTAL_BLOCKS = 2304
-SPRITE_ALLOC_TERMINATOR = $FF
-FAST_LOOKUP_SIZE = 130
-.segment "ZEROPAGE"
-LAST_BLOCK_CHECKED: .byte $0
-BLOCKS_CHECKED_COUNTER: .word $0
-BLOCKS_TO_FIND: .byte $0
-CONSECUTIVE_BLOCKS: .byte $0
-FIRST_THREE_BYTE_ALLOC_NUMBER = 176
-.segment "BANKRAM0D"
+.segment "ZEROPAGE"                        ; Zero-page variables for speed
+LAST_BLOCK_CHECKED: .byte $0    ; Index of last block checked
+BLOCKS_CHECKED_COUNTER: .word $0 ; Counter to limit search iterations
+BLOCKS_TO_FIND: .byte $0        ; Number of contiguous blocks requested
+CONSECUTIVE_BLOCKS: .byte $0     ; Counter of consecutive free blocks found
+FIRST_THREE_BYTE_ALLOC_NUMBER = 176 ; Threshold for using 3-byte VRAM addresses
 
-trap2: .byte $0
+.segment "BANKRAM0D"                      ; Main code segment in banked RAM
 
-_bDSpriteAllocTable: .res TOTAL_REAL_BLOCKS, $0
-bDSpriteAllocTableTerminator: .byte SPRITE_ALLOC_TERMINATOR
-stopBeingOptimistic = _bDSpriteAllocTable + TOTAL_REAL_BLOCKS - 64 - 1
+trap2: .byte $0                       ; Reserved trap byte
 
-_bDBlocksBySizeFastLookup: .res FAST_LOOKUP_SIZE
+; Allocation table: one byte per block (0=free, 1=occupied)
+_bDSpriteAllocTable: .res TOTAL_REAL_BLOCKS, $0  ; Initialize all to free
+bDSpriteAllocTableTerminator: .byte SPRITE_ALLOC_TERMINATOR ; End marker
+stopBeingOptimistic = _bDSpriteAllocTable + TOTAL_REAL_BLOCKS - 64 - 1 ; Optimistic skip threshold
 
+_bDBlocksBySizeFastLookup: .res FAST_LOOKUP_SIZE ; Lookup table for sizes to block counts. The key is the width + height and the value is the number of blocks. No need to clear the carry when looking in this table because the value is duplicated in the address afterwards. See the bDBlocksBySizeFastLookup fast lookup in the C code 
+
+; Macro: Calculate blocks needed based on size code in X (sreg)
 .macro CALC_BLOCKS_TO_ALLOCATE
-stx sreg
-adc sreg
-tax
-lda _bDBlocksBySizeFastLookup,x
-sta BLOCKS_TO_FIND
+    stx sreg                     ; Save size code to sreg
+    adc sreg                     ; Double size code (size*2)
+    tax                          ; X = Width + Height
+    lda _bDBlocksBySizeFastLookup, x ; Load block count
+    sta BLOCKS_TO_FIND           ; Store needed blocks
 .endmacro
 
+; Macro: Reset pointer to start of allocation table
 .macro RESET_SPRITE_TABLE_POINTER
-lda #<_bDSpriteAllocTable
-sta findFreeVRamLowByteLoop + 1
-lda #>_bDSpriteAllocTable
-sta findFreeVRamLowByteLoop + 2
+    lda #<_bDSpriteAllocTable      ; Low byte of table start address
+    sta findFreeVRamLowByteLoop + 1 ; Set low pointer
+    lda #>_bDSpriteAllocTable      ; High byte
+    sta findFreeVRamLowByteLoop + 2 ; Set high pointer
 .endmacro
 
-;void bDFindFreeVramBlock(SprSizes width, SprSizes height)
+;C Label For Function below:
+;unsigned long bDFindFreeVramBlock(SpriteAllocationSize width, SpriteAllocationSize height);
+;Used only by tests transforms the arguments to be conformant to the assm label
 _bDFindFreeVramBlock:
-pha
-jsr popa
-plx
+    pha                           ; Save A
+    jsr popa                      ; Pull low return address byte into A
+    plx                           ; Restore X
 
-bDFindFreeVramBlockAsmCall:
-CALC_BLOCKS_TO_ALLOCATE
+; Function: bDFindFreeVramBlock
+; Finds first fit of contiguous free blocks and marks them occupied
+; Input: X / sreg = width/height
+; Output: A/X/sreg = VRAM block start address
+; Optimistic mode is active by default when the memory hasn't being filled yet, we can freely allocate to the neighbouring block
+bDFindFreeVramBlock:
+    CALC_BLOCKS_TO_ALLOCATE       ; Determine BLOCKS_TO_FIND
+    ldx BLOCKS_TO_FIND            ; Load blocks to find
+    dex                           ; Zero-based count
+    findFirstFreeVRamBlock_optimisticSkip: ;If we are in optimistic mode skip straight to allocate
+     bra findFirstFreeVRamBlock_occupy ;This code is dynamically turned into NOP if we are not in optimistic mode
 
-ldx BLOCKS_TO_FIND
-dex
-findFirstFreeVRamBlock_optimisticSkip:
-bra findFirstFreeVRamBlock_occupy
-
-ldy BLOCKS_TO_FIND
-ldx #$0
-
-lda #<TOTAL_BLOCKS
-sta BLOCKS_CHECKED_COUNTER
-lda #>TOTAL_BLOCKS
-sta BLOCKS_CHECKED_COUNTER + 1
-stz CONSECUTIVE_BLOCKS
-
+    ldy BLOCKS_TO_FIND            ; Initialize consecutive counter
+    ldx #$0                        ; Reset X
+    lda #<TOTAL_BLOCKS            ; Low byte of total blocks
+    sta BLOCKS_CHECKED_COUNTER    ; Store search limit low
+    lda #>TOTAL_BLOCKS            ; High byte
+    sta BLOCKS_CHECKED_COUNTER + 1 ; Store high
+    stz CONSECUTIVE_BLOCKS        ; Reset consecutive free blocks counter
 
 findFirstFreeVRamBlock_highByteLoop:
-ldx #$0
+    ldx #$0                        ; Start at table offset 0
 
 findFirstFreeVRamBlock_lowByteLoop_DebugPoint:
 findFreeVRamLowByteLoop:
-lda _bDSpriteAllocTable,x
-bmi findFirstFreeVRamBlock_handleTerminator
-bne findFirstFreeVRamBlock_occupied
-
+    lda _bDSpriteAllocTable, x    ; Load table entry
+    bmi findFirstFreeVRamBlock_handleTerminator ; If byte>=128 (terminator marker)
+    bne findFirstFreeVRamBlock_occupied ; If non-zero, block occupied
 
 findFirstFreeVRamBlock_notOccupied:
-dey
-bne findFirstFreeVRamBlock_incrementX
-
-jmp findFirstFreeVRamBlock_occupy
+    dey                           ; Decrement needed count
+    bne findFirstFreeVRamBlock_incrementX ; Keep scanning if more needed
+    jmp findFirstFreeVRamBlock_occupy ; Found enough free blocks
 
 findFirstFreeVRamBlock_occupied:
-ldy BLOCKS_TO_FIND
+    ldy BLOCKS_TO_FIND            ; Restore blocks needed count
+
 findFirstFreeVRamBlock_incrementX:
-inx
+    inx                           ; Move to next entry
+    bne findFirstFreeVRamBlock_lowByteLoop_DebugPoint ; Loop within low page
 
-bne findFirstFreeVRamBlock_lowByteLoop_DebugPoint
-
-findFirstFreeVRamBlock_highByteIncLoopCounter:
-inc findFreeVRamLowByteLoop + 2
+    ; End of low page: increment high pointer
+    inc findFreeVRamLowByteLoop + 2
 
 findFirstFreeVRamBlock_highByteCheckLoop:
-dec BLOCKS_CHECKED_COUNTER + 1
-bmi findFirstFreeVRamBlock_endFail
-
-bra findFirstFreeVRamBlock_highByteLoop
+    dec BLOCKS_CHECKED_COUNTER + 1 ; Decrement search limit high
+    bmi findFirstFreeVRamBlock_endFail ; Fail if exhausted
+    bra findFirstFreeVRamBlock_highByteLoop ; Continue scanning
 
 findFirstFreeVRamBlock_endFail:
-stz sreg 
-stz sreg + 1
-lda #$0
-ldx #$0
+    stz sreg                      ; Return 0 on failure
+    stz sreg + 1
+    lda #$0
+    ldx #$0
+    rts                           ; Return
 
-rts
 findFirstFreeVRamBlock_handleTerminator:
+    ldy BLOCKS_TO_FIND            ; On terminator, restart scanning
+    RESET_SPRITE_TABLE_POINTER    ; Reset pointer to table start
+    stz CONSECUTIVE_BLOCKS        ; Reset free counter
+    bra findFirstFreeVRamBlock_highByteCheckLoop ; Retry
 
-ldy BLOCKS_TO_FIND
-
-RESET_SPRITE_TABLE_POINTER
-stz CONSECUTIVE_BLOCKS
-
-bra findFirstFreeVRamBlock_highByteCheckLoop
-
+; Mark the blocks as occupied and calculate VRAM address
 findFirstFreeVRamBlock_occupy:
-clc
-txa
-adc findFreeVRamLowByteLoop + 1
-sta findFreeVRamLowByteLoop + 1
-sta findFirstFreeVRamBlock_occupyLoop + 1
-lda #$0
-adc findFreeVRamLowByteLoop + 2
-sta findFreeVRamLowByteLoop + 2
-sta findFirstFreeVRamBlock_occupyLoop + 2
+;Step 1: Calculate addresses for occupation and next search
+    clc
+    txa
+    adc findFreeVRamLowByteLoop + 1 ; Add x to the to this value this will mean we start from here next time we search (Note we also need to add one as well that is done futher on otherwise we will be searching from the point we just allocated)
+    sta findFreeVRamLowByteLoop + 1 ; Update pointer
+    sta findFirstFreeVRamBlock_occupyLoop + 1 ;We use this when calculating the address of the LAST block we are allocating at the point of this label and it will be the same address as above
+    lda #$0
+    adc findFreeVRamLowByteLoop + 2 ; Compute high byte of table offset
+    sta findFreeVRamLowByteLoop + 2
+    sta findFirstFreeVRamBlock_occupyLoop + 2 ; Save for loop
 
-lda BLOCKS_TO_FIND
-dec
-sta sreg
+    lda BLOCKS_TO_FIND            ; Blocks to occupy
+    dec                           ; Count-1 for loop
+    sta sreg                      ; Store in sreg
 
-sec
-lda findFirstFreeVRamBlock_occupyLoop + 1
-sbc sreg
-sta findFirstFreeVRamBlock_occupyLoop + 1
-lda findFirstFreeVRamBlock_occupyLoop + 2
-sbc #$0
-sta findFirstFreeVRamBlock_occupyLoop + 2
+    sec                           ; Prepare for subtract
+    lda findFirstFreeVRamBlock_occupyLoop + 1 ; Loop low pointer ;Go to the first block we are allocating by subtracting from the last block the number of blocks minus 1
+    sbc sreg                      ; Subtract offset
+    sta findFirstFreeVRamBlock_occupyLoop + 1 ; Adjust pointer to start
+    lda findFirstFreeVRamBlock_occupyLoop + 2 ; High pointer
+    sbc #$0
+    sta findFirstFreeVRamBlock_occupyLoop + 2
 
-lda #$1
-ldy BLOCKS_TO_FIND
-dey
+    lda #$1                       ; Value to mark occupied ;Mark all of the blocks are occupied
+    ldy BLOCKS_TO_FIND            ; Number of blocks
+    dey                           ; Count-1
+
+;Step 2: Occupy
 findFirstFreeVRamBlock_occupyLoop:
-sta _bDSpriteAllocTable,y
-findFirstFreeVRamBlock_checkOccupyLoop:
-dey
-bpl findFirstFreeVRamBlock_occupyLoop
+    sta _bDSpriteAllocTable, y    ; Mark table entry
+    dey
+    bpl findFirstFreeVRamBlock_occupyLoop ; Loop
 
-inc findFreeVRamLowByteLoop + 1
-bne findFirstFreeVRamBlock_calculateAddress
-inc findFreeVRamLowByteLoop + 2
+    inc findFreeVRamLowByteLoop + 1 ; Advance pointer past span
+    bne findFirstFreeVRamBlock_calculateAddress ; If low didn't wrap
+    inc findFreeVRamLowByteLoop + 2 ; Carry to high
 
+;Step 3: Calculate VRAM Address
+; Work out the block number with a subtraction. The allocated block address minus the address of the first block
 findFirstFreeVRamBlock_calculateAddress:
-sec
-lda findFirstFreeVRamBlock_occupyLoop + 1
-sbc #<_bDSpriteAllocTable
-tay
-lda findFirstFreeVRamBlock_occupyLoop + 2
-sbc #>_bDSpriteAllocTable
-tax
+    sec                           ; Compute block index
+    lda findFirstFreeVRamBlock_occupyLoop + 1 ; Low index
+    sbc #<_bDSpriteAllocTable    ; Subtract table base low
+    tay                           ; Save to Y
+    lda findFirstFreeVRamBlock_occupyLoop + 2 ; High index
+    sbc #>_bDSpriteAllocTable    ;
+    tax                           ;If the block number number address is 
+    stz sreg               ; High byte of result = 0
+    bne findFirstFreeVRamBlock_activateHigh ;We know that are the lowest three byte block number is 176 so therefore if we have have a second byte which is non zero (block number >= 256) the high byte must be set
+    cpy #FIRST_THREE_BYTE_ALLOC_NUMBER
+    bcc findFirstFreeVRamBlock_multBy32
 
-stz sreg
-bne findFirstFreeVRamBlock_activateHigh
-cpy #FIRST_THREE_BYTE_ALLOC_NUMBER
-bcc findFirstFreeVRamBlock_multBy32
-
+    ; Multiply index (in X/Y) by BLOCK_SIZE=32 (shift left 5 times)
 findFirstFreeVRamBlock_activateHigh:
 inc sreg
-
 findFirstFreeVRamBlock_multBy32:
-
-.repeat 5
+    .repeat 5
 tya
 asl
 tay
@@ -177,82 +184,77 @@ txa
 rol
 tax
 .endrepeat
-
-clc
+   clc
 tya 
 adc #<SPRITE_START
 tay
 txa
 adc #>SPRITE_START
 tax
-tya
+tya                          ; Return address in sreg:sreg+1
 
+;Required by C to be set to zero as a long is four bytes but we only need 3.
 stz sreg + 1
 
 ldy findFreeVRamLowByteLoop + 2
-cpy #>stopBeingOptimistic
+cpy #>stopBeingOptimistic ;If the high byte of findFreeVRamLowByteLoop is less than the threshold then we can continue staying in optimistic mode 
 bcs findFreeVRamStopBeingOptimisticCheckAlreadyStopped
 rts
 
 findFreeVRamStopBeingOptimisticCheckAlreadyStopped:
-ldy findFirstFreeVRamBlock_optimisticSkip
+ldy findFirstFreeVRamBlock_optimisticSkip ;If optimistic mode is already turned off no need to waste cycles, return
 cmp #NOP_IMP
 bne findFreeVRamStopBeingOptimisticCheckLow
 rts
 
 findFreeVRamStopBeingOptimisticCheckLow:
-ldy findFreeVRamLowByteLoop + 1
+ldy findFreeVRamLowByteLoop + 1 ;Now that we know that the high byte is greater than or equal to the threshold check the low byte
 cpy #<stopBeingOptimistic
-bcs findFreeVRamStopBeingOptimistic
+bcs findFreeVRamStopBeingOptimistic ;If it is less, return
 rts
 
 findFreeVRamStopBeingOptimistic:
-ldy #NOP_IMP
+ldy #NOP_IMP ;Replace the bra with no op (2 bytes)
 sty findFirstFreeVRamBlock_optimisticSkip
 sty findFirstFreeVRamBlock_optimisticSkip + 1
 
 findFreeVRamOccupyReturn:
 rts
-findFreeVRamOccupyStopBeingOptimistic:
-ldy #NOP_IMP
-sty findFirstFreeVRamBlock_optimisticSkip
-sty findFirstFreeVRamBlock_optimisticSkip + 1
-
-rts
-
 _bDResetSpriteTablePointer:
-RESET_SPRITE_TABLE_POINTER
+    RESET_SPRITE_TABLE_POINTER    ; Reset scanning pointer
+    rts
 
-rts
-
+; Re-enable optimistic skipping logic
 _bDReenableOptimisticMode:
-lda #BRA_ABS
-sta findFirstFreeVRamBlock_optimisticSkip
+    lda #BRA_ABS
+    sta findFirstFreeVRamBlock_optimisticSkip ; Restore branch opcode
+    lda #findFirstFreeVRamBlock_occupy - findFirstFreeVRamBlock_optimisticSkip - 2 ; Compute relative jump
+    sta findFirstFreeVRamBlock_optimisticSkip + 1
+    rts
 
-lda #findFirstFreeVRamBlock_occupy - findFirstFreeVRamBlock_optimisticSkip - 2
-sta findFirstFreeVRamBlock_optimisticSkip + 1
-rts
-
-;void _bDDeleteAllocation(VeraSpriteAddress address, SpriteAllocationSize width, SpriteAllocationSize height)
+; Function: _bDDeleteAllocation
+; Frees previously allocated blocks by clearing table entries
 _bDDeleteAllocation:
-sta sreg
-jsr popa
-ldx sreg
+    sta sreg                      ; Save low byte of VRAM address
+    jsr popa                      ; Pull mid-byte into A
+    ldx sreg                      ; Save mid-byte in X
 
-CALC_BLOCKS_TO_ALLOCATE
+    CALC_BLOCKS_TO_ALLOCATE       ; Compute number of blocks to free
 
-jsr popa
-sta sreg + 1 ;low
-jsr popax
-stx sreg ;high
-tax ;middle
-lda sreg + 1
-tay
-jsr popa ;Discard forth byte
-tya
+    jsr popa                      ; Discard extra
+    sta sreg + 1                  ; Save low of block count
+    jsr popax                     ; Pull high of block count into X
+    stx sreg                      ; Save high
+    tax                           ; Move mid to X
+    lda sreg + 1                  ; Load low count
+    tay                           ; Move to Y
+    jsr popa                      ; Discard
+    tya                           ; Restore Y
 
-bDDeleteAllocationAsmCall:
-jmp @start
+   bDDeleteAllocationAsmCall:
+jmp @start                 ; Jump to clear routines
+
+; Table of clear routines for large deletes (@1..@127 entries)
 @clearUnrolledInstructions:
     .word $0    ; Entry 0, 1
     .addr @1    ; Entry 0, 1
@@ -547,14 +549,13 @@ jmp (sreg2)
     sta (sreg),y
 rts
 @smallDelete:
-tay
-dey
-lda #$0
+    tay                           ; Y = block count
+    dey                           ; Count-1
+    lda #$0                        ; Clear value
 @smallDeleteLoop:
-sta (sreg),y
-dey
-bpl @smallDeleteLoop
+    sta (sreg),y                 ; Clear table entry
+    dey
+    bpl @smallDeleteLoop
+    rts
 
-rts
-
-.endif
+.endif                            ; End include guard
