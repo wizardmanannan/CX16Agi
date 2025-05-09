@@ -30,7 +30,7 @@
 #include "parser.h"
 #include "graphics.h"
 #include "random.h"
-#include "spriteAllocatorNew.h"
+#include "spriteAllocator.h"
 //#include "sound.h"
 
 boolean hasEnteredNewRoom = FALSE, exitAllLogics = FALSE;

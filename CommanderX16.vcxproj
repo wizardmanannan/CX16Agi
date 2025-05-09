@@ -59,7 +59,7 @@
     <ClInclude Include="src\fixed.h" />
     <ClInclude Include="src\floatDivision.h" />
     <ClInclude Include="src\random.h" />
-    <ClInclude Include="src\spriteAllocatorNew.h" />
+    <ClInclude Include="src\spriteAllocator.h" />
     <ClInclude Include="src\spriteGarbage.h" />
     <ClInclude Include="src\GENERAL.H" />
     <ClInclude Include="src\graphics.h" />
@@ -102,7 +102,7 @@
     <ClCompile Include="src\object.c" />
     <ClCompile Include="src\paletteManager.c" />
     <ClCompile Include="src\random.c" />
-    <ClCompile Include="src\spriteAllocatorNew.c" />
+    <ClCompile Include="src\spriteAllocator.c" />
     <ClCompile Include="src\spriteGarbage.c" />
     <ClCompile Include="src\textLayer.c" />
     <ClCompile Include="src\GUI.C" />

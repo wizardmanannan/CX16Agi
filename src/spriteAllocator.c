@@ -1,4 +1,4 @@
-#include "spriteAllocatorNew.h"
+#include "spriteAllocator.h"
 
 //#define RUN_TESTS 1
 

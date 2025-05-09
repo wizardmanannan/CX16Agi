@@ -10,7 +10,7 @@
 #include "memoryManager.h"
 #include "agifiles.h"
 #include "picture.h"
-#include "spriteAllocatorNew.h"
+#include "spriteAllocator.h"
 #include "paletteManager.h"
 #include "helpers.h"
 #include "irq.h"
