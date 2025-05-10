@@ -415,22 +415,6 @@ GET_STRUCT_8_STORED_OFFSET _offsetOfSplitSegments, CEL_ADDR, NO_SPLIT_SEGMENTS
 ldy BULK_ADDRESS_INDEX
 lda _bEBulkAllocatedAddresses, y ;Low Byte
 
-; php
-; pha
-; phx
-; phy
-; .import _pictureTrap
-; lda _pictureTrap
-; cmp #$2
-; bne @continue
-; stp
-; @continue:
-; ply
-; plx
-; pla
-; plp
-
-
 sta VERA_ADDRESS ; Low byte Always zero
 lda _bEBulkAllocatedAddresses + 1, y ;Middle byte
 sta VERA_ADDRESS + 1
