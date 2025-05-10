@@ -441,7 +441,6 @@ bne @celToVeraBackwards
 @celToVeraForwards:
 lda #$1
 sta CEL_TO_VERA_IS_FORWARD_DIRECTION
-nop
 
 jsr _celToVera
 bra @restoreStack

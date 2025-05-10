@@ -358,11 +358,6 @@ void bESetViewMetadata(View* localView, ViewTable* viewTable, byte viewNum, byte
 	
 	metadata.veraAddresses = (VeraSpriteAddress*)(metadata.loopsVeraAddressesPointers + numberLoopVeraAddressPointers);
 
-	/*if (trap && viewTabNo == 11)
-	{
-		printf("va at %p %d %p\n", (VeraSpriteAddress*)metadata.loopsVeraAddressesPointers, numberLoopVeraAddressPointers, (VeraSpriteAddress*)metadata.loopsVeraAddressesPointers + numberLoopVeraAddressPointers);
-	}*/
-
 	metadata.backBuffers = (VeraSpriteAddress*) ((unsigned int)metadata.veraAddresses + numberVeraAddresses * sizeof(VeraSpriteAddress));	
 	metadata.viewNum = viewNum;
 
@@ -616,8 +611,6 @@ boolean bEAllocateSpriteMemory(Loop* localLoop, byte noToBlit)
 {
 	SpriteAllocationSize allocationWidth, allocationHeight;
 
-	//printf("the local loop width is %d %d\n", localLoop->allocationWidth, localLoop->allocationHeight);
-
 	switch (localLoop->allocationWidth)
 	{
 	case SPR_ATTR_8:
@@ -762,12 +755,6 @@ boolean agiBlit(ViewTable* localViewTab, byte entryNum, boolean disableInterupts
 	SpriteAllocationSize allocationWidth, allocationHeight;
 	byte combinedSpriteAllocationSize;
 	
-	//if (entryNum != 0)
-	//{
-	//	return TRUE;
-	//}
-
-
 	previousBank = RAM_BANK;
 	RAM_BANK = SPRITE_METADATA_BANK;
 
@@ -1284,20 +1271,6 @@ endBlit:
 	{
 		REENABLE_INTERRUPTS();
 	}
-
-	//for (i = 0; i < w; i++) {
-	//	for (j = 0; j < h; j++) {
-	//		c = bmp->line[j][i];
-	//		 Next line will be removed when error is found.
-	//		if (((y + j) < 168) && ((x + i) < 160) && ((y + j) >= 0) && ((x + i) >= 0))
-
-	//			if ((c != (trans + 1)) && (pNum >= priority->line[y + j][x + i])) {
-	//				priority->line[y + j][x + i] = pNum;
-	//				picture->line[y+j][x+i] = c;
-	//				spriteScreen->line[y + j][x + i] = c;
-	//			}
-	//	}
-	//}
 
 	RAM_BANK = previousBank;
 	return TRUE;
