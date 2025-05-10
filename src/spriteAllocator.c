@@ -1,5 +1,4 @@
 #include "spriteAllocator.h"
-
 //#define RUN_TESTS 1
 
 /*
@@ -22,6 +21,92 @@ boolean trap = FALSE;
 extern byte blocksBySize[4][4];
 extern unsigned long findFreeVRamLowByteLoop;
 extern boolean OPTIMISTIC_MODE;
+
+// cc65?style typedefs
+// VRAM parameters (avoid your VRAM_SIZE name)
+#define TOTAL_SPRITE_VRAM_BYTES  69120u  // 0x10E00
+#define BLOCK_BYTES                 32u  // one 8×8 block
+#define MIN_ALLOC_BYTES             BLOCK_BYTES
+
+// all 16 width×height combos
+static const struct { byte w, h; } sizeTable[16] = {
+	{  8,  8 }, {  8, 16 }, {  8, 32 }, {  8, 64 },
+	{ 16,  8 }, { 16, 16 }, { 16, 32 }, { 16, 64 },
+	{ 32,  8 }, { 32, 16 }, { 32, 32 }, { 32, 64 },
+	{ 64,  8 }, { 64, 16 }, { 64, 32 }, { 64, 64 }
+};
+
+// tiny 16-bit LFSR for pseudo-random 0..15
+static unsigned lfsr = 0xACE1;
+static byte prng4(void) {
+	unsigned bit = ((lfsr >> 0) ^ (lfsr >> 2)
+		^ (lfsr >> 3) ^ (lfsr >> 5)) & 1;
+	lfsr = (lfsr >> 1) | (bit << 15);
+	return (byte)(lfsr & 0x0F);
+}
+
+// your cc65-compiled allocation function; returns 0 on failure
+extern VeraSpriteAddress bDFindFreeVramBlock(SpriteAllocationSize w,
+	SpriteAllocationSize h);
+
+void canFillVRamWithRandomSprites(boolean printResults)
+{
+	/* all declarations must come first under C89/cc65: */
+	const unsigned      ALL_FAILED = 0xFFFFu;
+	unsigned            failedMask = 0;
+	unsigned long       totalBytes = 0;
+	unsigned            idx;
+	byte                w, h;
+	unsigned            blocks;
+	unsigned long       thisBytes;
+	VeraSpriteAddress   addr;
+	unsigned long       slack;
+
+	/* now the code: */
+	while (failedMask != ALL_FAILED)
+	{
+		idx = prng4();
+		w = sizeTable[idx].w;
+		h = sizeTable[idx].h;
+		blocks = (w >> 3) * (h >> 3);
+		thisBytes = blocks * BLOCK_BYTES;
+
+		printf("Filling memory with random sprites all the way up\n");
+
+		addr = bDFindFreeVramBlock((SpriteAllocationSize)w,
+			(SpriteAllocationSize)h);
+
+		if (addr) {
+			failedMask = 0;
+			totalBytes += thisBytes;
+			if (printResults) {
+				printf("OK: %2u×%2u @ 0x%05lX  (+%4lu ? %5lu/%u)\n",
+					(unsigned)w, (unsigned)h,
+					(unsigned long)addr,
+					thisBytes,
+					totalBytes,
+					TOTAL_SPRITE_VRAM_BYTES);
+			}
+		}
+		else {
+			failedMask |= (1u << idx);
+		}
+	}
+
+	/* final slack check */
+	slack = TOTAL_SPRITE_VRAM_BYTES - totalBytes;
+	if (slack >= MIN_ALLOC_BYTES) {
+		printf("ERROR: fragmented with %lu bytes free (? %u)\n",
+			slack, MIN_ALLOC_BYTES);
+	}
+	else {
+		if (printResults) {
+			printf("SUCCESS: VRAM “full” with %lu bytes slack (< %u)\n",
+				slack, MIN_ALLOC_BYTES);
+		}
+	}
+}
+
 
 void checkAllocationTableFilledWithValue(byte value, byte blockSize)
 {
@@ -171,6 +256,10 @@ void runTests()
 {
 	byte i, j, powI, powJ;
 	RAM_BANK = SPRITE_MEMORY_MANAGER_NEW_BANK;
+
+	canFillVRamWithRandomSprites(TRUE);
+
+	bDResetSpriteMemoryManager();
 
 	for (i = 0, powI = 1; i < 4; i++, powI*=2)
 	{
