@@ -1588,7 +1588,7 @@ void b3Load_sound() // 1, 0x00
 	int soundNum;
 
 	soundNum = loadAndIncWinCode();
-	loadSoundFile(soundNum);
+	b8LoadSoundFile(soundNum);
 	return;
 }
 
@@ -1606,7 +1606,6 @@ void b3Play_sound() // 2, 00  sound() renamed to avoid clash
 
 void b3Stop_sound() // 0, 0x00 
 {
-	checkForEnd = FALSE;
 	return;
 }
 

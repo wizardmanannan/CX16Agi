@@ -688,6 +688,7 @@ void b6LoadPictureFile(int picFileNum)
 
 
 	loadedPicture.size = tempAGI.totalSize;
+
 	loadedPicture.data = tempAGI.code;
 	loadedPicture.bank = tempAGI.codeBank;
 	loadedPicture.loaded = TRUE;

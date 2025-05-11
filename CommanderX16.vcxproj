@@ -102,6 +102,7 @@
     <ClCompile Include="src\object.c" />
     <ClCompile Include="src\paletteManager.c" />
     <ClCompile Include="src\random.c" />
+    <ClCompile Include="src\sound.c" />
     <ClCompile Include="src\spriteGarbage.c" />
     <ClCompile Include="src\spriteMemoryManager.c" />
     <ClCompile Include="src\textLayer.c" />
@@ -115,7 +116,6 @@
     <ClCompile Include="src\picture.c" />
     <ClCompile Include="src\PLAY.C" />
     <ClCompile Include="src\SHOWLOG.C" />
-    <ClCompile Include="src\SOUND.C" />
     <ClCompile Include="src\stub.c" />
     <ClCompile Include="src\TEXT.C" />
     <ClCompile Include="src\timer.c" />

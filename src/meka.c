@@ -30,6 +30,7 @@
 #include "parser.h"
 #include "graphics.h"
 #include "random.h"
+#include "sound.h"
 //#include "sound.h"
 
 boolean hasEnteredNewRoom = FALSE, exitAllLogics = FALSE;
@@ -89,7 +90,7 @@ void b6DiscardResources()
     int i;
     for (i = 0; i < 256; i++) b9DiscardView(i);
     for (i = 0; i < 256; i++) b6DiscardPictureFile(i);
-    for (i = 0; i < 256; i++) discardSoundFile(i);
+    for (i = 0; i < 256; i++) b8DiscardSoundFile(i);
 }
 
 /***************************************************************************
@@ -268,7 +269,7 @@ void b6Initialise()
     printf("Logics Inited\n");
 #endif
 
-    initSound();
+    b8InitSound();
 
     b9InitViews();
     b9InitObjects();

@@ -55,23 +55,6 @@ typedef struct {
 //
 //extern int screenMode;
 
-//Sound
-
-void loadSoundFile(int soundNum);
-
-typedef struct {
-	int loaded;
-	MIDI* data;
-} SoundFile;
-
-extern boolean checkForEnd;
-void discardSoundFile(int soundNum);
-void initSound();
-
-extern SoundFile loadedSounds[];
-extern boolean checkForEnd;
-extern int soundEndFlag;
-
 //View
 
 //Logic 

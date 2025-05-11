@@ -9,6 +9,7 @@
 #include "textLayer.h"
 #include "object.h"
 #include "parser.h"
+#include "sound.h"
 
 void executeLogic(LOGICEntry* logicEntry, int logNum);
 void b1Call(unsigned char** data);
