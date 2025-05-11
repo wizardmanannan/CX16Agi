@@ -3,24 +3,18 @@
 
 #include "general.h"
 #include "memoryManager.h"
+#include "agifiles.h"
 
 #define MAX_SOUNDS 256
 #define MAX_LOADED_SOUNDS 30
 
 typedef struct {
-	unsigned int duration;
-	unsigned int frequency;
-	byte attenuation;
-} SoundNote;
-
-
-
-typedef struct {
-	SoundNote* ch1;
-	SoundNote* ch2;
-	SoundNote* ch3;
-	SoundNote* chNoise;
+	byte* ch1;
+	byte* ch2;
+	byte* ch3;
+	byte* chNoise;
 	byte soundBank;
+	byte* soundResource;
 } SoundFile;
 
 #pragma wrapped-call (push, trampoline, SOUND_BANK)
