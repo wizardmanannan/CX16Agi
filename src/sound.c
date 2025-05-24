@@ -66,7 +66,38 @@ void b1DiscardSoundFile(int soundNum)
 	}
 }
 
-byte trap = FALSE;
+
+unsigned int b1ReadAhead(SoundFile* soundFile, unsigned int bytePerBufferCounter, BufferStatus* bufferStatus)
+{
+	byte readAheadByte;
+
+	if (bytePerBufferCounter == LOCAL_WORK_AREA_SIZE - 1)
+	{
+		memCpyBanked(&readAheadByte, bufferStatus->bankedData + LOCAL_WORK_AREA_SIZE, soundFile->soundBank, 1);
+	}
+	else
+	{
+		readAheadByte = GOLDEN_RAM_WORK_AREA[bytePerBufferCounter + 1];
+
+		printf("we read ahead to %x, from addr %p, counter %p\n", readAheadByte, &GOLDEN_RAM_WORK_AREA[bytePerBufferCounter], bytePerBufferCounter);
+	}
+
+	return readAheadByte;
+}
+
+unsigned int b1CopyAhead(SoundFile* soundFile, unsigned int bytePerBufferCounter, BufferStatus* bufferStatus, byte toCopy)
+{
+	if (bytePerBufferCounter == LOCAL_WORK_AREA_SIZE - 1)
+	{
+		memCpyBanked(bufferStatus->bankedData + LOCAL_WORK_AREA_SIZE, &toCopy, soundFile->soundBank, 1);
+	}
+	else
+	{
+		GOLDEN_RAM_WORK_AREA[bytePerBufferCounter + 1] = toCopy;
+		printf("tocopy is %x\n", toCopy);
+	}
+}
+
 void b1PrecomputeValues(SoundFile* soundFile)
 {
 	BufferStatus localBufferStatus;
@@ -91,23 +122,18 @@ void b1PrecomputeValues(SoundFile* soundFile)
 
 	b5RefreshBuffer(&localBufferStatus);
 
-	//printf("the bank is %p and data %p\n", soundFile->soundBank, soundFile->ch1);
+	printf("the bank is %p and data %p\n", soundFile->soundBank, soundFile->ch1);
 
 	while (seenFFFFCounter != NO_CHANNELS)
 	{
-		if (trap)
-		{
-			//asm("stp");
-		}
 	
-
 		/*if (totalCounter >= 0x222)
 		{
 			printf("data is %p\n", *data);
 			asm("stp");
 		}*/
 		GET_NEXT(readByte);
-		//printf("%p is freq %d will next read %p from golden ram %p, buffer counter %d data: %p bbb counter %d read from %p\n", totalCounter++, noteByteCounter == FREQUENCY_BYTE || noteByteCounter == FREQUENCY_BYTE + 1, readByte, GOLDEN_RAM_WORK_AREA, localBufferStatus.bufferCounter, *data, bytePerBufferCounter, localBufferStatus.bankedData + (localBufferStatus.bufferCounter - 1) * LOCAL_WORK_AREA_SIZE + bytePerBufferCounter);
+		printf("%p is freq %d will next read %p from golden ram %p, buffer counter %d data: %p bbb counter %d read from %p\n", totalCounter++, noteByteCounter == FREQUENCY_BYTE || noteByteCounter == FREQUENCY_BYTE + 1, readByte, GOLDEN_RAM_WORK_AREA, localBufferStatus.bufferCounter, *data, bytePerBufferCounter, localBufferStatus.bankedData + (localBufferStatus.bufferCounter - 1) * LOCAL_WORK_AREA_SIZE + bytePerBufferCounter);
 
 	/*	if (bytePerBufferCounter == LOCAL_WORK_AREA_SIZE)
 		{
@@ -125,18 +151,9 @@ void b1PrecomputeValues(SoundFile* soundFile)
 			if (readByte == 0xFF)
 			{
 				//printf("ff detected \n");
-
-				if (bytePerBufferCounter == LOCAL_WORK_AREA_SIZE - 1)
-				{
-					asm("stp");
-					memCpyBanked(&readAheadByte, bufferStatus->bankedData + LOCAL_WORK_AREA_SIZE, soundFile->soundBank, 1);
-				}
-				else
-				{
-					readAheadByte = GOLDEN_RAM_WORK_AREA[bytePerBufferCounter];
-
-					//printf("we see %x , we read ahead to %x, from addr %p, counter %p\n", readByte, readAheadByte, &GOLDEN_RAM_WORK_AREA[bytePerBufferCounter], bytePerBufferCounter);
-				}
+			
+				readAheadByte = b1ReadAhead(soundFile, bytePerBufferCounter, bufferStatus);
+				
 
 				if (readAheadByte == 0xFF)
 				{
@@ -151,31 +168,16 @@ void b1PrecomputeValues(SoundFile* soundFile)
 					*((byte*)&frequency) = readByte;
 					//printf("the readByte is %p\n", readByte);
 
-					if (bytePerBufferCounter == LOCAL_WORK_AREA_SIZE - 1)
-					{
-						memCpyBanked((byte*)&frequency + 1, bufferStatus->bankedData + LOCAL_WORK_AREA_SIZE, soundFile->soundBank, 1);
-					}
-					else
-					{
-						*((byte*)&frequency + 1) = GOLDEN_RAM_WORK_AREA[bytePerBufferCounter + 1];
-						//printf("the readByte 2 is %p. frequency  address %p\n", GOLDEN_RAM_WORK_AREA[bytePerBufferCounter], &frequency);
-					}
+					*((byte*)&frequency + 1) = b1ReadAhead(soundFile, bytePerBufferCounter, bufferStatus);
 					*((byte*)&frequency) = GOLDEN_RAM_WORK_AREA[bytePerBufferCounter];
 
 					frequencyDivisor = ((*((byte*)&frequency) & 0x3F) << 4) + (*((byte*)&frequency + 1) & 0x0F) & 0xFFFF;
 					adjustedFrequency = (FREQUENCY_NUMERATOR / frequencyDivisor) + 1;
 
 					//printf("bbc %d\n", bytePerBufferCounter);
-					//printf("the frequency is %p and adjusted is %p for divisor %lu\n", frequency, adjustedFrequency, frequencyDivisor);
+					printf("the frequency is %p and adjusted is %p for divisor %lu\n", frequency, adjustedFrequency, frequencyDivisor);
 
-					if (bytePerBufferCounter == LOCAL_WORK_AREA_SIZE - 1)
-					{
-						memCpyBanked(bufferStatus->bankedData + LOCAL_WORK_AREA_SIZE, (byte*)&adjustedFrequency + 1, soundFile->soundBank, 1);
-					}
-					else
-					{
-						GOLDEN_RAM_WORK_AREA[bytePerBufferCounter + 1] = *((byte*)&adjustedFrequency + 1);
-					}
+					b1CopyAhead(soundFile, bytePerBufferCounter, bufferStatus, *((byte*)&adjustedFrequency + 1));
 					GOLDEN_RAM_WORK_AREA[bytePerBufferCounter] = *((byte*)&adjustedFrequency);
 				}
 				else if (noteByteCounter == VOLUME_BYTE)
@@ -210,8 +212,6 @@ void b1PrecomputeValues(SoundFile* soundFile)
 			//printf("here is the stop and the buffer counter is %p\n", bytePerBufferCounter);
 		
 			bytePerBufferCounter = 0;
-		
-			trap = TRUE;
 		}
 	}
 	
@@ -219,6 +219,9 @@ void b1PrecomputeValues(SoundFile* soundFile)
 	{
 		memCpyBanked(localBufferStatus.bankedData + (localBufferStatus.bufferCounter - 1) * LOCAL_WORK_AREA_SIZE, GOLDEN_RAM_WORK_AREA, localBufferStatus.bank, bytePerBufferCounter);
 	}
+
+	asm("stp");
+
 	//printf("you are finalising with %p  and size %d end result %p\n", localBufferStatus.bankedData + (localBufferStatus.bufferCounter - 1) * LOCAL_WORK_AREA_SIZE, bytePerBufferCounter, localBufferStatus.bankedData + (localBufferStatus.bufferCounter - 1) * LOCAL_WORK_AREA_SIZE + bytePerBufferCounter);
 
 	//printf("the bank is %p and data %p\n", soundFile->soundBank, soundFile->ch1, bytePerBufferCounter);
