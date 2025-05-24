@@ -52,4 +52,6 @@ typedef enum {
 } FLAGS;
 #define VERA_ADDRESS_SIZE 3
 
+#define JIFFY_CALL_FREQ 16 
+
 #endif  /* _GENERAL_H_ */

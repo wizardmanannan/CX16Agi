@@ -18,12 +18,12 @@ typedef struct {
 } SoundFile;
 
 #pragma wrapped-call (push, trampoline, SOUND_BANK)
-void b8DiscardSoundFile(int soundNum);
-void b8InitSound();
-void b8LoadSoundFile(int soundNum);
+void b1DiscardSoundFile(int soundNum);
+void b1InitSound();
+void b1LoadSoundFile(int soundNum);
 #pragma wrapped-call (pop)
 
-extern SoundFile b8LoadedSounds[];
+extern SoundFile b1LoadedSounds[];
 extern int soundEndFlag;
 extern boolean checkForEnd;
 

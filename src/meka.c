@@ -90,7 +90,7 @@ void b6DiscardResources()
     int i;
     for (i = 0; i < 256; i++) b9DiscardView(i);
     for (i = 0; i < 256; i++) b6DiscardPictureFile(i);
-    for (i = 0; i < 256; i++) b8DiscardSoundFile(i);
+    for (i = 0; i < 256; i++) b1DiscardSoundFile(i);
 }
 
 /***************************************************************************
@@ -269,7 +269,7 @@ void b6Initialise()
     printf("Logics Inited\n");
 #endif
 
-    b8InitSound();
+    b1InitSound();
 
     b9InitViews();
     b9InitObjects();

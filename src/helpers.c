@@ -33,7 +33,7 @@ void b5RefreshBuffer(BufferStatus* bufferStatus)
 	bufferStatus->bufferCounter++;
 
 
-
+	//printf("the buffer counter is %d %p and the bank is %d\n", bufferStatus->bufferCounter, localBufferStatus.bankedData + localBufferStatus.bufferCounter * LOCAL_WORK_AREA_SIZE, localBufferStatus.bank);
 	memCpyBanked(GOLDEN_RAM_WORK_AREA, localBufferStatus.bankedData + localBufferStatus.bufferCounter * LOCAL_WORK_AREA_SIZE, localBufferStatus.bank, LOCAL_WORK_AREA_SIZE); //If it overflows the bank it isn't a big deal, the picture data is terminated by 0xFF so the rubbish data following will never be executed.
 }
 

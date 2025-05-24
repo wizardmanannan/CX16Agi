@@ -16,6 +16,8 @@
     .include "movement.s"
     .include "randomAsm.s"
     .include "modulus.s"
+    .include "soundAsm.s"
+
     .export _executeLogic
     .export _b6InitInterpreter
     .export _loadAndIncWinCode

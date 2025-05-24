@@ -1588,7 +1588,7 @@ void b3Load_sound() // 1, 0x00
 	int soundNum;
 
 	soundNum = loadAndIncWinCode();
-	b8LoadSoundFile(soundNum);
+	b1LoadSoundFile(soundNum);
 	return;
 }
 
