@@ -2,6 +2,7 @@
 
 #define NO_CHANNELS 4
 #define NO_NOTE_BYTES 5
+#define DURATION_BYTE 0
 #define FREQUENCY_BYTE 2
 #define VOLUME_BYTE 4
 #define FREQUENCY_NUMERATOR 111860
@@ -108,7 +109,7 @@ void b1PrecomputeValues(SoundFile* soundFile)
 	byte* buffer = GOLDEN_RAM_WORK_AREA;
 	byte** data = &buffer;
 	BufferStatus* bufferStatus;
-	unsigned int frequency, adjustedFrequency, bytePerBufferCounter = 0, lastDuration;
+	unsigned int frequency, adjustedFrequency, bytePerBufferCounter = 0, duration, adjustedDuration;
 	unsigned long frequencyDivisor;
 	boolean firstRun = TRUE;
 
@@ -162,7 +163,19 @@ void b1PrecomputeValues(SoundFile* soundFile)
 			}
 			if (!endByteDetected)
 			{
-				if (noteByteCounter == FREQUENCY_BYTE)
+				if (noteByteCounter == DURATION_BYTE)
+				{
+					*((byte*)&duration) = readByte;
+					//printf("the readByte is %p\n", readByte);
+
+					*((byte*)&duration + 1) = b1ReadAhead(soundFile, bytePerBufferCounter, bufferStatus);
+					*((byte*)&duration) = GOLDEN_RAM_WORK_AREA[bytePerBufferCounter];
+
+					adjustedDuration = ((unsigned int)*((byte*)&duration)) | ((unsigned int)*((byte*)&duration + 1)) << 8;
+
+					b1CopyAhead(soundFile, bytePerBufferCounter, bufferStatus, *((byte*)&adjustedDuration + 1));
+				}
+				else if (noteByteCounter == FREQUENCY_BYTE)
 				{
 
 					*((byte*)&frequency) = readByte;
@@ -182,9 +195,16 @@ void b1PrecomputeValues(SoundFile* soundFile)
 				}
 				else if (noteByteCounter == VOLUME_BYTE)
 				{
-					//printf("the volume is %p\n", GOLDEN_RAM_WORK_AREA[bytePerBufferCounter]);
-					GOLDEN_RAM_WORK_AREA[bytePerBufferCounter] = volumes[(GOLDEN_RAM_WORK_AREA[bytePerBufferCounter] & 0x0F) >> 1];
-					//printf("the volume result is %p\n", GOLDEN_RAM_WORK_AREA[bytePerBufferCounter]);
+					if (adjustedDuration != 0xFFFF)
+					{
+						//printf("the volume is %p\n", GOLDEN_RAM_WORK_AREA[bytePerBufferCounter]);
+						GOLDEN_RAM_WORK_AREA[bytePerBufferCounter] = volumes[(GOLDEN_RAM_WORK_AREA[bytePerBufferCounter] & 0x0F) >> 1];
+						//printf("the volume result is %p\n", GOLDEN_RAM_WORK_AREA[bytePerBufferCounter]);
+					}
+					else
+					{
+						GOLDEN_RAM_WORK_AREA[bytePerBufferCounter] = 0;
+					}
 				}
 				//asm("stp");
 
