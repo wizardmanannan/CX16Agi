@@ -1,5 +1,6 @@
 #include "sound.h"
 
+#define NOISE_CHANNEL 3
 #define NO_CHANNELS 4
 #define NO_NOTE_BYTES 5
 #define DURATION_BYTE 0
@@ -16,6 +17,7 @@ SoundFile b1LoadedSounds[MAX_LOADED_SOUNDS];
 SoundFile* b1LoadedSoundsPointer[MAX_SOUNDS];
 byte soundLoadCounter;
 const uint8_t volumes[] = { 63, 47, 31, 15, 0, 0, 0, 0 };
+const uint16_t noise_freq[] = { 2230, 1115, 557 };
 #pragma bss-name (pop)
 
 #pragma code-name (push, "BANKRAM01")
@@ -46,11 +48,11 @@ void b1InitSound() {
 void b1DiscardSoundFile(int soundNum)
 {
 	SoundFile* sound;
-	byte* soundResource; 
+	byte* soundResource;
 	byte loadedSoundNum;
 
 	sound = b1LoadedSoundsPointer[soundNum];
-	
+
 	loadedSoundNum = sound - &b1LoadedSounds[0];
 
 	soundResource = sound->soundResource;
@@ -80,7 +82,7 @@ unsigned int b1ReadAhead(SoundFile* soundFile, unsigned int bytePerBufferCounter
 	{
 		readAheadByte = GOLDEN_RAM_WORK_AREA[bytePerBufferCounter + 1];
 
-		printf("we read ahead to %x, from addr %p, counter %p\n", readAheadByte, &GOLDEN_RAM_WORK_AREA[bytePerBufferCounter], bytePerBufferCounter);
+		//printf("we read ahead to %x, from addr %p, counter %p\n", readAheadByte, &GOLDEN_RAM_WORK_AREA[bytePerBufferCounter], bytePerBufferCounter);
 	}
 
 	return readAheadByte;
@@ -95,7 +97,7 @@ unsigned int b1CopyAhead(SoundFile* soundFile, unsigned int bytePerBufferCounter
 	else
 	{
 		GOLDEN_RAM_WORK_AREA[bytePerBufferCounter + 1] = toCopy;
-		printf("tocopy is %x\n", toCopy);
+		//printf("tocopy is %x\n", toCopy);
 	}
 }
 
@@ -123,38 +125,38 @@ void b1PrecomputeValues(SoundFile* soundFile)
 
 	b5RefreshBuffer(&localBufferStatus);
 
-	printf("the bank is %p and data %p\n", soundFile->soundBank, soundFile->ch1);
+	//printf("the bank is %p and data %p\n", soundFile->soundBank, soundFile->ch1);
 
 	while (seenFFFFCounter != NO_CHANNELS)
 	{
-	
+
 		/*if (totalCounter >= 0x222)
 		{
 			printf("data is %p\n", *data);
 			asm("stp");
 		}*/
 		GET_NEXT(readByte);
-		printf("%p is freq %d will next read %p from golden ram %p, buffer counter %d data: %p bbb counter %d read from %p\n", totalCounter++, noteByteCounter == FREQUENCY_BYTE || noteByteCounter == FREQUENCY_BYTE + 1, readByte, GOLDEN_RAM_WORK_AREA, localBufferStatus.bufferCounter, *data, bytePerBufferCounter, localBufferStatus.bankedData + (localBufferStatus.bufferCounter - 1) * LOCAL_WORK_AREA_SIZE + bytePerBufferCounter);
+		//printf("%p is freq %d will next read %p from golden ram %p, buffer counter %d data: %p bbb counter %d read from %p\n", totalCounter++, noteByteCounter == FREQUENCY_BYTE || noteByteCounter == FREQUENCY_BYTE + 1, readByte, GOLDEN_RAM_WORK_AREA, localBufferStatus.bufferCounter, *data, bytePerBufferCounter, localBufferStatus.bankedData + (localBufferStatus.bufferCounter - 1) * LOCAL_WORK_AREA_SIZE + bytePerBufferCounter);
 
-	/*	if (bytePerBufferCounter == LOCAL_WORK_AREA_SIZE)
-		{
-			bytePerBufferCounter = 0;
-		}
-		else
-		{
-			bytePerBufferCounter++;
-		}*/
+		/*	if (bytePerBufferCounter == LOCAL_WORK_AREA_SIZE)
+			{
+				bytePerBufferCounter = 0;
+			}
+			else
+			{
+				bytePerBufferCounter++;
+			}*/
 
-		//printf("notes counter %d bb %d\n", noteByteCounter, bytePerBufferCounter);
+			//printf("notes counter %d bb %d\n", noteByteCounter, bytePerBufferCounter);
 
 		if (!endByteDetected)
 		{
 			if (readByte == 0xFF)
 			{
 				//printf("ff detected \n");
-			
+
 				readAheadByte = b1ReadAhead(soundFile, bytePerBufferCounter, bufferStatus);
-				
+
 
 				if (readAheadByte == 0xFF)
 				{
@@ -177,20 +179,27 @@ void b1PrecomputeValues(SoundFile* soundFile)
 				}
 				else if (noteByteCounter == FREQUENCY_BYTE)
 				{
-
 					*((byte*)&frequency) = readByte;
 					//printf("the readByte is %p\n", readByte);
 
-					*((byte*)&frequency + 1) = b1ReadAhead(soundFile, bytePerBufferCounter, bufferStatus);
-					*((byte*)&frequency) = GOLDEN_RAM_WORK_AREA[bytePerBufferCounter];
+					if (seenFFFFCounter != NOISE_CHANNEL)
+					{
+						*((byte*)&frequency + 1) = b1ReadAhead(soundFile, bytePerBufferCounter, bufferStatus);
+						*((byte*)&frequency) = GOLDEN_RAM_WORK_AREA[bytePerBufferCounter];
 
-					frequencyDivisor = ((*((byte*)&frequency) & 0x3F) << 4) + (*((byte*)&frequency + 1) & 0x0F) & 0xFFFF;
-					adjustedFrequency = (FREQUENCY_NUMERATOR / frequencyDivisor) + 1;
+						frequencyDivisor = ((*((byte*)&frequency) & 0x3F) << 4) + (*((byte*)&frequency + 1) & 0x0F) & 0xFFFF;
+						adjustedFrequency = (FREQUENCY_NUMERATOR / frequencyDivisor) + 1;
+						b1CopyAhead(soundFile, bytePerBufferCounter, bufferStatus, *((byte*)&adjustedFrequency + 1));
+					}
+					else
+					{
+						adjustedFrequency =	noise_freq[GOLDEN_RAM_WORK_AREA[bytePerBufferCounter] & 0x03];
+					}
 
 					//printf("bbc %d\n", bytePerBufferCounter);
-					printf("the frequency is %p and adjusted is %p for divisor %lu\n", frequency, adjustedFrequency, frequencyDivisor);
+					//printf("the frequency is %p and adjusted is %p for divisor %lu\n", frequency, adjustedFrequency, frequencyDivisor);
 
-					b1CopyAhead(soundFile, bytePerBufferCounter, bufferStatus, *((byte*)&adjustedFrequency + 1));
+					
 					GOLDEN_RAM_WORK_AREA[bytePerBufferCounter] = *((byte*)&adjustedFrequency);
 				}
 				else if (noteByteCounter == VOLUME_BYTE)
@@ -220,7 +229,7 @@ void b1PrecomputeValues(SoundFile* soundFile)
 		}
 
 		//printf("result %d, checking that %d == %d\n", bytePerBufferCounter == LOCAL_WORK_AREA_SIZE - 1 && !firstRun, bytePerBufferCounter, LOCAL_WORK_AREA_SIZE - 1);
-		
+
 		bytePerBufferCounter++;
 		if (bytePerBufferCounter == LOCAL_WORK_AREA_SIZE)
 		{
@@ -230,17 +239,15 @@ void b1PrecomputeValues(SoundFile* soundFile)
 			memCpyBanked(localBufferStatus.bankedData + (localBufferStatus.bufferCounter - 1) * LOCAL_WORK_AREA_SIZE, GOLDEN_RAM_WORK_AREA, localBufferStatus.bank, LOCAL_WORK_AREA_SIZE);
 
 			//printf("here is the stop and the buffer counter is %p\n", bytePerBufferCounter);
-		
+
 			bytePerBufferCounter = 0;
 		}
 	}
-	
+
 	if (bytePerBufferCounter)
 	{
 		memCpyBanked(localBufferStatus.bankedData + (localBufferStatus.bufferCounter - 1) * LOCAL_WORK_AREA_SIZE, GOLDEN_RAM_WORK_AREA, localBufferStatus.bank, bytePerBufferCounter);
 	}
-
-	asm("stp");
 
 	//printf("you are finalising with %p  and size %d end result %p\n", localBufferStatus.bankedData + (localBufferStatus.bufferCounter - 1) * LOCAL_WORK_AREA_SIZE, bytePerBufferCounter, localBufferStatus.bankedData + (localBufferStatus.bufferCounter - 1) * LOCAL_WORK_AREA_SIZE + bytePerBufferCounter);
 
@@ -268,7 +275,7 @@ void b1LoadSoundFile(int soundNum) {
 	{
 		*currentChannel = tempAGI.code + soundChannelOffSets[i];
 	}
-	
+
 	//printf("sound num is %d\n", soundNum);
 	b1PrecomputeValues(&b1LoadedSounds[soundLoadCounter]);
 
