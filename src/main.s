@@ -89,3 +89,12 @@
     .export _rand8Bit
     .export _randBetween
     .export _bAWander
+    .export _ZP_CURRENTLY_PLAYING_NOTE_1
+    .export _ZP_CURRENTLY_PLAYING_NOTE_2
+    .export _ZP_CURRENTLY_PLAYING_NOTE_3
+    .export _ZP_CURRENTLY_PLAYING_NOTE_NOISE
+    .export _b1Ch1Ticks
+    .export _b1Ch2Ticks
+    .export _b1Ch3Ticks
+    .export _b1Ch4Ticks
+    .export _b1IsPlaying

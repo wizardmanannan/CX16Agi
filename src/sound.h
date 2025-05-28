@@ -4,6 +4,7 @@
 #include "general.h"
 #include "memoryManager.h"
 #include "agifiles.h"
+#include "irq.h"
 
 #define MAX_SOUNDS 256
 #define MAX_LOADED_SOUNDS 30
@@ -21,6 +22,7 @@ typedef struct {
 void b1DiscardSoundFile(int soundNum);
 void b1InitSound();
 void b1LoadSoundFile(int soundNum);
+void b1PlaySound(byte soundNum);
 #pragma wrapped-call (pop)
 
 extern SoundFile b1LoadedSounds[];

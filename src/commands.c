@@ -1598,7 +1598,7 @@ void b3Play_sound() // 2, 00  sound() renamed to avoid clash
 
 	soundNum = loadAndIncWinCode();
 	soundEndFlag = loadAndIncWinCode();
-	/* playSound(soundNum); */
+	b1PlaySound(soundNum);
 	flag[soundEndFlag] = TRUE;
 	return;
 }
