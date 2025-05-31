@@ -22,7 +22,7 @@ typedef struct {
 void b1DiscardSoundFile(int soundNum);
 void b1InitSound();
 void b1LoadSoundFile(int soundNum);
-void b1PlaySound(byte soundNum);
+void b1PlaySound(byte soundNum, byte endSoundFlag);
 #pragma wrapped-call (pop)
 
 extern SoundFile b1LoadedSounds[];

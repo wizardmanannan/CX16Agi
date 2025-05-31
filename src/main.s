@@ -100,4 +100,6 @@
     .export _b1SoundDataBank
     .export _b1IsPlaying
     .export _b1SoundDataBank
+    .export _b1ChannelsPlaying
+    .export _b1EndSoundFlag
   

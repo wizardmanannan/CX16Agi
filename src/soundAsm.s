@@ -20,6 +20,8 @@ _b1Ch1Ticks: .word $0
 _b1Ch2Ticks: .word $0
 _b1Ch3Ticks: .word $0
 _b1Ch4Ticks: .word $0
+_b1ChannelsPlaying: .byte $0
+_b1EndSoundFlag: .byte $0
 
 _b1SoundDataBank: .byte $0
 _b1IsPlaying: .res NO_CHANNELS
@@ -44,8 +46,8 @@ lsr
 tay
 lda _b1IsPlaying,y
 
-beq @silenceChannel
-stp
+bne @checkNoteLength
+jmp @silenceChannel
 @checkNoteLength:
 ldy #$1
 lda _b1Ch1Ticks + 1,x
@@ -125,7 +127,14 @@ tay
 lda #$0
 sta _b1IsPlaying,y
 
+dec _b1ChannelsPlaying
+bne @silenceChannel
+
+lda _b1EndSoundFlag
+SET_FLAG_NON_INTERPRETER SOUND_SREG
+
 @silenceChannel:
+
 
 bra @incrementChannelCounter
 

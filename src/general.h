@@ -54,4 +54,6 @@ typedef enum {
 
 #define JIFFY_CALL_FREQ 16 
 
+extern boolean* flag;
+
 #endif  /* _GENERAL_H_ */

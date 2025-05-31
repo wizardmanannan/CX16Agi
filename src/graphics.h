@@ -147,5 +147,7 @@ typedef struct ViewTable {
 extern ViewTable viewtab[VIEW_TABLE_SIZE];
 extern View loadedViews[MAXVIEW];
 extern ViewTableMetadata viewTableMetadata[SPRITE_SLOTS];
+extern boolean* flag;
+
 
 #endif
