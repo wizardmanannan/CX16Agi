@@ -288,8 +288,8 @@ extern unsigned int b1Ch1Ticks;
 extern unsigned int b1Ch2Ticks;
 extern unsigned int b1Ch3Ticks;
 extern unsigned int b1Ch4Ticks;
-extern boolean isPlaying;
-extern boolean b1IsPlaying;
+extern boolean b1IsPlaying[NO_CHANNELS];
+extern byte b1SoundDataBank;
 
 extern byte* ZP_CURRENTLY_PLAYING_NOTE_1;
 #pragma zpsym("ZP_CURRENTLY_PLAYING_NOTE_1")
@@ -300,25 +300,26 @@ extern byte* ZP_CURRENTLY_PLAYING_NOTE_3;
 extern byte* ZP_CURRENTLY_PLAYING_NOTE_NOISE;
 #pragma zpsym("ZP_CURRENTLY_PLAYING_NOTE_NOISE")
 
+byte trap = TRUE;
 void b1PlaySound(byte soundNum)
 {
 	byte testVal, i;
-	SoundFile currentlyPlayingSound;
 	unsigned int* ticksPointer; 
 	byte** channelPointer;
 
-	asm("stp");
 	asm("sei");
 
-	ZP_CURRENTLY_PLAYING_NOTE_1 = b1LoadedSoundsPointer[soundNum]->ch1;
-	ZP_CURRENTLY_PLAYING_NOTE_2 = b1LoadedSoundsPointer[soundNum]->ch2;
-	ZP_CURRENTLY_PLAYING_NOTE_3 = b1LoadedSoundsPointer[soundNum]->ch3;
-	ZP_CURRENTLY_PLAYING_NOTE_NOISE = b1LoadedSoundsPointer[soundNum]->chNoise;
 
-	b1IsPlaying = TRUE;
+	ZP_CURRENTLY_PLAYING_NOTE_1 = b1LoadedSoundsPointer[soundNum]->ch1 - NO_NOTE_BYTES;
+	ZP_CURRENTLY_PLAYING_NOTE_2 = b1LoadedSoundsPointer[soundNum]->ch2 - NO_NOTE_BYTES;
+	ZP_CURRENTLY_PLAYING_NOTE_3 = b1LoadedSoundsPointer[soundNum]->ch3 - NO_NOTE_BYTES;
+	ZP_CURRENTLY_PLAYING_NOTE_NOISE = b1LoadedSoundsPointer[soundNum]->chNoise - NO_NOTE_BYTES;
+
+	b1SoundDataBank = b1LoadedSoundsPointer[soundNum]->soundBank;
+	
+	memset(b1IsPlaying, TRUE, NO_CHANNELS);
 
 	REENABLE_INTERRUPTS();
-	asm("stp");
 }
 
 #pragma code-name (pop)

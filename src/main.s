@@ -97,4 +97,7 @@
     .export _b1Ch2Ticks
     .export _b1Ch3Ticks
     .export _b1Ch4Ticks
+    .export _b1SoundDataBank
     .export _b1IsPlaying
+    .export _b1SoundDataBank
+  

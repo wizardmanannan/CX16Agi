@@ -108,6 +108,7 @@ SPRITE_METADATA_BANK = $0E
 
 DIVISION_METADATA_BANK = $31
 RANDOM_BANK = $6
+SOUND_BANK = $1
 
 
 ; Define offsets for different areas within golden RAM
@@ -784,6 +785,8 @@ BCS_IMP = $B0
 
 ;System Variables
 EGODIR = 6
+
+PSG_REGISTERS = $1F9C0
 
 .segment "ZEROPAGE"
 sreg2: .res 2

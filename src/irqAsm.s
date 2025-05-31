@@ -236,8 +236,11 @@ sta @previousRamBank
 ; continue to default IRQ handler
 lda VERA_isr
 and #VSYNC_BIT
-bne @handleDisplayInputLine
+bne @callSoundHandler
 jmp @defaultIqr
+
+@callSoundHandler:
+jsr soundHandler
 
 @handleDisplayInputLine:
 lda #PARSER_BANK
