@@ -110,8 +110,8 @@ void b1PrecomputeValues(SoundFile* soundFile)
 	byte* buffer = GOLDEN_RAM_WORK_AREA;
 	byte** data = &buffer;
 	BufferStatus* bufferStatus;
-	unsigned int frequency, adjustedFrequency, bytePerBufferCounter = 0, duration, adjustedDuration;
-	unsigned long frequencyDivisor;
+	unsigned int tenBitDivider, bytePerBufferCounter = 0, duration, adjustedDuration;
+	unsigned long divider, adjustedFrequency;
 	boolean firstRun = TRUE;
 
 	unsigned int totalCounter = 8;
@@ -178,16 +178,28 @@ void b1PrecomputeValues(SoundFile* soundFile)
 				}
 				else if (noteByteCounter == FREQUENCY_BYTE)
 				{
-					*((byte*)&frequency) = readByte;
+					*((byte*)&tenBitDivider) = readByte;
 					//printf("the readByte is %p\n", readByte);
 
 					if (seenFFFFCounter != NOISE_CHANNEL)
 					{
-						*((byte*)&frequency + 1) = b1ReadAhead(soundFile, bytePerBufferCounter, bufferStatus);
-						*((byte*)&frequency) = GOLDEN_RAM_WORK_AREA[bytePerBufferCounter];
+						*((byte*)&tenBitDivider + 1) = b1ReadAhead(soundFile, bytePerBufferCounter, bufferStatus);
+						*((byte*)&tenBitDivider) = GOLDEN_RAM_WORK_AREA[bytePerBufferCounter];
 
-						frequencyDivisor = ((*((byte*)&frequency) & 0x3F) << 4) + (*((byte*)&frequency + 1) & 0x0F) & 0xFFFF;
-						adjustedFrequency = (FREQUENCY_NUMERATOR / frequencyDivisor) + 1;
+						//printf("the address of freq is %p\n", &frequency);
+					
+						divider = ((*((byte*)&tenBitDivider) & 0x3F) << 4) + (*((byte*)&tenBitDivider + 1) & 0x0F) & 0xFFFF;
+						
+						//printf("the divider is %lu\n", divider);
+						
+						adjustedFrequency = (FREQUENCY_NUMERATOR / divider) + 1;
+
+						//printf("adjusted is %lu\n", adjustedFrequency);
+
+						adjustedFrequency = (adjustedFrequency * 176026) / 65536;
+
+						//printf("the input is %u and the output is %lu \n", tenBitDivider, adjustedFrequency);
+
 						b1CopyAhead(soundFile, bytePerBufferCounter, bufferStatus, *((byte*)&adjustedFrequency + 1));
 					}
 					else
@@ -303,6 +315,9 @@ extern byte* ZP_CURRENTLY_PLAYING_NOTE_NOISE;
 #pragma zpsym("ZP_CURRENTLY_PLAYING_NOTE_NOISE")
 
 byte trap = TRUE;
+
+extern void b1PsgClear();
+
 void b1PlaySound(byte soundNum, byte endSoundFlag)
 {
 	byte testVal, i;
@@ -310,6 +325,9 @@ void b1PlaySound(byte soundNum, byte endSoundFlag)
 	byte** channelPointer;
 
 	asm("sei");
+
+	b1PsgClear();
+
 	flag[endSoundFlag] = FALSE;
 
 	ZP_CURRENTLY_PLAYING_NOTE_1 = b1LoadedSoundsPointer[soundNum]->ch1 - NO_NOTE_BYTES;

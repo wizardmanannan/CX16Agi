@@ -1,9 +1,20 @@
 .ifndef SOUND_INC
 SOUND_INC = 1
 
-NO_CHANNELS = 4
+.include "globalGraphics.s"
+.include "global.s"
+
+NO_AGI_CHANNELS = 4
 NO_NOTES = 5
 END_MARKER = $FFFF
+FREQUENCY_BYTE = 2
+VOLUME_BYTE = 4
+NO_SYSTEM_CHANNELS = 16
+NO_BYTES_PER_CHANNEL = 4
+
+
+DEFAULT_VOLUME = $C0 ;Volume of zero with left and right bits set
+WAVE_FORM_PULSE_WIDTH = $3F ;Default wave form and 50% duty
 
 .import _b1LoadedSoundsPointer
 
@@ -24,7 +35,7 @@ _b1ChannelsPlaying: .byte $0
 _b1EndSoundFlag: .byte $0
 
 _b1SoundDataBank: .byte $0
-_b1IsPlaying: .res NO_CHANNELS
+_b1IsPlaying: .res NO_AGI_CHANNELS
 
 .segment "CODE"
 
@@ -36,11 +47,12 @@ pha
 lda #$0
 sta @channelCounter
 
+SET_VERA_ADDRESS_IMMEDIATE PSG_REGISTERS, #$0, #1
+
 ldx #$0
 @channelLoop:
 lda #SOUND_BANK
 sta RAM_BANK
-
 txa
 lsr
 tay
@@ -63,15 +75,31 @@ beq @durationDeductHigh
 bra @incrementChannelCounter
 
 @playNote:
+lda _b1SoundDataBank
+sta RAM_BANK
 
+ldy #FREQUENCY_BYTE
+lda (SOUND_SREG),y
+sta VERA_data0
+ldy #FREQUENCY_BYTE + 1
+lda (SOUND_SREG),y
+sta VERA_data0
 
+; ldy #VOLUME_BYTE 
+; lda (SOUND_SREG),y
+;ora #DEFAULT_VOLUME
 
+lda #$DF
+sta VERA_data0
+
+lda #WAVE_FORM_PULSE_WIDTH
+sta VERA_data0
 @goToNextNote:
 
 @incrementChannelCounter:
 inx
 inx
-cpx #NO_CHANNELS * 2
+cpx #$2 ;#NO_AGI_CHANNELS * 2
 bne @channelLoop
 
 @end:
@@ -134,7 +162,16 @@ lda _b1EndSoundFlag
 SET_FLAG_NON_INTERPRETER SOUND_SREG
 
 @silenceChannel:
+lda #$0
+;Freq
+sta VERA_data0
+sta VERA_data0
 
+;Vol
+sta VERA_data0
+
+;WaveForm/Width
+sta VERA_data0
 
 bra @incrementChannelCounter
 
@@ -142,4 +179,14 @@ bra @incrementChannelCounter
 @noteByte: .byte $0
 @ticks: .word $0
 
+;void b1PsgClear()
+_b1PsgClear:
+SET_VERA_ADDRESS_IMMEDIATE PSG_REGISTERS, #$0, #1
+ldx #NO_SYSTEM_CHANNELS * NO_BYTES_PER_CHANNEL
+@clearLoop:
+stz VERA_data0
+@checkLoop:
+dex
+bne @clearLoop
+rts
 .endif
