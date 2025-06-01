@@ -102,4 +102,5 @@
     .export _b1SoundDataBank
     .export _b1ChannelsPlaying
     .export _b1EndSoundFlag
+    .export _b1PsgClear
   
