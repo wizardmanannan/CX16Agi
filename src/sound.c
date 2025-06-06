@@ -187,26 +187,9 @@ void b1PrecomputeValues(SoundFile* soundFile)
 											
 						divider = ((*((byte*)&tenBitDivider) & 0x3F) << 4) + (*((byte*)&tenBitDivider + 1) & 0x0F) & 0xFFFF;												
 						adjustedFrequency = (FREQUENCY_NUMERATOR / divider) + 1;
+						adjustedFrequency = (adjustedFrequency * 176026) / 65536;
 
-						if (adjustedFrequency < 7000)
-						{
-
-							//if (adjustedFrequency >= 4000)
-							//{
-							//	adjustedFrequency = adjustedFrequency / 4;
-							//}
-							//
-							//printf("adjusted %lu\n", adjustedFrequency);
-
-							adjustedFrequency = (adjustedFrequency * 176026) / 65536;
-						}
-						else
-						{
-
-							//printf("set to %lu\n", adjustedDuration);
-							adjustedFrequency = 0;
-						}
-
+						
 						b1CopyAhead(soundFile, bytePerBufferCounter, bufferStatus, *((byte*)&adjustedFrequency + 1));
 					}
 					else
