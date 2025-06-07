@@ -85,13 +85,19 @@ ldy #FREQUENCY_BYTE + 1
 lda (SOUND_SREG),y
 sta VERA_data0
 
-; ldy #VOLUME_BYTE 
-; lda (SOUND_SREG),y
-;ora #DEFAULT_VOLUME
+ldy #VOLUME_BYTE 
+lda (SOUND_SREG),y
+bne @nonZeroVolume
 
-lda #$DF
+@zeroVolume:
+stz VERA_data0
+bra @waveForm
+
+@nonZeroVolume:
+ora #DEFAULT_VOLUME
 sta VERA_data0
 
+@waveForm:
 lda #WAVE_FORM_PULSE_WIDTH
 sta VERA_data0
 @goToNextNote:
