@@ -186,7 +186,7 @@ void b1PrecomputeValues(SoundFile* soundFile)
 
 											
 						divider = ((*((byte*)&tenBitDivider) & 0x3F) << 4) + (*((byte*)&tenBitDivider + 1) & 0x0F) & 0xFFFF;												
-						adjustedFrequency = (FREQUENCY_NUMERATOR / divider) + 1;
+						adjustedFrequency = ((FREQUENCY_NUMERATOR / divider) + 1) / 2;
 						adjustedFrequency = (adjustedFrequency * 176026) / 65536;
 
 						
