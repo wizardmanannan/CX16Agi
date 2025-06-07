@@ -47,7 +47,7 @@ pha
 lda #$0
 sta @channelCounter
 
-SET_VERA_ADDRESS_IMMEDIATE PSG_REGISTERS, #$0, #1
+SET_VERA_ADDRESS_IMMEDIATE FIRST_PSG_VOL_REGISTER, #$0, #1
 
 ldx #$0
 @channelLoop:
@@ -68,15 +68,30 @@ lda _b1Ch1Ticks,x
 beq @zeroDurationNote
 
 @deductOne:
+lda VERA_data0
+lda VERA_data0
+lda VERA_data0
+lda VERA_data0
+
 dec _b1Ch1Ticks,x
 lda _b1Ch1Ticks,x
 cmp #$FF
-beq @durationDeductHigh
-bra @incrementChannelCounter
+bne @incrementChannelCounter
+jmp @durationDeductHigh
 
 @playNote:
 lda _b1SoundDataBank
 sta RAM_BANK
+
+lda VERA_addr_bank
+ora #$8
+sta VERA_addr_bank
+stz VERA_data0
+lda VERA_data0
+
+lda VERA_addr_bank
+and #$F7
+sta VERA_addr_bank
 
 ldy #FREQUENCY_BYTE
 lda (SOUND_SREG),y
@@ -101,11 +116,10 @@ sta VERA_data0
 lda #WAVE_FORM_PULSE_WIDTH
 sta VERA_data0
 @goToNextNote:
-
 @incrementChannelCounter:
 inx
 inx
-cpx #$2 ;#NO_AGI_CHANNELS * 2
+cpx #$6 ;#NO_AGI_CHANNELS * 2
 bne @channelLoop
 
 @end:
@@ -145,7 +159,7 @@ sta _b1Ch1Ticks,x
 lda @ticks + 1
 sta  _b1Ch1Ticks + 1,x
 
-bra @playNote
+jmp @playNote
 
 @durationDeductHigh:
 dec _b1Ch1Ticks + 1,x
