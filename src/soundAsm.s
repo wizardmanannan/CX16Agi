@@ -65,7 +65,8 @@ ldy #$1
 lda _b1Ch1Ticks + 1,x
 bne @deductOne
 lda _b1Ch1Ticks,x
-beq @zeroDurationNote
+bne @deductOne
+jmp @zeroDurationNote
 
 @deductOne:
 lda VERA_data0
@@ -83,6 +84,7 @@ jmp @durationDeductHigh
 lda _b1SoundDataBank
 sta RAM_BANK
 
+@store:
 lda VERA_addr_bank
 ora #$8
 sta VERA_addr_bank
@@ -115,16 +117,21 @@ sta VERA_data0
 @waveForm:
 lda #WAVE_FORM_PULSE_WIDTH
 sta VERA_data0
+
+lda VERA_data0
+lda VERA_data0
 @goToNextNote:
 @incrementChannelCounter:
 inx
 inx
-cpx #$6 ;#NO_AGI_CHANNELS * 2
-bne @channelLoop
+cpx #NO_AGI_CHANNELS * 2
+beq @end
+jmp @channelLoop
 
 @end:
 pla
 sta RAM_BANK
+
 rts
 @zeroDurationNote:
 lda _b1SoundDataBank
@@ -193,7 +200,7 @@ sta VERA_data0
 ;WaveForm/Width
 sta VERA_data0
 
-bra @incrementChannelCounter
+jmp @incrementChannelCounter
 
 @channelCounter: .byte $0
 @noteByte: .byte $0
