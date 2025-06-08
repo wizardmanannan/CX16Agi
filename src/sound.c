@@ -304,8 +304,6 @@ extern byte* ZP_CURRENTLY_PLAYING_NOTE_3;
 extern byte* ZP_CURRENTLY_PLAYING_NOTE_NOISE;
 #pragma zpsym("ZP_CURRENTLY_PLAYING_NOTE_NOISE")
 
-byte trap = TRUE;
-
 extern void b1PsgClear();
 
 void b1PlaySound(byte soundNum, byte endSoundFlag)
@@ -313,8 +311,13 @@ void b1PlaySound(byte soundNum, byte endSoundFlag)
 	byte testVal, i;
 	unsigned int* ticksPointer; 
 	byte** channelPointer;
-
+	
 	asm("sei");
+
+	b1Ch1Ticks = 0;
+	b1Ch2Ticks = 0;
+	b1Ch3Ticks = 0;
+	b1Ch4Ticks = 0;
 
 	b1PsgClear();
 
