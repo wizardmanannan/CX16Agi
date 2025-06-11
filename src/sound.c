@@ -32,6 +32,8 @@ void b1ClearLoadedSound(byte soundFileNumber)
 	b1LoadedSounds[soundFileNumber].soundResource = NULL;
 }
 
+#define VIA2_t1_cl 0x9F14
+#define SOUND_COUNT_DOWN 0x3902
 void b1InitSound() {
 	int i;
 	for (i = 0; i < MAX_LOADED_SOUNDS; i++)
@@ -43,6 +45,8 @@ void b1InitSound() {
 	{
 		b1LoadedSoundsPointer[i] = NULL;
 	}
+
+	*((unsigned int*)VIA2_t1_cl) = SOUND_COUNT_DOWN;
 }
 
 void b1DiscardSoundFile(int soundNum)
@@ -306,6 +310,10 @@ extern byte* ZP_CURRENTLY_PLAYING_NOTE_NOISE;
 
 extern void b1PsgClear();
 
+#define VIA2_t1_ier 0x9F1E
+#define VIA2_t1_interupt_enabled 0x40
+#define VIA2_t1_interupt_disabled 0b10111111 //Everything else enabled, so and it with VIA2_t1_ier to turn off the sound timer and leave everything else 
+
 void b1PlaySound(byte soundNum, byte endSoundFlag)
 {
 	byte testVal, i;
@@ -313,6 +321,10 @@ void b1PlaySound(byte soundNum, byte endSoundFlag)
 	byte** channelPointer;
 	
 	asm("sei");
+	asm("lda %w", VIA2_t1_ier);
+	asm("ora #%w", VIA2_t1_interupt_enabled);
+	asm("sta %w", VIA2_t1_ier);
+	
 
 	b1Ch1Ticks = 0;
 	b1Ch2Ticks = 0;
