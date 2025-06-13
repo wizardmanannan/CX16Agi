@@ -122,7 +122,7 @@ void b6NewRoom()
     flag[2] = 0;
     flag[5] = 1;
     score = var[3];
-
+    b1StopSound();
     memsetBanked(b7Directions, 0, 9, STRING_BANK);
     /* rectfill(screen, 0, 20+(22*16), 639, 463, 0); */   /* Clear screen */
     b6SetAndWaitForIrqState(CLEAR);

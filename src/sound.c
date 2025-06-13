@@ -319,7 +319,6 @@ void b1PlaySound(byte soundNum, byte endSoundFlag)
 	b1Ch3Ticks = 0;
 	b1Ch4Ticks = 0;
 
-	b1PsgClear();
 
 	flag[endSoundFlag] = FALSE;
 
@@ -336,6 +335,14 @@ void b1PlaySound(byte soundNum, byte endSoundFlag)
 	//printf("you are playing %d the end sound flag is %x. the address is %p\n", soundNum, endSoundFlag, &flag[endSoundFlag]);
 
 
+	REENABLE_INTERRUPTS();
+}
+
+void b1StopSound()
+{
+	asm("sei");
+	b1PsgClear();
+	memset(b1IsPlaying, FALSE, NO_CHANNELS);
 	REENABLE_INTERRUPTS();
 }
 

@@ -23,6 +23,7 @@ void b1DiscardSoundFile(int soundNum);
 void b1InitSound();
 void b1LoadSoundFile(int soundNum);
 void b1PlaySound(byte soundNum, byte endSoundFlag);
+void b1StopSound();
 #pragma wrapped-call (pop)
 
 extern SoundFile b1LoadedSounds[];
