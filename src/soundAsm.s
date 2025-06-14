@@ -37,38 +37,30 @@ _b1EndSoundFlag: .byte $0
 _b1SoundDataBank: .byte $0
 _b1IsPlaying: .res NO_AGI_CHANNELS
 
-.segment "CODE"
-
-soundHandler:
-lda RAM_BANK
-pha
-
-@start:
-lda #$0
-sta @channelCounter
-
+.segment "BANKRAM01"
+b1SoundHandler:
+.scope
+start:
 SET_VERA_ADDRESS_IMMEDIATE FIRST_PSG_VOL_REGISTER, #$0, #1
 
 ldx #$0
-@channelLoop:
-lda #SOUND_BANK
-sta RAM_BANK
+channelLoop:
 txa
 lsr
 tay
 lda _b1IsPlaying,y
 
-bne @checkNoteLength
-jmp @silenceChannel
-@checkNoteLength:
+bne checkNoteLength
+jmp silenceChannel
+checkNoteLength:
 ldy #$1
 lda _b1Ch1Ticks + 1,x
-bne @deductOne
+bne deductOne
 lda _b1Ch1Ticks,x
-bne @deductOne
-jmp @zeroDurationNote
+bne deductOne
+jmp zeroDurationNote
 
-@deductOne:
+deductOne:
 lda VERA_data0
 lda VERA_data0
 lda VERA_data0
@@ -77,14 +69,11 @@ lda VERA_data0
 dec _b1Ch1Ticks,x
 lda _b1Ch1Ticks,x
 cmp #$FF
-bne @incrementChannelCounter
-jmp @durationDeductHigh
+bne incrementChannelCounter
+jmp durationDeductHigh
 
-@playNote:
-lda _b1SoundDataBank
-sta RAM_BANK
-
-@store:
+playNote:
+store:
 lda VERA_addr_bank
 ora #$8
 sta VERA_addr_bank
@@ -95,87 +84,67 @@ lda VERA_addr_bank
 and #$F7
 sta VERA_addr_bank
 
-ldy #FREQUENCY_BYTE
-lda (SOUND_SREG),y
-sta VERA_data0
-ldy #FREQUENCY_BYTE + 1
-lda (SOUND_SREG),y
-sta VERA_data0
+jmp readSound
 
-ldy #VOLUME_BYTE 
-lda (SOUND_SREG),y
-bne @nonZeroVolume
-
-@zeroVolume:
+zeroVolume:
 stz VERA_data0
-bra @waveForm
+bra waveForm
 
-@nonZeroVolume:
+nonZeroVolume:
 ora #DEFAULT_VOLUME
 sta VERA_data0
 
-@waveForm:
+waveForm:
 lda #WAVE_FORM_PULSE_WIDTH
 sta VERA_data0
 
 lda VERA_data0
 lda VERA_data0
-@goToNextNote:
-@incrementChannelCounter:
+goToNextNote:
+incrementChannelCounter:
 inx
 inx
 cpx #NO_AGI_CHANNELS * 2
-beq @end
-jmp @channelLoop
+beq end
+jmp channelLoop
 
-@end:
-pla
-sta RAM_BANK
-
+end:
 rts
-@zeroDurationNote:
-lda _b1SoundDataBank
-sta RAM_BANK
-
+zeroDurationNote:
 clc 
 lda #NO_NOTES
 adc _ZP_CURRENTLY_PLAYING_NOTE_1,x
 sta _ZP_CURRENTLY_PLAYING_NOTE_1,x
-bcc @loadNote
-@highByte:
+bcc loadNote
+highByte:
 inc _ZP_CURRENTLY_PLAYING_NOTE_1 + 1,x
 
-@loadNote:
+loadNote:
 lda _ZP_CURRENTLY_PLAYING_NOTE_1,x
 sta SOUND_SREG
 lda _ZP_CURRENTLY_PLAYING_NOTE_1 + 1,x
 sta SOUND_SREG + 1
-lda (SOUND_SREG)
-sta @ticks
-ldy #$1
-lda (SOUND_SREG),y
-sta  @ticks + 1
-and  @ticks
-cmp #$FF
-beq @disableChannel
 
-lda #SOUND_BANK
-sta RAM_BANK
-lda @ticks
+jmp getTicksJump
+
+storeTicks:
+sta  ticks + 1
+and  ticks
+cmp #$FF
+beq disableChannel
+
+lda ticks
 sta _b1Ch1Ticks,x
-lda @ticks + 1
+lda ticks + 1
 sta  _b1Ch1Ticks + 1,x
 
-jmp @playNote
+jmp playNote
 
-@durationDeductHigh:
+durationDeductHigh:
 dec _b1Ch1Ticks + 1,x
-bra @incrementChannelCounter
+bra incrementChannelCounter
 
-@disableChannel:
-lda #SOUND_BANK
-sta RAM_BANK
-
+disableChannel:
 txa
 lsr
 tay
@@ -183,12 +152,12 @@ lda #$0
 sta _b1IsPlaying,y
 
 dec _b1ChannelsPlaying
-bne @silenceChannel
+bne silenceChannel
 
 lda _b1EndSoundFlag
 SET_FLAG_NON_INTERPRETER SOUND_SREG
 
-@silenceChannel:
+silenceChannel:
 lda #$0
 ;Freq
 sta VERA_data0
@@ -200,12 +169,49 @@ sta VERA_data0
 ;WaveForm/Width
 sta VERA_data0
 
-jmp @incrementChannelCounter
+jmp incrementChannelCounter
 
-@channelCounter: .byte $0
-@noteByte: .byte $0
-@ticks: .word $0
+.segment "CODE"
+ticks: .word $0
 
+readSound:
+lda _b1SoundDataBank
+sta RAM_BANK
+ldy #FREQUENCY_BYTE
+lda (SOUND_SREG),y
+sta VERA_data0
+ldy #FREQUENCY_BYTE + 1
+lda (SOUND_SREG),y
+sta VERA_data0
+
+ldy #VOLUME_BYTE 
+lda (SOUND_SREG),y
+
+ldy #SOUND_BANK
+sty RAM_BANK
+
+cmp #$0
+beq @zeroVolumeJump
+jmp nonZeroVolume
+@zeroVolumeJump:
+jmp zeroVolume
+
+getTicksJump:
+lda _b1SoundDataBank
+sta RAM_BANK
+
+lda (SOUND_SREG)
+sta ticks
+ldy #$1
+lda (SOUND_SREG),y
+
+ldy #SOUND_BANK
+sty RAM_BANK
+jmp storeTicks
+
+.endscope
+
+.segment "BANKRAM01"
 ;void b1PsgClear()
 _b1PsgClear:
 SET_VERA_ADDRESS_IMMEDIATE PSG_REGISTERS, #$0, #1

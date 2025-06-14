@@ -240,7 +240,9 @@ bne @callSoundHandler
 jmp @defaultIqr
 
 @callSoundHandler:
-jsr soundHandler
+lda #SOUND_BANK
+sta RAM_BANK
+jsr b1SoundHandler
 
 @handleDisplayInputLine:
 lda #PARSER_BANK
