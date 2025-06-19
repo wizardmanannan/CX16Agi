@@ -11,10 +11,12 @@ FREQUENCY_BYTE = 2
 VOLUME_BYTE = 4
 NO_SYSTEM_CHANNELS = 16
 NO_BYTES_PER_CHANNEL = 4
-
+NOISE_CHANNEL = 3
 
 DEFAULT_VOLUME = $C0 ;Volume of zero with left and right bits set
 WAVE_FORM_PULSE_WIDTH = $3F ;Default wave form and 50% duty
+NOISE_WAVE = $C0
+SAW_TOOTH = $40
 
 .import _b1LoadedSoundsPointer
 
@@ -37,6 +39,8 @@ _b1EndSoundFlag: .byte $0
 _b1SoundDataBank: .byte $0
 _b1IsPlaying: .res NO_AGI_CHANNELS
 
+LATCH_TO_CH2 = $0
+
 .segment "BANKRAM01"
 b1SoundHandler:
 .scope
@@ -49,7 +53,6 @@ txa
 lsr
 tay
 lda _b1IsPlaying,y
-
 bne checkNoteLength
 jmp silenceChannel
 checkNoteLength:
@@ -95,12 +98,22 @@ ora #DEFAULT_VOLUME
 sta VERA_data0
 
 waveForm:
+cpx #NOISE_CHANNEL * 2
+bcc sawTooth
+
+noiseWave:
+lda #SAW_TOOTH
+sta VERA_data0
+bra goToNextNote
+
+sawTooth:
 lda #WAVE_FORM_PULSE_WIDTH
 sta VERA_data0
 
-lda VERA_data0
-lda VERA_data0
 goToNextNote:
+lda VERA_data0
+lda VERA_data0
+
 incrementChannelCounter:
 inx
 inx
@@ -171,19 +184,55 @@ sta VERA_data0
 
 jmp incrementChannelCounter
 
+b1CopyChannel2:
+sec
+lda VERA_addr_low
+sbc #NO_BYTES_PER_CHANNEL
+tay
+lda VERA_addr_high
+sbc #$0
+inc VERA_ctrl
+sty VERA_addr_low
+sta VERA_addr_high
+lda #$11
+sta VERA_addr_bank
+
+lda VERA_data1
+sta VERA_data0
+lda VERA_data1
+sta VERA_data0
+
+dec VERA_ctrl
+
+jmp returnCopyChannel    
+
 .segment "CODE"
 ticks: .word $0
-
 readSound:
 lda _b1SoundDataBank
 sta RAM_BANK
+
 ldy #FREQUENCY_BYTE
 lda (SOUND_SREG),y
+bne playFrequency
+cpx #NOISE_CHANNEL * 2
+bcc playFrequency
+
+lda #SOUND_BANK
+sta RAM_BANK
+jmp b1CopyChannel2
+returnCopyChannel:
+lda _b1SoundDataBank 
+sta RAM_BANK
+bra setVolume
+
+playFrequency:
 sta VERA_data0
 ldy #FREQUENCY_BYTE + 1
 lda (SOUND_SREG),y
 sta VERA_data0
 
+setVolume:
 ldy #VOLUME_BYTE 
 lda (SOUND_SREG),y
 

@@ -18,6 +18,9 @@ SoundFile* b1LoadedSoundsPointer[MAX_SOUNDS];
 byte soundLoadCounter;
 const uint8_t volumes[] = { 63, 47, 31, 15, 0, 0, 0, 0 };
 const uint16_t noise_freq[] = { 2230, 1115, 557 };
+
+#define LATCH_TO_CH2 0x0
+
 #pragma bss-name (pop)
 
 #pragma code-name (push, "BANKRAM01")
@@ -99,6 +102,8 @@ unsigned int b1CopyAhead(SoundFile* soundFile, unsigned int bytePerBufferCounter
 		//printf("tocopy is %x\n", toCopy);
 	}
 }
+
+#define FREQ_TO_CX_16(freq) freq = (freq * 176026) / 65536;
 
 void b1PrecomputeValues(SoundFile* soundFile)
 {
@@ -187,14 +192,22 @@ void b1PrecomputeValues(SoundFile* soundFile)
 											
 						divider = ((*((byte*)&tenBitDivider) & 0x3F) << 4) + (*((byte*)&tenBitDivider + 1) & 0x0F) & 0xFFFF;												
 						adjustedFrequency = ((FREQUENCY_NUMERATOR / divider) + 1) / 2;
-						adjustedFrequency = (adjustedFrequency * 176026) / 65536;
-
-						
+						FREQ_TO_CX_16(adjustedFrequency);
+												
 						b1CopyAhead(soundFile, bytePerBufferCounter, bufferStatus, *((byte*)&adjustedFrequency + 1));
 					}
 					else
 					{
-						adjustedFrequency =	noise_freq[GOLDEN_RAM_WORK_AREA[bytePerBufferCounter] & 0x03];
+						readByte = GOLDEN_RAM_WORK_AREA[bytePerBufferCounter] & 0xF;
+
+						if (readByte)
+						{
+							adjustedFrequency = noise_freq[readByte & 0x03];
+						}
+						else
+						{
+							adjustedFrequency = LATCH_TO_CH2;
+						}
 					}
 
 					//printf("bbc %d\n", bytePerBufferCounter);
@@ -209,6 +222,8 @@ void b1PrecomputeValues(SoundFile* soundFile)
 					{
 						//printf("the volume is %p\n", GOLDEN_RAM_WORK_AREA[bytePerBufferCounter]);
 						GOLDEN_RAM_WORK_AREA[bytePerBufferCounter] = volumes[(GOLDEN_RAM_WORK_AREA[bytePerBufferCounter] & 0x0F) >> 1];
+						
+												
 						//printf("the volume result is %p\n", GOLDEN_RAM_WORK_AREA[bytePerBufferCounter]);
 					}
 					else
