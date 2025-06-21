@@ -24,8 +24,7 @@ void b5WaitOnKey()
 }
 
 
-
-void b5RefreshBuffer(BufferStatus* bufferStatus)
+void b5RefreshBufferNonGolden(BufferStatus* bufferStatus, byte* buffer, int bufferSize)
 {
 	BufferStatus localBufferStatus;
 	localBufferStatus = *bufferStatus;
@@ -34,7 +33,12 @@ void b5RefreshBuffer(BufferStatus* bufferStatus)
 
 
 	//printf("the buffer counter is %d %p and the bank is %d\n", bufferStatus->bufferCounter, localBufferStatus.bankedData + localBufferStatus.bufferCounter * LOCAL_WORK_AREA_SIZE, localBufferStatus.bank);
-	memCpyBanked(GOLDEN_RAM_WORK_AREA, localBufferStatus.bankedData + localBufferStatus.bufferCounter * LOCAL_WORK_AREA_SIZE, localBufferStatus.bank, LOCAL_WORK_AREA_SIZE); //If it overflows the bank it isn't a big deal, the picture data is terminated by 0xFF so the rubbish data following will never be executed.
+	memCpyBanked(buffer, localBufferStatus.bankedData + localBufferStatus.bufferCounter * bufferSize, localBufferStatus.bank, bufferSize); //If it overflows the bank it isn't a big deal, the picture data is terminated by 0xFF so the rubbish data following will never be executed.
+}
+
+void b5RefreshBuffer(BufferStatus* bufferStatus)
+{
+	b5RefreshBufferNonGolden(bufferStatus, GOLDEN_RAM_WORK_AREA, LOCAL_WORK_AREA_SIZE);
 }
 
 byte convertAsciiByteToPetsciiByte(byte toConvert)

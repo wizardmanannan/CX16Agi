@@ -59,6 +59,7 @@ extern void trampoline();
 void b5RefreshBuffer(BufferStatus* bufferStatus);
 void b5WaitOnKey();
 void b5WaitOnSpecificKeys(byte* keys, byte length);
+void b5RefreshBufferNonGolden(BufferStatus* bufferStatus, byte* buffer, int bufferSize);
 #pragma wrapped-call (pop)
 extern void trampolineDebug(void (*trampolineDebug)()); //Only to be called when debugging is enabled (b5IsDebuggingEnabled), otherwise a crash is likely.
 
