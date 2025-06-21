@@ -17,7 +17,6 @@ SoundFile b1LoadedSounds[MAX_LOADED_SOUNDS];
 SoundFile* b1LoadedSoundsPointer[MAX_SOUNDS];
 byte soundLoadCounter;
 const uint8_t volumes[] = { 63, 47, 31, 15, 0, 0, 0, 0 };
-const uint16_t noise_freq[] = { 2230, 1115, 557 };
 
 #define LATCH_TO_CH2 0x0
 
@@ -196,19 +195,7 @@ void b1PrecomputeValues(SoundFile* soundFile)
 												
 						b1CopyAhead(soundFile, bytePerBufferCounter, bufferStatus, *((byte*)&adjustedFrequency + 1));
 					}
-					else
-					{
-						readByte = GOLDEN_RAM_WORK_AREA[bytePerBufferCounter] & 0xF;
-
-						if (readByte)
-						{
-							adjustedFrequency = noise_freq[readByte & 0x03];
-						}
-						else
-						{
-							adjustedFrequency = LATCH_TO_CH2;
-						}
-					}
+				
 
 					//printf("bbc %d\n", bytePerBufferCounter);
 					//printf("the frequency is %p and adjusted is %p for divisor %lu\n", frequency, adjustedFrequency, frequencyDivisor);

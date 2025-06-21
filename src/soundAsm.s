@@ -35,11 +35,19 @@ _b1Ch3Ticks: .word $0
 _b1Ch4Ticks: .word $0
 _b1ChannelsPlaying: .byte $0
 _b1EndSoundFlag: .byte $0
-
 _b1SoundDataBank: .byte $0
 _b1IsPlaying: .res NO_AGI_CHANNELS
-
 LATCH_TO_CH2 = $0
+
+;  b1NoiseFreq: 
+;  .word 5989
+;  .word 2994
+;  .word 1496
+
+b1NoiseFreq:
+    .word 1604     ; ~2230 Hz
+    .word 3209     ; ~1115 Hz
+    .word 6423     ; ~557 Hz
 
 .segment "BANKRAM01"
 b1SoundHandler:
@@ -99,14 +107,17 @@ sta VERA_data0
 
 waveForm:
 cpx #NOISE_CHANNEL * 2
-bcc sawTooth
+bcc squareWave
+
+lda isWhiteNoise
+beq squareWave
 
 noiseWave:
-lda #SAW_TOOTH
+lda #NOISE_WAVE
 sta VERA_data0
 bra goToNextNote
 
-sawTooth:
+squareWave:
 lda #WAVE_FORM_PULSE_WIDTH
 sta VERA_data0
 
@@ -184,6 +195,17 @@ sta VERA_data0
 
 jmp incrementChannelCounter
 
+b1PlayNoise:
+tay
+and #$4
+lsr
+lsr
+sta isWhiteNoise
+tya
+and #$3
+cmp #$3
+bne b1PlayPredefinedNoise
+
 b1CopyChannel2:
 sec
 lda VERA_addr_low
@@ -206,27 +228,43 @@ dec VERA_ctrl
 
 jmp returnCopyChannel    
 
+b1PlayPredefinedNoise:
+asl
+tay
+lda b1NoiseFreq,y
+sta VERA_data0
+iny
+lda b1NoiseFreq,y
+sta VERA_data0
+
+jmp returnCopyChannel 
+isWhiteNoise: .byte $0
+
 .segment "CODE"
 ticks: .word $0
 readSound:
 lda _b1SoundDataBank
 sta RAM_BANK
 
-ldy #FREQUENCY_BYTE
-lda (SOUND_SREG),y
-bne playFrequency
 cpx #NOISE_CHANNEL * 2
 bcc playFrequency
 
-lda #SOUND_BANK
-sta RAM_BANK
-jmp b1CopyChannel2
+ldy #FREQUENCY_BYTE + 1
+lda (SOUND_SREG),y
+
+ldy #SOUND_BANK
+sty RAM_BANK
+
+jmp b1PlayNoise
+
 returnCopyChannel:
 lda _b1SoundDataBank 
 sta RAM_BANK
 bra setVolume
 
 playFrequency:
+ldy #FREQUENCY_BYTE
+lda (SOUND_SREG),y
 sta VERA_data0
 ldy #FREQUENCY_BYTE + 1
 lda (SOUND_SREG),y
