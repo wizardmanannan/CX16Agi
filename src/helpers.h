@@ -131,6 +131,34 @@ extern byte _previousRomBank;
 		\
     } while(0);
 
+#define GET_NEXT_NG(storeLocation, buffer, data, bufferStatus)  \
+    do {                              \
+        if(*data >= buffer + bufferSize) \
+		{ \
+			b5RefreshBuffer(bufferStatus); \
+            *data = buffer; \
+		} \
+		 storeLocation = *((*data)++); \
+		\
+    } while(0);
+
+#define WRITE_NEXT_NG(storeLocation, buffer, dataPtr, toWrite, bufferStatus, allocatedBlockSize, bank)  \
+    do {                              \
+        if(*dataPtr >= buffer + bufferSize) \
+		{ \
+			b5FlushBufferNonGolden(bufferStatus); \
+            *dataPtr = buffer; \
+		} \
+        if(dataPtr >= *allocatedBlockSize) \
+        { \
+            b5ReallocateBiggerMemoryBlock(dataPtr, )\
+        } \
+		 *((*dataPtr)++) = toWrite; \
+        \
+		\
+    } while(0);
+
+
 
 #define READ_STACK_FROM_ASSM(byteVar) \
      do {                                           \

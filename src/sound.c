@@ -16,6 +16,7 @@ extern int soundEndFlag;
 SoundFile b1LoadedSounds[MAX_LOADED_SOUNDS];
 SoundFile* b1LoadedSoundsPointer[MAX_SOUNDS];
 byte soundLoadCounter;
+byte totalSoundSize;
 const uint8_t volumes[] = { 63, 47, 31, 15, 0, 0, 0, 0 };
 
 #define LATCH_TO_CH2 0x0
@@ -26,9 +27,9 @@ const uint8_t volumes[] = { 63, 47, 31, 15, 0, 0, 0, 0 };
 
 void b1ClearLoadedSound(byte soundFileNumber)
 {
+	b1LoadedSounds[soundFileNumber].ch0 = NULL;
 	b1LoadedSounds[soundFileNumber].ch1 = NULL;
 	b1LoadedSounds[soundFileNumber].ch2 = NULL;
-	b1LoadedSounds[soundFileNumber].ch3 = NULL;
 	b1LoadedSounds[soundFileNumber].chNoise = NULL;
 	b1LoadedSounds[soundFileNumber].soundBank = 0;
 	b1LoadedSounds[soundFileNumber].soundResource = NULL;
@@ -123,7 +124,7 @@ void b1PrecomputeValues(SoundFile* soundFile)
 	bufferStatus = &localBufferStatus;
 
 	localBufferStatus.bank = soundFile->soundBank;
-	localBufferStatus.bankedData = soundFile->ch1;
+	localBufferStatus.bankedData = soundFile->ch0;
 	localBufferStatus.bufferCounter = 0;
 
 	b5RefreshBuffer(&localBufferStatus);
@@ -257,12 +258,59 @@ void b1PrecomputeValues(SoundFile* soundFile)
 	//printf("the bank is %p and data %p\n", soundFile->soundBank, soundFile->ch1, bytePerBufferCounter);
 }
 
+void b1SetChannelOffsets(byte* codePtr, SoundFile* soundFile, unsigned int* soundChannelOffSets)
+{
+	byte i,	**currentChannel;
+
+	for (i = 0, currentChannel = &soundFile->ch0; i < NO_CHANNELS; i++, currentChannel++)
+	{
+		*currentChannel = codePtr + soundChannelOffSets[i];
+	}
+}
+
+//We minus 2 to take us to the nearest factor of 3
+#define ONETHIRDBUFFERSIZE (LOCAL_WORK_AREA_SIZE - 2) / 3 
+
+
+void b1PreComputePeriodicSound(SoundFile* soundFile, unsigned int* soundChannelOffSets)
+{
+	BufferStatus ch2LocalBufferStatus, chNoiseLocalBufferStatus;
+	byte* oldCh2Buffer = GOLDEN_RAM_WORK_AREA, *oldChNoiseBuffer = GOLDEN_RAM_WORK_AREA + ONETHIRDBUFFERSIZE, *newChNoiseBuffer = oldChNoiseBuffer + ONETHIRDBUFFERSIZE;
+	byte newSoundResourceBank, ffsSeen = 0;
+	byte** ch2Data = &oldCh2Buffer, **chNoiseDataPtr = &oldChNoiseBuffer;
+	BufferStatus* ch2BufferStatus;
+	SoundFile newSoundFile;
+
+	ch2BufferStatus = &ch2LocalBufferStatus;
+
+	ch2LocalBufferStatus.bank = soundFile->soundBank;
+	ch2LocalBufferStatus.bankedData = soundFile->ch0;
+	ch2LocalBufferStatus.bufferCounter = 0;
+
+	ch2LocalBufferStatus.bank = soundFile->soundBank;
+	ch2LocalBufferStatus.bankedData = soundFile->ch1;
+	ch2LocalBufferStatus.bufferCounter = 0;
+
+	b5RefreshBufferNonGolden(&ch2LocalBufferStatus, oldCh2Buffer, ONETHIRDBUFFERSIZE);
+	b5RefreshBufferNonGolden(&chNoiseLocalBufferStatus, oldChNoiseBuffer, ONETHIRDBUFFERSIZE);
+
+	newSoundFile.soundResource = b10BankedAlloc(totalSoundSize + totalSoundSize / 2, &newSoundResourceBank);
+
+	memCpyBankedBetween(newSoundFile.soundResource, newSoundResourceBank, soundFile->soundResource, soundFile->soundBank, soundFile->chNoise - soundFile->soundResource);
+
+	b1SetChannelOffsets(newSoundFile.soundResource, &newSoundFile, soundChannelOffSets);
+
+	//printf("the bank is %p and data %p\n", soundFile->soundBank, soundFile->ch1);
+
+	
+}
+
+
 void b1LoadSoundFile(int soundNum) {
 
 	AGIFile tempAGI;
 	AGIFilePosType agiFilePosType;
 	byte i;
-	byte** currentChannel;
 	unsigned int soundChannelOffSets[NO_CHANNELS];
 
 	getLogicDirectory(&agiFilePosType, &snddir[soundNum]);
@@ -274,10 +322,8 @@ void b1LoadSoundFile(int soundNum) {
 
 	memCpyBanked((byte*)soundChannelOffSets, tempAGI.code, tempAGI.codeBank, NO_CHANNELS * 2);
 
-	for (i = 0, currentChannel = &b1LoadedSounds[soundLoadCounter].ch1; i < NO_CHANNELS; i++, currentChannel++)
-	{
-		*currentChannel = tempAGI.code + soundChannelOffSets[i];
-	}
+	b1SetChannelOffsets(tempAGI.code, &b1LoadedSounds[soundLoadCounter], soundChannelOffSets);
+
 
 	//printf("sound num is %d\n", soundNum);
 	b1PrecomputeValues(&b1LoadedSounds[soundLoadCounter]);
@@ -286,6 +332,8 @@ void b1LoadSoundFile(int soundNum) {
 	{
 		soundLoadCounter++;
 	}
+
+	tempAGI.codeSize;
 }
 
 extern unsigned int b1Ch1Ticks;
@@ -324,9 +372,9 @@ void b1PlaySound(byte soundNum, byte endSoundFlag)
 
 	flag[endSoundFlag] = FALSE;
 
-	ZP_CURRENTLY_PLAYING_NOTE_1 = b1LoadedSoundsPointer[soundNum]->ch1 - NO_NOTE_BYTES;
-	ZP_CURRENTLY_PLAYING_NOTE_2 = b1LoadedSoundsPointer[soundNum]->ch2 - NO_NOTE_BYTES;
-	ZP_CURRENTLY_PLAYING_NOTE_3 = b1LoadedSoundsPointer[soundNum]->ch3 - NO_NOTE_BYTES;
+	ZP_CURRENTLY_PLAYING_NOTE_1 = b1LoadedSoundsPointer[soundNum]->ch0 - NO_NOTE_BYTES;
+	ZP_CURRENTLY_PLAYING_NOTE_2 = b1LoadedSoundsPointer[soundNum]->ch1 - NO_NOTE_BYTES;
+	ZP_CURRENTLY_PLAYING_NOTE_3 = b1LoadedSoundsPointer[soundNum]->ch2 - NO_NOTE_BYTES;
 	ZP_CURRENTLY_PLAYING_NOTE_NOISE = b1LoadedSoundsPointer[soundNum]->chNoise - NO_NOTE_BYTES;
 
 	b1SoundDataBank = b1LoadedSoundsPointer[soundNum]->soundBank;

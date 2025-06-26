@@ -36,6 +36,29 @@ void b5RefreshBufferNonGolden(BufferStatus* bufferStatus, byte* buffer, int buff
 	memCpyBanked(buffer, localBufferStatus.bankedData + localBufferStatus.bufferCounter * bufferSize, localBufferStatus.bank, bufferSize); //If it overflows the bank it isn't a big deal, the picture data is terminated by 0xFF so the rubbish data following will never be executed.
 }
 
+byte* b5ReallocateBiggerMemoryBlock(byte** memoryBlock, unsigned int newBufferSize, unsigned int oldBufferSize, byte* bank)
+{
+	byte oldBank, *oldMemoryBlock;
+
+	oldMemoryBlock = *memoryBlock;
+	oldBank = *bank;
+	*memoryBlock = b10BankedAlloc(newBufferSize, bank);
+	memCpyBankedBetween(*memoryBlock, *bank, oldMemoryBlock, oldBank, oldBufferSize);
+	b10BankedDealloc(oldMemoryBlock, oldBank);
+}
+
+void b5FlushBufferNonGolden(BufferStatus* bufferStatus, byte* buffer, int bufferSize, int amountToCopy)
+{
+	BufferStatus localBufferStatus;
+	localBufferStatus = *bufferStatus;
+
+	bufferStatus->bufferCounter++;
+
+
+	//printf("the buffer counter is %d %p and the bank is %d\n", bufferStatus->bufferCounter, localBufferStatus.bankedData + localBufferStatus.bufferCounter * LOCAL_WORK_AREA_SIZE, localBufferStatus.bank);
+	memCpyBanked(localBufferStatus.bankedData + localBufferStatus.bufferCounter * bufferSize, buffer, localBufferStatus.bank, bufferSize); //If it overflows the bank it isn't a big deal, the picture data is terminated by 0xFF so the rubbish data following will never be executed.
+}
+
 void b5RefreshBuffer(BufferStatus* bufferStatus)
 {
 	b5RefreshBufferNonGolden(bufferStatus, GOLDEN_RAM_WORK_AREA, LOCAL_WORK_AREA_SIZE);

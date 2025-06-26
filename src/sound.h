@@ -10,12 +10,12 @@
 #define MAX_LOADED_SOUNDS 15
 
 typedef struct {
+	byte* ch0;
 	byte* ch1;
 	byte* ch2;
-	byte* ch3;
 	byte* chNoise;
 	byte soundBank;
-	byte* soundResource;
+	byte* soundResource; 
 } SoundFile;
 
 #pragma wrapped-call (push, trampoline, SOUND_BANK)
