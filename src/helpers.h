@@ -131,7 +131,7 @@ extern byte _previousRomBank;
 		\
     } while(0);
 
-#define GET_NEXT_NG(storeLocation, buffer, data, bufferStatus)  \
+#define GET_NEXT_NG(storeLocation, buffer, data, bufferStatus, bufferSize)  \
     do {                              \
         if(*data >= buffer + bufferSize) \
 		{ \
