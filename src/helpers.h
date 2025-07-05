@@ -60,6 +60,8 @@ void b5RefreshBuffer(BufferStatus* bufferStatus);
 void b5WaitOnKey();
 void b5WaitOnSpecificKeys(byte* keys, byte length);
 void b5RefreshBufferNonGolden(BufferStatus* bufferStatus, byte* buffer, int bufferSize);
+void b5FlushBufferNonGolden(BufferStatus* bufferStatus, byte* buffer, int bufferSize, int amountToCopy);
+byte* b5ReallocateBiggerMemoryBlock(byte** memoryBlock, unsigned int newBufferSize, unsigned int* oldBufferSize, byte* bank);
 #pragma wrapped-call (pop)
 extern void trampolineDebug(void (*trampolineDebug)()); //Only to be called when debugging is enabled (b5IsDebuggingEnabled), otherwise a crash is likely.
 
@@ -139,19 +141,18 @@ extern byte _previousRomBank;
             *data = buffer; \
 		} \
 		 storeLocation = *((*data)++); \
-		\
     } while(0);
 
-#define WRITE_NEXT_NG(storeLocation, buffer, dataPtr, toWrite, bufferStatus, allocatedBlockSize, bank)  \
+#define WRITE_NEXT_NG(memoryBlock, buffer, dataPtr, toWrite, bufferStatus, oldBlockSize, newBlockSize, bank, bufferSize)  \
     do {                              \
-        if(*dataPtr >= buffer + bufferSize) \
+       if(*dataPtr >= buffer + bufferSize) \
 		{ \
-			b5FlushBufferNonGolden(bufferStatus); \
+			b5FlushBufferNonGolden(&bufferStatus, buffer, bufferSize, bufferSize); \
             *dataPtr = buffer; \
 		} \
-        if(dataPtr >= *allocatedBlockSize) \
+        if(*(oldBlockSize) > ONETHIRDBUFFERSIZE && (bufferStatus.bufferCounter + 1) * bufferSize + (*dataPtr - buffer) > *(oldBlockSize)) /*The first check means that this is never triggered if the whole sound is less than the size of the buffer*/\
         { \
-            b5ReallocateBiggerMemoryBlock(dataPtr, )\
+            b5ReallocateBiggerMemoryBlock(memoryBlock, newBlockSize, oldBlockSize, bank);\
         } \
 		 *((*dataPtr)++) = toWrite; \
         \

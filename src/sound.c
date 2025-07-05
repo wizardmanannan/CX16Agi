@@ -18,6 +18,8 @@ SoundFile b1LoadedSounds[MAX_LOADED_SOUNDS];
 SoundFile* b1LoadedSoundsPointer[MAX_SOUNDS];
 byte soundLoadCounter;
 byte totalSoundSize;
+
+const uint16_t noise_freq[] = { 2230, 1115, 557 };
 const uint8_t volumes[] = { 63, 47, 31, 15, 0, 0, 0, 0 };
 
 #define LATCH_TO_CH2 0x0
@@ -272,8 +274,10 @@ void b1SetChannelOffsets(byte* codePtr, SoundFile* soundFile, unsigned int* soun
 //We minus 2 to take us to the nearest factor of 3
 #define ONETHIRDBUFFERSIZE (LOCAL_WORK_AREA_SIZE - 2) / 3 
 
+#define INCREASE_BLOCK_SIZE_AMOUNT 30
+#define GET_CH(i) GET_NEXT_NG(channelBytes[i], oldBuffer, oldChDataPtr, bufferStatus, ONETHIRDBUFFERSIZE);
+#define WRITENOISE(toWrite) WRITE_NEXT_NG(&newSoundFile.soundResource, ORIGINAL_CHNOISEBUFFER, newChNoiseDataPtr, toWrite, newChNoiseLocalBufferStatus,  &allocatedBlockSize, allocatedBlockSize, &newChNoiseResourceBank, ONETHIRDBUFFERSIZE);
 
-#define GET_CH(i) GET_NEXT_NG(channelBytes[i], oldBuffer, oldChDataPtr, bufferStatus, ONETHIRDBUFFERSIZE);  //WRITE_NEXT_NG(oldCh2Byte, oldCh2Buffer, oldCh2DataPtr, toWrite, bufferStatus, allocatedBlockSize, bank);
 //#define GET_CH_NOISE GET_NEXT_NG(oldChNoiseByte, oldChNoiseBuffer, oldChNoiseDataPtr, &oldChNoiseLocalBufferStatus, ONETHIRDBUFFERSIZE);
 
 boolean b1FillNoteBuffer(byte* oldBuffer, byte** oldChDataPtr, BufferStatus* bufferStatus, byte* channelBytes)
@@ -282,7 +286,7 @@ boolean b1FillNoteBuffer(byte* oldBuffer, byte** oldChDataPtr, BufferStatus* buf
 
 	for (i = 0; i < NO_NOTE_BYTES; i++)
 	{
-		GET_CH(i);
+		GET_CH(i)
 
 		if (i == 1 && channelBytes[0] == 0xFF && channelBytes[1] == 0xFF)
 		{
@@ -339,17 +343,18 @@ unsigned int b1Advance2(byte* oldBuffer, byte** oldChDataPtr, BufferStatus* buff
 	return result;
 }
 
+#define ORIGINAL_CHNOISEBUFFER (GOLDEN_RAM_WORK_AREA + ONETHIRDBUFFERSIZE * 2)
 void b1PreComputePeriodicSound(SoundFile* soundFile, unsigned int* soundChannelOffSets)
 {
-	BufferStatus oldCh2LocalBufferStatus, oldChNoiseLocalBufferStatus;
-	byte* oldCh2Buffer = GOLDEN_RAM_WORK_AREA, * oldChNoiseBuffer = GOLDEN_RAM_WORK_AREA + ONETHIRDBUFFERSIZE, * newChNoiseBuffer = oldChNoiseBuffer + ONETHIRDBUFFERSIZE;
-	byte newSoundResourceBank, ffsSeen = 0;
-	byte** oldCh2DataPtr = &oldCh2Buffer, ** oldChNoiseDataPtr = &oldChNoiseBuffer;
+	BufferStatus oldCh2LocalBufferStatus, oldChNoiseLocalBufferStatus, newChNoiseLocalBufferStatus;
+	byte* oldCh2Buffer = GOLDEN_RAM_WORK_AREA, * oldChNoiseBuffer = GOLDEN_RAM_WORK_AREA + ONETHIRDBUFFERSIZE, * newChNoiseBuffer = ORIGINAL_CHNOISEBUFFER;
+	byte newChNoiseResourceBank, ffsSeen = 0, i;
+	byte** oldCh2DataPtr = &oldCh2Buffer, ** oldChNoiseDataPtr = &oldChNoiseBuffer, **newChNoiseDataPtr = &newChNoiseBuffer;
 	BufferStatus* ch2BufferStatus;
 	SoundFile newSoundFile;
 	byte oldCh2Bytes[NO_NOTE_BYTES], oldChNoiseBytes[NO_NOTE_BYTES];
 	boolean moreTwoToRead;
-	unsigned int advancement; //unsigned int instead of long here, because in this place it will never be negative
+	unsigned int advancement, ch2CurrentFreq, allocatedBlockSize = totalSoundSize + totalSoundSize / 2; //unsigned int instead of long here, because in this place it will never be negative
 
 	ch2BufferStatus = &oldCh2LocalBufferStatus;
 
@@ -364,33 +369,46 @@ void b1PreComputePeriodicSound(SoundFile* soundFile, unsigned int* soundChannelO
 	b5RefreshBufferNonGolden(&oldCh2LocalBufferStatus, oldCh2Buffer, ONETHIRDBUFFERSIZE);
 	b5RefreshBufferNonGolden(&oldChNoiseLocalBufferStatus, oldChNoiseBuffer, ONETHIRDBUFFERSIZE);
 
-	newSoundFile.soundResource = b10BankedAlloc(totalSoundSize + totalSoundSize / 2, &newSoundResourceBank);
+	newSoundFile.soundResource = b10BankedAlloc(allocatedBlockSize, &newChNoiseResourceBank);
 
-	memCpyBankedBetween(newSoundFile.soundResource, newSoundResourceBank, soundFile->soundResource, soundFile->soundBank, soundFile->chNoise - soundFile->soundResource);
+	memCpyBankedBetween(newSoundFile.soundResource, newChNoiseResourceBank, soundFile->soundResource, soundFile->soundBank, soundFile->chNoise - soundFile->soundResource);
 
 	b1SetChannelOffsets(newSoundFile.soundResource, &newSoundFile, soundChannelOffSets);
 
-	printf("the data is at %p. ch0 %p ch1 %p ch2 %p ch3 %p. bank %p\n", newSoundFile.soundResource, newSoundFile.ch0, newSoundFile.ch1, newSoundFile.ch2, newSoundFile.chNoise, newSoundResourceBank);
+	newChNoiseLocalBufferStatus.bank = newSoundFile.soundBank;
+	newChNoiseLocalBufferStatus.bankedData = newSoundFile.chNoise;
+	newChNoiseLocalBufferStatus.bufferCounter = 0;
+
+	printf("the data is at %p. ch0 %p ch1 %p ch2 %p ch3 %p. bank %p\n", newSoundFile.soundResource, newSoundFile.ch0, newSoundFile.ch1, newSoundFile.ch2, newSoundFile.chNoise, newChNoiseResourceBank);
 	printf("the data is at %p. ch0 %p ch1 %p ch2 %p ch3 %p bank %p\n", soundFile->soundResource, soundFile->ch0, soundFile->ch1, soundFile->ch2, soundFile->chNoise, soundFile->soundBank);
 
+	printf("buffer three is at %p\n", newChNoiseBuffer);
 
 	moreTwoToRead = b1FillNoteBuffer(oldCh2Buffer, oldCh2DataPtr, &oldCh2LocalBufferStatus, oldCh2Bytes);
 
+	if (moreTwoToRead)
+	{
+		ch2CurrentFreq = *((unsigned int*)oldCh2Bytes[FREQUENCY_BYTE]);
+	}
 	while (b1FillNoteBuffer(oldChNoiseBuffer, oldChNoiseDataPtr, &oldChNoiseLocalBufferStatus, oldChNoiseBytes))
 	{
-		if (oldCh2Bytes[NOISE_CHANNEL] & 4 >> 2) //white noise
+
+
+		if(oldCh2Bytes[NOISE_CHANNEL] & 4 >> 2) //white noise
 		{
-			*((byte*)&advancement) = oldChNoiseBytes[DURATION_BYTE];
-			*((byte*)&advancement + 1) = oldChNoiseBytes[DURATION_BYTE + 1];
+			advancement = *((unsigned int*)oldChNoiseBytes[DURATION_BYTE]);
 			b1Advance2(oldCh2Buffer, oldCh2DataPtr, &oldCh2LocalBufferStatus, oldCh2Bytes, &moreTwoToRead, advancement);
+			
+			for (i = 0; i < NO_NOTE_BYTES; i++)
+			{
+				WRITENOISE(oldChNoiseBytes);
+			}
 		}
 		else //periodic
 		{
 
 		}
 	}
-
-	asm("stp");
 }
 
 
@@ -410,6 +428,7 @@ void b1LoadSoundFile(int soundNum) {
 	b1LoadedSounds[soundLoadCounter].soundResource = tempAGI.code;
 	b1LoadedSounds[soundLoadCounter].soundBank = tempAGI.codeBank;
 	b1LoadedSoundsPointer[soundNum] = &b1LoadedSounds[soundLoadCounter];
+	totalSoundSize = tempAGI.codeSize;
 
 	memCpyBanked((byte*)soundChannelOffSets, tempAGI.code, tempAGI.codeBank, NO_CHANNELS * 2);
 
