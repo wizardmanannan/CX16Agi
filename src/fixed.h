@@ -13,10 +13,10 @@ typedef unsigned long fix32;
 
 // Function prototypes
 #pragma wrapped-call (push, trampoline, FLOAT_BANK)
-extern fix32 b1FpFromInt(unsigned int integer);
-extern int b1fpToInt(fix32 fixed);
-extern int b1GetMantissa(fix32 fp);
-extern int b1FloorFix32(fix32 fp);
-extern int b1CeilFix32(fix32 fp);
+extern fix32 b12FpFromInt(unsigned int integer);
+extern int b12FpToInt(fix32 fixed);
+extern int b12GetMantissa(fix32 fp);
+extern int b12FloorFix32(fix32 fp);
+extern int b12CeilFix32(fix32 fp);
 #pragma wrapped-call (pop)
 #endif // FIXED_POINT_H

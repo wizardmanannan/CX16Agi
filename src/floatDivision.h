@@ -6,5 +6,5 @@
 void b6InitFloatDivision();
 
 #pragma wrapped-call (push, trampoline, FLOAT_BANK)
-extern fix32 b1Div(int numerator, int denominator);
+extern fix32 b12Div(int numerator, int denominator);
 #pragma wrapped-call (pop)
