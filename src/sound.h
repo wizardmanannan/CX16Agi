@@ -7,7 +7,7 @@
 #include "irq.h"
 
 #define MAX_SOUNDS 256
-#define MAX_LOADED_SOUNDS 15
+#define MAX_LOADED_SOUNDS 10
 
 typedef struct {
 	byte* ch0;
