@@ -19,42 +19,42 @@ void testDivision()
 
 	// Adjusted Tests
 
-	result = b1Div(0, 0xA7); // 0 and 167
-	if (result != b1FpFromInt(0))
+	result = b12Div(0, 0xA7); // 0 and 167
+	if (result != b12FpFromInt(0))
 	{
-		printf("Fail Division 1. Expected %lx got %lx\n", b1FpFromInt(0), result);
+		printf("Fail Division 1. Expected %lx got %lx\n", b12FpFromInt(0), result);
 	}
 
-	result = b1Div(0xA7, 0); // 167 and 0
-	if (result != b1FpFromInt(0))
+	result = b12Div(0xA7, 0); // 167 and 0
+	if (result != b12FpFromInt(0))
 	{
-		printf("Fail Division 2. Expected %lx got %lx\n", b1FpFromInt(0), result);
+		printf("Fail Division 2. Expected %lx got %lx\n", b12FpFromInt(0), result);
 	}
 
-	result = b1Div(0xA7, 1); // 167 and 1
-	if (result != b1FpFromInt(0xA7))
+	result = b12Div(0xA7, 1); // 167 and 1
+	if (result != b12FpFromInt(0xA7))
 	{
-		printf("Fail Division 3. Expected %lx got %lx\n", b1FpFromInt(0xA7), result);
+		printf("Fail Division 3. Expected %lx got %lx\n", b12FpFromInt(0xA7), result);
 	}
 
-	result = b1Div(0xA7, 0xA7); // 167 and 167
-	if (result != b1FpFromInt(1))
+	result = b12Div(0xA7, 0xA7); // 167 and 167
+	if (result != b12FpFromInt(1))
 	{
-		printf("Fail Division 4. Expected %lx got %lx\n", b1FpFromInt(1), result);
+		printf("Fail Division 4. Expected %lx got %lx\n", b12FpFromInt(1), result);
 	}
 
 	// New Tests
 
-	result = b1Div(1, 2); // 1 divided by 2
-	if (result != b1FpFromInt(0) + 0x8000) // should be 0.5 in fixed point format
+	result = b12Div(1, 2); // 1 divided by 2
+	if (result != b12FpFromInt(0) + 0x8000) // should be 0.5 in fixed point format
 	{
-		printf("Fail Division 5. Expected %lx got %lx\n", b1FpFromInt(0) + 0x8000, result);
+		printf("Fail Division 5. Expected %lx got %lx\n", b12FpFromInt(0) + 0x8000, result);
 	}
 
-	result = b1Div(1, 3); // 1 divided by 3
-	if (result != b1FpFromInt(0) + 0x5555) // should be 0.5 in fixed point format
+	result = b12Div(1, 3); // 1 divided by 3
+	if (result != b12FpFromInt(0) + 0x5555) // should be 0.5 in fixed point format
 	{
-		printf("Fail Division 5. Expected %lx got %lx\n", b1FpFromInt(0) + 0x553F, result);
+		printf("Fail Division 5. Expected %lx got %lx\n", b12FpFromInt(0) + 0x553F, result);
 	}
 
 	asm("stp");
@@ -153,21 +153,22 @@ void b6InitFloatDivision()
 }
 #pragma code-name (pop)
 
-#pragma code-name (push, "BANKRAM01")
+#pragma code-name (push, "BANKRAM12")
 
 extern fix32 floatDivision(byte numerator, byte denominator);
 
-fix32 b1Div(int numerator, int denominator) {
+fix32 b12Div(int numerator, int denominator) {
 	if (denominator == 0 || numerator == 0) {
 		return (fix32)0;
 	}
 	else if (denominator == 1) {
-		return b1FpFromInt(numerator);
+		return b12FpFromInt(numerator);
 	}
 	else if (numerator == denominator) {
-		return b1FpFromInt(1);
+		return b12FpFromInt(1);
 	}
 	else {
 		return floatDivision(numerator, denominator);
 	}
 }
+#pragma code-name (pop)
