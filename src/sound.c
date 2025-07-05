@@ -9,6 +9,8 @@
 #define VOLUME_BYTE 4
 #define FREQUENCY_NUMERATOR 111860
 
+#define LFSR_INITIAL_SEED 0xACE1
+
 int soundEndFlag;
 
 extern int soundEndFlag;
@@ -18,8 +20,8 @@ SoundFile b1LoadedSounds[MAX_LOADED_SOUNDS];
 SoundFile* b1LoadedSoundsPointer[MAX_SOUNDS];
 byte soundLoadCounter;
 byte totalSoundSize;
-
-const uint16_t noise_freq[] = { 2230, 1115, 557 };
+static unsigned int b1LFSR = LFSR_INITIAL_SEED;
+const uint16_t b7NoiseFreq[] = { 25, 50, 100 };
 const uint8_t volumes[] = { 63, 47, 31, 15, 0, 0, 0, 0 };
 
 #define LATCH_TO_CH2 0x0
@@ -27,6 +29,45 @@ const uint8_t volumes[] = { 63, 47, 31, 15, 0, 0, 0, 0 };
 #pragma bss-name (pop)
 
 #pragma code-name (push, "BANKRAM01")
+
+
+unsigned int b1GetLFSRFrequencyFromCX16Freq(unsigned int cx16Freq) {
+	unsigned char b1Lsb;
+	unsigned char b1NewBit;
+	unsigned long b1Numerator;
+	unsigned long b1SilentFreq;
+
+	// LFSR step with taps at bits 0, 2, 3, 5 (poly 0xB400)
+	b1Lsb = (unsigned char)(b1LFSR & 1);
+	b1NewBit = (unsigned char)(((b1LFSR >> 0) ^
+		(b1LFSR >> 2) ^
+		(b1LFSR >> 3) ^
+		(b1LFSR >> 5)) & 1);
+	b1LFSR = (b1LFSR >> 1) | ((unsigned int)b1NewBit << 15);
+
+	// Safe dynamic calculation using long
+	b1Numerator = (unsigned long)FREQUENCY_NUMERATOR;
+	b1SilentFreq = ((b1Numerator / 65535UL) + 1UL) / 2UL;
+
+	if (b1Lsb) {
+		return cx16Freq;
+	}
+	else {
+		return (unsigned int)b1SilentFreq;
+	}
+}
+
+unsigned int b1GetPeriodicFrequency(byte frequencyByte, unsigned int currentCh2Frequency)
+{
+	byte noiseFrequency = frequencyByte & 3;
+
+	if (noiseFrequency != 3)
+	{
+		return b1GetLFSRFrequencyFromCX16Freq(b7NoiseFreq[noiseFrequency]);
+	}
+
+	return b1GetLFSRFrequencyFromCX16Freq(currentCh2Frequency);
+}
 
 void b1ClearLoadedSound(byte soundFileNumber)
 {
@@ -107,6 +148,9 @@ unsigned int b1CopyAhead(SoundFile* soundFile, unsigned int bytePerBufferCounter
 }
 
 #define FREQ_TO_CX_16(freq) freq = (freq * 176026) / 65536;
+
+
+#define FREQUENCY_NUMERATOR 111860
 
 void b1PrecomputeValues(SoundFile* soundFile)
 {
@@ -288,10 +332,10 @@ boolean b1FillNoteBuffer(byte* oldBuffer, byte** oldChDataPtr, BufferStatus* buf
 	{
 		GET_CH(i)
 
-		if (i == 1 && channelBytes[0] == 0xFF && channelBytes[1] == 0xFF)
-		{
-			return FALSE;
-		}
+			if (i == 1 && channelBytes[0] == 0xFF && channelBytes[1] == 0xFF)
+			{
+				return FALSE;
+			}
 	}
 
 	return TRUE;
@@ -348,13 +392,13 @@ void b1PreComputePeriodicSound(SoundFile* soundFile, unsigned int* soundChannelO
 {
 	BufferStatus oldCh2LocalBufferStatus, oldChNoiseLocalBufferStatus, newChNoiseLocalBufferStatus;
 	byte* oldCh2Buffer = GOLDEN_RAM_WORK_AREA, * oldChNoiseBuffer = GOLDEN_RAM_WORK_AREA + ONETHIRDBUFFERSIZE, * newChNoiseBuffer = ORIGINAL_CHNOISEBUFFER;
-	byte newChNoiseResourceBank, ffsSeen = 0, i;
-	byte** oldCh2DataPtr = &oldCh2Buffer, ** oldChNoiseDataPtr = &oldChNoiseBuffer, **newChNoiseDataPtr = &newChNoiseBuffer;
+	byte newChNoiseResourceBank, ffsSeen = 0;
+	byte** oldCh2DataPtr = &oldCh2Buffer, ** oldChNoiseDataPtr = &oldChNoiseBuffer, ** newChNoiseDataPtr = &newChNoiseBuffer;
 	BufferStatus* ch2BufferStatus;
 	SoundFile newSoundFile;
 	byte oldCh2Bytes[NO_NOTE_BYTES], oldChNoiseBytes[NO_NOTE_BYTES];
 	boolean moreTwoToRead;
-	unsigned int advancement, ch2CurrentFreq, allocatedBlockSize = totalSoundSize + totalSoundSize / 2; //unsigned int instead of long here, because in this place it will never be negative
+	unsigned int i, noiseFrequency, advancement, ch2CurrentFreq, allocatedBlockSize = totalSoundSize + totalSoundSize / 2; //unsigned int instead of long here, because in this place it will never be negative
 
 	ch2BufferStatus = &oldCh2LocalBufferStatus;
 
@@ -379,10 +423,10 @@ void b1PreComputePeriodicSound(SoundFile* soundFile, unsigned int* soundChannelO
 	newChNoiseLocalBufferStatus.bankedData = newSoundFile.chNoise;
 	newChNoiseLocalBufferStatus.bufferCounter = 0;
 
-	printf("the data is at %p. ch0 %p ch1 %p ch2 %p ch3 %p. bank %p\n", newSoundFile.soundResource, newSoundFile.ch0, newSoundFile.ch1, newSoundFile.ch2, newSoundFile.chNoise, newChNoiseResourceBank);
-	printf("the data is at %p. ch0 %p ch1 %p ch2 %p ch3 %p bank %p\n", soundFile->soundResource, soundFile->ch0, soundFile->ch1, soundFile->ch2, soundFile->chNoise, soundFile->soundBank);
+	//printf("the data is at %p. ch0 %p ch1 %p ch2 %p ch3 %p. bank %p\n", newSoundFile.soundResource, newSoundFile.ch0, newSoundFile.ch1, newSoundFile.ch2, newSoundFile.chNoise, newChNoiseResourceBank);
+	//printf("the data is at %p. ch0 %p ch1 %p ch2 %p ch3 %p bank %p\n", soundFile->soundResource, soundFile->ch0, soundFile->ch1, soundFile->ch2, soundFile->chNoise, soundFile->soundBank);
 
-	printf("buffer three is at %p\n", newChNoiseBuffer);
+	//printf("buffer three is at %p\n", newChNoiseBuffer);
 
 	moreTwoToRead = b1FillNoteBuffer(oldCh2Buffer, oldCh2DataPtr, &oldCh2LocalBufferStatus, oldCh2Bytes);
 
@@ -393,20 +437,32 @@ void b1PreComputePeriodicSound(SoundFile* soundFile, unsigned int* soundChannelO
 	while (b1FillNoteBuffer(oldChNoiseBuffer, oldChNoiseDataPtr, &oldChNoiseLocalBufferStatus, oldChNoiseBytes))
 	{
 
-
-		if(oldCh2Bytes[NOISE_CHANNEL] & 4 >> 2) //white noise
+		if (oldChNoiseBytes[NOISE_CHANNEL] & 4 >> 2) //white noise
 		{
 			advancement = *((unsigned int*)oldChNoiseBytes[DURATION_BYTE]);
 			b1Advance2(oldCh2Buffer, oldCh2DataPtr, &oldCh2LocalBufferStatus, oldCh2Bytes, &moreTwoToRead, advancement);
-			
+
 			for (i = 0; i < NO_NOTE_BYTES; i++)
 			{
-				WRITENOISE(oldChNoiseBytes);
+				WRITENOISE(oldChNoiseBytes[i]);
 			}
 		}
 		else //periodic
 		{
+			for (i = 0; i < *((unsigned int*)&oldChNoiseBytes[DURATION_BYTE]); i++)
+			{
+				WRITENOISE(oldChNoiseBytes[DURATION_BYTE]);
+				WRITENOISE(oldChNoiseBytes[DURATION_BYTE + 1]);
 
+				noiseFrequency = b1GetPeriodicFrequency(oldChNoiseBytes[NOISE_CHANNEL], *((unsigned int*)&oldCh2Bytes[FREQUENCY_BYTE]));
+
+				WRITENOISE(*((byte*)&noiseFrequency));
+				WRITENOISE(*((byte*)&noiseFrequency + 1));
+				WRITENOISE(oldChNoiseBytes[VOLUME_BYTE]);
+
+				b1Advance2(oldCh2Buffer, oldCh2DataPtr, &oldCh2LocalBufferStatus, oldCh2Bytes, &moreTwoToRead, 1);
+			}
+			//oldCh2Bytes[NOISE_CHANNEL]
 		}
 	}
 }
@@ -420,7 +476,7 @@ void b1LoadSoundFile(int soundNum) {
 	unsigned int soundChannelOffSets[NO_CHANNELS];
 
 
-	printf("your sound file is %d\n", soundNum);
+	//printf("your sound file is %d\n", soundNum);
 
 	getLogicDirectory(&agiFilePosType, &snddir[soundNum]);
 	b6LoadAGIFile(SOUND, &agiFilePosType, &tempAGI);
