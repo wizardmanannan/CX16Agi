@@ -30,6 +30,24 @@ const uint8_t volumes[] = { 63, 47, 31, 15, 0, 0, 0, 0 };
 
 #pragma code-name (push, "BANKRAM01")
 
+//We minus 2 to take us to the nearest factor of 3
+#define ONETHIRDBUFFERSIZE (LOCAL_WORK_AREA_SIZE - 2) / 3 
+
+void b1WriteNextNG(byte** memoryBlock, byte* buffer, byte** dataPtr, byte toWrite, BufferStatus* bufferStatus, unsigned int* oldBlockSize, unsigned int newBlockSize, byte* bank, unsigned int bufferSize) 
+{                          
+       if(*dataPtr >= buffer + bufferSize) 
+		{ 
+			b5FlushBufferNonGolden(bufferStatus, buffer, bufferSize, bufferSize); 
+            *dataPtr = buffer; 
+		} 
+        if(*(oldBlockSize) > ONETHIRDBUFFERSIZE && (bufferStatus->bufferCounter + 1) * bufferSize + (*dataPtr - buffer) > *(oldBlockSize)) /*The first check means that this is never triggered if the whole sound is less than the size of the buffer*/\
+        { 
+            b5ReallocateBiggerMemoryBlock(memoryBlock, newBlockSize, oldBlockSize, bank);
+        } 
+		 *((*dataPtr)++) = toWrite; 
+
+  } 
+
 
 unsigned int b1GetLFSRFrequencyFromCX16Freq(unsigned int cx16Freq) {
 	unsigned char b1Lsb;
@@ -180,7 +198,6 @@ void b1PrecomputeValues(SoundFile* soundFile)
 
 	while (seenFFFFCounter != NO_CHANNELS)
 	{
-
 		/*if (totalCounter >= 0x222)
 		{
 			printf("data is %p\n", *data);
@@ -255,11 +272,7 @@ void b1PrecomputeValues(SoundFile* soundFile)
 				{
 					if (adjustedDuration != 0xFFFF)
 					{
-						//printf("the volume is %p\n", GOLDEN_RAM_WORK_AREA[bytePerBufferCounter]);
 						GOLDEN_RAM_WORK_AREA[bytePerBufferCounter] = volumes[(GOLDEN_RAM_WORK_AREA[bytePerBufferCounter] & 0x0F) >> 1];
-
-
-						//printf("the volume result is %p\n", GOLDEN_RAM_WORK_AREA[bytePerBufferCounter]);
 					}
 					else
 					{
@@ -315,12 +328,9 @@ void b1SetChannelOffsets(byte* codePtr, SoundFile* soundFile, unsigned int* soun
 	}
 }
 
-//We minus 2 to take us to the nearest factor of 3
-#define ONETHIRDBUFFERSIZE (LOCAL_WORK_AREA_SIZE - 2) / 3 
-
 #define INCREASE_BLOCK_SIZE_AMOUNT 30
 #define GET_CH(i) GET_NEXT_NG(channelBytes[i], oldBuffer, oldChDataPtr, bufferStatus, ONETHIRDBUFFERSIZE);
-#define WRITENOISE(toWrite) WRITE_NEXT_NG(&newSoundFile.soundResource, ORIGINAL_CHNOISEBUFFER, newChNoiseDataPtr, toWrite, newChNoiseLocalBufferStatus,  &allocatedBlockSize, allocatedBlockSize, &newChNoiseResourceBank, ONETHIRDBUFFERSIZE);
+#define WRITENOISE(toWrite) b1WriteNextNG(&newSoundFile.soundResource, ORIGINAL_CHNOISEBUFFER, newChNoiseDataPtr, toWrite, &newChNoiseLocalBufferStatus, &allocatedBlockSize, allocatedBlockSize, &newChNoiseResourceBank, ONETHIRDBUFFERSIZE);
 
 //#define GET_CH_NOISE GET_NEXT_NG(oldChNoiseByte, oldChNoiseBuffer, oldChNoiseDataPtr, &oldChNoiseLocalBufferStatus, ONETHIRDBUFFERSIZE);
 
@@ -449,22 +459,33 @@ void b1PreComputePeriodicSound(SoundFile* soundFile, unsigned int* soundChannelO
 		}
 		else //periodic
 		{
+			printf("the noise buffer is at %p\n", ORIGINAL_CHNOISEBUFFER);
+
 			for (i = 0; i < *((unsigned int*)&oldChNoiseBytes[DURATION_BYTE]); i++)
 			{
 				WRITENOISE(oldChNoiseBytes[DURATION_BYTE]);
+				asm("stp");
 				WRITENOISE(oldChNoiseBytes[DURATION_BYTE + 1]);
+				asm("stp");
 
 				noiseFrequency = b1GetPeriodicFrequency(oldChNoiseBytes[NOISE_CHANNEL], *((unsigned int*)&oldCh2Bytes[FREQUENCY_BYTE]));
 
 				WRITENOISE(*((byte*)&noiseFrequency));
+				asm("stp");
 				WRITENOISE(*((byte*)&noiseFrequency + 1));
+				asm("stp");
 				WRITENOISE(oldChNoiseBytes[VOLUME_BYTE]);
+				asm("stp");
 
 				b1Advance2(oldCh2Buffer, oldCh2DataPtr, &oldCh2LocalBufferStatus, oldCh2Bytes, &moreTwoToRead, 1);
 			}
-			//oldCh2Bytes[NOISE_CHANNEL]
 		}
 	}
+
+	WRITENOISE(0xFF);
+	WRITENOISE(0xFF);
+
+	b5FlushBufferNonGolden(&newChNoiseLocalBufferStatus, newChNoiseBuffer, ONETHIRDBUFFERSIZE, (byte*)newChNoiseDataPtr - newChNoiseBuffer);
 }
 
 
