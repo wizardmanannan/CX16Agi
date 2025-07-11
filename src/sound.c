@@ -219,7 +219,7 @@ void b1PrecomputeValues(SoundFile* soundFile)
 
 		if (!endByteDetected)
 		{
-			if (readByte == 0xFF)
+			if (readByte == 0xFF && noteByteCounter == 0)
 			{
 				//printf("ff detected \n");
 
@@ -459,23 +459,16 @@ void b1PreComputePeriodicSound(SoundFile* soundFile, unsigned int* soundChannelO
 		}
 		else //periodic
 		{
-			printf("the noise buffer is at %p\n", ORIGINAL_CHNOISEBUFFER);
-
 			for (i = 0; i < *((unsigned int*)&oldChNoiseBytes[DURATION_BYTE]); i++)
 			{
 				WRITENOISE(oldChNoiseBytes[DURATION_BYTE]);
-				asm("stp");
 				WRITENOISE(oldChNoiseBytes[DURATION_BYTE + 1]);
-				asm("stp");
 
 				noiseFrequency = b1GetPeriodicFrequency(oldChNoiseBytes[NOISE_CHANNEL], *((unsigned int*)&oldCh2Bytes[FREQUENCY_BYTE]));
 
 				WRITENOISE(*((byte*)&noiseFrequency));
-				asm("stp");
 				WRITENOISE(*((byte*)&noiseFrequency + 1));
-				asm("stp");
 				WRITENOISE(oldChNoiseBytes[VOLUME_BYTE]);
-				asm("stp");
 
 				b1Advance2(oldCh2Buffer, oldCh2DataPtr, &oldCh2LocalBufferStatus, oldCh2Bytes, &moreTwoToRead, 1);
 			}
