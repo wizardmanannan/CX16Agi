@@ -29,7 +29,7 @@
 #define  EMPTY  0xFFFFF   /* Empty DIR entry */
 
 typedef struct {          /* AGI data file structure */
-   unsigned int totalSize;
+   unsigned int totalSize; /*TODO: Should be an unsigned long, as this can be three bytes*/
    unsigned int codeSize;
    byte* code;
    byte codeBank;

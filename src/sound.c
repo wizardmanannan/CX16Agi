@@ -19,7 +19,7 @@ extern int soundEndFlag;
 SoundFile b1LoadedSounds[MAX_LOADED_SOUNDS];
 SoundFile* b1LoadedSoundsPointer[MAX_SOUNDS];
 byte soundLoadCounter;
-byte totalSoundSize;
+unsigned long totalSoundSize;
 static unsigned int b1LFSR = LFSR_INITIAL_SEED;
 const uint16_t b7NoiseFreq[] = { 25, 50, 100 };
 const uint8_t volumes[] = { 63, 47, 31, 15, 0, 0, 0, 0 };
@@ -40,10 +40,16 @@ void b1WriteNextNG(byte** memoryBlock, byte* buffer, byte** dataPtr, byte toWrit
 			b5FlushBufferNonGolden(bufferStatus, buffer, bufferSize, bufferSize); 
             *dataPtr = buffer; 
 		} 
-        if(*(oldBlockSize) > ONETHIRDBUFFERSIZE && (bufferStatus->bufferCounter + 1) * bufferSize + (*dataPtr - buffer) > *(oldBlockSize)) /*The first check means that this is never triggered if the whole sound is less than the size of the buffer*/\
+	   
+	   //printf("we are checking that %p + %p (%p - %p) > %p\n", bufferStatus->bufferCounter * bufferSize, (*dataPtr - buffer), *dataPtr, buffer, *(oldBlockSize));
+        if(bufferStatus->bufferCounter * bufferSize + (*dataPtr - buffer) > *(oldBlockSize)) 
         { 
+			//printf("previously %p %p. Try to set %p\n", *memoryBlock, *oldBlockSize, newBlockSize);
             b5ReallocateBiggerMemoryBlock(memoryBlock, newBlockSize, oldBlockSize, bank);
+			//printf("new %p %p\n", *memoryBlock, *oldBlockSize);
         } 
+
+
 		 *((*dataPtr)++) = toWrite; 
 
   } 
@@ -330,7 +336,7 @@ void b1SetChannelOffsets(byte* codePtr, SoundFile* soundFile, unsigned int* soun
 
 #define INCREASE_BLOCK_SIZE_AMOUNT 30
 #define GET_CH(i) GET_NEXT_NG(channelBytes[i], oldBuffer, oldChDataPtr, bufferStatus, ONETHIRDBUFFERSIZE);
-#define WRITENOISE(toWrite) b1WriteNextNG(&newSoundFile.soundResource, ORIGINAL_CHNOISEBUFFER, newChNoiseDataPtr, toWrite, &newChNoiseLocalBufferStatus, &allocatedBlockSize, allocatedBlockSize, &newChNoiseResourceBank, ONETHIRDBUFFERSIZE);
+#define WRITENOISE(toWrite) b1WriteNextNG(&newSoundFile.soundResource, ORIGINAL_CHNOISEBUFFER, newChNoiseDataPtr, toWrite, &newChNoiseLocalBufferStatus, &allocatedBlockSize, allocatedBlockSize + INCREASE_BLOCK_SIZE_AMOUNT, &newChNoiseResourceBank, ONETHIRDBUFFERSIZE);
 
 //#define GET_CH_NOISE GET_NEXT_NG(oldChNoiseByte, oldChNoiseBuffer, oldChNoiseDataPtr, &oldChNoiseLocalBufferStatus, ONETHIRDBUFFERSIZE);
 
@@ -498,7 +504,7 @@ void b1LoadSoundFile(int soundNum) {
 	b1LoadedSounds[soundLoadCounter].soundResource = tempAGI.code;
 	b1LoadedSounds[soundLoadCounter].soundBank = tempAGI.codeBank;
 	b1LoadedSoundsPointer[soundNum] = &b1LoadedSounds[soundLoadCounter];
-	totalSoundSize = tempAGI.codeSize;
+	totalSoundSize = tempAGI.totalSize;
 
 	memCpyBanked((byte*)soundChannelOffSets, tempAGI.code, tempAGI.codeBank, NO_CHANNELS * 2);
 
