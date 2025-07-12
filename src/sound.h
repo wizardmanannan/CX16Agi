@@ -5,6 +5,7 @@
 #include "memoryManager.h"
 #include "agifiles.h"
 #include "irq.h"
+#include <limits.h>
 
 #define MAX_SOUNDS 256
 #define MAX_LOADED_SOUNDS 10
