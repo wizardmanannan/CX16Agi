@@ -533,6 +533,7 @@ void b1LoadSoundFile(int soundNum) {
 	byte i;
 	unsigned int soundChannelOffSets[NO_CHANNELS];
 
+	//soundNum = 19;
 
 	//printf("your sound file is %d\n", soundNum);
 
@@ -586,6 +587,8 @@ void b1PlaySound(byte soundNum, byte endSoundFlag)
 	byte** channelPointer;
 
 	asm("sei");
+
+	//soundNum = 19;
 
 	b1Ch1Ticks = 0;
 	b1Ch2Ticks = 0;

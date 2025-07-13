@@ -108,6 +108,8 @@ sta VERA_data0
 waveForm:
 cpx #NOISE_CHANNEL * 2
 bcc squareWave
+lda isWhiteNoise
+beq squareWave
 
 noiseWave:
 lda #NOISE_WAVE
@@ -197,6 +199,7 @@ tay
 and #$4
 lsr
 lsr
+sta isWhiteNoise
 bne determineIfPredefinedOrLatched ;Periodic sound has already being precalculated return to normal flow
 jmp returnToPlayFrequency
 determineIfPredefinedOrLatched:
@@ -235,6 +238,8 @@ sta VERA_data0
 iny
 lda b1NoiseFreq,y
 sta VERA_data0
+
+isWhiteNoise: .byte $0
 
 jmp returnCopyChannel 
 
