@@ -109,9 +109,6 @@ waveForm:
 cpx #NOISE_CHANNEL * 2
 bcc squareWave
 
-lda isWhiteNoise
-beq squareWave
-
 noiseWave:
 lda #NOISE_WAVE
 sta VERA_data0
@@ -200,7 +197,9 @@ tay
 and #$4
 lsr
 lsr
-sta isWhiteNoise
+bne determineIfPredefinedOrLatched ;Periodic sound has already being precalculated return to normal flow
+jmp returnToPlayFrequency
+determineIfPredefinedOrLatched:
 tya
 and #$3
 cmp #$3
@@ -238,7 +237,6 @@ lda b1NoiseFreq,y
 sta VERA_data0
 
 jmp returnCopyChannel 
-isWhiteNoise: .byte $0
 
 .segment "CODE"
 ticks: .word $0
@@ -262,6 +260,9 @@ lda _b1SoundDataBank
 sta RAM_BANK
 bra setVolume
 
+returnToPlayFrequency:
+lda _b1SoundDataBank 
+sta RAM_BANK
 playFrequency:
 ldy #FREQUENCY_BYTE
 lda (SOUND_SREG),y
