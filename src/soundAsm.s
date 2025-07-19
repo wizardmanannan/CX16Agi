@@ -195,15 +195,9 @@ sta VERA_data0
 jmp incrementChannelCounter
 
 b1PlayNoise:
-tay
-and #$4
-lsr
-lsr
-sta isWhiteNoise
-bne determineIfPredefinedOrLatched ;Periodic sound has already being precalculated return to normal flow
-jmp returnToPlayFrequency
+ldy #$1
+sty isWhiteNoise
 determineIfPredefinedOrLatched:
-tya
 and #$3
 cmp #$3
 bne b1PlayPredefinedNoise
@@ -239,18 +233,26 @@ iny
 lda b1NoiseFreq,y
 sta VERA_data0
 
-isWhiteNoise: .byte $0
-
 jmp returnCopyChannel 
 
 .segment "CODE"
+isWhiteNoise: .byte $0
 ticks: .word $0
+volByte: .byte $0
 readSound:
 lda _b1SoundDataBank
 sta RAM_BANK
 
 cpx #NOISE_CHANNEL * 2
 bcc playFrequency
+
+stz isWhiteNoise ;May still be white, but we check elsewhere
+
+ldy #VOLUME_BYTE
+lda (SOUND_SREG),y
+sta volByte
+bit volByte
+bmi playFrequency
 
 ldy #FREQUENCY_BYTE + 1
 lda (SOUND_SREG),y
@@ -279,6 +281,7 @@ sta VERA_data0
 setVolume:
 ldy #VOLUME_BYTE 
 lda (SOUND_SREG),y
+and #$7F
 
 ldy #SOUND_BANK
 sty RAM_BANK
