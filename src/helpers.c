@@ -54,8 +54,8 @@ void b5FlushBufferNonGolden(BufferStatus* bufferStatus, byte* buffer, int buffer
 	bufferStatus->bufferCounter++;
 
 
-	//printf("the buffer counter is %d %p and the bank is %d\n", bufferStatus->bufferCounter, localBufferStatus.bankedData + localBufferStatus.bufferCounter * LOCAL_WORK_AREA_SIZE, localBufferStatus.bank);
-	memCpyBanked(localBufferStatus.bankedData + localBufferStatus.bufferCounter * bufferSize, buffer, localBufferStatus.bank, bufferSize); //If it overflows the bank it isn't a big deal, the picture data is terminated by 0xFF so the rubbish data following will never be executed.
+	//printf("we flush to %p (%p + %p * %p) from %p bank %p, size %d\n", localBufferStatus.bankedData + localBufferStatus.bufferCounter * bufferSize, localBufferStatus.bankedData, localBufferStatus.bufferCounter, bufferSize,buffer, localBufferStatus.bank, amountToCopy);
+	memCpyBanked(localBufferStatus.bankedData + localBufferStatus.bufferCounter * bufferSize, buffer, localBufferStatus.bank, amountToCopy);
 }
 
 void b5RefreshBuffer(BufferStatus* bufferStatus)
