@@ -59,17 +59,13 @@ void b1WriteNextNG(byte** memoryBlock, byte* buffer, byte** dataPtr, byte toWrit
             *dataPtr = buffer; 
 		} 
 	   
-	   //printf("we are checking that %p + %p (%p - %p) > %p\n", bufferStatus->bufferCounter * bufferSize, (*dataPtr - buffer), *dataPtr, buffer, *(oldBlockSize));
         if(bufferStatus->bufferCounter * bufferSize + (*dataPtr - buffer) > *(oldBlockSize)) 
         { 
-			//printf("previously %p %p bank %p. Try to set %p\n", *memoryBlock, *oldBlockSize, *bank, newBlockSize);
             b5ReallocateBiggerMemoryBlock(memoryBlock, newBlockSize, oldBlockSize, bank);
-			//printf("new %p %p %p\n", *memoryBlock, *oldBlockSize, *bank);
         } 
 
 
 		 *((*dataPtr)++) = toWrite; 
-		 //printf("we are storing %p in %p\n", toWrite, *dataPtr);
   } 
 
 #define MIN_LFSR 8
@@ -81,9 +77,6 @@ uint16_t b1GetDividerFromCx16(uint16_t cx16_freq)
 	unsigned long denom = (2 * (uint32_t)cx16_freq) - 1;
 	if (denom == 0) denom = 1; // protect from division by zero
 	
-	
-	//printf("input %lx output %lx \n", cx16_freq, (uint16_t)(numerator / denom));
-
 	return (uint16_t)(numerator / denom);
 }
 
@@ -102,7 +95,6 @@ unsigned int b1DetermineLsfrDuration(unsigned int ch2Duration, unsigned int ch3D
 	else
 	{
 		*lsfrFrequencyToPlay = ((unsigned long)currentCh2Frequency * 2) / 3;
-		//printf("we try to play %p\n", *lsfrFrequencyToPlay);
 		divider = b1GetDividerFromCx16(currentCh2Frequency);
 	}
 
@@ -130,8 +122,6 @@ unsigned int b1DetermineLsfrDuration(unsigned int ch2Duration, unsigned int ch3D
 	{
 		result = MAX_LFSR;
 	}
-
-	//printf("compare vals: %u, %u, %u, %lu\n", ch2Duration, ch3Duration, *lsfrFrequencyToPlay, totalBeats);
 
 	return result;
 }
@@ -194,8 +184,6 @@ unsigned int b1ReadAhead(SoundFile* soundFile, unsigned int bytePerBufferCounter
 	else
 	{
 		readAheadByte = GOLDEN_RAM_WORK_AREA[bytePerBufferCounter + 1];
-
-		//printf("we read ahead to %x, from addr %p, counter %p\n", readAheadByte, &GOLDEN_RAM_WORK_AREA[bytePerBufferCounter], bytePerBufferCounter);
 	}
 
 	return readAheadByte;
@@ -210,7 +198,6 @@ unsigned int b1CopyAhead(SoundFile* soundFile, unsigned int bytePerBufferCounter
 	else
 	{
 		GOLDEN_RAM_WORK_AREA[bytePerBufferCounter + 1] = toCopy;
-		//printf("tocopy is %x\n", toCopy);
 	}
 }
 
@@ -231,9 +218,6 @@ void b1SetChannelOffsets(byte* codePtr, SoundFile* soundFile, unsigned int* soun
 		*currentChannel = codePtr + soundChannelOffSets[i];
 	}
 }
-
-//#define GET_CH_NOISE GET_NEXT_NG(oldChNoiseByte, oldChNoiseBuffer, oldChNoiseDataPtr, &oldChNoiseLocalBufferStatus, ONETHIRDBUFFERSIZE);
-
 boolean b1FillNoteBuffer(byte* oldBuffer, byte** oldChDataPtr, BufferStatus* bufferStatus, byte* channelBytes)
 {
 	byte i;
@@ -260,24 +244,16 @@ unsigned int b1Advance2(byte* oldBuffer, byte** oldChDataPtr, BufferStatus* buff
 
 	currentDuration = *((unsigned int*)&channelBytes[DURATION_BYTE]);
 
-	//printf("the current duration is %lu. more to to go %d. byte 0 %p, byte 1 %p\n", currentDuration, *moreTwoToRead, channelBytes[0], channelBytes[1]);
 
 	while (!finished && *moreTwoToRead)
 	{
 		currentDuration -= advancement;
 
-		//printf("we advance by %d leaving a current duration of %ld\n", advancement, currentDuration);
-
 		if (currentDuration < 0 && (*moreTwoToRead = b1FillNoteBuffer(oldBuffer, oldChDataPtr, bufferStatus, channelBytes)))
 		{
 			advancement = currentDuration * -1;
 
-			//printf("it is less than 0, we next advance by %d\n", advancement);
-
 			currentDuration = *((unsigned int*)&channelBytes[DURATION_BYTE]);
-
-			//printf("we now have an duration of %ld\n", currentDuration);
-			//printf("channel bytes address %p\n", channelBytes);
 
 			finished = FALSE;
 		}
@@ -291,8 +267,6 @@ unsigned int b1Advance2(byte* oldBuffer, byte** oldChDataPtr, BufferStatus* buff
 
 
 	result = *((unsigned int*)&channelBytes[FREQUENCY_BYTE]);
-
-	//printf("the result is %u. channel bytes address %p\n", result, channelBytes);
 
 	return result;
 }
@@ -331,15 +305,8 @@ void b1PreComputePeriodicSound(SoundFile* soundFile, unsigned int* soundChannelO
 
 	newChNoiseLocalBufferStatus.bank = newSoundFile.soundBank;
 
-	//printf("we set the sound bank to %p\n", newSoundFile.soundBank);
-
 	newChNoiseLocalBufferStatus.bankedData = newSoundFile.chNoise;
 	newChNoiseLocalBufferStatus.bufferCounter = 0;
-
-	//printf("the data is at %p. ch0 %p ch1 %p ch2 %p ch3 %p. bank %p. block size %p\n", newSoundFile.soundResource, newSoundFile.ch0, newSoundFile.ch1, newSoundFile.ch2, newSoundFile.chNoise, newSoundFile.soundBank, allocatedBlockSize);
-	//printf("the data is at %p. ch0 %p ch1 %p ch2 %p ch3 %p bank %p\n", soundFile->soundResource, soundFile->ch0, soundFile->ch1, soundFile->ch2, soundFile->chNoise, soundFile->soundBank);
-
-	//printf("buffer three is at %p\n", newChNoiseBuffer);
 
 	moreTwoToRead = b1FillNoteBuffer(oldCh2Buffer, oldCh2DataPtr, &oldCh2LocalBufferStatus, oldCh2Bytes);
 
@@ -366,10 +333,7 @@ void b1PreComputePeriodicSound(SoundFile* soundFile, unsigned int* soundChannelO
 		}
 		else //periodic
 		{
-			//printf("the address of the result set is %p\n", oldCh2Bytes);
 			lfsrDuration = b1DetermineLsfrDuration(*((unsigned int*)&oldCh2Bytes[DURATION_BYTE]), *((unsigned int*)&oldChNoiseBytes[DURATION_BYTE]), oldChNoiseBytes[NOISE_CHANNEL], *((unsigned int*)&oldCh2Bytes[FREQUENCY_BYTE]), &lsfrFrequencyToPlay, remainingBeats);
-
-			//printf("the f to play is %p\n", lsfrFrequencyToPlay);
 
 			WRITENOISE((*((byte*)&lfsrDuration)));
 			WRITENOISE((*((byte*)&lfsrDuration + 1)));
@@ -385,8 +349,6 @@ void b1PreComputePeriodicSound(SoundFile* soundFile, unsigned int* soundChannelO
 			{
 				remainingBeats -= lfsrDuration;
 			}
-
-			//printf("the address of the noise bytes is %p\n", newChNoiseDataPtr);
 		}
 	}
 
@@ -394,8 +356,7 @@ void b1PreComputePeriodicSound(SoundFile* soundFile, unsigned int* soundChannelO
 	WRITENOISE(0xFF);
 
 	b5FlushBufferNonGolden(&newChNoiseLocalBufferStatus, ORIGINAL_CHNOISEBUFFER, ONETHIRDBUFFERSIZE, newChNoiseBuffer - ORIGINAL_CHNOISEBUFFER);
-	//printf("we flush to %p bank %p. addr %p\n", newChNoiseLocalBufferStatus.bankedData, newChNoiseLocalBufferStatus.bank, &newChNoiseLocalBufferStatus);
-
+	
 	b10BankedDealloc(soundFile->soundResource, soundFile->soundBank);
 	*soundFile = newSoundFile;
 }
@@ -426,37 +387,16 @@ void b1PrecomputeValues(SoundFile* soundFile, unsigned int* soundChannelOffSets)
 
 	b5RefreshBuffer(&localBufferStatus);
 
-	//printf("the bank is %p and data %p\n", soundFile->soundBank, soundFile->ch1);
-
 	while (seenFFFFCounter != NO_CHANNELS)
 	{
-		/*if (totalCounter >= 0x222)
-		{
-			printf("data is %p\n", *data);
-			asm("stp");
-		}*/
+
 		GET_NEXT(readByte);
-		//printf("%p is freq %d will next read %p from golden ram %p, buffer counter %d data: %p bbb counter %d read from %p\n", totalCounter++, noteByteCounter == FREQUENCY_BYTE || noteByteCounter == FREQUENCY_BYTE + 1, readByte, GOLDEN_RAM_WORK_AREA, localBufferStatus.bufferCounter, *data, bytePerBufferCounter, localBufferStatus.bankedData + (localBufferStatus.bufferCounter - 1) * LOCAL_WORK_AREA_SIZE + bytePerBufferCounter);
-
-		/*	if (bytePerBufferCounter == LOCAL_WORK_AREA_SIZE)
-			{
-				bytePerBufferCounter = 0;
-			}
-			else
-			{
-				bytePerBufferCounter++;
-			}*/
-
-			//printf("notes counter %d bb %d\n", noteByteCounter, bytePerBufferCounter);
-
+		
 		if (!endByteDetected)
 		{
 			if (readByte == 0xFF && noteByteCounter == 0)
 			{
-				//printf("ff detected \n");
-
 				readAheadByte = b1ReadAhead(soundFile, bytePerBufferCounter, bufferStatus);
-
 
 				if (readAheadByte == 0xFF)
 				{
@@ -468,7 +408,6 @@ void b1PrecomputeValues(SoundFile* soundFile, unsigned int* soundChannelOffSets)
 				if (noteByteCounter == DURATION_BYTE)
 				{
 					*((byte*)&duration) = readByte;
-					//printf("the readByte is %p\n", readByte);
 
 					*((byte*)&duration + 1) = b1ReadAhead(soundFile, bytePerBufferCounter, bufferStatus);
 					*((byte*)&duration) = GOLDEN_RAM_WORK_AREA[bytePerBufferCounter];
@@ -478,7 +417,6 @@ void b1PrecomputeValues(SoundFile* soundFile, unsigned int* soundChannelOffSets)
 					b1CopyAhead(soundFile, bytePerBufferCounter, bufferStatus, *((byte*)&adjustedDuration + 1));
 
 					beatsForChannel += adjustedDuration;
-					//	printf("setting beats to %lu\n", beatsForChannel);
 				}
 				else if (noteByteCounter == FREQUENCY_BYTE)
 				{
@@ -497,49 +435,35 @@ void b1PrecomputeValues(SoundFile* soundFile, unsigned int* soundChannelOffSets)
 						b1CopyAhead(soundFile, bytePerBufferCounter, bufferStatus, *((byte*)&adjustedFrequency + 1));
 					}
 
-
-					//printf("bbc %d\n", bytePerBufferCounter);
-					//printf("the frequency is %p and adjusted is %p for divisor %lu\n", frequency, adjustedFrequency, frequencyDivisor);
-
-
 					GOLDEN_RAM_WORK_AREA[bytePerBufferCounter] = *((byte*)&adjustedFrequency);
 				}
 				else if (noteByteCounter == NOISE_FREQUENCY_BYTE && !periodicSoundDetected && seenFFFFCounter == 3)
 				{
 					periodicSoundDetected = (~GOLDEN_RAM_WORK_AREA[bytePerBufferCounter] & 4);
-					//printf("val %p, &4 %p inverse %p\n", GOLDEN_RAM_WORK_AREA[bytePerBufferCounter], ~GOLDEN_RAM_WORK_AREA[bytePerBufferCounter], ~GOLDEN_RAM_WORK_AREA[bytePerBufferCounter] & 4);
-					//printf("the address is %p\n", &GOLDEN_RAM_WORK_AREA[bytePerBufferCounter]);
 				}
 				else if (noteByteCounter == VOLUME_BYTE)
 				{
-					//printf("dur is %p\n", adjustedDuration);
 					if (adjustedDuration != 0xFFFF)
 					{
 						noiseChHasVolume = noiseChHasVolume || ((GOLDEN_RAM_WORK_AREA[bytePerBufferCounter] & 0x0F) != 0xF) && seenFFFFCounter == 3;
 
-						//printf("val is %p adjus %d %d\n", GOLDEN_RAM_WORK_AREA[bytePerBufferCounter], GOLDEN_RAM_WORK_AREA[bytePerBufferCounter] & 0x0F, SN76489_to_CX16_Volume[GOLDEN_RAM_WORK_AREA[bytePerBufferCounter] & 0x0F]);
 						GOLDEN_RAM_WORK_AREA[bytePerBufferCounter] = SN76489_to_CX16_Volume[(GOLDEN_RAM_WORK_AREA[bytePerBufferCounter] & 0x0F)];
-
-						//printf("vol: %p %p %p %p\n", GOLDEN_RAM_WORK_AREA[bytePerBufferCounter], GOLDEN_RAM_WORK_AREA[bytePerBufferCounter] & 0x0F, (GOLDEN_RAM_WORK_AREA[bytePerBufferCounter] & 0x0F) != 0x0F, noiseChHasVolume);
 					}
 					else
 					{
 						GOLDEN_RAM_WORK_AREA[bytePerBufferCounter] = 0;
 					}
 				}
-				//asm("stp");
 
 				noteByteCounter = (noteByteCounter + 1) % NO_NOTE_BYTES;
 			}
 		}
 		else
 		{
-			//printf("detected end byte\n");
 			endByteDetected = FALSE;
 			seenFFFFCounter++;
 			noteByteCounter = 0;
 
-			//printf("beats for channel %lu\n", beatsForChannel);
 			if (beatsForChannel > totalBeats)
 			{
 				totalBeats = beatsForChannel;
@@ -547,17 +471,10 @@ void b1PrecomputeValues(SoundFile* soundFile, unsigned int* soundChannelOffSets)
 			beatsForChannel = 0;
 		}
 
-		//printf("result %d, checking that %d == %d\n", bytePerBufferCounter == LOCAL_WORK_AREA_SIZE - 1 && !firstRun, bytePerBufferCounter, LOCAL_WORK_AREA_SIZE - 1);
-
 		bytePerBufferCounter++;
 		if (bytePerBufferCounter == LOCAL_WORK_AREA_SIZE)
 		{
-			//printf("dest %p source %p bank %p size %d\n", localBufferStatus.bankedData + (localBufferStatus.bufferCounter - 1) * LOCAL_WORK_AREA_SIZE, GOLDEN_RAM_WORK_AREA, localBufferStatus.bank, LOCAL_WORK_AREA_SIZE);
-			//printf("dest %p source %p bank %p size %d offset %p\n", localBufferStatus.bankedData + (localBufferStatus.bufferCounter - 1) * LOCAL_WORK_AREA_SIZE, GOLDEN_RAM_WORK_AREA, localBufferStatus.bank, LOCAL_WORK_AREA_SIZE, (localBufferStatus.bufferCounter - 1) * LOCAL_WORK_AREA_SIZE);
-			//printf("%d %p\n", localBufferStatus.bufferCounter, localBufferStatus.bankedData);
 			memCpyBanked(localBufferStatus.bankedData + (localBufferStatus.bufferCounter - 1) * LOCAL_WORK_AREA_SIZE, GOLDEN_RAM_WORK_AREA, localBufferStatus.bank, LOCAL_WORK_AREA_SIZE);
-
-			//printf("here is the stop and the buffer counter is %p\n", bytePerBufferCounter);
 
 			bytePerBufferCounter = 0;
 		}
@@ -572,9 +489,6 @@ void b1PrecomputeValues(SoundFile* soundFile, unsigned int* soundChannelOffSets)
 	{
 		b1PreComputePeriodicSound(&b1LoadedSounds[soundLoadCounter], soundChannelOffSets);
 	}
-	//printf("you are finalising with %p  and size %d end result %p\n", localBufferStatus.bankedData + (localBufferStatus.bufferCounter - 1) * LOCAL_WORK_AREA_SIZE, bytePerBufferCounter, localBufferStatus.bankedData + (localBufferStatus.bufferCounter - 1) * LOCAL_WORK_AREA_SIZE + bytePerBufferCounter);
-
-	//printf("the bank is %p and data %p\n", soundFile->soundBank, soundFile->ch1, bytePerBufferCounter);
 }
 
 void b1LoadSoundFile(int soundNum) {
@@ -583,12 +497,6 @@ void b1LoadSoundFile(int soundNum) {
 	AGIFilePosType agiFilePosType;
 	byte i;
 	unsigned int soundChannelOffSets[NO_CHANNELS];
-
-	//printf("you are loading sound %d\n", soundNum);
-
-	//soundNum = 19;
-
-	//printf("your sound file is %d\n", soundNum);
 
 	getLogicDirectory(&agiFilePosType, &snddir[soundNum]);
 	b6LoadAGIFile(SOUND, &agiFilePosType, &tempAGI);
@@ -602,7 +510,6 @@ void b1LoadSoundFile(int soundNum) {
 
 	b1SetChannelOffsets(tempAGI.code, &b1LoadedSounds[soundLoadCounter], soundChannelOffSets);
 
-	//printf("sound num is %d\n", soundNum);
 	b1PrecomputeValues(&b1LoadedSounds[soundLoadCounter], soundChannelOffSets);
 	
 	if (soundLoadCounter < MAX_LOADED_SOUNDS - 1)
@@ -639,8 +546,6 @@ void b1PlaySound(byte soundNum, byte endSoundFlag)
 
 	asm("sei");
 
-	//soundNum = 19;
-
 	b1Ch1Ticks = 0;
 	b1Ch2Ticks = 0;
 	b1Ch3Ticks = 0;
@@ -659,8 +564,6 @@ void b1PlaySound(byte soundNum, byte endSoundFlag)
 	memset(b1IsPlaying, TRUE, NO_CHANNELS);
 	b1ChannelsPlaying = NO_CHANNELS;
 	b1EndSoundFlag = endSoundFlag;
-	//printf("you are playing %d the end sound flag is %x. the address is %p\n", soundNum, endSoundFlag, &flag[endSoundFlag]);
-
 
 	REENABLE_INTERRUPTS();
 }
