@@ -1,321 +1,339 @@
 .ifndef SOUND_INC
 SOUND_INC = 1
 
-.include "globalGraphics.s"
-.include "global.s"
+.include "globalGraphics.s"          ; Include global graphics definitions
+.include "global.s"                  ; Include global definitions
 
-NO_AGI_CHANNELS = 4
-NO_NOTES = 5
-END_MARKER = $FFFF
-FREQUENCY_BYTE = 2
-VOLUME_BYTE = 4
-NO_SYSTEM_CHANNELS = 16
-NO_BYTES_PER_CHANNEL = 4
-NOISE_CHANNEL = 3
+NO_AGI_CHANNELS = 4                 ; Number of AGI sound channels
+NO_NOTES = 5                       ; Number of notes in a sequence
+END_MARKER = $FFFF                 ; End marker for sound data
+FREQUENCY_BYTE = 2                 ; Offset for frequency byte in note data
+VOLUME_BYTE = 4                    ; Offset for volume byte in note data
+NO_SYSTEM_CHANNELS = 16            ; Number of system sound channels
+NO_BYTES_PER_CHANNEL = 4           ; Number of bytes per channel
+NOISE_CHANNEL = 3                  ; Channel index for noise channel
 
-DEFAULT_VOLUME = $C0 ;Volume of zero with left and right bits set
-WAVE_FORM_PULSE_WIDTH = $3F ;Default wave form and 50% duty
-NOISE_WAVE = $C0
-SAW_TOOTH = $40
+DEFAULT_VOLUME = $C0               ; Volume of zero with left and right bits set
+WAVE_FORM_PULSE_WIDTH = $3F       ; Default wave form and 50% pulse width duty cycle
+NOISE_WAVE = $C0                  ; Noise waveform parameter
+SAW_TOOTH = $40                   ; Saw tooth waveform parameter
 
-.import _b1LoadedSoundsPointer
+.import _b1LoadedSoundsPointer       ; Import pointer for loaded sounds
 
 .segment "ZEROPAGE"
+; Zero page variables for currently playing notes for each channel
 _ZP_CURRENTLY_PLAYING_NOTE_1: .word $0
 _ZP_CURRENTLY_PLAYING_NOTE_2: .word $0
 _ZP_CURRENTLY_PLAYING_NOTE_3: .word $0
 _ZP_CURRENTLY_PLAYING_NOTE_NOISE: .word $0
-SOUND_SREG: .word $0
 
+SOUND_SREG: .word $0               ; Sound data register
 
 .segment "BANKRAM01"
-_b1Ch1Ticks: .word $0
-_b1Ch2Ticks: .word $0
-_b1Ch3Ticks: .word $0
-_b1Ch4Ticks: .word $0
-_b1ChannelsPlaying: .byte $0
-_b1EndSoundFlag: .byte $0
-_b1SoundDataBank: .byte $0
-_b1IsPlaying: .res NO_AGI_CHANNELS
-LATCH_TO_CH2 = $0
+; Variables for sound playback timing and state
+_b1Ch1Ticks: .word $0              ; Remaining ticks for Channel 1
+_b1Ch2Ticks: .word $0              ; Remaining ticks for Channel 2
+_b1Ch3Ticks: .word $0              ; Remaining ticks for Channel 3
+_b1Ch4Ticks: .word $0              ; Remaining ticks for Channel 4
 
-;  b1NoiseFreq: 
-;  .word 5989
-;  .word 2994
-;  .word 1496
+_b1ChannelsPlaying: .byte $0       ; Number of channels currently playing
+_b1EndSoundFlag: .byte $0          ; Flag indicating end of sound playback
+_b1SoundDataBank: .byte $0         ; Bank containing sound data
+_b1IsPlaying: .res NO_AGI_CHANNELS ; Flags for channels currently playing
 
+LATCH_TO_CH2 = $0                  ; Latch value used in some noise handling
+
+; Frequencies used for noise channel sound effects (in approximate timer counts)
 b1NoiseFreq:
-    .word 1604     ; ~2230 Hz
-    .word 3209     ; ~1115 Hz
-    .word 6423     ; ~557 Hz
+    .word 1604     ; ~2230 Hz noise frequency
+    .word 3209     ; ~1115 Hz noise frequency
+    .word 6423     ; ~557 Hz noise frequency
 
 .segment "BANKRAM01"
+;Note X is the channel index, and it is counted in 2s
 b1SoundHandler:
 .scope
 start:
-SET_VERA_ADDRESS_IMMEDIATE FIRST_PSG_VOL_REGISTER, #$0, #1
+    SET_VERA_ADDRESS_IMMEDIATE FIRST_PSG_VOL_REGISTER, #$0, #1  ; Set VERA PSG volume register address
 
-ldx #$0
+    ldx #$0                      ; Start loop counter at 0
+
 channelLoop:
-txa
-lsr
-tay
-lda _b1IsPlaying,y
-bne checkNoteLength
-jmp silenceChannel
+    txa                         ; Transfer X to A
+    lsr                         ; Logical shift right A (divide X by 2).
+    tay                         ; Transfer A to Y (indexing _b1IsPlaying bits)
+    lda _b1IsPlaying,y           ; Load _b1IsPlaying flag for current channel (Y)
+    bne checkNoteLength          ; If channel is playing, check note length
+    jmp silenceChannel           ; Otherwise silence the channel
+
 checkNoteLength:
-ldy #$1
-lda _b1Ch1Ticks + 1,x
-bne deductOne
-lda _b1Ch1Ticks,x
-bne deductOne
-jmp zeroDurationNote
+    ldy #$1                      ; Offset 1 into ticks (high byte)
+    lda _b1Ch1Ticks + 1,x        ; Load high byte of channel ticks
+    bne deductOne                ; If non-zero, deduct one tick
+    lda _b1Ch1Ticks,x            ; Load low byte of channel ticks
+    bne deductOne                ; If non-zero, deduct one tick
+    jmp zeroDurationNote         ; Zero ticks means load next note
 
 deductOne:
-lda VERA_data0
-lda VERA_data0
-lda VERA_data0
-lda VERA_data0
+    lda VERA_data0               ; Move to the volume byte 
+    lda VERA_data0               ;    
+    lda VERA_data0
+    lda VERA_data0
 
-dec _b1Ch1Ticks,x
-lda _b1Ch1Ticks,x
-cmp #$FF
-bne incrementChannelCounter
-jmp durationDeductHigh
+    dec _b1Ch1Ticks,x            ; Decrement low byte ticks
+    lda _b1Ch1Ticks,x            ; Reload low byte ticks
+    cmp #$FF                    ; Check if underflow (went below zero)
+    bne incrementChannelCounter  ; If not, continue to next channel
+    jmp durationDeductHigh       ; Otherwise decrement high byte ticks
 
 playNote:
 store:
-lda VERA_addr_bank
-ora #$8
-sta VERA_addr_bank
-stz VERA_data0
-lda VERA_data0
+    lda VERA_addr_bank
+    ora #$8
+    sta VERA_addr_bank           ; Turn on backwards so that after we set volume to zero we return to frequency
 
-lda VERA_addr_bank
-and #$F7
-sta VERA_addr_bank
+    stz VERA_data0               ; Set volume to zero to reduce chance of squeak
+    lda VERA_data0               
 
-jmp readSound
+    lda VERA_addr_bank
+    and #$F7
+    sta VERA_addr_bank           ; Clear bit previously set
+
+    jmp readSound                ; Jump to sound data read routine
 
 zeroVolume:
-stz VERA_data0
-bra waveForm
+    stz VERA_data0               ; Set zero volume
+    bra waveForm
 
 nonZeroVolume:
-ora #DEFAULT_VOLUME
-sta VERA_data0
+    ora #DEFAULT_VOLUME          ; OR with default volume bits
+    sta VERA_data0
 
 waveForm:
-cpx #NOISE_CHANNEL * 2
-bcc squareWave
-lda isWhiteNoise
-beq squareWave
+    cpx #NOISE_CHANNEL * 2       ; Compare channel with noise channel index * 2
+    bcc squareWave               ; If less, jump to square waveform
+
+    lda isWhiteNoise             ; Load noise flag
+    beq squareWave               ; If zero, jump to square waveform
 
 noiseWave:
-lda #NOISE_WAVE
-sta VERA_data0
-bra goToNextNote
+    lda #NOISE_WAVE              ; Load noise waveform value
+    sta VERA_data0              ; Store in waveform register
+    bra goToNextNote
 
 squareWave:
-lda #WAVE_FORM_PULSE_WIDTH
-sta VERA_data0
+    lda #WAVE_FORM_PULSE_WIDTH   ; Load square wave pulse width value
+    sta VERA_data0
 
 goToNextNote:
-lda VERA_data0
-lda VERA_data0
+    lda VERA_data0              ; Dummy loads for timing and synchronization
+    lda VERA_data0
 
 incrementChannelCounter:
-inx
-inx
-cpx #NO_AGI_CHANNELS * 2
-beq end
-jmp channelLoop
+    inx                         ; Increment low byte index (X)
+    inx                         ; Increment high byte index (X)
+    cpx #NO_AGI_CHANNELS * 2    ; Check if all AGI channels processed
+    beq end                     ; If yes, end routine
+    jmp channelLoop             ; Otherwise continue loop
 
 end:
-rts
+    rts                         ; Return from subroutine
+
 zeroDurationNote:
-clc 
-lda #NO_NOTES
-adc _ZP_CURRENTLY_PLAYING_NOTE_1,x
-sta _ZP_CURRENTLY_PLAYING_NOTE_1,x
-bcc loadNote
+    clc                         ; Clear carry before addition
+    lda #NO_NOTES               ; Load number of notes
+    adc _ZP_CURRENTLY_PLAYING_NOTE_1,x  ; Add current note index
+    sta _ZP_CURRENTLY_PLAYING_NOTE_1,x  ; Store updated note index
+    bcc loadNote                ; If no overflow, load note
+
 highByte:
-inc _ZP_CURRENTLY_PLAYING_NOTE_1 + 1,x
+    inc _ZP_CURRENTLY_PLAYING_NOTE_1 + 1,x  ; Increment high byte if overflow
 
 loadNote:
-lda _ZP_CURRENTLY_PLAYING_NOTE_1,x
-sta SOUND_SREG
-lda _ZP_CURRENTLY_PLAYING_NOTE_1 + 1,x
-sta SOUND_SREG + 1
+    lda _ZP_CURRENTLY_PLAYING_NOTE_1,x      ; Load current note low byte
+    sta SOUND_SREG                           ; Store in sound register low byte
+    lda _ZP_CURRENTLY_PLAYING_NOTE_1 + 1,x  ; Load high byte
+    sta SOUND_SREG + 1                       ; Store in sound register high byte
 
-jmp getTicksJump
+    jmp getTicksJump           ; Jump to get ticks for the note
 
 storeTicks:
-sta  ticks + 1
-and  ticks
-cmp #$FF
-beq disableChannel
+    sta ticks + 1              ; Store high byte of ticks
+    and ticks                 ; AND low byte with accumulator
+    cmp #$FF                  ;  If both ticks are FF disable channel
+    beq disableChannel         ; If match, disable channel
 
-lda ticks
-sta _b1Ch1Ticks,x
-lda ticks + 1
-sta  _b1Ch1Ticks + 1,x
+    lda ticks                 ; Load low byte of ticks
+    sta _b1Ch1Ticks,x          ; Store ticks low byte for channel
+    lda ticks + 1              ; Load high byte of ticks
+    sta _b1Ch1Ticks + 1,x      ; Store ticks high byte
 
-jmp playNote
+    jmp playNote              ; Play new note
 
 durationDeductHigh:
-dec _b1Ch1Ticks + 1,x
-bra incrementChannelCounter
+    dec _b1Ch1Ticks + 1,x      ; Decrement high byte of ticks for channel
+    bra incrementChannelCounter; Branch to increment channel counter
 
 disableChannel:
-txa
-lsr
-tay
-lda #$0
-sta _b1IsPlaying,y
+    txa                       ; Transfer X to A
+    lsr                       ; Logical shift right A
+    tay                       ; Transfer A to Y 
+    lda #$0                   ; Load zero
+    sta _b1IsPlaying,y         ; Clear playing flag for channel
 
-dec _b1ChannelsPlaying
-bne silenceChannel
+    dec _b1ChannelsPlaying     ; Decrement count of channels playing
+    bne silenceChannel         ; If still playing more channels, silence
 
-lda _b1EndSoundFlag
-SET_FLAG_NON_INTERPRETER SOUND_SREG
+    lda _b1EndSoundFlag        ; Load end of sound flag
+    SET_FLAG_NON_INTERPRETER SOUND_SREG   ; Set flag for non-interpreter sound register
 
 silenceChannel:
-lda #$0
-;Freq
-sta VERA_data0
-sta VERA_data0
+    lda #$0                   ; Load zero
+; Silence frequency
+    sta VERA_data0            ; Write zero frequency low byte
+    sta VERA_data0            ; Write zero frequency high byte
 
-;Vol
-sta VERA_data0
+; Silence volume
+    sta VERA_data0            ; Set volume to zero
 
-;WaveForm/Width
-sta VERA_data0
+; Silence waveform/width
+    sta VERA_data0            ; Set waveform to zero
 
-jmp incrementChannelCounter
+    jmp incrementChannelCounter ; Continue to next channel
 
 b1PlayNoise:
-ldy #$1
-sty isWhiteNoise
+    ldy #$1                   ; Load 1 into Y (noise channel index)
+    sty isWhiteNoise          ; Set white noise flag
+
 determineIfPredefinedOrLatched:
-and #$3
-cmp #$3
-bne b1PlayPredefinedNoise
+    and #$3                   ; The last two bits determine whether this noise is predefined or latched. 3, means latched, everything else predefined
+    cmp #$3                   ; 
+    bne b1PlayPredefinedNoise  ; If not equal, play predefined noise
 
 b1CopyChannel2:
-sec
-lda VERA_addr_low
-sbc #NO_BYTES_PER_CHANNEL
-tay
-lda VERA_addr_high
-sbc #$0
-inc VERA_ctrl
-sty VERA_addr_low
-sta VERA_addr_high
-lda #$11
-sta VERA_addr_bank
+    sec                       
+    lda VERA_addr_low          ;Set VERA ch1 to the current value of channel 2, by deducting the number of notes from channel zero and going back a channel
+    sbc #NO_BYTES_PER_CHANNEL ;Step 1 Deduct
+    tay                       
+    lda VERA_addr_high         
+    sbc #$0                   
+    inc VERA_ctrl    
 
-lda VERA_data1
-sta VERA_data0
-lda VERA_data1
-sta VERA_data0
+    sty VERA_addr_low       ;Step 2, Store In Ch1 Register   
+    sta VERA_addr_high         
+    lda #$11                  
+    sta VERA_addr_bank
 
-dec VERA_ctrl
+    lda VERA_data1            
+    sta VERA_data0             ;Step 3: Store frequency
+    lda VERA_data1            
+    sta VERA_data0             
 
-jmp returnCopyChannel    
+    dec VERA_ctrl              ;Return VERA_ctrl back to ch9
+
+    jmp returnCopyChannel      ; Return
 
 b1PlayPredefinedNoise:
-asl
-tay
-lda b1NoiseFreq,y
-sta VERA_data0
-iny
-lda b1NoiseFreq,y
-sta VERA_data0
+    asl                       ; Shift accumulator left (multiply by 2)
+    tay                       ; Store result in Y
 
-jmp returnCopyChannel 
+    lda b1NoiseFreq,y          ; Load low byte of noise frequency from table
+    sta VERA_data0             ; Store low byte frequency
+
+    iny                       ; Increment Y to get high byte
+    lda b1NoiseFreq,y          ; Load high byte noise frequency
+    sta VERA_data0             ; Store high byte frequency
+
+    jmp returnCopyChannel      ; Return from noise play
 
 .segment "CODE"
-isWhiteNoise: .byte $0
-ticks: .word $0
-volByte: .byte $0
+isWhiteNoise: .byte $0            ; Flag indicating if noise is white noise
+ticks: .word $0                   ; Current sound tick counter
+volByte: .byte $0                ; Current volume byte
+
 readSound:
-lda _b1SoundDataBank
-sta RAM_BANK
+    lda _b1SoundDataBank         ; Load sound data bank
+    sta RAM_BANK                 ; Select RAM bank
 
-cpx #NOISE_CHANNEL * 2
-bcc playFrequency
+    cpx #NOISE_CHANNEL * 2       ; Compare channel index with noise channel * 2
+    bcc playFrequency            ; If channel < noise channel, play frequency
 
-stz isWhiteNoise ;May still be white, but we check elsewhere
+    stz isWhiteNoise             ; Set white noise flag to 0
 
-ldy #VOLUME_BYTE
-lda (SOUND_SREG),y
-sta volByte
-bit volByte
-bmi playFrequency
+    ldy #VOLUME_BYTE
+    lda (SOUND_SREG),y           ; Load volume byte from sound register
+    sta volByte                  ; Store volume in volByte
+    bit volByte                  ; C code sets bit 7 to 1, if periodic
+    bmi playFrequency            ; If N is set, the noise has already being computed, play as a frequency.
 
-ldy #FREQUENCY_BYTE + 1
-lda (SOUND_SREG),y
+    ldy #FREQUENCY_BYTE + 1  ;This means white noise, we compute what we play here
+    lda (SOUND_SREG),y           ; Load frequency high byte
 
-ldy #SOUND_BANK
-sty RAM_BANK
+    ldy #SOUND_BANK
+    sty RAM_BANK                 ; Select sound bank RAM
 
-jmp b1PlayNoise
+    jmp b1PlayNoise              ; Play noise sound
 
 returnCopyChannel:
-lda _b1SoundDataBank 
-sta RAM_BANK
-bra setVolume
+    lda _b1SoundDataBank          ; Reload bank
+    sta RAM_BANK                  ; Set RAM bank
+
+    bra setVolume                 ; Jump to volume setting
 
 returnToPlayFrequency:
-lda _b1SoundDataBank 
-sta RAM_BANK
+    lda _b1SoundDataBank
+    sta RAM_BANK
+
 playFrequency:
-ldy #FREQUENCY_BYTE
-lda (SOUND_SREG),y
-sta VERA_data0
-ldy #FREQUENCY_BYTE + 1
-lda (SOUND_SREG),y
-sta VERA_data0
+    ldy #FREQUENCY_BYTE
+    lda (SOUND_SREG),y            ; Load frequency low byte
+    sta VERA_data0
+    ldy #FREQUENCY_BYTE + 1
+    lda (SOUND_SREG),y            ; Load frequency high byte
+    sta VERA_data0
 
 setVolume:
-ldy #VOLUME_BYTE 
-lda (SOUND_SREG),y
-and #$7F
+    ldy #VOLUME_BYTE 
+    lda (SOUND_SREG),y            ; Load volume byte
+    and #$7F                      ; Mask out top bit
 
-ldy #SOUND_BANK
-sty RAM_BANK
+     ldy #SOUND_BANK
+    sty RAM_BANK                  ; Set bank for sound
 
-cmp #$0
-beq @zeroVolumeJump
-jmp nonZeroVolume
+    cmp #$0                       ; Compare volume with zero
+    beq @zeroVolumeJump           ; If zero, jump to zero volume code
+    jmp nonZeroVolume             ; Else jump to non-zero volume
 @zeroVolumeJump:
-jmp zeroVolume
+    jmp zeroVolume
 
 getTicksJump:
-lda _b1SoundDataBank
-sta RAM_BANK
+    lda _b1SoundDataBank
+    sta RAM_BANK
 
-lda (SOUND_SREG)
-sta ticks
-ldy #$1
-lda (SOUND_SREG),y
+    lda (SOUND_SREG)
+    sta ticks                    ; Store low byte of ticks
 
-ldy #SOUND_BANK
-sty RAM_BANK
-jmp storeTicks
+    ldy #$1
+    lda (SOUND_SREG),y
+    ; fall through
+
+    ldy #SOUND_BANK
+    sty RAM_BANK
+    jmp storeTicks               ; Store ticks and handle
 
 .endscope
 
 .segment "BANKRAM01"
-;void b1PsgClear()
+; void b1PsgClear() - Clear all PSG registers to silence sound
 _b1PsgClear:
-SET_VERA_ADDRESS_IMMEDIATE PSG_REGISTERS, #$0, #1
-ldx #NO_SYSTEM_CHANNELS * NO_BYTES_PER_CHANNEL
+    SET_VERA_ADDRESS_IMMEDIATE PSG_REGISTERS, #$0, #1    ; Set to PSG registers start
+    ldx #NO_SYSTEM_CHANNELS * NO_BYTES_PER_CHANNEL       ; Initialize counter for all system channels
+
 @clearLoop:
-stz VERA_data0
+    stz VERA_data0              ; Store zero to current PSG register
 @checkLoop:
-dex
-bne @clearLoop
-rts
+    dex                        ; Decrement counter
+    bne @clearLoop              ; Repeat until all are cleared
+    rts                        ; Return from subroutine
+
 .endif

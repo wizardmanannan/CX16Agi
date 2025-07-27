@@ -408,7 +408,7 @@ void b1PreComputePeriodicSound(SoundFile* soundFile, unsigned int* soundChannelO
 			WRITENOISE((*((byte*)&lsfrFrequencyToPlay)));
 			WRITENOISE((*((byte*)&lsfrFrequencyToPlay + 1)));
 			//If the lsfr ends in 1 we will hear this note, otherwise we won't
-			WRITENOISE((lfsr & 1 ? SN76489_to_CX16_Volume[oldChNoiseBytes[VOLUME_BYTE]] & 0xF : 0) | 0X80);
+			WRITENOISE((lfsr & 1 ? SN76489_to_CX16_Volume[oldChNoiseBytes[VOLUME_BYTE]] & 0xF : 0) | 0X80); //High byte of volume is used to indicate periodic sound
 
 			// Update LFSR feedback according to noise generator algorithm
 			feedback = (lfsr ^ (lfsr >> 14)) & 1;
