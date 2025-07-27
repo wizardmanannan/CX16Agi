@@ -7,8 +7,9 @@
 ![image](https://github.com/wizardmanannan/CX16Agi/blob/main/docs/images/KingsQuestIIIIntroWith3dEffect.gif)
 
 See it running here on YouTube: \
+[King's Quest III](https://www.youtube.com/watch?v=NZXwPm8dgjs) \
 [King's Quest I](https://youtu.be/N0JRAPeKvf0) \
-[Space Quest II](https://youtu.be/Pxg_op2dU8Q) \
+[Space Quest II](https://youtu.be/Pxg_op2dU8Q) 
 
 ![image](https://github.com/wizardmanannan/CX16Agi/assets/58645812/95672f9e-32c5-4775-9ee3-5145495f0f11)
 ![image](https://github.com/wizardmanannan/CX16Agi/assets/58645812/3fdfeadf-2016-48f1-a2fb-0f577838c710)  
@@ -18,9 +19,12 @@ See it running here on YouTube: \
 ![image](https://github.com/user-attachments/assets/c1cdc287-a795-44fb-946b-8e7155d80fa1)
 ![image](https://github.com/user-attachments/assets/96817fbb-d173-4ca7-98f6-d2cb1458ef55)
 
-# CX 16 Iteration 11 Goals (Current)
+# CX 16 Iteration 12 Goals (Current)
+Fix object placement bugs, but trying to make code function exactly the same and a known good interpreter
+
+# CX 16 Iteration 11 Goals (Complete)
 - Build a reliable, fast and efficient sprite memory allocator
-- Fix object placement bugs, but trying to make code function exactly the same and a known good interpreter
+- Implement Audio
 
 # CX 16 Iteration 10 Goals (Complete)
 - Implement sprite garbage collection so that the backbuffer (see below) will fit.
