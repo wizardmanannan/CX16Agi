@@ -1098,7 +1098,6 @@ b2Subv:
          sec
          lda @val
          sbc @existingVal
-         INC_CODE
          sta @val
 
          SET_VAR_OR_FLAG VARS_AREA_START_GOLDEN_OFFSET, @val, @var
