@@ -15,7 +15,7 @@ byte debugBank;
 long opCounter = 1;
 long opStopAt = -1;
 long opExitAt = -1;
-long opStartPrintingAt = -1;
+long opStartPrintingAt = 0;
 int opPrintOnlyOnScript = PRINT_ALL_SCRIPTS;
 boolean opStopEvery = FALSE;
 int _clockBefore = 0;
@@ -30,7 +30,7 @@ unsigned long queueAction = 0;
 #pragma bss-name (pop)
 
 #pragma rodata-name (push, "BANKRAMDEBUG")
-const char bDbgPrintMessage[] = "op %lu, %d\n";
+const char bDbgPrintMessage[] = "%d.\n";
 const char bDbgRemainingMemoryMessage[] = "Your remaining memory is approx: %d \n";
 const char bDbgFalseResultMessage[] = "the result is false\n";
 const char bDbgTrueResultMessage[] = "the result is true\n";
@@ -170,7 +170,7 @@ void bDbgDebugPrint(byte toPrint)
 		}
 
 
-		printf(bDbgPrintMessage, opCounter, toPrint);
+		printf(bDbgPrintMessage, toPrint);
 		_clockBefore = clockVal;
 #ifdef CHECK_MEM
 		bDbgCheckMemory();
