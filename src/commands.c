@@ -1284,6 +1284,12 @@ void b2Stop_motion() // 1, 0x00
 	localViewtab.motion = 0;
 	localViewtab.staleCounter = TRUE;
 
+	if (entryNum == 0)
+	{
+		var[6] = 0;
+		controlMode = PROGRAM_CONTROL;
+	}
+
 	setViewTab(&localViewtab, entryNum);
 	return;
 }
