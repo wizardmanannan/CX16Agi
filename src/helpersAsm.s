@@ -2,7 +2,93 @@
 .importzp sreg
 
 HELPERS_INC = 1
+
+
+;Input a/y, output a/x
+.macro MULT_8x8_16 
+.local @end
+.local @largeMult
+cmp #MAX_TIMETABLE_MULT_A + 1
+bcs @largeMult
+cpy #MAX_TIMETABLE_MULT_B + 1
+bcs @largeMult
+
+jsr mul8x8to8
+ldx #$0
+
+bra @end
+@largeMult:
+sta sreg
+stz sreg + 1
+sty sreg2
+stz sreg2 + 1
+
+MULT_16x16_16 sreg, sreg2
+@end:
+.endmacro
+
+.macro MULT_16x16_16 addra, addrb
+    ; DCSEL = 2 for FX control registers
+    lda #(2 << 1)
+    sta VERA_ctrl
+    
+    ; Clear FX control and enable multiplier
+    stz VERA_fx_ctrl 
+    lda #%00010000      ; Enable multiplier
+    sta VERA_fx_mult
+    
+    ; DCSEL = 6 for cache registers
+    lda #(6 << 1)
+    sta VERA_ctrl
+    
+    ; Reset accumulator
+    lda VERA_fx_cache_l ;FX_ACCUM_RESET
+    
+    ; Load numbers into cache
+    lda addra
+    sta VERA_fx_cache_l      ; First number low byte
+    lda addra+1
+    sta VERA_fx_cache_m      ; First number high byte (0 for 8-bit)
+    lda addrb
+    sta VERA_fx_cache_h      ; Second number low byte
+    lda addrb+1
+    sta VERA_fx_cache_u      ; Second number high byte (0 for 8-bit)
+    
+    ; Back to DCSEL = 2 for writing result
+    lda #(2 << 1)
+    sta VERA_ctrl
+    
+    ; Enable cache write
+    lda #%01000000      ; Cache Write Enable
+    sta VERA_fx_ctrl
+    
+    ; Set up VRAM address to $1F9B0
+    lda #<MULTIPLIER_OUTPUT           ; Low byte
+    sta VERA_addr_low 
+    lda #>MULTIPLIER_OUTPUT          ; Middle byte
+    sta VERA_addr_high
+    stz VERA_addr_bank
+
+    ; Trigger multiply and write
+    stz VERA_data0
+    
+    ; Set increment to read result
+    lda #%00010000      ; Increment 1 + high nibble of bank
+    sta VERA_addr_bank
+    
+    ; Read result into A (low) and X (high)
+    lda VERA_data0     ; Low byte
+    ldx VERA_data0     ; High byte
+    
+    ; Cleanup
+    stz VERA_fx_mult
+    stz VERA_fx_ctrl
+    stz VERA_ctrl
+.endmacro
+
 .segment "BANKRAM05"
+MAX_TIMETABLE_MULT_A = 15
+MAX_TIMETABLE_MULT_B = 17
 
 multBy0: .byte $00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00
 multBy1: .byte $00,$01,$02,$03,$04,$05,$06,$07,$08,$09,$0a,$0b,$0c,$0d,$0e,$0f
@@ -19,7 +105,9 @@ multBy11: .byte $00,$0b,$16,$21,$2c,$37,$42,$4d,$58,$63,$6e,$79,$84,$8f,$9a,$a5
 multBy12: .byte $00,$0c,$18,$24,$30,$3c,$48,$54,$60,$6c,$78,$84,$90,$9c,$a8,$b4
 multBy13: .byte $00,$0d,$1a,$27,$34,$41,$4e,$5b,$68,$75,$82,$8f,$9c,$a9,$b6,$c3
 multBy14: .byte $00,$0e,$1c,$2a,$38,$46,$54,$62,$70,$7e,$8c,$9a,$a8,$b6,$c4,$d2
-multBy15: .byte $00,$0f,$1e,$2d,$3c,$4b,$5a,$69,$78,$87,$96,$a5,$b4,$c3,$d2,$e1 
+multBy15: .byte $00,$0f,$1e,$2d,$3c,$4b,$5a,$69,$78,$87,$96,$a5,$b4,$c3,$d2,$e1
+multBy16: .byte $00,$10,$20,$30,$40,$50,$60,$70,$80,$90,$a0,$b0,$c0,$d0,$e0,$f0
+multBy17: .byte $00,$11,$22,$33,$44,$55,$66,$77,$88,$99,$aa,$bb,$cc,$dd,$ee,$ff
 
 multLookUp: 
 .addr multBy0
@@ -38,13 +126,14 @@ multLookUp:
 .addr multBy13 
 .addr multBy14 
 .addr multBy15
+.addr multBy16
+.addr multBy17
 
 .segment "CODE"
 
-;Multiplies two products from 0 to 15
+;Multiplies two products from 0 to 17
 ;Input a/y, output a
 mul8x8to8:
-
 ldx RAM_BANK
 phx
 
@@ -62,6 +151,7 @@ lda (sreg),y
 
 plx
 stx RAM_BANK
+
 rts
 
 .export _trampoline

@@ -7,7 +7,6 @@
     .include "graphicsAsm.s"
     .include "helpersAsm.s"
     .include "splitView.s"
-    .include "spriteMemoryManagerAsm.s"
     .include "wordsAsm.s"
     .include "debug.s"
     .include "fillAsm.s"
@@ -17,7 +16,8 @@
     .include "randomAsm.s"
     .include "modulus.s"
     .include "soundAsm.s"
-
+    .include "spriteAllocatorAsm.s"
+    
     .export _executeLogic
     .export _b6InitInterpreter
     .export _loadAndIncWinCode
@@ -47,10 +47,6 @@
     .export _b6InitIrq
     .export _b6TellMeTheAddressPlease
     .export _bESpritesUpdatedBuffer
-    .export _bESpriteAddressTableMiddle
-    .export _spriteAllocTable
-    .export _bEAllocateSpriteMemory32
-    .export _bEAllocateSpriteMemory64
     .export _bEAllocateSpriteMemoryBulk
     .export _bEBulkAllocatedAddresses
     .export _bECellToVeraBulk
@@ -79,12 +75,6 @@
     .export _bECelToVeraBackwards
     .export _bEClearVeraSprite
     .export _bECalculateBytesPerRow
-    .export _bASpriteAddressReverseHighNotSet
-    .export _bASpriteAddressReverseHighSet
-    .export _runSpriteGarbageCollector
-    .export _runIncrementalGarbageCollector
-    .export _bARunSpriteGarbageCollectorAll
-    .export _SGC_LAST_LOCATION_GC_CHECKED
     .export _bAFollowEgoAsmSec
     .export _rand8Bit
     .export _randBetween
@@ -104,3 +94,10 @@
     .export _b1EndSoundFlag
     .export _b1PsgClear
   
+    .export _bAWander
+    .export _bDFindFreeVramBlock
+    .export _bDBlocksBySizeFastLookup
+    .export _bDSpriteAllocTable
+    .export _bDResetSpriteTablePointer
+    .export _bDReenableOptimisticMode
+    .export _bDDeleteAllocation

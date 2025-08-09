@@ -10,12 +10,11 @@
 #include "memoryManager.h"
 #include "agifiles.h"
 #include "picture.h"
-#include "spriteMemoryManager.h"
+#include "spriteAllocator.h"
 #include "paletteManager.h"
 #include "helpers.h"
 #include "irq.h"
 #include "celToVeraZp.h"
-#include "spriteGarbage.h"
 
 #define MAX_JOINED_SPRITES 6
 #define MAX_SPRITES_ROW_OR_COLUMN_SIZE 4

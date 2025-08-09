@@ -289,9 +289,9 @@ int b1Lprintf(char* fmt, ...)
 boolean b1Has() // 1, 0x00 
 {
 	objectType objectType;
-	
+
 	bFGetObject(loadAndIncWinCode(), &objectType);
-	
+
 	return (objectType.roomNum == 255);
 }
 
@@ -299,7 +299,7 @@ boolean b1Obj_in_room() // 2, 0x40
 {
 	int objNum, varNum;
 	objectType objectType;
-	
+
 	objNum = loadAndIncWinCode();
 	bFGetObject(objNum, &objectType);
 
@@ -354,7 +354,7 @@ boolean b1Controller() // 1, 0x00
 	//	event.activated = 0;
 	//	return (retVal);
 	//default:
-		return FALSE;
+	return FALSE;
 }
 
 boolean b1Have_key() // 0, 0x00
@@ -368,7 +368,7 @@ boolean b1Have_key() // 0, 0x00
 		GET_IN(key);
 		var[19] = key;
 	}
-	
+
 	return key;
 }
 
@@ -551,7 +551,7 @@ void b2Overlay_pic() // 1, 0x80
 
 	b11DrawPic(loadedPicture.data, loadedPicture.size, FALSE, pNum);
 	b9ResetSpriteMemory(TRUE);
-	
+
 	return;
 }
 
@@ -564,7 +564,7 @@ void b2Show_pri_screen() // 0, 0x00
 
 void b2Load_view() // 1, 0x00 
 {
-    b9LoadViewFile(loadAndIncWinCode());
+	b9LoadViewFile(loadAndIncWinCode());
 	return;
 }
 
@@ -576,7 +576,7 @@ void b2Load_view_v() // 1, 0x80
 
 void b2Discard_view() // 1, 0x00 
 {
-    b9DiscardView(loadAndIncWinCode());
+	b9DiscardView(loadAndIncWinCode());
 	return;
 }
 
@@ -1284,6 +1284,12 @@ void b2Stop_motion() // 1, 0x00
 	localViewtab.motion = 0;
 	localViewtab.staleCounter = TRUE;
 
+	if (entryNum == 0)
+	{
+		var[6] = 0;
+		controlMode = PROGRAM_CONTROL;
+	}
+
 	setViewTab(&localViewtab, entryNum);
 	return;
 }
@@ -1298,6 +1304,12 @@ void b2Start_motion() // 1, 0x00
 
 	localViewtab.flags |= MOTION;
 	localViewtab.motion = 0;        /* Not sure about this */
+
+	if (entryNum == 0)
+	{
+		var[6] = 0;
+		controlMode = PLAYER_CONTROL;
+	}
 
 	setViewTab(&localViewtab, entryNum);
 	return;
@@ -1514,7 +1526,7 @@ void b3Get_v() // 1, 0x80
 {
 	objectType objectType;
 	byte objNum = var[loadAndIncWinCode()];
-	
+
 	bFGetObject(objNum, &objectType);
 
 	objectType.roomNum = 255;
@@ -1630,7 +1642,7 @@ void b3PrintMessageInTextbox(byte messNum, byte x, byte y, byte length)
 	unsigned int waitTicks;
 	unsigned int vSyncToContinueAt;
 	LOGICFile logicFile;
-	byte keysToWait[NO_KEYS_TO_WAIT] = {KEY_ESC, KEY_ENTER};
+	byte keysToWait[NO_KEYS_TO_WAIT] = { KEY_ESC, KEY_ENTER };
 
 	getLogicFile(&logicFile, currentLog);
 
@@ -1697,7 +1709,7 @@ void b3DisplayWithoutTextbox(byte row, byte col, byte messNum)
 	printf("the messages live at %p on bank %p\n", logicFile.messages, logicFile.messageBank);
 #endif
 	//b3ProcessString(messagePointer, 0, tempString);
-	b3DisplayMessageBox(messagePointer, logicFile.messageBank, row, col, b3SetTextColor(_currentForegroundColour, _currentBackgroundColour), 0);	
+	b3DisplayMessageBox(messagePointer, logicFile.messageBank, row, col, b3SetTextColor(_currentForegroundColour, _currentBackgroundColour), 0);
 	return;
 }
 
@@ -1767,8 +1779,8 @@ void b4Set_cursor_char() // 1, 0x00
 
 
 	//b3ProcessString(messagePointer, logicFile.messageBank, temp);
-	
-	memCpyBanked((byte*) &cursorChar, (byte*)b7Temp, STRING_BANK, 1);
+
+	memCpyBanked((byte*)&cursorChar, (byte*)b7Temp, STRING_BANK, 1);
 
 #ifdef VERBOSE_STRING_CHECK
 	printf("Your cursor char is %c\n", cursorChar);
@@ -1869,7 +1881,7 @@ void b4Word_to_string() // 2, 0x00
 
 	stringPtr = b7GetInternalStringPtr(stringNum, &length);
 
-	memCpyBanked((byte*)&b7WordText[wordNum], (byte*) stringPtr, STRING_BANK, length); 
+	memCpyBanked((byte*)&b7WordText[wordNum], (byte*)stringPtr, STRING_BANK, length);
 	return;
 }
 
@@ -1894,7 +1906,7 @@ void b4Get_num() // 2, 0x40
 	LOGICFile logicFile;
 	byte tempBank;
 
-	b7Temp = (char*) b10BankedAlloc(80, &tempBank);
+	b7Temp = (char*)b10BankedAlloc(80, &tempBank);
 
 	getLogicFile(&logicFile, currentLog);
 
@@ -2195,7 +2207,7 @@ void b4Reposition_to_v() // 3, 0x60
 
 void b4Print_at() // 4, 0x00           /* 3 args for AGI versions before */
 {
-   b3PrintMessageInTextbox(loadAndIncWinCode(), loadAndIncWinCode(), loadAndIncWinCode(), loadAndIncWinCode());
+	b3PrintMessageInTextbox(loadAndIncWinCode(), loadAndIncWinCode(), loadAndIncWinCode(), loadAndIncWinCode());
 }
 
 void b4Print_at_v() // 4, 0x80         /* 2_440 (maybe laterz) */
@@ -2240,7 +2252,7 @@ void b4WaitKeyRelease()
 
 int b4MenuUpdate(byte eventNo)
 {
-	b4WaitKeyRelease(); 
+	b4WaitKeyRelease();
 	b7ActivateEvent(eventNo);
 	return D_O_K;
 }

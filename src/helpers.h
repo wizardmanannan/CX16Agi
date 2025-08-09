@@ -74,6 +74,7 @@ extern byte _assmByte;
 extern byte _assmByte2;
 extern byte _assmByte3;
 extern long _assmLong;
+extern unsigned long _assmULong;
 extern unsigned int _assmUInt;
 
 extern boolean enableHelpersDebugging;

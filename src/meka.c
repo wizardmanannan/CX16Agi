@@ -31,6 +31,7 @@
 #include "graphics.h"
 #include "random.h"
 #include "sound.h"
+#include "spriteAllocator.h"
 //#include "sound.h"
 
 boolean hasEnteredNewRoom = FALSE, exitAllLogics = FALSE;
@@ -263,7 +264,6 @@ void b6Initialise()
     ///* var[86] = 1; var[87] = 2; var[88] = 3; */
 
     b6InitLogics();
-    bAGarbageCollectorInit();
 
 #ifdef VERBOSE
     printf("Logics Inited\n");
@@ -279,7 +279,7 @@ void b6Initialise()
     b7InitEvents();
     b6InitInterpreter();
     b6InitIrq();
-    bEInitSpriteMemoryManager();
+    bDInitSpriteMemoryManager();
     b6InitFloatDivision();
 
     asm("sei");
@@ -319,7 +319,7 @@ void main()
 
     RAM_BANK = MEKA_BANK;
     b6Initialise();
-    
+
     while (TRUE) {
         /* Cycle initiator. Controlled by delay variable (var[10). */
         if (counter >= var[10]) {
@@ -327,7 +327,7 @@ void main()
             printf("Interpret Runs\n");
 #endif // VERBOSE
             b6Interpret();
-            runIncrementalGarbageCollector();
+            // runIncrementalGarbageCollector();
             counter = 0;
         }
         b6CheckTimer();

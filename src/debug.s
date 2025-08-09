@@ -3,15 +3,13 @@ DEBUG_INC = 1
 .include "codeWindow.s"
 .include "irqAsm.s"
 .include "fillAsm.s"
-.include "spriteGarbageAsm.s"
 .segment "BANKRAM06"
 .import _opCounter
 .import _pixelCounter
 _b6TellMeTheAddressPlease:
 lda _opCounter
 lda _bESpritesUpdatedBuffer
-lda _bASpriteAddressReverseHighNotSet
-lda _bASpriteAddressReverseHighSet
+lda _bEBulkAllocatedAddresses
 rts
 
 .segment "BANKRAM05"

@@ -47,7 +47,7 @@ TOTAL_ROWS = ZP_TMP_17
 MAX_VERA_SLOTS = ZP_TMP_17 + 1
 CEL_COUNTER = ZP_TMP_18
 
-;DO NOT USE 24 or 25 + 0 used in vera sprite memory allocator
+MAX_SPRITE_SLOTS_FOR_VIEW = ZP_TMP_24 ;16 bit number, needed for multiplier
 IS_ON_BACKBUFFER = ZP_TMP_25 + 1
 
 ;Used in agiBlit marked so they don't get overwritten

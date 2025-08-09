@@ -1096,9 +1096,8 @@ b2Subv:
          DEBUG_SUB_V
 
          sec
-         lda @val
-         sbc @existingVal
-         INC_CODE
+         lda @existingVal
+         sbc @val
          sta @val
 
          SET_VAR_OR_FLAG VARS_AREA_START_GOLDEN_OFFSET, @val, @var
