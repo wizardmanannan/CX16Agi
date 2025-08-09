@@ -30,7 +30,7 @@ unsigned long queueAction = 0;
 #pragma bss-name (pop)
 
 #pragma rodata-name (push, "BANKRAMDEBUG")
-const char bDbgPrintMessage[] = "%d.\n";
+const char bDbgPrintMessage[] = "%d. F0 is %d\n";
 const char bDbgRemainingMemoryMessage[] = "Your remaining memory is approx: %d \n";
 const char bDbgFalseResultMessage[] = "the result is false\n";
 const char bDbgTrueResultMessage[] = "the result is true\n";
@@ -95,7 +95,7 @@ void b5InitializeDebugging()
 			while (cbm_read(lfn, GOLDEN_RAM_WORK_AREA, readSizes[i]))
 			{
 				memCpyBanked(debugBankPtr, GOLDEN_RAM_WORK_AREA, debugBank, readSizes[i]);
-				
+
 				debugBankPtr += readSizes[i];
 			}
 		}
@@ -105,9 +105,14 @@ void b5InitializeDebugging()
 #pragma code-name (pop);
 
 #pragma code-name (push, "BANKRAMDEBUG");
+void bDbgDebugOn()
+{
+	opStartPrintingAt = 1;
+}
+
 void bDbgShowPriority()
 {
-	unsigned long i,j;
+	unsigned long i, j;
 	byte priByte;
 
 	asm("sei");
@@ -128,7 +133,7 @@ void bDbgShowPriority()
 				READ_BYTE_VAR_FROM_ASSM(priByte, VERA_data0); //Skip Over accords for bitmap being larger than priority
 			}
 		}
-	} 
+	}
 	asm("cli");
 }
 void bDbgCheckMemory()
@@ -153,6 +158,7 @@ void bDbgCheckMemory()
 #endif // CHECK_MEM
 }
 
+extern boolean* flag;
 void bDbgDebugPrint(byte toPrint)
 {
 	int time;
@@ -170,7 +176,7 @@ void bDbgDebugPrint(byte toPrint)
 		}
 
 
-		printf(bDbgPrintMessage, toPrint);
+		printf(bDbgPrintMessage, toPrint, flag[0]);
 		_clockBefore = clockVal;
 #ifdef CHECK_MEM
 		bDbgCheckMemory();

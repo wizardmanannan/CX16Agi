@@ -25,7 +25,9 @@ char cursorChar = '_';
 
 //#define VERBOSE_DEBUG_LOOKUP_WORDS
 #pragma rodata-name (push, "BANKRAM07")
-char SHOW_PRIORITY[] = {0X73, 0X68, 0X6F, 0X77, 0X20, 0X70, 0X72, 0X69, 0X6F, 0X72, 0X69, 0X74, 0X79 };
+char SHOW_PRIORITY[] = { 0X73, 0X68, 0X6F, 0X77, 0X20, 0X70, 0X72, 0X69, 0X6F, 0X72, 0X69, 0X74, 0X79 };
+char DEBUG[] = { 0x44, 0x45, 0x42, 0x55, 0x47 };
+char EXIT_BUCKET[] = { 0X65, 0X78, 0X69, 0X74, 0X20, 0X62, 0X75, 0X63, 0X6B, 0X65, 0X74 };
 #pragma rodata-name (pop)
 #pragma bss-name (push, "BANKRAM07")
 int b7InputWords[10];
@@ -180,6 +182,7 @@ void b7GetInternalString(char* promptStr, byte promptStringBank, byte stringNumb
 extern boolean b5IsDebuggingEnabled();
 #pragma wrapped-call (pop)
 extern void bDbgShowPriority();
+extern void bDbgDebugOn();
 extern byte debugBank;
 
 /***************************************************************************
@@ -240,6 +243,12 @@ void b7PollKeyboard()
 					{
 						trampolineDebug(bDbgShowPriority);
 					}
+
+					if (b5IsDebuggingEnabled() && !strcmp(b7CurrentInputStr, DEBUG))
+					{
+						trampolineDebug(bDbgDebugOn);
+					}
+
 					b7LookupWords(b7CurrentInputStr);
 					b7CurrentInputStr[0] = 0;
 					strPos = 0;
@@ -268,7 +277,7 @@ void b7PollKeyboard()
 						{
 							ch += ASCII_DIFF;
 						}
-						
+
 						b7CurrentInputStr[strPos] = (ch);
 						strPos++;
 						b7CurrentInputStr[strPos] = 0;
@@ -355,10 +364,10 @@ void b7LookupWords(char* inputLine)
 	int synNum;
 	boolean allWordsFound = TRUE;
 	char* userInput = b7Temp;
-	char** start = (char**)GOLDEN_RAM_PARAMS_AREA, **end, **originalEnd;
-	char* strBuf = (char*) start + MAX_WORD_SIZE * sizeof(char*) + sizeof(char**);
+	char** start = (char**)GOLDEN_RAM_PARAMS_AREA, ** end, ** originalEnd;
+	char* strBuf = (char*)start + MAX_WORD_SIZE * sizeof(char*) + sizeof(char**);
 	byte stringLength;
-	
+
 #ifdef VERBOSE_DEBUG_LOOKUP_WORDS
 	byte i;
 #endif
@@ -387,38 +396,38 @@ void b7LookupWords(char* inputLine)
 		printf("s. %p e. %p sBuf %p\n", start, end, strBuf);
 		asm("stp");
 #endif
-		
-		   switch (synNum = b12FindSynonymNum(strBuf, PARSER_BANK)) {
-			case -1: /* Word not found */
-				if (start == end)
-				{
-					var[9] = numInputWords + 1;
-					allWordsFound = FALSE;
-				}
-				stringLength = *end - *start;
-				*end--;
-				break;
-			default:
-				start = end + 1;
-				end = originalEnd;
 
-				if (start <= end)
-				{
-					stringLength = strlen(*start);
-				}
-				
-#ifdef VERBOSE_DEBUG_LOOKUP_WORDS
-				printf("2 s. %p e. %p sBuf %p. stringLength is %d\n", start, end, strBuf, stringLength);
-				asm("stp");
-#endif
-				if (synNum)
-				{
-					b7InputWords[numInputWords] = synNum;
-					strcpy(b7WordText[numInputWords], strBuf);
-					numInputWords++;
-				}
-				break;
+		switch (synNum = b12FindSynonymNum(strBuf, PARSER_BANK)) {
+		case -1: /* Word not found */
+			if (start == end)
+			{
+				var[9] = numInputWords + 1;
+				allWordsFound = FALSE;
 			}
+			stringLength = *end - *start;
+			*end--;
+			break;
+		default:
+			start = end + 1;
+			end = originalEnd;
+
+			if (start <= end)
+			{
+				stringLength = strlen(*start);
+			}
+
+#ifdef VERBOSE_DEBUG_LOOKUP_WORDS
+			printf("2 s. %p e. %p sBuf %p. stringLength is %d\n", start, end, strBuf, stringLength);
+			asm("stp");
+#endif
+			if (synNum)
+			{
+				b7InputWords[numInputWords] = synNum;
+				strcpy(b7WordText[numInputWords], strBuf);
+				numInputWords++;
+			}
+			break;
+		}
 	}
 
 #ifdef VERBOSE_DEBUG_LOOKUP_WORDS
