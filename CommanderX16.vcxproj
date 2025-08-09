@@ -103,6 +103,7 @@
     <ClCompile Include="src\paletteManager.c" />
     <ClCompile Include="src\random.c" />
     <ClCompile Include="src\sound.c" />
+    <ClCompile Include="src\spriteAllocator.c" />
     <ClCompile Include="src\spriteGarbage.c" />
     <ClCompile Include="src\textLayer.c" />
     <ClCompile Include="src\GUI.C" />
