@@ -7,7 +7,6 @@
     .include "graphicsAsm.s"
     .include "helpersAsm.s"
     .include "splitView.s"
-    .include "spriteMemoryManagerAsm.s"
     .include "wordsAsm.s"
     .include "debug.s"
     .include "fillAsm.s"
@@ -17,8 +16,7 @@
     .include "randomAsm.s"
     .include "modulus.s"
     .include "soundAsm.s"
-
-    .include "spriteAllocatorNewAsm.s"
+    .include "spriteAllocatorAsm.s"
     
     .export _executeLogic
     .export _b6InitInterpreter

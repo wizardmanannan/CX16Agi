@@ -941,7 +941,7 @@ initialise:
 	RAM_BANK = localMetadata.viewTableMetadataBank;
 	loopVeraAddress = localMetadata.backBuffers[0];
 
-	RAM_BANK = SPRITE_MEMORY_MANAGER_BANK;
+	RAM_BANK = SPRITE_UPDATED_BANK;
 
 	SET_VERA_ADDRESS_ZP(loopVeraAddress, VERA_ADDRESS, VERA_ADDRESS_HIGH);
 

@@ -4,10 +4,10 @@
 /*
 
 
-64 x — 8	8	1	8
-64 x — 16	8	2	16
-64 x — 32	8	4	32
-64 x — 64	8	8	64
+64 x - 8	8	1	8
+64 x - 16	8	2	16
+64 x - 32	8	4	32
+64 x - 64	8	8	64
 */
 
 extern byte bDSpriteAllocTable[TOTAL_REAL_BLOCKS];
@@ -25,10 +25,10 @@ extern boolean OPTIMISTIC_MODE;
 // cc65?style typedefs
 // VRAM parameters (avoid your VRAM_SIZE name)
 #define TOTAL_SPRITE_VRAM_BYTES  69120u  // 0x10E00
-#define BLOCK_BYTES                 32u  // one 8×8 block
+#define BLOCK_BYTES                 32u  // one 8ï¿½8 block
 #define MIN_ALLOC_BYTES             BLOCK_BYTES
 
-// all 16 width×height combos
+// all 16 widthxheight combos
 static const struct { byte w, h; } sizeTable[16] = {
 	{  8,  8 }, {  8, 16 }, {  8, 32 }, {  8, 64 },
 	{ 16,  8 }, { 16, 16 }, { 16, 32 }, { 16, 64 },
@@ -80,7 +80,7 @@ void canFillVRamWithRandomSprites(boolean printResults)
 			failedMask = 0;
 			totalBytes += thisBytes;
 			if (printResults) {
-				printf("OK: %2u×%2u @ 0x%05lX  (+%4lu ? %5lu/%u)\n",
+				printf("OK: %2ux%2u @ 0x%05lX  (+%4lu ? %5lu/%u)\n",
 					(unsigned)w, (unsigned)h,
 					(unsigned long)addr,
 					thisBytes,
@@ -101,7 +101,7 @@ void canFillVRamWithRandomSprites(boolean printResults)
 	}
 	else {
 		if (printResults) {
-			printf("SUCCESS: VRAM “full” with %lu bytes slack (< %u)\n",
+			printf("SUCCESS: VRAM xfullx with %lu bytes slack (< %u)\n",
 				slack, MIN_ALLOC_BYTES);
 		}
 	}
@@ -201,7 +201,7 @@ void canRepopulateAfterDelete()
 		  {0x15400, 0x15480, 0x15500, 0x15580},  /* 32Ã—8, 32Ã—16, 32Ã—32, 32Ã—64 */
 		  {0x15800, 0x15880, 0x15900, 0x15980}}, /* 64Ã—8, 64Ã—16, 64Ã—32, 64Ã—64 */
 
-		  // Group 3: End of memory (smallest â†’ largest, respecting width/height order)
+		  // Group 3: End of memory (smallest -> largest, respecting width/height order)
 		{{0x1F7E0, 0x1F7C0, 0x1F780, 0x1F700},  /*  8x8,   8x16,   8x32,   8x64  */
 			{0x1F760, 0x1F740, 0x1F700, 0x1F600},  /* 16x8,  16x16,  16x32,  16x64 */
 			{0x1F6A0, 0x1F680, 0x1F600, 0x1F400},  /* 32x8,  32x16,  32x32,  32x64 */
@@ -255,7 +255,7 @@ void canRepopulateAfterDelete()
 void runTests()
 {
 	byte i, j, powI, powJ;
-	RAM_BANK = SPRITE_MEMORY_MANAGER_NEW_BANK;
+	RAM_BANK = SPRITE_MEMORY_MANAGER_BANK;
 
 	canFillVRamWithRandomSprites(TRUE);
 

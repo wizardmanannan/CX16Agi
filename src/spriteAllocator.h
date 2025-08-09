@@ -20,7 +20,7 @@ typedef enum {
 	SPR_SIZE_64 = 64
 } SpriteAllocationSize;
 
-#pragma wrapped-call (push, trampoline, SPRITE_MEMORY_MANAGER_NEW_BANK)
+#pragma wrapped-call (push, trampoline, SPRITE_MEMORY_MANAGER_BANK)
 void bDInitSpriteMemoryManager();
 unsigned long bDFindFreeVramBlock(SpriteAllocationSize width, SpriteAllocationSize height);
 extern void bDDeleteAllocation(VeraSpriteAddress address, SpriteAllocationSize width, SpriteAllocationSize height);
