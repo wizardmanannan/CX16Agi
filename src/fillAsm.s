@@ -1386,14 +1386,6 @@ jsr popax
 sta @bufferStatus
 stx @bufferStatus + 1
 
-
- ; is the current vis colour 15 (white)?
-; if (vis_colour == 15) return 0;
-lda _picColour
-cmp #15
-bne @checkEnabled
-rts
-
 @checkEnabled:
 lda _picDrawEnabled
 ora _priDrawEnabled

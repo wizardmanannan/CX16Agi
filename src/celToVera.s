@@ -351,7 +351,8 @@ sta Y_VAL
 stx X_VAL
 
 jsr popa
-sta MAX_SPRITE_SLOTS
+sta MAX_SPRITE_SLOTS_FOR_VIEW
+stz MAX_SPRITE_SLOTS_FOR_VIEW + 1
 
 jsr popa
 sta NO_OF_CELS
@@ -412,15 +413,19 @@ jsr _memCpyBankedBetween
 GET_STRUCT_8_STORED_OFFSET _offsetOfSplitSegments, CEL_ADDR, NO_SPLIT_SEGMENTS
 
 ldy BULK_ADDRESS_INDEX
+lda _bEBulkAllocatedAddresses, y ;Low Byte
 
-stz VERA_ADDRESS ; Low byte Always zero
-lda _bEBulkAllocatedAddresses, y ;Middle byte
+sta VERA_ADDRESS ; Low byte Always zero
+lda _bEBulkAllocatedAddresses + 1, y ;Middle byte
 sta VERA_ADDRESS + 1
-lda _bEBulkAllocatedAddresses + 1, y
+lda _bEBulkAllocatedAddresses + 2, y;High byte
 sta VERA_ADDRESS_HIGH
 
 iny
 iny
+iny
+iny ;Skip byte 4 which is always zero
+
 sty BULK_ADDRESS_INDEX
 
 GET_STRUCT_8_STORED_OFFSET _offsetOfCelTrans, CEL_ADDR, CEL_TRANS
@@ -436,6 +441,7 @@ bne @celToVeraBackwards
 @celToVeraForwards:
 lda #$1
 sta CEL_TO_VERA_IS_FORWARD_DIRECTION
+
 jsr _celToVera
 bra @restoreStack
 
@@ -447,6 +453,7 @@ pla
 sta Y_VAL
 
 @checkSplitLoop:
+
 lda SPLIT_COUNTER
 cmp NO_SPLIT_SEGMENTS
 
@@ -464,16 +471,17 @@ adc #$0
 sta CEL_ADDR + 1
 
 
-inc CEL_COUNTER
+ldy CEL_COUNTER
+iny
+sty CEL_COUNTER
 
-lda MAX_SPRITE_SLOTS
+lda MAX_SPRITE_SLOTS_FOR_VIEW
 cmp #$1 
 beq @checkLoop ;Skip multiply where this view is not split, for efficiency 
-ldx #$0
-jsr pushax
-lda CEL_COUNTER
-ldx #$0
-TRAMPOLINE #HELPERS_BANK, _b5Multiply
+lda MAX_SPRITE_SLOTS_FOR_VIEW
+ldy CEL_COUNTER
+MULT_8x8_16
+asl
 asl
 sta BULK_ADDRESS_INDEX
 

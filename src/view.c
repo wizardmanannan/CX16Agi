@@ -68,7 +68,7 @@ extern int dirnOfEgo;
 
 #define MAX_INACTIVE_METADATA 10
 
-extern byte bEBulkAllocatedAddresses[VIEW_TABLE_SIZE * sizeof(VeraSpriteAddress) * ALLOCATOR_BLOCK_SIZE_64];
+extern byte bEBulkAllocatedAddresses[VIEW_TABLE_SIZE * sizeof(VeraSpriteAddress) * MAX_BULK_ALLOCATED_SIZE];
 
 void getViewTab(ViewTable* returnedViewTab, byte viewTabNumber)
 {
@@ -277,6 +277,7 @@ void bEResetViewTableMetadata()
 		viewTableMetadata[i].inactiveBank = NULL;
 		viewTableMetadata[i].backBuffers = NULL;
 		viewTableMetadata[i].isOnBackBuffer = FALSE;
+		viewTableMetadata[i].backBufferSize = 0;
 	}
 
 	memset(&viewTabNoToMetaData[0], VIEWNO_TO_METADATA_NO_SET, MAXVIEW);
@@ -301,9 +302,9 @@ void bESetViewMetadata(View* localView, ViewTable* viewTable, byte viewNum, byte
 	byte i;
 	byte maxVeraAddresses;
 	ViewTableMetadata metadata;
-	int loopVeraAddressesPointersSize;
-	int veraAddressesSize;
-	int backBufferAllocationSize;
+	int numberLoopVeraAddressPointers;
+	int numberVeraAddresses;
+	int numberBackBuffers;
 	int totalAllocationSize;
 	VeraSpriteAddress** addressBuffer = (VeraSpriteAddress**)GOLDEN_RAM_PARAMS_AREA;
 	VeraSpriteAddress* veraAddressCounter;
@@ -343,18 +344,21 @@ void bESetViewMetadata(View* localView, ViewTable* viewTable, byte viewNum, byte
 		//TODO: Deallocate vera as well
 	}
 
-	loopVeraAddressesPointersSize = localView->numberOfLoops;
-	veraAddressesSize = maxVeraAddresses * localView->numberOfLoops;
-	backBufferAllocationSize = localView->maxVeraSlots;
-	totalAllocationSize = (loopVeraAddressesPointersSize + veraAddressesSize + backBufferAllocationSize) * sizeof(VeraSpriteAddress*);
+	numberLoopVeraAddressPointers = localView->numberOfLoops;
+	numberVeraAddresses = maxVeraAddresses * localView->numberOfLoops;
+	numberBackBuffers = localView->maxVeraSlots;
+	totalAllocationSize = numberLoopVeraAddressPointers * sizeof(VeraSpriteAddress*) + (numberVeraAddresses + numberBackBuffers) * sizeof(VeraSpriteAddress);
 
 #ifdef VERBOSE_DEBUG_SET_METADATA
 	printf("There are %d loops and %d maxCels\n", localView->numberOfLoops, localView->maxCels);
 #endif
 
 	metadata.loopsVeraAddressesPointers = (VeraSpriteAddress**)b10BankedAlloc(totalAllocationSize, &metadata.viewTableMetadataBank);
-	metadata.veraAddresses = (VeraSpriteAddress*)metadata.loopsVeraAddressesPointers + loopVeraAddressesPointersSize;
-	metadata.backBuffers = metadata.veraAddresses + veraAddressesSize;
+	
+	
+	metadata.veraAddresses = (VeraSpriteAddress*)(metadata.loopsVeraAddressesPointers + numberLoopVeraAddressPointers);
+
+	metadata.backBuffers = (VeraSpriteAddress*) ((unsigned int)metadata.veraAddresses + numberVeraAddresses * sizeof(VeraSpriteAddress));	
 	metadata.viewNum = viewNum;
 
 #ifdef VERBOSE_DEBUG_SET_METADATA
@@ -577,12 +581,6 @@ void bESwitchMetadata(ViewTable* localViewTab, View* localView, byte viewNum, by
 		viewTableMetadata[entryNum] = localMetadata;
 		bESetViewMetadata(localView, localViewTab, viewNum, entryNum, viewTabNoToMetaData[entryNum]);
 		localMetadata = viewTableMetadata[entryNum];
-
-		if (backBuffers)
-		{
-			memCpyBankedBetween((byte*)localMetadata.backBuffers, localMetadata.viewTableMetadataBank, (byte*)backBuffers, backBuffersBank, localView->maxVeraSlots * sizeof(VeraSpriteAddress));
-			viewTableMetadata[entryNum] = localMetadata;
-		}
 	}
 	else
 	{
@@ -611,18 +609,42 @@ void bESwitchMetadata(ViewTable* localViewTab, View* localView, byte viewNum, by
 
 boolean bEAllocateSpriteMemory(Loop* localLoop, byte noToBlit)
 {
-	AllocationSize allocationSize;
+	SpriteAllocationSize allocationWidth, allocationHeight;
 
-	if (localLoop->allocationHeight == SPR_ATTR_64 || localLoop->allocationWidth == SPR_ATTR_64)
+	switch (localLoop->allocationWidth)
 	{
-		allocationSize = SIZE_64;
-	}
-	else
-	{
-		allocationSize = SIZE_32;
+	case SPR_ATTR_8:
+		allocationWidth = SPR_SIZE_8;
+		break;
+	case SPR_ATTR_16:
+		allocationWidth = SPR_SIZE_16;
+		break;
+	case SPR_ATTR_32:
+		allocationWidth = SPR_SIZE_32;
+		break;
+	case SPR_ATTR_64:
+		allocationWidth = SPR_SIZE_64;
+		break;
 	}
 
-	if (!bEAllocateSpriteMemoryBulk(allocationSize, noToBlit))
+	switch (localLoop->allocationHeight)
+	{
+	case SPR_ATTR_8:
+		allocationHeight = SPR_SIZE_8;
+		break;
+	case SPR_ATTR_16:
+		allocationHeight = SPR_SIZE_16;
+		break;
+	case SPR_ATTR_32:
+		allocationHeight = SPR_SIZE_32;
+		break;
+	case SPR_ATTR_64:
+		allocationHeight = SPR_SIZE_64;
+		break;
+	}
+
+	//printf("we pass in %d %d\n", allocationWidth, allocationHeight);
+	if (!bEAllocateSpriteMemoryBulk(allocationWidth, allocationHeight, noToBlit))
 	{
 		return FALSE;
 	}
@@ -706,11 +728,12 @@ extern void bEClearVeraSprite(byte celWidth, byte celHeight);
 
 #define SET_VERA_ADDRESS_ZP(loopVeraAddress, VERA_ADDRESS, VERA_ADDRESS_HIGH) \
     do { \
-        _assmUInt = loopVeraAddress; \
-		asm("stz %w", VERA_ADDRESS); \
-        asm("lda %v", _assmUInt); \
+        _assmULong = loopVeraAddress; \
+		asm("lda %v", _assmULong); \
+		asm("sta %w", VERA_ADDRESS); \
+        asm("lda %v + 1", _assmULong); \
         asm("sta %w + 1", VERA_ADDRESS); \
-        asm("lda %v + 1", _assmUInt); \
+        asm("lda %v + 2", _assmULong); \
         asm("sta %w", VERA_ADDRESS_HIGH); \
     } while (0)
 /***************************************************************************
@@ -729,7 +752,9 @@ boolean agiBlit(ViewTable* localViewTab, byte entryNum, boolean disableInterupts
 	boolean isAllocated = FALSE;
 	byte splitCounter; //Store the SPLIT_COUNTER ZP in here as this makes it easier for C to access it 
 	byte isAnimated = FALSE;
-
+	SpriteAllocationSize allocationWidth, allocationHeight;
+	byte combinedSpriteAllocationSize;
+	
 	previousBank = RAM_BANK;
 	RAM_BANK = SPRITE_METADATA_BANK;
 
@@ -841,13 +866,56 @@ boolean agiBlit(ViewTable* localViewTab, byte entryNum, boolean disableInterupts
 	asm("jmp %g", splitLoop);
 
 animatedSprite:
+	switch (localLoop.allocationWidth)
+	{
+	case SPR_ATTR_8:
+		allocationWidth = SPR_SIZE_8;
+		break;
+	case SPR_ATTR_16:
+		allocationWidth = SPR_SIZE_16;
+		break;
+	case SPR_ATTR_32:
+		allocationWidth = SPR_SIZE_32;
+		break;
+	case SPR_ATTR_64:
+		allocationWidth = SPR_SIZE_64;
+		break;
+	}
+
+	switch (localLoop.allocationHeight)
+	{
+	case SPR_ATTR_8:
+		allocationHeight = SPR_SIZE_8;
+		break;
+	case SPR_ATTR_16:
+		allocationHeight = SPR_SIZE_16;
+		break;
+	case SPR_ATTR_32:
+		allocationHeight = SPR_SIZE_32;
+		break;
+	case SPR_ATTR_64:
+		allocationHeight = SPR_SIZE_64;
+		break;
+	}
+
+	combinedSpriteAllocationSize = allocationWidth + allocationHeight;
+	
 	RAM_BANK = localMetadata.viewTableMetadataBank;
-	_assmUInt = localMetadata.backBuffers[0];
+	_assmULong = localMetadata.backBuffers[0];
 
 	RAM_BANK = SPRITE_METADATA_BANK;
-	asm("lda %v", _assmUInt);
+	
+	if (localMetadata.backBufferSize != combinedSpriteAllocationSize)
+	{
+		_assmULong = NULL;
+		//TODO: Add old backbuffer to delete queue
+	}
+
+	asm("lda %v", _assmULong);
 	asm("bne %g", jumpInvert);
-	asm("lda %v + 1", _assmUInt);
+	asm("lda %v + 1", _assmULong);
+	asm("bne %g", jumpInvert);
+	asm("lda %v + 2", _assmULong);
 	asm("bne %g", jumpInvert);
 	asm("jmp %g", initialise);
 
@@ -864,7 +932,8 @@ initialise:
 		}
 		
 		localMetadata.isOnBackBuffer = TRUE;
-		
+		localMetadata.backBufferSize = combinedSpriteAllocationSize;
+
 		isAllocated = TRUE;
 	}
 
@@ -895,7 +964,7 @@ switchToBackBuffer:
 	RAM_BANK = localMetadata.viewTableMetadataBank;
 	//printf("invert\n");
 	loopVeraAddress = localMetadata.backBuffers[0];
-	_assmUInt = loopVeraAddress;
+	_assmULong = loopVeraAddress;
 	//printf("2. your local loop has an allocated height of %d\n", localLoop.allocationHeight);
 
 	asm("lda #%w", SPRITE_METADATA_BANK);
@@ -941,7 +1010,7 @@ checkWhetherOnBackBuffer:
 notOnBackBuffer:
 	RAM_BANK = localMetadata.viewTableMetadataBank;
 	loopVeraAddress = loopVeraAddresses[splitCounter + (localView.maxVeraSlots * localViewTab->currentCel) - 1];
-	_assmUInt = loopVeraAddress;
+	_assmULong = loopVeraAddress;
 
 	SET_VERA_ADDRESS_ZP(loopVeraAddress, VERA_ADDRESS, VERA_ADDRESS_HIGH);
 	RAM_BANK = SPRITE_UPDATED_BANK;
@@ -965,24 +1034,29 @@ onBackBuffer:
 updateSpriteBuffer:
 	RAM_BANK = SPRITE_UPDATED_BANK;
 	//0 Vera Address Sprite Data Middle (Low will always be 0) (If both the first two bytes are zero that indicates the end of the buffer)
-	_assmUInt = loopVeraAddress;
+	_assmULong = loopVeraAddress;
+	//printf("loopVeraAddress is %lx, the address is %p\n", loopVeraAddress, &loopVeraAddress);
 
-	asm("lda %v", _assmUInt);
-	asm("and #$1F"); //Gets you the address bits 12:8 Which are the parts of the medium byte we need
-	asm("asl"); //Gets bits 5:7 which are always zero
+	asm("lda %v", _assmULong);
+	asm("and #$E0"); //Gets you the address bits 12:8 Which are the parts of the medium byte we need
+	asm("sta sreg");
+	asm("lda %v + 1", _assmULong);
+	asm("tax");
+	asm("asl"); //Gets bits 5:7
 	asm("asl");
 	asm("asl");
+	asm("ora sreg");
 	asm("sta (%w)", ZP_SPRITE_STORE_PTR);
 
 	//1 Vera Address Sprite Data High
-	asm("lda %v", _assmUInt);
+	asm("txa");
 	asm("and #$E0");
 	asm("lsr");
 	asm("lsr");
 	asm("lsr");
 	asm("lsr");
 	asm("lsr");
-	asm("ldx %v + 1", _assmUInt);
+	asm("ldx %v + 2", _assmULong);
 	asm("beq @store"); //If the high byte is zero we don't need to worry about it
 	asm("ora #$8"); //Keep the last three bits of the middle byte and have the forth byte high
 	asm("@store: ldy #$1");
@@ -1034,25 +1108,25 @@ moveXDueToFlipped:
 	asm("lda %v", _assmByte2);
 	asm("cmp #%w", SPR_ATTR_8);
 	asm("bne @check16");
-	asm("lda #%w", MAX_8_WIDTH_OR_HEIGHT);
+	asm("lda #%w", SPR_SIZE_8);
 	asm("bra @takeWidthFromMaxWidth");
 
 	//Width16
 	asm("@check16: lda %v", _assmByte2);
 	asm("cmp #%w", SPR_ATTR_16);
 	asm("bne @check32");
-	asm("lda #%w", MAX_16_WIDTH_OR_HEIGHT);
+	asm("lda #%w", SPR_SIZE_16);
 	asm("bra @takeWidthFromMaxWidth");
 
 	//Width32
 	asm("@check32: lda %v", _assmByte2);
 	asm("cmp #%w", SPR_ATTR_32);
 	asm("bne @set64");
-	asm("lda #%w", MAX_32_WIDTH_OR_HEIGHT);
+	asm("lda #%w", SPR_SIZE_32);
 	asm("bra @takeWidthFromMaxWidth");
 
 	//Width64
-	asm("@set64: lda #%w", MAX_64_WIDTH_OR_HEIGHT);
+	asm("@set64: lda #%w", SPR_SIZE_64);
 
 	asm("@takeWidthFromMaxWidth: sec");
 	asm("sbc %v", _assmByte); //Can't unset carry as we expect only 8 bit subtraction
@@ -1135,11 +1209,13 @@ callCelToVera:
 	asm("lda %v + 1", _assmUInt);
 	asm("sta %w + 1", CEL_ADDR);
 
-	_assmUInt = loopVeraAddress;
-	asm("stz %w", VERA_ADDRESS);
-	asm("lda %v", _assmUInt);
+	_assmULong = loopVeraAddress;
+	
+	asm("lda %v", _assmULong);
+	asm("sta %w", VERA_ADDRESS);
+	asm("lda %v + 1", _assmULong);
 	asm("sta %w + 1", VERA_ADDRESS);
-	asm("lda %v + 1", _assmUInt);
+	asm("lda %v + 2", _assmULong);
 	asm("sta %w", VERA_ADDRESS_HIGH);
 
 	_assmByte = localViewTab->xPos;
@@ -1179,7 +1255,7 @@ updateBufferPointer:
 	bESpritesUpdatedBufferPointer += BYTES_PER_SPRITE_UPDATE;
 
 	asm("clc");
-	asm("lda #%w", MAX_64_WIDTH_OR_HEIGHT / 2);
+	asm("lda #%w", SPR_SIZE_64 / 2);
 	asm("adc %w", SPLIT_OFFSET);
 	asm("sta %w", SPLIT_OFFSET);
 
@@ -1195,20 +1271,6 @@ endBlit:
 	{
 		REENABLE_INTERRUPTS();
 	}
-
-	//for (i = 0; i < w; i++) {
-	//	for (j = 0; j < h; j++) {
-	//		c = bmp->line[j][i];
-	//		 Next line will be removed when error is found.
-	//		if (((y + j) < 168) && ((x + i) < 160) && ((y + j) >= 0) && ((x + i) >= 0))
-
-	//			if ((c != (trans + 1)) && (pNum >= priority->line[y + j][x + i])) {
-	//				priority->line[y + j][x + i] = pNum;
-	//				picture->line[y+j][x+i] = c;
-	//				spriteScreen->line[y + j][x + i] = c;
-	//			}
-	//	}
-	//}
 
 	RAM_BANK = previousBank;
 	return TRUE;
@@ -1268,7 +1330,7 @@ void b9ResetSpriteMemory(boolean clearBuffer)
 	}
 	bEResetViewTableMetadata();
 	bEResetSpritePointers();
-	bEResetSpriteMemoryManager();
+	bDResetSpriteMemoryManager();
 }
 
 void b9Reset()
@@ -1466,7 +1528,7 @@ byte b9VeraSlotsForWidthOrHeight(byte widthOrHeight)
 
 	for (i = 1; i <= MAX_SPRITES_ROW_OR_COLUMN_SIZE; i++)
 	{
-		if (widthOrHeight <= MAX_64_WIDTH_OR_HEIGHT * i)
+		if (widthOrHeight <= SPR_SIZE_64 * i)
 		{
 			return  i;
 		}
@@ -1584,29 +1646,29 @@ void b9LoadViewFile(byte viewNum)
 #endif
 
 				//8 Is Default
-				if (localCel.width * 2 > MAX_32_WIDTH_OR_HEIGHT && localLoop.allocationWidth < MAX_64_WIDTH_OR_HEIGHT)
+				if (localCel.width * 2 > SPR_SIZE_32 && localLoop.allocationWidth < SPR_SIZE_64)
 				{
 					localLoop.allocationWidth = SPR_ATTR_64;
 				}
-				else if (localCel.width * 2 > MAX_16_WIDTH_OR_HEIGHT && localLoop.allocationWidth < MAX_32_WIDTH_OR_HEIGHT)
+				else if (localCel.width * 2 > SPR_SIZE_16 && localLoop.allocationWidth < SPR_SIZE_32)
 				{
 					localLoop.allocationWidth = SPR_ATTR_32;
 				}
-				else if (localCel.width * 2 > MAX_8_WIDTH_OR_HEIGHT && localLoop.allocationWidth < MAX_16_WIDTH_OR_HEIGHT)
+				else if (localCel.width * 2 > SPR_SIZE_8 && localLoop.allocationWidth < SPR_SIZE_16)
 				{
 					localLoop.allocationWidth = SPR_ATTR_16;
 				}
 
 				////Height isn't doubled only width
-				if (localCel.height > MAX_32_WIDTH_OR_HEIGHT && localLoop.allocationHeight < MAX_64_WIDTH_OR_HEIGHT)
+				if (localCel.height > SPR_SIZE_32 && localLoop.allocationHeight < SPR_SIZE_64)
 				{
 					localLoop.allocationHeight = SPR_ATTR_64;
 				}
-				else if (localCel.height > MAX_16_WIDTH_OR_HEIGHT && localLoop.allocationHeight < MAX_32_WIDTH_OR_HEIGHT)
+				else if (localCel.height > SPR_SIZE_16 && localLoop.allocationHeight < SPR_SIZE_32)
 				{
 					localLoop.allocationHeight = SPR_ATTR_32;
 				}
-				else if (localCel.height > MAX_8_WIDTH_OR_HEIGHT && localLoop.allocationHeight < MAX_16_WIDTH_OR_HEIGHT)
+				else if (localCel.height > SPR_ATTR_8 && localLoop.allocationHeight < SPR_SIZE_16)
 				{
 					localLoop.allocationHeight = SPR_ATTR_16;
 				}

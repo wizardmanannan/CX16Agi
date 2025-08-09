@@ -18,6 +18,8 @@
     .include "modulus.s"
     .include "soundAsm.s"
 
+    .include "spriteAllocatorNewAsm.s"
+    
     .export _executeLogic
     .export _b6InitInterpreter
     .export _loadAndIncWinCode
@@ -47,10 +49,7 @@
     .export _b6InitIrq
     .export _b6TellMeTheAddressPlease
     .export _bESpritesUpdatedBuffer
-    .export _bESpriteAddressTableMiddle
     .export _spriteAllocTable
-    .export _bEAllocateSpriteMemory32
-    .export _bEAllocateSpriteMemory64
     .export _bEAllocateSpriteMemoryBulk
     .export _bEBulkAllocatedAddresses
     .export _bECellToVeraBulk
@@ -104,3 +103,10 @@
     .export _b1EndSoundFlag
     .export _b1PsgClear
   
+    .export _bAWander
+    .export _bDFindFreeVramBlock
+    .export _bDBlocksBySizeFastLookup
+    .export _bDSpriteAllocTable
+    .export _bDResetSpriteTablePointer
+    .export _bDReenableOptimisticMode
+    .export _bDDeleteAllocation
