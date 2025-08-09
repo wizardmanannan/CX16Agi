@@ -264,7 +264,6 @@ void b6Initialise()
     ///* var[86] = 1; var[87] = 2; var[88] = 3; */
 
     b6InitLogics();
-    bAGarbageCollectorInit();
 
 #ifdef VERBOSE
     printf("Logics Inited\n");

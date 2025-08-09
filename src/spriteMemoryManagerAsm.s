@@ -8,10 +8,6 @@ SPRITE_MEMORY_MANAGER_INC = 1
 
 .import popa
 
-SPRITE_ALLOC_TABLE_SIZE = (SPRITE_END - SPRITE_START) / SEGMENT_SMALL
-.segment "CODE"
-_spriteAllocTable: .res SPRITE_ALLOC_TABLE_SIZE, $0
-
 .segment "BANKRAM0E"
 ZP_WIDTH = ZP_TMP_24 ;Starting from 3 as allocate functions use one tmp ZP
 ZP_HEIGHT = ZP_TMP_24 + 1

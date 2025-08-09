@@ -49,7 +49,6 @@
     .export _b6InitIrq
     .export _b6TellMeTheAddressPlease
     .export _bESpritesUpdatedBuffer
-    .export _spriteAllocTable
     .export _bEAllocateSpriteMemoryBulk
     .export _bEBulkAllocatedAddresses
     .export _bECellToVeraBulk
@@ -78,12 +77,6 @@
     .export _bECelToVeraBackwards
     .export _bEClearVeraSprite
     .export _bECalculateBytesPerRow
-    .export _bASpriteAddressReverseHighNotSet
-    .export _bASpriteAddressReverseHighSet
-    .export _runSpriteGarbageCollector
-    .export _runIncrementalGarbageCollector
-    .export _bARunSpriteGarbageCollectorAll
-    .export _SGC_LAST_LOCATION_GC_CHECKED
     .export _bAFollowEgoAsmSec
     .export _rand8Bit
     .export _randBetween

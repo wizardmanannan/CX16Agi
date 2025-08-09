@@ -2624,8 +2624,7 @@ void bBUpdateObjects()
 							else
 							{
 								blitFailed = TRUE;
-								bARunSpriteGarbageCollectorAll();
-								
+									
 								if (entryNum)
 								{
 									entryNum--;
