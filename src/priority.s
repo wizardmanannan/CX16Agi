@@ -2,22 +2,8 @@
 
 .ifndef  PRIORITY_INC
 
-PRIORITY_INC = 1
-
-NOT_AN_OBSTACLE = 4
-WATER = 3
-CONTROL_LINES = 2
-HIGHEST_BOUNDARY = 1
-LOWEST_BOUNDARY = 0
-;byte b8GetPriority(byte X, byte Y)
-;Note that all AGI implementations draw the control lines over the top of the priority screen
-;Original MEKA splits the priority screen into priority and control screens, but in a limited memory system this is wasteful.
-;Therefore we calculate the control value at the very time it is needed.
-;Here is the algorithm, regarding the pixel at priority screen x, y:
-;If the pixel is >= 4 (priority not control) => Return NOT_AN_OBSTACLE
-;If the pixel is < 4 (control) => pixel
-_b8GetControl:
-.scope
+.macro GET_PRIORITY
+.local @end
 X_VAL = ZP_TMP_2
 Y_VAL = ZP_TMP_2 + 1
 
@@ -38,7 +24,7 @@ bcc @getEvenValue
 @getOddValue:
 txa 
 and #$0F
-bra @checkValue
+bra @end
 
 @getEvenValue:
 txa
@@ -46,8 +32,36 @@ lsr
 lsr
 lsr
 lsr
+@end:
 
-@checkValue:
+.endmacro
+
+PRIORITY_INC = 1
+NOT_AN_OBSTACLE = 4
+WATER = 3
+CONTROL_LINES = 2
+HIGHEST_BOUNDARY = 1
+LOWEST_BOUNDARY = 0
+
+
+;byte b8GetPriority(byte X, byte Y)
+_b8GetPriority:
+.scope
+GET_PRIORITY
+.endscope
+rts
+
+;byte b8GetControl(byte X, byte Y)
+;Note that all AGI implementations draw the control lines over the top of the priority screen
+;Original MEKA splits the priority screen into priority and control screens, but in a limited memory system this is wasteful.
+;Therefore we calculate the control value at the very time it is needed.
+;Here is the algorithm, regarding the pixel at priority screen x, y:
+;If the pixel is >= 4 (priority not control) => Return NOT_AN_OBSTACLE
+;If the pixel is < 4 (control) => pixel
+_b8GetControl:
+.scope
+GET_PRIORITY
+
 cmp #NOT_AN_OBSTACLE ;Any thing greater than or equal to this value is a priority value and not a control value and therefore not an obstacle 
 
 bcc @return

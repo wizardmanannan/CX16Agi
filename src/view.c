@@ -354,11 +354,11 @@ void bESetViewMetadata(View* localView, ViewTable* viewTable, byte viewNum, byte
 #endif
 
 	metadata.loopsVeraAddressesPointers = (VeraSpriteAddress**)b10BankedAlloc(totalAllocationSize, &metadata.viewTableMetadataBank);
-	
-	
+
+
 	metadata.veraAddresses = (VeraSpriteAddress*)(metadata.loopsVeraAddressesPointers + numberLoopVeraAddressPointers);
 
-	metadata.backBuffers = (VeraSpriteAddress*) ((unsigned int)metadata.veraAddresses + numberVeraAddresses * sizeof(VeraSpriteAddress));	
+	metadata.backBuffers = (VeraSpriteAddress*)((unsigned int)metadata.veraAddresses + numberVeraAddresses * sizeof(VeraSpriteAddress));
 	metadata.viewNum = viewNum;
 
 #ifdef VERBOSE_DEBUG_SET_METADATA
@@ -754,7 +754,7 @@ boolean agiBlit(ViewTable* localViewTab, byte entryNum, boolean disableInterupts
 	byte isAnimated = FALSE;
 	SpriteAllocationSize allocationWidth, allocationHeight;
 	byte combinedSpriteAllocationSize;
-	
+
 	previousBank = RAM_BANK;
 	RAM_BANK = SPRITE_METADATA_BANK;
 
@@ -899,12 +899,12 @@ animatedSprite:
 	}
 
 	combinedSpriteAllocationSize = allocationWidth + allocationHeight;
-	
+
 	RAM_BANK = localMetadata.viewTableMetadataBank;
 	_assmULong = localMetadata.backBuffers[0];
 
 	RAM_BANK = SPRITE_METADATA_BANK;
-	
+
 	if (localMetadata.backBufferSize != combinedSpriteAllocationSize)
 	{
 		_assmULong = NULL;
@@ -930,7 +930,7 @@ initialise:
 		{
 			return FALSE;
 		}
-		
+
 		localMetadata.isOnBackBuffer = TRUE;
 		localMetadata.backBufferSize = combinedSpriteAllocationSize;
 
@@ -1210,7 +1210,7 @@ callCelToVera:
 	asm("sta %w + 1", CEL_ADDR);
 
 	_assmULong = loopVeraAddress;
-	
+
 	asm("lda %v", _assmULong);
 	asm("sta %w", VERA_ADDRESS);
 	asm("lda %v + 1", _assmULong);
@@ -1871,7 +1871,7 @@ void bACalcDirection(ViewTable* localViewtab)
 			case 3: b9SetLoop(localViewtab, 0); break;
 			case 4: b9SetLoop(localViewtab, 0); break;
 			case 5: break;
-			case 6: if(localViewtab->numberOfLoops > 1) b9SetLoop(localViewtab, 1); break;
+			case 6: if (localViewtab->numberOfLoops > 1) b9SetLoop(localViewtab, 1); break;
 			case 7: if (localViewtab->numberOfLoops > 1) b9SetLoop(localViewtab, 1); break;
 			case 8: if (localViewtab->numberOfLoops > 1) b9SetLoop(localViewtab, 1); break;
 			}
@@ -2260,7 +2260,7 @@ void bAAdjustPosition(ViewTable* viewTab, int fx, int fy, byte entryNum)
 
 void bAFollowEgo(ViewTable* localViewTab)
 {
-	byte ecx; 
+	byte ecx;
 	short ocx;
 	ViewTable egoViewTab;
 	View egoView, localView;
@@ -2290,6 +2290,7 @@ void bAFindPosition(int entryNum, ViewTable* viewTab)
 }
 
 #pragma wrapped-call (push, trampoline, FILL_BANK)
+extern byte b8GetPriority(byte X, byte Y);
 extern byte b8GetControl(byte X, byte Y);
 #pragma wrapped-called(pop)
 
@@ -2391,12 +2392,12 @@ void bANormalAdjust(int entryNum, ViewTable* viewTab, int dx, int dy)
 				return;
 			}
 			else if (!(viewTab->flags & IGNOREBLOCKS) && priorityValue == 1) {
-				
-		//		/*testVal = TRUE;
-		//b8GetControl(testX, tempY);*/
-		//		printf("we block at %d %d therefore we remain at %d %d", testX, tempY, viewTab->xPos, viewTab->yPos);
-		//		asm("stp");
-				
+
+				//		/*testVal = TRUE;
+				//b8GetControl(testX, tempY);*/
+				//		printf("we block at %d %d therefore we remain at %d %d", testX, tempY, viewTab->xPos, viewTab->yPos);
+				//		asm("stp");
+
 				return;
 			}
 		}
@@ -2624,7 +2625,7 @@ void bBUpdateObjects()
 							else
 							{
 								blitFailed = TRUE;
-									
+
 								if (entryNum)
 								{
 									entryNum--;
@@ -2672,6 +2673,175 @@ void bBUpdateObjects()
 	show_mouse(screen);
 }
 
+#pragma wrapped-call (push, trampoline, VIEW_CODE_BANK_3)
+boolean bBCollide(ViewTable* localViewtab, byte entryNum) {
+
+	return FALSE;
+}
+
+//#define VERBOSE_CANBEHERE
+boolean bBCanBeHere(ViewTable* localViewtab, byte entryNum)
+{
+	boolean canBeHere, entirelyOnWater = FALSE, hitSpecial = FALSE;
+	byte priority;
+	int startPixelPos, endPixelPos, pixelPos;
+	View localView;
+	Loop localLoop;
+	Cel localCel;
+
+	getLoadedView(&localView, localViewtab->currentView);
+	getLoadedLoop(&localView, &localLoop, localViewtab->currentLoop);
+	getLoadedCel(&localLoop, &localCel, localViewtab->currentCel);
+
+#ifdef VERBOSE_CANBEHERE
+	if(var[0] == 1)
+	printf("entry %d\n", entryNum);
+#endif
+
+#ifdef VERBOSE_CANBEHERE
+	if (var[0] == 1)
+	printf("fixed %d\n", !localViewtab->flags & FIXEDPRIORITY);
+#endif // DEBUG
+
+	//// If the priority is not fixed, calculate the priority based on current Y position.
+	if (!localViewtab->flags & FIXEDPRIORITY)
+	{
+		//	// NOTE: The following table only applies to games that don't support the ability to change the PriorityBase.
+		//	// Priority Band   Y range
+		//	// ------------------------
+		//	//       4 -
+		//	//       5          48 - 59
+		//	//       6          60 - 71
+		//	//       7          72 - 83
+		//	//       8          84 - 95
+		//	//       9          96 - 107
+		//	//      10         108 - 119
+		//	//      11         120 - 131
+		//	//      12         132 - 143
+		//	//      13         144 - 155
+		//	//      14         156 - 167
+		//	//      15            168
+		//	// ------------------------
+		priority = b8GetPriority(localViewtab->xPos, localViewtab->yPos);
+
+#ifdef VERBOSE_CANBEHERE
+		if (var[0] == 1)
+		printf("the priority is %d\n", priority);
+#endif
+	}
+	else
+	{
+		priority = localViewtab->priority;
+	}
+
+
+	//// Priority 15 skips the whole base line testing. None of the control lines
+	//// have any affect.
+	if (priority != 15)
+	{
+		// Start by assuming we're on water. Will be set false if it turns out we're not.
+		entirelyOnWater = TRUE;
+
+		//	// Loop over the priority screen pixels for the area overed by this
+		//	// object's base line.
+		startPixelPos = (localViewtab->yPos * 160) + localViewtab->xPos;
+		endPixelPos = startPixelPos + localCel.width;
+
+		for (pixelPos = startPixelPos; pixelPos < endPixelPos; pixelPos++) {
+			// Get the priority screen priority value for this pixel of the base line.
+			priority = b8GetControl(localViewtab->xPos, localViewtab->yPos);
+
+#ifdef VERBOSE_CANBEHERE
+			if (var[0] == 1)
+			printf("ctrl is %d\n", priority);
+#endif
+
+			if (priority != 3)
+			{
+				// This pixel is not water (i.e. not 3), so it can't be entirely on water.
+				entirelyOnWater = FALSE;
+
+#ifdef VERBOSE_CANBEHERE
+				if (var[0] == 1)
+				printf("detected not water\n");
+#endif
+
+				if (priority == 0)
+				{
+					//				// Permanent block.
+
+#ifdef VERBOSE_CANBEHERE
+					if (var[0] == 1)
+					printf("detected permanent block\n");
+#endif
+
+					canBeHere = FALSE;
+					break;
+				}
+				else if (priority == 1)
+				{
+					//				// Blocks if the AnimatedObject isn't ignoring blocks.
+					if (!localViewtab->flags & IGNOREBLOCKS)
+					{
+#ifdef VERBOSE_CANBEHERE
+						if (var[0] == 1)
+						printf("detected non perm. block\n");
+#endif
+
+						canBeHere = FALSE;
+						break;
+					}
+				}
+				else if (priority == 2)
+				{
+
+#ifdef VERBOSE_CANBEHERE
+					if (var[0] == 1)
+					printf("detected special\n");
+#endif
+
+					hitSpecial = TRUE;
+				}
+			}
+		}
+
+		if (entirelyOnWater)
+		{
+#ifdef VERBOSE_CANBEHERE
+			if (var[0] == 1)
+			printf("entirely on water\n");
+#endif
+
+			if (localViewtab->flags & ONLAND)
+			{
+				//			// Must not be entirely on water, so can't be here.
+				canBeHere = FALSE;
+			}
+		}
+		else
+		{
+#ifdef VERBOSE_CANBEHERE
+			if (var[0] == 1)
+			printf("not entirely on water\n");
+#endif
+
+			if (localViewtab->flags & ONWATER)
+			{
+				canBeHere = FALSE;
+			}
+		}
+	}
+
+	//// If the object is ego then we need to determine the on.water and hit.special flag values.
+	if (!entryNum)
+	{
+		flag[0] = entirelyOnWater;
+		flag[3] = hitSpecial;
+	}
+
+	return canBeHere;
+}
+#pragma wrapped-call (pop)
 #pragma code-name (pop)
 #pragma code-name (push, "BANKRAM0C")
 
@@ -2834,7 +3004,7 @@ void bCCalcObjMotion()
 	for (entryNum = 0; entryNum < VIEW_TABLE_SIZE; entryNum++) {
 
 		getViewTab(&localViewtab, entryNum);
-		
+
 		if (localViewtab.staleCounter)
 		{
 			localViewtab.staleCounter--;
@@ -2872,7 +3042,7 @@ void bCCalcObjMotion()
 				case 1: /* wander */
 					oldX = localViewtab.xPos;
 					oldY = localViewtab.yPos;
- 					bAWander(&localViewtab, entryNum);
+					bAWander(&localViewtab, entryNum);
 					switch (localViewtab.direction) {
 					case 0: break;
 					case 1:bANormalAdjust(entryNum, &localViewtab, 0, -1); break;
@@ -2923,6 +3093,16 @@ void bCCalcObjMotion()
 				}
 			}
 		} /* MOTION */
+
+		if (bBCollide(&localViewtab, entryNum) || !bBCanBeHere(&localViewtab, entryNum))
+		{
+			//this.X = px;
+			//this.Y = py;
+			//border = 0;
+
+			//// Make sure that this position is OK
+			//FindPosition();
+		}
 
 		/* Automatic change of direction if needed */
 		bACalcDirection(&localViewtab);
