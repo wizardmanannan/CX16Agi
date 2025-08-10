@@ -22,6 +22,7 @@ byte offsetOfFlipped = offsetof(struct Cel, flipped);
 //ViewTab
 byte offsetOfXPos = offsetof(struct ViewTable, xPos);
 byte offsetOfYPos = offsetof(struct ViewTable, yPos);
+byte offsetOfPrevY = offsetof(struct ViewTable, previousY);
 byte offsetOfPriority = offsetof(struct ViewTable, priority);
 byte offsetOfCurrentView = offsetof(struct ViewTable, currentView);
 byte offsetOfCurrentLoop = offsetof(struct ViewTable, currentLoop);
@@ -33,6 +34,7 @@ byte offsetOfParam3 = offsetof(struct ViewTable, param3);
 byte offsetOfMotion = offsetof(struct ViewTable, motion);
 byte offsetOfStopped = offsetof(struct ViewTable, stopped);
 byte offsetOfStepSize = offsetof(struct ViewTable, stepSize);
+byte sizeOfViewTab = sizeof(ViewTable);
 
 //View Metadata
 byte offsetOfloopsVeraAddressesPointers = offsetof(struct ViewTableMetadata, loopsVeraAddressesPointers);

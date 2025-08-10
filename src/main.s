@@ -17,6 +17,7 @@
     .include "modulus.s"
     .include "soundAsm.s"
     .include "spriteAllocatorAsm.s"
+    .include "viewAsm.s"
     
     .export _executeLogic
     .export _b6InitInterpreter
@@ -93,6 +94,7 @@
     .export _b1ChannelsPlaying
     .export _b1EndSoundFlag
     .export _b1PsgClear
+    .export _b9Collide
   
     .export _bAWander
     .export _bDFindFreeVramBlock
