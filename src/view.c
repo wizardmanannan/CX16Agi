@@ -2674,33 +2674,74 @@ void bBUpdateObjects()
 }
 
 #pragma wrapped-call (push, trampoline, VIEW_CODE_BANK_3)
-boolean bBCollide(ViewTable* localViewtab, byte entryNum) {
+boolean bBCollide(ViewTable* localViewtab, byte entryNum, byte localCelWidth) {
 
+	byte otherEntryNum;
+	ViewTable otherViewTab;
+	View otherView;
+	Loop otherLoop;
+	Cel otherCel;
+
+	return FALSE;
+
+	// If AnimatedObject is ignoring objects this return false.
+	if (localViewtab->flags & IGNOREOBJECTS)
+	{
+		return FALSE;
+	}
+
+	for (otherEntryNum = 0; otherEntryNum < VIEW_TABLE_SIZE; otherEntryNum++)
+	{
+		getViewTab(&otherViewTab, otherEntryNum);
+		// Collision with another object if:
+		//	- other object is animated and drawn
+		//	- other object is not ignoring objects
+		//	- other object is not this object
+		//	- the two objects have overlapping baselines
+		if (otherViewTab.flags & ANIMATED && otherViewTab.flags & DRAWN &&
+			!otherViewTab.flags & IGNOREOBJECTS &&
+			(entryNum != otherEntryNum))
+		{
+			getLoadedView(&otherView, otherViewTab.currentView);
+			getLoadedLoop(&otherView, &otherLoop, otherViewTab.currentLoop);
+			getLoadedCel(&otherLoop, &otherCel, otherViewTab.currentCel);
+
+			if (localViewtab->xPos + localCelWidth >= otherViewTab.xPos &&
+				localViewtab->xPos <= otherViewTab.xPos + otherCel.width)
+			{
+				// At this point, the two objects have overlapping
+				// x coordinates. A collision has occurred if they have
+				// the same y coordinate or if the object in question has
+				// moved across the other object in the last animation cycle
+				if ((localViewtab->yPos == otherViewTab.yPos) ||
+					(localViewtab->yPos > otherViewTab.yPos && localViewtab->previousY < localViewtab->previousY) ||
+					(localViewtab->yPos < otherViewTab.yPos && localViewtab->previousY > otherViewTab.previousY))
+				{
+					return TRUE;
+				}
+			}
+		}
+	}
 	return FALSE;
 }
 
 //#define VERBOSE_CANBEHERE
-boolean bBCanBeHere(ViewTable* localViewtab, byte entryNum)
+boolean bBCanBeHere(ViewTable* localViewtab, byte entryNum, byte localCelWidth)
 {
 	boolean canBeHere, entirelyOnWater = FALSE, hitSpecial = FALSE;
 	byte priority;
 	int startPixelPos, endPixelPos, pixelPos;
-	View localView;
-	Loop localLoop;
-	Cel localCel;
 
-	getLoadedView(&localView, localViewtab->currentView);
-	getLoadedLoop(&localView, &localLoop, localViewtab->currentLoop);
-	getLoadedCel(&localLoop, &localCel, localViewtab->currentCel);
+	return FALSE;
 
 #ifdef VERBOSE_CANBEHERE
-	if(var[0] == 1)
-	printf("entry %d\n", entryNum);
+	if (var[0] == 1)
+		printf("entry %d\n", entryNum);
 #endif
 
 #ifdef VERBOSE_CANBEHERE
 	if (var[0] == 1)
-	printf("fixed %d\n", !localViewtab->flags & FIXEDPRIORITY);
+		printf("fixed %d\n", !localViewtab->flags & FIXEDPRIORITY);
 #endif // DEBUG
 
 	//// If the priority is not fixed, calculate the priority based on current Y position.
@@ -2726,7 +2767,7 @@ boolean bBCanBeHere(ViewTable* localViewtab, byte entryNum)
 
 #ifdef VERBOSE_CANBEHERE
 		if (var[0] == 1)
-		printf("the priority is %d\n", priority);
+			printf("the priority is %d\n", priority);
 #endif
 	}
 	else
@@ -2745,7 +2786,7 @@ boolean bBCanBeHere(ViewTable* localViewtab, byte entryNum)
 		//	// Loop over the priority screen pixels for the area overed by this
 		//	// object's base line.
 		startPixelPos = (localViewtab->yPos * 160) + localViewtab->xPos;
-		endPixelPos = startPixelPos + localCel.width;
+		endPixelPos = startPixelPos + localCelWidth;
 
 		for (pixelPos = startPixelPos; pixelPos < endPixelPos; pixelPos++) {
 			// Get the priority screen priority value for this pixel of the base line.
@@ -2753,7 +2794,7 @@ boolean bBCanBeHere(ViewTable* localViewtab, byte entryNum)
 
 #ifdef VERBOSE_CANBEHERE
 			if (var[0] == 1)
-			printf("ctrl is %d\n", priority);
+				printf("ctrl is %d\n", priority);
 #endif
 
 			if (priority != 3)
@@ -2763,7 +2804,7 @@ boolean bBCanBeHere(ViewTable* localViewtab, byte entryNum)
 
 #ifdef VERBOSE_CANBEHERE
 				if (var[0] == 1)
-				printf("detected not water\n");
+					printf("detected not water\n");
 #endif
 
 				if (priority == 0)
@@ -2772,7 +2813,7 @@ boolean bBCanBeHere(ViewTable* localViewtab, byte entryNum)
 
 #ifdef VERBOSE_CANBEHERE
 					if (var[0] == 1)
-					printf("detected permanent block\n");
+						printf("detected permanent block\n");
 #endif
 
 					canBeHere = FALSE;
@@ -2785,7 +2826,7 @@ boolean bBCanBeHere(ViewTable* localViewtab, byte entryNum)
 					{
 #ifdef VERBOSE_CANBEHERE
 						if (var[0] == 1)
-						printf("detected non perm. block\n");
+							printf("detected non perm. block\n");
 #endif
 
 						canBeHere = FALSE;
@@ -2797,7 +2838,7 @@ boolean bBCanBeHere(ViewTable* localViewtab, byte entryNum)
 
 #ifdef VERBOSE_CANBEHERE
 					if (var[0] == 1)
-					printf("detected special\n");
+						printf("detected special\n");
 #endif
 
 					hitSpecial = TRUE;
@@ -2809,7 +2850,7 @@ boolean bBCanBeHere(ViewTable* localViewtab, byte entryNum)
 		{
 #ifdef VERBOSE_CANBEHERE
 			if (var[0] == 1)
-			printf("entirely on water\n");
+				printf("entirely on water\n");
 #endif
 
 			if (localViewtab->flags & ONLAND)
@@ -2822,7 +2863,7 @@ boolean bBCanBeHere(ViewTable* localViewtab, byte entryNum)
 		{
 #ifdef VERBOSE_CANBEHERE
 			if (var[0] == 1)
-			printf("not entirely on water\n");
+				printf("not entirely on water\n");
 #endif
 
 			if (localViewtab->flags & ONWATER)
@@ -2998,6 +3039,9 @@ void bCCalcObjMotion()
 	word objFlags;
 	ViewTable localViewtab;
 	ViewTable localViewtab0;
+	View localView;
+	Loop localLoop;
+	Cel localCel;
 
 	getViewTab(&localViewtab0, 0);
 
@@ -3094,7 +3138,13 @@ void bCCalcObjMotion()
 			}
 		} /* MOTION */
 
-		if (bBCollide(&localViewtab, entryNum) || !bBCanBeHere(&localViewtab, entryNum))
+
+		getLoadedView(&localView, entryNum);
+		getLoadedLoop(&localView, &localLoop, entryNum);
+		getLoadedCel(&localLoop, &localCel, entryNum);
+
+
+		if (bBCollide(&localViewtab, entryNum, localCel.width) || !bBCanBeHere(&localViewtab, entryNum, localCel.width))
 		{
 			//this.X = px;
 			//this.Y = py;
