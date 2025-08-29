@@ -157,6 +157,389 @@ void setLoadedCel(Loop* loadedLoop, Cel* localCell, byte localCellNumber)
 
 	RAM_BANK = previousRamBank;
 }
+
+//#define TEST_COLLIDE
+#ifdef TEST_COLLIDE
+extern boolean b9Collide(ViewTable* localViewtab, byte entryNum);
+void b9ResetViewtabs();
+
+extern byte offsetOfFlags;
+extern byte offsetOfXSize;
+
+boolean trap = FALSE;
+
+void testCollide()
+{
+	ViewTable otherViewTab, localViewTab;
+	boolean result = FALSE;
+
+#define TEST_WIDTH_SMALLER 9
+#define TEST_X_SMALLER 10
+#define TEST_WIDTH_BIGGER 16
+#define TEST_X_BIGGER 15
+
+#define TEST_EQUAL 10
+
+	RAM_BANK = VIEW_CODE_BANK_1;
+
+	b9ResetViewtabs(TRUE);
+
+	RAM_BANK = VIEWTAB_BANK;
+	getViewTab(&localViewTab, 0);
+	getViewTab(&otherViewTab, 2);
+	localViewTab.xPos = TEST_X_BIGGER;
+	result = b9Collide(&localViewTab, 0);
+	printf("test 1 No objects set animated and drawn expected false\n");
+	if (result)
+	{
+		printf("fail\n");
+		asm("stp");
+	}
+
+	b9ResetViewtabs(TRUE);
+	getViewTab(&localViewTab, 0);
+	getViewTab(&otherViewTab, 2);
+	otherViewTab.flags |= ANIMATED;
+	setViewTab(&otherViewTab, 2);
+	localViewTab.xPos = TEST_X_BIGGER;
+	result = b9Collide(&localViewTab, 0);
+	printf("test 2 Only one other object set animated not drawn expected false\n");
+	if (result)
+	{
+		printf("fail\n");
+		asm("stp");
+	}
+
+	b9ResetViewtabs(TRUE);
+	getViewTab(&localViewTab, 0);
+	getViewTab(&otherViewTab, 2);
+	otherViewTab.flags |= DRAWN;
+	setViewTab(&otherViewTab, 2);
+	localViewTab.xPos = TEST_X_BIGGER;
+	result = b9Collide(&localViewTab, 0);
+	printf("test 3 Only one other object set drawn not animated expected false\n");
+	if (result)
+	{
+		printf("fail\n");
+		asm("stp");
+	}
+
+	b9ResetViewtabs(TRUE);
+	getViewTab(&localViewTab, 0);
+	getViewTab(&otherViewTab, 2);
+	otherViewTab.flags |= DRAWN | ANIMATED | IGNOREOBJECTS;
+	setViewTab(&otherViewTab, 2);
+	localViewTab.xPos = TEST_X_BIGGER;
+	result = b9Collide(&localViewTab, 0);
+	printf("test 4 Other object animated, drawn and ignore objects expected false\n");
+	if (result)
+	{
+		printf("fail\n");
+		asm("stp");
+	}
+
+	b9ResetViewtabs(TRUE);
+	getViewTab(&localViewTab, 0);
+	getViewTab(&otherViewTab, 2);
+	otherViewTab.flags |= DRAWN | ANIMATED;
+	otherViewTab.xPos = TEST_X_SMALLER;
+	otherViewTab.xsize = TEST_WIDTH_SMALLER;
+	otherViewTab.yPos = TEST_EQUAL;
+	setViewTab(&otherViewTab, 2);
+	localViewTab.xPos = TEST_X_BIGGER;
+	localViewTab.xsize = TEST_WIDTH_BIGGER;
+	localViewTab.yPos = TEST_EQUAL;
+	setViewTab(&localViewTab, 0);
+	result = b9Collide(&localViewTab, 0);
+	//this.x + this.width > otherObj.x && otherObj.x + otherObj.width  > this.x
+	printf("test 5 local x plus local w greater x other obj x plus other obj width greater local x y test passes expected true\n");
+	if (!result)
+	{
+		printf("fail\n");
+		asm("stp");
+	}
+
+	b9ResetViewtabs(TRUE);
+	getViewTab(&localViewTab, 0);
+	getViewTab(&otherViewTab, 2);
+	otherViewTab.flags |= DRAWN | ANIMATED;
+	otherViewTab.xPos = TEST_X_SMALLER;
+	otherViewTab.xsize = TEST_WIDTH_SMALLER;
+	otherViewTab.yPos = TEST_EQUAL;
+	setViewTab(&otherViewTab, 2);
+	localViewTab.xPos = 0;
+	localViewTab.xsize = 0;
+	localViewTab.yPos = TEST_EQUAL;
+	setViewTab(&localViewTab, 0);
+	result = b9Collide(&localViewTab, 0);
+
+	//this.x + this.width < otherObj.x && otherObj.x + otherObj.width  > this.x
+
+	printf("test 6 local x plus local w less than other obj x other obj x plus other obj width greater local x y test pass expected false \n");
+	if (result)
+	{
+		printf("fail\n");
+		asm("stp");
+	}
+	b9ResetViewtabs(TRUE);
+	getViewTab(&localViewTab, 0);
+	getViewTab(&otherViewTab, 2);
+	otherViewTab.flags |= DRAWN | ANIMATED;
+	otherViewTab.xPos = 0;
+	otherViewTab.xsize = 5;
+	otherViewTab.yPos = TEST_EQUAL;
+	setViewTab(&otherViewTab, 2);
+	localViewTab.xPos = 5;
+	localViewTab.xsize = 5;
+	localViewTab.yPos = TEST_EQUAL;
+	setViewTab(&localViewTab, 0);
+	result = b9Collide(&localViewTab, 0);
+
+	//this.x + this.width == otherObj.x && otherObj.x + otherObj.width  == this.x
+
+	printf("test 7 local x plus local w equal other other obj x plus other obj width equal local x y test pass expected false \n");
+	if (result)
+	{
+		printf("fail\n");
+		asm("stp");
+	}
+
+	b9ResetViewtabs(TRUE);
+	getViewTab(&localViewTab, 0);
+	getViewTab(&otherViewTab, 2);
+	otherViewTab.flags |= DRAWN | ANIMATED;
+	otherViewTab.xPos = 20;
+	otherViewTab.xsize = 5;
+	otherViewTab.yPos = TEST_EQUAL;
+	setViewTab(&otherViewTab, 2);
+	localViewTab.xPos = 10;
+	localViewTab.xsize = 5;
+	localViewTab.yPos = TEST_EQUAL;
+	setViewTab(&localViewTab, 0);
+	result = b9Collide(&localViewTab, 0);
+
+	//this.x + this.width < otherObj.x && otherObj.x + otherObj.width  < this.x
+
+	printf("test 8 local x plus local w less than other other obj x plus other obj width less than local x y test pass expected false \n");
+	if (result)
+	{
+		printf("fail\n");
+		asm("stp");
+	}
+
+	b9ResetViewtabs(TRUE);
+	getViewTab(&localViewTab, 0);
+	getViewTab(&otherViewTab, 2);
+
+	otherViewTab.flags |= DRAWN | ANIMATED;
+	otherViewTab.xPos = 0;   // other.x
+	otherViewTab.xsize = 10;  // other.x + w = 10
+	otherViewTab.yPos = TEST_EQUAL;
+	setViewTab(&otherViewTab, 2);
+
+	localViewTab.xPos = 10;  // this.x
+	localViewTab.xsize = 1;   // this.x + w = 11
+	localViewTab.yPos = TEST_EQUAL;
+	setViewTab(&localViewTab, 0);
+
+	result = b9Collide(&localViewTab, 0);
+
+	//this.x + this.width > otherObj.x && otherObj.x + otherObj.width == this.x
+	printf("test 9 local x plus local w greater other obj x other obj x plus other obj w equal local x y test pass expected false\n");
+	if (result)
+	{
+		printf("fail\n");
+		asm("stp");
+	}
+
+	b9ResetViewtabs(TRUE);
+	getViewTab(&localViewTab, 0);
+	getViewTab(&otherViewTab, 2);
+
+	otherViewTab.flags |= DRAWN | ANIMATED;
+	otherViewTab.xPos = 5;
+	otherViewTab.xsize = 1;   // other.x + w = 6
+	otherViewTab.yPos = TEST_EQUAL;
+	setViewTab(&otherViewTab, 2);
+
+	localViewTab.xPos = 0;
+	localViewTab.xsize = 5;   // this.x + w = 5
+	localViewTab.yPos = TEST_EQUAL;
+	setViewTab(&localViewTab, 0);
+
+	result = b9Collide(&localViewTab, 0);
+
+	//this.x + this.width equal other obj x && other obj x plus other obj width greater local x
+	printf("test 10 local x plus local w equal other obj x other obj x plus other obj w greater local x y test pass expected true\n");
+	if (!result)
+	{
+		printf("fail\n");
+		asm("stp");
+	}
+
+	// ---------- test 11: A: > , B: < (expected FALSE) ----------
+	b9ResetViewtabs(TRUE);
+	getViewTab(&localViewTab, 0);
+	getViewTab(&otherViewTab, 2);
+
+	otherViewTab.flags |= DRAWN | ANIMATED;
+	otherViewTab.xPos = 0;
+	otherViewTab.xsize = 5;   // other.x + w = 5
+	otherViewTab.yPos = TEST_EQUAL;
+	setViewTab(&otherViewTab, 2);
+
+	localViewTab.xPos = 10;
+	localViewTab.xsize = 1;   // this.x + w = 11
+	localViewTab.yPos = TEST_EQUAL;
+	setViewTab(&localViewTab, 0);
+
+	result = b9Collide(&localViewTab, 0);
+
+	//this.x + this.width greater other obj x && other obj x plus other obj width less local x
+	printf("test 11 local x plus local w greater other obj x other obj x plus other obj w less local x y test pass expected false\n");
+	if (result)
+	{
+		printf("fail\n");
+		asm("stp");
+	}
+
+	b9ResetViewtabs(TRUE);
+	getViewTab(&localViewTab, 0);
+	getViewTab(&otherViewTab, 2);
+
+	otherViewTab.flags |= DRAWN | ANIMATED;
+	otherViewTab.xPos = 0;
+	otherViewTab.xsize = 10;
+	otherViewTab.yPos = 20;
+	otherViewTab.previousY = 20;
+	setViewTab(&otherViewTab, 2);
+
+	localViewTab.xPos = 5;
+	localViewTab.xsize = 5;
+	localViewTab.yPos = 20;
+	localViewTab.previousY = 20;
+	setViewTab(&localViewTab, 0);
+
+	result = b9Collide(&localViewTab, 0);
+
+	//this.y == otherObj.y
+	printf("test 12 x overlap true y equal test pass expected true\n");
+	if (!result)
+	{
+		printf("fail\n");
+		asm("stp");
+	}
+
+	b9ResetViewtabs(TRUE);
+	getViewTab(&localViewTab, 0);
+	getViewTab(&otherViewTab, 2);
+
+	otherViewTab.flags |= DRAWN | ANIMATED;
+	otherViewTab.xPos = 0;
+	otherViewTab.xsize = 10;
+	otherViewTab.yPos = 5;
+	otherViewTab.previousY = 6;
+	setViewTab(&otherViewTab, 2);
+
+	localViewTab.xPos = 5;
+	localViewTab.xsize = 5;
+	localViewTab.yPos = 6;
+	localViewTab.previousY = 4;
+	setViewTab(&localViewTab, 0);
+
+	result = b9Collide(&localViewTab, 0);
+
+	//this.y > otherObj.y && this.previousY < otherObj.previousY
+	printf("test 13 x overlap true this y greater other y this previous y less other previous y test pass expected true\n");
+	if (!result)
+	{
+		printf("fail\n");
+		asm("stp");
+	}
+
+	b9ResetViewtabs(TRUE);
+	getViewTab(&localViewTab, 0);
+	getViewTab(&otherViewTab, 2);
+
+	otherViewTab.flags |= DRAWN | ANIMATED;
+	otherViewTab.xPos = 0;
+	otherViewTab.xsize = 10;
+	otherViewTab.yPos = 6;
+	otherViewTab.previousY = 4;
+	setViewTab(&otherViewTab, 2);
+
+	localViewTab.xPos = 5;
+	localViewTab.xsize = 5;
+	localViewTab.yPos = 5;
+	localViewTab.previousY = 7;
+	setViewTab(&localViewTab, 0);
+
+	//trap = TRUE;
+	result = b9Collide(&localViewTab, 0);
+
+	//this.y < otherObj.y && this.previousY > otherObj.previousY
+	printf("test 14 x overlap true this y less other y this previous y greater other previous y test pass expected true\n");
+	if (!result)
+	{
+		printf("fail\n");
+		asm("stp");
+	}
+	
+	b9ResetViewtabs(TRUE);
+	getViewTab(&localViewTab, 0);
+	getViewTab(&otherViewTab, 2);
+
+	otherViewTab.flags |= DRAWN | ANIMATED;
+	otherViewTab.xPos = 0;
+	otherViewTab.xsize = 10;
+	otherViewTab.yPos = 20;
+	otherViewTab.previousY = 19;
+	setViewTab(&otherViewTab, 2);
+
+	localViewTab.xPos = 5;
+	localViewTab.xsize = 5;
+	localViewTab.yPos = 10;
+	localViewTab.previousY = 9;
+	setViewTab(&localViewTab, 0);
+
+	result = b9Collide(&localViewTab, 0);
+
+	//this.y != otherObj.y && no cross
+	printf("test 15 x overlap true y not equal no y cross test pass expected false\n");
+	if (result)
+	{
+		printf("fail\n");
+		asm("stp");
+	}
+
+	b9ResetViewtabs(TRUE);
+	getViewTab(&localViewTab, 0);
+	getViewTab(&otherViewTab, 2);
+	otherViewTab.flags |= DRAWN | ANIMATED;
+	otherViewTab.xPos = TEST_X_SMALLER;
+	otherViewTab.xsize = TEST_WIDTH_SMALLER;
+	otherViewTab.yPos = TEST_EQUAL;
+	setViewTab(&otherViewTab, 2);
+	localViewTab.xPos = TEST_X_BIGGER;
+	localViewTab.xsize = TEST_WIDTH_BIGGER;
+	localViewTab.yPos = TEST_EQUAL;
+	setViewTab(&localViewTab, 2);
+	result = b9Collide(&localViewTab, 2);
+	printf("test 16 local obj is the same as otherObj, but would otherwise pass \n");
+	if (result)
+	{
+		printf("fail\n");
+		asm("stp");
+	}
+
+	asm("stp");
+}
+
+
+
+#endif
+
+
 #pragma bss-name (push, "BANKRAM09")
 ViewTable viewtab[VIEW_TABLE_SIZE];
 ViewTable* viewTabFastLookup[VIEW_TABLE_SIZE];
@@ -1281,7 +1664,7 @@ endBlit:
 #pragma code-name (push, "BANKRAM09")
 
 #pragma wrapped-call (push, trampoline, VIEW_CODE_BANK_1)
-extern boolean b9Collide(ViewTable* localViewtab, byte entryNum, byte localCelWidth);
+extern boolean b9Collide(ViewTable* localViewtab, byte entryNum);
 #pragma wrapped-call (pop)
 
 void b9ResetViewtabs(boolean fullReset)
@@ -1374,6 +1757,11 @@ void b9InitViews()
 void b9InitObjects()
 {
 	byte i;
+
+#ifdef TEST_COLLIDE
+	testCollide();
+#endif // TEST_COLLIDE
+
 
 	b9ResetViewtabs(TRUE);
 	memsetBanked(viewTableMetadata, NULL, sizeof(ViewTableMetadata) * SPRITE_SLOTS, SPRITE_METADATA_BANK);
@@ -2946,7 +3334,7 @@ void bCCalcObjMotion()
 		getLoadedLoop(&localView, &localLoop, entryNum);
 		getLoadedCel(&localLoop, &localCel, entryNum);
 
-		if (b9Collide(&localViewtab, entryNum, localCel.width))
+		if (b9Collide(&localViewtab, entryNum))
 		{
 			//this.X = px;
 			//this.Y = py;

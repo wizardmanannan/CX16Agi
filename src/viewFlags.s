@@ -1,6 +1,0 @@
-.ifndef  VIEW_FLAGS
-VIEW_FLAGS = 1
-
-IGNORE_OBJECTS = $200
-
-.endif
