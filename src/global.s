@@ -169,6 +169,8 @@ MULT_TABLE_HALF_POINT = $80
 
 NEG_1_16 = $FFFF
 
+HIGHEST_PRIORITY = 15
+
 ; Macro for reading from an array
 .macro READ_ARRAY_POINTER arrayZeroPointer
     clc

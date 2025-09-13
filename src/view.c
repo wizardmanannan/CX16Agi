@@ -548,7 +548,7 @@ void testCollide()
 
 #endif
 
-#define TEST_CAN_BE_HERE
+//#define TEST_CAN_BE_HERE
 
 #ifdef TEST_CAN_BE_HERE
 extern boolean b9CanBeHere(ViewTable* localViewtab, byte entryNum);
@@ -559,7 +559,7 @@ extern void b8SetupLineTables();
 #pragma wrapped-call (pop)
 byte trap = FALSE;
 
-boolean testPriorityCalc(byte y, byte expectedPriority, char* testText)
+boolean testPriorityCalc(byte y, byte expectedPriority, char* testText, int flags, byte objInitialPriority)
 {
 	PictureFile loadedPicture;
 	ViewTable localViewTab;
@@ -570,6 +570,8 @@ boolean testPriorityCalc(byte y, byte expectedPriority, char* testText)
 
 	getViewTab(&localViewTab, 0);
 	localViewTab.yPos = y;
+	localViewTab.flags = flags;
+	localViewTab.priority = objInitialPriority;
 
 	result = b9CanBeHere(&localViewTab, 0);
 	printf(testText);
@@ -580,7 +582,7 @@ boolean testPriorityCalc(byte y, byte expectedPriority, char* testText)
 	}
 }
 
-boolean testCanBeHereFunction(byte pNum, byte x, byte y, byte xSize, char* testText, boolean expectedResult, boolean expectedWater, boolean expectedSpecial, int flags)
+boolean testCanBeHereFunction(byte pNum, byte x, byte y, byte xSize, char* testText, boolean expectedResult, boolean expectedWater, boolean expectedSpecial, int flags, byte objInitialPriority, byte objNum)
 {
 	PictureFile loadedPicture;
 	ViewTable localViewTab;
@@ -590,15 +592,16 @@ boolean testCanBeHereFunction(byte pNum, byte x, byte y, byte xSize, char* testT
 	b9ResetViewtabs(TRUE);
 	b8SetupLineTables();
 
-	getViewTab(&localViewTab, 0);
+	getViewTab(&localViewTab, objNum);
 	localViewTab.xPos = x;
 	localViewTab.yPos = y;
 	localViewTab.flags = flags;
 	localViewTab.xsize = xSize;
+	localViewTab.priority = objInitialPriority;
 	b6LoadPictureFile(pNum);
 	getLoadedPicture(&loadedPicture, pNum);
 	b11DrawPic(loadedPicture.data, loadedPicture.size, TRUE, pNum);
-	result = b9CanBeHere(&localViewTab, 0);
+	result = b9CanBeHere(&localViewTab, objNum);
 	printf(testText);
 	if (result != expectedResult)
 	{
@@ -614,9 +617,11 @@ boolean testCanBeHereFunction(byte pNum, byte x, byte y, byte xSize, char* testT
 	{
 		printf("fail, on special\n");
 	}
+
+	b6DiscardPictureFile(pNum);
 }
 
-boolean testCanBeHereFunctionWithWaterSpecial(byte pNum, byte x, byte y, byte xSize, char* testText, boolean expectedResult, boolean expectedWater, boolean expectedSpecial)
+boolean testCanBeHereFunctionWithWaterSpecial(byte pNum, byte x, byte y, byte xSize, char* testText, boolean expectedResult, boolean expectedWater, byte expectedSpecial, int flags, byte objInitialPriority)
 {
 	PictureFile loadedPicture;
 	ViewTable localViewTab;
@@ -629,8 +634,10 @@ boolean testCanBeHereFunctionWithWaterSpecial(byte pNum, byte x, byte y, byte xS
 	getViewTab(&localViewTab, 0);
 	localViewTab.xPos = x;
 	localViewTab.yPos = y;
+	localViewTab.flags = flags;
+	localViewTab.priority = objInitialPriority;
+    localViewTab.xsize = xSize;
 
-	localViewTab.xsize = xSize;
 	b6LoadPictureFile(pNum);
 	getLoadedPicture(&loadedPicture, pNum);
 	b11DrawPic(loadedPicture.data, loadedPicture.size, TRUE, pNum);
@@ -675,46 +682,65 @@ void testCanBeHere()
 
 	b8SetupLineTables();
 
-	testCanBeHereFunction(TEST_ENTIRE_ON_LAND_PIC, 50, 50, 10, "test 1: non fixed priority entirely on land priority > 3\n", TRUE, FALSE, FALSE, 0);
-	testCanBeHereFunction(TEST_ENTIRE_ON_LAND_PIC_PERMANENT_BLOCK, 159, 167, 6, "test 2: hits permanent on first pixel\n", FALSE, FALSE, FALSE, 0);
-	testCanBeHereFunction(TEST_ENTIRE_ON_LAND_PIC_PERMANENT_BLOCK, 154, 167, 6, "test 3: hits permanent on non first pixel\n", FALSE, FALSE, FALSE, 0);
-	testCanBeHereFunction(TEST_ENTIRE_ON_LAND_PIC_NON_PERM_BLOCK, 0, 42, 6, "test 4: hits non perm block on first pixel\n", FALSE, FALSE, FALSE, 0);
-	testCanBeHereFunction(TEST_ENTIRE_ON_LAND_PIC_NON_PERM_BLOCK, 159, 41, 6, "test 5: hits non perm block non first pixel\n", FALSE, FALSE, FALSE, 0);
-	testCanBeHereFunction(TEST_ENTIRE_ON_LAND_PIC_SPECIAL, 98, 101, 6, "test 6: hits special on first pixel\n", TRUE, FALSE, TRUE, 0);
-	testCanBeHereFunction(TEST_ENTIRE_ON_LAND_PIC_SPECIAL, 91, 101, 6, "test 7: hits special on non first pixel\n", TRUE, FALSE, TRUE, 0);
-	testCanBeHereFunction(TEST_ENTIRE_ON_LAND_PIC_SPECIAL, 98, 101, 6, "test 8: hits control lines on first pixel\n", TRUE, FALSE, TRUE, 0);
-	testCanBeHereFunction(TEST_ENTIRE_ON_LAND_PIC_SPECIAL, 91, 101, 6, "test 9: hits control lines on non first pixel\n", TRUE, FALSE, TRUE, 0);
-	testCanBeHereFunction(TEST_ENTIRE_ON_WATER, 20, 160, 6, "test 10: entirely On Water\n", TRUE, TRUE, FALSE, 0);
-	testCanBeHereFunction(TEST_ENTIRE_ON_WATER, 49, 123, 6, "test 11: half On water, half on perm. block\n", FALSE, FALSE, FALSE, 0);
-	testCanBeHereFunction(TEST_ENTIRE_ON_WATER, 81, 160, 6, "test 12: half On Water, half on block\n", FALSE, FALSE, FALSE, 0);
-	testCanBeHereFunctionWithWaterSpecial(TEST_ON_WATER_AND_SPECIAL, 79, 160, 6, "test 13: on Water, half on special\n", TRUE, FALSE, TRUE);
-	testCanBeHereFunction(TEST_BLOCK_ON_END, 80, 160, 6, "test 14: block on end\n", FALSE, FALSE, FALSE, 0);
-	testCanBeHereFunction(TEST_ENTIRE_ON_LAND_PIC_NON_PERM_BLOCK, 0, 42, 6, "test 15: hits non perm block on first pixel, ignore blocks enabled\n", TRUE, FALSE, FALSE, IGNOREBLOCKS);
-	testCanBeHereFunction(TEST_ENTIRE_ON_LAND_PIC_NON_PERM_BLOCK, 159, 41, 6, "test 16: hits non perm block non first pixel, ignore blocks enabled\n", TRUE, FALSE, FALSE, IGNOREBLOCKS);
+	testCanBeHereFunction(TEST_ENTIRE_ON_LAND_PIC, 50, 50, 10, "test 1: non fixed priority entirely on land priority > 3\n", TRUE, FALSE, FALSE, 0, 7, 0);
+	testCanBeHereFunction(TEST_ENTIRE_ON_LAND_PIC_PERMANENT_BLOCK, 159, 167, 6, "test 2: hits permanent on first pixel\n", FALSE, FALSE, FALSE, 0, 7, 0);
+	testCanBeHereFunction(TEST_ENTIRE_ON_LAND_PIC_PERMANENT_BLOCK, 154, 167, 6, "test 3: hits permanent on non first pixel\n", FALSE, FALSE, FALSE, 0, 7, 0);
+	testCanBeHereFunction(TEST_ENTIRE_ON_LAND_PIC_NON_PERM_BLOCK, 0, 42, 6, "test 4: hits non perm block on first pixel\n", FALSE, FALSE, FALSE, 0, 7, 0);
+	testCanBeHereFunction(TEST_ENTIRE_ON_LAND_PIC_NON_PERM_BLOCK, 159, 41, 6, "test 5: hits non perm block non first pixel\n", FALSE, FALSE, FALSE, 0, 7, 0);
+	testCanBeHereFunction(TEST_ENTIRE_ON_LAND_PIC_SPECIAL, 98, 101, 6, "test 6: hits special on first pixel\n", TRUE, FALSE, TRUE, 0, 7, 0);
+	testCanBeHereFunction(TEST_ENTIRE_ON_LAND_PIC_SPECIAL, 91, 101, 6, "test 7: hits special on non first pixel\n", TRUE, FALSE, TRUE, 0, 7, 0);
+	testCanBeHereFunction(TEST_ENTIRE_ON_LAND_PIC_SPECIAL, 98, 101, 6, "test 8: hits control lines on first pixel\n", TRUE, FALSE, TRUE, 0, 7, 0);
+	testCanBeHereFunction(TEST_ENTIRE_ON_LAND_PIC_SPECIAL, 91, 101, 6, "test 9: hits control lines on non first pixel\n", TRUE, FALSE, TRUE, 0, 7, 0);
+	testCanBeHereFunction(TEST_ENTIRE_ON_WATER, 20, 160, 6, "test 10: entirely On Water\n", TRUE, TRUE, FALSE, 0, 7, 0);
+	testCanBeHereFunction(TEST_ENTIRE_ON_WATER, 49, 123, 6, "test 11: half On water, half on perm. block\n", FALSE, FALSE, FALSE, 0, 7, 0);
+	testCanBeHereFunction(TEST_ENTIRE_ON_WATER, 81, 160, 6, "test 12: half On Water, half on block\n", FALSE, FALSE, FALSE, 0, 7, 0);
+	testCanBeHereFunctionWithWaterSpecial(TEST_ON_WATER_AND_SPECIAL, 79, 160, 6, "test 13: on Water, half on special\n", TRUE, FALSE, TRUE, 0, 7);
+	testCanBeHereFunction(TEST_BLOCK_ON_END, 80, 160, 6, "test 14: block on end\n", FALSE, FALSE, FALSE, 0, 7, 0);
+	testCanBeHereFunction(TEST_ENTIRE_ON_LAND_PIC_NON_PERM_BLOCK, 0, 42, 6, "test 15: hits non perm block on first pixel, ignore blocks enabled\n", TRUE, FALSE, FALSE, IGNOREBLOCKS, 7, 0);
+	testCanBeHereFunction(TEST_ENTIRE_ON_LAND_PIC_NON_PERM_BLOCK, 159, 41, 6, "test 16: hits non perm block non first pixel, ignore blocks enabled\n", TRUE, FALSE, FALSE, IGNOREBLOCKS, 7, 0);
+
+	testCanBeHereFunction(TEST_ENTIRE_ON_LAND_PIC_PERMANENT_BLOCK, 159, 167, 6, "test 17: hits permanent on first pixel (15 priority ignore)\n", TRUE, FALSE, FALSE, FIXEDPRIORITY, 15, 0);
+	testCanBeHereFunction(TEST_ENTIRE_ON_LAND_PIC_PERMANENT_BLOCK, 154, 167, 6, "test 18: hits permanent on non first pixel (15 priority ignore)\n", TRUE, FALSE, FALSE, FIXEDPRIORITY, 15, 0);
+	testCanBeHereFunction(TEST_ENTIRE_ON_LAND_PIC_NON_PERM_BLOCK, 0, 42, 6, "test 19: hits non perm block on first pixel\n", TRUE, FALSE, FALSE, FIXEDPRIORITY, 15, 0);
+	testCanBeHereFunction(TEST_ENTIRE_ON_LAND_PIC_NON_PERM_BLOCK, 159, 41, 6, "test 20: hits non perm block non first pixel (15 priority ignore)\n", TRUE, FALSE, FALSE, FIXEDPRIORITY, 15, 0);
+
+
+	testCanBeHereFunction(TEST_ENTIRE_ON_LAND_PIC_SPECIAL, 98, 101, 6, "test 21: hits special on first pixel(15 priority ignore)\n", TRUE, FALSE, FALSE, FIXEDPRIORITY, 15, 0);
+	testCanBeHereFunction(TEST_ENTIRE_ON_LAND_PIC_SPECIAL, 91, 101, 6, "test 22: hits special on non first pixel(15 priority ignore)\n", TRUE, FALSE, FALSE, FIXEDPRIORITY, 15, 0);
+	testCanBeHereFunction(TEST_ENTIRE_ON_LAND_PIC_SPECIAL, 98, 101, 6, "test 23: hits control lines on first pixel(15 priority ignore)\n", TRUE, FALSE, FALSE, FIXEDPRIORITY, 15, 0);
+	testCanBeHereFunction(TEST_ENTIRE_ON_LAND_PIC_SPECIAL, 91, 101, 6, "test 24: hits control lines on non first pixel(15 priority ignore)\n", TRUE, FALSE, FALSE, FIXEDPRIORITY, 15, 0);
+	testCanBeHereFunction(TEST_ENTIRE_ON_WATER, 20, 160, 6, "test 25: entirely On Water(15 priority ignore)\n", TRUE, FALSE, FALSE, FIXEDPRIORITY, 15, 0);
+	testCanBeHereFunction(TEST_ENTIRE_ON_WATER, 49, 123, 6, "test 26: half On water, half on perm. block(15 priority ignore)\n", TRUE, FALSE, FALSE, FIXEDPRIORITY, 15, 0);
+	testCanBeHereFunction(TEST_ENTIRE_ON_WATER, 81, 160, 6, "test 27: half On Water, half on block(15 priority ignore)\n", TRUE, FALSE, FALSE, FIXEDPRIORITY, 15, 0);
+	testCanBeHereFunctionWithWaterSpecial(TEST_ON_WATER_AND_SPECIAL, 79, 160, 6, "test 28: on Water, half on special(15 priority ignore)\n", TRUE, FALSE, FALSE, FIXEDPRIORITY, 15);
+	testCanBeHereFunction(TEST_BLOCK_ON_END, 80, 160, 6, "test 29: block on end(15 priority ignore)\n", TRUE, FALSE, FALSE, FIXEDPRIORITY, 15, 0);
+
+	testCanBeHereFunction(TEST_ENTIRE_ON_WATER, 20, 160, 6, "test 30: when not ego water flag not set\n", TRUE, FALSE, FALSE, 0, 7, 1);
 
 	// Below base -> always backmost (4)
 
-	trap = TRUE;
-
-	testPriorityCalc(20, 4, "priority test 1, backmost (y < base)\n");
-	testPriorityCalc(37, 4, "priority test 2, backmost (just below base)\n");
+	testPriorityCalc(20, 4, "priority test 1, backmost (y < base)\n", 0, 7);
+	testPriorityCalc(37, 4, "priority test 2, backmost (just below base)\n", 0, 7);
 
 	// At base
-	testPriorityCalc(38, 4, "priority test 3, base = 5\n");
+	testPriorityCalc(38, 4, "priority test 3, base = 5\n", 0, 7);
 
 	// Step increments of 13
-	testPriorityCalc(51, 5, "priority test 4, step 1\n");
-	testPriorityCalc(64, 6, "priority test 5, step 2\n");
-	testPriorityCalc(77, 7, "priority test 6, step 3\n");
-	testPriorityCalc(90, 8, "priority test 7, step 4\n");
-	testPriorityCalc(103, 9, "priority test 8, step 5\n");
-	testPriorityCalc(116, 10, "priority test 9, step 6\n");
-	testPriorityCalc(129, 11, "priority test 10, step 7\n");
-	testPriorityCalc(142, 12, "priority test 11, step 8\n");
-	testPriorityCalc(155, 13, "priority test 12, step 9\n");
+	testPriorityCalc(51, 5, "priority test 4, step 1\n", 0, 7);
+	testPriorityCalc(64, 6, "priority test 5, step 2\n", 0, 7);
+	testPriorityCalc(77, 7, "priority test 6, step 3\n", 0, 7);
+	testPriorityCalc(90, 8, "priority test 7, step 4\n", 0, 7);
+	testPriorityCalc(103, 9, "priority test 8, step 5\n", 0, 7);
+	testPriorityCalc(116, 10, "priority test 9, step 6\n", 0, 7);
+	testPriorityCalc(129, 11, "priority test 10, step 7\n", 0, 7);
+	testPriorityCalc(142, 12, "priority test 11, step 8\n", 0, 7);
+	testPriorityCalc(155, 13, "priority test 12, step 9\n", 0, 7);
 
 	// Very end of the scale
-	testPriorityCalc(168, 15, "priority test 13, top of range\n");
+
+	testPriorityCalc(168, 15, "priority test 13, top of range\n", 0, 7);
+
+	testPriorityCalc(168, 7, "uses own priority when fixed\n", FIXEDPRIORITY, 7);
 }
 #endif
 
@@ -1954,7 +1980,7 @@ void b9PopulatePrecomputedPriorityTable()
 		}
 		else
 		{
-			
+
 
 			numerator = b12FpFromInt(i - priorityBase);
 			denominator = b12FpFromInt(PICTURE_HEIGHT - priorityBase) / b12FpFromInt(10);

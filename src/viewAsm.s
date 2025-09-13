@@ -164,33 +164,18 @@ stx VIEW_POS_LOCAL_VIEW_TAB + 1
 
 lda #$1
 sta VIEW_POS_CAN_BE_HERE
-sta VIEW_POS_ENTIRELY_ON_WATER
+stz VIEW_POS_ENTIRELY_ON_WATER
 stz VIEW_POS_HIT_SPECIAL
 
 ldy _offsetOfFlags
 lda (VIEW_POS_LOCAL_VIEW_TAB),y
 sta VIEW_POS_FLAGS_LOW
-and FIXEDPRIORITY
+and #FIXEDPRIORITY
 bne @checkIfHighestPriority
 
 ldy _offsetOfYPos
 lda (VIEW_POS_LOCAL_VIEW_TAB),y
 tay
-
-php
-pha
-phx
-phy
-tay
-.import _trap
-lda _trap
-beq @continue
-stp
-@continue:
-ply
-plx
-pla
-plp
 
 lda _b9PreComputedPriority,y
 
@@ -198,6 +183,15 @@ ldy _offsetOfPriority
 sta (VIEW_POS_LOCAL_VIEW_TAB),y
 
 @checkIfHighestPriority:
+ldy _offsetOfPriority
+lda (VIEW_POS_LOCAL_VIEW_TAB),y
+cmp #HIGHEST_PRIORITY
+bne @calculateIfCanBeHere
+jmp @setEgoWaterSpecialFlags
+
+@calculateIfCanBeHere:
+inc VIEW_POS_ENTIRELY_ON_WATER
+
 ldy _offsetOfXPos
 lda (VIEW_POS_LOCAL_VIEW_TAB),y
 
