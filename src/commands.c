@@ -2466,6 +2466,13 @@ void b5Div_v() // 2, 0xC0
 	var[loadAndIncWinCode()] /= var[loadAndIncWinCode()];
 	return;
 }
+
+void b5SetPriorityBase()
+{
+	priorityBase = loadAndIncWinCode();
+	b9PopulatePrecomputedPriorityTable();
+}
+
 #pragma code-name (pop)
 
 

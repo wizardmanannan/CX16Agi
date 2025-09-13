@@ -15,6 +15,8 @@
 #include "helpers.h"
 #include "irq.h"
 #include "celToVeraZp.h"
+#include "fixed.h"
+#include <limits.h>
 
 #define MAX_JOINED_SPRITES 6
 #define MAX_SPRITES_ROW_OR_COLUMN_SIZE 4
@@ -55,6 +57,7 @@ extern void b9AddToPic(int vNum, int lNum, int cNum, int x, int y, int pNum, int
 extern void b9ResetViews();
 extern void b9InitViews();
 extern void b9InitObjects();
+extern void b9PopulatePrecomputedPriorityTable();
 #pragma wrapped-call (pop)
 
 #pragma wrapped-call (push, trampoline, VIEW_CODE_BANK_2)
@@ -79,6 +82,10 @@ extern void bDShowObjectState(int objNum);
 #pragma wrapped-call (push, trampoline, SPRITE_UPDATED_BANK)
 extern void bEClearSpriteAttributes();
 #pragma wrapped-call (pop)
+
+extern byte priorityBase;
+
+#define MIN_PRIORITY 4
 
 #endif   /* _VIEW_H_ */
 

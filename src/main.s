@@ -95,6 +95,7 @@
     .export _b1EndSoundFlag
     .export _b1PsgClear
     .export _b9Collide
+    .export _b9CanBeHere
   
     .export _bAWander
     .export _bDFindFreeVramBlock
@@ -103,4 +104,4 @@
     .export _bDResetSpriteTablePointer
     .export _bDReenableOptimisticMode
     .export _bDDeleteAllocation
-    .export _b8GetPriority
+    .export _b8SetupLineTables

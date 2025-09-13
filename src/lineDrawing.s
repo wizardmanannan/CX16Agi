@@ -53,7 +53,7 @@ LINE_LENGTH_ZP = ZP_TMP_4
 rts
 .endproc
 
-.proc b8SetupLineTables
+.proc _b8SetupLineTables
 ;Setup Visual
 lda #< b8LineTableVisualLow
 sta TABLE_LOW

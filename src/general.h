@@ -56,4 +56,6 @@ typedef enum {
 
 extern boolean* flag;
 
+#define DEFAULT_PRIORITY_BASE 48
+
 #endif  /* _GENERAL_H_ */

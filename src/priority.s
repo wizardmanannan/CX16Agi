@@ -4,12 +4,6 @@
 
 .macro GET_PRIORITY
 .local @end
-X_VAL = ZP_TMP_2
-Y_VAL = ZP_TMP_2 + 1
-
-sta Y_VAL
-jsr popa
-sta X_VAL
 
 sei
 ldy Y_VAL
@@ -43,14 +37,6 @@ CONTROL_LINES = 2
 HIGHEST_BOUNDARY = 1
 LOWEST_BOUNDARY = 0
 
-
-;byte b8GetPriority(byte X, byte Y)
-_b8GetPriority:
-.scope
-GET_PRIORITY
-.endscope
-rts
-
 ;byte b8GetControl(byte X, byte Y)
 ;Note that all AGI implementations draw the control lines over the top of the priority screen
 ;Original MEKA splits the priority screen into priority and control screens, but in a limited memory system this is wasteful.
@@ -60,6 +46,14 @@ rts
 ;If the pixel is < 4 (control) => pixel
 _b8GetControl:
 .scope
+
+X_VAL = ZP_TMP_2
+Y_VAL = ZP_TMP_2 + 1
+
+sta Y_VAL
+jsr popa
+sta X_VAL
+
 GET_PRIORITY
 
 cmp #NOT_AN_OBSTACLE ;Any thing greater than or equal to this value is a priority value and not a control value and therefore not an obstacle 

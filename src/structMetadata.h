@@ -38,6 +38,7 @@ byte sizeOfViewTab = sizeof(ViewTable);
 byte offsetOfXSize = offsetof(struct ViewTable, xsize);
 byte offsetOfYSize = offsetof(struct ViewTable, ysize);
 
+
 //View Metadata
 byte offsetOfloopsVeraAddressesPointers = offsetof(struct ViewTableMetadata, loopsVeraAddressesPointers);
 byte offsetOfViewMetadataBank = offsetof(struct ViewTableMetadata, viewTableMetadataBank);

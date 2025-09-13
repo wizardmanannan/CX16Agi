@@ -38,8 +38,13 @@
 //#define VERBOSE_ADD_TO_PIC;
 //#define VERBOSE_DEBUG_NO_BLIT_CACHE TODO: Weird print statement corruption fix
 
+
 #define MIN_SPRITE_PRIORITY 4
 #define MAX_SPRITE_PRIORITY 15
+#define DEFAULT_PRIORITY_BASE 48
+
+byte priorityBase = DEFAULT_PRIORITY_BASE;
+
 #define NO_PRIORITIES (MAX_SPRITE_PRIORITY - MIN_SPRITE_PRIORITY)
 
 #define BYTES_PER_SPRITE_UPDATE 7
@@ -54,6 +59,10 @@ extern byte* bESpritesUpdatedBufferPointer;
 
 extern void bAFollowEgoAsmSec(ViewTable* localViewTab, ViewTable* egoViewTab, byte egoWidth, byte localCelWidth);
 
+#pragma bss-name (push, "BANKRAM09")
+byte b9PreComputedPriority[CHAR_MAX];
+byte b9160TimesTable[PICTURE_WIDTH];
+#pragma bss-name (pop)
 #pragma bss-name (push, "BANKRAM11")
 View loadedViews[MAXVIEW];
 #pragma bss-name (pop)
@@ -484,7 +493,7 @@ void testCollide()
 		printf("fail\n");
 		asm("stp");
 	}
-	
+
 	b9ResetViewtabs(TRUE);
 	getViewTab(&localViewTab, 0);
 	getViewTab(&otherViewTab, 2);
@@ -537,6 +546,176 @@ void testCollide()
 
 
 
+#endif
+
+#define TEST_CAN_BE_HERE
+
+#ifdef TEST_CAN_BE_HERE
+extern boolean b9CanBeHere(ViewTable* localViewtab, byte entryNum);
+extern void b11DrawPic(byte* bankedData, int pLen, boolean okToClearScreen, byte picNum);
+extern void b9ResetViewtabs();
+#pragma wrapped-call (push, trampoline, 8)
+extern void b8SetupLineTables();
+#pragma wrapped-call (pop)
+byte trap = FALSE;
+
+boolean testPriorityCalc(byte y, byte expectedPriority, char* testText)
+{
+	PictureFile loadedPicture;
+	ViewTable localViewTab;
+	boolean result;
+
+	memset(flag, 0, 256);
+	b9ResetViewtabs(TRUE);
+
+	getViewTab(&localViewTab, 0);
+	localViewTab.yPos = y;
+
+	result = b9CanBeHere(&localViewTab, 0);
+	printf(testText);
+
+	if (localViewTab.priority != expectedPriority)
+	{
+		printf("fail the priority was expected to be %d, but we got %d\n", expectedPriority, localViewTab.priority);
+	}
+}
+
+boolean testCanBeHereFunction(byte pNum, byte x, byte y, byte xSize, char* testText, boolean expectedResult, boolean expectedWater, boolean expectedSpecial, int flags)
+{
+	PictureFile loadedPicture;
+	ViewTable localViewTab;
+	boolean result;
+
+	memset(flag, 0, 256);
+	b9ResetViewtabs(TRUE);
+	b8SetupLineTables();
+
+	getViewTab(&localViewTab, 0);
+	localViewTab.xPos = x;
+	localViewTab.yPos = y;
+	localViewTab.flags = flags;
+	localViewTab.xsize = xSize;
+	b6LoadPictureFile(pNum);
+	getLoadedPicture(&loadedPicture, pNum);
+	b11DrawPic(loadedPicture.data, loadedPicture.size, TRUE, pNum);
+	result = b9CanBeHere(&localViewTab, 0);
+	printf(testText);
+	if (result != expectedResult)
+	{
+		printf("fail, result\n");
+	}
+	if (flag[0] != expectedWater)
+	{
+		printf("fail, on water\n");
+	}
+
+	//printf("special flag address %p\n", &flag[3]);
+	if (flag[3] != expectedSpecial)
+	{
+		printf("fail, on special\n");
+	}
+}
+
+boolean testCanBeHereFunctionWithWaterSpecial(byte pNum, byte x, byte y, byte xSize, char* testText, boolean expectedResult, boolean expectedWater, boolean expectedSpecial)
+{
+	PictureFile loadedPicture;
+	ViewTable localViewTab;
+	boolean result;
+
+	memset(flag, 0, 256);
+	b9ResetViewtabs(TRUE);
+	b8SetupLineTables();
+
+	getViewTab(&localViewTab, 0);
+	localViewTab.xPos = x;
+	localViewTab.yPos = y;
+
+	localViewTab.xsize = xSize;
+	b6LoadPictureFile(pNum);
+	getLoadedPicture(&loadedPicture, pNum);
+	b11DrawPic(loadedPicture.data, loadedPicture.size, TRUE, pNum);
+
+	SET_VERA_ADDRESS(0xC827, 0, 0);
+#define WATER_SPECIAL 0x32
+	WRITE_BYTE_DEF_TO_ASSM(WATER_SPECIAL, VERA_data0); //Adding In This Value Specially, As I Couldn't Find A Real One
+
+	result = b9CanBeHere(&localViewTab, 0);
+	printf(testText);
+	if (result != expectedResult)
+	{
+		printf("fail, result\n");
+	}
+	if (flag[0] != expectedWater)
+	{
+		printf("fail, on water\n");
+	}
+
+	//printf("special flag address %p\n", &flag[3]);
+	if (flag[3] != expectedSpecial)
+	{
+		printf("fail, on special\n");
+	}
+}
+
+void testCanBeHere()
+{
+#define TEST_ENTIRE_ON_LAND_PIC 3
+#define TEST_ENTIRE_ON_LAND_PIC_PERMANENT_BLOCK 1
+#define TEST_ENTIRE_ON_LAND_PIC_NON_PERM_BLOCK 4
+#define TEST_ENTIRE_ON_LAND_PIC_SPECIAL 41
+#define TEST_ENTIRE_ON_WATER 17
+#define TEST_ON_WATER_AND_SPECIAL 17
+#define TEST_BLOCK_ON_END 17
+
+
+	PictureFile loadedPicture;
+	byte pNum = TEST_ENTIRE_ON_LAND_PIC;
+	ViewTable localViewTab;
+	boolean result;
+
+	b8SetupLineTables();
+
+	testCanBeHereFunction(TEST_ENTIRE_ON_LAND_PIC, 50, 50, 10, "test 1: non fixed priority entirely on land priority > 3\n", TRUE, FALSE, FALSE, 0);
+	testCanBeHereFunction(TEST_ENTIRE_ON_LAND_PIC_PERMANENT_BLOCK, 159, 167, 6, "test 2: hits permanent on first pixel\n", FALSE, FALSE, FALSE, 0);
+	testCanBeHereFunction(TEST_ENTIRE_ON_LAND_PIC_PERMANENT_BLOCK, 154, 167, 6, "test 3: hits permanent on non first pixel\n", FALSE, FALSE, FALSE, 0);
+	testCanBeHereFunction(TEST_ENTIRE_ON_LAND_PIC_NON_PERM_BLOCK, 0, 42, 6, "test 4: hits non perm block on first pixel\n", FALSE, FALSE, FALSE, 0);
+	testCanBeHereFunction(TEST_ENTIRE_ON_LAND_PIC_NON_PERM_BLOCK, 159, 41, 6, "test 5: hits non perm block non first pixel\n", FALSE, FALSE, FALSE, 0);
+	testCanBeHereFunction(TEST_ENTIRE_ON_LAND_PIC_SPECIAL, 98, 101, 6, "test 6: hits special on first pixel\n", TRUE, FALSE, TRUE, 0);
+	testCanBeHereFunction(TEST_ENTIRE_ON_LAND_PIC_SPECIAL, 91, 101, 6, "test 7: hits special on non first pixel\n", TRUE, FALSE, TRUE, 0);
+	testCanBeHereFunction(TEST_ENTIRE_ON_LAND_PIC_SPECIAL, 98, 101, 6, "test 8: hits control lines on first pixel\n", TRUE, FALSE, TRUE, 0);
+	testCanBeHereFunction(TEST_ENTIRE_ON_LAND_PIC_SPECIAL, 91, 101, 6, "test 9: hits control lines on non first pixel\n", TRUE, FALSE, TRUE, 0);
+	testCanBeHereFunction(TEST_ENTIRE_ON_WATER, 20, 160, 6, "test 10: entirely On Water\n", TRUE, TRUE, FALSE, 0);
+	testCanBeHereFunction(TEST_ENTIRE_ON_WATER, 49, 123, 6, "test 11: half On water, half on perm. block\n", FALSE, FALSE, FALSE, 0);
+	testCanBeHereFunction(TEST_ENTIRE_ON_WATER, 81, 160, 6, "test 12: half On Water, half on block\n", FALSE, FALSE, FALSE, 0);
+	testCanBeHereFunctionWithWaterSpecial(TEST_ON_WATER_AND_SPECIAL, 79, 160, 6, "test 13: on Water, half on special\n", TRUE, FALSE, TRUE);
+	testCanBeHereFunction(TEST_BLOCK_ON_END, 80, 160, 6, "test 14: block on end\n", FALSE, FALSE, FALSE, 0);
+	testCanBeHereFunction(TEST_ENTIRE_ON_LAND_PIC_NON_PERM_BLOCK, 0, 42, 6, "test 15: hits non perm block on first pixel, ignore blocks enabled\n", TRUE, FALSE, FALSE, IGNOREBLOCKS);
+	testCanBeHereFunction(TEST_ENTIRE_ON_LAND_PIC_NON_PERM_BLOCK, 159, 41, 6, "test 16: hits non perm block non first pixel, ignore blocks enabled\n", TRUE, FALSE, FALSE, IGNOREBLOCKS);
+
+	// Below base -> always backmost (4)
+
+	trap = TRUE;
+
+	testPriorityCalc(20, 4, "priority test 1, backmost (y < base)\n");
+	testPriorityCalc(37, 4, "priority test 2, backmost (just below base)\n");
+
+	// At base
+	testPriorityCalc(38, 4, "priority test 3, base = 5\n");
+
+	// Step increments of 13
+	testPriorityCalc(51, 5, "priority test 4, step 1\n");
+	testPriorityCalc(64, 6, "priority test 5, step 2\n");
+	testPriorityCalc(77, 7, "priority test 6, step 3\n");
+	testPriorityCalc(90, 8, "priority test 7, step 4\n");
+	testPriorityCalc(103, 9, "priority test 8, step 5\n");
+	testPriorityCalc(116, 10, "priority test 9, step 6\n");
+	testPriorityCalc(129, 11, "priority test 10, step 7\n");
+	testPriorityCalc(142, 12, "priority test 11, step 8\n");
+	testPriorityCalc(155, 13, "priority test 12, step 9\n");
+
+	// Very end of the scale
+	testPriorityCalc(168, 15, "priority test 13, top of range\n");
+}
 #endif
 
 
@@ -1665,6 +1844,7 @@ endBlit:
 
 #pragma wrapped-call (push, trampoline, VIEW_CODE_BANK_1)
 extern boolean b9Collide(ViewTable* localViewtab, byte entryNum);
+extern boolean b9CanBeHere(ViewTable* localViewtab, byte entryNum);
 #pragma wrapped-call (pop)
 
 void b9ResetViewtabs(boolean fullReset)
@@ -1754,6 +1934,38 @@ void b9InitViews()
 	}
 }
 
+void b9PopulatePrecomputedPriorityTable()
+{
+	int den;
+	int num;
+	int band;   // round-to-nearest; drop "+ den/2" for floor
+	int value;
+	int i;
+
+	fix32 numerator, denominator, divisionResult;
+
+	den = 168 - priorityBase;
+
+	for (i = 0; i < CHAR_MAX; i++)
+	{
+		if (i < priorityBase || den <= 0)
+		{
+			b9PreComputedPriority[i] = MIN_PRIORITY;
+		}
+		else
+		{
+			
+
+			numerator = b12FpFromInt(i - priorityBase);
+			denominator = b12FpFromInt(PICTURE_HEIGHT - priorityBase) / b12FpFromInt(10);
+			divisionResult = numerator / denominator;
+			divisionResult += b12FpFromInt(5);
+
+			b9PreComputedPriority[i] = b12FloorFix32(divisionResult);
+		}
+	}
+}
+
 void b9InitObjects()
 {
 	byte i;
@@ -1762,6 +1974,11 @@ void b9InitObjects()
 	testCollide();
 #endif // TEST_COLLIDE
 
+	b9PopulatePrecomputedPriorityTable();
+
+#ifdef TEST_CAN_BE_HERE
+	testCanBeHere();
+#endif
 
 	b9ResetViewtabs(TRUE);
 	memsetBanked(viewTableMetadata, NULL, sizeof(ViewTableMetadata) * SPRITE_SLOTS, SPRITE_METADATA_BANK);
@@ -3334,7 +3551,7 @@ void bCCalcObjMotion()
 		getLoadedLoop(&localView, &localLoop, entryNum);
 		getLoadedCel(&localLoop, &localCel, entryNum);
 
-		if (b9Collide(&localViewtab, entryNum))
+		if (b9Collide(&localViewtab, entryNum) || !b9CanBeHere(&localViewtab, entryNum))
 		{
 			//this.X = px;
 			//this.Y = py;

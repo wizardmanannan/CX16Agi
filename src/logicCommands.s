@@ -157,6 +157,7 @@ LOGICCOMMANDS_INC = 1
 .import _b5Mul_v
 .import _b5Div_n
 .import _b5Div_v
+.import _b5SetPriorityBase
 
 .import _exitAllLogics
 .import _hasEnteredNewRoom
@@ -828,7 +829,7 @@ jmpTableCommands2:
 .addr b1NoOp_0
 .addr b1NoOp_0
 .addr b1NoOp_1
-.addr b1NoOp_1
+.addr _b5SetPriorityBase
 .addr b1NoOp_0
 .addr b1NoOp_1
 .addr b1NoOp_0

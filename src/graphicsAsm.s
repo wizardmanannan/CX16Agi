@@ -281,7 +281,7 @@ lda #$6   ; Bitmap mode 16 colors
 sta VERA_L0_config
 stz VERA_L0_tilebase ;A 320 * 240 pixel bitmap at the beginning of VRAM
 
-TRAMPOLINE #LINE_DRAWING_BANK, b8SetupLineTables
+TRAMPOLINE #LINE_DRAWING_BANK, _b8SetupLineTables
 jsr _b6InitBackground
 
 lda #$11 ; 32 x 64 2bpp tiles
