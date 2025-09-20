@@ -318,47 +318,70 @@ rts
 .endscope
 
 
-;boolean b6GoodPosition(Viewtab* localViewTab)
+;------------------------------------------------------------------------------
+; b6GoodPosition(Viewtab* localViewTab)
+;
+; Checks whether a view object is within the valid picture bounds and
+; whether it should be drawn above the horizon line.
+;
+; High-level conditions being implemented:
+;   C1: (X + XSize) <= PICTURE_WIDTH
+;   C2: (Y - YSize) >= -1     ; ensures sprite doesn't extend above screen
+;   C3: (Y <= PICTURE_HEIGHT) ; ensures bottom within screen
+;   C4: (IgnoreHorizon || Y > Horizon) ; horizon check (only IgnoreHorizon here)
+;
+; Returns:
+;   A = 1 (TRUE) if position is valid
+;   A = 0 (FALSE) if invalid
+;------------------------------------------------------------------------------
+
 _b6GoodPosition:
-sta VIEW_POS_LOCAL_VIEW_TAB
-stx VIEW_POS_LOCAL_VIEW_TAB + 1
+    sta VIEW_POS_LOCAL_VIEW_TAB         ; save pointer low byte to localViewTab
+    stx VIEW_POS_LOCAL_VIEW_TAB + 1     ; save pointer high byte
 
-ldy _offsetOfXPos
-lda (VIEW_POS_LOCAL_VIEW_TAB),y
-ldy _offsetOfXSize
-adc (VIEW_POS_LOCAL_VIEW_TAB),y
+    ; ---- C1: check (X + XSize) <= PICTURE_WIDTH ----
+    ldy _offsetOfXPos                    ; offset of X in Viewtab
+    lda (VIEW_POS_LOCAL_VIEW_TAB),y      ; A = X
+    ldy _offsetOfXSize                   ; offset of XSize
+    adc (VIEW_POS_LOCAL_VIEW_TAB),y      ; A = X + XSize
 
-cmp #PICTURE_WIDTH
-beq @checkY
-bcs @returnFalse
+    cmp #PICTURE_WIDTH                   ; compare against picture width
+    beq @checkY                          ; if equal, still valid
+    bcs @returnFalse                     ; if greater, fail
 
 @checkY:
-ldy _offsetOfYPos
-lda (VIEW_POS_LOCAL_VIEW_TAB),y
-tax
+    ; ---- C2: check (Y - YSize) >= -1 ----
+    ldy _offsetOfYPos                    ; offset of Y in Viewtab
+    lda (VIEW_POS_LOCAL_VIEW_TAB),y      ; A = Y
+    tax                                  ; save Y in X for later
 
-sec
-ldy _offsetOfYSize
-sbc (VIEW_POS_LOCAL_VIEW_TAB),y
-bvc @checkLessThanMaxY
-cmp #$FF
-bne @returnFalse
+    sec                                  ; prepare for subtraction
+    ldy _offsetOfYSize                   ; offset of YSize
+    sbc (VIEW_POS_LOCAL_VIEW_TAB),y      ; A = Y - YSize
+
+    bvc @checkLessThanMaxY               ; if no signed overflow, continue
+    cmp #$FF                             ; overflow? must equal -1 (0xFF)
+    bne @returnFalse                     ; if not, fail
 
 @checkLessThanMaxY:
-txa
-cmp #PICTURE_HEIGHT
-bcs @returnFalse
+    ; ---- C3: check (Y <= PICTURE_HEIGHT) ----
+    txa                                  ; restore Y
+    cmp #PICTURE_HEIGHT                  ; compare to picture height
+    bcs @returnFalse                     ; if >= height, fail
 
-ldy _offsetOfFlags
-lda (VIEW_POS_LOCAL_VIEW_TAB),y
-and #IGNOREHORIZON
-bne @returnTrue
+    ; ---- C4: check IgnoreHorizon flag ----
+    ; (the "Y > Horizon" part is not in this routine)
+    ldy _offsetOfFlags                   ; offset of flags
+    lda (VIEW_POS_LOCAL_VIEW_TAB),y      ; load flags
+    and #IGNOREHORIZON                   ; mask IgnoreHorizon bit
+    bne @returnTrue                      ; if set, always pass
 
 @returnTrue:
-lda #$1
-rts
+    lda #$1                              ; return TRUE
+    rts
 
 @returnFalse:
-lda #$0
-rts
+    lda #$0                              ; return FALSE
+    rts
 .endif
+
