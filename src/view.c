@@ -167,6 +167,171 @@ void setLoadedCel(Loop* loadedLoop, Cel* localCell, byte localCellNumber)
 	RAM_BANK = previousRamBank;
 }
 
+//#define TEST_GOOD_POSITION
+
+#ifdef TEST_GOOD_POSITION
+
+extern boolean b6GoodPosition(ViewTable* localViewTab);
+extern byte offsetOfYSize;
+void testGoodPositionFunction(byte x, byte y, byte xSize, byte ySize, byte expectedHorizon, boolean expectedResult, char* testString, byte flags)
+{
+	ViewTable localViewTab;
+	boolean actualResult;
+
+	getViewTab(&localViewTab, 0);
+
+	localViewTab.xPos = x;
+	localViewTab.yPos = y;
+    localViewTab.xsize = xSize;
+	localViewTab.ysize = ySize;
+
+	printf("we set ySize to %d and its address is %p. the offset is %d. the local view tab addres is %p\n", localViewTab.ysize, &localViewTab.ysize, offsetOfYSize, &localViewTab);
+
+	localViewTab.flags = flags;
+	
+	horizon = expectedHorizon;
+
+    actualResult = b6GoodPosition(&localViewTab);
+
+	printf(testString);
+
+	if(actualResult != expectedResult)
+	{
+		printf("Fail expected %d \n", expectedResult);
+	}
+}
+
+
+#define MAXX (PICTURE_WIDTH - 1)
+#define MAXY (PICTURE_HEIGHT - 1)
+#define MINX 0
+#define MINY 0
+
+
+boolean trap;
+void testGoodPosition()
+{
+    // 1) inside bounds, above horizon
+    testGoodPositionFunction(
+        MINX + 5, MINY + 10, 10, 8,
+        /*horizon*/ MINY + 4,
+        /*expected*/ TRUE,
+        "inside bounds, above horizon\n",
+        0
+    );
+
+    // 2) full width fits exactly
+    testGoodPositionFunction(
+        MINX, MINY + 5,
+        (byte)((MAXX + 1) - MINX), 1,
+        /*horizon*/ MINY,
+        /*expected*/ TRUE,
+        "full width fits exactly\n",
+        0
+    );
+
+    // 3) touches top boundary
+    testGoodPositionFunction(
+        MINX + 3, MINY, 4, 1,
+        /*horizon*/ 1,
+        /*expected*/ TRUE,
+        "touches top boundary\n",
+        IGNOREHORIZON
+    );
+
+    // 4) touches bottom boundary
+    testGoodPositionFunction(
+        MINX + 3, MAXY, 4, 2,
+        /*horizon*/ MINY,
+        /*expected*/ TRUE,
+        "touches bottom boundary\n",
+        0
+    );
+
+    // 5) exceeds right bound
+    testGoodPositionFunction(
+        (byte)(MAXX - 5), MINY + 5, 7, 3,
+        /*horizon*/ MINY,
+        /*expected*/ FALSE,
+        "exceeds right bound\n",
+        0
+    );
+
+    // 6) exceeds top bound
+    testGoodPositionFunction(
+        MINX + 2, MINY, 3, 2,
+        /*horizon*/ MINY - 5,
+        /*expected*/ FALSE,
+        "exceeds top bound\n",
+        0
+    );
+
+    // 7) exceeds bottom bound
+    testGoodPositionFunction(
+        MINX + 2, (byte)(MAXY + 1), 3, 2,
+        /*horizon*/ MINY,
+        /*expected*/ TRUE,
+        "exceeds bottom bound\n",
+        0
+    );
+
+	// 8) blocked by horizon
+    testGoodPositionFunction(
+        MINX + 5, MINY + 6, 4, 3,
+        /*horizon*/ (byte)(MINY + 6),
+        /*expected*/ FALSE,
+        "blocked by horizon\n",
+        0
+    );
+
+    // 9) clears horizon
+    testGoodPositionFunction(
+        MINX + 5, MINY + 7, 4, 3,
+        /*horizon*/ (byte)(MINY + 6),
+        /*expected*/ TRUE,
+        "clears horizon\n",
+        0
+    );
+
+    // 10) one by one sprite
+    testGoodPositionFunction(
+        MINX + 1, MINY + 2, 1, 1,
+        /*horizon*/ MINY + 1,
+        /*expected*/ TRUE,
+        "one by one sprite\n",
+        0
+    );
+
+    // 11) fits right and bottom edges
+    {
+        byte fitWidth  = (byte)((MAXX + 1) - (MINX + 10));
+        byte yAtBottom = MAXY;
+        testGoodPositionFunction(
+            MINX + 10, yAtBottom, fitWidth, 1,
+            /*horizon*/ MINY,
+            /*expected*/ TRUE,
+            "fits right and bottom edges\n",
+            0
+        );
+    }
+
+	trap = TRUE;
+    // 12) fails only because of horizon
+    testGoodPositionFunction(
+        MINX + 20, MINY + 15, 2, 2,
+        /*horizon*/ (byte)(MINY + 20),
+        /*expected*/ FALSE,
+        "fails only because of horizon\n",
+        0
+    );
+}
+
+
+
+
+#endif
+
+
 //#define TEST_COLLIDE
 #ifdef TEST_COLLIDE
 extern boolean b9Collide(ViewTable* localViewtab, byte entryNum);
@@ -1999,6 +2164,10 @@ void b9InitObjects()
 #ifdef TEST_COLLIDE
 	testCollide();
 #endif // TEST_COLLIDE
+
+#ifdef TEST_GOOD_POSITION
+	testGoodPosition();
+#endif
 
 	b9PopulatePrecomputedPriorityTable();
 

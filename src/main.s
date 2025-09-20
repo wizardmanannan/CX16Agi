@@ -96,7 +96,7 @@
     .export _b1PsgClear
     .export _b9Collide
     .export _b9CanBeHere
-  
+    .export _b6GoodPosition
     .export _bAWander
     .export _bDFindFreeVramBlock
     .export _bDBlocksBySizeFastLookup
