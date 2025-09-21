@@ -171,7 +171,7 @@ void setLoadedCel(Loop* loadedLoop, Cel* localCell, byte localCellNumber)
 
 #ifdef TEST_GOOD_POSITION
 
-extern boolean b9GoodPosition(ViewTable* localViewTab);
+extern boolean b6GoodPosition(ViewTable* localViewTab);
 extern byte offsetOfYSize;
 void testGoodPositionFunction(byte x, byte y, byte xSize, byte ySize, byte expectedHorizon, boolean expectedResult, char* testString, byte flags)
 {
@@ -191,7 +191,7 @@ void testGoodPositionFunction(byte x, byte y, byte xSize, byte ySize, byte expec
 	
 	horizon = expectedHorizon;
 
-    actualResult = b9GoodPosition(&localViewTab);
+    actualResult = b6GoodPosition(&localViewTab);
 
 	printf(testString);
 
