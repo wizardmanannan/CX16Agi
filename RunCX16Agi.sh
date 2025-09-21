@@ -56,8 +56,5 @@ else
     taskset -c 0 ./x16emu -sdcard "$IMG_PATH" -prg "agi.cx16" -run -debug d -echo $OPTIONAL_ARGUMENTS > /tmp/output.txt -dump V
 fi
 
-# Pause equivalent (wait for keypress)
-read -rp "Press Enter to continue..."
-
 # Return to makefile folder
 cd "$MAKEFILE_FOLDER"
