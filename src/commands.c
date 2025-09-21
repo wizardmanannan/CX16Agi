@@ -628,6 +628,10 @@ void b2Unanimate_all() // 0, 0x00
 	return;
 }
 
+#pragma wrapped-call (push, trampoline, POSITION_HELPERS_BANK)
+extern void b9FindPosition(ViewTable* localViewTab, byte entryNum);
+#pragma wrapped-call (pop)
+
 void b2Draw() // 1, 0x00 
 {
 	int entryNum;
@@ -650,7 +654,9 @@ void b2Draw() // 1, 0x00
 
 	bADrawObject(&localViewtab);
 
-	bAFindPosition(entryNum, &localViewtab);
+    b9FindPosition(&localViewtab, entryNum);
+
+	//bAFindPosition(entryNum, &localViewtab);
 
 	setViewTab(&localViewtab, entryNum);
 	return;

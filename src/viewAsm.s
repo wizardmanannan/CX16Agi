@@ -17,31 +17,24 @@ VIEW_INC = 1
 VIEW_POS_LOCAL_VIEW_TAB = ZP_TMP_2
 VIEW_POS_ENTRY_NUM = ZP_TMP_3 + 1
 VIEW_POS_LOCAL_VIEW_FLAGS = ZP_TMP_4
-VIEW_POS_OTHER_VIEW_FLAGS = ZP_TMP_5
-VIEW_POS_OTHER_VIEW_TAB = ZP_TMP_6
-VIEW_POS_VIEW_POS_OTHER_VIEW_TAB = ZP_TMP_7
-VIEW_POS_LOCAL_VIEW_TAB_Y = ZP_TMP_7 + 1
-VIEW_POS_OTHER_VIEW_TAB_Y = ZP_TMP_8
-VIEW_POS_LOCAL_VIEW_TAB_PREV_Y = ZP_TMP_8 + 1
-VIEW_POS_OTHER_VIEW_TAB_PREV_Y = ZP_TMP_9
-VIEW_POS_CAN_BE_HERE = ZP_TMP_9 + 1
-VIEW_POS_ENTIRELY_ON_WATER = ZP_TMP_10
-VIEW_POS_HIT_SPECIAL = ZP_TMP_10 + 1
-VIEW_POS_WIDTH = ZP_TMP_12
-VIEW_POS_FLAGS_LOW = ZP_TMP_12 + 1
-VIEW_POS_FLAGS_HIGH = ZP_TMP_13 
+VIEW_POS_OTHER_VIEW_TAB = ZP_TMP_5
+VIEW_POS_VIEW_POS_OTHER_VIEW_TAB = ZP_TMP_6
+VIEW_POS_CAN_BE_HERE = ZP_TMP_7
+VIEW_POS_ENTIRELY_ON_WATER = ZP_TMP_7 + 1
+VIEW_POS_HIT_SPECIAL = ZP_TMP_8
+VIEW_POS_WIDTH = ZP_TMP_8 + 1
+VIEW_POS_FLAGS_LOW = ZP_TMP_9
 ;Don't put anything in 25 used for x and y of canBeHere
 
 .segment "BANKRAM09"
 ;boolean b9Collide(ViewTable* localViewtab, byte entryNum) 
 _b9Collide:
-.scope
-
 sta VIEW_POS_ENTRY_NUM
 jsr popax
 sta VIEW_POS_LOCAL_VIEW_TAB
 stx VIEW_POS_LOCAL_VIEW_TAB + 1
 
+b9CollideAsm:
 ldy _offsetOfFlags
 lda (VIEW_POS_LOCAL_VIEW_TAB),y
 sta VIEW_POS_LOCAL_VIEW_FLAGS
@@ -149,8 +142,6 @@ jmp @viewTabLoop
 lda #$0
 rts
 
-.endscope
-
 
 ; ---------------------------------------------------------------------------
 ; _b9CanBeHere
@@ -179,16 +170,18 @@ rts
 ;   VIEW_POS_HIT_SPECIAL      = boolean (set if special pixel seen)
 ;
 ; ---------------------------------------------------------------------------
-
-_b9CanBeHere:
-.scope
-X_VAL = ZP_TMP_25                 ; scratch: current X being scanned along baseline
-Y_VAL = ZP_TMP_25 + 1             ; scratch: Y of the baseline
+;boolean b9CanBeHere(ViewTable* localViewtab, byte entryNum);
+_b9CanBeHere: ;Call this from C, call b9CanBeHereFromAsm
 sta VIEW_POS_ENTRY_NUM            ; A = object/entry index (ego == 0)
 
 jsr popax                         ; pop pointer to view table into A/X
 sta VIEW_POS_LOCAL_VIEW_TAB       ;   low byte of pointer
 stx VIEW_POS_LOCAL_VIEW_TAB + 1   ;   high byte
+
+b9CanBeHere:
+.scope
+X_VAL = ZP_TMP_25                 ; scratch: current X being scanned along baseline
+Y_VAL = ZP_TMP_25 + 1             ; scratch: Y of the baseline
 
 lda #$1
 sta VIEW_POS_CAN_BE_HERE          ; canBeHere = true
@@ -319,7 +312,7 @@ rts
 
 
 ;------------------------------------------------------------------------------
-; b6GoodPosition(Viewtab* localViewTab)
+; b9GoodPosition(Viewtab* localViewTab)
 ;
 ; Checks whether a view object is within the valid picture bounds and
 ; whether it should be drawn above the horizon line.
@@ -335,10 +328,11 @@ rts
 ;   A = 0 (FALSE) if invalid
 ;------------------------------------------------------------------------------
 
-_b6GoodPosition:
+_b9GoodPosition:
     sta VIEW_POS_LOCAL_VIEW_TAB         ; save pointer low byte to localViewTab
     stx VIEW_POS_LOCAL_VIEW_TAB + 1     ; save pointer high byte
 
+b9GoodPositionAsm:
     ; ---- C1: check (X + XSize) <= PICTURE_WIDTH ----
     ldy _offsetOfXPos                    ; offset of X in Viewtab
     lda (VIEW_POS_LOCAL_VIEW_TAB),y      ; A = X
@@ -383,5 +377,143 @@ _b6GoodPosition:
 @returnFalse:
     lda #$0                              ; return FALSE
     rts
+
+;void b9FindPosition(ViewTable* localViewTab, byte entryNum)
+_b9FindPosition:
+.scope
+LEG_LEN = ZP_TMP_9 + 1
+LEG_DIR = ZP_TMP_10
+LEG_CNT = ZP_TMP_10 + 1
+
+sta VIEW_POS_ENTRY_NUM
+jsr popax
+sta VIEW_POS_LOCAL_VIEW_TAB         ; save pointer low byte to localViewTab
+stx VIEW_POS_LOCAL_VIEW_TAB + 1     ; save pointer high byte
+
+@checkIgnoreHorizon:
+ldy _offsetOfFlags                   
+lda (VIEW_POS_LOCAL_VIEW_TAB),y   
+and #IGNOREHORIZON 
+bne @checkAlreadyGoodPosition
+
+lda _horizon
+tax
+
+ldy _offsetOfYPos                   
+cmp (VIEW_POS_LOCAL_VIEW_TAB),y     
+
+beq @setYToHorizon
+bcc @checkAlreadyGoodPosition
+
+@setYToHorizon:
+inx
+txa
+sta (VIEW_POS_LOCAL_VIEW_TAB),y 
+
+@checkAlreadyGoodPosition:
+jsr b9GoodPositionAsm
+beq @findGoodPositionLoopInit
+jsr b9CollideAsm
+bne @findGoodPositionLoopInit
+jsr b9CanBeHere
+beq @findGoodPositionLoopInit
+@alreadyGoodPosition:
+rts
+
+@findGoodPositionLoopInit:
+lda #$1
+sta LEG_LEN
+stz LEG_DIR
+sta LEG_CNT
+
+@findGoodPositionLoop:
+jsr b9GoodPositionAsm
+beq @findGoodPositionLoopBody
+jsr b9CollideAsm
+bne @findGoodPositionLoopBody
+jsr b9CanBeHere
+beq @findGoodPositionLoopBody
+
+bra @return
+
+@findGoodPositionLoopBody:
+lda LEG_DIR
+@case0:
+bne @case1
+
+ldy _offsetOfXPos                   
+lda (VIEW_POS_LOCAL_VIEW_TAB),y 
+dec
+sta (VIEW_POS_LOCAL_VIEW_TAB),y 
+
+dec LEG_CNT
+bne @findGoodPositionLoop
+
+lda #$1
+sta LEG_DIR
+lda LEG_LEN
+sta LEG_CNT
+bra @findGoodPositionLoop
+
+@case1:
+cmp #$1
+bne @case2
+
+ldy _offsetOfYPos                   
+lda (VIEW_POS_LOCAL_VIEW_TAB),y 
+inc
+sta (VIEW_POS_LOCAL_VIEW_TAB),y
+
+dec LEG_CNT
+bne @findGoodPositionLoop
+
+lda #$2
+sta LEG_DIR
+
+lda LEG_LEN
+inc
+sta LEG_LEN
+sta LEG_CNT
+
+bra @findGoodPositionLoop
+
+@case2:
+cmp #$2
+bne @case3
+
+ldy _offsetOfXPos                   
+lda (VIEW_POS_LOCAL_VIEW_TAB),y 
+inc
+sta (VIEW_POS_LOCAL_VIEW_TAB),y 
+
+dec LEG_CNT
+bne @findGoodPositionLoop
+
+lda #$3
+sta LEG_DIR
+lda LEG_LEN
+sta LEG_CNT
+bra @findGoodPositionLoop
+
+@case3:
+ldy _offsetOfYPos                   
+lda (VIEW_POS_LOCAL_VIEW_TAB),y 
+dec
+sta (VIEW_POS_LOCAL_VIEW_TAB),y   
+
+dec LEG_CNT
+bne @findGoodPositionLoop
+
+stz LEG_DIR
+lda LEG_LEN
+inc
+sta LEG_LEN
+sta LEG_CNT
+bra @findGoodPositionLoop
+
+@return:
+rts
+.endscope
+
 .endif
 
