@@ -378,8 +378,8 @@ b9GoodPositionAsm:
     lda #$0                              ; return FALSE
     rts
 
-;void b9FindPosition(Viewtab* localViewTab, byte entryNum)
-b9FindPosition:
+;void b9FindPosition(ViewTable* localViewTab, byte entryNum)
+_b9FindPosition:
 .scope
 LEG_LEN = ZP_TMP_9 + 1
 LEG_DIR = ZP_TMP_10
@@ -459,7 +459,7 @@ bra @findGoodPositionLoop
 cmp #$1
 bne @case2
 
-ldy _offsetOfXPos                   
+ldy _offsetOfYPos                   
 lda (VIEW_POS_LOCAL_VIEW_TAB),y 
 inc
 sta (VIEW_POS_LOCAL_VIEW_TAB),y
@@ -474,6 +474,8 @@ lda LEG_LEN
 inc
 sta LEG_LEN
 sta LEG_CNT
+
+bra @findGoodPositionLoop
 
 @case2:
 cmp #$2
@@ -491,7 +493,7 @@ lda #$3
 sta LEG_DIR
 lda LEG_LEN
 sta LEG_CNT
-bne @findGoodPositionLoop
+bra @findGoodPositionLoop
 
 @case3:
 ldy _offsetOfYPos                   
@@ -507,8 +509,6 @@ lda LEG_LEN
 inc
 sta LEG_LEN
 sta LEG_CNT
-bne @findGoodPositionLoop
-
 bra @findGoodPositionLoop
 
 @return:
