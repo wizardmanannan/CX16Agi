@@ -147,7 +147,6 @@
 #define OBJECT_BANK 0xF
 #define RANDOM_BANK 0x6
 #define SOUND_BANK 0x1
-#define POSITION_HELPERS_BANK 0x9
 
 //Golden RAM
 #define VARS_AREA_START 0

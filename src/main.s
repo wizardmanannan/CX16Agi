@@ -105,4 +105,3 @@
     .export _bDReenableOptimisticMode
     .export _bDDeleteAllocation
     .export _b8SetupLineTables
-    .export _b9FindPosition
