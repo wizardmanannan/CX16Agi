@@ -379,7 +379,7 @@ b9GoodPositionAsm:
     rts
 
 ;void b9FindPosition(Viewtab* localViewTab, byte entryNum)
-b9FindPosition:
+_b9FindPosition:
 .scope
 LEG_LEN = ZP_TMP_9 + 1
 LEG_DIR = ZP_TMP_10

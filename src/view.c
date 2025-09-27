@@ -3160,6 +3160,16 @@ void bANormalAdjust(int entryNum, ViewTable* viewTab, int dx, int dy)
 		}
 	}
 
+	if (b9Collide(viewtab, entryNum) || !b9CanBeHere(viewtab, entryNum))
+	{
+		//this.X = px;
+		//this.Y = py;
+		//border = 0;
+
+		//// Make sure that this position is OK
+		//FindPosition();
+	}
+
 	if (entryNum == 0) {
 		flag[3] = 0;
 		flag[0] = 0;
@@ -3745,16 +3755,6 @@ void bCCalcObjMotion()
 		getLoadedView(&localView, entryNum);
 		getLoadedLoop(&localView, &localLoop, entryNum);
 		getLoadedCel(&localLoop, &localCel, entryNum);
-
-		if (b9Collide(&localViewtab, entryNum) || !b9CanBeHere(&localViewtab, entryNum))
-		{
-			//this.X = px;
-			//this.Y = py;
-			//border = 0;
-
-			//// Make sure that this position is OK
-			//FindPosition();
-		}
 
 		/* Automatic change of direction if needed */
 		bACalcDirection(&localViewtab);
