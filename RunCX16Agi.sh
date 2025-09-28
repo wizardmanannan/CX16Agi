@@ -51,9 +51,9 @@ cd "$CX16_EMULATOR_FOLDER"
 
 # Run emulator with or without optional arguments
 if [ -z "$OPTIONAL_ARGUMENTS" ]; then
-    taskset -c 0 ./x16emu -sdcard "$IMG_PATH" -prg "agi.cx16" -run -debug d -echo > ~/CLionProjects/CX16Agi/output.txt -dump V  -warp
+    ./x16emu -sdcard "$IMG_PATH" -prg "agi.cx16" -run -debug d -echo > /home/alay/CLionProjects/CX16Agi/output.txt -dump V  -warp
 else
-    taskset -c 0 ./x16emu -sdcard "$IMG_PATH" -prg "agi.cx16" -run -debug d -echo $OPTIONAL_ARGUMENTS > /tmp/output.txt -dump V
+    ./x16emu -sdcard "$IMG_PATH" -prg "agi.cx16" -run -debug d -echo $OPTIONAL_ARGUMENTS > /home/alay/CLionProjects/CX16Agi/output.txt  -dump V
 fi
 
 # Return to makefile folder
