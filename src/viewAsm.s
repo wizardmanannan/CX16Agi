@@ -311,71 +311,111 @@ rts
 .endscope
 
 
-;------------------------------------------------------------------------------
-; b9GoodPosition(Viewtab* localViewTab)
+; -----------------------------------------------------------------------------
+; b9GoodPositionAsm
+; 
+; Purpose:
+;   Validate that a VIEW's (X,Y) and size (XSize,YSize) lie within screen
+;   bounds and horizon rules, mirroring:
+;     return ( X >= MINX
+;              && (X + XSize) <= MAXX + 1
+;              && (Y - YSize) >= MINY - 1
+;              && Y <= MAXY
+;              && (IgnoreHorizon || Y > Horizon) );
 ;
-; Checks whether a view object is within the valid picture bounds and
-; whether it should be drawn above the horizon line.
+; Contract:
+;   - Returns: A = $01 (TRUE) if valid, A = $00 (FALSE) otherwise. RTS.
+;   - Clobbers: A, X, Y, and flags (NZVC).
+;   - Reads from: VIEW_POS_LOCAL_VIEW_TAB + offsets (X, XSize, Y, YSize, Flags)
+;   - Constants:
+;       PICTURE_WIDTH,  PICTURE_HEIGHT
+;       IGNOREHORIZON bit mask
+;   - Horizon:
+;       Separate check: pass if IgnoreHorizon set; otherwise require Y > Horizon.
 ;
-; High-level conditions being implemented:
-;   C1: (X + XSize) <= PICTURE_WIDTH
-;   C2: (Y - YSize) >= -1     ; ensures sprite doesn't extend above screen
-;   C3: (Y <= PICTURE_HEIGHT) ; ensures bottom within screen
-;   C4: (IgnoreHorizon || Y > Horizon) ; horizon check (only IgnoreHorizon here)
-;
-; Returns:
-;   A = 1 (TRUE) if position is valid
-;   A = 0 (FALSE) if invalid
-;------------------------------------------------------------------------------
-
-_b9GoodPosition:
-    sta VIEW_POS_LOCAL_VIEW_TAB         ; save pointer low byte to localViewTab
-    stx VIEW_POS_LOCAL_VIEW_TAB + 1     ; save pointer high byte
+; 6502 nuance:
+;   - CMP is unsigned. To approximate signed lower-bound checks (e.g. allow -1),
+;     code uses sentinel ranges:
+;       * For X lower bound: treat values >= PICTURE_WIDTH+64 as "wrapped negatives"
+;         and reject (heuristic since 6502 can't distinguish negatives directly).
+;       * For (Y - YSize) >= -1: explicit compare to $FF (i.e., -1) as a pass.
+;   - C (carry) must be set before SBC; BEQ/BCS/BCC follow unsigned semantics.
+; -----------------------------------------------------------------------------
 
 b9GoodPositionAsm:
-    ; ---- C1: check (X + XSize) <= PICTURE_WIDTH ----
-    ldy _offsetOfXPos                    ; offset of X in Viewtab
-    lda (VIEW_POS_LOCAL_VIEW_TAB),y      ; A = X
-    ldy _offsetOfXSize                   ; offset of XSize
-    adc (VIEW_POS_LOCAL_VIEW_TAB),y      ; A = X + XSize
+    ; ---- C0: X >= MINX (with "wrapped negative" guard) -----------------------
+    ; Load X
+    ldy _offsetOfXPos                    ; Y := offset of X in Viewtab
+    lda (VIEW_POS_LOCAL_VIEW_TAB),y      ; A := X
 
-    cmp #PICTURE_WIDTH                   ; compare against picture width
-    beq @checkY                          ; if equal, still valid
-    bcs @returnFalse                     ; if greater, fail
+    ; Heuristic: if A >= (PICTURE_WIDTH + 64), assume it's an invalid "negative"
+    ; (i.e., underflow wrap interpreted as a large unsigned). Reject.
+    cmp #PICTURE_WIDTH + 64              ; X >= WIDTH+64 ? -> reject
+    bcs @returnFalse
+
+    ; ---- C1: (X + XSize) <= PICTURE_WIDTH -----------------------------------
+    ; Note: C# uses (X + XSize) <= MAXX + 1 to allow right edge inclusive.
+    ; Here, compare to PICTURE_WIDTH (same effect).
+    ldy _offsetOfXSize                   ; Y := offset of XSize
+    adc (VIEW_POS_LOCAL_VIEW_TAB),y      ; A := X + XSize  (adc uses C from prior cmp: carry unaffected by CMP)
+                                         ; (CMP does not change C to a meaningful add carry; but adding size
+                                         ;  after comparing is fine because we only rely on A result for CMP below)
+
+    cmp #PICTURE_WIDTH                   ; (X + XSize) ? PICTURE_WIDTH
+    beq @checkY                          ; equal is OK
+    bcs @returnFalse                     ; greater -> reject
 
 @checkY:
-    ; ---- C2: check (Y - YSize) >= -1 ----
-    ldy _offsetOfYPos                    ; offset of Y in Viewtab
-    lda (VIEW_POS_LOCAL_VIEW_TAB),y      ; A = Y
-    tax                                  ; save Y in X for later
+    ; ---- Prep Y and compute (Y - YSize) -------------------------------------
+    ; Preserve Y (position) in X for later upper-bound/horizon checks.
+    ldy _offsetOfYPos                    ; Y := offset of Y
+    lda (VIEW_POS_LOCAL_VIEW_TAB),y      ; A := Y
+    tax                                  ; X := Y (save)
 
-    sec                                  ; prepare for subtraction
-    ldy _offsetOfYSize                   ; offset of YSize
-    sbc (VIEW_POS_LOCAL_VIEW_TAB),y      ; A = Y - YSize
+    ; Compute Y - YSize with borrow
+    sec                                  ; set carry for SBC (no borrow)
+    ldy _offsetOfYSize                   ; Y := offset of YSize
+    sbc (VIEW_POS_LOCAL_VIEW_TAB),y      ; A := Y - YSize
 
-    bvc @checkLessThanMaxY               ; if no signed overflow, continue
-    cmp #$FF                             ; overflow? must equal -1 (0xFF)
-    bne @returnFalse                     ; if not, fail
+    ; ---- C2: (Y - YSize) >= -1  ---------------------------------------------
+    ; Allow -1 exactly (C# uses MINY - 1).
+    cmp #$FF                             ; A == $FF (-1) ? -> pass to next check
+    beq @checkLessThanMaxY
+
+    ; As with X low bound, reject values that look like wrapped negatives:
+    ; if (Y - YSize) >= PICTURE_HEIGHT + 64, treat as invalid "negative".
+    cmp #PICTURE_HEIGHT + 64
+    bcs @returnFalse                     ; outside allowed low-bound heuristic -> reject
 
 @checkLessThanMaxY:
-    ; ---- C3: check (Y <= PICTURE_HEIGHT) ----
-    txa                                  ; restore Y
-    cmp #PICTURE_HEIGHT                  ; compare to picture height
-    bcs @returnFalse                     ; if >= height, fail
+    ; ---- C3: Y <= PICTURE_HEIGHT  -------------------------------------------
+    txa                                  ; restore Y into A
+    cmp #PICTURE_HEIGHT                  ; Y ? PICTURE_HEIGHT
+    beq @checkHorizon                    ; equal is OK
+    bcs @returnFalse                     ; greater -> reject
 
-    ; ---- C4: check IgnoreHorizon flag ----
-    ; (the "Y > Horizon" part is not in this routine)
-    ldy _offsetOfFlags                   ; offset of flags
-    lda (VIEW_POS_LOCAL_VIEW_TAB),y      ; load flags
-    and #IGNOREHORIZON                   ; mask IgnoreHorizon bit
-    bne @returnTrue                      ; if set, always pass
+@checkHorizon:
+    ; ---- C4: IgnoreHorizon || (Y > Horizon)  --------------------------------
+    ; If IgnoreHorizon flag set, pass immediately.
+    ldy _offsetOfFlags                   ; Y := offset of flags
+    lda (VIEW_POS_LOCAL_VIEW_TAB),y      ; A := flags
+    and #IGNOREHORIZON                   ; test IgnoreHorizon bit
+    bne @returnTrue                      ; set -> pass
+
+    ; Otherwise require Y > Horizon (strictly greater).
+    ; Load Y again and compare to _horizon:
+    ldy _offsetOfYPos                    ; Y := offset of Y (comment kept aligned with code)
+    lda (VIEW_POS_LOCAL_VIEW_TAB),y      ; A := Y
+    cmp _horizon                         ; Y ? Horizon
+    beq @returnFalse                     ; Y == Horizon -> fail (not strictly greater)
+    bcc @returnFalse                     ; Y < Horizon  -> fail
 
 @returnTrue:
-    lda #$1                              ; return TRUE
+    lda #$1                              ; TRUE
     rts
 
 @returnFalse:
-    lda #$0                              ; return FALSE
+    lda #$0                              ; FALSE
     rts
 
 ;void b9FindPosition(Viewtab* localViewTab, byte entryNum)
@@ -440,8 +480,7 @@ bra @return
 lda LEG_DIR
 @case0:
 bne @case1
-
-ldy _offsetOfXPos                   
+ldy _offsetOfXPos
 lda (VIEW_POS_LOCAL_VIEW_TAB),y 
 dec
 sta (VIEW_POS_LOCAL_VIEW_TAB),y 
@@ -459,12 +498,13 @@ bra @findGoodPositionLoop
 cmp #$1
 bne @case2
 
-ldy _offsetOfXPos                   
+ldy _offsetOfYPos
 lda (VIEW_POS_LOCAL_VIEW_TAB),y 
 inc
 sta (VIEW_POS_LOCAL_VIEW_TAB),y
 
 dec LEG_CNT
+
 bne @findGoodPositionLoop
 
 lda #$2
@@ -474,12 +514,12 @@ lda LEG_LEN
 inc
 sta LEG_LEN
 sta LEG_CNT
+bne @findGoodPositionLoop
 
 @case2:
 cmp #$2
 bne @case3
-
-ldy _offsetOfXPos                   
+ldy _offsetOfXPos
 lda (VIEW_POS_LOCAL_VIEW_TAB),y 
 inc
 sta (VIEW_POS_LOCAL_VIEW_TAB),y 
@@ -493,8 +533,9 @@ lda LEG_LEN
 sta LEG_CNT
 bne @findGoodPositionLoop
 
+
 @case3:
-ldy _offsetOfYPos                   
+ldy _offsetOfYPos
 lda (VIEW_POS_LOCAL_VIEW_TAB),y 
 dec
 sta (VIEW_POS_LOCAL_VIEW_TAB),y   
@@ -507,7 +548,6 @@ lda LEG_LEN
 inc
 sta LEG_LEN
 sta LEG_CNT
-bne @findGoodPositionLoop
 
 bra @findGoodPositionLoop
 

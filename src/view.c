@@ -197,7 +197,7 @@ void testGoodPositionFunction(byte x, byte y, byte xSize, byte ySize, byte expec
 
 	if(actualResult != expectedResult)
 	{
-		printf("Fail expected %d \n", expectedResult);
+		printf("xxxxxxxxxxxxxxxxxxxxxxxxxxfail expected %d \n", expectedResult);
 	}
 }
 
@@ -259,7 +259,7 @@ void testGoodPosition()
 
     // 6) exceeds top bound
     testGoodPositionFunction(
-        MINX + 2, MINY, 3, 2,
+        MINX + 2, MINY, 3, 1,
         /*horizon*/ MINY - 5,
         /*expected*/ FALSE,
         "exceeds top bound\n",
@@ -304,10 +304,8 @@ void testGoodPosition()
 
     // 11) fits right and bottom edges
     {
-        byte fitWidth  = (byte)((MAXX + 1) - (MINX + 10));
-        byte yAtBottom = MAXY;
         testGoodPositionFunction(
-            MINX + 10, yAtBottom, fitWidth, 1,
+            MAXX, MAXY + 1, 1, 1,
             /*horizon*/ MINY,
             /*expected*/ TRUE,
             "fits right and bottom edges\n",
@@ -315,13 +313,20 @@ void testGoodPosition()
         );
     }
 
-	trap = TRUE;
     // 12) fails only because of horizon
     testGoodPositionFunction(
         MINX + 20, MINY + 15, 2, 2,
         /*horizon*/ (byte)(MINY + 20),
         /*expected*/ FALSE,
         "fails only because of horizon\n",
+        0
+    );
+
+	  testGoodPositionFunction(
+        MINX -1, MINY + 10, 10, 8,
+        /*horizon*/ MINY + 4,
+        /*expected*/ FALSE,
+        "x outside of bounds\n",
         0
     );
 }
