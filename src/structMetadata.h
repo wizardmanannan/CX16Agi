@@ -31,13 +31,16 @@ byte offsetOfDirection = offsetof(struct ViewTable, direction);
 byte offsetOfParam1 = offsetof(struct ViewTable, param1);
 byte offsetOfParam2 = offsetof(struct ViewTable, param2);
 byte offsetOfParam3 = offsetof(struct ViewTable, param3);
+byte offsetOfParam4 = offsetof(struct ViewTable, param4);
 byte offsetOfMotion = offsetof(struct ViewTable, motion);
 byte offsetOfStopped = offsetof(struct ViewTable, stopped);
 byte offsetOfStepSize = offsetof(struct ViewTable, stepSize);
 byte sizeOfViewTab = sizeof(ViewTable);
 byte offsetOfXSize = offsetof(struct ViewTable, xsize);
 byte offsetOfYSize = offsetof(struct ViewTable, ysize);
-
+byte offsetOfStepTime = offsetof(struct ViewTable, stepTime);
+byte offsetOfStepTimeCount = offsetof(struct ViewTable, stepTimeCount);
+byte offsetOfRepositioned = offsetof(struct ViewTable, repositioned);
 
 //View Metadata
 byte offsetOfloopsVeraAddressesPointers = offsetof(struct ViewTableMetadata, loopsVeraAddressesPointers);

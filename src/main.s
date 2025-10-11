@@ -96,7 +96,6 @@
     .export _b1PsgClear
     .export _b9Collide
     .export _b9CanBeHere
-    .export _b9GoodPosition
     .export _bAWander
     .export _bDFindFreeVramBlock
     .export _bDBlocksBySizeFastLookup
@@ -106,3 +105,4 @@
     .export _bDDeleteAllocation
     .export _b8SetupLineTables
     .export _b9FindPosition
+    .export _b9UpdatePosition

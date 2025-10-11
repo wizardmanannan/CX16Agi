@@ -8,11 +8,16 @@ VIEW_INC = 1
 .import _offsetOfYSize
 .import _offsetOfPrevY
 .import _offsetOfPriority
+.import _offsetOfStepTimeCount
+.import _offsetOfStepTime
+.import _offsetOfStepSize
+.import _offsetOfRepositioned
 .import _viewtab
 .import _sizeOfViewTab
 .import _viewTabFastLookup
 .import _b9PreComputedPriority
 .import _horizon
+.import _controlMode
 
 VIEW_POS_LOCAL_VIEW_TAB = ZP_TMP_2
 VIEW_POS_ENTRY_NUM = ZP_TMP_3 + 1
@@ -24,7 +29,11 @@ VIEW_POS_ENTIRELY_ON_WATER = ZP_TMP_7 + 1
 VIEW_POS_HIT_SPECIAL = ZP_TMP_8
 VIEW_POS_WIDTH = ZP_TMP_8 + 1
 VIEW_POS_FLAGS_LOW = ZP_TMP_9
-;Don't put anything in 25 used for x and y of canBeHere
+VIEW_POS_STEP_TIME_COUNT = ZP_TMP_9 + 1
+VIEW_POS_STEP_TIME = ZP_TMP_9 + 1
+
+
+;Don't put anything in 25 used for x and y of canBeHere, or 21 - 24, used for local variables in update position
 
 .segment "BANKRAM09"
 ;boolean b9Collide(ViewTable* localViewtab, byte entryNum) 
@@ -40,7 +49,7 @@ lda (VIEW_POS_LOCAL_VIEW_TAB),y
 sta VIEW_POS_LOCAL_VIEW_FLAGS
 iny
 lda (VIEW_POS_LOCAL_VIEW_TAB),y
-sta VIEW_POS_LOCAL_VIEW_FLAGS
+sta VIEW_POS_LOCAL_VIEW_FLAGS + 1
 and #>IGNOREOBJECTS
 beq @loadInitialOtherViewtab
 jmp @returnFalse
@@ -178,7 +187,7 @@ jsr popax                         ; pop pointer to view table into A/X
 sta VIEW_POS_LOCAL_VIEW_TAB       ;   low byte of pointer
 stx VIEW_POS_LOCAL_VIEW_TAB + 1   ;   high byte
 
-b9CanBeHere:
+b9CanBeHereAsm:
 .scope
 X_VAL = ZP_TMP_25                 ; scratch: current X being scanned along baseline
 Y_VAL = ZP_TMP_25 + 1             ; scratch: Y of the baseline
@@ -341,7 +350,7 @@ rts
 ;       * For (Y - YSize) >= -1: explicit compare to $FF (i.e., -1) as a pass.
 ;   - C (carry) must be set before SBC; BEQ/BCS/BCC follow unsigned semantics.
 ; -----------------------------------------------------------------------------
-
+;void b9FindPosition(Viewtab* localViewTab, byte entryNum);
 b9GoodPositionAsm:
     ; ---- C0: X >= MINX (with "wrapped negative" guard) -----------------------
     ; Load X
@@ -418,142 +427,467 @@ b9GoodPositionAsm:
     lda #$0                              ; FALSE
     rts
 
-;void b9FindPosition(Viewtab* localViewTab, byte entryNum)
+; -----------------------------------------------------------------------------
+; _b9FindPosition
+;
+; Purpose:
+;   Attempt to place a VIEW object at a valid (X,Y) coordinate in the picture.
+;   Mirrors C# FindPosition():
+;     - Adjust Y below horizon if needed.
+;     - If current position is good (no collision, can be here), return.
+;     - Otherwise, scan outward in a spiral pattern (left, down, right, up),
+;       expanding the leg length as needed until a valid position is found.
+;
+; Inputs:
+;   - A: entryNum
+;   - Stack: pointer to Viewtab (popax restores it into A/X)
+;   - Globals: _horizon, VIEW_POS_LOCAL_VIEW_TAB, VIEW_POS_ENTRY_NUM
+;   - Offsets: _offsetOfFlags, _offsetOfXPos, _offsetOfYPos
+;   - Functions called:
+;       b9GoodPositionAsm (geometry bounds check)
+;       b9CollideAsm      (collision check)
+;       b9CanBeHereAsm      (environment rule check)
+;
+; Outputs:
+;   - Adjusts Viewtab’s X/Y in place until constraints satisfied.
+;   - Returns: RTS (no explicit value).
+;
+; Registers clobbered:
+;   A, X, Y
+;
+; Locals (ZP scratch):
+;   LEG_LEN = ZP_TMP_9 + 1   ; spiral leg length
+;   LEG_DIR = ZP_TMP_10      ; current leg direction (0=left,1=down,2=right,3=up)
+;   LEG_CNT = ZP_TMP_10 + 1  ; remaining steps in this leg
+; -----------------------------------------------------------------------------
+; extern boolean b9FindPosition(ViewTable* localViewTab, byte entryNum);
+
 _b9FindPosition:
-.scope
 LEG_LEN = ZP_TMP_9 + 1
 LEG_DIR = ZP_TMP_10
 LEG_CNT = ZP_TMP_10 + 1
 
-sta VIEW_POS_ENTRY_NUM
-jsr popax
-sta VIEW_POS_LOCAL_VIEW_TAB         ; save pointer low byte to localViewTab
-stx VIEW_POS_LOCAL_VIEW_TAB + 1     ; save pointer high byte
+    ; Save entry number and local view pointer
+    sta VIEW_POS_ENTRY_NUM
+    jsr popax
+    sta VIEW_POS_LOCAL_VIEW_TAB         ; pointer low byte
+    stx VIEW_POS_LOCAL_VIEW_TAB + 1     ; pointer high byte
 
+_b9FindPositionAsm:
 @checkIgnoreHorizon:
-ldy _offsetOfFlags                   
-lda (VIEW_POS_LOCAL_VIEW_TAB),y   
-and #IGNOREHORIZON 
-bne @checkAlreadyGoodPosition
+    ; If IgnoreHorizon is set, skip horizon adjustment
+    ldy _offsetOfFlags
+    lda (VIEW_POS_LOCAL_VIEW_TAB),y
+    and #IGNOREHORIZON
+    bne @checkAlreadyGoodPosition
 
-lda _horizon
-tax
+    ; Otherwise, ensure Y > horizon
+    lda _horizon
+    tax                                  ; save horizon in X
+    ldy _offsetOfYPos
+    cmp (VIEW_POS_LOCAL_VIEW_TAB),y      ; compare horizon to Y
 
-ldy _offsetOfYPos                   
-cmp (VIEW_POS_LOCAL_VIEW_TAB),y     
-
-beq @setYToHorizon
-bcc @checkAlreadyGoodPosition
+    beq @setYToHorizon                   ; if Y == horizon, bump it
+    bcc @checkAlreadyGoodPosition        ; if Y < horizon, already OK
 
 @setYToHorizon:
-inx
-txa
-sta (VIEW_POS_LOCAL_VIEW_TAB),y 
+    inx                                  ; horizon + 1
+    txa
+    sta (VIEW_POS_LOCAL_VIEW_TAB),y      ; Y := horizon+1
 
 @checkAlreadyGoodPosition:
-jsr b9GoodPositionAsm
-beq @findGoodPositionLoopInit
-jsr b9CollideAsm
-bne @findGoodPositionLoopInit
-jsr b9CanBeHere
-beq @findGoodPositionLoopInit
+    ; If position is already valid (bounds, no collision, allowed), return
+    jsr b9GoodPositionAsm
+    beq @findGoodPositionLoopInit
+    jsr b9CollideAsm
+    bne @findGoodPositionLoopInit
+    jsr b9CanBeHereAsm
+    beq @findGoodPositionLoopInit
+
 @alreadyGoodPosition:
-rts
+    rts
 
 @findGoodPositionLoopInit:
-lda #$1
-sta LEG_LEN
-stz LEG_DIR
-sta LEG_CNT
+    ; Initialize spiral search:
+    ; legLen=1, legDir=0 (left), legCnt=1
+    lda #$1
+    sta LEG_LEN
+    stz LEG_DIR
+    sta LEG_CNT
 
 @findGoodPositionLoop:
-jsr b9GoodPositionAsm
-beq @findGoodPositionLoopBody
-jsr b9CollideAsm
-bne @findGoodPositionLoopBody
-jsr b9CanBeHere
-beq @findGoodPositionLoopBody
+    ; Check if current spot is valid
+    jsr b9GoodPositionAsm
+    beq @findGoodPositionLoopBody
+    jsr b9CollideAsm
+    bne @findGoodPositionLoopBody
+    jsr b9CanBeHereAsm
+    beq @findGoodPositionLoopBody
 
-bra @return
+    ; Success → return
+    bra @return
 
 @findGoodPositionLoopBody:
-lda LEG_DIR
+    ; Spiral movement depending on LEG_DIR
+    lda LEG_DIR
+
 @case0:
-bne @case1
-ldy _offsetOfXPos
-lda (VIEW_POS_LOCAL_VIEW_TAB),y 
-dec
-sta (VIEW_POS_LOCAL_VIEW_TAB),y 
+    bne @case1
+    ; --- Case 0: Move left (X--) ---
+    ldy _offsetOfXPos
+    lda (VIEW_POS_LOCAL_VIEW_TAB),y
+    dec
+    sta (VIEW_POS_LOCAL_VIEW_TAB),y
 
-dec LEG_CNT
-bne @findGoodPositionLoop
+    dec LEG_CNT
+    bne @findGoodPositionLoop            ; continue leg
 
-lda #$1
-sta LEG_DIR
-lda LEG_LEN
-sta LEG_CNT
-bra @findGoodPositionLoop
+    lda #$1
+    sta LEG_DIR                          ; next direction: down
+    lda LEG_LEN
+    sta LEG_CNT
+    bra @findGoodPositionLoop
 
 @case1:
-cmp #$1
-bne @case2
+    cmp #$1
+    bne @case2
+    ; --- Case 1: Move down (Y++) ---
+    ldy _offsetOfYPos
+    lda (VIEW_POS_LOCAL_VIEW_TAB),y
+    inc
+    sta (VIEW_POS_LOCAL_VIEW_TAB),y
 
-ldy _offsetOfYPos
-lda (VIEW_POS_LOCAL_VIEW_TAB),y 
-inc
-sta (VIEW_POS_LOCAL_VIEW_TAB),y
+    dec LEG_CNT
+    bne @findGoodPositionLoop
 
-dec LEG_CNT
-
-bne @findGoodPositionLoop
-
-lda #$2
-sta LEG_DIR
-
-lda LEG_LEN
-inc
-sta LEG_LEN
-sta LEG_CNT
-bne @findGoodPositionLoop
+    lda #$2
+    sta LEG_DIR                          ; next direction: right
+    lda LEG_LEN
+    inc
+    sta LEG_LEN                          ; increase leg length
+    sta LEG_CNT
+    bne @findGoodPositionLoop
 
 @case2:
-cmp #$2
-bne @case3
-ldy _offsetOfXPos
-lda (VIEW_POS_LOCAL_VIEW_TAB),y 
-inc
-sta (VIEW_POS_LOCAL_VIEW_TAB),y 
+    cmp #$2
+    bne @case3
+    ; --- Case 2: Move right (X++) ---
+    ldy _offsetOfXPos
+    lda (VIEW_POS_LOCAL_VIEW_TAB),y
+    inc
+    sta (VIEW_POS_LOCAL_VIEW_TAB),y
 
-dec LEG_CNT
-bne @findGoodPositionLoop
+    dec LEG_CNT
+    bne @findGoodPositionLoop
 
-lda #$3
-sta LEG_DIR
-lda LEG_LEN
-sta LEG_CNT
-bne @findGoodPositionLoop
-
+    lda #$3
+    sta LEG_DIR                          ; next direction: up
+    lda LEG_LEN
+    sta LEG_CNT
+    bne @findGoodPositionLoop
 
 @case3:
-ldy _offsetOfYPos
-lda (VIEW_POS_LOCAL_VIEW_TAB),y 
-dec
-sta (VIEW_POS_LOCAL_VIEW_TAB),y   
+    ; --- Case 3: Move up (Y--) ---
+    ldy _offsetOfYPos
+    lda (VIEW_POS_LOCAL_VIEW_TAB),y
+    dec
+    sta (VIEW_POS_LOCAL_VIEW_TAB),y
 
-dec LEG_CNT
-bne @findGoodPositionLoop
+    dec LEG_CNT
+    bne @findGoodPositionLoop
 
-stz LEG_DIR
-lda LEG_LEN
-inc
-sta LEG_LEN
-sta LEG_CNT
-
-bra @findGoodPositionLoop
+    stz LEG_DIR                          ; wrap to direction 0 (left)
+    lda LEG_LEN
+    inc
+    sta LEG_LEN                          ; increase leg length
+    sta LEG_CNT
+    bra @findGoodPositionLoop
 
 @return:
+    rts
+
+
+b9EndMoveObj:
+
+ldy _offsetOfParam3
+lda (VIEW_POS_LOCAL_VIEW_TAB),y
+
+ldy _offsetOfStepSize
+sta (VIEW_POS_LOCAL_VIEW_TAB),y
+
+ldy _offsetOfParam4
+lda (VIEW_POS_LOCAL_VIEW_TAB),y
+SET_FLAG_NON_INTERPRETER sreg
+
+lda VIEW_POS_ENTRY_NUM
+bne @end
+
+lda #PLAYER_CONTROL
+sta _controlMode
+
+lda #EGODIR
+ldx #$0
+SET_VAR_NON_INTERPRETER sreg
+
+@end:
+rts
+
+VIEW_TOP_BORDER = 1
+VIEW_RIGHT_BORDER = 2
+VIEW_BOTTOM_BORDER = 3
+VIEW_LEFT_BORDER = 4
+
+xs_tab:
+    .byte 0, 0, 1, 1, 1, 0, $FF, $FF, $FF
+ys_tab:
+    .byte 0, $FF, $FF, 0, 1, 1, 1, 0, $FF
+
+_b9UpdatePosition:
+sta VIEW_POS_ENTRY_NUM
+jsr popax
+sta VIEW_POS_LOCAL_VIEW_TAB         ; pointer low byte
+stx VIEW_POS_LOCAL_VIEW_TAB + 1     ; pointer high byte
+
+
+b9UpdatePositionAsm:
+.scope
+BORDER = ZP_TMP_21
+OX = ZP_TMP_21 + 1
+PX = ZP_TMP_22
+OY = ZP_TMP_22 + 1
+PY = ZP_TMP_23
+OD = ZP_TMP_24 
+OS = ZP_TMP_24 + 1
+
+
+sta VIEW_POS_ENTRY_NUM
+jsr popax
+sta VIEW_POS_LOCAL_VIEW_TAB
+stx VIEW_POS_LOCAL_VIEW_TAB + 1
+
+ldy _offsetOfStepTimeCount
+lda (VIEW_POS_LOCAL_VIEW_TAB),y
+
+beq @resetStepTimeClock
+
+dec
+sta (VIEW_POS_LOCAL_VIEW_TAB),y
+beq @resetStepTimeClock
+rts
+
+
+@resetStepTimeClock:
+ldy _offsetOfStepTime
+lda (VIEW_POS_LOCAL_VIEW_TAB),y
+ldy _offsetOfStepTimeCount
+sta (VIEW_POS_LOCAL_VIEW_TAB),y
+
+stz BORDER
+
+ldy _offsetOfXPos
+lda (VIEW_POS_LOCAL_VIEW_TAB),y
+sta OX
+sta PX
+
+ldy _offsetOfYPos
+lda (VIEW_POS_LOCAL_VIEW_TAB),y
+sta OY
+sta PY
+tax ;Used in stepOperatorLocationY careful about using X
+
+ldy _offsetOfRepositioned
+lda (VIEW_POS_LOCAL_VIEW_TAB),y
+bne @checkBorders
+
+ldy _offsetOfStepSize
+lda (VIEW_POS_LOCAL_VIEW_TAB),y
+sta OS
+
+ldy _offsetOfDirection
+lda (VIEW_POS_LOCAL_VIEW_TAB),y
+tax
+
+@determineMovementX:
+lda xs_tab,x
+beq @determineMovementY
+bmi @subX
+
+@addX:
+clc
+lda OX
+adc OS
+sta OX
+
+bra @determineMovementY
+
+@subX:
+sec
+lda OX
+sbc OS
+sta OX
+
+@determineMovementY:
+lda ys_tab,x
+
+beq @checkBorders
+bmi @subY
+
+@addY:
+clc
+lda OY
+adc OS
+sta OY
+bra @checkBorders
+
+@subY:
+sec
+lda OY
+sbc OS
+sta OY
+
+@checkBorders:
+lda OX
+@checkLessThanXMin:
+cmp #PICTURE_WIDTH + 64
+bcc @checkGreaterThanXMax
+@setMinLeft:
+stz OX
+lda #VIEW_LEFT_BORDER
+sta BORDER
+
+@checkGreaterThanXMax:
+ldy _offsetOfXSize
+lda (VIEW_POS_LOCAL_VIEW_TAB),y
+sta sreg
+clc
+lda OX
+adc sreg
+cmp #PICTURE_WIDTH + 1
+bcc @checkLessThanYMin
+
+lda #PICTURE_WIDTH
+sec
+sbc sreg
+sta OX
+lda #VIEW_RIGHT_BORDER
+sta BORDER
+
+@checkLessThanYMin:
+ldy _offsetOfYSize
+lda (VIEW_POS_LOCAL_VIEW_TAB),y
+sta sreg
+
+sec
+lda OY
+sbc sreg
+
+cmp #PICTURE_HEIGHT + 64
+bcc @checkGreaterThanYMax
+cmp #$FF
+beq @checkGreaterThanYMax
+
+lda #$FF
+clc
+adc sreg
+sta OY
+lda #VIEW_TOP_BORDER
+sta BORDER
+bra @updatePosition
+
+@checkGreaterThanYMax:
+lda OY
+cmp #PICTURE_HEIGHT + 1
+bcc @checkLessThanHorizon
+
+lda #PICTURE_HEIGHT - 1
+sta OY
+lda #VIEW_BOTTOM_BORDER
+sta BORDER
+bra @updatePosition
+
+@checkLessThanHorizon:
+ldy _offsetOfFlags
+lda (VIEW_POS_LOCAL_VIEW_TAB),y
+and #IGNOREHORIZON
+bne @updatePosition
+
+lda _horizon
+cmp OY
+bcc @updatePosition
+
+inc
+sta OY
+
+lda #VIEW_TOP_BORDER
+sta BORDER
+
+@updatePosition:
+
+ldy _offsetOfXPos
+lda OX
+sta (VIEW_POS_LOCAL_VIEW_TAB),y
+
+ldy _offsetOfYPos
+lda OY
+sta (VIEW_POS_LOCAL_VIEW_TAB),y
+
+jsr b9CollideAsm
+bne @callFindPosition
+jsr b9CanBeHereAsm
+bne @checkBorderCollision
+
+@callFindPosition:
+ldy _offsetOfXPos
+lda PX
+sta (VIEW_POS_LOCAL_VIEW_TAB),y
+
+ldy _offsetOfYPos
+lda PY
+sta (VIEW_POS_LOCAL_VIEW_TAB),y
+
+stz BORDER
+jsr _b9FindPositionAsm
+
+@checkBorderCollision:
+
+lda BORDER ;Even though the C# said greater than 0, not zero is better in 6502, as there are less instructions
+beq @setRepositioned
+
+@borderHandling:
+lda VIEW_POS_ENTRY_NUM
+bne @nonEgoBorderHandling
+
+@egoBorderHandling:
+lda #EGOEDGE
+ldx BORDER
+SET_VAR_NON_INTERPRETER sreg
+bra @checkMotionType
+
+@nonEgoBorderHandling:
+lda #OBJHIT
+ldx VIEW_POS_ENTRY_NUM
+SET_VAR_NON_INTERPRETER sreg
+
+lda #OBJEDGE
+ldx BORDER
+SET_VAR_NON_INTERPRETER sreg
+
+@checkMotionType:
+ldy _offsetOfMotion
+lda #MOTION_MOVETO
+cmp (VIEW_POS_LOCAL_VIEW_TAB),y
+bne @setRepositioned
+
+@endMoveObj:
+jsr b9EndMoveObj
+
+@setRepositioned:
+
+ldy _offsetOfRepositioned
+lda #$0
+sta (VIEW_POS_LOCAL_VIEW_TAB),y
+
 rts
 .endscope
-
 .endif
 

@@ -9,6 +9,7 @@ MOVEMENT_INC = 1
 .import _offsetOfParam1
 .import _offsetOfParam2
 .import _offsetOfParam3
+.import _offsetOfParam4
 .import _offsetOfDirection
 .import _offsetOfMotion
 .import _offsetOfStopped
