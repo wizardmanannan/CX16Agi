@@ -45,19 +45,19 @@ extern void getLoadedView(View* returnedLoadedView, byte loadedViewNumber);
 extern void setLoadedView(View* loadedView, byte loadedViewNumber);
 
 #pragma wrapped-call (push, trampoline, VIEW_CODE_BANK_1)
-void b9ResetSpriteMemory(boolean clearBuffer);
+void bAResetSpriteMemory(boolean clearBuffer);
 void b9LoadViewFile(byte viewNum);
 void b9DiscardView(byte viewNum);
 void b9AddViewToTable(ViewTable* localViewtab, byte viewNum, byte entryNum);
 extern void b9SetCel(ViewTable* localViewtab, byte celNum);
 extern void b9SetLoop(ViewTable* localViewtab, byte loopNum);
 extern void b9AddToPic(int vNum, int lNum, int cNum, int x, int y, int pNum, int bCol);
-extern void b9ResetViews();
-extern void b9InitViews();
-extern void b9InitObjects();
+extern void bAResetViews();
 #pragma wrapped-call (pop)
 
 #pragma wrapped-call (push, trampoline, VIEW_CODE_BANK_2)
+extern void bAInitViews();
+extern void bAInitObjects();
 extern void bAWander(ViewTable* localViewTab, byte entryNum);
 extern void bAFindPosition(int entryNum, ViewTable* viewTab);
 extern void bBUpdateObj(int entryNum);

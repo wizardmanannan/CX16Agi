@@ -1276,9 +1276,8 @@ endBlit:
 	return TRUE;
 }
 
-#pragma code-name (push, "BANKRAM09")
-#pragma code-name (push, "BANKRAM09")
-void b9ResetViewtabs(boolean fullReset)
+#pragma code-name (push, "BANKRAM0A")
+void bAResetViewtabs(boolean fullReset)
 {
 	int entryNum;
 	byte i;
@@ -1322,7 +1321,7 @@ void b9ResetViewtabs(boolean fullReset)
 	}
 }
 
-void b9ResetSpriteMemory(boolean clearBuffer)
+void bAResetSpriteMemory(boolean clearBuffer)
 {
 	if (clearBuffer)
 	{
@@ -1333,22 +1332,22 @@ void b9ResetSpriteMemory(boolean clearBuffer)
 	bDResetSpriteMemoryManager();
 }
 
-void b9Reset()
+void bAReset()
 {
-	b9ResetSpriteMemory(TRUE);
+	bAResetSpriteMemory(TRUE);
 	bFInitPaletteManager();
-	b9ResetViewtabs(FALSE);
+	bAResetViewtabs(FALSE);
 }
 
-void b9InitSpriteData()
+void bAInitSpriteData()
 {
 	byte i;
 
-	b9Reset();
+	bAReset();
 }
 
 
-void b9InitViews()
+void bAInitViews()
 {
 	int i, j;
 	View localView;
@@ -1365,13 +1364,13 @@ void b9InitViews()
 	}
 }
 
-void b9InitObjects()
+void bAInitObjects()
 {
-	b9ResetViewtabs(TRUE);
+	bAResetViewtabs(TRUE);
 	memsetBanked(viewTableMetadata, NULL, sizeof(ViewTableMetadata) * SPRITE_SLOTS, SPRITE_METADATA_BANK);
 }
 
-void b9ResetViews()     /* Called after new.room */
+void bAResetViews()     /* Called after new.room */
 {
 	int entryNum;
 	ViewTable localViewtab;
@@ -1385,9 +1384,11 @@ void b9ResetViews()     /* Called after new.room */
 		setViewTab(&localViewtab, entryNum);
 	}
 
-	b9Reset();
+	bAReset();
 }
 
+#pragma code-name (pop)
+#pragma code-name (push, "BANKRAM09")
 
 #define VIEW_HEADER_BUFFER_SIZE 501
 #define LOOP_HEADER_BUFFER_SIZE 501

@@ -105,7 +105,7 @@ void b6DiscardResources()
 ***************************************************************************/
 void b6NewRoom()
 {
-     b9ResetViews();
+     bAResetViews();
     //stop_update_all();
     //unanimate_all();
     b6DiscardResources();
@@ -271,8 +271,8 @@ void b6Initialise()
 
     b1InitSound();
 
-    b9InitViews();
-    b9InitObjects();
+    bAInitViews();
+    bAInitObjects();
 
     bFLoadObjectFile();
     b12LoadWords();

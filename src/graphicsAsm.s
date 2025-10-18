@@ -27,7 +27,7 @@ _textBuffer2: .res 1000
 .import popa
 .import _b6DisplayLoadingScreen
 .import _b6InitVeraMemory
-.import _b9InitSpriteData
+.import _bAInitSpriteData
 .import _b3SetTextColor
 .importzp ptr4
 
@@ -73,7 +73,7 @@ SEND_IRQ_COMMAND #IRQ_CMD_BLACKSCREEN, @vSyncToCheck
 WAIT_FOR_NEXT_IRQ @vSyncToCheck
 
 jsr _b6InitVeraMemory
-TRAMPOLINE #SPRITE_MANAGER_BANK, _b9InitSpriteData
+TRAMPOLINE #SPRITE_INIT_BANK, _bAInitSpriteData
 
 sei
 lda #DISPLAY_SCALE
