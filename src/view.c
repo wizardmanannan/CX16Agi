@@ -2035,15 +2035,15 @@ endBlit:
 	return TRUE;
 }
 
-#pragma code-name (push, "BANKRAM09")
-#pragma code-name (push, "BANKRAM09")
+
+#pragma code-name (push, "BANKRAM0A")
 
 #pragma wrapped-call (push, trampoline, VIEW_CODE_BANK_1)
 extern boolean b9Collide(ViewTable* localViewtab, byte entryNum);
 extern boolean b9CanBeHere(ViewTable* localViewtab, byte entryNum);
 #pragma wrapped-call (pop)
 
-void b9ResetViewtabs(boolean fullReset)
+void bAResetViewtabs(boolean fullReset)
 {
 	int entryNum;
 	byte i;
@@ -2087,7 +2087,7 @@ void b9ResetViewtabs(boolean fullReset)
 	}
 }
 
-void b9ResetSpriteMemory(boolean clearBuffer)
+void bAResetSpriteMemory(boolean clearBuffer)
 {
 	if (clearBuffer)
 	{
@@ -2098,22 +2098,22 @@ void b9ResetSpriteMemory(boolean clearBuffer)
 	bDResetSpriteMemoryManager();
 }
 
-void b9Reset()
+void bAReset()
 {
-	b9ResetSpriteMemory(TRUE);
+	bAResetSpriteMemory(TRUE);
 	bFInitPaletteManager();
-	b9ResetViewtabs(FALSE);
+	
+	bAResetViewtabs(FALSE);
 }
 
-void b9InitSpriteData()
+void bAInitSpriteData()
 {
 	byte i;
-
-	b9Reset();
+	bAReset();
 }
 
 
-void b9InitViews()
+void bAInitViews()
 {
 	int i, j;
 	View localView;
@@ -2162,7 +2162,7 @@ void b9PopulatePrecomputedPriorityTable()
 	}
 }
 
-void b9InitObjects()
+void bAInitObjects()
 {
 	byte i;
 
@@ -2189,7 +2189,7 @@ void b9InitObjects()
 	}
 }
 
-void b9ResetViews()     /* Called after new.room */
+void bAResetViews()     /* Called after new.room */
 {
 	int entryNum;
 	ViewTable localViewtab;
@@ -2203,9 +2203,11 @@ void b9ResetViews()     /* Called after new.room */
 		setViewTab(&localViewtab, entryNum);
 	}
 
-	b9Reset();
+	bAReset();
 }
 
+#pragma code-name (pop)
+#pragma code-name (push, "BANKRAM09")
 
 #define VIEW_HEADER_BUFFER_SIZE 501
 #define LOOP_HEADER_BUFFER_SIZE 501
