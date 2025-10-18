@@ -1336,13 +1336,13 @@ void bAReset()
 {
 	bAResetSpriteMemory(TRUE);
 	bFInitPaletteManager();
+	
 	bAResetViewtabs(FALSE);
 }
 
 void bAInitSpriteData()
 {
 	byte i;
-
 	bAReset();
 }
 
