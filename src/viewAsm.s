@@ -29,8 +29,10 @@ VIEW_POS_ENTIRELY_ON_WATER = ZP_TMP_7 + 1
 VIEW_POS_HIT_SPECIAL = ZP_TMP_8
 VIEW_POS_WIDTH = ZP_TMP_8 + 1
 VIEW_POS_FLAGS_LOW = ZP_TMP_9
-VIEW_POS_STEP_TIME_COUNT = ZP_TMP_9 + 1
-VIEW_POS_STEP_TIME = ZP_TMP_9 + 1
+VIEW_POS_COMPLETION_FLAG = ZP_TMP_9 + 1
+VIEW_POS_STEP_SIZE = ZP_TMP_10
+VIEW_POS_XPOS = ZP_TMP_10 + 1
+VIEW_POS_YPOS = ZP_TMP_12
 
 
 ;Don't put anything in 25 used for x and y of canBeHere, or 21 - 24, used for local variables in update position
@@ -606,6 +608,76 @@ _b9FindPositionAsm:
 @return:
     rts
 
+;void b9StartMoveObj(ViewTable* localViewTab, byte entryNum, byte x, byte y, byte stepSize, byte completionFlag)
+b9StartMoveObj:
+ ; Save entry number and local view pointer
+sta VIEW_POS_COMPLETION_FLAG
+
+jsr popa 
+sta VIEW_POS_STEP_SIZE
+
+jsr popax
+stx VIEW_POS_YPOS
+sta VIEW_POS_XPOS
+
+jsr popa
+sta VIEW_POS_ENTRY_NUM
+jsr popax
+sta VIEW_POS_LOCAL_VIEW_TAB         ; pointer low byte
+stx VIEW_POS_LOCAL_VIEW_TAB + 1     ; pointer high byte
+
+b9StartMoveObjAsm:
+
+ldy _offsetOfMotion
+lda  MOTION_MOVETO
+sta (VIEW_POS_LOCAL_VIEW_TAB),y
+
+ldy _offsetOfYPos
+lda VIEW_POS_YPOS
+sta (VIEW_POS_LOCAL_VIEW_TAB),y 
+
+ldy _offsetOfStepSize
+lda (VIEW_POS_LOCAL_VIEW_TAB),y 
+ldy _offsetOfParam3
+sta (VIEW_POS_LOCAL_VIEW_TAB),y 
+
+lda VIEW_POS_STEP_SIZE
+beq @setMotionParam4
+
+@nonZeroStepSize:
+ldy _offsetOfStepSize
+sta (VIEW_POS_LOCAL_VIEW_TAB),y 
+
+@setMotionParam4:
+lda VIEW_POS_COMPLETION_FLAG
+ldy _offsetOfParam4
+sta (VIEW_POS_LOCAL_VIEW_TAB),y 
+ldx #$0
+SET_VAR_NON_INTERPRETER sreg
+
+lda VIEW_POS_FLAGS_LOW
+ldy _offsetOfParam4
+lda (VIEW_POS_LOCAL_VIEW_TAB),y 
+ora #UPDATE
+sta (VIEW_POS_LOCAL_VIEW_TAB),y 
+
+@checkifEgo:
+lda VIEW_POS_ENTRY_NUM
+bne @moveTo
+
+lda #PLAYER_CONTROL
+sta _controlMode
+bne @moveTo
+
+@moveTo:
+
+lda VIEW_POS_LOCAL_VIEW_TAB
+ldx VIEW_POS_LOCAL_VIEW_TAB + 1
+jsr pushax
+lda VIEW_POS_ENTRY_NUM
+TRAMPOLINE #MOVEMENT_BANK, bAMoveTo
+
+rts
 
 b9EndMoveObj:
 
@@ -622,7 +694,7 @@ SET_FLAG_NON_INTERPRETER sreg
 lda VIEW_POS_ENTRY_NUM
 bne @end
 
-lda #PLAYER_CONTROL
+lda #PROGRAM_CONTROL
 sta _controlMode
 
 lda #EGODIR

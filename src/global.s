@@ -109,6 +109,7 @@ SPRITE_METADATA_BANK = $0E
 DIVISION_METADATA_BANK = $31
 RANDOM_BANK = $6
 SOUND_BANK = $1
+MOVEMENT_BANK = $0A
 
 
 ; Define offsets for different areas within golden RAM
@@ -735,6 +736,7 @@ SET_VAR_OFFSET = GOLDEN_RAM + VARS_AREA_START_GOLDEN_OFFSET
 ;For setting a var, outside of the interpreter. Can still be called by an interpreter command, but doesn't affect or know about the current interpreter state.
 ;Requires the value to be set to be in 'X', and the variable number in 'A'
 ;Requires a ZP passed in as a param, which will be used internally to set the address of the var
+;The value to be stored, will be returned in 'a' for reuse
 .macro SET_VAR_NON_INTERPRETER ZP
         tay
         lda #<SET_VAR_OFFSET
