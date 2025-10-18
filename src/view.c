@@ -2035,7 +2035,7 @@ endBlit:
 	return TRUE;
 }
 
-
+#pragma code-name (push, "BANKRAM09")
 #pragma code-name (push, "BANKRAM0A")
 
 #pragma wrapped-call (push, trampoline, VIEW_CODE_BANK_1)
@@ -2129,6 +2129,8 @@ void bAInitViews()
 		setLoadedView(&localView, i);
 	}
 }
+#pragma code-name (pop)
+
 
 void b9PopulatePrecomputedPriorityTable()
 {
@@ -2180,7 +2182,7 @@ void bAInitObjects()
 	testCanBeHere();
 #endif
 
-	b9ResetViewtabs(TRUE);
+	bAResetViewtabs(TRUE);
 	memsetBanked(viewTableMetadata, NULL, sizeof(ViewTableMetadata) * SPRITE_SLOTS, SPRITE_METADATA_BANK);
 
 	for (i = 0; i < VIEW_TABLE_SIZE; i++)
@@ -2205,9 +2207,6 @@ void bAResetViews()     /* Called after new.room */
 
 	bAReset();
 }
-
-#pragma code-name (pop)
-#pragma code-name (push, "BANKRAM09")
 
 #define VIEW_HEADER_BUFFER_SIZE 501
 #define LOOP_HEADER_BUFFER_SIZE 501
