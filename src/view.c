@@ -917,7 +917,6 @@ void testCanBeHere()
 
 #pragma bss-name (push, "BANKRAM09")
 ViewTable viewtab[VIEW_TABLE_SIZE];
-ViewTable* viewTabFastLookup[VIEW_TABLE_SIZE];
 #pragma bss-name (pop)
 #pragma bss-name (push, "BANKRAM0E")
 ViewTableMetadata viewTableMetadata[SPRITE_SLOTS];
@@ -2184,11 +2183,6 @@ void bAInitObjects()
 
 	bAResetViewtabs(TRUE);
 	memsetBanked(viewTableMetadata, NULL, sizeof(ViewTableMetadata) * SPRITE_SLOTS, SPRITE_METADATA_BANK);
-
-	for (i = 0; i < VIEW_TABLE_SIZE; i++)
-	{
-		viewTabFastLookup[i] = &viewtab[i];
-	}
 }
 
 void bAResetViews()     /* Called after new.room */

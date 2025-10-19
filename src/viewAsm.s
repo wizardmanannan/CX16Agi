@@ -14,7 +14,6 @@ VIEW_INC = 1
 .import _offsetOfRepositioned
 .import _viewtab
 .import _sizeOfViewTab
-.import _viewTabFastLookup
 .import _b9PreComputedPriority
 .import _horizon
 .import _controlMode
