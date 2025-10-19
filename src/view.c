@@ -2035,38 +2035,6 @@ endBlit:
 }
 
 #pragma code-name (push, "BANKRAM09")
-void b9PopulatePrecomputedPriorityTable()
-{
-	int den;
-	int num;
-	int band;   // round-to-nearest; drop "+ den/2" for floor
-	int value;
-	int i;
-
-	fix32 numerator, denominator, divisionResult;
-
-	den = 168 - priorityBase;
-
-	for (i = 0; i < CHAR_MAX; i++)
-	{
-		if (i < priorityBase || den <= 0)
-		{
-			b9PreComputedPriority[i] = MIN_PRIORITY;
-		}
-		else
-		{
-
-
-			numerator = b12FpFromInt(i - priorityBase);
-			denominator = b12FpFromInt(PICTURE_HEIGHT - priorityBase) / b12FpFromInt(10);
-			divisionResult = numerator / denominator;
-			divisionResult += b12FpFromInt(5);
-
-			b9PreComputedPriority[i] = b12FloorFix32(divisionResult);
-		}
-	}
-}
-#pragma code-name (pop)
 #pragma code-name (push, "BANKRAM0A")
 
 #pragma wrapped-call (push, trampoline, VIEW_CODE_BANK_1)
@@ -2161,8 +2129,6 @@ void bAInitViews()
 	}
 }
 
-
-
 void bAInitObjects()
 {
 	byte i;
@@ -2203,6 +2169,39 @@ void bAResetViews()     /* Called after new.room */
 }
 
 #pragma code-name (pop)
+
+
+void b9PopulatePrecomputedPriorityTable()
+{
+	int den;
+	int num;
+	int band;   // round-to-nearest; drop "+ den/2" for floor
+	int value;
+	int i;
+
+	fix32 numerator, denominator, divisionResult;
+
+	den = 168 - priorityBase;
+
+	for (i = 0; i < CHAR_MAX; i++)
+	{
+		if (i < priorityBase || den <= 0)
+		{
+			b9PreComputedPriority[i] = MIN_PRIORITY;
+		}
+		else
+		{
+
+
+			numerator = b12FpFromInt(i - priorityBase);
+			denominator = b12FpFromInt(PICTURE_HEIGHT - priorityBase) / b12FpFromInt(10);
+			divisionResult = numerator / denominator;
+			divisionResult += b12FpFromInt(5);
+
+			b9PreComputedPriority[i] = b12FloorFix32(divisionResult);
+		}
+	}
+}
 
 #define VIEW_HEADER_BUFFER_SIZE 501
 #define LOOP_HEADER_BUFFER_SIZE 501
@@ -2336,7 +2335,7 @@ void setLoopData(AGIFile* tempAGI, View* localView, Loop* localLoop, byte* loopH
 	}
 }
 
-#pragma code-name (push, "BANKRAM09")
+
 byte b9VeraSlotsForWidthOrHeight(byte widthOrHeight)
 {
 	byte i;
