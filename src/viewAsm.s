@@ -1103,93 +1103,144 @@ sta (VIEW_POS_LOCAL_VIEW_TAB),y
 jsr b9SetCel
 rts
 
+; b9UpdateLoopAndCel
+; ------------------
+; Purpose: Updates the animation loop and cel (frame) of a view object based on its direction, 
+; number of loops, and timing conditions. Used in a game engine to manage sprite animations, 
+; ensuring correct animation sequences (e.g., walking left, right, or stopped) are displayed.
+; WARNING: Non-conventional calling. Assumes arguments are pre-loaded in zero page
+; Inputs: 
+;   - VIEW_POS_LOCAL_VIEW_TAB: Pointer to the view table containing object properties 
+;     (direction, number of loops, flags, step time count, cycle time count, current loop).
+;   - Y register: Used to index into the view table at specific offsets.
+; Outputs:
+;   - Updates VIEW_POS_NEW_LOOP with the new loop number based on direction.
+;   - Updates VIEW_POS_LOOP_NUM when a new loop is set.
+;   - Modifies cycle time count and advances cel in the view table when appropriate.
+;   - Calls b9SetLoop and b9AdvanceCel subroutines to apply changes.
+; Flow:
+;   1. Initializes new loop to Stopped state.
+;   2. Checks for fixed loop flag; skips loop selection if set.
+;   3. Determines number of loops (2, 3, or 4) and selects new loop from lookup tables (twoLoop or fourLoop).
+;   4. Updates loop if step time allows and new loop differs from current loop.
+;   5. If cycling, manages cycle time count and advances cel when count reaches zero.
+;   6. Resets cycle time and returns.
+; Notes:
+;   - Likely part of a game engine (e.g., Sierra's AGI system).
+;   - Skips a 'kq4 check' (possibly King's Quest IV-specific logic).
+;   - Assumes b9SetLoop and b9AdvanceCel subroutines handle low-level updates.
+
 b9UpdateLoopAndCel:
 .scope
-S = 4
-R = 0
-L = 1
-F = 2
-B = 3
+    ; Constants for movement directions and states
+    S = 4  ; Stopped
+    R = 0  ; Right
+    L = 1  ; Left
+    F = 2  ; Forward
+    B = 3  ; Backward
 
-; Define the twoLoop table (equivalent to C# twoLoop array)
-twoLoop:
-    .byte S, S, R, R, R, S, L, L, L
+    ; Define the twoLoop table
+    ; Maps direction to loop number for objects with 2 or 3 loops
+    twoLoop:
+        .byte S, S, R, R, R, S, L, L, L  ; Lookup table for loop selection
 
-; Define the fourLoop table (equivalent to C# fourLoop array)
-fourLoop:
-    .byte S, B, R, R, R, F, L, L, L
+    ; Define the fourLoop table
+    ; Maps direction to loop number for objects with 4 loops
+    fourLoop:
+        .byte S, B, R, R, R, F, L, L, L  ; Lookup table for loop selection
 
-lda #S
-sta VIEW_POS_NEW_LOOP
+    ; Initialize new loop to Stopped state
+    lda #S
+    sta VIEW_POS_NEW_LOOP
 
 @checkFixedLoop:
-lda _offsetOfFlags + 1
-lda (VIEW_POS_LOCAL_VIEW_TAB),y 
-and #>FIXEDLOOP
-bne @checkIfLoopShouldBeSet
-@getNewLoopBasedOnDirection:
+    ; Check if the object has a fixed loop flag set
+    lda _offsetOfFlags + 1
+    lda (VIEW_POS_LOCAL_VIEW_TAB),y 
+    and #>FIXEDLOOP
+    bne @checkIfLoopShouldBeSet  ; Skip to loop setting if fixed loop is set
 
-ldy _offsetOfNumberOfLoopsVT
-lda (VIEW_POS_LOCAL_VIEW_TAB),y 
+@getNewLoopBasedOnDirection:
+    ; Get the number of loops for the current view
+    ldy _offsetOfNumberOfLoopsVT
+    lda (VIEW_POS_LOCAL_VIEW_TAB),y 
+
 @checkForTwoOrThreeLoops:
-cmp #$2
-beq @twoOrThreeLoop
-cmp #$3
-bne @checkForFourLoops
+    ; Check if the view has 2 loops
+    cmp #$2
+    beq @twoOrThreeLoop
+    ; Check if the view has 3 loops
+    cmp #$3
+    bne @checkForFourLoops
 @twoOrThreeLoop:
-ldy _offsetOfDirection
-lda (VIEW_POS_LOCAL_VIEW_TAB),y 
-lda twoLoop,y
-sta VIEW_POS_NEW_LOOP
-bra @checkIfLoopShouldBeSet
+    ; For 2 or 3 loops, get the direction and map to new loop using twoLoop table
+    ldy _offsetOfDirection
+    lda (VIEW_POS_LOCAL_VIEW_TAB),y 
+    lda twoLoop,y
+    sta VIEW_POS_NEW_LOOP
+    bra @checkIfLoopShouldBeSet
+
 @checkForFourLoops:
-cmp #$4
-bne @checkIfLoopShouldBeSet
-ldy _offsetOfDirection
-lda (VIEW_POS_LOCAL_VIEW_TAB),y 
-lda fourLoop,y
-sta VIEW_POS_NEW_LOOP
-;Skip kq4 check for now
+    ; Check if the view has 4 loops
+    cmp #$4
+    bne @checkIfLoopShouldBeSet
+    ; For 4 loops, get the direction and map to new loop using fourLoop table
+    ldy _offsetOfDirection
+    lda (VIEW_POS_LOCAL_VIEW_TAB),y 
+    lda fourLoop,y
+    sta VIEW_POS_NEW_LOOP
+    ; Note: Skips kq4 check (commented as not implemented)
 
 @checkIfLoopShouldBeSet:
-lda _offsetOfStepTimeCount
-lda (VIEW_POS_LOCAL_VIEW_TAB),y
-cmp #$1
-bne @checkIfCelShouldBeAdvanced
-lda VIEW_POS_NEW_LOOP
-cmp #S
-beq @checkIfCelShouldBeAdvanced
-lda _offsetOfCurrentLoop
-lda (VIEW_POS_LOCAL_VIEW_TAB),y
-cmp VIEW_POS_NEW_LOOP
-beq @checkIfCelShouldBeAdvanced
-lda VIEW_POS_NEW_LOOP
-sta VIEW_POS_LOOP_NUM
-jsr b9SetLoop
+    ; Check if step time count is 1 (time to update loop)
+    lda _offsetOfStepTimeCount
+    lda (VIEW_POS_LOCAL_VIEW_TAB),y
+    cmp #$1
+    bne @checkIfCelShouldBeAdvanced  ; Skip if not time to update
+    ; Check if new loop is Stopped
+    lda VIEW_POS_NEW_LOOP
+    cmp #S
+    beq @checkIfCelShouldBeAdvanced  ; Skip if new loop is Stopped
+    ; Compare current loop with new loop
+    lda _offsetOfCurrentLoop
+    lda (VIEW_POS_LOCAL_VIEW_TAB),y
+    cmp VIEW_POS_NEW_LOOP
+    beq @checkIfCelShouldBeAdvanced  ; Skip if they're the same
+    ; Update the loop number and call subroutine to set it
+    lda VIEW_POS_NEW_LOOP
+    sta VIEW_POS_LOOP_NUM
+    jsr b9SetLoop
 
 @checkIfCelShouldBeAdvanced:
-lda _offsetOfFlags
-lda (VIEW_POS_LOCAL_VIEW_TAB),y 
-and #CYCLING
-beq @return
-@callAdvanceCel:
-lda _offsetOfCycleTimeCount
-lda (VIEW_POS_LOCAL_VIEW_TAB),y 
-beq @return
-dec
-sta (VIEW_POS_LOCAL_VIEW_TAB),y 
-bne @return
-jsr b9AdvanceCel
+    ; Check if the object is cycling (animation active)
+    lda _offsetOfFlags
+    lda (VIEW_POS_LOCAL_VIEW_TAB),y 
+    and #CYCLING
+    beq @return  ; Exit if not cycling
 
-lda _offsetOfCycleTime
-lda (VIEW_POS_LOCAL_VIEW_TAB),y 
-ldy _offsetOfCycleTimeCount
-sta (VIEW_POS_LOCAL_VIEW_TAB),y 
+@callAdvanceCel:
+    ; Check cycle time count
+    lda _offsetOfCycleTimeCount
+    lda (VIEW_POS_LOCAL_VIEW_TAB),y 
+    beq @return  ; Exit if cycle time is zero
+    ; Decrease cycle time count
+    dec
+    sta (VIEW_POS_LOCAL_VIEW_TAB),y 
+    bne @return  ; Exit if cycle time count is not zero
+    ; Advance to next cel (animation frame)
+    jsr b9AdvanceCel
+
+    ; Reset cycle time count to initial cycle time
+    lda _offsetOfCycleTime
+    lda (VIEW_POS_LOCAL_VIEW_TAB),y 
+    ldy _offsetOfCycleTimeCount
+    sta (VIEW_POS_LOCAL_VIEW_TAB),y 
 
 @return:
-rts
+    ; Return from subroutine
+    rts
 .endscope
-
+'
 b9AdvanceCel:
 
 rts
