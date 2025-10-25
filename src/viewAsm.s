@@ -1240,7 +1240,7 @@ b9UpdateLoopAndCel:
     ; Return from subroutine
     rts
 .endscope
-'
+
 b9AdvanceCel:
 
 rts

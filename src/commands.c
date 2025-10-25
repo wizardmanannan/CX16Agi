@@ -600,6 +600,7 @@ void b2Animate_obj() // 1, 0x00
 
 	localViewTab.repositioned = FALSE;
 	localViewTab.stopped = FALSE;
+	localViewTab.noAdvance = FALSE;
 
 	setViewTab(&localViewTab, entryNum);
 
@@ -657,6 +658,8 @@ void b2Draw() // 1, 0x00
     b9FindPosition(&localViewtab, entryNum);
 
 	//bAFindPosition(entryNum, &localViewtab);
+
+	localViewtab.noAdvance = FALSE;
 
 	setViewTab(&localViewtab, entryNum);
 	return;
@@ -850,6 +853,9 @@ void b2Set_cel() // 2, 0x00
 
 	b9SetCel(&localViewtab, celNum);
 
+
+	localViewtab.noAdvance = FALSE;
+
 	setViewTab(&localViewtab, entryNum);
 	return;
 }
@@ -863,6 +869,8 @@ void b2Set_cel_v() // 2, 0x40
 	celNum = var[loadAndIncWinCode()];
 
 	getViewTab(&localViewtab, entryNum);
+
+	localViewtab.noAdvance = FALSE;
 
 	b9SetCel(&localViewtab, celNum);
 
@@ -1228,6 +1236,7 @@ void b2End_of_loop() // 2, 0x00
 	localViewtab.param1 = loadAndIncWinCode();
 	localViewtab.cycleStatus = 1;
 	localViewtab.flags |= (UPDATE | CYCLING);
+	localViewtab.noAdvance = TRUE;
 
 	setViewTab(&localViewtab, entryNum);
 	return;
@@ -1259,6 +1268,8 @@ void b2Reverse_loop() // 2, 0x00
 	localViewtab.param1 = loadAndIncWinCode();
 	localViewtab.cycleStatus = 2;
 	localViewtab.flags |= (UPDATE | CYCLING);
+
+	localViewtab.noAdvance = TRUE;
 
 	setViewTab(&localViewtab, entryNum);
 	return;

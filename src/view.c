@@ -2080,6 +2080,7 @@ void bAResetViewtabs(boolean fullReset)
 			localViewtab.stopped = FALSE;
 			localViewtab.previousX = 0;
 			localViewtab.previousY = 0;
+			localViewtab.noAdvance = FALSE;
 
 			setViewTab(&localViewtab, entryNum);
 		}

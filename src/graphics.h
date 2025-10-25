@@ -139,6 +139,7 @@ typedef struct ViewTable {
 	boolean stopped;
 	byte previousX;
 	byte previousY;
+	boolean noAdvance;
 } ViewTable;
 
 #define VIEW_TABLE_SIZE  20 
