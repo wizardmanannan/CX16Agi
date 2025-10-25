@@ -965,90 +965,107 @@ sta (VIEW_POS_LOCAL_VIEW_TAB),y
 rts
 .endscope
 
-;void b9SetCel(ViewTable* localViewTab, byte entryNum, byte celNum) //WARNING NON CONVENTIONAL CALLING. It is expected that the arguments will already be loaded in zp by caller
+; void b9SetCel(ViewTable* localViewTab, byte entryNum, byte celNum)
+; WARNING: Non-conventional calling. Assumes arguments are pre-loaded in zero page:
+; - VIEW_POS_LOCAL_VIEW_TAB: Pointer to the view table (localViewTab)
+; - VIEW_POS_CEL_NUM: Cel number to set (celNum)
+; - entryNum is not used in this routine
 b9SetCel:
-lda VIEW_POS_CEL_NUM
-ldy _offsetOfCurrentCel
-sta (VIEW_POS_LOCAL_VIEW_TAB),y
+    ; Set the current cel number in the view table
+    lda VIEW_POS_CEL_NUM            ; Load cel number from zero page
+    ldy _offsetOfCurrentCel         ; Y = offset of CurrentCel in view table
+    sta (VIEW_POS_LOCAL_VIEW_TAB),y ; Store cel number in CurrentCel
 
+    ; Validate CurrentLoop < NumberOfLoops
+    ldy _offsetOfCurrentLoop        ; Y = offset of CurrentLoop
+    lda (VIEW_POS_LOCAL_VIEW_TAB),y ; A = CurrentLoop
+    ldy _offsetOfNumberOfLoopsVT    ; Y = offset of NumberOfLoops
+    cmp (VIEW_POS_LOCAL_VIEW_TAB),y ; Compare CurrentLoop with NumberOfLoops
+    bcs @return                     ; If CurrentLoop >= NumberOfLoops, return
 
-ldy _offsetOfCurrentLoop
-lda (VIEW_POS_LOCAL_VIEW_TAB),y
-ldy _offsetOfNumberOfLoopsVT
-cmp (VIEW_POS_LOCAL_VIEW_TAB),y
-bcs @return
-ldy _offsetOfCurrentCel
-lda (VIEW_POS_LOCAL_VIEW_TAB),y
-ldy _offsetOfNumberOfCelsVT
-cmp (VIEW_POS_LOCAL_VIEW_TAB),y
-bcs @return
+    ; Validate CurrentCel < NumberOfCels
+    ldy _offsetOfCurrentCel         ; Y = offset of CurrentCel
+    lda (VIEW_POS_LOCAL_VIEW_TAB),y ; A = CurrentCel
+    ldy _offsetOfNumberOfCelsVT     ; Y = offset of NumberOfCels
+    cmp (VIEW_POS_LOCAL_VIEW_TAB),y ; Compare CurrentCel with NumberOfCels
+    bcs @return                     ; If CurrentCel >= NumberOfCels, return
 
-@borderCollision: 
-ldy _offsetOfXPos
-lda (VIEW_POS_LOCAL_VIEW_TAB),y
-clc
-ldy _offsetOfXSize
-adc (VIEW_POS_LOCAL_VIEW_TAB),y
-cmp #PICTURE_WIDTH + 64; Wrapped Negative check
-bcs @checkY
-cmp #PICTURE_WIDTH
-beq @checkY
-bcc @checkY
+@borderCollision:
+    ; Check X-axis border collision: XPos + XSize > PICTURE_WIDTH
+    ldy _offsetOfXPos               ; Y = offset of XPos
+    lda (VIEW_POS_LOCAL_VIEW_TAB),y ; A = XPos
+    clc                             ; Clear carry for addition
+    ldy _offsetOfXSize              ; Y = offset of XSize
+    adc (VIEW_POS_LOCAL_VIEW_TAB),y ; A = XPos + XSize
+    cmp #PICTURE_WIDTH + 64         ; Check for wraparound (overflow in 8-bit arithmetic)
+    bcs @checkY                     ; If >= PICTURE_WIDTH + 64, skip to Y check (handles negative wrap)
+    cmp #PICTURE_WIDTH              ; Compare with PICTURE_WIDTH
+    beq @checkY                     ; If = PICTURE_WIDTH, skip to Y check
+    bcc @checkY                     ; If < PICTURE_WIDTH, skip to Y check
 
 @setRepositionedBasedOnX:
-ldy _offsetOfRepositioned
-lda #$1
-sta (VIEW_POS_LOCAL_VIEW_TAB),y
+    ; Set Repositioned flag for X-axis collision
+    ldy _offsetOfRepositioned       ; Y = offset of Repositioned
+    lda #$1                         ; A = 1 (true)
+    sta (VIEW_POS_LOCAL_VIEW_TAB),y ; Set Repositioned = true
+
 @clampToMaxX:
-sec
-lda #PICTURE_WIDTH - 1
-ldy _offsetOfXSize
-sbc (VIEW_POS_LOCAL_VIEW_TAB),y
-ldy _offsetOfXPos
-sta (VIEW_POS_LOCAL_VIEW_TAB),y
+    ; Clamp XPos to PICTURE_WIDTH - 1 - XSize
+    sec                             ; Set carry for subtraction
+    lda #PICTURE_WIDTH - 1         ; A = PICTURE_WIDTH - 1 (equivalent to Defines.MAXX)
+    ldy _offsetOfXSize              ; Y = offset of XSize
+    sbc (VIEW_POS_LOCAL_VIEW_TAB),y ; A = PICTURE_WIDTH - 1 - XSize
+    ldy _offsetOfXPos               ; Y = offset of XPos
+    sta (VIEW_POS_LOCAL_VIEW_TAB),y ; Set XPos = PICTURE_WIDTH - 1 - XSize
 
 @checkY:
-sec
-ldy _offsetOfYPos
-lda (VIEW_POS_LOCAL_VIEW_TAB),y
-ldy _offsetOfYSize
-sbc (VIEW_POS_LOCAL_VIEW_TAB),y
-cmp #PICTURE_HEIGHT + 64 ;Wrapped Negative
-bcc @return
-
+    ; Check Y-axis border collision: YPos - YSize < Defines.MINY - 1 (assumed 255)
+    sec                             ; Set carry for subtraction
+    ldy _offsetOfYPos               ; Y = offset of YPos
+    lda (VIEW_POS_LOCAL_VIEW_TAB),y ; A = YPos
+    ldy _offsetOfYSize              ; Y = offset of YSize
+    sbc (VIEW_POS_LOCAL_VIEW_TAB),y ; A = YPos - YSize
+    cmp #PICTURE_HEIGHT + 64        ; Check for underflow (high value due to 8-bit wraparound)
+    bcc @return                     ; If < PICTURE_HEIGHT + 64, no collision, return
 
 @setRepositionedBasedOnY:
-ldy _offsetOfRepositioned
-lda #$1
-sta (VIEW_POS_LOCAL_VIEW_TAB),y
+    ; Set Repositioned flag for Y-axis collision
+    ldy _offsetOfRepositioned       ; Y = offset of Repositioned
+    lda #$1                         ; A = 1 (true)
+    sta (VIEW_POS_LOCAL_VIEW_TAB),y ; Set Repositioned = true
 
-clc
-lda #$FF
-ldy _offsetOfYSize
-adc (VIEW_POS_LOCAL_VIEW_TAB),y
-ldy _offsetOfYPos
-sta (VIEW_POS_LOCAL_VIEW_TAB),y
+    ; Adjust YPos to Defines.MINY - 1 + YSize (assumes Defines.MINY - 1 = 255)
+    clc                             ; Clear carry for addition
+    lda #$FF                        ; A = 255 (Defines.MINY - 1)
+    ldy _offsetOfYSize              ; Y = offset of YSize
+    adc (VIEW_POS_LOCAL_VIEW_TAB),y ; A = 255 + YSize (mod 256, effectively YSize - 1)
+    ldy _offsetOfYPos               ; Y = offset of YPos
+    sta (VIEW_POS_LOCAL_VIEW_TAB),y ; Set YPos = 255 + YSize
 
 @clampToMaxY:
-ldy _offsetOfYPos
-lda (VIEW_POS_LOCAL_VIEW_TAB),y
-cmp _horizon
-beq @checkIgnoreHorizon
-bcs @return
+    ; Check if YPos is below or at horizon
+    ldy _offsetOfYPos               ; Y = offset of YPos
+    lda (VIEW_POS_LOCAL_VIEW_TAB),y ; A = YPos
+    cmp _horizon                    ; Compare YPos with horizon
+    beq @checkIgnoreHorizon         ; If YPos = horizon, check IgnoreHorizon flag
+    bcs @return                     ; If YPos > horizon, return
 
 @checkIgnoreHorizon:
-ldy _offsetOfFlags                   ; Y := offset of flags
-lda (VIEW_POS_LOCAL_VIEW_TAB),y      ; A := flags
-and #IGNOREHORIZON
-bne @return
+    ; Check if IgnoreHorizon flag is set
+    ldy _offsetOfFlags              ; Y = offset of Flags
+    lda (VIEW_POS_LOCAL_VIEW_TAB),y ; A = Flags
+    and #IGNOREHORIZON              ; Check IgnoreHorizon bit
+    bne @return                     ; If IgnoreHorizon is set, return
+
 @clampToHorizon:
-lda _horizon
-inc
-ldy _offsetOfYPos
-sta (VIEW_POS_LOCAL_VIEW_TAB),y
+    ; Clamp YPos to horizon + 1
+    lda _horizon                    ; A = horizon
+    inc                             ; A = horizon + 1
+    ldy _offsetOfYPos               ; Y = offset of YPos
+    sta (VIEW_POS_LOCAL_VIEW_TAB),y ; Set YPos = horizon + 1
 
 @return:
-rts
+    rts                             ; Return from subroutine
 
 .endif
 
