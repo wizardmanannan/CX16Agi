@@ -21,6 +21,8 @@ VIEW_INC = 1
 .import _offsetOfNumberOfLoopsVT
 .import _offsetOfCurrentLoop
 .import _offsetOfNumberOfCelsVT
+.import _offsetOfCycleTimeCount
+.import _offsetOfCycleTime
 
 VIEW_POS_LOCAL_VIEW_TAB = ZP_TMP_2
 VIEW_POS_ENTRY_NUM = ZP_TMP_3 + 1
@@ -37,6 +39,8 @@ VIEW_POS_STEP_SIZE = ZP_TMP_10
 VIEW_POS_XPOS = ZP_TMP_10 + 1
 VIEW_POS_YPOS = ZP_TMP_12
 VIEW_POS_CEL_NUM = ZP_TMP_12 + 1
+VIEW_POS_LOOP_NUM = ZP_TMP_13
+VIEW_POS_NEW_LOOP = ZP_TMP_13 + 1
 
 
 ;Don't put anything in 25 used for x and y of canBeHere, or 21 - 24, used for local variables in update position
@@ -1066,6 +1070,129 @@ b9SetCel:
 
 @return:
     rts                             ; Return from subroutine
+
+b9SetLoop:
+; void b9SetLoop(ViewTable* localViewTab, byte entryNum, byte celNum)
+; WARNING: Non-conventional calling. Assumes arguments are pre-loaded in zero page:
+; - VIEW_POS_LOCAL_VIEW_TAB: Pointer to the view table (localViewTab)
+; - VIEW_POS_LOOP_NUM: Loop number to set (loopNum)
+; - entryNum is not used in this routine
+lda VIEW_POS_LOOP_NUM
+ldy _offsetOfCurrentLoop
+sta (VIEW_POS_LOCAL_VIEW_TAB),y 
+
+ldy _offsetOfCurrentLoop
+lda (VIEW_POS_LOCAL_VIEW_TAB),y 
+ldy _offsetOfNumberOfLoopsVT
+cmp (VIEW_POS_LOCAL_VIEW_TAB),y 
+bcs @setCurrentCelToZero
+
+ldy _offsetOfCurrentCel
+lda (VIEW_POS_LOCAL_VIEW_TAB),y 
+ldy _offsetOfNumberOfCelsVT
+cmp (VIEW_POS_LOCAL_VIEW_TAB),y 
+bcc @setCel
+
+@setCurrentCelToZero:
+ldy _offsetOfCurrentCel
+lda #$0
+sta (VIEW_POS_LOCAL_VIEW_TAB),y 
+
+@setCel:
+
+jsr b9SetCel
+rts
+
+b9UpdateLoopAndCel:
+.scope
+S = 4
+R = 0
+L = 1
+F = 2
+B = 3
+
+; Define the twoLoop table (equivalent to C# twoLoop array)
+twoLoop:
+    .byte S, S, R, R, R, S, L, L, L
+
+; Define the fourLoop table (equivalent to C# fourLoop array)
+fourLoop:
+    .byte S, B, R, R, R, F, L, L, L
+
+lda #S
+sta VIEW_POS_NEW_LOOP
+
+@checkFixedLoop:
+lda _offsetOfFlags + 1
+lda (VIEW_POS_LOCAL_VIEW_TAB),y 
+and #>FIXEDLOOP
+bne @checkIfLoopShouldBeSet
+@getNewLoopBasedOnDirection:
+
+ldy _offsetOfNumberOfLoopsVT
+lda (VIEW_POS_LOCAL_VIEW_TAB),y 
+@checkForTwoOrThreeLoops:
+cmp #$2
+beq @twoOrThreeLoop
+cmp #$3
+bne @checkForFourLoops
+@twoOrThreeLoop:
+ldy _offsetOfDirection
+lda (VIEW_POS_LOCAL_VIEW_TAB),y 
+lda twoLoop,y
+sta VIEW_POS_NEW_LOOP
+bra @checkIfLoopShouldBeSet
+@checkForFourLoops:
+cmp #$4
+bne @checkIfLoopShouldBeSet
+ldy _offsetOfDirection
+lda (VIEW_POS_LOCAL_VIEW_TAB),y 
+lda fourLoop,y
+sta VIEW_POS_NEW_LOOP
+;Skip kq4 check for now
+
+@checkIfLoopShouldBeSet:
+lda _offsetOfStepTimeCount
+lda (VIEW_POS_LOCAL_VIEW_TAB),y
+cmp #$1
+bne @checkIfCelShouldBeAdvanced
+lda VIEW_POS_NEW_LOOP
+cmp #S
+beq @checkIfCelShouldBeAdvanced
+lda _offsetOfCurrentLoop
+lda (VIEW_POS_LOCAL_VIEW_TAB),y
+cmp VIEW_POS_NEW_LOOP
+beq @checkIfCelShouldBeAdvanced
+lda VIEW_POS_NEW_LOOP
+sta VIEW_POS_LOOP_NUM
+jsr b9SetLoop
+
+@checkIfCelShouldBeAdvanced:
+lda _offsetOfFlags
+lda (VIEW_POS_LOCAL_VIEW_TAB),y 
+and #CYCLING
+beq @return
+@callAdvanceCel:
+lda _offsetOfCycleTimeCount
+lda (VIEW_POS_LOCAL_VIEW_TAB),y 
+beq @return
+dec
+sta (VIEW_POS_LOCAL_VIEW_TAB),y 
+bne @return
+jsr b9AdvanceCel
+
+lda _offsetOfCycleTime
+lda (VIEW_POS_LOCAL_VIEW_TAB),y 
+ldy _offsetOfCycleTimeCount
+sta (VIEW_POS_LOCAL_VIEW_TAB),y 
+
+@return:
+rts
+.endscope
+
+b9AdvanceCel:
+
+rts
 
 .endif
 
