@@ -38,13 +38,8 @@
 //#define VERBOSE_ADD_TO_PIC;
 //#define VERBOSE_DEBUG_NO_BLIT_CACHE TODO: Weird print statement corruption fix
 
-
 #define MIN_SPRITE_PRIORITY 4
 #define MAX_SPRITE_PRIORITY 15
-#define DEFAULT_PRIORITY_BASE 48
-
-byte priorityBase = DEFAULT_PRIORITY_BASE;
-
 #define NO_PRIORITIES (MAX_SPRITE_PRIORITY - MIN_SPRITE_PRIORITY)
 
 #define BYTES_PER_SPRITE_UPDATE 7
@@ -59,10 +54,6 @@ extern byte* bESpritesUpdatedBufferPointer;
 
 extern void bAFollowEgoAsmSec(ViewTable* localViewTab, ViewTable* egoViewTab, byte egoWidth, byte localCelWidth);
 
-#pragma bss-name (push, "BANKRAM09")
-byte b9PreComputedPriority[CHAR_MAX];
-byte b9160TimesTable[PICTURE_WIDTH];
-#pragma bss-name (pop)
 #pragma bss-name (push, "BANKRAM11")
 View loadedViews[MAXVIEW];
 #pragma bss-name (pop)
@@ -166,755 +157,6 @@ void setLoadedCel(Loop* loadedLoop, Cel* localCell, byte localCellNumber)
 
 	RAM_BANK = previousRamBank;
 }
-
-//#define TEST_GOOD_POSITION
-
-#ifdef TEST_GOOD_POSITION
-
-extern boolean b9GoodPosition(ViewTable* localViewTab);
-extern byte offsetOfYSize;
-void testGoodPositionFunction(byte x, byte y, byte xSize, byte ySize, byte expectedHorizon, boolean expectedResult, char* testString, byte flags)
-{
-	ViewTable localViewTab;
-	boolean actualResult;
-
-	getViewTab(&localViewTab, 0);
-
-	localViewTab.xPos = x;
-	localViewTab.yPos = y;
-    localViewTab.xsize = xSize;
-	localViewTab.ysize = ySize;
-
-	printf("we set ySize to %d and its address is %p. the offset is %d. the local view tab addres is %p\n", localViewTab.ysize, &localViewTab.ysize, offsetOfYSize, &localViewTab);
-
-	localViewTab.flags = flags;
-	
-	horizon = expectedHorizon;
-
-    actualResult = b9GoodPosition(&localViewTab);
-
-	printf(testString);
-
-	if(actualResult != expectedResult)
-	{
-		printf("xxxxxxxxxxxxxxxxxxxxxxxxxxfail expected %d \n", expectedResult);
-	}
-}
-
-
-#define MAXX (PICTURE_WIDTH - 1)
-#define MAXY (PICTURE_HEIGHT - 1)
-#define MINX 0
-#define MINY 0
-
-
-boolean trap;
-void testGoodPosition()
-{
-    // 1) inside bounds, above horizon
-    testGoodPositionFunction(
-        MINX + 5, MINY + 10, 10, 8,
-        /*horizon*/ MINY + 4,
-        /*expected*/ TRUE,
-        "inside bounds, above horizon\n",
-        0
-    );
-
-    // 2) full width fits exactly
-    testGoodPositionFunction(
-        MINX, MINY + 5,
-        (byte)((MAXX + 1) - MINX), 1,
-        /*horizon*/ MINY,
-        /*expected*/ TRUE,
-        "full width fits exactly\n",
-        0
-    );
-
-    // 3) touches top boundary
-    testGoodPositionFunction(
-        MINX + 3, MINY, 4, 1,
-        /*horizon*/ 1,
-        /*expected*/ TRUE,
-        "touches top boundary\n",
-        IGNOREHORIZON
-    );
-
-    // 4) touches bottom boundary
-    testGoodPositionFunction(
-        MINX + 3, MAXY, 4, 2,
-        /*horizon*/ MINY,
-        /*expected*/ TRUE,
-        "touches bottom boundary\n",
-        0
-    );
-
-    // 5) exceeds right bound
-    testGoodPositionFunction(
-        (byte)(MAXX - 5), MINY + 5, 7, 3,
-        /*horizon*/ MINY,
-        /*expected*/ FALSE,
-        "exceeds right bound\n",
-        0
-    );
-
-    // 6) exceeds top bound
-    testGoodPositionFunction(
-        MINX + 2, MINY, 3, 1,
-        /*horizon*/ MINY - 5,
-        /*expected*/ FALSE,
-        "exceeds top bound\n",
-        0
-    );
-
-    // 7) exceeds bottom bound
-    testGoodPositionFunction(
-        MINX + 2, (byte)(MAXY + 1), 3, 2,
-        /*horizon*/ MINY,
-        /*expected*/ TRUE,
-        "exceeds bottom bound\n",
-        0
-    );
-
-	// 8) blocked by horizon
-    testGoodPositionFunction(
-        MINX + 5, MINY + 6, 4, 3,
-        /*horizon*/ (byte)(MINY + 6),
-        /*expected*/ FALSE,
-        "blocked by horizon\n",
-        0
-    );
-
-    // 9) clears horizon
-    testGoodPositionFunction(
-        MINX + 5, MINY + 7, 4, 3,
-        /*horizon*/ (byte)(MINY + 6),
-        /*expected*/ TRUE,
-        "clears horizon\n",
-        0
-    );
-
-    // 10) one by one sprite
-    testGoodPositionFunction(
-        MINX + 1, MINY + 2, 1, 1,
-        /*horizon*/ MINY + 1,
-        /*expected*/ TRUE,
-        "one by one sprite\n",
-        0
-    );
-
-    // 11) fits right and bottom edges
-    {
-        testGoodPositionFunction(
-            MAXX, MAXY + 1, 1, 1,
-            /*horizon*/ MINY,
-            /*expected*/ TRUE,
-            "fits right and bottom edges\n",
-            0
-        );
-    }
-
-    // 12) fails only because of horizon
-    testGoodPositionFunction(
-        MINX + 20, MINY + 15, 2, 2,
-        /*horizon*/ (byte)(MINY + 20),
-        /*expected*/ FALSE,
-        "fails only because of horizon\n",
-        0
-    );
-
-	  testGoodPositionFunction(
-        MINX -1, MINY + 10, 10, 8,
-        /*horizon*/ MINY + 4,
-        /*expected*/ FALSE,
-        "x outside of bounds\n",
-        0
-    );
-}
-
-
-
-
-#endif
-
-
-//#define TEST_COLLIDE
-#ifdef TEST_COLLIDE
-extern boolean b9Collide(ViewTable* localViewtab, byte entryNum);
-void b9ResetViewtabs();
-
-extern byte offsetOfFlags;
-extern byte offsetOfXSize;
-
-boolean trap = FALSE;
-
-void testCollide()
-{
-	ViewTable otherViewTab, localViewTab;
-	boolean result = FALSE;
-
-#define TEST_WIDTH_SMALLER 9
-#define TEST_X_SMALLER 10
-#define TEST_WIDTH_BIGGER 16
-#define TEST_X_BIGGER 15
-
-#define TEST_EQUAL 10
-
-	RAM_BANK = VIEW_CODE_BANK_1;
-
-	b9ResetViewtabs(TRUE);
-
-	RAM_BANK = VIEWTAB_BANK;
-	getViewTab(&localViewTab, 0);
-	getViewTab(&otherViewTab, 2);
-	localViewTab.xPos = TEST_X_BIGGER;
-	result = b9Collide(&localViewTab, 0);
-	printf("test 1 No objects set animated and drawn expected false\n");
-	if (result)
-	{
-		printf("fail\n");
-		asm("stp");
-	}
-
-	b9ResetViewtabs(TRUE);
-	getViewTab(&localViewTab, 0);
-	getViewTab(&otherViewTab, 2);
-	otherViewTab.flags |= ANIMATED;
-	setViewTab(&otherViewTab, 2);
-	localViewTab.xPos = TEST_X_BIGGER;
-	result = b9Collide(&localViewTab, 0);
-	printf("test 2 Only one other object set animated not drawn expected false\n");
-	if (result)
-	{
-		printf("fail\n");
-		asm("stp");
-	}
-
-	b9ResetViewtabs(TRUE);
-	getViewTab(&localViewTab, 0);
-	getViewTab(&otherViewTab, 2);
-	otherViewTab.flags |= DRAWN;
-	setViewTab(&otherViewTab, 2);
-	localViewTab.xPos = TEST_X_BIGGER;
-	result = b9Collide(&localViewTab, 0);
-	printf("test 3 Only one other object set drawn not animated expected false\n");
-	if (result)
-	{
-		printf("fail\n");
-		asm("stp");
-	}
-
-	b9ResetViewtabs(TRUE);
-	getViewTab(&localViewTab, 0);
-	getViewTab(&otherViewTab, 2);
-	otherViewTab.flags |= DRAWN | ANIMATED | IGNOREOBJECTS;
-	setViewTab(&otherViewTab, 2);
-	localViewTab.xPos = TEST_X_BIGGER;
-	result = b9Collide(&localViewTab, 0);
-	printf("test 4 Other object animated, drawn and ignore objects expected false\n");
-	if (result)
-	{
-		printf("fail\n");
-		asm("stp");
-	}
-
-	b9ResetViewtabs(TRUE);
-	getViewTab(&localViewTab, 0);
-	getViewTab(&otherViewTab, 2);
-	otherViewTab.flags |= DRAWN | ANIMATED;
-	otherViewTab.xPos = TEST_X_SMALLER;
-	otherViewTab.xsize = TEST_WIDTH_SMALLER;
-	otherViewTab.yPos = TEST_EQUAL;
-	setViewTab(&otherViewTab, 2);
-	localViewTab.xPos = TEST_X_BIGGER;
-	localViewTab.xsize = TEST_WIDTH_BIGGER;
-	localViewTab.yPos = TEST_EQUAL;
-	setViewTab(&localViewTab, 0);
-	result = b9Collide(&localViewTab, 0);
-	//this.x + this.width > otherObj.x && otherObj.x + otherObj.width  > this.x
-	printf("test 5 local x plus local w greater x other obj x plus other obj width greater local x y test passes expected true\n");
-	if (!result)
-	{
-		printf("fail\n");
-		asm("stp");
-	}
-
-	b9ResetViewtabs(TRUE);
-	getViewTab(&localViewTab, 0);
-	getViewTab(&otherViewTab, 2);
-	otherViewTab.flags |= DRAWN | ANIMATED;
-	otherViewTab.xPos = TEST_X_SMALLER;
-	otherViewTab.xsize = TEST_WIDTH_SMALLER;
-	otherViewTab.yPos = TEST_EQUAL;
-	setViewTab(&otherViewTab, 2);
-	localViewTab.xPos = 0;
-	localViewTab.xsize = 0;
-	localViewTab.yPos = TEST_EQUAL;
-	setViewTab(&localViewTab, 0);
-	result = b9Collide(&localViewTab, 0);
-
-	//this.x + this.width < otherObj.x && otherObj.x + otherObj.width  > this.x
-
-	printf("test 6 local x plus local w less than other obj x other obj x plus other obj width greater local x y test pass expected false \n");
-	if (result)
-	{
-		printf("fail\n");
-		asm("stp");
-	}
-	b9ResetViewtabs(TRUE);
-	getViewTab(&localViewTab, 0);
-	getViewTab(&otherViewTab, 2);
-	otherViewTab.flags |= DRAWN | ANIMATED;
-	otherViewTab.xPos = 0;
-	otherViewTab.xsize = 5;
-	otherViewTab.yPos = TEST_EQUAL;
-	setViewTab(&otherViewTab, 2);
-	localViewTab.xPos = 5;
-	localViewTab.xsize = 5;
-	localViewTab.yPos = TEST_EQUAL;
-	setViewTab(&localViewTab, 0);
-	result = b9Collide(&localViewTab, 0);
-
-	//this.x + this.width == otherObj.x && otherObj.x + otherObj.width  == this.x
-
-	printf("test 7 local x plus local w equal other other obj x plus other obj width equal local x y test pass expected false \n");
-	if (result)
-	{
-		printf("fail\n");
-		asm("stp");
-	}
-
-	b9ResetViewtabs(TRUE);
-	getViewTab(&localViewTab, 0);
-	getViewTab(&otherViewTab, 2);
-	otherViewTab.flags |= DRAWN | ANIMATED;
-	otherViewTab.xPos = 20;
-	otherViewTab.xsize = 5;
-	otherViewTab.yPos = TEST_EQUAL;
-	setViewTab(&otherViewTab, 2);
-	localViewTab.xPos = 10;
-	localViewTab.xsize = 5;
-	localViewTab.yPos = TEST_EQUAL;
-	setViewTab(&localViewTab, 0);
-	result = b9Collide(&localViewTab, 0);
-
-	//this.x + this.width < otherObj.x && otherObj.x + otherObj.width  < this.x
-
-	printf("test 8 local x plus local w less than other other obj x plus other obj width less than local x y test pass expected false \n");
-	if (result)
-	{
-		printf("fail\n");
-		asm("stp");
-	}
-
-	b9ResetViewtabs(TRUE);
-	getViewTab(&localViewTab, 0);
-	getViewTab(&otherViewTab, 2);
-
-	otherViewTab.flags |= DRAWN | ANIMATED;
-	otherViewTab.xPos = 0;   // other.x
-	otherViewTab.xsize = 10;  // other.x + w = 10
-	otherViewTab.yPos = TEST_EQUAL;
-	setViewTab(&otherViewTab, 2);
-
-	localViewTab.xPos = 10;  // this.x
-	localViewTab.xsize = 1;   // this.x + w = 11
-	localViewTab.yPos = TEST_EQUAL;
-	setViewTab(&localViewTab, 0);
-
-	result = b9Collide(&localViewTab, 0);
-
-	//this.x + this.width > otherObj.x && otherObj.x + otherObj.width == this.x
-	printf("test 9 local x plus local w greater other obj x other obj x plus other obj w equal local x y test pass expected false\n");
-	if (result)
-	{
-		printf("fail\n");
-		asm("stp");
-	}
-
-	b9ResetViewtabs(TRUE);
-	getViewTab(&localViewTab, 0);
-	getViewTab(&otherViewTab, 2);
-
-	otherViewTab.flags |= DRAWN | ANIMATED;
-	otherViewTab.xPos = 5;
-	otherViewTab.xsize = 1;   // other.x + w = 6
-	otherViewTab.yPos = TEST_EQUAL;
-	setViewTab(&otherViewTab, 2);
-
-	localViewTab.xPos = 0;
-	localViewTab.xsize = 5;   // this.x + w = 5
-	localViewTab.yPos = TEST_EQUAL;
-	setViewTab(&localViewTab, 0);
-
-	result = b9Collide(&localViewTab, 0);
-
-	//this.x + this.width equal other obj x && other obj x plus other obj width greater local x
-	printf("test 10 local x plus local w equal other obj x other obj x plus other obj w greater local x y test pass expected true\n");
-	if (!result)
-	{
-		printf("fail\n");
-		asm("stp");
-	}
-
-	// ---------- test 11: A: > , B: < (expected FALSE) ----------
-	b9ResetViewtabs(TRUE);
-	getViewTab(&localViewTab, 0);
-	getViewTab(&otherViewTab, 2);
-
-	otherViewTab.flags |= DRAWN | ANIMATED;
-	otherViewTab.xPos = 0;
-	otherViewTab.xsize = 5;   // other.x + w = 5
-	otherViewTab.yPos = TEST_EQUAL;
-	setViewTab(&otherViewTab, 2);
-
-	localViewTab.xPos = 10;
-	localViewTab.xsize = 1;   // this.x + w = 11
-	localViewTab.yPos = TEST_EQUAL;
-	setViewTab(&localViewTab, 0);
-
-	result = b9Collide(&localViewTab, 0);
-
-	//this.x + this.width greater other obj x && other obj x plus other obj width less local x
-	printf("test 11 local x plus local w greater other obj x other obj x plus other obj w less local x y test pass expected false\n");
-	if (result)
-	{
-		printf("fail\n");
-		asm("stp");
-	}
-
-	b9ResetViewtabs(TRUE);
-	getViewTab(&localViewTab, 0);
-	getViewTab(&otherViewTab, 2);
-
-	otherViewTab.flags |= DRAWN | ANIMATED;
-	otherViewTab.xPos = 0;
-	otherViewTab.xsize = 10;
-	otherViewTab.yPos = 20;
-	otherViewTab.previousY = 20;
-	setViewTab(&otherViewTab, 2);
-
-	localViewTab.xPos = 5;
-	localViewTab.xsize = 5;
-	localViewTab.yPos = 20;
-	localViewTab.previousY = 20;
-	setViewTab(&localViewTab, 0);
-
-	result = b9Collide(&localViewTab, 0);
-
-	//this.y == otherObj.y
-	printf("test 12 x overlap true y equal test pass expected true\n");
-	if (!result)
-	{
-		printf("fail\n");
-		asm("stp");
-	}
-
-	b9ResetViewtabs(TRUE);
-	getViewTab(&localViewTab, 0);
-	getViewTab(&otherViewTab, 2);
-
-	otherViewTab.flags |= DRAWN | ANIMATED;
-	otherViewTab.xPos = 0;
-	otherViewTab.xsize = 10;
-	otherViewTab.yPos = 5;
-	otherViewTab.previousY = 6;
-	setViewTab(&otherViewTab, 2);
-
-	localViewTab.xPos = 5;
-	localViewTab.xsize = 5;
-	localViewTab.yPos = 6;
-	localViewTab.previousY = 4;
-	setViewTab(&localViewTab, 0);
-
-	result = b9Collide(&localViewTab, 0);
-
-	//this.y > otherObj.y && this.previousY < otherObj.previousY
-	printf("test 13 x overlap true this y greater other y this previous y less other previous y test pass expected true\n");
-	if (!result)
-	{
-		printf("fail\n");
-		asm("stp");
-	}
-
-	b9ResetViewtabs(TRUE);
-	getViewTab(&localViewTab, 0);
-	getViewTab(&otherViewTab, 2);
-
-	otherViewTab.flags |= DRAWN | ANIMATED;
-	otherViewTab.xPos = 0;
-	otherViewTab.xsize = 10;
-	otherViewTab.yPos = 6;
-	otherViewTab.previousY = 4;
-	setViewTab(&otherViewTab, 2);
-
-	localViewTab.xPos = 5;
-	localViewTab.xsize = 5;
-	localViewTab.yPos = 5;
-	localViewTab.previousY = 7;
-	setViewTab(&localViewTab, 0);
-
-	//trap = TRUE;
-	result = b9Collide(&localViewTab, 0);
-
-	//this.y < otherObj.y && this.previousY > otherObj.previousY
-	printf("test 14 x overlap true this y less other y this previous y greater other previous y test pass expected true\n");
-	if (!result)
-	{
-		printf("fail\n");
-		asm("stp");
-	}
-
-	b9ResetViewtabs(TRUE);
-	getViewTab(&localViewTab, 0);
-	getViewTab(&otherViewTab, 2);
-
-	otherViewTab.flags |= DRAWN | ANIMATED;
-	otherViewTab.xPos = 0;
-	otherViewTab.xsize = 10;
-	otherViewTab.yPos = 20;
-	otherViewTab.previousY = 19;
-	setViewTab(&otherViewTab, 2);
-
-	localViewTab.xPos = 5;
-	localViewTab.xsize = 5;
-	localViewTab.yPos = 10;
-	localViewTab.previousY = 9;
-	setViewTab(&localViewTab, 0);
-
-	result = b9Collide(&localViewTab, 0);
-
-	//this.y != otherObj.y && no cross
-	printf("test 15 x overlap true y not equal no y cross test pass expected false\n");
-	if (result)
-	{
-		printf("fail\n");
-		asm("stp");
-	}
-
-	b9ResetViewtabs(TRUE);
-	getViewTab(&localViewTab, 0);
-	getViewTab(&otherViewTab, 2);
-	otherViewTab.flags |= DRAWN | ANIMATED;
-	otherViewTab.xPos = TEST_X_SMALLER;
-	otherViewTab.xsize = TEST_WIDTH_SMALLER;
-	otherViewTab.yPos = TEST_EQUAL;
-	setViewTab(&otherViewTab, 2);
-	localViewTab.xPos = TEST_X_BIGGER;
-	localViewTab.xsize = TEST_WIDTH_BIGGER;
-	localViewTab.yPos = TEST_EQUAL;
-	setViewTab(&localViewTab, 2);
-	result = b9Collide(&localViewTab, 2);
-	printf("test 16 local obj is the same as otherObj, but would otherwise pass \n");
-	if (result)
-	{
-		printf("fail\n");
-		asm("stp");
-	}
-
-	asm("stp");
-}
-
-
-
-#endif
-
-//#define TEST_CAN_BE_HERE
-
-#ifdef TEST_CAN_BE_HERE
-extern boolean b9CanBeHere(ViewTable* localViewtab, byte entryNum);
-extern void b11DrawPic(byte* bankedData, int pLen, boolean okToClearScreen, byte picNum);
-extern void b9ResetViewtabs();
-#pragma wrapped-call (push, trampoline, 8)
-extern void b8SetupLineTables();
-#pragma wrapped-call (pop)
-byte trap = FALSE;
-
-boolean testPriorityCalc(byte y, byte expectedPriority, char* testText, int flags, byte objInitialPriority)
-{
-	PictureFile loadedPicture;
-	ViewTable localViewTab;
-	boolean result;
-
-	memset(flag, 0, 256);
-	b9ResetViewtabs(TRUE);
-
-	getViewTab(&localViewTab, 0);
-	localViewTab.yPos = y;
-	localViewTab.flags = flags;
-	localViewTab.priority = objInitialPriority;
-
-	result = b9CanBeHere(&localViewTab, 0);
-	printf(testText);
-
-	if (localViewTab.priority != expectedPriority)
-	{
-		printf("fail the priority was expected to be %d, but we got %d\n", expectedPriority, localViewTab.priority);
-	}
-}
-
-boolean testCanBeHereFunction(byte pNum, byte x, byte y, byte xSize, char* testText, boolean expectedResult, boolean expectedWater, boolean expectedSpecial, int flags, byte objInitialPriority, byte objNum)
-{
-	PictureFile loadedPicture;
-	ViewTable localViewTab;
-	boolean result;
-
-	memset(flag, 0, 256);
-	b9ResetViewtabs(TRUE);
-	b8SetupLineTables();
-
-	getViewTab(&localViewTab, objNum);
-	localViewTab.xPos = x;
-	localViewTab.yPos = y;
-	localViewTab.flags = flags;
-	localViewTab.xsize = xSize;
-	localViewTab.priority = objInitialPriority;
-	b6LoadPictureFile(pNum);
-	getLoadedPicture(&loadedPicture, pNum);
-	b11DrawPic(loadedPicture.data, loadedPicture.size, TRUE, pNum);
-	result = b9CanBeHere(&localViewTab, objNum);
-	printf(testText);
-	if (result != expectedResult)
-	{
-		printf("fail, result\n");
-	}
-	if (flag[0] != expectedWater)
-	{
-		printf("fail, on water\n");
-	}
-
-	//printf("special flag address %p\n", &flag[3]);
-	if (flag[3] != expectedSpecial)
-	{
-		printf("fail, on special\n");
-	}
-
-	b6DiscardPictureFile(pNum);
-}
-
-boolean testCanBeHereFunctionWithWaterSpecial(byte pNum, byte x, byte y, byte xSize, char* testText, boolean expectedResult, boolean expectedWater, byte expectedSpecial, int flags, byte objInitialPriority)
-{
-	PictureFile loadedPicture;
-	ViewTable localViewTab;
-	boolean result;
-
-	memset(flag, 0, 256);
-	b9ResetViewtabs(TRUE);
-	b8SetupLineTables();
-
-	getViewTab(&localViewTab, 0);
-	localViewTab.xPos = x;
-	localViewTab.yPos = y;
-	localViewTab.flags = flags;
-	localViewTab.priority = objInitialPriority;
-    localViewTab.xsize = xSize;
-
-	b6LoadPictureFile(pNum);
-	getLoadedPicture(&loadedPicture, pNum);
-	b11DrawPic(loadedPicture.data, loadedPicture.size, TRUE, pNum);
-
-	SET_VERA_ADDRESS(0xC827, 0, 0);
-#define WATER_SPECIAL 0x32
-	WRITE_BYTE_DEF_TO_ASSM(WATER_SPECIAL, VERA_data0); //Adding In This Value Specially, As I Couldn't Find A Real One
-
-	result = b9CanBeHere(&localViewTab, 0);
-	printf(testText);
-	if (result != expectedResult)
-	{
-		printf("fail, result\n");
-	}
-	if (flag[0] != expectedWater)
-	{
-		printf("fail, on water\n");
-	}
-
-	//printf("special flag address %p\n", &flag[3]);
-	if (flag[3] != expectedSpecial)
-	{
-		printf("fail, on special\n");
-	}
-}
-
-void testCanBeHere()
-{
-#define TEST_ENTIRE_ON_LAND_PIC 3
-#define TEST_ENTIRE_ON_LAND_PIC_PERMANENT_BLOCK 1
-#define TEST_ENTIRE_ON_LAND_PIC_NON_PERM_BLOCK 4
-#define TEST_ENTIRE_ON_LAND_PIC_SPECIAL 41
-#define TEST_ENTIRE_ON_WATER 17
-#define TEST_ON_WATER_AND_SPECIAL 17
-#define TEST_BLOCK_ON_END 17
-
-
-	PictureFile loadedPicture;
-	byte pNum = TEST_ENTIRE_ON_LAND_PIC;
-	ViewTable localViewTab;
-	boolean result;
-
-	b8SetupLineTables();
-
-	testCanBeHereFunction(TEST_ENTIRE_ON_LAND_PIC, 50, 50, 10, "test 1: non fixed priority entirely on land priority > 3\n", TRUE, FALSE, FALSE, 0, 7, 0);
-	testCanBeHereFunction(TEST_ENTIRE_ON_LAND_PIC_PERMANENT_BLOCK, 159, 167, 6, "test 2: hits permanent on first pixel\n", FALSE, FALSE, FALSE, 0, 7, 0);
-	testCanBeHereFunction(TEST_ENTIRE_ON_LAND_PIC_PERMANENT_BLOCK, 154, 167, 6, "test 3: hits permanent on non first pixel\n", FALSE, FALSE, FALSE, 0, 7, 0);
-	testCanBeHereFunction(TEST_ENTIRE_ON_LAND_PIC_NON_PERM_BLOCK, 0, 42, 6, "test 4: hits non perm block on first pixel\n", FALSE, FALSE, FALSE, 0, 7, 0);
-	testCanBeHereFunction(TEST_ENTIRE_ON_LAND_PIC_NON_PERM_BLOCK, 159, 41, 6, "test 5: hits non perm block non first pixel\n", FALSE, FALSE, FALSE, 0, 7, 0);
-	testCanBeHereFunction(TEST_ENTIRE_ON_LAND_PIC_SPECIAL, 98, 101, 6, "test 6: hits special on first pixel\n", TRUE, FALSE, TRUE, 0, 7, 0);
-	testCanBeHereFunction(TEST_ENTIRE_ON_LAND_PIC_SPECIAL, 91, 101, 6, "test 7: hits special on non first pixel\n", TRUE, FALSE, TRUE, 0, 7, 0);
-	testCanBeHereFunction(TEST_ENTIRE_ON_LAND_PIC_SPECIAL, 98, 101, 6, "test 8: hits control lines on first pixel\n", TRUE, FALSE, TRUE, 0, 7, 0);
-	testCanBeHereFunction(TEST_ENTIRE_ON_LAND_PIC_SPECIAL, 91, 101, 6, "test 9: hits control lines on non first pixel\n", TRUE, FALSE, TRUE, 0, 7, 0);
-	testCanBeHereFunction(TEST_ENTIRE_ON_WATER, 20, 160, 6, "test 10: entirely On Water\n", TRUE, TRUE, FALSE, 0, 7, 0);
-	testCanBeHereFunction(TEST_ENTIRE_ON_WATER, 49, 123, 6, "test 11: half On water, half on perm. block\n", FALSE, FALSE, FALSE, 0, 7, 0);
-	testCanBeHereFunction(TEST_ENTIRE_ON_WATER, 81, 160, 6, "test 12: half On Water, half on block\n", FALSE, FALSE, FALSE, 0, 7, 0);
-	testCanBeHereFunctionWithWaterSpecial(TEST_ON_WATER_AND_SPECIAL, 79, 160, 6, "test 13: on Water, half on special\n", TRUE, FALSE, TRUE, 0, 7);
-	testCanBeHereFunction(TEST_BLOCK_ON_END, 80, 160, 6, "test 14: block on end\n", FALSE, FALSE, FALSE, 0, 7, 0);
-	testCanBeHereFunction(TEST_ENTIRE_ON_LAND_PIC_NON_PERM_BLOCK, 0, 42, 6, "test 15: hits non perm block on first pixel, ignore blocks enabled\n", TRUE, FALSE, FALSE, IGNOREBLOCKS, 7, 0);
-	testCanBeHereFunction(TEST_ENTIRE_ON_LAND_PIC_NON_PERM_BLOCK, 159, 41, 6, "test 16: hits non perm block non first pixel, ignore blocks enabled\n", TRUE, FALSE, FALSE, IGNOREBLOCKS, 7, 0);
-
-	testCanBeHereFunction(TEST_ENTIRE_ON_LAND_PIC_PERMANENT_BLOCK, 159, 167, 6, "test 17: hits permanent on first pixel (15 priority ignore)\n", TRUE, FALSE, FALSE, FIXEDPRIORITY, 15, 0);
-	testCanBeHereFunction(TEST_ENTIRE_ON_LAND_PIC_PERMANENT_BLOCK, 154, 167, 6, "test 18: hits permanent on non first pixel (15 priority ignore)\n", TRUE, FALSE, FALSE, FIXEDPRIORITY, 15, 0);
-	testCanBeHereFunction(TEST_ENTIRE_ON_LAND_PIC_NON_PERM_BLOCK, 0, 42, 6, "test 19: hits non perm block on first pixel\n", TRUE, FALSE, FALSE, FIXEDPRIORITY, 15, 0);
-	testCanBeHereFunction(TEST_ENTIRE_ON_LAND_PIC_NON_PERM_BLOCK, 159, 41, 6, "test 20: hits non perm block non first pixel (15 priority ignore)\n", TRUE, FALSE, FALSE, FIXEDPRIORITY, 15, 0);
-
-
-	testCanBeHereFunction(TEST_ENTIRE_ON_LAND_PIC_SPECIAL, 98, 101, 6, "test 21: hits special on first pixel(15 priority ignore)\n", TRUE, FALSE, FALSE, FIXEDPRIORITY, 15, 0);
-	testCanBeHereFunction(TEST_ENTIRE_ON_LAND_PIC_SPECIAL, 91, 101, 6, "test 22: hits special on non first pixel(15 priority ignore)\n", TRUE, FALSE, FALSE, FIXEDPRIORITY, 15, 0);
-	testCanBeHereFunction(TEST_ENTIRE_ON_LAND_PIC_SPECIAL, 98, 101, 6, "test 23: hits control lines on first pixel(15 priority ignore)\n", TRUE, FALSE, FALSE, FIXEDPRIORITY, 15, 0);
-	testCanBeHereFunction(TEST_ENTIRE_ON_LAND_PIC_SPECIAL, 91, 101, 6, "test 24: hits control lines on non first pixel(15 priority ignore)\n", TRUE, FALSE, FALSE, FIXEDPRIORITY, 15, 0);
-	testCanBeHereFunction(TEST_ENTIRE_ON_WATER, 20, 160, 6, "test 25: entirely On Water(15 priority ignore)\n", TRUE, FALSE, FALSE, FIXEDPRIORITY, 15, 0);
-	testCanBeHereFunction(TEST_ENTIRE_ON_WATER, 49, 123, 6, "test 26: half On water, half on perm. block(15 priority ignore)\n", TRUE, FALSE, FALSE, FIXEDPRIORITY, 15, 0);
-	testCanBeHereFunction(TEST_ENTIRE_ON_WATER, 81, 160, 6, "test 27: half On Water, half on block(15 priority ignore)\n", TRUE, FALSE, FALSE, FIXEDPRIORITY, 15, 0);
-	testCanBeHereFunctionWithWaterSpecial(TEST_ON_WATER_AND_SPECIAL, 79, 160, 6, "test 28: on Water, half on special(15 priority ignore)\n", TRUE, FALSE, FALSE, FIXEDPRIORITY, 15);
-	testCanBeHereFunction(TEST_BLOCK_ON_END, 80, 160, 6, "test 29: block on end(15 priority ignore)\n", TRUE, FALSE, FALSE, FIXEDPRIORITY, 15, 0);
-
-	testCanBeHereFunction(TEST_ENTIRE_ON_WATER, 20, 160, 6, "test 30: when not ego water flag not set\n", TRUE, FALSE, FALSE, 0, 7, 1);
-
-	// Below base -> always backmost (4)
-
-	testPriorityCalc(20, 4, "priority test 1, backmost (y < base)\n", 0, 7);
-	testPriorityCalc(37, 4, "priority test 2, backmost (just below base)\n", 0, 7);
-
-	// At base
-	testPriorityCalc(38, 4, "priority test 3, base = 5\n", 0, 7);
-
-	// Step increments of 13
-	testPriorityCalc(51, 5, "priority test 4, step 1\n", 0, 7);
-	testPriorityCalc(64, 6, "priority test 5, step 2\n", 0, 7);
-	testPriorityCalc(77, 7, "priority test 6, step 3\n", 0, 7);
-	testPriorityCalc(90, 8, "priority test 7, step 4\n", 0, 7);
-	testPriorityCalc(103, 9, "priority test 8, step 5\n", 0, 7);
-	testPriorityCalc(116, 10, "priority test 9, step 6\n", 0, 7);
-	testPriorityCalc(129, 11, "priority test 10, step 7\n", 0, 7);
-	testPriorityCalc(142, 12, "priority test 11, step 8\n", 0, 7);
-	testPriorityCalc(155, 13, "priority test 12, step 9\n", 0, 7);
-
-	// Very end of the scale
-
-	testPriorityCalc(168, 15, "priority test 13, top of range\n", 0, 7);
-
-	testPriorityCalc(168, 7, "uses own priority when fixed\n", FIXEDPRIORITY, 7);
-}
-#endif
-
-
 #pragma bss-name (push, "BANKRAM09")
 ViewTable viewtab[VIEW_TABLE_SIZE];
 #pragma bss-name (pop)
@@ -1112,11 +354,11 @@ void bESetViewMetadata(View* localView, ViewTable* viewTable, byte viewNum, byte
 #endif
 
 	metadata.loopsVeraAddressesPointers = (VeraSpriteAddress**)b10BankedAlloc(totalAllocationSize, &metadata.viewTableMetadataBank);
-
-
+	
+	
 	metadata.veraAddresses = (VeraSpriteAddress*)(metadata.loopsVeraAddressesPointers + numberLoopVeraAddressPointers);
 
-	metadata.backBuffers = (VeraSpriteAddress*)((unsigned int)metadata.veraAddresses + numberVeraAddresses * sizeof(VeraSpriteAddress));
+	metadata.backBuffers = (VeraSpriteAddress*) ((unsigned int)metadata.veraAddresses + numberVeraAddresses * sizeof(VeraSpriteAddress));	
 	metadata.viewNum = viewNum;
 
 #ifdef VERBOSE_DEBUG_SET_METADATA
@@ -1512,7 +754,7 @@ boolean agiBlit(ViewTable* localViewTab, byte entryNum, boolean disableInterupts
 	byte isAnimated = FALSE;
 	SpriteAllocationSize allocationWidth, allocationHeight;
 	byte combinedSpriteAllocationSize;
-
+	
 	previousBank = RAM_BANK;
 	RAM_BANK = SPRITE_METADATA_BANK;
 
@@ -1657,12 +899,12 @@ animatedSprite:
 	}
 
 	combinedSpriteAllocationSize = allocationWidth + allocationHeight;
-
+	
 	RAM_BANK = localMetadata.viewTableMetadataBank;
 	_assmULong = localMetadata.backBuffers[0];
 
 	RAM_BANK = SPRITE_METADATA_BANK;
-
+	
 	if (localMetadata.backBufferSize != combinedSpriteAllocationSize)
 	{
 		_assmULong = NULL;
@@ -1688,7 +930,7 @@ initialise:
 		{
 			return FALSE;
 		}
-
+		
 		localMetadata.isOnBackBuffer = TRUE;
 		localMetadata.backBufferSize = combinedSpriteAllocationSize;
 
@@ -1968,7 +1210,7 @@ callCelToVera:
 	asm("sta %w + 1", CEL_ADDR);
 
 	_assmULong = loopVeraAddress;
-
+	
 	asm("lda %v", _assmULong);
 	asm("sta %w", VERA_ADDRESS);
 	asm("lda %v + 1", _assmULong);
@@ -2035,14 +1277,8 @@ endBlit:
 }
 
 #pragma code-name (push, "BANKRAM09")
-#pragma code-name (push, "BANKRAM0A")
-
-#pragma wrapped-call (push, trampoline, VIEW_CODE_BANK_1)
-extern boolean b9Collide(ViewTable* localViewtab, byte entryNum);
-extern boolean b9CanBeHere(ViewTable* localViewtab, byte entryNum);
-#pragma wrapped-call (pop)
-
-void bAResetViewtabs(boolean fullReset)
+#pragma code-name (push, "BANKRAM09")
+void b9ResetViewtabs(boolean fullReset)
 {
 	int entryNum;
 	byte i;
@@ -2086,7 +1322,7 @@ void bAResetViewtabs(boolean fullReset)
 	}
 }
 
-void bAResetSpriteMemory(boolean clearBuffer)
+void b9ResetSpriteMemory(boolean clearBuffer)
 {
 	if (clearBuffer)
 	{
@@ -2097,22 +1333,22 @@ void bAResetSpriteMemory(boolean clearBuffer)
 	bDResetSpriteMemoryManager();
 }
 
-void bAReset()
+void b9Reset()
 {
-	bAResetSpriteMemory(TRUE);
+	b9ResetSpriteMemory(TRUE);
 	bFInitPaletteManager();
-	
-	bAResetViewtabs(FALSE);
+	b9ResetViewtabs(FALSE);
 }
 
-void bAInitSpriteData()
+void b9InitSpriteData()
 {
 	byte i;
-	bAReset();
+
+	b9Reset();
 }
 
 
-void bAInitViews()
+void b9InitViews()
 {
 	int i, j;
 	View localView;
@@ -2129,29 +1365,13 @@ void bAInitViews()
 	}
 }
 
-void bAInitObjects()
+void b9InitObjects()
 {
-	byte i;
-
-#ifdef TEST_COLLIDE
-	testCollide();
-#endif // TEST_COLLIDE
-
-#ifdef TEST_GOOD_POSITION
-	testGoodPosition();
-#endif
-
-	b9PopulatePrecomputedPriorityTable();
-
-#ifdef TEST_CAN_BE_HERE
-	testCanBeHere();
-#endif
-
-	bAResetViewtabs(TRUE);
+	b9ResetViewtabs(TRUE);
 	memsetBanked(viewTableMetadata, NULL, sizeof(ViewTableMetadata) * SPRITE_SLOTS, SPRITE_METADATA_BANK);
 }
 
-void bAResetViews()     /* Called after new.room */
+void b9ResetViews()     /* Called after new.room */
 {
 	int entryNum;
 	ViewTable localViewtab;
@@ -2165,43 +1385,9 @@ void bAResetViews()     /* Called after new.room */
 		setViewTab(&localViewtab, entryNum);
 	}
 
-	bAReset();
+	b9Reset();
 }
 
-#pragma code-name (pop)
-
-
-void b9PopulatePrecomputedPriorityTable()
-{
-	int den;
-	int num;
-	int band;   // round-to-nearest; drop "+ den/2" for floor
-	int value;
-	int i;
-
-	fix32 numerator, denominator, divisionResult;
-
-	den = 168 - priorityBase;
-
-	for (i = 0; i < CHAR_MAX; i++)
-	{
-		if (i < priorityBase || den <= 0)
-		{
-			b9PreComputedPriority[i] = MIN_PRIORITY;
-		}
-		else
-		{
-
-
-			numerator = b12FpFromInt(i - priorityBase);
-			denominator = b12FpFromInt(PICTURE_HEIGHT - priorityBase) / b12FpFromInt(10);
-			divisionResult = numerator / denominator;
-			divisionResult += b12FpFromInt(5);
-
-			b9PreComputedPriority[i] = b12FloorFix32(divisionResult);
-		}
-	}
-}
 
 #define VIEW_HEADER_BUFFER_SIZE 501
 #define LOOP_HEADER_BUFFER_SIZE 501
@@ -2685,7 +1871,7 @@ void bACalcDirection(ViewTable* localViewtab)
 			case 3: b9SetLoop(localViewtab, 0); break;
 			case 4: b9SetLoop(localViewtab, 0); break;
 			case 5: break;
-			case 6: if (localViewtab->numberOfLoops > 1) b9SetLoop(localViewtab, 1); break;
+			case 6: if(localViewtab->numberOfLoops > 1) b9SetLoop(localViewtab, 1); break;
 			case 7: if (localViewtab->numberOfLoops > 1) b9SetLoop(localViewtab, 1); break;
 			case 8: if (localViewtab->numberOfLoops > 1) b9SetLoop(localViewtab, 1); break;
 			}
@@ -3074,7 +2260,7 @@ void bAAdjustPosition(ViewTable* viewTab, int fx, int fy, byte entryNum)
 
 void bAFollowEgo(ViewTable* localViewTab)
 {
-	byte ecx;
+	byte ecx; 
 	short ocx;
 	ViewTable egoViewTab;
 	View egoView, localView;
@@ -3104,7 +2290,6 @@ void bAFindPosition(int entryNum, ViewTable* viewTab)
 }
 
 #pragma wrapped-call (push, trampoline, FILL_BANK)
-extern byte b8GetPriority(byte X, byte Y);
 extern byte b8GetControl(byte X, byte Y);
 #pragma wrapped-called(pop)
 
@@ -3161,16 +2346,6 @@ void bANormalAdjust(int entryNum, ViewTable* viewTab, int dx, int dy)
 		}
 	}
 
-	if (b9Collide(viewtab, entryNum) || !b9CanBeHere(viewtab, entryNum))
-	{
-		//this.X = px;
-		//this.Y = py;
-		//border = 0;
-
-		//// Make sure that this position is OK
-		//FindPosition();
-	}
-
 	if (entryNum == 0) {
 		flag[3] = 0;
 		flag[0] = 0;
@@ -3216,12 +2391,12 @@ void bANormalAdjust(int entryNum, ViewTable* viewTab, int dx, int dy)
 				return;
 			}
 			else if (!(viewTab->flags & IGNOREBLOCKS) && priorityValue == 1) {
-
-				//		/*testVal = TRUE;
-				//b8GetControl(testX, tempY);*/
-				//		printf("we block at %d %d therefore we remain at %d %d", testX, tempY, viewTab->xPos, viewTab->yPos);
-				//		asm("stp");
-
+				
+		//		/*testVal = TRUE;
+		//b8GetControl(testX, tempY);*/
+		//		printf("we block at %d %d therefore we remain at %d %d", testX, tempY, viewTab->xPos, viewTab->yPos);
+		//		asm("stp");
+				
 				return;
 			}
 		}
@@ -3449,7 +2624,7 @@ void bBUpdateObjects()
 							else
 							{
 								blitFailed = TRUE;
-
+									
 								if (entryNum)
 								{
 									entryNum--;
@@ -3496,7 +2671,7 @@ void bBUpdateObjects()
 	show_mouse(NULL);
 	show_mouse(screen);
 }
-#pragma wrapped-call (pop)
+
 #pragma code-name (pop)
 #pragma code-name (push, "BANKRAM0C")
 
@@ -3653,16 +2828,13 @@ void bCCalcObjMotion()
 	word objFlags;
 	ViewTable localViewtab;
 	ViewTable localViewtab0;
-	View localView;
-	Loop localLoop;
-	Cel localCel;
 
 	getViewTab(&localViewtab0, 0);
 
 	for (entryNum = 0; entryNum < VIEW_TABLE_SIZE; entryNum++) {
 
 		getViewTab(&localViewtab, entryNum);
-
+		
 		if (localViewtab.staleCounter)
 		{
 			localViewtab.staleCounter--;
@@ -3700,7 +2872,7 @@ void bCCalcObjMotion()
 				case 1: /* wander */
 					oldX = localViewtab.xPos;
 					oldY = localViewtab.yPos;
-					bAWander(&localViewtab, entryNum);
+ 					bAWander(&localViewtab, entryNum);
 					switch (localViewtab.direction) {
 					case 0: break;
 					case 1:bANormalAdjust(entryNum, &localViewtab, 0, -1); break;
@@ -3751,11 +2923,6 @@ void bCCalcObjMotion()
 				}
 			}
 		} /* MOTION */
-
-
-		getLoadedView(&localView, entryNum);
-		getLoadedLoop(&localView, &localLoop, entryNum);
-		getLoadedCel(&localLoop, &localCel, entryNum);
 
 		/* Automatic change of direction if needed */
 		bACalcDirection(&localViewtab);

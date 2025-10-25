@@ -521,7 +521,7 @@ void b2Draw_pic() // 1, 0x80
 	//picFNum = pNum;  // Debugging. Delete at some stage!!!
 
 	b11DrawPic(loadedPicture.data, loadedPicture.size, TRUE, pNum);
-	bAResetSpriteMemory(TRUE);
+	b9ResetSpriteMemory(TRUE);
 
 	return;
 }
@@ -550,7 +550,7 @@ void b2Overlay_pic() // 1, 0x80
 	getLoadedPicture(&loadedPicture, pNum);
 
 	b11DrawPic(loadedPicture.data, loadedPicture.size, FALSE, pNum);
-	bAResetSpriteMemory(TRUE);
+	b9ResetSpriteMemory(TRUE);
 
 	return;
 }
@@ -628,10 +628,6 @@ void b2Unanimate_all() // 0, 0x00
 	return;
 }
 
-#pragma wrapped-call (push, trampoline, POSITION_HELPERS_BANK)
-extern void b9FindPosition(ViewTable* localViewTab, byte entryNum);
-#pragma wrapped-call (pop)
-
 void b2Draw() // 1, 0x00 
 {
 	int entryNum;
@@ -654,9 +650,7 @@ void b2Draw() // 1, 0x00
 
 	bADrawObject(&localViewtab);
 
-    b9FindPosition(&localViewtab, entryNum);
-
-	//bAFindPosition(entryNum, &localViewtab);
+	bAFindPosition(entryNum, &localViewtab);
 
 	setViewTab(&localViewtab, entryNum);
 	return;
@@ -2472,13 +2466,6 @@ void b5Div_v() // 2, 0xC0
 	var[loadAndIncWinCode()] /= var[loadAndIncWinCode()];
 	return;
 }
-
-void b5SetPriorityBase()
-{
-	priorityBase = loadAndIncWinCode();
-	b9PopulatePrecomputedPriorityTable();
-}
-
 #pragma code-name (pop)
 
 
