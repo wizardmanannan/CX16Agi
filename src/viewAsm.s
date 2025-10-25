@@ -12,11 +12,15 @@ VIEW_INC = 1
 .import _offsetOfStepTime
 .import _offsetOfStepSize
 .import _offsetOfRepositioned
+.import _offsetOfCurrentCel
 .import _viewtab
 .import _sizeOfViewTab
 .import _b9PreComputedPriority
 .import _horizon
 .import _controlMode
+.import _offsetOfNumberOfLoopsVT
+.import _offsetOfCurrentLoop
+.import _offsetOfNumberOfCelsVT
 
 VIEW_POS_LOCAL_VIEW_TAB = ZP_TMP_2
 VIEW_POS_ENTRY_NUM = ZP_TMP_3 + 1
@@ -32,6 +36,7 @@ VIEW_POS_COMPLETION_FLAG = ZP_TMP_9 + 1
 VIEW_POS_STEP_SIZE = ZP_TMP_10
 VIEW_POS_XPOS = ZP_TMP_10 + 1
 VIEW_POS_YPOS = ZP_TMP_12
+VIEW_POS_CEL_NUM = ZP_TMP_12 + 1
 
 
 ;Don't put anything in 25 used for x and y of canBeHere, or 21 - 24, used for local variables in update position
@@ -755,8 +760,7 @@ sta (VIEW_POS_LOCAL_VIEW_TAB),y
 
 stz BORDER
 
-ldy _offsetOfXPos
-lda (VIEW_POS_LOCAL_VIEW_TAB),y
+
 sta OX
 sta PX
 
@@ -960,5 +964,91 @@ sta (VIEW_POS_LOCAL_VIEW_TAB),y
 
 rts
 .endscope
+
+;void b9SetCel(ViewTable* localViewTab, byte entryNum, byte celNum) //WARNING NON CONVENTIONAL CALLING. It is expected that the arguments will already be loaded in zp by caller
+b9SetCel:
+lda VIEW_POS_CEL_NUM
+ldy _offsetOfCurrentCel
+sta (VIEW_POS_LOCAL_VIEW_TAB),y
+
+
+ldy _offsetOfCurrentLoop
+lda (VIEW_POS_LOCAL_VIEW_TAB),y
+ldy _offsetOfNumberOfLoopsVT
+cmp (VIEW_POS_LOCAL_VIEW_TAB),y
+bcs @return
+ldy _offsetOfCurrentCel
+lda (VIEW_POS_LOCAL_VIEW_TAB),y
+ldy _offsetOfNumberOfCelsVT
+cmp (VIEW_POS_LOCAL_VIEW_TAB),y
+bcs @return
+
+@borderCollision: 
+ldy _offsetOfXPos
+lda (VIEW_POS_LOCAL_VIEW_TAB),y
+clc
+ldy _offsetOfXSize
+adc (VIEW_POS_LOCAL_VIEW_TAB),y
+cmp #PICTURE_WIDTH + 64; Wrapped Negative check
+bcs @checkY
+cmp #PICTURE_WIDTH
+beq @checkY
+bcc @checkY
+
+@setRepositionedBasedOnX:
+ldy _offsetOfRepositioned
+lda #$1
+sta (VIEW_POS_LOCAL_VIEW_TAB),y
+@clampToMaxX:
+sec
+lda #PICTURE_WIDTH - 1
+ldy _offsetOfXSize
+sbc (VIEW_POS_LOCAL_VIEW_TAB),y
+ldy _offsetOfXPos
+sta (VIEW_POS_LOCAL_VIEW_TAB),y
+
+@checkY:
+sec
+ldy _offsetOfYPos
+lda (VIEW_POS_LOCAL_VIEW_TAB),y
+ldy _offsetOfYSize
+sbc (VIEW_POS_LOCAL_VIEW_TAB),y
+cmp #PICTURE_HEIGHT + 64 ;Wrapped Negative
+bcc @return
+
+
+@setRepositionedBasedOnY:
+ldy _offsetOfRepositioned
+lda #$1
+sta (VIEW_POS_LOCAL_VIEW_TAB),y
+
+clc
+lda #$FF
+ldy _offsetOfYSize
+adc (VIEW_POS_LOCAL_VIEW_TAB),y
+ldy _offsetOfYPos
+sta (VIEW_POS_LOCAL_VIEW_TAB),y
+
+@clampToMaxY:
+ldy _offsetOfYPos
+lda (VIEW_POS_LOCAL_VIEW_TAB),y
+cmp _horizon
+beq @checkIgnoreHorizon
+bcs @return
+
+@checkIgnoreHorizon:
+ldy _offsetOfFlags                   ; Y := offset of flags
+lda (VIEW_POS_LOCAL_VIEW_TAB),y      ; A := flags
+and #IGNOREHORIZON
+bne @return
+@clampToHorizon:
+lda _horizon
+inc
+ldy _offsetOfYPos
+sta (VIEW_POS_LOCAL_VIEW_TAB),y
+
+@return:
+rts
+
 .endif
 
