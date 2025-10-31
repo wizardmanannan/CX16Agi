@@ -46,6 +46,8 @@ byte offsetOfNumberOfLoopsVT = offsetof(struct ViewTable, numberOfLoops);
 byte offsetOfNumberOfCelsVT = offsetof(struct ViewTable, numberOfCels);
 byte offsetOfCycleTimeCount = offsetof(struct ViewTable, cycleTimeCount);
 byte offsetOfCycleTime = offsetof(struct ViewTable, cycleTime);
+byte offsetOfNoAdvance = offsetof(struct ViewTable, noAdvance);
+byte offsetOfCycleStatus = offsetof(struct ViewTable, cycleStatus);
 
 //View Metadata
 byte offsetOfloopsVeraAddressesPointers = offsetof(struct ViewTableMetadata, loopsVeraAddressesPointers);
