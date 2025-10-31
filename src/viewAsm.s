@@ -1,3 +1,5 @@
+.include "x16.inc"
+
 .ifndef  VIEW_INC
 VIEW_INC = 1
 
@@ -23,6 +25,8 @@ VIEW_INC = 1
 .import _offsetOfNumberOfCelsVT
 .import _offsetOfCycleTimeCount
 .import _offsetOfCycleTime
+.import _offsetOfNoAdvance
+.import _offsetOfCycleStatus
 
 VIEW_POS_LOCAL_VIEW_TAB = ZP_TMP_2
 VIEW_POS_ENTRY_NUM = ZP_TMP_3 + 1
@@ -41,6 +45,8 @@ VIEW_POS_YPOS = ZP_TMP_12
 VIEW_POS_CEL_NUM = ZP_TMP_12 + 1
 VIEW_POS_LOOP_NUM = ZP_TMP_13
 VIEW_POS_NEW_LOOP = ZP_TMP_13 + 1
+VIEW_POS_THE_CEL = ZP_TMP_14 
+VIEW_POS_LAST_CEL = ZP_TMP_14 + 1
 
 
 ;Don't put anything in 25 used for x and y of canBeHere, or 21 - 24, used for local variables in update position
@@ -1103,147 +1109,172 @@ sta (VIEW_POS_LOCAL_VIEW_TAB),y
 jsr b9SetCel
 rts
 
-; b9UpdateLoopAndCel
-; ------------------
-; Purpose: Updates the animation loop and cel (frame) of a view object based on its direction, 
-; number of loops, and timing conditions. Used in a game engine to manage sprite animations, 
-; ensuring correct animation sequences (e.g., walking left, right, or stopped) are displayed.
-; WARNING: Non-conventional calling. Assumes arguments are pre-loaded in zero page
-; Inputs: 
-;   - VIEW_POS_LOCAL_VIEW_TAB: Pointer to the view table containing object properties 
-;     (direction, number of loops, flags, step time count, cycle time count, current loop).
-;   - Y register: Used to index into the view table at specific offsets.
-; Outputs:
-;   - Updates VIEW_POS_NEW_LOOP with the new loop number based on direction.
-;   - Updates VIEW_POS_LOOP_NUM when a new loop is set.
-;   - Modifies cycle time count and advances cel in the view table when appropriate.
-;   - Calls b9SetLoop and b9AdvanceCel subroutines to apply changes.
-; Flow:
-;   1. Initializes new loop to Stopped state.
-;   2. Checks for fixed loop flag; skips loop selection if set.
-;   3. Determines number of loops (2, 3, or 4) and selects new loop from lookup tables (twoLoop or fourLoop).
-;   4. Updates loop if step time allows and new loop differs from current loop.
-;   5. If cycling, manages cycle time count and advances cel when count reaches zero.
-;   6. Resets cycle time and returns.
+; b9AdvanceCel
+; -------------
+; Purpose:
+;   Advance the sprite's cel (frame) according to CycleType:
+;     - Normal:        ++cel, wrap to 0 past last
+;     - EndLoop:       advance until last cel, then set flag + stop cycling
+;     - ReverseLoop:   decrement until 0, then set flag + stop cycling
+;     - Reverse:       --cel, wrap to last from 0
+;
+; Parity:
+;   This routine directly mirrors the AdvanceCel() logic from the C# version.
+;
+; Calling/Assumptions:
+;   - VIEW_POS_LOCAL_VIEW_TAB points to the per-view state table (zero-page pointer).
+;   - Offsets (_offsetOf*) index fields within that table via (VIEW_POS_LOCAL_VIEW_TAB),Y.
+;   - VIEW_POS_THE_CEL is a working register for the cel index.
+;   - VIEW_POS_LAST_CEL is used as a scratch register (NumberOfCels - 1).
+;
+; Inputs:
+;   - NoAdvance: non-zero → skip advance for this frame, then clear.
+;   - CurrentCel: current cel index.
+;   - NumberOfCels: total cel count.
+;   - CycleType: 0=Normal, 1=EndLoop, 2=ReverseLoop, 3=Reverse.
+;   - Flags: bitfield containing CYCLING.
+;   - Param1: flag index for EndLoop/ReverseLoop finish signaling.
+;
+; Outputs/Side Effects:
+;   - Advances cel per CycleType with wrap or stop behavior.
+;   - On EndLoop/ReverseLoop finish: sets state.Flags[Param1]=true,
+;     clears CYCLING bit, sets Direction=0 and CycleType=Normal.
+;   - Updates VIEW_POS_CEL_NUM and calls b9SetCel.
+;
 ; Notes:
-;   - Likely part of a game engine (e.g., Sierra's AGI system).
-;   - Skips a 'kq4 check' (possibly King's Quest IV-specific logic).
-;   - Assumes b9SetLoop and b9AdvanceCel subroutines handle low-level updates.
+;   - Requires constant CYCLING_INV = $FF ^ CYCLING (bitwise inverse mask).
+;   - 65C02-only (uses STZ, BRA). No TRB used because TRB doesn’t support (zp),Y.
 
-b9UpdateLoopAndCel:
+b9AdvanceCel:
 .scope
-    ; Constants for movement directions and states
-    S = 4  ; Stopped
-    R = 0  ; Right
-    L = 1  ; Left
-    F = 2  ; Forward
-    B = 3  ; Backward
+    bra @start                     ; skip over jump table
 
-    ; Define the twoLoop table
-    ; Maps direction to loop number for objects with 2 or 3 loops
-    twoLoop:
-        .byte S, S, R, R, R, S, L, L, L  ; Lookup table for loop selection
+; ------------------------------------------------------------------
+; Jump table: CycleType * 2 → handler address
+; 0 = Normal, 1 = EndLoop, 2 = ReverseLoop, 3 = Reverse
+; ------------------------------------------------------------------
+@b9AdvanceCelJmpTable:
+    .addr @normal
+    .addr @endLoop
+    .addr @reverseLoop
+    .addr @reverse
 
-    ; Define the fourLoop table
-    ; Maps direction to loop number for objects with 4 loops
-    fourLoop:
-        .byte S, B, R, R, R, F, L, L, L  ; Lookup table for loop selection
-
-    ; Initialize new loop to Stopped state
-    lda #S
-    sta VIEW_POS_NEW_LOOP
-
-@checkFixedLoop:
-    ; Check if the object has a fixed loop flag set
-    lda _offsetOfFlags + 1
-    lda (VIEW_POS_LOCAL_VIEW_TAB),y 
-    and #>FIXEDLOOP
-    bne @checkIfLoopShouldBeSet  ; Skip to loop setting if fixed loop is set
-
-@getNewLoopBasedOnDirection:
-    ; Get the number of loops for the current view
-    ldy _offsetOfNumberOfLoopsVT
-    lda (VIEW_POS_LOCAL_VIEW_TAB),y 
-
-@checkForTwoOrThreeLoops:
-    ; Check if the view has 2 loops
-    cmp #$2
-    beq @twoOrThreeLoop
-    ; Check if the view has 3 loops
-    cmp #$3
-    bne @checkForFourLoops
-@twoOrThreeLoop:
-    ; For 2 or 3 loops, get the direction and map to new loop using twoLoop table
-    ldy _offsetOfDirection
-    lda (VIEW_POS_LOCAL_VIEW_TAB),y 
-    lda twoLoop,y
-    sta VIEW_POS_NEW_LOOP
-    bra @checkIfLoopShouldBeSet
-
-@checkForFourLoops:
-    ; Check if the view has 4 loops
-    cmp #$4
-    bne @checkIfLoopShouldBeSet
-    ; For 4 loops, get the direction and map to new loop using fourLoop table
-    ldy _offsetOfDirection
-    lda (VIEW_POS_LOCAL_VIEW_TAB),y 
-    lda fourLoop,y
-    sta VIEW_POS_NEW_LOOP
-    ; Note: Skips kq4 check (commented as not implemented)
-
-@checkIfLoopShouldBeSet:
-    ; Check if step time count is 1 (time to update loop)
-    lda _offsetOfStepTimeCount
+; ------------------------------------------------------------------
+@start:
+    ; Early-out if NoAdvance is set this frame; also clear it for next frame.
+    ldy _offsetOfNoAdvance
     lda (VIEW_POS_LOCAL_VIEW_TAB),y
-    cmp #$1
-    bne @checkIfCelShouldBeAdvanced  ; Skip if not time to update
-    ; Check if new loop is Stopped
-    lda VIEW_POS_NEW_LOOP
-    cmp #S
-    beq @checkIfCelShouldBeAdvanced  ; Skip if new loop is Stopped
-    ; Compare current loop with new loop
-    lda _offsetOfCurrentLoop
+    beq @advanceCel                ; 0 = advance, non-zero = skip
+
+@setNoAdvanceAndReturn:
+    lda #$00
+    sta (VIEW_POS_LOCAL_VIEW_TAB),y
+    rts
+
+; ------------------------------------------------------------------
+@advanceCel:
+    ; theCel ← CurrentCel (into working register)
+    ldy _offsetOfCurrentCel
     lda (VIEW_POS_LOCAL_VIEW_TAB),y
-    cmp VIEW_POS_NEW_LOOP
-    beq @checkIfCelShouldBeAdvanced  ; Skip if they're the same
-    ; Update the loop number and call subroutine to set it
-    lda VIEW_POS_NEW_LOOP
-    sta VIEW_POS_LOOP_NUM
-    jsr b9SetLoop
+    sta VIEW_POS_THE_CEL
 
-@checkIfCelShouldBeAdvanced:
-    ; Check if the object is cycling (animation active)
-    lda _offsetOfFlags
-    lda (VIEW_POS_LOCAL_VIEW_TAB),y 
-    and #CYCLING
-    beq @return  ; Exit if not cycling
+    ; lastCel ← NumberOfCels - 1 (scratch)
+    ldy _offsetOfNumberOfCelsVT
+    lda (VIEW_POS_LOCAL_VIEW_TAB),y
+    dec A
+    sta VIEW_POS_LAST_CEL
 
-@callAdvanceCel:
-    ; Check cycle time count
-    lda _offsetOfCycleTimeCount
-    lda (VIEW_POS_LOCAL_VIEW_TAB),y 
-    beq @return  ; Exit if cycle time is zero
-    ; Decrease cycle time count
-    dec
-    sta (VIEW_POS_LOCAL_VIEW_TAB),y 
-    bne @return  ; Exit if cycle time count is not zero
-    ; Advance to next cel (animation frame)
-    jsr b9AdvanceCel
+    ; Dispatch to handler by CycleType
+    ldy _offsetOfCycleStatus
+    lda (VIEW_POS_LOCAL_VIEW_TAB),y
+    asl A                          ; multiply by 2 for 16-bit table
+    tay
+    lda @b9AdvanceCelJmpTable,y
+    sta sreg
+    lda @b9AdvanceCelJmpTable+1,y
+    sta sreg+1
+    jmp (sreg)
 
-    ; Reset cycle time count to initial cycle time
-    lda _offsetOfCycleTime
-    lda (VIEW_POS_LOCAL_VIEW_TAB),y 
-    ldy _offsetOfCycleTimeCount
-    sta (VIEW_POS_LOCAL_VIEW_TAB),y 
+; ------------------------------------------------------------------
+@normal:
+    ; Normal: ++cel, wrap to 0 if > lastCel
+    lda VIEW_POS_THE_CEL
+    inc A
+    cmp VIEW_POS_LAST_CEL          ; sets carry if >= lastCel
+    sta VIEW_POS_THE_CEL           ; store incremented value
+    beq @setCel                    ; if == lastCel → stop increment
+    bcc @setCel                    ; if < lastCel → keep value
+    stz VIEW_POS_THE_CEL           ; if > lastCel → wrap to 0
+    bra @setCel
 
+; ------------------------------------------------------------------
+@endLoop:
+    ; EndLoop: advance until lastCel, then finish (set flag, stop cycling)
+    lda VIEW_POS_THE_CEL
+    cmp VIEW_POS_LAST_CEL
+    bcs @endLoopAction             ; already at/past last → finish
+
+    lda VIEW_POS_THE_CEL
+    inc A
+    cmp VIEW_POS_LAST_CEL
+    sta VIEW_POS_THE_CEL
+    bne @setCel                    ; not yet last → continue
+
+@endLoopAction:
+    ; state.Flags[Param1] = true
+    ldy _offsetOfParam1
+    lda (VIEW_POS_LOCAL_VIEW_TAB),y
+    SET_FLAG_NON_INTERPRETER sreg
+
+    ; Cycle=false → clear CYCLING bit in Flags
+    ldy _offsetOfFlags
+    lda (VIEW_POS_LOCAL_VIEW_TAB),y
+    and CYCLING ^ $FF
+    sta (VIEW_POS_LOCAL_VIEW_TAB),y
+
+    ; Direction = 0
+    ldy _offsetOfDirection
+    lda #$00
+    sta (VIEW_POS_LOCAL_VIEW_TAB),y
+
+    ; CycleType = Normal
+    ldy _offsetOfCycleStatus
+    lda #MOTION_NORMAL
+    sta (VIEW_POS_LOCAL_VIEW_TAB),y
+    bra @setCel
+
+; ------------------------------------------------------------------
+@reverseLoop:
+    ; ReverseLoop: decrement until 0, then finish (set flag, stop cycling)
+    lda VIEW_POS_THE_CEL
+    beq @endLoopAction             ; already 0 → finish
+    dec                            ; decrement accumulator
+    sta VIEW_POS_THE_CEL
+    bne @setCel                    ; not yet 0 → continue
+    bra @endLoopAction             ; now 0 → finish
+
+; ------------------------------------------------------------------
+@reverse:
+    ; Reverse: --cel, wrap from 0 → lastCel
+    lda VIEW_POS_THE_CEL
+    beq @setCelToLastCel           ; if 0 → wrap
+@minusCel:
+    dec VIEW_POS_THE_CEL           ; else decrement
+    bra @setCel
+@setCelToLastCel:
+    lda VIEW_POS_LAST_CEL
+    sta VIEW_POS_THE_CEL           ; wrap to last
+
+; ------------------------------------------------------------------
+@setCel:
+    ; Apply: write cel and call setter
+    lda VIEW_POS_THE_CEL
+    sta VIEW_POS_CEL_NUM
+    jsr b9SetCel
 @return:
-    ; Return from subroutine
     rts
 .endscope
 
-b9AdvanceCel:
-
-rts
 
 .endif
 
