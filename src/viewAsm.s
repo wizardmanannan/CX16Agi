@@ -45,8 +45,11 @@ VIEW_POS_YPOS = ZP_TMP_12
 VIEW_POS_CEL_NUM = ZP_TMP_12 + 1
 VIEW_POS_LOOP_NUM = ZP_TMP_13
 VIEW_POS_NEW_LOOP = ZP_TMP_13 + 1
-VIEW_POS_THE_CEL = ZP_TMP_14 
-VIEW_POS_LAST_CEL = ZP_TMP_14 + 1
+VIEW_POS_THE_CEL = ZP_TMP_14 + 1
+VIEW_POS_LAST_CEL = ZP_TMP_16
+VIEW_POS_ANIMATED_OBJECTS_COUNTER = ZP_TMP_16 + 1
+
+
 
 
 ;Don't put anything in 25 used for x and y of canBeHere, or 21 - 24, used for local variables in update position
@@ -1109,6 +1112,148 @@ sta (VIEW_POS_LOCAL_VIEW_TAB),y
 jsr b9SetCel
 rts
 
+
+; b9UpdateLoopAndCel
+; ------------------
+; Purpose: Updates the animation loop and cel (frame) of a view object based on its direction,
+; number of loops, and timing conditions. Used in a game engine to manage sprite animations,
+; ensuring correct animation sequences (e.g., walking left, right, or stopped) are displayed.
+; WARNING: Non-conventional calling. Assumes arguments are pre-loaded in zero page
+; Inputs:
+;   - VIEW_POS_LOCAL_VIEW_TAB: Pointer to the view table containing object properties
+;     (direction, number of loops, flags, step time count, cycle time count, current loop).
+;   - Y register: Used to index into the view table at specific offsets.
+; Outputs:
+;   - Updates VIEW_POS_NEW_LOOP with the new loop number based on direction.
+;   - Updates VIEW_POS_LOOP_NUM when a new loop is set.
+;   - Modifies cycle time count and advances cel in the view table when appropriate.
+;   - Calls b9SetLoop and b9AdvanceCel subroutines to apply changes.
+; Flow:
+;   1. Initializes new loop to Stopped state.
+;   2. Checks for fixed loop flag; skips loop selection if set.
+;   3. Determines number of loops (2, 3, or 4) and selects new loop from lookup tables (twoLoop or fourLoop).
+;   4. Updates loop if step time allows and new loop differs from current loop.
+;   5. If cycling, manages cycle time count and advances cel when count reaches zero.
+;   6. Resets cycle time and returns.
+; Notes:
+;   - Likely part of a game engine (e.g., Sierra's AGI system).
+;   - Skips a 'kq4 check' (possibly King's Quest IV-specific logic).
+;   - Assumes b9SetLoop and b9AdvanceCel subroutines handle low-level updates.
+
+b9UpdateLoopAndCel:
+.scope
+    ; Constants for movement directions and states
+    S = 4  ; Stopped
+    R = 0  ; Right
+    L = 1  ; Left
+    F = 2  ; Forward
+    B = 3  ; Backward
+
+
+    ; Define the twoLoop table
+    ; Maps direction to loop number for objects with 2 or 3 loops
+    twoLoop:
+        .byte S, S, R, R, R, S, L, L, L  ; Lookup table for loop selection
+
+    ; Define the fourLoop table
+    ; Maps direction to loop number for objects with 4 loops
+    fourLoop:
+        .byte S, B, R, R, R, F, L, L, L  ; Lookup table for loop selection
+
+    ; Initialize new loop to Stopped state
+    lda #S
+    sta VIEW_POS_NEW_LOOP
+
+stp
+
+@checkFixedLoop:
+    ; Check if the object has a fixed loop flag set
+    lda _offsetOfFlags + 1
+    lda (VIEW_POS_LOCAL_VIEW_TAB),y
+    and #>FIXEDLOOP
+    bne @checkIfLoopShouldBeSet  ; Skip to loop setting if fixed loop is set
+
+@getNewLoopBasedOnDirection:
+    ; Get the number of loops for the current view
+    ldy _offsetOfNumberOfLoopsVT
+    lda (VIEW_POS_LOCAL_VIEW_TAB),y
+
+@checkForTwoOrThreeLoops:
+    ; Check if the view has 2 loops
+    cmp #$2
+    beq @twoOrThreeLoop
+    ; Check if the view has 3 loops
+    cmp #$3
+    bne @checkForFourLoops
+@twoOrThreeLoop:
+    ; For 2 or 3 loops, get the direction and map to new loop using twoLoop table
+    ldy _offsetOfDirection
+    lda (VIEW_POS_LOCAL_VIEW_TAB),y
+    lda twoLoop,y
+    sta VIEW_POS_NEW_LOOP
+    bra @checkIfLoopShouldBeSet
+
+@checkForFourLoops:
+    ; Check if the view has 4 loops
+    cmp #$4
+    bne @checkIfLoopShouldBeSet
+    ; For 4 loops, get the direction and map to new loop using fourLoop table
+    ldy _offsetOfDirection
+    lda (VIEW_POS_LOCAL_VIEW_TAB),y
+    lda fourLoop,y
+    sta VIEW_POS_NEW_LOOP
+    ; Note: Skips kq4 check (commented as not implemented)
+
+@checkIfLoopShouldBeSet:
+    ; Check if step time count is 1 (time to update loop)
+    lda _offsetOfStepTimeCount
+    lda (VIEW_POS_LOCAL_VIEW_TAB),y
+    cmp #$1
+    bne @checkIfCelShouldBeAdvanced  ; Skip if not time to update
+    ; Check if new loop is Stopped
+    lda VIEW_POS_NEW_LOOP
+    cmp #S
+    beq @checkIfCelShouldBeAdvanced  ; Skip if new loop is Stopped
+    ; Compare current loop with new loop
+    lda _offsetOfCurrentLoop
+    lda (VIEW_POS_LOCAL_VIEW_TAB),y
+    cmp VIEW_POS_NEW_LOOP
+    beq @checkIfCelShouldBeAdvanced  ; Skip if they're the same
+    ; Update the loop number and call subroutine to set it
+    lda VIEW_POS_NEW_LOOP
+    sta VIEW_POS_LOOP_NUM
+    jsr b9SetLoop
+
+@checkIfCelShouldBeAdvanced:
+    ; Check if the object is cycling (animation active)
+    lda _offsetOfFlags
+    lda (VIEW_POS_LOCAL_VIEW_TAB),y
+    and #CYCLING
+    beq @return  ; Exit if not cycling
+
+@callAdvanceCel:
+    ; Check cycle time count
+    lda _offsetOfCycleTimeCount
+    lda (VIEW_POS_LOCAL_VIEW_TAB),y
+    beq @return  ; Exit if cycle time is zero
+    ; Decrease cycle time count
+    dec
+    sta (VIEW_POS_LOCAL_VIEW_TAB),y
+    bne @return  ; Exit if cycle time count is not zero
+    ; Advance to next cel (animation frame)
+    jsr b9AdvanceCel
+
+    ; Reset cycle time count to initial cycle time
+    lda _offsetOfCycleTime
+    lda (VIEW_POS_LOCAL_VIEW_TAB),y
+    ldy _offsetOfCycleTimeCount
+    sta (VIEW_POS_LOCAL_VIEW_TAB),y
+
+@return:
+    ; Return from subroutine
+    rts
+.endscope
+
 ; b9AdvanceCel
 ; -------------
 ; Purpose:
@@ -1275,6 +1420,154 @@ b9AdvanceCel:
     rts
 .endscope
 
+; _b9AnimateObjects
+; ----------------
+; Purpose:
+;   Implements the two–pass object-update pipeline for all animated views.
+;   Pass 1 calls b9UpdateLoopAndCel for each active object.
+;   Pass 2 calls b9UpdatePositionAsm for each active object.
+;
+; Parity:
+;   Mirrors the C# AnimateObjects() method:
+;       1. For each AnimatedObject → UpdateLoopAndCel()
+;       2. Reset EGOEDGE / OBJHIT / OBJEDGE
+;       3. For each AnimatedObject → UpdatePosition()
+;       4. Clear Ego’s “StayOnLand/StayOnWater” flags
+;   The per-entry guard `(ANIMATED | UPDATE | DRAWN)` is identical to
+;   the C# caller-side guard; both passes use the same condition.
+;
+; Calling/Assumptions:
+;   - _viewtab points to the start of the 256-entry view table.
+;   - VIEW_POS_LOCAL_VIEW_TAB is a zero-page pointer into that table.
+;   - Each entry has fixed stride `_sizeOfViewTab`.
+;   - _offsetOfFlags gives the offset of the flag byte within an entry.
+;   - loopMethodToCall is patched with the target subroutine for the pass.
+;   - 256 entries exactly; X rolls 0→255→0 as in AGI.
+;
+; Inputs:
+;   - Global view table (_viewtab) containing per-object state.
+;   - Each object’s flag bits determine inclusion in the update.
+;
+; Outputs/Side Effects:
+;   - Updates loops/cels and then positions for all active objects.
+;   - Clears per-frame EGOEDGE / OBJHIT / OBJEDGE variables.
+;   - Clears Ego’s ONLAND/ONWATER constraint bits.
+;
+; Notes:
+;   - Both passes share b9LoopThroughAnimatedObjects for iteration.
+;   - STZ clears VIEW_POS_NEW_LOOP only in Pass 1 to match C#.
+;   - Self-modifying JSR operands (loopMethodToCall) must reside in RAM.
+; ---------------------------------------------------------------------
+
+_b9AnimateObjects:
+.scope
+    ; Point shared loop at b9UpdateLoopAndCel
+    lda #<b9UpdateLoopAndCel
+    sta loopMethodToCall + 1
+    lda #>b9UpdateLoopAndCel
+    sta loopMethodToCall + 2
+    jsr b9LoopThroughAnimatedObjects
+
+@resetEgoEdgeValues:
+    ; Reset per-frame variables (EGOEDGE, OBJHIT, OBJEDGE)
+    ldx #$0
+    lda EGOEDGE
+    SET_VAR_NON_INTERPRETER sreg
+    ldx #$0
+    lda OBJHIT
+    SET_VAR_NON_INTERPRETER sreg
+    ldx #$0
+    lda OBJEDGE
+    SET_VAR_NON_INTERPRETER sreg
+
+    ; --- Pass 2: Update position ---
+    lda #<b9UpdatePositionAsm
+    sta loopMethodToCall + 1
+    lda #>b9UpdatePositionAsm
+    sta loopMethodToCall + 2
+    jsr b9LoopThroughAnimatedObjects
+
+    ; --- Final: clear Ego land/water bits (StayOnLand/StayOnWater) ---
+    lda _viewtab
+    sta VIEW_POS_LOCAL_VIEW_TAB
+    lda _viewtab + 1
+    sta VIEW_POS_LOCAL_VIEW_TAB + 1
+    ; If Ego is not the first entry, advance pointer by EgoIndex * _sizeOfViewTab
+
+    lda #(>ONLAND | >ONWATER) ^ $FF     ; Invert mask for clear
+    ldy _offsetOfFlags + 1              ; High-byte flags
+    and (VIEW_POS_LOCAL_VIEW_TAB),y
+    sta (VIEW_POS_LOCAL_VIEW_TAB),y
+    rts
+
+; b9LoopThroughAnimatedObjects
+; -----------------------------
+; Purpose:
+;   Iterate the 256-entry view table and invoke the method currently
+;   patched into loopMethodToCall for each object whose flags include
+;   ANIMATED | UPDATE | DRAWN.
+;
+; Parity:
+;   Matches the two foreach-loops in C# AnimateObjects().
+;
+; Calling/Assumptions:
+;   - loopMethodToCall contains address of routine to invoke.
+;   - VIEW_POS_LOCAL_VIEW_TAB points into view table.
+;   - _sizeOfViewTab is entry stride.
+;
+; Inputs:
+;   - _viewtab, _offsetOfFlags, loopMethodToCall.
+;
+; Outputs/Side Effects:
+;   - Calls the target routine for each qualifying object.
+;   - Uses VIEW_POS_ENTRY_NUM as temporary to preserve X across call.
+; -------------------------------------------------------------------
+
+b9LoopThroughAnimatedObjects:
+    ; Initialize table pointer
+    lda #<_viewtab
+    sta VIEW_POS_LOCAL_VIEW_TAB
+    lda #>_viewtab
+    sta VIEW_POS_LOCAL_VIEW_TAB + 1
+
+    ldx #$0
+animatedObjectsLoop:
+    ; Test for ANIMATED|UPDATE|DRAWN
+    lda #ANIMATED | UPDATE | DRAWN
+    ldy _offsetOfFlags
+    and (VIEW_POS_LOCAL_VIEW_TAB),y
+    cmp #ANIMATED | UPDATE | DRAWN
+    bne calculateNextAddress
+
+updateLoopAndCel:
+    ; Prepare entry index
+    stx VIEW_POS_ENTRY_NUM
+
+    ; Clear VIEW_POS_NEW_LOOP (harmless in Pass 2; C# parity OK)
+    stz VIEW_POS_NEW_LOOP
+
+loopMethodToCall:
+    jsr b9UpdateLoopAndCel              ; Patched per pass
+
+    ; Restore X from saved entry index
+    ldx VIEW_POS_ENTRY_NUM
+
+calculateNextAddress:
+    ; Advance pointer to next entry
+    clc
+    lda _sizeOfViewTab
+    adc VIEW_POS_LOCAL_VIEW_TAB
+    sta VIEW_POS_LOCAL_VIEW_TAB
+    lda #$0
+    adc VIEW_POS_LOCAL_VIEW_TAB + 1
+    sta VIEW_POS_LOCAL_VIEW_TAB + 1
+    inx
+
+    cpx #VIEW_TABLE_SIZE
+    bne animatedObjectsLoop
+
+    rts
+.endscope
 
 .endif
 
