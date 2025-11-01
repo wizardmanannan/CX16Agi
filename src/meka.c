@@ -151,6 +151,12 @@ void b6UpdateStatusLine()
     //    rectfill(screen, 0, 0, 639, 15, 0);   /* Clear status line */
     //}
 }
+
+
+#pragma wrapped-call (push, trampoline, VIEW_CODE_BANK_1)
+extern void b9AnimateObjects();     
+#pragma wrapped-call (pop)
+
 /***************************************************************************
 ** interpret
 **
@@ -159,6 +165,7 @@ void b6UpdateStatusLine()
 ***************************************************************************/
 void b6Interpret()
 {
+    int i;
     ViewTable localViewtab;
     LOGICFile logicFile;
     LOGICEntry logicEntry;
@@ -195,11 +202,9 @@ void b6Interpret()
         flag[5] = 0;
         flag[6] = FALSE;
         flag[12] = FALSE;
-        if (!hasEnteredNewRoom) {
-            bBUpdateObjects();
-        }
 
-        bCCalcObjMotion();
+
+        b9AnimateObjects();
 
         if (hasEnteredNewRoom) b6NewRoom();
 
