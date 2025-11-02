@@ -1308,6 +1308,7 @@ b9AdvanceCel:
 ; ------------------------------------------------------------------
 @start:
     ; Early-out if NoAdvance is set this frame; also clear it for next frame.
+    
     ldy _offsetOfNoAdvance
     lda (VIEW_POS_LOCAL_VIEW_TAB),y
     beq @advanceCel                ; 0 = advance, non-zero = skip
@@ -1320,6 +1321,7 @@ b9AdvanceCel:
 ; ------------------------------------------------------------------
 @advanceCel:
     ; theCel ← CurrentCel (into working register)
+
     ldy _offsetOfCurrentCel
     lda (VIEW_POS_LOCAL_VIEW_TAB),y
     sta VIEW_POS_THE_CEL
@@ -1375,7 +1377,8 @@ b9AdvanceCel:
     ; Cycle=false → clear CYCLING bit in Flags
     ldy _offsetOfFlags
     lda (VIEW_POS_LOCAL_VIEW_TAB),y
-    and CYCLING ^ $FF
+
+    and #CYCLING ^ $FF
     sta (VIEW_POS_LOCAL_VIEW_TAB),y
 
     ; Direction = 0
