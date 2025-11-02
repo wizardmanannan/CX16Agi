@@ -748,7 +748,6 @@ PY = ZP_TMP_23
 OD = ZP_TMP_24 
 OS = ZP_TMP_24 + 1
 
-
 sta VIEW_POS_ENTRY_NUM
 jsr popax
 sta VIEW_POS_LOCAL_VIEW_TAB
@@ -1150,28 +1149,28 @@ b9UpdateLoopAndCel:
     B = 3  ; Backward
 
 
+bra @start
     ; Define the twoLoop table
     ; Maps direction to loop number for objects with 2 or 3 loops
-    twoLoop:
-        .byte S, S, R, R, R, S, L, L, L  ; Lookup table for loop selection
+@twoLoop:
+       .byte S, S, R, R, R, S, L, L, L  ; Lookup table for loop selection
 
     ; Define the fourLoop table
     ; Maps direction to loop number for objects with 4 loops
-    fourLoop:
+@fourLoop:
         .byte S, B, R, R, R, F, L, L, L  ; Lookup table for loop selection
 
     ; Initialize new loop to Stopped state
+@start:
     lda #S
     sta VIEW_POS_NEW_LOOP
 
-stp
-
 @checkFixedLoop:
     ; Check if the object has a fixed loop flag set
-    lda _offsetOfFlags + 1
+    ldy _offsetOfFlags + 1
     lda (VIEW_POS_LOCAL_VIEW_TAB),y
     and #>FIXEDLOOP
-    bne @checkIfLoopShouldBeSet  ; Skip to loop setting if fixed loop is set
+    beq @checkIfLoopShouldBeSet  ; Skip to loop setting if fixed loop is set
 
 @getNewLoopBasedOnDirection:
     ; Get the number of loops for the current view
@@ -1189,7 +1188,7 @@ stp
     ; For 2 or 3 loops, get the direction and map to new loop using twoLoop table
     ldy _offsetOfDirection
     lda (VIEW_POS_LOCAL_VIEW_TAB),y
-    lda twoLoop,y
+    lda @twoLoop,y
     sta VIEW_POS_NEW_LOOP
     bra @checkIfLoopShouldBeSet
 
@@ -1200,13 +1199,14 @@ stp
     ; For 4 loops, get the direction and map to new loop using fourLoop table
     ldy _offsetOfDirection
     lda (VIEW_POS_LOCAL_VIEW_TAB),y
-    lda fourLoop,y
+    tay
+    lda @fourLoop,y
     sta VIEW_POS_NEW_LOOP
     ; Note: Skips kq4 check (commented as not implemented)
 
-@checkIfLoopShouldBeSet:
+@checkIfLoopShouldBeSet:  
     ; Check if step time count is 1 (time to update loop)
-    lda _offsetOfStepTimeCount
+    ldy _offsetOfStepTimeCount
     lda (VIEW_POS_LOCAL_VIEW_TAB),y
     cmp #$1
     bne @checkIfCelShouldBeAdvanced  ; Skip if not time to update
@@ -1215,7 +1215,7 @@ stp
     cmp #S
     beq @checkIfCelShouldBeAdvanced  ; Skip if new loop is Stopped
     ; Compare current loop with new loop
-    lda _offsetOfCurrentLoop
+    ldy _offsetOfCurrentLoop
     lda (VIEW_POS_LOCAL_VIEW_TAB),y
     cmp VIEW_POS_NEW_LOOP
     beq @checkIfCelShouldBeAdvanced  ; Skip if they're the same
@@ -1226,16 +1226,17 @@ stp
 
 @checkIfCelShouldBeAdvanced:
     ; Check if the object is cycling (animation active)
-    lda _offsetOfFlags
+    ldy _offsetOfFlags
     lda (VIEW_POS_LOCAL_VIEW_TAB),y
     and #CYCLING
     beq @return  ; Exit if not cycling
-
-@callAdvanceCel:
+ 
     ; Check cycle time count
-    lda _offsetOfCycleTimeCount
+    ldy _offsetOfCycleTimeCount
     lda (VIEW_POS_LOCAL_VIEW_TAB),y
     beq @return  ; Exit if cycle time is zero
+    
+    @callAdvanceCel:
     ; Decrease cycle time count
     dec
     sta (VIEW_POS_LOCAL_VIEW_TAB),y
@@ -1244,7 +1245,7 @@ stp
     jsr b9AdvanceCel
 
     ; Reset cycle time count to initial cycle time
-    lda _offsetOfCycleTime
+    ldy _offsetOfCycleTime
     lda (VIEW_POS_LOCAL_VIEW_TAB),y
     ldy _offsetOfCycleTimeCount
     sta (VIEW_POS_LOCAL_VIEW_TAB),y
@@ -1466,31 +1467,32 @@ _b9AnimateObjects:
     sta loopMethodToCall + 1
     lda #>b9UpdateLoopAndCel
     sta loopMethodToCall + 2
+    
     jsr b9LoopThroughAnimatedObjects
 
 @resetEgoEdgeValues:
     ; Reset per-frame variables (EGOEDGE, OBJHIT, OBJEDGE)
     ldx #$0
-    lda EGOEDGE
+    lda #EGOEDGE
     SET_VAR_NON_INTERPRETER sreg
     ldx #$0
-    lda OBJHIT
+    lda #OBJHIT
     SET_VAR_NON_INTERPRETER sreg
     ldx #$0
-    lda OBJEDGE
+    lda #OBJEDGE
     SET_VAR_NON_INTERPRETER sreg
 
     ; --- Pass 2: Update position ---
-    lda #<b9UpdatePositionAsm
-    sta loopMethodToCall + 1
-    lda #>b9UpdatePositionAsm
-    sta loopMethodToCall + 2
+    ; lda #<b9UpdatePositionAsm
+    ; sta loopMethodToCall + 1
+    ; lda #>b9UpdatePositionAsm
+    ; sta loopMethodToCall + 2
     jsr b9LoopThroughAnimatedObjects
 
     ; --- Final: clear Ego land/water bits (StayOnLand/StayOnWater) ---
-    lda _viewtab
+    lda #<_viewtab
     sta VIEW_POS_LOCAL_VIEW_TAB
-    lda _viewtab + 1
+    lda #>_viewtab
     sta VIEW_POS_LOCAL_VIEW_TAB + 1
     ; If Ego is not the first entry, advance pointer by EgoIndex * _sizeOfViewTab
 
@@ -1531,6 +1533,7 @@ b9LoopThroughAnimatedObjects:
     sta VIEW_POS_LOCAL_VIEW_TAB + 1
 
     ldx #$0
+
 animatedObjectsLoop:
     ; Test for ANIMATED|UPDATE|DRAWN
     lda #ANIMATED | UPDATE | DRAWN

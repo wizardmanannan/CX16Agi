@@ -106,3 +106,4 @@
     .export _b8SetupLineTables
     .export _b9FindPosition
     .export _b9UpdatePosition
+    .export _b9AnimateObjects
