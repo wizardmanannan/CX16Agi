@@ -737,6 +737,10 @@ jsr popax
 sta VIEW_POS_LOCAL_VIEW_TAB         ; pointer low byte
 stx VIEW_POS_LOCAL_VIEW_TAB + 1     ; pointer high byte
 
+sta VIEW_POS_ENTRY_NUM
+jsr popax
+sta VIEW_POS_LOCAL_VIEW_TAB
+stx VIEW_POS_LOCAL_VIEW_TAB + 1
 
 b9UpdatePositionAsm:
 .scope
@@ -747,11 +751,6 @@ OY = ZP_TMP_22 + 1
 PY = ZP_TMP_23
 OD = ZP_TMP_24 
 OS = ZP_TMP_24 + 1
-
-sta VIEW_POS_ENTRY_NUM
-jsr popax
-sta VIEW_POS_LOCAL_VIEW_TAB
-stx VIEW_POS_LOCAL_VIEW_TAB + 1
 
 ldy _offsetOfStepTimeCount
 lda (VIEW_POS_LOCAL_VIEW_TAB),y
@@ -772,7 +771,8 @@ sta (VIEW_POS_LOCAL_VIEW_TAB),y
 
 stz BORDER
 
-
+ldy _offsetOfXPos
+lda (VIEW_POS_LOCAL_VIEW_TAB),y
 sta OX
 sta PX
 
@@ -780,8 +780,11 @@ ldy _offsetOfYPos
 lda (VIEW_POS_LOCAL_VIEW_TAB),y
 sta OY
 sta PY
-tax ;Used in stepOperatorLocationY careful about using X
 
+stz OD
+stz OS
+
+stp
 ldy _offsetOfRepositioned
 lda (VIEW_POS_LOCAL_VIEW_TAB),y
 bne @checkBorders
@@ -792,6 +795,7 @@ sta OS
 
 ldy _offsetOfDirection
 lda (VIEW_POS_LOCAL_VIEW_TAB),y
+sta OD
 tax
 
 @determineMovementX:
@@ -1024,7 +1028,7 @@ b9SetCel:
 @clampToMaxX:
     ; Clamp XPos to PICTURE_WIDTH - 1 - XSize
     sec                             ; Set carry for subtraction
-    lda #PICTURE_WIDTH - 1         ; A = PICTURE_WIDTH - 1 (equivalent to Defines.MAXX)
+    lda #PICTURE_WIDTH         ; A = PICTURE_WIDTH - 1 (equivalent to Defines.MAXX)
     ldy _offsetOfXSize              ; Y = offset of XSize
     sbc (VIEW_POS_LOCAL_VIEW_TAB),y ; A = PICTURE_WIDTH - 1 - XSize
     ldy _offsetOfXPos               ; Y = offset of XPos
@@ -1079,8 +1083,17 @@ b9SetCel:
 @return:
     rts                             ; Return from subroutine
 
-b9SetLoop:
-; void b9SetLoop(ViewTable* localViewTab, byte entryNum, byte celNum)
+; void b9SetLoop(ViewTable* localViewTab, byte entryNum, byte loopNum)
+_b9SetLoop:
+sta VIEW_POS_LOOP_NUM
+jsr popa
+sta VIEW_POS_ENTRY_NUM
+jsr popax
+sta VIEW_POS_LOCAL_VIEW_TAB
+stx VIEW_POS_LOCAL_VIEW_TAB
+
+b9SetLoopAsm:
+; void b9SetLoop(ViewTable* localViewTab, byte entryNum, byte loopNum)
 ; WARNING: Non-conventional calling. Assumes arguments are pre-loaded in zero page:
 ; - VIEW_POS_LOCAL_VIEW_TAB: Pointer to the view table (localViewTab)
 ; - VIEW_POS_LOOP_NUM: Loop number to set (loopNum)
@@ -1222,7 +1235,7 @@ bra @start
     ; Update the loop number and call subroutine to set it
     lda VIEW_POS_NEW_LOOP
     sta VIEW_POS_LOOP_NUM
-    jsr b9SetLoop
+    jsr b9SetLoopAsm
 
 @checkIfCelShouldBeAdvanced:
     ; Check if the object is cycling (animation active)
@@ -1486,10 +1499,10 @@ _b9AnimateObjects:
     SET_VAR_NON_INTERPRETER sreg
 
     ; --- Pass 2: Update position ---
-    ; lda #<b9UpdatePositionAsm
-    ; sta loopMethodToCall + 1
-    ; lda #>b9UpdatePositionAsm
-    ; sta loopMethodToCall + 2
+    lda #<b9UpdatePositionAsm
+    sta loopMethodToCall + 1
+    lda #>b9UpdatePositionAsm
+    sta loopMethodToCall + 2
     jsr b9LoopThroughAnimatedObjects
 
     ; --- Final: clear Ego land/water bits (StayOnLand/StayOnWater) ---

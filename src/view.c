@@ -2600,18 +2600,7 @@ void b9SetCel(ViewTable* localViewtab, byte celNum)
 	localViewtab->ysize = localCel.height;
 }
 
-void b9SetLoop(ViewTable* localViewtab, byte loopNum)
-{
-	View temp;
-	Loop loop;
-	getLoadedView(&temp, localViewtab->currentView);
-	getLoadedLoop(&temp, &loop, loopNum);
 
-	localViewtab->currentLoop = loopNum;
-	localViewtab->numberOfCels = loop.numberOfCels;
-	/* Might have to set the cel as well */
-	/* It's probably better to do that in the set_loop function */
-}
 /**************************************************************************
 ** addViewToTable
 **
@@ -2626,15 +2615,7 @@ void b9AddViewToTable(ViewTable* localViewtab, byte viewNum, byte entryNum)
 	getLoadedLoop(&localView, &localLoop, 0);
 
 	localViewtab->currentView = viewNum;
-	localViewtab->numberOfLoops = localView.numberOfLoops;
-	b9SetLoop(localViewtab, 0);
-
-	localViewtab->numberOfCels = localLoop.numberOfCels;
-	b9SetCel(localViewtab, 0);
-	/* Might need to set some more defaults here */
-
-
-	localViewtab->repositioned = TRUE;
+	b9SetLoop(localViewtab, entryNum, 0);
 }
 
 void b9AddToPic(int vNum, int lNum, int cNum, int x, int y, int pNum, int bCol)
@@ -2675,32 +2656,32 @@ void b9AddToPic(int vNum, int lNum, int cNum, int x, int y, int pNum, int bCol)
 #pragma code-name (pop)
 #pragma code-name (push, "BANKRAM0A")
 #pragma wrapped-call (push, trampoline, VIEW_CODE_BANK_2)
-void bACalcDirection(ViewTable* localViewtab)
+void bACalcDirection(ViewTable* localViewtab, byte entryNum)
 {
 	if (!(localViewtab->flags & FIXLOOP)) {
 		if (localViewtab->numberOfLoops < 4) {
 
 			switch (localViewtab->direction) {
 			case 1: break;
-			case 2: b9SetLoop(localViewtab, 0); break;
-			case 3: b9SetLoop(localViewtab, 0); break;
-			case 4: b9SetLoop(localViewtab, 0); break;
+			case 2: b9SetLoop(localViewtab, entryNum, 0); break;
+			case 3: b9SetLoop(localViewtab, entryNum, 0); break;
+			case 4: b9SetLoop(localViewtab, entryNum, 0); break;
 			case 5: break;
-			case 6: if (localViewtab->numberOfLoops > 1) b9SetLoop(localViewtab, 1); break;
-			case 7: if (localViewtab->numberOfLoops > 1) b9SetLoop(localViewtab, 1); break;
-			case 8: if (localViewtab->numberOfLoops > 1) b9SetLoop(localViewtab, 1); break;
+			case 6: if (localViewtab->numberOfLoops > 1) b9SetLoop(localViewtab, entryNum, 1); break;
+			case 7: if (localViewtab->numberOfLoops > 1) b9SetLoop(localViewtab, entryNum, 1); break;
+			case 8: if (localViewtab->numberOfLoops > 1) b9SetLoop(localViewtab, entryNum, 1); break;
 			}
 		}
 		else {
 			switch (localViewtab->direction) {
-			case 1: if (localViewtab->numberOfLoops > 3) b9SetLoop(localViewtab, 3); break;
-			case 2: b9SetLoop(localViewtab, 0); break;
-			case 3: b9SetLoop(localViewtab, 0);  break;
-			case 4: b9SetLoop(localViewtab, 0); break;
-			case 5: if (localViewtab->numberOfLoops > 2) b9SetLoop(localViewtab, 2); break;
-			case 6: if (localViewtab->numberOfLoops > 1) b9SetLoop(localViewtab, 1); break;
-			case 7: if (localViewtab->numberOfLoops > 1) b9SetLoop(localViewtab, 1); break;
-			case 8: if (localViewtab->numberOfLoops > 1) b9SetLoop(localViewtab, 1); break;
+			case 1: if (localViewtab->numberOfLoops > 3) b9SetLoop(localViewtab, entryNum, 3); break;
+			case 2: b9SetLoop(localViewtab, entryNum, 0); break;
+			case 3: b9SetLoop(localViewtab, entryNum, 0);  break;
+			case 4: b9SetLoop(localViewtab, entryNum, 0); break;
+			case 5: if (localViewtab->numberOfLoops > 2) b9SetLoop(localViewtab, entryNum, 2); break;
+			case 6: if (localViewtab->numberOfLoops > 1) b9SetLoop(localViewtab, entryNum, 1); break;
+			case 7: if (localViewtab->numberOfLoops > 1) b9SetLoop(localViewtab, entryNum, 1); break;
+			case 8: if (localViewtab->numberOfLoops > 1) b9SetLoop(localViewtab, entryNum, 1); break;
 			}
 		}
 	}
@@ -2708,7 +2689,7 @@ void bACalcDirection(ViewTable* localViewtab)
 #pragma wrapped-call (pop)
 
 /* Called by draw() */
-void bADrawObject(ViewTable* localViewtab)
+void bADrawObject(ViewTable* localViewtab, byte entryNum)
 {
 	word objFlags;
 
@@ -2723,7 +2704,7 @@ void bADrawObject(ViewTable* localViewtab)
 			localViewtab->priority = (localViewtab->yPos / 12 + 1);
 	}
 
-	bACalcDirection(localViewtab);
+	bACalcDirection(localViewtab, entryNum);
 
 #ifdef VERBOSE_DEBUG_BLIT
 	printf("Called from draw object");
@@ -2751,7 +2732,7 @@ void bAUpdateEgoDirection(int oldX, int oldY, int newX, int newY, ViewTable* vie
 	if ((dx == -1) && (dy == 0)) var[6] = dirnOfEgo = 7;
 	if ((dx == -1) && (dy == -1)) var[6] = dirnOfEgo = 8;
 
-	bACalcDirection(viewTab);
+	bACalcDirection(viewTab, 0);
 }
 
 /***************************************************************************
@@ -3759,7 +3740,7 @@ void bCCalcObjMotion()
 		getLoadedCel(&localLoop, &localCel, entryNum);
 
 		/* Automatic change of direction if needed */
-		bACalcDirection(&localViewtab);
+		bACalcDirection(&localViewtab, entryNum);
 
 		setViewTab(&localViewtab, entryNum);
 	}

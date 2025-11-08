@@ -51,7 +51,7 @@ void b9LoadViewFile(byte viewNum);
 void b9DiscardView(byte viewNum);
 void b9AddViewToTable(ViewTable* localViewtab, byte viewNum, byte entryNum);
 extern void b9SetCel(ViewTable* localViewtab, byte celNum);
-extern void b9SetLoop(ViewTable* localViewtab, byte loopNum);
+extern void b9SetLoop(ViewTable* localViewTab, byte entryNum, byte loopNum);
 extern void b9AddToPic(int vNum, int lNum, int cNum, int x, int y, int pNum, int bCol);
 extern void b9PopulatePrecomputedPriorityTable();
 #pragma wrapped-call (pop)
@@ -63,7 +63,7 @@ extern void bAInitObjects();
 extern void bAWander(ViewTable* localViewTab, byte entryNum);
 extern void bAFindPosition(int entryNum, ViewTable* viewTab);
 extern void bBUpdateObj(int entryNum);
-extern void bADrawObject(ViewTable* viewTab);
+extern void bADrawObject(ViewTable* viewTab, byte entryNum);
 extern void bAResetViews();
 #pragma wrapped-call (pop)
 

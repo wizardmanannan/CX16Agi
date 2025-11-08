@@ -653,7 +653,7 @@ void b2Draw() // 1, 0x00
 
 	b9SetCel(&localViewtab, localViewtab.currentCel);
 
-	bADrawObject(&localViewtab);
+	bADrawObject(&localViewtab, entryNum);
 
     b9FindPosition(&localViewtab, entryNum);
 
@@ -788,8 +788,7 @@ void b2Set_loop() // 2, 0x00
 	loopNum = loadAndIncWinCode();
 
 	getViewTab(&localViewtab, entryNum);
-	b9SetLoop(&localViewtab, loopNum);
-	b9SetCel(&localViewtab, 0);
+	b9SetLoop(&localViewtab, entryNum, loopNum);
 
 	setViewTab(&localViewtab, entryNum);
 	return;
@@ -805,8 +804,7 @@ void b2Set_loop_v() // 2, 0x40
 
 	loopNum = var[loadAndIncWinCode()];
 
-	b9SetLoop(&localViewtab, loopNum);
-	b9SetCel(&localViewtab, loopNum);
+	b9SetLoop(&localViewtab, entryNum, loopNum);
 
 	setViewTab(&localViewtab, entryNum);
 	return;
