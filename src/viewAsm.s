@@ -981,12 +981,19 @@ sta (VIEW_POS_LOCAL_VIEW_TAB),y
 rts
 .endscope
 
+_b9SetCel:
+    sta VIEW_POS_LOOP_NUM
+    jsr popa
+    sta VIEW_POS_ENTRY_NUM
+    jsr popax
+    sta VIEW_POS_LOCAL_VIEW_TAB
+    stx VIEW_POS_LOCAL_VIEW_TAB
 ; void b9SetCel(ViewTable* localViewTab, byte entryNum, byte celNum)
 ; WARNING: Non-conventional calling. Assumes arguments are pre-loaded in zero page:
 ; - VIEW_POS_LOCAL_VIEW_TAB: Pointer to the view table (localViewTab)
 ; - VIEW_POS_CEL_NUM: Cel number to set (celNum)
 ; - entryNum is not used in this routine
-b9SetCel:
+b9SetCelAsm:
     ; Set the current cel number in the view table
     lda VIEW_POS_CEL_NUM            ; Load cel number from zero page
     ldy _offsetOfCurrentCel         ; Y = offset of CurrentCel in view table
@@ -1121,12 +1128,13 @@ sta (VIEW_POS_LOCAL_VIEW_TAB),y
 
 @setCel:
 
-jsr b9SetCel
+jsr b9SetCelAsm
 rts
 
 
 ; b9UpdateLoopAndCel
 ; ------------------
+; void _b9UpdateLoopAndCel(ViewTable* localViewTab, byte entryNum, byte loopNum)
 ; Purpose: Updates the animation loop and cel (frame) of a view object based on its direction,
 ; number of loops, and timing conditions. Used in a game engine to manage sprite animations,
 ; ensuring correct animation sequences (e.g., walking left, right, or stopped) are displayed.
@@ -1152,7 +1160,15 @@ rts
 ;   - Skips a 'kq4 check' (possibly King's Quest IV-specific logic).
 ;   - Assumes b9SetLoop and b9AdvanceCel subroutines handle low-level updates.
 
-b9UpdateLoopAndCel:
+_b9UpdateLoopAndCel:
+sta VIEW_POS_LOOP_NUM
+jsr popa
+sta VIEW_POS_ENTRY_NUM
+jsr popax
+sta VIEW_POS_LOCAL_VIEW_TAB
+stx VIEW_POS_LOCAL_VIEW_TAB
+
+b9UpdateLoopAndCelAsm:
 .scope
     ; Constants for movement directions and states
     S = 4  ; Stopped
@@ -1432,7 +1448,7 @@ b9AdvanceCel:
     ; Apply: write cel and call setter
     lda VIEW_POS_THE_CEL
     sta VIEW_POS_CEL_NUM
-    jsr b9SetCel
+    jsr b9SetCelAsm
 @return:
     rts
 .endscope
@@ -1479,9 +1495,9 @@ b9AdvanceCel:
 _b9AnimateObjects:
 .scope
     ; Point shared loop at b9UpdateLoopAndCel
-    lda #<b9UpdateLoopAndCel
+    lda #<b9UpdateLoopAndCelAsm
     sta loopMethodToCall + 1
-    lda #>b9UpdateLoopAndCel
+    lda #>b9UpdateLoopAndCelAsm
     sta loopMethodToCall + 2
     
     jsr b9LoopThroughAnimatedObjects

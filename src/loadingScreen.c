@@ -29,7 +29,7 @@ void b6DismissLoadingScreen()
 {
 	if (loadingScreenDisplayed)
 	{
-		bBUpdateObjects(); //This is a little unorthodox but if we don't do this objects that should /should not display wait until the VBLANK after
+		//bBUpdateObjects();//To Do: Refresh the screen after loading
 		b6SetAndWaitForIrqStateAsm(BLANK_SCREEN);
 		b3InitLayer1Mapbase();
 		b6SetAndWaitForIrqStateAsm(NORMAL);

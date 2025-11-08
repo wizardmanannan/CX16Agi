@@ -651,7 +651,7 @@ void b2Draw() // 1, 0x00
 
 
 
-	b9SetCel(&localViewtab, localViewtab.currentCel);
+	b9SetCel(&localViewtab, entryNum, localViewtab.currentCel);
 
 	bADrawObject(&localViewtab, entryNum);
 
@@ -849,7 +849,7 @@ void b2Set_cel() // 2, 0x00
 
 	getViewTab(&localViewtab, entryNum);
 
-	b9SetCel(&localViewtab, celNum);
+	b9SetCel(&localViewtab, entryNum, celNum);
 
 
 	localViewtab.noAdvance = FALSE;
@@ -870,7 +870,7 @@ void b2Set_cel_v() // 2, 0x40
 
 	localViewtab.noAdvance = FALSE;
 
-	b9SetCel(&localViewtab, celNum);
+	b9SetCel(&localViewtab, entryNum, celNum);
 
 	setViewTab(&localViewtab, entryNum);
 	return;

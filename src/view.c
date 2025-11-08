@@ -2585,22 +2585,6 @@ void b9DiscardView(byte viewNum)
 	}
 }
 
-void b9SetCel(ViewTable* localViewtab, byte celNum)
-{
-	Loop temp;
-	View localLoadedView;
-	Cel localCel;
-
-	getLoadedView(&localLoadedView, localViewtab->currentView);
-	getLoadedLoop(&localLoadedView, &temp, localViewtab->currentLoop);
-	getLoadedCel(&temp, &localCel, celNum);
-
-	localViewtab->currentCel = celNum;
-	localViewtab->xsize = localCel.width;
-	localViewtab->ysize = localCel.height;
-}
-
-
 /**************************************************************************
 ** addViewToTable
 **
@@ -3245,7 +3229,7 @@ void bBUpdateObj(int entryNum)
 				if (celNum >= localViewtab.numberOfCels)
 					celNum = 0;
 
-				b9SetCel(&localViewtab, celNum);
+				b9SetCel(&localViewtab, entryNum, celNum);
 				break;
 			case 1: /* end.of.loop */
 				celNum++;
@@ -3254,7 +3238,7 @@ void bBUpdateObj(int entryNum)
 					/* localViewtab.flags &= ~CYCLING; */
 				}
 				else
-					b9SetCel(&localViewtab, celNum);
+					b9SetCel(&localViewtab, entryNum, celNum);
 				break;
 			case 2: /* reverse.loop */
 				celNum--;
@@ -3263,13 +3247,13 @@ void bBUpdateObj(int entryNum)
 					/* localViewtab.flags &= ~CYCLING; */
 				}
 				else
-					b9SetCel(&localViewtab, celNum);
+					b9SetCel(&localViewtab, entryNum, celNum);
 				break;
 			case 3: /* reverse.cycle */
 				celNum--;
 				if (celNum < 0)
 					celNum = localViewtab.numberOfCels - 1;
-				b9SetCel(&localViewtab, celNum);
+				b9SetCel(&localViewtab, entryNum, celNum);
 				break;
 			}
 		}
@@ -3355,7 +3339,7 @@ void bBUpdateObjects()
 							celNum++;
 							if (celNum >= localViewtab.numberOfCels)
 								celNum = 0;
-							b9SetCel(&localViewtab, celNum);
+							b9SetCel(&localViewtab, entryNum, celNum);
 							break;
 						case 1: /* end.of.loop */
 							//Debug Here
@@ -3367,7 +3351,7 @@ void bBUpdateObjects()
 								localViewtab.cycleStatus = 0; //Normal
 							}
 							else
-								b9SetCel(&localViewtab, celNum);
+								b9SetCel(&localViewtab, entryNum, celNum);
 							break;
 						case 2: /* reverse.loop */
 							celNum--;
@@ -3377,13 +3361,13 @@ void bBUpdateObjects()
 								localViewtab.cycleStatus = 0; //Normal
 							}
 							else
-								b9SetCel(&localViewtab, celNum);
+								b9SetCel(&localViewtab, entryNum, celNum);
 							break;
 						case 3: /* reverse.cycle */
 							celNum--;
 							if (celNum < 0)
 								celNum = localViewtab.numberOfCels - 1;
-							b9SetCel(&localViewtab, celNum);
+							b9SetCel(&localViewtab, entryNum, celNum);
 							break;
 						}
 						setViewTab(&localViewtab, entryNum);
@@ -3520,7 +3504,7 @@ void bCupdateObjects2()
 							celNum++;
 							if (celNum >= localViewtab.numberOfCels)
 								celNum = 0;
-							b9SetCel(&localViewtab, celNum);
+							b9SetCel(&localViewtab, entryNum, celNum);
 							break;
 						case 1: /* end.of.loop */
 							celNum++;
@@ -3529,7 +3513,7 @@ void bCupdateObjects2()
 								localViewtab.flags &= ~CYCLING;
 							}
 							else
-								b9SetCel(&localViewtab, celNum);
+								b9SetCel(&localViewtab, entryNum, celNum);
 							break;
 						case 2: /* reverse.loop */
 							celNum--;
@@ -3538,13 +3522,13 @@ void bCupdateObjects2()
 								localViewtab.flags &= ~CYCLING;
 							}
 							else
-								b9SetCel(&localViewtab, celNum);
+								b9SetCel(&localViewtab, entryNum, celNum);
 							break;
 						case 3: /* reverse.cycle */
 							celNum--;
 							if (celNum < 0)
 								celNum = localViewtab.numberOfCels - 1;
-							b9SetCel(&localViewtab, celNum);
+							b9SetCel(&localViewtab, entryNum, celNum);
 							break;
 						}
 					}

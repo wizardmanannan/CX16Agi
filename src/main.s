@@ -108,3 +108,5 @@
     .export _b9UpdatePosition
     .export _b9AnimateObjects
     .export _b9SetLoop
+    .export _b9SetCel
+    .export _b9UpdateLoopAndCel
