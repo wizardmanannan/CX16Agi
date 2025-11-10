@@ -27,6 +27,7 @@ VIEW_INC = 1
 .import _offsetOfCycleTime
 .import _offsetOfNoAdvance
 .import _offsetOfCycleStatus
+.import _b9LoadCelFromViewTab
 
 VIEW_POS_LOCAL_VIEW_TAB = ZP_TMP_2
 VIEW_POS_ENTRY_NUM = ZP_TMP_3 + 1
@@ -784,7 +785,6 @@ sta PY
 stz OD
 stz OS
 
-stp
 ldy _offsetOfRepositioned
 lda (VIEW_POS_LOCAL_VIEW_TAB),y
 bne @checkBorders
@@ -982,7 +982,7 @@ rts
 .endscope
 
 _b9SetCel:
-    sta VIEW_POS_LOOP_NUM
+    sta VIEW_POS_CEL_NUM
     jsr popa
     sta VIEW_POS_ENTRY_NUM
     jsr popax
@@ -1088,6 +1088,11 @@ b9SetCelAsm:
     sta (VIEW_POS_LOCAL_VIEW_TAB),y ; Set YPos = horizon + 1
 
 @return:
+    lda VIEW_POS_LOCAL_VIEW_TAB
+    ldx VIEW_POS_LOCAL_VIEW_TAB + 1
+    jsr pushax
+    lda VIEW_POS_CEL_NUM
+    jsr _b9LoadCelFromViewTab
     rts                             ; Return from subroutine
 
 ; void b9SetLoop(ViewTable* localViewTab, byte entryNum, byte loopNum)
@@ -1097,7 +1102,7 @@ jsr popa
 sta VIEW_POS_ENTRY_NUM
 jsr popax
 sta VIEW_POS_LOCAL_VIEW_TAB
-stx VIEW_POS_LOCAL_VIEW_TAB
+stx VIEW_POS_LOCAL_VIEW_TAB + 1
 
 b9SetLoopAsm:
 ; void b9SetLoop(ViewTable* localViewTab, byte entryNum, byte loopNum)
@@ -1125,9 +1130,9 @@ bcc @setCel
 ldy _offsetOfCurrentCel
 lda #$0
 sta (VIEW_POS_LOCAL_VIEW_TAB),y 
+sta VIEW_POS_CEL_NUM
 
 @setCel:
-
 jsr b9SetCelAsm
 rts
 
@@ -1448,6 +1453,7 @@ b9AdvanceCel:
     ; Apply: write cel and call setter
     lda VIEW_POS_THE_CEL
     sta VIEW_POS_CEL_NUM
+
     jsr b9SetCelAsm
 @return:
     rts
@@ -1582,7 +1588,7 @@ updateLoopAndCel:
     stz VIEW_POS_NEW_LOOP
 
 loopMethodToCall:
-    jsr b9UpdateLoopAndCel              ; Patched per pass
+    jsr b9UpdateLoopAndCelAsm              ; Patched per pass
 
     ; Restore X from saved entry index
     ldx VIEW_POS_ENTRY_NUM

@@ -2035,6 +2035,22 @@ endBlit:
 }
 
 #pragma code-name (push, "BANKRAM09")
+
+void b9LoadCelFromViewTab(ViewTable* localViewtab, byte celNum)
+{
+	Loop temp;
+	View localLoadedView;
+	Cel localCel;
+
+	getLoadedView(&localLoadedView, localViewtab->currentView);
+	getLoadedLoop(&localLoadedView, &temp, localViewtab->currentLoop);
+	getLoadedCel(&temp, &localCel, celNum);
+
+	localViewtab->xsize = localCel.width;
+	localViewtab->ysize = localCel.height;
+}
+
+
 #pragma code-name (push, "BANKRAM0A")
 
 #pragma wrapped-call (push, trampoline, VIEW_CODE_BANK_1)
