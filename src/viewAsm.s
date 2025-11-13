@@ -28,6 +28,7 @@ VIEW_INC = 1
 .import _offsetOfNoAdvance
 .import _offsetOfCycleStatus
 .import _b9LoadCelFromViewTab
+.import _bBUpdateObjects
 
 VIEW_POS_LOCAL_VIEW_TAB = ZP_TMP_2
 VIEW_POS_ENTRY_NUM = ZP_TMP_3 + 1
@@ -913,7 +914,6 @@ lda #VIEW_TOP_BORDER
 sta BORDER
 
 @updatePosition:
-
 ldy _offsetOfXPos
 lda OX
 sta (VIEW_POS_LOCAL_VIEW_TAB),y
@@ -1526,6 +1526,9 @@ _b9AnimateObjects:
     lda #>b9UpdatePositionAsm
     sta loopMethodToCall + 2
     jsr b9LoopThroughAnimatedObjects
+
+
+    ;TRAMPOLINE #UPDATE_OBJECTS_BANK, _bBUpdateObjects
 
     ; --- Final: clear Ego land/water bits (StayOnLand/StayOnWater) ---
     lda #<_viewtab

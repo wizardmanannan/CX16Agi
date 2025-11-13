@@ -110,6 +110,7 @@ DIVISION_METADATA_BANK = $31
 RANDOM_BANK = $6
 SOUND_BANK = $1
 MOVEMENT_BANK = $0A
+UPDATE_OBJECTS_BANK = $0B
 
 
 ; Define offsets for different areas within golden RAM
