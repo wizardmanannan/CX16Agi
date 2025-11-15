@@ -20,4 +20,14 @@ ldx #$0
 lda #$1
 .endif
 rts
+
+
+_b5IsSpriteDebuggingEnabled:
+lda #$0
+ldx #$0
+.ifdef SPRITE_DEBUG
+lda #$1
+.endif
+rts
+
 .endif

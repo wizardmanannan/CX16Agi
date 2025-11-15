@@ -63,6 +63,7 @@
     .export _b12FindSynonymNumSearch
     .export _b6Clear
     .export _b5IsDebuggingEnabled
+    .export _b5IsSpriteDebuggingEnabled
     .export _b8DrawPixel
     .export _trampolineDebug
     .export _b8AsmPlotVisHLineFast

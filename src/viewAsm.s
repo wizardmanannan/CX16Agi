@@ -29,6 +29,14 @@ VIEW_INC = 1
 .import _offsetOfCycleStatus
 .import _b9LoadCelFromViewTab
 .import _bBUpdateObjects
+.import _bSdPrintAllObjects
+.import _spriteDebugBank
+.import _var
+
+.ifdef SPRITE_DEBUG
+.import _bSdRunNumber
+.import _bSdFunctionNumber
+.endif
 
 VIEW_POS_LOCAL_VIEW_TAB = ZP_TMP_2
 VIEW_POS_ENTRY_NUM = ZP_TMP_3 + 1
@@ -52,10 +60,74 @@ VIEW_POS_LAST_CEL = ZP_TMP_16
 VIEW_POS_ANIMATED_OBJECTS_COUNTER = ZP_TMP_16 + 1
 
 
+.segment "CODE"
+.ifdef SPRITE_DEBUG
+debugSprites:
+php
+pha
+phx
+phy
 
+lda RAM_BANK
+pha
+
+lda _spriteDebugBank
+sta RAM_BANK
+jsr _bSdPrintAllObjects
+
+pla
+sta RAM_BANK
+
+
+ply
+plx
+pla
+plp
+
+rts
+debugSpritesNextRun:
+php
+pha
+phx
+phy
+
+lda RAM_BANK
+pha
+
+lda _var
+cmp #$1
+bne @exit
+
+lda _spriteDebugBank
+sta RAM_BANK
+
+inc _bSdRunNumber
+stz _bSdFunctionNumber
+
+@exit:
+pla
+sta RAM_BANK
+
+ply
+plx
+pla
+plp
+
+rts
+.endif
+
+.macro SPRITE_DEBUG
+.ifdef SPRITE_DEBUG
+jsr debugSprites
+.endif
+.endmacro
+.macro SPRITE_DEBUG_NEXT_RUN
+.ifdef SPRITE_DEBUG
+jsr debugSpritesNextRun
+.endif
+.endmacro
 
 ;Don't put anything in 25 used for x and y of canBeHere, or 21 - 24, used for local variables in update position
-
 .segment "BANKRAM09"
 ;boolean b9Collide(ViewTable* localViewtab, byte entryNum) 
 _b9Collide:
@@ -922,6 +994,7 @@ ldy _offsetOfYPos
 lda OY
 sta (VIEW_POS_LOCAL_VIEW_TAB),y
 
+SPRITE_DEBUG ;10
 jsr b9CollideAsm
 bne @callFindPosition
 jsr b9CanBeHereAsm
@@ -940,6 +1013,7 @@ stz BORDER
 jsr _b9FindPositionAsm
 
 @checkBorderCollision:
+SPRITE_DEBUG ;11
 
 lda BORDER ;Even though the C# said greater than 0, not zero is better in 6502, as there are less instructions
 beq @setRepositioned
@@ -970,7 +1044,9 @@ cmp (VIEW_POS_LOCAL_VIEW_TAB),y
 bne @setRepositioned
 
 @endMoveObj:
+SPRITE_DEBUG ;12
 jsr b9EndMoveObj
+SPRITE_DEBUG ;13
 
 @setRepositioned:
 
@@ -1256,7 +1332,10 @@ bra @start
     ; Update the loop number and call subroutine to set it
     lda VIEW_POS_NEW_LOOP
     sta VIEW_POS_LOOP_NUM
+    
+    SPRITE_DEBUG ;2
     jsr b9SetLoopAsm
+    SPRITE_DEBUG ;5
 
 @checkIfCelShouldBeAdvanced:
     ; Check if the object is cycling (animation active)
@@ -1276,7 +1355,9 @@ bra @start
     sta (VIEW_POS_LOCAL_VIEW_TAB),y
     bne @return  ; Exit if cycle time count is not zero
     ; Advance to next cel (animation frame)
+    SPRITE_DEBUG ;6
     jsr b9AdvanceCel
+    SPRITE_DEBUG ;7
 
     ; Reset cycle time count to initial cycle time
     ldy _offsetOfCycleTime
@@ -1454,7 +1535,9 @@ b9AdvanceCel:
     lda VIEW_POS_THE_CEL
     sta VIEW_POS_CEL_NUM
 
+SPRITE_DEBUG ;3
     jsr b9SetCelAsm
+SPRITE_DEBUG ;4
 @return:
     rts
 .endscope
@@ -1500,6 +1583,10 @@ b9AdvanceCel:
 
 _b9AnimateObjects:
 .scope
+
+
+    SPRITE_DEBUG ;1
+
     ; Point shared loop at b9UpdateLoopAndCel
     lda #<b9UpdateLoopAndCelAsm
     sta loopMethodToCall + 1
@@ -1507,6 +1594,7 @@ _b9AnimateObjects:
     sta loopMethodToCall + 2
     
     jsr b9LoopThroughAnimatedObjects
+    SPRITE_DEBUG ;8
 
 @resetEgoEdgeValues:
     ; Reset per-frame variables (EGOEDGE, OBJHIT, OBJEDGE)
@@ -1519,13 +1607,16 @@ _b9AnimateObjects:
     ldx #$0
     lda #OBJEDGE
     SET_VAR_NON_INTERPRETER sreg
+    
 
+    SPRITE_DEBUG ;9
     ; --- Pass 2: Update position ---
     lda #<b9UpdatePositionAsm
     sta loopMethodToCall + 1
     lda #>b9UpdatePositionAsm
     sta loopMethodToCall + 2
     jsr b9LoopThroughAnimatedObjects
+    SPRITE_DEBUG ;14
 
 
     ;TRAMPOLINE #UPDATE_OBJECTS_BANK, _bBUpdateObjects
@@ -1541,6 +1632,8 @@ _b9AnimateObjects:
     ldy _offsetOfFlags + 1              ; High-byte flags
     and (VIEW_POS_LOCAL_VIEW_TAB),y
     sta (VIEW_POS_LOCAL_VIEW_TAB),y
+
+    SPRITE_DEBUG ;15
     rts
 
 ; b9LoopThroughAnimatedObjects

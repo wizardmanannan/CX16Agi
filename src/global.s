@@ -4,6 +4,7 @@
 ; Include the x16.inc file
 .include "x16.inc"
 ;DEBUG = 0
+;SPRITE_DEBUG = 0
 
 ; Define some start and end positions and code bank
 startPos: .word $0

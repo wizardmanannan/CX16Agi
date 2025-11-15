@@ -10,6 +10,7 @@ extern boolean hasEnteredNewRoom, exitAllLogics;
 extern int currentLog;
 
 byte debugBank;
+byte spriteDebugBank;
 
 #pragma bss-name (push, "BANKRAMDEBUG")
 long opCounter = 1;
@@ -31,7 +32,7 @@ unsigned long queueAction = 0;
 
 #pragma rodata-name (push, "BANKRAMDEBUG")
 const char bDbgPrintMessage[] = "%d.\n";
-const char bDbgRemainingMemoryMessage[] = "Your remaining memory is approx: %d \n";
+const char bDbgRemainingMemoryMessage[] = "your remaining memory is approx: %d \n";
 const char bDbgFalseResultMessage[] = "the result is false\n";
 const char bDbgTrueResultMessage[] = "the result is true\n";
 const char bDbgInvertedResultMessage[] = "the result is inverted by not\n";
@@ -60,46 +61,65 @@ const char bDbgCodeJumpMessage[] = "b1 is %d b2 is %d, shift %u and the jump res
 const char bDbgNewRoomMessage[] = "attempting to enter new room %d\n";
 const char bDbgExitAllLogicsMessage[] = "----------Exit Debug: Attempting to enter new room %d. Has entered new Room: %d. Has exited all logics %d\n";
 const char bDbgScriptStartMessage[] = "ex s. %d counter op %lu, var 0 is %d\n";
-const char bDbgRoomChangeMessage[] = "We are at %d, counter %lu\n";
+const char bDbgRoomChangeMessage[] = "we are at %d, counter %lu\n";
 #pragma rodata-name (pop)
 
 #pragma rodata-name (push, "BANKRAM05")
 const char b5InitializingDebug[] = "debug now initializing on bank %d\n";
+int b5ReadSizes[4] = { LOCAL_WORK_AREA_SIZE, 100, 10, 1 };
 #pragma rodata-name (pop)
 
 #pragma rodata-name (push, "BANKRAM06")
 char b6DebugFileName[] = "agi.cx16.debug";
+char b6SpriteDebugFileName[] = "agi.cx16.spritedebug";
 #pragma rodata-name (pop)
 
 #pragma code-name (push, "BANKRAM05");
 extern boolean b5IsDebuggingEnabled();
+extern boolean b5IsSpriteDebuggingEnabled();
+
+void b5DebugFileRead(char* debugFileName, byte* ptrDebugBank)
+{
+
+	byte lfn;
+	byte i;
+	byte* debugBankPtr;
+	int readSize;
+
+#define NO_READ_SIZES 4
+
+	lfn = b6Cbm_openForSeeking(debugFileName);
+
+	debugBankPtr = b10BankedAlloc(LARGE_SIZE, ptrDebugBank);
+
+	printf(b5InitializingDebug, *ptrDebugBank);
+	for (i = 0; i < NO_READ_SIZES; i++)
+	{
+		readSize = b5ReadSizes[i];
+		while (cbm_read(lfn, GOLDEN_RAM_WORK_AREA, readSize))
+		{
+			memCpyBanked(debugBankPtr, GOLDEN_RAM_WORK_AREA, *ptrDebugBank, readSize);
+			debugBankPtr += readSize;
+		}
+	}
+	cbm_close(lfn);
+}
 
 void b5InitializeDebugging()
 {
-#define NO_READ_SIZES 4
 	byte lfn;
 	byte i;
 	int bytesRead;
-	int readSizes[4] = { LOCAL_WORK_AREA_SIZE, 100, 10, 1 };
 	byte* debugBankPtr;
 
 	if (b5IsDebuggingEnabled())
 	{
-		lfn = b6Cbm_openForSeeking(b6DebugFileName);
+		b5DebugFileRead(b6DebugFileName, &debugBank);
+	}
 
-		debugBankPtr = b10BankedAlloc(LARGE_SIZE, &debugBank);
-
-		printf(b5InitializingDebug, debugBank);
-		for (i = 0; i < NO_READ_SIZES; i++)
-		{
-			while (cbm_read(lfn, GOLDEN_RAM_WORK_AREA, readSizes[i]))
-			{
-				memCpyBanked(debugBankPtr, GOLDEN_RAM_WORK_AREA, debugBank, readSizes[i]);
-				
-				debugBankPtr += readSizes[i];
-			}
-		}
-		cbm_close(lfn);
+	if (b5IsSpriteDebuggingEnabled())
+	{
+		b5DebugFileRead(b6SpriteDebugFileName, &spriteDebugBank);
 	}
 }
 #pragma code-name (pop);
@@ -453,4 +473,135 @@ void bDbgPrintRoomChange()
 {
 	printf(bDbgRoomChangeMessage, var[0], opCounter);
 }
+#pragma code-name (pop);
+
+#pragma code-name (push, "BANKRAMSPRITEDEBUG");
+
+
+#pragma rodata-name (push, "BANKRAMDEBUG")
+char* bSdRun = "at %d.%d\n";
+char* bSdEntryNum = "entry %d\n";
+char* bSdAnimated = "animated %d\n";
+char* bSdBlocked = "blocked %d\n";
+char* bSdCurrentCel = "current cel %d\n";
+char* bSdCurrentLoop = "current loop %d\n";
+char* bSdCurrentView = "current view %d\n";
+char* bSdCycle = "cycle %d\n";
+char* bSdCycleTime = "cycle time %d\n";
+char* bSdCycleTimeCount = "cycle time count %d\n";
+char* bSdCycleType = "cycle type %d\n";
+char* bSdDirection = "direction %d\n";
+char* bSdDrawn = "drawn %d\n";
+char* bSdFixedLoop = "fixed loop %d\n";
+char* bSdFixedPriority = "fixed priority %d\n";
+char* bSdIgnoreBlocks = "ignore blocks %d\n";
+char* bSdIgnoreHorizon = "ignore horizon %d\n";
+char* bSdIgnoreObjects = "ignore objects %d\n";
+char* bSdMotionParam1 = "motion param1 %d\n";
+char* bSdMotionParam2 = "motion param2 %d\n";
+char* bSdMotionParam3 = "motion param3 %d\n";
+char* bSdMotionParam4 = "motion param4 %d\n";
+char* bSdMotionType = "motion type %d\n";
+char* bSdNoAdvance = "no advance %d\n";
+char* bSdObjectNumber = "object number %d\n";
+char* bSdPrevX = "prev x %d\n";
+char* bSdPrevY = "prev y %d\n";
+char* bSdPriority = "priority %d\n";
+char* bSdRepositioned = "repositioned %d\n";
+char* bSdStayOnLand = "stay on land %d\n";
+char* bSdStayOnWater = "stay on water %d\n";
+char* bSdStepSize = "step size %d\n";
+char* bSdStepTime = "step time %d\n";
+char* bSdStepTimeCount = "step time count %d\n";
+char* bSdStopped = "stopped %d\n";
+char* bSdUpdate = "update %d\n";
+char* bSdX = "x %d\n";
+char* bSdXSize = "x size %d\n";
+char* bSdY = "y %d\n";
+char* bSdYSize = "y size %d\n";
+char* bSdSeparator = "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx\n";
+char* bSdRunSeparator = "qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq\n";
+#pragma rodata-name (pop)
+
+
+#pragma bss-name (push, "BANKRAMSPRITEDEBUG")
+byte bSdFunctionNumber;
+long bSdRunNumber;
+#define INTERESTED_ROOM_NUMBER 1
+#pragma bss-name (pop)
+
+extern byte* var;
+
+void bSdPrintState(ViewTable* localViewTab, byte entryNum)
+{
+	if (localViewTab->flags & DRAWN)
+	{
+		printf(bSdRun, bSdRunNumber, bSdFunctionNumber);
+		printf(bSdEntryNum, entryNum);
+		printf(bSdAnimated, (localViewTab->flags & ANIMATED) != 0);
+		printf(bSdBlocked, (localViewTab->flags & IGNOREBLOCKS) != 0);        // assuming BLOCKED flag exists
+		printf(bSdCurrentCel, localViewTab->currentCel);
+		printf(bSdCurrentLoop, localViewTab->currentLoop);
+		printf(bSdCurrentView, localViewTab->currentView);
+		printf(bSdCycle, localViewTab->cycleStatus);
+		printf(bSdCycleTime, localViewTab->cycleTime);
+		printf(bSdCycleTimeCount, localViewTab->cycleTimeCount);
+		printf(bSdCycleType, localViewTab->cycleStatus);                 // reuse cycleStatus or add dedicated field if needed
+		printf(bSdDirection, localViewTab->direction);
+		printf(bSdDrawn, (localViewTab->flags & DRAWN) != 0);                                             // not stored directly; assume drawn if active
+		printf(bSdFixedLoop, (localViewTab->flags & FIXLOOP) != 0);
+		printf(bSdFixedPriority, (localViewTab->flags & FIXEDPRIORITY) != 0);
+		printf(bSdIgnoreBlocks, (localViewTab->flags & IGNOREBLOCKS) != 0);
+		printf(bSdIgnoreHorizon, (localViewTab->flags & IGNOREHORIZON) != 0);
+		printf(bSdIgnoreObjects, (localViewTab->flags & IGNOREOBJECTS) != 0);
+		printf(bSdMotionParam1, localViewTab->param1);
+		printf(bSdMotionParam2, localViewTab->param2);
+		printf(bSdMotionParam3, localViewTab->param3);
+		printf(bSdMotionParam4, localViewTab->param4);
+		printf(bSdMotionType, localViewTab->motion);
+		printf(bSdNoAdvance, localViewTab->noAdvance);
+		printf(bSdObjectNumber,    /* object index passed externally or stored elsewhere */ 0); // adjust if you have it
+		printf(bSdPrevX, localViewTab->previousX);
+		printf(bSdPrevY, localViewTab->previousY);
+		printf(bSdPriority, localViewTab->priority);
+		printf(bSdRepositioned, localViewTab->repositioned);
+		printf(bSdStayOnLand, (localViewTab->flags & ONLAND) != 0);
+		printf(bSdStayOnWater, (localViewTab->flags & ONWATER) != 0);
+		printf(bSdStepSize, localViewTab->stepSize);
+		printf(bSdStepTime, localViewTab->stepTime);
+		printf(bSdStepTimeCount, localViewTab->stepTimeCount);
+		printf(bSdStopped, localViewTab->stopped);
+		printf(bSdUpdate, (localViewTab->flags & UPDATE) != 0);
+		printf(bSdX, localViewTab->xPos);
+		printf(bSdXSize, localViewTab->xsize);
+		printf(bSdY, localViewTab->yPos);
+		printf(bSdYSize, localViewTab->ysize);
+
+		printf(bSdSeparator);
+	}
+
+	bSdFunctionNumber++;
+}
+
+void bSdPrintAllObjects()
+{
+	ViewTable localViewTab;
+	byte i;
+
+	if (var[0] == INTERESTED_ROOM_NUMBER)
+	{
+		for (i = 0; i < 20; i++)
+		{
+			getViewTab(&localViewTab, i);
+
+			bSdPrintState(&localViewTab, i);
+		}
+		if (var[0] == INTERESTED_ROOM_NUMBER)
+		{
+			bSdFunctionNumber++;
+		}
+		printf(bSdRunSeparator);
+	}
+}
+
 #pragma code-name (pop);
