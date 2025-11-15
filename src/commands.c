@@ -2485,7 +2485,7 @@ void b5Div_v() // 2, 0xC0
 void b5SetPriorityBase()
 {
 	priorityBase = loadAndIncWinCode();
-	b9PopulatePrecomputedPriorityTable();
+	bAPopulatePrecomputedPriorityTable();
 }
 
 #pragma code-name (pop)

@@ -53,10 +53,10 @@ void b9AddViewToTable(ViewTable* localViewtab, byte viewNum, byte entryNum);
 extern void b9SetCel(ViewTable* localViewTab, byte entryNum, byte celNum);
 extern void b9SetLoop(ViewTable* localViewTab, byte entryNum, byte loopNum);
 extern void b9AddToPic(int vNum, int lNum, int cNum, int x, int y, int pNum, int bCol);
-extern void b9PopulatePrecomputedPriorityTable();
 #pragma wrapped-call (pop)
 
 #pragma wrapped-call (push, trampoline, VIEW_CODE_BANK_2)
+extern void bAPopulatePrecomputedPriorityTable();
 extern void bAResetSpriteMemory(boolean clearBuffer);
 extern void bAInitViews();
 extern void bAInitObjects();
