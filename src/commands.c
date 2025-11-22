@@ -641,27 +641,25 @@ void b2Draw() // 1, 0x00
 	entryNum = loadAndIncWinCode();
 	getViewTab(&localViewtab, entryNum);
 
-	if (!localViewtab.flags & DRAWN)
+	if (!(localViewtab.flags & DRAWN))
 	{
 		localViewtab.previousX = localViewtab.xPos;
 		localViewtab.previousY = localViewtab.yPos;
+
+
+		localViewtab.flags |= (DRAWN | UPDATE);   /* Not sure about update */
+
+
+		bADrawObject(&localViewtab, entryNum);
+
+		b9FindPosition(&localViewtab, entryNum);
+
+		//bAFindPosition(entryNum, &localViewtab);
+
+		localViewtab.noAdvance = FALSE;
+
+		setViewTab(&localViewtab, entryNum);
 	}
-
-	localViewtab.flags |= (DRAWN | UPDATE);   /* Not sure about update */
-
-
-
-	b9SetCel(&localViewtab, entryNum, localViewtab.currentCel);
-
-	bADrawObject(&localViewtab, entryNum);
-
-    b9FindPosition(&localViewtab, entryNum);
-
-	//bAFindPosition(entryNum, &localViewtab);
-
-	localViewtab.noAdvance = FALSE;
-
-	setViewTab(&localViewtab, entryNum);
 	return;
 }
 
