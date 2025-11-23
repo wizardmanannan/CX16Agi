@@ -2204,7 +2204,6 @@ void bAPopulatePrecomputedPriorityTable()
 		{
 			priorityToCopy = MIN_SPRITE_PRIORITY;
 			memCpyBanked(&b9PreComputedPriority[i], &priorityToCopy, VIEW_CODE_BANK_1, 1);
-			b9PreComputedPriority[i] = MIN_PRIORITY;
 		}
 		else
 		{
