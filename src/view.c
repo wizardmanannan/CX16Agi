@@ -2688,30 +2688,6 @@ void bACalcDirection(ViewTable* localViewtab, byte entryNum)
 	}
 }
 #pragma wrapped-call (pop)
-
-/* Called by draw() */
-void bADrawObject(ViewTable* localViewtab, byte entryNum)
-{
-	word objFlags;
-
-	objFlags = localViewtab->flags;
-	//Previous x and y may be needed here see Agile animated obj 1701
-
-	/* Determine priority for unfixed priorities */
-	if (!(objFlags & FIXEDPRIORITY)) {
-		if (localViewtab->yPos < 60)
-			localViewtab->priority = 4;
-		else
-			localViewtab->priority = (localViewtab->yPos / 12 + 1);
-	}
-
-	bACalcDirection(localViewtab, entryNum);
-
-#ifdef VERBOSE_DEBUG_BLIT
-	printf("Called from draw object");
-#endif // DEBUG
-}
-
 #pragma wrapped-call (push, trampoline, VIEW_CODE_BANK_2)
 /***************************************************************************
 ** updateEgoDirection
