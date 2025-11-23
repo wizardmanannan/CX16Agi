@@ -650,6 +650,8 @@ void b2Draw() // 1, 0x00
 		localViewtab.flags |= (DRAWN | UPDATE);   /* Not sure about update */
 
 
+		bADrawObject(&localViewtab, entryNum);
+
 		b9FindPosition(&localViewtab, entryNum);
 
 		//bAFindPosition(entryNum, &localViewtab);

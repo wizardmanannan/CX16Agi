@@ -63,6 +63,7 @@ extern void bAInitObjects();
 extern void bAWander(ViewTable* localViewTab, byte entryNum);
 extern void bAFindPosition(int entryNum, ViewTable* viewTab);
 extern void bBUpdateObj(int entryNum);
+extern void bADrawObject(ViewTable* viewTab, byte entryNum);
 extern void bAResetViews();
 #pragma wrapped-call (pop)
 
