@@ -20,7 +20,8 @@ fi
 
 # Go to the makefile folder and build
 cd "$MAKEFILE_FOLDER"
-make
+sudo make clean
+sudo make
 
 # Full image path
 IMG_PATH="$SDCARD_IMAGE_FOLDER/$SDCARD_IMAGE_FILE"

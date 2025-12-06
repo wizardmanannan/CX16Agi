@@ -579,8 +579,6 @@ void bSdPrintState(ViewTable* localViewTab, byte entryNum)
 
 		printf(bSdSeparator);
 	}
-
-	bSdFunctionNumber++;
 }
 
 void bSdPrintAllObjects()

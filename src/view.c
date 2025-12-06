@@ -2601,6 +2601,7 @@ void b9DiscardView(byte viewNum)
 	}
 }
 
+byte trap = FALSE;
 /**************************************************************************
 ** addViewToTable
 **
@@ -2610,11 +2611,18 @@ void b9AddViewToTable(ViewTable* localViewtab, byte viewNum, byte entryNum)
 {
 	View localView;
 	Loop localLoop;
+	Cel localCel;
 
 	getLoadedView(&localView, viewNum);
-	getLoadedLoop(&localView, &localLoop, 0);
+	getLoadedLoop(&localView, &localLoop, localViewtab->currentLoop);
+	getLoadedCel(&localLoop, &localCel, localViewtab->currentCel);
 
 	localViewtab->currentView = viewNum;
+	localViewtab->numberOfLoops = localView.numberOfLoops;
+	localViewtab->numberOfCels = localLoop.numberOfCels;
+	localViewtab->xsize = localCel.width;
+	localViewtab->ysize = localCel.height;
+	
 	b9SetLoop(localViewtab, entryNum, 0);
 }
 
