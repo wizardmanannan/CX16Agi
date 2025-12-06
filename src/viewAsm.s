@@ -1069,8 +1069,8 @@ _b9SetCel:
 ; - VIEW_POS_LOCAL_VIEW_TAB: Pointer to the view table (localViewTab)
 ; - VIEW_POS_CEL_NUM: Cel number to set (celNum)
 ; - entryNum is not used in this routine
-b9SetCelAsm:
-    ; Set the current cel number in the view table
+b9SetCelAsm:    
+   ; Set the current cel number in the view table
     lda VIEW_POS_CEL_NUM            ; Load cel number from zero page
     ldy _offsetOfCurrentCel         ; Y = offset of CurrentCel in view table
     sta (VIEW_POS_LOCAL_VIEW_TAB),y ; Store cel number in CurrentCel
@@ -1109,7 +1109,7 @@ b9SetCelAsm:
     sta (VIEW_POS_LOCAL_VIEW_TAB),y ; Set Repositioned = true
 
 @clampToMaxX:
-    ; Clamp XPos to PICTURE_WIDTH - 1 - XSize
+   ; Clamp XPos to PICTURE_WIDTH - 1 - XSize
     sec                             ; Set carry for subtraction
     lda #PICTURE_WIDTH         ; A = PICTURE_WIDTH - 1 (equivalent to Defines.MAXX)
     ldy _offsetOfXSize              ; Y = offset of XSize
@@ -1189,6 +1189,10 @@ b9SetLoopAsm:
 lda VIEW_POS_LOOP_NUM
 ldy _offsetOfCurrentLoop
 sta (VIEW_POS_LOCAL_VIEW_TAB),y 
+
+lda _offsetOfCurrentCel
+lda (VIEW_POS_LOCAL_VIEW_TAB),y 
+sta VIEW_POS_CEL_NUM
 
 ldy _offsetOfCurrentLoop
 lda (VIEW_POS_LOCAL_VIEW_TAB),y 
