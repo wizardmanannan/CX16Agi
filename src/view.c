@@ -2601,6 +2601,7 @@ void b9DiscardView(byte viewNum)
 	}
 }
 
+byte trap = FALSE;
 /**************************************************************************
 ** addViewToTable
 **
@@ -2610,12 +2611,35 @@ void b9AddViewToTable(ViewTable* localViewtab, byte viewNum, byte entryNum)
 {
 	View localView;
 	Loop localLoop;
+	Cel localCel;
 
 	getLoadedView(&localView, viewNum);
-	getLoadedLoop(&localView, &localLoop, 0);
+	getLoadedLoop(&localView, &localLoop, localViewtab->currentLoop);
+	getLoadedCel(&localLoop, &localCel, localViewtab->currentCel);
 
 	localViewtab->currentView = viewNum;
+	localViewtab->numberOfLoops = localView.numberOfLoops;
+	localViewtab->numberOfCels = localLoop.numberOfCels;
+	localViewtab->xsize = localCel.width;
+	localViewtab->ysize = localCel.height;
+	
+	if (var[0] == 1 && entryNum == 1)
+	{
+
+		printf("view tab %p ypos %d ysize %d\n", localViewtab, localViewtab->yPos, localViewtab->ysize);
+		//printf("num cell %d view tab %p loop num %d\n", localLoop.numberOfCels, &localViewtab, localViewtab->currentLoop);
+		trap = TRUE;
+		asm("stp");
+
+		asm("nop");
+	}
 	b9SetLoop(localViewtab, entryNum, 0);
+
+	if (var[0] == 1 && entryNum == 1)
+	{
+		asm("stp");
+		asm("nop");
+	}
 }
 
 void b9AddToPic(int vNum, int lNum, int cNum, int x, int y, int pNum, int bCol)
