@@ -2624,6 +2624,12 @@ void b9AddViewToTable(ViewTable* localViewtab, byte viewNum, byte entryNum)
 	localViewtab->ysize = localCel.height;
 	
 	b9SetLoop(localViewtab, entryNum, 0);
+
+	if (var[0] == 1 && entryNum == 1)
+	{
+		asm("stp");
+		asm("nop");
+	}
 }
 
 void b9AddToPic(int vNum, int lNum, int cNum, int x, int y, int pNum, int bCol)
