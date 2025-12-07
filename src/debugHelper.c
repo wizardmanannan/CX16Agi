@@ -519,6 +519,7 @@ char* bSdX = "x %d\n";
 char* bSdXSize = "x size %d\n";
 char* bSdY = "y %d\n";
 char* bSdYSize = "y size %d\n";
+char* bSdFlag0 = "flag 0 %d\n";
 char* bSdSeparator = "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx\n";
 char* bSdRunSeparator = "qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq\n";
 #pragma rodata-name (pop)
@@ -539,11 +540,11 @@ void bSdPrintState(ViewTable* localViewTab, byte entryNum)
 		printf(bSdRun, bSdRunNumber, bSdFunctionNumber);
 		printf(bSdEntryNum, entryNum);
 		printf(bSdAnimated, (localViewTab->flags & ANIMATED) != 0);
-		printf(bSdBlocked, (localViewTab->flags & IGNOREBLOCKS) != 0);        // assuming BLOCKED flag exists
+		printf(bSdBlocked, 0);        // assuming BLOCKED flag exists
 		printf(bSdCurrentCel, localViewTab->currentCel);
 		printf(bSdCurrentLoop, localViewTab->currentLoop);
 		printf(bSdCurrentView, localViewTab->currentView);
-		printf(bSdCycle, localViewTab->cycleStatus);
+		printf(bSdCycle, (localViewTab->flags & CYCLING) != 0);
 		printf(bSdCycleTime, localViewTab->cycleTime);
 		printf(bSdCycleTimeCount, localViewTab->cycleTimeCount);
 		printf(bSdCycleType, localViewTab->cycleStatus);                 // reuse cycleStatus or add dedicated field if needed
@@ -560,7 +561,7 @@ void bSdPrintState(ViewTable* localViewTab, byte entryNum)
 		printf(bSdMotionParam4, localViewTab->param4);
 		printf(bSdMotionType, localViewTab->motion);
 		printf(bSdNoAdvance, localViewTab->noAdvance);
-		printf(bSdObjectNumber,    /* object index passed externally or stored elsewhere */ 0); // adjust if you have it
+		printf(bSdObjectNumber,    /* object index passed externally or stored elsewhere */ entryNum); // adjust if you have it
 		printf(bSdPrevX, localViewTab->previousX);
 		printf(bSdPrevY, localViewTab->previousY);
 		printf(bSdPriority, localViewTab->priority);
@@ -576,7 +577,7 @@ void bSdPrintState(ViewTable* localViewTab, byte entryNum)
 		printf(bSdXSize, localViewTab->xsize);
 		printf(bSdY, localViewTab->yPos);
 		printf(bSdYSize, localViewTab->ysize);
-
+		printf(bSdFlag0, flag[0]);
 		printf(bSdSeparator);
 	}
 }
