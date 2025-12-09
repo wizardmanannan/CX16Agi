@@ -62,6 +62,9 @@ VIEW_POS_ANIMATED_OBJECTS_COUNTER = ZP_TMP_16 + 1
 
 .segment "CODE"
 .ifdef SPRITE_DEBUG
+.import _bSdRunSeparator
+.import _printf
+
 debugSprites:
 php
 pha
@@ -94,15 +97,23 @@ phy
 lda RAM_BANK
 pha
 
-lda _var
+; lda _var
+; sta sreg
+; lda _var + 1
+; sta sreg + 1
+; lda (sreg)
+lda $400
 cmp #$1
 bne @exit
-
 lda _spriteDebugBank
 sta RAM_BANK
 
 inc _bSdRunNumber
 stz _bSdFunctionNumber
+
+lda #<_bSdRunSeparator
+ldx #>_bSdRunSeparator
+jsr _printf
 
 @exit:
 pla
@@ -1623,7 +1634,7 @@ _b9AnimateObjects:
     SPRITE_DEBUG ;14
 
 
-    ;TRAMPOLINE #UPDATE_OBJECTS_BANK, _bBUpdateObjects
+    TRAMPOLINE #UPDATE_OBJECTS_BANK, _bBUpdateObjects
 
     ; --- Final: clear Ego land/water bits (StayOnLand/StayOnWater) ---
     lda #<_viewtab
@@ -1638,6 +1649,7 @@ _b9AnimateObjects:
     sta (VIEW_POS_LOCAL_VIEW_TAB),y
 
     SPRITE_DEBUG ;15
+    SPRITE_DEBUG_NEXT_RUN
     rts
 
 ; b9LoopThroughAnimatedObjects

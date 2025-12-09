@@ -478,8 +478,8 @@ void bDbgPrintRoomChange()
 #pragma code-name (push, "BANKRAMSPRITEDEBUG");
 
 
-#pragma rodata-name (push, "BANKRAMDEBUG")
-char* bSdRun = "at %d.%d\n";
+#pragma rodata-name (push, "BANKRAMSPRITEDEBUG")
+char* bSdRun = "at %lu.%d\n";
 char* bSdEntryNum = "entry %d\n";
 char* bSdAnimated = "animated %d\n";
 char* bSdBlocked = "blocked %d\n";
@@ -521,7 +521,8 @@ char* bSdY = "y %d\n";
 char* bSdYSize = "y size %d\n";
 char* bSdFlag0 = "flag 0 %d\n";
 char* bSdSeparator = "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx\n";
-char* bSdRunSeparator = "qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq\n";
+char* bSdAllObjectsSeparator = "qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq\n";
+char* bSdRunSeparator = "rrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrr";
 #pragma rodata-name (pop)
 
 
@@ -537,7 +538,7 @@ void bSdPrintState(ViewTable* localViewTab, byte entryNum)
 {
 	if (localViewTab->flags & DRAWN)
 	{
-		printf(bSdRun, bSdRunNumber, bSdFunctionNumber);
+     	printf(bSdRun, bSdRunNumber, bSdFunctionNumber);
 		printf(bSdEntryNum, entryNum);
 		printf(bSdAnimated, (localViewTab->flags & ANIMATED) != 0);
 		printf(bSdBlocked, 0);        // assuming BLOCKED flag exists
@@ -595,11 +596,8 @@ void bSdPrintAllObjects()
 
 			bSdPrintState(&localViewTab, i);
 		}
-		if (var[0] == INTERESTED_ROOM_NUMBER)
-		{
-			bSdFunctionNumber++;
-		}
-		printf(bSdRunSeparator);
+		bSdFunctionNumber++;
+		printf(bSdAllObjectsSeparator);
 	}
 }
 
