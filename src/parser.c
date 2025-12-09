@@ -181,7 +181,7 @@ extern boolean b5IsDebuggingEnabled();
 #pragma wrapped-call (pop)
 extern void bDbgShowPriority();
 extern byte debugBank;
-
+byte trap = FALSE;
 /***************************************************************************
 ** pollKeyboard
 ***************************************************************************/
@@ -222,7 +222,7 @@ void b7PollKeyboard()
 				case KEY_PGUP: b7HandleDirection(2); return;
 				case KEY_RIGHT: b7HandleDirection(3); return;
 				case KEY_PGDN: b7HandleDirection(4); return;
-				case KEY_DOWN: b7HandleDirection(5); return;
+				case KEY_DOWN: b7HandleDirection(5); trap = TRUE; return;
 				case KEY_END: b7HandleDirection(6); return;
 				case KEY_LEFT: b7HandleDirection(7); return;
 				case KEY_HOME: b7HandleDirection(8); return;

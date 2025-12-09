@@ -2601,7 +2601,6 @@ void b9DiscardView(byte viewNum)
 	}
 }
 
-byte trap = FALSE;
 /**************************************************************************
 ** addViewToTable
 **
