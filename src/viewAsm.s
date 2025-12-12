@@ -1295,7 +1295,7 @@ bra @start
     ldy _offsetOfFlags + 1
     lda (VIEW_POS_LOCAL_VIEW_TAB),y
     and #>FIXEDLOOP
-    beq @checkIfLoopShouldBeSet  ; Skip to loop setting if fixed loop is set
+    bne @checkIfLoopShouldBeSet  ; Skip to loop setting if fixed loop is set
 
 @getNewLoopBasedOnDirection:
     ; Get the number of loops for the current view
@@ -1303,16 +1303,17 @@ bra @start
     lda (VIEW_POS_LOCAL_VIEW_TAB),y
 
 @checkForTwoOrThreeLoops:
-    ; Check if the view has 2 loops
+    ; Check if the view has 2 loops  
     cmp #$2
     beq @twoOrThreeLoop
     ; Check if the view has 3 loops
     cmp #$3
     bne @checkForFourLoops
-@twoOrThreeLoop:
+@twoOrThreeLoop:   
     ; For 2 or 3 loops, get the direction and map to new loop using twoLoop table
     ldy _offsetOfDirection
     lda (VIEW_POS_LOCAL_VIEW_TAB),y
+    tay
     lda @twoLoop,y
     sta VIEW_POS_NEW_LOOP
     bra @checkIfLoopShouldBeSet
@@ -1321,7 +1322,7 @@ bra @start
     ; Check if the view has 4 loops
     cmp #$4
     bne @checkIfLoopShouldBeSet
-    ; For 4 loops, get the direction and map to new loop using fourLoop table
+    ; For 4 loops, get the direction and map to new loop using fourLoop table    
     ldy _offsetOfDirection
     lda (VIEW_POS_LOCAL_VIEW_TAB),y
     tay
@@ -1330,22 +1331,6 @@ bra @start
     ; Note: Skips kq4 check (commented as not implemented)
 
 @checkIfLoopShouldBeSet:  
-
-
-    php
-    pha
-    phx
-    phy
-    .import _trap
-    lda _trap
-    beq @continue
-    stp
-    @continue:
-    ply
-    plx
-    pla
-    plp
-
     ; Check if step time count is 1 (time to update loop)
     ldy _offsetOfStepTimeCount
     lda (VIEW_POS_LOCAL_VIEW_TAB),y
