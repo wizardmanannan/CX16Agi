@@ -2613,6 +2613,9 @@ void b9AddViewToTable(ViewTable* localViewtab, byte viewNum, byte entryNum)
 	Cel localCel;
 
 	getLoadedView(&localView, viewNum);
+
+	b9SetLoop(localViewtab, entryNum, localViewtab->currentLoop > localView.numberOfLoops ? 0 : localViewtab->currentLoop);
+
 	getLoadedLoop(&localView, &localLoop, localViewtab->currentLoop);
 	getLoadedCel(&localLoop, &localCel, localViewtab->currentCel);
 
@@ -2621,8 +2624,6 @@ void b9AddViewToTable(ViewTable* localViewtab, byte viewNum, byte entryNum)
 	localViewtab->numberOfCels = localLoop.numberOfCels;
 	localViewtab->xsize = localCel.width;
 	localViewtab->ysize = localCel.height;
-	
-	b9SetLoop(localViewtab, entryNum, 0);
 }
 
 void b9AddToPic(int vNum, int lNum, int cNum, int x, int y, int pNum, int bCol)
