@@ -49,7 +49,7 @@ extern void setLoadedView(View* loadedView, byte loadedViewNumber);
 #pragma wrapped-call (push, trampoline, VIEW_CODE_BANK_1)
 void b9LoadViewFile(byte viewNum);
 void b9DiscardView(byte viewNum);
-void b9AddViewToTable(ViewTable* localViewtab, byte viewNum, byte entryNum);
+void b9SetView(byte viewNum, byte entryNum);
 extern void b9SetCel(ViewTable* localViewTab, byte entryNum, byte celNum);
 extern void b9SetLoop(ViewTable* localViewTab, byte entryNum, byte loopNum);
 extern void b9AddToPic(int vNum, int lNum, int cNum, int x, int y, int pNum, int bCol);

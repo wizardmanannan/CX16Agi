@@ -2606,24 +2606,27 @@ void b9DiscardView(byte viewNum)
 **
 ** Purpose: To add a loaded VIEW to the VIEW table.
 **************************************************************************/
-void b9AddViewToTable(ViewTable* localViewtab, byte viewNum, byte entryNum)
+void b9SetView(byte viewNum, byte entryNum)
 {
+	ViewTable* viewtabPtr;
 	View localView;
 	Loop localLoop;
 	Cel localCel;
 
+	viewtabPtr = &viewtab[entryNum];
+
 	getLoadedView(&localView, viewNum);
 
-	b9SetLoop(localViewtab, entryNum, localViewtab->currentLoop > localView.numberOfLoops ? 0 : localViewtab->currentLoop);
+	b9SetLoop(viewtabPtr, entryNum, viewtabPtr->currentLoop >= localView.numberOfLoops ? 0 : viewtabPtr->currentLoop);
 
-	getLoadedLoop(&localView, &localLoop, localViewtab->currentLoop);
-	getLoadedCel(&localLoop, &localCel, localViewtab->currentCel);
+	getLoadedLoop(&localView, &localLoop, viewtabPtr->currentLoop);
+	getLoadedCel(&localLoop, &localCel, viewtabPtr->currentCel);
 
-	localViewtab->currentView = viewNum;
-	localViewtab->numberOfLoops = localView.numberOfLoops;
-	localViewtab->numberOfCels = localLoop.numberOfCels;
-	localViewtab->xsize = localCel.width;
-	localViewtab->ysize = localCel.height;
+	viewtabPtr->currentView = viewNum;
+	viewtabPtr->numberOfLoops = localView.numberOfLoops;
+	viewtabPtr->numberOfCels = localLoop.numberOfCels;
+	viewtabPtr->xsize = localCel.width;
+	viewtabPtr->ysize = localCel.height;
 }
 
 void b9AddToPic(int vNum, int lNum, int cNum, int x, int y, int pNum, int bCol)
