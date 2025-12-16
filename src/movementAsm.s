@@ -32,7 +32,7 @@ lda (sreg),y
 .segment "BANKRAM0A"
 
 ;void bAMoveTo(ViewTable* localViewTab, byte entryNum);
-bAMoveTo:
+_bAMoveTo:
 .scope
 MVT_LOCAL_VIEW_TAB = ZP_TMP_2
 MVT_ENTRY_NUM = ZP_TMP_3

@@ -58,6 +58,7 @@
     <ClInclude Include="src\fillStack.h" />
     <ClInclude Include="src\fixed.h" />
     <ClInclude Include="src\floatDivision.h" />
+    <ClInclude Include="src\movement.h" />
     <ClInclude Include="src\random.h" />
     <ClInclude Include="src\spriteAllocator.h" />
     <ClInclude Include="src\spriteGarbage.h" />
@@ -99,6 +100,7 @@
     <ClCompile Include="src\graphics.c" />
     <ClCompile Include="src\irq.c" />
     <ClCompile Include="src\loadingScreen.c" />
+    <ClCompile Include="src\movement.c" />
     <ClCompile Include="src\object.c" />
     <ClCompile Include="src\paletteManager.c" />
     <ClCompile Include="src\random.c" />

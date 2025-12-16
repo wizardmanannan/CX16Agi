@@ -154,7 +154,8 @@ void b6UpdateStatusLine()
 
 
 #pragma wrapped-call (push, trampoline, VIEW_CODE_BANK_1)
-extern void b9AnimateObjects();     
+extern void b9AnimateObjects(); 
+extern void b9UpdateObjectDirections();
 #pragma wrapped-call (pop)
 
 /***************************************************************************
@@ -188,6 +189,8 @@ void b6Interpret()
     do {
         hasEnteredNewRoom = FALSE;
         exitAllLogics = FALSE;
+
+        b9UpdateObjectDirections();
 
         executeLogic(&logicEntry, 0);
 

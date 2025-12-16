@@ -12,7 +12,7 @@
     .include "fillAsm.s"
     .include "floatDivisionAsm.s"
     .include "priority.s"
-    .include "movement.s"
+    .include "movementAsm.s"
     .include "randomAsm.s"
     .include "modulus.s"
     .include "soundAsm.s"
@@ -111,3 +111,5 @@
     .export _b9SetLoop
     .export _b9SetCel
     .export _b9UpdateLoopAndCel
+    .export _bAMoveTo
+    .export _b9UpdateObjectDirections

@@ -32,14 +32,21 @@ VIEW_INC = 1
 .import _bSdPrintAllObjects
 .import _spriteDebugBank
 .import _var
+.import _getViewTab
+.import _bADetermineMovement
 
 .ifdef SPRITE_DEBUG
 .import _bSdRunNumber
 .import _bSdFunctionNumber
 .endif
 
-VIEW_POS_LOCAL_VIEW_TAB = ZP_TMP_2
-VIEW_POS_ENTRY_NUM = ZP_TMP_3 + 1
+.segment "ZEROPAGE"
+;These need to be preserved when b9LoopThroughAnimatedObjects calls something else, hence the zp
+VIEW_POS_LOCAL_VIEW_TAB: .word $0
+VIEW_POS_ENTRY_NUM: .byte $0
+VIEW_POS_NEW_LOOP: .byte $0
+.segment "CODE"
+
 VIEW_POS_LOCAL_VIEW_FLAGS = ZP_TMP_4
 VIEW_POS_OTHER_VIEW_TAB = ZP_TMP_5
 VIEW_POS_VIEW_POS_OTHER_VIEW_TAB = ZP_TMP_6
@@ -54,7 +61,6 @@ VIEW_POS_XPOS = ZP_TMP_10 + 1
 VIEW_POS_YPOS = ZP_TMP_12
 VIEW_POS_CEL_NUM = ZP_TMP_12 + 1
 VIEW_POS_LOOP_NUM = ZP_TMP_13
-VIEW_POS_NEW_LOOP = ZP_TMP_13 + 1
 VIEW_POS_THE_CEL = ZP_TMP_14 + 1
 VIEW_POS_LAST_CEL = ZP_TMP_16
 VIEW_POS_ANIMATED_OBJECTS_COUNTER = ZP_TMP_16 + 1
@@ -777,7 +783,7 @@ lda VIEW_POS_LOCAL_VIEW_TAB
 ldx VIEW_POS_LOCAL_VIEW_TAB + 1
 jsr pushax
 lda VIEW_POS_ENTRY_NUM
-TRAMPOLINE #MOVEMENT_BANK, bAMoveTo
+TRAMPOLINE #MOVEMENT_BANK, _bAMoveTo
 
 rts
 
@@ -1598,9 +1604,6 @@ SPRITE_DEBUG ;4
 ; ---------------------------------------------------------------------
 
 _b9AnimateObjects:
-.scope
-
-
     SPRITE_DEBUG ;1
 
     ; Point shared loop at b9UpdateLoopAndCel
@@ -1652,6 +1655,19 @@ _b9AnimateObjects:
     SPRITE_DEBUG ;15
     SPRITE_DEBUG_NEXT_RUN
     rts
+
+
+b9UpdateObjectDirection:
+ldy _offsetOfMotion
+lda (VIEW_POS_LOCAL_VIEW_TAB),y
+beq @return
+
+lda VIEW_POS_ENTRY_NUM
+TRAMPOLINE #MOVEMENT_BANK, _bADetermineMovement
+
+
+@return:
+rts
 
 ; b9LoopThroughAnimatedObjects
 ; -----------------------------
@@ -1721,7 +1737,17 @@ calculateNextAddress:
     bne animatedObjectsLoop
 
     rts
-.endscope
+
+
+_b9UpdateObjectDirections:
+lda #<b9UpdateObjectDirection
+sta loopMethodToCall + 1
+lda #>b9UpdateObjectDirection
+sta loopMethodToCall + 2
+    
+jsr b9LoopThroughAnimatedObjects
+    
+rts
 
 .endif
 
