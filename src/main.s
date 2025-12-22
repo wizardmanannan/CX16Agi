@@ -18,6 +18,7 @@
     .include "soundAsm.s"
     .include "spriteAllocatorAsm.s"
     .include "viewAsm.s"
+    .include "init.s"
     
     .export _executeLogic
     .export _b6InitInterpreter
@@ -113,3 +114,4 @@
     .export _b9UpdateLoopAndCel
     .export _bAMoveTo
     .export _b9UpdateObjectDirections
+    .export _loadInitBankAndInitMemory
