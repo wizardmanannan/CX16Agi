@@ -17,6 +17,7 @@
     .include "modulus.s"
     .include "soundAsm.s"
     .include "spriteAllocatorAsm.s"
+    .include "init.s"
     
     .export _executeLogic
     .export _b6InitInterpreter
@@ -101,3 +102,4 @@
     .export _bDResetSpriteTablePointer
     .export _bDReenableOptimisticMode
     .export _bDDeleteAllocation
+    .export _loadInitBankAndInitMemory

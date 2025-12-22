@@ -147,6 +147,7 @@
 #define OBJECT_BANK 0xF
 #define RANDOM_BANK 0x6
 #define SOUND_BANK 0x1
+#define INIT_BANK 0x26
 
 //Golden RAM
 #define VARS_AREA_START 0
@@ -250,7 +251,7 @@ typedef struct {          /* DIR entry structure */
 void b10InitDynamicMemory();
 void b10InitZeroPage();
 
-void memoryMangerInit();
+void bInitMemoryMangerInit();
 
 extern void trampoline(); //DOTO: Really should come from helpers but there would be a circular dependency if I included it. Split helpers up to make this possible
 
