@@ -305,6 +305,8 @@ void b6Initialise()
 
 #pragma code-name (pop)
 
+extern void loadInitBankAndInitMemory();
+
 void main()
 {
     int ret, oldCount = 0;
@@ -320,7 +322,9 @@ void main()
     RAM_BANK = 7;
     srand(*((unsigned int*)0xA000)); //Memory starts as random gibberish
 
-    memoryMangerInit();
+    loadInitBankAndInitMemory();
+
+    bInitMemoryMangerInit();
 
     RAM_BANK = DEBUG_INIT_BANK;
     b5InitializeDebugging();

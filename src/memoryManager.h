@@ -251,7 +251,7 @@ typedef struct {          /* DIR entry structure */
 void b10InitDynamicMemory();
 void b10InitZeroPage();
 
-void memoryMangerInit();
+void bInitMemoryMangerInit();
 
 extern void trampoline(); //DOTO: Really should come from helpers but there would be a circular dependency if I included it. Split helpers up to make this possible
 

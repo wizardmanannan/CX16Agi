@@ -116,6 +116,7 @@ VERA_spi_ctrl     = $9F3F
 
 ROM_BANK          = $9F60
 RAM_BANK          = $0
+USER_SPACE = $400
 
 YM_reg            = $9FE0
 YM_data           = $9FE1
