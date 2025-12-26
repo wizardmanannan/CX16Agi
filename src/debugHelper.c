@@ -525,11 +525,11 @@ const char bSdAllObjectsSeparator[] = "qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq
 const char bSdRunSeparator[] = "rrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrr";
 #pragma rodata-name (pop)
 
+byte interestedRoomNumber = 41;
 
 #pragma bss-name (push, "BANKRAMSPRITEDEBUG")
 byte bSdFunctionNumber;
 long bSdRunNumber;
-#define INTERESTED_ROOM_NUMBER 1
 #pragma bss-name (pop)
 
 extern byte* var;
@@ -588,7 +588,7 @@ void bSdPrintAllObjects()
 	ViewTable localViewTab;
 	byte i;
 
-	if (var[0] == INTERESTED_ROOM_NUMBER)
+	if (var[0] == interestedRoomNumber)
 	{
 		for (i = 0; i < 20; i++)
 		{
