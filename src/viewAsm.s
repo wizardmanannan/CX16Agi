@@ -38,6 +38,7 @@ VIEW_INC = 1
 .ifdef SPRITE_DEBUG
 .import _bSdRunNumber
 .import _bSdFunctionNumber
+.import _interestedRoomNumber
 .endif
 
 .segment "ZEROPAGE"
@@ -109,7 +110,7 @@ pha
 ; sta sreg + 1
 ; lda (sreg)
 lda $400
-cmp #$1
+cmp _interestedRoomNumber
 bne @exit
 lda _spriteDebugBank
 sta RAM_BANK
@@ -119,6 +120,7 @@ stz _bSdFunctionNumber
 
 lda #<_bSdRunSeparator
 ldx #>_bSdRunSeparator
+ldy #$0 ;variadic args 0
 jsr _printf
 
 @exit:
