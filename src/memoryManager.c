@@ -18,7 +18,7 @@ const char B6_OPEN_FLOOD_FILE_MESSAGE_STRING[] = "Opening flood file %d of %d\n"
 #pragma rodata-name (push, "BANKRAM10")
 const char B10_OUT_DYNAMIC[] = "Out of dynamic memory. Amount %d\n";
 #pragma rodata-name (pop)
-#pragma code-name (push, "BANKRAMINIT")
+#pragma code-name (push, "RAMINIT")
 void bInitBankedRamInit()
 {
 #define FILE_NAME_LENGTH 13
@@ -261,7 +261,7 @@ boolean b10BankedDealloc(byte* ptr, byte bank)
 }
 
 #pragma code-name (pop);
-#pragma code-name (push, "BANKRAMINIT")
+#pragma code-name (push, "RAMINIT")
 void bInitMemoryMangerInit()
 {
 	byte previousRamBank = RAM_BANK;
