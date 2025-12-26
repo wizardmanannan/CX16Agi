@@ -137,7 +137,7 @@ rts
 
 .macro SPRITE_DEBUG
 .ifdef SPRITE_DEBUG
-jsr debugSprites
+;jsr debugSprites
 .endif
 .endmacro
 .macro SPRITE_DEBUG_NEXT_RUN
