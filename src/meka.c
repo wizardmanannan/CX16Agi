@@ -202,15 +202,16 @@ void b6Interpret()
         b6UpdateStatusLine();
         var[5] = 0;
         var[4] = 0;
-        flag[5] = 0;
+
+        if (!hasEnteredNewRoom)
+        {
+            flag[5] = 0;
+        }
         flag[6] = FALSE;
         flag[12] = FALSE;
 
 
         b9AnimateObjects();
-
-        if (hasEnteredNewRoom) b6NewRoom();
-
     } while (hasEnteredNewRoom);
 }
 

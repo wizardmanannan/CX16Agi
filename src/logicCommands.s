@@ -158,6 +158,7 @@ LOGICCOMMANDS_INC = 1
 .import _b5Div_n
 .import _b5Div_v
 .import _b5SetPriorityBase
+.import _b6NewRoom
 
 .import _exitAllLogics
 .import _hasEnteredNewRoom
@@ -1319,6 +1320,9 @@ lda #TRUE
 sta _hasEnteredNewRoom
 sta _exitAllLogics
 INC_CODE 
+
+JSRFAR _b6NewRoom, MEKA_BANK
+
 jmp endMainLoop
 
 
