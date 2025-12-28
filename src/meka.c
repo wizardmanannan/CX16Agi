@@ -105,25 +105,31 @@ void b6DiscardResources()
 ***************************************************************************/
 void b6NewRoom()
 {
+    b1StopSound();
+
      bAResetViews();
     //stop_update_all();
     //unanimate_all();
     b6DiscardResources();
-    controlMode = PLAYER_CONTROL;
+
+    b6AdjustEgoPosition();
+
     //unblock();
-    horizon = 36;
-    var[1] = var[0];
-    var[0] = newRoomNum;
     var[4] = 0;
     var[5] = 0;
     var[9] = 0;
-    var[16] = 0;
-    b6AdjustEgoPosition();
+    var[1] = var[0];
     var[2] = 0;
+    var[0] = newRoomNum;
+    var[16] = 0;
     flag[2] = 0;
     flag[5] = 1;
+
+
+    controlMode = PLAYER_CONTROL;
+    horizon = 36;
+
     score = var[3];
-    b1StopSound();
     memsetBanked(b7Directions, 0, 9, STRING_BANK);
     /* rectfill(screen, 0, 20+(22*16), 639, 463, 0); */   /* Clear screen */
     b6SetAndWaitForIrqState(CLEAR);
