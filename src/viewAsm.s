@@ -1209,7 +1209,22 @@ lda VIEW_POS_LOOP_NUM
 ldy _offsetOfCurrentLoop
 sta (VIEW_POS_LOCAL_VIEW_TAB),y 
 
-lda _offsetOfCurrentCel
+
+; php
+; pha
+; phx
+; phy
+; lda VIEW_POS_ENTRY_NUM
+; bne @continue
+; stp
+; @continue:
+; ply
+; plx
+; pla
+; plp
+
+
+ldy _offsetOfCurrentCel
 lda (VIEW_POS_LOCAL_VIEW_TAB),y 
 sta VIEW_POS_CEL_NUM
 
