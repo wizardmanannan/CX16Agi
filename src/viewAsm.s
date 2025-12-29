@@ -1082,7 +1082,7 @@ _b9SetCel:
     sta VIEW_POS_ENTRY_NUM
     jsr popax
     sta VIEW_POS_LOCAL_VIEW_TAB
-    stx VIEW_POS_LOCAL_VIEW_TAB
+    stx VIEW_POS_LOCAL_VIEW_TAB + 1
 ; void b9SetCel(ViewTable* localViewTab, byte entryNum, byte celNum)
 ; WARNING: Non-conventional calling. Assumes arguments are pre-loaded in zero page:
 ; - VIEW_POS_LOCAL_VIEW_TAB: Pointer to the view table (localViewTab)
