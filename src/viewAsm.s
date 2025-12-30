@@ -34,6 +34,8 @@ VIEW_INC = 1
 .import _var
 .import _getViewTab
 .import _bADetermineMovement
+.import _b11GetNumberOfCels
+.import _offsetOfCurrentView
 
 .ifdef SPRITE_DEBUG
 .import _bSdRunNumber
@@ -1205,6 +1207,15 @@ b9SetLoopAsm:
 ; - VIEW_POS_LOCAL_VIEW_TAB: Pointer to the view table (localViewTab)
 ; - VIEW_POS_LOOP_NUM: Loop number to set (loopNum)
 ; - entryNum is not used in this routine
+
+ldy _offsetOfCurrentView
+lda (VIEW_POS_LOCAL_VIEW_TAB),y 
+jsr pusha
+lda VIEW_POS_LOOP_NUM
+TRAMPOLINE #LOADED_VIEW_BANK, _b11GetNumberOfCels
+ldy _offsetOfNumberOfCelsVT
+sta (VIEW_POS_LOCAL_VIEW_TAB),y 
+
 lda VIEW_POS_LOOP_NUM
 ldy _offsetOfCurrentLoop
 sta (VIEW_POS_LOCAL_VIEW_TAB),y 

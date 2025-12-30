@@ -3859,3 +3859,20 @@ void bDShowObjectState(int objNum)
 }
 
 #pragma code-name (pop)
+
+#pragma code-name (push, "BANKRAM11")
+byte b11GetNumberOfCels(byte viewNum, byte loopNum)
+{
+	View view;
+	byte numberOfCels;
+
+	view = loadedViews[viewNum];
+
+	memCpyBanked(&numberOfCels, view.loops + loopNum, view.loopsBank, 1);
+
+	/*printf("you are checking %p  on bank %p\n", view.loops + loopNum, view.loopsBank);
+	printf("view %d loop %d has %d cels\n", viewNum, loopNum, numberOfCels);*/
+
+	return numberOfCels;
+}
+#pragma code-name (pop)
