@@ -1326,7 +1326,8 @@ bra @start
 
 @checkFixedLoop:
     ; Check if the object has a fixed loop flag set
-    ldy _offsetOfFlags + 1
+    ldy _offsetOfFlags
+    iny
     lda (VIEW_POS_LOCAL_VIEW_TAB),y
     and #>FIXEDLOOP
     bne @checkIfLoopShouldBeSet  ; Skip to loop setting if fixed loop is set
@@ -1676,7 +1677,8 @@ _b9AnimateObjects:
     ; If Ego is not the first entry, advance pointer by EgoIndex * _sizeOfViewTab
 
     lda #(>ONLAND | >ONWATER) ^ $FF     ; Invert mask for clear
-    ldy _offsetOfFlags + 1              ; High-byte flags
+    ldy _offsetOfFlags            ; High-byte flags
+    iny
     and (VIEW_POS_LOCAL_VIEW_TAB),y
     sta (VIEW_POS_LOCAL_VIEW_TAB),y
 
