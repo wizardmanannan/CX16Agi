@@ -83,3 +83,8 @@ cx16TesterConfig.json
 /AGIStudio
 /.vscode/settings.json
 /.RunCX16Agi.sh.swp
+/src/CommanderX16AGI/.vs/CommanderX16AGI/v14
+/src/CommanderX16AGI/CommanderX16AGI.ncb
+/src/CommanderX16AGI/CommanderX16AGI.suo
+/src/CommanderX16AGI/CommanderX16AGI.VC.db
+/src/CommanderX16AGI/UpgradeLog.htm
