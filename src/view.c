@@ -1616,7 +1616,7 @@ boolean agiBlit(ViewTable* localViewTab, byte entryNum, boolean disableInterupts
 	RAM_BANK = localMetadata.viewTableMetadataBank;
 	loopVeraAddress = loopVeraAddresses[localView.maxVeraSlots * localViewTab->currentCel];
 
-	_assmByte = (localViewTab->flags & MOTION > 0) || localViewTab->staleCounter || localMetadata.isOnBackBuffer;
+	_assmByte = ((localViewTab->flags & MOTION > 0) && localViewTab->direction > 0) || localViewTab->staleCounter || localMetadata.isOnBackBuffer;
 	isAnimated = _assmByte;
 
 	asm("lda %v", _assmByte);
