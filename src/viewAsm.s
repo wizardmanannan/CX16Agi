@@ -1101,8 +1101,10 @@ b9SetCelAsm:
     lda (VIEW_POS_LOCAL_VIEW_TAB),y ; A = CurrentLoop
     ldy _offsetOfNumberOfLoopsVT    ; Y = offset of NumberOfLoops
     cmp (VIEW_POS_LOCAL_VIEW_TAB),y ; Compare CurrentLoop with NumberOfLoops
-    bcs @return                     ; If CurrentLoop >= NumberOfLoops, return
+    bcc @chckCurrentCelLtNc
+    jmp @return                     ; If CurrentLoop >= NumberOfLoops, return
 
+    @chckCurrentCelLtNc:
     ; Validate CurrentCel < NumberOfCels
     ldy _offsetOfCurrentCel         ; Y = offset of CurrentCel
     lda (VIEW_POS_LOCAL_VIEW_TAB),y ; A = CurrentCel
@@ -1140,13 +1142,14 @@ b9SetCelAsm:
 
 @checkY:
     ; Check Y-axis border collision: YPos - YSize < Defines.MINY - 1 (assumed 255)
-    sec                             ; Set carry for subtraction
-    ldy _offsetOfYPos               ; Y = offset of YPos
-    lda (VIEW_POS_LOCAL_VIEW_TAB),y ; A = YPos
-    ldy _offsetOfYSize              ; Y = offset of YSize
-    sbc (VIEW_POS_LOCAL_VIEW_TAB),y ; A = YPos - YSize
-    cmp #PICTURE_HEIGHT + 64        ; Check for underflow (high value due to 8-bit wraparound)
-    bcc @return                     ; If < PICTURE_HEIGHT + 64, no collision, return
+    ldy _offsetOfYPos
+    lda (VIEW_POS_LOCAL_VIEW_TAB),y
+    clc
+    adc #2
+    ldy _offsetOfYSize
+    cmp (VIEW_POS_LOCAL_VIEW_TAB),y
+    beq @setRepositionedBasedOnY
+    bcs @return
 
 @setRepositionedBasedOnY:
     ; Set Repositioned flag for Y-axis collision
