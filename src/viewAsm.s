@@ -464,7 +464,6 @@ rts
 ;       * For (Y - YSize) >= -1: explicit compare to $FF (i.e., -1) as a pass.
 ;   - C (carry) must be set before SBC; BEQ/BCS/BCC follow unsigned semantics.
 ; -----------------------------------------------------------------------------
-;void b9FindPosition(Viewtab* localViewTab, byte entryNum);
 b9GoodPositionAsm:
     ; ---- C0: X >= MINX (with "wrapped negative" guard) -----------------------
     ; Load X
@@ -488,31 +487,19 @@ b9GoodPositionAsm:
     beq @checkY                          ; equal is OK
     bcs @returnFalse                     ; greater -> reject
 
-@checkY:
-    ; ---- Prep Y and compute (Y - YSize) -------------------------------------
-    ; Preserve Y (position) in X for later upper-bound/horizon checks.
-    ldy _offsetOfYPos                    ; Y := offset of Y
-    lda (VIEW_POS_LOCAL_VIEW_TAB),y      ; A := Y
-    tax                                  ; X := Y (save)
-
-    ; Compute Y - YSize with borrow
-    sec                                  ; set carry for SBC (no borrow)
-    ldy _offsetOfYSize                   ; Y := offset of YSize
-    sbc (VIEW_POS_LOCAL_VIEW_TAB),y      ; A := Y - YSize
-
-    ; ---- C2: (Y - YSize) >= -1  ---------------------------------------------
-    ; Allow -1 exactly (C# uses MINY - 1).
-    cmp #$FF                             ; A == $FF (-1) ? -> pass to next check
-    beq @checkLessThanMaxY
-
-    ; As with X low bound, reject values that look like wrapped negatives:
-    ; if (Y - YSize) >= PICTURE_HEIGHT + 64, treat as invalid "negative".
-    cmp #PICTURE_HEIGHT + 64
-    bcs @returnFalse                     ; outside allowed low-bound heuristic -> reject
-
+@checkY:  ;Substitute for ((this.Y - this.YSize) >= Defines.MINY - 1). Works around the issue of being unable to the difference between large positives and low negatives
+    ldy _offsetOfYPos                  ; Y := offset of YSize
+    lda (VIEW_POS_LOCAL_VIEW_TAB),y      ; A := Y - YSize
+    clc
+    adc #$1
+    ldy _offsetOfYSize
+    cmp (VIEW_POS_LOCAL_VIEW_TAB),y 
+    bcc @returnFalse
+  
 @checkLessThanMaxY:
     ; ---- C3: Y <= PICTURE_HEIGHT  -------------------------------------------
-    txa                                  ; restore Y into A
+    ldy _offsetOfYPos
+    lda (VIEW_POS_LOCAL_VIEW_TAB),y                                 ;
     cmp #PICTURE_HEIGHT                  ; Y ? PICTURE_HEIGHT
     beq @checkHorizon                    ; equal is OK
     bcs @returnFalse                     ; greater -> reject
