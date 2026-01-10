@@ -37,6 +37,7 @@ _bAMoveTo:
 MVT_LOCAL_VIEW_TAB = ZP_TMP_2
 MVT_ENTRY_NUM = ZP_TMP_3
 MVT_DIR_VAL_X = ZP_TMP_3 + 1
+MVT_DIR = ZP_TMP_4
 
 sta MVT_ENTRY_NUM
 jsr popax 
@@ -71,18 +72,22 @@ jsr bADirectionIndex
 txa
 
 READ_DIRECTION_TABLE
+
 ldy _offsetOfDirection
 sta (MVT_LOCAL_VIEW_TAB),y
+sta MVT_DIR 
 
 ldx MVT_ENTRY_NUM
 bne @endMoveObj
 
 @updateEgoDirection:
+
 txa
 lda #EGODIR
 SET_VAR_NON_INTERPRETER sreg
 
 @endMoveObj:
+lda MVT_DIR
 cmp #$0
 bne @return
 
