@@ -82,7 +82,7 @@ bne @endMoveObj
 
 @updateEgoDirection:
 
-txa
+tax
 lda #EGODIR
 SET_VAR_NON_INTERPRETER sreg
 
