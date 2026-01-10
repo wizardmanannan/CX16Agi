@@ -716,8 +716,8 @@ jsr popa
 sta VIEW_POS_STEP_SIZE
 
 jsr popax
-stx VIEW_POS_YPOS
-sta VIEW_POS_XPOS
+sta VIEW_POS_YPOS
+stx VIEW_POS_XPOS
 
 jsr popa
 sta VIEW_POS_ENTRY_NUM
@@ -726,9 +726,8 @@ sta VIEW_POS_LOCAL_VIEW_TAB         ; pointer low byte
 stx VIEW_POS_LOCAL_VIEW_TAB + 1     ; pointer high byte
 
 b9StartMoveObjAsm:
-
 ldy _offsetOfMotion
-lda  MOTION_MOVETO
+lda  #MOTION_MOVETO
 sta (VIEW_POS_LOCAL_VIEW_TAB),y
 
 ldy _offsetOfParam1

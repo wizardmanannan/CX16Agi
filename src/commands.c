@@ -1361,7 +1361,6 @@ void b2Move_obj() // 5, 0x00
 	entryNum = loadAndIncWinCode();
 	getViewTab(&localViewtab, entryNum);
 
-	//printf("the address of the view tab is %d for entry %d\n", entryNum);
 	b9StartMoveObj(&localViewtab, entryNum, loadAndIncWinCode(), loadAndIncWinCode(), loadAndIncWinCode(), loadAndIncWinCode());
 
 	setViewTab(&localViewtab, entryNum);
