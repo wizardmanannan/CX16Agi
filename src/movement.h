@@ -13,4 +13,8 @@ typedef enum {
 
 void bADetermineMovement(byte entryNum);
 
+#pragma wrapped-call (push, trampoline, VIEWTAB_BANK)
+extern void b9StartMoveObj(ViewTable* localViewTab, byte entryNum, byte x, byte y, byte stepSize, byte completionFlag);
+#pragma wrapped-call (pop)
+
 #endif

@@ -1361,14 +1361,8 @@ void b2Move_obj() // 5, 0x00
 	entryNum = loadAndIncWinCode();
 	getViewTab(&localViewtab, entryNum);
 
-	localViewtab.param1 = loadAndIncWinCode();
-	localViewtab.param2 = loadAndIncWinCode();
-	localViewtab.param3 = localViewtab.stepSize;  /* Save stepsize */
-	stepVal = loadAndIncWinCode();
-	if (stepVal > 0) localViewtab.stepSize = stepVal;
-	localViewtab.param4 = loadAndIncWinCode();
-	localViewtab.motion = 3;
-	localViewtab.flags |= MOTION;
+	//printf("the address of the view tab is %d for entry %d\n", entryNum);
+	b9StartMoveObj(&localViewtab, entryNum, loadAndIncWinCode(), loadAndIncWinCode(), loadAndIncWinCode(), loadAndIncWinCode());
 
 	setViewTab(&localViewtab, entryNum);
 	return;

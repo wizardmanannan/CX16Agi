@@ -115,3 +115,4 @@
     .export _bAMoveTo
     .export _b9UpdateObjectDirections
     .export _loadInitBankAndInitMemory
+    .export _b9StartMoveObj

@@ -17,6 +17,7 @@
 #include "celToVeraZp.h"
 #include "fixed.h"
 #include <limits.h>
+#include "movement.h"
 
 #define MAX_JOINED_SPRITES 6
 #define MAX_SPRITES_ROW_OR_COLUMN_SIZE 4

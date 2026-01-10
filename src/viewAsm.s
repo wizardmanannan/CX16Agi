@@ -708,7 +708,7 @@ _b9FindPositionAsm:
     rts
 
 ;void b9StartMoveObj(ViewTable* localViewTab, byte entryNum, byte x, byte y, byte stepSize, byte completionFlag)
-b9StartMoveObj:
+_b9StartMoveObj:
  ; Save entry number and local view pointer
 sta VIEW_POS_COMPLETION_FLAG
 
@@ -731,7 +731,11 @@ ldy _offsetOfMotion
 lda  MOTION_MOVETO
 sta (VIEW_POS_LOCAL_VIEW_TAB),y
 
-ldy _offsetOfYPos
+ldy _offsetOfParam1
+lda VIEW_POS_XPOS
+sta (VIEW_POS_LOCAL_VIEW_TAB),y 
+
+ldy _offsetOfParam2
 lda VIEW_POS_YPOS
 sta (VIEW_POS_LOCAL_VIEW_TAB),y 
 
@@ -751,11 +755,10 @@ sta (VIEW_POS_LOCAL_VIEW_TAB),y
 lda VIEW_POS_COMPLETION_FLAG
 ldy _offsetOfParam4
 sta (VIEW_POS_LOCAL_VIEW_TAB),y 
-ldx #$0
-SET_VAR_NON_INTERPRETER sreg
+RESET_FLAG_NON_INTERPRETER sreg
 
 lda VIEW_POS_FLAGS_LOW
-ldy _offsetOfParam4
+ldy _offsetOfFlags
 lda (VIEW_POS_LOCAL_VIEW_TAB),y 
 ora #UPDATE
 sta (VIEW_POS_LOCAL_VIEW_TAB),y 
@@ -764,7 +767,7 @@ sta (VIEW_POS_LOCAL_VIEW_TAB),y
 lda VIEW_POS_ENTRY_NUM
 bne @moveTo
 
-lda #PLAYER_CONTROL
+lda #PROGRAM_CONTROL
 sta _controlMode
 bne @moveTo
 
