@@ -756,7 +756,6 @@ ldy _offsetOfParam4
 sta (VIEW_POS_LOCAL_VIEW_TAB),y 
 RESET_FLAG_NON_INTERPRETER sreg
 
-lda VIEW_POS_FLAGS_LOW
 ldy _offsetOfFlags
 lda (VIEW_POS_LOCAL_VIEW_TAB),y 
 ora #UPDATE
@@ -768,7 +767,6 @@ bne @moveTo
 
 lda #PROGRAM_CONTROL
 sta _controlMode
-bne @moveTo
 
 @moveTo:
 
