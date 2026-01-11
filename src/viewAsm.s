@@ -363,6 +363,13 @@ sta X_VAL
 
 GET_PRIORITY                      ; A = priority at (X_VAL,Y_VAL)
 
+; 
+
+
+
+
+
+@compareWater:
 ; --- Priority == WATER (3) ---
 cmp #WATER
 beq @checkAgainstControlLoopCheck ; still water, continue
@@ -833,6 +840,21 @@ OY = ZP_TMP_22 + 1
 PY = ZP_TMP_23
 OD = ZP_TMP_24 
 OS = ZP_TMP_24 + 1
+
+; php
+; pha
+; phx
+; phy
+; lda VIEW_POS_ENTRY_NUM 
+; cmp #15
+; bne @continue
+; stp
+; @continue:
+; ply
+; plx
+; pla
+; plp
+
 
 ldy _offsetOfStepTimeCount
 lda (VIEW_POS_LOCAL_VIEW_TAB),y

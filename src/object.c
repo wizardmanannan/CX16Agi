@@ -119,6 +119,11 @@ void bFLoadObjectFile()
         index = *(marker)+256 * (*(marker + 1)) + 3;
         bBObjects[objNum].name = (char*) &bFObjData[index];
         bBObjects[objNum].roomNum = *(marker + 2);
+
+        if (objNum == 1)
+        {
+            bBObjects[objNum].roomNum = 255;
+        }
     }
 }
 #pragma code-name (pop)

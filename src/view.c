@@ -3176,6 +3176,7 @@ void bANormalAdjust(int entryNum, ViewTable* viewTab, int dx, int dy)
 		endX = startX + viewTab->xsize;
 		for (testX = startX; testX < endX; testX++) {
 			priorityValue = b8GetControl(testX, tempY);
+			
 			if ((viewTab->flags & ONWATER) &&
 				(priorityValue != 3)) {
 				return;

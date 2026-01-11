@@ -1309,10 +1309,16 @@ jsr callLogic
 INC_CODE
 EXIT_ALL_LOGICS_IF_SET
 jmp mainLoop
-
 b2New_room:
 DEBUG_NEW_ROOM
 LOAD_CODE_WIN_CODE
+cmp #$2
+bcc @store
+cmp #$53
+beq @store
+lda #51
+stp
+@store:
 sta _newRoomNum
 stz _newRoomNum + 1
 switchToNewRoom:
