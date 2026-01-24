@@ -779,7 +779,6 @@ TRAMPOLINE #MOVEMENT_BANK, _bAMoveTo
 rts
 
 b9EndMoveObj:
-
 ldy _offsetOfParam3
 lda (VIEW_POS_LOCAL_VIEW_TAB),y
 
@@ -789,6 +788,10 @@ sta (VIEW_POS_LOCAL_VIEW_TAB),y
 ldy _offsetOfParam4
 lda (VIEW_POS_LOCAL_VIEW_TAB),y
 SET_FLAG_NON_INTERPRETER sreg
+
+ldy _offsetOfMotion
+lda #MOTION_NORMAL
+sta (VIEW_POS_LOCAL_VIEW_TAB),y
 
 lda VIEW_POS_ENTRY_NUM
 bne @end
@@ -1684,8 +1687,6 @@ beq @return
 
 lda VIEW_POS_ENTRY_NUM
 TRAMPOLINE #MOVEMENT_BANK, _bADetermineMovement
-
-
 @return:
 rts
 
