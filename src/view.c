@@ -2067,11 +2067,7 @@ void bAResetViewtabs(boolean fullReset)
 	for (entryNum = 0; entryNum < VIEW_TABLE_SIZE; entryNum++) {
 		getViewTab(&localViewtab, entryNum);
 
-		localViewtab.flags &= ~ANIMATED;
-		localViewtab.flags &= ~DRAWN;
-		localViewtab.flags &= UPDATE;
-
-		
+		localViewtab.flags = (localViewtab.flags & ~(ANIMATED | DRAWN)) | UPDATE;
 		localViewtab.stepSize = 1;
 		localViewtab.cycleTime = 1;
 		localViewtab.cycleTimeCount = 1;
