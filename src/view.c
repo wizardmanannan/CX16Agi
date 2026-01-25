@@ -2067,36 +2067,50 @@ void bAResetViewtabs(boolean fullReset)
 	for (entryNum = 0; entryNum < VIEW_TABLE_SIZE; entryNum++) {
 		getViewTab(&localViewtab, entryNum);
 
-		localViewtab.stepTime = 1;
-		localViewtab.stepTimeCount = 1;
+		localViewtab.flags &= ~ANIMATED;
+		localViewtab.flags &= ~DRAWN;
+		localViewtab.flags &= UPDATE;
+
+		
 		localViewtab.stepSize = 1;
 		localViewtab.cycleTime = 1;
 		localViewtab.cycleTimeCount = 1;
+		localViewtab.stepTime = 1;
+		localViewtab.stepTimeCount = 1;
+			
+		
 		localViewtab.staleCounter = 0;
 		if (fullReset)
 		{
 			localViewtab.xPos = 0;
 			localViewtab.yPos = 0;
-			localViewtab.currentView = 0;
 			localViewtab.viewData = NULL;
-			localViewtab.currentLoop = 0;
-			localViewtab.numberOfLoops = 0;
-			localViewtab.loopData = NULL;
 			localViewtab.currentCel = 0;
+			localViewtab.currentLoop = 0;
+			localViewtab.currentView = 0;
+			localViewtab.direction = 0;
+			localViewtab.param1 = 0;
+			localViewtab.param2 = 0;
+			localViewtab.param3 = 0;
+			localViewtab.param4 = 0;
+			localViewtab.cycleStatus = 0;
+			localViewtab.noAdvance = FALSE;
+			localViewtab.previousX = 0;
+			localViewtab.previousY = 0;
+			localViewtab.priority = 0;
+			localViewtab.repositioned = 0;
+			localViewtab.motion = 0;
+			localViewtab.previousX = 0;
+			localViewtab.previousY = 0;
+			localViewtab.numberOfLoops = 0;
+			localViewtab.loopData = NULL;	
 			localViewtab.numberOfCels = 0;
 			localViewtab.celData = NULL;
 			localViewtab.xsize = 0;
 			localViewtab.ysize = 0;
-			localViewtab.direction = 0;
-			localViewtab.motion = 0;
-			localViewtab.cycleStatus = 0;
-			localViewtab.priority = 0;
-			localViewtab.flags = 0;
-			localViewtab.repositioned = FALSE;
 			localViewtab.stopped = FALSE;
-			localViewtab.previousX = 0;
-			localViewtab.previousY = 0;
-			localViewtab.noAdvance = FALSE;
+	
+	
 		}
 		setViewTab(&localViewtab, entryNum);
 	}
