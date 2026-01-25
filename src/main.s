@@ -10,7 +10,6 @@
     .include "wordsAsm.s"
     .include "debug.s"
     .include "fillAsm.s"
-    .include "floatDivisionAsm.s"
     .include "priority.s"
     .include "movementAsm.s"
     .include "randomAsm.s"
@@ -32,7 +31,6 @@
     .export _logDebugVal4
     .export _logDebugVal5
     .export _logDebugVal6
-    .export _floatDivision
     .export _b6SetAndWaitForIrqStateAsm
     .export _displayTextAddressToCopyTo
     .export _vSyncCounter

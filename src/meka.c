@@ -26,7 +26,6 @@
 #include "textLayer.h"
 #include "loadingScreen.h"
 #include "structMetadata.h"
-#include "floatDivision.h"
 #include "parser.h"
 #include "graphics.h"
 #include "random.h"
@@ -295,7 +294,6 @@ void b6Initialise()
     b6InitInterpreter();
     b6InitIrq();
     bDInitSpriteMemoryManager();
-    b6InitFloatDivision();
 
     asm("sei");
     b6InitGraphics();
@@ -330,9 +328,6 @@ void main()
     srand(*((unsigned int*)0xA000)); //Memory starts as random gibberish
 
     loadInitBankAndInitMemory();
-
-    bInitMemoryMangerInit();
-
     RAM_BANK = DEBUG_INIT_BANK;
     b5InitializeDebugging();
 

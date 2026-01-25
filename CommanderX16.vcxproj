@@ -57,7 +57,6 @@
     <ClInclude Include="src\DECOMP.H" />
     <ClInclude Include="src\fillStack.h" />
     <ClInclude Include="src\fixed.h" />
-    <ClInclude Include="src\floatDivision.h" />
     <ClInclude Include="src\movement.h" />
     <ClInclude Include="src\random.h" />
     <ClInclude Include="src\spriteAllocator.h" />
@@ -95,7 +94,6 @@
     <ClCompile Include="src\DECOMP.C" />
     <ClCompile Include="src\fillStack.c" />
     <ClCompile Include="src\fixed.c" />
-    <ClCompile Include="src\floatDivision.c" />
     <ClCompile Include="src\general.c" />
     <ClCompile Include="src\graphics.c" />
     <ClCompile Include="src\irq.c" />
