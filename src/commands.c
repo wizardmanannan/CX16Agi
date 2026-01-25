@@ -1038,9 +1038,9 @@ void b2Force_update() // 1, 0x00
 	int entryNum;
 
 	entryNum = loadAndIncWinCode();
-	/* Do immediate update here. Call update(entryNum) */
+	
+	//Will happen automatically the next vblank. The param is ignored
 
-	bBUpdateObj(entryNum);
 	return;
 }
 
