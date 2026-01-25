@@ -62,7 +62,6 @@ extern void bAResetSpriteMemory(boolean clearBuffer);
 extern void bAInitViews();
 extern void bAInitObjects();
 extern void bAWander(ViewTable* localViewTab, byte entryNum);
-extern void bAFindPosition(int entryNum, ViewTable* viewTab);
 extern void bBUpdateObj(int entryNum);
 extern void bAResetViews();
 #pragma wrapped-call (pop)
