@@ -65,8 +65,13 @@ boolean oldQuit = FALSE;
 
 
 int numOfMenus = 0;
-MENU* the_menu = (MENU*)&BANK_RAM[MENU_START];
-MENU* the_menuChildren = (MENU*)&BANK_RAM[MENU_CHILD_START];
+
+
+#pragma bss-name (push, "BANKRAM05")
+MENU the_menu[MAX_MENUS];
+MENU the_menuChildren[MAX_MENU_CHILDREN];
+#pragma bss-name (pop)
+
 
 int printCounter = 1;
 byte lastRoom = 0;
@@ -96,14 +101,13 @@ int getNum(char* inputString, int* i, int inputStringBank)
 	return 0;
 }
 
-void menuChildInit()
+#pragma wrapped-call (push, trampoline, MENU_BANK)
+#pragma code-name (push, "BANKRAM05");
+void b5MenuChildInit()
 {
 	int i;
-	int previousRamBank = RAM_BANK;
 
-	RAM_BANK = MENU_BANK;
-
-	for (i = 0; i < MAX_MENU_SIZE * MAX_MENU_SIZE; i++)
+	for (i = 0; i < MAX_MENU_CHILDREN; i++)
 	{
 		MENU menuChild;
 		menuChild.dp = NULL;
@@ -113,40 +117,25 @@ void menuChildInit()
 		menuChild.text = NULL;
 		the_menuChildren[i] = menuChild;
 	}
-
-	RAM_BANK = previousRamBank;
 }
 
-void getMenu(MENU* menu, byte menuNo)
+void b5GetMenu(MENU* menu, byte menuNo)
 {
-	byte previousBank = RAM_BANK;
-
-	RAM_BANK = MENU_BANK;
 	*menu = the_menu[menuNo];
-
-	RAM_BANK = previousBank;
 }
 
-void setMenu(MENU* menu, byte menuNo)
+void b5SetMenu(MENU* menu, byte menuNo)
 {
-	byte previousBank = RAM_BANK;
-
 #ifdef VERBOSE_MENU
 	printf("-- Adding menu %p at position %d dp %p flags %d proc %p address %p \n", menu, menuNo, menu->dp, menu->flags, menu->proc, menu->text);
 #endif // VERBOSE_MENU
 
-	RAM_BANK = MENU_BANK;
 	the_menu[menuNo] = *menu;
-
-	RAM_BANK = previousBank;
 }
 
-void setMenuChild(MENU* menu, byte menuNo)
+void b5SetMenuChild(MENU* menu, byte menuNo)
 {
 	int i;
-	byte previousBank = RAM_BANK;
-
-	RAM_BANK = MENU_BANK;
 
 	for (i = 0; i < MAX_MENU_SIZE && the_menuChildren[menuNo * MAX_MENU_SIZE + i].text != NULL; i++);
 
@@ -157,8 +146,6 @@ void setMenuChild(MENU* menu, byte menuNo)
 #endif // VERBOSE_MENU
 		the_menuChildren[menuNo * MAX_MENU_SIZE + i] = *menu;
 	}
-
-	RAM_BANK = previousBank;
 }
 
 //void getMenuChild(MENU* menu, byte menuNo, byte menuChildNo)
@@ -175,6 +162,8 @@ void setMenuChild(MENU* menu, byte menuNo)
 //
 //    RAM_BANK = previousBank;
 //}
+#pragma wrapped-call (pop)
+#pragma code-name (pop);
 
 char* getMessagePointer(byte logicFileNo, byte messageNo)
 {
@@ -2331,9 +2320,13 @@ void b4Set_menu() // 1, 0x00
 	MENU newMenu;
 	LOGICFile currentLogicFile;
 
+	messNum = loadAndIncWinCode();
+
+	//return;
+
 	if (numOfMenus == 0)
 	{
-		menuChildInit();
+		b5MenuChildInit();
 	}
 
 	getLogicFile(&currentLogicFile, currentLog);
@@ -2342,9 +2335,6 @@ void b4Set_menu() // 1, 0x00
 	newMenu.flags = 0;
 	newMenu.proc = 0;
 	newMenu.menuTextBank = currentLogicFile.messageBank;
-
-	messNum = loadAndIncWinCode();
-
 	/* Create new menu and allocate space for MAX_MENU_SIZE items */
 	newMenu.text = getMessagePointer(currentLog, messNum - 1);
 
@@ -2354,7 +2344,7 @@ void b4Set_menu() // 1, 0x00
 
 	newMenu.proc = NULL;
 
-	setMenu(&newMenu, numOfMenus);
+	b5SetMenu(&newMenu, numOfMenus);
 	numOfMenus++;
 
 	newMenu.dp = NULL;
@@ -2364,7 +2354,7 @@ void b4Set_menu() // 1, 0x00
 	newMenu.menuTextBank = 0;
 
 	/* Mark end of menu */
-	setMenu(&newMenu, numOfMenus);
+	b5SetMenu(&newMenu, numOfMenus);
 
 	return;
 }
@@ -2394,7 +2384,7 @@ void b5Set_menu_item() // 2, 0x00
 	childMenu.proc = menuFunctions[controllerNum];
 	childMenu.menuTextBank = currentLogicFile.messageBank;
 
-	setMenuChild(&childMenu, numOfMenus - 1);
+	b5SetMenuChild(&childMenu, numOfMenus - 1);
 
 
 #ifdef VERBOSE_MENU_DUMP
