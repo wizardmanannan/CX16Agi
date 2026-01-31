@@ -182,8 +182,10 @@ void b6Interpret()
     //   dirnOfEgo = var[6];
     //else
     //   var[6] = dirnOfEgo;
-    getLogicFile(&logicFile, 0);
-    getLogicEntry(&logicEntry, 0);
+
+    b5GetLogicFile(&logicFile, 0);
+    b5GetLogicEntry(&logicEntry, 0);
+
     getViewTab(&localViewtab, 0);
     localViewtab.direction = var[6];
     setViewTab(&localViewtab, 0);
@@ -196,7 +198,7 @@ void b6Interpret()
         exitAllLogics = FALSE;
 
         b9UpdateObjectDirections();
-
+   
         executeLogic(&logicEntry, 0);
 
         //dirnOfEgo = var[6];
@@ -276,7 +278,6 @@ void b6Initialise()
 
     ///* SQ2 patch. I don't know where these are set in the game. */
     ///* var[86] = 1; var[87] = 2; var[88] = 3; */
-
     b6InitLogics();
 
 #ifdef VERBOSE

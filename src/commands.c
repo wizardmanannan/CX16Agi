@@ -172,7 +172,7 @@ char* getMessagePointer(byte logicFileNo, byte messageNo)
 	int i;
 
 	LOGICFile logicFile;
-	getLogicFile(&logicFile, logicFileNo);
+	b5GetLogicFile(&logicFile, logicFileNo);
 
 	RAM_BANK = logicFile.messageBank;
 
@@ -1635,7 +1635,7 @@ void b3PrintMessageInTextbox(byte messNum, byte x, byte y, byte length)
 	LOGICFile logicFile;
 	byte keysToWait[NO_KEYS_TO_WAIT] = { KEY_ESC, KEY_ENTER };
 
-	getLogicFile(&logicFile, currentLog);
+	b5GetLogicFile(&logicFile, currentLog);
 
 #ifdef  VERBOSE_MESSAGE_PRINT
 	printf("Attempting to display message %d at %d,%d, length %d\n", messNum - 1, x, y, length);
@@ -1691,7 +1691,7 @@ void b3DisplayWithoutTextbox(byte row, byte col, byte messNum)
 	char* messagePointer;
 
 	LOGICFile logicFile;
-	getLogicFile(&logicFile, currentLog);
+	b5GetLogicFile(&logicFile, currentLog);
 
 	messagePointer = getMessagePointer(currentLog, messNum - 1);
 
@@ -1762,7 +1762,7 @@ void b4Set_cursor_char() // 1, 0x00
 	char* messagePointer = getMessagePointer(currentLog, msgNo);
 	LOGICFile logicFile;
 
-	getLogicFile(&logicFile, currentLog);
+	b5GetLogicFile(&logicFile, currentLog);
 
 #ifdef VERBOSE_STRING_CHECK
 	printf("Your msgNo is %d\n", msgNo);
@@ -1826,7 +1826,7 @@ void b4Set_string() // 2, 0x00
 	char* messagePointer;
 	LOGICFile logicFile;
 
-	getLogicFile(&logicFile, currentLog);
+	b5GetLogicFile(&logicFile, currentLog);
 
 	stringNum = loadAndIncWinCode();
 	messNum = loadAndIncWinCode();
@@ -1847,7 +1847,7 @@ void b4Get_string() // 5, 0x00
 	char* messagePointer;
 	LOGICFile logicFile;
 
-	getLogicFile(&logicFile, currentLog);
+	b5GetLogicFile(&logicFile, currentLog);
 
 	strNum = loadAndIncWinCode();
 	messNum = loadAndIncWinCode();
@@ -1899,7 +1899,7 @@ void b4Get_num() // 2, 0x40
 
 	b7Temp = (char*)b10BankedAlloc(80, &tempBank);
 
-	getLogicFile(&logicFile, currentLog);
+	b5GetLogicFile(&logicFile, currentLog);
 
 	messNum = loadAndIncWinCode();
 	varNum = loadAndIncWinCode();
@@ -2145,11 +2145,11 @@ void b4Reset_scan_start() // 0, 0x00
 {
 	LOGICEntry logicEntry;
 
-	getLogicEntry(&logicEntry, currentLog);
+	b5GetLogicEntry(&logicEntry, currentLog);
 
 	logicEntry.entryPoint = 0;
 
-	setLogicEntry(&logicEntry, currentLog);
+	b5SetLogicEntry(&logicEntry, currentLog);
 	return;
 }
 
@@ -2322,20 +2322,19 @@ void b4Set_menu() // 1, 0x00
 
 	messNum = loadAndIncWinCode();
 
-	//return;
 
 	if (numOfMenus == 0)
 	{
 		b5MenuChildInit();
 	}
 
-	getLogicFile(&currentLogicFile, currentLog);
+	b5GetLogicFile(&currentLogicFile, currentLog);
 
 	newMenu.dp = NULL;
 	newMenu.flags = 0;
 	newMenu.proc = 0;
 	newMenu.menuTextBank = currentLogicFile.messageBank;
-	/* Create new menu and allocate space for MAX_MENU_SIZE items */
+	/* Create new menu and allocate space for MAX_MENU_SIZE items */	
 	newMenu.text = getMessagePointer(currentLog, messNum - 1);
 
 #ifdef VERBOSE_MENU
@@ -2343,8 +2342,8 @@ void b4Set_menu() // 1, 0x00
 #endif // VERBOSE_MENU
 
 	newMenu.proc = NULL;
-
 	b5SetMenu(&newMenu, numOfMenus);
+
 	numOfMenus++;
 
 	newMenu.dp = NULL;
@@ -2369,7 +2368,7 @@ void b5Set_menu_item() // 2, 0x00
 	LOGICFile currentLogicFile;
 	EventType event;
 
-	getLogicFile(&currentLogicFile, currentLog);
+	b5GetLogicFile(&currentLogicFile, currentLog);
 	b7GetEvent(&event, controllerNum);
 
 	messNum = loadAndIncWinCode();

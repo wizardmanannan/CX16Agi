@@ -19,70 +19,59 @@
 /* The logics array is the array that holds all the information about the
 ** logic files. A boolean flag determines whether the logic is loaded or
 ** not. If it isn't loaded, then the data is not in memory. */
-LOGICEntry* logics = (LOGICEntry*)&BANK_RAM[LOGIC_ENTRY_START];
 
-LOGICEntry** logicEntryAddressesLow = (LOGICEntry**)&BANK_RAM[LOGIC_ENTRY_ADDRESSES_START];
-LOGICEntry** logicEntryAddressesHigh = &((LOGICEntry**)&BANK_RAM[LOGIC_ENTRY_ADDRESSES_START])[128];
-void getLogicFile(LOGICFile* logicFile, byte logicFileNo)
+
+#pragma bss-name (push, "BANKRAM05")
+LOGICEntry logics[NO_LOGIC_ENTRYS];
+LOGICFile logicFiles[NO_LOGIC_ENTRYS];
+#pragma bss-name (pop)
+
+
+#pragma wrapped-call (push, trampoline, LOGIC_BANK)
+#pragma code-name (push, "BANKRAM05")
+
+void b5GetLogicFile(LOGICFile* logicFile, byte logicFileNo)
 {
-	byte previousBank = RAM_BANK;
 	LOGICEntry logicEntry;
 
 #ifdef VERBOSE
 	printf("attempting to write to %p for logicfileno %d \n", logicFile, logicFileNo);
 #endif // VERBOSE
-	RAM_BANK = LOGIC_BANK;
 
 	logicEntry = logics[logicFileNo];
-
-	RAM_BANK = LOGIC_BANK;
 	*logicFile = *logicEntry.data;
 
 #ifdef VERBOSE
 	printf("logic entry address is %p \n", logicEntry.data);
 	printf("the code bank is %p\n", logicFile->codeBank);
 #endif // VERBOSE
-
-	RAM_BANK = previousBank;
 }
 
-void setLogicFile(LOGICFile* logicFile, byte logicFileNo)
+void b5SetLogicFile(LOGICFile* logicFile, byte logicFileNo)
 {
-	byte previousBank = RAM_BANK;
 	LOGICEntry logicEntry;
 
-	RAM_BANK = LOGIC_BANK;
+
 
 	logicEntry = logics[logicFileNo];
 
-	RAM_BANK = LOGIC_BANK;
 
 	*logicFile;
 	*(logicEntry.data) = *logicFile;
-
-	RAM_BANK = previousBank;
 }
 
-void setLogicEntry(LOGICEntry* logicEntry, byte logicFileNo)
+
+void b5SetLogicEntry(LOGICEntry* logicEntry, byte logicFileNo)
 {
-	byte previousBank = RAM_BANK;
-
-	RAM_BANK = LOGIC_BANK;
-
 	logics[logicFileNo] = *logicEntry;
-
-	RAM_BANK = previousBank;
 }
 
-void getLogicEntry(LOGICEntry* logicEntry, byte logicFileNo)
+void b5GetLogicEntry(LOGICEntry* logicEntry, byte logicFileNo)
 {
-	byte previousBank = RAM_BANK;
-
-	RAM_BANK = LOGIC_BANK;
 	*logicEntry = logics[logicFileNo];
-
-	RAM_BANK = previousBank;
 }
+#pragma code-name (pop)
+#pragma wrapped-call (pop)
 
 /***************************************************************************
 ** initLogics
@@ -101,13 +90,13 @@ void b6InitLogics()
 	int i;
 	LOGICEntry logicEntry;
 	for (i = 0; i < 256; i++) {
-		getLogicEntry(&logicEntry, i);
+		b5GetLogicEntry(&logicEntry, i);
 
 		logicEntry.loaded = FALSE;
 		logicEntry.entryPoint = 0;
 		logicEntry.currentPoint = 0;
-		logicEntry.data = &((LOGICFile*)&BANK_RAM[LOGIC_FILE_START])[i];
-		setLogicEntry(&logicEntry, i);
+		logicEntry.data = &logicFiles[i];
+		b5SetLogicEntry(&logicEntry, i);
 #ifdef VERBOSE
 		printf("%d: currentPoint: %p, data: %p, dataBank: %d, loaded %d  &logics[i] %p\n",i, logicEntry.currentPoint, logicEntry.data, logicEntry.dataBank, logicEntry.loaded, &logics[i]);
 #endif // VERBOSE
@@ -128,8 +117,8 @@ void b6LoadLogicFile(byte logFileNum)
 	AGIFilePosType agiFilePosType;
 	LOGICEntry logicEntry;
 	LOGICFile logicData;
-
-	getLogicEntry(&logicEntry, logFileNum);
+	
+	b5GetLogicEntry(&logicEntry, logFileNum);
 	
 	if (logicEntry.loaded)
 	{
@@ -151,7 +140,7 @@ void b6LoadLogicFile(byte logFileNum)
 #endif // VERBOSE
 	b4LruCacheGet(LOGIC, logFileNum, &agiFilePosType, &tempAGI);
 
-	getLogicFile(&logicData, logFileNum);
+	b5SetLogicFile(&logicData, logFileNum);
 	logicData.codeBank = tempAGI.codeBank;
 	logicData.codeSize = tempAGI.codeSize;
 	logicData.logicCode = tempAGI.code;
@@ -172,11 +161,11 @@ void b6LoadLogicFile(byte logFileNum)
 
 #endif // VERBOSE
 
-	setLogicFile(&logicData, logFileNum);
+	b5SetLogicFile(&logicData, logFileNum);
 
 	logicEntry.loaded = TRUE;
 
-	setLogicEntry(&logicEntry, logFileNum);
+	b5SetLogicEntry(&logicEntry, logFileNum);
 
 
 }
@@ -194,8 +183,8 @@ void b6DiscardLogicFile(byte logFileNum)
 	LOGICFile logicData;
 	LOGICEntry logicEntry;
 
-	getLogicFile(&logicData, logFileNum);
-	getLogicEntry(&logicEntry, logFileNum);
+	b5GetLogicFile(&logicData, logFileNum);
+	b5GetLogicEntry(&logicEntry, logFileNum);
 
 	if (logicEntry.loaded) {
 
@@ -214,7 +203,7 @@ void b6DiscardLogicFile(byte logFileNum)
 		}
 
 		logicEntry.loaded = FALSE;
-		setLogicEntry(&logicEntry, logFileNum);
+		b5SetLogicEntry(&logicEntry, logFileNum);
 	}
 }
 

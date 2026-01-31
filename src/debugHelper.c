@@ -189,7 +189,7 @@ void bDbgDebugPrint(byte toPrint)
 			time = _clockBefore - clockVal;
 		}
 
-
+	
 		printf(bDbgPrintMessage, toPrint);
 		_clockBefore = clockVal;
 #ifdef CHECK_MEM
@@ -397,7 +397,7 @@ void bDbgScanStart()
 		int cwCurrentCode = (int)logDebugVal3 + ((int)*(&logDebugVal3 + 1) << 8);
 		int startPos = (int)logDebugVal5 + ((int)*(&logDebugVal5 + 1) << 8);
 
-		getLogicEntry(&logicEntry, currentLog);
+		b5GetLogicEntry(&logicEntry, currentLog);
 
 		printf(bDbgScanStartMessage, currentLog, (int)zpCode, (int)cwCurrentCode, (int)startPos, (int)(zpCode + cwCurrentCode) - startPos, logicEntry.entryPoint);
 	}
@@ -409,7 +409,7 @@ void bDbgResetScanStart()
 
 	if (opCounter >= opStartPrintingAt && opStartPrintingAt != 0 && (opPrintOnlyOnScript == PRINT_ALL_SCRIPTS || opPrintOnlyOnScript == currentLog))
 	{
-		getLogicEntry(&logicEntry, currentLog);
+		b5GetLogicEntry(&logicEntry, currentLog);
 
 		printf(bDbgResetScanStartMessage, currentLog, logicEntry.entryPoint == 0 ? "" : "not");
 	}
