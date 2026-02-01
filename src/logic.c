@@ -22,8 +22,8 @@
 
 
 #pragma bss-name (push, "BANKRAM05")
-LOGICEntry logics[NO_LOGIC_ENTRYS];
-LOGICFile logicFiles[NO_LOGIC_ENTRYS];
+LOGICEntry logics[NO_DIRECTORY_ENTRYS];
+LOGICFile logicFiles[NO_DIRECTORY_ENTRYS];
 #pragma bss-name (pop)
 
 
@@ -125,7 +125,7 @@ void b6LoadLogicFile(byte logFileNum)
 		return;
 	}
 	
-	getLogicDirectory(&agiFilePosType, &logdir[logFileNum]);
+	b10GetLogicDirectory(&agiFilePosType, &logdir[logFileNum]);
 
 #ifdef VERBOSE
 	printf("\n%d Retrieved file num %d, Offset %lu\n", logFileNum, agiFilePosType.filePos);

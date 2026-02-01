@@ -2410,7 +2410,7 @@ void b9LoadViewFile(byte viewNum)
 		printf("Attempt to load viewNum %d\n", viewNum);
 #endif // VERBOSE_LOAD_VIEWS
 
-		getLogicDirectory(&agiFilePosType, &viewdir[viewNum]);
+		b10GetLogicDirectory(&agiFilePosType, &viewdir[viewNum]);
 		b6LoadAGIFile(VIEW, &agiFilePosType, &tempAGI);
 
 #ifdef VERBOSE_LOAD_VIEWS

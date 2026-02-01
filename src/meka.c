@@ -260,7 +260,6 @@ void b6Initialise()
     b6InitTimer(&b6Timing_proc);
 
     b4InitLruCaches(&b4DiscardLogicFileWrapper, &b9DiscardView);
-
     b6InitFiles();             /* Load resource directories */
     b6InitRandom();
 
@@ -334,7 +333,6 @@ void main()
 
     RAM_BANK = MEKA_BANK;
     b6Initialise();
-
     while (TRUE) {
         /* Cycle initiator. Controlled by delay variable (var[10). */
         if (counter >= var[10]) {

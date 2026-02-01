@@ -674,7 +674,7 @@ void b6LoadPictureFile(int picFileNum)
 
 	b0CGetLoadedPicture(&loadedPicture, picFileNum);
 
-	getLogicDirectory(&agiFilePosType, &picdir[picFileNum]);
+	b10GetLogicDirectory(&agiFilePosType, &picdir[picFileNum]);
 
 
 #ifdef VERBOSE
