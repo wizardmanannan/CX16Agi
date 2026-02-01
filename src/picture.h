@@ -36,7 +36,7 @@ typedef struct {
 	byte bank; //6
 } PictureFile;
 
-extern PictureFile* loadedPictures;
+extern PictureFile loadedPictures[NO_PICTURES];
 
 extern int screenMode;
 extern int min_print_line, user_input_line, status_line_num;
@@ -70,7 +70,8 @@ extern long b8GetVeraPictureAddress(byte x, byte y);
 #pragma wrapped-call (pop)
 
 
-extern void getLoadedPicture(PictureFile* returnedloadedPicture, byte loadedPictureNumber);
-
+#pragma wrapped-call (push, trampoline, PICTURE_DATA_BANK)
+extern void b0CGetLoadedPicture(PictureFile* returnedloadedPicture, byte loadedPictureNumber);
+#pragma wrapped-call (pop)
 
 #endif  /* _PICTURE_H_ */

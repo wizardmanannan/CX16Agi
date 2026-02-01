@@ -505,7 +505,7 @@ void b2Draw_pic() // 1, 0x80
 	PictureFile loadedPicture;
 	pNum = var[loadAndIncWinCode()];
 
-	getLoadedPicture(&loadedPicture, pNum);
+	b0CGetLoadedPicture(&loadedPicture, pNum);
 
 	//picFNum = pNum;  // Debugging. Delete at some stage!!!
 
@@ -536,7 +536,7 @@ void b2Overlay_pic() // 1, 0x80
 	PictureFile loadedPicture;
 	pNum = var[loadAndIncWinCode()];
 
-	getLoadedPicture(&loadedPicture, pNum);
+	b0CGetLoadedPicture(&loadedPicture, pNum);
 
 	b11DrawPic(loadedPicture.data, loadedPicture.size, FALSE, pNum);
 	bAResetSpriteMemory(TRUE);
