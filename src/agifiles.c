@@ -39,10 +39,10 @@ byte avisDurgan[11] = { 0x41, 0x76, 0x69, 0x73, 0x20, 0x44, 0x75, 0x72, 0x67, 0x
 
 
 #pragma bss-name (push, "BANKRAM10")
-AGIFilePosType logdir[NO_DIRS];
-AGIFilePosType picdir[NO_DIRS];
-AGIFilePosType viewdir[NO_DIRS];
-AGIFilePosType snddir[NO_DIRS];
+AGIFilePosType logdir[NO_DIRECTORY_ENTRYS];
+AGIFilePosType picdir[NO_DIRECTORY_ENTRYS];
+AGIFilePosType viewdir[NO_DIRECTORY_ENTRYS];
+AGIFilePosType snddir[NO_DIRECTORY_ENTRYS];
 #pragma bss-name (pop)
 
 int numLogics, numPictures, numViews, numSounds;

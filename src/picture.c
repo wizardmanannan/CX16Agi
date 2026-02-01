@@ -137,14 +137,6 @@ void b0CSetLoadedPicture(PictureFile* loadedPicture, byte loadedPictureNumber)
 #pragma wrapped-call (pop)
 #pragma code-name (pop)
 
-#pragma code-name (push, "BANKRAMFLOOD")
-
-#pragma wrapped-call (push, trampoline, FIRST_FLOOD_BANK)
-extern void bFloodAgiFill(byte x, byte y);
-#pragma wrapped-call (pop)
-
-#pragma code-name (pop)
-
 #pragma code-name (push, "BANKRAM04")
 
 

@@ -43,35 +43,18 @@
 #define MEDIUM_FIRST_BANK 0x1B
 #define LARGE_FIRST_BANK 0x21
 
-#define ALLOCATION_BANK 60
-
 #define NO_SIZES 5
 
 #define BANK_SIZE (0xBFFF-0xA000 + 1)
 #define BANK_MIN 0xA000
 #define BANK_MAX 0xBFFF
 
-#define TOTAL_SIZE_OF_DIR 1275
-#define TOTAL_SIZE_OF_LOGIC_ENTRY 2040
-#define TOTAL_SIZE_OF_LOGIC_DATA 7331
-#define TOTAL_SIZE_OF_VIEWTAB_DATA 840
-#define TOTAL_SIZE_OF_LOADED_VIEWS 1536
-#define TOTAL_SIZE_OF_MEMORY_AREA 35
-#define TOTAL_SIZE_LOGIC_ENTRY_ADDRESSES 512
-#define TOTAL_SIZE_OF_PICTURES 1536
 #define ALLOCATION_ARRAY_START 7971
-#define NO_VIEWS 256
 #define MEMORY_AREA_START 8156
-#define DIR_SIZE 6
-#define LOGIC_ENTRY_SIZE 8
-#define LOGIC_FILE_SIZE 9
-#define MEMORY_AREA_SIZE 7
-#define PICTURE_SIZE 6
 #define MAX_MENUS 10
 #define MAX_MENU_CHILDREN 35
 #define NO_DIRECTORY_ENTRYS 256
 #define NO_PICTURES 256
-#define NO_DIRS 256
 
 //RAM BANKS
 #define DIRECTORY_BANK 0x10
@@ -80,43 +63,18 @@
 #define LOGIC_ENTRY_ADDRESSES_BANK 8
 #define DEBUG_INIT_BANK 5
 #define HELPERS_BANK 5
-#define INSTRUCTION_HANDLER_BANK 5
-#define IF_LOGIC_HANDLERS_BANK 5
 #define VIEWTAB_BANK 9
 #define LOADED_VIEW_BANK 0x11
-#define VIEW_DRAW_BUFFER_BANK 9
 #define STRING_BANK 0x7
 #define PARSER_BANK 0x7
 #define WORD_BANK 0x12
 #define LINE_DRAW_BANK 8
-#define FILL_BANK 8
-#define SPRITE_GARBAGE_BANK 0xA
-
-#define FIRST_FLOOD_BANK 0x27
-#define NO_FLOOD_BANKS 0x0A
-#define LAST_FLOOD_BANK (FIRST_FLOOD_BANK + NO_FLOOD_BANKS - 1)
-
-#define FIRST_DIVISION_BANK 0x31
-#define NO_DIVISION_BANKS 0x0B
-#define LAST_DIVISION_BANK (FIRST_DIVISION_BANK + NO_DIVISION_BANKS - 1)
-#define DIVISION_AREA        ((byte *)0xA000)
-#define divBankMetadata ((byte *)0xA000 + 7470)
-#define divAddressMetadata ((byte *)0xA000 + 7637)
-#define DIV_METADATA_BANK 0x31
-#define DIV_BANK_METADATA_SIZE 167
-#define DIV_ADDRESS_METADATA_SIZE 334
 
 #define NO_CODE_BANKS 18
-
 #define LRU_CACHE_LOGIC_DATA_SIZE 10
-#define LRU_CACHE_LOGIC_VIEW_SIZE 20
-
-#define FLOOD_QUEUE_START 0xA850
-
 //Code Banks
 #define TEXT_CODE_BANK 3
 #define LOADING_SCREEN_CODE_BANK 6
-#define LOAD_DIRS_BANK 0x6
 #define FILE_LOADER_HELPERS 0x6
 #define MEKA_BANK 0x6
 #define LOGIC_CODE_BANK 0x6
@@ -160,14 +118,9 @@
 #define VERA_ctrl 0x9F25
 #define VERA_data0 0x9F23
 #define VERA_data1 0x9F24
-#define VERA_DCVIDEO 0x9F29
 
 
-//Char Set 
-#define CHAR_SET_ROM ((byte *)0xC800)
-#define CHARSET_ROM 6
 #define SIZE_PER_CHAR_CHAR_SET_ROM 8
-
 
 //Zero Page Values 
 #define ZP_PTR_TMP_2 0xAD
@@ -188,19 +141,6 @@
 #define ZP_PTR_TMP_30 = 0xD7
 #define ZP_PTR_TMP_31 = 0xD9
 
-//Sprite Allocation
-#define ZP_PTR_SEG_32 0xF7
-#define ZP_PTR_SEG_64 0xF8
-#define  ZP_PTR_HIGH_BYTE_START 0xF9
-#define ZP_PTR_WALL_32 0xFA
-#define ZP_PTR_WALL_64 0xFB
-
-//Float Division Zero Page
-#define ZP_DIV_AREA 0xE3
-#define ZP_DIV_BANK 0xE5
-#define ZP_DIV_ADDR 0xFC
-
-
 #define NO_ZERO_PAGE_ENTRIES 87
 #define FIRST_ZERO_PAGE_ENTRY 0xA9
 
@@ -218,10 +158,6 @@
 #define PRIORITY_START (((unsigned long)BITMAP_WIDTH * BITMAP_HEIGHT) / 2)
 #define PRIORITY_SIZE (((unsigned long) PICTURE_WIDTH * PICTURE_HEIGHT) / 2)
 #define SIZE_OF_SPRITE_ATTRIBUTE 8
-
-#ifdef _MSC_VER //Used for testing under windows
-extern byte* banked;
-#endif 
 
 #define GOLDEN_RAM        ((unsigned char *)0x0400)
 #define GOLDEN_RAM_WORK_AREA        ((unsigned char *)0x0400 + LOCAL_WORK_AREA_START)
