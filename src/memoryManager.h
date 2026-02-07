@@ -19,9 +19,9 @@
 
 #define TINY_NO_SEGMENTS  80
 #define EXTRA_SMALL_NO_SEGMENTS 50
-#define SMALL_NO_SEGMENTS 30
-#define MEDIUM_NO_SEGMENTS 12
-#define LARGE_NO_SEGMENTS 6
+#define SMALL_NO_SEGMENTS 60
+#define MEDIUM_NO_SEGMENTS 24
+#define LARGE_NO_SEGMENTS 18
 
 //Warning: All of these sizes must be multiples of 8000, otherwise the program will crash
 #define TINY_SIZE  100
@@ -33,15 +33,15 @@
 
 #define TINY_NO_BANKS  1
 #define EXTRA_SMALL_NO_BANKS 1
-#define SMALL_NO_BANKS 6
-#define MEDIUM_NO_BANKS 6
-#define LARGE_NO_BANKS 6
+#define SMALL_NO_BANKS 12
+#define MEDIUM_NO_BANKS 12
+#define LARGE_NO_BANKS 18
 
 #define TINY_FIRST_BANK  0x13
 #define EXTRA_SMALL_FIRST_BANK 0x14
 #define SMALL_FIRST_BANK 0x15
-#define MEDIUM_FIRST_BANK 0x1B
-#define LARGE_FIRST_BANK 0x21
+#define MEDIUM_FIRST_BANK 0x21
+#define LARGE_FIRST_BANK 0x2D
 
 #define NO_SIZES 5
 
