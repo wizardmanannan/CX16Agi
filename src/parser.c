@@ -31,6 +31,7 @@ char SHOW_PRIORITY[] = {0X73, 0X68, 0X6F, 0X77, 0X20, 0X70, 0X72, 0X69, 0X6F, 0X
 int b7InputWords[10];
 char b7WordText[10][80], b7CurrentInputStr[MAX_INPUT_STRING_LENGTH + 1], strPos = 0, b7OutputString[80], b7Temp[256];
 char string[12][40];
+char b7LookupWordsBuffer[125];
 //boolean wordsAreWaiting=FALSE;
 
 byte b7KeyState[256], b7AsciiState[256];
@@ -354,7 +355,7 @@ void b7LookupWords(char* inputLine)
 	int synNum;
 	boolean allWordsFound = TRUE;
 	char* userInput = b7Temp;
-	char** start = (char**)GOLDEN_RAM_PARAMS_AREA, **end, **originalEnd;
+	char** start = (char**)b7LookupWordsBuffer, **end, **originalEnd;
 	char* strBuf = (char*) start + MAX_WORD_SIZE * sizeof(char*) + sizeof(char**);
 	byte stringLength;
 	
@@ -460,6 +461,7 @@ boolean b7Said(byte** data)
 		argValue = (argLo + (argHi << 8));
 		if (argValue == 9999) break; /* Should always be last argument */
 		if (argValue == 1) continue; /* Word comparison does not matter */
+
 		if (b7InputWords[wordNum] != argValue) wordsMatch = FALSE;
 	}
 
