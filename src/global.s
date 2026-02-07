@@ -4,6 +4,7 @@
 ; Include the x16.inc file
 .include "x16.inc"
 ;DEBUG = 0
+;SPRITE_DEBUG = 0
 
 ; Define some start and end positions and code bank
 startPos: .word $0
@@ -54,26 +55,17 @@ ZP_TMP_24 = $CB
 ZP_TMP_25 = $CD
 ZP_TMP_26 = $CF
 ZP_TMP_27 = $D1
-
-
-;Float Division
-ZP_DIV_AREA = $E3
-ZP_DIV_BANK = $E5
-ZP_DIV_ADDR = $FC 
+ZP_TMP_28 = $E3
+ZP_TMP_29 = $E5
+ZP_TMP_30 = $FC 
+ZP_TMP_31 = $F7 
+ZP_TMP_32 = $F8
+ZP_TMP_33 = $F9
+ZP_TMP_34 = $FA
+ZP_TMP_35 = $FB
 
 ZP_PTR_LF = $E7
 ZP_PTR_LE = $E9
-ZP_PTR_PLF_HIGH = $EB
-ZP_PTR_PLF_LOW = $ED
-
-;Sprite Memory Manager These are 8 bit values
-ZP_PTR_SEG_32 = $F7 
-ZP_PTR_SEG_64 = $F8
-ZP_PTR_HIGH_BYTE_START = $F9
-ZP_PTR_WALL_32 = $FA
-ZP_PTR_WALL_64 = $FB
-
-
 
 ; Define the starting address for golden RAM
 GOLDEN_RAM = $400
@@ -83,14 +75,14 @@ LOGIC_COMMANDS_BANK = $0F
 HELPERS_BANK = $05
 COMMAND_LOOP_HELPER_BANK = $0F
 MEKA_BANK = $06
-LOGIC_BANK = $3E
+LOGIC_BANK = $5
 LOGIC_ENTRY_ADDRESSES_BANK = $6
 LOGIC_CODE_BANK = $6
 PICTURE_BANK = $11
 PICTURE_CODE_OVERFLOW_BANK = $4
 TEXT_BANK = $3
 GRAPHICS_BANK = $6
-SPRITE_MANAGER_BANK = $9
+SPRITE_INIT_BANK = $0A
 IRQ_BANK = $6
 BANKED_ALLOC_BANK = $10
 PARSER_BANK = $7
@@ -109,6 +101,8 @@ SPRITE_METADATA_BANK = $0E
 DIVISION_METADATA_BANK = $31
 RANDOM_BANK = $6
 SOUND_BANK = $1
+MOVEMENT_BANK = $0A
+UPDATE_OBJECTS_BANK = $0B
 
 
 ; Define offsets for different areas within golden RAM
@@ -168,6 +162,8 @@ COLOR_WHITE      = $FFF
 MULT_TABLE_HALF_POINT = $80
 
 NEG_1_16 = $FFFF
+
+HIGHEST_PRIORITY = 15
 
 ; Macro for reading from an array
 .macro READ_ARRAY_POINTER arrayZeroPointer
@@ -733,6 +729,7 @@ SET_VAR_OFFSET = GOLDEN_RAM + VARS_AREA_START_GOLDEN_OFFSET
 ;For setting a var, outside of the interpreter. Can still be called by an interpreter command, but doesn't affect or know about the current interpreter state.
 ;Requires the value to be set to be in 'X', and the variable number in 'A'
 ;Requires a ZP passed in as a param, which will be used internally to set the address of the var
+;The value to be stored, will be returned in 'a' for reuse
 .macro SET_VAR_NON_INTERPRETER ZP
         tay
         lda #<SET_VAR_OFFSET
@@ -759,6 +756,20 @@ SET_FLAG_OFFSET = GOLDEN_RAM + FLAGS_AREA_START_GOLDEN_OFFSET
         sta (ZP),y
 .endmacro
 
+;For resetting a flag, outside of the interpreter. Can still be called by an interpreter command, but doesn't affect or know about the current interpreter state.
+;Requires the flag number in 'A'
+;Requires a ZP passed in as a param, which will be used internally to set the address of the var
+.macro RESET_FLAG_NON_INTERPRETER ZP
+        tay
+        lda #<SET_FLAG_OFFSET
+        sta ZP
+        lda #>SET_FLAG_OFFSET
+        sta ZP + 1
+
+        lda #$0
+        sta (ZP),y
+.endmacro
+
 
 
 ;OpCode Values (For self modifying code)
@@ -769,12 +780,27 @@ SBC_IMM = $E9
 BCS_IMP = $B0
 NOP_IMP = $EA
 BRA_ABS = $80
+INC_IMP = $1A
+DEC_IMP = $3A
+INX_IMP = $E8
+DEX_IMP = $CA
 
 ;System Variables
+EGOEDGE = 2
+OBJHIT = 4
+OBJEDGE = 5
 EGODIR = 6
 
 PSG_REGISTERS = $1F9C0
 FIRST_PSG_VOL_REGISTER = $1F9C2
+
+;Flags
+FLAG_ON_WATER = 0
+FLAG_HIT_SPECIAL = 3
+
+;Control
+PLAYER_CONTROL = 0
+PROGRAM_CONTROL = 1
 
 .segment "ZEROPAGE"
 sreg2: .res 2

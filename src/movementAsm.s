@@ -9,20 +9,107 @@ MOVEMENT_INC = 1
 .import _offsetOfParam1
 .import _offsetOfParam2
 .import _offsetOfParam3
+.import _offsetOfParam4
 .import _offsetOfDirection
 .import _offsetOfMotion
 .import _offsetOfStopped
 .import _offsetOfStepSize
+.import _getViewTab
+
+
+.macro READ_DIRECTION_TABLE
+asl
+tax
+lda newdir_row_addresses,x
+sta sreg
+lda newdir_row_addresses + 1,x
+sta sreg + 1
+
+ldy MVT_DIR_VAL_X
+lda (sreg),y
+.endmacro
 
 .segment "BANKRAM0A"
 
+;void bAMoveTo(ViewTable* localViewTab, byte entryNum);
+_bAMoveTo:
+.scope
+MVT_LOCAL_VIEW_TAB = ZP_TMP_2
+MVT_ENTRY_NUM = ZP_TMP_3
+MVT_DIR_VAL_X = ZP_TMP_3 + 1
+MVT_DIR = ZP_TMP_4
+
+sta MVT_ENTRY_NUM
+jsr popax 
+sta MVT_LOCAL_VIEW_TAB
+stx MVT_LOCAL_VIEW_TAB + 1
+
+ldy _offsetOfParam1
+lda (MVT_LOCAL_VIEW_TAB),y
+sta sreg
+ldy _offsetOfXPos
+lda (MVT_LOCAL_VIEW_TAB),y
+tax
+ldy _offsetOfStepSize
+lda (MVT_LOCAL_VIEW_TAB),y
+tay
+txa
+jsr bADirectionIndex
+stx MVT_DIR_VAL_X
+
+
+ldy _offsetOfParam2
+lda (MVT_LOCAL_VIEW_TAB),y
+sta sreg
+ldy _offsetOfYPos
+lda (MVT_LOCAL_VIEW_TAB),y
+tax
+ldy _offsetOfStepSize
+lda (MVT_LOCAL_VIEW_TAB),y
+tay
+txa
+jsr bADirectionIndex
+txa
+
+READ_DIRECTION_TABLE
+
+ldy _offsetOfDirection
+sta (MVT_LOCAL_VIEW_TAB),y
+sta MVT_DIR 
+
+ldx MVT_ENTRY_NUM
+bne @endMoveObj
+
+@updateEgoDirection:
+
+tax
+lda #EGODIR
+SET_VAR_NON_INTERPRETER sreg
+
+@endMoveObj:
+lda MVT_DIR
+cmp #$0
+bne @return
+
+lda MVT_LOCAL_VIEW_TAB
+ldx MVT_LOCAL_VIEW_TAB + 1
+sta VIEW_POS_LOCAL_VIEW_TAB
+stx VIEW_POS_LOCAL_VIEW_TAB + 1
+lda MVT_ENTRY_NUM
+sta VIEW_POS_ENTRY_NUM
+TRAMPOLINE #VIEW_TAB_BANK, b9EndMoveObj
+
+@return:
+.endscope
+rts
+
 ;Local refers to the reference to current viewTab
 ;------------------------------------------------------------------------------
-; bAMoveDirection
+; bADirectionIndex
 ; Inputs:
-;   a: Local position (x or y coordinate, not both)
+;   a: Local position (y coordinate)
 ;   y: Step size (motion threshold)
-;   sreg: Ego position (x or y coordinate)
+;   sreg: Ego position (y coordinate)
 ; Outputs:
 ;   a: Distance between local and ego positions
 ;   x: Direction of movement
@@ -30,7 +117,7 @@ MOVEMENT_INC = 1
 ;   Determines the movement direction based on relative positions and step size.
 ;   Returns the distance and direction between the local position and ego position.
 ;------------------------------------------------------------------------------
-bAMoveDirection:
+bADirectionIndex:
     cmp sreg               ; Compare local position with ego position
     bcc @localIsSmaller    ; Branch if local is smaller than ego
 
@@ -151,7 +238,7 @@ _bAFollowEgoAsmSec:
     sta sreg
     lda MVT_LCX
     ldy MVT_DELTA
-    jsr bAMoveDirection
+    jsr bADirectionIndex
     sta MVT_DIFF_X
     stx MVT_DIR_VAL_X
 
@@ -159,21 +246,13 @@ _bAFollowEgoAsmSec:
     GET_STRUCT_8_STORED_OFFSET _offsetOfYPos, MVT_EGO_VIEW_TAB, sreg
     GET_STRUCT_8_STORED_OFFSET _offsetOfYPos, MVT_LOCAL_VIEW_TAB
     ldy MVT_DELTA
-    jsr bAMoveDirection
+    jsr bADirectionIndex
     sta MVT_DIFF_Y
     stx MVT_DIR_VAL_Y
 
     ; Map direction using the table
     txa
-    asl
-    tax
-    lda newdir_row_addresses,x
-    sta sreg
-    lda newdir_row_addresses + 1,x
-    sta sreg + 1
-
-    ldy MVT_DIR_VAL_X
-    lda (sreg),y
+    READ_DIRECTION_TABLE
     sta MVT_DIR
 
 @checkCollision: ;Do the local and ego collide?

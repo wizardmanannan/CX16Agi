@@ -26,7 +26,7 @@ typedef struct {
 	byte dataBank; //7
 } LOGICEntry;
 
-extern LOGICEntry* logics;
+//extern LOGICEntry logics;
 void b6InitLogics();
 
 #pragma wrapped-call (push, trampoline, LOGIC_CODE_BANK)
@@ -34,8 +34,11 @@ void b6LoadLogicFile(byte logFileNum);
 void b6DiscardLogicFile(byte logFileNum);
 #pragma wrapped-call (pop)
 
-extern void getLogicFile(LOGICFile* logicFile, byte logicFileNo);
-extern void getLogicEntry(LOGICEntry* logicEntry, byte logicFileNo);
-extern void setLogicEntry(LOGICEntry* logicEntry, byte logicFileNo);
+#pragma wrapped-call (push, trampoline, LOGIC_BANK)
+extern void b5GetLogicFile(LOGICFile* logicFile, byte logicFileNo);
+extern void b5SetLogicFile(LOGICFile* logicFile, byte logicFileNo);
+extern void b5GetLogicEntry(LOGICEntry* logicEntry, byte logicFileNo);
+extern void b5SetLogicEntry(LOGICEntry* logicEntry, byte logicFileNo);
+#pragma wrapped-call (pop)
 
 #endif  /* _LOGIC_H_ */

@@ -28,7 +28,11 @@ extern void b8TestAsmPlotPriHLineFast();
 //#define VERBOSE_DRAW_LINE
 //#define VERBOSE_X_CORNER
 //#define VERBOSE_ABS_LINE
-PictureFile* loadedPictures = (PictureFile*)&BANK_RAM[PICTURE_START];
+
+#pragma bss-name (push, "BANKRAM0C")
+PictureFile loadedPictures[NO_PICTURES];
+#pragma bss-name (pop)
+
 int screenMode;
 int min_print_line = 1, user_input_line = 23, status_line_num = 0;
 boolean statusLineDisplayed = FALSE, inputLineDisplayed = FALSE;
@@ -118,34 +122,19 @@ extern byte b8AsmFloodFillSections(BufferStatus* bufferStatus, boolean* cleanPic
 extern byte b8AsmFloodFillSectionsVisOnly(BufferStatus* bufferStatus, boolean* cleanPic);
 #pragma wrapped-call (pop)
 
-void getLoadedPicture(PictureFile* returnedloadedPicture, byte loadedPictureNumber)
+#pragma code-name (push, "BANKRAM0C")
+extern boolean trap;
+void b0CGetLoadedPicture(PictureFile* returnedloadedPicture, byte loadedPictureNumber)
 {
-	byte previousRamBank = RAM_BANK;
-
-	RAM_BANK = PICTURE_BANK;
-
 	*returnedloadedPicture = loadedPictures[loadedPictureNumber];
-
-	RAM_BANK = previousRamBank;
 }
 
-void setLoadedPicture(PictureFile* loadedPicture, byte loadedPictureNumber)
+#pragma wrapped-call (push, trampoline, PICTURE_DATA_BANK)
+void b0CSetLoadedPicture(PictureFile* loadedPicture, byte loadedPictureNumber)
 {
-	byte previousRamBank = RAM_BANK;
-
-	RAM_BANK = PICTURE_BANK;
-
 	loadedPictures[loadedPictureNumber] = *loadedPicture;
-
-	RAM_BANK = previousRamBank;
 }
-
-#pragma code-name (push, "BANKRAMFLOOD")
-
-#pragma wrapped-call (push, trampoline, FIRST_FLOOD_BANK)
-extern void bFloodAgiFill(byte x, byte y);
 #pragma wrapped-call (pop)
-
 #pragma code-name (pop)
 
 #pragma code-name (push, "BANKRAM04")
@@ -521,7 +510,7 @@ void b11DrawPic(byte* bankedData, int pLen, boolean okToClearScreen, byte picNum
 	b8TestDrawLine();
 #endif
 
-	getLoadedPicture(&loadedPicture, picNum);
+	b0CGetLoadedPicture(&loadedPicture, picNum);
 
 #ifdef VERBOSE
 	printf("Preparing To Draw %d of size %d\n", picNum, loadedPicture.size);
@@ -655,10 +644,11 @@ void b6InitPictures()
 	int i;
 	PictureFile loadedPicture;
 	for (i = 0; i < 256; i++) {
-		getLoadedPicture(&loadedPicture, i);
+		b0CGetLoadedPicture(&loadedPicture, i);
 		loadedPicture.loaded = FALSE;
-		setLoadedPicture(&loadedPicture, i);
+		b0CSetLoadedPicture(&loadedPicture, i);
 	}
+	asm("stp");
 }
 
 #pragma code-name (pop)
@@ -674,9 +664,9 @@ void b6LoadPictureFile(int picFileNum)
 	AGIFilePosType agiFilePosType;
 	PictureFile loadedPicture;
 
-	getLoadedPicture(&loadedPicture, picFileNum);
+	b0CGetLoadedPicture(&loadedPicture, picFileNum);
 
-	getLogicDirectory(&agiFilePosType, &picdir[picFileNum]);
+	b10GetLogicDirectory(&agiFilePosType, &picdir[picFileNum]);
 
 
 #ifdef VERBOSE
@@ -693,7 +683,7 @@ void b6LoadPictureFile(int picFileNum)
 	loadedPicture.bank = tempAGI.codeBank;
 	loadedPicture.loaded = TRUE;
 
-	setLoadedPicture(&loadedPicture, picFileNum);
+	b0CSetLoadedPicture(&loadedPicture, picFileNum);
 
 #ifdef VERBOSE
 	printf("Loaded Picture %d, data %p, bank %d, loaded %d\n", loadedPicture.size, loadedPicture.data, loadedPicture.bank, loadedPicture.loaded);
@@ -704,14 +694,14 @@ void b6DiscardPictureFile(int picFileNum)
 {
 	PictureFile loadedPicture;
 
-	getLoadedPicture(&loadedPicture, picFileNum);
+	b0CGetLoadedPicture(&loadedPicture, picFileNum);
 
 	if (loadedPicture.loaded) {
 		loadedPicture.loaded = FALSE;
 		b10BankedDealloc(loadedPicture.data, loadedPicture.bank);
 	}
 
-	setLoadedPicture(&loadedPicture, picFileNum);
+	b0CSetLoadedPicture(&loadedPicture, picFileNum);
 }
 
 void b6ShowPicture()

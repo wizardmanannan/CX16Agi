@@ -1,0 +1,10 @@
+* text=auto eol=lf
+
+# Binary files should not be modified by Git
+*.png binary
+*.jpg binary
+*.gif binary
+*.pdf binary
+*.exe binary
+*.dll binary
+*.zip binary

@@ -49,8 +49,10 @@ extern void copyStringFromBanked(char* src, char* dest, int start, int chunk, by
 
 extern int sprintfBanked(const char* buffer, byte bank, char const* const format, ...);
 
-extern void getLogicDirectory(AGIFilePosType* returnedLogicDirectory, AGIFilePosType* logicDirectoryLocation);
-extern void setResourceDirectory(AGIFilePosType* newLogicDirectory, AGIFilePosType* logicDirectoryLocation);
+#pragma wrapped-call (push, trampoline, DIRECTORY_BANK)
+extern void b10GetLogicDirectory(AGIFilePosType* returnedLogicDirectory, AGIFilePosType* logicDirectoryLocation);
+extern void b10SetResourceDirectory(AGIFilePosType* newLogicDirectory, AGIFilePosType* logicDirectoryLocation);
+#pragma wrapped-call (pop)
 
 extern void debugPrint(byte toPrint);
 extern void trampoline();

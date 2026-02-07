@@ -31,6 +31,7 @@ char SHOW_PRIORITY[] = {0X73, 0X68, 0X6F, 0X77, 0X20, 0X70, 0X72, 0X69, 0X6F, 0X
 int b7InputWords[10];
 char b7WordText[10][80], b7CurrentInputStr[MAX_INPUT_STRING_LENGTH + 1], strPos = 0, b7OutputString[80], b7Temp[256];
 char string[12][40];
+char b7LookupWordsBuffer[125];
 //boolean wordsAreWaiting=FALSE;
 
 byte b7KeyState[256], b7AsciiState[256];
@@ -181,7 +182,6 @@ extern boolean b5IsDebuggingEnabled();
 #pragma wrapped-call (pop)
 extern void bDbgShowPriority();
 extern byte debugBank;
-
 /***************************************************************************
 ** pollKeyboard
 ***************************************************************************/
@@ -282,24 +282,40 @@ void b7PollKeyboard()
 }
 
 /***************************************************************************
-** stripExtraChars
+** b7StripExtraChars
 **
-** Purpose: This function strips out all the punctuation and unneeded
-** spaces from the user input, and converts all the characters to
-** lowercase.
+** Overall purpose:
+**   Removes punctuation and collapses multiple spaces in the input string,
+**   then writes the cleaned result back into the same buffer.
 ***************************************************************************/
 void b7StripExtraChars(char* userInput)
 {
+	// Create small temporary buffer to build the cleaned string
 	char tempString[41] = "";
+
+	// Position counters: one for reading input, one for writing to temp
 	int strPos, tempPos = 0;
+
+	// Flag to remember whether the last written character was a space
 	boolean lastCharSpace = FALSE;
 
-	for (strPos = 0; strPos < strlen(userInput); strPos++) {
-		switch (userInput[strPos]) {
+	// Loop through every character in the input string
+	for (strPos = 0; strPos < strlen(userInput); strPos++)
+	{
+		// Decide what to do based on current character
+		switch (userInput[strPos])
+		{
 		case ' ':
-			if (!lastCharSpace) tempString[tempPos++] = ' ';
+			// Only write a space if we didn't just write one
+			if (!lastCharSpace)
+			{
+				tempString[tempPos++] = ' ';
+			}
+			// Remember that last written character was space
 			lastCharSpace = TRUE;
 			break;
+
+			// These characters are completely ignored / removed
 		case ',':
 		case '.':
 		case '?':
@@ -316,121 +332,194 @@ void b7StripExtraChars(char* userInput)
 		case '`':
 		case '-':
 		case '"':
-			/* Ignore */
+			// Do nothing — skip this character
 			break;
+
 		default:
+			// Any other character is kept as-is
+			// Reset space flag since this is not a space
 			lastCharSpace = FALSE;
+			// Copy the character to the output buffer
 			tempString[tempPos++] = userInput[strPos];
 			break;
 		}
 	}
 
-	tempString[tempPos] = 0;
+	// Terminate the cleaned string properly
+	tempString[tempPos] = '\0';
+
+	// Copy the result back into the caller's buffer (overwriting original)
 	strcpy(userInput, tempString);
 }
 
+
+/***************************************************************************
+** b7TokenizeWords
+**
+** Overall purpose:
+**   Splits the input string into space-separated words using strtok,
+**   stores pointers to each word in the tokens array, and returns
+**   a pointer to the last stored token pointer.
+***************************************************************************/
 char** b7TokenizeWords(char* inputLine, char** tokens)
 {
-	char* token;
+	char* token;    // Will hold each token pointer returned by strtok
 
-	for (token = strtok(inputLine, " "); token; token = strtok(0, " ")) {
+	// First call finds the first token; subsequent calls use NULL
+	for (token = strtok(inputLine, " "); token; token = strtok(0, " "))
+	{
+		// Store the pointer to this token in the next free slot
 		*tokens++ = token;
 	}
 
+	// Return pointer to the last stored token pointer
+	// (subtract 1 because tokens++ has already advanced past it)
 	return tokens - 1;
 }
 
 
-extern long opStartPrintingAt;
 /***************************************************************************
-** lookupWords
+** b7LookupWords
 **
-** Purpose: To convert the users input string into a list of synonym
-** numbers as used in WORDS.TOK. This functions is called when the ENTER
-** key is hit in the normal flow of game play (as opposed to using the menu,
-** browsing the inventory, etc).
+** Overall purpose:
+**   Takes player input, cleans it, tokenizes it, tries to match words
+**   against a synonym dictionary, collects recognized synonym numbers
+**   and original word text, and updates parser state flags.
+**   Uses a loop that shrinks or resets the token range depending on matches.
 ***************************************************************************/
 void b7LookupWords(char* inputLine)
 {
+	// Synonym number returned from dictionary lookup
 	int synNum;
+
+	// Flag that remains true only while all processed words are found
 	boolean allWordsFound = TRUE;
+
+	// Working buffer for input copies
 	char* userInput = b7Temp;
-	char** start = (char**)GOLDEN_RAM_PARAMS_AREA, **end, **originalEnd;
-	char* strBuf = (char*) start + MAX_WORD_SIZE * sizeof(char*) + sizeof(char**);
+
+	// Pointers into the token array stored in b7LookupWordsBuffer
+	char** start = (char**)b7LookupWordsBuffer, ** end, ** originalEnd;
+
+	// Area after the token pointers — used to hold one word for lookup
+	char* strBuf = (char*)start + MAX_WORD_SIZE * sizeof(char*) + sizeof(char**);
+
+	// Length of the current word being processed
 	byte stringLength;
-	
+
 #ifdef VERBOSE_DEBUG_LOOKUP_WORDS
-	byte i;
+	byte i;                                 // used only for debug printing
 #endif
 
+	// Copy input into working buffer
 	strcpy(userInput, inputLine);
+
+	// Remove punctuation and collapse spaces
 	b7StripExtraChars(userInput);
 
+	// Tokenize ? fill token pointer array, get pointer to last token
 	end = b7TokenizeWords(userInput, start);
+
+	// Save the original end-of-tokens pointer
 	originalEnd = end;
 
 #ifdef VERBOSE_DEBUG_LOOKUP_WORDS
+	// Show initial token pointer range
 	printf("start %p end %p\n", start, end);
 #endif
 
-	strcpy(userInput, inputLine); //We want to remove the terminators added by strtok afterwards
+	// Re-copy original input (strtok inserted nulls into previous copy)
+	strcpy(userInput, inputLine);
 
+	// Reset count of recognized words this turn
 	numInputWords = 0;
 
+	// Starting length value (will be updated per token)
 	stringLength = strlen(inputLine);
+
+	// Main loop: process tokens while we have some left and haven't failed
 	while (start <= end && allWordsFound)
 	{
+		// Copy the bytes of the current token into strBuf
 		memcpy(strBuf, *start, stringLength);
+
+		// Make it a proper C string
 		strBuf[stringLength] = '\0';
 
 #ifdef VERBOSE_DEBUG_LOOKUP_WORDS
+		// Debug print: current pointers and buffer content location
 		printf("s. %p e. %p sBuf %p\n", start, end, strBuf);
-		asm("stp");
+		asm("stp");                         // debugger breakpoint
 #endif
-		
-		   switch (synNum = b12FindSynonymNum(strBuf, PARSER_BANK)) {
-			case -1: /* Word not found */
-				if (start == end)
-				{
-					var[9] = numInputWords + 1;
-					allWordsFound = FALSE;
-				}
-				stringLength = *end - *start;
-				*end--;
-				break;
-			default:
-				start = end + 1;
-				end = originalEnd;
 
-				if (start <= end)
-				{
-					stringLength = strlen(*start);
-				}
-				
-#ifdef VERBOSE_DEBUG_LOOKUP_WORDS
-				printf("2 s. %p e. %p sBuf %p. stringLength is %d\n", start, end, strBuf, stringLength);
-				asm("stp");
-#endif
-				if (synNum)
-				{
-					b7InputWords[numInputWords] = synNum;
-					strcpy(b7WordText[numInputWords], strBuf);
-					numInputWords++;
-				}
-				break;
+		// Try to find this word in the dictionary
+		switch (synNum = b12FindSynonymNum(strBuf, PARSER_BANK)) {
+
+		case -1: /* Word not found */
+			// If this is the last remaining token
+			if (start == end)
+			{
+				// Record position (1-based) of the unknown word
+				var[9] = numInputWords + 1;
+				// Cause loop to exit
+				allWordsFound = FALSE;
 			}
+
+			// Set length to byte distance between two token pointers
+			stringLength = *end - *start;
+
+			// Move end pointer one position left (drop last token)
+			*end--;
+			break;
+
+		default: /* Word was found */
+			// Move start pointer past current end
+			start = end + 1;
+
+			// Restore end to original last token
+			end = originalEnd;
+
+			// If we still have tokens left, get length of next one
+			if (start <= end)
+			{
+				stringLength = strlen(*start);
+			}
+
+#ifdef VERBOSE_DEBUG_LOOKUP_WORDS
+			// Debug: show updated pointers and length
+			printf("2 s. %p e. %p sBuf %p. stringLength is %d\n", start, end, strBuf, stringLength);
+			asm("stp");
+#endif
+
+			// If synonym number is non-zero, store it
+			if (synNum)
+			{
+				// Save synonym number
+				b7InputWords[numInputWords] = synNum;
+				// Save original spelling of the word
+				strcpy(b7WordText[numInputWords], strBuf);
+				// Count this recognized word
+				numInputWords++;
+			}
+			break;
+		}
 	}
 
 #ifdef VERBOSE_DEBUG_LOOKUP_WORDS
+	// Print all collected synonym numbers
 	for (i = 0; i < numInputWords; i++)
 	{
 		printf("%d \n", b7InputWords[i]);
 	}
 #endif
 
-	if (strlen(inputLine)) {
-		flag[2] = TRUE;  /* The user has entered an input line */
-		flag[4] = FALSE; /* Said command has not yet accepted the line */
+	// If the player actually typed something
+	if (strlen(inputLine))
+	{
+		// Mark that input was received this turn
+		flag[2] = TRUE;
+		// Mark that the command has not yet been handled
+		flag[4] = FALSE;
 	}
 }
 
@@ -461,6 +550,7 @@ boolean b7Said(byte** data)
 		argValue = (argLo + (argHi << 8));
 		if (argValue == 9999) break; /* Should always be last argument */
 		if (argValue == 1) continue; /* Word comparison does not matter */
+
 		if (b7InputWords[wordNum] != argValue) wordsMatch = FALSE;
 	}
 

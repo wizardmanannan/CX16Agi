@@ -27,7 +27,7 @@ _textBuffer2: .res 1000
 .import popa
 .import _b6DisplayLoadingScreen
 .import _b6InitVeraMemory
-.import _b9InitSpriteData
+.import _bAInitSpriteData
 .import _b3SetTextColor
 .importzp ptr4
 
@@ -73,7 +73,7 @@ SEND_IRQ_COMMAND #IRQ_CMD_BLACKSCREEN, @vSyncToCheck
 WAIT_FOR_NEXT_IRQ @vSyncToCheck
 
 jsr _b6InitVeraMemory
-TRAMPOLINE #SPRITE_MANAGER_BANK, _b9InitSpriteData
+TRAMPOLINE #SPRITE_INIT_BANK, _bAInitSpriteData
 
 sei
 lda #DISPLAY_SCALE
@@ -281,7 +281,7 @@ lda #$6   ; Bitmap mode 16 colors
 sta VERA_L0_config
 stz VERA_L0_tilebase ;A 320 * 240 pixel bitmap at the beginning of VRAM
 
-TRAMPOLINE #LINE_DRAWING_BANK, b8SetupLineTables
+TRAMPOLINE #LINE_DRAWING_BANK, _b8SetupLineTables
 jsr _b6InitBackground
 
 lda #$11 ; 32 x 64 2bpp tiles

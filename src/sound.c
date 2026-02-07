@@ -607,7 +607,7 @@ void b1LoadSoundFile(int soundNum) {
 	unsigned int soundChannelOffSets[NO_CHANNELS];  // Offsets to channel data in sound file
 
 	// Gets logic directory entry for sound file number and loads AGI file
-	getLogicDirectory(&agiFilePosType, &snddir[soundNum]);
+	b10GetLogicDirectory(&agiFilePosType, &snddir[soundNum]);
 	b6LoadAGIFile(SOUND, &agiFilePosType, &tempAGI);
 
 	// Save references to loaded sound resource data and bank info

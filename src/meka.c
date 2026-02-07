@@ -26,7 +26,6 @@
 #include "textLayer.h"
 #include "loadingScreen.h"
 #include "structMetadata.h"
-#include "floatDivision.h"
 #include "parser.h"
 #include "graphics.h"
 #include "random.h"
@@ -105,25 +104,31 @@ void b6DiscardResources()
 ***************************************************************************/
 void b6NewRoom()
 {
-     b9ResetViews();
+    b1StopSound();
+
+     bAResetViews();
     //stop_update_all();
     //unanimate_all();
     b6DiscardResources();
-    controlMode = PLAYER_CONTROL;
+
+    b6AdjustEgoPosition();
+
     //unblock();
-    horizon = 36;
-    var[1] = var[0];
-    var[0] = newRoomNum;
     var[4] = 0;
     var[5] = 0;
     var[9] = 0;
-    var[16] = 0;
-    b6AdjustEgoPosition();
+    var[1] = var[0];
     var[2] = 0;
+    var[0] = newRoomNum;
+    var[16] = 0;
     flag[2] = 0;
     flag[5] = 1;
+
+
+    controlMode = PLAYER_CONTROL;
+    horizon = 36;
+
     score = var[3];
-    b1StopSound();
     memsetBanked(b7Directions, 0, 9, STRING_BANK);
     /* rectfill(screen, 0, 20+(22*16), 639, 463, 0); */   /* Clear screen */
     b6SetAndWaitForIrqState(CLEAR);
@@ -151,6 +156,13 @@ void b6UpdateStatusLine()
     //    rectfill(screen, 0, 0, 639, 15, 0);   /* Clear status line */
     //}
 }
+
+
+#pragma wrapped-call (push, trampoline, VIEW_CODE_BANK_1)
+extern void b9AnimateObjects(); 
+extern void b9UpdateObjectDirections();
+#pragma wrapped-call (pop)
+
 /***************************************************************************
 ** interpret
 **
@@ -159,6 +171,7 @@ void b6UpdateStatusLine()
 ***************************************************************************/
 void b6Interpret()
 {
+    int i;
     ViewTable localViewtab;
     LOGICFile logicFile;
     LOGICEntry logicEntry;
@@ -169,8 +182,10 @@ void b6Interpret()
     //   dirnOfEgo = var[6];
     //else
     //   var[6] = dirnOfEgo;
-    getLogicFile(&logicFile, 0);
-    getLogicEntry(&logicEntry, 0);
+
+    b5GetLogicFile(&logicFile, 0);
+    b5GetLogicEntry(&logicEntry, 0);
+
     getViewTab(&localViewtab, 0);
     localViewtab.direction = var[6];
     setViewTab(&localViewtab, 0);
@@ -182,6 +197,8 @@ void b6Interpret()
         hasEnteredNewRoom = FALSE;
         exitAllLogics = FALSE;
 
+        b9UpdateObjectDirections();
+   
         executeLogic(&logicEntry, 0);
 
         //dirnOfEgo = var[6];
@@ -192,17 +209,16 @@ void b6Interpret()
         b6UpdateStatusLine();
         var[5] = 0;
         var[4] = 0;
-        flag[5] = 0;
+
+        if (!hasEnteredNewRoom)
+        {
+            flag[5] = 0;
+        }
         flag[6] = FALSE;
         flag[12] = FALSE;
-        if (!hasEnteredNewRoom) {
-            bBUpdateObjects();
-        }
 
-        bCCalcObjMotion();
 
-        if (hasEnteredNewRoom) b6NewRoom();
-
+        b9AnimateObjects();
     } while (hasEnteredNewRoom);
 }
 
@@ -244,7 +260,6 @@ void b6Initialise()
     b6InitTimer(&b6Timing_proc);
 
     b4InitLruCaches(&b4DiscardLogicFileWrapper, &b9DiscardView);
-
     b6InitFiles();             /* Load resource directories */
     b6InitRandom();
 
@@ -262,7 +277,6 @@ void b6Initialise()
 
     ///* SQ2 patch. I don't know where these are set in the game. */
     ///* var[86] = 1; var[87] = 2; var[88] = 3; */
-
     b6InitLogics();
 
 #ifdef VERBOSE
@@ -271,8 +285,8 @@ void b6Initialise()
 
     b1InitSound();
 
-    b9InitViews();
-    b9InitObjects();
+    bAInitViews();
+    bAInitObjects();
 
     bFLoadObjectFile();
     b12LoadWords();
@@ -280,7 +294,6 @@ void b6Initialise()
     b6InitInterpreter();
     b6InitIrq();
     bDInitSpriteMemoryManager();
-    b6InitFloatDivision();
 
     asm("sei");
     b6InitGraphics();
@@ -297,6 +310,8 @@ void b6Initialise()
 
 #pragma code-name (pop)
 
+extern void loadInitBankAndInitMemory();
+
 void main()
 {
     int ret, oldCount = 0;
@@ -312,14 +327,12 @@ void main()
     RAM_BANK = 7;
     srand(*((unsigned int*)0xA000)); //Memory starts as random gibberish
 
-    memoryMangerInit();
-
+    loadInitBankAndInitMemory();
     RAM_BANK = DEBUG_INIT_BANK;
     b5InitializeDebugging();
 
     RAM_BANK = MEKA_BANK;
     b6Initialise();
-
     while (TRUE) {
         /* Cycle initiator. Controlled by delay variable (var[10). */
         if (counter >= var[10]) {

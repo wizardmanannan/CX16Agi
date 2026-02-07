@@ -1,3 +1,4 @@
+.include "x16.inc"
 
 ; This code is an assembly language implementation of various logic commands,
 ; functions, and macros for a game engine.
@@ -157,15 +158,17 @@ LOGICCOMMANDS_INC = 1
 .import _b5Mul_v
 .import _b5Div_n
 .import _b5Div_v
+.import _b5SetPriorityBase
+.import _b6NewRoom
 
 .import _exitAllLogics
 .import _hasEnteredNewRoom
 .import _newRoomNum
-.import _getLogicFile
-.import _getLogicEntry
+.import _b5GetLogicFile
+.import _b5GetLogicEntry
 .import pushax
 
-.import _setLogicEntry
+.import _b5SetLogicEntry
 
 ; Debugging related imports (only included if DEBUG is defined)
 .ifdef DEBUG
@@ -603,30 +606,27 @@ sta @previousBank
 
 STORE_ON_STACK_RECURSIVE_CALL
 
-lda #MEKA_BANK
+lda #LOGIC_BANK
 sta RAM_BANK
-
-;lda #<logicFile
-;sta ZP_TMP
-;lda #>logicFile
-;sta ZP_TMP + 1
-;lda #ZP_TMP
-;ldx #$0
 lda #<@logicFile
 ldx #>@logicFile
 jsr pushax
 lda @logNum
 ldx #$0
-jsr _getLogicFile
+jsr _b5GetLogicFile
 
 
+lda #LOGIC_BANK
+sta RAM_BANK
 lda #<@logicEntry
 ldx #>@logicEntry
 jsr pushax
 lda @logNum
 lda @logNum
 ldx #$0
-jsr _getLogicEntry
+jsr _b5GetLogicEntry
+lda #MEKA_BANK
+sta RAM_BANK
 
 lda @logNum
 ldx #$0
@@ -828,7 +828,7 @@ jmpTableCommands2:
 .addr b1NoOp_0
 .addr b1NoOp_0
 .addr b1NoOp_1
-.addr b1NoOp_1
+.addr _b5SetPriorityBase
 .addr b1NoOp_0
 .addr b1NoOp_1
 .addr b1NoOp_0
@@ -1318,6 +1318,9 @@ lda #TRUE
 sta _hasEnteredNewRoom
 sta _exitAllLogics
 INC_CODE 
+
+JSRFAR _b6NewRoom, MEKA_BANK
+
 jmp endMainLoop
 
 
@@ -1707,7 +1710,8 @@ b4ScanStart:
         jsr pushax
         lda _currentLog
         ldx #$0
-        jsr _setLogicEntry
+
+        TRAMPOLINE #LOGIC_BANK, _b5SetLogicEntry
 
         DEBUG_SCAN_START
 

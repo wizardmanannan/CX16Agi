@@ -10,13 +10,14 @@
     .include "wordsAsm.s"
     .include "debug.s"
     .include "fillAsm.s"
-    .include "floatDivisionAsm.s"
     .include "priority.s"
-    .include "movement.s"
+    .include "movementAsm.s"
     .include "randomAsm.s"
     .include "modulus.s"
     .include "soundAsm.s"
     .include "spriteAllocatorAsm.s"
+    .include "viewAsm.s"
+    .include "init.s"
     
     .export _executeLogic
     .export _b6InitInterpreter
@@ -30,7 +31,6 @@
     .export _logDebugVal4
     .export _logDebugVal5
     .export _logDebugVal6
-    .export _floatDivision
     .export _b6SetAndWaitForIrqStateAsm
     .export _displayTextAddressToCopyTo
     .export _vSyncCounter
@@ -62,6 +62,7 @@
     .export _b12FindSynonymNumSearch
     .export _b6Clear
     .export _b5IsDebuggingEnabled
+    .export _b5IsSpriteDebuggingEnabled
     .export _b8DrawPixel
     .export _trampolineDebug
     .export _b8AsmPlotVisHLineFast
@@ -93,7 +94,8 @@
     .export _b1ChannelsPlaying
     .export _b1EndSoundFlag
     .export _b1PsgClear
-  
+    .export _b9Collide
+    .export _b9CanBeHere
     .export _bAWander
     .export _bDFindFreeVramBlock
     .export _bDBlocksBySizeFastLookup
@@ -101,3 +103,14 @@
     .export _bDResetSpriteTablePointer
     .export _bDReenableOptimisticMode
     .export _bDDeleteAllocation
+    .export _b8SetupLineTables
+    .export _b9FindPosition
+    .export _b9UpdatePosition
+    .export _b9AnimateObjects
+    .export _b9SetLoop
+    .export _b9SetCel
+    .export _b9UpdateLoopAndCel
+    .export _bAMoveTo
+    .export _b9UpdateObjectDirections
+    .export _loadInitBankAndInitMemory
+    .export _b9StartMoveObj

@@ -38,8 +38,13 @@
 //#define VERBOSE_ADD_TO_PIC;
 //#define VERBOSE_DEBUG_NO_BLIT_CACHE TODO: Weird print statement corruption fix
 
+
 #define MIN_SPRITE_PRIORITY 4
 #define MAX_SPRITE_PRIORITY 15
+#define DEFAULT_PRIORITY_BASE 48
+
+byte priorityBase = DEFAULT_PRIORITY_BASE;
+
 #define NO_PRIORITIES (MAX_SPRITE_PRIORITY - MIN_SPRITE_PRIORITY)
 
 #define BYTES_PER_SPRITE_UPDATE 7
@@ -54,6 +59,9 @@ extern byte* bESpritesUpdatedBufferPointer;
 
 extern void bAFollowEgoAsmSec(ViewTable* localViewTab, ViewTable* egoViewTab, byte egoWidth, byte localCelWidth);
 
+#pragma bss-name (push, "BANKRAM09")
+byte b9PreComputedPriority[CHAR_MAX];
+#pragma bss-name (pop)
 #pragma bss-name (push, "BANKRAM11")
 View loadedViews[MAXVIEW];
 #pragma bss-name (pop)
@@ -157,6 +165,755 @@ void setLoadedCel(Loop* loadedLoop, Cel* localCell, byte localCellNumber)
 
 	RAM_BANK = previousRamBank;
 }
+
+//#define TEST_GOOD_POSITION
+
+#ifdef TEST_GOOD_POSITION
+
+extern boolean b9GoodPosition(ViewTable* localViewTab);
+extern byte offsetOfYSize;
+void testGoodPositionFunction(byte x, byte y, byte xSize, byte ySize, byte expectedHorizon, boolean expectedResult, char* testString, byte flags)
+{
+	ViewTable localViewTab;
+	boolean actualResult;
+
+	getViewTab(&localViewTab, 0);
+
+	localViewTab.xPos = x;
+	localViewTab.yPos = y;
+    localViewTab.xsize = xSize;
+	localViewTab.ysize = ySize;
+
+	printf("we set ySize to %d and its address is %p. the offset is %d. the local view tab addres is %p\n", localViewTab.ysize, &localViewTab.ysize, offsetOfYSize, &localViewTab);
+
+	localViewTab.flags = flags;
+	
+	horizon = expectedHorizon;
+
+    actualResult = b9GoodPosition(&localViewTab);
+
+	printf(testString);
+
+	if(actualResult != expectedResult)
+	{
+		printf("xxxxxxxxxxxxxxxxxxxxxxxxxxfail expected %d \n", expectedResult);
+	}
+}
+
+
+#define MAXX (PICTURE_WIDTH - 1)
+#define MAXY (PICTURE_HEIGHT - 1)
+#define MINX 0
+#define MINY 0
+
+
+boolean trap;
+void testGoodPosition()
+{
+    // 1) inside bounds, above horizon
+    testGoodPositionFunction(
+        MINX + 5, MINY + 10, 10, 8,
+        /*horizon*/ MINY + 4,
+        /*expected*/ TRUE,
+        "inside bounds, above horizon\n",
+        0
+    );
+
+    // 2) full width fits exactly
+    testGoodPositionFunction(
+        MINX, MINY + 5,
+        (byte)((MAXX + 1) - MINX), 1,
+        /*horizon*/ MINY,
+        /*expected*/ TRUE,
+        "full width fits exactly\n",
+        0
+    );
+
+    // 3) touches top boundary
+    testGoodPositionFunction(
+        MINX + 3, MINY, 4, 1,
+        /*horizon*/ 1,
+        /*expected*/ TRUE,
+        "touches top boundary\n",
+        IGNOREHORIZON
+    );
+
+    // 4) touches bottom boundary
+    testGoodPositionFunction(
+        MINX + 3, MAXY, 4, 2,
+        /*horizon*/ MINY,
+        /*expected*/ TRUE,
+        "touches bottom boundary\n",
+        0
+    );
+
+    // 5) exceeds right bound
+    testGoodPositionFunction(
+        (byte)(MAXX - 5), MINY + 5, 7, 3,
+        /*horizon*/ MINY,
+        /*expected*/ FALSE,
+        "exceeds right bound\n",
+        0
+    );
+
+    // 6) exceeds top bound
+    testGoodPositionFunction(
+        MINX + 2, MINY, 3, 1,
+        /*horizon*/ MINY - 5,
+        /*expected*/ FALSE,
+        "exceeds top bound\n",
+        0
+    );
+
+    // 7) exceeds bottom bound
+    testGoodPositionFunction(
+        MINX + 2, (byte)(MAXY + 1), 3, 2,
+        /*horizon*/ MINY,
+        /*expected*/ TRUE,
+        "exceeds bottom bound\n",
+        0
+    );
+
+	// 8) blocked by horizon
+    testGoodPositionFunction(
+        MINX + 5, MINY + 6, 4, 3,
+        /*horizon*/ (byte)(MINY + 6),
+        /*expected*/ FALSE,
+        "blocked by horizon\n",
+        0
+    );
+
+    // 9) clears horizon
+    testGoodPositionFunction(
+        MINX + 5, MINY + 7, 4, 3,
+        /*horizon*/ (byte)(MINY + 6),
+        /*expected*/ TRUE,
+        "clears horizon\n",
+        0
+    );
+
+    // 10) one by one sprite
+    testGoodPositionFunction(
+        MINX + 1, MINY + 2, 1, 1,
+        /*horizon*/ MINY + 1,
+        /*expected*/ TRUE,
+        "one by one sprite\n",
+        0
+    );
+
+    // 11) fits right and bottom edges
+    {
+        testGoodPositionFunction(
+            MAXX, MAXY + 1, 1, 1,
+            /*horizon*/ MINY,
+            /*expected*/ TRUE,
+            "fits right and bottom edges\n",
+            0
+        );
+    }
+
+    // 12) fails only because of horizon
+    testGoodPositionFunction(
+        MINX + 20, MINY + 15, 2, 2,
+        /*horizon*/ (byte)(MINY + 20),
+        /*expected*/ FALSE,
+        "fails only because of horizon\n",
+        0
+    );
+
+	  testGoodPositionFunction(
+        MINX -1, MINY + 10, 10, 8,
+        /*horizon*/ MINY + 4,
+        /*expected*/ FALSE,
+        "x outside of bounds\n",
+        0
+    );
+}
+
+
+
+
+#endif
+
+
+//#define TEST_COLLIDE
+#ifdef TEST_COLLIDE
+extern boolean b9Collide(ViewTable* localViewtab, byte entryNum);
+void b9ResetViewtabs();
+
+extern byte offsetOfFlags;
+extern byte offsetOfXSize;
+
+boolean trap = FALSE;
+
+void testCollide()
+{
+	ViewTable otherViewTab, localViewTab;
+	boolean result = FALSE;
+
+#define TEST_WIDTH_SMALLER 9
+#define TEST_X_SMALLER 10
+#define TEST_WIDTH_BIGGER 16
+#define TEST_X_BIGGER 15
+
+#define TEST_EQUAL 10
+
+	RAM_BANK = VIEW_CODE_BANK_1;
+
+	b9ResetViewtabs(TRUE);
+
+	RAM_BANK = VIEWTAB_BANK;
+	getViewTab(&localViewTab, 0);
+	getViewTab(&otherViewTab, 2);
+	localViewTab.xPos = TEST_X_BIGGER;
+	result = b9Collide(&localViewTab, 0);
+	printf("test 1 No objects set animated and drawn expected false\n");
+	if (result)
+	{
+		printf("fail\n");
+		asm("stp");
+	}
+
+	b9ResetViewtabs(TRUE);
+	getViewTab(&localViewTab, 0);
+	getViewTab(&otherViewTab, 2);
+	otherViewTab.flags |= ANIMATED;
+	setViewTab(&otherViewTab, 2);
+	localViewTab.xPos = TEST_X_BIGGER;
+	result = b9Collide(&localViewTab, 0);
+	printf("test 2 Only one other object set animated not drawn expected false\n");
+	if (result)
+	{
+		printf("fail\n");
+		asm("stp");
+	}
+
+	b9ResetViewtabs(TRUE);
+	getViewTab(&localViewTab, 0);
+	getViewTab(&otherViewTab, 2);
+	otherViewTab.flags |= DRAWN;
+	setViewTab(&otherViewTab, 2);
+	localViewTab.xPos = TEST_X_BIGGER;
+	result = b9Collide(&localViewTab, 0);
+	printf("test 3 Only one other object set drawn not animated expected false\n");
+	if (result)
+	{
+		printf("fail\n");
+		asm("stp");
+	}
+
+	b9ResetViewtabs(TRUE);
+	getViewTab(&localViewTab, 0);
+	getViewTab(&otherViewTab, 2);
+	otherViewTab.flags |= DRAWN | ANIMATED | IGNOREOBJECTS;
+	setViewTab(&otherViewTab, 2);
+	localViewTab.xPos = TEST_X_BIGGER;
+	result = b9Collide(&localViewTab, 0);
+	printf("test 4 Other object animated, drawn and ignore objects expected false\n");
+	if (result)
+	{
+		printf("fail\n");
+		asm("stp");
+	}
+
+	b9ResetViewtabs(TRUE);
+	getViewTab(&localViewTab, 0);
+	getViewTab(&otherViewTab, 2);
+	otherViewTab.flags |= DRAWN | ANIMATED;
+	otherViewTab.xPos = TEST_X_SMALLER;
+	otherViewTab.xsize = TEST_WIDTH_SMALLER;
+	otherViewTab.yPos = TEST_EQUAL;
+	setViewTab(&otherViewTab, 2);
+	localViewTab.xPos = TEST_X_BIGGER;
+	localViewTab.xsize = TEST_WIDTH_BIGGER;
+	localViewTab.yPos = TEST_EQUAL;
+	setViewTab(&localViewTab, 0);
+	result = b9Collide(&localViewTab, 0);
+	//this.x + this.width > otherObj.x && otherObj.x + otherObj.width  > this.x
+	printf("test 5 local x plus local w greater x other obj x plus other obj width greater local x y test passes expected true\n");
+	if (!result)
+	{
+		printf("fail\n");
+		asm("stp");
+	}
+
+	b9ResetViewtabs(TRUE);
+	getViewTab(&localViewTab, 0);
+	getViewTab(&otherViewTab, 2);
+	otherViewTab.flags |= DRAWN | ANIMATED;
+	otherViewTab.xPos = TEST_X_SMALLER;
+	otherViewTab.xsize = TEST_WIDTH_SMALLER;
+	otherViewTab.yPos = TEST_EQUAL;
+	setViewTab(&otherViewTab, 2);
+	localViewTab.xPos = 0;
+	localViewTab.xsize = 0;
+	localViewTab.yPos = TEST_EQUAL;
+	setViewTab(&localViewTab, 0);
+	result = b9Collide(&localViewTab, 0);
+
+	//this.x + this.width < otherObj.x && otherObj.x + otherObj.width  > this.x
+
+	printf("test 6 local x plus local w less than other obj x other obj x plus other obj width greater local x y test pass expected false \n");
+	if (result)
+	{
+		printf("fail\n");
+		asm("stp");
+	}
+	b9ResetViewtabs(TRUE);
+	getViewTab(&localViewTab, 0);
+	getViewTab(&otherViewTab, 2);
+	otherViewTab.flags |= DRAWN | ANIMATED;
+	otherViewTab.xPos = 0;
+	otherViewTab.xsize = 5;
+	otherViewTab.yPos = TEST_EQUAL;
+	setViewTab(&otherViewTab, 2);
+	localViewTab.xPos = 5;
+	localViewTab.xsize = 5;
+	localViewTab.yPos = TEST_EQUAL;
+	setViewTab(&localViewTab, 0);
+	result = b9Collide(&localViewTab, 0);
+
+	//this.x + this.width == otherObj.x && otherObj.x + otherObj.width  == this.x
+
+	printf("test 7 local x plus local w equal other other obj x plus other obj width equal local x y test pass expected false \n");
+	if (result)
+	{
+		printf("fail\n");
+		asm("stp");
+	}
+
+	b9ResetViewtabs(TRUE);
+	getViewTab(&localViewTab, 0);
+	getViewTab(&otherViewTab, 2);
+	otherViewTab.flags |= DRAWN | ANIMATED;
+	otherViewTab.xPos = 20;
+	otherViewTab.xsize = 5;
+	otherViewTab.yPos = TEST_EQUAL;
+	setViewTab(&otherViewTab, 2);
+	localViewTab.xPos = 10;
+	localViewTab.xsize = 5;
+	localViewTab.yPos = TEST_EQUAL;
+	setViewTab(&localViewTab, 0);
+	result = b9Collide(&localViewTab, 0);
+
+	//this.x + this.width < otherObj.x && otherObj.x + otherObj.width  < this.x
+
+	printf("test 8 local x plus local w less than other other obj x plus other obj width less than local x y test pass expected false \n");
+	if (result)
+	{
+		printf("fail\n");
+		asm("stp");
+	}
+
+	b9ResetViewtabs(TRUE);
+	getViewTab(&localViewTab, 0);
+	getViewTab(&otherViewTab, 2);
+
+	otherViewTab.flags |= DRAWN | ANIMATED;
+	otherViewTab.xPos = 0;   // other.x
+	otherViewTab.xsize = 10;  // other.x + w = 10
+	otherViewTab.yPos = TEST_EQUAL;
+	setViewTab(&otherViewTab, 2);
+
+	localViewTab.xPos = 10;  // this.x
+	localViewTab.xsize = 1;   // this.x + w = 11
+	localViewTab.yPos = TEST_EQUAL;
+	setViewTab(&localViewTab, 0);
+
+	result = b9Collide(&localViewTab, 0);
+
+	//this.x + this.width > otherObj.x && otherObj.x + otherObj.width == this.x
+	printf("test 9 local x plus local w greater other obj x other obj x plus other obj w equal local x y test pass expected false\n");
+	if (result)
+	{
+		printf("fail\n");
+		asm("stp");
+	}
+
+	b9ResetViewtabs(TRUE);
+	getViewTab(&localViewTab, 0);
+	getViewTab(&otherViewTab, 2);
+
+	otherViewTab.flags |= DRAWN | ANIMATED;
+	otherViewTab.xPos = 5;
+	otherViewTab.xsize = 1;   // other.x + w = 6
+	otherViewTab.yPos = TEST_EQUAL;
+	setViewTab(&otherViewTab, 2);
+
+	localViewTab.xPos = 0;
+	localViewTab.xsize = 5;   // this.x + w = 5
+	localViewTab.yPos = TEST_EQUAL;
+	setViewTab(&localViewTab, 0);
+
+	result = b9Collide(&localViewTab, 0);
+
+	//this.x + this.width equal other obj x && other obj x plus other obj width greater local x
+	printf("test 10 local x plus local w equal other obj x other obj x plus other obj w greater local x y test pass expected true\n");
+	if (!result)
+	{
+		printf("fail\n");
+		asm("stp");
+	}
+
+	// ---------- test 11: A: > , B: < (expected FALSE) ----------
+	b9ResetViewtabs(TRUE);
+	getViewTab(&localViewTab, 0);
+	getViewTab(&otherViewTab, 2);
+
+	otherViewTab.flags |= DRAWN | ANIMATED;
+	otherViewTab.xPos = 0;
+	otherViewTab.xsize = 5;   // other.x + w = 5
+	otherViewTab.yPos = TEST_EQUAL;
+	setViewTab(&otherViewTab, 2);
+
+	localViewTab.xPos = 10;
+	localViewTab.xsize = 1;   // this.x + w = 11
+	localViewTab.yPos = TEST_EQUAL;
+	setViewTab(&localViewTab, 0);
+
+	result = b9Collide(&localViewTab, 0);
+
+	//this.x + this.width greater other obj x && other obj x plus other obj width less local x
+	printf("test 11 local x plus local w greater other obj x other obj x plus other obj w less local x y test pass expected false\n");
+	if (result)
+	{
+		printf("fail\n");
+		asm("stp");
+	}
+
+	b9ResetViewtabs(TRUE);
+	getViewTab(&localViewTab, 0);
+	getViewTab(&otherViewTab, 2);
+
+	otherViewTab.flags |= DRAWN | ANIMATED;
+	otherViewTab.xPos = 0;
+	otherViewTab.xsize = 10;
+	otherViewTab.yPos = 20;
+	otherViewTab.previousY = 20;
+	setViewTab(&otherViewTab, 2);
+
+	localViewTab.xPos = 5;
+	localViewTab.xsize = 5;
+	localViewTab.yPos = 20;
+	localViewTab.previousY = 20;
+	setViewTab(&localViewTab, 0);
+
+	result = b9Collide(&localViewTab, 0);
+
+	//this.y == otherObj.y
+	printf("test 12 x overlap true y equal test pass expected true\n");
+	if (!result)
+	{
+		printf("fail\n");
+		asm("stp");
+	}
+
+	b9ResetViewtabs(TRUE);
+	getViewTab(&localViewTab, 0);
+	getViewTab(&otherViewTab, 2);
+
+	otherViewTab.flags |= DRAWN | ANIMATED;
+	otherViewTab.xPos = 0;
+	otherViewTab.xsize = 10;
+	otherViewTab.yPos = 5;
+	otherViewTab.previousY = 6;
+	setViewTab(&otherViewTab, 2);
+
+	localViewTab.xPos = 5;
+	localViewTab.xsize = 5;
+	localViewTab.yPos = 6;
+	localViewTab.previousY = 4;
+	setViewTab(&localViewTab, 0);
+
+	result = b9Collide(&localViewTab, 0);
+
+	//this.y > otherObj.y && this.previousY < otherObj.previousY
+	printf("test 13 x overlap true this y greater other y this previous y less other previous y test pass expected true\n");
+	if (!result)
+	{
+		printf("fail\n");
+		asm("stp");
+	}
+
+	b9ResetViewtabs(TRUE);
+	getViewTab(&localViewTab, 0);
+	getViewTab(&otherViewTab, 2);
+
+	otherViewTab.flags |= DRAWN | ANIMATED;
+	otherViewTab.xPos = 0;
+	otherViewTab.xsize = 10;
+	otherViewTab.yPos = 6;
+	otherViewTab.previousY = 4;
+	setViewTab(&otherViewTab, 2);
+
+	localViewTab.xPos = 5;
+	localViewTab.xsize = 5;
+	localViewTab.yPos = 5;
+	localViewTab.previousY = 7;
+	setViewTab(&localViewTab, 0);
+
+	//trap = TRUE;
+	result = b9Collide(&localViewTab, 0);
+
+	//this.y < otherObj.y && this.previousY > otherObj.previousY
+	printf("test 14 x overlap true this y less other y this previous y greater other previous y test pass expected true\n");
+	if (!result)
+	{
+		printf("fail\n");
+		asm("stp");
+	}
+
+	b9ResetViewtabs(TRUE);
+	getViewTab(&localViewTab, 0);
+	getViewTab(&otherViewTab, 2);
+
+	otherViewTab.flags |= DRAWN | ANIMATED;
+	otherViewTab.xPos = 0;
+	otherViewTab.xsize = 10;
+	otherViewTab.yPos = 20;
+	otherViewTab.previousY = 19;
+	setViewTab(&otherViewTab, 2);
+
+	localViewTab.xPos = 5;
+	localViewTab.xsize = 5;
+	localViewTab.yPos = 10;
+	localViewTab.previousY = 9;
+	setViewTab(&localViewTab, 0);
+
+	result = b9Collide(&localViewTab, 0);
+
+	//this.y != otherObj.y && no cross
+	printf("test 15 x overlap true y not equal no y cross test pass expected false\n");
+	if (result)
+	{
+		printf("fail\n");
+		asm("stp");
+	}
+
+	b9ResetViewtabs(TRUE);
+	getViewTab(&localViewTab, 0);
+	getViewTab(&otherViewTab, 2);
+	otherViewTab.flags |= DRAWN | ANIMATED;
+	otherViewTab.xPos = TEST_X_SMALLER;
+	otherViewTab.xsize = TEST_WIDTH_SMALLER;
+	otherViewTab.yPos = TEST_EQUAL;
+	setViewTab(&otherViewTab, 2);
+	localViewTab.xPos = TEST_X_BIGGER;
+	localViewTab.xsize = TEST_WIDTH_BIGGER;
+	localViewTab.yPos = TEST_EQUAL;
+	setViewTab(&localViewTab, 2);
+	result = b9Collide(&localViewTab, 2);
+	printf("test 16 local obj is the same as otherObj, but would otherwise pass \n");
+	if (result)
+	{
+		printf("fail\n");
+		asm("stp");
+	}
+
+	asm("stp");
+}
+
+
+
+#endif
+
+//#define TEST_CAN_BE_HERE
+
+#ifdef TEST_CAN_BE_HERE
+extern boolean b9CanBeHere(ViewTable* localViewtab, byte entryNum);
+extern void b11DrawPic(byte* bankedData, int pLen, boolean okToClearScreen, byte picNum);
+extern void b9ResetViewtabs();
+#pragma wrapped-call (push, trampoline, 8)
+extern void b8SetupLineTables();
+#pragma wrapped-call (pop)
+byte trap = FALSE;
+
+boolean testPriorityCalc(byte y, byte expectedPriority, char* testText, int flags, byte objInitialPriority)
+{
+	PictureFile loadedPicture;
+	ViewTable localViewTab;
+	boolean result;
+
+	memset(flag, 0, 256);
+	b9ResetViewtabs(TRUE);
+
+	getViewTab(&localViewTab, 0);
+	localViewTab.yPos = y;
+	localViewTab.flags = flags;
+	localViewTab.priority = objInitialPriority;
+
+	result = b9CanBeHere(&localViewTab, 0);
+	printf(testText);
+
+	if (localViewTab.priority != expectedPriority)
+	{
+		printf("fail the priority was expected to be %d, but we got %d\n", expectedPriority, localViewTab.priority);
+	}
+}
+
+boolean testCanBeHereFunction(byte pNum, byte x, byte y, byte xSize, char* testText, boolean expectedResult, boolean expectedWater, boolean expectedSpecial, int flags, byte objInitialPriority, byte objNum)
+{
+	PictureFile loadedPicture;
+	ViewTable localViewTab;
+	boolean result;
+
+	memset(flag, 0, 256);
+	b9ResetViewtabs(TRUE);
+	b8SetupLineTables();
+
+	getViewTab(&localViewTab, objNum);
+	localViewTab.xPos = x;
+	localViewTab.yPos = y;
+	localViewTab.flags = flags;
+	localViewTab.xsize = xSize;
+	localViewTab.priority = objInitialPriority;
+	b6LoadPictureFile(pNum);
+	getLoadedPicture(&loadedPicture, pNum);
+	b11DrawPic(loadedPicture.data, loadedPicture.size, TRUE, pNum);
+	result = b9CanBeHere(&localViewTab, objNum);
+	printf(testText);
+	if (result != expectedResult)
+	{
+		printf("fail, result\n");
+	}
+	if (flag[0] != expectedWater)
+	{
+		printf("fail, on water\n");
+	}
+
+	//printf("special flag address %p\n", &flag[3]);
+	if (flag[3] != expectedSpecial)
+	{
+		printf("fail, on special\n");
+	}
+
+	b6DiscardPictureFile(pNum);
+}
+
+boolean testCanBeHereFunctionWithWaterSpecial(byte pNum, byte x, byte y, byte xSize, char* testText, boolean expectedResult, boolean expectedWater, byte expectedSpecial, int flags, byte objInitialPriority)
+{
+	PictureFile loadedPicture;
+	ViewTable localViewTab;
+	boolean result;
+
+	memset(flag, 0, 256);
+	b9ResetViewtabs(TRUE);
+	b8SetupLineTables();
+
+	getViewTab(&localViewTab, 0);
+	localViewTab.xPos = x;
+	localViewTab.yPos = y;
+	localViewTab.flags = flags;
+	localViewTab.priority = objInitialPriority;
+    localViewTab.xsize = xSize;
+
+	b6LoadPictureFile(pNum);
+	getLoadedPicture(&loadedPicture, pNum);
+	b11DrawPic(loadedPicture.data, loadedPicture.size, TRUE, pNum);
+
+	SET_VERA_ADDRESS(0xC827, 0, 0);
+#define WATER_SPECIAL 0x32
+	WRITE_BYTE_DEF_TO_ASSM(WATER_SPECIAL, VERA_data0); //Adding In This Value Specially, As I Couldn't Find A Real One
+
+	result = b9CanBeHere(&localViewTab, 0);
+	printf(testText);
+	if (result != expectedResult)
+	{
+		printf("fail, result\n");
+	}
+	if (flag[0] != expectedWater)
+	{
+		printf("fail, on water\n");
+	}
+
+	//printf("special flag address %p\n", &flag[3]);
+	if (flag[3] != expectedSpecial)
+	{
+		printf("fail, on special\n");
+	}
+}
+
+void testCanBeHere()
+{
+#define TEST_ENTIRE_ON_LAND_PIC 3
+#define TEST_ENTIRE_ON_LAND_PIC_PERMANENT_BLOCK 1
+#define TEST_ENTIRE_ON_LAND_PIC_NON_PERM_BLOCK 4
+#define TEST_ENTIRE_ON_LAND_PIC_SPECIAL 41
+#define TEST_ENTIRE_ON_WATER 17
+#define TEST_ON_WATER_AND_SPECIAL 17
+#define TEST_BLOCK_ON_END 17
+
+
+	PictureFile loadedPicture;
+	byte pNum = TEST_ENTIRE_ON_LAND_PIC;
+	ViewTable localViewTab;
+	boolean result;
+
+	b8SetupLineTables();
+
+	testCanBeHereFunction(TEST_ENTIRE_ON_LAND_PIC, 50, 50, 10, "test 1: non fixed priority entirely on land priority > 3\n", TRUE, FALSE, FALSE, 0, 7, 0);
+	testCanBeHereFunction(TEST_ENTIRE_ON_LAND_PIC_PERMANENT_BLOCK, 159, 167, 6, "test 2: hits permanent on first pixel\n", FALSE, FALSE, FALSE, 0, 7, 0);
+	testCanBeHereFunction(TEST_ENTIRE_ON_LAND_PIC_PERMANENT_BLOCK, 154, 167, 6, "test 3: hits permanent on non first pixel\n", FALSE, FALSE, FALSE, 0, 7, 0);
+	testCanBeHereFunction(TEST_ENTIRE_ON_LAND_PIC_NON_PERM_BLOCK, 0, 42, 6, "test 4: hits non perm block on first pixel\n", FALSE, FALSE, FALSE, 0, 7, 0);
+	testCanBeHereFunction(TEST_ENTIRE_ON_LAND_PIC_NON_PERM_BLOCK, 159, 41, 6, "test 5: hits non perm block non first pixel\n", FALSE, FALSE, FALSE, 0, 7, 0);
+	testCanBeHereFunction(TEST_ENTIRE_ON_LAND_PIC_SPECIAL, 98, 101, 6, "test 6: hits special on first pixel\n", TRUE, FALSE, TRUE, 0, 7, 0);
+	testCanBeHereFunction(TEST_ENTIRE_ON_LAND_PIC_SPECIAL, 91, 101, 6, "test 7: hits special on non first pixel\n", TRUE, FALSE, TRUE, 0, 7, 0);
+	testCanBeHereFunction(TEST_ENTIRE_ON_LAND_PIC_SPECIAL, 98, 101, 6, "test 8: hits control lines on first pixel\n", TRUE, FALSE, TRUE, 0, 7, 0);
+	testCanBeHereFunction(TEST_ENTIRE_ON_LAND_PIC_SPECIAL, 91, 101, 6, "test 9: hits control lines on non first pixel\n", TRUE, FALSE, TRUE, 0, 7, 0);
+	testCanBeHereFunction(TEST_ENTIRE_ON_WATER, 20, 160, 6, "test 10: entirely On Water\n", TRUE, TRUE, FALSE, 0, 7, 0);
+	testCanBeHereFunction(TEST_ENTIRE_ON_WATER, 49, 123, 6, "test 11: half On water, half on perm. block\n", FALSE, FALSE, FALSE, 0, 7, 0);
+	testCanBeHereFunction(TEST_ENTIRE_ON_WATER, 81, 160, 6, "test 12: half On Water, half on block\n", FALSE, FALSE, FALSE, 0, 7, 0);
+	testCanBeHereFunctionWithWaterSpecial(TEST_ON_WATER_AND_SPECIAL, 79, 160, 6, "test 13: on Water, half on special\n", TRUE, FALSE, TRUE, 0, 7);
+	testCanBeHereFunction(TEST_BLOCK_ON_END, 80, 160, 6, "test 14: block on end\n", FALSE, FALSE, FALSE, 0, 7, 0);
+	testCanBeHereFunction(TEST_ENTIRE_ON_LAND_PIC_NON_PERM_BLOCK, 0, 42, 6, "test 15: hits non perm block on first pixel, ignore blocks enabled\n", TRUE, FALSE, FALSE, IGNOREBLOCKS, 7, 0);
+	testCanBeHereFunction(TEST_ENTIRE_ON_LAND_PIC_NON_PERM_BLOCK, 159, 41, 6, "test 16: hits non perm block non first pixel, ignore blocks enabled\n", TRUE, FALSE, FALSE, IGNOREBLOCKS, 7, 0);
+
+	testCanBeHereFunction(TEST_ENTIRE_ON_LAND_PIC_PERMANENT_BLOCK, 159, 167, 6, "test 17: hits permanent on first pixel (15 priority ignore)\n", TRUE, FALSE, FALSE, FIXEDPRIORITY, 15, 0);
+	testCanBeHereFunction(TEST_ENTIRE_ON_LAND_PIC_PERMANENT_BLOCK, 154, 167, 6, "test 18: hits permanent on non first pixel (15 priority ignore)\n", TRUE, FALSE, FALSE, FIXEDPRIORITY, 15, 0);
+	testCanBeHereFunction(TEST_ENTIRE_ON_LAND_PIC_NON_PERM_BLOCK, 0, 42, 6, "test 19: hits non perm block on first pixel\n", TRUE, FALSE, FALSE, FIXEDPRIORITY, 15, 0);
+	testCanBeHereFunction(TEST_ENTIRE_ON_LAND_PIC_NON_PERM_BLOCK, 159, 41, 6, "test 20: hits non perm block non first pixel (15 priority ignore)\n", TRUE, FALSE, FALSE, FIXEDPRIORITY, 15, 0);
+
+
+	testCanBeHereFunction(TEST_ENTIRE_ON_LAND_PIC_SPECIAL, 98, 101, 6, "test 21: hits special on first pixel(15 priority ignore)\n", TRUE, FALSE, FALSE, FIXEDPRIORITY, 15, 0);
+	testCanBeHereFunction(TEST_ENTIRE_ON_LAND_PIC_SPECIAL, 91, 101, 6, "test 22: hits special on non first pixel(15 priority ignore)\n", TRUE, FALSE, FALSE, FIXEDPRIORITY, 15, 0);
+	testCanBeHereFunction(TEST_ENTIRE_ON_LAND_PIC_SPECIAL, 98, 101, 6, "test 23: hits control lines on first pixel(15 priority ignore)\n", TRUE, FALSE, FALSE, FIXEDPRIORITY, 15, 0);
+	testCanBeHereFunction(TEST_ENTIRE_ON_LAND_PIC_SPECIAL, 91, 101, 6, "test 24: hits control lines on non first pixel(15 priority ignore)\n", TRUE, FALSE, FALSE, FIXEDPRIORITY, 15, 0);
+	testCanBeHereFunction(TEST_ENTIRE_ON_WATER, 20, 160, 6, "test 25: entirely On Water(15 priority ignore)\n", TRUE, FALSE, FALSE, FIXEDPRIORITY, 15, 0);
+	testCanBeHereFunction(TEST_ENTIRE_ON_WATER, 49, 123, 6, "test 26: half On water, half on perm. block(15 priority ignore)\n", TRUE, FALSE, FALSE, FIXEDPRIORITY, 15, 0);
+	testCanBeHereFunction(TEST_ENTIRE_ON_WATER, 81, 160, 6, "test 27: half On Water, half on block(15 priority ignore)\n", TRUE, FALSE, FALSE, FIXEDPRIORITY, 15, 0);
+	testCanBeHereFunctionWithWaterSpecial(TEST_ON_WATER_AND_SPECIAL, 79, 160, 6, "test 28: on Water, half on special(15 priority ignore)\n", TRUE, FALSE, FALSE, FIXEDPRIORITY, 15);
+	testCanBeHereFunction(TEST_BLOCK_ON_END, 80, 160, 6, "test 29: block on end(15 priority ignore)\n", TRUE, FALSE, FALSE, FIXEDPRIORITY, 15, 0);
+
+	testCanBeHereFunction(TEST_ENTIRE_ON_WATER, 20, 160, 6, "test 30: when not ego water flag not set\n", TRUE, FALSE, FALSE, 0, 7, 1);
+
+	// Below base -> always backmost (4)
+
+	testPriorityCalc(20, 4, "priority test 1, backmost (y < base)\n", 0, 7);
+	testPriorityCalc(37, 4, "priority test 2, backmost (just below base)\n", 0, 7);
+
+	// At base
+	testPriorityCalc(38, 4, "priority test 3, base = 5\n", 0, 7);
+
+	// Step increments of 13
+	testPriorityCalc(51, 5, "priority test 4, step 1\n", 0, 7);
+	testPriorityCalc(64, 6, "priority test 5, step 2\n", 0, 7);
+	testPriorityCalc(77, 7, "priority test 6, step 3\n", 0, 7);
+	testPriorityCalc(90, 8, "priority test 7, step 4\n", 0, 7);
+	testPriorityCalc(103, 9, "priority test 8, step 5\n", 0, 7);
+	testPriorityCalc(116, 10, "priority test 9, step 6\n", 0, 7);
+	testPriorityCalc(129, 11, "priority test 10, step 7\n", 0, 7);
+	testPriorityCalc(142, 12, "priority test 11, step 8\n", 0, 7);
+	testPriorityCalc(155, 13, "priority test 12, step 9\n", 0, 7);
+
+	// Very end of the scale
+
+	testPriorityCalc(168, 15, "priority test 13, top of range\n", 0, 7);
+
+	testPriorityCalc(168, 7, "uses own priority when fixed\n", FIXEDPRIORITY, 7);
+}
+#endif
+
+
 #pragma bss-name (push, "BANKRAM09")
 ViewTable viewtab[VIEW_TABLE_SIZE];
 #pragma bss-name (pop)
@@ -201,12 +958,6 @@ typedef struct FONT                 /* can be either */
 		FONT_PROP* dat_prop;
 	} dat;
 } FONT;
-
-void textout(BITMAP* bmp, FONT* f, char* str, int x, int y, int color)
-{
-
-}
-
 FONT* font;
 
 //
@@ -354,11 +1105,11 @@ void bESetViewMetadata(View* localView, ViewTable* viewTable, byte viewNum, byte
 #endif
 
 	metadata.loopsVeraAddressesPointers = (VeraSpriteAddress**)b10BankedAlloc(totalAllocationSize, &metadata.viewTableMetadataBank);
-	
-	
+
+
 	metadata.veraAddresses = (VeraSpriteAddress*)(metadata.loopsVeraAddressesPointers + numberLoopVeraAddressPointers);
 
-	metadata.backBuffers = (VeraSpriteAddress*) ((unsigned int)metadata.veraAddresses + numberVeraAddresses * sizeof(VeraSpriteAddress));	
+	metadata.backBuffers = (VeraSpriteAddress*)((unsigned int)metadata.veraAddresses + numberVeraAddresses * sizeof(VeraSpriteAddress));
 	metadata.viewNum = viewNum;
 
 #ifdef VERBOSE_DEBUG_SET_METADATA
@@ -754,7 +1505,7 @@ boolean agiBlit(ViewTable* localViewTab, byte entryNum, boolean disableInterupts
 	byte isAnimated = FALSE;
 	SpriteAllocationSize allocationWidth, allocationHeight;
 	byte combinedSpriteAllocationSize;
-	
+
 	previousBank = RAM_BANK;
 	RAM_BANK = SPRITE_METADATA_BANK;
 
@@ -899,12 +1650,12 @@ animatedSprite:
 	}
 
 	combinedSpriteAllocationSize = allocationWidth + allocationHeight;
-	
+
 	RAM_BANK = localMetadata.viewTableMetadataBank;
 	_assmULong = localMetadata.backBuffers[0];
 
 	RAM_BANK = SPRITE_METADATA_BANK;
-	
+
 	if (localMetadata.backBufferSize != combinedSpriteAllocationSize)
 	{
 		_assmULong = NULL;
@@ -930,7 +1681,7 @@ initialise:
 		{
 			return FALSE;
 		}
-		
+
 		localMetadata.isOnBackBuffer = TRUE;
 		localMetadata.backBufferSize = combinedSpriteAllocationSize;
 
@@ -1210,7 +1961,7 @@ callCelToVera:
 	asm("sta %w + 1", CEL_ADDR);
 
 	_assmULong = loopVeraAddress;
-	
+
 	asm("lda %v", _assmULong);
 	asm("sta %w", VERA_ADDRESS);
 	asm("lda %v + 1", _assmULong);
@@ -1277,8 +2028,30 @@ endBlit:
 }
 
 #pragma code-name (push, "BANKRAM09")
-#pragma code-name (push, "BANKRAM09")
-void b9ResetViewtabs(boolean fullReset)
+
+void b9LoadCelFromViewTab(ViewTable* localViewtab, byte celNum)
+{
+	Loop temp;
+	View localLoadedView;
+	Cel localCel;
+
+	getLoadedView(&localLoadedView, localViewtab->currentView);
+	getLoadedLoop(&localLoadedView, &temp, localViewtab->currentLoop);
+	getLoadedCel(&temp, &localCel, celNum);
+
+	localViewtab->xsize = localCel.width;
+	localViewtab->ysize = localCel.height;
+}
+
+
+#pragma code-name (push, "BANKRAM0A")
+
+#pragma wrapped-call (push, trampoline, VIEW_CODE_BANK_1)
+extern boolean b9Collide(ViewTable* localViewtab, byte entryNum);
+extern boolean b9CanBeHere(ViewTable* localViewtab, byte entryNum);
+#pragma wrapped-call (pop)
+
+void bAResetViewtabs(boolean fullReset)
 {
 	int entryNum;
 	byte i;
@@ -1287,42 +2060,52 @@ void b9ResetViewtabs(boolean fullReset)
 	for (entryNum = 0; entryNum < VIEW_TABLE_SIZE; entryNum++) {
 		getViewTab(&localViewtab, entryNum);
 
-		localViewtab.stepTime = 1;
-		localViewtab.stepTimeCount = 1;
+		localViewtab.flags = (localViewtab.flags & ~(ANIMATED | DRAWN)) | UPDATE;
 		localViewtab.stepSize = 1;
 		localViewtab.cycleTime = 1;
 		localViewtab.cycleTimeCount = 1;
+		localViewtab.stepTime = 1;
+		localViewtab.stepTimeCount = 1;
+			
+		
 		localViewtab.staleCounter = 0;
 		if (fullReset)
 		{
 			localViewtab.xPos = 0;
 			localViewtab.yPos = 0;
-			localViewtab.currentView = 0;
 			localViewtab.viewData = NULL;
-			localViewtab.currentLoop = 0;
-			localViewtab.numberOfLoops = 0;
-			localViewtab.loopData = NULL;
 			localViewtab.currentCel = 0;
+			localViewtab.currentLoop = 0;
+			localViewtab.currentView = 0;
+			localViewtab.direction = 0;
+			localViewtab.param1 = 0;
+			localViewtab.param2 = 0;
+			localViewtab.param3 = 0;
+			localViewtab.param4 = 0;
+			localViewtab.cycleStatus = 0;
+			localViewtab.noAdvance = FALSE;
+			localViewtab.previousX = 0;
+			localViewtab.previousY = 0;
+			localViewtab.priority = 0;
+			localViewtab.repositioned = 0;
+			localViewtab.motion = 0;
+			localViewtab.previousX = 0;
+			localViewtab.previousY = 0;
+			localViewtab.numberOfLoops = 0;
+			localViewtab.loopData = NULL;	
 			localViewtab.numberOfCels = 0;
 			localViewtab.celData = NULL;
 			localViewtab.xsize = 0;
 			localViewtab.ysize = 0;
-			localViewtab.direction = 0;
-			localViewtab.motion = 0;
-			localViewtab.cycleStatus = 0;
-			localViewtab.priority = 0;
-			localViewtab.flags = 0;
-			localViewtab.repositioned = FALSE;
 			localViewtab.stopped = FALSE;
-			localViewtab.previousX = 0;
-			localViewtab.previousY = 0;
-
-			setViewTab(&localViewtab, entryNum);
+	
+	
 		}
+		setViewTab(&localViewtab, entryNum);
 	}
 }
 
-void b9ResetSpriteMemory(boolean clearBuffer)
+void bAResetSpriteMemory(boolean clearBuffer)
 {
 	if (clearBuffer)
 	{
@@ -1333,22 +2116,22 @@ void b9ResetSpriteMemory(boolean clearBuffer)
 	bDResetSpriteMemoryManager();
 }
 
-void b9Reset()
+void bAReset()
 {
-	b9ResetSpriteMemory(TRUE);
+	bAResetSpriteMemory(TRUE);
 	bFInitPaletteManager();
-	b9ResetViewtabs(FALSE);
+	
+	bAResetViewtabs(FALSE);
 }
 
-void b9InitSpriteData()
+void bAInitSpriteData()
 {
 	byte i;
-
-	b9Reset();
+	bAReset();
 }
 
 
-void b9InitViews()
+void bAInitViews()
 {
 	int i, j;
 	View localView;
@@ -1365,13 +2148,29 @@ void b9InitViews()
 	}
 }
 
-void b9InitObjects()
+void bAInitObjects()
 {
-	b9ResetViewtabs(TRUE);
+	byte i;
+
+#ifdef TEST_COLLIDE
+	testCollide();
+#endif // TEST_COLLIDE
+
+#ifdef TEST_GOOD_POSITION
+	testGoodPosition();
+#endif
+
+	bAPopulatePrecomputedPriorityTable();
+
+#ifdef TEST_CAN_BE_HERE
+	testCanBeHere();
+#endif
+
+	bAResetViewtabs(TRUE);
 	memsetBanked(viewTableMetadata, NULL, sizeof(ViewTableMetadata) * SPRITE_SLOTS, SPRITE_METADATA_BANK);
 }
 
-void b9ResetViews()     /* Called after new.room */
+void bAResetViews()     /* Called after new.room */
 {
 	int entryNum;
 	ViewTable localViewtab;
@@ -1385,9 +2184,43 @@ void b9ResetViews()     /* Called after new.room */
 		setViewTab(&localViewtab, entryNum);
 	}
 
-	b9Reset();
+	bAReset();
 }
 
+void bAPopulatePrecomputedPriorityTable()
+{
+	int den;
+	int num;
+	int band;   // round-to-nearest; drop "+ den/2" for floor
+	int value;
+	int i;
+	byte priorityToCopy;
+
+	fix32 numerator, denominator, divisionResult;
+
+	den = 168 - priorityBase;
+
+	for (i = 0; i < CHAR_MAX; i++)
+	{
+		if (i < priorityBase || den <= 0)
+		{
+			priorityToCopy = MIN_SPRITE_PRIORITY;
+			memCpyBanked(&b9PreComputedPriority[i], &priorityToCopy, VIEW_CODE_BANK_1, 1);
+		}
+		else
+		{
+			numerator = b12FpFromInt(i - priorityBase);
+			denominator = b12FpFromInt(PICTURE_HEIGHT - priorityBase) / b12FpFromInt(10);
+			divisionResult = numerator / denominator;
+			divisionResult += b12FpFromInt(5);
+
+			priorityToCopy = b12FloorFix32(divisionResult);
+			memCpyBanked(&b9PreComputedPriority[i], &priorityToCopy, VIEW_CODE_BANK_1, 1);
+		}
+	}
+}
+
+#pragma code-name (pop)
 
 #define VIEW_HEADER_BUFFER_SIZE 501
 #define LOOP_HEADER_BUFFER_SIZE 501
@@ -1577,7 +2410,7 @@ void b9LoadViewFile(byte viewNum)
 		printf("Attempt to load viewNum %d\n", viewNum);
 #endif // VERBOSE_LOAD_VIEWS
 
-		getLogicDirectory(&agiFilePosType, &viewdir[viewNum]);
+		b10GetLogicDirectory(&agiFilePosType, &viewdir[viewNum]);
 		b6LoadAGIFile(VIEW, &agiFilePosType, &tempAGI);
 
 #ifdef VERBOSE_LOAD_VIEWS
@@ -1770,56 +2603,32 @@ void b9DiscardView(byte viewNum)
 	}
 }
 
-void b9SetCel(ViewTable* localViewtab, byte celNum)
-{
-	Loop temp;
-	View localLoadedView;
-	Cel localCel;
-
-	getLoadedView(&localLoadedView, localViewtab->currentView);
-	getLoadedLoop(&localLoadedView, &temp, localViewtab->currentLoop);
-	getLoadedCel(&temp, &localCel, celNum);
-
-	localViewtab->currentCel = celNum;
-	localViewtab->xsize = localCel.width;
-	localViewtab->ysize = localCel.height;
-}
-
-void b9SetLoop(ViewTable* localViewtab, byte loopNum)
-{
-	View temp;
-	Loop loop;
-	getLoadedView(&temp, localViewtab->currentView);
-	getLoadedLoop(&temp, &loop, loopNum);
-
-	localViewtab->currentLoop = loopNum;
-	localViewtab->numberOfCels = loop.numberOfCels;
-	/* Might have to set the cel as well */
-	/* It's probably better to do that in the set_loop function */
-}
 /**************************************************************************
 ** addViewToTable
 **
 ** Purpose: To add a loaded VIEW to the VIEW table.
 **************************************************************************/
-void b9AddViewToTable(ViewTable* localViewtab, byte viewNum, byte entryNum)
+void b9SetView(byte viewNum, byte entryNum)
 {
+	ViewTable* viewtabPtr;
 	View localView;
 	Loop localLoop;
+	Cel localCel;
+
+	viewtabPtr = &viewtab[entryNum];
 
 	getLoadedView(&localView, viewNum);
-	getLoadedLoop(&localView, &localLoop, 0);
 
-	localViewtab->currentView = viewNum;
-	localViewtab->numberOfLoops = localView.numberOfLoops;
-	b9SetLoop(localViewtab, 0);
+	b9SetLoop(viewtabPtr, entryNum, viewtabPtr->currentLoop >= localView.numberOfLoops ? 0 : viewtabPtr->currentLoop);
 
-	localViewtab->numberOfCels = localLoop.numberOfCels;
-	b9SetCel(localViewtab, 0);
-	/* Might need to set some more defaults here */
+	getLoadedLoop(&localView, &localLoop, viewtabPtr->currentLoop);
+	getLoadedCel(&localLoop, &localCel, viewtabPtr->currentCel);
 
-
-	localViewtab->repositioned = TRUE;
+	viewtabPtr->currentView = viewNum;
+	viewtabPtr->numberOfLoops = localView.numberOfLoops;
+	viewtabPtr->numberOfCels = localLoop.numberOfCels;
+	viewtabPtr->xsize = localCel.width;
+	viewtabPtr->ysize = localCel.height;
 }
 
 void b9AddToPic(int vNum, int lNum, int cNum, int x, int y, int pNum, int bCol)
@@ -1860,407 +2669,9 @@ void b9AddToPic(int vNum, int lNum, int cNum, int x, int y, int pNum, int bCol)
 #pragma code-name (pop)
 #pragma code-name (push, "BANKRAM0A")
 #pragma wrapped-call (push, trampoline, VIEW_CODE_BANK_2)
-void bACalcDirection(ViewTable* localViewtab)
-{
-	if (!(localViewtab->flags & FIXLOOP)) {
-		if (localViewtab->numberOfLoops < 4) {
-
-			switch (localViewtab->direction) {
-			case 1: break;
-			case 2: b9SetLoop(localViewtab, 0); break;
-			case 3: b9SetLoop(localViewtab, 0); break;
-			case 4: b9SetLoop(localViewtab, 0); break;
-			case 5: break;
-			case 6: if(localViewtab->numberOfLoops > 1) b9SetLoop(localViewtab, 1); break;
-			case 7: if (localViewtab->numberOfLoops > 1) b9SetLoop(localViewtab, 1); break;
-			case 8: if (localViewtab->numberOfLoops > 1) b9SetLoop(localViewtab, 1); break;
-			}
-		}
-		else {
-			switch (localViewtab->direction) {
-			case 1: if (localViewtab->numberOfLoops > 3) b9SetLoop(localViewtab, 3); break;
-			case 2: b9SetLoop(localViewtab, 0); break;
-			case 3: b9SetLoop(localViewtab, 0);  break;
-			case 4: b9SetLoop(localViewtab, 0); break;
-			case 5: if (localViewtab->numberOfLoops > 2) b9SetLoop(localViewtab, 2); break;
-			case 6: if (localViewtab->numberOfLoops > 1) b9SetLoop(localViewtab, 1); break;
-			case 7: if (localViewtab->numberOfLoops > 1) b9SetLoop(localViewtab, 1); break;
-			case 8: if (localViewtab->numberOfLoops > 1) b9SetLoop(localViewtab, 1); break;
-			}
-		}
-	}
-}
-#pragma wrapped-call (pop)
-
-/* Called by draw() */
-void bADrawObject(ViewTable* localViewtab)
-{
-	word objFlags;
-
-	objFlags = localViewtab->flags;
-	//Previous x and y may be needed here see Agile animated obj 1701
-
-	/* Determine priority for unfixed priorities */
-	if (!(objFlags & FIXEDPRIORITY)) {
-		if (localViewtab->yPos < 60)
-			localViewtab->priority = 4;
-		else
-			localViewtab->priority = (localViewtab->yPos / 12 + 1);
-	}
-
-	bACalcDirection(localViewtab);
-
-#ifdef VERBOSE_DEBUG_BLIT
-	printf("Called from draw object");
-#endif // DEBUG
-}
-
-#pragma wrapped-call (push, trampoline, VIEW_CODE_BANK_2)
-/***************************************************************************
-** updateEgoDirection
-**
-** Purpose: To update var[6] when ego is moved with adjustPosition().
-***************************************************************************/
-void bAUpdateEgoDirection(int oldX, int oldY, int newX, int newY, ViewTable* viewTab)
-{
-	int dx = (newX - oldX);
-	int dy = (newY - oldY);
-
-	if ((dx == 0) && (dy == 0)) var[6] = dirnOfEgo = 0;
-	if ((dx == 0) && (dy == -1)) var[6] = dirnOfEgo = 1;
-	if ((dx == 1) && (dy == -1)) var[6] = dirnOfEgo = 2;
-	if ((dx == 1) && (dy == 0)) var[6] = dirnOfEgo = 3;
-	if ((dx == 1) && (dy == 1)) var[6] = dirnOfEgo = 4;
-	if ((dx == 0) && (dy == 1)) var[6] = dirnOfEgo = 5;
-	if ((dx == -1) && (dy == 1)) var[6] = dirnOfEgo = 6;
-	if ((dx == -1) && (dy == 0)) var[6] = dirnOfEgo = 7;
-	if ((dx == -1) && (dy == -1)) var[6] = dirnOfEgo = 8;
-
-	bACalcDirection(viewTab);
-}
-
-/***************************************************************************
-** adjustPosition
-**
-** Purpose: To adjust the given objects position so that it moves closer
-** to the given position. The routine is similar to a line draw and is used
-** for the move.obj. If the object is ego, then var[6] has to be updated.
-***************************************************************************/
-void bAAdjustPosition(ViewTable* viewTab, int fx, int fy, byte entryNum)
-{
-	int height, width, count, stepVal, dx, dy;
-	fix32 x, y, addX, addY, x1, y1, x2, y2;
-	int dummy;
-	boolean xIsPos = TRUE, yIsPos = TRUE;
-
-	/* Set up start and end points */
-	x1 = b12FpFromInt(viewTab->xPos);
-	y1 = b12FpFromInt(viewTab->yPos);
-	x2 = b12FpFromInt(fx);
-	y2 = b12FpFromInt(fy);
-
-#ifdef VERBOSE_MOVE
-	if (opCounter > 0x55c00 && entryNum == 0)
-	{
-		printf("x1 is %lu, y1 is %lu, x2 is %lu, y2 is %lu\n", x1, y1, x2, y2);
-	}
-#endif // VERBOSE_MOVE
-
-	if (x1 > x2)
-	{
-		xIsPos = FALSE;
-	}
-
-	if (y1 > y2)
-	{
-		yIsPos = FALSE;
-	}
-	width = abs(fx - viewTab->xPos);
-	height = abs(fy - viewTab->yPos);
-
-
-#ifdef VERBOSE_MOVE
-	if (opCounter > 0x55c00 && entryNum == 0)
-	{
-		printf("height is %d width is %d\n", height, width);
-	}
-#endif // VERBOSE_MOVE
-
-	addX = (height == 0 ? b12FpFromInt(height) : b12Div(width, abs(height)));
-	addY = (width == 0 ? b12FpFromInt(width) : b12Div(height, abs(width)));
-
-#ifdef VERBOSE_MOVE
-	if (opCounter > 0x55c00 && entryNum == 0)
-	{
-		printf("add x is %lu add y is %lu\n", addX, addY);
-	}
-#endif // VERBOSE_MOVE
-
-	/* Will find the point on the line that is stepSize pixels away */
-	if (abs(width) > abs(height)) {
-		y = y1;
-
-#ifdef VERBOSE_MOVE
-		if (opCounter > 0x55c00 && entryNum == 0)
-		{
-			printf("width %d greater than height %d\n", width, height);
-		}
-#endif // VERBOSE_MOVE
-
-		addX = (width == 0 ? 0 : b12Div(width, abs(width)));
-
-#ifdef VERBOSE_MOVE
-		if (opCounter > 0x55c00 && entryNum == 0)
-		{
-			printf("add x is %lu\n", addX);
-		}
-#endif // VERBOSE_MOVE
-
-
-		if (xIsPos && addX == 0)
-		{
-			if (!yIsPos)
-				viewTab->direction = 1;
-			else
-				viewTab->direction = 5;
-		}
-		else if (!xIsPos && addX == b12FpFromInt(1))
-		{
-			if (!yIsPos)
-				viewTab->direction = 8;
-			else if (yIsPos && y != 0)
-				viewTab->direction = 6;
-			else
-				viewTab->direction = 7;
-		}
-		else //x Is Pos and x == 1
-		{
-			if (!yIsPos)
-				viewTab->direction = 2;
-			else if (yIsPos && addY != 0)
-				viewTab->direction = 4;
-			else
-				viewTab->direction = 3;
-		}
-
-		if (viewTab->repositioned)
-		{
-			viewTab->repositioned = FALSE; //Don't move on first reposition
-
-			return;
-		}
-
-#ifdef VERBOSE_MOVE
-		if (opCounter > 0x55c00 && entryNum == 0)
-		{
-			printf("add x is %lu add y is %lu. Direction is %d\n", addX, addY, viewTab->direction);
-		}
-#endif // VERBOSE_MOVE
-
-		count = 0;
-		stepVal = viewTab->stepSize;
-
-#ifdef VERBOSE_MOVE
-		if (opCounter > 0x55c00 && entryNum == 0)
-		{
-			printf("x1 is %lu, (%lu != %lu) && (%d < (%d + 1)) result: %d\n", x1, x, x2, count, stepVal, (x != x2) && (count < (stepVal + 1)));
-		}
-#endif // VERBOSE_MOVE
-
-#ifdef VERBOSE_MOVE
-		if (opCounter > 0x55c00 && entryNum == 0)
-		{
-			printf("x loop start\n");
-			printf("the value of addX is %lu. which is roughly %d\n", addX, b1fpToInt(addX));
-		}
-#endif // VERBOSE_MOVE
-		for (x = x1; (x != x2) && (count < (stepVal + 1)); xIsPos ? x += addX : x -= addX, count++) {
-
-#ifdef VERBOSE_MOVE
-			if (opCounter > 0x55c00 && entryNum == 0)
-			{
-				printf("before ceil x is %lu and y is %lu\n", x, y);
-			}
-#endif
-
-			dx = b12CeilFix32(x);
-			dy = b12CeilFix32(y);
-			yIsPos ? y += addY : y -= addY;
-
-#ifdef VERBOSE_MOVE
-			if (opCounter > 0x55c00 && entryNum == 0)
-			{
-				printf("in loop x1 is %lu, (%lu != %lu) && (%d < (%d + 1)) result: %d\n", x1, x, x2, count, stepVal, (x != x2) && (count < (stepVal + 1)));
-				printf("x is %lu\n", x);
-				printf("In loop dx is %d and dy is %d\n", dx, dy);
-			}
-
-#endif // VERBOSE_MOVE
-		}
-#ifdef VERBOSE_MOVE
-		if (opCounter > 0x55c00 && entryNum == 0)
-		{
-			printf("out loop x1 is %lu, (%lu != %lu) && (%d < (%d + 1)) result: %d\n", x1, x, x2, count, stepVal, (x != x2) && (count < (stepVal + 1)));
-			printf("x is %lu and y is %lu\n", x, y);
-		}
-
-#endif // VERBOSE_MOVE
-
-#ifdef VERBOSE_MOVE
-		if (opCounter > 0x55c00 && entryNum == 0)
-		{
-			printf("(%lu == %lu) && (%d < (%d + 1)) result %d\n", x, x2, count, stepVal, (x == x2) && (count < (stepVal + 1)));
-		}
-#endif // VERBOSE_MOVE
-
-		if ((x == x2) && (count < (stepVal + 1))) {
-			dx = b12CeilFix32(x);
-			dy = b12CeilFix32(y);
-		}
-	}
-	else {
-		x = x1;
-
-#ifdef VERBOSE_MOVE
-		if (opCounter > 0x55c00 && entryNum == 0)
-		{
-			printf("width %d less than or equal height %d\n", width, height);
-		}
-#endif // VERBOSE_MOVE
-
-
-		addY = (height == 0 ? 0 : b12Div(height, abs(height)));
-
-#ifdef VERBOSE_MOVE
-		if (opCounter > 0x55c00 && entryNum == 0)
-		{
-			printf("add y is %lu. its address is %p\n", addY, &addY);
-		}
-#endif // VERBOSE_MOVE
-
-
-		if (yIsPos && addY == 0)
-		{
-			if (!xIsPos)
-				viewTab->direction = 7;
-			else
-				viewTab->direction = 3;
-		}
-		else if (!yIsPos && addY == b12FpFromInt(1))
-		{
-			if (!xIsPos)
-				viewTab->direction = 8;
-			else if (xIsPos && addX != 0)
-				viewTab->direction = 2;
-			else
-				viewTab->direction = 1;
-		}
-		else //y Is Pos and y == 1
-		{
-			if (!xIsPos)
-				viewTab->direction = 6;
-			else if (xIsPos && addX != 0)
-				viewTab->direction = 4;
-			else
-				viewTab->direction = 5;
-		}
-
-		if (viewTab->repositioned)
-		{
-			viewTab->repositioned = FALSE; //Don't move on first position
-			return;
-		}
-
-#ifdef VERBOSE_MOVE
-		if (opCounter > 0x55c00 && entryNum == 0)
-		{
-			printf("xispos %d yispos %d addx is %lu addy is %lu\n", xIsPos, yIsPos, addX, addY);
-			printf("view tab direction is %d\n", viewTab->direction);
-		}
-#endif // VERBOSE_MOVE
-
-#ifdef VERBOSE_MOVE
-		if (opCounter > 0x55c00 && entryNum == 0)
-		{
-			printf("add x is %lu add y is %lu\n", addX, addY);
-		}
-#endif // VERBOSE_MOVE
-
-		count = 0;
-		stepVal = viewTab->stepSize;
-
-
-#ifdef VERBOSE_MOVE
-		if (opCounter > 0x55c00 && entryNum == 0)
-		{
-			printf("y1 is %lu, (%lu != %lu) && (%d < (%d + 1)) result: %d\n", y1, y, y2, count, stepVal, (y != y2) && (count < (stepVal + 1)));
-		}
-#endif // VERBOSE_MOVE
-
-		for (y = y1; (y != y2) && (count < (stepVal + 1)); yIsPos ? y += addY : y -= addY, count++) {
-			dx = b12CeilFix32(x);
-
-#ifdef VERBOSE_MOVE
-			if (opCounter > 0x55c00 && entryNum == 0)
-			{
-				printf("before ceil x is %lu and y is %lu\n", x, y);
-			}
-#endif
-			dy = b12CeilFix32(y);
-			xIsPos ? x += addX : x -= addX;
-
-#ifdef VERBOSE_MOVE
-			if (opCounter > 0x55c00 && entryNum == 0)
-			{
-				printf("in loop y1 is %lu, (%lu != %lu) && (%d < (%d + 1)) result: %d\n", y1, y, y2, count, stepVal, (y != y2) && (count < (stepVal + 1)));
-				printf("x is %lu\n", x);
-				printf("In loop dx is %d and dy is %d\n", dx, dy);
-			}
-
-#endif // VERBOSE_MOVE
-		}
-#ifdef VERBOSE_MOVE
-		if (opCounter > 0x55c00 && entryNum == 0)
-		{
-			printf("out loop y1 is %lu, (%lu != %lu) && (%d < (%d + 1)) result: %d\n", y1, y, y2, count, stepVal, (y != y2) && (count < (stepVal + 1)));
-			printf("x is %lu and y is %lu\n", x, y);
-		}
-
-#endif // VERBOSE_MOVE
-
-#ifdef VERBOSE_MOVE
-		if (opCounter > 0x55c00 && entryNum == 0)
-		{
-			printf("(%lu == %lu) && (%d < (%d + 1)) result %d", y, y2, count, stepVal, (y == y2) && (count < (stepVal + 1)));
-		}
-#endif // VERBOSE_MOVE
-
-
-		if ((y == y2) && (count < (stepVal + 1))) {
-			dx = b12CeilFix32(x);
-			dy = b12CeilFix32(y);
-		}
-	}
-
-	viewTab->xPos = dx;
-	viewTab->yPos = dy;
-
-#ifdef VERBOSE_MOVE
-	if (opCounter > 0x55c00 && entryNum == 0)
-	{
-		printf("dx is %d and dy is %d\n", dx, dy);
-	}
-#endif
-
-	if (entryNum == 0) {
-		bAUpdateEgoDirection(b12FpToInt(x1), b12FpToInt(y1), dx, dy, viewTab);
-	}
-
-}
-
 void bAFollowEgo(ViewTable* localViewTab)
 {
-	byte ecx; 
+	byte ecx;
 	short ocx;
 	ViewTable egoViewTab;
 	View egoView, localView;
@@ -2279,222 +2690,9 @@ void bAFollowEgo(ViewTable* localViewTab)
 	bAFollowEgoAsmSec(localViewTab, &egoViewTab, egoCel.width, localCel.width);
 }
 #pragma wrapped-call (pop)
-
-void bAFindPosition(int entryNum, ViewTable* viewTab)
-{
-	// Place Y below horizon if it is above it and is not ignoring the horizon.
-	if ((viewTab->yPos <= horizon) && !(viewTab->flags & IGNOREHORIZON))
-	{
-		viewTab->yPos = horizon + 1;
-	}
-}
-
-#pragma wrapped-call (push, trampoline, FILL_BANK)
-extern byte b8GetControl(byte X, byte Y);
-#pragma wrapped-called(pop)
-
 boolean testVal = FALSE;
-
-#pragma wrapped-call (push, trampoline, VIEW_CODE_BANK_2)
-void bANormalAdjust(int entryNum, ViewTable* viewTab, int dx, int dy)
-{
-	int tempX, tempY, testX, startX, endX, waterCount = 0;
-	byte priorityValue;
-
-	tempX = (viewTab->xPos + dx);
-	tempY = (viewTab->yPos + dy);
-
-	if (entryNum == 0) {
-		if (tempX < 0) {   /* Hit left edge */
-			var[2] = 4;
-			return;
-		}
-		if (tempX > (160 - viewTab->xsize)) {   /* Hit right edge */
-			var[2] = 2;
-			return;
-		}
-		if (tempY > 167) {   /* Hit bottom edge */
-			var[2] = 3;
-			return;
-		}
-
-		if (tempY < horizon) {   /* Hit horizon */
-			var[2] = 1;
-			return;
-		}
-	}
-	else {   /* For all other objects */
-		if (tempX < 0) {   /* Hit left edge */
-			var[5] = 4;
-			var[4] = entryNum;
-			return;
-		}
-		if (tempX > (160 - viewTab->xsize)) {   /* Hit right edge */
-			var[5] = 2;
-			var[4] = entryNum;
-			return;
-		}
-		if (tempY > 167) {   /* Hit bottom edge */
-			var[5] = 3;
-			var[4] = entryNum;
-			return;
-		}
-		if (tempY < horizon) {   /* Hit horizon */
-			var[5] = 1;
-			var[4] = entryNum;
-			return;
-		}
-	}
-
-	if (entryNum == 0) {
-		flag[3] = 0;
-		flag[0] = 0;
-
-		/* End points of the base line */ //TODO: Put back in once we have pri screen loaded
-		startX = tempX;
-		endX = startX + viewTab->xsize;
-
-		for (testX = startX; testX < endX; testX++) {
-			switch (b8GetControl(testX, tempY)) {
-			case 0: return;   /* Unconditional obstacle */
-			case 1:
-				if (viewTab->flags & IGNOREBLOCKS) break;
-				return;    /* Conditional obstacle */
-			case 3:
-				waterCount++;
-				break;
-			case 2: flag[3] = 1; /* Trigger */
-				viewTab->xPos = tempX;
-				viewTab->yPos = tempY;
-				return;
-			}
-		}
-		if (waterCount == viewTab->xsize) {
-			viewTab->xPos = tempX;
-			viewTab->yPos = tempY;
-			flag[0] = 1;
-			return;
-		}
-	}
-	else {
-		/* End points of the base line */
-		startX = tempX;
-		endX = startX + viewTab->xsize;
-		for (testX = startX; testX < endX; testX++) {
-			priorityValue = b8GetControl(testX, tempY);
-			if ((viewTab->flags & ONWATER) &&
-				(priorityValue != 3)) {
-				return;
-			}
-			else if (!priorityValue)
-			{
-				return;
-			}
-			else if (!(viewTab->flags & IGNOREBLOCKS) && priorityValue == 1) {
-				
-		//		/*testVal = TRUE;
-		//b8GetControl(testX, tempY);*/
-		//		printf("we block at %d %d therefore we remain at %d %d", testX, tempY, viewTab->xPos, viewTab->yPos);
-		//		asm("stp");
-				
-				return;
-			}
-		}
-	}
-
-	viewTab->xPos = tempX;
-	viewTab->yPos = tempY;
-}
-#pragma wrapped-call (pop)
-
 #pragma code-name (pop)
 #pragma code-name (push, "BANKRAM0B")
-
-#pragma wrapped-call (push, trampoline, VIEW_CODE_BANK_3)
-void bBUpdateObj(int entryNum)
-{
-	int oldX, oldY, celNum;
-	word objFlags;
-	ViewTable localViewtab;
-
-	getViewTab(&localViewtab, entryNum);
-
-	objFlags = localViewtab.flags;
-
-
-	//if ((objFlags & ANIMATED) && (objFlags & DRAWN)) {
-
-	   //if (objFlags & UPDATE) {
-
-	if (objFlags & CYCLING) {
-		localViewtab.cycleTimeCount++;
-		if (localViewtab.cycleTimeCount >
-			localViewtab.cycleTime) {
-			localViewtab.cycleTimeCount = 1;
-			celNum = localViewtab.currentCel;
-			switch (localViewtab.cycleStatus) {
-			case 0: /* normal.cycle */
-				celNum++;
-				if (celNum >= localViewtab.numberOfCels)
-					celNum = 0;
-
-				b9SetCel(&localViewtab, celNum);
-				break;
-			case 1: /* end.of.loop */
-				celNum++;
-				if (celNum >= localViewtab.numberOfCels) {
-					flag[localViewtab.param1] = 1;
-					/* localViewtab.flags &= ~CYCLING; */
-				}
-				else
-					b9SetCel(&localViewtab, celNum);
-				break;
-			case 2: /* reverse.loop */
-				celNum--;
-				if (celNum < 0) {
-					flag[localViewtab.param1] = 1;
-					/* localViewtab.flags &= ~CYCLING; */
-				}
-				else
-					b9SetCel(&localViewtab, celNum);
-				break;
-			case 3: /* reverse.cycle */
-				celNum--;
-				if (celNum < 0)
-					celNum = localViewtab.numberOfCels - 1;
-				b9SetCel(&localViewtab, celNum);
-				break;
-			}
-		}
-	} /* CYCLING */
- //} /* UPDATE */
-
-
-	/* Determine priority for unfixed priorities */
-	if (!(objFlags & FIXEDPRIORITY)) {
-		if (localViewtab.yPos < 60)
-			localViewtab.priority = 4;
-		else
-			localViewtab.priority = (localViewtab.yPos / 12 + 1);
-	}
-
-
-	if ((objFlags & ANIMATED) && (objFlags & DRAWN)) {
-		/* Draw new cel onto picture\priority bitmaps */
-
-#ifdef VERBOSE_DEBUG_BLIT
-		printf("Called from update obj ");
-#endif // DEBUG
-
-	}
-
-	setViewTab(&localViewtab, entryNum);
-	show_mouse(NULL);
-	show_mouse(screen);
-	b6ShowPicture();
-}
-#pragma wrapped-call (pop)
-
 #pragma bss-name (push, "BANKRAM0B")
 boolean prioritiesSeen[NO_PRIORITIES - 1];
 #pragma bss-name (pop)
@@ -2505,98 +2703,6 @@ void bBUpdateObjects()
 	word objFlags;
 	ViewTable localViewtab;
 	boolean blitFailed = FALSE;
-
-	/******************* Place all background bitmaps *******************/
-	for (entryNum = 0; entryNum < VIEW_TABLE_SIZE; entryNum++) {
-		getViewTab(&localViewtab, entryNum);
-
-		objFlags = localViewtab.flags;
-		//if ((objFlags & ANIMATED) && (objFlags & DRAWN)) {
-		   /* Add saved background to picture\priority bitmaps */
-		//}
-		setViewTab(&localViewtab, entryNum);
-	}
-
-	for (entryNum = 0; entryNum < VIEW_TABLE_SIZE; entryNum++) {
-		getViewTab(&localViewtab, entryNum);
-		objFlags = localViewtab.flags;
-
-#ifdef VERBOSE_UPDATE_OBJECTS
-		printf("Checking entry num %d it has objFlags of %d \n", entryNum, objFlags);
-#endif // VERBOSE_UPDATE_OBJECTS
-
-		if ((objFlags & ANIMATED) && (objFlags & DRAWN)) {
-
-			if (objFlags & UPDATE) {
-
-				if (objFlags & CYCLING) {
-
-#ifdef VERBOSE_UPDATE_OBJECTS
-					printf("Now inside %d\n", entryNum);
-#endif // VERBOSE_UPDATE_OBJECTS
-
-					localViewtab.cycleTimeCount++;
-					if (localViewtab.cycleTimeCount >
-						localViewtab.cycleTime) {
-						localViewtab.cycleTimeCount = 1;
-						celNum = localViewtab.currentCel;
-
-						setViewTab(&localViewtab, entryNum);
-
-						switch (localViewtab.cycleStatus) {
-						case 0: /* normal.cycle */
-							celNum++;
-							if (celNum >= localViewtab.numberOfCels)
-								celNum = 0;
-							b9SetCel(&localViewtab, celNum);
-							break;
-						case 1: /* end.of.loop */
-							//Debug Here
-							celNum++;
-							if (celNum >= localViewtab.numberOfCels) {
-
-								flag[localViewtab.param1] = 1;
-								localViewtab.flags &= ~CYCLING;
-								localViewtab.cycleStatus = 0; //Normal
-							}
-							else
-								b9SetCel(&localViewtab, celNum);
-							break;
-						case 2: /* reverse.loop */
-							celNum--;
-							if (celNum < 0) {
-								flag[localViewtab.param1] = 1;
-								localViewtab.flags &= ~CYCLING;
-								localViewtab.cycleStatus = 0; //Normal
-							}
-							else
-								b9SetCel(&localViewtab, celNum);
-							break;
-						case 3: /* reverse.cycle */
-							celNum--;
-							if (celNum < 0)
-								celNum = localViewtab.numberOfCels - 1;
-							b9SetCel(&localViewtab, celNum);
-							break;
-						}
-						setViewTab(&localViewtab, entryNum);
-					}
-				} /* CYCLING */
-			} /* UPDATE */
-
-			/* Determine priority for unfixed priorities */
-			if (!(objFlags & FIXEDPRIORITY)) {
-				if (localViewtab.yPos < 60)
-					localViewtab.priority = 4;
-				else
-					localViewtab.priority = (localViewtab.yPos / 12 + 1);
-			}
-		}
-
-		setViewTab(&localViewtab, entryNum);
-	}
-
-	/* Draw all cels */
 
 	memset(prioritiesSeen, FALSE, NO_PRIORITIES - 1);
 
@@ -2624,7 +2730,7 @@ void bBUpdateObjects()
 							else
 							{
 								blitFailed = TRUE;
-									
+
 								if (entryNum)
 								{
 									entryNum--;
@@ -2671,481 +2777,29 @@ void bBUpdateObjects()
 	show_mouse(NULL);
 	show_mouse(screen);
 }
-
-#pragma code-name (pop)
-#pragma code-name (push, "BANKRAM0C")
-
-void bCupdateObjects2()
-{
-	int entryNum, celNum, oldX, oldY;
-	word objFlags;
-	ViewTable localViewtab;
-
-	/* Place all background bitmaps */
-	for (entryNum = 0; entryNum < VIEW_TABLE_SIZE; entryNum++) {
-		getViewTab(&localViewtab, entryNum);
-
-		objFlags = localViewtab.flags;
-		//if ((objFlags & ANIMATED) && (objFlags & DRAWN)) {
-		   /* Add saved background to picture\priority bitmaps */
-		//}
-
-		setViewTab(&localViewtab, entryNum);
-	}
-
-	for (entryNum = 0; entryNum < VIEW_TABLE_SIZE; entryNum++) {
-		getViewTab(&localViewtab, entryNum);
-
-		objFlags = localViewtab.flags;
-
-		if ((objFlags & ANIMATED) && (objFlags & DRAWN)) {
-
-			if (objFlags & UPDATE) {
-
-				if (objFlags & CYCLING) {
-					localViewtab.cycleTimeCount++;
-					if (localViewtab.cycleTimeCount >
-						localViewtab.cycleTime) {
-						localViewtab.cycleTimeCount = 1;
-						celNum = localViewtab.currentCel;
-						switch (localViewtab.cycleStatus) {
-						case 0: /* normal.cycle */
-							celNum++;
-							if (celNum >= localViewtab.numberOfCels)
-								celNum = 0;
-							b9SetCel(&localViewtab, celNum);
-							break;
-						case 1: /* end.of.loop */
-							celNum++;
-							if (celNum >= localViewtab.numberOfCels) {
-								flag[localViewtab.param1] = 1;
-								localViewtab.flags &= ~CYCLING;
-							}
-							else
-								b9SetCel(&localViewtab, celNum);
-							break;
-						case 2: /* reverse.loop */
-							celNum--;
-							if (celNum < 0) {
-								flag[localViewtab.param1] = 1;
-								localViewtab.flags &= ~CYCLING;
-							}
-							else
-								b9SetCel(&localViewtab, celNum);
-							break;
-						case 3: /* reverse.cycle */
-							celNum--;
-							if (celNum < 0)
-								celNum = localViewtab.numberOfCels - 1;
-							b9SetCel(&localViewtab, celNum);
-							break;
-						}
-					}
-				} /* CYCLING */
-	/*
-				if (objFlags & MOTION) {
-				   localViewtab.stepTimeCount++;
-				   if (localViewtab.stepTimeCount >
-					   localViewtab.stepTime) {
-					  localViewtab.stepTimeCount = 1;
-					  switch (localViewtab.motion) {
-						 case 0: // normal.motion
-							switch (localViewtab.direction) {
-							   case 0: break;
-							   case 1: normalAdjust(entryNum, 0, -1); break;
-							   case 2: normalAdjust(entryNum, 1, -1); break;
-							   case 3: normalAdjust(entryNum, 1, 0); break;
-							   case 4: normalAdjust(entryNum, 1, 1); break;
-							   case 5: normalAdjust(entryNum, 0, 1); break;
-							   case 6: normalAdjust(entryNum, -1, 1); break;
-							   case 7: normalAdjust(entryNum, -1, 0); break;
-							   case 8: normalAdjust(entryNum, -1, -1); break;
-							}
-							break;
-						 case 1: // wander
-							oldX = localViewtab.xPos;
-							oldY = localViewtab.yPos;
-							switch (localViewtab.direction) {
-							   case 0: break;
-							   case 1: normalAdjust(entryNum, 0, -1); break;
-							   case 2: normalAdjust(entryNum, 1, -1); break;
-							   case 3: normalAdjust(entryNum, 1, 0); break;
-							   case 4: normalAdjust(entryNum, 1, 1); break;
-							   case 5: normalAdjust(entryNum, 0, 1); break;
-							   case 6: normalAdjust(entryNum, -1, 1); break;
-							   case 7: normalAdjust(entryNum, -1, 0); break;
-							   case 8: normalAdjust(entryNum, -1, -1); break;
-							}
-							if ((localViewtab.xPos == oldX) &&
-								(localViewtab.yPos == oldY)) {
-							   localViewtab.direction = (rand() % 8) + 1;
-							}
-							break;
-						 case 2: // follow.ego
-							break;
-						 case 3: // move.obj
-							adjustPosition(entryNum, localViewtab.param1,
-							   localViewtab.param2);
-							if ((localViewtab.xPos == localViewtab.param1) &&
-								(localViewtab.yPos == localViewtab.param2)) {
-							   localViewtab.motion = 0;
-							   localViewtab.flags &= ~MOTION;
-							   flag[localViewtab.param4] = 1;
-							}
-							break;
-					  }
-				   }
-				} // MOTION
-	*/
-			} /* UPDATE */
-
-			/* Determine priority for unfixed priorities */
-			if (!(objFlags & FIXEDPRIORITY)) {
-				if (localViewtab.yPos < 60)
-					localViewtab.priority = 4;
-				else
-					localViewtab.priority = (localViewtab.yPos / 12 + 1);
-			}
-
-			/* Draw new cel onto picture\priority bitmaps */
-			/*
-			agi_blit(localViewtab.celData->bmp,
-			   localViewtab.xPos,
-			   (localViewtab.yPos - localViewtab.ysize) + 1,
-			   localViewtab.xsize,
-			   localViewtab.ysize,
-			   localViewtab.celData->transparency & 0x0f,
-			   localViewtab.priority);
-			*/
-			setViewTab(&localViewtab, entryNum);
-		}
-	}
-}
-void bCCalcObjMotion()
-{
-	int entryNum, celNum, oldX, oldY, steps = 0;
-	byte randomNum;
-	word objFlags;
-	ViewTable localViewtab;
-	ViewTable localViewtab0;
-
-	getViewTab(&localViewtab0, 0);
-
-	for (entryNum = 0; entryNum < VIEW_TABLE_SIZE; entryNum++) {
-
-		getViewTab(&localViewtab, entryNum);
-		
-		if (localViewtab.staleCounter)
-		{
-			localViewtab.staleCounter--;
-		}
-
-		objFlags = localViewtab.flags;
-		//Warning
-		if ((objFlags & MOTION) && (objFlags & UPDATE) && (objFlags & DRAWN)) {
-
-			//if (entryNum != 0)
-			//{
-			//	bAFollowEgo(&localViewtab); //Temporary for testing
-			//}
-
-			localViewtab.stepTimeCount++;
-
-			if (localViewtab.stepTimeCount >
-				localViewtab.stepTime) {
-				localViewtab.stepTimeCount = 1;
-
-				switch (localViewtab.motion) {
-				case 0: /* normal.motion */
-					switch (localViewtab.direction) {
-					case 0: break;
-					case 1:bANormalAdjust(entryNum, &localViewtab, 0, -1); break;
-					case 2:bANormalAdjust(entryNum, &localViewtab, 0, -1); break;
-					case 3:bANormalAdjust(entryNum, &localViewtab, 1, 0); break;
-					case 4:bANormalAdjust(entryNum, &localViewtab, 1, 1); break;
-					case 5:bANormalAdjust(entryNum, &localViewtab, 0, 1); break;
-					case 6:bANormalAdjust(entryNum, &localViewtab, -1, 1); break;
-					case 7:bANormalAdjust(entryNum, &localViewtab, -1, 0); break;
-					case 8:bANormalAdjust(entryNum, &localViewtab, -1, -1);
-					}
-					break;
-				case 1: /* wander */
-					oldX = localViewtab.xPos;
-					oldY = localViewtab.yPos;
- 					bAWander(&localViewtab, entryNum);
-					switch (localViewtab.direction) {
-					case 0: break;
-					case 1:bANormalAdjust(entryNum, &localViewtab, 0, -1); break;
-					case 2:bANormalAdjust(entryNum, &localViewtab, 1, -1); break;
-					case 3:bANormalAdjust(entryNum, &localViewtab, 1, 0); break;
-					case 4:bANormalAdjust(entryNum, &localViewtab, 1, 1); break;
-					case 5:bANormalAdjust(entryNum, &localViewtab, 0, 1); break;
-					case 6:bANormalAdjust(entryNum, &localViewtab, -1, 1); break;
-					case 7:bANormalAdjust(entryNum, &localViewtab, -1, 0); break;
-					case 8:bANormalAdjust(entryNum, &localViewtab, -1, -1); break;
-					}
-					break;
-				case 2: /* follow.ego */
-					bAFollowEgo(&localViewtab);
-					switch (localViewtab.direction) {
-					case 0: break;
-					case 1:bANormalAdjust(entryNum, &localViewtab, 0, -1 * localViewtab.stepSize); break;
-					case 2:bANormalAdjust(entryNum, &localViewtab, localViewtab.stepSize, -1 * localViewtab.stepSize); break;
-					case 3:bANormalAdjust(entryNum, &localViewtab, localViewtab.stepSize, 0); break;
-					case 4:bANormalAdjust(entryNum, &localViewtab, localViewtab.stepSize, localViewtab.stepSize); break;
-					case 5:bANormalAdjust(entryNum, &localViewtab, 0, localViewtab.stepSize); break;
-					case 6:bANormalAdjust(entryNum, &localViewtab, -1 * localViewtab.stepSize, localViewtab.stepSize); break;
-					case 7:bANormalAdjust(entryNum, &localViewtab, -1 * localViewtab.stepSize, 0); break;
-					case 8:bANormalAdjust(entryNum, &localViewtab, -1 * localViewtab.stepSize, -1 * localViewtab.stepSize);
-					}
-					break;
-				case 3: /* move.obj */
-					if (flag[localViewtab.param4]) break;
-					bAAdjustPosition(&localViewtab, (int)localViewtab.param1,
-						(int)localViewtab.param2, entryNum);
-
-					if ((localViewtab.xPos == localViewtab.param1 || abs((int)localViewtab.xPos - localViewtab.param1) < localViewtab.stepSize) &&
-						(localViewtab.yPos == localViewtab.param2 || abs((int)localViewtab.yPos - localViewtab.param2) < localViewtab.stepSize)
-						) {
-						/* These lines really are guess work */
-						localViewtab.motion = 0;
-						//localViewtab.flags &= ~MOTION;
-						localViewtab.direction = 0;
-						if (entryNum == 0) var[6] = 0;
-						flag[localViewtab.param4] = 1;
-						localViewtab.stepSize = localViewtab.param3;
-
-						localViewtab.staleCounter = 1;
-
-						break;
-					}
-					break;
-				}
-			}
-		} /* MOTION */
-
-		/* Automatic change of direction if needed */
-		bACalcDirection(&localViewtab);
-
-		setViewTab(&localViewtab, entryNum);
-	}
-}
-
 #pragma code-name (pop)
 #pragma code-name (push, "BANKRAM0D")
 
-///***************************************************************************
-//** showView
-//**
-//** Purpose: To display all the cells of VIEW.
-//***************************************************************************/
-//void bDShowView(int viewNum)
-//{
-//	int loopNum, celNum, maxHeight, totalWidth, totalHeight = 5;
-//	int startX = 0, startY = 0;
-//	BITMAP* temp = create_bitmap(800, 600);
-//	BITMAP* scn = create_bitmap(320, 240);
-//	char viewString[20], loopString[3];
-//	boolean stillViewing = TRUE;
-//
-//	clear_to_color(temp, 15);
-//
-//	for (loopNum = 0; loopNum < loadedViews[viewNum].numberOfLoops; loopNum++) {
-//		maxHeight = 0;
-//		totalWidth = 25;
-//		sprintf(loopString, "%2d", loopNum);
-//		drawString(temp, loopString, 2, totalHeight, 0, 15);
-//		for (celNum = 0; celNum < loadedViews[viewNum].loops[loopNum].numberOfCels; celNum++) {
-//			if (maxHeight < loadedViews[viewNum].loops[loopNum].cels[celNum].height)
-//				maxHeight = loadedViews[viewNum].loops[loopNum].cels[celNum].height;
-//			//blit(loadedViews[viewNum].loops[loopNum].cels[celNum].bmp, temp,
-//			//   0, 0, totalWidth, totalHeight,
-//			//   loadedViews[viewNum].loops[loopNum].cels[celNum].width,
-//			//   loadedViews[viewNum].loops[loopNum].cels[celNum].height);
-//			stretch_blit(loadedViews[viewNum].loops[loopNum].cels[celNum].bmp,
-//				temp, 0, 0,
-//				loadedViews[viewNum].loops[loopNum].cels[celNum].width,
-//				loadedViews[viewNum].loops[loopNum].cels[celNum].height,
-//				totalWidth, totalHeight,
-//				loadedViews[viewNum].loops[loopNum].cels[celNum].width * 2,
-//				loadedViews[viewNum].loops[loopNum].cels[celNum].height);
-//			totalWidth += loadedViews[viewNum].loops[loopNum].cels[celNum].width * 2;
-//			totalWidth += 3;
-//		}
-//		if (maxHeight < 10) maxHeight = 10;
-//		totalHeight += maxHeight;
-//		totalHeight += 3;
-//	}
-//
-//	if (strcmp(loadedViews[viewNum].description, "") != 0) {
-//		int i, counter = 0, descLine = 0, maxLen = 0, strPos;
-//		char* tempString = (char*)&GOLDEN_RAM[LOCAL_WORK_AREA_START];
-//		char* string = loadedViews[viewNum].description;
-//
-//		totalHeight += 20;
-//
-//		for (i = 0; i < strlen(string); i++) {
-//			if (counter++ > 30) {
-//				for (strPos = strlen(tempString) - 1; strPos >= 0; strPos--)
-//					if (tempString[strPos] == ' ') break;
-//				tempString[strPos] = 0;
-//				drawString(temp, tempString, 27, totalHeight + descLine, 0, 15);
-//				sprintf(tempString, "%s%c", &tempString[strPos + 1], string[i]);
-//				descLine += 8;
-//				if (strPos > maxLen) maxLen = strPos;
-//				counter = strlen(tempString);
-//			}
-//			else {
-//				if (string[i] == 0x0A) {
-//					sprintf(tempString, "%s\\n", tempString);
-//					counter++;
-//				}
-//				else {
-//					if (string[i] == '\"') {
-//						sprintf(tempString, "%s\\\"", tempString);
-//						counter++;
-//					}
-//					else {
-//						sprintf(tempString, "%s%c", tempString, string[i]);
-//					}
-//				}
-//			}
-//		}
-//		drawString(temp, tempString, 27, totalHeight + descLine, 0, 15);
-//		rect(temp, 25, totalHeight - 2, 25 + (maxLen + 1) * 8 + 3,
-//			(totalHeight - 2) + (descLine + 8) + 3, 4);
-//	}
-//
-//	sprintf(viewString, "view.%d", viewNum);
-//	rect(scn, 0, 0, 319, 9, 4);
-//	rectfill(scn, 1, 1, 318, 8, 4);
-//	drawString(scn, viewString, 130, 1, 0, 4);
-//	rect(scn, 310, 9, 319, 230, 4);
-//	rectfill(scn, 311, 10, 318, 229, 3);
-//	rect(scn, 310, 230, 319, 239, 4);
-//	drawChar(scn, 0xB1, 311, 231, 4, 3);
-//	drawChar(scn, 0x18, 311, 11, 4, 3);
-//	drawChar(scn, 0x19, 311, 222, 4, 3);
-//	rect(scn, 0, 230, 310, 239, 4);
-//	rectfill(scn, 1, 231, 309, 238, 3);
-//	drawChar(scn, 0x1B, 2, 231, 4, 3);
-//	drawChar(scn, 0x1A, 302, 231, 4, 3);
-//	blit(temp, scn, 0, 0, 0, 10, 310, 220);
-//	stretch_blit(scn, screen, 0, 0, 320, 240, 0, 0, 640, 480);
-//
-//	while (stillViewing) {
-//		switch (readkey() >> 8) {
-//		case KEY_ESC:
-//			stillViewing = FALSE;
-//			break;
-//		case KEY_UP:
-//			startY -= 5;
-//			break;
-//		case KEY_DOWN:
-//			startY += 5;
-//			break;
-//		case KEY_LEFT:
-//			startX -= 5;
-//			break;
-//		case KEY_RIGHT:
-//			startX += 5;
-//			break;
-//		case KEY_PGUP:
-//			startY -= 220;
-//			break;
-//		case KEY_PGDN:
-//			startY += 220;
-//			break;
-//		case KEY_END:
-//			startX = 489;
-//			break;
-//		case KEY_HOME:
-//			startX = 0;
-//			break;
-//		}
-//		if (startY < 0) startY = 0;
-//		if (startY >= 380) startY = 379;
-//		if (startX < 0) startX = 0;
-//		if (startX >= 490) startX = 489;
-//		stretch_blit(temp, screen, startX, startY, 310, 220, 0, 20, 620, 440);
-//	}
-//
-//	destroy_bitmap(temp);
-//	destroy_bitmap(scn);
-//}
-//
-///***************************************************************************
-//** showView2
-//**
-//** Purpose: To display AGI VIEWs and allow scrolling through the cells and
-//** loops. You have to install the allegro keyboard handler to call this
-//** function.
-//***************************************************************************/
-//void bDShowView2(int viewNum)
-//{
-//	int loopNum = 0, celNum = 0;
-//	BITMAP* temp = create_bitmap(640, 480);
-//	char viewString[20], loopString[20], celString[20];
-//	boolean stillViewing = TRUE;
-//
-//	sprintf(viewString, "View number: %d", viewNum);
-//
-//	while (stillViewing) {
-//		clear(temp);
-//		textout(temp, font, viewString, 10, 10, 15);
-//		sprintf(loopString, "Loop number: %d", loopNum);
-//		sprintf(celString, "Cel number: %d", celNum);
-//		textout(temp, font, loopString, 10, 18, 15);
-//		textout(temp, font, celString, 10, 26, 15);
-//		stretch_blit(loadedViews[viewNum].loops[loopNum].cels[celNum].bmp, temp,
-//			0, 0, loadedViews[viewNum].loops[loopNum].cels[celNum].width,
-//			loadedViews[viewNum].loops[loopNum].cels[celNum].height, 10, 40,
-//			loadedViews[viewNum].loops[loopNum].cels[celNum].width * 4,
-//			loadedViews[viewNum].loops[loopNum].cels[celNum].height * 3);
-//		blit(temp, screen, 0, 0, 0, 0, 640, 480);
-//		switch (readkey() >> 8) {  /* Scan code */
-//		case KEY_UP:
-//			loopNum++;
-//			break;
-//		case KEY_DOWN:
-//			loopNum--;
-//			break;
-//		case KEY_LEFT:
-//			celNum--;
-//			break;
-//		case KEY_RIGHT:
-//			celNum++;
-//			break;
-//		case KEY_ESC:
-//			stillViewing = FALSE;
-//			break;
-//		}
-//
-//		if (loopNum < 0) loopNum = loadedViews[viewNum].numberOfLoops - 1;
-//		if (loopNum >= loadedViews[viewNum].numberOfLoops) loopNum = 0;
-//		if (celNum < 0)
-//			celNum = loadedViews[viewNum].loops[loopNum].numberOfCels - 1;
-//		if (celNum >= loadedViews[viewNum].loops[loopNum].numberOfCels)
-//			celNum = 0;
-//	}
-//
-//	destroy_bitmap(temp);
-//}
-
-/***************************************************************************
-** showObjectState
-**
-** This function shows the full on screen object state. It shows all view
-** table variables and displays the current cell.
-**
-** Params:
-**
-**    objNum              Object number.
-**
-***************************************************************************/
 void bDShowObjectState(int objNum)
 {
 
 }
 
+#pragma code-name (pop)
+
+#pragma code-name (push, "BANKRAM11")
+byte b11GetNumberOfCels(byte viewNum, byte loopNum)
+{
+	View view;
+	byte numberOfCels;
+
+	view = loadedViews[viewNum];
+
+	memCpyBanked(&numberOfCels, view.loops + loopNum, view.loopsBank, 1);
+
+	/*printf("you are checking %p  on bank %p\n", view.loops + loopNum, view.loopsBank);
+	printf("view %d loop %d has %d cels\n", viewNum, loopNum, numberOfCels);*/
+
+	return numberOfCels;
+}
 #pragma code-name (pop)

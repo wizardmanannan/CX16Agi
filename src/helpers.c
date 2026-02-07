@@ -261,31 +261,19 @@ size_t strLenBanked(char* string, int bank)
 	return len;
 }
 
-void setResourceDirectory(AGIFilePosType* newLogicDirectory, AGIFilePosType* logicDirectoryLocation)
+
+#pragma code-name (push, "BANKRAM10")
+void b10SetResourceDirectory(AGIFilePosType* newLogicDirectory, AGIFilePosType* logicDirectoryLocation)
 {
-	byte previousRamBank = RAM_BANK;
-
-	RAM_BANK = DIRECTORY_BANK;
-
 	*logicDirectoryLocation = *newLogicDirectory;
 
-	RAM_BANK = previousRamBank;
 }
 
-void getLogicDirectory(AGIFilePosType* returnedLogicDirectory, AGIFilePosType* logicDirectoryLocation)
+void b10GetLogicDirectory(AGIFilePosType* returnedLogicDirectory, AGIFilePosType* logicDirectoryLocation)
 {
-	byte previousRamBank = RAM_BANK;
-
-	RAM_BANK = DIRECTORY_BANK;
-
 	*returnedLogicDirectory = *logicDirectoryLocation;
-
-#ifdef VERBOSE
-	printf("Retrieving file no: %d, location %p\n", logicDirectoryLocation->fileNum, logicDirectoryLocation->filePos);
-#endif // VERBOSE
-
-	RAM_BANK = previousRamBank;
 }
+#pragma code-name (pop)
 
 
 

@@ -448,7 +448,7 @@ _executeLogic:
 
          lda #LOGIC_CODE_BANK
          sta RAM_BANK
-         
+        
          lda _currentLog
          ldx _currentLog + 1
          jsr _b6LoadLogicFile
@@ -467,7 +467,7 @@ _executeLogic:
          
          ADD_WORD_16 startPos,entryPoint,ZP_PTR_CODE ;code = startPos + currentLogic.entryPoint;
          ADD_WORD_16 startPos,codeSize,endPos ;startPos + currentLogicFile.codeSize;
-
+        
          LDA #TRUE
          sta codeWindowInvalid ;At the beginning start from ZP_PTR_CODE
          jsr refreshCodeWindow

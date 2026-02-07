@@ -65,8 +65,13 @@ boolean oldQuit = FALSE;
 
 
 int numOfMenus = 0;
-MENU* the_menu = (MENU*)&BANK_RAM[MENU_START];
-MENU* the_menuChildren = (MENU*)&BANK_RAM[MENU_CHILD_START];
+
+
+#pragma bss-name (push, "BANKRAM05")
+MENU the_menu[MAX_MENUS];
+MENU the_menuChildren[MAX_MENU_CHILDREN];
+#pragma bss-name (pop)
+
 
 int printCounter = 1;
 byte lastRoom = 0;
@@ -96,14 +101,13 @@ int getNum(char* inputString, int* i, int inputStringBank)
 	return 0;
 }
 
-void menuChildInit()
+#pragma wrapped-call (push, trampoline, MENU_BANK)
+#pragma code-name (push, "BANKRAM05");
+void b5MenuChildInit()
 {
 	int i;
-	int previousRamBank = RAM_BANK;
 
-	RAM_BANK = MENU_BANK;
-
-	for (i = 0; i < MAX_MENU_SIZE * MAX_MENU_SIZE; i++)
+	for (i = 0; i < MAX_MENU_CHILDREN; i++)
 	{
 		MENU menuChild;
 		menuChild.dp = NULL;
@@ -113,40 +117,25 @@ void menuChildInit()
 		menuChild.text = NULL;
 		the_menuChildren[i] = menuChild;
 	}
-
-	RAM_BANK = previousRamBank;
 }
 
-void getMenu(MENU* menu, byte menuNo)
+void b5GetMenu(MENU* menu, byte menuNo)
 {
-	byte previousBank = RAM_BANK;
-
-	RAM_BANK = MENU_BANK;
 	*menu = the_menu[menuNo];
-
-	RAM_BANK = previousBank;
 }
 
-void setMenu(MENU* menu, byte menuNo)
+void b5SetMenu(MENU* menu, byte menuNo)
 {
-	byte previousBank = RAM_BANK;
-
 #ifdef VERBOSE_MENU
 	printf("-- Adding menu %p at position %d dp %p flags %d proc %p address %p \n", menu, menuNo, menu->dp, menu->flags, menu->proc, menu->text);
 #endif // VERBOSE_MENU
 
-	RAM_BANK = MENU_BANK;
 	the_menu[menuNo] = *menu;
-
-	RAM_BANK = previousBank;
 }
 
-void setMenuChild(MENU* menu, byte menuNo)
+void b5SetMenuChild(MENU* menu, byte menuNo)
 {
 	int i;
-	byte previousBank = RAM_BANK;
-
-	RAM_BANK = MENU_BANK;
 
 	for (i = 0; i < MAX_MENU_SIZE && the_menuChildren[menuNo * MAX_MENU_SIZE + i].text != NULL; i++);
 
@@ -157,8 +146,6 @@ void setMenuChild(MENU* menu, byte menuNo)
 #endif // VERBOSE_MENU
 		the_menuChildren[menuNo * MAX_MENU_SIZE + i] = *menu;
 	}
-
-	RAM_BANK = previousBank;
 }
 
 //void getMenuChild(MENU* menu, byte menuNo, byte menuChildNo)
@@ -175,6 +162,8 @@ void setMenuChild(MENU* menu, byte menuNo)
 //
 //    RAM_BANK = previousBank;
 //}
+#pragma wrapped-call (pop)
+#pragma code-name (pop);
 
 char* getMessagePointer(byte logicFileNo, byte messageNo)
 {
@@ -183,7 +172,7 @@ char* getMessagePointer(byte logicFileNo, byte messageNo)
 	int i;
 
 	LOGICFile logicFile;
-	getLogicFile(&logicFile, logicFileNo);
+	b5GetLogicFile(&logicFile, logicFileNo);
 
 	RAM_BANK = logicFile.messageBank;
 
@@ -516,12 +505,12 @@ void b2Draw_pic() // 1, 0x80
 	PictureFile loadedPicture;
 	pNum = var[loadAndIncWinCode()];
 
-	getLoadedPicture(&loadedPicture, pNum);
+	b0CGetLoadedPicture(&loadedPicture, pNum);
 
 	//picFNum = pNum;  // Debugging. Delete at some stage!!!
 
 	b11DrawPic(loadedPicture.data, loadedPicture.size, TRUE, pNum);
-	b9ResetSpriteMemory(TRUE);
+	bAResetSpriteMemory(TRUE);
 
 	return;
 }
@@ -547,10 +536,10 @@ void b2Overlay_pic() // 1, 0x80
 	PictureFile loadedPicture;
 	pNum = var[loadAndIncWinCode()];
 
-	getLoadedPicture(&loadedPicture, pNum);
+	b0CGetLoadedPicture(&loadedPicture, pNum);
 
 	b11DrawPic(loadedPicture.data, loadedPicture.size, FALSE, pNum);
-	b9ResetSpriteMemory(TRUE);
+	bAResetSpriteMemory(TRUE);
 
 	return;
 }
@@ -600,6 +589,7 @@ void b2Animate_obj() // 1, 0x00
 
 	localViewTab.repositioned = FALSE;
 	localViewTab.stopped = FALSE;
+	localViewTab.noAdvance = FALSE;
 
 	setViewTab(&localViewTab, entryNum);
 
@@ -628,6 +618,10 @@ void b2Unanimate_all() // 0, 0x00
 	return;
 }
 
+#pragma wrapped-call (push, trampoline, POSITION_HELPERS_BANK)
+extern void b9FindPosition(ViewTable* localViewTab, byte entryNum);
+#pragma wrapped-call (pop)
+
 void b2Draw() // 1, 0x00 
 {
 	int entryNum;
@@ -636,23 +630,23 @@ void b2Draw() // 1, 0x00
 	entryNum = loadAndIncWinCode();
 	getViewTab(&localViewtab, entryNum);
 
-	if (!localViewtab.flags & DRAWN)
+	if (!(localViewtab.flags & DRAWN))
 	{
 		localViewtab.previousX = localViewtab.xPos;
 		localViewtab.previousY = localViewtab.yPos;
+
+
+		localViewtab.flags |= (DRAWN | UPDATE);   /* Not sure about update */
+
+
+		b9FindPosition(&localViewtab, entryNum);
+
+		//bAFindPosition(entryNum, &localViewtab);
+
+		localViewtab.noAdvance = FALSE;
+
+		setViewTab(&localViewtab, entryNum);
 	}
-
-	localViewtab.flags |= (DRAWN | UPDATE);   /* Not sure about update */
-
-
-
-	b9SetCel(&localViewtab, localViewtab.currentCel);
-
-	bADrawObject(&localViewtab);
-
-	bAFindPosition(entryNum, &localViewtab);
-
-	setViewTab(&localViewtab, entryNum);
 	return;
 }
 
@@ -748,9 +742,8 @@ void b2Set_view() // 2, 0x00
 
 	getViewTab(&localViewtab, entryNum);
 
-	b9AddViewToTable(&localViewtab, viewNum, entryNum);
+	b9SetView(viewNum, entryNum);
 
-	setViewTab(&localViewtab, entryNum);
 	return;
 }
 
@@ -764,9 +757,8 @@ void b2Set_view_v() // 2, 0x40
 
 	getViewTab(&localViewtab, entryNum);
 
-	b9AddViewToTable(&localViewtab, viewNum, entryNum);
+	b9SetView(viewNum, entryNum);
 
-	setViewTab(&localViewtab, entryNum);
 	return;
 }
 
@@ -779,8 +771,7 @@ void b2Set_loop() // 2, 0x00
 	loopNum = loadAndIncWinCode();
 
 	getViewTab(&localViewtab, entryNum);
-	b9SetLoop(&localViewtab, loopNum);
-	b9SetCel(&localViewtab, 0);
+	b9SetLoop(&localViewtab, entryNum, loopNum);
 
 	setViewTab(&localViewtab, entryNum);
 	return;
@@ -796,8 +787,7 @@ void b2Set_loop_v() // 2, 0x40
 
 	loopNum = var[loadAndIncWinCode()];
 
-	b9SetLoop(&localViewtab, loopNum);
-	b9SetCel(&localViewtab, loopNum);
+	b9SetLoop(&localViewtab, entryNum, loopNum);
 
 	setViewTab(&localViewtab, entryNum);
 	return;
@@ -842,7 +832,10 @@ void b2Set_cel() // 2, 0x00
 
 	getViewTab(&localViewtab, entryNum);
 
-	b9SetCel(&localViewtab, celNum);
+	b9SetCel(&localViewtab, entryNum, celNum);
+
+
+	localViewtab.noAdvance = FALSE;
 
 	setViewTab(&localViewtab, entryNum);
 	return;
@@ -858,7 +851,9 @@ void b2Set_cel_v() // 2, 0x40
 
 	getViewTab(&localViewtab, entryNum);
 
-	b9SetCel(&localViewtab, celNum);
+	localViewtab.noAdvance = FALSE;
+
+	b9SetCel(&localViewtab, entryNum, celNum);
 
 	setViewTab(&localViewtab, entryNum);
 	return;
@@ -1032,9 +1027,9 @@ void b2Force_update() // 1, 0x00
 	int entryNum;
 
 	entryNum = loadAndIncWinCode();
-	/* Do immediate update here. Call update(entryNum) */
+	
+	//Will happen automatically the next vblank. The param is ignored
 
-	bBUpdateObj(entryNum);
 	return;
 }
 
@@ -1222,6 +1217,7 @@ void b2End_of_loop() // 2, 0x00
 	localViewtab.param1 = loadAndIncWinCode();
 	localViewtab.cycleStatus = 1;
 	localViewtab.flags |= (UPDATE | CYCLING);
+	localViewtab.noAdvance = TRUE;
 
 	setViewTab(&localViewtab, entryNum);
 	return;
@@ -1253,6 +1249,8 @@ void b2Reverse_loop() // 2, 0x00
 	localViewtab.param1 = loadAndIncWinCode();
 	localViewtab.cycleStatus = 2;
 	localViewtab.flags |= (UPDATE | CYCLING);
+
+	localViewtab.noAdvance = TRUE;
 
 	setViewTab(&localViewtab, entryNum);
 	return;
@@ -1352,14 +1350,7 @@ void b2Move_obj() // 5, 0x00
 	entryNum = loadAndIncWinCode();
 	getViewTab(&localViewtab, entryNum);
 
-	localViewtab.param1 = loadAndIncWinCode();
-	localViewtab.param2 = loadAndIncWinCode();
-	localViewtab.param3 = localViewtab.stepSize;  /* Save stepsize */
-	stepVal = loadAndIncWinCode();
-	if (stepVal > 0) localViewtab.stepSize = stepVal;
-	localViewtab.param4 = loadAndIncWinCode();
-	localViewtab.motion = 3;
-	localViewtab.flags |= MOTION;
+	b9StartMoveObj(&localViewtab, entryNum, loadAndIncWinCode(), loadAndIncWinCode(), loadAndIncWinCode(), loadAndIncWinCode());
 
 	setViewTab(&localViewtab, entryNum);
 	return;
@@ -1644,7 +1635,7 @@ void b3PrintMessageInTextbox(byte messNum, byte x, byte y, byte length)
 	LOGICFile logicFile;
 	byte keysToWait[NO_KEYS_TO_WAIT] = { KEY_ESC, KEY_ENTER };
 
-	getLogicFile(&logicFile, currentLog);
+	b5GetLogicFile(&logicFile, currentLog);
 
 #ifdef  VERBOSE_MESSAGE_PRINT
 	printf("Attempting to display message %d at %d,%d, length %d\n", messNum - 1, x, y, length);
@@ -1700,7 +1691,7 @@ void b3DisplayWithoutTextbox(byte row, byte col, byte messNum)
 	char* messagePointer;
 
 	LOGICFile logicFile;
-	getLogicFile(&logicFile, currentLog);
+	b5GetLogicFile(&logicFile, currentLog);
 
 	messagePointer = getMessagePointer(currentLog, messNum - 1);
 
@@ -1771,7 +1762,7 @@ void b4Set_cursor_char() // 1, 0x00
 	char* messagePointer = getMessagePointer(currentLog, msgNo);
 	LOGICFile logicFile;
 
-	getLogicFile(&logicFile, currentLog);
+	b5GetLogicFile(&logicFile, currentLog);
 
 #ifdef VERBOSE_STRING_CHECK
 	printf("Your msgNo is %d\n", msgNo);
@@ -1835,7 +1826,7 @@ void b4Set_string() // 2, 0x00
 	char* messagePointer;
 	LOGICFile logicFile;
 
-	getLogicFile(&logicFile, currentLog);
+	b5GetLogicFile(&logicFile, currentLog);
 
 	stringNum = loadAndIncWinCode();
 	messNum = loadAndIncWinCode();
@@ -1856,7 +1847,7 @@ void b4Get_string() // 5, 0x00
 	char* messagePointer;
 	LOGICFile logicFile;
 
-	getLogicFile(&logicFile, currentLog);
+	b5GetLogicFile(&logicFile, currentLog);
 
 	strNum = loadAndIncWinCode();
 	messNum = loadAndIncWinCode();
@@ -1908,7 +1899,7 @@ void b4Get_num() // 2, 0x40
 
 	b7Temp = (char*)b10BankedAlloc(80, &tempBank);
 
-	getLogicFile(&logicFile, currentLog);
+	b5GetLogicFile(&logicFile, currentLog);
 
 	messNum = loadAndIncWinCode();
 	varNum = loadAndIncWinCode();
@@ -2154,11 +2145,11 @@ void b4Reset_scan_start() // 0, 0x00
 {
 	LOGICEntry logicEntry;
 
-	getLogicEntry(&logicEntry, currentLog);
+	b5GetLogicEntry(&logicEntry, currentLog);
 
 	logicEntry.entryPoint = 0;
 
-	setLogicEntry(&logicEntry, currentLog);
+	b5SetLogicEntry(&logicEntry, currentLog);
 	return;
 }
 
@@ -2329,21 +2320,21 @@ void b4Set_menu() // 1, 0x00
 	MENU newMenu;
 	LOGICFile currentLogicFile;
 
+	messNum = loadAndIncWinCode();
+
+
 	if (numOfMenus == 0)
 	{
-		menuChildInit();
+		b5MenuChildInit();
 	}
 
-	getLogicFile(&currentLogicFile, currentLog);
+	b5GetLogicFile(&currentLogicFile, currentLog);
 
 	newMenu.dp = NULL;
 	newMenu.flags = 0;
 	newMenu.proc = 0;
 	newMenu.menuTextBank = currentLogicFile.messageBank;
-
-	messNum = loadAndIncWinCode();
-
-	/* Create new menu and allocate space for MAX_MENU_SIZE items */
+	/* Create new menu and allocate space for MAX_MENU_SIZE items */	
 	newMenu.text = getMessagePointer(currentLog, messNum - 1);
 
 #ifdef VERBOSE_MENU
@@ -2351,8 +2342,8 @@ void b4Set_menu() // 1, 0x00
 #endif // VERBOSE_MENU
 
 	newMenu.proc = NULL;
+	b5SetMenu(&newMenu, numOfMenus);
 
-	setMenu(&newMenu, numOfMenus);
 	numOfMenus++;
 
 	newMenu.dp = NULL;
@@ -2362,7 +2353,7 @@ void b4Set_menu() // 1, 0x00
 	newMenu.menuTextBank = 0;
 
 	/* Mark end of menu */
-	setMenu(&newMenu, numOfMenus);
+	b5SetMenu(&newMenu, numOfMenus);
 
 	return;
 }
@@ -2377,7 +2368,7 @@ void b5Set_menu_item() // 2, 0x00
 	LOGICFile currentLogicFile;
 	EventType event;
 
-	getLogicFile(&currentLogicFile, currentLog);
+	b5GetLogicFile(&currentLogicFile, currentLog);
 	b7GetEvent(&event, controllerNum);
 
 	messNum = loadAndIncWinCode();
@@ -2392,7 +2383,7 @@ void b5Set_menu_item() // 2, 0x00
 	childMenu.proc = menuFunctions[controllerNum];
 	childMenu.menuTextBank = currentLogicFile.messageBank;
 
-	setMenuChild(&childMenu, numOfMenus - 1);
+	b5SetMenuChild(&childMenu, numOfMenus - 1);
 
 
 #ifdef VERBOSE_MENU_DUMP
@@ -2466,6 +2457,13 @@ void b5Div_v() // 2, 0xC0
 	var[loadAndIncWinCode()] /= var[loadAndIncWinCode()];
 	return;
 }
+
+void b5SetPriorityBase()
+{
+	priorityBase = loadAndIncWinCode();
+	bAPopulatePrecomputedPriorityTable();
+}
+
 #pragma code-name (pop)
 
 

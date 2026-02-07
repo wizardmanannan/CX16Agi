@@ -15,6 +15,9 @@
 #include "helpers.h"
 #include "irq.h"
 #include "celToVeraZp.h"
+#include "fixed.h"
+#include <limits.h>
+#include "movement.h"
 
 #define MAX_JOINED_SPRITES 6
 #define MAX_SPRITES_ROW_OR_COLUMN_SIZE 4
@@ -45,23 +48,22 @@ extern void getLoadedView(View* returnedLoadedView, byte loadedViewNumber);
 extern void setLoadedView(View* loadedView, byte loadedViewNumber);
 
 #pragma wrapped-call (push, trampoline, VIEW_CODE_BANK_1)
-void b9ResetSpriteMemory(boolean clearBuffer);
 void b9LoadViewFile(byte viewNum);
 void b9DiscardView(byte viewNum);
-void b9AddViewToTable(ViewTable* localViewtab, byte viewNum, byte entryNum);
-extern void b9SetCel(ViewTable* localViewtab, byte celNum);
-extern void b9SetLoop(ViewTable* localViewtab, byte loopNum);
+void b9SetView(byte viewNum, byte entryNum);
+extern void b9SetCel(ViewTable* localViewTab, byte entryNum, byte celNum);
+extern void b9SetLoop(ViewTable* localViewTab, byte entryNum, byte loopNum);
 extern void b9AddToPic(int vNum, int lNum, int cNum, int x, int y, int pNum, int bCol);
-extern void b9ResetViews();
-extern void b9InitViews();
-extern void b9InitObjects();
 #pragma wrapped-call (pop)
 
 #pragma wrapped-call (push, trampoline, VIEW_CODE_BANK_2)
+extern void bAPopulatePrecomputedPriorityTable();
+extern void bAResetSpriteMemory(boolean clearBuffer);
+extern void bAInitViews();
+extern void bAInitObjects();
 extern void bAWander(ViewTable* localViewTab, byte entryNum);
-extern void bAFindPosition(int entryNum, ViewTable* viewTab);
 extern void bBUpdateObj(int entryNum);
-extern void bADrawObject(ViewTable* viewTab);
+extern void bAResetViews();
 #pragma wrapped-call (pop)
 
 #pragma wrapped-call (push, trampoline, VIEW_CODE_BANK_3)
@@ -79,6 +81,10 @@ extern void bDShowObjectState(int objNum);
 #pragma wrapped-call (push, trampoline, SPRITE_UPDATED_BANK)
 extern void bEClearSpriteAttributes();
 #pragma wrapped-call (pop)
+
+extern byte priorityBase;
+
+#define MIN_PRIORITY 4
 
 #endif   /* _VIEW_H_ */
 
