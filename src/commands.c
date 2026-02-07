@@ -1591,7 +1591,7 @@ void b3Load_sound() // 1, 0x00
 	int soundNum;
 
 	soundNum = loadAndIncWinCode();
-	b1LoadSoundFile(soundNum);
+	bBLoadSoundFile(soundNum);
 	return;
 }
 
@@ -1601,7 +1601,7 @@ void b3Play_sound() // 2, 00  sound() renamed to avoid clash
 
 	soundNum = loadAndIncWinCode();
 	soundEndFlag = loadAndIncWinCode();
-	b1PlaySound(soundNum, soundEndFlag);
+	bBPlaySound(soundNum, soundEndFlag);
 	return;
 }
 

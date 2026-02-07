@@ -98,7 +98,7 @@
 #define PALETTE_MANAGER_BANK 0xF
 #define OBJECT_BANK 0xD
 #define RANDOM_BANK 0x6
-#define SOUND_BANK 0x1
+#define SOUND_BANK 0xB
 #define POSITION_HELPERS_BANK 0x9
 
 //Golden RAM

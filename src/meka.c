@@ -90,7 +90,7 @@ void b6DiscardResources()
     int i;
     for (i = 0; i < 256; i++) b9DiscardView(i);
     for (i = 0; i < 256; i++) b6DiscardPictureFile(i);
-    for (i = 0; i < 256; i++) b1DiscardSoundFile(i);
+    for (i = 0; i < 256; i++) bBDiscardSoundFile(i);
 }
 
 /***************************************************************************
@@ -104,7 +104,7 @@ void b6DiscardResources()
 ***************************************************************************/
 void b6NewRoom()
 {
-    b1StopSound();
+    bBStopSound();
 
      bAResetViews();
     //stop_update_all();
@@ -283,7 +283,7 @@ void b6Initialise()
     printf("Logics Inited\n");
 #endif
 
-    b1InitSound();
+    bBInitSound();
 
     bAInitViews();
     bAInitObjects();

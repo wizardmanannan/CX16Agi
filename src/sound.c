@@ -15,12 +15,12 @@ int soundEndFlag;                      // Flag indicating sound end
 
 extern int soundEndFlag;               // External reference to the sound end flag
 
-#pragma bss-name (push, "BANKRAM01")
-SoundFile b1LoadedSounds[MAX_LOADED_SOUNDS];         // Array of loaded sound files
-SoundFile* b1LoadedSoundsPointer[MAX_SOUNDS];        // Pointers to loaded sounds indexed by sound number
+#pragma bss-name (push, "BANKRAM0B")
+SoundFile bBLoadedSounds[MAX_LOADED_SOUNDS];         // Array of loaded sound files
+SoundFile* bBLoadedSoundsPointer[MAX_SOUNDS];        // Pointers to loaded sounds indexed by sound number
 byte soundLoadCounter;                                 // Counter of loaded sounds
 unsigned long totalSoundSize, totalBeats;             // Total size and beats for current sound
-static unsigned int b1LFSR = LFSR_INITIAL_SEED;       // Static LFSR state used in noise generation
+static unsigned int bBLFSR = LFSR_INITIAL_SEED;       // Static LFSR state used in noise generation
 
 // Predefined noise frequencies for noise channel
 const uint16_t b7NoiseFreq[] = { 2230, 1115, 557 };
@@ -49,7 +49,7 @@ const unsigned char SN76489_to_CX16_Volume[16] = {
 
 #pragma bss-name (pop)
 
-#pragma code-name (push, "BANKRAM01")
+#pragma code-name (push, "BANKRAM0B")
 
 // Calculate one-third buffer size, adjusted to nearest factor of 3,
 // by subtracting 2 from local work area size and division by 3.
@@ -57,7 +57,7 @@ const unsigned char SN76489_to_CX16_Volume[16] = {
 
 // Writes a byte (toWrite) to the next position in the note generation buffer,
 // reallocating or flushing buffers as necessary.
-void b1WriteNextNG(byte** memoryBlock, byte* buffer, byte** dataPtr, byte toWrite, BufferStatus* bufferStatus, unsigned int* oldBlockSize, unsigned int newBlockSize, byte* bank, unsigned int bufferSize)
+void bBWriteNextNG(byte** memoryBlock, byte* buffer, byte** dataPtr, byte toWrite, BufferStatus* bufferStatus, unsigned int* oldBlockSize, unsigned int newBlockSize, byte* bank, unsigned int bufferSize)
 {
 	// If pointer exceeds buffer size, flush and reset pointer.
 	if (*dataPtr >= buffer + bufferSize)
@@ -80,7 +80,7 @@ void b1WriteNextNG(byte** memoryBlock, byte* buffer, byte** dataPtr, byte toWrit
 #define MAX_LFSR 2400                // Maximum length of LFSR duration
 
 // Converts CX16 frequency to sound divider value for PSG tone generation.
-uint16_t b1GetDividerFromCx16(uint16_t cx16_freq)
+uint16_t bBGetDividerFromCx16(uint16_t cx16_freq)
 {
 	unsigned long numerator = 241699UL; // (7734375 / 32), clock related constant
 	unsigned long denom = (2 * (uint32_t)cx16_freq) - 1;
@@ -95,7 +95,7 @@ uint16_t b1GetDividerFromCx16(uint16_t cx16_freq)
 
 // Determines duration for LFSR noise processing based on channel 2 and channel 3 durations,
 // noise frequency byte, current channel 2 frequency, and beats remaining.
-unsigned int b1DetermineLsfrDuration(unsigned int ch2Duration, unsigned int ch3Duration, byte frequencyByte, unsigned int currentCh2Frequency, unsigned int* lsfrFrequencyToPlay, unsigned long remainingBeats)
+unsigned int bBDetermineLsfrDuration(unsigned int ch2Duration, unsigned int ch3Duration, byte frequencyByte, unsigned int currentCh2Frequency, unsigned int* lsfrFrequencyToPlay, unsigned long remainingBeats)
 {
 	byte noiseFrequency = frequencyByte & 3;  // Extract low two bits for noise frequency
 
@@ -106,13 +106,13 @@ unsigned int b1DetermineLsfrDuration(unsigned int ch2Duration, unsigned int ch3D
 		// If noise frequency is not periodic noise (frequency != 3)
 		ch2Duration = UINT_MAX;  // Invalidate ch2Duration for comparison
 		*lsfrFrequencyToPlay = CALC_C16_FREQ(b7NoiseFreq[noiseFrequency]);  // Get CX16 freq for noise
-		divider = b1GetDividerFromCx16(*lsfrFrequencyToPlay);
+		divider = bBGetDividerFromCx16(*lsfrFrequencyToPlay);
 	}
 	else
 	{
 		// For periodic noise, use 2/3 of current channel 2 frequency
 		*lsfrFrequencyToPlay = ((unsigned long)currentCh2Frequency * 2) / 3;
-		divider = b1GetDividerFromCx16(currentCh2Frequency);
+		divider = bBGetDividerFromCx16(currentCh2Frequency);
 	}
 
 	// Find minimum time slice for LFSR based on durations and divider
@@ -146,42 +146,42 @@ unsigned int b1DetermineLsfrDuration(unsigned int ch2Duration, unsigned int ch3D
 }
 
 // Clears the loaded sound data for the specified sound file number, resetting all pointers and bank.
-void b1ClearLoadedSound(byte soundFileNumber)
+void bBClearLoadedSound(byte soundFileNumber)
 {
-	b1LoadedSounds[soundFileNumber].ch0 = NULL;
-	b1LoadedSounds[soundFileNumber].ch1 = NULL;
-	b1LoadedSounds[soundFileNumber].ch2 = NULL;
-	b1LoadedSounds[soundFileNumber].chNoise = NULL;
-	b1LoadedSounds[soundFileNumber].soundBank = 0;
-	b1LoadedSounds[soundFileNumber].soundResource = NULL;
+	bBLoadedSounds[soundFileNumber].ch0 = NULL;
+	bBLoadedSounds[soundFileNumber].ch1 = NULL;
+	bBLoadedSounds[soundFileNumber].ch2 = NULL;
+	bBLoadedSounds[soundFileNumber].chNoise = NULL;
+	bBLoadedSounds[soundFileNumber].soundBank = 0;
+	bBLoadedSounds[soundFileNumber].soundResource = NULL;
 }
 
 // Initializes the loaded sound arrays by clearing all sound entries and pointers.
-void b1InitSound() {
+void bBInitSound() {
 	int i;
 	for (i = 0; i < MAX_LOADED_SOUNDS; i++)
 	{
-		b1ClearLoadedSound(i);
+		bBClearLoadedSound(i);
 	}
 
 	for (i = 0; i < MAX_SOUNDS; i++)
 	{
-		b1LoadedSoundsPointer[i] = NULL;
+		bBLoadedSoundsPointer[i] = NULL;
 	}
 }
 
 // Discards/unloads a sound file by releasing its allocated memory and clearing references.
-void b1DiscardSoundFile(int soundNum)
+void bBDiscardSoundFile(int soundNum)
 {
 	SoundFile* sound;
 	byte* soundResource;
 	byte loadedSoundNum;
 
 	// Get pointer to loaded sound structure
-	sound = b1LoadedSoundsPointer[soundNum];
+	sound = bBLoadedSoundsPointer[soundNum];
 
 	// Calculate index from pointer subtracting base array pointer
-	loadedSoundNum = sound - &b1LoadedSounds[0];
+	loadedSoundNum = sound - &bBLoadedSounds[0];
 
 	soundResource = sound->soundResource;
 
@@ -192,21 +192,21 @@ void b1DiscardSoundFile(int soundNum)
 		b10BankedDealloc(soundResource, sound->soundBank);
 
 		// Clear loaded sound info and pointer
-		b1ClearLoadedSound(loadedSoundNum);
-		b1LoadedSoundsPointer[soundNum] = NULL;
+		bBClearLoadedSound(loadedSoundNum);
+		bBLoadedSoundsPointer[soundNum] = NULL;
 	}
 
 	// Reduce soundLoadCounter by trimming any trailing unused loaded sounds
 	// Keep keep going while the loaded sound at loadedSoundNum is null, because that means 'empty'
 	// We only have 10 loaded sounds so if the counter gets to FF just stop, that will never be a valid value
-	for (loadedSoundNum = soundLoadCounter - 1; loadedSoundNum != 0xFF && b1LoadedSounds[loadedSoundNum].soundResource == NULL; loadedSoundNum--)
+	for (loadedSoundNum = soundLoadCounter - 1; loadedSoundNum != 0xFF && bBLoadedSounds[loadedSoundNum].soundResource == NULL; loadedSoundNum--)
 	{
 		soundLoadCounter--;
 	}
 }
 
 // Reads (peeks) the next byte ahead in the buffer from the sound file, supporting banked memory.
-unsigned int b1ReadAhead(SoundFile* soundFile, unsigned int bytePerBufferCounter, BufferStatus* bufferStatus)
+unsigned int bBReadAhead(SoundFile* soundFile, unsigned int bytePerBufferCounter, BufferStatus* bufferStatus)
 {
 	byte readAheadByte;
 
@@ -225,7 +225,7 @@ unsigned int b1ReadAhead(SoundFile* soundFile, unsigned int bytePerBufferCounter
 }
 
 // Copies (writes) a byte ahead in the buffer supporting banked and local memory.
-unsigned int b1CopyAhead(SoundFile* soundFile, unsigned int bytePerBufferCounter, BufferStatus* bufferStatus, byte toCopy)
+unsigned int bBCopyAhead(SoundFile* soundFile, unsigned int bytePerBufferCounter, BufferStatus* bufferStatus, byte toCopy)
 {
 	if (bytePerBufferCounter == LOCAL_WORK_AREA_SIZE - 1)
 	{
@@ -247,11 +247,11 @@ unsigned int b1CopyAhead(SoundFile* soundFile, unsigned int bytePerBufferCounter
 #define GET_CH(i) GET_NEXT_NG(channelBytes[i], oldBuffer, oldChDataPtr, bufferStatus, ONETHIRDBUFFERSIZE);
 
 // Macro to write noise byte using the noise channel generator function
-#define WRITENOISE(toWrite) b1WriteNextNG(&newSoundFile.soundResource, ORIGINAL_CHNOISEBUFFER, newChNoiseDataPtr, toWrite, &newChNoiseLocalBufferStatus, &allocatedBlockSize, allocatedBlockSize + INCREASE_BLOCK_SIZE_AMOUNT, &newSoundFile.soundBank, ONETHIRDBUFFERSIZE);
+#define WRITENOISE(toWrite) bBWriteNextNG(&newSoundFile.soundResource, ORIGINAL_CHNOISEBUFFER, newChNoiseDataPtr, toWrite, &newChNoiseLocalBufferStatus, &allocatedBlockSize, allocatedBlockSize + INCREASE_BLOCK_SIZE_AMOUNT, &newSoundFile.soundBank, ONETHIRDBUFFERSIZE);
 
 // Sets the channel data pointers in the SoundFile struct based on offsets
 // Accepts as an argument the 'codePtr' which is a pointer to the sounds allocated resource block
-void b1SetChannelOffsets(byte* codePtr, SoundFile* soundFile, unsigned int* soundChannelOffSets)
+void bBSetChannelOffsets(byte* codePtr, SoundFile* soundFile, unsigned int* soundChannelOffSets)
 {
 	byte i, ** currentChannel;
 
@@ -264,7 +264,7 @@ void b1SetChannelOffsets(byte* codePtr, SoundFile* soundFile, unsigned int* soun
 }
 
 // Fills a note buffer from old channel data pointers into channelBytes, returns FALSE if end marker found.
-boolean b1FillNoteBuffer(byte* oldBuffer, byte** oldChDataPtr, BufferStatus* bufferStatus, byte* channelBytes)
+boolean bBFillNoteBuffer(byte* oldBuffer, byte** oldChDataPtr, BufferStatus* bufferStatus, byte* channelBytes)
 {
 	byte i;
 
@@ -287,7 +287,7 @@ boolean b1FillNoteBuffer(byte* oldBuffer, byte** oldChDataPtr, BufferStatus* buf
 // Returns frequency value from the updated note.
 // Used particularly to advance our buffer of channel 2, used in LSFR
 // The idea is to advance the duration by the set amount, and when we run out of duration go to the next note
-unsigned int b1Advance2(byte* oldBuffer, byte** oldChDataPtr, BufferStatus* bufferStatus, byte* channelBytes, boolean* moreTwoToRead, unsigned int advancement)
+unsigned int bBAdvance2(byte* oldBuffer, byte** oldChDataPtr, BufferStatus* bufferStatus, byte* channelBytes, boolean* moreTwoToRead, unsigned int advancement)
 {
 	long currentDuration;              // Long because it can be decremented to less than zero (temporarily)
 	boolean finished = FALSE;          // Loop control flag
@@ -303,7 +303,7 @@ unsigned int b1Advance2(byte* oldBuffer, byte** oldChDataPtr, BufferStatus* buff
 		currentDuration -= advancement;
 
 		// If current duration expires, load next note and reset advancement accordingly
-		if (currentDuration < 0 && (*moreTwoToRead = b1FillNoteBuffer(oldBuffer, oldChDataPtr, bufferStatus, channelBytes)))
+		if (currentDuration < 0 && (*moreTwoToRead = bBFillNoteBuffer(oldBuffer, oldChDataPtr, bufferStatus, channelBytes)))
 		{
 			advancement = currentDuration * -1; // Negative remainder is turned positive
 			currentDuration = *((unsigned int*)&channelBytes[DURATION_BYTE]); // Reset duration for next note
@@ -325,7 +325,7 @@ unsigned int b1Advance2(byte* oldBuffer, byte** oldChDataPtr, BufferStatus* buff
 }
 
 // Precomputes periodic sound data, modifying noise channel data for periodic noise types, leaving white noise alone as this can be handled by the VERA.
-void b1PreComputePeriodicSound(SoundFile* soundFile, unsigned int* soundChannelOffSets)
+void bBPreComputePeriodicSound(SoundFile* soundFile, unsigned int* soundChannelOffSets)
 {
 	BufferStatus oldCh2LocalBufferStatus, oldChNoiseLocalBufferStatus, newChNoiseLocalBufferStatus;
 	byte* oldCh2Buffer = GOLDEN_RAM_WORK_AREA, * oldChNoiseBuffer = GOLDEN_RAM_WORK_AREA + ONETHIRDBUFFERSIZE, * newChNoiseBuffer = ORIGINAL_CHNOISEBUFFER;
@@ -360,7 +360,7 @@ void b1PreComputePeriodicSound(SoundFile* soundFile, unsigned int* soundChannelO
 	memCpyBankedBetween(newSoundFile.soundResource, newSoundFile.soundBank, soundFile->soundResource, soundFile->soundBank, soundFile->chNoise - soundFile->soundResource);
 
 	// Set channel offsets for new sound file based on copied data pointers
-	b1SetChannelOffsets(newSoundFile.soundResource, &newSoundFile, soundChannelOffSets);
+	bBSetChannelOffsets(newSoundFile.soundResource, &newSoundFile, soundChannelOffSets);
 
 	// Initialize noise buffer status struct for writing new noise channel data
 	newChNoiseLocalBufferStatus.bank = newSoundFile.soundBank;
@@ -368,7 +368,7 @@ void b1PreComputePeriodicSound(SoundFile* soundFile, unsigned int* soundChannelO
 	newChNoiseLocalBufferStatus.bufferCounter = 0;
 
 	// Read first notes from channel 2 buffer
-	moreTwoToRead = b1FillNoteBuffer(oldCh2Buffer, oldCh2DataPtr, &oldCh2LocalBufferStatus, oldCh2Bytes);
+	moreTwoToRead = bBFillNoteBuffer(oldCh2Buffer, oldCh2DataPtr, &oldCh2LocalBufferStatus, oldCh2Bytes);
 
 	if (moreTwoToRead)
 	{
@@ -376,14 +376,14 @@ void b1PreComputePeriodicSound(SoundFile* soundFile, unsigned int* soundChannelO
 	}
 
 	// Main loop processing noise channel notes
-	while (b1FillNoteBuffer(oldChNoiseBuffer, oldChNoiseDataPtr, &oldChNoiseLocalBufferStatus, oldChNoiseBytes))
+	while (bBFillNoteBuffer(oldChNoiseBuffer, oldChNoiseDataPtr, &oldChNoiseLocalBufferStatus, oldChNoiseBytes))
 	{
 		// Check if noise is white noise (noise channel flags bit 2 set)
 		if ((oldChNoiseBytes[NOISE_CHANNEL] & 4) >> 2) // white noise
 		{
 			// Advance channel 2 note position by noise channel note duration
 			advancement = *((unsigned int*)oldChNoiseBytes[DURATION_BYTE]);
-			b1Advance2(oldCh2Buffer, oldCh2DataPtr, &oldCh2LocalBufferStatus, oldCh2Bytes, &moreTwoToRead, advancement);
+			bBAdvance2(oldCh2Buffer, oldCh2DataPtr, &oldCh2LocalBufferStatus, oldCh2Bytes, &moreTwoToRead, advancement);
 
 			// Write noise channel note bytes verbatim into new noise channel buffer
 			for (i = 0; i < NO_NOTE_BYTES; i++)
@@ -400,7 +400,7 @@ void b1PreComputePeriodicSound(SoundFile* soundFile, unsigned int* soundChannelO
 		else // Periodic noise channel processing
 		{
 			// Determine LFSR duration and frequency to play for periodic noise
-			lfsrDuration = b1DetermineLsfrDuration(*((unsigned int*)&oldCh2Bytes[DURATION_BYTE]), *((unsigned int*)&oldChNoiseBytes[DURATION_BYTE]), oldChNoiseBytes[NOISE_CHANNEL], *((unsigned int*)&oldCh2Bytes[FREQUENCY_BYTE]), &lsfrFrequencyToPlay, remainingBeats);
+			lfsrDuration = bBDetermineLsfrDuration(*((unsigned int*)&oldCh2Bytes[DURATION_BYTE]), *((unsigned int*)&oldChNoiseBytes[DURATION_BYTE]), oldChNoiseBytes[NOISE_CHANNEL], *((unsigned int*)&oldCh2Bytes[FREQUENCY_BYTE]), &lsfrFrequencyToPlay, remainingBeats);
 
 			// Write computed LFSR parameters to new noise channel buffer
 			WRITENOISE((*((byte*)&lfsrDuration)));
@@ -415,7 +415,7 @@ void b1PreComputePeriodicSound(SoundFile* soundFile, unsigned int* soundChannelO
 			lfsr = (lfsr >> 1) | (feedback << 14);   // keep it 15-bit state
 
 			// Advance channel 2 notes by the lfsrDuration used
-			b1Advance2(oldCh2Buffer, oldCh2DataPtr, &oldCh2LocalBufferStatus, oldCh2Bytes, &moreTwoToRead, lfsrDuration);
+			bBAdvance2(oldCh2Buffer, oldCh2DataPtr, &oldCh2LocalBufferStatus, oldCh2Bytes, &moreTwoToRead, lfsrDuration);
 
 			// Decrement remaining beats accordingly
 			if (remainingBeats > lfsrDuration)
@@ -441,7 +441,7 @@ void b1PreComputePeriodicSound(SoundFile* soundFile, unsigned int* soundChannelO
 
 // Performs precomputation of volume and frequency values of sound file's notes,
 // converts frequencies/volumes, detects periodic sound, and adjusts sound data.
-void b1PrecomputeValues(SoundFile* soundFile, unsigned int* soundChannelOffSets)
+void bBPrecomputeValues(SoundFile* soundFile, unsigned int* soundChannelOffSets)
 {
 	BufferStatus localBufferStatus;
 	byte seenFFFFCounter = 0;       // Tracks end marker count per channel
@@ -480,7 +480,7 @@ void b1PrecomputeValues(SoundFile* soundFile, unsigned int* soundChannelOffSets)
 			// Check for potential channel end marker sequence (0xFF 0xFF)
 			if (readByte == 0xFF && noteByteCounter == 0)
 			{
-				readAheadByte = b1ReadAhead(soundFile, bytePerBufferCounter, bufferStatus);
+				readAheadByte = bBReadAhead(soundFile, bytePerBufferCounter, bufferStatus);
 
 				if (readAheadByte == 0xFF)
 				{
@@ -494,13 +494,13 @@ void b1PrecomputeValues(SoundFile* soundFile, unsigned int* soundChannelOffSets)
 				{
 					// Read two bytes of duration (little endian)
 					*((byte*)&duration) = readByte;
-					*((byte*)&duration + 1) = b1ReadAhead(soundFile, bytePerBufferCounter, bufferStatus);
+					*((byte*)&duration + 1) = bBReadAhead(soundFile, bytePerBufferCounter, bufferStatus);
 					*((byte*)&duration) = GOLDEN_RAM_WORK_AREA[bytePerBufferCounter];
 
 					adjustedDuration = ((unsigned int)*((byte*)&duration)) | ((unsigned int)*((byte*)&duration + 1)) << 8;
 
 					// Copy lookahead byte to buffer to maintain coherence
-					b1CopyAhead(soundFile, bytePerBufferCounter, bufferStatus, *((byte*)&adjustedDuration + 1));
+					bBCopyAhead(soundFile, bytePerBufferCounter, bufferStatus, *((byte*)&adjustedDuration + 1));
 
 					// Accumulate beats for channel duration accounting
 					beatsForChannel += adjustedDuration;
@@ -513,7 +513,7 @@ void b1PrecomputeValues(SoundFile* soundFile, unsigned int* soundChannelOffSets)
 					if (seenFFFFCounter != NOISE_CHANNEL)
 					{
 						// Read second frequency byte
-						*((byte*)&tenBitDivider + 1) = b1ReadAhead(soundFile, bytePerBufferCounter, bufferStatus);
+						*((byte*)&tenBitDivider + 1) = bBReadAhead(soundFile, bytePerBufferCounter, bufferStatus);
 						*((byte*)&tenBitDivider) = GOLDEN_RAM_WORK_AREA[bytePerBufferCounter];
 
 						// Compute linear frequency divider from frequency byte bits
@@ -524,7 +524,7 @@ void b1PrecomputeValues(SoundFile* soundFile, unsigned int* soundChannelOffSets)
 						FREQ_TO_CX_16(adjustedFrequency);
 
 						// Copy lookahead frequency byte back into buffer
-						b1CopyAhead(soundFile, bytePerBufferCounter, bufferStatus, *((byte*)&adjustedFrequency + 1));
+						bBCopyAhead(soundFile, bytePerBufferCounter, bufferStatus, *((byte*)&adjustedFrequency + 1));
 					}
 
 					// Store low byte of adjusted frequency in local work area buffer
@@ -594,12 +594,12 @@ void b1PrecomputeValues(SoundFile* soundFile, unsigned int* soundChannelOffSets)
 	// If periodic sound is detected and noise channel has volume, perform precomputation for periodic sound.
 	if (periodicSoundDetected && noiseChHasVolume)
 	{
-		b1PreComputePeriodicSound(&b1LoadedSounds[soundLoadCounter], soundChannelOffSets);
+		bBPreComputePeriodicSound(&bBLoadedSounds[soundLoadCounter], soundChannelOffSets);
 	}
 }
 
 // Loads a sound file given a sound number, converting and precomputing values, and preparing for playback.
-void b1LoadSoundFile(int soundNum) {
+void bBLoadSoundFile(int soundNum) {
 
 	AGIFile tempAGI;               // Temporary AGI file structure for sound file code
 	AGIFilePosType agiFilePosType;
@@ -611,19 +611,19 @@ void b1LoadSoundFile(int soundNum) {
 	b6LoadAGIFile(SOUND, &agiFilePosType, &tempAGI);
 
 	// Save references to loaded sound resource data and bank info
-	b1LoadedSounds[soundLoadCounter].soundResource = tempAGI.code;
-	b1LoadedSounds[soundLoadCounter].soundBank = tempAGI.codeBank;
-	b1LoadedSoundsPointer[soundNum] = &b1LoadedSounds[soundLoadCounter];
+	bBLoadedSounds[soundLoadCounter].soundResource = tempAGI.code;
+	bBLoadedSounds[soundLoadCounter].soundBank = tempAGI.codeBank;
+	bBLoadedSoundsPointer[soundNum] = &bBLoadedSounds[soundLoadCounter];
 	totalSoundSize = tempAGI.totalSize;
 
 	// Copy sound channel offsets from the beginning of code resource
 	memCpyBanked((byte*)soundChannelOffSets, tempAGI.code, tempAGI.codeBank, NO_CHANNELS * 2);
 
 	// Set channel pointers in loaded sound struct
-	b1SetChannelOffsets(tempAGI.code, &b1LoadedSounds[soundLoadCounter], soundChannelOffSets);
+	bBSetChannelOffsets(tempAGI.code, &bBLoadedSounds[soundLoadCounter], soundChannelOffSets);
 
 	// Precompute frequency and volume values for loaded sound
-	b1PrecomputeValues(&b1LoadedSounds[soundLoadCounter], soundChannelOffSets);
+	bBPrecomputeValues(&bBLoadedSounds[soundLoadCounter], soundChannelOffSets);
 
 	// Increment sound load counter if space available
 	if (soundLoadCounter < MAX_LOADED_SOUNDS - 1)
@@ -632,14 +632,14 @@ void b1LoadSoundFile(int soundNum) {
 	}
 }
 
-extern unsigned int b1Ch1Ticks;
-extern unsigned int b1Ch2Ticks;
-extern unsigned int b1Ch3Ticks;
-extern unsigned int b1Ch4Ticks;
-extern boolean b1IsPlaying[NO_CHANNELS];
-extern byte b1SoundDataBank;
-extern byte b1ChannelsPlaying;
-extern byte b1EndSoundFlag;
+extern unsigned int bBCh1Ticks;
+extern unsigned int bBCh2Ticks;
+extern unsigned int bBCh3Ticks;
+extern unsigned int bBCh4Ticks;
+extern boolean bBIsPlaying[NO_CHANNELS];
+extern byte bBSoundDataBank;
+extern byte bBChannelsPlaying;
+extern byte bBEndSoundFlag;
 
 extern byte* ZP_CURRENTLY_PLAYING_NOTE_1;
 #pragma zpsym("ZP_CURRENTLY_PLAYING_NOTE_1")
@@ -650,10 +650,10 @@ extern byte* ZP_CURRENTLY_PLAYING_NOTE_3;
 extern byte* ZP_CURRENTLY_PLAYING_NOTE_NOISE;
 #pragma zpsym("ZP_CURRENTLY_PLAYING_NOTE_NOISE")
 
-extern void b1PsgClear();
+extern void bBPsgClear();
 
 // Plays a loaded sound by initializing playback pointers and state.
-void b1PlaySound(byte soundNum, byte endSoundFlag)
+void bBPlaySound(byte soundNum, byte endSoundFlag)
 {
 	byte testVal, i;
 	unsigned int* ticksPointer;
@@ -662,39 +662,39 @@ void b1PlaySound(byte soundNum, byte endSoundFlag)
 	asm("sei"); // Disable interrupts to initialize sound playback safely
 
 	// Reset tick counters for all channels
-	b1Ch1Ticks = 0;
-	b1Ch2Ticks = 0;
-	b1Ch3Ticks = 0;
-	b1Ch4Ticks = 0;
+	bBCh1Ticks = 0;
+	bBCh2Ticks = 0;
+	bBCh3Ticks = 0;
+	bBCh4Ticks = 0;
 
 	// Clear the end sound flag in the system flag array
 	flag[endSoundFlag] = FALSE;
 
 	// Set current playing note pointers for each channel, offset by NO_NOTE_BYTES bytes before actual note start
-	ZP_CURRENTLY_PLAYING_NOTE_1 = b1LoadedSoundsPointer[soundNum]->ch0 - NO_NOTE_BYTES;
-	ZP_CURRENTLY_PLAYING_NOTE_2 = b1LoadedSoundsPointer[soundNum]->ch1 - NO_NOTE_BYTES;
-	ZP_CURRENTLY_PLAYING_NOTE_3 = b1LoadedSoundsPointer[soundNum]->ch2 - NO_NOTE_BYTES;
-	ZP_CURRENTLY_PLAYING_NOTE_NOISE = b1LoadedSoundsPointer[soundNum]->chNoise - NO_NOTE_BYTES;
+	ZP_CURRENTLY_PLAYING_NOTE_1 = bBLoadedSoundsPointer[soundNum]->ch0 - NO_NOTE_BYTES;
+	ZP_CURRENTLY_PLAYING_NOTE_2 = bBLoadedSoundsPointer[soundNum]->ch1 - NO_NOTE_BYTES;
+	ZP_CURRENTLY_PLAYING_NOTE_3 = bBLoadedSoundsPointer[soundNum]->ch2 - NO_NOTE_BYTES;
+	ZP_CURRENTLY_PLAYING_NOTE_NOISE = bBLoadedSoundsPointer[soundNum]->chNoise - NO_NOTE_BYTES;
 
 	// Set sound bank for playback
-	b1SoundDataBank = b1LoadedSoundsPointer[soundNum]->soundBank;
+	bBSoundDataBank = bBLoadedSoundsPointer[soundNum]->soundBank;
 
 	// Mark all channels as playing
-	memset(b1IsPlaying, TRUE, NO_CHANNELS);
-	b1ChannelsPlaying = NO_CHANNELS;
+	memset(bBIsPlaying, TRUE, NO_CHANNELS);
+	bBChannelsPlaying = NO_CHANNELS;
 
 	// Store end sound flag for signaling when sound finishes
-	b1EndSoundFlag = endSoundFlag;
+	bBEndSoundFlag = endSoundFlag;
 
 	REENABLE_INTERRUPTS(); // Re-enable interrupts for playback
 }
 
 // Stops current playing sound, clears PSG state, and cancels playing flags.
-void b1StopSound()
+void bBStopSound()
 {
 	asm("sei");         // Disable interrupts to safely stop sound
-	b1PsgClear();       // Clear PSG sound generator state
-	memset(b1IsPlaying, FALSE, NO_CHANNELS); // Mark all channels as not playing
+	bBPsgClear();       // Clear PSG sound generator state
+	memset(bBIsPlaying, FALSE, NO_CHANNELS); // Mark all channels as not playing
 	REENABLE_INTERRUPTS(); // Re-enable interrupts after sound stop
 }
 
