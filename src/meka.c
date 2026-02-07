@@ -288,7 +288,7 @@ void b6Initialise()
     bAInitViews();
     bAInitObjects();
 
-    bFLoadObjectFile();
+    bDLoadObjectFile();
     b12LoadWords();
     b7InitEvents();
     b6InitInterpreter();
