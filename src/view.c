@@ -2694,7 +2694,7 @@ boolean testVal = FALSE;
 #pragma code-name (pop)
 #pragma code-name (push, "BANKRAM0B")
 #pragma bss-name (push, "BANKRAM0B")
-boolean prioritiesSeen[NO_PRIORITIES - 1];
+boolean prioritiesSeen[NO_PRIORITIES];
 #pragma bss-name (pop)
 void bBUpdateObjects()
 {
@@ -2704,12 +2704,12 @@ void bBUpdateObjects()
 	ViewTable localViewtab;
 	boolean blitFailed = FALSE;
 
-	memset(prioritiesSeen, FALSE, NO_PRIORITIES - 1);
+	memset(prioritiesSeen, FALSE, NO_PRIORITIES);
 
 	asm("sei");
 	for (i = MAX_SPRITE_PRIORITY; i >= MIN_SPRITE_PRIORITY; i--)
 	{
-		if (i == MAX_SPRITE_PRIORITY || prioritiesSeen[i - MIN_SPRITE_PRIORITY - 1])
+		if (i == MAX_SPRITE_PRIORITY || prioritiesSeen[i - MIN_SPRITE_PRIORITY])
 		{
 			for (entryNum = 0; entryNum < VIEW_TABLE_SIZE; entryNum++) {
 				getViewTab(&localViewtab, entryNum);
@@ -2764,7 +2764,7 @@ void bBUpdateObjects()
 					}
 					else if (i == MAX_SPRITE_PRIORITY)
 					{
-						prioritiesSeen[localViewtab.priority - MIN_SPRITE_PRIORITY - 1] = TRUE;
+						prioritiesSeen[localViewtab.priority - MIN_SPRITE_PRIORITY] = TRUE;
 					}
 				}
 				setViewTab(&localViewtab, entryNum);
