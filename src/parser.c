@@ -182,6 +182,7 @@ extern boolean b5IsDebuggingEnabled();
 #pragma wrapped-call (pop)
 extern void bDbgShowPriority();
 extern byte debugBank;
+byte trap = FALSE;
 /***************************************************************************
 ** pollKeyboard
 ***************************************************************************/
@@ -238,6 +239,7 @@ void b7PollKeyboard()
 				case KEY_ENTER:
 					if (b5IsDebuggingEnabled() && !strcmp(b7CurrentInputStr, SHOW_PRIORITY))
 					{
+						trap = TRUE;
 						trampolineDebug(bDbgShowPriority);
 					}
 					b7LookupWords(b7CurrentInputStr);

@@ -565,6 +565,26 @@ newIncrementBackwards: .byte %1000, %1000, %1000, %1000, %1000, %1000, %1000, %1
 ;COLOR: The current current being drawn doubled up (eg. FF instead of F due to pixel doubling)
 ;NEXT_DATA_INDEX: Index into the BMP_DATA, starts are zero, and incremented after each read. BMP_DATA is incremented by 255 when this resets
 _celToVera:
+
+
+php
+pha
+phx
+phy
+.import _trap
+lda _trap
+beq @continue
+.import _trap2
+lda _trap2
+beq @continue
+nop
+@continue:
+ply
+plx
+pla
+plp
+
+
 stz NEXT_DATA_INDEX
 
 lda RAM_BANK
@@ -612,7 +632,6 @@ sta RAM_BANK
 
 celToVeraLowRam_setVeraAddress: ;Begin plot line/next line
 SET_VERA_ADDRESS VERA_ADDRESS, #$1, VERA_ADDRESS_HIGH, #$0 ;Set the vera address of the first point on this line on the sprite
-
 ldy Y_VAL ;Work out the priority address of the first point in this line. Make use of the priority line table
 celToVeraLowRam_setPriorityAddress:
 VERA_CTRL_SET #$1

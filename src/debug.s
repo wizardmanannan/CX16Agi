@@ -7,6 +7,9 @@ DEBUG_INC = 1
 .import _opCounter
 .import _pixelCounter
 _b6TellMeTheAddressPlease:
+stp
+.import _counterTest
+lda _counterTest
 lda _opCounter
 lda _bESpritesUpdatedBuffer
 lda _bEBulkAllocatedAddresses

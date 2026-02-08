@@ -1487,6 +1487,9 @@ extern void bEClearVeraSprite(byte celWidth, byte celHeight);
         asm("lda %v + 2", _assmULong); \
         asm("sta %w", VERA_ADDRESS_HIGH); \
     } while (0)
+
+boolean trap2 = FALSE;
+extern boolean trap;
 /***************************************************************************
 ** agi_blit
 ***************************************************************************/
@@ -1506,6 +1509,19 @@ boolean agiBlit(ViewTable* localViewTab, byte entryNum, boolean disableInterupts
 	SpriteAllocationSize allocationWidth, allocationHeight;
 	byte combinedSpriteAllocationSize;
 
+	/*if (entryNum != 0)
+	{
+		return TRUE;
+	}*/
+
+	if (entryNum == 0 && trap)
+	{
+		
+		trap2 = TRUE;
+		asm("stp");
+		asm("lda #$FE");
+	}
+	
 	previousBank = RAM_BANK;
 	RAM_BANK = SPRITE_METADATA_BANK;
 
@@ -1788,6 +1804,15 @@ updateSpriteBuffer:
 	_assmULong = loopVeraAddress;
 	//printf("loopVeraAddress is %lx, the address is %p\n", loopVeraAddress, &loopVeraAddress);
 
+	if (trap && trap2)
+	{
+		_assmByte = isAnimated;
+		printf("%d %d %d %d", localViewTab->flags & MOTION, localViewTab->direction, localViewTab->staleCounter, localMetadata.isOnBackBuffer);
+			asm("stp");
+		//asm("lda %v\n", _assmByte);
+	}
+
+	//asm("nop");
 	asm("lda %v", _assmULong);
 	asm("and #$E0"); //Gets you the address bits 12:8 Which are the parts of the medium byte we need
 	asm("sta sreg");
@@ -2024,6 +2049,9 @@ endBlit:
 	}
 
 	RAM_BANK = previousBank;
+
+	trap2 = FALSE;
+
 	return TRUE;
 }
 
@@ -2696,6 +2724,8 @@ boolean testVal = FALSE;
 #pragma bss-name (push, "BANKRAM0B")
 boolean prioritiesSeen[NO_PRIORITIES];
 #pragma bss-name (pop)
+extern boolean trap;
+byte counterTest;
 void bBUpdateObjects()
 {
 	int entryNum, celNum, oldX, oldY;
@@ -2703,6 +2733,8 @@ void bBUpdateObjects()
 	word objFlags;
 	ViewTable localViewtab;
 	boolean blitFailed = FALSE;
+
+	counterTest = 0;
 
 	memset(prioritiesSeen, FALSE, NO_PRIORITIES);
 
@@ -2720,6 +2752,7 @@ void bBUpdateObjects()
 
 					if (i == localViewtab.priority)
 					{
+
 						if (!agiBlit(&localViewtab, entryNum, FALSE))
 						{
 							if (blitFailed)
@@ -2760,6 +2793,7 @@ void bBUpdateObjects()
 
 							localViewtab.stopped = FALSE;
 						}
+						counterTest++;
 						//Blit may fail if we run out of sprite memory, if that is the case clear everything as there is likely to be stuff we are no longer using. If it fails more than once, we know there is not point continuing
 					}
 					else if (i == MAX_SPRITE_PRIORITY)
