@@ -40,7 +40,7 @@ cp agi.cx16* "$CX16_EMULATOR_FOLDER/"
 
 # Rename files in current folder to uppercase (Linux is case-sensitive)
 for f in agi.cx16*; do
-    mv "$f" "$(echo "$f" | tr '[:lower:]' '[:upper:]')"
+    mv -f "$f" "$(echo "$f" | tr '[:lower:]' '[:upper:]')"
 done
 
 # Unmount and detach loop device

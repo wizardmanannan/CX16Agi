@@ -18,7 +18,7 @@ WAVE_FORM_PULSE_WIDTH = $3F       ; Default wave form and 50% pulse width duty c
 NOISE_WAVE = $C0                  ; Noise waveform parameter
 SAW_TOOTH = $40                   ; Saw tooth waveform parameter
 
-.import _b1LoadedSoundsPointer       ; Import pointer for loaded sounds
+.import _bBLoadedSoundsPointer       ; Import pointer for loaded sounds
 
 .segment "ZEROPAGE"
 ; Zero page variables for currently playing notes for each channel
@@ -29,29 +29,29 @@ _ZP_CURRENTLY_PLAYING_NOTE_NOISE: .word $0
 
 SOUND_SREG: .word $0               ; Sound data register
 
-.segment "BANKRAM01"
+.segment "BANKRAM0B"
 ; Variables for sound playback timing and state
-_b1Ch1Ticks: .word $0              ; Remaining ticks for Channel 1
-_b1Ch2Ticks: .word $0              ; Remaining ticks for Channel 2
-_b1Ch3Ticks: .word $0              ; Remaining ticks for Channel 3
-_b1Ch4Ticks: .word $0              ; Remaining ticks for Channel 4
+_bBCh1Ticks: .word $0              ; Remaining ticks for Channel 1
+_bBCh2Ticks: .word $0              ; Remaining ticks for Channel 2
+_bBCh3Ticks: .word $0              ; Remaining ticks for Channel 3
+_bBCh4Ticks: .word $0              ; Remaining ticks for Channel 4
 
-_b1ChannelsPlaying: .byte $0       ; Number of channels currently playing
-_b1EndSoundFlag: .byte $0          ; Flag indicating end of sound playback
-_b1SoundDataBank: .byte $0         ; Bank containing sound data
-_b1IsPlaying: .res NO_AGI_CHANNELS ; Flags for channels currently playing
+_bBChannelsPlaying: .byte $0       ; Number of channels currently playing
+_bBEndSoundFlag: .byte $0          ; Flag indicating end of sound playback
+_bBSoundDataBank: .byte $0         ; Bank containing sound data
+_bBIsPlaying: .res NO_AGI_CHANNELS ; Flags for channels currently playing
 
 LATCH_TO_CH2 = $0                  ; Latch value used in some noise handling
 
 ; Frequencies used for noise channel sound effects (in approximate timer counts)
-b1NoiseFreq:
+bBNoiseFreq:
     .word 1604     ; ~2230 Hz noise frequency
     .word 3209     ; ~1115 Hz noise frequency
     .word 6423     ; ~557 Hz noise frequency
 
-.segment "BANKRAM01"
+.segment "BANKRAM0B"
 ;Note X is the channel index, and it is counted in 2s
-b1SoundHandler:
+bBSoundHandler:
 .scope
 start:
     SET_VERA_ADDRESS_IMMEDIATE FIRST_PSG_VOL_REGISTER, #$0, #1  ; Set VERA PSG volume register address
@@ -61,16 +61,16 @@ start:
 channelLoop:
     txa                         ; Transfer X to A
     lsr                         ; Logical shift right A (divide X by 2).
-    tay                         ; Transfer A to Y (indexing _b1IsPlaying bits)
-    lda _b1IsPlaying,y           ; Load _b1IsPlaying flag for current channel (Y)
+    tay                         ; Transfer A to Y (indexing _bBIsPlaying bits)
+    lda _bBIsPlaying,y           ; Load _bBIsPlaying flag for current channel (Y)
     bne checkNoteLength          ; If channel is playing, check note length
     jmp silenceChannel           ; Otherwise silence the channel
 
 checkNoteLength:
     ldy #$1                      ; Offset 1 into ticks (high byte)
-    lda _b1Ch1Ticks + 1,x        ; Load high byte of channel ticks
+    lda _bBCh1Ticks + 1,x        ; Load high byte of channel ticks
     bne deductOne                ; If non-zero, deduct one tick
-    lda _b1Ch1Ticks,x            ; Load low byte of channel ticks
+    lda _bBCh1Ticks,x            ; Load low byte of channel ticks
     bne deductOne                ; If non-zero, deduct one tick
     jmp zeroDurationNote         ; Zero ticks means load next note
 
@@ -80,8 +80,8 @@ deductOne:
     lda VERA_data0
     lda VERA_data0
 
-    dec _b1Ch1Ticks,x            ; Decrement low byte ticks
-    lda _b1Ch1Ticks,x            ; Reload low byte ticks
+    dec _bBCh1Ticks,x            ; Decrement low byte ticks
+    lda _bBCh1Ticks,x            ; Reload low byte ticks
     cmp #$FF                    ; Check if underflow (went below zero)
     bne incrementChannelCounter  ; If not, continue to next channel
     jmp durationDeductHigh       ; Otherwise decrement high byte ticks
@@ -164,14 +164,14 @@ storeTicks:
     beq disableChannel         ; If match, disable channel
 
     lda ticks                 ; Load low byte of ticks
-    sta _b1Ch1Ticks,x          ; Store ticks low byte for channel
+    sta _bBCh1Ticks,x          ; Store ticks low byte for channel
     lda ticks + 1              ; Load high byte of ticks
-    sta _b1Ch1Ticks + 1,x      ; Store ticks high byte
+    sta _bBCh1Ticks + 1,x      ; Store ticks high byte
 
     jmp playNote              ; Play new note
 
 durationDeductHigh:
-    dec _b1Ch1Ticks + 1,x      ; Decrement high byte of ticks for channel
+    dec _bBCh1Ticks + 1,x      ; Decrement high byte of ticks for channel
     bra incrementChannelCounter; Branch to increment channel counter
 
 disableChannel:
@@ -179,12 +179,12 @@ disableChannel:
     lsr                       ; Logical shift right A
     tay                       ; Transfer A to Y 
     lda #$0                   ; Load zero
-    sta _b1IsPlaying,y         ; Clear playing flag for channel
+    sta _bBIsPlaying,y         ; Clear playing flag for channel
 
-    dec _b1ChannelsPlaying     ; Decrement count of channels playing
+    dec _bBChannelsPlaying     ; Decrement count of channels playing
     bne silenceChannel         ; If still playing more channels, silence
 
-    lda _b1EndSoundFlag        ; Load end of sound flag
+    lda _bBEndSoundFlag        ; Load end of sound flag
     SET_FLAG_NON_INTERPRETER SOUND_SREG   ; Set flag for non-interpreter sound register
 
 silenceChannel:
@@ -201,16 +201,16 @@ silenceChannel:
 
     jmp incrementChannelCounter ; Continue to next channel
 
-b1PlayNoise:
+bBPlayNoise:
     ldy #$1                   ; Load 1 into Y (noise channel index)
     sty isWhiteNoise          ; Set white noise flag
 
 determineIfPredefinedOrLatched:
     and #$3                   ; The last two bits determine whether this noise is predefined or latched. 3, means latched, everything else predefined
     cmp #$3                   ; 
-    bne b1PlayPredefinedNoise  ; If not equal, play predefined noise
+    bne bBPlayPredefinedNoise  ; If not equal, play predefined noise
 
-b1CopyChannel2:
+bBCopyChannel2:
     sec                       
     lda VERA_addr_low          ;Set VERA ch1 to the current value of channel 2, by deducting the number of notes from channel zero and going back a channel
     sbc #NO_BYTES_PER_CHANNEL ;Step 1 Deduct
@@ -233,15 +233,15 @@ b1CopyChannel2:
 
     jmp returnCopyChannel      ; Return
 
-b1PlayPredefinedNoise:
+bBPlayPredefinedNoise:
     asl                       ; Shift accumulator left (multiply by 2)
     tay                       ; Store result in Y
 
-    lda b1NoiseFreq,y          ; Load low byte of noise frequency from table
+    lda bBNoiseFreq,y          ; Load low byte of noise frequency from table
     sta VERA_data0             ; Store low byte frequency
 
     iny                       ; Increment Y to get high byte
-    lda b1NoiseFreq,y          ; Load high byte noise frequency
+    lda bBNoiseFreq,y          ; Load high byte noise frequency
     sta VERA_data0             ; Store high byte frequency
 
     jmp returnCopyChannel      ; Return from noise play
@@ -252,7 +252,7 @@ ticks: .word $0                   ; Current sound tick counter
 volByte: .byte $0                ; Current volume byte
 
 readSound:
-    lda _b1SoundDataBank         ; Load sound data bank
+    lda _bBSoundDataBank         ; Load sound data bank
     sta RAM_BANK                 ; Select RAM bank
 
     cpx #NOISE_CHANNEL * 2       ; Compare channel index with noise channel * 2
@@ -272,16 +272,16 @@ readSound:
     ldy #SOUND_BANK
     sty RAM_BANK                 ; Select sound bank RAM
 
-    jmp b1PlayNoise              ; Play noise sound
+    jmp bBPlayNoise              ; Play noise sound
 
 returnCopyChannel:
-    lda _b1SoundDataBank          ; Reload bank
+    lda _bBSoundDataBank          ; Reload bank
     sta RAM_BANK                  ; Set RAM bank
 
     bra setVolume                 ; Jump to volume setting
 
 returnToPlayFrequency:
-    lda _b1SoundDataBank
+    lda _bBSoundDataBank
     sta RAM_BANK
 
 playFrequency:
@@ -307,7 +307,7 @@ setVolume:
     jmp zeroVolume
 
 getTicksJump:
-    lda _b1SoundDataBank
+    lda _bBSoundDataBank
     sta RAM_BANK
 
     lda (SOUND_SREG)
@@ -323,9 +323,9 @@ getTicksJump:
 
 .endscope
 
-.segment "BANKRAM01"
-; void b1PsgClear() - Clear all PSG registers to silence sound
-_b1PsgClear:
+.segment "BANKRAM0B"
+; void bBPsgClear() - Clear all PSG registers to silence sound
+_bBPsgClear:
     SET_VERA_ADDRESS_IMMEDIATE PSG_REGISTERS, #$0, #1    ; Set to PSG registers start
     ldx #NO_SYSTEM_CHANNELS * NO_BYTES_PER_CHANNEL       ; Initialize counter for all system channels
 

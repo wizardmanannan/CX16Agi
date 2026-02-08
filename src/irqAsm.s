@@ -242,7 +242,7 @@ jmp @defaultIqr
 @callSoundHandler:
 lda #SOUND_BANK
 sta RAM_BANK
-jsr b1SoundHandler
+jsr bBSoundHandler
 
 @handleDisplayInputLine:
 lda #PARSER_BANK

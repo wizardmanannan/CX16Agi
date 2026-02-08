@@ -26,7 +26,6 @@
 #include "textLayer.h"
 #include "loadingScreen.h"
 #include "structMetadata.h"
-#include "floatDivision.h"
 #include "parser.h"
 #include "graphics.h"
 #include "random.h"
@@ -91,7 +90,7 @@ void b6DiscardResources()
     int i;
     for (i = 0; i < 256; i++) b9DiscardView(i);
     for (i = 0; i < 256; i++) b6DiscardPictureFile(i);
-    for (i = 0; i < 256; i++) b1DiscardSoundFile(i);
+    for (i = 0; i < 256; i++) bBDiscardSoundFile(i);
 }
 
 /***************************************************************************
@@ -105,7 +104,7 @@ void b6DiscardResources()
 ***************************************************************************/
 void b6NewRoom()
 {
-    b1StopSound();
+    bBStopSound();
 
      bAResetViews();
     //stop_update_all();
@@ -188,8 +187,10 @@ void b6Interpret()
     //   dirnOfEgo = var[6];
     //else
     //   var[6] = dirnOfEgo;
-    getLogicFile(&logicFile, 0);
-    getLogicEntry(&logicEntry, 0);
+
+    b5GetLogicFile(&logicFile, 0);
+    b5GetLogicEntry(&logicEntry, 0);
+
     getViewTab(&localViewtab, 0);
     localViewtab.direction = var[6];
     setViewTab(&localViewtab, 0);
@@ -273,7 +274,6 @@ void b6Initialise()
     b6InitTimer(&b6Timing_proc);
 
     b4InitLruCaches(&b4DiscardLogicFileWrapper, &b9DiscardView);
-
     b6InitFiles();             /* Load resource directories */
     b6InitRandom();
 
@@ -291,25 +291,23 @@ void b6Initialise()
 
     ///* SQ2 patch. I don't know where these are set in the game. */
     ///* var[86] = 1; var[87] = 2; var[88] = 3; */
-
     b6InitLogics();
 
 #ifdef VERBOSE
     printf("Logics Inited\n");
 #endif
 
-    b1InitSound();
+    bBInitSound();
 
     bAInitViews();
     bAInitObjects();
 
-    bFLoadObjectFile();
+    bDLoadObjectFile();
     b12LoadWords();
     b7InitEvents();
     b6InitInterpreter();
     b6InitIrq();
     bDInitSpriteMemoryManager();
-    b6InitFloatDivision();
 
     asm("sei");
     b6InitGraphics();
@@ -344,15 +342,11 @@ void main()
     srand(*((unsigned int*)0xA000)); //Memory starts as random gibberish
 
     loadInitBankAndInitMemory();
-
-    bInitMemoryMangerInit();
-
     RAM_BANK = DEBUG_INIT_BANK;
     b5InitializeDebugging();
 
     RAM_BANK = MEKA_BANK;
     b6Initialise();
-
     while (TRUE) {
         /* Cycle initiator. Controlled by delay variable (var[10). */
         if (counter >= var[10]) {

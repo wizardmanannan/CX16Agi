@@ -18,6 +18,9 @@ const char B6_OPEN_FLOOD_FILE_MESSAGE_STRING[] = "Opening flood file %d of %d\n"
 #pragma rodata-name (push, "BANKRAM10")
 const char B10_OUT_DYNAMIC[] = "Out of dynamic memory. Amount %d\n";
 #pragma rodata-name (pop)
+#pragma bss-name (push, "BANKRAM10")
+byte allocationArray[ALLOCATION_ARRAY_SIZE];
+#pragma bss-name (pop)
 #pragma code-name (push, "RAMINIT")
 void bInitBankedRamInit()
 {
@@ -114,7 +117,7 @@ void b10InitSegments(byte segOrder, byte noBanks, int segmentSize, byte noSegmen
 		//printf("The address is %p \n", _segments[segOrder].start);
 	}
 	else {
-		_memoryAreas[segOrder].start = &BANK_RAM[ALLOCATION_ARRAY_START];
+		_memoryAreas[segOrder].start = allocationArray;
 	}
 
 	_memoryAreas[segOrder].firstBank = firstBank;

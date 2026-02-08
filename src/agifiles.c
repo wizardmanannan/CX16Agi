@@ -37,10 +37,13 @@ const char B6_VOL[] = "vol.%d";
 
 byte avisDurgan[11] = { 0x41, 0x76, 0x69, 0x73, 0x20, 0x44, 0x75, 0x72, 0x67, 0x61, 0x6E };//https://www.liquisearch.com/what_is_avis_durgan
 
-AGIFilePosType* logdir = (AGIFilePosType*)&BANK_RAM[LOGDIR_START];
-AGIFilePosType* picdir = (AGIFilePosType*)&BANK_RAM[PICDIR_START];
-AGIFilePosType* viewdir = (AGIFilePosType*)&BANK_RAM[VIEWDIR_START];
-AGIFilePosType* snddir = (AGIFilePosType*)&BANK_RAM[SOUNDDIR_START];
+
+#pragma bss-name (push, "BANKRAM10")
+AGIFilePosType logdir[NO_DIRECTORY_ENTRYS];
+AGIFilePosType picdir[NO_DIRECTORY_ENTRYS];
+AGIFilePosType viewdir[NO_DIRECTORY_ENTRYS];
+AGIFilePosType snddir[NO_DIRECTORY_ENTRYS];
+#pragma bss-name (pop)
 
 int numLogics, numPictures, numViews, numSounds;
 boolean version3 = FALSE;
@@ -199,7 +202,7 @@ void b6LoadAGIDir(int dirNum, const char* fName, int* count)
 		switch (dirNum) {
 		case 0:
 		{
-			setResourceDirectory(&tempPos, &logdir[*count]);
+			b10SetResourceDirectory(&tempPos, &logdir[*count]);
 #ifdef VERBOSE_DISPLAY_FILEOFFSETS
 			printf("\n%d Logic File Name %s, Offset %lu\n", *count, tempPos.fileName, logdir[*count].filePos);
 #endif // VERBOSE_DISPLAY_FILEOFFSETS
@@ -209,7 +212,7 @@ void b6LoadAGIDir(int dirNum, const char* fName, int* count)
 		}
 		case 1:
 		{
-			setResourceDirectory(&tempPos, &picdir[*count]);
+			b10SetResourceDirectory(&tempPos, &picdir[*count]);
 #ifdef VERBOSE_DISPLAY_FILEOFFSETS
 			printf("\n%d Pic File Name %s, Offset %lu\n", *count, picdir[*count].fileName, picdir[*count].filePos);
 #endif // VERBOSE_DISPLAY_FILEOFFSETS
@@ -217,14 +220,14 @@ void b6LoadAGIDir(int dirNum, const char* fName, int* count)
 		break;
 		case 2:
 		{
-			setResourceDirectory(&tempPos, &viewdir[*count]);
+			b10SetResourceDirectory(&tempPos, &viewdir[*count]);
 #ifdef VERBOSE_DISPLAY_FILEOFFSETS
 			printf("\n%d View File Name %s, Offset %lu\n", *count, viewdir[*count].fileName, viewdir[*count].filePos);
 #endif // VERBOSE_DISPLAY_FILEOFFSETS
 			break;
 		}
 		case 3:
-			setResourceDirectory(&tempPos, &snddir[*count]);
+			b10SetResourceDirectory(&tempPos, &snddir[*count]);
 
 #ifdef VERBOSE_DISPLAY_FILEOFFSETS
 			printf("\n%d sound File Name %s, Offset %lu\n", *count, snddir[*count].fileName, snddir[*count].filePos);

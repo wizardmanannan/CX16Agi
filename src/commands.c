@@ -65,8 +65,13 @@ boolean oldQuit = FALSE;
 
 
 int numOfMenus = 0;
-MENU* the_menu = (MENU*)&BANK_RAM[MENU_START];
-MENU* the_menuChildren = (MENU*)&BANK_RAM[MENU_CHILD_START];
+
+
+#pragma bss-name (push, "BANKRAM05")
+MENU the_menu[MAX_MENUS];
+MENU the_menuChildren[MAX_MENU_CHILDREN];
+#pragma bss-name (pop)
+
 
 int printCounter = 1;
 byte lastRoom = 0;
@@ -96,14 +101,13 @@ int getNum(char* inputString, int* i, int inputStringBank)
 	return 0;
 }
 
-void menuChildInit()
+#pragma wrapped-call (push, trampoline, MENU_BANK)
+#pragma code-name (push, "BANKRAM05");
+void b5MenuChildInit()
 {
 	int i;
-	int previousRamBank = RAM_BANK;
 
-	RAM_BANK = MENU_BANK;
-
-	for (i = 0; i < MAX_MENU_SIZE * MAX_MENU_SIZE; i++)
+	for (i = 0; i < MAX_MENU_CHILDREN; i++)
 	{
 		MENU menuChild;
 		menuChild.dp = NULL;
@@ -113,40 +117,25 @@ void menuChildInit()
 		menuChild.text = NULL;
 		the_menuChildren[i] = menuChild;
 	}
-
-	RAM_BANK = previousRamBank;
 }
 
-void getMenu(MENU* menu, byte menuNo)
+void b5GetMenu(MENU* menu, byte menuNo)
 {
-	byte previousBank = RAM_BANK;
-
-	RAM_BANK = MENU_BANK;
 	*menu = the_menu[menuNo];
-
-	RAM_BANK = previousBank;
 }
 
-void setMenu(MENU* menu, byte menuNo)
+void b5SetMenu(MENU* menu, byte menuNo)
 {
-	byte previousBank = RAM_BANK;
-
 #ifdef VERBOSE_MENU
 	printf("-- Adding menu %p at position %d dp %p flags %d proc %p address %p \n", menu, menuNo, menu->dp, menu->flags, menu->proc, menu->text);
 #endif // VERBOSE_MENU
 
-	RAM_BANK = MENU_BANK;
 	the_menu[menuNo] = *menu;
-
-	RAM_BANK = previousBank;
 }
 
-void setMenuChild(MENU* menu, byte menuNo)
+void b5SetMenuChild(MENU* menu, byte menuNo)
 {
 	int i;
-	byte previousBank = RAM_BANK;
-
-	RAM_BANK = MENU_BANK;
 
 	for (i = 0; i < MAX_MENU_SIZE && the_menuChildren[menuNo * MAX_MENU_SIZE + i].text != NULL; i++);
 
@@ -157,8 +146,6 @@ void setMenuChild(MENU* menu, byte menuNo)
 #endif // VERBOSE_MENU
 		the_menuChildren[menuNo * MAX_MENU_SIZE + i] = *menu;
 	}
-
-	RAM_BANK = previousBank;
 }
 
 //void getMenuChild(MENU* menu, byte menuNo, byte menuChildNo)
@@ -175,6 +162,8 @@ void setMenuChild(MENU* menu, byte menuNo)
 //
 //    RAM_BANK = previousBank;
 //}
+#pragma wrapped-call (pop)
+#pragma code-name (pop);
 
 char* getMessagePointer(byte logicFileNo, byte messageNo)
 {
@@ -183,7 +172,7 @@ char* getMessagePointer(byte logicFileNo, byte messageNo)
 	int i;
 
 	LOGICFile logicFile;
-	getLogicFile(&logicFile, logicFileNo);
+	b5GetLogicFile(&logicFile, logicFileNo);
 
 	RAM_BANK = logicFile.messageBank;
 
@@ -290,7 +279,7 @@ boolean b1Has() // 1, 0x00
 {
 	objectType objectType;
 
-	bFGetObject(loadAndIncWinCode(), &objectType);
+	bDGetObject(loadAndIncWinCode(), &objectType);
 
 	return (objectType.roomNum == 255);
 }
@@ -301,7 +290,7 @@ boolean b1Obj_in_room() // 2, 0x40
 	objectType objectType;
 
 	objNum = loadAndIncWinCode();
-	bFGetObject(objNum, &objectType);
+	bDGetObject(objNum, &objectType);
 
 	varNum = var[loadAndIncWinCode()];
 	return (objectType.roomNum == varNum);
@@ -516,7 +505,7 @@ void b2Draw_pic() // 1, 0x80
 	PictureFile loadedPicture;
 	pNum = var[loadAndIncWinCode()];
 
-	getLoadedPicture(&loadedPicture, pNum);
+	b0CGetLoadedPicture(&loadedPicture, pNum);
 
 	//picFNum = pNum;  // Debugging. Delete at some stage!!!
 
@@ -547,7 +536,7 @@ void b2Overlay_pic() // 1, 0x80
 	PictureFile loadedPicture;
 	pNum = var[loadAndIncWinCode()];
 
-	getLoadedPicture(&loadedPicture, pNum);
+	b0CGetLoadedPicture(&loadedPicture, pNum);
 
 	b11DrawPic(loadedPicture.data, loadedPicture.size, FALSE, pNum);
 	bAResetSpriteMemory(TRUE);
@@ -1038,9 +1027,9 @@ void b2Force_update() // 1, 0x00
 	int entryNum;
 
 	entryNum = loadAndIncWinCode();
-	/* Do immediate update here. Call update(entryNum) */
+	
+	//Will happen automatically the next vblank. The param is ignored
 
-	bBUpdateObj(entryNum);
 	return;
 }
 
@@ -1515,11 +1504,11 @@ void b3Get() // 1, 00
 	objectType objectType;
 	byte objNum = loadAndIncWinCode();
 
-	bFGetObject(objNum, &objectType);
+	bDGetObject(objNum, &objectType);
 
 	objectType.roomNum = 255;
 
-	bFSetObject(objNum, &objectType);
+	bDSetObject(objNum, &objectType);
 
 	return;
 }
@@ -1529,11 +1518,11 @@ void b3Get_v() // 1, 0x80
 	objectType objectType;
 	byte objNum = var[loadAndIncWinCode()];
 
-	bFGetObject(objNum, &objectType);
+	bDGetObject(objNum, &objectType);
 
 	objectType.roomNum = 255;
 
-	bFSetObject(objNum, &objectType);
+	bDSetObject(objNum, &objectType);
 
 	return;
 }
@@ -1543,11 +1532,11 @@ void b3Drop() // 1, 0x00
 	objectType objectType;
 	byte objNum = loadAndIncWinCode();
 
-	bFGetObject(objNum, &objectType);
+	bDGetObject(objNum, &objectType);
 
 	objectType.roomNum = 0;
 
-	bFSetObject(objNum, &objectType);
+	bDSetObject(objNum, &objectType);
 	return;
 }
 
@@ -1560,11 +1549,11 @@ void b3Put() // 2, 0x00
 	objNum = loadAndIncWinCode();
 	room = loadAndIncWinCode();
 
-	bFGetObject(objNum, &objectType);
+	bDGetObject(objNum, &objectType);
 
 	objectType.roomNum = room;
 
-	bFSetObject(objNum, &objectType);
+	bDSetObject(objNum, &objectType);
 	return;
 }
 
@@ -1576,11 +1565,11 @@ void b3Put_v() // 2, 0x00
 	objNum = loadAndIncWinCode();
 	room = var[loadAndIncWinCode()];
 
-	bFGetObject(objNum, &objectType);
+	bDGetObject(objNum, &objectType);
 
 	objectType.roomNum = room;
 
-	bFSetObject(objNum, &objectType);
+	bDSetObject(objNum, &objectType);
 	return;
 }
 
@@ -1591,7 +1580,7 @@ void b3Get_room_v() // 2, 0xC0
 
 	objNum = var[loadAndIncWinCode()];
 
-	bFGetObject(objNum, &objectType);
+	bDGetObject(objNum, &objectType);
 
 	var[loadAndIncWinCode()] = objectType.roomNum;
 	return;
@@ -1602,7 +1591,7 @@ void b3Load_sound() // 1, 0x00
 	int soundNum;
 
 	soundNum = loadAndIncWinCode();
-	b1LoadSoundFile(soundNum);
+	bBLoadSoundFile(soundNum);
 	return;
 }
 
@@ -1612,7 +1601,7 @@ void b3Play_sound() // 2, 00  sound() renamed to avoid clash
 
 	soundNum = loadAndIncWinCode();
 	soundEndFlag = loadAndIncWinCode();
-	b1PlaySound(soundNum, soundEndFlag);
+	bBPlaySound(soundNum, soundEndFlag);
 	return;
 }
 
@@ -1646,7 +1635,7 @@ void b3PrintMessageInTextbox(byte messNum, byte x, byte y, byte length)
 	LOGICFile logicFile;
 	byte keysToWait[NO_KEYS_TO_WAIT] = { KEY_ESC, KEY_ENTER };
 
-	getLogicFile(&logicFile, currentLog);
+	b5GetLogicFile(&logicFile, currentLog);
 
 #ifdef  VERBOSE_MESSAGE_PRINT
 	printf("Attempting to display message %d at %d,%d, length %d\n", messNum - 1, x, y, length);
@@ -1702,7 +1691,7 @@ void b3DisplayWithoutTextbox(byte row, byte col, byte messNum)
 	char* messagePointer;
 
 	LOGICFile logicFile;
-	getLogicFile(&logicFile, currentLog);
+	b5GetLogicFile(&logicFile, currentLog);
 
 	messagePointer = getMessagePointer(currentLog, messNum - 1);
 
@@ -1773,7 +1762,7 @@ void b4Set_cursor_char() // 1, 0x00
 	char* messagePointer = getMessagePointer(currentLog, msgNo);
 	LOGICFile logicFile;
 
-	getLogicFile(&logicFile, currentLog);
+	b5GetLogicFile(&logicFile, currentLog);
 
 #ifdef VERBOSE_STRING_CHECK
 	printf("Your msgNo is %d\n", msgNo);
@@ -1837,7 +1826,7 @@ void b4Set_string() // 2, 0x00
 	char* messagePointer;
 	LOGICFile logicFile;
 
-	getLogicFile(&logicFile, currentLog);
+	b5GetLogicFile(&logicFile, currentLog);
 
 	stringNum = loadAndIncWinCode();
 	messNum = loadAndIncWinCode();
@@ -1858,7 +1847,7 @@ void b4Get_string() // 5, 0x00
 	char* messagePointer;
 	LOGICFile logicFile;
 
-	getLogicFile(&logicFile, currentLog);
+	b5GetLogicFile(&logicFile, currentLog);
 
 	strNum = loadAndIncWinCode();
 	messNum = loadAndIncWinCode();
@@ -1910,7 +1899,7 @@ void b4Get_num() // 2, 0x40
 
 	b7Temp = (char*)b10BankedAlloc(80, &tempBank);
 
-	getLogicFile(&logicFile, currentLog);
+	b5GetLogicFile(&logicFile, currentLog);
 
 	messNum = loadAndIncWinCode();
 	varNum = loadAndIncWinCode();
@@ -2156,11 +2145,11 @@ void b4Reset_scan_start() // 0, 0x00
 {
 	LOGICEntry logicEntry;
 
-	getLogicEntry(&logicEntry, currentLog);
+	b5GetLogicEntry(&logicEntry, currentLog);
 
 	logicEntry.entryPoint = 0;
 
-	setLogicEntry(&logicEntry, currentLog);
+	b5SetLogicEntry(&logicEntry, currentLog);
 	return;
 }
 
@@ -2331,21 +2320,21 @@ void b4Set_menu() // 1, 0x00
 	MENU newMenu;
 	LOGICFile currentLogicFile;
 
+	messNum = loadAndIncWinCode();
+
+
 	if (numOfMenus == 0)
 	{
-		menuChildInit();
+		b5MenuChildInit();
 	}
 
-	getLogicFile(&currentLogicFile, currentLog);
+	b5GetLogicFile(&currentLogicFile, currentLog);
 
 	newMenu.dp = NULL;
 	newMenu.flags = 0;
 	newMenu.proc = 0;
 	newMenu.menuTextBank = currentLogicFile.messageBank;
-
-	messNum = loadAndIncWinCode();
-
-	/* Create new menu and allocate space for MAX_MENU_SIZE items */
+	/* Create new menu and allocate space for MAX_MENU_SIZE items */	
 	newMenu.text = getMessagePointer(currentLog, messNum - 1);
 
 #ifdef VERBOSE_MENU
@@ -2353,8 +2342,8 @@ void b4Set_menu() // 1, 0x00
 #endif // VERBOSE_MENU
 
 	newMenu.proc = NULL;
+	b5SetMenu(&newMenu, numOfMenus);
 
-	setMenu(&newMenu, numOfMenus);
 	numOfMenus++;
 
 	newMenu.dp = NULL;
@@ -2364,7 +2353,7 @@ void b4Set_menu() // 1, 0x00
 	newMenu.menuTextBank = 0;
 
 	/* Mark end of menu */
-	setMenu(&newMenu, numOfMenus);
+	b5SetMenu(&newMenu, numOfMenus);
 
 	return;
 }
@@ -2379,7 +2368,7 @@ void b5Set_menu_item() // 2, 0x00
 	LOGICFile currentLogicFile;
 	EventType event;
 
-	getLogicFile(&currentLogicFile, currentLog);
+	b5GetLogicFile(&currentLogicFile, currentLog);
 	b7GetEvent(&event, controllerNum);
 
 	messNum = loadAndIncWinCode();
@@ -2394,7 +2383,7 @@ void b5Set_menu_item() // 2, 0x00
 	childMenu.proc = menuFunctions[controllerNum];
 	childMenu.menuTextBank = currentLogicFile.messageBank;
 
-	setMenuChild(&childMenu, numOfMenus - 1);
+	b5SetMenuChild(&childMenu, numOfMenus - 1);
 
 
 #ifdef VERBOSE_MENU_DUMP

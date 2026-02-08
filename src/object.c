@@ -14,27 +14,27 @@
 #include "general.h"
 #include "object.h"
 
-#pragma code-name (push, "BANKRAM0F")
+#pragma code-name (push, "BANKRAM0D")
 
-#pragma rodata (push, "BANKRAM0F")
-const char BF_OBJECT_FILE_NAME[] = "object";
-const char BF_CANNOT_OPEN[] = "Cannot find file : object\n";
+#pragma rodata (push, "BANKRAM0D")
+const char BD_OBJECT_FILE_NAME[] = "object";
+const char BD_CANNOT_OPEN[] = "Cannot find file : object\n";
 #pragma rodata (pop)
 
-#pragma bss-name (push, "BANKRAM0F")
+#pragma bss-name (push, "BANKRAM0D")
 int bFNumObjects;
-objectType bBObjects[MAX_OBJECTS];
-byte bFObjData[OBJ_NAME_CACHE_SIZE];
+objectType bDObjects[MAX_OBJECTS];
+byte bDObjData[OBJ_NAME_CACHE_SIZE];
 #pragma bss-name (pop)
 
-void bFGetObject(byte objNum, objectType* objectType)
+void bDGetObject(byte objNum, objectType* objectType)
 {
-    *objectType = bBObjects[objNum];
+    *objectType = bDObjects[objNum];
 }
 
-void bFSetObject(byte objNum, objectType* objectType)
+void bDSetObject(byte objNum, objectType* objectType)
 {
-    bBObjects[objNum] = *objectType;
+    bDObjects[objNum] = *objectType;
 }
 
 /**************************************************************************
@@ -47,7 +47,7 @@ void bFSetObject(byte objNum, objectType* objectType)
 ** not encrypted. On the other hand, if the OBJECT file is encrypted,
 ** there is usually a lot of characters less than 0x20.
 **************************************************************************/
-boolean bFIsObjCrypt(long fileLen, byte* objData)
+boolean bDIsObjCrypt(long fileLen, byte* objData)
 {
     int i, checkLen;
 
@@ -57,16 +57,16 @@ boolean bFIsObjCrypt(long fileLen, byte* objData)
     // ->>>
 
     for (i = fileLen - 1; i > (fileLen - checkLen); i--) {
-        if (((bFObjData[i] < 0x20) || (bFObjData[i] > 0x7F)) && (bFObjData[i] != 0))
+        if (((bDObjData[i] < 0x20) || (bDObjData[i] > 0x7F)) && (bDObjData[i] != 0))
             return TRUE;
     }
 
     return FALSE;
 }
 
-byte bFLoadFile(int* fileLen, byte* buffer)
+byte bDLoadFile(int* fileLen, byte* buffer)
 {
-    byte lfn = b6Cbm_openForSeeking(BF_OBJECT_FILE_NAME);
+    byte lfn = b6Cbm_openForSeeking(BD_OBJECT_FILE_NAME);
   
     if (lfn == NULL) {
         printf("Cannot find file : object\n");
@@ -77,7 +77,7 @@ byte bFLoadFile(int* fileLen, byte* buffer)
     {
         if (*fileLen > OBJ_NAME_CACHE_SIZE)
         {
-            printf(BF_CANNOT_OPEN);
+            printf(BD_CANNOT_OPEN);
             exit(0);
         }
     }
@@ -93,7 +93,7 @@ byte bFLoadFile(int* fileLen, byte* buffer)
 ** Purpose: Load the names of the inventory items from the OBJECT file and
 ** their starting rooms.
 **************************************************************************/
-void bFLoadObjectFile()
+void bDLoadObjectFile()
 {
     byte lfn;
     int avisPos = 0, objNum, i, strPos = 0;
@@ -101,28 +101,27 @@ void bFLoadObjectFile()
     byte* marker;
     word index;
 
-    lfn = bFLoadFile(&fileLen, bFObjData);
+    lfn = bDLoadFile(&fileLen, bDObjData);
 
-    marker = (byte*) bFObjData + 3;
+    marker = (byte*) bDObjData + 3;
                 
-    if (bFIsObjCrypt(fileLen, bFObjData))
+    if (bDIsObjCrypt(fileLen, bDObjData))
     {
         for (i = 0; i < fileLen; i++)
         {
-           bFObjData[i] ^= avisDurgan[avisPos++ % 11];
+           bDObjData[i] ^= avisDurgan[avisPos++ % 11];
         }
     }
 
-    bFNumObjects = (((bFObjData[1] * 256) + bFObjData[0]) / 3);
+    bFNumObjects = (((bDObjData[1] * 256) + bDObjData[0]) / 3);
 
     for (objNum = 0; objNum < bFNumObjects; objNum++, strPos = 0, marker += 3) {
         index = *(marker)+256 * (*(marker + 1)) + 3;
-        bBObjects[objNum].name = (char*) &bFObjData[index];
-        bBObjects[objNum].roomNum = *(marker + 2);
-
+        bDObjects[objNum].name = (char*) &bDObjData[index];
+        bDObjects[objNum].roomNum = *(marker + 2);
         if (objNum == 1)
         {
-            bBObjects[objNum].roomNum = 255;
+            bDObjects[objNum].roomNum = 255;
         }
     }
 }

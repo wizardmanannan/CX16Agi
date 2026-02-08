@@ -18,13 +18,13 @@ typedef struct {
 	char* name;
 } objectType;
 
-extern objectType bBObjects[MAX_OBJECTS];
+extern objectType bDObjects[MAX_OBJECTS];
 extern int bFNumObjects;
 
 #pragma wrapped-call (push, trampoline, OBJECT_BANK)
-void bFGetObject(byte objNum, objectType* objectType);
-void bFSetObject(byte objNum, objectType* objectType);
-void bFLoadObjectFile();
+void bDGetObject(byte objNum, objectType* objectType);
+void bDSetObject(byte objNum, objectType* objectType);
+void bDLoadObjectFile();
 #pragma wrapped-call (pop)
 
 #endif /* _OBJECT_H_ */

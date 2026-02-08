@@ -20,14 +20,14 @@ typedef struct {
 } SoundFile;
 
 #pragma wrapped-call (push, trampoline, SOUND_BANK)
-void b1DiscardSoundFile(int soundNum);
-void b1InitSound();
-void b1LoadSoundFile(int soundNum);
-void b1PlaySound(byte soundNum, byte endSoundFlag);
-void b1StopSound();
+void bBDiscardSoundFile(int soundNum);
+void bBInitSound();
+void bBLoadSoundFile(int soundNum);
+void bBPlaySound(byte soundNum, byte endSoundFlag);
+void bBStopSound();
 #pragma wrapped-call (pop)
 
-extern SoundFile b1LoadedSounds[];
+extern SoundFile bBLoadedSounds[];
 extern int soundEndFlag;
 extern boolean checkForEnd;
 
