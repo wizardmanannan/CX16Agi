@@ -36,6 +36,7 @@ VIEW_INC = 1
 .import _bADetermineMovement
 .import _b11GetNumberOfCels
 .import _offsetOfCurrentView
+.import _offsetOfStaleCounter
 
 .ifdef SPRITE_DEBUG
 .import _bSdRunNumber
@@ -66,7 +67,7 @@ VIEW_POS_CEL_NUM = ZP_TMP_12 + 1
 VIEW_POS_LOOP_NUM = ZP_TMP_13
 VIEW_POS_THE_CEL = ZP_TMP_14 + 1
 VIEW_POS_LAST_CEL = ZP_TMP_16
-VIEW_POS_ANIMATED_OBJECTS_COUNTER = ZP_TMP_16 + 1
+VIEW_POS_SHOULD_MINUS_STALE = ZP_TMP_16 + 1
 
 
 .segment "CODE"
@@ -1634,6 +1635,7 @@ _b9AnimateObjects:
     lda #>b9UpdateLoopAndCelAsm
     sta loopMethodToCall + 2
     
+    stz VIEW_POS_SHOULD_MINUS_STALE
     jsr b9LoopThroughAnimatedObjects
     SPRITE_DEBUG ;8
 
@@ -1656,6 +1658,9 @@ _b9AnimateObjects:
     sta loopMethodToCall + 1
     lda #>b9UpdatePositionAsm
     sta loopMethodToCall + 2
+
+    lda #$1
+    sta VIEW_POS_SHOULD_MINUS_STALE
     jsr b9LoopThroughAnimatedObjects
     SPRITE_DEBUG ;14
 
@@ -1712,7 +1717,6 @@ rts
 ;   - Calls the target routine for each qualifying object.
 ;   - Uses VIEW_POS_ENTRY_NUM as temporary to preserve X across call.
 ; -------------------------------------------------------------------
-
 b9LoopThroughAnimatedObjects:
     ; Initialize table pointer
     lda #<_viewtab
@@ -1723,6 +1727,15 @@ b9LoopThroughAnimatedObjects:
     ldx #$0
 
 animatedObjectsLoop:
+    lda VIEW_POS_SHOULD_MINUS_STALE
+    beq checkAnimated
+    ldy _offsetOfStaleCounter
+    lda (VIEW_POS_LOCAL_VIEW_TAB),y
+    beq checkAnimated
+    dec
+    sta (VIEW_POS_LOCAL_VIEW_TAB),y
+
+checkAnimated:
     ; Test for ANIMATED|UPDATE|DRAWN
     lda #ANIMATED | UPDATE | DRAWN
     ldy _offsetOfFlags
@@ -1765,7 +1778,8 @@ lda #<b9UpdateObjectDirection
 sta loopMethodToCall + 1
 lda #>b9UpdateObjectDirection
 sta loopMethodToCall + 2
-    
+
+stz VIEW_POS_SHOULD_MINUS_STALE  
 jsr b9LoopThroughAnimatedObjects
     
 rts
