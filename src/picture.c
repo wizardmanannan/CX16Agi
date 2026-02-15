@@ -489,6 +489,9 @@ extern void b6Clear();
 **  pLen = length of PICTURE data
 **************************************************************************/
 extern boolean disableIrq;
+
+
+extern long opStartPrintingAt;
 void b11DrawPic(byte* bankedData, int pLen, boolean okToClearScreen, byte picNum)
 {
 	unsigned long i;
@@ -500,6 +503,13 @@ void b11DrawPic(byte* bankedData, int pLen, boolean okToClearScreen, byte picNum
 	BufferStatus localBufferStatus;
 	BufferStatus* bufferStatus = &localBufferStatus;
 	boolean cleanPic = TRUE;
+
+	//if (picNum == 51)
+	//{
+	//	asm("stp");
+	//	opStartPrintingAt = 1;
+	//	asm("lda #$44");
+	//}
 
 	picDrawEnabled = FALSE;
 	priDrawEnabled = FALSE;

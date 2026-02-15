@@ -163,6 +163,9 @@ extern void b9AnimateObjects();
 extern void b9UpdateObjectDirections();
 #pragma wrapped-call (pop)
 boolean set = FALSE;
+
+
+extern byte* var;
 /***************************************************************************
 ** interpret
 **
@@ -176,6 +179,7 @@ void b6Interpret()
     ViewTable localViewtab;
     LOGICFile logicFile;
     LOGICEntry logicEntry;
+    byte toCopy;
 
 
     getViewTab(&viewtab, 0);
@@ -214,6 +218,17 @@ void b6Interpret()
 
 
         executeLogic(&logicEntry, 0);
+
+       /* if (var[0] == 51)
+        {
+            memCpyBanked(&toCopy, 0xA035, 9, 1);
+
+            if (toCopy != 0)
+            {
+                asm("stp");
+                asm("lda #$1");
+            }
+        }*/
      
         //dirnOfEgo = var[6];
         getViewTab(&localViewtab, 0);
@@ -233,6 +248,18 @@ void b6Interpret()
 
 
         b9AnimateObjects();
+
+      /*  if (var[0] == 51)
+        {
+            memCpyBanked(&toCopy, 0xA035, 9, 1);
+
+            if (toCopy != 0)
+            {
+                asm("stp");
+                asm("lda #$2");
+            }
+        }*/
+
     } while (hasEnteredNewRoom);
 }
 
@@ -267,9 +294,14 @@ extern void b6InitGraphics();
 extern void b6InitIrq();
 extern void b6InitInterpreter();
 extern void b6TellMeTheAddressPlease();
+
+
+extern char* test;
 void b6Initialise()
 {
     int i;
+
+    //printf("%p\n", &test);
 
     b6InitTimer(&b6Timing_proc);
 

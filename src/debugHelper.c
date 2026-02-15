@@ -32,16 +32,16 @@ unsigned long queueAction = 0;
 
 #pragma rodata-name (push, "BANKRAMDEBUG")
 const char bDbgPrintMessage[] = "%d.\n";
-const char bDbgRemainingMemoryMessage[] = "your remaining memory is approx: %d \n";
-const char bDbgFalseResultMessage[] = "the result is false\n";
-const char bDbgTrueResultMessage[] = "the result is true\n";
-const char bDbgInvertedResultMessage[] = "the result is inverted by not\n";
+const char bDbgRemainingMemoryMessage[] = "y is approx: %d \n";
+const char bDbgFalseResultMessage[] = "the r is false\n";
+const char bDbgTrueResultMessage[] = "the re true\n";
+const char bDbgInvertedResultMessage[] = "tht is inverted by not\n";
 const char bDbgIsSetMessage[] = "checking that %d is set and it %d\n";
-const char bDbgGreaterThan_8N_Message[] = "checking that %d (%d) is > %d and the result should be %d\n";
-const char bDbgLessThan_8N_Message[] = "checking that %d is < %d and the result should be %d\n";
+const char bDbgGreaterThan_8N_Message[] = "checking that %d (%d) is > %d and the should be %d\n";
+const char bDbgLessThan_8N_Message[] = "chec %d and the result should be %d\n";
 const char bDbgGreaterThan_8V_Message[] = "checking that %d (%d) is > %d (%d) and the result should be %d\n";
 const char bDbgLessThan_8V_Message[] = "checking that %d (%d) is < %d (%d) and the result should be %d\n";
-const char bDbgEqualN_Message[] = "checking that %d (%d) is equal to %d and it %d\n";
+const char bDbgEqualN_Message[] = "chg that %d (%d) is equal to %d and it %d\n";
 const char bDbgEqualV_Message[] = "checking that %d (%d) is equal to %d (%d) and it %d\n";
 const char bDbgIncrementingMessage[] = "incrementing var %d(%d) to %d\n";
 const char bDbgDecrementingMessage[] = "decrementing var %d to %d\n";
@@ -173,10 +173,21 @@ void bDbgCheckMemory()
 #endif // CHECK_MEM
 }
 
+byte previousOpCode;
 void bDbgDebugPrint(byte toPrint)
 {
 	int time;
 	int clockVal = (int)clock();
+	byte toCheck;
+
+	memCpyBanked(&toCheck, 0xA035, 9, 1);
+
+	//if (*(byte*)(0x400) == 51 && toCheck != 0)
+	//{
+	//	printf("the previous opcode was %d\n", previousOpCode);
+	//	asm("stp");
+	//}
+
 
 	if (opCounter >= opStartPrintingAt && opStartPrintingAt != 0 && (opPrintOnlyOnScript == PRINT_ALL_SCRIPTS || opPrintOnlyOnScript == currentLog))
 	{
@@ -214,6 +225,8 @@ void bDbgDebugPrint(byte toPrint)
 	}
 
 	opCounter++;
+
+	previousOpCode = toPrint;
 }
 
 void bDbgPrintFalse()

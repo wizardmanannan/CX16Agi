@@ -772,6 +772,11 @@ void b2Set_loop() // 2, 0x00
 
 	getViewTab(&localViewtab, entryNum);
 	b9SetLoop(&localViewtab, entryNum, loopNum);
+	if(var[0] == 51 && entryNum == 51)
+	{
+		asm("stp");
+		asm("lda #15");
+	}
 
 	setViewTab(&localViewtab, entryNum);
 	return;
@@ -788,6 +793,11 @@ void b2Set_loop_v() // 2, 0x40
 	loopNum = var[loadAndIncWinCode()];
 
 	b9SetLoop(&localViewtab, entryNum, loopNum);
+	if(var[0] == 51 && entryNum == 51)
+	{
+		asm("stp");
+		asm("lda #16");
+	}
 
 	setViewTab(&localViewtab, entryNum);
 	return;

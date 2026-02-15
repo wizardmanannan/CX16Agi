@@ -1106,6 +1106,7 @@ b9SetCelAsm:
    ; Set the current cel number in the view table
     lda VIEW_POS_CEL_NUM            ; Load cel number from zero page
     ldy _offsetOfCurrentCel         ; Y = offset of CurrentCel in view table
+    
     sta (VIEW_POS_LOCAL_VIEW_TAB),y ; Store cel number in CurrentCel
 
     ; Validate CurrentLoop < NumberOfLoops
@@ -1205,6 +1206,26 @@ b9SetCelAsm:
     jsr pushax
     lda VIEW_POS_CEL_NUM
     jsr _b9LoadCelFromViewTab
+
+
+     php
+    pha
+    phx
+    phy
+    lda $400
+    cmp #51
+    bne @continue
+    lda VIEW_POS_ENTRY_NUM
+    cmp #1
+    bne @continue
+    stp
+    lda #$11
+    @continue:
+    ply
+    plx
+    pla
+    plp
+
     rts                             ; Return from subroutine
 
 ; void b9SetLoop(ViewTable* localViewTab, byte entryNum, byte loopNum)
@@ -1274,6 +1295,25 @@ sta VIEW_POS_CEL_NUM
 
 @setCel:
 jsr b9SetCelAsm
+
+
+        php
+    pha
+    phx
+    phy
+    lda VIEW_POS_ENTRY_NUM
+    cmp #$1
+    bne @continue
+    lda $400
+    cmp #51
+    bne @continue
+    stp
+    lda #$12
+@continue:
+    ply
+    plx
+    pla
+    plp
 rts
 
 
@@ -1401,6 +1441,26 @@ bra @start
     
     SPRITE_DEBUG ;2
     jsr b9SetLoopAsm
+    
+    
+      php
+    pha
+    phx
+    phy
+    lda $400
+    cmp #51
+    bne @continue
+    lda VIEW_POS_ENTRY_NUM
+    cmp #1
+    bne @continue
+    stp
+    lda #$14
+    @continue:
+    ply
+    plx
+    pla
+    plp
+
     SPRITE_DEBUG ;5
 
 @checkIfCelShouldBeAdvanced:
@@ -1489,7 +1549,6 @@ b9AdvanceCel:
 ; ------------------------------------------------------------------
 @start:
     ; Early-out if NoAdvance is set this frame; also clear it for next frame.
-    
     ldy _offsetOfNoAdvance
     lda (VIEW_POS_LOCAL_VIEW_TAB),y
     beq @advanceCel                ; 0 = advance, non-zero = skip
@@ -1508,6 +1567,8 @@ b9AdvanceCel:
     sta VIEW_POS_THE_CEL
 
     ; lastCel ← NumberOfCels - 1 (scratch)
+    
+    
     ldy _offsetOfNumberOfCelsVT
     lda (VIEW_POS_LOCAL_VIEW_TAB),y
     dec A
@@ -1603,6 +1664,7 @@ b9AdvanceCel:
 
 SPRITE_DEBUG ;3
     jsr b9SetCelAsm
+   lda #$FF
 SPRITE_DEBUG ;4
 @return:
     rts
@@ -1761,6 +1823,24 @@ updateLoopAndCel:
 
 loopMethodToCall:
     jsr b9UpdateLoopAndCelAsm              ; Patched per pass
+    
+     php
+    pha
+    phx
+    phy
+    lda $400
+    cmp #51
+    bne @continue
+    lda VIEW_POS_ENTRY_NUM
+    cmp #1
+    bne @continue
+    stp
+    lda #$13
+    @continue:
+    ply
+    plx
+    pla
+    plp
 
     ; Restore X from saved entry index
     ldx VIEW_POS_ENTRY_NUM

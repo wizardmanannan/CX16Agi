@@ -143,6 +143,7 @@ void setLoadedLoop(View* loadedView, Loop* localLoop, byte localLoopNumber)
 	RAM_BANK = previousRamBank;
 }
 
+extern boolean trap, trap2;
 void getLoadedCel(Loop* loadedLoop, Cel* localCell, byte localCellNumber)
 {
 	byte previousRamBank = RAM_BANK;
@@ -150,6 +151,12 @@ void getLoadedCel(Loop* loadedLoop, Cel* localCell, byte localCellNumber)
 	RAM_BANK = loadedLoop->celsBank;
 
 	*localCell = loadedLoop->cels[localCellNumber];
+
+	//if (trap && trap2)
+	//{
+	//	printf("%d\n", localCellNumber);
+	//	asm("stp");
+	//}
 
 	RAM_BANK = previousRamBank;
 }
@@ -1490,6 +1497,7 @@ extern void bEClearVeraSprite(byte celWidth, byte celHeight);
 
 boolean trap2 = FALSE;
 extern boolean trap;
+
 /***************************************************************************
 ** agi_blit
 ***************************************************************************/
@@ -1509,17 +1517,21 @@ boolean agiBlit(ViewTable* localViewTab, byte entryNum, boolean disableInterupts
 	SpriteAllocationSize allocationWidth, allocationHeight;
 	byte combinedSpriteAllocationSize;
 
+
+
+
 	/*if (entryNum != 0)
 	{
 		return TRUE;
 	}*/
 
-	if (entryNum == 0 && trap)
+	if (entryNum == 1 && trap)
 	{
 		
 		trap2 = TRUE;
-		asm("stp");
 		asm("lda #$FE");
+		printf("%p\n", &viewtab[1].currentCel);
+		asm("stp");
 	}
 	
 	previousBank = RAM_BANK;
@@ -1627,6 +1639,163 @@ boolean agiBlit(ViewTable* localViewTab, byte entryNum, boolean disableInterupts
 
 	_assmByte = ((localViewTab->flags & MOTION > 0) && localViewTab->direction > 0) || localViewTab->staleCounter || localMetadata.isOnBackBuffer;
 	isAnimated = _assmByte;
+
+	if (trap && trap2)
+	{
+		_assmByte = isAnimated;
+		printf("%d %d %d %d", localViewTab->flags & MOTION, localViewTab->direction, localViewTab->staleCounter, localMetadata.isOnBackBuffer);
+		asm("lda #$1");
+		printf("is ani %d on bb %d viewNo %d %p address %p bank %p\n", isAnimated, localMetadata.isOnBackBuffer, localViewTab->currentView, loopVeraAddress, loopVeraAddresses, localMetadata.viewTableMetadataBank);
+		printf("address %p bank %p %p %d %d\n", loopVeraAddresses, localMetadata.viewTableMetadataBank, &loopVeraAddress, localView.maxVeraSlots, localViewTab->currentCel);		//printf("address %p\n", &loopVeraAddress);
+		printf("hello");
+		asm("stp");
+		asm("nop");
+		asm("nop");
+		asm("nop");
+		asm("nop");
+		asm("nop");
+		asm("nop");
+		asm("nop");
+		asm("nop");
+		asm("nop");
+		asm("nop");
+		asm("nop");
+		asm("nop");
+		asm("nop");
+		asm("nop");
+		asm("nop");
+		asm("nop");
+		asm("nop");
+		asm("nop");
+		asm("nop");
+		asm("nop");
+		asm("nop");
+		asm("nop");
+		asm("nop");
+		asm("nop");
+		asm("nop");
+		asm("nop");
+		asm("nop");
+		asm("nop");
+		asm("nop");
+		asm("nop");
+		asm("nop");
+		asm("nop");
+		asm("nop");
+		asm("nop");
+		asm("nop");
+		asm("nop");
+		asm("nop");
+		asm("nop");
+		asm("nop");
+		asm("nop");
+		asm("nop");
+		asm("nop");
+		asm("nop");
+		asm("nop");
+		asm("nop");
+		asm("nop");
+		asm("nop");
+		asm("nop");
+		asm("nop");
+		asm("nop");
+		asm("nop");
+		asm("nop");
+		asm("nop");
+		asm("nop");
+		asm("nop");
+		asm("nop");
+		asm("nop");
+		asm("nop");
+		asm("nop");
+		asm("nop");
+		asm("nop");
+		asm("nop");
+		asm("nop");
+		asm("nop");
+		asm("nop");
+		asm("nop");
+		asm("nop");
+		asm("nop");
+		asm("nop");
+		asm("nop");
+		asm("nop");
+		asm("nop");
+		asm("nop");
+		asm("nop");
+		asm("nop");
+		asm("nop");
+		asm("nop");
+		asm("nop");
+		asm("nop");
+		asm("nop");
+		asm("nop");
+		asm("nop");
+		asm("nop");
+		asm("nop");
+		asm("nop");
+		asm("nop");
+		asm("nop");
+		asm("nop");
+		asm("nop");
+		asm("nop");
+		asm("nop");
+		asm("nop");
+		asm("nop");
+		asm("nop");
+		asm("nop");
+		asm("nop");
+		asm("nop");
+		asm("nop");
+		asm("nop");
+		asm("nop");
+		asm("nop");
+		asm("nop");
+		asm("nop");
+		asm("nop");
+		asm("nop");
+		asm("nop");
+		asm("nop");
+		asm("nop");
+		asm("nop");
+		asm("nop");
+		asm("nop");
+		asm("nop");
+		asm("nop");
+		asm("nop");
+		asm("nop");
+		asm("nop");
+		asm("nop");
+		asm("nop");
+		asm("nop");
+		asm("nop");
+		asm("nop");
+		asm("nop");
+		asm("nop");
+		asm("nop");
+		asm("nop");
+		asm("nop");
+		asm("nop");
+		asm("nop");
+		asm("nop");
+		asm("nop");
+		asm("nop");
+		asm("nop");
+		asm("nop");
+		asm("nop");
+		asm("nop");
+		asm("nop");
+		asm("nop");
+		asm("nop");
+		asm("nop");
+		asm("nop");
+		asm("nop");
+		asm("nop");
+		asm("nop");
+		asm("nop");
+		asm("lda #$aa");
+		//asm("lda %v\n", _assmByte);
+	}
 
 	asm("lda %v", _assmByte);
 	asm("bne %g", animatedSprite);
@@ -1768,6 +1937,7 @@ setSpritesUpdatedBank:
 checkWhetherOnBackBuffer:
 	RAM_BANK = localMetadata.viewTableMetadataBank;
 	_assmByte = isAnimated & localMetadata.isOnBackBuffer;
+		
 	asm("lda %v", _assmByte);
 
 
@@ -1803,14 +1973,6 @@ updateSpriteBuffer:
 	//0 Vera Address Sprite Data Middle (Low will always be 0) (If both the first two bytes are zero that indicates the end of the buffer)
 	_assmULong = loopVeraAddress;
 	//printf("loopVeraAddress is %lx, the address is %p\n", loopVeraAddress, &loopVeraAddress);
-
-	if (trap && trap2)
-	{
-		_assmByte = isAnimated;
-		printf("%d %d %d %d", localViewTab->flags & MOTION, localViewTab->direction, localViewTab->staleCounter, localMetadata.isOnBackBuffer);
-			asm("stp");
-		//asm("lda %v\n", _assmByte);
-	}
 
 	//asm("nop");
 	asm("lda %v", _assmULong);
@@ -2643,20 +2805,26 @@ void b9SetView(byte viewNum, byte entryNum)
 	Loop localLoop;
 	Cel localCel;
 
-	viewtabPtr = &viewtab[entryNum];
+   getLoadedView(&localView, viewNum);
 
-	getLoadedView(&localView, viewNum);
+	viewtabPtr = &viewtab[entryNum];
+	viewtabPtr->currentView = viewNum;
+	viewtabPtr->numberOfLoops = localView.numberOfLoops;
+	viewtabPtr->numberOfCels = localLoop.numberOfCels;
+	viewtabPtr->xsize = localCel.width;
+	viewtabPtr->ysize = localCel.height;
+
 
 	b9SetLoop(viewtabPtr, entryNum, viewtabPtr->currentLoop >= localView.numberOfLoops ? 0 : viewtabPtr->currentLoop);
 
 	getLoadedLoop(&localView, &localLoop, viewtabPtr->currentLoop);
 	getLoadedCel(&localLoop, &localCel, viewtabPtr->currentCel);
 
-	viewtabPtr->currentView = viewNum;
-	viewtabPtr->numberOfLoops = localView.numberOfLoops;
-	viewtabPtr->numberOfCels = localLoop.numberOfCels;
-	viewtabPtr->xsize = localCel.width;
-	viewtabPtr->ysize = localCel.height;
+	if (entryNum == 1)
+	{
+		asm("stp");
+		asm("lda #$22");
+	}
 }
 
 void b9AddToPic(int vNum, int lNum, int cNum, int x, int y, int pNum, int bCol)
