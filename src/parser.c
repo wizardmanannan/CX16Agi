@@ -377,7 +377,6 @@ char** b7TokenizeWords(char* inputLine, char** tokens)
 	return tokens - 1;
 }
 
-
 /***************************************************************************
 ** b7LookupWords
 **
@@ -496,6 +495,8 @@ void b7LookupWords(char* inputLine)
 			{
 				// Save synonym number
 				b7InputWords[numInputWords] = synNum;
+
+				//printf("the synNum was %d\n", synNum);
 				// Save original spelling of the word
 				strcpy(b7WordText[numInputWords], strBuf);
 				// Count this recognized word

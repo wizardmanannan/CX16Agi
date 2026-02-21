@@ -214,6 +214,7 @@ void b6Interpret()
 
 
         executeLogic(&logicEntry, 0);
+        flag[67] = TRUE;
      
         //dirnOfEgo = var[6];
         getViewTab(&localViewtab, 0);
