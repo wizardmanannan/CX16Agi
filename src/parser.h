@@ -36,7 +36,6 @@ extern EventType b7Events[256];
 extern int numInputWords, b7InputWords[];
 extern char b7WordText[10][80];
 extern boolean haveKey;
-extern byte b7KeyState[256], b7AsciiState[256];
 extern byte b7Directions[9];
 extern int lastKey;
 
@@ -51,7 +50,6 @@ extern void b7GetEvent(EventType* event, byte eventNumber);
 extern void b7SetEvent(EventType* event, byte eventNumber);
 extern byte b7GetAsciiState(byte number);
 extern void b7GetEvent(EventType* event, byte eventNumber);
-extern byte b7GetKeyState(byte number);
 extern void b7InitEvents();
 extern void b7PollKeyboard();
 extern byte b7GetInputWord(byte number);

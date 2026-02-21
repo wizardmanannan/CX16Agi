@@ -34,7 +34,6 @@ char string[12][40];
 char b7LookupWordsBuffer[125];
 //boolean wordsAreWaiting=FALSE;
 
-byte b7KeyState[256], b7AsciiState[256];
 char b7LastLine[80];
 EventType b7Events[256];  /* controller(), set.key(), set.menu.item() */
 byte b7Directions[9] = { 0, 0, 0, 0, 0, 0, 0, 0, 0 };
@@ -60,16 +59,6 @@ void b7ActivateEvent(byte eventNumber)
 void b7SetEvent(EventType* event, byte eventNumber)
 {
 	b7Events[eventNumber] = *event;
-}
-
-byte b7GetAsciiState(byte number)
-{
-	return b7AsciiState[number];
-}
-
-byte b7GetKeyState(byte number)
-{
-	return b7KeyState[number];
 }
 
 byte b7GetInputWord(byte number)
@@ -192,9 +181,6 @@ void b7PollKeyboard()
 
 	var[19] = 0;
 
-	/* Clear keyboard buffers */
-	memset(b7KeyState, 0, 256);
-	memset(b7AsciiState, 0, 256);
 	//b1ProcessString(temp, PARSER_BANK, outputString );
 	gx = 0;
 	gy = ((user_input_line - 1) * 16) + 20;
@@ -209,10 +195,7 @@ void b7PollKeyboard()
 			var[19] = ch;
 			lastKey = ch;  /* Store key value for have.key() cmd */
 			if (ch == 0x1C) ch |= 0x0D; /* Handle keypad ENTER */
-			b7KeyState[ch] = 1;     /* Mark scancode as activated */
-			/* if ((ch & 0x00) != 0x00) asciiState[ch & 0xff] = 1; */
-			b7AsciiState[ch] = 1;
-
+		
 			//if ((ch >> 8) == KEY_F11) saveSnapShot();
 
 			/* Handle arrow keys */
