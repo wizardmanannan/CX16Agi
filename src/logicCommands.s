@@ -1,4 +1,5 @@
 .include "x16.inc"
+.include "x16.inc"
 
 ; This code is an assembly language implementation of various logic commands,
 ; functions, and macros for a game engine.
@@ -167,6 +168,8 @@ LOGICCOMMANDS_INC = 1
 .import _b5GetLogicFile
 .import _b5GetLogicEntry
 .import pushax
+.import _numInputWords
+.import _inputWords
 
 .import _b5SetLogicEntry
 
@@ -1783,7 +1786,7 @@ jmpTableIf:
 .addr b1PosnCCall
 .addr b1ControllerCCall
 .addr b1Have_keyCCall
-.addr b1SaidCCall
+.addr bFSaid
 .addr b1Compare_stringsCCall
 .addr b1Obj_in_boxCCall
 .addr b1Center_posnCCall
@@ -1959,9 +1962,136 @@ b1Have_keyCCall:
     jsr _b1Have_key
     HANDLE_C_IF_RESULT
 
-b1SaidCCall:
-    jsr _b1Said
-    HANDLE_C_IF_RESULT
+purgeArgs: ;local to the function below
+lda NO_ARGS
+asl
+sta sreg
+stz sreg + 1
+INC_CODE_BY sreg
+jmp returnFromOpCodeFalse
+rts
+bFSaid:
+REST_OF_LINE = 9999
+ANY_WORD = 1
+NO_ARGS = ZP_TMP_2
+INPUT_WORDS_COUNTER = ZP_PTR_2 + 1
+ARGS = ZP_TMP_3
+
+LOAD_CODE_WIN_CODE
+sta NO_ARGS
+INC_CODE
+
+ldx _numInputWords
+beq purgeArgs
+
+ldy #INT_FLAG_INPUT
+GET_FLAG_NON_INTERPRETER sreg
+beq purgeArgs
+
+ldy #INT_FLAG_HAD_MATCH
+GET_FLAG_NON_INTERPRETER sreg
+beq @setupInputWordsZp
+jmp purgeArgs
+
+@setupInputWordsZp:
+lda _numInputWords
+asl
+sta INPUT_WORDS_COUNTER
+
+ldx #$0
+@numberWordsLoopCheck:
+cpx _numInputWords
+bcc @numberWordsLoopBody
+jmp @checkWordNumbersCount
+@numberWordsLoopBody:
+
+LOAD_CODE_WIN_CODE
+sta ARGS
+INC_CODE
+LOAD_CODE_WIN_CODE
+sta ARGS + 1
+INC_CODE
+
+@checkRestOfLine:
+lda ARGS + 1
+cmp _inputWords,x
+bne @checkRecognisedWordCount + 1
+
+lda ARGS
+cmp _inputWords,x
+bne @checkRecognisedWordCount
+
+lda #INT_FLAG_INPUT
+SET_FLAG_NON_INTERPRETER sreg
+jmp @incrementByUnusedWordsTrue
+
+@checkRecognisedWordCount:
+cpx INPUT_WORDS_COUNTER
+bcc @checkWordMatch
+jmp @incrementByUnusedWordsFalse
+
+@checkWordMatch:
+lda ARGS + 1
+cmp _inputWords + 1,x
+beq @checkLowByte
+tay
+bne @incrementByUnusedWordsFalse ;No point checking any word if this byte is non zero, as anyword is 1
+
+@checkAnyWord:
+cpy #ANY_WORD
+beq @incrementLoopCounter
+bra @incrementByUnusedWordsFalse
+
+@checkLowByte:
+ldy _inputWords,x
+cmp ARGS
+bne @checkAnyWord
+bra @incrementLoopCounter
+
+
+@incrementByUnusedWordsFalse:
+inx
+inx
+stx sreg
+sec
+lda NO_ARGS
+sbc sreg
+sta sreg
+INC_CODE_BY sreg
+jmp returnFromOpCodeFalse
+
+@incrementLoopCounter:
+inx
+inx
+cpx NO_ARGS
+bcs @checkWordNumbersCount
+jmp @numberWordsLoopBody
+
+
+@checkWordNumbersCount:
+cpx INPUT_WORDS_COUNTER
+bcc @mismatchedArgs
+beq @mismatchedArgs
+
+@matched:
+lda #INT_FLAG_INPUT
+SET_FLAG_NON_INTERPRETER sreg
+jmp returnFromOpCodeTrue
+
+@mismatchedArgs:
+jmp returnFromOpCodeFalse 
+
+
+@incrementByUnusedWordsTrue:
+inx
+inx
+stx sreg
+sec
+lda NO_ARGS
+sbc sreg
+sta sreg
+INC_CODE_BY sreg
+jmp returnFromOpCodeFalse
 
 b1Compare_stringsCCall:
     jsr _b1Compare_strings

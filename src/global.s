@@ -741,29 +741,40 @@ SET_VAR_OFFSET = GOLDEN_RAM + VARS_AREA_START_GOLDEN_OFFSET
         sta (ZP),y    
 .endmacro
 
-SET_FLAG_OFFSET = GOLDEN_RAM + FLAGS_AREA_START_GOLDEN_OFFSET
+FLAG_OFFSET = GOLDEN_RAM + FLAGS_AREA_START_GOLDEN_OFFSET
 ;For setting a flag, outside of the interpreter. Can still be called by an interpreter command, but doesn't affect or know about the current interpreter state.
 ;Requires the flag number in 'A'
 ;Requires a ZP passed in as a param, which will be used internally to set the address of the var
 .macro SET_FLAG_NON_INTERPRETER ZP
         tay
-        lda #<SET_FLAG_OFFSET
+        lda #<FLAG_OFFSET
         sta ZP
-        lda #>SET_FLAG_OFFSET
+        lda #>FLAG_OFFSET
         sta ZP + 1
 
         lda #$1
         sta (ZP),y
 .endmacro
 
+
+.macro GET_FLAG_NON_INTERPRETER ZP
+        lda #<FLAG_OFFSET
+        sta ZP
+        lda #>FLAG_OFFSET
+        sta ZP + 1
+
+        lda (ZP),y
+.endmacro
+
+
 ;For resetting a flag, outside of the interpreter. Can still be called by an interpreter command, but doesn't affect or know about the current interpreter state.
 ;Requires the flag number in 'A'
 ;Requires a ZP passed in as a param, which will be used internally to set the address of the var
 .macro RESET_FLAG_NON_INTERPRETER ZP
         tay
-        lda #<SET_FLAG_OFFSET
+        lda #<FLAG_OFFSET
         sta ZP
-        lda #>SET_FLAG_OFFSET
+        lda #>FLAG_OFFSET
         sta ZP + 1
 
         lda #$0
@@ -794,13 +805,17 @@ EGODIR = 6
 PSG_REGISTERS = $1F9C0
 FIRST_PSG_VOL_REGISTER = $1F9C2
 
-;Flags
+;Sprite Flags
 FLAG_ON_WATER = 0
 FLAG_HIT_SPECIAL = 3
 
 ;Control
 PLAYER_CONTROL = 0
 PROGRAM_CONTROL = 1
+
+;Interpreter Flags
+INT_FLAG_INPUT = 2
+INT_FLAG_HAD_MATCH = 4
 
 .segment "ZEROPAGE"
 sreg2: .res 2

@@ -33,7 +33,7 @@ typedef struct {
 
 extern EventType b7Events[256];
 
-extern int numInputWords, b7InputWords[];
+extern int numInputWords, inputWords[];
 extern char b7WordText[10][80];
 extern boolean haveKey;
 extern byte b7Directions[9];
