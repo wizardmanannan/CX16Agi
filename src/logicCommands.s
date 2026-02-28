@@ -2057,6 +2057,7 @@ sec
 lda NO_ARGS
 sbc sreg
 sta sreg
+stz sreg + 1
 INC_CODE_BY sreg
 jmp returnFromOpCodeFalse
 
@@ -2090,6 +2091,7 @@ sec
 lda NO_ARGS
 sbc sreg
 sta sreg
+stz sreg + 1
 INC_CODE_BY sreg
 jmp returnFromOpCodeFalse
 
