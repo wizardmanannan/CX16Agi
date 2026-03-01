@@ -2082,10 +2082,9 @@ jmp @numberWordsLoopBody
 @checkWordNumbersCount:
 cpx WORDS_COUNTER
 bcc @mismatchedArgs
-beq @mismatchedArgs
 
 @matched:
-lda #INT_FLAG_INPUT
+lda #INT_FLAG_HAD_MATCH
 SET_FLAG_NON_INTERPRETER sreg
 jmp returnFromOpCodeTrue
 
