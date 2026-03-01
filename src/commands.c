@@ -1881,6 +1881,8 @@ void b4Parse() // 1, 0x00
 	int stringNum;
 	size_t length;
 	char* stringToParse;
+	flag[2] = FALSE;
+    flag[4] = FALSE;
 
 	stringToParse = b7GetInternalStringPtr(stringNum, &length);
 

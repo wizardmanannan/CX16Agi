@@ -180,6 +180,9 @@ void b7PollKeyboard()
 	int ch, dummy, gx, gy;
 
 	var[19] = 0;
+	var[2] = FALSE;
+	var[4] = FALSE;
+	var[9] = 0;
 
 	//b1ProcessString(temp, PARSER_BANK, outputString );
 	gx = 0;
@@ -477,6 +480,7 @@ void b7LookupWords(char* inputLine)
 			// If synonym number is non-zero, store it
 			if (synNum)
 			{
+				flag[2] = TRUE;
 				// Save synonym number
 				inputWords[numInputWords] = synNum;
 				// Save original spelling of the word

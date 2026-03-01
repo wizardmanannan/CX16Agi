@@ -1962,14 +1962,16 @@ b1Have_keyCCall:
     jsr _b1Have_key
     HANDLE_C_IF_RESULT
 
-purgeArgs: ;local to the function below
+
+.macro PURGE_ARGS
 lda NO_ARGS
 asl
 sta sreg
 stz sreg + 1
 INC_CODE_BY sreg
 jmp returnFromOpCodeFalse
-rts
+.endmacro
+
 bFSaid:
 REST_OF_LINE = 9999
 ANY_WORD = 1
@@ -1982,16 +1984,19 @@ sta NO_ARGS
 INC_CODE
 
 ldx _numInputWords
-beq purgeArgs
+bne @inputExists
 
+@purgeArgs:
+PURGE_ARGS
+@inputExists:
 ldy #INT_FLAG_INPUT
 GET_FLAG_NON_INTERPRETER sreg
-beq purgeArgs
+beq @purgeArgs
 
 ldy #INT_FLAG_HAD_MATCH
 GET_FLAG_NON_INTERPRETER sreg
 beq @setupInputWordsZp
-jmp purgeArgs
+jmp @purgeArgs
 
 @setupInputWordsZp:
 lda _numInputWords

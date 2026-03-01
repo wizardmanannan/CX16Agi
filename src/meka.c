@@ -209,6 +209,8 @@ void b6Interpret()
         b6UpdateStatusLine();
         var[5] = 0;
         var[4] = 0;
+        flag[2] = FALSE;
+        var[9] = 0;
 
         if (!hasEnteredNewRoom)
         {
