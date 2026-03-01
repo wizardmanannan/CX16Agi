@@ -2074,7 +2074,7 @@ jmp returnFromOpCodeFalse
 @incrementLoopCounter:
 inx
 inx
-cpx NO_ARGS
+cpx WORDS_COUNTER
 bcs @checkWordNumbersCount
 jmp @numberWordsLoopBody
 
