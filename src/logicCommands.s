@@ -2080,7 +2080,9 @@ jmp @numberWordsLoopBody
 
 
 @checkWordNumbersCount:
-cpx WORDS_COUNTER
+txa
+lsr
+cmp _numInputWords
 bcc @mismatchedArgs
 
 @matched:
