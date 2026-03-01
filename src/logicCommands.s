@@ -1976,7 +1976,7 @@ bFSaid:
 REST_OF_LINE = 9999
 ANY_WORD = 1
 NO_ARGS = ZP_TMP_2
-INPUT_WORDS_COUNTER = ZP_PTR_2 + 1
+WORDS_COUNTER = ZP_PTR_2 + 1
 ARGS = ZP_TMP_3
 
 LOAD_CODE_WIN_CODE
@@ -1996,16 +1996,16 @@ beq @purgeArgs
 ldy #INT_FLAG_HAD_MATCH
 GET_FLAG_NON_INTERPRETER sreg
 beq @setupInputWordsZp
-jmp @purgeArgs
+PURGE_ARGS
 
 @setupInputWordsZp:
-lda _numInputWords
+lda NO_ARGS
 asl
-sta INPUT_WORDS_COUNTER
+sta WORDS_COUNTER
 
 ldx #$0
 @numberWordsLoopCheck:
-cpx _numInputWords
+cpx WORDS_COUNTER
 bcc @numberWordsLoopBody
 jmp @checkWordNumbersCount
 @numberWordsLoopBody:
@@ -2019,11 +2019,12 @@ INC_CODE
 
 @checkRestOfLine:
 lda ARGS + 1
-cmp _inputWords,x
-bne @checkRecognisedWordCount + 1
+beq @checkRecognisedWordCount ;If the first byte is zero it can't be equal to rest of line, skip check
+cmp #>REST_OF_LINE
+bne @checkRecognisedWordCount
 
 lda ARGS
-cmp _inputWords,x
+cmp #<REST_OF_LINE
 bne @checkRecognisedWordCount
 
 lda #INT_FLAG_INPUT
@@ -2031,7 +2032,7 @@ SET_FLAG_NON_INTERPRETER sreg
 jmp @incrementByUnusedWordsTrue
 
 @checkRecognisedWordCount:
-cpx INPUT_WORDS_COUNTER
+cpx WORDS_COUNTER
 bcc @checkWordMatch
 jmp @incrementByUnusedWordsFalse
 
@@ -2043,12 +2044,13 @@ tay
 bne @incrementByUnusedWordsFalse ;No point checking any word if this byte is non zero, as anyword is 1
 
 @checkAnyWord:
-cpy #ANY_WORD
+lda ARGS
+cmp #ANY_WORD
 beq @incrementLoopCounter
 bra @incrementByUnusedWordsFalse
 
 @checkLowByte:
-ldy _inputWords,x
+lda _inputWords,x
 cmp ARGS
 bne @checkAnyWord
 bra @incrementLoopCounter
@@ -2058,12 +2060,15 @@ bra @incrementLoopCounter
 inx
 inx
 stx sreg
-sec
 lda NO_ARGS
+asl
+sec
 sbc sreg
 sta sreg
 stz sreg + 1
+beq @returnFromOpCodeFalseJmp
 INC_CODE_BY sreg
+@returnFromOpCodeFalseJmp:
 jmp returnFromOpCodeFalse
 
 @incrementLoopCounter:
@@ -2075,7 +2080,7 @@ jmp @numberWordsLoopBody
 
 
 @checkWordNumbersCount:
-cpx INPUT_WORDS_COUNTER
+cpx WORDS_COUNTER
 bcc @mismatchedArgs
 beq @mismatchedArgs
 
