@@ -2083,15 +2083,17 @@ jmp @numberWordsLoopBody
 txa
 lsr
 cmp _numInputWords
-bcc @mismatchedArgs
+beq @matched
+
+@mismatchedArgs:
+jmp returnFromOpCodeFalse 
 
 @matched:
 lda #INT_FLAG_HAD_MATCH
 SET_FLAG_NON_INTERPRETER sreg
 jmp returnFromOpCodeTrue
 
-@mismatchedArgs:
-jmp returnFromOpCodeFalse 
+
 
 
 @incrementByUnusedWordsTrue:
