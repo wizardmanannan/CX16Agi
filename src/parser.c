@@ -180,8 +180,8 @@ void b7PollKeyboard()
 	int ch, dummy, gx, gy;
 
 	var[19] = 0;
-	var[2] = FALSE;
-	var[4] = FALSE;
+	flag[2] = FALSE;
+	flag[4] = FALSE;
 	var[9] = 0;
 
 	//b1ProcessString(temp, PARSER_BANK, outputString );
