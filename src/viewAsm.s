@@ -1134,11 +1134,8 @@ b9SetCelAsm:
     ; Check Y-axis border collision: YPos - YSize < Defines.MINY - 1 (assumed 255)
     ldy _offsetOfYPos
     lda (VIEW_POS_LOCAL_VIEW_TAB),y
-    clc
-    adc #2
     ldy _offsetOfYSize
     cmp (VIEW_POS_LOCAL_VIEW_TAB),y
-    beq @setRepositionedBasedOnY
     bcs @return
 
 @setRepositionedBasedOnY:
