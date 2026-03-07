@@ -1132,6 +1132,22 @@ b9SetCelAsm:
 
 @checkY:
     ; Check Y-axis border collision: YPos - YSize < Defines.MINY - 1 (assumed 255)
+    
+    ; php
+    ; pha
+    ; phx
+    ; phy
+    ; .import _trap
+    ; lda _trap
+    ; beq @continue
+    ; stp
+    ; @continue:
+    ; ply
+    ; plx
+    ; pla
+    ; plp
+
+    
     ldy _offsetOfYPos
     lda (VIEW_POS_LOCAL_VIEW_TAB),y
     ldy _offsetOfYSize
