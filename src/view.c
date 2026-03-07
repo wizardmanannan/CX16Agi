@@ -2618,8 +2618,8 @@ void b9SetView(byte viewNum, byte entryNum)
 	viewtabPtr = &viewtab[entryNum];
 
 	getLoadedView(&localView, viewNum);
-	getLoadedLoop(&localView, &localLoop, viewtabPtr->currentLoop);
-	getLoadedCel(&localLoop, &localCel, viewtabPtr->currentCel);
+	getLoadedLoop(&localView, &localLoop, viewtabPtr->currentLoop >= localView.numberOfLoops ? 0 : viewtabPtr->currentLoop);
+	getLoadedCel(&localLoop, &localCel, viewtabPtr->currentCel >= localLoop.numberOfCels ? 0 : viewtabPtr->currentCel);
 
 	viewtabPtr->currentView = viewNum;
 	viewtabPtr->numberOfLoops = localView.numberOfLoops;
