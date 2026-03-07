@@ -2618,6 +2618,8 @@ void b9SetView(byte viewNum, byte entryNum)
 	viewtabPtr = &viewtab[entryNum];
 
 	getLoadedView(&localView, viewNum);
+	getLoadedLoop(&localView, &localLoop, viewtabPtr->currentLoop >= localView.numberOfLoops ? 0 : viewtabPtr->currentLoop);
+	getLoadedCel(&localLoop, &localCel, viewtabPtr->currentCel >= localLoop.numberOfCels ? 0 : viewtabPtr->currentCel);
 
 	viewtabPtr->currentView = viewNum;
 	viewtabPtr->numberOfLoops = localView.numberOfLoops;
@@ -2626,9 +2628,6 @@ void b9SetView(byte viewNum, byte entryNum)
 	viewtabPtr->ysize = localCel.height;
 
 	b9SetLoop(viewtabPtr, entryNum, viewtabPtr->currentLoop >= localView.numberOfLoops ? 0 : viewtabPtr->currentLoop);
-
-	getLoadedLoop(&localView, &localLoop, viewtabPtr->currentLoop);
-	getLoadedCel(&localLoop, &localCel, viewtabPtr->currentCel);
 }
 
 void b9AddToPic(int vNum, int lNum, int cNum, int x, int y, int pNum, int bCol)
