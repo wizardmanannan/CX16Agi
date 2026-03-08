@@ -281,7 +281,9 @@ boolean b1Has() // 1, 0x00
 
 	bDGetObject(loadAndIncWinCode(), &objectType);
 
-	return (objectType.roomNum == 255);
+	asm("stp");
+
+	return (TRUE);
 }
 
 boolean b1Obj_in_room() // 2, 0x40 
@@ -361,6 +363,9 @@ boolean b1Have_key() // 0, 0x00
 	return key;
 }
 
+
+byte trap = FALSE;
+extern long opStartPrintingAt;
 boolean b1Said()
 {
 	int numOfArgs, wordNum, argValue;
@@ -371,6 +376,19 @@ boolean b1Said()
 
 	if ((flag[2] == 0) || (flag[4] == 1)) {  /* Not valid input waiting */
 		incCodeBy(numOfArgs * 2); /* Jump over arguments */
+
+		if (trap)
+		{
+			argLo = loadAndIncWinCode();
+			argHi = loadAndIncWinCode();
+
+			printf("the address of flag is %p\n", &flag[0]);
+			asm("stp");
+			asm("nop");
+			asm("nop");
+			asm("nop");
+		}
+
 		return FALSE;
 	}
 
@@ -387,6 +405,9 @@ boolean b1Said()
 	if ((numInputWords != numOfArgs) && (argValue != 9999)) return FALSE;
 
 	if (wordsMatch) {
+		opStartPrintingAt = 1;
+		trap = TRUE;
+		
 		flag[4] = TRUE;    /* said() accepted input */
 		numInputWords = 0;
 		flag[2] = FALSE;   /* not sure about this one */

@@ -162,7 +162,7 @@ void b6UpdateStatusLine()
 extern void b9AnimateObjects(); 
 extern void b9UpdateObjectDirections();
 #pragma wrapped-call (pop)
-
+boolean set = FALSE;
 /***************************************************************************
 ** interpret
 **
@@ -171,10 +171,15 @@ extern void b9UpdateObjectDirections();
 ***************************************************************************/
 void b6Interpret()
 {
+    ViewTable viewtab;
     int i;
     ViewTable localViewtab;
     LOGICFile logicFile;
     LOGICEntry logicEntry;
+
+
+    getViewTab(&viewtab, 0);
+
     flag[2] = FALSE;   //The player has issued a command line
     flag[4] = FALSE;   //The 'said' command has accepted the input
     b7PollKeyboard();
@@ -198,9 +203,19 @@ void b6Interpret()
         exitAllLogics = FALSE;
 
         b9UpdateObjectDirections();
-   
-        executeLogic(&logicEntry, 0);
 
+        if (var[0] == 53 && !set)
+        {
+            viewtab.flags = localViewtab.flags | IGNOREBLOCKS;
+            setViewTab(&localViewtab, 0);
+            set = TRUE;
+        }
+
+
+
+        executeLogic(&logicEntry, 0);
+        flag[67] = TRUE;
+     
         //dirnOfEgo = var[6];
         getViewTab(&localViewtab, 0);
         localViewtab.direction = var[6];

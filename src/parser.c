@@ -363,7 +363,6 @@ char** b7TokenizeWords(char* inputLine, char** tokens)
 	return tokens - 1;
 }
 
-
 /***************************************************************************
 ** b7LookupWords
 **

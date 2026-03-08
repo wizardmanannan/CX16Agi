@@ -119,6 +119,10 @@ void bDLoadObjectFile()
         index = *(marker)+256 * (*(marker + 1)) + 3;
         bDObjects[objNum].name = (char*) &bDObjData[index];
         bDObjects[objNum].roomNum = *(marker + 2);
+        if (objNum == 1)
+        {
+            bDObjects[objNum].roomNum = 255;
+        }
     }
 }
 #pragma code-name (pop)
