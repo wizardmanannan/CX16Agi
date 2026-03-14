@@ -594,6 +594,8 @@ jmp @widthLoop
 @checkHeightLoopCondition: ;Getting ready for the next line
 INCREMENT_SEGMENT ;Add a zero on the end of the line
 
+jsr bCPadUnusedSegmentsForLine ; Pad unused segments for this row with zeros
+
 inc ROWS_SO_FAR ;Stop when we have processed all of the rows
 lda ROWS_SO_FAR
 cmp SPLIT_CEL_HEIGHT
@@ -611,9 +613,6 @@ bra @repeatForNextRow
 inc HEIGHT_SEG_COUNTER
 
 @repeatForNextRow:
-
-jsr bCPadUnusedSegmentsForLine ; Pad unused segments for this row with zeros
-
 lda #$0
 sta WIDTH_SEG_COUNTER ;Go back to the first width segment, for a new row
 jsr _bCSetSegmentPointer ;Set the segment pointer for this new row, and column 0
