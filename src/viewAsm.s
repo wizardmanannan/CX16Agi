@@ -67,7 +67,9 @@ VIEW_POS_LOOP_NUM = ZP_TMP_13
 VIEW_POS_THE_CEL = ZP_TMP_14 + 1
 VIEW_POS_LAST_CEL = ZP_TMP_16
 UPDATE_OBJ_NUM_OBJS = ZP_TMP_16 + 1
-
+UPDATE_OBJ_M1 = ZP_TMP_17
+UPDATE_OBJ = ZP_TMP_18
+UPDATE_OBJ_I = ZP_TMP_19
 
 .segment "CODE"
 .ifdef SPRITE_DEBUG
@@ -1595,9 +1597,64 @@ sta loopMethodToCall + 2
 jsr b9LoopThroughAnimatedObjects
 
 lsr UPDATE_OBJ_NUM_OBJS
+beq @exit
+
 ldx #$1
 
+@outerLoopCheck:
+stp
+cpx UPDATE_OBJ_NUM_OBJS
+bcs @outerLoopEnd
 
+stx UPDATE_OBJ_I
+
+@innerLoopCheck:
+cpx #$0
+beq @innerLoopEnd
+
+txa
+asl
+tay
+
+lda b9ObjectList - 2,y
+sta UPDATE_OBJ_M1
+lda b9ObjectList - 1, y
+sta UPDATE_OBJ_M1 + 1
+
+lda b9ObjectList,y
+sta UPDATE_OBJ
+lda b9ObjectList + 1,y
+sta UPDATE_OBJ + 1
+
+sty sreg
+ldy _offsetOfPriority
+lda (UPDATE_OBJ),y
+cmp (UPDATE_OBJ_M1),y
+ldy sreg
+
+bcc @innerLoopEnd
+;beq tiebreak
+
+lda UPDATE_OBJ_M1
+sta b9ObjectList,y
+lda UPDATE_OBJ_M1 + 1
+sta b9ObjectList + 1, y
+
+lda UPDATE_OBJ
+sta b9ObjectList - 2,y
+lda UPDATE_OBJ + 1
+sta b9ObjectList - 1, y
+
+dex
+bra @innerLoopCheck
+
+@innerLoopEnd:
+ldx UPDATE_OBJ_I
+inx
+bra @outerLoopCheck
+@outerLoopEnd:
+
+@exit:
 rts
 
 b9PrepareUpdateObjectsList:
