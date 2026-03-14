@@ -66,7 +66,7 @@ VIEW_POS_CEL_NUM = ZP_TMP_12 + 1
 VIEW_POS_LOOP_NUM = ZP_TMP_13
 VIEW_POS_THE_CEL = ZP_TMP_14 + 1
 VIEW_POS_LAST_CEL = ZP_TMP_16
-VIEW_POS_ANIMATED_OBJECTS_COUNTER = ZP_TMP_16 + 1
+UPDATE_OBJ_NUM_OBJS = ZP_TMP_16 + 1
 
 
 .segment "CODE"
@@ -1582,6 +1582,36 @@ SPRITE_DEBUG ;4
 @return:
     rts
 .endscope
+b9ObjectList: .word VIEW_TABLE_SIZE + 1
+
+b9UpdateObjects:
+stz UPDATE_OBJ_NUM_OBJS
+
+lda #<b9PrepareUpdateObjectsList
+sta loopMethodToCall + 1
+lda #>b9PrepareUpdateObjectsList
+sta loopMethodToCall + 2
+
+jsr b9LoopThroughAnimatedObjects
+
+lsr UPDATE_OBJ_NUM_OBJS
+ldx #$1
+
+
+rts
+
+b9PrepareUpdateObjectsList:
+ldy UPDATE_OBJ_NUM_OBJS
+
+lda VIEW_POS_LOCAL_VIEW_TAB
+sta b9ObjectList,y 
+lda VIEW_POS_LOCAL_VIEW_TAB + 1
+sta b9ObjectList + 1,y
+
+iny
+iny
+sty UPDATE_OBJ_NUM_OBJS
+rts
 
 ; _b9AnimateObjects
 ; ----------------
@@ -1657,7 +1687,7 @@ _b9AnimateObjects:
     SPRITE_DEBUG ;14
 
 
-    TRAMPOLINE #UPDATE_OBJECTS_BANK, _bBUpdateObjects
+    jsr b9UpdateObjects
 
     ; --- Final: clear Ego land/water bits (StayOnLand/StayOnWater) ---
     lda #<_viewtab
