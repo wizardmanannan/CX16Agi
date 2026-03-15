@@ -1505,7 +1505,7 @@ boolean agiBlit(ViewTable* localViewTab, byte entryNum, boolean disableInterupts
 	byte isAnimated = FALSE;
 	SpriteAllocationSize allocationWidth, allocationHeight;
 	byte combinedSpriteAllocationSize;
-
+		
 	previousBank = RAM_BANK;
 	RAM_BANK = SPRITE_METADATA_BANK;
 
@@ -2073,10 +2073,10 @@ void bAResetViewtabs(boolean fullReset)
 		{
 			localViewtab.xPos = 0;
 			localViewtab.yPos = 0;
-			localViewtab.viewData = NULL;
 			localViewtab.currentCel = 0;
 			localViewtab.currentLoop = 0;
 			localViewtab.currentView = 0;
+			localViewtab.entryNum = entryNum;
 			localViewtab.direction = 0;
 			localViewtab.param1 = 0;
 			localViewtab.param2 = 0;
