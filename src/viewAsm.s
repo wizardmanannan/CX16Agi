@@ -70,6 +70,7 @@ UPDATE_OBJ_NUM_OBJS = ZP_TMP_16 + 1
 UPDATE_OBJ_M1 = ZP_TMP_17
 UPDATE_OBJ = ZP_TMP_18
 UPDATE_OBJ_I = ZP_TMP_19
+UPDATE_OBJ_J = ZP_TMP_19 + 1
 
 .segment "CODE"
 .ifdef SPRITE_DEBUG
@@ -1602,7 +1603,6 @@ beq @exit
 ldx #$1
 
 @outerLoopCheck:
-stp
 cpx UPDATE_OBJ_NUM_OBJS
 bcs @outerLoopEnd
 
@@ -1626,15 +1626,15 @@ sta UPDATE_OBJ
 lda b9ObjectList + 1,y
 sta UPDATE_OBJ + 1
 
-sty sreg
+sty UPDATE_OBJ_J
 ldy _offsetOfPriority
 lda (UPDATE_OBJ),y
 cmp (UPDATE_OBJ_M1),y
-ldy sreg
-
 bcc @innerLoopEnd
-;beq tiebreak
+beq @tieBreak
 
+@swap:
+ldy UPDATE_OBJ_J
 lda UPDATE_OBJ_M1
 sta b9ObjectList,y
 lda UPDATE_OBJ_M1 + 1
@@ -1653,9 +1653,46 @@ ldx UPDATE_OBJ_I
 inx
 bra @outerLoopCheck
 @outerLoopEnd:
-
 @exit:
 rts
+@tieBreak:
+phx
+lda UPDATE_OBJ
+sta sreg
+lda UPDATE_OBJ + 1
+sta sreg + 1
+jsr @getY
+sta sreg2
+lda UPDATE_OBJ_M1
+sta sreg
+lda UPDATE_OBJ_M1 + 1
+sta sreg + 1
+jsr @getY
+sta sreg2 + 1
+
+plx
+
+lda sreg2 + 1
+cmp sreg2
+
+bcs @innerLoopEnd
+bcc @swap
+
+@getY:
+ldy _offsetOfYPos
+lda (sreg),y
+tax
+
+ldy _offsetOfFlags
+lda (sreg),y
+and #FIXEDPRIORITY
+bne @getPriorityBase
+txa
+rts
+@getPriorityBase:
+lda _b9PreComputedPriority,x
+rts
+
 
 b9PrepareUpdateObjectsList:
 ldy UPDATE_OBJ_NUM_OBJS
