@@ -1,4 +1,5 @@
 .include "x16.inc"
+.include "x16.inc"
 
 .ifndef  VIEW_INC
 VIEW_INC = 1
@@ -36,6 +37,9 @@ VIEW_INC = 1
 .import _bADetermineMovement
 .import _b11GetNumberOfCels
 .import _offsetOfCurrentView
+.import _bETerminateSpriteBuffer
+.import _agiBlit
+.import _offsetOfEntryNum
 
 .ifdef SPRITE_DEBUG
 .import _bSdRunNumber
@@ -48,6 +52,8 @@ VIEW_INC = 1
 VIEW_POS_LOCAL_VIEW_TAB: .word $0
 VIEW_POS_ENTRY_NUM: .byte $0
 VIEW_POS_NEW_LOOP: .byte $0
+UPDATE_OBJ_NUM_OBJS: .byte $0
+UPDATE_OBJECTS_COUNTER: .byte $0
 .segment "CODE"
 
 VIEW_POS_LOCAL_VIEW_FLAGS = ZP_TMP_4
@@ -66,11 +72,10 @@ VIEW_POS_CEL_NUM = ZP_TMP_12 + 1
 VIEW_POS_LOOP_NUM = ZP_TMP_13
 VIEW_POS_THE_CEL = ZP_TMP_14 + 1
 VIEW_POS_LAST_CEL = ZP_TMP_16
-UPDATE_OBJ_NUM_OBJS = ZP_TMP_16 + 1
+UPDATE_OBJ_I = ZP_TMP_16 + 1
 UPDATE_OBJ_M1 = ZP_TMP_17
 UPDATE_OBJ = ZP_TMP_18
-UPDATE_OBJ_I = ZP_TMP_19
-UPDATE_OBJ_J = ZP_TMP_19 + 1
+UPDATE_OBJ_J = ZP_TMP_19
 
 .segment "CODE"
 .ifdef SPRITE_DEBUG
@@ -1585,7 +1590,7 @@ SPRITE_DEBUG ;4
 @return:
     rts
 .endscope
-b9ObjectList: .word VIEW_TABLE_SIZE + 1
+b9ObjectList: .res VIEW_TABLE_SIZE * 2
 
 b9UpdateObjects:
 stz UPDATE_OBJ_NUM_OBJS
@@ -1594,6 +1599,8 @@ lda #<b9PrepareUpdateObjectsList
 sta loopMethodToCall + 1
 lda #>b9PrepareUpdateObjectsList
 sta loopMethodToCall + 2
+
+sei
 
 jsr b9LoopThroughAnimatedObjects
 
@@ -1626,6 +1633,7 @@ sta UPDATE_OBJ
 lda b9ObjectList + 1,y
 sta UPDATE_OBJ + 1
 
+SPRITE_DEBUG_NEXT_RUN
 sty UPDATE_OBJ_J
 ldy _offsetOfPriority
 lda (UPDATE_OBJ),y
@@ -1653,7 +1661,12 @@ ldx UPDATE_OBJ_I
 inx
 bra @outerLoopCheck
 @outerLoopEnd:
+
+jsr b9AgiBlitLoop
 @exit:
+
+JSRFAR _bETerminateSpriteBuffer, SPRITE_UPDATES_BANK
+REENABLE_INTERRUPTS
 rts
 @tieBreak:
 phx
@@ -1691,6 +1704,37 @@ txa
 rts
 @getPriorityBase:
 lda _b9PreComputedPriority,x
+rts
+
+b9AgiBlitLoop:
+stz UPDATE_OBJECTS_COUNTER
+
+lda UPDATE_OBJ_NUM_OBJS
+asl 
+sta UPDATE_OBJ_NUM_OBJS
+
+ldy #$0
+@agiBlitLoopDo:
+lda b9ObjectList,y
+sta sreg
+lda b9ObjectList + 1,y
+sta sreg + 1
+ldy _offsetOfEntryNum
+lda (sreg),y
+jsr pusha
+lda #$0
+
+jsr _agiBlit
+
+@agiBlitLoopWhile:
+ldy UPDATE_OBJECTS_COUNTER
+iny
+iny 
+sty UPDATE_OBJECTS_COUNTER
+
+cpy UPDATE_OBJ_NUM_OBJS
+bcc @agiBlitLoopDo
+
 rts
 
 
