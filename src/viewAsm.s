@@ -48,6 +48,7 @@ VIEW_INC = 1
 VIEW_POS_LOCAL_VIEW_TAB: .word $0
 VIEW_POS_ENTRY_NUM: .byte $0
 VIEW_POS_NEW_LOOP: .byte $0
+LOOP_THROUGH_ANIMATED_CONDITION: .byte $0
 .segment "CODE"
 
 VIEW_POS_LOCAL_VIEW_FLAGS = ZP_TMP_4
@@ -1631,6 +1632,7 @@ _b9AnimateObjects:
     lda #>b9UpdateLoopAndCelAsm
     sta loopMethodToCall + 2
     
+    lda #ANIMATED | UPDATE | DRAWN
     jsr b9LoopThroughAnimatedObjects
     SPRITE_DEBUG ;8
 
@@ -1653,6 +1655,8 @@ _b9AnimateObjects:
     sta loopMethodToCall + 1
     lda #>b9UpdatePositionAsm
     sta loopMethodToCall + 2
+
+    lda #ANIMATED | UPDATE | DRAWN
     jsr b9LoopThroughAnimatedObjects
     SPRITE_DEBUG ;14
 
@@ -1687,30 +1691,27 @@ TRAMPOLINE #MOVEMENT_BANK, _bADetermineMovement
 @return:
 rts
 
-; b9LoopThroughAnimatedObjects
-; -----------------------------
+; void b9LoopThroughAnimatedObjects(uint8_t requiredFlagsMask)
+; -----------------------------------------------------------------------------
 ; Purpose:
-;   Iterate the 256-entry view table and invoke the method currently
-;   patched into loopMethodToCall for each object whose flags include
-;   ANIMATED | UPDATE | DRAWN.
+; Iterate over the view table (VIEW_TABLE_SIZE entries, currently 20).
 ;
-; Parity:
-;   Matches the two foreach-loops in C# AnimateObjects().
+; For each view object:
+;   - Load its flags byte at offset _offsetOfFlags
+;   - AND it with the value in LOOP_THROUGH_ANIMATED_CONDITION
+;   - If the result exactly equals LOOP_THROUGH_ANIMATED_CONDITION,
+;     then the object matches → proceed to call the per-object routine
+;   - Otherwise, skip to the next entry
 ;
-; Calling/Assumptions:
-;   - loopMethodToCall contains address of routine to invoke.
-;   - VIEW_POS_LOCAL_VIEW_TAB points into view table.
-;   - _sizeOfViewTab is entry stride.
+; The actual processing for matching objects is performed by the routine
+; whose address is currently patched into the jsr instruction at loopMethodToCall.
+; This address is dynamically updated by the caller depending on the processing
+; phase/pass (e.g. update position & cel, draw, animate cycle, etc.).
 ;
-; Inputs:
-;   - _viewtab, _offsetOfFlags, loopMethodToCall.
-;
-; Outputs/Side Effects:
-;   - Calls the target routine for each qualifying object.
-;   - Uses VIEW_POS_ENTRY_NUM as temporary to preserve X across call.
-; -------------------------------------------------------------------
-
 b9LoopThroughAnimatedObjects:
+    
+    sta LOOP_THROUGH_ANIMATED_CONDITION
+    
     ; Initialize table pointer
     lda #<_viewtab
     sta VIEW_POS_LOCAL_VIEW_TAB
@@ -1721,10 +1722,10 @@ b9LoopThroughAnimatedObjects:
 
 animatedObjectsLoop:
     ; Test for ANIMATED|UPDATE|DRAWN
-    lda #ANIMATED | UPDATE | DRAWN
+    lda LOOP_THROUGH_ANIMATED_CONDITION
     ldy _offsetOfFlags
     and (VIEW_POS_LOCAL_VIEW_TAB),y
-    cmp #ANIMATED | UPDATE | DRAWN
+    cmp LOOP_THROUGH_ANIMATED_CONDITION
     bne calculateNextAddress
 
 updateLoopAndCel:
@@ -1762,7 +1763,8 @@ lda #<b9UpdateObjectDirection
 sta loopMethodToCall + 1
 lda #>b9UpdateObjectDirection
 sta loopMethodToCall + 2
-    
+
+lda #ANIMATED | UPDATE | DRAWN
 jsr b9LoopThroughAnimatedObjects
     
 rts
