@@ -106,7 +106,7 @@ void b6NewRoom()
 {
     bBStopSound();
 
-     bAResetViews();
+    bAResetViews();
     //stop_update_all();
     //unanimate_all();
     b6DiscardResources();
@@ -159,10 +159,11 @@ void b6UpdateStatusLine()
 
 
 #pragma wrapped-call (push, trampoline, VIEW_CODE_BANK_1)
-extern void b9AnimateObjects(); 
+extern void b9AnimateObjects();
 extern void b9UpdateObjectDirections();
 #pragma wrapped-call (pop)
 
+extern boolean trap;
 /***************************************************************************
 ** interpret
 **
@@ -198,7 +199,6 @@ void b6Interpret()
         exitAllLogics = FALSE;
 
         b9UpdateObjectDirections();
-   
         executeLogic(&logicEntry, 0);
 
         //dirnOfEgo = var[6];
@@ -314,6 +314,7 @@ void b6Initialise()
 
 extern void loadInitBankAndInitMemory();
 
+byte mainLoopCounter = 0;
 void main()
 {
     int ret, oldCount = 0;
@@ -344,6 +345,7 @@ void main()
             b6Interpret();
             // runIncrementalGarbageCollector();
             counter = 0;
+            mainLoopCounter++;
         }
         b6CheckTimer();
     }

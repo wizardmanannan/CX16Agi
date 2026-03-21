@@ -7,6 +7,8 @@ IRQ_INC = 1
 .include "spriteIrqHandler.s"
 .include "inputIrqHandler.s"
 
+.import _mainLoopCounter
+
 .macro SEND_IRQ_COMMAND command, vSyncToCheck
 sei
 lda command
@@ -225,7 +227,7 @@ sendIrqCommand: .byte $0
 
 ;As above except it will never change to 0
 currentIrqState: .byte $0
-
+lastMainLoopCounter: .byte $FF
 _vSyncCounter: .word $0
 debugVSyncCounter: .word $0
 
@@ -249,11 +251,19 @@ lda #PARSER_BANK
 sta RAM_BANK
 jsr b7HandleInputLine
 
+
+@checkMainLoopCounter:
+lda _mainLoopCounter
+cmp lastMainLoopCounter
+beq @sendIrqCommand
+sta lastMainLoopCounter
+
 @handleSpriteUpdates:
 lda #SPRITE_UPDATES_BANK
 sta RAM_BANK
 jsr bEHandleSpriteUpdates
 
+@sendIrqCommand:
 lda sendIrqCommand
 tax
 
