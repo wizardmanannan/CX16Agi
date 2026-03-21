@@ -181,20 +181,20 @@ void testGoodPositionFunction(byte x, byte y, byte xSize, byte ySize, byte expec
 
 	localViewTab.xPos = x;
 	localViewTab.yPos = y;
-    localViewTab.xsize = xSize;
+	localViewTab.xsize = xSize;
 	localViewTab.ysize = ySize;
 
 	printf("we set ySize to %d and its address is %p. the offset is %d. the local view tab addres is %p\n", localViewTab.ysize, &localViewTab.ysize, offsetOfYSize, &localViewTab);
 
 	localViewTab.flags = flags;
-	
+
 	horizon = expectedHorizon;
 
-    actualResult = b9GoodPosition(&localViewTab);
+	actualResult = b9GoodPosition(&localViewTab);
 
 	printf(testString);
 
-	if(actualResult != expectedResult)
+	if (actualResult != expectedResult)
 	{
 		printf("xxxxxxxxxxxxxxxxxxxxxxxxxxfail expected %d \n", expectedResult);
 	}
@@ -210,124 +210,124 @@ void testGoodPositionFunction(byte x, byte y, byte xSize, byte ySize, byte expec
 boolean trap;
 void testGoodPosition()
 {
-    // 1) inside bounds, above horizon
-    testGoodPositionFunction(
-        MINX + 5, MINY + 10, 10, 8,
-        /*horizon*/ MINY + 4,
-        /*expected*/ TRUE,
-        "inside bounds, above horizon\n",
-        0
-    );
+	// 1) inside bounds, above horizon
+	testGoodPositionFunction(
+		MINX + 5, MINY + 10, 10, 8,
+		/*horizon*/ MINY + 4,
+		/*expected*/ TRUE,
+		"inside bounds, above horizon\n",
+		0
+	);
 
-    // 2) full width fits exactly
-    testGoodPositionFunction(
-        MINX, MINY + 5,
-        (byte)((MAXX + 1) - MINX), 1,
-        /*horizon*/ MINY,
-        /*expected*/ TRUE,
-        "full width fits exactly\n",
-        0
-    );
+	// 2) full width fits exactly
+	testGoodPositionFunction(
+		MINX, MINY + 5,
+		(byte)((MAXX + 1) - MINX), 1,
+		/*horizon*/ MINY,
+		/*expected*/ TRUE,
+		"full width fits exactly\n",
+		0
+	);
 
-    // 3) touches top boundary
-    testGoodPositionFunction(
-        MINX + 3, MINY, 4, 1,
-        /*horizon*/ 1,
-        /*expected*/ TRUE,
-        "touches top boundary\n",
-        IGNOREHORIZON
-    );
+	// 3) touches top boundary
+	testGoodPositionFunction(
+		MINX + 3, MINY, 4, 1,
+		/*horizon*/ 1,
+		/*expected*/ TRUE,
+		"touches top boundary\n",
+		IGNOREHORIZON
+	);
 
-    // 4) touches bottom boundary
-    testGoodPositionFunction(
-        MINX + 3, MAXY, 4, 2,
-        /*horizon*/ MINY,
-        /*expected*/ TRUE,
-        "touches bottom boundary\n",
-        0
-    );
+	// 4) touches bottom boundary
+	testGoodPositionFunction(
+		MINX + 3, MAXY, 4, 2,
+		/*horizon*/ MINY,
+		/*expected*/ TRUE,
+		"touches bottom boundary\n",
+		0
+	);
 
-    // 5) exceeds right bound
-    testGoodPositionFunction(
-        (byte)(MAXX - 5), MINY + 5, 7, 3,
-        /*horizon*/ MINY,
-        /*expected*/ FALSE,
-        "exceeds right bound\n",
-        0
-    );
+	// 5) exceeds right bound
+	testGoodPositionFunction(
+		(byte)(MAXX - 5), MINY + 5, 7, 3,
+		/*horizon*/ MINY,
+		/*expected*/ FALSE,
+		"exceeds right bound\n",
+		0
+	);
 
-    // 6) exceeds top bound
-    testGoodPositionFunction(
-        MINX + 2, MINY, 3, 1,
-        /*horizon*/ MINY - 5,
-        /*expected*/ FALSE,
-        "exceeds top bound\n",
-        0
-    );
+	// 6) exceeds top bound
+	testGoodPositionFunction(
+		MINX + 2, MINY, 3, 1,
+		/*horizon*/ MINY - 5,
+		/*expected*/ FALSE,
+		"exceeds top bound\n",
+		0
+	);
 
-    // 7) exceeds bottom bound
-    testGoodPositionFunction(
-        MINX + 2, (byte)(MAXY + 1), 3, 2,
-        /*horizon*/ MINY,
-        /*expected*/ TRUE,
-        "exceeds bottom bound\n",
-        0
-    );
+	// 7) exceeds bottom bound
+	testGoodPositionFunction(
+		MINX + 2, (byte)(MAXY + 1), 3, 2,
+		/*horizon*/ MINY,
+		/*expected*/ TRUE,
+		"exceeds bottom bound\n",
+		0
+	);
 
 	// 8) blocked by horizon
-    testGoodPositionFunction(
-        MINX + 5, MINY + 6, 4, 3,
-        /*horizon*/ (byte)(MINY + 6),
-        /*expected*/ FALSE,
-        "blocked by horizon\n",
-        0
-    );
+	testGoodPositionFunction(
+		MINX + 5, MINY + 6, 4, 3,
+		/*horizon*/ (byte)(MINY + 6),
+		/*expected*/ FALSE,
+		"blocked by horizon\n",
+		0
+	);
 
-    // 9) clears horizon
-    testGoodPositionFunction(
-        MINX + 5, MINY + 7, 4, 3,
-        /*horizon*/ (byte)(MINY + 6),
-        /*expected*/ TRUE,
-        "clears horizon\n",
-        0
-    );
+	// 9) clears horizon
+	testGoodPositionFunction(
+		MINX + 5, MINY + 7, 4, 3,
+		/*horizon*/ (byte)(MINY + 6),
+		/*expected*/ TRUE,
+		"clears horizon\n",
+		0
+	);
 
-    // 10) one by one sprite
-    testGoodPositionFunction(
-        MINX + 1, MINY + 2, 1, 1,
-        /*horizon*/ MINY + 1,
-        /*expected*/ TRUE,
-        "one by one sprite\n",
-        0
-    );
+	// 10) one by one sprite
+	testGoodPositionFunction(
+		MINX + 1, MINY + 2, 1, 1,
+		/*horizon*/ MINY + 1,
+		/*expected*/ TRUE,
+		"one by one sprite\n",
+		0
+	);
 
-    // 11) fits right and bottom edges
-    {
-        testGoodPositionFunction(
-            MAXX, MAXY + 1, 1, 1,
-            /*horizon*/ MINY,
-            /*expected*/ TRUE,
-            "fits right and bottom edges\n",
-            0
-        );
-    }
+	// 11) fits right and bottom edges
+	{
+		testGoodPositionFunction(
+			MAXX, MAXY + 1, 1, 1,
+			/*horizon*/ MINY,
+			/*expected*/ TRUE,
+			"fits right and bottom edges\n",
+			0
+		);
+	}
 
-    // 12) fails only because of horizon
-    testGoodPositionFunction(
-        MINX + 20, MINY + 15, 2, 2,
-        /*horizon*/ (byte)(MINY + 20),
-        /*expected*/ FALSE,
-        "fails only because of horizon\n",
-        0
-    );
+	// 12) fails only because of horizon
+	testGoodPositionFunction(
+		MINX + 20, MINY + 15, 2, 2,
+		/*horizon*/ (byte)(MINY + 20),
+		/*expected*/ FALSE,
+		"fails only because of horizon\n",
+		0
+	);
 
-	  testGoodPositionFunction(
-        MINX -1, MINY + 10, 10, 8,
-        /*horizon*/ MINY + 4,
-        /*expected*/ FALSE,
-        "x outside of bounds\n",
-        0
-    );
+	testGoodPositionFunction(
+		MINX - 1, MINY + 10, 10, 8,
+		/*horizon*/ MINY + 4,
+		/*expected*/ FALSE,
+		"x outside of bounds\n",
+		0
+	);
 }
 
 
@@ -805,7 +805,7 @@ boolean testCanBeHereFunctionWithWaterSpecial(byte pNum, byte x, byte y, byte xS
 	localViewTab.yPos = y;
 	localViewTab.flags = flags;
 	localViewTab.priority = objInitialPriority;
-    localViewTab.xsize = xSize;
+	localViewTab.xsize = xSize;
 
 	b6LoadPictureFile(pNum);
 	getLoadedPicture(&loadedPicture, pNum);
@@ -1490,8 +1490,9 @@ extern void bEClearVeraSprite(byte celWidth, byte celHeight);
 /***************************************************************************
 ** agi_blit
 ***************************************************************************/
-boolean agiBlit(ViewTable* localViewTab, byte entryNum, boolean disableInterupts)
+boolean agiBlit(byte entryNum, boolean disableInterupts)
 {
+	ViewTable localViewTab;
 	View localView;
 	Loop localLoop;
 	Cel localCel, tempCel;
@@ -1509,7 +1510,9 @@ boolean agiBlit(ViewTable* localViewTab, byte entryNum, boolean disableInterupts
 	previousBank = RAM_BANK;
 	RAM_BANK = SPRITE_METADATA_BANK;
 
-	viewNum = localViewTab->currentView;
+	getViewTab(&localViewTab, entryNum);
+
+	viewNum = localViewTab.currentView;
 
 #ifdef VERBOSE_DEBUG_BLIT
 	printf("The viewNum is %d and the loop is %d\n", viewNum, localViewTab->currentLoop);
@@ -1518,8 +1521,8 @@ boolean agiBlit(ViewTable* localViewTab, byte entryNum, boolean disableInterupts
 	//#endif // VERBOSE_DEBUG_BLIT
 
 	getLoadedView(&localView, viewNum);
-	getLoadedLoop(&localView, &localLoop, localViewTab->currentLoop);
-	getLoadedCel(&localLoop, &localCel, localViewTab->currentCel);
+	getLoadedLoop(&localView, &localLoop, localViewTab.currentLoop);
+	getLoadedCel(&localLoop, &localCel, localViewTab.currentCel);
 
 	if (localView.maxVeraSlots > 1)
 	{
@@ -1551,8 +1554,8 @@ boolean agiBlit(ViewTable* localViewTab, byte entryNum, boolean disableInterupts
 #ifdef VERBOSE_SWITCH_METADATA
 		printf("switching to %d for entry %d\n", viewNum, entryNum);
 #endif
-		bESwitchMetadata(localViewTab, &localView, viewNum, entryNum);
-		localViewTab->staleCounter = localLoop.numberOfCels;
+		bESwitchMetadata(&localViewTab, &localView, viewNum, entryNum);
+		localViewTab.staleCounter = localLoop.numberOfCels;
 	}
 
 	if (viewTabNoToMetaData[entryNum] == VIEWNO_TO_METADATA_NO_SET) //Statement will be true if switched to another view for the first time in bESwitchMetadata
@@ -1560,7 +1563,7 @@ boolean agiBlit(ViewTable* localViewTab, byte entryNum, boolean disableInterupts
 #ifdef VERBOSE_DEBUG_NO_BLIT_CACHE
 		printf("set Metadata %d. The vt is %d\n", localViewTab->viewData, entryNum);
 #endif
-		bESetViewMetadata(&localView, localViewTab, viewNum, entryNum, VIEWNO_TO_METADATA_NO_SET);
+		bESetViewMetadata(&localView, &localViewTab, viewNum, entryNum, VIEWNO_TO_METADATA_NO_SET);
 	}
 
 	localMetadata = viewTableMetadata[entryNum];
@@ -1571,7 +1574,7 @@ boolean agiBlit(ViewTable* localViewTab, byte entryNum, boolean disableInterupts
 	printf("Checking %d.\n", localMetadata.loopsVeraAddressesPointers[localViewTab->currentLoop][0]);
 #endif
 	RAM_BANK = localMetadata.viewTableMetadataBank;
-	loopVeraAddresses = localMetadata.loopsVeraAddressesPointers[localViewTab->currentLoop];
+	loopVeraAddresses = localMetadata.loopsVeraAddressesPointers[localViewTab.currentLoop];
 
 #ifdef VERBOSE_DEBUG_NO_BLIT_CACHE	
 	printf("We are checking %p. It has a value of %u. The bank is %p and it should be %d\n", &loopVeraAddresses[0], loopVeraAddresses[0], RAM_BANK, localMetadata.viewTableMetadataBank);
@@ -1585,7 +1588,7 @@ boolean agiBlit(ViewTable* localViewTab, byte entryNum, boolean disableInterupts
 #ifdef VERBOSE_DEBUG_NO_BLIT_CACHE
 		printf("loading view %d loop %d. The vt %p. It's position is %d,%d. v36 is %d\n", localViewTab->currentView, localViewTab->currentLoop, entryNum, localViewTab->xPos, localViewTab->yPos, var[36]);
 #endif
-		if (!bESetLoop(localViewTab, &localMetadata, &localView, loopVeraAddresses, entryNum))
+		if (!bESetLoop(&localViewTab, &localMetadata, &localView, loopVeraAddresses, entryNum))
 		{
 			RAM_BANK = previousBank;
 
@@ -1604,12 +1607,12 @@ boolean agiBlit(ViewTable* localViewTab, byte entryNum, boolean disableInterupts
 
 	asm("stz %w", SPLIT_OFFSET);
 
-	getLoadedCel(&localLoop, &localCel, localViewTab->currentCel); //If the cel has being split our data would be stale
+	getLoadedCel(&localLoop, &localCel, localViewTab.currentCel); //If the cel has being split our data would be stale
 
 	RAM_BANK = localMetadata.viewTableMetadataBank;
-	loopVeraAddress = loopVeraAddresses[localView.maxVeraSlots * localViewTab->currentCel];
+	loopVeraAddress = loopVeraAddresses[localView.maxVeraSlots * localViewTab.currentCel];
 
-	_assmByte = ((localViewTab->flags & MOTION > 0) && localViewTab->direction > 0) || localViewTab->staleCounter || localMetadata.isOnBackBuffer;
+	_assmByte = ((localViewTab.flags & MOTION > 0) && localViewTab.direction > 0) || localViewTab.staleCounter || localMetadata.isOnBackBuffer;
 	isAnimated = _assmByte;
 
 	asm("lda %v", _assmByte);
@@ -1760,7 +1763,7 @@ checkWhetherOnBackBuffer:
 
 notOnBackBuffer:
 	RAM_BANK = localMetadata.viewTableMetadataBank;
-	loopVeraAddress = loopVeraAddresses[splitCounter + (localView.maxVeraSlots * localViewTab->currentCel) - 1];
+	loopVeraAddress = loopVeraAddresses[splitCounter + (localView.maxVeraSlots * localViewTab.currentCel) - 1];
 	_assmULong = loopVeraAddress;
 
 	SET_VERA_ADDRESS_ZP(loopVeraAddress, VERA_ADDRESS, VERA_ADDRESS_HIGH);
@@ -1771,7 +1774,7 @@ notOnBackBuffer:
 onBackBuffer:
 	loopVeraAddress = localMetadata.backBuffers[splitCounter - 1];
 
-	if (((localViewTab->flags & MOTION > 0) && localViewTab->direction > 0) || localViewTab->staleCounter || localMetadata.isOnBackBuffer)
+	if (((localViewTab.flags & MOTION > 0) && localViewTab.direction > 0) || localViewTab.staleCounter || localMetadata.isOnBackBuffer)
 	{
 		//printf("loop vera address %p\n", loopVeraAddress);
 	}
@@ -1814,7 +1817,7 @@ updateSpriteBuffer:
 	asm("sta (%w),y", ZP_SPRITE_STORE_PTR);
 
 	//2 x low
-	_assmUInt = (byte)localViewTab->xPos;
+	_assmUInt = (byte)localViewTab.xPos;
 	_assmByte = localCel.flipped;
 
 	asm("lda %w", SPLIT_OFFSET);
@@ -1897,7 +1900,7 @@ moveXDueToFlipped:
 	asm("sta (%w),y", ZP_SPRITE_STORE_PTR);
 
 	//4 y low (y high is always zero)
-yPos: _assmByte = (byte)localViewTab->yPos;
+yPos: _assmByte = (byte)localViewTab.yPos;
 	_assmByte2 = localCel.height - 1;
 
 	asm("ldy #$4");
@@ -1969,11 +1972,11 @@ callCelToVera:
 	asm("lda %v + 2", _assmULong);
 	asm("sta %w", VERA_ADDRESS_HIGH);
 
-	_assmByte = localViewTab->xPos;
+	_assmByte = localViewTab.xPos;
 	asm("lda %v", _assmByte);
 	asm("sta %w", X_VAL);
 
-	_assmByte = localViewTab->priority;
+	_assmByte = localViewTab.priority;
 	asm("lda %v", _assmByte);
 	asm("sta %w", P_NUM);
 
@@ -2018,6 +2021,10 @@ updateBufferPointer:
 	asm("jmp %g", splitLoop);
 
 endBlit:
+
+
+	setViewTab(&localViewTab, entryNum);
+
 	if (disableInterupts)
 	{
 		REENABLE_INTERRUPTS();
@@ -2066,14 +2073,13 @@ void bAResetViewtabs(boolean fullReset)
 		localViewtab.cycleTimeCount = 1;
 		localViewtab.stepTime = 1;
 		localViewtab.stepTimeCount = 1;
-			
-		
+
+
 		localViewtab.staleCounter = 0;
 		if (fullReset)
 		{
 			localViewtab.xPos = 0;
 			localViewtab.yPos = 0;
-			localViewtab.viewData = NULL;
 			localViewtab.currentCel = 0;
 			localViewtab.currentLoop = 0;
 			localViewtab.currentView = 0;
@@ -2092,14 +2098,14 @@ void bAResetViewtabs(boolean fullReset)
 			localViewtab.previousX = 0;
 			localViewtab.previousY = 0;
 			localViewtab.numberOfLoops = 0;
-			localViewtab.loopData = NULL;	
+			localViewtab.loopData = NULL;
 			localViewtab.numberOfCels = 0;
 			localViewtab.celData = NULL;
 			localViewtab.xsize = 0;
 			localViewtab.ysize = 0;
 			localViewtab.stopped = FALSE;
-	
-	
+
+
 		}
 		setViewTab(&localViewtab, entryNum);
 	}
@@ -2120,7 +2126,7 @@ void bAReset()
 {
 	bAResetSpriteMemory(TRUE);
 	bFInitPaletteManager();
-	
+
 	bAResetViewtabs(FALSE);
 }
 
@@ -2719,7 +2725,7 @@ void bBUpdateObjects()
 
 					if (i == localViewtab.priority)
 					{
-						if (!agiBlit(&localViewtab, entryNum, FALSE))
+						if (!agiBlit(entryNum, FALSE))
 						{
 							if (blitFailed)
 							{
