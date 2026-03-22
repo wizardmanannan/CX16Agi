@@ -318,6 +318,8 @@ byte mainLoopCounter = 0;
 void main()
 {
     int ret, oldCount = 0;
+    unsigned int lastVsync = vSyncCounter;
+
 
     //chdir("..\\KQ1-2917");
     //chdir("..\\COMPILER\\NEW\\SAMPLE\\TEMPLATE");
@@ -338,7 +340,12 @@ void main()
     b6Initialise();
     while (TRUE) {
         /* Cycle initiator. Controlled by delay variable (var[10). */
-        if (counter >= var[10]) {
+
+        if (abs(vSyncCounter - lastVsync) >= var[10] * 3) {
+
+            lastVsync = vSyncCounter;
+
+
 #ifdef VERBOSE
             printf("Interpret Runs\n");
 #endif // VERBOSE
@@ -346,8 +353,10 @@ void main()
             // runIncrementalGarbageCollector();
             counter = 0;
             mainLoopCounter++;
+
+
+            b6CheckTimer();
         }
-        b6CheckTimer();
     }
 
     //chdir("\\HACK\\AGI\\D\\AGI\\MEKA");
