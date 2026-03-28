@@ -43,7 +43,6 @@ byte horizon;
 #define DEBUG 1
 //#define VERBOSE
 
-volatile int counter;              /* Used for timer control */
 volatile int hund;                 /* Used for interpreters clock */
 
 int controlMode = PLAYER_CONTROL;    /* player.control or program.control */
@@ -226,7 +225,6 @@ void b6Interpret()
 
 void b6Timing_proc()
 {
-    counter++;
     hund += 5;
     if (hund >= 100) { //One second has passed
         var[11]++;
@@ -303,7 +301,6 @@ void b6Initialise()
     horizon = 36;
 
     ///* Set up timer. The timer controls the interpreter speed. */
-    counter = 0;
 
     b6TellMeTheAddressPlease();
     bFInitPaletteManager();
@@ -351,9 +348,7 @@ void main()
 #endif // VERBOSE
             b6Interpret();
             // runIncrementalGarbageCollector();
-            counter = 0;
             mainLoopCounter++;
-
 
             b6CheckTimer();
         }
