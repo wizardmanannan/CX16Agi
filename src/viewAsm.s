@@ -1718,11 +1718,11 @@ sta UPDATE_OBJ_NUM_OBJS
 ldy #$0
 @agiBlitLoopDo:
 lda b9ObjectList,y
-sta sreg
+sta VIEW_POS_LOCAL_VIEW_TAB
 lda b9ObjectList + 1,y
-sta sreg + 1
+sta VIEW_POS_LOCAL_VIEW_TAB + 1
 ldy _offsetOfEntryNum
-lda (sreg),y
+lda (VIEW_POS_LOCAL_VIEW_TAB),y
 jsr pusha
 lda #$0
 
