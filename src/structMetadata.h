@@ -22,6 +22,7 @@ byte offsetOfFlipped = offsetof(struct Cel, flipped);
 //ViewTab
 byte offsetOfXPos = offsetof(struct ViewTable, xPos);
 byte offsetOfYPos = offsetof(struct ViewTable, yPos);
+byte offsetOfPrevX = offsetof(struct ViewTable, previousX);
 byte offsetOfPrevY = offsetof(struct ViewTable, previousY);
 byte offsetOfPriority = offsetof(struct ViewTable, priority);
 byte offsetOfCurrentCel = offsetof(struct ViewTable, currentCel);

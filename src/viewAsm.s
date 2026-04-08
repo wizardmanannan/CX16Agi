@@ -9,7 +9,9 @@ VIEW_INC = 1
 .import _offsetOfYPos
 .import _offsetOfXSize
 .import _offsetOfYSize
+.import _offsetOfPrevX
 .import _offsetOfPrevY
+.import _offsetofStopped
 .import _offsetOfPriority
 .import _offsetOfStepTimeCount
 .import _offsetOfStepTime
@@ -1727,6 +1729,41 @@ jsr pusha
 lda #$0
 
 jsr _agiBlit
+
+;TODO Handle When BLIT fails
+
+ldy _offsetOfXPos
+lda (VIEW_POS_LOCAL_VIEW_TAB),y
+ldy _offsetOfPrevX
+cmp (VIEW_POS_LOCAL_VIEW_TAB),y
+bne @resetPrevious
+
+ldy _offsetOfYPos
+lda (VIEW_POS_LOCAL_VIEW_TAB),y
+ldy _offsetOfPrevY
+cmp (VIEW_POS_LOCAL_VIEW_TAB),y
+bne @resetPrevious
+
+@stopped:
+ldy _offsetOfStopped
+lda #$1
+sta (VIEW_POS_LOCAL_VIEW_TAB),y
+bra @agiBlitLoopWhile
+
+@resetPrevious:
+ldy _offsetOfXPos
+lda (VIEW_POS_LOCAL_VIEW_TAB),y
+ldy _offsetOfPrevX
+sta (VIEW_POS_LOCAL_VIEW_TAB),y
+
+ldy _offsetOfYPos
+lda (VIEW_POS_LOCAL_VIEW_TAB),y
+ldy _offsetOfPrevY
+sta(VIEW_POS_LOCAL_VIEW_TAB),y
+
+ldy _offsetOfStopped
+lda #$0
+sta (VIEW_POS_LOCAL_VIEW_TAB),y
 
 @agiBlitLoopWhile:
 ldy UPDATE_OBJECTS_COUNTER
