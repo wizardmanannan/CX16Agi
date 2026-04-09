@@ -1595,200 +1595,310 @@ SPRITE_DEBUG ;4
 .endscope
 b9ObjectList: .res VIEW_TABLE_SIZE * 2
 
+; =============================================================================
+; void b9UpdateObjects()
+; -----------------------------------------------------------------------------
+;   Purpose:
+;       Updates all currently visible animated objects (sprites/actors).
+;       This is the main per-frame update routine for the sprite/object system.
+;
+;   Parameters:
+;       None
+;
+;   Returns:
+;       Nothing (void)
+;
+;   Description:
+;       1. Builds a list of all objects marked as DRAWN (visible).
+;       2. Sorts the list by drawing priority:
+;            - Primary key: Priority field (higher value = drawn later = appears on top)
+;            - Tie-breaker: When priorities are equal, Y position is used.
+;              Lower Y position = drawn first (appears behind)
+;              Higher Y position = drawn later (appears in front)
+;       3. Blits (draws) all objects in the final sorted order using the AGI blit system.
+;       4. For each object, updates its previous X/Y position and sets the "stopped" flag
+;          (1 if the object did not move this frame, 0 if it did move).
+;
+;   Notes:
+;       - Uses a lightweight insertion-sort style (bubble) algorithm, efficient for small
+;         numbers of on-screen objects.
+;       - Interrupts are disabled during the critical sorting and list-building phase.
+;       - Calls into the AGI engine for actual blitting (_agiBlit).
+; =============================================================================
+
 b9UpdateObjects:
-stz UPDATE_OBJ_NUM_OBJS
 
-lda #<b9PrepareUpdateObjectsList
-sta loopMethodToCall + 1
-lda #>b9PrepareUpdateObjectsList
-sta loopMethodToCall + 2
+        stz UPDATE_OBJ_NUM_OBJS         ; Reset number of objects to update this frame
 
-sei
+        ; Set indirect jump target to the routine that populates the object list
+        lda #<b9PrepareUpdateObjectsList
+        sta loopMethodToCall + 1
+        lda #>b9PrepareUpdateObjectsList
+        sta loopMethodToCall + 2
 
-lda #DRAWN
-jsr b9LoopThroughAnimatedObjects
+        sei                             ; Disable interrupts during critical update
 
-lsr UPDATE_OBJ_NUM_OBJS
-beq @exit
+        ; Populate b9ObjectList with all objects that have the DRAWN flag set
+        lda #DRAWN
+        jsr b9LoopThroughAnimatedObjects
 
-ldx #$1
+        lsr UPDATE_OBJ_NUM_OBJS         ; Adjust count (list stores 2-byte pointers)
+        beq @exit                       ; No objects to process → exit early
+
+        ldx #$1                        ; Start from second element (index 1)
 
 @outerLoopCheck:
-cpx UPDATE_OBJ_NUM_OBJS
-bcs @outerLoopEnd
+        cpx UPDATE_OBJ_NUM_OBJS
+        bcs @outerLoopEnd               ; X >= num objects → sorting finished
 
-stx UPDATE_OBJ_I
+        stx UPDATE_OBJ_I                ; Save outer loop index
 
 @innerLoopCheck:
-cpx #$0
-beq @innerLoopEnd
+        cpx #$0
+        beq @innerLoopEnd               ; Reached start of list
 
-txa
-asl
-tay
+        ; Load pointers for two adjacent objects in the list
+        txa
+        asl                             ; X * 2 because each entry is a 16-bit pointer
+        tay
 
-lda b9ObjectList - 2,y
-sta UPDATE_OBJ_M1
-lda b9ObjectList - 1, y
-sta UPDATE_OBJ_M1 + 1
+        lda b9ObjectList - 2,y          ; Previous object (M1)
+        sta UPDATE_OBJ_M1
+        lda b9ObjectList - 1,y
+        sta UPDATE_OBJ_M1 + 1
 
-lda b9ObjectList,y
-sta UPDATE_OBJ
-lda b9ObjectList + 1,y
-sta UPDATE_OBJ + 1
+        lda b9ObjectList,y              ; Current object
+        sta UPDATE_OBJ
+        lda b9ObjectList + 1,y
+        sta UPDATE_OBJ + 1
 
-SPRITE_DEBUG_NEXT_RUN
-sty UPDATE_OBJ_J
-ldy _offsetOfPriority
-lda (UPDATE_OBJ),y
-cmp (UPDATE_OBJ_M1),y
-bcc @innerLoopEnd
-beq @tieBreak
+        SPRITE_DEBUG_NEXT_RUN           ; Debug hook (usually NOP in release builds)
+
+        sty UPDATE_OBJ_J                ; Save current list offset for potential swap
+
+        ; === Main priority comparison ===
+        ; Higher priority value = drawn later = appears on top of lower priority objects
+        ldy _offsetOfPriority
+        lda (UPDATE_OBJ),y              ; Current object's priority
+        cmp (UPDATE_OBJ_M1),y           ; vs previous object's priority
+        bcc @innerLoopEnd               ; Current < previous → correct order, stop bubbling
+        beq @tieBreak                   ; Priorities equal → use Y position as tie-breaker
 
 @swap:
-ldy UPDATE_OBJ_J
-lda UPDATE_OBJ_M1
-sta b9ObjectList,y
-lda UPDATE_OBJ_M1 + 1
-sta b9ObjectList + 1, y
+        ; Swap the two pointers so the higher-priority object moves toward the end of the list
+        ldy UPDATE_OBJ_J
+        lda UPDATE_OBJ_M1
+        sta b9ObjectList,y
+        lda UPDATE_OBJ_M1 + 1
+        sta b9ObjectList + 1, y
 
-lda UPDATE_OBJ
-sta b9ObjectList - 2,y
-lda UPDATE_OBJ + 1
-sta b9ObjectList - 1, y
+        lda UPDATE_OBJ
+        sta b9ObjectList - 2,y
+        lda UPDATE_OBJ + 1
+        sta b9ObjectList - 1, y
 
-dex
-bra @innerLoopCheck
+        dex                             ; Continue bubbling the higher priority object right
+        bra @innerLoopCheck
 
 @innerLoopEnd:
-ldx UPDATE_OBJ_I
-inx
-bra @outerLoopCheck
+        ldx UPDATE_OBJ_I                ; Restore outer index
+        inx
+        bra @outerLoopCheck
+
 @outerLoopEnd:
+        jsr b9AgiBlitLoop               ; Draw all objects in final sorted order
 
-jsr b9AgiBlitLoop
 @exit:
+        JSRFAR _bETerminateSpriteBuffer, SPRITE_UPDATES_BANK
+        REENABLE_INTERRUPTS             ; Re-enable interrupts
+        rts
 
-JSRFAR _bETerminateSpriteBuffer, SPRITE_UPDATES_BANK
-REENABLE_INTERRUPTS
-rts
+
+; -----------------------------------------------------------------------------
+; Tie-breaker for objects with equal priority
+; When priority values are identical, Y position is used as tie-breaker:
+;   - Lower Y position = drawn first (appears behind)
+;   - Higher Y position = drawn later (appears in front)
+;
+; Objects with the FIXEDPRIORITY flag set use a pre-computed priority table
+; instead of their raw screen Y coordinate.
+; -----------------------------------------------------------------------------
 @tieBreak:
-phx
-lda UPDATE_OBJ
-sta sreg
-lda UPDATE_OBJ + 1
-sta sreg + 1
-jsr @getY
-sta sreg2
-lda UPDATE_OBJ_M1
-sta sreg
-lda UPDATE_OBJ_M1 + 1
-sta sreg + 1
-jsr @getY
-sta sreg2 + 1
+        phx                             ; Preserve X
 
-plx
+        ; Get effective Y for current object → sreg2
+        lda UPDATE_OBJ
+        sta sreg
+        lda UPDATE_OBJ + 1
+        sta sreg + 1
+        jsr @getY
+        sta sreg2
 
-lda sreg2 + 1
-cmp sreg2
+        ; Get effective Y for previous object (M1) → sreg2+1
+        lda UPDATE_OBJ_M1
+        sta sreg
+        lda UPDATE_OBJ_M1 + 1
+        sta sreg + 1
+        jsr @getY
+        sta sreg2 + 1
 
-bcs @innerLoopEnd
-bcc @swap
+        plx
 
+        lda sreg2 + 1                   ; Previous object's effective Y
+        cmp sreg2                       ; vs current object's effective Y
+        bcs @innerLoopEnd               ; Previous Y >= current Y → already correct order
+        bcc @swap                       ; Previous Y < current Y → swap (current should be drawn later)
+
+
+; Helper: Return the effective Y value used for tie-breaking
 @getY:
-ldy _offsetOfYPos
-lda (sreg),y
-tax
+        ldy _offsetOfYPos
+        lda (sreg),y
+        tax                             ; X = raw Y coordinate
 
-ldy _offsetOfFlags
-lda (sreg),y
-and #FIXEDPRIORITY
-bne @getPriorityBase
-txa
-rts
+        ldy _offsetOfFlags
+        lda (sreg),y
+        and #FIXEDPRIORITY
+        bne @getPriorityBase            ; Fixed priority objects use lookup table
+
+        txa                             ; Normal objects use raw Y position
+        rts
+
 @getPriorityBase:
-lda _b9PreComputedPriority,x
-rts
+        lda _b9PreComputedPriority,x    ; Lookup precomputed base priority
+        rts
+
+
+; =============================================================================
+; b9AgiBlitLoop
+; -----------------------------------------------------------------------------
+; Blits every object in the sorted b9ObjectList using the AGI blit routine.
+; Also updates each object's previous X/Y position and "stopped" flag.
+;
+; The "stopped" flag indicates whether the object changed position this frame.
+; It is set to 1 if the object did not move, and 0 if it did move.
+; =============================================================================
 
 b9AgiBlitLoop:
-stz UPDATE_OBJECTS_COUNTER
+        stz UPDATE_OBJECTS_COUNTER      ; Reset counter
 
-lda UPDATE_OBJ_NUM_OBJS
-asl 
-sta UPDATE_OBJ_NUM_OBJS
+        ; Double the object count (each list entry is 2 bytes)
+        lda UPDATE_OBJ_NUM_OBJS
+        asl
+        sta UPDATE_OBJ_NUM_OBJS
 
-ldy #$0
+        ldy #$0
+
 @agiBlitLoopDo:
-lda b9ObjectList,y
-sta VIEW_POS_LOCAL_VIEW_TAB
-lda b9ObjectList + 1,y
-sta VIEW_POS_LOCAL_VIEW_TAB + 1
-ldy _offsetOfEntryNum
-lda (VIEW_POS_LOCAL_VIEW_TAB),y
-jsr pusha
-lda #$0
+        ; Load current object pointer into VIEW_POS_LOCAL_VIEW_TAB
+        lda b9ObjectList,y
+        sta VIEW_POS_LOCAL_VIEW_TAB
+        lda b9ObjectList + 1,y
+        sta VIEW_POS_LOCAL_VIEW_TAB + 1
 
-jsr _agiBlit
+        ; Call AGI blit routine: _agiBlit(entryNum, 0)
+        ldy _offsetOfEntryNum
+        lda (VIEW_POS_LOCAL_VIEW_TAB),y
+        jsr pusha
+        lda #$0
+        jsr _agiBlit
+        ; TODO: Handle blit failure gracefully
 
-;TODO Handle When BLIT fails
+        ; Detect if object moved this frame by comparing current vs previous position
+        ldy _offsetOfXPos
+        lda (VIEW_POS_LOCAL_VIEW_TAB),y
+        ldy _offsetOfPrevX
+        cmp (VIEW_POS_LOCAL_VIEW_TAB),y
+        bne @resetPrevious
 
-ldy _offsetOfXPos
-lda (VIEW_POS_LOCAL_VIEW_TAB),y
-ldy _offsetOfPrevX
-cmp (VIEW_POS_LOCAL_VIEW_TAB),y
-bne @resetPrevious
-
-ldy _offsetOfYPos
-lda (VIEW_POS_LOCAL_VIEW_TAB),y
-ldy _offsetOfPrevY
-cmp (VIEW_POS_LOCAL_VIEW_TAB),y
-bne @resetPrevious
+        ldy _offsetOfYPos
+        lda (VIEW_POS_LOCAL_VIEW_TAB),y
+        ldy _offsetOfPrevY
+        cmp (VIEW_POS_LOCAL_VIEW_TAB),y
+        bne @resetPrevious
 
 @stopped:
-ldy _offsetOfStopped
-lda #$1
-sta (VIEW_POS_LOCAL_VIEW_TAB),y
-bra @agiBlitLoopWhile
+        ; Object did not move this frame → set stopped flag to 1
+        ldy _offsetOfStopped
+        lda #$1
+        sta (VIEW_POS_LOCAL_VIEW_TAB),y
+        bra @agiBlitLoopWhile
 
 @resetPrevious:
-ldy _offsetOfXPos
-lda (VIEW_POS_LOCAL_VIEW_TAB),y
-ldy _offsetOfPrevX
-sta (VIEW_POS_LOCAL_VIEW_TAB),y
+        ; Object moved this frame → update previous X/Y and clear stopped flag (set to 0)
+        ldy _offsetOfXPos
+        lda (VIEW_POS_LOCAL_VIEW_TAB),y
+        ldy _offsetOfPrevX
+        sta (VIEW_POS_LOCAL_VIEW_TAB),y
 
-ldy _offsetOfYPos
-lda (VIEW_POS_LOCAL_VIEW_TAB),y
-ldy _offsetOfPrevY
-sta(VIEW_POS_LOCAL_VIEW_TAB),y
+        ldy _offsetOfYPos
+        lda (VIEW_POS_LOCAL_VIEW_TAB),y
+        ldy _offsetOfPrevY
+        sta (VIEW_POS_LOCAL_VIEW_TAB),y
 
-ldy _offsetOfStopped
-lda #$0
-sta (VIEW_POS_LOCAL_VIEW_TAB),y
+        ldy _offsetOfStopped
+        lda #$0
+        sta (VIEW_POS_LOCAL_VIEW_TAB),y
 
 @agiBlitLoopWhile:
-ldy UPDATE_OBJECTS_COUNTER
-iny
-iny 
-sty UPDATE_OBJECTS_COUNTER
+        ; Advance to next object (step by 2 bytes)
+        ldy UPDATE_OBJECTS_COUNTER
+        iny
+        iny
+        sty UPDATE_OBJECTS_COUNTER
+        cpy UPDATE_OBJ_NUM_OBJS
+        bcc @agiBlitLoopDo
 
-cpy UPDATE_OBJ_NUM_OBJS
-bcc @agiBlitLoopDo
+        rts
 
-rts
 
+; =============================================================================
+; void b9PrepareUpdateObjectsList(void)
+; -----------------------------------------------------------------------------
+; C-style function header:
+;
+;   Purpose:
+;       Adds the current object (pointed to by VIEW_POS_LOCAL_VIEW_TAB) to the
+;       list of objects that will be updated and drawn this frame.
+;
+;   Parameters:
+;       None (uses global state)
+;
+;   Returns:
+;       Nothing (void)
+;
+;   Description:
+;       This routine is called from inside b9LoopThroughAnimatedObjects (which is
+;       invoked via an indirect jump from b9UpdateObjects). It appends the current
+;       object pointer to b9ObjectList and increments the object counter.
+;
+;       It is designed to be called repeatedly in a loop elsewhere in the engine.
+;       Each call adds one 16-bit object pointer to the list.
+;
+;   Side effects:
+;       - Modifies b9ObjectList[] (appends a new entry)
+;       - Increments UPDATE_OBJ_NUM_OBJS by 2 (since each entry is 2 bytes)
+;
+;   Notes:
+;       This is a very lightweight "list builder" helper. The actual looping and
+;       decision-making (which objects to include) happens in the calling loop
+;       (b9LoopThroughAnimatedObjects).
+; =============================================================================
 
 b9PrepareUpdateObjectsList:
-ldy UPDATE_OBJ_NUM_OBJS
+        ldy UPDATE_OBJ_NUM_OBJS         ; Load current list insertion index
 
-lda VIEW_POS_LOCAL_VIEW_TAB
-sta b9ObjectList,y 
-lda VIEW_POS_LOCAL_VIEW_TAB + 1
-sta b9ObjectList + 1,y
+        ; Store the 16-bit pointer to the current object
+        lda VIEW_POS_LOCAL_VIEW_TAB
+        sta b9ObjectList,y
+        lda VIEW_POS_LOCAL_VIEW_TAB + 1
+        sta b9ObjectList + 1,y
 
-iny
-iny
-sty UPDATE_OBJ_NUM_OBJS
-rts
+        iny                             ; Advance index by 2 bytes (for next pointer)
+        iny
+        sty UPDATE_OBJ_NUM_OBJS         ; Update the total object count
+
+        rts
 
 ; _b9AnimateObjects
 ; ----------------
