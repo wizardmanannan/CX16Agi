@@ -7,7 +7,7 @@
 ![image](https://github.com/wizardmanannan/CX16Agi/blob/main/docs/images/KingsQuestIIIIntroWith3dEffect.gif)
 
 See it running here on YouTube: \
-[King's Quest III](https://www.youtube.com/watch?v=NZXwPm8dgjs) \
+[King's Quest III](https://youtu.be/NmkiB3tb6WM) \
 [King's Quest I](https://youtu.be/N0JRAPeKvf0) \
 [Space Quest II](https://youtu.be/Pxg_op2dU8Q) 
 
