@@ -4,7 +4,7 @@
 
 **Note: This Project Is Under Construction And Is Not Ready For General Use**
 
-![image](https://github.com/wizardmanannan/CX16Agi/blob/main/docs/images/KingsQuestIIIIntroWith3dEffect.gif)
+![image](https://github.com/wizardmanannan/CX16Agi/blob/main/docs/images/KingsQuestThreeImprovedIntro.gif)
 
 See it running here on YouTube: \
 [King's Quest III](https://youtu.be/NmkiB3tb6WM) \
