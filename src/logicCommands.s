@@ -1,4 +1,5 @@
 .include "x16.inc"
+.include "x16.inc"
 
 ; This code is an assembly language implementation of various logic commands,
 ; functions, and macros for a game engine.
@@ -167,6 +168,8 @@ LOGICCOMMANDS_INC = 1
 .import _b5GetLogicFile
 .import _b5GetLogicEntry
 .import pushax
+.import _numInputWords
+.import _inputWords
 
 .import _b5SetLogicEntry
 
@@ -1789,7 +1792,7 @@ jmpTableIf:
 .addr b1PosnCCall
 .addr b1ControllerCCall
 .addr b1Have_keyCCall
-.addr b1SaidCCall
+.addr bFSaid
 .addr b1Compare_stringsCCall
 .addr b1Obj_in_boxCCall
 .addr b1Center_posnCCall
@@ -1965,9 +1968,342 @@ b1Have_keyCCall:
     jsr _b1Have_key
     HANDLE_C_IF_RESULT
 
-b1SaidCCall:
-    jsr _b1Said
-    HANDLE_C_IF_RESULT
+
+.macro PURGE_ARGS
+lda NO_ARGS
+asl
+sta sreg
+stz sreg + 1
+INC_CODE_BY sreg
+jmp returnFromOpCodeFalse
+.endmacro
+
+; ------------------------------------------------------------
+; Said() interpreter opcode
+;
+; Checks whether the words recognised in the player's input
+; match a specified list of word numbers.
+;
+; Behaviour:
+; - Returns true if the recognised input words match the
+;   provided word list in order.
+; - The special word ANY_WORD (token 1) matches any input word.
+; - The special token REST_OF_LINE (9999) matches the remainder
+;   of the player's input immediately.
+; - A match only occurs if the number of input words equals the
+;   number of words in the list (unless REST_OF_LINE is used).
+;
+; This implementation is a 6502 assembly port of the Said()
+; routine from the AGILE project:
+;
+;   AGILE – A C# implementation of the Sierra AGI interpreter
+;   https://github.com/lanceewing/agile
+;
+; Author of AGILE:
+;   Lance Ewing
+;
+; Original C# method:
+;
+;   public bool Said(List<int> wordNumbers)
+;
+; That routine compares recognised input word numbers against
+; a list of expected word numbers and sets the HADMATCH flag
+; when a successful match occurs.
+;
+; This version replicates the same logic for a 6502-based AGI
+; interpreter.
+; ------------------------------------------------------------
+
+
+REST_OF_LINE = 9999
+ANY_WORD = 1
+
+NO_ARGS = ZP_TMP_2
+WORDS_COUNTER = ZP_PTR_2 + 1
+ARGS = ZP_TMP_3
+
+
+bFSaid:
+
+; ------------------------------------------------------------
+; Load number of words in the test list from bytecode
+; (equivalent to wordNumbers.Count)
+; ------------------------------------------------------------
+
+    LOAD_CODE_WIN_CODE
+    sta NO_ARGS
+    INC_CODE
+
+
+; ------------------------------------------------------------
+; If there are no recognised words then fail immediately
+;
+; C# equivalent:
+; if (RecognisedWordNumbers.Count == 0)
+;     return false;
+; ------------------------------------------------------------
+
+    ldx _numInputWords
+    bne @inputExists
+
+@purgeArgs:
+    PURGE_ARGS
+@inputExists:
+
+
+; ------------------------------------------------------------
+; Only run the test if:
+;   INPUT flag is set
+;   HADMATCH flag is NOT already set
+;
+; C# equivalent:
+; if (!state.Flags[INPUT] || state.Flags[HADMATCH])
+;     return false;
+; ------------------------------------------------------------
+
+    ldy #INT_FLAG_INPUT
+    GET_FLAG_NON_INTERPRETER sreg
+    beq @purgeArgs
+
+    ldy #INT_FLAG_HAD_MATCH
+    GET_FLAG_NON_INTERPRETER sreg
+    beq @setupInputWordsZp
+
+    PURGE_ARGS
+
+
+; ------------------------------------------------------------
+; Prepare loop counters
+;
+; Word numbers are stored as 16-bit values.
+; Multiply number of words by 2 to obtain byte count.
+; ------------------------------------------------------------
+
+@setupInputWordsZp:
+
+    lda NO_ARGS
+    asl
+    sta WORDS_COUNTER
+
+    ldx #$0
+
+
+; ------------------------------------------------------------
+; Main loop over expected words
+; ------------------------------------------------------------
+
+@numberWordsLoopCheck:
+
+    cpx WORDS_COUNTER
+    bcc @numberWordsLoopBody
+    jmp @checkWordNumbersCount
+
+
+; ------------------------------------------------------------
+; Load next test word (16-bit) from bytecode
+; ------------------------------------------------------------
+
+@numberWordsLoopBody:
+
+    LOAD_CODE_WIN_CODE
+    sta ARGS
+    INC_CODE
+
+    LOAD_CODE_WIN_CODE
+    sta ARGS + 1
+    INC_CODE
+
+
+; ------------------------------------------------------------
+; Check if this word is REST_OF_LINE
+;
+; C# equivalent:
+; if (testWordNumber == REST_OF_LINE)
+; {
+;     state.Flags[HADMATCH] = true;
+;     return true;
+; }
+; ------------------------------------------------------------
+
+@checkRestOfLine:
+
+    lda ARGS + 1
+    beq @checkRecognisedWordCount
+
+    cmp #>REST_OF_LINE
+    bne @checkRecognisedWordCount
+
+    lda ARGS
+    cmp #<REST_OF_LINE
+    bne @checkRecognisedWordCount
+
+    lda #INT_FLAG_INPUT
+    SET_FLAG_NON_INTERPRETER sreg
+
+    jmp @incrementByUnusedWordsTrue
+
+
+; ------------------------------------------------------------
+; Ensure we haven't run out of recognised input words
+;
+; C# equivalent:
+; if (i >= RecognisedWordNumbers.Count)
+;     return false;
+; ------------------------------------------------------------
+
+@checkRecognisedWordCount:
+
+    cpx WORDS_COUNTER
+    bcc @checkWordMatch
+    jmp @incrementByUnusedWordsFalse
+
+
+; ------------------------------------------------------------
+; Compare test word against input word
+; ------------------------------------------------------------
+
+@checkWordMatch:
+
+    lda ARGS + 1
+    cmp _inputWords + 1,x
+    beq @checkLowByte
+
+    ; If high bytes differ and the test word is not ANY_WORD,
+    ; the match fails.
+
+    tay
+    bne @incrementByUnusedWordsFalse
+
+
+; ------------------------------------------------------------
+; ANY_WORD wildcard test
+;
+; C# equivalent:
+; if (testWordNumber == ANYWORD)
+;     match
+; ------------------------------------------------------------
+
+@checkAnyWord:
+
+    lda ARGS
+    cmp #ANY_WORD
+    beq @incrementLoopCounter
+
+    bra @incrementByUnusedWordsFalse
+
+
+; ------------------------------------------------------------
+; High bytes match — check low bytes
+; ------------------------------------------------------------
+
+@checkLowByte:
+
+    lda _inputWords,x
+    cmp ARGS
+    bne @checkAnyWord
+
+    bra @incrementLoopCounter
+
+
+; ------------------------------------------------------------
+; Word mismatch
+;
+; Skip remaining arguments in the bytecode stream
+; and return false.
+; ------------------------------------------------------------
+
+@incrementByUnusedWordsFalse:
+
+    inx
+    inx
+
+    stx sreg
+    lda NO_ARGS
+    asl
+    sec
+    sbc sreg
+    sta sreg
+    stz sreg + 1
+
+    beq @returnFromOpCodeFalseJmp
+
+    INC_CODE_BY sreg
+
+@returnFromOpCodeFalseJmp:
+
+    jmp returnFromOpCodeFalse
+
+
+; ------------------------------------------------------------
+; Word matched — advance to next word
+; ------------------------------------------------------------
+
+@incrementLoopCounter:
+
+    inx
+    inx
+
+    cpx WORDS_COUNTER
+    bcs @checkWordNumbersCount
+
+    jmp @numberWordsLoopBody
+
+
+; ------------------------------------------------------------
+; Final check:
+; ensure number of matched words equals number of input words
+;
+; C# equivalent:
+; if (RecognisedWords.Count > wordNumbers.Count)
+;     return false;
+; ------------------------------------------------------------
+
+@checkWordNumbersCount:
+
+    txa
+    lsr
+    cmp _numInputWords
+    beq @matched
+
+
+@mismatchedArgs:
+
+    jmp returnFromOpCodeFalse
+
+
+; ------------------------------------------------------------
+; Successful match
+; ------------------------------------------------------------
+
+@matched:
+
+    lda #INT_FLAG_HAD_MATCH
+    SET_FLAG_NON_INTERPRETER sreg
+
+    jmp returnFromOpCodeTrue
+
+
+; ------------------------------------------------------------
+; REST_OF_LINE match
+;
+; Skip remaining bytecode arguments
+; ------------------------------------------------------------
+
+@incrementByUnusedWordsTrue:
+
+    inx
+    inx
+
+    stx sreg
+    sec
+    lda NO_ARGS
+    sbc sreg
+    sta sreg
+    stz sreg + 1
+
+    INC_CODE_BY sreg
+
+    jmp returnFromOpCodeFalse
 
 b1Compare_stringsCCall:
     jsr _b1Compare_strings

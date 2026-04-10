@@ -1490,8 +1490,9 @@ extern void bEClearVeraSprite(byte celWidth, byte celHeight);
 /***************************************************************************
 ** agi_blit
 ***************************************************************************/
-boolean agiBlit(ViewTable* localViewTab, byte entryNum, boolean disableInterupts)
+boolean agiBlit(byte entryNum, boolean disableInterupts)
 {
+	ViewTable localViewTab;
 	View localView;
 	Loop localLoop;
 	Cel localCel, tempCel;
@@ -1505,11 +1506,13 @@ boolean agiBlit(ViewTable* localViewTab, byte entryNum, boolean disableInterupts
 	byte isAnimated = FALSE;
 	SpriteAllocationSize allocationWidth, allocationHeight;
 	byte combinedSpriteAllocationSize;
-
+	
 	previousBank = RAM_BANK;
 	RAM_BANK = SPRITE_METADATA_BANK;
 
-	viewNum = localViewTab->currentView;
+	getViewTab(&localViewTab, entryNum);
+
+	viewNum = localViewTab.currentView;
 
 #ifdef VERBOSE_DEBUG_BLIT
 	printf("The viewNum is %d and the loop is %d\n", viewNum, localViewTab->currentLoop);
@@ -1518,8 +1521,8 @@ boolean agiBlit(ViewTable* localViewTab, byte entryNum, boolean disableInterupts
 	//#endif // VERBOSE_DEBUG_BLIT
 
 	getLoadedView(&localView, viewNum);
-	getLoadedLoop(&localView, &localLoop, localViewTab->currentLoop);
-	getLoadedCel(&localLoop, &localCel, localViewTab->currentCel);
+	getLoadedLoop(&localView, &localLoop, localViewTab.currentLoop);
+	getLoadedCel(&localLoop, &localCel, localViewTab.currentCel);
 
 	if (localView.maxVeraSlots > 1)
 	{
@@ -1551,8 +1554,8 @@ boolean agiBlit(ViewTable* localViewTab, byte entryNum, boolean disableInterupts
 #ifdef VERBOSE_SWITCH_METADATA
 		printf("switching to %d for entry %d\n", viewNum, entryNum);
 #endif
-		bESwitchMetadata(localViewTab, &localView, viewNum, entryNum);
-		localViewTab->staleCounter = localLoop.numberOfCels;
+		bESwitchMetadata(&localViewTab, &localView, viewNum, entryNum);
+		localViewTab.staleCounter = localLoop.numberOfCels;
 	}
 
 	if (viewTabNoToMetaData[entryNum] == VIEWNO_TO_METADATA_NO_SET) //Statement will be true if switched to another view for the first time in bESwitchMetadata
@@ -1560,7 +1563,7 @@ boolean agiBlit(ViewTable* localViewTab, byte entryNum, boolean disableInterupts
 #ifdef VERBOSE_DEBUG_NO_BLIT_CACHE
 		printf("set Metadata %d. The vt is %d\n", localViewTab->viewData, entryNum);
 #endif
-		bESetViewMetadata(&localView, localViewTab, viewNum, entryNum, VIEWNO_TO_METADATA_NO_SET);
+		bESetViewMetadata(&localView, &localViewTab, viewNum, entryNum, VIEWNO_TO_METADATA_NO_SET);
 	}
 
 	localMetadata = viewTableMetadata[entryNum];
@@ -1571,7 +1574,7 @@ boolean agiBlit(ViewTable* localViewTab, byte entryNum, boolean disableInterupts
 	printf("Checking %d.\n", localMetadata.loopsVeraAddressesPointers[localViewTab->currentLoop][0]);
 #endif
 	RAM_BANK = localMetadata.viewTableMetadataBank;
-	loopVeraAddresses = localMetadata.loopsVeraAddressesPointers[localViewTab->currentLoop];
+	loopVeraAddresses = localMetadata.loopsVeraAddressesPointers[localViewTab.currentLoop];
 
 #ifdef VERBOSE_DEBUG_NO_BLIT_CACHE	
 	printf("We are checking %p. It has a value of %u. The bank is %p and it should be %d\n", &loopVeraAddresses[0], loopVeraAddresses[0], RAM_BANK, localMetadata.viewTableMetadataBank);
@@ -1585,7 +1588,7 @@ boolean agiBlit(ViewTable* localViewTab, byte entryNum, boolean disableInterupts
 #ifdef VERBOSE_DEBUG_NO_BLIT_CACHE
 		printf("loading view %d loop %d. The vt %p. It's position is %d,%d. v36 is %d\n", localViewTab->currentView, localViewTab->currentLoop, entryNum, localViewTab->xPos, localViewTab->yPos, var[36]);
 #endif
-		if (!bESetLoop(localViewTab, &localMetadata, &localView, loopVeraAddresses, entryNum))
+		if (!bESetLoop(&localViewTab, &localMetadata, &localView, loopVeraAddresses, entryNum))
 		{
 			RAM_BANK = previousBank;
 
@@ -1604,12 +1607,12 @@ boolean agiBlit(ViewTable* localViewTab, byte entryNum, boolean disableInterupts
 
 	asm("stz %w", SPLIT_OFFSET);
 
-	getLoadedCel(&localLoop, &localCel, localViewTab->currentCel); //If the cel has being split our data would be stale
+	getLoadedCel(&localLoop, &localCel, localViewTab.currentCel); //If the cel has being split our data would be stale
 
 	RAM_BANK = localMetadata.viewTableMetadataBank;
-	loopVeraAddress = loopVeraAddresses[localView.maxVeraSlots * localViewTab->currentCel];
+	loopVeraAddress = loopVeraAddresses[localView.maxVeraSlots * localViewTab.currentCel];
 
-	_assmByte = ((localViewTab->flags & MOTION > 0) && localViewTab->direction > 0) || localViewTab->staleCounter || localMetadata.isOnBackBuffer;
+	_assmByte = ((localViewTab.flags & MOTION > 0) && localViewTab.direction > 0) || localViewTab.staleCounter || localMetadata.isOnBackBuffer;
 	isAnimated = _assmByte;
 
 	asm("lda %v", _assmByte);
@@ -1760,7 +1763,7 @@ checkWhetherOnBackBuffer:
 
 notOnBackBuffer:
 	RAM_BANK = localMetadata.viewTableMetadataBank;
-	loopVeraAddress = loopVeraAddresses[splitCounter + (localView.maxVeraSlots * localViewTab->currentCel) - 1];
+	loopVeraAddress = loopVeraAddresses[splitCounter + (localView.maxVeraSlots * localViewTab.currentCel) - 1];
 	_assmULong = loopVeraAddress;
 
 	SET_VERA_ADDRESS_ZP(loopVeraAddress, VERA_ADDRESS, VERA_ADDRESS_HIGH);
@@ -1771,7 +1774,7 @@ notOnBackBuffer:
 onBackBuffer:
 	loopVeraAddress = localMetadata.backBuffers[splitCounter - 1];
 
-	if (((localViewTab->flags & MOTION > 0) && localViewTab->direction > 0) || localViewTab->staleCounter || localMetadata.isOnBackBuffer)
+	if (((localViewTab.flags & MOTION > 0) && localViewTab.direction > 0) || localViewTab.staleCounter || localMetadata.isOnBackBuffer)
 	{
 		//printf("loop vera address %p\n", loopVeraAddress);
 	}
@@ -1814,7 +1817,7 @@ updateSpriteBuffer:
 	asm("sta (%w),y", ZP_SPRITE_STORE_PTR);
 
 	//2 x low
-	_assmUInt = (byte)localViewTab->xPos;
+	_assmUInt = (byte)localViewTab.xPos;
 	_assmByte = localCel.flipped;
 
 	asm("lda %w", SPLIT_OFFSET);
@@ -1897,7 +1900,7 @@ moveXDueToFlipped:
 	asm("sta (%w),y", ZP_SPRITE_STORE_PTR);
 
 	//4 y low (y high is always zero)
-yPos: _assmByte = (byte)localViewTab->yPos;
+yPos: _assmByte = (byte)localViewTab.yPos;
 	_assmByte2 = localCel.height - 1;
 
 	asm("ldy #$4");
@@ -1969,11 +1972,11 @@ callCelToVera:
 	asm("lda %v + 2", _assmULong);
 	asm("sta %w", VERA_ADDRESS_HIGH);
 
-	_assmByte = localViewTab->xPos;
+	_assmByte = localViewTab.xPos;
 	asm("lda %v", _assmByte);
 	asm("sta %w", X_VAL);
 
-	_assmByte = localViewTab->priority;
+	_assmByte = localViewTab.priority;
 	asm("lda %v", _assmByte);
 	asm("sta %w", P_NUM);
 
@@ -2018,6 +2021,10 @@ updateBufferPointer:
 	asm("jmp %g", splitLoop);
 
 endBlit:
+
+
+	setViewTab(&localViewTab, entryNum);
+
 	if (disableInterupts)
 	{
 		REENABLE_INTERRUPTS();
@@ -2073,10 +2080,10 @@ void bAResetViewtabs(boolean fullReset)
 		{
 			localViewtab.xPos = 0;
 			localViewtab.yPos = 0;
-			localViewtab.viewData = NULL;
 			localViewtab.currentCel = 0;
 			localViewtab.currentLoop = 0;
 			localViewtab.currentView = 0;
+			localViewtab.entryNum = entryNum;
 			localViewtab.direction = 0;
 			localViewtab.param1 = 0;
 			localViewtab.param2 = 0;
@@ -2618,6 +2625,8 @@ void b9SetView(byte viewNum, byte entryNum)
 	viewtabPtr = &viewtab[entryNum];
 
 	getLoadedView(&localView, viewNum);
+	getLoadedLoop(&localView, &localLoop, viewtabPtr->currentLoop >= localView.numberOfLoops ? 0 : viewtabPtr->currentLoop);
+	getLoadedCel(&localLoop, &localCel, viewtabPtr->currentCel >= localLoop.numberOfCels ? 0 : viewtabPtr->currentCel);
 
 	viewtabPtr->currentView = viewNum;
 	viewtabPtr->numberOfLoops = localView.numberOfLoops;
@@ -2626,9 +2635,6 @@ void b9SetView(byte viewNum, byte entryNum)
 	viewtabPtr->ysize = localCel.height;
 
 	b9SetLoop(viewtabPtr, entryNum, viewtabPtr->currentLoop >= localView.numberOfLoops ? 0 : viewtabPtr->currentLoop);
-
-	getLoadedLoop(&localView, &localLoop, viewtabPtr->currentLoop);
-	getLoadedCel(&localLoop, &localCel, viewtabPtr->currentCel);
 }
 
 void b9AddToPic(int vNum, int lNum, int cNum, int x, int y, int pNum, int bCol)
@@ -2696,87 +2702,87 @@ boolean testVal = FALSE;
 #pragma bss-name (push, "BANKRAM0B")
 boolean prioritiesSeen[NO_PRIORITIES];
 #pragma bss-name (pop)
-void bBUpdateObjects()
-{
-	int entryNum, celNum, oldX, oldY;
-	byte i;
-	word objFlags;
-	ViewTable localViewtab;
-	boolean blitFailed = FALSE;
-
-	memset(prioritiesSeen, FALSE, NO_PRIORITIES);
-
-	asm("sei");
-	for (i = MAX_SPRITE_PRIORITY; i >= MIN_SPRITE_PRIORITY; i--)
-	{
-		if (i == MAX_SPRITE_PRIORITY || prioritiesSeen[i - MIN_SPRITE_PRIORITY])
-		{
-			for (entryNum = 0; entryNum < VIEW_TABLE_SIZE; entryNum++) {
-				getViewTab(&localViewtab, entryNum);
-
-				objFlags = localViewtab.flags;
-				if ((objFlags & ANIMATED) && (objFlags & DRAWN)) {
-					/* Draw new cel onto picture\priority bitmaps */
-
-					if (i == localViewtab.priority)
-					{
-						if (!agiBlit(&localViewtab, entryNum, FALSE))
-						{
-							if (blitFailed)
-							{
-								printf("no sprite memory");
-								exit(0);
-							}
-							else
-							{
-								blitFailed = TRUE;
-
-								if (entryNum)
-								{
-									entryNum--;
-								}
-								continue;
-							}
-						}
-						else if (localViewtab.xPos == localViewtab.previousX && localViewtab.yPos == localViewtab.yPos)
-						{
-							/*if (entryNum == 11)
-							{
-								asm("stp");
-								asm("lda #$2");
-							}*/
-							localViewtab.stopped = TRUE;
-						}
-						else
-						{
-							localViewtab.previousX = localViewtab.xPos;
-							localViewtab.previousY = localViewtab.yPos;
-
-							/*if (entryNum == 11)
-							{
-								asm("stp");
-								asm("lda #$3");
-							}*/
-
-							localViewtab.stopped = FALSE;
-						}
-						//Blit may fail if we run out of sprite memory, if that is the case clear everything as there is likely to be stuff we are no longer using. If it fails more than once, we know there is not point continuing
-					}
-					else if (i == MAX_SPRITE_PRIORITY)
-					{
-						prioritiesSeen[localViewtab.priority - MIN_SPRITE_PRIORITY] = TRUE;
-					}
-				}
-				setViewTab(&localViewtab, entryNum);
-			}
-		}
-	}
-	bETerminateSpriteBuffer();
-	REENABLE_INTERRUPTS();
-
-	show_mouse(NULL);
-	show_mouse(screen);
-}
+//void bBUpdateObjects()
+//{
+//	int entryNum, celNum, oldX, oldY;
+//	byte i;
+//	word objFlags;
+//	ViewTable localViewtab;
+//	boolean blitFailed = FALSE;
+//
+//	memset(prioritiesSeen, FALSE, NO_PRIORITIES);
+//
+//	asm("sei");
+//	for (i = MAX_SPRITE_PRIORITY; i >= MIN_SPRITE_PRIORITY; i--)
+//	{
+//		if (i == MAX_SPRITE_PRIORITY || prioritiesSeen[i - MIN_SPRITE_PRIORITY])
+//		{
+//			for (entryNum = 0; entryNum < VIEW_TABLE_SIZE; entryNum++) {
+//				getViewTab(&localViewtab, entryNum);
+//
+//				objFlags = localViewtab.flags;
+//				if ((objFlags & ANIMATED) && (objFlags & DRAWN)) {
+//					/* Draw new cel onto picture\priority bitmaps */
+//
+//					if (i == localViewtab.priority)
+//					{
+//						if (!agiBlit(&localViewtab, entryNum, FALSE))
+//						{
+//							if (blitFailed)
+//							{
+//								printf("no sprite memory");
+//								exit(0);
+//							}
+//							else
+//							{
+//								blitFailed = TRUE;
+//
+//								if (entryNum)
+//								{
+//									entryNum--;
+//								}
+//								continue;
+//							}
+//						}
+//						else if (localViewtab.xPos == localViewtab.previousX && localViewtab.yPos == localViewtab.yPos)
+//						{
+//							/*if (entryNum == 11)
+//							{
+//								asm("stp");
+//								asm("lda #$2");
+//							}*/
+//							localViewtab.stopped = TRUE;
+//						}
+//						else
+//						{
+//							localViewtab.previousX = localViewtab.xPos;
+//							localViewtab.previousY = localViewtab.yPos;
+//
+//							/*if (entryNum == 11)
+//							{
+//								asm("stp");
+//								asm("lda #$3");
+//							}*/
+//
+//							localViewtab.stopped = FALSE;
+//						}
+//						//Blit may fail if we run out of sprite memory, if that is the case clear everything as there is likely to be stuff we are no longer using. If it fails more than once, we know there is not point continuing
+//					}
+//					else if (i == MAX_SPRITE_PRIORITY)
+//					{
+//						prioritiesSeen[localViewtab.priority - MIN_SPRITE_PRIORITY] = TRUE;
+//					}
+//				}
+//				setViewTab(&localViewtab, entryNum);
+//			}
+//		}
+//	}
+//	bETerminateSpriteBuffer();
+//	REENABLE_INTERRUPTS();
+//
+//	show_mouse(NULL);
+//	show_mouse(screen);
+//}
 #pragma code-name (pop)
 #pragma code-name (push, "BANKRAM0D")
 

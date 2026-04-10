@@ -43,7 +43,6 @@ byte horizon;
 #define DEBUG 1
 //#define VERBOSE
 
-volatile int counter;              /* Used for timer control */
 volatile int hund;                 /* Used for interpreters clock */
 
 int controlMode = PLAYER_CONTROL;    /* player.control or program.control */
@@ -106,7 +105,7 @@ void b6NewRoom()
 {
     bBStopSound();
 
-     bAResetViews();
+    bAResetViews();
     //stop_update_all();
     //unanimate_all();
     b6DiscardResources();
@@ -159,7 +158,7 @@ void b6UpdateStatusLine()
 
 
 #pragma wrapped-call (push, trampoline, VIEW_CODE_BANK_1)
-extern void b9AnimateObjects(); 
+extern void b9AnimateObjects();
 extern void b9UpdateObjectDirections();
 #pragma wrapped-call (pop)
 boolean set = FALSE;
@@ -203,16 +202,6 @@ void b6Interpret()
         exitAllLogics = FALSE;
 
         b9UpdateObjectDirections();
-
-        if (var[0] == 53 && !set)
-        {
-            viewtab.flags = localViewtab.flags | IGNOREBLOCKS;
-            setViewTab(&localViewtab, 0);
-            set = TRUE;
-        }
-
-
-
         executeLogic(&logicEntry, 0);
      
         //dirnOfEgo = var[6];
@@ -223,6 +212,8 @@ void b6Interpret()
         b6UpdateStatusLine();
         var[5] = 0;
         var[4] = 0;
+        flag[2] = FALSE;
+        var[9] = 0;
 
         if (!hasEnteredNewRoom)
         {
@@ -238,7 +229,6 @@ void b6Interpret()
 
 void b6Timing_proc()
 {
-    counter++;
     hund += 5;
     if (hund >= 100) { //One second has passed
         var[11]++;
@@ -315,7 +305,6 @@ void b6Initialise()
     horizon = 36;
 
     ///* Set up timer. The timer controls the interpreter speed. */
-    counter = 0;
 
     b6TellMeTheAddressPlease();
     bFInitPaletteManager();
@@ -326,9 +315,12 @@ void b6Initialise()
 
 extern void loadInitBankAndInitMemory();
 
+byte mainLoopCounter = 0;
 void main()
 {
     int ret, oldCount = 0;
+    unsigned int lastVsync = vSyncCounter;
+
 
     //chdir("..\\KQ1-2917");
     //chdir("..\\COMPILER\\NEW\\SAMPLE\\TEMPLATE");
@@ -349,15 +341,21 @@ void main()
     b6Initialise();
     while (TRUE) {
         /* Cycle initiator. Controlled by delay variable (var[10). */
-        if (counter >= var[10]) {
+
+        if (abs(vSyncCounter - lastVsync) >= var[10] * 3) {
+
+            lastVsync = vSyncCounter;
+
+
 #ifdef VERBOSE
             printf("Interpret Runs\n");
 #endif // VERBOSE
             b6Interpret();
             // runIncrementalGarbageCollector();
-            counter = 0;
+            mainLoopCounter++;
+
+            b6CheckTimer();
         }
-        b6CheckTimer();
     }
 
     //chdir("\\HACK\\AGI\\D\\AGI\\MEKA");

@@ -1,4 +1,5 @@
 .include "x16.inc"
+.include "x16.inc"
 
 .ifndef  VIEW_INC
 VIEW_INC = 1
@@ -8,7 +9,9 @@ VIEW_INC = 1
 .import _offsetOfYPos
 .import _offsetOfXSize
 .import _offsetOfYSize
+.import _offsetOfPrevX
 .import _offsetOfPrevY
+.import _offsetofStopped
 .import _offsetOfPriority
 .import _offsetOfStepTimeCount
 .import _offsetOfStepTime
@@ -36,6 +39,9 @@ VIEW_INC = 1
 .import _bADetermineMovement
 .import _b11GetNumberOfCels
 .import _offsetOfCurrentView
+.import _bETerminateSpriteBuffer
+.import _agiBlit
+.import _offsetOfEntryNum
 
 .ifdef SPRITE_DEBUG
 .import _bSdRunNumber
@@ -48,6 +54,9 @@ VIEW_INC = 1
 VIEW_POS_LOCAL_VIEW_TAB: .word $0
 VIEW_POS_ENTRY_NUM: .byte $0
 VIEW_POS_NEW_LOOP: .byte $0
+LOOP_THROUGH_ANIMATED_CONDITION: .byte $0
+UPDATE_OBJ_NUM_OBJS: .byte $0
+UPDATE_OBJECTS_COUNTER: .byte $0
 .segment "CODE"
 
 VIEW_POS_LOCAL_VIEW_FLAGS = ZP_TMP_4
@@ -66,8 +75,10 @@ VIEW_POS_CEL_NUM = ZP_TMP_12 + 1
 VIEW_POS_LOOP_NUM = ZP_TMP_13
 VIEW_POS_THE_CEL = ZP_TMP_14 + 1
 VIEW_POS_LAST_CEL = ZP_TMP_16
-VIEW_POS_ANIMATED_OBJECTS_COUNTER = ZP_TMP_16 + 1
-
+UPDATE_OBJ_I = ZP_TMP_16 + 1
+UPDATE_OBJ_M1 = ZP_TMP_17
+UPDATE_OBJ = ZP_TMP_18
+UPDATE_OBJ_J = ZP_TMP_19
 
 .segment "CODE"
 .ifdef SPRITE_DEBUG
@@ -1156,11 +1167,8 @@ b9SetCelAsm:
     ; Check Y-axis border collision: YPos - YSize < Defines.MINY - 1 (assumed 255)
     ldy _offsetOfYPos
     lda (VIEW_POS_LOCAL_VIEW_TAB),y
-    clc
-    adc #2
     ldy _offsetOfYSize
     cmp (VIEW_POS_LOCAL_VIEW_TAB),y
-    beq @setRepositionedBasedOnY
     bcs @return
 
 @setRepositionedBasedOnY:
@@ -1607,6 +1615,312 @@ SPRITE_DEBUG ;4
 @return:
     rts
 .endscope
+b9ObjectList: .res VIEW_TABLE_SIZE * 2
+
+; =============================================================================
+; void b9UpdateObjects()
+; -----------------------------------------------------------------------------
+;   Purpose:
+;       Updates all currently visible animated objects (sprites/actors).
+;       This is the main per-frame update routine for the sprite/object system.
+;
+;   Parameters:
+;       None
+;
+;   Returns:
+;       Nothing (void)
+;
+;   Description:
+;       1. Builds a list of all objects marked as DRAWN (visible).
+;       2. Sorts the list by drawing priority:
+;            - Primary key: Priority field (higher value = drawn later = appears on top)
+;            - Tie-breaker: When priorities are equal, Y position is used.
+;              Lower Y position = drawn first (appears behind)
+;              Higher Y position = drawn later (appears in front)
+;       3. Blits (draws) all objects in the final sorted order using the AGI blit system.
+;       4. For each object, updates its previous X/Y position and sets the "stopped" flag
+;          (1 if the object did not move this frame, 0 if it did move).
+;
+;   Notes:
+;       - Uses a lightweight insertion-sort style (bubble) algorithm, efficient for small
+;         numbers of on-screen objects.
+;       - Interrupts are disabled during the critical sorting and list-building phase.
+;       - Calls into the AGI engine for actual blitting (_agiBlit).
+; =============================================================================
+
+b9UpdateObjects:
+
+        stz UPDATE_OBJ_NUM_OBJS         ; Reset number of objects to update this frame
+
+        ; Set indirect jump target to the routine that populates the object list
+        lda #<b9PrepareUpdateObjectsList
+        sta loopMethodToCall + 1
+        lda #>b9PrepareUpdateObjectsList
+        sta loopMethodToCall + 2
+
+        sei                             ; Disable interrupts during critical update
+
+        ; Populate b9ObjectList with all objects that have the DRAWN flag set
+        lda #DRAWN
+        jsr b9LoopThroughAnimatedObjects
+
+        lsr UPDATE_OBJ_NUM_OBJS         ; Adjust count (list stores 2-byte pointers)
+        beq @exit                       ; No objects to process → exit early
+
+        ldx #$1                        ; Start from second element (index 1)
+
+@outerLoopCheck:
+        cpx UPDATE_OBJ_NUM_OBJS
+        bcs @outerLoopEnd               ; X >= num objects → sorting finished
+
+        stx UPDATE_OBJ_I                ; Save outer loop index
+
+@innerLoopCheck:
+        cpx #$0
+        beq @innerLoopEnd               ; Reached start of list
+
+        ; Load pointers for two adjacent objects in the list
+        txa
+        asl                             ; X * 2 because each entry is a 16-bit pointer
+        tay
+
+        lda b9ObjectList - 2,y          ; Previous object (M1)
+        sta UPDATE_OBJ_M1
+        lda b9ObjectList - 1,y
+        sta UPDATE_OBJ_M1 + 1
+
+        lda b9ObjectList,y              ; Current object
+        sta UPDATE_OBJ
+        lda b9ObjectList + 1,y
+        sta UPDATE_OBJ + 1
+
+        SPRITE_DEBUG_NEXT_RUN           ; Debug hook (usually NOP in release builds)
+
+        sty UPDATE_OBJ_J                ; Save current list offset for potential swap
+
+        ; === Main priority comparison ===
+        ; Higher priority value = drawn later = appears on top of lower priority objects
+        ldy _offsetOfPriority
+        lda (UPDATE_OBJ),y              ; Current object's priority
+        cmp (UPDATE_OBJ_M1),y           ; vs previous object's priority
+        bcc @innerLoopEnd               ; Current < previous → correct order, stop bubbling
+        beq @tieBreak                   ; Priorities equal → use Y position as tie-breaker
+
+@swap:
+        ; Swap the two pointers so the higher-priority object moves toward the end of the list
+        ldy UPDATE_OBJ_J
+        lda UPDATE_OBJ_M1
+        sta b9ObjectList,y
+        lda UPDATE_OBJ_M1 + 1
+        sta b9ObjectList + 1, y
+
+        lda UPDATE_OBJ
+        sta b9ObjectList - 2,y
+        lda UPDATE_OBJ + 1
+        sta b9ObjectList - 1, y
+
+        dex                             ; Continue bubbling the higher priority object right
+        bra @innerLoopCheck
+
+@innerLoopEnd:
+        ldx UPDATE_OBJ_I                ; Restore outer index
+        inx
+        bra @outerLoopCheck
+
+@outerLoopEnd:
+        jsr b9AgiBlitLoop               ; Draw all objects in final sorted order
+
+@exit:
+        JSRFAR _bETerminateSpriteBuffer, SPRITE_UPDATES_BANK
+        REENABLE_INTERRUPTS             ; Re-enable interrupts
+        rts
+
+
+; -----------------------------------------------------------------------------
+; Tie-breaker for objects with equal priority
+; When priority values are identical, Y position is used as tie-breaker:
+;   - Lower Y position = drawn first (appears behind)
+;   - Higher Y position = drawn later (appears in front)
+;
+; Objects with the FIXEDPRIORITY flag set use a pre-computed priority table
+; instead of their raw screen Y coordinate.
+; -----------------------------------------------------------------------------
+@tieBreak:
+        phx                             ; Preserve X
+
+        ; Get effective Y for current object → sreg2
+        lda UPDATE_OBJ
+        sta sreg
+        lda UPDATE_OBJ + 1
+        sta sreg + 1
+        jsr @getY
+        sta sreg2
+
+        ; Get effective Y for previous object (M1) → sreg2+1
+        lda UPDATE_OBJ_M1
+        sta sreg
+        lda UPDATE_OBJ_M1 + 1
+        sta sreg + 1
+        jsr @getY
+        sta sreg2 + 1
+
+        plx
+
+        lda sreg2 + 1                   ; Previous object's effective Y
+        cmp sreg2                       ; vs current object's effective Y
+        bcs @innerLoopEnd               ; Previous Y >= current Y → already correct order
+        bcc @swap                       ; Previous Y < current Y → swap (current should be drawn later)
+
+
+; Helper: Return the effective Y value used for tie-breaking
+@getY:
+        ldy _offsetOfYPos
+        lda (sreg),y
+        tax                             ; X = raw Y coordinate
+
+        ldy _offsetOfFlags
+        lda (sreg),y
+        and #FIXEDPRIORITY
+        bne @getPriorityBase            ; Fixed priority objects use lookup table
+
+        txa                             ; Normal objects use raw Y position
+        rts
+
+@getPriorityBase:
+        lda _b9PreComputedPriority,x    ; Lookup precomputed base priority
+        rts
+
+
+; =============================================================================
+; b9AgiBlitLoop
+; -----------------------------------------------------------------------------
+; Blits every object in the sorted b9ObjectList using the AGI blit routine.
+; Also updates each object's previous X/Y position and "stopped" flag.
+;
+; The "stopped" flag indicates whether the object changed position this frame.
+; It is set to 1 if the object did not move, and 0 if it did move.
+; =============================================================================
+
+b9AgiBlitLoop:
+        stz UPDATE_OBJECTS_COUNTER      ; Reset counter
+
+        ; Double the object count (each list entry is 2 bytes)
+        lda UPDATE_OBJ_NUM_OBJS
+        asl
+        sta UPDATE_OBJ_NUM_OBJS
+
+        ldy #$0
+
+@agiBlitLoopDo:
+        ; Load current object pointer into VIEW_POS_LOCAL_VIEW_TAB
+        lda b9ObjectList,y
+        sta VIEW_POS_LOCAL_VIEW_TAB
+        lda b9ObjectList + 1,y
+        sta VIEW_POS_LOCAL_VIEW_TAB + 1
+
+        ; Call AGI blit routine: _agiBlit(entryNum, 0)
+        ldy _offsetOfEntryNum
+        lda (VIEW_POS_LOCAL_VIEW_TAB),y
+        jsr pusha
+        lda #$0
+        jsr _agiBlit
+        ; TODO: Handle blit failure gracefully
+
+        ; Detect if object moved this frame by comparing current vs previous position
+        ldy _offsetOfXPos
+        lda (VIEW_POS_LOCAL_VIEW_TAB),y
+        ldy _offsetOfPrevX
+        cmp (VIEW_POS_LOCAL_VIEW_TAB),y
+        bne @resetPrevious
+
+        ldy _offsetOfYPos
+        lda (VIEW_POS_LOCAL_VIEW_TAB),y
+        ldy _offsetOfPrevY
+        cmp (VIEW_POS_LOCAL_VIEW_TAB),y
+        bne @resetPrevious
+
+@stopped:
+        ; Object did not move this frame → set stopped flag to 1
+        ldy _offsetOfStopped
+        lda #$1
+        sta (VIEW_POS_LOCAL_VIEW_TAB),y
+        bra @agiBlitLoopWhile
+
+@resetPrevious:
+        ; Object moved this frame → update previous X/Y and clear stopped flag (set to 0)
+        ldy _offsetOfXPos
+        lda (VIEW_POS_LOCAL_VIEW_TAB),y
+        ldy _offsetOfPrevX
+        sta (VIEW_POS_LOCAL_VIEW_TAB),y
+
+        ldy _offsetOfYPos
+        lda (VIEW_POS_LOCAL_VIEW_TAB),y
+        ldy _offsetOfPrevY
+        sta (VIEW_POS_LOCAL_VIEW_TAB),y
+
+        ldy _offsetOfStopped
+        lda #$0
+        sta (VIEW_POS_LOCAL_VIEW_TAB),y
+
+@agiBlitLoopWhile:
+        ; Advance to next object (step by 2 bytes)
+        ldy UPDATE_OBJECTS_COUNTER
+        iny
+        iny
+        sty UPDATE_OBJECTS_COUNTER
+        cpy UPDATE_OBJ_NUM_OBJS
+        bcc @agiBlitLoopDo
+
+        rts
+
+
+; =============================================================================
+; void b9PrepareUpdateObjectsList(void)
+; -----------------------------------------------------------------------------
+; C-style function header:
+;
+;   Purpose:
+;       Adds the current object (pointed to by VIEW_POS_LOCAL_VIEW_TAB) to the
+;       list of objects that will be updated and drawn this frame.
+;
+;   Parameters:
+;       None (uses global state)
+;
+;   Returns:
+;       Nothing (void)
+;
+;   Description:
+;       This routine is called from inside b9LoopThroughAnimatedObjects (which is
+;       invoked via an indirect jump from b9UpdateObjects). It appends the current
+;       object pointer to b9ObjectList and increments the object counter.
+;
+;       It is designed to be called repeatedly in a loop elsewhere in the engine.
+;       Each call adds one 16-bit object pointer to the list.
+;
+;   Side effects:
+;       - Modifies b9ObjectList[] (appends a new entry)
+;       - Increments UPDATE_OBJ_NUM_OBJS by 2 (since each entry is 2 bytes)
+;
+;   Notes:
+;       This is a very lightweight "list builder" helper. The actual looping and
+;       decision-making (which objects to include) happens in the calling loop
+;       (b9LoopThroughAnimatedObjects).
+; =============================================================================
+
+b9PrepareUpdateObjectsList:
+        ldy UPDATE_OBJ_NUM_OBJS         ; Load current list insertion index
+
+        ; Store the 16-bit pointer to the current object
+        lda VIEW_POS_LOCAL_VIEW_TAB
+        sta b9ObjectList,y
+        lda VIEW_POS_LOCAL_VIEW_TAB + 1
+        sta b9ObjectList + 1,y
+
+        iny                             ; Advance index by 2 bytes (for next pointer)
+        iny
+        sty UPDATE_OBJ_NUM_OBJS         ; Update the total object count
+
+        rts
 
 ; _b9AnimateObjects
 ; ----------------
@@ -1656,6 +1970,7 @@ _b9AnimateObjects:
     lda #>b9UpdateLoopAndCelAsm
     sta loopMethodToCall + 2
     
+    lda #ANIMATED | UPDATE | DRAWN
     jsr b9LoopThroughAnimatedObjects
     SPRITE_DEBUG ;8
 
@@ -1678,11 +1993,13 @@ _b9AnimateObjects:
     sta loopMethodToCall + 1
     lda #>b9UpdatePositionAsm
     sta loopMethodToCall + 2
+
+    lda #ANIMATED | UPDATE | DRAWN
     jsr b9LoopThroughAnimatedObjects
     SPRITE_DEBUG ;14
 
 
-    TRAMPOLINE #UPDATE_OBJECTS_BANK, _bBUpdateObjects
+    jsr b9UpdateObjects
 
     ; --- Final: clear Ego land/water bits (StayOnLand/StayOnWater) ---
     lda #<_viewtab
@@ -1712,30 +2029,27 @@ TRAMPOLINE #MOVEMENT_BANK, _bADetermineMovement
 @return:
 rts
 
-; b9LoopThroughAnimatedObjects
-; -----------------------------
+; void b9LoopThroughAnimatedObjects(uint8_t requiredFlagsMask)
+; -----------------------------------------------------------------------------
 ; Purpose:
-;   Iterate the 256-entry view table and invoke the method currently
-;   patched into loopMethodToCall for each object whose flags include
-;   ANIMATED | UPDATE | DRAWN.
+; Iterate over the view table (VIEW_TABLE_SIZE entries, currently 20).
 ;
-; Parity:
-;   Matches the two foreach-loops in C# AnimateObjects().
+; For each view object:
+;   - Load its flags byte at offset _offsetOfFlags
+;   - AND it with the value in LOOP_THROUGH_ANIMATED_CONDITION
+;   - If the result exactly equals LOOP_THROUGH_ANIMATED_CONDITION,
+;     then the object matches → proceed to call the per-object routine
+;   - Otherwise, skip to the next entry
 ;
-; Calling/Assumptions:
-;   - loopMethodToCall contains address of routine to invoke.
-;   - VIEW_POS_LOCAL_VIEW_TAB points into view table.
-;   - _sizeOfViewTab is entry stride.
+; The actual processing for matching objects is performed by the routine
+; whose address is currently patched into the jsr instruction at loopMethodToCall.
+; This address is dynamically updated by the caller depending on the processing
+; phase/pass (e.g. update position & cel, draw, animate cycle, etc.).
 ;
-; Inputs:
-;   - _viewtab, _offsetOfFlags, loopMethodToCall.
-;
-; Outputs/Side Effects:
-;   - Calls the target routine for each qualifying object.
-;   - Uses VIEW_POS_ENTRY_NUM as temporary to preserve X across call.
-; -------------------------------------------------------------------
-
 b9LoopThroughAnimatedObjects:
+    
+    sta LOOP_THROUGH_ANIMATED_CONDITION
+    
     ; Initialize table pointer
     lda #<_viewtab
     sta VIEW_POS_LOCAL_VIEW_TAB
@@ -1746,10 +2060,10 @@ b9LoopThroughAnimatedObjects:
 
 animatedObjectsLoop:
     ; Test for ANIMATED|UPDATE|DRAWN
-    lda #ANIMATED | UPDATE | DRAWN
+    lda LOOP_THROUGH_ANIMATED_CONDITION
     ldy _offsetOfFlags
     and (VIEW_POS_LOCAL_VIEW_TAB),y
-    cmp #ANIMATED | UPDATE | DRAWN
+    cmp LOOP_THROUGH_ANIMATED_CONDITION
     bne calculateNextAddress
 
 updateLoopAndCel:
@@ -1787,7 +2101,8 @@ lda #<b9UpdateObjectDirection
 sta loopMethodToCall + 1
 lda #>b9UpdateObjectDirection
 sta loopMethodToCall + 2
-    
+
+lda #ANIMATED | UPDATE | DRAWN
 jsr b9LoopThroughAnimatedObjects
     
 rts

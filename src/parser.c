@@ -27,14 +27,13 @@ char cursorChar = '_';
 #pragma rodata-name (push, "BANKRAM07")
 char SHOW_PRIORITY[] = {0X73, 0X68, 0X6F, 0X77, 0X20, 0X70, 0X72, 0X69, 0X6F, 0X72, 0X69, 0X74, 0X79 };
 #pragma rodata-name (pop)
+int inputWords[10];
 #pragma bss-name (push, "BANKRAM07")
-int b7InputWords[10];
 char b7WordText[10][80], b7CurrentInputStr[MAX_INPUT_STRING_LENGTH + 1], strPos = 0, b7OutputString[80], b7Temp[256];
 char string[12][40];
 char b7LookupWordsBuffer[125];
 //boolean wordsAreWaiting=FALSE;
 
-byte b7KeyState[256], b7AsciiState[256];
 char b7LastLine[80];
 EventType b7Events[256];  /* controller(), set.key(), set.menu.item() */
 byte b7Directions[9] = { 0, 0, 0, 0, 0, 0, 0, 0, 0 };
@@ -62,19 +61,9 @@ void b7SetEvent(EventType* event, byte eventNumber)
 	b7Events[eventNumber] = *event;
 }
 
-byte b7GetAsciiState(byte number)
-{
-	return b7AsciiState[number];
-}
-
-byte b7GetKeyState(byte number)
-{
-	return b7KeyState[number];
-}
-
 byte b7GetInputWord(byte number)
 {
-	return b7InputWords[number];
+	return inputWords[number];
 }
 
 char* b7GetInternalStringPtr(byte number, size_t* length)
@@ -191,10 +180,10 @@ void b7PollKeyboard()
 	int ch, dummy, gx, gy;
 
 	var[19] = 0;
+	flag[2] = FALSE;
+	flag[4] = FALSE;
+	var[9] = 0;
 
-	/* Clear keyboard buffers */
-	memset(b7KeyState, 0, 256);
-	memset(b7AsciiState, 0, 256);
 	//b1ProcessString(temp, PARSER_BANK, outputString );
 	gx = 0;
 	gy = ((user_input_line - 1) * 16) + 20;
@@ -209,10 +198,7 @@ void b7PollKeyboard()
 			var[19] = ch;
 			lastKey = ch;  /* Store key value for have.key() cmd */
 			if (ch == 0x1C) ch |= 0x0D; /* Handle keypad ENTER */
-			b7KeyState[ch] = 1;     /* Mark scancode as activated */
-			/* if ((ch & 0x00) != 0x00) asciiState[ch & 0xff] = 1; */
-			b7AsciiState[ch] = 1;
-
+		
 			//if ((ch >> 8) == KEY_F11) saveSnapShot();
 
 			/* Handle arrow keys */
@@ -332,7 +318,7 @@ void b7StripExtraChars(char* userInput)
 		case '`':
 		case '-':
 		case '"':
-			// Do nothing — skip this character
+			// Do nothing ï¿½ skip this character
 			break;
 
 		default:
@@ -401,7 +387,7 @@ void b7LookupWords(char* inputLine)
 	// Pointers into the token array stored in b7LookupWordsBuffer
 	char** start = (char**)b7LookupWordsBuffer, ** end, ** originalEnd;
 
-	// Area after the token pointers — used to hold one word for lookup
+	// Area after the token pointers ï¿½ used to hold one word for lookup
 	char* strBuf = (char*)start + MAX_WORD_SIZE * sizeof(char*) + sizeof(char**);
 
 	// Length of the current word being processed
@@ -494,8 +480,9 @@ void b7LookupWords(char* inputLine)
 			// If synonym number is non-zero, store it
 			if (synNum)
 			{
+				flag[2] = TRUE;
 				// Save synonym number
-				b7InputWords[numInputWords] = synNum;
+				inputWords[numInputWords] = synNum;
 				// Save original spelling of the word
 				strcpy(b7WordText[numInputWords], strBuf);
 				// Count this recognized word
@@ -509,7 +496,7 @@ void b7LookupWords(char* inputLine)
 	// Print all collected synonym numbers
 	for (i = 0; i < numInputWords; i++)
 	{
-		printf("%d \n", b7InputWords[i]);
+		printf("%d \n", inputWords[i]);
 	}
 #endif
 
@@ -551,7 +538,7 @@ boolean b7Said(byte** data)
 		if (argValue == 9999) break; /* Should always be last argument */
 		if (argValue == 1) continue; /* Word comparison does not matter */
 
-		if (b7InputWords[wordNum] != argValue) wordsMatch = FALSE;
+		if (inputWords[wordNum] != argValue) wordsMatch = FALSE;
 	}
 
 	if ((numInputWords != numOfArgs) && (argValue != 9999)) return FALSE;
