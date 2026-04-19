@@ -1,5 +1,41 @@
 #include "menu.h"
 
+//#define VERBOSE_MENU
+//#define VERBOSE_MENU_DUMP
+
+#ifdef VERBOSE_MENU_DUMP
+void testMenus()
+{
+	byte previousRamBank = RAM_BANK;
+	int i, j;
+	MENU menuToPrint, childMenuToPrint;
+
+	RAM_BANK = MENU_BANK;
+
+	for (i = 0; i < numOfMenus; i++)
+	{
+		menuToPrint = the_menu[i];
+
+		RAM_BANK = menuToPrint.menuTextBank;
+		printf("- %s dp %dp flags %d proc %d \n", menuToPrint.text, menuToPrint.dp, menuToPrint.flags, menuToPrint.proc);
+		RAM_BANK = MENU_BANK;
+
+		for (j = 0; the_menuChildren[i * MAX_MENU_SIZE + j].text != NULL; j++)
+		{
+			childMenuToPrint = the_menuChildren[i * MAX_MENU_SIZE + j];
+
+			RAM_BANK = childMenuToPrint.menuTextBank;
+			printf("    -- %s %p dp %d flags %d proc %p \n", childMenuToPrint.text, childMenuToPrint.text, childMenuToPrint.dp, childMenuToPrint.flags, childMenuToPrint.proc);
+
+			RAM_BANK = MENU_BANK;
+		}
+	}
+
+	printf("\n\n_____________________________________________________\n");
+	RAM_BANK = previousRamBank;
+}
+#endif // VERBOSE_MENU
+
 int numOfMenus = 0;
 
 typedef struct MENU

@@ -36,8 +36,6 @@
 //#define VERBOSE_LOGIC_EXEC
 //#define VERBOSE_SCRIPT_START
 //#define VERBOSE_PRINT_COUNTER;
-//#define VERBOSE_MENU
-//#define VERBOSE_MENU_DUMP
 //#define VERBOSE_MESSAGE_TEXT
 //#define VERBOSE_GOTO
 //#define VERBOSE_ROOM_CHANGE
@@ -92,26 +90,6 @@ int getNum(char* inputString, int* i, int inputStringBank)
 	return 0;
 }
 
-#pragma wrapped-call (push, trampoline, MENU_BANK)
-#pragma code-name (push, "BANKRAM05");
-//void getMenuChild(MENU* menu, byte menuNo, byte menuChildNo)
-//{
-//    byte previousBank = RAM_BANK;
-//
-//    RAM_BANK = MENU_BANK;
-//
-//#ifdef VERBOSE_MENU
-//    printf("-- Get menu childen %p at position %d child %p dp %p flags %d proc %p text %p \n", menu, menuNo * MAX_MENU_SIZE + i, menu->child, menu->dp, menu->flags, menu->proc, menu->text);
-//#endif // VERBOSE_MENU
-//
-//    *menu = the_menuChildren[menuChildNo * MAX_MENU_SIZE + menuChildNo];
-//
-//    RAM_BANK = previousBank;
-//}
-#pragma wrapped-call (pop)
-#pragma code-name (pop);
-
-
 //TODO: Move this to a place where it can be retrived for both menus and strings
 char* getMessagePointer(byte logicFileNo, byte messageNo)
 {
@@ -143,39 +121,6 @@ char* getMessagePointer(byte logicFileNo, byte messageNo)
 
 	return result;
 }
-
-#ifdef VERBOSE_MENU_DUMP
-void testMenus()
-{
-	byte previousRamBank = RAM_BANK;
-	int i, j;
-	MENU menuToPrint, childMenuToPrint;
-
-	RAM_BANK = MENU_BANK;
-
-	for (i = 0; i < numOfMenus; i++)
-	{
-		menuToPrint = the_menu[i];
-
-		RAM_BANK = menuToPrint.menuTextBank;
-		printf("- %s dp %dp flags %d proc %d \n", menuToPrint.text, menuToPrint.dp, menuToPrint.flags, menuToPrint.proc);
-		RAM_BANK = MENU_BANK;
-
-		for (j = 0; the_menuChildren[i * MAX_MENU_SIZE + j].text != NULL; j++)
-		{
-			childMenuToPrint = the_menuChildren[i * MAX_MENU_SIZE + j];
-
-			RAM_BANK = childMenuToPrint.menuTextBank;
-			printf("    -- %s %p dp %d flags %d proc %p \n", childMenuToPrint.text, childMenuToPrint.text, childMenuToPrint.dp, childMenuToPrint.flags, childMenuToPrint.proc);
-
-			RAM_BANK = MENU_BANK;
-		}
-	}
-
-	printf("\n\n_____________________________________________________\n");
-	RAM_BANK = previousRamBank;
-}
-#endif // VERBOSE_MENU
 
 #define PROCESS_STRING_BANK 3
 
@@ -2191,13 +2136,6 @@ void b4WaitKeyRelease()
 	return;
 }
 
-int b4MenuUpdate(byte eventNo)
-{
-	b4WaitKeyRelease();
-	b7ActivateEvent(eventNo);
-	return D_O_K;
-}
-
 void b4Set_menu() // 1, 0x00 
 {
 	b5SetMenu(loadAndIncWinCode());
@@ -2210,22 +2148,6 @@ void b5Set_menu_item() // 2, 0x00
 {
 	b5SetMenuItem(loadAndIncWinCode(), loadAndIncWinCode());
 }
-
-//void b4Submit_menu() // 0, 0x00 
-//{
-//
-//}
-
-//void b4Enable_item() // 1, 0x00 
-//{
-//	(*data)++;
-//}
-//
-//void b4Disable_item() // 1, 0x00 
-//{
-//	(*data)++;
-//}
-
 
 void b5Menu_input() // 0, 0x00 
 {
