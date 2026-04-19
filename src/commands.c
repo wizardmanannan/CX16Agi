@@ -21,6 +21,7 @@
 #include "stub.h"
 #include "helpers.h"
 #include "parser.h"
+#include "menu.h"
 
 #define HIGHEST_BANK1_FUNC 36
 #define HIGHEST_BANK2_FUNC 91
@@ -63,16 +64,6 @@ int currentLog, agi_bg = 1, agi_fg = 16;
 extern char cursorChar;
 boolean oldQuit = FALSE;
 
-
-int numOfMenus = 0;
-
-
-#pragma bss-name (push, "BANKRAM05")
-MENU the_menu[MAX_MENUS];
-MENU the_menuChildren[MAX_MENU_CHILDREN];
-#pragma bss-name (pop)
-
-
 int printCounter = 1;
 byte lastRoom = 0;
 
@@ -103,51 +94,6 @@ int getNum(char* inputString, int* i, int inputStringBank)
 
 #pragma wrapped-call (push, trampoline, MENU_BANK)
 #pragma code-name (push, "BANKRAM05");
-void b5MenuChildInit()
-{
-	int i;
-
-	for (i = 0; i < MAX_MENU_CHILDREN; i++)
-	{
-		MENU menuChild;
-		menuChild.dp = NULL;
-		menuChild.flags = 0;
-		menuChild.menuTextBank = 0;
-		menuChild.proc = NULL;
-		menuChild.text = NULL;
-		the_menuChildren[i] = menuChild;
-	}
-}
-
-void b5GetMenu(MENU* menu, byte menuNo)
-{
-	*menu = the_menu[menuNo];
-}
-
-void b5SetMenu(MENU* menu, byte menuNo)
-{
-#ifdef VERBOSE_MENU
-	printf("-- Adding menu %p at position %d dp %p flags %d proc %p address %p \n", menu, menuNo, menu->dp, menu->flags, menu->proc, menu->text);
-#endif // VERBOSE_MENU
-
-	the_menu[menuNo] = *menu;
-}
-
-void b5SetMenuChild(MENU* menu, byte menuNo)
-{
-	int i;
-
-	for (i = 0; i < MAX_MENU_SIZE && the_menuChildren[menuNo * MAX_MENU_SIZE + i].text != NULL; i++);
-
-	if (i < MAX_MENU_SIZE)
-	{
-#ifdef VERBOSE_MENU
-		printf("-- Adding menu childen %p at position %d dp %p flags %d proc %p text %p \n", menu, menuNo * MAX_MENU_SIZE + i, menu->dp, menu->flags, menu->proc, menu->text);
-#endif // VERBOSE_MENU
-		the_menuChildren[menuNo * MAX_MENU_SIZE + i] = *menu;
-	}
-}
-
 //void getMenuChild(MENU* menu, byte menuNo, byte menuChildNo)
 //{
 //    byte previousBank = RAM_BANK;
@@ -165,6 +111,8 @@ void b5SetMenuChild(MENU* menu, byte menuNo)
 #pragma wrapped-call (pop)
 #pragma code-name (pop);
 
+
+//TODO: Move this to a place where it can be retrived for both menus and strings
 char* getMessagePointer(byte logicFileNo, byte messageNo)
 {
 	byte previousBank = RAM_BANK;
@@ -2250,114 +2198,9 @@ int b4MenuUpdate(byte eventNo)
 	return D_O_K;
 }
 
-int menuEvent0() { return b4MenuUpdate(0); }
-int menuEvent1() { return b4MenuUpdate(1); }
-int menuEvent2() { return b4MenuUpdate(2); }
-int menuEvent3() { return b4MenuUpdate(3); }
-int menuEvent4() { return b4MenuUpdate(4); }
-int menuEvent5() { return b4MenuUpdate(5); }
-int menuEvent6() { return b4MenuUpdate(6); }
-int menuEvent7() { return b4MenuUpdate(7); }
-int menuEvent8() { return b4MenuUpdate(8); }
-int menuEvent9() { return b4MenuUpdate(9); }
-int menuEvent10() { return b4MenuUpdate(10); }
-int menuEvent11() { return b4MenuUpdate(11); }
-int menuEvent12() { return b4MenuUpdate(12); }
-int menuEvent13() { return b4MenuUpdate(13); }
-int menuEvent14() { return b4MenuUpdate(14); }
-int menuEvent15() { return b4MenuUpdate(15); }
-int menuEvent16() { return b4MenuUpdate(16); }
-int menuEvent17() { return b4MenuUpdate(17); }
-int menuEvent18() { return b4MenuUpdate(18); }
-int menuEvent19() { return b4MenuUpdate(19); }
-int menuEvent20() { return b4MenuUpdate(20); }
-int menuEvent21() { return b4MenuUpdate(21); }
-int menuEvent22() { return b4MenuUpdate(22); }
-int menuEvent23() { return b4MenuUpdate(23); }
-int menuEvent24() { return b4MenuUpdate(24); }
-int menuEvent25() { return b4MenuUpdate(25); }
-int menuEvent26() { return b4MenuUpdate(26); }
-int menuEvent27() { return b4MenuUpdate(27); }
-int menuEvent28() { return b4MenuUpdate(28); }
-int menuEvent29() { return b4MenuUpdate(29); }
-int menuEvent30() { return b4MenuUpdate(30); }
-int menuEvent31() { return b4MenuUpdate(31); }
-int menuEvent32() { return b4MenuUpdate(32); }
-int menuEvent33() { return b4MenuUpdate(33); }
-int menuEvent34() { return b4MenuUpdate(34); }
-int menuEvent35() { return b4MenuUpdate(35); }
-int menuEvent36() { return b4MenuUpdate(36); }
-int menuEvent37() { return b4MenuUpdate(37); }
-int menuEvent38() { return b4MenuUpdate(38); }
-int menuEvent39() { return b4MenuUpdate(39); }
-int menuEvent40() { return b4MenuUpdate(40); }
-int menuEvent41() { return b4MenuUpdate(41); }
-int menuEvent42() { return b4MenuUpdate(42); }
-int menuEvent43() { return b4MenuUpdate(43); }
-int menuEvent44() { return b4MenuUpdate(44); }
-int menuEvent45() { return b4MenuUpdate(45); }
-int menuEvent46() { return b4MenuUpdate(46); }
-int menuEvent47() { return b4MenuUpdate(47); }
-int menuEvent48() { return b4MenuUpdate(48); }
-int menuEvent49() { return b4MenuUpdate(49); }
-
-int (*(menuFunctions[50]))() = {
-	menuEvent0, menuEvent1, menuEvent2, menuEvent3, menuEvent4,
-	menuEvent5, menuEvent6, menuEvent7, menuEvent8, menuEvent9,
-	menuEvent10, menuEvent11, menuEvent12, menuEvent13, menuEvent14,
-	menuEvent15, menuEvent16, menuEvent17, menuEvent18, menuEvent19,
-	menuEvent20, menuEvent21, menuEvent22, menuEvent23, menuEvent24,
-	menuEvent25, menuEvent26, menuEvent27, menuEvent28, menuEvent29,
-	menuEvent30, menuEvent31, menuEvent32, menuEvent33, menuEvent34,
-	menuEvent35, menuEvent36, menuEvent37, menuEvent38, menuEvent39,
-	menuEvent40, menuEvent41, menuEvent42, menuEvent43, menuEvent44,
-	menuEvent45, menuEvent46, menuEvent47, menuEvent48, menuEvent49
-};
-
 void b4Set_menu() // 1, 0x00 
 {
-	int messNum, startOffset;
-	char* messData;
-
-	MENU newMenu;
-	LOGICFile currentLogicFile;
-
-	messNum = loadAndIncWinCode();
-
-
-	if (numOfMenus == 0)
-	{
-		b5MenuChildInit();
-	}
-
-	b5GetLogicFile(&currentLogicFile, currentLog);
-
-	newMenu.dp = NULL;
-	newMenu.flags = 0;
-	newMenu.proc = 0;
-	newMenu.menuTextBank = currentLogicFile.messageBank;
-	/* Create new menu and allocate space for MAX_MENU_SIZE items */	
-	newMenu.text = getMessagePointer(currentLog, messNum - 1);
-
-#ifdef VERBOSE_MENU
-	printf("The result is %p \n", newMenu.text);
-#endif // VERBOSE_MENU
-
-	newMenu.proc = NULL;
-	b5SetMenu(&newMenu, numOfMenus);
-
-	numOfMenus++;
-
-	newMenu.dp = NULL;
-	newMenu.flags = 0;
-	newMenu.proc = NULL;
-	newMenu.text = NULL;
-	newMenu.menuTextBank = 0;
-
-	/* Mark end of menu */
-	b5SetMenu(&newMenu, numOfMenus);
-
-	return;
+	b5SetMenu(loadAndIncWinCode());
 }
 
 #pragma code-name (pop)
@@ -2365,34 +2208,7 @@ void b4Set_menu() // 1, 0x00
 
 void b5Set_menu_item() // 2, 0x00 
 {
-	int messNum, controllerNum, i;
-	MENU childMenu;
-	LOGICFile currentLogicFile;
-	EventType event;
-
-	b5GetLogicFile(&currentLogicFile, currentLog);
-	b7GetEvent(&event, controllerNum);
-
-	messNum = loadAndIncWinCode();
-	controllerNum = loadAndIncWinCode();
-
-	if (event.type == NO_EVENT) {
-		event.type = MENU_EVENT;
-	}
-	event.activated = 0;
-
-	childMenu.text = getMessagePointer(currentLog, messNum - 1);
-	childMenu.proc = menuFunctions[controllerNum];
-	childMenu.menuTextBank = currentLogicFile.messageBank;
-
-	b5SetMenuChild(&childMenu, numOfMenus - 1);
-
-
-#ifdef VERBOSE_MENU_DUMP
-	testMenus();
-#endif // VERBOSE_MENU
-
-	return;
+	b5SetMenuItem(loadAndIncWinCode(), loadAndIncWinCode());
 }
 
 //void b4Submit_menu() // 0, 0x00 
@@ -2413,7 +2229,6 @@ void b5Set_menu_item() // 2, 0x00
 
 void b5Menu_input() // 0, 0x00 
 {
-	do_menu(the_menu, 10, 20);
 	return;
 }
 

@@ -6,11 +6,6 @@ void show_mouse(BITMAP* bmp) {
 
 }
 
-int do_menu(MENU* menu, int x, int y)
-{
-	return 0;
-}
-
 //allgero
 BITMAP* screen;
 

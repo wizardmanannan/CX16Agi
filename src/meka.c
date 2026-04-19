@@ -31,6 +31,7 @@
 #include "random.h"
 #include "sound.h"
 #include "spriteAllocator.h"
+#include "menu.h"
 //#include "sound.h"
 
 boolean hasEnteredNewRoom = FALSE, exitAllLogics = FALSE;
