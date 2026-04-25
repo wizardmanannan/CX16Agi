@@ -7,11 +7,11 @@
 #include "parser.h"
 
 #define MAX_MENUS 10
-#define MAX_MENU_CHILDREN 15
+#define MAX_MENU_CHILDREN 10
 
 #pragma wrapped-call (push, trampoline, MENU_BANK)
-void b5SetMenu(byte messageNo);
-void b5SetMenuItem(int messageNum, int controllerNum);
+void bFSetMenu(byte messageNo);
+void bFSetMenuItem(int messageNum, int controllerNum);
 #pragma wrapped-call  (pop);
 
 

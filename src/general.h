@@ -21,7 +21,6 @@
 #endif
 
 /* MENU data */
-#define MAX_MENU_SIZE 20
 #define SEQUENTIAL_LFN 2
 
 typedef unsigned char byte;

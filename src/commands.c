@@ -2138,7 +2138,7 @@ void b4WaitKeyRelease()
 
 void b4Set_menu() // 1, 0x00 
 {
-	b5SetMenu(loadAndIncWinCode());
+	bFSetMenu(loadAndIncWinCode());
 }
 
 #pragma code-name (pop)
@@ -2146,7 +2146,7 @@ void b4Set_menu() // 1, 0x00
 
 void b5Set_menu_item() // 2, 0x00 
 {
-	b5SetMenuItem(loadAndIncWinCode(), loadAndIncWinCode());
+	bFSetMenuItem(loadAndIncWinCode(), loadAndIncWinCode());
 }
 
 void b5Menu_input() // 0, 0x00 
