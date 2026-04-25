@@ -84,11 +84,11 @@ bpl @loop
 rts
 
 _b3InitLayer1Mapbase:
-SET_VERA_ADDRESS_IMMEDIATE MAP_BASE, #$0, #$1
+SET_VERA_ADDRESS_IMMEDIATE (MAP_BASE + MENU_BAR_WIDTH * 2), #$0, #$1
 
-ldx #< TILE_LAYER_NO_TILES
+ldx #< (TILE_LAYER_NO_TILES - MENU_BAR_WIDTH)
 
-lda #> TILE_LAYER_NO_TILES
+lda #> (TILE_LAYER_NO_TILES - MENU_BAR_WIDTH)
 sta ZP_TILE_LAYER_NO_TILES_HIGH
 
 lda #TRANSPARENT_CHAR
@@ -251,6 +251,10 @@ lda #PARSER_BANK
 sta RAM_BANK
 jsr b7HandleInputLine
 
+@handleMenuBar:
+lda #MENU_BANK
+sta RAM_BANK  
+jsr bFDisplayMenu
 
 @checkMainLoopCounter:
 lda _mainLoopCounter
@@ -297,7 +301,7 @@ lda sendIrqCommand
 cmp #IRQ_CMD_NORMAL
 beq @resetSetIrqState
 
-TRAMPOLINE #TEXT_BANK, _b3InitLayer1Mapbase
+;TRAMPOLINE #TEXT_BANK, _b3InitLayer1Mapbase
 TRAMPOLINE #GRAPHICS_BANK, _b6InitInput
 
 bra @resetSetIrqState

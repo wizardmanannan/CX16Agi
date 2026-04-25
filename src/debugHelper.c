@@ -13,6 +13,7 @@ byte debugBank;
 byte spriteDebugBank;
 
 #pragma bss-name (push, "BANKRAMDEBUG")
+byte lastOpCode;
 long opCounter = 1;
 long opStopAt = -1;
 long opExitAt = -1;
@@ -213,7 +214,8 @@ void bDbgDebugPrint(byte toPrint)
 		exit(0);
 	}
 
-	opCounter++;
+	lastOpCode = toPrint;
+ 	opCounter++;
 }
 
 void bDbgPrintFalse()

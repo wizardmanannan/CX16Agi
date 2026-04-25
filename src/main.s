@@ -18,6 +18,7 @@
     .include "spriteAllocatorAsm.s"
     .include "viewAsm.s"
     .include "init.s"
+    .include "menuAsm.s"
     
     .export _executeLogic
     .export _b6InitInterpreter
@@ -114,3 +115,4 @@
     .export _b9UpdateObjectDirections
     .export _loadInitBankAndInitMemory
     .export _b9StartMoveObj
+    .export _bFInitMenus

@@ -254,6 +254,11 @@ extern void b6InitGraphics();
 extern void b6InitIrq();
 extern void b6InitInterpreter();
 extern void b6TellMeTheAddressPlease();
+
+#pragma wrapped-call (push, trampoline, MENU_BANK)
+extern void bFInitMenus();
+#pragma wrapped-call (pop)
+
 void b6Initialise()
 {
     int i;
@@ -263,6 +268,7 @@ void b6Initialise()
     b4InitLruCaches(&b4DiscardLogicFileWrapper, &b9DiscardView);
     b6InitFiles();             /* Load resource directories */
     b6InitRandom();
+    bFInitMenus();
 
     //// <<--  Determine exact version in here
     for (i = 0; i < 255; i++) {  /* Initialize variables and flags */

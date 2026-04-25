@@ -1,6 +1,5 @@
 #include "textLayer.h"
 #pragma code-name (push, "BANKRAM06")
-
 //#define VERBOSE_CHAR_SET_LOAD
 //#define TEST_CHARSET
 //#define VERBOSE_DISPLAY_TEXT
@@ -10,6 +9,7 @@ byte printOn = TRUE;
 int byteCounter = 0;
 #endif
 
+boolean charSetInited = FALSE;
 #pragma bss-name (push, "BANKRAM03")
 byte _currentForegroundColour;
 byte _currentBackgroundColour;
@@ -136,8 +136,8 @@ void b3InitCharset()
 {
 #define ORIGINAL_CHARSET_ADDRESS 0x1f000
 	
-	int i;
 
+	int i;
 	//printf("Initializing CharSet. . .\n");
 
 	SCREEN_SET_CHAR_SET(ISO);
@@ -161,6 +161,7 @@ void b3InitCharset()
 	printf("returning : %p. The byte counter is %d\n.", buffer, byteCounter);
 #endif // VERBOSE_CHAR_SET_LOAD
 
+	charSetInited = TRUE;
 }
 
 #ifdef TEST_CHARSET
@@ -362,6 +363,7 @@ void b3DisplayMessageBox(char* message, byte messageBank, byte row, byte col, by
 	if (messageSize > 1) //Agi sometimes has empty messages. We say greater than 1 because of the terminator
 	{
 		displayTextAddressToCopyTo = MAPBASE + (FIRST_ROW + row - 1) * TILE_LAYER_BYTES_PER_ROW + col * BYTES_PER_CELL;
+				
 		displayAddressCopyPaletteTo = displayTextAddressToCopyTo + 1;
 
 #ifdef VERBOSE_DISPLAY_TEXT
