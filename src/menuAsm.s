@@ -9,28 +9,18 @@ MENU_INC = 1
 .import _the_menu
 .import _sizeOfMenu
 .import _offsetOfText
-.import _offsetOfMenuTextBank
 
 .segment "ZEROPAGE"
 MENU_SREG: .word $0
 TEXT_ZP: .word $0
 MENU_TEXT_COUNTER: .byte $0
-.segment "CODE"
-printMenuText:
-bra @start
-@previousRamBank: .byte $0
-@start:
-lda RAM_BANK 
-sta @previousRamBank
 
+.segment "BANKRAM0F"
+bFPrintMenuText:
 stz MENU_TEXT_COUNTER
 
 @menusLoop:
-lda #MENU_BANK
-sta RAM_BANK
 GET_STRUCT_16_STORED_OFFSET _offsetOfText, MENU_SREG,TEXT_ZP
-GET_STRUCT_8_STORED_OFFSET _offsetOfMenuTextBank, MENU_SREG    
-sta RAM_BANK
 
 lda TEXT_ZP
 ora TEXT_ZP + 1
@@ -60,11 +50,7 @@ sta MENU_SREG + 1
 bra @menusLoop
 
 @end:
-lda @previousRamBank
-sta RAM_BANK
 rts
-
-.segment "BANKRAM0F"
 
 
 SPACE = $20
@@ -127,7 +113,7 @@ sta MENU_SREG
 lda #>_the_menu
 adc #$0
 sta MENU_SREG + 1
-jsr printMenuText
+jsr bFPrintMenuText
 
 
 @pad:

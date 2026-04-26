@@ -8,6 +8,8 @@ int numOfMenus = 0;
 #pragma bss-name (push, "BANKRAM0F")
 MENU the_menu[MAX_MENUS];
 MENU the_menuChildren[MAX_MENU_CHILDREN * MAX_MENUS];
+char menuTextBuffer[MENU_TEXT_BUFFER_SIZE];
+char* nextMenuTextBufferAddr = menuTextBuffer;
 #pragma bss-name (pop)
 
 #ifdef VERBOSE_MENU_DUMP
@@ -130,7 +132,6 @@ void bFMenuChildInit()
 		MENU menuChild;
 		menuChild.dp = NULL;
 		menuChild.flags = 0;
-		menuChild.menuTextBank = 0;
 		menuChild.proc = NULL;
 		menuChild.text = NULL;
 		the_menuChildren[i] = menuChild;
@@ -157,10 +158,28 @@ void bFSetMenuChild(MENU* menu, byte menuNo)
 	}
 }
 
+char* bFStoreMessageInBuffer(LOGICFile* currentLogicFile, byte messNum)
+{
+	char* messData,*result;
+	byte messLength;
+
+
+	messData = getMessagePointer(currentLog, messNum - 1);
+	messLength = strLenBanked(messData, currentLogicFile->messageBank) + 1;
+	
+	memCpyBankedBetween((byte*)nextMenuTextBufferAddr, MENU_BANK, (byte*)messData, currentLogicFile->messageBank, messLength);
+
+	result = nextMenuTextBufferAddr;
+
+	nextMenuTextBufferAddr += messLength;
+
+	return result;
+}
+
 void bFSetMenu(byte messNum)
 {
 	int startOffset;
-	char* messData;
+
 
 	MENU newMenu;
 	LOGICFile currentLogicFile;
@@ -171,13 +190,14 @@ void bFSetMenu(byte messNum)
 	}
 
 	b5GetLogicFile(&currentLogicFile, currentLog);
-
+	
+	
+	newMenu.text = bFStoreMessageInBuffer(&currentLogicFile, messNum);
 	newMenu.dp = NULL;
 	newMenu.flags = 0;
 	newMenu.proc = 0;
-	newMenu.menuTextBank = currentLogicFile.messageBank;
 	/* Create new menu and allocate space for MAX_MENU_SIZE items */
-	newMenu.text = getMessagePointer(currentLog, messNum - 1);
+
 	
 #ifdef VERBOSE_MENU
 	printf("The result is %p \n", newMenu.text);
@@ -192,7 +212,6 @@ void bFSetMenu(byte messNum)
 	newMenu.flags = 0;
 	newMenu.proc = NULL;
 	newMenu.text = NULL;
-	newMenu.menuTextBank = 0;
 
 	/* Mark end of menu */
 		the_menu[numOfMenus] = newMenu;
@@ -215,9 +234,8 @@ void bFSetMenuItem(int messNum, int controllerNum)
 	}
 	event.activated = 0;
 
-	childMenu.text = getMessagePointer(currentLog, messNum - 1);
+	childMenu.text = bFStoreMessageInBuffer(&currentLogicFile, messNum);
 	childMenu.proc = menuFunctions[controllerNum];
-	childMenu.menuTextBank = currentLogicFile.messageBank;
 
 	bFSetMenuChild(&childMenu, numOfMenus - 1);
 

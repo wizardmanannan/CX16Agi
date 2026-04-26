@@ -8,11 +8,11 @@
 
 #define MAX_MENUS 10
 #define MAX_MENU_CHILDREN 10
+#define MENU_TEXT_BUFFER_SIZE 500
 
 typedef struct MENU
 {
 	char* text;                   /* menu item text */
-	byte menuTextBank;
 	int (*proc)(void);            /* callback function */
 	int flags;                    /* flags about the menu state */
 	void* dp;                     /* any data the menu might require */
