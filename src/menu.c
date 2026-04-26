@@ -5,16 +5,6 @@
 
 int numOfMenus = 0;
 
-typedef struct MENU
-{
-	char* text;                   /* menu item text */
-	byte menuTextBank;
-	int (*proc)(void);            /* callback function */
-	int flags;                    /* flags about the menu state */
-	void* dp;                     /* any data the menu might require */
-	boolean enabled;
-} MENU;
-
 #pragma bss-name (push, "BANKRAM0F")
 MENU the_menu[MAX_MENUS];
 MENU the_menuChildren[MAX_MENU_CHILDREN * MAX_MENUS];
@@ -188,7 +178,7 @@ void bFSetMenu(byte messNum)
 	newMenu.menuTextBank = currentLogicFile.messageBank;
 	/* Create new menu and allocate space for MAX_MENU_SIZE items */
 	newMenu.text = getMessagePointer(currentLog, messNum - 1);
-
+	
 #ifdef VERBOSE_MENU
 	printf("The result is %p \n", newMenu.text);
 #endif // VERBOSE_MENU

@@ -2,6 +2,7 @@
 #define _STRUCT_H_
 
 #include "view.h"
+#include "menu.h"
 #include <stddef.h>
 
 //This used for stored struct sizes of offsets which are used in assembler. That way when struct sizes/offsets change the assembler won't break. 
@@ -61,5 +62,10 @@ byte offsetOfNumberOfLoops = offsetof(struct View, numberOfLoops);
 byte offsetOfMaxCels = offsetof(struct View, maxCels);
 byte offsetOfMaxVeraSlots = offsetof(struct View, maxVeraSlots);
 byte sizeOfView = sizeof(View);
+
+//Menu
+byte sizeOfMenu = sizeof(MENU);
+byte offsetOfText = offsetof(struct MENU, text);
+byte offsetOfMenuTextBank = offsetof(struct MENU, menuTextBank);
 
 #endif

@@ -9,6 +9,16 @@
 #define MAX_MENUS 10
 #define MAX_MENU_CHILDREN 10
 
+typedef struct MENU
+{
+	char* text;                   /* menu item text */
+	byte menuTextBank;
+	int (*proc)(void);            /* callback function */
+	int flags;                    /* flags about the menu state */
+	void* dp;                     /* any data the menu might require */
+	boolean enabled;
+} MENU;
+
 #pragma wrapped-call (push, trampoline, MENU_BANK)
 void bFSetMenu(byte messageNo);
 void bFSetMenuItem(int messageNum, int controllerNum);
