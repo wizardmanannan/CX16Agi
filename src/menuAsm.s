@@ -10,6 +10,7 @@ MENU_INC = 1
 .import _sizeOfMenu
 .import _offsetOfText
 .import _bFMenuAllowed
+.import _bFMenuShown
 
 .segment "ZEROPAGE"
 MENU_SREG: .word $0
@@ -81,6 +82,8 @@ bne @setupMenuSecondByteLoop
 
 lda #$1
 sta _bFMenuAllowed
+
+stz _bFMenuShown
 
 rts
 

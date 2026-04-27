@@ -10,7 +10,8 @@ MENU the_menu[MAX_MENUS];
 MENU the_menuChildren[MAX_MENU_CHILDREN * MAX_MENUS];
 char menuTextBuffer[MENU_TEXT_BUFFER_SIZE];
 char* nextMenuTextBufferAddr = menuTextBuffer;
-byte bFMenuAllowed;
+boolean bFMenuAllowed;
+boolean bFMenuShown;
 #pragma bss-name (pop)
 
 #ifdef VERBOSE_MENU_DUMP
@@ -142,6 +143,12 @@ void bFMenuChildInit()
 void bFAllowMenu(boolean allowed)
 {
 	bFMenuAllowed = allowed;
+}
+
+void bFShowMenu(boolean shown)
+{
+	asm("stp");
+	bFMenuShown = shown;
 }
 
 void bFGetMenu(MENU* menu, byte menuNo)
