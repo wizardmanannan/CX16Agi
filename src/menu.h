@@ -22,6 +22,7 @@ typedef struct MENU
 #pragma wrapped-call (push, trampoline, MENU_BANK)
 void bFSetMenu(byte messageNo);
 void bFSetMenuItem(int messageNum, int controllerNum);
+void bFAllowMenu(boolean allowed);
 #pragma wrapped-call  (pop);
 
 

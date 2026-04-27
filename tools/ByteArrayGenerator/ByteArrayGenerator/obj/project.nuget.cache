@@ -1,20 +1,10 @@
 {
   "version": 2,
-  "dgSpecHash": "ybhpGs5iwMM=",
+  "dgSpecHash": "stV1sAwrXEE=",
   "success": true,
-  "projectFilePath": "C:\\meka\\CommanderX16Repo\\tools\\ByteArrayGenerator\\ByteArrayGenerator\\ByteArrayGenerator.csproj",
+  "projectFilePath": "Z:\\CLionProjects\\CX16Agi\\tools\\ByteArrayGenerator\\ByteArrayGenerator\\ByteArrayGenerator.csproj",
   "expectedPackageFiles": [
-    "C:\\Users\\andre\\.nuget\\packages\\newtonsoft.json\\13.0.2\\newtonsoft.json.13.0.2.nupkg.sha512"
+    "C:\\Users\\alay\\.nuget\\packages\\newtonsoft.json\\13.0.2\\newtonsoft.json.13.0.2.nupkg.sha512"
   ],
-  "logs": [
-    {
-      "code": "NU1900",
-      "level": "Warning",
-      "message": "Error occurred while getting package vulnerability data: Unable to load the service index for source https://api.nuget.org/v3/index.json.",
-      "projectPath": "C:\\meka\\CommanderX16Repo\\tools\\ByteArrayGenerator\\ByteArrayGenerator\\ByteArrayGenerator.csproj",
-      "warningLevel": 1,
-      "filePath": "C:\\meka\\CommanderX16Repo\\tools\\ByteArrayGenerator\\ByteArrayGenerator\\ByteArrayGenerator.csproj",
-      "targetGraphs": []
-    }
-  ]
+  "logs": []
 }

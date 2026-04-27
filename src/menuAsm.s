@@ -9,6 +9,7 @@ MENU_INC = 1
 .import _the_menu
 .import _sizeOfMenu
 .import _offsetOfText
+.import _bFMenuAllowed
 
 .segment "ZEROPAGE"
 MENU_SREG: .word $0
@@ -78,10 +79,12 @@ sta VERA_data0
 dex
 bne @setupMenuSecondByteLoop
 
+lda #$1
+sta _bFMenuAllowed
 
 rts
 
-bFDisplayMenu:
+bFDisplayMenu: 
 lda _charSetInited
 beq @return
 
@@ -101,6 +104,8 @@ sta VERA_addr_bank
 ldy #DISPLAY_MENU_FLAG
 
 
+lda _bFMenuAllowed
+beq @displayMenu
 GET_FLAG_NON_INTERPRETER MENU_SREG
 beq @clearMenu
 

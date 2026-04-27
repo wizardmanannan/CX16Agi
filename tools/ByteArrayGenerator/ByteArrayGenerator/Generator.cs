@@ -6,7 +6,7 @@ using System.Text;
 
 Console.WriteLine("Hello, World!");
 
-BankInfos map = JsonConvert.DeserializeObject<BankInfos>(File.ReadAllText("C:\\meka\\tools\\ByteArrayGenerator\\ByteArrayGenerator\\BankDoc.json"));
+BankInfos map = JsonConvert.DeserializeObject<BankInfos>(File.ReadAllText("Z:\\CLionProjects\\CX16Agi\\tools\\ByteArrayGenerator\\ByteArrayGenerator\\BankDoc.json"));
 const int DefaultBank = 5;
 const int NoCommands = 182;
 const int SaidInstruction = 14;

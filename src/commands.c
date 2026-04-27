@@ -2163,6 +2163,14 @@ void b5Show_obj_v() // 1, 0x01
 	return;
 }
 
+void b5Allow_menu() // 1, 0x01 
+{
+	boolean menuAllowed = loadAndIncWinCode();
+
+	bFAllowMenu(menuAllowed);
+	return;
+}
+
 //void b4Open_dialogue() // 0, 0x00 
 //{
 //

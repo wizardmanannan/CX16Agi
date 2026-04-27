@@ -160,6 +160,7 @@ LOGICCOMMANDS_INC = 1
 .import _b5Div_n
 .import _b5Div_v
 .import _b5SetPriorityBase
+.import _b5Allow_menu
 .import _b6NewRoom
 
 .import _exitAllLogics
@@ -1753,6 +1754,9 @@ b5Menu_inputCCall:
         jmp mainLoop
 b5Show_obj_vCCall:
         jsr _b5Show_obj_v
+        jmp mainLoop
+b5Allow_menuCCall:
+        jsr _b5Allow_menu
         jmp mainLoop
 b5Mul_nCCall:
         jsr _b5Mul_n

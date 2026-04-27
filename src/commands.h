@@ -11,6 +11,7 @@
 #include "parser.h"
 #include "sound.h"
 #include "view.h"
+#include "menu.h"
 
 void executeLogic(LOGICEntry* logicEntry, int logNum);
 void b1Call(unsigned char** data);
