@@ -1825,35 +1825,13 @@ void b4Accept_input() // 0, 0x00
 void b4Set_key() // 3, 0x00 
 {
 	int asciiCode, scanCode, eventCode;
-	char* tempStr = (char*)&GOLDEN_RAM[LOCAL_WORK_AREA_START];
 	EventType event;
 
 	asciiCode = loadAndIncWinCode();
 	scanCode = loadAndIncWinCode();
 	eventCode = loadAndIncWinCode();
 
-	b7GetEvent(&event, eventCode);
-
-	/* Ignore cases which have both values set for now. They seem to behave
-	** differently than normal and often specify controllers that have
-	** already been defined.
-	*/
-	if (scanCode && asciiCode) return;
-
-	if (scanCode) {
-		event.type = SCAN_KEY_EVENT;
-		event.eventID = scanCode;
-		event.asciiValue = asciiCode;
-		event.scanCodeValue = scanCode;
-		event.activated = FALSE;
-	}
-	else if (asciiCode) {
-		event.type = ASCII_KEY_EVENT;
-		event.eventID = asciiCode;
-		event.asciiValue = asciiCode;
-		event.scanCodeValue = scanCode;
-		event.activated = FALSE;
-	}
+	b1AssociateController(asciiCode, scanCode, eventCode);
 }
 
 void b4Add_to_pic() // 7, 0x00 

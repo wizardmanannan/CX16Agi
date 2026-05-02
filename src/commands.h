@@ -12,6 +12,7 @@
 #include "sound.h"
 #include "view.h"
 #include "menu.h"
+#include "controllers.h"
 
 void executeLogic(LOGICEntry* logicEntry, int logNum);
 void b1Call(unsigned char** data);

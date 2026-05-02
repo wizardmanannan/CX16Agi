@@ -179,6 +179,8 @@ void b7PollKeyboard()
 	static char strPos = 0;
 	int ch, dummy, gx, gy;
 
+	b1ResetControllers();
+
 	var[19] = 0;
 	flag[2] = FALSE;
 	flag[4] = FALSE;
@@ -214,8 +216,8 @@ void b7PollKeyboard()
 				case KEY_HOME: b7HandleDirection(8); return;
 				}
 			}
-
-			if (inputLineDisplayed) {
+           
+			if (!b1SetController(ch) && inputLineDisplayed) {
 				switch (ch & 0xff) {
 				case KEY_TAB:  /* Ignore these when building input string */
 				case KEY_ESC:
@@ -232,7 +234,7 @@ void b7PollKeyboard()
 					sprintf(b7OutputString, "%s%s%c", b7Temp, b7CurrentInputStr, cursorChar);
 					strcpy(b7LastLine, b7CurrentInputStr);
 					break;
-				case KEY_BACK_SPACE:   /* Backspace */
+				case KEY_BACKSPACE:   /* Backspace */
 					if (strPos > 0) {
 						strPos--;
 						b7CurrentInputStr[strPos] = 0;

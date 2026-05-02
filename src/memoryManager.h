@@ -68,6 +68,7 @@
 #define PARSER_BANK 0x7
 #define WORD_BANK 0x12
 #define LINE_DRAW_BANK 8
+#define CONTROLLER_BANK 0x1
 
 #define NO_CODE_BANKS 18
 #define LRU_CACHE_LOGIC_DATA_SIZE 10

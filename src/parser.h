@@ -15,6 +15,7 @@
 #include "words.h"
 #include "kernal.h"
 #include "keyboard.h"
+#include "controllers.h"
 
 #define  NO_EVENT         0
 #define  ASCII_KEY_EVENT  1
