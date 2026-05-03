@@ -19,6 +19,7 @@
     .include "viewAsm.s"
     .include "init.s"
     .include "menuAsm.s"
+    .include "controllersAsm.s"
     
     .export _executeLogic
     .export _b6InitInterpreter

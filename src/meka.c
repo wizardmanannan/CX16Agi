@@ -311,7 +311,7 @@ void b6Initialise()
 
     b6TellMeTheAddressPlease();
     bFInitPaletteManager();
-    b1ResetControllers();
+    b1InitControllers();
 }
 
 

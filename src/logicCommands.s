@@ -1788,7 +1788,7 @@ jmpTableIf:
 .addr b1HasCCall
 .addr b1Obj_in_roomCCall
 .addr b1PosnCCall
-.addr b1ControllerCCall
+.addr b1Controller
 .addr b1Have_keyCCall
 .addr bFSaid
 .addr b1Compare_stringsCCall
@@ -1958,9 +1958,22 @@ b1PosnCCall:
    jsr _b1Posn
    HANDLE_C_IF_RESULT
 
-b1ControllerCCall:
-    jsr _b1Controller
-    HANDLE_C_IF_RESULT
+b1Controller:
+.scope
+    CONTROLLER = ZP_TMP_2
+    
+    LOAD_CODE_WIN_CODE
+    sta CONTROLLER
+    INC_CODE
+    lda CONTROLLER
+    TRAMPOLINE #CONTROLLER_BANK, b1IsControllerSet
+    bne @returnFromOpCodeTrue
+    jmp returnFromOpCodeFalse
+    @returnFromOpCodeTrue:
+    jmp @returnFromOpCodeTrue
+
+.endscope
+
 
 b1Have_keyCCall:
     jsr _b1Have_key

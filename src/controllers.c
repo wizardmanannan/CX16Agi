@@ -9,6 +9,11 @@ byte b1ControllerBits[NO_CONTROLLER_BITS];
 #pragma code-name (push, "BANKRAM01")
 void b1ResetControllers()
 {
+    memset(b1ControllerBits, 0, NO_CONTROLLER_BITS);
+}
+
+void b1InitControllers()
+{
     memset(b1Controllers, NO_ASSOCIATED, NO_CONTROLLERS);
     memset(b1PetciiToControllers, NO_ASSOCIATED, LARGEST_PETSCII + 1);
     memset(b1ControllerBits, 0, NO_CONTROLLER_BITS);
@@ -176,13 +181,5 @@ boolean b1SetController(byte petscii)
 
     return FALSE;
 }
-
-byte b1IsControllerSet(byte controller)
-{
-    if (controller >= 256) return 0;
-    return (b1ControllerBits[controller >> 3] & (1 << (controller & 7))) != 0;
-}
-
-
 
 #pragma code-name (pop)

@@ -12,6 +12,7 @@
 
 #pragma wrapped-call (push, trampoline, CONTROLLER_BANK)
 void b1ResetControllers();
+void b1InitControllers();
 void b1AssociateController(byte asciiCode, byte scanCode, byte controller);
 boolean b1SetController(byte petscii);
 byte b1IsControllerSet(byte controller);
