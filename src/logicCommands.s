@@ -1970,7 +1970,7 @@ b1Controller:
     bne @returnFromOpCodeTrue
     jmp returnFromOpCodeFalse
     @returnFromOpCodeTrue:
-    jmp @returnFromOpCodeTrue
+    jmp returnFromOpCodeTrue
 
 .endscope
 
