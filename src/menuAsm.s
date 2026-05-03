@@ -106,10 +106,11 @@ sta VERA_addr_bank
 
 ldy #DISPLAY_MENU_FLAG
 
-
 lda _bFMenuAllowed
-beq @displayMenu
+beq @clearMenu
 GET_FLAG_NON_INTERPRETER MENU_SREG
+beq @clearMenu
+lda _bFMenuShown
 beq @clearMenu
 
 @displayMenu:

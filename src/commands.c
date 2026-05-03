@@ -2096,7 +2096,6 @@ void b5Set_menu_item() // 2, 0x00
 
 void b5Menu_input() // 0, 0x00 
 {
-	asm("stp");
 	bFShowMenu(TRUE);
 	return;
 }

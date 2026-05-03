@@ -147,7 +147,6 @@ void bFAllowMenu(boolean allowed)
 
 void bFShowMenu(boolean shown)
 {
-	asm("stp");
 	bFMenuShown = shown;
 }
 
