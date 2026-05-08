@@ -5,6 +5,8 @@
 
 int numOfMenus = 0;
 
+#define MENU_WIDTH 40
+
 #pragma bss-name (push, "BANKRAM0F")
 MENU the_menu[MAX_MENUS];
 MENU the_menuChildren[MAX_MENU_CHILDREN * MAX_MENUS];
@@ -12,6 +14,10 @@ char menuTextBuffer[MENU_TEXT_BUFFER_SIZE];
 char* nextMenuTextBufferAddr = menuTextBuffer;
 boolean bFMenuAllowed;
 boolean bFMenuShown;
+byte bFMenuSelected;
+byte bFMenuChildSelected;
+byte bFMenuWidthTimesTableLow[MAX_MENU_CHILDREN];
+byte bFMenuWidthTimesTableHigh[MAX_MENU_CHILDREN];
 #pragma bss-name (pop)
 
 #ifdef VERBOSE_MENU_DUMP
@@ -148,6 +154,7 @@ void bFAllowMenu(boolean allowed)
 void bFShowMenu(boolean shown)
 {
 	bFMenuShown = shown;
+	bFMenuSelected = 0;
 }
 
 void bFGetMenu(MENU* menu, byte menuNo)
