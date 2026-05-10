@@ -92,6 +92,66 @@ void b3MakeRightBorder()
 	}
 }
 
+
+void b3MakeMenuTopEnd()
+{
+	byte i;
+
+	SET_VERA_ADDRESS(TILEBASE + MENU_TOP_END * BYTES_PER_CHARACTER, ADDRESSSEL0, 1);
+
+	for (i = 0; i < BYTES_PER_CHARACTER; i++)
+	{
+		if (i == 0 || i == 1)
+		{
+			WRITE_BYTE_DEF_TO_ASSM(0b01010101, VERA_data0); //Black Horizonal Border
+		}
+		else if(i % 2 == 0)
+		{
+			WRITE_BYTE_DEF_TO_ASSM(0b01101010, VERA_data0); //Black Vertical Border 
+		}
+		else
+		{
+			WRITE_BYTE_DEF_TO_ASSM(0b10101010, VERA_data0); //White Space 
+		}
+	}
+}
+
+void b3MakeMenuTop()
+{
+	byte i;
+
+	SET_VERA_ADDRESS(TILEBASE + MENU_TOP * BYTES_PER_CHARACTER, ADDRESSSEL0, 1);
+	for (i = 0; i < BYTES_PER_CHARACTER; i++)
+	{
+		if (i == 0 || i == 1)
+		{
+			WRITE_BYTE_DEF_TO_ASSM(0b01010101, VERA_data0); //Black Horizonal Border
+		}
+		else
+		{
+			WRITE_BYTE_DEF_TO_ASSM(0b10101010, VERA_data0); //White Space 
+		}
+	}
+}
+
+void b3MakeMenuVertical()
+{
+	byte i;
+
+	SET_VERA_ADDRESS(TILEBASE + MENU_VERTICAL * BYTES_PER_CHARACTER, ADDRESSSEL0, 1);
+	for (i = 0; i < BYTES_PER_CHARACTER; i++)
+	{
+		if(i % 2 == 0)
+		{
+			WRITE_BYTE_DEF_TO_ASSM(0b01101010, VERA_data0); //Black Vertical Border 
+		}
+		else
+		{
+			WRITE_BYTE_DEF_TO_ASSM(0b10101010, VERA_data0); //White Space 
+		}
+	}
+}
+
 void b3ConvertsOneBitPerPixCharToTwoBitPerPixelChars()
 {
 	int i;
@@ -156,6 +216,9 @@ void b3InitCharset()
 	b3MakeLeftBorder();
 	b3MakeBottomBorder();
 	b3MakeRightBorder();
+	b3MakeMenuTopEnd();
+	b3MakeMenuTop();
+	b3MakeMenuVertical();
 
 #ifdef VERBOSE_CHAR_SET_LOAD
 	printf("returning : %p. The byte counter is %d\n.", buffer, byteCounter);

@@ -274,6 +274,88 @@ sta VERA_data0
 lda #>COLOR_RED
 sta VERA_data0
 
+;The rest of this palette is junk
+lda #<COLOR_BLACK
+sta VERA_data0
+lda #>COLOR_BLACK
+sta VERA_data0
+
+lda #<COLOR_BLACK
+sta VERA_data0
+lda #>COLOR_BLACK
+sta VERA_data0
+
+lda #<COLOR_BLACK
+sta VERA_data0
+lda #>COLOR_BLACK
+sta VERA_data0
+
+lda #<COLOR_BLACK
+sta VERA_data0
+lda #>COLOR_BLACK
+sta VERA_data0
+
+lda #<COLOR_BLACK
+sta VERA_data0
+lda #>COLOR_BLACK
+sta VERA_data0
+
+lda #<COLOR_BLACK
+sta VERA_data0
+lda #>COLOR_BLACK
+sta VERA_data0
+
+lda #<COLOR_BLACK
+sta VERA_data0
+lda #>COLOR_BLACK
+sta VERA_data0
+
+lda #<COLOR_BLACK
+sta VERA_data0
+lda #>COLOR_BLACK
+sta VERA_data0
+
+lda #<COLOR_BLACK
+sta VERA_data0
+lda #>COLOR_BLACK
+sta VERA_data0
+
+lda #<COLOR_BLACK
+sta VERA_data0
+lda #>COLOR_BLACK
+sta VERA_data0
+
+lda #<COLOR_BLACK
+sta VERA_data0
+lda #>COLOR_BLACK
+sta VERA_data0
+
+lda #<COLOR_BLACK
+sta VERA_data0
+lda #>COLOR_BLACK
+sta VERA_data0
+
+;TileSet Layer 2
+lda #<COLOR_BLACK
+sta VERA_data0
+lda #>COLOR_BLACK
+sta VERA_data0
+
+ lda #<COLOR_BLACK
+sta VERA_data0
+lda #>COLOR_BLACK
+sta VERA_data0
+
+lda #<COLOR_WHITE
+sta VERA_data0
+lda #>COLOR_WHITE
+sta VERA_data0
+
+lda #<COLOR_RED
+sta VERA_data0
+lda #>COLOR_RED
+sta VERA_data0
+
 
 ;Other palettes are dynamic created in paletteManager.c
 

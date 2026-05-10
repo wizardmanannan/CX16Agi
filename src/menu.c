@@ -10,14 +10,14 @@ int numOfMenus = 0;
 #pragma bss-name (push, "BANKRAM0F")
 MENU the_menu[MAX_MENUS];
 MENU the_menuChildren[MAX_MENU_CHILDREN * MAX_MENUS];
+MENU* bFFirstMenuChild[MAX_MENUS];
 char menuTextBuffer[MENU_TEXT_BUFFER_SIZE];
+byte bFMenuChildWidth[MAX_MENUS];
 char* nextMenuTextBufferAddr = menuTextBuffer;
 boolean bFMenuAllowed;
 boolean bFMenuShown;
 byte bFMenuSelected;
 byte bFMenuChildSelected;
-byte bFMenuWidthTimesTableLow[MAX_MENU_CHILDREN];
-byte bFMenuWidthTimesTableHigh[MAX_MENU_CHILDREN];
 #pragma bss-name (pop)
 
 #ifdef VERBOSE_MENU_DUMP
@@ -131,6 +131,27 @@ int (*(menuFunctions[50]))() = {
 
 extern char* getMessagePointer(byte logicFileNo, byte messageNo);
 
+void bFCalculateFirstMenuChildAddress()
+{
+	byte i;
+
+	for(i = 0; i < MAX_MENU_CHILDREN; i++)
+	{
+		bFFirstMenuChild[i] = the_menuChildren + i * MAX_MENU_CHILDREN;
+	}
+}
+
+void bFInitMenuState()
+{
+	bFMenuAllowed = TRUE;
+	bFMenuShown = FALSE;
+	bFMenuSelected = FALSE;
+
+	bFCalculateFirstMenuChildAddress();
+	
+	memset(bFMenuChildWidth, 0, MAX_MENUS);
+}
+
 void bFMenuChildInit()
 {
 	int i;
@@ -154,7 +175,8 @@ void bFAllowMenu(boolean allowed)
 void bFShowMenu(boolean shown)
 {
 	bFMenuShown = shown;
-	bFMenuSelected = 0;
+	bFMenuSelected = 2;
+	bFMenuChildSelected = 1;
 }
 
 void bFGetMenu(MENU* menu, byte menuNo)
@@ -175,6 +197,8 @@ void bFSetMenuChild(MENU* menu, byte menuNo)
 #endif // VERBOSE_MENU
 		the_menuChildren[menuNo * MAX_MENU_CHILDREN + i] = *menu;
 	}
+
+
 }
 
 char* bFStoreMessageInBuffer(LOGICFile* currentLogicFile, byte messNum)
@@ -244,6 +268,8 @@ void bFSetMenuItem(int messNum, int controllerNum)
 	MENU childMenu;
 	LOGICFile currentLogicFile;
 	EventType event;
+	byte menuTextLength;
+	
 
 	b5GetLogicFile(&currentLogicFile, currentLog);
 	b7GetEvent(&event, controllerNum);
@@ -258,6 +284,12 @@ void bFSetMenuItem(int messNum, int controllerNum)
 
 	bFSetMenuChild(&childMenu, numOfMenus - 1);
 
+	menuTextLength = strlen(childMenu.text);
+
+	if(menuTextLength + 2 > bFMenuChildWidth[numOfMenus - 1])
+	{
+		bFMenuChildWidth[numOfMenus - 1] = menuTextLength + 2; //Plus 2 to take in account the border on the left and right
+	}
 
 #ifdef VERBOSE_MENU_DUMP
 	testMenus();
