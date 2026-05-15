@@ -44,7 +44,7 @@ MENU_CHILDREN_ADDRESS = MENU_BAR_LOCATION + (MENU_BAR_WIDTH * 2)
 .segment "BANKRAM0F"
 
 bFMoveVeraAddressToNextChildMenu:
-ldx _bFMenuChildSelected
+ldx _bFMenuSelected
 lda _bFMenuChildWidth,x
 asl
 sta MENU_SREG2
@@ -69,7 +69,7 @@ sta VERA_addr_high
 rts
 
 bFDrawTopChildrenBorder:
-ldy _bFMenuChildSelected
+ldy _bFMenuSelected
 ldx _bFMenuChildWidth,y
 ldy #CHILD_MENU_PALETTE
 dex
@@ -95,7 +95,7 @@ sty VERA_data0
 rts
 
 bFDrawBottomChildrenBorder:
-ldy _bFMenuChildSelected
+ldy _bFMenuSelected
 ldx _bFMenuChildWidth,y
 ldy #CHILD_MENU_PALETTE | 8 ;Flip vertically
 dex
@@ -282,7 +282,7 @@ bne @clearLoop
 rts
 
 bFPrintMenuChildText:
-;jsr bFClearMenuChildren
+jsr bFClearMenuChildren
 jsr bFDisplayChildMenu
 rts
 bFPrintMenuText:
@@ -442,6 +442,8 @@ sta VERA_data0
 
 dex
 bne @clearMenuLoop
+
+jsr bFClearMenuChildren
 
 @return:
 rts

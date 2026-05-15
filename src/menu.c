@@ -18,6 +18,7 @@ boolean bFMenuAllowed;
 boolean bFMenuShown;
 byte bFMenuSelected;
 byte bFMenuChildSelected;
+byte bFChildMenuToClear = NO_MENU_TO_CLEAR;
 #pragma bss-name (pop)
 
 #ifdef VERBOSE_MENU_DUMP
@@ -172,11 +173,51 @@ void bFAllowMenu(boolean allowed)
 	bFMenuAllowed = allowed;
 }
 
+void bFGoToNextMenu(signed char direction)
+{
+  asm("sei");
+  bFMenuSelected += direction;
+  bFMenuChildSelected = 0;
+
+  if(bFMenuSelected == 0xFF)
+  {
+	bFMenuSelected = numOfMenus - 1;
+  }
+  else if(bFMenuSelected == numOfMenus)
+  {
+	bFMenuSelected = 0;
+  }
+//   printf("menu selected %d\n", 255 % 6);
+//   asm("stp");
+  REENABLE_INTERRUPTS();	
+}
+
 void bFShowMenu(boolean shown)
 {
-	bFMenuShown = shown;
-	bFMenuSelected = 2;
-	bFMenuChildSelected = 1;
+	byte ch;
+	bFMenuShown = TRUE;
+	bFMenuSelected = 1;
+	bFMenuChildSelected = 0;
+
+	do 
+	{
+		GET_IN(ch);
+
+		if(ch == KEY_LEFT)
+		{
+			bFGoToNextMenu(-1);
+		}
+		else if(ch == KEY_RIGHT)
+		{
+		   bFGoToNextMenu(1);
+		}
+
+	} while(ch != KEY_ESC);
+
+	asm("sei");
+	bFMenuShown = FALSE;
+	bFChildMenuToClear = bFMenuSelected;
+	REENABLE_INTERRUPTS();
 }
 
 void bFGetMenu(MENU* menu, byte menuNo)

@@ -9,6 +9,7 @@
 #define MAX_MENUS 10
 #define MAX_MENU_CHILDREN 10
 #define MENU_TEXT_BUFFER_SIZE 500
+#define NO_MENU_TO_CLEAR 0xFF
 
 typedef struct MENU
 {
