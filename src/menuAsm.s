@@ -16,6 +16,7 @@ MENU_INC = 1
 .import _bFInitMenuState
 .import _bFMenuChildWidth
 .import _bFFirstMenuChild
+.import _bFMenuChildShiftBack
 
 .segment "ZEROPAGE"
 MENU_SREG: .word $0
@@ -298,6 +299,18 @@ lda VERA_addr_low
 sta OPEN_MENU_ADDRESS
 lda VERA_addr_high
 sta OPEN_MENU_ADDRESS + 1
+
+lda _bFMenuChildShiftBack,x
+beq @getTextZp
+
+sec
+lda OPEN_MENU_ADDRESS
+sbc _bFMenuChildShiftBack,x
+sta OPEN_MENU_ADDRESS
+lda OPEN_MENU_ADDRESS + 1
+sbc #$0
+sta OPEN_MENU_ADDRESS + 1
+
 @getTextZp:
 GET_STRUCT_16_STORED_OFFSET _offsetOfText, MENU_SREG,TEXT_ZP
 
@@ -352,6 +365,8 @@ SPACE = $20
 TRANSPARENT = $80
 
 MENU_BAR_LOCATION = $DA00
+MENU_BAR_END = MENU_BAR_LOCATION + (MENU_BAR_WIDTH * 2)
+MENU_BAR_MAX_CHILD_FIRST_ROW = (MENU_BAR_END + TILE_LAYER_WIDTH * 2)
 
 DISPLAY_MENU_FLAG = 14
 MENU_BAR_SECOND_BYTE = $10
