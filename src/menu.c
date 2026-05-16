@@ -14,6 +14,7 @@ MENU* bFFirstMenuChild[MAX_MENUS];
 char menuTextBuffer[MENU_TEXT_BUFFER_SIZE];
 byte bFMenuChildWidth[MAX_MENUS];
 byte bFMenuChildShiftBack[MAX_MENUS];
+byte bFMenuChildCount[MAX_MENUS];
 char* nextMenuTextBufferAddr = menuTextBuffer;
 boolean bFMenuAllowed;
 boolean bFMenuShown;
@@ -91,6 +92,10 @@ void bFInitMenuState()
 	
 	memset(bFMenuChildWidth, 0, MAX_MENUS);
 	memset(bFMenuChildShiftBack, 0, MAX_MENUS);
+	memset(bFMenuChildCount, 0, MAX_MENUS);
+
+	bFMenuSelected = 0;
+	bFMenuChildSelected = 0;
 }
 
 void bFMenuChildInit()
@@ -127,8 +132,22 @@ void bFGoToNextMenu(signed char direction)
   {
 	bFMenuSelected = 0;
   }
-//   printf("menu selected %d\n", 255 % 6);
-//   asm("stp");
+  REENABLE_INTERRUPTS();	
+}
+
+void bFGoToNextChildMenu(signed char direction)
+{
+  asm("sei");
+  bFMenuChildSelected += direction;
+
+  if(bFMenuChildSelected == 0xFF)
+  {
+	bFMenuChildSelected = bFMenuChildCount[bFMenuSelected] - 1;
+  }
+  else if(bFMenuChildSelected >= bFMenuChildCount[bFMenuSelected])
+  {
+	bFMenuChildSelected = 0;
+  }
   REENABLE_INTERRUPTS();	
 }
 
@@ -136,9 +155,6 @@ void bFShowMenu(boolean shown)
 {
 	byte ch;
 	bFMenuShown = TRUE;
-	bFMenuSelected = 1;
-	bFMenuChildSelected = 0;
-
 	do 
 	{
 		GET_IN(ch);
@@ -150,6 +166,14 @@ void bFShowMenu(boolean shown)
 		else if(ch == KEY_RIGHT)
 		{
 		   bFGoToNextMenu(1);
+		}
+		else if(ch == KEY_UP)
+		{
+		   bFGoToNextChildMenu(-1);
+		}
+		else if(ch == KEY_DOWN)
+		{
+		   bFGoToNextChildMenu(1);
 		}
 
 	} while(ch != KEY_ESC);
@@ -177,6 +201,7 @@ void bFSetMenuChild(MENU* menu, byte menuNo)
 		printf("-- Adding menu childen %p at position %d dp %p flags %d proc %p text %p \n", menu, menuNo * MAX_MENU_CHILDREN + i, menu->dp, menu->flags, menu->proc, menu->text);
 #endif // VERBOSE_MENU
 		the_menuChildren[menuNo * MAX_MENU_CHILDREN + i] = *menu;
+		bFMenuChildCount[menuNo]++;
 	}
 
 
@@ -255,7 +280,7 @@ void bFSetMenuChildShiftBack(byte menuNumber)
 
   if(menuLocation + bFMenuChildWidth[i] * 2 > MENU_BAR_MAX_CHILD_FIRST_ROW)
   {
-	bFMenuChildShiftBack[i] = (menuLocation + bFMenuChildWidth[i] * 2 - MENU_BAR_MAX_CHILD_FIRST_ROW) + 2;
+	bFMenuChildShiftBack[i] = (menuLocation + bFMenuChildWidth[i] * 2 - MENU_BAR_MAX_CHILD_FIRST_ROW) + 2; //Shift by 1 title (2 spaces to create a gap)
   }
   else
   {
