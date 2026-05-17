@@ -7,6 +7,8 @@ int numOfMenus = 0;
 
 #define MENU_WIDTH 40
 
+boolean menuDirty;
+
 #pragma bss-name (push, "BANKRAM0F")
 MENU the_menu[MAX_MENUS];
 MENU the_menuChildren[MAX_MENU_CHILDREN * MAX_MENUS];
@@ -96,31 +98,35 @@ void bFInitMenuState()
 
 	bFMenuSelected = 0;
 	bFMenuChildSelected = 0;
+	menuDirty = TRUE; //Setting this to dirty initially is required so that the menu bar area is clear
 }
 
 void bFMenuChildInit()
 {
 	int i;
 
+	asm("sei");
 	for (i = 0; i < MAX_MENUS * MAX_MENU_CHILDREN; i++)
 	{
 		MENU menuChild;
-		menuChild.dp = NULL;
-		menuChild.flags = 0;
-		menuChild.proc = NULL;
+		menuChild.controller = NO_ASSOCIATED;
 		menuChild.text = NULL;
 		the_menuChildren[i] = menuChild;
 	}
+	REENABLE_INTERRUPTS();
 }
 
 void bFAllowMenu(boolean allowed)
 {
+	asm("sei");
 	bFMenuAllowed = allowed;
+	REENABLE_INTERRUPTS();
 }
 
 void bFGoToNextMenu(signed char direction)
 {
   asm("sei");
+  menuDirty = TRUE;
   bFMenuSelected += direction;
   bFMenuChildSelected = 0;
 
@@ -138,6 +144,7 @@ void bFGoToNextMenu(signed char direction)
 void bFGoToNextChildMenu(signed char direction)
 {
   asm("sei");
+  menuDirty = TRUE;
   bFMenuChildSelected += direction;
 
   if(bFMenuChildSelected == 0xFF)
@@ -154,11 +161,17 @@ void bFGoToNextChildMenu(signed char direction)
 void bFShowMenu(boolean shown)
 {
 	byte ch;
+	MENU selectedMenu;
+
+	asm("sei");
 	bFMenuShown = TRUE;
+	menuDirty = TRUE;
+	REENABLE_INTERRUPTS();
+
 	do 
 	{
 		GET_IN(ch);
-
+		
 		if(ch == KEY_LEFT)
 		{
 			bFGoToNextMenu(-1);
@@ -175,10 +188,20 @@ void bFShowMenu(boolean shown)
 		{
 		   bFGoToNextChildMenu(1);
 		}
+		else if(ch == KEY_ENTER)
+		{
+			selectedMenu = the_menuChildren[bFMenuSelected * MAX_MENU_CHILDREN + bFMenuChildSelected];
 
-	} while(ch != KEY_ESC);
+			if(selectedMenu.controller != NO_ASSOCIATED)
+			{
+				b1SetController(selectedMenu.controller);
+			}
+		}
+
+	} while(ch != KEY_ESC && ch != KEY_ENTER);
 
 	asm("sei");
+	menuDirty = TRUE;
 	bFMenuShown = FALSE;
 	bFChildMenuToClear = bFMenuSelected;
 	REENABLE_INTERRUPTS();
@@ -192,7 +215,7 @@ void bFGetMenu(MENU* menu, byte menuNo)
 void bFSetMenuChild(MENU* menu, byte menuNo)
 {
 	int i;
-
+	
 	for (i = 0; i < MAX_MENU_CHILDREN && the_menuChildren[menuNo * MAX_MENU_CHILDREN + i].text != NULL; i++);
 
 	if (i < MAX_MENU_CHILDREN)
@@ -228,10 +251,11 @@ char* bFStoreMessageInBuffer(LOGICFile* currentLogicFile, byte messNum)
 void bFSetMenu(byte messNum)
 {
 	int startOffset;
-
-
 	MENU newMenu;
 	LOGICFile currentLogicFile;
+
+	asm("sei");
+
 
 	if (numOfMenus == 0)
 	{
@@ -242,9 +266,7 @@ void bFSetMenu(byte messNum)
 	
 	
 	newMenu.text = bFStoreMessageInBuffer(&currentLogicFile, messNum);
-	newMenu.dp = NULL;
-	newMenu.flags = 0;
-	newMenu.proc = 0;
+	newMenu.controller = NO_ASSOCIATED;
 	/* Create new menu and allocate space for MAX_MENU_SIZE items */
 
 	
@@ -252,18 +274,16 @@ void bFSetMenu(byte messNum)
 	printf("The result is %p \n", newMenu.text);
 #endif // VERBOSE_MENU
 
-	newMenu.proc = NULL;
 	the_menu[numOfMenus] = newMenu;
 
 	numOfMenus++;
 
-	newMenu.dp = NULL;
-	newMenu.flags = 0;
-	newMenu.proc = NULL;
 	newMenu.text = NULL;
 
 	/* Mark end of menu */
 		the_menu[numOfMenus] = newMenu;
+
+	REENABLE_INTERRUPTS();
 
 	return;
 }
@@ -299,9 +319,9 @@ void bFSetMenuItem(int messNum, int controllerNum)
 	EventType event;
 	byte menuTextLength;
 	
+	asm("sei");
 
 	b5GetLogicFile(&currentLogicFile, currentLog);
-	b7GetEvent(&event, controllerNum);
 
 	if (event.type == NO_EVENT) {
 		event.type = MENU_EVENT;
@@ -309,6 +329,7 @@ void bFSetMenuItem(int messNum, int controllerNum)
 	event.activated = 0;
 
 	childMenu.text = bFStoreMessageInBuffer(&currentLogicFile, messNum);
+	childMenu.controller = controllerNum;
 
 	bFSetMenuChild(&childMenu, numOfMenus - 1);
 
@@ -323,6 +344,8 @@ void bFSetMenuItem(int messNum, int controllerNum)
 #ifdef VERBOSE_MENU_DUMP
 	testMenus();
 #endif // VERBOSE_MENU
+
+    REENABLE_INTERRUPTS();
 
 	return;
 }

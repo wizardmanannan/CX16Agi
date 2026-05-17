@@ -17,6 +17,7 @@ MENU_INC = 1
 .import _bFMenuChildWidth
 .import _bFFirstMenuChild
 .import _bFMenuChildShiftBack
+.import menuDirty
 
 .segment "ZEROPAGE"
 MENU_SREG: .word $0
@@ -276,7 +277,7 @@ lda #$30
 sta VERA_addr_bank
 
 lda MENU_CHILD_TILES
-ldx #<((MENU_CHILD_TILES - 1) / 2)
+ldx #<((MENU_CHILD_TILES - 1) / 2) ;It writes four at a time, but only two of those are tiles, the other two are the palettes
 ldy #>((MENU_CHILD_TILES - 1) / 2)
 
  ; Set up VERA for cache operations
@@ -432,11 +433,13 @@ lda _bFMenuAllowed
 beq @clearMenu
 GET_FLAG_NON_INTERPRETER MENU_SREG
 beq @clearMenu
+
+stz _menuDirty
+
 lda _bFMenuShown
 beq @clearMenu
 
 @displayMenu:
-
 clc
 lda #<_the_menu
 adc _offsetOfText

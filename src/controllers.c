@@ -169,10 +169,15 @@ void b1AssociateController(byte asciiCode, byte scanCode, byte controller)
     }
 }
 
-boolean b1SetController(byte petscii)
+boolean b1SetControllerByPetscii(byte petscii)
 {
     byte controller = b1PetciiToControllers[petscii];
 
+    return b1SetController(controller);
+}
+
+boolean b1SetController(byte controller)
+{
     if (controller < NO_ASSOCIATED)
     {
         b1ControllerBits[controller >> 3] |= (1 << (controller & 7));

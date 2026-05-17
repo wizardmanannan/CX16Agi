@@ -217,7 +217,7 @@ void b7PollKeyboard()
 				}
 			}
            
-			if (!b1SetController(ch) && inputLineDisplayed) {
+			if (!b1SetControllerByPetscii(ch) && inputLineDisplayed) {
 				switch (ch & 0xff) {
 				case KEY_TAB:  /* Ignore these when building input string */
 				case KEY_ESC:

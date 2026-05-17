@@ -5,9 +5,10 @@
 #include "memoryManager.h"
 #include "logic.h"
 #include "parser.h"
+#include "controllers.h"
 
 #define MAX_MENUS 10
-#define MAX_MENU_CHILDREN 10
+#define MAX_MENU_CHILDREN 15
 #define MENU_TEXT_BUFFER_SIZE 500
 #define NO_MENU_TO_CLEAR 0xFF
 
@@ -20,10 +21,8 @@
 typedef struct MENU
 {
 	char* text;                   /* menu item text */
-	int (*proc)(void);            /* callback function */
-	int flags;                    /* flags about the menu state */
-	void* dp;                     /* any data the menu might require */
 	boolean enabled;
+	byte controller;
 } MENU;
 
 #pragma wrapped-call (push, trampoline, MENU_BANK)

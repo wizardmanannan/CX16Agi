@@ -8,6 +8,7 @@ IRQ_INC = 1
 .include "inputIrqHandler.s"
 
 .import _mainLoopCounter
+.import _menuDirty
 
 .macro SEND_IRQ_COMMAND command, vSyncToCheck
 sei
@@ -252,8 +253,12 @@ sta RAM_BANK
 jsr b7HandleInputLine
 
 @handleMenuBar:
+lda _menuDirty
+beq @checkMainLoopCounter
+
 lda #MENU_BANK
-sta RAM_BANK  
+sta RAM_BANK 
+
 jsr bFDisplayMenu
 
 @checkMainLoopCounter:
