@@ -40,7 +40,7 @@ MENU_NOT_SELECTED = $10
 MENU_SELECTED = $20
 MAX_MENU_CHILDREN = 10
 MENU_CHILD_TILES = (MAX_MENU_CHILDREN + 3) * MENU_BAR_WIDTH
-MENU_CHILDREN_ADDRESS = MENU_BAR_LOCATION + (MENU_BAR_WIDTH * 2)
+MENU_CHILDREN_ADDRESS = MENU_BAR_LOCATION + (TILE_LAYER_WIDTH * 2)
 
 .segment "BANKRAM0F"
 
@@ -258,18 +258,32 @@ rts
 
 
 bFClearMenuChildren:
-stz VERA_ctrl
+lda #%00001100
+sta VERA_ctrl
+
+lda #TRANSPARENT
+ldy #CHILD_MENU_PALETTE
+sta $9f29
+sty $9f2A
+sta $9f2B
+sty $9f2C
+
 lda #<MENU_CHILDREN_ADDRESS
 sta VERA_addr_low
 lda #>MENU_CHILDREN_ADDRESS
 sta VERA_addr_high
-lda #$20
+lda #$30
 sta VERA_addr_bank
 
-ldx #<(MENU_CHILD_TILES - 1)
-ldy #>(MENU_CHILD_TILES - 1)
-lda #TRANSPARENT
+lda MENU_CHILD_TILES
+ldx #<((MENU_CHILD_TILES - 1) / 2)
+ldy #>((MENU_CHILD_TILES - 1) / 2)
 
+ ; Set up VERA for cache operations
+lda #%00000100  ; DCSEL = Mode 2 for enabling cache
+sta VERA_ctrl
+lda #%01000000  ; Enable cache writing
+sta VERA_dc_video
 
 @clearLoop:
 sta VERA_data0
@@ -280,6 +294,10 @@ dey
 cpy #$FF
 bne @clearLoop
 @exit:
+
+stz VERA_dc_video
+stz VERA_ctrl
+
 rts
 
 bFPrintMenuChildText:
