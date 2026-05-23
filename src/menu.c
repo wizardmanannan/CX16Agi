@@ -78,7 +78,7 @@ void bFCalculateFirstMenuChildAddress()
 {
 	byte i;
 
-	for(i = 0; i < MAX_MENU_CHILDREN; i++)
+	for(i = 0; i < MAX_MENUS; i++)
 	{
 		bFFirstMenuChild[i] = the_menuChildren + i * MAX_MENU_CHILDREN;
 	}
@@ -106,12 +106,16 @@ void bFMenuChildInit()
 	int i;
 
 	asm("sei");
+
 	for (i = 0; i < MAX_MENUS * MAX_MENU_CHILDREN; i++)
 	{
 		MENU menuChild;
 		menuChild.controller = NO_ASSOCIATED;
 		menuChild.text = NULL;
-		the_menuChildren[i] = menuChild;
+
+		the_menuChildren[i].controller = NO_ASSOCIATED;
+		the_menuChildren[i].text = NULL;
+
 	}
 	REENABLE_INTERRUPTS();
 }
@@ -226,8 +230,6 @@ void bFSetMenuChild(MENU* menu, byte menuNo)
 		the_menuChildren[menuNo * MAX_MENU_CHILDREN + i] = *menu;
 		bFMenuChildCount[menuNo]++;
 	}
-
-
 }
 
 char* bFStoreMessageInBuffer(LOGICFile* currentLogicFile, byte messNum)

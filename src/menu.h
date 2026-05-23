@@ -21,7 +21,6 @@
 typedef struct MENU
 {
 	char* text;                   /* menu item text */
-	boolean enabled;
 	byte controller;
 } MENU;
 
