@@ -2094,6 +2094,17 @@ void b5Set_menu_item() // 2, 0x00
 	bFSetMenuItem(loadAndIncWinCode(), loadAndIncWinCode());
 }
 
+void b5EnableItem()
+{
+	bFSetMenuControllerEnabled(loadAndIncWinCode(), TRUE);
+}
+
+void b5DisableItem()
+{
+	bFSetMenuControllerEnabled(loadAndIncWinCode(), FALSE);
+}
+
+
 void b5Menu_input() // 0, 0x00 
 {
 	bFShowMenu(TRUE);

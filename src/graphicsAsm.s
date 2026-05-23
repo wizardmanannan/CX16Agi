@@ -335,13 +335,8 @@ sta VERA_data0
 lda #>COLOR_BLACK
 sta VERA_data0
 
-;TileSet Layer 2
+;TileSet Layer 3
 lda #<COLOR_BLACK
-sta VERA_data0
-lda #>COLOR_BLACK
-sta VERA_data0
-
- lda #<COLOR_BLACK
 sta VERA_data0
 lda #>COLOR_BLACK
 sta VERA_data0
@@ -349,6 +344,11 @@ sta VERA_data0
 lda #<COLOR_WHITE
 sta VERA_data0
 lda #>COLOR_WHITE
+sta VERA_data0
+
+lda #<COLOR_LIGHT_GRAY
+sta VERA_data0
+lda #>COLOR_LIGHT_GRAY
 sta VERA_data0
 
 lda #<COLOR_RED

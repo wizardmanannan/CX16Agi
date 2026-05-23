@@ -154,6 +154,8 @@ LOGICCOMMANDS_INC = 1
 .import _b4Set_menu
 .import _b5Set_menu_item
 .import _b5Menu_input
+.import _b5EnableItem
+.import _b5DisableItem
 .import _b5Show_obj_v
 .import _b5Mul_n
 .import _b5Mul_v
@@ -816,8 +818,8 @@ jmpTableCommands2:
 .addr b4Set_menuCCall
 .addr b5Set_menu_itemCCall
 .addr b1NoOp_0
-.addr b1NoOp_1
-.addr b1NoOp_1
+.addr b5EnableItemCCall
+.addr b5DisableItemCCall
 .addr b5Menu_inputCCall
 .addr b5Show_obj_vCCall
 .addr b1NoOp_0
@@ -1751,6 +1753,12 @@ b5Set_menu_itemCCall:
         jmp mainLoop
 b5Menu_inputCCall:
         jsr _b5Menu_input
+        jmp mainLoop
+b5EnableItemCCall:
+        jsr _b5EnableItem
+        jmp mainLoop
+b5DisableItemCCall:
+        jsr _b5DisableItem
         jmp mainLoop
 b5Show_obj_vCCall:
         jsr _b5Show_obj_v

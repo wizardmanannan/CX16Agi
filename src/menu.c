@@ -17,6 +17,7 @@ char menuTextBuffer[MENU_TEXT_BUFFER_SIZE];
 byte bFMenuChildWidth[MAX_MENUS];
 byte bFMenuChildShiftBack[MAX_MENUS];
 byte bFMenuChildCount[MAX_MENUS];
+byte bFEnabledMenuControllers[NO_CONTROLLERS];
 char* nextMenuTextBufferAddr = menuTextBuffer;
 boolean bFMenuAllowed;
 boolean bFMenuShown;
@@ -95,6 +96,7 @@ void bFInitMenuState()
 	memset(bFMenuChildWidth, 0, MAX_MENUS);
 	memset(bFMenuChildShiftBack, 0, MAX_MENUS);
 	memset(bFMenuChildCount, 0, MAX_MENUS);
+	memset(bFEnabledMenuControllers, TRUE, NO_CONTROLLERS);
 
 	bFMenuSelected = 0;
 	bFMenuChildSelected = 0;
@@ -109,10 +111,6 @@ void bFMenuChildInit()
 
 	for (i = 0; i < MAX_MENUS * MAX_MENU_CHILDREN; i++)
 	{
-		MENU menuChild;
-		menuChild.controller = NO_ASSOCIATED;
-		menuChild.text = NULL;
-
 		the_menuChildren[i].controller = NO_ASSOCIATED;
 		the_menuChildren[i].text = NULL;
 
@@ -164,8 +162,7 @@ void bFGoToNextChildMenu(signed char direction)
 
 void bFShowMenu(boolean shown)
 {
-	byte ch;
-	MENU selectedMenu;
+	byte ch, controller;
 
 	asm("sei");
 	bFMenuShown = TRUE;
@@ -194,15 +191,15 @@ void bFShowMenu(boolean shown)
 		}
 		else if(ch == KEY_ENTER)
 		{
-			selectedMenu = the_menuChildren[bFMenuSelected * MAX_MENU_CHILDREN + bFMenuChildSelected];
+			controller = the_menuChildren[bFMenuSelected * MAX_MENU_CHILDREN + bFMenuChildSelected].controller;
 
-			if(selectedMenu.controller != NO_ASSOCIATED)
+			if(controller != NO_ASSOCIATED)
 			{
-				b1SetController(selectedMenu.controller);
+				b1SetController(controller);
 			}
 		}
 
-	} while(ch != KEY_ESC && ch != KEY_ENTER);
+	} while(ch != KEY_ESC && ch != KEY_ENTER || ch == KEY_ENTER && !bFEnabledMenuControllers[controller]);
 
 	asm("sei");
 	menuDirty = TRUE;
@@ -227,7 +224,7 @@ void bFSetMenuChild(MENU* menu, byte menuNo)
 #ifdef VERBOSE_MENU
 		printf("-- Adding menu childen %p at position %d dp %p flags %d proc %p text %p \n", menu, menuNo * MAX_MENU_CHILDREN + i, menu->dp, menu->flags, menu->proc, menu->text);
 #endif // VERBOSE_MENU
-		the_menuChildren[menuNo * MAX_MENU_CHILDREN + i] = *menu;
+		the_menuChildren[menuNo * MAX_MENU_CHILDREN + i] = *menu;		
 		bFMenuChildCount[menuNo]++;
 	}
 }
@@ -350,6 +347,11 @@ void bFSetMenuItem(int messNum, int controllerNum)
     REENABLE_INTERRUPTS();
 
 	return;
+}
+
+void bFSetMenuControllerEnabled(byte controllerNumber, boolean enabled)
+{
+	bFEnabledMenuControllers[controllerNumber] = enabled;
 }
 
 #pragma code-name (pop);

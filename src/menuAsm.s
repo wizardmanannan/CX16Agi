@@ -17,7 +17,8 @@ MENU_INC = 1
 .import _bFMenuChildWidth
 .import _bFFirstMenuChild
 .import _bFMenuChildShiftBack
-.import menuDirty
+.import _bFEnabledMenuControllers
+.import _offsetOfController
 
 .segment "ZEROPAGE"
 MENU_SREG: .word $0
@@ -27,6 +28,8 @@ MENU_TEXT_COUNTER: .byte $0
 OPEN_MENU_ADDRESS: .word $0
 HAS_ALL_TEXT_BEING_DRAWN: .byte $0
 CHILD_MENU_COUNTER = MENU_TEXT_COUNTER ;These are never used at the same time, saving space
+CONTROLLER: .byte $0
+CONTROLLER_ENABLED = CONTROLLER ;There are never used at the same time
 
 HORIZONAL_BORDER = $5F
 VERTICAL_BORDER = $84
@@ -39,6 +42,7 @@ CHILD_MENU_PALETTE = $10
 
 MENU_NOT_SELECTED = $10
 MENU_SELECTED = $20
+MENU_SELECTED_DISABLED = $30
 MAX_MENU_CHILDREN = 10
 MENU_CHILD_TILES = (MAX_MENU_CHILDREN + 3) * MENU_BAR_WIDTH
 MENU_CHILDREN_ADDRESS = MENU_BAR_LOCATION + (TILE_LAYER_WIDTH * 2)
@@ -152,12 +156,22 @@ stz CHILD_MENU_COUNTER
 
 @childMenuLoop:
 GET_STRUCT_16_STORED_OFFSET _offsetOfText, MENU_SREG,TEXT_ZP
+GET_STRUCT_8_STORED_OFFSET _offsetOfController, MENU_SREG,CONTROLLER
+
+lda _offsetOfController
+ldy CONTROLLER
+lda MENU_SREG
+lda _bFEnabledMenuControllers,y
+sta CONTROLLER_ENABLED
+
 
 lda TEXT_ZP
 ora TEXT_ZP + 1
-beq @drawBottomBorder
+bne @loadWidth
+jmp @drawBottomBorder
 
 
+@loadWidth:
 ldx _bFMenuSelected
 ldy _bFMenuChildWidth,x
 sty MENU_SREG2
@@ -220,7 +234,16 @@ sta VERA_data0
 bra @incrementToNextLetter
 
 @isSelected:
+lda CONTROLLER_ENABLED
+beq @isNotEnabled
+
+@isEnabled:    
 lda #MENU_SELECTED
+sta VERA_data0
+bra @incrementToNextLetter
+
+@isNotEnabled:
+lda #MENU_SELECTED_DISABLED
 sta VERA_data0
 
 @incrementToNextLetter:

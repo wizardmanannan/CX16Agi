@@ -66,4 +66,5 @@ byte sizeOfView = sizeof(View);
 //Menu
 byte sizeOfMenu = sizeof(MENU);
 byte offsetOfText = offsetof(struct MENU, text);
+byte offsetOfController = offsetof(struct MENU, controller);
 #endif

@@ -20,7 +20,7 @@
 
 typedef struct MENU
 {
-	char* text;                   /* menu item text */
+	char* text;      /* menu item text */
 	byte controller;
 } MENU;
 
@@ -29,6 +29,7 @@ void bFSetMenu(byte messageNo);
 void bFSetMenuItem(int messageNum, int controllerNum);
 void bFAllowMenu(boolean allowed);
 void bFShowMenu(boolean shown);
+void bFSetMenuControllerEnabled(byte controllerNumber, boolean enabled);
 #pragma wrapped-call  (pop);
 
 
