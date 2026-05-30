@@ -1593,6 +1593,8 @@ void b3Clear_lines() // 3, 0x00
 #pragma code-name (pop)
 #pragma code-name (push, "BANKRAM04")
 
+extern boolean statusLineDisplayed;
+
 void b4Text_screen() // 0, 0x00 
 {
 	screenMode = AGI_TEXT;

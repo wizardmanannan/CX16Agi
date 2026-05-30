@@ -254,12 +254,17 @@ jsr b7HandleInputLine
 
 @handleMenuBar:
 lda _menuDirty
-beq @checkMainLoopCounter
+beq @handleStatusBar
 
 lda #MENU_BANK
 sta RAM_BANK 
 
 jsr bFDisplayMenu
+
+@handleStatusBar:
+lda #STATUSBAR_BANK
+sta RAM_BANK
+jsr b10DisplayStatusBar
 
 @checkMainLoopCounter:
 lda _mainLoopCounter

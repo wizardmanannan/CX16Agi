@@ -4,11 +4,12 @@
 //#define VERBOSE_MENU_DUMP
 
 int numOfMenus = 0;
+boolean menuShown;
 
 #define MENU_WIDTH 40
 
 boolean menuDirty;
-
+boolean menuAllowed;
 #pragma bss-name (push, "BANKRAM0F")
 MENU the_menu[MAX_MENUS];
 MENU the_menuChildren[MAX_MENU_CHILDREN * MAX_MENUS];
@@ -19,8 +20,6 @@ byte bFMenuChildShiftBack[MAX_MENUS];
 byte bFMenuChildCount[MAX_MENUS];
 byte bFEnabledMenuControllers[NO_CONTROLLERS];
 char* nextMenuTextBufferAddr = menuTextBuffer;
-boolean bFMenuAllowed;
-boolean bFMenuShown;
 byte bFMenuSelected;
 byte bFMenuChildSelected;
 byte bFChildMenuToClear = NO_MENU_TO_CLEAR;
@@ -87,8 +86,8 @@ void bFCalculateFirstMenuChildAddress()
 
 void bFInitMenuState()
 {
-	bFMenuAllowed = TRUE;
-	bFMenuShown = FALSE;
+	menuAllowed = TRUE;
+	menuShown = FALSE;
 	bFMenuSelected = FALSE;
 
 	bFCalculateFirstMenuChildAddress();
@@ -121,7 +120,7 @@ void bFMenuChildInit()
 void bFAllowMenu(boolean allowed)
 {
 	asm("sei");
-	bFMenuAllowed = allowed;
+	menuAllowed = allowed;
 	REENABLE_INTERRUPTS();
 }
 
@@ -165,7 +164,7 @@ void bFShowMenu(boolean shown)
 	byte ch, controller;
 
 	asm("sei");
-	bFMenuShown = TRUE;
+	menuShown = TRUE;
 	menuDirty = TRUE;
 	REENABLE_INTERRUPTS();
 
@@ -203,7 +202,7 @@ void bFShowMenu(boolean shown)
 
 	asm("sei");
 	menuDirty = TRUE;
-	bFMenuShown = FALSE;
+	menuShown = FALSE;
 	bFChildMenuToClear = bFMenuSelected;
 	REENABLE_INTERRUPTS();
 }

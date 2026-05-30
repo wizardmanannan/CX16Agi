@@ -9,8 +9,8 @@ MENU_INC = 1
 .import _the_menu
 .import _sizeOfMenu
 .import _offsetOfText
-.import _bFMenuAllowed
-.import _bFMenuShown
+.import _menuAllowed
+.import _menuShown
 .import _bFMenuSelected
 .import _bFMenuChildSelected
 .import _bFInitMenuState
@@ -21,14 +21,14 @@ MENU_INC = 1
 .import _offsetOfController
 
 .segment "ZEROPAGE"
-MENU_SREG: .word $0
-MENU_SREG2: .word $0
-TEXT_ZP: .word $0
-MENU_TEXT_COUNTER: .byte $0
-OPEN_MENU_ADDRESS: .word $0
-HAS_ALL_TEXT_BEING_DRAWN: .byte $0
+MENU_SREG = IRQ_TMP_1
+MENU_SREG2 = IRQ_TMP_2
+TEXT_ZP = IRQ_TMP_3
+OPEN_MENU_ADDRESS = IRQ_TMP_4
+MENU_TEXT_COUNTER = IRQ_TMP_5
+HAS_ALL_TEXT_BEING_DRAWN = IRQ_TMP_5 + 1
 CHILD_MENU_COUNTER = MENU_TEXT_COUNTER ;These are never used at the same time, saving space
-CONTROLLER: .byte $0
+CONTROLLER = IRQ_TMP_6
 CONTROLLER_ENABLED = CONTROLLER ;There are never used at the same time
 
 HORIZONAL_BORDER = $5F
@@ -47,7 +47,30 @@ MAX_MENU_CHILDREN = 10
 MENU_CHILD_TILES = (MAX_MENU_CHILDREN + 3) * MENU_BAR_WIDTH
 MENU_CHILDREN_ADDRESS = MENU_BAR_LOCATION + (TILE_LAYER_WIDTH * 2)
 
+
+.segment "CODE"
+isMenuAllowed:
+lda _menuAllowed
+tax
+ldy #ENABLE_MENU
+GET_FLAG_NON_INTERPRETER MENU_SREG
+sta MENU_SREG
+txa 
+and MENU_SREG
+rts
 .segment "BANKRAM0F"
+bFClearTopLine:
+ldx #MENU_BAR_WIDTH
+
+ldy #TRANSPARENT
+@clearMenuLoop:
+sty VERA_data0
+lda #MENU_NOT_SELECTED
+sta VERA_data0
+dex
+bne @clearMenuLoop
+rts
+
 
 bFMoveVeraAddressToNextChildMenu:
 ldx _bFMenuSelected
@@ -402,10 +425,6 @@ bra @menusLoop
 @end:
 rts
 
-
-SPACE = $20
-TRANSPARENT = $80
-
 MENU_BAR_LOCATION = $DA00
 MENU_BAR_END = MENU_BAR_LOCATION + (MENU_BAR_WIDTH * 2)
 MENU_BAR_MAX_CHILD_FIRST_ROW = (MENU_BAR_END + TILE_LAYER_WIDTH * 2)
@@ -451,15 +470,12 @@ lda #$10
 sta VERA_addr_bank
 
 ldy #DISPLAY_MENU_FLAG
-
-lda _bFMenuAllowed
-beq @clearMenu
-GET_FLAG_NON_INTERPRETER MENU_SREG
+jsr isMenuAllowed
 beq @clearMenu
 
 stz _menuDirty
 
-lda _bFMenuShown
+lda _menuShown
 beq @clearMenu
 
 @displayMenu:
@@ -491,17 +507,8 @@ jsr bFPrintMenuChildText
 bra @return
 
 @clearMenu:
-ldx #MENU_BAR_WIDTH
 
-ldy #TRANSPARENT
-@clearMenuLoop:
-sty VERA_data0
-lda #MENU_NOT_SELECTED
-sta VERA_data0
-
-dex
-bne @clearMenuLoop
-
+jsr bFClearTopLine
 jsr bFClearMenuChildren
 
 @return:

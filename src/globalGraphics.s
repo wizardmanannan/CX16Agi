@@ -113,6 +113,10 @@ LINE_LENGTH = 160
 ;Menu Bar Width
 MENU_BAR_WIDTH = 40
 
+;Common Tiles
+SPACE = $20
+TRANSPARENT = $80
+
 .macro SET_VERA_ADDRESS_ABSOLUTE VeraAddress, AddressSel, Stride ;Vera Address is a 4 bit number instead of three to make it easier to work with C
         lda AddressSel
         sta VERA_ctrl  

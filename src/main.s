@@ -20,6 +20,7 @@
     .include "init.s"
     .include "menuAsm.s"
     .include "controllersAsm.s"
+    .include "statusBar.s"
     
     .export _executeLogic
     .export _b6InitInterpreter
@@ -117,3 +118,4 @@
     .export _loadInitBankAndInitMemory
     .export _b9StartMoveObj
     .export _bFInitMenus
+    .export _statusLineDisplayed

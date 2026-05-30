@@ -90,6 +90,7 @@ LINE_DRAWING_BANK = $8
 GARBAGE_BANK = $A
 LOADED_VIEW_BANK = $11
 MENU_BANK = $F
+STATUSBAR_BANK = $10
 
 FIRST_FLOOD_BANK = $27
 NO_FLOOD_BANKS = $0A
@@ -727,10 +728,12 @@ jsr _printfSafe
 .endmacro
 
 SET_VAR_OFFSET = GOLDEN_RAM + VARS_AREA_START_GOLDEN_OFFSET
-;For setting a var, outside of the interpreter. Can still be called by an interpreter command, but doesn't affect or know about the current interpreter state.
-;Requires the value to be set to be in 'X', and the variable number in 'A'
-;Requires a ZP passed in as a param, which will be used internally to set the address of the var
-;The value to be stored, will be returned in 'a' for reuse
+;For getting a var, outside of the interpreter. Can still be called by an interpreter command, but doesn't affect or know about the current interpreter state.
+;Requires var number to be set in y
+.macro GET_VAR_NON_INTERPRETER
+        lda GOLDEN_RAM + VARS_AREA_START_GOLDEN_OFFSET,y    
+.endmacro
+
 .macro SET_VAR_NON_INTERPRETER ZP
         tay
         lda #<SET_VAR_OFFSET
@@ -741,6 +744,7 @@ SET_VAR_OFFSET = GOLDEN_RAM + VARS_AREA_START_GOLDEN_OFFSET
         txa
         sta (ZP),y    
 .endmacro
+
 
 FLAG_OFFSET = GOLDEN_RAM + FLAGS_AREA_START_GOLDEN_OFFSET
 ;For setting a flag, outside of the interpreter. Can still be called by an interpreter command, but doesn't affect or know about the current interpreter state.
@@ -798,6 +802,9 @@ INX_IMP = $E8
 DEX_IMP = $CA
 
 ;System Variables
+SCORE_VAR = 3
+MAX_SCORE_VAR = 7
+SOUND_VAR = 9
 EGOEDGE = 2
 OBJHIT = 4
 OBJEDGE = 5
@@ -817,8 +824,17 @@ PROGRAM_CONTROL = 1
 ;Interpreter Flags
 INT_FLAG_INPUT = 2
 INT_FLAG_HAD_MATCH = 4
+ENABLE_MENU = 14
 
 .segment "ZEROPAGE"
 sreg2: .res 2
+
+IRQ_TMP_1: .word $0
+IRQ_TMP_2: .word $0
+IRQ_TMP_3: .word $0
+IRQ_TMP_4: .word $0
+IRQ_TMP_5: .word $0
+IRQ_TMP_6: .word $0
+
 
 .endif
