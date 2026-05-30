@@ -59,7 +59,16 @@ txa
 and MENU_SREG
 rts
 .segment "BANKRAM0F"
-bFClearTopLine:
+bFClearTopLine: 
+
+stz VERA_ctrl
+lda #<MENU_BAR_LOCATION
+sta VERA_addr_low
+lda #>MENU_BAR_LOCATION
+sta VERA_addr_high
+lda #$10 
+sta VERA_addr_bank
+
 ldx #MENU_BAR_WIDTH
 
 ldy #TRANSPARENT
