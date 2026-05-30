@@ -469,11 +469,11 @@ sta VERA_addr_high
 lda #$10 
 sta VERA_addr_bank
 
+stz _menuDirty
+
 ldy #DISPLAY_MENU_FLAG
 jsr isMenuAllowed
 beq @clearMenu
-
-stz _menuDirty
 
 lda _menuShown
 beq @clearMenu
