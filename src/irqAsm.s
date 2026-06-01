@@ -8,6 +8,7 @@ IRQ_INC = 1
 .include "inputIrqHandler.s"
 
 .import _mainLoopCounter
+.import _menuDirty
 
 .macro SEND_IRQ_COMMAND command, vSyncToCheck
 sei
@@ -84,11 +85,11 @@ bpl @loop
 rts
 
 _b3InitLayer1Mapbase:
-SET_VERA_ADDRESS_IMMEDIATE MAP_BASE, #$0, #$1
+SET_VERA_ADDRESS_IMMEDIATE (MAP_BASE + MENU_BAR_WIDTH * 2), #$0, #$1
 
-ldx #< TILE_LAYER_NO_TILES
+ldx #< (TILE_LAYER_NO_TILES - MENU_BAR_WIDTH)
 
-lda #> TILE_LAYER_NO_TILES
+lda #> (TILE_LAYER_NO_TILES - MENU_BAR_WIDTH)
 sta ZP_TILE_LAYER_NO_TILES_HIGH
 
 lda #TRANSPARENT_CHAR
@@ -251,6 +252,19 @@ lda #PARSER_BANK
 sta RAM_BANK
 jsr b7HandleInputLine
 
+@handleMenuBar:
+lda _menuDirty
+beq @handleStatusBar
+
+lda #MENU_BANK
+sta RAM_BANK 
+
+jsr bADisplayMenu
+
+@handleStatusBar:
+lda #STATUSBAR_BANK
+sta RAM_BANK
+jsr b10DisplayStatusBar
 
 @checkMainLoopCounter:
 lda _mainLoopCounter

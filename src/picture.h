@@ -40,7 +40,7 @@ extern PictureFile loadedPictures[NO_PICTURES];
 
 extern int screenMode;
 extern int min_print_line, user_input_line, status_line_num;
-extern boolean statusLineDisplayed, inputLineDisplayed;
+extern boolean inputLineDisplayed;
 extern BITMAP* picture, * priority, * control, * agi_screen, * working_screen;
 
 extern void b6DisableAndWaitForVsync();

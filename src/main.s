@@ -18,6 +18,9 @@
     .include "spriteAllocatorAsm.s"
     .include "viewAsm.s"
     .include "init.s"
+    .include "menuAsm.s"
+    .include "controllersAsm.s"
+    .include "statusBar.s"
     
     .export _executeLogic
     .export _b6InitInterpreter
@@ -114,3 +117,5 @@
     .export _b9UpdateObjectDirections
     .export _loadInitBankAndInitMemory
     .export _b9StartMoveObj
+    .export _bAInitMenus
+    .export _statusLineDisplayed

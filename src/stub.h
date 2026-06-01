@@ -8,16 +8,6 @@
 
 void show_mouse(BITMAP* bmp);
 
-
-typedef struct MENU
-{
-	char* text;                   /* menu item text */
-	byte menuTextBank;
-	int (*proc)(void);            /* callback function */
-	int flags;                    /* flags about the menu state */
-	void* dp;                     /* any data the menu might require */
-} MENU;
-
 #define DIGI_VOICES           32       /* Theoretical maximums: */
 #define MIDI_VOICES           32       /* actual drivers may not be */
 #define MIDI_TRACKS           32       /* able to handle this many */
@@ -32,8 +22,6 @@ typedef struct MIDI                    /* a midi file */
 		int len;                         /* length of the track data */
 	} track[MIDI_TRACKS];
 } MIDI;
-
-int do_menu(MENU* menu, int x, int y);
 
 //Agi Codes
 #define MAX_NAME_LENGTH    20
@@ -121,11 +109,6 @@ typedef struct {
 #define MSG_USER        16       /* from here on are free... */
 
 #endif
-
-#define  NO_EVENT         0
-#define  ASCII_KEY_EVENT  1
-#define  SCAN_KEY_EVENT   2
-#define  MENU_EVENT       3
 
 //Unknown 
 extern byte* key;

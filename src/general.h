@@ -21,7 +21,6 @@
 #endif
 
 /* MENU data */
-#define MAX_MENU_SIZE 20
 #define SEQUENTIAL_LFN 2
 
 typedef unsigned char byte;
@@ -55,6 +54,8 @@ typedef enum {
 #define JIFFY_CALL_FREQ 16 
 
 extern boolean* flag;
+
+extern int currentLog;
 
 #define DEFAULT_PRIORITY_BASE 48
 

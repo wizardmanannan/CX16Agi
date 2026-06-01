@@ -31,6 +31,7 @@
 #include "random.h"
 #include "sound.h"
 #include "spriteAllocator.h"
+#include "menu.h"
 //#include "sound.h"
 
 boolean hasEnteredNewRoom = FALSE, exitAllLogics = FALSE;
@@ -253,6 +254,11 @@ extern void b6InitGraphics();
 extern void b6InitIrq();
 extern void b6InitInterpreter();
 extern void b6TellMeTheAddressPlease();
+
+#pragma wrapped-call (push, trampoline, MENU_BANK)
+extern void bAInitMenus();
+#pragma wrapped-call (pop)
+
 void b6Initialise()
 {
     int i;
@@ -262,6 +268,7 @@ void b6Initialise()
     b4InitLruCaches(&b4DiscardLogicFileWrapper, &b9DiscardView);
     b6InitFiles();             /* Load resource directories */
     b6InitRandom();
+    bAInitMenus();
 
     //// <<--  Determine exact version in here
     for (i = 0; i < 255; i++) {  /* Initialize variables and flags */
@@ -304,6 +311,7 @@ void b6Initialise()
 
     b6TellMeTheAddressPlease();
     bFInitPaletteManager();
+    b1InitControllers();
 }
 
 

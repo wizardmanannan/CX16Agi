@@ -1,6 +1,5 @@
 #include "textLayer.h"
 #pragma code-name (push, "BANKRAM06")
-
 //#define VERBOSE_CHAR_SET_LOAD
 //#define TEST_CHARSET
 //#define VERBOSE_DISPLAY_TEXT
@@ -10,6 +9,7 @@ byte printOn = TRUE;
 int byteCounter = 0;
 #endif
 
+boolean charSetInited = FALSE;
 #pragma bss-name (push, "BANKRAM03")
 byte _currentForegroundColour;
 byte _currentBackgroundColour;
@@ -92,6 +92,66 @@ void b3MakeRightBorder()
 	}
 }
 
+
+void b3MakeMenuTopEnd()
+{
+	byte i;
+
+	SET_VERA_ADDRESS(TILEBASE + MENU_TOP_END * BYTES_PER_CHARACTER, ADDRESSSEL0, 1);
+
+	for (i = 0; i < BYTES_PER_CHARACTER; i++)
+	{
+		if (i == 0 || i == 1)
+		{
+			WRITE_BYTE_DEF_TO_ASSM(0b01010101, VERA_data0); //Black Horizonal Border
+		}
+		else if(i % 2 == 0)
+		{
+			WRITE_BYTE_DEF_TO_ASSM(0b01101010, VERA_data0); //Black Vertical Border 
+		}
+		else
+		{
+			WRITE_BYTE_DEF_TO_ASSM(0b10101010, VERA_data0); //White Space 
+		}
+	}
+}
+
+void b3MakeMenuTop()
+{
+	byte i;
+
+	SET_VERA_ADDRESS(TILEBASE + MENU_TOP * BYTES_PER_CHARACTER, ADDRESSSEL0, 1);
+	for (i = 0; i < BYTES_PER_CHARACTER; i++)
+	{
+		if (i == 0 || i == 1)
+		{
+			WRITE_BYTE_DEF_TO_ASSM(0b01010101, VERA_data0); //Black Horizonal Border
+		}
+		else
+		{
+			WRITE_BYTE_DEF_TO_ASSM(0b10101010, VERA_data0); //White Space 
+		}
+	}
+}
+
+void b3MakeMenuVertical()
+{
+	byte i;
+
+	SET_VERA_ADDRESS(TILEBASE + MENU_VERTICAL * BYTES_PER_CHARACTER, ADDRESSSEL0, 1);
+	for (i = 0; i < BYTES_PER_CHARACTER; i++)
+	{
+		if(i % 2 == 0)
+		{
+			WRITE_BYTE_DEF_TO_ASSM(0b01101010, VERA_data0); //Black Vertical Border 
+		}
+		else
+		{
+			WRITE_BYTE_DEF_TO_ASSM(0b10101010, VERA_data0); //White Space 
+		}
+	}
+}
+
 void b3ConvertsOneBitPerPixCharToTwoBitPerPixelChars()
 {
 	int i;
@@ -136,8 +196,8 @@ void b3InitCharset()
 {
 #define ORIGINAL_CHARSET_ADDRESS 0x1f000
 	
-	int i;
 
+	int i;
 	//printf("Initializing CharSet. . .\n");
 
 	SCREEN_SET_CHAR_SET(ISO);
@@ -156,11 +216,15 @@ void b3InitCharset()
 	b3MakeLeftBorder();
 	b3MakeBottomBorder();
 	b3MakeRightBorder();
+	b3MakeMenuTopEnd();
+	b3MakeMenuTop();
+	b3MakeMenuVertical();
 
 #ifdef VERBOSE_CHAR_SET_LOAD
 	printf("returning : %p. The byte counter is %d\n.", buffer, byteCounter);
 #endif // VERBOSE_CHAR_SET_LOAD
 
+	charSetInited = TRUE;
 }
 
 #ifdef TEST_CHARSET
@@ -362,6 +426,7 @@ void b3DisplayMessageBox(char* message, byte messageBank, byte row, byte col, by
 	if (messageSize > 1) //Agi sometimes has empty messages. We say greater than 1 because of the terminator
 	{
 		displayTextAddressToCopyTo = MAPBASE + (FIRST_ROW + row - 1) * TILE_LAYER_BYTES_PER_ROW + col * BYTES_PER_CELL;
+				
 		displayAddressCopyPaletteTo = displayTextAddressToCopyTo + 1;
 
 #ifdef VERBOSE_DISPLAY_TEXT

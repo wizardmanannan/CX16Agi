@@ -35,7 +35,7 @@ PictureFile loadedPictures[NO_PICTURES];
 
 int screenMode;
 int min_print_line = 1, user_input_line = 23, status_line_num = 0;
-boolean statusLineDisplayed = FALSE, inputLineDisplayed = FALSE;
+boolean inputLineDisplayed = FALSE;
 
 BITMAP* picture;
 BITMAP* priority;
