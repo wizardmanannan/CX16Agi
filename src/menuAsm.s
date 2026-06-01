@@ -533,7 +533,6 @@ MENU_BAR_LOCATION = $DA00           ; VRAM address for menu bar
 MENU_BAR_END = MENU_BAR_LOCATION + (MENU_BAR_WIDTH * 2)
 MENU_BAR_MAX_CHILD_FIRST_ROW = (MENU_BAR_END + TILE_LAYER_WIDTH * 2)
 
-DISPLAY_MENU_FLAG = 14
 MENU_BAR_SECOND_BYTE = $10
 
 
@@ -603,7 +602,6 @@ sta VERA_addr_bank
 
 stz _menuDirty                      ; Clear dirty flag (used by caller for optimization)
 
-ldy #DISPLAY_MENU_FLAG              ; Check global menu enable flag
 jsr isMenuAllowed
 beq @clearMenu                      ; Menu not allowed → clear it
 
