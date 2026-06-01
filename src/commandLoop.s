@@ -241,6 +241,7 @@ bra @start
 
     @eqFC:
     bne @gtFC
+    stz orMode
     jmp ifHandlerLoop
 
     @gtFC:
