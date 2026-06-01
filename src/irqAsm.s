@@ -259,7 +259,7 @@ beq @handleStatusBar
 lda #MENU_BANK
 sta RAM_BANK 
 
-jsr bFDisplayMenu
+jsr bADisplayMenu
 
 @handleStatusBar:
 lda #STATUSBAR_BANK

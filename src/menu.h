@@ -25,11 +25,11 @@ typedef struct MENU
 } MENU;
 
 #pragma wrapped-call (push, trampoline, MENU_BANK)
-void bFSetMenu(byte messageNo);
-void bFSetMenuItem(int messageNum, int controllerNum);
-void bFAllowMenu(boolean allowed);
-void bFShowMenu(boolean shown);
-void bFSetMenuControllerEnabled(byte controllerNumber, boolean enabled);
+void bASetMenu(byte messageNo);
+void bASetMenuItem(int messageNum, int controllerNum);
+void bAAllowMenu(boolean allowed);
+void bAShowMenu(boolean shown);
+void bASetMenuControllerEnabled(byte controllerNumber, boolean enabled);
 #pragma wrapped-call  (pop);
 
 

@@ -138,7 +138,7 @@ beq @notShowingNotDisplay
 lda _statusLineDisplayed
 bne @isShowingShouldDisplay
 @isShowingShouldNotDisplay:
-JSRFAR bFClearTopLine,MENU_BANK
+JSRFAR bAClearTopLine,MENU_BANK
 @notShowingNotDisplay:
 rts
 @isShowingShouldDisplay:

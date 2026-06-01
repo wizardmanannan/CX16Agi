@@ -11,13 +11,13 @@ MENU_INC = 1
 .import _offsetOfText
 .import _menuAllowed
 .import _menuShown
-.import _bFMenuSelected
-.import _bFMenuChildSelected
-.import _bFInitMenuState
-.import _bFMenuChildWidth
-.import _bFFirstMenuChild
-.import _bFMenuChildShiftBack
-.import _bFEnabledMenuControllers
+.import _bAMenuSelected
+.import _bAMenuChildSelected
+.import _bAInitMenuState
+.import _bAMenuChildWidth
+.import _bAFirstMenuChild
+.import _bAMenuChildShiftBack
+.import _bAEnabledMenuControllers
 .import _offsetOfController
 
 .segment "ZEROPAGE"
@@ -58,8 +58,8 @@ sta MENU_SREG
 txa 
 and MENU_SREG
 rts
-.segment "BANKRAM0F"
-bFClearTopLine: 
+.segment "BANKRAM0A"
+bAClearTopLine: 
 
 stz VERA_ctrl
 lda #<MENU_BAR_LOCATION
@@ -81,9 +81,9 @@ bne @clearMenuLoop
 rts
 
 
-bFMoveVeraAddressToNextChildMenu:
-ldx _bFMenuSelected
-lda _bFMenuChildWidth,x
+bAMoveVeraAddressToNextChildMenu:
+ldx _bAMenuSelected
+lda _bAMenuChildWidth,x
 asl
 sta MENU_SREG2
 
@@ -106,9 +106,9 @@ sta VERA_addr_high
 
 rts
 
-bFDrawTopChildrenBorder:
-ldy _bFMenuSelected
-ldx _bFMenuChildWidth,y
+bADrawTopChildrenBorder:
+ldy _bAMenuSelected
+ldx _bAMenuChildWidth,y
 ldy #CHILD_MENU_PALETTE
 dex
 dex
@@ -132,9 +132,9 @@ sty VERA_data0
 
 rts
 
-bFDrawBottomChildrenBorder:
-ldy _bFMenuSelected
-ldx _bFMenuChildWidth,y
+bADrawBottomChildrenBorder:
+ldy _bAMenuSelected
+ldx _bAMenuChildWidth,y
 ldy #CHILD_MENU_PALETTE | 8 ;Flip vertically
 dex
 dex
@@ -158,7 +158,7 @@ sty VERA_data0
 
 rts
 
-bFDisplayChildMenu:
+bADisplayChildMenu:
 stz VERA_ctrl
 
 clc
@@ -172,16 +172,16 @@ lda #$10
 sta VERA_addr_bank
 
 lda #MENU_TOP
-jsr bFDrawTopChildrenBorder
-jsr bFMoveVeraAddressToNextChildMenu
+jsr bADrawTopChildrenBorder
+jsr bAMoveVeraAddressToNextChildMenu
 
-lda _bFMenuSelected
+lda _bAMenuSelected
 asl
 tax
-lda _bFFirstMenuChild,x
+lda _bAFirstMenuChild,x
 sta MENU_SREG
 inx
-lda _bFFirstMenuChild,x
+lda _bAFirstMenuChild,x
 sta MENU_SREG + 1
 
 stz CHILD_MENU_COUNTER
@@ -193,7 +193,7 @@ GET_STRUCT_8_STORED_OFFSET _offsetOfController, MENU_SREG,CONTROLLER
 lda _offsetOfController
 ldy CONTROLLER
 lda MENU_SREG
-lda _bFEnabledMenuControllers,y
+lda _bAEnabledMenuControllers,y
 sta CONTROLLER_ENABLED
 
 
@@ -204,8 +204,8 @@ jmp @drawBottomBorder
 
 
 @loadWidth:
-ldx _bFMenuSelected
-ldy _bFMenuChildWidth,x
+ldx _bAMenuSelected
+ldy _bAMenuChildWidth,x
 sty MENU_SREG2
 
 ldy #$0
@@ -257,7 +257,7 @@ bra @drawPadding
 sta VERA_data0
 
 lda CHILD_MENU_COUNTER
-cmp _bFMenuChildSelected
+cmp _bAMenuChildSelected
 beq @isSelected
 
 @isNotSelected:
@@ -292,7 +292,7 @@ bra @drawMenuItemLoop
 
 
 @moveToNextLine:
-jsr bFMoveVeraAddressToNextChildMenu
+jsr bAMoveVeraAddressToNextChildMenu
 
 inc CHILD_MENU_COUNTER
 
@@ -308,12 +308,12 @@ jmp @childMenuLoop
 
 @drawBottomBorder:
 lda #HORIZONAL_BORDER
-jsr bFDrawBottomChildrenBorder
+jsr bADrawBottomChildrenBorder
 
 rts
 
 
-bFClearMenuChildren:
+bAClearMenuChildren:
 lda #%00001100
 sta VERA_ctrl
 
@@ -356,16 +356,16 @@ stz VERA_ctrl
 
 rts
 
-bFPrintMenuChildText:
-jsr bFClearMenuChildren
-jsr bFDisplayChildMenu
+bAPrintMenuChildText:
+jsr bAClearMenuChildren
+jsr bADisplayChildMenu
 rts
-bFPrintMenuText:
+bAPrintMenuText:
 stz MENU_TEXT_COUNTER
 ldx #$0
 
 @menusLoop:
-cpx _bFMenuSelected
+cpx _bAMenuSelected
 bne @getTextZp
 
 @markOpenMenu:
@@ -374,12 +374,12 @@ sta OPEN_MENU_ADDRESS
 lda VERA_addr_high
 sta OPEN_MENU_ADDRESS + 1
 
-lda _bFMenuChildShiftBack,x
+lda _bAMenuChildShiftBack,x
 beq @getTextZp
 
 sec
 lda OPEN_MENU_ADDRESS
-sbc _bFMenuChildShiftBack,x
+sbc _bAMenuChildShiftBack,x
 sta OPEN_MENU_ADDRESS
 lda OPEN_MENU_ADDRESS + 1
 sbc #$0
@@ -398,7 +398,7 @@ lda (TEXT_ZP),y
 beq @endPrintTextLoop
 sta VERA_data0
 
-cpx _bFMenuSelected
+cpx _bAMenuSelected
 beq @selected
 @notSelected:
 lda #MENU_NOT_SELECTED
@@ -441,7 +441,7 @@ MENU_BAR_MAX_CHILD_FIRST_ROW = (MENU_BAR_END + TILE_LAYER_WIDTH * 2)
 DISPLAY_MENU_FLAG = 14
 MENU_BAR_SECOND_BYTE = $10
 
-_bFInitMenus:
+_bAInitMenus:
 stz VERA_ctrl
 lda #<(MENU_BAR_LOCATION + 1)
 sta VERA_addr_low
@@ -458,18 +458,18 @@ sta VERA_data0
 dex
 bne @setupMenuSecondByteLoop
 
-jsr _bFInitMenuState
+jsr _bAInitMenuState
 rts
 
-bFDisplayMenu: 
+bADisplayMenu: 
 lda _charSetInited
 beq @return
 
-jsr bFDisplayMenuBar
+jsr bADisplayMenuBar
 
 @return:
 rts
-bFDisplayMenuBar:
+bADisplayMenuBar:
 stz VERA_ctrl
 lda #<MENU_BAR_LOCATION
 sta VERA_addr_low
@@ -495,7 +495,7 @@ sta MENU_SREG
 lda #>_the_menu
 adc #$0
 sta MENU_SREG + 1
-jsr bFPrintMenuText
+jsr bAPrintMenuText
 
 
 @pad:
@@ -511,14 +511,14 @@ dec
 bne @padLoop  
 
 
-jsr bFPrintMenuChildText
+jsr bAPrintMenuChildText
 
 bra @return
 
 @clearMenu:
 
-jsr bFClearTopLine
-jsr bFClearMenuChildren
+jsr bAClearTopLine
+jsr bAClearMenuChildren
 
 @return:
 rts

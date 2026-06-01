@@ -117,5 +117,5 @@
     .export _b9UpdateObjectDirections
     .export _loadInitBankAndInitMemory
     .export _b9StartMoveObj
-    .export _bFInitMenus
+    .export _bAInitMenus
     .export _statusLineDisplayed
