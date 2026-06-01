@@ -6,7 +6,7 @@
 #include "keyboard.h"
 
 #define NO_CONTROLLERS 256
-#define NO_ASSOCIATED 0xFF
+#define NOT_ASSOCIATED 0xFF
 #define LARGEST_PETSCII 0xDA
 #define NO_CONTROLLER_BITS NO_CONTROLLERS / 8
 

@@ -14,14 +14,14 @@ void b1ResetControllers()
 
 void b1InitControllers()
 {
-    memset(b1Controllers, NO_ASSOCIATED, NO_CONTROLLERS);
-    memset(b1PetciiToControllers, NO_ASSOCIATED, LARGEST_PETSCII + 1);
+    memset(b1Controllers, NOT_ASSOCIATED, NO_CONTROLLERS);
+    memset(b1PetciiToControllers, NOT_ASSOCIATED, LARGEST_PETSCII + 1);
     memset(b1ControllerBits, 0, NO_CONTROLLER_BITS);
 }
 
 void b1AssociateController(byte asciiCode, byte scanCode, byte controller)
 {
-    byte petscii = NO_ASSOCIATED;
+    byte petscii = NOT_ASSOCIATED;
 
     /* ------------------- ASCII keys (scanCode == 0) ------------------- */
     if (scanCode == 0)
@@ -162,7 +162,7 @@ void b1AssociateController(byte asciiCode, byte scanCode, byte controller)
         }
     }
 
-    if (petscii < NO_ASSOCIATED)
+    if (petscii < NOT_ASSOCIATED)
     {
         b1Controllers[controller] = petscii;        
         b1PetciiToControllers[petscii] = controller;
@@ -178,7 +178,7 @@ boolean b1SetControllerByPetscii(byte petscii)
 
 boolean b1SetController(byte controller)
 {
-    if (controller < NO_ASSOCIATED)
+    if (controller < NOT_ASSOCIATED)
     {
         b1ControllerBits[controller >> 3] |= (1 << (controller & 7));
         return TRUE;
