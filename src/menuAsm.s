@@ -415,6 +415,7 @@ lda #%01000000                      ; Enable cache write (writes all 4 cache byt
 sta VERA_dc_video
 
 ; Step 6: Fast clear loop using 16-bit counter (X = low, Y = high)
+lda #$0 ;Load 0 so that nothing is masked and all bytes print
 @clearLoop:
 sta VERA_data0                      ; Write 4 bytes (tile+attr repeated) to VRAM via cache
 dex                                 ; Decrement 16-bit counter
