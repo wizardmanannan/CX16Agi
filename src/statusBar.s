@@ -188,6 +188,7 @@ bne @isShowingShouldDisplay             ; if (b10StatusBarShowing && !_statusLin
 
 @isShowingShouldNotDisplay:
 JSRFAR bAClearTopLine, MENU_BANK        ; Clear the top line via menu bank routine
+stz b10StatusBarShowing
 
 @notShowingNotDisplay:
 rts
@@ -197,7 +198,6 @@ ldy #SCORE_VAR
 GET_VAR_NON_INTERPRETER                 ; Get current score
 cmp LAST_PRINTED_SCORE                  ; Has score changed?
 bne @displayStatusBar                   ; if (score != LAST_PRINTED_SCORE)
-
 rts                                     ; Score unchanged → no need to redraw
 
 @displayStatusBar:
