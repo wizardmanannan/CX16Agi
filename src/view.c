@@ -1487,6 +1487,40 @@ extern void bEClearVeraSprite(byte celWidth, byte celHeight);
         asm("lda %v + 2", _assmULong); \
         asm("sta %w", VERA_ADDRESS_HIGH); \
     } while (0)
+
+void splitCels(View *localView, Loop* localLoop)
+{
+	byte i;
+	Cel celToSplit;
+
+	if (localView->maxVeraSlots > 1)
+	{
+		i = 0;
+		getLoadedCel(localLoop, &celToSplit, i);
+
+#ifdef VERBOSE_SPLIT
+		printf("you are splitting view %d loop %d cel %d. the data is %p on bank %p. it's width doubled is %d\n", viewNum, localViewTab->currentLoop, localViewTab->currentCel, tempCel.bmp, tempCel.bitmapBank, tempCel.width * 2);
+#endif
+		do
+		{
+			if (!celToSplit.splitCelPointers && (celToSplit.veraSlotsWidth > 1 && celToSplit.veraSlotsWidth > 1))
+			{
+				bESplitCel(&celToSplit);
+				setLoadedCel(localLoop, &celToSplit, i);
+			}
+
+			getLoadedCel(localLoop, &celToSplit, ++i);
+			//asm("stp");
+			
+
+		} while (i < localLoop->numberOfCels && (!celToSplit.splitCelPointers || (celToSplit.veraSlotsWidth == 1 && celToSplit.veraSlotsWidth == 1))); // One we have seen the first one which is split then they all are
+
+		// asm("stp");
+		// asm("nop");
+	}
+}
+
+
 /***************************************************************************
 ** agi_blit
 ***************************************************************************/
@@ -1524,30 +1558,6 @@ boolean agiBlit(byte entryNum, boolean disableInterupts)
 	getLoadedLoop(&localView, &localLoop, localViewTab.currentLoop);
 	getLoadedCel(&localLoop, &localCel, localViewTab.currentCel);
 
-	if (localView.maxVeraSlots > 1)
-	{
-		i = 0;
-		getLoadedCel(&localLoop, &tempCel, i);
-
-#ifdef VERBOSE_SPLIT
-		printf("you are splitting view %d loop %d cel %d. the data is %p on bank %p. it's width doubled is %d\n", viewNum, localViewTab->currentLoop, localViewTab->currentCel, tempCel.bmp, tempCel.bitmapBank, tempCel.width * 2);
-#endif
-		do
-		{
-			if (!tempCel.splitCelPointers && (tempCel.veraSlotsWidth > 1 && tempCel.veraSlotsWidth > 1))
-			{
-				bESplitCel(&tempCel);
-				setLoadedCel(&localLoop, &tempCel, i);
-			}
-
-			getLoadedCel(&localLoop, &tempCel, ++i);
-
-		} while (i < localLoop.numberOfCels && (!tempCel.splitCelPointers || (tempCel.veraSlotsWidth == 1 && tempCel.veraSlotsWidth == 1))); //One we have seen the first one which is split then they all are
-
-		//printf("setting address %p. loop %d cel %d\n", &((Cel*)bEToBlitCelArray)[localViewTab->currentCel], localViewTab->currentLoop, localViewTab->currentCel);
-
-		//((Cel*)bEToBlitCelArray)[localViewTab->currentCel] = localCel;
-	}
 
 	if (viewTabNoToMetaData[entryNum] != VIEWNO_TO_METADATA_NO_SET && viewTableMetadata[entryNum].viewNum != viewNum)
 	{
@@ -2425,7 +2435,7 @@ void b9LoadViewFile(byte viewNum)
 	byte celHeader[CEL_HEADER_SIZE];
 	byte maxLoopVeraSlots = 1;
 	byte currentCelVeraSlots;
-
+	
 	getLoadedView(&localView, viewNum);
 
 	if (!localView.loaded)
@@ -2562,7 +2572,7 @@ void b9LoadViewFile(byte viewNum)
 #ifdef VERBOSE_LOAD_VIEWS
 			printf("view %d loop %d is allocated width and %d height %d\n", viewNum, l, localLoop.allocationWidth, localLoop.allocationHeight);
 #endif
-
+			splitCels(&localView, &localLoop);
 
 			setLoadedLoop(&localView, &localLoop, l);
 		}
