@@ -1488,37 +1488,6 @@ extern void bEClearVeraSprite(byte celWidth, byte celHeight);
         asm("sta %w", VERA_ADDRESS_HIGH); \
     } while (0)
 
-void splitCels(View *localView, Loop* localLoop)
-{
-	byte i;
-	Cel celToSplit;
-
-	if (localView->maxVeraSlots > 1)
-	{
-		i = 0;
-		getLoadedCel(localLoop, &celToSplit, i);
-
-#ifdef VERBOSE_SPLIT
-		printf("you are splitting view %d loop %d cel %d. the data is %p on bank %p. it's width doubled is %d\n", viewNum, localViewTab->currentLoop, localViewTab->currentCel, tempCel.bmp, tempCel.bitmapBank, tempCel.width * 2);
-#endif
-		do
-		{
-			if (!celToSplit.splitCelPointers && (celToSplit.veraSlotsWidth > 1 && celToSplit.veraSlotsWidth > 1))
-			{
-				bESplitCel(&celToSplit);
-				setLoadedCel(localLoop, &celToSplit, i);
-			}
-
-			getLoadedCel(localLoop, &celToSplit, ++i);
-			//asm("stp");
-			
-
-		} while (i < localLoop->numberOfCels && (!celToSplit.splitCelPointers || (celToSplit.veraSlotsWidth == 1 && celToSplit.veraSlotsWidth == 1))); // One we have seen the first one which is split then they all are
-
-		// asm("stp");
-		// asm("nop");
-	}
-}
 
 
 /***************************************************************************
@@ -2561,6 +2530,11 @@ void b9LoadViewFile(byte viewNum)
 					localView.maxVeraSlots = currentCelVeraSlots;
 				}
 
+				if(!localCel.splitCelPointers && localCel.veraSlotsWidth > 1 && localCel.veraSlotsHeight == 1) //We currently don't support split by height sprites. TODO change this boolean once we do
+				{
+					bESplitCel(&localCel);
+				}
+
 				setLoadedCel(&localLoop, &localCel, c);
 			}
 
@@ -2572,8 +2546,6 @@ void b9LoadViewFile(byte viewNum)
 #ifdef VERBOSE_LOAD_VIEWS
 			printf("view %d loop %d is allocated width and %d height %d\n", viewNum, l, localLoop.allocationWidth, localLoop.allocationHeight);
 #endif
-			splitCels(&localView, &localLoop);
-
 			setLoadedLoop(&localView, &localLoop, l);
 		}
 		setLoadedView(&localView, viewNum);
