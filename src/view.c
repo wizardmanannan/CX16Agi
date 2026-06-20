@@ -1419,7 +1419,7 @@ boolean bESetLoop(ViewTable* localViewTab, ViewTableMetadata* localMetadata, Vie
 	getLoadedLoop(localView, &localLoop, localViewTab->currentLoop);
 	getLoadedCel(&localLoop, &localCel, localViewTab->currentCel);
 
-	noToBlit = localLoop.numberOfCels * localView->maxVeraSlots;
+	noToBlit = localView->maxVeraSlots;
 
 #ifdef VERBOSE_DEBUG_BLIT
 	printf("Trying to copy to %p from %p. Number %d. \n ", localMetadata->loopsVeraAddressesPointers[localViewTab->currentLoop], bEBulkAllocatedAddresses, noToBlit);
@@ -1455,16 +1455,20 @@ boolean bESetLoop(ViewTable* localViewTab, ViewTableMetadata* localMetadata, Vie
 	printf("Trying to copy to %p on bank %d from %p on bank %d number %d.", (byte*)loopVeraAddresses, localMetadata->viewTableMetadataBank, bEBulkAllocatedAddresses, SPRITE_METADATA_BANK, noToBlit * sizeof(VeraSpriteAddress));
 #endif
 	enableHelpersDebugging = TRUE;
-	memCpyBankedBetween((byte*)loopVeraAddresses, localMetadata->viewTableMetadataBank, bEBulkAllocatedAddresses, SPRITE_METADATA_BANK, noToBlit * sizeof(VeraSpriteAddress));
+	memCpyBankedBetween((byte*)&loopVeraAddresses[localView->maxVeraSlots * localViewTab->currentCel], localMetadata->viewTableMetadataBank, bEBulkAllocatedAddresses, SPRITE_METADATA_BANK, noToBlit * sizeof(VeraSpriteAddress));
+	
+	//printf("we copy to (%d %d) %p on bank %p the num to blit is %d we copy from %p\n", localView->maxVeraSlots, localViewTab->currentCel, &loopVeraAddresses[localView->maxVeraSlots * localViewTab->currentCel], localMetadata->viewTableMetadataBank, noToBlit * sizeof(VeraSpriteAddress), bEBulkAllocatedAddresses);
+	//asm("stp");
+
 	enableHelpersDebugging = FALSE;
 
-	memCpyBankedBetween(bEToBlitCelArray, SPRITE_METADATA_BANK, (byte*)localLoop.cels, localLoop.celsBank, localLoop.numberOfCels * sizeof(Cel));
+	memCpyBankedBetween(bEToBlitCelArray, SPRITE_METADATA_BANK, (byte*)&localLoop.cels[localViewTab->currentCel], localLoop.celsBank, sizeof(Cel));
 
 #ifdef VERBOSE_DEBUG_BLIT
 	printf("You are allocating %d.%d. It has a width of %d and height of %d. There are %d to blit\n", localViewTab->currentView, localViewTab->currentLoop, localLoop.allocationWidth, localLoop.allocationHeight, noToBlit);
 #endif
 	//Change this method
-	bECellToVeraBulk(localLoop.allocationWidth, localLoop.allocationHeight, localLoop.numberOfCels, localView->maxVeraSlots, localViewTab->xPos, (localViewTab->yPos - localCel.height) + 1, localViewTab->priority);
+	bECellToVeraBulk(localLoop.allocationWidth, localLoop.allocationHeight, 1, localView->maxVeraSlots, localViewTab->xPos, (localViewTab->yPos - localCel.height) + 1, localViewTab->priority);
 
 	return TRUE;
 }
@@ -1507,8 +1511,17 @@ boolean agiBlit(byte entryNum, boolean disableInterupts)
 	SpriteAllocationSize allocationWidth, allocationHeight;
 	byte combinedSpriteAllocationSize;
 	
+// if(entryNum != 0)
+// {
+// 	return TRUE;
+// }
+
+
 	previousBank = RAM_BANK;
 	RAM_BANK = SPRITE_METADATA_BANK;
+
+
+	
 
 	getViewTab(&localViewTab, entryNum);
 
@@ -1581,9 +1594,15 @@ boolean agiBlit(byte entryNum, boolean disableInterupts)
 	printf("The bank is %d\n", RAM_BANK);
 #endif
 
-	if (!loopVeraAddresses[0])
+	if (!loopVeraAddresses[localView.maxVeraSlots * localViewTab.currentCel])
 	{
+
+		//printf("current cel %d\n", localViewTab.currentCel);
+		//printf("you are checking %d %d address %p on bank %p %p\n", localView.maxVeraSlots, localViewTab.currentCel, &loopVeraAddresses[localView.maxVeraSlots * localViewTab.currentCel], RAM_BANK, loopVeraAddresses[localView.maxVeraSlots * localViewTab.currentCel]);
+		//asm("stp");
+
 		RAM_BANK = SPRITE_METADATA_BANK;
+
 
 #ifdef VERBOSE_DEBUG_NO_BLIT_CACHE
 		printf("loading view %d loop %d. The vt %p. It's position is %d,%d. v36 is %d\n", localViewTab->currentView, localViewTab->currentLoop, entryNum, localViewTab->xPos, localViewTab->yPos, var[36]);
