@@ -55,14 +55,19 @@ ZP_TMP_24 = $CB
 ZP_TMP_25 = $CD
 ZP_TMP_26 = $CF
 ZP_TMP_27 = $D1
+
+;Second Set of tmp zp to be used when you might conflict with the ones above
 ZP_TMP_28 = $E3
 ZP_TMP_29 = $E5
 ZP_TMP_30 = $FC 
 ZP_TMP_31 = $F7 
-ZP_TMP_32 = $F8
-ZP_TMP_33 = $F9
-ZP_TMP_34 = $FA
-ZP_TMP_35 = $FB
+ZP_TMP_32 = $F9
+
+.segment "ZEROPAGE"
+ZP_TMP_33: .word $0
+ZP_TMP_34: .word $0
+.segment "CODE"
+
 
 ZP_PTR_LF = $E7
 ZP_PTR_LE = $E9

@@ -8,7 +8,7 @@
 //This used for stored struct sizes of offsets which are used in assembler. That way when struct sizes/offsets change the assembler won't break. 
 
 //Cel
-byte sizeofCel = sizeof(Cel);
+byte sizeOfCel = sizeof(Cel);
 
 byte offsetOfBmp = offsetof(struct Cel, bmp);
 byte offsetOfBmpBank = offsetof(struct Cel, bitmapBank);
@@ -61,7 +61,15 @@ byte offsetOfIsOnBackBuffer = offsetof(struct ViewTableMetadata, isOnBackBuffer)
 byte offsetOfNumberOfLoops = offsetof(struct View, numberOfLoops);
 byte offsetOfMaxCels = offsetof(struct View, maxCels);
 byte offsetOfMaxVeraSlots = offsetof(struct View, maxVeraSlots);
+byte offsetOfLoopsBank = offsetof(struct View, loopsBank);
+byte offsetOfLoops = offsetof(struct View, loops);
 byte sizeOfView = sizeof(View);
+
+//Loop
+byte offsetOfCelsBank = offsetof(struct Loop, celsBank);
+byte offsetOfCels = offsetof(struct Loop, cels);
+byte sizeOfLoop = sizeof(Loop);
+
 
 //Menu
 byte sizeOfMenu = sizeof(MENU);

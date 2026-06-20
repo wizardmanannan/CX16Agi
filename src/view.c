@@ -1487,6 +1487,9 @@ extern void bEClearVeraSprite(byte celWidth, byte celHeight);
         asm("lda %v + 2", _assmULong); \
         asm("sta %w", VERA_ADDRESS_HIGH); \
     } while (0)
+
+extern boolean setLoop(ViewTable* localViewTab, ViewTableMetadata* localMetadata, View* localView, VeraSpriteAddress* loopVeraAddresses, byte entryNum);
+
 /***************************************************************************
 ** agi_blit
 ***************************************************************************/
@@ -1588,7 +1591,7 @@ boolean agiBlit(byte entryNum, boolean disableInterupts)
 #ifdef VERBOSE_DEBUG_NO_BLIT_CACHE
 		printf("loading view %d loop %d. The vt %p. It's position is %d,%d. v36 is %d\n", localViewTab->currentView, localViewTab->currentLoop, entryNum, localViewTab->xPos, localViewTab->yPos, var[36]);
 #endif
-		if (!bESetLoop(&localViewTab, &localMetadata, &localView, loopVeraAddresses, entryNum))
+		if (!setLoop(&localViewTab, &localMetadata, &localView, loopVeraAddresses, entryNum))
 		{
 			RAM_BANK = previousBank;
 

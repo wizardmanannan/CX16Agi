@@ -42,6 +42,13 @@ VIEW_INC = 1
 .import _bETerminateSpriteBuffer
 .import _agiBlit
 .import _offsetOfEntryNum
+.import _viewsWithSpriteMem
+.import _offsetOfLoopsBank
+.import _offsetOfLoops
+.import _offsetOfCelsBank
+.import _offsetOfCels
+.import _sizeOfLoop
+.import _sizeOfCel
 
 .ifdef SPRITE_DEBUG
 .import _bSdRunNumber
@@ -158,6 +165,96 @@ jsr debugSprites
 jsr debugSpritesNextRun
 .endif
 .endmacro
+
+
+.scope
+; .segment "ZEROPAGE"
+; entryNum: .byte $0
+; loopVeraAddress: .word $0
+; view: .word $0
+; viewTableMetadata: .word $0
+; viewTab: .word $0
+; previousBank: .byte $0
+; loop: .word $0
+
+ENTRY_NUM = ZP_TMP_28
+PREVIOUS_BANK = ZP_TMP_28 + 1
+LOOP_VERA_ADDRESS = ZP_TMP_29
+VIEW = ZP_TMP_30
+VIEW_TABLE_METADATA = ZP_TMP_31
+VIEW_TAB = ZP_TMP_32
+LOOP = ZP_TMP_33
+CEL = ZP_TMP_34
+
+.segment "CODE"
+;boolean bESetLoop(ViewTable* localViewTab, ViewTableMetadata* localMetadata, View* localView, VeraSpriteAddress* loopVeraAddresses, byte entryNum)
+
+.export _setLoop
+_setLoop:
+
+stp
+
+sta ENTRY_NUM
+jsr popax
+sta LOOP_VERA_ADDRESS
+stx LOOP_VERA_ADDRESS + 1
+jsr popax
+sta VIEW
+stx VIEW + 1
+jsr popax
+sta VIEW_TABLE_METADATA
+stx VIEW_TABLE_METADATA + 1
+jsr popax
+sta VIEW_TAB
+stx VIEW_TAB + 1
+setLoopAsm:
+
+lda RAM_BANK
+sta PREVIOUS_BANK
+
+ldx ENTRY_NUM
+lda #$1 
+sta _viewsWithSpriteMem,x
+
+GET_STRUCT_8_STORED_OFFSET _offsetOfLoopsBank, VIEW, RAM_BANK 
+GET_STRUCT_16_STORED_OFFSET _offsetOfLoops, VIEW, LOOP
+GET_STRUCT_8_STORED_OFFSET _offsetOfCurrentLoop, VIEW_TAB 
+
+;current loop is already in a from macro above
+ldy _sizeOfLoop
+MULT_8x8_16
+
+clc
+adc LOOP
+sta LOOP
+txa
+adc LOOP + 1
+sta LOOP + 1
+
+GET_STRUCT_16_STORED_OFFSET _offsetOfCels, LOOP, CEL
+GET_STRUCT_8_STORED_OFFSET _offsetOfCelsBank, LOOP, RAM_BANK
+GET_STRUCT_8_STORED_OFFSET _offsetOfCurrentCel, VIEW_TAB 
+;current cel is already in a from macro above
+ldy _sizeOfCel
+MULT_8x8_16
+
+stp
+
+clc
+adc CEL
+sta CEL
+txa
+adc CEL + 1
+sta CEL + 1
+
+lda PREVIOUS_BANK
+sta RAM_BANK
+
+
+rts
+.endscope
+
+
 
 ;Don't put anything in 25 used for x and y of canBeHere, or 21 - 24, used for local variables in update position
 .segment "BANKRAM09"
