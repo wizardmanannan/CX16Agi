@@ -68,6 +68,9 @@ byte sizeOfView = sizeof(View);
 //Loop
 byte offsetOfCelsBank = offsetof(struct Loop, celsBank);
 byte offsetOfCels = offsetof(struct Loop, cels);
+byte offsetOfNumberOfCels = offsetof(struct Loop, numberOfCels);
+byte offsetOfAllocationWidth = offsetof(struct Loop, allocationWidth);
+byte offsetOfAllocationHeight = offsetof(struct Loop, allocationHeight);
 byte sizeOfLoop = sizeof(Loop);
 
 

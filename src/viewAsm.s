@@ -49,6 +49,10 @@ VIEW_INC = 1
 .import _offsetOfCels
 .import _sizeOfLoop
 .import _sizeOfCel
+.import _offsetOfNumberOfCels
+.import _offsetOfMaxVeraSlots
+.import _offsetOfAllocationWidth
+.import _offsetOfAllocationHeight
 
 .ifdef SPRITE_DEBUG
 .import _bSdRunNumber
@@ -185,6 +189,34 @@ VIEW_TABLE_METADATA = ZP_TMP_31
 VIEW_TAB = ZP_TMP_32
 LOOP = ZP_TMP_33
 CEL = ZP_TMP_34
+NUMBER_OF_CELS = ZP_TMP_35
+MAX_VERA_SLOTS = ZP_TMP_35 + 1
+ALLOCATION_WIDTH = ZP_TMP_36
+ALLOCATION_HEIGHT = ZP_TMP_36 + 1
+
+.segment "BANKRAM0E"
+bEAllocateWidthToSpriteSize: .byte 8,16,32,64
+bEAllocateSpriteMemory:
+
+lda MAX_VERA_SLOTS
+sta ZP_NUMBER_TO_ALLOCATE
+
+ldx ALLOCATION_WIDTH
+lda bEAllocateWidthToSpriteSize,x
+sta ZP_WIDTH
+
+ldx ALLOCATION_HEIGHT
+lda bEAllocateWidthToSpriteSize,x
+sta ZP_HEIGHT
+
+jsr bEAllocateSpriteMemoryBulkAsm
+bne success
+jmp restoreBank
+
+success:
+jmp copyAddresses
+
+rts
 
 .segment "CODE"
 ;boolean bESetLoop(ViewTable* localViewTab, ViewTableMetadata* localMetadata, View* localView, VeraSpriteAddress* loopVeraAddresses, byte entryNum)
@@ -216,8 +248,12 @@ ldx ENTRY_NUM
 lda #$1 
 sta _viewsWithSpriteMem,x
 
+
+GET_STRUCT_8_STORED_OFFSET _offsetOfMaxVeraSlots, VIEW, MAX_VERA_SLOTS
 GET_STRUCT_8_STORED_OFFSET _offsetOfLoopsBank, VIEW, RAM_BANK 
 GET_STRUCT_16_STORED_OFFSET _offsetOfLoops, VIEW, LOOP
+GET_STRUCT_8_STORED_OFFSET _offsetOfAllocationWidth, LOOP, ALLOCATION_WIDTH
+GET_STRUCT_8_STORED_OFFSET _offsetOfAllocationHeight, LOOP, ALLOCATION_HEIGHT
 GET_STRUCT_8_STORED_OFFSET _offsetOfCurrentLoop, VIEW_TAB 
 
 ;current loop is already in a from macro above
@@ -233,12 +269,13 @@ sta LOOP + 1
 
 GET_STRUCT_16_STORED_OFFSET _offsetOfCels, LOOP, CEL
 GET_STRUCT_8_STORED_OFFSET _offsetOfCelsBank, LOOP, RAM_BANK
+GET_STRUCT_8_STORED_OFFSET _offsetOfNumberOfCels, LOOP, NUMBER_OF_CELS
 GET_STRUCT_8_STORED_OFFSET _offsetOfCurrentCel, VIEW_TAB 
+
+
 ;current cel is already in a from macro above
 ldy _sizeOfCel
 MULT_8x8_16
-
-stp
 
 clc
 adc CEL
@@ -247,14 +284,40 @@ txa
 adc CEL + 1
 sta CEL + 1
 
-lda PREVIOUS_BANK
+lda #SPRITE_ALLOCATOR_BANK
 sta RAM_BANK
 
+jmp bEAllocateSpriteMemory
 
+copyAddresses:
+lda MAX_VERA_SLOTS
+asl
+asl
+tax
+
+;Ignoring + 3 always zero save cycles by not storing it
+lda _bEBulkAllocatedAddresses + 2,x
+sta GOLDEN_RAM_WORK_AREA + 2,x
+lda _bEBulkAllocatedAddresses + 1,x
+sta GOLDEN_RAM_WORK_AREA + 1,x 
+lda _bEBulkAllocatedAddresses,x
+sta GOLDEN_RAM_WORK_AREA,x 
+
+
+copyAddressesToBufferLoop:
+lda _bEBulkAllocatedAddresses 
+dex
+dex
+dex
+dex
+
+
+
+restoreBank:
+lda PREVIOUS_BANK
+sta RAM_BANK
 rts
 .endscope
-
-
 
 ;Don't put anything in 25 used for x and y of canBeHere, or 21 - 24, used for local variables in update position
 .segment "BANKRAM09"

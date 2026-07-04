@@ -1358,7 +1358,7 @@ void bESwitchMetadata(ViewTable* localViewTab, View* localView, byte viewNum, by
 #endif
 }
 
-boolean bEAllocateSpriteMemory(Loop* localLoop, byte noToBlit)
+boolean bEAllocateSXpriteMemory(Loop* localLoop, byte noToBlit)
 {
 	SpriteAllocationSize allocationWidth, allocationHeight;
 
@@ -1433,7 +1433,7 @@ boolean bESetLoop(ViewTable* localViewTab, ViewTableMetadata* localMetadata, Vie
 	printf("Trying to allocate %d. Number %d\n", localLoop.allocationSize, noToBlit);
 #endif
 
-	for (i = 0; !bEAllocateSpriteMemory(&localLoop, noToBlit); i++)
+	for (i = 0; !bEAllocateSXpriteMemory(&localLoop, noToBlit); i++)
 	{
 		//printf("md %p  current loop %d view %p lvp %p bank %d no loops %d  number cels %d, vt %p\n", &viewTableMetadata[7], localViewTab->currentLoop, &loadedViews[61], localMetadata->loopsVeraAddressesPointers, localMetadata->viewTableMetadataBank, localView->numberOfLoops, localView->maxCels, &viewtab[7]);
 		//printf("the max slots are %d for view %d\n", localView->maxVeraSlots, localViewTab->currentView);
@@ -1702,7 +1702,7 @@ initialise:
 	if (!isAllocated)
 	{
 		viewsWithSpriteMem[entryNum] = TRUE;
-		if (!bEAllocateSpriteMemory(&localLoop, localView.maxVeraSlots))
+		if (!bEAllocateSXpriteMemory(&localLoop, localView.maxVeraSlots))
 		{
 			return FALSE;
 		}
