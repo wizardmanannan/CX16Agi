@@ -25,13 +25,13 @@ See it running here on YouTube: \
 - Continuing to squash bugs that would stop a player completing the game
 - Stop music from stalling when heavy work is undertaken, by reducing the time IRQ is paused
 
-# CX 16 Iteration 13 Goals 
+# CX 16 Iteration 13 Goals (Complete)
 Working Towards Full Playability For King's Quest I:
 - Fix broken and slow z-order algorithm
 - Building a more reliable action handler algorithm (eg. Algorithm that acts on the parsed tokens of the user's input)
 - Bug fixes
 
-# CX 16 Iteration 12 Goals (Current)
+# CX 16 Iteration 12 Goals (Complete)
 Fix object placement bugs, but trying to make code function exactly the same and a known good interpreter
 
 # CX 16 Iteration 11 Goals (Complete)
