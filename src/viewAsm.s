@@ -198,6 +198,7 @@ ALLOCATION_HEIGHT = ZP_TMP_36 + 1
 VIEW_TABLE_METADATA_BANK = ZP_TMP_37
 VIEW_TABLE_CURRENT_CEL = ZP_TMP_37 + 1
 CEL_BANK = ZP_TMP_38
+LOOP_BANK = ZP_TMP_39
 
 .segment "BANKRAM0E"
 bEAllocateWidthToSpriteSize: .byte 8,16,32,64
@@ -232,7 +233,7 @@ sta _bEToBlitCelArray,y
 dey
 bpl copyToBlitCelArrayLoop
 
-jmp bECopyToCelArray
+jmp callCelToVeraBulk
 
 
 
@@ -242,6 +243,7 @@ jmp bECopyToCelArray
 
 .export _setLoop
 _setLoop:
+stp
 sta ENTRY_NUM
 jsr popax
 sta LOOP_VERA_ADDRESS
@@ -266,6 +268,7 @@ sta _viewsWithSpriteMem,x
 
 GET_STRUCT_8_STORED_OFFSET _offsetOfMaxVeraSlots, VIEW, MAX_VERA_SLOTS
 GET_STRUCT_8_STORED_OFFSET _offsetOfLoopsBank, VIEW, RAM_BANK 
+sta LOOP_BANK
 GET_STRUCT_16_STORED_OFFSET _offsetOfLoops, VIEW, LOOP
 GET_STRUCT_8_STORED_OFFSET _offsetOfAllocationWidth, LOOP, ALLOCATION_WIDTH
 GET_STRUCT_8_STORED_OFFSET _offsetOfAllocationHeight, LOOP, ALLOCATION_HEIGHT
@@ -389,9 +392,55 @@ sta RAM_BANK
 
 jmp bECopyToCelArray
 
+callCelToVeraBulk:
+
+lda LOOP_BANK
+sta RAM_BANK
+
+;allocationWidth:
+GET_STRUCT_8_STORED_OFFSET _offsetOfAllocationWidth, LOOP
+jsr pusha
+
+;allocationHeight:
+GET_STRUCT_8_STORED_OFFSET _offsetOfAllocationHeight, LOOP
+jsr pusha
+
+;noCels
+lda #1
+jsr pusha
+
+;maxVeraSlots:
+GET_STRUCT_8_STORED_OFFSET _offsetOfMaxVeraSlots, VIEW
+jsr pusha
+
+;xPos
+GET_STRUCT_8_STORED_OFFSET _offsetOfXPos, VIEW_TAB
+jsr pusha
+
+;yPos
+lda CEL_BANK
+ldy _offsetOfCelHeight
+
+GET_STRUCT_8_STORED_OFFSET _offsetOfCelHeight, CEL, sreg
+GET_STRUCT_8_STORED_OFFSET _offsetOfYPos, VIEW_TAB
+
+sec
+sbc sreg
+inc
+jsr pusha
+
+;pNum
+GET_STRUCT_8_STORED_OFFSET _offsetOfPriority, VIEW_TAB
+
+lda #SPRITE_ALLOCATOR_BANK
+sta RAM_BANK
+
+jsr _bECellToVeraBulk
+
 restoreBank:
 lda PREVIOUS_BANK
 sta RAM_BANK
+stp
 rts
 .endscope
 
