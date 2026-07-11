@@ -197,8 +197,7 @@ ALLOCATION_WIDTH = ZP_TMP_36
 ALLOCATION_HEIGHT = ZP_TMP_36 + 1
 VIEW_TABLE_METADATA_BANK = ZP_TMP_37
 VIEW_TABLE_CURRENT_CEL = ZP_TMP_37 + 1
-MAXVERA_TIMES_CURR_CEL = ZP_TMP_38
-LOOP_VERA_ADDR_PLUS_VERA_SLOT = ZP_TMP_39
+CEL_BANK = ZP_TMP_38
 
 .segment "BANKRAM0E"
 bEAllocateWidthToSpriteSize: .byte 8,16,32,64
@@ -223,6 +222,20 @@ success:
 jmp copyAddresses
 
 rts
+
+bECopyToCelArray:
+ldy _sizeOfCel
+dey
+copyToBlitCelArrayLoop:
+lda GOLDEN_RAM_WORK_AREA,y
+sta _bEToBlitCelArray,y
+dey
+bpl copyToBlitCelArrayLoop
+
+jmp bECopyToCelArray
+
+
+
 
 .segment "CODE"
 ;boolean bESetLoop(ViewTable* localViewTab, ViewTableMetadata* localMetadata, View* localView, VeraSpriteAddress* loopVeraAddresses, byte entryNum)
@@ -271,7 +284,9 @@ sta LOOP + 1
 
 GET_STRUCT_16_STORED_OFFSET _offsetOfCels, LOOP, CEL
 
-GET_STRUCT_8_STORED_OFFSET _offsetOfCelsBank, LOOP, RAM_BANK
+GET_STRUCT_8_STORED_OFFSET _offsetOfCelsBank, LOOP, CEL_BANK
+sta RAM_BANK
+
 GET_STRUCT_8_STORED_OFFSET _offsetOfNumberOfCels, LOOP, NUMBER_OF_CELS
 GET_STRUCT_8_STORED_OFFSET _offsetOfCurrentCel, VIEW_TAB, VIEW_TABLE_CURRENT_CEL 
 
@@ -286,6 +301,7 @@ sta CEL
 txa
 adc CEL + 1
 sta CEL + 1
+
 
 lda #VIEW_TABLE_METADATA_BANK
 sta RAM_BANK
@@ -330,7 +346,6 @@ lda VIEW_TABLE_METADATA_BANK
 sta RAM_BANK
 
 loopVeraAddress1:
-stp
 lda #$0
 sta (LOOP_VERA_ADDRESS),y
 dey
@@ -348,7 +363,6 @@ sta (LOOP_VERA_ADDRESS)
 dey
 
 copyAddressesLoopCheck:
-
 lda #SPRITE_ALLOCATOR_BANK
 sta RAM_BANK
 
@@ -358,7 +372,22 @@ dex
 dex
 bpl copyAddressesLoop
 
+celCopy:
 
+lda CEL_BANK
+sta RAM_BANK
+ldy _sizeOfCel
+dey
+celCopyToGoldenLoop:
+lda (CEL),y
+sta GOLDEN_RAM_WORK_AREA,y
+dey
+bpl celCopyToGoldenLoop
+
+lda #SPRITE_METADATA_BANK
+sta RAM_BANK
+
+jmp bECopyToCelArray
 
 restoreBank:
 lda PREVIOUS_BANK
