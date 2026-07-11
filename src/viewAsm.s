@@ -203,7 +203,6 @@ LOOP_BANK = ZP_TMP_39
 .segment "BANKRAM0E"
 bEAllocateWidthToSpriteSize: .byte 8,16,32,64
 bEAllocateSpriteMemory:
-
 lda MAX_VERA_SLOTS
 sta ZP_NUMBER_TO_ALLOCATE
 
@@ -255,6 +254,7 @@ ldx ENTRY_NUM
 lda #$1 
 sta _viewsWithSpriteMem,x
 
+GET_STRUCT_16_STORED_OFFSET _offsetOfLoops, VIEW, LOOP
 GET_STRUCT_8_STORED_OFFSET _offsetOfMaxVeraSlots, VIEW, MAX_VERA_SLOTS
 GET_STRUCT_8_STORED_OFFSET _offsetOfLoopsBank, VIEW, LOOP_BANK 
 jmp setLoop
@@ -264,9 +264,6 @@ jmp setLoop
 
 setLoop:
 sta RAM_BANK
-GET_STRUCT_16_STORED_OFFSET _offsetOfLoops, VIEW, LOOP
-GET_STRUCT_8_STORED_OFFSET _offsetOfAllocationWidth, LOOP, ALLOCATION_WIDTH
-GET_STRUCT_8_STORED_OFFSET _offsetOfAllocationHeight, LOOP, ALLOCATION_HEIGHT
 GET_STRUCT_8_STORED_OFFSET _offsetOfCurrentLoop, VIEW_TAB 
 
 ;current loop is already in a from macro above
@@ -280,6 +277,10 @@ lda #$0
 adc LOOP + 1
 sta LOOP + 1
 
+GET_STRUCT_8_STORED_OFFSET _offsetOfAllocationWidth, LOOP, ALLOCATION_WIDTH
+
+GET_STRUCT_8_STORED_OFFSET _offsetOfAllocationHeight, LOOP, ALLOCATION_HEIGHT
+
 GET_STRUCT_16_STORED_OFFSET _offsetOfCels, LOOP, CEL
 
 GET_STRUCT_8_STORED_OFFSET _offsetOfCelsBank, LOOP, CEL_BANK
@@ -287,7 +288,6 @@ sta RAM_BANK
 
 GET_STRUCT_8_STORED_OFFSET _offsetOfNumberOfCels, LOOP, NUMBER_OF_CELS
 GET_STRUCT_8_STORED_OFFSET _offsetOfCurrentCel, VIEW_TAB, VIEW_TABLE_CURRENT_CEL 
-
 
 ;current cel is already in a from macro above
 ldy _sizeOfCel
