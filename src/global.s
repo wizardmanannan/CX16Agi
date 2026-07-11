@@ -68,6 +68,9 @@ ZP_TMP_33: .word $0
 ZP_TMP_34: .word $0
 ZP_TMP_35: .word $0
 ZP_TMP_36: .word $0
+ZP_TMP_37: .word $0
+ZP_TMP_38: .word $0
+ZP_TMP_39: .word $0
 .segment "CODE"
 
 

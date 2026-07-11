@@ -57,6 +57,7 @@ byte offsetOfloopsVeraAddressesPointers = offsetof(struct ViewTableMetadata, loo
 byte offsetOfViewMetadataBank = offsetof(struct ViewTableMetadata, viewTableMetadataBank);
 byte offsetOfBackBuffers = offsetof(struct ViewTableMetadata, backBuffers);
 byte offsetOfIsOnBackBuffer = offsetof(struct ViewTableMetadata, isOnBackBuffer);
+
 //View
 byte offsetOfNumberOfLoops = offsetof(struct View, numberOfLoops);
 byte offsetOfMaxCels = offsetof(struct View, maxCels);

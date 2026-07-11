@@ -53,6 +53,8 @@ VIEW_INC = 1
 .import _offsetOfMaxVeraSlots
 .import _offsetOfAllocationWidth
 .import _offsetOfAllocationHeight
+.import _offsetOfViewMetadataBank
+
 
 .ifdef SPRITE_DEBUG
 .import _bSdRunNumber
@@ -193,6 +195,10 @@ NUMBER_OF_CELS = ZP_TMP_35
 MAX_VERA_SLOTS = ZP_TMP_35 + 1
 ALLOCATION_WIDTH = ZP_TMP_36
 ALLOCATION_HEIGHT = ZP_TMP_36 + 1
+VIEW_TABLE_METADATA_BANK = ZP_TMP_37
+VIEW_TABLE_CURRENT_CEL = ZP_TMP_37 + 1
+MAXVERA_TIMES_CURR_CEL = ZP_TMP_38
+LOOP_VERA_ADDR_PLUS_VERA_SLOT = ZP_TMP_39
 
 .segment "BANKRAM0E"
 bEAllocateWidthToSpriteSize: .byte 8,16,32,64
@@ -223,9 +229,6 @@ rts
 
 .export _setLoop
 _setLoop:
-
-stp
-
 sta ENTRY_NUM
 jsr popax
 sta LOOP_VERA_ADDRESS
@@ -248,7 +251,6 @@ ldx ENTRY_NUM
 lda #$1 
 sta _viewsWithSpriteMem,x
 
-
 GET_STRUCT_8_STORED_OFFSET _offsetOfMaxVeraSlots, VIEW, MAX_VERA_SLOTS
 GET_STRUCT_8_STORED_OFFSET _offsetOfLoopsBank, VIEW, RAM_BANK 
 GET_STRUCT_16_STORED_OFFSET _offsetOfLoops, VIEW, LOOP
@@ -268,9 +270,10 @@ adc LOOP + 1
 sta LOOP + 1
 
 GET_STRUCT_16_STORED_OFFSET _offsetOfCels, LOOP, CEL
+
 GET_STRUCT_8_STORED_OFFSET _offsetOfCelsBank, LOOP, RAM_BANK
 GET_STRUCT_8_STORED_OFFSET _offsetOfNumberOfCels, LOOP, NUMBER_OF_CELS
-GET_STRUCT_8_STORED_OFFSET _offsetOfCurrentCel, VIEW_TAB 
+GET_STRUCT_8_STORED_OFFSET _offsetOfCurrentCel, VIEW_TAB, VIEW_TABLE_CURRENT_CEL 
 
 
 ;current cel is already in a from macro above
@@ -284,32 +287,76 @@ txa
 adc CEL + 1
 sta CEL + 1
 
+lda #VIEW_TABLE_METADATA_BANK
+sta RAM_BANK
+GET_STRUCT_8_STORED_OFFSET _offsetOfViewMetadataBank, VIEW_TABLE_METADATA, VIEW_TABLE_METADATA_BANK
+
 lda #SPRITE_ALLOCATOR_BANK
 sta RAM_BANK
 
-jmp bEAllocateSpriteMemory
 
-copyAddresses:
+jmp bEAllocateSpriteMemory
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                
+copyAddresses:  
+;loopVeraAddresses[localView->maxVeraSlots * localViewTab->currentCel]
 lda MAX_VERA_SLOTS
+ldy VIEW_TABLE_CURRENT_CEL
+MULT_8x8_16
+
+clc
+adc MAX_VERA_SLOTS
+dec
+asl
+asl 
+adc #$3
+tay
+
+lda MAX_VERA_SLOTS
+dec
 asl
 asl
 tax
 
+copyAddressesLoop:
 ;Ignoring + 3 always zero save cycles by not storing it
 lda _bEBulkAllocatedAddresses + 2,x
-sta GOLDEN_RAM_WORK_AREA + 2,x
+sta sreg2
 lda _bEBulkAllocatedAddresses + 1,x
-sta GOLDEN_RAM_WORK_AREA + 1,x 
+sta sreg
 lda _bEBulkAllocatedAddresses,x
-sta GOLDEN_RAM_WORK_AREA,x 
+sta sreg + 1
 
+lda VIEW_TABLE_METADATA_BANK
+sta RAM_BANK
 
-copyAddressesToBufferLoop:
-lda _bEBulkAllocatedAddresses 
+loopVeraAddress1:
+stp
+lda #$0
+sta (LOOP_VERA_ADDRESS),y
+dey
+
+lda sreg2
+sta (LOOP_VERA_ADDRESS),y
+dey
+
+lda sreg
+sta (LOOP_VERA_ADDRESS),y
+dey
+
+lda sreg + 1
+sta (LOOP_VERA_ADDRESS)
+dey
+
+copyAddressesLoopCheck:
+
+lda #SPRITE_ALLOCATOR_BANK
+sta RAM_BANK
+
 dex
 dex
 dex
 dex
+bpl copyAddressesLoop
 
 
 
