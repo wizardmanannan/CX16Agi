@@ -1407,7 +1407,7 @@ boolean bEAllocateSXpriteMemory(Loop* localLoop, byte noToBlit)
 extern byte bEToBlitCelArray[TO_BLIT_CEL_ARRAY_LENGTH];
 //Copy cels into array above first
 extern void bECellToVeraBulk(SpriteAttributeSize allocationWidth, SpriteAttributeSize allocationHeight, byte noCels, byte maxVeraSlots, byte xVal, byte yVal, byte pNum);
-boolean bESetLoop(ViewTable* localViewTab, ViewTableMetadata* localMetadata, View* localView, VeraSpriteAddress* loopVeraAddresses, byte entryNum)
+boolean bESextLoop(ViewTable* localViewTab, ViewTableMetadata* localMetadata, View* localView, VeraSpriteAddress* loopVeraAddresses, byte entryNum)
 {
 	Loop localLoop;
 	Cel localCel;
@@ -1492,7 +1492,7 @@ extern void bEClearVeraSprite(byte celWidth, byte celHeight);
         asm("sta %w", VERA_ADDRESS_HIGH); \
     } while (0)
 
-extern boolean setLoop(ViewTable* localViewTab, ViewTableMetadata* localMetadata, View* localView, VeraSpriteAddress* loopVeraAddresses, byte entryNum);
+extern boolean bESetLoop(ViewTable* localViewTab, ViewTableMetadata* localMetadata, View* localView, VeraSpriteAddress* loopVeraAddresses, byte entryNum);
 
 /***************************************************************************
 ** agi_blit
@@ -1606,11 +1606,10 @@ boolean agiBlit(byte entryNum, boolean disableInterupts)
 
 		RAM_BANK = SPRITE_METADATA_BANK;
 
-
 #ifdef VERBOSE_DEBUG_NO_BLIT_CACHE
 		printf("loading view %d loop %d. The vt %p. It's position is %d,%d. v36 is %d\n", localViewTab->currentView, localViewTab->currentLoop, entryNum, localViewTab->xPos, localViewTab->yPos, var[36]);
 #endif
-		if (!setLoop(&localViewTab, &localMetadata, &localView, loopVeraAddresses, entryNum))
+		if (!bESetLoop(&localViewTab, &localMetadata, &localView, loopVeraAddresses, entryNum))
 		{
 			RAM_BANK = previousBank;
 

@@ -235,15 +235,8 @@ bpl copyToBlitCelArrayLoop
 
 jmp callCelToVeraBulk
 
-
-
-
-.segment "CODE"
-;boolean bESetLoop(ViewTable* localViewTab, ViewTableMetadata* localMetadata, View* localView, VeraSpriteAddress* loopVeraAddresses, byte entryNum)
-
-.export _setLoop
-_setLoop:
-stp
+.export _bESetLoop
+_bESetLoop:
 sta ENTRY_NUM
 jsr popax
 sta LOOP_VERA_ADDRESS
@@ -258,17 +251,19 @@ jsr popax
 sta VIEW_TAB
 stx VIEW_TAB + 1
 setLoopAsm:
-
-lda RAM_BANK
-sta PREVIOUS_BANK
-
 ldx ENTRY_NUM
 lda #$1 
 sta _viewsWithSpriteMem,x
 
 GET_STRUCT_8_STORED_OFFSET _offsetOfMaxVeraSlots, VIEW, MAX_VERA_SLOTS
-GET_STRUCT_8_STORED_OFFSET _offsetOfLoopsBank, VIEW, RAM_BANK 
-sta LOOP_BANK
+GET_STRUCT_8_STORED_OFFSET _offsetOfLoopsBank, VIEW, LOOP_BANK 
+jmp setLoop
+
+.segment "CODE"
+;boolean bESetLoop(ViewTable* localViewTab, ViewTableMetadata* localMetadata, View* localView, VeraSpriteAddress* loopVeraAddresses, byte entryNum)
+
+setLoop:
+sta RAM_BANK
 GET_STRUCT_16_STORED_OFFSET _offsetOfLoops, VIEW, LOOP
 GET_STRUCT_8_STORED_OFFSET _offsetOfAllocationWidth, LOOP, ALLOCATION_WIDTH
 GET_STRUCT_8_STORED_OFFSET _offsetOfAllocationHeight, LOOP, ALLOCATION_HEIGHT
@@ -276,12 +271,12 @@ GET_STRUCT_8_STORED_OFFSET _offsetOfCurrentLoop, VIEW_TAB
 
 ;current loop is already in a from macro above
 ldy _sizeOfLoop
-MULT_8x8_16
+jsr mul8x8to8
 
 clc
 adc LOOP
 sta LOOP
-txa
+lda #$0
 adc LOOP + 1
 sta LOOP + 1
 
@@ -296,12 +291,12 @@ GET_STRUCT_8_STORED_OFFSET _offsetOfCurrentCel, VIEW_TAB, VIEW_TABLE_CURRENT_CEL
 
 ;current cel is already in a from macro above
 ldy _sizeOfCel
-MULT_8x8_16
+jsr mul8x8to8
 
 clc
 adc CEL
 sta CEL
-txa
+lda #$0
 adc CEL + 1
 sta CEL + 1
 
@@ -320,7 +315,7 @@ copyAddresses:
 ;loopVeraAddresses[localView->maxVeraSlots * localViewTab->currentCel]
 lda MAX_VERA_SLOTS
 ldy VIEW_TABLE_CURRENT_CEL
-MULT_8x8_16
+jsr mul8x8to8
 
 clc
 adc MAX_VERA_SLOTS
@@ -440,7 +435,6 @@ jsr _bECellToVeraBulk
 restoreBank:
 lda PREVIOUS_BANK
 sta RAM_BANK
-stp
 rts
 .endscope
 
