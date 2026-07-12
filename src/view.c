@@ -1358,7 +1358,7 @@ void bESwitchMetadata(ViewTable* localViewTab, View* localView, byte viewNum, by
 #endif
 }
 
-boolean bEAllocateSXpriteMemory(Loop* localLoop, byte noToBlit)
+boolean bEAllocateSpriteMemory(Loop* localLoop, byte noToBlit)
 {
 	SpriteAllocationSize allocationWidth, allocationHeight;
 
@@ -1399,76 +1399,6 @@ boolean bEAllocateSXpriteMemory(Loop* localLoop, byte noToBlit)
 	{
 		return FALSE;
 	}
-
-	return TRUE;
-}
-
-#define TO_BLIT_CEL_ARRAY_LENGTH 500
-extern byte bEToBlitCelArray[TO_BLIT_CEL_ARRAY_LENGTH];
-//Copy cels into array above first
-extern void bECellToVeraBulk(SpriteAttributeSize allocationWidth, SpriteAttributeSize allocationHeight, byte noCels, byte maxVeraSlots, byte xVal, byte yVal, byte pNum);
-boolean bESextLoop(ViewTable* localViewTab, ViewTableMetadata* localMetadata, View* localView, VeraSpriteAddress* loopVeraAddresses, byte entryNum)
-{
-	Loop localLoop;
-	Cel localCel;
-	byte noToBlit, i;
-	byte veraSpriteWidthAndHeight;
-
-	viewsWithSpriteMem[entryNum] = TRUE;
-
-	getLoadedLoop(localView, &localLoop, localViewTab->currentLoop);
-	getLoadedCel(&localLoop, &localCel, localViewTab->currentCel);
-
-	noToBlit = localView->maxVeraSlots;
-
-#ifdef VERBOSE_DEBUG_BLIT
-	printf("Trying to copy to %p from %p. Number %d. \n ", localMetadata->loopsVeraAddressesPointers[localViewTab->currentLoop], bEBulkAllocatedAddresses, noToBlit);
-#endif // VERBOSE_DEBUG_BLIT
-
-#ifdef VERBOSE_DEBUG_BLIT
-	printf("vera Sprite addresses %d * %d * %d = %d (%d)\n", localLoop.numberOfCels, localLoop.veraSlotsWidth, localLoop.veraSlotsHeight, localLoop.numberOfCels * localLoop.veraSlotsWidth * localLoop.veraSlotsHeight, noToBlit);
-#endif
-
-#ifdef VERBOSE_DEBUG_BLIT
-	printf("Trying to allocate %d. Number %d\n", localLoop.allocationSize, noToBlit);
-#endif
-
-	for (i = 0; !bEAllocateSXpriteMemory(&localLoop, noToBlit); i++)
-	{
-		//printf("md %p  current loop %d view %p lvp %p bank %d no loops %d  number cels %d, vt %p\n", &viewTableMetadata[7], localViewTab->currentLoop, &loadedViews[61], localMetadata->loopsVeraAddressesPointers, localMetadata->viewTableMetadataBank, localView->numberOfLoops, localView->maxCels, &viewtab[7]);
-		//printf("the max slots are %d for view %d\n", localView->maxVeraSlots, localViewTab->currentView);
-		//printf("view %p is at %p view tab is at %p view md is %p entry %p", localViewTab->currentView, &loadedViews[localViewTab->currentView], &viewtab[7], &viewTableMetadata[0xB], viewTabNoToMetaData[7]);
-
-		if (i == 0)
-		{
-			//runSpriteGarbageCollector(7, 7);
-			//bCDeleteSpriteMemoryForViewTab(localMetadata, localViewTab->currentLoop, localView, TRUE);
-		}
-		else {
-			return FALSE;
-		}
-	}
-
-#ifdef VERBOSE_DEBUG_BLIT
-	printf("The address of the buffer is %p\n ", bEBulkAllocatedAddresses);
-	printf("loop vera is %p", loopVeraAddresses);
-	printf("Trying to copy to %p on bank %d from %p on bank %d number %d.", (byte*)loopVeraAddresses, localMetadata->viewTableMetadataBank, bEBulkAllocatedAddresses, SPRITE_METADATA_BANK, noToBlit * sizeof(VeraSpriteAddress));
-#endif
-	enableHelpersDebugging = TRUE;
-	memCpyBankedBetween((byte*)&loopVeraAddresses[localView->maxVeraSlots * localViewTab->currentCel], localMetadata->viewTableMetadataBank, bEBulkAllocatedAddresses, SPRITE_METADATA_BANK, noToBlit * sizeof(VeraSpriteAddress));
-	
-	//printf("we copy to (%d %d) %p on bank %p the num to blit is %d we copy from %p\n", localView->maxVeraSlots, localViewTab->currentCel, &loopVeraAddresses[localView->maxVeraSlots * localViewTab->currentCel], localMetadata->viewTableMetadataBank, noToBlit * sizeof(VeraSpriteAddress), bEBulkAllocatedAddresses);
-	//asm("stp");
-
-	enableHelpersDebugging = FALSE;
-
-	memCpyBankedBetween(bEToBlitCelArray, SPRITE_METADATA_BANK, (byte*)&localLoop.cels[localViewTab->currentCel], localLoop.celsBank, sizeof(Cel));
-
-#ifdef VERBOSE_DEBUG_BLIT
-	printf("You are allocating %d.%d. It has a width of %d and height of %d. There are %d to blit\n", localViewTab->currentView, localViewTab->currentLoop, localLoop.allocationWidth, localLoop.allocationHeight, noToBlit);
-#endif
-	//Change this method
-	bECellToVeraBulk(localLoop.allocationWidth, localLoop.allocationHeight, 1, localView->maxVeraSlots, localViewTab->xPos, (localViewTab->yPos - localCel.height) + 1, localViewTab->priority);
 
 	return TRUE;
 }
@@ -1701,7 +1631,7 @@ initialise:
 	if (!isAllocated)
 	{
 		viewsWithSpriteMem[entryNum] = TRUE;
-		if (!bEAllocateSXpriteMemory(&localLoop, localView.maxVeraSlots))
+		if (!bEAllocateSpriteMemory(&localLoop, localView.maxVeraSlots))
 		{
 			return FALSE;
 		}
