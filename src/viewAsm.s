@@ -427,8 +427,8 @@ jsr pusha
 ;pNum
 GET_STRUCT_8_STORED_OFFSET _offsetOfPriority, VIEW_TAB
 
-lda #SPRITE_ALLOCATOR_BANK
-sta RAM_BANK
+ldx #SPRITE_ALLOCATOR_BANK
+stx RAM_BANK
 
 jsr _bECellToVeraBulk
 
