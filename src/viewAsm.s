@@ -435,6 +435,8 @@ jsr _bECellToVeraBulk
 restoreBank:
 lda PREVIOUS_BANK
 sta RAM_BANK
+
+lda #TRUE        
 rts
 .endscope
 
