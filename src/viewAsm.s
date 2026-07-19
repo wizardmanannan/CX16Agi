@@ -475,6 +475,8 @@ callCelToVeraBulk:
 
     ; yPos = viewTab->yPos - cel->height + 1
     lda CEL_BANK
+    sta RAM_BANK
+
     ldy _offsetOfCelHeight
     GET_STRUCT_8_STORED_OFFSET _offsetOfCelHeight, CEL, sreg
     GET_STRUCT_8_STORED_OFFSET _offsetOfYPos, VIEW_TAB
