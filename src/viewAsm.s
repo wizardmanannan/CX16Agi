@@ -421,7 +421,7 @@ loopVeraAddress1:
     dey
 
     lda sreg + 1
-    sta (LOOP_VERA_ADDRESS)
+    sta (LOOP_VERA_ADDRESS),y
     dey
 
 copyAddressesLoopCheck:
