@@ -361,7 +361,7 @@ sta BCOL
 stz BULK_ADDRESS_INDEX
 stz CEL_COUNTER
 
-lda _sizeofCel
+lda _sizeOfCel
 sta SIZE_OF_CEL
 
 lda #<_bEToBlitCelArray

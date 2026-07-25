@@ -10,8 +10,6 @@ SPLITVIEW_INC = 1
 .import _b1DivAndCeil
 .import _memCpyBankedBetween
 
-.import _sizeofCel
-
 .import _b10BankedAlloc
 .import _b5Multiply
 .import _b5Divide

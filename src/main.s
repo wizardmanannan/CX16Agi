@@ -119,3 +119,4 @@
     .export _b9StartMoveObj
     .export _bAInitMenus
     .export _statusLineDisplayed
+
