@@ -1,0 +1,17 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Extract AGI Deps",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${file}",
+            "console": "integratedTerminal",
+            "args": [
+                "/home/alay/CLionProjects/games/kq1",
+                "/home/alay/CLionProjects/games/kq1/extract"
+            ],
+            "justMyCode": true
+        }
+    ]
+}
