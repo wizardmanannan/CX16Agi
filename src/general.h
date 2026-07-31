@@ -23,9 +23,15 @@
 /* MENU data */
 #define SEQUENTIAL_LFN 2
 
+#define GAMEID_MAX_LENGTH 6
+
+extern char gameId[GAMEID_MAX_LENGTH + 1];
+
 typedef unsigned char byte;
 typedef unsigned short int word;
 typedef char boolean;
+
+
 
 typedef struct { 
 	int w;

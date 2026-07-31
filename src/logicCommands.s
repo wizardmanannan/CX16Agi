@@ -144,6 +144,7 @@ LOGICCOMMANDS_INC = 1
 .import _b4Quit
 .import _b4Pause
 .import _b4Version
+.import _b4Set_game_id
 .import _b4Reset_scan_start
 .import _b4Reposition_to
 .import _b4Reposition_to_v
@@ -802,7 +803,7 @@ jmpTableCommands2:
 .addr b1NoOp_0
 .addr _b4Version
 .addr b1NoOp_1
-.addr b1NoOp_1
+.addr b4SetGameIdCCall ;Here
 .addr b1NoOp_1
 .addr b4ScanStart
 .addr b4Reset_scan_startCCall
@@ -1684,6 +1685,11 @@ b4PauseCCall:
 b4VersionCCall:
         jsr _b4Version
         jmp mainLoop
+b4SetGameIdCCall:
+        jsr _b4Set_game_id
+        jmp mainLoop
+
+
 b4ScanStart:
         ;Sets the interpreter to begin execution at the next statement the next time the script is loaded,
         ;by updating the entry point.

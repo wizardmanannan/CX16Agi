@@ -1973,10 +1973,22 @@ void b4Version() // 0, 0x00
 //	(*data)++;  /* Ignore the script size. Not important for this interpreter */
 //}
 //
-//void b4Set_game_id() // 1, 0x00 
-//{
-//	(*data)++;  /* Ignore the game ID. Not important */
-//}
+void b4Set_game_id() // 1, 0x00 
+{
+
+	LOGICFile logicFile;
+	char* messagePointer;
+	byte messageNo;
+
+	messageNo = loadAndIncWinCode();
+
+	b5GetLogicFile(&logicFile, currentLog);
+
+	messagePointer = getMessagePointer(currentLog, messageNo - 1);  /* Ignore the game ID. Not important */
+
+	strcpyBanked(gameId, messagePointer, logicFile.messageBank);
+
+}
 //
 //void b4Log() // 1, 0x00 
 //{
