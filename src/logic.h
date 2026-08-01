@@ -6,7 +6,6 @@
 #define _LOGIC_H_
 
 #include "helpers.h"
-#include "lruCache.h"
 
 typedef struct {
 	word codeSize; //0

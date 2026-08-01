@@ -1,14 +1,23 @@
 #!/usr/bin/env python3
 """
-Extract per-logic static dependencies from agikit-slim decompiled sources.
+Extract per-logic static dependencies from agikit-slim decompiled sources
+and write consolidated files for the Commander X16 AGI interpreter.
 
-Output files are named (all uppercase):
-    <GAMEID><ROOM><LOG|SND|VIW>META.BIN
+Filenames are deliberately descriptive so it is obvious they contain only
+resource-ID lists, not game code or assets.
 
-Example for King's Quest 1, room 5:
-    KQ15LOGMETA.BIN
-    KQ15VIWMETA.BIN
-    KQ15SNDMETA.BIN
+For each game three pairs of files are produced (all uppercase):
+
+    <GAMEID>-SCRIPT-IDS.BIN / <GAMEID>-SCRIPT-IDS.IDX
+    <GAMEID>-VIEW-IDS.BIN   / <GAMEID>-VIEW-IDS.IDX
+    <GAMEID>-SOUND-IDS.BIN  / <GAMEID>-SOUND-IDS.IDX
+
+Index format (3 bytes per room, room 0 .. max_room):
+    offset  (uint16 little-endian)  – start of this room’s list in the .BIN
+    length  (uint8)                 – number of resource IDs
+
+Data format:
+    Concatenated lists of resource-ID bytes, in room-number order.
 """
 
 import argparse
@@ -36,7 +45,6 @@ RE_SOUND = re.compile(
     re.IGNORECASE
 )
 
-# set.game.id("KQ1")  or  set.game.id('KQ1')
 RE_GAME_ID = re.compile(
     r'\bset\.game\.id\s*\(\s*["\']([^"\']+)["\']\s*\)',
     re.IGNORECASE
@@ -50,10 +58,16 @@ def extract_deps(text: str):
     return scripts, views, sounds
 
 
-def extract_game_id(logic0_text: str) -> str:
-    m = RE_GAME_ID.search(logic0_text)
-    if m:
-        return m.group(1).strip().upper()
+def find_game_id(logic_files: list[Path]) -> str:
+    """Search every logic file for the first set.game.id("XXXX")."""
+    for path in sorted(logic_files):
+        try:
+            text = path.read_text(encoding="utf-8", errors="replace")
+        except Exception:
+            continue
+        m = RE_GAME_ID.search(text)
+        if m:
+            return m.group(1).strip().upper()[:6]
     return "UNK"
 
 
@@ -74,19 +88,65 @@ def run_agikit_extract(game_dir: Path, out_dir: Path) -> None:
         print(result.stdout)
 
 
-def write_flat(path: Path, numbers: set[int]) -> None:
-    data = bytes(sorted(n for n in numbers if 0 <= n <= 255))
-    path.write_bytes(data)
-    print(f"  {path.name:30s}  {len(data):3d} resources → {list(data)}")
+def write_consolidated(output_dir: Path, game_id: str,
+                       all_scripts: dict, all_views: dict, all_sounds: dict) -> None:
+    """
+    Write the three .BIN + .IDX pairs with clear, non-suspicious names.
+    Index is dense from room 0 to max_room inclusive.
+    """
+    max_room = max(
+        max(all_scripts.keys(), default=0),
+        max(all_views.keys(), default=0),
+        max(all_sounds.keys(), default=0)
+    )
+
+    def write_one(resource_name: str, deps: dict) -> None:
+        data = bytearray()
+        index = bytearray()
+
+        for room in range(max_room + 1):
+            ids = sorted(n for n in deps.get(room, set()) if 0 <= n <= 255)
+            offset = len(data)
+            length = len(ids)
+
+            # 2-byte little-endian offset + 1-byte length
+            index.append(offset & 0xFF)
+            index.append((offset >> 8) & 0xFF)
+            index.append(length & 0xFF)
+
+            data.extend(ids)
+
+        # Clear descriptive names
+        bin_name = f"{game_id}-{resource_name}-IDS.BIN"
+        idx_name = f"{game_id}-{resource_name}-IDS.IDX"
+
+        bin_path = output_dir / bin_name
+        idx_path = output_dir / idx_name
+
+        bin_path.write_bytes(data)
+        idx_path.write_bytes(index)
+
+        print(f"  {bin_name:30s}  {len(data):5d} bytes   "
+              f"({max_room + 1} rooms)")
+        print(f"  {idx_name:30s}  {len(index):5d} bytes")
+
+    print(f"\nWriting consolidated ID-list files for '{game_id}' "
+          f"(rooms 0–{max_room}) to {output_dir}")
+    write_one("SCRIPT", all_scripts)
+    write_one("VIEW",   all_views)
+    write_one("SOUND",  all_sounds)
 
 
 def main():
-    parser = argparse.ArgumentParser()
+    parser = argparse.ArgumentParser(
+        description="Extract AGI room dependency ID lists (consolidated format)"
+    )
     parser.add_argument("game_dir", type=Path,
-                        help="Folder containing the original AGI game")
+                        help="Folder containing the original AGI game files")
     parser.add_argument("output_dir", type=Path, nargs="?", default=None,
-                        help="Where to write the .bin files (default = <game_dir>/deps)")
-    parser.add_argument("--keep-extract", action="store_true")
+                        help="Where to write the files (default = <game_dir>/deps)")
+    parser.add_argument("--keep-extract", action="store_true",
+                        help="Also keep the full agikit extract tree")
     args = parser.parse_args()
 
     game_dir = args.game_dir.resolve()
@@ -105,25 +165,11 @@ def main():
             print("Error: no .agilogic files found", file=sys.stderr)
             sys.exit(1)
 
-        logic_dir = logic_files[0].parent
-        print(f"Found {len(logic_files)} logic files in {logic_dir}")
+        print(f"Found {len(logic_files)} logic files")
 
-        # ----- Get game ID from logic 0 -----
-        logic0_path = logic_dir / "0.agilogic"
-        if not logic0_path.exists():
-            candidates = list(logic_dir.glob("0*.agilogic"))
-            logic0_path = candidates[0] if candidates else None
-
-        if logic0_path and logic0_path.exists():
-            logic0_text = logic0_path.read_text(encoding="utf-8", errors="replace")
-            game_id = extract_game_id(logic0_text)
-        else:
-            game_id = "UNK"
-            print("Warning: could not find logic 0 – using game ID 'UNK'")
-
+        game_id = find_game_id(logic_files)
         print(f"Game ID: '{game_id}'\n")
 
-        # ----- Collect dependencies -----
         all_scripts = defaultdict(set)
         all_views   = defaultdict(set)
         all_sounds  = defaultdict(set)
@@ -146,15 +192,8 @@ def main():
                   f"views={sorted(views)}  "
                   f"sounds={sorted(sounds)}")
 
-        # ----- Write files (all uppercase names) -----
-        print(f"\nWriting files to {output_dir}")
-        for room in sorted(all_scripts):
-            # Everything forced to uppercase for the CX16
-            base = f"{game_id}{room}".upper()
-
-            write_flat(output_dir / f"{base}LOGMETA.BIN", all_scripts[room])
-            write_flat(output_dir / f"{base}VIWMETA.BIN", all_views[room])
-            write_flat(output_dir / f"{base}SNDMETA.BIN", all_sounds[room])
+        write_consolidated(output_dir, game_id,
+                           all_scripts, all_views, all_sounds)
 
         if args.keep_extract:
             keep = output_dir / "agikit_extract"

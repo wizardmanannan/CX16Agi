@@ -17,7 +17,6 @@
 #include "view.h"
 #include "stub.h"
 #include "memoryManager.h"
-#include "lruCache.h"
 #include "debugHelper.h"
 //#include "object.h"
 #include "words.h"
@@ -264,8 +263,6 @@ void b6Initialise()
     int i;
 
     b6InitTimer(&b6Timing_proc);
-
-    b4InitLruCaches(&b4DiscardLogicFileWrapper, &b9DiscardView);
     b6InitFiles();             /* Load resource directories */
     b6InitRandom();
     bAInitMenus();
