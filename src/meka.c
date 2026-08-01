@@ -50,13 +50,6 @@ int dirnOfEgo, newRoomNum, score;
 
 extern int picFNum;    // Debugging. Delete at some stage!!
 
-#pragma code-name(push, "BANKRAM04")
-void b4DiscardLogicFileWrapper(byte logFileNum)
-{
-    b6DiscardLogicFile(logFileNum);
-}
-#pragma code-name(pop)
-
 #pragma code-name (push, "BANKRAM06")
 void b6AdjustEgoPosition()
 {

@@ -46,8 +46,8 @@ extern BITMAP* picture, * priority, * control, * agi_screen, * working_screen;
 extern void b6DisableAndWaitForVsync();
 
 #pragma wrapped-call (push, trampoline, PICTURE_CODE_OVERFLOW_BANK)
-extern void b4ClearBackground();
-extern void b4ClearPicture();
+extern void b8ClearBackground();
+extern void b8ClearPicture();
 #pragma wrapped-call (pop);
 
 #pragma wrapped-call (push, trampoline, PICTURE_CODE_BANK)
