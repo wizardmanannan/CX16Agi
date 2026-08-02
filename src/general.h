@@ -20,6 +20,9 @@
 #define  FALSE   0
 #endif
 
+#define FILE_DEVICE 8
+#define FILE_OPEN_ADDRESS 2
+
 /* MENU data */
 #define SEQUENTIAL_LFN 2
 

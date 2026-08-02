@@ -254,7 +254,7 @@ extern void bAInitMenus();
 void b6Initialise()
 {
     int i;
-
+    
     b6InitTimer(&b6Timing_proc);
     b6InitFiles();             /* Load resource directories */
     b6InitRandom();

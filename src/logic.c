@@ -167,7 +167,7 @@ void b6LoadLogicFile(byte logFileNum)
 
 	b5SetLogicEntry(&logicEntry, logFileNum);
 
-
+	b4LoadDependencies(logFileNum);
 }
 
 /**************************************************************************

@@ -1988,6 +1988,12 @@ void b4Set_game_id() // 1, 0x00
 
 	strcpyBanked(gameId, messagePointer, logicFile.messageBank);
 
+	b4InitMetadata();
+	b4LoadDependencies(0);
+	if(currentLog != 0)
+	{
+		b4LoadDependencies(currentLog);
+	}
 }
 //
 //void b4Log() // 1, 0x00 

@@ -5,8 +5,6 @@
 #ifndef _AGIFILES_H_
 #define _AGIFILES_H_
 
-#define FILE_DEVICE 8
-
 #include "memoryManager.h"
 #include "helpers.h"
 #include "general.h"
@@ -22,7 +20,6 @@
 #define  VIEW     2
 #define  SOUND    3
 
-#define FILE_OPEN_ADDRESS 2
 #define NO_BYTES_PER_MESSAGE 2
 #define FILE_NAME_SIZE 15
 

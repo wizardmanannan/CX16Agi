@@ -6,6 +6,7 @@
 #define _LOGIC_H_
 
 #include "helpers.h"
+#include "dependencyResolver.h"
 
 typedef struct {
 	word codeSize; //0
