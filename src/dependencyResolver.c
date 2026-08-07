@@ -29,7 +29,7 @@ const char b4FileFlags[] = ",S,R";
 
 #pragma rodata-name (pop)
 
-//#pragma code-name (push, "BANKRAM04")
+#pragma code-name (push, "BANKRAM04")
 boolean b4OpenMetadataFile(char* fileName, byte* buffer, int size)
 {
     byte fileOpenResult, result = FALSE;
@@ -87,4 +87,4 @@ void b4LoadDependencies(byte scriptNumber)
 
 }
 
-//#pragma code-name (pop)
+#pragma code-name (pop)
