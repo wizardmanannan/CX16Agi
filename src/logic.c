@@ -191,7 +191,7 @@ void b6DiscardLogicFile(byte logFileNum)
 	b5GetLogicFile(&logicData, logFileNum);
 	b5GetLogicEntry(&logicEntry, logFileNum);
 
-	if (logicEntry.loaded) {
+	if (logicEntry.loaded && logFileNum != 0) {
 
 		if (logicEntry.loaded && !b10BankedDealloc((byte*)logicData.messages, logicData.messageBank))
 		{

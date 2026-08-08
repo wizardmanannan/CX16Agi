@@ -85,8 +85,6 @@ void b4InitMetadata()
 
     //printf("li %p lm %p si %p sm %p vi %p vm %p\n", b4LogicIndex, b4LogicMetadata, b4SoundIndex, b4SoundMetadata, b4ViewIndex, b4ViewMetadata);
 
-    //asm("stp");
-
     b4IsInited = TRUE;
 }
 
@@ -94,6 +92,8 @@ void b4LoadUnloadDependencies(byte scriptNumber, boolean shouldLoad)
 {
     int index = 0, size = 0;
     byte scriptIndex = scriptNumber * 3, i, logicToLoad;
+
+    //asm("stp");
 
     // if(shouldLoad)
     // {
