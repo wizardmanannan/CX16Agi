@@ -92,31 +92,46 @@ void b4InitMetadata()
 
 #pragma wrapped-call (push, trampoline, LOGIC_CODE_BANK)
 void b6LoadLogicFile(byte logFileNum);
+void b6DiscardLogicFile(byte logFileNum);
 #pragma wrapped-call (pop)
 
-void b4LoadDependencies(byte scriptNumber)
+void b4LoadUnloadDependencies(byte scriptNumber, boolean shouldLoad)
 {
     int index = 0, size = 0;
     byte scriptIndex = scriptNumber * 3, i, logicToLoad;
 
-    printf("loading %d\n", scriptNumber);
+    // if(shouldLoad)
+    // {
+    //     printf("loading %d\n", scriptNumber);
+    // }
+    // else
+    // {
+    //     printf("unloading %d\n", scriptNumber);
+    // }
 
     if(b4IsInited)
     {
         size = b4LogicIndex[scriptIndex + 2];
-        printf("your size is %d\n", size);
+        //printf("your size is %d\n", size);
         if(size > 0)
         {
             index = b4LogicIndex[scriptIndex] + (b4LogicIndex[scriptIndex + 1] << 8);
 
-        printf("your index is %d which is %d + (%d << 8 (%d)) = %d \n", index, b4LogicIndex[scriptIndex], b4LogicIndex[scriptIndex + 1], b4LogicIndex[scriptIndex + 1] << 8, b4LogicIndex[scriptIndex] + (b4LogicIndex[scriptIndex + 1] << 8));
+        //printf("your index is %d which is %d + (%d << 8 (%d)) = %d \n", index, b4LogicIndex[scriptIndex], b4LogicIndex[scriptIndex + 1], b4LogicIndex[scriptIndex + 1] << 8, b4LogicIndex[scriptIndex] + (b4LogicIndex[scriptIndex + 1] << 8));
 
             for(i = 0; i < size; i++, index++)
             {
                logicToLoad = b4LogicMetadata[index];
-               printf("you are loading %d\n", logicToLoad);
+               //printf("you are loading %d\n", logicToLoad);
 
-               b6LoadLogicFile(logicToLoad);
+               if(shouldLoad)
+               {
+                b6LoadLogicFile(logicToLoad);
+               }
+               else
+               {
+                b6DiscardLogicFile(logicToLoad);
+               }
             }
         }
     }

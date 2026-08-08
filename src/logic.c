@@ -167,7 +167,7 @@ void b6LoadLogicFile(byte logFileNum)
 
 	b5SetLogicEntry(&logicEntry, logFileNum);
 
-	b4LoadDependencies(logFileNum);
+	b4LoadUnloadDependencies(logFileNum, TRUE);
 }
 
 /**************************************************************************
@@ -204,6 +204,8 @@ void b6DiscardLogicFile(byte logFileNum)
 
 		logicEntry.loaded = FALSE;
 		b5SetLogicEntry(&logicEntry, logFileNum);
+
+		b4LoadUnloadDependencies(logFileNum, FALSE);
 	}
 }
 

@@ -105,6 +105,8 @@ void b6NewRoom()
 
     b6AdjustEgoPosition();
 
+    b6DiscardLogicFile(var[0]);
+
     //unblock();
     var[4] = 0;
     var[5] = 0;

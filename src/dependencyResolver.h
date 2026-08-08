@@ -12,7 +12,7 @@
 //void b4ResolveDependency(byte fileType, loadFn loadFn, isLoadedFn isLoadedFn);
 
 void b4InitMetadata();
-void b4LoadDependencies(byte scriptNumber);
+void b4LoadUnloadDependencies(byte scriptNumber, boolean shouldLoad);
 
 #pragma wrapped-call (pop)
 
