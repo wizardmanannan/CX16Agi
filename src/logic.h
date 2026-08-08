@@ -6,6 +6,9 @@
 #define _LOGIC_H_
 
 #include "helpers.h"
+#include "dependencyResolver.h"
+
+
 typedef struct {
 	word codeSize; //0
 	byte* logicCode; //2
@@ -22,7 +25,7 @@ typedef struct {
 	word currentPoint; //3
 	LOGICFile* data; //5
 	byte dataBank; //7
-	byte isAZeroDependency; //8
+	boolean isLogicZeroOrDependency; //So we can avoid unloading zero and its dependencies. Zero counts as a dependency of itself.
 } LOGICEntry;
 
 //extern LOGICEntry logics;

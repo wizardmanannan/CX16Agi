@@ -97,6 +97,7 @@ void b6InitLogics()
 		logicEntry.entryPoint = 0;
 		logicEntry.currentPoint = 0;
 		logicEntry.data = &logicFiles[i];
+		logicEntry.isLogicZeroOrDependency = FALSE;
 		b5SetLogicEntry(&logicEntry, i);
 #ifdef VERBOSE
 		printf("%d: currentPoint: %p, data: %p, dataBank: %d, loaded %d  &logics[i] %p\n",i, logicEntry.currentPoint, logicEntry.data, logicEntry.dataBank, logicEntry.loaded, &logics[i]);
@@ -192,7 +193,7 @@ void b6DiscardLogicFile(byte logFileNum)
 	b5GetLogicFile(&logicData, logFileNum);
 	b5GetLogicEntry(&logicEntry, logFileNum);
 
-	if (logicEntry.loaded && logFileNum != 0) {
+	if (logicEntry.loaded && !logicEntry.isLogicZeroOrDependency) {
 
 		if (logicEntry.loaded && !b10BankedDealloc((byte*)logicData.messages, logicData.messageBank))
 		{

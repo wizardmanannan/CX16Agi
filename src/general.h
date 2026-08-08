@@ -58,6 +58,7 @@ extern byte callC1, callC2;
 typedef enum {
 	PRINT_TIMEOUT = 21
 } FLAGS;
+
 #define VERA_ADDRESS_SIZE 3
 
 #define JIFFY_CALL_FREQ 16 

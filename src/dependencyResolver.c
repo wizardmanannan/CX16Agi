@@ -32,6 +32,7 @@ const char b4FileFlags[] = ",S,R";
 #pragma bss-name (push, "BANKRAM04")
 #pragma data-name (push, "BANKRAM04")
 boolean b4IsInited = FALSE;
+boolean b4IsHandlingZeroOrDependencies = FALSE;
 #pragma data-name (pop)
 #pragma bss-name (pop)
 
@@ -92,20 +93,25 @@ void b4LoadUnloadDependencies(byte scriptNumber, boolean shouldLoad)
 {
     int index = 0, size = 0;
     byte scriptIndex = scriptNumber * 3, i, logicToLoad;
-
-    //asm("stp");
-
-    // if(shouldLoad)
-    // {
-    //     printf("loading %d\n", scriptNumber);
-    // }
-    // else
-    // {
-    //     printf("unloading %d\n", scriptNumber);
-    // }
+    LOGICEntry localLogicEntry;
 
     if(b4IsInited)
-    {
+    {       
+        if(scriptNumber == 0)
+        {
+            b4IsHandlingZeroOrDependencies = TRUE;
+        }
+
+
+        // if(shouldLoad)
+        // {
+        //     printf("loading %d room %d\n", scriptNumber, *((byte*)0x400));
+        // }
+        // else
+        // {
+        //     printf("unloading %d\n", scriptNumber);
+        // }
+
         size = b4LogicIndex[scriptIndex + 2];
         //printf("your size is %d\n", size);
         if(size > 0)
@@ -122,12 +128,25 @@ void b4LoadUnloadDependencies(byte scriptNumber, boolean shouldLoad)
                if(shouldLoad)
                {
                 b6LoadLogicFile(logicToLoad);
+                
+                if(b4IsHandlingZeroOrDependencies)
+                {
+                    b5GetLogicEntry(&localLogicEntry, scriptNumber);
+                    localLogicEntry.isLogicZeroOrDependency = TRUE;
+                    b5SetLogicEntry(&localLogicEntry, scriptNumber);
+                }
+
                }
                else
                {
                 b6DiscardLogicFile(logicToLoad);
                }
             }
+        }
+
+        if(scriptNumber == 0)
+        {
+            b4IsHandlingZeroOrDependencies = FALSE;
         }
     }
 }
