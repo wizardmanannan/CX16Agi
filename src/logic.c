@@ -105,6 +105,11 @@ void b6InitLogics()
 }
 
 
+
+#pragma wrapped-call (push, trampoline, DEPENDENCY_RESOLVER_BANK)
+void b4InitMetadata();
+void b4LoadUnloadDependencies(byte scriptNumber, boolean shouldLoad);
+#pragma wrapped-call (pop)
 /**************************************************************************
 ** loadLogicFile
 **

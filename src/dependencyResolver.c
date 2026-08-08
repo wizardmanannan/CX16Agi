@@ -90,11 +90,6 @@ void b4InitMetadata()
     b4IsInited = TRUE;
 }
 
-#pragma wrapped-call (push, trampoline, LOGIC_CODE_BANK)
-void b6LoadLogicFile(byte logFileNum);
-void b6DiscardLogicFile(byte logFileNum);
-#pragma wrapped-call (pop)
-
 void b4LoadUnloadDependencies(byte scriptNumber, boolean shouldLoad)
 {
     int index = 0, size = 0;

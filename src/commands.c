@@ -1973,6 +1973,11 @@ void b4Version() // 0, 0x00
 //	(*data)++;  /* Ignore the script size. Not important for this interpreter */
 //}
 //
+
+#pragma wrapped-call (push, trampoline, DEPENDENCY_RESOLVER_BANK)
+void b4InitMetadata();
+void b4LoadUnloadDependencies(byte scriptNumber, boolean shouldLoad);
+#pragma wrapped-call (pop)
 void b4Set_game_id() // 1, 0x00 
 {
 
