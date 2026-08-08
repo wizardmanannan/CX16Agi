@@ -29,6 +29,12 @@ const char b4FileFlags[] = ",S,R";
 
 #pragma rodata-name (pop)
 
+#pragma bss-name (push, "BANKRAM04")
+#pragma data-name (push, "BANKRAM04")
+boolean b4IsInited = FALSE;
+#pragma data-name (pop)
+#pragma bss-name (pop)
+
 #pragma code-name (push, "BANKRAM04")
 boolean b4OpenMetadataFile(char* fileName, byte* buffer, int size)
 {
@@ -80,11 +86,40 @@ void b4InitMetadata()
     //printf("li %p lm %p si %p sm %p vi %p vm %p\n", b4LogicIndex, b4LogicMetadata, b4SoundIndex, b4SoundMetadata, b4ViewIndex, b4ViewMetadata);
 
     //asm("stp");
+
+    b4IsInited = TRUE;
 }
+
+#pragma wrapped-call (push, trampoline, LOGIC_CODE_BANK)
+void b6LoadLogicFile(byte logFileNum);
+#pragma wrapped-call (pop)
 
 void b4LoadDependencies(byte scriptNumber)
 {
+    int index = 0, size = 0;
+    byte scriptIndex = scriptNumber * 3, i, logicToLoad;
 
+    printf("loading %d\n", scriptNumber);
+
+    if(b4IsInited)
+    {
+        size = b4LogicIndex[scriptIndex + 2];
+        printf("your size is %d\n", size);
+        if(size > 0)
+        {
+            index = b4LogicIndex[scriptIndex] + (b4LogicIndex[scriptIndex + 1] << 8);
+
+        printf("your index is %d which is %d + (%d << 8 (%d)) = %d \n", index, b4LogicIndex[scriptIndex], b4LogicIndex[scriptIndex + 1], b4LogicIndex[scriptIndex + 1] << 8, b4LogicIndex[scriptIndex] + (b4LogicIndex[scriptIndex + 1] << 8));
+
+            for(i = 0; i < size; i++, index++)
+            {
+               logicToLoad = b4LogicMetadata[index];
+               printf("you are loading %d\n", logicToLoad);
+
+               b6LoadLogicFile(logicToLoad);
+            }
+        }
+    }
 }
 
 #pragma code-name (pop)

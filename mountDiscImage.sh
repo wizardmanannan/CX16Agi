@@ -4,7 +4,7 @@ SDCARD_MOUNT_POINT="/mnt/cx16Img"               # mount point
 CX16_EMULATOR_FOLDER="/home/alay/cx16Emu"       # emulator folder
 MAKEFILE_FOLDER="/home/alay/CLionProjects/CX16Agi/"   # makefile folder
 OPTIONAL_ARGUMENTS=""                           # optional args for emulator
-LOOP_DEVICE="/dev/loop120"
+LOOP_DEVICE="/dev/loop140"
 
 # ---- Script ----
 
