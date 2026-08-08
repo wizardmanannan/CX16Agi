@@ -21,6 +21,10 @@ LOGICCOMMANDS_INC = 1
 
 ; Import various functions and variables from other files
 ; (functions related to game logic, drawing, animations, sound, text, etc.)
+
+.import _assmLogicEntry
+.import _assmLogicFile
+
 .import _b1Has
 .import _b1Obj_in_room
 .import _b1Posn
@@ -603,8 +607,6 @@ callLogic: ; A subroutine for making calls, not an instruction
 bra @start
 @logNum: .byte $0
 @previousBank: .byte $0
-@logicFile: .res 9, $0
-@logicEntry: .res 8, $0
 @start:
 sta @logNum
 
@@ -615,8 +617,8 @@ STORE_ON_STACK_RECURSIVE_CALL
 
 lda #LOGIC_BANK
 sta RAM_BANK
-lda #<@logicFile
-ldx #>@logicFile
+lda #<_assmLogicFile
+ldx #>_assmLogicFile
 jsr pushax
 lda @logNum
 ldx #$0
@@ -625,8 +627,8 @@ jsr _b5GetLogicFile
 
 lda #LOGIC_BANK
 sta RAM_BANK
-lda #<@logicEntry
-ldx #>@logicEntry
+lda #<_assmLogicEntry
+ldx #>_assmLogicEntry
 jsr pushax
 lda @logNum
 lda @logNum
@@ -638,8 +640,8 @@ sta RAM_BANK
 lda @logNum
 ldx #$0
 
-lda #<@logicEntry
-ldx #>@logicEntry
+lda #<_assmLogicEntry
+ldx #>_assmLogicEntry
 jsr pushax
 
 lda @logNum

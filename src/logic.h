@@ -22,6 +22,7 @@ typedef struct {
 	word currentPoint; //3
 	LOGICFile* data; //5
 	byte dataBank; //7
+	byte isAZeroDependency; //8
 } LOGICEntry;
 
 //extern LOGICEntry logics;

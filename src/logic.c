@@ -16,11 +16,12 @@
 #include "logic.h"
 #include "memoryManager.h"
 
+LOGICEntry assmLogicEntry; //Used by assm functions that need memory to hold these two entities, not permanent storage
+LOGICFile assmLogicFile;
+
 /* The logics array is the array that holds all the information about the
 ** logic files. A boolean flag determines whether the logic is loaded or
 ** not. If it isn't loaded, then the data is not in memory. */
-
-
 #pragma bss-name (push, "BANKRAM05")
 LOGICEntry logics[NO_DIRECTORY_ENTRYS];
 LOGICFile logicFiles[NO_DIRECTORY_ENTRYS];
