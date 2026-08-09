@@ -338,14 +338,14 @@ boolean b1Right_posn() // 5, 0x00
 
 void b2Load_logics() // 1, 0x00 
 {
-	b6LoadLogicFile(loadAndIncWinCode());
+	b6LoadLogicFile(loadAndIncWinCode(), FALSE);
 
 	return;
 }
 
 void b2Load_logics_v() // 1, 0x80 
 {
-	b6LoadLogicFile(var[loadAndIncWinCode()]);
+	b6LoadLogicFile(var[loadAndIncWinCode()], FALSE);
 
 	return;
 }
@@ -1976,7 +1976,7 @@ void b4Version() // 0, 0x00
 
 #pragma wrapped-call (push, trampoline, DEPENDENCY_RESOLVER_BANK)
 void b4InitMetadata();
-void b4LoadUnloadDependencies(byte scriptNumber, boolean shouldLoad);
+void b4LoadUnloadDependencies(byte scriptNumber, boolean shouldLoad, boolean forceLoadSubDependencies);
 #pragma wrapped-call (pop)
 void b4Set_game_id() // 1, 0x00 
 {
@@ -1994,10 +1994,10 @@ void b4Set_game_id() // 1, 0x00
 	strcpyBanked(gameId, messagePointer, logicFile.messageBank);
 
 	b4InitMetadata();
-	b4LoadUnloadDependencies(0, TRUE);
+	b4LoadUnloadDependencies(0, TRUE, TRUE);
 	if(currentLog != 0)
 	{
-		b4LoadUnloadDependencies(currentLog, TRUE);
+		b4LoadUnloadDependencies(currentLog, TRUE, TRUE);
 	}
 }
 //

@@ -7,7 +7,7 @@
 #include "logic.h"
 #pragma wrapped-call (push, trampoline, DEPENDENCY_RESOLVER_BANK)
 void b4InitMetadata();
-void b4LoadUnloadDependencies(byte scriptNumber, boolean shouldLoad);
+void b4LoadUnloadDependencies(byte scriptNumber, boolean shouldLoad, boolean forceLoadSubDependencies);
 #pragma wrapped-call (pop)
 
 #endif

@@ -103,14 +103,14 @@ void b6InitLogics()
 		printf("%d: currentPoint: %p, data: %p, dataBank: %d, loaded %d  &logics[i] %p\n",i, logicEntry.currentPoint, logicEntry.data, logicEntry.dataBank, logicEntry.loaded, &logics[i]);
 #endif // VERBOSE
 	}
-	b6LoadLogicFile(0);
+	b6LoadLogicFile(0, FALSE);
 }
 
 
 
 #pragma wrapped-call (push, trampoline, DEPENDENCY_RESOLVER_BANK)
 void b4InitMetadata();
-void b4LoadUnloadDependencies(byte scriptNumber, boolean shouldLoad);
+void b4LoadUnloadDependencies(byte scriptNumber, boolean shouldLoad, boolean forceLoadSubDependencies);
 #pragma wrapped-call (pop)
 /**************************************************************************
 ** loadLogicFile
@@ -118,7 +118,7 @@ void b4LoadUnloadDependencies(byte scriptNumber, boolean shouldLoad);
 ** Purpose: To load a LOGIC file, decode the messages, and store in a
 ** suitable structure.
 **************************************************************************/
-void b6LoadLogicFile(byte logFileNum)
+void b6LoadLogicFile(byte logFileNum, boolean forceLoadSubDependencies)
 {
 	AGIFile tempAGI;
 	AGIFilePosType agiFilePosType;
@@ -127,54 +127,57 @@ void b6LoadLogicFile(byte logFileNum)
 	
 	b5GetLogicEntry(&logicEntry, logFileNum);
 	
-	if (logicEntry.loaded)
-	{
-		return;
+	if (!logicEntry.loaded)
+	{	
+		b10GetLogicDirectory(&agiFilePosType, &logdir[logFileNum]);
+
+	#ifdef VERBOSE
+		printf("\n%d Retrieved file num %d, Offset %lu\n", logFileNum, agiFilePosType.filePos);
+	#endif // VERBOSE
+
+		/* Load LOGIC file, calculate logic code length, and copy
+		** logic code into tempLOGIC. */
+
+
+	#ifdef VERBOSE
+		printf("Loading Logic %d\n", logFileNum);
+	#endif // VERBOSE
+		b6LoadAGIFile(LOGIC, &agiFilePosType, &tempAGI);
+
+		b5SetLogicFile(&logicData, logFileNum);
+		logicData.codeBank = tempAGI.codeBank;
+		logicData.codeSize = tempAGI.codeSize;
+		logicData.logicCode = tempAGI.code;
+		logicData.messageBank = tempAGI.messageBank;
+		logicData.messages = (byte**)tempAGI.messagePointers;
+		logicData.numMessages = tempAGI.noMessages;
+
+	#ifdef VERBOSE
+		printf("The codebank is %d, the code size is %d, the messageBank is %d, \n and the number of messages is %d, the code pointer is non zero and matched against temp agi %d the message pointer is non zero and matches temp agi %d \n",
+			logicData.codeBank, logicData.codeSize, logicData.messageBank, logicData.numMessages
+			, logicData.logicCode == tempAGI.code && logicData.logicCode
+			, logicData.messages == (byte**)tempAGI.messagePointers && logicData.messages
+		);
+
+	#ifdef VERBOSE
+		printf("currentPoint: %p, data: %p, dataBank: %d, loaded %d \n", logicEntry.currentPoint, logicEntry.data, logicEntry.dataBank, logicEntry.loaded);
+	#endif
+
+	#endif // VERBOSE
+
+		b5SetLogicFile(&logicData, logFileNum);
+
+		logicEntry.loaded = TRUE;
+
+		b5SetLogicEntry(&logicEntry, logFileNum);
+
+		b4LoadUnloadDependencies(logFileNum, TRUE, forceLoadSubDependencies);
 	}
-	
-	b10GetLogicDirectory(&agiFilePosType, &logdir[logFileNum]);
 
-#ifdef VERBOSE
-	printf("\n%d Retrieved file num %d, Offset %lu\n", logFileNum, agiFilePosType.filePos);
-#endif // VERBOSE
-
-	/* Load LOGIC file, calculate logic code length, and copy
-	** logic code into tempLOGIC. */
-
-
-#ifdef VERBOSE
-	printf("Loading Logic %d\n", logFileNum);
-#endif // VERBOSE
-	b6LoadAGIFile(LOGIC, &agiFilePosType, &tempAGI);
-
-	b5SetLogicFile(&logicData, logFileNum);
-	logicData.codeBank = tempAGI.codeBank;
-	logicData.codeSize = tempAGI.codeSize;
-	logicData.logicCode = tempAGI.code;
-	logicData.messageBank = tempAGI.messageBank;
-	logicData.messages = (byte**)tempAGI.messagePointers;
-	logicData.numMessages = tempAGI.noMessages;
-
-#ifdef VERBOSE
-	printf("The codebank is %d, the code size is %d, the messageBank is %d, \n and the number of messages is %d, the code pointer is non zero and matched against temp agi %d the message pointer is non zero and matches temp agi %d \n",
-		logicData.codeBank, logicData.codeSize, logicData.messageBank, logicData.numMessages
-		, logicData.logicCode == tempAGI.code && logicData.logicCode
-		, logicData.messages == (byte**)tempAGI.messagePointers && logicData.messages
-	);
-
-#ifdef VERBOSE
-	printf("currentPoint: %p, data: %p, dataBank: %d, loaded %d \n", logicEntry.currentPoint, logicEntry.data, logicEntry.dataBank, logicEntry.loaded);
-#endif
-
-#endif // VERBOSE
-
-	b5SetLogicFile(&logicData, logFileNum);
-
-	logicEntry.loaded = TRUE;
-
-	b5SetLogicEntry(&logicEntry, logFileNum);
-
-	b4LoadUnloadDependencies(logFileNum, TRUE);
+	if(forceLoadSubDependencies)
+	{
+		b4LoadUnloadDependencies(logFileNum, TRUE, forceLoadSubDependencies);
+	}
 }
 
 /**************************************************************************
@@ -211,8 +214,7 @@ void b6DiscardLogicFile(byte logFileNum)
 
 		logicEntry.loaded = FALSE;
 		b5SetLogicEntry(&logicEntry, logFileNum);
-
-		b4LoadUnloadDependencies(logFileNum, FALSE);
+		b4LoadUnloadDependencies(logFileNum, FALSE, FALSE);
 	}
 }
 

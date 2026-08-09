@@ -89,7 +89,7 @@ void b4InitMetadata()
     b4IsInited = TRUE;
 }
 
-void b4LoadUnloadLogics(byte scriptNumber, boolean shouldLoad)
+void b4LoadUnloadLogics(byte scriptNumber, boolean shouldLoad, boolean forceLoadSubDependencies) 
 {
 
     int index = 0, size = 0;
@@ -116,11 +116,10 @@ void b4LoadUnloadLogics(byte scriptNumber, boolean shouldLoad)
             for(i = 0; i < size; i++, index++)
             {
                logicToLoad = b4LogicMetadata[index];
-               //printf("you are loading %d\n", logicToLoad);
 
                if(shouldLoad)
                {
-                b6LoadLogicFile(logicToLoad);
+                b6LoadLogicFile(logicToLoad, forceLoadSubDependencies);
                 
                 if(b4IsHandlingZeroOrDependencies)
                 {
@@ -138,7 +137,9 @@ void b4LoadUnloadLogics(byte scriptNumber, boolean shouldLoad)
         }
 }
 
-void b4LoadUnloadDependencies(byte scriptNumber, boolean shouldLoad)
+//Using this last parameter you can force a search for script 0's dependencies even when it itself is already loaded. We need it because script 0 will be called before the dependency resolver is ready eg. The b4Set_game_id  -> b4InitMetadata call is complete
+//Note: It is usually script 0 that calls b4Set_game_id, but some games have a different script; in this case both the dependencies of both it and script 0 need to be force loaded.
+void b4LoadUnloadDependencies(byte scriptNumber, boolean shouldLoad, boolean forceLoadSubDependencies)
 {
     if(b4IsInited)
     {       
@@ -147,7 +148,7 @@ void b4LoadUnloadDependencies(byte scriptNumber, boolean shouldLoad)
             b4IsHandlingZeroOrDependencies = TRUE;
         }
 
-        b4LoadUnloadLogics(scriptNumber, shouldLoad);
+        b4LoadUnloadLogics(scriptNumber, shouldLoad, forceLoadSubDependencies);
 
         if(scriptNumber == 0)
         {

@@ -452,6 +452,8 @@ _executeLogic:
         
          lda _currentLog
          ldx _currentLog + 1
+         jsr pushax
+         lda #$0
          jsr _b6LoadLogicFile
          
          ldx #LOGIC_BANK

@@ -32,7 +32,7 @@ typedef struct {
 void b6InitLogics();
 
 #pragma wrapped-call (push, trampoline, LOGIC_CODE_BANK)
-void b6LoadLogicFile(byte logFileNum);
+void b6LoadLogicFile(byte logFileNum, boolean forceLoadSubDependencies);
 void b6DiscardLogicFile(byte logFileNum);
 #pragma wrapped-call (pop)
 
