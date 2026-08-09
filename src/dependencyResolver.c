@@ -89,21 +89,14 @@ void b4InitMetadata()
     b4IsInited = TRUE;
 }
 
-void b4LoadUnloadDependencies(byte scriptNumber, boolean shouldLoad)
+void b4LoadUnloadLogics(byte scriptNumber, boolean shouldLoad)
 {
+
     int index = 0, size = 0;
     byte scriptIndex = scriptNumber * 3, i, logicToLoad;
     LOGICEntry localLogicEntry;
 
-    if(b4IsInited)
-    {       
-        if(scriptNumber == 0)
-        {
-            b4IsHandlingZeroOrDependencies = TRUE;
-        }
-
-
-        // if(shouldLoad)
+      // if(shouldLoad)
         // {
         //     printf("loading %d room %d\n", scriptNumber, *((byte*)0x400));
         // }
@@ -143,6 +136,18 @@ void b4LoadUnloadDependencies(byte scriptNumber, boolean shouldLoad)
                }
             }
         }
+}
+
+void b4LoadUnloadDependencies(byte scriptNumber, boolean shouldLoad)
+{
+    if(b4IsInited)
+    {       
+        if(scriptNumber == 0)
+        {
+            b4IsHandlingZeroOrDependencies = TRUE;
+        }
+
+        b4LoadUnloadLogics(scriptNumber, shouldLoad);
 
         if(scriptNumber == 0)
         {
