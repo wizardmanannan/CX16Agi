@@ -152,11 +152,11 @@ LOGICCOMMANDS_INC = 1
 .import _b4Reset_scan_start
 .import _b4Reposition_to
 .import _b4Reposition_to_v
-.import _b4Print_at
-.import _b4Print_at_v
-.import _b4Discard_view_v
-.import _b4Clear_text_rect
-.import _b4Set_menu
+.import _b5Print_at
+.import _b5Print_at_v
+.import _b5Discard_view_v
+.import _b5Clear_text_rect
+.import _b5Set_menu
 .import _b5Set_menu_item
 .import _b5Menu_input
 .import _b5EnableItem
@@ -813,12 +813,12 @@ jmpTableCommands2:
 .addr b4Reposition_to_vCCall
 .addr b1NoOp_0
 .addr b1NoOp_3
-.addr b4Print_atCCall
-.addr b4Print_at_vCCall
-.addr _b4Discard_view_v
-.addr _b4Clear_text_rect
+.addr b5Print_atCCall
+.addr b5Print_at_vCCall
+.addr _b5Discard_view_v
+.addr _b5Clear_text_rect
 .addr b1NoOp_2
-.addr b4Set_menuCCall
+.addr b5Set_menuCCall
 .addr b5Set_menu_itemCCall
 .addr b1NoOp_0
 .addr b5EnableItemCCall
@@ -1740,22 +1740,23 @@ b4Reposition_toCCall:
 b4Reposition_to_vCCall:
         jsr _b4Reposition_to_v
         jmp mainLoop
-b4Print_atCCall:
-        jsr _b4Print_at
-        jmp mainLoop
-b4Print_at_vCCall:
-        jsr _b4Print_at_v
-        jmp mainLoop
-b4Discard_view_vCCall:
-        jsr _b4Discard_view_v
-        jmp mainLoop
-b4Clear_text_rectCCall:
-        jsr _b4Clear_text_rect
-        jmp mainLoop
-b4Set_menuCCall:
-        jsr _b4Set_menu
-        jmp mainLoop
+
 .segment "BANKRAM05"
+b5Print_atCCall:
+        jsr _b5Print_at
+        jmp mainLoop
+b5Print_at_vCCall:
+        jsr _b5Print_at_v
+        jmp mainLoop
+b5Discard_view_vCCall:
+        jsr _b5Discard_view_v
+        jmp mainLoop
+b5Clear_text_rectCCall:
+        jsr _b5Clear_text_rect
+        jmp mainLoop
+b5Set_menuCCall:
+        jsr _b5Set_menu
+        jmp mainLoop
 b5Set_menu_itemCCall:
         jsr _b5Set_menu_item
         jmp mainLoop
