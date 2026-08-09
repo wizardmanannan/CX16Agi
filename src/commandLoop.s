@@ -451,13 +451,13 @@ _executeLogic:
 
          lda #LOGIC_CODE_BANK
          sta RAM_BANK
-        
+
          lda _currentLog
          ldx _currentLog + 1
-         jsr pushax
+         jsr pusha
          lda #$0
          jsr _b6LoadLogicFile
-         
+      
          ldx #LOGIC_BANK
          stx RAM_BANK
          @endifLoaded:    
