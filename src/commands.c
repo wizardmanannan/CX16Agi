@@ -1976,7 +1976,7 @@ void b4Version() // 0, 0x00
 
 #pragma wrapped-call (push, trampoline, DEPENDENCY_RESOLVER_BANK)
 void b4InitMetadata();
-void b4LoadUnloadDependencies(byte scriptNumber, boolean shouldLoad, boolean forceLoadSubDependencies);
+void b4LoadUnloadDependencies(byte scriptNumber, boolean shouldLoad, boolean forceLoadSubDependencies, DEPENDENCY_TYPE dependencyType);
 #pragma wrapped-call (pop)
 void b4Set_game_id() // 1, 0x00 
 {
@@ -1994,10 +1994,10 @@ void b4Set_game_id() // 1, 0x00
 	strcpyBanked(gameId, messagePointer, logicFile.messageBank);
 
 	b4InitMetadata();
-	b4LoadUnloadDependencies(0, TRUE, TRUE);
+	b4LoadUnloadDependencies(0, TRUE, TRUE, DEPENDENCY_LOGIC);
 	if(currentLog != 0)
 	{
-		b4LoadUnloadDependencies(currentLog, TRUE, TRUE);
+		b4LoadUnloadDependencies(currentLog, TRUE, TRUE, DEPENDENCY_LOGIC);
 	}
 }
 //

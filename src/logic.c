@@ -110,7 +110,7 @@ void b6InitLogics()
 
 #pragma wrapped-call (push, trampoline, DEPENDENCY_RESOLVER_BANK)
 void b4InitMetadata();
-void b4LoadUnloadDependencies(byte scriptNumber, boolean shouldLoad, boolean forceLoadSubDependencies);
+void b4LoadUnloadDependencies(byte scriptNumber, boolean shouldLoad, boolean forceLoadSubDependencies, DEPENDENCY_TYPE dependencyType);
 #pragma wrapped-call (pop)
 /**************************************************************************
 ** loadLogicFile
@@ -171,12 +171,12 @@ void b6LoadLogicFile(byte logFileNum, boolean forceLoadSubDependencies)
 
 		b5SetLogicEntry(&logicEntry, logFileNum);
 
-		b4LoadUnloadDependencies(logFileNum, TRUE, forceLoadSubDependencies);
+		b4LoadUnloadDependencies(logFileNum, TRUE, forceLoadSubDependencies, DEPENDENCY_LOGIC);
 	}
 
 	if(forceLoadSubDependencies)
 	{
-		b4LoadUnloadDependencies(logFileNum, TRUE, forceLoadSubDependencies);
+		b4LoadUnloadDependencies(logFileNum, TRUE, forceLoadSubDependencies, DEPENDENCY_LOGIC);
 	}
 }
 
@@ -214,7 +214,7 @@ void b6DiscardLogicFile(byte logFileNum)
 
 		logicEntry.loaded = FALSE;
 		b5SetLogicEntry(&logicEntry, logFileNum);
-		b4LoadUnloadDependencies(logFileNum, FALSE, FALSE);
+		b4LoadUnloadDependencies(logFileNum, FALSE, FALSE, DEPENDENCY_LOGIC);
 	}
 }
 
