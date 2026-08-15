@@ -2280,6 +2280,7 @@ void setViewData(byte viewNum, AGIFile* tempAGI, View* localView)
 	localView->maxVeraSlots = 0;
 	localView->codeBlock = tempAGI->code;
 	localView->codeBlockBank = tempAGI->codeBank;
+	localView->isLogicZeroOrDependency = FALSE;
 	setLoadedView(&localView, viewNum);
 }
 

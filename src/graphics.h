@@ -104,6 +104,7 @@ typedef struct View {
 	byte codeBlockBank;
 	byte maxCels;
 	byte maxVeraSlots;
+	byte isLogicZeroOrDependency;
 } View;
 
 

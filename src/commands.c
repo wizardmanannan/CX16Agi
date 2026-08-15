@@ -1985,6 +1985,8 @@ void b4Set_game_id() // 1, 0x00
 	char* messagePointer;
 	byte messageNo;
 
+
+
 	messageNo = loadAndIncWinCode();
 
 	b5GetLogicFile(&logicFile, currentLog);
@@ -1994,9 +1996,12 @@ void b4Set_game_id() // 1, 0x00
 	strcpyBanked(gameId, messagePointer, logicFile.messageBank);
 
 	b4InitMetadata();
+	
+	//printf("start\n");
 	b4LoadUnloadDependencies(0, TRUE, TRUE, DEPENDENCY_LOGIC);
+		//printf("end\n");
 	if(currentLog != 0)
-	{
+    {
 		b4LoadUnloadDependencies(currentLog, TRUE, TRUE, DEPENDENCY_LOGIC);
 	}
 }

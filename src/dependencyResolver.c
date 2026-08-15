@@ -92,10 +92,12 @@ void b4InitMetadata()
 void b4LoadUnloadLogics(byte scriptNumber, boolean shouldLoad, boolean forceLoadSubDependencies, DEPENDENCY_TYPE dependencyType)
 {
 
-    int index = 0, size = 0;
-    byte scriptIndex = scriptNumber * 3, i, logicToLoad;
+    int index = 0, size = 0, scriptIndex = scriptNumber * 3;
+    byte i, logicToLoad;
     LOGICEntry localLogicEntry;
+    View localView;
 
+    byte* indexData;
     // if(shouldLoad)
       // {
       //     printf("loading %d room %d\n", scriptNumber, *((byte*)0x400));
@@ -105,17 +107,41 @@ void b4LoadUnloadLogics(byte scriptNumber, boolean shouldLoad, boolean forceLoad
       //     printf("unloading %d\n", scriptNumber);
       // }
 
-    size = b4LogicIndex[scriptIndex + 2];
-    //printf("your size is %d\n", size);
+    // switch (dependencyType)
+    // {
+    // case DEPENDENCY_LOGIC:
+    //     size = b4LogicIndex[scriptIndex + 2];
+    //     break;
+    // case DEPENDENCY_VIEW:
+    //     size = b4ViewIndex[scriptIndex + 2];
+    //     break;
+    // }
+
+    switch (dependencyType)
+    {
+    case DEPENDENCY_LOGIC:
+        indexData = b4LogicIndex;
+        break;
+    case DEPENDENCY_VIEW:
+        indexData = b4ViewIndex;
+        break;
+    }
+
+    size = indexData[scriptIndex + 2];
+
+    //printf("loading %d size %d type %d \n", scriptNumber, size, dependencyType);
+    if (dependencyType == DEPENDENCY_LOGIC)
+    {
+        b4LoadUnloadLogics(scriptNumber, shouldLoad, FALSE, DEPENDENCY_VIEW);
+    }
+
+    
+
     if (size > 0)
     {
 
-        switch (dependencyType)
-        {
-        case DEPENDENCY_LOGIC:
-            index = b4LogicIndex[scriptIndex] + (b4LogicIndex[scriptIndex + 1] << 8);
-            break;
-        }
+        index = indexData[scriptIndex] + (indexData[scriptIndex + 1] << 8);
+
 
         //printf("your index is %d which is %d + (%d << 8 (%d)) = %d \n", index, b4LogicIndex[scriptIndex], b4LogicIndex[scriptIndex + 1], b4LogicIndex[scriptIndex + 1] << 8, b4LogicIndex[scriptIndex] + (b4LogicIndex[scriptIndex + 1] << 8));
 
@@ -126,16 +152,30 @@ void b4LoadUnloadLogics(byte scriptNumber, boolean shouldLoad, boolean forceLoad
             case DEPENDENCY_LOGIC:
                 logicToLoad = b4LogicMetadata[index];
                 break;
+            case DEPENDENCY_VIEW:
+                logicToLoad = b4ViewMetadata[index];
+                break;
             }
 
 
             if (shouldLoad)
             {
+                //printf("the dep type is %d\n", dependencyType);
 
                 switch (dependencyType)
                 {
                 case DEPENDENCY_LOGIC:
                     b6LoadLogicFile(logicToLoad, forceLoadSubDependencies);
+                    break;
+                case DEPENDENCY_VIEW:
+
+                    // if(dependencyType == DEPENDENCY_VIEW && scriptNumber == 102)
+                    // {
+                    //     printf("your size is for resource size %d, v %d, s %d\n", size, logicToLoad, scriptNumber);
+                    //     asm("stp");
+                    // }
+
+                    b9LoadViewFile(logicToLoad);
                     break;
                 }
 
@@ -149,6 +189,11 @@ void b4LoadUnloadLogics(byte scriptNumber, boolean shouldLoad, boolean forceLoad
                         localLogicEntry.isLogicZeroOrDependency = TRUE;
                         b5SetLogicEntry(&localLogicEntry, scriptNumber);
                         break;
+                    case DEPENDENCY_VIEW:
+                        getLoadedView(&localView, logicToLoad);
+                        localView.isLogicZeroOrDependency = TRUE;
+                        getLoadedView(&localView, logicToLoad);
+                        break;
                     }
                 }
 
@@ -160,10 +205,20 @@ void b4LoadUnloadLogics(byte scriptNumber, boolean shouldLoad, boolean forceLoad
                 case DEPENDENCY_LOGIC:
                     b6DiscardLogicFile(logicToLoad);
                     break;
+                case DEPENDENCY_VIEW:
+                    b9DiscardView(logicToLoad);
+                    break;
                 }
             }
         }
     }
+
+    //  if (dependencyType == DEPENDENCY_VIEW && scriptNumber == 102)
+    // {
+
+    //     asm("stp");
+    // }
+
 }
 
 //Using this last parameter you can force a search for script 0's dependencies even when it itself is already loaded. We need it because script 0 will be called before the dependency resolver is ready eg. The b4Set_game_id  -> b4InitMetadata call is complete
@@ -178,6 +233,11 @@ void b4LoadUnloadDependencies(byte scriptNumber, boolean shouldLoad, boolean for
         }
 
         b4LoadUnloadLogics(scriptNumber, shouldLoad, forceLoadSubDependencies, dependencyType);
+        // asm("nop");
+        // asm("nop");
+        // asm("nop");
+
+   
 
         if (scriptNumber == 0)
         {
