@@ -41,7 +41,7 @@
 //#define VERBOSE_ROOM_CHANGE
 //#define VERBOSE_MESSAGE_PRINT
 
-#pragma rodata-name (push, "BANKRAM04")
+#pragma rodata-name (push, "BANKRAM05")
 const char B4_QUIT_MESSAGE[] = "Press ENTER to quit. Press ESC to keep playing.";
 const char B4_PAUSE_MESSAGE[] = "      Game paused.\nPress ENTER to continue.";
 const char B4_MEKA_MESSAGE[] = "MEKA AGI Interpreter\n    Version 1.0";
@@ -1909,7 +1909,9 @@ void b4Obj_status_v() // 1, 0x80
 }
 
 
-void b4Quit() // 1, 0x00                     /* 0 args for AGI version 2_089 */
+#pragma code-name (pop)
+#pragma code-name (push, "BANKRAM05")
+void b5Quit() // 1, 0x00                     /* 0 args for AGI version 2_089 */
 {
 	int quitType, ch;
 
@@ -1930,7 +1932,7 @@ void b4Quit() // 1, 0x00                     /* 0 args for AGI version 2_089 */
 	return;
 }
 
-void b4Pause() // 0, 0x00 
+void b5Pause() // 0, 0x00 
 {
 #define PAUSE_BOX_SIZE 15
 	while (key[KEY_ENTER]) { /* Wait */ }
@@ -1958,7 +1960,7 @@ void b4Pause() // 0, 0x00
 //	/* Not important at this stage */
 //}
 
-void b4Version() // 0, 0x00 
+void b5Version() // 0, 0x00 
 {
 #define VERSION_BOX_SIZE 15
 	while (key[KEY_ENTER] || key[KEY_ESC]) { /* Wait */ }
@@ -1978,7 +1980,7 @@ void b4Version() // 0, 0x00
 void b4InitMetadata();
 void b4LoadUnloadDependencies(byte scriptNumber, boolean shouldLoad, boolean forceLoadSubDependencies, DEPENDENCY_TYPE dependencyType);
 #pragma wrapped-call (pop)
-void b4Set_game_id() // 1, 0x00 
+void b5Set_game_id() // 1, 0x00 
 {
 
 	LOGICFile logicFile;
@@ -2011,7 +2013,7 @@ void b4Set_game_id() // 1, 0x00
 //	(*data)++;  /* Ignore log message. Not important */
 //}
 
-void b4Reset_scan_start() // 0, 0x00 
+void b5Reset_scan_start() // 0, 0x00 
 {
 	LOGICEntry logicEntry;
 
@@ -2023,7 +2025,7 @@ void b4Reset_scan_start() // 0, 0x00
 	return;
 }
 
-void b4Reposition_to() // 3, 0x00 
+void b5Reposition_to() // 3, 0x00 
 {
 	int entryNum;
 	ViewTable localViewtab;
@@ -2040,7 +2042,7 @@ void b4Reposition_to() // 3, 0x00
 	return;
 }
 
-void b4Reposition_to_v() // 3, 0x60 
+void b5Reposition_to_v() // 3, 0x60 
 {
 	int entryNum;
 	ViewTable localViewtab;
@@ -2065,9 +2067,6 @@ void b4Reposition_to_v() // 3, 0x60
 //{
 //	*data += 3;  /* Ignore trace information at this stage. */
 //}
-
-#pragma code-name (pop)
-#pragma code-name (push, "BANKRAM05")
 
 void b5Print_at() // 4, 0x00           /* 3 args for AGI versions before */
 {

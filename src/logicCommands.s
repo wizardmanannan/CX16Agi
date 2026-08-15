@@ -145,13 +145,13 @@ LOGICCOMMANDS_INC = 1
 .import _b4Program_control
 .import _b4Player_control
 .import _b4Obj_status_v
-.import _b4Quit
-.import _b4Pause
-.import _b4Version
-.import _b4Set_game_id
-.import _b4Reset_scan_start
-.import _b4Reposition_to
-.import _b4Reposition_to_v
+.import _b5Quit
+.import _b5Pause
+.import _b5Version
+.import _b5Set_game_id
+.import _b5Reset_scan_start
+.import _b5Reposition_to
+.import _b5Reposition_to_v
 .import _b5Print_at
 .import _b5Print_at_v
 .import _b5Discard_view_v
@@ -796,21 +796,21 @@ jmpTableCommands2:
 .addr b4Program_controlCCall
 .addr b4Player_controlCCall
 .addr b4Obj_status_vCCall
-.addr b4QuitCCall
+.addr b5QuitCCall
 .addr b1NoOp_0
-.addr _b4Pause
-.addr b1NoOp_0
-.addr b1NoOp_0
+.addr _b5Pause
 .addr b1NoOp_0
 .addr b1NoOp_0
-.addr _b4Version
+.addr b1NoOp_0
+.addr b1NoOp_0
+.addr _b5Version
 .addr b1NoOp_1
-.addr b4SetGameIdCCall ;Here
+.addr b5SetGameIdCCall ;Here
 .addr b1NoOp_1
-.addr b4ScanStart
-.addr b4Reset_scan_startCCall
-.addr b4Reposition_toCCall
-.addr b4Reposition_to_vCCall
+.addr b5ScanStart
+.addr b5Reset_scan_startCCall
+.addr b5Reposition_toCCall
+.addr b5Reposition_to_vCCall
 .addr b1NoOp_0
 .addr b1NoOp_3
 .addr b5Print_atCCall
@@ -1678,21 +1678,20 @@ b4Player_controlCCall:
 b4Obj_status_vCCall:
         jsr _b4Obj_status_v
         jmp mainLoop
-b4QuitCCall:
-        jsr _b4Quit
+.segment "BANKRAM05"
+b5QuitCCall:
+        jsr _b5Quit
         jmp mainLoop
-b4PauseCCall:
-        jsr _b4Pause
+b5PauseCCall:
+        jsr _b5Pause
         jmp mainLoop
-b4VersionCCall:
-        jsr _b4Version
+b5VersionCCall:
+        jsr _b5Version
         jmp mainLoop
-b4SetGameIdCCall:
-        jsr _b4Set_game_id
+b5SetGameIdCCall:
+        jsr _b5Set_game_id
         jmp mainLoop
-
-
-b4ScanStart:
+b5ScanStart:
         ;Sets the interpreter to begin execution at the next statement the next time the script is loaded,
         ;by updating the entry point.
         ;The entry point is not an address but a byte number, the first byte being zero
@@ -1730,17 +1729,16 @@ b4ScanStart:
         DEBUG_SCAN_START
 
         jmp mainLoop
-b4Reset_scan_startCCall:
-        jsr _b4Reset_scan_start
+b5Reset_scan_startCCall:
+        jsr _b5Reset_scan_start
         DEBUG_RESET_SCAN
         jmp mainLoop
-b4Reposition_toCCall:
-        jsr _b4Reposition_to
+b5Reposition_toCCall:
+        jsr _b5Reposition_to
         jmp mainLoop
-b4Reposition_to_vCCall:
-        jsr _b4Reposition_to_v
+b5Reposition_to_vCCall:
+        jsr _b5Reposition_to_v
         jmp mainLoop
-.segment "BANKRAM05"
 b5Print_atCCall:
         jsr _b5Print_at
         jmp mainLoop
