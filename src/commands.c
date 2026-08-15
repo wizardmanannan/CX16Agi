@@ -2038,23 +2038,26 @@ void b4Reposition_to_v() // 3, 0x60
 //	*data += 3;  /* Ignore trace information at this stage. */
 //}
 
-void b4Print_at() // 4, 0x00           /* 3 args for AGI versions before */
+#pragma code-name (pop)
+#pragma code-name (push, "BANKRAM05")
+
+void b5Print_at() // 4, 0x00           /* 3 args for AGI versions before */
 {
 	b3PrintMessageInTextbox(loadAndIncWinCode(), loadAndIncWinCode(), loadAndIncWinCode(), loadAndIncWinCode());
 }
 
-void b4Print_at_v() // 4, 0x80         /* 2_440 (maybe laterz) */
+void b5Print_at_v() // 4, 0x80         /* 2_440 (maybe laterz) */
 {
 	b3PrintMessageInTextbox(var[loadAndIncWinCode()], loadAndIncWinCode(), loadAndIncWinCode(), loadAndIncWinCode());
 }
 
-void b4Discard_view_v() // 1, 0x80 
+void b5Discard_view_v() // 1, 0x80 
 {
 	b9DiscardView(var[loadAndIncWinCode()]);
 	return;
 }
 
-void b4Clear_text_rect() // 5, 0x00 
+void b5Clear_text_rect() // 5, 0x00 
 {
 	int x1, y1, x2, y2, boxColour;
 
@@ -2075,7 +2078,7 @@ void b4Clear_text_rect() // 5, 0x00
 //	*data += 2;
 //}
 
-void b4WaitKeyRelease()
+void b5WaitKeyRelease()
 {
 	byte ch;
 
@@ -2083,13 +2086,10 @@ void b4WaitKeyRelease()
 	return;
 }
 
-void b4Set_menu() // 1, 0x00 
+void b5Set_menu() // 1, 0x00 
 {
 	bASetMenu(loadAndIncWinCode());
 }
-
-#pragma code-name (pop)
-#pragma code-name (push, "BANKRAM05")
 
 void b5Set_menu_item() // 2, 0x00 
 {
