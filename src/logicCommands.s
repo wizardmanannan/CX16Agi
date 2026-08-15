@@ -1740,7 +1740,6 @@ b4Reposition_toCCall:
 b4Reposition_to_vCCall:
         jsr _b4Reposition_to_v
         jmp mainLoop
-
 .segment "BANKRAM05"
 b5Print_atCCall:
         jsr _b5Print_at
