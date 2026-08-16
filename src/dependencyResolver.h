@@ -6,6 +6,7 @@
 #include <cbm.h>
 #include "logic.h"
 #include "view.h"
+#include "sound.h"
 #pragma wrapped-call (push, trampoline, DEPENDENCY_RESOLVER_BANK)
 
 typedef enum {

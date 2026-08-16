@@ -125,6 +125,9 @@ void b4LoadUnloadLogics(byte scriptNumber, boolean shouldLoad, boolean forceLoad
     case DEPENDENCY_VIEW:
         indexData = b4ViewIndex;
         break;
+    case DEPENDENCY_SOUND:
+        indexData = b4SoundIndex;
+        break;        
     }
 
     size = indexData[scriptIndex + 2];
@@ -133,15 +136,16 @@ void b4LoadUnloadLogics(byte scriptNumber, boolean shouldLoad, boolean forceLoad
     if (dependencyType == DEPENDENCY_LOGIC)
     {
         b4LoadUnloadLogics(scriptNumber, shouldLoad, FALSE, DEPENDENCY_VIEW);
+        b4LoadUnloadLogics(scriptNumber, shouldLoad, FALSE, DEPENDENCY_SOUND);
     }
 
-    
 
     if (size > 0)
     {
 
         index = indexData[scriptIndex] + (indexData[scriptIndex + 1] << 8);
 
+        //printf("the index is %d and it's address is %p, the md is %p\n", index, indexData, );
 
         //printf("your index is %d which is %d + (%d << 8 (%d)) = %d \n", index, b4LogicIndex[scriptIndex], b4LogicIndex[scriptIndex + 1], b4LogicIndex[scriptIndex + 1] << 8, b4LogicIndex[scriptIndex] + (b4LogicIndex[scriptIndex + 1] << 8));
 
@@ -155,6 +159,8 @@ void b4LoadUnloadLogics(byte scriptNumber, boolean shouldLoad, boolean forceLoad
             case DEPENDENCY_VIEW:
                 logicToLoad = b4ViewMetadata[index];
                 break;
+            case DEPENDENCY_SOUND:
+                logicToLoad = b4SoundMetadata[index];
             }
 
 
@@ -177,6 +183,9 @@ void b4LoadUnloadLogics(byte scriptNumber, boolean shouldLoad, boolean forceLoad
 
                     b9LoadViewFile(logicToLoad);
                     break;
+                case DEPENDENCY_SOUND:
+                    bBLoadSoundFile(logicToLoad);
+                    break;
                 }
 
 
@@ -194,6 +203,9 @@ void b4LoadUnloadLogics(byte scriptNumber, boolean shouldLoad, boolean forceLoad
                         localView.isLogicZeroOrDependency = TRUE;
                         getLoadedView(&localView, logicToLoad);
                         break;
+                    case DEPENDENCY_SOUND:
+                        bBMarkSoundAsAZeroDependency(logicToLoad);
+                        break;
                     }
                 }
 
@@ -208,6 +220,9 @@ void b4LoadUnloadLogics(byte scriptNumber, boolean shouldLoad, boolean forceLoad
                 case DEPENDENCY_VIEW:
                     b9DiscardView(logicToLoad);
                     break;
+                case DEPENDENCY_SOUND:
+                   bBDiscardSoundFile(logicToLoad);
+                   break;
                 }
             }
         }

@@ -2536,6 +2536,11 @@ void b9DiscardView(byte viewNum)
 
 	getLoadedView(&localView, viewNum);
 
+	if(localView.isLogicZeroOrDependency)
+	{
+		return;
+	}
+
 	if (localView.loaded) {
 		for (l = 0; l < localView.numberOfLoops; l++) {
 
