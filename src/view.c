@@ -2118,6 +2118,7 @@ void bAInitViews()
 		localView.numberOfLoops = 0;
 		localView.codeBlock = NULL;
 		localView.codeBlockBank = 0;
+		localView.isLogicZeroOrDependency = FALSE;
 
 		setLoadedView(&localView, i);
 	}

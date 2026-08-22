@@ -2002,10 +2002,6 @@ void b5Set_game_id() // 1, 0x00
 	//printf("start\n");
 	b4LoadUnloadDependencies(0, TRUE, TRUE, DEPENDENCY_LOGIC);
 		//printf("end\n");
-	if(currentLog != 0)
-    {
-		b4LoadUnloadDependencies(currentLog, TRUE, TRUE, DEPENDENCY_LOGIC);
-	}
 }
 //
 //void b4Log() // 1, 0x00 

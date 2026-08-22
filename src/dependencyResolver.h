@@ -17,6 +17,8 @@ typedef enum {
 
 void b4InitMetadata();
 void b4LoadUnloadDependencies(byte scriptNumber, boolean shouldLoad, boolean forceLoadSubDependencies, DEPENDENCY_TYPE dependencyType);
+void b4SetLastRoomLoaded(byte scriptNumber);
+byte b4GetLastRoomLoaded();
 #pragma wrapped-call (pop)
 
 #endif

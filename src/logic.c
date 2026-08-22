@@ -152,6 +152,11 @@ void b6LoadLogicFile(byte logFileNum, boolean forceLoadSubDependencies)
 		logicData.messages = (byte**)tempAGI.messagePointers;
 		logicData.numMessages = tempAGI.noMessages;
 
+		if(logFileNum == 0)
+		{
+			logicEntry.isLogicZeroOrDependency = TRUE; //This value is set for dependencies as they are loading in dependencyResolver
+		}
+
 	#ifdef VERBOSE
 		printf("The codebank is %d, the code size is %d, the messageBank is %d, \n and the number of messages is %d, the code pointer is non zero and matched against temp agi %d the message pointer is non zero and matches temp agi %d \n",
 			logicData.codeBank, logicData.codeSize, logicData.messageBank, logicData.numMessages
@@ -174,7 +179,7 @@ void b6LoadLogicFile(byte logFileNum, boolean forceLoadSubDependencies)
 		b4LoadUnloadDependencies(logFileNum, TRUE, forceLoadSubDependencies, DEPENDENCY_LOGIC);
 	}
 
-	if(forceLoadSubDependencies)
+	if(forceLoadSubDependencies) //This param will be set higher up in the call stack in set_game_id, and passed through b4LoadUnloadResources recursively. We need to make sure that we load all of the sub-sub dependencies of zero, even if the sub dependencies are loaded.
 	{
 		b4LoadUnloadDependencies(logFileNum, TRUE, forceLoadSubDependencies, DEPENDENCY_LOGIC);
 	}
@@ -197,7 +202,6 @@ void b6DiscardLogicFile(byte logFileNum)
 	b5GetLogicEntry(&logicEntry, logFileNum);
 
 	if (logicEntry.loaded && !logicEntry.isLogicZeroOrDependency) {
-
 		if (logicEntry.loaded && !b10BankedDealloc((byte*)logicData.messages, logicData.messageBank))
 		{
 #ifdef VERBOSE
