@@ -1,3 +1,19 @@
+/*
+ * dependencyResolver.c
+ *
+ * Resource dependency manager for the AGI interpreter (Commander X16 / banked memory).
+ *
+ * Loads per-game index + metadata files (logic / view / sound) from the meta/ folder
+ * into BANKRAM04.  These tables describe which resources each script depends on.
+ *
+ * Provides the public API used by the rest of the interpreter to:
+ *   - initialise the metadata tables once at start-up
+ *   - load or unload a script’s dependencies (recursively for logics)
+ *   - specially mark script-0 / forced dependencies so they stay resident
+ *
+ * All data and code for this module live in bank BANKRAM04.
+ */
+
 #include "dependencyResolver.h"
 
 #pragma bss-name (push, "BANKRAM04")
@@ -5,10 +21,10 @@
 #define LOGIC_METADATA_SIZE 700
 #define SOUND_METADATA_SIZE 400
 #define VIEW_METADATA_SIZE 700
-byte b4LogicIndex[INDEX_CACHE_SIZE];
+byte b4LogicIndex[INDEX_CACHE_SIZE];      // Per-script index: [offset_lo, offset_hi, count] * N
 byte b4SoundIndex[INDEX_CACHE_SIZE];
 byte b4ViewIndex[INDEX_CACHE_SIZE];
-byte b4LogicMetadata[LOGIC_METADATA_SIZE];
+byte b4LogicMetadata[LOGIC_METADATA_SIZE]; // Flat list of resource numbers that each script depends on
 byte b4SoundMetadata[SOUND_METADATA_SIZE];
 byte b4ViewMetadata[VIEW_METADATA_SIZE];
 #pragma bss-name (pop)
@@ -25,19 +41,22 @@ const char b4ViewIdsFileName[] = "%s%s-view-ids.%s%s";
 const char b4IndexExtension[] = "idx";
 const char b4DataExtension[] = "bin";
 const char b4Folder[] = "meta/";
-const char b4FileFlags[] = ",S,R";
+const char b4FileFlags[] = ",S,R";        // Commodore sequential read flags
 
 #pragma rodata-name (pop)
 
 #pragma bss-name (push, "BANKRAM04")
 #pragma data-name (push, "BANKRAM04")
-boolean b4IsInited = FALSE;
-boolean b4IsHandlingZeroOrDependencies = FALSE;
+boolean b4IsInited = FALSE;                       // True once metadata files have been loaded
+boolean b4IsHandlingZeroOrDependencies = FALSE;   // True while processing script 0 (or forced zero-deps)
 byte b4LastRoomLoaded = 0;
 #pragma data-name (pop)
 #pragma bss-name (pop)
 
 #pragma code-name (push, "BANKRAM04")
+
+// Opens a metadata file (index or data) and reads its entire contents into the supplied buffer.
+// Returns TRUE if at least one byte was successfully read.
 boolean b4OpenMetadataFile(char* fileName, byte* buffer, int size)
 {
     byte fileOpenResult, result = FALSE;
@@ -58,6 +77,7 @@ boolean b4OpenMetadataFile(char* fileName, byte* buffer, int size)
     return result;
 }
 
+// Builds the two filenames for a resource type (index + data) and loads both into the provided buffers.
 void b4InitResourceMetadata(char* fileNameTemplate, byte* indexBuffer, byte* metadataBuffer, int metadataSize)
 {
     byte fileName[32];
@@ -69,6 +89,7 @@ void b4InitResourceMetadata(char* fileNameTemplate, byte* indexBuffer, byte* met
     b4OpenMetadataFile(fileName, metadataBuffer, metadataSize);
 }
 
+// Loads all three pairs of index/metadata files (logic, sound, view) and marks the resolver as ready.
 void b4InitMetadata()
 {
     int result;
@@ -82,6 +103,9 @@ void b4InitMetadata()
     b4IsInited = TRUE;
 }
 
+// Core dependency walker.
+// For a given script and resource type, walks the dependency list and either loads or discards each resource.
+// When the type is LOGIC it first recursively processes the same script's VIEW and SOUND dependencies.
 void b4LoadUnloadResources(byte scriptNumber, boolean shouldLoad, boolean forceLoadSubDependencies, DEPENDENCY_TYPE dependencyType)
 {
 
@@ -113,6 +137,7 @@ void b4LoadUnloadResources(byte scriptNumber, boolean shouldLoad, boolean forceL
 
     if (dependencyType == DEPENDENCY_LOGIC)
     {
+        // Ensure view + sound dependencies of this logic are handled first
         b4LoadUnloadResources(scriptNumber, shouldLoad, FALSE, DEPENDENCY_VIEW);
         b4LoadUnloadResources(scriptNumber, shouldLoad, FALSE, DEPENDENCY_SOUND);
     }
@@ -121,6 +146,7 @@ void b4LoadUnloadResources(byte scriptNumber, boolean shouldLoad, boolean forceL
     if (size > 0)
     {
 
+        // Reconstruct 16-bit offset into the metadata array
         index = indexData[scriptIndex] + (indexData[scriptIndex + 1] << 8);
 
         for (i = 0; i < size; i++, index++)
@@ -156,6 +182,8 @@ void b4LoadUnloadResources(byte scriptNumber, boolean shouldLoad, boolean forceL
                 }
 
 
+                // While handling script 0 (or forced zero-deps) mark the resource so the rest of
+                // the system knows it must stay resident / be treated specially.
                 if (b4IsHandlingZeroOrDependencies)
                 {
                     switch (dependencyType)
