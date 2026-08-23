@@ -414,7 +414,10 @@ _executeLogic:
 
          ldy RAM_BANK
          sty previousRamBank
-
+         
+         ldy _currentLog
+         phy
+    
          sta _currentLog
          stx _currentLog + 1
          
@@ -533,6 +536,10 @@ _executeLogic:
         endMainLoop:
         lda previousRamBank
         sta RAM_BANK
+
+        pla
+        sta _currentLog
+
         rts
 .endif
 
