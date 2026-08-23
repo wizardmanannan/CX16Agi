@@ -2118,6 +2118,7 @@ void bAInitViews()
 		localView.numberOfLoops = 0;
 		localView.codeBlock = NULL;
 		localView.codeBlockBank = 0;
+		localView.isLogicZeroOrDependency = FALSE;
 
 		setLoadedView(&localView, i);
 	}
@@ -2280,6 +2281,7 @@ void setViewData(byte viewNum, AGIFile* tempAGI, View* localView)
 	localView->maxVeraSlots = 0;
 	localView->codeBlock = tempAGI->code;
 	localView->codeBlockBank = tempAGI->codeBank;
+	localView->isLogicZeroOrDependency = FALSE;
 	setLoadedView(&localView, viewNum);
 }
 
@@ -2534,6 +2536,11 @@ void b9DiscardView(byte viewNum)
 	Cel localCel;
 
 	getLoadedView(&localView, viewNum);
+
+	if(localView.isLogicZeroOrDependency)
+	{
+		return;
+	}
 
 	if (localView.loaded) {
 		for (l = 0; l < localView.numberOfLoops; l++) {

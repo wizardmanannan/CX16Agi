@@ -1,0 +1,17 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Extract AGI Deps (with breakpoints)",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${file}",
+            "console": "integratedTerminal",
+            "args": [
+                "/home/alay/CLionProjects/games/kq3",
+                "/home/alay/CLionProjects/games/kq3/extracted"
+            ],
+            "justMyCode": true
+        }
+    ]
+}

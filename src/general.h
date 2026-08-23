@@ -20,12 +20,21 @@
 #define  FALSE   0
 #endif
 
+#define FILE_DEVICE 8
+#define FILE_OPEN_ADDRESS 2
+
 /* MENU data */
 #define SEQUENTIAL_LFN 2
+
+#define GAMEID_MAX_LENGTH 6
+
+extern char gameId[GAMEID_MAX_LENGTH + 1];
 
 typedef unsigned char byte;
 typedef unsigned short int word;
 typedef char boolean;
+
+
 
 typedef struct { 
 	int w;
@@ -49,6 +58,7 @@ extern byte callC1, callC2;
 typedef enum {
 	PRINT_TIMEOUT = 21
 } FLAGS;
+
 #define VERA_ADDRESS_SIZE 3
 
 #define JIFFY_CALL_FREQ 16 

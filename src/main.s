@@ -61,7 +61,7 @@
     .export _b3PaletteRows
     .export _b3PaletteNumber
     .export _b3InitLayer1Mapbase
-    .export _b4ClearPicture
+    .export _b8ClearPicture
     .export _b12FindSynonymNumSearch
     .export _b6Clear
     .export _b5IsDebuggingEnabled

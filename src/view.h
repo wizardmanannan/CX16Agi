@@ -47,6 +47,8 @@ extern void setViewTab(ViewTable* viewTab, byte viewTabNumber);
 extern void getLoadedView(View* returnedLoadedView, byte loadedViewNumber);
 extern void setLoadedView(View* loadedView, byte loadedViewNumber);
 
+void getLoadedLoop(View* loadedView, Loop* returnedLocalLoop, byte localLoopNumber);
+
 #pragma wrapped-call (push, trampoline, VIEW_CODE_BANK_1)
 void b9LoadViewFile(byte viewNum);
 void b9DiscardView(byte viewNum);

@@ -6,7 +6,8 @@
 #define _LOGIC_H_
 
 #include "helpers.h"
-#include "lruCache.h"
+#include "dependencyResolver.h"
+
 
 typedef struct {
 	word codeSize; //0
@@ -24,13 +25,14 @@ typedef struct {
 	word currentPoint; //3
 	LOGICFile* data; //5
 	byte dataBank; //7
+	boolean isLogicZeroOrDependency; //So we can avoid unloading zero and its dependencies. Zero counts as a dependency of itself.
 } LOGICEntry;
 
 //extern LOGICEntry logics;
 void b6InitLogics();
 
 #pragma wrapped-call (push, trampoline, LOGIC_CODE_BANK)
-void b6LoadLogicFile(byte logFileNum);
+void b6LoadLogicFile(byte logFileNum, boolean forceLoadSubDependencies);
 void b6DiscardLogicFile(byte logFileNum);
 #pragma wrapped-call (pop)
 

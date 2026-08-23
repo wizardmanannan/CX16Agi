@@ -104,6 +104,7 @@ typedef struct View {
 	byte codeBlockBank;
 	byte maxCels;
 	byte maxVeraSlots;
+	byte isLogicZeroOrDependency; //Note: Zero dependent views can be false if they have a non managed palette as these must be reloaded every time; this palette value can change
 } View;
 
 

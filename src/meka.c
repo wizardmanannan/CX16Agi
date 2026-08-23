@@ -17,7 +17,6 @@
 #include "view.h"
 #include "stub.h"
 #include "memoryManager.h"
-#include "lruCache.h"
 #include "debugHelper.h"
 //#include "object.h"
 #include "words.h"
@@ -51,13 +50,6 @@ int dirnOfEgo, newRoomNum, score;
 
 extern int picFNum;    // Debugging. Delete at some stage!!
 
-#pragma code-name(push, "BANKRAM04")
-void b4DiscardLogicFileWrapper(byte logFileNum)
-{
-    b6DiscardLogicFile(logFileNum);
-}
-#pragma code-name(pop)
-
 #pragma code-name (push, "BANKRAM06")
 void b6AdjustEgoPosition()
 {
@@ -88,9 +80,7 @@ void b6AdjustEgoPosition()
 void b6DiscardResources()
 {
     int i;
-    for (i = 0; i < 256; i++) b9DiscardView(i);
     for (i = 0; i < 256; i++) b6DiscardPictureFile(i);
-    for (i = 0; i < 256; i++) bBDiscardSoundFile(i);
 }
 
 /***************************************************************************
@@ -104,6 +94,9 @@ void b6DiscardResources()
 ***************************************************************************/
 void b6NewRoom()
 {
+
+    byte lastRoomLoaded;
+
     bBStopSound();
 
     bAResetViews();
@@ -112,6 +105,15 @@ void b6NewRoom()
     b6DiscardResources();
 
     b6AdjustEgoPosition();
+
+    b6DiscardLogicFile(var[0]);
+
+    lastRoomLoaded = b4GetLastRoomLoaded();
+
+    if(lastRoomLoaded > 0) //Script room zero we never unload
+    {
+        b4LoadUnloadDependencies(lastRoomLoaded, FALSE, FALSE, DEPENDENCY_LOGIC);
+    }
 
     //unblock();
     var[4] = 0;
@@ -132,6 +134,9 @@ void b6NewRoom()
     memsetBanked(b7Directions, 0, 9, STRING_BANK);
     /* rectfill(screen, 0, 20+(22*16), 639, 463, 0); */   /* Clear screen */
     b6SetAndWaitForIrqState(CLEAR);
+
+    b4SetLastRoomLoaded(newRoomNum);
+
 #ifdef VERBOSE
     printf("New room code called");
 #endif // VERBOSE
@@ -262,10 +267,8 @@ extern void bAInitMenus();
 void b6Initialise()
 {
     int i;
-
+    
     b6InitTimer(&b6Timing_proc);
-
-    b4InitLruCaches(&b4DiscardLogicFileWrapper, &b9DiscardView);
     b6InitFiles();             /* Load resource directories */
     b6InitRandom();
     bAInitMenus();

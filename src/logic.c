@@ -16,11 +16,12 @@
 #include "logic.h"
 #include "memoryManager.h"
 
+LOGICEntry assmLogicEntry; //Used by assm functions that need memory to hold these two entities, not permanent storage
+LOGICFile assmLogicFile;
+
 /* The logics array is the array that holds all the information about the
 ** logic files. A boolean flag determines whether the logic is loaded or
 ** not. If it isn't loaded, then the data is not in memory. */
-
-
 #pragma bss-name (push, "BANKRAM05")
 LOGICEntry logics[NO_DIRECTORY_ENTRYS];
 LOGICFile logicFiles[NO_DIRECTORY_ENTRYS];
@@ -96,22 +97,28 @@ void b6InitLogics()
 		logicEntry.entryPoint = 0;
 		logicEntry.currentPoint = 0;
 		logicEntry.data = &logicFiles[i];
+		logicEntry.isLogicZeroOrDependency = FALSE;
 		b5SetLogicEntry(&logicEntry, i);
 #ifdef VERBOSE
 		printf("%d: currentPoint: %p, data: %p, dataBank: %d, loaded %d  &logics[i] %p\n",i, logicEntry.currentPoint, logicEntry.data, logicEntry.dataBank, logicEntry.loaded, &logics[i]);
 #endif // VERBOSE
 	}
-	b6LoadLogicFile(0);
+	b6LoadLogicFile(0, FALSE);
 }
 
 
+
+#pragma wrapped-call (push, trampoline, DEPENDENCY_RESOLVER_BANK)
+void b4InitMetadata();
+void b4LoadUnloadDependencies(byte scriptNumber, boolean shouldLoad, boolean forceLoadSubDependencies, DEPENDENCY_TYPE dependencyType);
+#pragma wrapped-call (pop)
 /**************************************************************************
 ** loadLogicFile
 **
 ** Purpose: To load a LOGIC file, decode the messages, and store in a
 ** suitable structure.
 **************************************************************************/
-void b6LoadLogicFile(byte logFileNum)
+void b6LoadLogicFile(byte logFileNum, boolean forceLoadSubDependencies)
 {
 	AGIFile tempAGI;
 	AGIFilePosType agiFilePosType;
@@ -120,54 +127,62 @@ void b6LoadLogicFile(byte logFileNum)
 	
 	b5GetLogicEntry(&logicEntry, logFileNum);
 	
-	if (logicEntry.loaded)
-	{
-		return;
+	if (!logicEntry.loaded)
+	{	
+		b10GetLogicDirectory(&agiFilePosType, &logdir[logFileNum]);
+
+	#ifdef VERBOSE
+		printf("\n%d Retrieved file num %d, Offset %lu\n", logFileNum, agiFilePosType.filePos);
+	#endif // VERBOSE
+
+		/* Load LOGIC file, calculate logic code length, and copy
+		** logic code into tempLOGIC. */
+
+
+	#ifdef VERBOSE
+		printf("Loading Logic %d\n", logFileNum);
+	#endif // VERBOSE
+		b6LoadAGIFile(LOGIC, &agiFilePosType, &tempAGI);
+
+		b5SetLogicFile(&logicData, logFileNum);
+		logicData.codeBank = tempAGI.codeBank;
+		logicData.codeSize = tempAGI.codeSize;
+		logicData.logicCode = tempAGI.code;
+		logicData.messageBank = tempAGI.messageBank;
+		logicData.messages = (byte**)tempAGI.messagePointers;
+		logicData.numMessages = tempAGI.noMessages;
+
+		if(logFileNum == 0)
+		{
+			logicEntry.isLogicZeroOrDependency = TRUE; //This value is set for dependencies as they are loading in dependencyResolver
+		}
+
+	#ifdef VERBOSE
+		printf("The codebank is %d, the code size is %d, the messageBank is %d, \n and the number of messages is %d, the code pointer is non zero and matched against temp agi %d the message pointer is non zero and matches temp agi %d \n",
+			logicData.codeBank, logicData.codeSize, logicData.messageBank, logicData.numMessages
+			, logicData.logicCode == tempAGI.code && logicData.logicCode
+			, logicData.messages == (byte**)tempAGI.messagePointers && logicData.messages
+		);
+
+	#ifdef VERBOSE
+		printf("currentPoint: %p, data: %p, dataBank: %d, loaded %d \n", logicEntry.currentPoint, logicEntry.data, logicEntry.dataBank, logicEntry.loaded);
+	#endif
+
+	#endif // VERBOSE
+
+		b5SetLogicFile(&logicData, logFileNum);
+
+		logicEntry.loaded = TRUE;
+
+		b5SetLogicEntry(&logicEntry, logFileNum);
+
+		b4LoadUnloadDependencies(logFileNum, TRUE, forceLoadSubDependencies, DEPENDENCY_LOGIC);
 	}
-	
-	b10GetLogicDirectory(&agiFilePosType, &logdir[logFileNum]);
 
-#ifdef VERBOSE
-	printf("\n%d Retrieved file num %d, Offset %lu\n", logFileNum, agiFilePosType.filePos);
-#endif // VERBOSE
-
-	/* Load LOGIC file, calculate logic code length, and copy
-	** logic code into tempLOGIC. */
-
-
-#ifdef VERBOSE
-	printf("Loading Logic %d\n", logFileNum);
-#endif // VERBOSE
-	b4LruCacheGet(LOGIC, logFileNum, &agiFilePosType, &tempAGI);
-
-	b5SetLogicFile(&logicData, logFileNum);
-	logicData.codeBank = tempAGI.codeBank;
-	logicData.codeSize = tempAGI.codeSize;
-	logicData.logicCode = tempAGI.code;
-	logicData.messageBank = tempAGI.messageBank;
-	logicData.messages = (byte**)tempAGI.messagePointers;
-	logicData.numMessages = tempAGI.noMessages;
-
-#ifdef VERBOSE
-	printf("The codebank is %d, the code size is %d, the messageBank is %d, \n and the number of messages is %d, the code pointer is non zero and matched against temp agi %d the message pointer is non zero and matches temp agi %d \n",
-		logicData.codeBank, logicData.codeSize, logicData.messageBank, logicData.numMessages
-		, logicData.logicCode == tempAGI.code && logicData.logicCode
-		, logicData.messages == (byte**)tempAGI.messagePointers && logicData.messages
-	);
-
-#ifdef VERBOSE
-	printf("currentPoint: %p, data: %p, dataBank: %d, loaded %d \n", logicEntry.currentPoint, logicEntry.data, logicEntry.dataBank, logicEntry.loaded);
-#endif
-
-#endif // VERBOSE
-
-	b5SetLogicFile(&logicData, logFileNum);
-
-	logicEntry.loaded = TRUE;
-
-	b5SetLogicEntry(&logicEntry, logFileNum);
-
-
+	if(forceLoadSubDependencies) //This param will be set higher up in the call stack in set_game_id, and passed through b4LoadUnloadResources recursively. We need to make sure that we load all of the sub-sub dependencies of zero, even if the sub dependencies are loaded.
+	{
+		b4LoadUnloadDependencies(logFileNum, TRUE, forceLoadSubDependencies, DEPENDENCY_LOGIC);
+	}
 }
 
 /**************************************************************************
@@ -186,8 +201,7 @@ void b6DiscardLogicFile(byte logFileNum)
 	b5GetLogicFile(&logicData, logFileNum);
 	b5GetLogicEntry(&logicEntry, logFileNum);
 
-	if (logicEntry.loaded) {
-
+	if (logicEntry.loaded && !logicEntry.isLogicZeroOrDependency) {
 		if (logicEntry.loaded && !b10BankedDealloc((byte*)logicData.messages, logicData.messageBank))
 		{
 #ifdef VERBOSE
@@ -204,6 +218,11 @@ void b6DiscardLogicFile(byte logFileNum)
 
 		logicEntry.loaded = FALSE;
 		b5SetLogicEntry(&logicEntry, logFileNum);
+		b4LoadUnloadDependencies(logFileNum, FALSE, FALSE, DEPENDENCY_LOGIC);
+	}
+	else if(logicEntry.loaded) //For zero dependencies we have to unload any views with a managed palette as the palette could change
+	{
+		b4LoadUnloadDependencies(logFileNum, FALSE, FALSE, DEPENDENCY_LOGIC);
 	}
 }
 
