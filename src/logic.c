@@ -220,6 +220,10 @@ void b6DiscardLogicFile(byte logFileNum)
 		b5SetLogicEntry(&logicEntry, logFileNum);
 		b4LoadUnloadDependencies(logFileNum, FALSE, FALSE, DEPENDENCY_LOGIC);
 	}
+	else if(logicEntry.loaded) //For zero dependencies we have to unload any views with a managed palette as the palette could change
+	{
+		b4LoadUnloadDependencies(logFileNum, FALSE, FALSE, DEPENDENCY_LOGIC);
+	}
 }
 
 #pragma code-name (pop)
