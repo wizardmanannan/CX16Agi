@@ -119,7 +119,7 @@ void b4LoadUnloadResources(byte scriptNumber, boolean shouldLoad, boolean forceL
 
 
     b5GetLogicEntry(&localLogicEntry, scriptNumber);
-    
+
     switch (dependencyType)
     {
     case DEPENDENCY_LOGIC:
@@ -130,7 +130,7 @@ void b4LoadUnloadResources(byte scriptNumber, boolean shouldLoad, boolean forceL
         break;
     case DEPENDENCY_SOUND:
         indexData = b4SoundIndex;
-        break;        
+        break;
     }
 
     size = indexData[scriptIndex + 2];
@@ -186,24 +186,13 @@ void b4LoadUnloadResources(byte scriptNumber, boolean shouldLoad, boolean forceL
                 // the system knows it must stay resident / be treated specially.
                 if (b4IsHandlingZeroOrDependencies)
                 {
+                    //Skip views here they are reloaded every time as palettes changes room to room.TODO: Investigate a way to refresh palette without reloading the whole view
                     switch (dependencyType)
                     {
                     case DEPENDENCY_LOGIC:
                         b5GetLogicEntry(&localLogicEntry, resourceToLoad);
                         localLogicEntry.isLogicZeroOrDependency = TRUE;
                         b5SetLogicEntry(&localLogicEntry, resourceToLoad);
-                        break;
-                    case DEPENDENCY_VIEW:
-                        getLoadedView(&localView, resourceToLoad);
-                        getLoadedLoop(&localView, &localLoop, resourceToLoad);
-
-                        
-                        if(localLoop.palette < BASE_MANAGED_PALETTE) //If this sprite has a managed palette it must be reloaded as it could change and must be retrieved from the file
-                        {
-                            localView.isLogicZeroOrDependency = TRUE;
-                            setLoadedView(&localView, resourceToLoad);
-                        }
-
                         break;
                     case DEPENDENCY_SOUND:
                         bBMarkSoundAsAZeroDependency(resourceToLoad);
@@ -219,12 +208,12 @@ void b4LoadUnloadResources(byte scriptNumber, boolean shouldLoad, boolean forceL
                 case DEPENDENCY_LOGIC:
                     b6DiscardLogicFile(resourceToLoad);
                     break;
-                case DEPENDENCY_VIEW:                
+                case DEPENDENCY_VIEW:
                     b9DiscardView(resourceToLoad);
                     break;
                 case DEPENDENCY_SOUND:
-                   bBDiscardSoundFile(resourceToLoad);
-                   break;
+                    bBDiscardSoundFile(resourceToLoad);
+                    break;
                 }
             }
         }
@@ -234,7 +223,7 @@ void b4LoadUnloadResources(byte scriptNumber, boolean shouldLoad, boolean forceL
 //Using this last parameter you can force a search for script 0's dependencies even when it itself is already loaded. We need it because script 0 will be called before the dependency resolver is ready eg. The b4Set_game_id  -> b4InitMetadata call is complete
 //Note: It is usually script 0 that calls b4Set_game_id, but some games have a different script; in this case both the dependencies of both it and script 0 need to be force loaded.
 void b4LoadUnloadDependencies(byte scriptNumber, boolean shouldLoad, boolean forceLoadSubDependencies, DEPENDENCY_TYPE dependencyType)
-{    
+{
     if (b4IsInited)
     {
 
@@ -244,7 +233,7 @@ void b4LoadUnloadDependencies(byte scriptNumber, boolean shouldLoad, boolean for
         }
 
         b4LoadUnloadResources(scriptNumber, shouldLoad, forceLoadSubDependencies, dependencyType);
-  
+
 
         if (scriptNumber == 0)
         {
