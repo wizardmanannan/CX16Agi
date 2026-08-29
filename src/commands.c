@@ -41,11 +41,14 @@
 //#define VERBOSE_ROOM_CHANGE
 //#define VERBOSE_MESSAGE_PRINT
 
+#define COMMAND_MESSAGES_BANK 5
 #pragma rodata-name (push, "BANKRAM05")
-const char B4_QUIT_MESSAGE[] = "Press ENTER to quit. Press ESC to keep playing.";
-const char B4_PAUSE_MESSAGE[] = "      Game paused.\nPress ENTER to continue.";
-const char B4_MEKA_MESSAGE[] = "MEKA AGI Interpreter\n    Version 1.0";
-const char B4_VERSION_MESSAGE[] = "MEKA AGI Interpreter\n    Version 1.0";
+#include <ascii_charmap.h>
+const char B5_QUIT_MESSAGE[] = "Press ENTER to quit. Press ESC to keep playing.";
+const char B5_PAUSE_MESSAGE[] = "      Game paused.\nPress ENTER to continue.";
+const char B5_MEKA_MESSAGE[] = "MEKA AGI Interpreter\n    Version 1.0";
+const char B5_VERSION_MESSAGE[] = "MEKA AGI Interpreter\n    Version 1.0";
+#include <cbm_petscii_charmap.h>
 #pragma rodata-name (pop)
 
 extern byte* var;
@@ -1921,12 +1924,18 @@ void b5Quit() // 1, 0x00                     /* 0 args for AGI version 2_089 */
 	else { /* Prompt for exit */
 #define QUIT_BOX_SIZE 15
 		//TODO: Fix display of quit message
-		b3DisplayMessageBox(B4_QUIT_MESSAGE, 4, MAX_ROWS_DOWN / 2 - FIRST_ROW, MAX_CHAR_ACROSS / 2, TEXTBOX_PALETTE_NUMBER, QUIT_BOX_SIZE);
+		b3DisplayMessageBox(B5_QUIT_MESSAGE, COMMAND_MESSAGES_BANK, MAX_ROWS_DOWN / 2 - FIRST_ROW, MAX_CHAR_ACROSS / 2, TEXTBOX_PALETTE_NUMBER, QUIT_BOX_SIZE);
 		do {
 			GET_IN(ch);
 			ch >> 8;
 		} while ((ch != KEY_ESC) && (ch != KEY_ENTER));
-		if (ch == KEY_ENTER) exit(0);
+		if (ch == KEY_ENTER)
+		{
+			SOFT_RESET()
+		}
+
+
+
 		b6ShowPicture();
 	}
 	return;
@@ -1936,7 +1945,7 @@ void b5Pause() // 0, 0x00
 {
 #define PAUSE_BOX_SIZE 15
 	while (key[KEY_ENTER]) { /* Wait */ }
-	b3DisplayMessageBox(B4_PAUSE_MESSAGE, 4, MAX_ROWS_DOWN / 2 - FIRST_ROW, MAX_CHAR_ACROSS / 2, TEXTBOX_PALETTE_NUMBER, PAUSE_BOX_SIZE);
+	b3DisplayMessageBox(B5_PAUSE_MESSAGE, COMMAND_MESSAGES_BANK, MAX_ROWS_DOWN / 2 - FIRST_ROW, MAX_CHAR_ACROSS / 2, TEXTBOX_PALETTE_NUMBER, PAUSE_BOX_SIZE);
 	while (!key[KEY_ENTER]) { /* Wait */ }
 	b6ShowPicture();
 	return;
@@ -1964,7 +1973,7 @@ void b5Version() // 0, 0x00
 {
 #define VERSION_BOX_SIZE 15
 	while (key[KEY_ENTER] || key[KEY_ESC]) { /* Wait */ }
-	b3DisplayMessageBox(B4_VERSION_MESSAGE, 4, MAX_ROWS_DOWN / 2 - FIRST_ROW, MAX_CHAR_ACROSS / 2, TEXTBOX_PALETTE_NUMBER, VERSION_BOX_SIZE);
+	b3DisplayMessageBox(B5_VERSION_MESSAGE, COMMAND_MESSAGES_BANK, MAX_ROWS_DOWN / 2 - FIRST_ROW, MAX_CHAR_ACROSS / 2, TEXTBOX_PALETTE_NUMBER, VERSION_BOX_SIZE);
 	while (!key[KEY_ENTER] && !key[KEY_ESC]) { /* Wait */ }
 	b6ShowPicture();
 	return;

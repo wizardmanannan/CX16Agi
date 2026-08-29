@@ -11,6 +11,7 @@
 #include <string.h>
 #include <stdlib.h>
 
+
 #define C_STACK 0x22
 
 #ifndef TRUE
@@ -68,5 +69,13 @@ extern boolean* flag;
 extern int currentLog;
 
 #define DEFAULT_PRIORITY_BASE 48
+
+
+#define SOFT_RESET()           \
+    do {                       \
+        asm("sei");            \
+        asm("stz $01");        \
+        asm("jmp ($FFFC)");    \
+    } while (0);
 
 #endif  /* _GENERAL_H_ */

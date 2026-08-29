@@ -1,5 +1,6 @@
 #ifndef _COMMANDS_H_
 #define _COMMANDS_H_
+#include "general.h"
 #include "helpers.h"
 #include "memoryManager.h"
 #include "logic.h"
