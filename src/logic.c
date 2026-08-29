@@ -109,8 +109,8 @@ void b6InitLogics()
 
 
 #pragma wrapped-call (push, trampoline, DEPENDENCY_RESOLVER_BANK)
-void b4InitMetadata();
-void b4LoadUnloadDependencies(byte scriptNumber, boolean shouldLoad, boolean forceLoadSubDependencies, DEPENDENCY_TYPE dependencyType);
+extern void b4InitMetadata();
+extern void b4LoadUnloadDependencies(byte scriptNumber, boolean shouldLoad, boolean forceLoadSubDependencies);
 #pragma wrapped-call (pop)
 /**************************************************************************
 ** loadLogicFile
@@ -176,12 +176,12 @@ void b6LoadLogicFile(byte logFileNum, boolean forceLoadSubDependencies)
 
 		b5SetLogicEntry(&logicEntry, logFileNum);
 
-		b4LoadUnloadDependencies(logFileNum, TRUE, forceLoadSubDependencies, DEPENDENCY_LOGIC);
+		b4LoadUnloadDependencies(logFileNum, TRUE, forceLoadSubDependencies);
 	}
 
 	if (forceLoadSubDependencies) //This param will be set higher up in the call stack in set_game_id, and passed through b4LoadUnloadResources recursively. We need to make sure that we load all of the sub-sub dependencies of zero, even if the sub dependencies are loaded.
 	{
-		b4LoadUnloadDependencies(logFileNum, TRUE, forceLoadSubDependencies, DEPENDENCY_LOGIC);
+		b4LoadUnloadDependencies(logFileNum, TRUE, forceLoadSubDependencies);
 	}
 }
 
@@ -218,11 +218,11 @@ void b6DiscardLogicFile(byte logFileNum)
 
 		logicEntry.loaded = FALSE;
 		b5SetLogicEntry(&logicEntry, logFileNum);
-		b4LoadUnloadDependencies(logFileNum, FALSE, FALSE, DEPENDENCY_LOGIC);
+		b4LoadUnloadDependencies(logFileNum, FALSE, FALSE);
 	}
 	else if(logicEntry.loaded) //For zero dependencies we have to unload any views, because the palettes may have changed, this includes 
 	{
-		b4LoadUnloadDependencies(logFileNum, FALSE, FALSE, DEPENDENCY_LOGIC);
+		b4LoadUnloadDependencies(logFileNum, FALSE, FALSE);
 	}
 }
 

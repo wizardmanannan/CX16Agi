@@ -112,7 +112,7 @@ void b6NewRoom()
 
     if(lastRoomLoaded > 0) //Script room zero we never unload
     {
-        b4LoadUnloadDependencies(lastRoomLoaded, FALSE, FALSE, DEPENDENCY_LOGIC);
+        b4LoadUnloadDependencies(lastRoomLoaded, FALSE, FALSE);
     }
 
     //unblock();
