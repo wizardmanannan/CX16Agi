@@ -1538,12 +1538,12 @@ void b3PrintMessageInTextbox(byte messNum, byte x, byte y, byte length)
 
 void b3Print() // 1, 00 
 {
-	b3PrintMessageInTextbox(loadAndIncWinCode(), DEFAULT_TEXTBOX_X, DEFAULT_TEXTBOX_Y, DEFAULT_BOX_WIDTH);
+	b3PrintMessageInTextbox(loadAndIncWinCode(), DEFAULT_TEXTBOX_X, AUTO_CALC_ROW, DEFAULT_BOX_WIDTH);
 }
 
 void b3Print_v() // 1, 0x80 
 {
-	b3PrintMessageInTextbox(var[loadAndIncWinCode()], DEFAULT_TEXTBOX_X, DEFAULT_TEXTBOX_Y, DEFAULT_BOX_WIDTH);
+	b3PrintMessageInTextbox(var[loadAndIncWinCode()], DEFAULT_TEXTBOX_X, AUTO_CALC_ROW, DEFAULT_BOX_WIDTH);
 }
 
 //A helper function not a command
@@ -1924,7 +1924,10 @@ void b5Quit() // 1, 0x00                     /* 0 args for AGI version 2_089 */
 	else { /* Prompt for exit */
 #define QUIT_BOX_SIZE 15
 		//TODO: Fix display of quit message
-		b3DisplayMessageBox(B5_QUIT_MESSAGE, COMMAND_MESSAGES_BANK, MAX_ROWS_DOWN / 2 - FIRST_ROW, MAX_CHAR_ACROSS / 2, TEXTBOX_PALETTE_NUMBER, QUIT_BOX_SIZE);
+		b3DisplayMessageBox(B5_QUIT_MESSAGE, COMMAND_MESSAGES_BANK, AUTO_CALC_ROW, DEFAULT_TEXTBOX_X,  TEXTBOX_PALETTE_NUMBER, DEFAULT_BOX_WIDTH);
+		//b3PrintMessageInTextbox(loadAndIncWinCode(), DEFAULT_TEXTBOX_X, DEFAULT_TEXTBOX_Y, DEFAULT_BOX_WIDTH);
+
+		
 		do {
 			GET_IN(ch);
 			ch >> 8;
@@ -1945,7 +1948,7 @@ void b5Pause() // 0, 0x00
 {
 #define PAUSE_BOX_SIZE 15
 	while (key[KEY_ENTER]) { /* Wait */ }
-	b3DisplayMessageBox(B5_PAUSE_MESSAGE, COMMAND_MESSAGES_BANK, MAX_ROWS_DOWN / 2 - FIRST_ROW, MAX_CHAR_ACROSS / 2, TEXTBOX_PALETTE_NUMBER, PAUSE_BOX_SIZE);
+	b3DisplayMessageBox(B5_PAUSE_MESSAGE, COMMAND_MESSAGES_BANK, AUTO_CALC_ROW, MAX_CHAR_ACROSS / 2, TEXTBOX_PALETTE_NUMBER, PAUSE_BOX_SIZE);
 	while (!key[KEY_ENTER]) { /* Wait */ }
 	b6ShowPicture();
 	return;
@@ -1973,7 +1976,7 @@ void b5Version() // 0, 0x00
 {
 #define VERSION_BOX_SIZE 15
 	while (key[KEY_ENTER] || key[KEY_ESC]) { /* Wait */ }
-	b3DisplayMessageBox(B5_VERSION_MESSAGE, COMMAND_MESSAGES_BANK, MAX_ROWS_DOWN / 2 - FIRST_ROW, MAX_CHAR_ACROSS / 2, TEXTBOX_PALETTE_NUMBER, VERSION_BOX_SIZE);
+	b3DisplayMessageBox(B5_VERSION_MESSAGE, COMMAND_MESSAGES_BANK, AUTO_CALC_ROW, MAX_CHAR_ACROSS / 2, TEXTBOX_PALETTE_NUMBER, VERSION_BOX_SIZE);
 	while (!key[KEY_ENTER] && !key[KEY_ESC]) { /* Wait */ }
 	b6ShowPicture();
 	return;

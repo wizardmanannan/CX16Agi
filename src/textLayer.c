@@ -412,10 +412,9 @@ void b3DisplayMessageBox(char* message, byte messageBank, byte row, byte col, by
 	byte textWidth = boxWidth;
 	byte numberOfLines = 1;
 	size_t maxMessageSize = boxWidth ? TEXTBUFFER_SIZE : TEXTBUFFER_SIZE * 2; //If there is no box, we can overflow into buffer 2 for a bigger message.
-	
+		
 	currentTextBuffer = textBuffer1;
 
-	lastBoxStartLine = row;
 	lastBoxLines = 1;
 
 	if (boxWidth)
@@ -424,9 +423,7 @@ void b3DisplayMessageBox(char* message, byte messageBank, byte row, byte col, by
 	}
 
 	if (messageSize > 1) //Agi sometimes has empty messages. We say greater than 1 because of the terminator
-	{
-		displayTextAddressToCopyTo = MAPBASE + (FIRST_ROW + row - 1) * TILE_LAYER_BYTES_PER_ROW + col * BYTES_PER_CELL;
-				
+	{				
 		displayAddressCopyPaletteTo = displayTextAddressToCopyTo + 1;
 
 #ifdef VERBOSE_DISPLAY_TEXT
@@ -465,7 +462,17 @@ void b3DisplayMessageBox(char* message, byte messageBank, byte row, byte col, by
 			currentTextBuffer = textBuffer2;
 		}
 
-		b3PaletteAddress = MAPBASE + (FIRST_ROW + row - 1) * TILE_LAYER_BYTES_PER_ROW + 1; //We will set the same palette for the whole row
+		if(row == AUTO_CALC_ROW)
+		{
+			lastBoxStartLine = (TEXT_ROWS / 2 - (numberOfLines + 2) / 2);
+		}
+		else
+		{
+			lastBoxStartLine = row;
+		}
+
+		displayTextAddressToCopyTo = MAPBASE + (FIRST_ROW + lastBoxStartLine - 1) * TILE_LAYER_BYTES_PER_ROW + col * BYTES_PER_CELL;
+		b3PaletteAddress = MAPBASE + (FIRST_ROW + lastBoxStartLine - 1) * TILE_LAYER_BYTES_PER_ROW + 1; //We will set the same palette for the whole row
 		b3PaletteRows = numberOfLines;
 		b3PaletteNumber = paletteNumber;
 
