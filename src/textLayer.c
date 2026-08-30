@@ -105,7 +105,7 @@ void b3MakeMenuTopEnd()
 		{
 			WRITE_BYTE_DEF_TO_ASSM(0b01010101, VERA_data0); //Black Horizonal Border
 		}
-		else if(i % 2 == 0)
+		else if (i % 2 == 0)
 		{
 			WRITE_BYTE_DEF_TO_ASSM(0b01101010, VERA_data0); //Black Vertical Border 
 		}
@@ -141,7 +141,7 @@ void b3MakeMenuVertical()
 	SET_VERA_ADDRESS(TILEBASE + MENU_VERTICAL * BYTES_PER_CHARACTER, ADDRESSSEL0, 1);
 	for (i = 0; i < BYTES_PER_CHARACTER; i++)
 	{
-		if(i % 2 == 0)
+		if (i % 2 == 0)
 		{
 			WRITE_BYTE_DEF_TO_ASSM(0b01101010, VERA_data0); //Black Vertical Border 
 		}
@@ -195,7 +195,7 @@ void b3ConvertsOneBitPerPixCharToTwoBitPerPixelChars()
 void b3InitCharset()
 {
 #define ORIGINAL_CHARSET_ADDRESS 0x1f000
-	
+
 
 	int i;
 	//printf("Initializing CharSet. . .\n");
@@ -232,9 +232,9 @@ void b6TestCharset()
 {
 	int i;
 	byte j;
-	byte* veraDcVideo = (byte*) VERA_DCVIDEO;
+	byte* veraDcVideo = (byte*)VERA_DCVIDEO;
 
-	#define LAYER_1_2_ENABLE 0x31;
+#define LAYER_1_2_ENABLE 0x31;
 
 	*veraDcVideo = LAYER_1_2_ENABLE;
 
@@ -306,12 +306,12 @@ byte b3WrapText(char* line_start, int width) {
 			{
 				*last_space = NEW_LINE;
 			}
-			
+
 			line_start = last_space + 1;
 			last_space = 0;
 			lastBoxLines++;
 
-		    numberOfLines++;
+			numberOfLines++;
 		}
 	}
 
@@ -321,7 +321,7 @@ byte b3WrapText(char* line_start, int width) {
 void b3DrawBorder(byte boxWidth, size_t messageSize)
 {
 	byte i;
-	char* currentCharToWrite = &textBuffer2[0], *charToReadNext;
+	char* currentCharToWrite = &textBuffer2[0], * charToReadNext;
 	int segmentLength;
 	char* leftBarPosition;
 	char delimiter[2];
@@ -348,13 +348,13 @@ void b3DrawBorder(byte boxWidth, size_t messageSize)
 	*currentCharToWrite++ = NEW_LINE;
 
 	charToReadNext = strtok(textBuffer1, delimiter);
-	
+
 	do
 	{
 		leftBarPosition = currentCharToWrite;
 		*currentCharToWrite++ = LEFT_BORDER;
 
-	    segmentLength = strlen(charToReadNext);
+		segmentLength = strlen(charToReadNext);
 		memcpy(currentCharToWrite, charToReadNext, segmentLength);
 
 		currentCharToWrite += segmentLength;
@@ -412,7 +412,7 @@ void b3DisplayMessageBox(char* message, byte messageBank, byte row, byte col, by
 	byte textWidth = boxWidth;
 	byte numberOfLines = 1;
 	size_t maxMessageSize = boxWidth ? TEXTBUFFER_SIZE : TEXTBUFFER_SIZE * 2; //If there is no box, we can overflow into buffer 2 for a bigger message.
-		
+
 	currentTextBuffer = textBuffer1;
 
 	lastBoxLines = 1;
@@ -423,7 +423,7 @@ void b3DisplayMessageBox(char* message, byte messageBank, byte row, byte col, by
 	}
 
 	if (messageSize > 1) //Agi sometimes has empty messages. We say greater than 1 because of the terminator
-	{				
+	{
 		displayAddressCopyPaletteTo = displayTextAddressToCopyTo + 1;
 
 #ifdef VERBOSE_DISPLAY_TEXT
@@ -441,7 +441,7 @@ void b3DisplayMessageBox(char* message, byte messageBank, byte row, byte col, by
 		printf("row %d and col is %d", row, col);
 #endif // VERBOSE_DISPLAY_TEXT
 
-		if (message != (char*) textBuffer1)
+		if (message != (char*)textBuffer1)
 		{
 			memCpyBankedBetween((byte*)textBuffer1, TEXT_CODE_BANK, (byte*)message, messageBank, messageSize);
 		}
@@ -455,6 +455,10 @@ void b3DisplayMessageBox(char* message, byte messageBank, byte row, byte col, by
 
 			numberOfLines = b3WrapText(textBuffer1, boxWidth ? textWidth : TILE_LAYER_WIDTH);
 		}
+		else if (boxWidth && messageSize < boxWidth - 4)
+		{
+			boxWidth = messageSize + 2;
+		}
 
 		if (boxWidth)
 		{
@@ -462,7 +466,7 @@ void b3DisplayMessageBox(char* message, byte messageBank, byte row, byte col, by
 			currentTextBuffer = textBuffer2;
 		}
 
-		if(row == AUTO_CALC_ROW)
+		if (row == AUTO_CALC_ROW)
 		{
 			lastBoxStartLine = (TEXT_ROWS / 2 - (numberOfLines + 2) / 2);
 		}
@@ -486,15 +490,15 @@ byte b3SetTextColor(byte foreground, byte background)
 	unsigned int foreColorBytes, backColorBytes;
 	long paletteWriteAddress;
 	byte paletteSlot;
-    PaletteGetResult palleteGetResult;
+	PaletteGetResult palleteGetResult;
 	int textPalette;
 
 	paletteSlot = bFGetPalette(BASE_TEXT_ID + textId, &palleteGetResult);
 
-	#ifdef VERBOSE_SET_PALETTE
+#ifdef VERBOSE_SET_PALETTE
 	printf("fore of %d and back of %d\n", foreground, background);
 	printf("\n1. the palette slot is %d. the get palette result is %d\n", paletteSlot, palleteGetResult);
-    #endif
+#endif
 
 	paletteWriteAddress = PALETTE_START + COLOURS_PER_PALETTE * BYTES_PER_PALETTE_COLOUR * paletteSlot;
 	textPalette = paletteSlot;
@@ -521,9 +525,9 @@ byte b3SetTextColor(byte foreground, byte background)
 		REENABLE_INTERRUPTS();
 	}
 
-	#ifdef VERBOSE_SET_PALETTE
+#ifdef VERBOSE_SET_PALETTE
 	printf("3 the palette slot is %d. the fore color is %p and back is %p\n", paletteSlot, foreColorBytes, backColorBytes);
-    #endif
+#endif
 
 	return paletteSlot;
 }
