@@ -437,7 +437,6 @@ void b3DisplayMessageBox(char* message, byte messageBank, byte row, byte col, by
 		if (messageSize > maxMessageSize)
 		{
 			memCpyBanked((byte*)message + maxMessageSize - 1, (byte*)&terminator, messageBank, 1);
-			printf("warning overflow on message. the message size is %d.\n", messageSize);
 		}
 
 #ifdef VERBOSE_DISPLAY_TEXT
