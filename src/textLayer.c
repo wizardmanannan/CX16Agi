@@ -288,16 +288,16 @@ void b3FillChar(byte startLine, byte endLine, byte paletteNumber, byte charToFil
 
 extern byte lastBoxLines;
 extern byte lastBoxStartLine;
-
 //Thanks to https://www.rosettacode.org/wiki/Word_wrap#In-place_greedy
 //Agi text does not have newlines and requires the programmer to manually wrap the text
-byte b3WrapText(char* line_start, int width) {
+byte b3WrapText(char* line_start, int width, byte* maxWidth) {
 	char* last_space = 0;
 	char* p;
 	byte numberOfLines = 1;
+	*maxWidth = 0;
 
 	for (p = line_start; *p; p++) {
-		if (*p == ' ') {
+		if (*p == ' ' && !(p - line_start > width)) { //Second side of the and prevents us from regarding a space as the last space, if that space would overflow the box.
 			last_space = p;
 		}
 
@@ -305,6 +305,10 @@ byte b3WrapText(char* line_start, int width) {
 			if (*p != NEW_LINE)
 			{
 				*last_space = NEW_LINE;
+				if(*maxWidth < last_space - line_start)
+				{
+					*maxWidth = (last_space - line_start) + 1;
+				}
 			}
 
 			line_start = last_space + 1;
@@ -410,7 +414,7 @@ void b3DisplayMessageBox(char* message, byte messageBank, byte row, byte col, by
 	size_t messageSize = strLenBanked(message, messageBank) + 1;
 	long displayAddressCopyPaletteTo;
 	byte textWidth = boxWidth;
-	byte numberOfLines = 1;
+	byte numberOfLines = 1, maxWidth;
 	size_t maxMessageSize = boxWidth ? TEXTBUFFER_SIZE : TEXTBUFFER_SIZE * 2; //If there is no box, we can overflow into buffer 2 for a bigger message.
 
 	currentTextBuffer = textBuffer1;
@@ -453,11 +457,16 @@ void b3DisplayMessageBox(char* message, byte messageBank, byte row, byte col, by
 				textWidth = boxWidth - 4;
 			}
 
-			numberOfLines = b3WrapText(textBuffer1, boxWidth ? textWidth : TILE_LAYER_WIDTH);
+			numberOfLines = b3WrapText(textBuffer1, boxWidth ? textWidth : TILE_LAYER_WIDTH, &maxWidth);
+			
+			if(boxWidth && maxWidth)
+			{
+				boxWidth = maxWidth + 2;
+			}
 		}
 		else if (boxWidth && messageSize < boxWidth - 4)
 		{
-			boxWidth = messageSize + 2;
+			boxWidth = messageSize + 3;
 		}
 
 		if (boxWidth)
