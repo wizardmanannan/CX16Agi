@@ -1538,12 +1538,12 @@ void b3PrintMessageInTextbox(byte messNum, byte x, byte y, byte length)
 
 void b3Print() // 1, 00 
 {
-	b3PrintMessageInTextbox(loadAndIncWinCode(), DEFAULT_TEXTBOX_X, AUTO_CALC_ROW, DEFAULT_BOX_WIDTH);
+	b3PrintMessageInTextbox(loadAndIncWinCode(), AUTO_CALC_COLUMN, AUTO_CALC_ROW, DEFAULT_BOX_WIDTH);
 }
 
 void b3Print_v() // 1, 0x80 
 {
-	b3PrintMessageInTextbox(var[loadAndIncWinCode()], DEFAULT_TEXTBOX_X, AUTO_CALC_ROW, DEFAULT_BOX_WIDTH);
+	b3PrintMessageInTextbox(var[loadAndIncWinCode()], AUTO_CALC_COLUMN, AUTO_CALC_ROW, DEFAULT_BOX_WIDTH);
 }
 
 //A helper function not a command

@@ -465,7 +465,7 @@ void b3DisplayMessageBox(char* message, byte messageBank, byte row, byte col, by
 		}
 		else if (boxWidth && messageSize < boxWidth - 4)
 		{
-			boxWidth = messageSize + 3;
+			boxWidth = messageSize + 2;
 		}
 
 		if (boxWidth)
@@ -481,6 +481,11 @@ void b3DisplayMessageBox(char* message, byte messageBank, byte row, byte col, by
 		else
 		{
 			lastBoxStartLine = row;
+		}
+
+		if(col == AUTO_CALC_COLUMN)
+		{
+			col = MAX_CHAR_ACROSS / 2 - boxWidth / 2;
 		}
 
 		displayTextAddressToCopyTo = MAPBASE + (FIRST_ROW + lastBoxStartLine - 1) * TILE_LAYER_BYTES_PER_ROW + col * BYTES_PER_CELL;
