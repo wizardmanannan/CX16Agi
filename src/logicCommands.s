@@ -798,7 +798,7 @@ jmpTableCommands2:
 .addr b4Obj_status_vCCall
 .addr b5QuitCCall
 .addr b1NoOp_0
-.addr _b5Pause
+.addr b5PauseCCall
 .addr b1NoOp_0
 .addr b1NoOp_0
 .addr b1NoOp_0
