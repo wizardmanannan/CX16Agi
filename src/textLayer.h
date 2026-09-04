@@ -58,7 +58,7 @@
 #define TEXTBOX_PALETTE_NUMBER 1
 
 
-extern byte lastBoxLines; //Must be set manually if you display a textbox with wrapping turned off
+extern byte b3LastBoxLines; //Must be set manually if you display a textbox with wrapping turned off
 extern byte lastBoxStartLine;
 
 #pragma wrapped-call (push, trampoline, TEXT_CODE_BANK)

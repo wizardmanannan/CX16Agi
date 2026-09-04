@@ -311,7 +311,7 @@ byte b3WrapText(char* line_start, int width, byte* maxWidth) {
 
 			line_start = last_space + 1;
 			last_space = 0;
-			lastBoxLines++;
+			b3LastBoxLines++;
 
 			numberOfLines++;
 		}
@@ -417,11 +417,11 @@ void b3DisplayMessageBox(char* message, byte messageBank, byte row, byte col, by
 
 	currentTextBuffer = textBuffer1;
 
-	lastBoxLines = 1;
+	b3LastBoxLines = 1;
 
 	if (boxWidth)
 	{
-		lastBoxLines += 4; //Account for the top and bottom border, plus padding at the top at the bottom
+		b3LastBoxLines+= 4; //Account for the top and bottom border, plus padding at the top at the bottom
 	}
 
 	if (messageSize > 1) //Agi sometimes has empty messages. We say greater than 1 because of the terminator
@@ -549,10 +549,10 @@ byte b3SetTextColor(byte foreground, byte background)
 void b3ClearLastPlacedText()
 {
 #ifdef VERBOSE_DISPLAY_TEXT
-	printf("Trying to clear at start line %d number of lines %d end line %d \n", lastBoxStartLine, lastBoxLines, lastBoxStartLine + lastBoxLines - 1);
+	printf("Trying to clear at start line %d number of lines %d end line %d \n", lastBoxStartLine, b3LastBoxLines, lastBoxStartLine + lastBoxLines - 1);
 #endif
 
-	b3FillChar(lastBoxStartLine, lastBoxStartLine + lastBoxLines - 1, TEXTBOX_PALETTE_NUMBER, TRANSPARENT_CHAR);
+	b3FillChar(lastBoxStartLine, lastBoxStartLine + b3LastBoxLines - 1, TEXTBOX_PALETTE_NUMBER, TRANSPARENT_CHAR);
 }
 
 #pragma code-name (pop)

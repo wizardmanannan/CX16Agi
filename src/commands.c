@@ -1953,7 +1953,7 @@ void b5Pause() // 0, 0x00
 	byte ch, pauseBoxLines = 7;
 
 	b3DisplayMessageBox(B5_PAUSE_MESSAGE, COMMAND_MESSAGES_BANK, AUTO_CALC_ROW, AUTO_CALC_COLUMN,  TEXTBOX_PALETTE_NUMBER, PAUSE_BOX_SIZE, FALSE);
-	memCpyBanked(&lastBoxLines, &pauseBoxLines, TEXT_CODE_BANK, 1);
+	memCpyBanked(&b3LastBoxLines, &pauseBoxLines, TEXT_CODE_BANK, 1);
 	do {
 			GET_IN(ch);
 			ch >> 8;
