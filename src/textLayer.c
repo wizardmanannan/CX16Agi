@@ -297,7 +297,7 @@ byte b3WrapText(char* line_start, int width, byte* maxWidth) {
 	*maxWidth = 0;
 
 	for (p = line_start; *p; p++) {
-		if (*p == ' ' && !(p - line_start > width)) { //Second side of the and prevents us from regarding a space as the last space, if that space would overflow the box.
+		if (*p == ' ') {
 			last_space = p;
 		}
 
@@ -305,7 +305,7 @@ byte b3WrapText(char* line_start, int width, byte* maxWidth) {
 			if (*p != NEW_LINE)
 			{
 				*last_space = NEW_LINE;
-				if(*maxWidth < last_space - line_start)
+				if(*maxWidth < (last_space - line_start) + 1)
 				{
 					*maxWidth = (last_space - line_start) + 1;
 				}
