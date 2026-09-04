@@ -13,6 +13,8 @@ boolean charSetInited = FALSE;
 #pragma bss-name (push, "BANKRAM03")
 byte _currentForegroundColour;
 byte _currentBackgroundColour;
+byte b3LastBoxLines;
+byte b3LastBoxStartLine;
 #pragma bss-name (pop)
 
 #pragma code-name (push, "BANKRAM03")
@@ -477,11 +479,11 @@ void b3DisplayMessageBox(char* message, byte messageBank, byte row, byte col, by
 
 		if (row == AUTO_CALC_ROW)
 		{
-			lastBoxStartLine = (TEXT_ROWS / 2 - (numberOfLines + 2) / 2);
+			b3LastBoxStartLine = (TEXT_ROWS / 2 - (numberOfLines + 2) / 2);
 		}
 		else
 		{
-			lastBoxStartLine = row;
+			b3LastBoxStartLine = row;
 		}
 
 		if (col == AUTO_CALC_COLUMN)
@@ -489,8 +491,8 @@ void b3DisplayMessageBox(char* message, byte messageBank, byte row, byte col, by
 			col = MAX_CHAR_ACROSS / 2 - boxWidth / 2;
 		}
 
-		displayTextAddressToCopyTo = MAPBASE + (FIRST_ROW + lastBoxStartLine - 1) * TILE_LAYER_BYTES_PER_ROW + col * BYTES_PER_CELL;
-		b3PaletteAddress = MAPBASE + (FIRST_ROW + lastBoxStartLine - 1) * TILE_LAYER_BYTES_PER_ROW + 1; //We will set the same palette for the whole row
+		displayTextAddressToCopyTo = MAPBASE + (FIRST_ROW + b3LastBoxStartLine - 1) * TILE_LAYER_BYTES_PER_ROW + col * BYTES_PER_CELL;
+		b3PaletteAddress = MAPBASE + (FIRST_ROW + b3LastBoxStartLine - 1) * TILE_LAYER_BYTES_PER_ROW + 1; //We will set the same palette for the whole row
 		b3PaletteRows = numberOfLines;
 		b3PaletteNumber = paletteNumber;
 
@@ -552,7 +554,7 @@ void b3ClearLastPlacedText()
 	printf("Trying to clear at start line %d number of lines %d end line %d \n", lastBoxStartLine, b3LastBoxLines, lastBoxStartLine + lastBoxLines - 1);
 #endif
 
-	b3FillChar(lastBoxStartLine, lastBoxStartLine + b3LastBoxLines - 1, TEXTBOX_PALETTE_NUMBER, TRANSPARENT_CHAR);
+	b3FillChar(b3LastBoxStartLine, b3LastBoxStartLine + b3LastBoxLines - 1, TEXTBOX_PALETTE_NUMBER, TRANSPARENT_CHAR);
 }
 
 #pragma code-name (pop)

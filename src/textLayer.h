@@ -59,7 +59,7 @@
 
 
 extern byte b3LastBoxLines; //Must be set manually if you display a textbox with wrapping turned off
-extern byte lastBoxStartLine;
+extern byte b3LastBoxStartLine;
 
 #pragma wrapped-call (push, trampoline, TEXT_CODE_BANK)
 void b3InitLayer1Mapbase();

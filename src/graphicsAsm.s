@@ -9,8 +9,7 @@ GRAPHICS_INC = 1
 .include "lineDrawing.s"
 
 .segment "BANKRAM03"
-_b3LastBoxLines: .byte $0 ; Wish I could have declared these in textLayer.c, but put it here to ensure it is in bank 3
-_lastBoxStartLine: .byte $0
+
 
 
 _textBuffer1: .res 1000

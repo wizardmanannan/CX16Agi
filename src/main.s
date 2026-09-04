@@ -37,8 +37,6 @@
     .export _b6SetAndWaitForIrqStateAsm
     .export _displayTextAddressToCopyTo
     .export _vSyncCounter
-    .export _b3LastBoxLines
-    .export _lastBoxStartLine
     .export _textBuffer1
     .export _textBuffer2
     .export _currentTextBuffer
