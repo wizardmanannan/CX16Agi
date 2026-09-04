@@ -1946,12 +1946,20 @@ void b5Quit() // 1, 0x00                     /* 0 args for AGI version 2_089 */
 
 void b5Pause() // 0, 0x00 
 {
+
+
 #define PAUSE_BOX_SIZE 27
-	while (key[KEY_ENTER]) { /* Wait */ }
+
+	byte ch, pauseBoxLines = 7;
+
 	b3DisplayMessageBox(B5_PAUSE_MESSAGE, COMMAND_MESSAGES_BANK, AUTO_CALC_ROW, AUTO_CALC_COLUMN,  TEXTBOX_PALETTE_NUMBER, PAUSE_BOX_SIZE, FALSE);
-	while (!key[KEY_ENTER]) { /* Wait */ }
-	b6ShowPicture();
-	return;
+	memCpyBanked(&lastBoxLines, &pauseBoxLines, TEXT_CODE_BANK, 1);
+	do {
+			GET_IN(ch);
+			ch >> 8;
+	} while ((ch != KEY_ESC) && (ch != KEY_ENTER));
+
+	b3ClearLastPlacedText();
 }
 
 

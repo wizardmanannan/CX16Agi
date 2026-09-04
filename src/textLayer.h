@@ -57,6 +57,10 @@
 
 #define TEXTBOX_PALETTE_NUMBER 1
 
+
+extern byte lastBoxLines; //Must be set manually if you display a textbox with wrapping turned off
+extern byte lastBoxStartLine;
+
 #pragma wrapped-call (push, trampoline, TEXT_CODE_BANK)
 void b3InitLayer1Mapbase();
 void b3DisplayMessageBox(char* message, byte messageBank, byte row, byte col, byte paletteNumber, byte boxWidth, boolean wrap);

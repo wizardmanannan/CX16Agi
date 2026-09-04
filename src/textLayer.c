@@ -286,8 +286,6 @@ void b3FillChar(byte startLine, byte endLine, byte paletteNumber, byte charToFil
 	}
 }
 
-extern byte lastBoxLines;
-extern byte lastBoxStartLine;
 //Thanks to https://www.rosettacode.org/wiki/Word_wrap#In-place_greedy
 //Agi text does not have newlines and requires the programmer to manually wrap the text
 byte b3WrapText(char* line_start, int width, byte* maxWidth) {
