@@ -1487,7 +1487,7 @@ boolean b3CharIsIn(char testChar, char* testString)
 
 #pragma wrapped-call (push, trampoline, TEXT_CODE_BANK)
 //Helper function not a command. Note there is an identical function on bank 4
-void b3PrintMessageInTextbox(byte messNum, byte x, byte y, byte length)
+void b3PrintMessageInTextbox(byte messNum, byte x, byte y, byte length, boolean wrap)
 {
 #define NO_KEYS_TO_WAIT 2
 
@@ -1513,7 +1513,7 @@ void b3PrintMessageInTextbox(byte messNum, byte x, byte y, byte length)
 
 	messagePointer = getMessagePointer(currentLog, messNum - 1);
 
-	b3DisplayMessageBox(messagePointer, logicFile.messageBank, y, x, TEXTBOX_PALETTE_NUMBER, length);
+	b3DisplayMessageBox(messagePointer, logicFile.messageBank, y, x, TEXTBOX_PALETTE_NUMBER, length, wrap);
 
 	if (timeoutFlagVal)
 	{
@@ -1538,12 +1538,12 @@ void b3PrintMessageInTextbox(byte messNum, byte x, byte y, byte length)
 
 void b3Print() // 1, 00 
 {
-	b3PrintMessageInTextbox(loadAndIncWinCode(), AUTO_CALC_COLUMN, AUTO_CALC_ROW, DEFAULT_BOX_WIDTH);
+	b3PrintMessageInTextbox(loadAndIncWinCode(), AUTO_CALC_COLUMN, AUTO_CALC_ROW, DEFAULT_BOX_WIDTH, TRUE);
 }
 
 void b3Print_v() // 1, 0x80 
 {
-	b3PrintMessageInTextbox(var[loadAndIncWinCode()], AUTO_CALC_COLUMN, AUTO_CALC_ROW, DEFAULT_BOX_WIDTH);
+	b3PrintMessageInTextbox(var[loadAndIncWinCode()], AUTO_CALC_COLUMN, AUTO_CALC_ROW, DEFAULT_BOX_WIDTH, TRUE);
 }
 
 //A helper function not a command
@@ -1563,7 +1563,7 @@ void b3DisplayWithoutTextbox(byte row, byte col, byte messNum)
 	printf("the messages live at %p on bank %p\n", logicFile.messages, logicFile.messageBank);
 #endif
 	//b3ProcessString(messagePointer, 0, tempString);
-	b3DisplayMessageBox(messagePointer, logicFile.messageBank, row, col, b3SetTextColor(_currentForegroundColour, _currentBackgroundColour), 0);
+	b3DisplayMessageBox(messagePointer, logicFile.messageBank, row, col, b3SetTextColor(_currentForegroundColour, _currentBackgroundColour), 0, FALSE);
 	return;
 }
 
@@ -1924,7 +1924,7 @@ void b5Quit() // 1, 0x00                     /* 0 args for AGI version 2_089 */
 	else { /* Prompt for exit */
 #define QUIT_BOX_SIZE 15
 		//TODO: Fix display of quit message
-		b3DisplayMessageBox(B5_QUIT_MESSAGE, COMMAND_MESSAGES_BANK, AUTO_CALC_ROW, DEFAULT_TEXTBOX_X,  TEXTBOX_PALETTE_NUMBER, DEFAULT_BOX_WIDTH);
+		b3DisplayMessageBox(B5_QUIT_MESSAGE, COMMAND_MESSAGES_BANK, AUTO_CALC_ROW, AUTO_CALC_COLUMN,  TEXTBOX_PALETTE_NUMBER, DEFAULT_BOX_WIDTH, FALSE);
 		//b3PrintMessageInTextbox(loadAndIncWinCode(), DEFAULT_TEXTBOX_X, DEFAULT_TEXTBOX_Y, DEFAULT_BOX_WIDTH);
 
 		
@@ -1946,9 +1946,9 @@ void b5Quit() // 1, 0x00                     /* 0 args for AGI version 2_089 */
 
 void b5Pause() // 0, 0x00 
 {
-#define PAUSE_BOX_SIZE 15
+#define PAUSE_BOX_SIZE 27
 	while (key[KEY_ENTER]) { /* Wait */ }
-	b3DisplayMessageBox(B5_PAUSE_MESSAGE, COMMAND_MESSAGES_BANK, AUTO_CALC_ROW, MAX_CHAR_ACROSS / 2, TEXTBOX_PALETTE_NUMBER, PAUSE_BOX_SIZE);
+	b3DisplayMessageBox(B5_PAUSE_MESSAGE, COMMAND_MESSAGES_BANK, AUTO_CALC_ROW, AUTO_CALC_COLUMN,  TEXTBOX_PALETTE_NUMBER, PAUSE_BOX_SIZE, FALSE);
 	while (!key[KEY_ENTER]) { /* Wait */ }
 	b6ShowPicture();
 	return;
@@ -1976,7 +1976,7 @@ void b5Version() // 0, 0x00
 {
 #define VERSION_BOX_SIZE 15
 	while (key[KEY_ENTER] || key[KEY_ESC]) { /* Wait */ }
-	b3DisplayMessageBox(B5_VERSION_MESSAGE, COMMAND_MESSAGES_BANK, AUTO_CALC_ROW, MAX_CHAR_ACROSS / 2, TEXTBOX_PALETTE_NUMBER, VERSION_BOX_SIZE);
+	b3DisplayMessageBox(B5_VERSION_MESSAGE, COMMAND_MESSAGES_BANK, AUTO_CALC_ROW, MAX_CHAR_ACROSS / 2, TEXTBOX_PALETTE_NUMBER, VERSION_BOX_SIZE, FALSE);
 	while (!key[KEY_ENTER] && !key[KEY_ESC]) { /* Wait */ }
 	b6ShowPicture();
 	return;
@@ -2078,12 +2078,12 @@ void b5Reposition_to_v() // 3, 0x60
 
 void b5Print_at() // 4, 0x00           /* 3 args for AGI versions before */
 {
-	b3PrintMessageInTextbox(loadAndIncWinCode(), loadAndIncWinCode(), loadAndIncWinCode(), loadAndIncWinCode());
+	b3PrintMessageInTextbox(loadAndIncWinCode(), loadAndIncWinCode(), loadAndIncWinCode(), loadAndIncWinCode(), TRUE);
 }
 
 void b5Print_at_v() // 4, 0x80         /* 2_440 (maybe laterz) */
 {
-	b3PrintMessageInTextbox(var[loadAndIncWinCode()], loadAndIncWinCode(), loadAndIncWinCode(), loadAndIncWinCode());
+	b3PrintMessageInTextbox(var[loadAndIncWinCode()], loadAndIncWinCode(), loadAndIncWinCode(), loadAndIncWinCode(), TRUE);
 }
 
 void b5Discard_view_v() // 1, 0x80 

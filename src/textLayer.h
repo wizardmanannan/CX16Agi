@@ -59,7 +59,7 @@
 
 #pragma wrapped-call (push, trampoline, TEXT_CODE_BANK)
 void b3InitLayer1Mapbase();
-void b3DisplayMessageBox(char* message, byte messageBank, byte row, byte col, byte paletteNumber, byte boxWidth);
+void b3DisplayMessageBox(char* message, byte messageBank, byte row, byte col, byte paletteNumber, byte boxWidth, boolean wrap);
 void b3FillChar(byte startLine, byte endLine, byte paletteNumber, byte charToFill);
 void b3ClearLastPlacedText();
 byte b3SetTextColor(byte foreground, byte background);

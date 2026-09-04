@@ -276,7 +276,7 @@ void b3FillChar(byte startLine, byte endLine, byte paletteNumber, byte charToFil
 			|| i == endLine) // Minus one so the terminator can fit in
 		{
 			*clearBuffer = '\0';
-			b3DisplayMessageBox(textBuffer1, TEXT_CODE_BANK, startLine, 0, paletteNumber, 0);
+			b3DisplayMessageBox(textBuffer1, TEXT_CODE_BANK, startLine, 0, paletteNumber, 0, TRUE);
 		}
 		else
 		{
@@ -407,7 +407,7 @@ extern byte b3PaletteNumber;
 
 //Box width is 0 for text that is not in a box, or the width of the box otherwise
 //Supports copying from banks or putting data directly into textbuffer, which is on bank 3
-void b3DisplayMessageBox(char* message, byte messageBank, byte row, byte col, byte paletteNumber, byte boxWidth)
+void b3DisplayMessageBox(char* message, byte messageBank, byte row, byte col, byte paletteNumber, byte boxWidth, boolean wrap)
 {
 	int i;
 	char terminator = 0;
@@ -451,16 +451,19 @@ void b3DisplayMessageBox(char* message, byte messageBank, byte row, byte col, by
 
 		if (messageSize - 1 > TILE_LAYER_WIDTH / 2)
 		{
-			if (boxWidth)
+			if (wrap)
 			{
-				textWidth = boxWidth - 4;
-			}
+				if (boxWidth)
+				{
+					textWidth = boxWidth - 4;
+				}
 
-			numberOfLines = b3WrapText(textBuffer1, boxWidth ? textWidth : TILE_LAYER_WIDTH, &maxWidth);
-			
-			if(boxWidth && maxWidth)
-			{
-				boxWidth = maxWidth + 2;
+				numberOfLines = b3WrapText(textBuffer1, boxWidth ? textWidth : TILE_LAYER_WIDTH, &maxWidth);
+
+				if (boxWidth && maxWidth)
+				{
+					boxWidth = maxWidth + 2;
+				}
 			}
 		}
 		else if (boxWidth && messageSize < boxWidth - 4)
@@ -483,7 +486,7 @@ void b3DisplayMessageBox(char* message, byte messageBank, byte row, byte col, by
 			lastBoxStartLine = row;
 		}
 
-		if(col == AUTO_CALC_COLUMN)
+		if (col == AUTO_CALC_COLUMN)
 		{
 			col = MAX_CHAR_ACROSS / 2 - boxWidth / 2;
 		}
