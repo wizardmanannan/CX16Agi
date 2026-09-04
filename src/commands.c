@@ -1471,7 +1471,7 @@ void b3Play_sound() // 2, 00  sound() renamed to avoid clash
 
 void b3Stop_sound() // 0, 0x00 
 {
-	return;
+	bBStopSound();
 }
 
 boolean b3CharIsIn(char testChar, char* testString)
@@ -1951,6 +1951,8 @@ void b5Pause() // 0, 0x00
 #define PAUSE_BOX_SIZE 27
 
 	byte ch, pauseBoxLines = 7;
+
+	bBStopSound();
 
 	b3DisplayMessageBox(B5_PAUSE_MESSAGE, COMMAND_MESSAGES_BANK, AUTO_CALC_ROW, AUTO_CALC_COLUMN,  TEXTBOX_PALETTE_NUMBER, PAUSE_BOX_SIZE, FALSE);
 	memCpyBanked(&b3LastBoxLines, &pauseBoxLines, TEXT_CODE_BANK, 1);
