@@ -11,8 +11,8 @@ int byteCounter = 0;
 
 boolean charSetInited = FALSE;
 #pragma bss-name (push, "BANKRAM03")
-byte _currentForegroundColour;
-byte _currentBackgroundColour;
+byte b3CurrentForegroundColour;
+byte b3CurrentBackgroundColour;
 byte b3LastBoxLines;
 byte b3LastBoxStartLine;
 #pragma bss-name (pop)
@@ -519,8 +519,8 @@ byte b3SetTextColor(byte foreground, byte background)
 	paletteWriteAddress = PALETTE_START + COLOURS_PER_PALETTE * BYTES_PER_PALETTE_COLOUR * paletteSlot;
 	textPalette = paletteSlot;
 
-	_currentBackgroundColour = background;
-	_currentForegroundColour = foreground;
+	b3CurrentBackgroundColour = background;
+	b3CurrentForegroundColour = foreground;
 
 	if (palleteGetResult == Allocated)
 	{

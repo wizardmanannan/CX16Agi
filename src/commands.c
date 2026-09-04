@@ -1563,7 +1563,7 @@ void b3DisplayWithoutTextbox(byte row, byte col, byte messNum)
 	printf("the messages live at %p on bank %p\n", logicFile.messages, logicFile.messageBank);
 #endif
 	//b3ProcessString(messagePointer, 0, tempString);
-	b3DisplayMessageBox(messagePointer, logicFile.messageBank, row, col, b3SetTextColor(_currentForegroundColour, _currentBackgroundColour), 0, FALSE);
+	b3DisplayMessageBox(messagePointer, logicFile.messageBank, row, col, b3SetTextColor(b3CurrentForegroundColour, b3CurrentBackgroundColour), 0, FALSE);
 	return;
 }
 

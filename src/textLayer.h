@@ -72,7 +72,7 @@ byte b3SetTextColor(byte foreground, byte background);
 extern char textBuffer1[TEXTBUFFER_SIZE];
 extern char textBuffer2[TEXTBUFFER_SIZE];
 
-extern byte _currentForegroundColour;
-extern byte _currentBackgroundColour;
+extern byte b3CurrentForegroundColour;
+extern byte b3CurrentBackgroundColour;
 
 #endif
