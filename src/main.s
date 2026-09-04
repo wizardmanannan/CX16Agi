@@ -37,8 +37,7 @@
     .export _b6SetAndWaitForIrqStateAsm
     .export _displayTextAddressToCopyTo
     .export _vSyncCounter
-    .export _textBuffer1
-    .export _textBuffer2
+
     .export _currentTextBuffer
     .export _trampoline
     .export _viewHeaderBuffer

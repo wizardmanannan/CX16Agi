@@ -8,18 +8,7 @@ GRAPHICS_INC = 1
 .include "irqAsm.s"
 .include "lineDrawing.s"
 
-.segment "BANKRAM03"
-
-
-
-_textBuffer1: .res 1000
-_textBuffer2: .res 1000
-
-
- .segment "BANKRAM06"
-
-
-
+.segment "BANKRAM06"
 .import _b3InitCharset
 .import pushax
 .import pusha

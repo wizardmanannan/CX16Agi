@@ -69,8 +69,8 @@ void b3ClearLastPlacedText();
 byte b3SetTextColor(byte foreground, byte background);
 #pragma wrapped-call(pop)
 
-extern char textBuffer1[TEXTBUFFER_SIZE];
-extern char textBuffer2[TEXTBUFFER_SIZE];
+extern char b3TextBuffer1[TEXTBUFFER_SIZE];
+extern char b3TextBuffer2[TEXTBUFFER_SIZE];
 
 extern byte b3CurrentForegroundColour;
 extern byte b3CurrentBackgroundColour;

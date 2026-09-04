@@ -15,6 +15,8 @@ byte b3CurrentForegroundColour;
 byte b3CurrentBackgroundColour;
 byte b3LastBoxLines;
 byte b3LastBoxStartLine;
+char b3TextBuffer1[TEXTBUFFER_SIZE];
+char b3TextBuffer2[TEXTBUFFER_SIZE];
 #pragma bss-name (pop)
 
 #pragma code-name (push, "BANKRAM03")
@@ -263,7 +265,7 @@ void b3FillChar(byte startLine, byte endLine, byte paletteNumber, byte charToFil
 {
 	byte i, j;
 
-	char* clearBuffer = textBuffer1;
+	char* clearBuffer = b3TextBuffer1;
 
 	for (i = startLine; i <= endLine; i++)
 	{
@@ -278,7 +280,7 @@ void b3FillChar(byte startLine, byte endLine, byte paletteNumber, byte charToFil
 			|| i == endLine) // Minus one so the terminator can fit in
 		{
 			*clearBuffer = '\0';
-			b3DisplayMessageBox(textBuffer1, TEXT_CODE_BANK, startLine, 0, paletteNumber, 0, TRUE);
+			b3DisplayMessageBox(b3TextBuffer1, TEXT_CODE_BANK, startLine, 0, paletteNumber, 0, TRUE);
 		}
 		else
 		{
@@ -325,7 +327,7 @@ byte b3WrapText(char* line_start, int width, byte* maxWidth) {
 void b3DrawBorder(byte boxWidth, size_t messageSize)
 {
 	byte i;
-	char* currentCharToWrite = &textBuffer2[0], * charToReadNext;
+	char* currentCharToWrite = &b3TextBuffer2[0], * charToReadNext;
 	int segmentLength;
 	char* leftBarPosition;
 	char delimiter[2];
@@ -351,7 +353,7 @@ void b3DrawBorder(byte boxWidth, size_t messageSize)
 
 	*currentCharToWrite++ = NEW_LINE;
 
-	charToReadNext = strtok(textBuffer1, delimiter);
+	charToReadNext = strtok(b3TextBuffer1, delimiter);
 
 	do
 	{
@@ -393,7 +395,7 @@ void b3DrawBorder(byte boxWidth, size_t messageSize)
 	}
 	*currentCharToWrite++ = '\0';
 
-	if (currentCharToWrite > &textBuffer2[0] + TEXTBUFFER_SIZE - 1)
+	if (currentCharToWrite > &b3TextBuffer2[0] + TEXTBUFFER_SIZE - 1)
 	{
 		printf("Bounds check fail. Boxing function");
 	}
@@ -417,7 +419,7 @@ void b3DisplayMessageBox(char* message, byte messageBank, byte row, byte col, by
 	byte numberOfLines = 1, maxWidth;
 	size_t maxMessageSize = boxWidth ? TEXTBUFFER_SIZE : TEXTBUFFER_SIZE * 2; //If there is no box, we can overflow into buffer 2 for a bigger message.
 
-	currentTextBuffer = textBuffer1;
+	currentTextBuffer = b3TextBuffer1;
 
 	b3LastBoxLines = 1;
 
@@ -444,9 +446,9 @@ void b3DisplayMessageBox(char* message, byte messageBank, byte row, byte col, by
 		printf("row %d and col is %d", row, col);
 #endif // VERBOSE_DISPLAY_TEXT
 
-		if (message != (char*)textBuffer1)
+		if (message != (char*)b3TextBuffer1)
 		{
-			memCpyBankedBetween((byte*)textBuffer1, TEXT_CODE_BANK, (byte*)message, messageBank, messageSize);
+			memCpyBankedBetween((byte*)b3TextBuffer1, TEXT_CODE_BANK, (byte*)message, messageBank, messageSize);
 		}
 
 		if (messageSize - 1 > TILE_LAYER_WIDTH / 2)
@@ -458,7 +460,7 @@ void b3DisplayMessageBox(char* message, byte messageBank, byte row, byte col, by
 					textWidth = boxWidth - 4;
 				}
 
-				numberOfLines = b3WrapText(textBuffer1, boxWidth ? textWidth : TILE_LAYER_WIDTH, &maxWidth);
+				numberOfLines = b3WrapText(b3TextBuffer1, boxWidth ? textWidth : TILE_LAYER_WIDTH, &maxWidth);
 
 				if (boxWidth && maxWidth)
 				{
@@ -474,7 +476,7 @@ void b3DisplayMessageBox(char* message, byte messageBank, byte row, byte col, by
 		if (boxWidth)
 		{
 			b3DrawBorder(boxWidth - 2, messageSize);
-			currentTextBuffer = textBuffer2;
+			currentTextBuffer = b3TextBuffer2;
 		}
 
 		if (row == AUTO_CALC_ROW)
