@@ -226,6 +226,12 @@ void b6Interpret()
 
 
         b9AnimateObjects();
+
+        if(!flag[9])
+        {
+            bBStopSound();
+        }
+
     } while (hasEnteredNewRoom);
 }
 

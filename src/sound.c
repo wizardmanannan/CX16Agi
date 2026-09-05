@@ -672,6 +672,13 @@ void bBPlaySound(byte soundNum, byte endSoundFlag)
 
 	asm("sei"); // Disable interrupts to initialize sound playback safely
 
+	if(!flag[9])
+	{
+		flag[endSoundFlag] = TRUE;
+		return;
+	}
+
+
 	// Reset tick counters for all channels
 	bBCh1Ticks = 0;
 	bBCh2Ticks = 0;
@@ -700,12 +707,30 @@ void bBPlaySound(byte soundNum, byte endSoundFlag)
 	REENABLE_INTERRUPTS(); // Re-enable interrupts for playback
 }
 
+boolean bBIsPlayingNoInterupts()
+{
+	boolean soundPlaying = FALSE;	
+	byte i;
+
+	for(i = 0; i < NO_CHANNELS && !soundPlaying; i++)
+	{
+		soundPlaying = bBIsPlaying[i];
+	}
+
+	return soundPlaying;
+}
+
 // Stops current playing sound, clears PSG state, and cancels playing flags.
 void bBStopSound()
 {
 	asm("sei");         // Disable interrupts to safely stop sound
-	bBPsgClear();       // Clear PSG sound generator state
-	memset(bBIsPlaying, FALSE, NO_CHANNELS); // Mark all channels as not playing
+	
+	if(bBIsPlayingNoInterupts())
+	{
+		bBPsgClear();       // Clear PSG sound generator state
+		memset(bBIsPlaying, FALSE, NO_CHANNELS); // Mark all channels as not playing
+		flag[soundEndFlag] = TRUE;
+	}
 	REENABLE_INTERRUPTS(); // Re-enable interrupts after sound stop
 }
 
