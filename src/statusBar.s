@@ -17,6 +17,7 @@ SCORE_TO_SOUND_PADDING = 20             ; Padding spaces between score and sound
 .segment "ZEROPAGE"
 TEXT_TO_PAD_MAX_SCORE: .byte $0         ; Maximum padding needed for score display
 LAST_PRINTED_SCORE: .byte $0            ; Last score value printed (used to avoid unnecessary redraws)
+LAST_SOUND_ON_FLAG: .byte $0
 .segment "BANKRAM10"
 
 ; ===================================================================
@@ -212,6 +213,10 @@ ldy #SCORE_VAR
 GET_VAR_NON_INTERPRETER                 ; Get current score
 cmp LAST_PRINTED_SCORE                  ; Has score changed?
 bne @displayStatusBar                   ; if (score != LAST_PRINTED_SCORE)
+ldy #SOUND_ON_FLAG
+GET_FLAG_NON_INTERPRETER STATUS_BAR_SREG
+cmp LAST_SOUND_ON_FLAG
+bne @displayStatusBar
 rts                                     ; Score unchanged → no need to redraw
 
 @displayStatusBar:
@@ -336,8 +341,9 @@ lda #>sound
 sta TEXT_TO_PRINT + 1
 jsr b10PrintStatusBarString
 
-ldy #SOUND_VAR 
+ldy #SOUND_ON_FLAG 
 GET_FLAG_NON_INTERPRETER STATUS_BAR_SREG
+sta LAST_SOUND_ON_FLAG
 bne @soundOn
 
 @soundOff:
@@ -345,6 +351,7 @@ lda #<off
 sta TEXT_TO_PRINT
 lda #>off
 sta TEXT_TO_PRINT + 1
+
 bra @printSoundStatus
 
 @soundOn:
