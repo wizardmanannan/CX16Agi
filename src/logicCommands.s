@@ -1224,7 +1224,7 @@ b2Toggle:
         GET_VAR_OR_FLAG FLAGS_AREA_START_GOLDEN_OFFSET, @flagVal
                 
         lda @flagVal
-        bne @setTrue
+        beq @setTrue
         stz @flagVal
         bra @setValue
         
@@ -1283,7 +1283,7 @@ b2Togglev:
         GET_VAR_OR_FLAG FLAGS_AREA_START_GOLDEN_OFFSET, @flagVal, @varVal
                 
         lda @flagVal
-        bne @setTrue
+        beq @setTrue
         stz @flagVal
         bra @setValue
         
