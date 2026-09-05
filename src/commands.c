@@ -44,7 +44,7 @@
 #define COMMAND_MESSAGES_BANK 5
 #pragma rodata-name (push, "BANKRAM05")
 #include <ascii_charmap.h>
-const char B5_QUIT_MESSAGE[] = "Press ENTER to quit. Press ESC to keep playing.";
+const char B5_QUIT_MESSAGE[] = "Press ENTER to quit.\nPress ESC to keep playing.";
 const char B5_PAUSE_MESSAGE[] = "      Game paused.\nPress ENTER to continue.";
 const char B5_MEKA_MESSAGE[] = "MEKA AGI Interpreter\n    Version 1.0";
 const char B5_VERSION_MESSAGE[] = "MEKA AGI Interpreter\n    Version 1.0";
@@ -890,7 +890,6 @@ void b2Force_update() // 1, 0x00
 	int entryNum;
 
 	entryNum = loadAndIncWinCode();
-	
 	//Will happen automatically the next vblank. The param is ignored
 
 	return;
@@ -1747,7 +1746,7 @@ void b4Parse() // 1, 0x00
 	size_t length;
 	char* stringToParse;
 	flag[2] = FALSE;
-    flag[4] = FALSE;
+	flag[4] = FALSE;
 
 	stringToParse = b7GetInternalStringPtr(stringNum, &length);
 
@@ -1916,30 +1915,22 @@ void b4Obj_status_v() // 1, 0x80
 #pragma code-name (push, "BANKRAM05")
 void b5Quit() // 1, 0x00                     /* 0 args for AGI version 2_089 */
 {
-	int quitType, ch;
+	int quitType;
+	byte ch;
 
 	quitType = ((!oldQuit) ? loadAndIncWinCode() : 0);
 	if (quitType == 1) /* Immediate quit */
 		exit(0);
 	else { /* Prompt for exit */
-#define QUIT_BOX_SIZE 15
+#define QUIT_BOX_WIDTH 29	
+#define QUIT_BOX_HEIGHT 6
 		//TODO: Fix display of quit message
-		b3DisplayMessageBox(B5_QUIT_MESSAGE, COMMAND_MESSAGES_BANK, AUTO_CALC_ROW, AUTO_CALC_COLUMN,  TEXTBOX_PALETTE_NUMBER, DEFAULT_BOX_WIDTH, FALSE);
-		//b3PrintMessageInTextbox(loadAndIncWinCode(), DEFAULT_TEXTBOX_X, DEFAULT_TEXTBOX_Y, DEFAULT_BOX_WIDTH);
+		ch = b3DisplayManuallyWrappedMessageBox(B5_QUIT_MESSAGE, COMMAND_MESSAGES_BANK, AUTO_CALC_ROW, AUTO_CALC_COLUMN, TEXTBOX_PALETTE_NUMBER, QUIT_BOX_WIDTH, QUIT_BOX_HEIGHT);
 
-		
-		do {
-			GET_IN(ch);
-			ch >> 8;
-		} while ((ch != KEY_ESC) && (ch != KEY_ENTER));
 		if (ch == KEY_ENTER)
 		{
 			SOFT_RESET()
 		}
-
-
-
-		b6ShowPicture();
 	}
 	return;
 }
@@ -1948,20 +1939,11 @@ void b5Pause() // 0, 0x00
 {
 
 
-#define PAUSE_BOX_SIZE 27
-
-	byte ch, pauseBoxLines = 7;
-
+#define PAUSE_BOX_WIDTH 27
+#define PAUSE_BOX_HEIGHT 7
 	bBStopSound();
 
-	b3DisplayMessageBox(B5_PAUSE_MESSAGE, COMMAND_MESSAGES_BANK, AUTO_CALC_ROW, AUTO_CALC_COLUMN,  TEXTBOX_PALETTE_NUMBER, PAUSE_BOX_SIZE, FALSE);
-	memCpyBanked(&b3LastBoxLines, &pauseBoxLines, TEXT_CODE_BANK, 1);
-	do {
-			GET_IN(ch);
-			ch >> 8;
-	} while ((ch != KEY_ESC) && (ch != KEY_ENTER));
-
-	b3ClearLastPlacedText();
+	b3DisplayManuallyWrappedMessageBox(B5_PAUSE_MESSAGE, COMMAND_MESSAGES_BANK, AUTO_CALC_ROW, AUTO_CALC_COLUMN, TEXTBOX_PALETTE_NUMBER, PAUSE_BOX_WIDTH, PAUSE_BOX_HEIGHT);
 }
 
 
@@ -2020,10 +2002,9 @@ void b5Set_game_id() // 1, 0x00
 	strcpyBanked(gameId, messagePointer, logicFile.messageBank);
 
 	b4InitMetadata();
-	
+
 	//printf("start\n");
 	b4LoadUnloadDependencies(0, TRUE, TRUE);
-		//printf("end\n");
 }
 //
 //void b4Log() // 1, 0x00 

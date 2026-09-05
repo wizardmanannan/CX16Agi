@@ -307,7 +307,7 @@ byte b3WrapText(char* line_start, int width, byte* maxWidth) {
 			if (*p != NEW_LINE)
 			{
 				*last_space = NEW_LINE;
-				if(*maxWidth < (last_space - line_start) + 1)
+				if (*maxWidth < (last_space - line_start) + 1)
 				{
 					*maxWidth = (last_space - line_start) + 1;
 				}
@@ -425,7 +425,7 @@ void b3DisplayMessageBox(char* message, byte messageBank, byte row, byte col, by
 
 	if (boxWidth)
 	{
-		b3LastBoxLines+= 4; //Account for the top and bottom border, plus padding at the top at the bottom
+		b3LastBoxLines += 4; //Account for the top and bottom border, plus padding at the top at the bottom
 	}
 
 	if (messageSize > 1) //Agi sometimes has empty messages. We say greater than 1 because of the terminator
@@ -500,6 +500,27 @@ void b3DisplayMessageBox(char* message, byte messageBank, byte row, byte col, by
 
 		b6SetAndWaitForIrqState(DISPLAY_TEXT);
 	}
+}
+
+
+byte b3DisplayManuallyWrappedMessageBox(char* message, byte messageBank, byte row, byte col, byte paletteNumber, byte boxWidth, byte boxHeight)
+{
+	byte ch;
+
+	b3DisplayMessageBox(message, messageBank, AUTO_CALC_ROW, AUTO_CALC_COLUMN, TEXTBOX_PALETTE_NUMBER, boxWidth, FALSE);
+	b3LastBoxLines = boxHeight;
+
+	//b3PrintMessageInTextbox(loadAndIncWinCode(), DEFAULT_TEXTBOX_X, DEFAULT_TEXTBOX_Y, DEFAULT_BOX_WIDTH);
+
+
+	do {
+		GET_IN(ch);
+		ch >> 8;
+	} while ((ch != KEY_ESC) && (ch != KEY_ENTER));
+
+	b3ClearLastPlacedText();
+
+	return ch;
 }
 
 byte b3SetTextColor(byte foreground, byte background)
