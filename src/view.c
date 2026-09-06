@@ -962,8 +962,6 @@ FONT* font;
 
 //
 
-extern void b9CelToVera(Cel* localCel, byte celBank, long veraAddress, byte bCol, byte drawingAreaWidth, byte x, byte y, byte pNum);
-
 #pragma code-name (push, "BANKRAM0E")
 #pragma wrapped-call (push, trampoline, SPRITE_METADATA_BANK)
 
@@ -1358,41 +1356,37 @@ void bESwitchMetadata(ViewTable* localViewTab, View* localView, byte viewNum, by
 #endif
 }
 
+
+SpriteAllocationSize bEGetSpriteAllocateSize(SpriteAttributeSize spriteAttributeSize)
+{
+   SpriteAllocationSize allocation;
+
+	switch (spriteAttributeSize)
+	{
+	case SPR_ATTR_8:
+		allocation = SPR_SIZE_8;
+		break;
+	case SPR_ATTR_16:
+		allocation = SPR_SIZE_16;
+		break;
+	case SPR_ATTR_32:
+		allocation = SPR_SIZE_32;
+		break;
+	case SPR_ATTR_64:
+		allocation = SPR_SIZE_64;
+		break;
+	}
+
+	return allocation;
+}
+
 boolean bEAllocateSpriteMemory(Loop* localLoop, byte noToBlit)
 {
 	SpriteAllocationSize allocationWidth, allocationHeight;
 
-	switch (localLoop->allocationWidth)
-	{
-	case SPR_ATTR_8:
-		allocationWidth = SPR_SIZE_8;
-		break;
-	case SPR_ATTR_16:
-		allocationWidth = SPR_SIZE_16;
-		break;
-	case SPR_ATTR_32:
-		allocationWidth = SPR_SIZE_32;
-		break;
-	case SPR_ATTR_64:
-		allocationWidth = SPR_SIZE_64;
-		break;
-	}
+	allocationWidth = bEGetSpriteAllocateSize(localLoop->allocationWidth);
 
-	switch (localLoop->allocationHeight)
-	{
-	case SPR_ATTR_8:
-		allocationHeight = SPR_SIZE_8;
-		break;
-	case SPR_ATTR_16:
-		allocationHeight = SPR_SIZE_16;
-		break;
-	case SPR_ATTR_32:
-		allocationHeight = SPR_SIZE_32;
-		break;
-	case SPR_ATTR_64:
-		allocationHeight = SPR_SIZE_64;
-		break;
-	}
+	allocationHeight = bEGetSpriteAllocateSize(localLoop->allocationHeight);
 
 	//printf("we pass in %d %d\n", allocationWidth, allocationHeight);
 	if (!bEAllocateSpriteMemoryBulk(allocationWidth, allocationHeight, noToBlit))
@@ -2751,14 +2745,6 @@ boolean prioritiesSeen[NO_PRIORITIES];
 //	show_mouse(NULL);
 //	show_mouse(screen);
 //}
-#pragma code-name (pop)
-#pragma code-name (push, "BANKRAM0D")
-
-void bDShowObjectState(int objNum)
-{
-
-}
-
 #pragma code-name (pop)
 
 #pragma code-name (push, "BANKRAM11")

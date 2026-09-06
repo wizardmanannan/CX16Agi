@@ -22,6 +22,7 @@
 #include "helpers.h"
 #include "parser.h"
 #include "menu.h"
+#include "showObj.h"
 
 #define HIGHEST_BANK1_FUNC 36
 #define HIGHEST_BANK2_FUNC 91
@@ -1906,7 +1907,7 @@ void b4Obj_status_v() // 1, 0x80
 	/* Not supported yet */
 
 	/* showView(viewtab[objectNum].currentView); */
-	bDShowObjectState(objectNum);
+	b11ShowObj(objectNum);
 	return;
 }
 
@@ -1943,7 +1944,11 @@ void b5Pause() // 0, 0x00
 #define PAUSE_BOX_HEIGHT 7
 	bBStopSound();
 
-	b3DisplayManuallyWrappedMessageBox(B5_PAUSE_MESSAGE, COMMAND_MESSAGES_BANK, AUTO_CALC_ROW, AUTO_CALC_COLUMN, TEXTBOX_PALETTE_NUMBER, PAUSE_BOX_WIDTH, PAUSE_BOX_HEIGHT);
+	b11ShowObj(118);
+
+	//b3DisplayManuallyWrappedMessageBox(B5_PAUSE_MESSAGE, COMMAND_MESSAGES_BANK, AUTO_CALC_ROW, AUTO_CALC_COLUMN, TEXTBOX_PALETTE_NUMBER, PAUSE_BOX_WIDTH, PAUSE_BOX_HEIGHT);
+
+
 }
 
 

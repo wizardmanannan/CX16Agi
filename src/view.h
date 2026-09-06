@@ -48,6 +48,7 @@ extern void getLoadedView(View* returnedLoadedView, byte loadedViewNumber);
 extern void setLoadedView(View* loadedView, byte loadedViewNumber);
 
 void getLoadedLoop(View* loadedView, Loop* returnedLocalLoop, byte localLoopNumber);
+void getLoadedCel(Loop* loadedLoop, Cel* localCell, byte localCellNumber);
 
 #pragma wrapped-call (push, trampoline, VIEW_CODE_BANK_1)
 void b9LoadViewFile(byte viewNum);
@@ -56,6 +57,7 @@ void b9SetView(byte viewNum, byte entryNum);
 extern void b9SetCel(ViewTable* localViewTab, byte entryNum, byte celNum);
 extern void b9SetLoop(ViewTable* localViewTab, byte entryNum, byte loopNum);
 extern void b9AddToPic(int vNum, int lNum, int cNum, int x, int y, int pNum, int bCol);
+extern void b9CelToVera(Cel* localCel, byte celBank, long veraAddress, byte bCol, byte drawingAreaWidth, byte x, byte y, byte pNum);
 #pragma wrapped-call (pop)
 
 #pragma wrapped-call (push, trampoline, VIEW_CODE_BANK_2)
@@ -76,17 +78,15 @@ extern void bBUpdateObjects();
 extern void bCCalcObjMotion();
 #pragma wrapped-call (pop)
 
-#pragma wrapped-call (push, trampoline, VIEW_CODE_BANK_5)
-extern void bDShowObjectState(int objNum);
-#pragma wrapped-call (pop)
-
 #pragma wrapped-call (push, trampoline, SPRITE_UPDATED_BANK)
 extern void bEClearSpriteAttributes();
+SpriteAllocationSize bEGetSpriteAllocateSize(SpriteAttributeSize spriteAttributeSize);
 #pragma wrapped-call (pop)
 
 extern byte priorityBase;
 
 #define MIN_PRIORITY 4
+#define MAX_PRIORITY 15
 
 #endif   /* _VIEW_H_ */
 
