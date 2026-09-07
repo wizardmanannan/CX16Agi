@@ -81,12 +81,25 @@ extern void bCCalcObjMotion();
 #pragma wrapped-call (push, trampoline, SPRITE_UPDATED_BANK)
 extern void bEClearSpriteAttributes();
 SpriteAllocationSize bEGetSpriteAllocateSize(SpriteAttributeSize spriteAttributeSize);
+extern void bEClearVeraSprite(byte celWidth, byte celHeight);
 #pragma wrapped-call (pop)
 
 extern byte priorityBase;
 
 #define MIN_PRIORITY 4
 #define MAX_PRIORITY 15
+
+#define SET_VERA_ADDRESS_ZP(loopVeraAddress, VERA_ADDRESS, VERA_ADDRESS_HIGH) \
+    do { \
+        _assmULong = loopVeraAddress; \
+		asm("lda %v", _assmULong); \
+		asm("sta %w", VERA_ADDRESS); \
+        asm("lda %v + 1", _assmULong); \
+        asm("sta %w + 1", VERA_ADDRESS); \
+        asm("lda %v + 2", _assmULong); \
+        asm("sta %w", VERA_ADDRESS_HIGH); \
+    } while (0)
+
 
 #endif   /* _VIEW_H_ */
 

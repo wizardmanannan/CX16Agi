@@ -5,7 +5,7 @@ extern byte b11ShowObjSprAttr7;
 extern int b11ShowObjX;
 extern byte b11ShowObjY;
 
-byte trap = FALSE;
+
 
 #pragma code-name (push, "BANKRAM11")
 void b11ShowObj(byte objNum)
@@ -18,7 +18,6 @@ void b11ShowObj(byte objNum)
    PaletteGetResult paletteGetResult;
    byte palette = 0;
 
-   ;trap = TRUE;
 
    b9LoadViewFile(objNum);
 
@@ -32,8 +31,8 @@ void b11ShowObj(byte objNum)
    spriteAllocationHeight = bEGetSpriteAllocateSize(localLoop.allocationHeight);
    spriteAddress = bDFindFreeVramBlock(spriteAllocationWidth, spriteAllocationHeight);
 
-   //printf("you have a width of %d and a height of %d and have allocated %lx, the cel is on %p bank %p\n", spriteAllocationWidth, spriteAllocationHeight, spriteAddress, localCel.bmp, localCel.bitmapBank);
-   //asm("stp");
+   printf("you have a width of %d and a height of %d and have allocated %lx, the cel is on %p bank %p\n", spriteAllocationWidth, spriteAllocationHeight, spriteAddress, localCel.bmp, localCel.bitmapBank);
+
 
 
    if(spriteAddress)
@@ -43,15 +42,19 @@ void b11ShowObj(byte objNum)
     // {
     //    palette = bFGetPalette(id, paletteGetResult);
     // }
-
     asm("sei");
-    b9CelToVera(&localCel, localLoop.celsBank, spriteAddress, MAX_PRIORITY, spriteAllocationWidth / 2, 0, 0, MAX_PRIORITY);
+    SET_VERA_ADDRESS_ZP(spriteAddress, VERA_ADDRESS, VERA_ADDRESS_HIGH);
+	 bEClearVeraSprite(localLoop.allocationWidth, localLoop.allocationHeight);
     REENABLE_INTERRUPTS();
+
+    asm("stp");
+
+    b9CelToVera(&localCel, localLoop.celsBank, spriteAddress, MAX_PRIORITY, spriteAllocationWidth / 2, 0, 0, MAX_PRIORITY);
 
     b11ShowObjSpriteAddressShifted = spriteAddress >> 5;
     b11ShowObjX = PICTURE_WIDTH - localCel.width;
     b11ShowObjY = PICTURE_HEIGHT / 2 + localCel.height / 2;
-    //printf("you are displaying it at %d %d width %d height %d. The trans color is %d with palette %d\n", b11ShowObjX, b11ShowObjY, localCel.width, localCel.height, localCel.transparency, localLoop.palette);
+    printf("you are displaying it at %d %d width %d height %d. The trans color is %d with palette %d\n", b11ShowObjX, b11ShowObjY, localCel.width, localCel.height, localCel.transparency, localLoop.palette);
 
     // printf("the description is %p on bank %p\n", localView.description, localView.codeBlockBank);
     // asm("stp");

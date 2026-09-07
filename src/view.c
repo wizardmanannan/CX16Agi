@@ -1403,19 +1403,6 @@ extern void celToVera();
 extern void bECelToVeraBackwards();
 extern void bECalculateBytesPerRow(byte celWidth);
 
-extern void bEClearVeraSprite(byte celWidth, byte celHeight);
-
-#define SET_VERA_ADDRESS_ZP(loopVeraAddress, VERA_ADDRESS, VERA_ADDRESS_HIGH) \
-    do { \
-        _assmULong = loopVeraAddress; \
-		asm("lda %v", _assmULong); \
-		asm("sta %w", VERA_ADDRESS); \
-        asm("lda %v + 1", _assmULong); \
-        asm("sta %w + 1", VERA_ADDRESS); \
-        asm("lda %v + 2", _assmULong); \
-        asm("sta %w", VERA_ADDRESS_HIGH); \
-    } while (0)
-
 extern boolean bESetLoop(ViewTable* localViewTab, ViewTableMetadata* localMetadata, View* localView, VeraSpriteAddress* loopVeraAddresses, byte entryNum);
 
 /***************************************************************************
