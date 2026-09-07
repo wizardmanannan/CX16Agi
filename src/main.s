@@ -21,6 +21,7 @@
     .include "menuAsm.s"
     .include "controllersAsm.s"
     .include "statusBar.s"
+    .include "showObjAsm.s"
     
     .export _executeLogic
     .export _b6InitInterpreter
@@ -116,4 +117,9 @@
     .export _b9StartMoveObj
     .export _bAInitMenus
     .export _statusLineDisplayed
+    .export _b11ShowObjSpriteAddressShifted
+    .export _b11ShowObjSprAttr7
+    .export _b11ShowObjCelHeight
+    .export _b11ShowObjX
+    .export _b11ShowObjY
 
