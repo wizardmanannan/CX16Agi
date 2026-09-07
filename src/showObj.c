@@ -31,7 +31,7 @@ void b11ShowObj(byte objNum)
    spriteAllocationHeight = bEGetSpriteAllocateSize(localLoop.allocationHeight);
    spriteAddress = bDFindFreeVramBlock(spriteAllocationWidth, spriteAllocationHeight);
 
-   printf("you have a width of %d and a height of %d and have allocated %lx, the cel is on %p bank %p\n", spriteAllocationWidth, spriteAllocationHeight, spriteAddress, localCel.bmp, localCel.bitmapBank);
+   //printf("you have a width of %d and a height of %d and have allocated %lx, the cel is on %p bank %p\n", spriteAllocationWidth, spriteAllocationHeight, spriteAddress, localCel.bmp, localCel.bitmapBank);
 
 
 
@@ -54,7 +54,7 @@ void b11ShowObj(byte objNum)
     b11ShowObjSpriteAddressShifted = spriteAddress >> 5;
     b11ShowObjX = PICTURE_WIDTH - localCel.width;
     b11ShowObjY = PICTURE_HEIGHT / 2 + localCel.height / 2;
-    printf("you are displaying it at %d %d width %d height %d. The trans color is %d with palette %d\n", b11ShowObjX, b11ShowObjY, localCel.width, localCel.height, localCel.transparency, localLoop.palette);
+    //printf("you are displaying it at %d %d width %d height %d. The trans color is %d with palette %d\n", b11ShowObjX, b11ShowObjY, localCel.width, localCel.height, localCel.transparency, localLoop.palette);
 
     // printf("the description is %p on bank %p\n", localView.description, localView.codeBlockBank);
     // asm("stp");
