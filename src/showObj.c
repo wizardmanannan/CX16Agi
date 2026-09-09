@@ -25,6 +25,9 @@ void b11ShowObj(byte objNum)
    getLoadedLoop(&localView, &localLoop, 0);
    getLoadedCel(&localLoop, &localCel, 0);
 
+   //printf("the view description address is %p on bank %p\n", localView.description, localView.codeBlockBank, localLoop.celsBank);
+   asm("stp");
+
    b11ShowObjSprAttr7 = localCel.width;
 
    spriteAllocationWidth = bEGetSpriteAllocateSize(localLoop.allocationWidth);
@@ -56,14 +59,14 @@ void b11ShowObj(byte objNum)
     b11ShowObjY = PICTURE_HEIGHT / 2 + localCel.height / 2;
     //printf("you are displaying it at %d %d width %d height %d. The trans color is %d with palette %d\n", b11ShowObjX, b11ShowObjY, localCel.width, localCel.height, localCel.transparency, localLoop.palette);
 
-    // printf("the description is %p on bank %p\n", localView.description, localView.codeBlockBank);
-    // asm("stp");
+    //printf("the description is %p on bank %p\n", localView.description, localView.codeBlockBank);
+    //asm("stp");
 
     b11ShowObjSprAttr7 = localLoop.allocationHeight << 6 | localLoop.allocationWidth << 4 | localLoop.palette;
 
     b6SetAndWaitForIrqState(SHOW_OBJ);
     
-    while(TRUE);
+    b3DisplayMessageBox(localView.description, localView.codeBlockBank,14, AUTO_CALC_COLUMN, TEXTBOX_PALETTE_NUMBER, DEFAULT_BOX_WIDTH, TRUE);
 
     bDDeleteAllocation(spriteAddress, spriteAllocationWidth, spriteAllocationHeight);
    }

@@ -2221,7 +2221,7 @@ void setViewData(byte viewNum, AGIFile* tempAGI, View* localView)
 
 	if (isThereADescription)
 	{
-		description = (const char*)(tempAGI->code + viewHeaderBuffer[POSITION_OF_DESCRIPTION] + viewHeaderBuffer[POSITION_OF_DESCRIPTION] * 256);
+		description = (const char*)(tempAGI->code + viewHeaderBuffer[POSITION_OF_DESCRIPTION] + viewHeaderBuffer[POSITION_OF_DESCRIPTION + 1] * 256);
 		descriptionLength = strLenBanked((char*)description, tempAGI->codeBank);
 
 #ifdef VERBOSE_SET_VIEWS
