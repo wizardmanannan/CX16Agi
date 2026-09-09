@@ -2457,7 +2457,7 @@ void b9LoadViewFile(byte viewNum)
 				{
 					localLoop.allocationHeight = SPR_ATTR_32;
 				}
-				else if (localCel.height > SPR_ATTR_8 && localLoop.allocationHeight < SPR_SIZE_16)
+				else if (localCel.height > SPR_SIZE_8 && localLoop.allocationHeight < SPR_SIZE_16)
 				{
 					localLoop.allocationHeight = SPR_ATTR_16;
 				}
