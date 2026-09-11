@@ -2435,29 +2435,29 @@ void b9LoadViewFile(byte viewNum)
 #endif
 
 				//8 Is Default
-				if (localCel.width * 2 > SPR_SIZE_32 && localLoop.allocationWidth < SPR_SIZE_64)
+				if (localCel.width * 2 > SPR_SIZE_32 && localLoop.allocationWidth < SPR_ATTR_64)
 				{
 					localLoop.allocationWidth = SPR_ATTR_64;
 				}
-				else if (localCel.width * 2 > SPR_SIZE_16 && localLoop.allocationWidth < SPR_SIZE_32)
+				else if (localCel.width * 2 > SPR_SIZE_16 && localLoop.allocationWidth < SPR_ATTR_32)
 				{
 					localLoop.allocationWidth = SPR_ATTR_32;
 				}
-				else if (localCel.width * 2 > SPR_SIZE_8 && localLoop.allocationWidth < SPR_SIZE_16)
+				else if (localCel.width * 2 > SPR_SIZE_8 && localLoop.allocationWidth < SPR_ATTR_16)
 				{
 					localLoop.allocationWidth = SPR_ATTR_16;
 				}
 
 				////Height isn't doubled only width
-				if (localCel.height > SPR_SIZE_32 && localLoop.allocationHeight < SPR_SIZE_64)
+				if (localCel.height > SPR_SIZE_32 && localLoop.allocationHeight < SPR_ATTR_64)
 				{
 					localLoop.allocationHeight = SPR_ATTR_64;
 				}
-				else if (localCel.height > SPR_SIZE_16 && localLoop.allocationHeight < SPR_SIZE_32)
+				else if (localCel.height > SPR_SIZE_16 && localLoop.allocationHeight < SPR_ATTR_32)
 				{
 					localLoop.allocationHeight = SPR_ATTR_32;
 				}
-				else if (localCel.height > SPR_SIZE_8 && localLoop.allocationHeight < SPR_SIZE_16)
+				else if (localCel.height > SPR_SIZE_8 && localLoop.allocationHeight < SPR_ATTR_16)
 				{
 					localLoop.allocationHeight = SPR_ATTR_16;
 				}
