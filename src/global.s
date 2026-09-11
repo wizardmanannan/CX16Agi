@@ -55,14 +55,24 @@ ZP_TMP_24 = $CB
 ZP_TMP_25 = $CD
 ZP_TMP_26 = $CF
 ZP_TMP_27 = $D1
+
+;Second Set of tmp zp to be used when you might conflict with the ones above
 ZP_TMP_28 = $E3
 ZP_TMP_29 = $E5
 ZP_TMP_30 = $FC 
 ZP_TMP_31 = $F7 
-ZP_TMP_32 = $F8
-ZP_TMP_33 = $F9
-ZP_TMP_34 = $FA
-ZP_TMP_35 = $FB
+ZP_TMP_32 = $F9
+
+.segment "ZEROPAGE"
+ZP_TMP_33: .word $0
+ZP_TMP_34: .word $0
+ZP_TMP_35: .word $0
+ZP_TMP_36: .word $0
+ZP_TMP_37: .word $0
+ZP_TMP_38: .word $0
+ZP_TMP_39: .word $0
+.segment "CODE"
+
 
 ZP_PTR_LF = $E7
 ZP_PTR_LE = $E9
@@ -79,7 +89,7 @@ LOGIC_BANK = $5
 LOGIC_ENTRY_ADDRESSES_BANK = $6
 LOGIC_CODE_BANK = $6
 PICTURE_BANK = $11
-PICTURE_CODE_OVERFLOW_BANK = $4
+PICTURE_CODE_OVERFLOW_BANK = $8
 TEXT_BANK = $3
 GRAPHICS_BANK = $6
 SPRITE_INIT_BANK = $0A
@@ -99,12 +109,14 @@ SPRITE_UPDATES_BANK = $0E
 SPLIT_BUFFER_BANK = $0C
 VIEW_TAB_BANK = $09
 SPRITE_METADATA_BANK = $0E
+SPRITE_ALLOCATOR_BANK = $0E
 
 DIVISION_METADATA_BANK = $31
 RANDOM_BANK = $6
 SOUND_BANK = $0B
 MOVEMENT_BANK = $0A
 UPDATE_OBJECTS_BANK = $0B
+SHOW_OBJ_BANK = $11
 
 
 ; Define offsets for different areas within golden RAM
@@ -804,7 +816,6 @@ DEX_IMP = $CA
 ;System Variables
 SCORE_VAR = 3
 MAX_SCORE_VAR = 7
-SOUND_VAR = 9
 EGOEDGE = 2
 OBJHIT = 4
 OBJEDGE = 5
@@ -824,6 +835,7 @@ PROGRAM_CONTROL = 1
 ;Interpreter Flags
 INT_FLAG_INPUT = 2
 INT_FLAG_HAD_MATCH = 4
+SOUND_ON_FLAG = 9
 ENABLE_MENU = 14
 
 .segment "ZEROPAGE"

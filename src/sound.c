@@ -154,6 +154,7 @@ void bBClearLoadedSound(byte soundFileNumber)
 	bBLoadedSounds[soundFileNumber].chNoise = NULL;
 	bBLoadedSounds[soundFileNumber].soundBank = 0;
 	bBLoadedSounds[soundFileNumber].soundResource = NULL;
+	bBLoadedSounds[soundFileNumber].isLogicZeroOrDependency = FALSE;
 }
 
 // Initializes the loaded sound arrays by clearing all sound entries and pointers.
@@ -179,6 +180,11 @@ void bBDiscardSoundFile(int soundNum)
 
 	// Get pointer to loaded sound structure
 	sound = bBLoadedSoundsPointer[soundNum];
+
+	if(sound->isLogicZeroOrDependency)
+	{
+		return;
+	}
 
 	// Calculate index from pointer subtracting base array pointer
 	loadedSoundNum = sound - &bBLoadedSounds[0];
@@ -606,6 +612,11 @@ void bBLoadSoundFile(int soundNum) {
 	byte i;
 	unsigned int soundChannelOffSets[NO_CHANNELS];  // Offsets to channel data in sound file
 
+	if(bBLoadedSoundsPointer[soundNum])
+	{
+		return;
+	}
+
 	// Gets logic directory entry for sound file number and loads AGI file
 	b10GetLogicDirectory(&agiFilePosType, &snddir[soundNum]);
 	b6LoadAGIFile(SOUND, &agiFilePosType, &tempAGI);
@@ -661,6 +672,13 @@ void bBPlaySound(byte soundNum, byte endSoundFlag)
 
 	asm("sei"); // Disable interrupts to initialize sound playback safely
 
+	if(!flag[9])
+	{
+		flag[endSoundFlag] = TRUE;
+		return;
+	}
+
+
 	// Reset tick counters for all channels
 	bBCh1Ticks = 0;
 	bBCh2Ticks = 0;
@@ -689,13 +707,39 @@ void bBPlaySound(byte soundNum, byte endSoundFlag)
 	REENABLE_INTERRUPTS(); // Re-enable interrupts for playback
 }
 
+boolean bBIsPlayingNoInterupts()
+{
+	boolean soundPlaying = FALSE;	
+	byte i;
+
+	for(i = 0; i < NO_CHANNELS && !soundPlaying; i++)
+	{
+		soundPlaying = bBIsPlaying[i];
+	}
+
+	return soundPlaying;
+}
+
 // Stops current playing sound, clears PSG state, and cancels playing flags.
 void bBStopSound()
 {
 	asm("sei");         // Disable interrupts to safely stop sound
-	bBPsgClear();       // Clear PSG sound generator state
-	memset(bBIsPlaying, FALSE, NO_CHANNELS); // Mark all channels as not playing
+	
+	if(bBIsPlayingNoInterupts())
+	{
+		bBPsgClear();       // Clear PSG sound generator state
+		memset(bBIsPlaying, FALSE, NO_CHANNELS); // Mark all channels as not playing
+		flag[soundEndFlag] = TRUE;
+	}
 	REENABLE_INTERRUPTS(); // Re-enable interrupts after sound stop
+}
+
+void bBMarkSoundAsAZeroDependency(byte soundNum)
+{
+	if(bBLoadedSoundsPointer[soundNum])
+	{
+		bBLoadedSoundsPointer[soundNum]->isLogicZeroOrDependency = TRUE;
+	}
 }
 
 #pragma code-name (pop)

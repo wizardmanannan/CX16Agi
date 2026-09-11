@@ -22,7 +22,7 @@ typedef enum {
 
 #pragma wrapped-call (push, trampoline, SPRITE_MEMORY_MANAGER_BANK)
 void bDInitSpriteMemoryManager();
-unsigned long bDFindFreeVramBlock(SpriteAllocationSize width, SpriteAllocationSize height);
+VeraSpriteAddress bDFindFreeVramBlock(SpriteAllocationSize width, SpriteAllocationSize height);
 extern void bDDeleteAllocation(VeraSpriteAddress address, SpriteAllocationSize width, SpriteAllocationSize height);
 extern void bDResetSpriteMemoryManager();
 //Warning must pop return addresses of system stack after call. The number of return addresses will be 2 * number. 

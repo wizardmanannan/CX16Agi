@@ -22,6 +22,7 @@
 #include "helpers.h"
 #include "parser.h"
 #include "menu.h"
+#include "showObj.h"
 
 #define HIGHEST_BANK1_FUNC 36
 #define HIGHEST_BANK2_FUNC 91
@@ -41,11 +42,14 @@
 //#define VERBOSE_ROOM_CHANGE
 //#define VERBOSE_MESSAGE_PRINT
 
-#pragma rodata-name (push, "BANKRAM04")
-const char B4_QUIT_MESSAGE[] = "Press ENTER to quit. Press ESC to keep playing.";
-const char B4_PAUSE_MESSAGE[] = "      Game paused.\nPress ENTER to continue.";
-const char B4_MEKA_MESSAGE[] = "MEKA AGI Interpreter\n    Version 1.0";
-const char B4_VERSION_MESSAGE[] = "MEKA AGI Interpreter\n    Version 1.0";
+#define COMMAND_MESSAGES_BANK 5
+#pragma rodata-name (push, "BANKRAM05")
+#include <ascii_charmap.h>
+const char B5_QUIT_MESSAGE[] = "Press ENTER to quit.\nPress ESC to keep playing.";
+const char B5_PAUSE_MESSAGE[] = "      Game paused.\nPress ENTER to continue.";
+const char B5_MEKA_MESSAGE[] = "MEKA AGI Interpreter\n    Version 1.0";
+const char B5_VERSION_MESSAGE[] = "MEKA AGI Interpreter\n    Version 1.0";
+#include <cbm_petscii_charmap.h>
 #pragma rodata-name (pop)
 
 extern byte* var;
@@ -338,14 +342,14 @@ boolean b1Right_posn() // 5, 0x00
 
 void b2Load_logics() // 1, 0x00 
 {
-	b6LoadLogicFile(loadAndIncWinCode());
+	b6LoadLogicFile(loadAndIncWinCode(), FALSE);
 
 	return;
 }
 
 void b2Load_logics_v() // 1, 0x80 
 {
-	b6LoadLogicFile(var[loadAndIncWinCode()]);
+	b6LoadLogicFile(var[loadAndIncWinCode()], FALSE);
 
 	return;
 }
@@ -887,7 +891,6 @@ void b2Force_update() // 1, 0x00
 	int entryNum;
 
 	entryNum = loadAndIncWinCode();
-	
 	//Will happen automatically the next vblank. The param is ignored
 
 	return;
@@ -1468,7 +1471,7 @@ void b3Play_sound() // 2, 00  sound() renamed to avoid clash
 
 void b3Stop_sound() // 0, 0x00 
 {
-	return;
+	bBStopSound();
 }
 
 boolean b3CharIsIn(char testChar, char* testString)
@@ -1484,7 +1487,7 @@ boolean b3CharIsIn(char testChar, char* testString)
 
 #pragma wrapped-call (push, trampoline, TEXT_CODE_BANK)
 //Helper function not a command. Note there is an identical function on bank 4
-void b3PrintMessageInTextbox(byte messNum, byte x, byte y, byte length)
+void b3PrintMessageInTextbox(byte messNum, byte x, byte y, byte length, boolean wrap)
 {
 #define NO_KEYS_TO_WAIT 2
 
@@ -1510,7 +1513,7 @@ void b3PrintMessageInTextbox(byte messNum, byte x, byte y, byte length)
 
 	messagePointer = getMessagePointer(currentLog, messNum - 1);
 
-	b3DisplayMessageBox(messagePointer, logicFile.messageBank, y, x, TEXTBOX_PALETTE_NUMBER, length);
+	b3DisplayMessageBox(messagePointer, logicFile.messageBank, y, x, TEXTBOX_PALETTE_NUMBER, length, wrap);
 
 	if (timeoutFlagVal)
 	{
@@ -1535,12 +1538,12 @@ void b3PrintMessageInTextbox(byte messNum, byte x, byte y, byte length)
 
 void b3Print() // 1, 00 
 {
-	b3PrintMessageInTextbox(loadAndIncWinCode(), DEFAULT_TEXTBOX_X, DEFAULT_TEXTBOX_Y, DEFAULT_BOX_WIDTH);
+	b3PrintMessageInTextbox(loadAndIncWinCode(), AUTO_CALC_COLUMN, AUTO_CALC_ROW, DEFAULT_BOX_WIDTH, TRUE);
 }
 
 void b3Print_v() // 1, 0x80 
 {
-	b3PrintMessageInTextbox(var[loadAndIncWinCode()], DEFAULT_TEXTBOX_X, DEFAULT_TEXTBOX_Y, DEFAULT_BOX_WIDTH);
+	b3PrintMessageInTextbox(var[loadAndIncWinCode()], AUTO_CALC_COLUMN, AUTO_CALC_ROW, DEFAULT_BOX_WIDTH, TRUE);
 }
 
 //A helper function not a command
@@ -1560,7 +1563,7 @@ void b3DisplayWithoutTextbox(byte row, byte col, byte messNum)
 	printf("the messages live at %p on bank %p\n", logicFile.messages, logicFile.messageBank);
 #endif
 	//b3ProcessString(messagePointer, 0, tempString);
-	b3DisplayMessageBox(messagePointer, logicFile.messageBank, row, col, b3SetTextColor(_currentForegroundColour, _currentBackgroundColour), 0);
+	b3DisplayMessageBox(messagePointer, logicFile.messageBank, row, col, b3SetTextColor(b3CurrentForegroundColour, b3CurrentBackgroundColour), 0, FALSE);
 	return;
 }
 
@@ -1744,7 +1747,7 @@ void b4Parse() // 1, 0x00
 	size_t length;
 	char* stringToParse;
 	flag[2] = FALSE;
-    flag[4] = FALSE;
+	flag[4] = FALSE;
 
 	stringToParse = b7GetInternalStringPtr(stringNum, &length);
 
@@ -1904,40 +1907,49 @@ void b4Obj_status_v() // 1, 0x80
 	/* Not supported yet */
 
 	/* showView(viewtab[objectNum].currentView); */
-	bDShowObjectState(objectNum);
+	b11ShowObj(objectNum);
 	return;
 }
 
 
-void b4Quit() // 1, 0x00                     /* 0 args for AGI version 2_089 */
+#pragma code-name (pop)
+#pragma code-name (push, "BANKRAM05")
+void b5Quit() // 1, 0x00                     /* 0 args for AGI version 2_089 */
 {
-	int quitType, ch;
+	int quitType;
+	byte ch;
 
 	quitType = ((!oldQuit) ? loadAndIncWinCode() : 0);
 	if (quitType == 1) /* Immediate quit */
 		exit(0);
 	else { /* Prompt for exit */
-#define QUIT_BOX_SIZE 15
+#define QUIT_BOX_WIDTH 29	
+#define QUIT_BOX_HEIGHT 6
 		//TODO: Fix display of quit message
-		b3DisplayMessageBox(B4_QUIT_MESSAGE, 4, MAX_ROWS_DOWN / 2 - FIRST_ROW, MAX_CHAR_ACROSS / 2, TEXTBOX_PALETTE_NUMBER, QUIT_BOX_SIZE);
-		do {
-			GET_IN(ch);
-			ch >> 8;
-		} while ((ch != KEY_ESC) && (ch != KEY_ENTER));
-		if (ch == KEY_ENTER) exit(0);
-		b6ShowPicture();
+		ch = b3DisplayManuallyWrappedMessageBox(B5_QUIT_MESSAGE, COMMAND_MESSAGES_BANK, AUTO_CALC_ROW, AUTO_CALC_COLUMN, TEXTBOX_PALETTE_NUMBER, QUIT_BOX_WIDTH, QUIT_BOX_HEIGHT);
+
+		if (ch == KEY_ENTER)
+		{
+			SOFT_RESET()
+		}
 	}
 	return;
 }
 
-void b4Pause() // 0, 0x00 
+void b5Pause() // 0, 0x00 
 {
-#define PAUSE_BOX_SIZE 15
-	while (key[KEY_ENTER]) { /* Wait */ }
-	b3DisplayMessageBox(B4_PAUSE_MESSAGE, 4, MAX_ROWS_DOWN / 2 - FIRST_ROW, MAX_CHAR_ACROSS / 2, TEXTBOX_PALETTE_NUMBER, PAUSE_BOX_SIZE);
-	while (!key[KEY_ENTER]) { /* Wait */ }
-	b6ShowPicture();
-	return;
+
+
+#define PAUSE_BOX_WIDTH 27
+#define PAUSE_BOX_HEIGHT 7
+	bBStopSound();
+
+	b11ShowObj(128);
+	//b11ShowObj(119);
+
+	//b3DisplayManuallyWrappedMessageBox(B5_PAUSE_MESSAGE, COMMAND_MESSAGES_BANK, AUTO_CALC_ROW, AUTO_CALC_COLUMN, TEXTBOX_PALETTE_NUMBER, PAUSE_BOX_WIDTH, PAUSE_BOX_HEIGHT);
+
+
 }
 
 
@@ -1958,11 +1970,11 @@ void b4Pause() // 0, 0x00
 //	/* Not important at this stage */
 //}
 
-void b4Version() // 0, 0x00 
+void b5Version() // 0, 0x00 
 {
 #define VERSION_BOX_SIZE 15
 	while (key[KEY_ENTER] || key[KEY_ESC]) { /* Wait */ }
-	b3DisplayMessageBox(B4_VERSION_MESSAGE, 4, MAX_ROWS_DOWN / 2 - FIRST_ROW, MAX_CHAR_ACROSS / 2, TEXTBOX_PALETTE_NUMBER, VERSION_BOX_SIZE);
+	b3DisplayMessageBox(B5_VERSION_MESSAGE, COMMAND_MESSAGES_BANK, AUTO_CALC_ROW, MAX_CHAR_ACROSS / 2, TEXTBOX_PALETTE_NUMBER, VERSION_BOX_SIZE, FALSE);
 	while (!key[KEY_ENTER] && !key[KEY_ESC]) { /* Wait */ }
 	b6ShowPicture();
 	return;
@@ -1973,17 +1985,40 @@ void b4Version() // 0, 0x00
 //	(*data)++;  /* Ignore the script size. Not important for this interpreter */
 //}
 //
-//void b4Set_game_id() // 1, 0x00 
-//{
-//	(*data)++;  /* Ignore the game ID. Not important */
-//}
+
+#pragma wrapped-call (push, trampoline, DEPENDENCY_RESOLVER_BANK)
+extern void b4InitMetadata();
+extern void b4LoadUnloadDependencies(byte scriptNumber, boolean shouldLoad, boolean forceLoadSubDependencies);
+#pragma wrapped-call (pop)
+void b5Set_game_id() // 1, 0x00 
+{
+
+	LOGICFile logicFile;
+	char* messagePointer;
+	byte messageNo;
+
+
+
+	messageNo = loadAndIncWinCode();
+
+	b5GetLogicFile(&logicFile, currentLog);
+
+	messagePointer = getMessagePointer(currentLog, messageNo - 1);  /* Ignore the game ID. Not important */
+
+	strcpyBanked(gameId, messagePointer, logicFile.messageBank);
+
+	b4InitMetadata();
+
+	//printf("start\n");
+	b4LoadUnloadDependencies(0, TRUE, TRUE);
+}
 //
 //void b4Log() // 1, 0x00 
 //{
 //	(*data)++;  /* Ignore log message. Not important */
 //}
 
-void b4Reset_scan_start() // 0, 0x00 
+void b5Reset_scan_start() // 0, 0x00 
 {
 	LOGICEntry logicEntry;
 
@@ -1995,7 +2030,7 @@ void b4Reset_scan_start() // 0, 0x00
 	return;
 }
 
-void b4Reposition_to() // 3, 0x00 
+void b5Reposition_to() // 3, 0x00 
 {
 	int entryNum;
 	ViewTable localViewtab;
@@ -2012,7 +2047,7 @@ void b4Reposition_to() // 3, 0x00
 	return;
 }
 
-void b4Reposition_to_v() // 3, 0x60 
+void b5Reposition_to_v() // 3, 0x60 
 {
 	int entryNum;
 	ViewTable localViewtab;
@@ -2038,23 +2073,23 @@ void b4Reposition_to_v() // 3, 0x60
 //	*data += 3;  /* Ignore trace information at this stage. */
 //}
 
-void b4Print_at() // 4, 0x00           /* 3 args for AGI versions before */
+void b5Print_at() // 4, 0x00           /* 3 args for AGI versions before */
 {
-	b3PrintMessageInTextbox(loadAndIncWinCode(), loadAndIncWinCode(), loadAndIncWinCode(), loadAndIncWinCode());
+	b3PrintMessageInTextbox(loadAndIncWinCode(), loadAndIncWinCode(), loadAndIncWinCode(), loadAndIncWinCode(), TRUE);
 }
 
-void b4Print_at_v() // 4, 0x80         /* 2_440 (maybe laterz) */
+void b5Print_at_v() // 4, 0x80         /* 2_440 (maybe laterz) */
 {
-	b3PrintMessageInTextbox(var[loadAndIncWinCode()], loadAndIncWinCode(), loadAndIncWinCode(), loadAndIncWinCode());
+	b3PrintMessageInTextbox(var[loadAndIncWinCode()], loadAndIncWinCode(), loadAndIncWinCode(), loadAndIncWinCode(), TRUE);
 }
 
-void b4Discard_view_v() // 1, 0x80 
+void b5Discard_view_v() // 1, 0x80 
 {
 	b9DiscardView(var[loadAndIncWinCode()]);
 	return;
 }
 
-void b4Clear_text_rect() // 5, 0x00 
+void b5Clear_text_rect() // 5, 0x00 
 {
 	int x1, y1, x2, y2, boxColour;
 
@@ -2075,7 +2110,7 @@ void b4Clear_text_rect() // 5, 0x00
 //	*data += 2;
 //}
 
-void b4WaitKeyRelease()
+void b5WaitKeyRelease()
 {
 	byte ch;
 
@@ -2083,13 +2118,10 @@ void b4WaitKeyRelease()
 	return;
 }
 
-void b4Set_menu() // 1, 0x00 
+void b5Set_menu() // 1, 0x00 
 {
 	bASetMenu(loadAndIncWinCode());
 }
-
-#pragma code-name (pop)
-#pragma code-name (push, "BANKRAM05")
 
 void b5Set_menu_item() // 2, 0x00 
 {

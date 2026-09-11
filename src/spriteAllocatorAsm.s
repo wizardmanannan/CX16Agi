@@ -28,7 +28,7 @@ ZP_HEIGHT = ZP_TMP_24 + 1
 ZP_NUMBER_TO_ALLOCATE = ZP_TMP_25
 ZP_ARRAY_COUNTER = ZP_TMP_25 + 1
 MAX_BULK_ALLOCATED_SIZE = 256
-;Puts the returned memory addresses on the system stack. Note as the lower byte is always zero only the high and middle bytes (in that order) are pushed onto the stack
+;Puts the returned memory addresses into the _bEBulkAllocatedAddresses buffer. Note as the lower byte is always zero only the high and middle bytes (in that order) are pushed onto the stack
 ;boolean bEAllocateSpriteMemoryBulk(SpriteAllocationSize width, SpriteAllocationSize height, byte number);
 _bEBulkAllocatedAddresses: .res MAX_BULK_ALLOCATED_SIZE, $0
 _bEAllocateSpriteMemoryBulk:
@@ -36,6 +36,8 @@ sta ZP_NUMBER_TO_ALLOCATE ;Save the number of sprites to allocate
 jsr popax
 sta ZP_HEIGHT ;Save the size of the allocation
 stx ZP_WIDTH
+
+bEAllocateSpriteMemoryBulkAsm:
 
 stz ZP_ARRAY_COUNTER
 

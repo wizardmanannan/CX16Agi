@@ -9,6 +9,7 @@
 #include "irq.h"
 #include "graphics.h"
 #include "paletteManager.h"
+#include "keyboard.h"
 
 #define BYTES_PER_CHARACTER 16
 #define NO_CHARS 160
@@ -29,6 +30,11 @@
 #define MENU_TOP_END 130
 #define MENU_TOP 131
 #define MENU_VERTICAL 132
+
+#define TEXT_ROWS 20
+#define AUTO_CALC_ROW 255
+#define AUTO_CALC_COLUMN 255
+
 
 #define TRANSPARENT_CHAR_BYTE (TRANSPARENT_CHAR * SIZE_PER_CHAR_CHAR_SET_ROM)
 #define LAST_BYTE_TRANSPARENT_CHAR ((TRANSPARENT_CHAR + 1) * SIZE_PER_CHAR_CHAR_SET_ROM - 1)
@@ -52,18 +58,23 @@
 
 #define TEXTBOX_PALETTE_NUMBER 1
 
+
+extern byte b3LastBoxLines; //Must be set manually if you display a textbox with wrapping turned off
+extern byte b3LastBoxStartLine;
+
 #pragma wrapped-call (push, trampoline, TEXT_CODE_BANK)
 void b3InitLayer1Mapbase();
-void b3DisplayMessageBox(char* message, byte messageBank, byte row, byte col, byte paletteNumber, byte boxWidth);
+byte b3DisplayManuallyWrappedMessageBox(char* message, byte messageBank, byte row, byte col, byte paletteNumber, byte boxWidth, byte boxHeight);
+void b3DisplayMessageBox(char* message, byte messageBank, byte row, byte col, byte paletteNumber, byte boxWidth, boolean wrap);
 void b3FillChar(byte startLine, byte endLine, byte paletteNumber, byte charToFill);
 void b3ClearLastPlacedText();
 byte b3SetTextColor(byte foreground, byte background);
 #pragma wrapped-call(pop)
 
-extern char textBuffer1[TEXTBUFFER_SIZE];
-extern char textBuffer2[TEXTBUFFER_SIZE];
+extern char b3TextBuffer1[TEXTBUFFER_SIZE];
+extern char b3TextBuffer2[TEXTBUFFER_SIZE];
 
-extern byte _currentForegroundColour;
-extern byte _currentBackgroundColour;
+extern byte b3CurrentForegroundColour;
+extern byte b3CurrentBackgroundColour;
 
 #endif

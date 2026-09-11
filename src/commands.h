@@ -1,8 +1,8 @@
 #ifndef _COMMANDS_H_
 #define _COMMANDS_H_
+#include "general.h"
 #include "helpers.h"
 #include "memoryManager.h"
-#include "lruCache.h"
 #include "logic.h"
 #include "debugHelper.h"
 #include "picture.h"

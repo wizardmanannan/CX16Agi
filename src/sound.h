@@ -8,7 +8,7 @@
 #include <limits.h>
 
 #define MAX_SOUNDS 256
-#define MAX_LOADED_SOUNDS 10
+#define MAX_LOADED_SOUNDS 30
 
 typedef struct {
 	byte* ch0;
@@ -16,7 +16,8 @@ typedef struct {
 	byte* ch2;
 	byte* chNoise;
 	byte soundBank;
-	byte* soundResource; 
+	byte* soundResource;
+	byte isLogicZeroOrDependency; 
 } SoundFile;
 
 #pragma wrapped-call (push, trampoline, SOUND_BANK)
@@ -25,6 +26,7 @@ void bBInitSound();
 void bBLoadSoundFile(int soundNum);
 void bBPlaySound(byte soundNum, byte endSoundFlag);
 void bBStopSound();
+void bBMarkSoundAsAZeroDependency(byte soundNum);
 #pragma wrapped-call (pop)
 
 extern SoundFile bBLoadedSounds[];

@@ -45,7 +45,7 @@ jumpOffset: .byte $0
 numArgs: .byte $0,$2,$2,$2,$2,$2,$2,$1,$1,$1,$2,$5,$1,$0,$0,$2,$5,$5,$5
 
 ; Define the codeBankArray, which stores the bank of every opcode (excluding return and boolean operators like greater than) starting from opcode 1 and going to 182
-codeBankArray: .byte $5,$1,$1,$1,$1,$1,$1,$2,$2,$2,$2,$2,$2,$2,$2,$2,$2,$2,$2,$2,$2,$2,$2,$2,$2,$2,$2,$2,$2,$2,$2,$2,$2,$2,$2,$2,$2,$2,$2,$2,$2,$2,$2,$2,$2,$2,$2,$2,$2,$2,$2,$2,$2,$2,$2,$2,$2,$2,$2,$2,$2,$2,$2,$2,$2,$2,$2,$2,$2,$2,$2,$2,$2,$2,$2,$2,$2,$2,$2,$2,$2,$2,$2,$2,$2,$2,$2,$2,$2,$2,$1,$1,$3,$3,$3,$3,$3,$3,$3,$3,$3,$3,$3,$3,$3,$3,$4,$4,$4,$4,$1,$4,$4,$4,$4,$4,$4,$4,$4,$4,$4,$4,$4,$4,$4,$1,$1,$1,$4,$4,$4,$4,$4,$4,$4,$1,$4,$1,$1,$1,$1,$4,$1,$1,$1,$4,$4,$4,$4,$1,$1,$4,$4,$4,$4,$1,$4,$5,$1,$5,$5,$5,$5,$1,$1,$5,$5,$5,$5,$1,$1,$1,$1,$1,$5,$1,$1,$5,$1,$1,$1,$1,$1 ;Import debug functions if DEBUG is defined
+codeBankArray: .byte $5,$1,$1,$1,$1,$1,$1,$2,$2,$2,$2,$2,$2,$2,$2,$2,$2,$2,$2,$2,$2,$2,$2,$2,$2,$2,$2,$2,$2,$2,$2,$2,$2,$2,$2,$2,$2,$2,$2,$2,$2,$2,$2,$2,$2,$2,$2,$2,$2,$2,$2,$2,$2,$2,$2,$2,$2,$2,$2,$2,$2,$2,$2,$2,$2,$2,$2,$2,$2,$2,$2,$2,$2,$2,$2,$2,$2,$2,$2,$2,$2,$2,$2,$2,$2,$2,$2,$2,$2,$2,$1,$1,$3,$3,$3,$3,$3,$3,$3,$3,$3,$3,$3,$3,$3,$3,$4,$4,$4,$4,$1,$4,$4,$4,$4,$4,$4,$4,$4,$4,$4,$4,$4,$4,$4,$1,$1,$1,$4,$4,$4,$4,$4,$4,$5,$1,$5,$1,$1,$1,$1,$5,$1,$5,$1,$5,$5,$5,$5,$1,$1,$5,$5,$5,$5,$1,$5,$5,$1,$5,$5,$5,$5,$1,$1,$5,$5,$5,$5,$1,$1,$1,$1,$1,$5,$1,$1,$5,$1,$1,$1,$1,$1
 .ifdef DEBUG
 .import _bDbgPrintTrue
 .import _bDbgPrintFalse
@@ -414,7 +414,10 @@ _executeLogic:
 
          ldy RAM_BANK
          sty previousRamBank
-
+         
+         ldy _currentLog
+         phy
+    
          sta _currentLog
          stx _currentLog + 1
          
@@ -449,11 +452,13 @@ _executeLogic:
 
          lda #LOGIC_CODE_BANK
          sta RAM_BANK
-        
+
          lda _currentLog
          ldx _currentLog + 1
+         jsr pusha
+         lda #$0
          jsr _b6LoadLogicFile
-         
+      
          ldx #LOGIC_BANK
          stx RAM_BANK
          @endifLoaded:    
@@ -531,6 +536,10 @@ _executeLogic:
         endMainLoop:
         lda previousRamBank
         sta RAM_BANK
+
+        pla
+        sta _currentLog
+
         rts
 .endif
 

@@ -42,6 +42,19 @@ VIEW_INC = 1
 .import _bETerminateSpriteBuffer
 .import _agiBlit
 .import _offsetOfEntryNum
+.import _viewsWithSpriteMem
+.import _offsetOfLoopsBank
+.import _offsetOfLoops
+.import _offsetOfCelsBank
+.import _offsetOfCels
+.import _sizeOfLoop
+.import _sizeOfCel
+.import _offsetOfNumberOfCels
+.import _offsetOfMaxVeraSlots
+.import _offsetOfAllocationWidth
+.import _offsetOfAllocationHeight
+.import _offsetOfViewMetadataBank
+
 
 .ifdef SPRITE_DEBUG
 .import _bSdRunNumber
@@ -158,6 +171,339 @@ jsr debugSprites
 jsr debugSpritesNextRun
 .endif
 .endmacro
+
+
+; =============================================================================
+; bESetLoop
+;
+; boolean bESetLoop(
+;     ViewTable*          localViewTab,      // Current view table entry
+;     ViewTableMetadata*  localMetadata,     // View metadata
+;     View*               localView,          // View structure
+;     VeraSpriteAddress*  loopVeraAddresses,  // Destination array for VERA addresses
+;     byte                entryNum            // Entry number in viewsWithSpriteMem
+; );
+;
+; This routine is part of the sprite memory management system for the
+; Sierra AGI interpreter on Commander X16.
+;
+; Flow:
+;   1. Allocates VERA sprite slots for the current loop
+;   2. Copies the allocated VERA addresses into the view's loop array
+;   3. Copies current cel data into temporary Golden RAM work area
+;   4. Copies that data from Golden RAM into _bEToBlitCelArray
+;   5. Calls _bECellToVeraBulk to render the cel
+;
+; Note: 
+;   - Golden RAM work area is purely temporary storage.
+;   - VERA addresses are stored as 4-byte C longs in loopVeraAddresses.
+;   - The fourth byte is always 0 on the X16.
+;
+; Returns: TRUE on success
+; =============================================================================
+
+.scope
+
+; Zero-page temporaries used by this routine
+ENTRY_NUM               = ZP_TMP_28
+PREVIOUS_BANK           = ZP_TMP_28 + 1
+LOOP_VERA_ADDRESS       = ZP_TMP_29     ; pointer to destination array in RAM
+VIEW                    = ZP_TMP_30
+VIEW_TABLE_METADATA     = ZP_TMP_31
+VIEW_TAB                = ZP_TMP_32
+LOOP                    = ZP_TMP_33
+CEL                     = ZP_TMP_34
+NUMBER_OF_CELS          = ZP_TMP_35
+MAX_VERA_SLOTS          = ZP_TMP_35 + 1
+ALLOCATION_WIDTH        = ZP_TMP_36
+ALLOCATION_HEIGHT       = ZP_TMP_36 + 1
+VIEW_TABLE_METADATA_BANK = ZP_TMP_37
+VIEW_TABLE_CURRENT_CEL  = ZP_TMP_37 + 1
+CEL_BANK                = ZP_TMP_38
+LOOP_BANK               = ZP_TMP_39
+
+.segment "BANKRAM0E"
+
+; Lookup table: index -> sprite size in pixels (8,16,32,64)
+bEAllocateWidthToSpriteSize: .byte 8,16,32,64
+
+; -----------------------------------------------------------------------------
+; Entry point for sprite memory allocation
+; -----------------------------------------------------------------------------
+bEAllocateSpriteMemory:
+    lda MAX_VERA_SLOTS
+    sta ZP_NUMBER_TO_ALLOCATE
+
+    ldx ALLOCATION_WIDTH
+    lda bEAllocateWidthToSpriteSize,x
+    sta ZP_WIDTH
+
+    ldx ALLOCATION_HEIGHT
+    lda bEAllocateWidthToSpriteSize,x
+    sta ZP_HEIGHT
+
+    jsr bEAllocateSpriteMemoryBulkAsm
+    bne success
+    jmp restoreBank
+
+success:
+    jmp copyAddresses
+
+    rts
+
+; -----------------------------------------------------------------------------
+; Copy from temporary Golden RAM work area into _bEToBlitCelArray
+; (this is the buffer actually used by the bulk renderer)
+; -----------------------------------------------------------------------------
+bECopyToCelArray:
+    ldy _sizeOfCel
+    dey
+copyToBlitCelArrayLoop:
+    lda GOLDEN_RAM_WORK_AREA,y
+    sta _bEToBlitCelArray,y
+    dey
+    bpl copyToBlitCelArrayLoop
+
+    jmp callCelToVeraBulk
+
+; -----------------------------------------------------------------------------
+; Public C-callable wrapper
+; -----------------------------------------------------------------------------
+.export _bESetLoop
+_bESetLoop:
+    sta ENTRY_NUM               ; entry number for viewsWithSpriteMem flag
+
+    jsr popax
+    sta LOOP_VERA_ADDRESS
+    stx LOOP_VERA_ADDRESS + 1
+
+    jsr popax
+    sta VIEW
+    stx VIEW + 1
+
+    jsr popax
+    sta VIEW_TABLE_METADATA
+    stx VIEW_TABLE_METADATA + 1
+
+    jsr popax
+    sta VIEW_TAB
+    stx VIEW_TAB + 1
+
+setLoopAsm:
+    ldx ENTRY_NUM
+    lda #$1 
+    sta _viewsWithSpriteMem,x   ; mark view as having sprite memory allocated
+
+    GET_STRUCT_16_STORED_OFFSET _offsetOfLoops, VIEW, LOOP
+    GET_STRUCT_8_STORED_OFFSET _offsetOfMaxVeraSlots, VIEW, MAX_VERA_SLOTS
+    GET_STRUCT_8_STORED_OFFSET _offsetOfLoopsBank, VIEW, LOOP_BANK 
+
+    jmp setLoop
+
+.segment "CODE"
+
+; -----------------------------------------------------------------------------
+; Main logic - resolve structures and allocate sprite memory
+; -----------------------------------------------------------------------------
+setLoop:
+    sta RAM_BANK                        ; switch to view table bank
+    GET_STRUCT_8_STORED_OFFSET _offsetOfCurrentLoop, VIEW_TAB 
+
+    ; Calculate pointer to current Loop structure
+    ldy _sizeOfLoop
+    jsr mul8x8to8
+    clc
+    adc LOOP
+    sta LOOP
+    lda #$0
+    adc LOOP + 1
+    sta LOOP + 1
+
+    GET_STRUCT_8_STORED_OFFSET _offsetOfAllocationWidth,  LOOP, ALLOCATION_WIDTH
+    GET_STRUCT_8_STORED_OFFSET _offsetOfAllocationHeight, LOOP, ALLOCATION_HEIGHT
+
+    GET_STRUCT_16_STORED_OFFSET _offsetOfCels, LOOP, CEL
+    GET_STRUCT_8_STORED_OFFSET  _offsetOfCelsBank, LOOP, CEL_BANK
+    sta RAM_BANK
+
+    GET_STRUCT_8_STORED_OFFSET _offsetOfNumberOfCels, LOOP, NUMBER_OF_CELS
+    GET_STRUCT_8_STORED_OFFSET _offsetOfCurrentCel, VIEW_TAB, VIEW_TABLE_CURRENT_CEL 
+
+    ; Calculate pointer to current Cel structure
+    ldy _sizeOfCel
+    jsr mul8x8to8
+    clc
+    adc CEL
+    sta CEL
+    lda #$0
+    adc CEL + 1
+    sta CEL + 1
+
+    ; Read view metadata bank
+    lda #VIEW_TABLE_METADATA_BANK
+    sta RAM_BANK
+    GET_STRUCT_8_STORED_OFFSET _offsetOfViewMetadataBank, VIEW_TABLE_METADATA, VIEW_TABLE_METADATA_BANK
+
+    lda #SPRITE_ALLOCATOR_BANK
+    sta RAM_BANK
+
+    jmp bEAllocateSpriteMemory
+
+; -----------------------------------------------------------------------------
+; Copy allocated VERA sprite addresses (as 4-byte C longs) 
+; into the loop's address array
+; -----------------------------------------------------------------------------
+copyAddresses:  
+    ; === ADDRESS CALCULATION FOR THE CURRENT CEL ===
+    ;
+    ; We need the starting byte offset for the group of addresses belonging
+    ; to the current cel. Each cel has MAX_VERA_SLOTS addresses.
+    ;
+    ; Desired slot index = MAX_VERA_SLOTS * currentCel
+    ;
+    ; Because we copy backwards, we actually want the *last* address in that group:
+    ;     last_slot = MAX_VERA_SLOTS * currentCel + (MAX_VERA_SLOTS - 1)
+    ;
+    ; The code computes this using a small optimisation trick:
+    ;
+    ;   A = MAX_VERA_SLOTS * currentCel
+    ;   A = A + MAX_VERA_SLOTS          → MAX_VERA_SLOTS * (currentCel + 1)
+    ;   A = A - 1                       → MAX_VERA_SLOTS * currentCel + (MAX_VERA_SLOTS - 1)
+    ;
+    ; Why (currentCel + 1) - 1 ?
+    ; It's a common 6502 trick to avoid extra instructions or using another register
+    ; when preparing a descending loop. It saves bytes and cycles.
+
+    lda MAX_VERA_SLOTS
+    ldy VIEW_TABLE_CURRENT_CEL
+    jsr mul8x8to8               ; A = MAX_VERA_SLOTS * currentCel
+
+    clc
+    adc MAX_VERA_SLOTS          ; A = MAX_VERA_SLOTS * (currentCel + 1)
+    dec                         ; A = MAX_VERA_SLOTS * currentCel + (MAX_VERA_SLOTS - 1)
+    asl                         ; ×2
+    asl                         ; ×4  (4 bytes per C long)
+    adc #$3                     ; +3 to point at the last byte of the 4-byte long
+    tay                         ; Y = final byte offset for backwards write
+
+    ; Set up X as source index into the bulk allocation buffer (3 bytes per address)
+    lda MAX_VERA_SLOTS
+    dec
+    asl
+    asl
+    tax
+
+copyAddressesLoop:
+    ; Load one 3-byte VERA address from bulk allocator.
+    ; Fourth byte (high byte of C long) is always 0 on the X16.
+    lda _bEBulkAllocatedAddresses + 2,x
+    sta sreg2
+    lda _bEBulkAllocatedAddresses + 1,x
+    sta sreg
+    lda _bEBulkAllocatedAddresses,x
+    sta sreg + 1
+
+    lda VIEW_TABLE_METADATA_BANK
+    sta RAM_BANK
+
+    ; Write the 4-byte long backwards (MSB first)
+loopVeraAddress1:
+    lda #$0                     ; high byte of long = 0
+    sta (LOOP_VERA_ADDRESS),y
+    dey
+
+    lda sreg2
+    sta (LOOP_VERA_ADDRESS),y
+    dey
+
+    lda sreg
+    sta (LOOP_VERA_ADDRESS),y
+    dey
+
+    lda sreg + 1
+    sta (LOOP_VERA_ADDRESS),y
+    dey
+
+copyAddressesLoopCheck:
+    lda #SPRITE_ALLOCATOR_BANK
+    sta RAM_BANK
+
+    dex
+    dex
+    dex
+    dex
+    bpl copyAddressesLoop
+
+; -----------------------------------------------------------------------------
+; Copy current cel into temporary Golden RAM work area
+; -----------------------------------------------------------------------------
+celCopy:
+    lda CEL_BANK
+    sta RAM_BANK
+    ldy _sizeOfCel
+    dey
+celCopyToGoldenLoop:
+    lda (CEL),y
+    sta GOLDEN_RAM_WORK_AREA,y      ; temporary storage only
+    dey
+    bpl celCopyToGoldenLoop
+
+    lda #SPRITE_METADATA_BANK
+    sta RAM_BANK
+
+    jmp bECopyToCelArray
+
+callCelToVeraBulk:
+    lda LOOP_BANK
+    sta RAM_BANK
+
+    ; Push parameters for _bECellToVeraBulk
+    GET_STRUCT_8_STORED_OFFSET _offsetOfAllocationWidth, LOOP
+    jsr pusha
+
+    GET_STRUCT_8_STORED_OFFSET _offsetOfAllocationHeight, LOOP
+    jsr pusha
+
+    lda #1                      ; noCels = 1 (single cel this call)
+    jsr pusha
+
+    GET_STRUCT_8_STORED_OFFSET _offsetOfMaxVeraSlots, VIEW
+    jsr pusha
+
+    GET_STRUCT_8_STORED_OFFSET _offsetOfXPos, VIEW_TAB
+    jsr pusha
+
+    ; yPos = viewTab->yPos - cel->height + 1
+    lda CEL_BANK
+    sta RAM_BANK
+
+    ldy _offsetOfCelHeight
+    GET_STRUCT_8_STORED_OFFSET _offsetOfCelHeight, CEL, sreg
+    GET_STRUCT_8_STORED_OFFSET _offsetOfYPos, VIEW_TAB
+
+    sec
+    sbc sreg
+    inc
+    jsr pusha
+
+    GET_STRUCT_8_STORED_OFFSET _offsetOfPriority, VIEW_TAB
+
+    ldx #SPRITE_ALLOCATOR_BANK
+    stx RAM_BANK
+
+    jsr _bECellToVeraBulk
+
+; -----------------------------------------------------------------------------
+; Restore previous RAM bank and return
+; -----------------------------------------------------------------------------
+restoreBank:
+    lda PREVIOUS_BANK
+    sta RAM_BANK
+
+    lda #TRUE        
+    rts
+
+.endscope
 
 ;Don't put anything in 25 used for x and y of canBeHere, or 21 - 24, used for local variables in update position
 .segment "BANKRAM09"

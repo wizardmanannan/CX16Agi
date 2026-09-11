@@ -19,19 +19,25 @@ See it running here on YouTube: \
 ![image](https://github.com/user-attachments/assets/c1cdc287-a795-44fb-946b-8e7155d80fa1)
 ![image](https://github.com/user-attachments/assets/96817fbb-d173-4ca7-98f6-d2cb1458ef55)
 
-# CX 16 Iteration 14 Goals (Current)
+# CX 16 Iteration 15 Goals (Current)
+- Implement Load And Save
 - Continuing to work towards playability of King's Quest I:
 - Fix stalls that sometimes happen, such as those that occur when a new loop is loaded
 - Continuing to squash bugs that would stop a player completing the game
-- Stop music from stalling when heavy work is undertaken, by reducing the time IRQ is paused
 
-# CX 16 Iteration 13 Goals 
+# CX 16 Iteration 14 Goals (Complete)
+- Continuing to work towards playability of King's Quest I:
+- Fix stalls that sometimes happen, such as those that occur when a new loop is loaded
+- Continuing to squash bugs that would stop a player completing the game
+- Implement Menus
+
+# CX 16 Iteration 13 Goals (Complete)
 Working Towards Full Playability For King's Quest I:
 - Fix broken and slow z-order algorithm
 - Building a more reliable action handler algorithm (eg. Algorithm that acts on the parsed tokens of the user's input)
 - Bug fixes
 
-# CX 16 Iteration 12 Goals (Current)
+# CX 16 Iteration 12 Goals (Complete)
 Fix object placement bugs, but trying to make code function exactly the same and a known good interpreter
 
 # CX 16 Iteration 11 Goals (Complete)

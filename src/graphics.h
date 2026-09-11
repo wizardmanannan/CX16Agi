@@ -85,7 +85,7 @@ typedef enum {
 	SPR_ATTR_64 = 3
 } SpriteAttributeSize;
 
-typedef struct {
+typedef struct Loop {
 	byte numberOfCels;
 	Cel* cels;
 	byte celsBank;

@@ -232,7 +232,7 @@ lastMainLoopCounter: .byte $FF
 _vSyncCounter: .word $0
 debugVSyncCounter: .word $0
 
-custom_irq_handler:
+custom_irq_handler: ;For some reason the jmpTableBank seems disused and we are trampoling: TODO FIX as this wastes cycles 
 lda RAM_BANK
 sta @previousRamBank 
 
@@ -332,6 +332,10 @@ bra @resetSetIrqState
 
 @clear:
 CALL_CLEAR
+bra @resetSetIrqState
+
+@showObj:
+TRAMPOLINE #SHOW_OBJ_BANK, b11ShowObjIrqHandler
 
 @resetSetIrqState:
 lda #IRQ_CMD_DONTCHANGE
@@ -361,6 +365,8 @@ jmp (default_irq_vector)
 .addr @l12Only
 .addr @clear
 .addr @normal ;Graphics command goes to the same place as normal, it just clears while normal does not
+.addr @showObj
+
 
 @jmpTableBank: .byte $0, $0, $0, $0, TEXT_BANK, $0 ;In order of IRQ_CMDS
 @previousRamBank: .byte $0

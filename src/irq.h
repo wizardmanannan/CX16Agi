@@ -13,7 +13,8 @@ typedef enum {
     DISPLAY_TEXT = 4,
     L0_L1_ONLY = 5,
     CLEAR = 6,
-    DISPLAY_GRAPHICS = 7 //Used to handle the 'graphics' command
+    DISPLAY_GRAPHICS = 7, //Used to handle the 'graphics' command
+    SHOW_OBJ = 8
 } IRQ_COMMAND;
 
 extern unsigned int vSyncCounter; //Updated by IRQ every 60ms

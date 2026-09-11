@@ -77,8 +77,8 @@ const char B11_THE_BUFFER_STATUS[] = "";
 const char B11_LOADED_PIC[] = "Loaded picture data %p, bank %d, size %d\n";
 #pragma rodata-name (pop)
 
-#pragma rodata-name (push, "BANKRAM04")
-const char B4_CIRCLES[][15] = { /* agi circle bitmaps */
+#pragma rodata-name (push, "BANKRAM08")
+const char B8_CIRCLES[][15] = { /* agi circle bitmaps */
 	  {0x80},
 	  {0xfc},
 	  {0x5f, 0xf4},
@@ -90,14 +90,14 @@ const char B4_CIRCLES[][15] = { /* agi circle bitmaps */
 	   0x7e, 0x3c, 0x18}
 };
 
-const byte B4_SPLATTER_MAP[32] = { /* splatter brush bitmaps */
+const byte B8_SPLATTER_MAP[32] = { /* splatter brush bitmaps */
   0x20, 0x94, 0x02, 0x24, 0x90, 0x82, 0xa4, 0xa2,
   0x82, 0x09, 0x0a, 0x22, 0x12, 0x10, 0x42, 0x14,
   0x91, 0x4a, 0x91, 0x11, 0x08, 0x12, 0x25, 0x10,
   0x22, 0xa8, 0x14, 0x24, 0x00, 0x50, 0x24, 0x04
 };
 
-const byte B4_SPLATTER_START[128] = { /* starting bit position */
+const byte B8_SPLATTER_START[128] = { /* starting bit position */
   0x00, 0x18, 0x30, 0xc4, 0xdc, 0x65, 0xeb, 0x48,
   0x60, 0xbd, 0x89, 0x05, 0x0a, 0xf4, 0x7d, 0x7d,
   0x85, 0xb0, 0x8e, 0x95, 0x1f, 0x22, 0x0d, 0xdf,
@@ -137,12 +137,12 @@ void b0CSetLoadedPicture(PictureFile* loadedPicture, byte loadedPictureNumber)
 #pragma wrapped-call (pop)
 #pragma code-name (pop)
 
-#pragma code-name (push, "BANKRAM04")
+#pragma code-name (push, "BANKRAM08")
 
 
 #define plotPatternPoint() \
    if (patCode & 0x20) { \
-      if ((B4_SPLATTER_MAP[bitPos>>3] >> (7-(bitPos&7))) & 1) b8DrawPixel(x1, y1); \
+      if ((B8_SPLATTER_MAP[bitPos>>3] >> (7-(bitPos&7))) & 1) b8DrawPixel(x1, y1); \
       bitPos++; \
       if (bitPos == 0xff) bitPos=0; \
    } else b8DrawPixel(x1, y1)
@@ -154,11 +154,11 @@ void b0CSetLoadedPicture(PictureFile* loadedPicture, byte loadedPictureNumber)
 ** Draws pixels, circles, squares, or splatter brush patterns depending
 ** on the pattern code.
 **************************************************************************/
-void b4PlotPattern(byte x, byte y)
+void b8PlotPattern(byte x, byte y)
 {
 
 	int circlePos = 0;
-	byte x1, y1, penSize, bitPos = B4_SPLATTER_START[patNum];
+	byte x1, y1, penSize, bitPos = B8_SPLATTER_START[patNum];
 
 	penSize = (patCode & 7);
 
@@ -180,7 +180,7 @@ void b4PlotPattern(byte x, byte y)
 				plotPatternPoint();
 			}
 			else { /* Circle */
-				if ((B4_CIRCLES[patCode & 7][circlePos >> 3] >> (7 - (circlePos & 7))) & 1) {
+				if ((B8_CIRCLES[patCode & 7][circlePos >> 3] >> (7 - (circlePos & 7))) & 1) {
 					plotPatternPoint();
 				}
 				circlePos++;
@@ -425,7 +425,7 @@ byte b11PlotBrush(byte** data, BufferStatus* bufferStatus)
 
 		GET_NEXT(y1);
 		if (y1 >= 0xF0) return y1;
-		b4PlotPattern(x1, y1);
+		b8PlotPattern(x1, y1);
 	}
 }
 

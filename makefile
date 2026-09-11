@@ -27,7 +27,7 @@ CONFIG  :=
 
 # Additional C compiler flags and options.
 # Default: none
-CFLAGS  =
+CFLAGS  = -O -Wc --disable-opt,OptPush1 -Wc --disable-opt,OptPush2 -Wc --disable-opt,OptPushPop1 -Wc --disable-opt,OptStore1 -Wc --disable-opt,OptStore2 -Wc --disable-opt,OptStore3 -Wc --disable-opt,OptStore4 -Wc --disable-opt,OptStore5 -Wc --disable-opt,OptStackOps -Wc --disable-opt,OptStackPtrOps -Wc --disable-opt,OptGotoSPAdj -Wc --disable-opt,OptUnusedStores -Wc --disable-opt,OptStoreLoad #These wc arguments are required because I have noticed the 3d effect is broken without them. Likely this happens because assembly function calls have arguments reordered
 
 # Additional assembler flags and options.
 # Default: none
@@ -304,10 +304,10 @@ $(TARGETOBJDIR)/%.o: %.asm | $(TARGETOBJDIR)
 vpath %.a65 $(SRCDIR)/$(TARGETLIST) $(SRCDIR)
 
 $(TARGETOBJDIR)/%.o: %.a65 | $(TARGETOBJDIR)
-	$(CC) -t $(CC65TARGET) -c --create-dep $(@:.o=.d) $(ASFLAGS) -o $@ $<
+	$(CC) -O -t $(CC65TARGET) -c --create-dep $(@:.o=.d) $(ASFLAGS) -o $@ $<
 
 $(PROGRAM): $(CONFIG) $(OBJECTS) $(LIBS)
-	$(CC) -t $(CC65TARGET) $(LDFLAGS) -o $@ $(patsubst %.cfg,-C %.cfg,$^) -C cx16-bank.cfg --mapfile "/home/alay/CLionProjects/CX16Agi/map.txt"
+	$(CC) -t $(CC65TARGET) $(LDFLAGS)  -o $@ $(patsubst %.cfg,-C %.cfg,$^) -C cx16-bank.cfg --mapfile "/home/alay/CLionProjects/CX16Agi/map.txt"
 
 test: $(PROGRAM)
 	$(PREEMUCMD)

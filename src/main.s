@@ -21,6 +21,7 @@
     .include "menuAsm.s"
     .include "controllersAsm.s"
     .include "statusBar.s"
+    .include "showObjAsm.s"
     
     .export _executeLogic
     .export _b6InitInterpreter
@@ -37,10 +38,7 @@
     .export _b6SetAndWaitForIrqStateAsm
     .export _displayTextAddressToCopyTo
     .export _vSyncCounter
-    .export _lastBoxLines
-    .export _lastBoxStartLine
-    .export _textBuffer1
-    .export _textBuffer2
+
     .export _currentTextBuffer
     .export _trampoline
     .export _viewHeaderBuffer
@@ -61,7 +59,7 @@
     .export _b3PaletteRows
     .export _b3PaletteNumber
     .export _b3InitLayer1Mapbase
-    .export _b4ClearPicture
+    .export _b8ClearPicture
     .export _b12FindSynonymNumSearch
     .export _b6Clear
     .export _b5IsDebuggingEnabled
@@ -119,3 +117,9 @@
     .export _b9StartMoveObj
     .export _bAInitMenus
     .export _statusLineDisplayed
+    .export _b11ShowObjSpriteAddressShifted
+    .export _b11ShowObjSprAttr7
+    .export _b11ShowObjCelHeight
+    .export _b11ShowObjX
+    .export _b11ShowObjY
+

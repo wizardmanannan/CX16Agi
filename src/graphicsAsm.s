@@ -8,19 +8,7 @@ GRAPHICS_INC = 1
 .include "irqAsm.s"
 .include "lineDrawing.s"
 
-.segment "BANKRAM03"
-_lastBoxLines: .byte $0 ; Wish I could have declared these in textLayer.c, but put it here to ensure it is in bank 3
-_lastBoxStartLine: .byte $0
-
-
-_textBuffer1: .res 1000
-_textBuffer2: .res 1000
-
-
- .segment "BANKRAM06"
-
-
-
+.segment "BANKRAM06"
 .import _b3InitCharset
 .import pushax
 .import pusha
@@ -35,7 +23,7 @@ _textBuffer2: .res 1000
 _b6Clear:
 TRAMPOLINE #TEXT_BANK, _b3InitLayer1Mapbase
 TRAMPOLINE #SPRITE_UPDATES_BANK, _bEClearSpriteAttributes
-TRAMPOLINE #PICTURE_CODE_OVERFLOW_BANK, _b4ClearPicture
+TRAMPOLINE #PICTURE_CODE_OVERFLOW_BANK, _b8ClearPicture
 TRAMPOLINE #GRAPHICS_BANK, _b6InitInput
 rts
 
@@ -415,13 +403,13 @@ dec
 bne @initLoop 
 rts
 
-.segment "BANKRAM04"
-_b4ClearPicture:
- jsr _b4ClearBackground
- jsr _b4ClearPriority
+.segment "BANKRAM08"
+_b8ClearPicture:
+ jsr _b8ClearBackground
+ jsr _b8ClearPriority
  rts
 
-_b4ClearPriority:
+_b8ClearPriority:
 PRIORITY_COUNTER = ZP_TMP_2
 
 stz VERA_ctrl
@@ -453,7 +441,7 @@ bne @loopOuter
 rts
 
 
-_b4ClearBackground:
+_b8ClearBackground:
 stz VERA_ctrl
 lda #$10 | ^STARTING_BYTE
 sta VERA_addr_bank

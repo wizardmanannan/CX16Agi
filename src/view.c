@@ -962,8 +962,6 @@ FONT* font;
 
 //
 
-extern void b9CelToVera(Cel* localCel, byte celBank, long veraAddress, byte bCol, byte drawingAreaWidth, byte x, byte y, byte pNum);
-
 #pragma code-name (push, "BANKRAM0E")
 #pragma wrapped-call (push, trampoline, SPRITE_METADATA_BANK)
 
@@ -1358,41 +1356,37 @@ void bESwitchMetadata(ViewTable* localViewTab, View* localView, byte viewNum, by
 #endif
 }
 
+
+SpriteAllocationSize bEGetSpriteAllocateSize(SpriteAttributeSize spriteAttributeSize)
+{
+   SpriteAllocationSize allocation;
+
+	switch (spriteAttributeSize)
+	{
+	case SPR_ATTR_8:
+		allocation = SPR_SIZE_8;
+		break;
+	case SPR_ATTR_16:
+		allocation = SPR_SIZE_16;
+		break;
+	case SPR_ATTR_32:
+		allocation = SPR_SIZE_32;
+		break;
+	case SPR_ATTR_64:
+		allocation = SPR_SIZE_64;
+		break;
+	}
+
+	return allocation;
+}
+
 boolean bEAllocateSpriteMemory(Loop* localLoop, byte noToBlit)
 {
 	SpriteAllocationSize allocationWidth, allocationHeight;
 
-	switch (localLoop->allocationWidth)
-	{
-	case SPR_ATTR_8:
-		allocationWidth = SPR_SIZE_8;
-		break;
-	case SPR_ATTR_16:
-		allocationWidth = SPR_SIZE_16;
-		break;
-	case SPR_ATTR_32:
-		allocationWidth = SPR_SIZE_32;
-		break;
-	case SPR_ATTR_64:
-		allocationWidth = SPR_SIZE_64;
-		break;
-	}
+	allocationWidth = bEGetSpriteAllocateSize(localLoop->allocationWidth);
 
-	switch (localLoop->allocationHeight)
-	{
-	case SPR_ATTR_8:
-		allocationHeight = SPR_SIZE_8;
-		break;
-	case SPR_ATTR_16:
-		allocationHeight = SPR_SIZE_16;
-		break;
-	case SPR_ATTR_32:
-		allocationHeight = SPR_SIZE_32;
-		break;
-	case SPR_ATTR_64:
-		allocationHeight = SPR_SIZE_64;
-		break;
-	}
+	allocationHeight = bEGetSpriteAllocateSize(localLoop->allocationHeight);
 
 	//printf("we pass in %d %d\n", allocationWidth, allocationHeight);
 	if (!bEAllocateSpriteMemoryBulk(allocationWidth, allocationHeight, noToBlit))
@@ -1402,78 +1396,14 @@ boolean bEAllocateSpriteMemory(Loop* localLoop, byte noToBlit)
 
 	return TRUE;
 }
-
-#define TO_BLIT_CEL_ARRAY_LENGTH 500
-extern byte bEToBlitCelArray[TO_BLIT_CEL_ARRAY_LENGTH];
-//Copy cels into array above first
-extern void bECellToVeraBulk(SpriteAttributeSize allocationWidth, SpriteAttributeSize allocationHeight, byte noCels, byte maxVeraSlots, byte xVal, byte yVal, byte pNum);
-boolean bESetLoop(ViewTable* localViewTab, ViewTableMetadata* localMetadata, View* localView, VeraSpriteAddress* loopVeraAddresses, byte entryNum)
-{
-	Loop localLoop;
-	Cel localCel;
-	byte noToBlit, i;
-	byte veraSpriteWidthAndHeight;
-
-	viewsWithSpriteMem[entryNum] = TRUE;
-
-	getLoadedLoop(localView, &localLoop, localViewTab->currentLoop);
-	getLoadedCel(&localLoop, &localCel, localViewTab->currentCel);
-
-	noToBlit = localLoop.numberOfCels * localView->maxVeraSlots;
-
-#ifdef VERBOSE_DEBUG_BLIT
-	printf("Trying to copy to %p from %p. Number %d. \n ", localMetadata->loopsVeraAddressesPointers[localViewTab->currentLoop], bEBulkAllocatedAddresses, noToBlit);
-#endif // VERBOSE_DEBUG_BLIT
-
-#ifdef VERBOSE_DEBUG_BLIT
-	printf("vera Sprite addresses %d * %d * %d = %d (%d)\n", localLoop.numberOfCels, localLoop.veraSlotsWidth, localLoop.veraSlotsHeight, localLoop.numberOfCels * localLoop.veraSlotsWidth * localLoop.veraSlotsHeight, noToBlit);
-#endif
-
-#ifdef VERBOSE_DEBUG_BLIT
-	printf("Trying to allocate %d. Number %d\n", localLoop.allocationSize, noToBlit);
-#endif
-
-	for (i = 0; !bEAllocateSpriteMemory(&localLoop, noToBlit); i++)
-	{
-		//printf("md %p  current loop %d view %p lvp %p bank %d no loops %d  number cels %d, vt %p\n", &viewTableMetadata[7], localViewTab->currentLoop, &loadedViews[61], localMetadata->loopsVeraAddressesPointers, localMetadata->viewTableMetadataBank, localView->numberOfLoops, localView->maxCels, &viewtab[7]);
-		//printf("the max slots are %d for view %d\n", localView->maxVeraSlots, localViewTab->currentView);
-		//printf("view %p is at %p view tab is at %p view md is %p entry %p", localViewTab->currentView, &loadedViews[localViewTab->currentView], &viewtab[7], &viewTableMetadata[0xB], viewTabNoToMetaData[7]);
-
-		if (i == 0)
-		{
-			//runSpriteGarbageCollector(7, 7);
-			//bCDeleteSpriteMemoryForViewTab(localMetadata, localViewTab->currentLoop, localView, TRUE);
-		}
-		else {
-			return FALSE;
-		}
-	}
-
-#ifdef VERBOSE_DEBUG_BLIT
-	printf("The address of the buffer is %p\n ", bEBulkAllocatedAddresses);
-	printf("loop vera is %p", loopVeraAddresses);
-	printf("Trying to copy to %p on bank %d from %p on bank %d number %d.", (byte*)loopVeraAddresses, localMetadata->viewTableMetadataBank, bEBulkAllocatedAddresses, SPRITE_METADATA_BANK, noToBlit * sizeof(VeraSpriteAddress));
-#endif
-	enableHelpersDebugging = TRUE;
-	memCpyBankedBetween((byte*)loopVeraAddresses, localMetadata->viewTableMetadataBank, bEBulkAllocatedAddresses, SPRITE_METADATA_BANK, noToBlit * sizeof(VeraSpriteAddress));
-	enableHelpersDebugging = FALSE;
-
-	memCpyBankedBetween(bEToBlitCelArray, SPRITE_METADATA_BANK, (byte*)localLoop.cels, localLoop.celsBank, localLoop.numberOfCels * sizeof(Cel));
-
-#ifdef VERBOSE_DEBUG_BLIT
-	printf("You are allocating %d.%d. It has a width of %d and height of %d. There are %d to blit\n", localViewTab->currentView, localViewTab->currentLoop, localLoop.allocationWidth, localLoop.allocationHeight, noToBlit);
-#endif
-	//Change this method
-	bECellToVeraBulk(localLoop.allocationWidth, localLoop.allocationHeight, localLoop.numberOfCels, localView->maxVeraSlots, localViewTab->xPos, (localViewTab->yPos - localCel.height) + 1, localViewTab->priority);
-
-	return TRUE;
-}
 #pragma code-name (pop)
 
 //Expect ZP to be properly set up. See celToVera function in assembly for further details.
 extern void celToVera();
 extern void bECelToVeraBackwards();
 extern void bECalculateBytesPerRow(byte celWidth);
+
+extern boolean bESetLoop(ViewTable* localViewTab, ViewTableMetadata* localMetadata, View* localView, VeraSpriteAddress* loopVeraAddresses, byte entryNum);
 
 extern void bEClearVeraSprite(byte celWidth, byte celHeight);
 
@@ -1510,8 +1440,17 @@ boolean agiBlit(byte entryNum, boolean disableInterupts)
 	SpriteAllocationSize allocationWidth, allocationHeight;
 	byte combinedSpriteAllocationSize;
 	
+// if(entryNum != 0)
+// {
+// 	return TRUE;
+// }
+
+
 	previousBank = RAM_BANK;
 	RAM_BANK = SPRITE_METADATA_BANK;
+
+
+	
 
 	getViewTab(&localViewTab, entryNum);
 
@@ -1560,8 +1499,13 @@ boolean agiBlit(byte entryNum, boolean disableInterupts)
 	printf("The bank is %d\n", RAM_BANK);
 #endif
 
-	if (!loopVeraAddresses[0])
+	if (!loopVeraAddresses[localView.maxVeraSlots * localViewTab.currentCel])
 	{
+
+		//printf("current cel %d\n", localViewTab.currentCel);
+		//printf("you are checking %d %d address %p on bank %p %p\n", localView.maxVeraSlots, localViewTab.currentCel, &loopVeraAddresses[localView.maxVeraSlots * localViewTab.currentCel], RAM_BANK, loopVeraAddresses[localView.maxVeraSlots * localViewTab.currentCel]);
+		//asm("stp");
+
 		RAM_BANK = SPRITE_METADATA_BANK;
 
 #ifdef VERBOSE_DEBUG_NO_BLIT_CACHE
@@ -2268,7 +2212,7 @@ void setViewData(byte viewNum, AGIFile* tempAGI, View* localView)
 
 	if (isThereADescription)
 	{
-		description = (const char*)(tempAGI->code + viewHeaderBuffer[POSITION_OF_DESCRIPTION] + viewHeaderBuffer[POSITION_OF_DESCRIPTION] * 256);
+		description = (const char*)(tempAGI->code + viewHeaderBuffer[POSITION_OF_DESCRIPTION] + viewHeaderBuffer[POSITION_OF_DESCRIPTION + 1] * 256);
 		descriptionLength = strLenBanked((char*)description, tempAGI->codeBank);
 
 #ifdef VERBOSE_SET_VIEWS
@@ -2482,29 +2426,29 @@ void b9LoadViewFile(byte viewNum)
 #endif
 
 				//8 Is Default
-				if (localCel.width * 2 > SPR_SIZE_32 && localLoop.allocationWidth < SPR_SIZE_64)
+				if (localCel.width * 2 > SPR_SIZE_32 && localLoop.allocationWidth < SPR_ATTR_64)
 				{
 					localLoop.allocationWidth = SPR_ATTR_64;
 				}
-				else if (localCel.width * 2 > SPR_SIZE_16 && localLoop.allocationWidth < SPR_SIZE_32)
+				else if (localCel.width * 2 > SPR_SIZE_16 && localLoop.allocationWidth < SPR_ATTR_32)
 				{
 					localLoop.allocationWidth = SPR_ATTR_32;
 				}
-				else if (localCel.width * 2 > SPR_SIZE_8 && localLoop.allocationWidth < SPR_SIZE_16)
+				else if (localCel.width * 2 > SPR_SIZE_8 && localLoop.allocationWidth < SPR_ATTR_16)
 				{
 					localLoop.allocationWidth = SPR_ATTR_16;
 				}
 
 				////Height isn't doubled only width
-				if (localCel.height > SPR_SIZE_32 && localLoop.allocationHeight < SPR_SIZE_64)
+				if (localCel.height > SPR_SIZE_32 && localLoop.allocationHeight < SPR_ATTR_64)
 				{
 					localLoop.allocationHeight = SPR_ATTR_64;
 				}
-				else if (localCel.height > SPR_SIZE_16 && localLoop.allocationHeight < SPR_SIZE_32)
+				else if (localCel.height > SPR_SIZE_16 && localLoop.allocationHeight < SPR_ATTR_32)
 				{
 					localLoop.allocationHeight = SPR_ATTR_32;
 				}
-				else if (localCel.height > SPR_ATTR_8 && localLoop.allocationHeight < SPR_SIZE_16)
+				else if (localCel.height > SPR_SIZE_8 && localLoop.allocationHeight < SPR_ATTR_16)
 				{
 					localLoop.allocationHeight = SPR_ATTR_16;
 				}
@@ -2782,14 +2726,6 @@ boolean prioritiesSeen[NO_PRIORITIES];
 //	show_mouse(NULL);
 //	show_mouse(screen);
 //}
-#pragma code-name (pop)
-#pragma code-name (push, "BANKRAM0D")
-
-void bDShowObjectState(int objNum)
-{
-
-}
-
 #pragma code-name (pop)
 
 #pragma code-name (push, "BANKRAM11")

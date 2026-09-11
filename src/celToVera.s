@@ -361,7 +361,7 @@ sta BCOL
 stz BULK_ADDRESS_INDEX
 stz CEL_COUNTER
 
-lda _sizeofCel
+lda _sizeOfCel
 sta SIZE_OF_CEL
 
 lda #<_bEToBlitCelArray
@@ -565,6 +565,7 @@ newIncrementBackwards: .byte %1000, %1000, %1000, %1000, %1000, %1000, %1000, %1
 ;COLOR: The current current being drawn doubled up (eg. FF instead of F due to pixel doubling)
 ;NEXT_DATA_INDEX: Index into the BMP_DATA, starts are zero, and incremented after each read. BMP_DATA is incremented by 255 when this resets
 _celToVera:
+
 stz NEXT_DATA_INDEX
 
 lda RAM_BANK
