@@ -7,7 +7,7 @@ SHOWOBJ_INC = 1
 
 SHOW_OBJ_ATTRIBUTE_ADDRESS = $1FFF8
 
-_b11ShowObjSpriteAddressShifted: .res 2
+_b11ShowObjSpriteAddressShifted: .res 2 * MAX_SPRITES_ROW_OR_COLUMN_SIZE
 _b11ShowObjSprAttr7: .byte $0
 _b11ShowObjCelHeight: .byte $0
 _b11ShowObjX: .word $0
