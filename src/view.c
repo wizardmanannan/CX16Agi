@@ -1146,9 +1146,8 @@ void bESetViewMetadata(View* localView, ViewTable* viewTable, byte viewNum, byte
 }
 
 #pragma wrapped-call (push, trampoline, SPRITE_METADATA_BANK)
-byte bECreateSpritePalette(byte transparentColor)
+byte bECreateSpritePalette(byte transparentColor, PaletteGetResult* palleteGetResult)
 {
-	PaletteGetResult palleteGetResult;
 	byte i;
 	byte paletteColourLow, paletteColourHigh, paletteBlackLow, paletteBlackHigh;
 	byte paletteSlot;
@@ -1157,19 +1156,20 @@ byte bECreateSpritePalette(byte transparentColor)
 #ifdef VERBOSE_GET_PALETTE
 	printf("cs 1. trans color is %d\n", transparentColor);
 #endif
-	paletteSlot = bFGetPalette(BASE_SPRITE_ID + transparentColor, &palleteGetResult);
+	paletteSlot = bFGetPalette(BASE_SPRITE_ID + transparentColor, palleteGetResult);
+
 
 #ifdef VERBOSE_GET_PALETTE
 	printf("cs 2. The palette slot is %d and the result is %d\n", paletteSlot, palleteGetResult);
 #endif
 	paletteWriteAddress = PALETTE_START + COLOURS_PER_PALETTE * BYTES_PER_PALETTE_COLOUR * paletteSlot;
 
-	if (palleteGetResult == FailToAllocate)
+	if (*palleteGetResult == FailToAllocate)
 	{
 		return 0; //If we are out of palettes the best we can do is use the default
 	}
 
-	if (palleteGetResult == Allocated)
+	if (*palleteGetResult == Allocated)
 	{
 		asm("sei");
 		SET_VERA_ADDRESS(PALETTE_START, 0, 1);
@@ -2334,7 +2334,7 @@ byte b9VeraSlotsForWidthOrHeight(byte widthOrHeight)
 ** Purpose: Loads a VIEW file into memory storing it in the loadedViews
 ** array.
 **************************************************************************/
-void b9LoadViewFile(byte viewNum)
+PaletteGetResult b9LoadViewFile(byte viewNum)
 {
 	AGIFile tempAGI;
 	AGIFilePosType agiFilePosType;
@@ -2348,6 +2348,7 @@ void b9LoadViewFile(byte viewNum)
 	byte celHeader[CEL_HEADER_SIZE];
 	byte maxLoopVeraSlots = 1;
 	byte currentCelVeraSlots;
+	PaletteGetResult paletteGetResult = FailToAllocate;
 	
 	getLoadedView(&localView, viewNum);
 
@@ -2414,7 +2415,7 @@ void b9LoadViewFile(byte viewNum)
 #ifdef VERBOSE_GET_PALETTE
 					printf("lv 1. create palette for view %d loop %d\n", viewNum, l);
 #endif
-					localLoop.palette = bECreateSpritePalette(localCel.transparency);
+					localLoop.palette = bECreateSpritePalette(localCel.transparency, &paletteGetResult);
 
 #ifdef VERBOSE_GET_PALETTE
 					printf("lv 1. set palette for view %d loop %d. palette %d\n", viewNum, l, localLoop.palette);
@@ -2494,6 +2495,8 @@ void b9LoadViewFile(byte viewNum)
 		}
 		setLoadedView(&localView, viewNum);
 	}
+
+	return paletteGetResult;
 }
 
 /***************************************************************************

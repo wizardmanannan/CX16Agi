@@ -59,4 +59,13 @@ byte bFGetPalette(int id, PaletteGetResult* result)
 
 	return allocatedPalette + BASE_MANAGED_PALETTE;
 }
+
+void bFRemoveLastPalette()
+{
+	if(palettesAllocated)
+	{
+		allocatedPaletteOwners[--palettesAllocated] = 0;
+	}
+}
+
 #pragma code-name (pop)

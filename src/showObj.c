@@ -21,14 +21,11 @@ void b11ShowObj(byte objNum)
    boolean outOfSpriteMemory = FALSE;
 
 
-   b9LoadViewFile(objNum);
+   paletteGetResult = b9LoadViewFile(objNum);
 
    getLoadedView(&localView, objNum);
    getLoadedLoop(&localView, &localLoop, 0);
    getLoadedCel(&localLoop, &localCel, 0);
-
-   //printf("the view description address is %p on bank %p\n", localView.description, localView.codeBlockBank, localLoop.celsBank);
-   asm("stp");
 
    b11ShowObjSprAttr7 = localCel.width;
 
@@ -44,18 +41,8 @@ void b11ShowObj(byte objNum)
 
    }
 
-   //printf("you have a width of %d and a height of %d and have allocated %lx, the cel is on %p bank %p\n", spriteAllocationWidth, spriteAllocationHeight, spriteAddress, localCel.bmp, localCel.bitmapBank);
-
-
-
    if (!outOfSpriteMemory)
    {
-
-      // if(localLoop.palette)
-      // {
-      //    palette = bFGetPalette(id, paletteGetResult);
-      // }
-
       *((byte*)SPLIT_COUNTER) = 1;
       for (i = 0; i < localView.maxVeraSlots; i++)
       {
@@ -76,19 +63,11 @@ void b11ShowObj(byte objNum)
 
          b9CelToVera(&localCel, localLoop.celsBank, spriteAddress[i], MAX_PRIORITY, spriteAllocationWidth / 2, 0, 0, MAX_PRIORITY, localView.maxVeraSlots);
 
-         //printf("you are drawing to %lx the data is on %p bank %p\n", spriteAddress[i], localCel.splitCelPointers, localCel.splitCelBank);
-
          (*((byte*)SPLIT_COUNTER))++;
       }
-      // asm("stp");
-      // asm("nop");
 
       b11ShowObjX = PICTURE_WIDTH - localCel.width;
       b11ShowObjY = 204 - localCel.height;
-      //printf("you are displaying it at %d %d width %d height %d. The trans color is %d with palette %d\n", b11ShowObjX, b11ShowObjY, localCel.width, localCel.height, localCel.transparency, localLoop.palette);
-
-      //printf("the description is %p on bank %p\n", localView.description, localView.codeBlockBank);
-      //asm("stp");
 
       b11ShowObjSprAttr7 = localLoop.allocationHeight << 6 | localLoop.allocationWidth << 4 | localLoop.palette;
 
@@ -112,6 +91,11 @@ void b11ShowObj(byte objNum)
          {
             bDDeleteAllocation(spriteAddress[i], spriteAllocationWidth, spriteAllocationHeight);
          }
+      }
+
+      if(paletteGetResult == Allocated) //We only have so many palettes, if we allocate a palette which is not in used by one of the game sprites we should dispose it of
+      {
+         bFRemoveLastPalette();
       }
 
       b9DiscardView(objNum);

@@ -25,9 +25,6 @@ sta _b11VeraSlots
 
 ldy #$0
 @slotsLoop:
-stp
-;beq @increment
-
 lda _b11ShowObjSpriteAddressShifted,y
 sta VERA_data0
 lda _b11ShowObjSpriteAddressShifted + 1,y 
