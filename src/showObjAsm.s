@@ -50,7 +50,7 @@ beq @end
 
 clc
 lda _b11ShowObjX
-adc #TILE_LAYER_WIDTH
+adc #SPR_SIZE_64
 sta _b11ShowObjX
 lda _b11ShowObjX + 1
 adc #$0
