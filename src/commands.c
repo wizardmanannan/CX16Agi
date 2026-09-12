@@ -1945,7 +1945,7 @@ void b5Pause() // 0, 0x00
 	bBStopSound();
 
 	//b11ShowObj(128);
-	b11ShowObj(107);
+	b11ShowObj(119);
 
 	//b3DisplayManuallyWrappedMessageBox(B5_PAUSE_MESSAGE, COMMAND_MESSAGES_BANK, AUTO_CALC_ROW, AUTO_CALC_COLUMN, TEXTBOX_PALETTE_NUMBER, PAUSE_BOX_WIDTH, PAUSE_BOX_HEIGHT);
 

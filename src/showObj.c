@@ -69,15 +69,9 @@ void b11ShowObj(byte objNum)
 
          if (localView.maxVeraSlots > 1)
          {
-            _assmByte = localCel.splitCelBank;
-            asm("lda %v", _assmByte);
-            asm("sta %w", SPLIT_CEL_BANK);
+            *((byte*)(SPLIT_CEL_BANK)) = localCel.splitCelBank;
 
-            _assmUInt = localCel.splitCelPointers;
-            asm("lda %v", _assmUInt);
-            asm("sta %w", SPLIT_CEL_SEGMENTS);
-            asm("lda %v + 1", _assmUInt);
-            asm("sta %w + 1", SPLIT_CEL_SEGMENTS);
+            *((byte***)(SPLIT_CEL_SEGMENTS)) = localCel.splitCelPointers;
          }
 
          printf("the split cel pointers is %p on bank %p\n", localCel.splitCelPointers, localCel.splitCelBank);
