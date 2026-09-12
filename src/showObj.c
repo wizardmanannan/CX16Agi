@@ -4,9 +4,10 @@ extern unsigned int b11ShowObjSpriteAddressShifted[MAX_SPRITES_ROW_OR_COLUMN_SIZ
 extern byte b11ShowObjSprAttr7;
 extern int b11ShowObjX;
 extern byte b11ShowObjY;
+extern byte b11VeraSlots;
 
 
-
+boolean trap = FALSE;
 #pragma code-name (push, "BANKRAM11")
 void b11ShowObj(byte objNum)
 {
@@ -55,14 +56,40 @@ void b11ShowObj(byte objNum)
       //    palette = bFGetPalette(id, paletteGetResult);
       // }
 
+      *((byte*)SPLIT_COUNTER) = 1;
       for (i = 0; i < localView.maxVeraSlots; i++)
       {
          asm("sei");
+
+         trap = TRUE;
+
          SET_VERA_ADDRESS_ZP(spriteAddress[i], VERA_ADDRESS, VERA_ADDRESS_HIGH);
          bEClearVeraSprite(localLoop.allocationWidth, localLoop.allocationHeight);
          REENABLE_INTERRUPTS();
-         b9CelToVera(&localCel, localLoop.celsBank, spriteAddress[i], MAX_PRIORITY, spriteAllocationWidth / 2, 0, 0, MAX_PRIORITY);
+
+         if (localView.maxVeraSlots > 1)
+         {
+            _assmByte = localCel.splitCelBank;
+            asm("lda %v", _assmByte);
+            asm("sta %w", SPLIT_CEL_BANK);
+
+            _assmUInt = localCel.splitCelPointers;
+            asm("lda %v", _assmUInt);
+            asm("sta %w", SPLIT_CEL_SEGMENTS);
+            asm("lda %v + 1", _assmUInt);
+            asm("sta %w + 1", SPLIT_CEL_SEGMENTS);
+         }
+
+         printf("the split cel pointers is %p on bank %p\n", localCel.splitCelPointers, localCel.splitCelBank);
+
+         b9CelToVera(&localCel, localLoop.celsBank, spriteAddress[i], MAX_PRIORITY, spriteAllocationWidth / 2, 0, 0, MAX_PRIORITY, localView.maxVeraSlots);
+
+         //printf("you are drawing to %lx the data is on %p bank %p\n", spriteAddress[i], localCel.splitCelPointers, localCel.splitCelBank);
+
+         (*((byte*)SPLIT_COUNTER))++;
       }
+      // asm("stp");
+      // asm("nop");
 
       b11ShowObjX = PICTURE_WIDTH - localCel.width;
       b11ShowObjY = PICTURE_HEIGHT / 2 + localCel.height / 2;
@@ -73,15 +100,16 @@ void b11ShowObj(byte objNum)
 
       b11ShowObjSprAttr7 = localLoop.allocationHeight << 6 | localLoop.allocationWidth << 4 | localLoop.palette;
 
+      b11VeraSlots = localView.maxVeraSlots;
       b6SetAndWaitForIrqState(SHOW_OBJ);
 
       b3DisplayMessageBox(localView.description, localView.codeBlockBank, 14, AUTO_CALC_COLUMN, TEXTBOX_PALETTE_NUMBER, DEFAULT_BOX_WIDTH, TRUE);
 
    }
 
-   for(i = 0; i < localView.maxVeraSlots; i++)
+   for (i = 0; i < localView.maxVeraSlots; i++)
    {
-      if(spriteAddress[i])
+      if (spriteAddress[i])
       {
          bDDeleteAllocation(spriteAddress[i], spriteAllocationWidth, spriteAllocationHeight);
       }

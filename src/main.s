@@ -122,4 +122,5 @@
     .export _b11ShowObjCelHeight
     .export _b11ShowObjX
     .export _b11ShowObjY
+    .export _b11VeraSlots
 

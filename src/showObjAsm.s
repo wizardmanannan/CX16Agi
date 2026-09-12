@@ -5,23 +5,31 @@ SHOWOBJ_INC = 1
 
 .segment "BANKRAM11"
 
-SHOW_OBJ_ATTRIBUTE_ADDRESS = $1FFF8
+SHOW_OBJ_ATTRIBUTE_ADDRESS = $1FFE0
 
 _b11ShowObjSpriteAddressShifted: .res 2 * MAX_SPRITES_ROW_OR_COLUMN_SIZE
 _b11ShowObjSprAttr7: .byte $0
 _b11ShowObjCelHeight: .byte $0
 _b11ShowObjX: .word $0
 _b11ShowObjY: .byte $0
+_b11VeraSlots: .byte $0
+
 
 b11ShowObjIrqHandler:
-stp
-
-
 SET_VERA_ADDRESS_IMMEDIATE SHOW_OBJ_ATTRIBUTE_ADDRESS, #$0,#$1
+
+lda _b11VeraSlots
+asl
+sta _b11VeraSlots
+
+ldy #$0
+@slotsLoop:
 stp
-lda _b11ShowObjSpriteAddressShifted
+;beq @increment
+
+lda _b11ShowObjSpriteAddressShifted,y
 sta VERA_data0
-lda _b11ShowObjSpriteAddressShifted + 1
+lda _b11ShowObjSpriteAddressShifted + 1,y 
 sta VERA_data0
 lda _b11ShowObjX
 sta VERA_data0
@@ -35,6 +43,24 @@ sta VERA_data0
 lda _b11ShowObjSprAttr7
 sta VERA_data0
 
+@increment:
+iny
+iny
+
+cpy _b11VeraSlots
+beq @end
+
+clc
+lda _b11ShowObjX
+adc #TILE_LAYER_WIDTH
+sta _b11ShowObjX
+lda _b11ShowObjX + 1
+adc #$0
+sta _b11ShowObjX + 1
+
+bra @slotsLoop
+
+@end:
 rts
 
 .endif

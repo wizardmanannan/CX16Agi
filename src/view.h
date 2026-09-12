@@ -57,7 +57,7 @@ void b9SetView(byte viewNum, byte entryNum);
 extern void b9SetCel(ViewTable* localViewTab, byte entryNum, byte celNum);
 extern void b9SetLoop(ViewTable* localViewTab, byte entryNum, byte loopNum);
 extern void b9AddToPic(int vNum, int lNum, int cNum, int x, int y, int pNum, int bCol);
-extern void b9CelToVera(Cel* localCel, byte celBank, long veraAddress, byte bCol, byte drawingAreaWidth, byte x, byte y, byte pNum);
+extern void b9CelToVera(Cel* localCel, byte celBank, long veraAddress, byte bCol, byte drawingAreaWidth, byte x, byte y, byte pNum, byte noVeraSlots);
 #pragma wrapped-call (pop)
 
 #pragma wrapped-call (push, trampoline, VIEW_CODE_BANK_2)
