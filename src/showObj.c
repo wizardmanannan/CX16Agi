@@ -17,7 +17,7 @@ void b11ShowObj(byte objNum)
    SpriteAllocationSize spriteAllocationWidth, spriteAllocationHeight;
    VeraSpriteAddress spriteAddress[MAX_SPRITES_ROW_OR_COLUMN_SIZE];
    PaletteGetResult paletteGetResult;
-   byte palette = 0, i;
+   byte palette = 0, i, ch;
    boolean outOfSpriteMemory = FALSE;
 
 
@@ -84,7 +84,7 @@ void b11ShowObj(byte objNum)
       // asm("nop");
 
       b11ShowObjX = PICTURE_WIDTH - localCel.width;
-      b11ShowObjY = PICTURE_HEIGHT / 2 + localCel.height / 2;
+      b11ShowObjY = 204 - localCel.height;
       //printf("you are displaying it at %d %d width %d height %d. The trans color is %d with palette %d\n", b11ShowObjX, b11ShowObjY, localCel.width, localCel.height, localCel.transparency, localLoop.palette);
 
       //printf("the description is %p on bank %p\n", localView.description, localView.codeBlockBank);
@@ -95,19 +95,27 @@ void b11ShowObj(byte objNum)
       b11VeraSlots = localView.maxVeraSlots;
       b6SetAndWaitForIrqState(SHOW_OBJ);
 
-      b3DisplayMessageBox(localView.description, localView.codeBlockBank, 14, AUTO_CALC_COLUMN, TEXTBOX_PALETTE_NUMBER, DEFAULT_BOX_WIDTH, TRUE);
+      b3DisplayMessageBox(localView.description, localView.codeBlockBank, AUTO_CALC_ROW, AUTO_CALC_COLUMN, TEXTBOX_PALETTE_NUMBER, DEFAULT_BOX_WIDTH, TRUE);
 
-   }
-
-   for (i = 0; i < localView.maxVeraSlots; i++)
-   {
-      if (spriteAddress[i])
+      do
       {
-         bDDeleteAllocation(spriteAddress[i], spriteAllocationWidth, spriteAllocationHeight);
-      }
-   }
+         GET_IN(ch);                     // Get keyboard input
 
-   b9DiscardView(objNum);
+      } while (ch != KEY_ESC && ch != KEY_ENTER);
+
+      b3ClearLastPlacedText();
+      b6SetAndWaitForIrqState(CLEAR_OBJ);
+
+      for (i = 0; i < localView.maxVeraSlots; i++)
+      {
+         if (spriteAddress[i])
+         {
+            bDDeleteAllocation(spriteAddress[i], spriteAllocationWidth, spriteAllocationHeight);
+         }
+      }
+
+      b9DiscardView(objNum);
+   }
 }
 
 #pragma code-name (pop)

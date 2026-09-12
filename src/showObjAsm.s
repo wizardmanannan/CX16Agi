@@ -6,6 +6,7 @@ SHOWOBJ_INC = 1
 .segment "BANKRAM11"
 
 SHOW_OBJ_ATTRIBUTE_ADDRESS = $1FFE0
+MAX_SHOW_OBJ_SPLIT_SPRITES = $4
 
 _b11ShowObjSpriteAddressShifted: .res 2 * MAX_SPRITES_ROW_OR_COLUMN_SIZE
 _b11ShowObjSprAttr7: .byte $0
@@ -61,6 +62,18 @@ sta _b11ShowObjX + 1
 bra @slotsLoop
 
 @end:
+rts
+
+b11ClearObjIrqHandler:
+SET_VERA_ADDRESS_IMMEDIATE (SHOW_OBJ_ATTRIBUTE_ADDRESS + 6), #$0,#$4
+
+lda #MAX_SHOW_OBJ_SPLIT_SPRITES
+
+@loop:
+stz VERA_data0
+dec
+bne @loop
+
 rts
 
 .endif

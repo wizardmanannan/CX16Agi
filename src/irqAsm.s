@@ -292,14 +292,14 @@ jmp (@jmpTableIrq,x)
 
 @displayText:
 jsr handleDisplayText
-bra @resetSetIrqState
+jmp @resetSetIrqState
 
 @blankScreen:
 lda #LAYER_0_1_SPRITES_DISABLE
 sta VERA_dc_video
 lda #IRQ_CMD_BLACKSCREEN
 sta currentIrqState
-bra @resetSetIrqState
+jmp @resetSetIrqState
 
 @normal:
 lda #LAYER_0_1_SPRITES_ENABLE
@@ -336,6 +336,10 @@ bra @resetSetIrqState
 
 @showObj:
 TRAMPOLINE #SHOW_OBJ_BANK, b11ShowObjIrqHandler
+bra @resetSetIrqState
+
+@clearObj:
+TRAMPOLINE #SHOW_OBJ_BANK, b11ClearObjIrqHandler
 
 @resetSetIrqState:
 lda #IRQ_CMD_DONTCHANGE
@@ -366,6 +370,7 @@ jmp (default_irq_vector)
 .addr @clear
 .addr @normal ;Graphics command goes to the same place as normal, it just clears while normal does not
 .addr @showObj
+.addr @clearObj
 
 
 @jmpTableBank: .byte $0, $0, $0, $0, TEXT_BANK, $0 ;In order of IRQ_CMDS
