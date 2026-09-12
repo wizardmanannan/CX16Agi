@@ -23,6 +23,13 @@ byte bFGetPalette(int id, PaletteGetResult* result)
 	printf("gp1. the id is %d\n", id);
 #endif // VERBOSE_PALETTE_MANAGER
 
+
+	if(id == 0)
+	{
+		*result = AlreadyAllocated; //Palette 0 is a special case it is always there as the first palette entry, because it needs to be used by the background
+		return 0;
+	}
+
 	if (palettesAllocated == NO_MANAGED_PALETTES)
 	{
 		*result = FailToAllocate;
