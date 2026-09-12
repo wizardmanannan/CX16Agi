@@ -74,8 +74,6 @@ void b11ShowObj(byte objNum)
             *((byte***)(SPLIT_CEL_SEGMENTS)) = localCel.splitCelPointers;
          }
 
-         printf("the split cel pointers is %p on bank %p\n", localCel.splitCelPointers, localCel.splitCelBank);
-
          b9CelToVera(&localCel, localLoop.celsBank, spriteAddress[i], MAX_PRIORITY, spriteAllocationWidth / 2, 0, 0, MAX_PRIORITY, localView.maxVeraSlots);
 
          //printf("you are drawing to %lx the data is on %p bank %p\n", spriteAddress[i], localCel.splitCelPointers, localCel.splitCelBank);
