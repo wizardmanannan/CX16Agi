@@ -119,7 +119,6 @@
     .export _statusLineDisplayed
     .export _b11ShowObjSpriteAddressShifted
     .export _b11ShowObjSprAttr7
-    .export _b11ShowObjCelHeight
     .export _b11ShowObjX
     .export _b11ShowObjY
     .export _b11VeraSlots
