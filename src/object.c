@@ -122,11 +122,20 @@ void bDLoadObjectFile()
     }
 }
 
+
 void bDDisplayInventory(boolean showObject)
 {
     byte ch;
 
-    b6SetAndWaitForIrqStateAsm(TEXT_ONLY);
+    byte inventoryPaletteByte = 0x20;
+
+    memCpyBanked(&b3TextModeTileByte, &inventoryPaletteByte, TEXT_CODE_BANK, 1);
+    
+    // inputLineDisplayed = FALSE;
+	// statusLineDisplayed = FALSE;
+    
+    b6SetBackgroundColour(PALETTE_COLOR_WHITE);
+    b6TextMode();
 
     
 
@@ -135,7 +144,8 @@ void bDDisplayInventory(boolean showObject)
         GET_IN(ch);                     // Get keyboard input
     } while (!ch);
 
-    b6SetAndWaitForIrqStateAsm(NORMAL);
+    b6SetBackgroundColour(PALETTE_COLOR_BLACK);
+    b6GraphicsMode();
 }
 
 #pragma code-name (pop)

@@ -122,4 +122,7 @@
     .export _b11ShowObjX
     .export _b11ShowObjY
     .export _b11VeraSlots
+    .export _b3TextModeTileByte
+    .export _b6BackgroundColorToSet
+    .export _b6SetBackgroundColor
 

@@ -62,6 +62,7 @@
 
 extern byte b3LastBoxLines; //Must be set manually if you display a textbox with wrapping turned off
 extern byte b3LastBoxStartLine;
+extern byte b3TextModeTileByte; //Changes the background colour the next time you enter textmode. It automatically returns to the default $10 afterwards
 
 #pragma wrapped-call (push, trampoline, TEXT_CODE_BANK)
 void b3InitLayer1Mapbase(byte tileByte);

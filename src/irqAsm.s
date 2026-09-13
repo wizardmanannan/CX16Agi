@@ -96,7 +96,6 @@ lda #> (TILE_LAYER_NO_TILES - MENU_BAR_WIDTH)
 sta ZP_TILE_LAYER_NO_TILES_HIGH
 
 lda #TRANSPARENT_CHAR
-
 @loop:
 sta VERA_data0
 sty VERA_data0
@@ -214,6 +213,9 @@ IRQ_CMD_DISPLAY_TEXT = 4
 IRQ_CMD_L0_L1_ONLY = 5
 IRQ_CMD_CLEAR = 6
 IRQ_CMD_GRAPHICS = 7
+SHOW_OBJ = 8
+CLEAR_OBJ = 9
+SET_BACKGROUND = 10
 
 
 LAYER_0_1_SPRITES_ENABLE = $71
@@ -314,6 +316,7 @@ lda sendIrqCommand
 cmp #IRQ_CMD_NORMAL
 beq @resetSetIrqState
 
+@normalLdaTileByte:
 lda #TILE_BYTE_2
 TRAMPOLINE #TEXT_BANK, _b3InitLayer1Mapbase
 TRAMPOLINE #GRAPHICS_BANK, _b6InitInput
@@ -324,8 +327,10 @@ bra @resetSetIrqState
 lda #LAYER_0_SPRITES_DISABLE_1_ENABLE
 sta VERA_dc_video
 
+lda _b3TextModeTileByte
+jsr _b3InitLayer1Mapbase
 lda #TILE_BYTE_2
-TRAMPOLINE #TEXT_BANK, _b3InitLayer1Mapbase
+sta _b3TextModeTileByte
 bra @resetSetIrqState
 
 @l12Only:
@@ -345,6 +350,10 @@ bra @resetSetIrqState
 
 @clearObj:
 TRAMPOLINE #SHOW_OBJ_BANK, b11ClearObjIrqHandler
+bra @resetSetIrqState
+
+@setBackground:
+jsr _b6SetBackgroundColor
 
 @resetSetIrqState:
 lda #IRQ_CMD_DONTCHANGE
@@ -376,9 +385,10 @@ jmp (default_irq_vector)
 .addr @normal ;Graphics command goes to the same place as normal, it just clears while normal does not
 .addr @showObj
 .addr @clearObj
+.addr @setBackground
 
 
-@jmpTableBank: .byte $0, $0, $0, $0, TEXT_BANK, $0 ;In order of IRQ_CMDS
+@jmpTableBank: .byte $0, $0, TEXT_BANK, $0, TEXT_BANK, $0,$0,$0,$0,$0,GRAPHICS_BANK ;In order of IRQ_CMDS
 @previousRamBank: .byte $0
 
 .endif ; IRQ_INC

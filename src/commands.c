@@ -1596,28 +1596,14 @@ void b3Clear_lines() // 3, 0x00
 #pragma code-name (pop)
 #pragma code-name (push, "BANKRAM04")
 
-extern boolean statusLineDisplayed;
-
 void b4Text_screen() // 0, 0x00 
 {
-	screenMode = AGI_TEXT;
-	/* Do something else here */
-	inputLineDisplayed = FALSE;
-	statusLineDisplayed = FALSE;
-	b6SetAndWaitForIrqState(TEXT_ONLY);
-
-	return;
+	b6TextMode();
 }
 
 void b4Graphics() // 0, 0x00 
 {
-	screenMode = AGI_GRAPHICS;
-	/* Do something else here */
-	inputLineDisplayed = TRUE;
-	statusLineDisplayed = TRUE;
-	b6SetAndWaitForIrqState(DISPLAY_GRAPHICS);
-
-	return;
+	b6GraphicsMode();
 }
 
 void b4Set_cursor_char() // 1, 0x00 
@@ -1844,10 +1830,11 @@ void b4Add_to_pic_v() // 7, 0xFE
 
 void b4Status() // 0, 0x00 
 {
-	/* Inventory */
-	// set text mode
-	// if flag 13 is set then allow selection and store selection in var[25]
-	var[25] = 255;
+	// /* Inventory */
+	// // set text mode
+	// // if flag 13 is set then allow selection and store selection in var[25]
+	// var[25] = 255;
+	bDDisplayInventory(flag[13]);
 }
 
 //void b4Save_game() // 0, 0x00 

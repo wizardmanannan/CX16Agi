@@ -33,9 +33,7 @@ extern void b8TestAsmPlotPriHLineFast();
 PictureFile loadedPictures[NO_PICTURES];
 #pragma bss-name (pop)
 
-int screenMode;
 int min_print_line = 1, user_input_line = 23, status_line_num = 0;
-boolean inputLineDisplayed = FALSE;
 
 BITMAP* picture;
 BITMAP* priority;
