@@ -10,6 +10,7 @@
 #define  PROGRAM_CONTROL  1
 
 #include "parser.h"
+#include "teleport.h"
 
 extern boolean* flag;
 extern byte* var;
@@ -228,6 +229,9 @@ void b7PollKeyboard()
 					{
 						trampolineDebug(bDbgShowPriority);
 					}
+#if ENABLE_TELEPORT
+					if (!b7TeleportCommand(b7CurrentInputStr))
+#endif
 					b7LookupWords(b7CurrentInputStr);
 					b7CurrentInputStr[0] = 0;
 					strPos = 0;
@@ -245,7 +249,7 @@ void b7PollKeyboard()
 						return;
 					break;
 				default:
-					if (strlen(b7CurrentInputStr) < MAX_INPUT_STRING_LENGTH && (ch >= KEY_CAP_A && ch <= KEY_CAP_Z || ch >= KEY_LOWER_A && ch <= KEY_LOWER_Z || ch >= KEY_1 && ch <= KEY_9 || ch == SPACE))
+					if (strlen(b7CurrentInputStr) < MAX_INPUT_STRING_LENGTH && (ch >= KEY_CAP_A && ch <= KEY_CAP_Z || ch >= KEY_LOWER_A && ch <= KEY_LOWER_Z || ch >= KEY_0 && ch <= KEY_9 || ch == SPACE))
 					{
 						if (ch >= KEY_CAP_A && ch <= KEY_CAP_Z)
 						{
@@ -555,4 +559,3 @@ boolean b7Said(byte** data)
 }
 
 #pragma code-name (pop)
-

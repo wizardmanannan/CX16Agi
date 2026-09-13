@@ -31,6 +31,7 @@
 #include "sound.h"
 #include "spriteAllocator.h"
 #include "menu.h"
+#include "teleport.h"
 //#include "sound.h"
 
 boolean hasEnteredNewRoom = FALSE, exitAllLogics = FALSE;
@@ -184,6 +185,9 @@ void b6Interpret()
     flag[2] = FALSE;   //The player has issued a command line
     flag[4] = FALSE;   //The 'said' command has accepted the input
     b7PollKeyboard();
+#if ENABLE_TELEPORT
+    if (teleportPending) b6BeginTeleport();
+#endif
     //if (controlMode == PROGRAM_CONTROL)
     //   dirnOfEgo = var[6];
     //else
@@ -219,6 +223,9 @@ void b6Interpret()
 
         if (!hasEnteredNewRoom)
         {
+#if ENABLE_TELEPORT
+            if (teleportPending && flag[5]) b6FinishTeleport();
+#endif
             flag[5] = 0;
         }
         flag[6] = FALSE;
