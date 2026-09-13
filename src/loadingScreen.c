@@ -13,7 +13,7 @@ void b6DisplayLoadingScreen()
 	if (!loadingScreenDisplayed)
 	{
 		b6SetAndWaitForIrqStateAsm(BLANK_SCREEN);
-		b3InitLayer1Mapbase();
+		b3InitLayer1Mapbase(TILE_BYTE_2);
 
 		b6SetAndWaitForIrqStateAsm(TEXT_ONLY);
 		b3DisplayMessageBox((char*)B6_LOADING_TEXT, 0, MAX_ROWS_DOWN / 2 - FIRST_ROW, MAX_CHAR_ACROSS / 2 - (LOADING_BOX_SIZE / 2), TEXTBOX_PALETTE_NUMBER, LOADING_BOX_SIZE, FALSE);
@@ -31,7 +31,7 @@ void b6DismissLoadingScreen()
 	{
 		//bBUpdateObjects();//To Do: Refresh the screen after loading
 		b6SetAndWaitForIrqStateAsm(BLANK_SCREEN);
-		b3InitLayer1Mapbase();
+		b3InitLayer1Mapbase(TILE_BYTE_2);
 		b6SetAndWaitForIrqStateAsm(NORMAL);
 		loadingScreenDisplayed = FALSE;
 	}

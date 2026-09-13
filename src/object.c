@@ -67,7 +67,7 @@ boolean bDIsObjCrypt(long fileLen, byte* objData)
 byte bDLoadFile(int* fileLen, byte* buffer)
 {
     byte lfn = b6Cbm_openForSeeking(BD_OBJECT_FILE_NAME);
-  
+
     if (lfn == NULL) {
         printf("Cannot find file : object\n");
         exit(1);
@@ -103,13 +103,13 @@ void bDLoadObjectFile()
 
     lfn = bDLoadFile(&fileLen, bDObjData);
 
-    marker = (byte*) bDObjData + 3;
-                
+    marker = (byte*)bDObjData + 3;
+
     if (bDIsObjCrypt(fileLen, bDObjData))
     {
         for (i = 0; i < fileLen; i++)
         {
-           bDObjData[i] ^= avisDurgan[avisPos++ % 11];
+            bDObjData[i] ^= avisDurgan[avisPos++ % 11];
         }
     }
 
@@ -117,9 +117,26 @@ void bDLoadObjectFile()
 
     for (objNum = 0; objNum < bFNumObjects; objNum++, strPos = 0, marker += 3) {
         index = *(marker)+256 * (*(marker + 1)) + 3;
-        bDObjects[objNum].name = (char*) &bDObjData[index];
+        bDObjects[objNum].name = (char*)&bDObjData[index];
         bDObjects[objNum].roomNum = *(marker + 2);
     }
 }
+
+void bDDisplayInventory(boolean showObject)
+{
+    byte ch;
+
+    b6SetAndWaitForIrqStateAsm(TEXT_ONLY);
+
+    
+
+    do
+    {
+        GET_IN(ch);                     // Get keyboard input
+    } while (!ch);
+
+    b6SetAndWaitForIrqStateAsm(NORMAL);
+}
+
 #pragma code-name (pop)
 

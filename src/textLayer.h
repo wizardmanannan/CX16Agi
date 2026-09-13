@@ -15,6 +15,7 @@
 #define NO_CHARS 160
 #define SIZE_OF_CHARSET (BYTES_PER_CHARACTER * NO_CHARS)
 #define BYTES_PER_CELL 2
+#define TILE_BYTE_2 0x10 //Black Tile
 
 
 #define ADDRESSSEL0 0 
@@ -63,7 +64,7 @@ extern byte b3LastBoxLines; //Must be set manually if you display a textbox with
 extern byte b3LastBoxStartLine;
 
 #pragma wrapped-call (push, trampoline, TEXT_CODE_BANK)
-void b3InitLayer1Mapbase();
+void b3InitLayer1Mapbase(byte tileByte);
 byte b3DisplayManuallyWrappedMessageBox(char* message, byte messageBank, byte row, byte col, byte paletteNumber, byte boxWidth, byte boxHeight);
 void b3DisplayMessageBox(char* message, byte messageBank, byte row, byte col, byte paletteNumber, byte boxWidth, boolean wrap);
 void b3FillChar(byte startLine, byte endLine, byte paletteNumber, byte charToFill);

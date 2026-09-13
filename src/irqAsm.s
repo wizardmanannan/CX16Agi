@@ -47,7 +47,8 @@ REENABLE_INTERRUPTS
 _b3PaletteAddress: .res 4 ;Should be three bytes, but there is no data type in C for handling 3 byte values
 _b3PaletteRows: .byte $0
 _b3PaletteNumber: .byte $0
-
+_b3TextModeTileByte: .byte TILE_BYTE_2
+_b3TextBackground: .byte $0
 ZP_PALETTE_BYTE = ZP_TMP_2
 
 
@@ -84,7 +85,9 @@ bpl @loop
 
 rts
 
+;void b3InitLayer1MapBase(byte tileByte)
 _b3InitLayer1Mapbase:
+tay
 SET_VERA_ADDRESS_IMMEDIATE (MAP_BASE + MENU_BAR_WIDTH * 2), #$0, #$1
 
 ldx #< (TILE_LAYER_NO_TILES - MENU_BAR_WIDTH)
@@ -93,7 +96,6 @@ lda #> (TILE_LAYER_NO_TILES - MENU_BAR_WIDTH)
 sta ZP_TILE_LAYER_NO_TILES_HIGH
 
 lda #TRANSPARENT_CHAR
-ldy #TILE_BYTE_2
 
 @loop:
 sta VERA_data0
@@ -196,6 +198,7 @@ rts
 @vSyncToCheck: .word $0
 
 .segment "CODE"
+
 
 .macro CALL_CLEAR
 lda #GRAPHICS_BANK
@@ -311,6 +314,7 @@ lda sendIrqCommand
 cmp #IRQ_CMD_NORMAL
 beq @resetSetIrqState
 
+lda #TILE_BYTE_2
 TRAMPOLINE #TEXT_BANK, _b3InitLayer1Mapbase
 TRAMPOLINE #GRAPHICS_BANK, _b6InitInput
 
@@ -320,6 +324,7 @@ bra @resetSetIrqState
 lda #LAYER_0_SPRITES_DISABLE_1_ENABLE
 sta VERA_dc_video
 
+lda #TILE_BYTE_2
 TRAMPOLINE #TEXT_BANK, _b3InitLayer1Mapbase
 bra @resetSetIrqState
 

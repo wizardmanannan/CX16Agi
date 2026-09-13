@@ -8,6 +8,7 @@
 #include "memoryManager.h"
 #include <cbm.h>
 #include "agifiles.h"
+#include "irq.h"
 
 
 #define MAX_OBJECTS 255
@@ -25,6 +26,9 @@ extern int bFNumObjects;
 void bDGetObject(byte objNum, objectType* objectType);
 void bDSetObject(byte objNum, objectType* objectType);
 void bDLoadObjectFile();
+
+void bDDisplayInventory(boolean showObject);
+
 #pragma wrapped-call (pop)
 
 #endif /* _OBJECT_H_ */

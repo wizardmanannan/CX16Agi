@@ -21,6 +21,7 @@ GRAPHICS_INC = 1
 
 
 _b6Clear:
+lda #TILE_BYTE_2
 TRAMPOLINE #TEXT_BANK, _b3InitLayer1Mapbase
 TRAMPOLINE #SPRITE_UPDATES_BANK, _bEClearSpriteAttributes
 TRAMPOLINE #PICTURE_CODE_OVERFLOW_BANK, _b8ClearPicture
@@ -366,6 +367,7 @@ sta VERA_L1_vscroll_l
 stz VERA_L1_vscroll_h
 
 TRAMPOLINE #TEXT_BANK, _b3InitCharset
+lda #TILE_BYTE_2
 TRAMPOLINE #TEXT_BANK, _b3InitLayer1Mapbase
 TRAMPOLINE #SPRITE_UPDATES_BANK, _bEClearSpriteAttributes 
 jsr _b6InitInput

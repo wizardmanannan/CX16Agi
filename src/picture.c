@@ -709,7 +709,7 @@ void b6ShowPicture()
 	if (showPicCalled)
 	{
 		asm("sei");
-		b3InitLayer1Mapbase();
+		b3InitLayer1Mapbase(TILE_BYTE_2);
 		asm("cli");
 	}
 	showPicCalled = TRUE;
