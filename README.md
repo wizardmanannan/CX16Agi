@@ -69,6 +69,11 @@ Fix object placement bugs, but trying to make code function exactly the same and
 
 **Only AGI 1 & 2 games are currently supported**
 
+For testing, `teleport ROOM X Y` requests an ego position using the loaded
+game's resources. Same-room requests place the ego in the current scene;
+cross-room requests wait for the next normal script-driven room entry. See
+[teleport usage and limits](docs/teleport.md).
+
 Sierra released many well-known adventure games, like King's Quest and Police Quest. For obvious reasons, these games were not coded from scratch but rather depended upon engines to run the games.
 
 One such engine was the AGI engine, which was used to power games such as King's Quest 1 - 3 and Space Quest 1 and 2.
@@ -129,6 +134,4 @@ The `boolean banked_dealloc(byte* ptr, byte bank)` function deallocates the memo
 It's worth noting that the algorithm, implementation, and segmentation of memory might not be optimal. As more games are run, a better understanding of the appropriate segment sizes will be gained. Improvements to the segmentation sizes and overall memory management might be needed in the future.
 
 All of the sizes and other numerous constants related to dynamic memory are located in `memorymanager.h`.
-
-
 
