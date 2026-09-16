@@ -159,6 +159,8 @@
 #define PALETTE_START 0x1FA00
 #define PRIORITY_START (((unsigned long)BITMAP_WIDTH * BITMAP_HEIGHT) / 2)
 #define PRIORITY_SIZE (((unsigned long) PICTURE_WIDTH * PICTURE_HEIGHT) / 2)
+#define SPLIT_BANK 0XC
+
 #define SIZE_OF_SPRITE_ATTRIBUTE 8
 
 #define GOLDEN_RAM        ((unsigned char *)0x0400)

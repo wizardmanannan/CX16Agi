@@ -12,8 +12,10 @@
 #include "textLayer.h"
 
 
-#define MAX_OBJECTS 255
+#define MAX_OBJECTS 150
 #define OBJ_NAME_CACHE_SIZE MAX_OBJECTS * 10
+#define HAS_OBJ 255
+#define INVENTORY_PALETTE_NUMBER 1
 
 typedef struct {
 	byte roomNum;
@@ -21,7 +23,7 @@ typedef struct {
 } objectType;
 
 extern objectType bDObjects[MAX_OBJECTS];
-extern int bFNumObjects;
+extern int bDNumObjects;
 
 #pragma wrapped-call (push, trampoline, OBJECT_BANK)
 void bDGetObject(byte objNum, objectType* objectType);

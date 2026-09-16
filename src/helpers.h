@@ -64,6 +64,7 @@ void b5WaitOnSpecificKeys(byte* keys, byte length);
 void b5RefreshBufferNonGolden(BufferStatus* bufferStatus, byte* buffer, int bufferSize);
 void b5FlushBufferNonGolden(BufferStatus* bufferStatus, byte* buffer, int bufferSize, int amountToCopy);
 byte* b5ReallocateBiggerMemoryBlock(byte** memoryBlock, unsigned int newBufferSize, unsigned int* oldBufferSize, byte* bank);
+void b5FlushBuffer(BufferStatus* bufferStatus);
 #pragma wrapped-call (pop)
 extern void trampolineDebug(void (*trampolineDebug)()); //Only to be called when debugging is enabled (b5IsDebuggingEnabled), otherwise a crash is likely.
 
@@ -162,7 +163,16 @@ extern byte _previousRomBank;
 		\
     } while(0);
 
-
+#define WRITE_NEXT(toWrite)  \
+    do {                              \
+       if(*data >= GOLDEN_RAM_WORK_AREA + LOCAL_WORK_AREA_SIZE) \
+		{ \
+			b5FlushBufferNonGolden(&bufferStatus, GOLDEN_RAM_WORK_AREA, LOCAL_WORK_AREA_SIZE, LOCAL_WORK_AREA_SIZE); \
+            *dataPtr = GOLDEN_RAM_WORK_AREA; \
+		} \
+		 *((*data)++) = toWrite; \
+        \
+    } while(0);
 
 #define READ_STACK_FROM_ASSM(byteVar) \
      do {                                           \

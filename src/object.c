@@ -18,11 +18,11 @@
 
 #pragma rodata (push, "BANKRAM0D")
 const char BD_OBJECT_FILE_NAME[] = "object";
-const char BD_CANNOT_OPEN[] = "Cannot find file : object\n";
+const char BD_CANNOT_OPEN[] = "no object file\n";
 #pragma rodata (pop)
 
 #pragma bss-name (push, "BANKRAM0D")
-int bFNumObjects;
+int bDNumObjects;
 objectType bDObjects[MAX_OBJECTS];
 byte bDObjData[OBJ_NAME_CACHE_SIZE];
 #pragma bss-name (pop)
@@ -113,31 +113,119 @@ void bDLoadObjectFile()
         }
     }
 
-    bFNumObjects = (((bDObjData[1] * 256) + bDObjData[0]) / 3);
+    bDNumObjects = (((bDObjData[1] * 256) + bDObjData[0]) / 3);
 
-    for (objNum = 0; objNum < bFNumObjects; objNum++, strPos = 0, marker += 3) {
+    for (objNum = 0; objNum < bDNumObjects; objNum++, strPos = 0, marker += 3) {
         index = *(marker)+256 * (*(marker + 1)) + 3;
         bDObjects[objNum].name = (char*)&bDObjData[index];
         bDObjects[objNum].roomNum = *(marker + 2);
     }
 }
 
-
 void bDDisplayInventory(boolean showObject)
 {
-    byte ch;
-
+    byte ch, lastLength, thisLength;
     byte inventoryPaletteByte = 0x20;
+    byte** data, * dataPtr;
+    BufferStatus bufferStatus;
+
+    objectType object;
+    char* objectName;
+    int i, j;
+    boolean evenObj = TRUE, foundObject = FALSE;
+
+    bDObjects[1].roomNum = 255;
+    bDObjects[2].roomNum = 255;
 
     memCpyBanked(&b3TextModeTileByte, &inventoryPaletteByte, TEXT_CODE_BANK, 1);
-    
+
     // inputLineDisplayed = FALSE;
-	// statusLineDisplayed = FALSE;
-    
+    // statusLineDisplayed = FALSE;
+
     b6SetBackgroundColour(PALETTE_COLOR_WHITE);
     b6TextMode();
 
-    
+
+    bufferStatus.bank = SPLIT_BANK;
+    bufferStatus.bankedData = bCSplitBuffer; //Its a safer better to use the split buffer. As when the buffer flushes at the end it will always write the full buffer size out even if there's not data. There is a terminator so we know where the legitimate data ends, but it must not overflow
+    bufferStatus.bufferCounter = 0;
+
+    // printf("1. splitbuffer %p buffer status %p\n", bCSplitBuffer, &bufferStatus);;
+    // asm("stp");
+
+    //printf("%p\n", bufferStatus.bankedData);
+
+    dataPtr = GOLDEN_RAM_WORK_AREA;
+    data = &dataPtr;
+
+    memset(GOLDEN_RAM_WORK_AREA, 0, LOCAL_WORK_AREA_SIZE);
+
+    for (i = 0; i < bDNumObjects; i++)
+    {
+
+        //printf("2. splitbuffer %p buffer status %p\n", bCSplitBuffer, &bufferStatus);;
+        // asm("stp");
+
+        object.name = bDObjects[i].name;
+        object.roomNum = bDObjects[i].roomNum;
+        if (object.roomNum == HAS_OBJ)
+        {
+
+            //printf("3. splitbuffer %p buffer status %p\n", bCSplitBuffer, &bufferStatus);;
+            // asm("stp");
+            objectName = object.name;
+            thisLength = strlen(objectName);
+            j = 0;
+
+            if(!evenObj && foundObject)
+            {
+                for(j = lastLength + thisLength; j < TILES_ACROSS; j++)
+                {
+                     ch = " ";
+                     WRITE_NEXT(data);
+                }
+            }
+            else if(foundObject)
+            {
+                 ch = NEW_LINE;
+                 WRITE_NEXT(data);
+            }
+            else
+            {
+                foundObject = TRUE;
+            }
+
+            j = 0;
+
+            // printf("4. splitbuffer %p buffer status %p\n", bCSplitBuffer, &bufferStatus);;
+            // asm("stp");
+
+            while (objectName[j])
+            {
+                // printf("5. splitbuffer %p buffer status %p\n", bCSplitBuffer, &bufferStatus);;
+                // asm("stp");
+                WRITE_NEXT(objectName[j]);
+                //asm("stp");
+                //printf("object name is %p %d %p objName[j] is %d data %p dataptr %p\n", &objectName, j, GOLDEN_RAM_WORK_AREA, objectName[j], data, dataPtr);
+                j++;
+            }
+            //    WRITE_NEXT(data, 0, localBufferStatus);
+
+            lastLength = thisLength;
+            evenObj = ~evenObj;
+        }
+    }
+
+    ch = NEW_LINE;
+    WRITE_NEXT(NEW_LINE);
+
+    b5FlushBuffer(&bufferStatus);
+
+    b3DisplayMessageBox(bCSplitBuffer, SPLIT_BANK, 0, 0, INVENTORY_PALETTE_NUMBER, 0, FALSE);
+
+    // printf("6. splitbuffer %p buffer status %p\n", bCSplitBuffer, &bufferStatus);;
+    // asm("stp");
+    // asm("nop");
 
     do
     {

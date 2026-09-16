@@ -59,6 +59,18 @@ void b5FlushBufferNonGolden(BufferStatus* bufferStatus, byte* buffer, int buffer
 	memCpyBanked(localBufferStatus.bankedData + localBufferStatus.bufferCounter * bufferSize, buffer, localBufferStatus.bank, amountToCopy);
 }
 
+void b5FlushBuffer(BufferStatus* bufferStatus)
+{
+	BufferStatus localBufferStatus;
+	localBufferStatus = *bufferStatus;
+
+	bufferStatus->bufferCounter++;
+
+
+	printf("we flush to %p (%p + %p * %p) from %p bank %p, size %d\n", localBufferStatus.bankedData + localBufferStatus.bufferCounter * LOCAL_WORK_AREA_SIZE, localBufferStatus.bankedData, localBufferStatus.bufferCounter, LOCAL_WORK_AREA_SIZE,GOLDEN_RAM_WORK_AREA, localBufferStatus.bank, LOCAL_WORK_AREA_SIZE);
+	memCpyBanked(localBufferStatus.bankedData + localBufferStatus.bufferCounter * LOCAL_WORK_AREA_SIZE, GOLDEN_RAM_WORK_AREA, localBufferStatus.bank, LOCAL_WORK_AREA_SIZE);
+}
+
 void b5RefreshBuffer(BufferStatus* bufferStatus)
 {
 	b5RefreshBufferNonGolden(bufferStatus, GOLDEN_RAM_WORK_AREA, LOCAL_WORK_AREA_SIZE);

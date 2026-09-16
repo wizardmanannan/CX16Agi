@@ -100,8 +100,8 @@ _bESplitCel: ;The goal of this function is to PREPARE to split a cel into segmen
 ;This method has several steps, in this order.
 ; 1. Read the cel struct to get the width, height, and cel data address and bank
 ; 2. Divide the memory by the number of segments
-; 3. Now partition the bCSplitBuffer buffer into equal sized segments to the allocated memory. Note even though this buffer is larger then the allocated memory, any excess space will be discounted. This allows for the pointers to both buffers to point to the same data eg. the first pointer in the allocated memory will point to the first segment in the buffer will point the same data as the first pointer for the buffer and so on
-; 4. Store the pointers to the divisions of bCSplitBuffer buffer in bCSplitBufferSegments
+; 3. Now partition the _bCSplitBuffer buffer into equal sized segments to the allocated memory. Note even though this buffer is larger then the allocated memory, any excess space will be discounted. This allows for the pointers to both buffers to point to the same data eg. the first pointer in the allocated memory will point to the first segment in the buffer will point the same data as the first pointer for the buffer and so on
+; 4. Store the pointers to the divisions of _bCSplitBuffer buffer in bCSplitBufferSegments
 ; 5. Call bCSplitCel
 ; 6. Determine how much dynamic memory needs to be allocated to permanently store the data, we can't just copy the data from the buffer because there are huge gaps. Then copy to the allocated memory
 
@@ -218,15 +218,15 @@ TRAMPOLINE #HELPERS_BANK, _b5Divide ;Divide the total amount of memory by the nu
 sta SEGMENT_SIZE
 stx SEGMENT_SIZE + 1
 
-;3. Now partition the bCSplitBuffer buffer into equal sized segments to the allocated memory
-lda #<bCSplitBuffer 
+;3. Now partition the _bCSplitBuffer buffer into equal sized segments to the allocated memory
+lda #<_bCSplitBuffer 
 sta ZP_TMP_14
-lda #>bCSplitBuffer 
+lda #>_bCSplitBuffer 
 sta ZP_TMP_14 + 1
 
 PARTITION_MEMORY
 
-;4. Store the pointers to the divisions of bCSplitBuffer buffer
+;4. Store the pointers to the divisions of _bCSplitBuffer buffer
 lda #< bCSplitBufferSegments
 ldx #> bCSplitBufferSegments
 jsr pushax
@@ -243,16 +243,16 @@ asl
 ldx #$0
 jsr _memCpyBanked
 
-lda #<bCSplitBuffer 
+lda #<_bCSplitBuffer 
 sta ZP_TMP_14
-lda #>bCSplitBuffer 
+lda #>_bCSplitBuffer 
 sta ZP_TMP_14 + 1
 
 ;5. Call bCSplitCel
 PREPARE_BUFFER_SPLIT_CEL ;While in a perfect world the prep steps would live in bCSplitCel, it is here because there isn't much room left on C
 ;Clear out the portion of the buffer we will be using
-lda #< bCSplitBuffer
-ldx #> bCSplitBuffer
+lda #< _bCSplitBuffer
+ldx #> _bCSplitBuffer
 jsr pushax
 
 lda #$0
@@ -361,7 +361,7 @@ lda SPLIT_BANK
 SET_STRUCT_8_STORED_OFFSET_VALUE_IN_REG _offsetOfSplitCelBank, CEL_STRUCT_POINTER
 
 
-; 6.5 Copy the data from bCSplitBuffer to the allocated memory
+; 6.5 Copy the data from _bCSplitBuffer to the allocated memory
 clc ;Calculate the end address + 1 of the allocated memory
 lda SPLIT_DATA
 adc ACCUMULATED_SIZE
@@ -441,7 +441,7 @@ rts
 
 .segment "BANKRAM0C"
 SPLIT_BUFFER_SIZE = 4000
-bCSplitBuffer: .res SPLIT_BUFFER_SIZE
+_bCSplitBuffer: .res SPLIT_BUFFER_SIZE
 bCSplitBufferSegments: .res 32
 
 ;Still uses Uses ZP_TMP_14 as temp
@@ -481,7 +481,7 @@ ldy #$0 ;Reset the counter for where we are in the next segment
 .endmacro
 
 ;void bCSplitCel() ;Don't take any arguments, because all of the data is stored in the zero page
-;This method will split the cel into segments and store the segments in the bCSplitBuffer buffer
+;This method will split the cel into segments and store the segments in the _bCSplitBuffer buffer
 _bCSplitCel: ;Must be called by bESplitCel, which does all of the prepartion, as this depends on the data in the zero page values set up by bESplitCel and the buffer prepare macro being called
 .ifdef DEBUG_SPLIT
 lda debugCounter
