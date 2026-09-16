@@ -122,12 +122,19 @@ void bDLoadObjectFile()
     }
 }
 
+#pragma rodata (push, "BANKRAM0D")
+
+#include <ascii_charmap.h>
+const char BD_YOU_ARE_CARRYING[] = "You are carrying:";
+#include <cbm_petscii_charmap.h>
+#pragma rodata (pop)
 void bDDisplayInventory(boolean showObject)
 {
     byte ch, lastLength, thisLength;
     byte inventoryPaletteByte = 0x20;
     byte** data, * dataPtr;
     BufferStatus bufferStatus;
+    boolean isFirstLetterOfWord;
 
     objectType object;
     char* objectName;
@@ -136,6 +143,8 @@ void bDDisplayInventory(boolean showObject)
 
     bDObjects[1].roomNum = 255;
     bDObjects[2].roomNum = 255;
+    bDObjects[3].roomNum = 255;
+    bDObjects[4].roomNum = 255;
 
     memCpyBanked(&b3TextModeTileByte, &inventoryPaletteByte, TEXT_CODE_BANK, 1);
 
@@ -160,6 +169,20 @@ void bDDisplayInventory(boolean showObject)
 
     memset(GOLDEN_RAM_WORK_AREA, 0, LOCAL_WORK_AREA_SIZE);
 
+
+    // i=0;
+    // ch = BD_YOU_ARE_CARRYING[i];
+    // while(ch)
+    // {
+    //     WRITE_NEXT(ch);
+    //     ch = BD_YOU_ARE_CARRYING[i];
+    //     i++;
+    // }
+
+    strcpy(GOLDEN_RAM_WORK_AREA, BD_YOU_ARE_CARRYING);
+    (*data) += strlen(BD_YOU_ARE_CARRYING);
+    WRITE_NEXT(NEW_LINE);
+
     for (i = 0; i < bDNumObjects; i++)
     {
 
@@ -176,47 +199,66 @@ void bDDisplayInventory(boolean showObject)
             objectName = object.name;
             thisLength = strlen(objectName);
             j = 0;
-
+            
             if(!evenObj && foundObject)
             {
                 for(j = lastLength + thisLength; j < TILES_ACROSS; j++)
                 {
-                     ch = " ";
-                     WRITE_NEXT(data);
+                     ch = SPACE;
+                     WRITE_NEXT(ch);
                 }
             }
             else if(foundObject)
             {
-                 ch = NEW_LINE;
-                 WRITE_NEXT(data);
+                 WRITE_NEXT(NEW_LINE);
             }
             else
             {
                 foundObject = TRUE;
             }
 
-            j = 0;
+   
 
             // printf("4. splitbuffer %p buffer status %p\n", bCSplitBuffer, &bufferStatus);;
             // asm("stp");
 
-            while (objectName[j])
+            j = 0;
+            isFirstLetterOfWord = TRUE;
+            ch = objectName[j];
+            while (ch)
             {
                 // printf("5. splitbuffer %p buffer status %p\n", bCSplitBuffer, &bufferStatus);;
                 // asm("stp");
-                WRITE_NEXT(objectName[j]);
+                //printf("%d >= 'a' (%d) && %d <= 'z' (%d) && %d (%d)", ch, ch >= 'a', ch, ch <= 'z', isFirstLetterOfWord , ch >= 'a' && ch <= 'z' && isFirstLetterOfWord);
+                if(ch >= 97 && ch <= 122 && isFirstLetterOfWord) //Between lower a and lower z
+                {
+                    ch -= 32;
+                }
+                WRITE_NEXT(ch);
                 //asm("stp");
                 //printf("object name is %p %d %p objName[j] is %d data %p dataptr %p\n", &objectName, j, GOLDEN_RAM_WORK_AREA, objectName[j], data, dataPtr);
+                if(ch == SPACE)
+                {
+                    isFirstLetterOfWord = TRUE;
+                    asm("stp");
+                }
+                else
+                {
+                    isFirstLetterOfWord = FALSE;
+                }
+                
+                
                 j++;
+                ch = objectName[j];
             }
             //    WRITE_NEXT(data, 0, localBufferStatus);
 
             lastLength = thisLength;
-            evenObj = ~evenObj;
+            
+            evenObj = !evenObj;
         }
     }
 
-    ch = NEW_LINE;
     WRITE_NEXT(NEW_LINE);
 
     b5FlushBuffer(&bufferStatus);
