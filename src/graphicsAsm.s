@@ -174,7 +174,7 @@ lda #>COLOR_WHITE
 sta VERA_data0
 
 ;TileSet Layer 1
-lda #<COLOR_BLACK
+lda #<COLOR_BLACK ;White background black text
 sta VERA_data0
 lda #>COLOR_BLACK
 sta VERA_data0
@@ -256,7 +256,7 @@ lda #>COLOR_BLACK
 sta VERA_data0
 
 ;TileSet Layer 2
-lda #<COLOR_BLACK
+lda #<COLOR_BLACK ;White text black background
 sta VERA_data0
 lda #>COLOR_BLACK
 sta VERA_data0

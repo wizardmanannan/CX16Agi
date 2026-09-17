@@ -280,7 +280,7 @@ void b3FillChar(byte startLine, byte endLine, byte paletteNumber, byte charToFil
 			|| i == endLine) // Minus one so the terminator can fit in
 		{
 			*clearBuffer = '\0';
-			b3DisplayMessageBox(b3TextBuffer1, TEXT_CODE_BANK, startLine, 0, paletteNumber, 0, TRUE);
+			b3DisplayMessageBox(b3TextBuffer1, TEXT_CODE_BANK, startLine, 0, paletteNumber, 0, TRUE, FIRST_TEXT_ROW);
 		}
 		else
 		{
@@ -409,7 +409,7 @@ extern byte b3PaletteNumber;
 
 //Box width is 0 for text that is not in a box, or the width of the box otherwise
 //Supports copying from banks or putting data directly into textbuffer, which is on bank 3
-void b3DisplayMessageBox(char* message, byte messageBank, byte row, byte col, byte paletteNumber, byte boxWidth, boolean wrap)
+void b3DisplayMessageBox(char* message, byte messageBank, byte row, byte col, byte paletteNumber, byte boxWidth, boolean wrap, byte firstRow)
 {
 	int i;
 	char terminator = 0;
@@ -493,8 +493,8 @@ void b3DisplayMessageBox(char* message, byte messageBank, byte row, byte col, by
 			col = MAX_CHAR_ACROSS / 2 - boxWidth / 2;
 		}
 
-		displayTextAddressToCopyTo = MAPBASE + (FIRST_ROW + b3LastBoxStartLine - 1) * TILE_LAYER_BYTES_PER_ROW + col * BYTES_PER_CELL;
-		b3PaletteAddress = MAPBASE + (FIRST_ROW + b3LastBoxStartLine - 1) * TILE_LAYER_BYTES_PER_ROW + 1; //We will set the same palette for the whole row
+		displayTextAddressToCopyTo = MAPBASE + (firstRow + b3LastBoxStartLine - 1) * TILE_LAYER_BYTES_PER_ROW + col * BYTES_PER_CELL;
+		b3PaletteAddress = MAPBASE + (firstRow + b3LastBoxStartLine - 1) * TILE_LAYER_BYTES_PER_ROW + 1; //We will set the same palette for the whole row
 		b3PaletteRows = numberOfLines;
 		b3PaletteNumber = paletteNumber;
 
@@ -507,7 +507,7 @@ byte b3DisplayManuallyWrappedMessageBox(char* message, byte messageBank, byte ro
 {
 	byte ch;
 
-	b3DisplayMessageBox(message, messageBank, AUTO_CALC_ROW, AUTO_CALC_COLUMN, TEXTBOX_PALETTE_NUMBER, boxWidth, FALSE);
+	b3DisplayMessageBox(message, messageBank, AUTO_CALC_ROW, AUTO_CALC_COLUMN, TEXTBOX_PALETTE_NUMBER, boxWidth, FALSE, FIRST_TEXT_ROW);
 	b3LastBoxLines = boxHeight;
 
 	//b3PrintMessageInTextbox(loadAndIncWinCode(), DEFAULT_TEXTBOX_X, DEFAULT_TEXTBOX_Y, DEFAULT_BOX_WIDTH);

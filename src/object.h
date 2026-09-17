@@ -16,6 +16,7 @@
 #define OBJ_NAME_CACHE_SIZE MAX_OBJECTS * 10
 #define HAS_OBJ 255
 #define INVENTORY_PALETTE_NUMBER 1
+#define FIRST_OBJECT_ROW 1
 
 typedef struct {
 	byte roomNum;

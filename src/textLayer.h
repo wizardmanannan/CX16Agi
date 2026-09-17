@@ -55,7 +55,7 @@
 
 #define TEXTBUFFER_SIZE 1000
 
-#define FIRST_ROW 4
+#define FIRST_TEXT_ROW 4
 
 #define TEXTBOX_PALETTE_NUMBER 1
 
@@ -67,7 +67,7 @@ extern byte b3TextModeTileByte; //Changes the background colour the next time yo
 #pragma wrapped-call (push, trampoline, TEXT_CODE_BANK)
 void b3InitLayer1Mapbase(byte tileByte);
 byte b3DisplayManuallyWrappedMessageBox(char* message, byte messageBank, byte row, byte col, byte paletteNumber, byte boxWidth, byte boxHeight);
-void b3DisplayMessageBox(char* message, byte messageBank, byte row, byte col, byte paletteNumber, byte boxWidth, boolean wrap);
+void b3DisplayMessageBox(char* message, byte messageBank, byte row, byte col, byte paletteNumber, byte boxWidth, boolean wrap, byte firstRow);
 void b3FillChar(byte startLine, byte endLine, byte paletteNumber, byte charToFill);
 void b3ClearLastPlacedText();
 byte b3SetTextColor(byte foreground, byte background);

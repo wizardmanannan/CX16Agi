@@ -109,7 +109,7 @@ void b11ShowObj(byte objNum)
    }
 
    /* Shown even if sprite allocation failed. */
-   b3DisplayMessageBox(localView.description, localView.codeBlockBank, AUTO_CALC_ROW, AUTO_CALC_COLUMN, TEXTBOX_PALETTE_NUMBER, DEFAULT_BOX_WIDTH, TRUE);
+   b3DisplayMessageBox(localView.description, localView.codeBlockBank, AUTO_CALC_ROW, AUTO_CALC_COLUMN, TEXTBOX_PALETTE_NUMBER, DEFAULT_BOX_WIDTH, TRUE, FIRST_TEXT_ROW);
 
    do
    {

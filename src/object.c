@@ -131,7 +131,7 @@ const char BD_YOU_ARE_CARRYING[] = "You are carrying:";
 void bDDisplayInventory(boolean showObject)
 {
     byte ch, lastLength, thisLength;
-    byte inventoryPaletteByte = 0x20;
+    byte inventoryPaletteByte = 0x10;
     byte** data, * dataPtr;
     BufferStatus bufferStatus;
     boolean isFirstLetterOfWord;
@@ -146,13 +146,16 @@ void bDDisplayInventory(boolean showObject)
     bDObjects[3].roomNum = 255;
     bDObjects[4].roomNum = 255;
 
-    memCpyBanked(&b3TextModeTileByte, &inventoryPaletteByte, TEXT_CODE_BANK, 1);
+    memCpyBanked(&b3TextModeTileByte, &inventoryPaletteByte, TEXT_CODE_BANK, 1); //Text mode only sets the stuff below the menu bar, but since the menu bar is already the right color (white), we are going to not add any extra complexity
 
     // inputLineDisplayed = FALSE;
     // statusLineDisplayed = FALSE;
 
     b6SetBackgroundColour(PALETTE_COLOR_WHITE);
+
     b6TextMode();
+    asm("stp");
+    asm("nop");
 
 
     bufferStatus.bank = SPLIT_BANK;
@@ -240,7 +243,7 @@ void bDDisplayInventory(boolean showObject)
                 if(ch == SPACE)
                 {
                     isFirstLetterOfWord = TRUE;
-                    asm("stp");
+                    //asm("stp");
                 }
                 else
                 {
@@ -263,7 +266,12 @@ void bDDisplayInventory(boolean showObject)
 
     b5FlushBuffer(&bufferStatus);
 
-    b3DisplayMessageBox(bCSplitBuffer, SPLIT_BANK, 0, 0, INVENTORY_PALETTE_NUMBER, 0, FALSE);
+    //     asm("stp");
+    // asm("nop");
+    // asm("nop");
+
+        
+    b3DisplayMessageBox(bCSplitBuffer, SPLIT_BANK, 0, 0, INVENTORY_PALETTE_NUMBER, 0, FALSE, FIRST_OBJECT_ROW);
 
     // printf("6. splitbuffer %p buffer status %p\n", bCSplitBuffer, &bufferStatus);;
     // asm("stp");

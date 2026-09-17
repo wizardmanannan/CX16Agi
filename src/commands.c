@@ -1513,7 +1513,7 @@ void b3PrintMessageInTextbox(byte messNum, byte x, byte y, byte length, boolean 
 
 	messagePointer = getMessagePointer(currentLog, messNum - 1);
 
-	b3DisplayMessageBox(messagePointer, logicFile.messageBank, y, x, TEXTBOX_PALETTE_NUMBER, length, wrap);
+	b3DisplayMessageBox(messagePointer, logicFile.messageBank, y, x, TEXTBOX_PALETTE_NUMBER, length, wrap, FIRST_TEXT_ROW);
 
 	if (timeoutFlagVal)
 	{
@@ -1563,7 +1563,7 @@ void b3DisplayWithoutTextbox(byte row, byte col, byte messNum)
 	printf("the messages live at %p on bank %p\n", logicFile.messages, logicFile.messageBank);
 #endif
 	//b3ProcessString(messagePointer, 0, tempString);
-	b3DisplayMessageBox(messagePointer, logicFile.messageBank, row, col, b3SetTextColor(b3CurrentForegroundColour, b3CurrentBackgroundColour), 0, FALSE);
+	b3DisplayMessageBox(messagePointer, logicFile.messageBank, row, col, b3SetTextColor(b3CurrentForegroundColour, b3CurrentBackgroundColour), 0, FALSE, FIRST_TEXT_ROW);
 	return;
 }
 
@@ -1961,7 +1961,7 @@ void b5Version() // 0, 0x00
 {
 #define VERSION_BOX_SIZE 15
 	while (key[KEY_ENTER] || key[KEY_ESC]) { /* Wait */ }
-	b3DisplayMessageBox(B5_VERSION_MESSAGE, COMMAND_MESSAGES_BANK, AUTO_CALC_ROW, MAX_CHAR_ACROSS / 2, TEXTBOX_PALETTE_NUMBER, VERSION_BOX_SIZE, FALSE);
+	b3DisplayMessageBox(B5_VERSION_MESSAGE, COMMAND_MESSAGES_BANK, AUTO_CALC_ROW, MAX_CHAR_ACROSS / 2, TEXTBOX_PALETTE_NUMBER, VERSION_BOX_SIZE, FALSE, FIRST_TEXT_ROW);
 	while (!key[KEY_ENTER] && !key[KEY_ESC]) { /* Wait */ }
 	b6ShowPicture();
 	return;
