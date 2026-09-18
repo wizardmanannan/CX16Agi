@@ -125,12 +125,14 @@ void bDLoadObjectFile()
 #pragma rodata (push, "BANKRAM0D")
 
 #include <ascii_charmap.h>
-const char BD_YOU_ARE_CARRYING[] = "You are carrying:";
-#include <cbm_petscii_charmap.h>
+const char BD_YOU_ARE_CARRYING[] = "            You are carrying:"; //Spaces are on purpose to centre.
+const char BD_NOTHING[] = "                  nothing";
+const char BD_EXIT_INVENTORY[] = "    Press a key to return to the game";
 #pragma rodata (pop)
+#include <cbm_petscii_charmap.h>
 void bDDisplayInventory(boolean showObject)
 {
-    byte ch, lastLength, thisLength;
+    byte ch, lastLength, thisLength, rows = 1; //Always at least one row since the text 'nothing' displays if you carry nothing
     byte inventoryPaletteByte = 0x10;
     byte** data, * dataPtr;
     BufferStatus bufferStatus;
@@ -138,24 +140,30 @@ void bDDisplayInventory(boolean showObject)
 
     objectType object;
     char* objectName;
-    int i, j;
+    unsigned int i, j;
     boolean evenObj = TRUE, foundObject = FALSE;
 
-    bDObjects[1].roomNum = 255;
-    bDObjects[2].roomNum = 255;
-    bDObjects[3].roomNum = 255;
-    bDObjects[4].roomNum = 255;
+    
+    printf("the buffer is at %p\n", bCSplitBuffer);
 
+    for(i = 1; i < 55; i++)
+    {
+        if(i >=44 && i <= 46)
+        {
+            continue;
+        }
+
+        bDObjects[i].roomNum = 255;
+    }
     memCpyBanked(&b3TextModeTileByte, &inventoryPaletteByte, TEXT_CODE_BANK, 1); //Text mode only sets the stuff below the menu bar, but since the menu bar is already the right color (white), we are going to not add any extra complexity
+    //memCpyBanked(&b3TextModeTileHeight, &inventoryTileLayerHeight, TEXT_CODE_BANK, sizeof(int));
 
-    // inputLineDisplayed = FALSE;
+    inputLineDisplayed = FALSE;
     // statusLineDisplayed = FALSE;
 
     b6SetBackgroundColour(PALETTE_COLOR_WHITE);
 
     b6TextMode();
-    asm("stp");
-    asm("nop");
 
 
     bufferStatus.bank = SPLIT_BANK;
@@ -167,6 +175,7 @@ void bDDisplayInventory(boolean showObject)
 
     //printf("%p\n", bufferStatus.bankedData);
 
+    asm("stp");
     dataPtr = GOLDEN_RAM_WORK_AREA;
     data = &dataPtr;
 
@@ -202,25 +211,26 @@ void bDDisplayInventory(boolean showObject)
             objectName = object.name;
             thisLength = strlen(objectName);
             j = 0;
-            
-            if(!evenObj && foundObject)
+
+            if (!evenObj && foundObject)
             {
-                for(j = lastLength + thisLength; j < TILES_ACROSS; j++)
+                for (j = lastLength + thisLength; j < TILES_ACROSS; j++)
                 {
-                     ch = SPACE;
-                     WRITE_NEXT(ch);
+                    ch = SPACE;
+                    WRITE_NEXT(ch);
                 }
+                rows++; //One row for every even row
             }
-            else if(foundObject)
+            else if (foundObject)
             {
-                 WRITE_NEXT(NEW_LINE);
+                WRITE_NEXT(NEW_LINE);
             }
             else
             {
                 foundObject = TRUE;
             }
 
-   
+
 
             // printf("4. splitbuffer %p buffer status %p\n", bCSplitBuffer, &bufferStatus);;
             // asm("stp");
@@ -233,14 +243,14 @@ void bDDisplayInventory(boolean showObject)
                 // printf("5. splitbuffer %p buffer status %p\n", bCSplitBuffer, &bufferStatus);;
                 // asm("stp");
                 //printf("%d >= 'a' (%d) && %d <= 'z' (%d) && %d (%d)", ch, ch >= 'a', ch, ch <= 'z', isFirstLetterOfWord , ch >= 'a' && ch <= 'z' && isFirstLetterOfWord);
-                if(ch >= 97 && ch <= 122 && isFirstLetterOfWord) //Between lower a and lower z
+                if (ch >= 97 && ch <= 122 && isFirstLetterOfWord) //Between lower a and lower z
                 {
                     ch -= 32;
                 }
                 WRITE_NEXT(ch);
                 //asm("stp");
                 //printf("object name is %p %d %p objName[j] is %d data %p dataptr %p\n", &objectName, j, GOLDEN_RAM_WORK_AREA, objectName[j], data, dataPtr);
-                if(ch == SPACE)
+                if (ch == SPACE)
                 {
                     isFirstLetterOfWord = TRUE;
                     //asm("stp");
@@ -249,33 +259,61 @@ void bDDisplayInventory(boolean showObject)
                 {
                     isFirstLetterOfWord = FALSE;
                 }
-                
-                
+
+
                 j++;
                 ch = objectName[j];
             }
             //    WRITE_NEXT(data, 0, localBufferStatus);
 
             lastLength = thisLength;
-            
+
             evenObj = !evenObj;
         }
     }
 
     WRITE_NEXT(NEW_LINE);
 
+    if (!foundObject)
+    {
+        strcpy(*data, BD_NOTHING);
+        (*data) += strlen(BD_NOTHING);
+    }
+
+    // if (!showObject)
+    // {
+    //     // for(i = 0; i < 27 - rows; i++)
+    //     // {
+    //     //   WRITE_NEXT(NEW_LINE);  
+    //     // }
+
+    //     i = 0;
+    //     ch = BD_EXIT_INVENTORY[i];
+    //     while (ch)
+    //     {
+    //         WRITE_NEXT(ch);
+    //         i++;
+    //         ch = BD_EXIT_INVENTORY[i];
+    //     }
+    // }
+
+    WRITE_NEXT('\0');
+
+    asm("stp");
+    asm("nop");
     b5FlushBuffer(&bufferStatus);
 
     //     asm("stp");
     // asm("nop");
     // asm("nop");
 
-        
+
     b3DisplayMessageBox(bCSplitBuffer, SPLIT_BANK, 0, 0, INVENTORY_PALETTE_NUMBER, 0, FALSE, FIRST_OBJECT_ROW);
 
     // printf("6. splitbuffer %p buffer status %p\n", bCSplitBuffer, &bufferStatus);;
     // asm("stp");
     // asm("nop");
+    asm("stp");
 
     do
     {

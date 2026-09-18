@@ -78,5 +78,6 @@ extern char b3TextBuffer2[TEXTBUFFER_SIZE];
 
 extern byte b3CurrentForegroundColour;
 extern byte b3CurrentBackgroundColour;
+extern unsigned int b3TextModeTileHeight;
 
 #endif

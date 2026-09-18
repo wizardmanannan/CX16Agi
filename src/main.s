@@ -126,4 +126,3 @@
     .export _b6BackgroundColorToSet
     .export _b6SetBackgroundColor
     .export _bCSplitBuffer
-

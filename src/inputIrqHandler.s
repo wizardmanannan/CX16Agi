@@ -7,6 +7,10 @@ MAX_INPUT_STRING_LENGTH = 40 ;Includes terminator
 .include "globalGraphics.s"
 .segment "BANKRAM07"
 b7HandleInputLine:
+
+lda _inputLineDisplayed
+beq @end
+
 SET_VERA_ADDRESS_IMMEDIATE INPUT_STRING_ADDRESS, #$0, #$2
 @clearInputLine:
 lda #TRANSPARENT_CHAR
@@ -17,10 +21,7 @@ inx
 cpx #MAX_INPUT_STRING_LENGTH
 bne @clearLoop
 
-lda _inputLineDisplayed
-beq @end
 ldx #$0
-
 SET_VERA_ADDRESS_IMMEDIATE INPUT_STRING_ADDRESS, #$0, #$2
 @drawInput:
 lda #INPUT_PROMPT_CHAR

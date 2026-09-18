@@ -167,8 +167,8 @@ extern byte _previousRomBank;
     do {                              \
        if(*data >= GOLDEN_RAM_WORK_AREA + LOCAL_WORK_AREA_SIZE) \
 		{ \
-			b5FlushBufferNonGolden(&bufferStatus, GOLDEN_RAM_WORK_AREA, LOCAL_WORK_AREA_SIZE, LOCAL_WORK_AREA_SIZE); \
-            *dataPtr = GOLDEN_RAM_WORK_AREA; \
+			b5FlushBuffer(&bufferStatus); \
+            *data = GOLDEN_RAM_WORK_AREA; \
 		} \
 		 *((*data)++) = toWrite; \
         \
