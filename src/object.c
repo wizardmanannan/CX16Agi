@@ -280,22 +280,22 @@ void bDDisplayInventory(boolean showObject)
         (*data) += strlen(BD_NOTHING);
     }
 
-    // if (!showObject)
-    // {
-    //     // for(i = 0; i < 27 - rows; i++)
-    //     // {
-    //     //   WRITE_NEXT(NEW_LINE);  
-    //     // }
+    if (!showObject)
+    {
+        for(i = 0; i < 27 - rows; i++)
+        {
+           WRITE_NEXT(NEW_LINE);  
+        }
 
-    //     i = 0;
-    //     ch = BD_EXIT_INVENTORY[i];
-    //     while (ch)
-    //     {
-    //         WRITE_NEXT(ch);
-    //         i++;
-    //         ch = BD_EXIT_INVENTORY[i];
-    //     }
-    // }
+        i = 0;
+        ch = BD_EXIT_INVENTORY[i];
+        while (ch)
+        {
+            WRITE_NEXT(ch);
+            i++;
+            ch = BD_EXIT_INVENTORY[i];
+        }
+    }
 
     WRITE_NEXT('\0');
 
