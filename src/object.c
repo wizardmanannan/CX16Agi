@@ -144,7 +144,15 @@ void bDDisplayInventory(boolean showObject)
     boolean evenObj = TRUE, foundObject = FALSE;
 
 
+    // for(i = 1; i < 55; i++) //Uncomment this when you wants lots of inventory items
+    // {
+    //     if(i >=44 && i <= 46)
+    //     {
+    //         continue;
+    //     }
 
+    //     bDObjects[i].roomNum = 255;
+    // }
     memCpyBanked(&b3TextModeTileByte, &inventoryPaletteByte, TEXT_CODE_BANK, 1); //Text mode only sets the stuff below the menu bar, but since the menu bar is already the right color (white), we are going to not add any extra complexity
    
     inputLineDisplayed = FALSE;
@@ -203,16 +211,8 @@ void bDDisplayInventory(boolean showObject)
                     ch -= 32;
                 }
                 WRITE_NEXT(ch);
-                
-                if (ch == SPACE)
-                {
-                    isFirstLetterOfWord = TRUE;
-                }
-                else
-                {
-                    isFirstLetterOfWord = FALSE;
-                }
-
+               
+                isFirstLetterOfWord = ch == SPACE;
 
                 j++;
                 ch = objectName[j];
