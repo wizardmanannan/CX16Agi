@@ -23,11 +23,24 @@ BUFFER_STATUS_ADDRESS = ZP_TMP_12
 _bDWriteNext:
 ldx WRITE_ZP + 1
 cpx #>(GOLDEN_RAM_WORK_AREA + LOCAL_WORK_AREA_SIZE)
-bcc @write
+bcs @highByteCheck
+
+@write:
+sta (WRITE_ZP)
+inc WRITE_ZP
+beq @incHigh
+rts
+@incHigh:
+inc WRITE_ZP + 1
+@return:
+rts
+
+@highByteCheck:
 ldx WRITE_ZP
 cpx #<(GOLDEN_RAM_WORK_AREA + LOCAL_WORK_AREA_SIZE)
 bcc @write
 
+@refreshBuffer:
 pha
 lda BUFFER_STATUS_ADDRESS
 ldx BUFFER_STATUS_ADDRESS + 1
@@ -37,16 +50,7 @@ lda #<GOLDEN_RAM_WORK_AREA
 sta WRITE_ZP
 lda #>GOLDEN_RAM_WORK_AREA
 sta WRITE_ZP + 1
-
 pla
-
-@write:
-sta (WRITE_ZP)
-
-inc WRITE_ZP
-bne @return
-inc WRITE_ZP + 1
-@return:
-rts
+jmp @write
 
 .endif
