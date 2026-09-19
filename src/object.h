@@ -10,6 +10,7 @@
 #include "agifiles.h"
 #include "irq.h"
 #include "textLayer.h"
+#include "zeroPointer.h"
 
 
 #define MAX_OBJECTS 150

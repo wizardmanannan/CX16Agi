@@ -123,13 +123,21 @@ void bDLoadObjectFile()
 }
 
 #pragma rodata (push, "BANKRAM0D")
-
 #include <ascii_charmap.h>
 const char BD_YOU_ARE_CARRYING[] = "            You are carrying:"; //Spaces are on purpose to centre.
 const char BD_NOTHING[] = "                  nothing";
 const char BD_EXIT_INVENTORY[] = "    Press a key to return to the game";
 #pragma rodata (pop)
 #include <cbm_petscii_charmap.h>
+
+
+
+extern void bDWriteNext(byte toWrite);
+
+#define WRITE_ZP ZP_TMP_10
+#define BUFFER_STATUS_ZP ZP_TMP_12
+#define WRITE_ZP_PTR ((byte**)WRITE_ZP)
+#define BUFFER_ZP_PTR ((byte**)BUFFER_STATUS_ZP)
 void bDDisplayInventory(boolean showObject)
 {
     byte ch, lastLength, thisLength, rows = 1; //Always at least one row since the text 'nothing' displays if you carry nothing
@@ -143,6 +151,8 @@ void bDDisplayInventory(boolean showObject)
     unsigned int i, j;
     boolean evenObj = TRUE, foundObject = FALSE;
 
+    *WRITE_ZP_PTR = GOLDEN_RAM_WORK_AREA;
+    *BUFFER_ZP_PTR = &bufferStatus;
 
     // for(i = 1; i < 55; i++) //Uncomment this when you wants lots of inventory items for testing in kq3
     // {
@@ -166,11 +176,10 @@ void bDDisplayInventory(boolean showObject)
     bufferStatus.bankedData = bCSplitBuffer; //Its a safer better to use the split buffer. As when the buffer flushes at the end it will always write the full buffer size out even if there's not data. There is a terminator so we know where the legitimate data ends, but it must not overflow
     bufferStatus.bufferCounter = 0;
 
-    data = GOLDEN_RAM_WORK_AREA;
-
     strcpy(GOLDEN_RAM_WORK_AREA, BD_YOU_ARE_CARRYING);
-    data += strlen(BD_YOU_ARE_CARRYING);
-    WRITE_NEXT(NEW_LINE);
+    *WRITE_ZP_PTR += strlen(BD_YOU_ARE_CARRYING);
+    
+    bDWriteNext(NEW_LINE);
 
     for (i = 0; i < bDNumObjects; i++)
     {
@@ -188,13 +197,13 @@ void bDDisplayInventory(boolean showObject)
                 for (j = lastLength + thisLength; j < TILES_ACROSS; j++)
                 {
                     ch = SPACE;
-                    WRITE_NEXT(ch);
+                    bDWriteNext(ch);
                 }
                 rows++; //One row for every even row
             }
             else if (foundObject)
             {
-                WRITE_NEXT(NEW_LINE);
+                bDWriteNext(NEW_LINE);
             }
             else
             {
@@ -211,7 +220,7 @@ void bDDisplayInventory(boolean showObject)
                     ch -= 32;
                 }
                 
-                WRITE_NEXT(ch);
+                bDWriteNext(ch);
                                                
                 isFirstLetterOfWord = ch == SPACE;
 
@@ -225,32 +234,32 @@ void bDDisplayInventory(boolean showObject)
         }
     }
 
-    WRITE_NEXT(NEW_LINE);
+    bDWriteNext(NEW_LINE);
 
     if (!foundObject)
     {
-        strcpy(data, BD_NOTHING);
-        data += strlen(BD_NOTHING);
+        strcpy(*WRITE_ZP_PTR, BD_NOTHING);
+        *WRITE_ZP_PTR += strlen(BD_NOTHING);
     }
 
     if (!showObject)
     {
         for(i = 0; i < 27 - rows; i++)
         {
-           WRITE_NEXT(NEW_LINE);  
+           bDWriteNext(NEW_LINE);  
         }
 
         i = 0;
         ch = BD_EXIT_INVENTORY[i];
         while (ch)
         {
-            WRITE_NEXT(ch);
+            bDWriteNext(ch);
             i++;
             ch = BD_EXIT_INVENTORY[i];
         }
     }
 
-    WRITE_NEXT('\0');
+    bDWriteNext('\0');
 
     b5FlushBuffer(&bufferStatus);
 

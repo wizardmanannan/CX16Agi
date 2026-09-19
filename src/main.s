@@ -22,6 +22,7 @@
     .include "controllersAsm.s"
     .include "statusBar.s"
     .include "showObjAsm.s"
+    .include "objectAsm.s"
     
     .export _executeLogic
     .export _b6InitInterpreter
@@ -126,3 +127,4 @@
     .export _b6BackgroundColorToSet
     .export _b6SetBackgroundColor
     .export _bCSplitBuffer
+    .export _bDWriteNext
