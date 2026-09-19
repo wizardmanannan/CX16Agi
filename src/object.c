@@ -136,8 +136,11 @@ extern void bDWriteNext(byte toWrite);
 
 #define WRITE_ZP ZP_TMP_10
 #define BUFFER_STATUS_ZP ZP_TMP_12
+#define OBJECT_NAME_ZP ZP_TMP_13
 #define WRITE_ZP_PTR ((byte**)WRITE_ZP)
 #define BUFFER_ZP_PTR ((byte**)BUFFER_STATUS_ZP)
+#define OBJECT_NAME_PTR ((byte**)OBJECT_NAME_ZP)
+
 void bDDisplayInventory(boolean showObject)
 {
     byte ch, lastLength, thisLength, rows = 1; //Always at least one row since the text 'nothing' displays if you carry nothing
@@ -154,18 +157,18 @@ void bDDisplayInventory(boolean showObject)
     *WRITE_ZP_PTR = GOLDEN_RAM_WORK_AREA;
     *BUFFER_ZP_PTR = &bufferStatus;
 
-    // for(i = 1; i < 55; i++) //Uncomment this when you wants lots of inventory items for testing in kq3
-    // {
-    //     if(i >=44 && i <= 46)
-    //     {
-    //         continue;
-    //     }
+    for (i = 1; i < 55; i++) //Uncomment this when you wants lots of inventory items for testing in kq3
+    {
+        if (i >= 44 && i <= 46)
+        {
+            continue;
+        }
 
-    //     bDObjects[i].roomNum = 255;
-    // }
+        bDObjects[i].roomNum = 255;
+    }
 
     memCpyBanked(&b3TextModeTileByte, &inventoryPaletteByte, TEXT_CODE_BANK, 1); //Text mode only sets the stuff below the menu bar, but since the menu bar is already the right color (white), we are going to not add any extra complexity
-   
+
     inputLineDisplayed = FALSE;
 
     b6SetBackgroundColour(PALETTE_COLOR_WHITE);
@@ -178,27 +181,52 @@ void bDDisplayInventory(boolean showObject)
 
     strcpy(GOLDEN_RAM_WORK_AREA, BD_YOU_ARE_CARRYING);
     *WRITE_ZP_PTR += strlen(BD_YOU_ARE_CARRYING);
-    
+
     bDWriteNext(NEW_LINE);
 
     for (i = 0; i < bDNumObjects; i++)
     {
         object.name = bDObjects[i].name;
         object.roomNum = bDObjects[i].roomNum;
-        
+
         if (object.roomNum == HAS_OBJ)
         {
             objectName = object.name;
             thisLength = strlen(objectName);
+            *OBJECT_NAME_PTR = object.name;
+            
             j = 0;
 
             if (!evenObj && foundObject)
             {
                 for (j = lastLength + thisLength; j < TILES_ACROSS; j++)
                 {
-                    ch = SPACE;
-                    bDWriteNext(ch);
+                    asm("ldx %w", WRITE_ZP + 1);
+                    asm("cpx #>%w", GOLDEN_RAM_WORK_AREA_ADDR + LOCAL_WORK_AREA_SIZE);
+                    asm("bcs %g", lowByteCheckSpace);
+
+                writeSpace:
+                    asm("lda #%w", SPACE);
+                    asm("sta (%w)", WRITE_ZP);
+                    asm("inc %w", WRITE_ZP);
+                    asm("bne %g", endLoopSpace);
+
+                incHighSpace:
+                    asm("inc %w + 1", WRITE_ZP);
+                    asm("bra %g", endLoopSpace);
+
+                lowByteCheckSpace:
+                    asm("ldx %w", WRITE_ZP);
+                    asm("cpx #<%w", GOLDEN_RAM_WORK_AREA_ADDR + LOCAL_WORK_AREA_SIZE);
+                    asm("bcc %g", writeSpace);
+                    b5FlushBuffer(&bufferStatus);
+                    *WRITE_ZP_PTR = GOLDEN_RAM_WORK_AREA;
+                    goto writeSpace;
+                endLoopSpace:
+                    asm("nop");
                 }
+                    //printf("the buffer is at %p\n",bCSplitBuffer);
+    //asm("stp");
                 rows++; //One row for every even row
             }
             else if (foundObject)
@@ -210,22 +238,50 @@ void bDDisplayInventory(boolean showObject)
                 foundObject = TRUE;
             }
 
-            j = 0;
+            _assmByte2 = 0;
             isFirstLetterOfWord = TRUE;
-            ch = objectName[j];
-            while (ch)
-            {
-                if (ch >= 97 && ch <= 122 && isFirstLetterOfWord) //Between lower a and lower z
-                {
-                    ch -= 32;
-                }
-                
-                bDWriteNext(ch);
-                                               
-                isFirstLetterOfWord = ch == SPACE;
 
-                j++;
-                ch = objectName[j];
+
+            asm("ldy %v", _assmByte2);
+            asm("lda (%w),y", OBJECT_NAME_ZP);
+            asm("sta %v", _assmByte);
+            while (_assmByte)
+            {
+                if (_assmByte >= 97 && _assmByte <= 122 && isFirstLetterOfWord) //Between lower a and lower z
+                {
+                    _assmByte -= 32;
+                }
+
+                asm("ldx %w", WRITE_ZP + 1);
+                asm("cpx #>%w", GOLDEN_RAM_WORK_AREA_ADDR + LOCAL_WORK_AREA_SIZE);
+                asm("bcs %g", lowByteCheck);
+
+            write:
+                asm("lda %v", _assmByte);
+                asm("sta (%w)", WRITE_ZP);
+                asm("inc %w", WRITE_ZP);
+                asm("bne %g", endLoop);
+
+            incHigh:
+                asm("inc %w + 1", WRITE_ZP);
+                asm("bra %g", endLoop);
+
+            lowByteCheck:
+                asm("ldx %w", WRITE_ZP);
+                asm("cpx #<%w", GOLDEN_RAM_WORK_AREA_ADDR + LOCAL_WORK_AREA_SIZE);
+                asm("bcc %g", write);
+
+                b5FlushBuffer(&bufferStatus);
+                *WRITE_ZP_PTR = GOLDEN_RAM_WORK_AREA;
+                goto write;
+
+            endLoop:
+                isFirstLetterOfWord = _assmByte == SPACE;
+
+                _assmByte2++;
+                 asm("ldy %v", _assmByte2);
+                 asm("lda (%w),y", OBJECT_NAME_ZP);
+                 asm("sta %v", _assmByte);
             }
 
             lastLength = thisLength;
@@ -233,7 +289,6 @@ void bDDisplayInventory(boolean showObject)
             evenObj = !evenObj;
         }
     }
-
     bDWriteNext(NEW_LINE);
 
     if (!foundObject)
@@ -244,9 +299,9 @@ void bDDisplayInventory(boolean showObject)
 
     if (!showObject)
     {
-        for(i = 0; i < 27 - rows; i++)
+        for (i = 0; i < 27 - rows; i++)
         {
-           bDWriteNext(NEW_LINE);  
+            bDWriteNext(NEW_LINE);
         }
 
         i = 0;
@@ -262,6 +317,7 @@ void bDDisplayInventory(boolean showObject)
     bDWriteNext('\0');
 
     b5FlushBuffer(&bufferStatus);
+
 
     b3DisplayMessageBox(bCSplitBuffer, SPLIT_BANK, 0, 0, INVENTORY_PALETTE_NUMBER, 0, FALSE, FIRST_OBJECT_ROW);
 

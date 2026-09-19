@@ -166,6 +166,7 @@
 #define GOLDEN_RAM        ((unsigned char *)0x0400)
 #define GOLDEN_RAM_WORK_AREA        ((unsigned char *)0x0400 + LOCAL_WORK_AREA_START)
 #define GOLDEN_RAM_PARAMS_AREA &GOLDEN_RAM[PARAMETERS_START]
+#define GOLDEN_RAM_WORK_AREA_ADDR 0x0400 + LOCAL_WORK_AREA_START
 
 extern int _noSegments;
 
