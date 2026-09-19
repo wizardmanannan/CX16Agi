@@ -165,12 +165,12 @@ extern byte _previousRomBank;
 
 #define WRITE_NEXT(toWrite)  \
     do {                              \
-       if(*data >= GOLDEN_RAM_WORK_AREA + LOCAL_WORK_AREA_SIZE) \
+       if(data >= GOLDEN_RAM_WORK_AREA + LOCAL_WORK_AREA_SIZE) \
 		{ \
 			b5FlushBuffer(&bufferStatus); \
-            *data = GOLDEN_RAM_WORK_AREA; \
+            data = GOLDEN_RAM_WORK_AREA; \
 		} \
-		 *((*data)++) = toWrite; \
+		 *data++ = toWrite; \
         \
     } while(0);
 

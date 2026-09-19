@@ -134,7 +134,7 @@ void bDDisplayInventory(boolean showObject)
 {
     byte ch, lastLength, thisLength, rows = 1; //Always at least one row since the text 'nothing' displays if you carry nothing
     byte inventoryPaletteByte = 0x10;
-    byte** data, * dataPtr;
+    byte* data;
     BufferStatus bufferStatus;
     boolean isFirstLetterOfWord;
 
@@ -144,7 +144,7 @@ void bDDisplayInventory(boolean showObject)
     boolean evenObj = TRUE, foundObject = FALSE;
 
 
-    // for(i = 1; i < 55; i++) //Uncomment this when you wants lots of inventory items
+    // for(i = 1; i < 55; i++) //Uncomment this when you wants lots of inventory items for testing in kq3
     // {
     //     if(i >=44 && i <= 46)
     //     {
@@ -153,6 +153,7 @@ void bDDisplayInventory(boolean showObject)
 
     //     bDObjects[i].roomNum = 255;
     // }
+
     memCpyBanked(&b3TextModeTileByte, &inventoryPaletteByte, TEXT_CODE_BANK, 1); //Text mode only sets the stuff below the menu bar, but since the menu bar is already the right color (white), we are going to not add any extra complexity
    
     inputLineDisplayed = FALSE;
@@ -161,22 +162,21 @@ void bDDisplayInventory(boolean showObject)
 
     b6TextMode();
 
-
     bufferStatus.bank = SPLIT_BANK;
     bufferStatus.bankedData = bCSplitBuffer; //Its a safer better to use the split buffer. As when the buffer flushes at the end it will always write the full buffer size out even if there's not data. There is a terminator so we know where the legitimate data ends, but it must not overflow
     bufferStatus.bufferCounter = 0;
 
-    dataPtr = GOLDEN_RAM_WORK_AREA;
-    data = &dataPtr;
+    data = GOLDEN_RAM_WORK_AREA;
 
     strcpy(GOLDEN_RAM_WORK_AREA, BD_YOU_ARE_CARRYING);
-    (*data) += strlen(BD_YOU_ARE_CARRYING);
+    data += strlen(BD_YOU_ARE_CARRYING);
     WRITE_NEXT(NEW_LINE);
 
     for (i = 0; i < bDNumObjects; i++)
     {
         object.name = bDObjects[i].name;
         object.roomNum = bDObjects[i].roomNum;
+        
         if (object.roomNum == HAS_OBJ)
         {
             objectName = object.name;
@@ -210,8 +210,9 @@ void bDDisplayInventory(boolean showObject)
                 {
                     ch -= 32;
                 }
+                
                 WRITE_NEXT(ch);
-               
+                                               
                 isFirstLetterOfWord = ch == SPACE;
 
                 j++;
@@ -228,8 +229,8 @@ void bDDisplayInventory(boolean showObject)
 
     if (!foundObject)
     {
-        strcpy(*data, BD_NOTHING);
-        (*data) += strlen(BD_NOTHING);
+        strcpy(data, BD_NOTHING);
+        data += strlen(BD_NOTHING);
     }
 
     if (!showObject)
