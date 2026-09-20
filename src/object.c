@@ -133,6 +133,8 @@ const char BD_EXIT_INVENTORY[] = "    Press a key to return to the game";
 
 
 extern void bDWriteNext(byte toWrite);
+extern void bDDisplayInventoryInnerNoCompare();
+extern void bDDisplayInventoryInner();
 
 #define WRITE_ZP ZP_TMP_10
 #define BUFFER_STATUS_ZP ZP_TMP_12
@@ -151,7 +153,7 @@ void bDDisplayInventory(boolean showObject)
 
     objectType object;
     char* objectName;
-    unsigned int i, j;
+    unsigned int i, j, inventoryInnerWriteAddr;
     boolean evenObj = TRUE, foundObject = FALSE;
 
     *WRITE_ZP_PTR = GOLDEN_RAM_WORK_AREA;
@@ -238,50 +240,13 @@ void bDDisplayInventory(boolean showObject)
                 foundObject = TRUE;
             }
 
-            _assmByte2 = 0;
-            isFirstLetterOfWord = TRUE;
-
-
-            asm("ldy %v", _assmByte2);
-            asm("lda (%w),y", OBJECT_NAME_ZP);
-            asm("sta %v", _assmByte);
-            while (_assmByte)
+            if(*WRITE_ZP_PTR + thisLength < GOLDEN_RAM_WORK_AREA + LOCAL_WORK_AREA_SIZE)
             {
-                if (_assmByte >= 97 && _assmByte <= 122 && isFirstLetterOfWord) //Between lower a and lower z
-                {
-                    _assmByte -= 32;
-                }
-
-                asm("ldx %w", WRITE_ZP + 1);
-                asm("cpx #>%w", GOLDEN_RAM_WORK_AREA_ADDR + LOCAL_WORK_AREA_SIZE);
-                asm("bcs %g", lowByteCheck);
-
-            write:
-                asm("lda %v", _assmByte);
-                asm("sta (%w)", WRITE_ZP);
-                asm("inc %w", WRITE_ZP);
-                asm("bne %g", endLoop);
-
-            incHigh:
-                asm("inc %w + 1", WRITE_ZP);
-                asm("bra %g", endLoop);
-
-            lowByteCheck:
-                asm("ldx %w", WRITE_ZP);
-                asm("cpx #<%w", GOLDEN_RAM_WORK_AREA_ADDR + LOCAL_WORK_AREA_SIZE);
-                asm("bcc %g", write);
-
-                b5FlushBuffer(&bufferStatus);
-                *WRITE_ZP_PTR = GOLDEN_RAM_WORK_AREA;
-                goto write;
-
-            endLoop:
-                isFirstLetterOfWord = _assmByte == SPACE;
-
-                _assmByte2++;
-                 asm("ldy %v", _assmByte2);
-                 asm("lda (%w),y", OBJECT_NAME_ZP);
-                 asm("sta %v", _assmByte);
+                bDDisplayInventoryInnerNoCompare();
+            }
+            else
+            {
+                bDDisplayInventoryInner();
             }
 
             lastLength = thisLength;

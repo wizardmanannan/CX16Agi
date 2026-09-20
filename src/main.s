@@ -128,3 +128,6 @@
     .export _b6SetBackgroundColor
     .export _bCSplitBuffer
     .export _bDWriteNext
+    .export _bDDisplayInventoryInner
+    .export _bDDisplayInventoryInnerNoCompare
+
