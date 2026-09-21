@@ -25,6 +25,7 @@ const char BD_CANNOT_OPEN[] = "no object file\n";
 int bDNumObjects;
 objectType bDObjects[MAX_OBJECTS];
 byte bDObjData[OBJ_NAME_CACHE_SIZE];
+byte bDObjectNameLengths[MAX_OBJECTS];
 #pragma bss-name (pop)
 
 void bDGetObject(byte objNum, objectType* objectType)
@@ -119,6 +120,7 @@ void bDLoadObjectFile()
         index = *(marker)+256 * (*(marker + 1)) + 3;
         bDObjects[objNum].name = (char*)&bDObjData[index];
         bDObjects[objNum].roomNum = *(marker + 2);
+        bDObjectNameLengths[objNum] = strlen(bDObjects[objNum].name);
     }
 }
 
@@ -194,7 +196,9 @@ void bDDisplayInventory(boolean showObject)
         if (object.roomNum == HAS_OBJ)
         {
             objectName = object.name;
-            thisLength = strlen(objectName);
+
+            thisLength = bDObjectNameLengths[i];
+
             *OBJECT_NAME_PTR = object.name;
             
             j = 0;
