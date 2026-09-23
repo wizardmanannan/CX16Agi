@@ -137,6 +137,8 @@ const char BD_EXIT_INVENTORY[] = "    Press a key to return to the game";
 extern void bDWriteNext(byte toWrite);
 extern void bDDisplayInventoryInnerNoCompare();
 extern void bDDisplayInventoryInner();
+extern void bDPadWordsWithSpaces(byte objectNumber, byte lastLength);
+//extern void bDPadWordsWithSpacesNoCompare(byte objectNumber, byte lastLength);
 
 #define WRITE_ZP ZP_TMP_10
 #define BUFFER_STATUS_ZP ZP_TMP_12
@@ -147,7 +149,7 @@ extern void bDDisplayInventoryInner();
 
 void bDDisplayInventory(boolean showObject)
 {
-    byte ch, lastLength, thisLength, rows = 1; //Always at least one row since the text 'nothing' displays if you carry nothing
+    byte ch, lastLength = 0, thisLength, rows = 1; //Always at least one row since the text 'nothing' displays if you carry nothing
     byte inventoryPaletteByte = 0x10;
     byte* data;
     BufferStatus bufferStatus;
@@ -165,8 +167,15 @@ void bDDisplayInventory(boolean showObject)
     {
         if (i >= 44 && i <= 46)
         {
-            continue;
+           continue;
         }
+
+            // if(i == 12 || i == 23 || i == 7 || i == 1)
+            // {
+            //     continue;
+            // }
+
+        
 
         bDObjects[i].roomNum = 255;
     }
@@ -188,6 +197,7 @@ void bDDisplayInventory(boolean showObject)
 
     bDWriteNext(NEW_LINE);
 
+    //asm("stp");
     for (i = 0; i < bDNumObjects; i++)
     {
         object.name = bDObjects[i].name;
@@ -198,6 +208,7 @@ void bDDisplayInventory(boolean showObject)
             objectName = object.name;
 
             thisLength = bDObjectNameLengths[i];
+            //printf("tl %d\n", thisLength);
 
             *OBJECT_NAME_PTR = object.name;
             
@@ -205,34 +216,7 @@ void bDDisplayInventory(boolean showObject)
 
             if (!evenObj && foundObject)
             {
-                for (j = lastLength + thisLength; j < TILES_ACROSS; j++)
-                {
-                    asm("ldx %w", WRITE_ZP + 1);
-                    asm("cpx #>%w", GOLDEN_RAM_WORK_AREA_ADDR + LOCAL_WORK_AREA_SIZE);
-                    asm("bcs %g", lowByteCheckSpace);
-
-                writeSpace:
-                    asm("lda #%w", SPACE);
-                    asm("sta (%w)", WRITE_ZP);
-                    asm("inc %w", WRITE_ZP);
-                    asm("bne %g", endLoopSpace);
-
-                incHighSpace:
-                    asm("inc %w + 1", WRITE_ZP);
-                    asm("bra %g", endLoopSpace);
-
-                lowByteCheckSpace:
-                    asm("ldx %w", WRITE_ZP);
-                    asm("cpx #<%w", GOLDEN_RAM_WORK_AREA_ADDR + LOCAL_WORK_AREA_SIZE);
-                    asm("bcc %g", writeSpace);
-                    b5FlushBuffer(&bufferStatus);
-                    *WRITE_ZP_PTR = GOLDEN_RAM_WORK_AREA;
-                    goto writeSpace;
-                endLoopSpace:
-                    asm("nop");
-                }
-                    //printf("the buffer is at %p\n",bCSplitBuffer);
-    //asm("stp");
+                bDPadWordsWithSpaces(i, lastLength);
                 rows++; //One row for every even row
             }
             else if (foundObject)
@@ -258,6 +242,7 @@ void bDDisplayInventory(boolean showObject)
             evenObj = !evenObj;
         }
     }
+    //asm("stp");
     bDWriteNext(NEW_LINE);
 
     if (!foundObject)
@@ -290,6 +275,8 @@ void bDDisplayInventory(boolean showObject)
 
     b3DisplayMessageBox(bCSplitBuffer, SPLIT_BANK, 0, 0, INVENTORY_PALETTE_NUMBER, 0, FALSE, FIRST_OBJECT_ROW);
 
+    //printf("the split buffer is on %p\n", bCSplitBuffer);
+
     do
     {
         GET_IN(ch);                     // Get keyboard input
@@ -297,6 +284,8 @@ void bDDisplayInventory(boolean showObject)
 
     b6SetBackgroundColour(PALETTE_COLOR_BLACK);
     b6GraphicsMode();
+
+    //asm("stp");
 }
 
 #pragma code-name (pop)

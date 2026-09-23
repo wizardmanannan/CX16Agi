@@ -130,4 +130,5 @@
     .export _bDWriteNext
     .export _bDDisplayInventoryInner
     .export _bDDisplayInventoryInnerNoCompare
+    .export _bDPadWordsWithSpaces
 
