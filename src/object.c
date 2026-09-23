@@ -160,6 +160,9 @@ void bDDisplayInventory(boolean showObject)
     unsigned int i, j, inventoryInnerWriteAddr;
     boolean evenObj = TRUE, foundObject = FALSE;
 
+        asm("stp");
+    asm("nop");
+
     *WRITE_ZP_PTR = GOLDEN_RAM_WORK_AREA;
     *BUFFER_ZP_PTR = &bufferStatus;
 
@@ -197,7 +200,6 @@ void bDDisplayInventory(boolean showObject)
 
     bDWriteNext(NEW_LINE);
 
-    //asm("stp");
     for (i = 0; i < bDNumObjects; i++)
     {
         object.name = bDObjects[i].name;
@@ -242,7 +244,6 @@ void bDDisplayInventory(boolean showObject)
             evenObj = !evenObj;
         }
     }
-    //asm("stp");
     bDWriteNext(NEW_LINE);
 
     if (!foundObject)
@@ -271,12 +272,10 @@ void bDDisplayInventory(boolean showObject)
     bDWriteNext('\0');
 
     b5FlushBuffer(&bufferStatus);
-
-
     b3DisplayMessageBox(bCSplitBuffer, SPLIT_BANK, 0, 0, INVENTORY_PALETTE_NUMBER, 0, FALSE, FIRST_OBJECT_ROW);
-
     //printf("the split buffer is on %p\n", bCSplitBuffer);
 
+           
     do
     {
         GET_IN(ch);                     // Get keyboard input
@@ -286,6 +285,7 @@ void bDDisplayInventory(boolean showObject)
     b6GraphicsMode();
 
     //asm("stp");
+    asm("nop");
 }
 
 #pragma code-name (pop)

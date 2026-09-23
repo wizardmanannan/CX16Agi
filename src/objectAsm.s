@@ -236,9 +236,7 @@ bcs @checkLowByte
 @noCompareNeeded:
 ldy #$0
 ldx J_COUNTER
-bra @checkLoopCondition
-@loop:
-inx
+
 @checkLoopCondition:
 cpx #TILES_ACROSS
 bcs @endLoop
@@ -247,8 +245,9 @@ bcs @endLoop
 lda #SPACE
 sta (WRITE_ZP),y
 iny
+inx
+bra @checkLoopCondition
 
-bra @loop
 @endLoop:
 
 clc
