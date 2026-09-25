@@ -66,7 +66,7 @@ _bDWriteNext:
 WRITE_NEXT
 
 
-_bDDisplayInventoryInner:
+bDDisplayInventoryInnerWithCompare:
 lda (OBJECT_NAME)
 sta CH
 beq @return
@@ -127,10 +127,21 @@ jmp @write
 @return:
 rts
 
-_bDDisplayInventoryInnerNoCompare:
-.export _bDDisplayInventoryInnerNoCompare
+_bDDisplayInventoryInner:
+
+clc
+adc WRITE_ZP
+sta sreg
+lda #$0
+adc WRITE_ZP + 1
+sta sreg + 1
+
+cmp #>(GOLDEN_RAM_WORK_AREA + LOCAL_WORK_AREA_SIZE) 
+bcc @checkLowByte
+
+@noCompareNeeded:
 lda (OBJECT_NAME)
-beq return
+beq @return
 
 ldx WRITE_ZP
 stx @inventoryInnerWrite + 1
@@ -156,8 +167,13 @@ lda #$0
 adc WRITE_ZP + 1
 sta WRITE_ZP + 1
 
-return:
+@return:
 rts
+@checkLowByte:
+lda WRITE_ZP
+cmp #<(GOLDEN_RAM_WORK_AREA + LOCAL_WORK_AREA_SIZE) 
+bcc @noCompareNeeded
+jmp bDDisplayInventoryInnerWithCompare
 
 
 bDPadWordsWithSpacesWithCompare:

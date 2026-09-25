@@ -136,7 +136,7 @@ const char BD_EXIT_INVENTORY[] = "    Press a key to return to the game";
 
 extern void bDWriteNext(byte toWrite);
 extern void bDDisplayInventoryInnerNoCompare();
-extern void bDDisplayInventoryInner();
+extern void bDDisplayInventoryInner(byte thisLength);
 extern void bDPadWordsWithSpaces(byte objectNumber, byte lastLength);
 //extern void bDPadWordsWithSpacesNoCompare(byte objectNumber, byte lastLength);
 
@@ -159,9 +159,6 @@ void bDDisplayInventory(boolean showObject)
     char* objectName;
     unsigned int i, j, inventoryInnerWriteAddr;
     boolean evenObj = TRUE, foundObject = FALSE;
-
-        asm("stp");
-    asm("nop");
 
     *WRITE_ZP_PTR = GOLDEN_RAM_WORK_AREA;
     *BUFFER_ZP_PTR = &bufferStatus;
@@ -199,7 +196,7 @@ void bDDisplayInventory(boolean showObject)
     *WRITE_ZP_PTR += strlen(BD_YOU_ARE_CARRYING);
 
     bDWriteNext(NEW_LINE);
-
+    
     for (i = 0; i < bDNumObjects; i++)
     {
         object.name = bDObjects[i].name;
@@ -230,15 +227,8 @@ void bDDisplayInventory(boolean showObject)
                 foundObject = TRUE;
             }
 
-            if(*WRITE_ZP_PTR + thisLength < GOLDEN_RAM_WORK_AREA + LOCAL_WORK_AREA_SIZE)
-            {
-                bDDisplayInventoryInnerNoCompare();
-            }
-            else
-            {
-                bDDisplayInventoryInner();
-            }
-
+            bDDisplayInventoryInner(thisLength);
+            
             lastLength = thisLength;
 
             evenObj = !evenObj;
