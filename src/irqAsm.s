@@ -312,9 +312,14 @@ sta VERA_dc_video
 lda #IRQ_CMD_NORMAL
 sta currentIrqState
 
+lda #DISPLAY_SCALE_GRAPHICS
+sta VERA_dc_hscale
+sta VERA_dc_vscale
+
 lda sendIrqCommand
 cmp #IRQ_CMD_NORMAL
-beq @resetSetIrqState
+bne @normalLdaTileByte
+jmp @resetSetIrqState
 
 @normalLdaTileByte:
 lda #TILE_BYTE_2
@@ -326,6 +331,12 @@ bra @resetSetIrqState
 @textOnly:
 lda #LAYER_0_SPRITES_DISABLE_1_ENABLE
 sta VERA_dc_video
+
+lda #DISPLAY_SCALE_TEXT_H
+sta VERA_dc_hscale
+lda #DISPLAY_SCALE_TEXT_V
+sta VERA_dc_vscale
+
 
 lda _b3TextModeTileByte
 jsr _b3InitLayer1Mapbase

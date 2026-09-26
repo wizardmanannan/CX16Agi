@@ -28,11 +28,23 @@ byte bDObjData[OBJ_NAME_CACHE_SIZE];
 byte bDObjectNameLengths[MAX_OBJECTS];
 #pragma bss-name (pop)
 
+/**************************************************************************
+** bDGetObject
+**
+** Purpose: Copy object objNum from the loaded table into the caller's
+** struct.
+**************************************************************************/
 void bDGetObject(byte objNum, objectType* objectType)
 {
     *objectType = bDObjects[objNum];
 }
 
+/**************************************************************************
+** bDSetObject
+**
+** Purpose: Write the caller's object struct back into slot objNum of
+** the loaded table (e.g. after changing roomNum when picking up / dropping).
+**************************************************************************/
 void bDSetObject(byte objNum, objectType* objectType)
 {
     bDObjects[objNum] = *objectType;
@@ -52,19 +64,28 @@ boolean bDIsObjCrypt(long fileLen, byte* objData)
 {
     int i, checkLen;
 
-    checkLen = ((fileLen < 20) ? 10 : 20);
+    checkLen = ((fileLen < 20) ? 10 : 20);   /* inspect last 10 or 20 bytes */
 
     /* TODO: Needs a fix here for Mixed Up Mother Goose */
     // ->>>
 
     for (i = fileLen - 1; i > (fileLen - checkLen); i--) {
         if (((bDObjData[i] < 0x20) || (bDObjData[i] > 0x7F)) && (bDObjData[i] != 0))
-            return TRUE;
+            return TRUE;                    /* non-printable => encrypted */
     }
 
     return FALSE;
 }
 
+/**************************************************************************
+** bDLoadFile
+**
+** Purpose: Open "object" via the CBM seek helper and read it byte-by-byte
+** into buffer. fileLen is set to the number of bytes read. Exits if the
+** file is missing or larger than OBJ_NAME_CACHE_SIZE.
+**
+** Returns: the logical file number that was used (already closed).
+**************************************************************************/
 byte bDLoadFile(int* fileLen, byte* buffer)
 {
     byte lfn = b6Cbm_openForSeeking(BD_OBJECT_FILE_NAME);
@@ -104,20 +125,21 @@ void bDLoadObjectFile()
 
     lfn = bDLoadFile(&fileLen, bDObjData);
 
-    marker = (byte*)bDObjData + 3;
+    marker = (byte*)bDObjData + 3;          /* first 3-byte object record */
 
     if (bDIsObjCrypt(fileLen, bDObjData))
     {
         for (i = 0; i < fileLen; i++)
         {
-            bDObjData[i] ^= avisDurgan[avisPos++ % 11];
+            bDObjData[i] ^= avisDurgan[avisPos++ % 11];  /* Avis Durgan cycle */
         }
     }
 
+    /* header word is byte offset of name table; divide by 3 = object count */
     bDNumObjects = (((bDObjData[1] * 256) + bDObjData[0]) / 3);
 
     for (objNum = 0; objNum < bDNumObjects; objNum++, strPos = 0, marker += 3) {
-        index = *(marker)+256 * (*(marker + 1)) + 3;
+        index = *(marker)+256 * (*(marker + 1)) + 3;     /* name offset in file */
         bDObjects[objNum].name = (char*)&bDObjData[index];
         bDObjects[objNum].roomNum = *(marker + 2);
         bDObjectNameLengths[objNum] = strlen(bDObjects[objNum].name);
@@ -147,6 +169,15 @@ extern void bDPadWordsWithSpaces(byte objectNumber, byte lastLength);
 #define BUFFER_ZP_PTR ((byte**)BUFFER_STATUS_ZP)
 #define OBJECT_NAME_PTR ((byte**)OBJECT_NAME_ZP)
 
+/**************************************************************************
+** bDDisplayInventory
+**
+** Purpose: Build the "You are carrying:" screen into the golden-RAM work
+** area / split buffer, flush it, and show it as a text-mode message box.
+** Objects are listed two per row; empty inventory shows "nothing".
+** If showObject is false, pad to a full box and append the "press a key"
+** prompt, then wait for a key before restoring graphics mode.
+**************************************************************************/
 void bDDisplayInventory(boolean showObject)
 {
     byte ch, lastLength = 0, thisLength, rows = 1; //Always at least one row since the text 'nothing' displays if you carry nothing
@@ -160,25 +191,8 @@ void bDDisplayInventory(boolean showObject)
     unsigned int i, j, inventoryInnerWriteAddr;
     boolean evenObj = TRUE, foundObject = FALSE;
 
-    *WRITE_ZP_PTR = GOLDEN_RAM_WORK_AREA;
+    *WRITE_ZP_PTR = GOLDEN_RAM_WORK_AREA;    /* assembly WRITE_NEXT starts here */
     *BUFFER_ZP_PTR = &bufferStatus;
-
-    for (i = 1; i < 55; i++) //Uncomment this when you wants lots of inventory items for testing in kq3
-    {
-        if (i >= 44 && i <= 46)
-        {
-           continue;
-        }
-
-            // if(i == 12 || i == 23 || i == 7 || i == 1)
-            // {
-            //     continue;
-            // }
-
-        
-
-        bDObjects[i].roomNum = 255;
-    }
 
     memCpyBanked(&b3TextModeTileByte, &inventoryPaletteByte, TEXT_CODE_BANK, 1); //Text mode only sets the stuff below the menu bar, but since the menu bar is already the right color (white), we are going to not add any extra complexity
 
@@ -202,29 +216,28 @@ void bDDisplayInventory(boolean showObject)
         object.name = bDObjects[i].name;
         object.roomNum = bDObjects[i].roomNum;
 
-        if (object.roomNum == HAS_OBJ)
+        if (object.roomNum == HAS_OBJ)      /* carried by the player */
         {
             objectName = object.name;
 
             thisLength = bDObjectNameLengths[i];
-            //printf("tl %d\n", thisLength);
 
-            *OBJECT_NAME_PTR = object.name;
+            *OBJECT_NAME_PTR = object.name; /* for the asm name-copy helpers */
             
             j = 0;
 
             if (!evenObj && foundObject)
             {
-                bDPadWordsWithSpaces(i, lastLength);
+                bDPadWordsWithSpaces(i, lastLength);  /* second column of the pair */
                 rows++; //One row for every even row
             }
             else if (foundObject)
             {
-                bDWriteNext(NEW_LINE);
+                bDWriteNext(NEW_LINE);      /* start a new row for an odd item */
             }
             else
             {
-                foundObject = TRUE;
+                foundObject = TRUE;         /* first carried object */
             }
 
             bDDisplayInventoryInner(thisLength);
@@ -246,7 +259,7 @@ void bDDisplayInventory(boolean showObject)
     {
         for (i = 0; i < 27 - rows; i++)
         {
-            bDWriteNext(NEW_LINE);
+            bDWriteNext(NEW_LINE);          /* pad remaining rows of the box */
         }
 
         i = 0;
@@ -259,24 +272,18 @@ void bDDisplayInventory(boolean showObject)
         }
     }
 
-    bDWriteNext('\0');
+    bDWriteNext('\0');                      /* terminator for the flush path */
 
     b5FlushBuffer(&bufferStatus);
     b3DisplayMessageBox(bCSplitBuffer, SPLIT_BANK, 0, 0, INVENTORY_PALETTE_NUMBER, 0, FALSE, FIRST_OBJECT_ROW);
-    //printf("the split buffer is on %p\n", bCSplitBuffer);
-
            
     do
     {
-        GET_IN(ch);                     // Get keyboard input
+        GET_IN(ch);                     //Wait for input
     } while (!ch);
 
     b6SetBackgroundColour(PALETTE_COLOR_BLACK);
     b6GraphicsMode();
-
-    //asm("stp");
-    asm("nop");
 }
 
 #pragma code-name (pop)
-

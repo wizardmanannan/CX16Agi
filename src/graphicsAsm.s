@@ -86,7 +86,7 @@ jsr _b6InitVeraMemory
 TRAMPOLINE #SPRITE_INIT_BANK, _bAInitSpriteData
 
 sei
-lda #DISPLAY_SCALE
+lda #DISPLAY_SCALE_GRAPHICS
 sta VERA_dc_hscale
 sta VERA_dc_vscale
 
