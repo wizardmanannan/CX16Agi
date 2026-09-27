@@ -14,6 +14,8 @@
 #include "general.h"
 #include "object.h"
 
+extern byte* var;
+
 #pragma code-name (push, "BANKRAM0D")
 
 #pragma rodata (push, "BANKRAM0D")
@@ -26,6 +28,10 @@ int bDNumObjects;
 objectType bDObjects[MAX_OBJECTS];
 byte bDObjData[OBJ_NAME_CACHE_SIZE];
 byte bDObjectNameLengths[MAX_OBJECTS];
+unsigned int bDObjectRowPaletteAddresses[MAX_OBJECT_ROWS];
+byte bDScreenObjToGameObj[MAX_OBJECT_ROWS * 2];
+objectType* bDSelectedObject, *bDUnselectedObject;
+unsigned char bDSelectedScreenObjNum, bDUnselectedScreenObjNum;
 #pragma bss-name (pop)
 
 /**************************************************************************
@@ -142,7 +148,20 @@ void bDLoadObjectFile()
         index = *(marker)+256 * (*(marker + 1)) + 3;     /* name offset in file */
         bDObjects[objNum].name = (char*)&bDObjData[index];
         bDObjects[objNum].roomNum = *(marker + 2);
+        bDObjects[objNum].objectNum = objNum;
         bDObjectNameLengths[objNum] = strlen(bDObjects[objNum].name);
+    }
+}
+
+void bDInitObjects()
+{
+    byte i, rowCounter;
+
+    bDLoadObjectFile();
+
+    for (i = 0; i < MAX_ROWS_DOWN;i++)
+    {
+        bDObjectRowPaletteAddresses[i] = MAPBASE + (i + 1) * TILE_LAYER_WIDTH * 2 + 1; //+ 1 to i as the first row is 'you are carrying', + 1 on the end to get to the palette not the tile byte
     }
 }
 
@@ -159,8 +178,83 @@ const char BD_EXIT_INVENTORY[] = "    Press a key to return to the game";
 extern void bDWriteNext(byte toWrite);
 extern void bDDisplayInventoryInnerNoCompare();
 extern void bDDisplayInventoryInner(byte thisLength);
-extern void bDPadWordsWithSpaces(byte objectNumber, byte lastLength);
+extern byte bDPadWordsWithSpaces(byte objectNumber, byte lastLength);
 //extern void bDPadWordsWithSpacesNoCompare(byte objectNumber, byte lastLength);
+
+#define NOTHING_TO_SELECT 0xFF
+void bDShowObject(byte numObjs)
+{
+    byte ch, changed = FALSE;
+
+    bDSelectedScreenObjNum = 0;
+    bDUnselectedScreenObjNum = NOTHING_TO_SELECT;
+    bDSelectedObject = &bDObjects[bDScreenObjToGameObj[bDSelectedScreenObjNum]];
+
+    b6SetAndWaitForIrqState(HIGHLIGHT_INVENTORY_ROW);
+
+    bDUnselectedScreenObjNum = bDSelectedScreenObjNum;
+    bDUnselectedObject = bDSelectedObject;
+
+    do
+    {
+        GET_IN(ch);  
+        // if(ch)                   //Wait for input
+        // {
+        //     printf("you pushed %d bDSelectedScreenObjNum %d\n", ch, bDSelectedScreenObjNum);
+        // }
+        switch (ch)
+        {
+        case KEY_UP:
+            if (bDSelectedScreenObjNum - 2 >= 0)
+            {
+                bDSelectedScreenObjNum -= 2;
+                changed = TRUE;
+            }
+            break;
+        case KEY_DOWN:
+            if (bDSelectedScreenObjNum + 2 < numObjs)
+            {
+                bDSelectedScreenObjNum += 2;
+                changed = TRUE;
+            }
+            break;
+        case KEY_LEFT:
+            if (bDSelectedScreenObjNum - 1 >= 0)
+            {
+                bDSelectedScreenObjNum--;
+                changed = TRUE;
+            }
+            break;
+        case KEY_RIGHT:
+            if (bDSelectedScreenObjNum + 1 < numObjs)
+            {
+                bDSelectedScreenObjNum++;
+                changed = TRUE;
+            }
+        }
+
+        if(changed)
+        {
+          bDSelectedObject = &bDObjects[bDScreenObjToGameObj[bDSelectedScreenObjNum]];
+          b6SetAndWaitForIrqState(HIGHLIGHT_INVENTORY_ROW);
+          changed = FALSE;
+
+          bDUnselectedScreenObjNum = bDSelectedScreenObjNum;
+          bDUnselectedObject = bDSelectedObject;
+        }
+
+    } while (ch != KEY_ENTER && ch != KEY_ESC);
+
+
+    if(ch == KEY_ENTER)
+    {
+        var[25] = bDScreenObjToGameObj[bDSelectedScreenObjNum];
+    }
+    else if(ch == KEY_ESC)
+    {
+        var[25] = NOTHING_TO_SELECT;
+    }
+}
 
 #define WRITE_ZP ZP_TMP_10
 #define BUFFER_STATUS_ZP ZP_TMP_12
@@ -180,8 +274,8 @@ extern void bDPadWordsWithSpaces(byte objectNumber, byte lastLength);
 **************************************************************************/
 void bDDisplayInventory(boolean showObject)
 {
-    byte ch, lastLength = 0, thisLength, rows = 1; //Always at least one row since the text 'nothing' displays if you carry nothing
-    byte inventoryPaletteByte = 0x10;
+    byte ch, lastLength = 0, thisLength, rows = 0, numSpacesAdded; //Always at least one row since the text 'nothing' displays if you carry nothing
+    byte inventoryPaletteByte = 0x10, numObjs = 0;
     byte* data;
     BufferStatus bufferStatus;
     boolean isFirstLetterOfWord;
@@ -210,7 +304,14 @@ void bDDisplayInventory(boolean showObject)
     *WRITE_ZP_PTR += strlen(BD_YOU_ARE_CARRYING);
 
     bDWriteNext(NEW_LINE);
-    
+
+
+    bDObjects[1].roomNum = HAS_OBJ;
+    bDObjects[2].roomNum = HAS_OBJ;
+    bDObjects[3].roomNum = HAS_OBJ;
+    bDObjects[4].roomNum = HAS_OBJ;
+    bDObjects[5].roomNum = HAS_OBJ;
+
     for (i = 0; i < bDNumObjects; i++)
     {
         object.name = bDObjects[i].name;
@@ -223,28 +324,33 @@ void bDDisplayInventory(boolean showObject)
             thisLength = bDObjectNameLengths[i];
 
             *OBJECT_NAME_PTR = object.name; /* for the asm name-copy helpers */
-            
+
             j = 0;
 
             if (!evenObj && foundObject)
             {
-                bDPadWordsWithSpaces(i, lastLength);  /* second column of the pair */
+                numSpacesAdded = bDPadWordsWithSpaces(i, lastLength);  /* second column of the pair */
                 rows++; //One row for every even row
+                bDObjects[i].lengthOffset = lastLength + numSpacesAdded;
             }
             else if (foundObject)
-            {
+            { //Add one extra for space
+                bDObjects[i].lengthOffset = 0;
                 bDWriteNext(NEW_LINE);      /* start a new row for an odd item */
             }
             else
             {
                 foundObject = TRUE;         /* first carried object */
+                bDObjects[i].lengthOffset = 0;
             }
 
             bDDisplayInventoryInner(thisLength);
-            
+
             lastLength = thisLength;
 
             evenObj = !evenObj;
+            bDObjects[i].row = rows / 2;
+            bDScreenObjToGameObj[numObjs++] = i;
         }
     }
     bDWriteNext(NEW_LINE);
@@ -276,11 +382,18 @@ void bDDisplayInventory(boolean showObject)
 
     b5FlushBuffer(&bufferStatus);
     b3DisplayMessageBox(bCSplitBuffer, SPLIT_BANK, 0, 0, INVENTORY_PALETTE_NUMBER, 0, FALSE, FIRST_OBJECT_ROW);
-           
-    do
+
+    if (showObject)
     {
-        GET_IN(ch);                     //Wait for input
-    } while (!ch);
+        bDShowObject(numObjs);
+    }
+    else
+    {
+        do
+        {
+            GET_IN(ch);                     //Wait for input
+        } while (!ch);
+    }
 
     b6SetBackgroundColour(PALETTE_COLOR_BLACK);
     b6GraphicsMode();

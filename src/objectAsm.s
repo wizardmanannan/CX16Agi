@@ -6,6 +6,14 @@ OBJECT_INC = 1
 .import _b5FlushBuffer
 .import _bDObjectNameLengths
 
+.import _bDObjectRowPaletteAddresses
+.import _bDSelectedObject
+.import _bDUnselectedObject
+.import _offsetOfLengthOffset
+.import _offsetOfRow
+.import _offsetOfObjectNum
+.import _bDSelectedScreenObjNum
+.import _bDUnselectedScreenObjNum
 .segment "BANKRAM0D"
 
 ; WRITE_NEXT
@@ -311,6 +319,7 @@ lda #$0
 adc WRITE_ZP + 1
 sta WRITE_ZP + 1        ; advance WRITE_ZP by number of spaces written
 
+tya
 rts
 
 @checkLowByte:
@@ -318,5 +327,93 @@ lda WRITE_ZP
 cmp #<(GOLDEN_RAM_WORK_AREA + LOCAL_WORK_AREA_SIZE - TILES_ACROSS)
 bcc @noCompareNeeded
 jmp bDPadWordsWithSpacesWithCompare
+
+OBJECT_TO_SET_PALETTE = IRQ_TMP_1
+OBJECT_VERA_ADDRESS = IRQ_TMP_2
+OBJECT_VERA_ADDRESS_HIGH = IRQ_TMP_3 ;Only one high byte
+OBJECT_NAME_LENGTH = IRQ_TMP_3 + 1
+PALETTE_TO_SET = IRQ_TMP_4
+SCREEN_OBJ_NUM = IRQ_TMP_4 + 1
+bDSetInventoryRowPalette:
+GET_STRUCT_8_STORED_OFFSET _offsetOfLengthOffset, OBJECT_TO_SET_PALETTE
+asl
+sta OBJECT_VERA_ADDRESS
+
+; GET_STRUCT_8_STORED_OFFSET _offsetOfRow, OBJECT_TO_SET_PALETTE
+; stp
+; asl
+lda SCREEN_OBJ_NUM
+lsr ;Why are we halfing and then doubling? This is sensible, halfing gets up the row via integer maths for example half of 3 is 1. Then you need to double for the 16 bit address for row 1 which is at position 2.
+asl
+
+tax 
+lda _bDObjectRowPaletteAddresses,x
+tay
+lda _bDObjectRowPaletteAddresses + 1,x 
+tax
+
+clc
+tya
+adc OBJECT_VERA_ADDRESS
+sta OBJECT_VERA_ADDRESS
+txa
+adc #$0
+sta OBJECT_VERA_ADDRESS + 1
+
+stz OBJECT_VERA_ADDRESS_HIGH
+stz OBJECT_VERA_ADDRESS_HIGH + 1
+
+SET_VERA_ADDRESS OBJECT_VERA_ADDRESS, #$2, OBJECT_VERA_ADDRESS_HIGH, #$0
+
+GET_STRUCT_8_STORED_OFFSET _offsetOfObjectNum,OBJECT_TO_SET_PALETTE
+tax
+lda _bDObjectNameLengths,x
+
+tax
+lda PALETTE_TO_SET
+@setPaletteLoop:
+sta VERA_data0
+dex
+bne @setPaletteLoop
+@endLoop:
+
+
+rts
+
+OBJECT_SELECTED_PALETTE = $20
+OBJECT_UNSELECTED_PALETTE = $10
+
+NOTHING_TO_SELECT = $FF
+
+bDHighlightInventoryRow:
+
+lda #OBJECT_SELECTED_PALETTE
+sta PALETTE_TO_SET
+lda _bDSelectedObject
+sta OBJECT_TO_SET_PALETTE
+lda _bDSelectedObject + 1
+sta OBJECT_TO_SET_PALETTE + 1
+lda _bDSelectedScreenObjNum
+sta SCREEN_OBJ_NUM
+jsr bDSetInventoryRowPalette
+
+lda _bDUnselectedScreenObjNum
+cmp #NOTHING_TO_SELECT
+beq @return
+
+lda #OBJECT_UNSELECTED_PALETTE
+sta PALETTE_TO_SET
+lda _bDUnselectedObject
+sta OBJECT_TO_SET_PALETTE
+lda _bDUnselectedObject + 1
+sta OBJECT_TO_SET_PALETTE + 1
+lda _bDUnselectedScreenObjNum
+sta SCREEN_OBJ_NUM
+jsr bDSetInventoryRowPalette
+
+@return:
+rts
+
+
 
 .endif

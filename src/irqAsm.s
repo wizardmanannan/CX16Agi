@@ -216,6 +216,7 @@ IRQ_CMD_GRAPHICS = 7
 SHOW_OBJ = 8
 CLEAR_OBJ = 9
 SET_BACKGROUND = 10
+HIGHLIGHT_INVENTORY_ROW = 11
 
 
 LAYER_0_1_SPRITES_ENABLE = $71
@@ -365,6 +366,10 @@ bra @resetSetIrqState
 
 @setBackground:
 jsr _b6SetBackgroundColor
+bra @resetSetIrqState
+
+@highlightInventoryRow:
+jsr bDHighlightInventoryRow
 
 @resetSetIrqState:
 lda #IRQ_CMD_DONTCHANGE
@@ -397,9 +402,10 @@ jmp (default_irq_vector)
 .addr @showObj
 .addr @clearObj
 .addr @setBackground
+.addr @highlightInventoryRow
 
 
-@jmpTableBank: .byte $0, $0, TEXT_BANK, $0, TEXT_BANK, $0,$0,$0,$0,$0,GRAPHICS_BANK ;In order of IRQ_CMDS
+@jmpTableBank: .byte $0, $0, TEXT_BANK, $0, TEXT_BANK, $0,$0,$0,$0,$0,GRAPHICS_BANK,OBJECT_BANK ;In order of IRQ_CMDS
 @previousRamBank: .byte $0
 
 .endif ; IRQ_INC

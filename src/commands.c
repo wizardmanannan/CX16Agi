@@ -1925,18 +1925,11 @@ void b5Quit() // 1, 0x00                     /* 0 args for AGI version 2_089 */
 
 void b5Pause() // 0, 0x00 
 {
-
-
 #define PAUSE_BOX_WIDTH 27
 #define PAUSE_BOX_HEIGHT 7
 	bBStopSound();
 
-	//b11ShowObj(128);
-	b11ShowObj(119);
-
-	//b3DisplayManuallyWrappedMessageBox(B5_PAUSE_MESSAGE, COMMAND_MESSAGES_BANK, AUTO_CALC_ROW, AUTO_CALC_COLUMN, TEXTBOX_PALETTE_NUMBER, PAUSE_BOX_WIDTH, PAUSE_BOX_HEIGHT);
-
-
+	b3DisplayManuallyWrappedMessageBox(B5_PAUSE_MESSAGE, COMMAND_MESSAGES_BANK, AUTO_CALC_ROW, AUTO_CALC_COLUMN, TEXTBOX_PALETTE_NUMBER, PAUSE_BOX_WIDTH, PAUSE_BOX_HEIGHT);
 }
 
 
@@ -2137,7 +2130,9 @@ void b5Show_obj_v() // 1, 0x01
 	int objectNum;
 
 	objectNum = var[loadAndIncWinCode()];
-	/* Not supported yet */
+	
+    b11ShowObj(objectNum);
+
 	return;
 }
 
