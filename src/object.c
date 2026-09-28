@@ -30,7 +30,7 @@ byte bDObjData[OBJ_NAME_CACHE_SIZE];
 byte bDObjectNameLengths[MAX_OBJECTS];
 unsigned int bDObjectRowPaletteAddresses[MAX_OBJECT_ROWS];
 byte bDScreenObjToGameObj[MAX_OBJECT_ROWS * 2];
-objectType* bDSelectedObject, *bDUnselectedObject;
+objectType* bDSelectedObject, * bDUnselectedObject;
 unsigned char bDSelectedScreenObjNum, bDUnselectedScreenObjNum;
 #pragma bss-name (pop)
 
@@ -170,6 +170,7 @@ void bDInitObjects()
 const char BD_YOU_ARE_CARRYING[] = "            You are carrying:"; //Spaces are on purpose to centre.
 const char BD_NOTHING[] = "                  nothing";
 const char BD_EXIT_INVENTORY[] = "    Press a key to return to the game";
+const char BD_SHOW_INVENTORY[] = "   Press ENTER to select, ESC to cancel";
 #pragma rodata (pop)
 #include <cbm_petscii_charmap.h>
 
@@ -197,7 +198,7 @@ void bDShowObject(byte numObjs)
 
     do
     {
-        GET_IN(ch);  
+        GET_IN(ch);
         // if(ch)                   //Wait for input
         // {
         //     printf("you pushed %d bDSelectedScreenObjNum %d\n", ch, bDSelectedScreenObjNum);
@@ -233,24 +234,24 @@ void bDShowObject(byte numObjs)
             }
         }
 
-        if(changed)
+        if (changed)
         {
-          bDSelectedObject = &bDObjects[bDScreenObjToGameObj[bDSelectedScreenObjNum]];
-          b6SetAndWaitForIrqState(HIGHLIGHT_INVENTORY_ROW);
-          changed = FALSE;
+            bDSelectedObject = &bDObjects[bDScreenObjToGameObj[bDSelectedScreenObjNum]];
+            b6SetAndWaitForIrqState(HIGHLIGHT_INVENTORY_ROW);
+            changed = FALSE;
 
-          bDUnselectedScreenObjNum = bDSelectedScreenObjNum;
-          bDUnselectedObject = bDSelectedObject;
+            bDUnselectedScreenObjNum = bDSelectedScreenObjNum;
+            bDUnselectedObject = bDSelectedObject;
         }
 
     } while (ch != KEY_ENTER && ch != KEY_ESC);
 
 
-    if(ch == KEY_ENTER)
+    if (ch == KEY_ENTER)
     {
         var[25] = bDScreenObjToGameObj[bDSelectedScreenObjNum];
     }
-    else if(ch == KEY_ESC)
+    else if (ch == KEY_ESC)
     {
         var[25] = NOTHING_TO_SELECT;
     }
@@ -279,6 +280,7 @@ void bDDisplayInventory(boolean showObject)
     byte* data;
     BufferStatus bufferStatus;
     boolean isFirstLetterOfWord;
+    char* exitMessage;
 
     objectType object;
     char* objectName;
@@ -306,11 +308,11 @@ void bDDisplayInventory(boolean showObject)
     bDWriteNext(NEW_LINE);
 
 
-    bDObjects[1].roomNum = HAS_OBJ;
-    bDObjects[2].roomNum = HAS_OBJ;
-    bDObjects[3].roomNum = HAS_OBJ;
-    bDObjects[4].roomNum = HAS_OBJ;
-    bDObjects[5].roomNum = HAS_OBJ;
+    //bDObjects[1].roomNum = HAS_OBJ;
+    //bDObjects[2].roomNum = HAS_OBJ;
+    //bDObjects[3].roomNum = HAS_OBJ;
+    //bDObjects[4].roomNum = HAS_OBJ;
+    //bDObjects[5].roomNum = HAS_OBJ;
 
     for (i = 0; i < bDNumObjects; i++)
     {
@@ -361,29 +363,37 @@ void bDDisplayInventory(boolean showObject)
         *WRITE_ZP_PTR += strlen(BD_NOTHING);
     }
 
-    if (!showObject)
-    {
-        for (i = 0; i < 27 - rows; i++)
-        {
-            bDWriteNext(NEW_LINE);          /* pad remaining rows of the box */
-        }
 
-        i = 0;
-        ch = BD_EXIT_INVENTORY[i];
-        while (ch)
-        {
-            bDWriteNext(ch);
-            i++;
-            ch = BD_EXIT_INVENTORY[i];
-        }
+    for (i = 0; i < 26 - rows; i++)
+    {
+        bDWriteNext(NEW_LINE);          /* pad remaining rows of the box */
     }
+
+    if(showObject && foundObject)
+    {
+        exitMessage = BD_SHOW_INVENTORY;
+    }
+    else
+    {
+        exitMessage = BD_EXIT_INVENTORY;
+    }
+
+    i = 0;
+    ch = exitMessage[i];
+    while (ch)
+    {
+        bDWriteNext(ch);
+        i++;
+        ch = exitMessage[i];
+    }
+
 
     bDWriteNext('\0');                      /* terminator for the flush path */
 
     b5FlushBuffer(&bufferStatus);
     b3DisplayMessageBox(bCSplitBuffer, SPLIT_BANK, 0, 0, INVENTORY_PALETTE_NUMBER, 0, FALSE, FIRST_OBJECT_ROW);
 
-    if (showObject)
+    if (showObject && foundObject)
     {
         bDShowObject(numObjs);
     }
