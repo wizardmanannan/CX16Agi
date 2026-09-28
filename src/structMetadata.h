@@ -82,6 +82,5 @@ byte offsetOfController = offsetof(struct MENU, controller);
 
 //Objects
 byte offsetOfLengthOffset = offsetof(struct objectType, lengthOffset);
-byte offsetOfRow = offsetof(struct objectType, row);
 byte offsetOfObjectNum = offsetof(struct objectType, objectNum);
 #endif

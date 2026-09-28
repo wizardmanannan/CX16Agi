@@ -23,7 +23,6 @@
 typedef struct objectType {
 	byte roomNum;
 	char* name;
-	byte row;
 	byte lengthOffset;
 	byte objectNum;
 } objectType;

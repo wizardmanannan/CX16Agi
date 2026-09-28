@@ -10,7 +10,6 @@ OBJECT_INC = 1
 .import _bDSelectedObject
 .import _bDUnselectedObject
 .import _offsetOfLengthOffset
-.import _offsetOfRow
 .import _offsetOfObjectNum
 .import _bDSelectedScreenObjNum
 .import _bDUnselectedScreenObjNum

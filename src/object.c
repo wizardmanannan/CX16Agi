@@ -351,7 +351,6 @@ void bDDisplayInventory(boolean showObject)
             lastLength = thisLength;
 
             evenObj = !evenObj;
-            bDObjects[i].row = rows / 2;
             bDScreenObjToGameObj[numObjs++] = i;
         }
     }
