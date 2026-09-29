@@ -264,6 +264,9 @@ void bDShowObject(byte numObjs)
 #define BUFFER_ZP_PTR ((byte**)BUFFER_STATUS_ZP)
 #define OBJECT_NAME_PTR ((byte**)OBJECT_NAME_ZP)
 
+
+byte trap = FALSE;
+
 /**************************************************************************
 ** bDDisplayInventory
 **
@@ -287,6 +290,9 @@ void bDDisplayInventory(boolean showObject)
     unsigned int i, j, inventoryInnerWriteAddr;
     boolean evenObj = TRUE, foundObject = FALSE;
 
+
+
+
     *WRITE_ZP_PTR = GOLDEN_RAM_WORK_AREA;    /* assembly WRITE_NEXT starts here */
     *BUFFER_ZP_PTR = &bufferStatus;
 
@@ -308,8 +314,23 @@ void bDDisplayInventory(boolean showObject)
     bDWriteNext(NEW_LINE);
 
 
-    //bDObjects[1].roomNum = HAS_OBJ;
-    //bDObjects[2].roomNum = HAS_OBJ;
+
+    for(i = 1; i < 55; i++)
+    {
+        if(i >= 44 && i <= 46)
+        {
+            continue;
+        }
+
+     bDObjects[i].roomNum = HAS_OBJ;
+ 
+    }
+
+    // bDObjects[19].roomNum = HAS_OBJ;
+    // bDObjects[20].roomNum = HAS_OBJ;
+    // bDObjects[21].roomNum = HAS_OBJ;
+    // bDObjects[22].roomNum = HAS_OBJ;
+
     //bDObjects[3].roomNum = HAS_OBJ;
     //bDObjects[4].roomNum = HAS_OBJ;
     //bDObjects[5].roomNum = HAS_OBJ;

@@ -73,6 +73,7 @@ OBJ_NAME_OFFSET = ZP_TMP_14 + 1     ; saved Y while using Y as dest offset
 I_COUNTER = ZP_TMP_16               ; object-index / outer counter
 J_COUNTER = ZP_TMP_16 + 1           ; column / pad-length counter
 LASTLENGTH = ZP_TMP_17              ; running length of the current inventory line
+WRITE_OUT_VAL = ZP_TMP_17 + 1
 
 ; _bDWriteNext
 ; C-callable wrapper: writes A using the WRITE_NEXT macro and returns.
@@ -90,18 +91,24 @@ lda (OBJECT_NAME)
 sta CH
 beq @return             ; empty name — nothing to write
 
+sec
+lda #<(GOLDEN_RAM_WORK_AREA + LOCAL_WORK_AREA_SIZE)
+sbc WRITE_ZP
+sta WRITE_OUT_VAL
+
+
 ldx #$0                 ; X = bytes written this call
 ldy #$0                 ; Y = index into object-name string
 @loop:
-lda WRITE_ZP + 1
-cmp #>(GOLDEN_RAM_WORK_AREA + LOCAL_WORK_AREA_SIZE)
-bcs @highByteCheck      ; high byte already at/past limit — check low byte
+cpx WRITE_OUT_VAL
+bcs @refreshBuffer
 
 @write:
 sty OBJ_NAME_OFFSET     ; save string index
 txa
 tay                     ; Y = dest offset from current WRITE_ZP
 lda CH
+
 sta (WRITE_ZP),y        ; write character
 ldy OBJ_NAME_OFFSET     ; restore string index
 
@@ -128,6 +135,7 @@ cmp #<(GOLDEN_RAM_WORK_AREA + LOCAL_WORK_AREA_SIZE)
 bcc @write              ; still room in this page
 
 @refreshBuffer:
+sty OBJ_NAME_OFFSET
 lda BUFFER_STATUS_ADDRESS
 ldx BUFFER_STATUS_ADDRESS + 1
 
@@ -139,6 +147,7 @@ lda #>GOLDEN_RAM_WORK_AREA
 sta WRITE_ZP + 1        ; reset pointer after flush
 
 ldx #$0                 ; dest offset restarts at 0 in the fresh buffer
+ldy OBJ_NAME_OFFSET
 jmp @write
 
 
@@ -156,7 +165,6 @@ rts
 ; On entry: A = additional length already accounted for on this line
 ;           (added to WRITE_ZP and compared against the work-area end).
 _bDDisplayInventoryInner:
-
 clc
 adc WRITE_ZP
 sta sreg
@@ -165,7 +173,7 @@ adc WRITE_ZP + 1
 sta sreg + 1            ; sreg = WRITE_ZP + incoming length (end probe)
 
 cmp #>(GOLDEN_RAM_WORK_AREA + LOCAL_WORK_AREA_SIZE) 
-bcc @checkLowByte
+bcs @checkLowByte
 
 @noCompareNeeded:
 lda (OBJECT_NAME)
@@ -198,7 +206,7 @@ sta WRITE_ZP + 1        ; advance write pointer by bytes copied
 @return:
 rts
 @checkLowByte:
-lda WRITE_ZP
+lda sreg
 cmp #<(GOLDEN_RAM_WORK_AREA + LOCAL_WORK_AREA_SIZE) 
 bcc @noCompareNeeded
 jmp bDDisplayInventoryInnerWithCompare   ; not enough guaranteed room
@@ -220,6 +228,7 @@ bDPadWordsWithSpacesWithCompare:
 ; jmp bDPadWordsWithSpacesNoCompare
 
 ; bra @checkLoopCondition
+bra @checkLoopCondition
 @loop:
 inc J_COUNTER
 @checkLoopCondition:
@@ -282,12 +291,6 @@ clc
 adc LASTLENGTH
 sta J_COUNTER           ; column we would occupy after this name
 
-clc
-lda #<GOLDEN_RAM_WORK_AREA
-adc J_COUNTER
-sta sreg
-lda #>GOLDEN_RAM_WORK_AREA
-adc #$0                 ; probe address (high byte left in A)
 
 lda WRITE_ZP + 1
 cmp #>(GOLDEN_RAM_WORK_AREA + LOCAL_WORK_AREA_SIZE - TILES_ACROSS)

@@ -333,6 +333,9 @@ bra @resetSetIrqState
 lda #LAYER_0_SPRITES_DISABLE_1_ENABLE
 sta VERA_dc_video
 
+; lda #$FF
+; sta VERA_L1_vscroll_h
+
 lda #DISPLAY_SCALE_TEXT_H
 sta VERA_dc_hscale
 lda #DISPLAY_SCALE_TEXT_V
