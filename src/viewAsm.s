@@ -1153,7 +1153,7 @@ sta (VIEW_POS_LOCAL_VIEW_TAB),y
 lda VIEW_POS_ENTRY_NUM
 bne @end
 
-lda #PROGRAM_CONTROL
+lda #PLAYER_CONTROL
 sta _controlMode
 
 lda #EGODIR
