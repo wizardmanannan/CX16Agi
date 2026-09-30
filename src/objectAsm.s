@@ -74,6 +74,7 @@ I_COUNTER = ZP_TMP_16               ; object-index / outer counter
 J_COUNTER = ZP_TMP_16 + 1           ; column / pad-length counter
 LASTLENGTH = ZP_TMP_17              ; running length of the current inventory line
 WRITE_OUT_VAL = ZP_TMP_17 + 1
+SPACES_ADDED = ZP_TMP_18
 
 ; _bDWriteNext
 ; C-callable wrapper: writes A using the WRITE_NEXT macro and returns.
@@ -216,7 +217,10 @@ jmp bDDisplayInventoryInnerWithCompare   ; not enough guaranteed room
 ; Pads the current inventory line with spaces until J_COUNTER reaches
 ; TILES_ACROSS, checking the write pointer against the work-area limit
 ; on every store and flushing/resetting when full.
-bDPadWordsWithSpacesWithCompare:
+bDPadWordsWithSpacesWithCompare: 
+
+;Note: Experiment using an index (WRITE_ZP),y, but didn't make much difference and didn't seem worth the complexity
+
 ; cmp #>(GOLDEN_RAM_WORK_AREA + LOCAL_WORK_AREA_SIZE)
 ; beq @checkLow
 ; bcs @checkLoopCondition ;Don't think we need this because i don't think j can be that big
@@ -228,6 +232,7 @@ bDPadWordsWithSpacesWithCompare:
 ; jmp bDPadWordsWithSpacesNoCompare
 
 ; bra @checkLoopCondition
+ldx #$0
 bra @checkLoopCondition
 @loop:
 inc J_COUNTER
@@ -243,6 +248,7 @@ bcs @lowByteCheckSpace
 @writeSpace:
  lda #SPACE
  sta (WRITE_ZP)
+ inx
  inc WRITE_ZP
  bne @loop
 
@@ -251,6 +257,7 @@ inc WRITE_ZP + 1        ; page crossed while writing a space
 bra @loop
 
 @lowByteCheckSpace:
+stx SPACES_ADDED
 lda WRITE_ZP
 cmp #<(GOLDEN_RAM_WORK_AREA + LOCAL_WORK_AREA_SIZE)
 bcc @writeSpace
@@ -263,8 +270,11 @@ lda #<GOLDEN_RAM_WORK_AREA
 sta WRITE_ZP
 lda #>GOLDEN_RAM_WORK_AREA
 sta WRITE_ZP + 1        ; reset after flush
+ldx SPACES_ADDED
 jmp @writeSpace;
 @endLoop:
+
+txa
 rts
 
 ; _bDPadWordsWithSpaces
