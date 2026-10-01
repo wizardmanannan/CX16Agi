@@ -282,16 +282,12 @@ void bDDisplayInventory(boolean showObject)
     byte inventoryPaletteByte = 0x10, numObjs = 0;
     byte* data;
     BufferStatus bufferStatus;
-    boolean isFirstLetterOfWord;
     char* exitMessage;
 
     objectType object;
     char* objectName;
-    unsigned int i, j, inventoryInnerWriteAddr;
+    unsigned int i;
     boolean evenObj = TRUE, foundObject = FALSE;
-
-
-
 
     *WRITE_ZP_PTR = GOLDEN_RAM_WORK_AREA;    /* assembly WRITE_NEXT starts here */
     *BUFFER_ZP_PTR = &bufferStatus;
@@ -313,28 +309,6 @@ void bDDisplayInventory(boolean showObject)
 
     bDWriteNext(NEW_LINE);
 
-
-
-    for(i = 1; i < 55; i++)
-    {
-        if(i >= 44 && i <= 46)
-        {
-            continue;
-        }
-
-     bDObjects[i].roomNum = HAS_OBJ;
- 
-    }
-
-    // bDObjects[19].roomNum = HAS_OBJ;
-    // bDObjects[20].roomNum = HAS_OBJ;
-    // bDObjects[21].roomNum = HAS_OBJ;
-    // bDObjects[22].roomNum = HAS_OBJ;
-
-    //bDObjects[3].roomNum = HAS_OBJ;
-    //bDObjects[4].roomNum = HAS_OBJ;
-    //bDObjects[5].roomNum = HAS_OBJ;
-
     for (i = 0; i < bDNumObjects; i++)
     {
         object.name = bDObjects[i].name;
@@ -347,8 +321,6 @@ void bDDisplayInventory(boolean showObject)
             thisLength = bDObjectNameLengths[i];
 
             *OBJECT_NAME_PTR = object.name; /* for the asm name-copy helpers */
-
-            j = 0;
 
             if (!evenObj && foundObject)
             {

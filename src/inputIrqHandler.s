@@ -7,7 +7,6 @@ MAX_INPUT_STRING_LENGTH = 40 ;Includes terminator
 .include "globalGraphics.s"
 .segment "BANKRAM07"
 b7HandleInputLine:
-
 lda _inputLineDisplayed
 beq @end
 
