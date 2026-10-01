@@ -7,9 +7,13 @@
 ![image](https://github.com/wizardmanannan/CX16Agi/blob/main/docs/images/KingsQuestThreeImprovedIntro.gif)
 
 See it running here on YouTube: \
-[King's Quest III](https://youtu.be/NmkiB3tb6WM) \
-[King's Quest I](https://youtu.be/N0JRAPeKvf0) \
-[Space Quest II](https://youtu.be/Pxg_op2dU8Q) 
+[King's Quest III](https://youtu.be/NmkiB3tb6WM)
+
+[King's Quest I](https://youtu.be/N0JRAPeKvf0)
+
+[Space Quest II](https://youtu.be/Pxg_op2dU8Q)
+
+[Black Cauldron](https://youtu.be/h7zuFAZj-MI)
 
 ![image](https://github.com/user-attachments/assets/444ff862-348a-492a-8962-a567565608af)
 ![image](https://github.com/user-attachments/assets/aeb64726-8bc4-4682-b7ba-f76894aec0fd)
