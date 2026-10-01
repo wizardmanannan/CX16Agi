@@ -351,9 +351,6 @@ GET_STRUCT_8_STORED_OFFSET _offsetOfLengthOffset, OBJECT_TO_SET_PALETTE
 asl
 sta OBJECT_VERA_ADDRESS
 
-; GET_STRUCT_8_STORED_OFFSET _offsetOfRow, OBJECT_TO_SET_PALETTE
-; stp
-; asl
 lda SCREEN_OBJ_NUM
 lsr ;Why are we halfing and then doubling? This is sensible, halfing gets up the row via integer maths for example half of 3 is 1. Then you need to double for the 16 bit address for row 1 which is at position 2.
 asl
@@ -392,39 +389,56 @@ bne @setPaletteLoop
 
 rts
 
-OBJECT_SELECTED_PALETTE = $20
-OBJECT_UNSELECTED_PALETTE = $10
+; Palette values used for inventory objects
+OBJECT_SELECTED_PALETTE   = $20   ; palette for the currently selected item
+OBJECT_UNSELECTED_PALETTE = $10   ; palette for items that are no longer selected
 
-NOTHING_TO_SELECT = $FF
+NOTHING_TO_SELECT = $FF           ; sentinel: no previous/unselected object
 
+; Highlight the selected inventory row and un-highlight the previous one.
+; Expects:
+;   _bDSelectedObject / +1     : object id of the newly selected item
+;   _bDSelectedScreenObjNum    : screen-object index of the newly selected item
+;   _bDUnselectedObject / +1   : object id of the previously selected item
+;   _bDUnselectedScreenObjNum  : screen-object index of the previously selected item
+;                                ($FF = nothing to un-highlight)
 bDHighlightInventoryRow:
 
-lda #OBJECT_SELECTED_PALETTE
-sta PALETTE_TO_SET
-lda _bDSelectedObject
-sta OBJECT_TO_SET_PALETTE
-lda _bDSelectedObject + 1
-sta OBJECT_TO_SET_PALETTE + 1
-lda _bDSelectedScreenObjNum
-sta SCREEN_OBJ_NUM
-jsr bDSetInventoryRowPalette
+    ; --- selected item: set its inventory-row palette ---
+    lda #OBJECT_SELECTED_PALETTE
+    sta PALETTE_TO_SET
 
-lda _bDUnselectedScreenObjNum
-cmp #NOTHING_TO_SELECT
-beq @return
+    lda _bDSelectedObject
+    sta OBJECT_TO_SET_PALETTE
+    lda _bDSelectedObject + 1
+    sta OBJECT_TO_SET_PALETTE + 1
 
-lda #OBJECT_UNSELECTED_PALETTE
-sta PALETTE_TO_SET
-lda _bDUnselectedObject
-sta OBJECT_TO_SET_PALETTE
-lda _bDUnselectedObject + 1
-sta OBJECT_TO_SET_PALETTE + 1
-lda _bDUnselectedScreenObjNum
-sta SCREEN_OBJ_NUM
-jsr bDSetInventoryRowPalette
+    lda _bDSelectedScreenObjNum
+    sta SCREEN_OBJ_NUM
+
+    jsr bDSetInventoryRowPalette
+
+    ; --- previous item: skip if there is none ---
+    lda _bDUnselectedScreenObjNum
+    cmp #NOTHING_TO_SELECT
+    beq @return
+
+    ; un-highlight the previously selected inventory row
+    lda #OBJECT_UNSELECTED_PALETTE
+    sta PALETTE_TO_SET
+
+    lda _bDUnselectedObject
+    sta OBJECT_TO_SET_PALETTE
+    lda _bDUnselectedObject + 1
+    sta OBJECT_TO_SET_PALETTE + 1
+
+    lda _bDUnselectedScreenObjNum
+    sta SCREEN_OBJ_NUM
+
+    jsr bDSetInventoryRowPalette
 
 @return:
-rts
+    rts
 
 
 
