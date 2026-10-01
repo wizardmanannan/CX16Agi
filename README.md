@@ -47,7 +47,7 @@ High Level Things To Be Done:
 
 
 
-# CX 16 Iteration 15 Goals (Current)
+# CX 16 Iteration 16 Goals (Current)
 - Implement string interpolation (string token replacement) 
 - Continuing to work towards playability of King's Quest I:
 - Implement screen shaking using the Vera scroll registers
