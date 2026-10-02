@@ -9,6 +9,7 @@ IRQ_INC = 1
 
 .import _mainLoopCounter
 .import _menuDirty
+.import _inputLineDirty
 
 .macro SEND_IRQ_COMMAND command, vSyncToCheck
 sei
@@ -108,6 +109,8 @@ bne @loop
 
 dec ZP_TILE_LAYER_NO_TILES_HIGH
 bpl @loop
+lda #$1
+sta _inputLineDirty
 rts
 
 handleDisplayText:
@@ -149,6 +152,8 @@ stz ZP_TMP
 stz ZP_TMP + 1
 
 jsr b3SetPalette
+lda #$1
+sta _inputLineDirty
 rts
 
 b3DisplayTextNewLine: ;Goes to the start of the next line of the VERA but maintains the column number of the first character of the first line

@@ -87,6 +87,13 @@ static char *find(char *text, const char *needle) {
     char *match = strstr(text, needle); CHECK(match, "Assembly source marker missing"); return match;
 }
 
+static unsigned occurrences(const char *text, const char *needle) {
+    unsigned count = 0;
+    size_t length = strlen(needle);
+    for (const char *match = text; (match = strstr(match, needle)); match += length) ++count;
+    return count;
+}
+
 static void write_file(const char *path, const char *contents) {
     FILE *file = fopen(path, "wb"); CHECK(file, "Cannot create fixture");
     CHECK(fwrite(contents, 1, strlen(contents), file) == strlen(contents), "Cannot write fixture");
@@ -141,7 +148,7 @@ static void assemble(void) {
         "INPUT_LINE_RENDER_CELLS=MAX_INPUT_STRING_LENGTH+1\n"
         ".assert INPUT_LINE_COL + INPUT_LINE_RENDER_CELLS <= TILE_LAYER_WIDTH, error, \"Input line rendering exceeds tile map row\"\n"
         ".segment \"CODE\"\n"
-        ".export input,enable,send,wait,done,snapshot,_vSyncCounter,sendIrqCommand,_inputLineDisplayed,_b7CurrentInputStr\n"
+        ".export input,enable,send,wait,done,snapshot,_vSyncCounter,sendIrqCommand,_inputLineDisplayed,_inputLineDirty,_b7CurrentInputStr\n"
         ".export clearSprites,inputStringAddress,spriteFirstZ,spriteCount\n"
         "%.*s\n%.*s\n%.*s\n%.*s\n"
         "input:\n%.*s\n"
@@ -215,6 +222,7 @@ static void seed_input_map(void) {
 static void set_input(unsigned shown, unsigned length) {
     unsigned buffer = symbol("_b7CurrentInputStr");
     ram[symbol("_inputLineDisplayed")] = (uint8_t)shown;
+    ram[symbol("_inputLineDirty")] = 1;
     memset(ram + buffer, 0, INPUT_MAX_LENGTH + 1);
     for (unsigned i = 0; i < length; ++i)
         ram[buffer + i] = (uint8_t)('A' + i % 26);
@@ -245,7 +253,82 @@ static void render_input(unsigned shown, unsigned length, unsigned initial_x) {
     run();
     CHECK(writes == INPUT_RENDER_CELLS + (shown ? length + 1 + (length < INPUT_MAX_LENGTH) : 0),
           "Input line clear/draw wrote the wrong number of cells");
+    CHECK(!ram[symbol("_inputLineDirty")], "Input redraw did not consume its dirty flag");
     check_input_map(shown, length);
+}
+
+static void test_input_dirty(void) {
+    const unsigned base = symbol("inputStringAddress"), dirty = symbol("_inputLineDirty");
+    seed_input_map();
+    set_input(1, 4);
+    init_cpu(symbol("input"), 0);
+    run();
+    check_input_map(1, 4);
+
+    unsigned saved_address = addr[0], saved_stride = stride[0];
+    uint8_t saved_low = ram[0x9F20], saved_high = ram[0x9F21], saved_bank = ram[0x9F22];
+    init_cpu(symbol("input"), 255);
+    uint32_t clean_start = clockticks6502;
+    run();
+    CHECK(!writes && addr[0] == saved_address && stride[0] == saved_stride,
+          "Clean input line still accessed VERA");
+    CHECK(clockticks6502 - clean_start == 13,
+          "Clean input line fast path exceeded 13 cycles");
+    CHECK(ram[0x9F20] == saved_low && ram[0x9F21] == saved_high && ram[0x9F22] == saved_bank,
+          "Clean input line changed the VERA address registers");
+
+    ram[symbol("_b7CurrentInputStr") + 1] = 'Z'; /* Parser mutation. */
+    ram[dirty] = 1;
+    init_cpu(symbol("input"), 0);
+    run();
+    CHECK(writes > 0, "Input mutation invalidation did not redraw");
+    CHECK(vram[base + 4] == 'Z', "Input mutation was not rendered");
+
+    ram[symbol("_inputLineDisplayed")] = 0; /* prevent.input / text-screen transition */
+    ram[dirty] = 1;
+    init_cpu(symbol("input"), 0);
+    run();
+    check_input_map(0, 0);
+
+    ram[symbol("_inputLineDisplayed")] = 1; /* accept.input / graphics transition */
+    ram[dirty] = 1;
+    init_cpu(symbol("input"), 0);
+    run();
+    check_input_map(1, 4);
+
+    for (unsigned cell = 0; cell < INPUT_RENDER_CELLS; ++cell)
+        vram[base + cell * 2] = 0x80; /* Full map clear / text overlay. */
+    ram[dirty] = 1;
+    init_cpu(symbol("input"), 0);
+    run();
+    check_input_map(1, 4);
+}
+
+static void test_input_dirty_sources(void) {
+    char *parser = read_file("src/parser.c");
+    char *commands = read_file("src/commands.c");
+    char *picture = read_file("src/picture.c");
+    char *irq = read_file("src/irqAsm.s");
+    char *graphics = read_file("src/graphicsAsm.s");
+    char *map_clear = find(irq, "_b3InitLayer1Mapbase:");
+    char *map_clear_dirty = find(map_clear, "sta _inputLineDirty");
+    char *display = find(irq, "handleDisplayText:");
+    char *display_dirty = find(display, "sta _inputLineDirty");
+    char *input_init = find(graphics, "_b6InitInput:");
+    char *input_init_dirty = find(input_init, "sta _inputLineDirty");
+
+    CHECK(occurrences(parser, "inputLineDirty = TRUE;") >= 5,
+          "Parser edits/reset do not all invalidate the input row");
+    CHECK(occurrences(commands, "inputLineDirty = TRUE;") >= 4,
+          "Input visibility/screen transitions do not all invalidate the row");
+    CHECK(strstr(picture, "volatile byte inputLineDirty = TRUE;"),
+          "Input dirty state is not initialized in resident storage");
+    CHECK(map_clear_dirty < display && display_dirty < find(display, "b3DisplayTextNewLine:"),
+          "Map clear/text display does not invalidate the row");
+    CHECK(input_init_dirty < find(input_init, ".segment \"BANKRAM08\""),
+          "Input row initialization does not invalidate the row");
+
+    free(parser); free(commands); free(picture); free(irq); free(graphics);
 }
 
 static void test_input(void) {
@@ -340,6 +423,8 @@ int main(void) {
     CHECK(mkdtemp(temporary), "Cannot create temporary directory");
     assemble();
     test_input();
+    test_input_dirty();
+    test_input_dirty_sources();
     test_acknowledgement();
     test_snapshot_and_wait();
     test_sprite_clear();

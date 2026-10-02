@@ -187,6 +187,7 @@ static const char hook[] =
 "        }\n"
 "        if(shake_input_replaced) {\n"
 "            for(int i=0;i<40;i++) shake_banked_ram(S__b7CurrentInputStr+i,7,shake_saved_input[i]);\n"
+"            shake_ram(S__inputLineDirty,1);\n"
 "            shake_input_replaced=false;\n"
 "        }\n"
 "        for(int i=0;i<50;i++) shake_ram(S_codeWindow+i,shake_saved_window[i]);\n"
@@ -227,6 +228,7 @@ static const char hook[] =
 "            for(int i=0;i<40;i++) shake_saved_input[i]=debug_read6502(S__b7CurrentInputStr+i,0,7);\n"
 "            const char input[]=\"LOOK\";\n"
 "            for(int i=0;i<5;i++) shake_banked_ram(S__b7CurrentInputStr+i,7,input[i]);\n"
+"            shake_ram(S__inputLineDirty,1);\n"
 "            shake_input_replaced=true;\n"
 "        }\n"
 "    }\n"
@@ -263,7 +265,7 @@ static const char hook[] =
 "    }\n"
 "}\n"
 ;
-static const char *names[] = {"custom_irq_handler","mainLoop","codeWindow","cwCurrentCode","b4ShakeScreen","shakeCount","shakePhases","shakeFrames","_menuDirty","_menuShown","_mainLoopCounter","_bBChannelsPlaying","bBSoundHandler","b7HandleInputLine","bADisplayMenu","b10DisplayStatusBar","bEHandleSpriteUpdates","b10PrintStatusBarString","handleScreenShake","@handleSound","_inputLineDisplayed","_b7CurrentInputStr","_bESpritesUpdatedBuffer","_bESpritesUpdatedBufferPointer"};
+static const char *names[] = {"custom_irq_handler","mainLoop","codeWindow","cwCurrentCode","b4ShakeScreen","shakeCount","shakePhases","shakeFrames","_menuDirty","_menuShown","_mainLoopCounter","_bBChannelsPlaying","bBSoundHandler","b7HandleInputLine","bADisplayMenu","b10DisplayStatusBar","bEHandleSpriteUpdates","b10PrintStatusBarString","handleScreenShake","@handleSound","_inputLineDisplayed","_inputLineDirty","_b7CurrentInputStr","_bESpritesUpdatedBuffer","_bESpritesUpdatedBufferPointer"};
 #define NAME_COUNT (sizeof(names)/sizeof(names[0]))
 static unsigned labels[NAME_COUNT]; static bool found[NAME_COUNT];
 static void load_symbols(const char *path) {

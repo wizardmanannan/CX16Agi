@@ -17,6 +17,7 @@ GRAPHICS_INC = 1
 .import _b6InitVeraMemory
 .import _bAInitSpriteData
 .import _b3SetTextColor
+.import _inputLineDirty
 .importzp ptr4
 
 
@@ -393,14 +394,16 @@ rts
 _b6InitInput:
 SET_VERA_ADDRESS_IMMEDIATE_SPLIT #<INPUT_STRING_ADDRESS + 1, #>INPUT_STRING_ADDRESS, #$0, #$0, #$2 ;To to the first tile byte 1
 ldx #INPUT_BYTE_1
-lda #MAX_INPUT_STRING_LENGTH
+lda #INPUT_LINE_RENDER_CELLS
 
 @initLoop:
 stx VERA_data0
 
 @checkCondition:
 dec
-bne @initLoop 
+bne @initLoop
+lda #$1
+sta _inputLineDirty
 rts
 
 .segment "BANKRAM08"

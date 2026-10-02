@@ -1603,6 +1603,7 @@ void b4Text_screen() // 0, 0x00
 	screenMode = AGI_TEXT;
 	/* Do something else here */
 	inputLineDisplayed = FALSE;
+	inputLineDirty = TRUE;
 	statusLineDisplayed = FALSE;
 	b6SetAndWaitForIrqState(TEXT_ONLY);
 
@@ -1614,6 +1615,7 @@ void b4Graphics() // 0, 0x00
 	screenMode = AGI_GRAPHICS;
 	/* Do something else here */
 	inputLineDisplayed = TRUE;
+	inputLineDirty = TRUE;
 	statusLineDisplayed = TRUE;
 	b6SetAndWaitForIrqState(DISPLAY_GRAPHICS);
 
@@ -1777,6 +1779,7 @@ void b4Get_num() // 2, 0x40
 void b4Prevent_input() // 0, 0x00 
 {
 	inputLineDisplayed = FALSE;
+	inputLineDirty = TRUE;
 	/* Do something else here */
 	return;
 }
@@ -1784,6 +1787,7 @@ void b4Prevent_input() // 0, 0x00
 void b4Accept_input() // 0, 0x00 
 {
 	inputLineDisplayed = TRUE;
+	inputLineDirty = TRUE;
 	/* Do something else here */
 	return;
 }

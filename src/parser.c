@@ -144,6 +144,7 @@ void b7GetString(char* promptStr, byte promptStringBank, char* returnStr, byte r
 				if (strPos > 0) {
 					strPos--;
 					b7CurrentInputStr[strPos] = 0;
+					inputLineDirty = TRUE;
 				}
 				break;
 			case 0x0A: break;
@@ -152,6 +153,7 @@ void b7GetString(char* promptStr, byte promptStringBank, char* returnStr, byte r
 				b7CurrentInputStr[strPos] = (ch & 0xff);
 				strPos++;
 				b7CurrentInputStr[strPos] = 0;
+				inputLineDirty = TRUE;
 				sprintf(b7OutputString, "%s%s%c", b7Temp, b7CurrentInputStr, cursorChar);
 				break;
 			}
@@ -231,6 +233,7 @@ void b7PollKeyboard()
 					b7LookupWords(b7CurrentInputStr);
 					b7CurrentInputStr[0] = 0;
 					strPos = 0;
+					inputLineDirty = TRUE;
 					sprintf(b7OutputString, "%s%s%c", b7Temp, b7CurrentInputStr, cursorChar);
 					strcpy(b7LastLine, b7CurrentInputStr);
 					break;
@@ -238,6 +241,7 @@ void b7PollKeyboard()
 					if (strPos > 0) {
 						strPos--;
 						b7CurrentInputStr[strPos] = 0;
+						inputLineDirty = TRUE;
 						sprintf(b7OutputString, "%s%s%c ", b7Temp, b7CurrentInputStr, cursorChar);
 						//drawBigString(screen, " ", (strPos*16), 448, 7, 0);
 					}
@@ -260,6 +264,7 @@ void b7PollKeyboard()
 						b7CurrentInputStr[strPos] = (ch);
 						strPos++;
 						b7CurrentInputStr[strPos] = 0;
+						inputLineDirty = TRUE;
 						sprintf(b7OutputString, "%s%s%c", b7Temp, b7CurrentInputStr, cursorChar);
 					}
 					break;
