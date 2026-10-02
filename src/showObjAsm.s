@@ -14,11 +14,7 @@ _b11ShowObjX: .word $0
 _b11ShowObjY: .byte $0
 
 b11ShowObjIrqHandler:
-stp
-
-
 SET_VERA_ADDRESS_IMMEDIATE SHOW_OBJ_ATTRIBUTE_ADDRESS, #$0,#$1
-stp
 lda _b11ShowObjSpriteAddressShifted
 sta VERA_data0
 lda _b11ShowObjSpriteAddressShifted + 1
