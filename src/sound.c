@@ -569,7 +569,7 @@ void bBPrecomputeValues(SoundFile* soundFile, unsigned int* soundChannelOffSets)
 				}
 
 				// Move to next byte within note
-				noteByteCounter = (noteByteCounter + 1) % NO_NOTE_BYTES;
+				if (++noteByteCounter == NO_NOTE_BYTES) noteByteCounter = 0;
 			}
 		}
 		else
