@@ -243,6 +243,14 @@ bne @callSoundHandler
 jmp @defaultIqr
 
 @callSoundHandler:
+; Apply display movement before the expensive handlers, during blanking.
+; Self-modifying count in writable resident RAM (cacheless W65C02).
+; Foreground STA and IRQ DEC publish one byte atomically; skip idle calls.
+@shakeCountLoad:
+lda #0
+beq @handleSound
+jsr handleScreenShake
+@handleSound:
 lda #SOUND_BANK
 sta RAM_BANK
 jsr bBSoundHandler
@@ -371,5 +379,8 @@ jmp (default_irq_vector)
 @jmpTableBank: .byte $0, $0, $0, $0, TEXT_BANK, $0 ;In order of IRQ_CMDS
 @previousRamBank: .byte $0
 
-.endif ; IRQ_INC
+; Global aliases end ca65's cheap-local scope, so define this after the handler.
+shakeCount = @shakeCountLoad + 1
+.assert shakeCount < $9F00, lderror, "Shake operand must stay in resident RAM"
 
+.endif ; IRQ_INC

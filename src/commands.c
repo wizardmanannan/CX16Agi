@@ -1659,12 +1659,6 @@ void b4Set_text_attribute() // 2, 0x00
 	return;
 }
 
-//void b4Shake_screen() // 1, 0x00 
-//{
-//	(*data)++;  /* Ignore this for now. */
-//}
-
-
 void b4Configure_screen() // 3, 0x00 
 {
 	min_print_line = loadAndIncWinCode();

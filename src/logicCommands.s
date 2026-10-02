@@ -770,7 +770,7 @@ jmpTableCommands1:
 .addr b4GraphicsCCall
 .addr b4Set_cursor_charCCall
 .addr b4Set_text_attributeCCall
-.addr b1NoOp_1
+.addr b4ShakeScreen
 .addr b4Configure_screenCCall
 .addr b4Status_line_onCCall
 .addr b4Status_line_offCCall

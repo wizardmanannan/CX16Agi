@@ -22,6 +22,7 @@
     .include "controllersAsm.s"
     .include "statusBar.s"
     .include "showObjAsm.s"
+    .include "screenShake.s"
     
     .export _executeLogic
     .export _b6InitInterpreter
