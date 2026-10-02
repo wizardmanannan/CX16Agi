@@ -14,19 +14,23 @@ SET_VERA_ADDRESS_IMMEDIATE (SPRITE_ATTR_START + SPRITE_ATTR_SIZE + OFFSET), CHAN
 
 SPRITE_IRQ_HANDLER_INC = 1
 
+.include "spriteUpdates.inc"
 
-BYTES_PER_SPRITE_UPDATE = 8
-SPRITE_UPDATED_BUFFER_SIZE = 256 ;Viewtab may be updated more than once, hence times two for safety
+; Sprite updates run after the menu and status bar, so their last IRQ-only temp is free.
+ZP_SPRITE_UPDATE_READ_POINTER = IRQ_TMP_6
 
 .macro GET_NEXT_FROM_SPRITE_UPDATE_BUFFER noStore
-.local @continue
+.local @noCarry
 
-lda _bESpritesUpdatedBuffer,y
-iny
+ldy #$0
+lda (ZP_SPRITE_UPDATE_READ_POINTER),y
+inc ZP_SPRITE_UPDATE_READ_POINTER
+bne @noCarry
+inc ZP_SPRITE_UPDATE_READ_POINTER + 1
+@noCarry:
 .ifblank noStore
   sta VERA_data0
 .endif
-@continue:
 .endmacro
 
 
@@ -57,21 +61,41 @@ bra @loop
 _bESpritesUpdatedBuffer: .res SPRITE_UPDATED_BUFFER_SIZE
 _bESpritesUpdatedBufferPointer: .word _bESpritesUpdatedBuffer
 
+.import _bESpriteUpdateOverflowed
+.export _bECanAppendSpriteUpdate
+
+; Carry is set while a complete record still fits before the terminator.
+_bECanAppendSpriteUpdate:
+lda _bESpritesUpdatedBufferPointer + 1
+cmp #>(_bESpritesUpdatedBuffer + SPRITE_UPDATE_RECORD_BYTES * SPRITE_UPDATE_MAX_RECORDS - SPRITE_UPDATE_RECORD_BYTES + 1)
+bcc @available
+bne @full
+lda _bESpritesUpdatedBufferPointer
+cmp #<(_bESpritesUpdatedBuffer + SPRITE_UPDATE_RECORD_BYTES * SPRITE_UPDATE_MAX_RECORDS - SPRITE_UPDATE_RECORD_BYTES + 1)
+bcc @available
+@full:
+lda #$1
+sta _bESpriteUpdateOverflowed
+clc
+rts
+@available:
+sec
+rts
+
 ;void bEClearSpriteAttributes()
 _bEClearSpriteAttributes:
 CLEAR_SPRITE_ATTRS
 rts
-@numToClear: .byte $0
+_spriteUpdateNumToClear: .byte $0
 
 ;Define Insertion Order:
-;0 Vera Address Sprite Data Middle (Low will always be 0) (If both the first two bytes are zero that indicates the end of the buffer)
+;0 Vera Address Sprite Data Middle (Low will always be 0; both address bytes zero ends the buffer)
 ;1 Vera Address Sprite Data High
 ;2 x low
 ;3 x high
 ;4 y
 ;5 Flipped
 ;6 Sprite Attr Size/Palette Offset
-;7 Reblit
 
 .import _viewSeen
 
@@ -92,12 +116,17 @@ jmp @end
 
 @start:
 
+lda #<_bESpritesUpdatedBuffer
+sta ZP_SPRITE_UPDATE_READ_POINTER
+lda #>_bESpritesUpdatedBuffer
+sta ZP_SPRITE_UPDATE_READ_POINTER + 1
+stz _spriteUpdateNumToClear
+
 CLEAR_SPRITE_ATTRS
 .import _sResetCounter
 
 SET_VERA_START_SPRITE_ATTRS #$0, #$1, SA_VERA_ADDRESS_LOW ; Sets VERA channel 0 to the start of the sprites attributes table with a stride of 1
 
-ldy #$0
 @loop:
 GET_NEXT_FROM_SPRITE_UPDATE_BUFFER ;Address 12:5 0 (buffer 0)
 sta ZP_LOW_BYTE
@@ -123,6 +152,10 @@ sta @flipped
 
 GET_NEXT_FROM_SPRITE_UPDATE_BUFFER ;Sprite Attr Size 7 (buffer 6)
 
+inc _spriteUpdateNumToClear
+lda _spriteUpdateNumToClear
+cmp #SPRITE_UPDATE_MAX_RECORDS
+beq @addressReset
 jmp @loop
 
 @addressReset:
@@ -130,6 +163,7 @@ lda #< _bESpritesUpdatedBuffer
 sta _bESpritesUpdatedBufferPointer
 lda #> _bESpritesUpdatedBuffer
 sta _bESpritesUpdatedBufferPointer + 1
+stz _spriteUpdateNumToClear
 
 @end:
 

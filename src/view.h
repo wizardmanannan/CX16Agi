@@ -85,6 +85,7 @@ extern void bEClearVeraSprite(byte celWidth, byte celHeight);
 #pragma wrapped-call (pop)
 
 extern byte priorityBase;
+extern volatile byte bESpriteUpdateOverflowed;
 
 #define MIN_PRIORITY 4
 #define MAX_PRIORITY 15

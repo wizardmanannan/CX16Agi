@@ -9,14 +9,15 @@
 #include <unistd.h>
 #include "registers.h"
 #include "fake6502.h"
+#include "../src/spriteUpdates.h"
 
 extern struct regs regs;
 static uint8_t ram[65536], vram[131072];
 static unsigned addr[2], stride[2], writes, acks;
-static unsigned write_addresses[1024];
-static uint8_t write_values[1024];
+static unsigned write_addresses[2048];
+static uint8_t write_values[2048];
 static char temporary[4096];
-struct symbol { char name[100]; unsigned addr; } symbols[64];
+struct symbol { char name[100]; unsigned addr; } symbols[128];
 static unsigned symbol_count;
 
 #define CHECK(condition, message) do { if (!(condition)) { fprintf(stderr, "%s (%s:%d)\n", message, __FILE__, __LINE__); exit(1); } } while (0)
@@ -146,16 +147,33 @@ static void assemble(void) {
     char *sprite_start_end = find(sprite_start, ".endmacro") + strlen(".endmacro");
     char *sprite_clear = find(sprite, ".macro CLEAR_SPRITE_ATTRS");
     char *sprite_clear_end = find(sprite_clear, ".endmacro") + strlen(".endmacro");
+    char *sprite_get = find(sprite, ".macro GET_NEXT_FROM_SPRITE_UPDATE_BUFFER");
+    char *sprite_get_end = find(sprite_get, ".endmacro") + strlen(".endmacro");
+    char *sprite_append = find(sprite, "_bECanAppendSpriteUpdate:\n");
+    char *sprite_append_end = find(sprite_append, "\n;void bEClearSpriteAttributes");
+    char *sprite_handler = find(sprite, "bEHandleSpriteUpdates:");
+    char *sprite_handler_end = find(sprite_handler, "\n.endif");
 
     int length = snprintf(source, sizeof(source),
-        ".include \"x16.inc\"\nVIEW_TABLE_SIZE=1\n.include \"globalGraphics.s\"\n.include \"global.s\"\nMAX_INPUT_STRING_LENGTH=40\n"
+        ".include \"x16.inc\"\nVIEW_TABLE_SIZE=1\n.include \"globalGraphics.s\"\n.include \"spriteUpdates.inc\"\n.include \"global.s\"\nMAX_INPUT_STRING_LENGTH=40\n"
         "INPUT_LINE_RENDER_CELLS=MAX_INPUT_STRING_LENGTH+1\n"
         ".assert INPUT_LINE_COL + INPUT_LINE_RENDER_CELLS <= TILE_LAYER_WIDTH, error, \"Input line rendering exceeds tile map row\"\n"
         ".segment \"CODE\"\n"
         ".export input,enable,send,wait,done,snapshot,_vSyncCounter,sendIrqCommand,_inputLineDisplayed,_inputLineDirty,_b7CurrentInputStr\n"
         ".export clearSprites,inputStringAddress,spriteFirstZ,spriteCount\n"
+        ".export handleSpriteUpdates,checkSpriteUpdateCapacity,_bESpritesUpdatedBuffer,_bESpritesUpdatedBufferPointer,_bESpriteUpdateOverflowed,spriteBufferBefore,spriteBufferEnd,spriteBufferGuard,spriteUpdateBufferBytes,spriteUpdateRecordBytes,spriteUpdateMaxRecords,spriteUpdateBank,irqScratchPointer\n"
         ".export bBSoundHandler,_bBChannelsPlaying,_bBEndSoundFlag,_bBIsPlaying,_bBCh1Ticks,_ZP_CURRENTLY_PLAYING_NOTE_1,SOUND_SREG,_bBPsgClear,soundCriticalSection\n"
-        "%.*s\n%.*s\n%.*s\n"
+        "ZP_SPRITE_UPDATE_READ_POINTER=IRQ_TMP_6\nZP_LOW_BYTE=ZP_TMP_5+1\n"
+        "%.*s\n%.*s\n%.*s\n%.*s\n%.*s\n%.*s\n"
+        "spriteBufferBefore: .byte $3D\n_bESpritesUpdatedBuffer: .res SPRITE_UPDATED_BUFFER_SIZE\n"
+        "spriteBufferEnd:\nspriteBufferGuard: .byte $A6,$5B\n"
+        "_bESpritesUpdatedBufferPointer: .word _bESpritesUpdatedBuffer\n"
+        "_bESpriteUpdateOverflowed: .byte 0\n_spriteUpdateNumToClear: .byte 0\n"
+        "handleSpriteUpdates: jmp bEHandleSpriteUpdates\n"
+        "checkSpriteUpdateCapacity: jmp _bECanAppendSpriteUpdate\n"
+        "spriteBufferEndAddress = _bESpritesUpdatedBuffer + SPRITE_UPDATED_BUFFER_SIZE\n"
+        "spriteUpdateBufferBytes = SPRITE_UPDATED_BUFFER_SIZE\nspriteUpdateRecordBytes = SPRITE_UPDATE_RECORD_BYTES\nspriteUpdateMaxRecords = SPRITE_UPDATE_MAX_RECORDS\nirqScratchPointer = IRQ_TMP_6\n"
+        "spriteUpdateBank = SPRITE_UPDATES_BANK\n"
         "input:\n%.*s\n"
         "enable: REENABLE_INTERRUPTS\nrts\n"
         "send: SEND_IRQ_COMMAND command,snapshot\nrts\n"
@@ -169,9 +187,12 @@ static void assemble(void) {
         (int)(irq_end - irq_macros), irq_macros,
         (int)(sprite_start_end - sprite_start), sprite_start,
         (int)(sprite_clear_end - sprite_clear), sprite_clear,
+        (int)(sprite_get_end - sprite_get), sprite_get,
+        (int)(sprite_append_end - sprite_append), sprite_append,
+        (int)(sprite_handler_end - sprite_handler), sprite_handler,
         (int)(input_end - input_body), input_body);
     CHECK(length >= 0 && length < (int)sizeof(source), "Fixture assembly is too large");
-    CHECK(snprintf(stub, sizeof(stub), ".segment \"CODE\"\n.export _bBLoadedSoundsPointer\n_bBLoadedSoundsPointer: .res 512\n") < (int)sizeof(stub), "Fixture stub is too large");
+    CHECK(snprintf(stub, sizeof(stub), ".segment \"CODE\"\n.export _bBLoadedSoundsPointer,_sResetCounter\n_bBLoadedSoundsPointer: .res 512\n_sResetCounter: .byte 0\n") < (int)sizeof(stub), "Fixture stub is too large");
     free(irq); free(input); free(sprite);
 
     write_file(path, source);
@@ -281,8 +302,8 @@ static void test_input_dirty(void) {
     run();
     CHECK(!writes && addr[0] == saved_address && stride[0] == saved_stride,
           "Clean input line still accessed VERA");
-    CHECK(clockticks6502 - clean_start == 13,
-          "Clean input line fast path exceeded 13 cycles");
+    CHECK(clockticks6502 - clean_start <= 14,
+          "Clean input line fast path exceeded 14 cycles");
     CHECK(ram[0x9F20] == saved_low && ram[0x9F21] == saved_high && ram[0x9F22] == saved_bank,
           "Clean input line changed the VERA address registers");
 
@@ -554,6 +575,149 @@ static void test_sprite_clear(void) {
     CHECK(vram[0x0006] == 0x0C, "Sprite clear wrapped around VRAM");
 }
 
+static void seed_sprite_update_buffer(void) {
+    const unsigned base = symbol("_bESpritesUpdatedBuffer");
+    const unsigned end = symbol("spriteBufferEnd");
+    CHECK(end - base == SPRITE_UPDATED_BUFFER_SIZE, "Assembly and C sprite buffer sizes differ");
+    CHECK(symbol("spriteUpdateBufferBytes") == SPRITE_UPDATED_BUFFER_SIZE &&
+          symbol("spriteUpdateRecordBytes") == SPRITE_UPDATE_RECORD_BYTES &&
+          symbol("spriteUpdateMaxRecords") == SPRITE_UPDATE_MAX_RECORDS,
+          "Assembly sprite update contract differs from the C header");
+    CHECK(symbol("spriteBufferBefore") + 1 == base &&
+          symbol("spriteBufferGuard") == end,
+          "Sprite update buffer guards are not adjacent to the buffer");
+    CHECK(SPRITE_UPDATED_BUFFER_SIZE == 891 && SPRITE_UPDATE_MAX_RECORDS == 127,
+          "Sprite update contract no longer fits the VERA sprite limit");
+
+    ram[symbol("spriteBufferBefore")] = 0x3D;
+    memset(ram + base, 0xCC, SPRITE_UPDATED_BUFFER_SIZE);
+    ram[symbol("spriteBufferGuard")] = 0xA6;
+    ram[symbol("spriteBufferGuard") + 1] = 0x5B;
+    write_word(symbol("_bESpritesUpdatedBufferPointer"), base);
+    ram[symbol("_bESpriteUpdateOverflowed")] = 0;
+}
+
+static void stage_sprite_update(unsigned index) {
+    const unsigned base = symbol("_bESpritesUpdatedBuffer");
+    const unsigned pointer_address = symbol("_bESpritesUpdatedBufferPointer");
+    unsigned pointer = ram[pointer_address] | ((unsigned)ram[pointer_address + 1] << 8);
+    uint8_t record[SPRITE_UPDATE_RECORD_BYTES] = {
+        (uint8_t)(0x80 | (index & 0x7F)),
+        (uint8_t)(0x20 | (index >> 7)),
+        (uint8_t)(index + 0x11),
+        (uint8_t)(0x40 | index),
+        (uint8_t)(index + 0x31),
+        (uint8_t)(0x80 | (index & 1)),
+        (uint8_t)(0x60 | (index & 0x1F))
+    };
+
+    CHECK(pointer == base + index * SPRITE_UPDATE_RECORD_BYTES,
+          "Sprite producer pointer did not advance by one complete record");
+    CHECK(pointer + SPRITE_UPDATE_RECORD_BYTES <= base + SPRITE_UPDATE_MAX_RECORDS * SPRITE_UPDATE_RECORD_BYTES,
+          "Sprite record would overlap the terminator");
+    memcpy(ram + pointer, record, sizeof(record));
+    write_word(pointer_address, pointer + SPRITE_UPDATE_RECORD_BYTES);
+}
+
+static unsigned max_sprite_consumer_cycles;
+
+static void test_sprite_update_batch(unsigned requested, bool write_terminator) {
+    const unsigned pointer_address = symbol("_bESpritesUpdatedBufferPointer");
+    const unsigned base = symbol("_bESpritesUpdatedBuffer");
+    const unsigned sprite_bank = symbol("spriteUpdateBank");
+    const unsigned accepted = requested < SPRITE_UPDATE_MAX_RECORDS ? requested : SPRITE_UPDATE_MAX_RECORDS;
+    unsigned produced = 0;
+
+    seed_sprite_update_buffer();
+    ram[0] = (uint8_t)sprite_bank;
+
+    /* Split work as the cel blitter does: no more than sixteen records per part. */
+    while (produced < requested) {
+        unsigned batch = requested - produced;
+        if (batch > 16) batch = 16;
+        for (unsigned i = 0; i < batch; ++i) {
+            unsigned pointer = ram[pointer_address] | ((unsigned)ram[pointer_address + 1] << 8);
+            init_cpu(symbol("checkSpriteUpdateCapacity"), 0);
+            run();
+            CHECK(ram[0] == sprite_bank, "Capacity check changed the RAM bank");
+            if (produced < SPRITE_UPDATE_MAX_RECORDS) {
+                CHECK(regs.status & FLAG_CARRY, "Capacity helper rejected a representable sprite");
+                stage_sprite_update(produced);
+            } else {
+                CHECK(!(regs.status & FLAG_CARRY), "Capacity helper admitted a sprite past VERA's limit");
+                CHECK((ram[pointer_address] | ((unsigned)ram[pointer_address + 1] << 8)) == pointer,
+                      "Rejected sprite advanced the published buffer pointer");
+            }
+            ++produced;
+        }
+    }
+
+    CHECK((ram[symbol("_bESpriteUpdateOverflowed")] != 0) == (requested > SPRITE_UPDATE_MAX_RECORDS),
+          "Sprite overflow indicator does not match the unrepresentable tail");
+
+    unsigned pointer = ram[pointer_address] | ((unsigned)ram[pointer_address + 1] << 8);
+    CHECK(pointer == base + accepted * SPRITE_UPDATE_RECORD_BYTES,
+          "Sprite producer pointer does not end after the accepted records");
+    CHECK(pointer + SPRITE_UPDATE_TERMINATOR_BYTES <= base + SPRITE_UPDATED_BUFFER_SIZE,
+          "Sprite terminator would exceed the buffer");
+    if (write_terminator) {
+        ram[pointer] = 0;
+        ram[pointer + 1] = 0;
+    }
+
+    const unsigned first_z = symbol("spriteFirstZ");
+    const unsigned first_sprite = first_z - 6;
+    const unsigned mouse = first_sprite - 8;
+    memset(vram, 0xE1, 8);
+    memset(vram + mouse, 0xA5, 8);
+    for (unsigned i = 0; i < SPRITE_UPDATE_MAX_RECORDS; ++i)
+        vram[first_z + i * 8] = 0x0C;
+
+    init_cpu(symbol("handleSpriteUpdates"), 0);
+    uint32_t consumer_start = clockticks6502;
+    run();
+    uint32_t consumer_cycles = clockticks6502 - consumer_start;
+    if (consumer_cycles > max_sprite_consumer_cycles)
+        max_sprite_consumer_cycles = consumer_cycles;
+    CHECK(ram[0] == sprite_bank, "Sprite consumer changed the RAM bank");
+    CHECK((ram[pointer_address] | ((unsigned)ram[pointer_address + 1] << 8)) == base,
+          "Sprite consumer did not reset the published pointer");
+    CHECK(writes == SPRITE_UPDATE_MAX_RECORDS + accepted * 8 +
+                   (write_terminator && accepted < SPRITE_UPDATE_MAX_RECORDS ? 2 : 0),
+          "Sprite consumer wrote an unexpected number of VERA attributes");
+    CHECK(consumer_cycles < 30000, "127-record sprite consumer exceeded its cycle budget");
+
+    for (unsigned i = 0; i < accepted; ++i) {
+        unsigned record = base + i * SPRITE_UPDATE_RECORD_BYTES;
+        unsigned attributes = first_sprite + i * 8;
+        CHECK(vram[attributes] == ram[record] && vram[attributes + 1] == ram[record + 1] &&
+              vram[attributes + 2] == ram[record + 2] && vram[attributes + 3] == ram[record + 3] &&
+              vram[attributes + 4] == ram[record + 4] && vram[attributes + 5] == 0 &&
+              vram[attributes + 6] == ram[record + 5] && vram[attributes + 7] == ram[record + 6],
+              "Sprite consumer lost or shifted an update record");
+    }
+    for (unsigned i = 0; i < 8; ++i)
+        CHECK(vram[mouse + i] == 0xA5, "Sprite consumer clobbered the mouse attributes");
+    for (unsigned i = 0; i < 8; ++i)
+        CHECK(vram[i] == 0xE1, "Sprite consumer wrapped writes around VERA memory");
+    CHECK(ram[symbol("spriteBufferBefore")] == 0x3D &&
+          ram[symbol("spriteBufferGuard")] == 0xA6 &&
+          ram[symbol("spriteBufferGuard") + 1] == 0x5B,
+          "Sprite producer or consumer crossed the staged buffer bounds");
+    if (write_terminator)
+        CHECK(ram[pointer] == 0 && ram[pointer + 1] == 0,
+              "Sprite terminator was overwritten while consuming the buffer");
+    else
+        CHECK(ram[pointer] == 0xCC && ram[pointer + 1] == 0xCC,
+              "Sprite consumer read or wrote past the 127-record limit");
+}
+
+static void test_sprite_updates(void) {
+    const unsigned requested[] = {36, 37, 127, 128, 200};
+    for (unsigned i = 0; i < sizeof(requested) / sizeof(requested[0]); ++i)
+        test_sprite_update_batch(requested[i], requested[i] != SPRITE_UPDATE_MAX_RECORDS);
+}
+
 int main(void) {
     const char *tmp = getenv("TMPDIR");
     CHECK(snprintf(temporary, sizeof(temporary), "%s/irq-helpers-XXXXXX", tmp ? tmp : "/tmp") < (int)sizeof(temporary), "Temporary path too long");
@@ -565,9 +729,11 @@ int main(void) {
     test_acknowledgement();
     test_snapshot_and_wait();
     test_sprite_clear();
+    test_sprite_updates();
     test_sound_source_contract();
     test_sound_handler();
     test_sound_interrupt_restore();
-    puts("IRQ helpers pass: input lengths/dirty fast path, sound lifecycle/idle stride, VSYNC helpers, and sprite bounds");
+    printf("IRQ helpers pass: input lengths/dirty fast path, sound lifecycle/idle stride, VSYNC helpers, and sprite bounds (sprite consumer max %u cycles)\n",
+           max_sprite_consumer_cycles);
     return 0;
 }

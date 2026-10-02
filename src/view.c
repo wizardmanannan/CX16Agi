@@ -21,6 +21,7 @@
 #include "general.h"
 #include "agifiles.h"
 #include "view.h"
+#include "spriteUpdates.h"
 
 //#define VERBOSE_SWITCH_METADATA
 //#define VERBOSE_GET_PALETTE
@@ -47,14 +48,17 @@ byte priorityBase = DEFAULT_PRIORITY_BASE;
 
 #define NO_PRIORITIES (MAX_SPRITE_PRIORITY - MIN_SPRITE_PRIORITY)
 
-#define BYTES_PER_SPRITE_UPDATE 7
-#define SPRITE_UPDATED_BUFFER_SIZE  VIEW_TABLE_SIZE * BYTES_PER_SPRITE_UPDATE * 2
 extern byte bESpritesUpdatedBuffer[SPRITE_UPDATED_BUFFER_SIZE];
 
 //These views are believed to have sprite memory allocated. It is possible for the value to be falsely true, but not falsely false. 
 boolean viewsWithSpriteMem[VIEW_TABLE_SIZE];
 
 extern byte* bESpritesUpdatedBufferPointer;
+
+#pragma bss-name (push, "BANKRAM0E")
+volatile byte bESpriteUpdateOverflowed;
+static byte bESpriteUpdateRecordStaged;
+#pragma bss-name (pop)
 
 
 extern void bAFollowEgoAsmSec(ViewTable* localViewTab, ViewTable* egoViewTab, byte egoWidth, byte localCelWidth);
@@ -969,6 +973,7 @@ extern void bESplitCel(Cel* cel);
 
 void bETerminateSpriteBuffer()
 {
+	// At most 127 records have been staged, leaving room for both terminator bytes.
 	*bESpritesUpdatedBufferPointer++ = 0;
 	*bESpritesUpdatedBufferPointer++ = 0;
 }
@@ -1041,6 +1046,7 @@ void bEResetSpritesUpdatedBuffer()
 {
 	memsetBanked(bESpritesUpdatedBuffer, 0, VIEW_TABLE_SIZE, SPRITE_UPDATED_BANK);
 	bESpritesUpdatedBufferPointer = bESpritesUpdatedBuffer;
+	bESpriteUpdateOverflowed = FALSE;
 }
 
 #pragma wrapped-call (pop)
@@ -1720,6 +1726,14 @@ onBackBuffer:
 updateSpriteBuffer:
 	RAM_BANK = SPRITE_UPDATED_BANK;
 	_assmULong = loopVeraAddress;
+	asm("jsr _bECanAppendSpriteUpdate");
+	asm("bcs %g", spriteUpdateHasRoom);
+	asm("lda #$0");
+	asm("sta %v", bESpriteUpdateRecordStaged);
+	asm("jmp %g", spriteUpdateFieldsDone);
+	spriteUpdateHasRoom:
+	asm("lda #$1");
+	asm("sta %v", bESpriteUpdateRecordStaged);
 	
 	//0 and 1 x low and high shifted by 5 to form the two bytes required by VERA
 	asm("lda %v + 2", _assmULong); //Note that the third byte of the vera address is either 0 or 1 which means when it is shift it must be zero. Therefore we only need to shift this byte once
@@ -1897,6 +1911,7 @@ yPos: _assmByte = (byte)localViewTab.yPos;
 
 
 	asm("sta (%w),y", ZP_SPRITE_STORE_PTR);
+	spriteUpdateFieldsDone:
 	_assmByte = isAnimated;
 	asm("lda %v", _assmByte);
 	asm("bne %g", callCelToVera);
@@ -1955,7 +1970,10 @@ celToVeraBackwards:
 	bECelToVeraBackwards();
 
 updateBufferPointer:
-	bESpritesUpdatedBufferPointer += BYTES_PER_SPRITE_UPDATE;
+	asm("lda %v", bESpriteUpdateRecordStaged);
+	asm("beq %g", spriteUpdatePointerAdvanced);
+	bESpritesUpdatedBufferPointer += SPRITE_UPDATE_RECORD_BYTES;
+	spriteUpdatePointerAdvanced:
 
 	asm("clc");
 	asm("lda #%w", SPR_SIZE_64 / 2);
