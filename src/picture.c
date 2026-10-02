@@ -8,6 +8,7 @@
 **************************************************************************/
 
 #include "picture.h"
+#include "irq.h"
 //#define TEST_LINE_DRAW
 //#define TEST_PRIORITY_DRAW_LINES;
 
@@ -479,9 +480,6 @@ void b11SplitPriority()
 int picFNum = 0;
 boolean showPicCalled = FALSE;
 
-#pragma wrapped-call (push, trampoline, GRAPHICS_BANK)
-extern void b6Clear();
-#pragma wrapped-call (pop)
 /**************************************************************************
 ** drawPic
 **
@@ -525,8 +523,7 @@ void b11DrawPic(byte* bankedData, int pLen, boolean okToClearScreen, byte picNum
 	b5RefreshBuffer(bufferStatus);
 
 	if (okToClearScreen) {
-		asm("sei");
-		b6Clear();
+		b6SetAndWaitForIrqState(CLEAR);
 	}
 	asm("sei");
 

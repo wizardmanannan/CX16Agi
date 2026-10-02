@@ -16,6 +16,9 @@ static unsigned addr[2], stride[2], writes;
 static char temporary[4096];
 static struct { char name[100]; unsigned address; } symbols[16];
 static unsigned symbol_count;
+#define PRIORITY_START ((320 * 240) / 2)
+#define PRIORITY_SIZE ((160 * 168) / 2)
+static unsigned symbol(const char *name);
 
 #define CHECK(c, m) do { if (!(c)) { fprintf(stderr, "%s (%s:%d)\n", m, __FILE__, __LINE__); exit(1); } } while (0)
 
@@ -94,18 +97,39 @@ static void assemble(const char *graphics_path) {
     snprintf(labels, sizeof(labels), "%s/clear.lbl", temporary);
 
     char *graphics = read_file(graphics_path);
-    char *clear = strstr(graphics, "_b8ClearBackground:"); CHECK(clear, "Background clear missing");
+    char *irq = read_file("src/irqAsm.s");
+    char *map_start = strstr(irq, "_b3InitLayer1Mapbase:"); CHECK(map_start, "Map clear missing");
+    char *map_end = strstr(map_start, "\nhandleDisplayTextSlice:"); CHECK(map_end, "Map clear end missing");
+    char *slice_start = strstr(graphics, "_b8ClearBackgroundSliceReset:"); CHECK(slice_start, "Background slice clear missing");
+    char *slice_end = strstr(slice_start, "_b8ClearBackground:"); CHECK(slice_end, "Background slice clear end missing");
+    char *clear = slice_end;
     char *end = strstr(clear, "\n.endif"); CHECK(end, "Background clear end missing");
     int length = snprintf(fixture, sizeof(fixture),
         ".include \"global.s\"\n"
+        "MAP_BASE=$DA00\nMENU_BAR_WIDTH=40\nTILE_LAYER_WIDTH=64\nTILE_LAYER_HEIGHT=32\n"
+        "TILE_LAYER_NO_TILES=(TILE_LAYER_WIDTH*TILE_LAYER_HEIGHT)\nTRANSPARENT_CHAR=$80\nTILE_BYTE_2=$10\n"
         "BITMAP_WIDTH=320\nPICTURE_WIDTH=160\nPICTURE_HEIGHT=168\n"
         "STARTING_ROW=(240-PICTURE_HEIGHT)/2\nSTARTING_BYTE=STARTING_ROW*(BITMAP_WIDTH/2)\n"
+        "BYTES_PER_ROW=BITMAP_WIDTH/2\nPRIORITY_START=(BITMAP_WIDTH*BITMAP_HEIGHT)/2\n"
+        "PRIORITY_SIZE=(PICTURE_WIDTH*PICTURE_HEIGHT)/2\nPRIORITY_DEF=$44\nBITMAP_HEIGHT=240\n"
         "LEFT_BORDER=$A1\nRIGHT_BORDER=$B2\nDEFAULT_BACKGROUND_COLOR=$C3\n"
-        ".export runBackground,done\n.segment \"CODE\"\n%.*s\n"
-        "runBackground: jsr _b8ClearBackground\ndone: rts\n",
-        (int)(end - clear), clear);
+        ".macro SET_VERA_ADDRESS_IMMEDIATE VERA_ADDRESS, ADDRESS_SEL, STRIDE\n"
+        "lda ADDRESS_SEL\nsta VERA_ctrl\nlda #^VERA_ADDRESS\nand #$1\nora STRIDE << 4\nsta VERA_addr_bank\n"
+        "lda #<VERA_ADDRESS\nsta VERA_addr_low\nlda #>VERA_ADDRESS\nsta VERA_addr_high\n.endmacro\n"
+        "ZP_TILE_LAYER_NO_TILES_HIGH=ZP_TMP_2\n"
+        ".export runBackground,done,runBackgroundSlice,resetBackgroundSlices,runPrioritySlice,resetPrioritySlices,runMap,sliceDone,_b3InitLayer1Mapbase,_inputLineDirty\n"
+        ".segment \"CODE\"\n_inputLineDirty: .byte $0\n%.*s\n%.*s\n%.*s\n"
+        "runBackground: jsr _b8ClearBackground\ndone: rts\n"
+        "resetBackgroundSlices: jsr _b8ClearBackgroundSliceReset\nrts\n"
+        "runBackgroundSlice: jsr _b8ClearBackgroundSlice\nrts\n"
+        "resetPrioritySlices: jsr _b8ClearPrioritySliceReset\nrts\n"
+        "runPrioritySlice: jsr _b8ClearPrioritySlice\nrts\n"
+        "runMap: jsr _b3InitLayer1Mapbase\nrts\n"
+        "sliceDone: rts\n",
+        (int)(map_end - map_start), map_start,
+        (int)(slice_end - slice_start), slice_start, (int)(end - clear), clear);
     CHECK(length >= 0 && length < (int)sizeof(fixture), "Fixture assembly too large");
-    free(graphics); write_file(path, fixture);
+    free(graphics); free(irq); write_file(path, fixture);
     write_file(config,
         "MEMORY { ZP:start=$22,size=$5C,file=\"\"; RAM:start=$2000,size=$6000,file=%O; }\n"
         "SEGMENTS { ZEROPAGE:load=ZP,type=zp,optional=yes; CODE:load=RAM,type=rw; RODATA:load=RAM,type=ro,optional=yes; DATA:load=RAM,type=rw,optional=yes; }\n");
@@ -124,6 +148,72 @@ static void assemble(const char *graphics_path) {
         symbols[symbol_count++].address = address;
     }
     CHECK(!fclose(file), "Cannot close labels");
+}
+
+static void run_helper(const char *entry, unsigned max_steps) {
+    unsigned start = symbol(entry), done = symbol("sliceDone");
+    reset6502(false); regs.pc = (uint16_t)start; regs.sp = 0x1FD;
+    regs.status = FLAG_CONSTANT; ram[0x1FE] = (uint8_t)(done - 1); ram[0x1FF] = (uint8_t)((done - 1) >> 8);
+    clockticks6502 = 0; waiting = 0;
+    for (unsigned step = 0; step < max_steps && regs.pc != done; ++step) {
+        CHECK(!waiting, "Unexpected WAI in clear helper"); step6502();
+    }
+    CHECK(regs.pc == done, "Clear helper did not return");
+}
+
+static void test_bounded_slices(void) {
+    const unsigned start = 36 * 160, width = 160, height = 168;
+    unsigned max_background_cycles = 0, max_priority_cycles = 0;
+    memset(vram, 0x5A, sizeof(vram)); memset(addr, 0, sizeof(addr)); memset(stride, 0, sizeof(stride)); writes = 0;
+
+    run_helper("resetBackgroundSlices", 1000);
+    for (unsigned slice = 0; slice < 14; ++slice) {
+        unsigned before = writes;
+        run_helper("runBackgroundSlice", 300000);
+        unsigned count = writes - before;
+        CHECK(count == 12 * width && count <= 2048, "Background slice exceeded its write budget or missed rows");
+        CHECK(regs.a == (slice == 13 ? 1 : 0), "Background slice returned the wrong completion byte");
+        CHECK((regs.status & FLAG_ZERO) == (slice == 13 ? 0 : FLAG_ZERO), "Background slice completion flags disagree with A");
+        CHECK(clockticks6502 < 25000, "Background slice exceeded its cycle budget");
+        if (clockticks6502 > max_background_cycles) max_background_cycles = (unsigned)clockticks6502;
+    }
+    CHECK(writes == width * height, "Background slices wrote the wrong total byte count");
+    CHECK(vram[start - 1] == 0x5A && vram[start + width * height] == 0x5A, "Background slices wrote outside the picture");
+    for (unsigned row = 0; row < height; ++row) {
+        unsigned offset = start + row * width;
+        CHECK(vram[offset] == 0xA1 && vram[offset + width - 1] == 0xB2, "Sliced background border differs");
+        for (unsigned col = 1; col < width - 1; ++col)
+            CHECK(vram[offset + col] == 0xC3, "Sliced background interior differs");
+    }
+
+    writes = 0; memset(vram + PRIORITY_START, 0x5A, PRIORITY_SIZE + 1);
+    run_helper("resetPrioritySlices", 1000);
+    for (unsigned slice = 0; slice < 7; ++slice) {
+        unsigned before = writes;
+        run_helper("runPrioritySlice", 300000);
+        unsigned count = writes - before;
+        CHECK(count == (slice < 6 ? 2048 : 1152), "Priority slice wrote the wrong chunk size");
+        CHECK(count <= 2048, "Priority slice exceeded its write budget");
+        CHECK(regs.a == (slice == 6 ? 1 : 0), "Priority slice returned the wrong completion byte");
+        CHECK((regs.status & FLAG_ZERO) == (slice == 6 ? 0 : FLAG_ZERO), "Priority slice completion flags disagree with A");
+        CHECK(clockticks6502 < 25000, "Priority slice exceeded its cycle budget");
+        if (clockticks6502 > max_priority_cycles) max_priority_cycles = (unsigned)clockticks6502;
+    }
+    CHECK(writes == PRIORITY_SIZE, "Priority slices wrote the wrong total byte count");
+    for (unsigned i = 0; i < PRIORITY_SIZE; ++i) CHECK(vram[PRIORITY_START + i] == 0x44, "Priority byte differs");
+    CHECK(vram[PRIORITY_START - 1] == 0x5A && vram[PRIORITY_START + PRIORITY_SIZE] == 0x5A, "Priority slices wrote outside the picture");
+
+    memset(vram, 0x5A, sizeof(vram)); writes = 0; ram[symbol("_inputLineDirty")] = 0;
+    run_helper("runMap", 300000);
+    unsigned map_cycles = (unsigned)clockticks6502;
+    CHECK(writes == (64 * 32 - 40) * 2, "Map clear wrote the wrong number of bytes");
+    CHECK(vram[0xDA50 - 1] == 0x5A && vram[0xEA00] == 0x5A, "Map clear wrote outside its exact map range");
+    for (unsigned address = 0xDA50; address < 0xEA00; address += 2)
+        CHECK(vram[address] == 0x80 && vram[address + 1] == 0x10, "Map clear tile bytes differ");
+    CHECK(ram[symbol("_inputLineDirty")] == 1, "Map clear did not invalidate the input row");
+    CHECK(clockticks6502 < 50000, "Map clear exceeded its documented one-frame cycle budget");
+    printf("Clear slices: background max %u cycles/1920 writes, priority max %u cycles/2048 writes, map %u cycles/4016 writes; 22 VSYNCs total\n",
+           max_background_cycles, max_priority_cycles, map_cycles);
 }
 
 static unsigned symbol(const char *name) {
@@ -156,5 +246,7 @@ int main(int argc, char **argv) {
     }
     printf("Background clear writes exact VRAM; %u cycles\n", (unsigned)clockticks6502);
     CHECK(clockticks6502 < 200000, "Background clear exceeded its cycle budget");
+    test_bounded_slices();
+    puts("Background and priority clear slices stay under 2048 writes/25000 cycles and preserve sentinels");
     return 0;
 }

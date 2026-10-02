@@ -345,8 +345,9 @@ static void test_input_dirty_sources(void) {
     char *graphics = read_file("src/graphicsAsm.s");
     char *map_clear = find(irq, "_b3InitLayer1Mapbase:");
     char *map_clear_dirty = find(map_clear, "sta _inputLineDirty");
-    char *display = find(irq, "handleDisplayText:");
+    char *display = find(irq, "@finishDisplayText:");
     char *display_dirty = find(display, "sta _inputLineDirty");
+    char *display_finish = find(display, "stz irqWorkKind");
     char *input_init = find(graphics, "_b6InitInput:");
     char *input_init_dirty = find(input_init, "sta _inputLineDirty");
 
@@ -356,7 +357,7 @@ static void test_input_dirty_sources(void) {
           "Input visibility/screen transitions do not all invalidate the row");
     CHECK(strstr(picture, "volatile byte inputLineDirty = TRUE;"),
           "Input dirty state is not initialized in resident storage");
-    CHECK(map_clear_dirty < display && display_dirty < find(display, "b3DisplayTextNewLine:"),
+    CHECK(map_clear_dirty < display && display_dirty < display_finish,
           "Map clear/text display does not invalidate the row");
     CHECK(input_init_dirty < find(input_init, ".segment \"BANKRAM08\""),
           "Input row initialization does not invalidate the row");

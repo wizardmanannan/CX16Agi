@@ -443,6 +443,139 @@ bne @loopOuter
 
 rts
 
+; IRQ clear uses row-aligned slices so every invocation stays below 2048 writes.
+_b8ClearBackgroundSliceReset:
+lda #<STARTING_BYTE
+sta b8ClearBackgroundAddress
+lda #>STARTING_BYTE
+sta b8ClearBackgroundAddress + 1
+lda #PICTURE_HEIGHT
+sta b8ClearBackgroundRowsRemaining
+rts
+
+_b8ClearBackgroundSlice:
+stz VERA_ctrl
+lda #$10 | ^STARTING_BYTE
+sta VERA_addr_bank
+lda b8ClearBackgroundAddress + 1
+sta VERA_addr_high
+lda b8ClearBackgroundAddress
+sta VERA_addr_low
+lda #12
+sta b8ClearBackgroundRowsThisSlice
+
+@backgroundRow:
+lda #LEFT_BORDER
+sta VERA_data0
+lda #DEFAULT_BACKGROUND_COLOR
+ldy #((PICTURE_WIDTH - 2) / 4)
+@backgroundFill:
+    sta VERA_data0
+    sta VERA_data0
+    sta VERA_data0
+    sta VERA_data0
+    dey
+    bne @backgroundFill
+.repeat ((PICTURE_WIDTH - 2) .mod 4)
+sta VERA_data0
+.endrepeat
+lda #RIGHT_BORDER
+sta VERA_data0
+
+dec b8ClearBackgroundRowsRemaining
+beq @backgroundComplete
+dec b8ClearBackgroundRowsThisSlice
+bne @backgroundRow
+
+clc
+lda b8ClearBackgroundAddress
+adc #<(12 * BYTES_PER_ROW)
+sta b8ClearBackgroundAddress
+lda b8ClearBackgroundAddress + 1
+adc #>(12 * BYTES_PER_ROW)
+sta b8ClearBackgroundAddress + 1
+lda #$0
+rts
+
+@backgroundComplete:
+lda #$1
+rts
+
+b8ClearBackgroundAddress: .word STARTING_BYTE
+b8ClearBackgroundRowsRemaining: .byte PICTURE_HEIGHT
+b8ClearBackgroundRowsThisSlice: .byte $0
+
+; Clear 2048 priority bytes per call; the final slice emits the exact remainder.
+_b8ClearPrioritySliceReset:
+lda #<PRIORITY_START
+sta b8ClearPriorityAddress
+lda #>PRIORITY_START
+sta b8ClearPriorityAddress + 1
+lda #<PRIORITY_SIZE
+sta b8ClearPriorityRemaining
+lda #>PRIORITY_SIZE
+sta b8ClearPriorityRemaining + 1
+rts
+
+_b8ClearPrioritySlice:
+stz VERA_ctrl
+lda #$10 | ^PRIORITY_START
+sta VERA_addr_bank
+lda b8ClearPriorityAddress + 1
+sta VERA_addr_high
+lda b8ClearPriorityAddress
+sta VERA_addr_low
+lda #PRIORITY_DEF
+ldx b8ClearPriorityRemaining + 1
+cpx #8
+bcc @priorityTail
+
+ldx #8
+@priorityFullPage:
+ldy #$0
+@priorityFullPageLoop:
+sta VERA_data0
+iny
+bne @priorityFullPageLoop
+dex
+bne @priorityFullPage
+
+sec
+lda b8ClearPriorityRemaining + 1
+sbc #8
+sta b8ClearPriorityRemaining + 1
+clc
+lda b8ClearPriorityAddress + 1
+adc #8
+sta b8ClearPriorityAddress + 1
+lda #$0
+rts
+
+@priorityTail:
+@priorityTailPage:
+cpx #$0
+beq @priorityTailBytes
+ldy #$0
+@priorityTailPageLoop:
+sta VERA_data0
+iny
+bne @priorityTailPageLoop
+dex
+bra @priorityTailPage
+
+@priorityTailBytes:
+ldy b8ClearPriorityRemaining
+beq @priorityComplete
+@priorityTailByteLoop:
+sta VERA_data0
+dey
+bne @priorityTailByteLoop
+@priorityComplete:
+lda #$1
+rts
+
+b8ClearPriorityAddress: .word PRIORITY_START
+b8ClearPriorityRemaining: .word PRIORITY_SIZE
 
 _b8ClearBackground:
 stz VERA_ctrl
