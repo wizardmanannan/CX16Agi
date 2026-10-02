@@ -453,46 +453,29 @@ sta VERA_addr_high
 lda #< (STARTING_ROW * (BITMAP_WIDTH / 2) )
 sta VERA_addr_low
 
-; Calculate number of bytes per row. There are 160 pixel per row, double width. However each pixel is 4 bits, so 160 * 2 / 2 = 160
+; Write each border once per row and unroll the 158-byte interior fill.
 lda #PICTURE_HEIGHT
 tax
 
-; Calculate number of rows (BITMAP_HEIGHT) and store it into @mapHeight
-lda #PICTURE_WIDTH
-sta @mapWidth
-
 @loopOuter:
-ldy @mapWidth  ; Load Y with mapHeight
-lda #$1
-sta @isFirstPixel
-lda @loopCounter
+lda #LEFT_BORDER
+sta VERA_data0
+lda #DEFAULT_BACKGROUND_COLOR
+ldy #((PICTURE_WIDTH - 2) / 4)
 @loopInner:
-    lda @isFirstPixel
-    bne @drawLeftBorder
-    cpy #$1
-    bne @default
-    @drawRightBorder:
-    lda #RIGHT_BORDER
-    sta VERA_data0 ; Set a value that makes it obvious that this is the left border
-    bra @continue
-    @drawLeftBorder:
-    lda #LEFT_BORDER
-    sta VERA_data0 ; Set a value that makes it obvious that this is the right border
-    bra @continue
-    @default:
-    lda #DEFAULT_BACKGROUND_COLOR
-    sta VERA_data0  ; Store 0 into VRAM (set pixel to white)
-    inc @loopCounter
-    @continue:
-    dey  ; Decrement Y
-    stz @isFirstPixel       
+    sta VERA_data0
+    sta VERA_data0
+    sta VERA_data0
+    sta VERA_data0
+    dey
     bne @loopInner  ; If Y is not 0, continue loop
-
-dex  ; Decrement X
-bne @loopOuter  ; If X is not 0, continue loop
+.repeat ((PICTURE_WIDTH - 2) .mod 4)
+sta VERA_data0
+.endrepeat
+lda #RIGHT_BORDER
+sta VERA_data0
+dex
+bne @loopOuter
 rts
-@mapWidth: .byte $0
-@isFirstPixel: .byte $0
-@loopCounter: .byte $0
 
 .endif
