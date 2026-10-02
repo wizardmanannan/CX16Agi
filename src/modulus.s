@@ -1,6 +1,8 @@
 .ifndef MOD_INC
 MOD_INC = 1
 
+.segment "CODE"
+
 ; zero-page addresses (adjust as needed)
 MOD_DIVIDEND  = sreg
 MOD_DIVISOR   = sreg + 1

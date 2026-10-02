@@ -43,6 +43,7 @@ pha
 sec
 txa
 sbc sreg
+inc ; inclusive max; 0..255 wraps to the full 256-byte span
 jsr _rand8Bit
 
 plx
