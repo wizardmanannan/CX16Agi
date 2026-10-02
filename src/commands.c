@@ -1494,7 +1494,7 @@ void b3PrintMessageInTextbox(byte messNum, byte x, byte y, byte length, boolean 
 	char* messagePointer;
 	byte timeoutFlagVal = var[PRINT_TIMEOUT];
 	unsigned int waitTicks;
-	unsigned int vSyncToContinueAt;
+	unsigned long vSyncStart, vSyncNow;
 	LOGICFile logicFile;
 	byte keysToWait[NO_KEYS_TO_WAIT] = { KEY_ESC, KEY_ENTER };
 
@@ -1518,9 +1518,10 @@ void b3PrintMessageInTextbox(byte messNum, byte x, byte y, byte length, boolean 
 	if (timeoutFlagVal)
 	{
 		waitTicks = timeoutFlagVal * 30;  // The timeout value is given in half seconds and the TotalTicks in 1/60ths of a second.
-		vSyncToContinueAt = vSyncCounter + waitTicks;
-
-		while (vSyncCounter != vSyncToContinueAt);
+		b6CopyVSyncCounter32(&vSyncStart);
+		do {
+			b6CopyVSyncCounter32(&vSyncNow);
+		} while (vSyncNow - vSyncStart < waitTicks);
 	}
 	else
 	{

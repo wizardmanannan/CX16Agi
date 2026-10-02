@@ -1,6 +1,7 @@
 #ifndef _IRQ_H_
 #define _IRQ_H_
 
+#include <stdint.h>
 #include "general.h"
 #include "memoryManager.h"
 #include "helpers.h"
@@ -17,7 +18,8 @@ typedef enum {
     SHOW_OBJ = 8
 } IRQ_COMMAND;
 
-extern unsigned int vSyncCounter; //Updated by IRQ every 60ms
+extern volatile unsigned int vSyncCounter; //Low word of the resident serviced-VSYNC counter.
+extern void __fastcall__ b6CopyVSyncCounter32(uint32_t *out);
 
 //Only to be called directly by bank 6
 extern void b6SetAndWaitForIrqStateAsm(IRQ_COMMAND state);

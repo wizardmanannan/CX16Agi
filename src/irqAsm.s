@@ -237,7 +237,32 @@ sendIrqCommand: .byte $0
 currentIrqState: .byte $0
 lastMainLoopCounter: .byte $FF
 _vSyncCounter: .word $0
+_vSyncCounterHigh: .word $0
 debugVSyncCounter: .word $0
+
+.export _vSyncCounterHigh, _b6CopyVSyncCounter32
+
+; __fastcall__ pointer arrives in A/X. Keep its publication and the copy
+; inside the same interrupt-masked interval; IRQ_TMP_6 is private to IRQ work.
+_b6CopyVSyncCounter32:
+php
+sei
+sta IRQ_TMP_6
+stx IRQ_TMP_6 + 1
+ldy #$0
+lda _vSyncCounter
+sta (IRQ_TMP_6),y
+iny
+lda _vSyncCounter + 1
+sta (IRQ_TMP_6),y
+iny
+lda _vSyncCounterHigh
+sta (IRQ_TMP_6),y
+iny
+lda _vSyncCounterHigh + 1
+sta (IRQ_TMP_6),y
+plp
+rts
 
 custom_irq_handler: ;For some reason the jmpTableBank seems disused and we are trampoling: TODO FIX as this wastes cycles 
 lda RAM_BANK
@@ -360,6 +385,10 @@ sta sendIrqCommand
 inc _vSyncCounter
 bne @resetLatches
 inc _vSyncCounter + 1
+bne @resetLatches
+inc _vSyncCounterHigh
+bne @resetLatches
+inc _vSyncCounterHigh + 1
 
 @resetLatches:
 lda #(VSYNC_BIT)

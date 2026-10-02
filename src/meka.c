@@ -31,6 +31,7 @@
 #include "sound.h"
 #include "spriteAllocator.h"
 #include "menu.h"
+#include <stdint.h>
 //#include "sound.h"
 
 boolean hasEnteredNewRoom = FALSE, exitAllLogics = FALSE;
@@ -42,8 +43,6 @@ byte horizon;
 #define  PROGRAM_CONTROL  1
 #define DEBUG 1
 //#define VERBOSE
-
-volatile int hund;                 /* Used for interpreters clock */
 
 int controlMode = PLAYER_CONTROL;    /* player.control or program.control */
 int dirnOfEgo, newRoomNum, score;
@@ -235,27 +234,6 @@ void b6Interpret()
     } while (hasEnteredNewRoom);
 }
 
-void b6Timing_proc()
-{
-    hund += 5;
-    if (hund >= 100) { //One second has passed
-        var[11]++;
-        if (var[11] >= 60) {  //One minute has passed
-            var[12]++;
-            if (var[12] >= 60) { //One hour has passed
-                var[13]++;
-                if (var[13] >= 24) { //One day has passed 
-                    var[14]++;
-                    var[13] = 0;
-                }
-                var[12] = 0;
-            }
-            var[11] = 0;
-        }
-        hund = 0;
-    }
-}
-
 void b6Closedown()
 {
     b12DiscardWords();
@@ -274,7 +252,6 @@ void b6Initialise()
 {
     int i;
     
-    b6InitTimer(&b6Timing_proc);
     b6InitFiles();             /* Load resource directories */
     b6InitRandom();
     bAInitMenus();
@@ -321,6 +298,7 @@ void b6Initialise()
     b6TellMeTheAddressPlease();
     bFInitPaletteManager();
     b1InitControllers();
+    b6InitTimer(&b6Timing_proc);
 }
 
 
@@ -332,7 +310,8 @@ byte mainLoopCounter = 0;
 void main()
 {
     int ret, oldCount = 0;
-    unsigned int lastVsync = vSyncCounter;
+    unsigned int lastVsync;
+    uint32_t currentVsync;
 
 
     //chdir("..\\KQ1-2917");
@@ -352,12 +331,16 @@ void main()
 
     RAM_BANK = MEKA_BANK;
     b6Initialise();
+    b6CopyVSyncCounter32(&currentVsync);
+    lastVsync = (unsigned int)currentVsync;
     while (TRUE) {
         /* Cycle initiator. Controlled by delay variable (var[10). */
 
-        if (abs(vSyncCounter - lastVsync) >= var[10] * 3) {
+        b6CopyVSyncCounter32(&currentVsync);
+        b6CheckTimer(currentVsync);
+        if ((unsigned int)((unsigned int)currentVsync - lastVsync) >= var[10] * 3) {
 
-            lastVsync = vSyncCounter;
+            lastVsync = (unsigned int)currentVsync;
 
 
 #ifdef VERBOSE
@@ -366,8 +349,6 @@ void main()
             b6Interpret();
             // runIncrementalGarbageCollector();
             mainLoopCounter++;
-
-            b6CheckTimer();
         }
     }
 

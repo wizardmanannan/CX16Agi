@@ -139,6 +139,8 @@ static void assemble(void) {
     char *irq = read_file("src/irqAsm.s");
     char *input = read_file("src/inputIrqHandler.s");
     char *sprite = read_file("src/spriteIrqHandler.s");
+    char *snapshot_helper = find(irq, "_b6CopyVSyncCounter32:\n");
+    char *snapshot_helper_end = find(snapshot_helper, "\nrts") + strlen("\nrts");
     char *irq_macros = find(irq, ".macro SEND_IRQ_COMMAND");
     char *irq_end = find(irq_macros, ";Handlers");
     char *input_body = find(input, "b7HandleInputLine:");
@@ -159,12 +161,12 @@ static void assemble(void) {
         "INPUT_LINE_RENDER_CELLS=MAX_INPUT_STRING_LENGTH+1\n"
         ".assert INPUT_LINE_COL + INPUT_LINE_RENDER_CELLS <= TILE_LAYER_WIDTH, error, \"Input line rendering exceeds tile map row\"\n"
         ".segment \"CODE\"\n"
-        ".export input,enable,send,wait,done,snapshot,_vSyncCounter,sendIrqCommand,_inputLineDisplayed,_inputLineDirty,_b7CurrentInputStr\n"
+        ".export input,enable,send,wait,done,snapshot,snapshot32,snapshotOutput,_vSyncCounter,_vSyncCounterHigh,sendIrqCommand,_inputLineDisplayed,_inputLineDirty,_b7CurrentInputStr\n"
         ".export clearSprites,inputStringAddress,spriteFirstZ,spriteCount\n"
         ".export handleSpriteUpdates,checkSpriteUpdateCapacity,_bESpritesUpdatedBuffer,_bESpritesUpdatedBufferPointer,_bESpriteUpdateOverflowed,spriteBufferBefore,spriteBufferEnd,spriteBufferGuard,spriteUpdateBufferBytes,spriteUpdateRecordBytes,spriteUpdateMaxRecords,spriteUpdateBank,irqScratchPointer\n"
         ".export bBSoundHandler,_bBChannelsPlaying,_bBEndSoundFlag,_bBIsPlaying,_bBCh1Ticks,_ZP_CURRENTLY_PLAYING_NOTE_1,SOUND_SREG,_bBPsgClear,soundCriticalSection\n"
         "ZP_SPRITE_UPDATE_READ_POINTER=IRQ_TMP_6\nZP_LOW_BYTE=ZP_TMP_5+1\n"
-        "%.*s\n%.*s\n%.*s\n%.*s\n%.*s\n%.*s\n"
+        "%.*s\n%.*s\n%.*s\n%.*s\n%.*s\n%.*s\n%.*s\n"
         "spriteBufferBefore: .byte $3D\n_bESpritesUpdatedBuffer: .res SPRITE_UPDATED_BUFFER_SIZE\n"
         "spriteBufferEnd:\nspriteBufferGuard: .byte $A6,$5B\n"
         "_bESpritesUpdatedBufferPointer: .word _bESpritesUpdatedBuffer\n"
@@ -179,12 +181,13 @@ static void assemble(void) {
         "send: SEND_IRQ_COMMAND command,snapshot\nrts\n"
         "wait: WAIT_FOR_NEXT_IRQ snapshot\nrts\n"
         "clearSprites: CLEAR_SPRITE_ATTRS\nrts\n"
-        "done: brk\ncommand: .byte 4\nsendIrqCommand: .byte 0\nsnapshot: .word 0\n_vSyncCounter: .word 0\n"
+        "done: brk\ncommand: .byte 4\nsendIrqCommand: .byte 0\nsnapshot: .word 0\n_vSyncCounter: .word 0\n_vSyncCounterHigh: .word 0\nsnapshotOutput: .res 4\nsnapshot32: jmp _b6CopyVSyncCounter32\n"
         "_inputLineDisplayed: .byte 0\n_inputLineDirty: .byte 0\n_b7CurrentInputStr: .res 41\n"
         ".include \"soundAsm.s\"\n.segment \"CODE\"\n"
         "soundCriticalSection: php\nsei\nplp\nrts\n"
         "inputStringAddress=INPUT_STRING_ADDRESS\nspriteFirstZ=SPRITE_ATTR_START+SPRITE_ATTR_SIZE+SA_VERA_ZORDER\nspriteCount=NO_SPRITES\n",
         (int)(irq_end - irq_macros), irq_macros,
+        (int)(snapshot_helper_end - snapshot_helper), snapshot_helper,
         (int)(sprite_start_end - sprite_start), sprite_start,
         (int)(sprite_clear_end - sprite_clear), sprite_clear,
         (int)(sprite_get_end - sprite_get), sprite_get,
@@ -553,6 +556,35 @@ static void test_snapshot_and_wait(void) {
     CHECK(!acks, "WAIT_FOR_NEXT_IRQ acknowledged the pending ISR");
 }
 
+static void test_atomic_vsync_snapshot(void) {
+    const unsigned counter = symbol("_vSyncCounter");
+    const unsigned high = symbol("_vSyncCounterHigh");
+    const unsigned output = symbol("snapshotOutput");
+
+    ram[counter] = 0x34;
+    ram[counter + 1] = 0x12;
+    ram[high] = 0xCD;
+    ram[high + 1] = 0xAB;
+    ram[0x9F27] = 1;
+    init_cpu(symbol("snapshot32"), 0);
+    regs.a = (uint8_t)output;
+    regs.x = (uint8_t)(output >> 8);
+    run();
+    CHECK(ram[output] == 0x34 && ram[output + 1] == 0x12 &&
+          ram[output + 2] == 0xCD && ram[output + 3] == 0xAB,
+          "Atomic VSYNC snapshot did not copy all four bytes in order");
+    CHECK(!(regs.status & FLAG_INTERRUPT), "Snapshot did not restore enabled caller IRQ state");
+    CHECK(ram[0x9F27] == 1 && !acks, "Snapshot acknowledged or cleared pending VSYNC");
+
+    init_cpu(symbol("snapshot32"), 0);
+    regs.a = (uint8_t)output;
+    regs.x = (uint8_t)(output >> 8);
+    regs.status |= FLAG_INTERRUPT;
+    run();
+    CHECK(regs.status & FLAG_INTERRUPT, "Snapshot did not preserve disabled caller IRQ state");
+    CHECK(ram[0x9F27] == 1 && !acks, "Snapshot with IRQ disabled changed pending VSYNC");
+}
+
 static void test_sprite_clear(void) {
     unsigned first_z = symbol("spriteFirstZ"), count = symbol("spriteCount");
     CHECK(count == 127 && first_z + (count - 1) * 8 == 0x1FFFE, "Fixture sprite table bounds differ from VERA");
@@ -737,6 +769,7 @@ int main(void) {
     test_input_dirty_sources();
     test_acknowledgement();
     test_snapshot_and_wait();
+    test_atomic_vsync_snapshot();
     test_sprite_clear();
     test_sprite_updates();
     test_sound_source_contract();
