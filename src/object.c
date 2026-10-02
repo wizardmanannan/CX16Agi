@@ -265,8 +265,6 @@ void bDShowObject(byte numObjs)
 #define OBJECT_NAME_PTR ((byte**)OBJECT_NAME_ZP)
 
 
-byte trap = FALSE;
-
 /**************************************************************************
 ** bDDisplayInventory
 **
