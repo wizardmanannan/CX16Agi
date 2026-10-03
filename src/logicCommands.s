@@ -475,10 +475,18 @@ lda ZP_PTR_CODE + 1
 pha
 lda _codeBank
 pha
+lda ZP_PTR_LE
+pha
+lda ZP_PTR_LE + 1
+pha
 .endmacro
 
 ; Macro to restore values from the stack after a recursive call
 .macro RESTORE_FROM_STACK_RECURSIVE_CALL
+pla
+sta ZP_PTR_LE + 1
+pla
+sta ZP_PTR_LE
 pla
 sta _codeBank
 pla
@@ -493,7 +501,6 @@ pla
 sta startPos + 1
 pla
 sta startPos
-
 .endmacro
 
 ; Macro to get a variable or flag value and store it in the result
