@@ -1657,7 +1657,7 @@ b4Restart_gameCCall:
 b4Show_objCCall:
         jsr _b4Show_obj
         jmp mainLoop
-b4Random_num:
+b4Random_num:       
         LOAD_CODE_WIN_CODE
         sta OPCODE_FUNC_TMP
         INC_CODE
@@ -1669,7 +1669,7 @@ b4Random_num:
         ldx OPCODE_FUNC_TMP + 1
         jsr randBetweenAsmCall
         sta OPCODE_FUNC_TMP
-
+ 
         LOAD_CODE_WIN_CODE
         sta OPCODE_FUNC_TMP + 1
         INC_CODE
