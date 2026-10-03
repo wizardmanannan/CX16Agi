@@ -90,7 +90,20 @@ static char *read_file(const char *path) {
 }
 
 static char *find(char *text, const char *needle) {
-    char *match = strstr(text, needle); CHECK(match, "Assembly source marker missing"); return match;
+    char *match = strstr(text, needle);
+    if (!match) { fprintf(stderr, "Source marker missing: %s\n", needle); exit(1); }
+    return match;
+}
+
+static bool has_code_line(const char *start, const char *end, const char *text) {
+    for (const char *match = start; (match = strstr(match, text)) && match < end; ++match) {
+        const char *line = match;
+        while (line > start && line[-1] != '\n') --line;
+        const char *p = line;
+        while (p < match && (*p == ' ' || *p == '\t')) ++p;
+        if (p == match) return true;
+    }
+    return false;
 }
 
 static unsigned occurrences(const char *text, const char *needle) {
@@ -141,6 +154,9 @@ static void assemble(void) {
     char *sprite = read_file("src/spriteIrqHandler.s");
     char *snapshot_helper = find(irq, "_b6CopyVSyncCounter32:\n");
     char *snapshot_helper_end = find(snapshot_helper, "\nrts") + strlen("\nrts");
+    char *owner_helpers = find(irq, "_b6EnterForegroundVera:\n");
+    char *owner_leave = find(owner_helpers, "_b6LeaveForegroundVera:\n");
+    char *owner_helpers_end = find(owner_leave, "\nrts") + strlen("\nrts");
     char *irq_macros = find(irq, ".macro SEND_IRQ_COMMAND");
     char *irq_end = find(irq_macros, ";Handlers");
     char *input_body = find(input, "b7HandleInputLine:");
@@ -161,12 +177,12 @@ static void assemble(void) {
         "INPUT_LINE_RENDER_CELLS=MAX_INPUT_STRING_LENGTH+1\n"
         ".assert INPUT_LINE_COL + INPUT_LINE_RENDER_CELLS <= TILE_LAYER_WIDTH, error, \"Input line rendering exceeds tile map row\"\n"
         ".segment \"CODE\"\n"
-        ".export input,enable,send,wait,done,snapshot,snapshot32,snapshotOutput,_vSyncCounter,_vSyncCounterHigh,sendIrqCommand,_inputLineDisplayed,_inputLineDirty,_b7CurrentInputStr\n"
+        ".export input,enable,send,wait,done,snapshot,snapshot32,snapshotOutput,_vSyncCounter,_vSyncCounterHigh,sendIrqCommand,_inputLineDisplayed,_inputLineDirty,_b7CurrentInputStr,_foregroundVeraDepth,_b6EnterForegroundVera,_b6LeaveForegroundVera\n"
         ".export clearSprites,inputStringAddress,spriteFirstZ,spriteCount\n"
         ".export handleSpriteUpdates,checkSpriteUpdateCapacity,_bESpritesUpdatedBuffer,_bESpritesUpdatedBufferPointer,_bESpriteUpdateOverflowed,spriteBufferBefore,spriteBufferEnd,spriteBufferGuard,spriteUpdateBufferBytes,spriteUpdateRecordBytes,spriteUpdateMaxRecords,spriteUpdateBank,irqScratchPointer\n"
         ".export bBSoundHandler,_bBChannelsPlaying,_bBEndSoundFlag,_bBIsPlaying,_bBCh1Ticks,_ZP_CURRENTLY_PLAYING_NOTE_1,SOUND_SREG,_bBPsgClear,soundCriticalSection\n"
         "ZP_SPRITE_UPDATE_READ_POINTER=IRQ_TMP_6\nZP_LOW_BYTE=ZP_TMP_5+1\n"
-        "%.*s\n%.*s\n%.*s\n%.*s\n%.*s\n%.*s\n%.*s\n"
+        "%.*s\n%.*s\n%.*s\n%.*s\n%.*s\n%.*s\n%.*s\n%.*s\n"
         "spriteBufferBefore: .byte $3D\n_bESpritesUpdatedBuffer: .res SPRITE_UPDATED_BUFFER_SIZE\n"
         "spriteBufferEnd:\nspriteBufferGuard: .byte $A6,$5B\n"
         "_bESpritesUpdatedBufferPointer: .word _bESpritesUpdatedBuffer\n"
@@ -181,13 +197,14 @@ static void assemble(void) {
         "send: SEND_IRQ_COMMAND command,snapshot\nrts\n"
         "wait: WAIT_FOR_NEXT_IRQ snapshot\nrts\n"
         "clearSprites: CLEAR_SPRITE_ATTRS\nrts\n"
-        "done: brk\ncommand: .byte 4\nsendIrqCommand: .byte 0\nsnapshot: .word 0\n_vSyncCounter: .word 0\n_vSyncCounterHigh: .word 0\nsnapshotOutput: .res 4\nsnapshot32: jmp _b6CopyVSyncCounter32\n"
+        "done: brk\ncommand: .byte 4\nsendIrqCommand: .byte 0\nsnapshot: .word 0\n_vSyncCounter: .word 0\n_vSyncCounterHigh: .word 0\n_foregroundVeraDepth: .byte 0\nsnapshotOutput: .res 4\nsnapshot32: jmp _b6CopyVSyncCounter32\n"
         "_inputLineDisplayed: .byte 0\n_inputLineDirty: .byte 0\n_b7CurrentInputStr: .res 41\n"
         ".include \"soundAsm.s\"\n.segment \"CODE\"\n"
         "soundCriticalSection: php\nsei\nplp\nrts\n"
         "inputStringAddress=INPUT_STRING_ADDRESS\nspriteFirstZ=SPRITE_ATTR_START+SPRITE_ATTR_SIZE+SA_VERA_ZORDER\nspriteCount=NO_SPRITES\n",
         (int)(irq_end - irq_macros), irq_macros,
         (int)(snapshot_helper_end - snapshot_helper), snapshot_helper,
+        (int)(owner_helpers_end - owner_helpers), owner_helpers,
         (int)(sprite_start_end - sprite_start), sprite_start,
         (int)(sprite_clear_end - sprite_clear), sprite_clear,
         (int)(sprite_get_end - sprite_get), sprite_get,
@@ -400,6 +417,99 @@ static void test_sound_source_contract(void) {
     free(source);
 }
 
+static void test_agi_blit_owner_cleanup_contract(void) {
+    char *source = read_file("src/view.c");
+    char *assembly = read_file("src/viewAsm.s");
+    char *blit = find(source, "boolean agiBlit(");
+    char *blit_end = find(blit, "\n}\n");
+    char *enter = find(blit, "b6EnterForegroundVera();");
+    char *set_loop_failure = find(blit, "if (!bESetLoop(");
+    char *allocation_failure = find(blit, "if (!bEAllocateSpriteMemory(");
+    char *cleanup = find(blit, "endAgiBlit:");
+    char *bank_restore = find(cleanup, "RAM_BANK = previousBank;");
+    char *leave = find(bank_restore, "b6LeaveForegroundVera();");
+    char *result = find(leave, "return result;");
+
+    CHECK(blit_end && enter < set_loop_failure && set_loop_failure < allocation_failure &&
+          allocation_failure < cleanup && bank_restore < leave && leave < result,
+          "AGI blit ownership exits do not use the shared bank/owner cleanup");
+    char *set_loop_goto = strstr(set_loop_failure, "goto endAgiBlit;");
+    char *allocation_goto = strstr(allocation_failure, "goto endAgiBlit;");
+    CHECK(set_loop_goto && set_loop_goto < cleanup && allocation_goto && allocation_goto < cleanup,
+          "AGI blit failure exit bypasses owner cleanup");
+    CHECK(!has_code_line(blit, blit_end, "return FALSE;") && !has_code_line(blit, blit_end, "return TRUE;"),
+          "AGI blit has an unbalanced direct return after ownership entry");
+
+    char *set_loop = find(assembly, "_bESetLoop:\n");
+    char *save_bank = find(set_loop, "lda RAM_BANK\n    sta PREVIOUS_BANK");
+    char *set_loop_jump = find(set_loop, "jmp bEAllocateSpriteMemory");
+    char *allocator = find(assembly, "bEAllocateSpriteMemory:\n");
+    char *allocator_call = find(allocator, "jsr bEAllocateSpriteMemoryBulkAsm");
+    char *failed_branch = find(allocator_call, "bne success\n    jmp restoreBankFailure");
+    char *success_return = find(allocator_call, "restoreBank:\n    lda PREVIOUS_BANK\n    sta RAM_BANK\n\n    lda #TRUE");
+    char *failure_return = find(success_return, "restoreBankFailure:\n    lda PREVIOUS_BANK\n    sta RAM_BANK\n\n    lda #FALSE\n    rts");
+    CHECK(save_bank < set_loop_jump && allocator_call < failed_branch && failed_branch < success_return && failure_return,
+          "bESetLoop does not save/restore the caller bank and return FALSE on allocation failure");
+    free(source); free(assembly);
+}
+
+static void test_get_priority_condition_codes(void) {
+    char *priority = read_file("src/priority.s");
+    char *view_asm = read_file("src/viewAsm.s");
+    char *macro = find(priority, ".macro GET_PRIORITY");
+    char *macro_end = find(macro, ".endmacro");
+    char *save_flags = find(macro, "php\nsei");
+    char *restore_flags = find(macro, "plp");
+    char *control_call = find(priority, "GET_PRIORITY\n\ncmp #NOT_AN_OBSTACLE");
+    char *object_call = find(view_asm, "GET_PRIORITY                      ; A = priority at (X_VAL,Y_VAL)");
+
+    CHECK(save_flags && save_flags < restore_flags && restore_flags < macro_end,
+          "GET_PRIORITY does not restore caller condition codes after its VERA read");
+    CHECK(control_call && object_call &&
+          find(control_call, "cmp #NOT_AN_OBSTACLE") < find(control_call, "bcc @return") &&
+          find(object_call, "cmp #WATER") < find(object_call, "beq @checkAgainstControlLoopCheck"),
+          "GET_PRIORITY caller branches on stale condition codes instead of comparing its result");
+    free(priority); free(view_asm);
+}
+
+static void test_nested_foreground_owner(void) {
+    const unsigned depth = symbol("_foregroundVeraDepth");
+    const unsigned preserved_flags = FLAG_CARRY | FLAG_ZERO | FLAG_INTERRUPT |
+        FLAG_DECIMAL | FLAG_CONSTANT | FLAG_OVERFLOW | FLAG_SIGN;
+
+    for (unsigned irq_masked = 0; irq_masked <= 1; ++irq_masked) {
+        const unsigned entries[] = {
+            symbol("_b6EnterForegroundVera"), symbol("_b6EnterForegroundVera"),
+            symbol("_b6LeaveForegroundVera"), symbol("_b6LeaveForegroundVera")
+        };
+        const uint8_t depths[] = {0, 1, 2, 1};
+        const uint8_t expected_depths[] = {1, 2, 1, 0};
+
+        ram[depth] = 0;
+        for (unsigned i = 0; i < sizeof(entries) / sizeof(entries[0]); ++i) {
+            const uint8_t saved_status = FLAG_CONSTANT | FLAG_DECIMAL | FLAG_CARRY |
+                FLAG_ZERO | FLAG_OVERFLOW | FLAG_SIGN |
+                (irq_masked ? FLAG_INTERRUPT : 0);
+            ram[depth] = depths[i];
+            init_cpu(entries[i], 0);
+            regs.a = (uint8_t)(0xA5 + i);
+            regs.x = (uint8_t)(0x5A + i);
+            regs.y = (uint8_t)(0xC3 + i);
+            regs.status = saved_status;
+            run();
+
+            CHECK(ram[depth] == expected_depths[i],
+                  "Nested foreground VERA owner depth was not retained");
+            CHECK(regs.a == (uint8_t)(0xA5 + i) && regs.x == (uint8_t)(0x5A + i) &&
+                  regs.y == (uint8_t)(0xC3 + i),
+                  "Foreground VERA owner changed a live CPU register");
+            CHECK((regs.status & preserved_flags) == (saved_status & preserved_flags),
+                  "Foreground VERA owner changed caller processor flags");
+            CHECK(regs.sp == 0x1FF, "Foreground VERA owner changed the hardware stack");
+        }
+    }
+}
+
 static void write_word(unsigned address, unsigned value) {
     ram[address] = (uint8_t)value;
     ram[address + 1] = (uint8_t)(value >> 8);
@@ -413,8 +523,12 @@ static void test_sound_handler(void) {
 
     memset(vram + psg, 0xA5, 64);
     init_cpu(symbol("_bBPsgClear"), 0);
+    uint32_t psg_clear_start = clockticks6502;
     run();
+    uint32_t psg_clear_cycles = clockticks6502 - psg_clear_start;
     CHECK(writes == 64, "Startup/stop PSG clear did not write every system register");
+    CHECK(psg_clear_cycles < 4096, "Bounded 64-register PSG clear exceeded its IRQ-mask budget");
+    fprintf(stderr, "PSG clear: %u cycles for 64 register writes (IRQ mask budget < 4096 cycles)\n", psg_clear_cycles);
     for (unsigned i = 0; i < 64; ++i)
         CHECK(vram[psg + i] == 0 && write_addresses[i] == psg + i && write_values[i] == 0,
               "PSG clear left a stale register or used the wrong stride");
@@ -511,13 +625,13 @@ static void test_input(void) {
     render_input(0, INPUT_MAX_LENGTH, 255);
 }
 
-static void test_acknowledgement(void) {
+static void test_reenable_preserves_pending_isr(void) {
     for (unsigned bank = 0; bank < 256; ++bank) {
         ram[1] = (uint8_t)bank;
         ram[0x9F27] = 0xFF;
         init_cpu(symbol("enable"), 0); run();
-        CHECK(acks == 1, "REENABLE_INTERRUPTS did not acknowledge VSYNC exactly once");
-        CHECK(ram[0x9F27] == 0xFE, "VSYNC acknowledgement cleared unrelated pending ISR bits");
+        CHECK(acks == 0, "REENABLE_INTERRUPTS acknowledged a pending VSYNC");
+        CHECK(ram[0x9F27] == 0xFF, "REENABLE_INTERRUPTS changed pending ISR bits");
         CHECK(!(regs.status & FLAG_INTERRUPT), "REENABLE_INTERRUPTS left IRQ disabled");
     }
 }
@@ -768,11 +882,14 @@ int main(void) {
     test_input();
     test_input_dirty();
     test_input_dirty_sources();
-    test_acknowledgement();
+    test_reenable_preserves_pending_isr();
     test_snapshot_and_wait();
     test_atomic_vsync_snapshot();
     test_sprite_clear();
     test_sprite_updates();
+    test_agi_blit_owner_cleanup_contract();
+    test_get_priority_condition_codes();
+    test_nested_foreground_owner();
     test_sound_source_contract();
     test_sound_handler();
     test_sound_interrupt_restore();
