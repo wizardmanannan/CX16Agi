@@ -20,14 +20,8 @@ SPRITE_IRQ_HANDLER_INC = 1
 ZP_SPRITE_UPDATE_READ_POINTER = IRQ_TMP_6
 
 .macro GET_NEXT_FROM_SPRITE_UPDATE_BUFFER noStore
-.local @noCarry
-
-ldy #$0
 lda (ZP_SPRITE_UPDATE_READ_POINTER),y
-inc ZP_SPRITE_UPDATE_READ_POINTER
-bne @noCarry
-inc ZP_SPRITE_UPDATE_READ_POINTER + 1
-@noCarry:
+iny
 .ifblank noStore
   sta VERA_data0
 .endif
@@ -128,6 +122,7 @@ CLEAR_SPRITE_ATTRS
 SET_VERA_START_SPRITE_ATTRS #$0, #$1, SA_VERA_ADDRESS_LOW ; Sets VERA channel 0 to the start of the sprites attributes table with a stride of 1
 
 @loop:
+ldy #$0
 GET_NEXT_FROM_SPRITE_UPDATE_BUFFER ;Address 12:5 0 (buffer 0)
 sta ZP_LOW_BYTE
 
@@ -151,6 +146,14 @@ and #1
 sta @flipped
 
 GET_NEXT_FROM_SPRITE_UPDATE_BUFFER ;Sprite Attr Size 7 (buffer 6)
+
+clc
+lda ZP_SPRITE_UPDATE_READ_POINTER
+adc #SPRITE_UPDATE_RECORD_BYTES
+sta ZP_SPRITE_UPDATE_READ_POINTER
+bcc @readPointerNoCarry
+inc ZP_SPRITE_UPDATE_READ_POINTER + 1
+@readPointerNoCarry:
 
 inc _spriteUpdateNumToClear
 lda _spriteUpdateNumToClear

@@ -620,6 +620,7 @@ static void stage_sprite_update(unsigned index) {
 }
 
 static unsigned max_sprite_consumer_cycles;
+static unsigned max_full_sprite_consumer_cycles;
 
 static void test_sprite_update_batch(unsigned requested, bool write_terminator) {
     const unsigned pointer_address = symbol("_bESpritesUpdatedBufferPointer");
@@ -679,6 +680,9 @@ static void test_sprite_update_batch(unsigned requested, bool write_terminator) 
     uint32_t consumer_cycles = clockticks6502 - consumer_start;
     if (consumer_cycles > max_sprite_consumer_cycles)
         max_sprite_consumer_cycles = consumer_cycles;
+    if (accepted == SPRITE_UPDATE_MAX_RECORDS &&
+        consumer_cycles > max_full_sprite_consumer_cycles)
+        max_full_sprite_consumer_cycles = consumer_cycles;
     CHECK(ram[0] == sprite_bank, "Sprite consumer changed the RAM bank");
     CHECK((ram[pointer_address] | ((unsigned)ram[pointer_address + 1] << 8)) == base,
           "Sprite consumer did not reset the published pointer");
@@ -716,6 +720,11 @@ static void test_sprite_updates(void) {
     const unsigned requested[] = {36, 37, 127, 128, 200};
     for (unsigned i = 0; i < sizeof(requested) / sizeof(requested[0]); ++i)
         test_sprite_update_batch(requested[i], requested[i] != SPRITE_UPDATE_MAX_RECORDS);
+    fprintf(stderr,
+            "127-record sprite consumer: %u cycles (baseline 24276; limit 20000)\n",
+            max_full_sprite_consumer_cycles);
+    CHECK(max_full_sprite_consumer_cycles <= 20000,
+          "127-record sprite consumer exceeded the 20000-cycle budget");
 }
 
 int main(void) {
