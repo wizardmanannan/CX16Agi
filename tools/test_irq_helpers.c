@@ -130,7 +130,7 @@ static void run_tool(char **arguments) {
         char *argv[16]; unsigned count = 0;
         while (arguments[count]) { CHECK(count < 15, "Too many assembler arguments"); argv[count] = arguments[count]; ++count; }
         argv[0] = executable; argv[count] = NULL;
-        execv(executable, argv);
+        execvp(executable, argv);
         perror(executable);
         _exit(127);
     }
@@ -157,6 +157,10 @@ static void assemble(void) {
     char *owner_helpers = find(irq, "_b6EnterForegroundVera:\n");
     char *owner_leave = find(owner_helpers, "_b6LeaveForegroundVera:\n");
     char *owner_helpers_end = find(owner_leave, "\nrts") + strlen("\nrts");
+    char *irq_constants = find(irq, "IRQ_CMD_DONTCHANGE = 0");
+    char *irq_constants_end = find(irq_constants, "sendIrqCommand: .byte");
+    char *irq_handler = find(irq, "IRQ_WORK_CLEAR = 1");
+    char *irq_handler_end = find(irq_handler, "\n.endif ; IRQ_INC");
     char *irq_macros = find(irq, ".macro SEND_IRQ_COMMAND");
     char *irq_end = find(irq_macros, ";Handlers");
     char *input_body = find(input, "b7HandleInputLine:");
@@ -201,6 +205,14 @@ static void assemble(void) {
         "_inputLineDisplayed: .byte 0\n_inputLineDirty: .byte 0\n_b7CurrentInputStr: .res 41\n"
         ".include \"soundAsm.s\"\n.segment \"CODE\"\n"
         "soundCriticalSection: php\nsei\nplp\nrts\n"
+        "%.*s\n%.*s\n"
+        ".export custom_irq_handler,irqEntry,irqDefault,default_irq_vector,irqWorkKind,lastMainLoopCounter,_mainLoopCounter,irqNormalWork\n"
+        "currentIrqState: .byte 0\nlastMainLoopCounter: .byte 0\n_mainLoopCounter: .byte 0\n_menuDirty: .byte 0\n_b3PaletteRows: .byte 0\nirqNormalWork: .byte 0\n"
+        "irqEntry: pha\nphx\nphy\njmp custom_irq_handler\n"
+        "irqDefault: ply\nplx\npla\nrti\n"
+        "b10DisplayStatusBar: inc irqNormalWork\nlda #$91\nldx #$82\nldy #$73\nrts\n"
+        "handleScreenShake: rts\nbADisplayMenu: rts\nb3InitDisplayTextSlice: rts\n_b3InitLayer1Mapbase: rts\n_b6InitInput: rts\nb11ShowObjIrqHandler: rts\n"
+        "_bEClearSpriteAttributes: rts\n_b8ClearBackgroundSliceReset: rts\n_b8ClearPrioritySliceReset: rts\n_b8ClearBackgroundSlice: rts\n_b8ClearPrioritySlice: rts\nb3SetPaletteSlice: rts\nhandleDisplayTextSlice: rts\n"
         "inputStringAddress=INPUT_STRING_ADDRESS\nspriteFirstZ=SPRITE_ATTR_START+SPRITE_ATTR_SIZE+SA_VERA_ZORDER\nspriteCount=NO_SPRITES\n",
         (int)(irq_end - irq_macros), irq_macros,
         (int)(snapshot_helper_end - snapshot_helper), snapshot_helper,
@@ -210,7 +222,9 @@ static void assemble(void) {
         (int)(sprite_get_end - sprite_get), sprite_get,
         (int)(sprite_append_end - sprite_append), sprite_append,
         (int)(sprite_handler_end - sprite_handler), sprite_handler,
-        (int)(input_end - input_body), input_body);
+        (int)(input_end - input_body), input_body,
+        (int)(irq_constants_end - irq_constants), irq_constants,
+        (int)(irq_handler_end - irq_handler), irq_handler);
     CHECK(length >= 0 && length < (int)sizeof(source), "Fixture assembly is too large");
     CHECK(snprintf(stub, sizeof(stub), ".segment \"CODE\"\n.export _bBLoadedSoundsPointer,_sResetCounter\n_bBLoadedSoundsPointer: .res 512\n_sResetCounter: .byte 0\n") < (int)sizeof(stub), "Fixture stub is too large");
     free(irq); free(input); free(sprite);
@@ -700,6 +714,47 @@ static void test_atomic_vsync_snapshot(void) {
     CHECK(ram[0x9F27] == 1 && !acks, "Snapshot with IRQ disabled changed pending VSYNC");
 }
 
+
+/* Execute the entire production dispatcher, including its ownership fast path.
+ * irqEntry/irqDefault provide only the ROM register-save/restore convention. */
+static void test_irq_counter_carries(void) {
+    const uint32_t starts[] = {0xFF, 0xFFFF, 0xFFFFFF, UINT32_MAX};
+    unsigned counter = symbol("_vSyncCounter"), high = symbol("_vSyncCounterHigh");
+    for (unsigned owner = 0; owner <= 2; ++owner)
+        for (unsigned i = 0; i < sizeof(starts)/sizeof(starts[0]); ++i)
+            for (unsigned pending = 2; pending <= 3; ++pending) {
+                uint32_t before = starts[i], expected = before + (pending & 1);
+                ram[counter] = (uint8_t)before; ram[counter + 1] = (uint8_t)(before >> 8);
+                ram[high] = (uint8_t)(before >> 16); ram[high + 1] = (uint8_t)(before >> 24);
+                ram[symbol("_foregroundVeraDepth")] = (uint8_t)owner;
+                ram[symbol("irqWorkKind")] = ram[symbol("sendIrqCommand")] = 0;
+                ram[symbol("lastMainLoopCounter")] = ram[symbol("_mainLoopCounter")] = 0;
+                ram[symbol("_inputLineDirty")] = ram[symbol("_bBChannelsPlaying")] = 0;
+                ram[symbol("irqNormalWork")] = 0;
+                ram[symbol("default_irq_vector")] = (uint8_t)symbol("irqDefault");
+                ram[symbol("default_irq_vector") + 1] = (uint8_t)(symbol("irqDefault") >> 8);
+                init_cpu(symbol("done"), 0x42);
+                regs.a = 0x31; regs.y = 0x53; regs.sp = 0x1FF;
+                regs.status = FLAG_CONSTANT | FLAG_CARRY | FLAG_DECIMAL | FLAG_OVERFLOW;
+                ram[0] = 0x35; ram[1] = 0x74; ram[0x9F27] = (uint8_t)pending;
+                ram[0xFFFE] = (uint8_t)symbol("irqEntry"); ram[0xFFFF] = (uint8_t)(symbol("irqEntry") >> 8);
+                irq6502(); run();
+                uint32_t actual = ram[counter] | ((uint32_t)ram[counter+1] << 8) |
+                    ((uint32_t)ram[high] << 16) | ((uint32_t)ram[high+1] << 24);
+                CHECK(actual == expected, "Production IRQ counter carry/wrap or non-VSYNC accounting failed");
+                CHECK(acks == (pending & 1) && ram[0x9F27] == 2,
+                      "Production IRQ did not acknowledge exactly one VSYNC while preserving other pending bits");
+                CHECK(ram[0] == 0x35 && ram[1] == 0x74 && regs.a == 0x31 && regs.x == 0x42 && regs.y == 0x53 && regs.sp == 0x1FF,
+                      "Production IRQ did not restore caller registers, stack, or banks");
+                /* B is not a physical W65C02 flag; the core sets it on RTI. */
+                CHECK((regs.status & ~FLAG_BREAK) == (FLAG_CONSTANT | FLAG_CARRY | FLAG_DECIMAL | FLAG_OVERFLOW),
+                      "Production IRQ did not restore caller flags");
+                CHECK(ram[symbol("irqNormalWork")] == (!owner && (pending & 1)) && !writes,
+                      "Foreground-owned or non-VSYNC IRQ executed normal work");
+            }
+    ram[symbol("_foregroundVeraDepth")] = 0;
+}
+
 static void test_sprite_clear(void) {
     unsigned first_z = symbol("spriteFirstZ"), count = symbol("spriteCount");
     CHECK(count == 127 && first_z + (count - 1) * 8 == 0x1FFFE, "Fixture sprite table bounds differ from VERA");
@@ -885,6 +940,7 @@ int main(void) {
     test_reenable_preserves_pending_isr();
     test_snapshot_and_wait();
     test_atomic_vsync_snapshot();
+    test_irq_counter_carries();
     test_sprite_clear();
     test_sprite_updates();
     test_agi_blit_owner_cleanup_contract();
@@ -893,7 +949,7 @@ int main(void) {
     test_sound_source_contract();
     test_sound_handler();
     test_sound_interrupt_restore();
-    printf("IRQ helpers pass: input lengths/dirty fast path, sound lifecycle/idle stride, VSYNC helpers, and sprite bounds (sprite consumer max %u cycles)\n",
+    printf("IRQ helpers pass: input lengths/dirty fast path, sound lifecycle/idle stride, VSYNC helpers/production IRQ carries, and sprite bounds (sprite consumer max %u cycles)\n",
            max_sprite_consumer_cycles);
     return 0;
 }

@@ -123,7 +123,7 @@ static void assemble(uint16_t start, bool code_window, bool guards) {
         ".export shakeCount,shakePhases,shakeFrames,shakeWindow,shakeShiftedWindow,shakeBorder\n"
         "irqStart:\npha\nphx\nphy\nlda $00\npha\nlda #3\nsta $00\nirqDispatch:\n"
         "%.*sbne irqEntry\njmp irqEnd\nirqEntry:\n"
-        "%.*s%.*sirqEnd:\npla\nsta $00\nply\nplx\npla\nrti\nmainLoop: brk\noperand: .byte 0\nconsumed: .byte 0\n%s%s",
+        "%.*s@vSyncCounter:\n%.*sirqEnd:\npla\nsta $00\nply\nplx\npla\nrti\nmainLoop: brk\noperand: .byte 0\nconsumed: .byte 0\n_foregroundVeraDepth: .byte 0\n%s%s",
         prefix, (int)(dispatch_branch-dispatch), dispatch, (int)(end - gate), gate, (int)(alias_end - alias), alias, reader, helper);
     CHECK(length >= 0 && length < (int)sizeof(source), "Fixture source too large");
     free(irq); free(helper);
@@ -239,7 +239,7 @@ static void run_case(unsigned count, unsigned ctrl, const uint8_t window[4], boo
     CHECK(frames == (count ? count * 32 + 1 : 0), "Shake repeat count differs");
     CHECK(window_writes == count * 32, "Window writes occurred outside phase changes");
     CHECK(count || !vera_writes, "Zero count touched VERA"); CHECK(regs.sp == 0x1FF, "Command leaked stack");
-    unsigned idle = interrupt(); CHECK(idle == 5 || idle == 6, "Idle IRQ gate cost changed");
+    unsigned idle = interrupt(); CHECK(idle >= 12 && idle <= 14, "Idle ownership/shake gate cost changed");
     if (idle < idle_min) idle_min = idle;
     if (idle > idle_max) idle_max = idle;
     checking = false;
