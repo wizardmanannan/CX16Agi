@@ -214,6 +214,8 @@ static void test_bounded_slices(void) {
     CHECK(clockticks6502 < 50000, "Map clear exceeded its documented one-frame cycle budget");
     printf("Clear slices: background max %u cycles/1920 writes, priority max %u cycles/2048 writes, map %u cycles/4016 writes; 22 VSYNCs total\n",
            max_background_cycles, max_priority_cycles, map_cycles);
+    /* Prior priority IRQ loop measured 18,568 cycles; keep its replacement below 13,000. */
+    CHECK(max_priority_cycles < 13000, "Priority slice exceeded the 13000-cycle target (baseline 18568)");
 }
 
 static unsigned symbol(const char *name) {

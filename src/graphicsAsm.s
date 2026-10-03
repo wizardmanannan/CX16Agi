@@ -533,10 +533,12 @@ bcc @priorityTail
 
 ldx #8
 @priorityFullPage:
-ldy #$0
+ldy #32
 @priorityFullPageLoop:
+.repeat 8
 sta VERA_data0
-iny
+.endrepeat
+dey
 bne @priorityFullPageLoop
 dex
 bne @priorityFullPage
@@ -556,10 +558,12 @@ rts
 @priorityTailPage:
 cpx #$0
 beq @priorityTailBytes
-ldy #$0
+ldy #32
 @priorityTailPageLoop:
+.repeat 8
 sta VERA_data0
-iny
+.endrepeat
+dey
 bne @priorityTailPageLoop
 dex
 bra @priorityTailPage
