@@ -1320,9 +1320,10 @@ jmp mainLoop
 b2New_room:
 DEBUG_NEW_ROOM
 LOAD_CODE_WIN_CODE
+
+switchToNewRoom:
 sta _newRoomNum
 stz _newRoomNum + 1
-switchToNewRoom:
 lda #TRUE
 sta _hasEnteredNewRoom
 sta _exitAllLogics
