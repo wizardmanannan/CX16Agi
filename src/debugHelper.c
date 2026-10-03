@@ -131,7 +131,7 @@ void bDbgShowPriority()
 	unsigned long i,j;
 	byte priByte;
 
-	asm("sei");
+	b6EnterForegroundVera();
 	SET_VERA_ADDRESS(BITMAP_START, 0, 1);
 	SET_VERA_ADDRESS(PRIORITY_START, 1, 1);
 
@@ -150,7 +150,7 @@ void bDbgShowPriority()
 			}
 		}
 	} 
-	asm("cli");
+	b6LeaveForegroundVera();
 }
 void bDbgCheckMemory()
 {

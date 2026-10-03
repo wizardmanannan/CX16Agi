@@ -547,7 +547,7 @@ byte b3SetTextColor(byte foreground, byte background)
 
 	if (palleteGetResult == Allocated)
 	{
-		asm("sei");
+		b6EnterForegroundVera();
 		foreColorBytes = b6SetPaletteToInt(foreground);
 		backColorBytes = b6SetPaletteToInt(background);
 
@@ -561,7 +561,7 @@ byte b3SetTextColor(byte foreground, byte background)
 		WRITE_BYTE_VAR_TO_ASSM(backColorBytes, VERA_data0);
 		WRITE_BYTE_VAR_TO_ASSM(backColorBytes >> 8, VERA_data0);
 
-		REENABLE_INTERRUPTS();
+		b6LeaveForegroundVera();
 	}
 
 #ifdef VERBOSE_SET_PALETTE

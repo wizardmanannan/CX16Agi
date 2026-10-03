@@ -196,10 +196,13 @@ static void test_source_contract(void)
 	char *irq = read_file("src/irq.h");
 	char *irqAsm = read_file("src/irqAsm.s");
 	char *main = strstr(meka, "void main()");
-	char *initialise = strstr(meka, "void b6Initialise()");
-	char *copy = main ? strstr(main, "b6CopyVSyncCounter32(&currentVsync)") : NULL;
-	char *service = copy ? strstr(copy, "b6CheckTimer(currentVsync)") : NULL;
+	char *initialise = strstr(meka, "b6Initialise()");
+	char *loop = main ? strstr(main, "while (TRUE)") : NULL;
+	char *copy = loop ? strstr(loop, "b6CopyVSyncCounter32(&currentVsync)") : NULL;
+	char *timerGate = copy ? strstr(copy, "if (currentVsync != lastTimerVsync)") : NULL;
+	char *service = timerGate ? strstr(timerGate, "b6CheckTimer(currentVsync)") : NULL;
 	char *throttle = service ? strstr(service, "if ((unsigned int)((unsigned int)currentVsync - lastVsync)") : NULL;
+	char *initialTimerBaseline = main ? strstr(main, "lastTimerVsync = currentVsync;") : NULL;
 	char *controllers = initialise ? strstr(initialise, "b1InitControllers();") : NULL;
 	char *timerBaseline = controllers ? strstr(controllers, "b6InitTimer(&b6Timing_proc);") : NULL;
 	char *timeout = strstr(commands, "vSyncNow - vSyncStart < waitTicks");
@@ -208,8 +211,9 @@ static void test_source_contract(void)
 	char *counterUpdate = strstr(irqAsm, "@vSyncCounter:\n");
 	char *lowWordWrap = counterUpdate ? strstr(counterUpdate, "inc _vSyncCounter\nbne @resetLatches\ninc _vSyncCounter + 1\nbne @resetLatches\ninc _vSyncCounterHigh") : NULL;
 
-	CHECK(copy && service && throttle && copy < service && service < throttle,
-		"Main loop does not use one atomic snapshot for timer service and throttle");
+	CHECK(copy && timerGate && service && throttle && initialTimerBaseline &&
+		initialTimerBaseline < loop && loop < copy && copy < timerGate && timerGate < service && service < throttle,
+		"Main loop does not gate timer service on changed VSYNC snapshots before the interpreter throttle");
 	CHECK(controllers && timerBaseline && controllers < timerBaseline,
 		"Timer baseline is set before game initialization completes");
 	CHECK(timeout && !strstr(commands, "vSyncCounter != vSyncToContinueAt"),

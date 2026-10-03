@@ -45,10 +45,10 @@ void b11ShowObj(byte objNum)
     // {
     //    palette = bFGetPalette(id, paletteGetResult);
     // }
-    asm("sei");
+    b6EnterForegroundVera();
     SET_VERA_ADDRESS_ZP(spriteAddress, VERA_ADDRESS, VERA_ADDRESS_HIGH);
 	 bEClearVeraSprite(localLoop.allocationWidth, localLoop.allocationHeight);
-    REENABLE_INTERRUPTS();
+    b6LeaveForegroundVera();
 
     asm("stp");
 

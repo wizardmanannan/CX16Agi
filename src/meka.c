@@ -288,9 +288,7 @@ void b6Initialise()
     b6InitIrq();
     bDInitSpriteMemoryManager();
 
-    asm("sei");
     b6InitGraphics();
-    REENABLE_INTERRUPTS();
     horizon = 36;
 
     ///* Set up timer. The timer controls the interpreter speed. */
@@ -312,6 +310,7 @@ void main()
     int ret, oldCount = 0;
     unsigned int lastVsync;
     uint32_t currentVsync;
+    uint32_t lastTimerVsync;
 
 
     //chdir("..\\KQ1-2917");
@@ -333,11 +332,15 @@ void main()
     b6Initialise();
     b6CopyVSyncCounter32(&currentVsync);
     lastVsync = (unsigned int)currentVsync;
+    lastTimerVsync = currentVsync;
     while (TRUE) {
         /* Cycle initiator. Controlled by delay variable (var[10). */
 
         b6CopyVSyncCounter32(&currentVsync);
-        b6CheckTimer(currentVsync);
+        if (currentVsync != lastTimerVsync) {
+            lastTimerVsync = currentVsync;
+            b6CheckTimer(currentVsync);
+        }
         if ((unsigned int)((unsigned int)currentVsync - lastVsync) >= var[10] * 3) {
 
             lastVsync = (unsigned int)currentVsync;

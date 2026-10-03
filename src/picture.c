@@ -487,7 +487,6 @@ boolean showPicCalled = FALSE;
 **
 **  pLen = length of PICTURE data
 **************************************************************************/
-extern boolean disableIrq;
 void b11DrawPic(byte* bankedData, int pLen, boolean okToClearScreen, byte picNum)
 {
 	unsigned long i;
@@ -525,7 +524,7 @@ void b11DrawPic(byte* bankedData, int pLen, boolean okToClearScreen, byte picNum
 	if (okToClearScreen) {
 		b6SetAndWaitForIrqState(CLEAR);
 	}
-	asm("sei");
+	b6EnterForegroundVera();
 
 #ifdef TEST_PRIORITY_DRAW_LINES
 	b8TestAsmPlotPriHLineFast();
@@ -632,9 +631,8 @@ void b11DrawPic(byte* bankedData, int pLen, boolean okToClearScreen, byte picNum
 
 	b11SplitPriority();
 
-	REENABLE_INTERRUPTS(); //Loading screen stays on until showPic command
-
 	showPicCalled = FALSE;
+	b6LeaveForegroundVera(); //Loading screen stays on until showPic command
 }
 
 void b6InitPictures()
@@ -706,9 +704,9 @@ void b6ShowPicture()
 {
 	if (showPicCalled)
 	{
-		asm("sei");
+		b6EnterForegroundVera();
 		b3InitLayer1Mapbase();
-		asm("cli");
+		b6LeaveForegroundVera();
 	}
 	showPicCalled = TRUE;
 }

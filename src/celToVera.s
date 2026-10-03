@@ -13,6 +13,7 @@ _loopHeaderBuffer: .res LOOP_HEADER_BUFFER_SIZE
 NO_MARGIN = 4
 ;void b9CelToVera(Cel* localCel, byte celBank, long veraAddress, byte bCol, byte drawingAreaWidth, byte x, byte y, byte pNum)
 _b9CelToVera:
+jsr _b6EnterForegroundVera
 sta P_NUM
 jsr popax
 sta Y_VAL
@@ -34,7 +35,6 @@ stx CEL_ADDR + 1
 lda #$1
 sta NO_SPLIT_SEGMENTS ;When we draw directly to the bitmap we don't need to split the cel into segments
 
-sei
 lda celToVeraLowRam_skipBasedOnPriority
 pha
 lda #LDX_ABS
@@ -44,7 +44,7 @@ sta CEL_TO_VERA_IS_FORWARD_DIRECTION
 jsr _celToVera
 pla
 sta celToVeraLowRam_skipBasedOnPriority
-REENABLE_INTERRUPTS
+jsr _b6LeaveForegroundVera
 rts
 
 .segment "BANKRAM0E"

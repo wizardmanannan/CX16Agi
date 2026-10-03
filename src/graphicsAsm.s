@@ -61,10 +61,11 @@ SEND_IRQ_COMMAND #IRQ_CMD_BLACKSCREEN, @vSyncToCheck
 
 WAIT_FOR_NEXT_IRQ @vSyncToCheck
 
+; Protect the shared sprite state and VERA setup until the display is ready.
+jsr _b6EnterForegroundVera
 jsr _b6InitVeraMemory
 TRAMPOLINE #SPRITE_INIT_BANK, _bAInitSpriteData
 
-sei
 lda #DISPLAY_SCALE
 sta VERA_dc_hscale
 sta VERA_dc_vscale
@@ -378,7 +379,7 @@ jsr pushax
 lda #DEFAULT_TEXT_BACKGROUND
 ldx #$0
 
-cli
+jsr _b6LeaveForegroundVera
 
 TRAMPOLINE #TEXT_BANK, _b3SetTextColor 
 
