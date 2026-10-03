@@ -20,6 +20,8 @@ typedef enum {
 
 extern volatile unsigned int vSyncCounter; //Low word of the resident serviced-VSYNC counter.
 extern void __fastcall__ b6CopyVSyncCounter32(uint32_t *out);
+void b6EnterForegroundVera(void);
+void b6LeaveForegroundVera(void);
 
 //Only to be called directly by bank 6
 extern void b6SetAndWaitForIrqStateAsm(IRQ_COMMAND state);
@@ -33,8 +35,6 @@ extern void b6SetAndWaitForIrqState(IRQ_COMMAND state);
 
 #define REENABLE_INTERRUPTS() \
 do { \
-    asm("lda #%w", VSYNC_BIT); \
-    asm("sta %w", VERA_ISR); \
     asm("cli"); \
   \
 } while (0);

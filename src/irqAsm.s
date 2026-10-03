@@ -354,8 +354,26 @@ lastMainLoopCounter: .byte $FF
 _vSyncCounter: .word $0
 _vSyncCounterHigh: .word $0
 debugVSyncCounter: .word $0
+_foregroundVeraDepth: .byte $0
 
 .export _vSyncCounterHigh, _b6CopyVSyncCounter32
+.export _b6EnterForegroundVera, _b6LeaveForegroundVera, _foregroundVeraDepth
+
+; Long foreground VERA work owns the VERA ports and IRQ scratch. Keep VSYNC
+; accounting live while deferring normal sound, input, and display work.
+_b6EnterForegroundVera:
+php
+sei
+inc _foregroundVeraDepth
+plp
+rts
+
+_b6LeaveForegroundVera:
+php
+sei
+dec _foregroundVeraDepth
+plp
+rts
 
 ; __fastcall__ pointer arrives in A/X. Keep its publication and the copy
 ; inside the same interrupt-masked interval; IRQ_TMP_6 is private to IRQ work.
@@ -404,6 +422,11 @@ bne @callSoundHandler
 jmp @defaultIqr
 
 @callSoundHandler:
+lda _foregroundVeraDepth
+beq @normalVsyncWork
+jmp @vSyncCounter
+
+@normalVsyncWork:
 ; Apply display movement before the expensive handlers, during blanking.
 ; Self-modifying count in writable resident RAM (cacheless W65C02).
 ; Foreground STA and IRQ DEC publish one byte atomically; skip idle calls.
