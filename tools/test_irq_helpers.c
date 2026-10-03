@@ -13,7 +13,7 @@
 
 extern struct regs regs;
 static uint8_t ram[65536], vram[131072];
-static unsigned addr[2], stride[2], writes, acks;
+static unsigned addr[2], stride[2], writes, data_port_reads, acks;
 static unsigned write_addresses[2048];
 static uint8_t write_values[2048];
 static char temporary[4096];
@@ -26,6 +26,7 @@ uint8_t read6502(uint16_t address, uint8_t bank) {
     (void)bank;
     if (address == 0x9F23 || address == 0x9F24) {
         unsigned port = address - 0x9F23;
+        ++data_port_reads;
         uint8_t value = vram[addr[port]];
         addr[port] = (addr[port] + stride[port]) & 0x1FFFF;
         return value;
@@ -258,7 +259,7 @@ static void init_cpu(unsigned pc, unsigned x) {
     regs.pc = pc; regs.sp = 0x1FD; regs.a = regs.y = 0; regs.x = (uint8_t)x; regs.status = FLAG_CONSTANT;
     ram[0x1FE] = (uint8_t)(symbol("done") - 1);
     ram[0x1FF] = (uint8_t)((symbol("done") - 1) >> 8);
-    waiting = 0; writes = acks = 0;
+    waiting = 0; writes = data_port_reads = acks = 0;
 }
 
 static void run(void) {
@@ -535,17 +536,23 @@ static void test_sound_handler(void) {
     const unsigned ticks = symbol("_bBCh1Ticks");
     const unsigned psg = 0x1F9C0;
 
+    vram[psg - 1] = 0x5A;
     memset(vram + psg, 0xA5, 64);
+    vram[psg + 64] = 0xC7;
     init_cpu(symbol("_bBPsgClear"), 0);
     uint32_t psg_clear_start = clockticks6502;
     run();
     uint32_t psg_clear_cycles = clockticks6502 - psg_clear_start;
     CHECK(writes == 64, "Startup/stop PSG clear did not write every system register");
-    CHECK(psg_clear_cycles < 4096, "Bounded 64-register PSG clear exceeded its IRQ-mask budget");
-    fprintf(stderr, "PSG clear: %u cycles for 64 register writes (IRQ mask budget < 4096 cycles)\n", psg_clear_cycles);
+    CHECK(data_port_reads == 0, "PSG clear read from a VERA data port");
+    /* Baseline before loop unrolling: 611 cycles in this native fixture. */
+    fprintf(stderr, "PSG clear: %u cycles for 64 register writes (baseline 611; budget < 400 cycles)\n", psg_clear_cycles);
+    CHECK(psg_clear_cycles < 400, "Bounded 64-register PSG clear exceeded its 400-cycle IRQ-mask budget");
     for (unsigned i = 0; i < 64; ++i)
         CHECK(vram[psg + i] == 0 && write_addresses[i] == psg + i && write_values[i] == 0,
               "PSG clear left a stale register or used the wrong stride");
+    CHECK(vram[psg - 1] == 0x5A && vram[psg + 64] == 0xC7,
+          "PSG clear overwrote an adjacent register");
 
     ram[channel_count] = 0;
     unsigned after_clear_address = addr[0];

@@ -332,12 +332,14 @@ getTicksJump:
 ; void bBPsgClear() - Clear all PSG registers to silence sound
 _bBPsgClear:
     SET_VERA_ADDRESS_IMMEDIATE PSG_REGISTERS, #$0, #1    ; Set to PSG registers start
-    ldx #NO_SYSTEM_CHANNELS * NO_BYTES_PER_CHANNEL       ; Initialize counter for all system channels
+    .assert ((NO_SYSTEM_CHANNELS * NO_BYTES_PER_CHANNEL) .mod 8) = 0, error, "PSG register count must be divisible by eight"
+    ldx #(NO_SYSTEM_CHANNELS * NO_BYTES_PER_CHANNEL) / 8 ; Eight writes per loop pass
 
 @clearLoop:
-    stz VERA_data0              ; Store zero to current PSG register
-@checkLoop:
-    dex                        ; Decrement counter
+    .repeat 8
+        stz VERA_data0
+    .endrepeat
+    dex                         ; Decrement eight-write group counter
     bne @clearLoop              ; Repeat until all are cleared
     rts                        ; Return from subroutine
 
