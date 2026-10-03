@@ -1177,7 +1177,7 @@ byte bECreateSpritePalette(byte transparentColor)
 
 	if (palleteGetResult == Allocated)
 	{
-		asm("sei");
+		b6EnterForegroundVera();
 		SET_VERA_ADDRESS(PALETTE_START, 0, 1);
 
 		SET_VERA_ADDRESS_ABSOLUTE(paletteWriteAddress, 1, 1);
@@ -1215,7 +1215,7 @@ byte bECreateSpritePalette(byte transparentColor)
 		}
 
 		SET_VERA_ADDRESS(PALETTE_START, 0, 1); //Setting back to channel zero as if we don't printf can screw up our memory. This is a possible framework bug
-		REENABLE_INTERRUPTS();
+		b6LeaveForegroundVera();
 	}
 
 	return paletteSlot;
@@ -1426,10 +1426,15 @@ boolean agiBlit(byte entryNum, boolean disableInterupts)
 	VeraSpriteAddress* loopVeraAddresses;
 	VeraSpriteAddress loopVeraAddress, tempVeraAddress; //Put out here so it can be accessed by inline assembly without going via a C variable
 	boolean isAllocated = FALSE;
+	boolean result = TRUE;
 	byte splitCounter; //Store the SPLIT_COUNTER ZP in here as this makes it easier for C to access it 
 	byte isAnimated = FALSE;
 	SpriteAllocationSize allocationWidth, allocationHeight;
 	byte combinedSpriteAllocationSize;
+	if (disableInterupts)
+	{
+		b6EnterForegroundVera();
+	}
 	
 // if(entryNum != 0)
 // {
@@ -1528,9 +1533,8 @@ boolean agiBlit(byte entryNum, boolean disableInterupts)
 #endif
 		if (!bESetLoop(&localViewTab, &localMetadata, &localView, loopVeraAddresses, entryNum))
 		{
-			RAM_BANK = previousBank;
-
-			return FALSE;
+			result = FALSE;
+			goto endAgiBlit;
 		}
 	}
 
@@ -1620,7 +1624,8 @@ initialise:
 		viewsWithSpriteMem[entryNum] = TRUE;
 		if (!bEAllocateSpriteMemory(&localLoop, localView.maxVeraSlots))
 		{
-			return FALSE;
+			result = FALSE;
+			goto endAgiBlit;
 		}
 
 		localMetadata.isOnBackBuffer = TRUE;
@@ -1674,11 +1679,6 @@ splitLoop:
 
 setSpritesUpdatedBank:
 	RAM_BANK = SPRITE_UPDATED_BANK;
-
-	if (disableInterupts)
-	{
-		asm("sei");
-	}
 
 	WRITE_INT_VAR_TO_ASSM((unsigned int)bESpritesUpdatedBufferPointer, ZP_SPRITE_STORE_PTR);
 
@@ -1992,13 +1992,13 @@ endBlit:
 
 	setViewTab(&localViewTab, entryNum);
 
+endAgiBlit:
+	RAM_BANK = previousBank;
 	if (disableInterupts)
 	{
-		REENABLE_INTERRUPTS();
+		b6LeaveForegroundVera();
 	}
-
-	RAM_BANK = previousBank;
-	return TRUE;
+	return result;
 }
 
 #pragma code-name (push, "BANKRAM09")
