@@ -31,6 +31,7 @@ off: .byte $4F, $66, $66, $00                   ; "Off"
 
 totalScore: .res 3                              ; 3-byte storage for total/max score display (hundreds, tens, units)
 totalScoreSet: .byte $0                         ; Flag: has totalScore been initialized?
+LAST_PRINTED_MAX_SCORE: .byte $0
 
 ; ===================================================================
 ; b10ScoreUnits - Units digit lookup table (always ASCII)
@@ -217,6 +218,10 @@ ldy #SOUND_ON_FLAG
 GET_FLAG_NON_INTERPRETER STATUS_BAR_SREG
 cmp LAST_SOUND_ON_FLAG
 bne @displayStatusBar
+ldy #MAX_SCORE_VAR
+GET_VAR_NON_INTERPRETER
+cmp LAST_PRINTED_MAX_SCORE
+bne @displayStatusBar
 rts                                     ; Score unchanged → no need to redraw
 
 @displayStatusBar:
@@ -244,12 +249,12 @@ jsr b10PrintStatusBarString
 
 @printScore:
 lda totalScoreSet
-bne @loadTextToPad
-
-stz b10StatusBarShowing
-
-lda totalScoreSet
-bne @loadTextToPad
+beq @initializeTotalScore
+ldy #MAX_SCORE_VAR
+GET_VAR_NON_INTERPRETER
+cmp LAST_PRINTED_MAX_SCORE
+beq @loadTextToPad
+@initializeTotalScore:
 jmp @setTotalScore                      ; First time - initialize total score display
 
 @loadTextToPad:
@@ -371,7 +376,7 @@ sta TEXT_TO_PAD_MAX_SCORE
 
 ldy #MAX_SCORE_VAR
 GET_VAR_NON_INTERPRETER
-beq @printSound
+sta LAST_PRINTED_MAX_SCORE
 
 tay
 lda b10ScoreUnits,y                     ; Store units digit of max score
@@ -386,10 +391,12 @@ dec TEXT_TO_PAD_MAX_SCORE
 @setTotalScoreHundreds:
 lda b10ScoreHundreds,y
 sta totalScore + 2
+beq @incrementTotalScore
 dec TEXT_TO_PAD_MAX_SCORE
 
 @incrementTotalScore:
-inc totalScoreSet                       ; Mark total score as initialized
+lda #1
+sta totalScoreSet                       ; Mark total score as initialized
 jmp @loadTextToPad
 
 .endif

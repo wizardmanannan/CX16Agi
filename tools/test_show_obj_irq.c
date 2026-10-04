@@ -13,7 +13,7 @@ extern struct regs regs;
 static uint8_t ram[65536], vram[131072];
 static unsigned address[2], stride[2], writes;
 static char temporary[4096];
-static struct { char name[100]; unsigned address; } symbols[12];
+static struct { char name[100]; unsigned address; } symbols[64];
 static unsigned symbol_count;
 
 #define CHECK(c, m) do { if (!(c)) { fprintf(stderr, "%s (%s:%d)\n", m, __FILE__, __LINE__); exit(1); } } while (0)
@@ -82,12 +82,19 @@ static void assemble(void) {
         "VIEW_TABLE_SIZE=1\n.include \"global.s\"\n.include \"globalGraphics.s\"\n"
         "SHOW_OBJ_ATTRIBUTE_ADDRESS=$1FFF8\n.segment \"CODE\"\n"
         ".export runHandler,done,_b11ShowObjSpriteAddressShifted,_b11ShowObjSprAttr7,_b11ShowObjX,_b11ShowObjY\n%.*s\n"
-        "runHandler: jsr b11ShowObjIrqHandler\ndone: rts\n",
+        "runHandler: jsr b11ShowObjIrqHandler\ndone: rts\n"
+        ".scope StatusFixture\n.include \"statusBar.s\"\n.endscope\n.segment \"CODE\"\n"
+        "_menuShown: .byte 0\nisMenuAllowed: lda #1\nrts\nbAClearTopLine: rts\n"
+        ".export runStatus,statusDisplayed,statusShowing,statusInitialized,statusScore,statusMaxScore,statusSound\n"
+        "runStatus: jmp StatusFixture::b10DisplayStatusBar\n"
+        "statusDisplayed=StatusFixture::_statusLineDisplayed\nstatusShowing=StatusFixture::b10StatusBarShowing\n"
+        "statusInitialized=StatusFixture::totalScoreSet\nstatusScore=SET_VAR_OFFSET+SCORE_VAR\n"
+        "statusMaxScore=SET_VAR_OFFSET+MAX_SCORE_VAR\nstatusSound=FLAG_OFFSET+SOUND_ON_FLAG\n",
         (int)(end - begin), begin);
     CHECK(count >= 0 && count < (int)sizeof(fixture), "Fixture too large"); free(assembly); write_file(source, fixture);
     write_file(config,
         "MEMORY { ZP:start=$22,size=$5C,file=\"\"; RAM:start=$2000,size=$6000,file=%O; }\n"
-        "SEGMENTS { ZEROPAGE:load=ZP,type=zp,optional=yes; CODE:load=RAM,type=rw; RODATA:load=RAM,type=ro,optional=yes; DATA:load=RAM,type=rw,optional=yes; }\n");
+        "SEGMENTS { ZEROPAGE:load=ZP,type=zp,optional=yes; CODE:load=RAM,type=rw; RODATA:load=RAM,type=ro,optional=yes; DATA:load=RAM,type=rw,optional=yes; BANKRAM10:load=RAM,type=rw,optional=yes; }\n");
     const char *home = getenv("CC65_HOME"); char ca65[4096], ld65[4096];
     if (home) { snprintf(ca65, sizeof(ca65), "%s/bin/ca65", home); snprintf(ld65, sizeof(ld65), "%s/bin/ld65", home); }
     else { strcpy(ca65, "ca65"); strcpy(ld65, "ld65"); }
@@ -106,6 +113,64 @@ static void assemble(void) {
     fclose(file);
 }
 
+static unsigned call_status(void) {
+    reset6502(false); regs.pc = symbol("runStatus"); regs.sp = 0x1FD;
+    regs.status = FLAG_CONSTANT | FLAG_INTERRUPT;
+    ram[0x1FE] = (uint8_t)(symbol("done") - 1);
+    ram[0x1FF] = (uint8_t)((symbol("done") - 1) >> 8);
+    clockticks6502 = 0; waiting = 0; writes = 0;
+    ram[0] = 0x10; ram[1] = 0x37;
+    for (unsigned step = 0; step < 10000 && regs.pc != symbol("done"); ++step) step6502();
+    CHECK(regs.pc == symbol("done"), "Status rendering did not return within its IRQ budget");
+    CHECK(ram[0] == 0x10 && ram[1] == 0x37 && regs.sp == 0x1FF,
+          "Status rendering changed caller banks/stack");
+    CHECK(writes <= 80, "Status rendering overran its 40-cell row");
+    return clockticks6502;
+}
+
+static void check_status(unsigned score, unsigned maximum, unsigned sound_on) {
+    char prefix[64];
+    snprintf(prefix, sizeof(prefix), " Score:%u of %u", score, maximum);
+    for (unsigned i = 0; prefix[i]; ++i)
+        CHECK(vram[0xDA00 + i * 2] == (uint8_t)prefix[i],
+              "Status rendering dropped a decimal digit or zero maximum");
+    const char *sound = sound_on ? "Sound:On " : "Sound:Off";
+    bool found = false;
+    for (unsigned i = 0; i + strlen(sound) <= 40; ++i) {
+        bool match = true;
+        for (unsigned j = 0; sound[j]; ++j)
+            if (vram[0xDA00 + (i + j) * 2] != (uint8_t)sound[j]) match = false;
+        found |= match;
+    }
+    CHECK(found, "Status rendering lost its sound state");
+    CHECK(vram[0xD9FF] == 0x5A && vram[0xDA50] == 0x5A,
+          "Status rendering overwrote an adjacent row cell");
+}
+
+static void test_status(void) {
+    static const unsigned maxima[] = {255, 0, 1, 9, 10, 99, 100, 101, 109, 110, 199, 200, 209};
+    for (unsigned m = 0; m < sizeof(maxima) / sizeof(maxima[0]); ++m)
+        for (unsigned score = 0; score < 256; ++score)
+            for (unsigned sound = 0; sound < 2; ++sound) {
+                memset(vram, 0x5A, sizeof(vram));
+                ram[symbol("statusDisplayed")] = 1;
+                ram[symbol("statusShowing")] = ram[symbol("statusInitialized")] = 0;
+                ram[symbol("statusScore")] = score;
+                ram[symbol("statusMaxScore")] = maxima[m];
+                ram[symbol("statusSound")] = sound;
+                call_status(); check_status(score, maxima[m], sound);
+                CHECK(ram[symbol("statusShowing")] && ram[symbol("statusInitialized")],
+                      "Status initial rendering did not publish initialized visibility");
+                call_status();
+                CHECK(writes == 0, "Unchanged status row redrew");
+                ram[symbol("statusMaxScore")] = (maxima[m] + 1) & 255;
+                call_status();
+                CHECK(writes > 0, "Maximum score edit did not invalidate the status row");
+                check_status(score, (maxima[m] + 1) & 255, sound);
+            }
+    puts("Status checks pass: every byte score, zero/decimal boundaries, maximum edits and unchanged fast path");
+}
+
 int main(void) {
     const char *tmp = getenv("TMPDIR");
     CHECK(snprintf(temporary, sizeof(temporary), "%s/show-obj-irq-XXXXXX", tmp ? tmp : "/tmp") < (int)sizeof(temporary), "Temporary path too long");
@@ -121,5 +186,6 @@ int main(void) {
     for (unsigned i = 0; i < 8; ++i) CHECK(vram[0x1FFF8 + i] == expected[i], "show_obj attribute byte differs");
     CHECK(vram[0x1FFF7] == 0x5A && vram[0] == 0x5A, "show_obj handler wrote outside its eight-byte slot");
     CHECK(clockticks6502 < 1000, "show_obj handler exceeded its cycle budget");
-    printf("show_obj handler returns with exactly eight VRAM writes (%u cycles)\n", (unsigned)clockticks6502); return 0;
+    printf("show_obj handler returns with exactly eight VRAM writes (%u cycles)\n", (unsigned)clockticks6502);
+    test_status(); return 0;
 }
