@@ -42,8 +42,6 @@ static byte paletteSlot;
 static PaletteGetResult paletteResult;
 static unsigned foregroundEnters;
 static unsigned foregroundLeaves;
-static int useReportedStringLength;
-static size_t reportedStringLength;
 
 void b6SetAndWaitForIrqState(IRQ_COMMAND state)
 {
@@ -84,8 +82,18 @@ byte bFGetPalette(int id, PaletteGetResult* result)
 size_t strLenBanked(char* text, int bank)
 {
 	(void)bank;
-	if (useReportedStringLength) return reportedStringLength;
 	return strlen(text);
+}
+
+size_t strLenBankedBounded(char* text, int bank, size_t byteLimit, boolean* terminated)
+{
+	size_t length = 0;
+	(void)bank;
+	if (terminated) *terminated = FALSE;
+	if (!text) return 0;
+	while (length < byteLimit && text[length]) ++length;
+	if (terminated) *terminated = length < byteLimit;
+	return length;
 }
 
 void* memCpyBanked(byte* destination, byte* source, byte bank, size_t length)
@@ -98,6 +106,8 @@ void* memCpyBanked(byte* destination, byte* source, byte bank, size_t length)
 void memCpyBankedBetween(byte* destination, byte bankDestination,
 	byte* source, byte bankSource, size_t length)
 {
+	byte chunk[50];
+	size_t offset, amount;
 	(void)bankDestination;
 	(void)bankSource;
 	++bankCopyCalls;
@@ -107,7 +117,12 @@ void memCpyBankedBetween(byte* destination, byte bankDestination,
 			"Production changed the long message before copying it");
 	CHECK(length <= TEXTBUFFER_SIZE * 2,
 		"Production requested a copy larger than both text buffers");
-	memcpy(destination, source, length);
+	for (offset = 0; offset < length; offset += amount)
+	{
+		amount = length - offset < sizeof(chunk) ? length - offset : sizeof(chunk);
+		memcpy(chunk, source + offset, amount);
+		memcpy(destination + offset, chunk, amount);
+	}
 }
 
 extern void b3DrawBorder(byte boxWidth, size_t messageSize);
@@ -186,21 +201,18 @@ static void test_long_message_is_bounded_and_unchanged(void)
 	CHECK(displayCalls == 1, "Long message was not submitted for display");
 }
 
-static void test_wrapped_source_length_is_bounded(void)
+static void test_source_length_is_bounded(void)
 {
 	char message[TEXTBUFFER_TOTAL_SIZE + 1];
 	memset(message, 'X', sizeof(message) - 1);
 	message[sizeof(message) - 1] = '\0';
 	bankCopyCalls = bankWriteCalls = 0;
 	displayCalls = 0;
-	useReportedStringLength = 1;
-	reportedStringLength = (size_t)-1;
 	b3DisplayMessageBox(message, 0, 0, 0, 0, 0, FALSE);
-	useReportedStringLength = 0;
 	CHECK(bankCopyCalls == 1 && bankCopyLength == TEXTBUFFER_TOTAL_SIZE,
-		"Maximum reported string length wrapped before being bounded");
+		"Source length was not bounded by the available text buffers");
 	CHECK(b3TextBuffer1[TEXTBUFFER_TOTAL_SIZE - 1] == '\0',
-		"Maximum reported string length was not terminated at capacity");
+		"Source at destination capacity was not terminated at capacity");
 	CHECK(displayCalls == 1,
 		"Maximum reported string length was not submitted for display");
 }
@@ -241,6 +253,20 @@ static void test_border_accepts_empty_text(void)
 	b3TextBuffer2[0] = 'X';
 	b3DrawBorder(10, 1);
 	CHECK(b3TextBuffer2[0] == '\0', "Empty border input did not produce empty output");
+}
+
+static void test_border_preserves_trailing_blank_line(void)
+{
+	char message[] = "first\n";
+	char* line;
+	unsigned rows = 0;
+	b3DisplayMessageBox(message, 0, 0, 0, 0, 12, FALSE);
+	for (line = b3TextBuffer2; *line; ++line)
+		if (*line == NEW_LINE) ++rows;
+	++rows;
+	CHECK(rows == 6, "Boxed trailing newline lost its final blank content row");
+	CHECK(b3LastBoxLines == rows && b3PaletteRows == rows,
+		"Boxed trailing blank row was omitted from published row metadata");
 }
 
 static void test_border_exact_capacity_includes_terminator(void)
@@ -433,25 +459,114 @@ static void test_short_wrapped_explicit_rows(void)
 	check_published_text_rows(message, 0, TRUE, 2);
 }
 
+static void test_auto_center_unboxed_text(void)
+{
+	char message[] = "abc";
+	unsigned int column;
+	b3DisplayMessageBox(message, 0, AUTO_CALC_ROW, AUTO_CALC_COLUMN, 0, 0, FALSE);
+	column = (unsigned int)((displayTextAddressToCopyTo - MAPBASE -
+		(FIRST_ROW + b3LastBoxStartLine - 1) * TILE_LAYER_BYTES_PER_ROW) / BYTES_PER_CELL);
+	CHECK(column == (MAX_CHAR_ACROSS - 3) / 2,
+		"Automatically centered unboxed text ignored its content width");
+}
+
+static void test_auto_center_explicit_multiline_box(void)
+{
+	char message[] = "first\nsecond\nthird";
+	b3DisplayMessageBox(message, 0, AUTO_CALC_ROW, AUTO_CALC_COLUMN, 0, 12, FALSE);
+	CHECK(b3LastBoxLines == 7, "Multiline box did not publish its full rendered extent");
+	CHECK(b3LastBoxStartLine == (TEXT_ROWS - b3LastBoxLines) / 2,
+		"Automatically centered box ignored its final rendered height");
+}
+
+static void test_right_edge_clips_unboxed_text(void)
+{
+	char message[] = "AB";
+	b3DisplayMessageBox(message, 0, 0, MAX_CHAR_ACROSS - 1, 0, 0, FALSE);
+	CHECK(!strcmp(currentTextBuffer, "A"),
+		"Text at the right edge was not clipped to the visible screen width");
+	CHECK(b3PaletteRows == 1, "Right-edge clipping changed the visible row count");
+}
+
+static void test_bottom_edge_clips_unboxed_text(void)
+{
+	char message[] = "first\nsecond";
+	b3DisplayMessageBox(message, 0, TILE_LAYER_HEIGHT - FIRST_ROW,
+		0, 0, 0, FALSE);
+	CHECK(!strcmp(currentTextBuffer, "first"),
+		"Text below the final tile-map row was not clipped");
+	CHECK(b3PaletteRows == 1 && b3LastBoxLines == 1,
+		"Bottom-edge clipping published rows outside the tile map");
+}
+
+static void test_control_bytes_survive_preparation(void)
+{
+	char message[] = { 'A', '\t', '\r', 1, 'B', '\0' };
+	b3DisplayMessageBox(message, 0, 0, 0, 0, 0, FALSE);
+	CHECK(!memcmp(currentTextBuffer, message, sizeof(message)),
+		"Text preparation changed non-newline control bytes");
+}
+
+static void test_source_alias_inside_text_buffer(void)
+{
+	static const char expected[] = "aliased source";
+	char* aliasedSource = b3TextBuffer1 + 8;
+	memcpy(aliasedSource, expected, sizeof(expected));
+	b3DisplayMessageBox(aliasedSource, TEXT_CODE_BANK, 0, 0, 0, 0, FALSE);
+	CHECK(currentTextBuffer == b3TextBuffer1 && !strcmp(currentTextBuffer, expected),
+		"Source alias inside the text buffer was not prepared intact");
+}
+
 static void test_rejected_box_preserves_cleanup_extent(void)
 {
 	char valid[] = "first\nsecond\nthird";
 	char invalid[901];
+	char* previousTextBuffer;
+	unsigned long previousTextAddress;
+	long previousPaletteAddress;
+	byte previousPaletteRows, previousPaletteNumber;
+	byte previousBoxLines, previousBoxStartLine;
 	memset(invalid, 'X', sizeof(invalid) - 1);
 	invalid[sizeof(invalid) - 1] = '\0';
 	displayCalls = 0;
 	b3DisplayMessageBox(valid, 0, 1, 0, 2, 12, FALSE);
 	CHECK(displayCalls == 1 && b3LastBoxLines == 7, "Initial box did not publish its extent");
+	previousTextBuffer = currentTextBuffer;
+	previousTextAddress = displayTextAddressToCopyTo;
+	previousPaletteAddress = b3PaletteAddress;
+	previousPaletteRows = b3PaletteRows;
+	previousPaletteNumber = b3PaletteNumber;
+	previousBoxLines = b3LastBoxLines;
+	previousBoxStartLine = b3LastBoxStartLine;
 	b3DisplayMessageBox(invalid, 0, 5, 0, 2, 254, FALSE);
-	CHECK(displayCalls == 1 && b3LastBoxLines == 7 && b3LastBoxStartLine == 1,
-		"Rejected box replaced the previous display cleanup extent");
+	CHECK(displayCalls == 1 && currentTextBuffer == previousTextBuffer &&
+		displayTextAddressToCopyTo == previousTextAddress &&
+		b3PaletteAddress == previousPaletteAddress && b3PaletteRows == previousPaletteRows &&
+		b3PaletteNumber == previousPaletteNumber && b3LastBoxLines == previousBoxLines &&
+		b3LastBoxStartLine == previousBoxStartLine,
+		"Rejected box changed previously published display metadata");
 	b3DisplayMessageBox("", 0, 5, 0, 2, 12, FALSE);
-	CHECK(displayCalls == 1 && b3LastBoxLines == 7 && b3LastBoxStartLine == 1,
-		"Empty message replaced the previous display cleanup extent");
+	CHECK(displayCalls == 1 && currentTextBuffer == previousTextBuffer &&
+		displayTextAddressToCopyTo == previousTextAddress &&
+		b3PaletteAddress == previousPaletteAddress && b3PaletteRows == previousPaletteRows &&
+		b3PaletteNumber == previousPaletteNumber && b3LastBoxLines == previousBoxLines &&
+		b3LastBoxStartLine == previousBoxStartLine,
+		"Empty message changed previously published display metadata");
+	b3DisplayMessageBox(NULL, 0, 5, 0, 2, 12, FALSE);
+	CHECK(displayCalls == 1 && currentTextBuffer == previousTextBuffer &&
+		displayTextAddressToCopyTo == previousTextAddress &&
+		b3PaletteAddress == previousPaletteAddress && b3PaletteRows == previousPaletteRows &&
+		b3PaletteNumber == previousPaletteNumber && b3LastBoxLines == previousBoxLines &&
+		b3LastBoxStartLine == previousBoxStartLine,
+		"Null message changed previously published display metadata");
 	memset(invalid, NEW_LINE, sizeof(invalid) - 1);
 	b3DisplayMessageBox(invalid, 0, 5, 0, 2, 0, FALSE);
-	CHECK(displayCalls == 1 && b3LastBoxLines == 7 && b3LastBoxStartLine == 1,
-		"Unrepresentable text rows replaced the previous display cleanup extent");
+	CHECK(displayCalls == 1 && currentTextBuffer == previousTextBuffer &&
+		displayTextAddressToCopyTo == previousTextAddress &&
+		b3PaletteAddress == previousPaletteAddress && b3PaletteRows == previousPaletteRows &&
+		b3PaletteNumber == previousPaletteNumber && b3LastBoxLines == previousBoxLines &&
+		b3LastBoxStartLine == previousBoxStartLine,
+		"Unrepresentable text changed previously published display metadata");
 	captureFillOutput = 1;
 	displayedCells = displayedNewlines = unexpectedText = fillMapRowsSeen = 0;
 	b3ClearLastPlacedText();
@@ -474,10 +589,11 @@ static const TextTestCase textTests[] =
 	{ "fill_rejects_wrapped_row", test_fill_rejects_wrapped_row },
 	{ "fill_clear_lines_map_range", test_fill_clear_lines_map_range },
 	{ "long_message_is_bounded_and_unchanged", test_long_message_is_bounded_and_unchanged },
-	{ "wrapped_source_length_is_bounded", test_wrapped_source_length_is_bounded },
+	{ "source_length_is_bounded", test_source_length_is_bounded },
 	{ "border_rejects_oversized_output", test_border_rejects_oversized_output },
 	{ "border_keeps_content_inside_requested_width", test_border_keeps_content_inside_requested_width },
 	{ "border_accepts_empty_text", test_border_accepts_empty_text },
+	{ "border_preserves_trailing_blank_line", test_border_preserves_trailing_blank_line },
 	{ "border_exact_capacity_includes_terminator", test_border_exact_capacity_includes_terminator },
 	{ "wrap_width_includes_last_line", test_wrap_width_includes_last_line },
 	{ "wrap_newline_without_spaces", test_wrap_newline_without_spaces },
@@ -487,6 +603,12 @@ static const TextTestCase textTests[] =
 	{ "multiline_box_rows", test_multiline_box_rows },
 	{ "box_preserves_blank_rows", test_box_preserves_blank_rows },
 	{ "short_wrapped_explicit_rows", test_short_wrapped_explicit_rows },
+	{ "auto_center_unboxed_text", test_auto_center_unboxed_text },
+	{ "auto_center_explicit_multiline_box", test_auto_center_explicit_multiline_box },
+	{ "right_edge_clips_unboxed_text", test_right_edge_clips_unboxed_text },
+	{ "bottom_edge_clips_unboxed_text", test_bottom_edge_clips_unboxed_text },
+	{ "control_bytes_survive_preparation", test_control_bytes_survive_preparation },
+	{ "source_alias_inside_text_buffer", test_source_alias_inside_text_buffer },
 	{ "rejected_box_preserves_cleanup_extent", test_rejected_box_preserves_cleanup_extent },
 	{ "text_color_ids", test_text_color_ids },
 	{ "text_color_allocation_failure", test_text_color_allocation_failure }
