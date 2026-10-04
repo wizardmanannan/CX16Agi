@@ -7,6 +7,7 @@ CC65_HOME ?= $(SHARED_TOOL_ROOT)/.tools/cc65-latest
 X16_EMULATOR_SOURCE ?= $(SHARED_TOOL_ROOT)/.tools/x16-emulator
 HOST_CC ?= cc
 HOST_CFLAGS ?= -std=c11 -O2 -Wall -Wextra
+# Sanitized host children need ASan loaded first; omit the injected LD_PRELOAD for those runs.
 TEST_OUTPUT_ROOT ?= $(REPO_ROOT)/obj
 
 export CC65_HOME X16_EMULATOR_SOURCE TMPDIR ROM GAME BUILD SYMBOLS SDL_PREFIX KEEP_TEST_OUTPUT
@@ -94,6 +95,7 @@ _run:
 	    "$(HOST_CC)" $(HOST_CFLAGS) "$$repo/tools/test_tool_paths.c" -o "$$work/bin/test_tool_paths"; \
 	    "$(HOST_CC)" $(HOST_CFLAGS) -Wno-unknown-pragmas "$$repo/tools/test_palette_manager.c" -o "$$work/bin/test_palette_manager"; \
 	    "$(HOST_CC)" $(HOST_CFLAGS) -Wno-unknown-pragmas -fsanitize=bounds -fno-sanitize-recover=bounds "$$repo/tools/test_controllers.c" -o "$$work/bin/test_controllers"; \
+	    "$(HOST_CC)" $(HOST_CFLAGS) -Wno-unknown-pragmas -fsanitize=address,undefined -fno-sanitize-recover=all "$$repo/tools/test_menu.c" -o "$$work/bin/test_menu"; \
 	    failed=0; \
 	    run_test() { echo "RUN $$*"; if "$$@"; then :; else failed=$$((failed + 1)); fi; }; \
 	    for name in graphics_clear irq_completion irq_helpers random show_obj_irq text_irq; do \
@@ -104,6 +106,7 @@ _run:
 	    run_test "$$work/bin/test_tool_paths"; \
 	    run_test "$$work/bin/test_palette_manager"; \
 	    run_test "$$work/bin/test_controllers"; \
+	    run_test env -u LD_PRELOAD "$$work/bin/test_menu"; \
 	    [ "$$failed" -eq 0 ] || fail "$$failed regression(s) failed" ;; \
 	  image|production-test) \
 	    $(MAKE) --no-print-directory -f "$$repo/tools/test-image.mk" "REPO_ROOT=$$repo" "OUT=$$work/image"; \

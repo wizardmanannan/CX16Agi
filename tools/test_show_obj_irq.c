@@ -8,6 +8,10 @@
 #include <unistd.h>
 #include "registers.h"
 #include "fake6502.h"
+#define _MEMORYMANAGER_H_
+#define _LOGIC_H_
+#define _PARSER_H_
+#include "../src/menu.h"
 
 extern struct regs regs;
 static uint8_t ram[65536], vram[131072];
@@ -15,11 +19,23 @@ static unsigned address[2], stride[2], writes;
 static char temporary[4096];
 static struct { char name[100]; unsigned address; } symbols[64];
 static unsigned symbol_count;
+static bool fx_write;
+static uint8_t fx_cache[4];
+static bool track_menu_reads;
+static unsigned menu_records, menu_record_limit, menu_record_end;
 
 #define CHECK(c, m) do { if (!(c)) { fprintf(stderr, "%s (%s:%d)\n", m, __FILE__, __LINE__); exit(1); } } while (0)
 
 uint8_t read6502(uint16_t location, uint8_t bank) {
     (void)bank;
+    if (track_menu_reads && location >= menu_records && location < menu_record_end)
+        CHECK(location < menu_record_limit, "Menu renderer read beyond its published child count");
+    if (location >= 0x9F20 && location <= 0x9F22) {
+        unsigned port = ram[0x9F25] & 1;
+        if (location == 0x9F20) return address[port];
+        if (location == 0x9F21) return address[port] >> 8;
+        return (ram[0x9F22] & 0xFE) | (address[port] >> 16);
+    }
     if (location == 0x9F23 || location == 0x9F24) {
         unsigned port = location - 0x9F23;
         uint8_t value = vram[address[port]];
@@ -31,6 +47,12 @@ uint8_t read6502(uint16_t location, uint8_t bank) {
 
 void write6502(uint16_t location, uint8_t bank, uint8_t value) {
     (void)bank;
+    if (location >= 0x9F29 && location <= 0x9F2C && (ram[0x9F25] >> 1) == 6) {
+        fx_cache[location - 0x9F29] = value; return;
+    }
+    if (location == 0x9F29 && (ram[0x9F25] >> 1) == 2) {
+        fx_write = (value & 0x40) != 0; return;
+    }
     if (location >= 0x9F20 && location <= 0x9F22) {
         static const unsigned increments[16] = {0,1,2,4,8,16,32,64,128,256,512,40,80,160,320,640};
         unsigned port = ram[0x9F25] & 1;
@@ -41,9 +63,14 @@ void write6502(uint16_t location, uint8_t bank, uint8_t value) {
     }
     if (location == 0x9F23 || location == 0x9F24) {
         unsigned port = location - 0x9F23;
-        vram[address[port]] = value;
+        if (fx_write) {
+            CHECK(value == 0 && (address[port] & 3) == 0, "Unexpected masked/unaligned FX menu write");
+            for (unsigned i = 0; i < 4; ++i) vram[(address[port] + i) & 0x1FFFF] = fx_cache[i];
+            writes += 4;
+        } else {
+            vram[address[port]] = value; ++writes;
+        }
         address[port] = (address[port] + stride[port]) & 0x1FFFF;
-        ++writes;
         return;
     }
     ram[location] = value;
@@ -63,6 +90,46 @@ static void write_file(const char *path, const char *contents) {
 static unsigned symbol(const char *name) {
     for (unsigned i = 0; i < symbol_count; ++i) if (!strcmp(name, symbols[i].name)) return symbols[i].address;
     fprintf(stderr, "Missing assembler symbol: %s\n", name); exit(1);
+}
+
+static char *read_source(const char *path) {
+    FILE *file = fopen(path, "rb"); CHECK(file, "Cannot read production assembly");
+    CHECK(!fseek(file, 0, SEEK_END), "Cannot seek production assembly");
+    long length = ftell(file); CHECK(length >= 0, "Cannot size production assembly"); rewind(file);
+    char *text = malloc((size_t)length + 1); CHECK(text, "Out of memory");
+    CHECK(fread(text, 1, length, file) == (size_t)length, "Cannot load production assembly");
+    text[length] = 0; CHECK(!fclose(file), "Cannot close production assembly"); return text;
+}
+
+static void append_menu_fixture(const char *path) {
+    char *text = read_source("src/menuAsm.s");
+    char *constants = strstr(text, "MENU_SREG ="), *constants_end = constants ? strstr(constants, ".segment \"CODE\"") : NULL;
+    char *helpers = strstr(text, "bAClearTopLine:"), *helpers_end = helpers ? strstr(helpers, "bAPrintMenuChildText:") : NULL;
+    char *printer = strstr(text, "bAPrintMenuText:"), *printer_end = printer ? strstr(printer, "MENU_BAR_LOCATION =") : NULL;
+    char *locations_end = printer_end ? strstr(printer_end, "\n\n") : NULL;
+    char *bar = strstr(text, "bADisplayMenuBar:"), *bar_end = bar ? strstr(bar, ".endif") : NULL;
+    CHECK(constants_end && helpers_end && locations_end && bar_end, "Menu assembly boundaries changed");
+    FILE *file = fopen(path, "a"); CHECK(file, "Cannot extend owned IRQ fixture");
+    fprintf(file, ".scope MenuFixture\n%.*s\n%.*s\n%.*s\n%.*s\n%.*s\n",
+        (int)(constants_end - constants), constants,
+        (int)(locations_end - printer_end), printer_end,
+        (int)(helpers_end - helpers), helpers,
+        (int)(printer_end - printer), printer,
+        (int)(bar_end - bar), bar);
+    fprintf(file,
+        "_bAMenuSelected: .byte 0\n_bAMenuChildSelected: .byte 0\n_bAMenuChildWidth: .res 10\n"
+        "_bAMenuChildShiftBack: .res 10\n_bAMenuChildCount: .res 10\n_bAFirstMenuChild: .res 20\n"
+        "_bAEnabledMenuControllers: .res 256\n_sizeOfMenu: .byte 3\n_offsetOfText: .byte 0\n_offsetOfController: .byte 2\n"
+        "_numOfMenus: .word 0\n_the_menu: .res 33\n_menuDirty: .byte 1\n_menuShown: .byte 1\n"
+        "isMenuAllowed: lda #1\nrts\nbAPrintMenuChildText: rts\n.endscope\n.segment \"CODE\"\n"
+        ".export runMenuClear,runMenuChildren,runMenuBar,menuWidth,menuChildCount,menuFirstChild,menuSelected,menuBarCount,menuBarRecords,menuEnabled,menuOpenAddress\n"
+        "runMenuClear: jmp MenuFixture::bAClearMenuChildren\nrunMenuChildren: jmp MenuFixture::bADisplayChildMenu\n"
+        "runMenuBar: jmp MenuFixture::bADisplayMenuBar\nmenuWidth=MenuFixture::_bAMenuChildWidth\n"
+        "menuChildCount=MenuFixture::_bAMenuChildCount\nmenuFirstChild=MenuFixture::_bAFirstMenuChild\n"
+        "menuSelected=MenuFixture::_bAMenuSelected\nmenuBarCount=MenuFixture::_numOfMenus\n"
+        "menuBarRecords=MenuFixture::_the_menu\nmenuEnabled=MenuFixture::_bAEnabledMenuControllers\n"
+        "menuOpenAddress=MenuFixture::OPEN_MENU_ADDRESS\n");
+    CHECK(!fclose(file), "Cannot close menu fixture"); free(text);
 }
 
 static void assemble(void) {
@@ -92,9 +159,10 @@ static void assemble(void) {
         "statusMaxScore=SET_VAR_OFFSET+MAX_SCORE_VAR\nstatusSound=FLAG_OFFSET+SOUND_ON_FLAG\n",
         (int)(end - begin), begin);
     CHECK(count >= 0 && count < (int)sizeof(fixture), "Fixture too large"); free(assembly); write_file(source, fixture);
+    append_menu_fixture(source);
     write_file(config,
         "MEMORY { ZP:start=$22,size=$5C,file=\"\"; RAM:start=$2000,size=$6000,file=%O; }\n"
-        "SEGMENTS { ZEROPAGE:load=ZP,type=zp,optional=yes; CODE:load=RAM,type=rw; RODATA:load=RAM,type=ro,optional=yes; DATA:load=RAM,type=rw,optional=yes; BANKRAM10:load=RAM,type=rw,optional=yes; }\n");
+        "SEGMENTS { ZEROPAGE:load=ZP,type=zp,optional=yes; CODE:load=RAM,type=rw; RODATA:load=RAM,type=ro,optional=yes; DATA:load=RAM,type=rw,optional=yes; BANKRAM10:load=RAM,type=rw,optional=yes; BANKRAM0A:load=RAM,type=rw,optional=yes; }\n");
     const char *home = getenv("CC65_HOME"); char ca65[4096], ld65[4096];
     if (home) { snprintf(ca65, sizeof(ca65), "%s/bin/ca65", home); snprintf(ld65, sizeof(ld65), "%s/bin/ld65", home); }
     else { strcpy(ca65, "ca65"); strcpy(ld65, "ld65"); }
@@ -113,19 +181,117 @@ static void assemble(void) {
     fclose(file);
 }
 
-static unsigned call_status(void) {
-    reset6502(false); regs.pc = symbol("runStatus"); regs.sp = 0x1FD;
+static unsigned call_ui(const char *entry, unsigned max_writes) {
+    reset6502(false); regs.pc = symbol(entry); regs.sp = 0x1FD;
     regs.status = FLAG_CONSTANT | FLAG_INTERRUPT;
     ram[0x1FE] = (uint8_t)(symbol("done") - 1);
     ram[0x1FF] = (uint8_t)((symbol("done") - 1) >> 8);
     clockticks6502 = 0; waiting = 0; writes = 0;
     ram[0] = 0x10; ram[1] = 0x37;
-    for (unsigned step = 0; step < 10000 && regs.pc != symbol("done"); ++step) step6502();
+    for (unsigned step = 0; step < 15000 && regs.pc != symbol("done"); ++step) step6502();
     CHECK(regs.pc == symbol("done"), "Status rendering did not return within its IRQ budget");
     CHECK(ram[0] == 0x10 && ram[1] == 0x37 && regs.sp == 0x1FF,
           "Status rendering changed caller banks/stack");
-    CHECK(writes <= 80, "Status rendering overran its 40-cell row");
+    CHECK(writes <= max_writes, "UI rendering exceeded its VRAM write bound");
     return clockticks6502;
+}
+
+static unsigned call_status(void) { return call_ui("runStatus", 80); }
+
+static void put_word(unsigned at, unsigned value) { ram[at] = value; ram[at + 1] = value >> 8; }
+
+static void test_menu_clear(void) {
+    const unsigned base = MENU_BAR_LOCATION + 128;
+    const unsigned bytes = (MAX_MENU_CHILDREN + 2) * 128;
+    memset(vram, 0x5A, sizeof(vram)); memset(fx_cache, 0xA5, sizeof(fx_cache)); fx_write = false;
+    unsigned cycles = call_ui("runMenuClear", bytes);
+    CHECK(writes == bytes, "Menu clear does not cover all C-declared children and both border rows");
+    for (unsigned i = 0; i < bytes; ++i)
+        CHECK(vram[base + i] == (i & 1 ? 0x10 : 0x80), "Menu clear used the wrong FX cache register bank/pattern");
+    CHECK(vram[base - 1] == 0x5A && vram[base + bytes] == 0x5A,
+          "Menu clear changed an adjacent row");
+    CHECK(!fx_write && ram[0x9F25] == 0, "Menu clear left VERA FX cache writes enabled");
+    CHECK(cycles < 9000, "Menu clear exceeded its bounded IRQ cycle budget");
+    printf("Menu clear: %u cycles, %u bytes across %u rows\n", cycles, bytes, MAX_MENU_CHILDREN + 2);
+}
+
+static void test_menu_children(void) {
+    enum { FULL_MENU_BASELINE_CYCLES = 42308, FULL_MENU_BUDGET_CYCLES = 60000 };
+    menu_records = 0x8000; menu_record_end = menu_records + (MAX_MENU_CHILDREN + 1) * 3;
+    ram[0x8100] = 'X'; ram[0x8101] = 0;
+    ram[symbol("menuSelected")] = 0;
+    ram[symbol("menuWidth")] = 5;
+    memset(ram + symbol("menuEnabled"), 1, 256);
+    put_word(symbol("menuFirstChild"), menu_records);
+    for (unsigned count = 0; count <= MAX_MENU_CHILDREN; ++count) {
+        memset(vram, 0x5A, sizeof(vram));
+        for (unsigned i = 0; i <= MAX_MENU_CHILDREN; ++i) {
+            put_word(menu_records + i * 3, 0x8100); ram[menu_records + i * 3 + 2] = i;
+        }
+        put_word(symbol("menuOpenAddress"), MENU_BAR_LOCATION);
+        ram[symbol("menuChildCount")] = count;
+        menu_record_limit = menu_records + count * 3;
+        track_menu_reads = true;
+        call_ui("runMenuChildren", (count + 2) * 10);
+        track_menu_reads = false;
+        CHECK(writes == (count ? (count + 2) * 10 : 0), "Menu child renderer ignored its empty/published count");
+        for (unsigned row = 0; row < count + 2 && count; ++row) {
+            unsigned base = MENU_BAR_LOCATION + (row + 1) * 128;
+            CHECK(vram[base] != 0x5A && vram[base + 9] != 0x5A && vram[base + 10] == 0x5A,
+                  "Menu child row stride/width overran its borders");
+        }
+    }
+    memset(vram, 0x5A, sizeof(vram));
+    memset(ram + 0x8100, 'T', MENU_BAR_WIDTH - 2);
+    ram[0x8100 + MENU_BAR_WIDTH - 2] = 0;
+    ram[symbol("menuWidth")] = MENU_BAR_WIDTH;
+    ram[symbol("menuChildCount")] = MAX_MENU_CHILDREN;
+    put_word(symbol("menuOpenAddress"), MENU_BAR_LOCATION);
+    menu_record_limit = menu_records + MAX_MENU_CHILDREN * 3;
+    track_menu_reads = true;
+    unsigned maximum_cycles = call_ui("runMenuChildren", (MAX_MENU_CHILDREN + 2) * MENU_BAR_WIDTH * 2);
+    track_menu_reads = false;
+    CHECK(writes == (MAX_MENU_CHILDREN + 2) * MENU_BAR_WIDTH * 2 && maximum_cycles < FULL_MENU_BUDGET_CYCLES,
+          "Maximum menu exceeded its declared extent or IRQ cycle budget");
+    for (unsigned row = 0; row < MAX_MENU_CHILDREN + 2; ++row) {
+        unsigned base = MENU_BAR_LOCATION + (row + 1) * 128;
+        CHECK(vram[base - 1] == 0x5A && vram[base + MENU_BAR_WIDTH * 2] == 0x5A,
+              "Maximum menu changed a cell outside its declared row width");
+        if (row && row <= MAX_MENU_CHILDREN)
+            for (unsigned column = 1; column < MENU_BAR_WIDTH - 1; ++column)
+                CHECK(vram[base + column * 2] == 'T', "Maximum menu dropped content characters");
+    }
+    printf("Maximum menu children: %u cycles, %u writes (baseline %u, budget <%u)\n",
+           maximum_cycles, writes, FULL_MENU_BASELINE_CYCLES, FULL_MENU_BUDGET_CYCLES);
+    for (unsigned width = 0; width <= 41; ++width) {
+        memset(vram, 0x5A, sizeof(vram));
+        ram[symbol("menuWidth")] = width;
+        ram[symbol("menuChildCount")] = 1;
+        put_word(symbol("menuOpenAddress"), MENU_BAR_LOCATION);
+        call_ui("runMenuChildren", width >= 2 && width <= 40 ? width * 6 : 0);
+        CHECK(writes == (width >= 2 && width <= 40 ? width * 6 : 0),
+              "Menu border width two underflowed or invalid width drew outside the bar");
+    }
+
+}
+
+static void test_menu_bar(void) {
+    puts("Menu children pass: published counts 0..15, widths 0..41 and bounded row strides");
+    const unsigned records = symbol("menuBarRecords");
+    ram[symbol("menuBarCount")] = 1;
+    put_word(records, 0x8200); put_word(records + 3, 0);
+    for (unsigned length = 0; length <= 255; ++length) {
+        memset(vram, 0x5A, sizeof(vram));
+        memset(ram + 0x8200, 'T', length); ram[0x8200 + length] = 0;
+        call_ui("runMenuBar", 80);
+        CHECK(writes == 80 && vram[MENU_BAR_LOCATION - 1] == 0x5A && vram[MENU_BAR_END] == 0x5A,
+              "Menu title/padding overran the 40-cell bar");
+    }
+    ram[symbol("menuBarCount")] = MAX_MENUS;
+    for (unsigned i = 0; i <= MAX_MENUS; ++i) put_word(records + i * 3, 0x8200);
+    strcpy((char *)ram + 0x8200, "X");
+    call_ui("runMenuBar", 80);
+    CHECK(writes == 80, "Full menu bar did not stop at its published item count");
 }
 
 static void check_status(unsigned score, unsigned maximum, unsigned sound_on) {
@@ -187,5 +353,5 @@ int main(void) {
     CHECK(vram[0x1FFF7] == 0x5A && vram[0] == 0x5A, "show_obj handler wrote outside its eight-byte slot");
     CHECK(clockticks6502 < 1000, "show_obj handler exceeded its cycle budget");
     printf("show_obj handler returns with exactly eight VRAM writes (%u cycles)\n", (unsigned)clockticks6502);
-    test_status(); return 0;
+    test_status(); test_menu_clear(); test_menu_children(); test_menu_bar(); return 0;
 }

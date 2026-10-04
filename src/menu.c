@@ -160,6 +160,10 @@ void bAAllowMenu(boolean allowed)
 // ================================================================
 void bAGoToNextMenu(signed char direction)
 {
+  if (numOfMenus == 0) {
+	bAMenuSelected = bAMenuChildSelected = 0;
+	return;
+  }
   asm("php");
   asm("sei");
   menuDirty = TRUE;
@@ -186,6 +190,10 @@ void bAGoToNextMenu(signed char direction)
 // ================================================================
 void bAGoToNextChildMenu(signed char direction)
 {
+  if (bAMenuSelected >= numOfMenus || bAMenuChildCount[bAMenuSelected] == 0) {
+	bAMenuChildSelected = 0;
+	return;
+  }
   asm("php");
   asm("sei");
   menuDirty = TRUE;
@@ -213,6 +221,8 @@ void bAGoToNextChildMenu(signed char direction)
 void bAShowMenu(boolean shown)
 {
 	byte ch, controller;
+	boolean selected = FALSE;
+	(void)shown;
 
 	asm("php");
 	asm("sei");
@@ -240,17 +250,19 @@ void bAShowMenu(boolean shown)
 		{
 		   bAGoToNextChildMenu(1);
 		}
-		else if(ch == KEY_ENTER)
+		else if(ch == KEY_ENTER && bAMenuSelected < numOfMenus &&
+		        bAMenuChildSelected < bAMenuChildCount[bAMenuSelected])
 		{
 			controller = the_menuChildren[bAMenuSelected * MAX_MENU_CHILDREN + bAMenuChildSelected].controller;
 
-			if(controller != NOT_ASSOCIATED)
+			if(controller != NOT_ASSOCIATED && bAEnabledMenuControllers[controller])
 			{
 				b1SetController(controller);    // Activate associated controller/action
+				selected = TRUE;
 			}
 		}
 
-	} while(ch != KEY_ESC && ch != KEY_ENTER || ch == KEY_ENTER && !bAEnabledMenuControllers[controller]);
+	} while(ch != KEY_ESC && !selected);
 
 	asm("php");
 	asm("sei");
@@ -284,6 +296,7 @@ void bAGetMenu(MENU* menu, byte menuNo)
 void bASetMenuChild(MENU* menu, byte menuNo)
 {
 	int i;
+	if (menuNo >= numOfMenus || menuNo >= MAX_MENUS) return;
 	
 	for (i = 0; i < MAX_MENU_CHILDREN && the_menuChildren[menuNo * MAX_MENU_CHILDREN + i].text != NULL; i++);
 
@@ -308,11 +321,16 @@ void bASetMenuChild(MENU* menu, byte menuNo)
 char* bAStoreMessageInBuffer(LOGICFile* currentLogicFile, byte messNum)
 {
 	char* messData,*result;
-	byte messLength;
+	size_t messLength;
 
+	if (!messNum) return NULL;
 
 	messData = getMessagePointer(currentLog, messNum - 1);
-	messLength = strLenBanked(messData, currentLogicFile->messageBank) + 1;
+	if (!messData) return NULL;
+	messLength = strLenBanked(messData, currentLogicFile->messageBank);
+	/* Compare before adding the terminator, so a 16-bit length cannot wrap. */
+	if (messLength >= (size_t)(menuTextBuffer + MENU_TEXT_BUFFER_SIZE - nextMenuTextBufferAddr)) return NULL;
+	++messLength;
 	
 	memCpyBankedBetween((byte*)nextMenuTextBufferAddr, MENU_BANK, (byte*)messData, currentLogicFile->messageBank, messLength);
 
@@ -332,9 +350,9 @@ char* bAStoreMessageInBuffer(LOGICFile* currentLogicFile, byte messNum)
 // ================================================================
 void bASetMenu(byte messNum)
 {
-	int startOffset;
 	MENU newMenu;
 	LOGICFile currentLogicFile;
+	if (numOfMenus >= MAX_MENUS) return;
 
 	if (numOfMenus == 0)
 	{
@@ -345,6 +363,7 @@ void bASetMenu(byte messNum)
 	
 	
 	newMenu.text = bAStoreMessageInBuffer(&currentLogicFile, messNum);
+	if (!newMenu.text) return;
 	newMenu.controller = NOT_ASSOCIATED;
 	/* Create new menu and allocate space for MAX_MENU_SIZE items */
 
@@ -357,7 +376,7 @@ void bASetMenu(byte messNum)
 	newMenu.text = NULL;
 
 	/* Mark end of menu */
-	the_menu[numOfMenus + 1] = newMenu;
+	if (numOfMenus + 1 < MAX_MENUS) the_menu[numOfMenus + 1] = newMenu;
 	numOfMenus++;
 
 	return;
@@ -401,23 +420,19 @@ void bASetMenuChildShiftBack(byte menuNumber)
 // ================================================================
 void bASetMenuItem(int messNum, int controllerNum)
 {
-	int i;
 	MENU childMenu;
 	LOGICFile currentLogicFile;
-	EventType event;
-	byte menuTextLength;
+	size_t menuTextLength;
 	
+	if (numOfMenus == 0 || bAMenuChildCount[numOfMenus - 1] >= MAX_MENU_CHILDREN) return;
 	b5GetLogicFile(&currentLogicFile, currentLog);
 
-	if (event.type == NO_EVENT) {
-		event.type = MENU_EVENT;
-	}
-	event.activated = 0;
-
 	childMenu.text = bAStoreMessageInBuffer(&currentLogicFile, messNum);
+	if (!childMenu.text) return;
 	childMenu.controller = controllerNum;
 
 	menuTextLength = strlen(childMenu.text);
+	if (menuTextLength > MENU_BAR_WIDTH - 2) menuTextLength = MENU_BAR_WIDTH - 2;
 
 	if(menuTextLength + 2 > bAMenuChildWidth[numOfMenus - 1])
 	{
