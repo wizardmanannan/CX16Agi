@@ -88,7 +88,7 @@ static void run_tool(const char *name, char *const arguments[]) {
     CHECK(WIFEXITED(status) && !WEXITSTATUS(status), "Assembler or linker failed");
 }
 
-static void assemble(const char *graphics_path) {
+static void assemble(const char *graphics_path, unsigned priority_size) {
     char path[8192], config[8192], object[8192], binary[8192], labels[8192], fixture[8192];
     snprintf(path, sizeof(path), "%s/clear.s", temporary);
     snprintf(config, sizeof(config), "%s/clear.cfg", temporary);
@@ -100,6 +100,8 @@ static void assemble(const char *graphics_path) {
     char *irq = read_file("src/irqAsm.s");
     char *map_start = strstr(irq, "_b3InitLayer1Mapbase:"); CHECK(map_start, "Map clear missing");
     char *map_end = strstr(map_start, "\nhandleDisplayTextSlice:"); CHECK(map_end, "Map clear end missing");
+    char *priority_start = strstr(graphics, "_b8ClearPriority:"); CHECK(priority_start, "Full priority clear missing");
+    char *priority_end = strstr(priority_start, "\n; IRQ clear uses row-aligned slices"); CHECK(priority_end, "Full priority clear end missing");
     char *slice_start = strstr(graphics, "_b8ClearBackgroundSliceReset:"); CHECK(slice_start, "Background slice clear missing");
     char *slice_end = strstr(slice_start, "_b8ClearBackground:"); CHECK(slice_end, "Background slice clear end missing");
     char *clear = slice_end;
@@ -111,22 +113,25 @@ static void assemble(const char *graphics_path) {
         "BITMAP_WIDTH=320\nPICTURE_WIDTH=160\nPICTURE_HEIGHT=168\n"
         "STARTING_ROW=(240-PICTURE_HEIGHT)/2\nSTARTING_BYTE=STARTING_ROW*(BITMAP_WIDTH/2)\n"
         "BYTES_PER_ROW=BITMAP_WIDTH/2\nPRIORITY_START=(BITMAP_WIDTH*BITMAP_HEIGHT)/2\n"
-        "PRIORITY_SIZE=(PICTURE_WIDTH*PICTURE_HEIGHT)/2\nPRIORITY_DEF=$44\nBITMAP_HEIGHT=240\n"
+        "PRIORITY_SIZE=%u\nPRIORITY_DEF=$44\nBITMAP_HEIGHT=240\n"
         "LEFT_BORDER=$A1\nRIGHT_BORDER=$B2\nDEFAULT_BACKGROUND_COLOR=$C3\n"
         ".macro SET_VERA_ADDRESS_IMMEDIATE VERA_ADDRESS, ADDRESS_SEL, STRIDE\n"
         "lda ADDRESS_SEL\nsta VERA_ctrl\nlda #^VERA_ADDRESS\nand #$1\nora STRIDE << 4\nsta VERA_addr_bank\n"
         "lda #<VERA_ADDRESS\nsta VERA_addr_low\nlda #>VERA_ADDRESS\nsta VERA_addr_high\n.endmacro\n"
         "ZP_TILE_LAYER_NO_TILES_HIGH=ZP_TMP_2\n"
-        ".export runBackground,done,runBackgroundSlice,resetBackgroundSlices,runPrioritySlice,resetPrioritySlices,runMap,sliceDone,_b3InitLayer1Mapbase,_inputLineDirty\n"
-        ".segment \"CODE\"\n_inputLineDirty: .byte $0\n%.*s\n%.*s\n%.*s\n"
+        ".export runBackground,done,runPriority,runBackgroundSlice,resetBackgroundSlices,runPrioritySlice,resetPrioritySlices,runMap,sliceDone,_b3InitLayer1Mapbase,_inputLineDirty\n"
+        ".segment \"CODE\"\n_inputLineDirty: .byte $0\n%.*s\n%.*s\n%.*s\n%.*s\n"
         "runBackground: jsr _b8ClearBackground\ndone: rts\n"
+        "runPriority: jsr _b8ClearPriority\nrts\n"
         "resetBackgroundSlices: jsr _b8ClearBackgroundSliceReset\nrts\n"
         "runBackgroundSlice: jsr _b8ClearBackgroundSlice\nrts\n"
         "resetPrioritySlices: jsr _b8ClearPrioritySliceReset\nrts\n"
         "runPrioritySlice: jsr _b8ClearPrioritySlice\nrts\n"
         "runMap: jsr _b3InitLayer1Mapbase\nrts\n"
         "sliceDone: rts\n",
+        priority_size,
         (int)(map_end - map_start), map_start,
+        (int)(priority_end - priority_start), priority_start,
         (int)(slice_end - slice_start), slice_start, (int)(end - clear), clear);
     CHECK(length >= 0 && length < (int)sizeof(fixture), "Fixture assembly too large");
     free(graphics); free(irq); write_file(path, fixture);
@@ -138,8 +143,10 @@ static void assemble(const char *graphics_path) {
     run_tool("ca65", ca65); run_tool("ld65", ld65);
 
     FILE *file = fopen(binary, "rb"); CHECK(file, "Cannot read linked fixture");
+    memset(ram + 0x2000, 0, 0x6000);
     CHECK(fread(ram + 0x2000, 1, 0x6000, file) > 0, "Fixture binary is empty");
     CHECK(!fclose(file), "Cannot close fixture binary");
+    symbol_count = 0;
     file = fopen(labels, "r"); CHECK(file, "Cannot read labels");
     char line[256], kind[16], name[100]; unsigned address;
     while (fgets(line, sizeof(line), file)) if (sscanf(line, "%15s %x %99s", kind, &address, name) == 3) {
@@ -218,6 +225,35 @@ static void test_bounded_slices(void) {
     CHECK(max_priority_cycles < 13000, "Priority slice exceeded the 13000-cycle target (baseline 18568)");
 }
 
+static void test_full_priority_clear(void) {
+    memset(vram, 0x5A, sizeof(vram)); writes = 0;
+    run_helper("runPriority", 1000000);
+    unsigned cycles = (unsigned)clockticks6502;
+    CHECK(writes == PRIORITY_SIZE, "Full priority clear wrote the wrong number of bytes");
+    CHECK(vram[PRIORITY_START - 1] == 0x5A && vram[PRIORITY_START + PRIORITY_SIZE] == 0x5A,
+          "Full priority clear wrote outside its exact range");
+    for (unsigned i = 0; i < PRIORITY_SIZE; ++i)
+        CHECK(vram[PRIORITY_START + i] == 0x44, "Full priority clear byte differs");
+    printf("Full priority clear: %u cycles/%u writes\n", cycles, PRIORITY_SIZE);
+    /* Baselines: original 148,203; countdown 121,218; next unroll target <70,000. */
+    CHECK(cycles < 70000, "Full priority clear exceeded the 70000-cycle target (baseline 121218)");
+}
+
+static void test_priority_page_boundaries(const char *graphics_path) {
+    static const unsigned sizes[] = {0, 1, 7, 8, 9, 128, 256, 384};
+    for (unsigned test = 0; test < sizeof(sizes) / sizeof(sizes[0]); ++test) {
+        unsigned size = sizes[test];
+        assemble(graphics_path, size);
+        memset(vram, 0x5A, sizeof(vram)); writes = 0;
+        run_helper("runPriority", 1000000);
+        CHECK(writes == size, "Priority clear page-boundary variant wrote the wrong byte count");
+        CHECK(vram[PRIORITY_START - 1] == 0x5A && vram[PRIORITY_START + size] == 0x5A,
+              "Priority clear page-boundary variant wrote outside its range");
+        for (unsigned i = 0; i < size; ++i)
+            CHECK(vram[PRIORITY_START + i] == 0x44, "Priority clear page-boundary byte differs");
+    }
+}
+
 static unsigned symbol(const char *name) {
     for (unsigned i = 0; i < symbol_count; ++i)
         if (!strcmp(name, symbols[i].name)) return symbols[i].address;
@@ -229,7 +265,8 @@ int main(int argc, char **argv) {
     const char *tmp = getenv("TMPDIR");
     CHECK(snprintf(temporary, sizeof(temporary), "%s/graphics-clear-XXXXXX", tmp ? tmp : "/tmp") < (int)sizeof(temporary), "Temporary path too long");
     CHECK(mkdtemp(temporary), "Cannot create temporary directory");
-    assemble(argc > 1 ? argv[1] : "src/graphicsAsm.s"); memset(vram, 0x5A, sizeof(vram));
+    const char *graphics_path = argc > 1 ? argv[1] : "src/graphicsAsm.s";
+    assemble(graphics_path, PRIORITY_SIZE); memset(vram, 0x5A, sizeof(vram));
 
     reset6502(false); regs.pc = (uint16_t)symbol("runBackground"); regs.sp = 0x1FD;
     regs.status = FLAG_CONSTANT; ram[0x1FE] = (uint8_t)(symbol("done") - 1); ram[0x1FF] = (uint8_t)((symbol("done") - 1) >> 8);
@@ -248,7 +285,9 @@ int main(int argc, char **argv) {
     }
     printf("Background clear writes exact VRAM; %u cycles\n", (unsigned)clockticks6502);
     CHECK(clockticks6502 < 200000, "Background clear exceeded its cycle budget");
+    test_full_priority_clear();
     test_bounded_slices();
+    test_priority_page_boundaries(graphics_path);
     puts("Background and priority clear slices stay under 2048 writes/25000 cycles and preserve sentinels");
     return 0;
 }

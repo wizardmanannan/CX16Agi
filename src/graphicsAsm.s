@@ -425,23 +425,34 @@ sta VERA_addr_high
 lda #< PRIORITY_START
 sta VERA_addr_low
 
-ldy #<(PRIORITY_SIZE - 1)
-ldx #>(PRIORITY_SIZE - 1)
-
 lda #PRIORITY_DEF
-
-@loopOuter:
-@loopInner:
+ldx #>(PRIORITY_SIZE)
+beq @priorityTailSetup
+@priorityFullPage:
+ldy #32
+@priorityPageByte:
+.repeat 8
 sta VERA_data0
-@loopInnerCheck:
+.endrepeat
 dey
-cpy #$FF
-bne @loopInner
-@loopOuterCheck:
+bne @priorityPageByte
 dex
-cpx #$FF
-bne @loopOuter
+bne @priorityFullPage
 
+@priorityTailSetup:
+ldy #((PRIORITY_SIZE .mod 256) / 8)
+beq @priorityTailBytes
+@priorityTail:
+.repeat 8
+sta VERA_data0
+.endrepeat
+dey
+bne @priorityTail
+
+@priorityTailBytes:
+.repeat (PRIORITY_SIZE .mod 8)
+sta VERA_data0
+.endrepeat
 rts
 
 ; IRQ clear uses row-aligned slices so every invocation stays below 2048 writes.
