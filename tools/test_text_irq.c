@@ -242,7 +242,13 @@ static void check_text(const uint8_t *bytes, unsigned length, uint16_t source,
     for (;;) {
         if (calls) clobber_irq_registers();
         unsigned beforeWrites = writes;
+        unsigned beforeSource = get_16bit(symbol("displayTextSourcePointer"));
         uint32_t cycles = run_entry("runText", carry);
+        unsigned remaining = length - calls * 512;
+        unsigned expectedConsumed = remaining > 512 ? 512 : remaining;
+        CHECK(((get_16bit(symbol("displayTextSourcePointer")) - beforeSource) & 0xFFFF) == expectedConsumed,
+              "Text slice consumed the wrong number of source bytes, including newlines");
+        CHECK((regs.a != 0) == (remaining < 512), "Text slice completion disagrees with its byte budget");
         if (cycles > max_text_slice_cycles) max_text_slice_cycles = cycles;
         unsigned sliceWrites = writes - beforeWrites;
         CHECK(sliceWrites <= 512, "Text helper exceeded its 512-byte output budget");
@@ -252,6 +258,7 @@ static void check_text(const uint8_t *bytes, unsigned length, uint16_t source,
         CHECK(calls < 10, "Text helper did not consume a long string incrementally");
     }
 
+    CHECK(calls == length / 512 + 1, "Text slice call count did not include the final NUL probe");
     for (unsigned i = 0; i < length; ++i) {
         if (bytes[i] == NEW_LINE) {
             ++newlines;
@@ -279,7 +286,7 @@ static void check_text(const uint8_t *bytes, unsigned length, uint16_t source,
     CHECK(get_17bit(symbol("displayTextVeraAddress")) == cursor,
           "Private text VERA cursor did not persist the hardware address");
     CHECK(ram[0] == 3 && ram[1] == 0x74, "Text helper changed RAM or ROM bank");
-    CHECK((ram[0x9F22] & 0x31) == (0x20 | ((cursor >> 16) & 1)) && ram[0x9F25] == 0,
+    CHECK((read6502(0x9F22, 0) & 0x31) == (0x20 | ((cursor >> 16) & 1)) && ram[0x9F25] == 0,
           "Text helper left the wrong VERA bank, stride, or address port");
     CHECK((regs.status & (FLAG_INTERRUPT | FLAG_DECIMAL)) == FLAG_INTERRUPT,
           "Text helper changed the IRQ/decimal flag contract");
@@ -305,6 +312,13 @@ static void test_text_slices(void) {
     memset(boundary, 'R', sizeof(boundary));
     check_text(boundary, 511, 0x8400, 0x5000, 0); /* NUL at byte 511 */
     check_text(boundary, 512, 0x8400, 0x5000, 1); /* NUL at byte 512 */
+
+    static const unsigned shortLengths[] = {0, 255, 256, 257};
+    memset(boundary, 'S', sizeof(boundary));
+    for (unsigned n = 0; n < sizeof(shortLengths) / sizeof(shortLengths[0]); ++n)
+        check_text(boundary, shortLengths[n], 0x8400, 0x1FFF0, n & 1);
+    boundary[255] = boundary[256] = NEW_LINE;
+    check_text(boundary, 257, 0x8400, 0x1FFF0, 1);
 
     memset(boundary, NEW_LINE, 512);
     check_text(boundary, 512, 0x8400, 0x1FFF0, 0); /* Worst-case newline-heavy slice */
@@ -335,6 +349,8 @@ static void test_palette(unsigned address, uint8_t rows, uint8_t carry) {
         CHECK(writes - beforeWrites <= 2048, "Palette helper exceeded 2048 writes in one slice");
         CHECK(cycles < 30000, "Palette helper exceeded its per-slice cycle bound");
         completedRows += expectedRows;
+        CHECK(get_17bit(symbol("displayPaletteCursor")) == ((address + completedRows * 128) & 0x1FFFF),
+              "Palette cursor did not advance by exactly the consumed row slice");
         ++calls;
         CHECK((regs.a != 0) == (completedRows == rows), "Palette completion result is wrong");
         if (regs.a) break;
@@ -381,9 +397,15 @@ int main(void) {
     test_palette(0x1F000, 255, 0);
     test_palette(0x1F000, 255, 1);
     test_palette(0xDA01, 64, 0);
+    test_palette(0x1FFF1, 1, 0);
+    test_palette(0x1FFF1, 31, 1);
+    test_palette(0x1FFF1, 32, 0);
+    test_palette(0x1FFF1, 33, 1);
     test_zero_palette();
-    fprintf(stderr, "Palette slice: %lu cycles (baseline 20236; limit 14000)\n", (unsigned long)max_palette_slice_cycles);
-    CHECK(max_palette_slice_cycles < 14000, "Palette slice exceeded 14000 cycles (baseline 20236)");
+    fprintf(stderr, "Text slice: %lu cycles (baselines 67215/56469; limit 55000)\n", (unsigned long)max_text_slice_cycles);
+    CHECK(max_text_slice_cycles < 55000, "Text slice exceeded 55000 cycles (baseline 56469)");
+    fprintf(stderr, "Palette slice: %lu cycles (baselines 20236/11276; limit 11000)\n", (unsigned long)max_palette_slice_cycles);
+    CHECK(max_palette_slice_cycles < 11000, "Palette slice exceeded 11000 cycles (baseline 11276)");
     CHECK(max_text_slice_cycles + 38000 < 134400,
           "Text slice plus conservative other IRQ work exceeds a VSYNC frame");
     CHECK(max_palette_slice_cycles + 38000 < 134400,

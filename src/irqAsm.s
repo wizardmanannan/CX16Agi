@@ -81,7 +81,7 @@ DISPLAY_PALETTE_SLICE_ROWS = 32
 ; These cursors survive the other IRQ work between bounded slices.
 displayTextSourcePointer: .word $0
 displayTextVeraAddress: .res 3
-displayTextBytesRemaining: .word $0
+displayTextPagesRemaining: .byte $0
 displayTextSliceResult: .byte $0
 displayPaletteCursor: .res 3
 displayPaletteRowsRemaining: .byte $0
@@ -139,21 +139,18 @@ sta VERA_data0
 dex
 bne @paletteByte
 
-; One tile-map row is 64 cells, or TILE_LAYER_WIDTH * 2 bytes.
-clc
-lda displayPaletteCursor
-adc #TILE_LAYER_WIDTH * 2
-sta displayPaletteCursor
-lda displayPaletteCursor + 1
-adc #$0
-sta displayPaletteCursor + 1
-lda displayPaletteCursor + 2
-adc #$0
-and #$1
-sta displayPaletteCursor + 2
 dec displayPaletteRowsRemaining
 dec displayPaletteRowsThisSlice
 bne @paletteRow
+
+; VERA has advanced through the whole slice; persist its 17-bit cursor once.
+lda VERA_addr_low
+sta displayPaletteCursor
+lda VERA_addr_high
+sta displayPaletteCursor + 1
+lda VERA_addr_bank
+and #$1
+sta displayPaletteCursor + 2
 
 lda displayPaletteRowsRemaining
 beq @paletteComplete
@@ -215,13 +212,13 @@ lda displayTextSourcePointer
 sta ZP_DISPLAY_TEXT_SOURCE_POINTER
 lda displayTextSourcePointer + 1
 sta ZP_DISPLAY_TEXT_SOURCE_POINTER + 1
-lda #<DISPLAY_TEXT_SLICE_BYTES
-sta displayTextBytesRemaining
-lda #>DISPLAY_TEXT_SLICE_BYTES
-sta displayTextBytesRemaining + 1
+ .assert (DISPLAY_TEXT_SLICE_BYTES .mod 256) = 0, error, "Text slices must contain whole 256-byte groups"
+lda #(DISPLAY_TEXT_SLICE_BYTES / 256)
+sta displayTextPagesRemaining
+ldx #$0
+ldy #$0
 
 @nextCharacter:
-ldy #$0
 lda (ZP_DISPLAY_TEXT_SOURCE_POINTER), y
 beq @textComplete
 
@@ -234,17 +231,13 @@ bra @consumeTextCharacter ; Newline advances the VERA cursor without a tile writ
 sta VERA_data0
 
 @consumeTextCharacter:
-inc ZP_DISPLAY_TEXT_SOURCE_POINTER
+iny
 bne @sourcePointerReady
 inc ZP_DISPLAY_TEXT_SOURCE_POINTER + 1
 @sourcePointerReady:
-lda displayTextBytesRemaining
-bne @decrementTextBudget
-dec displayTextBytesRemaining + 1
-@decrementTextBudget:
-dec displayTextBytesRemaining
-lda displayTextBytesRemaining
-ora displayTextBytesRemaining + 1
+dex
+bne @nextCharacter
+dec displayTextPagesRemaining
 beq @textBudgetComplete
 bra @nextCharacter
 
@@ -264,9 +257,13 @@ sta displayTextVeraAddress + 1
 lda VERA_addr_bank
 and #$1
 sta displayTextVeraAddress + 2
-lda ZP_DISPLAY_TEXT_SOURCE_POINTER
+; Fold the index into the persisted 16-bit cursor, including source wrap.
+tya
+clc
+adc ZP_DISPLAY_TEXT_SOURCE_POINTER
 sta displayTextSourcePointer
 lda ZP_DISPLAY_TEXT_SOURCE_POINTER + 1
+adc #$0
 sta displayTextSourcePointer + 1
 lda displayTextSliceResult
 rts
