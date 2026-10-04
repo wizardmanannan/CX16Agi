@@ -670,7 +670,8 @@ void b6LoadPictureFile(int picFileNum)
 	printf("The picture number is %d \n", picFileNum);
 	printf("Loading Picture file %d, position %d\n", agiFilePosType.fileNum, agiFilePosType.filePos);
 #endif
-	b6LoadAGIFile(PICTURE, &agiFilePosType, &tempAGI);
+	if (!b6LoadAGIFile(PICTURE, &agiFilePosType, &tempAGI))
+		return;
 
 
 	loadedPicture.size = tempAGI.totalSize;

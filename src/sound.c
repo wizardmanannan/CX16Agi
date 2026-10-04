@@ -629,7 +629,8 @@ void bBLoadSoundFile(int soundNum) {
 
 	// Gets logic directory entry for sound file number and loads AGI file
 	b10GetLogicDirectory(&agiFilePosType, &snddir[soundNum]);
-	b6LoadAGIFile(SOUND, &agiFilePosType, &tempAGI);
+	if (!b6LoadAGIFile(SOUND, &agiFilePosType, &tempAGI))
+		return;
 
 	// Save references to loaded sound resource data and bank info
 	bBLoadedSounds[soundLoadCounter].soundResource = tempAGI.code;

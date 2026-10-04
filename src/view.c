@@ -2385,7 +2385,7 @@ void b9LoadViewFile(byte viewNum)
 #endif // VERBOSE_LOAD_VIEWS
 
 		b10GetLogicDirectory(&agiFilePosType, &viewdir[viewNum]);
-		b6LoadAGIFile(VIEW, &agiFilePosType, &tempAGI);
+		if (!b6LoadAGIFile(VIEW, &agiFilePosType, &tempAGI)) return;
 
 #ifdef VERBOSE_LOAD_VIEWS
 		printf("loaded agiFile of total size %u\n", tempAGI.totalSize);

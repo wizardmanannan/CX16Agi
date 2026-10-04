@@ -142,7 +142,8 @@ void b6LoadLogicFile(byte logFileNum, boolean forceLoadSubDependencies)
 #ifdef VERBOSE
 		printf("Loading Logic %d\n", logFileNum);
 #endif // VERBOSE
-		b6LoadAGIFile(LOGIC, &agiFilePosType, &tempAGI);
+		if (!b6LoadAGIFile(LOGIC, &agiFilePosType, &tempAGI))
+			return;
 
 		b5SetLogicFile(&logicData, logFileNum);
 		logicData.codeBank = tempAGI.codeBank;
