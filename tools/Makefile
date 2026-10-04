@@ -92,6 +92,7 @@ _run:
 	    echo 'CC test_timer.c'; \
 	    "$(HOST_CC)" $(HOST_CFLAGS) -Wno-unknown-pragmas "$$repo/tools/test_timer.c" -o "$$work/bin/test_timer"; \
 	    "$(HOST_CC)" $(HOST_CFLAGS) "$$repo/tools/test_tool_paths.c" -o "$$work/bin/test_tool_paths"; \
+	    "$(HOST_CC)" $(HOST_CFLAGS) -Wno-unknown-pragmas "$$repo/tools/test_palette_manager.c" -o "$$work/bin/test_palette_manager"; \
 	    failed=0; \
 	    run_test() { echo "RUN $$*"; if "$$@"; then :; else failed=$$((failed + 1)); fi; }; \
 	    for name in graphics_clear irq_completion irq_helpers random show_obj_irq text_irq; do \
@@ -100,6 +101,7 @@ _run:
 	    run_test "$$work/bin/test_screen_shake" --repo-root "$$repo"; \
 	    run_test "$$work/bin/test_timer"; \
 	    run_test "$$work/bin/test_tool_paths"; \
+	    run_test "$$work/bin/test_palette_manager"; \
 	    [ "$$failed" -eq 0 ] || fail "$$failed regression(s) failed" ;; \
 	  image|production-test) \
 	    $(MAKE) --no-print-directory -f "$$repo/tools/test-image.mk" "REPO_ROOT=$$repo" "OUT=$$work/image"; \
