@@ -382,6 +382,8 @@ int main(void) {
     test_palette(0x1F000, 255, 1);
     test_palette(0xDA01, 64, 0);
     test_zero_palette();
+    fprintf(stderr, "Palette slice: %lu cycles (baseline 20236; limit 14000)\n", (unsigned long)max_palette_slice_cycles);
+    CHECK(max_palette_slice_cycles < 14000, "Palette slice exceeded 14000 cycles (baseline 20236)");
     CHECK(max_text_slice_cycles + 38000 < 134400,
           "Text slice plus conservative other IRQ work exceeds a VSYNC frame");
     CHECK(max_palette_slice_cycles + 38000 < 134400,

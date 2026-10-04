@@ -130,9 +130,12 @@ SET_VERA_ADDRESS_ABSOLUTE displayPaletteCursor, #$0, #$2
 
 @paletteRow:
 lda displayPaletteValue
-ldx #TILE_LAYER_WIDTH
+.assert (TILE_LAYER_WIDTH .mod 8) = 0, error, "Palette row must contain whole eight-cell groups"
+ldx #(TILE_LAYER_WIDTH / 8)
 @paletteByte:
+.repeat 8
 sta VERA_data0
+.endrepeat
 dex
 bne @paletteByte
 
