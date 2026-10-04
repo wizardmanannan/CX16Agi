@@ -7,7 +7,7 @@ CC65_HOME ?= $(SHARED_TOOL_ROOT)/.tools/cc65-latest
 X16_EMULATOR_SOURCE ?= $(SHARED_TOOL_ROOT)/.tools/x16-emulator
 HOST_CC ?= cc
 HOST_CFLAGS ?= -std=c11 -O2 -Wall -Wextra
-# Sanitized host children need ASan loaded first; omit the injected LD_PRELOAD for those runs.
+# Sanitized host children need ASan first while retaining injected command guards for fixture cleanup.
 TEST_OUTPUT_ROOT ?= $(REPO_ROOT)/obj
 
 export CC65_HOME X16_EMULATOR_SOURCE TMPDIR ROM GAME BUILD SYMBOLS SDL_PREFIX KEEP_TEST_OUTPUT
@@ -97,6 +97,7 @@ _run:
 	    "$(HOST_CC)" $(HOST_CFLAGS) -Wno-unknown-pragmas -fsanitize=bounds -fno-sanitize-recover=bounds "$$repo/tools/test_controllers.c" -o "$$work/bin/test_controllers"; \
 	    "$(HOST_CC)" $(HOST_CFLAGS) -Wno-unknown-pragmas -fsanitize=address,undefined -fno-sanitize-recover=all "$$repo/tools/test_menu.c" -o "$$work/bin/test_menu"; \
 	    "$(HOST_CC)" $(HOST_CFLAGS) -Wno-unknown-pragmas -fsanitize=address,undefined -fno-sanitize-recover=all -idirafter "$$CC65_HOME/include" "$$repo/tools/test_text_buffers.c" -o "$$work/bin/test_text_buffers"; \
+	    "$(HOST_CC)" $(HOST_CFLAGS) -Wno-error=incompatible-pointer-types -Wno-error=int-conversion -D_MSC_VER -D__CBM__ '-D__fastcall__=' '-D__asm__(...)=' -idirafter "$$CC65_HOME/include" -Wno-unknown-pragmas -ffunction-sections -fdata-sections -fsanitize=address,undefined -fno-sanitize-recover=all "$$repo/tools/test_agifiles.c" "$$repo/src/agifiles.c" -Wl,--gc-sections -o "$$work/bin/test_agifiles"; \
 	    failed=0; \
 	    run_test() { echo "RUN $$*"; if "$$@"; then :; else failed=$$((failed + 1)); fi; }; \
 	    for name in graphics_clear irq_completion irq_helpers random show_obj_irq text_irq words_assembly sprite_allocator; do \
@@ -107,8 +108,15 @@ _run:
 	    run_test "$$work/bin/test_tool_paths"; \
 	    run_test "$$work/bin/test_palette_manager"; \
 	    run_test "$$work/bin/test_controllers"; \
-	    run_test env -u LD_PRELOAD "$$work/bin/test_menu"; \
-	    run_test env -u LD_PRELOAD "$$work/bin/test_text_buffers"; \
+	    sanitized_preload=$${LD_PRELOAD:-}; \
+	    if [ -n "$$sanitized_preload" ]; then \
+	      asan_runtime=$$("$(HOST_CC)" -print-file-name=libasan.so); \
+	      [ -f "$$asan_runtime" ] || fail 'host compiler has no ASan shared runtime for injected preloads'; \
+	      sanitized_preload="$$asan_runtime:$$sanitized_preload"; \
+	    fi; \
+	    run_test env LD_PRELOAD="$$sanitized_preload" "$$work/bin/test_menu"; \
+	    run_test env LD_PRELOAD="$$sanitized_preload" "$$work/bin/test_text_buffers"; \
+	    run_test env LD_PRELOAD="$$sanitized_preload" "$$work/bin/test_agifiles"; \
 	    [ "$$failed" -eq 0 ] || fail "$$failed regression(s) failed" ;; \
 	  image|production-test) \
 	    $(MAKE) --no-print-directory -f "$$repo/tools/test-image.mk" "REPO_ROOT=$$repo" "OUT=$$work/image"; \

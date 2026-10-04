@@ -27,7 +27,8 @@
 const char B6_OPEN_FLAGS[] = ",S,R";
 const char B6_FILE_AND_FLAGS[] = "%s%s";
 const char B6_FILE_FLAGS[] = "rb";
-const char B6_NO_FILE[] = "no file : % s.\n";
+const char B6_NO_FILE[] = "no file : %s.\n";
+const char B6_INVALID_DIR[] = "Invalid resource directory: %s\n";
 const char B6_LOG_DIR[] = "logdir";
 const char B6_PIC_DIR[] = "picdir";
 const char B6_VIEW_DIR[] = "viewdir";
@@ -44,6 +45,9 @@ AGIFilePosType picdir[NO_DIRECTORY_ENTRYS];
 AGIFilePosType viewdir[NO_DIRECTORY_ENTRYS];
 AGIFilePosType snddir[NO_DIRECTORY_ENTRYS];
 #pragma bss-name (pop)
+
+/* Stage records in resident RAM until the complete directory is validated. */
+static byte directoryReadBuffer[NO_DIRECTORY_ENTRYS * 3 + 1];
 
 int numLogics, numPictures, numViews, numSounds;
 boolean version3 = FALSE;
@@ -169,76 +173,57 @@ int8_t b6Cx16_fseek(uint8_t channel, uint32_t offset) {
 ** Purpose: To read in an individual AGI directory file. This function
 ** should only be called by loadAGIDirs() below.
 ***************************************************************************/
-void b6LoadAGIDir(int dirNum, const char* fName, int* count)
+boolean b6LoadAGIDir(int dirNum, const char* fName, int* count)
 {
 	FILE* fp;
-	unsigned char byte1, byte2, byte3;
-	unsigned char address[4] = { 0,0,0,0 };
+	size_t bytesRead;
+	unsigned int entryCount, i;
+	AGIFilePosType* directory;
+	byte* record;
 	AGIFilePosType tempPos;
-	int value;
 
-	if ((fp = fopen(fName, B6_FILE_FLAGS)) == NULL) {
+	if (!fName || !count || dirNum < 0 || dirNum > 3 || *count < 0 || *count > NO_DIRECTORY_ENTRYS)
+		return FALSE;
+
+	switch (dirNum) {
+	case 0: directory = logdir; break;
+	case 1: directory = picdir; break;
+	case 2: directory = viewdir; break;
+	default: directory = snddir; break;
+	}
+
+	fp = fopen(fName, B6_FILE_FLAGS);
+	if (!fp) {
 		printf(B6_NO_FILE, fName);
-		exit(0);
+		return FALSE;
 	}
 
-	while (!feof(fp)) {
-		byte1 = fgetc(fp);
-		byte2 = fgetc(fp);
-		byte3 = fgetc(fp);
-
-		tempPos.fileNum = ((byte1 & 0xF0) >> 4);
-
-		address[3] = 0;
-		address[2] = byte1 & 0x0F;
-		address[1] = byte2;
-		address[0] = byte3;
-
-
-		memcpy(&tempPos.filePos, &address[0], 4);
-
-		value = tempPos.filePos;
-
-		switch (dirNum) {
-		case 0:
-		{
-			b10SetResourceDirectory(&tempPos, &logdir[*count]);
-#ifdef VERBOSE_DISPLAY_FILEOFFSETS
-			printf("\n%d Logic File Name %s, Offset %lu\n", *count, tempPos.fileName, logdir[*count].filePos);
-#endif // VERBOSE_DISPLAY_FILEOFFSETS
-
-
-			break;
-		}
-		case 1:
-		{
-			b10SetResourceDirectory(&tempPos, &picdir[*count]);
-#ifdef VERBOSE_DISPLAY_FILEOFFSETS
-			printf("\n%d Pic File Name %s, Offset %lu\n", *count, picdir[*count].fileName, picdir[*count].filePos);
-#endif // VERBOSE_DISPLAY_FILEOFFSETS
-		}
-		break;
-		case 2:
-		{
-			b10SetResourceDirectory(&tempPos, &viewdir[*count]);
-#ifdef VERBOSE_DISPLAY_FILEOFFSETS
-			printf("\n%d View File Name %s, Offset %lu\n", *count, viewdir[*count].fileName, viewdir[*count].filePos);
-#endif // VERBOSE_DISPLAY_FILEOFFSETS
-			break;
-		}
-		case 3:
-			b10SetResourceDirectory(&tempPos, &snddir[*count]);
-
-#ifdef VERBOSE_DISPLAY_FILEOFFSETS
-			printf("\n%d sound File Name %s, Offset %lu\n", *count, snddir[*count].fileName, snddir[*count].filePos);
-#endif // VERBOSE_DISPLAY_FILEOFFSETS
-			break;
-		}
-
-		(*count)++;
+	bytesRead = fread(directoryReadBuffer, 1, sizeof(directoryReadBuffer), fp);
+	if (ferror(fp) || bytesRead > NO_DIRECTORY_ENTRYS * 3 || bytesRead % 3 != 0) {
+		fclose(fp);
+		printf(B6_INVALID_DIR, fName);
+		return FALSE;
+	}
+	if (fclose(fp) != 0) {
+		printf(B6_INVALID_DIR, fName);
+		return FALSE;
 	}
 
-	fclose(fp);
+	entryCount = bytesRead / 3;
+	if (entryCount > NO_DIRECTORY_ENTRYS - *count) {
+		printf(B6_INVALID_DIR, fName);
+		return FALSE;
+	}
+
+	for (i = 0; i < entryCount; ++i) {
+		record = &directoryReadBuffer[i * 3];
+		tempPos.fileNum = record[0] >> 4;
+		tempPos.filePos = ((unsigned long)(record[0] & 0x0F) << 16) |
+			((unsigned long)record[1] << 8) | record[2];
+		b10SetResourceDirectory(&tempPos, &directory[*count + i]);
+	}
+	*count += entryCount;
+	return TRUE;
 }
 
 /***************************************************************************
@@ -319,10 +304,11 @@ void b6LoadAGIDirs()
 #ifdef VERBOSE
 		printf("Loading Indexes");
 #endif // VERBOSE
-		b6LoadAGIDir(0, B6_LOG_DIR, &numLogics);
-		b6LoadAGIDir(1, B6_PIC_DIR, &numPictures);
-		b6LoadAGIDir(2, B6_VIEW_DIR, &numViews);
-		b6LoadAGIDir(3, B6_SND_DIR, &numSounds);
+		if (!b6LoadAGIDir(0, B6_LOG_DIR, &numLogics) ||
+			!b6LoadAGIDir(1, B6_PIC_DIR, &numPictures) ||
+			!b6LoadAGIDir(2, B6_VIEW_DIR, &numViews) ||
+			!b6LoadAGIDir(3, B6_SND_DIR, &numSounds))
+			exit(EXIT_FAILURE);
 #ifdef VERBOSE
 		printf("Indexs Loaded\n");
 #endif
@@ -717,6 +703,4 @@ void b6LoadAGIFile(int resType, AGIFilePosType* location, AGIFile* AGIData)
 
 }
 #pragma code-name (pop)
-
-
 
