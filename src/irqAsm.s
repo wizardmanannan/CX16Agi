@@ -163,19 +163,26 @@ rts
 _b3InitLayer1Mapbase:
 SET_VERA_ADDRESS_IMMEDIATE (MAP_BASE + MENU_BAR_WIDTH * 2), #$0, #$1
 
-ldx #< (TILE_LAYER_NO_TILES - MENU_BAR_WIDTH)
+ldx #(((TILE_LAYER_NO_TILES - MENU_BAR_WIDTH) .mod 256) / 4)
 lda #TRANSPARENT_CHAR
 ldy #TILE_BYTE_2
 
 ; The low-byte remainder is followed by exactly the full pages in the count.
 cpx #$0
-beq @fullPages
+beq @remainderBytes
 @remainder:
+.repeat 4
 sta VERA_data0
 sty VERA_data0
+.endrepeat
 dex
 bne @remainder
 
+@remainderBytes:
+.repeat ((TILE_LAYER_NO_TILES - MENU_BAR_WIDTH) .mod 4)
+sta VERA_data0
+sty VERA_data0
+.endrepeat
 @fullPages:
 lda #> (TILE_LAYER_NO_TILES - MENU_BAR_WIDTH)
 beq @mapClearDone
@@ -183,10 +190,12 @@ sta ZP_TILE_LAYER_NO_TILES_HIGH
 lda #TRANSPARENT_CHAR
 ldy #TILE_BYTE_2
 @page:
-ldx #$0
+ldx #64
 @pageLoop:
+.repeat 4
 sta VERA_data0
 sty VERA_data0
+.endrepeat
 dex
 bne @pageLoop
 dec ZP_TILE_LAYER_NO_TILES_HIGH

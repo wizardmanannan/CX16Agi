@@ -88,7 +88,7 @@ static void run_tool(const char *name, char *const arguments[]) {
     CHECK(WIFEXITED(status) && !WEXITSTATUS(status), "Assembler or linker failed");
 }
 
-static void assemble(const char *graphics_path, unsigned priority_size) {
+static void assemble(const char *graphics_path, unsigned priority_size, unsigned map_cells) {
     char path[8192], config[8192], object[8192], binary[8192], labels[8192], fixture[8192];
     snprintf(path, sizeof(path), "%s/clear.s", temporary);
     snprintf(config, sizeof(config), "%s/clear.cfg", temporary);
@@ -109,7 +109,7 @@ static void assemble(const char *graphics_path, unsigned priority_size) {
     int length = snprintf(fixture, sizeof(fixture),
         ".include \"global.s\"\n"
         "MAP_BASE=$DA00\nMENU_BAR_WIDTH=40\nTILE_LAYER_WIDTH=64\nTILE_LAYER_HEIGHT=32\n"
-        "TILE_LAYER_NO_TILES=(TILE_LAYER_WIDTH*TILE_LAYER_HEIGHT)\nTRANSPARENT_CHAR=$80\nTILE_BYTE_2=$10\n"
+        "TILE_LAYER_NO_TILES=(MENU_BAR_WIDTH+%u)\nTRANSPARENT_CHAR=$80\nTILE_BYTE_2=$10\n"
         "BITMAP_WIDTH=320\nPICTURE_WIDTH=160\nPICTURE_HEIGHT=168\n"
         "STARTING_ROW=(240-PICTURE_HEIGHT)/2\nSTARTING_BYTE=STARTING_ROW*(BITMAP_WIDTH/2)\n"
         "BYTES_PER_ROW=BITMAP_WIDTH/2\nPRIORITY_START=(BITMAP_WIDTH*BITMAP_HEIGHT)/2\n"
@@ -129,7 +129,7 @@ static void assemble(const char *graphics_path, unsigned priority_size) {
         "runPrioritySlice: jsr _b8ClearPrioritySlice\nrts\n"
         "runMap: jsr _b3InitLayer1Mapbase\nrts\n"
         "sliceDone: rts\n",
-        priority_size,
+        map_cells, priority_size,
         (int)(map_end - map_start), map_start,
         (int)(priority_end - priority_start), priority_start,
         (int)(slice_end - slice_start), slice_start, (int)(end - clear), clear);
@@ -218,7 +218,8 @@ static void test_bounded_slices(void) {
     for (unsigned address = 0xDA50; address < 0xEA00; address += 2)
         CHECK(vram[address] == 0x80 && vram[address + 1] == 0x10, "Map clear tile bytes differ");
     CHECK(ram[symbol("_inputLineDirty")] == 1, "Map clear did not invalidate the input row");
-    CHECK(clockticks6502 < 50000, "Map clear exceeded its documented one-frame cycle budget");
+    /* Paired single-cell loop baseline: 26238 cycles. */
+    CHECK(clockticks6502 < 22000, "Map clear exceeded 22000 cycles (baseline 26238)");
     printf("Clear slices: background max %u cycles/1920 writes, priority max %u cycles/2048 writes, map %u cycles/4016 writes; 22 VSYNCs total\n",
            max_background_cycles, max_priority_cycles, map_cycles);
     /* Prior priority IRQ loop measured 18,568 cycles; keep its replacement below 13,000. */
@@ -244,7 +245,7 @@ static void test_priority_page_boundaries(const char *graphics_path) {
     static const unsigned sizes[] = {0, 1, 7, 8, 9, 128, 256, 384};
     for (unsigned test = 0; test < sizeof(sizes) / sizeof(sizes[0]); ++test) {
         unsigned size = sizes[test];
-        assemble(graphics_path, size);
+        assemble(graphics_path, size, 2008);
         memset(vram, 0x5A, sizeof(vram)); writes = 0;
         run_helper("runPriority", 1000000);
         CHECK(writes == size, "Priority clear page-boundary variant wrote the wrong byte count");
@@ -252,6 +253,23 @@ static void test_priority_page_boundaries(const char *graphics_path) {
               "Priority clear page-boundary variant wrote outside its range");
         for (unsigned i = 0; i < size; ++i)
             CHECK(vram[PRIORITY_START + i] == 0x44, "Priority clear page-boundary byte differs");
+    }
+}
+
+static void test_map_boundaries(const char *graphics_path) {
+    static const unsigned cells[] = {0, 1, 3, 4, 5, 256, 260};
+    for (unsigned n = 0; n < sizeof(cells) / sizeof(cells[0]); ++n) {
+        assemble(graphics_path, PRIORITY_SIZE, cells[n]);
+        memset(vram, 0x5A, sizeof(vram)); writes = 0;
+        ram[symbol("_inputLineDirty")] = 0;
+        run_helper("runMap", 1000000);
+        CHECK(writes == cells[n] * 2, "Map boundary variant has wrong write count");
+        CHECK(vram[0xDA4F] == 0x5A && vram[0xDA50 + cells[n] * 2] == 0x5A,
+              "Map boundary variant overwrote its sentinels");
+        for (unsigned i = 0; i < cells[n]; ++i)
+            CHECK(vram[0xDA50 + i * 2] == 0x80 && vram[0xDA51 + i * 2] == 0x10,
+                  "Map boundary variant changed tile/attribute ordering");
+        CHECK(ram[symbol("_inputLineDirty")] == 1, "Map variant did not invalidate input");
     }
 }
 
@@ -267,7 +285,7 @@ int main(int argc, char **argv) {
     CHECK(snprintf(temporary, sizeof(temporary), "%s/graphics-clear-XXXXXX", tmp ? tmp : "/tmp") < (int)sizeof(temporary), "Temporary path too long");
     CHECK(mkdtemp(temporary), "Cannot create temporary directory");
     const char *graphics_path = argc > 1 ? argv[1] : "src/graphicsAsm.s";
-    assemble(graphics_path, PRIORITY_SIZE); memset(vram, 0x5A, sizeof(vram));
+    assemble(graphics_path, PRIORITY_SIZE, 2008); memset(vram, 0x5A, sizeof(vram));
 
     reset6502(false); regs.pc = (uint16_t)symbol("runBackground"); regs.sp = 0x1FD;
     regs.status = FLAG_CONSTANT; ram[0x1FE] = (uint8_t)(symbol("done") - 1); ram[0x1FF] = (uint8_t)((symbol("done") - 1) >> 8);
@@ -290,6 +308,7 @@ int main(int argc, char **argv) {
     test_full_priority_clear();
     test_bounded_slices();
     test_priority_page_boundaries(graphics_path);
+    test_map_boundaries(graphics_path);
     puts("Background and priority clear slices stay under 2048 writes/25000 cycles and preserve sentinels");
     return 0;
 }
