@@ -19,11 +19,18 @@ static uint8_t write_values[2048];
 static char temporary[4096];
 struct symbol { char name[100]; unsigned addr; } symbols[128];
 static unsigned symbol_count;
+static bool track_sprite_reads;
+static unsigned sprite_read_start, sprite_read_end, sprite_read_limit, sprite_reads;
 
 #define CHECK(condition, message) do { if (!(condition)) { fprintf(stderr, "%s (%s:%d)\n", message, __FILE__, __LINE__); exit(1); } } while (0)
 
 uint8_t read6502(uint16_t address, uint8_t bank) {
     (void)bank;
+    if (track_sprite_reads && address >= sprite_read_start - 1 && address < sprite_read_end + 2) {
+        CHECK(address >= sprite_read_start && address < sprite_read_limit,
+              "Sprite consumer read beyond its accepted records/terminator");
+        ++sprite_reads;
+    }
     if (address == 0x9F23 || address == 0x9F24) {
         unsigned port = address - 0x9F23;
         ++data_port_reads;
@@ -191,7 +198,7 @@ static void assemble(void) {
         "spriteBufferBefore: .byte $3D\n_bESpritesUpdatedBuffer: .res SPRITE_UPDATED_BUFFER_SIZE\n"
         "spriteBufferEnd:\nspriteBufferGuard: .byte $A6,$5B\n"
         "_bESpritesUpdatedBufferPointer: .word _bESpritesUpdatedBuffer\n"
-        "_bESpriteUpdateOverflowed: .byte 0\n_spriteUpdateNumToClear: .byte 0\n"
+        "_bESpriteUpdateOverflowed: .byte 0\n"
         "handleSpriteUpdates: jmp bEHandleSpriteUpdates\n"
         "checkSpriteUpdateCapacity: jmp _bECanAppendSpriteUpdate\n"
         "spriteBufferEndAddress = _bESpritesUpdatedBuffer + SPRITE_UPDATED_BUFFER_SIZE\n"
@@ -951,10 +958,17 @@ static void test_sprite_update_batch(unsigned requested, bool write_terminator) 
     for (unsigned i = 0; i < SPRITE_UPDATE_MAX_RECORDS; ++i)
         vram[first_z + i * 8] = 0x0C;
 
+    sprite_read_start = base;
+    sprite_read_end = symbol("spriteBufferEnd");
+    sprite_read_limit = base + accepted * SPRITE_UPDATE_RECORD_BYTES +
+        (accepted < SPRITE_UPDATE_MAX_RECORDS ? SPRITE_UPDATE_TERMINATOR_BYTES : 0);
+    sprite_reads = 0; track_sprite_reads = true;
     init_cpu(symbol("handleSpriteUpdates"), 0);
     uint32_t consumer_start = clockticks6502;
     run();
     uint32_t consumer_cycles = clockticks6502 - consumer_start;
+    track_sprite_reads = false;
+    CHECK(sprite_reads == sprite_read_limit - base, "Sprite consumer did not read exactly its complete records");
     if (consumer_cycles > max_sprite_consumer_cycles)
         max_sprite_consumer_cycles = consumer_cycles;
     if (accepted == SPRITE_UPDATE_MAX_RECORDS &&
@@ -998,10 +1012,10 @@ static void test_sprite_updates(void) {
     for (unsigned i = 0; i < sizeof(requested) / sizeof(requested[0]); ++i)
         test_sprite_update_batch(requested[i], requested[i] != SPRITE_UPDATE_MAX_RECORDS);
     fprintf(stderr,
-            "127-record sprite consumer: %u cycles (baseline 24276; limit 20000)\n",
+            "127-record sprite consumer: %u cycles (baselines 24276/19074; limit 18200)\n",
             max_full_sprite_consumer_cycles);
-    CHECK(max_full_sprite_consumer_cycles <= 20000,
-          "127-record sprite consumer exceeded the 20000-cycle budget");
+    CHECK(max_full_sprite_consumer_cycles <= 18200,
+          "127-record sprite consumer exceeded the 18200-cycle budget (baseline 19074)");
 }
 
 int main(void) {

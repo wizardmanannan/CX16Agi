@@ -80,7 +80,6 @@ rts
 _bEClearSpriteAttributes:
 CLEAR_SPRITE_ATTRS
 rts
-_spriteUpdateNumToClear: .byte $0
 
 ;Define Insertion Order:
 ;0 Vera Address Sprite Data Middle (Low will always be 0; both address bytes zero ends the buffer)
@@ -114,12 +113,14 @@ lda #<_bESpritesUpdatedBuffer
 sta ZP_SPRITE_UPDATE_READ_POINTER
 lda #>_bESpritesUpdatedBuffer
 sta ZP_SPRITE_UPDATE_READ_POINTER + 1
-stz _spriteUpdateNumToClear
 
 CLEAR_SPRITE_ATTRS
 .import _sResetCounter
 
 SET_VERA_START_SPRITE_ATTRS #$0, #$1, SA_VERA_ADDRESS_LOW ; Sets VERA channel 0 to the start of the sprites attributes table with a stride of 1
+
+; IRQ caller reloads X afterward; keep the bounded record count in X.
+ldx #SPRITE_UPDATE_MAX_RECORDS
 
 @loop:
 ldy #$0
@@ -155,9 +156,7 @@ bcc @readPointerNoCarry
 inc ZP_SPRITE_UPDATE_READ_POINTER + 1
 @readPointerNoCarry:
 
-inc _spriteUpdateNumToClear
-lda _spriteUpdateNumToClear
-cmp #SPRITE_UPDATE_MAX_RECORDS
+dex
 beq @addressReset
 jmp @loop
 
@@ -166,7 +165,6 @@ lda #< _bESpritesUpdatedBuffer
 sta _bESpritesUpdatedBufferPointer
 lda #> _bESpritesUpdatedBuffer
 sta _bESpritesUpdatedBufferPointer + 1
-stz _spriteUpdateNumToClear
 
 @end:
 
