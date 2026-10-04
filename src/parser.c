@@ -68,7 +68,13 @@ byte b7GetInputWord(byte number)
 
 char* b7GetInternalStringPtr(byte number, size_t* length)
 {
-	*length = strlen(string[number]);
+	char* terminator;
+	if (!length) return NULL;
+	*length = 0;
+	if (number >= sizeof(string) / sizeof(string[0])) return NULL;
+	terminator = (char*)memchr(string[number], '\0', sizeof(string[0]));
+	if (!terminator) return NULL;
+	*length = (size_t)(terminator - string[number]);
 	return string[number];
 }
 
@@ -164,7 +170,9 @@ void b7GetString(char* promptStr, byte promptStringBank, char* returnStr, byte r
 /* used by get.string and get.num */
 void b7GetInternalString(char* promptStr, byte promptStringBank, byte stringNumber, int x, int y, int l)
 {
-	char* inputString = string[stringNumber];
+	char* inputString;
+	if (stringNumber >= sizeof(string) / sizeof(string[0])) return;
+	inputString = string[stringNumber];
 	b7GetString(promptStr, promptStringBank, inputString, PARSER_BANK, x, y, l);
 }
 
@@ -560,4 +568,3 @@ boolean b7Said(byte** data)
 }
 
 #pragma code-name (pop)
-

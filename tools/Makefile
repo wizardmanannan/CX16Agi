@@ -12,10 +12,13 @@ TEST_OUTPUT_ROOT ?= $(REPO_ROOT)/obj
 
 export CC65_HOME X16_EMULATOR_SOURCE TMPDIR ROM GAME BUILD SYMBOLS SDL_PREFIX KEEP_TEST_OUTPUT
 
-.PHONY: test suite image production-test modes integration _run
+.PHONY: test suite commands-test image production-test modes integration _run
 
 test suite:
 	@$(MAKE) --no-print-directory -f "$(REPO_ROOT)/tools/Makefile" _run MODE=core
+
+commands-test:
+	@$(MAKE) --no-print-directory -f "$(REPO_ROOT)/tools/Makefile" _run MODE=commands-test
 
 image:
 	@$(MAKE) --no-print-directory -f "$(REPO_ROOT)/tools/Makefile" _run MODE=image
@@ -49,6 +52,7 @@ _run:
 	}; \
 	case "$$mode" in \
 	  core) need_cc65; need_cpu ;; \
+	  commands-test) need_cc65 ;; \
 	  image) need_cc65; need_exec "$$CC65_HOME/bin/cl65"; need_image_makefile ;; \
 	  production-test) \
 	    need_cc65; need_exec "$$CC65_HOME/bin/cl65"; need_cpu; need_image_makefile; \
@@ -83,7 +87,29 @@ _run:
 	if [ "$$mode" != image ] && [ "$${KEEP_TEST_OUTPUT:-0}" != 1 ]; then \
 	  trap 'status=$$?; trap - EXIT; if ! rm -r -- "$$work"; then echo "test suite: could not clean owned output: $$work" >&2; exit 2; fi; exit "$$status"' EXIT; \
 	fi; \
+	build_commands() { \
+	  for name in command_bounds parser_buffers; do \
+	    "$(HOST_CC)" $(HOST_CFLAGS) -Wno-unknown-pragmas -Wno-error=incompatible-pointer-types -Wno-error=int-conversion -D_MSC_VER -D__CBM__ '-D__fastcall__=' '-D__asm__(...)=' -idirafter "$$CC65_HOME/include" -ffunction-sections -fdata-sections -fsanitize=address,undefined -fno-sanitize-recover=all "$$repo/tools/test_$$name.c" -Wl,--gc-sections -o "$$work/bin/test_$$name"; \
+	  done; \
+	}; \
+	prepare_sanitizers() { \
+	  sanitized_preload=$${LD_PRELOAD:-}; \
+	  if [ -n "$$sanitized_preload" ]; then \
+	    asan_runtime=$$("$(HOST_CC)" -print-file-name=libasan.so); \
+	    [ -f "$$asan_runtime" ] || fail 'host compiler has no ASan shared runtime for injected preloads'; \
+	    sanitized_preload="$$asan_runtime:$$sanitized_preload"; \
+	  fi; \
+	}; \
 	case "$$mode" in \
+	  commands-test) \
+	    build_commands; prepare_sanitizers; failed=0; \
+	    for option in '' --parse --strings --allocation; do \
+	      if env LD_PRELOAD="$$sanitized_preload" "$$work/bin/test_command_bounds" $${option:+"$$option"}; then :; else failed=$$((failed + 1)); fi; \
+	    done; \
+	    for option in '' --unterminated; do \
+	      if env LD_PRELOAD="$$sanitized_preload" "$$work/bin/test_parser_buffers" $${option:+"$$option"}; then :; else failed=$$((failed + 1)); fi; \
+	    done; \
+	    [ "$$failed" -eq 0 ] || fail "$$failed command regression(s) failed" ;; \
 	  core) \
 	    cd "$$repo"; \
 	    for name in graphics_clear irq_completion irq_helpers random screen_shake show_obj_irq text_irq words_assembly sprite_allocator; do \
@@ -96,6 +122,7 @@ _run:
 	    "$(HOST_CC)" $(HOST_CFLAGS) -Wno-unknown-pragmas "$$repo/tools/test_palette_manager.c" -o "$$work/bin/test_palette_manager"; \
 	    "$(HOST_CC)" $(HOST_CFLAGS) -Wno-unknown-pragmas -fsanitize=bounds -fno-sanitize-recover=bounds "$$repo/tools/test_controllers.c" -o "$$work/bin/test_controllers"; \
 	    "$(HOST_CC)" $(HOST_CFLAGS) -Wno-unknown-pragmas -fsanitize=address,undefined -fno-sanitize-recover=all "$$repo/tools/test_menu.c" -o "$$work/bin/test_menu"; \
+	    build_commands; \
 	    "$(HOST_CC)" $(HOST_CFLAGS) -Wno-unknown-pragmas -fsanitize=address,undefined -fno-sanitize-recover=all -idirafter "$$CC65_HOME/include" "$$repo/tools/test_text_buffers.c" -o "$$work/bin/test_text_buffers"; \
 	    "$(HOST_CC)" $(HOST_CFLAGS) -Wno-error=incompatible-pointer-types -Wno-error=int-conversion -D_MSC_VER -D__CBM__ '-D__fastcall__=' '-D__asm__(...)=' -idirafter "$$CC65_HOME/include" -Wno-unknown-pragmas -ffunction-sections -fdata-sections -fsanitize=address,undefined -fno-sanitize-recover=all "$$repo/tools/test_agifiles.c" -Wl,--gc-sections -o "$$work/bin/test_agifiles"; \
 	    failed=0; \
@@ -108,13 +135,14 @@ _run:
 	    run_test "$$work/bin/test_tool_paths"; \
 	    run_test "$$work/bin/test_palette_manager"; \
 	    run_test "$$work/bin/test_controllers"; \
-	    sanitized_preload=$${LD_PRELOAD:-}; \
-	    if [ -n "$$sanitized_preload" ]; then \
-	      asan_runtime=$$("$(HOST_CC)" -print-file-name=libasan.so); \
-	      [ -f "$$asan_runtime" ] || fail 'host compiler has no ASan shared runtime for injected preloads'; \
-	      sanitized_preload="$$asan_runtime:$$sanitized_preload"; \
-	    fi; \
+	    prepare_sanitizers; \
 	    run_test env LD_PRELOAD="$$sanitized_preload" "$$work/bin/test_menu"; \
+	    run_test env LD_PRELOAD="$$sanitized_preload" "$$work/bin/test_command_bounds"; \
+	    run_test env LD_PRELOAD="$$sanitized_preload" "$$work/bin/test_command_bounds" --parse; \
+	    run_test env LD_PRELOAD="$$sanitized_preload" "$$work/bin/test_command_bounds" --strings; \
+	    run_test env LD_PRELOAD="$$sanitized_preload" "$$work/bin/test_command_bounds" --allocation; \
+	    run_test env LD_PRELOAD="$$sanitized_preload" "$$work/bin/test_parser_buffers"; \
+	    run_test env LD_PRELOAD="$$sanitized_preload" "$$work/bin/test_parser_buffers" --unterminated; \
 	    run_test env LD_PRELOAD="$$sanitized_preload" "$$work/bin/test_text_buffers"; \
 	    run_test env LD_PRELOAD="$$sanitized_preload" "$$work/bin/test_agifiles"; \
 	    [ "$$failed" -eq 0 ] || fail "$$failed regression(s) failed" ;; \
