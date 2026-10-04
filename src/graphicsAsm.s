@@ -480,15 +480,14 @@ sta b8ClearBackgroundRowsThisSlice
 lda #LEFT_BORDER
 sta VERA_data0
 lda #DEFAULT_BACKGROUND_COLOR
-ldy #((PICTURE_WIDTH - 2) / 4)
+ldy #((PICTURE_WIDTH - 2) / 8)
 @backgroundFill:
+    .repeat 8
     sta VERA_data0
-    sta VERA_data0
-    sta VERA_data0
-    sta VERA_data0
+    .endrepeat
     dey
     bne @backgroundFill
-.repeat ((PICTURE_WIDTH - 2) .mod 4)
+.repeat ((PICTURE_WIDTH - 2) .mod 8)
 sta VERA_data0
 .endrepeat
 lda #RIGHT_BORDER
@@ -610,15 +609,14 @@ tax
 lda #LEFT_BORDER
 sta VERA_data0
 lda #DEFAULT_BACKGROUND_COLOR
-ldy #((PICTURE_WIDTH - 2) / 4)
+ldy #((PICTURE_WIDTH - 2) / 8)
 @loopInner:
+    .repeat 8
     sta VERA_data0
-    sta VERA_data0
-    sta VERA_data0
-    sta VERA_data0
+    .endrepeat
     dey
     bne @loopInner  ; If Y is not 0, continue loop
-.repeat ((PICTURE_WIDTH - 2) .mod 4)
+.repeat ((PICTURE_WIDTH - 2) .mod 8)
 sta VERA_data0
 .endrepeat
 lda #RIGHT_BORDER

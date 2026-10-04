@@ -222,6 +222,7 @@ static void test_bounded_slices(void) {
     printf("Clear slices: background max %u cycles/1920 writes, priority max %u cycles/2048 writes, map %u cycles/4016 writes; 22 VSYNCs total\n",
            max_background_cycles, max_priority_cycles, map_cycles);
     /* Prior priority IRQ loop measured 18,568 cycles; keep its replacement below 13,000. */
+    CHECK(max_background_cycles < 9900, "Background slice exceeded 9900 cycles (baseline 10392)");
     CHECK(max_priority_cycles < 13000, "Priority slice exceeded the 13000-cycle target (baseline 18568)");
 }
 
@@ -284,7 +285,8 @@ int main(int argc, char **argv) {
             CHECK(vram[offset + col] == 0xC3, "Background interior byte differs");
     }
     printf("Background clear writes exact VRAM; %u cycles\n", (unsigned)clockticks6502);
-    CHECK(clockticks6502 < 200000, "Background clear exceeded its cycle budget");
+    /* Four-store baseline: 142333 foreground cycles, 10392 per IRQ slice. */
+    CHECK(clockticks6502 < 130000, "Background clear exceeded 130000 cycles (baseline 142333)");
     test_full_priority_clear();
     test_bounded_slices();
     test_priority_page_boundaries(graphics_path);
