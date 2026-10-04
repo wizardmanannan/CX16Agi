@@ -96,6 +96,7 @@ _run:
 	    "$(HOST_CC)" $(HOST_CFLAGS) -Wno-unknown-pragmas "$$repo/tools/test_palette_manager.c" -o "$$work/bin/test_palette_manager"; \
 	    "$(HOST_CC)" $(HOST_CFLAGS) -Wno-unknown-pragmas -fsanitize=bounds -fno-sanitize-recover=bounds "$$repo/tools/test_controllers.c" -o "$$work/bin/test_controllers"; \
 	    "$(HOST_CC)" $(HOST_CFLAGS) -Wno-unknown-pragmas -fsanitize=address,undefined -fno-sanitize-recover=all "$$repo/tools/test_menu.c" -o "$$work/bin/test_menu"; \
+	    "$(HOST_CC)" $(HOST_CFLAGS) -Wno-unknown-pragmas -fsanitize=address,undefined -fno-sanitize-recover=all -idirafter "$$CC65_HOME/include" "$$repo/tools/test_text_buffers.c" -o "$$work/bin/test_text_buffers"; \
 	    failed=0; \
 	    run_test() { echo "RUN $$*"; if "$$@"; then :; else failed=$$((failed + 1)); fi; }; \
 	    for name in graphics_clear irq_completion irq_helpers random show_obj_irq text_irq; do \
@@ -107,6 +108,7 @@ _run:
 	    run_test "$$work/bin/test_palette_manager"; \
 	    run_test "$$work/bin/test_controllers"; \
 	    run_test env -u LD_PRELOAD "$$work/bin/test_menu"; \
+	    run_test env -u LD_PRELOAD "$$work/bin/test_text_buffers"; \
 	    [ "$$failed" -eq 0 ] || fail "$$failed regression(s) failed" ;; \
 	  image|production-test) \
 	    $(MAKE) --no-print-directory -f "$$repo/tools/test-image.mk" "REPO_ROOT=$$repo" "OUT=$$work/image"; \
