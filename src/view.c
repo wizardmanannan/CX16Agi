@@ -80,7 +80,7 @@ extern int dirnOfEgo;
 
 #define MAX_INACTIVE_METADATA 10
 
-extern byte bEBulkAllocatedAddresses[VIEW_TABLE_SIZE * sizeof(VeraSpriteAddress) * MAX_BULK_ALLOCATED_SIZE];
+extern byte bEBulkAllocatedAddresses[MAX_BULK_ALLOCATED_SIZE];
 
 void getViewTab(ViewTable* returnedViewTab, byte viewTabNumber)
 {

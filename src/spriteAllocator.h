@@ -25,13 +25,13 @@ void bDInitSpriteMemoryManager();
 VeraSpriteAddress bDFindFreeVramBlock(SpriteAllocationSize width, SpriteAllocationSize height);
 extern void bDDeleteAllocation(VeraSpriteAddress address, SpriteAllocationSize width, SpriteAllocationSize height);
 extern void bDResetSpriteMemoryManager();
-//Warning must pop return addresses of system stack after call. The number of return addresses will be 2 * number. 
-//The first value popped off will be the middle byte of the first result, and the second the high byte of the first result and so on until the last result
-//The low byte of the result is always zero and is therefore omitted from the stack
+#define MAX_BULK_ALLOCATED_SIZE 256
+#define MAX_BULK_ALLOCATED_COUNT (MAX_BULK_ALLOCATED_SIZE / sizeof(VeraSpriteAddress))
+
 #pragma wrapped-call (pop)
 
+/* Returns TRUE only when all results are allocated. Zero, over-capacity, and
+ * partially failing requests return FALSE; the result buffer is valid only on TRUE. */
 extern boolean bEAllocateSpriteMemoryBulk(SpriteAllocationSize width, SpriteAllocationSize height, byte number);
-
-#define MAX_BULK_ALLOCATED_SIZE 256
 
 #endif
