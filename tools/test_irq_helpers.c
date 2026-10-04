@@ -715,6 +715,74 @@ static void test_atomic_vsync_snapshot(void) {
 }
 
 
+/* Assert VSYNC at each instruction boundary, then service the real dispatcher
+ * whenever I allows it. A snapshot may be old or new, but never torn. */
+static void test_snapshot_interrupt_boundaries(void) {
+    const unsigned counter = symbol("_vSyncCounter"), high = symbol("_vSyncCounterHigh");
+    const unsigned output = symbol("snapshotOutput");
+    const uint32_t starts[] = {0xFF, 0xFFFF, 0xFFFFFF, UINT32_MAX};
+    unsigned instruction_count = 0;
+    init_cpu(symbol("snapshot32"), output >> 8);
+    regs.a = (uint8_t)output;
+    while (regs.pc != symbol("done") && instruction_count < 100) {
+        step6502(); ++instruction_count;
+    }
+    CHECK(regs.pc == symbol("done"), "Cannot determine snapshot instruction boundaries");
+
+    for (unsigned masked = 0; masked < 2; ++masked)
+        for (unsigned value = 0; value < sizeof(starts) / sizeof(starts[0]); ++value)
+            for (unsigned boundary = 0; boundary <= instruction_count; ++boundary) {
+                uint32_t before = starts[value];
+                ram[counter] = (uint8_t)before; ram[counter + 1] = (uint8_t)(before >> 8);
+                ram[high] = (uint8_t)(before >> 16); ram[high + 1] = (uint8_t)(before >> 24);
+                memset(ram + output, 0xA5, 4);
+                ram[symbol("_foregroundVeraDepth")] = 1;
+                ram[symbol("default_irq_vector")] = (uint8_t)symbol("irqDefault");
+                ram[symbol("default_irq_vector") + 1] = (uint8_t)(symbol("irqDefault") >> 8);
+                ram[0xFFFE] = (uint8_t)symbol("irqEntry");
+                ram[0xFFFF] = (uint8_t)(symbol("irqEntry") >> 8);
+                ram[0] = 0x35; ram[1] = 0x74; ram[0x9F27] = 2;
+                init_cpu(symbol("snapshot32"), output >> 8);
+                regs.a = (uint8_t)output;
+                regs.status = FLAG_CONSTANT | FLAG_DECIMAL | FLAG_CARRY |
+                    (masked ? FLAG_INTERRUPT : 0);
+                bool asserted = false, in_irq = false;
+                unsigned foreground_steps = 0, resume_pc = 0, resume_sp = 0;
+                for (unsigned steps = 0; steps < 20000; ++steps) {
+                    if (!in_irq && !asserted && foreground_steps == boundary) {
+                        ram[0x9F27] |= 1; asserted = true;
+                    }
+                    if (!in_irq && (ram[0x9F27] & 1) && !(regs.status & FLAG_INTERRUPT)) {
+                        resume_pc = regs.pc; resume_sp = regs.sp;
+                        irq6502(); in_irq = true;
+                    } else if (!in_irq && regs.pc == symbol("done")) break;
+                    else {
+                        step6502();
+                        if (in_irq) {
+                            if (regs.pc == resume_pc && regs.sp == resume_sp) in_irq = false;
+                        } else ++foreground_steps;
+                    }
+                }
+                uint32_t snapshot_value = ram[output] | ((uint32_t)ram[output + 1] << 8) |
+                    ((uint32_t)ram[output + 2] << 16) | ((uint32_t)ram[output + 3] << 24);
+                uint32_t actual = ram[counter] | ((uint32_t)ram[counter + 1] << 8) |
+                    ((uint32_t)ram[high] << 16) | ((uint32_t)ram[high + 1] << 24);
+                CHECK(asserted && regs.pc == symbol("done") && !in_irq,
+                      "Snapshot interleaving did not complete");
+                CHECK(snapshot_value == before || (!masked && snapshot_value == before + 1),
+                      "Interrupt at a snapshot boundary produced a torn counter");
+                CHECK(actual == before + !masked && acks == !masked && ram[0x9F27] == (masked ? 3 : 2),
+                      "Snapshot interleaving lost VSYNC or acknowledged an unrelated source");
+                CHECK(regs.sp == 0x1FF && ram[0] == 0x35 && ram[1] == 0x74 &&
+                    (regs.status & (FLAG_INTERRUPT | FLAG_DECIMAL | FLAG_CARRY)) ==
+                    (FLAG_DECIMAL | FLAG_CARRY | (masked ? FLAG_INTERRUPT : 0)),
+                      "Snapshot interleaving changed caller state");
+            }
+    ram[symbol("_foregroundVeraDepth")] = 0;
+    printf("Atomic snapshot passes %u instruction boundaries, both I states and every carry boundary\n",
+           instruction_count + 1);
+}
+
 /* Execute the entire production dispatcher, including its ownership fast path.
  * irqEntry/irqDefault provide only the ROM register-save/restore convention. */
 static void test_irq_counter_carries(void) {
@@ -940,6 +1008,7 @@ int main(void) {
     test_reenable_preserves_pending_isr();
     test_snapshot_and_wait();
     test_atomic_vsync_snapshot();
+    test_snapshot_interrupt_boundaries();
     test_irq_counter_carries();
     test_sprite_clear();
     test_sprite_updates();
