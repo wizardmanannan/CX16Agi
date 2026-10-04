@@ -31,6 +31,12 @@ uint8_t read6502(uint16_t address, uint8_t bank) {
               "Sprite consumer read beyond its accepted records/terminator");
         ++sprite_reads;
     }
+    if (address >= 0x9F20 && address <= 0x9F22) {
+        unsigned port = ram[0x9F25] & 1;
+        if (address == 0x9F20) return (uint8_t)addr[port];
+        if (address == 0x9F21) return (uint8_t)(addr[port] >> 8);
+        return (uint8_t)((ram[address] & 0xFE) | ((addr[port] >> 16) & 1));
+    }
     if (address == 0x9F23 || address == 0x9F24) {
         unsigned port = address - 0x9F23;
         ++data_port_reads;
@@ -192,7 +198,8 @@ static void assemble(void) {
         ".export input,enable,send,wait,done,snapshot,snapshot32,snapshotOutput,_vSyncCounter,_vSyncCounterHigh,sendIrqCommand,_inputLineDisplayed,_inputLineDirty,_b7CurrentInputStr,_foregroundVeraDepth,_b6EnterForegroundVera,_b6LeaveForegroundVera\n"
         ".export clearSprites,inputStringAddress,spriteFirstZ,spriteCount\n"
         ".export handleSpriteUpdates,checkSpriteUpdateCapacity,_bESpritesUpdatedBuffer,_bESpritesUpdatedBufferPointer,_bESpriteUpdateOverflowed,spriteBufferBefore,spriteBufferEnd,spriteBufferGuard,spriteUpdateBufferBytes,spriteUpdateRecordBytes,spriteUpdateMaxRecords,spriteUpdateBank,irqScratchPointer\n"
-        ".export bBSoundHandler,_bBChannelsPlaying,_bBEndSoundFlag,_bBIsPlaying,_bBCh1Ticks,_ZP_CURRENTLY_PLAYING_NOTE_1,SOUND_SREG,_bBPsgClear,soundCriticalSection\n"
+        ".export bBSoundHandler,_bBChannelsPlaying,_bBEndSoundFlag,_bBIsPlaying,_bBCh1Ticks,_bBCh2Ticks,_bBCh3Ticks,_bBCh4Ticks\n"
+        ".export _ZP_CURRENTLY_PLAYING_NOTE_1,_ZP_CURRENTLY_PLAYING_NOTE_2,_ZP_CURRENTLY_PLAYING_NOTE_3,_ZP_CURRENTLY_PLAYING_NOTE_NOISE,SOUND_SREG,_bBPsgClear,soundCriticalSection\n"
         "ZP_SPRITE_UPDATE_READ_POINTER=IRQ_TMP_6\nZP_LOW_BYTE=ZP_TMP_5+1\n"
         "%.*s\n%.*s\n%.*s\n%.*s\n%.*s\n%.*s\n%.*s\n%.*s\n"
         "spriteBufferBefore: .byte $3D\n_bESpritesUpdatedBuffer: .res SPRITE_UPDATED_BUFFER_SIZE\n"
@@ -540,8 +547,20 @@ static void write_word(unsigned address, unsigned value) {
 static void test_sound_handler(void) {
     const unsigned channel_count = symbol("_bBChannelsPlaying");
     const unsigned playing = symbol("_bBIsPlaying");
-    const unsigned ticks = symbol("_bBCh1Ticks");
     const unsigned psg = 0x1F9C0;
+    const char *tick_names[] = {"_bBCh1Ticks", "_bBCh2Ticks", "_bBCh3Ticks", "_bBCh4Ticks"};
+    const char *note_names[] = {"_ZP_CURRENTLY_PLAYING_NOTE_1", "_ZP_CURRENTLY_PLAYING_NOTE_2",
+                                "_ZP_CURRENTLY_PLAYING_NOTE_3", "_ZP_CURRENTLY_PLAYING_NOTE_NOISE"};
+    enum { SPARSE_SOUND_BASELINE_CYCLES = 254, SPARSE_SOUND_BUDGET_CYCLES = 250 };
+    unsigned tick_addresses[4], note_addresses[4];
+    bool sparse_channels_wrote = false, sound_channel_state_changed = false;
+    bool end_channel_state_wrong = false, end_writes_wrong = false;
+    uint32_t sparse_handler_cycles = 0;
+
+    for (unsigned i = 0; i < 4; ++i) {
+        tick_addresses[i] = symbol(tick_names[i]);
+        note_addresses[i] = symbol(note_names[i]);
+    }
 
     vram[psg - 1] = 0x5A;
     memset(vram + psg, 0xA5, 64);
@@ -570,33 +589,107 @@ static void test_sound_handler(void) {
     CHECK(clockticks6502 - idle_start == 12,
           "Idle sound handler fast path exceeded 12 cycles");
 
-    memset(ram + playing, 0, 4);
-    ram[channel_count] = 1;
-    ram[playing] = 1;
-    ram[ticks] = 1;
-    ram[ticks + 1] = 0;
-    memset(vram + psg, 0xA5, 64);
-    init_cpu(symbol("bBSoundHandler"), 0);
-    run();
-    CHECK(writes == 12 && ram[ticks] == 0 && ram[channel_count] == 1 && ram[playing] == 1,
-          "Partially idle sound lost its active channel or silence writes");
-    for (unsigned i = 0; i < 12; ++i)
-        CHECK(write_addresses[i] == 0x1F9C6 + i && write_values[i] == 0,
-              "Partially idle channels did not retain four-register VERA stride");
+    /* Inactive channels are already silent after init/stop or their one end transition. */
+    for (unsigned mask = 1; mask < 16; ++mask) {
+        unsigned active_count = 0;
+        uint8_t expected_psg[64];
+        memset(vram + psg, 0xA5, 64); /* Guard the unmanaged channels after AGI's four. */
+        for (unsigned channel = 0; channel < 4; ++channel) {
+            bool active = (mask & (1u << channel)) != 0;
+            ram[playing + channel] = active ? 1 : 0;
+            ram[tick_addresses[channel]] = active ? 1 : 0;
+            ram[tick_addresses[channel] + 1] = 0;
+            if (active) {
+                ++active_count;
+                for (unsigned reg = 0; reg < 4; ++reg)
+                    vram[psg + channel * 4 + reg] = (uint8_t)(0x40 + channel * 4 + reg);
+            } else {
+                memset(vram + psg + channel * 4, 0, 4);
+            }
+        }
+        memcpy(expected_psg, vram + psg, sizeof(expected_psg));
+        ram[channel_count] = (uint8_t)active_count;
+        init_cpu(symbol("bBSoundHandler"), 0);
+        uint32_t handler_start = clockticks6502;
+        run();
+        uint32_t handler_cycles = clockticks6502 - handler_start;
+        if (mask == 1) {
+            sparse_handler_cycles = handler_cycles;
+        }
+        if (writes) sparse_channels_wrote = true;
+        CHECK(ram[channel_count] == active_count,
+              "Sound handler changed the active channel count while ticking notes");
+        CHECK(addr[0] == 0x1F9D2,
+              "Sound handler did not advance four channel slots from the PSG volume base");
+        CHECK(data_port_reads == active_count * 4,
+              "Sound handler changed the four-byte PSG slot advancement for active ticks");
+        for (unsigned channel = 0; channel < 4; ++channel) {
+            bool active = (mask & (1u << channel)) != 0;
+            CHECK(ram[playing + channel] == active,
+                  "Sound handler changed a channel flag while ticking notes");
+            CHECK(ram[tick_addresses[channel]] == 0 && ram[tick_addresses[channel] + 1] == 0,
+                  "Sound handler did not consume one tick on each active channel");
+        }
+        if (memcmp(expected_psg, vram + psg, sizeof(expected_psg)))
+            sound_channel_state_changed = true;
+    }
+
+    /* Ending one slot must clear exactly its own four registers and preserve the next active slot. */
+    for (unsigned ending = 0; ending < 4; ++ending) {
+        unsigned end_note = 0x9000;
+        memset(vram + psg, 0xA5, 64);
+        for (unsigned channel = 0; channel < 4; ++channel) {
+            ram[playing + channel] = 1;
+            ram[tick_addresses[channel]] = channel == ending ? 0 : 1;
+            ram[tick_addresses[channel] + 1] = 0;
+            for (unsigned reg = 0; reg < 4; ++reg)
+                vram[psg + channel * 4 + reg] = (uint8_t)(0x50 + channel * 4 + reg);
+        }
+        ram[channel_count] = 4;
+        write_word(note_addresses[ending], end_note - 5);
+        ram[end_note] = ram[end_note + 1] = 0xFF;
+        init_cpu(symbol("bBSoundHandler"), 0);
+        run();
+
+        if (writes != 4) end_writes_wrong = true;
+        else for (unsigned reg = 0; reg < 4; ++reg)
+            if (write_addresses[reg] != psg + ending * 4 + reg || write_values[reg] != 0)
+                end_writes_wrong = true;
+        if (ram[channel_count] != 3 || ram[playing + ending] != 0 ||
+            addr[0] != 0x1F9D2 || data_port_reads != 12)
+            end_channel_state_wrong = true;
+        for (unsigned channel = 0; channel < 4; ++channel) {
+            for (unsigned reg = 0; reg < 4; ++reg) {
+                uint8_t expected = channel == ending ? 0 : (uint8_t)(0x50 + channel * 4 + reg);
+                if (vram[psg + channel * 4 + reg] != expected)
+                    end_channel_state_wrong = true;
+            }
+        }
+        for (unsigned i = 16; i < 64; ++i)
+            if (vram[psg + i] != 0xA5) end_channel_state_wrong = true;
+    }
 
     memset(ram + playing, 0, 4);
     ram[playing] = 1;
     ram[channel_count] = 1;
     ram[symbol("_bBEndSoundFlag")] = 3;
     ram[0x504] = 0;
-    ram[ticks] = ram[ticks + 1] = 0;
+    ram[tick_addresses[0]] = ram[tick_addresses[0] + 1] = 0;
     const unsigned note = 0x9000;
-    write_word(symbol("_ZP_CURRENTLY_PLAYING_NOTE_1"), note - 5);
+    write_word(note_addresses[0], note - 5);
     ram[note] = ram[note + 1] = 0xFF;
+    memset(vram + psg, 0xA5, 64);
     init_cpu(symbol("bBSoundHandler"), 0);
     run();
     CHECK(!ram[channel_count] && !ram[playing] && ram[0x504] == 1,
           "Final channel did not clear ownership and set its end flag");
+    CHECK(writes == 4 && write_addresses[0] == psg && write_addresses[1] == psg + 1 &&
+          write_addresses[2] == psg + 2 && write_addresses[3] == psg + 3,
+          "Final channel did not silence exactly its own PSG registers");
+    for (unsigned i = 0; i < 4; ++i)
+        CHECK(vram[psg + i] == 0, "Final channel left an audible PSG register");
+    CHECK(vram[psg + 4] == 0xA5 && vram[psg + 5] == 0xA5,
+          "Final channel silence overwrote the following channel's frequency");
 
     init_cpu(symbol("bBSoundHandler"), 0);
     run();
@@ -605,8 +698,8 @@ static void test_sound_handler(void) {
     memset(ram + playing, 1, 4);
     ram[channel_count] = 4;
     for (unsigned i = 0; i < 4; ++i) {
-        ram[ticks + i * 2] = 1;
-        ram[ticks + i * 2 + 1] = 0;
+        ram[tick_addresses[i]] = 1;
+        ram[tick_addresses[i] + 1] = 0;
     }
     init_cpu(symbol("bBSoundHandler"), 0);
     run();
@@ -618,6 +711,18 @@ static void test_sound_handler(void) {
     init_cpu(symbol("bBSoundHandler"), 0);
     run();
     CHECK(!writes, "Stopped sound did not reach the idle fast path");
+
+    fprintf(stderr,
+            "Sparse sound IRQ mask $01: %u cycles (baseline %u, budget <%u); inactive PSG writes %s; end mute %s\n",
+            sparse_handler_cycles, SPARSE_SOUND_BASELINE_CYCLES, SPARSE_SOUND_BUDGET_CYCLES,
+            sparse_channels_wrote ? "observed" : "none",
+            (end_writes_wrong || end_channel_state_wrong) ? "incorrect" : "per-channel");
+    CHECK(sparse_handler_cycles < SPARSE_SOUND_BUDGET_CYCLES,
+          "Sparse sound handler exceeded its 250-cycle budget (baseline 254)");
+    CHECK(!end_writes_wrong && !end_channel_state_wrong,
+          "Sound end transition did not clear its own PSG slot or overwrote an adjacent active channel");
+    CHECK(!sparse_channels_wrote && !sound_channel_state_changed,
+          "Already silent sound channels rewrote PSG state or changed an active channel");
 }
 
 static void test_sound_interrupt_restore(void) {
