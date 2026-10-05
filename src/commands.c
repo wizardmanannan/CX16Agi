@@ -1513,7 +1513,7 @@ void b3PrintMessageInTextbox(byte messNum, byte x, byte y, byte length, boolean 
 
 	messagePointer = getMessagePointer(currentLog, messNum - 1);
 
-	b3DisplayMessageBox(messagePointer, logicFile.messageBank, y, x, TEXTBOX_PALETTE_NUMBER, length, wrap);
+	b3DisplayMessageBox(messagePointer, logicFile.messageBank, y, x, TEXTBOX_PALETTE_NUMBER, length, wrap, FIRST_TEXT_ROW);
 
 	if (timeoutFlagVal)
 	{
@@ -1563,7 +1563,7 @@ void b3DisplayWithoutTextbox(byte row, byte col, byte messNum)
 	printf("the messages live at %p on bank %p\n", logicFile.messages, logicFile.messageBank);
 #endif
 	//b3ProcessString(messagePointer, 0, tempString);
-	b3DisplayMessageBox(messagePointer, logicFile.messageBank, row, col, b3SetTextColor(b3CurrentForegroundColour, b3CurrentBackgroundColour), 0, FALSE);
+	b3DisplayMessageBox(messagePointer, logicFile.messageBank, row, col, b3SetTextColor(b3CurrentForegroundColour, b3CurrentBackgroundColour), 0, FALSE, FIRST_TEXT_ROW);
 	return;
 }
 
@@ -1596,28 +1596,14 @@ void b3Clear_lines() // 3, 0x00
 #pragma code-name (pop)
 #pragma code-name (push, "BANKRAM04")
 
-extern boolean statusLineDisplayed;
-
 void b4Text_screen() // 0, 0x00 
 {
-	screenMode = AGI_TEXT;
-	/* Do something else here */
-	inputLineDisplayed = FALSE;
-	statusLineDisplayed = FALSE;
-	b6SetAndWaitForIrqState(TEXT_ONLY);
-
-	return;
+	b6TextMode();
 }
 
 void b4Graphics() // 0, 0x00 
 {
-	screenMode = AGI_GRAPHICS;
-	/* Do something else here */
-	inputLineDisplayed = TRUE;
-	statusLineDisplayed = TRUE;
-	b6SetAndWaitForIrqState(DISPLAY_GRAPHICS);
-
-	return;
+	b6GraphicsMode();
 }
 
 void b4Set_cursor_char() // 1, 0x00 
@@ -1844,10 +1830,11 @@ void b4Add_to_pic_v() // 7, 0xFE
 
 void b4Status() // 0, 0x00 
 {
-	/* Inventory */
-	// set text mode
-	// if flag 13 is set then allow selection and store selection in var[25]
-	var[25] = 255;
+	// /* Inventory */
+	// // set text mode
+	// // if flag 13 is set then allow selection and store selection in var[25]
+	// var[25] = 255;
+	bDDisplayInventory(flag[13]);
 }
 
 //void b4Save_game() // 0, 0x00 
@@ -1938,18 +1925,11 @@ void b5Quit() // 1, 0x00                     /* 0 args for AGI version 2_089 */
 
 void b5Pause() // 0, 0x00 
 {
-
-
 #define PAUSE_BOX_WIDTH 27
 #define PAUSE_BOX_HEIGHT 7
 	bBStopSound();
 
-	b11ShowObj(128);
-	//b11ShowObj(119);
-
-	//b3DisplayManuallyWrappedMessageBox(B5_PAUSE_MESSAGE, COMMAND_MESSAGES_BANK, AUTO_CALC_ROW, AUTO_CALC_COLUMN, TEXTBOX_PALETTE_NUMBER, PAUSE_BOX_WIDTH, PAUSE_BOX_HEIGHT);
-
-
+	b3DisplayManuallyWrappedMessageBox(B5_PAUSE_MESSAGE, COMMAND_MESSAGES_BANK, AUTO_CALC_ROW, AUTO_CALC_COLUMN, TEXTBOX_PALETTE_NUMBER, PAUSE_BOX_WIDTH, PAUSE_BOX_HEIGHT);
 }
 
 
@@ -1974,7 +1954,7 @@ void b5Version() // 0, 0x00
 {
 #define VERSION_BOX_SIZE 15
 	while (key[KEY_ENTER] || key[KEY_ESC]) { /* Wait */ }
-	b3DisplayMessageBox(B5_VERSION_MESSAGE, COMMAND_MESSAGES_BANK, AUTO_CALC_ROW, MAX_CHAR_ACROSS / 2, TEXTBOX_PALETTE_NUMBER, VERSION_BOX_SIZE, FALSE);
+	b3DisplayMessageBox(B5_VERSION_MESSAGE, COMMAND_MESSAGES_BANK, AUTO_CALC_ROW, MAX_CHAR_ACROSS / 2, TEXTBOX_PALETTE_NUMBER, VERSION_BOX_SIZE, FALSE, FIRST_TEXT_ROW);
 	while (!key[KEY_ENTER] && !key[KEY_ESC]) { /* Wait */ }
 	b6ShowPicture();
 	return;
@@ -2150,7 +2130,9 @@ void b5Show_obj_v() // 1, 0x01
 	int objectNum;
 
 	objectNum = var[loadAndIncWinCode()];
-	/* Not supported yet */
+	
+    b11ShowObj(objectNum);
+
 	return;
 }
 

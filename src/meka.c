@@ -96,6 +96,9 @@ void b6NewRoom()
 {
 
     byte lastRoomLoaded;
+    ViewTable localViewTab;
+
+    getViewTab(&localViewTab, 0);
 
     bBStopSound();
 
@@ -122,7 +125,7 @@ void b6NewRoom()
     var[1] = var[0];
     var[2] = 0;
     var[0] = newRoomNum;
-    var[16] = 0;
+    var[16] = localViewTab.currentView;
     flag[2] = 0;
     flag[5] = 1;
 
@@ -304,7 +307,7 @@ void b6Initialise()
     bAInitViews();
     bAInitObjects();
 
-    bDLoadObjectFile();
+    bDInitObjects();
     b12LoadWords();
     b7InitEvents();
     b6InitInterpreter();

@@ -25,6 +25,7 @@ typedef enum
 #pragma wrapped-call (push, trampoline, PALETTE_MANAGER_BANK)
 byte bFInitPaletteManager();
 byte bFGetPalette(int id, PaletteGetResult* result);
+void bFRemoveLastPalette();
 #pragma wrapped-call (pop)
 
 #endif

@@ -773,17 +773,11 @@ stz VIEW_POS_CAN_BE_HERE          ; StayOnWater but not entirely on water → fa
 lda VIEW_POS_ENTRY_NUM
 bne @return                       ; skip if not ego
 
-@setOnWaterFlag:
 lda VIEW_POS_ENTIRELY_ON_WATER
-beq @setOnHitSpecialFlag
-lda #FLAG_ON_WATER
-SET_FLAG_NON_INTERPRETER sreg
+sta FLAG_OFFSET + FLAG_ON_WATER
 
-@setOnHitSpecialFlag:
 lda VIEW_POS_HIT_SPECIAL
-beq @return
-lda #FLAG_HIT_SPECIAL
-SET_FLAG_NON_INTERPRETER sreg
+sta FLAG_OFFSET + FLAG_HIT_SPECIAL
 
 @return: ; return value
 lda VIEW_POS_CAN_BE_HERE
@@ -1153,7 +1147,7 @@ sta (VIEW_POS_LOCAL_VIEW_TAB),y
 lda VIEW_POS_ENTRY_NUM
 bne @end
 
-lda #PROGRAM_CONTROL
+lda #PLAYER_CONTROL
 sta _controlMode
 
 lda #EGODIR

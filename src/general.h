@@ -70,6 +70,8 @@ extern int currentLog;
 
 #define DEFAULT_PRIORITY_BASE 48
 
+#define SPLIT_BUFFER_SIZE 4000
+extern byte bCSplitBuffer[SPLIT_BUFFER_SIZE];
 
 #define SOFT_RESET()           \
     do {                       \

@@ -79,4 +79,8 @@ byte sizeOfLoop = sizeof(Loop);
 byte sizeOfMenu = sizeof(MENU);
 byte offsetOfText = offsetof(struct MENU, text);
 byte offsetOfController = offsetof(struct MENU, controller);
+
+//Objects
+byte offsetOfLengthOffset = offsetof(struct objectType, lengthOffset);
+byte offsetOfObjectNum = offsetof(struct objectType, objectNum);
 #endif

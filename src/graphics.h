@@ -6,6 +6,18 @@
 #include "irq.h"
 #include "general.h"
 
+#define PALETTE_COLOR_WHITE 0xFFF //I would have prefered to called it COLOR_WHITE but it is declared somewhere else I can't find with the wrong value
+#define PALETTE_COLOR_BLACK 0x000
+#define  AGI_GRAPHICS  0
+#define  AGI_TEXT      1
+
+#define DEFAULT_BACKGROUND COLOR_BLACK
+
+
+extern int screenMode; //TODO: Move this into graphics along with related variables
+extern boolean inputLineDisplayed;
+extern boolean statusLineDisplayed;
+
 //must be constants
 #define SET_VERA_ADDRESS(VeraAddress, AddressSel, Stride) \
     do {      \
@@ -39,13 +51,17 @@
 typedef unsigned long VeraSpriteAddress; 
 
 #pragma wrapped-call (push, trampoline, GRAPHICS_BANK)
-unsigned int b6SetPaletteToInt(byte paletteReference);
+extern unsigned int b6SetPaletteToInt(byte paletteReference);
+extern void b6SetBackgroundColour(unsigned int paletteEntry);
+extern void b6TextMode();
+extern void b6GraphicsMode();
 #pragma wrapped-call (pop);
 
 #define PICTURE_WIDTH   160  /* Picture resolution */
 #define PICTURE_HEIGHT  168
 #define BITMAP_WIDTH 320
 #define BITMAP_HEIGHT 240
+#define TILES_ACROSS 42
 #define BYTES_PER_ROW (SCREEN_WIDTH / 2)
 #define STARTING_ROW ((SCREEN_HEIGHT / 2) - (PICTURE_HEIGHT / 2))
 #define STARTING_BYTE (STARTING_ROW * BYTES_PER_ROW)

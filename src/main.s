@@ -22,6 +22,7 @@
     .include "controllersAsm.s"
     .include "statusBar.s"
     .include "showObjAsm.s"
+    .include "objectAsm.s"
     
     .export _executeLogic
     .export _b6InitInterpreter
@@ -119,7 +120,14 @@
     .export _statusLineDisplayed
     .export _b11ShowObjSpriteAddressShifted
     .export _b11ShowObjSprAttr7
-    .export _b11ShowObjCelHeight
     .export _b11ShowObjX
     .export _b11ShowObjY
+    .export _b11VeraSlots
+    .export _b3TextModeTileByte
+    .export _b6BackgroundColorToSet
+    .export _b6SetBackgroundColor
+    .export _bCSplitBuffer
+    .export _bDWriteNext
+    .export _bDDisplayInventoryInner
+    .export _bDPadWordsWithSpaces
 

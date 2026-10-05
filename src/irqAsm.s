@@ -47,7 +47,8 @@ REENABLE_INTERRUPTS
 _b3PaletteAddress: .res 4 ;Should be three bytes, but there is no data type in C for handling 3 byte values
 _b3PaletteRows: .byte $0
 _b3PaletteNumber: .byte $0
-
+_b3TextModeTileByte: .byte TILE_BYTE_2
+_b3TextBackground: .byte $0
 ZP_PALETTE_BYTE = ZP_TMP_2
 
 
@@ -84,17 +85,17 @@ bpl @loop
 
 rts
 
+;void b3InitLayer1MapBase(byte tileByte)
 _b3InitLayer1Mapbase:
+tay
 SET_VERA_ADDRESS_IMMEDIATE (MAP_BASE + MENU_BAR_WIDTH * 2), #$0, #$1
 
-ldx #< (TILE_LAYER_NO_TILES - MENU_BAR_WIDTH)
+ldx #< (TILE_LAYER_NO_TILES_EX_MENU - 1)
 
-lda #> (TILE_LAYER_NO_TILES - MENU_BAR_WIDTH)
+lda #> (TILE_LAYER_NO_TILES_EX_MENU - 1)
 sta ZP_TILE_LAYER_NO_TILES_HIGH
 
 lda #TRANSPARENT_CHAR
-ldy #TILE_BYTE_2
-
 @loop:
 sta VERA_data0
 sty VERA_data0
@@ -197,6 +198,7 @@ rts
 
 .segment "CODE"
 
+
 .macro CALL_CLEAR
 lda #GRAPHICS_BANK
 sta RAM_BANK
@@ -211,6 +213,10 @@ IRQ_CMD_DISPLAY_TEXT = 4
 IRQ_CMD_L0_L1_ONLY = 5
 IRQ_CMD_CLEAR = 6
 IRQ_CMD_GRAPHICS = 7
+SHOW_OBJ = 8
+CLEAR_OBJ = 9
+SET_BACKGROUND = 10
+HIGHLIGHT_INVENTORY_ROW = 11
 
 
 LAYER_0_1_SPRITES_ENABLE = $71
@@ -292,14 +298,14 @@ jmp (@jmpTableIrq,x)
 
 @displayText:
 jsr handleDisplayText
-bra @resetSetIrqState
+jmp @resetSetIrqState
 
 @blankScreen:
 lda #LAYER_0_1_SPRITES_DISABLE
 sta VERA_dc_video
 lda #IRQ_CMD_BLACKSCREEN
 sta currentIrqState
-bra @resetSetIrqState
+jmp @resetSetIrqState
 
 @normal:
 lda #LAYER_0_1_SPRITES_ENABLE
@@ -307,10 +313,17 @@ sta VERA_dc_video
 lda #IRQ_CMD_NORMAL
 sta currentIrqState
 
+lda #DISPLAY_SCALE_GRAPHICS
+sta VERA_dc_hscale
+sta VERA_dc_vscale
+
 lda sendIrqCommand
 cmp #IRQ_CMD_NORMAL
-beq @resetSetIrqState
+bne @normalLdaTileByte
+jmp @resetSetIrqState
 
+@normalLdaTileByte:
+lda #TILE_BYTE_2
 TRAMPOLINE #TEXT_BANK, _b3InitLayer1Mapbase
 TRAMPOLINE #GRAPHICS_BANK, _b6InitInput
 
@@ -320,7 +333,19 @@ bra @resetSetIrqState
 lda #LAYER_0_SPRITES_DISABLE_1_ENABLE
 sta VERA_dc_video
 
-TRAMPOLINE #TEXT_BANK, _b3InitLayer1Mapbase
+; lda #$FF
+; sta VERA_L1_vscroll_h
+
+lda #DISPLAY_SCALE_TEXT_H
+sta VERA_dc_hscale
+lda #DISPLAY_SCALE_TEXT_V
+sta VERA_dc_vscale
+
+
+lda _b3TextModeTileByte
+jsr _b3InitLayer1Mapbase
+lda #TILE_BYTE_2
+sta _b3TextModeTileByte
 bra @resetSetIrqState
 
 @l12Only:
@@ -336,6 +361,18 @@ bra @resetSetIrqState
 
 @showObj:
 TRAMPOLINE #SHOW_OBJ_BANK, b11ShowObjIrqHandler
+bra @resetSetIrqState
+
+@clearObj:
+TRAMPOLINE #SHOW_OBJ_BANK, b11ClearObjIrqHandler
+bra @resetSetIrqState
+
+@setBackground:
+jsr _b6SetBackgroundColor
+bra @resetSetIrqState
+
+@highlightInventoryRow:
+jsr bDHighlightInventoryRow
 
 @resetSetIrqState:
 lda #IRQ_CMD_DONTCHANGE
@@ -366,9 +403,12 @@ jmp (default_irq_vector)
 .addr @clear
 .addr @normal ;Graphics command goes to the same place as normal, it just clears while normal does not
 .addr @showObj
+.addr @clearObj
+.addr @setBackground
+.addr @highlightInventoryRow
 
 
-@jmpTableBank: .byte $0, $0, $0, $0, TEXT_BANK, $0 ;In order of IRQ_CMDS
+@jmpTableBank: .byte $0, $0, TEXT_BANK, $0, TEXT_BANK, $0,$0,$0,$0,$0,GRAPHICS_BANK,OBJECT_BANK ;In order of IRQ_CMDS
 @previousRamBank: .byte $0
 
 .endif ; IRQ_INC

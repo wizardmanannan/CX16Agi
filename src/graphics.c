@@ -1,5 +1,8 @@
 #include "graphics.h"
 
+int screenMode;
+boolean inputLineDisplayed = FALSE;
+
 #pragma code-name (push, "BANKRAM06")
 void b6InitVeraMemory()
 {
@@ -29,6 +32,34 @@ unsigned int b6SetPaletteToInt(byte paletteReference)
 	*(((byte*)&result) + 1) = high;
 
 	return result;
+}
+
+extern unsigned int b6BackgroundColorToSet;
+void b6SetBackgroundColour(unsigned int paletteEntry)
+{
+	b6BackgroundColorToSet = paletteEntry;
+
+	b6SetAndWaitForIrqStateAsm(SET_BACKGROUND);
+}
+
+void b6TextMode()
+{
+	screenMode = AGI_TEXT;
+	/* Do something else here */
+	inputLineDisplayed = FALSE;
+	statusLineDisplayed = FALSE;
+	b6SetAndWaitForIrqState(TEXT_ONLY);
+
+	return;
+}
+
+void b6GraphicsMode()
+{
+	screenMode = AGI_GRAPHICS;
+	/* Do something else here */
+	inputLineDisplayed = TRUE;
+	statusLineDisplayed = TRUE;
+	b6SetAndWaitForIrqState(DISPLAY_GRAPHICS);
 }
 
 #pragma code-name (pop);

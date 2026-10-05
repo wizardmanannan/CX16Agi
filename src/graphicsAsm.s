@@ -19,13 +19,35 @@ GRAPHICS_INC = 1
 .import _b3SetTextColor
 .importzp ptr4
 
+.macro SET_VERA_ON_PALETTE
+stz VERA_ctrl
+lda #^VRAM_palette | $10
+sta VERA_addr_bank
+lda #>VRAM_palette
+sta VERA_addr_high
+lda #<VRAM_palette
+sta VERA_addr_low
+.endmacro
 
 _b6Clear:
+lda #TILE_BYTE_2
 TRAMPOLINE #TEXT_BANK, _b3InitLayer1Mapbase
 TRAMPOLINE #SPRITE_UPDATES_BANK, _bEClearSpriteAttributes
 TRAMPOLINE #PICTURE_CODE_OVERFLOW_BANK, _b8ClearPicture
 TRAMPOLINE #GRAPHICS_BANK, _b6InitInput
 rts
+
+_b6BackgroundColorToSet: .word $0 ;The color where there is no bitmap or tile over the top, not the bitmap background
+_b6SetBackgroundColor:
+SET_VERA_ON_PALETTE
+
+lda _b6BackgroundColorToSet
+sta VERA_data0
+lda _b6BackgroundColorToSet + 1
+sta VERA_data0
+
+rts
+
 
 @mapWidth: .byte $0
 @isFirstPixel: .byte $0
@@ -64,17 +86,11 @@ jsr _b6InitVeraMemory
 TRAMPOLINE #SPRITE_INIT_BANK, _bAInitSpriteData
 
 sei
-lda #DISPLAY_SCALE
+lda #DISPLAY_SCALE_GRAPHICS
 sta VERA_dc_hscale
 sta VERA_dc_vscale
 
-stz VERA_ctrl
-lda #^VRAM_palette | $10
-sta VERA_addr_bank
-lda #>VRAM_palette
-sta VERA_addr_high
-lda #<VRAM_palette
-sta VERA_addr_low
+SET_VERA_ON_PALETTE
 
 ;Bitmap Layer 0
 lda #<COLOR_BLACK
@@ -158,7 +174,7 @@ lda #>COLOR_WHITE
 sta VERA_data0
 
 ;TileSet Layer 1
-lda #<COLOR_BLACK
+lda #<COLOR_BLACK ;White background black text
 sta VERA_data0
 lda #>COLOR_BLACK
 sta VERA_data0
@@ -240,7 +256,7 @@ lda #>COLOR_BLACK
 sta VERA_data0
 
 ;TileSet Layer 2
-lda #<COLOR_BLACK
+lda #<COLOR_BLACK ;White text black background
 sta VERA_data0
 lda #>COLOR_BLACK
 sta VERA_data0
@@ -366,6 +382,7 @@ sta VERA_L1_vscroll_l
 stz VERA_L1_vscroll_h
 
 TRAMPOLINE #TEXT_BANK, _b3InitCharset
+lda #TILE_BYTE_2
 TRAMPOLINE #TEXT_BANK, _b3InitLayer1Mapbase
 TRAMPOLINE #SPRITE_UPDATES_BANK, _bEClearSpriteAttributes 
 jsr _b6InitInput
@@ -488,8 +505,8 @@ lda @loopCounter
 dex  ; Decrement X
 bne @loopOuter  ; If X is not 0, continue loop
 rts
+
 @mapWidth: .byte $0
 @isFirstPixel: .byte $0
 @loopCounter: .byte $0
-
 .endif
