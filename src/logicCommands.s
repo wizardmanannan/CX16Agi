@@ -1024,8 +1024,7 @@ b1Addv:
          
          sta @var
          
-         GET_VAR_OR_FLAG VARS_AREA_START_GOLDEN_OFFSET, @existingVal
-                  
+         GET_VAR_OR_FLAG VARS_AREA_START_GOLDEN_OFFSET, @existingVal              
          INC_CODE
 
          .ifdef DEBUG
@@ -1036,13 +1035,11 @@ b1Addv:
          DEBUG_ADD_V
 
          GET_VAR_OR_FLAG VARS_AREA_START_GOLDEN_OFFSET, @val
-
          INC_CODE
          lda @val
 
          clc
          adc @existingVal
-         INC_CODE
          sta @val
 
          SET_VAR_OR_FLAG VARS_AREA_START_GOLDEN_OFFSET, @val, @var
