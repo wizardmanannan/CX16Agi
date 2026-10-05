@@ -7,10 +7,16 @@
 ![image](https://github.com/wizardmanannan/CX16Agi/blob/main/docs/images/KingsQuestThreeImprovedIntro.gif)
 
 See it running here on YouTube: \
-[King's Quest III](https://youtu.be/NmkiB3tb6WM) \
-[King's Quest I](https://youtu.be/N0JRAPeKvf0) \
-[Space Quest II](https://youtu.be/Pxg_op2dU8Q) 
+[King's Quest III](https://youtu.be/NmkiB3tb6WM)
 
+[King's Quest I](https://youtu.be/N0JRAPeKvf0)
+
+[Space Quest II](https://youtu.be/Pxg_op2dU8Q)
+
+[Black Cauldron](https://youtu.be/h7zuFAZj-MI)
+
+![image](https://github.com/user-attachments/assets/444ff862-348a-492a-8962-a567565608af)
+![image](https://github.com/user-attachments/assets/aeb64726-8bc4-4682-b7ba-f76894aec0fd)
 ![image](https://github.com/wizardmanannan/CX16Agi/assets/58645812/95672f9e-32c5-4775-9ee3-5145495f0f11)
 ![image](https://github.com/wizardmanannan/CX16Agi/assets/58645812/3fdfeadf-2016-48f1-a2fb-0f577838c710)  
 ![image](https://github.com/wizardmanannan/CX16Agi/assets/58645812/3df45e82-c7d4-4b29-ae96-cdc5e560ff09)  
@@ -19,8 +25,36 @@ See it running here on YouTube: \
 ![image](https://github.com/user-attachments/assets/c1cdc287-a795-44fb-946b-8e7155d80fa1)
 ![image](https://github.com/user-attachments/assets/96817fbb-d173-4ca7-98f6-d2cb1458ef55)
 
-# CX 16 Iteration 15 Goals (Current)
-- Implement Load And Save
+
+High Level Things Completed:
+- Views, backgrounds and priority
+- Text parser
+- Sound
+- Interpreter
+- Inventory
+- Text boxes
+- Horizontal split sprites
+  
+
+High Level Things To Be Done:
+- Load and save
+- String interpolation
+- Vertical split sprites
+- Screen shaking
+- Support for games with resources larger than 8k
+- Support for AGI 3 games which compress resources
+- LFSR sound (I currently have a very basic stand in)
+
+
+
+# CX 16 Iteration 16 Goals (Current)
+- Implement string interpolation (string token replacement) 
+- Continuing to work towards playability of King's Quest I:
+- Implement screen shaking using the Vera scroll registers
+- Continuing to squash bugs that would stop a player completing the game
+
+# CX 16 Iteration 15 Goals (Completed)
+- Implement Inventory
 - Continuing to work towards playability of King's Quest I:
 - Fix stalls that sometimes happen, such as those that occur when a new loop is loaded
 - Continuing to squash bugs that would stop a player completing the game
@@ -89,17 +123,6 @@ However extensive assembly is used where speed is required.
 
 ## Instructions For Building In Windows:
 See: https://github.com/wizardmanannan/CX16Agi/blob/main/How%20To%20Setup%20Meka%20For%20Cx16.docx
-
-
-Obvious things that need to be done:
-- I have been building this under Windows, and the deployment tool I threw together for the purpose is Windows dependent. A Linux build tool should be developed
-- String functions need to be uncommented out and made to work
-- Import the rest of the MEKA code base. I have been importing it in a piecemeal fashion, and using a stub
-- Sound need to be implemented
-- Uncomment out routines for the support of AGI 3 games and put them into the BANKS
-- Review the implementation of dynamic memory as mentioned in memorymanager.h and the related C file. I am not a memory algorithm expert; there may be a much more efficient way of doing things. At least a review of the segment sizes I have chosen will be required.
-- Menu systems need to be built, one for game select (maybe BASIC) and another for the internal game menus
-- <s>Priority screens and sprite to background priority</s>
 
 This project requires extensive use of Banked RAM, for both code and data as the Meka source code is quite large.
 
