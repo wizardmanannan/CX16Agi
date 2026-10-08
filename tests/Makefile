@@ -8,6 +8,13 @@ SIM65 ?= sim65
 
 .PHONY: test sanitize footprint cpu
 
+# Run against an already linked checkout; caller rebuilds after a RED result.
+game: $(BUILD)/test_teleport_game
+	$(BUILD)/test_teleport_game "$(ROOT)" "$(GAME)" ../build/out
+
+$(BUILD)/test_teleport_game: test_teleport_game.c | $(BUILD)
+	$(CC) $(CFLAGS) $< -o $@
+
 test: $(BUILD)/test_teleport $(BUILD)/test_teleport_keyboard
 	$(BUILD)/test_teleport $(GAMES)
 	$(BUILD)/test_teleport_keyboard
