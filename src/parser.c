@@ -10,6 +10,7 @@
 #define  PROGRAM_CONTROL  1
 
 #include "parser.h"
+#include "teleport.h"
 
 extern boolean* flag;
 extern byte* var;
@@ -178,6 +179,7 @@ void b7PollKeyboard()
 {
 	static char strPos = 0;
 	int ch, dummy, gx, gy;
+	boolean controllerHandled;
 
 	b1ResetControllers();
 
@@ -217,7 +219,13 @@ void b7PollKeyboard()
 				}
 			}
            
-			if (!b1SetControllerByPetscii(ch) && inputLineDisplayed) {
+#if ENABLE_TELEPORT
+			if (inputLineDisplayed && b7TeleportInputPrefix(b7CurrentInputStr))
+				controllerHandled = FALSE;
+			else
+#endif
+				controllerHandled = b1SetControllerByPetscii(ch);
+			if (!controllerHandled && inputLineDisplayed) {
 				switch (ch & 0xff) {
 				case KEY_TAB:  /* Ignore these when building input string */
 				case KEY_ESC:
@@ -228,6 +236,9 @@ void b7PollKeyboard()
 					{
 						trampolineDebug(bDbgShowPriority);
 					}
+#if ENABLE_TELEPORT
+					if (!b7TeleportCommand(b7CurrentInputStr))
+#endif
 					b7LookupWords(b7CurrentInputStr);
 					b7CurrentInputStr[0] = 0;
 					strPos = 0;
@@ -245,7 +256,7 @@ void b7PollKeyboard()
 						return;
 					break;
 				default:
-					if (strlen(b7CurrentInputStr) < MAX_INPUT_STRING_LENGTH && (ch >= KEY_CAP_A && ch <= KEY_CAP_Z || ch >= KEY_LOWER_A && ch <= KEY_LOWER_Z || ch >= KEY_1 && ch <= KEY_9 || ch == SPACE))
+					if (strlen(b7CurrentInputStr) < MAX_INPUT_STRING_LENGTH && (ch >= KEY_CAP_A && ch <= KEY_CAP_Z || ch >= KEY_LOWER_A && ch <= KEY_LOWER_Z || ch >= KEY_0 && ch <= KEY_9 || ch == SPACE))
 					{
 						if (ch >= KEY_CAP_A && ch <= KEY_CAP_Z)
 						{
@@ -555,4 +566,3 @@ boolean b7Said(byte** data)
 }
 
 #pragma code-name (pop)
-
