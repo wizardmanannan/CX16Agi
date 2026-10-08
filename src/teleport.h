@@ -19,6 +19,7 @@ enum {
 /* Zero means idle; otherwise this is the destination room. */
 extern byte teleportPending;
 /* Called in bank 7; input is the parser's ASCII buffer. */
+boolean b7TeleportInputPrefix(const char* input);
 boolean b7TeleportCommand(const char* input);
 /* Called in bank 6, outside the logic interpreter. */
 void b6BeginTeleport(void);

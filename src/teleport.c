@@ -50,6 +50,11 @@ void b7TeleportNotice(byte reason)
     b3ClearLastPlacedText();
 }
 
+boolean b7TeleportInputPrefix(const char* input)
+{
+    return !strncmp(input, teleportWord, 8) && input[8] == 32;
+}
+
 boolean b7TeleportCommand(const char* input)
 {
     byte args[3], i;

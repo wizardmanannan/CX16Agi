@@ -179,6 +179,7 @@ void b7PollKeyboard()
 {
 	static char strPos = 0;
 	int ch, dummy, gx, gy;
+	boolean controllerHandled;
 
 	b1ResetControllers();
 
@@ -218,7 +219,13 @@ void b7PollKeyboard()
 				}
 			}
            
-			if (!b1SetControllerByPetscii(ch) && inputLineDisplayed) {
+#if ENABLE_TELEPORT
+			if (inputLineDisplayed && b7TeleportInputPrefix(b7CurrentInputStr))
+				controllerHandled = FALSE;
+			else
+#endif
+				controllerHandled = b1SetControllerByPetscii(ch);
+			if (!controllerHandled && inputLineDisplayed) {
 				switch (ch & 0xff) {
 				case KEY_TAB:  /* Ignore these when building input string */
 				case KEY_ESC:

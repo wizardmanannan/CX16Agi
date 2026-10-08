@@ -8,14 +8,18 @@ SIM65 ?= sim65
 
 .PHONY: test sanitize footprint cpu
 
-test: $(BUILD)/test_teleport
+test: $(BUILD)/test_teleport $(BUILD)/test_teleport_keyboard
 	$(BUILD)/test_teleport $(GAMES)
+	$(BUILD)/test_teleport_keyboard
 
 $(BUILD):
 	mkdir -p $@
 
 $(BUILD)/test_teleport: test_teleport.c support/teleport_host.h ../src/teleport.c $(wildcard ../src/*.h) | $(BUILD)
 	$(CC) $(CFLAGS) -I../src -include support/teleport_host.h test_teleport.c ../src/teleport.c -o $@
+
+$(BUILD)/test_teleport_keyboard: test_teleport_keyboard.c support/parser_input_host.h ../src/parser.c ../src/controllers.c ../src/teleport.c | $(BUILD)
+	$(CC) $(CFLAGS) -Wno-error -Wno-unknown-pragmas -ffunction-sections -fdata-sections -I../src -include support/parser_input_host.h test_teleport_keyboard.c ../src/parser.c ../src/controllers.c ../src/teleport.c -Wl,--gc-sections -o $@
 
 sanitize:
 	$(MAKE) test BUILD=$(BUILD)/sanitize CFLAGS='$(CFLAGS) -fsanitize=address,undefined -fno-omit-frame-pointer' GAMES='$(GAMES)'
