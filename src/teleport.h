@@ -11,10 +11,10 @@
 #if ENABLE_TELEPORT
 #include "memoryManager.h"
 enum {
-    TELEPORT_WAITING = 1,
-    TELEPORT_BLOCKED,
+    TELEPORT_BLOCKED = 1,
     TELEPORT_WRONG_ROOM,
-    TELEPORT_CANCELED
+    TELEPORT_CANCELED,
+    TELEPORT_NEAREST
 };
 /* Zero means idle; otherwise this is the destination room. */
 extern byte teleportPending;

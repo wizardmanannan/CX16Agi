@@ -821,6 +821,42 @@ rts
 ;       * For (Y - YSize) >= -1: explicit compare to $FF (i.e., -1) as a pass.
 ;   - C (carry) must be set before SBC; BEQ/BCS/BCC follow unsigned semantics.
 ; -----------------------------------------------------------------------------
+; Teleport's landing policy: reject raised scenery, even when ego's drawing
+; priority would put him in front of it. Control values remain CanBeHere's job.
+; Ordinary movement still permits walking behind foreground objects.
+.export _b9TeleportBaselineVisible
+_b9TeleportBaselineVisible:
+.scope
+X_VAL = ZP_TMP_25
+Y_VAL = ZP_TMP_25 + 1
+sta VIEW_POS_LOCAL_VIEW_TAB
+stx VIEW_POS_LOCAL_VIEW_TAB + 1
+ldy _offsetOfXPos
+lda (VIEW_POS_LOCAL_VIEW_TAB),y
+sta X_VAL
+ldy _offsetOfYPos
+lda (VIEW_POS_LOCAL_VIEW_TAB),y
+sta Y_VAL
+ldy _offsetOfXSize
+lda (VIEW_POS_LOCAL_VIEW_TAB),y
+clc
+adc X_VAL
+sta VIEW_POS_WIDTH
+@pixel:
+GET_PRIORITY
+cmp #5                          ; 4 = background; 5..15 = raised scenery
+bcc @next
+lda #0
+rts
+@next:
+inc X_VAL
+lda X_VAL
+cmp VIEW_POS_WIDTH
+bne @pixel
+lda #1
+rts
+.endscope
+
 b9GoodPositionAsm:
     ; ---- C0: X >= MINX (with "wrapped negative" guard) -----------------------
     ; Load X
@@ -2432,4 +2468,3 @@ jsr b9LoopThroughAnimatedObjects
 rts
 
 .endif
-

@@ -8,7 +8,7 @@
 #endif
 
 AGIFilePosType logdir[NO_DIRECTORY_ENTRYS];
-int numLogics, dirnOfEgo, controlMode;
+int numLogics, dirnOfEgo, controlMode, newRoomNum;
 byte horizon;
 static byte variables[256];
 static boolean flags[256];
@@ -41,8 +41,15 @@ void memsetBanked(void* dest, int value, size_t length, byte bank)
     assert(dest == b7Directions && value == 0 && length == 9 && bank == STRING_BANK);
     memset(dest, value, length);
 }
-/* This must never be called by teleport: only real game scripts may enter rooms. */
-void b6NewRoom(void) { ++transitions; assert(!"synthetic room transition"); }
+void b6NewRoom(void)
+{ ++transitions; var[1] = var[0]; var[0] = newRoomNum; flag[5] = TRUE; }
+boolean b9TeleportBaselineVisible(ViewTable* candidate)
+{
+    unsigned x;
+    for (x = candidate->xPos; x < candidate->xPos + candidate->xsize; ++x)
+        if (terrain[candidate->yPos][x] > 4) return FALSE;
+    return TRUE;
+}
 void b3DisplayMessageBox(char* message, byte bank, byte row, byte col,
                         byte palette, byte width, boolean wrap)
 {
@@ -193,7 +200,7 @@ static void test_input(void)
 }
 static void test_bounds(void)
 {
-    unsigned n, x, y, before;
+    unsigned n, x, y, before, writesBefore;
     reset(256);
     for (n = 1; n < 256; ++n) logdir[n].filePos = 0;
     for (n = 1; n < 256; ++n) {
@@ -205,7 +212,14 @@ static void test_bounds(void)
         assert((teleportPending != 0) == (x < 160 && y < 168));
         if (teleportPending) {
             before = collisions;
-            if (x <= 152 && y > 36) accepted(x, y); else rejected();
+            if (x <= 152 && y > 36) accepted(x, y);
+            else {
+                writesBefore = viewWrites;
+                b6BeginTeleport();
+                assert(!teleportPending && viewWrites == writesBefore + 1);
+                assert(ego.xPos + ego.xsize <= 160 && ego.yPos > horizon);
+                assert(strstr(lastNotice, "nearest reachable"));
+            }
             assert(collisions - before <= 168);
         }
     }
@@ -218,7 +232,7 @@ static void test_bounds(void)
     assert(collisions == 168 && probes == 169); /* Includes final flag publication. */
     puts("PASS: all room bytes, all 65,536 X/Y byte pairs, 168-check maximum");
 }
-static void test_no_synthetic_entry(void)
+static void test_room_entry(void)
 {
     ViewTable before;
     unsigned writesBefore;
@@ -226,16 +240,14 @@ static void test_no_synthetic_entry(void)
     var[1] = 17; var[2] = 1; var[6] = 1; dirnOfEgo = 1;
     before = ego;
     queue(2, 90, 110);
-    assert(strstr(lastNotice, "normal exit"));
     b6BeginTeleport();
-    assert(!transitions && var[0] == 1 && var[1] == 17 && var[2] == 1);
-    assert(var[6] == 1 && dirnOfEgo == 1 && teleportPending == 2);
+    assert(transitions == 1 && var[0] == 2 && var[1] == 1 && var[2] == 0);
+    assert(var[6] == 0 && dirnOfEgo == 0 && teleportPending == 2);
     assert(!memcmp(&ego, &before, sizeof ego));
-    /* Simulate the game's completed normal entry, not teleport's new.room. */
-    var[1] = 1; var[0] = 2; flag[5] = TRUE;
+    /* Placement follows room initialization, not the entry call itself. */
     b6FinishTeleport();
     assert(!teleportPending && ego.xPos == 90 && ego.yPos == 110);
-    assert(var[1] == 1 && flag[5] && !transitions);
+    assert(var[1] == 1 && flag[5] && transitions == 1);
     queue(1, 80, 100);
     var[1] = 2; var[0] = 3; /* Different exit or scripted redirect. */
     before = ego; writesBefore = viewWrites;
@@ -243,23 +255,21 @@ static void test_no_synthetic_entry(void)
     assert(!teleportPending && viewWrites == writesBefore);
     assert(!memcmp(&ego, &before, sizeof ego));
     assert(var[1] == 2 && var[0] == 3 && strstr(lastNotice, "different room"));
-    puts("PASS: normal-entry-only travel, preserved direction/previous room, redirects");
+    puts("PASS: immediate engine room entry, placement after initialization, redirects");
 }
 static void test_blocked_paths(void)
 {
-    unsigned x;
     reset(256); memset(terrain, 0, sizeof terrain);
     queue(1, 90, 110); rejected();
     assert(probes == 1); /* Fully blocked scene must return, never spiral. */
-    reset(256);
-    for (x = 0; x < 160; ++x) terrain[120][x] = 0;
-    queue(1, 90, 130); rejected(); /* Free endpoint across a solid wall. */
     reset(256); terrain[100][88] = 0; /* Right end of baseline, not ego origin. */
     queue(1, 90, 100); rejected();
     reset(256); obstacleX = 90; obstacleY = 110;
-    queue(1, 90, 110); rejected();
+    queue(1, 90, 110); accepted(89, 109);
+    assert(strstr(lastNotice, "nearest reachable"));
     reset(256); ego.flags |= ONLAND;
-    memset(terrain[110], 3, 160); queue(1, 90, 110); rejected();
+    memset(terrain[110], 3, 160); queue(1, 90, 110); accepted(89, 109);
+    assert(strstr(lastNotice, "nearest reachable"));
     reset(256); ego.flags |= ONWATER;
     queue(1, 90, 110); rejected();
     reset(256); memset(terrain, 1, sizeof terrain);
@@ -280,6 +290,27 @@ static void test_blocked_paths(void)
     reset(256); ego.ysize = 169; queue(1, 90, 110); rejected();
     reset(256); ego.xPos = 65535; queue(1, 90, 110); rejected();
     puts("PASS: walls, full baseline, objects, water, horizon, script control, atomic rejection");
+}
+static void test_nearest_reachable_fallback(void)
+{
+    unsigned x;
+    reset(256);
+    for (x = 0; x < 160; ++x) terrain[120][x] = 0;
+    queue(1, 90, 130);
+    accepted(90, 119);
+    assert(strstr(lastNotice, "nearest reachable"));
+    puts("PASS: blocked teleport lands at nearest reachable route point");
+}
+static void test_new_room_landing(void)
+{
+    reset(256); flag[5] = TRUE;
+    terrain[100][80] = 0; /* Old-room coordinates are unusable in this room. */
+    queue(1, 100, 110); accepted(100, 110);
+    reset(256); flag[5] = TRUE;
+    memset(terrain[110] + 100, 13, 8);
+    queue(1, 100, 110); accepted(100, 109);
+    assert(strstr(lastNotice, "nearest reachable"));
+    puts("PASS: new-room placement searches around the target, including hidden scenery");
 }
 static FILE* open_resource(const char* game, const char* upper, const char* lower)
 {
@@ -319,17 +350,18 @@ static void test_game(const char* game)
         assert((teleportPending != 0) ==
                (room < (unsigned)numLogics && logdir[room].filePos != EMPTY));
         if (teleportPending) {
-            b6BeginTeleport(); assert(var[0] == 0 && !transitions);
-            var[0] = (byte)room; /* Model a normal room entry. */
+            b6BeginTeleport(); assert(var[0] == room);
             b6FinishTeleport(); assert(!teleportPending); ++valid;
         }
     }
-    printf("PASS: %s: %u resource destinations; no synthetic transitions\n", game, valid);
+    printf("PASS: %s: %u resource destinations through engine room entry\n", game, valid);
 }
 int main(int argc, char** argv)
 {
     int i;
-    test_no_synthetic_entry(); test_input(); test_bounds(); test_blocked_paths();
+    test_room_entry(); test_input(); test_bounds(); test_blocked_paths();
+    test_nearest_reachable_fallback();
+    test_new_room_landing();
     for (i = 1; i < argc; ++i) test_game(argv[i]);
     return 0;
 }

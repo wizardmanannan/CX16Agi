@@ -5,7 +5,8 @@
 #include <stddef.h>
 
 AGIFilePosType logdir[256];
-int numLogics = 2, dirnOfEgo, controlMode;
+int numLogics = 2, dirnOfEgo, controlMode, newRoomNum;
+void b6NewRoom(void) { assert(!"same-room CPU cases must not enter rooms"); }
 byte horizon = 36;
 static byte variables[256];
 static boolean flags[256];
@@ -82,7 +83,13 @@ static void max_path(void)
     b6BeginTeleport();
     assert(!teleportPending);
     assert(viewtab[0].xPos == 159 && viewtab[0].yPos == 167);
-    assert(pixelReads == 169); /* 168 probes plus the final flag publication. */
+    assert(pixelReads == 337); /* Collision + visibility per probe, then publish. */
+}
+static void nearest(const char* command, byte x, byte y)
+{
+    assert(b7TeleportCommand(command)); b6BeginTeleport();
+    printf("%s: (%u,%u), expected (%u,%u)\n", command, viewtab[0].xPos, viewtab[0].yPos, x, y);
+    assert(!teleportPending && viewtab[0].xPos == x && viewtab[0].yPos == y);
 }
 int main(void)
 {
@@ -92,18 +99,24 @@ int main(void)
     assert(pixelReads == 8);
     reset();
     memset(terrain[120], 0, 160);
-    blocked("teleport 1 90 130"); /* Open destination behind a south wall. */
+    nearest("teleport 1 90 130", 90, 119); /* Stop before the south wall. */
     reset();
     terrain[100][88] = 0;
     blocked("teleport 1 90 100"); /* Entire baseline matters. */
     reset();
     viewtab[1].flags = ANIMATED | DRAWN;
     viewtab[1].xPos = 90; viewtab[1].yPos = 110; viewtab[1].xsize = 8;
-    blocked("teleport 1 90 110");
+    nearest("teleport 1 90 110", 81, 101); /* Other object's previousY is zero. */
     reset();
     viewtab[0].flags |= ONLAND;
     memset(terrain[110], 3, 160);
-    blocked("teleport 1 90 110");
+    nearest("teleport 1 90 110", 89, 109);
+    reset();
+    memset(terrain[100] + 90, 13, 8);
+    nearest("teleport 1 100 100", 82, 100); /* Castle foreground hides ego. */
+    reset();
+    memset(terrain[100] + 90, 6, 8);
+    nearest("teleport 1 100 100", 82, 100); /* Visible in front of a wall is not ground. */
     max_path();
     reset();
     terrain[100][80] = 2;
