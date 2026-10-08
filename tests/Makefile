@@ -1,6 +1,6 @@
 CC = cc
 CFLAGS = -std=c99 -O1 -g -Wall -Wextra -Werror -Wno-unknown-pragmas
-BUILD ?= /tmp/cx16-teleport-tests
+BUILD ?= ../build/tests/teleport
 GAMES ?=
 CL65 ?= cl65
 OD65 ?= od65
