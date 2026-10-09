@@ -299,19 +299,19 @@ _bDReenableOptimisticMode:
 ; Function: _bDDeleteAllocation
 ; Frees previously allocated blocks by clearing table entries
 _bDDeleteAllocation:
-    sta sreg                      ; Save low byte of VRAM address
+    sta sreg                      ; Store height in sreg
     jsr popa                      ; Pull mid-byte into A
     ldx sreg                      ; Save mid-byte in X
 
     CALC_BLOCKS_TO_ALLOCATE       ; Compute number of blocks to free
 
     jsr popa                      ; Discard extra
-    sta sreg + 1                  ; Save low of block count
+    sta sreg + 1 ;low sreg +1                 ; Save low of block count
     jsr popax                     ; Pull high of block count into X
-    stx sreg                      ; Save high
-    tax                           ; Move mid to X
+    stx sreg ;high sreg                      ; Save high
+    tax ;mid x                           ; Move mid to X
     lda sreg + 1                  ; Load low count
-    tay                           ; Move to Y
+    tay ;low y                          ; Move to Y
     jsr popa                      ; Discard
     tya                           ; Restore Y
 
