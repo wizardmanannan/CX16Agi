@@ -1089,6 +1089,7 @@ void bESetViewMetadata(View* localView, ViewTable* viewTable, byte viewNum, byte
 	if (metadata.loopsVeraAddressesPointers != NULL)
 	{
 		b10BankedDealloc((byte*)metadata.loopsVeraAddressesPointers, metadata.viewTableMetadataBank);
+
 		//TODO: Deallocate vera as well
 	}
 
@@ -1276,6 +1277,7 @@ void bESwitchMetadata(ViewTable* localViewTab, View* localView, byte viewNum, by
 			localMetadata.inactiveBank = NULL;
 
 			bESwitchMetadata(localViewTab, localView, viewNum, entryNum); //Call itself with clear inactive metadata
+
 			//TODO: Deallocate vera addresses
 
 			return;
@@ -1386,6 +1388,7 @@ boolean bEAllocateSpriteMemory(Loop* localLoop, byte noToBlit)
 
 	allocationHeight = bEGetSpriteAllocateSize(localLoop->allocationHeight);
 
+	//printf("we pass in %d %d\n", allocationWidth, allocationHeight);
 	if (!bEAllocateSpriteMemoryBulk(allocationWidth, allocationHeight, noToBlit))
 	{
 		return FALSE;
@@ -1579,20 +1582,10 @@ animatedSprite:
 
 	RAM_BANK = SPRITE_METADATA_BANK;
 
-	if (_assmULong && localMetadata.backBufferSize != combinedSpriteAllocationSize)
+	if (localMetadata.backBufferSize != combinedSpriteAllocationSize)
 	{
-		for(i = 0; i < localView.maxVeraSlots; i++)
-		{
-			//printf("the back buffer size is %d the combined is %d the address is %p bank %p\n", localMetadata.backBufferSize, combinedSpriteAllocationSize, &localMetadata.backBuffers[i], localMetadata.viewTableMetadataBank);
-			
-			RAM_BANK = localMetadata.viewTableMetadataBank;
-			tempVeraAddress = localMetadata.backBuffers[i];
-			//printf("tempVera is %lx\n", tempVeraAddress);
-			localMetadata.backBuffers[i] = NULL;
-			RAM_BANK = SPRITE_MEMORY_MANAGER_BANK;
-			bDMarkForDeletion(allocationWidth, allocationHeight, tempVeraAddress);
-			RAM_BANK = SPRITE_METADATA_BANK;
-		}
+		_assmULong = NULL;
+		//TODO: Add old backbuffer to delete queue
 	}
 
 	asm("lda %v", _assmULong);
