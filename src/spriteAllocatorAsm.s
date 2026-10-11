@@ -299,9 +299,9 @@ _bDReenableOptimisticMode:
 ; Function: _bDDeleteAllocation
 ; Frees previously allocated blocks by clearing table entries
 _bDDeleteAllocation:
-    sta sreg                      ; Store height in sreg
-    jsr popa                      ; Pull mid-byte into A
-    ldx sreg                      ; Save mid-byte in X
+    sta sreg                
+    jsr popa ; width a                      
+    ldx sreg ;height x                      
 
     CALC_BLOCKS_TO_ALLOCATE       ; Compute number of blocks to free
 
@@ -311,11 +311,11 @@ _bDDeleteAllocation:
     stx sreg ;high sreg                      ; Save high
     tax ;mid x                           ; Move mid to X
     lda sreg + 1                  ; Load low count
-    tay ;low y                          ; Move to Y
+    tay                          ; Move to Y
     jsr popa                      ; Discard
-    tya                           ; Restore Y
+    tya ;low a                          ; Restore Y
 
-   bDDeleteAllocationAsmCall:
+bDDeleteAllocationAsmCall:
 jmp @start                 ; Jump to clear routines
 
 ; Table of clear routines for large deletes (@1..@127 entries)
@@ -386,8 +386,8 @@ jmp @start                 ; Jump to clear routines
     .word 0   ; Entry 124, 125
     .addr @64   ; Entry 126, 127
 
-;Width/Height: a/x Address y/sreg/sreg + 1
-;y x sreg
+;Expects CALC_BLOCKS_TO_ALLOCATE to be called first
+;Address in a/x/sreg
 @start:
 sec
 sbc #<SPRITE_START
@@ -446,16 +446,6 @@ ldy @clearUnrolledInstructions,x
 sty sreg2
 ldy @clearUnrolledInstructions + 1,x
 sty sreg2 + 1
-
-
-; php
-; pha
-; phx
-; phy
-; .import _trap
-; lda _trap
-; beq @continue
-; stp
 ; @continue:
 ; ply
 ; plx
@@ -622,4 +612,77 @@ rts
     bpl @smallDeleteLoop
     rts
 
+
+NO_DELETION_SLOTS = 100
+
+bDMarkedForDeletionTableLow: .res NO_DELETION_SLOTS
+bDMarkedForDeletionTableMiddle: .res NO_DELETION_SLOTS
+bDMarkedForDeletionTableHigh: .res NO_DELETION_SLOTS
+bDMarkedForDeletionAllocationWidth: .res NO_DELETION_SLOTS
+bDMarkedForDeletionAllocationHeight: .res NO_DELETION_SLOTS
+
+;void bDMarkForDeletion(SpriteAllocationSize width, SpriteAllocationSize height, VeraSpriteAddress addr)
+_bDMarkForDeletion:
+ldy bEAMarkForDeletionIndex
+cpy #NO_DELETION_SLOTS
+bcs @fullRoutine
+
+sta bDMarkedForDeletionTableLow,y
+txa
+sta bDMarkedForDeletionTableMiddle,y
+lda sreg
+sta bDMarkedForDeletionTableHigh,y
+
+sty bEAMarkForDeletionIndex
+jsr popax
+ldy bEAMarkForDeletionIndex
+sta bDMarkedForDeletionAllocationHeight,y
+txa
+sta bDMarkedForDeletionAllocationWidth,y
+
+iny
+sty bEAMarkForDeletionIndex
+
+rts
+@fullRoutine:
+;jsr bDDeleteAllocationAsmCall ; Edge case for when the list is full, not ideal, as it may cause graphical glitches, but hopefully this shouldn't be called
+rts
+
+bEAMarkForDeletionIndex: .byte $0
+
+;void bDRunSpriteGarbageCollector()
+_bDRunSpriteGarbageCollector:
+ldy bEAMarkForDeletionIndex
+bne @stuffToDelete
+
+@nothingToDo:
+rts
+
+@stuffToDelete:
+
+@stuffToDeleteLoop:
+
+lda bDMarkedForDeletionAllocationHeight - 1,y
+tax
+lda bDMarkedForDeletionAllocationWidth - 1,y
+
+CALC_BLOCKS_TO_ALLOCATE 
+
+lda bDMarkedForDeletionTableHigh - 1,y
+sta sreg
+lda bDMarkedForDeletionTableMiddle - 1,y
+tax
+lda bDMarkedForDeletionTableLow - 1,y
+
+sty bEAMarkForDeletionIndex
+
+jsr bDDeleteAllocationAsmCall
+ldy bEAMarkForDeletionIndex
+dey
+bne @stuffToDeleteLoop
+@endLoop:
+sty bEAMarkForDeletionIndex
+rts
+
+trap: .byte $0
 .endif                            ; End include guard

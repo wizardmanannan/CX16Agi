@@ -130,4 +130,7 @@
     .export _bDWriteNext
     .export _bDDisplayInventoryInner
     .export _bDPadWordsWithSpaces
+    .export _bDMarkForDeletion
+    .export _bDRunSpriteGarbageCollector
+
 
