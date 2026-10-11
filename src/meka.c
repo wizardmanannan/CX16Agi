@@ -235,6 +235,7 @@ void b6Interpret()
             bBStopSound();
         }
 
+        bDRunSpriteGarbageCollector();
     } while (hasEnteredNewRoom);
 }
 
@@ -367,7 +368,6 @@ void main()
             printf("Interpret Runs\n");
 #endif // VERBOSE
             b6Interpret();
-            // runIncrementalGarbageCollector();
             mainLoopCounter++;
 
             b6CheckTimer();

@@ -25,6 +25,8 @@ void bDInitSpriteMemoryManager();
 VeraSpriteAddress bDFindFreeVramBlock(SpriteAllocationSize width, SpriteAllocationSize height);
 extern void bDDeleteAllocation(VeraSpriteAddress address, SpriteAllocationSize width, SpriteAllocationSize height);
 extern void bDResetSpriteMemoryManager();
+extern void bDMarkForDeletion(SpriteAllocationSize width, SpriteAllocationSize height, VeraSpriteAddress addr);
+extern void bDRunSpriteGarbageCollector();
 //Warning must pop return addresses of system stack after call. The number of return addresses will be 2 * number. 
 //The first value popped off will be the middle byte of the first result, and the second the high byte of the first result and so on until the last result
 //The low byte of the result is always zero and is therefore omitted from the stack
