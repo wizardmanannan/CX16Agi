@@ -1589,6 +1589,7 @@ animatedSprite:
 			tempVeraAddress = localMetadata.backBuffers[i];
 			//printf("tempVera is %lx\n", tempVeraAddress);
 			localMetadata.backBuffers[i] = NULL;
+			_assmULong = NULL;
 			RAM_BANK = SPRITE_MEMORY_MANAGER_BANK;
 			bDMarkForDeletion(allocationWidth, allocationHeight, tempVeraAddress);
 			RAM_BANK = SPRITE_METADATA_BANK;
