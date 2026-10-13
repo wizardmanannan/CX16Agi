@@ -10,13 +10,13 @@
 #include "registers.h"
 #include "fake6502.h"
 #include "../src/spriteUpdates.h"
+#include "test_paths.h"
 
 extern struct regs regs;
 static uint8_t ram[65536], vram[131072];
 static unsigned addr[2], stride[2], writes, data_port_reads, acks;
 static unsigned write_addresses[2048];
 static uint8_t write_values[2048];
-static char temporary[4096];
 struct symbol { char name[100]; unsigned addr; } symbols[128];
 static unsigned symbol_count;
 static bool track_sprite_reads;
@@ -155,13 +155,13 @@ static void run_tool(char **arguments) {
 
 static void assemble(void) {
     char source[65536], stub[256], path[4096], stub_path[4096], config_path[4096], object_path[4096], stub_object_path[4096], binary_path[4096], labels_path[4096];
-    CHECK(snprintf(path, sizeof(path), "%s/test.s", temporary) < (int)sizeof(path), "Fixture path too long");
-    CHECK(snprintf(stub_path, sizeof(stub_path), "%s/sound_stub.s", temporary) < (int)sizeof(stub_path), "Fixture path too long");
-    CHECK(snprintf(config_path, sizeof(config_path), "%s/test.cfg", temporary) < (int)sizeof(config_path), "Fixture path too long");
-    CHECK(snprintf(object_path, sizeof(object_path), "%s/test.o", temporary) < (int)sizeof(object_path), "Fixture path too long");
-    CHECK(snprintf(stub_object_path, sizeof(stub_object_path), "%s/sound_stub.o", temporary) < (int)sizeof(stub_object_path), "Fixture path too long");
-    CHECK(snprintf(binary_path, sizeof(binary_path), "%s/test.bin", temporary) < (int)sizeof(binary_path), "Fixture path too long");
-    CHECK(snprintf(labels_path, sizeof(labels_path), "%s/test.lbl", temporary) < (int)sizeof(labels_path), "Fixture path too long");
+    suite_test_path(path, sizeof(path), suite_fixture_directory, "test.s");
+    suite_test_path(stub_path, sizeof(stub_path), suite_fixture_directory, "sound_stub.s");
+    suite_test_path(config_path, sizeof(config_path), suite_fixture_directory, "test.cfg");
+    suite_test_path(object_path, sizeof(object_path), suite_output_directory, "irq_helpers.o");
+    suite_test_path(stub_object_path, sizeof(stub_object_path), suite_output_directory, "sound_stub.o");
+    suite_test_path(binary_path, sizeof(binary_path), suite_output_directory, "irq_helpers.bin");
+    suite_test_path(labels_path, sizeof(labels_path), suite_output_directory, "irq_helpers.lbl");
 
     char *irq = read_file("src/irqAsm.s");
     char *input = read_file("src/inputIrqHandler.s");
@@ -1124,9 +1124,7 @@ static void test_sprite_updates(void) {
 }
 
 int main(void) {
-    const char *tmp = getenv("TMPDIR");
-    CHECK(snprintf(temporary, sizeof(temporary), "%s/irq-helpers-XXXXXX", tmp ? tmp : "/tmp") < (int)sizeof(temporary), "Temporary path too long");
-    CHECK(mkdtemp(temporary), "Cannot create temporary directory");
+    suite_test_paths_init("irq-helpers");
     assemble();
     test_input();
     test_input_dirty();

@@ -8,11 +8,11 @@
 #include <unistd.h>
 #include "registers.h"
 #include "fake6502.h"
+#include "test_paths.h"
 
 extern struct regs regs;
 static uint8_t ram[65536], vera_ctrl, dc_video, dc_hstart;
 static unsigned data_writes;
-static char temporary[4096];
 static struct { char name[100]; unsigned address; } symbols[16];
 static unsigned symbol_count;
 
@@ -65,9 +65,9 @@ static unsigned symbol(const char *name) {
 
 static void assemble(void) {
     char source[8192],config[8192],object[8192],binary[8192],labels[8192],fixture[12000];
-    snprintf(source,sizeof(source),"%s/irq_completion.s",temporary); snprintf(config,sizeof(config),"%s/irq_completion.cfg",temporary);
-    snprintf(object,sizeof(object),"%s/irq_completion.o",temporary); snprintf(binary,sizeof(binary),"%s/irq_completion.bin",temporary);
-    snprintf(labels,sizeof(labels),"%s/irq_completion.lbl",temporary);
+    suite_test_path(source,sizeof(source),suite_fixture_directory,"irq_completion.s"); suite_test_path(config,sizeof(config),suite_fixture_directory,"irq_completion.cfg");
+    suite_test_path(object,sizeof(object),suite_output_directory,"irq_completion.o"); suite_test_path(binary,sizeof(binary),suite_output_directory,"irq_completion.bin");
+    suite_test_path(labels,sizeof(labels),suite_output_directory,"irq_completion.lbl");
     char *irq=read_file("src/irqAsm.s");
     char *graphics=read_file("src/graphicsAsm.s");
     char *priority=strstr(graphics,"_b8ClearPrioritySliceReset:"); CHECK(priority,"Priority clear slice missing");
@@ -164,8 +164,7 @@ static void test_idle_generation_source(void) {
 }
 
 int main(void) {
-    const char *tmp=getenv("TMPDIR"); CHECK(snprintf(temporary,sizeof(temporary),"%s/irq-completion-XXXXXX",tmp?tmp:"/tmp")<(int)sizeof(temporary),"Temporary path too long");
-    CHECK(mkdtemp(temporary),"Cannot create temporary directory"); assemble();
+    suite_test_paths_init("irq-completion"); assemble();
     test_completion_wait(); test_clear_video_restore(); test_idle_generation_source();
     puts("IRQ completion handles precompleted/in-progress/wrap states; idle VSYNC is not completion; clear restores exact DC_VIDEO");
     return 0;

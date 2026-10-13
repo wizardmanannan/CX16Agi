@@ -1,6 +1,5 @@
 /* Exercise the production binary search assembly with native 6502 execution. */
 #define _POSIX_C_SOURCE 200809L
-#include <errno.h>
 #include <stdbool.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -10,12 +9,12 @@
 #include <unistd.h>
 #include "registers.h"
 #include "fake6502.h"
+#include "test_paths.h"
 
 extern struct regs regs;
 
 enum { WORDS_TEXT_CAPACITY = 4500, WORD_METADATA_BYTES = 3 };
 static uint8_t ram[65536];
-static char fixture[4096];
 static struct { char name[100]; unsigned address; } labels[64];
 static unsigned label_count;
 static bool watch_search_reads;
@@ -86,21 +85,6 @@ static unsigned symbol(const char *name) {
     exit(1);
 }
 
-static void remove_fixture(void) {
-    const char *names[] = { "test.s", "words_stub.s", "test.cfg", "test.o", "words_stub.o", "test.bin", "test.lbl" };
-    char path[4096];
-    bool failed = false;
-    for (unsigned i = 0; i < sizeof(names) / sizeof(names[0]); ++i) {
-        if (snprintf(path, sizeof(path), "%s/%s", fixture, names[i]) >= (int)sizeof(path) ||
-            (unlink(path) && errno != ENOENT)) failed = true;
-    }
-    if (fixture[0] && rmdir(fixture)) failed = true;
-    if (failed) {
-        fprintf(stderr, "Could not clean words assembly fixture: %s\n", fixture);
-        _Exit(EXIT_FAILURE);
-    }
-}
-
 static void write_file(const char *path, const char *contents) {
     FILE *file = fopen(path, "wb");
     CHECK(file, "Cannot create assembler fixture");
@@ -136,10 +120,13 @@ static void run_tool(char *const arguments[]) {
 
 static void assemble(void) {
     char path[4096], stub_path[4096], config[4096], object[4096], stub_object[4096], binary[4096], labels_path[4096];
-    const char *names[] = { "test.s", "words_stub.s", "test.cfg", "test.o", "words_stub.o", "test.bin", "test.lbl" };
-    char *paths[] = { path, stub_path, config, object, stub_object, binary, labels_path };
-    for (unsigned i = 0; i < sizeof(names) / sizeof(names[0]); ++i)
-        CHECK(snprintf(paths[i], 4096, "%s/%s", fixture, names[i]) < 4096, "Fixture path too long");
+    suite_test_path(path, sizeof(path), suite_fixture_directory, "test.s");
+    suite_test_path(stub_path, sizeof(stub_path), suite_fixture_directory, "words_stub.s");
+    suite_test_path(config, sizeof(config), suite_fixture_directory, "test.cfg");
+    suite_test_path(object, sizeof(object), suite_output_directory, "test_words_assembly.o");
+    suite_test_path(stub_object, sizeof(stub_object), suite_output_directory, "words_stub.o");
+    suite_test_path(binary, sizeof(binary), suite_output_directory, "words_assembly.bin");
+    suite_test_path(labels_path, sizeof(labels_path), suite_output_directory, "words_assembly.lbl");
 
     write_file(path,
         ".include \"global.s\"\n"
@@ -282,10 +269,7 @@ static bool search(const char *name, const char *query, unsigned word_count,
 }
 
 int main(void) {
-    const char *tmp = getenv("TMPDIR");
-    CHECK(snprintf(fixture, sizeof(fixture), "%s/words-assembly-XXXXXX", tmp ? tmp : "/tmp") < (int)sizeof(fixture), "Fixture path too long");
-    CHECK(mkdtemp(fixture), "Cannot create words assembly fixture directory");
-    atexit(remove_fixture);
+    suite_test_paths_init("words-assembly");
     assemble();
 
     const uint8_t first_word[3] = { 'a', 0, 0 };

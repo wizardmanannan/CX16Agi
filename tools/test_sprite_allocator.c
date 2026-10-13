@@ -21,8 +21,6 @@ static uint8_t image[0x6000];
 static size_t image_size;
 static unsigned allocation_table_start, bulk_results_start;
 static bool cleanup_failed;
-static bool keep_fixture_outputs;
-static bool fixture_preserved_message;
 
 #define CHECK(condition, message) do { if (!(condition)) { fprintf(stderr, "%s (%s:%d)\n", message, __FILE__, __LINE__); exit(1); } } while (0)
 
@@ -48,11 +46,6 @@ static unsigned symbol(const char *name) {
 }
 
 static void cleanup(void) {
-    if (keep_fixture_outputs) {
-        if (!fixture_preserved_message) fprintf(stderr, "Preserving allocator fixture directory %s\n", temporary);
-        fixture_preserved_message = true;
-        return;
-    }
     DIR *directory = opendir(temporary);
     if (!directory) {
         if (errno != ENOENT) {
@@ -82,6 +75,12 @@ static void write_file(const char *path, const char *contents) {
     CHECK(!fclose(file), "Cannot close allocator fixture");
 }
 
+static void output_path(char *path, size_t capacity, const char *name) {
+    const char *directory = getenv("TEST_OUTPUT_DIR");
+    CHECK(directory && *directory, "TEST_OUTPUT_DIR is unavailable");
+    CHECK(snprintf(path, capacity, "%s/%s", directory, name) < (int)capacity, "Output path too long");
+}
+
 static void run_tool(const char *name, char *const arguments[]) {
     char executable[4096];
     const char *home = getenv("CC65_HOME");
@@ -102,10 +101,10 @@ static void assemble(void) {
     CHECK(snprintf(source, sizeof(source), "%s/allocator.s", temporary) < (int)sizeof(source), "Fixture path too long");
     CHECK(snprintf(stub, sizeof(stub), "%s/runtime.s", temporary) < (int)sizeof(stub), "Fixture path too long");
     CHECK(snprintf(config, sizeof(config), "%s/allocator.cfg", temporary) < (int)sizeof(config), "Fixture path too long");
-    CHECK(snprintf(object, sizeof(object), "%s/allocator.o", temporary) < (int)sizeof(object), "Fixture path too long");
-    CHECK(snprintf(stub_object, sizeof(stub_object), "%s/runtime.o", temporary) < (int)sizeof(stub_object), "Fixture path too long");
-    CHECK(snprintf(binary, sizeof(binary), "%s/allocator.bin", temporary) < (int)sizeof(binary), "Fixture path too long");
-    CHECK(snprintf(labels, sizeof(labels), "%s/allocator.lbl", temporary) < (int)sizeof(labels), "Fixture path too long");
+    output_path(object, sizeof(object), "sprite_allocator.o");
+    output_path(stub_object, sizeof(stub_object), "sprite_allocator_runtime.o");
+    output_path(binary, sizeof(binary), "sprite_allocator.bin");
+    output_path(labels, sizeof(labels), "sprite_allocator.lbl");
 
     write_file(source,
         ".include \"x16.inc\"\n"
@@ -475,10 +474,13 @@ static void test_large_partial_failure_rolls_back(void) {
 
 int main(void) {
     const char *tmp = getenv("TMPDIR");
-    keep_fixture_outputs = getenv("KEEP_TEST_OUTPUT") && !strcmp(getenv("KEEP_TEST_OUTPUT"), "1");
     CHECK(snprintf(temporary, sizeof(temporary), "%s/sprite-allocator-XXXXXX", tmp ? tmp : "/tmp") < (int)sizeof(temporary), "Temporary path too long");
     CHECK(mkdtemp(temporary), "Cannot create allocator fixture directory");
-    CHECK(!atexit(cleanup), "Cannot register allocator fixture cleanup");
+    if (atexit(cleanup) != 0) {
+        cleanup();
+        fprintf(stderr, "Cannot register allocator fixture cleanup\n");
+        return EXIT_FAILURE;
+    }
     assemble();
     test_single_count();
     test_all_geometry_combinations();

@@ -12,11 +12,11 @@
 #define _LOGIC_H_
 #define _PARSER_H_
 #include "../src/menu.h"
+#include "test_paths.h"
 
 extern struct regs regs;
 static uint8_t ram[65536], vram[131072];
 static unsigned address[2], stride[2], writes;
-static char temporary[4096];
 static struct { char name[100]; unsigned address; } symbols[64];
 static unsigned symbol_count;
 static bool fx_write;
@@ -134,11 +134,11 @@ static void append_menu_fixture(const char *path) {
 
 static void assemble(void) {
     char source[8192], config[8192], object[8192], binary[8192], labels[8192], fixture[8192];
-    CHECK(snprintf(source, sizeof(source), "%s/show_obj.s", temporary) < (int)sizeof(source), "Path too long");
-    CHECK(snprintf(config, sizeof(config), "%s/show_obj.cfg", temporary) < (int)sizeof(config), "Path too long");
-    CHECK(snprintf(object, sizeof(object), "%s/show_obj.o", temporary) < (int)sizeof(object), "Path too long");
-    CHECK(snprintf(binary, sizeof(binary), "%s/show_obj.bin", temporary) < (int)sizeof(binary), "Path too long");
-    CHECK(snprintf(labels, sizeof(labels), "%s/show_obj.lbl", temporary) < (int)sizeof(labels), "Path too long");
+    suite_test_path(source, sizeof(source), suite_fixture_directory, "show_obj.s");
+    suite_test_path(config, sizeof(config), suite_fixture_directory, "show_obj.cfg");
+    suite_test_path(object, sizeof(object), suite_output_directory, "show_obj.o");
+    suite_test_path(binary, sizeof(binary), suite_output_directory, "show_obj.bin");
+    suite_test_path(labels, sizeof(labels), suite_output_directory, "show_obj.lbl");
     FILE *file = fopen("src/showObjAsm.s", "rb"); CHECK(file, "Cannot read show_obj assembly");
     CHECK(!fseek(file, 0, SEEK_END), "Cannot seek show_obj assembly"); long length = ftell(file); CHECK(length >= 0, "Cannot size show_obj assembly"); rewind(file);
     char *assembly = malloc((size_t)length + 1); CHECK(assembly, "Out of memory");
@@ -338,9 +338,7 @@ static void test_status(void) {
 }
 
 int main(void) {
-    const char *tmp = getenv("TMPDIR");
-    CHECK(snprintf(temporary, sizeof(temporary), "%s/show-obj-irq-XXXXXX", tmp ? tmp : "/tmp") < (int)sizeof(temporary), "Temporary path too long");
-    CHECK(mkdtemp(temporary), "Cannot create temporary directory"); assemble();
+    suite_test_paths_init("show-obj-irq"); assemble();
     memset(vram, 0x5A, sizeof(vram)); memset(address, 0, sizeof(address)); memset(stride, 0, sizeof(stride)); writes = 0;
     ram[symbol("_b11ShowObjSpriteAddressShifted")] = 0x34; ram[symbol("_b11ShowObjSpriteAddressShifted") + 1] = 0x12;
     ram[symbol("_b11ShowObjSprAttr7")] = 0xA7; ram[symbol("_b11ShowObjX")] = 0xBC; ram[symbol("_b11ShowObjX") + 1] = 0x01; ram[symbol("_b11ShowObjY")] = 0x56;

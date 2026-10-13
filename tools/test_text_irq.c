@@ -9,6 +9,7 @@
 #include <unistd.h>
 #include "registers.h"
 #include "fake6502.h"
+#include "test_paths.h"
 
 #define NEW_LINE 10
 
@@ -18,7 +19,6 @@ static size_t image_size;
 static unsigned addr[2], stride[2], writes;
 static uint32_t max_text_slice_cycles, max_palette_slice_cycles;
 static bool wrapped_text_overlay;
-static char temporary[4096];
 struct symbol { char name[100]; unsigned addr; } symbols[64];
 static unsigned symbol_count;
 
@@ -110,9 +110,9 @@ static void run_tool(char **arguments) {
 
 static void assemble(void) {
     char path[8192], cfg[8192], object[8192], binary[8192], labels[8192], fixture[16000];
-    snprintf(path, sizeof(path), "%s/text.s", temporary); snprintf(cfg, sizeof(cfg), "%s/text.cfg", temporary);
-    snprintf(object, sizeof(object), "%s/text.o", temporary); snprintf(binary, sizeof(binary), "%s/text.bin", temporary);
-    snprintf(labels, sizeof(labels), "%s/text.lbl", temporary);
+    suite_test_path(path, sizeof(path), suite_fixture_directory, "text.s"); suite_test_path(cfg, sizeof(cfg), suite_fixture_directory, "text.cfg");
+    suite_test_path(object, sizeof(object), suite_output_directory, "text.o"); suite_test_path(binary, sizeof(binary), suite_output_directory, "text.bin");
+    suite_test_path(labels, sizeof(labels), suite_output_directory, "text.lbl");
     char *irq = read_file("src/irqAsm.s");
     char *data = find(irq, "_b3PaletteAddress: .res 4");
     char *palette_end = find(data, "_b3InitLayer1Mapbase:");
@@ -389,9 +389,7 @@ static void test_zero_palette(void) {
 }
 
 int main(void) {
-    const char *tmp = getenv("TMPDIR");
-    CHECK(snprintf(temporary, sizeof(temporary), "%s/text-irq-XXXXXX", tmp ? tmp : "/tmp") < (int)sizeof(temporary), "Temporary path too long");
-    CHECK(mkdtemp(temporary), "Cannot create temporary directory");
+    suite_test_paths_init("text-irq");
     assemble();
     test_text_slices();
     test_palette(0x1F000, 255, 0);

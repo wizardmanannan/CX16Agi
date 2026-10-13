@@ -8,10 +8,17 @@ X16_EMULATOR_SOURCE ?= $(SHARED_TOOL_ROOT)/.tools/x16-emulator
 SDL_PREFIX ?= $(if $(wildcard $(SHARED_TOOL_ROOT)/.tools/sdl2-install/lib/cmake/SDL2/SDL2Config.cmake),$(SHARED_TOOL_ROOT)/.tools/sdl2-install)
 HOST_CC ?= cc
 HOST_CFLAGS ?= -std=c11 -O2 -Wall -Wextra
+# Keep host compiler intermediates in the suite-owned output tree; GCC otherwise
+# deletes temporary compiler/linker files outside it during test startup.
+# Override HOST_TEST_FLAGS when using a non-GCC HOST_CC.
+HOST_TEST_FLAGS ?= -save-temps=obj -fno-use-linker-plugin
+override HOST_CFLAGS += $(HOST_TEST_FLAGS)
 # Sanitized host children need ASan first while retaining injected command guards for fixture cleanup.
 TEST_OUTPUT_ROOT ?= $(REPO_ROOT)/obj
+TEST_FIXTURE_ROOT ?= $(if $(TMPDIR),$(TMPDIR),/tmp)
 
-export CC65_HOME X16_EMULATOR_SOURCE TMPDIR ROM GAME BUILD SYMBOLS SDL_PREFIX KEEP_TEST_OUTPUT
+export CC65_HOME X16_EMULATOR_SOURCE TMPDIR TEST_OUTPUT_DIR ROM GAME BUILD SYMBOLS SDL_PREFIX
+unexport KEEP_TEST_OUTPUT
 
 .PHONY: test suite commands-test image production-test modes integration _run
 
@@ -32,7 +39,7 @@ modes integration:
 
 _run:
 	@set -eu; \
-	repo='$(REPO_ROOT)'; mode='$(MODE)'; \
+	repo='$(REPO_ROOT)'; mode='$(MODE)'; keep_output='$(KEEP_TEST_OUTPUT)'; fixture_base='$(TEST_FIXTURE_ROOT)'; \
 	repo=$$(cd "$$repo" && pwd -P); \
 	fail() { echo "test suite: $$*" >&2; exit 2; }; \
 	need_file() { [ -f "$$1" ] || fail "required file not found: $$1"; }; \
@@ -83,11 +90,34 @@ _run:
 	  case "$$tmp_base/" in "$$audit_base/"*) fail 'TMPDIR must be outside .audit-tmp' ;; esac; \
 	fi; \
 	work=$$(mktemp -d "$$tmp_base/cx16agi-$$mode.XXXXXX") || fail 'could not create fresh output directory'; \
-	mkdir -p "$$work/bin" "$$work/tmp"; export TMPDIR="$$work/tmp"; \
+	fixture_work=''; \
+	cleanup_suite() { \
+	  status=$$?; trap - EXIT; \
+	  if [ "$$status" -ne 0 ]; then \
+	    for log in "$$work"/foreground/build.log "$$work"/combined/build.log "$$work"/picture/build.log; do \
+	      if [ -f "$$log" ]; then echo "--- $$log (last 80 lines) ---" >&2; tail -n 80 "$$log" >&2; fi; \
+	    done; \
+	  fi; \
+	  if [ -n "$$fixture_work" ] && [ -d "$$fixture_work" ]; then \
+	    residual_fixture=$$(find "$$fixture_work" -mindepth 1 -print -quit); \
+	    if [ -n "$$residual_fixture" ]; then echo "test suite: test-owned fixture was not cleaned: $$residual_fixture" >&2; status=2; \
+	    elif ! rmdir "$$fixture_work"; then echo "test suite: could not clean fixture root: $$fixture_work" >&2; status=2; fi; \
+	  fi; \
+	  if [ "$$mode" != image ] && [ "$$keep_output" != 1 ]; then \
+	    if ! rm -r -- "$$work"; then echo "test suite: could not clean owned output: $$work" >&2; status=2; fi; \
+	  fi; \
+	  exit "$$status"; \
+	}; \
+	trap cleanup_suite EXIT; \
+	[ -d "$$fixture_base" ] || fail "test fixture root not found: $$fixture_base"; \
+	fixture_base=$$(cd "$$fixture_base" && pwd -P); \
+	case "$$fixture_base/" in "$$repo/"*) fail 'test fixtures must be outside the product worktree' ;; esac; \
+	case "$$fixture_base/" in "$$repo/.audit-tmp/"*) fail 'test fixtures must be outside .audit-tmp' ;; esac; \
+	case "$$tmp_base/" in "$$fixture_base/"*) fail 'test output root must be outside test fixture root' ;; esac; \
+	case "$$fixture_base/" in "$$tmp_base/"*) fail 'test fixture root must be outside test output root' ;; esac; \
+	fixture_work=$$(mktemp -d "$$fixture_base/cx16agi-fixtures-$$mode.XXXXXX") || fail 'could not create fresh test fixture root'; \
+	mkdir -p "$$work/bin"; TEST_OUTPUT_DIR="$$work"; export TMPDIR="$$fixture_work" TEST_OUTPUT_DIR; \
 	echo "Output: $$work"; \
-	if [ "$$mode" != image ] && [ "$${KEEP_TEST_OUTPUT:-0}" != 1 ]; then \
-	  trap 'status=$$?; trap - EXIT; if ! rm -r -- "$$work"; then echo "test suite: could not clean owned output: $$work" >&2; exit 2; fi; exit "$$status"' EXIT; \
-	fi; \
 	build_commands() { \
 	  for name in command_bounds parser_buffers; do \
 	    "$(HOST_CC)" $(HOST_CFLAGS) -Wno-unknown-pragmas -Wno-error=incompatible-pointer-types -Wno-error=int-conversion -D_MSC_VER -D__CBM__ '-D__fastcall__=' '-D__asm__(...)=' -idirafter "$$CC65_HOME/include" -ffunction-sections -fdata-sections -fsanitize=address,undefined -fno-sanitize-recover=all "$$repo/tools/test_$$name.c" -Wl,--gc-sections -o "$$work/bin/test_$$name"; \
@@ -120,6 +150,7 @@ _run:
 	    echo 'CC test_timer.c'; \
 	    "$(HOST_CC)" $(HOST_CFLAGS) -Wno-unknown-pragmas "$$repo/tools/test_timer.c" -o "$$work/bin/test_timer"; \
 	    "$(HOST_CC)" $(HOST_CFLAGS) "$$repo/tools/test_tool_paths.c" -o "$$work/bin/test_tool_paths"; \
+	    "$(HOST_CC)" $(HOST_CFLAGS) "$$repo/tools/test_fixture_cleanup.c" -o "$$work/bin/test_fixture_cleanup"; \
 	    "$(HOST_CC)" $(HOST_CFLAGS) -Wno-unknown-pragmas "$$repo/tools/test_palette_manager.c" -o "$$work/bin/test_palette_manager"; \
 	    "$(HOST_CC)" $(HOST_CFLAGS) -Wno-unknown-pragmas -fsanitize=bounds -fno-sanitize-recover=bounds "$$repo/tools/test_controllers.c" -o "$$work/bin/test_controllers"; \
 	    "$(HOST_CC)" $(HOST_CFLAGS) -Wno-unknown-pragmas -fsanitize=address,undefined -fno-sanitize-recover=all "$$repo/tools/test_menu.c" -o "$$work/bin/test_menu"; \
@@ -134,6 +165,7 @@ _run:
 	    run_test "$$work/bin/test_screen_shake" --repo-root "$$repo"; \
 	    run_test "$$work/bin/test_timer"; \
 	    run_test "$$work/bin/test_tool_paths"; \
+	    run_test "$$work/bin/test_fixture_cleanup"; \
 	    run_test "$$work/bin/test_palette_manager"; \
 	    run_test "$$work/bin/test_controllers"; \
 	    prepare_sanitizers; \

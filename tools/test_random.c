@@ -14,12 +14,12 @@
 #include <unistd.h>
 #include "registers.h"
 #include "fake6502.h"
+#include "test_paths.h"
 
 extern struct regs regs;
 static uint8_t ram[65536], banks[256][0x2000], binary[8192];
 static size_t binary_size;
 static uint16_t binary_start;
-static char temporary[4096];
 static unsigned minimum_cycles = UINT32_MAX, maximum_cycles;
 struct label { char name[100]; uint16_t address; };
 static struct label labels[64];
@@ -83,13 +83,13 @@ static void assemble(void) {
         "SEGMENTS { ZEROPAGE: load=ZP,type=zp; CODE: load=RAM,type=rw; BANKRAM0A: load=BANK6,type=rw,optional=yes; BANKRAM06: load=BANK6,type=rw; }\n";
     char src[4096], bank_src[4096], cfg[4096], obj[4096], bank_obj[4096], bin[4096], lbl[4096];
     const char *home = getenv("CC65_HOME"); CHECK(home && *home, "Set CC65_HOME to a cc65 toolchain");
-    CHECK(snprintf(src, sizeof(src), "%s/random.s", temporary) < (int)sizeof(src), "Path too long");
-    CHECK(snprintf(bank_src, sizeof(bank_src), "%s/bank.s", temporary) < (int)sizeof(bank_src), "Path too long");
-    CHECK(snprintf(cfg, sizeof(cfg), "%s/random.cfg", temporary) < (int)sizeof(cfg), "Path too long");
-    CHECK(snprintf(obj, sizeof(obj), "%s/random.o", temporary) < (int)sizeof(obj), "Path too long");
-    CHECK(snprintf(bank_obj, sizeof(bank_obj), "%s/bank.o", temporary) < (int)sizeof(bank_obj), "Path too long");
-    CHECK(snprintf(bin, sizeof(bin), "%s/random.bin", temporary) < (int)sizeof(bin), "Path too long");
-    CHECK(snprintf(lbl, sizeof(lbl), "%s/random.lbl", temporary) < (int)sizeof(lbl), "Path too long");
+    suite_test_path(src, sizeof(src), suite_fixture_directory, "random.s");
+    suite_test_path(bank_src, sizeof(bank_src), suite_fixture_directory, "bank.s");
+    suite_test_path(cfg, sizeof(cfg), suite_fixture_directory, "random.cfg");
+    suite_test_path(obj, sizeof(obj), suite_output_directory, "random.o");
+    suite_test_path(bank_obj, sizeof(bank_obj), suite_output_directory, "bank.o");
+    suite_test_path(bin, sizeof(bin), suite_output_directory, "random.bin");
+    suite_test_path(lbl, sizeof(lbl), suite_output_directory, "random.lbl");
     write_file(src, source); write_file(bank_src, bank_source); write_file(cfg, config);
     char ca[4096], ld[4096];
     CHECK(snprintf(ca, sizeof(ca), "%s/bin/ca65", home) < (int)sizeof(ca), "Toolchain path too long");
@@ -169,9 +169,7 @@ static void check_exclusive_rand8(void) {
         CHECK(ram[label("byteResults") + i] == i % 9, "rand8Bit stopped using an exclusive upper bound");
 }
 int main(void) {
-    const char *temp = getenv("TMPDIR"); if (!temp) temp = "/tmp";
-    CHECK(snprintf(temporary, sizeof(temporary), "%s/random-test-XXXXXX", temp) < (int)sizeof(temporary), "Temporary path too long");
-    CHECK(mkdtemp(temporary), "Cannot create temporary directory"); assemble();
+    suite_test_paths_init("random-test"); assemble();
     const uint8_t ranges[][2] = {{0,0},{255,255},{0,1},{254,255},{0,255},{6,50}};
     for (unsigned i = 0; i < sizeof(ranges)/sizeof(*ranges); ++i) check_range(ranges[i][0], ranges[i][1]);
     check_exclusive_rand8();

@@ -15,12 +15,12 @@
 #include <unistd.h>
 #include "registers.h"
 #include "fake6502.h"
+#include "test_paths.h"
 
 extern struct regs regs;
 static uint8_t ram[65536], allowed[65536], display[64][4];
 static bool checking;
 static unsigned vera_writes, window_writes, maximum_cycles, idle_min = 999, idle_max;
-static char temporary[4096];
 struct label { char name[100]; uint16_t address; };
 static struct label labels[128];
 static unsigned label_count;
@@ -87,7 +87,7 @@ static int run_tool(const char *name, char *const arguments[], bool reject) {
     pid_t child = fork(); CHECK(child >= 0, "Cannot fork assembler");
     if (!child) {
         if (reject) {
-            char path[4096]; CHECK(snprintf(path, sizeof(path), "%s/rejected.log", temporary) < (int)sizeof(path), "Log path too long");
+            char path[4096]; suite_test_path(path, sizeof(path), suite_output_directory, "shake-rejected.log");
             CHECK(freopen(path, "w", stderr), "Cannot capture rejected build");
         }
         char *argv[16]; unsigned count = 0;
@@ -103,12 +103,12 @@ static int run_tool(const char *name, char *const arguments[], bool reject) {
 }
 static void assemble(uint16_t start, bool code_window, bool guards) {
     char source[65536], config[512], srcpath[4096], cfgpath[4096], objpath[4096], binpath[4096], lblpath[4096], logpath[4096];
-    CHECK(snprintf(srcpath, sizeof(srcpath), "%s/test.s", temporary) < (int)sizeof(srcpath), "Path too long");
-    CHECK(snprintf(cfgpath, sizeof(cfgpath), "%s/test.cfg", temporary) < (int)sizeof(cfgpath), "Path too long");
-    CHECK(snprintf(objpath, sizeof(objpath), "%s/test.o", temporary) < (int)sizeof(objpath), "Path too long");
-    CHECK(snprintf(binpath, sizeof(binpath), "%s/test.bin", temporary) < (int)sizeof(binpath), "Path too long");
-    CHECK(snprintf(lblpath, sizeof(lblpath), "%s/test.lbl", temporary) < (int)sizeof(lblpath), "Path too long");
-    CHECK(snprintf(logpath, sizeof(logpath), "%s/rejected.log", temporary) < (int)sizeof(logpath), "Path too long");
+    suite_test_path(srcpath, sizeof(srcpath), suite_fixture_directory, "shake.s");
+    suite_test_path(cfgpath, sizeof(cfgpath), suite_fixture_directory, "shake.cfg");
+    suite_test_path(objpath, sizeof(objpath), suite_output_directory, "shake.o");
+    suite_test_path(binpath, sizeof(binpath), suite_output_directory, "shake.bin");
+    suite_test_path(lblpath, sizeof(lblpath), suite_output_directory, "shake.lbl");
+    suite_test_path(logpath, sizeof(logpath), suite_output_directory, "shake-rejected.log");
     char *irq = read_file("src/irqAsm.s"), *helper = read_file("src/screenShake.s");
     char *dispatch = find(find(irq, "custom_irq_handler:"), "lda VERA_isr");
     char *dispatch_branch = find(dispatch, "bne @callSoundHandler\njmp @defaultIqr");
@@ -286,9 +286,7 @@ int main(int argc, char **argv) {
         fprintf(stderr, "Usage: %s [--repo-root PATH]\n", argv[0]);
         return 2;
     }
-    const char *temp = getenv("TMPDIR"); if (!temp) temp = "/tmp";
-    CHECK(snprintf(temporary, sizeof(temporary), "%s/shake-test-c-XXXXXX", temp) < (int)sizeof(temporary), "Temporary path too long");
-    CHECK(mkdtemp(temporary), "Cannot create temporary directory");
+    suite_test_paths_init("screen-shake");
     const uint16_t pcs[] = {0x2000,0x2000,0x20FF};
     const uint8_t ops[][3] = {{0xCE,0,0x60},{0x80,0,0},{0x80,0xFD,0}};
     const unsigned costs[] = {6,3,4};

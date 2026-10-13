@@ -9,11 +9,11 @@
 #include <unistd.h>
 #include "registers.h"
 #include "fake6502.h"
+#include "test_paths.h"
 
 extern struct regs regs;
 static uint8_t ram[65536], vram[131072];
 static unsigned addr[2], stride[2], writes;
-static char temporary[4096];
 static struct { char name[100]; unsigned address; } symbols[16];
 static unsigned symbol_count;
 #define PRIORITY_START ((320 * 240) / 2)
@@ -90,11 +90,11 @@ static void run_tool(const char *name, char *const arguments[]) {
 
 static void assemble(const char *graphics_path, unsigned priority_size, unsigned map_cells) {
     char path[8192], config[8192], object[8192], binary[8192], labels[8192], fixture[8192];
-    snprintf(path, sizeof(path), "%s/clear.s", temporary);
-    snprintf(config, sizeof(config), "%s/clear.cfg", temporary);
-    snprintf(object, sizeof(object), "%s/clear.o", temporary);
-    snprintf(binary, sizeof(binary), "%s/clear.bin", temporary);
-    snprintf(labels, sizeof(labels), "%s/clear.lbl", temporary);
+    suite_test_path(path, sizeof(path), suite_fixture_directory, "clear.s");
+    suite_test_path(config, sizeof(config), suite_fixture_directory, "clear.cfg");
+    suite_test_path(object, sizeof(object), suite_output_directory, "clear.o");
+    suite_test_path(binary, sizeof(binary), suite_output_directory, "clear.bin");
+    suite_test_path(labels, sizeof(labels), suite_output_directory, "clear.lbl");
 
     char *graphics = read_file(graphics_path);
     char *irq = read_file("src/irqAsm.s");
@@ -281,9 +281,7 @@ static unsigned symbol(const char *name) {
 
 int main(int argc, char **argv) {
     const unsigned start = 36 * 160, width = 160, height = 168;
-    const char *tmp = getenv("TMPDIR");
-    CHECK(snprintf(temporary, sizeof(temporary), "%s/graphics-clear-XXXXXX", tmp ? tmp : "/tmp") < (int)sizeof(temporary), "Temporary path too long");
-    CHECK(mkdtemp(temporary), "Cannot create temporary directory");
+    suite_test_paths_init("graphics-clear");
     const char *graphics_path = argc > 1 ? argv[1] : "src/graphicsAsm.s";
     assemble(graphics_path, PRIORITY_SIZE, 2008); memset(vram, 0x5A, sizeof(vram));
 
