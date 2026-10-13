@@ -992,7 +992,9 @@ void bEResetInactiveViewTableMetadata(ViewTableMetadata* localViewTableMetadata)
 
 		if (localInactiveMetadata.loopsVeraAddressesPointers)
 		{
-			b10BankedDealloc((byte*)localInactiveMetadata.loopsVeraAddressesPointers, localInactiveMetadata.inactiveBank);
+			if (localInactiveMetadata.loopsVeraAddressesPointers != localViewTableMetadata->loopsVeraAddressesPointers ||
+				localInactiveMetadata.viewTableMetadataBank != localViewTableMetadata->viewTableMetadataBank)
+				b10BankedDealloc((byte*)localInactiveMetadata.loopsVeraAddressesPointers, localInactiveMetadata.viewTableMetadataBank);
 		}
 		else
 		{
@@ -1003,32 +1005,26 @@ void bEResetInactiveViewTableMetadata(ViewTableMetadata* localViewTableMetadata)
 
 void bEResetViewTableMetadata()
 {
-	byte i, j, stop;
-	ViewTableMetadata localInactiveMetadata;
-	ViewTableMetadata* inActivePtr;
+	byte i;
 
 	for (i = 0; i < SPRITE_SLOTS; i++)
 	{
-		if (viewTableMetadata[i].loopsVeraAddressesPointers != NULL)
-		{
-			b10BankedDealloc((byte*)viewTableMetadata[i].loopsVeraAddressesPointers, viewTableMetadata[i].viewTableMetadataBank);
-		}
-
-		viewTableMetadata[i].loopsVeraAddressesPointers = NULL;
-		viewTableMetadata[i].viewTableMetadataBank = NULL;
-		viewTableMetadata[i].viewNum = 0;
-
 		if (viewTableMetadata[i].inactive != NULL)
 		{
-			inActivePtr = (ViewTableMetadata*)viewTableMetadata[i].inactive;
-
 			bEResetInactiveViewTableMetadata(&viewTableMetadata[i]);
 
 			b10BankedDealloc((byte*)viewTableMetadata[i].inactive, viewTableMetadata[i].inactiveBank);
 		}
 
+		if (viewTableMetadata[i].loopsVeraAddressesPointers != NULL)
+			b10BankedDealloc((byte*)viewTableMetadata[i].loopsVeraAddressesPointers, viewTableMetadata[i].viewTableMetadataBank);
+
+		viewTableMetadata[i].loopsVeraAddressesPointers = NULL;
+		viewTableMetadata[i].veraAddresses = NULL;
+		viewTableMetadata[i].viewTableMetadataBank = 0;
+		viewTableMetadata[i].viewNum = 0;
 		viewTableMetadata[i].inactive = NULL;
-		viewTableMetadata[i].inactiveBank = NULL;
+		viewTableMetadata[i].inactiveBank = 0;
 		viewTableMetadata[i].backBuffers = NULL;
 		viewTableMetadata[i].isOnBackBuffer = FALSE;
 		viewTableMetadata[i].backBufferSize = 0;

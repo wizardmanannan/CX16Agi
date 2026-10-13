@@ -329,6 +329,7 @@ static void call_target_caller(const char *name)
 
 #include "test_banked_strings_bounded_cases.h"
 #include "test_banked_strings_input_cases.h"
+#include "test_banked_strings_metadata_cases.h"
 
 static void run_harness_smoke(void)
 {
@@ -342,7 +343,7 @@ static void run_harness_smoke(void)
 int main(int argc, char **argv)
 {
 	CHECK((argc == 3 || argc == 4) && !strcmp(argv[1], "--build"),
-		"Usage: test_banked_strings --build DIR [--smoke|--bounded|--input]");
+		"Usage: test_banked_strings --build DIR [--smoke|--bounded|--input|--metadata]");
 	load_image(argv[2]);
 	if (argc == 4)
 	{
@@ -353,6 +354,7 @@ int main(int argc, char **argv)
 			run_game_id_cases();
 		}
 		else if (!strcmp(argv[3], "--input")) run_input_cases();
+		else if (!strcmp(argv[3], "--metadata")) run_metadata_cases();
 		else CHECK(false, "Unknown production caller test case");
 		return 0;
 	}
@@ -360,5 +362,6 @@ int main(int argc, char **argv)
 	run_bounded_cases();
 	run_game_id_cases();
 	run_input_cases();
+	run_metadata_cases();
 	return 0;
 }
