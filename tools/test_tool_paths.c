@@ -4,6 +4,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <sys/wait.h>
+#include <unistd.h>
 
 static void read_command(const char *command, char *output, size_t size)
 {
@@ -22,7 +23,7 @@ static void read_command(const char *command, char *output, size_t size)
 
 int main(void)
 {
-    char common[4096], actual[16384], expected[16384];
+    char common[4096], actual[16384], expected[16384], command[8192];
     read_command("git rev-parse --path-format=absolute --git-common-dir", common, sizeof common);
     char *slash = strrchr(common, '/');
     if (!slash || strcmp(slash, "/.git")) return 1;
@@ -35,6 +36,37 @@ int main(void)
     }
     read_command("env CC65_HOME=/explicit/compiler X16_EMULATOR_SOURCE=/explicit/emulator make --no-print-directory -s -f tools/Makefile --eval 'probe:;@printf \"%s|%s\\n\" \"$(CC65_HOME)\" \"$(X16_EMULATOR_SOURCE)\"' probe", actual, sizeof actual);
     if (strcmp(actual, "/explicit/compiler|/explicit/emulator")) return 1;
+
+    char missing_root[256];
+    snprintf(missing_root, sizeof missing_root, "/nonexistent-cx16agi-sdl-probe-%ld", (long)getpid());
+    snprintf(command, sizeof command,
+        "env -u SDL_PREFIX make --no-print-directory -s -f tools/Makefile SHARED_TOOL_ROOT=%s --eval 'probe:;@printf \"%%s\\n\" \"$(SDL_PREFIX)\"' probe",
+        missing_root);
+    read_command(command, actual, sizeof actual);
+    if (actual[0]) {
+        fprintf(stderr, "SDL_PREFIX default without bundled SDL: got [%s], expected empty\n", actual);
+        return 1;
+    }
+
+    snprintf(command, sizeof command,
+        "env SDL_PREFIX=/explicit/sdl make --no-print-directory -s -f tools/Makefile SHARED_TOOL_ROOT=%s --eval 'probe:;@printf \"%%s\\n\" \"$(SDL_PREFIX)\"' probe",
+        missing_root);
+    read_command(command, actual, sizeof actual);
+    if (strcmp(actual, "/explicit/sdl")) {
+        fprintf(stderr, "SDL_PREFIX explicit override: got [%s], expected [/explicit/sdl]\n", actual);
+        return 1;
+    }
+
+    char sdl_config[4096];
+    snprintf(sdl_config, sizeof sdl_config, "%s/.tools/sdl2-install/lib/cmake/SDL2/SDL2Config.cmake", common);
+    expected[0] = '\0';
+    if (!access(sdl_config, F_OK))
+        snprintf(expected, sizeof expected, "%s/.tools/sdl2-install", common);
+    read_command("env -u SDL_PREFIX make --no-print-directory -s -f tools/Makefile --eval 'probe:;@printf \"%s\\n\" \"$(SDL_PREFIX)\"' probe", actual, sizeof actual);
+    if (strcmp(actual, expected)) {
+        fprintf(stderr, "Shared SDL_PREFIX default: got [%s], expected [%s]\n", actual, expected);
+        return 1;
+    }
     puts("Shared tool paths and explicit overrides pass");
     return 0;
 }

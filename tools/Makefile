@@ -5,6 +5,7 @@ REPO_ROOT := $(shell d='$(CURDIR)'; if [ -f "$$d/tools/test-image.mk" ]; then cd
 SHARED_TOOL_ROOT := $(shell d=$$(git -C "$(REPO_ROOT)" rev-parse --path-format=absolute --git-common-dir 2>/dev/null) && dirname "$$d")
 CC65_HOME ?= $(SHARED_TOOL_ROOT)/.tools/cc65-latest
 X16_EMULATOR_SOURCE ?= $(SHARED_TOOL_ROOT)/.tools/x16-emulator
+SDL_PREFIX ?= $(if $(wildcard $(SHARED_TOOL_ROOT)/.tools/sdl2-install/lib/cmake/SDL2/SDL2Config.cmake),$(SHARED_TOOL_ROOT)/.tools/sdl2-install)
 HOST_CC ?= cc
 HOST_CFLAGS ?= -std=c11 -O2 -Wall -Wextra
 # Sanitized host children need ASan first while retaining injected command guards for fixture cleanup.
