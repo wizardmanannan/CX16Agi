@@ -1277,6 +1277,7 @@ void bESwitchMetadata(ViewTable* localViewTab, View* localView, byte viewNum, by
 			b10BankedDealloc((byte*)inActiveMetadataPointer, localMetadata.inactiveBank);
 			localMetadata.inactive = NULL;
 			localMetadata.inactiveBank = NULL;
+			viewTableMetadata[entryNum] = localMetadata;
 
 			bESwitchMetadata(localViewTab, localView, viewNum, entryNum); //Call itself with clear inactive metadata
 

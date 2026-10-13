@@ -399,8 +399,8 @@ static void call_target_caller(const char *name)
 	{
 		if (++steps >= 1000000)
 		{
-			fprintf(stderr, "Production target caller timed out: PC=$%04X RAM=$%02X WAI=%u I=%u\n",
-				regs.pc, ram[0], waiting, (regs.status & FLAG_INTERRUPT) != 0);
+			fprintf(stderr, "Production target caller %s timed out: PC=$%04X RAM=$%02X WAI=%u I=%u\n",
+				name, regs.pc, ram[0], waiting, (regs.status & FLAG_INTERRUPT) != 0);
 			CHECK(false, "Production target caller did not return");
 		}
 		if (sound_bounds_monitor_requested)
