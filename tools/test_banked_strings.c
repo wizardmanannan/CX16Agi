@@ -327,6 +327,8 @@ static void call_target_caller(const char *name)
 	CHECK(ram[0] == CALLER_BANK && ram[1] == 0x53, "Production text caller did not restore caller banks");
 }
 
+#include "test_banked_strings_bounded_cases.h"
+
 static void run_harness_smoke(void)
 {
 	prepare();
@@ -339,9 +341,21 @@ static void run_harness_smoke(void)
 int main(int argc, char **argv)
 {
 	CHECK((argc == 3 || argc == 4) && !strcmp(argv[1], "--build"),
-		"Usage: test_banked_strings --build DIR [--smoke]");
-	CHECK(argc == 3 || !strcmp(argv[3], "--smoke"), "Unknown production caller test case");
+		"Usage: test_banked_strings --build DIR [--smoke|--bounded]");
 	load_image(argv[2]);
+	if (argc == 4)
+	{
+		if (!strcmp(argv[3], "--smoke")) run_harness_smoke();
+		else if (!strcmp(argv[3], "--bounded"))
+		{
+			run_bounded_cases();
+			run_game_id_cases();
+		}
+		else CHECK(false, "Unknown production caller test case");
+		return 0;
+	}
 	run_harness_smoke();
+	run_bounded_cases();
+	run_game_id_cases();
 	return 0;
 }

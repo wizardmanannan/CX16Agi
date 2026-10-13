@@ -262,6 +262,31 @@ size_t strLenBanked(char* string, int bank)
 }
 
 
+size_t strLenBankedBounded(char* string, int bank, size_t byteLimit, boolean* terminated)
+{
+	byte previousRamBank = RAM_BANK;
+	size_t len = 0;
+	boolean foundTerminator = FALSE;
+#ifdef __CX16__
+	unsigned int sourceAddress = (unsigned int)string;
+	if (sourceAddress >= 0xA000 && sourceAddress < 0xC000)
+	{
+		unsigned int bytesLeftInBankWindow = 0xC000 - sourceAddress;
+		if (byteLimit > bytesLeftInBankWindow) byteLimit = bytesLeftInBankWindow;
+	}
+#endif
+	if (terminated) *terminated = FALSE;
+	if (!string) return 0;
+
+	RAM_BANK = bank;
+	while (len < byteLimit && string[len]) ++len;
+	foundTerminator = len < byteLimit;
+	RAM_BANK = previousRamBank;
+
+	if (terminated) *terminated = foundTerminator;
+	return len;
+}
+
 #pragma code-name (push, "BANKRAM10")
 void b10SetResourceDirectory(AGIFilePosType* newLogicDirectory, AGIFilePosType* logicDirectoryLocation)
 {
