@@ -27,14 +27,22 @@ objectType bDObjects[MAX_OBJECTS];
 byte bDObjData[OBJ_NAME_CACHE_SIZE];
 #pragma bss-name (pop)
 
-void bDGetObject(byte objNum, objectType* objectType)
+boolean bDGetObject(byte objNum, objectType* objectType)
 {
+    if (!objectType || objNum >= MAX_OBJECTS || objNum >= bFNumObjects)
+        return FALSE;
+
     *objectType = bDObjects[objNum];
+    return TRUE;
 }
 
-void bDSetObject(byte objNum, objectType* objectType)
+boolean bDSetObject(byte objNum, objectType* objectType)
 {
+    if (!objectType || objNum >= MAX_OBJECTS || objNum >= bFNumObjects)
+        return FALSE;
+
     bDObjects[objNum] = *objectType;
+    return TRUE;
 }
 
 /**************************************************************************

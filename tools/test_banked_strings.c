@@ -40,6 +40,8 @@ static uint8_t logic_code_image[BANK_SIZE];
 static uint8_t memory_code_image[BANK_SIZE];
 static uint8_t view_code_image[BANK_SIZE];
 static uint8_t sound_code_image[BANK_SIZE];
+static uint8_t object_data_code_image[BANK_SIZE];
+static uint8_t object_predicate_code_image[BANK_SIZE];
 static uint8_t vram[0x20000];
 static uint32_t vera_address;
 static unsigned vera_stride;
@@ -317,6 +319,9 @@ static void load_image(const char *build)
 	load_raw_bank_image(build, "agi.cx16.10", memory_code_image, "Cannot open memory-manager code bank image");
 	load_raw_bank_image(build, "agi.cx16.0E", view_code_image, "Cannot open view metadata code bank image");
 	load_raw_bank_image(build, "agi.cx16.0B", sound_code_image, "Cannot open sound code bank image");
+	load_raw_bank_image(build, "agi.cx16.0D", object_data_code_image, "Cannot open object code bank image");
+	load_raw_bank_image(build, "agi.cx16.0F", object_predicate_code_image,
+		"Cannot open object predicate code bank image");
 }
 
 static void put_word(uint16_t address, uint16_t value)
@@ -343,6 +348,8 @@ static void prepare(void)
 	memcpy(bank_ram[7], parser_code_image, sizeof(parser_code_image));
 	memcpy(bank_ram[0x10], memory_code_image, sizeof(memory_code_image));
 	memcpy(bank_ram[0x0E], view_code_image, sizeof(view_code_image));
+	memcpy(bank_ram[0x0D], object_data_code_image, sizeof(object_data_code_image));
+	memcpy(bank_ram[0x0F], object_predicate_code_image, sizeof(object_predicate_code_image));
 	memcpy(bank_ram[SOUND_BANK], sound_code_image, sizeof(sound_code_image));
 	reset6502(false);
 	regs.a = regs.x = regs.y = regs.db = regs.k = 0;
@@ -460,6 +467,7 @@ static void call_target_caller(const char *name)
 #include "test_banked_strings_input_cases.h"
 #include "test_banked_strings_metadata_cases.h"
 #include "test_banked_strings_commands_cases.h"
+#include "test_object_commands_cases.h"
 #include "test_banked_strings_sound_cases.h"
 
 static void run_harness_smoke(void)
@@ -474,7 +482,7 @@ static void run_harness_smoke(void)
 int main(int argc, char **argv)
 {
 	CHECK((argc == 3 || argc == 4) && !strcmp(argv[1], "--build"),
-		"Usage: test_banked_strings --build DIR [--smoke|--bounded|--input|--metadata|--get-num|--sound]");
+		"Usage: test_banked_strings --build DIR [--smoke|--bounded|--input|--metadata|--get-num|--object-commands|--sound]");
 	load_image(argv[2]);
 	if (argc == 4)
 	{
@@ -487,6 +495,7 @@ int main(int argc, char **argv)
 		else if (!strcmp(argv[3], "--input")) run_input_cases();
 		else if (!strcmp(argv[3], "--metadata")) run_metadata_cases();
 		else if (!strcmp(argv[3], "--get-num")) run_commands_cases();
+		else if (!strcmp(argv[3], "--object-commands")) run_object_commands_cases();
 		else if (!strcmp(argv[3], "--sound")) run_sound_cases();
 		else CHECK(false, "Unknown production caller test case");
 		return 0;
@@ -497,6 +506,7 @@ int main(int argc, char **argv)
 	run_input_cases();
 	run_metadata_cases();
 	run_commands_cases();
+	run_object_commands_cases();
 	run_sound_cases();
 	return 0;
 }

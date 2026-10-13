@@ -22,8 +22,8 @@ extern objectType bDObjects[MAX_OBJECTS];
 extern int bFNumObjects;
 
 #pragma wrapped-call (push, trampoline, OBJECT_BANK)
-void bDGetObject(byte objNum, objectType* objectType);
-void bDSetObject(byte objNum, objectType* objectType);
+boolean bDGetObject(byte objNum, objectType* objectType);
+boolean bDSetObject(byte objNum, objectType* objectType);
 void bDLoadObjectFile();
 #pragma wrapped-call (pop)
 

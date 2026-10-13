@@ -185,7 +185,8 @@ boolean b1Has() // 1, 0x00
 {
 	objectType objectType;
 
-	bDGetObject(loadAndIncWinCode(), &objectType);
+	if (!bDGetObject(loadAndIncWinCode(), &objectType))
+		return FALSE;
 
 	return (objectType.roomNum == 255);
 }
@@ -196,9 +197,10 @@ boolean b1Obj_in_room() // 2, 0x40
 	objectType objectType;
 
 	objNum = loadAndIncWinCode();
-	bDGetObject(objNum, &objectType);
-
 	varNum = var[loadAndIncWinCode()];
+	if (!bDGetObject(objNum, &objectType))
+		return FALSE;
+
 	return (objectType.roomNum == varNum);
 }
 
@@ -1377,11 +1379,13 @@ void b3Get() // 1, 00
 	objectType objectType;
 	byte objNum = loadAndIncWinCode();
 
-	bDGetObject(objNum, &objectType);
+	if (!bDGetObject(objNum, &objectType))
+		return;
 
 	objectType.roomNum = 255;
 
-	bDSetObject(objNum, &objectType);
+	if (!bDSetObject(objNum, &objectType))
+		return;
 
 	return;
 }
@@ -1391,11 +1395,13 @@ void b3Get_v() // 1, 0x80
 	objectType objectType;
 	byte objNum = var[loadAndIncWinCode()];
 
-	bDGetObject(objNum, &objectType);
+	if (!bDGetObject(objNum, &objectType))
+		return;
 
 	objectType.roomNum = 255;
 
-	bDSetObject(objNum, &objectType);
+	if (!bDSetObject(objNum, &objectType))
+		return;
 
 	return;
 }
@@ -1405,11 +1411,13 @@ void b3Drop() // 1, 0x00
 	objectType objectType;
 	byte objNum = loadAndIncWinCode();
 
-	bDGetObject(objNum, &objectType);
+	if (!bDGetObject(objNum, &objectType))
+		return;
 
 	objectType.roomNum = 0;
 
-	bDSetObject(objNum, &objectType);
+	if (!bDSetObject(objNum, &objectType))
+		return;
 	return;
 }
 
@@ -1422,11 +1430,13 @@ void b3Put() // 2, 0x00
 	objNum = loadAndIncWinCode();
 	room = loadAndIncWinCode();
 
-	bDGetObject(objNum, &objectType);
+	if (!bDGetObject(objNum, &objectType))
+		return;
 
 	objectType.roomNum = room;
 
-	bDSetObject(objNum, &objectType);
+	if (!bDSetObject(objNum, &objectType))
+		return;
 	return;
 }
 
@@ -1438,24 +1448,27 @@ void b3Put_v() // 2, 0x00
 	objNum = loadAndIncWinCode();
 	room = var[loadAndIncWinCode()];
 
-	bDGetObject(objNum, &objectType);
+	if (!bDGetObject(objNum, &objectType))
+		return;
 
 	objectType.roomNum = room;
 
-	bDSetObject(objNum, &objectType);
+	if (!bDSetObject(objNum, &objectType))
+		return;
 	return;
 }
 
 void b3Get_room_v() // 2, 0xC0 
 {
-	int objNum, room;
+	int objNum, roomVar;
 	objectType objectType;
 
 	objNum = var[loadAndIncWinCode()];
+	roomVar = loadAndIncWinCode();
+	if (!bDGetObject(objNum, &objectType))
+		return;
 
-	bDGetObject(objNum, &objectType);
-
-	var[loadAndIncWinCode()] = objectType.roomNum;
+	var[roomVar] = objectType.roomNum;
 	return;
 }
 
