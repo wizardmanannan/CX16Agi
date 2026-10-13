@@ -350,7 +350,7 @@ void bBPreComputePeriodicSound(SoundFile* soundFile, unsigned int* soundChannelO
 	SoundFile newSoundFile;
 	byte oldCh2Bytes[NO_NOTE_BYTES], oldChNoiseBytes[NO_NOTE_BYTES];
 	boolean moreTwoToRead;
-	unsigned int i, noiseFrequency, advancement, ch2CurrentFreq = 0, allocatedBlockSize = totalSoundSize + totalSoundSize / 2;
+	unsigned int i, advancement, allocatedBlockSize = totalSoundSize + totalSoundSize / 2;
 	unsigned int lfsrDuration, lsfrFrequencyToPlay, lfsr = LFSR_INITIAL_SEED, feedback;
 	unsigned long remainingBeats = totalBeats;
 
@@ -386,10 +386,6 @@ void bBPreComputePeriodicSound(SoundFile* soundFile, unsigned int* soundChannelO
 	// Read first notes from channel 2 buffer
 	moreTwoToRead = bBFillNoteBuffer(oldCh2Buffer, oldCh2DataPtr, &oldCh2LocalBufferStatus, oldCh2Bytes);
 
-	if (moreTwoToRead)
-	{
-		ch2CurrentFreq = *((unsigned int*)oldCh2Bytes[FREQUENCY_BYTE]);
-	}
 
 	// Main loop processing noise channel notes
 	while (bBFillNoteBuffer(oldChNoiseBuffer, oldChNoiseDataPtr, &oldChNoiseLocalBufferStatus, oldChNoiseBytes))
@@ -398,7 +394,7 @@ void bBPreComputePeriodicSound(SoundFile* soundFile, unsigned int* soundChannelO
 		if ((oldChNoiseBytes[NOISE_CHANNEL] & 4) >> 2) // white noise
 		{
 			// Advance channel 2 note position by noise channel note duration
-			advancement = *((unsigned int*)oldChNoiseBytes[DURATION_BYTE]);
+			advancement = *((unsigned int*)&oldChNoiseBytes[DURATION_BYTE]);
 			bBAdvance2(oldCh2Buffer, oldCh2DataPtr, &oldCh2LocalBufferStatus, oldCh2Bytes, &moreTwoToRead, advancement);
 
 			// Write noise channel note bytes verbatim into new noise channel buffer
@@ -424,7 +420,7 @@ void bBPreComputePeriodicSound(SoundFile* soundFile, unsigned int* soundChannelO
 			WRITENOISE((*((byte*)&lsfrFrequencyToPlay)));
 			WRITENOISE((*((byte*)&lsfrFrequencyToPlay + 1)));
 			//If the lsfr ends in 1 we will hear this note, otherwise we won't
-			WRITENOISE((lfsr & 1 ? SN76489_to_CX16_Volume[oldChNoiseBytes[VOLUME_BYTE]] & 0xF : 0) | 0X80); //High byte of volume is used to indicate periodic sound
+			WRITENOISE((lfsr & 1 ? oldChNoiseBytes[VOLUME_BYTE] : 0) | 0x80); //High byte of volume is used to indicate periodic sound
 
 			// Update LFSR feedback according to noise generator algorithm
 			feedback = (lfsr ^ (lfsr >> 14)) & 1;

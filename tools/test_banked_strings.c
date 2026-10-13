@@ -331,6 +331,7 @@ static void call_target_caller(const char *name)
 #include "test_banked_strings_input_cases.h"
 #include "test_banked_strings_metadata_cases.h"
 #include "test_banked_strings_commands_cases.h"
+#include "test_banked_strings_sound_cases.h"
 
 static void run_harness_smoke(void)
 {
@@ -344,7 +345,7 @@ static void run_harness_smoke(void)
 int main(int argc, char **argv)
 {
 	CHECK((argc == 3 || argc == 4) && !strcmp(argv[1], "--build"),
-		"Usage: test_banked_strings --build DIR [--smoke|--bounded|--input|--metadata|--get-num]");
+		"Usage: test_banked_strings --build DIR [--smoke|--bounded|--input|--metadata|--get-num|--sound]");
 	load_image(argv[2]);
 	if (argc == 4)
 	{
@@ -357,6 +358,7 @@ int main(int argc, char **argv)
 		else if (!strcmp(argv[3], "--input")) run_input_cases();
 		else if (!strcmp(argv[3], "--metadata")) run_metadata_cases();
 		else if (!strcmp(argv[3], "--get-num")) run_commands_cases();
+		else if (!strcmp(argv[3], "--sound")) run_sound_cases();
 		else CHECK(false, "Unknown production caller test case");
 		return 0;
 	}
@@ -366,5 +368,6 @@ int main(int argc, char **argv)
 	run_input_cases();
 	run_metadata_cases();
 	run_commands_cases();
+	run_sound_cases();
 	return 0;
 }
