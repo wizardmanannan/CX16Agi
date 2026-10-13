@@ -139,34 +139,6 @@ extern byte _previousRomBank;
 		\
     } while(0);
 
-#define GET_NEXT_NG(storeLocation, buffer, data, bufferStatus, bufferSize)  \
-    do {                              \
-        if(*data >= buffer + bufferSize) \
-		{ \
-			b5RefreshBuffer(bufferStatus); \
-            *data = buffer; \
-		} \
-		 storeLocation = *((*data)++); \
-    } while(0);
-
-#define WRITE_NEXT_NG(memoryBlock, buffer, dataPtr, toWrite, bufferStatus, oldBlockSize, newBlockSize, bank, bufferSize)  \
-    do {                              \
-       if(*dataPtr >= buffer + bufferSize) \
-		{ \
-			b5FlushBufferNonGolden(&bufferStatus, buffer, bufferSize, bufferSize); \
-            *dataPtr = buffer; \
-		} \
-        if(*(oldBlockSize) > ONETHIRDBUFFERSIZE && (bufferStatus.bufferCounter + 1) * bufferSize + (*dataPtr - buffer) > *(oldBlockSize)) /*The first check means that this is never triggered if the whole sound is less than the size of the buffer*/\
-        { \
-            b5ReallocateBiggerMemoryBlock(memoryBlock, newBlockSize, oldBlockSize, bank);\
-        } \
-		 *((*dataPtr)++) = toWrite; \
-        \
-		\
-    } while(0);
-
-
-
 #define READ_STACK_FROM_ASSM(byteVar) \
      do {                                           \
         asm("pla"); \

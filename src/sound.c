@@ -259,9 +259,6 @@ unsigned int bBCopyAhead(SoundFile* soundFile, unsigned int bytePerBufferCounter
 #define ORIGINAL_CHNOISEBUFFER (GOLDEN_RAM_WORK_AREA + ONETHIRDBUFFERSIZE * 2)  // Noise channel buffer start in local work area
 #define INCREASE_BLOCK_SIZE_AMOUNT 30    // Memory block growth size constant
 
-// Macro to get the next note generation byte for channel i
-#define GET_CH(i) GET_NEXT_NG(channelBytes[i], oldBuffer, oldChDataPtr, bufferStatus, ONETHIRDBUFFERSIZE);
-
 // Macro to write noise byte using the noise channel generator function
 #define WRITENOISE(toWrite) bBWriteNextNG(&newSoundFile.soundResource, ORIGINAL_CHNOISEBUFFER, newChNoiseDataPtr, toWrite, &newChNoiseLocalBufferStatus, &allocatedBlockSize, allocatedBlockSize + INCREASE_BLOCK_SIZE_AMOUNT, &newSoundFile.soundBank, ONETHIRDBUFFERSIZE);
 
@@ -279,14 +276,45 @@ void bBSetChannelOffsets(byte* codePtr, SoundFile* soundFile, unsigned int* soun
 	}
 }
 
-// Fills a note buffer from old channel data pointers into channelBytes, returns FALSE if end marker found.
-boolean bBFillNoteBuffer(byte* oldBuffer, byte** oldChDataPtr, BufferStatus* bufferStatus, byte* channelBytes)
+typedef struct
+{
+	byte* source;
+	byte* buffer;
+	byte* next;
+	unsigned int length;
+	unsigned int loaded;
+	byte bank;
+} SoundInputBuffer;
+
+static void bBRefreshSoundInputBuffer(SoundInputBuffer* input)
+{
+	unsigned int amount = input->length - input->loaded;
+	if (amount > ONETHIRDBUFFERSIZE) amount = ONETHIRDBUFFERSIZE;
+	if (amount)
+	{
+		memCpyBanked(input->buffer, input->source + input->loaded, input->bank, amount);
+		input->loaded += amount;
+	}
+	if (amount < ONETHIRDBUFFERSIZE)
+		memset(input->buffer + amount, 0xFF, ONETHIRDBUFFERSIZE - amount);
+	input->next = input->buffer;
+}
+
+static byte bBReadSoundInputByte(SoundInputBuffer* input)
+{
+	if (input->next >= input->buffer + ONETHIRDBUFFERSIZE)
+		bBRefreshSoundInputBuffer(input);
+	return *input->next++;
+}
+
+// Fills a note buffer from one bounded channel stream, returning FALSE at its terminator.
+static boolean bBFillNoteBuffer(SoundInputBuffer* input, byte* channelBytes)
 {
 	byte i;
 
 	for (i = 0; i < NO_NOTE_BYTES; i++)
 	{
-		GET_CH(i) // Use macro to copy note byte from old buffer
+		channelBytes[i] = bBReadSoundInputByte(input);
 
 			// If first two bytes signal end of stream (0xFF 0xFF), stop reading.
 			// Only the first two bytes together can signal the end, which is why we can only detect the end when we have read 1.
@@ -303,11 +331,10 @@ boolean bBFillNoteBuffer(byte* oldBuffer, byte** oldChDataPtr, BufferStatus* buf
 // Returns frequency value from the updated note.
 // Used particularly to advance our buffer of channel 2, used in LSFR
 // The idea is to advance the duration by the set amount, and when we run out of duration go to the next note
-unsigned int bBAdvance2(byte* oldBuffer, byte** oldChDataPtr, BufferStatus* bufferStatus, byte* channelBytes, boolean* moreTwoToRead, unsigned int advancement)
+static unsigned int bBAdvance2(SoundInputBuffer* input, byte* channelBytes, boolean* moreTwoToRead, unsigned int advancement)
 {
 	long currentDuration;              // Long because it can be decremented to less than zero (temporarily)
 	boolean finished = FALSE;          // Loop control flag
-	byte i;
 	unsigned int result;
 
 	// Get current duration value from note bytes, assuming little endian 2-byte int.
@@ -319,7 +346,7 @@ unsigned int bBAdvance2(byte* oldBuffer, byte** oldChDataPtr, BufferStatus* buff
 		currentDuration -= advancement;
 
 		// If current duration expires, load next note and reset advancement accordingly
-		if (currentDuration < 0 && (*moreTwoToRead = bBFillNoteBuffer(oldBuffer, oldChDataPtr, bufferStatus, channelBytes)))
+		if (currentDuration < 0 && (*moreTwoToRead = bBFillNoteBuffer(input, channelBytes)))
 		{
 			advancement = currentDuration * -1; // Negative remainder is turned positive
 			currentDuration = *((unsigned int*)&channelBytes[DURATION_BYTE]); // Reset duration for next note
@@ -343,10 +370,10 @@ unsigned int bBAdvance2(byte* oldBuffer, byte** oldChDataPtr, BufferStatus* buff
 // Precomputes periodic sound data, modifying noise channel data for periodic noise types, leaving white noise alone as this can be handled by the VERA.
 void bBPreComputePeriodicSound(SoundFile* soundFile, unsigned int* soundChannelOffSets)
 {
-	BufferStatus oldCh2LocalBufferStatus, oldChNoiseLocalBufferStatus, newChNoiseLocalBufferStatus;
+	BufferStatus newChNoiseLocalBufferStatus;
 	byte* oldCh2Buffer = GOLDEN_RAM_WORK_AREA, * oldChNoiseBuffer = GOLDEN_RAM_WORK_AREA + ONETHIRDBUFFERSIZE, * newChNoiseBuffer = ORIGINAL_CHNOISEBUFFER;
-	byte** oldCh2DataPtr = &oldCh2Buffer, ** oldChNoiseDataPtr = &oldChNoiseBuffer, ** newChNoiseDataPtr = &newChNoiseBuffer;
-	BufferStatus* ch2BufferStatus;
+	byte** newChNoiseDataPtr = &newChNoiseBuffer;
+	SoundInputBuffer oldCh2Input, oldChNoiseInput;
 	SoundFile newSoundFile;
 	byte oldCh2Bytes[NO_NOTE_BYTES], oldChNoiseBytes[NO_NOTE_BYTES];
 	boolean moreTwoToRead;
@@ -354,20 +381,19 @@ void bBPreComputePeriodicSound(SoundFile* soundFile, unsigned int* soundChannelO
 	unsigned int lfsrDuration, lsfrFrequencyToPlay, lfsr = LFSR_INITIAL_SEED, feedback;
 	unsigned long remainingBeats = totalBeats;
 
-	// Setup buffer statuses for channel 2 and noise channel
-	ch2BufferStatus = &oldCh2LocalBufferStatus;
-
-	oldCh2LocalBufferStatus.bank = soundFile->soundBank;
-	oldCh2LocalBufferStatus.bankedData = soundFile->ch2;
-	oldCh2LocalBufferStatus.bufferCounter = 0;
-
-	oldChNoiseLocalBufferStatus.bank = soundFile->soundBank;
-	oldChNoiseLocalBufferStatus.bankedData = soundFile->chNoise;
-	oldChNoiseLocalBufferStatus.bufferCounter = 0;
-
-	// Refresh local buffers from banked data for channel 2 and noise channel
-	b5RefreshBufferNonGolden(&oldCh2LocalBufferStatus, oldCh2Buffer, ONETHIRDBUFFERSIZE);
-	b5RefreshBufferNonGolden(&oldChNoiseLocalBufferStatus, oldChNoiseBuffer, ONETHIRDBUFFERSIZE);
+	oldCh2Input.source = soundFile->ch2;
+	oldCh2Input.buffer = oldCh2Buffer;
+	oldCh2Input.next = oldCh2Buffer + ONETHIRDBUFFERSIZE;
+	oldCh2Input.length = soundFile->chNoise > soundFile->ch2 ? soundFile->chNoise - soundFile->ch2 : 0;
+	oldCh2Input.loaded = 0;
+	oldCh2Input.bank = soundFile->soundBank;
+	oldChNoiseInput.source = soundFile->chNoise;
+	oldChNoiseInput.buffer = oldChNoiseBuffer;
+	oldChNoiseInput.next = oldChNoiseBuffer + ONETHIRDBUFFERSIZE;
+	oldChNoiseInput.length = totalSoundSize > (unsigned long)(soundFile->chNoise - soundFile->soundResource) ?
+		(unsigned int)(totalSoundSize - (unsigned long)(soundFile->chNoise - soundFile->soundResource)) : 0;
+	oldChNoiseInput.loaded = 0;
+	oldChNoiseInput.bank = soundFile->soundBank;
 
 	// Allocate new memory block for new sound resource with increased size
 	newSoundFile.soundResource = b10BankedAlloc(allocatedBlockSize, &newSoundFile.soundBank);
@@ -384,18 +410,17 @@ void bBPreComputePeriodicSound(SoundFile* soundFile, unsigned int* soundChannelO
 	newChNoiseLocalBufferStatus.bufferCounter = 0;
 
 	// Read first notes from channel 2 buffer
-	moreTwoToRead = bBFillNoteBuffer(oldCh2Buffer, oldCh2DataPtr, &oldCh2LocalBufferStatus, oldCh2Bytes);
-
+	moreTwoToRead = bBFillNoteBuffer(&oldCh2Input, oldCh2Bytes);
 
 	// Main loop processing noise channel notes
-	while (bBFillNoteBuffer(oldChNoiseBuffer, oldChNoiseDataPtr, &oldChNoiseLocalBufferStatus, oldChNoiseBytes))
+	while (bBFillNoteBuffer(&oldChNoiseInput, oldChNoiseBytes))
 	{
 		// Check if noise is white noise (noise channel flags bit 2 set)
 		if ((oldChNoiseBytes[NOISE_CHANNEL] & 4) >> 2) // white noise
 		{
 			// Advance channel 2 note position by noise channel note duration
 			advancement = *((unsigned int*)&oldChNoiseBytes[DURATION_BYTE]);
-			bBAdvance2(oldCh2Buffer, oldCh2DataPtr, &oldCh2LocalBufferStatus, oldCh2Bytes, &moreTwoToRead, advancement);
+			bBAdvance2(&oldCh2Input, oldCh2Bytes, &moreTwoToRead, advancement);
 
 			// Write noise channel note bytes verbatim into new noise channel buffer
 			for (i = 0; i < NO_NOTE_BYTES; i++)
@@ -420,14 +445,14 @@ void bBPreComputePeriodicSound(SoundFile* soundFile, unsigned int* soundChannelO
 			WRITENOISE((*((byte*)&lsfrFrequencyToPlay)));
 			WRITENOISE((*((byte*)&lsfrFrequencyToPlay + 1)));
 			//If the lsfr ends in 1 we will hear this note, otherwise we won't
-			WRITENOISE((lfsr & 1 ? oldChNoiseBytes[VOLUME_BYTE] : 0) | 0x80); //High byte of volume is used to indicate periodic sound
+			WRITENOISE((lfsr & 1 ? oldChNoiseBytes[VOLUME_BYTE] : 0) | 0x80); // High byte of volume is used to indicate periodic sound
 
 			// Update LFSR feedback according to noise generator algorithm
 			feedback = (lfsr ^ (lfsr >> 14)) & 1;
 			lfsr = (lfsr >> 1) | (feedback << 14);   // keep it 15-bit state
 
 			// Advance channel 2 notes by the lfsrDuration used
-			bBAdvance2(oldCh2Buffer, oldCh2DataPtr, &oldCh2LocalBufferStatus, oldCh2Bytes, &moreTwoToRead, lfsrDuration);
+			bBAdvance2(&oldCh2Input, oldCh2Bytes, &moreTwoToRead, lfsrDuration);
 
 			// Decrement remaining beats accordingly
 			if (remainingBeats > lfsrDuration)

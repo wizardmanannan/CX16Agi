@@ -112,9 +112,200 @@ static void run_sound_conversion(void)
 	puts("Production periodic-noise conversion passes byte generation, allocator ownership and PSG playback");
 }
 
+static bool sound_bounds_case_failed;
+
+static void sound_bounds_expect(bool condition, const char *message)
+{
+	if (!condition)
+	{
+		fprintf(stderr, "%s\n", message);
+		sound_bounds_case_failed = true;
+	}
+}
+
+static void begin_sound_bounds_monitor(void)
+{
+	sound_bounds_resource_start = get_word(symbol("_testSoundBoundsResource"));
+	sound_bounds_resource_end = get_word(symbol("_testSoundBoundsResourceEnd"));
+	sound_bounds_allocation_end = get_word(symbol("_testSoundBoundsAllocationEnd"));
+	sound_bounds_channel_start[0] = get_word(symbol("_testSoundBoundsChannel2Start"));
+	sound_bounds_channel_end[0] = get_word(symbol("_testSoundBoundsChannel2End"));
+	sound_bounds_channel_start[1] = get_word(symbol("_testSoundBoundsNoiseStart"));
+	sound_bounds_channel_end[1] = get_word(symbol("_testSoundBoundsNoiseEnd"));
+	sound_bounds_source_bank = ram[symbol("_testSoundBoundsBank")];
+	sound_bounds_prefix_entry = symbol("_memCpyBankedBetween");
+	sound_bounds_periodic_entry = symbol("_bBPreComputePeriodicSound");
+	sound_bounds_copy_entry = symbol("_memCpyBanked");
+	sound_bounds_periodic_active = false;
+	sound_bounds_prefix_active = false;
+	sound_bounds_prefix_seen = false;
+	sound_bounds_copy_active = false;
+	sound_bounds_copy_count = 0;
+	sound_bounds_active_copy_index = SOUND_BOUNDS_MAX_COPY_CALLS;
+	sound_bounds_copy_overflow = false;
+	memset(sound_bounds_copy_reads, 0, sizeof(sound_bounds_copy_reads));
+	memset(sound_bounds_outside_channel, 0, sizeof(sound_bounds_outside_channel));
+	memset(sound_bounds_outside_window, 0, sizeof(sound_bounds_outside_window));
+	memset(sound_bounds_outside_resource, 0, sizeof(sound_bounds_outside_resource));
+	memset(sound_bounds_outside_allocation, 0, sizeof(sound_bounds_outside_allocation));
+	sound_bounds_monitor_requested = true;
+}
+
+static void end_sound_bounds_monitor(void)
+{
+	sound_bounds_monitor_requested = false;
+	sound_bounds_expect(sound_bounds_prefix_seen,
+		"Periodic sound conversion did not finish its real source-prefix copy");
+	sound_bounds_expect(!sound_bounds_periodic_active && !sound_bounds_prefix_active && !sound_bounds_copy_active,
+		"Sound source-read monitor did not stop at the production helper return");
+	sound_bounds_expect(!sound_bounds_copy_overflow,
+		"Sound source-read monitor exceeded its per-copy counter capacity");
+}
+
+static void run_sound_bounds_short_resource(void)
+{
+	prepare();
+	call_target_caller("_testPrepareSoundBounds");
+	begin_sound_bounds_monitor();
+	call_target_caller("_testRunSoundBounds");
+	end_sound_bounds_monitor();
+	sound_bounds_expect(sound_bounds_copy_count >= 2,
+		"Periodic sound conversion did not perform both channel source copies");
+	if (sound_bounds_copy_count >= 2)
+	{
+		sound_bounds_expect(sound_bounds_copy_reads[0] > 0 && sound_bounds_copy_reads[1] > 0,
+			"Periodic sound source monitor did not observe actual CPU reads");
+		sound_bounds_expect(sound_bounds_outside_channel[0] == 0 &&
+			sound_bounds_outside_channel[1] == 0,
+			"Periodic sound refresh read outside a channel's actual source span");
+		sound_bounds_expect(sound_bounds_outside_resource[0] == 0 &&
+			sound_bounds_outside_resource[1] == 0,
+			"Periodic sound refresh read beyond the loaded sound resource");
+		sound_bounds_expect(sound_bounds_outside_window[0] == 0 &&
+			sound_bounds_outside_window[1] == 0,
+			"Periodic sound refresh read past the banked RAM window");
+		sound_bounds_expect(sound_bounds_outside_allocation[0] == 0 &&
+			sound_bounds_outside_allocation[1] == 0,
+			"Periodic sound refresh read beyond the allocator-owned source block");
+	}
+	call_target_caller("_testCleanupSoundBounds");
+	sound_bounds_expect(ram[symbol("_testSoundBoundsOutputReleased")] != 0,
+		"Short sound source-bound case did not release its generated output allocation");
+}
+
+static void run_sound_refill_long_resource(void)
+{
+	static const unsigned expectedCopyReads[] = { 12, 166, 166, 166, 166, 88 };
+	static const uint8_t expectedPeriodicRecord[5] = { 8, 0, 200, 0, 0x8F };
+	static const uint8_t expectedTerminator[2] = { 0xFF, 0xFF };
+	const unsigned whiteNoteCount = 149;
+	const unsigned expectedOutputBytes = whiteNoteCount * 5 + sizeof(expectedPeriodicRecord) + sizeof(expectedTerminator);
+	uint16_t outputNoise;
+	uint16_t outputResource;
+	uint8_t outputBank;
+	unsigned mismatchOffset = 0;
+	uint8_t expectedByte = 0, actualByte = 0;
+	unsigned i;
+	bool outputMatches = true;
+	bool outputPointerValid;
+
+	prepare();
+	call_target_caller("_testPrepareSoundRefill");
+	begin_sound_bounds_monitor();
+	call_target_caller("_testRunSoundBounds");
+	end_sound_bounds_monitor();
+	sound_bounds_expect(sound_bounds_copy_count == sizeof(expectedCopyReads) / sizeof(expectedCopyReads[0]),
+		"Long periodic-noise refill did not use the expected channel and bounded-refill copies");
+	for (i = 0; i < sound_bounds_copy_count && i < SOUND_BOUNDS_MAX_COPY_CALLS; ++i)
+	{
+		if (i < sizeof(expectedCopyReads) / sizeof(expectedCopyReads[0]))
+			sound_bounds_expect(sound_bounds_copy_reads[i] == expectedCopyReads[i],
+				"Long periodic-noise refill did not copy the exact channel/refill span");
+		sound_bounds_expect(sound_bounds_outside_channel[i] == 0,
+			"Long periodic-noise refill read outside its channel's source span");
+		sound_bounds_expect(sound_bounds_outside_resource[i] == 0,
+			"Long periodic-noise refill read beyond the loaded sound resource");
+		sound_bounds_expect(sound_bounds_outside_allocation[i] == 0,
+			"Long periodic-noise refill read beyond the allocator-owned source block");
+		sound_bounds_expect(sound_bounds_outside_window[i] == 0,
+			"Long periodic-noise refill read at or beyond $C000");
+	}
+
+	outputNoise = get_word(symbol("_testSoundBoundsOutputNoise"));
+	outputResource = get_word(symbol("_testSoundBoundsOutputResource"));
+	outputBank = ram[symbol("_testSoundBoundsOutputBank")];
+	outputPointerValid = outputNoise >= BANK_START &&
+		(unsigned)outputNoise + expectedOutputBytes <= BANK_END;
+	sound_bounds_expect(outputPointerValid,
+		"Long periodic-noise output stream did not fit inside the banked RAM window");
+	sound_bounds_expect(outputNoise == (uint16_t)(outputResource + 24),
+		"Long periodic-noise conversion published an unexpected output channel offset");
+	if (outputPointerValid)
+	{
+		const uint8_t *output = bank_ram[outputBank] + outputNoise - BANK_START;
+		for (i = 0; i < whiteNoteCount && outputMatches; ++i)
+		{
+			uint16_t duration = i == 50 ? 256 : 1;
+			uint8_t expectedNote[5] = {
+				(uint8_t)duration, (uint8_t)(duration >> 8), 44, 4, 15
+			};
+			unsigned j;
+			for (j = 0; j < sizeof(expectedNote); ++j)
+			{
+				unsigned offset = i * sizeof(expectedNote) + j;
+				if (output[offset] != expectedNote[j])
+				{
+					outputMatches = false;
+					mismatchOffset = offset;
+					expectedByte = expectedNote[j];
+					actualByte = output[offset];
+					break;
+				}
+			}
+		}
+		for (i = 0; i < sizeof(expectedPeriodicRecord) && outputMatches; ++i)
+		{
+			unsigned offset = whiteNoteCount * 5 + i;
+			if (output[offset] != expectedPeriodicRecord[i])
+			{
+				outputMatches = false;
+				mismatchOffset = offset;
+				expectedByte = expectedPeriodicRecord[i];
+				actualByte = output[offset];
+			}
+		}
+		for (i = 0; i < sizeof(expectedTerminator) && outputMatches; ++i)
+		{
+			unsigned offset = whiteNoteCount * 5 + sizeof(expectedPeriodicRecord) + i;
+			if (output[offset] != expectedTerminator[i])
+			{
+				outputMatches = false;
+				mismatchOffset = offset;
+				expectedByte = expectedTerminator[i];
+				actualByte = output[offset];
+			}
+		}
+	}
+	else
+		outputMatches = false;
+	if (!outputMatches)
+		fprintf(stderr, "Long periodic-noise output mismatch at byte %u: expected %02X, got %02X (expected length %u)\n",
+			mismatchOffset, (unsigned)expectedByte, (unsigned)actualByte, expectedOutputBytes);
+	sound_bounds_expect(outputMatches,
+		"Long periodic-noise output did not contain every converted note, final periodic record and terminator");
+	call_target_caller("_testCleanupSoundBounds");
+	sound_bounds_expect(ram[symbol("_testSoundBoundsOutputReleased")] != 0,
+		"Long sound refill case did not release its generated output allocation");
+}
+
 static void run_sound_cases(void)
 {
+	sound_bounds_case_failed = false;
 	run_sound_conversion();
+	run_sound_bounds_short_resource();
+	run_sound_refill_long_resource();
+	CHECK(!sound_bounds_case_failed,
+		"Production sound source bounds or long-channel refill regression detected");
 }
 
 #endif
