@@ -387,6 +387,47 @@ void b6InitFiles(void)
 #pragma code-name (pop)
 #pragma code-name (push, "CODE")
 
+/* A declared payload may not consume the next resource header in this volume. */
+static boolean b6ResourceFitsBeforeNextDirectoryEntry(AGIFilePosType* location, unsigned int totalSize)
+{
+	byte volumeNumber = location->fileNum;
+	uint32_t startOffset = (uint32_t)location->filePos;
+	uint32_t resourceEnd = startOffset + 5UL + (uint32_t)totalSize;
+	uint32_t nextOffset = 0xFFFFFFFFUL;
+	byte previousBank = RAM_BANK;
+	AGIFilePosType* directory;
+	AGIFilePosType* entry;
+	int entryCount;
+	unsigned int type, entryIndex;
+
+	if (numLogics < 0 || numLogics > NO_DIRECTORY_ENTRYS ||
+		numPictures < 0 || numPictures > NO_DIRECTORY_ENTRYS ||
+		numViews < 0 || numViews > NO_DIRECTORY_ENTRYS ||
+		numSounds < 0 || numSounds > NO_DIRECTORY_ENTRYS)
+		return FALSE;
+
+	/* The four directory arrays share bank 10; map once for this bounded scan. */
+	RAM_BANK = DIRECTORY_BANK;
+	for (type = 0; type < 4; ++type) {
+		entryIndex = 0;
+		switch (type) {
+		case 0: directory = logdir; entryCount = numLogics; break;
+		case 1: directory = picdir; entryCount = numPictures; break;
+		case 2: directory = viewdir; entryCount = numViews; break;
+		default: directory = snddir; entryCount = numSounds; break;
+		}
+		for (; entryIndex < (unsigned int)entryCount; ++entryIndex) {
+			entry = directory + entryIndex;
+			if (entry->fileNum == volumeNumber && entry->filePos != EMPTY &&
+				entry->filePos > startOffset && entry->filePos < nextOffset)
+				nextOffset = (uint32_t)entry->filePos;
+		}
+	}
+	RAM_BANK = previousBank;
+
+	return resourceEnd <= nextOffset;
+}
+
 static boolean b6ReadVolumeBytes(byte* destination, unsigned int size)
 {
 	int bytesRead = cbm_read(SEQUENTIAL_LFN, destination, size);
@@ -540,7 +581,8 @@ boolean b6LoadAGIFile(int resType, AGIFilePosType* location, AGIFile* AGIData)
 		goto done;
 
 	loaded.totalSize = (unsigned int)volumeHeader[1] | ((unsigned int)volumeHeader[2] << 8);
-	if (!loaded.totalSize || loaded.totalSize > LARGE_SIZE)
+	if (!loaded.totalSize || (resType != LOGIC && loaded.totalSize > LARGE_SIZE) ||
+		!b6ResourceFitsBeforeNextDirectoryEntry(location, loaded.totalSize))
 		goto done;
 
 	if (resType == LOGIC) {

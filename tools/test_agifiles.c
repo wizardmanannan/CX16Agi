@@ -13,6 +13,9 @@
 #include "../src/agifiles.h"
 #include <cbm.h>
 
+static byte testRamBank;
+#define RAM_BANK testRamBank
+
 #define CHECK(condition, message) do { \
     if (!(condition)) { fprintf(stderr, "%s (%s:%d)\n", message, __FILE__, __LINE__); exit(EXIT_FAILURE); } \
 } while (0)
@@ -25,6 +28,8 @@ static byte resourceWorkArea[LOCAL_WORK_AREA_SIZE];
 static byte *allocations[32];
 static size_t allocationSizes[32];
 static size_t outstandingAllocations;
+static size_t successfulAllocations;
+static size_t successfulDeallocations;
 static unsigned char seekResult;
 static bool trapInvalidAllocation;
 static bool trapInvalidResourceCopy;
@@ -91,6 +96,7 @@ byte *b10BankedAlloc(int size, byte *bank)
     allocations[slot] = result;
     allocationSizes[slot] = size ? (size_t)size : 1;
     ++outstandingAllocations;
+    ++successfulAllocations;
     *bank = 1;
     return result;
 }
@@ -105,6 +111,7 @@ boolean b10BankedDealloc(byte *ptr, byte bank)
             allocations[slot] = NULL;
             allocationSizes[slot] = 0;
             --outstandingAllocations;
+            ++successfulDeallocations;
             return TRUE;
         }
     }
@@ -383,6 +390,94 @@ static void check_short_resource_types_preserve_loaded_resource(void)
     CHECK(outstandingAllocations == 0, "Cross-type EOF/retry case leaked banked memory");
 }
 
+static void check_resource_payload_does_not_cross_next_directory_entry(void)
+{
+    /* The first resource declares 8 payload bytes, but another type's
+     * directory points at a resource header after only 5 payload bytes. */
+    static const uint8_t overlapping_volume[] = {
+        0x12, 0x34, 2, 8, 0,
+        0xA1, 0xA2, 0xA3, 0xA4, 0xA5,
+        0x12, 0x34, 2, 2, 0, 0xB1, 0xB2
+    };
+    static const uint8_t retry_payload[] = { 0x31, 0x42, 0x53, 0x64, 0x75, 0x86, 0x97, 0xA8 };
+    uint8_t retry_volume[5 + sizeof(retry_payload)];
+    uint8_t adjacent_volume[sizeof(retry_volume) + 7];
+    AGIFilePosType location = { 2, 0 };
+    AGIFile data, before;
+
+    testRamBank = 0x47;
+    numLogics = numPictures = numViews = numSounds = 0;
+    memset(logdir, 0, sizeof(logdir));
+    memset(picdir, 0, sizeof(picdir));
+    memset(viewdir, 0, sizeof(viewdir));
+    memset(snddir, 0, sizeof(snddir));
+    snddir[0] = location;
+    numSounds = 1;
+    viewdir[0].fileNum = 2;
+    viewdir[0].filePos = 10;
+    numViews = 1;
+
+    memset(&data, 0xA5, sizeof(data));
+    before = data;
+    write_bytes("vol.2", overlapping_volume, sizeof(overlapping_volume));
+    CHECK(!b6LoadAGIFile(SOUND, &location, &data),
+          "Resource payload crossing the next volume directory entry was accepted");
+    CHECK(testRamBank == 0x47, "Rejected overlapping resource did not restore the caller RAM bank");
+    CHECK(!memcmp(&data, &before, sizeof(data)),
+          "Overlapping resource payload changed caller state");
+    CHECK(outstandingAllocations == 0,
+          "Overlapping resource payload leaked an allocation");
+
+    retry_volume[0] = 0x12;
+    retry_volume[1] = 0x34;
+    retry_volume[2] = 2;
+    retry_volume[3] = sizeof(retry_payload);
+    retry_volume[4] = 0;
+    memcpy(retry_volume + 5, retry_payload, sizeof(retry_payload));
+    numViews = 0;
+    write_bytes("vol.2", retry_volume, sizeof(retry_volume));
+    CHECK(b6LoadAGIFile(SOUND, &location, &data),
+          "Valid retry after rejecting an overlapping resource was rejected");
+    CHECK(testRamBank == 0x47, "Valid resource retry did not restore the caller RAM bank");
+    CHECK(data.totalSize == sizeof(retry_payload) && data.codeSize == sizeof(retry_payload) &&
+          !memcmp(data.code, retry_payload, sizeof(retry_payload)),
+          "Retry after an overlapping resource did not publish complete data");
+    CHECK(outstandingAllocations == 1, "Valid overlap retry did not own exactly one allocation");
+    CHECK(b10BankedDealloc(data.code, data.codeBank), "Could not release overlap retry data");
+    CHECK(outstandingAllocations == 0, "Overlap retry leaked banked memory");
+
+    /* Different type tables may intentionally share one resource offset. */
+    viewdir[0] = location;
+    numViews = 1;
+    memset(&data, 0xA5, sizeof(data));
+    write_bytes("vol.2", retry_volume, sizeof(retry_volume));
+    CHECK(b6LoadAGIFile(SOUND, &location, &data),
+          "Equal cross-type resource offsets were rejected as an overlap");
+    CHECK(testRamBank == 0x47, "Shared-offset resource did not restore the caller RAM bank");
+    CHECK(b10BankedDealloc(data.code, data.codeBank), "Could not release shared-offset resource");
+    CHECK(outstandingAllocations == 0, "Shared-offset resource leaked banked memory");
+
+    /* A following resource header exactly at the payload end is also valid. */
+    memcpy(adjacent_volume, retry_volume, sizeof(retry_volume));
+    adjacent_volume[sizeof(retry_volume)] = 0x12;
+    adjacent_volume[sizeof(retry_volume) + 1] = 0x34;
+    adjacent_volume[sizeof(retry_volume) + 2] = 2;
+    adjacent_volume[sizeof(retry_volume) + 3] = 2;
+    adjacent_volume[sizeof(retry_volume) + 4] = 0;
+    adjacent_volume[sizeof(retry_volume) + 5] = 0xC1;
+    adjacent_volume[sizeof(retry_volume) + 6] = 0xC2;
+    viewdir[0].filePos = sizeof(retry_volume);
+    memset(&data, 0xA5, sizeof(data));
+    write_bytes("vol.2", adjacent_volume, sizeof(adjacent_volume));
+    CHECK(b6LoadAGIFile(SOUND, &location, &data),
+          "Resource ending exactly at the next header was rejected");
+    CHECK(testRamBank == 0x47, "Adjacent resource did not restore the caller RAM bank");
+    CHECK(b10BankedDealloc(data.code, data.codeBank), "Could not release adjacent resource");
+    CHECK(outstandingAllocations == 0, "Adjacent resource leaked banked memory");
+    numSounds = 0;
+    numViews = 0;
+}
+
 static void check_truncated_resource_header(void)
 {
     static const uint8_t truncated_volume[] = { 0x12 };
@@ -485,6 +580,202 @@ static void check_declared_length_limit(void)
 static uint8_t maximum_payload_byte(size_t index)
 {
     return (uint8_t)(index * 13u + 7u);
+}
+
+static uint8_t split_logic_message_byte(size_t index, size_t text_size)
+{
+    if (index + 1 == text_size)
+        return 0;
+    return index == 0 ? 'B' : (uint8_t)('A' + index % 26);
+}
+
+static size_t build_split_logic_payload(uint8_t *payload, size_t capacity,
+                                        size_t code_size, size_t section_size)
+{
+    static const uint8_t avis_durgan_key[] = {
+        0x41, 0x76, 0x69, 0x73, 0x20, 0x44, 0x75, 0x72, 0x67, 0x61, 0x6E
+    };
+    size_t total_size = code_size + 5 + section_size;
+    uint16_t message_size = (uint16_t)(section_size + 2);
+    uint8_t *messages;
+    uint8_t *text;
+    size_t text_size;
+
+    CHECK(section_size >= 4 && total_size <= capacity && total_size <= UINT16_MAX,
+          "Split logic fixture does not fit its declared fields");
+    messages = payload + code_size + 5;
+    text = messages + 2;
+    text_size = section_size - 2;
+    memset(payload, 0, total_size);
+    payload[0] = (uint8_t)code_size;
+    payload[1] = (uint8_t)(code_size >> 8);
+    for (size_t i = 0; i < code_size; ++i)
+        payload[2 + i] = maximum_payload_byte(i);
+    payload[2 + code_size] = 1;
+    payload[3 + code_size] = (uint8_t)message_size;
+    payload[4 + code_size] = (uint8_t)(message_size >> 8);
+
+    /* One message starts at text offset zero and ends at the final text byte. */
+    messages[0] = 4;
+    messages[1] = 0;
+    for (size_t i = 0; i < text_size; ++i)
+        text[i] = split_logic_message_byte(i, text_size) ^
+            avis_durgan_key[i % sizeof(avis_durgan_key)];
+    return total_size;
+}
+
+static void clear_resource_directories(void)
+{
+    numLogics = numPictures = numViews = numSounds = 0;
+    memset(logdir, 0, sizeof(logdir));
+    memset(picdir, 0, sizeof(picdir));
+    memset(viewdir, 0, sizeof(viewdir));
+    memset(snddir, 0, sizeof(snddir));
+}
+
+static size_t write_split_logic_volume(uint8_t *volume, size_t volume_capacity,
+                                       uint8_t *payload, size_t payload_capacity,
+                                       size_t code_size, size_t section_size,
+                                       bool append_adjacent_resource,
+                                       uint32_t *next_resource_offset)
+{
+    static const uint8_t adjacent_payload[] = { 0xA5, 0x5A };
+    size_t payload_size = build_split_logic_payload(payload, payload_capacity,
+        code_size, section_size);
+    size_t used = 0;
+    uint32_t resource_offset = append_volume_resource(volume, volume_capacity, &used,
+        2, (uint16_t)payload_size, payload, payload_size);
+
+    if (append_adjacent_resource) {
+        uint32_t adjacent_offset = append_volume_resource(volume, volume_capacity, &used,
+            2, sizeof(adjacent_payload), adjacent_payload, sizeof(adjacent_payload));
+        CHECK(adjacent_offset == 5 + payload_size,
+              "Adjacent split-logic resource did not start at the exact payload end");
+        if (next_resource_offset)
+            *next_resource_offset = adjacent_offset;
+    } else if (next_resource_offset) {
+        *next_resource_offset = 0;
+    }
+    write_bytes("vol.2", volume, used);
+    return resource_offset;
+}
+
+static void check_logic_split_allocation_limits(void)
+{
+    enum {
+        VALID_CODE_SIZE = 3904,
+        VALID_SECTION_SIZE = 5090,
+        VALID_TOTAL_SIZE = VALID_CODE_SIZE + 5 + VALID_SECTION_SIZE
+    };
+    static const uint8_t retained_payload[] = { 0xD4, 0xE5 };
+    uint8_t logic_payload[VALID_TOTAL_SIZE];
+    uint8_t volume[5 + VALID_TOTAL_SIZE + 5 + 2];
+    AGIFilePosType location = { 2, 0 };
+    AGIFile data, retained, valid_before;
+    uint32_t next_offset;
+    uint16_t message_address;
+    size_t used = 0;
+
+    testRamBank = 0x47;
+    clear_resource_directories();
+    CHECK(outstandingAllocations == 0, "Split logic case started with leaked banked allocations");
+    append_volume_resource(volume, sizeof(volume), &used, 2,
+        sizeof(retained_payload), retained_payload, sizeof(retained_payload));
+    write_bytes("vol.2", volume, used);
+    memset(&data, 0xA5, sizeof(data));
+    CHECK(b6LoadAGIFile(SOUND, &location, &data),
+          "Could not load retained resource before split-logic size checks");
+    retained = data;
+    CHECK(outstandingAllocations == 1,
+          "Retained resource did not own exactly one allocation");
+
+    CHECK(write_split_logic_volume(volume, sizeof(volume), logic_payload,
+          sizeof(logic_payload), VALID_CODE_SIZE, VALID_SECTION_SIZE, true,
+          &next_offset) == 0,
+          "Valid split-logic resource unexpectedly started at a nonzero offset");
+    CHECK(next_offset == 9004,
+          "Valid split-logic fixture did not end at the expected next-resource boundary");
+    picdir[0].fileNum = 2;
+    picdir[0].filePos = next_offset;
+    numPictures = 1;
+    CHECK(b6LoadAGIFile(LOGIC, &location, &data),
+          "Valid split LOGIC resource larger than LARGE_SIZE was rejected");
+    CHECK(testRamBank == 0x47,
+          "Valid split-logic load did not restore the caller RAM bank");
+    CHECK(data.totalSize == VALID_TOTAL_SIZE && data.codeSize == VALID_CODE_SIZE &&
+          data.noMessages == 1 && data.code && data.messagePointers &&
+          data.messageData == (byte *)data.messagePointers + 2,
+          "Large split-logic load published incorrect section sizes or ownership");
+    CHECK(data.code[0] == maximum_payload_byte(0) &&
+          data.code[LOCAL_WORK_AREA_SIZE - 1] == maximum_payload_byte(LOCAL_WORK_AREA_SIZE - 1) &&
+          data.code[LOCAL_WORK_AREA_SIZE] == maximum_payload_byte(LOCAL_WORK_AREA_SIZE) &&
+          data.code[data.codeSize - 1] == maximum_payload_byte(data.codeSize - 1),
+          "Large split-logic code was not read across banked chunks correctly");
+    memcpy(&message_address, data.messagePointers, sizeof(message_address));
+    CHECK(message_address == (uint16_t)(uintptr_t)data.messageData &&
+          data.messageData[0] == 'B' &&
+          data.messageData[LOCAL_WORK_AREA_SIZE - 1] ==
+              split_logic_message_byte(LOCAL_WORK_AREA_SIZE - 1, VALID_SECTION_SIZE - 2) &&
+          data.messageData[LOCAL_WORK_AREA_SIZE] ==
+              split_logic_message_byte(LOCAL_WORK_AREA_SIZE, VALID_SECTION_SIZE - 2) &&
+          data.messageData[VALID_SECTION_SIZE - 3] == 0,
+          "Large split-logic message table or chunked encrypted text was decoded incorrectly");
+    CHECK(outstandingAllocations == 3,
+          "Large split-logic result did not retain its code, message and prior resource allocations");
+    valid_before = data;
+
+    clear_resource_directories();
+    size_t allocations_before = successfulAllocations;
+    size_t deallocations_before = successfulDeallocations;
+    CHECK(write_split_logic_volume(volume, sizeof(volume), logic_payload,
+          sizeof(logic_payload), LARGE_SIZE + 1, 4, false, NULL) == 0,
+          "Oversized-code fixture unexpectedly started at a nonzero offset");
+    CHECK(!b6LoadAGIFile(LOGIC, &location, &data),
+          "LOGIC code section larger than LARGE_SIZE was accepted");
+    CHECK(testRamBank == 0x47 && !memcmp(&data, &valid_before, sizeof(data)) &&
+          valid_before.code[0] == maximum_payload_byte(0) && outstandingAllocations == 3,
+          "Rejected oversized LOGIC code changed the retained resource or caller bank");
+    CHECK(successfulAllocations == allocations_before &&
+          successfulDeallocations == deallocations_before,
+          "Oversized LOGIC code reached the bank allocator");
+
+    allocations_before = successfulAllocations;
+    deallocations_before = successfulDeallocations;
+    CHECK(write_split_logic_volume(volume, sizeof(volume), logic_payload,
+          sizeof(logic_payload), 1, LARGE_SIZE + 1, false, NULL) == 0,
+          "Oversized-message fixture unexpectedly started at a nonzero offset");
+    CHECK(!b6LoadAGIFile(LOGIC, &location, &data),
+          "LOGIC message section larger than LARGE_SIZE was accepted");
+    CHECK(testRamBank == 0x47 && !memcmp(&data, &valid_before, sizeof(data)) &&
+          valid_before.messageData[0] == 'B' && outstandingAllocations == 3,
+          "Rejected oversized LOGIC messages changed the retained resource or caller bank");
+    CHECK(successfulAllocations == allocations_before + 1 &&
+          successfulDeallocations == deallocations_before + 1,
+          "Oversized LOGIC messages did not release the already allocated code section");
+
+    CHECK(write_split_logic_volume(volume, sizeof(volume), logic_payload,
+          sizeof(logic_payload), VALID_CODE_SIZE, VALID_SECTION_SIZE, true,
+          &next_offset) == 0,
+          "Valid split-logic retry unexpectedly started at a nonzero offset");
+    picdir[0].fileNum = 2;
+    picdir[0].filePos = next_offset;
+    numPictures = 1;
+    CHECK(b6LoadAGIFile(LOGIC, &location, &data),
+          "Valid split-logic retry after section-boundary failures was rejected");
+    CHECK(testRamBank == 0x47 && data.totalSize == VALID_TOTAL_SIZE &&
+          data.code[0] == maximum_payload_byte(0) && data.messageData[0] == 'B' &&
+          data.messageData[VALID_SECTION_SIZE - 3] == 0 && outstandingAllocations == 5,
+          "Valid split-logic retry did not publish complete data while preserving prior owners");
+
+    CHECK(b10BankedDealloc((byte *)data.messagePointers, data.messageBank) &&
+          b10BankedDealloc(data.code, data.codeBank) &&
+          b10BankedDealloc((byte *)valid_before.messagePointers, valid_before.messageBank) &&
+          b10BankedDealloc(valid_before.code, valid_before.codeBank) &&
+          b10BankedDealloc(retained.code, retained.codeBank),
+          "Could not release split-logic success, retry and retained allocations");
+    CHECK(outstandingAllocations == 0,
+          "Split-logic size checks and retry leaked banked allocations");
+    clear_resource_directories();
 }
 
 static void check_maximum_resource_length(void)
@@ -783,6 +1074,7 @@ int main(int argc, char **argv)
 
     if (argc == 2 && !strcmp(argv[1], "--resource-offsets")) {
         check_short_resource_types_preserve_loaded_resource();
+        check_resource_payload_does_not_cross_next_directory_entry();
         check_valid_resources_at_nonzero_offsets();
         puts("AGI resource offset checks pass: EOF rollback across all types and valid nonzero offsets");
         cleanup();
@@ -792,6 +1084,7 @@ int main(int argc, char **argv)
         check_compressed_resource_marker();
         check_declared_length_limit();
         check_maximum_resource_length();
+        check_logic_split_allocation_limits();
         puts("AGI resource boundary checks pass: compression and length limits across all types");
         cleanup();
         return 0;
@@ -840,6 +1133,8 @@ int main(int argc, char **argv)
     check_bad_logic_message_offset();
     check_logic_message_size_mismatch();
     check_valid_resources_and_retry();
+    check_resource_payload_does_not_cross_next_directory_entry();
+    check_logic_split_allocation_limits();
     check_startup_directory_transaction();
 
     puts("AGI loader checks pass: directory bounds, volume integrity, rollback, and retry");
