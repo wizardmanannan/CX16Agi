@@ -1,4 +1,5 @@
 #include "helpers.h"
+#include <stdlib.h>
 //#define VERBOSE
 //#define VERBOSE_CPY_CHECK
 //#define VERBOSE_MEMSET_CHECK
@@ -285,6 +286,19 @@ size_t strLenBankedBounded(char* string, int bank, size_t byteLimit, boolean* te
 	if (terminated) *terminated = foundTerminator;
 	return len;
 }
+
+int atoiBanked(const char* string, byte bank)
+{
+	byte previousRamBank = RAM_BANK;
+	int value;
+	if (!string) return 0;
+
+	RAM_BANK = bank;
+	value = atoi(string);
+	RAM_BANK = previousRamBank;
+	return value;
+}
+
 
 #pragma code-name (push, "BANKRAM10")
 void b10SetResourceDirectory(AGIFilePosType* newLogicDirectory, AGIFilePosType* logicDirectoryLocation)

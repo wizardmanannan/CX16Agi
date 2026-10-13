@@ -23,6 +23,8 @@ char string[12][40];
 static byte test_vars[256];
 byte *var = test_vars;
 static unsigned allocation_calls, deallocation_calls, input_calls;
+static unsigned conversion_calls;
+static byte conversion_bank;
 static boolean allocation_failure = TRUE;
 static byte input_allocation[80];
 
@@ -48,6 +50,14 @@ void b7GetString(char *prompt, byte prompt_bank, char *destination, byte destina
     ++input_calls;
     CHECK(destination != NULL, "get.num passed a failed allocation to the input routine");
     strcpy(destination, "123");
+}
+
+int atoiBanked(const char *text, byte bank)
+{
+    ++conversion_calls;
+    conversion_bank = bank;
+    CHECK(bank == 0x35, "get.num parsed its allocation from the wrong bank");
+    return atoi(text);
 }
 
 byte loadAndIncWinCode(void)
@@ -104,7 +114,8 @@ int main(int argc, char **argv)
         operands[0] = 1;
         allocation_failure = FALSE;
         b4Get_num();
-        CHECK(operand_reads == 2 && allocation_calls == 2 && deallocation_calls == 1 && input_calls == 1,
+        CHECK(operand_reads == 2 && allocation_calls == 2 && deallocation_calls == 1 && input_calls == 1 &&
+              conversion_calls == 1 && conversion_bank == 0x35,
               "get.num retry did not release its successful input allocation exactly once");
         CHECK(test_vars[0] == 123 && test_ram_bank == 0x37,
               "get.num retry did not publish the entered number");

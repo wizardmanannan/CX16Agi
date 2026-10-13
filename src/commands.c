@@ -1789,7 +1789,7 @@ void b4Get_num() // 2, 0x40
 	if (!b7Temp) return;
 
 	b7GetString(messagePointer, logicFile.messageBank, b7Temp, tempBank, 1, 23, 3);
-	var[varNum] = atoi(b7Temp);
+	var[varNum] = atoiBanked(b7Temp, tempBank);
 
 	b10BankedDealloc((byte*)b7Temp, tempBank);
 
