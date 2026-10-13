@@ -53,7 +53,7 @@ static unsigned label_count;
 static unsigned bank_window_reads;
 static unsigned out_of_window_reads;
 static bool track_source_reads;
-static uint8_t getin_keys[16];
+static uint8_t getin_keys[64];
 static unsigned getin_count;
 static unsigned getin_index;
 static bool getin_enabled;
@@ -328,6 +328,7 @@ static void call_target_caller(const char *name)
 }
 
 #include "test_banked_strings_bounded_cases.h"
+#include "test_banked_strings_input_cases.h"
 
 static void run_harness_smoke(void)
 {
@@ -341,7 +342,7 @@ static void run_harness_smoke(void)
 int main(int argc, char **argv)
 {
 	CHECK((argc == 3 || argc == 4) && !strcmp(argv[1], "--build"),
-		"Usage: test_banked_strings --build DIR [--smoke|--bounded]");
+		"Usage: test_banked_strings --build DIR [--smoke|--bounded|--input]");
 	load_image(argv[2]);
 	if (argc == 4)
 	{
@@ -351,11 +352,13 @@ int main(int argc, char **argv)
 			run_bounded_cases();
 			run_game_id_cases();
 		}
+		else if (!strcmp(argv[3], "--input")) run_input_cases();
 		else CHECK(false, "Unknown production caller test case");
 		return 0;
 	}
 	run_harness_smoke();
 	run_bounded_cases();
 	run_game_id_cases();
+	run_input_cases();
 	return 0;
 }
