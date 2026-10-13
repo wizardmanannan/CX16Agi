@@ -182,9 +182,22 @@ _run:
 	  image|production-test) \
 	    $(MAKE) --no-print-directory -f "$$repo/tools/test-image.mk" "REPO_ROOT=$$repo" "OUT=$$work/image"; \
 	    if [ "$$mode" = production-test ]; then \
-	      echo 'CC test_sound_foreground.c'; \
-	      "$(HOST_CC)" $(HOST_CFLAGS) -I"$$X16_EMULATOR_SOURCE/src/cpu" "$$repo/tools/test_sound_foreground.c" "$$X16_EMULATOR_SOURCE/src/cpu/fake6502.c" -o "$$work/bin/test_sound_foreground"; \
-	      echo 'RUN test_sound_foreground'; cd "$$repo"; "$$work/bin/test_sound_foreground" --build "$$work/image"; \
+	      failed=0; \
+	      for name in sound_foreground banked_strings; do \
+	        echo "CC test_$$name.c"; \
+	        "$(HOST_CC)" $(HOST_CFLAGS) -I"$$X16_EMULATOR_SOURCE/src/cpu" "$$repo/tools/test_$$name.c" "$$X16_EMULATOR_SOURCE/src/cpu/fake6502.c" -o "$$work/bin/test_$$name"; \
+	        cd "$$repo"; \
+	        if [ "$$name" = banked_strings ]; then \
+	          for test_case in --smoke; do \
+	            echo "RUN test_banked_strings $$test_case"; \
+	            if "$$work/bin/test_banked_strings" --build "$$work/image" "$$test_case"; then :; else failed=$$((failed + 1)); fi; \
+	          done; \
+	        else \
+	          echo "RUN test_$$name"; \
+	          if "$$work/bin/test_$$name" --build "$$work/image"; then :; else failed=$$((failed + 1)); fi; \
+	        fi; \
+	      done; \
+	      [ "$$failed" -eq 0 ] || fail "$$failed production regression(s) failed"; \
 	    fi ;; \
 	  modes) \
 	    echo 'CC test_full_game_irq.c'; \
