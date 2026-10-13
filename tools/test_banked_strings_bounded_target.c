@@ -15,6 +15,10 @@ byte testBankedStringBank;
 unsigned int testBankedStringByteLimit;
 size_t testBankedStringLength;
 boolean testBankedStringTerminated;
+char *testBankedStrcpyDestination;
+char *testBankedStrcpySource;
+byte testBankedStrcpyBank;
+char *testBankedStrcpyResult;
 char *testGameIdMessage;
 byte testGameIdMessageBank;
 static LOGICFile testGetNumLogicFile;
@@ -25,6 +29,12 @@ void testRunBankedString(void)
 {
 	testBankedStringLength = strLenBankedBounded(testBankedStringSource,
 		testBankedStringBank, testBankedStringByteLimit, &testBankedStringTerminated);
+}
+
+void testRunBankedStrcpy(void)
+{
+	testBankedStrcpyResult = strcpyBanked(testBankedStrcpyDestination,
+		testBankedStrcpySource, testBankedStrcpyBank);
 }
 
 void testRunSetGameId(void)

@@ -149,7 +149,6 @@ int strcmpIgnoreSpace(const char* str1, const char* str2) {
 
 char* strcpyBanked(char* dest, const char* src, byte bank)
 {
-	char* result;
 	byte previousRamBank = RAM_BANK;
 
 	RAM_BANK = bank;
@@ -158,7 +157,7 @@ char* strcpyBanked(char* dest, const char* src, byte bank)
 
 	RAM_BANK = previousRamBank;
 
-	return result;
+	return dest;
 }
 
 void* memCpyBanked(byte* dest, byte* src, byte bank, size_t len)

@@ -54,6 +54,45 @@ static void check_result(uint16_t expected_length, bool expected_terminated)
 	CHECK(out_of_window_reads == 0, "Bounded banked string read at or beyond $C000");
 }
 
+static void run_banked_strcpy_case(void)
+{
+	static const uint8_t source_text[] = "banked strcpy returns destination";
+	const uint16_t source_address = 0xA100;
+	const uint16_t destination_address = 0x8800;
+	const uint8_t source_before = 0x69;
+	const uint8_t source_after = 0x96;
+	const uint8_t destination_before = 0x3C;
+	const uint8_t destination_after = 0xC3;
+	uint16_t result = symbol("_testBankedStrcpyResult");
+
+	prepare();
+	bank_ram[0x24][source_address - BANK_START - 1] = source_before;
+	memcpy(bank_ram[0x24] + source_address - BANK_START, source_text, sizeof(source_text));
+	bank_ram[0x24][source_address - BANK_START + sizeof(source_text)] = source_after;
+	ram[destination_address - 1] = destination_before;
+	memset(ram + destination_address, 0xA5, sizeof(source_text) + 1);
+	ram[destination_address + sizeof(source_text)] = destination_after;
+	put_word(symbol("_testBankedStrcpySource"), source_address);
+	put_word(symbol("_testBankedStrcpyDestination"), destination_address);
+	ram[symbol("_testBankedStrcpyBank")] = 0x24;
+	put_word(result, 0xDEAD);
+
+	call_target_caller("_testRunBankedStrcpy");
+
+	CHECK(get_word(result) == destination_address,
+		"Banked strcpy did not return the full 16-bit destination pointer");
+	CHECK(!memcmp(ram + destination_address, source_text, sizeof(source_text)),
+		"Banked strcpy did not copy the exact NUL-terminated source text");
+	CHECK(ram[destination_address - 1] == destination_before &&
+		ram[destination_address + sizeof(source_text)] == destination_after,
+		"Banked strcpy overwrote an adjacent destination guard");
+	CHECK(bank_ram[0x24][source_address - BANK_START - 1] == source_before &&
+		!memcmp(bank_ram[0x24] + source_address - BANK_START, source_text, sizeof(source_text)) &&
+		bank_ram[0x24][source_address - BANK_START + sizeof(source_text)] == source_after,
+		"Banked strcpy changed its source or adjacent source guards");
+	CHECK((regs.status & FLAG_INTERRUPT) == 0, "Banked strcpy changed the caller I flag");
+}
+
 static void run_game_id_message(const char *message, bool should_accept)
 {
 	static const uint8_t previous_id[] = { 'S', 'A', 'F', 'E', 0, 0x5A, 0xC3 };
@@ -170,6 +209,8 @@ static void run_bounded_cases(void)
 		check_result((uint16_t)length, true);
 		CHECK(bank_window_reads == length + 1, "Wide string length did not scan through its terminator");
 	}
+
+	run_banked_strcpy_case();
 }
 
 static void run_game_id_cases(void)
