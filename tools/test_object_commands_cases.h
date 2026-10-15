@@ -313,6 +313,87 @@ static void run_object_file_capacity_cases(void)
 		"Object parser read a name without a terminator inside its input");
 }
 
+static void run_object_reader_capacity_case(void)
+{
+	unsigned capacity;
+	uint8_t *data;
+	static const uint8_t short_header[] = { 0, 0 };
+	static const uint8_t one_byte[] = { 'A' };
+
+	prepare();
+	capacity = get_object_target_word("_testObjectNameCacheSize");
+	data = malloc(capacity + 1u);
+	CHECK(data, "Cannot allocate OBJECT reader boundary stream");
+	memset(data, 'A', capacity + 1u);
+	set_object_file_stream(data, capacity, false);
+	monitor_object_buffer_writes();
+	call_target_caller("_testObjectCommandsReadFile");
+	stop_monitoring_object_buffer_writes();
+	CHECK(object_buffer_out_of_bounds_writes == 0,
+		"OBJECT reader wrote beyond bDObjData at exact capacity");
+	CHECK(get_object_target_byte("_testObjectFileLfn") == 2 &&
+		get_object_target_word("_testObjectFileLength") == capacity,
+		"OBJECT reader rejected an exactly full input buffer");
+	CHECK(object_file_close_calls == 1,
+		"OBJECT reader did not close an exactly full input file");
+
+	prepare();
+	set_object_file_stream(data, capacity + 1u, false);
+	monitor_object_buffer_writes();
+	call_target_caller("_testObjectCommandsReadFile");
+	stop_monitoring_object_buffer_writes();
+	CHECK(object_buffer_out_of_bounds_writes == 0,
+		"OBJECT reader wrote beyond bDObjData for a capacity-plus-one file");
+	CHECK(get_object_target_byte("_testObjectFileLfn") == 0 &&
+		get_object_target_word("_testObjectFileLength") == 0xFFFF,
+		"OBJECT reader did not publish capacity-plus-one failure");
+	CHECK(object_file_close_calls == 1,
+		"OBJECT reader did not close a capacity-plus-one input file");
+
+	prepare();
+	set_object_file_stream(one_byte, sizeof(one_byte), true);
+	monitor_object_buffer_writes();
+	call_target_caller("_testObjectCommandsReadFile");
+	stop_monitoring_object_buffer_writes();
+	CHECK(get_object_target_byte("_testObjectFileLfn") == 0 &&
+		get_object_target_word("_testObjectFileLength") == 0xFFFF,
+		"OBJECT reader treated cbm_read's -1 error as file data");
+	CHECK(object_file_close_calls == 1,
+		"OBJECT reader did not close a file after cbm_read failed");
+	CHECK(object_buffer_out_of_bounds_writes == 0,
+		"OBJECT reader wrote to its destination after cbm_read failed");
+
+	prepare();
+	set_object_file_stream(NULL, 0, false);
+	call_target_caller("_testObjectCommandsLoadObjectFile");
+	CHECK(object_file_close_calls == 1 &&
+		get_object_target_word("_testObjectObservedCount") == 0,
+		"OBJECT loader did not publish an empty file as zero objects");
+
+	prepare();
+	set_object_file_stream(short_header, sizeof(short_header), false);
+	call_target_caller("_testObjectCommandsLoadObjectFile");
+	CHECK(object_file_close_calls == 1 &&
+		get_object_target_word("_testObjectObservedCount") == 0,
+		"OBJECT loader did not reject a short header cleanly");
+
+	prepare();
+	set_object_file_stream(one_byte, sizeof(one_byte), false);
+	set_object_target_byte("_testObjectFileNullLength", 1);
+	call_target_caller("_testObjectCommandsReadFile");
+	CHECK(get_object_target_byte("_testObjectFileLfn") == 0 && cbm_open_calls == 0,
+		"OBJECT reader opened a file with a null length parameter");
+
+	prepare();
+	set_object_file_stream(one_byte, sizeof(one_byte), false);
+	set_object_target_byte("_testObjectFileNullBuffer", 1);
+	call_target_caller("_testObjectCommandsReadFile");
+	CHECK(get_object_target_byte("_testObjectFileLfn") == 0 &&
+		get_object_target_word("_testObjectFileLength") == 0xFFFF && cbm_open_calls == 0,
+		"OBJECT reader opened a file with a null destination buffer");
+	free(data);
+}
+
 static void run_object_commands_cases(void)
 {
 	prepare();
@@ -335,6 +416,7 @@ static void run_object_commands_cases(void)
 	run_invalid_object_commands(0);
 	inspect_object(0, OBJECT_COMMAND_SENTINEL_ROOM, OBJECT_COMMAND_SENTINEL_NAME);
 	run_object_file_capacity_cases();
+	run_object_reader_capacity_case();
 
 	puts("Compiled object commands exercise real BANKRAM0F/BANKRAM03 handlers and BANKRAM0D accessors");
 }

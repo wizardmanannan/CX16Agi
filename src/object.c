@@ -98,32 +98,52 @@ boolean bDIsObjCrypt(long fileLen, byte* objData)
 **
 ** Purpose: Open "object" via the CBM seek helper and read it byte-by-byte
 ** into buffer. fileLen is set to the number of bytes read. Exits if the
-** file is missing or larger than OBJ_NAME_CACHE_SIZE.
+** file is missing. Returns zero after closing the file if a read fails or
+** the input exceeds OBJ_NAME_CACHE_SIZE.
 **
 ** Returns: the logical file number that was used (already closed).
 **************************************************************************/
+/* BANKRAM0D has no room for the bounds-checked reader. */
+#pragma code-name (push, "CODE")
 byte bDLoadFile(int* fileLen, byte* buffer)
 {
-    byte lfn = b6Cbm_openForSeeking(BD_OBJECT_FILE_NAME);
+	byte lfn;
+	byte readByte;
+	int bytesRead;
+
+	if (!fileLen || !buffer)
+	{
+		if (fileLen)
+			*fileLen = -1;
+		return 0;
+	}
+
+	*fileLen = 0;
+	lfn = b6Cbm_openForSeeking(BD_OBJECT_FILE_NAME);
 
     if (lfn == NULL) {
         printf("Cannot find file : object\n");
         exit(1);
     }
 
-    for (*fileLen = 0; cbm_read(lfn, buffer++, 1); *fileLen += 1)
+	while ((bytesRead = cbm_read(lfn, &readByte, 1)) != 0)
     {
-        if (*fileLen > OBJ_NAME_CACHE_SIZE)
+		if (bytesRead != 1 || *fileLen >= OBJ_NAME_CACHE_SIZE)
         {
-            printf(BD_CANNOT_OPEN);
-            exit(0);
+			cbm_close(lfn);
+			*fileLen = -1;
+			return 0;
         }
+
+		buffer[*fileLen] = readByte;
+		++*fileLen;
     }
 
     cbm_close(lfn);
 
     return lfn;
 }
+#pragma code-name (pop)
 
 /**************************************************************************
 ** loadObjectFile
@@ -189,6 +209,12 @@ void bDLoadObjectFile()
     int avisPos = 0, i, fileLen;
 
     lfn = bDLoadFile(&fileLen, bDObjData);
+	if (lfn == NULL)
+	{
+		bDNumObjects = 0;
+		printf(BD_CANNOT_OPEN);
+		exit(1);
+	}
 
     if (fileLen < 3 || fileLen > OBJ_NAME_CACHE_SIZE) {
         bDNumObjects = 0;

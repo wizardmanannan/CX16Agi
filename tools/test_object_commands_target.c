@@ -19,6 +19,9 @@ word testObjectName;
 byte testObjectSeedRoom;
 word testObjectSeedName;
 int testObjectFileLength;
+byte testObjectFileLfn;
+byte testObjectFileNullLength;
+byte testObjectFileNullBuffer;
 boolean testObjectResult;
 boolean testObjectParseResult;
 int testObjectParsedCount;
@@ -29,6 +32,29 @@ word testObjectParsedName;
 word testObjectParsedHeader;
 byte testObjectObservedRoom;
 word testObjectObservedName;
+
+#pragma wrapped-call (push, trampoline, OBJECT_BANK)
+extern byte bDLoadFile(int* fileLen, byte* buffer);
+#pragma wrapped-call (pop)
+
+void testObjectCommandsReadFile(void)
+{
+	byte previousBank = RAM_BANK;
+	int* fileLen = testObjectFileNullLength ? (int*)0 : &testObjectFileLength;
+	byte* buffer = testObjectFileNullBuffer ? (byte*)0 : bDObjData;
+	RAM_BANK = OBJECT_BANK;
+	testObjectFileLfn = bDLoadFile(fileLen, buffer);
+	RAM_BANK = previousBank;
+}
+
+void testObjectCommandsLoadObjectFile(void)
+{
+	byte previousBank = RAM_BANK;
+	bDLoadObjectFile();
+	RAM_BANK = OBJECT_BANK;
+	testObjectObservedCount = bDNumObjects;
+	RAM_BANK = previousBank;
+}
 
 #pragma wrapped-call (push, trampoline, 0x0F)
 extern boolean b1Has(void);

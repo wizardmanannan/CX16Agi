@@ -19,9 +19,12 @@ extern struct regs regs;
 #define CBM_SETLFS_ADDRESS 0xFFBAu
 #define CBM_SETNAM_ADDRESS 0xFFBDu
 #define CBM_OPEN_ADDRESS  0xFFC0u
-#define CBM_READST_ADDRESS 0xFFB7u
+#define CBM_CLOSE_ADDRESS 0xFFC3u
+#define CBM_CHKIN_ADDRESS 0xFFC6u
 #define CBM_CKOUT_ADDRESS  0xFFC9u
+#define CBM_READST_ADDRESS 0xFFB7u
 #define CBM_CLRCH_ADDRESS  0xFFCCu
+#define CBM_BASIN_ADDRESS 0xFFCFu
 #define CBM_BSOUT_ADDRESS  0xFFD2u /* CHROUT and BSOUT share the KERNAL output entry. */
 #define VERA_ADDR_LOW 0x9F20u
 #define VERA_ADDR_HIGH 0x9F21u
@@ -106,6 +109,18 @@ static bool allocator_oom_output_capture_active;
 static uint8_t allocator_oom_output[128];
 static size_t allocator_oom_output_length;
 static bool allocator_oom_output_overflow;
+static bool object_file_io_enabled;
+static const uint8_t *object_file_stream;
+static unsigned object_file_stream_length;
+static unsigned object_file_stream_position;
+static uint8_t object_file_status;
+static bool object_file_fail_first_read;
+static bool object_file_read_failed;
+static unsigned object_file_close_calls;
+static bool object_buffer_write_monitor;
+static uint16_t object_buffer_start;
+static unsigned object_buffer_capacity;
+static unsigned object_buffer_out_of_bounds_writes;
 
 #define CHECK(condition, message) do { \
 	if (!(condition)) { fprintf(stderr, "%s (%s:%d)\n", message, __FILE__, __LINE__); exit(1); } \
@@ -153,11 +168,64 @@ uint8_t read6502(uint16_t address, uint8_t bank)
 	{
 		return 0x60; /* The metadata fixture supplies the KERNAL file-open seam. */
 	}
+	if (object_file_io_enabled && address == CBM_CHKIN_ADDRESS)
+	{
+		if (object_file_fail_first_read && !object_file_read_failed)
+		{
+			object_file_read_failed = true;
+			regs.a = 5;
+			regs.status |= FLAG_CARRY;
+		}
+		else
+		{
+			regs.a = 0;
+			regs.status &= (uint8_t)~FLAG_CARRY;
+		}
+		return 0x60;
+	}
+	if (object_file_io_enabled && address == CBM_READST_ADDRESS)
+	{
+		regs.a = object_file_status;
+		return 0x60;
+	}
+	if (object_file_io_enabled && address == CBM_BASIN_ADDRESS)
+	{
+		if (object_file_stream_position < object_file_stream_length)
+		{
+			regs.a = object_file_stream[object_file_stream_position++];
+			object_file_status = object_file_stream_position == object_file_stream_length ? 0x40 : 0;
+		}
+		else
+		{
+			regs.a = 0;
+			object_file_status = 0x40;
+		}
+		return 0x60;
+	}
+	if (object_file_io_enabled && address == CBM_CLRCH_ADDRESS)
+	{
+		return 0x60;
+	}
+	if (object_file_io_enabled && address == CBM_CLOSE_ADDRESS)
+	{
+		++object_file_close_calls;
+		return 0x60;
+	}
 	if (address == CBM_OPEN_ADDRESS)
 	{
 		++cbm_open_calls;
-		regs.a = 1; /* Return a missing-file error so the real resolver stays empty. */
-		regs.status |= FLAG_CARRY;
+		if (object_file_io_enabled)
+		{
+			object_file_stream_position = 0;
+			object_file_status = object_file_stream_length == 0 ? 0x40 : 0;
+			regs.a = 0;
+			regs.status &= (uint8_t)~FLAG_CARRY;
+		}
+		else
+		{
+			regs.a = 1; /* Return a missing-file error so the real resolver stays empty. */
+			regs.status |= FLAG_CARRY;
+		}
 		return 0x60;
 	}
 	if (allocator_oom_runtime_active && address == CBM_CKOUT_ADDRESS)
@@ -232,6 +300,9 @@ void write6502(uint16_t address, uint8_t bank, uint8_t value)
 		ram[address] &= (uint8_t)~value;
 		return;
 	}
+	if (object_buffer_write_monitor && ram[0] == 0x0D &&
+		address >= object_buffer_start + object_buffer_capacity && address < BANK_END)
+		++object_buffer_out_of_bounds_writes;
 	if (address == VERA_ADDR_LOW)
 	{
 		ram[address] = value;
@@ -393,6 +464,34 @@ static uint16_t get_word(uint16_t address)
 	return (uint16_t)(ram[address] | ((uint16_t)ram[address + 1] << 8));
 }
 
+static void set_object_file_stream(const uint8_t *data, unsigned length, bool fail_first_read)
+{
+	object_file_io_enabled = true;
+	object_file_stream = data;
+	object_file_stream_length = length;
+	object_file_stream_position = 0;
+	object_file_status = length == 0 ? 0x40 : 0;
+	object_file_fail_first_read = fail_first_read;
+	object_file_read_failed = false;
+	object_file_close_calls = 0;
+}
+
+static void monitor_object_buffer_writes(void)
+{
+	object_buffer_start = symbol("_bDObjData");
+	object_buffer_capacity = get_word(symbol("_testObjectNameCacheSize"));
+	CHECK(object_buffer_start >= BANK_START &&
+		object_buffer_start + object_buffer_capacity <= BANK_END,
+		"Production object input buffer is outside BANKRAM0D");
+	object_buffer_out_of_bounds_writes = 0;
+	object_buffer_write_monitor = true;
+}
+
+static void stop_monitoring_object_buffer_writes(void)
+{
+	object_buffer_write_monitor = false;
+}
+
 static void prepare(void)
 {
 	memset(ram, 0, sizeof(ram));
@@ -439,6 +538,18 @@ static void prepare(void)
 	allocator_oom_output_capture_active = false;
 	allocator_oom_output_length = 0;
 	allocator_oom_output_overflow = false;
+	object_file_io_enabled = false;
+	object_file_stream = NULL;
+	object_file_stream_length = 0;
+	object_file_stream_position = 0;
+	object_file_status = 0;
+	object_file_fail_first_read = false;
+	object_file_read_failed = false;
+	object_file_close_calls = 0;
+	object_buffer_write_monitor = false;
+	object_buffer_start = 0;
+	object_buffer_capacity = 0;
+	object_buffer_out_of_bounds_writes = 0;
 	vera_address = 0;
 	vera_stride = 0;
 	vera_decrement = false;
@@ -463,8 +574,11 @@ static void call_target_caller(const char *name)
 	{
 		if (++steps >= 1000000)
 		{
-			fprintf(stderr, "Production target caller %s timed out: PC=$%04X RAM=$%02X WAI=%u I=%u\n",
-				name, regs.pc, ram[0], waiting, (regs.status & FLAG_INTERRUPT) != 0);
+			fprintf(stderr, "Production target caller %s timed out: PC=$%04X RAM=$%02X SP=$%02X WAI=%u I=%u OBJECT open=%u stream=%u/%u status=$%02X close=%u readError=%u\n",
+				name, regs.pc, ram[0], regs.sp, waiting,
+				(regs.status & FLAG_INTERRUPT) != 0, cbm_open_calls,
+				object_file_stream_position, object_file_stream_length,
+				object_file_status, object_file_close_calls, object_file_read_failed);
 			CHECK(false, "Production target caller did not return");
 		}
 		if (sound_bounds_monitor_requested)
