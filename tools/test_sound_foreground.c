@@ -141,6 +141,23 @@ int main(int argc,char **argv) {
         for(unsigned i=0;i<4;i++) {CHECK(!getword(symbol(ticks[i])),"Play retained ticks");CHECK(getword(symbol(notes[i]))==0xB000+0x100*i-5,"Play note pointer incorrect");CHECK(get(symbol("_bBIsPlaying")+i)==1,"Play channel not active");}
         CHECK(!psg_writes,"Play unexpectedly cleared PSG");
 
+        /* Match command sound's end-flag publication, then exercise a real
+         * stop/repeated-stop/restart/reset sequence on the same state. */
+        word(symbol("_soundEndFlag"),23);
+        rearm_call();call("_bBStopSound",masked);cleared();
+        CHECK(get(0x8800+23)==1 && !get(symbol("_bBChannelsPlaying")),
+              "Stop after play did not finish the published sound");
+        rearm_call();call("_bBStopSound",masked);
+        CHECK(!psg_writes,"Repeated stop rewrote idle PSG registers");
+        rearm_call();ram[0x9000]=7;regs.a=31;word(symbol("_soundEndFlag"),31);
+        call("_bBPlaySound",masked);
+        CHECK(!get(0x8800+31) && get(0x8800+23)==1 && get(symbol("_bBChannelsPlaying"))==4,
+              "Restart retained stale end flags or channel accounting");
+        rearm_call();call("_bBInitSound",masked);cleared();
+        CHECK(!get(symbol("_bBChannelsPlaying")),"Reset during playback retained channels");
+        rearm_call();call("_bBInitSound",masked);cleared();
+        CHECK(!get(symbol("_bBChannelsPlaying")),"Repeated reset retained channels");
+
         prepare(masked);word(symbol("_bBLoadedSoundsPointer")+255*2,0);
         word(symbol("_bBLoadedSoundsPointer")+14,sound);
         for(unsigned i=0;i<4;i++)word(sound+2*i,0xB000+0x100*i);
