@@ -698,7 +698,7 @@ void bBPlaySound(byte soundNum, byte endSoundFlag)
 	unsigned int* ticksPointer;
 	byte** channelPointer;
 
-	if(!flag[9])
+	if(!flag[9] || !bBLoadedSoundsPointer[soundNum])
 	{
 		flag[endSoundFlag] = TRUE;
 		return;

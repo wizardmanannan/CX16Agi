@@ -110,6 +110,13 @@ static void cleared(void) {
     CHECK(psg_writes==64,"PSG clear did not write exactly 64 registers");
     for(unsigned i=0x1F9C0;i<0x1FA00;i++) CHECK(vram[i]==0,"PSG register remained audible");
 }
+/* Re-enter as a C caller without resetting playback or PSG state. */
+static void rearm_call(void) {
+    regs.sp=0x1FD;
+    ram[0x1FE]=0xFF;ram[0x1FF]=0x01;
+    word(symbol("c_sp"),0x9000);
+    psg_writes=0;
+}
 int main(int argc,char **argv) {
     CHECK(argc==3 && !strcmp(argv[1],"--build"),"Usage: test_sound_foreground --build DIR");load_image(argv[2]);
     const char *ticks[]={"_bBCh1Ticks","_bBCh2Ticks","_bBCh3Ticks","_bBCh4Ticks"};
@@ -133,6 +140,20 @@ int main(int argc,char **argv) {
         CHECK(get(symbol("_bBSoundDataBank"))==0x19 && get(symbol("_bBChannelsPlaying"))==4,"Play channel/bank state incorrect");
         for(unsigned i=0;i<4;i++) {CHECK(!getword(symbol(ticks[i])),"Play retained ticks");CHECK(getword(symbol(notes[i]))==0xB000+0x100*i-5,"Play note pointer incorrect");CHECK(get(symbol("_bBIsPlaying")+i)==1,"Play channel not active");}
         CHECK(!psg_writes,"Play unexpectedly cleared PSG");
+
+        prepare(masked);word(symbol("_bBLoadedSoundsPointer")+255*2,0);
+        word(symbol("_bBLoadedSoundsPointer")+14,sound);
+        for(unsigned i=0;i<4;i++)word(sound+2*i,0xB000+0x100*i);
+        put(sound+8,0x19);put(0x8800+9,1);put(0x8800+31,0);
+        ram[0x9000]=7;regs.a=23;call("_bBPlaySound",masked);
+        rearm_call();ram[0x9000]=255;regs.a=31;call("_bBPlaySound",masked);
+        CHECK(get(0x8800+31)==1 && get(symbol("_bBChannelsPlaying"))==4 && !psg_writes,
+              "Unloaded sound published playback state instead of rejecting the request");
+        CHECK(get(symbol("_bBSoundDataBank"))==0x19 && get(symbol("_bBEndSoundFlag"))==23 && !get(0x8800+23),
+              "Unloaded sound changed the previous sound's bank or end flag");
+        for(unsigned i=0;i<4;i++)CHECK(!getword(symbol(ticks[i])) && get(symbol("_bBIsPlaying")+i)==1 &&
+                                     getword(symbol(notes[i]))==0xB000+0x100*i-5,
+                                     "Unloaded sound changed live channel state");
 
         prepare(masked);put(0x8800+9,0);put(symbol("_bBChannelsPlaying"),2);ram[0x9000]=7;regs.a=23;
         call("_bBPlaySound",masked);CHECK(get(0x8800+23)==1 && get(symbol("_bBChannelsPlaying"))==2 && !psg_writes,"Disabled sound play changed playback state");

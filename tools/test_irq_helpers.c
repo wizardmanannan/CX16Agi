@@ -423,7 +423,7 @@ static void test_sound_source_contract(void) {
     char *init_sei = find(init_save, "asm(\"sei\")");
     char *init_clear = find(init_sei, "bBPsgClear();");
     char *init_restore = find(init_clear, "asm(\"plp\")");
-    char *play_disabled = find(play, "if(!flag[9])");
+    char *play_disabled = find(play, "if(!flag[9]");
     char *play_save = find(play, "asm(\"php\")");
     char *play_sei = find(play_save, "asm(\"sei\")");
     char *play_restore = find(play_sei, "asm(\"plp\")");
