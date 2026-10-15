@@ -468,6 +468,23 @@ static void run_object_crypto_bounds_case(void)
 		plain_objects, objectCount, objectCount * 3u + 3u, 1);
 }
 
+static void run_object_crypto_pointer_case(void)
+{
+	unsigned objectDataAddress;
+	unsigned alternateDataAddress;
+
+	prepare();
+	objectDataAddress = symbol("_bDObjData");
+	alternateDataAddress = symbol("_testObjectCryptoData");
+	memset(bank_ram[0x0D] + objectDataAddress - BANK_START, 0, 20);
+	memset(ram + alternateDataAddress, 0, 20);
+	ram[alternateDataAddress + 19] = 0x01;
+	set_object_target_word("_testObjectFileLength", 20);
+	call_target_caller("_testObjectCommandsCheckCrypto");
+	CHECK(get_object_target_byte("_testObjectCryptoResult"),
+		"OBJECT crypto detector ignored its supplied data pointer");
+}
+
 static void run_object_commands_cases(void)
 {
 	prepare();

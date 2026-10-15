@@ -757,7 +757,7 @@ static void run_harness_smoke(void)
 int main(int argc, char **argv)
 {
 	CHECK((argc == 3 || argc == 4) && !strcmp(argv[1], "--build"),
-		"Usage: test_banked_strings --build DIR [--smoke|--bounded|--input|--metadata|--allocator-oom|--get-num|--object-commands|--object-crypto-bounds|--show-object|--sound|--text-cleanup]");
+		"Usage: test_banked_strings --build DIR [--smoke|--bounded|--input|--metadata|--allocator-oom|--get-num|--object-commands|--object-crypto-bounds|--object-crypto-pointer|--show-object|--sound|--text-cleanup]");
 	load_image(argv[2]);
 	if (argc == 4)
 	{
@@ -773,6 +773,7 @@ int main(int argc, char **argv)
 		else if (!strcmp(argv[3], "--get-num")) run_commands_cases();
 		else if (!strcmp(argv[3], "--object-commands")) run_object_commands_cases();
 		else if (!strcmp(argv[3], "--object-crypto-bounds")) run_object_crypto_bounds_case();
+		else if (!strcmp(argv[3], "--object-crypto-pointer")) run_object_crypto_pointer_case();
 		else if (!strcmp(argv[3], "--show-object")) run_show_obj_allocation_cases();
 		else if (!strcmp(argv[3], "--sound")) run_sound_cases();
 		else if (!strcmp(argv[3], "--text-cleanup")) run_text_cleanup_cases();
@@ -788,6 +789,7 @@ int main(int argc, char **argv)
 	run_commands_cases();
 	run_object_commands_cases();
 	run_object_crypto_bounds_case();
+	run_object_crypto_pointer_case();
 	run_show_obj_allocation_cases();
 	run_sound_cases();
 	run_text_cleanup_cases();

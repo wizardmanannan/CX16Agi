@@ -36,9 +36,12 @@ int testObjectLoadedRoom;
 byte testObjectLoadedObjectNum;
 byte testObjectLoadedNameLength;
 word testObjectLoadedName;
+boolean testObjectCryptoResult;
+byte testObjectCryptoData[20];
 
 #pragma wrapped-call (push, trampoline, OBJECT_BANK)
 extern byte bDLoadFile(int* fileLen, byte* buffer);
+extern boolean bDIsObjCrypt(long fileLen, byte* objData);
 #pragma wrapped-call (pop)
 
 void testObjectCommandsReadFile(void)
@@ -69,6 +72,12 @@ void testObjectCommandsLoadObjectFile(void)
 		testObjectLoadedName = (word)bDObjects[0].name;
 	}
 	RAM_BANK = previousBank;
+}
+
+void testObjectCommandsCheckCrypto(void)
+{
+	testObjectCryptoResult = bDIsObjCrypt((long)testObjectFileLength,
+		testObjectCryptoData);
 }
 
 #pragma wrapped-call (push, trampoline, 0x0F)
