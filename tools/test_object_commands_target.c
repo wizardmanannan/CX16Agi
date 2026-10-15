@@ -22,6 +22,7 @@ int testObjectFileLength;
 byte testObjectFileLfn;
 byte testObjectFileNullLength;
 byte testObjectFileNullBuffer;
+byte testObjectStartupContinuation;
 boolean testObjectResult;
 boolean testObjectParseResult;
 int testObjectParsedCount;
@@ -71,6 +72,16 @@ void testObjectCommandsLoadObjectFile(void)
 		testObjectLoadedNameLength = bDObjectNameLengths[0];
 		testObjectLoadedName = (word)bDObjects[0].name;
 	}
+	RAM_BANK = previousBank;
+}
+
+void testObjectCommandsInitObjects(void)
+{
+	byte previousBank = RAM_BANK;
+	bDInitObjects();
+	RAM_BANK = OBJECT_BANK;
+	testObjectObservedCount = bDNumObjects;
+	testObjectStartupContinuation = 1;
 	RAM_BANK = previousBank;
 }
 

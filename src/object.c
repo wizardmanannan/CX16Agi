@@ -221,7 +221,7 @@ void bDLoadObjectFile()
 
     if (fileLen < 3 || fileLen > OBJ_NAME_CACHE_SIZE) {
         bDNumObjects = 0;
-        return;
+        exit(1);
     }
 
     if (bDIsObjCrypt(fileLen, bDObjData))
@@ -232,7 +232,10 @@ void bDLoadObjectFile()
         }
     }
 
-    bDParseObjectFileData(fileLen);
+    if (!bDParseObjectFileData(fileLen))
+    {
+        exit(1);
+    }
 }
 
 void bDInitObjects()

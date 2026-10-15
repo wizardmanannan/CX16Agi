@@ -365,17 +365,17 @@ static void run_object_reader_capacity_case(void)
 
 	prepare();
 	set_object_file_stream(NULL, 0, false);
-	call_target_caller("_testObjectCommandsLoadObjectFile");
-	CHECK(object_file_close_calls == 1 &&
-		get_object_target_word("_testObjectObservedCount") == 0,
-		"OBJECT loader did not publish an empty file as zero objects");
+	CHECK(call_target_caller_until_exit("_testObjectCommandsLoadObjectFile"),
+		"OBJECT loader returned for a zero-length file");
+	CHECK((regs.a | regs.x) != 0 && object_file_close_calls == 1,
+		"OBJECT loader did not reject a zero-length file with a nonzero exit");
 
 	prepare();
 	set_object_file_stream(short_header, sizeof(short_header), false);
-	call_target_caller("_testObjectCommandsLoadObjectFile");
-	CHECK(object_file_close_calls == 1 &&
-		get_object_target_word("_testObjectObservedCount") == 0,
-		"OBJECT loader did not reject a short header cleanly");
+	CHECK(call_target_caller_until_exit("_testObjectCommandsLoadObjectFile"),
+		"OBJECT loader returned for a short header");
+	CHECK((regs.a | regs.x) != 0 && object_file_close_calls == 1,
+		"OBJECT loader did not reject a short header with a nonzero exit");
 
 	prepare();
 	set_object_file_stream(one_byte, sizeof(one_byte), false);
@@ -392,6 +392,77 @@ static void run_object_reader_capacity_case(void)
 		get_object_target_word("_testObjectFileLength") == 0xFFFF && cbm_open_calls == 0,
 		"OBJECT reader opened a file with a null destination buffer");
 	free(data);
+}
+
+static void expect_object_startup_rejection(const uint8_t *data, unsigned length)
+{
+	prepare();
+	set_object_file_stream(data, length, false);
+	set_object_target_byte("_testObjectStartupContinuation", 0);
+	CHECK(call_target_caller_until_exit("_testObjectCommandsInitObjects"),
+		"Malformed OBJECT input returned through startup after loading");
+	CHECK(regs.pc == symbol("_exit") && (regs.a | regs.x) != 0,
+		"Malformed OBJECT input did not exit with a nonzero status");
+	CHECK(get_object_target_byte("_testObjectStartupContinuation") == 0,
+		"Malformed OBJECT input reached post-load initialization");
+	CHECK(object_file_close_calls == 1,
+		"Malformed OBJECT input did not close its file before exiting");
+}
+
+static void run_object_startup_validation_cases(void)
+{
+	static const uint8_t empty_objects[] = { 0, 0, 0 };
+	static const uint8_t short_objects[] = { 0, 0 };
+	static const uint8_t invalid_table_size[] = { 1, 0, 0 };
+	static const uint8_t invalid_name_offset[] = { 3, 0, 0, 0, 0, 0 };
+	static const uint8_t unterminated_name[] = { 3, 0, 0, 3, 0, 0, 'a', 'b', 'c' };
+	unsigned objectCount = object_command_objects;
+	unsigned tableSize = objectCount * 3u;
+	unsigned tableEnd = tableSize + 3u;
+	unsigned fullLength = tableEnd + objectCount * 2u;
+	uint8_t full_objects[3 + 5 * 100];
+	unsigned index;
+
+	CHECK(objectCount == 100,
+		"Production OBJECT target no longer uses MAX_OBJECTS=100");
+	CHECK(fullLength <= sizeof(full_objects),
+		"Full OBJECT table fixture exceeds its test buffer");
+
+	prepare();
+	set_object_file_stream(empty_objects, sizeof(empty_objects), false);
+	call_target_caller("_testObjectCommandsInitObjects");
+	CHECK(get_object_target_byte("_testObjectStartupContinuation") == 1 &&
+		get_object_target_word("_testObjectObservedCount") == 0,
+		"Valid empty OBJECT table did not complete initialization");
+	CHECK(object_file_close_calls == 1,
+		"Valid empty OBJECT table did not close its file");
+
+	memset(full_objects, 0, sizeof(full_objects));
+	full_objects[0] = (uint8_t)tableSize;
+	full_objects[1] = (uint8_t)(tableSize >> 8);
+	for (index = 0; index < objectCount; ++index)
+	{
+		unsigned record = 3u + index * 3u;
+		unsigned name = tableEnd + index * 2u;
+		unsigned nameOffset = name - 3u;
+		full_objects[record] = (uint8_t)nameOffset;
+		full_objects[record + 1u] = (uint8_t)(nameOffset >> 8);
+		full_objects[record + 2u] = (uint8_t)index;
+		full_objects[name] = (uint8_t)('A' + (index % 26u));
+	}
+	prepare();
+	set_object_file_stream(full_objects, fullLength, false);
+	call_target_caller("_testObjectCommandsInitObjects");
+	CHECK(get_object_target_byte("_testObjectStartupContinuation") == 1 &&
+		get_object_target_word("_testObjectObservedCount") == objectCount,
+		"Valid full OBJECT table did not complete initialization");
+	CHECK(object_file_close_calls == 1,
+		"Valid full OBJECT table did not close its file");
+
+	expect_object_startup_rejection(short_objects, sizeof(short_objects));
+	expect_object_startup_rejection(invalid_table_size, sizeof(invalid_table_size));
+	expect_object_startup_rejection(invalid_name_offset, sizeof(invalid_name_offset));
+	expect_object_startup_rejection(unterminated_name, sizeof(unterminated_name));
 }
 
 static void load_object_crypto_stream(const uint8_t *stream, unsigned length,
@@ -508,6 +579,7 @@ static void run_object_commands_cases(void)
 	inspect_object(0, OBJECT_COMMAND_SENTINEL_ROOM, OBJECT_COMMAND_SENTINEL_NAME);
 	run_object_file_capacity_cases();
 	run_object_reader_capacity_case();
+	run_object_startup_validation_cases();
 
 	puts("Compiled object commands exercise real BANKRAM0F/BANKRAM03 handlers and BANKRAM0D accessors");
 }
