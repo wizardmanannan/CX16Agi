@@ -55,8 +55,9 @@ void b6Timing_proc(uint32_t elapsedSeconds)
 	totalSeconds += ((uint32_t)var[13] * 60U * 60U);
 	totalSeconds += ((uint32_t)var[14] * 24U * 60U * 60U);
 
-	var[14] = (byte)(totalSeconds / (24U * 60U * 60U));
-	totalSeconds %= (24U * 60U * 60U);
+	/* cc65 unsigned int is 16 bits; a day must be computed as unsigned long. */
+	var[14] = (byte)(totalSeconds / (24UL * 60U * 60U));
+	totalSeconds %= (24UL * 60U * 60U);
 	var[13] = (byte)(totalSeconds / (60U * 60U));
 	totalSeconds %= (60U * 60U);
 	var[12] = (byte)(totalSeconds / 60U);

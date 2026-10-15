@@ -744,6 +744,7 @@ static bool call_target_caller_until_exit(const char *name)
 #include "test_show_obj_allocation_cases.h"
 #include "test_banked_strings_sound_cases.h"
 #include "test_banked_strings_text_cases.h"
+#include "test_timer_target_cases.h"
 
 static void run_harness_smoke(void)
 {
@@ -757,7 +758,7 @@ static void run_harness_smoke(void)
 int main(int argc, char **argv)
 {
 	CHECK((argc == 3 || argc == 4) && !strcmp(argv[1], "--build"),
-		"Usage: test_banked_strings --build DIR [--smoke|--bounded|--input|--metadata|--allocator-oom|--get-num|--object-commands|--object-crypto-bounds|--object-crypto-pointer|--show-object|--sound|--text-cleanup]");
+		"Usage: test_banked_strings --build DIR [--smoke|--bounded|--input|--metadata|--allocator-oom|--get-num|--object-commands|--object-crypto-bounds|--object-crypto-pointer|--show-object|--sound|--text-cleanup|--timer]");
 	load_image(argv[2]);
 	if (argc == 4)
 	{
@@ -777,6 +778,7 @@ int main(int argc, char **argv)
 		else if (!strcmp(argv[3], "--show-object")) run_show_obj_allocation_cases();
 		else if (!strcmp(argv[3], "--sound")) run_sound_cases();
 		else if (!strcmp(argv[3], "--text-cleanup")) run_text_cleanup_cases();
+		else if (!strcmp(argv[3], "--timer")) run_timer_clock_cases();
 		else CHECK(false, "Unknown production caller test case");
 		return 0;
 	}
@@ -793,5 +795,6 @@ int main(int argc, char **argv)
 	run_show_obj_allocation_cases();
 	run_sound_cases();
 	run_text_cleanup_cases();
+	run_timer_clock_cases();
 	return 0;
 }
