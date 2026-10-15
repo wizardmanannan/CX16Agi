@@ -15,6 +15,7 @@ byte b3CurrentForegroundColour;
 byte b3CurrentBackgroundColour;
 byte b3LastBoxLines;
 byte b3LastBoxStartLine;
+static byte b3LastBoxFirstRow;
 char b3TextBuffers[TEXTBUFFER_TOTAL_SIZE];
 #pragma bss-name (pop)
 
@@ -260,30 +261,47 @@ void b6TestCharset()
 }
 #endif
 
-void b3FillChar(byte startLine, byte endLine, byte paletteNumber, byte charToFill)
+static void b3FillCharAt(byte firstRow, byte startLine, unsigned int endLine,
+	byte paletteNumber, byte charToFill)
 {
-	unsigned int line, lastLine;
-	char* clearBuffer = b3TextBuffer1;
-	const unsigned int lastMapLine = TILE_LAYER_HEIGHT - FIRST_TEXT_ROW;
+	unsigned int line, lastLine, chunkStartLine, chunkLastLine;
+	const unsigned int maxRowsPerChunk = TEXTBUFFER_TOTAL_SIZE / (TILE_LAYER_WIDTH + 1);
+	unsigned int lastMapLine;
 
+	if (firstRow < 1 || firstRow > TILE_LAYER_HEIGHT)
+	{
+		return;
+	}
+
+	lastMapLine = TILE_LAYER_HEIGHT - firstRow;
 	if (startLine > lastMapLine || startLine > endLine)
 	{
 		return;
 	}
 
 	lastLine = endLine < lastMapLine ? endLine : lastMapLine;
-	for (line = startLine; line <= lastLine; ++line)
+	for (line = startLine; line <= lastLine;)
 	{
-		memset(clearBuffer, charToFill, TILE_LAYER_WIDTH);
-		clearBuffer += TILE_LAYER_WIDTH;
-		if (line < lastLine)
+		char* clearBuffer = b3TextBuffer1;
+		chunkStartLine = line;
+		chunkLastLine = line + maxRowsPerChunk - 1;
+		if (chunkLastLine > lastLine) chunkLastLine = lastLine;
+		while (line <= chunkLastLine)
 		{
-			*clearBuffer++ = NEW_LINE;
+			memset(clearBuffer, charToFill, TILE_LAYER_WIDTH);
+			clearBuffer += TILE_LAYER_WIDTH;
+			if (line < chunkLastLine) *clearBuffer++ = NEW_LINE;
+			++line;
 		}
+		*clearBuffer = '\0';
+		b3DisplayMessageBox(b3TextBuffer1, TEXT_CODE_BANK, chunkStartLine, 0,
+			paletteNumber, 0, TRUE, firstRow);
 	}
-	*clearBuffer = '\0';
-	b3DisplayMessageBox(b3TextBuffer1, TEXT_CODE_BANK, startLine, 0,
-		paletteNumber, 0, TRUE, FIRST_TEXT_ROW);
+}
+
+void b3FillChar(byte startLine, byte endLine, byte paletteNumber, byte charToFill)
+{
+	b3FillCharAt(FIRST_TEXT_ROW, startLine, endLine, paletteNumber, charToFill);
 }
 
 //Thanks to https://www.rosettacode.org/wiki/Word_wrap#In-place_greedy
@@ -513,9 +531,9 @@ void b3DisplayMessageBox(char* message, byte messageBank, byte row, byte col, by
 	unsigned int lastLogicalRow, physicalRow;
 	size_t lineWidth = 0, maximumLineWidth = 0;
 	boolean messageTerminated;
-	/* b3FillChar passes its prepared map buffer directly to clear all 64 cells. */
+	/* Row fills pass their prepared map buffer directly to clear all 64 cells. */
 	boolean fullLayerClear = !boxWidth && row != AUTO_CALC_ROW && col == 0 && wrap &&
-		message == (char*)b3TextBuffer1 && firstRow == FIRST_TEXT_ROW;
+		message == (char*)b3TextBuffer1;
 	size_t maxMessageSize = boxWidth ? TEXTBUFFER_SIZE : TEXTBUFFER_TOTAL_SIZE;
 
 	if (!message || firstRow < 1 || firstRow > TILE_LAYER_HEIGHT)
@@ -643,6 +661,7 @@ void b3DisplayMessageBox(char* message, byte messageBank, byte row, byte col, by
 		currentTextBuffer = preparedBuffer;
 		b3LastBoxLines = (byte)preparedRows;
 		b3LastBoxStartLine = (byte)preparedStartLine;
+		b3LastBoxFirstRow = firstRow;
 		physicalRow = firstRow + preparedStartLine - 1;
 		displayTextAddressToCopyTo = MAPBASE + physicalRow * TILE_LAYER_BYTES_PER_ROW + preparedColumn * BYTES_PER_CELL;
 		b3PaletteAddress = MAPBASE + physicalRow * TILE_LAYER_BYTES_PER_ROW + 1; //We will set the same palette for the whole row
@@ -731,11 +750,28 @@ byte b3SetTextColor(byte foreground, byte background)
 
 void b3ClearLastPlacedText()
 {
+	byte previousLines, previousStartLine, previousFirstRow;
+	unsigned int lastLine;
+
+	if (!b3LastBoxLines)
+	{
+		return;
+	}
+
+	previousLines = b3LastBoxLines;
+	previousStartLine = b3LastBoxStartLine;
+	previousFirstRow = b3LastBoxFirstRow;
+	lastLine = (unsigned int)previousStartLine + previousLines - 1;
+
 #ifdef VERBOSE_DISPLAY_TEXT
-	printf("Trying to clear at start line %d number of lines %d end line %d \n", lastBoxStartLine, b3LastBoxLines, lastBoxStartLine + lastBoxLines - 1);
+	printf("Trying to clear at start line %d number of lines %d end line %d \n", previousStartLine, previousLines, lastLine);
 #endif
 
-	b3FillChar(b3LastBoxStartLine, b3LastBoxStartLine + b3LastBoxLines - 1, TEXTBOX_PALETTE_NUMBER, TRANSPARENT_CHAR);
+	b3FillCharAt(previousFirstRow, previousStartLine, lastLine,
+		TEXTBOX_PALETTE_NUMBER, TRANSPARENT_CHAR);
+	b3LastBoxLines = previousLines;
+	b3LastBoxStartLine = previousStartLine;
+	b3LastBoxFirstRow = previousFirstRow;
 }
 
 #pragma code-name (pop)

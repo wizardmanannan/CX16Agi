@@ -521,6 +521,155 @@ static void test_first_row_controls_map_bounds(void)
 	CHECK(!displayCalls, "A first-row origin below the tile map was accepted");
 }
 
+static void check_cleanup_chunk_boundary(byte firstRow, unsigned rows)
+{
+	char message[TILE_LAYER_HEIGHT * 2 + 1];
+	unsigned i, length = 0;
+	unsigned expectedChunks = (rows + TEXTBUFFER_TOTAL_SIZE / (TILE_LAYER_WIDTH + 1) - 1) /
+		(TEXTBUFFER_TOTAL_SIZE / (TILE_LAYER_WIDTH + 1));
+	unsigned expectedFirstMapRow = firstRow - 1;
+	unsigned expectedLastMapRow = expectedFirstMapRow + rows - 1;
+	unsigned repeat;
+
+	for (i = 0; i < rows; ++i)
+	{
+		message[length++] = 'A';
+		if (i + 1 < rows) message[length++] = NEW_LINE;
+	}
+	message[length] = '\0';
+
+	displayCalls = 0;
+	b3DisplayMessageBox(message, 0, 0, 0, 0, 0, FALSE, firstRow);
+	CHECK(displayCalls == 1 && b3LastBoxLines == rows,
+		"Maximum-height fixture did not publish its full displayed extent");
+	CHECK(b3LastBoxStartLine == 0 && b3LastBoxFirstRow == firstRow,
+		"Maximum-height fixture published the wrong cleanup origin");
+
+	for (repeat = 0; repeat < 2; ++repeat)
+	{
+		displayCalls = displayedCells = displayedNewlines = unexpectedText = 0;
+		fillMapRowsSeen = 0;
+		captureFillOutput = 1;
+		b3ClearLastPlacedText();
+		captureFillOutput = 0;
+		CHECK(displayCalls == expectedChunks && fillMapRowsSeen == expectedChunks,
+			"Cleanup did not submit the expected number of bounded chunks");
+		CHECK(lowestFillMapRow == expectedFirstMapRow && highestFillMapRow == expectedLastMapRow,
+			"Chunked cleanup escaped the displayed physical row range");
+		CHECK(displayedCells == rows * TILE_LAYER_WIDTH &&
+			displayedNewlines + fillMapRowsSeen == rows,
+			"Chunked cleanup omitted cells or row boundaries");
+		CHECK(!unexpectedText, "Chunked cleanup submitted unexpected text");
+		CHECK(b3LastBoxLines == rows && b3LastBoxStartLine == 0 &&
+			b3LastBoxFirstRow == firstRow,
+			"Chunked or repeated cleanup replaced the original extent or origin");
+	}
+}
+
+static void test_cleanup_staging_capacity_and_maximum_height(void)
+{
+	check_cleanup_chunk_boundary(1, TEXTBUFFER_TOTAL_SIZE / (TILE_LAYER_WIDTH + 1));
+	check_cleanup_chunk_boundary(1, TEXTBUFFER_TOTAL_SIZE / (TILE_LAYER_WIDTH + 1) + 1);
+	check_cleanup_chunk_boundary(1, TILE_LAYER_HEIGHT);
+	check_cleanup_chunk_boundary(2, TILE_LAYER_HEIGHT - 1);
+	check_cleanup_chunk_boundary(FIRST_TEXT_ROW, TILE_LAYER_HEIGHT - FIRST_TEXT_ROW + 1);
+}
+
+static void test_cleanup_uses_display_origin(void)
+{
+	static const struct
+	{
+		byte firstRow;
+		unsigned expectedFirstMapRow;
+		unsigned expectedLastMapRow;
+	} cases[] = {
+		{ 1, 0, 1 },
+		{ FIRST_TEXT_ROW, FIRST_TEXT_ROW - 1, FIRST_TEXT_ROW },
+		{ TILE_LAYER_HEIGHT, TILE_LAYER_HEIGHT - 1, TILE_LAYER_HEIGHT - 1 }
+	};
+	size_t i;
+
+	for (i = 0; i < sizeof(cases) / sizeof(cases[0]); ++i)
+	{
+		char message[] = "first\nsecond";
+		unsigned displayedFirstMapRow, displayedLastMapRow;
+		displayCalls = displayedCells = displayedNewlines = unexpectedText = 0;
+		fillMapRowsSeen = 0;
+		captureFillOutput = 1;
+		b3DisplayMessageBox(message, 0, 0, 0, 0, 0, FALSE, cases[i].firstRow);
+		captureFillOutput = 0;
+		CHECK(displayCalls == 1, "Origin regression message was not displayed");
+		CHECK(fillMapRowsSeen == 1 && lowestFillMapRow == cases[i].expectedFirstMapRow &&
+			highestFillMapRow == cases[i].expectedLastMapRow,
+			"Origin regression message did not use its expected physical rows");
+		displayedFirstMapRow = lowestFillMapRow;
+		displayedLastMapRow = highestFillMapRow;
+
+		displayCalls = displayedCells = displayedNewlines = unexpectedText = 0;
+		fillMapRowsSeen = 0;
+		captureFillOutput = 1;
+		b3ClearLastPlacedText();
+		captureFillOutput = 0;
+		CHECK(fillMapRowsSeen == 1 && lowestFillMapRow == displayedFirstMapRow &&
+			highestFillMapRow == displayedLastMapRow,
+			"Cleanup did not clear the same physical rows as the displayed message");
+		CHECK(displayedCells == (displayedLastMapRow - displayedFirstMapRow + 1) * TILE_LAYER_WIDTH,
+			"Cleanup did not cover every cell in the displayed physical rows");
+	}
+}
+
+static void test_cleanup_without_previous_display_and_repeats(void)
+{
+	char message[] = "first\nsecond";
+	displayCalls = 0;
+	captureFillOutput = 1;
+	b3ClearLastPlacedText();
+	captureFillOutput = 0;
+	CHECK(!displayCalls, "Cleanup without a previous display cleared an unrelated row range");
+
+	displayCalls = displayedCells = displayedNewlines = unexpectedText = 0;
+	fillMapRowsSeen = 0;
+	captureFillOutput = 1;
+	b3DisplayMessageBox(message, 0, 0, 0, 0, 0, FALSE, 1);
+	captureFillOutput = 0;
+	CHECK(fillMapRowsSeen == 1 && lowestFillMapRow == 0 && highestFillMapRow == 1,
+		"Repeated-cleanup fixture did not display at physical rows zero and one");
+
+	displayCalls = displayedCells = displayedNewlines = unexpectedText = 0;
+	fillMapRowsSeen = 0;
+	captureFillOutput = 1;
+	b3ClearLastPlacedText();
+	b3ClearLastPlacedText();
+	captureFillOutput = 0;
+	CHECK(displayCalls == 2 && fillMapRowsSeen == 2 && lowestFillMapRow == 0 && highestFillMapRow == 1,
+		"Repeated cleanup lost the displayed physical origin or extent");
+	CHECK(displayedCells == 2 * TILE_LAYER_WIDTH * 2,
+		"Repeated cleanup did not clear the full displayed extent each time");
+}
+
+static void test_rejected_draw_preserves_cleanup_origin(void)
+{
+	char valid[] = "first\nsecond";
+	char invalid[901];
+	memset(invalid, 'X', sizeof(invalid) - 1);
+	invalid[sizeof(invalid) - 1] = '\0';
+	displayCalls = 0;
+	b3DisplayMessageBox(valid, 0, 0, 0, 0, 0, FALSE, 1);
+	CHECK(displayCalls == 1, "Initial non-default-origin message was not displayed");
+	b3DisplayMessageBox(invalid, 0, 5, 0, 2, 254, FALSE, FIRST_TEXT_ROW);
+	CHECK(displayCalls == 1, "Rejected draw reached the renderer");
+
+	displayedCells = displayedNewlines = unexpectedText = 0;
+	fillMapRowsSeen = 0;
+	captureFillOutput = 1;
+	b3ClearLastPlacedText();
+	captureFillOutput = 0;
+	CHECK(fillMapRowsSeen == 1 && lowestFillMapRow == 0 && highestFillMapRow == 1,
+		"Rejected draw replaced the previous cleanup origin or extent");
+	CHECK(displayedCells == 2 * TILE_LAYER_WIDTH,
+		"Cleanup after a rejected draw omitted the previous rows");
+}
+
 static void test_control_bytes_survive_preparation(void)
 {
 	char message[] = { 'A', '\t', '\r', 1, 'B', '\0' };
@@ -630,6 +779,10 @@ static const TextTestCase textTests[] =
 	{ "right_edge_clips_unboxed_text", test_right_edge_clips_unboxed_text },
 	{ "bottom_edge_clips_unboxed_text", test_bottom_edge_clips_unboxed_text },
 	{ "first_row_controls_map_bounds", test_first_row_controls_map_bounds },
+	{ "cleanup_staging_capacity_and_maximum_height", test_cleanup_staging_capacity_and_maximum_height },
+	{ "cleanup_uses_display_origin", test_cleanup_uses_display_origin },
+	{ "cleanup_without_previous_display_and_repeats", test_cleanup_without_previous_display_and_repeats },
+	{ "rejected_draw_preserves_cleanup_origin", test_rejected_draw_preserves_cleanup_origin },
 	{ "control_bytes_survive_preparation", test_control_bytes_survive_preparation },
 	{ "source_alias_inside_text_buffer", test_source_alias_inside_text_buffer },
 	{ "rejected_box_preserves_cleanup_extent", test_rejected_box_preserves_cleanup_extent },

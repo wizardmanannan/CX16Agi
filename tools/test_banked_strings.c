@@ -27,6 +27,7 @@ extern struct regs regs;
 #define VERA_ADDR_HIGH 0x9F21u
 #define VERA_ADDR_BANK 0x9F22u
 #define VERA_DATA0 0x9F23u
+#define VERA_ISR 0x9F27u
 #define PARSER_BANK 0x07u
 #define INPUT_STRING_ADDRESS 0xE680u
 #define RETURN_PC  0x0200u
@@ -51,6 +52,12 @@ static uint8_t vram[0x20000];
 static uint32_t vera_address;
 static unsigned vera_stride;
 static bool vera_decrement;
+static bool service_text_render_irqs;
+static bool watch_text_buffer_overflow;
+static uint16_t text_buffer_overflow_start;
+static uint16_t text_buffer_overflow_end;
+static unsigned text_buffer_overflow_writes;
+static uint16_t first_text_buffer_overflow_address;
 static unsigned vera_data0_writes;
 static const unsigned vera_increments[16] = { 0, 1, 2, 4, 8, 16, 32, 64, 128, 256, 512, 40, 80, 160, 320, 640 };
 static struct { uint32_t address; uint8_t value; } vera_data0_history[16];
@@ -110,6 +117,10 @@ static void advance_vera_address(void)
 		vera_address = (vera_address - vera_stride) & 0x1FFFFu;
 	else
 		vera_address = (vera_address + vera_stride) & 0x1FFFFu;
+	/* VERA updates its address registers after each data-port access. */
+	ram[VERA_ADDR_LOW] = (uint8_t)vera_address;
+	ram[VERA_ADDR_HIGH] = (uint8_t)(vera_address >> 8);
+	ram[VERA_ADDR_BANK] = (uint8_t)((ram[VERA_ADDR_BANK] & 0xFE) | (vera_address >> 16));
 }
 
 uint8_t read6502(uint16_t address, uint8_t bank)
@@ -209,6 +220,18 @@ uint8_t read6502(uint16_t address, uint8_t bank)
 void write6502(uint16_t address, uint8_t bank, uint8_t value)
 {
 	(void)bank;
+	if (watch_text_buffer_overflow && ram[0] == 3 &&
+		address >= text_buffer_overflow_start && address < text_buffer_overflow_end && value == 0x80)
+	{
+		if (!text_buffer_overflow_writes) first_text_buffer_overflow_address = address;
+		++text_buffer_overflow_writes;
+	}
+	if (address == VERA_ISR && service_text_render_irqs)
+	{
+		/* The production IRQ clears VERA interrupt bits by writing one to them. */
+		ram[address] &= (uint8_t)~value;
+		return;
+	}
 	if (address == VERA_ADDR_LOW)
 	{
 		ram[address] = value;
@@ -422,6 +445,7 @@ static void prepare(void)
 	vera_data0_writes = 0;
 	vera_data0_history_count = 0;
 	capture_vera_data0_history = false;
+	service_text_render_irqs = false;
 }
 
 
@@ -479,6 +503,12 @@ static void call_target_caller(const char *name)
 			}
 		}
 		step6502();
+		if (service_text_render_irqs)
+		{
+			/* Deliver VSYNC at WAI and let irq6502 run the production handler. */
+			if (waiting) ram[VERA_ISR] |= 1;
+			if (ram[VERA_ISR] & 1) irq6502();
+		}
 		if (sound_bounds_monitor_requested)
 		{
 			if (sound_bounds_prefix_active && regs.pc == sound_bounds_prefix_return &&
@@ -536,6 +566,7 @@ static bool call_target_caller_until_exit(const char *name)
 #include "test_object_commands_cases.h"
 #include "test_show_obj_allocation_cases.h"
 #include "test_banked_strings_sound_cases.h"
+#include "test_banked_strings_text_cases.h"
 
 static void run_harness_smoke(void)
 {
@@ -549,7 +580,7 @@ static void run_harness_smoke(void)
 int main(int argc, char **argv)
 {
 	CHECK((argc == 3 || argc == 4) && !strcmp(argv[1], "--build"),
-		"Usage: test_banked_strings --build DIR [--smoke|--bounded|--input|--metadata|--allocator-oom|--get-num|--object-commands|--show-object|--sound]");
+		"Usage: test_banked_strings --build DIR [--smoke|--bounded|--input|--metadata|--allocator-oom|--get-num|--object-commands|--show-object|--sound|--text-cleanup]");
 	load_image(argv[2]);
 	if (argc == 4)
 	{
@@ -566,6 +597,7 @@ int main(int argc, char **argv)
 		else if (!strcmp(argv[3], "--object-commands")) run_object_commands_cases();
 		else if (!strcmp(argv[3], "--show-object")) run_show_obj_allocation_cases();
 		else if (!strcmp(argv[3], "--sound")) run_sound_cases();
+		else if (!strcmp(argv[3], "--text-cleanup")) run_text_cleanup_cases();
 		else CHECK(false, "Unknown production caller test case");
 		return 0;
 	}
@@ -579,5 +611,6 @@ int main(int argc, char **argv)
 	run_object_commands_cases();
 	run_show_obj_allocation_cases();
 	run_sound_cases();
+	run_text_cleanup_cases();
 	return 0;
 }
