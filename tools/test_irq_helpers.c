@@ -15,12 +15,14 @@
 extern struct regs regs;
 static uint8_t ram[65536], vram[131072];
 static unsigned addr[2], stride[2], writes, data_port_reads, acks;
-static unsigned write_addresses[2048];
-static uint8_t write_values[2048];
+static unsigned write_addresses[8192];
+static uint8_t write_values[8192];
 struct symbol { char name[100]; unsigned addr; } symbols[128];
 static unsigned symbol_count;
 static bool track_sprite_reads;
 static unsigned sprite_read_start, sprite_read_end, sprite_read_limit, sprite_reads;
+static bool fx_write;
+static uint8_t fx_cache[4];
 
 #define CHECK(condition, message) do { if (!(condition)) { fprintf(stderr, "%s (%s:%d)\n", message, __FILE__, __LINE__); exit(1); } } while (0)
 
@@ -49,6 +51,14 @@ uint8_t read6502(uint16_t address, uint8_t bank) {
 
 void write6502(uint16_t address, uint8_t bank, uint8_t value) {
     (void)bank;
+    if (address >= 0x9F29 && address <= 0x9F2C && (ram[0x9F25] >> 1) == 6) {
+        fx_cache[address - 0x9F29] = value;
+        return;
+    }
+    if (address == 0x9F29 && (ram[0x9F25] >> 1) == 2) {
+        fx_write = (value & 0x40) != 0;
+        return;
+    }
     if (address >= 0x9F20 && address <= 0x9F22) {
         static const unsigned increments[16] = {0,1,2,4,8,16,32,64,128,256,512,40,80,160,320,640};
         unsigned port = ram[0x9F25] & 1;
@@ -59,12 +69,22 @@ void write6502(uint16_t address, uint8_t bank, uint8_t value) {
     }
     if (address == 0x9F23 || address == 0x9F24) {
         unsigned port = address - 0x9F23;
-        CHECK(writes < sizeof(write_addresses) / sizeof(write_addresses[0]), "Too many VERA writes");
-        write_addresses[writes] = addr[port];
-        write_values[writes] = value;
-        vram[addr[port]] = value;
+        unsigned count = fx_write ? 4 : 1;
+        CHECK(writes + count <= sizeof(write_addresses) / sizeof(write_addresses[0]), "Too many VERA writes");
+        if (fx_write) {
+            CHECK(value == 0 && (addr[port] & 3) == 0, "Unexpected unaligned VERA FX cache write");
+            for (unsigned i = 0; i < 4; ++i) {
+                write_addresses[writes + i] = (addr[port] + i) & 0x1FFFF;
+                write_values[writes + i] = fx_cache[i];
+                vram[(addr[port] + i) & 0x1FFFF] = fx_cache[i];
+            }
+        } else {
+            write_addresses[writes] = addr[port];
+            write_values[writes] = value;
+            vram[addr[port]] = value;
+        }
         addr[port] = (addr[port] + stride[port]) & 0x1FFFF;
-        ++writes;
+        writes += count;
         return;
     }
     if (address == 0x9F27) {
@@ -150,16 +170,57 @@ static void run_tool(char **arguments) {
     }
     int status;
     CHECK(waitpid(child, &status, 0) == child, "Cannot wait for assembler");
-    CHECK(WIFEXITED(status) && !WEXITSTATUS(status), "Assembler or linker failed");
+    if (!WIFEXITED(status) || WEXITSTATUS(status)) {
+        if (!strcmp(arguments[0], "ca65") && arguments[5]) {
+            FILE *source = fopen(arguments[5], "r");
+            if (source) {
+                char line[1024];
+                unsigned number = 0;
+                fprintf(stderr, "Failed assembler input %s:\n", arguments[5]);
+                while (fgets(line, sizeof(line), source))
+                    fprintf(stderr, "%4u %s", ++number, line);
+                fclose(source);
+            }
+        }
+        CHECK(false, "Assembler or linker failed");
+    }
+}
+
+static void append_menu_fixture(const char *path) {
+    char *menu = read_file("src/menuAsm.s");
+    char *constants = find(menu, "MENU_SREG =");
+    char *constants_end = find(constants, ".segment \"CODE\"");
+    char *allowed = find(menu, "isMenuAllowed:");
+    char *allowed_end = find(allowed, "\n\n.segment \"BANKRAM0A\"");
+    char *helpers = find(menu, "bAClearTopLine:");
+    char *helpers_end = find(helpers, "bAPrintMenuText:");
+    char *printer = find(menu, "bAPrintMenuText:");
+    char *printer_end = find(printer, "MENU_BAR_LOCATION =");
+    char *locations = printer_end;
+    char *locations_end = find(locations, "_bAInitMenus:");
+    char *display = find(menu, "bADisplayMenu:");
+    char *display_end = find(display, "\n.endif");
+    FILE *file = fopen(path, "a"); CHECK(file, "Cannot extend owned IRQ fixture");
+    fprintf(file, "\n.segment \"ZEROPAGE\"\n%.*s\n.segment \"CODE\"\n%.*s\n.segment \"BANKRAM0A\"\n%.*s\n%.*s\n%.*s\n%.*s\n",
+        (int)(constants_end - constants), constants,
+        (int)(allowed_end - allowed), allowed,
+        (int)(helpers_end - helpers), helpers,
+        (int)(printer_end - printer), printer,
+        (int)(locations_end - locations), locations,
+        (int)(display_end - display), display);
+    CHECK(!fclose(file), "Cannot close menu fixture");
+    free(menu);
 }
 
 static void assemble(void) {
-    char source[65536], stub[256], path[4096], stub_path[4096], config_path[4096], object_path[4096], stub_object_path[4096], binary_path[4096], labels_path[4096];
+    char source[65536], stub[256], menu_stub[1024], path[4096], stub_path[4096], menu_stub_path[4096], config_path[4096], object_path[4096], stub_object_path[4096], menu_stub_object_path[4096], binary_path[4096], labels_path[4096];
     suite_test_path(path, sizeof(path), suite_fixture_directory, "test.s");
     suite_test_path(stub_path, sizeof(stub_path), suite_fixture_directory, "sound_stub.s");
+    suite_test_path(menu_stub_path, sizeof(menu_stub_path), suite_fixture_directory, "menu_stub.s");
     suite_test_path(config_path, sizeof(config_path), suite_fixture_directory, "test.cfg");
     suite_test_path(object_path, sizeof(object_path), suite_output_directory, "irq_helpers.o");
     suite_test_path(stub_object_path, sizeof(stub_object_path), suite_output_directory, "sound_stub.o");
+    suite_test_path(menu_stub_object_path, sizeof(menu_stub_object_path), suite_output_directory, "menu_stub.o");
     suite_test_path(binary_path, sizeof(binary_path), suite_output_directory, "irq_helpers.bin");
     suite_test_path(labels_path, sizeof(labels_path), suite_output_directory, "irq_helpers.lbl");
 
@@ -172,6 +233,11 @@ static void assemble(void) {
         exit(EXIT_FAILURE);
     }
     char *sprite_snapshot_reset_end = find(sprite_snapshot_reset, "\nrts") + strlen("\nrts");
+    char *text_state = find(irq, "_b3PaletteAddress: .res 4");
+    char *text_palette_code = find(text_state, "_b3InitLayer1Mapbase:");
+    char *text_copy_code = find(text_palette_code, "handleDisplayTextSlice:");
+    char *text_data = find(text_copy_code, "_displayTextAddressToCopyTo: .word $0");
+    char *text_end = find(text_data, ".segment \"BANKRAM06\"");
     char *snapshot_helper = find(irq, "_b6CopyVSyncCounter32:\n");
     char *snapshot_helper_end = find(snapshot_helper, "\nrts") + strlen("\nrts");
     char *owner_helpers = find(irq, "_b6EnterForegroundVera:\n");
@@ -207,6 +273,7 @@ static void assemble(void) {
         ".export handleSpriteUpdates,checkSpriteUpdateCapacity,bEBeginSpriteSnapshot,_bESpritesUpdatedBuffer,_bESpritesUpdatedBufferPointer,_bESpriteUpdateOverflowed,spriteBufferBefore,spriteBufferEnd,spriteBufferGuard,spriteUpdateBufferBytes,spriteUpdateRecordBytes,spriteUpdateMaxRecords,spriteUpdateBank,irqScratchPointer\n"
         ".export bBSoundHandler,_bBChannelsPlaying,_bBEndSoundFlag,_bBIsPlaying,_bBCh1Ticks,_bBCh2Ticks,_bBCh3Ticks,_bBCh4Ticks\n"
         ".export _ZP_CURRENTLY_PLAYING_NOTE_1,_ZP_CURRENTLY_PLAYING_NOTE_2,_ZP_CURRENTLY_PLAYING_NOTE_3,_ZP_CURRENTLY_PLAYING_NOTE_NOISE,SOUND_SREG,_bBPsgClear,soundCriticalSection\n"
+        ".import _charSetInited,_numOfMenus,_the_menu,_sizeOfMenu,_offsetOfText,_menuAllowed,_menuShown,_bAMenuSelected,_bAMenuChildSelected,_bAMenuChildWidth,_bAMenuChildCount,_bAFirstMenuChild,_bAMenuChildShiftBack,_bAEnabledMenuControllers,_offsetOfController,_menuDirty\n"
         "ZP_SPRITE_UPDATE_READ_POINTER=IRQ_TMP_6\nZP_LOW_BYTE=ZP_TMP_5+1\n"
         "%.*s\n%.*s\n%.*s\n%.*s\n%.*s\n%.*s\n%.*s\n%.*s\n%.*s\n"
         "spriteBufferBefore: .byte $3D\n_bESpritesUpdatedBuffer: .res SPRITE_UPDATED_BUFFER_SIZE\n"
@@ -224,18 +291,22 @@ static void assemble(void) {
         "wait: WAIT_FOR_NEXT_IRQ snapshot\nrts\n"
         "clearSprites: CLEAR_SPRITE_ATTRS\nrts\n"
         "done: brk\ncommand: .byte 4\nsendIrqCommand: .byte 0\nsnapshot: .word 0\n_vSyncCounter: .word 0\n_vSyncCounterHigh: .word 0\n_foregroundVeraDepth: .byte 0\nsnapshotOutput: .res 4\nsnapshot32: jmp _b6CopyVSyncCounter32\n"
-        "_inputLineDisplayed: .byte 0\n_inputLineDirty: .byte 0\n_b3TextModeTileByte: .byte TILE_BYTE_2\n_b7CurrentInputStr: .res 41\n"
+        "_inputLineDisplayed: .byte 0\n_inputLineDirty: .byte 0\n_b7CurrentInputStr: .res 41\n"
         ".include \"soundAsm.s\"\n.segment \"CODE\"\n"
         "soundCriticalSection: php\nsei\nplp\nrts\n"
         "%.*s\n%.*s\n"
-        ".export custom_irq_handler,irqEntry,irqDefault,default_irq_vector,irqWorkKind,lastMainLoopCounter,_mainLoopCounter,irqNormalWork\n"
-        "currentIrqState: .byte 0\nlastMainLoopCounter: .byte 0\n_mainLoopCounter: .byte 0\n_menuDirty: .byte 0\n_b3PaletteRows: .byte 0\nirqNormalWork: .byte 0\n"
+        ".export custom_irq_handler,irqEntry,irqDefault,default_irq_vector,irqWorkKind,irqTextStage,irqCompletionGeneration,lastMainLoopCounter,_mainLoopCounter\n"
+        ".export b3InitDisplayTextSlice,b3SetPaletteSlice,handleDisplayTextSlice,_b3PaletteAddress,_b3PaletteRows,_b3PaletteNumber,_displayTextAddressToCopyTo,_currentTextBuffer,displayTextSourcePointer,displayPaletteCursor\n"
+        "currentIrqState: .byte 0\nlastMainLoopCounter: .byte 0\n_mainLoopCounter: .byte 0\n"
         "irqEntry: pha\nphx\nphy\njmp custom_irq_handler\n"
         "irqDefault: ply\nplx\npla\nrti\n"
-        "b10DisplayStatusBar: inc irqNormalWork\nlda #$91\nldx #$82\nldy #$73\nrts\n"
-        "handleScreenShake: rts\nbADisplayMenu: rts\nb3InitDisplayTextSlice: rts\n_b3InitLayer1Mapbase: rts\n_b6InitInput: rts\n_b6SetBackgroundColor: rts\nb11ShowObjIrqHandler: rts\nb11ClearObjIrqHandler: rts\nbDHighlightInventoryRow: rts\n"
-        "_bEClearSpriteAttributes: rts\n_b8ClearBackgroundSliceReset: rts\n_b8ClearPrioritySliceReset: rts\n_b8ClearBackgroundSlice: rts\n_b8ClearPrioritySlice: rts\nb3SetPaletteSlice: rts\nhandleDisplayTextSlice: rts\n"
-        "inputStringAddress=INPUT_STRING_ADDRESS\nspriteFirstZ=SPRITE_ATTR_START+SPRITE_ATTR_SIZE+SA_VERA_ZORDER\nspriteCount=NO_SPRITES\n",
+        "handleScreenShake: rts\n_b3InitLayer1Mapbase: rts\n_b6InitInput: rts\n_b6SetBackgroundColor: rts\n"
+        "b11ShowObjIrqHandler: rts\nb11ClearObjIrqHandler: rts\nbDHighlightInventoryRow: rts\n"
+        "_bEClearSpriteAttributes: rts\n_b8ClearBackgroundSliceReset: rts\n_b8ClearPrioritySliceReset: rts\n_b8ClearBackgroundSlice: rts\n_b8ClearPrioritySlice: rts\n"
+        ".segment \"BANKRAM03\"\n%.*s\n%.*s\n%.*s\n"
+        ".segment \"CODE\"\n"
+        "inputStringAddress=INPUT_STRING_ADDRESS\nspriteFirstZ=SPRITE_ATTR_START+SPRITE_ATTR_SIZE+SA_VERA_ZORDER\nspriteCount=NO_SPRITES\n"
+        ".include \"statusBar.s\"\n.export b10StatusBarShowing\n",
         (int)(irq_end - irq_macros), irq_macros,
         (int)(snapshot_helper_end - snapshot_helper), snapshot_helper,
         (int)(owner_helpers_end - owner_helpers), owner_helpers,
@@ -247,20 +318,34 @@ static void assemble(void) {
         (int)(sprite_handler_end - sprite_handler), sprite_handler,
         (int)(input_end - input_body), input_body,
         (int)(irq_constants_end - irq_constants), irq_constants,
-        (int)(irq_handler_end - irq_handler), irq_handler);
+        (int)(irq_handler_end - irq_handler), irq_handler,
+        (int)(text_palette_code - text_state), text_state,
+        (int)(text_data - text_copy_code), text_copy_code,
+        (int)(text_end - text_data), text_data);
     CHECK(length >= 0 && length < (int)sizeof(source), "Fixture assembly is too large");
     CHECK(snprintf(stub, sizeof(stub), ".segment \"CODE\"\n.export _bBLoadedSoundsPointer,_sResetCounter\n_bBLoadedSoundsPointer: .res 512\n_sResetCounter: .byte 0\n") < (int)sizeof(stub), "Fixture stub is too large");
+    CHECK(snprintf(menu_stub, sizeof(menu_stub),
+        ".export _charSetInited,_numOfMenus,_the_menu,_the_menuChildren,_menuTextBuffer,_sizeOfMenu,_offsetOfText,_offsetOfController,_menuAllowed,_menuShown,_menuDirty,_bAMenuSelected,_bAMenuChildSelected,_bAMenuChildWidth,_bAMenuChildCount,_bAFirstMenuChild,_bAMenuChildShiftBack,_bAEnabledMenuControllers\n"
+        ".segment \"BSS\"\n_charSetInited: .res 1\n_numOfMenus: .res 2\n_menuShown: .res 1\n_menuAllowed: .res 1\n_menuDirty: .res 1\n"
+        ".segment \"DATA\"\n_sizeOfMenu: .byte 3\n_offsetOfText: .byte 0\n_offsetOfController: .byte 2\n"
+        ".segment \"BANKRAM0A\"\n_the_menu: .res 30\n_the_menuChildren: .res 450\n_bAFirstMenuChild: .res 20\n_menuTextBuffer: .res 500\n"
+        "_bAMenuChildWidth: .res 10\n_bAMenuChildShiftBack: .res 10\n_bAMenuChildCount: .res 10\n_bAEnabledMenuControllers: .res 256\n"
+        "_nextMenuTextBufferAddr: .word _menuTextBuffer\n_bAMenuSelected: .res 1\n_bAMenuChildSelected: .res 1\n_bAChildMenuToClear: .byte $FF\n"
+        "") < (int)sizeof(menu_stub), "Menu fixture globals are too large");
     free(irq); free(input); free(sprite);
 
     write_file(path, source);
+    append_menu_fixture(path);
     write_file(stub_path, stub);
+    write_file(menu_stub_path, menu_stub);
     write_file(config_path,
         "MEMORY { ZP:start=$22,size=$5C,file=\"\"; RAM:start=$2000,size=$6000,file=%O; }\n"
-        "SEGMENTS { ZEROPAGE:load=ZP,type=zp,optional=yes; CODE:load=RAM,type=rw; RODATA:load=RAM,type=ro,optional=yes; DATA:load=RAM,type=rw,optional=yes; BANKRAM07:load=RAM,type=rw,optional=yes; BANKRAM0B:load=RAM,type=rw,optional=yes; }\n");
+        "SEGMENTS { ZEROPAGE:load=ZP,type=zp,optional=yes; CODE:load=RAM,type=rw; RODATA:load=RAM,type=ro,optional=yes; DATA:load=RAM,type=rw,optional=yes; BSS:load=RAM,type=rw,optional=yes; BANKRAM03:load=RAM,type=rw,optional=yes; BANKRAM07:load=RAM,type=rw,optional=yes; BANKRAM0A:load=RAM,type=rw,optional=yes; BANKRAM0B:load=RAM,type=rw,optional=yes; BANKRAM10:load=RAM,type=rw,optional=yes; }\n");
     char *ca65[] = {"ca65", "-t", "cx16", "-I", "src", path, "-o", object_path, NULL};
     char *ca65_stub[] = {"ca65", "-t", "cx16", stub_path, "-o", stub_object_path, NULL};
-    char *ld65[] = {"ld65", "-C", config_path, object_path, stub_object_path, "-o", binary_path, "-Ln", labels_path, NULL};
-    run_tool(ca65); run_tool(ca65_stub); run_tool(ld65);
+    char *ca65_menu_stub[] = {"ca65", "-t", "cx16", menu_stub_path, "-o", menu_stub_object_path, NULL};
+    char *ld65[] = {"ld65", "-C", config_path, object_path, stub_object_path, menu_stub_object_path, "-o", binary_path, "-Ln", labels_path, NULL};
+    run_tool(ca65); run_tool(ca65_stub); run_tool(ca65_menu_stub); run_tool(ld65);
 
     FILE *file = fopen(binary_path, "rb"); CHECK(file, "Cannot read linked fixture");
     CHECK(fread(ram + 0x2000, 1, 0x6000, file) > 0, "Linked fixture is empty");
@@ -285,9 +370,33 @@ static void init_cpu(unsigned pc, unsigned x) {
 }
 
 static void run(void) {
-    for (unsigned steps = 0; steps < 20000 && regs.pc != symbol("done"); ++steps) {
+    const unsigned start_pc = regs.pc;
+    uint16_t trace_pc[32];
+    uint8_t trace_op[32];
+    unsigned steps;
+    for (steps = 0; steps < 20000 && regs.pc != symbol("done"); ++steps) {
         CHECK(!waiting, "Unexpected WAI");
+        trace_pc[steps % 32] = regs.pc;
+        trace_op[steps % 32] = ram[regs.pc];
         step6502();
+    }
+    if (regs.pc != symbol("done")) {
+        const struct symbol *nearest = NULL;
+        for (unsigned i = 0; i < symbol_count; ++i)
+            if (symbols[i].addr <= regs.pc && (!nearest || symbols[i].addr > nearest->addr)) nearest = &symbols[i];
+        fprintf(stderr, "Assembly helper start=$%04X final=$%04X (%s=$%04X) bank=$%02X sp=$%04X status=$%02X after %u steps; sound count=%u flags=%u%u%u%u ticks=%u/%u\n",
+                start_pc, regs.pc, nearest ? nearest->name : "?", nearest ? nearest->addr : 0,
+                regs.k, regs.sp, regs.status, steps, ram[symbol("_bBChannelsPlaying")],
+                ram[symbol("_bBIsPlaying")], ram[symbol("_bBIsPlaying") + 1],
+                ram[symbol("_bBIsPlaying") + 2], ram[symbol("_bBIsPlaying") + 3],
+                ram[symbol("_bBCh1Ticks")], ram[symbol("_bBCh1Ticks") + 1]);
+        const unsigned shown = steps < 32 ? steps : 32;
+        const unsigned begin = steps < 32 ? 0 : steps % 32;
+        for (unsigned i = 0; i < shown; ++i) {
+            const unsigned trace = (begin + i) % 32;
+            fprintf(stderr, "  step %u pc=$%04X op=$%02X\n", steps - shown + i,
+                    trace_pc[trace], trace_op[trace]);
+        }
     }
     CHECK(regs.pc == symbol("done"), "Assembly helper did not return");
 }
@@ -489,7 +598,6 @@ static void test_agi_blit_owner_cleanup_contract(void) {
     char *failure_return = find(success_return, "restoreBankFailure:\n    lda PREVIOUS_BANK\n    sta RAM_BANK\n\n    lda #FALSE\n    rts");
     CHECK(save_bank < set_loop_jump && allocator_call < failed_branch && failed_branch < success_return && failure_return,
           "bESetLoop does not save/restore the caller bank and return FALSE on allocation failure");
-
     char *cel_to_vera = read_file("src/celToVera.s");
     char *cel_entry = find(cel_to_vera, "_b9CelToVera:\n");
     char *slot_argument = find(cel_entry, "sta NO_SPLIT_SEGMENTS");
@@ -925,6 +1033,9 @@ static void test_snapshot_interrupt_boundaries(void) {
 static void test_irq_counter_carries(void) {
     const uint32_t starts[] = {0xFF, 0xFFFF, 0xFFFFFF, UINT32_MAX};
     unsigned counter = symbol("_vSyncCounter"), high = symbol("_vSyncCounterHigh");
+    unsigned status_bar_showing = symbol("b10StatusBarShowing");
+    unsigned sound_playing = symbol("_bBIsPlaying");
+    unsigned sound_ticks = symbol("_bBCh1Ticks");
     for (unsigned owner = 0; owner <= 2; ++owner)
         for (unsigned i = 0; i < sizeof(starts)/sizeof(starts[0]); ++i)
             for (unsigned pending = 2; pending <= 3; ++pending) {
@@ -934,8 +1045,14 @@ static void test_irq_counter_carries(void) {
                 ram[symbol("_foregroundVeraDepth")] = (uint8_t)owner;
                 ram[symbol("irqWorkKind")] = ram[symbol("sendIrqCommand")] = 0;
                 ram[symbol("lastMainLoopCounter")] = ram[symbol("_mainLoopCounter")] = 0;
-                ram[symbol("_inputLineDirty")] = ram[symbol("_bBChannelsPlaying")] = 0;
-                ram[symbol("irqNormalWork")] = 0;
+                ram[symbol("_inputLineDisplayed")] = ram[symbol("_inputLineDirty")] = 0;
+                ram[symbol("_bBChannelsPlaying")] = ram[symbol("_bBEndSoundFlag")] = 0;
+                memset(ram + sound_playing, 0, 4);
+                memset(ram + sound_ticks, 0, 8);
+                ram[symbol("_menuDirty")] = 0;
+                ram[symbol("_menuAllowed")] = ram[symbol("_menuShown")] = 1;
+                ram[0x400 + 257 + 14] = 1;
+                ram[status_bar_showing] = 1;
                 ram[symbol("default_irq_vector")] = (uint8_t)symbol("irqDefault");
                 ram[symbol("default_irq_vector") + 1] = (uint8_t)(symbol("irqDefault") >> 8);
                 init_cpu(symbol("done"), 0x42);
@@ -954,7 +1071,16 @@ static void test_irq_counter_carries(void) {
                 /* B is not a physical W65C02 flag; the core sets it on RTI. */
                 CHECK((regs.status & ~FLAG_BREAK) == (FLAG_CONSTANT | FLAG_CARRY | FLAG_DECIMAL | FLAG_OVERFLOW),
                       "Production IRQ did not restore caller flags");
-                CHECK(ram[symbol("irqNormalWork")] == (!owner && (pending & 1)) && !writes,
+                const unsigned expected_normal_work = !owner && (pending & 1);
+                if (ram[status_bar_showing] != !expected_normal_work || writes)
+                    fprintf(stderr, "IRQ carry owner=%u pending=%u statusBar=%u expected=%u writes=%u menuAllowed=%u menuShown=%u\n",
+                            owner, pending, ram[status_bar_showing], !expected_normal_work, writes,
+                            ram[symbol("_menuAllowed")], ram[symbol("_menuShown")]);
+                if (writes) {
+                    for (unsigned w = 0; w < writes && w < 16; ++w)
+                        fprintf(stderr, "  VERA write[%u]=$%05X:$%02X\n", w, write_addresses[w], write_values[w]);
+                }
+                CHECK(ram[status_bar_showing] == !expected_normal_work && !writes,
                       "Foreground-owned or non-VSYNC IRQ executed normal work");
             }
     ram[symbol("_foregroundVeraDepth")] = 0;
@@ -1169,6 +1295,278 @@ static void test_sprite_snapshot_reset(void) {
     puts("sprite_snapshot_reset passed");
 }
 
+static void stage_irq_sprite(void) {
+    const unsigned first_z = symbol("spriteFirstZ");
+    const unsigned base = symbol("_bESpritesUpdatedBuffer");
+    seed_sprite_update_buffer();
+    stage_sprite_update(0);
+    ram[base + SPRITE_UPDATE_RECORD_BYTES] = 0;
+    ram[base + SPRITE_UPDATE_RECORD_BYTES + 1] = 0;
+    for (unsigned i = 0; i < SPRITE_UPDATE_MAX_RECORDS; ++i)
+        vram[first_z + i * 8] = 0x0C;
+}
+
+static void check_irq_sprite(void) {
+    const unsigned base = symbol("_bESpritesUpdatedBuffer");
+    const unsigned first_sprite = symbol("spriteFirstZ") - 6;
+    const unsigned pointer = symbol("_bESpritesUpdatedBufferPointer");
+    CHECK((ram[pointer] | ((unsigned)ram[pointer + 1] << 8)) == base,
+          "Mixed IRQ sprite batch was not consumed and reset");
+    CHECK(vram[first_sprite] == ram[base] && vram[first_sprite + 1] == ram[base + 1] &&
+          vram[first_sprite + 2] == ram[base + 2] && vram[first_sprite + 3] == ram[base + 3] &&
+          vram[first_sprite + 4] == ram[base + 4] && vram[first_sprite + 5] == 0 &&
+          vram[first_sprite + 6] == ram[base + 5] && vram[first_sprite + 7] == ram[base + 6],
+          "Mixed IRQ lost or shifted its sprite update");
+}
+
+static unsigned run_mixed_irq(unsigned *masked_cycles) {
+    ram[symbol("default_irq_vector")] = (uint8_t)symbol("irqDefault");
+    ram[symbol("default_irq_vector") + 1] = (uint8_t)(symbol("irqDefault") >> 8);
+    ram[0xFFFE] = (uint8_t)symbol("irqEntry");
+    ram[0xFFFF] = (uint8_t)(symbol("irqEntry") >> 8);
+    ram[0x9F27] = 1;
+    uint32_t start = clockticks6502;
+    irq6502();
+    CHECK(regs.status & FLAG_INTERRUPT, "Combined production IRQ did not mask interrupts on entry");
+    unsigned entry_cycles = (unsigned)(clockticks6502 - start);
+    unsigned masked = 0;
+    for (unsigned steps = 0; steps < 100000 && regs.pc != symbol("done"); ++steps) {
+        CHECK(!waiting, "Unexpected WAI during combined IRQ workload");
+        CHECK(regs.status & FLAG_INTERRUPT,
+              "Combined production IRQ cleared the interrupt mask before RTI");
+        uint32_t step_start = clockticks6502;
+        step6502();
+        masked += (unsigned)(clockticks6502 - step_start);
+    }
+    CHECK(regs.pc == symbol("done"), "Combined production IRQ did not return");
+    unsigned elapsed = (unsigned)(clockticks6502 - start);
+    CHECK(masked + entry_cycles == elapsed,
+          "Combined production IRQ cycle measurement escaped the dynamically checked masked interval");
+    *masked_cycles = masked + entry_cycles;
+    CHECK(*masked_cycles == elapsed,
+          "combined_irq_acceptance_to_rti_masked_cycles: reported interval omitted IRQ acceptance/entry cycles");
+    return elapsed;
+}
+
+static void test_combined_irq_workload(void) {
+    enum { TEXT_SOURCE = 0x9000, TEXT_DESTINATION = 0x5000, PALETTE_ADDRESS = 0x1F000,
+           TEXT_LENGTH = 511, FRAME_CYCLES = 134400, PSG_ADDRESS = 0x1F9C0,
+           MENU_MAX_TOP_LEVELS = 10, MENU_TEXT_BUFFER_BYTES = 500,
+           MENU_MAX_CHILDREN = 15, MENU_MAX_WIDTH = 40,
+           MENU_CLEAR_WRITES = 2176, MENU_BAR_WRITES = 80,
+           MENU_CHILD_WRITES = (MENU_MAX_CHILDREN + 2) * MENU_MAX_WIDTH * 2,
+           SPRITE_BATCH_WRITES = 127 + 8 + 2 };
+    const unsigned counter = symbol("_vSyncCounter");
+    const unsigned completion = symbol("irqCompletionGeneration");
+    const unsigned playing = symbol("_bBIsPlaying");
+    const unsigned ticks = symbol("_bBCh1Ticks");
+    const unsigned status_bar_showing = symbol("b10StatusBarShowing");
+    const unsigned palette_rows = symbol("_b3PaletteRows");
+    const unsigned palette_number = symbol("_b3PaletteNumber");
+    const unsigned palette_address = symbol("_b3PaletteAddress");
+    const unsigned text_source = symbol("_currentTextBuffer");
+    const unsigned text_destination = symbol("_displayTextAddressToCopyTo");
+    const unsigned text_cursor = symbol("displayTextSourcePointer");
+    const unsigned palette_cursor = symbol("displayPaletteCursor");
+    const unsigned menu_records = symbol("_the_menu");
+    const unsigned menu_children = symbol("_the_menuChildren");
+    const unsigned menu_text_buffer = symbol("_menuTextBuffer");
+    const unsigned menu_child_heads = symbol("_bAFirstMenuChild");
+    const unsigned menu_child_widths = symbol("_bAMenuChildWidth");
+    const unsigned menu_child_counts = symbol("_bAMenuChildCount");
+    const unsigned menu_controllers = symbol("_bAEnabledMenuControllers");
+
+    init_cpu(symbol("done"), 0x42);
+    clockticks6502 = 0;
+    fx_write = false;
+    memset(fx_cache, 0xA5, sizeof(fx_cache));
+
+    memset(vram, 0x5A, sizeof(vram));
+    memset(ram + TEXT_SOURCE, 'A', TEXT_LENGTH);
+    ram[TEXT_SOURCE + TEXT_LENGTH] = 0;
+    write_word(text_source, TEXT_SOURCE);
+    ram[text_source + 2] = ram[text_source + 3] = 0;
+    ram[text_destination] = (uint8_t)TEXT_DESTINATION;
+    ram[text_destination + 1] = (uint8_t)(TEXT_DESTINATION >> 8);
+    ram[text_destination + 2] = 0;
+    ram[text_destination + 3] = 0;
+    ram[palette_address] = (uint8_t)PALETTE_ADDRESS;
+    ram[palette_address + 1] = (uint8_t)(PALETTE_ADDRESS >> 8);
+    ram[palette_address + 2] = (uint8_t)(PALETTE_ADDRESS >> 16);
+    ram[palette_address + 3] = 0;
+    ram[palette_rows] = 1;
+    ram[palette_number] = 0x0A;
+    ram[symbol("irqWorkKind")] = 0;
+    ram[symbol("irqTextStage")] = 0;
+    ram[symbol("sendIrqCommand")] = 4;
+    ram[completion] = 0xFF;
+    ram[completion + 1] = 0;
+    ram[counter] = 0xFF;
+    ram[counter + 1] = ram[symbol("_vSyncCounterHigh")] = ram[symbol("_vSyncCounterHigh") + 1] = 0;
+    ram[symbol("_foregroundVeraDepth")] = 0;
+    ram[symbol("_menuDirty")] = 1;
+    ram[status_bar_showing] = 1;
+    ram[symbol("_inputLineDisplayed")] = ram[symbol("_inputLineDirty")] = 0;
+    ram[symbol("_mainLoopCounter")] = 1;
+    ram[symbol("lastMainLoopCounter")] = 0;
+
+    ram[symbol("_charSetInited")] = 1;
+    ram[symbol("_numOfMenus")] = MENU_MAX_TOP_LEVELS;
+    ram[symbol("_numOfMenus") + 1] = 0;
+    ram[symbol("_menuAllowed")] = ram[symbol("_menuShown")] = 1;
+    ram[0x400 + 257 + 14] = 1; /* ENABLE_MENU interpreter flag */
+    ram[symbol("_bAMenuSelected")] = ram[symbol("_bAMenuChildSelected")] = 0;
+    memset(ram + menu_child_widths, 0, 10);
+    memset(ram + menu_child_counts, 0, 10);
+    memset(ram + symbol("_bAMenuChildShiftBack"), 0, 10);
+    memset(ram + menu_controllers, 1, 256);
+    ram[menu_child_widths] = MENU_MAX_WIDTH;
+    ram[menu_child_counts] = MENU_MAX_CHILDREN;
+    unsigned menu_text_cursor = menu_text_buffer;
+    for (unsigned i = 0; i < MENU_MAX_TOP_LEVELS; ++i) {
+        write_word(menu_records + i * 3, menu_text_cursor);
+        ram[menu_records + i * 3 + 2] = 0;
+        ram[menu_text_cursor++] = (uint8_t)('A' + i);
+        ram[menu_text_cursor++] = 0;
+    }
+    write_word(menu_child_heads, menu_children);
+    memset(ram + menu_children, 0, 3 * MENU_MAX_CHILDREN);
+    unsigned child_lengths[MENU_MAX_CHILDREN] = {38, 32, 32, 32, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 31};
+    for (unsigned i = 0; i < MENU_MAX_CHILDREN; ++i) {
+        write_word(menu_children + i * 3, menu_text_cursor);
+        ram[menu_children + i * 3 + 2] = 0;
+        memset(ram + menu_text_cursor, 'T', child_lengths[i]);
+        menu_text_cursor += child_lengths[i];
+        ram[menu_text_cursor++] = 0;
+    }
+    CHECK(menu_text_cursor == menu_text_buffer + MENU_TEXT_BUFFER_BYTES,
+          "Combined menu fixture no longer fits menu.c's 500-byte text buffer");
+
+    memset(ram + playing, 0, 4);
+    ram[playing] = 1;
+    ram[symbol("_bBChannelsPlaying")] = 1;
+    ram[ticks] = 3;
+    ram[ticks + 1] = 0;
+    for (unsigned i = 0; i < 4; ++i) vram[PSG_ADDRESS + i] = (uint8_t)(0x40 + i);
+    stage_irq_sprite();
+    ram[0] = 0x35;
+    ram[1] = 0x74;
+    regs.sp = 0x1FF;
+    regs.status = FLAG_CONSTANT | FLAG_CARRY | FLAG_DECIMAL;
+    const unsigned initial_vsync = ram[counter] | ((unsigned)ram[counter + 1] << 8);
+
+    unsigned first_masked_cycles;
+    unsigned first_cycles = run_mixed_irq(&first_masked_cycles);
+    CHECK(first_masked_cycles < FRAME_CYCLES,
+          "Mixed text-copy IRQ exceeded the 134400-cycle VSYNC frame budget");
+    CHECK(acks == 1 && ram[0x9F27] == 0,
+          "Mixed text-copy IRQ did not acknowledge its VSYNC exactly once");
+    CHECK((ram[counter] | ((unsigned)ram[counter + 1] << 8)) == 0x0100,
+          "Mixed text-copy IRQ lost the VSYNC counter carry");
+    CHECK(ram[completion] == 0xFF && ram[completion + 1] == 0 &&
+          ram[symbol("irqWorkKind")] == 2 && ram[symbol("irqTextStage")] == 1,
+          "Text-copy IRQ completed early or lost its pending palette stage");
+    const unsigned first_writes = MENU_CLEAR_WRITES + MENU_BAR_WRITES + MENU_CHILD_WRITES +
+        SPRITE_BATCH_WRITES + TEXT_LENGTH;
+    CHECK(writes == first_writes,
+          "Text-copy IRQ lost real menu, sprite, or text writes");
+    CHECK(data_port_reads == 127 + 4,
+          "Text-copy IRQ did not perform the expected sprite-clear and sound PSG reads");
+    CHECK(ram[ticks] == 2 && ram[ticks + 1] == 0,
+          "Text-copy IRQ failed to consume exactly one active sound tick");
+    CHECK(!ram[symbol("_menuDirty")] && !ram[status_bar_showing],
+          "Text-copy IRQ skipped the real dirty-menu or status-bar dispatcher work");
+    CHECK(ram[symbol("lastMainLoopCounter")] == 1,
+          "Text-copy IRQ failed to service the pending sprite frame");
+    check_irq_sprite();
+    for (unsigned i = 0; i < MENU_MAX_TOP_LEVELS; ++i) {
+        unsigned address = 0xDA00 + i * 4;
+        CHECK(vram[address] == (uint8_t)('A' + i) &&
+              vram[address + 1] == (i == 0 ? 0x20 : 0x10) &&
+              vram[address + 2] == 0x20 && vram[address + 3] == 0x10,
+              "Production menu renderer did not draw all nonempty top-level titles");
+    }
+    CHECK(vram[0xDA80] == 0x82 && vram[0xDA81] == 0x10 &&
+          vram[0xDB00] == 0x84 && vram[0xDB01] == 0x10 &&
+          vram[0xDB02] == 'T' && vram[0xDB03] == 0x20 &&
+          vram[0xDB4E] == 0x84 && vram[0xDB4F] == 0x14,
+          "Production menu renderer lost its maximum-width child row or border");
+    for (unsigned row = 0; row < MENU_MAX_CHILDREN + 2; ++row) {
+        for (unsigned column = MENU_MAX_WIDTH; column < 64; ++column) {
+            const unsigned address = 0xDA80 + row * 128 + column * 2;
+            CHECK(vram[address] == 0x80 && vram[address + 1] == 0x10,
+                  "VERA FX cache clear did not expand its 4-byte pattern across the full child area");
+        }
+    }
+    CHECK(ram[text_cursor] == (uint8_t)(TEXT_SOURCE + TEXT_LENGTH) &&
+          ram[text_cursor + 1] == (uint8_t)((TEXT_SOURCE + TEXT_LENGTH) >> 8),
+          "Text-copy IRQ did not persist the source cursor at its terminator");
+    for (unsigned i = 0; i < TEXT_LENGTH; ++i)
+        CHECK(vram[TEXT_DESTINATION + i * 2] == 'A' &&
+              vram[TEXT_DESTINATION + i * 2 + 1] == 0x5A,
+              "Text-copy IRQ dropped a tile or changed its attribute byte");
+    CHECK(ram[0] == 0x35 && ram[1] == 0x74,
+          "Text-copy IRQ did not restore the caller's RAM and ROM banks");
+    CHECK(!fx_write && ram[0x9F25] == 0,
+          "Production menu left VERA FX cache writes or a nondefault port enabled");
+
+    ram[symbol("_mainLoopCounter")] = 2;
+    ram[symbol("_menuDirty")] = 1;
+    ram[status_bar_showing] = 1;
+    stage_irq_sprite();
+    const unsigned second_write_start = writes;
+    const unsigned second_read_start = data_port_reads;
+    const unsigned first_vsync = ram[counter] | ((unsigned)ram[counter + 1] << 8);
+    unsigned palette_masked_cycles;
+    unsigned palette_cycles = run_mixed_irq(&palette_masked_cycles);
+    CHECK(palette_masked_cycles < FRAME_CYCLES,
+          "Mixed palette IRQ exceeded the 134400-cycle VSYNC frame budget");
+    CHECK(acks == 2 && ram[0x9F27] == 0 &&
+          (ram[counter] | ((unsigned)ram[counter + 1] << 8)) == 0x0101,
+          "Mixed palette IRQ lost or double-counted its serviced VSYNC");
+    CHECK(ram[completion] == 0 && ram[completion + 1] == 1 &&
+          ram[symbol("irqWorkKind")] == 0 && ram[symbol("_inputLineDirty")] == 1,
+          "Following palette IRQ did not finish the text command exactly once");
+    CHECK(writes - second_write_start == MENU_CLEAR_WRITES + MENU_BAR_WRITES +
+          MENU_CHILD_WRITES + SPRITE_BATCH_WRITES + 64,
+          "Palette IRQ lost real menu, sprite, or palette writes");
+    CHECK(data_port_reads - second_read_start == 127 + 4,
+          "Palette IRQ did not perform the expected sprite-clear and sound PSG reads");
+    CHECK(ram[ticks] == 1 && ram[ticks + 1] == 0,
+          "Palette IRQ failed to consume exactly one active sound tick");
+    CHECK(!ram[symbol("_menuDirty")] && !ram[status_bar_showing] &&
+          ram[symbol("lastMainLoopCounter")] == 2,
+          "Palette IRQ skipped overlapped real menu, status-bar, or sprite work");
+    check_irq_sprite();
+    CHECK(ram[palette_rows] == 1 && ram[palette_cursor] == (uint8_t)(PALETTE_ADDRESS + 128) &&
+          ram[palette_cursor + 1] == (uint8_t)((PALETTE_ADDRESS + 128) >> 8) &&
+          ram[palette_cursor + 2] == 1,
+          "Palette IRQ did not persist its completed 17-bit palette cursor");
+    for (unsigned i = 0; i < 64; ++i)
+        CHECK(vram[PALETTE_ADDRESS + i * 2] == 0xA0 &&
+              vram[PALETTE_ADDRESS + i * 2 + 1] == 0x5A,
+              "Palette IRQ dropped a color write or changed stride padding");
+    CHECK(ram[0] == 0x35 && ram[1] == 0x74,
+          "Palette IRQ did not restore the caller's RAM and ROM banks");
+
+    const unsigned total_cycles = first_cycles + palette_cycles;
+    const unsigned max_masked_cycles = first_masked_cycles > palette_masked_cycles ?
+        first_masked_cycles : palette_masked_cycles;
+    const unsigned final_vsync = ram[counter] | ((unsigned)ram[counter + 1] << 8);
+    CHECK((uint16_t)(final_vsync - initial_vsync) == 2 &&
+          (uint16_t)(final_vsync - first_vsync) == 1,
+          "Text and palette work did not complete in exactly two consecutive VSYNCs");
+    CHECK(total_cycles < FRAME_CYCLES * 2,
+          "Combined text-copy/palette workload exceeded the two-frame cycle bound");
+    CHECK(max_masked_cycles < FRAME_CYCLES,
+          "Combined workload exceeded the frame's maximum IRQ-masked cycle bound");
+    CHECK(!fx_write && ram[0x9F25] == 0,
+          "Second production menu pass left VERA FX cache writes or a nondefault port enabled");
+    fprintf(stderr,
+            "Combined max-menu IRQ: text-copy %u cycles, palette %u cycles, max conservative acceptance-to-RTI I-masked bound %u, total %u cycles, completion in 2 VSYNCs (< %u/frame)\n",
+            first_cycles, palette_cycles, max_masked_cycles, total_cycles, FRAME_CYCLES);
+}
+
 int main(void) {
     suite_test_paths_init("irq-helpers");
     assemble();
@@ -1189,7 +1587,8 @@ int main(void) {
     test_sound_source_contract();
     test_sound_handler();
     test_sound_interrupt_restore();
-    printf("IRQ helpers pass: input lengths/dirty fast path, sound lifecycle/idle stride, VSYNC helpers/production IRQ carries, and sprite bounds (sprite consumer max %u cycles)\n",
+    test_combined_irq_workload();
+    printf("IRQ helpers pass: input lengths/dirty fast path, sound lifecycle/idle stride, VSYNC helpers/production IRQ carries, mixed text/palette workload, and sprite bounds (sprite consumer max %u cycles)\n",
            max_sprite_consumer_cycles);
     return 0;
 }
