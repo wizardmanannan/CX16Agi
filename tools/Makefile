@@ -188,7 +188,7 @@ _run:
 	        "$(HOST_CC)" $(HOST_CFLAGS) -I"$$X16_EMULATOR_SOURCE/src/cpu" "$$repo/tools/test_$$name.c" "$$X16_EMULATOR_SOURCE/src/cpu/fake6502.c" -o "$$work/bin/test_$$name"; \
 	        cd "$$repo"; \
 	        if [ "$$name" = banked_strings ]; then \
-	          for test_case in --smoke --bounded --input --metadata --get-num --object-commands --show-object --sound; do \
+	          for test_case in --smoke --bounded --input --metadata --allocator-oom --get-num --object-commands --show-object --sound; do \
 	            echo "RUN test_banked_strings $$test_case"; \
 	            if "$$work/bin/test_banked_strings" --build "$$work/image" "$$test_case"; then :; else failed=$$((failed + 1)); fi; \
 	          done; \

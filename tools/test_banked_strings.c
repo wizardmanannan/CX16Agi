@@ -19,6 +19,10 @@ extern struct regs regs;
 #define CBM_SETLFS_ADDRESS 0xFFBAu
 #define CBM_SETNAM_ADDRESS 0xFFBDu
 #define CBM_OPEN_ADDRESS  0xFFC0u
+#define CBM_READST_ADDRESS 0xFFB7u
+#define CBM_CKOUT_ADDRESS  0xFFC9u
+#define CBM_CLRCH_ADDRESS  0xFFCCu
+#define CBM_BSOUT_ADDRESS  0xFFD2u /* CHROUT and BSOUT share the KERNAL output entry. */
 #define VERA_ADDR_LOW 0x9F20u
 #define VERA_ADDR_HIGH 0x9F21u
 #define VERA_ADDR_BANK 0x9F22u
@@ -90,6 +94,11 @@ static unsigned getin_count;
 static unsigned getin_index;
 static bool getin_enabled;
 static unsigned cbm_open_calls;
+static bool allocator_oom_runtime_active;
+static bool allocator_oom_output_capture_active;
+static uint8_t allocator_oom_output[128];
+static size_t allocator_oom_output_length;
+static bool allocator_oom_output_overflow;
 
 #define CHECK(condition, message) do { \
 	if (!(condition)) { fprintf(stderr, "%s (%s:%d)\n", message, __FILE__, __LINE__); exit(1); } \
@@ -138,6 +147,29 @@ uint8_t read6502(uint16_t address, uint8_t bank)
 		++cbm_open_calls;
 		regs.a = 1; /* Return a missing-file error so the real resolver stays empty. */
 		regs.status |= FLAG_CARRY;
+		return 0x60;
+	}
+	if (allocator_oom_runtime_active && address == CBM_CKOUT_ADDRESS)
+	{
+		regs.status &= (uint8_t)~FLAG_CARRY;
+		return 0x60;
+	}
+	if (allocator_oom_runtime_active && address == CBM_READST_ADDRESS)
+	{
+		regs.a = 0;
+		return 0x60;
+	}
+	if (allocator_oom_runtime_active && address == CBM_CLRCH_ADDRESS)
+		return 0x60;
+	if (allocator_oom_runtime_active && address == CBM_BSOUT_ADDRESS)
+	{
+		if (allocator_oom_output_capture_active)
+		{
+			if (allocator_oom_output_length < sizeof(allocator_oom_output))
+				allocator_oom_output[allocator_oom_output_length++] = regs.a;
+			else
+				allocator_oom_output_overflow = true;
+		}
 		return 0x60;
 	}
 	if (address == VERA_DATA0)
@@ -380,6 +412,10 @@ static void prepare(void)
 	getin_count = getin_index = 0;
 	getin_enabled = false;
 	cbm_open_calls = 0;
+	allocator_oom_runtime_active = false;
+	allocator_oom_output_capture_active = false;
+	allocator_oom_output_length = 0;
+	allocator_oom_output_overflow = false;
 	vera_address = 0;
 	vera_stride = 0;
 	vera_decrement = false;
@@ -467,9 +503,35 @@ static void call_target_caller(const char *name)
 	CHECK(ram[0] == CALLER_BANK && ram[1] == 0x53, "Production text caller did not restore caller banks");
 }
 
+static bool call_target_caller_until_exit(const char *name)
+{
+	uint16_t exit_entry = symbol("_exit");
+	unsigned steps = 0;
+
+	regs.sp = 0x1FD;
+	regs.a = regs.x = regs.y = 0;
+	regs.status = FLAG_CONSTANT;
+	ram[0x1FE] = 0xFF;
+	ram[0x1FF] = 0x01;
+	regs.pc = symbol(name);
+	/* Stop before the CRT stores cc65's fastcall int argument from A/X in STATUS. */
+	while (regs.pc != exit_entry && regs.pc != RETURN_PC)
+	{
+		if (++steps >= 1000000)
+		{
+			fprintf(stderr, "Production target caller %s did not reach _exit or return: PC=$%04X\n",
+				name, regs.pc);
+			CHECK(false, "Production target caller did not reach a process-exit boundary");
+		}
+		step6502();
+	}
+	return regs.pc == exit_entry;
+}
+
 #include "test_banked_strings_bounded_cases.h"
 #include "test_banked_strings_input_cases.h"
 #include "test_banked_strings_metadata_cases.h"
+#include "test_banked_strings_allocator_cases.h"
 #include "test_banked_strings_commands_cases.h"
 #include "test_object_commands_cases.h"
 #include "test_show_obj_allocation_cases.h"
@@ -487,7 +549,7 @@ static void run_harness_smoke(void)
 int main(int argc, char **argv)
 {
 	CHECK((argc == 3 || argc == 4) && !strcmp(argv[1], "--build"),
-		"Usage: test_banked_strings --build DIR [--smoke|--bounded|--input|--metadata|--get-num|--object-commands|--show-object|--sound]");
+		"Usage: test_banked_strings --build DIR [--smoke|--bounded|--input|--metadata|--allocator-oom|--get-num|--object-commands|--show-object|--sound]");
 	load_image(argv[2]);
 	if (argc == 4)
 	{
@@ -499,6 +561,7 @@ int main(int argc, char **argv)
 		}
 		else if (!strcmp(argv[3], "--input")) run_input_cases();
 		else if (!strcmp(argv[3], "--metadata")) run_metadata_cases();
+		else if (!strcmp(argv[3], "--allocator-oom")) run_allocator_oom_case();
 		else if (!strcmp(argv[3], "--get-num")) run_commands_cases();
 		else if (!strcmp(argv[3], "--object-commands")) run_object_commands_cases();
 		else if (!strcmp(argv[3], "--show-object")) run_show_obj_allocation_cases();
@@ -511,6 +574,7 @@ int main(int argc, char **argv)
 	run_game_id_cases();
 	run_input_cases();
 	run_metadata_cases();
+	run_allocator_oom_case();
 	run_commands_cases();
 	run_object_commands_cases();
 	run_show_obj_allocation_cases();
