@@ -521,7 +521,7 @@ extern byte b3PaletteNumber;
 //Supports copying from banks or putting data directly into textbuffer, which is on bank 3
 void b3DisplayMessageBox(char* message, byte messageBank, byte row, byte col, byte paletteNumber, byte boxWidth, boolean wrap, byte firstRow)
 {
-	size_t messageSize;
+	size_t messageSize, messageLength, copyLength;
 	byte textWidth = boxWidth;
 	byte maxWidth;
 	char* preparedChar;
@@ -533,22 +533,39 @@ void b3DisplayMessageBox(char* message, byte messageBank, byte row, byte col, by
 	boolean messageTerminated;
 	/* Row fills pass their prepared map buffer directly to clear all 64 cells. */
 	boolean fullLayerClear = !boxWidth && row != AUTO_CALC_ROW && col == 0 && wrap &&
-		message == (char*)b3TextBuffer1;
+		messageBank == TEXT_CODE_BANK && message == (char*)b3TextBuffer1;
 	size_t maxMessageSize = boxWidth ? TEXTBUFFER_SIZE : TEXTBUFFER_TOTAL_SIZE;
+	size_t sourceScanLimit = maxMessageSize;
 
 	if (!message || firstRow < 1 || firstRow > TILE_LAYER_HEIGHT)
 	{
 		goto message_rejected;
 	}
 	lastLogicalRow = TILE_LAYER_HEIGHT - firstRow;
-	messageSize = strLenBankedBounded(message, messageBank, maxMessageSize, &messageTerminated);
-	if (!messageTerminated)
+	if (messageBank == TEXT_CODE_BANK)
+	{
+		unsigned int sourceAddress = (unsigned int)message;
+		unsigned int bufferAddress = (unsigned int)b3TextBuffers;
+		if (sourceAddress >= bufferAddress)
+		{
+			unsigned int sourceOffset = sourceAddress - bufferAddress;
+			if (sourceOffset < TEXTBUFFER_TOTAL_SIZE)
+			{
+				size_t sourceBytesRemaining = TEXTBUFFER_TOTAL_SIZE - sourceOffset;
+				if (sourceScanLimit > sourceBytesRemaining) sourceScanLimit = sourceBytesRemaining;
+			}
+		}
+	}
+	messageLength = strLenBankedBounded(message, messageBank, sourceScanLimit, &messageTerminated);
+	if (messageLength >= maxMessageSize)
 	{
 		messageSize = maxMessageSize;
+		copyLength = maxMessageSize;
 	}
 	else
 	{
-		++messageSize;
+		messageSize = messageLength + 1;
+		copyLength = messageTerminated ? messageSize : messageLength;
 	}
 
 	if (messageSize > 1) //Agi sometimes has empty messages. We say greater than 1 because of the terminator
@@ -561,9 +578,9 @@ void b3DisplayMessageBox(char* message, byte messageBank, byte row, byte col, by
 		printf("row %d and col is %d", row, col);
 #endif // VERBOSE_DISPLAY_TEXT
 
-		if (message != (char*)b3TextBuffer1)
+		if (messageBank != TEXT_CODE_BANK || message != (char*)b3TextBuffer1)
 		{
-			memCpyBankedBetween((byte*)b3TextBuffer1, TEXT_CODE_BANK, (byte*)message, messageBank, messageSize);
+			memCpyBankedBetween((byte*)b3TextBuffer1, TEXT_CODE_BANK, (byte*)message, messageBank, copyLength);
 		}
 		b3TextBuffer1[messageSize - 1] = '\0';
 
