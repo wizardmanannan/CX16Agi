@@ -30,34 +30,13 @@ iny
 .endmacro
 
 
-.macro CLEAR_SPRITE_ATTRS
-.local @loop
-.local @end
-
-
-SET_VERA_START_SPRITE_ATTRS #$1, #4, SA_VERA_ZORDER ;Set VERA channel 0 to first zorder attribute with a stride of 4.
-lda VERA_addr_low
-ldx VERA_addr_high
-ldy VERA_addr_bank
-stz VERA_ctrl
-sta VERA_addr_low
-stx VERA_addr_high
-sty VERA_addr_bank
-
-@loop:
-lda VERA_data0 ; A zorder of zero means disabled
-beq @end
-stz VERA_data1
-bra @loop
-@end:
-.endmacro
-
-.macro CLEAR_ACTIVE_SPRITE_ATTRS ;Excludes mouse
+.macro CLEAR_SPRITE_ATTRS ;Excludes mouse; stop at disabled depth or the table boundary.
 .local @loop
 .local @end
 
 SET_VERA_START_SPRITE_ATTRS #$0, #4, SA_VERA_ZORDER ;Set VERA channel 0 to first zorder attribute with a stride of 4.
 SET_VERA_START_SPRITE_ATTRS #$1, #4, SA_VERA_ZORDER ;Set VERA channel 1 so we can see if we have reached the end
+stz VERA_ctrl ;Preserve the previous clear helper's channel selection.
 ldy #$0
 
 @loop:

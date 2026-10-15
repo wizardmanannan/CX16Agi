@@ -17,6 +17,7 @@ sta sendIrqCommand
 lda _vSyncCounter
 ldx _vSyncCounter + 1
 sta vSyncToCheck
+stx vSyncToCheck + 1
 REENABLE_INTERRUPTS
 .endmacro
 
@@ -24,22 +25,23 @@ REENABLE_INTERRUPTS
 .local @waitForIrq
 .local @end
 
+@waitForIrq:
 sei
 lda vSyncToCheck
 ldx vSyncToCheck + 1
-
-@waitForIrq:
-REENABLE_INTERRUPTS
-wai
-
-sei
 cmp _vSyncCounter
 bne @end
 cpx _vSyncCounter + 1
-beq @waitForIrq
+bne @end
+
+; A masked WAI wakes on a pending IRQ; CLI lets the handler consume it.
+; Checking first also catches a command completed before entering this wait.
+wai
+cli
+bra @waitForIrq
 
 @end:
-REENABLE_INTERRUPTS
+cli
 .endmacro
 
 ;Handlers
@@ -374,9 +376,12 @@ jmp (default_irq_vector)
 .addr @clear
 .addr @normal ;Graphics command goes to the same place as normal, it just clears while normal does not
 .addr @showObj
+@jmpTableIrqEnd:
 
 
-@jmpTableBank: .byte $0, $0, $0, $0, TEXT_BANK, $0 ;In order of IRQ_CMDS
+@jmpTableBank: .byte $0, $0, $0, $0, TEXT_BANK, $0, $0, $0, $0 ;In order of IRQ_CMDS
+@jmpTableBankEnd:
+.assert (@jmpTableIrqEnd - @jmpTableIrq) = 2 * (@jmpTableBankEnd - @jmpTableBank), error, "IRQ dispatch tables must match"
 @previousRamBank: .byte $0
 
 ; Global aliases end ca65's cheap-local scope, so define this after the handler.
