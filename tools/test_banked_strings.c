@@ -12,6 +12,7 @@ extern struct regs regs;
 #define BANK_START 0xA000u
 #define BANK_END   0xC000u
 #define BANK_SIZE  (BANK_END - BANK_START)
+#define OBJECT_CRYPTO_READ_GUARD 16u
 #define SOUND_BOUNDS_MAX_COPY_CALLS 32u
 #define MEMORY_MANAGEMENT_BANK 0x10u
 #define SOUND_BANK 0x0Bu
@@ -121,6 +122,14 @@ static bool object_buffer_write_monitor;
 static uint16_t object_buffer_start;
 static unsigned object_buffer_capacity;
 static unsigned object_buffer_out_of_bounds_writes;
+static bool object_buffer_read_monitor;
+static unsigned object_buffer_read_length;
+static unsigned object_buffer_prefix_reads;
+static unsigned object_buffer_suffix_reads;
+static bool object_crypto_read_active;
+static uint8_t object_crypto_read_stack;
+static uint16_t object_crypto_read_return;
+static uint16_t object_crypto_read_entry;
 
 #define CHECK(condition, message) do { \
 	if (!(condition)) { fprintf(stderr, "%s (%s:%d)\n", message, __FILE__, __LINE__); exit(1); } \
@@ -142,6 +151,16 @@ uint8_t read6502(uint16_t address, uint8_t bank)
 {
 	unsigned sound_copy_index = SOUND_BOUNDS_MAX_COPY_CALLS;
 	(void)bank;
+	if (object_crypto_read_active && ram[0] == 0x0D &&
+		address >= BANK_START && address < BANK_END)
+	{
+		if (address >= object_buffer_start - OBJECT_CRYPTO_READ_GUARD &&
+			address < object_buffer_start)
+			++object_buffer_prefix_reads;
+		if (address >= object_buffer_start + object_buffer_read_length &&
+			address < object_buffer_start + object_buffer_read_length + OBJECT_CRYPTO_READ_GUARD)
+			++object_buffer_suffix_reads;
+	}
 	if (sound_bounds_monitor_requested && sound_bounds_periodic_active &&
 		sound_bounds_prefix_seen && !sound_bounds_prefix_active &&
 		sound_bounds_copy_active && ram[0] == sound_bounds_source_bank &&
@@ -492,6 +511,29 @@ static void stop_monitoring_object_buffer_writes(void)
 	object_buffer_write_monitor = false;
 }
 
+static void monitor_object_buffer_reads(unsigned fileLength)
+{
+	object_buffer_start = symbol("_bDObjData");
+	object_buffer_capacity = get_word(symbol("_testObjectNameCacheSize"));
+	CHECK(object_buffer_start >= BANK_START &&
+		object_buffer_start + object_buffer_capacity <= BANK_END,
+		"Production object input buffer is outside BANKRAM0D");
+	CHECK(fileLength <= object_buffer_capacity,
+		"Crypto read monitor fixture exceeds the production input buffer");
+	object_buffer_read_length = fileLength;
+	object_buffer_prefix_reads = 0;
+	object_buffer_suffix_reads = 0;
+	object_crypto_read_active = false;
+	object_crypto_read_entry = symbol("_bDIsObjCrypt");
+	object_buffer_read_monitor = true;
+}
+
+static void stop_monitoring_object_buffer_reads(void)
+{
+	object_buffer_read_monitor = false;
+	object_crypto_read_active = false;
+}
+
 static void prepare(void)
 {
 	memset(ram, 0, sizeof(ram));
@@ -550,6 +592,14 @@ static void prepare(void)
 	object_buffer_start = 0;
 	object_buffer_capacity = 0;
 	object_buffer_out_of_bounds_writes = 0;
+	object_buffer_read_monitor = false;
+	object_buffer_read_length = 0;
+	object_buffer_prefix_reads = 0;
+	object_buffer_suffix_reads = 0;
+	object_crypto_read_active = false;
+	object_crypto_read_stack = 0;
+	object_crypto_read_return = 0;
+	object_crypto_read_entry = 0;
 	vera_address = 0;
 	vera_stride = 0;
 	vera_decrement = false;
@@ -616,6 +666,16 @@ static void call_target_caller(const char *name)
 				sound_bounds_active_copy_index = SOUND_BOUNDS_MAX_COPY_CALLS;
 			}
 		}
+		if (object_buffer_read_monitor && !object_crypto_read_active &&
+			regs.pc == object_crypto_read_entry)
+		{
+			object_crypto_read_active = true;
+			object_crypto_read_stack = (uint8_t)regs.sp;
+			object_crypto_read_return = (uint16_t)(
+				ram[0x100 + (uint8_t)(regs.sp + 1)] |
+				((uint16_t)ram[0x100 + (uint8_t)(regs.sp + 2)] << 8));
+			++object_crypto_read_return;
+		}
 		step6502();
 		if (service_text_render_irqs)
 		{
@@ -623,6 +683,9 @@ static void call_target_caller(const char *name)
 			if (waiting) ram[VERA_ISR] |= 1;
 			if (ram[VERA_ISR] & 1) irq6502();
 		}
+		if (object_crypto_read_active && regs.pc == object_crypto_read_return &&
+			(uint8_t)regs.sp == (uint8_t)(object_crypto_read_stack + 2))
+			object_crypto_read_active = false;
 		if (sound_bounds_monitor_requested)
 		{
 			if (sound_bounds_prefix_active && regs.pc == sound_bounds_prefix_return &&
@@ -694,7 +757,7 @@ static void run_harness_smoke(void)
 int main(int argc, char **argv)
 {
 	CHECK((argc == 3 || argc == 4) && !strcmp(argv[1], "--build"),
-		"Usage: test_banked_strings --build DIR [--smoke|--bounded|--input|--metadata|--allocator-oom|--get-num|--object-commands|--show-object|--sound|--text-cleanup]");
+		"Usage: test_banked_strings --build DIR [--smoke|--bounded|--input|--metadata|--allocator-oom|--get-num|--object-commands|--object-crypto-bounds|--show-object|--sound|--text-cleanup]");
 	load_image(argv[2]);
 	if (argc == 4)
 	{
@@ -709,6 +772,7 @@ int main(int argc, char **argv)
 		else if (!strcmp(argv[3], "--allocator-oom")) run_allocator_oom_case();
 		else if (!strcmp(argv[3], "--get-num")) run_commands_cases();
 		else if (!strcmp(argv[3], "--object-commands")) run_object_commands_cases();
+		else if (!strcmp(argv[3], "--object-crypto-bounds")) run_object_crypto_bounds_case();
 		else if (!strcmp(argv[3], "--show-object")) run_show_obj_allocation_cases();
 		else if (!strcmp(argv[3], "--sound")) run_sound_cases();
 		else if (!strcmp(argv[3], "--text-cleanup")) run_text_cleanup_cases();
@@ -723,6 +787,7 @@ int main(int argc, char **argv)
 	run_allocator_oom_case();
 	run_commands_cases();
 	run_object_commands_cases();
+	run_object_crypto_bounds_case();
 	run_show_obj_allocation_cases();
 	run_sound_cases();
 	run_text_cleanup_cases();

@@ -80,12 +80,15 @@ boolean bDIsObjCrypt(long fileLen, byte* objData)
 {
     int i, checkLen;
 
+    if (fileLen <= 0 || fileLen > OBJ_NAME_CACHE_SIZE)
+        return FALSE;
+
     checkLen = ((fileLen < 20) ? 10 : 20);   /* inspect last 10 or 20 bytes */
 
     /* TODO: Needs a fix here for Mixed Up Mother Goose */
     // ->>>
 
-    for (i = fileLen - 1; i > (fileLen - checkLen); i--) {
+    for (i = fileLen - 1; i >= 0 && i > (fileLen - checkLen); i--) {
         if (((bDObjData[i] < 0x20) || (bDObjData[i] > 0x7F)) && (bDObjData[i] != 0))
             return TRUE;                    /* non-printable => encrypted */
     }

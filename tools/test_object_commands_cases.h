@@ -394,6 +394,80 @@ static void run_object_reader_capacity_case(void)
 	free(data);
 }
 
+static void load_object_crypto_stream(const uint8_t *stream, unsigned length,
+	const uint8_t *expectedData, unsigned expectedCount,
+	unsigned expectedNameOffset, unsigned expectedNameLength)
+{
+	unsigned dataAddress;
+	unsigned dataOffset;
+	uint8_t *objectData;
+
+	prepare();
+	set_object_file_stream(stream, length, false);
+	monitor_object_buffer_reads(length);
+	call_target_caller("_testObjectCommandsLoadObjectFile");
+	stop_monitoring_object_buffer_reads();
+	CHECK(object_buffer_prefix_reads == 0,
+		"OBJECT crypto detector read before bDObjData");
+	CHECK(object_buffer_suffix_reads == 0,
+		"OBJECT crypto detector read beyond the input file");
+	CHECK(object_file_close_calls == 1,
+		"OBJECT loader did not close the input file");
+	dataAddress = symbol("_bDObjData");
+	if (get_object_target_word("_testObjectObservedCount") != expectedCount)
+		fprintf(stderr, "OBJECT fixture length %u expected %u objects, got %u; stream %u/%u\n",
+			length, expectedCount, get_object_target_word("_testObjectObservedCount"),
+			object_file_stream_position, object_file_stream_length);
+	CHECK(get_object_target_word("_testObjectObservedCount") == expectedCount,
+		"OBJECT loader returned the wrong object count");
+
+	dataOffset = dataAddress - BANK_START;
+	objectData = bank_ram[0x0D] + dataOffset;
+	CHECK(memcmp(objectData, expectedData, length) == 0,
+		"OBJECT loader changed the input file while checking encryption");
+	if (expectedCount != 0)
+	{
+		CHECK(get_object_target_word("_testObjectLoadedName") == dataAddress + expectedNameOffset &&
+			get_object_target_word("_testObjectLoadedRoom") == 0 &&
+			get_object_target_byte("_testObjectLoadedObjectNum") == 0 &&
+			get_object_target_byte("_testObjectLoadedNameLength") == expectedNameLength,
+			"OBJECT loader did not parse the first object's room and name");
+	}
+}
+
+static void run_object_crypto_bounds_case(void)
+{
+	static const uint8_t empty_object_table[] = { 0, 0, 0 };
+	uint8_t plain_objects[44] = { 0 };
+	static const uint8_t avis_key[11] = {
+		0x41, 0x76, 0x69, 0x73, 0x20, 0x44, 0x75, 0x72, 0x67, 0x61, 0x6E
+	};
+	uint8_t encrypted_objects[sizeof(plain_objects)];
+	unsigned objectCount = 7;
+	unsigned index;
+
+	plain_objects[0] = objectCount * 3u;
+	for (index = 0; index < objectCount; ++index)
+	{
+		unsigned record = 3u + index * 3u;
+		unsigned nameOffset = objectCount * 3u + index * 3u;
+		unsigned nameStart = nameOffset + 3u;
+		plain_objects[record] = (uint8_t)nameOffset;
+		plain_objects[record + 1u] = 0;
+		plain_objects[record + 2u] = (uint8_t)index;
+		plain_objects[nameStart] = (uint8_t)('A' + index);
+	}
+	for (index = 0; index < sizeof(plain_objects); ++index)
+		encrypted_objects[index] = plain_objects[index] ^ avis_key[index % 11];
+
+	load_object_crypto_stream(empty_object_table, sizeof(empty_object_table),
+		empty_object_table, 0, 0, 0);
+	load_object_crypto_stream(plain_objects, sizeof(plain_objects),
+		plain_objects, objectCount, objectCount * 3u + 3u, 1);
+	load_object_crypto_stream(encrypted_objects, sizeof(encrypted_objects),
+		plain_objects, objectCount, objectCount * 3u + 3u, 1);
+}
+
 static void run_object_commands_cases(void)
 {
 	prepare();

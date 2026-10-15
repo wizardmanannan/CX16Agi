@@ -32,6 +32,10 @@ word testObjectParsedName;
 word testObjectParsedHeader;
 byte testObjectObservedRoom;
 word testObjectObservedName;
+int testObjectLoadedRoom;
+byte testObjectLoadedObjectNum;
+byte testObjectLoadedNameLength;
+word testObjectLoadedName;
 
 #pragma wrapped-call (push, trampoline, OBJECT_BANK)
 extern byte bDLoadFile(int* fileLen, byte* buffer);
@@ -53,6 +57,17 @@ void testObjectCommandsLoadObjectFile(void)
 	bDLoadObjectFile();
 	RAM_BANK = OBJECT_BANK;
 	testObjectObservedCount = bDNumObjects;
+	testObjectLoadedRoom = -1;
+	testObjectLoadedObjectNum = 0xFF;
+	testObjectLoadedNameLength = 0;
+	testObjectLoadedName = 0;
+	if (bDNumObjects > 0)
+	{
+		testObjectLoadedRoom = bDObjects[0].roomNum;
+		testObjectLoadedObjectNum = bDObjects[0].objectNum;
+		testObjectLoadedNameLength = bDObjectNameLengths[0];
+		testObjectLoadedName = (word)bDObjects[0].name;
+	}
 	RAM_BANK = previousBank;
 }
 
