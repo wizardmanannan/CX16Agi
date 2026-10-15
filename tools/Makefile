@@ -6,6 +6,7 @@ SHARED_TOOL_ROOT := $(shell d=$$(git -C "$(REPO_ROOT)" rev-parse --path-format=a
 CC65_HOME ?= $(SHARED_TOOL_ROOT)/.tools/cc65-latest
 X16_EMULATOR_SOURCE ?= $(SHARED_TOOL_ROOT)/.tools/x16-emulator
 SDL_PREFIX ?= $(if $(wildcard $(SHARED_TOOL_ROOT)/.tools/sdl2-install/lib/cmake/SDL2/SDL2Config.cmake),$(SHARED_TOOL_ROOT)/.tools/sdl2-install)
+TAS_CAPTURE_HEADER ?= $(SHARED_TOOL_ROOT)/projects/tool-assistance/src/core/tas-capture.h
 HOST_CC ?= cc
 HOST_CFLAGS ?= -std=c11 -O2 -Wall -Wextra
 # Keep host compiler intermediates in the suite-owned output tree; GCC otherwise
@@ -17,10 +18,10 @@ override HOST_CFLAGS += $(HOST_TEST_FLAGS)
 TEST_OUTPUT_ROOT ?= $(REPO_ROOT)/obj
 TEST_FIXTURE_ROOT ?= $(if $(TMPDIR),$(TMPDIR),/tmp)
 
-export CC65_HOME X16_EMULATOR_SOURCE TMPDIR TEST_OUTPUT_DIR ROM GAME BUILD SYMBOLS SDL_PREFIX
+export CC65_HOME X16_EMULATOR_SOURCE TMPDIR TEST_OUTPUT_DIR ROM GAME BUILD SYMBOLS SDL_PREFIX TAS_CAPTURE_HEADER
 unexport KEEP_TEST_OUTPUT
 
-.PHONY: test suite commands-test image production-test modes integration _run
+.PHONY: test suite commands-test image production-test integration-test picture-test loader-test modes integration _run
 
 test suite:
 	@$(MAKE) --no-print-directory -f "$(REPO_ROOT)/tools/Makefile" _run MODE=core
@@ -33,6 +34,15 @@ image:
 
 production-test:
 	@$(MAKE) --no-print-directory -f "$(REPO_ROOT)/tools/Makefile" _run MODE=production-test
+
+integration-test:
+	@$(MAKE) --no-print-directory -f "$(REPO_ROOT)/tools/Makefile" _run MODE=integration-test
+
+picture-test:
+	@$(MAKE) --no-print-directory -f "$(REPO_ROOT)/tools/Makefile" _run MODE=picture-test
+
+loader-test:
+	@$(MAKE) --no-print-directory -f "$(REPO_ROOT)/tools/Makefile" _run MODE=loader-test
 
 modes integration:
 	@$(MAKE) --no-print-directory -f "$(REPO_ROOT)/tools/Makefile" _run MODE=modes
@@ -65,7 +75,7 @@ _run:
 	  production-test) \
 	    need_cc65; need_exec "$$CC65_HOME/bin/cl65"; need_cpu; need_image_makefile; \
 	    need_file "$$repo/tools/test_sound_foreground.c" ;; \
-	  modes) \
+	  modes|integration-test|picture-test) \
 	    need_command cmake; need_command magick; need_command pkg-config; \
 	    if [ -n "$${SDL_PREFIX:-}" ]; then \
 	      need_file "$$SDL_PREFIX/lib/cmake/SDL2/SDL2Config.cmake"; \
@@ -73,11 +83,24 @@ _run:
 	    pkg-config --exists libpng || fail 'libpng development files are required (pkg-config libpng)'; \
 	    [ -n "$${ROM:-}" ] || fail 'set ROM to a compatible X16 ROM file'; \
 	    [ -n "$${GAME:-}" ] || fail 'set GAME to the unpacked KQ1 game directory'; \
-	    [ -n "$${BUILD:-}" ] || fail 'set BUILD to an existing production build with labels'; \
-	    [ -n "$${SYMBOLS:-}" ] || fail 'set SYMBOLS to the production assembly debug-symbol file'; \
+	    if [ "$$mode" = modes ]; then \
+	      [ -n "$${BUILD:-}" ] || fail 'set BUILD to an existing production build with labels'; \
+	      [ -n "$${SYMBOLS:-}" ] || fail 'set SYMBOLS to the production assembly debug-symbol file'; \
+	    else need_cc65; need_exec "$$CC65_HOME/bin/cl65"; need_image_makefile; fi; \
 	    [ -n "$${X16_EMULATOR_SOURCE:-}" ] || fail 'set X16_EMULATOR_SOURCE to the x16-emulator source directory'; \
 	    need_file "$$ROM"; [ -d "$$GAME" ] || fail "game directory not found: $$GAME"; \
-	    [ -d "$$BUILD" ] || fail "build directory not found: $$BUILD"; need_file "$$SYMBOLS"; \
+	    if [ "$$mode" = modes ]; then [ -d "$$BUILD" ] || fail "build directory not found: $$BUILD"; need_file "$$SYMBOLS"; fi; \
+	    need_file "$$X16_EMULATOR_SOURCE/src/main.c"; need_file "$$repo/tools/test_full_game_irq.c" ;; \
+	  loader-test) \
+	    need_command cmake; need_command pkg-config; \
+	    if [ -n "$${SDL_PREFIX:-}" ]; then need_file "$$SDL_PREFIX/lib/cmake/SDL2/SDL2Config.cmake"; \
+	    else pkg-config --exists sdl2 || fail 'SDL2 development files are required (pkg-config sdl2 or SDL_PREFIX)'; fi; \
+	    pkg-config --exists libpng || fail 'libpng development files are required (pkg-config libpng)'; \
+	    [ -n "$${ROM:-}" ] || fail 'set ROM to a compatible X16 ROM file'; \
+	    [ -n "$${GAME:-}" ] || fail 'set GAME to the unpacked KQ1 game directory'; \
+	    need_cc65; need_exec "$$CC65_HOME/bin/cl65"; need_image_makefile; \
+	    [ -n "$${X16_EMULATOR_SOURCE:-}" ] || fail 'set X16_EMULATOR_SOURCE to the x16-emulator source directory'; \
+	    need_file "$$ROM"; [ -d "$$GAME" ] || fail "game directory not found: $$GAME"; \
 	    need_file "$$X16_EMULATOR_SOURCE/src/main.c"; need_file "$$repo/tools/test_full_game_irq.c" ;; \
 	  *) fail "unknown run mode: $$mode" ;; \
 	esac; \
@@ -206,11 +229,30 @@ _run:
 	      done; \
 	      [ "$$failed" -eq 0 ] || fail "$$failed production regression(s) failed"; \
 	    fi ;; \
-	  modes) \
+	  modes|integration-test|picture-test) \
+	    if [ "$$mode" = integration-test ] || [ "$$mode" = picture-test ]; then \
+	      $(MAKE) --no-print-directory -f "$$repo/tools/test-image.mk" "REPO_ROOT=$$repo" "OUT=$$work/image"; \
+	      BUILD="$$work/image"; SYMBOLS="$$work/image/final.lbl"; \
+	    fi; \
 	    echo 'CC test_full_game_irq.c'; \
 	    "$(HOST_CC)" $(HOST_CFLAGS) "$$repo/tools/test_full_game_irq.c" -lpng -o "$$work/bin/test_full_game_irq"; \
 	    cd "$$repo"; set -- --emulator-source "$$X16_EMULATOR_SOURCE" --rom "$$ROM" --build "$$BUILD" --game "$$GAME" --symbols "$$SYMBOLS"; \
+	    if [ -n "$${TAS_CAPTURE_HEADER:-}" ]; then set -- "$$@" --tas-capture-header "$$TAS_CAPTURE_HEADER"; fi; \
 	    if [ -n "$${SDL_PREFIX:-}" ]; then set -- "$$@" --sdl-prefix "$$SDL_PREFIX"; fi; \
-	    echo 'RUN test_full_game_irq --foreground-test'; "$$work/bin/test_full_game_irq" "$$@" --output "$$work/foreground" --foreground-test; \
+	    if [ "$$mode" != picture-test ]; then \
+	      echo 'RUN test_full_game_irq --foreground-test'; "$$work/bin/test_full_game_irq" "$$@" --output "$$work/foreground" --foreground-test; \
+	    fi; \
+	    if [ "$$mode" = integration-test ]; then \
+	      echo 'RUN test_full_game_irq --combined-irq-test'; "$$work/bin/test_full_game_irq" "$$@" --output "$$work/combined" --combined-irq-test; \
+	    fi; \
 	    echo 'RUN test_full_game_irq --picture-test'; "$$work/bin/test_full_game_irq" "$$@" --output "$$work/picture" --picture-test ;; \
+	  loader-test) \
+	    $(MAKE) --no-print-directory -f "$$repo/tools/test-image.mk" "REPO_ROOT=$$repo" "OUT=$$work/image"; \
+	    BUILD="$$work/image"; SYMBOLS="$$work/image/final.lbl"; \
+	    echo 'CC test_full_game_irq.c'; \
+	    "$(HOST_CC)" $(HOST_CFLAGS) "$$repo/tools/test_full_game_irq.c" -lpng -o "$$work/bin/test_full_game_irq"; \
+	    cd "$$repo"; set -- --emulator-source "$$X16_EMULATOR_SOURCE" --rom "$$ROM" --build "$$BUILD" --game "$$GAME" --symbols "$$SYMBOLS" --loader-test; \
+	    if [ -n "$${TAS_CAPTURE_HEADER:-}" ]; then set -- "$$@" --tas-capture-header "$$TAS_CAPTURE_HEADER"; fi; \
+	    if [ -n "$${SDL_PREFIX:-}" ]; then set -- "$$@" --sdl-prefix "$$SDL_PREFIX"; fi; \
+	    echo 'RUN test_full_game_irq --loader-test'; "$$work/bin/test_full_game_irq" "$$@" --output "$$work/loader" ;; \
 	esac
