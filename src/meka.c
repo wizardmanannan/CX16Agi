@@ -251,7 +251,7 @@ extern void b6TellMeTheAddressPlease();
 extern void bAInitMenus();
 #pragma wrapped-call (pop)
 
-void b6Initialise()
+boolean b6Initialise()
 {
     int i;
     
@@ -285,7 +285,7 @@ void b6Initialise()
     bAInitObjects();
 
     bDInitObjects();
-    b12LoadWords();
+    if (!b12LoadWords()) return FALSE;
     b7InitEvents();
     b6InitInterpreter();
     b6InitIrq();
@@ -300,6 +300,7 @@ void b6Initialise()
     bFInitPaletteManager();
     b1InitControllers();
     b6InitTimer(&b6Timing_proc);
+    return TRUE;
 }
 
 
@@ -332,7 +333,7 @@ void main()
     b5InitializeDebugging();
 
     RAM_BANK = MEKA_BANK;
-    b6Initialise();
+    if (!b6Initialise()) exit(1);
     b6CopyVSyncCounter32(&currentVsync);
     lastVsync = (unsigned int)currentVsync;
     lastTimerVsync = currentVsync;

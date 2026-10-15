@@ -15,7 +15,7 @@ extern int numWords;
 extern int numSynonyms;
 
 #pragma wrapped-call (push, trampoline, WORD_BANK)
-extern void b12LoadWords();
+extern boolean b12LoadWords();
 extern void b12DiscardWords();
 int b12FindSynonymNum(char* userWord, byte userWordBank); 
 #pragma wrapped-call (pop)

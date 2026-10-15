@@ -143,7 +143,7 @@ _run:
 	    [ "$$failed" -eq 0 ] || fail "$$failed command regression(s) failed" ;; \
 	  core) \
 	    cd "$$repo"; \
-	    for name in graphics_clear irq_completion irq_helpers random screen_shake show_obj_irq text_irq words_assembly sprite_allocator; do \
+	    for name in graphics_clear irq_completion irq_helpers random screen_shake show_obj_irq text_irq sprite_allocator; do \
 	      echo "CC test_$$name.c"; \
 	      "$(HOST_CC)" $(HOST_CFLAGS) -I"$$X16_EMULATOR_SOURCE/src/cpu" "$$repo/tools/test_$$name.c" "$$X16_EMULATOR_SOURCE/src/cpu/fake6502.c" -o "$$work/bin/test_$$name"; \
 	    done; \
@@ -158,10 +158,11 @@ _run:
 	    "$(HOST_CC)" $(HOST_CFLAGS) -Wno-unknown-pragmas -fsanitize=address,undefined -fno-sanitize-recover=all "$$repo/tools/test_menu.c" -o "$$work/bin/test_menu"; \
 	    build_commands; \
 	    "$(HOST_CC)" $(HOST_CFLAGS) -Wno-unknown-pragmas -fsanitize=address,undefined -fno-sanitize-recover=all -idirafter "$$CC65_HOME/include" "$$repo/tools/test_text_buffers.c" -o "$$work/bin/test_text_buffers"; \
+	    "$(HOST_CC)" $(HOST_CFLAGS) -Wno-error=incompatible-pointer-types -Wno-error=int-conversion -D_MSC_VER -D__CBM__ '-D__fastcall__=' '-D__asm__(...)=' -idirafter "$$CC65_HOME/include" -Wno-unknown-pragmas -ffunction-sections -fdata-sections -fsanitize=address,undefined -fno-sanitize-recover=all "$$repo/tools/test_words_file.c" -Wl,--gc-sections -o "$$work/bin/test_words_file"; \
 	    "$(HOST_CC)" $(HOST_CFLAGS) -Wno-error=incompatible-pointer-types -Wno-error=int-conversion -D_MSC_VER -D__CBM__ '-D__fastcall__=' '-D__asm__(...)=' -idirafter "$$CC65_HOME/include" -Wno-unknown-pragmas -ffunction-sections -fdata-sections -fsanitize=address,undefined -fno-sanitize-recover=all "$$repo/tools/test_agifiles.c" -Wl,--gc-sections -o "$$work/bin/test_agifiles"; \
 	    failed=0; \
 	    run_test() { echo "RUN $$*"; if "$$@"; then :; else failed=$$((failed + 1)); fi; }; \
-	    for name in graphics_clear irq_completion irq_helpers random show_obj_irq text_irq words_assembly sprite_allocator; do \
+	    for name in graphics_clear irq_completion irq_helpers random show_obj_irq text_irq sprite_allocator; do \
 	      run_test "$$work/bin/test_$$name"; \
 	    done; \
 	    run_test "$$work/bin/test_screen_shake" --repo-root "$$repo"; \
@@ -180,6 +181,9 @@ _run:
 	    run_test env LD_PRELOAD="$$sanitized_preload" "$$work/bin/test_parser_buffers"; \
 	    run_test env LD_PRELOAD="$$sanitized_preload" "$$work/bin/test_parser_buffers" --unterminated; \
 	    run_test env LD_PRELOAD="$$sanitized_preload" "$$work/bin/test_text_buffers"; \
+	    for option in --truncated-synonym --prefix-bound --full-word-order --short-header --shared-prefix --allocation-failure --staging-read --retry --first-nonzero --word-count --discard-reload --missing-file --trailing-sentinel; do \
+	      run_test env LD_PRELOAD="$$sanitized_preload" "$$work/bin/test_words_file" "$$option"; \
+	    done; \
 	    run_test env LD_PRELOAD="$$sanitized_preload" "$$work/bin/test_agifiles"; \
 	    [ "$$failed" -eq 0 ] || fail "$$failed regression(s) failed" ;; \
 	  image|production-test) \
