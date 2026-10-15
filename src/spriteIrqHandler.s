@@ -56,7 +56,16 @@ _bESpritesUpdatedBuffer: .res SPRITE_UPDATED_BUFFER_SIZE
 _bESpritesUpdatedBufferPointer: .word _bESpritesUpdatedBuffer
 
 .import _bESpriteUpdateOverflowed
-.export _bECanAppendSpriteUpdate
+.export _bECanAppendSpriteUpdate, bEBeginSpriteSnapshot
+
+; b9 owns foreground VERA access while it replaces this complete snapshot.
+bEBeginSpriteSnapshot:
+lda #<_bESpritesUpdatedBuffer
+sta _bESpritesUpdatedBufferPointer
+lda #>_bESpritesUpdatedBuffer
+sta _bESpritesUpdatedBufferPointer + 1
+stz _bESpriteUpdateOverflowed
+rts
 
 ; Carry is set while a complete record still fits before the terminator.
 _bECanAppendSpriteUpdate:

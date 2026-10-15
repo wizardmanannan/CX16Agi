@@ -1979,6 +1979,9 @@ b9UpdateObjects:
 
         jsr _b6EnterForegroundVera
 
+        ; Replace any unconsumed snapshot while the IRQ is deferred.
+        JSRFAR bEBeginSpriteSnapshot, SPRITE_UPDATES_BANK
+
         stz UPDATE_OBJ_NUM_OBJS         ; Reset number of objects to update this frame
 
         ; Set indirect jump target to the routine that populates the object list

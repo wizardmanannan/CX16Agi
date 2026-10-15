@@ -166,6 +166,12 @@ static void assemble(void) {
     char *irq = read_file("src/irqAsm.s");
     char *input = read_file("src/inputIrqHandler.s");
     char *sprite = read_file("src/spriteIrqHandler.s");
+    char *sprite_snapshot_reset = strstr(sprite, "bEBeginSpriteSnapshot:\n");
+    if (!sprite_snapshot_reset) {
+        fprintf(stderr, "FAIL sprite_snapshot_reset: production reset routine is missing\n");
+        exit(EXIT_FAILURE);
+    }
+    char *sprite_snapshot_reset_end = find(sprite_snapshot_reset, "\nrts") + strlen("\nrts");
     char *snapshot_helper = find(irq, "_b6CopyVSyncCounter32:\n");
     char *snapshot_helper_end = find(snapshot_helper, "\nrts") + strlen("\nrts");
     char *owner_helpers = find(irq, "_b6EnterForegroundVera:\n");
@@ -198,11 +204,11 @@ static void assemble(void) {
         ".segment \"CODE\"\n"
         ".export input,enable,send,wait,done,snapshot,snapshot32,snapshotOutput,_vSyncCounter,_vSyncCounterHigh,sendIrqCommand,_inputLineDisplayed,_inputLineDirty,_b7CurrentInputStr,_foregroundVeraDepth,_b6EnterForegroundVera,_b6LeaveForegroundVera\n"
         ".export clearSprites,inputStringAddress,spriteFirstZ,spriteCount\n"
-        ".export handleSpriteUpdates,checkSpriteUpdateCapacity,_bESpritesUpdatedBuffer,_bESpritesUpdatedBufferPointer,_bESpriteUpdateOverflowed,spriteBufferBefore,spriteBufferEnd,spriteBufferGuard,spriteUpdateBufferBytes,spriteUpdateRecordBytes,spriteUpdateMaxRecords,spriteUpdateBank,irqScratchPointer\n"
+        ".export handleSpriteUpdates,checkSpriteUpdateCapacity,bEBeginSpriteSnapshot,_bESpritesUpdatedBuffer,_bESpritesUpdatedBufferPointer,_bESpriteUpdateOverflowed,spriteBufferBefore,spriteBufferEnd,spriteBufferGuard,spriteUpdateBufferBytes,spriteUpdateRecordBytes,spriteUpdateMaxRecords,spriteUpdateBank,irqScratchPointer\n"
         ".export bBSoundHandler,_bBChannelsPlaying,_bBEndSoundFlag,_bBIsPlaying,_bBCh1Ticks,_bBCh2Ticks,_bBCh3Ticks,_bBCh4Ticks\n"
         ".export _ZP_CURRENTLY_PLAYING_NOTE_1,_ZP_CURRENTLY_PLAYING_NOTE_2,_ZP_CURRENTLY_PLAYING_NOTE_3,_ZP_CURRENTLY_PLAYING_NOTE_NOISE,SOUND_SREG,_bBPsgClear,soundCriticalSection\n"
         "ZP_SPRITE_UPDATE_READ_POINTER=IRQ_TMP_6\nZP_LOW_BYTE=ZP_TMP_5+1\n"
-        "%.*s\n%.*s\n%.*s\n%.*s\n%.*s\n%.*s\n%.*s\n%.*s\n"
+        "%.*s\n%.*s\n%.*s\n%.*s\n%.*s\n%.*s\n%.*s\n%.*s\n%.*s\n"
         "spriteBufferBefore: .byte $3D\n_bESpritesUpdatedBuffer: .res SPRITE_UPDATED_BUFFER_SIZE\n"
         "spriteBufferEnd:\nspriteBufferGuard: .byte $A6,$5B\n"
         "_bESpritesUpdatedBufferPointer: .word _bESpritesUpdatedBuffer\n"
@@ -236,6 +242,7 @@ static void assemble(void) {
         (int)(sprite_start_end - sprite_start), sprite_start,
         (int)(sprite_clear_end - sprite_clear), sprite_clear,
         (int)(sprite_get_end - sprite_get), sprite_get,
+        (int)(sprite_snapshot_reset_end - sprite_snapshot_reset), sprite_snapshot_reset,
         (int)(sprite_append_end - sprite_append), sprite_append,
         (int)(sprite_handler_end - sprite_handler), sprite_handler,
         (int)(input_end - input_body), input_body,
@@ -1134,6 +1141,34 @@ static void test_sprite_updates(void) {
           "127-record sprite consumer exceeded the 18200-cycle budget (baseline 19074)");
 }
 
+static void test_sprite_snapshot_reset(void) {
+    const unsigned base = symbol("_bESpritesUpdatedBuffer");
+    const unsigned pointer = symbol("_bESpritesUpdatedBufferPointer");
+    const unsigned overflow = symbol("_bESpriteUpdateOverflowed");
+    seed_sprite_update_buffer();
+    write_word(pointer, base + 4 * SPRITE_UPDATE_RECORD_BYTES);
+    ram[overflow] = 1;
+    ram[base + 7] = 0xC7;
+    ram[0] = 0x14;
+    ram[1] = 0x2A;
+
+    init_cpu(symbol("bEBeginSpriteSnapshot"), 0);
+    run();
+
+    CHECK((ram[pointer] | ((unsigned)ram[pointer + 1] << 8)) == base,
+          "sprite_snapshot_reset: publication pointer did not return to the empty snapshot base");
+    CHECK(ram[overflow] == 0,
+          "sprite_snapshot_reset: overflow flag was not cleared for the new snapshot");
+    CHECK(ram[base + 7] == 0xC7,
+          "sprite_snapshot_reset: reset changed stale payload outside the published extent");
+    CHECK(ram[symbol("spriteBufferBefore")] == 0x3D &&
+          ram[symbol("spriteBufferGuard")] == 0xA6 && ram[symbol("spriteBufferGuard") + 1] == 0x5B,
+          "sprite_snapshot_reset: reset crossed a sprite buffer canary");
+    CHECK(ram[0] == 0x14 && ram[1] == 0x2A,
+          "sprite_snapshot_reset: reset changed caller RAM or ROM bank");
+    puts("sprite_snapshot_reset passed");
+}
+
 int main(void) {
     suite_test_paths_init("irq-helpers");
     assemble();
@@ -1147,6 +1182,7 @@ int main(void) {
     test_irq_counter_carries();
     test_sprite_clear();
     test_sprite_updates();
+    test_sprite_snapshot_reset();
     test_agi_blit_owner_cleanup_contract();
     test_get_priority_condition_codes();
     test_nested_foreground_owner();
