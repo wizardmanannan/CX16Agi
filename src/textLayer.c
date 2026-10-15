@@ -264,7 +264,7 @@ void b3FillChar(byte startLine, byte endLine, byte paletteNumber, byte charToFil
 {
 	unsigned int line, lastLine;
 	char* clearBuffer = b3TextBuffer1;
-	const unsigned int lastMapLine = TILE_LAYER_HEIGHT - FIRST_ROW;
+	const unsigned int lastMapLine = TILE_LAYER_HEIGHT - FIRST_TEXT_ROW;
 
 	if (startLine > lastMapLine || startLine > endLine)
 	{
@@ -283,7 +283,7 @@ void b3FillChar(byte startLine, byte endLine, byte paletteNumber, byte charToFil
 	}
 	*clearBuffer = '\0';
 	b3DisplayMessageBox(b3TextBuffer1, TEXT_CODE_BANK, startLine, 0,
-		paletteNumber, 0, TRUE);
+		paletteNumber, 0, TRUE, FIRST_TEXT_ROW);
 }
 
 //Thanks to https://www.rosettacode.org/wiki/Word_wrap#In-place_greedy
@@ -501,7 +501,7 @@ extern byte b3PaletteNumber;
 
 //Box width is 0 for text that is not in a box, or the width of the box otherwise
 //Supports copying from banks or putting data directly into textbuffer, which is on bank 3
-void b3DisplayMessageBox(char* message, byte messageBank, byte row, byte col, byte paletteNumber, byte boxWidth, boolean wrap)
+void b3DisplayMessageBox(char* message, byte messageBank, byte row, byte col, byte paletteNumber, byte boxWidth, boolean wrap, byte firstRow)
 {
 	size_t messageSize;
 	byte textWidth = boxWidth;
@@ -510,15 +510,21 @@ void b3DisplayMessageBox(char* message, byte messageBank, byte row, byte col, by
 	char* preparedBuffer = b3TextBuffer1;
 	unsigned int preparedRows;
 	unsigned int preparedColumn, preparedStartLine, availableColumns, availableRows, displayWidth;
-	unsigned int lastLogicalRow = TILE_LAYER_HEIGHT - FIRST_ROW;
+	unsigned int lastLogicalRow, physicalRow;
 	size_t lineWidth = 0, maximumLineWidth = 0;
+	boolean messageTerminated;
 	/* b3FillChar passes its prepared map buffer directly to clear all 64 cells. */
 	boolean fullLayerClear = !boxWidth && row != AUTO_CALC_ROW && col == 0 && wrap &&
-		message == (char*)b3TextBuffer1;
+		message == (char*)b3TextBuffer1 && firstRow == FIRST_TEXT_ROW;
 	size_t maxMessageSize = boxWidth ? TEXTBUFFER_SIZE : TEXTBUFFER_TOTAL_SIZE;
-	if (!message) goto message_rejected;
-	messageSize = strLenBanked(message, messageBank);
-	if (messageSize >= maxMessageSize)
+
+	if (!message || firstRow < 1 || firstRow > TILE_LAYER_HEIGHT)
+	{
+		goto message_rejected;
+	}
+	lastLogicalRow = TILE_LAYER_HEIGHT - firstRow;
+	messageSize = strLenBankedBounded(message, messageBank, maxMessageSize, &messageTerminated);
+	if (!messageTerminated)
 	{
 		messageSize = maxMessageSize;
 	}
@@ -530,7 +536,7 @@ void b3DisplayMessageBox(char* message, byte messageBank, byte row, byte col, by
 	if (messageSize > 1) //Agi sometimes has empty messages. We say greater than 1 because of the terminator
 	{
 #ifdef VERBOSE_DISPLAY_TEXT
-		printf("Address: %p + (%d + %d) * %d + %d * %d = %lx\n", MAPBASE, FIRST_ROW, row, TILE_LAYER_BYTES_PER_ROW, col, BYTES_PER_CELL, displayTextAddressToCopyTo);
+		printf("Address: %p + (%d + %d) * %d + %d * %d = %lx\n", MAPBASE, firstRow, row, TILE_LAYER_BYTES_PER_ROW, col, BYTES_PER_CELL, displayTextAddressToCopyTo);
 #endif
 #ifdef VERBOSE_DISPLAY_TEXT
 		printf("Copy message %p on bank %d of size %d\n", message, messageBank, messageSize);
@@ -637,8 +643,9 @@ void b3DisplayMessageBox(char* message, byte messageBank, byte row, byte col, by
 		currentTextBuffer = preparedBuffer;
 		b3LastBoxLines = (byte)preparedRows;
 		b3LastBoxStartLine = (byte)preparedStartLine;
-		displayTextAddressToCopyTo = MAPBASE + (FIRST_ROW + preparedStartLine - 1) * TILE_LAYER_BYTES_PER_ROW + preparedColumn * BYTES_PER_CELL;
-		b3PaletteAddress = MAPBASE + (FIRST_ROW + preparedStartLine - 1) * TILE_LAYER_BYTES_PER_ROW + 1; //We will set the same palette for the whole row
+		physicalRow = firstRow + preparedStartLine - 1;
+		displayTextAddressToCopyTo = MAPBASE + physicalRow * TILE_LAYER_BYTES_PER_ROW + preparedColumn * BYTES_PER_CELL;
+		b3PaletteAddress = MAPBASE + physicalRow * TILE_LAYER_BYTES_PER_ROW + 1; //We will set the same palette for the whole row
 		b3PaletteRows = preparedRows;
 		b3PaletteNumber = paletteNumber;
 
@@ -655,7 +662,7 @@ byte b3DisplayManuallyWrappedMessageBox(char* message, byte messageBank, byte ro
 {
 	byte ch;
 
-	b3DisplayMessageBox(message, messageBank, AUTO_CALC_ROW, AUTO_CALC_COLUMN, TEXTBOX_PALETTE_NUMBER, boxWidth, FALSE);
+	b3DisplayMessageBox(message, messageBank, AUTO_CALC_ROW, AUTO_CALC_COLUMN, TEXTBOX_PALETTE_NUMBER, boxWidth, FALSE, FIRST_TEXT_ROW);
 	b3LastBoxLines = boxHeight;
 
 	//b3PrintMessageInTextbox(loadAndIncWinCode(), DEFAULT_TEXTBOX_X, DEFAULT_TEXTBOX_Y, DEFAULT_BOX_WIDTH);

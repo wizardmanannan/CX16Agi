@@ -143,13 +143,16 @@ static void assemble(void) {
     CHECK(!fseek(file, 0, SEEK_END), "Cannot seek show_obj assembly"); long length = ftell(file); CHECK(length >= 0, "Cannot size show_obj assembly"); rewind(file);
     char *assembly = malloc((size_t)length + 1); CHECK(assembly, "Out of memory");
     CHECK(fread(assembly, 1, (size_t)length, file) == (size_t)length, "Cannot read show_obj assembly"); assembly[length] = 0; fclose(file);
-    char *begin = strstr(assembly, "_b11ShowObjSpriteAddressShifted: .res 2"); CHECK(begin, "Handler data missing");
+    char *constant_begin = strstr(assembly, "SHOW_OBJ_ATTRIBUTE_ADDRESS ="); CHECK(constant_begin, "Show.obj address constant missing");
+    char *begin = strstr(constant_begin, "_b11ShowObjSpriteAddressShifted: .res 2"); CHECK(begin, "Handler data missing");
     char *end = strstr(begin, "\n.endif"); CHECK(end, "Handler end missing");
     int count = snprintf(fixture, sizeof(fixture),
-        "VIEW_TABLE_SIZE=1\n.include \"global.s\"\n.include \"globalGraphics.s\"\n"
-        "SHOW_OBJ_ATTRIBUTE_ADDRESS=$1FFF8\n.segment \"CODE\"\n"
-        ".export runHandler,done,_b11ShowObjSpriteAddressShifted,_b11ShowObjSprAttr7,_b11ShowObjX,_b11ShowObjY\n%.*s\n"
-        "runHandler: jsr b11ShowObjIrqHandler\ndone: rts\n"
+        "VIEW_TABLE_SIZE=1\nMAX_SPRITES_ROW_OR_COLUMN_SIZE=4\n.include \"global.s\"\n.include \"globalGraphics.s\"\n"
+        "%.*s\n"
+        ".segment \"CODE\"\n"
+        ".export runHandler,runClearObj,done,_b11ShowObjSpriteAddressShifted,_b11ShowObjSprAttr7,_b11ShowObjX,_b11ShowObjY,_b11VeraSlots\n%.*s\n"
+        ".export testShowObjAttributeAddress\ntestShowObjAttributeAddress=SHOW_OBJ_ATTRIBUTE_ADDRESS\n"
+        "runHandler: jsr b11ShowObjIrqHandler\ndone: rts\nrunClearObj: jsr b11ClearObjIrqHandler\nrts\n"
         ".scope StatusFixture\n.include \"statusBar.s\"\n.endscope\n.segment \"CODE\"\n"
         "_menuShown: .byte 0\nisMenuAllowed: lda #1\nrts\nbAClearTopLine: rts\n"
         ".export runStatus,statusDisplayed,statusShowing,statusInitialized,statusScore,statusMaxScore,statusSound\n"
@@ -157,6 +160,7 @@ static void assemble(void) {
         "statusDisplayed=StatusFixture::_statusLineDisplayed\nstatusShowing=StatusFixture::b10StatusBarShowing\n"
         "statusInitialized=StatusFixture::totalScoreSet\nstatusScore=SET_VAR_OFFSET+SCORE_VAR\n"
         "statusMaxScore=SET_VAR_OFFSET+MAX_SCORE_VAR\nstatusSound=FLAG_OFFSET+SOUND_ON_FLAG\n",
+        (int)(begin - constant_begin), constant_begin,
         (int)(end - begin), begin);
     CHECK(count >= 0 && count < (int)sizeof(fixture), "Fixture too large"); free(assembly); write_file(source, fixture);
     append_menu_fixture(source);
@@ -337,19 +341,117 @@ static void test_status(void) {
     puts("Status checks pass: every byte score, zero/decimal boundaries, maximum edits and unchanged fast path");
 }
 
+static void run_show_obj_handler(const char *entry, unsigned max_steps)
+{
+    reset6502(false);
+    regs.pc = (uint16_t)symbol(entry);
+    regs.sp = 0x1FD;
+    regs.status = FLAG_CONSTANT;
+    ram[0x1FE] = (uint8_t)(symbol("done") - 1);
+    ram[0x1FF] = (uint8_t)((symbol("done") - 1) >> 8);
+    clockticks6502 = 0;
+    waiting = 0;
+    writes = 0;
+    for (unsigned step = 0; step < max_steps && regs.pc != symbol("done"); ++step)
+        step6502();
+    CHECK(regs.pc == symbol("done"), "show_obj handler did not return");
+}
+
+static void set_show_obj_fixture(uint8_t slots, uint16_t x)
+{
+    ram[symbol("_b11VeraSlots")] = slots;
+    ram[symbol("_b11ShowObjX")] = (uint8_t)x;
+    ram[symbol("_b11ShowObjX") + 1] = (uint8_t)(x >> 8);
+    ram[symbol("_b11ShowObjY")] = 0x56;
+    ram[symbol("_b11ShowObjSprAttr7")] = 0xA7;
+    for (unsigned i = 0; i < 4; ++i) {
+        ram[symbol("_b11ShowObjSpriteAddressShifted") + 2 * i] = (uint8_t)(0x34 + i * 0x10);
+        ram[symbol("_b11ShowObjSpriteAddressShifted") + 2 * i + 1] = (uint8_t)(0x12 + i);
+    }
+}
+
+static void check_show_obj_record(unsigned slot, uint16_t x)
+{
+    const unsigned at = (symbol("testShowObjAttributeAddress") + slot * 8) & 0x1FFFF;
+    const uint8_t expected[8] = {
+        (uint8_t)(0x34 + slot * 0x10), (uint8_t)(0x12 + slot),
+        (uint8_t)x, (uint8_t)(x >> 8), 0x56, 0x00, 0x0C, 0xA7
+    };
+    for (unsigned i = 0; i < sizeof(expected); ++i)
+        CHECK(vram[at + i] == expected[i], "show_obj slot attribute record differs");
+}
+
+static void test_show_obj_handlers(void)
+{
+    memset(vram, 0x5A, sizeof(vram));
+    memset(address, 0, sizeof(address));
+    memset(stride, 0, sizeof(stride));
+    set_show_obj_fixture(0, 100);
+    run_show_obj_handler("runHandler", 100000);
+    CHECK(writes == 0, "zero-slot show_obj publication wrote sprite attributes");
+
+    memset(vram, 0x5A, sizeof(vram));
+    set_show_obj_fixture(1, 100);
+    run_show_obj_handler("runHandler", 10000);
+    CHECK(writes == 8, "one-slot show_obj publication did not write exactly one record");
+    check_show_obj_record(0, 100);
+    CHECK(ram[symbol("_b11VeraSlots")] == 1 &&
+          ram[symbol("_b11ShowObjX")] == 100 && ram[symbol("_b11ShowObjX") + 1] == 0,
+          "one-slot show_obj handler changed its published inputs");
+    CHECK(vram[(symbol("testShowObjAttributeAddress") - 1) & 0x1FFFF] == 0x5A && vram[0] == 0x5A,
+          "one-slot show_obj publication changed an adjacent record");
+
+    memset(vram, 0x5A, sizeof(vram));
+    set_show_obj_fixture(4, 100);
+    run_show_obj_handler("runHandler", 10000);
+    CHECK(writes == 32, "four-slot show_obj publication did not write exactly four records");
+    for (unsigned i = 0; i < 4; ++i)
+        check_show_obj_record(i, (uint16_t)(100 + 64 * i));
+    CHECK(ram[symbol("_b11VeraSlots")] == 4 &&
+          ram[symbol("_b11ShowObjX")] == 100 && ram[symbol("_b11ShowObjX") + 1] == 0,
+          "four-slot show_obj handler changed its published inputs");
+    CHECK(vram[(symbol("testShowObjAttributeAddress") - 1) & 0x1FFFF] == 0x5A && vram[0] == 0x5A,
+          "four-slot show_obj publication changed an adjacent record");
+
+    uint8_t published[32];
+    unsigned show_obj_base = symbol("testShowObjAttributeAddress");
+    memcpy(published, vram + show_obj_base, sizeof(published));
+    run_show_obj_handler("runHandler", 10000);
+    CHECK(writes == 32 && !memcmp(published, vram + show_obj_base, sizeof(published)),
+          "repeated show_obj publication changed the same inputs into different attributes");
+    CHECK(ram[symbol("_b11VeraSlots")] == 4 &&
+          ram[symbol("_b11ShowObjX")] == 100 && ram[symbol("_b11ShowObjX") + 1] == 0,
+          "repeated show_obj publication changed its count or origin");
+
+    memset(vram, 0x5A, sizeof(vram));
+    set_show_obj_fixture(5, 100);
+    run_show_obj_handler("runHandler", 10000);
+    CHECK(writes == 0, "oversize show_obj publication exceeded its four reserved records");
+    CHECK(vram[0] == 0x5A, "oversize show_obj publication touched an unrelated record");
+    CHECK(ram[symbol("_b11VeraSlots")] == 5 &&
+          ram[symbol("_b11ShowObjX")] == 100 && ram[symbol("_b11ShowObjX") + 1] == 0,
+          "oversize show_obj publication changed its invalid count or origin");
+
+    memset(vram, 0x5A, sizeof(vram));
+    set_show_obj_fixture(255, 100);
+    run_show_obj_handler("runHandler", 10000);
+    CHECK(writes == 0, "255-slot show_obj publication wrapped into reserved attributes");
+    CHECK(ram[symbol("_b11VeraSlots")] == 255 &&
+          ram[symbol("_b11ShowObjX")] == 100 && ram[symbol("_b11ShowObjX") + 1] == 0,
+          "255-slot show_obj publication changed its invalid count or origin");
+
+    memset(vram, 0x5A, sizeof(vram));
+    run_show_obj_handler("runClearObj", 10000);
+    CHECK(writes == 4, "CLEAR_OBJ did not disable exactly four reserved attributes");
+    for (unsigned i = 0; i < 4; ++i)
+        CHECK(vram[(show_obj_base + i * 8 + 6) & 0x1FFFF] == 0, "CLEAR_OBJ missed a reserved sprite enable byte");
+    CHECK(vram[(show_obj_base + 4 * 8 + 6) & 0x1FFFF] == 0x5A,
+          "CLEAR_OBJ changed the first sprite attribute outside its reserved range");
+    puts("show_obj handlers pass zero/one/four/oversize/repeat and exact CLEAR_OBJ bounds");
+}
+
 int main(void) {
     suite_test_paths_init("show-obj-irq"); assemble();
-    memset(vram, 0x5A, sizeof(vram)); memset(address, 0, sizeof(address)); memset(stride, 0, sizeof(stride)); writes = 0;
-    ram[symbol("_b11ShowObjSpriteAddressShifted")] = 0x34; ram[symbol("_b11ShowObjSpriteAddressShifted") + 1] = 0x12;
-    ram[symbol("_b11ShowObjSprAttr7")] = 0xA7; ram[symbol("_b11ShowObjX")] = 0xBC; ram[symbol("_b11ShowObjX") + 1] = 0x01; ram[symbol("_b11ShowObjY")] = 0x56;
-    reset6502(false); regs.pc = (uint16_t)symbol("runHandler"); regs.sp = 0x1FD; regs.status = FLAG_CONSTANT; ram[0x1FE] = (uint8_t)(symbol("done") - 1); ram[0x1FF] = (uint8_t)((symbol("done") - 1) >> 8); clockticks6502 = 0; waiting = 0;
-    for (unsigned step = 0; step < 1000 && regs.pc != symbol("done"); ++step) step6502();
-    CHECK(regs.pc == symbol("done"), "show_obj handler did not return");
-    CHECK(writes == 8, "show_obj handler did not emit exactly eight attribute bytes");
-    const uint8_t expected[8] = {0x34,0x12,0xBC,0x01,0x56,0x00,0x0C,0xA7};
-    for (unsigned i = 0; i < 8; ++i) CHECK(vram[0x1FFF8 + i] == expected[i], "show_obj attribute byte differs");
-    CHECK(vram[0x1FFF7] == 0x5A && vram[0] == 0x5A, "show_obj handler wrote outside its eight-byte slot");
-    CHECK(clockticks6502 < 1000, "show_obj handler exceeded its cycle budget");
-    printf("show_obj handler returns with exactly eight VRAM writes (%u cycles)\n", (unsigned)clockticks6502);
+    test_show_obj_handlers();
     test_status(); test_menu_clear(); test_menu_children(); test_menu_bar(); return 0;
 }

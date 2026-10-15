@@ -191,7 +191,8 @@ static void assemble(void) {
     char *sprite_handler_end = find(sprite_handler, "\n.endif");
 
     int length = snprintf(source, sizeof(source),
-        ".include \"x16.inc\"\nVIEW_TABLE_SIZE=1\n.include \"globalGraphics.s\"\n.include \"spriteUpdates.inc\"\n.include \"global.s\"\nMAX_INPUT_STRING_LENGTH=40\n"
+        ".include \"x16.inc\"\nVIEW_TABLE_SIZE=1\n.include \"globalGraphics.s\"\n.include \"spriteUpdates.inc\"\n.include \"global.s\"\n"
+        ".macro TRAMPOLINE BANK, JMPTO\njsr JMPTO\n.endmacro\nMAX_INPUT_STRING_LENGTH=40\n"
         "INPUT_LINE_RENDER_CELLS=MAX_INPUT_STRING_LENGTH+1\n"
         ".assert INPUT_LINE_COL + INPUT_LINE_RENDER_CELLS <= TILE_LAYER_WIDTH, error, \"Input line rendering exceeds tile map row\"\n"
         ".segment \"CODE\"\n"
@@ -217,7 +218,7 @@ static void assemble(void) {
         "wait: WAIT_FOR_NEXT_IRQ snapshot\nrts\n"
         "clearSprites: CLEAR_SPRITE_ATTRS\nrts\n"
         "done: brk\ncommand: .byte 4\nsendIrqCommand: .byte 0\nsnapshot: .word 0\n_vSyncCounter: .word 0\n_vSyncCounterHigh: .word 0\n_foregroundVeraDepth: .byte 0\nsnapshotOutput: .res 4\nsnapshot32: jmp _b6CopyVSyncCounter32\n"
-        "_inputLineDisplayed: .byte 0\n_inputLineDirty: .byte 0\n_b7CurrentInputStr: .res 41\n"
+        "_inputLineDisplayed: .byte 0\n_inputLineDirty: .byte 0\n_b3TextModeTileByte: .byte TILE_BYTE_2\n_b7CurrentInputStr: .res 41\n"
         ".include \"soundAsm.s\"\n.segment \"CODE\"\n"
         "soundCriticalSection: php\nsei\nplp\nrts\n"
         "%.*s\n%.*s\n"
@@ -226,7 +227,7 @@ static void assemble(void) {
         "irqEntry: pha\nphx\nphy\njmp custom_irq_handler\n"
         "irqDefault: ply\nplx\npla\nrti\n"
         "b10DisplayStatusBar: inc irqNormalWork\nlda #$91\nldx #$82\nldy #$73\nrts\n"
-        "handleScreenShake: rts\nbADisplayMenu: rts\nb3InitDisplayTextSlice: rts\n_b3InitLayer1Mapbase: rts\n_b6InitInput: rts\nb11ShowObjIrqHandler: rts\n"
+        "handleScreenShake: rts\nbADisplayMenu: rts\nb3InitDisplayTextSlice: rts\n_b3InitLayer1Mapbase: rts\n_b6InitInput: rts\n_b6SetBackgroundColor: rts\nb11ShowObjIrqHandler: rts\nb11ClearObjIrqHandler: rts\nbDHighlightInventoryRow: rts\n"
         "_bEClearSpriteAttributes: rts\n_b8ClearBackgroundSliceReset: rts\n_b8ClearPrioritySliceReset: rts\n_b8ClearBackgroundSlice: rts\n_b8ClearPrioritySlice: rts\nb3SetPaletteSlice: rts\nhandleDisplayTextSlice: rts\n"
         "inputStringAddress=INPUT_STRING_ADDRESS\nspriteFirstZ=SPRITE_ATTR_START+SPRITE_ATTR_SIZE+SA_VERA_ZORDER\nspriteCount=NO_SPRITES\n",
         (int)(irq_end - irq_macros), irq_macros,
@@ -386,6 +387,7 @@ static void test_input_dirty(void) {
 static void test_input_dirty_sources(void) {
     char *parser = read_file("src/parser.c");
     char *commands = read_file("src/commands.c");
+    char *graphics_c = read_file("src/graphics.c");
     char *picture = read_file("src/picture.c");
     char *irq = read_file("src/irqAsm.s");
     char *graphics = read_file("src/graphicsAsm.s");
@@ -399,8 +401,9 @@ static void test_input_dirty_sources(void) {
 
     CHECK(occurrences(parser, "inputLineDirty = TRUE;") >= 5,
           "Parser edits/reset do not all invalidate the input row");
-    CHECK(occurrences(commands, "inputLineDirty = TRUE;") >= 4,
-          "Input visibility/screen transitions do not all invalidate the row");
+    CHECK(occurrences(commands, "inputLineDirty = TRUE;") >= 2 &&
+          occurrences(graphics_c, "inputLineDirty = TRUE;") >= 2,
+          "Input visibility and mode transitions do not all invalidate the row");
     CHECK(strstr(picture, "volatile byte inputLineDirty = TRUE;"),
           "Input dirty state is not initialized in resident storage");
     CHECK(map_clear_dirty < display && display_dirty < display_finish,
@@ -408,7 +411,7 @@ static void test_input_dirty_sources(void) {
     CHECK(input_init_dirty < find(input_init, ".segment \"BANKRAM08\""),
           "Input row initialization does not invalidate the row");
 
-    free(parser); free(commands); free(picture); free(irq); free(graphics);
+    free(parser); free(commands); free(graphics_c); free(picture); free(irq); free(graphics);
 }
 
 static void test_sound_source_contract(void) {
@@ -479,6 +482,14 @@ static void test_agi_blit_owner_cleanup_contract(void) {
     char *failure_return = find(success_return, "restoreBankFailure:\n    lda PREVIOUS_BANK\n    sta RAM_BANK\n\n    lda #FALSE\n    rts");
     CHECK(save_bank < set_loop_jump && allocator_call < failed_branch && failed_branch < success_return && failure_return,
           "bESetLoop does not save/restore the caller bank and return FALSE on allocation failure");
+
+    char *cel_to_vera = read_file("src/celToVera.s");
+    char *cel_entry = find(cel_to_vera, "_b9CelToVera:\n");
+    char *slot_argument = find(cel_entry, "sta NO_SPLIT_SEGMENTS");
+    char *owner_entry = find(cel_entry, "jsr _b6EnterForegroundVera");
+    CHECK(slot_argument < owner_entry,
+          "Cel-to-VERA split-slot argument must be saved before the owner helper clobbers A");
+    free(cel_to_vera);
     free(source); free(assembly);
 }
 

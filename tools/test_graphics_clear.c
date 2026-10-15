@@ -127,7 +127,7 @@ static void assemble(const char *graphics_path, unsigned priority_size, unsigned
         "runBackgroundSlice: jsr _b8ClearBackgroundSlice\nrts\n"
         "resetPrioritySlices: jsr _b8ClearPrioritySliceReset\nrts\n"
         "runPrioritySlice: jsr _b8ClearPrioritySlice\nrts\n"
-        "runMap: jsr _b3InitLayer1Mapbase\nrts\n"
+        "runMap: lda #TILE_BYTE_2\njsr _b3InitLayer1Mapbase\nrts\n"
         "sliceDone: rts\n",
         map_cells, priority_size,
         (int)(map_end - map_start), map_start,

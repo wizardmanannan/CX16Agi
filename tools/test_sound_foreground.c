@@ -14,7 +14,7 @@ extern struct regs regs;
 static uint8_t ram[65536], bank_ram[8192], image[65536], bank_image[8192], vram[131072];
 static unsigned vera_address, vera_stride, psg_writes, counter_writes, isr_writes;
 static uint16_t counter, counter_high;
-static struct { char name[100]; uint16_t address; } labels[4096];
+static struct { char name[100]; uint16_t address; } labels[8192];
 static unsigned label_count;
 #define CHECK(c,m) do { if (!(c)) { fprintf(stderr,"%s (%s:%d)\n",m,__FILE__,__LINE__); exit(1); } } while (0)
 
@@ -61,7 +61,7 @@ static void load_image(const char *build) {
     char filename[4096],line[256],kind[16],name[100];unsigned address;
     path(filename,sizeof(filename),build,"final.lbl"); FILE *f=fopen(filename,"r"); CHECK(f,"Cannot open final.lbl");
     while(fgets(line,sizeof(line),f)) if(sscanf(line,"%15s %x %99s",kind,&address,name)==3) {
-        CHECK(label_count<4096 && address<65536,"Invalid label file");
+        CHECK(label_count < sizeof(labels) / sizeof(labels[0]) && address < 65536,"Invalid label file");
         strcpy(labels[label_count].name,name[0]=='.'?name+1:name); labels[label_count++].address=(uint16_t)address;
     }
     fclose(f);

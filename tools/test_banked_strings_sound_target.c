@@ -11,8 +11,10 @@ extern byte allocationArray[];
 extern SoundFile *bBLoadedSoundsPointer[MAX_SOUNDS];
 
 #pragma wrapped-call (push, trampoline, SOUND_BANK)
-extern void bBSetChannelOffsets(byte *codePtr, SoundFile *soundFile, unsigned int *soundChannelOffSets);
-extern void bBPrecomputeValues(SoundFile *soundFile, unsigned int *soundChannelOffSets);
+extern byte bBSetChannelOffsets(byte *codePtr, SoundFile *soundFile,
+	unsigned int *soundChannelOffSets, unsigned int totalSize);
+extern void bBPrecomputeValues(SoundFile *soundFile,
+	unsigned int *soundChannelOffSets, byte validChannels);
 #pragma wrapped-call (pop)
 
 byte testSoundConversionNoiseBytes[2][12];
@@ -30,6 +32,9 @@ unsigned int testSoundBoundsChannel2End;
 unsigned int testSoundBoundsNoiseStart;
 unsigned int testSoundBoundsNoiseEnd;
 byte testSoundBoundsBank;
+byte testSoundBoundsValidChannels;
+byte testSoundOffsetPrefixCount;
+unsigned int testSoundOffsetPrefixPointers[4];
 unsigned int testSoundBoundsOutputResource;
 unsigned int testSoundBoundsOutputNoise;
 byte testSoundBoundsOutputBank;
@@ -54,6 +59,7 @@ static void testBuildSoundConversion(byte rawVolume, byte resultIndex)
 	byte previousBank = RAM_BANK;
 	byte sourceBank;
 	byte outputBank;
+	byte validChannels;
 	byte *sourceResource, *outputResource, *outputNoise;
 	unsigned int soundChannelOffsets[4];
 
@@ -75,8 +81,9 @@ static void testBuildSoundConversion(byte rawVolume, byte resultIndex)
 	bBLoadedSounds[resultIndex].soundBank = sourceBank;
 	bBLoadedSounds[resultIndex].soundResource = sourceResource;
 	totalSoundSize = sizeof(testSoundConversionRawResource);
-	bBSetChannelOffsets(sourceResource, &bBLoadedSounds[resultIndex], soundChannelOffsets);
-	bBPrecomputeValues(&bBLoadedSounds[resultIndex], soundChannelOffsets);
+	validChannels = bBSetChannelOffsets(sourceResource, &bBLoadedSounds[resultIndex],
+		soundChannelOffsets, sizeof(testSoundConversionRawResource));
+	bBPrecomputeValues(&bBLoadedSounds[resultIndex], soundChannelOffsets, validChannels);
 
 	RAM_BANK = SOUND_BANK;
 	outputResource = bBLoadedSounds[resultIndex].soundResource;
@@ -132,7 +139,8 @@ void testPrepareSoundBounds(void)
 	bBLoadedSounds[0].soundBank = sourceBank;
 	bBLoadedSounds[0].soundResource = sourceResource;
 	totalSoundSize = sizeof(testSoundConversionRawResource);
-	bBSetChannelOffsets(sourceResource, &bBLoadedSounds[0], soundChannelOffsets);
+	testSoundBoundsValidChannels = bBSetChannelOffsets(sourceResource,
+		&bBLoadedSounds[0], soundChannelOffsets, sizeof(testSoundConversionRawResource));
 
 	testSoundBoundsResource = (unsigned int)sourceResource;
 	testSoundBoundsResourceEnd = testSoundBoundsResource + sizeof(testSoundConversionRawResource);
@@ -146,6 +154,26 @@ void testPrepareSoundBounds(void)
 	testSoundBoundsOutputNoise = 0;
 	testSoundBoundsOutputBank = 0;
 	testSoundBoundsOutputReleased = FALSE;
+	RAM_BANK = previousBank;
+}
+
+void testSoundSetOffsetPrefix(void)
+{
+	byte previousBank = RAM_BANK;
+	SoundFile soundFile;
+	unsigned int offsets[4] = { 8, 10, 12, 0xFFFF };
+
+	soundFile.ch0 = (byte *)0xBEEF;
+	soundFile.ch1 = (byte *)0xBEEF;
+	soundFile.ch2 = (byte *)0xBEEF;
+	soundFile.chNoise = (byte *)0xBEEF;
+	RAM_BANK = SOUND_BANK;
+	testSoundOffsetPrefixCount = bBSetChannelOffsets((byte *)0xA000, &soundFile,
+		offsets, 32);
+	testSoundOffsetPrefixPointers[0] = (unsigned int)soundFile.ch0;
+	testSoundOffsetPrefixPointers[1] = (unsigned int)soundFile.ch1;
+	testSoundOffsetPrefixPointers[2] = (unsigned int)soundFile.ch2;
+	testSoundOffsetPrefixPointers[3] = (unsigned int)soundFile.chNoise;
 	RAM_BANK = previousBank;
 }
 
@@ -204,7 +232,8 @@ void testPrepareSoundRefill(void)
 	bBLoadedSounds[0].soundBank = sourceBank;
 	bBLoadedSounds[0].soundResource = sourceResource;
 	totalSoundSize = TEST_SOUND_LONG_RESOURCE_SIZE;
-	bBSetChannelOffsets(sourceResource, &bBLoadedSounds[0], soundChannelOffsets);
+	testSoundBoundsValidChannels = bBSetChannelOffsets(sourceResource,
+		&bBLoadedSounds[0], soundChannelOffsets, TEST_SOUND_LONG_RESOURCE_SIZE);
 
 	testSoundBoundsResource = (unsigned int)sourceResource;
 	testSoundBoundsResourceEnd = testSoundBoundsResource + TEST_SOUND_LONG_RESOURCE_SIZE;
@@ -232,7 +261,8 @@ void testRunSoundBounds(void)
 	soundChannelOffsets[3] = 24;
 	RAM_BANK = SOUND_BANK;
 	soundLoadCounter = 0;
-	bBPrecomputeValues(&bBLoadedSounds[0], soundChannelOffsets);
+	bBPrecomputeValues(&bBLoadedSounds[0], soundChannelOffsets,
+		testSoundBoundsValidChannels);
 	testSoundBoundsOutputResource = (unsigned int)bBLoadedSounds[0].soundResource;
 	testSoundBoundsOutputNoise = (unsigned int)bBLoadedSounds[0].chNoise;
 	testSoundBoundsOutputBank = bBLoadedSounds[0].soundBank;

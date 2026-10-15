@@ -15,7 +15,10 @@ typedef enum {
     L0_L1_ONLY = 5,
     CLEAR = 6,
     DISPLAY_GRAPHICS = 7, //Used to handle the 'graphics' command
-    SHOW_OBJ = 8
+    SHOW_OBJ = 8,
+    CLEAR_OBJ = 9,
+    SET_BACKGROUND = 10,
+    HIGHLIGHT_INVENTORY_ROW = 11
 } IRQ_COMMAND;
 
 extern volatile unsigned int vSyncCounter; //Low word of the resident serviced-VSYNC counter.

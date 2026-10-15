@@ -1,7 +1,7 @@
 ; L0 is a bitmap and sprites have no layer scroll. Move the composed display
 ; instead: +8/+4 AGI pixels at DISPLAY_SCALE=64, without copying VRAM.
 ; Eight alternating phases per repeat, four VSYNCs per phase (AGI timing).
-.assert DISPLAY_SCALE = 64, error, "Shake displacement requires 2x display scaling"
+.assert DISPLAY_SCALE_GRAPHICS = 64, error, "Shake displacement requires 2x display scaling"
 .segment "ZEROPAGE"
 shakeFrames: .res 1 ; written before first read; linker-owned, not IRQ scratch
 .assert shakeFrames < $7E, lderror, "Shake frame counter overlaps KERNAL scratch"

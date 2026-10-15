@@ -39,6 +39,7 @@ extern char b7WordText[10][80];
 extern boolean haveKey;
 extern byte b7Directions[9];
 extern int lastKey;
+extern boolean statusLineDisplayed;
 
 #pragma wrapped-call (push, trampoline, STRING_BANK)
 extern void b7LookupWords(char* inputLine);

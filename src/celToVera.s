@@ -11,9 +11,11 @@ _loopHeaderBuffer: .res LOOP_HEADER_BUFFER_SIZE
 
 ;Constants
 NO_MARGIN = 4
-;void b9CelToVera(Cel* localCel, byte celBank, long veraAddress, byte bCol, byte drawingAreaWidth, byte x, byte y, byte pNum)
+;void b9CelToVera(Cel* localCel, byte celBank, long veraAddress, byte bCol, byte drawingAreaWidth, byte x, byte y, byte pNum, byte noVeraSlots)
 _b9CelToVera:
+sta NO_SPLIT_SEGMENTS
 jsr _b6EnterForegroundVera
+jsr popa
 sta P_NUM
 jsr popax
 sta Y_VAL
@@ -32,8 +34,6 @@ sta CEL_BANK
 jsr popax
 sta CEL_ADDR
 stx CEL_ADDR + 1
-lda #$1
-sta NO_SPLIT_SEGMENTS ;When we draw directly to the bitmap we don't need to split the cel into segments
 
 lda celToVeraLowRam_skipBasedOnPriority
 pha
@@ -587,6 +587,7 @@ GET_STRUCT_8_STORED_OFFSET _offsetOfBmpBank, CEL_ADDR, BMP_BANK
 bra celToVeraLowRam_start
 
 celToVeraLowRam_split:
+
 lda SPLIT_COUNTER ;The counter would have being set by the calling method
 dec
 asl

@@ -70,10 +70,11 @@ cli
 _b3PaletteAddress: .res 4 ;Should be three bytes, but there is no data type in C for handling 3 byte values
 _b3PaletteRows: .byte $0
 _b3PaletteNumber: .byte $0
-
 .ifndef ZP_DISPLAY_TEXT_SOURCE_POINTER
 ZP_DISPLAY_TEXT_SOURCE_POINTER = IRQ_TMP_6
 .endif
+_b3TextModeTileByte: .byte TILE_BYTE_2
+_b3TextBackground: .byte $0
 
 DISPLAY_TEXT_SLICE_BYTES = 512
 DISPLAY_PALETTE_SLICE_ROWS = 32
@@ -160,12 +161,13 @@ rts
 lda #$1
 rts
 
+;void b3InitLayer1MapBase(byte tileByte)
 _b3InitLayer1Mapbase:
+tay
 SET_VERA_ADDRESS_IMMEDIATE (MAP_BASE + MENU_BAR_WIDTH * 2), #$0, #$1
 
 ldx #(((TILE_LAYER_NO_TILES - MENU_BAR_WIDTH) .mod 256) / 4)
 lda #TRANSPARENT_CHAR
-ldy #TILE_BYTE_2
 
 ; The low-byte remainder is followed by exactly the full pages in the count.
 cpx #$0
@@ -188,7 +190,6 @@ lda #> (TILE_LAYER_NO_TILES - MENU_BAR_WIDTH)
 beq @mapClearDone
 sta ZP_TILE_LAYER_NO_TILES_HIGH
 lda #TRANSPARENT_CHAR
-ldy #TILE_BYTE_2
 @page:
 ldx #64
 @pageLoop:
@@ -342,6 +343,12 @@ IRQ_CMD_DISPLAY_TEXT = 4
 IRQ_CMD_L0_L1_ONLY = 5
 IRQ_CMD_CLEAR = 6
 IRQ_CMD_GRAPHICS = 7
+SHOW_OBJ = 8
+CLEAR_OBJ = 9
+SET_BACKGROUND = 10
+HIGHLIGHT_INVENTORY_ROW = 11
+IRQ_CMD_COUNT = HIGHLIGHT_INVENTORY_ROW + 1
+.assert IRQ_CMD_COUNT <= 256, error, "IRQ command index must fit in one byte"
 
 
 LAYER_0_1_SPRITES_ENABLE = $71
@@ -423,6 +430,8 @@ irqSavedDcVideo: .byte $0
 custom_irq_handler:
 lda RAM_BANK
 sta @previousRamBank 
+lda VERA_ctrl
+sta @previousVeraCtrl
 
 ; continue to default IRQ handler
 lda VERA_isr
@@ -480,7 +489,15 @@ jsr bEHandleSpriteUpdates
 
 @sendIrqCommand:
 lda sendIrqCommand
+cmp #IRQ_CMD_COUNT
+bcc @commandInRange
+lda #IRQ_CMD_DONTCHANGE
+sta sendIrqCommand
 tax
+bra @dispatchCommand
+@commandInRange:
+tax
+@dispatchCommand:
 
 lda @jmpTableBank, x
 sta RAM_BANK
@@ -516,18 +533,19 @@ sta VERA_dc_video
 lda #IRQ_CMD_NORMAL
 sta currentIrqState
 
+lda #DISPLAY_SCALE_GRAPHICS
+sta VERA_dc_hscale
+sta VERA_dc_vscale
+
 lda sendIrqCommand
 cmp #IRQ_CMD_NORMAL
 bne @normalSetup
 jmp @resetSetIrqState
 
 @normalSetup:
-lda #TEXT_BANK
-sta RAM_BANK
-jsr _b3InitLayer1Mapbase
-lda #GRAPHICS_BANK
-sta RAM_BANK
-jsr _b6InitInput
+lda #TILE_BYTE_2
+TRAMPOLINE #TEXT_BANK, _b3InitLayer1Mapbase
+TRAMPOLINE #GRAPHICS_BANK, _b6InitInput
 
 jmp @resetSetIrqState
 
@@ -536,9 +554,19 @@ stz VERA_ctrl
 lda #LAYER_0_SPRITES_DISABLE_1_ENABLE
 sta VERA_dc_video
 
-lda #TEXT_BANK
-sta RAM_BANK
+; lda #$FF
+; sta VERA_L1_vscroll_h
+
+lda #DISPLAY_SCALE_TEXT_H
+sta VERA_dc_hscale
+lda #DISPLAY_SCALE_TEXT_V
+sta VERA_dc_vscale
+
+
+lda _b3TextModeTileByte
 jsr _b3InitLayer1Mapbase
+lda #TILE_BYTE_2
+sta _b3TextModeTileByte
 jmp @resetSetIrqState
 
 @l12Only:
@@ -564,9 +592,7 @@ jsr @servicePendingWork
 jmp @vSyncCounter
 
 @showObj:
-lda #SHOW_OBJ_BANK
-sta RAM_BANK
-jsr b11ShowObjIrqHandler
+TRAMPOLINE #SHOW_OBJ_BANK, b11ShowObjIrqHandler
 jmp @resetSetIrqState
 
 @noCommand:
@@ -612,6 +638,7 @@ rts
 @serviceClearMap:
 lda #TEXT_BANK
 sta RAM_BANK
+lda #TILE_BYTE_2
 jsr _b3InitLayer1Mapbase
 lda #SPRITE_UPDATES_BANK
 sta RAM_BANK
@@ -664,6 +691,18 @@ bne @serviceWorkReturn
 inc irqCompletionGeneration + 1
 bra @serviceWorkReturn
 
+@clearObj:
+TRAMPOLINE #SHOW_OBJ_BANK, b11ClearObjIrqHandler
+bra @resetSetIrqState
+
+@setBackground:
+jsr _b6SetBackgroundColor
+bra @resetSetIrqState
+
+@highlightInventoryRow:
+jsr bDHighlightInventoryRow
+bra @resetSetIrqState
+
 @resetSetIrqState:
 inc irqCompletionGeneration
 bne @resetCommandState
@@ -686,6 +725,8 @@ lda #(VSYNC_BIT)
 sta VERA_isr ; reset latches
 
 @defaultIqr:
+lda @previousVeraCtrl
+sta VERA_ctrl
 lda @previousRamBank
 sta RAM_BANK
 jmp (default_irq_vector)
@@ -701,13 +742,19 @@ jmp (default_irq_vector)
 .addr @clear
 .addr @normal ;Graphics command goes to the same place as normal, it just clears while normal does not
 .addr @showObj
+.addr @clearObj
+.addr @setBackground
+.addr @highlightInventoryRow
 @jmpTableIrqEnd:
 
-
-@jmpTableBank: .byte $0, $0, $0, $0, TEXT_BANK, $0, $0, $0, $0 ;In order of IRQ_CMDS
+@jmpTableBank:
+.byte $0, $0, TEXT_BANK, $0, TEXT_BANK, $0, $0, $0, SHOW_OBJ_BANK, SHOW_OBJ_BANK, GRAPHICS_BANK, OBJECT_BANK
 @jmpTableBankEnd:
 .assert (@jmpTableIrqEnd - @jmpTableIrq) = 2 * (@jmpTableBankEnd - @jmpTableBank), error, "IRQ dispatch tables must match"
 @previousRamBank: .byte $0
+@previousVeraCtrl: .byte $0
+.assert (@jmpTableIrqEnd - @jmpTableIrq) / 2 = IRQ_CMD_COUNT, error, "IRQ command table length must match command range"
+.assert (@jmpTableBankEnd - @jmpTableBank) = IRQ_CMD_COUNT, error, "IRQ bank table length must match command range"
 
 ; Global aliases end ca65's cheap-local scope, so define this after the handler.
 shakeCount = @shakeCountLoad + 1

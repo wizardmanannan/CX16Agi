@@ -15,6 +15,7 @@
 #define NO_CHARS 160
 #define SIZE_OF_CHARSET (BYTES_PER_CHARACTER * NO_CHARS)
 #define BYTES_PER_CELL 2
+#define TILE_BYTE_2 0x10 //Black Tile
 
 
 #define ADDRESSSEL0 0 
@@ -55,9 +56,9 @@
 #define TEXTBUFFER_SIZE 1000
 #define TEXTBUFFER_TOTAL_SIZE (TEXTBUFFER_SIZE * 2)
 
-#define FIRST_ROW 4
+#define FIRST_TEXT_ROW 4
 
-#if ((TILE_LAYER_HEIGHT - FIRST_ROW + 1) * (TILE_LAYER_WIDTH + 1)) > TEXTBUFFER_TOTAL_SIZE
+#if ((TILE_LAYER_HEIGHT - FIRST_TEXT_ROW + 1) * (TILE_LAYER_WIDTH + 1)) > TEXTBUFFER_TOTAL_SIZE
 #error Text buffers are too small for a full tile-map clear
 #endif
 
@@ -66,11 +67,12 @@
 
 extern byte b3LastBoxLines; //Must be set manually if you display a textbox with wrapping turned off
 extern byte b3LastBoxStartLine;
+extern byte b3TextModeTileByte; //Changes the background colour the next time you enter textmode. It automatically returns to the default $10 afterwards
 
 #pragma wrapped-call (push, trampoline, TEXT_CODE_BANK)
-void b3InitLayer1Mapbase();
+void b3InitLayer1Mapbase(byte tileByte);
 byte b3DisplayManuallyWrappedMessageBox(char* message, byte messageBank, byte row, byte col, byte paletteNumber, byte boxWidth, byte boxHeight);
-void b3DisplayMessageBox(char* message, byte messageBank, byte row, byte col, byte paletteNumber, byte boxWidth, boolean wrap);
+void b3DisplayMessageBox(char* message, byte messageBank, byte row, byte col, byte paletteNumber, byte boxWidth, boolean wrap, byte firstRow);
 void b3FillChar(byte startLine, byte endLine, byte paletteNumber, byte charToFill);
 void b3ClearLastPlacedText();
 byte b3SetTextColor(byte foreground, byte background);
@@ -82,5 +84,6 @@ extern char b3TextBuffers[TEXTBUFFER_TOTAL_SIZE];
 
 extern byte b3CurrentForegroundColour;
 extern byte b3CurrentBackgroundColour;
+extern unsigned int b3TextModeTileHeight;
 
 #endif

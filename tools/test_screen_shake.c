@@ -116,7 +116,7 @@ static void assemble(uint16_t start, bool code_window, bool guards) {
     char *end = find(gate, "lda #SOUND_BANK");
     char *alias = find(end, "shakeCount = @shakeCountLoad");
     char *alias_end = find(alias, ".endif");
-    const char *prefix = code_window ? ".segment \"CODE\"\n.include \"global.s\"\n.export codeWindow,cwCurrentCode,codeWindowInvalid,_codeBank\n" : ".include \"x16.inc\"\nDISPLAY_SCALE=64\nVSYNC_BIT=1\n";
+    const char *prefix = code_window ? ".segment \"CODE\"\n.include \"global.s\"\n.export codeWindow,cwCurrentCode,codeWindowInvalid,_codeBank\n" : ".include \"x16.inc\"\nDISPLAY_SCALE_GRAPHICS=64\nVSYNC_BIT=1\n";
     const char *reader = code_window ? ".include \"codeWindow.s\"\n" : "_loadAndIncWinCode:\ninc consumed\nlda operand\nldx #0\nrts\n";
     int length = snprintf(source, sizeof(source), "%s.segment \"CODE\"\n"
         ".export b4ShakeScreen,handleScreenShake,mainLoop,irqStart,irqDispatch,irqEntry,irqEnd,operand,consumed\n"
@@ -151,15 +151,15 @@ static void assemble(uint16_t start, bool code_window, bool guards) {
         CHECK(run_tool("ld65", ld, true), "KERNAL scratch placement linked");
         char *log = read_file(logpath); CHECK(strstr(log, "KERNAL scratch"), "Missing ZP assertion"); free(log);
         memcpy(zp + 7, "22", 2); write_file(cfgpath, config);
-        char *scale = find(source, "DISPLAY_SCALE=64");
-        size_t tail = strlen(scale + strlen("DISPLAY_SCALE=64"));
-        memmove(scale + strlen("DISPLAY_SCALE=128"), scale + strlen("DISPLAY_SCALE=64"), tail + 1);
-        memcpy(scale, "DISPLAY_SCALE=128", strlen("DISPLAY_SCALE=128")); write_file(srcpath, source);
+        char *scale = find(source, "DISPLAY_SCALE_GRAPHICS=64");
+        size_t tail = strlen(scale + strlen("DISPLAY_SCALE_GRAPHICS=64"));
+        memmove(scale + strlen("DISPLAY_SCALE_GRAPHICS=128"), scale + strlen("DISPLAY_SCALE_GRAPHICS=64"), tail + 1);
+        memcpy(scale, "DISPLAY_SCALE_GRAPHICS=128", strlen("DISPLAY_SCALE_GRAPHICS=128")); write_file(srcpath, source);
         CHECK(run_tool("ca65", ca, true), "Wrong display scale assembled");
         log = read_file(logpath); CHECK(strstr(log, "Shake displacement"), "Missing scale assertion"); free(log);
         /* Restore the valid source/object before testing resident placement. */
-        memmove(scale + strlen("DISPLAY_SCALE=64"), scale + strlen("DISPLAY_SCALE=128"), tail + 1);
-        memcpy(scale, "DISPLAY_SCALE=64", strlen("DISPLAY_SCALE=64")); write_file(srcpath, source);
+        memmove(scale + strlen("DISPLAY_SCALE_GRAPHICS=64"), scale + strlen("DISPLAY_SCALE_GRAPHICS=128"), tail + 1);
+        memcpy(scale, "DISPLAY_SCALE_GRAPHICS=64", strlen("DISPLAY_SCALE_GRAPHICS=64")); write_file(srcpath, source);
         CHECK(!run_tool("ca65", ca, false), "Cannot restore valid object");
         char *ramstart = find(config, "RAM:start=$2000"); memcpy(ramstart + strlen("RAM:start=$"), "A000", 4); write_file(cfgpath, config);
         CHECK(run_tool("ld65", ld, true), "Banked shake operand linked");

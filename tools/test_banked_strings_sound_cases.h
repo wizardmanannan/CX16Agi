@@ -298,12 +298,28 @@ static void run_sound_refill_long_resource(void)
 		"Long sound refill case did not release its generated output allocation");
 }
 
+static void run_sound_offset_prefix_case(void)
+{
+	uint16_t pointers;
+
+	prepare();
+	call_target_caller("_testSoundSetOffsetPrefix");
+	pointers = symbol("_testSoundOffsetPrefixPointers");
+	CHECK(ram[symbol("_testSoundOffsetPrefixCount")] == 3,
+		"A valid sound channel was rejected because the following offset was invalid");
+	CHECK(get_word(pointers) == 0xA008 && get_word((uint16_t)(pointers + 2)) == 0xA00A &&
+		get_word((uint16_t)(pointers + 4)) == 0xA00C &&
+		get_word((uint16_t)(pointers + 6)) == 0,
+		"Sound channel setup did not publish the valid prefix and clear absent channels");
+}
+
 static void run_sound_cases(void)
 {
 	sound_bounds_case_failed = false;
 	run_sound_conversion();
 	run_sound_bounds_short_resource();
 	run_sound_refill_long_resource();
+	run_sound_offset_prefix_case();
 	CHECK(!sound_bounds_case_failed,
 		"Production sound source bounds or long-channel refill regression detected");
 }

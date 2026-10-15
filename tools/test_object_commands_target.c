@@ -5,16 +5,28 @@
 
 extern byte *var;
 extern byte bDObjData[OBJ_NAME_CACHE_SIZE];
+extern byte bDObjectNameLengths[MAX_OBJECTS];
 
 int testObjectCount;
 int testObjectObservedCount;
+int testObjectCapacity = MAX_OBJECTS;
+int testObjectNameCacheSize = OBJ_NAME_CACHE_SIZE;
+int testObjectStride = sizeof(objectType);
 byte testObjectVars[256];
 byte testObjectIndex;
 byte testObjectRoom;
 word testObjectName;
 byte testObjectSeedRoom;
 word testObjectSeedName;
+int testObjectFileLength;
 boolean testObjectResult;
+boolean testObjectParseResult;
+int testObjectParsedCount;
+byte testObjectParsedRoom;
+byte testObjectParsedObjectNum;
+byte testObjectParsedNameLength;
+word testObjectParsedName;
+word testObjectParsedHeader;
 byte testObjectObservedRoom;
 word testObjectObservedName;
 
@@ -40,7 +52,7 @@ void testObjectCommandsReset(void)
 	memset(testObjectVars, 0, sizeof(testObjectVars));
 	var = testObjectVars;
 	RAM_BANK = OBJECT_BANK;
-	bFNumObjects = testObjectCount;
+	bDNumObjects = testObjectCount;
 	for (index = 0; index < MAX_OBJECTS; ++index)
 	{
 		bDObjects[index].roomNum = 0x66;
@@ -55,7 +67,21 @@ void testObjectCommandsReadCount(void)
 {
 	byte previousBank = RAM_BANK;
 	RAM_BANK = OBJECT_BANK;
-	testObjectObservedCount = bFNumObjects;
+	testObjectObservedCount = bDNumObjects;
+	RAM_BANK = previousBank;
+}
+
+void testObjectCommandsParseFile(void)
+{
+	byte previousBank = RAM_BANK;
+	testObjectParseResult = bDParseObjectFileData(testObjectFileLength);
+	RAM_BANK = OBJECT_BANK;
+	testObjectParsedCount = bDNumObjects;
+	testObjectParsedRoom = bDObjects[MAX_OBJECTS - 1].roomNum;
+	testObjectParsedObjectNum = bDObjects[MAX_OBJECTS - 1].objectNum;
+	testObjectParsedName = (word)bDObjects[MAX_OBJECTS - 1].name;
+	testObjectParsedNameLength = bDObjectNameLengths[MAX_OBJECTS - 1];
+	testObjectParsedHeader = bDObjData[0] | ((word)bDObjData[1] << 8);
 	RAM_BANK = previousBank;
 }
 

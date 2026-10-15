@@ -136,11 +136,11 @@ static void test_fill_full_layer(void)
 	captureFillOutput = 0;
 	CHECK(fillMapRowsSeen == 1, "Clearing the visible map range was split unexpectedly");
 	CHECK(displayCalls > 0, "Clearing the layer did not submit text");
-	CHECK(displayedCells == TILE_LAYER_WIDTH * (TILE_LAYER_HEIGHT - FIRST_ROW + 1),
+	CHECK(displayedCells == TILE_LAYER_WIDTH * (TILE_LAYER_HEIGHT - FIRST_TEXT_ROW + 1),
 		"Clearing the layer omitted cells");
-	CHECK(displayedNewlines + displayCalls == TILE_LAYER_HEIGHT - FIRST_ROW + 1,
+	CHECK(displayedNewlines + displayCalls == TILE_LAYER_HEIGHT - FIRST_TEXT_ROW + 1,
 		"Clearing the layer changed its row boundaries");
-	CHECK(lowestFillMapRow == FIRST_ROW - 1 &&
+	CHECK(lowestFillMapRow == FIRST_TEXT_ROW - 1 &&
 		highestFillMapRow == TILE_LAYER_HEIGHT - 1,
 		"Clearing the layer escaped the physical tile-map range");
 	CHECK(!unexpectedText, "Clearing the layer submitted unexpected text");
@@ -150,7 +150,7 @@ static void test_fill_rejects_wrapped_row(void)
 {
 	displayCalls = 0;
 	memset(b3TextBuffer1, 0x5A, TEXTBUFFER_SIZE);
-	b3FillChar(TILE_LAYER_HEIGHT - FIRST_ROW + 1,
+	b3FillChar(TILE_LAYER_HEIGHT - FIRST_TEXT_ROW + 1,
 		TILE_LAYER_HEIGHT - 1, 0, TRANSPARENT_CHAR);
 	CHECK(!displayCalls, "A row below the tile-map bottom was rendered");
 	CHECK((unsigned char)b3TextBuffer1[0] == 0x5A,
@@ -170,9 +170,9 @@ static void test_fill_clear_lines_map_range(void)
 	b3FillChar(0, 23, 0, TRANSPARENT_CHAR);
 	captureFillOutput = 0;
 	CHECK(fillMapRowsSeen == 1, "The AGI clear_lines range was split unexpectedly");
-	CHECK(lowestFillMapRow == FIRST_ROW - 1,
+	CHECK(lowestFillMapRow == FIRST_TEXT_ROW - 1,
 		"AGI row zero no longer maps to the first gameplay map row");
-	CHECK(highestFillMapRow == FIRST_ROW + 23 - 1,
+	CHECK(highestFillMapRow == FIRST_TEXT_ROW + 23 - 1,
 		"AGI row 23 changed its established map row");
 	CHECK(highestFillMapRow < TILE_LAYER_HEIGHT,
 		"The production clear_lines range writes past the tile map");
@@ -189,7 +189,7 @@ static void test_long_message_is_bounded_and_unchanged(void)
 	bankCopyCalls = bankWriteCalls = 0;
 	displayCalls = 0;
 	boundedMessageSource = message;
-	b3DisplayMessageBox(message, 0, 0, 0, 0, 0, FALSE);
+	b3DisplayMessageBox(message, 0, 0, 0, 0, 0, FALSE, FIRST_TEXT_ROW);
 	boundedMessageSource = NULL;
 	CHECK(!bankWriteCalls, "Displaying a long message modified its source");
 	CHECK(bankCopyCalls == 1 && bankCopyLength == TEXTBUFFER_SIZE * 2,
@@ -208,7 +208,7 @@ static void test_source_length_is_bounded(void)
 	message[sizeof(message) - 1] = '\0';
 	bankCopyCalls = bankWriteCalls = 0;
 	displayCalls = 0;
-	b3DisplayMessageBox(message, 0, 0, 0, 0, 0, FALSE);
+	b3DisplayMessageBox(message, 0, 0, 0, 0, 0, FALSE, FIRST_TEXT_ROW);
 	CHECK(bankCopyCalls == 1 && bankCopyLength == TEXTBUFFER_TOTAL_SIZE,
 		"Source length was not bounded by the available text buffers");
 	CHECK(b3TextBuffer1[TEXTBUFFER_TOTAL_SIZE - 1] == '\0',
@@ -223,7 +223,7 @@ static void test_border_rejects_oversized_output(void)
 	memset(message, 'X', sizeof(message) - 1);
 	message[sizeof(message) - 1] = '\0';
 	displayCalls = 0;
-	b3DisplayMessageBox(message, 0, 0, 0, 0, 254, FALSE);
+	b3DisplayMessageBox(message, 0, 0, 0, 0, 254, FALSE, FIRST_TEXT_ROW);
 	CHECK(b3TextBuffer2[0] == '\0', "Oversized border output was not rejected");
 	CHECK(!displayCalls, "Rejected border output was still submitted for display");
 }
@@ -234,7 +234,7 @@ static void test_border_keeps_content_inside_requested_width(void)
 	char* line = b3TextBuffer2;
 	size_t lineLength;
 	const size_t maximumRowLength = 11; /* b3DrawBorder receives boxWidth - 2. */
-	b3DisplayMessageBox(message, 0, 0, 0, 0, 12, FALSE);
+	b3DisplayMessageBox(message, 0, 0, 0, 0, 12, FALSE, FIRST_TEXT_ROW);
 	if (!b3TextBuffer2[0]) return; /* Rejecting an unsafe box is valid. */
 	while (*line)
 	{
@@ -260,7 +260,7 @@ static void test_border_preserves_trailing_blank_line(void)
 	char message[] = "first\n";
 	char* line;
 	unsigned rows = 0;
-	b3DisplayMessageBox(message, 0, 0, 0, 0, 12, FALSE);
+	b3DisplayMessageBox(message, 0, 0, 0, 0, 12, FALSE, FIRST_TEXT_ROW);
 	for (line = b3TextBuffer2; *line; ++line)
 		if (*line == NEW_LINE) ++rows;
 	++rows;
@@ -340,7 +340,7 @@ static void test_wrapped_box_fits_its_content(void)
 	size_t contentRows = 0;
 	const size_t expectedRowLength = 11; /* Nine text columns and two borders. */
 	const size_t expectedRows = 8; /* Top/padding + four content rows + padding/bottom. */
-	b3DisplayMessageBox(text, 0, 0, 0, 0, 12, TRUE);
+	b3DisplayMessageBox(text, 0, 0, 0, 0, 12, TRUE, FIRST_TEXT_ROW);
 	CHECK(currentTextBuffer == b3TextBuffer2,
 		"Wrapped box did not select the bordered output buffer");
 	CHECK(b3TextBuffer2[0] != '\0', "Wrapped box rejected content that should fit");
@@ -418,7 +418,7 @@ static void test_text_color_allocation_failure(void)
 static void check_published_text_rows(char* message, byte width, boolean wrap, unsigned expected)
 {
 	displayCalls = 0;
-	b3DisplayMessageBox(message, 0, 1, 0, 2, width, wrap);
+	b3DisplayMessageBox(message, 0, 1, 0, 2, width, wrap, FIRST_TEXT_ROW);
 	CHECK(displayCalls == 1, "Multiline text was not submitted");
 	unsigned rows = 1;
 	for (const char* p = currentTextBuffer; *p; ++p)
@@ -463,9 +463,9 @@ static void test_auto_center_unboxed_text(void)
 {
 	char message[] = "abc";
 	unsigned int column;
-	b3DisplayMessageBox(message, 0, AUTO_CALC_ROW, AUTO_CALC_COLUMN, 0, 0, FALSE);
+	b3DisplayMessageBox(message, 0, AUTO_CALC_ROW, AUTO_CALC_COLUMN, 0, 0, FALSE, FIRST_TEXT_ROW);
 	column = (unsigned int)((displayTextAddressToCopyTo - MAPBASE -
-		(FIRST_ROW + b3LastBoxStartLine - 1) * TILE_LAYER_BYTES_PER_ROW) / BYTES_PER_CELL);
+		(FIRST_TEXT_ROW + b3LastBoxStartLine - 1) * TILE_LAYER_BYTES_PER_ROW) / BYTES_PER_CELL);
 	CHECK(column == (MAX_CHAR_ACROSS - 3) / 2,
 		"Automatically centered unboxed text ignored its content width");
 }
@@ -473,7 +473,7 @@ static void test_auto_center_unboxed_text(void)
 static void test_auto_center_explicit_multiline_box(void)
 {
 	char message[] = "first\nsecond\nthird";
-	b3DisplayMessageBox(message, 0, AUTO_CALC_ROW, AUTO_CALC_COLUMN, 0, 12, FALSE);
+	b3DisplayMessageBox(message, 0, AUTO_CALC_ROW, AUTO_CALC_COLUMN, 0, 12, FALSE, FIRST_TEXT_ROW);
 	CHECK(b3LastBoxLines == 7, "Multiline box did not publish its full rendered extent");
 	CHECK(b3LastBoxStartLine == (TEXT_ROWS - b3LastBoxLines) / 2,
 		"Automatically centered box ignored its final rendered height");
@@ -482,7 +482,7 @@ static void test_auto_center_explicit_multiline_box(void)
 static void test_right_edge_clips_unboxed_text(void)
 {
 	char message[] = "AB";
-	b3DisplayMessageBox(message, 0, 0, MAX_CHAR_ACROSS - 1, 0, 0, FALSE);
+	b3DisplayMessageBox(message, 0, 0, MAX_CHAR_ACROSS - 1, 0, 0, FALSE, FIRST_TEXT_ROW);
 	CHECK(!strcmp(currentTextBuffer, "A"),
 		"Text at the right edge was not clipped to the visible screen width");
 	CHECK(b3PaletteRows == 1, "Right-edge clipping changed the visible row count");
@@ -491,18 +491,40 @@ static void test_right_edge_clips_unboxed_text(void)
 static void test_bottom_edge_clips_unboxed_text(void)
 {
 	char message[] = "first\nsecond";
-	b3DisplayMessageBox(message, 0, TILE_LAYER_HEIGHT - FIRST_ROW,
-		0, 0, 0, FALSE);
+	b3DisplayMessageBox(message, 0, TILE_LAYER_HEIGHT - FIRST_TEXT_ROW,
+		0, 0, 0, FALSE, FIRST_TEXT_ROW);
 	CHECK(!strcmp(currentTextBuffer, "first"),
 		"Text below the final tile-map row was not clipped");
 	CHECK(b3PaletteRows == 1 && b3LastBoxLines == 1,
 		"Bottom-edge clipping published rows outside the tile map");
 }
 
+static void test_first_row_controls_map_bounds(void)
+{
+	char message[] = "bottom";
+	const unsigned int bottomRowAddress = MAPBASE + (TILE_LAYER_HEIGHT - 1) * TILE_LAYER_BYTES_PER_ROW;
+	displayCalls = 0;
+	b3DisplayMessageBox(message, 0, TILE_LAYER_HEIGHT - 1, 0, 0, 0, FALSE, 1);
+	CHECK(displayCalls == 1, "First-row origin 1 rejected the last physical tile row");
+	CHECK(displayTextAddressToCopyTo == bottomRowAddress,
+		"First-row origin 1 did not map logical row 31 to physical row 31");
+
+	displayCalls = 0;
+	b3DisplayMessageBox(message, 0, 0, 0, 0, 0, FALSE, TILE_LAYER_HEIGHT);
+	CHECK(displayCalls == 1 && displayTextAddressToCopyTo == bottomRowAddress,
+		"First-row origin 32 did not map logical row zero to the last physical row");
+
+	displayCalls = 0;
+	b3DisplayMessageBox(message, 0, 0, 0, 0, 0, FALSE, 0);
+	CHECK(!displayCalls, "A zero first-row origin was accepted");
+	b3DisplayMessageBox(message, 0, 0, 0, 0, 0, FALSE, TILE_LAYER_HEIGHT + 1);
+	CHECK(!displayCalls, "A first-row origin below the tile map was accepted");
+}
+
 static void test_control_bytes_survive_preparation(void)
 {
 	char message[] = { 'A', '\t', '\r', 1, 'B', '\0' };
-	b3DisplayMessageBox(message, 0, 0, 0, 0, 0, FALSE);
+	b3DisplayMessageBox(message, 0, 0, 0, 0, 0, FALSE, FIRST_TEXT_ROW);
 	CHECK(!memcmp(currentTextBuffer, message, sizeof(message)),
 		"Text preparation changed non-newline control bytes");
 }
@@ -512,7 +534,7 @@ static void test_source_alias_inside_text_buffer(void)
 	static const char expected[] = "aliased source";
 	char* aliasedSource = b3TextBuffer1 + 8;
 	memcpy(aliasedSource, expected, sizeof(expected));
-	b3DisplayMessageBox(aliasedSource, TEXT_CODE_BANK, 0, 0, 0, 0, FALSE);
+	b3DisplayMessageBox(aliasedSource, TEXT_CODE_BANK, 0, 0, 0, 0, FALSE, FIRST_TEXT_ROW);
 	CHECK(currentTextBuffer == b3TextBuffer1 && !strcmp(currentTextBuffer, expected),
 		"Source alias inside the text buffer was not prepared intact");
 }
@@ -529,7 +551,7 @@ static void test_rejected_box_preserves_cleanup_extent(void)
 	memset(invalid, 'X', sizeof(invalid) - 1);
 	invalid[sizeof(invalid) - 1] = '\0';
 	displayCalls = 0;
-	b3DisplayMessageBox(valid, 0, 1, 0, 2, 12, FALSE);
+	b3DisplayMessageBox(valid, 0, 1, 0, 2, 12, FALSE, FIRST_TEXT_ROW);
 	CHECK(displayCalls == 1 && b3LastBoxLines == 7, "Initial box did not publish its extent");
 	previousTextBuffer = currentTextBuffer;
 	previousTextAddress = displayTextAddressToCopyTo;
@@ -538,21 +560,21 @@ static void test_rejected_box_preserves_cleanup_extent(void)
 	previousPaletteNumber = b3PaletteNumber;
 	previousBoxLines = b3LastBoxLines;
 	previousBoxStartLine = b3LastBoxStartLine;
-	b3DisplayMessageBox(invalid, 0, 5, 0, 2, 254, FALSE);
+	b3DisplayMessageBox(invalid, 0, 5, 0, 2, 254, FALSE, FIRST_TEXT_ROW);
 	CHECK(displayCalls == 1 && currentTextBuffer == previousTextBuffer &&
 		displayTextAddressToCopyTo == previousTextAddress &&
 		b3PaletteAddress == previousPaletteAddress && b3PaletteRows == previousPaletteRows &&
 		b3PaletteNumber == previousPaletteNumber && b3LastBoxLines == previousBoxLines &&
 		b3LastBoxStartLine == previousBoxStartLine,
 		"Rejected box changed previously published display metadata");
-	b3DisplayMessageBox("", 0, 5, 0, 2, 12, FALSE);
+	b3DisplayMessageBox("", 0, 5, 0, 2, 12, FALSE, FIRST_TEXT_ROW);
 	CHECK(displayCalls == 1 && currentTextBuffer == previousTextBuffer &&
 		displayTextAddressToCopyTo == previousTextAddress &&
 		b3PaletteAddress == previousPaletteAddress && b3PaletteRows == previousPaletteRows &&
 		b3PaletteNumber == previousPaletteNumber && b3LastBoxLines == previousBoxLines &&
 		b3LastBoxStartLine == previousBoxStartLine,
 		"Empty message changed previously published display metadata");
-	b3DisplayMessageBox(NULL, 0, 5, 0, 2, 12, FALSE);
+	b3DisplayMessageBox(NULL, 0, 5, 0, 2, 12, FALSE, FIRST_TEXT_ROW);
 	CHECK(displayCalls == 1 && currentTextBuffer == previousTextBuffer &&
 		displayTextAddressToCopyTo == previousTextAddress &&
 		b3PaletteAddress == previousPaletteAddress && b3PaletteRows == previousPaletteRows &&
@@ -560,7 +582,7 @@ static void test_rejected_box_preserves_cleanup_extent(void)
 		b3LastBoxStartLine == previousBoxStartLine,
 		"Null message changed previously published display metadata");
 	memset(invalid, NEW_LINE, sizeof(invalid) - 1);
-	b3DisplayMessageBox(invalid, 0, 5, 0, 2, 0, FALSE);
+	b3DisplayMessageBox(invalid, 0, 5, 0, 2, 0, FALSE, FIRST_TEXT_ROW);
 	CHECK(displayCalls == 1 && currentTextBuffer == previousTextBuffer &&
 		displayTextAddressToCopyTo == previousTextAddress &&
 		b3PaletteAddress == previousPaletteAddress && b3PaletteRows == previousPaletteRows &&
@@ -607,6 +629,7 @@ static const TextTestCase textTests[] =
 	{ "auto_center_explicit_multiline_box", test_auto_center_explicit_multiline_box },
 	{ "right_edge_clips_unboxed_text", test_right_edge_clips_unboxed_text },
 	{ "bottom_edge_clips_unboxed_text", test_bottom_edge_clips_unboxed_text },
+	{ "first_row_controls_map_bounds", test_first_row_controls_map_bounds },
 	{ "control_bytes_survive_preparation", test_control_bytes_survive_preparation },
 	{ "source_alias_inside_text_buffer", test_source_alias_inside_text_buffer },
 	{ "rejected_box_preserves_cleanup_extent", test_rejected_box_preserves_cleanup_extent },

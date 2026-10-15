@@ -191,7 +191,7 @@ void bBDiscardSoundFile(int soundNum)
 	// Get pointer to loaded sound structure
 	sound = bBLoadedSoundsPointer[soundNum];
 
-	if(sound->isLogicZeroOrDependency)
+	if (sound->isLogicZeroOrDependency)
 	{
 		return;
 	}
@@ -264,16 +264,37 @@ unsigned int bBCopyAhead(SoundFile* soundFile, unsigned int bytePerBufferCounter
 
 // Sets the channel data pointers in the SoundFile struct based on offsets
 // Accepts as an argument the 'codePtr' which is a pointer to the sounds allocated resource block
-void bBSetChannelOffsets(byte* codePtr, SoundFile* soundFile, unsigned int* soundChannelOffSets)
+byte bBSetChannelOffsets(byte* codePtr, SoundFile* soundFile, unsigned int* soundChannelOffSets, unsigned int totalSoundSize)
 {
-	byte i, ** currentChannel;
+	byte i, validChannels = 0;
+	unsigned int previousOffset = 0;
+	byte* channelAddress;
 
-	// Iterate through all channels
-	for (i = 0, currentChannel = &soundFile->ch0; i < NO_CHANNELS; i++, currentChannel++)
+	soundFile->ch0 = NULL;
+	soundFile->ch1 = NULL;
+	soundFile->ch2 = NULL;
+	soundFile->chNoise = NULL;
+
+	/* The channel streams are consumed in offset-table order. Keep the valid
+	 * prefix: an invalid next entry does not invalidate the current channel. */
+	for (i = 0; i < NO_CHANNELS; ++i)
 	{
-		// Set pointer for each channel start position by adding offset to base pointer
-		*currentChannel = codePtr + soundChannelOffSets[i];
+		if (soundChannelOffSets[i] >= totalSoundSize ||
+			(i && soundChannelOffSets[i] < previousOffset))
+			break;
+		channelAddress = codePtr + soundChannelOffSets[i];
+		switch (i)
+		{
+		case 0: soundFile->ch0 = channelAddress; break;
+		case 1: soundFile->ch1 = channelAddress; break;
+		case 2: soundFile->ch2 = channelAddress; break;
+		case 3: soundFile->chNoise = channelAddress; break;
+		}
+		previousOffset = soundChannelOffSets[i];
+		validChannels++;
 	}
+
+	return validChannels;
 }
 
 typedef struct
@@ -402,7 +423,7 @@ void bBPreComputePeriodicSound(SoundFile* soundFile, unsigned int* soundChannelO
 	memCpyBankedBetween(newSoundFile.soundResource, newSoundFile.soundBank, soundFile->soundResource, soundFile->soundBank, soundFile->chNoise - soundFile->soundResource);
 
 	// Set channel offsets for new sound file based on copied data pointers
-	bBSetChannelOffsets(newSoundFile.soundResource, &newSoundFile, soundChannelOffSets);
+	bBSetChannelOffsets(newSoundFile.soundResource, &newSoundFile, soundChannelOffSets, allocatedBlockSize);
 
 	// Initialize noise buffer status struct for writing new noise channel data
 	newChNoiseLocalBufferStatus.bank = newSoundFile.soundBank;
@@ -478,7 +499,7 @@ void bBPreComputePeriodicSound(SoundFile* soundFile, unsigned int* soundChannelO
 
 // Performs precomputation of volume and frequency values of sound file's notes,
 // converts frequencies/volumes, detects periodic sound, and adjusts sound data.
-void bBPrecomputeValues(SoundFile* soundFile, unsigned int* soundChannelOffSets)
+void bBPrecomputeValues(SoundFile* soundFile, unsigned int* soundChannelOffSets, byte validChannels)
 {
 	BufferStatus localBufferStatus;
 	byte seenFFFFCounter = 0;       // Tracks end marker count per channel
@@ -505,9 +526,8 @@ void bBPrecomputeValues(SoundFile* soundFile, unsigned int* soundChannelOffSets)
 
 	// Refresh local buffer with banked data for channel 0
 	b5RefreshBuffer(&localBufferStatus);
-
 	// Loop until end markers (0xFFFF) are found on all channels
-	while (seenFFFFCounter != NO_CHANNELS)
+	while (seenFFFFCounter != validChannels)
 	{
 		GET_NEXT(readByte);  // Macro to get next byte from banked sound data
 
@@ -640,10 +660,11 @@ void bBLoadSoundFile(int soundNum) {
 
 	AGIFile tempAGI;               // Temporary AGI file structure for sound file code
 	AGIFilePosType agiFilePosType;
-	byte i;
+	byte i, validChannels;
 	unsigned int soundChannelOffSets[NO_CHANNELS];  // Offsets to channel data in sound file
 
-	if(bBLoadedSoundsPointer[soundNum])
+
+	if (bBLoadedSoundsPointer[soundNum])
 	{
 		return;
 	}
@@ -663,10 +684,11 @@ void bBLoadSoundFile(int soundNum) {
 	memCpyBanked((byte*)soundChannelOffSets, tempAGI.code, tempAGI.codeBank, NO_CHANNELS * 2);
 
 	// Set channel pointers in loaded sound struct
-	bBSetChannelOffsets(tempAGI.code, &bBLoadedSounds[soundLoadCounter], soundChannelOffSets);
+	validChannels = bBSetChannelOffsets(tempAGI.code, &bBLoadedSounds[soundLoadCounter], soundChannelOffSets, totalSoundSize);
+
 
 	// Precompute frequency and volume values for loaded sound
-	bBPrecomputeValues(&bBLoadedSounds[soundLoadCounter], soundChannelOffSets);
+	bBPrecomputeValues(&bBLoadedSounds[soundLoadCounter], soundChannelOffSets, validChannels);
 
 	// Increment sound load counter if space available
 	if (soundLoadCounter < MAX_LOADED_SOUNDS - 1)
@@ -737,10 +759,10 @@ void bBPlaySound(byte soundNum, byte endSoundFlag)
 
 boolean bBIsPlayingNoInterupts()
 {
-	boolean soundPlaying = FALSE;	
+	boolean soundPlaying = FALSE;
 	byte i;
 
-	for(i = 0; i < NO_CHANNELS && !soundPlaying; i++)
+	for (i = 0; i < NO_CHANNELS && !soundPlaying; i++)
 	{
 		soundPlaying = bBIsPlaying[i];
 	}
@@ -753,8 +775,8 @@ void bBStopSound()
 {
 	asm("php");
 	asm("sei");         // Disable interrupts to safely stop sound
-	
-	if(bBIsPlayingNoInterupts())
+
+	if (bBIsPlayingNoInterupts())
 	{
 		bBPsgClear();       // Clear PSG sound generator state
 		memset(bBIsPlaying, FALSE, NO_CHANNELS); // Mark all channels as not playing
@@ -766,7 +788,7 @@ void bBStopSound()
 
 void bBMarkSoundAsAZeroDependency(byte soundNum)
 {
-	if(bBLoadedSoundsPointer[soundNum])
+	if (bBLoadedSoundsPointer[soundNum])
 	{
 		bBLoadedSoundsPointer[soundNum]->isLogicZeroOrDependency = TRUE;
 	}

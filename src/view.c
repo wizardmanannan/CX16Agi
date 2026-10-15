@@ -1148,9 +1148,8 @@ void bESetViewMetadata(View* localView, ViewTable* viewTable, byte viewNum, byte
 }
 
 #pragma wrapped-call (push, trampoline, SPRITE_METADATA_BANK)
-byte bECreateSpritePalette(byte transparentColor)
+byte bECreateSpritePalette(byte transparentColor, PaletteGetResult* palleteGetResult)
 {
-	PaletteGetResult palleteGetResult;
 	byte i;
 	byte paletteColourLow, paletteColourHigh, paletteBlackLow, paletteBlackHigh;
 	byte paletteSlot;
@@ -1159,19 +1158,20 @@ byte bECreateSpritePalette(byte transparentColor)
 #ifdef VERBOSE_GET_PALETTE
 	printf("cs 1. trans color is %d\n", transparentColor);
 #endif
-	paletteSlot = bFGetPalette(BASE_SPRITE_ID + transparentColor, &palleteGetResult);
+	paletteSlot = bFGetPalette(BASE_SPRITE_ID + transparentColor, palleteGetResult);
+
 
 #ifdef VERBOSE_GET_PALETTE
 	printf("cs 2. The palette slot is %d and the result is %d\n", paletteSlot, palleteGetResult);
 #endif
 	paletteWriteAddress = PALETTE_START + COLOURS_PER_PALETTE * BYTES_PER_PALETTE_COLOUR * paletteSlot;
 
-	if (palleteGetResult == FailToAllocate)
+	if (*palleteGetResult == FailToAllocate)
 	{
 		return 0; //If we are out of palettes the best we can do is use the default
 	}
 
-	if (palleteGetResult == Allocated)
+	if (*palleteGetResult == Allocated)
 	{
 		b6EnterForegroundVera();
 		SET_VERA_ADDRESS(PALETTE_START, 0, 1);
@@ -1408,6 +1408,21 @@ extern void bECalculateBytesPerRow(byte celWidth);
 
 extern boolean bESetLoop(ViewTable* localViewTab, ViewTableMetadata* localMetadata, View* localView, VeraSpriteAddress* loopVeraAddresses, byte entryNum);
 
+extern void bEClearVeraSprite(byte celWidth, byte celHeight);
+
+#define SET_VERA_ADDRESS_ZP(loopVeraAddress, VERA_ADDRESS, VERA_ADDRESS_HIGH) \
+    do { \
+        _assmULong = loopVeraAddress; \
+		asm("lda %v", _assmULong); \
+		asm("sta %w", VERA_ADDRESS); \
+        asm("lda %v + 1", _assmULong); \
+        asm("sta %w + 1", VERA_ADDRESS); \
+        asm("lda %v + 2", _assmULong); \
+        asm("sta %w", VERA_ADDRESS_HIGH); \
+    } while (0)
+
+
+
 /***************************************************************************
 ** agi_blit
 ***************************************************************************/
@@ -1459,30 +1474,6 @@ boolean agiBlit(byte entryNum, boolean disableInterupts)
 	getLoadedLoop(&localView, &localLoop, localViewTab.currentLoop);
 	getLoadedCel(&localLoop, &localCel, localViewTab.currentCel);
 
-	if (localView.maxVeraSlots > 1)
-	{
-		i = 0;
-		getLoadedCel(&localLoop, &tempCel, i);
-
-#ifdef VERBOSE_SPLIT
-		printf("you are splitting view %d loop %d cel %d. the data is %p on bank %p. it's width doubled is %d\n", viewNum, localViewTab->currentLoop, localViewTab->currentCel, tempCel.bmp, tempCel.bitmapBank, tempCel.width * 2);
-#endif
-		do
-		{
-			if (!tempCel.splitCelPointers && (tempCel.veraSlotsWidth > 1 && tempCel.veraSlotsWidth > 1))
-			{
-				bESplitCel(&tempCel);
-				setLoadedCel(&localLoop, &tempCel, i);
-			}
-
-			getLoadedCel(&localLoop, &tempCel, ++i);
-
-		} while (i < localLoop.numberOfCels && (!tempCel.splitCelPointers || (tempCel.veraSlotsWidth == 1 && tempCel.veraSlotsWidth == 1))); //One we have seen the first one which is split then they all are
-
-		//printf("setting address %p. loop %d cel %d\n", &((Cel*)bEToBlitCelArray)[localViewTab->currentCel], localViewTab->currentLoop, localViewTab->currentCel);
-
-		//((Cel*)bEToBlitCelArray)[localViewTab->currentCel] = localCel;
-	}
 
 	if (viewTabNoToMetaData[entryNum] != VIEWNO_TO_METADATA_NO_SET && viewTableMetadata[entryNum].viewNum != viewNum)
 	{
@@ -2358,7 +2349,7 @@ byte b9VeraSlotsForWidthOrHeight(byte widthOrHeight)
 ** Purpose: Loads a VIEW file into memory storing it in the loadedViews
 ** array.
 **************************************************************************/
-void b9LoadViewFile(byte viewNum)
+PaletteGetResult b9LoadViewFile(byte viewNum)
 {
 	AGIFile tempAGI;
 	AGIFilePosType agiFilePosType;
@@ -2372,6 +2363,7 @@ void b9LoadViewFile(byte viewNum)
 	byte celHeader[CEL_HEADER_SIZE];
 	byte maxLoopVeraSlots = 1;
 	byte currentCelVeraSlots;
+	PaletteGetResult paletteGetResult = FailToAllocate;
 
 	getLoadedView(&localView, viewNum);
 
@@ -2382,7 +2374,7 @@ void b9LoadViewFile(byte viewNum)
 #endif // VERBOSE_LOAD_VIEWS
 
 		b10GetLogicDirectory(&agiFilePosType, &viewdir[viewNum]);
-		if (!b6LoadAGIFile(VIEW, &agiFilePosType, &tempAGI)) return;
+		if (!b6LoadAGIFile(VIEW, &agiFilePosType, &tempAGI)) return FailToAllocate;
 
 #ifdef VERBOSE_LOAD_VIEWS
 		printf("loaded agiFile of total size %u\n", tempAGI.totalSize);
@@ -2438,7 +2430,7 @@ void b9LoadViewFile(byte viewNum)
 #ifdef VERBOSE_GET_PALETTE
 					printf("lv 1. create palette for view %d loop %d\n", viewNum, l);
 #endif
-					localLoop.palette = bECreateSpritePalette(localCel.transparency);
+					localLoop.palette = bECreateSpritePalette(localCel.transparency, &paletteGetResult);
 
 #ifdef VERBOSE_GET_PALETTE
 					printf("lv 1. set palette for view %d loop %d. palette %d\n", viewNum, l, localLoop.palette);
@@ -2498,6 +2490,11 @@ void b9LoadViewFile(byte viewNum)
 					localView.maxVeraSlots = currentCelVeraSlots;
 				}
 
+				if(!localCel.splitCelPointers && localCel.veraSlotsWidth > 1 && localCel.veraSlotsHeight == 1) //We currently don't support split by height sprites. TODO change this boolean once we do
+				{
+					bESplitCel(&localCel);
+				}
+
 				setLoadedCel(&localLoop, &localCel, c);
 			}
 
@@ -2509,12 +2506,12 @@ void b9LoadViewFile(byte viewNum)
 #ifdef VERBOSE_LOAD_VIEWS
 			printf("view %d loop %d is allocated width and %d height %d\n", viewNum, l, localLoop.allocationWidth, localLoop.allocationHeight);
 #endif
-
-
 			setLoadedLoop(&localView, &localLoop, l);
 		}
 		setLoadedView(&localView, viewNum);
 	}
+
+	return paletteGetResult;
 }
 
 /***************************************************************************
@@ -2617,7 +2614,7 @@ void b9AddToPic(int vNum, int lNum, int cNum, int x, int y, int pNum, int bCol)
 
 	//printf("x and y are %p, %p, %d, %d. the height is %d %p\n", x, calcYCoord, x, calcYCoord, localCel.height, localCel.height);
 
-	b9CelToVera(&localCel, localLoop.celsBank, b8GetVeraPictureAddress(x, calcYCoord), bCol, BYTES_PER_ROW, x, calcYCoord, pNum);
+	b9CelToVera(&localCel, localLoop.celsBank, b8GetVeraPictureAddress(x, calcYCoord), bCol, BYTES_PER_ROW, x, calcYCoord, pNum, 1);
 
 	//TODO: Finish implementing the priority and control line stuff
 //

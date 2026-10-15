@@ -24,9 +24,6 @@
 #include "graphics.h"
 #define DEFAULT_COLOR 0xF
 
-#define  AGI_GRAPHICS  0
-#define  AGI_TEXT      1
-
 #define MULT_HALF_POINT 128
 
 typedef struct {

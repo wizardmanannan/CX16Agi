@@ -24,6 +24,11 @@ byte bFGetPalette(int id, PaletteGetResult* result)
 	printf("gp1. the id is %d\n", id);
 #endif // VERBOSE_PALETTE_MANAGER
 
+	if (id == 0)
+	{
+		*result = AlreadyAllocated; //Palette 0 is a special case it is always there as the first palette entry, because it needs to be used by the background
+		return 0;
+	}
 #ifdef VERBOSE_PALETTE_MANAGER
 	printf("gp2. the number of available palettes are %d\n", NO_MANAGED_PALETTES - palettesAllocated);
 #endif // VERBOSE_PALETTE_MANAGER
@@ -60,4 +65,13 @@ byte bFGetPalette(int id, PaletteGetResult* result)
 
 	return allocatedPalette + BASE_MANAGED_PALETTE;
 }
+
+void bFRemoveLastPalette()
+{
+	if(palettesAllocated)
+	{
+		allocatedPaletteOwners[--palettesAllocated] = 0;
+	}
+}
+
 #pragma code-name (pop)

@@ -1,10 +1,11 @@
 #ifndef TEST_OBJECT_COMMANDS_CASES_H
 #define TEST_OBJECT_COMMANDS_CASES_H
 
-#define OBJECT_COMMAND_OBJECTS 255u
-#define OBJECT_COMMAND_LAST 254u
 #define OBJECT_COMMAND_SENTINEL_ROOM 0x66u
 #define OBJECT_COMMAND_SENTINEL_NAME 0xBEEFu
+
+static unsigned object_command_objects;
+static uint8_t object_command_last;
 
 static void set_object_target_byte(const char *name, uint8_t value)
 {
@@ -123,43 +124,43 @@ static void write_object(uint8_t objectNumber, uint8_t room, uint16_t name,
 
 static void run_valid_object_commands(void)
 {
-	static const uint8_t get_operand[] = { OBJECT_COMMAND_LAST };
-	static const uint8_t get_var_operand[] = { 12 };
-	static const uint8_t drop_operand[] = { OBJECT_COMMAND_LAST };
-	static const uint8_t put_operand[] = { OBJECT_COMMAND_LAST, 0x47 };
-	static const uint8_t put_var_operand[] = { OBJECT_COMMAND_LAST, 19 };
-	static const uint8_t get_room_var_operand[] = { 20, 21 };
-	static const uint8_t has_operand[] = { OBJECT_COMMAND_LAST };
-	static const uint8_t in_room_operand[] = { OBJECT_COMMAND_LAST, 22 };
+	const uint8_t get_operand[] = { object_command_last };
+	const uint8_t get_var_operand[] = { 12 };
+	const uint8_t drop_operand[] = { object_command_last };
+	const uint8_t put_operand[] = { object_command_last, 0x47 };
+	const uint8_t put_var_operand[] = { object_command_last, 19 };
+	const uint8_t get_room_var_operand[] = { 20, 21 };
+	const uint8_t has_operand[] = { object_command_last };
+	const uint8_t in_room_operand[] = { object_command_last, 22 };
 
-	reset_object_fixture(OBJECT_COMMAND_OBJECTS);
-	read_object(OBJECT_COMMAND_LAST, 0xA5, 0xDEAD, 1,
+	reset_object_fixture(object_command_objects);
+	read_object(object_command_last, 0xA5, 0xDEAD, 1,
 		OBJECT_COMMAND_SENTINEL_ROOM, OBJECT_COMMAND_SENTINEL_NAME);
-	write_object(OBJECT_COMMAND_LAST, 255, 0x4567, 1);
-	inspect_object(OBJECT_COMMAND_LAST, 255, 0x4567);
+	write_object(object_command_last, 255, 0x4567, 1);
+	inspect_object(object_command_last, 255, 0x4567);
 
-	write_object(OBJECT_COMMAND_LAST, 0x11, 0x4567, 1);
+	write_object(object_command_last, 0x11, 0x4567, 1);
 	run_object_command("_testObjectCommandsRunB3Get", get_operand, sizeof(get_operand));
-	inspect_object(OBJECT_COMMAND_LAST, 255, 0x4567);
+	inspect_object(object_command_last, 255, 0x4567);
 
-	write_object(OBJECT_COMMAND_LAST, 0x22, 0x4567, 1);
-	set_object_var(12, OBJECT_COMMAND_LAST);
+	write_object(object_command_last, 0x22, 0x4567, 1);
+	set_object_var(12, object_command_last);
 	run_object_command("_testObjectCommandsRunB3GetVar", get_var_operand,
 		sizeof(get_var_operand));
-	inspect_object(OBJECT_COMMAND_LAST, 255, 0x4567);
+	inspect_object(object_command_last, 255, 0x4567);
 
 	run_object_command("_testObjectCommandsRunB3Drop", drop_operand, sizeof(drop_operand));
-	inspect_object(OBJECT_COMMAND_LAST, 0, 0x4567);
+	inspect_object(object_command_last, 0, 0x4567);
 
 	run_object_command("_testObjectCommandsRunB3Put", put_operand, sizeof(put_operand));
-	inspect_object(OBJECT_COMMAND_LAST, 0x47, 0x4567);
+	inspect_object(object_command_last, 0x47, 0x4567);
 
 	set_object_var(19, 0x68);
 	run_object_command("_testObjectCommandsRunB3PutVar", put_var_operand,
 		sizeof(put_var_operand));
-	inspect_object(OBJECT_COMMAND_LAST, 0x68, 0x4567);
+	inspect_object(object_command_last, 0x68, 0x4567);
 
-	set_object_var(20, OBJECT_COMMAND_LAST);
+	set_object_var(20, object_command_last);
 	set_object_var(21, 0xA7);
 	run_object_command("_testObjectCommandsRunB3GetRoomVar", get_room_var_operand,
 		sizeof(get_room_var_operand));
@@ -170,7 +171,7 @@ static void run_valid_object_commands(void)
 	CHECK(get_object_target_byte("_testObjectResult") == 0,
 		"has returned true for the last object outside the inventory");
 	set_object_target_byte("_testObjectRoom", 255);
-	write_object(OBJECT_COMMAND_LAST, 255, 0x4567, 1);
+	write_object(object_command_last, 255, 0x4567, 1);
 	run_object_command("_testObjectCommandsRunB1Has", has_operand, sizeof(has_operand));
 	CHECK(get_object_target_byte("_testObjectResult") == 1,
 		"has did not recognize the last object in inventory");
@@ -224,16 +225,108 @@ static void run_invalid_object_commands(uint8_t invalidObject)
 		sizeof(get_room_var_operand));
 	CHECK(get_object_var(33) == 0xB7,
 		"get.room.v changed its destination variable for an invalid object");
-	inspect_object(OBJECT_COMMAND_LAST, OBJECT_COMMAND_SENTINEL_ROOM,
+	inspect_object(object_command_last, OBJECT_COMMAND_SENTINEL_ROOM,
 		OBJECT_COMMAND_SENTINEL_NAME);
 	check_object_name_cache_canary();
 }
 
+static unsigned seed_object_file(unsigned objectCount)
+{
+	uint16_t dataAddress = symbol("_bDObjData");
+	unsigned cacheSize = get_object_target_word("_testObjectNameCacheSize");
+	unsigned headerLength = objectCount * 3u;
+	unsigned nameOffset = headerLength + 3u;
+	unsigned fileLength = nameOffset + 5u;
+	unsigned bankOffset;
+	unsigned index;
+
+	CHECK(dataAddress >= BANK_START && dataAddress + cacheSize <= BANK_END,
+		"Production object file buffer is outside BANKRAM0D");
+	CHECK(fileLength <= cacheSize,
+		"Object parser fixture exceeds the production input buffer");
+	bankOffset = dataAddress - BANK_START;
+	memset(bank_ram[0x0D] + bankOffset, 0xA5, cacheSize);
+	bank_ram[0x0D][bankOffset] = (uint8_t)headerLength;
+	bank_ram[0x0D][bankOffset + 1] = (uint8_t)(headerLength >> 8);
+	for (index = 0; index < objectCount; ++index)
+	{
+		unsigned record = bankOffset + 3u + index * 3u;
+		bank_ram[0x0D][record] = (uint8_t)headerLength;
+		bank_ram[0x0D][record + 1] = (uint8_t)(headerLength >> 8);
+		bank_ram[0x0D][record + 2] = (uint8_t)index;
+	}
+	memcpy(bank_ram[0x0D] + bankOffset + nameOffset, "item", 5);
+	return fileLength;
+}
+
+static void run_object_file_capacity_cases(void)
+{
+	unsigned capacity = get_object_target_word("_testObjectCapacity");
+	unsigned fileLength;
+	unsigned nameAddress;
+
+	prepare();
+	fileLength = seed_object_file(capacity);
+	nameAddress = symbol("_bDObjData") + capacity * 3u + 3u;
+	set_object_target_word("_testObjectFileLength", (uint16_t)fileLength);
+	call_object_target("_testObjectCommandsParseFile");
+	CHECK(get_object_target_byte("_testObjectParseResult"),
+		"Object parser rejected exactly MAX_OBJECTS records");
+	CHECK(get_object_target_word("_testObjectParsedCount") == capacity,
+		"Object parser returned the wrong maximum object count");
+	CHECK(get_object_target_word("_testObjectParsedName") == nameAddress &&
+		get_object_target_byte("_testObjectParsedRoom") == (uint8_t)(capacity - 1) &&
+		get_object_target_byte("_testObjectParsedObjectNum") == (uint8_t)(capacity - 1) &&
+		get_object_target_byte("_testObjectParsedNameLength") == 4,
+		"Object parser did not preserve the last valid record and its name");
+
+	fileLength = seed_object_file(capacity + 1u);
+	set_object_target_word("_testObjectFileLength", (uint16_t)fileLength);
+	call_object_target("_testObjectCommandsParseFile");
+	CHECK(!get_object_target_byte("_testObjectParseResult") &&
+		get_object_target_word("_testObjectParsedCount") == 0,
+		"Object parser accepted a declared object count above MAX_OBJECTS");
+	CHECK(get_object_target_word("_testObjectParsedHeader") == (capacity + 1u) * 3u,
+		"Rejected object table overwrote its input buffer");
+
+	fileLength = seed_object_file(1);
+	{
+		unsigned bankOffset = symbol("_bDObjData") - BANK_START;
+		bank_ram[0x0D][bankOffset + 3] = 0xFF;
+		bank_ram[0x0D][bankOffset + 4] = 0xFF;
+	}
+	set_object_target_word("_testObjectFileLength", (uint16_t)fileLength);
+	call_object_target("_testObjectCommandsParseFile");
+	CHECK(!get_object_target_byte("_testObjectParseResult") &&
+		get_object_target_word("_testObjectParsedCount") == 0,
+		"Object parser accepted a name offset outside its input");
+
+	fileLength = seed_object_file(1);
+	{
+		unsigned bankOffset = symbol("_bDObjData") - BANK_START;
+		memcpy(bank_ram[0x0D] + bankOffset + 6, "abcde", 5);
+	}
+	set_object_target_word("_testObjectFileLength", (uint16_t)fileLength);
+	call_object_target("_testObjectCommandsParseFile");
+	CHECK(!get_object_target_byte("_testObjectParseResult") &&
+		get_object_target_word("_testObjectParsedCount") == 0,
+		"Object parser read a name without a terminator inside its input");
+}
+
 static void run_object_commands_cases(void)
 {
+	prepare();
+	object_command_objects = get_object_target_word("_testObjectCapacity");
+	CHECK(object_command_objects > 0 && object_command_objects <= 255,
+		"Production object capacity does not fit the byte command operand");
+	CHECK(get_object_target_word("_testObjectStride") == 5,
+		"Production object record stride is not the declared five-byte type");
+	object_command_last = (uint8_t)(object_command_objects - 1);
 	run_valid_object_commands();
 
-	reset_object_fixture(OBJECT_COMMAND_OBJECTS);
+	reset_object_fixture(object_command_objects);
+	run_invalid_object_commands((uint8_t)object_command_objects);
+	reset_object_fixture(object_command_objects);
 	run_invalid_object_commands(255);
 
 	reset_object_fixture(0);
@@ -241,6 +334,7 @@ static void run_object_commands_cases(void)
 	write_object(0, 0x91, 0x1234, 0);
 	run_invalid_object_commands(0);
 	inspect_object(0, OBJECT_COMMAND_SENTINEL_ROOM, OBJECT_COMMAND_SENTINEL_NAME);
+	run_object_file_capacity_cases();
 
 	puts("Compiled object commands exercise real BANKRAM0F/BANKRAM03 handlers and BANKRAM0D accessors");
 }

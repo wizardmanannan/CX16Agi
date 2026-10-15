@@ -27,7 +27,6 @@ bne @clearLoop
 lda _inputLineDisplayed
 beq @end
 ldx #$0
-
 SET_VERA_ADDRESS_IMMEDIATE INPUT_STRING_ADDRESS, #$0, #$2
 @drawInput:
 lda #INPUT_PROMPT_CHAR

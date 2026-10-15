@@ -475,10 +475,18 @@ lda ZP_PTR_CODE + 1
 pha
 lda _codeBank
 pha
+lda ZP_PTR_LE
+pha
+lda ZP_PTR_LE + 1
+pha
 .endmacro
 
 ; Macro to restore values from the stack after a recursive call
 .macro RESTORE_FROM_STACK_RECURSIVE_CALL
+pla
+sta ZP_PTR_LE + 1
+pla
+sta ZP_PTR_LE
 pla
 sta _codeBank
 pla
@@ -493,7 +501,6 @@ pla
 sta startPos + 1
 pla
 sta startPos
-
 .endmacro
 
 ; Macro to get a variable or flag value and store it in the result
@@ -1018,7 +1025,6 @@ b1Addv:
          sta @var
          
          GET_VAR_OR_FLAG VARS_AREA_START_GOLDEN_OFFSET, @existingVal
-                  
          INC_CODE
 
          .ifdef DEBUG
@@ -1029,13 +1035,11 @@ b1Addv:
          DEBUG_ADD_V
 
          GET_VAR_OR_FLAG VARS_AREA_START_GOLDEN_OFFSET, @val
-
          INC_CODE
          lda @val
 
          clc
          adc @existingVal
-         INC_CODE
          sta @val
 
          SET_VAR_OR_FLAG VARS_AREA_START_GOLDEN_OFFSET, @val, @var
@@ -1320,9 +1324,10 @@ jmp mainLoop
 b2New_room:
 DEBUG_NEW_ROOM
 LOAD_CODE_WIN_CODE
+
+switchToNewRoom:
 sta _newRoomNum
 stz _newRoomNum + 1
-switchToNewRoom:
 lda #TRUE
 sta _hasEnteredNewRoom
 sta _exitAllLogics
