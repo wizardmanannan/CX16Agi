@@ -73,6 +73,7 @@ void testReserveSpriteFixtureBlocks(void)
 	VeraSpriteAddress address;
 
 	testClearSpriteFixture();
+	bDResetSpriteTablePointer();
 	for (;;)
 	{
 		address = bDFindFreeVramBlock(SPR_SIZE_8, SPR_SIZE_8);
@@ -91,6 +92,7 @@ void testPrepareSpriteFixturePartialRun(void)
 	SpriteAllocationSize width, height;
 
 	testClearSpriteFixture();
+	bDResetSpriteTablePointer();
 	width = (SpriteAllocationSize)testSpriteFixtureWidth;
 	height = (SpriteAllocationSize)testSpriteFixtureHeight;
 	if ((width != SPR_SIZE_8 && width != SPR_SIZE_16 && width != SPR_SIZE_32 && width != SPR_SIZE_64) ||
