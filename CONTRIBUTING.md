@@ -80,6 +80,12 @@ equality establish traceability, not semantic correctness.
 | Sound | Stop/restart, sparse channels, simultaneous endings, end flags, refill bounds, and exact PSG addressing |
 | Performance | Equivalent output and boundaries, repeatable maximum workload, retained baseline, and the limits of the timing model |
 
+Match each failure case to the caller's actual contract. A recoverable failure
+must return the documented result and preserve the state needed for retry. A
+fatal failure must reach the real exit path with a nonzero status and prevent
+later initialization; do not require it to return normally or simulate a return
+in the fixture. Keep those outcomes distinct when several loaders share a test.
+
 ## Update a reviewed series predictably
 
 After review starts, keep follow-up changes easy to identify. State which
