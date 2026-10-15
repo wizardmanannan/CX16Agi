@@ -13,6 +13,8 @@
 extern struct regs regs;
 static uint8_t ram[65536], vram[131072];
 static unsigned addr[2], stride[2], writes, acks;
+static unsigned write_addresses[1024];
+static uint8_t write_values[1024];
 static char temporary[4096];
 struct symbol { char name[100]; unsigned addr; } symbols[64];
 static unsigned symbol_count;
@@ -42,6 +44,9 @@ void write6502(uint16_t address, uint8_t bank, uint8_t value) {
     }
     if (address == 0x9F23 || address == 0x9F24) {
         unsigned port = address - 0x9F23;
+        CHECK(writes < sizeof(write_addresses) / sizeof(write_addresses[0]), "Too many VERA writes");
+        write_addresses[writes] = addr[port];
+        write_values[writes] = value;
         vram[addr[port]] = value;
         addr[port] = (addr[port] + stride[port]) & 0x1FFFF;
         ++writes;
@@ -121,19 +126,18 @@ static void run_tool(char **arguments) {
 }
 
 static void assemble(void) {
-    char source[65536], path[4096], config_path[4096], object_path[4096], binary_path[4096], labels_path[4096];
+    char source[65536], stub[256], path[4096], stub_path[4096], config_path[4096], object_path[4096], stub_object_path[4096], binary_path[4096], labels_path[4096];
     CHECK(snprintf(path, sizeof(path), "%s/test.s", temporary) < (int)sizeof(path), "Fixture path too long");
+    CHECK(snprintf(stub_path, sizeof(stub_path), "%s/sound_stub.s", temporary) < (int)sizeof(stub_path), "Fixture path too long");
     CHECK(snprintf(config_path, sizeof(config_path), "%s/test.cfg", temporary) < (int)sizeof(config_path), "Fixture path too long");
     CHECK(snprintf(object_path, sizeof(object_path), "%s/test.o", temporary) < (int)sizeof(object_path), "Fixture path too long");
+    CHECK(snprintf(stub_object_path, sizeof(stub_object_path), "%s/sound_stub.o", temporary) < (int)sizeof(stub_object_path), "Fixture path too long");
     CHECK(snprintf(binary_path, sizeof(binary_path), "%s/test.bin", temporary) < (int)sizeof(binary_path), "Fixture path too long");
     CHECK(snprintf(labels_path, sizeof(labels_path), "%s/test.lbl", temporary) < (int)sizeof(labels_path), "Fixture path too long");
 
-    char *global = read_file("src/global.s");
     char *irq = read_file("src/irqAsm.s");
     char *input = read_file("src/inputIrqHandler.s");
     char *sprite = read_file("src/spriteIrqHandler.s");
-    char *ack_macro = find(global, ".macro REENABLE_INTERRUPTS");
-    char *ack_end = find(ack_macro, ".endmacro") + strlen(".endmacro");
     char *irq_macros = find(irq, ".macro SEND_IRQ_COMMAND");
     char *irq_end = find(irq_macros, ";Handlers");
     char *input_body = find(input, "b7HandleInputLine:");
@@ -144,36 +148,41 @@ static void assemble(void) {
     char *sprite_clear_end = find(sprite_clear, ".endmacro") + strlen(".endmacro");
 
     int length = snprintf(source, sizeof(source),
-        ".include \"x16.inc\"\nVIEW_TABLE_SIZE=1\n.include \"globalGraphics.s\"\nVSYNC_BIT=$01\nMAX_INPUT_STRING_LENGTH=40\n"
+        ".include \"x16.inc\"\nVIEW_TABLE_SIZE=1\n.include \"globalGraphics.s\"\n.include \"global.s\"\nMAX_INPUT_STRING_LENGTH=40\n"
         "INPUT_LINE_RENDER_CELLS=MAX_INPUT_STRING_LENGTH+1\n"
         ".assert INPUT_LINE_COL + INPUT_LINE_RENDER_CELLS <= TILE_LAYER_WIDTH, error, \"Input line rendering exceeds tile map row\"\n"
         ".segment \"CODE\"\n"
         ".export input,enable,send,wait,done,snapshot,_vSyncCounter,sendIrqCommand,_inputLineDisplayed,_inputLineDirty,_b7CurrentInputStr\n"
         ".export clearSprites,inputStringAddress,spriteFirstZ,spriteCount\n"
-        "%.*s\n%.*s\n%.*s\n%.*s\n"
+        ".export bBSoundHandler,_bBChannelsPlaying,_bBEndSoundFlag,_bBIsPlaying,_bBCh1Ticks,_ZP_CURRENTLY_PLAYING_NOTE_1,SOUND_SREG,_bBPsgClear,soundCriticalSection\n"
+        "%.*s\n%.*s\n%.*s\n"
         "input:\n%.*s\n"
         "enable: REENABLE_INTERRUPTS\nrts\n"
         "send: SEND_IRQ_COMMAND command,snapshot\nrts\n"
         "wait: WAIT_FOR_NEXT_IRQ snapshot\nrts\n"
         "clearSprites: CLEAR_SPRITE_ATTRS\nrts\n"
         "done: brk\ncommand: .byte 4\nsendIrqCommand: .byte 0\nsnapshot: .word 0\n_vSyncCounter: .word 0\n"
-        "_inputLineDisplayed: .byte 0\n_b7CurrentInputStr: .res 41\n"
+        "_inputLineDisplayed: .byte 0\n_inputLineDirty: .byte 0\n_b7CurrentInputStr: .res 41\n"
+        ".include \"soundAsm.s\"\n.segment \"CODE\"\n"
+        "soundCriticalSection: php\nsei\nplp\nrts\n"
         "inputStringAddress=INPUT_STRING_ADDRESS\nspriteFirstZ=SPRITE_ATTR_START+SPRITE_ATTR_SIZE+SA_VERA_ZORDER\nspriteCount=NO_SPRITES\n",
-        (int)(ack_end - ack_macro), ack_macro,
         (int)(irq_end - irq_macros), irq_macros,
         (int)(sprite_start_end - sprite_start), sprite_start,
         (int)(sprite_clear_end - sprite_clear), sprite_clear,
         (int)(input_end - input_body), input_body);
     CHECK(length >= 0 && length < (int)sizeof(source), "Fixture assembly is too large");
-    free(global); free(irq); free(input); free(sprite);
+    CHECK(snprintf(stub, sizeof(stub), ".segment \"CODE\"\n.export _bBLoadedSoundsPointer\n_bBLoadedSoundsPointer: .res 512\n") < (int)sizeof(stub), "Fixture stub is too large");
+    free(irq); free(input); free(sprite);
 
     write_file(path, source);
+    write_file(stub_path, stub);
     write_file(config_path,
         "MEMORY { ZP:start=$22,size=$5C,file=\"\"; RAM:start=$2000,size=$6000,file=%O; }\n"
-        "SEGMENTS { ZEROPAGE:load=ZP,type=zp,optional=yes; CODE:load=RAM,type=rw; RODATA:load=RAM,type=ro,optional=yes; DATA:load=RAM,type=rw,optional=yes; }\n");
+        "SEGMENTS { ZEROPAGE:load=ZP,type=zp,optional=yes; CODE:load=RAM,type=rw; RODATA:load=RAM,type=ro,optional=yes; DATA:load=RAM,type=rw,optional=yes; BANKRAM07:load=RAM,type=rw,optional=yes; BANKRAM0B:load=RAM,type=rw,optional=yes; }\n");
     char *ca65[] = {"ca65", "-t", "cx16", "-I", "src", path, "-o", object_path, NULL};
-    char *ld65[] = {"ld65", "-C", config_path, object_path, "-o", binary_path, "-Ln", labels_path, NULL};
-    run_tool(ca65); run_tool(ld65);
+    char *ca65_stub[] = {"ca65", "-t", "cx16", stub_path, "-o", stub_object_path, NULL};
+    char *ld65[] = {"ld65", "-C", config_path, object_path, stub_object_path, "-o", binary_path, "-Ln", labels_path, NULL};
+    run_tool(ca65); run_tool(ca65_stub); run_tool(ld65);
 
     FILE *file = fopen(binary_path, "rb"); CHECK(file, "Cannot read linked fixture");
     CHECK(fread(ram + 0x2000, 1, 0x6000, file) > 0, "Linked fixture is empty");
@@ -331,6 +340,134 @@ static void test_input_dirty_sources(void) {
     free(parser); free(commands); free(picture); free(irq); free(graphics);
 }
 
+static void test_sound_source_contract(void) {
+    char *source = read_file("src/sound.c");
+    char *init = find(source, "void bBInitSound()");
+    char *play = find(source, "void bBPlaySound(");
+    char *stop = find(source, "void bBStopSound()");
+    char *init_end = find(init, "\n}");
+    char *play_end = find(play, "\n}");
+    char *stop_end = find(stop, "\n}");
+    char *init_save = find(init, "asm(\"php\")");
+    char *init_sei = find(init_save, "asm(\"sei\")");
+    char *init_clear = find(init_sei, "bBPsgClear();");
+    char *init_restore = find(init_clear, "asm(\"plp\")");
+    char *play_disabled = find(play, "if(!flag[9])");
+    char *play_save = find(play, "asm(\"php\")");
+    char *play_sei = find(play_save, "asm(\"sei\")");
+    char *play_restore = find(play_sei, "asm(\"plp\")");
+    char *stop_save = find(stop, "asm(\"php\")");
+    char *stop_sei = find(stop_save, "asm(\"sei\")");
+    char *stop_count = find(stop_sei, "bBChannelsPlaying = 0;");
+    char *stop_restore = find(stop_count, "asm(\"plp\")");
+
+    CHECK(init_save < init_sei && init_sei < init_clear && init_clear < init_restore && init_restore < init_end,
+          "Sound startup must mute PSG and restore caller interrupt state");
+    CHECK(play_disabled < play_save && play_save < play_sei && play_sei < play_restore && play_restore < play_end,
+          "Disabled sound must return before masking IRQs; play must preserve caller interrupt state");
+    CHECK(find(play, "memset(bBIsPlaying, TRUE, NO_CHANNELS)") < find(play, "bBChannelsPlaying = NO_CHANNELS"),
+          "Sound start did not publish all playing channels before its count");
+    CHECK(stop_count < stop_restore && find(stop, "memset(bBIsPlaying, FALSE, NO_CHANNELS)") < stop_count,
+          "Sound stop did not clear flags and channel count before restoring IRQ state");
+    CHECK(stop_restore < stop_end, "Sound stop did not restore caller interrupt state");
+    CHECK(!strstr(play, "REENABLE_INTERRUPTS()") && !strstr(stop, "REENABLE_INTERRUPTS()"),
+          "Sound transitions must not discard a pending VSYNC acknowledgement");
+    free(source);
+}
+
+static void write_word(unsigned address, unsigned value) {
+    ram[address] = (uint8_t)value;
+    ram[address + 1] = (uint8_t)(value >> 8);
+}
+
+static void test_sound_handler(void) {
+    const unsigned channel_count = symbol("_bBChannelsPlaying");
+    const unsigned playing = symbol("_bBIsPlaying");
+    const unsigned ticks = symbol("_bBCh1Ticks");
+    const unsigned psg = 0x1F9C0;
+
+    memset(vram + psg, 0xA5, 64);
+    init_cpu(symbol("_bBPsgClear"), 0);
+    run();
+    CHECK(writes == 64, "Startup/stop PSG clear did not write every system register");
+    for (unsigned i = 0; i < 64; ++i)
+        CHECK(vram[psg + i] == 0 && write_addresses[i] == psg + i && write_values[i] == 0,
+              "PSG clear left a stale register or used the wrong stride");
+
+    ram[channel_count] = 0;
+    unsigned after_clear_address = addr[0];
+    init_cpu(symbol("bBSoundHandler"), 0);
+    uint32_t idle_start = clockticks6502;
+    run();
+    CHECK(!writes && addr[0] == after_clear_address, "Idle sound handler still accessed PSG/VERA");
+    CHECK(clockticks6502 - idle_start == 12,
+          "Idle sound handler fast path exceeded 12 cycles");
+
+    memset(ram + playing, 0, 4);
+    ram[channel_count] = 1;
+    ram[playing] = 1;
+    ram[ticks] = 1;
+    ram[ticks + 1] = 0;
+    memset(vram + psg, 0xA5, 64);
+    init_cpu(symbol("bBSoundHandler"), 0);
+    run();
+    CHECK(writes == 12 && ram[ticks] == 0 && ram[channel_count] == 1 && ram[playing] == 1,
+          "Partially idle sound lost its active channel or silence writes");
+    for (unsigned i = 0; i < 12; ++i)
+        CHECK(write_addresses[i] == 0x1F9C6 + i && write_values[i] == 0,
+              "Partially idle channels did not retain four-register VERA stride");
+
+    memset(ram + playing, 0, 4);
+    ram[playing] = 1;
+    ram[channel_count] = 1;
+    ram[symbol("_bBEndSoundFlag")] = 3;
+    ram[0x504] = 0;
+    ram[ticks] = ram[ticks + 1] = 0;
+    const unsigned note = 0x9000;
+    write_word(symbol("_ZP_CURRENTLY_PLAYING_NOTE_1"), note - 5);
+    ram[note] = ram[note + 1] = 0xFF;
+    init_cpu(symbol("bBSoundHandler"), 0);
+    run();
+    CHECK(!ram[channel_count] && !ram[playing] && ram[0x504] == 1,
+          "Final channel did not clear ownership and set its end flag");
+
+    init_cpu(symbol("bBSoundHandler"), 0);
+    run();
+    CHECK(!writes, "Naturally ended sound did not reach the idle fast path");
+
+    memset(ram + playing, 1, 4);
+    ram[channel_count] = 4;
+    for (unsigned i = 0; i < 4; ++i) {
+        ram[ticks + i * 2] = 1;
+        ram[ticks + i * 2 + 1] = 0;
+    }
+    init_cpu(symbol("bBSoundHandler"), 0);
+    run();
+    CHECK(!writes && ram[channel_count] == 4 && ram[playing] && ram[playing + 3],
+          "Restarted sound did not take the active-channel path");
+
+    memset(ram + playing, 0, 4); /* bBStopSound publishes these states after clearing PSG. */
+    ram[channel_count] = 0;
+    init_cpu(symbol("bBSoundHandler"), 0);
+    run();
+    CHECK(!writes, "Stopped sound did not reach the idle fast path");
+}
+
+static void test_sound_interrupt_restore(void) {
+    ram[0x9F27] = 1;
+    init_cpu(symbol("soundCriticalSection"), 0);
+    run();
+    CHECK(!(regs.status & FLAG_INTERRUPT) && ram[0x9F27] == 1 && !acks,
+          "Sound critical section failed to restore enabled IRQ state or discarded VSYNC");
+
+    ram[0x9F27] = 1;
+    init_cpu(symbol("soundCriticalSection"), 0);
+    regs.status |= FLAG_INTERRUPT;
+    run();
+    CHECK((regs.status & FLAG_INTERRUPT) && ram[0x9F27] == 1 && !acks,
+          "Sound critical section failed to preserve disabled IRQ state or discarded VSYNC");
+}
+
 static void test_input(void) {
     for (unsigned shown = 0; shown <= 1; ++shown) {
         for (unsigned length = 0; length <= INPUT_MAX_LENGTH; ++length) {
@@ -428,6 +565,9 @@ int main(void) {
     test_acknowledgement();
     test_snapshot_and_wait();
     test_sprite_clear();
-    puts("IRQ helpers pass: input lengths/X/shrinking, VSYNC ack/snapshot/waits, and bounded sprite clear");
+    test_sound_source_contract();
+    test_sound_handler();
+    test_sound_interrupt_restore();
+    puts("IRQ helpers pass: input lengths/dirty fast path, sound lifecycle/idle stride, VSYNC helpers, and sprite bounds");
     return 0;
 }

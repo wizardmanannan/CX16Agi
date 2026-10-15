@@ -54,6 +54,11 @@ bBNoiseFreq:
 bBSoundHandler:
 .scope
 start:
+    lda _bBChannelsPlaying
+    bne @active
+    rts                         ; No active channels means no PSG work is needed
+
+@active:
     SET_VERA_ADDRESS_IMMEDIATE FIRST_PSG_VOL_REGISTER, #$0, #1  ; Set VERA PSG volume register address
 
     ldx #$0                      ; Start loop counter at 0

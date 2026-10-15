@@ -21,6 +21,9 @@ SoundFile* bBLoadedSoundsPointer[MAX_SOUNDS];        // Pointers to loaded sound
 byte soundLoadCounter;                                 // Counter of loaded sounds
 unsigned long totalSoundSize, totalBeats;             // Total size and beats for current sound
 static unsigned int bBLFSR = LFSR_INITIAL_SEED;       // Static LFSR state used in noise generation
+extern boolean bBIsPlaying[NO_CHANNELS];
+extern byte bBChannelsPlaying;
+extern void bBPsgClear(void);
 
 // Predefined noise frequencies for noise channel
 const uint16_t b7NoiseFreq[] = { 2230, 1115, 557 };
@@ -169,6 +172,13 @@ void bBInitSound() {
 	{
 		bBLoadedSoundsPointer[i] = NULL;
 	}
+
+	asm("php");
+	asm("sei");
+	memset(bBIsPlaying, FALSE, NO_CHANNELS);
+	bBChannelsPlaying = 0;
+	bBPsgClear();
+	asm("plp");
 }
 
 // Discards/unloads a sound file by releasing its allocated memory and clearing references.
@@ -647,9 +657,7 @@ extern unsigned int bBCh1Ticks;
 extern unsigned int bBCh2Ticks;
 extern unsigned int bBCh3Ticks;
 extern unsigned int bBCh4Ticks;
-extern boolean bBIsPlaying[NO_CHANNELS];
 extern byte bBSoundDataBank;
-extern byte bBChannelsPlaying;
 extern byte bBEndSoundFlag;
 
 extern byte* ZP_CURRENTLY_PLAYING_NOTE_1;
@@ -661,8 +669,6 @@ extern byte* ZP_CURRENTLY_PLAYING_NOTE_3;
 extern byte* ZP_CURRENTLY_PLAYING_NOTE_NOISE;
 #pragma zpsym("ZP_CURRENTLY_PLAYING_NOTE_NOISE")
 
-extern void bBPsgClear();
-
 // Plays a loaded sound by initializing playback pointers and state.
 void bBPlaySound(byte soundNum, byte endSoundFlag)
 {
@@ -670,14 +676,14 @@ void bBPlaySound(byte soundNum, byte endSoundFlag)
 	unsigned int* ticksPointer;
 	byte** channelPointer;
 
-	asm("sei"); // Disable interrupts to initialize sound playback safely
-
 	if(!flag[9])
 	{
 		flag[endSoundFlag] = TRUE;
 		return;
 	}
 
+	asm("php");
+	asm("sei"); // Disable interrupts to initialize sound playback safely
 
 	// Reset tick counters for all channels
 	bBCh1Ticks = 0;
@@ -704,7 +710,7 @@ void bBPlaySound(byte soundNum, byte endSoundFlag)
 	// Store end sound flag for signaling when sound finishes
 	bBEndSoundFlag = endSoundFlag;
 
-	REENABLE_INTERRUPTS(); // Re-enable interrupts for playback
+	asm("plp"); // Restore the caller's interrupt state without acknowledging VSYNC
 }
 
 boolean bBIsPlayingNoInterupts()
@@ -723,6 +729,7 @@ boolean bBIsPlayingNoInterupts()
 // Stops current playing sound, clears PSG state, and cancels playing flags.
 void bBStopSound()
 {
+	asm("php");
 	asm("sei");         // Disable interrupts to safely stop sound
 	
 	if(bBIsPlayingNoInterupts())
@@ -731,7 +738,8 @@ void bBStopSound()
 		memset(bBIsPlaying, FALSE, NO_CHANNELS); // Mark all channels as not playing
 		flag[soundEndFlag] = TRUE;
 	}
-	REENABLE_INTERRUPTS(); // Re-enable interrupts after sound stop
+	bBChannelsPlaying = 0;
+	asm("plp"); // Restore the caller's interrupt state without acknowledging VSYNC
 }
 
 void bBMarkSoundAsAZeroDependency(byte soundNum)
