@@ -83,7 +83,6 @@ DISPLAY_PALETTE_SLICE_ROWS = 32
 displayTextSourcePointer: .word $0
 displayTextVeraAddress: .res 3
 displayTextPagesRemaining: .byte $0
-displayTextSliceResult: .byte $0
 displayPaletteCursor: .res 3
 displayPaletteRowsRemaining: .byte $0
 displayPaletteRowsThisSlice: .byte $0
@@ -216,7 +215,6 @@ sta ZP_DISPLAY_TEXT_SOURCE_POINTER + 1
  .assert (DISPLAY_TEXT_SLICE_BYTES .mod 256) = 0, error, "Text slices must contain whole 256-byte groups"
 lda #(DISPLAY_TEXT_SLICE_BYTES / 256)
 sta displayTextPagesRemaining
-ldx #$0
 ldy #$0
 
 @nextCharacter:
@@ -233,11 +231,8 @@ sta VERA_data0
 
 @consumeTextCharacter:
 iny
-bne @sourcePointerReady
-inc ZP_DISPLAY_TEXT_SOURCE_POINTER + 1
-@sourcePointerReady:
-dex
 bne @nextCharacter
+inc ZP_DISPLAY_TEXT_SOURCE_POINTER + 1
 dec displayTextPagesRemaining
 beq @textBudgetComplete
 bra @nextCharacter
@@ -250,7 +245,7 @@ bra @saveTextState
 lda #$0
 
 @saveTextState:
-sta displayTextSliceResult
+tax
 lda VERA_addr_low
 sta displayTextVeraAddress
 lda VERA_addr_high
@@ -266,7 +261,7 @@ sta displayTextSourcePointer
 lda ZP_DISPLAY_TEXT_SOURCE_POINTER + 1
 adc #$0
 sta displayTextSourcePointer + 1
-lda displayTextSliceResult
+txa
 rts
 
 b3DisplayTextNewLine: ;Goes to the start of the next line of the VERA but maintains the column number of the first character of the first line

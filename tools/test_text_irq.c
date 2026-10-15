@@ -249,6 +249,8 @@ static void check_text(const uint8_t *bytes, unsigned length, uint16_t source,
         CHECK(((get_16bit(symbol("displayTextSourcePointer")) - beforeSource) & 0xFFFF) == expectedConsumed,
               "Text slice consumed the wrong number of source bytes, including newlines");
         CHECK((regs.a != 0) == (remaining < 512), "Text slice completion disagrees with its byte budget");
+        CHECK((regs.status & FLAG_ZERO) == (regs.a ? 0 : FLAG_ZERO),
+              "Text slice zero flag disagrees with its completion result");
         if (cycles > max_text_slice_cycles) max_text_slice_cycles = cycles;
         unsigned sliceWrites = writes - beforeWrites;
         CHECK(sliceWrites <= 512, "Text helper exceeded its 512-byte output budget");
@@ -400,8 +402,9 @@ int main(void) {
     test_palette(0x1FFF1, 32, 0);
     test_palette(0x1FFF1, 33, 1);
     test_zero_palette();
-    fprintf(stderr, "Text slice: %lu cycles (baselines 67215/56469; limit 55000)\n", (unsigned long)max_text_slice_cycles);
-    CHECK(max_text_slice_cycles < 55000, "Text slice exceeded 55000 cycles (baseline 56469)");
+    fprintf(stderr, "Text slice: %lu cycles (recorded baseline 53917; target 52000)\n", (unsigned long)max_text_slice_cycles);
+    CHECK(max_text_slice_cycles < 52000,
+          "text_slice_single_counter_budget: exceeded 52000 cycles (recorded baseline 53917)");
     fprintf(stderr, "Palette slice: %lu cycles (baselines 20236/11276; limit 11000)\n", (unsigned long)max_palette_slice_cycles);
     CHECK(max_palette_slice_cycles < 11000, "Palette slice exceeded 11000 cycles (baseline 11276)");
     CHECK(max_text_slice_cycles + 38000 < 134400,
