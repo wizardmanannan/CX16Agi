@@ -14,9 +14,11 @@
 
 extern struct regs regs;
 static uint8_t ram[65536], vram[131072];
-static unsigned addr[2], stride[2], writes, data_port_reads, acks;
-static unsigned write_addresses[8192];
-static uint8_t write_values[8192];
+static unsigned addr[2], writes, data_port_reads, acks;
+static int stride[2];
+static uint8_t addr_control[2];
+static unsigned write_addresses[16384];
+static uint8_t write_values[16384];
 struct symbol { char name[100]; unsigned addr; } symbols[128];
 static unsigned symbol_count;
 static bool track_sprite_reads;
@@ -25,6 +27,11 @@ static bool fx_write;
 static uint8_t fx_cache[4];
 
 #define CHECK(condition, message) do { if (!(condition)) { fprintf(stderr, "%s (%s:%d)\n", message, __FILE__, __LINE__); exit(1); } } while (0)
+
+/* Match VERA's independent live address and increment registers for ports 0 and 1. */
+static void advance_vera(unsigned port) {
+    addr[port] = (unsigned)((int)addr[port] + stride[port]) & 0x1FFFF;
+}
 
 uint8_t read6502(uint16_t address, uint8_t bank) {
     (void)bank;
@@ -37,13 +44,13 @@ uint8_t read6502(uint16_t address, uint8_t bank) {
         unsigned port = ram[0x9F25] & 1;
         if (address == 0x9F20) return (uint8_t)addr[port];
         if (address == 0x9F21) return (uint8_t)(addr[port] >> 8);
-        return (uint8_t)((ram[address] & 0xFE) | ((addr[port] >> 16) & 1));
+        return (uint8_t)(addr_control[port] | ((addr[port] >> 16) & 1));
     }
     if (address == 0x9F23 || address == 0x9F24) {
         unsigned port = address - 0x9F23;
         ++data_port_reads;
         uint8_t value = vram[addr[port]];
-        addr[port] = (addr[port] + stride[port]) & 0x1FFFF;
+        advance_vera(port);
         return value;
     }
     return ram[address];
@@ -63,8 +70,16 @@ void write6502(uint16_t address, uint8_t bank, uint8_t value) {
         static const unsigned increments[16] = {0,1,2,4,8,16,32,64,128,256,512,40,80,160,320,640};
         unsigned port = ram[0x9F25] & 1;
         ram[address] = value;
-        addr[port] = ram[0x9F20] | (ram[0x9F21] << 8) | ((ram[0x9F22] & 1) << 16);
-        stride[port] = increments[ram[0x9F22] >> 4];
+        if (address == 0x9F20) {
+            addr[port] = (addr[port] & 0x1FF00) | value;
+        } else if (address == 0x9F21) {
+            addr[port] = (addr[port] & 0x100FF) | ((unsigned)value << 8);
+        } else {
+            addr[port] = (addr[port] & 0x0FFFF) | ((unsigned)(value & 1) << 16);
+            addr_control[port] = value & 0xFE;
+            stride[port] = (int)increments[value >> 4];
+            if (value & 0x08) stride[port] = -stride[port];
+        }
         return;
     }
     if (address == 0x9F23 || address == 0x9F24) {
@@ -83,7 +98,7 @@ void write6502(uint16_t address, uint8_t bank, uint8_t value) {
             write_values[writes] = value;
             vram[addr[port]] = value;
         }
-        addr[port] = (addr[port] + stride[port]) & 0x1FFFF;
+        advance_vera(port);
         writes += count;
         return;
     }
@@ -461,7 +476,8 @@ static void test_input_dirty(void) {
     run();
     check_input_map(1, 4);
 
-    unsigned saved_address = addr[0], saved_stride = stride[0];
+    unsigned saved_address = addr[0];
+    int saved_stride = stride[0];
     uint8_t saved_low = ram[0x9F20], saved_high = ram[0x9F21], saved_bank = ram[0x9F22];
     init_cpu(symbol("input"), 255);
     uint32_t clean_start = clockticks6502;
@@ -1297,34 +1313,105 @@ static void test_sprite_snapshot_reset(void) {
 
 static void stage_irq_sprite(void) {
     const unsigned first_z = symbol("spriteFirstZ");
-    const unsigned base = symbol("_bESpritesUpdatedBuffer");
     seed_sprite_update_buffer();
-    stage_sprite_update(0);
-    ram[base + SPRITE_UPDATE_RECORD_BYTES] = 0;
-    ram[base + SPRITE_UPDATE_RECORD_BYTES + 1] = 0;
+    for (unsigned i = 0; i < SPRITE_UPDATE_MAX_RECORDS; ++i)
+        stage_sprite_update(i);
     for (unsigned i = 0; i < SPRITE_UPDATE_MAX_RECORDS; ++i)
         vram[first_z + i * 8] = 0x0C;
+    memset(vram + symbol("spriteFirstZ") - 14, 0xA5, 8); /* Preserve the mouse attributes before sprite zero. */
 }
 
 static void check_irq_sprite(void) {
     const unsigned base = symbol("_bESpritesUpdatedBuffer");
     const unsigned first_sprite = symbol("spriteFirstZ") - 6;
     const unsigned pointer = symbol("_bESpritesUpdatedBufferPointer");
+    const unsigned mouse = first_sprite - 8;
     CHECK((ram[pointer] | ((unsigned)ram[pointer + 1] << 8)) == base,
           "Mixed IRQ sprite batch was not consumed and reset");
-    CHECK(vram[first_sprite] == ram[base] && vram[first_sprite + 1] == ram[base + 1] &&
-          vram[first_sprite + 2] == ram[base + 2] && vram[first_sprite + 3] == ram[base + 3] &&
-          vram[first_sprite + 4] == ram[base + 4] && vram[first_sprite + 5] == 0 &&
-          vram[first_sprite + 6] == ram[base + 5] && vram[first_sprite + 7] == ram[base + 6],
-          "Mixed IRQ lost or shifted its sprite update");
+    for (unsigned i = 0; i < SPRITE_UPDATE_MAX_RECORDS; ++i) {
+        unsigned record = base + i * SPRITE_UPDATE_RECORD_BYTES;
+        unsigned attributes = first_sprite + i * 8;
+        CHECK(vram[attributes] == ram[record] && vram[attributes + 1] == ram[record + 1] &&
+              vram[attributes + 2] == ram[record + 2] && vram[attributes + 3] == ram[record + 3] &&
+              vram[attributes + 4] == ram[record + 4] && vram[attributes + 5] == 0 &&
+              vram[attributes + 6] == ram[record + 5] && vram[attributes + 7] == ram[record + 6],
+              "Mixed IRQ lost or shifted a sprite update record");
+    }
+    CHECK(ram[symbol("spriteBufferBefore")] == 0x3D &&
+          ram[symbol("spriteBufferGuard")] == 0xA6 && ram[symbol("spriteBufferGuard") + 1] == 0x5B &&
+          ram[base + SPRITE_UPDATE_MAX_RECORDS * SPRITE_UPDATE_RECORD_BYTES] == 0xCC &&
+          ram[base + SPRITE_UPDATE_MAX_RECORDS * SPRITE_UPDATE_RECORD_BYTES + 1] == 0xCC,
+          "Mixed IRQ crossed the full sprite queue canaries");
+    CHECK(!ram[symbol("_bESpriteUpdateOverflowed")],
+          "Mixed IRQ marked a representable 127-record sprite queue as overflowed");
+    for (unsigned i = 0; i < 8; ++i)
+        CHECK(vram[mouse + i] == 0xA5, "Mixed IRQ clobbered the mouse sprite attributes");
+}
+
+static void check_irq_sound_writes(unsigned write_start, bool refilled, const unsigned note_buffers[4]) {
+    const unsigned psg = 0x1F9C0;
+    unsigned observed = 0;
+    for (unsigned i = write_start; i < writes; ++i) {
+        if (write_addresses[i] < psg || write_addresses[i] >= psg + 16) continue;
+        CHECK(refilled, "Mixed IRQ wrote PSG registers while all sound channels only consumed ticks");
+        unsigned channel = observed / 5;
+        unsigned slot_write = observed % 5;
+        CHECK(channel < 4, "Mixed IRQ wrote more than four sound notes");
+        unsigned note = note_buffers[channel];
+        bool latched_noise = channel == 3;
+        const unsigned expected_addresses[5] = {
+            psg + channel * 4 + 2, psg + channel * 4,
+            psg + channel * 4 + 1, psg + channel * 4 + 2,
+            psg + channel * 4 + 3
+        };
+        const uint8_t expected_values[5] = {
+            0,
+            ram[note_buffers[latched_noise ? 2 : channel] + 2],
+            ram[note_buffers[latched_noise ? 2 : channel] + 3],
+            (uint8_t)((ram[note + 4] & 0x7F) | 0xC0),
+            latched_noise ? 0xC0 : 0x3F
+        };
+        CHECK(write_addresses[i] == expected_addresses[slot_write] &&
+              write_values[i] == expected_values[slot_write],
+              "Mixed IRQ sound refill wrote the wrong PSG register or value");
+        ++observed;
+    }
+    CHECK(observed == (refilled ? 20u : 0u),
+          "Mixed IRQ did not produce the expected four-channel PSG write count");
+    if (refilled) {
+        for (unsigned channel = 0; channel < 4; ++channel) {
+            unsigned psg_channel = psg + channel * 4;
+            unsigned note = note_buffers[channel];
+            unsigned frequency_note = note_buffers[channel == 3 ? 2 : channel];
+            CHECK(vram[psg_channel] == ram[frequency_note + 2] &&
+                  vram[psg_channel + 1] == ram[frequency_note + 3] &&
+                  vram[psg_channel + 2] == (uint8_t)((ram[note + 4] & 0x7F) | 0xC0) &&
+                  vram[psg_channel + 3] == (channel == 3 ? 0xC0 : 0x3F),
+                  "Mixed IRQ sound refill left the wrong channel register state");
+        }
+        CHECK(vram[psg + 12] == vram[psg + 8] && vram[psg + 13] == vram[psg + 9] &&
+              vram[psg + 15] == 0xC0,
+              "Mixed IRQ did not copy channel 2 frequency into latched white-noise channel 3");
+        for (unsigned i = 16; i < 64; ++i)
+            CHECK(vram[psg + i] == 0x5A, "Mixed IRQ sound refill touched an unmanaged PSG register");
+    }
 }
 
 static unsigned run_mixed_irq(unsigned *masked_cycles) {
+    const unsigned sprite_base = symbol("_bESpritesUpdatedBuffer");
+    const uint8_t entry_a = regs.a, entry_x = regs.x, entry_y = regs.y, entry_status = regs.status;
+    const uint16_t entry_sp = regs.sp;
+    const uint8_t entry_ram_bank = ram[0], entry_rom_bank = ram[1];
     ram[symbol("default_irq_vector")] = (uint8_t)symbol("irqDefault");
     ram[symbol("default_irq_vector") + 1] = (uint8_t)(symbol("irqDefault") >> 8);
     ram[0xFFFE] = (uint8_t)symbol("irqEntry");
     ram[0xFFFF] = (uint8_t)(symbol("irqEntry") >> 8);
     ram[0x9F27] = 1;
+    sprite_read_start = sprite_base;
+    sprite_read_end = symbol("spriteBufferEnd");
+    sprite_read_limit = sprite_base + SPRITE_UPDATE_MAX_RECORDS * SPRITE_UPDATE_RECORD_BYTES;
+    sprite_reads = 0;
+    track_sprite_reads = true;
     uint32_t start = clockticks6502;
     irq6502();
     CHECK(regs.status & FLAG_INTERRUPT, "Combined production IRQ did not mask interrupts on entry");
@@ -1339,6 +1426,15 @@ static unsigned run_mixed_irq(unsigned *masked_cycles) {
         masked += (unsigned)(clockticks6502 - step_start);
     }
     CHECK(regs.pc == symbol("done"), "Combined production IRQ did not return");
+    track_sprite_reads = false;
+    CHECK(sprite_reads == SPRITE_UPDATE_MAX_RECORDS * SPRITE_UPDATE_RECORD_BYTES,
+          "Mixed IRQ did not read exactly all 127 sprite records");
+    CHECK(regs.a == entry_a && regs.x == entry_x && regs.y == entry_y &&
+          (regs.status & (uint8_t)~FLAG_BREAK) == (entry_status & (uint8_t)~FLAG_BREAK) &&
+          regs.sp == entry_sp,
+          "Combined production IRQ did not restore caller registers, flags, or stack");
+    CHECK(ram[0] == entry_ram_bank && ram[1] == entry_rom_bank,
+          "Combined production IRQ did not restore caller RAM and ROM banks");
     unsigned elapsed = (unsigned)(clockticks6502 - start);
     CHECK(masked + entry_cycles == elapsed,
           "Combined production IRQ cycle measurement escaped the dynamically checked masked interval");
@@ -1355,11 +1451,14 @@ static void test_combined_irq_workload(void) {
            MENU_MAX_CHILDREN = 15, MENU_MAX_WIDTH = 40,
            MENU_CLEAR_WRITES = 2176, MENU_BAR_WRITES = 80,
            MENU_CHILD_WRITES = (MENU_MAX_CHILDREN + 2) * MENU_MAX_WIDTH * 2,
-           SPRITE_BATCH_WRITES = 127 + 8 + 2 };
+           SPRITE_CLEAR_WRITES = SPRITE_UPDATE_MAX_RECORDS,
+           SPRITE_BATCH_WRITES = SPRITE_CLEAR_WRITES + SPRITE_UPDATE_MAX_RECORDS * 8,
+           SOUND_CHANNELS = 4, SOUND_NOTE_BYTES = 5, SOUND_NOTE_BUFFER_BYTES = 16,
+           SOUND_NOTE_STRIDE = 16, SOUND_CHANNEL_TICK_READS = 4,
+           SOUND_REFILL_READS = 3, SOUND_NOISE_COPY_READS = 2, SOUND_REFILL_WRITES = 5 };
     const unsigned counter = symbol("_vSyncCounter");
     const unsigned completion = symbol("irqCompletionGeneration");
     const unsigned playing = symbol("_bBIsPlaying");
-    const unsigned ticks = symbol("_bBCh1Ticks");
     const unsigned status_bar_showing = symbol("b10StatusBarShowing");
     const unsigned palette_rows = symbol("_b3PaletteRows");
     const unsigned palette_number = symbol("_b3PaletteNumber");
@@ -1375,6 +1474,18 @@ static void test_combined_irq_workload(void) {
     const unsigned menu_child_widths = symbol("_bAMenuChildWidth");
     const unsigned menu_child_counts = symbol("_bAMenuChildCount");
     const unsigned menu_controllers = symbol("_bAEnabledMenuControllers");
+    const char *tick_names[SOUND_CHANNELS] = {
+        "_bBCh1Ticks", "_bBCh2Ticks", "_bBCh3Ticks", "_bBCh4Ticks"
+    };
+    const char *note_names[SOUND_CHANNELS] = {
+        "_ZP_CURRENTLY_PLAYING_NOTE_1", "_ZP_CURRENTLY_PLAYING_NOTE_2",
+        "_ZP_CURRENTLY_PLAYING_NOTE_3", "_ZP_CURRENTLY_PLAYING_NOTE_NOISE"
+    };
+    unsigned tick_addresses[SOUND_CHANNELS], note_pointer_addresses[SOUND_CHANNELS];
+    unsigned note_buffers[SOUND_CHANNELS];
+
+    /* Baseline before this gap was filled: one sprite record, channel 1 at three ticks;
+       text=65333, palette=52205, max masked=65333, total=117538 cycles (two VSYNCs). */
 
     init_cpu(symbol("done"), 0x42);
     clockticks6502 = 0;
@@ -1409,6 +1520,7 @@ static void test_combined_irq_workload(void) {
     ram[symbol("_inputLineDisplayed")] = ram[symbol("_inputLineDirty")] = 0;
     ram[symbol("_mainLoopCounter")] = 1;
     ram[symbol("lastMainLoopCounter")] = 0;
+    ram[0x9F25] = 0;
 
     ram[symbol("_charSetInited")] = 1;
     ram[symbol("_numOfMenus")] = MENU_MAX_TOP_LEVELS;
@@ -1442,12 +1554,29 @@ static void test_combined_irq_workload(void) {
     CHECK(menu_text_cursor == menu_text_buffer + MENU_TEXT_BUFFER_BYTES,
           "Combined menu fixture no longer fits menu.c's 500-byte text buffer");
 
-    memset(ram + playing, 0, 4);
-    ram[playing] = 1;
-    ram[symbol("_bBChannelsPlaying")] = 1;
-    ram[ticks] = 3;
-    ram[ticks + 1] = 0;
-    for (unsigned i = 0; i < 4; ++i) vram[PSG_ADDRESS + i] = (uint8_t)(0x40 + i);
+    memset(ram + playing, 0, SOUND_CHANNELS);
+    ram[symbol("_bBChannelsPlaying")] = SOUND_CHANNELS;
+    memset(vram + PSG_ADDRESS, 0x5A, 64);
+    for (unsigned i = 0; i < SOUND_CHANNELS; ++i) {
+        tick_addresses[i] = symbol(tick_names[i]);
+        note_pointer_addresses[i] = symbol(note_names[i]);
+        note_buffers[i] = 0xA000 + i * SOUND_NOTE_STRIDE;
+        ram[playing + i] = 1;
+        ram[tick_addresses[i]] = 0; /* Every channel refills together on the text-copy IRQ. */
+        ram[tick_addresses[i] + 1] = 0;
+        write_word(note_pointer_addresses[i], note_buffers[i] - SOUND_NOTE_BYTES);
+        memset(ram + note_buffers[i], 0xCC, SOUND_NOTE_BUFFER_BYTES);
+        ram[note_buffers[i]] = 2;
+        ram[note_buffers[i] + 1] = 0;
+        ram[note_buffers[i] + 2] = i == SOUND_CHANNELS - 1 ? 0xA7 : (uint8_t)(0x34 + i);
+        ram[note_buffers[i] + 3] = i == SOUND_CHANNELS - 1 ? 0x03 : (uint8_t)(0x02 + i);
+        ram[note_buffers[i] + 4] = 0x0F;
+        ram[note_buffers[i] + SOUND_NOTE_BYTES] = 0xFF;
+        ram[note_buffers[i] + SOUND_NOTE_BYTES + 1] = 0xFF; /* Bounded end marker after the next note. */
+        ram[note_buffers[i] + SOUND_NOTE_BYTES + 2] = 0;
+        ram[note_buffers[i] + SOUND_NOTE_BYTES + 3] = 0;
+        ram[note_buffers[i] + SOUND_NOTE_BYTES + 4] = 0;
+    }
     stage_irq_sprite();
     ram[0] = 0x35;
     ram[1] = 0x74;
@@ -1455,6 +1584,7 @@ static void test_combined_irq_workload(void) {
     regs.status = FLAG_CONSTANT | FLAG_CARRY | FLAG_DECIMAL;
     const unsigned initial_vsync = ram[counter] | ((unsigned)ram[counter + 1] << 8);
 
+    const unsigned first_write_start = writes;
     unsigned first_masked_cycles;
     unsigned first_cycles = run_mixed_irq(&first_masked_cycles);
     CHECK(first_masked_cycles < FRAME_CYCLES,
@@ -1467,13 +1597,23 @@ static void test_combined_irq_workload(void) {
           ram[symbol("irqWorkKind")] == 2 && ram[symbol("irqTextStage")] == 1,
           "Text-copy IRQ completed early or lost its pending palette stage");
     const unsigned first_writes = MENU_CLEAR_WRITES + MENU_BAR_WRITES + MENU_CHILD_WRITES +
-        SPRITE_BATCH_WRITES + TEXT_LENGTH;
+        SPRITE_BATCH_WRITES + SOUND_CHANNELS * SOUND_REFILL_WRITES + TEXT_LENGTH;
     CHECK(writes == first_writes,
           "Text-copy IRQ lost real menu, sprite, or text writes");
-    CHECK(data_port_reads == 127 + 4,
-          "Text-copy IRQ did not perform the expected sprite-clear and sound PSG reads");
-    CHECK(ram[ticks] == 2 && ram[ticks + 1] == 0,
-          "Text-copy IRQ failed to consume exactly one active sound tick");
+    CHECK(data_port_reads == SPRITE_CLEAR_WRITES + SOUND_CHANNELS * SOUND_REFILL_READS +
+          SOUND_NOISE_COPY_READS,
+          "Text-copy IRQ did not perform the full sprite-clear and four-channel sound-refill reads");
+    for (unsigned i = 0; i < SOUND_CHANNELS; ++i) {
+        CHECK(ram[playing + i] == 1 && ram[tick_addresses[i]] == 2 && ram[tick_addresses[i] + 1] == 0,
+              "Text-copy IRQ did not refill all four active sound channels");
+        CHECK((ram[note_pointer_addresses[i]] | ((unsigned)ram[note_pointer_addresses[i] + 1] << 8)) ==
+              note_buffers[i],
+              "Text-copy IRQ did not advance each sound channel to its bounded note");
+    }
+    check_irq_sound_writes(first_write_start, true, note_buffers);
+    for (unsigned i = 0; i < SOUND_CHANNELS; ++i)
+        for (unsigned j = SOUND_NOTE_BYTES * 2; j < SOUND_NOTE_BUFFER_BYTES; ++j)
+            CHECK(ram[note_buffers[i] + j] == 0xCC, "Text-copy IRQ modified a bounded sound-buffer canary");
     CHECK(!ram[symbol("_menuDirty")] && !ram[status_bar_showing],
           "Text-copy IRQ skipped the real dirty-menu or status-bar dispatcher work");
     CHECK(ram[symbol("lastMainLoopCounter")] == 1,
@@ -1509,11 +1649,16 @@ static void test_combined_irq_workload(void) {
           "Text-copy IRQ did not restore the caller's RAM and ROM banks");
     CHECK(!fx_write && ram[0x9F25] == 0,
           "Production menu left VERA FX cache writes or a nondefault port enabled");
+    const unsigned first_reads = data_port_reads;
 
     ram[symbol("_mainLoopCounter")] = 2;
     ram[symbol("_menuDirty")] = 1;
     ram[status_bar_showing] = 1;
     stage_irq_sprite();
+    for (unsigned i = 0; i < SOUND_CHANNELS; ++i) {
+        CHECK(ram[tick_addresses[i]] == 2 && ram[tick_addresses[i] + 1] == 0,
+              "Second mixed IRQ did not begin with all four refilled sound channels active");
+    }
     const unsigned second_write_start = writes;
     const unsigned second_read_start = data_port_reads;
     const unsigned first_vsync = ram[counter] | ((unsigned)ram[counter + 1] << 8);
@@ -1530,10 +1675,20 @@ static void test_combined_irq_workload(void) {
     CHECK(writes - second_write_start == MENU_CLEAR_WRITES + MENU_BAR_WRITES +
           MENU_CHILD_WRITES + SPRITE_BATCH_WRITES + 64,
           "Palette IRQ lost real menu, sprite, or palette writes");
-    CHECK(data_port_reads - second_read_start == 127 + 4,
-          "Palette IRQ did not perform the expected sprite-clear and sound PSG reads");
-    CHECK(ram[ticks] == 1 && ram[ticks + 1] == 0,
-          "Palette IRQ failed to consume exactly one active sound tick");
+    CHECK(data_port_reads - second_read_start == SPRITE_CLEAR_WRITES +
+          SOUND_CHANNELS * SOUND_CHANNEL_TICK_READS,
+          "Palette IRQ did not perform full sprite-clear and four-channel sound tick reads");
+    for (unsigned i = 0; i < SOUND_CHANNELS; ++i) {
+        CHECK(ram[playing + i] == 1 && ram[tick_addresses[i]] == 1 && ram[tick_addresses[i] + 1] == 0,
+              "Palette IRQ did not tick all four refilled sound channels");
+        CHECK((ram[note_pointer_addresses[i]] | ((unsigned)ram[note_pointer_addresses[i] + 1] << 8)) ==
+              note_buffers[i],
+              "Palette IRQ advanced a sound channel without a note refill");
+    }
+    check_irq_sound_writes(second_write_start, false, note_buffers);
+    for (unsigned i = 0; i < SOUND_CHANNELS; ++i)
+        for (unsigned j = SOUND_NOTE_BYTES * 2; j < SOUND_NOTE_BUFFER_BYTES; ++j)
+            CHECK(ram[note_buffers[i] + j] == 0xCC, "Palette IRQ modified a bounded sound-buffer canary");
     CHECK(!ram[symbol("_menuDirty")] && !ram[status_bar_showing] &&
           ram[symbol("lastMainLoopCounter")] == 2,
           "Palette IRQ skipped overlapped real menu, status-bar, or sprite work");
@@ -1563,8 +1718,12 @@ static void test_combined_irq_workload(void) {
     CHECK(!fx_write && ram[0x9F25] == 0,
           "Second production menu pass left VERA FX cache writes or a nondefault port enabled");
     fprintf(stderr,
-            "Combined max-menu IRQ: text-copy %u cycles, palette %u cycles, max conservative acceptance-to-RTI I-masked bound %u, total %u cycles, completion in 2 VSYNCs (< %u/frame)\n",
-            first_cycles, palette_cycles, max_masked_cycles, total_cycles, FRAME_CYCLES);
+            "Combined max-menu/max-sprite IRQ: menu %u bytes, text %u bytes, sprites %u records/%u bytes per slice, sound 4 channels (3 periodic + 1 latched-noise refill, then tick), writes %u/%u, reads %u/%u; text-copy %u cycles, palette %u cycles, max conservative acceptance-to-RTI I-masked bound %u, total %u cycles, completion in 2 VSYNCs (< %u/frame)\n",
+            MENU_TEXT_BUFFER_BYTES, TEXT_LENGTH, SPRITE_UPDATE_MAX_RECORDS,
+            SPRITE_UPDATE_MAX_RECORDS * SPRITE_UPDATE_RECORD_BYTES,
+            first_writes, writes - second_write_start,
+            first_reads, data_port_reads - second_read_start, first_cycles, palette_cycles,
+            max_masked_cycles, total_cycles, FRAME_CYCLES);
 }
 
 int main(void) {
