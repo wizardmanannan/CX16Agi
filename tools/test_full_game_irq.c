@@ -44,6 +44,11 @@ static void write_file(const char *path,const void *data,size_t size) {
     FILE *f=fopen(path,"wb"); if(!f) fail("Write %s: %s",path,strerror(errno)); REQUIRE(fwrite(data,1,size,f)==size,"Short write"); REQUIRE(!fclose(f),"Close failed");
 }
 static bool exists(const char *path) { struct stat st; return !stat(path,&st); }
+static void require_no_retained_stage(const char *output) {
+    char *stage=join(output,"stage");
+    if(exists(stage)) fail("integration fixture cleanup regression: staged game remains in retained output: %s",stage);
+    free(stage);
+}
 static void mkdirs(const char *path) {
     char *s=strdup(path); REQUIRE(s,"Out of memory"); for(char *p=s+1;*p;p++) if(*p=='/') { *p=0; if(mkdir(s,0700)&&errno!=EEXIST) fail("mkdir %s: %s",s,strerror(errno)); *p='/'; }
     if(mkdir(s,0700)&&errno!=EEXIST) fail("mkdir %s: %s",s,strerror(errno));
@@ -1526,22 +1531,22 @@ static void write_malformed_words_fixture(const char *path,const char *kind) {
     }
     REQUIRE(!fclose(file),"Close malformed WORDS.TOK fixture failed");
 }
-static char loader_stage_cleanup_path[PATH_MAX];
-static void cleanup_loader_stage(void) {
-    if (!loader_stage_cleanup_path[0]) return;
-    if (!suite_test_paths_remove(loader_stage_cleanup_path)) {
-        fprintf(stderr,"Could not clean loader fixture directory %s\n",loader_stage_cleanup_path);
+static char stage_cleanup_path[PATH_MAX];
+static void cleanup_stage(void) {
+    if (!stage_cleanup_path[0]) return;
+    if (!suite_test_paths_remove(stage_cleanup_path)) {
+        fprintf(stderr,"Could not clean game fixture directory %s\n",stage_cleanup_path);
         _Exit(EXIT_FAILURE);
     }
-    loader_stage_cleanup_path[0]=0;
+    stage_cleanup_path[0]=0;
 }
-static char *create_loader_stage(const char *name) {
+static char *create_stage(const char *name) {
     char *stage_name=format("stage-%s-XXXXXX",name);
-    suite_test_path(loader_stage_cleanup_path,sizeof(loader_stage_cleanup_path),suite_fixture_directory,stage_name);
+    suite_test_path(stage_cleanup_path,sizeof(stage_cleanup_path),suite_fixture_directory,stage_name);
     free(stage_name);
-    if(!mkdtemp(loader_stage_cleanup_path)) fail("mkdtemp loader fixture: %s",strerror(errno));
-    char *stage=strdup(loader_stage_cleanup_path);
-    REQUIRE(stage,"Out of memory while creating loader fixture");
+    if(!mkdtemp(stage_cleanup_path)) fail("mkdtemp game fixture: %s",strerror(errno));
+    char *stage=strdup(stage_cleanup_path);
+    REQUIRE(stage,"Out of memory while creating game fixture");
     return stage;
 }
 static bool run_loader_case(const char *name,const char *kind,const char *game,const char *build,
@@ -1549,7 +1554,7 @@ static bool run_loader_case(const char *name,const char *kind,const char *game,c
                             const char *result_path,unsigned opens,unsigned allocations,
                             bool truncated,unsigned objects,bool success,unsigned expected_words,
                             const int *search_results) {
-    char *stage=create_loader_stage(name);
+    char *stage=create_stage(name);
     copy_stage(game,stage,false,!strcmp(kind,"missing-object"));
     copy_stage(build,stage,true,false);
     if(!strcmp(kind,"missing-object")) { char *object=join(stage,"OBJECT"); REQUIRE(!exists(object),"Missing-OBJECT fixture still contains the object file"); free(object); }
@@ -1568,13 +1573,13 @@ static bool run_loader_case(const char *name,const char *kind,const char *game,c
     fprintf(stderr,"RUN real X16 emulator loader case: %s\n",name);run_from(command,log,90,stage);
     unsigned expected_passes=success||truncated?2u:1u;
     bool okay=validate_loader_result(name,result_path,strcmp(kind,"missing-object")!=0,opens,allocations,truncated,expected_passes,objects,success,expected_words,search_results,!strcmp(kind,"missing-object"));
-    cleanup_loader_stage();
+    cleanup_stage();
     free(stage);free(words);free(program);free(emulator);free(log);
     return okay;
 }
 static void run_loader_test(const char *game,const char *build,const char *native,const char *rom,const char *output) {
     suite_test_paths_init("loader");
-    if(atexit(cleanup_loader_stage)) fail("Cannot register loader fixture cleanup");
+    if(atexit(cleanup_stage)) fail("Cannot register loader fixture cleanup");
     static const int empty_results[LOADER_SEARCH_COUNT]={-1,-1,-1,-1,-1,-1,-1,-1,-1};
     static const int single_results[LOADER_SEARCH_COUNT]={37,-1,-1,-1,-1,-1,-1,-1,-1};
     static const int prefix_results[LOADER_SEARCH_COUNT]={11,12,13,-1,-1,-1,-1,-1,-1};
@@ -1618,8 +1623,14 @@ int main(int argc,char **argv) {
     REQUIRE(strncmp(output,emulator,source_len)||(output[source_len]&&output[source_len]!='/'),"Output must be outside emulator source tree");
     /* A fresh output prevents stale logs or previously patched emulator sources. */
     REQUIRE(!exists(join(output,"emulator")),"Output already contains an emulator; use a fresh directory");
-    char *source=join(output,"emulator"),*stage=join(output,"stage");copy_tree(emulator,source);stage_tas_capture_header(source,tas_capture_header);
-    if(!loader_test) { mkdirs(stage);copy_stage(game,stage,false,false);copy_stage(build,stage,true,false); }
+    char *source=join(output,"emulator"),*stage=NULL;copy_tree(emulator,source);stage_tas_capture_header(source,tas_capture_header);
+    if(!loader_test) {
+        const char *fixture_name=combined_test?"combined-game":picture_test?"picture-game":"foreground-game";
+        suite_test_paths_init(fixture_name);
+        if(atexit(cleanup_stage)) fail("Cannot register game fixture cleanup");
+        stage=create_stage("game");
+        copy_stage(game,stage,false,false);copy_stage(build,stage,true,false);
+    }
     const char *candidates[]={"final.lbl","agi.cx16.lbl","final.dbg","agi.cx16.dbg"};
     if(!symbol)for(size_t i=0;i<4;i++) {char *p=join(build,candidates[i]);if(exists(p)){symbol=p;break;}free(p);}
     REQUIRE(symbol,"Provide --symbols with private assembly symbols");load_symbols(join(build,"final.lbl"));load_symbols(join(build,"agi.cx16.lbl"));load_symbols(symbol);
@@ -1678,5 +1689,8 @@ int main(int argc,char **argv) {
     if(!picture_test&&!combined_test) { command[command_length++]="-gif";command[command_length++]=format("%s/game.gif,wait",output); }
     command[command_length++]="-tas";command[command_length++]=tas;command[command_length++]="-echo";command[command_length]=NULL;
     run(command,join(output,"run.log"),picture_test?300:90);
+    cleanup_stage();
+    if(!stage||exists(stage)) fail("Integration fixture cleanup regression: private staged game was not removed");
+    require_no_retained_stage(output);
     if(picture_test) validate_picture(output); else if(combined_test) validate_combined(output); else validate(output,foreground_test);return 0;
 }
