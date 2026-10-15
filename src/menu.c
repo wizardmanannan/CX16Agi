@@ -321,15 +321,17 @@ void bASetMenuChild(MENU* menu, byte menuNo)
 char* bAStoreMessageInBuffer(LOGICFile* currentLogicFile, byte messNum)
 {
 	char* messData,*result;
-	size_t messLength;
+	size_t messLength, remaining;
+	boolean messageTerminated;
 
 	if (!messNum) return NULL;
 
 	messData = getMessagePointer(currentLog, messNum - 1);
 	if (!messData) return NULL;
-	messLength = strLenBanked(messData, currentLogicFile->messageBank);
-	/* Compare before adding the terminator, so a 16-bit length cannot wrap. */
-	if (messLength >= (size_t)(menuTextBuffer + MENU_TEXT_BUFFER_SIZE - nextMenuTextBufferAddr)) return NULL;
+	remaining = (size_t)(menuTextBuffer + MENU_TEXT_BUFFER_SIZE - nextMenuTextBufferAddr);
+	messLength = strLenBankedBounded(messData, currentLogicFile->messageBank,
+		remaining, &messageTerminated);
+	if (!messageTerminated) return NULL;
 	++messLength;
 	
 	memCpyBankedBetween((byte*)nextMenuTextBufferAddr, MENU_BANK, (byte*)messData, currentLogicFile->messageBank, messLength);

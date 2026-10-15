@@ -11,16 +11,26 @@ static unsigned char keys[4];
 #define GET_IN(ch) ((ch) = keys[key_index++])
 #include "../src/menu.h"
 size_t strLenBanked(char *, int);
+size_t strLenBankedBounded(char *, int, size_t, boolean *);
 void memCpyBankedBetween(byte *, byte, byte *, byte, size_t);
 #include "../src/menu.c"
 
 #define CHECK(c, m) do { if (!(c)) { fprintf(stderr, "%s\n", m); exit(1); } } while (0)
 int currentLog;
 static char message[600];
-static unsigned copies, activations;
+static unsigned copies, activations, bounded_length_calls, bounded_length_limit, bounded_length_bank;
 char *getMessagePointer(byte logic, byte number) { (void)logic; (void)number; return message; }
 void b5GetLogicFile(LOGICFile *file, byte number) { (void)number; memset(file, 0, sizeof(*file)); }
 size_t strLenBanked(char *text, int bank) { (void)bank; return strlen(text); }
+size_t strLenBankedBounded(char *text, int bank, size_t limit, boolean *terminated) {
+    size_t length = 0;
+    ++bounded_length_calls;
+    bounded_length_limit = (unsigned)limit;
+    bounded_length_bank = (unsigned)bank;
+    while (length < limit && text[length]) ++length;
+    *terminated = length < limit;
+    return length;
+}
 void memCpyBankedBetween(byte *dest, byte bank, byte *src, byte source_bank, size_t length) {
     (void)bank; (void)source_bank; ++copies; memcpy(dest, src, length);
 }
@@ -29,6 +39,7 @@ boolean b1SetController(byte controller) { ++activations; return controller != N
 static void reset(void) {
     memset(the_menu, 0, sizeof(the_menu));
     numOfMenus = 0; nextMenuTextBufferAddr = menuTextBuffer; copies = 0;
+    bounded_length_calls = bounded_length_limit = bounded_length_bank = 0;
     bAInitMenuState(); bAMenuChildInit(); strcpy(message, "menu");
     key_index = activations = 0; memset(keys, KEY_ESC, sizeof(keys));
 }
@@ -62,6 +73,15 @@ int main(void) {
     strcpy(message, "x");
     CHECK(bAStoreMessageInBuffer(&file, 1) == NULL && copies == 1,
           "Exhausted menu text buffer accepted another string");
+    reset();
+    file.messageBank = 7;
+    nextMenuTextBufferAddr = menuTextBuffer + MENU_TEXT_BUFFER_SIZE - 1;
+    strcpy(message, "x");
+    CHECK(bAStoreMessageInBuffer(&file, 1) == NULL && copies == 0 &&
+          nextMenuTextBufferAddr == menuTextBuffer + MENU_TEXT_BUFFER_SIZE - 1,
+          "Unterminated menu text crossed the remaining menu-buffer boundary");
+    CHECK(bounded_length_calls == 1 && bounded_length_limit == 1 && bounded_length_bank == 7,
+          "Menu source scan was not bounded by remaining capacity and its source bank");
     reset();
     bAGoToNextMenu(-1); bAGoToNextChildMenu(-1);
     CHECK(bAMenuSelected == 0 && bAMenuChildSelected == 0,
