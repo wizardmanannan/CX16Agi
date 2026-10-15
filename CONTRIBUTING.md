@@ -88,3 +88,10 @@ rewrites that invalidate review anchors. Resolve conflicts by checking both
 contracts and their callers, and explain nontrivial resolutions. Rerun the
 relevant suites on the resulting head; green results from either parent do not
 validate the integration.
+
+For a merge commit, inspect `git show --remerge-diff MERGE_HEAD` to distinguish
+the resolutions and edits made during integration from incoming upstream work.
+This view includes conflict-marker removal, so line counts are not a measure of
+new behavior. Give each substantive resolution its rationale and regression;
+keep newly discovered independent fixes identifiable rather than hiding them in
+an unexplained merge.
