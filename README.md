@@ -34,13 +34,13 @@ High Level Things Completed:
 - Inventory
 - Text boxes
 - Horizontal split sprites
+- Screen shaking through VERA's display window (bitmap and sprites cannot use layer scrolling)
   
 
 High Level Things To Be Done:
 - Load and save
 - String interpolation
 - Vertical split sprites
-- Screen shaking
 - Support for games with resources larger than 8k
 - Support for AGI 3 games which compress resources
 - LFSR sound (I currently have a very basic stand in)
@@ -50,7 +50,7 @@ High Level Things To Be Done:
 # CX 16 Iteration 16 Goals (Current)
 - Implement string interpolation (string token replacement) 
 - Continuing to work towards playability of King's Quest I:
-- Implement screen shaking using the Vera scroll registers
+- Screen shaking implemented using VERA display-window registers
 - Continuing to squash bugs that would stop a player completing the game
 
 # CX 16 Iteration 15 Goals (Completed)
@@ -124,6 +124,83 @@ However extensive assembly is used where speed is required.
 ## Instructions For Building In Windows:
 See: https://github.com/wizardmanannan/CX16Agi/blob/main/How%20To%20Setup%20Meka%20For%20Cx16.docx
 
+## Repeatable C regression suite
+
+The audit experiments are represented by checked-in C tests under `tools/`. Generated `.audit-tmp` binaries, assembly listings, emulator clones, logs, and captures are evidence, not test inputs. Tests generate their own fixtures from current production source; no audit directory is needed.
+
+The focused C suite covers screen shake, random range/ABI behavior, exact graphics clears, sliced text, command completion, IRQ/input/sprite helpers, show-object attributes, elapsed-VSYNC timer arithmetic, palette-cache lifecycle, controller indexing, menu storage/rendering/selection, text preparation, dictionary search bounds, and bulk allocation rollback. Native scenarios additionally exercise production sprite updates and picture drawing, compare rendering against an IRQ-suppressed reference, and check allocation failure cleanup. Native runs need your own compatible ROM and KQ1 data; neither is bundled.
+
+Run from the repository root (or use `make -C tools`):
+
+The suite defaults to `.tools/cc65-latest` and `.tools/x16-emulator` beside Git's common directory in the main checkout. Linked T3 worktrees share those dependencies automatically; sources and generated output stay in the current worktree. Explicit environment or Make command-line values override the defaults. Missing dependencies produce an error; the suite does not download them.
+
+```sh
+make -C tools test
+make -C tools production-test
+# For dependencies installed elsewhere:
+# CC65_HOME=/path/to/cc65 X16_EMULATOR_SOURCE=/path/to/x16-emulator make -C tools test
+```
+
+`test` compiles and runs the focused C regressions, including shared dependency discovery and override checks. `production-test` builds a fresh application image and runs the compiled foreground sound routines on the emulator CPU core, without ROM or game data. Each run prints its fresh output directory under the project's `obj/` build tree; `TEST_OUTPUT_ROOT` can select another build output tree. Tests clean their owned output on exit. Set `KEEP_TEST_OUTPUT=1` only when you explicitly need diagnostic captures. Cleanup failure is an error. `HOST_CC` and `HOST_CFLAGS` configure the host compiler. Dependencies are checked explicitly.
+
+For native rendering and input integration:
+
+```sh
+make -f tools/test-image.mk OUT=/path/to/test-image
+make -C tools modes ROM=/path/to/rom.bin GAME=/path/to/KQ1 \
+  BUILD=/path/to/test-image SYMBOLS=/path/to/test-image/final.dbg \
+  SDL_PREFIX=/optional/SDL2/install
+```
+
+`modes` runs both foreground and picture scenarios. It also requires CMake, ImageMagick (`magick`), libpng development files, and SDL2 development files, supplied by pkg-config or `SDL_PREFIX`. The isolated image build preserves production optimizer exclusions except `OptStackOps`, which current cc65 rejects, and includes private assembly debug symbols. No test reads `.audit-tmp`; old evidence can be archived independently.
+
+Audit artifact disposition:
+
+| Historical artifact family | Durable case or disposition |
+| --- | --- |
+| `random-test-*`, `negative/src` | `test_random.c`: exhaustive byte/range checks, resident modulus placement |
+| `shake-current*`, `shake-test-c-*` | `test_screen_shake.c`: operand reader, zero/max counts, page alignment, restoration, rejected invalid assembly |
+| `irq-helpers-*`, `sound-counter-check`, `input_sound` | `test_irq_helpers.c` and production sound tests: pending IRQ and state preservation, sound/input/sprite behavior |
+| `graphics-clear-*`, background/map patches | `test_graphics_clear.c`: exact boundaries, bounded slices and cycle limits |
+| `irq-completion-*` | `test_irq_completion.c`: multi-frame completion and display ownership |
+| `text-irq-*` | `test_text_irq.c`: cursor, palette, page/wrap/newline boundaries |
+| `show-obj-irq-*` | `test_show_obj_irq.c`: exact sprite attributes and sentinels |
+| Timer binaries and clock patch | `test_timer.c`: elapsed frames, fractions, wrap and game-clock rollover |
+| Native profiles, foreground and picture investigations | `test_full_game_irq.c --foreground-test` and `--picture-test`: production execution and rendering comparisons |
+| RTC bridge, RTC traces and unavailable-RTC repro | Obsolete removed workaround; its clock-loss requirement is covered by production rendering VSYNC assertions |
+| Five-improvement/RTC build scripts | `tools/test-image.mk`: fresh production image and debug symbols without private paths |
+| `test runner space`, compiler scratch, cached emulator builds | Regenerated build products; paths with spaces belong in suite portability verification |
+
+Do not promote historical compiler output or removed RTC functionality into fixtures. Keep assertions against live production behavior and regenerate outputs for each run.
+
+## Screen Shake Verification
+
+`tools/test_screen_shake.c` checks the assembled command, operand reader, register restoration, edge cases, and cycle budget using the project's emulator CPU core. `tools/test_full_game_irq.c` runs King’s Quest I in a temporary copy of that emulator and measures the complete IRQ through the final KERNAL return. These are host tools, built with your system C compiler. The full-game tool requires CMake, SDL2 development files, ImageMagick, libpng development files, your game data, and a matching build with assembly debug symbols (`ASFLAGS=-g` and a linker `.dbg` file).
+
+Run `make -C tools test` for the focused case and `make -C tools modes` for native scenarios, using the dependency variables documented above.
+
+The output contains IRQ timings, opcode results, a recording, and a report. The finite KQ1 emulator sample recorded 1,123 IRQs; the maximum complete IRQ through the final KERNAL return was 32,067 cycles, the active-shake maximum was 12,929 cycles, and the maximum VSYNC-to-window-write delay was 276 cycles. All five command checks restored the display, code window, and cursor, and queued input was processed after the shake. This is not an all-game worst case or a hardware measurement; this emulator renders a 0-to-4 VSTART change as seven pixels while the registers retain their correct hardware units.
+
+Pass `--foreground-test` to instrument the real `b11DrawPic` and `b9UpdateObjects` callers when the game exercises them. In this KQ1 sample, `b11DrawPic` is not called; a real `b9UpdateObjects` workload crosses five VSYNCs. The check compares asserted VSYNCs with the production 32-bit serviced counter and verifies that IRQs during foreground VERA ownership preserve CPU registers, banks, and VERA address/control registers. It also reports the maximum fast-path IRQ duration.
+
+Pass `--picture-test` for a deterministic production rendering check. The harness dispatches real `load.pic(1); draw.pic;` commands, then runs `draw.pic` again with VSYNC IRQ service suppressed during foreground ownership as a reference. It requires `b11DrawPic` to service every asserted VSYNC, verifies owner release and IRQ preservation of CPU state, banks, VERA state, shared scratch, renderer work memory, and I2C state, and confirms the real flood-fill and priority-split paths ran. It compares all 51,840 captured VRAM bytes between the IRQ-enabled and reference draws. `picture.csv` records counters and timings; `picture-irq.vram` and `picture-reference.vram` contain the captures.
+
+The same scenario dispatches real `load.view(0); set.view(0,0); draw(0);` commands to reach `agiBlit` with the loaded resource. Since KQ1 startup leaves the entry's DRAWN flag clear, the native harness sets DRAWN on that loaded view-table entry and sets its stale counter to exercise the later allocation path. At the real `agiBlit` entry it enables the function's ownership argument while b9 already owns VERA, then forces `bESetLoop` failure and C allocator failure separately. It checks depth 1→2→1→0 and bank/ROM/I-flag restoration, restores the allocator and the fixture's flags/stale counter, and records both results in `agi-blit-failures.csv`.
+
+## IRQ Helper Verification
+
+`tools/test_irq_helpers.c` assembles the IRQ macros, input/sprite helpers, sound handler, and 32-bit VSYNC snapshot into a small fixture, then runs them on the emulator CPU core. It checks every input length (0–40), clean-row no-write and invalidation paths, all initial X values, sound start/stop/end state and partial-channel stride, snapshot byte order/caller-I preservation, pending-VSYNC preservation across interrupt reenable and wait cases, and sprite clearing through the 127-entry table boundary.
+
+`tools/test_timer.c` runs the production timer code in a host fixture through `make -C tools test`. It covers retained VSYNC fractions, 16-bit and 32-bit rollover, long blocking intervals, and calendar boundaries. The game clock has one source: the serviced VSYNC counter. Foreground code that owns VERA leaves IRQs enabled; a short IRQ path acknowledges and counts VSYNC without touching VERA address/data ports or foreground scratch, then normal sound, input, and display work resumes after the owner exits. VERA exposes VSYNC as a pending status bit, so multiple frames coalesce if code outside these managed sections masks IRQs across them; this counter cannot reconstruct such an unbounded interval without a separate elapsed-time source.
+
+`tools/test_random.c` checks inclusive random ranges across all 256 source bytes, both assembly and C calling conventions, bank and stack restoration, and the exclusive upper bound of `rand8Bit`. `tools/test_text_irq.c` checks 512-byte source boundaries, NUL/newline edges, 16-bit source wrap, 17-bit VERA wrap, and text/palette slices through the maximum row count.
+
+`tools/test_irq_completion.c` runs the completion-wait macro and clear start/final IRQ paths on the emulator CPU core. `tools/test_graphics_clear.c` checks exact VRAM bounds and per-call write/cycle limits for the clear slices. The clear takes 22 VSYNCs: a first IRQ runs map/sprite/input setup (the map portion clears 2,008 cells with 4,016 VERA writes), followed by 14 background slices (1,920 writes maximum each) and seven priority slices (2,048 writes maximum each). The map routine is a deliberate exception to the 2,048-write slice target; the fixture measures it at 18,708 cycles against the 134,400-cycle frame budget.
+
+Run these cases together with `make -C tools test`; the suite owns compilation, fixtures, and cleanup.
+
+`CC65_HOME` must point to a CC65 installation containing `bin/ca65` and `bin/ld65`; run once per compiler version to check compatibility.
+
 This project requires extensive use of Banked RAM, for both code and data as the Meka source code is quite large.
 
 Due to the sheer number of objects and amount of code to be stored, an allocation spreadsheet tracks this called docs\allocation.xlsx
@@ -153,5 +230,6 @@ It's worth noting that the algorithm, implementation, and segmentation of memory
 
 All of the sizes and other numerous constants related to dynamic memory are located in `memorymanager.h`.
 
+`tools/test_sprite_allocator.c` checks the production bulk allocator’s 64-record capacity, bank ownership, partial-failure rollback and retry, including 64×64 allocations across 17-bit VRAM addresses. Run it with `make -C tools test`.
 
-
+`tools/test_agifiles.c` covers exact resource-directory EOF, empty/full tables and rejection without partial publication. Multiline text cases check palette coverage and actual cleanup; ownership and allocator cases also check processor flags and the cc65 return ABI. These run in the same `make -C tools test` suite.
