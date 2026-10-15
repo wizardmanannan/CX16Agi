@@ -149,6 +149,8 @@ _run:
 	    done; \
 	    echo 'CC test_timer.c'; \
 	    "$(HOST_CC)" $(HOST_CFLAGS) -Wno-unknown-pragmas "$$repo/tools/test_timer.c" -o "$$work/bin/test_timer"; \
+	    echo 'CC test_run_from.c'; \
+	    "$(HOST_CC)" $(HOST_CFLAGS) "$$repo/tools/test_run_from.c" -o "$$work/bin/test_run_from"; \
 	    "$(HOST_CC)" $(HOST_CFLAGS) "$$repo/tools/test_tool_paths.c" -o "$$work/bin/test_tool_paths"; \
 	    "$(HOST_CC)" $(HOST_CFLAGS) "$$repo/tools/test_fixture_cleanup.c" -o "$$work/bin/test_fixture_cleanup"; \
 	    "$(HOST_CC)" $(HOST_CFLAGS) -Wno-unknown-pragmas "$$repo/tools/test_palette_manager.c" -o "$$work/bin/test_palette_manager"; \
@@ -164,6 +166,7 @@ _run:
 	    done; \
 	    run_test "$$work/bin/test_screen_shake" --repo-root "$$repo"; \
 	    run_test "$$work/bin/test_timer"; \
+	    run_test "$$work/bin/test_run_from"; \
 	    run_test "$$work/bin/test_tool_paths"; \
 	    run_test "$$work/bin/test_fixture_cleanup"; \
 	    run_test "$$work/bin/test_palette_manager"; \

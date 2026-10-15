@@ -22,6 +22,8 @@
 #include <time.h>
 #include <unistd.h>
 
+#include "test_run_from.h"
+
 static void fail(const char *fmt, ...) {
     va_list ap; va_start(ap,fmt); vfprintf(stderr,fmt,ap); va_end(ap); fputc('\n',stderr); exit(1);
 }
@@ -62,19 +64,6 @@ static void copy_stage(const char *from,const char *to,bool build) {
     while((e=readdir(d))) { bool agi=!strncasecmp(e->d_name,"agi.cx16",8); if(agi!=build) continue;
         char *a=join(from,e->d_name),*b=join(to,e->d_name); struct stat st; if(!stat(a,&st)&&S_ISREG(st.st_mode)) copy_file(a,b); free(a);free(b);
     } closedir(d);
-}
-/* Use argv directly: paths and game names never become shell commands. */
-static void run(char *const argv[],const char *log,int timeout) {
-    pid_t pid=fork(); if(pid<0) fail("fork: %s",strerror(errno));
-    if(!pid) { if(log) { FILE *f=fopen(log,"a"); if(!f) _exit(126); dup2(fileno(f),1);dup2(fileno(f),2);fclose(f); } execvp(argv[0],argv); perror(argv[0]);_exit(127); }
-    int status; struct timespec start,now;
-    REQUIRE(!clock_gettime(CLOCK_MONOTONIC,&start),"Cannot read monotonic clock");
-    for(;;) { pid_t r=waitpid(pid,&status,WNOHANG); if(r==pid) break; if(r<0&&errno!=EINTR) fail("waitpid: %s",strerror(errno));
-        REQUIRE(!clock_gettime(CLOCK_MONOTONIC,&now),"Cannot read monotonic clock");
-        if(timeout&&(now.tv_sec-start.tv_sec>timeout||(now.tv_sec-start.tv_sec==timeout&&now.tv_nsec>=start.tv_nsec))) { kill(pid,SIGKILL);waitpid(pid,&status,0);fail("%s timed out (%d seconds); see %s",argv[0],timeout,log?log:"output"); }
-        struct timespec delay={0,100000000};nanosleep(&delay,NULL);
-    }
-    if(!WIFEXITED(status)||WEXITSTATUS(status)) fail("%s failed (status %d); see %s",argv[0],status,log?log:"output");
 }
 static char *quoted(const char *s) {
     size_t n=strlen(s); char *out=malloc(n*6+3),*p=out; REQUIRE(out,"Out of memory"); *p++='"';
@@ -552,7 +541,7 @@ static void validate(const char *output,bool foreground_test) {
     char *gif=join(output,"game.gif");size_t gifsize;unsigned char *header=(unsigned char*)read_file(gif,&gifsize);
     REQUIRE(gifsize>=10&&(!memcmp(header,"GIF87a",6)||!memcmp(header,"GIF89a",6)),"Invalid GIF capture");unsigned width=header[6]|header[7]<<8,height=header[8]|header[9]<<8;free(header);
     REQUIRE(width>=608&&height>=368,"Capture too small for visual checks");char *raw=join(output,"frames.rgb"),*rawarg=format("rgb:%s",raw);
-    char *convert[]={"magick",gif,"-coalesce","-alpha","off","-depth","8",rawarg,NULL};run(convert,join(output,"visual.log"),90);
+    char *convert[]={"magick",gif,"-coalesce","-alpha","off","-depth","8",rawarg,NULL};run_from(convert,join(output,"visual.log"),90,NULL);
     size_t bytes;unsigned char *images=(unsigned char*)read_file(raw,&bytes);size_t framebytes=(size_t)width*height*3;REQUIRE(bytes%framebytes==0,"Truncated RGB frames");size_t frames=bytes/framebytes;REQUIRE(frames>100,"Missing full-game visual capture");
     int vertical=original[2]==0?7:8;size_t pair=0;
     for(size_t i=16;i<48&&i+4<frames;i++) { unsigned char *shifted=images+i*framebytes,*normal=images+(i+4)*framebytes;
@@ -610,8 +599,8 @@ int main(int argc,char **argv) {
     char *native=join(output,"native"),*buildlog=join(output,"build.log");
     if(!sdl) {char *parent=strdup(emulator),*slash=strrchr(parent,'/');REQUIRE(slash,"Invalid emulator path");*slash=0;sdl=join(parent,"sdl2-install");free(parent);}
     char *prefix=NULL;if(exists(sdl)) {char *absolute=realpath(sdl,NULL);REQUIRE(absolute,"Cannot resolve SDL prefix");prefix=format("-DCMAKE_PREFIX_PATH=%s",absolute);free(absolute);}
-    char *configure[]={"cmake","-S",source,"-B",native,"-DENABLE_LTO=OFF","-DENABLE_TRACE=OFF","-DENABLE_FLUIDSYNTH=OFF",prefix,NULL};run(configure,buildlog,0);
-    char *compile[]={"cmake","--build",native,"-j4",NULL};run(compile,buildlog,0);
+    char *configure[]={"cmake","-S",source,"-B",native,"-DENABLE_LTO=OFF","-DENABLE_TRACE=OFF","-DENABLE_FLUIDSYNTH=OFF",prefix,NULL};run_from(configure,buildlog,0,NULL);
+    char *compile[]={"cmake","--build",native,"-j4",NULL};run_from(compile,buildlog,0,NULL);
     REQUIRE(!setenv("SDL_VIDEODRIVER","dummy",1)&&!setenv("SDL_AUDIODRIVER","dummy",1),"Cannot set SDL environment");
     char *tas=join(output,"input.tas");write_file(tas,"0:Return\n",9);
     char *command[24];int command_length=0;
@@ -621,6 +610,6 @@ int main(int argc,char **argv) {
     command[command_length++]="-warp";command[command_length++]="-sound";command[command_length++]="none";
     if(!picture_test) { command[command_length++]="-gif";command[command_length++]=format("%s/game.gif,wait",output); }
     command[command_length++]="-tas";command[command_length++]=tas;command[command_length++]="-echo";command[command_length]=NULL;
-    run(command,join(output,"run.log"),picture_test?300:90);
+    run_from(command,join(output,"run.log"),picture_test?300:90,NULL);
     if(picture_test) validate_picture(output); else validate(output,foreground_test);return 0;
 }
