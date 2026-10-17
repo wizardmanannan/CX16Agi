@@ -21,13 +21,16 @@ TEST_FIXTURE_ROOT ?= $(if $(TMPDIR),$(TMPDIR),/tmp)
 export CC65_HOME X16_EMULATOR_SOURCE TMPDIR TEST_OUTPUT_DIR ROM GAME BUILD SYMBOLS SDL_PREFIX TAS_CAPTURE_HEADER
 unexport KEEP_TEST_OUTPUT
 
-.PHONY: test suite commands-test image production-test integration-test picture-test loader-test modes integration _run
+.PHONY: test suite commands-test image production-test integration-test picture-test loader-test modes integration review-workflow-test _run
 
 test suite:
 	@$(MAKE) --no-print-directory -f "$(REPO_ROOT)/tools/Makefile" _run MODE=core
 
 commands-test:
 	@$(MAKE) --no-print-directory -f "$(REPO_ROOT)/tools/Makefile" _run MODE=commands-test
+
+review-workflow-test:
+	@$(MAKE) --no-print-directory -f "$(REPO_ROOT)/tools/Makefile" _run MODE=review-workflow
 
 image:
 	@$(MAKE) --no-print-directory -f "$(REPO_ROOT)/tools/Makefile" _run MODE=image
@@ -70,6 +73,7 @@ _run:
 	}; \
 	case "$$mode" in \
 	  core) need_cc65; need_cpu ;; \
+	  review-workflow) need_command git; need_command bash ;; \
 	  commands-test) need_cc65 ;; \
 	  image) need_cc65; need_exec "$$CC65_HOME/bin/cl65"; need_image_makefile ;; \
 	  production-test) \
@@ -155,6 +159,10 @@ _run:
 	  fi; \
 	}; \
 	case "$$mode" in \
+	  review-workflow) \
+	    cd "$$repo"; \
+	    "$(HOST_CC)" $(HOST_CFLAGS) "$$repo/tools/test_review_workflow.c" -o "$$work/bin/test_review_workflow"; \
+	    "$$work/bin/test_review_workflow" "$$repo/.github/workflows/native-regressions.yml" ;; \
 	  commands-test) \
 	    build_commands; prepare_sanitizers; failed=0; \
 	    for option in '' --parse --strings --allocation; do \
@@ -184,6 +192,7 @@ _run:
 	    "$(HOST_CC)" $(HOST_CFLAGS) -Wno-error=incompatible-pointer-types -Wno-error=int-conversion -D_MSC_VER -D__CBM__ '-D__fastcall__=' -idirafter "$$CC65_HOME/include" -Wno-unknown-pragmas -ffunction-sections -fdata-sections -fsanitize=address,undefined -fno-sanitize-recover=all "$$repo/tools/test_words_file.c" -Wl,--gc-sections -o "$$work/bin/test_words_file"; \
 	    "$(HOST_CC)" $(HOST_CFLAGS) -Wno-error=incompatible-pointer-types -Wno-error=int-conversion -D_MSC_VER -D__CBM__ '-D__fastcall__=' -idirafter "$$CC65_HOME/include" -Wno-unknown-pragmas -ffunction-sections -fdata-sections -fsanitize=address,undefined -fno-sanitize-recover=all "$$repo/tools/test_agifiles.c" -Wl,--gc-sections -o "$$work/bin/test_agifiles"; \
 	    "$(HOST_CC)" $(HOST_CFLAGS) "$$repo/tools/test_review_sha256.c" "$$repo/tools/review_sha256.c" -o "$$work/bin/test_review_sha256"; \
+	    "$(HOST_CC)" $(HOST_CFLAGS) "$$repo/tools/test_review_workflow.c" -o "$$work/bin/test_review_workflow"; \
 	    failed=0; \
 	    run_test() { echo "RUN $$*"; if "$$@"; then :; else failed=$$((failed + 1)); fi; }; \
 	    for name in graphics_clear irq_completion irq_helpers random show_obj_irq text_irq sprite_allocator; do \
@@ -195,6 +204,7 @@ _run:
 	    run_test "$$work/bin/test_tool_paths"; \
 	    run_test "$$work/bin/test_fixture_cleanup"; \
 	    run_test "$$work/bin/test_review_sha256"; \
+	    run_test "$$work/bin/test_review_workflow" "$$repo/.github/workflows/native-regressions.yml"; \
 	    run_test "$$work/bin/test_palette_manager"; \
 	    run_test "$$work/bin/test_controllers"; \
 	    prepare_sanitizers; \
