@@ -44,7 +44,7 @@ extern boolean statusLineDisplayed;
 #pragma wrapped-call (push, trampoline, STRING_BANK)
 extern void b7LookupWords(char* inputLine);
 extern int b7Strcmp(char const* _Str1,char const* _Str2);
-extern void b7ProcessString(char* stringPointer, byte stringBank, char* b7OutputString, byte outputStringBank);
+extern void b7ProcessString(char* stringPointer, byte stringBank, char* b7OutputString, byte outputStringBank, size_t dstMax);
 extern char* b7GetInternalStringPtr(byte number, size_t* length);
 extern void b7GetInternalString(char* promptStr, byte promptStringBank, byte stringNumber, int x, int y, int l);
 void b7GetString(char* promptStr, byte promptStringBank, char* returnStr, byte returnStrBank, int x, int y, int l);

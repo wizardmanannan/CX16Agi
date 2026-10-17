@@ -33,12 +33,12 @@ High Level Things Completed:
 - Interpreter
 - Inventory
 - Text boxes
+- String interpolation ([native regression tests](tests/README.md))
 - Horizontal split sprites
   
 
 High Level Things To Be Done:
 - Load and save
-- String interpolation
 - Vertical split sprites
 - Screen shaking
 - Support for games with resources larger than 8k

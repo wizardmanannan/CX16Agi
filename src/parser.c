@@ -10,6 +10,7 @@
 #define  PROGRAM_CONTROL  1
 
 #include "parser.h"
+#include "stringFormat.h"
 
 extern boolean* flag;
 extern byte* var;
@@ -74,13 +75,13 @@ char* b7GetInternalStringPtr(byte number, size_t* length)
 
 void b7LookupWords(char* inputLine);
 
-void b7ProcessString(char* stringPointer, byte stringBank, char* b7OutputString, byte outputStringBank)
+/* Fixed code remains visible while the formatter switches source banks. */
+#pragma code-name (push, "CODE")
+void b7ProcessString(char* stringPointer, byte stringBank, char* b7OutputString, byte outputStringBank, size_t dstMax)
 {
-#define TEMP_SIZE 80
-#define NUM_STRING_SIZE 80
-#define INPUT_BUFFER_SIZE 10
-
+	expandFormatCodes(stringPointer, stringBank, b7OutputString, outputStringBank, dstMax);
 }
+#pragma code-name (pop)
 
 void b7InitEvents()
 {
@@ -123,8 +124,8 @@ void b7GetString(char* promptStr, byte promptStringBank, char* returnStr, byte r
 
 	gx = (x - 1) * 16;
 	gy = ((y - 1) * 16) + 20;
-	b7ProcessString(promptStr, promptStringBank, b7Temp, PARSER_BANK);
-	sprintf(b7OutputString, "%s%s%c", b7Temp, b7CurrentInputStr, cursorChar);
+	b7ProcessString(promptStr, promptStringBank, b7Temp, PARSER_BANK, sizeof(b7Temp));
+	snprintf(b7OutputString, sizeof(b7OutputString), "%s%s%c", b7Temp, b7CurrentInputStr, cursorChar);
 
 	do {
 		GET_IN(ch);
@@ -152,7 +153,7 @@ void b7GetString(char* promptStr, byte promptStringBank, char* returnStr, byte r
 				b7CurrentInputStr[strPos] = (ch & 0xff);
 				strPos++;
 				b7CurrentInputStr[strPos] = 0;
-				sprintf(b7OutputString, "%s%s%c", b7Temp, b7CurrentInputStr, cursorChar);
+				snprintf(b7OutputString, sizeof(b7OutputString), "%s%s%c", b7Temp, b7CurrentInputStr, cursorChar);
 				break;
 			}
 		}
@@ -190,7 +191,7 @@ void b7PollKeyboard()
 	gx = 0;
 	gy = ((user_input_line - 1) * 16) + 20;
 	if (inputLineDisplayed) {
-		sprintf(b7OutputString, "%s%s%c", b7Temp, b7CurrentInputStr, cursorChar);
+		snprintf(b7OutputString, sizeof(b7OutputString), "%s%s%c", b7Temp, b7CurrentInputStr, cursorChar);
 	}
 
 	do {
@@ -231,14 +232,14 @@ void b7PollKeyboard()
 					b7LookupWords(b7CurrentInputStr);
 					b7CurrentInputStr[0] = 0;
 					strPos = 0;
-					sprintf(b7OutputString, "%s%s%c", b7Temp, b7CurrentInputStr, cursorChar);
+					snprintf(b7OutputString, sizeof(b7OutputString), "%s%s%c", b7Temp, b7CurrentInputStr, cursorChar);
 					strcpy(b7LastLine, b7CurrentInputStr);
 					break;
 				case KEY_BACKSPACE:   /* Backspace */
 					if (strPos > 0) {
 						strPos--;
 						b7CurrentInputStr[strPos] = 0;
-						sprintf(b7OutputString, "%s%s%c ", b7Temp, b7CurrentInputStr, cursorChar);
+						snprintf(b7OutputString, sizeof(b7OutputString), "%s%s%c ", b7Temp, b7CurrentInputStr, cursorChar);
 						//drawBigString(screen, " ", (strPos*16), 448, 7, 0);
 					}
 					else
@@ -260,7 +261,7 @@ void b7PollKeyboard()
 						b7CurrentInputStr[strPos] = (ch);
 						strPos++;
 						b7CurrentInputStr[strPos] = 0;
-						sprintf(b7OutputString, "%s%s%c", b7Temp, b7CurrentInputStr, cursorChar);
+						snprintf(b7OutputString, sizeof(b7OutputString), "%s%s%c", b7Temp, b7CurrentInputStr, cursorChar);
 					}
 					break;
 				}

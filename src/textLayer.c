@@ -1,4 +1,5 @@
 #include "textLayer.h"
+#include "stringFormat.h"
 #pragma code-name (push, "BANKRAM06")
 //#define VERBOSE_CHAR_SET_LOAD
 //#define TEST_CHARSET
@@ -412,7 +413,6 @@ extern byte b3PaletteNumber;
 void b3DisplayMessageBox(char* message, byte messageBank, byte row, byte col, byte paletteNumber, byte boxWidth, boolean wrap, byte firstRow)
 {
 	int i;
-	char terminator = 0;
 	size_t messageSize = strLenBanked(message, messageBank) + 1;
 	long displayAddressCopyPaletteTo;
 	byte textWidth = boxWidth;
@@ -436,10 +436,6 @@ void b3DisplayMessageBox(char* message, byte messageBank, byte row, byte col, by
 		printf("Address: %p + (%d + %d) * %d + %d * %d = %lx\n", MAPBASE, FIRST_ROW, row, TILE_LAYER_BYTES_PER_ROW, col, BYTES_PER_CELL, displayTextAddressToCopyTo);
 		printf("displayAddressCopyPaletteTo = %lx\n", displayAddressCopyPaletteTo);
 #endif
-		if (messageSize > maxMessageSize)
-		{
-			memCpyBanked((byte*)message + maxMessageSize - 1, (byte*)&terminator, messageBank, 1);
-		}
 
 #ifdef VERBOSE_DISPLAY_TEXT
 		printf("Copy message %p on bank %d of size %d\n", message, messageBank, messageSize);
@@ -448,7 +444,9 @@ void b3DisplayMessageBox(char* message, byte messageBank, byte row, byte col, by
 
 		if (message != (char*)b3TextBuffer1)
 		{
-			memCpyBankedBetween((byte*)b3TextBuffer1, TEXT_CODE_BANK, (byte*)message, messageBank, messageSize);
+			/* Replacement text must participate in wrapping and box sizing. */
+			expandFormatCodes(message, messageBank, b3TextBuffer1, TEXT_CODE_BANK, maxMessageSize);
+			messageSize = strLenBanked(b3TextBuffer1, TEXT_CODE_BANK) + 1;
 		}
 
 		if (messageSize - 1 > TILE_LAYER_WIDTH / 2)

@@ -10,6 +10,8 @@ string-format-test:
 	@mkdir -p $(STRING_FORMAT_OUT)
 	@{ flock -n 9 || { echo 'Build output busy; set CX16AGI_BUILD_DIR to a private base.' >&2; exit 1; }; \
 	ulimit -c 0; \
+	$(HOSTCC) $(STRING_FORMAT_FLAGS) tests/test-text-interpolation.c src/textLayer.c src/parser.c src/stringFormat.c -Wl,--gc-sections -o $(STRING_FORMAT_OUT)/test-text-interpolation && \
+	$(STRING_FORMAT_OUT)/test-text-interpolation && \
 	$(HOSTCC) $(STRING_FORMAT_FLAGS) tests/test-string-format.c src/stringFormat.c -Wl,--gc-sections -o $(STRING_FORMAT_OUT)/test-string-format && \
 	$(STRING_FORMAT_OUT)/test-string-format; } 9>$(CX16AGI_BUILD_DIR)/.string-format.lock
 
@@ -17,7 +19,7 @@ string-format-test:
 string-format-target-check:
 	@mkdir -p $(STRING_FORMAT_OUT)
 	@{ flock -n 9 || { echo 'Build output busy; set CX16AGI_BUILD_DIR to a private base.' >&2; exit 1; }; \
-	set -e; for name in stringFormat; do \
+	set -e; for name in stringFormat parser textLayer; do \
 	$(CC65) -t cx16 -O -o $(STRING_FORMAT_OUT)/$$name.s src/$$name.c; \
 	$(CA65) -t cx16 -o $(STRING_FORMAT_OUT)/$$name.o $(STRING_FORMAT_OUT)/$$name.s; \
 	done; } 9>$(CX16AGI_BUILD_DIR)/.string-format.lock
