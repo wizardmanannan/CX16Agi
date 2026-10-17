@@ -1671,24 +1671,24 @@ void b4Status_line_off() // 0, 0x00
 	return;
 }
 
-void b4Set_string() // 2, 0x00 
+void b4Set_string() // 2, 0x00
 {
-	int stringNum, messNum;
+	byte stringNum = loadAndIncWinCode();
+	byte messNum = loadAndIncWinCode();
 	char* messagePointer;
+	char terminator = '\0';
+	size_t length;
 	LOGICFile logicFile;
 
+	if (stringNum >= sizeof(string) / sizeof(string[0])) return;
 	b5GetLogicFile(&logicFile, currentLog);
-
-	stringNum = loadAndIncWinCode();
-	messNum = loadAndIncWinCode();
+	if (!messNum || messNum > logicFile.numMessages || !logicFile.messages) return;
 	messagePointer = getMessagePointer(currentLog, messNum - 1);
-
-	/*printf("attempting to %p on bank %p to %p. the length is %d\n", string[stringNum - 1], messagePointer, logicFile.messageBank, strLenBanked(messagePointer, logicFile.messageBank));
-
-	strcpyBanked(string[stringNum - 1], messagePointer, logicFile.messageBank);
-
-	asm("stp");*/
-
+	length = strLenBanked(messagePointer, logicFile.messageBank);
+	if (length >= sizeof(string[0])) length = sizeof(string[0]) - 1;
+	memCpyBankedBetween((byte*)string[stringNum], STRING_BANK,
+	                   (byte*)messagePointer, logicFile.messageBank, length);
+	memCpyBanked((byte*)string[stringNum] + length, (byte*)&terminator, STRING_BANK, 1);
 	return;
 }
 
