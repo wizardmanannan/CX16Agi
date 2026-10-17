@@ -435,8 +435,13 @@ static void replace_fixture_text(const char *name, const char *before, const cha
 
 int main(int argc, char **argv)
 {
-    CHECK(argc == 3, "Expected review-policy executable path and policy file path");
+    bool witness_mode = argc == 4 && !strcmp(argv[3], "--witness");
+    CHECK(argc == 3 || witness_mode, "Expected review-policy executable path and policy file path");
     suite_test_paths_init("review-policy-protocol");
+    if (witness_mode) {
+        fputs("WITNESS_EXECUTED: check-run-suite-head-optional\n", stderr);
+        fflush(stderr);
+    }
     CHECK(snprintf(fixture_directory, sizeof(fixture_directory), "%s", suite_fixture_directory) <
           (int)sizeof(fixture_directory), "Review policy fixture path is too long");
     CHECK(snprintf(output_directory, sizeof(output_directory), "%s/review-policy-test-XXXXXX", suite_output_directory) <
@@ -471,6 +476,21 @@ int main(int argc, char **argv)
     };
     run_from(cli_argv, cli_log, 30, NULL);
     char *output = read_text(cli_log);
+    if (witness_mode) {
+        if (strstr(output, "NOT READY: check run has incomplete identity or App data")) {
+            fputs(output, stderr);
+            free(output);
+            return EXIT_FAILURE;
+        }
+        if (strstr(output, "READY")) {
+            free(output);
+            puts("POLICY_WITNESS_PASS: check-run-suite-head-optional");
+            return EXIT_SUCCESS;
+        }
+        fprintf(stderr, "Unexpected review-policy witness output:\n%s", output);
+        free(output);
+        return 2;
+    }
     CHECK(strstr(output, "READY") != NULL, "Review policy CLI omitted its ready result");
     free(output);
     output = read_text(gh_log);

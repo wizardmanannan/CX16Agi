@@ -1,0 +1,15 @@
+review-plan-v2
+repo|.
+candidate|HEAD
+toolchain|@INPUT:cc65-home@/bin/cc65
+tool|make|make
+tool|host-cc|cc
+input|cc65-home|@ENV:CC65_HOME@
+input|x16-emulator-source|@ENV:X16_EMULATOR_SOURCE@
+suite|required-native|1800|13|@TOOL:make@|-C|@REPO@/tools|test|HOST_CC=@TOOL:host-cc@|CC65_HOME=@INPUT:cc65-home@|X16_EMULATOR_SOURCE=@INPUT:x16-emulator-source@|CC65=@TOOLCHAIN@|TEST_OUTPUT_ROOT=@OUT@|TEST_FIXTURE_ROOT=@TMP@|OUT_ROOT=@OUT@/review-series|REVIEW_POLICY_OUTPUT_ROOT=@OUT@/review-policy|REVIEW_POLICY_HOST_CC=@TOOL:host-cc@
+suite|production-native|1800|10|@TOOL:make@|-C|@REPO@/tools|production-test|HOST_CC=@TOOL:host-cc@|CC65_HOME=@INPUT:cc65-home@|X16_EMULATOR_SOURCE=@INPUT:x16-emulator-source@|CC65=@TOOLCHAIN@|TEST_OUTPUT_ROOT=@OUT@|TEST_FIXTURE_ROOT=@TMP@
+suite|enforcement-focus|600|9|@TOOL:make@|-C|@REPO@/tools|-f|review-enforcement-test.mk|test|HOST_CC=@TOOL:host-cc@|TEST_OUTPUT_ROOT=@OUT@|TEST_FIXTURE_ROOT=@TMP@
+witness|check-run-suite-head-optional|35f2fffc22160f99dfb3f249bc8a2f0a87658688|120|1|WITNESS_EXECUTED: check-run-suite-head-optional|NOT READY: check run has incomplete identity or App data|POLICY_WITNESS_PASS: check-run-suite-head-optional|8|@TOOL:make@|-C|@REPO@/tools|-f|review-policy.mk|review-policy-witness-build|REVIEW_POLICY_WITNESS_OUTPUT=@OUT@|REVIEW_POLICY_HOST_CC=@TOOL:host-cc@|4|@OUT@/test_review_policy|@OUT@/review-policy|@REPO@/tools/review/branch-protection.json|--witness
+scope|check-run-suite-head-optional|Accept GitHub check runs whose check_suite supplies its documented id without an unadvertised nested head_sha|check_run_identity|tools/review_policy.c|review_policy_check -> fetch_observed_checks -> collect_check_identities -> check_run_identity|tools/test_review_policy.c|required-native,production-native,enforcement-focus|Use the observed id-only check_suite response in the permanent protocol case; reject it on the old implementation and accept it on the fixed implementation|none
+overlay|check-run-suite-head-optional|tools/review-policy.mk
+overlay|check-run-suite-head-optional|tools/test_review_policy.c

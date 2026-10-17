@@ -3,7 +3,7 @@ REVIEW_POLICY_REPO_ROOT := $(abspath $(REVIEW_POLICY_TOOLS_DIR)/..)
 REVIEW_POLICY_OUTPUT_ROOT ?= $(REVIEW_POLICY_REPO_ROOT)/obj
 REVIEW_POLICY_HOST_CC ?= cc
 
-.PHONY: review-policy-test
+.PHONY: review-policy-test review-policy-witness-build
 
 review-policy-test:
 	@set -eu; \
@@ -52,3 +52,14 @@ review-policy-test:
 	  printf '%s\n' 'Review policy test left a fixture directory after failure.' >&2; exit 1; \
 	fi; \
 	printf '%s\n' 'PASS review-policy test cleanup after success and expected failure'
+
+REVIEW_POLICY_WITNESS_OUTPUT ?= $(REVIEW_POLICY_OUTPUT_ROOT)/review-policy-witness
+
+review-policy-witness-build:
+	@mkdir -p "$(REVIEW_POLICY_WITNESS_OUTPUT)"
+	'$(REVIEW_POLICY_HOST_CC)' -std=c11 -O2 -Wall -Wextra -Werror -DREVIEW_COMMAND_TIMEOUT_MS=1000 \
+	  '$(REVIEW_POLICY_TOOLS_DIR)/review_policy.c' \
+	  -o '$(REVIEW_POLICY_WITNESS_OUTPUT)/review-policy'
+	'$(REVIEW_POLICY_HOST_CC)' -std=c11 -O2 -Wall -Wextra -Werror \
+	  -I'$(REVIEW_POLICY_TOOLS_DIR)' '$(REVIEW_POLICY_TOOLS_DIR)/test_review_policy.c' \
+	  -o '$(REVIEW_POLICY_WITNESS_OUTPUT)/test_review_policy'
