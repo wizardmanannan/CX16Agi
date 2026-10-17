@@ -95,6 +95,9 @@ int main(void)
 	messages[6] = (byte*)"Manannan";
 	messages[25] = (byte*)warning;
 	RAM_BANK = 13;
+	b3DisplayMessageBox("%s0", 21, 1, 1, 1, DEFAULT_BOX_WIDTH, TRUE, FIRST_TEXT_ROW);
+	assert(displays == 0);
+	assert(RAM_BANK == 13);
 	b3DisplayMessageBox(warning, 21, 1, 1, 1, 0, FALSE, FIRST_TEXT_ROW);
 	assert(displays == 1);
 	assert(RAM_BANK == 13);

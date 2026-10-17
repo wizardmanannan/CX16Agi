@@ -448,6 +448,7 @@ void b3DisplayMessageBox(char* message, byte messageBank, byte row, byte col, by
 			expandFormatCodes(message, messageBank, b3TextBuffer1, TEXT_CODE_BANK, maxMessageSize);
 			messageSize = strLenBanked(b3TextBuffer1, TEXT_CODE_BANK) + 1;
 		}
+		if (messageSize == 1) return;
 
 		if (messageSize - 1 > TILE_LAYER_WIDTH / 2)
 		{
