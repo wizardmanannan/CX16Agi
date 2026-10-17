@@ -341,6 +341,7 @@ void b3DrawBorder(byte boxWidth, size_t messageSize)
 	rowBytes = (size_t)boxWidth + 2;
 	/* Reserve top/bottom borders, padding rows and the terminator. */
 	rowsLeft = (byte)(TEXTBUFFER_SIZE / rowBytes - 4);
+	if (rowsLeft > TEXT_ROWS - 4) rowsLeft = TEXT_ROWS - 4;
 
 	delimiter[0] = NEW_LINE;
 	delimiter[1] = '\0';

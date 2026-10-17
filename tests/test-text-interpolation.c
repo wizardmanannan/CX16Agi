@@ -174,10 +174,15 @@ static void test_explicit_line_breaks(void)
 
 static void test_border_capacity(void)
 {
+	size_t i;
 	memset(b3TextBuffer1, 'x', TEXTBUFFER_SIZE - 1);
 	b3TextBuffer1[TEXTBUFFER_SIZE - 1] = '\0';
 	b3DrawBorder(30, TEXTBUFFER_SIZE);
 	assert(memchr(b3TextBuffer2, '\0', TEXTBUFFER_SIZE) != NULL);
+	for (i = 0; i < TEXTBUFFER_SIZE - 1; i++) b3TextBuffer1[i] = i % 2 ? '\n' : 'x';
+	b3TextBuffer1[TEXTBUFFER_SIZE - 1] = '\0';
+	b3DrawBorder(30, TEXTBUFFER_SIZE);
+	assert(b3LastBoxLines <= TEXT_ROWS);
 	strcpy(b3TextBuffer1, "\n\n");
 	b3DrawBorder(30, 3);
 	assert(memchr(b3TextBuffer2, '\0', TEXTBUFFER_SIZE) != NULL);
