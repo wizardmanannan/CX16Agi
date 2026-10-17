@@ -14,6 +14,7 @@ HOST_CFLAGS ?= -std=c11 -O2 -Wall -Wextra
 # Override HOST_TEST_FLAGS when using a non-GCC HOST_CC.
 HOST_TEST_FLAGS ?= -save-temps=obj -fno-use-linker-plugin
 override HOST_CFLAGS += $(HOST_TEST_FLAGS)
+REVIEW_TOOLS_BIN := $(REPO_ROOT)/obj/review-tools
 REVIEW_SERIES_BIN ?= $(REPO_ROOT)/obj/review-series/review_series
 # Sanitized host children need ASan first while retaining injected command guards for fixture cleanup.
 TEST_OUTPUT_ROOT ?= $(REPO_ROOT)/obj
@@ -22,10 +23,13 @@ TEST_FIXTURE_ROOT ?= $(if $(TMPDIR),$(TMPDIR),/tmp)
 export CC65_HOME X16_EMULATOR_SOURCE TMPDIR TEST_OUTPUT_DIR ROM GAME BUILD SYMBOLS SDL_PREFIX TAS_CAPTURE_HEADER
 unexport KEEP_TEST_OUTPUT
 
-.PHONY: test suite commands-test image production-test integration-test picture-test loader-test modes integration review-series review-workflow-test _run
+.PHONY: test suite commands-test image production-test integration-test picture-test loader-test modes integration review-tools review-policy review-series review-metrics review-events review-ready review-workflow-test _run
 
 test suite:
 	@$(MAKE) --no-print-directory -f "$(REPO_ROOT)/tools/Makefile" _run MODE=core
+	@$(MAKE) --no-print-directory -C "$(REPO_ROOT)/tools" -f review-policy.mk review-policy-test
+	@$(MAKE) --no-print-directory -C "$(REPO_ROOT)/tools" -f review-series.mk review-series-test
+	@$(MAKE) --no-print-directory -C "$(REPO_ROOT)/tools" -f review-graphics-metrics.mk review-graphics-metrics-test OUT_ROOT="$(TEST_OUTPUT_ROOT)/review-graphics-metrics" FIXTURE_BASE="$(TEST_FIXTURE_ROOT)"
 
 commands-test:
 	@$(MAKE) --no-print-directory -f "$(REPO_ROOT)/tools/Makefile" _run MODE=commands-test
@@ -51,9 +55,38 @@ loader-test:
 modes integration:
 	@$(MAKE) --no-print-directory -f "$(REPO_ROOT)/tools/Makefile" _run MODE=modes
 
+review-tools:
+	@mkdir -p "$(REPO_ROOT)/obj"
+	@$(HOST_CC) $(HOST_CFLAGS) "$(REPO_ROOT)/tools/review-tools.c" "$(REPO_ROOT)/tools/review_sha256.c" -o "$(REVIEW_TOOLS_BIN)"
+
+review-policy:
+	@mkdir -p "$(REPO_ROOT)/obj"
+	@$(HOST_CC) $(HOST_CFLAGS) "$(REPO_ROOT)/tools/review_policy.c" -o "$(REPO_ROOT)/obj/review-policy"
+
 review-series:
 	@mkdir -p "$(dir $(REVIEW_SERIES_BIN))"
 	@$(HOST_CC) $(HOST_CFLAGS) "$(REPO_ROOT)/tools/review_series.c" "$(REPO_ROOT)/tools/review_sha256.c" -o "$(REVIEW_SERIES_BIN)"
+
+review-metrics:
+	@mkdir -p "$(REPO_ROOT)/obj"
+	@$(HOST_CC) $(HOST_CFLAGS) "$(REPO_ROOT)/tools/review_metrics.c" "$(REPO_ROOT)/tools/review_sha256.c" -o "$(REPO_ROOT)/obj/review-metrics"
+
+review-events:
+	@mkdir -p "$(REPO_ROOT)/obj"
+	@$(HOST_CC) $(HOST_CFLAGS) "$(REPO_ROOT)/tools/review_events.c" -o "$(REPO_ROOT)/obj/review-events"
+
+# Publication checks preserve unrestricted authoring commands. GitHub remains
+# responsible for atomically enforcing approval and required checks at merge.
+review-ready: review-tools review-policy
+	@test -n "$(REVIEW_PLAN)" -a -n "$(REVIEW_EVIDENCE)" -a -n "$(REVIEW_REPLAY_ROOT)" \
+	  -a -n "$(REVIEW_REPOSITORY)" -a -n "$(REVIEW_PR)" -a -n "$(REVIEW_HEAD)" -a -n "$(REVIEW_BASE)" \
+	  || { echo 'review-ready requires REVIEW_PLAN, REVIEW_EVIDENCE, REVIEW_REPLAY_ROOT, REVIEW_REPOSITORY, REVIEW_PR, REVIEW_HEAD and REVIEW_BASE' >&2; exit 2; }
+	@test "$$(git -C "$(REPO_ROOT)" rev-parse HEAD)" = "$(REVIEW_HEAD)" \
+	  || { echo 'review-ready head differs from the local evidence checkout' >&2; exit 2; }
+	@cd "$(REPO_ROOT)" && "$(REVIEW_TOOLS_BIN)" verify --plan "$(REVIEW_PLAN)" --evidence-dir "$(REVIEW_EVIDENCE)" --replay-root "$(REVIEW_REPLAY_ROOT)"
+	@test "$$(git -C "$(REPO_ROOT)" rev-parse HEAD)" = "$(REVIEW_HEAD)" \
+	  || { echo 'review-ready head changed during evidence replay' >&2; exit 2; }
+	@cd "$(REPO_ROOT)" && "$(REPO_ROOT)/obj/review-policy" check --repo "$(REVIEW_REPOSITORY)" --pr "$(REVIEW_PR)" --head "$(REVIEW_HEAD)" --base "$(REVIEW_BASE)" --policy "$(REPO_ROOT)/tools/review/branch-protection.json"
 
 _run:
 	@set -eu; \
@@ -197,6 +230,8 @@ _run:
 	    "$(HOST_CC)" $(HOST_CFLAGS) -Wno-error=incompatible-pointer-types -Wno-error=int-conversion -D_MSC_VER -D__CBM__ '-D__fastcall__=' -idirafter "$$CC65_HOME/include" -Wno-unknown-pragmas -ffunction-sections -fdata-sections -fsanitize=address,undefined -fno-sanitize-recover=all "$$repo/tools/test_words_file.c" -Wl,--gc-sections -o "$$work/bin/test_words_file"; \
 	    "$(HOST_CC)" $(HOST_CFLAGS) -Wno-error=incompatible-pointer-types -Wno-error=int-conversion -D_MSC_VER -D__CBM__ '-D__fastcall__=' -idirafter "$$CC65_HOME/include" -Wno-unknown-pragmas -ffunction-sections -fdata-sections -fsanitize=address,undefined -fno-sanitize-recover=all "$$repo/tools/test_agifiles.c" -Wl,--gc-sections -o "$$work/bin/test_agifiles"; \
 	    "$(HOST_CC)" $(HOST_CFLAGS) "$$repo/tools/test_review_sha256.c" "$$repo/tools/review_sha256.c" -o "$$work/bin/test_review_sha256"; \
+	    "$(HOST_CC)" $(HOST_CFLAGS) "$$repo/tools/review-tools.c" "$$repo/tools/review_sha256.c" -o "$$work/bin/review-tools"; \
+	    "$(HOST_CC)" $(HOST_CFLAGS) "$$repo/tools/test_review_evidence.c" "$$repo/tools/review_sha256.c" -o "$$work/bin/test_review_evidence"; \
 	    "$(HOST_CC)" $(HOST_CFLAGS) "$$repo/tools/test_review_workflow.c" -o "$$work/bin/test_review_workflow"; \
 	    failed=0; \
 	    run_test() { echo "RUN $$*"; if "$$@"; then :; else failed=$$((failed + 1)); fi; }; \
@@ -209,6 +244,7 @@ _run:
 	    run_test "$$work/bin/test_tool_paths"; \
 	    run_test "$$work/bin/test_fixture_cleanup"; \
 	    run_test "$$work/bin/test_review_sha256"; \
+	    run_test "$$work/bin/test_review_evidence" "$$work/bin/review-tools" "$(HOST_CC)"; \
 	    run_test "$$work/bin/test_review_workflow" "$$repo/.github/workflows/native-regressions.yml"; \
 	    run_test "$$work/bin/test_palette_manager"; \
 	    run_test "$$work/bin/test_controllers"; \
