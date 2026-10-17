@@ -1,0 +1,1 @@
+/* Host compiler already uses ASCII. */

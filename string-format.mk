@@ -13,7 +13,9 @@ string-format-test:
 	$(HOSTCC) $(STRING_FORMAT_FLAGS) tests/test-text-interpolation.c src/textLayer.c src/parser.c src/stringFormat.c -Wl,--gc-sections -o $(STRING_FORMAT_OUT)/test-text-interpolation && \
 	$(STRING_FORMAT_OUT)/test-text-interpolation && \
 	$(HOSTCC) $(STRING_FORMAT_FLAGS) tests/test-string-format.c src/stringFormat.c -Wl,--gc-sections -o $(STRING_FORMAT_OUT)/test-string-format && \
-	$(STRING_FORMAT_OUT)/test-string-format; } 9>$(CX16AGI_BUILD_DIR)/.string-format.lock
+	$(STRING_FORMAT_OUT)/test-string-format && \
+	$(HOSTCC) $(STRING_FORMAT_FLAGS) tests/test-string-commands.c src/commands.c -Wl,--gc-sections -o $(STRING_FORMAT_OUT)/test-string-commands && \
+	$(STRING_FORMAT_OUT)/test-string-commands; } 9>$(CX16AGI_BUILD_DIR)/.string-format.lock
 
 .PHONY: string-format-target-check
 string-format-target-check:
