@@ -12,9 +12,9 @@
 #include "test_paths.h"
 
 extern struct regs regs;
-static uint8_t ram[65536], vram[131072];
+static uint8_t ram[65536], vram[131072], vera_ctrl, fx_ctrl, fx_cache[4];
 static unsigned addr[2], stride[2], writes;
-static struct { char name[100]; unsigned address; } symbols[16];
+static struct { char name[100]; unsigned address; } symbols[24];
 static unsigned symbol_count;
 #define PRIORITY_START ((320 * 240) / 2)
 #define PRIORITY_SIZE ((160 * 168) / 2)
@@ -24,6 +24,10 @@ static unsigned symbol(const char *name);
 
 uint8_t read6502(uint16_t address, uint8_t bank) {
     (void)bank;
+    if (address == 0x9F20) return (uint8_t)addr[vera_ctrl & 1];
+    if (address == 0x9F21) return (uint8_t)(addr[vera_ctrl & 1] >> 8);
+    if (address == 0x9F22) return (uint8_t)((addr[vera_ctrl & 1] >> 16) | (stride[vera_ctrl & 1] << 4));
+    if (address == 0x9F25) return vera_ctrl;
     if (address == 0x9F23 || address == 0x9F24) {
         unsigned port = address - 0x9F23;
         uint8_t value = vram[addr[port]];
@@ -37,17 +41,44 @@ void write6502(uint16_t address, uint8_t bank, uint8_t value) {
     (void)bank;
     if (address >= 0x9F20 && address <= 0x9F22) {
         static const unsigned increments[16] = {0,1,2,4,8,16,32,64,128,256,512,40,80,160,320,640};
-        unsigned port = ram[0x9F25] & 1;
+        unsigned port = vera_ctrl & 1;
         ram[address] = value;
-        addr[port] = ram[0x9F20] | (ram[0x9F21] << 8) | ((ram[0x9F22] & 1) << 16);
-        stride[port] = increments[ram[0x9F22] >> 4];
+        if (address == 0x9F20) addr[port] = (addr[port] & 0x1FF00) | value;
+        else if (address == 0x9F21) addr[port] = (addr[port] & 0x100FF) | (value << 8);
+        else {
+            addr[port] = (addr[port] & 0xFFFF) | ((value & 1) << 16);
+            stride[port] = increments[value >> 4];
+        }
+        return;
+    }
+    if (address == 0x9F25) { vera_ctrl = value; return; }
+    if (address >= 0x9F29 && address <= 0x9F2C) {
+        unsigned dcsel = (vera_ctrl >> 1) & 0x3F;
+        unsigned reg = address - 0x9F29;
+        if (dcsel == 2 && reg == 0) fx_ctrl = value;
+        else if (dcsel == 6) fx_cache[reg] = value;
+        else ram[address] = value;
         return;
     }
     if (address == 0x9F23 || address == 0x9F24) {
         unsigned port = address - 0x9F23;
-        vram[addr[port]] = value;
+        unsigned current = addr[port];
+        if (fx_ctrl & 0x40) {
+            unsigned base = current & ~3U;
+            for (unsigned i = 0; i < 4; ++i) {
+                unsigned mask = fx_ctrl & 0x80 ? (fx_cache[i] == 0 ? 3 : 0) : (value >> (i * 2)) & 3;
+                if ((fx_ctrl & 0x80) && fx_cache[i] == 0) continue;
+                if (mask == 0) vram[base + i] = fx_cache[i];
+                else if (mask == 1) vram[base + i] = (vram[base + i] & 0x0F) | (fx_cache[i] & 0xF0);
+                else if (mask == 2) vram[base + i] = (vram[base + i] & 0xF0) | (fx_cache[i] & 0x0F);
+                else continue;
+                ++writes;
+            }
+        } else {
+            vram[current] = value;
+            ++writes;
+        }
         addr[port] = (addr[port] + stride[port]) & 0x1FFFF;
-        ++writes;
         return;
     }
     ram[address] = value;
@@ -103,6 +134,8 @@ static void assemble(const char *graphics_path, unsigned priority_size, unsigned
     char *priority_start = strstr(graphics, "_b8ClearPriority:"); CHECK(priority_start, "Full priority clear missing");
     char *priority_end = strstr(priority_start, "\n; IRQ clear uses row-aligned slices"); CHECK(priority_end, "Full priority clear end missing");
     char *slice_start = strstr(graphics, "_b8ClearBackgroundSliceReset:"); CHECK(slice_start, "Background slice clear missing");
+    char *priority_slice_start = strstr(slice_start, "_b8ClearPrioritySliceReset:"); CHECK(priority_slice_start, "Priority slice clear missing");
+    char *priority_slice_end = strstr(priority_slice_start, "\n_b8ClearBackground:"); CHECK(priority_slice_end, "Priority slice clear end missing");
     char *slice_end = strstr(slice_start, "_b8ClearBackground:"); CHECK(slice_end, "Background slice clear end missing");
     char *clear = slice_end;
     char *end = strstr(clear, "\n.endif"); CHECK(end, "Background clear end missing");
@@ -113,14 +146,14 @@ static void assemble(const char *graphics_path, unsigned priority_size, unsigned
         "BITMAP_WIDTH=320\nPICTURE_WIDTH=160\nPICTURE_HEIGHT=168\n"
         "STARTING_ROW=(240-PICTURE_HEIGHT)/2\nSTARTING_BYTE=STARTING_ROW*(BITMAP_WIDTH/2)\n"
         "BYTES_PER_ROW=BITMAP_WIDTH/2\nPRIORITY_START=(BITMAP_WIDTH*BITMAP_HEIGHT)/2\n"
-        "PRIORITY_SIZE=%u\nPRIORITY_DEF=$44\nBITMAP_HEIGHT=240\n"
+        "PRIORITY_SIZE=%u\nPRIORITY_SLICE_SIZE=2048\nPRIORITY_TAIL_SIZE=(PRIORITY_SIZE .mod PRIORITY_SLICE_SIZE)\nPRIORITY_DEF=$44\nBITMAP_HEIGHT=240\n"
         "LEFT_BORDER=$A1\nRIGHT_BORDER=$B2\nDEFAULT_BACKGROUND_COLOR=$C3\n"
         ".macro SET_VERA_ADDRESS_IMMEDIATE VERA_ADDRESS, ADDRESS_SEL, STRIDE\n"
         "lda ADDRESS_SEL\nsta VERA_ctrl\nlda #^VERA_ADDRESS\nand #$1\nora STRIDE << 4\nsta VERA_addr_bank\n"
         "lda #<VERA_ADDRESS\nsta VERA_addr_low\nlda #>VERA_ADDRESS\nsta VERA_addr_high\n.endmacro\n"
         "ZP_TILE_LAYER_NO_TILES_HIGH=ZP_TMP_2\n"
-        ".export runBackground,done,runPriority,runBackgroundSlice,resetBackgroundSlices,runPrioritySlice,resetPrioritySlices,runMap,sliceDone,_b3InitLayer1Mapbase,_inputLineDirty\n"
-        ".segment \"CODE\"\n_inputLineDirty: .byte $0\n%.*s\n%.*s\n%.*s\n%.*s\n"
+        ".export runBackground,done,runPriority,runBackgroundSlice,resetBackgroundSlices,runPrioritySlice,resetPrioritySlices,runMap,sliceDone,_b3InitLayer1Mapbase,_inputLineDirty,b8ClearPriorityAddress,b8ClearPriorityRemaining,priorityFullStart,priorityFullEnd,prioritySliceStart,prioritySliceEnd\n"
+        ".segment \"CODE\"\n_inputLineDirty: .byte $0\n%.*s\npriorityFullStart:\n%.*s\npriorityFullEnd:\n%.*s\nprioritySliceStart:\n%.*s\nprioritySliceEnd:\n%.*s\n"
         "runBackground: jsr _b8ClearBackground\ndone: rts\n"
         "runPriority: jsr _b8ClearPriority\nrts\n"
         "resetBackgroundSlices: jsr _b8ClearBackgroundSliceReset\nrts\n"
@@ -132,7 +165,9 @@ static void assemble(const char *graphics_path, unsigned priority_size, unsigned
         map_cells, priority_size,
         (int)(map_end - map_start), map_start,
         (int)(priority_end - priority_start), priority_start,
-        (int)(slice_end - slice_start), slice_start, (int)(end - clear), clear);
+        (int)(priority_slice_start - slice_start), slice_start,
+        (int)(priority_slice_end - priority_slice_start), priority_slice_start,
+        (int)(end - clear), clear);
     CHECK(length >= 0 && length < (int)sizeof(fixture), "Fixture assembly too large");
     free(graphics); free(irq); write_file(path, fixture);
     write_file(config,
@@ -168,6 +203,13 @@ static void run_helper(const char *entry, unsigned max_steps) {
     CHECK(regs.pc == done, "Clear helper did not return");
 }
 
+static void check_priority_video_state(unsigned end_address) {
+    CHECK(vera_ctrl == 0, "Priority clear did not leave VERA control at DCSEL0/ADDR0");
+    CHECK(stride[0] == 1, "Priority clear did not restore the public one-byte stride contract");
+    CHECK(fx_ctrl == 0, "Priority clear returned with VERA FX control enabled");
+    CHECK(addr[0] == end_address, "Priority clear left the VERA address at the wrong end");
+}
+
 static void test_bounded_slices(void) {
     const unsigned start = 36 * 160, width = 160, height = 168;
     unsigned max_background_cycles = 0, max_priority_cycles = 0;
@@ -194,6 +236,8 @@ static void test_bounded_slices(void) {
     }
 
     writes = 0; memset(vram + PRIORITY_START, 0x5A, PRIORITY_SIZE + 1);
+    memset(addr, 0, sizeof(addr)); memset(stride, 0, sizeof(stride));
+    vera_ctrl = fx_ctrl = 0;
     run_helper("resetPrioritySlices", 1000);
     for (unsigned slice = 0; slice < 7; ++slice) {
         unsigned before = writes;
@@ -203,7 +247,18 @@ static void test_bounded_slices(void) {
         CHECK(count <= 2048, "Priority slice exceeded its write budget");
         CHECK(regs.a == (slice == 6 ? 1 : 0), "Priority slice returned the wrong completion byte");
         CHECK((regs.status & FLAG_ZERO) == (slice == 6 ? 0 : FLAG_ZERO), "Priority slice completion flags disagree with A");
-        CHECK(clockticks6502 < 25000, "Priority slice exceeded its cycle budget");
+        CHECK(clockticks6502 < 3500, "Priority slice exceeded the 3500-cycle target (baseline 9601)");
+        unsigned cleared = slice < 6 ? (slice + 1) * 2048 : PRIORITY_SIZE;
+        unsigned state_cleared = slice < 6 ? cleared : 6 * 2048;
+        unsigned cursor = symbol("b8ClearPriorityAddress");
+        unsigned remaining = symbol("b8ClearPriorityRemaining");
+        CHECK(ram[cursor] == (uint8_t)(PRIORITY_START + state_cleared) &&
+              ram[cursor + 1] == (uint8_t)((PRIORITY_START + state_cleared) >> 8),
+              "Priority slice left the remaining address cursor wrong");
+        CHECK(ram[remaining] == (uint8_t)(PRIORITY_SIZE - state_cleared) &&
+              ram[remaining + 1] == (uint8_t)((PRIORITY_SIZE - state_cleared) >> 8),
+              "Priority slice left the remaining byte count wrong");
+        check_priority_video_state(PRIORITY_START + cleared);
         if (clockticks6502 > max_priority_cycles) max_priority_cycles = (unsigned)clockticks6502;
     }
     CHECK(writes == PRIORITY_SIZE, "Priority slices wrote the wrong total byte count");
@@ -222,23 +277,30 @@ static void test_bounded_slices(void) {
     CHECK(clockticks6502 < 22000, "Map clear exceeded 22000 cycles (baseline 26238)");
     printf("Clear slices: background max %u cycles/1920 writes, priority max %u cycles/2048 writes, map %u cycles/4016 writes; 22 VSYNCs total\n",
            max_background_cycles, max_priority_cycles, map_cycles);
-    /* Prior priority IRQ loop measured 18,568 cycles; keep its replacement below 13,000. */
     CHECK(max_background_cycles < 9900, "Background slice exceeded 9900 cycles (baseline 10392)");
-    CHECK(max_priority_cycles < 13000, "Priority slice exceeded the 13000-cycle target (baseline 18568)");
+    CHECK(max_priority_cycles < 3500, "Priority slice exceeded the 3500-cycle target (baseline 9601)");
 }
 
 static void test_full_priority_clear(void) {
     memset(vram, 0x5A, sizeof(vram)); writes = 0;
+    memset(addr, 0, sizeof(addr)); memset(stride, 0, sizeof(stride));
+    vera_ctrl = fx_ctrl = 0;
+    ram[0] = 0x12; ram[1] = 0x34;
     run_helper("runPriority", 1000000);
     unsigned cycles = (unsigned)clockticks6502;
+    unsigned priority_code_bytes = symbol("priorityFullEnd") - symbol("priorityFullStart") +
+                                  symbol("prioritySliceEnd") - symbol("prioritySliceStart");
     CHECK(writes == PRIORITY_SIZE, "Full priority clear wrote the wrong number of bytes");
     CHECK(vram[PRIORITY_START - 1] == 0x5A && vram[PRIORITY_START + PRIORITY_SIZE] == 0x5A,
           "Full priority clear wrote outside its exact range");
     for (unsigned i = 0; i < PRIORITY_SIZE; ++i)
         CHECK(vram[PRIORITY_START + i] == 0x44, "Full priority clear byte differs");
+    check_priority_video_state(PRIORITY_START + PRIORITY_SIZE);
+    CHECK(ram[0] == 0x12 && ram[1] == 0x34, "Full priority clear changed caller RAM/ROM banks");
     printf("Full priority clear: %u cycles/%u writes\n", cycles, PRIORITY_SIZE);
-    /* Baselines: original 148,203; countdown 121,218; next unroll target <70,000. */
-    CHECK(cycles < 70000, "Full priority clear exceeded the 70000-cycle target (baseline 121218)");
+    printf("Priority clear code: %u bytes (full + sliced paths, cache helper and state)\n", priority_code_bytes);
+    /* Four zero-mask FX flushes per 16-byte group keep this below 20,000. */
+    CHECK(cycles < 20000, "Full priority clear exceeded the 20000-cycle target (baseline 62520)");
 }
 
 static void test_priority_page_boundaries(const char *graphics_path) {
@@ -253,6 +315,7 @@ static void test_priority_page_boundaries(const char *graphics_path) {
               "Priority clear page-boundary variant wrote outside its range");
         for (unsigned i = 0; i < size; ++i)
             CHECK(vram[PRIORITY_START + i] == 0x44, "Priority clear page-boundary byte differs");
+        check_priority_video_state(PRIORITY_START + size);
     }
 }
 

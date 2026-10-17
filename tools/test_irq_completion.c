@@ -11,7 +11,15 @@
 #include "test_paths.h"
 
 extern struct regs regs;
-static uint8_t ram[65536], vera_ctrl, dc_video, dc_hstart;
+enum {
+    PRIORITY_START = (320 * 240) / 2,
+    PRIORITY_SIZE = (160 * 168) / 2,
+    PRIORITY_SLICE_SIZE = 2048,
+    PRIORITY_TAIL_START = PRIORITY_START + (PRIORITY_SIZE / PRIORITY_SLICE_SIZE) * PRIORITY_SLICE_SIZE,
+    PRIORITY_TAIL_SIZE = PRIORITY_SIZE % PRIORITY_SLICE_SIZE
+};
+static uint8_t ram[65536], vram[131072], vera_ctrl, dc_video, dc_hstart, fx_ctrl, fx_cache[4];
+static unsigned addr[2], stride[2];
 static unsigned data_writes;
 static struct { char name[100]; unsigned address; } symbols[16];
 static unsigned symbol_count;
@@ -21,19 +29,68 @@ static unsigned symbol_count;
 uint8_t read6502(uint16_t address, uint8_t bank) {
     (void)bank;
     if (address == 0x9F25) return vera_ctrl;
-    if (address == 0x9F29) return (vera_ctrl & 0x0E) ? dc_hstart : dc_video;
+    if (address >= 0x9F20 && address <= 0x9F22) {
+        unsigned port = vera_ctrl & 1;
+        if (address == 0x9F20) return (uint8_t)addr[port];
+        if (address == 0x9F21) return (uint8_t)(addr[port] >> 8);
+        return (uint8_t)((addr[port] >> 16) | (stride[port] << 4));
+    }
+    if (address == 0x9F23 || address == 0x9F24) {
+        unsigned port = address - 0x9F23;
+        uint8_t value = vram[addr[port]];
+        addr[port] = (addr[port] + stride[port]) & 0x1FFFF;
+        return value;
+    }
+    if (address >= 0x9F29 && address <= 0x9F2C) {
+        unsigned dcsel = (vera_ctrl >> 1) & 0x3F;
+        unsigned reg = address - 0x9F29;
+        if (dcsel == 0 && reg == 0) return dc_video;
+        if (dcsel == 1 && reg == 0) return dc_hstart;
+        if (dcsel == 2 && reg == 0) return fx_ctrl;
+        if (dcsel == 6) return fx_cache[reg];
+    }
     return ram[address];
 }
 
 void write6502(uint16_t address, uint8_t bank, uint8_t value) {
     (void)bank;
     if (address == 0x9F25) { vera_ctrl = value; return; }
-    if (address == 0x9F29) {
-        if (vera_ctrl & 0x0E) dc_hstart = value;
-        else dc_video = value;
+    if (address >= 0x9F20 && address <= 0x9F22) {
+        static const unsigned increments[16] = {0,1,2,4,8,16,32,64,128,256,512,40,80,160,320,640};
+        unsigned port = vera_ctrl & 1;
+        ram[address] = value;
+        if (address == 0x9F20) addr[port] = (addr[port] & 0x1FF00) | value;
+        else if (address == 0x9F21) addr[port] = (addr[port] & 0x100FF) | (value << 8);
+        else {
+            addr[port] = (addr[port] & 0xFFFF) | ((value & 1) << 16);
+            stride[port] = increments[value >> 4];
+        }
         return;
     }
-    if (address == 0x9F23 || address == 0x9F24) ++data_writes;
+    if (address >= 0x9F29 && address <= 0x9F2C) {
+        unsigned dcsel = (vera_ctrl >> 1) & 0x3F;
+        unsigned reg = address - 0x9F29;
+        if (dcsel == 0 && reg == 0) dc_video = value;
+        else if (dcsel == 1 && reg == 0) dc_hstart = value;
+        else if (dcsel == 2 && reg == 0) fx_ctrl = value;
+        else if (dcsel == 6) fx_cache[reg] = value;
+        else ram[address] = value;
+        return;
+    }
+    if (address == 0x9F23 || address == 0x9F24) {
+        unsigned port = address - 0x9F23;
+        if (fx_ctrl & 0x40) {
+            CHECK(value == 0, "Priority FX flush must write the zero mask");
+            CHECK(((vera_ctrl >> 1) & 0x3F) == 2, "Priority FX flush must use DCSEL2");
+            unsigned base = addr[port] & ~3U;
+            for (unsigned i = 0; i < 4; ++i) { vram[base + i] = fx_cache[i]; ++data_writes; }
+        } else {
+            vram[addr[port]] = value;
+            ++data_writes;
+        }
+        addr[port] = (addr[port] + stride[port]) & 0x1FFFF;
+        return;
+    }
     ram[address] = value;
 }
 
@@ -81,9 +138,9 @@ static void assemble(void) {
     int size=snprintf(fixture,sizeof(fixture),
         ".include \"x16.inc\"\n.segment \"CODE\"\n"
         "IRQ_WORK_CLEAR = 1\nIRQ_CLEAR_STAGE_MAP = 0\nIRQ_CLEAR_STAGE_BACKGROUND = 1\nPICTURE_CODE_OVERFLOW_BANK = 14\n"
-        "PRIORITY_START = (320*240)/2\nPRIORITY_SIZE = (160*168)/2\nPRIORITY_DEF = $44\n"
+        "PRIORITY_START = (320*240)/2\nPRIORITY_SIZE = (160*168)/2\nPRIORITY_SLICE_SIZE = 2048\nPRIORITY_TAIL_SIZE = (PRIORITY_SIZE .mod PRIORITY_SLICE_SIZE)\nPRIORITY_DEF = $44\n"
         ".export runWait,waitDone,waitSnapshot,irqCompletionGeneration,runClear,clearStarted,runFinish,finishDone,irqSavedDcVideo,irqWorkKind,irqClearStage\n"
-        ".export b8ClearPriorityRemaining\n"
+        ".export b8ClearPriorityRemaining,b8ClearPriorityAddress\n"
         "%.*s\n"
         "irqCompletionGeneration: .word $0\nwaitSnapshot: .word $0\n"
         "irqSavedDcVideo: .byte $0\nirqClearStage: .byte $0\nirqWorkKind: .byte $0\nsendIrqCommand: .byte $0\n"
@@ -138,17 +195,27 @@ static void test_completion_wait(void) {
 }
 
 static void test_clear_video_restore(void) {
-    unsigned saved=symbol("irqSavedDcVideo"),work=symbol("irqWorkKind"),stage=symbol("irqClearStage"),gen=symbol("irqCompletionGeneration"),remaining=symbol("b8ClearPriorityRemaining");
+    unsigned saved=symbol("irqSavedDcVideo"),work=symbol("irqWorkKind"),stage=symbol("irqClearStage"),gen=symbol("irqCompletionGeneration"),remaining=symbol("b8ClearPriorityRemaining"),cursor=symbol("b8ClearPriorityAddress");
     vera_ctrl=0x02; dc_video=0xF3; dc_hstart=0xA2; ram[saved]=ram[work]=0; ram[gen]=0xFF; ram[gen+1]=0x34;
+    fx_ctrl=0; memset(fx_cache,0,sizeof(fx_cache)); memset(vram,0x5A,sizeof(vram)); memset(addr,0,sizeof(addr)); memset(stride,0,sizeof(stride));
     run_to_done("runClear","clearStarted",1000);
     CHECK(ram[saved]==0xF3&&dc_video==0x83,"Clear start did not blank only layers through DCSEL0");
     CHECK(vera_ctrl==0&&dc_hstart==0xA2,"Clear start changed DCSEL1 or left the selector set");
     CHECK(ram[work]==1&&ram[gen]==0xFF&&ram[gen+1]==0x34,"Clear start advanced completion before the slices finished");
-    ram[stage]=2; ram[work]=1; ram[remaining]=128; ram[remaining+1]=0; data_writes=0;
+    ram[stage]=2; ram[work]=1;
+    ram[cursor]=(uint8_t)PRIORITY_TAIL_START; ram[cursor+1]=(uint8_t)(PRIORITY_TAIL_START>>8);
+    ram[remaining]=(uint8_t)PRIORITY_TAIL_SIZE; ram[remaining+1]=(uint8_t)(PRIORITY_TAIL_SIZE>>8);
+    data_writes=0;
     run_to_done("runFinish","finishDone",1000);
     CHECK(dc_video==0xF3&&vera_ctrl==0&&dc_hstart==0xA2,"Clear finish did not restore exact DC_VIDEO");
     CHECK(ram[work]==0&&ram[gen]==0&&ram[gen+1]==0x35,"Clear completion did not advance the generation exactly once");
-    CHECK(data_writes==128,"Final priority slice did not use the real helper to clear its exact tail");
+    CHECK(data_writes==PRIORITY_TAIL_SIZE,"Final priority slice did not clear its exact tail");
+    CHECK(fx_ctrl==0&&stride[0]==1&&vera_ctrl==0,"Final priority slice left FX mode, stride or control active");
+    CHECK(addr[0]==PRIORITY_TAIL_START+PRIORITY_TAIL_SIZE,"Final priority slice left the VERA cursor at the wrong address");
+    CHECK(ram[cursor]==(uint8_t)PRIORITY_TAIL_START&&ram[cursor+1]==(uint8_t)(PRIORITY_TAIL_START>>8),"Final priority slice changed the completed tail cursor");
+    CHECK(ram[remaining]==(uint8_t)PRIORITY_TAIL_SIZE&&ram[remaining+1]==(uint8_t)(PRIORITY_TAIL_SIZE>>8),"Final priority slice changed the completed tail byte count");
+    for(unsigned i=0;i<PRIORITY_TAIL_SIZE;++i) CHECK(vram[PRIORITY_TAIL_START+i]==0x44,"Final priority cache flush byte differs");
+    CHECK(vram[PRIORITY_TAIL_START-1]==0x5A&&vram[PRIORITY_TAIL_START+PRIORITY_TAIL_SIZE]==0x5A,"Final priority slice cache flush crossed its exact range");
 }
 
 static void test_idle_generation_source(void) {

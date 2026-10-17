@@ -8,6 +8,9 @@ GRAPHICS_INC = 1
 .include "irqAsm.s"
 .include "lineDrawing.s"
 
+PRIORITY_SLICE_SIZE = 2048
+PRIORITY_TAIL_SIZE = PRIORITY_SIZE .mod PRIORITY_SLICE_SIZE
+
 .segment "BANKRAM06"
 .import _b3InitCharset
 .import pushax
@@ -431,45 +434,30 @@ _b8ClearPicture:
  rts
 
 _b8ClearPriority:
-PRIORITY_COUNTER = ZP_TMP_2
+; Cache groups require aligned starts; direct byte tails support any exact byte count.
+.assert (PRIORITY_START .mod 4) = 0, error, "Priority start must be four-byte aligned"
+.assert (PRIORITY_SLICE_SIZE .mod 4) = 0, error, "Priority slice must be a multiple of four bytes"
+.assert PRIORITY_SIZE <= $FFFF, error, "Priority byte count must fit in 16 bits"
+.assert PRIORITY_START + PRIORITY_SIZE < $10000, error, "Priority cursor must stay below 64 KiB"
+.assert (PRIORITY_SLICE_SIZE .mod 256) = 0, error, "Priority slice address advance must fit in one high-byte addition"
 
 stz VERA_ctrl
-lda #$10 ;Always going to be zero on byte 17
+lda #$10 | ^PRIORITY_START
 sta VERA_addr_bank
-
-lda #> PRIORITY_START ;There are 320 bytes per row, but since each pixel is 4 bits we divide by 2
+lda #> PRIORITY_START
 sta VERA_addr_high
 lda #< PRIORITY_START
 sta VERA_addr_low
 
+ldx #<(PRIORITY_SIZE / 16)
+ldy #>(PRIORITY_SIZE / 16)
+jsr b8PriorityCacheFill
+.if (PRIORITY_SIZE .mod 16) <> 0
 lda #PRIORITY_DEF
-ldx #>(PRIORITY_SIZE)
-beq @priorityTailSetup
-@priorityFullPage:
-ldy #32
-@priorityPageByte:
-.repeat 8
+.repeat (PRIORITY_SIZE .mod 16)
 sta VERA_data0
 .endrepeat
-dey
-bne @priorityPageByte
-dex
-bne @priorityFullPage
-
-@priorityTailSetup:
-ldy #((PRIORITY_SIZE .mod 256) / 8)
-beq @priorityTailBytes
-@priorityTail:
-.repeat 8
-sta VERA_data0
-.endrepeat
-dey
-bne @priorityTail
-
-@priorityTailBytes:
-.repeat (PRIORITY_SIZE .mod 8)
-sta VERA_data0
-.endrepeat
+.endif
 rts
 
 ; IRQ clear uses row-aligned slices so every invocation stays below 2048 writes.
@@ -553,61 +541,84 @@ lda b8ClearPriorityAddress + 1
 sta VERA_addr_high
 lda b8ClearPriorityAddress
 sta VERA_addr_low
-lda #PRIORITY_DEF
 ldx b8ClearPriorityRemaining + 1
-cpx #8
+cpx #>PRIORITY_SLICE_SIZE
 bcc @priorityTail
 
-ldx #8
-@priorityFullPage:
-ldy #32
-@priorityFullPageLoop:
-.repeat 8
-sta VERA_data0
-.endrepeat
-dey
-bne @priorityFullPageLoop
-dex
-bne @priorityFullPage
+ldx #<(PRIORITY_SLICE_SIZE / 16)
+ldy #>(PRIORITY_SLICE_SIZE / 16)
+jsr b8PriorityCacheFill
 
 sec
 lda b8ClearPriorityRemaining + 1
-sbc #8
+sbc #>PRIORITY_SLICE_SIZE
 sta b8ClearPriorityRemaining + 1
 clc
 lda b8ClearPriorityAddress + 1
-adc #8
+adc #>PRIORITY_SLICE_SIZE
 sta b8ClearPriorityAddress + 1
+lda b8ClearPriorityRemaining
+ora b8ClearPriorityRemaining + 1
+beq @priorityComplete
 lda #$0
 rts
 
 @priorityTail:
-@priorityTailPage:
-cpx #$0
-beq @priorityTailBytes
-ldy #32
-@priorityTailPageLoop:
-.repeat 8
+ldx #<(PRIORITY_TAIL_SIZE / 16)
+ldy #>(PRIORITY_TAIL_SIZE / 16)
+jsr b8PriorityCacheFill
+.if (PRIORITY_TAIL_SIZE .mod 16) <> 0
+lda #PRIORITY_DEF
+.repeat (PRIORITY_TAIL_SIZE .mod 16)
 sta VERA_data0
 .endrepeat
-dey
-bne @priorityTailPageLoop
-dex
-bra @priorityTailPage
+.endif
 
-@priorityTailBytes:
-ldy b8ClearPriorityRemaining
-beq @priorityComplete
-@priorityTailByteLoop:
-sta VERA_data0
-dey
-bne @priorityTailByteLoop
 @priorityComplete:
 lda #$1
 rts
 
 b8ClearPriorityAddress: .word PRIORITY_START
 b8ClearPriorityRemaining: .word PRIORITY_SIZE
+
+b8PriorityCacheFill:
+lda #$0C
+sta VERA_ctrl
+lda #PRIORITY_DEF
+sta $9F29
+sta $9F2A
+sta $9F2B
+sta $9F2C
+lda #$30 | ^PRIORITY_START
+sta VERA_addr_bank
+lda #$04
+sta VERA_ctrl
+lda #$40
+sta VERA_dc_video
+
+; X/Y contain 16-byte cache groups; exact byte remainders use ordinary writes.
+cpx #$00
+beq @priorityGroupCount
+iny ; The nested 8-bit counter includes a partial low-byte run.
+@priorityGroupCount:
+cpy #$00
+beq @priorityRemainder
+@priorityFullGroup:
+.repeat 4
+stz VERA_data0
+.endrepeat
+dex
+bne @priorityFullGroup
+dey
+bne @priorityFullGroup
+@priorityRemainder:
+lda #$04
+sta VERA_ctrl
+stz VERA_dc_video
+stz VERA_ctrl
+lda #$10 | ^PRIORITY_START
+sta VERA_addr_bank
+rts
 
 _b8ClearBackground:
 stz VERA_ctrl
