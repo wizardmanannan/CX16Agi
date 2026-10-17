@@ -54,6 +54,21 @@ static void test_idle_input(void)
 	assert(inputKeyPosition == sizeof(keys));
 }
 
+static void test_input_capacity(void)
+{
+	byte keys[51];
+	memset(keys, 'x', 50);
+	keys[50] = KEY_ENTER;
+	strcpy(string[1], "guard");
+	inputKeys = keys;
+	inputKeyCount = sizeof(keys);
+	inputKeyPosition = 0;
+	b7GetInternalString("Name:", 21, 0, 1, 1, 255);
+	assert(strlen(string[0]) == sizeof(string[0]) - 1);
+	assert(strcmp(string[1], "guard") == 0);
+	assert(inputKeyPosition == sizeof(keys));
+}
+
 void b5GetLogicFile(LOGICFile* result, byte logicNo)
 {
 	assert(logicNo == 106);
@@ -161,6 +176,7 @@ int main(void)
 	test_explicit_line_breaks();
 	test_border_capacity();
 	test_idle_input();
+	test_input_capacity();
 	puts("text interpolation tests passed");
 	return 0;
 }

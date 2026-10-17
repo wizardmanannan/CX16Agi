@@ -122,6 +122,8 @@ void b7GetString(char* promptStr, byte promptStringBank, char* returnStr, byte r
 	int ch, gx, gy;
 	boolean stillInputing = TRUE;
 
+	if (l < 0) l = 0;
+	if (l > MAX_INPUT_STRING_LENGTH) l = MAX_INPUT_STRING_LENGTH;
 	strPos = 0;
 	b7CurrentInputStr[0] = '\0';
 	gx = (x - 1) * 16;
@@ -151,7 +153,7 @@ void b7GetString(char* promptStr, byte promptStringBank, char* returnStr, byte r
 				break;
 			case 0x0A: break;
 			default:
-				if (strPos == l) break;
+				if (strPos >= l) break;
 				b7CurrentInputStr[strPos] = (ch & 0xff);
 				strPos++;
 				b7CurrentInputStr[strPos] = 0;
@@ -165,7 +167,10 @@ void b7GetString(char* promptStr, byte promptStringBank, char* returnStr, byte r
 /* used by get.string and get.num */
 void b7GetInternalString(char* promptStr, byte promptStringBank, byte stringNumber, int x, int y, int l)
 {
-	char* inputString = string[stringNumber];
+	char* inputString;
+	if (stringNumber >= sizeof(string) / sizeof(string[0])) return;
+	if (l >= sizeof(string[0])) l = sizeof(string[0]) - 1;
+	inputString = string[stringNumber];
 	b7GetString(promptStr, promptStringBank, inputString, PARSER_BANK, x, y, l);
 }
 
