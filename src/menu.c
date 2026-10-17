@@ -12,7 +12,7 @@ boolean menuDirty;                  // Flag to indicate menu needs redrawing
 boolean menuAllowed;                // Global flag controlling if menu system is enabled
 
 #pragma bss-name (push, "BANKRAM0A")
-MENU the_menu[MAX_MENUS];                           // Array of top-level menu items
+MENU the_menu[MAX_MENUS + 1];                       // Includes the end sentinel
 MENU the_menuChildren[MAX_MENU_CHILDREN * MAX_MENUS]; // Storage for all child menu items
 MENU* bAFirstMenuChild[MAX_MENUS];                  // Pointers to first child of each menu
 char menuTextBuffer[MENU_TEXT_BUFFER_SIZE];         // Buffer for storing menu text strings
@@ -309,11 +309,13 @@ void bASetMenuChild(MENU* menu, byte menuNo)
 char* bAStoreMessageInBuffer(LOGICFile* currentLogicFile, byte messNum)
 {
 	char* messData,*result;
-	byte messLength;
+	size_t messLength;
 
 
+	if (!messNum || messNum > currentLogicFile->numMessages || !currentLogicFile->messages) return NULL;
 	messData = getMessagePointer(currentLog, messNum - 1);
 	messLength = strLenBanked(messData, currentLogicFile->messageBank) + 1;
+	if (messLength > (size_t)(menuTextBuffer + MENU_TEXT_BUFFER_SIZE - nextMenuTextBufferAddr)) return NULL;
 	
 	memCpyBankedBetween((byte*)nextMenuTextBufferAddr, MENU_BANK, (byte*)messData, currentLogicFile->messageBank, messLength);
 
@@ -337,6 +339,7 @@ void bASetMenu(byte messNum)
 	MENU newMenu;
 	LOGICFile currentLogicFile;
 
+	if (numOfMenus >= MAX_MENUS) return;
 	asm("sei");
 
 	if (numOfMenus == 0)
@@ -348,6 +351,10 @@ void bASetMenu(byte messNum)
 	
 	
 	newMenu.text = bAStoreMessageInBuffer(&currentLogicFile, messNum);
+	if (!newMenu.text) {
+		REENABLE_INTERRUPTS();
+		return;
+	}
 	newMenu.controller = NOT_ASSOCIATED;
 	/* Create new menu and allocate space for MAX_MENU_SIZE items */
 
@@ -414,6 +421,8 @@ void bASetMenuItem(int messNum, int controllerNum)
 	EventType event;
 	byte menuTextLength;
 	
+	if (numOfMenus <= 0 || numOfMenus > MAX_MENUS ||
+	    bAMenuChildCount[numOfMenus - 1] >= MAX_MENU_CHILDREN) return;
 	asm("sei");
 
 	b5GetLogicFile(&currentLogicFile, currentLog);
@@ -424,6 +433,10 @@ void bASetMenuItem(int messNum, int controllerNum)
 	event.activated = 0;
 
 	childMenu.text = bAStoreMessageInBuffer(&currentLogicFile, messNum);
+	if (!childMenu.text) {
+		REENABLE_INTERRUPTS();
+		return;
+	}
 	childMenu.controller = controllerNum;
 
 	bASetMenuChild(&childMenu, numOfMenus - 1);
