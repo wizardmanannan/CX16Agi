@@ -1712,18 +1712,19 @@ void b4Get_string() // 5, 0x00
 	return;
 }
 
-void b4Word_to_string() // 2, 0x00 
+void b4Word_to_string() // 2, 0x00
 {
-	int stringNum, wordNum;
-	char* stringPtr;
+	byte stringNum = loadAndIncWinCode();
+	byte wordNum = loadAndIncWinCode();
+	char terminator = '\0';
 	size_t length;
 
-	stringNum = loadAndIncWinCode();
-	wordNum = loadAndIncWinCode();
-
-	stringPtr = b7GetInternalStringPtr(stringNum, &length);
-
-	memCpyBanked((byte*)&b7WordText[wordNum], (byte*)stringPtr, STRING_BANK, length);
+	if (stringNum >= sizeof(string) / sizeof(string[0]) ||
+	    wordNum >= numInputWords || wordNum >= 10) return;
+	length = strLenBanked(b7WordText[wordNum], STRING_BANK);
+	if (length >= sizeof(string[0])) length = sizeof(string[0]) - 1;
+	memCpyBanked((byte*)string[stringNum], (byte*)b7WordText[wordNum], STRING_BANK, length);
+	memCpyBanked((byte*)string[stringNum] + length, (byte*)&terminator, STRING_BANK, 1);
 	return;
 }
 

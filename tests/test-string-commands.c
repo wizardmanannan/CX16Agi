@@ -44,7 +44,7 @@ void b7LookupWords(char* text) { strcpy(parsed, text); }
 
 size_t strLenBanked(char* text, int bank)
 {
-	assert(bank == 21);
+	assert(bank == 21 || bank == STRING_BANK);
 	return strlen(text);
 }
 
@@ -79,6 +79,18 @@ static void test_set_string(void)
 	assert(strcmp(string[1], "guard") == 0);
 }
 
+static void test_word_to_string(void)
+{
+	strcpy(b7WordText[0], "look");
+	strcpy(string[0], "old suffix");
+	numInputWords = 1;
+	operands[0] = operands[1] = 0;
+	operandCount = 0;
+	b4Word_to_string();
+	assert(strcmp(string[0], "look") == 0);
+	assert(strcmp(b7WordText[0], "look") == 0);
+}
+
 int main(void)
 {
 	currentLog = 106;
@@ -88,6 +100,7 @@ int main(void)
 	assert(operandCount == 1);
 	assert(strcmp(parsed, "look") == 0);
 	test_set_string();
+	test_word_to_string();
 	puts("string command tests passed");
 	return 0;
 }
