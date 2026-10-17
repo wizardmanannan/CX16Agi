@@ -307,7 +307,7 @@ ZP_TILE_LAYER_NO_TILES_HIGH = ZP_TMP_2
 
 _b6SetAndWaitForIrqStateAsm:
 sta @state
-lda @state
+ora #$0 ; A still holds the command; recompute N/Z without changing C/V.
 beq @waitForVSync
 sei
 lda irqCompletionGeneration
@@ -497,7 +497,6 @@ tax
 lda @jmpTableBank, x
 sta RAM_BANK
 txa
-clc
 asl
 tax
 jmp (@jmpTableIrq,x)
@@ -601,8 +600,7 @@ jmp @vSyncCounter
 @servicePendingWork:
 lda irqWorkKind
 cmp #IRQ_WORK_CLEAR
-bne @serviceCheckText
-jmp @serviceClear
+beq @serviceClear
 @serviceCheckText:
 cmp #IRQ_WORK_DISPLAY_TEXT
 bne @serviceWorkUnknown

@@ -353,9 +353,10 @@ static void assemble(void) {
     append_menu_fixture(path);
     write_file(stub_path, stub);
     write_file(menu_stub_path, menu_stub);
+    /* The flat fixture uses page-aligned segments to isolate timing from adjacent segment placement. */
     write_file(config_path,
         "MEMORY { ZP:start=$22,size=$5C,file=\"\"; RAM:start=$2000,size=$6000,file=%O; }\n"
-        "SEGMENTS { ZEROPAGE:load=ZP,type=zp,optional=yes; CODE:load=RAM,type=rw; RODATA:load=RAM,type=ro,optional=yes; DATA:load=RAM,type=rw,optional=yes; BSS:load=RAM,type=rw,optional=yes; BANKRAM03:load=RAM,type=rw,optional=yes; BANKRAM07:load=RAM,type=rw,optional=yes; BANKRAM0A:load=RAM,type=rw,optional=yes; BANKRAM0B:load=RAM,type=rw,optional=yes; BANKRAM10:load=RAM,type=rw,optional=yes; }\n");
+        "SEGMENTS { ZEROPAGE:load=ZP,type=zp,optional=yes; CODE:load=RAM,type=rw,align=$100; RODATA:load=RAM,type=ro,align=$100,optional=yes; DATA:load=RAM,type=rw,align=$100,optional=yes; BSS:load=RAM,type=rw,align=$100,optional=yes; BANKRAM03:load=RAM,type=rw,align=$100,optional=yes; BANKRAM07:load=RAM,type=rw,align=$100,optional=yes; BANKRAM0A:load=RAM,type=rw,align=$100,optional=yes; BANKRAM0B:load=RAM,type=rw,align=$100,optional=yes; BANKRAM10:load=RAM,type=rw,align=$100,optional=yes; }\n");
     char *ca65[] = {"ca65", "-t", "cx16", "-I", "src", path, "-o", object_path, NULL};
     char *ca65_stub[] = {"ca65", "-t", "cx16", stub_path, "-o", stub_object_path, NULL};
     char *ca65_menu_stub[] = {"ca65", "-t", "cx16", menu_stub_path, "-o", menu_stub_object_path, NULL};
@@ -1464,6 +1465,10 @@ static unsigned run_mixed_irq(unsigned *masked_cycles) {
 static void test_combined_irq_workload(void) {
     enum { TEXT_SOURCE = 0x9000, TEXT_DESTINATION = 0x5000, PALETTE_ADDRESS = 0x1F000,
            TEXT_LENGTH = 511, FRAME_CYCLES = 134400, PSG_ADDRESS = 0x1F9C0,
+           /* Base 5364f892 with original irqAsm.s and the page-aligned fixture. */
+           MIXED_TEXT_DISPATCH_BASELINE_CYCLES = 79570,
+           MIXED_PALETTE_DISPATCH_BASELINE_CYCLES = 67159,
+           DISPATCH_CYCLE_REDUCTION = 3,
            MENU_MAX_TOP_LEVELS = 10, MENU_TEXT_BUFFER_BYTES = 500,
            MENU_MAX_CHILDREN = 15, MENU_MAX_WIDTH = 40,
            MENU_CLEAR_WRITES = 2176, MENU_BAR_WRITES = 80,
@@ -1740,6 +1745,13 @@ static void test_combined_irq_workload(void) {
             first_writes, writes - second_write_start,
             first_reads, data_port_reads - second_read_start, first_cycles, palette_cycles,
             max_masked_cycles, total_cycles, FRAME_CYCLES);
+    if (first_cycles > MIXED_TEXT_DISPATCH_BASELINE_CYCLES - DISPATCH_CYCLE_REDUCTION ||
+        palette_cycles > MIXED_PALETTE_DISPATCH_BASELINE_CYCLES - DISPATCH_CYCLE_REDUCTION) {
+        fprintf(stderr, "Mixed IRQ dispatch ceilings: text %u <= %u, palette %u <= %u\n",
+                first_cycles, MIXED_TEXT_DISPATCH_BASELINE_CYCLES - DISPATCH_CYCLE_REDUCTION,
+                palette_cycles, MIXED_PALETTE_DISPATCH_BASELINE_CYCLES - DISPATCH_CYCLE_REDUCTION);
+        CHECK(false, "Mixed text/palette IRQ retained redundant dispatch cycles");
+    }
 }
 
 int main(void) {
