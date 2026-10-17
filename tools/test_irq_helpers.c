@@ -693,7 +693,8 @@ static void test_sound_handler(void) {
     const char *tick_names[] = {"_bBCh1Ticks", "_bBCh2Ticks", "_bBCh3Ticks", "_bBCh4Ticks"};
     const char *note_names[] = {"_ZP_CURRENTLY_PLAYING_NOTE_1", "_ZP_CURRENTLY_PLAYING_NOTE_2",
                                 "_ZP_CURRENTLY_PLAYING_NOTE_3", "_ZP_CURRENTLY_PLAYING_NOTE_NOISE"};
-    enum { SPARSE_SOUND_BASELINE_CYCLES = 254, SPARSE_SOUND_BUDGET_CYCLES = 250 };
+    enum { SPARSE_SOUND_BASELINE_CYCLES = 235, SPARSE_SOUND_TARGET_CYCLES = 228 };
+    static const unsigned baseline_cycles_by_channels[] = {0, 235, 265, 295, 325};
     unsigned tick_addresses[4], note_addresses[4];
     bool sparse_channels_wrote = false, sound_channel_state_changed = false;
     bool end_channel_state_wrong = false, end_writes_wrong = false;
@@ -752,9 +753,13 @@ static void test_sound_handler(void) {
         memcpy(expected_psg, vram + psg, sizeof(expected_psg));
         ram[channel_count] = (uint8_t)active_count;
         init_cpu(symbol("bBSoundHandler"), 0);
+        if (mask == 1) regs.status |= FLAG_CARRY;
         uint32_t handler_start = clockticks6502;
         run();
         uint32_t handler_cycles = clockticks6502 - handler_start;
+        fprintf(stderr, "Sound IRQ mask $%02X: %u cycles\n", mask, handler_cycles);
+        CHECK(handler_cycles <= baseline_cycles_by_channels[active_count] - active_count * 8,
+              "Sound tick path exceeded its per-channel cycle target");
         if (mask == 1) {
             sparse_handler_cycles = handler_cycles;
         }
@@ -763,8 +768,8 @@ static void test_sound_handler(void) {
               "Sound handler changed the active channel count while ticking notes");
         CHECK(addr[0] == 0x1F9D2,
               "Sound handler did not advance four channel slots from the PSG volume base");
-        CHECK(data_port_reads == active_count * 4,
-              "Sound handler changed the four-byte PSG slot advancement for active ticks");
+        CHECK(data_port_reads == 0,
+              "Tick-only sound handler read from the VERA data port");
         for (unsigned channel = 0; channel < 4; ++channel) {
             bool active = (mask & (1u << channel)) != 0;
             CHECK(ram[playing + channel] == active,
@@ -775,6 +780,18 @@ static void test_sound_handler(void) {
         if (memcmp(expected_psg, vram + psg, sizeof(expected_psg)))
             sound_channel_state_changed = true;
     }
+
+    memset(ram + playing, 0, 4);
+    ram[playing] = 1;
+    ram[channel_count] = 1;
+    ram[tick_addresses[0]] = 0;
+    ram[tick_addresses[0] + 1] = 1;
+    init_cpu(symbol("bBSoundHandler"), 0);
+    run();
+    CHECK(ram[tick_addresses[0]] == 0xFF && ram[tick_addresses[0] + 1] == 0 &&
+          ram[channel_count] == 1 && ram[playing] && !writes && !data_port_reads &&
+          addr[0] == 0x1F9D2,
+          "Sound handler did not borrow one tick from the high duration byte");
 
     /* Ending one slot must clear exactly its own four registers and preserve the next active slot. */
     for (unsigned ending = 0; ending < 4; ++ending) {
@@ -798,7 +815,7 @@ static void test_sound_handler(void) {
             if (write_addresses[reg] != psg + ending * 4 + reg || write_values[reg] != 0)
                 end_writes_wrong = true;
         if (ram[channel_count] != 3 || ram[playing + ending] != 0 ||
-            addr[0] != 0x1F9D2 || data_port_reads != 12)
+            addr[0] != 0x1F9D2 || data_port_reads != 0)
             end_channel_state_wrong = true;
         for (unsigned channel = 0; channel < 4; ++channel) {
             for (unsigned reg = 0; reg < 4; ++reg) {
@@ -855,12 +872,12 @@ static void test_sound_handler(void) {
     CHECK(!writes, "Stopped sound did not reach the idle fast path");
 
     fprintf(stderr,
-            "Sparse sound IRQ mask $01: %u cycles (baseline %u, budget <%u); inactive PSG writes %s; end mute %s\n",
-            sparse_handler_cycles, SPARSE_SOUND_BASELINE_CYCLES, SPARSE_SOUND_BUDGET_CYCLES,
+            "Sparse sound IRQ mask $01: %u cycles (baseline %u, target <%u); inactive PSG writes %s; end mute %s\n",
+            sparse_handler_cycles, SPARSE_SOUND_BASELINE_CYCLES, SPARSE_SOUND_TARGET_CYCLES,
             sparse_channels_wrote ? "observed" : "none",
             (end_writes_wrong || end_channel_state_wrong) ? "incorrect" : "per-channel");
-    CHECK(sparse_handler_cycles < SPARSE_SOUND_BUDGET_CYCLES,
-          "Sparse sound handler exceeded its 250-cycle budget (baseline 254)");
+    CHECK(sparse_handler_cycles < SPARSE_SOUND_TARGET_CYCLES,
+          "Sparse sound handler exceeded its 228-cycle target");
     CHECK(!end_writes_wrong && !end_channel_state_wrong,
           "Sound end transition did not clear its own PSG slot or overwrote an adjacent active channel");
     CHECK(!sparse_channels_wrote && !sound_channel_state_changed,
@@ -1454,7 +1471,7 @@ static void test_combined_irq_workload(void) {
            SPRITE_CLEAR_WRITES = SPRITE_UPDATE_MAX_RECORDS,
            SPRITE_BATCH_WRITES = SPRITE_CLEAR_WRITES + SPRITE_UPDATE_MAX_RECORDS * 8,
            SOUND_CHANNELS = 4, SOUND_NOTE_BYTES = 5, SOUND_NOTE_BUFFER_BYTES = 16,
-           SOUND_NOTE_STRIDE = 16, SOUND_CHANNEL_TICK_READS = 4,
+           SOUND_NOTE_STRIDE = 16,
            SOUND_REFILL_READS = 3, SOUND_NOISE_COPY_READS = 2, SOUND_REFILL_WRITES = 5 };
     const unsigned counter = symbol("_vSyncCounter");
     const unsigned completion = symbol("irqCompletionGeneration");
@@ -1675,9 +1692,8 @@ static void test_combined_irq_workload(void) {
     CHECK(writes - second_write_start == MENU_CLEAR_WRITES + MENU_BAR_WRITES +
           MENU_CHILD_WRITES + SPRITE_BATCH_WRITES + 64,
           "Palette IRQ lost real menu, sprite, or palette writes");
-    CHECK(data_port_reads - second_read_start == SPRITE_CLEAR_WRITES +
-          SOUND_CHANNELS * SOUND_CHANNEL_TICK_READS,
-          "Palette IRQ did not perform full sprite-clear and four-channel sound tick reads");
+    CHECK(data_port_reads - second_read_start == SPRITE_CLEAR_WRITES,
+          "Palette IRQ did not limit VERA data reads to the sprite clear");
     for (unsigned i = 0; i < SOUND_CHANNELS; ++i) {
         CHECK(ram[playing + i] == 1 && ram[tick_addresses[i]] == 1 && ram[tick_addresses[i] + 1] == 0,
               "Palette IRQ did not tick all four refilled sound channels");

@@ -74,7 +74,6 @@ channelLoop:
     jmp skipSilentChannel        ; Its PSG slot was silenced when it ended
 
 checkNoteLength:
-    ldy #$1                      ; Offset 1 into ticks (high byte)
     lda _bBCh1Ticks + 1,x        ; Load high byte of channel ticks
     bne deductOne                ; If non-zero, deduct one tick
     lda _bBCh1Ticks,x            ; Load low byte of channel ticks
@@ -82,10 +81,10 @@ checkNoteLength:
     jmp zeroDurationNote         ; Zero ticks means load next note
 
 deductOne:
-    lda VERA_data0               ; Move to the volume byte 
-    lda VERA_data0               ;    
-    lda VERA_data0
-    lda VERA_data0
+    ; X is even, so channelLoop's LSR leaves carry clear for this add.
+    lda VERA_addr_low
+    adc #NO_BYTES_PER_CHANNEL
+    sta VERA_addr_low
 
     dec _bBCh1Ticks,x            ; Decrement low byte ticks
     lda _bBCh1Ticks,x            ; Reload low byte ticks
