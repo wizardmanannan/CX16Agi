@@ -18,6 +18,7 @@ byte* key = keyState;
 byte _assmByte;
 extern char b7OutputString[80];
 extern byte b3WrapText(char* text, int width, byte* maxWidth);
+extern void b3DrawBorder(byte width, size_t messageSize);
 int currentLog = 106;
 objectType bDObjects[MAX_OBJECTS];
 int bDNumObjects;
@@ -86,6 +87,17 @@ static void test_explicit_line_breaks(void)
 	assert(strcmp(hardBreakAfterSpace, "ab cd\nef gh ij") == 0);
 }
 
+static void test_border_capacity(void)
+{
+	memset(b3TextBuffer1, 'x', TEXTBUFFER_SIZE - 1);
+	b3TextBuffer1[TEXTBUFFER_SIZE - 1] = '\0';
+	b3DrawBorder(30, TEXTBUFFER_SIZE);
+	assert(memchr(b3TextBuffer2, '\0', TEXTBUFFER_SIZE) != NULL);
+	strcpy(b3TextBuffer1, "\n\n");
+	b3DrawBorder(30, 3);
+	assert(memchr(b3TextBuffer2, '\0', TEXTBUFFER_SIZE) != NULL);
+}
+
 int main(void)
 {
 	/* KQ3 logic 106, message 26; the IRQ stub inspects the actual display buffer. */
@@ -116,6 +128,7 @@ int main(void)
 	assert(strlen(b7OutputString) == sizeof(b7OutputString) - 1);
 	assert(strncmp(b7OutputString, expected, sizeof(b7OutputString) - 1) == 0);
 	test_explicit_line_breaks();
+	test_border_capacity();
 	puts("text interpolation tests passed");
 	return 0;
 }

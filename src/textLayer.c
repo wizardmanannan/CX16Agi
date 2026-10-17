@@ -332,6 +332,15 @@ void b3DrawBorder(byte boxWidth, size_t messageSize)
 	int segmentLength;
 	char* leftBarPosition;
 	char delimiter[2];
+	size_t rowBytes;
+	byte rowsLeft, rowsWritten = 0;
+
+	(void)messageSize;
+	if (boxWidth < 2) boxWidth = 2;
+	if (boxWidth > TILE_LAYER_WIDTH - 2) boxWidth = TILE_LAYER_WIDTH - 2;
+	rowBytes = (size_t)boxWidth + 2;
+	/* Reserve top/bottom borders, padding rows and the terminator. */
+	rowsLeft = (byte)(TEXTBUFFER_SIZE / rowBytes - 4);
 
 	delimiter[0] = NEW_LINE;
 	delimiter[1] = '\0';
@@ -356,12 +365,13 @@ void b3DrawBorder(byte boxWidth, size_t messageSize)
 
 	charToReadNext = strtok(b3TextBuffer1, delimiter);
 
-	do
+	while (charToReadNext && rowsLeft)
 	{
 		leftBarPosition = currentCharToWrite;
 		*currentCharToWrite++ = LEFT_BORDER;
 
 		segmentLength = strlen(charToReadNext);
+		if (segmentLength > boxWidth - 1) segmentLength = boxWidth - 1;
 		memcpy(currentCharToWrite, charToReadNext, segmentLength);
 
 		currentCharToWrite += segmentLength;
@@ -376,7 +386,9 @@ void b3DrawBorder(byte boxWidth, size_t messageSize)
 		*currentCharToWrite++ = RIGHT_BORDER;
 		*currentCharToWrite++ = NEW_LINE;
 
-	} while (charToReadNext);
+		rowsWritten++;
+		rowsLeft--;
+	}
 
 
 	*currentCharToWrite++ = LEFT_BORDER;
@@ -396,10 +408,7 @@ void b3DrawBorder(byte boxWidth, size_t messageSize)
 	}
 	*currentCharToWrite++ = '\0';
 
-	if (currentCharToWrite > &b3TextBuffer2[0] + TEXTBUFFER_SIZE - 1)
-	{
-		printf("Bounds check fail. Boxing function");
-	}
+	b3LastBoxLines = rowsWritten + 4;
 }
 
 extern unsigned long displayTextAddressToCopyTo;
@@ -475,6 +484,7 @@ void b3DisplayMessageBox(char* message, byte messageBank, byte row, byte col, by
 		if (boxWidth)
 		{
 			b3DrawBorder(boxWidth - 2, messageSize);
+			numberOfLines = b3LastBoxLines - 4;
 			currentTextBuffer = b3TextBuffer2;
 		}
 
