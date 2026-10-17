@@ -1,6 +1,7 @@
 #include <assert.h>
 #include <stdio.h>
 #include <string.h>
+#include <stdarg.h>
 #include "textLayer.h"
 #include "logic.h"
 #include "object.h"
@@ -25,7 +26,33 @@ int bDNumObjects;
 static byte* messages[26];
 static unsigned int displays;
 static boolean boxed;
+static const byte* inputKeys;
+static size_t inputKeyCount, inputKeyPosition;
 static const char expected[] = "\"You're up to no good, Gwydion\" Manannan snarls through clenched teeth. \"Never again will you discover my secrets!\"";
+
+void native_asm(const char* instruction, ...)
+{
+	va_list args;
+	if (strcmp(instruction, "jsr %w") != 0) return;
+	va_start(args, instruction);
+	if (va_arg(args, int) == GETIN_ADDRESS) {
+		assert(inputKeyPosition < inputKeyCount);
+		_assmByte = inputKeys[inputKeyPosition++];
+	}
+	va_end(args);
+}
+
+static void test_idle_input(void)
+{
+	static const byte keys[] = { 0, 'h', 'i', KEY_ENTER };
+	char result[40] = "unchanged";
+	inputKeys = keys;
+	inputKeyCount = sizeof(keys);
+	inputKeyPosition = 0;
+	b7GetString("Name:", 21, result, STRING_BANK, 1, 1, 39);
+	assert(strcmp(result, "hi") == 0);
+	assert(inputKeyPosition == sizeof(keys));
+}
 
 void b5GetLogicFile(LOGICFile* result, byte logicNo)
 {
@@ -103,6 +130,7 @@ int main(void)
 	/* KQ3 logic 106, message 26; the IRQ stub inspects the actual display buffer. */
 	char warning[] = "\"You're up to no good, %m6\" %m7 snarls through clenched teeth. \"Never again will you discover my secrets!\"";
 	char prompt[128];
+	static const byte submit[] = { KEY_ENTER };
 	messages[5] = (byte*)"Gwydion";
 	messages[6] = (byte*)"Manannan";
 	messages[25] = (byte*)warning;
@@ -123,12 +151,16 @@ int main(void)
 	assert(strcmp(prompt, expected) == 0);
 	assert(RAM_BANK == 13);
 	/* An expanded prompt may exceed the parser's 80-byte display line. */
+	inputKeys = submit;
+	inputKeyCount = sizeof(submit);
+	inputKeyPosition = 0;
 	b7GetString("%m26", 21, prompt, 2, 1, 1, 39);
 	assert(memchr(b7OutputString, '\0', sizeof(b7OutputString)) != NULL);
 	assert(strlen(b7OutputString) == sizeof(b7OutputString) - 1);
 	assert(strncmp(b7OutputString, expected, sizeof(b7OutputString) - 1) == 0);
 	test_explicit_line_breaks();
 	test_border_capacity();
+	test_idle_input();
 	puts("text interpolation tests passed");
 	return 0;
 }

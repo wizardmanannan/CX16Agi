@@ -122,6 +122,8 @@ void b7GetString(char* promptStr, byte promptStringBank, char* returnStr, byte r
 	int ch, gx, gy;
 	boolean stillInputing = TRUE;
 
+	strPos = 0;
+	b7CurrentInputStr[0] = '\0';
 	gx = (x - 1) * 16;
 	gy = ((y - 1) * 16) + 20;
 	b7ProcessString(promptStr, promptStringBank, b7Temp, PARSER_BANK, sizeof(b7Temp));
@@ -157,7 +159,7 @@ void b7GetString(char* promptStr, byte promptStringBank, char* returnStr, byte r
 				break;
 			}
 		}
-	} while (ch);
+	} while (TRUE);
 }
 
 /* used by get.string and get.num */
