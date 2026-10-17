@@ -7,6 +7,11 @@
 #include "words.h"
 #include <cx16.h>
 
+#define TEST_MULTIPLY_GRID_SIZE 9
+static const byte testMultiplyBoundaryValues[TEST_MULTIPLY_GRID_SIZE] = {2, 0, 1, 14, 15, 16, 17, 18, 255};
+unsigned int testMultiplyBoundsResults[TEST_MULTIPLY_GRID_SIZE * TEST_MULTIPLY_GRID_SIZE];
+extern unsigned int __fastcall__ testMultiply8x8(unsigned int packed);
+
 char *testBankAliasSource;
 byte testBankAliasBank;
 char testWordsQuery[MAX_WORD_SIZE];
@@ -175,6 +180,19 @@ void testEndSpritePublicationWork(void)
 
 void testRunCombinedDisplayText(void)
 {
+	byte left, right;
+	unsigned int packed;
+
+	for (left = 0; left < TEST_MULTIPLY_GRID_SIZE; ++left)
+	{
+		for (right = 0; right < TEST_MULTIPLY_GRID_SIZE; ++right)
+		{
+			packed = ((unsigned int)testMultiplyBoundaryValues[left] << 8) |
+				testMultiplyBoundaryValues[right];
+			testMultiplyBoundsResults[(unsigned int)left * TEST_MULTIPLY_GRID_SIZE + right] =
+				testMultiply8x8(packed);
+		}
+	}
 	bBPlaySound(0, testCombinedSoundEndFlag);
 	b6SetAndWaitForIrqState(DISPLAY_TEXT);
 }

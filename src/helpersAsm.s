@@ -87,8 +87,8 @@ MULT_16x16_16 sreg, sreg2
 .endmacro
 
 .segment "BANKRAM05"
-MAX_TIMETABLE_MULT_A = 15
-MAX_TIMETABLE_MULT_B = 17
+MAX_TIMETABLE_MULT_A = 17
+MAX_TIMETABLE_MULT_B = 15
 
 multBy0: .byte $00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00
 multBy1: .byte $00,$01,$02,$03,$04,$05,$06,$07,$08,$09,$0a,$0b,$0c,$0d,$0e,$0f
@@ -129,9 +129,12 @@ multLookUp:
 .addr multBy16
 .addr multBy17
 
+.assert (multBy1 - multBy0) = MAX_TIMETABLE_MULT_B + 1, error, "Multiply table column bound must match row width"
+.assert (multLookUp - multBy0) = (MAX_TIMETABLE_MULT_A + 1) * (multBy1 - multBy0), error, "Multiply table row bound must match row count"
+
 .segment "CODE"
 
-;Multiplies two products from 0 to 17
+;A selects one of 18 rows; Y selects one of 16 columns. MULT_8x8_16 guards both.
 ;Input a/y, output a
 mul8x8to8:
 ldx RAM_BANK

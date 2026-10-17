@@ -11,3 +11,13 @@
 .export shakeWindow
 .export shakeBorder
 .export b4ShakeScreen
+.export _testMultiply8x8
+
+.segment "CODE"
+_testMultiply8x8:
+jsr _b6EnterForegroundVera
+tay
+txa
+MULT_8x8_16
+jsr _b6LeaveForegroundVera
+rts
