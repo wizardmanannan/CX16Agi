@@ -1,5 +1,9 @@
 /* Exercise the production WORDS.TOK loader with owned, malformed inputs. */
 #define _POSIX_C_SOURCE 200809L
+/* Keep this loader path fortified by default without overriding stronger builds. */
+#ifndef _FORTIFY_SOURCE
+#define _FORTIFY_SOURCE 2
+#endif
 #include <errno.h>
 #include <fcntl.h>
 #include <stdbool.h>

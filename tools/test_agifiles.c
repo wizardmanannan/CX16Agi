@@ -1164,5 +1164,8 @@ static unsigned char host_k_open_at_offset(const void *encoded_command)
 
 #define cbm_k_open() host_k_open_at_offset(&cmd)
 /* Compile and exercise the production loader with its RAM work area mapped. */
+/* Keep cc65 inline assembly a host no-op without rewriting system headers. */
+#define __asm__(...)
 #include "../src/agifiles.c"
+#undef __asm__
 #undef cbm_k_open

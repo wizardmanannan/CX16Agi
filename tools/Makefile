@@ -143,7 +143,7 @@ _run:
 	echo "Output: $$work"; \
 	build_commands() { \
 	  for name in command_bounds parser_buffers; do \
-	    "$(HOST_CC)" $(HOST_CFLAGS) -Wno-unknown-pragmas -Wno-error=incompatible-pointer-types -Wno-error=int-conversion -D_MSC_VER -D__CBM__ '-D__fastcall__=' '-D__asm__(...)=' -idirafter "$$CC65_HOME/include" -ffunction-sections -fdata-sections -fsanitize=address,undefined -fno-sanitize-recover=all "$$repo/tools/test_$$name.c" -Wl,--gc-sections -o "$$work/bin/test_$$name"; \
+	    "$(HOST_CC)" $(HOST_CFLAGS) -Wno-unknown-pragmas -Wno-error=incompatible-pointer-types -Wno-error=int-conversion -D_MSC_VER -D__CBM__ '-D__fastcall__=' -idirafter "$$CC65_HOME/include" -ffunction-sections -fdata-sections -fsanitize=address,undefined -fno-sanitize-recover=all "$$repo/tools/test_$$name.c" -Wl,--gc-sections -o "$$work/bin/test_$$name"; \
 	  done; \
 	}; \
 	prepare_sanitizers() { \
@@ -181,8 +181,8 @@ _run:
 	    "$(HOST_CC)" $(HOST_CFLAGS) -Wno-unknown-pragmas -fsanitize=address,undefined -fno-sanitize-recover=all "$$repo/tools/test_menu.c" -o "$$work/bin/test_menu"; \
 	    build_commands; \
 	    "$(HOST_CC)" $(HOST_CFLAGS) -Wno-unknown-pragmas -fsanitize=address,undefined -fno-sanitize-recover=all -idirafter "$$CC65_HOME/include" "$$repo/tools/test_text_buffers.c" -o "$$work/bin/test_text_buffers"; \
-	    "$(HOST_CC)" $(HOST_CFLAGS) -Wno-error=incompatible-pointer-types -Wno-error=int-conversion -D_MSC_VER -D__CBM__ '-D__fastcall__=' '-D__asm__(...)=' -idirafter "$$CC65_HOME/include" -Wno-unknown-pragmas -ffunction-sections -fdata-sections -fsanitize=address,undefined -fno-sanitize-recover=all "$$repo/tools/test_words_file.c" -Wl,--gc-sections -o "$$work/bin/test_words_file"; \
-	    "$(HOST_CC)" $(HOST_CFLAGS) -Wno-error=incompatible-pointer-types -Wno-error=int-conversion -D_MSC_VER -D__CBM__ '-D__fastcall__=' '-D__asm__(...)=' -idirafter "$$CC65_HOME/include" -Wno-unknown-pragmas -ffunction-sections -fdata-sections -fsanitize=address,undefined -fno-sanitize-recover=all "$$repo/tools/test_agifiles.c" -Wl,--gc-sections -o "$$work/bin/test_agifiles"; \
+	    "$(HOST_CC)" $(HOST_CFLAGS) -Wno-error=incompatible-pointer-types -Wno-error=int-conversion -D_MSC_VER -D__CBM__ '-D__fastcall__=' -idirafter "$$CC65_HOME/include" -Wno-unknown-pragmas -ffunction-sections -fdata-sections -fsanitize=address,undefined -fno-sanitize-recover=all "$$repo/tools/test_words_file.c" -Wl,--gc-sections -o "$$work/bin/test_words_file"; \
+	    "$(HOST_CC)" $(HOST_CFLAGS) -Wno-error=incompatible-pointer-types -Wno-error=int-conversion -D_MSC_VER -D__CBM__ '-D__fastcall__=' -idirafter "$$CC65_HOME/include" -Wno-unknown-pragmas -ffunction-sections -fdata-sections -fsanitize=address,undefined -fno-sanitize-recover=all "$$repo/tools/test_agifiles.c" -Wl,--gc-sections -o "$$work/bin/test_agifiles"; \
 	    failed=0; \
 	    run_test() { echo "RUN $$*"; if "$$@"; then :; else failed=$$((failed + 1)); fi; }; \
 	    for name in graphics_clear irq_completion irq_helpers random show_obj_irq text_irq sprite_allocator; do \
