@@ -39,3 +39,50 @@ $(OUT_ROOT)/test_review_events: $(REPO_ROOT)/tools/test_review_events.c $(REPO_R
 	@mkdir -p "$(OUT_ROOT)"
 	$(HOST_CC) $(HOST_CFLAGS) -I"$(REPO_ROOT)/tools" \
 	  "$(REPO_ROOT)/tools/test_review_events.c" "$(OUT_ROOT)/review_events.o" -o "$@"
+
+.PHONY: review-metrics-test
+
+review-metrics-test: $(OUT_ROOT)/review_metrics $(OUT_ROOT)/test_review_metrics $(OUT_ROOT)/metrics_runner \
+	$(OUT_ROOT)/metrics_runner_alt
+	@set -eu; \
+	fixtures=$$(mktemp -d "$(FIXTURE_BASE)/cx16agi-review-metrics-suite.XXXXXX"); \
+	cleanup() { \
+	  status=$$?; trap - EXIT; \
+	  if [ -d "$$fixtures" ]; then \
+	    residual=$$(find "$$fixtures" -mindepth 1 -print -quit); \
+	    if [ -n "$$residual" ]; then \
+	      echo "review-metrics test: fixture was not cleaned: $$residual" >&2; status=2; \
+	    elif ! rmdir "$$fixtures"; then \
+	      echo "review-metrics test: could not clean fixture root $$fixtures" >&2; status=2; \
+	    fi; \
+	  fi; \
+	  exit "$$status"; \
+	}; \
+	trap cleanup EXIT; \
+	TEST_OUTPUT_DIR="$(OUT_ROOT)" TMPDIR="$$fixtures" \
+	  "$(OUT_ROOT)/test_review_metrics" "$(OUT_ROOT)/review_metrics" \
+	  "$(OUT_ROOT)/metrics_runner" "$(OUT_ROOT)/metrics_runner_alt"
+
+$(OUT_ROOT)/review_metrics: $(REPO_ROOT)/tools/review_metrics.c $(REPO_ROOT)/tools/review_metrics.h \
+	$(REPO_ROOT)/tools/review_sha256.c $(REPO_ROOT)/tools/review_sha256.h
+	@mkdir -p "$(OUT_ROOT)"
+	$(HOST_CC) $(HOST_CFLAGS) -I"$(REPO_ROOT)/tools" \
+	  "$(REPO_ROOT)/tools/review_metrics.c" "$(REPO_ROOT)/tools/review_sha256.c" -o "$@"
+
+$(OUT_ROOT)/test_review_metrics: $(REPO_ROOT)/tools/test_review_metrics.c $(REPO_ROOT)/tools/test_paths.h \
+	$(REPO_ROOT)/tools/test_run_from.h $(REPO_ROOT)/tools/review_sha256.c $(REPO_ROOT)/tools/review_sha256.h
+	@mkdir -p "$(OUT_ROOT)"
+	$(HOST_CC) $(HOST_CFLAGS) -I"$(REPO_ROOT)/tools" \
+	  "$(REPO_ROOT)/tools/test_review_metrics.c" "$(REPO_ROOT)/tools/review_sha256.c" -o "$@"
+
+$(OUT_ROOT)/metrics_runner: $(REPO_ROOT)/tools/test_review_metrics.c $(REPO_ROOT)/tools/review_sha256.c \
+	$(REPO_ROOT)/tools/review_sha256.h
+	@mkdir -p "$(OUT_ROOT)"
+	$(HOST_CC) $(HOST_CFLAGS) -DREVIEW_METRICS_FIXTURE_RUNNER -I"$(REPO_ROOT)/tools" \
+	  "$(REPO_ROOT)/tools/test_review_metrics.c" "$(REPO_ROOT)/tools/review_sha256.c" -o "$@"
+
+$(OUT_ROOT)/metrics_runner_alt: $(REPO_ROOT)/tools/test_review_metrics.c $(REPO_ROOT)/tools/review_sha256.c \
+	$(REPO_ROOT)/tools/review_sha256.h
+	@mkdir -p "$(OUT_ROOT)"
+	$(HOST_CC) $(HOST_CFLAGS) -DREVIEW_METRICS_FIXTURE_RUNNER -DMETRICS_RUNNER_VARIANT -I"$(REPO_ROOT)/tools" \
+	  "$(REPO_ROOT)/tools/test_review_metrics.c" "$(REPO_ROOT)/tools/review_sha256.c" -o "$@"
