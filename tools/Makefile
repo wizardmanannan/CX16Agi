@@ -14,6 +14,7 @@ HOST_CFLAGS ?= -std=c11 -O2 -Wall -Wextra
 # Override HOST_TEST_FLAGS when using a non-GCC HOST_CC.
 HOST_TEST_FLAGS ?= -save-temps=obj -fno-use-linker-plugin
 override HOST_CFLAGS += $(HOST_TEST_FLAGS)
+REVIEW_SERIES_BIN ?= $(REPO_ROOT)/obj/review-series/review_series
 # Sanitized host children need ASan first while retaining injected command guards for fixture cleanup.
 TEST_OUTPUT_ROOT ?= $(REPO_ROOT)/obj
 TEST_FIXTURE_ROOT ?= $(if $(TMPDIR),$(TMPDIR),/tmp)
@@ -21,7 +22,7 @@ TEST_FIXTURE_ROOT ?= $(if $(TMPDIR),$(TMPDIR),/tmp)
 export CC65_HOME X16_EMULATOR_SOURCE TMPDIR TEST_OUTPUT_DIR ROM GAME BUILD SYMBOLS SDL_PREFIX TAS_CAPTURE_HEADER
 unexport KEEP_TEST_OUTPUT
 
-.PHONY: test suite commands-test image production-test integration-test picture-test loader-test modes integration review-workflow-test _run
+.PHONY: test suite commands-test image production-test integration-test picture-test loader-test modes integration review-series review-workflow-test _run
 
 test suite:
 	@$(MAKE) --no-print-directory -f "$(REPO_ROOT)/tools/Makefile" _run MODE=core
@@ -49,6 +50,10 @@ loader-test:
 
 modes integration:
 	@$(MAKE) --no-print-directory -f "$(REPO_ROOT)/tools/Makefile" _run MODE=modes
+
+review-series:
+	@mkdir -p "$(dir $(REVIEW_SERIES_BIN))"
+	@$(HOST_CC) $(HOST_CFLAGS) "$(REPO_ROOT)/tools/review_series.c" "$(REPO_ROOT)/tools/review_sha256.c" -o "$(REVIEW_SERIES_BIN)"
 
 _run:
 	@set -eu; \
