@@ -50,6 +50,7 @@ jobs:
         with:
           ref: ${{ github.event.pull_request.head.sha || github.sha }}
           persist-credentials: false
+          fetch-depth: 0
 
       - name: Record head identity
         id: identity
@@ -104,43 +105,20 @@ jobs:
             exit "$build_status"
           fi
 
-      - name: Run native suites on the pull request head
+      - name: Capture and replay the declared review plan
         shell: bash
         run: |
-          set -uo pipefail
+          set -euo pipefail
           export TEST_FIXTURE_ROOT="$RUNNER_TEMP" TMPDIR="$RUNNER_TEMP"
-          test_status=0
-          production_status=0
-          evidence_status=0
-
-          run_suite() {
-            local label="$1"
-            local target="$2"
-            local status
-            local tee_status
-            local -a pipeline_status
-
-            set +e
-            make -C tools "$target" 2>&1 | tee "$EVIDENCE_DIR/$label.log"
-            pipeline_status=("${PIPESTATUS[@]}")
-            set -e
-            status="${pipeline_status[0]}"
-            tee_status="${pipeline_status[1]}"
-            printf '%s=%s\n' "$label" "$status" >> "$EVIDENCE_DIR/results.txt"
-            printf -- '- `make -C tools %s`: exit %s\n' "$target" "$status" >> "$GITHUB_STEP_SUMMARY"
-            if [[ "$tee_status" -ne 0 ]]; then
-              echo "Could not capture the $label log (tee exit $tee_status)" >&2
-              evidence_status=1
-            fi
-            case "$label" in
-              test) test_status="$status" ;;
-              production-test) production_status="$status" ;;
-            esac
-          }
-
-          run_suite test test
-          run_suite production-test production-test
-          [[ "$test_status" -eq 0 && "$production_status" -eq 0 && "$evidence_status" -eq 0 ]]
+          make -C tools review-tools
+          obj/review-tools capture --plan tools/review/cx16.plan \
+            --output "$EVIDENCE_DIR/packet" 2>&1 | tee "$EVIDENCE_DIR/capture.log"
+          mkdir -p "$GITHUB_WORKSPACE/obj/review-ci-replay"
+          obj/review-tools verify --plan tools/review/cx16.plan \
+            --evidence-dir "$EVIDENCE_DIR/packet" \
+            --replay-root "$GITHUB_WORKSPACE/obj/review-ci-replay" \
+            2>&1 | tee "$EVIDENCE_DIR/verify.log"
+          cat "$EVIDENCE_DIR/packet/review.md" >> "$GITHUB_STEP_SUMMARY"
 
       - name: Digest native head evidence
         if: always()
@@ -148,7 +126,7 @@ jobs:
         run: |
           set -euo pipefail
           : > "$EVIDENCE_DIR/SHA256SUMS"
-          for name in identity.txt dependency-fetch.log cc65-build.log test.log production-test.log results.txt; do
+          for name in identity.txt dependency-fetch.log cc65-build.log capture.log verify.log; do
             if [[ -f "$EVIDENCE_DIR/$name" ]]; then
               (cd "$EVIDENCE_DIR" && sha256sum "$name") >> "$EVIDENCE_DIR/SHA256SUMS"
             fi
@@ -295,43 +273,20 @@ jobs:
             exit "$build_status"
           fi
 
-      - name: Run native suites on the GitHub integration merge
+      - name: Capture and replay the declared review plan
         shell: bash
         run: |
-          set -uo pipefail
+          set -euo pipefail
           export TEST_FIXTURE_ROOT="$RUNNER_TEMP" TMPDIR="$RUNNER_TEMP"
-          test_status=0
-          production_status=0
-          evidence_status=0
-
-          run_suite() {
-            local label="$1"
-            local target="$2"
-            local status
-            local tee_status
-            local -a pipeline_status
-
-            set +e
-            make -C tools "$target" 2>&1 | tee "$EVIDENCE_DIR/$label.log"
-            pipeline_status=("${PIPESTATUS[@]}")
-            set -e
-            status="${pipeline_status[0]}"
-            tee_status="${pipeline_status[1]}"
-            printf '%s=%s\n' "$label" "$status" >> "$EVIDENCE_DIR/results.txt"
-            printf -- '- `make -C tools %s`: exit %s\n' "$target" "$status" >> "$GITHUB_STEP_SUMMARY"
-            if [[ "$tee_status" -ne 0 ]]; then
-              echo "Could not capture the $label log (tee exit $tee_status)" >&2
-              evidence_status=1
-            fi
-            case "$label" in
-              test) test_status="$status" ;;
-              production-test) production_status="$status" ;;
-            esac
-          }
-
-          run_suite test test
-          run_suite production-test production-test
-          [[ "$test_status" -eq 0 && "$production_status" -eq 0 && "$evidence_status" -eq 0 ]]
+          make -C tools review-tools
+          obj/review-tools capture --plan tools/review/cx16.plan \
+            --output "$EVIDENCE_DIR/packet" 2>&1 | tee "$EVIDENCE_DIR/capture.log"
+          mkdir -p "$GITHUB_WORKSPACE/obj/review-ci-replay"
+          obj/review-tools verify --plan tools/review/cx16.plan \
+            --evidence-dir "$EVIDENCE_DIR/packet" \
+            --replay-root "$GITHUB_WORKSPACE/obj/review-ci-replay" \
+            2>&1 | tee "$EVIDENCE_DIR/verify.log"
+          cat "$EVIDENCE_DIR/packet/review.md" >> "$GITHUB_STEP_SUMMARY"
 
       - name: Digest native integration evidence
         if: always()
@@ -339,7 +294,7 @@ jobs:
         run: |
           set -euo pipefail
           : > "$EVIDENCE_DIR/SHA256SUMS"
-          for name in identity.txt dependency-fetch.log cc65-build.log test.log production-test.log results.txt; do
+          for name in identity.txt dependency-fetch.log cc65-build.log capture.log verify.log; do
             if [[ -f "$EVIDENCE_DIR/$name" ]]; then
               (cd "$EVIDENCE_DIR" && sha256sum "$name") >> "$EVIDENCE_DIR/SHA256SUMS"
             fi
