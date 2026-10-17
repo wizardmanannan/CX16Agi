@@ -1,6 +1,7 @@
 Run the native C interpolation regression with `make string-format-test`.
-It covers token types, escapes, recursion, cycles and output bounds, and compiles
-the production display and prompt paths with hardware assembly and the IRQ
+It covers token types, escapes, recursion, cycles, output bounds and explicit
+line breaks. It compiles the production display and prompt paths with hardware
+assembly and the IRQ
 handoff stubbed. The IRQ stub checks the text submitted for display, including
 the KQ3 wizard's `%m6`/`%m7` dialogue. Long prompts must fit the input display line.
 Logic metadata and banked copy helpers use in-memory fixtures; these tests do

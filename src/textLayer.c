@@ -314,7 +314,7 @@ byte b3WrapText(char* line_start, int width, byte* maxWidth) {
 				}
 			}
 
-			line_start = last_space + 1;
+			line_start = (*p == NEW_LINE ? p : last_space) + 1;
 			last_space = 0;
 			b3LastBoxLines++;
 

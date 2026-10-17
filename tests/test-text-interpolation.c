@@ -17,6 +17,7 @@ byte keyState[256];
 byte* key = keyState;
 byte _assmByte;
 extern char b7OutputString[80];
+extern byte b3WrapText(char* text, int width, byte* maxWidth);
 int currentLog = 106;
 objectType bDObjects[MAX_OBJECTS];
 int bDNumObjects;
@@ -74,6 +75,17 @@ void b6SetAndWaitForIrqState(IRQ_COMMAND state)
 	}
 }
 
+static void test_explicit_line_breaks(void)
+{
+	char hardBreak[] = "abc\ndef ghi";
+	char hardBreakAfterSpace[] = "ab cd\nef gh ij";
+	byte maxWidth;
+	assert(b3WrapText(hardBreak, 8, &maxWidth) == 2);
+	assert(strcmp(hardBreak, "abc\ndef ghi") == 0);
+	assert(b3WrapText(hardBreakAfterSpace, 8, &maxWidth) == 2);
+	assert(strcmp(hardBreakAfterSpace, "ab cd\nef gh ij") == 0);
+}
+
 int main(void)
 {
 	/* KQ3 logic 106, message 26; the IRQ stub inspects the actual display buffer. */
@@ -100,6 +112,7 @@ int main(void)
 	assert(memchr(b7OutputString, '\0', sizeof(b7OutputString)) != NULL);
 	assert(strlen(b7OutputString) == sizeof(b7OutputString) - 1);
 	assert(strncmp(b7OutputString, expected, sizeof(b7OutputString) - 1) == 0);
+	test_explicit_line_breaks();
 	puts("text interpolation tests passed");
 	return 0;
 }
