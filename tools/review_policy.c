@@ -1215,7 +1215,7 @@ static bool check_run_identity(const json_document *document, int run, const rev
                                bool require_pull, const char *pull_head, long long *app_id,
                                char *error, size_t error_capacity)
 {
-    char run_head[65], status[32], conclusion[32], suite_head[65], app_slug[REVIEW_POLICY_VALUE_LIMIT];
+    char run_head[65], status[32], conclusion[32], app_slug[REVIEW_POLICY_VALUE_LIMIT];
     long long run_id, suite_id;
     int app = json_object_get(document, run, "app");
     int suite = json_object_get(document, run, "check_suite");
@@ -1224,8 +1224,7 @@ static bool check_run_identity(const json_document *document, int run, const rev
         !json_get_string(document, run, "status", status, sizeof(status)) ||
         !json_get_string(document, run, "conclusion", conclusion, sizeof(conclusion)) ||
         !json_get_number(document, app, "id", app_id) || *app_id <= 0 ||
-        !json_get_number(document, suite, "id", &suite_id) || suite_id <= 0 ||
-        !json_get_string(document, suite, "head_sha", suite_head, sizeof(suite_head))) {
+        !json_get_number(document, suite, "id", &suite_id) || suite_id <= 0) {
         set_error(error, error_capacity, "check run has incomplete identity or App data");
         return false;
     }
@@ -1237,7 +1236,7 @@ static bool check_run_identity(const json_document *document, int run, const rev
         set_error(error, error_capacity, "check run provider does not match trusted policy");
         return false;
     }
-    if (strcasecmp(run_head, head) || strcasecmp(suite_head, head)) {
+    if (strcasecmp(run_head, head)) {
         set_error(error, error_capacity, "check run belongs to a different head revision (stale or replayed run)");
         return false;
     }

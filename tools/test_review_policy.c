@@ -461,6 +461,9 @@ int main(int argc, char **argv)
     CHECK(!setenv("REVIEW_POLICY_CALL_LOG", gh_log, 1), "Cannot record offline GitHub API requests");
 
     write_protocol_fixture();
+    /* GitHub check-run responses expose a suite id, not a nested suite head SHA. */
+    replace_fixture_text("checks.json", "\"check_suite\":{\"id\":70,\"head_sha\":\"4444444444444444444444444444444444444444\"}",
+                         "\"check_suite\":{\"id\":70}");
     char *cli_argv[] = {
         argv[1], (char *)"check", (char *)"--repo", (char *)"wizardmanannan/CX16Agi",
         (char *)"--pr", (char *)"41", (char *)"--head", (char *)current_head,
@@ -637,9 +640,10 @@ int main(int argc, char **argv)
                     current_base, "completed", "success", 900001, false, false);
     expect_rejected(argv[1], argv[2], "stale or replayed run", false);
     write_protocol_fixture();
-    write_check_run(current_merge, "3333333333333333333333333333333333333333", current_base,
+    write_check_run(current_merge, current_merge, current_base,
                     "completed", "success", 900001, false, false);
-    expect_rejected(argv[1], argv[2], "stale or replayed run", false);
+    replace_fixture_text("checks.json", "\"check_suite\":{\"id\":70", "\"check_suite\":{\"id\":0");
+    expect_rejected(argv[1], argv[2], "incomplete identity or App data", false);
     write_protocol_fixture();
     write_check_run(current_merge, current_merge, "3333333333333333333333333333333333333333",
                     "completed", "success", 900001, false, false);
