@@ -142,7 +142,8 @@ void b7GetString(char* promptStr, byte promptStringBank, char* returnStr, byte r
 			case 0x1B:
 				break;
 			case 0x0D:  /* ENTER */
-				strcpy(returnStr, b7CurrentInputStr);
+				memCpyBankedBetween((byte*)returnStr, returnStrBank,
+				                   (byte*)b7CurrentInputStr, STRING_BANK, (size_t)strPos + 1);
 				while (key[KEY_ENTER]) { /* Wait until ENTER released */ }
 				return;
 			case 0x08: /* Backspace */

@@ -20,6 +20,32 @@ static byte* messages[2];
 extern void b4Parse(void);
 extern void b4Set_string(void);
 extern void b4Word_to_string(void);
+extern void b4Get_num(void);
+static char allocatedWindow[80];
+static unsigned int allocations;
+
+byte* b10BankedAlloc(int length, byte* bank)
+{
+	assert(length <= sizeof(allocatedWindow));
+	allocations++;
+	*bank = 24;
+	strcpy(allocatedWindow, "wrong bank");
+	return (byte*)allocatedWindow;
+}
+
+boolean b10BankedDealloc(byte* memory, byte bank)
+{
+	assert(memory == (byte*)allocatedWindow && bank == 24);
+	return TRUE;
+}
+
+void b7GetString(char* prompt, byte promptBank, char* result, byte resultBank, int x, int y, int limit)
+{
+	(void)prompt; (void)promptBank; (void)resultBank; (void)x; (void)y;
+	assert(limit == 3);
+	/* A banked result is not visible through the caller's current window. */
+	if (result != allocatedWindow) strcpy(result, "123");
+}
 
 byte loadAndIncWinCode(void) { return operands[operandCount++]; }
 
@@ -91,6 +117,17 @@ static void test_word_to_string(void)
 	assert(strcmp(b7WordText[0], "look") == 0);
 }
 
+static void test_numeric_input(void)
+{
+	messages[0] = (byte*)"Number:";
+	operands[0] = 1;
+	operands[1] = 5;
+	operandCount = 0;
+	b4Get_num();
+	assert(variables[5] == 123);
+	assert(allocations == 0);
+}
+
 int main(void)
 {
 	currentLog = 106;
@@ -101,6 +138,7 @@ int main(void)
 	assert(strcmp(parsed, "look") == 0);
 	test_set_string();
 	test_word_to_string();
+	test_numeric_input();
 	puts("string command tests passed");
 	return 0;
 }

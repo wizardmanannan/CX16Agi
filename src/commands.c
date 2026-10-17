@@ -1743,27 +1743,21 @@ void b4Parse() // 1, 0x00
 	return;
 }
 
-void b4Get_num() // 2, 0x40 
+void b4Get_num() // 2, 0x40
 {
-	int messNum, varNum;
-	char* b7Temp;
+	byte messNum, varNum;
+	char input[4] = "";
 	char* messagePointer;
 	LOGICFile logicFile;
-	byte tempBank;
-
-	b7Temp = (char*)b10BankedAlloc(80, &tempBank);
 
 	b5GetLogicFile(&logicFile, currentLog);
-
 	messNum = loadAndIncWinCode();
 	varNum = loadAndIncWinCode();
-
+	if (!messNum || messNum > logicFile.numMessages || !logicFile.messages) return;
 	messagePointer = getMessagePointer(currentLog, messNum - 1);
-	b7GetString(messagePointer, logicFile.messageBank, b7Temp, tempBank, 1, 23, 3);
-	var[varNum] = atoi(b7Temp);
-
-	b10BankedDealloc((byte*)b7Temp, tempBank);
-
+	/* The software stack is visible regardless of the mapped resource bank. */
+	b7GetString(messagePointer, logicFile.messageBank, input, RAM_BANK, 1, 23, sizeof(input) - 1);
+	var[varNum] = (byte)atoi(input);
 	return;
 }
 

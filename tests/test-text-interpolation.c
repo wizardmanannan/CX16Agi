@@ -28,6 +28,7 @@ static unsigned int displays;
 static boolean boxed;
 static const byte* inputKeys;
 static size_t inputKeyCount, inputKeyPosition;
+static char bankWindow[80], bank24[80];
 static const char expected[] = "\"You're up to no good, Gwydion\" Manannan snarls through clenched teeth. \"Never again will you discover my secrets!\"";
 
 void native_asm(const char* instruction, ...)
@@ -69,6 +70,19 @@ static void test_input_capacity(void)
 	assert(inputKeyPosition == sizeof(keys));
 }
 
+static void test_banked_input(void)
+{
+	static const byte keys[] = { '4', '2', KEY_ENTER };
+	strcpy(bankWindow, "wrong bank");
+	strcpy(bank24, "unchanged");
+	inputKeys = keys;
+	inputKeyCount = sizeof(keys);
+	inputKeyPosition = 0;
+	b7GetString("Number:", 21, bankWindow, 24, 1, 1, 3);
+	assert(strcmp(bank24, "42") == 0);
+	assert(strcmp(bankWindow, "wrong bank") == 0);
+}
+
 void b5GetLogicFile(LOGICFile* result, byte logicNo)
 {
 	assert(logicNo == 106);
@@ -99,6 +113,16 @@ void* memCpyBanked(byte* dst, byte* src, byte bank, size_t length)
 	result = memcpy(dst, src, length);
 	RAM_BANK = previousBank;
 	return result;
+}
+
+void memCpyBankedBetween(byte* dst, byte dstBank, byte* src, byte srcBank, size_t length)
+{
+	assert(srcBank == STRING_BANK);
+	if (dst == (byte*)bankWindow) {
+		assert(dstBank == 24 && length <= sizeof(bank24));
+		dst = (byte*)bank24;
+	}
+	memcpy(dst, src, length);
 }
 
 void b6SetAndWaitForIrqState(IRQ_COMMAND state)
@@ -177,6 +201,7 @@ int main(void)
 	test_border_capacity();
 	test_idle_input();
 	test_input_capacity();
+	test_banked_input();
 	puts("text interpolation tests passed");
 	return 0;
 }
