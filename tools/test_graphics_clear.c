@@ -9,6 +9,7 @@
 #include <unistd.h>
 #include "registers.h"
 #include "fake6502.h"
+#include "test_graphics_clear.h"
 #include "test_paths.h"
 
 extern struct regs regs;
@@ -19,6 +20,8 @@ static unsigned symbol_count;
 #define PRIORITY_START ((320 * 240) / 2)
 #define PRIORITY_SIZE ((160 * 168) / 2)
 static unsigned symbol(const char *name);
+static char assembled_binary_path[8192];
+static bool graphics_clear_paths_initialized;
 
 #define CHECK(c, m) do { if (!(c)) { fprintf(stderr, "%s (%s:%d)\n", m, __FILE__, __LINE__); exit(1); } } while (0)
 
@@ -104,6 +107,36 @@ static void write_file(const char *path, const char *contents) {
     CHECK(!fclose(file), "Cannot close fixture");
 }
 
+static void set_error(char *error, size_t capacity, const char *message) {
+    if (error && capacity) snprintf(error, capacity, "%s", message);
+}
+
+static bool copy_file(const char *source, const char *destination, size_t *copied) {
+    FILE *input = fopen(source, "rb"); if (!input) return false;
+    FILE *output = fopen(destination, "wb");
+    if (!output) { fclose(input); return false; }
+    unsigned char bytes[8192]; size_t total = 0; bool ok = true;
+    for (;;) {
+        size_t count = fread(bytes, 1, sizeof(bytes), input);
+        if (count && fwrite(bytes, 1, count, output) != count) { ok = false; break; }
+        total += count;
+        if (count < sizeof(bytes)) {
+            if (ferror(input)) ok = false;
+            break;
+        }
+    }
+    if (fclose(input)) ok = false;
+    if (fclose(output)) ok = false;
+    if (copied) *copied = total;
+    return ok;
+}
+
+static void initialize_paths(const char *prefix) {
+    if (graphics_clear_paths_initialized) return;
+    suite_test_paths_init(prefix);
+    graphics_clear_paths_initialized = true;
+}
+
 static void run_tool(const char *name, char *const arguments[]) {
     char tool[4096]; const char *home = getenv("CC65_HOME");
     if (home) CHECK(snprintf(tool, sizeof(tool), "%s/bin/%s", home, name) < (int)sizeof(tool), "Tool path too long");
@@ -126,6 +159,8 @@ static void assemble(const char *graphics_path, unsigned priority_size, unsigned
     suite_test_path(object, sizeof(object), suite_output_directory, "clear.o");
     suite_test_path(binary, sizeof(binary), suite_output_directory, "clear.bin");
     suite_test_path(labels, sizeof(labels), suite_output_directory, "clear.lbl");
+    CHECK(snprintf(assembled_binary_path, sizeof(assembled_binary_path), "%s", binary) < (int)sizeof(assembled_binary_path),
+          "Linked image path is too long");
 
     char *graphics = read_file(graphics_path);
     char *irq = read_file("src/irqAsm.s");
@@ -192,15 +227,20 @@ static void assemble(const char *graphics_path, unsigned priority_size, unsigned
     CHECK(!fclose(file), "Cannot close labels");
 }
 
-static void run_helper(const char *entry, unsigned max_steps) {
-    unsigned start = symbol(entry), done = symbol("sliceDone");
+static bool execute_helper(unsigned start, unsigned done, unsigned max_steps) {
     reset6502(false); regs.pc = (uint16_t)start; regs.sp = 0x1FD;
     regs.status = FLAG_CONSTANT; ram[0x1FE] = (uint8_t)(done - 1); ram[0x1FF] = (uint8_t)((done - 1) >> 8);
     clockticks6502 = 0; waiting = 0;
     for (unsigned step = 0; step < max_steps && regs.pc != done; ++step) {
-        CHECK(!waiting, "Unexpected WAI in clear helper"); step6502();
+        if (waiting) return false;
+        step6502();
     }
-    CHECK(regs.pc == done, "Clear helper did not return");
+    return regs.pc == done;
+}
+
+#ifndef TEST_GRAPHICS_CLEAR_NO_MAIN
+static void run_helper(const char *entry, unsigned max_steps) {
+    CHECK(execute_helper(symbol(entry), symbol("sliceDone"), max_steps), "Clear helper did not return");
 }
 
 static void check_priority_video_state(unsigned end_address) {
@@ -335,6 +375,7 @@ static void test_map_boundaries(const char *graphics_path) {
         CHECK(ram[symbol("_inputLineDirty")] == 1, "Map variant did not invalidate input");
     }
 }
+#endif
 
 static unsigned symbol(const char *name) {
     for (unsigned i = 0; i < symbol_count; ++i)
@@ -342,9 +383,10 @@ static unsigned symbol(const char *name) {
     fprintf(stderr, "Missing assembler symbol: %s\n", name); exit(1);
 }
 
+#ifndef TEST_GRAPHICS_CLEAR_NO_MAIN
 int main(int argc, char **argv) {
     const unsigned start = 36 * 160, width = 160, height = 168;
-    suite_test_paths_init("graphics-clear");
+    initialize_paths("graphics-clear");
     const char *graphics_path = argc > 1 ? argv[1] : "src/graphicsAsm.s";
     assemble(graphics_path, PRIORITY_SIZE, 2008); memset(vram, 0x5A, sizeof(vram));
 
@@ -371,5 +413,125 @@ int main(int argc, char **argv) {
     test_priority_page_boundaries(graphics_path);
     test_map_boundaries(graphics_path);
     puts("Background and priority clear slices stay under 2048 writes/25000 cycles and preserve sentinels");
+    return 0;
+}
+#endif
+
+int graphics_clear_export_test_image(const char *graphics_source, const char *image_path,
+                                     GraphicsClearTestImage *image,
+                                     char *error, size_t error_capacity) {
+    if (!graphics_source || !*graphics_source || !image_path || !*image_path || !image) {
+        set_error(error, error_capacity, "missing graphics test image argument");
+        return -1;
+    }
+    initialize_paths("graphics-clear-metrics");
+    assemble(graphics_source, PRIORITY_SIZE, 2008);
+    size_t image_bytes = 0;
+    if (!copy_file(assembled_binary_path, image_path, &image_bytes) ||
+        !image_bytes || image_bytes > GRAPHICS_CLEAR_TEST_IMAGE_CAPACITY) {
+        set_error(error, error_capacity, "could not export bounded linked graphics test image");
+        return -1;
+    }
+    const char *names[] = { "resetPrioritySlices", "runPrioritySlice", "sliceDone",
+        "b8ClearPriorityAddress", "b8ClearPriorityRemaining" };
+    unsigned addresses[sizeof(names) / sizeof(names[0])];
+    for (size_t i = 0; i < sizeof(names) / sizeof(names[0]); ++i) addresses[i] = symbol(names[i]);
+    for (size_t i = 0; i < sizeof(addresses) / sizeof(addresses[0]); ++i) {
+        if (addresses[i] < GRAPHICS_CLEAR_TEST_LOAD_ADDRESS ||
+            addresses[i] >= GRAPHICS_CLEAR_TEST_LOAD_ADDRESS + image_bytes || addresses[i] > UINT16_MAX) {
+            set_error(error, error_capacity, "linked graphics test symbol is outside the exported image");
+            return -1;
+        }
+    }
+    image->image_bytes = image_bytes;
+    image->reset_entry = (uint16_t)addresses[0];
+    image->slice_entry = (uint16_t)addresses[1];
+    image->return_entry = (uint16_t)addresses[2];
+    image->cursor_address = (uint16_t)addresses[3];
+    image->remaining_address = (uint16_t)addresses[4];
+    return 0;
+}
+
+static bool image_address_valid(const GraphicsClearTestImage *image, uint16_t address) {
+    return address >= GRAPHICS_CLEAR_TEST_LOAD_ADDRESS &&
+           (size_t)(address - GRAPHICS_CLEAR_TEST_LOAD_ADDRESS) < image->image_bytes;
+}
+
+int graphics_clear_run_test_image(const char *image_path, const GraphicsClearTestImage *image,
+                                  uint8_t *output_vram, size_t output_capacity,
+                                  uint32_t *worst_slice_cycles,
+                                  uint64_t *total_workload_cycles,
+                                  char *error, size_t error_capacity) {
+    if (!image_path || !*image_path || !image || !output_vram ||
+        output_capacity < GRAPHICS_CLEAR_TEST_VRAM_BYTES || !worst_slice_cycles ||
+        !total_workload_cycles ||
+        !image->image_bytes || image->image_bytes > GRAPHICS_CLEAR_TEST_IMAGE_CAPACITY ||
+        !image_address_valid(image, image->reset_entry) ||
+        !image_address_valid(image, image->slice_entry) ||
+        !image_address_valid(image, image->return_entry) ||
+        !image_address_valid(image, image->cursor_address) ||
+        !image_address_valid(image, image->remaining_address)) {
+        set_error(error, error_capacity, "invalid bounded graphics test workload");
+        return -1;
+    }
+
+    FILE *file = fopen(image_path, "rb");
+    if (!file) { set_error(error, error_capacity, "cannot open linked graphics test image"); return -1; }
+    if (fseek(file, 0, SEEK_END)) { fclose(file); set_error(error, error_capacity, "cannot seek graphics test image"); return -1; }
+    long length = ftell(file);
+    if (length < 0 || (size_t)length != image->image_bytes || fseek(file, 0, SEEK_SET)) {
+        fclose(file); set_error(error, error_capacity, "graphics test image size differs from its workload binding"); return -1;
+    }
+    memset(ram + GRAPHICS_CLEAR_TEST_LOAD_ADDRESS, 0, GRAPHICS_CLEAR_TEST_IMAGE_CAPACITY);
+    bool read_failed = fread(ram + GRAPHICS_CLEAR_TEST_LOAD_ADDRESS, 1, image->image_bytes, file) != image->image_bytes;
+    if (fclose(file)) read_failed = true;
+    if (read_failed) {
+        set_error(error, error_capacity, "cannot read linked graphics test image");
+        return -1;
+    }
+
+    memset(vram, 0x5A, sizeof(vram));
+    memset(addr, 0, sizeof(addr)); memset(stride, 0, sizeof(stride)); memset(fx_cache, 0, sizeof(fx_cache));
+    vera_ctrl = fx_ctrl = 0; writes = 0; waiting = 0;
+    bool oracle = execute_helper(image->reset_entry, image->return_entry, 1000);
+    uint64_t total = (uint64_t)clockticks6502;
+    uint32_t worst = 0;
+    for (unsigned slice = 0; slice < GRAPHICS_CLEAR_TEST_SLICE_COUNT; ++slice) {
+        unsigned before = writes;
+        bool returned = execute_helper(image->slice_entry, image->return_entry, 300000);
+        uint32_t cycles = (uint32_t)clockticks6502;
+        if (cycles > worst) worst = cycles;
+        total += cycles;
+        unsigned expected_count = slice < GRAPHICS_CLEAR_TEST_SLICE_COUNT - 1 ? 2048 : 1152;
+        if (!returned || writes - before != expected_count ||
+            regs.a != (slice == GRAPHICS_CLEAR_TEST_SLICE_COUNT - 1 ? 1 : 0) ||
+            (regs.status & FLAG_ZERO) != (slice == GRAPHICS_CLEAR_TEST_SLICE_COUNT - 1 ? 0 : FLAG_ZERO))
+            oracle = false;
+        unsigned cleared = slice < GRAPHICS_CLEAR_TEST_SLICE_COUNT - 1 ? (slice + 1) * 2048 : GRAPHICS_CLEAR_TEST_PRIORITY_BYTES;
+        unsigned state_cleared = slice < GRAPHICS_CLEAR_TEST_SLICE_COUNT - 1 ? cleared : 6 * 2048;
+        if (ram[image->cursor_address] != (uint8_t)(GRAPHICS_CLEAR_TEST_PRIORITY_ADDRESS + state_cleared) ||
+            ram[image->cursor_address + 1] != (uint8_t)((GRAPHICS_CLEAR_TEST_PRIORITY_ADDRESS + state_cleared) >> 8) ||
+            ram[image->remaining_address] != (uint8_t)(GRAPHICS_CLEAR_TEST_PRIORITY_BYTES - state_cleared) ||
+            ram[image->remaining_address + 1] != (uint8_t)((GRAPHICS_CLEAR_TEST_PRIORITY_BYTES - state_cleared) >> 8))
+            oracle = false;
+        if (vera_ctrl != 0 || stride[0] != 1 || fx_ctrl != 0 ||
+            addr[0] != GRAPHICS_CLEAR_TEST_PRIORITY_ADDRESS + cleared)
+            oracle = false;
+    }
+    if (writes != GRAPHICS_CLEAR_TEST_PRIORITY_BYTES) oracle = false;
+    for (unsigned address = 0; address < GRAPHICS_CLEAR_TEST_VRAM_BYTES; ++address) {
+        bool in_priority = address >= GRAPHICS_CLEAR_TEST_PRIORITY_ADDRESS &&
+                           address < GRAPHICS_CLEAR_TEST_PRIORITY_ADDRESS + GRAPHICS_CLEAR_TEST_PRIORITY_BYTES;
+        uint8_t expected = in_priority ? 0x44 : 0x5A;
+        if (vram[address] != expected) oracle = false;
+    }
+
+    memcpy(output_vram, vram, GRAPHICS_CLEAR_TEST_VRAM_BYTES);
+    *worst_slice_cycles = worst;
+    *total_workload_cycles = total;
+    if (!oracle) {
+        set_error(error, error_capacity, "priority slice workload failed exact VRAM oracle");
+        return -1;
+    }
     return 0;
 }
