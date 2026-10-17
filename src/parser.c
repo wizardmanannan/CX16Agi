@@ -32,7 +32,8 @@ int inputWords[10];
 #pragma bss-name (push, "BANKRAM07")
 char b7WordText[10][80], b7CurrentInputStr[MAX_INPUT_STRING_LENGTH + 1], strPos = 0, b7OutputString[80], b7Temp[256];
 char string[12][40];
-char b7LookupWordsBuffer[125];
+char* b7LookupWordTokens[MAX_INPUT_STRING_LENGTH / 2];
+char b7LookupWord[MAX_INPUT_STRING_LENGTH + 1];
 //boolean wordsAreWaiting=FALSE;
 
 char b7LastLine[80];
@@ -395,11 +396,11 @@ void b7LookupWords(char* inputLine)
 	// Working buffer for input copies
 	char* userInput = b7Temp;
 
-	// Pointers into the token array stored in b7LookupWordsBuffer
-	char** start = (char**)b7LookupWordsBuffer, ** end, ** originalEnd;
+	// Token pointers and word text have separate, correctly sized storage.
+	char** start = b7LookupWordTokens, ** end, ** originalEnd;
 
-	// Area after the token pointers � used to hold one word for lookup
-	char* strBuf = (char*)start + MAX_WORD_SIZE * sizeof(char*) + sizeof(char**);
+	// Holds one candidate phrase for dictionary lookup.
+	char* strBuf = b7LookupWord;
 
 	// Length of the current word being processed
 	byte stringLength;
@@ -491,6 +492,11 @@ void b7LookupWords(char* inputLine)
 			// If synonym number is non-zero, store it
 			if (synNum)
 			{
+				if (numInputWords >= sizeof(inputWords) / sizeof(inputWords[0])) {
+					var[9] = numInputWords + 1;
+					allWordsFound = FALSE;
+					break;
+				}
 				flag[2] = TRUE;
 				// Save synonym number
 				inputWords[numInputWords] = synNum;

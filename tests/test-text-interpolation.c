@@ -14,6 +14,8 @@ long b3PaletteAddress;
 byte b3PaletteRows, b3PaletteNumber;
 byte variables[256];
 byte* var = variables;
+boolean flagValues[256];
+boolean* flag = flagValues;
 byte keyState[256];
 byte* key = keyState;
 byte _assmByte;
@@ -81,6 +83,23 @@ static void test_banked_input(void)
 	b7GetString("Number:", 21, bankWindow, 24, 1, 1, 3);
 	assert(strcmp(bank24, "42") == 0);
 	assert(strcmp(bankWindow, "wrong bank") == 0);
+}
+
+int b12FindSynonymNum(char* word, byte bank)
+{
+	size_t length = strlen(word);
+	assert(bank == PARSER_BANK);
+	while (length && word[length - 1] == ' ') length--;
+	return length == 2 && word[0] == 'g' && word[1] == 'o' ? 1 : -1;
+}
+
+static void test_word_capacity(void)
+{
+	char input[] = "go go go go go go go go go go go go go";
+	b7LookupWords(input);
+	assert(numInputWords == 10);
+	assert(variables[9] == 11);
+	assert(strncmp(b7WordText[9], "go", 2) == 0);
 }
 
 void b5GetLogicFile(LOGICFile* result, byte logicNo)
@@ -202,6 +221,7 @@ int main(void)
 	test_idle_input();
 	test_input_capacity();
 	test_banked_input();
+	test_word_capacity();
 	puts("text interpolation tests passed");
 	return 0;
 }
