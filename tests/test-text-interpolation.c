@@ -104,6 +104,24 @@ static void test_word_capacity(void)
 	assert(strncmp(b7WordText[9], "go", 2) == 0);
 }
 
+static void test_word_lookup_uses_cleaned_input(void)
+{
+	char punctuated[] = "go!";
+	char separated[] = "go,  go!";
+
+	numInputWords = 0;
+	b7LookupWords(punctuated);
+	assert(numInputWords == 1 && inputWords[0] == 1);
+	assert(strcmp(b7WordText[0], "go") == 0);
+	assert(strcmp(punctuated, "go!") == 0);
+
+	numInputWords = 0;
+	b7LookupWords(separated);
+	assert(numInputWords == 2 && inputWords[0] == 1 && inputWords[1] == 1);
+	assert(strncmp(b7WordText[0], "go", 2) == 0 && strncmp(b7WordText[1], "go", 2) == 0);
+	assert(strcmp(separated, "go,  go!") == 0);
+}
+
 void b5GetLogicFile(LOGICFile* result, byte logicNo)
 {
 	assert(logicNo == 106);
@@ -281,6 +299,7 @@ int main(void)
 	test_input_capacity();
 	test_banked_input();
 	test_word_capacity();
+	test_word_lookup_uses_cleaned_input();
 	puts("text interpolation tests passed");
 	return 0;
 }

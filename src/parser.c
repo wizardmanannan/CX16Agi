@@ -414,9 +414,12 @@ void b7LookupWords(char* inputLine)
 
 	// Remove punctuation and collapse spaces
 	b7StripExtraChars(userInput);
+	// strtok inserts nulls; preserve the cleaned phrase for phrase lookup.
+	strcpy(strBuf, userInput);
 
 	// Tokenize ? fill token pointer array, get pointer to last token
 	end = b7TokenizeWords(userInput, start);
+	strcpy(userInput, strBuf);
 
 	// Save the original end-of-tokens pointer
 	originalEnd = end;
@@ -426,14 +429,11 @@ void b7LookupWords(char* inputLine)
 	printf("start %p end %p\n", start, end);
 #endif
 
-	// Re-copy original input (strtok inserted nulls into previous copy)
-	strcpy(userInput, inputLine);
-
 	// Reset count of recognized words this turn
 	numInputWords = 0;
 
-	// Starting length value (will be updated per token)
-	stringLength = strlen(inputLine);
+	// Starting length of the cleaned phrase (updated as tokens are consumed)
+	stringLength = strlen(userInput);
 
 	// Main loop: process tokens while we have some left and haven't failed
 	while (start <= end && allWordsFound)
