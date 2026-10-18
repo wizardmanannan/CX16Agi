@@ -5,11 +5,14 @@
 
 byte RAM_BANK;
 int currentLog = 106;
-static byte* messages[2];
+static byte* messages[3];
 extern char menuTextBuffer[MENU_TEXT_BUFFER_SIZE];
 extern char* nextMenuTextBufferAddr;
 extern int numOfMenus;
 extern MENU the_menu[];
+extern MENU the_menuChildren[];
+extern byte bAMenuChildWidth[MAX_MENUS];
+extern void bAInitMenuState(void);
 extern char* bAStoreMessageInBuffer(LOGICFile* file, byte message);
 
 void native_asm(const char* instruction, ...) { (void)instruction; }
@@ -19,13 +22,13 @@ void b5GetLogicFile(LOGICFile* result, byte number)
 	assert(number == 106);
 	memset(result, 0, sizeof(*result));
 	result->messages = messages;
-	result->numMessages = 2;
+	result->numMessages = 3;
 	result->messageBank = 21;
 }
 
 char* getMessagePointer(byte logic, byte message)
 {
-	assert(logic == 106 && message < 2);
+	assert(logic == 106 && message < 3);
 	return (char*)messages[message];
 }
 
@@ -39,10 +42,26 @@ void memCpyBankedBetween(byte* dst, byte dstBank, byte* src, byte srcBank, size_
 	memcpy(dst, src, length);
 }
 
+static void test_child_menu_width(size_t labelLength, byte messageNumber, char fill)
+{
+	char label[257];
+	numOfMenus = 0;
+	nextMenuTextBufferAddr = menuTextBuffer;
+	bAInitMenuState();
+	messages[0] = (byte*)"Menu";
+	memset(label, fill, labelLength);
+	label[labelLength] = '\0';
+	messages[messageNumber - 1] = (byte*)label;
+	bASetMenu(1);
+	bASetMenuItem(messageNumber, 1);
+	assert(strlen(the_menuChildren[0].text) == labelLength);
+	assert(bAMenuChildWidth[0] == MENU_BAR_WIDTH);
+}
+
 int main(void)
 {
 	LOGICFile file;
-	char label[256];
+	char label[257];
 	char* saved;
 	int i;
 	b5GetLogicFile(&file, 106);
@@ -65,6 +84,8 @@ int main(void)
 	saved = nextMenuTextBufferAddr;
 	bASetMenu(1);
 	assert(numOfMenus == MAX_MENUS && nextMenuTextBufferAddr == saved);
+	test_child_menu_width(255, 2, 'x');
+	test_child_menu_width(256, 3, 'y');
 	puts("menu text tests passed");
 	return 0;
 }

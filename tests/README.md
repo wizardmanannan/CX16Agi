@@ -3,7 +3,8 @@ exercise the production formatter, display, prompt, parser, string-command and
 menu modules. They cover token expansion, escapes, recursion, cycles, output
 bounds, explicit line breaks, the KQ3 wizard's `%m6`/`%m7` dialogue, idle and
 bounded keyboard input, destination-bank writes, parser word capacity,
-`set.string`, `word.to.string`, numeric input, and menu text/count capacity.
+`set.string`, `word.to.string`, numeric input, menu text/count capacity, and
+child-menu widths for 255/256-character labels.
 Hardware assembly and IRQ handoff are stubbed; logic metadata and banked-copy
 helpers use in-memory fixtures, so these tests do not emulate the X16 memory
 map.

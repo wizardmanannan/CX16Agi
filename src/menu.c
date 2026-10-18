@@ -419,7 +419,7 @@ void bASetMenuItem(int messNum, int controllerNum)
 	MENU childMenu;
 	LOGICFile currentLogicFile;
 	EventType event;
-	byte menuTextLength;
+	size_t menuTextWidth;
 	
 	if (numOfMenus <= 0 || numOfMenus > MAX_MENUS ||
 	    bAMenuChildCount[numOfMenus - 1] >= MAX_MENU_CHILDREN) return;
@@ -441,11 +441,12 @@ void bASetMenuItem(int messNum, int controllerNum)
 
 	bASetMenuChild(&childMenu, numOfMenus - 1);
 
-	menuTextLength = strlen(childMenu.text);
+	menuTextWidth = strlen(childMenu.text) + 2;
+	if (menuTextWidth > MENU_BAR_WIDTH) menuTextWidth = MENU_BAR_WIDTH;
 
-	if(menuTextLength + 2 > bAMenuChildWidth[numOfMenus - 1])
+	if(menuTextWidth > bAMenuChildWidth[numOfMenus - 1])
 	{
-		bAMenuChildWidth[numOfMenus - 1] = menuTextLength + 2; // Plus 2 to account for left and right borders
+		bAMenuChildWidth[numOfMenus - 1] = menuTextWidth; // Includes left and right borders
 		bASetMenuChildShiftBack(numOfMenus - 1);
 	}
 
