@@ -688,7 +688,6 @@ rts
 @stuffToDelete:
 
 @stuffToDeleteLoop:
-stp
 
 lda bDMarkedForDeletionAllocationHeight - 1,y
 tax

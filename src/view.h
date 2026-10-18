@@ -79,6 +79,7 @@ extern void bCCalcObjMotion();
 #pragma wrapped-call (pop)
 
 #pragma wrapped-call (push, trampoline, SPRITE_UPDATED_BANK)
+extern void bESwitchMetadata(byte entryNum);
 extern void bEClearSpriteAttributes();
 SpriteAllocationSize bEGetSpriteAllocateSize(SpriteAttributeSize spriteAttributeSize);
 extern void bEClearVeraSprite(byte celWidth, byte celHeight);

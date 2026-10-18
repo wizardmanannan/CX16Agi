@@ -1401,7 +1401,6 @@ extern void bECalculateBytesPerRow(byte celWidth);
 extern boolean bESetLoop(ViewTable* localViewTab, ViewTableMetadata* localMetadata, View* localView, VeraSpriteAddress* loopVeraAddresses, byte entryNum);
 
 extern void bEClearVeraSprite(byte celWidth, byte celHeight);
-
 extern void bESwitchMetadata(byte maxVeraAddresses);
 
 #define SET_VERA_ADDRESS_ZP(loopVeraAddress, VERA_ADDRESS, VERA_ADDRESS_HIGH) \
@@ -1476,8 +1475,8 @@ boolean agiBlit(byte entryNum, boolean disableInterupts)
 		// printf("data %p\n", tempMd.loopsVeraAddressesPointers);
 		// RAM_BANK = SPRITE_METADATA_BANK;
 		
-		
-		
+
+			
 		bESwitchMetadata(entryNum);
 		localViewTab.staleCounter = localLoop.numberOfCels;
 
