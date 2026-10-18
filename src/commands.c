@@ -1969,6 +1969,7 @@ void b5Set_game_id() // 1, 0x00
 	LOGICFile logicFile;
 	char* messagePointer;
 	byte messageNo;
+	size_t gameIdLength;
 
 
 
@@ -1976,9 +1977,12 @@ void b5Set_game_id() // 1, 0x00
 
 	b5GetLogicFile(&logicFile, currentLog);
 
-	messagePointer = getMessagePointer(currentLog, messageNo - 1);  /* Ignore the game ID. Not important */
+	messagePointer = getMessagePointer(currentLog, messageNo - 1);
 
-	strcpyBanked(gameId, messagePointer, logicFile.messageBank);
+	gameIdLength = strLenBanked(messagePointer, logicFile.messageBank);
+	if (gameIdLength > GAMEID_MAX_LENGTH) gameIdLength = GAMEID_MAX_LENGTH;
+	memCpyBanked((byte*)gameId, (byte*)messagePointer, logicFile.messageBank, gameIdLength);
+	gameId[gameIdLength] = '\0';
 
 	b4InitMetadata();
 

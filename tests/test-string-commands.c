@@ -14,6 +14,7 @@ char string[12][40];
 char b7WordText[10][80];
 int numInputWords;
 int inputWords[10];
+char gameId[GAMEID_MAX_LENGTH + 1];
 static byte operands[32];
 static unsigned int operandCount;
 static char parsed[40];
@@ -23,10 +24,23 @@ extern void b4Set_string(void);
 extern void b4Word_to_string(void);
 extern void b4Get_num(void);
 extern void b4Set_cursor_char(void);
+extern void b5Set_game_id(void);
 extern boolean b1Said(void);
 char cursorChar = '_';
 static char allocatedWindow[80];
 static unsigned int allocations;
+static unsigned int metadataInitializations, dependencyLoads;
+
+void b4InitMetadata(void)
+{
+	metadataInitializations++;
+}
+
+void b4LoadUnloadDependencies(byte scriptNumber, boolean shouldLoad, boolean forceLoadSubDependencies)
+{
+	assert(scriptNumber == 0 && shouldLoad && forceLoadSubDependencies);
+	dependencyLoads++;
+}
 
 byte* b10BankedAlloc(int length, byte* bank)
 {
@@ -108,11 +122,25 @@ void* memCpyBanked(byte* dst, byte* src, byte bank, size_t length)
 	if (dst == (byte*)&cursorChar) {
 		assert(src == messages[0] && bank == 21 && length == 1);
 	}
+	else if (dst == (byte*)gameId) {
+		assert(src == messages[0] && bank == 21 && length <= GAMEID_MAX_LENGTH);
+	}
 	else {
 		assert(bank == STRING_BANK);
 	}
 	RAM_BANK = bank;
 	result = memcpy(dst, src, length);
+	RAM_BANK = previousBank;
+	return result;
+}
+
+char* strcpyBanked(char* dest, const char* src, byte bank)
+{
+	byte previousBank = RAM_BANK;
+	char* result;
+	assert(bank == 21);
+	RAM_BANK = bank;
+	result = strcpy(dest, src);
 	RAM_BANK = previousBank;
 	return result;
 }
@@ -182,6 +210,19 @@ static void test_set_cursor_char(void)
 	assert(RAM_BANK == 13);
 }
 
+static void test_set_game_id_bounds(void)
+{
+	messages[0] = (byte*)"ABCDEFGH";
+	operands[0] = 1;
+	operandCount = 0;
+	RAM_BANK = 13;
+	b5Set_game_id();
+	assert(operandCount == 1);
+	assert(strcmp(gameId, "ABCDEF") == 0);
+	assert(RAM_BANK == 13);
+	assert(metadataInitializations == 1 && dependencyLoads == 1);
+}
+
 static void set_said_argument(unsigned int index, int value)
 {
 	operands[1 + index * 2] = value & 0xff;
@@ -230,6 +271,7 @@ int main(void)
 	test_word_to_string();
 	test_numeric_input();
 	test_set_cursor_char();
+	test_set_game_id_bounds();
 	test_said_rejects_excess_arguments();
 	test_said_trailing_wildcard();
 	puts("string command tests passed");
