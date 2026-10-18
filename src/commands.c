@@ -245,7 +245,7 @@ boolean b1Said()
 		argValue = (argLo + (argHi << 8));
 		if (argValue == 9999) break; /* Should always be last argument */
 		if (argValue == 1) continue; /* Word comparison does not matter */
-		if (b7GetInputWord(wordNum) != argValue) wordsMatch = FALSE;
+		if (wordNum >= numInputWords || b7GetInputWord(wordNum) != argValue) wordsMatch = FALSE;
 	}
 
 	if ((numInputWords != numOfArgs) && (argValue != 9999)) return FALSE;

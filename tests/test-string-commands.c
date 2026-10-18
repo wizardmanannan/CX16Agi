@@ -13,7 +13,8 @@ boolean* flag = flags;
 char string[12][40];
 char b7WordText[10][80];
 int numInputWords;
-static byte operands[8];
+int inputWords[10];
+static byte operands[32];
 static unsigned int operandCount;
 static char parsed[40];
 static byte* messages[2];
@@ -21,6 +22,7 @@ extern void b4Parse(void);
 extern void b4Set_string(void);
 extern void b4Word_to_string(void);
 extern void b4Get_num(void);
+extern boolean b1Said(void);
 static char allocatedWindow[80];
 static unsigned int allocations;
 
@@ -47,7 +49,23 @@ void b7GetString(char* prompt, byte promptBank, char* result, byte resultBank, i
 	if (result != allocatedWindow) strcpy(result, "123");
 }
 
-byte loadAndIncWinCode(void) { return operands[operandCount++]; }
+byte loadAndIncWinCode(void)
+{
+	assert(operandCount < sizeof(operands));
+	return operands[operandCount++];
+}
+
+byte b7GetInputWord(byte number)
+{
+	assert(number < sizeof(inputWords) / sizeof(inputWords[0]));
+	return inputWords[number];
+}
+
+void incCodeBy(int jumpAmount)
+{
+	operandCount += jumpAmount;
+	assert(operandCount <= sizeof(operands));
+}
 
 void b5GetLogicFile(LOGICFile* result, byte number)
 {
@@ -128,6 +146,42 @@ static void test_numeric_input(void)
 	assert(allocations == 0);
 }
 
+static void set_said_argument(unsigned int index, int value)
+{
+	operands[1 + index * 2] = value & 0xff;
+	operands[2 + index * 2] = value >> 8;
+}
+
+static void test_said_rejects_excess_arguments(void)
+{
+	int i;
+	operands[0] = 11;
+	for (i = 0; i < 10; i++) inputWords[i] = i + 2;
+	for (i = 0; i < 11; i++) set_said_argument(i, i + 2);
+	numInputWords = 10;
+	flag[2] = TRUE;
+	flag[4] = FALSE;
+	operandCount = 0;
+	assert(!b1Said());
+	assert(operandCount == 23);
+	assert(numInputWords == 10 && flag[2] == TRUE && flag[4] == FALSE);
+}
+
+static void test_said_trailing_wildcard(void)
+{
+	operands[0] = 2;
+	set_said_argument(0, 42);
+	set_said_argument(1, 9999);
+	inputWords[0] = 42;
+	numInputWords = 10;
+	flag[2] = TRUE;
+	flag[4] = FALSE;
+	operandCount = 0;
+	assert(b1Said());
+	assert(operandCount == 5);
+	assert(numInputWords == 0 && flag[2] == FALSE && flag[4] == TRUE);
+}
+
 int main(void)
 {
 	currentLog = 106;
@@ -139,6 +193,8 @@ int main(void)
 	test_set_string();
 	test_word_to_string();
 	test_numeric_input();
+	test_said_rejects_excess_arguments();
+	test_said_trailing_wildcard();
 	puts("string command tests passed");
 	return 0;
 }
