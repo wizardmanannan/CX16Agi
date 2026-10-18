@@ -71,6 +71,8 @@ ZP_TMP_36: .word $0
 ZP_TMP_37: .word $0
 ZP_TMP_38: .word $0
 ZP_TMP_39: .word $0
+ZP_TMP_40: .word $0
+ZP_TMP_41: .word $0
 .segment "CODE"
 
 
@@ -101,6 +103,7 @@ LOADED_VIEW_BANK = $11
 MENU_BANK = $A
 STATUSBAR_BANK = $10
 OBJECT_BANK = $D
+GARBAGE_BANK = $D
 
 FIRST_FLOOD_BANK = $27
 NO_FLOOD_BANKS = $0A

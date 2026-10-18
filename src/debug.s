@@ -14,6 +14,7 @@ rts
 
 .segment "BANKRAM05"
 _b5IsDebuggingEnabled:
+lda _bDSpriteAllocTable
 lda #$0
 ldx #$0
 .ifdef DEBUG

@@ -234,7 +234,6 @@ void b6Interpret()
         {
             bBStopSound();
         }
-
         bDRunSpriteGarbageCollector();
     } while (hasEnteredNewRoom);
 }

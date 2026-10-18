@@ -621,9 +621,36 @@ bDMarkedForDeletionTableHigh: .res NO_DELETION_SLOTS
 bDMarkedForDeletionAllocationWidth: .res NO_DELETION_SLOTS
 bDMarkedForDeletionAllocationHeight: .res NO_DELETION_SLOTS
 
+
+;
+.macro MARK_FOR_DELETION ALLOCATION_WIDTH, ALLOCATION_HEIGHT ;To be used in assembler as it is faster than calling the method below
+.local @end
+sty sreg
+
+ldy bDMarkForDeletionIndex
+bcs @end
+
+sta bDMarkedForDeletionTableLow,y
+txa
+sta bDMarkedForDeletionTableMiddle,y
+lda sreg
+sta bDMarkedForDeletionTableHigh,y
+
+lda ALLOCATION_WIDTH
+sta bDMarkedForDeletionAllocationWidth,y
+
+lda ALLOCATION_HEIGHT
+sta bDMarkedForDeletionAllocationHeight,y
+
+iny
+sty bDMarkForDeletionIndex
+
+@end:
+.endmacro
+
 ;void bDMarkForDeletion(SpriteAllocationSize width, SpriteAllocationSize height, VeraSpriteAddress addr)
 _bDMarkForDeletion:
-ldy bEAMarkForDeletionIndex
+ldy bDMarkForDeletionIndex
 cpy #NO_DELETION_SLOTS
 bcs @fullRoutine
 
@@ -633,26 +660,26 @@ sta bDMarkedForDeletionTableMiddle,y
 lda sreg
 sta bDMarkedForDeletionTableHigh,y
 
-sty bEAMarkForDeletionIndex
+sty bDMarkForDeletionIndex
 jsr popax
-ldy bEAMarkForDeletionIndex
+ldy bDMarkForDeletionIndex
 sta bDMarkedForDeletionAllocationHeight,y
 txa
 sta bDMarkedForDeletionAllocationWidth,y
 
 iny
-sty bEAMarkForDeletionIndex
+sty bDMarkForDeletionIndex
 
 rts
 @fullRoutine:
 ;jsr bDDeleteAllocationAsmCall ; Edge case for when the list is full, not ideal, as it may cause graphical glitches, but hopefully this shouldn't be called
 rts
 
-bEAMarkForDeletionIndex: .byte $0
+bDMarkForDeletionIndex: .byte $0
 
 ;void bDRunSpriteGarbageCollector()
 _bDRunSpriteGarbageCollector:
-ldy bEAMarkForDeletionIndex
+ldy bDMarkForDeletionIndex
 bne @stuffToDelete
 
 @nothingToDo:
@@ -661,6 +688,7 @@ rts
 @stuffToDelete:
 
 @stuffToDeleteLoop:
+stp
 
 lda bDMarkedForDeletionAllocationHeight - 1,y
 tax
@@ -674,15 +702,14 @@ lda bDMarkedForDeletionTableMiddle - 1,y
 tax
 lda bDMarkedForDeletionTableLow - 1,y
 
-sty bEAMarkForDeletionIndex
+sty bDMarkForDeletionIndex
 
 jsr bDDeleteAllocationAsmCall
-ldy bEAMarkForDeletionIndex
+ldy bDMarkForDeletionIndex
 dey
 bne @stuffToDeleteLoop
 @endLoop:
-sty bEAMarkForDeletionIndex
+sty bDMarkForDeletionIndex
 rts
 
-trap: .byte $0
 .endif                            ; End include guard

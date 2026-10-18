@@ -130,6 +130,10 @@ multLookUp:
 .addr multBy17
 
 .segment "CODE"
+;Input a/y, output a/x
+mul8x8to16:
+MULT_8x8_16
+rts
 
 ;Multiplies two products from 0 to 17
 ;Input a/y, output a

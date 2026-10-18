@@ -523,6 +523,7 @@ void b2Erase() // 1, 0x00
 	getViewTab(&localViewtab, entryNum);
 	localViewtab.flags &= ~DRAWN;
 	setViewTab(&localViewtab, entryNum);
+
 	return;
 }
 

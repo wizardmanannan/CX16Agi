@@ -54,7 +54,20 @@ VIEW_INC = 1
 .import _offsetOfAllocationWidth
 .import _offsetOfAllocationHeight
 .import _offsetOfViewMetadataBank
-
+.import _viewTableMetadata
+.import _offsetoOfLoopsVeraAddressesPointers
+.import _offsetOfViewMetadataBank
+.import _memCpyBanked
+.import _sizeOfViewTableMetadata
+.import _offsetOfViewNum
+.import _sizeOfView
+.import _loadedViews
+.import _offsetOfMaxCels
+.import _offsetOfNumberOfLoops
+.import _offsetOfloopsVeraAddressesPointers
+.import _b10BankedDealloc
+.import _offsetOfVeraAddresses
+.import _viewTabNoToMetaData
 
 .ifdef SPRITE_DEBUG
 .import _bSdRunNumber
@@ -173,6 +186,277 @@ jsr debugSpritesNextRun
 .endmacro
 
 
+
+.segment "CODE"
+.scope
+
+attributeSizetoAllocationSize: .byte 8,16,32,64
+
+switchMetadataLoop:
+
+lda #LOADED_VIEW_BANK
+sta RAM_BANK
+
+lda _sizeOfView
+ldy VIEW_NUM
+jsr mul8x8to16
+
+clc
+adc #<_loadedViews
+sta VIEW_ADDRESS
+txa
+adc #>_loadedViews
+sta VIEW_ADDRESS + 1
+
+ldy _offsetOfMaxVeraSlots
+lda (VIEW_ADDRESS),y
+sta sreg
+ldy _offsetOfMaxCels
+lda (VIEW_ADDRESS),y
+ldy sreg
+jsr mul8x8to16
+sta MAX_VERA_ADDRESSES
+
+ldy _offsetOfLoops
+lda (VIEW_ADDRESS),y
+sta LOOPS_POINTER
+iny
+lda (VIEW_ADDRESS),y
+sta LOOPS_POINTER + 1
+
+ldy _offsetOfNumberOfLoops    ; Y = offset of NumberOfLoops
+lda  (VIEW_ADDRESS),y 
+tax
+asl
+dec
+sta LOOP_BYTE_COUNTER
+dex
+stx NUM_LOOPS
+
+
+lda NUM_LOOPS
+ldy _sizeOfLoop
+jsr mul8x8to16
+sta FINAL_LOOP_OFFSET
+stx FINAL_LOOP_OFFSET + 1
+
+ldy _offsetOfLoopsBank
+lda (VIEW_ADDRESS),y
+sta LOOPS_BANK
+
+lda LOOPS_BANK
+sta RAM_BANK
+
+clc
+lda LOOPS_POINTER
+adc FINAL_LOOP_OFFSET
+sta LOOPS_POINTER
+lda LOOPS_POINTER + 1
+sta LOOPS_POINTER + 1
+
+lda VIEW_MD_BANK
+sta RAM_BANK
+
+bra startLoops
+
+loops:
+sec
+lda LOOPS_POINTER
+sbc _sizeOfLoop
+sta LOOPS_POINTER
+lda LOOPS_POINTER + 1
+sbc #$0
+sta LOOPS_POINTER + 1
+
+startLoops:
+
+lda LOOPS_BANK
+sta RAM_BANK
+
+ldy _offsetOfAllocationWidth
+lda (LOOPS_POINTER),y
+tax 
+lda attributeSizetoAllocationSize,x
+sta ALLOCATION_WIDTH
+
+ldy _offsetOfAllocationHeight
+lda (LOOPS_POINTER),y
+tax 
+lda attributeSizetoAllocationSize,x
+sta ALLOCATION_HEIGHT
+
+lda VIEW_MD_BANK
+sta RAM_BANK
+
+ldy LOOP_BYTE_COUNTER
+lda (LOOP_VERA_ADDRESS_POINTER),y
+sta CELS_POINTER + 1
+dey 
+lda (LOOP_VERA_ADDRESS_POINTER),y
+sta CELS_POINTER
+
+ora CELS_POINTER + 1
+beq endCels
+
+sty LOOP_BYTE_COUNTER
+
+lda MAX_VERA_ADDRESSES
+ldy #$4 ;Times the number of vera address bytes
+jsr mul8x8to8
+dec
+sta MAX_VERA_ADDRESSES_COUNTER
+
+cels:
+
+lda VIEW_MD_BANK
+sta RAM_BANK
+
+ldy MAX_VERA_ADDRESSES_COUNTER
+dey
+
+lda (CELS_POINTER),y
+sta TO_DELETE_HIGH
+dey
+lda (CELS_POINTER),y
+sta TO_DELETE_MID
+dey 
+lda (CELS_POINTER),y
+dey
+sty MAX_VERA_ADDRESSES_COUNTER
+
+ora TO_DELETE_MID
+beq checkForZero
+
+nonZero:
+ldx #GARBAGE_BANK
+stx RAM_BANK
+
+ldy TO_DELETE_HIGH
+ldx TO_DELETE_LOW
+
+MARK_FOR_DELETION ALLOCATION_WIDTH, ALLOCATION_HEIGHT
+
+moreCelsCheck:
+lda MAX_VERA_ADDRESSES_COUNTER
+
+bpl cels
+
+endCels:
+
+lda LOOPS_BANK
+sta RAM_BANK
+
+dec LOOP_BYTE_COUNTER
+bmi endLoops
+jmp loops
+endLoops: 
+
+lda #SPRITE_METADATA_BANK
+sta RAM_BANK
+jmp afterSwitchMetadataLoop
+
+checkForZero:
+ora TO_DELETE_HIGH
+bne nonZero
+beq moreCelsCheck
+ 
+
+
+.segment "BANKRAM0E"
+.export _bESwitchMetadata
+
+VIEW_TAB_MD = ZP_TMP_28
+TO_DELETE_LOW = ZP_TMP_30
+TO_DELETE_MID = ZP_TMP_30 + 1
+TO_DELETE_HIGH = ZP_TMP_31
+ENTRY_NUM = ZP_TMP_31 + 1
+LOOP_BYTE_COUNTER = ZP_TMP_32
+MAX_VERA_ADDRESSES =  ZP_TMP_32 + 1
+MAX_VERA_ADDRESSES_COUNTER = ZP_TMP_33
+VIEW_MD_BANK = ZP_TMP_33 + 1
+LOOP_VERA_ADDRESS_POINTER = ZP_TMP_34
+CELS_POINTER = ZP_TMP_35
+VIEW_ADDRESS = ZP_TMP_36
+LOOPS_POINTER = ZP_TMP_37
+LOOPS_BANK = ZP_TMP_38
+ALLOCATION_WIDTH = ZP_TMP_38 + 1
+ALLOCATION_HEIGHT = ZP_TMP_39
+NUM_LOOPS = ZP_TMP_39 + 1
+FINAL_LOOP_OFFSET = ZP_TMP_40
+VIEW_NUM = ZP_TMP_41
+
+
+;void bESwitchMetadata(byte entryNum)
+_bESwitchMetadata:
+sta ENTRY_NUM
+tax
+
+ldy ENTRY_NUM
+lda _sizeOfViewTableMetadata
+jsr mul8x8to16
+
+clc
+adc #<_viewTableMetadata
+sta VIEW_TAB_MD
+txa
+adc #>_viewTableMetadata
+sta VIEW_TAB_MD + 1
+
+ldy _offsetOfViewNum
+lda (VIEW_TAB_MD),y
+sta VIEW_NUM
+
+ldy _offsetoOfLoopsVeraAddressesPointers
+lda (VIEW_TAB_MD),y 
+sta LOOP_VERA_ADDRESS_POINTER
+iny
+lda (VIEW_TAB_MD),y 
+sta LOOP_VERA_ADDRESS_POINTER + 1
+
+ldy _offsetOfViewMetadataBank    ; Y = offset of NumberOfLoops
+lda  (VIEW_TAB_MD),y
+sta VIEW_MD_BANK
+
+jmp switchMetadataLoop
+
+afterSwitchMetadataLoop:
+
+
+ldy _offsetOfloopsVeraAddressesPointers
+iny
+lda  (VIEW_TAB_MD),y
+tax
+lda #$0
+sta  (VIEW_TAB_MD),y
+dey
+lda  (VIEW_TAB_MD),y
+jsr pushax
+lda #$0
+sta (VIEW_TAB_MD),y
+lda VIEW_MD_BANK
+TRAMPOLINE #BANKED_ALLOC_BANK, _b10BankedDealloc
+
+ldy _offsetOfVeraAddresses
+lda #$0
+sta  (VIEW_TAB_MD),y
+iny
+sta  (VIEW_TAB_MD),y
+
+ldy _offsetOfViewMetadataBank
+sta  (VIEW_TAB_MD),y
+
+ldy _offsetOfViewNum
+sta  (VIEW_TAB_MD),y
+
+lda #VIEWNO_TO_METADATA_NO_SET
+ldy ENTRY_NUM
+sta _viewTabNoToMetaData,y
+
+rts
+
+.endscope
+
+
 ; =============================================================================
 ; bESetLoop
 ;
@@ -223,7 +507,6 @@ CEL_BANK                = ZP_TMP_38
 LOOP_BANK               = ZP_TMP_39
 
 .segment "BANKRAM0E"
-
 ; Lookup table: index -> sprite size in pixels (8,16,32,64)
 bEAllocateWidthToSpriteSize: .byte 8,16,32,64
 
