@@ -1,30 +1,24 @@
-Run the native C regressions with `make string-format-test`. Four test programs
-exercise the production formatter, display, prompt, parser, string-command and
-menu modules. They cover token expansion, escapes, recursion, cycles, output
-bounds, explicit line breaks, the KQ3 wizard's `%m6`/`%m7` dialogue, idle and
-bounded keyboard input, destination-bank writes, parser word capacity,
-`said()` argument bounds and wildcard matching, `set.string`, `word.to.string`,
-numeric input, menu text/count capacity, and child-menu widths for
-255/256-character labels.
-Hardware assembly and IRQ handoff are stubbed; logic metadata and banked-copy
-helpers use in-memory fixtures, so these tests do not emulate the X16 memory
-map.
-No game files or generated fixtures are needed. All executables live under
-`$CX16AGI_BUILD_DIR/obj/host/string-format` (default `~/.cache/cx16agi/build`).
-Concurrent builds must use separate `CX16AGI_BUILD_DIR` values.
-The host suite requires a C compiler, a linker supporting `--gc-sections`, and
-`flock`. To enable sanitizers, set `HOSTCC='cc -fsanitize=address,undefined'`.
+Run the string regressions with `make string-format-test`. The formatter case
+compiles the production path for the 65C02 and runs it in x16emu with banked
+RAM. Its KQ3 workload checks the 106-byte wizard line, its two `%m` messages,
+115-byte output, source preservation, bank restoration, and a cycle budget. The
+target driver also covers tokens, escapes, recursion, cycles, depth limits,
+chunked output, and destination capacities 0, 1, and truncated output. The
+remaining host tests cover string commands and menu text/count capacity.
+
+The target test creates its executable and emulator input in a unique directory
+beneath `$CX16AGI_BUILD_DIR/obj/host/string-format`, then removes that directory
+on success and failure. The suite requires cc65/ca65/cl65, x16emu, the X16 ROM,
+a host C compiler, a linker supporting `--gc-sections`, and `flock`. Set
+`CC65_HOME`, `X16EMU`, and `X16_ROM` when the tools are elsewhere. Concurrent
+builds must use separate `CX16AGI_BUILD_DIR` values.
 
 `make string-format-target-check` compiles and assembles the five changed
 production modules with cc65/ca65. Set `CC65_HOME` if the tools are outside PATH.
 This checks target compilation, not a full interpreter link or emulator replay.
 
-The KQ3 warning is 106 input bytes with two message references, expanding to
-115 output bytes. Per display, network and disk do no I/O (zero bytes and
-requests). Memory traffic includes scanning the input and two replacement
-strings, then three output chunks (50, 50, 15 bytes) and one terminator; the
-formatter buffers 50 bytes and tracks at most eight source pointer/bank pairs.
-CPU work is linear scanning and copying per displayed character, plus two
-message lookups; it runs once per displayed message, not per frame. Bank helper
-calls are the repeated latency cost; output is batched into 50-byte chunks.
-No network/disk wait or speedup claim is involved.
+The KQ3 warning workload is 106 input bytes, two message references, and 115
+output bytes. The current C formatter baseline is 86,586 emulator CPU cycles;
+the suite's strict 86,585-cycle budget requires the assembly formatter to
+improve it. The test checks output copying in 50-byte chunks plus the
+terminator.
