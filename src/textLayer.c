@@ -431,12 +431,7 @@ void b3DisplayMessageBox(char* message, byte messageBank, byte row, byte col, by
 
 	currentTextBuffer = b3TextBuffer1;
 
-	b3LastBoxLines = 1;
-
-	if (boxWidth)
-	{
-		b3LastBoxLines += 4; //Account for the top and bottom border, plus padding at the top at the bottom
-	}
+	b3LastBoxLines = 0;
 
 	if (messageSize > 1) //Agi sometimes has empty messages. We say greater than 1 because of the terminator
 	{
@@ -459,6 +454,12 @@ void b3DisplayMessageBox(char* message, byte messageBank, byte row, byte col, by
 			messageSize = strLenBanked(b3TextBuffer1, TEXT_CODE_BANK) + 1;
 		}
 		if (messageSize == 1) return;
+
+		b3LastBoxLines = 1;
+		if (boxWidth)
+		{
+			b3LastBoxLines += 4; //Account for the top and bottom border, plus padding at the top at the bottom
+		}
 
 		if (messageSize - 1 > TILE_LAYER_WIDTH / 2)
 		{
@@ -518,7 +519,7 @@ byte b3DisplayManuallyWrappedMessageBox(char* message, byte messageBank, byte ro
 	byte ch;
 
 	b3DisplayMessageBox(message, messageBank, AUTO_CALC_ROW, AUTO_CALC_COLUMN, TEXTBOX_PALETTE_NUMBER, boxWidth, FALSE, FIRST_TEXT_ROW);
-	b3LastBoxLines = boxHeight;
+	if (b3LastBoxLines) b3LastBoxLines = boxHeight;
 
 	//b3PrintMessageInTextbox(loadAndIncWinCode(), DEFAULT_TEXTBOX_X, DEFAULT_TEXTBOX_Y, DEFAULT_BOX_WIDTH);
 
@@ -583,11 +584,14 @@ byte b3SetTextColor(byte foreground, byte background)
 
 void b3ClearLastPlacedText()
 {
+	if (!b3LastBoxLines) return;
+
 #ifdef VERBOSE_DISPLAY_TEXT
 	printf("Trying to clear at start line %d number of lines %d end line %d \n", lastBoxStartLine, b3LastBoxLines, lastBoxStartLine + lastBoxLines - 1);
 #endif
 
 	b3FillChar(b3LastBoxStartLine, b3LastBoxStartLine + b3LastBoxLines - 1, TEXTBOX_PALETTE_NUMBER, TRANSPARENT_CHAR);
+	b3LastBoxLines = 0;
 }
 
 #pragma code-name (pop)

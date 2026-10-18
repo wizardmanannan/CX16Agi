@@ -27,7 +27,9 @@ objectType bDObjects[MAX_OBJECTS];
 int bDNumObjects;
 static byte* messages[26];
 static unsigned int displays;
+static unsigned int clearDisplays;
 static boolean boxed;
+static boolean observingClear;
 static const byte* inputKeys;
 static size_t inputKeyCount, inputKeyPosition;
 static char bankWindow[80], bank24[80];
@@ -148,6 +150,10 @@ void b6SetAndWaitForIrqState(IRQ_COMMAND state)
 {
 	assert(state == DISPLAY_TEXT);
 	displays++;
+	if (observingClear) {
+		clearDisplays++;
+		return;
+	}
 	if (boxed) {
 		assert(currentTextBuffer == b3TextBuffer2);
 		assert(strstr(currentTextBuffer, "Gwydion") != NULL);
@@ -188,6 +194,52 @@ static void test_border_capacity(void)
 	assert(memchr(b3TextBuffer2, '\0', TEXTBUFFER_SIZE) != NULL);
 }
 
+static void test_border_width_capacity(void)
+{
+	size_t i;
+	size_t expectedRows = TEXTBUFFER_SIZE / TILE_LAYER_WIDTH;
+	size_t expectedSize = expectedRows * TILE_LAYER_WIDTH;
+	memset(b3TextBuffer1, 'x', TEXTBUFFER_SIZE - 1);
+	for (i = 1; i < TEXTBUFFER_SIZE - 1; i += 2) b3TextBuffer1[i] = NEW_LINE;
+	b3TextBuffer1[TEXTBUFFER_SIZE - 1] = '\0';
+	memset(b3TextBuffer2, 0x5a, sizeof(b3TextBuffer2));
+	b3DrawBorder(TILE_LAYER_WIDTH - 2, TEXTBUFFER_SIZE);
+	assert(b3LastBoxLines == expectedRows);
+	assert(b3LastBoxLines <= TEXT_ROWS);
+	assert(strlen(b3TextBuffer2) == expectedSize - 1);
+	assert(b3TextBuffer2[expectedSize - 1] == '\0');
+	assert((byte)b3TextBuffer2[expectedSize] == 0x5a);
+}
+
+static void test_empty_message_does_not_clear(char* priorText)
+{
+	boolean wasBoxed = boxed;
+	size_t clearCount = clearDisplays;
+	boxed = FALSE;
+	b3DisplayMessageBox(priorText, 21, 7, 1, TEXTBOX_PALETTE_NUMBER, 0, FALSE, FIRST_TEXT_ROW);
+	boxed = wasBoxed;
+	assert(b3LastBoxStartLine == 7);
+
+	variables[0] = 0;
+	b3DisplayMessageBox("%s0", 21, 18, 1, TEXTBOX_PALETTE_NUMBER,
+	                    DEFAULT_BOX_WIDTH, TRUE, FIRST_TEXT_ROW);
+	observingClear = TRUE;
+	b3ClearLastPlacedText();
+	observingClear = FALSE;
+	assert(clearDisplays == clearCount);
+	assert(b3LastBoxLines == 0);
+	assert(b3LastBoxStartLine == 7);
+
+	b3DisplayMessageBox("", 21, 18, 1, TEXTBOX_PALETTE_NUMBER,
+	                    DEFAULT_BOX_WIDTH, TRUE, FIRST_TEXT_ROW);
+	observingClear = TRUE;
+	b3ClearLastPlacedText();
+	observingClear = FALSE;
+	assert(clearDisplays == clearCount);
+	assert(b3LastBoxLines == 0);
+	assert(b3LastBoxStartLine == 7);
+}
+
 int main(void)
 {
 	/* KQ3 logic 106, message 26; the IRQ stub inspects the actual display buffer. */
@@ -223,6 +275,8 @@ int main(void)
 	assert(strncmp(b7OutputString, expected, sizeof(b7OutputString) - 1) == 0);
 	test_explicit_line_breaks();
 	test_border_capacity();
+	test_border_width_capacity();
+	test_empty_message_does_not_clear(warning);
 	test_idle_input();
 	test_input_capacity();
 	test_banked_input();
