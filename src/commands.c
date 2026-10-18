@@ -1608,7 +1608,6 @@ void b4Graphics() // 0, 0x00
 
 void b4Set_cursor_char() // 1, 0x00 
 {
-	char* b7Temp = (char*)&GOLDEN_RAM[LOCAL_WORK_AREA_START];
 	byte msgNo = loadAndIncWinCode() - 1;
 	char* messagePointer = getMessagePointer(currentLog, msgNo);
 	LOGICFile logicFile;
@@ -1619,10 +1618,9 @@ void b4Set_cursor_char() // 1, 0x00
 	printf("Your msgNo is %d\n", msgNo);
 #endif // VERBOSE_STRING_CHECK
 
-
-	//b3ProcessString(messagePointer, logicFile.messageBank, temp);
-
-	memCpyBanked((byte*)&cursorChar, (byte*)b7Temp, STRING_BANK, 1);
+	// cursorChar is in fixed BSS, so only the message source needs bank mapping.
+	if (strLenBanked(messagePointer, logicFile.messageBank))
+		memCpyBanked((byte*)&cursorChar, (byte*)messagePointer, logicFile.messageBank, 1);
 
 #ifdef VERBOSE_STRING_CHECK
 	printf("Your cursor char is %c\n", cursorChar);

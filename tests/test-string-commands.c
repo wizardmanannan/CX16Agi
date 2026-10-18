@@ -22,7 +22,9 @@ extern void b4Parse(void);
 extern void b4Set_string(void);
 extern void b4Word_to_string(void);
 extern void b4Get_num(void);
+extern void b4Set_cursor_char(void);
 extern boolean b1Said(void);
+char cursorChar = '_';
 static char allocatedWindow[80];
 static unsigned int allocations;
 
@@ -43,7 +45,8 @@ boolean b10BankedDealloc(byte* memory, byte bank)
 
 void b7GetString(char* prompt, byte promptBank, char* result, byte resultBank, int x, int y, int limit)
 {
-	(void)prompt; (void)promptBank; (void)resultBank; (void)x; (void)y;
+	(void)prompt; (void)promptBank; (void)x; (void)y;
+	assert(resultBank == 13);
 	assert(limit == 3);
 	/* A banked result is not visible through the caller's current window. */
 	if (result != allocatedWindow) strcpy(result, "123");
@@ -100,8 +103,18 @@ void memCpyBankedBetween(byte* dst, byte dstBank, byte* src, byte srcBank, size_
 
 void* memCpyBanked(byte* dst, byte* src, byte bank, size_t length)
 {
-	assert(bank == STRING_BANK);
-	return memcpy(dst, src, length);
+	byte previousBank = RAM_BANK;
+	void* result;
+	if (dst == (byte*)&cursorChar) {
+		assert(src == messages[0] && bank == 21 && length == 1);
+	}
+	else {
+		assert(bank == STRING_BANK);
+	}
+	RAM_BANK = bank;
+	result = memcpy(dst, src, length);
+	RAM_BANK = previousBank;
+	return result;
 }
 
 static void test_set_string(void)
@@ -141,9 +154,32 @@ static void test_numeric_input(void)
 	operands[0] = 1;
 	operands[1] = 5;
 	operandCount = 0;
+	RAM_BANK = 13;
 	b4Get_num();
 	assert(variables[5] == 123);
+	assert(RAM_BANK == 13);
 	assert(allocations == 0);
+}
+
+static void test_set_cursor_char(void)
+{
+	messages[0] = (byte*)">";
+	operands[0] = 1;
+	operandCount = 0;
+	cursorChar = '_';
+	RAM_BANK = 13;
+	b4Set_cursor_char();
+	assert(operandCount == 1);
+	assert(cursorChar == '>');
+	assert(RAM_BANK == 13);
+
+	messages[0] = (byte*)"";
+	operands[0] = 1;
+	operandCount = 0;
+	cursorChar = '?';
+	b4Set_cursor_char();
+	assert(cursorChar == '?');
+	assert(RAM_BANK == 13);
 }
 
 static void set_said_argument(unsigned int index, int value)
@@ -193,6 +229,7 @@ int main(void)
 	test_set_string();
 	test_word_to_string();
 	test_numeric_input();
+	test_set_cursor_char();
 	test_said_rejects_excess_arguments();
 	test_said_trailing_wildcard();
 	puts("string command tests passed");
