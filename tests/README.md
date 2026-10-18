@@ -1,18 +1,19 @@
-Run the native C interpolation regression with `make string-format-test`.
-It covers token types, escapes, recursion, cycles, output bounds and explicit
-line breaks. It compiles the production display and prompt paths with hardware
-assembly and the IRQ
-handoff stubbed. The IRQ stub checks the text submitted for display, including
-the KQ3 wizard's `%m6`/`%m7` dialogue. Long prompts must fit the input display line.
-Logic metadata and banked copy helpers use in-memory fixtures; these tests do
-not emulate the X16 memory map.
+Run the native C regressions with `make string-format-test`. Four test programs
+exercise the production formatter, display, prompt, parser, string-command and
+menu modules. They cover token expansion, escapes, recursion, cycles, output
+bounds, explicit line breaks, the KQ3 wizard's `%m6`/`%m7` dialogue, idle and
+bounded keyboard input, destination-bank writes, parser word capacity,
+`set.string`, `word.to.string`, numeric input, and menu text/count capacity.
+Hardware assembly and IRQ handoff are stubbed; logic metadata and banked-copy
+helpers use in-memory fixtures, so these tests do not emulate the X16 memory
+map.
 No game files or generated fixtures are needed. All executables live under
 `$CX16AGI_BUILD_DIR/obj/host/string-format` (default `~/.cache/cx16agi/build`).
 Concurrent builds must use separate `CX16AGI_BUILD_DIR` values.
 The host suite requires a C compiler, a linker supporting `--gc-sections`, and
 `flock`. To enable sanitizers, set `HOSTCC='cc -fsanitize=address,undefined'`.
 
-`make string-format-target-check` compiles and assembles the three changed
+`make string-format-target-check` compiles and assembles the five changed
 production modules with cc65/ca65. Set `CC65_HOME` if the tools are outside PATH.
 This checks target compilation, not a full interpreter link or emulator replay.
 
