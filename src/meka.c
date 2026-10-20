@@ -267,6 +267,7 @@ void b6Closedown()
 extern void b6InitGraphics();
 extern void b6InitIrq();
 extern void b6InitInterpreter();
+extern void b6ClearInterpreterVariables(void);
 extern void b6TellMeTheAddressPlease();
 
 #pragma wrapped-call (push, trampoline, MENU_BANK)
@@ -275,24 +276,20 @@ extern void bAInitMenus();
 
 void b6Initialise()
 {
-    int i;
-    
     b6InitTimer(&b6Timing_proc);
     b6InitFiles();             /* Load resource directories */
     b6InitRandom();
     bAInitMenus();
 
     //// <<--  Determine exact version in here
-    for (i = 0; i < 255; i++) {  /* Initialize variables and flags */
-        var[i] = 0;
-        flag[i] = FALSE;
-    }
+    b6ClearInterpreterVariables();
     flag[5] = TRUE;
-    var[24] = 0x29;
-    var[22] = 3;
+    flag[11] = TRUE;
+    var[24] = 38;      /* Maximum input characters */
+    var[22] = 1;      /* PC speaker sound generator */
     var[26] = 3;
-    var[8] = 255;     /* Number of free 256 byte pages of memory */
-    var[10] = 2;      /* Normal speed */
+    var[8] = 180;     /* Number of free 256 byte pages of memory */
+    /* AGI starts with speed zero; the game's Logic0 selects its speed. */
 
     ///* SQ2 patch. I don't know where these are set in the game. */
     ///* var[86] = 1; var[87] = 2; var[88] = 3; */

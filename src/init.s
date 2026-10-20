@@ -13,6 +13,16 @@ INIT_INC =1
 .import _bInitMemoryMangerInit
 
 .segment "BANKRAM06"
+.global _b6ClearInterpreterVariables
+_b6ClearInterpreterVariables:
+    ldx #0
+@clear:
+    stz GOLDEN_RAM + VARS_AREA_START_GOLDEN_OFFSET,x
+    stz GOLDEN_RAM + FLAGS_AREA_START_GOLDEN_OFFSET,x
+    inx
+    bne @clear
+    rts
+
 _b6InitInterpreter:
     stz ZP_TMP
     stz ZP_TMP + 1

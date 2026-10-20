@@ -1828,15 +1828,18 @@ void b4Restart_game() // 0, 0x00
 
 	/* Not supported yet */
 	for (i = 0; i < 256; i++) {
-		flag[i] = FALSE;
-		var[i] = 0;
+		LOGIC_STORE_FLAG(i, FALSE);
+		LOGIC_STORE_VAR(i, 0);
 	}
-	var[24] = 0x29;
-	var[26] = 3;
-	var[8] = 255;     /* Number of free 256 byte pages of memory */
+	LOGIC_STORE_FLAG(11, TRUE);
+	LOGIC_STORE_VAR(24, 38);      /* Maximum input characters */
+	LOGIC_STORE_VAR(26, 3);
+	LOGIC_STORE_VAR(22, 1);      /* PC speaker sound generator */
+	LOGIC_STORE_VAR(8, 180);     /* Number of free 256 byte pages of memory */
 
 	newRoomNum = 0;
 	hasEnteredNewRoom = TRUE;
+	exitAllLogics = TRUE;
 	return;
 }
 
