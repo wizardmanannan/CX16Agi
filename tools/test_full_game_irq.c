@@ -388,6 +388,7 @@ static const char hook[] =
 "    if(kind==1 && PICTURE_TEST_ENABLED && (picture_test_stage==1 || picture_test_stage==3)) { picture_draw_active=true; picture_floodfill_count=picture_split_count=0; }\n"
 "}\n"
 "static void foreground_finish(void) {\n"
+"    if(!FOREGROUND_TEST_ENABLED) return;\n"
 "    uint32_t frames=shake_frames_seen-foreground_start_frames, serviced=foreground_vsync_counter()-foreground_start_counter;\n"
 "    uint32_t missed=frames>serviced?frames-serviced:0; uint32_t cycles=clockticks6502-foreground_start_cycles;\n"
 "    if(missed>0 && !(PICTURE_TEST_ENABLED && ((foreground_kind==1 && picture_irq_suppressed) || (foreground_kind==2 && picture_test_stage>=4)))) { fprintf(stderr,\"Production foreground caller %s lost %u VSYNC(s): cycles=%u asserted=%u serviced=%u\\n\",foreground_kind==1?\"b11DrawPic\":\"b9UpdateObjects\",missed,cycles,frames,serviced); exit(3); }\n"
