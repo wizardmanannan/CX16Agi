@@ -141,11 +141,12 @@ make -C tools production-test
 make -C tools integration-test ROM=/path/to/rom.bin GAME=/path/to/KQ1
 make -C tools picture-test ROM=/path/to/rom.bin GAME=/path/to/KQ1
 make -C tools loader-test ROM=/path/to/rom.bin GAME=/path/to/KQ1
+make -C tools startup-text-test ROM=/path/to/rom.bin GAME=/path/to/KQ1
 # For dependencies installed elsewhere:
 # CC65_HOME=/path/to/cc65 X16_EMULATOR_SOURCE=/path/to/x16-emulator make -C tools test
 ```
 
-`test` compiles and runs the focused C regressions, including shared dependency discovery and override checks. `production-test` builds a fresh application image and runs the compiled foreground sound routines on the emulator CPU core, without ROM or game data. Each run prints its fresh output directory under the project's `obj/` build tree; `TEST_OUTPUT_ROOT` can select another build output tree. Tests clean their owned output on exit. Set `KEEP_TEST_OUTPUT=1` only when you explicitly need diagnostic captures. Cleanup failure is an error. `HOST_CC` and `HOST_CFLAGS` configure the host compiler. Dependencies are checked explicitly.
+`test` compiles and runs the focused C regressions, including shared dependency discovery and override checks. `production-test` builds a fresh application image and runs compiled C/assembly callers for sound, banked resources, text, and other production helpers on the emulator CPU core, without ROM or game data. Its text cases inspect colors at IRQ returns as well as completed text. Each run prints its fresh output directory under the project's `obj/` build tree; `TEST_OUTPUT_ROOT` can select another build output tree. Tests clean their owned output on exit. Set `KEEP_TEST_OUTPUT=1` only when you explicitly need diagnostic captures. Cleanup failure is an error. `HOST_CC` and `HOST_CFLAGS` configure the host compiler. Dependencies are checked explicitly.
 
 For native rendering and input integration:
 
@@ -161,6 +162,8 @@ make -C tools modes ROM=/path/to/rom.bin GAME=/path/to/KQ1 \
 `integration-test` builds the same isolated image and runs foreground, combined IRQ/text, and picture scenarios. `picture-test` runs the picture scenarios alone. The combined IRQ workload records two production dispatch rows, total IRQ cycles, the continuous I-masked interval from IRQ acceptance through the observed RTI, and two-frame text completion. Its current finite KQ1 regression reference is 29,987 cycles for the first row, 34,076 total IRQ cycles, and 29,987 maximum I-masked cycles, each with a 4,096-cycle tolerance; this is not maximum-menu or all-game coverage.
 
 `loader-test` runs 14 generated startup scenarios through the compiled X16 loader and WORDS search routines. The native C suite also runs the real WORDS parser with platform file/bank calls replaced by test doubles. Cases cover malformed headers and records, descending full-word order, transaction rollback, empty/single/shared-prefix dictionaries (including equal adjacent words), a 513-word dictionary, missing files, and retries. A successful load retains exactly three banked allocations; a rejected load preserves published WORDS pointers, the search cache, and the allocator map. Each suite owns and removes its generated fixtures on success and failure.
+
+`startup-text-test` boots KQ1 without pressing a key to skip its title. It checks the graphics initializer's C stack balance and all 23 credit phases through 221 real `display.v` calls, including blank lines, the 13-line scrolling limit, copyright, and the continuation prompt. Retain output with `KEEP_TEST_OUTPUT=1` to inspect the recording and per-call cycle/frame measurements.
 
 Audit artifact disposition:
 
