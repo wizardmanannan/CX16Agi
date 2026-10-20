@@ -1662,3 +1662,323 @@ done:
 
 /* All generated Logic0 bytes stay in this suite's staged game. Restore them
    before hash-verified gameplay, including when the emulator or assertion fails. */
+static int run_logic_fixture(const char *name, const char *game_directory,
+                              const uint8_t *code, size_t code_size,
+                              uint32_t ticks, uint32_t timeout_ms,
+                              const LogicAppReplayInput *events, size_t event_count,
+                              uint8_t *snapshot, char *detail, size_t detail_size)
+{
+    static const char text[] = "Replay checkpoint";
+    static const char key[] = "Avis Durgan";
+    uint8_t replacement[256] = {0x12, 0x34}, saved[256];
+    uint8_t *directory = NULL;
+    size_t directory_size = 0, length = 7 + code_size + 5 + sizeof text, i, section;
+    char path[PATH_CAPACITY];
+    FILE *volume = NULL;
+    long offset = 0;
+    int dirty = 0, result = -1;
+    memset(snapshot, 0, LOGIC_APP_REPLAY_OUTPUT_SIZE);
+    if (!code_size || length > sizeof replacement ||
+        snprintf(path, sizeof path, "%s/LOGDIR", game_directory) >= (int)sizeof path ||
+        read_file(path, &directory, &directory_size) || directory_size < 3)
+        goto done;
+    offset = ((long)(directory[0] & 15) << 16) |
+             ((long)directory[1] << 8) | directory[2];
+    replacement[2] = directory[0] >> 4;
+    replacement[3] = length - 5;
+    replacement[5] = code_size;
+    memcpy(replacement + 7, code, code_size);
+    section = 7 + code_size;
+    replacement[section] = 1;
+    replacement[section + 1] = 4 + sizeof text;
+    replacement[section + 3] = 4;
+    for (i = 0; i < sizeof text; ++i)
+        replacement[section + 5 + i] = text[i] ^ key[i % (sizeof key - 1)];
+    if (snprintf(path, sizeof path, "%s/VOL.%u", game_directory, replacement[2]) >= (int)sizeof path ||
+        !(volume = fopen(path, "r+b")) || fseek(volume, offset, SEEK_SET) ||
+        fread(saved, 1, length, volume) != length || fseek(volume, offset, SEEK_SET))
+        goto done;
+    dirty = 1;
+    if (fwrite(replacement, 1, length, volume) != length || fflush(volume)) goto done;
+    result = run_app_checkpoint(name, game_directory, UINT16_C(0xA61B),
+        events, event_count, ticks, timeout_ms, 0, snapshot, detail, detail_size);
+done:
+    if (dirty && (fseek(volume, offset, SEEK_SET) ||
+        fwrite(saved, 1, length, volume) != length || fflush(volume)))
+        result = -1;
+    if (volume && fclose(volume)) result = -1;
+    free(directory);
+    return result;
+}
+
+/* The parser/said workload uses production dispatch. Gate the release image
+   so optional write tracing cannot mask changes to emitted release code. */
+static int verify_parser_footprint(const char *program)
+{
+    char path[PATH_CAPACITY], line[256], segment[64];
+    unsigned size, total = 0, found = 0;
+    int module = 0;
+    if (snprintf(path, sizeof path, "%s.map", program) >= (int)sizeof path)
+        return -1;
+    FILE *map = fopen(path, "r");
+    if (!map) return -1;
+    while (fgets(line, sizeof line, map)) {
+        if (line[0] != ' ' && line[0] != '\t') {
+            module = !strcmp(line, "commands.o:\n") ? 1 :
+                     !strcmp(line, "parser.o:\n") ? 2 : 0;
+        } else if (module && sscanf(line, " %63s Offs=%*x Size=%x", segment, &size) == 2 &&
+                   ((module == 1 && !strcmp(segment, "BANKRAM0F")) ||
+                    (module == 2 && !strcmp(segment, "BANKRAM07")))) {
+            total += size;
+            found |= (unsigned)module;
+        }
+    }
+    int failed = ferror(map);
+    if (fclose(map)) failed = 1;
+    if (failed || found != 3 || total > 6879) {
+        fprintf(stderr, "release parser footprint regression: %u bytes, budget6879; modules=%u\n",
+                total, found);
+        return -1;
+    }
+    printf("release parser/conditional C bank contribution: %u bytes (budget6879)\n", total);
+    return 0;
+}
+
+static int verify_production_commands(const char *game_directory,
+                                        uint32_t timeout_ms)
+{
+    static const uint8_t code[] = {
+        3, 250, 42, 4, 249, 250, /* differently sized writes, exact opcode PCs */
+        12, 200, 73, 0, 200, /* set(f200); end.of.loop(0, f200) */
+        12, 201, 75, 1, 201, /* set(f201); reverse.loop(1, f201) */
+        12, 255, /* last flag crosses the flag table's low-byte boundary */
+        255, 7, 255, 255, 3, 0, 3, 248, 1, /* if (isset(255)) v248=1 */
+        3, 247, 255,
+        255, 8, 247, 255, 3, 0, 3, 246, 1, /* if (isset.v(v247)) v246=1 */
+        3, 244, 254,
+        255, 8, 244, 255, 3, 0, 3, 245, 1, /* unset f254 must stay false */
+        37, 0, 95, 100, 39, 0, 249, 244, /* position; get.posn outputs */
+        0
+    };
+    uint8_t snapshot[LOGIC_APP_REPLAY_OUTPUT_SIZE];
+    char detail[256] = {0};
+    int result = -1, writes_seen = 0, c_flags_seen = 0, c_vars_seen = 0;
+    /* This case also verifies that tracing retains ordinary writes rather
+       than a hand-picked variable whitelist. */
+    if (run_logic_fixture("command-state-and-trace", game_directory,
+            code, sizeof code, 1, timeout_ms, NULL, 0,
+            snapshot, detail, sizeof detail) == 0 &&
+        snapshot[LOGIC_APP_REPLAY_FLAGS_OFFSET + 200] == 0 &&
+        snapshot[LOGIC_APP_REPLAY_FLAGS_OFFSET + 201] == 0 &&
+        snapshot[LOGIC_APP_REPLAY_FLAGS_OFFSET + 255] == 1 &&
+        snapshot[LOGIC_APP_REPLAY_VARS_OFFSET + 248] == 1 &&
+        snapshot[LOGIC_APP_REPLAY_VARS_OFFSET + 246] == 1 &&
+        snapshot[LOGIC_APP_REPLAY_VARS_OFFSET + 245] == 0 &&
+        snapshot[LOGIC_APP_REPLAY_VARS_OFFSET + 249] == 95 &&
+        snapshot[LOGIC_APP_REPLAY_VARS_OFFSET + 244] == 100)
+        result = 0;
+    else
+        fprintf(stderr, "production loop completion regression: f200=%u f201=%u f255=%u isset=%u isset.v=%u unset.v=%u detail=%s\n",
+                snapshot[LOGIC_APP_REPLAY_FLAGS_OFFSET + 200],
+                snapshot[LOGIC_APP_REPLAY_FLAGS_OFFSET + 201],
+                snapshot[LOGIC_APP_REPLAY_FLAGS_OFFSET + 255],
+                snapshot[LOGIC_APP_REPLAY_VARS_OFFSET + 248],
+                snapshot[LOGIC_APP_REPLAY_VARS_OFFSET + 246],
+                snapshot[LOGIC_APP_REPLAY_VARS_OFFSET + 245], detail);
+    if (!result) {
+        unsigned i;
+        for (i = 0; i < snapshot[41]; ++i) {
+            const uint8_t *event = snapshot + LOGIC_APP_REPLAY_TRACE_OFFSET +
+                i * LOGIC_APP_REPLAY_TRACE_RECORD_SIZE;
+            if (event[8] == LOGIC_TRACE_KIND_WRITE && event[9] == 0 &&
+                get_u32(event + 4) == 1 &&
+                ((event[12] == 3 && event[15] == 250 && get_u16(event + 10) == 0) ||
+                 (event[12] == 4 && event[15] == 249 && get_u16(event + 10) == 3)))
+                ++writes_seen;
+            if (event[8] == LOGIC_TRACE_KIND_WRITE && event[9] == 0 &&
+                get_u32(event + 4) == 1) {
+                if (event[24] == 2 && get_u32(event + 16) == 1 &&
+                    get_u32(event + 20) == 0 &&
+                    ((event[12] == 73 && event[15] == 200 && get_u16(event + 10) == 8) ||
+                     (event[12] == 75 && event[15] == 201 && get_u16(event + 10) == 13)))
+                    ++c_flags_seen;
+                if (event[24] == 1 && event[12] == 39 && get_u16(event + 10) == 55 &&
+                    ((event[15] == 249 && get_u32(event + 16) == 42 && get_u32(event + 20) == 95) ||
+                     (event[15] == 244 && get_u32(event + 16) == 254 && get_u32(event + 20) == 100)))
+                    ++c_vars_seen;
+            }
+        }
+        if (writes_seen != 2) {
+            fprintf(stderr, "production write trace regression: exact opcode records=%d expected2\n", writes_seen);
+            result = -1;
+        }
+        if (c_flags_seen != 2 || c_vars_seen != 2) {
+            fprintf(stderr, "production C write trace regression: flags=%d/2 variables=%d/2\n",
+                    c_flags_seen, c_vars_seen);
+            result = -1;
+        }
+    }
+    if (!result) {
+        static const uint8_t wander[] = {
+            255, 1, 251, 0, 255, 18, 0,
+            30, 0, 33, 0, 41, 0, 0, 37, 0, 100, 100,
+            35, 0, 84, 0, 3, 251, 1, 0
+        };
+        if (run_logic_fixture("wander-zero-counter", game_directory,
+                wander, sizeof wander, 2, timeout_ms, NULL, 0, snapshot,
+                detail, sizeof detail) || get_u32(snapshot + 60) != 1 ||
+            get_u32(snapshot + LOGIC_APP_REPLAY_RNG_STATE_OFFSET) != UINT32_C(0xc3d8de0a) ||
+            get_u16(snapshot + LOGIC_APP_REPLAY_OBJECTS_OFFSET + 3) != 100 ||
+            get_u16(snapshot + LOGIC_APP_REPLAY_OBJECTS_OFFSET + 5) != 100) {
+            fprintf(stderr, "production wander regression: draws=%u state=%08x ego=(%u,%u) detail=%s\n",
+                    (unsigned)get_u32(snapshot + 60),
+                    (unsigned)get_u32(snapshot + LOGIC_APP_REPLAY_RNG_STATE_OFFSET),
+                    get_u16(snapshot + LOGIC_APP_REPLAY_OBJECTS_OFFSET + 3),
+                    get_u16(snapshot + LOGIC_APP_REPLAY_OBJECTS_OFFSET + 5), detail);
+            result = -1;
+        }
+    }
+    {
+        uint8_t bottom_edge[] = {
+            255, 1, 251, 0, 255, 21, 0,
+            30, 0, 33, 0, 41, 0, 0, 37, 0, 95, 167,
+            /* Fixed priority 15 isolates borders from picture control lines. */
+            54, 0, 15, 35, 0, 78, 0, 3, 251, 1, 3, 6, 5, 0
+        };
+        for (unsigned crossing = 0; crossing < 2; ++crossing) {
+            bottom_edge[17] = crossing ? 167 : 166;
+            if (run_logic_fixture(crossing ? "ego-bottom-crossing" : "ego-bottom-inside",
+                    game_directory, bottom_edge, sizeof bottom_edge, 2, timeout_ms,
+                    NULL, 0, snapshot, detail, sizeof detail) ||
+                get_u16(snapshot + LOGIC_APP_REPLAY_OBJECTS_OFFSET + 5) != 167 ||
+                snapshot[LOGIC_APP_REPLAY_VARS_OFFSET + 2] != (crossing ? 3 : 0)) {
+                fprintf(stderr, "production bottom-edge regression: crossing=%u y=%u edge=%u dir=%u v6=%u expected167/%u; %s\n",
+                        crossing, get_u16(snapshot + LOGIC_APP_REPLAY_OBJECTS_OFFSET + 5),
+                        snapshot[LOGIC_APP_REPLAY_VARS_OFFSET + 2],
+                        snapshot[LOGIC_APP_REPLAY_OBJECTS_OFFSET + 10],
+                        snapshot[LOGIC_APP_REPLAY_VARS_OFFSET + 6], crossing ? 3 : 0, detail);
+                result = -1;
+            }
+        }
+    }
+    {
+        static const uint8_t timed_print[] = {3, 21, 2, 101, 1, 0};
+        if (run_logic_fixture("timed-print-clock", game_directory,
+                timed_print, sizeof timed_print, 1, timeout_ms, NULL, 0, snapshot,
+                detail, sizeof detail) ||
+            snapshot[LOGIC_APP_REPLAY_VARS_OFFSET + 21] != 0 ||
+            snapshot[LOGIC_APP_REPLAY_VARS_OFFSET + 11] != 1 ||
+            get_u32(snapshot + LOGIC_APP_REPLAY_SCHEDULE_FRAME_OFFSET) != 61) {
+            fprintf(stderr, "production timed-print regression: timer=%u seconds=%u frame=%u detail=%s\n",
+                    snapshot[LOGIC_APP_REPLAY_VARS_OFFSET + 21],
+                    snapshot[LOGIC_APP_REPLAY_VARS_OFFSET + 11],
+                    (unsigned)get_u32(snapshot + LOGIC_APP_REPLAY_SCHEDULE_FRAME_OFFSET), detail);
+            result = -1;
+        }
+    }
+    {
+        static const uint8_t timed_then_cycle[] = {
+            255, 1, 251, 0, 255, 8, 0,
+            3, 21, 2, 101, 1, 3, 251, 1, 0
+        };
+        if (run_logic_fixture("timed-print-next-cycle", game_directory,
+                timed_then_cycle, sizeof timed_then_cycle, 2, timeout_ms,
+                NULL, 0, snapshot, detail, sizeof detail) ||
+            get_u32(snapshot + LOGIC_APP_REPLAY_SCHEDULE_FRAME_OFFSET) != 63) {
+            fprintf(stderr, "production message cycle reset regression: frame=%u expected63 (1030 ms close, next 25 ms quantum); %s\n",
+                    (unsigned)get_u32(snapshot + LOGIC_APP_REPLAY_SCHEDULE_FRAME_OFFSET), detail);
+            result = -1;
+        }
+    }
+    {
+        uint8_t poll[101] = {0};
+        for (unsigned i = 0; i < 20; ++i) {
+            poll[i * 5] = 255;
+            poll[i * 5 + 1] = 13; /* have.key */
+            poll[i * 5 + 2] = 255;
+        }
+        if (run_logic_fixture("have-key-clock", game_directory,
+                poll, sizeof poll, 1, timeout_ms, NULL, 0, snapshot, detail, sizeof detail) ||
+            get_u32(snapshot + LOGIC_APP_REPLAY_SCHEDULE_FRAME_OFFSET) != 13) {
+            fprintf(stderr, "production have.key clock regression: frame=%u expected13 (30 ms + 20 polls of 10 ms); %s\n",
+                    (unsigned)get_u32(snapshot + LOGIC_APP_REPLAY_SCHEDULE_FRAME_OFFSET), detail);
+            result = -1;
+        }
+    }
+    {
+        static const uint8_t modal_poll[] = {
+            101, 1, 255, 13, 255, 3, 0, 254, 5, 0,
+            1, 250, 254, 0xF3, 0xFF, 0
+        };
+        static const LogicAppReplayInput keys[] = {{7, 13}, {12, 13}};
+        if (run_logic_fixture("modal-then-have-key", game_directory,
+                modal_poll, sizeof modal_poll, 1, timeout_ms, keys, 2,
+                snapshot, detail, sizeof detail) ||
+            snapshot[LOGIC_APP_REPLAY_VARS_OFFSET + 250] != 7) {
+            fprintf(stderr, "production modal poll regression: empty polls=%u expected7; %s\n",
+                    snapshot[LOGIC_APP_REPLAY_VARS_OFFSET + 250], detail);
+            result = -1;
+        }
+    }
+    {
+        static const uint8_t said_or[] = {
+            120, 255, 252,
+            /* A skipped word ID contains the OR separator byte ($FC). */
+            14, 2, 2, 0, 3, 0, 14, 1, 2, 0, 14, 2, 2, 0, 252, 0,
+            252, 255, 3, 0, 3, 250, 1, 0
+        };
+        static const LogicAppReplayInput look[] = {
+            {3, 'l'}, {3, 'o'}, {3, 'o'}, {3, 'k'}, {3, 13}
+        };
+        static const LogicAppReplayInput upper_look[] = {
+            {3, 'L'}, {3, 'O'}, {3, 'O'}, {3, 'K'}, {3, 13}
+        };
+        if (run_logic_fixture("parser-said-or-uppercase", game_directory,
+                said_or, sizeof said_or, 2, timeout_ms, upper_look, 5,
+                snapshot, detail, sizeof detail) ||
+            snapshot[LOGIC_APP_REPLAY_VARS_OFFSET + 250] != 1) {
+            fprintf(stderr, "production said OR uppercase regression: matched=%u expected1; %s\n",
+                    snapshot[LOGIC_APP_REPLAY_VARS_OFFSET + 250], detail);
+            result = -1;
+        }
+        if (run_logic_fixture("parser-said-or", game_directory,
+                said_or, sizeof said_or, 2, timeout_ms, look, 5,
+                snapshot, detail, sizeof detail) ||
+            snapshot[LOGIC_APP_REPLAY_VARS_OFFSET + 250] != 1) {
+            fprintf(stderr, "production said OR regression: matched=%u expected1 inputs=%u words=%u first=%u; %s\n",
+                    snapshot[LOGIC_APP_REPLAY_VARS_OFFSET + 250],
+                    get_u16(snapshot + 12),
+                    get_u16(snapshot + LOGIC_APP_REPLAY_PARSER_OFFSET),
+                    get_u16(snapshot + LOGIC_APP_REPLAY_PARSER_OFFSET + 2), detail);
+            result = -1;
+        }
+        static const uint8_t said_rest[] = {
+            120, 255, 14, 2, 2, 0, 0x0F, 0x27, 255, 3, 0, 3, 250, 1,
+            255, 7, 4, 255, 3, 0, 3, 251, 1, 0
+        };
+        if (run_logic_fixture("parser-said-rest", game_directory,
+                said_rest, sizeof said_rest, 2, timeout_ms, upper_look, 5,
+                snapshot, detail, sizeof detail) ||
+            snapshot[LOGIC_APP_REPLAY_VARS_OFFSET + 250] != 1 ||
+            snapshot[LOGIC_APP_REPLAY_VARS_OFFSET + 251] != 1) {
+            fprintf(stderr, "production said rest regression: matched=%u accepted=%u expected1/1; %s\n",
+                    snapshot[LOGIC_APP_REPLAY_VARS_OFFSET + 250],
+                    snapshot[LOGIC_APP_REPLAY_VARS_OFFSET + 251], detail);
+            result = -1;
+        }
+        static const uint8_t said_missing_word[] = {
+            120, 255, 14, 3, 2, 0, 1, 0, 0x0F, 0x27, 255, 3, 0,
+            3, 250, 1, 0
+        };
+        if (run_logic_fixture("parser-said-missing-word", game_directory,
+                said_missing_word, sizeof said_missing_word, 2, timeout_ms,
+                upper_look, 5, snapshot, detail, sizeof detail) ||
+            snapshot[LOGIC_APP_REPLAY_VARS_OFFSET + 250] != 0) {
+            fprintf(stderr, "production said missing-word regression: matched=%u expected0; %s\n",
+                    snapshot[LOGIC_APP_REPLAY_VARS_OFFSET + 250], detail);
+            result = -1;
+        }
+    }
+    return result;
+}
+
