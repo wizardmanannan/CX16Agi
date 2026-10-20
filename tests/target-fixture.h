@@ -17,3 +17,19 @@ static FILE* targetFixtureFile(void)
     assert(file);
     return file;
 }
+
+static unsigned int targetFixtureSymbol(const char* labels, const char* wanted)
+{
+    FILE* file = fopen(labels, "r");
+    char line[256], name[128];
+    unsigned int address;
+    assert(file);
+    while (fgets(line, sizeof(line), file)) {
+        if (sscanf(line, "al %x %127s", &address, name) == 2 &&
+            name[0] == '.' && strcmp(name + 1, wanted) == 0) {
+            fclose(file);
+            return address;
+        }
+    }
+    abort();
+}

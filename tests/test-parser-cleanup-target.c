@@ -8,22 +8,6 @@
 #include <unistd.h>
 #include "target-fixture.h"
 
-static unsigned int symbol(const char* labels, const char* wanted)
-{
-    FILE* file = fopen(labels, "r");
-    char line[256], name[128];
-    unsigned int address;
-    assert(file);
-    while (fgets(line, sizeof(line), file)) {
-        if (sscanf(line, "al %x %127s", &address, name) == 2 &&
-            name[0] == '.' && strcmp(name + 1, wanted) == 0) {
-            fclose(file);
-            return address;
-        }
-    }
-    abort();
-}
-
 static void copyCall(FILE* input, unsigned int routine, unsigned int stack,
                      unsigned int length, unsigned int source, unsigned int sourceBank,
                      unsigned int destination, unsigned int destinationBank)
@@ -70,14 +54,14 @@ int main(int argc, char** argv)
     int status, byte, phase = 0, valid = 1;
     pid_t child;
     assert(argc == 5 && input && output);
-    copyRoutine = symbol(argv[2], "_memCpyBankedBetween");
-    wrap = symbol(argv[2], "_b3WrapText");
-    border = symbol(argv[2], "_b3DrawBorder");
-    buffers = symbol(argv[2], "_b3TextBuffers");
-    lines = symbol(argv[2], "_b3LastBoxLines");
-    routine = symbol(argv[2], "_b7StripExtraChars");
-    size = symbol(argv[2], "_b7StripExtraCharsEnd") - routine;
-    stack = symbol(argv[2], "c_sp");
+    copyRoutine = targetFixtureSymbol(argv[2], "_memCpyBankedBetween");
+    wrap = targetFixtureSymbol(argv[2], "_b3WrapText");
+    border = targetFixtureSymbol(argv[2], "_b3DrawBorder");
+    buffers = targetFixtureSymbol(argv[2], "_b3TextBuffers");
+    lines = targetFixtureSymbol(argv[2], "_b3LastBoxLines");
+    routine = targetFixtureSymbol(argv[2], "_b7StripExtraChars");
+    size = targetFixtureSymbol(argv[2], "_b7StripExtraCharsEnd") - routine;
+    stack = targetFixtureSymbol(argv[2], "c_sp");
     bank = fopen(argv[3], "rb");
     assert(bank);
     address = (unsigned int)fgetc(bank);
@@ -164,7 +148,7 @@ int main(int argc, char** argv)
         if (n == 2) fprintf(input, "STM 8EFB 15\nSTM 8EFC FD\nSTM 8EFD A0\nSTM 8EFE 00\nSTM 8EFF A8\n");
         if (n == 3) fprintf(input, "STM 8EFA 01\nSTM 8EFB 02\nSTM 8EFC A7\nSTM 8EFD 00\nSTM 8EFE 00\nSTM 8EFF A8\n");
         fprintf(input, "STM 0000 0D\nSTA %02X\nSTX %02X\nRUN %04X\n",
-                n == 2 ? 1 : 21, n == 2 ? 2 : 0, symbol(argv[2], names[n]));
+                n == 2 ? 1 : 21, n == 2 ? 2 : 0, targetFixtureSymbol(argv[2], names[n]));
         if (n != 3) {
             fprintf(input, "RQA\nRQX\n");
             copyExpected[copyCount++] = n == 0 ? 1 : 0;

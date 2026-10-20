@@ -80,3 +80,8 @@ reduced 30,464 cycles to about 17,800; its budget is 20,000. Percent signs and
 backslashes remain literal in these replacements. A 300-byte global-message
 case checks cursor wraparound, embedded metacharacters at byte 254, termination,
 a destination canary, and bank restoration.
+
+Dictionary comparison runs the full product's strcmpIgnoreSpace on 64 spaced
+phrases: the C baseline is 273,152 cycles. Cases retain exact signed 16-bit
+results, prefix ordering, high bytes, space-only inputs, tabs, bank/stack state,
+source preservation, and a 305-byte page-crossing input.
