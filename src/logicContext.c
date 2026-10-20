@@ -560,5 +560,277 @@ static void verifyAbandonedState(const LogicContextShadow *expected,
 }
 #endif
 
-
+byte logicContextLeave(void)
+{
+    LogicContextFrame *frame;
+    byte index;
+#ifdef LOGIC_CONTEXT_VERIFY
+    word leaveGeneration;
 #endif
+
+    if (contextDepth == 0) {
+        contextLastError = LOGIC_CONTEXT_UNDERFLOW;
+        exitAllLogics = TRUE;
+        return FALSE;
+    }
+
+    index = (byte)(contextDepth - 1);
+    frame = &frames[index];
+#ifdef LOGIC_CONTEXT_VERIFY
+    if (!logicContextVerifyFailed) {
+#if LOGIC_CONTEXT_TRACE
+        contextMismatchOpcodeValue = frame->callOpcode;
+#else
+        contextMismatchOpcodeValue = 0;
+#endif
+    }
+#endif
+#if LOGIC_CONTEXT_TRACE
+    recordTraceEvent(LOGIC_TRACE_KIND_RETURN, (byte)frame->currentLog,
+                     frame->callSitePc,
+                     frame->callOpcode, contextDepth, codeBank,
+                     LOGIC_CONTEXT_FIELD_CURRENT_LOG, frame->calledLogic,
+                     (unsigned int)frame->currentLog,
+                     frame->abandoned ? 1 : 0);
+#endif
+#ifdef LOGIC_CONTEXT_VERIFY
+    if (frame->abandoned != shadowFrames[index].abandoned)
+        mismatch(LOGIC_CONTEXT_FIELD_ABANDONED, 0,
+                 shadowFrames[index].abandoned, frame->abandoned,
+                 shadowFrames[index].pc);
+    if (frame->depth != shadowFrames[index].depth)
+        mismatch(LOGIC_CONTEXT_FIELD_DEPTH, 0, shadowFrames[index].depth,
+                 frame->depth, shadowFrames[index].pc);
+    if (frame->generation != shadowFrames[index].generation)
+        mismatch(LOGIC_CONTEXT_FIELD_GENERATION,
+                 0, shadowFrames[index].generation,
+                 frame->generation, shadowFrames[index].pc);
+#endif
+    if (frame->abandoned) {
+        /* Preserve the room/restart abandonment instead of resuming the
+           caller's discarded logic state. */
+        cwCurrentCode = 0;
+        codeWindowInvalid = TRUE;
+    } else {
+        restoreState(frame);
+    }
+    --contextDepth;
+#if LOGIC_CONTEXT_TRACE || defined(LOGIC_CONTEXT_VERIFY)
+    ++contextGeneration;
+#endif
+#ifdef LOGIC_CONTEXT_VERIFY
+    --verifierDepth;
+    ++verifierGeneration;
+#endif
+#ifdef LOGIC_CONTEXT_VERIFY
+    /* Perturb only the post-pop values so this regression reaches the
+       verifier without changing the frame index or restored machine state. */
+    if (contextTestDepthPending) {
+        ++contextDepth;
+        contextTestDepthPending = FALSE;
+        contextTestDepthRestore = TRUE;
+    }
+    if (contextTestGenerationPending) {
+        ++contextGeneration;
+        contextTestGenerationPending = FALSE;
+        contextTestGenerationRestore = TRUE;
+    }
+    leaveGeneration = verifierGeneration;
+#endif
+#ifdef LOGIC_CONTEXT_VERIFY
+    if (frame->abandoned)
+        verifyAbandonedState(&shadowFrames[index], verifierDepth, leaveGeneration);
+    else
+        verifyRestoredState(&shadowFrames[index], verifierDepth, leaveGeneration);
+#endif
+#ifdef LOGIC_CONTEXT_VERIFY
+    if (contextTestDepthRestore) {
+        --contextDepth;
+        contextTestDepthRestore = FALSE;
+    }
+    if (contextTestGenerationRestore) {
+        --contextGeneration;
+        contextTestGenerationRestore = FALSE;
+    }
+#endif
+    return TRUE;
+}
+
+void logicContextAbandon(void)
+{
+    if (contextDepth != 0) {
+        frames[contextDepth - 1].abandoned = TRUE;
+#ifdef LOGIC_CONTEXT_VERIFY
+        shadowFrames[contextDepth - 1].abandoned = TRUE;
+#endif
+    }
+}
+
+byte logicContextDepth(void)
+{
+    return contextDepth;
+}
+
+#if LOGIC_CONTEXT_TRACE
+byte logicContextReplayFrameGet(byte index,
+                                LogicContextReplayFrame *snapshot)
+{
+    const LogicContextFrame *frame;
+    if (!snapshot || index >= contextDepth ||
+        index >= LOGIC_CONTEXT_MAX_DEPTH)
+        return FALSE;
+    frame = &frames[index];
+    snapshot->depth = frame->depth;
+    snapshot->callerLogic = (byte)frame->currentLog;
+    snapshot->calledLogic = frame->calledLogic;
+    snapshot->callOpcode = frame->callOpcode;
+    snapshot->logicalPc = (word)(frame->pc - frame->start);
+    snapshot->codeBank = frame->codeBank;
+    snapshot->ramBank = frame->ramBank;
+    snapshot->generation = frame->generation;
+    snapshot->abandoned = frame->abandoned;
+    snapshot->windowInvalid = frame->windowInvalid;
+    return TRUE;
+}
+#endif
+
+word logicContextGeneration(void)
+{
+#if LOGIC_CONTEXT_TRACE || defined(LOGIC_CONTEXT_VERIFY)
+    return contextGeneration;
+#else
+    return 0;
+#endif
+}
+
+byte logicContextError(void)
+{
+    return contextLastError;
+}
+
+byte logicContextMismatchField(void)
+{
+#ifdef LOGIC_CONTEXT_VERIFY
+    return contextMismatchField;
+#else
+    return 0;
+#endif
+}
+
+byte logicContextMismatchOffset(void)
+{
+#ifdef LOGIC_CONTEXT_VERIFY
+    return contextMismatchOffset;
+#else
+    return 0;
+#endif
+}
+
+byte logicContextMismatchLogic(void)
+{
+#ifdef LOGIC_CONTEXT_VERIFY
+    return contextMismatchLogicValue;
+#else
+    return 0;
+#endif
+}
+
+byte logicContextMismatchOpcode(void)
+{
+#ifdef LOGIC_CONTEXT_VERIFY
+    return contextMismatchOpcodeValue;
+#else
+    return 0;
+#endif
+}
+
+word logicContextMismatchPc(void)
+{
+#ifdef LOGIC_CONTEXT_VERIFY
+    return contextMismatchPc;
+#else
+    return 0;
+#endif
+}
+
+unsigned long logicContextMismatchExpected(void)
+{
+#ifdef LOGIC_CONTEXT_VERIFY
+    return contextMismatchExpected;
+#else
+    return 0;
+#endif
+}
+
+unsigned long logicContextMismatchActual(void)
+{
+#ifdef LOGIC_CONTEXT_VERIFY
+    return contextMismatchActual;
+#else
+    return 0;
+#endif
+}
+
+unsigned int logicContextStorageBytes(void)
+{
+    unsigned int bytes = sizeof frames + sizeof contextDepth +
+                         sizeof contextLastError;
+#if LOGIC_CONTEXT_TRACE || defined(LOGIC_CONTEXT_VERIFY)
+    bytes += sizeof contextGeneration + sizeof logicContextHardwareSp +
+             sizeof logicContextSoftwareSp;
+#endif
+#ifdef LOGIC_CONTEXT_VERIFY
+    bytes += sizeof shadowFrames + sizeof actualState;
+    bytes += sizeof verifierDepth + sizeof verifierGeneration;
+    bytes += sizeof logicContextVerifyFailed + sizeof logicContextVerifyField +
+             sizeof logicContextVerifyOffset + sizeof logicContextVerifyPc +
+             sizeof logicContextVerifyExpected + sizeof logicContextVerifyActual;
+    bytes += sizeof contextMismatchField + sizeof contextMismatchOffset +
+             sizeof contextMismatchLogicValue + sizeof contextMismatchOpcodeValue +
+             sizeof contextMismatchPc +
+             sizeof contextMismatchExpected +
+             sizeof contextMismatchActual + sizeof contextTestDepthPending +
+             sizeof contextTestGenerationPending + sizeof contextTestDepthRestore +
+             sizeof contextTestGenerationRestore;
+#ifdef LOGIC_CONTEXT_FAULT_INJECTION
+    bytes += sizeof contextTestOmitMetadataSave;
+#endif
+#endif
+#if LOGIC_CONTEXT_TRACE
+#if defined(LOGIC_APP_REPLAY_TARGET)
+    bytes += LOGIC_CONTEXT_TRACE_STORAGE_BYTES + sizeof contextTraceEvents +
+             sizeof contextTraceBank;
+#else
+    bytes += sizeof contextTraceEvents;
+#endif
+    bytes += sizeof contextTraceRing +
+             sizeof contextTraceInitialized + sizeof logicContextOpcode +
+             sizeof logicContextInstructionPc +
+             sizeof logicContextRequestedLogic + sizeof logicContextWriteField +
+             sizeof logicContextWriteBefore + sizeof logicContextWriteAfter +
+             sizeof contextHardwareStackHighWater +
+             sizeof contextSoftwareStackHighWater +
+             sizeof contextHardwareStackBase + sizeof contextSoftwareStackBase +
+             sizeof logicContextTick;
+#endif
+    return bytes;
+}
+
+unsigned int logicContextHardwareStackBytes(void)
+{
+#if LOGIC_CONTEXT_TRACE
+    return contextHardwareStackHighWater;
+#else
+    return 0;
+#endif
+}
+
+unsigned int logicContextSoftwareStackBytes(void)
+{
+#if LOGIC_CONTEXT_TRACE
+    return contextSoftwareStackHighWater;
+#else
+    return 0;
+#endif
+}
+#endif /* diagnostic builds; release stack operations live in logicContext.s */
