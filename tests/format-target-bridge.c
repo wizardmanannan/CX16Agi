@@ -15,6 +15,7 @@ extern char string[12][40], b7WordText[10][80];
 extern byte* var;
 extern int numInputWords, currentLog;
 extern char* getMessagePointer(byte logic, byte message);
+byte textClipColumns, textClipRows;
 
 static unsigned int address(const char* symbol)
 {
@@ -47,7 +48,7 @@ static void putWord(FILE* commands, unsigned int at, unsigned int value)
     bytes(commands, at, pair, 2);
 }
 
-static void targetTransform(const char* source, byte sourceBank, char* destination,
+static byte targetTransform(const char* source, byte sourceBank, char* destination,
                             byte destinationBank, size_t capacity, byte controls)
 {
     FILE* commands;
@@ -58,10 +59,10 @@ static void targetTransform(const char* source, byte sourceBank, char* destinati
     size_t length, produced = 0;
     char* output;
     pid_t child;
-    int status, result = -1;
+    int status, result = -1, lines = -1;
     byte active = 1;
     (void)sourceBank;
-    if (!capacity) return;
+    if (!capacity) return 0;
     assert(capacity <= 2000 && strlen(source) < 0x1f00);
     commands = tmpfile();
     responses = tmpfile();
@@ -69,6 +70,8 @@ static void targetTransform(const char* source, byte sourceBank, char* destinati
     fprintf(commands, "RUN %04X\nRAM 00\n", address("targetPrepareKq3Entry"));
     bytes(commands, address("_bridgeActive"), &active, 1);
     bytes(commands, address("_bridgeControls"), &controls, 1);
+    bytes(commands, address("_textClipColumns"), &textClipColumns, 1);
+    bytes(commands, address("_textClipRows"), &textClipRows, 1);
     putWord(commands, address("_bridgeCapacity"), capacity);
     bytes(commands, address("_variables"), var, 256);
     putWord(commands, address("_numInputWords"), numInputWords);
@@ -107,6 +110,7 @@ static void targetTransform(const char* source, byte sourceBank, char* destinati
     bytes(commands, 0xa100, source, strlen(source) + 1);
     fprintf(commands, "RUN %04X\nRAM 00\nRQM %04X\nRAM 16\n",
             address("targetBridgeEntry"), address("_targetResult"));
+    fprintf(commands, "RAM 00\nRQM %04X\nRAM 16\n", address("_bridgeLines"));
     if (controls) fprintf(commands, "RAM 15\n");
     for (i = 0; i < capacity; i++) fprintf(commands, "RQM %04X\n", (controls ? 0xa100 : 0xa300) + i);
     rewind(commands);
@@ -129,6 +133,7 @@ static void targetTransform(const char* source, byte sourceBank, char* destinati
         char extra;
         if (sscanf(line, "%x %c", &value, &extra) != 1) continue;
         if (result == -1) result = value;
+        else if (lines == -1) lines = value;
         else {
             assert(produced < capacity);
             output[produced++] = value;
@@ -145,6 +150,7 @@ static void targetTransform(const char* source, byte sourceBank, char* destinati
     free(output);
     fclose(commands);
     fclose(responses);
+    return lines;
 }
 
 void expandFormatCodes(const char* source, byte sourceBank, char* destination,
@@ -156,4 +162,9 @@ void expandFormatCodes(const char* source, byte sourceBank, char* destination,
 void b3ApplyTextModeControls(char* text)
 {
     targetTransform(text, 3, text, 3, strlen(text) + 1, 1);
+}
+
+byte b3ClipTextToMap(char* text)
+{
+    return targetTransform(text, 3, text, 3, strlen(text) + 1, 2);
 }

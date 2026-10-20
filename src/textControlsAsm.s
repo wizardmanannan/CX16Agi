@@ -2,11 +2,18 @@
 ; AX points to text in the currently mapped bank. Output never grows.
 .importzp ptr1, ptr2
 .export _b3ApplyTextModeControls
+.export _b3ClipTextToMap, _textClipColumns, _textClipRows
 .segment "BSS"
 controlRead: .res 2
 controlLine: .res 2
 controlCursor: .res 2
 controlEnd: .res 2
+_textClipColumns: .res 1
+_textClipRows: .res 1
+clipColumnsLeft: .res 1
+clipLineBase: .res 1
+clipPhysicalLine: .res 1
+clipLines: .res 1
 .segment "CODE"
 _b3ApplyTextModeControls:
     sta controlRead
@@ -106,3 +113,75 @@ controlPointCursor:
     lda controlCursor+1
     sta ptr2+1
     rts
+
+; AX points to the display buffer. Preserve VERA's sequential row wrapping,
+; but discard cells outside the map. Explicit LF advances from the line origin.
+_b3ClipTextToMap:
+    sta ptr1
+    sta ptr2
+    stx ptr1+1
+    stx ptr2+1
+    stz clipLines
+    lda _textClipColumns
+    beq clipFinish
+    sta clipColumnsLeft
+    lda _textClipRows
+    beq clipFinish
+    lda #1
+    sta clipLines
+    sta clipLineBase
+    sta clipPhysicalLine
+clipLoop:
+    lda (ptr1)
+    beq clipFinish
+    inc ptr1
+    bne :+
+    inc ptr1+1
+:   cmp #$0a
+    beq clipNewline
+    ldx clipColumnsLeft
+    bne clipStore
+    ldx clipPhysicalLine
+    cpx _textClipRows
+    bcs clipLoop
+    inc clipPhysicalLine
+    pha
+    lda clipPhysicalLine
+    jsr clipMaxLine
+    lda #64
+    sta clipColumnsLeft
+    pla
+clipStore:
+    dec clipColumnsLeft
+    sta (ptr2)
+    jsr clipAdvance
+    bra clipLoop
+clipNewline:
+    ldx clipLineBase
+    cpx _textClipRows
+    bcs clipFinish
+    sta (ptr2)
+    jsr clipAdvance
+    inc clipLineBase
+    lda clipLineBase
+    sta clipPhysicalLine
+    jsr clipMaxLine
+    lda _textClipColumns
+    sta clipColumnsLeft
+    bra clipLoop
+clipFinish:
+    lda #0
+    sta (ptr2)
+    lda clipLines
+    ldx #0
+    rts
+clipAdvance:
+    inc ptr2
+    bne :+
+    inc ptr2+1
+:   rts
+clipMaxLine:
+    cmp clipLines
+    bcc :+
+    sta clipLines
+:   rts

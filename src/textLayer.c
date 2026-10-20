@@ -417,6 +417,8 @@ void b3DrawBorder(byte boxWidth, size_t messageSize)
 }
 
 extern void __fastcall__ b3ApplyTextModeControls(char* text);
+extern byte __fastcall__ b3ClipTextToMap(char* text);
+extern byte textClipColumns, textClipRows;
 
 extern unsigned long displayTextAddressToCopyTo;
 extern char* currentTextBuffer;
@@ -428,7 +430,7 @@ extern byte b3PaletteNumber;
 //Supports copying from banks or putting data directly into textbuffer, which is on bank 3
 void b3DisplayMessageBox(char* message, byte messageBank, byte row, byte col, byte paletteNumber, byte boxWidth, boolean wrap, byte firstRow)
 {
-	int i;
+	int autoRow;
 	size_t messageSize = strLenBanked(message, messageBank) + 1;
 	long displayAddressCopyPaletteTo;
 	byte textWidth = boxWidth;
@@ -438,6 +440,9 @@ void b3DisplayMessageBox(char* message, byte messageBank, byte row, byte col, by
 	currentTextBuffer = b3TextBuffer1;
 
 	b3LastBoxLines = 0;
+	if (!firstRow || firstRow > TILE_LAYER_HEIGHT) return;
+	if (boxWidth && boxWidth < 4) boxWidth = 4;
+	if (boxWidth > TILE_LAYER_WIDTH) boxWidth = TILE_LAYER_WIDTH;
 
 	if (messageSize > 1) //Agi sometimes has empty messages. We say greater than 1 because of the terminator
 	{
@@ -502,7 +507,8 @@ void b3DisplayMessageBox(char* message, byte messageBank, byte row, byte col, by
 
 		if (row == AUTO_CALC_ROW)
 		{
-			b3LastBoxStartLine = (TEXT_ROWS / 2 - (numberOfLines + 2) / 2);
+			autoRow = TEXT_ROWS / 2 - (numberOfLines + 2) / 2;
+			b3LastBoxStartLine = autoRow < 0 ? 0 : autoRow;
 		}
 		else
 		{
@@ -511,9 +517,17 @@ void b3DisplayMessageBox(char* message, byte messageBank, byte row, byte col, by
 
 		if (col == AUTO_CALC_COLUMN)
 		{
-			col = MAX_CHAR_ACROSS / 2 - boxWidth / 2;
+			col = boxWidth > MAX_CHAR_ACROSS ? 0 : MAX_CHAR_ACROSS / 2 - boxWidth / 2;
 		}
 
+		if (b3LastBoxStartLine > TILE_LAYER_HEIGHT - firstRow || col >= TILE_LAYER_WIDTH) {
+			b3LastBoxLines = 0;
+			return;
+		}
+		textClipColumns = TILE_LAYER_WIDTH - col;
+		textClipRows = TILE_LAYER_HEIGHT - (firstRow + b3LastBoxStartLine - 1);
+		numberOfLines = b3ClipTextToMap(currentTextBuffer);
+		b3LastBoxLines = numberOfLines;
 		b3LastBoxFirstRow = firstRow;
 		displayTextAddressToCopyTo = MAPBASE + (firstRow + b3LastBoxStartLine - 1) * TILE_LAYER_BYTES_PER_ROW + col * BYTES_PER_CELL;
 		b3PaletteAddress = MAPBASE + (firstRow + b3LastBoxStartLine - 1) * TILE_LAYER_BYTES_PER_ROW + 1; //We will set the same palette for the whole row

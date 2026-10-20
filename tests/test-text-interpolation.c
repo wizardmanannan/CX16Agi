@@ -35,6 +35,7 @@ static const char* controlExpected;
 static boolean observingFill;
 static unsigned int fillRows, fillChunks, expectedFillRow;
 static byte expectedFirstRow;
+static boolean observingClip;
 static const byte* inputKeys;
 static size_t inputKeyCount, inputKeyPosition;
 static char bankWindow[80], bank24[80];
@@ -172,6 +173,14 @@ void b6SetAndWaitForIrqState(IRQ_COMMAND state)
 {
 	assert(state == DISPLAY_TEXT);
 	displays++;
+	if (observingClip) {
+		assert(displayTextAddressToCopyTo == MAPBASE +
+		       (TILE_LAYER_HEIGHT - 1) * TILE_LAYER_BYTES_PER_ROW +
+		       (TILE_LAYER_WIDTH - 2) * BYTES_PER_CELL);
+		assert(strcmp(currentTextBuffer, "ab") == 0);
+		assert(b3PaletteRows == 1 && b3LastBoxLines == 1);
+		return;
+	}
 	if (observingFill) {
 		size_t size = strlen(currentTextBuffer);
 		unsigned int rows = (size + 1) / (TILE_LAYER_WIDTH + 1);
@@ -321,6 +330,20 @@ static void test_cleanup_capacity(void)
 	observingFill = FALSE;
 }
 
+static void test_display_map_bounds(void)
+{
+	unsigned int priorDisplays;
+	observingClip = TRUE;
+	b3DisplayMessageBox("abcd\ne", 21, TILE_LAYER_HEIGHT - FIRST_TEXT_ROW,
+	                    TILE_LAYER_WIDTH - 2, 1, 0, FALSE, FIRST_TEXT_ROW);
+	observingClip = FALSE;
+	priorDisplays = displays;
+	b3DisplayMessageBox("outside", 21, 254, 1, 1, 0, FALSE, FIRST_TEXT_ROW);
+	b3DisplayMessageBox("outside", 21, 1, 254, 1, 0, FALSE, FIRST_TEXT_ROW);
+	assert(displays == priorDisplays);
+	assert(b3LastBoxLines == 0);
+}
+
 static void test_empty_message_does_not_clear(char* priorText)
 {
 	boolean wasBoxed = boxed;
@@ -395,6 +418,7 @@ int main(void)
 	test_word_lookup_uses_cleaned_input();
 	test_text_mode_controls();
 	test_cleanup_capacity();
+	test_display_map_bounds();
 	puts("text interpolation tests passed");
 	return 0;
 }

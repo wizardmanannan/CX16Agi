@@ -35,7 +35,8 @@ objectType bDObjects[MAX_OBJECTS];
 int bDNumObjects;
 #pragma bss-name (pop)
 
-byte bridgeActive, bridgeControls, bridgeCounts[2];
+byte bridgeActive, bridgeControls, bridgeLines, bridgeCounts[2];
+extern byte __fastcall__ b3ClipTextToMap(char* text);
 extern void __fastcall__ b3ApplyTextModeControls(char* text);
 byte* bridgeMessages[2][256];
 size_t bridgeCapacity;
@@ -287,9 +288,11 @@ void targetEdgeCases(void)
 void targetBridge(void)
 {
 	RAM_BANK = 13;
+	bridgeLines = 1;
 	if (bridgeControls) {
 		RAM_BANK = SOURCE_BANK;
-		b3ApplyTextModeControls((char*)SOURCE_ADDRESS);
+		if (bridgeControls == 2) bridgeLines = b3ClipTextToMap((char*)SOURCE_ADDRESS);
+		else b3ApplyTextModeControls((char*)SOURCE_ADDRESS);
 		RAM_BANK = 13;
 	} else {
 		expandFormatCodes((char*)SOURCE_ADDRESS, SOURCE_BANK,
