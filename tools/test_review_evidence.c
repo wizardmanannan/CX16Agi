@@ -6,7 +6,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/socket.h>
 #include <sys/stat.h>
+#include <sys/un.h>
 #include <sys/types.h>
 #include <sys/wait.h>
 #include <unistd.h>
@@ -46,6 +48,21 @@ static void write_text(const char *path, const char *contents)
     size_t length = strlen(contents);
     CHECK(fwrite(contents, 1, length, file) == length, "Cannot write review evidence test input");
     CHECK(!fclose(file), "Cannot close review evidence test input");
+}
+
+static void create_unix_socket(const char *path)
+{
+    int descriptor = socket(AF_UNIX, SOCK_STREAM, 0);
+    CHECK(descriptor >= 0, "Cannot create review evidence Unix socket fixture");
+    struct sockaddr_un address;
+    memset(&address, 0, sizeof(address));
+    address.sun_family = AF_UNIX;
+    size_t length = strlen(path);
+    CHECK(length < sizeof(address.sun_path), "Review evidence Unix socket path is too long");
+    memcpy(address.sun_path, path, length + 1);
+    CHECK(!bind(descriptor, (struct sockaddr *)&address, sizeof(address)),
+          "Cannot bind review evidence Unix socket fixture");
+    CHECK(!close(descriptor), "Cannot close review evidence Unix socket fixture");
 }
 
 static char *read_text(const char *path)
@@ -484,9 +501,15 @@ int main(int argc, char **argv)
     CHECK(!mkdir(project, 0700), "Cannot create miniature C product fixture");
     path_join(fixture_input, sizeof(fixture_input), suite_fixture_directory, "fixture-data");
     CHECK(!mkdir(fixture_input, 0700), "Cannot create review test input directory");
-    char input_file[4096];
+    char input_file[4096], git_admin_directory[4096], git_metadata_file[4096], git_socket[4096];
     path_join(input_file, sizeof(input_file), fixture_input, "input.txt");
     write_text(input_file, "declared suite input\n");
+    path_join(git_admin_directory, sizeof(git_admin_directory), fixture_input, ".git");
+    CHECK(!mkdir(git_admin_directory, 0700), "Cannot create declared input VCS metadata directory");
+    path_join(git_metadata_file, sizeof(git_metadata_file), git_admin_directory, "config");
+    write_text(git_metadata_file, "[core]\nrepositoryformatversion = 0\n");
+    path_join(git_socket, sizeof(git_socket), git_admin_directory, "s");
+    create_unix_socket(git_socket);
     path_join(report, sizeof(report), output_root, "captured");
     path_join(plan_path, sizeof(plan_path), suite_fixture_directory, "review.plan");
     path_join(tool_log, sizeof(tool_log), output_root, "review-tools.log");
@@ -515,6 +538,11 @@ int main(int argc, char **argv)
           strstr(packet, "same permanent contract case must run on baseline and candidate") &&
           strstr(packet, "Unavailable required coverage: none"),
           "Generated review packet omitted the production contract, callers, case, or coverage obligation");
+    CHECK(strstr(packet, "cx16agi-external-input-v1") &&
+          strstr(packet, "directory-root-dotgit-excluded-v1") &&
+          strstr(packet, "omit exactly the root `.git` entry") &&
+          strstr(packet, "Artifact-tree hashes do not apply the `.git` exclusion"),
+          "Generated review packet omitted external-input VCS exclusion semantics");
     free(packet);
 
     char stderr_version_helper[4096], stderr_version_plan_path[4096];
@@ -642,8 +670,25 @@ int main(int argc, char **argv)
     CHECK(strcmp(baseline_tree, candidate_tree),
           "Candidate test overlays replaced the recorded production baseline tree");
     free(captured_evidence);
+    write_text(git_metadata_file, "[core]\nrepositoryformatversion = 1\nchanged = true\n");
+    char git_head_metadata[4096];
+    path_join(git_head_metadata, sizeof(git_head_metadata), git_admin_directory, "HEAD");
+    write_text(git_head_metadata, "ref: refs/heads/metadata-change\n");
     expect_tool_status(argv[1], "verify", plan_path, report, output_root, 0,
                        "Trusted review evidence verification rejected an intact run");
+
+    char outside_git_socket[4096], outside_git_report[4096];
+    path_join(outside_git_socket, sizeof(outside_git_socket), fixture_input, "s");
+    create_unix_socket(outside_git_socket);
+    path_join(outside_git_report, sizeof(outside_git_report), output_root, "outside-git-socket");
+    expect_tool_failure(argv[1], "capture", plan_path, outside_git_report, NULL,
+                        "Capture accepted an unsupported socket outside root .git");
+    char *outside_git_diagnostic = read_text(tool_log);
+    CHECK(strstr(outside_git_diagnostic, "unsupported artifact type") &&
+          strstr(outside_git_diagnostic, outside_git_socket),
+          "Socket outside root .git was not rejected by external-input hashing");
+    free(outside_git_diagnostic);
+    CHECK(!unlink(outside_git_socket), "Cannot remove outside-.git Unix socket fixture");
 
     char nested_workdir[4096], nested_plan[4096], nested_report[4096], nested_evidence_path[4096];
     path_join(nested_workdir, sizeof(nested_workdir), project, "tools");

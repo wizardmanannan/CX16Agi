@@ -14,6 +14,10 @@ and witnesses. The canonical plan format and witness are exercised by
 The plan takes absolute dependency roots from `CC65_HOME` and
 `X16_EMULATOR_SOURCE`. Export the same installed roots used by the native
 suites before capture and verification; CI supplies its pinned installations.
+External directory input hashes omit only the root `.git` administrative entry;
+the packet records this policy. Runtime files remain hashed, and sockets or
+other unsupported entries outside `.git` fail capture. Artifact hashes do not
+apply this exclusion.
 
 ```sh
 export CC65_HOME=/absolute/path/to/cc65

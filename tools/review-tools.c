@@ -956,7 +956,8 @@ static void append_u64(review_sha256 *context, uint64_t value)
     append_sha(context, bytes, sizeof(bytes));
 }
 
-static void hash_tree_at(review_sha256 *context, const char *root, const char *relative)
+static void hash_tree_at(review_sha256 *context, const char *root, const char *relative,
+                         bool exclude_root_git)
 {
     char path[PATH_CAP];
     if (*relative) join_path(path, sizeof(path), root, relative);
@@ -968,20 +969,29 @@ static void hash_tree_at(review_sha256 *context, const char *root, const char *r
         int count = scandir(path, &entries, NULL, alphasort);
         if (count < 0) fail("cannot list artifact directory %s: %s", path, strerror(errno));
         if (count < 2) fail("invalid artifact directory listing: %s", path);
+        bool is_excluded_root = exclude_root_git && !*relative;
+        uint64_t entry_count = 0;
+        for (int i = 0; i < count; ++i) {
+            const char *name = entries[i]->d_name;
+            if (!strcmp(name, ".") || !strcmp(name, "..") ||
+                (is_excluded_root && !strcmp(name, ".git"))) continue;
+            ++entry_count;
+        }
         append_u64(context, strlen(relative));
         append_sha(context, relative, strlen(relative));
         char kind = 'd';
         append_sha(context, &kind, 1);
         append_u64(context, (uint64_t)(info.st_mode & 07777));
-        append_u64(context, (uint64_t)count - 2);
+        append_u64(context, entry_count);
         for (int i = 0; i < count; ++i) {
             const char *name = entries[i]->d_name;
-            if (strcmp(name, ".") && strcmp(name, "..")) {
+            if (strcmp(name, ".") && strcmp(name, "..") &&
+                !(is_excluded_root && !strcmp(name, ".git"))) {
                 char child[PATH_CAP];
                 int length = *relative ? snprintf(child, sizeof(child), "%s/%s", relative, name) :
                                          snprintf(child, sizeof(child), "%s", name);
                 if (length < 0 || length >= (int)sizeof(child)) fail("artifact path is too long");
-                hash_tree_at(context, root, child);
+                hash_tree_at(context, root, child, false);
             }
             free(entries[i]);
         }
@@ -1030,7 +1040,31 @@ static void tree_sha(const char *path, char digest[65])
 {
     review_sha256 context;
     review_sha256_init(&context);
-    hash_tree_at(&context, path, "");
+    hash_tree_at(&context, path, "", false);
+    unsigned char bytes[32];
+    review_sha256_final(&context, bytes);
+    review_sha256_hex(bytes, digest);
+}
+
+static void external_input_sha(const char *path, char digest[65])
+{
+    static const char input_domain[] = "cx16agi-external-input-v1";
+    static const char directory_policy[] = "directory-root-dotgit-excluded-v1";
+    static const char file_policy[] = "regular-file-v1";
+    struct stat info;
+    if (stat(path, &info)) fail("cannot inspect external input %s: %s", path, strerror(errno));
+    if (!S_ISDIR(info.st_mode) && !S_ISREG(info.st_mode))
+        fail("external input has an unsupported type: %s", path);
+    review_sha256 context;
+    review_sha256_init(&context);
+    append_sha(&context, input_domain, sizeof(input_domain) - 1);
+    if (S_ISDIR(info.st_mode)) {
+        append_sha(&context, directory_policy, sizeof(directory_policy) - 1);
+        hash_tree_at(&context, path, "", true);
+    } else {
+        append_sha(&context, file_policy, sizeof(file_policy) - 1);
+        hash_tree_at(&context, path, "", false);
+    }
     unsigned char bytes[32];
     review_sha256_final(&context, bytes);
     review_sha256_hex(bytes, digest);
@@ -1650,7 +1684,7 @@ static void calculate_dependency_identities(const Plan *plan, Evidence *evidence
         char *path = resolved_input_path(plan, plan->inputs[i].name);
         copy_field(fact->name, sizeof(fact->name), plan->inputs[i].name, "input name");
         copy_field(fact->path, sizeof(fact->path), path, "input path");
-        tree_sha(path, fact->sha);
+        external_input_sha(path, fact->sha);
         free(path);
     }
 }
@@ -2443,7 +2477,9 @@ static char *make_review_packet(const Plan *plan, const Evidence *evidence, cons
         buffer_printf(&packet, "- `%s`: `%s` (binary SHA-256 `%s`, version output SHA-256 `%s`).\n",
                       fact->name, fact->path, fact->sha, fact->version_sha);
     }
-    buffer_append(&packet, "\n## External inputs\n\n");
+    buffer_append(&packet,
+        "\n## External inputs\n\n"
+        "External inputs use the `cx16agi-external-input-v1` hash domain. Directory inputs add the `directory-root-dotgit-excluded-v1` policy and omit exactly the root `.git` entry; every other entry remains hashed. Regular files use the `regular-file-v1` policy. Artifact-tree hashes do not apply the `.git` exclusion.\n\n");
     for (size_t i = 0; i < evidence->input_count; ++i) {
         const InputFact *fact = &evidence->inputs[i];
         buffer_printf(&packet, "- `%s`: `%s` (tree SHA-256 `%s`).\n", fact->name, fact->path, fact->sha);
