@@ -1168,7 +1168,7 @@ static const char startup_hook[] =
 "        ticks++; unsigned room=shake_banked_read(shake_var_address(0),0);\n"
 "        if(STARTUP_TEST_ROOM==7&&room==7&&(!kq3_intro_pictures||!kq3_intro_shown||!kq3_story_shown)) { fprintf(stderr,\"KQ3 skipped its intro: gameplay room 7 reached before the title/story opening completed; v70=%u restart_flag=%u\\n\",shake_banked_read(shake_var_address(70),0),shake_banked_read(shake_pointer_value(S__flag)+6,0)); exit(3); }\n"
 "        if(STARTUP_TEST_ROOM==7&&room==7&&shake_frames_seen-kq3_story_first_frame<120) { fprintf(stderr,\"KQ3 intro dismissed without input after %u frames\\n\",shake_frames_seen-kq3_story_first_frame); exit(3); }\n"
-"        if(INTRO_TEST_ENABLED) {\n"
+"        if(INTRO_TEST_ENABLED&&STARTUP_TEST_ROOM==1) {\n"
 "            if(intro_rows>=13) { unsigned span=intro_last_frame-intro_first_frame; fprintf(stderr,\"Natural intro credit batch: rows=%u visible_update_frames=%u active_sound_calls=%u max_sound_gap_frames=%u emulated_cycles=%u host_ms=%u batch_cycles=%u display_cycles=%u waits=%u\\n\",intro_rows,span,intro_sound_calls,intro_max_sound_gap,clockticks6502,SDL_GetTicks()+1-intro_host_start,intro_last_cycle-intro_first_cycle,intro_display_cycles,intro_display_waits); if(span>3||intro_last_cycle-intro_first_cycle>403200u||intro_display_waits) { fprintf(stderr,\"Intro credit batch exceeded its three-frame CPU budget or waited for display IRQs\\n\"); exit(3); } if(!intro_sound_calls||intro_max_sound_gap>1) { fprintf(stderr,\"Intro sound updates missed active VSYNC frames\\n\"); exit(3); } fprintf(stderr,\"PASS natural intro presentation\\n\"); exit(0); }\n"
 "            intro_rows=0; intro_display_waits=0; intro_display_cycles=0;\n"
 "        }\n"
@@ -1187,6 +1187,7 @@ static const char startup_hook[] =
 "            else if((x!=start_x||y!=start_y)&&shake_banked_read(shake_var_address(6),0)==3) { fprintf(stderr,\"PASS natural game startup: room=%u ticks=%u polls=%u pictures=%u updates=%u visible_sprites=%u moved=%u,%u->%u,%u\\n\",room,ticks,polls,pictures,updates,sprites,start_x,start_y,x,y); if(STARTUP_TEST_ROOM!=7) exit(0); if(!colour_phase) { static char down[]=\"\\x11\"; machine_paste(down,false); colour_phase=1; next_key=clockticks6502+8000000u; } }\n"
 "        }\n"
 "    }\n"
+"    if(INTRO_TEST_ENABLED&&STARTUP_TEST_ROOM==7&&kq3_story_shown&&shake_frames_seen-kq3_story_first_frame>=120) { fprintf(stderr,\"PASS natural intro presentation: KQ3 titles/credits mask=%x and story opening remained visible without input\\n\",kq3_intro_stages); exit(0); }\n"
 "    if(!INTRO_TEST_ENABLED&&(STARTUP_TEST_ROOM!=7||(kq3_story_shown&&shake_frames_seen-kq3_story_first_frame>=120))&&clockticks6502>=next_key&&(last_room!=STARTUP_TEST_ROOM||colour_phase)) { static char key[]=\"\\r\"; machine_paste(key,false); next_key=clockticks6502+8000000u; }\n"
 "}\n";
 
@@ -1722,11 +1723,13 @@ static void test_game_staging(void) {
 }
 int main(int argc,char **argv) {
     if(argc==2&&!strcmp(argv[1],"--staging-test")) { test_game_staging(); return 0; }
-    char *emulator=NULL,*rom=NULL,*build=NULL,*game=NULL,*output=NULL,*sdl=NULL,*symbol=NULL,*tas_capture_header=NULL;unsigned long trigger=180000000;bool foreground_test=false,picture_test=false,combined_test=false,loader_test=false,random_ram=false,intro_test=false,play=false;unsigned startup_room=0;
+    char *emulator=NULL,*rom=NULL,*build=NULL,*game=NULL,*output=NULL,*sdl=NULL,*symbol=NULL,*tas_capture_header=NULL;unsigned long trigger=180000000;bool foreground_test=false,picture_test=false,combined_test=false,loader_test=false,random_ram=false,intro_test=false,play=false;
+    bool visible_startup=getenv("CX16AGI_VISIBLE_STARTUP")&&!strcmp(getenv("CX16AGI_VISIBLE_STARTUP"),"1");
+    unsigned startup_room=0;
     for(int i=1;i<argc;i++) {
         if(!strcmp(argv[i],"--help")) {puts("Usage: test_full_game_irq --emulator-source DIR --rom FILE --build DIR --game DIR [--output DIR] [--symbols FILE] [--sdl-prefix DIR] [--tas-capture-header FILE] [--trigger-cycle N] [--foreground-test] [--combined-irq-test] [--picture-test] [--loader-test] [--startup-room 1|7] [--random-ram] [--intro-test] [--play]");return 0;}
         if(!strcmp(argv[i],"--play")) { play=true;random_ram=true;continue;}
-        if(!strcmp(argv[i],"--intro-test")) { intro_test=true;startup_room=1;continue;}
+        if(!strcmp(argv[i],"--intro-test")) { intro_test=true;if(!startup_room) startup_room=1;continue;}
         if(!strcmp(argv[i],"--random-ram")) { random_ram=true;continue;}
         if(!strcmp(argv[i],"--foreground-test")) {foreground_test=true;continue;}
         if(!strcmp(argv[i],"--picture-test")) {picture_test=true;continue;}
@@ -1737,6 +1740,7 @@ int main(int argc,char **argv) {
         else if(!strcmp(option,"--emulator-source"))emulator=value;else if(!strcmp(option,"--rom"))rom=value;else if(!strcmp(option,"--build"))build=value;else if(!strcmp(option,"--game"))game=value;else if(!strcmp(option,"--output"))output=value;else if(!strcmp(option,"--sdl-prefix"))sdl=value;else if(!strcmp(option,"--symbols"))symbol=value;else if(!strcmp(option,"--tas-capture-header"))tas_capture_header=value;
         else if(!strcmp(option,"--trigger-cycle")) {char *end;errno=0;trigger=strtoul(value,&end,10);REQUIRE(!errno&&*value&&!*end&&trigger<=UINT32_MAX,"Invalid trigger cycle");}else fail("Unknown option %s",option);
     }
+    REQUIRE(!visible_startup||startup_room,"Visible startup requires a startup scenario");
     REQUIRE(!play||!(startup_room||foreground_test||picture_test||combined_test||loader_test),"Interactive play must run separately from test scenarios");
     REQUIRE(!startup_room||!(foreground_test||picture_test||combined_test||loader_test),"Startup must run separately from injected command scenarios");
     REQUIRE(emulator&&rom&&build&&game,"Require --emulator-source, --rom, --build and --game");
@@ -1806,9 +1810,9 @@ int main(int argc,char **argv) {
     patch(video,"\t\tif (record_gif == RECORD_GIF_SINGLE) {","\t\tif (record_gif > RECORD_GIF_PAUSED) {\n\t\t\textern void shake_video_frame_written(uint32_t,uint32_t,uint16_t,uint8_t);\n\t\t\tshake_video_frame_written((uint32_t)frame_count, clockticks6502, regs.pc, memory_get_ram_bank());\n\t\t}\n\t\tif (record_gif == RECORD_GIF_SINGLE) {",1);
     patch(i2c,"\nvoid i2c_reset_state() {","\nvoid shake_get_i2c_state(uint8_t *out) { out[0]=i2c_port.clk_in; out[1]=i2c_port.data_in; out[2]=i2c_port.data_out; out[3]=(uint8_t)(state+1); out[4]=read_mode; out[5]=value; out[6]=(uint8_t)count; out[7]=device; }\n\nvoid i2c_reset_state() {",1);
     }
-    if(play) {
+    if(play||visible_startup) {
         const char *adapter=getenv("CX16AGI_TEST_AUDIO_ADAPTER");
-        REQUIRE(adapter&&exists(adapter),"Run interactive playback through make -C tools play (audio adapter required)");
+        REQUIRE(adapter&&exists(adapter),"Interactive scenarios require the suite audio adapter");
         char *upstream_audio=join(source,"src/audio-upstream.c");
         copy_file(join(source,"src/audio.c"),upstream_audio);
         copy_file(adapter,join(source,"src/audio.c"));
@@ -1817,15 +1821,16 @@ int main(int argc,char **argv) {
     char *native=join(output,"native"),*buildlog=join(output,"build.log");
     if(!sdl) {char *parent=strdup(emulator),*slash=strrchr(parent,'/');REQUIRE(slash,"Invalid emulator path");*slash=0;sdl=join(parent,"sdl2-install");free(parent);}
     char *prefix=NULL;if(exists(sdl)) {char *absolute=realpath(sdl,NULL);REQUIRE(absolute,"Cannot resolve SDL prefix");prefix=format("-DCMAKE_PREFIX_PATH=%s",absolute);free(absolute);}
-    char *configure[]={"cmake","-S",source,"-B",native,"-DCMAKE_BUILD_TYPE=Release",play?"-DENABLE_LTO=ON":"-DENABLE_LTO=OFF","-DENABLE_TRACE=OFF","-DENABLE_FLUIDSYNTH=OFF",prefix,NULL};run_from(configure,buildlog,0,NULL);
+    char *configure[]={"cmake","-S",source,"-B",native,"-DCMAKE_BUILD_TYPE=Release",(play||visible_startup)?"-DENABLE_LTO=ON":"-DENABLE_LTO=OFF","-DENABLE_TRACE=OFF","-DENABLE_FLUIDSYNTH=OFF",prefix,NULL};run_from(configure,buildlog,0,NULL);
     char *compile[]={"cmake","--build",native,"-j4",NULL};run_from(compile,buildlog,0,NULL);
-    if(!play) REQUIRE(!setenv("SDL_VIDEODRIVER","dummy",1)&&!setenv("SDL_AUDIODRIVER","dummy",1),"Cannot set SDL environment");
+    if(!play&&!visible_startup) REQUIRE(!setenv("SDL_VIDEODRIVER","dummy",1)&&!setenv("SDL_AUDIODRIVER","dummy",1),"Cannot set SDL environment");
     if(loader_test) { run_loader_test(game,build,native,rom,output); return 0; }
     char *command[26];int command_length=0;
     command[command_length++]=join(native,"x16emu");command[command_length++]="-rom";command[command_length++]=rom;
     command[command_length++]="-fsroot";command[command_length++]=stage;command[command_length++]="-startin";command[command_length++]=stage;
     command[command_length++]="-prg";command[command_length++]=join(stage,"agi.cx16");command[command_length++]="-run";if(!random_ram) command[command_length++]="-zeroram";
-    if(!play) { command[command_length++]="-warp";command[command_length++]="-sound";command[command_length++]="none"; }
+    if(visible_startup) { command[command_length++]="-log";command[command_length++]="K"; }
+    if(!play&&!visible_startup) { command[command_length++]="-warp";command[command_length++]="-sound";command[command_length++]="none"; }
     if(!play&&!startup_room&&!picture_test&&!combined_test) { command[command_length++]="-gif";command[command_length++]=format("%s/game.gif,wait",output); }
     command[command_length++]="-echo";command[command_length]=NULL;
     run(command,join(output,"run.log"),play?0:300);
@@ -1833,12 +1838,12 @@ int main(int argc,char **argv) {
     if(!stage||exists(stage)) fail("Integration fixture cleanup regression: private staged game was not removed");
     require_no_retained_stage(output);
     if(play) { puts("Interactive emulator closed; staged game cleaned"); return 0; }
-    if(intro_test) {
+    if(intro_test&&startup_room==1) {
         char *log=read_file(join(output,"run.log"),NULL);
         char *row=strstr(log,"Natural intro credit batch:");
         REQUIRE(row,"Missing intro workload evidence");
         char *end=strchr(row,'\n'); if(end) *end=0;
         puts(row); free(log);
     }
-    if(startup_room) { REQUIRE(file_contains(join(output,"run.log"),intro_test?"PASS natural intro presentation":startup_room==7?"PASS natural game startup and courtyard round trip colours":"PASS natural game startup"),"Game did not reach its playable room"); puts(intro_test?"PASS natural intro text publication and audio cadence":"PASS natural game startup and sustained interpreter/input/render progress"); } else if(picture_test) validate_picture(output); else if(combined_test) validate_combined(output); else validate(output,foreground_test);return 0;
+    if(startup_room) { REQUIRE(file_contains(join(output,"run.log"),intro_test?"PASS natural intro presentation":startup_room==7?"PASS natural game startup and courtyard round trip colours":"PASS natural game startup"),"Game did not reach its playable room"); puts(intro_test?(startup_room==7?"PASS natural KQ3 titles and story opening without input":"PASS natural intro text publication and audio cadence"):"PASS natural game startup and sustained interpreter/input/render progress"); } else if(picture_test) validate_picture(output); else if(combined_test) validate_combined(output); else validate(output,foreground_test);return 0;
 }

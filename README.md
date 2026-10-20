@@ -176,6 +176,14 @@ fidelity check. `review-check` runs `staging-test`, `test`, `production-test`, `
 `intro-test`, and `emulator-audio-test` sequentially and fails if either game
 or any required input is missing.
 
+`make -C tools kq3-intro-test ROM=/path/to/rom.bin GAME_KQ3=/path/to/KQ3`
+checks the complete animated title/credit sequence and the first story scene
+without injecting a key. For an on-screen diagnostic using the interactive
+Release/LTO emulator and buffered audio, prefix that command with
+`CX16AGI_VISIBLE_STARTUP=1`. It logs real key events and closes automatically
+after verifying the story picture remains visible for 120 frames. Leave the
+keyboard untouched during that run.
+
 `make -C tools intro-test ROM=/path/to/rom.bin GAME_KQ1=/path/to/KQ1`
 retains KQ1's natural title and checks a real 13-row credit redraw. The batch
 must finish within three display frames without per-row IRQ waits; active sound

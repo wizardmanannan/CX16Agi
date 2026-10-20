@@ -21,7 +21,7 @@ TEST_FIXTURE_ROOT ?= $(if $(TMPDIR),$(TMPDIR),/tmp)
 export GAME_KQ1 GAME_KQ3 CC65_HOME X16_EMULATOR_SOURCE TMPDIR TEST_OUTPUT_DIR ROM GAME BUILD SYMBOLS SDL_PREFIX TAS_CAPTURE_HEADER
 unexport KEEP_TEST_OUTPUT
 
-.PHONY: test suite commands-test image production-test integration-test picture-test loader-test modes integration _run build-test games-test review-check intro-test play emulator-audio-test staging-test metadata-test
+.PHONY: test suite commands-test image production-test integration-test picture-test loader-test modes integration _run build-test games-test review-check intro-test kq3-intro-test play emulator-audio-test staging-test metadata-test
 
 # A review handoff requires both original games; missing inputs fail closed.
 review-check:
@@ -52,6 +52,9 @@ emulator-audio-test:
 
 intro-test:
 	@$(MAKE) --no-print-directory -f "$(REPO_ROOT)/tools/Makefile" _run MODE=intro-test
+
+kq3-intro-test:
+	@$(MAKE) --no-print-directory -f "$(REPO_ROOT)/tools/Makefile" _run MODE=kq3-intro-test
 
 games-test:
 	@$(MAKE) --no-print-directory -f "$(REPO_ROOT)/tools/Makefile" _run MODE=games-test
@@ -113,10 +116,12 @@ _run:
 	  production-test) \
 	    need_cc65; need_exec "$$CC65_HOME/bin/cl65"; need_cpu; need_image_makefile; \
 	    need_file "$$repo/tools/test_sound_foreground.c" ;; \
-	  modes|integration-test|picture-test|games-test|intro-test|play) \
+	  modes|integration-test|picture-test|games-test|intro-test|kq3-intro-test|play) \
 	    need_command cmake; need_command pkg-config; \
-	    if [ "$$mode" != games-test ] && [ "$$mode" != intro-test ] && [ "$$mode" != play ]; then need_command magick; fi; \
-	    if [ "$$mode" = games-test ] || [ "$$mode" = intro-test ]; then \
+	    if [ "$$mode" != games-test ] && [ "$$mode" != intro-test ] && [ "$$mode" != kq3-intro-test ] && [ "$$mode" != play ]; then need_command magick; fi; \
+	    if [ "$$mode" = kq3-intro-test ]; then \
+	      [ -n "$${GAME_KQ3:-}" ] && [ -d "$$GAME_KQ3" ] || fail 'set GAME_KQ3 to original KQ3 data'; GAME="$$GAME_KQ3"; \
+	    elif [ "$$mode" = games-test ] || [ "$$mode" = intro-test ]; then \
 	      [ -n "$${GAME_KQ1:-}" ] && [ -d "$$GAME_KQ1" ] || fail 'set GAME_KQ1 to original KQ1 data'; \
 	      if [ "$$mode" = games-test ]; then [ -n "$${GAME_KQ3:-}" ] && [ -d "$$GAME_KQ3" ] || fail 'set GAME_KQ3 to original KQ3 data'; fi; \
 	      GAME="$$GAME_KQ1"; \
@@ -212,19 +217,19 @@ _run:
 	  emulator-audio-test) \
 	    "$(HOST_CC)" $(HOST_CFLAGS) -I"$$X16_EMULATOR_SOURCE/src" $$(pkg-config --cflags sdl2) -ffunction-sections -fdata-sections "$$repo/tools/test_emulator_audio.c" $$(pkg-config --libs sdl2) -Wl,--gc-sections -o "$$work/bin/test_emulator_audio"; \
 	    "$$work/bin/test_emulator_audio" ;; \
-	  games-test|intro-test|play) \
+	  games-test|intro-test|kq3-intro-test|play) \
 	    "$(HOST_CC)" $(HOST_CFLAGS) "$$repo/tools/test_build.c" -o "$$work/bin/test_build"; \
 	    "$$work/bin/test_build" "$$repo"; \
 	    "$(HOST_CC)" $(HOST_CFLAGS) "$$repo/tools/test_full_game_irq.c" -lpng -o "$$work/bin/test_full_game_irq"; \
 	    failed=0; \
-	    game_ids="KQ1 KQ3"; if [ "$$mode" = intro-test ] || [ "$$mode" = play ]; then game_ids=KQ1; fi; \
+	    game_ids="KQ1 KQ3"; if [ "$$mode" = intro-test ] || [ "$$mode" = play ]; then game_ids=KQ1; elif [ "$$mode" = kq3-intro-test ]; then game_ids=KQ3; fi; \
 	    for game_id in $$game_ids; do \
 	      if [ "$$mode" = play ]; then game="$$GAME"; room=1; elif [ "$$game_id" = KQ1 ]; then game="$$GAME_KQ1"; room=1; else game="$$GAME_KQ3"; room=7; fi; \
 	      echo "RUN $$mode $$game_id"; \
 	      set -- --emulator-source "$$X16_EMULATOR_SOURCE" --rom "$$ROM" --build "$$work/image" --game "$$game" --symbols "$$work/image/agi.cx16.dbg" --startup-room "$$room" --random-ram --output "$$work/$$game_id"; \
 	      if [ "$$mode" = play ]; then \
 	        set -- --emulator-source "$$X16_EMULATOR_SOURCE" --rom "$$ROM" --build "$$work/image" --game "$$game" --output "$$work/$$game_id" --play; \
-	      elif [ "$$mode" = intro-test ]; then set -- "$$@" --intro-test; fi; \
+	      elif [ "$$mode" = intro-test ] || [ "$$mode" = kq3-intro-test ]; then set -- "$$@" --intro-test; fi; \
 	      if [ -n "$${TAS_CAPTURE_HEADER:-}" ]; then set -- "$$@" --tas-capture-header "$$TAS_CAPTURE_HEADER"; fi; \
 	      if [ -n "$${SDL_PREFIX:-}" ]; then set -- "$$@" --sdl-prefix "$$SDL_PREFIX"; fi; \
 	      if CX16AGI_TEST_AUDIO_ADAPTER="$$repo/tools/emulator-audio-buffer.c" "$$work/bin/test_full_game_irq" "$$@"; then :; else failed=$$((failed+1)); fi; \
