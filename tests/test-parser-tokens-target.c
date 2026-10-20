@@ -106,6 +106,7 @@ int main(int argc, char** argv)
     assert(phase == count + 2);
     printf("Tokenization: 64 x 20 words, %lu cycles\n", cycles);
     fflush(stdout);
+    assert(cycles < 160000);
     fclose(input);
     fclose(output);
     return 0;

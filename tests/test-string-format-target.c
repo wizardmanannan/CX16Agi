@@ -47,6 +47,7 @@ byte bridgeActive, bridgeControls, bridgeLines, bridgeCounts[2];
 extern byte __fastcall__ b3ClipTextToMap(char* text);
 extern void __fastcall__ b3ApplyTextModeControls(char* text);
 extern void __fastcall__ b7StripExtraChars(char* text);
+extern char** __fastcall__ b7TokenizeWords(char* text, char** tokens);
 byte* bridgeMessages[2][256];
 size_t bridgeCapacity;
 
@@ -390,7 +391,10 @@ void targetBridge(void)
 	bridgeLines = 1;
 	if (bridgeControls) {
 		RAM_BANK = SOURCE_BANK;
-		if (bridgeControls == 5) {
+		if (bridgeControls == 6) {
+            bridgeLines = (byte)(((unsigned int)b7TokenizeWords((char*)SOURCE_ADDRESS, (char**)0xA800) - 0xA800 + 2) / 2);
+        }
+        else if (bridgeControls == 5) {
             RAM_BANK = 3;
             memset(b3TextBuffers + 1000, 0x5a, 1000);
             borderCanary = 0x5a;

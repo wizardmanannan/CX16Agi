@@ -18,7 +18,7 @@ extern int numInputWords, currentLog;
 extern char* getMessagePointer(byte logic, byte message);
 byte textClipColumns, textClipRows;
 static unsigned int layoutWidth;
-static byte layoutMaximum, layoutBoxLines;
+static byte layoutMaximum, layoutBoxLines, tokenBytes[40];
 
 static unsigned int address(const char* symbol)
 {
@@ -63,6 +63,7 @@ static byte targetTransform(const char* source, byte sourceBank, char* destinati
     char* output;
     pid_t child;
     int status, result = -1, lines = -1, maximum = -1, boxLines = -1;
+    unsigned int tokenByteCount = 0;
     byte active = 1;
     (void)sourceBank;
     if (!capacity) return 0;
@@ -119,6 +120,8 @@ static byte targetTransform(const char* source, byte sourceBank, char* destinati
     fprintf(commands, "RAM 00\nRQM %04X\nRAM 16\n", address("_bridgeLines"));
     fprintf(commands, "RAM 00\nRQM %04X\nRQM %04X\n", address("_bridgeMaximum"), address("_b3LastBoxLines"));
     fprintf(commands, "RAM %02X\n", controls == 5 ? 3 : controls ? 21 : 22);
+    if (controls == 6)
+        for (i = 0; i < sizeof(tokenBytes); i++) fprintf(commands, "RQM %04X\n", 0xa800 + i);
     for (i = 0; i < capacity; i++) fprintf(commands, "RQM %04X\n", (controls == 5 ? address("_b3TextBuffers") + 1000 : controls ? 0xa100 : 0xa300) + i);
     rewind(commands);
     fflush(responses);
@@ -144,6 +147,7 @@ static byte targetTransform(const char* source, byte sourceBank, char* destinati
         else if (lines == -1) lines = value;
         else if (maximum == -1) maximum = value;
         else if (boxLines == -1) boxLines = value;
+        else if (controls == 6 && tokenByteCount < sizeof(tokenBytes)) tokenBytes[tokenByteCount++] = value;
         else {
             assert(produced < capacity);
             output[produced++] = value;
@@ -151,12 +155,17 @@ static byte targetTransform(const char* source, byte sourceBank, char* destinati
     }
     assert(result == 0 && produced == capacity && memchr(output, 0, capacity));
     length = strlen(output);
+    if (controls == 6) {
+        assert(lines <= 20 && tokenByteCount == sizeof(tokenBytes));
+        memcpy(destination, output, capacity);
+    } else {
     /* Retain the host fixtures' bank-copy observations at the transport edge. */
     for (i = 0; i < length; i += j) {
         j = length - i > 50 ? 50 : length - i;
         memCpyBanked((byte*)destination + i, (byte*)output + i, destinationBank, j);
     }
     memCpyBanked((byte*)destination + length, (byte*)output + length, destinationBank, 1);
+    }
     layoutMaximum = maximum;
     layoutBoxLines = boxLines;
     free(output);
@@ -204,4 +213,17 @@ void b3DrawBorder(byte width, size_t ignored)
     layoutWidth = width;
     targetTransform(b3TextBuffers, 3, b3TextBuffers + 1000, 3, 1000, 5);
     b3LastBoxLines = layoutBoxLines;
+}
+
+char** b7TokenizeWords(char* text, char** tokens)
+{
+    unsigned int i, offset;
+    size_t capacity = strlen(text) + 1;
+    byte count = targetTransform(text, 7, text, 7, capacity, 6);
+    for (i = 0; i < count; i++) {
+        offset = tokenBytes[i * 2] + 256u * tokenBytes[i * 2 + 1] - 0xa100;
+        assert(offset < capacity);
+        tokens[i] = text + offset;
+    }
+    return tokens + count - 1;
 }

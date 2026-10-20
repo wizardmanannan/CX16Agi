@@ -88,6 +88,9 @@ prefix ordering, high bytes, space-only inputs, tabs, bank/stack state, and sour
 preservation. Symmetric 305-byte inputs cross pages in both cursor paths.
 
 Tokenization uses the full product image and parser bank. Its C/strtok baseline
-is 1,516,864 cycles for 64 inputs of 20 words. Cases check exact token pointers,
+is 1,516,864 cycles for 64 inputs of 20 words; the single-space assembly scanner
+takes about 105,700 (93% fewer), with a 160,000-cycle budget. Cases check exact token pointers,
 inserted NULs, empty/all-space inputs, tabs, table/source canaries, stack and bank
 state, a full 20-entry table, and source/table addresses across page boundaries.
+The display/parser host suite transports token bytes and pointer offsets through
+that same target scanner; there is no host tokenizer implementation.

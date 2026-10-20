@@ -293,25 +293,11 @@ extern void __fastcall__ b7StripExtraChars(char* userInput);
 ** b7TokenizeWords
 **
 ** Overall purpose:
-**   Splits the input string into space-separated words using strtok,
+**   Splits the input string into space-separated words in assembly,
 **   stores pointers to each word in the tokens array, and returns
 **   a pointer to the last stored token pointer.
 ***************************************************************************/
-char** b7TokenizeWords(char* inputLine, char** tokens)
-{
-	char* token;    // Will hold each token pointer returned by strtok
-
-	// First call finds the first token; subsequent calls use NULL
-	for (token = strtok(inputLine, " "); token; token = strtok(0, " "))
-	{
-		// Store the pointer to this token in the next free slot
-		*tokens++ = token;
-	}
-
-	// Return pointer to the last stored token pointer
-	// (subtract 1 because tokens++ has already advanced past it)
-	return tokens - 1;
-}
+extern char** __fastcall__ b7TokenizeWords(char* inputLine, char** tokens);
 
 
 /***************************************************************************
@@ -352,7 +338,7 @@ void b7LookupWords(char* inputLine)
 
 	// Remove punctuation and collapse spaces
 	b7StripExtraChars(userInput);
-	// strtok inserts nulls; preserve the cleaned phrase for phrase lookup.
+	// Tokenization inserts nulls; preserve the cleaned phrase for phrase lookup.
 	strcpy(strBuf, userInput);
 
 	// Tokenize ? fill token pointer array, get pointer to last token
