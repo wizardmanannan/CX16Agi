@@ -1,7 +1,7 @@
 HOSTCC ?= cc
 CX16AGI_BUILD_DIR ?= $(HOME)/.cache/cx16agi/build
 STRING_FORMAT_OUT := $(CX16AGI_BUILD_DIR)/obj/host/string-format
-STRING_FORMAT_CYCLE_BUDGET ?= 15000
+STRING_FORMAT_CYCLE_BUDGET ?= 12000
 STRING_FORMAT_FLAGS := -std=c99 -D_MSC_VER -Itests/stubs -Isrc -include tests/stubs/native.h -ffunction-sections -fdata-sections -Wno-unknown-pragmas
 CC65_HOME ?= $(HOME)/.cache/cx16agi/tools/cc65
 X16EMU ?= $(HOME)/.cache/cx16agi/tools/x16-emulator/build-tas/x16emu

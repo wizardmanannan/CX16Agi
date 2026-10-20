@@ -1,10 +1,11 @@
 ; AGI wire strings use ASCII, independently of cc65's character map.
 ; All scanning, decimal conversion, recursion, and bounded appending stay resident.
 .macpack longbranch
-.import _formatMessage, _var, _currentLog
+.import _b5GetLogicFile, _var, _currentLog
+.global _trampoline
 .import _string, _b7WordText, _numInputWords, _bDObjects, _bDNumObjects
-.importzp ptr1, ptr2, c_sp
-.import incsp6
+.importzp ptr1, ptr2, ptr4, tmp4, c_sp
+.import incsp6, pushax
 .export _expandFormatCodes, _formatIndex, _formatTextBank
 
 .segment "BSS"
@@ -21,6 +22,7 @@ _formatInvalid: .res 1
 _formatText: .res 2
 _formatTextBank: .res 1
 _formatRecursive: .res 1
+formatLogicFile: .res 9
 formatPreviousBank: .res 1
 formatOffsetHi: .res 1
 formatCursor: .res 2
@@ -195,7 +197,8 @@ formatLiteral:
     jsr formatFlush
     ldx #0
 :   lda _formatRemaining
-    ora _formatRemaining+1
+    bne formatLiteral
+    lda _formatRemaining+1
     bne formatLiteral
     jsr formatSaveLiteral
     rts
@@ -336,7 +339,7 @@ formatLookup:
     inc _formatRecursive
     lda _currentLog
 @lookup:
-    jsr _formatMessage
+    jsr formatMessage
     sta _formatText
     stx _formatText+1
 formatResolved:
@@ -365,6 +368,55 @@ formatCopyText:
     jne formatCopyText
     inc _formatText+1
     jmp formatCopyText
+
+; Resolve metadata through the engine's wrapped bank-5 API. Its packed
+; LOGICFile offsets are checked by stringFormat.c at target compile time.
+formatMessage:
+    pha
+    lda #<formatLogicFile
+    ldx #>formatLogicFile
+    jsr pushax
+    ldy #5
+    sty tmp4
+    ldy #<_b5GetLogicFile
+    sty ptr4
+    ldy #>_b5GetLogicFile
+    sty ptr4+1
+    pla
+    ldx #0
+    jsr _trampoline
+    lda formatLogicFile+8
+    sta _formatTextBank
+    lda formatLogicFile+5
+    ora formatLogicFile+6
+    beq @missing
+    lda _formatIndex
+    beq @missing
+    cmp formatLogicFile+4
+    beq :+
+    bcs @missing
+:
+    dec a
+    stz formatOffsetHi
+    asl
+    rol formatOffsetHi
+    clc
+    adc formatLogicFile+5
+    sta ptr1
+    lda formatOffsetHi
+    adc formatLogicFile+6
+    sta ptr1+1
+    lda _formatTextBank
+    sta $00
+    ldy #1
+    lda (ptr1),y
+    tax
+    lda (ptr1)
+    rts
+@missing:
+    lda #0
+    tax
+    rts
 
 formatTimes5:
     stz formatOffsetHi

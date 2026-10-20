@@ -256,6 +256,19 @@ void targetEdgeCases(void)
 	putBankedString(OBJECT_BANK, 0xA600, "last object");
 	valid = valid && expectFormat("%s11/%w10/%0100/%0101", "last string/last word/last object/", 256);
 
+    /* Highest one-based message index crosses the table's first page. */
+    logicFiles[1].numMessages = 255;
+    logicFiles[1].messages = (byte**)0xA700;
+    RAM_BANK = MESSAGE_BANK;
+    ((byte**)0xA700)[254] = (byte*)0xA200;
+    valid = valid && expectFormat("%m255/%g1", "Global/Global", 256);
+    logicFiles[1].numMessages = TEST_MESSAGES;
+    logicFiles[1].messages = messagePointers[1];
+    valid = valid && expectFormat("%m9", "", 256);
+    logicFiles[1].messages = NULL;
+    valid = valid && expectFormat("%m1", "", 256);
+    logicFiles[1].messages = messagePointers[1];
+
 	setParserString(0, "A%s0");
 	valid = valid && expectFormat("%s0", "A", 256);
 	setParserString(0, "A%s1");
