@@ -23,6 +23,20 @@
 #include "parser.h"
 #include "menu.h"
 #include "showObj.h"
+#include "logicContext.h"
+
+#if LOGIC_CONTEXT_TRACE
+#define LOGIC_STORE_VAR(index, value) \
+	logicContextWriteVariable((byte)(index), (byte)(value))
+#define LOGIC_STORE_FLAG(index, value) \
+	logicContextWriteFlag((byte)(index), (boolean)(value))
+#pragma wrapped-call (push, trampoline, STRING_BANK)
+extern void b7SetCommandWriteTrace(byte enabled);
+#pragma wrapped-call (pop)
+#else
+#define LOGIC_STORE_VAR(index, value) (var[(index)] = (value))
+#define LOGIC_STORE_FLAG(index, value) (flag[(index)] = (value))
+#endif
 
 #define HIGHEST_BANK1_FUNC 36
 #define HIGHEST_BANK2_FUNC 91
