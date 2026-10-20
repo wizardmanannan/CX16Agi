@@ -233,5 +233,203 @@ static uint16_t captureInventory(void)
     return count;
 }
 
+static uint8_t captureTrace(void)
+{
+    uint8_t available = logicContextTraceCount();
+    uint8_t count = available;
+    uint8_t first = 0;
+    uint8_t i;
+    if (count > LOGIC_APP_REPLAY_TRACE_MAX) {
+        capacityFlags |= LOGIC_APP_REPLAY_CAPACITY_TRACE_DROPPED;
+        first = (uint8_t)(count - LOGIC_APP_REPLAY_TRACE_MAX);
+        count = LOGIC_APP_REPLAY_TRACE_MAX;
+    }
+    for (i = 0; i < count; ++i) {
+        LogicTraceEvent event;
+        if (!logicContextTraceGet((byte)(first + i), &event))
+            return i;
+        writeTrace(LOGIC_APP_REPLAY_TRACE_OFFSET +
+                   (uint16_t)i * LOGIC_APP_REPLAY_TRACE_RECORD_SIZE, &event);
+    }
+    return count;
+}
+
+static void captureSnapshot(void)
+{
+    uint16_t i;
+    uint16_t loaded;
+    uint8_t objects;
+    uint16_t inventory;
+    uint8_t traceCount;
+    uint8_t availableTraceCount;
+    uint8_t statusFlags = 0;
+    byte previousBank;
+    LOGICFile logicZero;
+    uint8_t frameCount;
+    uint8_t frameIndex;
+    uint16_t pc = (uint16_t)(*(volatile uint16_t *)0x00A9 +
+                             cwCurrentCode - startPos);
+
+    /* The dispatcher has consumed RETURN at a completed cycle boundary. */
+    if (logicContextOpcode == 0 && pc)
+        --pc;
+
+    updateReplayClock();
+
+    memset((void *)logicAppReplayOutput, 0,
+           LOGIC_APP_REPLAY_MESSAGES_OFFSET);
+    memset((void *)(logicAppReplayOutput + LOGIC_APP_REPLAY_TRACE_OFFSET), 0,
+           LOGIC_APP_REPLAY_TRACE_MAX * LOGIC_APP_REPLAY_TRACE_RECORD_SIZE);
+    memset((void *)(logicAppReplayOutput + LOGIC_APP_REPLAY_PARSER_OFFSET), 0,
+           LOGIC_APP_REPLAY_OUTPUT_SIZE - LOGIC_APP_REPLAY_PARSER_OFFSET);
+    /* Binary checkpoint magic is ASCII. cc65 maps character constants to
+       PETSCII on CX16 (so 'X' would encode as $D8, not ASCII $58). */
+    logicAppReplayOutput[0] = 0x58;
+    logicAppReplayOutput[1] = 0x31;
+    logicAppReplayOutput[2] = 0x36;
+    logicAppReplayOutput[3] = 0x52;
+    logicAppReplayOutput[4] = LOGIC_APP_REPLAY_SNAPSHOT_VERSION;
+    logicAppReplayOutput[5] = logicAppReplayReady ? 1 : 0;
+    put32(6, replayTick);
+    put16(10, logicAppReplayEventCount);
+    put16(12, nextInputEvent);
+    logicAppReplayOutput[14] = inputWasMissed;
+    logicAppReplayOutput[15] = var[0];
+    logicAppReplayOutput[16] = (uint8_t)currentLog;
+    put16(17, pc);
+    logicAppReplayOutput[19] = logicContextOpcode;
+    logicAppReplayOutput[20] = logicContextDepth();
+    logicAppReplayOutput[21] = logicContextError();
+#ifdef LOGIC_CONTEXT_VERIFY
+    logicAppReplayOutput[22] = logicContextVerifyFailed;
+    logicAppReplayOutput[23] = logicContextVerifyField;
+    logicAppReplayOutput[24] = logicContextVerifyOffset;
+    logicAppReplayOutput[25] = logicContextMismatchLogic();
+    logicAppReplayOutput[26] = logicContextMismatchOpcode();
+    put16(27, logicContextMismatchPc());
+    put32(29, logicContextVerifyExpected);
+    put32(33, logicContextVerifyActual);
+    if (logicContextVerifyFailed)
+        statusFlags |= LOGIC_APP_REPLAY_STATUS_CONTEXT_VERIFY_FAILED;
+#endif
+    logicAppReplayOutput[37] = logicAppReplayRandomIndex;
+    logicAppReplayOutput[38] = mainLoopCounter;
+    put32(60, logicAppReplayRandomCalls);
+    loaded = captureLoadedLogics();
+    put16(39, loaded);
+    availableTraceCount = logicContextTraceCount();
+    traceCount = captureTrace();
+    logicAppReplayOutput[41] = traceCount;
+    put32(42, logicContextTraceDropped() +
+           (availableTraceCount > traceCount
+                ? availableTraceCount - traceCount : 0));
+    if (logicContextTraceDropped() || availableTraceCount > traceCount) {
+        statusFlags |= LOGIC_APP_REPLAY_STATUS_TRACE_DROPPED;
+        capacityFlags |= LOGIC_APP_REPLAY_CAPACITY_TRACE_DROPPED;
+    }
+    logicAppReplayOutput[46] = messageCount;
+    put16(47, messageDropped);
+    objects = captureObjects();
+    put16(49, objects);
+    inventory = captureInventory();
+    put16(51, inventory);
+    put16(53, logicContextStorageBytes());
+    logicAppReplayOutput[55] = (uint8_t)logicContextHardwareStackBytes();
+    put16(56, logicContextSoftwareStackBytes());
+    if (inputWasMissed)
+        statusFlags |= LOGIC_APP_REPLAY_STATUS_INPUT_MISSED;
+    if (messageOverflow)
+        statusFlags |= LOGIC_APP_REPLAY_STATUS_MESSAGE_OVERFLOW;
+    if (inputWaitExhausted)
+        statusFlags |= LOGIC_APP_REPLAY_STATUS_INPUT_WAIT_EXHAUSTED;
+    if (faultTriggered)
+        statusFlags |= LOGIC_APP_REPLAY_STATUS_FAULT_TRIGGERED;
+    if (capacityFlags)
+        statusFlags |= LOGIC_APP_REPLAY_STATUS_CAPTURE_CAPACITY;
+    logicAppReplayOutput[58] = statusFlags;
+    logicAppReplayOutput[59] = codeBank;
+
+    putRaw(LOGIC_APP_REPLAY_VARS_OFFSET, (const uint8_t *)GOLDEN_RAM, 256);
+    putRaw(LOGIC_APP_REPLAY_FLAGS_OFFSET,
+           (const uint8_t *)(GOLDEN_RAM + 257), 256);
+
+    previousBank = RAM_BANK;
+    RAM_BANK = PARSER_BANK;
+    put16(LOGIC_APP_REPLAY_PARSER_OFFSET,
+          numInputWords > 0 ? (uint16_t)numInputWords : 0);
+    for (i = 0; i < 10; ++i)
+        put16(LOGIC_APP_REPLAY_PARSER_OFFSET + 2 + i * 2,
+              (uint16_t)inputWords[i]);
+    RAM_BANK = WORD_BANK;
+    put16(LOGIC_APP_REPLAY_WORD_COUNT_OFFSET,
+          numWords > 0 ? (uint16_t)numWords : 0);
+    RAM_BANK = previousBank;
+
+    put16(LOGIC_APP_REPLAY_DIRECTORY_COUNTS_OFFSET,
+          numLogics > 0 ? (uint16_t)numLogics : 0);
+    put16(LOGIC_APP_REPLAY_DIRECTORY_COUNTS_OFFSET + 2,
+          numPictures > 0 ? (uint16_t)numPictures : 0);
+    put16(LOGIC_APP_REPLAY_DIRECTORY_COUNTS_OFFSET + 4,
+          numViews > 0 ? (uint16_t)numViews : 0);
+    put16(LOGIC_APP_REPLAY_DIRECTORY_COUNTS_OFFSET + 6,
+          numSounds > 0 ? (uint16_t)numSounds : 0);
+    b5GetLogicFile(&logicZero, 0);
+    put16(LOGIC_APP_REPLAY_LOGIC0_SIZE_OFFSET,
+          (uint16_t)logicZero.codeSize);
+    logicAppReplayOutput[LOGIC_APP_REPLAY_LOGIC0_BANK_OFFSET] =
+        logicZero.codeBank;
+
+    frameCount = logicContextDepth();
+    if (frameCount > LOGIC_APP_REPLAY_CONTEXT_FRAME_MAX) {
+        capacityFlags |= LOGIC_APP_REPLAY_CAPACITY_CONTEXT_TRUNCATED;
+        frameCount = LOGIC_APP_REPLAY_CONTEXT_FRAME_MAX;
+    }
+    logicAppReplayOutput[LOGIC_APP_REPLAY_CONTEXT_FRAME_COUNT_OFFSET] =
+        frameCount;
+#if LOGIC_CONTEXT_TRACE
+    for (frameIndex = 0; frameIndex < frameCount; ++frameIndex) {
+        LogicContextReplayFrame frame;
+        uint16_t offset = LOGIC_APP_REPLAY_CONTEXT_FRAMES_OFFSET +
+            (uint16_t)frameIndex * LOGIC_APP_REPLAY_CONTEXT_FRAME_RECORD_SIZE;
+        if (!logicContextReplayFrameGet(frameIndex, &frame)) {
+            capacityFlags |= LOGIC_APP_REPLAY_CAPACITY_CONTEXT_TRUNCATED;
+            logicAppReplayOutput[LOGIC_APP_REPLAY_CONTEXT_FRAME_COUNT_OFFSET] =
+                frameIndex;
+            break;
+        }
+        logicAppReplayOutput[offset] = frame.depth;
+        logicAppReplayOutput[offset + 1] = frame.callerLogic;
+        logicAppReplayOutput[offset + 2] = frame.calledLogic;
+        logicAppReplayOutput[offset + 3] = frame.callOpcode;
+        logicAppReplayOutput[offset + 4] = (uint8_t)frame.logicalPc;
+        logicAppReplayOutput[offset + 5] = (uint8_t)(frame.logicalPc >> 8);
+        logicAppReplayOutput[offset + 6] = frame.codeBank;
+        logicAppReplayOutput[offset + 7] = frame.ramBank;
+        put16(offset + 8, frame.generation);
+        logicAppReplayOutput[offset + 10] = frame.abandoned;
+        logicAppReplayOutput[offset + 11] = frame.windowInvalid;
+    }
+#else
+    if (frameCount)
+        capacityFlags |= LOGIC_APP_REPLAY_CAPACITY_CONTEXT_TRUNCATED;
+    logicAppReplayOutput[LOGIC_APP_REPLAY_CONTEXT_FRAME_COUNT_OFFSET] = 0;
+#endif
+    put16(LOGIC_APP_REPLAY_RNG_SEED_OFFSET,
+          (uint16_t)((uint16_t)logicAppReplaySeed[0] |
+                     ((uint16_t)logicAppReplaySeed[1] << 8)));
+    put32(LOGIC_APP_REPLAY_RNG_STATE_OFFSET, replayRandomState);
+    put16(LOGIC_APP_REPLAY_CAPACITY_FLAGS_OFFSET, capacityFlags);
+    if (capacityFlags)
+        logicAppReplayOutput[58] |=
+            LOGIC_APP_REPLAY_STATUS_CAPTURE_CAPACITY;
+    put16(LOGIC_APP_REPLAY_INPUT_WAIT_POLLS_OFFSET, inputWaitPolls);
+    put32(LOGIC_APP_REPLAY_LAST_INPUT_FRAME_OFFSET, lastInputFrame);
+    logicAppReplayOutput[LOGIC_APP_REPLAY_LAST_INPUT_KEY_OFFSET] = lastInputKey;
+    put32(LOGIC_APP_REPLAY_ELAPSED_VSYNC_OFFSET, replayElapsedVsync);
+    put32(LOGIC_APP_REPLAY_SCHEDULE_FRAME_OFFSET, replayScheduleFrame);
+
+    logicAppReplayOutputLength = LOGIC_APP_REPLAY_OUTPUT_SIZE;
+}
+
 
 #endif
