@@ -164,8 +164,9 @@ missing metadata can no longer produce a passing acceptance result.
 It sends Return through the emulator keyboard to leave the introduction,
 requires KQ1 room 1 and KQ3 room 7, completed picture rendering, visible sprites,
 and ten more interpreter/input cycles, then sends Right and checks that the
-player actually moves. Before sending KQ3 a key, it requires intro room 45 to
-be drawn and shown, then waits 120 VSYNC frames with no injected input. KQ3's
+player actually moves. Before sending KQ3 a key, it requires all three title/credit pictures in intro
+room 45, the natural transition into story room 46, and its first picture to be
+shown. It then waits 120 more VSYNC frames with no injected input. KQ3's
 game script skips its intro on any key, including Return.
 The KQ3 case also walks outside, checks Gwydion's published sprite palette
 against the game's base colours in all four walking directions, then goes
