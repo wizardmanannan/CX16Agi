@@ -233,7 +233,7 @@ boolean b1Have_key() // 0, 0x00
 	if (!key)
 	{
 		GET_IN(key);
-		var[19] = key;
+		LOGIC_STORE_VAR(19, key);
 	}
 
 	return key;
@@ -544,8 +544,8 @@ void b2Get_posn() // 3, 0x60
 	getViewTab(&localViewtab, entryNum);
 
 
-	var[loadAndIncWinCode()] = localViewtab.xPos;
-	var[loadAndIncWinCode()] = localViewtab.yPos;
+	LOGIC_STORE_VAR(loadAndIncWinCode(), localViewtab.xPos);
+	LOGIC_STORE_VAR(loadAndIncWinCode(), localViewtab.yPos);
 
 	return;
 }
@@ -705,7 +705,7 @@ void b2Last_cel() // 2, 0x40
 	getViewTab(&localViewtab, entryNum);
 	varNum = loadAndIncWinCode();
 
-	var[varNum] = localViewtab.numberOfCels - 1;
+	LOGIC_STORE_VAR(varNum, localViewtab.numberOfCels - 1);
 	setViewTab(&localViewtab, entryNum);
 	return;
 }
@@ -719,7 +719,7 @@ void b2Current_cel() // 2, 0x40
 	getViewTab(&localViewtab, entryNum);
 	varNum = loadAndIncWinCode();
 
-	var[varNum] = localViewtab.currentCel;
+	LOGIC_STORE_VAR(varNum, localViewtab.currentCel);
 	setViewTab(&localViewtab, entryNum);
 	return;
 }
@@ -733,7 +733,7 @@ void b2Current_loop() // 2, 0x40
 	varNum = loadAndIncWinCode();
 	getViewTab(&localViewtab, entryNum);
 
-	var[varNum] = localViewtab.currentLoop;
+	LOGIC_STORE_VAR(varNum, localViewtab.currentLoop);
 	setViewTab(&localViewtab, entryNum);
 	return;
 }
@@ -748,7 +748,7 @@ void b2Current_view() // 2, 0x40
 	getViewTab(&localViewtab, entryNum);
 
 	varNum = loadAndIncWinCode();
-	var[varNum] = localViewtab.currentView;
+	LOGIC_STORE_VAR(varNum, localViewtab.currentView);
 
 	setViewTab(&localViewtab, entryNum);
 
@@ -764,7 +764,7 @@ void b2Number_of_loops() // 2, 0x40
 	getViewTab(&localViewtab, entryNum);
 
 	varNum = loadAndIncWinCode();
-	var[varNum] = localViewtab.numberOfLoops;
+	LOGIC_STORE_VAR(varNum, localViewtab.numberOfLoops);
 
 	setViewTab(&localViewtab, entryNum);
 	return;
@@ -824,7 +824,7 @@ void b2Get_priority() // 2, 0x40
 
 
 	varNum = loadAndIncWinCode();
-	var[varNum] = localViewtab.priority;
+	LOGIC_STORE_VAR(varNum, localViewtab.priority);
 
 	setViewTab(&localViewtab, entryNum);
 	return;
@@ -989,14 +989,14 @@ void b2Distance() // 3, 0x20
 	/* Check that both objects are on screen here. If they aren't
 	** then 255 should be returned. */
 	if (!((localViewtab1.flags & DRAWN) && (localViewtab2.flags & DRAWN))) {
-		var[varNum] = 255;
+		LOGIC_STORE_VAR(varNum, 255);
 		return;
 	}
 	x1 = localViewtab1.xPos;
 	y1 = localViewtab1.yPos;
 	x2 = localViewtab2.xPos;
 	y2 = localViewtab2.yPos;
-	var[varNum] = abs(x1 - x2) + abs(y1 - y2);
+	LOGIC_STORE_VAR(varNum, abs(x1 - x2) + abs(y1 - y2));
 	return;
 }
 
@@ -1122,7 +1122,7 @@ void b2Stop_motion() // 1, 0x00
 
 	if (entryNum == 0)
 	{
-		var[6] = 0;
+		LOGIC_STORE_VAR(6, 0);
 		controlMode = PROGRAM_CONTROL;
 	}
 
@@ -1143,7 +1143,7 @@ void b2Start_motion() // 1, 0x00
 
 	if (entryNum == 0)
 	{
-		var[6] = 0;
+		LOGIC_STORE_VAR(6, 0);
 		controlMode = PLAYER_CONTROL;
 	}
 
@@ -1289,7 +1289,7 @@ void b2Get_dir() // 2, 0x40
 	entryNum = loadAndIncWinCode();
 	getViewTab(&localViewtab, entryNum);
 
-	var[loadAndIncWinCode()] = localViewtab.direction;
+	LOGIC_STORE_VAR(loadAndIncWinCode(), localViewtab.direction);
 
 	setViewTab(&localViewtab, entryNum);
 	return;
@@ -1420,7 +1420,7 @@ void b3Get_room_v() // 2, 0xC0
 
 	bDGetObject(objNum, &objectType);
 
-	var[loadAndIncWinCode()] = objectType.roomNum;
+	LOGIC_STORE_VAR(loadAndIncWinCode(), objectType.roomNum);
 	return;
 }
 
@@ -1707,13 +1707,19 @@ void b4Parse() // 1, 0x00
 	int stringNum;
 	size_t length;
 	char* stringToParse;
-	flag[2] = FALSE;
-	flag[4] = FALSE;
+#if LOGIC_CONTEXT_TRACE
+	b7SetCommandWriteTrace(TRUE);
+#endif
+	LOGIC_STORE_FLAG(2, FALSE);
+	LOGIC_STORE_FLAG(4, FALSE);
 
 	stringToParse = b7GetInternalStringPtr(stringNum, &length);
 
 	stringNum = loadAndIncWinCode();
 	b7LookupWords(stringToParse);
+#if LOGIC_CONTEXT_TRACE
+	b7SetCommandWriteTrace(FALSE);
+#endif
 	return;
 }
 
@@ -1734,7 +1740,7 @@ void b4Get_num() // 2, 0x40
 
 	messagePointer = getMessagePointer(currentLog, messNum - 1);
 	b7GetString(messagePointer, logicFile.messageBank, b7Temp, tempBank, 1, 23, 3);
-	var[varNum] = atoi(b7Temp);
+	LOGIC_STORE_VAR(varNum, atoi(b7Temp));
 
 	b10BankedDealloc((byte*)b7Temp, tempBank);
 
@@ -2134,25 +2140,59 @@ void b5Allow_menu() // 1, 0x01
 
 void b5Mul_n() // 2, 0x80 
 {
+#if LOGIC_CONTEXT_TRACE
+	byte varIndex, before, operand;
+	varIndex = loadAndIncWinCode();
+	before = var[varIndex];
+	operand = loadAndIncWinCode();
+	logicContextWriteVariable(varIndex, (byte)(before * operand));
+#else
 	var[loadAndIncWinCode()] *= loadAndIncWinCode();
+#endif
 	return;
 }
 
 void b5Mul_v() // 2, 0xC0 
 {
+#if LOGIC_CONTEXT_TRACE
+	byte varIndex, operandIndex, before, operand;
+	varIndex = loadAndIncWinCode();
+	before = var[varIndex];
+	operandIndex = loadAndIncWinCode();
+	operand = var[operandIndex];
+	logicContextWriteVariable(varIndex, (byte)(before * operand));
+#else
 	var[loadAndIncWinCode()] *= var[loadAndIncWinCode()];
+#endif
 	return;
 }
 
 void b5Div_n() // 2, 0x80 
 {
+#if LOGIC_CONTEXT_TRACE
+	byte varIndex, before, operand;
+	varIndex = loadAndIncWinCode();
+	before = var[varIndex];
+	operand = loadAndIncWinCode();
+	logicContextWriteVariable(varIndex, (byte)(before / operand));
+#else
 	var[loadAndIncWinCode()] /= loadAndIncWinCode();
+#endif
 	return;
 }
 
 void b5Div_v() // 2, 0xC0 
 {
+#if LOGIC_CONTEXT_TRACE
+	byte varIndex, operandIndex, before, operand;
+	varIndex = loadAndIncWinCode();
+	before = var[varIndex];
+	operandIndex = loadAndIncWinCode();
+	operand = var[operandIndex];
+	logicContextWriteVariable(varIndex, (byte)(before / operand));
+#else
 	var[loadAndIncWinCode()] /= var[loadAndIncWinCode()];
+#endif
 	return;
 }
 
