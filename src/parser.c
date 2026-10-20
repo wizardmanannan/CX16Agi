@@ -68,11 +68,6 @@ void b7SetEvent(EventType* event, byte eventNumber)
 	b7Events[eventNumber] = *event;
 }
 
-byte b7GetInputWord(byte number)
-{
-	return inputWords[number];
-}
-
 char* b7GetInternalStringPtr(byte number, size_t* length)
 {
 	*length = strlen(string[number]);

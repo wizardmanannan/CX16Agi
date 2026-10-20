@@ -85,6 +85,17 @@ int main(int argc, char** argv)
     memcpy(longSplit, longText, sizeof(longText));
     longSplit[300] = longSplit[302] = 0;
     tokenCase(input, routine, stack, longText, longSplit, longOffsets, 2);
+    {
+        static const unsigned int ids[] = { 1, 255, 256, 257, 809, 9999, 65535 };
+        unsigned int getter = targetFixtureSymbol(argv[2], "_b7GetInputWord");
+        unsigned int words = targetFixtureSymbol(argv[2], "_inputWords");
+        for (i = 0; i < sizeof(ids) / sizeof(ids[0]); i++) {
+            fprintf(input, "STM %04X %02X\nSTM %04X %02X\nSTA 00\nRUN %04X\nRQA\nRQX\n",
+                    words, ids[i] & 255, words + 1, ids[i] >> 8, getter);
+            expected[count++] = ids[i] & 255;
+            expected[count++] = ids[i] >> 8;
+        }
+    }
     rewind(input);
     child = fork();
     assert(child >= 0);
@@ -100,7 +111,12 @@ int main(int argc, char** argv)
         if (sscanf(line, "%x %c", &value, &extra) != 1) continue;
         if (!phase) before = value;
         else if (phase == 1) cycles = value - before;
-        else { assert(phase - 2 < count); assert(value == expected[phase - 2]); }
+        else {
+            assert(phase - 2 < count);
+            if (value != expected[phase - 2])
+                fprintf(stderr, "parser result %u: got %x, expected %x\n", phase - 2, value, expected[phase - 2]);
+            assert(value == expected[phase - 2]);
+        }
         phase++;
     }
     assert(phase == count + 2);

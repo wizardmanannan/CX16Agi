@@ -6,9 +6,20 @@ PARSER_INPUT_ASM_INC = 1
 .import popax
 .export _b7StripExtraChars, _b7StripExtraCharsEnd
 .export _b7TokenizeWords
+.export _b7GetInputWord
+.import _inputWords
 .export _b7RefreshInputLine
 .import _b7Temp, _b7CurrentInputStr, _b7OutputString, _cursorChar
 .segment "CODE"
+; Dictionary synonym IDs are words, including values above 255.
+_b7GetInputWord:
+    asl
+    tay
+    lda _inputWords+1,y
+    tax
+    lda _inputWords,y
+    rts
+
 ; Resident code also permits the emulator fixture to supply another input bank.
 
 ; Read and write cursors permit compaction in place, including page crossings.

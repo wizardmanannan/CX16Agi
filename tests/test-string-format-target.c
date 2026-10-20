@@ -19,6 +19,7 @@
 byte variables[256];
 byte* var = variables;
 int numInputWords;
+int inputWords[10];
 int currentLog;
 unsigned int bankedCopyCalls;
 byte targetResult;

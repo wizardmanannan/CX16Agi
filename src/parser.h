@@ -54,7 +54,7 @@ extern byte b7GetAsciiState(byte number);
 extern void b7GetEvent(EventType* event, byte eventNumber);
 extern void b7InitEvents();
 extern void b7PollKeyboard();
-extern byte b7GetInputWord(byte number);
+extern word b7GetInputWord(byte number);
 extern void b7ActivateEvent(byte eventNumber);
 
 extern char string[12][40];

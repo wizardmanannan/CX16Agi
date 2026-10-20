@@ -73,7 +73,7 @@ byte loadAndIncWinCode(void)
 	return operands[operandCount++];
 }
 
-byte b7GetInputWord(byte number)
+word b7GetInputWord(byte number)
 {
 	assert(number < sizeof(inputWords) / sizeof(inputWords[0]));
 	return inputWords[number];
@@ -260,6 +260,23 @@ static void test_said_trailing_wildcard(void)
 	assert(numInputWords == 0 && flag[2] == FALSE && flag[4] == TRUE);
 }
 
+static void test_said_high_dictionary_ids(void)
+{
+    static const int ids[] = { 256, 257, 809, 9998 };
+    unsigned int i;
+    for (i = 0; i < sizeof(ids) / sizeof(ids[0]); i++) {
+        operands[0] = 1;
+        set_said_argument(0, ids[i]);
+        inputWords[0] = ids[i];
+        numInputWords = 1;
+        flag[2] = TRUE;
+        flag[4] = FALSE;
+        operandCount = 0;
+        assert(b1Said());
+        assert(operandCount == 3 && numInputWords == 0);
+    }
+}
+
 int main(void)
 {
 	currentLog = 106;
@@ -279,6 +296,7 @@ int main(void)
 	test_set_game_id_bounds();
 	test_said_rejects_excess_arguments();
 	test_said_trailing_wildcard();
+    test_said_high_dictionary_ids();
 	puts("string command tests passed");
 	return 0;
 }
