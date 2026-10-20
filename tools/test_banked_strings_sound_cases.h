@@ -114,6 +114,8 @@ static void run_sound_conversion(void)
 
 	prepare();
 	call_target_caller("_testRunSoundConversion");
+	CHECK(ram[symbol("_testSoundConversionProtected")] == 0 && ram[symbol("_testSoundConversionProtected")+1] == 1,
+		"Periodic conversion lost persistent dependency ownership");
 	CHECK(read6502((uint16_t)(outputBanks), 0) == 0x13 &&
 		read6502((uint16_t)(outputBanks + 1), 0) == 0x13,
 		"Sound conversion did not use real allocator banks for both generated resources");

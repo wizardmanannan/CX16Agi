@@ -27,6 +27,7 @@ unsigned int testSoundConversionResources[2];
 unsigned int testSoundConversionNoiseAddresses[2];
 byte testSoundConversionSourcesReleased[2];
 byte testSoundConversionOutputsReleased[2];
+byte testSoundConversionProtected[2];
 unsigned int testSoundBoundsResource;
 unsigned int testSoundBoundsResourceEnd;
 unsigned int testSoundBoundsAllocationEnd;
@@ -147,6 +148,7 @@ static void testBuildSoundConversion(byte rawVolume, byte resultIndex)
 
 	RAM_BANK = SOUND_BANK;
 	memset(&bBLoadedSounds[resultIndex], 0, sizeof(SoundFile));
+	bBLoadedSounds[resultIndex].isLogicZeroOrDependency = resultIndex;
 	soundLoadCounter = resultIndex;
 	bBLoadedSounds[resultIndex].soundBank = sourceBank;
 	bBLoadedSounds[resultIndex].soundResource = sourceResource;
@@ -159,6 +161,7 @@ static void testBuildSoundConversion(byte rawVolume, byte resultIndex)
 	outputResource = bBLoadedSounds[resultIndex].soundResource;
 	outputBank = bBLoadedSounds[resultIndex].soundBank;
 	outputNoise = bBLoadedSounds[resultIndex].chNoise;
+	testSoundConversionProtected[resultIndex] = bBLoadedSounds[resultIndex].isLogicZeroOrDependency;
 	testSoundConversionBanks[resultIndex] = outputBank;
 	testSoundConversionSourceBanks[resultIndex] = sourceBank;
 	testSoundConversionResources[resultIndex] = (unsigned int)outputResource;

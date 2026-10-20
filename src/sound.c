@@ -406,6 +406,7 @@ void bBPreComputePeriodicSound(SoundFile* soundFile, unsigned int* soundChannelO
 	unsigned int lfsrDuration, lsfrFrequencyToPlay, lfsr = LFSR_INITIAL_SEED, feedback;
 	unsigned long remainingBeats = totalBeats;
 
+	newSoundFile = *soundFile;
 	oldCh2Input.source = soundFile->ch2;
 	oldCh2Input.buffer = oldCh2Buffer;
 	oldCh2Input.next = oldCh2Buffer + ONETHIRDBUFFERSIZE;
