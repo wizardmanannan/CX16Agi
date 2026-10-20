@@ -99,14 +99,15 @@ char* getMessagePointer(byte logicFileNo, byte messageNo)
 {
 	byte previousBank = RAM_BANK;
 	char* result;
-	int i;
 
 	LOGICFile logicFile;
 	b5GetLogicFile(&logicFile, logicFileNo);
+	if (!logicFile.messages || messageNo >= logicFile.numMessages) return "";
 
 	RAM_BANK = logicFile.messageBank;
 
 	result = (char*)logicFile.messages[messageNo];
+	if (!result) result = "";
 
 	//for (i = 1; i < strlen(result) && *result == ' '; i++) //Skip tabbing
 	//{
@@ -245,7 +246,7 @@ boolean b1Said()
 		argValue = (argLo + (argHi << 8));
 		if (argValue == 9999) break; /* Should always be last argument */
 		if (argValue == 1) continue; /* Word comparison does not matter */
-		if (b7GetInputWord(wordNum) != argValue) wordsMatch = FALSE;
+		if (wordNum >= numInputWords || b7GetInputWord(wordNum) != argValue) wordsMatch = FALSE;
 	}
 
 	if ((numInputWords != numOfArgs) && (argValue != 9999)) return FALSE;
@@ -1494,7 +1495,8 @@ void b3PrintMessageInTextbox(byte messNum, byte x, byte y, byte length, boolean 
 	char* messagePointer;
 	byte timeoutFlagVal = var[PRINT_TIMEOUT];
 	unsigned int waitTicks;
-	unsigned int vSyncToContinueAt;
+	word waitStarted;
+	int ch;
 	LOGICFile logicFile;
 	byte keysToWait[NO_KEYS_TO_WAIT] = { KEY_ESC, KEY_ENTER };
 
@@ -1514,18 +1516,25 @@ void b3PrintMessageInTextbox(byte messNum, byte x, byte y, byte length, boolean 
 	messagePointer = getMessagePointer(currentLog, messNum - 1);
 
 	b3DisplayMessageBox(messagePointer, logicFile.messageBank, y, x, TEXTBOX_PALETTE_NUMBER, length, wrap, FIRST_TEXT_ROW);
+	if (flag[15]) {
+		flag[15] = FALSE;
+		return;
+	}
 
 	if (timeoutFlagVal)
 	{
 		waitTicks = timeoutFlagVal * 30;  // The timeout value is given in half seconds and the TotalTicks in 1/60ths of a second.
-		vSyncToContinueAt = vSyncCounter + waitTicks;
-
-		while (vSyncCounter != vSyncToContinueAt);
+		waitStarted = vSyncCounter;
+		while ((word)(vSyncCounter - waitStarted) < waitTicks) {
+			GET_IN(ch);
+			if (ch == KEY_ENTER || ch == KEY_ESC) break;
+		}
 	}
 	else
 	{
 		b5WaitOnSpecificKeys(keysToWait, NO_KEYS_TO_WAIT);
 	}
+	var[PRINT_TIMEOUT] = 0;
 
 	b3ClearLastPlacedText();
 
@@ -1608,7 +1617,6 @@ void b4Graphics() // 0, 0x00
 
 void b4Set_cursor_char() // 1, 0x00 
 {
-	char* b7Temp = (char*)&GOLDEN_RAM[LOCAL_WORK_AREA_START];
 	byte msgNo = loadAndIncWinCode() - 1;
 	char* messagePointer = getMessagePointer(currentLog, msgNo);
 	LOGICFile logicFile;
@@ -1619,10 +1627,9 @@ void b4Set_cursor_char() // 1, 0x00
 	printf("Your msgNo is %d\n", msgNo);
 #endif // VERBOSE_STRING_CHECK
 
-
-	//b3ProcessString(messagePointer, logicFile.messageBank, temp);
-
-	memCpyBanked((byte*)&cursorChar, (byte*)b7Temp, STRING_BANK, 1);
+	// cursorChar is in fixed BSS, so only the message source needs bank mapping.
+	if (strLenBanked(messagePointer, logicFile.messageBank))
+		memCpyBanked((byte*)&cursorChar, (byte*)messagePointer, logicFile.messageBank, 1);
 
 #ifdef VERBOSE_STRING_CHECK
 	printf("Your cursor char is %c\n", cursorChar);
@@ -1671,24 +1678,24 @@ void b4Status_line_off() // 0, 0x00
 	return;
 }
 
-void b4Set_string() // 2, 0x00 
+void b4Set_string() // 2, 0x00
 {
-	int stringNum, messNum;
+	byte stringNum = loadAndIncWinCode();
+	byte messNum = loadAndIncWinCode();
 	char* messagePointer;
+	char terminator = '\0';
+	size_t length;
 	LOGICFile logicFile;
 
+	if (stringNum >= sizeof(string) / sizeof(string[0])) return;
 	b5GetLogicFile(&logicFile, currentLog);
-
-	stringNum = loadAndIncWinCode();
-	messNum = loadAndIncWinCode();
+	if (!messNum || messNum > logicFile.numMessages || !logicFile.messages) return;
 	messagePointer = getMessagePointer(currentLog, messNum - 1);
-
-	/*printf("attempting to %p on bank %p to %p. the length is %d\n", string[stringNum - 1], messagePointer, logicFile.messageBank, strLenBanked(messagePointer, logicFile.messageBank));
-
-	strcpyBanked(string[stringNum - 1], messagePointer, logicFile.messageBank);
-
-	asm("stp");*/
-
+	length = strLenBanked(messagePointer, logicFile.messageBank);
+	if (length >= sizeof(string[0])) length = sizeof(string[0]) - 1;
+	memCpyBankedBetween((byte*)string[stringNum], STRING_BANK,
+	                   (byte*)messagePointer, logicFile.messageBank, length);
+	memCpyBanked((byte*)string[stringNum] + length, (byte*)&terminator, STRING_BANK, 1);
 	return;
 }
 
@@ -1712,18 +1719,19 @@ void b4Get_string() // 5, 0x00
 	return;
 }
 
-void b4Word_to_string() // 2, 0x00 
+void b4Word_to_string() // 2, 0x00
 {
-	int stringNum, wordNum;
-	char* stringPtr;
+	byte stringNum = loadAndIncWinCode();
+	byte wordNum = loadAndIncWinCode();
+	char terminator = '\0';
 	size_t length;
 
-	stringNum = loadAndIncWinCode();
-	wordNum = loadAndIncWinCode();
-
-	stringPtr = b7GetInternalStringPtr(stringNum, &length);
-
-	memCpyBanked((byte*)&b7WordText[wordNum], (byte*)stringPtr, STRING_BANK, length);
+	if (stringNum >= sizeof(string) / sizeof(string[0]) ||
+	    wordNum >= numInputWords || wordNum >= 10) return;
+	length = strLenBanked(b7WordText[wordNum], STRING_BANK);
+	if (length >= sizeof(string[0])) length = sizeof(string[0]) - 1;
+	memCpyBanked((byte*)string[stringNum], (byte*)b7WordText[wordNum], STRING_BANK, length);
+	memCpyBanked((byte*)string[stringNum] + length, (byte*)&terminator, STRING_BANK, 1);
 	return;
 }
 
@@ -1735,34 +1743,28 @@ void b4Parse() // 1, 0x00
 	flag[2] = FALSE;
 	flag[4] = FALSE;
 
-	stringToParse = b7GetInternalStringPtr(stringNum, &length);
-
 	stringNum = loadAndIncWinCode();
+	if (stringNum >= sizeof(string) / sizeof(string[0])) return;
+	stringToParse = b7GetInternalStringPtr(stringNum, &length);
 	b7LookupWords(stringToParse);
 	return;
 }
 
-void b4Get_num() // 2, 0x40 
+void b4Get_num() // 2, 0x40
 {
-	int messNum, varNum;
-	char* b7Temp;
+	byte messNum, varNum;
+	char input[4] = "";
 	char* messagePointer;
 	LOGICFile logicFile;
-	byte tempBank;
-
-	b7Temp = (char*)b10BankedAlloc(80, &tempBank);
 
 	b5GetLogicFile(&logicFile, currentLog);
-
 	messNum = loadAndIncWinCode();
 	varNum = loadAndIncWinCode();
-
+	if (!messNum || messNum > logicFile.numMessages || !logicFile.messages) return;
 	messagePointer = getMessagePointer(currentLog, messNum - 1);
-	b7GetString(messagePointer, logicFile.messageBank, b7Temp, tempBank, 1, 23, 3);
-	var[varNum] = atoi(b7Temp);
-
-	b10BankedDealloc((byte*)b7Temp, tempBank);
-
+	/* The software stack is visible regardless of the mapped resource bank. */
+	b7GetString(messagePointer, logicFile.messageBank, input, RAM_BANK, 1, 23, sizeof(input) - 1);
+	var[varNum] = (byte)atoi(input);
 	return;
 }
 
@@ -1933,17 +1935,16 @@ void b5Pause() // 0, 0x00
 }
 
 
-//void b4Echo_line() // 0, 0x00 
-//{
-//
-//}
+void b5Echo_line(void)
+{
+    b7EchoLine();
+}
 
 
-//void b4Cancel_line() // 0, 0x00 
-//{
-//	/*currentInputStr[0]=0;
-//	strPos=0;*/
-//}
+void b5Cancel_line(void)
+{
+    b7CancelLine();
+}
 
 //void b4Init_joy() // 0, 0x00 
 //{
@@ -1976,6 +1977,7 @@ void b5Set_game_id() // 1, 0x00
 	LOGICFile logicFile;
 	char* messagePointer;
 	byte messageNo;
+	size_t gameIdLength;
 
 
 
@@ -1983,9 +1985,12 @@ void b5Set_game_id() // 1, 0x00
 
 	b5GetLogicFile(&logicFile, currentLog);
 
-	messagePointer = getMessagePointer(currentLog, messageNo - 1);  /* Ignore the game ID. Not important */
+	messagePointer = getMessagePointer(currentLog, messageNo - 1);
 
-	strcpyBanked(gameId, messagePointer, logicFile.messageBank);
+	gameIdLength = strLenBanked(messagePointer, logicFile.messageBank);
+	if (gameIdLength > GAMEID_MAX_LENGTH) gameIdLength = GAMEID_MAX_LENGTH;
+	memCpyBanked((byte*)gameId, (byte*)messagePointer, logicFile.messageBank, gameIdLength);
+	gameId[gameIdLength] = '\0';
 
 	b4InitMetadata();
 
@@ -2055,12 +2060,20 @@ void b5Reposition_to_v() // 3, 0x60
 
 void b5Print_at() // 4, 0x00           /* 3 args for AGI versions before */
 {
-	b3PrintMessageInTextbox(loadAndIncWinCode(), loadAndIncWinCode(), loadAndIncWinCode(), loadAndIncWinCode(), TRUE);
+    byte message = loadAndIncWinCode();
+    byte row = loadAndIncWinCode();
+    byte column = loadAndIncWinCode();
+    byte width = loadAndIncWinCode();
+    b3PrintMessageInTextbox(message, column, row, width, TRUE);
 }
 
 void b5Print_at_v() // 4, 0x80         /* 2_440 (maybe laterz) */
 {
-	b3PrintMessageInTextbox(var[loadAndIncWinCode()], loadAndIncWinCode(), loadAndIncWinCode(), loadAndIncWinCode(), TRUE);
+    byte message = var[loadAndIncWinCode()];
+    byte row = loadAndIncWinCode();
+    byte column = loadAndIncWinCode();
+    byte width = loadAndIncWinCode();
+    b3PrintMessageInTextbox(message, column, row, width, TRUE);
 }
 
 void b5Discard_view_v() // 1, 0x80 

@@ -1,3 +1,8 @@
+    .include "bankedStringAsm.s"
+.include "textLayoutAsm.s"
+    .include "parserInputAsm.s"
+    .include "textControlsAsm.s"
+    .include "stringFormatAsm.s"
     .importzp sreg
     .include "init.s"
     .include "commandLoop.s"

@@ -14,6 +14,7 @@ OBJECT_INC = 1
 .import _bDSelectedScreenObjNum
 .import _bDUnselectedScreenObjNum
 .segment "BANKRAM0D"
+NAME_REMAINING: .byte 0
 
 ; WRITE_NEXT
 ; Writes one byte from A to the current output pointer (WRITE_ZP).
@@ -115,12 +116,15 @@ ldy OBJ_NAME_OFFSET     ; restore string index
 
 iny
 inx
+dec NAME_REMAINING
+beq @nameDone
 
 @getObjectName:
 lda (OBJECT_NAME),y
 sta CH
 bne @loop               ; more characters in the name
 
+@nameDone:
 clc
 txa
 adc WRITE_ZP
@@ -147,6 +151,9 @@ sta WRITE_ZP
 lda #>GOLDEN_RAM_WORK_AREA
 sta WRITE_ZP + 1        ; reset pointer after flush
 
+; The fresh 500-byte area fits the remainder of any byte-sized name.
+lda #255
+sta WRITE_OUT_VAL
 ldx #$0                 ; dest offset restarts at 0 in the fresh buffer
 ldy OBJ_NAME_OFFSET
 jmp @write
@@ -163,9 +170,13 @@ rts
 ; If the high (and then low) byte of WRITE_ZP shows the buffer may
 ; overflow, jumps to bDDisplayInventoryInnerWithCompare instead.
 ;
-; On entry: A = additional length already accounted for on this line
-;           (added to WRITE_ZP and compared against the work-area end).
+; On entry: A = maximum name bytes to copy (zero copies nothing).
 _bDDisplayInventoryInner:
+sta NAME_REMAINING
+cmp #0
+bne :+
+rts
+:
 clc
 adc WRITE_ZP
 sta sreg
@@ -174,7 +185,9 @@ adc WRITE_ZP + 1
 sta sreg + 1            ; sreg = WRITE_ZP + incoming length (end probe)
 
 cmp #>(GOLDEN_RAM_WORK_AREA + LOCAL_WORK_AREA_SIZE) 
-bcs @checkLowByte
+bcc @noCompareNeeded
+beq @checkLowByte
+jmp bDDisplayInventoryInnerWithCompare
 
 @noCompareNeeded:
 lda (OBJECT_NAME)
@@ -192,10 +205,13 @@ ldy #$0                 ; source index
 sta GOLDEN_RAM_WORK_AREA,x     ; self-modified: writes to WRITE_ZP,X
 iny
 inx
+dec NAME_REMAINING
+beq @nameDone
 @getObjectName:
 lda (OBJECT_NAME),y
 bne @loop               ; continue until NUL
 
+@nameDone:
 clc
 txa
 adc WRITE_ZP
@@ -238,7 +254,7 @@ bra @checkLoopCondition
 inc J_COUNTER
 @checkLoopCondition:
 lda J_COUNTER
-cmp #TILES_ACROSS
+cmp #40
 bcs @endLoop            ; line is already a full row of tiles
 
 lda WRITE_ZP + 1
@@ -283,20 +299,23 @@ rts
 ;
 ; On entry (cc65 calling convention):
 ;   A  = lastLength  (bytes already used on this line)
-;   stacked byte = i  (object index; used to look up name length)
+;   stacked byte = object index
 ;
-; Computes J_COUNTER = lastLength + objectNameLengths[i], then writes
-; SPACE until J_COUNTER == TILES_ACROSS. Fast path when there is
+; Clip the next name to 20 columns, add lastLength, then write
+; SPACE until J_COUNTER == 40. Fast path when there is
 ; clearly enough room in the work area; otherwise jumps to the
 ; compare-and-flush variant.
 _bDPadWordsWithSpaces:
 sta LASTLENGTH
 jsr popa 
-sta I_COUNTER           ; I_COUNTER = object index
 
 @loopInit:
 tay
 lda _bDObjectNameLengths,y
+cmp #21
+bcc :+
+lda #20
+:
 clc
 adc LASTLENGTH
 sta J_COUNTER           ; column we would occupy after this name
@@ -311,7 +330,7 @@ ldy #$0                 ; dest offset from WRITE_ZP
 ldx J_COUNTER           ; current column
 
 @checkLoopCondition:
-cpx #TILES_ACROSS
+cpx #40
 bcs @endLoop
 
 @writeSpace:
@@ -377,6 +396,11 @@ SET_VERA_ADDRESS OBJECT_VERA_ADDRESS, #$2, OBJECT_VERA_ADDRESS_HIGH, #$0
 GET_STRUCT_8_STORED_OFFSET _offsetOfObjectNum,OBJECT_TO_SET_PALETTE
 tax
 lda _bDObjectNameLengths,x
+beq @endLoop
+cmp #21
+bcc :+
+lda #20
+:
 
 tax
 lda PALETTE_TO_SET
