@@ -55,17 +55,46 @@ static void write_text(const char *path, const char *contents)
 
 static void create_unix_socket(const char *path)
 {
+    char parent[4096];
+    char name[sizeof(((struct sockaddr_un *)0)->sun_path)];
+    size_t path_length = strlen(path);
+    CHECK(path_length < sizeof(parent), "Review evidence Unix socket fixture path is too long");
+    memcpy(parent, path, path_length + 1);
+    char *slash = strrchr(parent, '/');
+    const char *base = parent;
+    if (slash) base = slash + 1;
+    size_t name_length = strlen(base);
+    CHECK(name_length > 0 && name_length < sizeof(name),
+          "Review evidence Unix socket fixture name is too long");
+    memcpy(name, base, name_length + 1);
+    if (slash) {
+        if (slash == parent) slash[1] = '\0';
+        else *slash = '\0';
+    } else {
+        strcpy(parent, ".");
+    }
+
+    int saved_cwd = open(".", O_RDONLY);
+    CHECK(saved_cwd >= 0, "Cannot save review evidence fixture working directory");
     int descriptor = socket(AF_UNIX, SOCK_STREAM, 0);
-    CHECK(descriptor >= 0, "Cannot create review evidence Unix socket fixture");
+    if (descriptor < 0) {
+        close(saved_cwd);
+        CHECK(false, "Cannot create review evidence Unix socket fixture");
+    }
     struct sockaddr_un address;
     memset(&address, 0, sizeof(address));
     address.sun_family = AF_UNIX;
-    size_t length = strlen(path);
-    CHECK(length < sizeof(address.sun_path), "Review evidence Unix socket path is too long");
-    memcpy(address.sun_path, path, length + 1);
-    CHECK(!bind(descriptor, (struct sockaddr *)&address, sizeof(address)),
-          "Cannot bind review evidence Unix socket fixture");
-    CHECK(!close(descriptor), "Cannot close review evidence Unix socket fixture");
+    memcpy(address.sun_path, name, name_length + 1);
+    bool changed_directory = !chdir(parent);
+    bool bound = changed_directory && !bind(descriptor, (struct sockaddr *)&address, sizeof(address));
+    bool socket_closed = !close(descriptor);
+    bool restored_directory = !changed_directory || !fchdir(saved_cwd);
+    bool cwd_closed = !close(saved_cwd);
+    CHECK(changed_directory, "Cannot enter review evidence socket fixture directory");
+    CHECK(bound, "Cannot bind review evidence Unix socket fixture");
+    CHECK(socket_closed, "Cannot close review evidence Unix socket fixture");
+    CHECK(restored_directory, "Cannot restore review evidence fixture working directory");
+    CHECK(cwd_closed, "Cannot close saved review evidence fixture directory");
 }
 
 static void check_engine_fixture_temps_clean(void)
@@ -631,7 +660,8 @@ int main(int argc, char **argv)
     fprintf(stderr, "WITNESS_EXECUTED: review-evidence-v2\n");
     path_join(project, sizeof(project), suite_fixture_directory, "mini-c-product");
     CHECK(!mkdir(project, 0700), "Cannot create miniature C product fixture");
-    path_join(fixture_input, sizeof(fixture_input), suite_fixture_directory, "fixture-data");
+    path_join(fixture_input, sizeof(fixture_input), suite_fixture_directory,
+              "fixture-data-with-a-component-long-enough-to-exceed-the-unix-domain-socket-sun-path-limit");
     CHECK(!mkdir(fixture_input, 0700), "Cannot create review test input directory");
     char input_file[4096], git_admin_directory[4096], git_metadata_file[4096], git_socket[4096];
     path_join(input_file, sizeof(input_file), fixture_input, "input.txt");
@@ -641,6 +671,9 @@ int main(int argc, char **argv)
     path_join(git_metadata_file, sizeof(git_metadata_file), git_admin_directory, "config");
     write_text(git_metadata_file, "[core]\nrepositoryformatversion = 0\n");
     path_join(git_socket, sizeof(git_socket), git_admin_directory, "s");
+    struct sockaddr_un socket_path_limit = { 0 };
+    CHECK(strlen(git_socket) >= sizeof(socket_path_limit.sun_path),
+          "Review evidence Unix socket fixture did not exceed sun_path");
     create_unix_socket(git_socket);
     path_join(report, sizeof(report), output_root, "captured");
     path_join(plan_path, sizeof(plan_path), suite_fixture_directory, "review.plan");
