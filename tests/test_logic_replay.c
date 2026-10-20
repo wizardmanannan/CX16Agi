@@ -235,3 +235,237 @@ static int unlink_if_present(const char *path)
     return -1;
 }
 
+int main(int argc, char **argv)
+{
+    char directory[] = "obj/cx16/logic-replay-test-XXXXXX";
+    char resource_path[256], manifest_path[256], trace_path[256];
+    char live_resource_paths[3][256] = {{0}};
+    LogicReplayManifest manifest, decoded, live_manifest;
+    LogicReplayEvent events[9], invalid[2], *loaded = NULL, *minimized = NULL;
+    LogicReplayEvent live_events[8], *live_minimized = NULL;
+    LogicFailureSignature failure, expected_failure, expected_live_failure;
+    LogicFailureSignature live_failure;
+    LogicReductionOptions options;
+    LogicReductionReport report;
+    LogicReductionOptions live_options;
+    LogicReductionReport live_report;
+    LogicReplayResult clean_result, clean_repeat_result;
+    LogicReplayResult faulty_result, minimized_result;
+    LiveReplayOracle live_oracle;
+    size_t loaded_count = 0, minimized_count = 0;
+    size_t live_minimized_count = 0;
+    MarkerOracleRuns oracle_runs = {0, 0};
+    InvalidResultOracleRuns invalid_result_runs = {0};
+    unsigned char digest[LOGIC_REPLAY_SHA256_SIZE];
+    static const unsigned char abc_sha256[LOGIC_REPLAY_SHA256_SIZE] = {
+        0xBA,0x78,0x16,0xBF,0x8F,0x01,0xCF,0xEA,
+        0x41,0x41,0x40,0xDE,0x5D,0xAE,0x22,0x23,
+        0xB0,0x03,0x61,0xA3,0x96,0x17,0x7A,0x9C,
+        0xB4,0x10,0xFF,0x61,0xF2,0x00,0x15,0xAD
+    };
+    int failed = 0;
+    int cleanup_failed = 0;
+    int intentional_failure = 0;
+    int directory_created = 0;
+    size_t i;
+    int fail_after_fixtures = argc == 2 &&
+                              strcmp(argv[1], "--fail-after-fixtures") == 0;
+
+    if (argc != 1 && !fail_after_fixtures) {
+        fprintf(stderr, "usage: %s [--fail-after-fixtures]\n", argv[0]);
+        return 2;
+    }
+
+    memset(&manifest, 0, sizeof manifest);
+    memset(&decoded, 0, sizeof decoded);
+    memset(&live_manifest, 0, sizeof live_manifest);
+    memset(events, 0, sizeof events);
+    memset(live_events, 0, sizeof live_events);
+    memset(&options, 0, sizeof options);
+    memset(&report, 0, sizeof report);
+    memset(&live_options, 0, sizeof live_options);
+    memset(&live_report, 0, sizeof live_report);
+    memset(&clean_result, 0, sizeof clean_result);
+    memset(&clean_repeat_result, 0, sizeof clean_repeat_result);
+    memset(&faulty_result, 0, sizeof faulty_result);
+    memset(&minimized_result, 0, sizeof minimized_result);
+    memset(&failure, 0, sizeof failure);
+    memset(&expected_failure, 0, sizeof expected_failure);
+    memset(&live_failure, 0, sizeof live_failure);
+    memset(&live_oracle, 0, sizeof live_oracle);
+    resource_path[0] = manifest_path[0] = trace_path[0] = '\0';
+
+    CHECK(mkdtemp(directory) != NULL);
+    directory_created = 1;
+    snprintf(resource_path, sizeof resource_path, "%s/LOGIC.0", directory);
+    snprintf(manifest_path, sizeof manifest_path, "%s/run.lrm", directory);
+    snprintf(trace_path, sizeof trace_path, "%s/run.lrt", directory);
+    CHECK(write_bytes(resource_path, "abc", 3) == 0);
+    CHECK(logic_replay_sha256_file(resource_path, digest) == 0);
+    CHECK(memcmp(digest, abc_sha256, sizeof digest) == 0);
+
+    manifest.version = LOGIC_REPLAY_MANIFEST_VERSION;
+    strcpy(manifest.engine, "CX16-interpreter");
+    strcpy(manifest.build, "t3code-f508eb73");
+    strcpy(manifest.agi_version, "3");
+    manifest.resource_count = 1;
+    strcpy(manifest.resources[0].name, "LOGIC.0");
+    memcpy(manifest.resources[0].sha256, digest, sizeof digest);
+    manifest.checkpoint_length = 4;
+    manifest.initial_checkpoint[0] = 0x01;
+    manifest.initial_checkpoint[1] = 0x23;
+    manifest.initial_checkpoint[2] = 0x45;
+    manifest.initial_checkpoint[3] = 0x67;
+    manifest.rng_seed = UINT64_C(0x123456789ABCDEF0);
+    strcpy(manifest.rng_algorithm, "xorshift32-v1");
+    manifest.tick_numerator = 60;
+    manifest.tick_denominator = 1;
+    CHECK(logic_replay_manifest_validate(&manifest) == 0);
+    CHECK(logic_replay_manifest_write(manifest_path, &manifest) == 0);
+    CHECK(logic_replay_manifest_read(manifest_path, &decoded) == 0);
+    CHECK(logic_replay_manifest_matches(&manifest, &decoded));
+    CHECK(logic_replay_manifest_verify_resources(&decoded, directory) == 0);
+    CHECK(write_bytes(resource_path, "abd", 3) == 0);
+    CHECK(logic_replay_manifest_verify_resources(&decoded, directory) != 0);
+    CHECK(write_bytes(resource_path, "abc", 3) == 0);
+
+    events[0].sequence = 0;
+    events[0].tick = 1;
+    events[0].kind = LOGIC_TRACE_KIND_CALL;
+    events[0].logic = 9;
+    events[0].depth = 1;
+    events[1].sequence = 1;
+    events[1].tick = 1;
+    events[1].kind = LOGIC_TRACE_KIND_MARK;
+    events[1].reason = LOGIC_REPLAY_REASON_INPUT_DOWN;
+    events[1].field = 42;
+    events[1].before = 0;
+    events[1].after = 1;
+    events[2].sequence = 2;
+    events[2].tick = 2;
+    events[2].kind = LOGIC_TRACE_KIND_MARK;
+    events[2].reason = LOGIC_REPLAY_REASON_TIME;
+    events[2].before = 1;
+    events[2].after = 2;
+    events[3].sequence = 3;
+    events[3].tick = 3;
+    events[3].kind = LOGIC_TRACE_KIND_MARK;
+    events[3].reason = LOGIC_REPLAY_REASON_TIME;
+    events[3].before = 1;
+    events[3].after = 2;
+    events[4].sequence = 4;
+    events[4].tick = 4;
+    events[4].kind = LOGIC_TRACE_KIND_MARK;
+    events[4].reason = LOGIC_REPLAY_REASON_RNG;
+    events[4].logic = 7;
+    events[4].opcode = 0xAA;
+    events[4].after = 0x87654321;
+    events[5].sequence = 5;
+    events[5].tick = 5;
+    events[5].kind = LOGIC_TRACE_KIND_MARK;
+    events[5].reason = LOGIC_REPLAY_REASON_TIME;
+    events[5].after = 4;
+    events[6].sequence = 6;
+    events[6].tick = 6;
+    events[6].kind = LOGIC_TRACE_KIND_MARK;
+    events[6].reason = LOGIC_REPLAY_REASON_RNG;
+    events[6].after = 0x13579BDF;
+    events[7].sequence = 7;
+    events[7].tick = 7;
+    events[7].kind = LOGIC_TRACE_KIND_MARK;
+    events[7].reason = LOGIC_REPLAY_REASON_TIME;
+    events[7].after = 6;
+    events[8].sequence = 8;
+    events[8].tick = 7;
+    events[8].kind = LOGIC_TRACE_KIND_RETURN;
+    events[8].logic = 9;
+    events[8].depth = 1;
+
+    events[7].kind = LOGIC_TRACE_KIND_MARK;
+    events[7].reason = LOGIC_REPLAY_REASON_INPUT_UP;
+    events[7].field = 42;
+    events[7].before = 1;
+    events[7].after = 0;
+
+    CHECK(logic_replay_trace_validate(events, 9) == 0);
+    CHECK(logic_replay_trace_write(trace_path, events, 9) == 0);
+    if (fail_after_fixtures) {
+        fprintf(stderr, "logic replay cleanup probe: intentional failure\n");
+        failed = 1;
+        intentional_failure = 1;
+        goto cleanup;
+    }
+    CHECK(logic_replay_trace_read(trace_path, &loaded, &loaded_count) == 0);
+    CHECK(loaded_count == 9);
+    for (i = 0; i < loaded_count; ++i)
+        CHECK(same_event(&loaded[i], &events[i]));
+    logic_replay_events_free(loaded);
+    loaded = NULL;
+    CHECK(trace_first_event_is_little_endian(trace_path) == 0);
+
+    memset(invalid, 0, sizeof invalid);
+    invalid[0] = events[7];
+    invalid[0].sequence = 1;
+    CHECK(logic_replay_trace_validate(invalid, 1) != 0);
+    invalid[0] = events[1];
+    invalid[0].sequence = 1;
+    CHECK(logic_replay_trace_validate(invalid, 1) != 0);
+    invalid[0] = events[0];
+    invalid[0].sequence = 1;
+    CHECK(logic_replay_trace_validate(invalid, 1) != 0);
+    invalid[0] = events[5];
+    invalid[0].sequence = 0;
+    invalid[1] = events[6];
+    invalid[1].sequence = 2;
+    CHECK(logic_replay_trace_validate(invalid, 2) != 0);
+    invalid[0] = events[3];
+    invalid[0].sequence = 1;
+    invalid[1] = events[5];
+    invalid[1].sequence = 2;
+    invalid[1].tick = 0;
+    CHECK(logic_replay_trace_validate(invalid, 2) != 0);
+
+    CHECK(write_u16_at(manifest_path, 8,
+                       LOGIC_REPLAY_MANIFEST_VERSION + 1) == 0);
+    CHECK(logic_replay_manifest_read(manifest_path, &decoded) != 0);
+    CHECK(logic_replay_manifest_write(manifest_path, &manifest) == 0);
+    CHECK(write_u16_at(manifest_path,
+                       LOGIC_REPLAY_MANIFEST_RECORD_LENGTH_OFFSET,
+                       LOGIC_REPLAY_MANIFEST_RESOURCE_RECORD_SIZE - 1) == 0);
+    CHECK(logic_replay_manifest_read(manifest_path, &decoded) != 0);
+    CHECK(logic_replay_manifest_write(manifest_path, &manifest) == 0);
+
+    CHECK(write_u16_at(trace_path, 4, LOGIC_REPLAY_TRACE_VERSION + 1) == 0);
+    CHECK(logic_replay_trace_read(trace_path, &loaded, &loaded_count) != 0);
+    CHECK(logic_replay_trace_write(trace_path, events, 9) == 0);
+    CHECK(write_u16_at(trace_path,
+                       LOGIC_REPLAY_TRACE_RECORD_LENGTH_OFFSET,
+                       LOGIC_REPLAY_EVENT_RECORD_SIZE - 1) == 0);
+    CHECK(logic_replay_trace_read(trace_path, &loaded, &loaded_count) != 0);
+    CHECK(logic_replay_trace_write(trace_path, events, 9) == 0);
+    CHECK(truncate_tail(trace_path, 1) == 0);
+    CHECK(logic_replay_trace_read(trace_path, &loaded, &loaded_count) != 0);
+
+cleanup:
+    logic_replay_events_free(loaded);
+    logic_replay_events_free(minimized);
+    logic_replay_events_free(live_minimized);
+    if (unlink_if_present(resource_path) != 0) cleanup_failed = 1;
+    if (unlink_if_present(live_resource_paths[1]) != 0) cleanup_failed = 1;
+    if (unlink_if_present(live_resource_paths[2]) != 0) cleanup_failed = 1;
+    if (unlink_if_present(manifest_path) != 0) cleanup_failed = 1;
+    if (unlink_if_present(trace_path) != 0) cleanup_failed = 1;
+    if (directory_created && rmdir(directory) != 0) {
+        fprintf(stderr, "logic replay regression: cannot remove %s: %s\n",
+                directory, strerror(errno));
+        cleanup_failed = 1;
+    }
+    if (cleanup_failed)
+        return 1;
+    if (intentional_failure)
+        return 2;
+    if (failed)
+        return 1;
+    puts("logic replay serialization and reduction checks passed");
+    return 0;
+}
