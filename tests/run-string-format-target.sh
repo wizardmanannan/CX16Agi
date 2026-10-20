@@ -127,7 +127,7 @@ if ! python3 "$repo_root/tests/build-target-product.py" "$repo_root" "$fixture/p
     exit 1
 fi
 "${compiler[@]}" -std=c99 "$repo_root/tests/test-input-render-target.c" -o "$fixture/test-input-render-target"
-"$fixture/test-input-render-target" "$fixture/product/agi.cx16" "$fixture/product/agi.lbl" "$fixture/product/agi.cx16.07"
+"$fixture/test-input-render-target" "$fixture/product/agi.cx16" "$fixture/product/agi.lbl" "$fixture/product/agi.cx16.07" "$fixture/product/agi.cx16.03" "$fixture/product/agi.cx16.0F"
 "${compiler[@]}" -std=c99 "$repo_root/tests/test-parser-cleanup-target.c" -o "$fixture/test-parser-cleanup-target"
 "$fixture/test-parser-cleanup-target" "$fixture/product/agi.cx16" "$fixture/product/agi.lbl" "$fixture/product/agi.cx16.07" "$fixture/product/agi.cx16.03"
 "${compiler[@]}" -std=c99 "$repo_root/tests/test-string-compare-target.c" -o "$fixture/test-string-compare-target"

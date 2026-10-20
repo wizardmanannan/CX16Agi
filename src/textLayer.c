@@ -11,6 +11,8 @@ int byteCounter = 0;
 #endif
 
 boolean charSetInited = FALSE;
+/* Resident so the input IRQ can use the active text palette in bank 7. */
+byte b3InputTextPalette = 0x20;
 #pragma bss-name (push, "BANKRAM03")
 byte b3CurrentForegroundColour;
 byte b3CurrentBackgroundColour;
@@ -445,7 +447,7 @@ byte b3DisplayManuallyWrappedMessageBox(char* message, byte messageBank, byte ro
 
 byte b3SetTextColor(byte foreground, byte background)
 {
-	int textId = (int)foreground << 4 + background;
+	int textId = ((int)foreground << 4) + background;
 	unsigned int foreColorBytes, backColorBytes;
 	long paletteWriteAddress;
 	byte paletteSlot;
@@ -453,6 +455,7 @@ byte b3SetTextColor(byte foreground, byte background)
 	int textPalette;
 
 	paletteSlot = bFGetPalette(BASE_TEXT_ID + textId, &palleteGetResult);
+	b3InputTextPalette = paletteSlot << 4;
 
 #ifdef VERBOSE_SET_PALETTE
 	printf("fore of %d and back of %d\n", foreground, background);

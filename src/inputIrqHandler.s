@@ -5,6 +5,7 @@ MAX_INPUT_STRING_LENGTH = 40
 .import _inputLineDisplayed, _user_input_line
 .import _b7OutputString, _b7ReadingString, _b7InputReady
 .import _b7InputRow, _b7InputColumn
+.import _b3InputTextPalette
 .include "globalGraphics.s"
 .segment "BSS"
 inputAddress: .res 2
@@ -104,7 +105,7 @@ b7HandleInputLine:
     lda #$20
 @write:
     sta VERA_data0
-    lda #INPUT_BYTE_1
+    lda _b3InputTextPalette
     sta VERA_data0
     iny
     cpy inputCount

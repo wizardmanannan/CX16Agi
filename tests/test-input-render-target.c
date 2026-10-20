@@ -9,6 +9,7 @@
 #include "target-fixture.h"
 
 static unsigned int expected[2048], count;
+static unsigned int textPalette = 0x20;
 static void store(FILE* input, unsigned int at, unsigned int value)
 {
     fprintf(input, "STM %04X %02X\n", at, value & 255);
@@ -31,7 +32,7 @@ static void checkRow(FILE* input, unsigned int address, unsigned int column, con
         unsigned int tile = 0x5a, palette = 0x5a;
         if (i >= column && i < 40 && i - column < size + erase) {
             tile = i - column < size ? (unsigned char)value[i - column] : ' ';
-            palette = 0x20;
+            palette = textPalette;
         }
         vera(input, address + i * 2);
         fprintf(input, "RQM 9F23\n"); expected[count++] = tile;
@@ -53,7 +54,7 @@ int main(int argc, char** argv)
     char line[256];
     int byte, status;
     pid_t child;
-    assert(argc == 4);
+    assert(argc == 6);
     routine = targetFixtureSymbol(argv[2], "b7HandleInputLine");
     bank = fopen(argv[3], "rb"); assert(bank);
     at = (unsigned int)fgetc(bank);
@@ -61,6 +62,22 @@ int main(int argc, char** argv)
     fprintf(input, "STM 0000 07\n");
     while ((byte = fgetc(bank)) != EOF) store(input, at++, byte);
     fclose(bank);
+    bank = fopen(argv[4], "rb"); assert(bank);
+    at = (unsigned int)fgetc(bank);
+    at |= (unsigned int)fgetc(bank) << 8;
+    store(input, 0, 3);
+    while ((byte = fgetc(bank)) != EOF) store(input, at++, byte);
+    fclose(bank);
+    bank = fopen(argv[5], "rb"); assert(bank);
+    at = 0xa000;
+    store(input, 0, 15);
+    while ((byte = fgetc(bank)) != EOF) store(input, at++, byte);
+    fclose(bank);
+    /* Reuse a real allocated colour pair: foreground 2, background 4. */
+    store(input, targetFixtureSymbol(argv[2], "_palettesAllocated"), 1);
+    store(input, targetFixtureSymbol(argv[2], "_allocatedPaletteOwners"), 52);
+    store(input, targetFixtureSymbol(argv[2], "_allocatedPaletteOwners") + 1, 0);
+    store(input, 0, 7);
     store(input, targetFixtureSymbol(argv[2], "_inputLineDisplayed"), 0);
     store(input, targetFixtureSymbol(argv[2], "_b7ReadingString"), 1);
     store(input, targetFixtureSymbol(argv[2], "_b7InputReady"), 1);
@@ -102,6 +119,18 @@ int main(int argc, char** argv)
     text(input, targetFixtureSymbol(argv[2], "_b7OutputString"), "Cmd:go?");
     fprintf(input, "STX FF\nRUN %04X\n", routine);
     checkRow(input, row, 0, "Cmd:go?", 0);
+    {
+        unsigned int stack = targetFixtureSymbol(argv[2], "c_sp");
+        store(input, stack, 0xff); store(input, stack + 1, 0x8e);
+        store(input, 0x8eff, 2);
+        store(input, 0, 3);
+        fprintf(input, "STA 04\nRUN %04X\nRQA\n", targetFixtureSymbol(argv[2], "_b3SetTextColor"));
+        expected[count++] = 4;
+        store(input, 0, 7);
+        fprintf(input, "RUN %04X\n", routine);
+        textPalette = 0x40;
+        checkRow(input, row, 0, "Cmd:go?", 0);
+    }
     rewind(input);
     child = fork(); assert(child >= 0);
     if (!child) {
