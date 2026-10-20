@@ -409,3 +409,342 @@ static int set_detail(char *detail, size_t capacity, const char *text)
     return copy_text(detail, capacity, text);
 }
 
+static int run_application(const char *game_directory, uint16_t seed,
+                             const LogicAppReplayInput *events,
+                             size_t event_count, uint32_t tick_count,
+                             uint32_t timeout_ms, uint8_t fault_flags,
+                             uint8_t output_bytes[LOGIC_APP_REPLAY_OUTPUT_SIZE],
+                             char *detail, size_t detail_capacity,
+                             uint8_t snapshots[][LOGIC_APP_REPLAY_OUTPUT_SIZE])
+{
+    static const char *const default_emulator = "x16emu";
+    static const char *const default_rom = "rom.bin";
+    static const char *const default_program = LOGIC_APP_REPLAY_DEFAULT_PROGRAM;
+    static const char *const default_labels = "obj/cx16/logic-app-replay/agi.cx16.lbl";
+    const char *emulator = getenv("X16EMU");
+    const char *rom = getenv("X16ROM");
+    const char *program = getenv("CX16_LOGIC_APP_PRG");
+    const char *label_path = getenv("CX16_LOGIC_APP_LABELS");
+    AppReplayLabels labels;
+    uint8_t seed_bytes[2];
+    uint8_t tick_bytes[4];
+    uint8_t translated_events[APP_REPLAY_MAX_EVENTS];
+    uint8_t event_count_byte;
+    uint8_t fault_byte = fault_flags;
+    uint8_t run_byte = 1;
+    pid_t child = -1;
+    int input = -1, output = -1;
+    int64_t deadline;
+    char line[256], command[64];
+    unsigned i;
+    uint32_t latest_event_frame = 0;
+    int status;
+    uint8_t requested, ready;
+    uint8_t empty_header[4] = {0};
+    uint8_t output_length_bytes[2];
+
+    if (detail && detail_capacity)
+        detail[0] = '\0';
+    if (output_bytes)
+        memset(output_bytes, 0, LOGIC_APP_REPLAY_OUTPUT_SIZE);
+    if (!game_directory || !*game_directory || !output_bytes || !detail ||
+        !detail_capacity || !timeout_ms || (!events && event_count) ||
+        event_count > APP_REPLAY_MAX_EVENTS || tick_count > 255u ||
+        (fault_flags & (uint8_t)~(LOGIC_APP_REPLAY_FAULT_OMIT_METADATA_SAVE |
+                                LOGIC_APP_REPLAY_FAULT_SEMANTIC_WRITE)))
+    {
+        if (detail && detail_capacity)
+            set_detail(detail, detail_capacity,
+                       event_count > APP_REPLAY_MAX_EVENTS
+                           ? "full-app input event capacity exceeded (max 64)"
+                           : tick_count > 255u
+                                 ? "full-app tick capacity exceeded (max 255)"
+                                 : "invalid full-app replay arguments");
+        return -1;
+    }
+    (void)signal(SIGPIPE, SIG_IGN);
+    for (i = 0; i < event_count; ++i) {
+        if (!events[i].frame || events[i].frame > UINT16_MAX ||
+            events[i].petscii == 0 ||
+            (i && events[i - 1].frame > events[i].frame) ||
+            semantic_key_to_petscii(events[i].petscii,
+                                    &translated_events[i]) != 0) {
+            (void)snprintf(detail, detail_capacity,
+                           "invalid semantic input event %u (frame=%u key=%02x)",
+                           i, (unsigned)events[i].frame,
+                           (unsigned)events[i].petscii);
+            return -1;
+        }
+        latest_event_frame = events[i].frame;
+    }
+    if (latest_event_frame + tick_count * 6u > UINT16_MAX) {
+        set_detail(detail, detail_capacity,
+                   "full-app virtual frame range exceeds 16-bit VERA clock");
+        return -1;
+    }
+    if (!emulator || !*emulator) emulator = default_emulator;
+    if (!rom || !*rom) rom = default_rom;
+    if (!program || !*program) program = default_program;
+    if (!label_path || !*label_path) label_path = default_labels;
+    if (read_labels(label_path, &labels) != 0) {
+        set_detail(detail, detail_capacity, "full-app replay labels are missing or invalid");
+        return -1;
+    }
+    if (launch_emulator(emulator, rom, program, game_directory,
+                        &child, &input, &output) != 0) {
+        set_detail(detail, detail_capacity, "cannot launch full-app emulator");
+        return -1;
+    }
+    deadline = monotonic_ms();
+    if (deadline < 0) {
+        stop_child(child, input, output);
+        set_detail(detail, detail_capacity, "cannot read monotonic clock");
+        return -1;
+    }
+    deadline += timeout_ms;
+    status = wait_for_ready(output, line, sizeof line, deadline);
+    if (status != 0) {
+        stop_child(child, input, output);
+        set_detail(detail, detail_capacity,
+                   status == -2 ? "full-app emulator startup timed out"
+                                : "full-app emulator did not reach the testbench");
+        return -1;
+    }
+    status = snprintf(command, sizeof command, "RUN %04X\n", labels.start);
+    if (status <= 0 || (size_t)status >= sizeof command ||
+        send_command(input, output, command, line, sizeof line, deadline) != 0) {
+        stop_child(child, input, output);
+        set_detail(detail, detail_capacity,
+                   "full application did not complete its normal CRT entry");
+        return -1;
+    }
+
+    seed_bytes[0] = (uint8_t)seed;
+    seed_bytes[1] = (uint8_t)(seed >> 8);
+    event_count_byte = (uint8_t)event_count;
+    put_u32(tick_bytes, snapshots ? 0 : tick_count);
+    if (write_memory(input, output, labels.seed, seed_bytes,
+                     sizeof seed_bytes, line, sizeof line, deadline) != 0 ||
+        write_memory(input, output, labels.event_count, &event_count_byte,
+                     sizeof event_count_byte, line, sizeof line, deadline) != 0) {
+        stop_child(child, input, output);
+        set_detail(detail, detail_capacity, "cannot set full-app replay seed or event count");
+        return -1;
+    }
+    for (i = 0; i < event_count; ++i) {
+        uint8_t record[LOGIC_APP_REPLAY_INPUT_RECORD_SIZE];
+        put_u32(record, events[i].frame);
+        record[4] = translated_events[i];
+        if (write_memory(input, output,
+                         labels.events + i * LOGIC_APP_REPLAY_INPUT_RECORD_SIZE,
+                         record, sizeof record, line, sizeof line,
+                         deadline) != 0) {
+            stop_child(child, input, output);
+            set_detail(detail, detail_capacity, "cannot deliver full-app input events");
+            return -1;
+        }
+    }
+    if (write_memory(input, output, labels.fault_flags, &fault_byte, 1,
+                     line, sizeof line, deadline) != 0 ||
+        write_memory(input, output, labels.tick_limit, tick_bytes,
+                     sizeof tick_bytes, line, sizeof line, deadline) != 0 ||
+        write_memory(input, output, labels.run_requested, &run_byte, 1,
+                     line, sizeof line, deadline) != 0) {
+        stop_child(child, input, output);
+        set_detail(detail, detail_capacity, "cannot deliver full-app replay request");
+        return -1;
+    }
+    if (select_ram_bank_zero(input, output, line, sizeof line, deadline) != 0 ||
+        read_memory_byte(input, output, labels.run_requested, &requested,
+                         line, sizeof line, deadline) != 0 || requested != 1) {
+        stop_child(child, input, output);
+        set_detail(detail, detail_capacity,
+                   "testbench did not deliver the full-app run request to BSS");
+        return -1;
+    }
+    if (read_memory(input, output, labels.output_data, empty_header,
+                    sizeof empty_header, line, sizeof line, deadline) != 0 ||
+        empty_header[0] != 0 || empty_header[1] != 0 ||
+        empty_header[2] != 0 || empty_header[3] != 0) {
+        stop_child(child, input, output);
+        (void)snprintf(detail, detail_capacity,
+                       "testbench BSS preflight read unexpected output bytes %02x%02x%02x%02x",
+                       empty_header[0], empty_header[1],
+                       empty_header[2], empty_header[3]);
+        return -1;
+    }
+    status = snprintf(command, sizeof command, "RUN %04X\n", labels.main);
+    if (status <= 0 || (size_t)status >= sizeof command ||
+        send_command(input, output, command, line, sizeof line, deadline) != 0) {
+        stop_child(child, input, output);
+        set_detail(detail, detail_capacity,
+                   remaining_ms(deadline) == 0
+                       ? "full production application boot or replay timed out"
+                       : "full production application boot or replay did not return to testbench");
+        return -1;
+    }
+    if (select_ram_bank_zero(input, output, line, sizeof line, deadline) != 0 ||
+        read_memory_byte(input, output, labels.ready, &ready,
+                         line, sizeof line, deadline) != 0 ||
+        read_memory(input, output, labels.output_length, output_length_bytes,
+                    sizeof output_length_bytes, line, sizeof line,
+                    deadline) != 0) {
+        stop_child(child, input, output);
+        set_detail(detail, detail_capacity,
+                   "testbench could not read full-app completion state");
+        return -1;
+    }
+    if (ready != 1 || (output_length_bytes[0] |
+                       ((uint16_t)output_length_bytes[1] << 8)) !=
+                      LOGIC_APP_REPLAY_OUTPUT_SIZE ||
+        read_memory(input, output, labels.output_data, output_bytes,
+                    LOGIC_APP_REPLAY_OUTPUT_SIZE, line, sizeof line,
+                    deadline) != 0) {
+        stop_child(child, input, output);
+        set_detail(detail, detail_capacity,
+                   "full production application returned without a complete semantic checkpoint");
+        return -1;
+    }
+    if (snapshots) {
+        for (uint32_t tick = 1; tick <= tick_count; ++tick) {
+            uint8_t *checkpoint = snapshots[tick - 1];
+            snprintf(command, sizeof command, "RUN %04X\n", labels.step);
+            if (send_command(input, output, command, line, sizeof line, deadline) ||
+                select_ram_bank_zero(input, output, line, sizeof line, deadline) ||
+                read_memory(input, output, labels.output_data, checkpoint,
+                    LOGIC_APP_REPLAY_OUTPUT_SIZE, line, sizeof line, deadline)) {
+                stop_child(child, input, output);
+                set_detail(detail, detail_capacity, "application checkpoint series timed out or stopped");
+                return -1;
+            }
+            if (memcmp(checkpoint, "X16R", 4) ||
+                checkpoint[4] != LOGIC_APP_REPLAY_SNAPSHOT_VERSION ||
+                get_u32(checkpoint + 6) != tick) {
+                stop_child(child, input, output);
+                set_detail(detail, detail_capacity, "application checkpoint series skipped a cycle");
+                return -1;
+            }
+            if (checkpoint[58] & (LOGIC_APP_REPLAY_STATUS_INPUT_WAIT_EXHAUSTED |
+                                  LOGIC_APP_REPLAY_STATUS_CONTEXT_VERIFY_FAILED)) {
+                memcpy(output_bytes, checkpoint, LOGIC_APP_REPLAY_OUTPUT_SIZE);
+                break;
+            }
+        }
+    }
+    status = finish_child(child, input, output, deadline);
+    if (status != 0) {
+        set_detail(detail, detail_capacity,
+                   status == -2 ? "full-app emulator shutdown timed out"
+                                : "full-app emulator did not exit cleanly");
+        return -1;
+    }
+    if (output_bytes[0] != 'X' || output_bytes[1] != '1' ||
+        output_bytes[2] != '6' || output_bytes[3] != 'R' ||
+        output_bytes[4] != LOGIC_APP_REPLAY_SNAPSHOT_VERSION ||
+        (!(output_bytes[58] &
+           (LOGIC_APP_REPLAY_STATUS_INPUT_WAIT_EXHAUSTED |
+            LOGIC_APP_REPLAY_STATUS_CONTEXT_VERIFY_FAILED)) &&
+         get_u32(output_bytes + 6) != tick_count)) {
+        (void)snprintf(detail, detail_capacity,
+                       "full-app checkpoint invalid: ready=%u length=%u header=%02x%02x%02x%02x version=%u tick=%u expected=%u",
+                       (unsigned)ready,
+                       (unsigned)(output_length_bytes[0] |
+                           ((uint16_t)output_length_bytes[1] << 8)),
+                       output_bytes[0], output_bytes[1], output_bytes[2],
+                       output_bytes[3], output_bytes[4],
+                       (unsigned)get_u32(output_bytes + 6), tick_count);
+        return -1;
+    }
+    if (output_bytes[58] & LOGIC_APP_REPLAY_STATUS_INPUT_WAIT_EXHAUSTED) {
+        (void)snprintf(detail, detail_capacity,
+                       "input_wait_exhausted: tick=%u events=%u/%u frame=%u key=%02x polls=%u",
+                       (unsigned)get_u32(output_bytes + 6),
+                       (unsigned)get_u16(output_bytes + 12),
+                       (unsigned)get_u16(output_bytes + 10),
+                       (unsigned)get_u32(output_bytes +
+                           LOGIC_APP_REPLAY_LAST_INPUT_FRAME_OFFSET),
+                       (unsigned)output_bytes[
+                           LOGIC_APP_REPLAY_LAST_INPUT_KEY_OFFSET],
+                       (unsigned)get_u16(output_bytes +
+                           LOGIC_APP_REPLAY_INPUT_WAIT_POLLS_OFFSET));
+        return -1;
+    }
+    if (fault_flags &&
+        !(output_bytes[58] & LOGIC_APP_REPLAY_STATUS_FAULT_TRIGGERED)) {
+        (void)snprintf(detail, detail_capacity,
+                       "input-triggered fault event was not delivered (target frame=%u PETSCII=%02x)",
+                       (unsigned)LOGIC_APP_REPLAY_FAULT_TRIGGER_FRAME,
+                       (unsigned)LOGIC_APP_REPLAY_FAULT_TRIGGER_PETSCII);
+        return -1;
+    }
+    if (output_bytes[58] & LOGIC_APP_REPLAY_STATUS_CONTEXT_VERIFY_FAILED) {
+        (void)snprintf(detail, detail_capacity,
+                       "context verifier mismatch: field=%u offset=%u logic=%u opcode=%u pc=%04x expected=%08x actual=%08x fault_triggered=%u",
+                       (unsigned)output_bytes[23],
+                       (unsigned)output_bytes[24],
+                       (unsigned)output_bytes[25],
+                       (unsigned)output_bytes[26],
+                       (unsigned)get_u16(output_bytes + 27),
+                       (unsigned)get_u32(output_bytes + 29),
+                       (unsigned)get_u32(output_bytes + 33),
+                       (unsigned)((output_bytes[58] &
+                           LOGIC_APP_REPLAY_STATUS_FAULT_TRIGGERED) != 0));
+        return -1;
+    }
+    if ((output_bytes[58] & LOGIC_APP_REPLAY_STATUS_FAULT_TRIGGERED) &&
+        !(fault_flags & LOGIC_APP_REPLAY_FAULT_SEMANTIC_WRITE)) {
+        set_detail(detail, detail_capacity,
+                   "input-triggered fault fired but produced no verifier mismatch");
+        return -1;
+    }
+    {
+        uint8_t expected_status =
+            LOGIC_APP_REPLAY_STATUS_TRACE_DROPPED |
+            LOGIC_APP_REPLAY_STATUS_CAPTURE_CAPACITY;
+        uint16_t capacity_flags = get_u16(output_bytes +
+            LOGIC_APP_REPLAY_CAPACITY_FLAGS_OFFSET);
+        uint32_t trace_dropped = get_u32(output_bytes + 42);
+        uint8_t actual_status = output_bytes[58];
+        if (fault_flags & LOGIC_APP_REPLAY_FAULT_SEMANTIC_WRITE)
+            actual_status &= (uint8_t)~LOGIC_APP_REPLAY_STATUS_FAULT_TRIGGERED;
+        int bounded_trace = output_bytes[41] == LOGIC_APP_REPLAY_TRACE_MAX &&
+            trace_dropped != 0 && actual_status == expected_status &&
+            capacity_flags == LOGIC_APP_REPLAY_CAPACITY_TRACE_DROPPED;
+        if ((actual_status || capacity_flags || trace_dropped) &&
+            !bounded_trace) {
+            (void)snprintf(detail, detail_capacity,
+                           "full-app checkpoint has status=%02x capacity=%04x",
+                           output_bytes[58], (unsigned)capacity_flags);
+            return -1;
+        }
+    }
+    detail[0] = '\0';
+    return 0;
+}
+
+int logic_app_replay_x16_run(const char *game_directory, uint16_t seed,
+    const LogicAppReplayInput *events, size_t event_count, uint32_t tick_count,
+    uint32_t timeout_ms, uint8_t fault_flags,
+    uint8_t output[LOGIC_APP_REPLAY_OUTPUT_SIZE], char *detail, size_t detail_capacity)
+{
+    return run_application(game_directory, seed, events, event_count, tick_count,
+        timeout_ms, fault_flags, output, detail, detail_capacity, NULL);
+}
+
+int logic_app_replay_x16_series(const char *game_directory, uint16_t seed,
+    const LogicAppReplayInput *events, size_t event_count, uint32_t ticks,
+    uint32_t timeout_ms, uint8_t fault_flags,
+    uint8_t snapshots[][LOGIC_APP_REPLAY_OUTPUT_SIZE],
+    size_t capacity, char *detail, size_t detail_capacity)
+{
+    if (!snapshots || !ticks || ticks > 255u || capacity < ticks) {
+        if (snapshots && capacity)
+            memset(snapshots, 0, (capacity < 255u ? capacity : 255u) * sizeof snapshots[0]);
+        if (detail && detail_capacity)
+            set_detail(detail, detail_capacity, "invalid application checkpoint series capacity");
+        return -1;
+    }
+    memset(snapshots, 0, ticks * sizeof snapshots[0]);
+    return run_application(game_directory, seed, events, event_count, ticks,
+        timeout_ms, fault_flags, snapshots[ticks - 1], detail, detail_capacity, snapshots);
+}
