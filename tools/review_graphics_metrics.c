@@ -15,21 +15,25 @@
 
 #define WORKLOAD_LINE_MAX 512
 #define WORKLOAD_INPUT_MAX 8192
-#define GRAPHICS_METRIC_FIELDS 17
+#define GRAPHICS_METRIC_FIELDS 24
 
 typedef struct {
     char workload[128];
     char baseline_image_sha256[65];
     char candidate_image_sha256[65];
     char toolchain_sha256[65];
-    GraphicsClearTestImage image;
+    GraphicsClearTestImage baseline_image;
+    GraphicsClearTestImage candidate_image;
 } GraphicsWorkload;
 
 static const char *const workload_keys[GRAPHICS_METRIC_FIELDS] = {
     "workload", "image_kind", "baseline_image_sha256", "candidate_image_sha256",
-    "load_address", "image_bytes", "reset_entry", "slice_entry", "return_entry",
-    "cursor_address", "remaining_address", "priority_address", "priority_bytes",
-    "slice_count", "fill_byte", "sentinel_byte", "toolchain_sha256"
+    "baseline_load_address", "baseline_image_bytes", "baseline_reset_entry",
+    "baseline_slice_entry", "baseline_return_entry", "baseline_cursor_address",
+    "baseline_remaining_address", "candidate_load_address", "candidate_image_bytes",
+    "candidate_reset_entry", "candidate_slice_entry", "candidate_return_entry",
+    "candidate_cursor_address", "candidate_remaining_address", "priority_address",
+    "priority_bytes", "slice_count", "fill_byte", "sentinel_byte", "toolchain_sha256"
 };
 
 static void set_error(char *error, size_t capacity, const char *message)
@@ -125,6 +129,35 @@ int review_graphics_metrics_toolchain_sha256(char digest[65], char *error, size_
     return 0;
 }
 
+static bool parse_image_layout(char values[GRAPHICS_METRIC_FIELDS][256], size_t first,
+                               GraphicsClearTestImage *image)
+{
+    uint64_t number;
+    if (!parse_u64(values[first], &number) || number != GRAPHICS_CLEAR_TEST_LOAD_ADDRESS ||
+        !parse_u64(values[first + 1], &number) || !number || number > GRAPHICS_CLEAR_TEST_IMAGE_CAPACITY)
+        return false;
+    image->image_bytes = (size_t)number;
+    uint16_t *addresses[] = { &image->reset_entry, &image->slice_entry, &image->return_entry,
+        &image->cursor_address, &image->remaining_address };
+    for (size_t i = 0; i < sizeof(addresses) / sizeof(addresses[0]); ++i) {
+        if (!parse_u64(values[first + 2 + i], &number) || number > UINT16_MAX ||
+            number < GRAPHICS_CLEAR_TEST_LOAD_ADDRESS ||
+            number >= GRAPHICS_CLEAR_TEST_LOAD_ADDRESS + image->image_bytes)
+            return false;
+        *addresses[i] = (uint16_t)number;
+    }
+    return true;
+}
+
+static bool same_image_layout(const GraphicsClearTestImage *left,
+                              const GraphicsClearTestImage *right)
+{
+    return left->image_bytes == right->image_bytes &&
+           left->reset_entry == right->reset_entry && left->slice_entry == right->slice_entry &&
+           left->return_entry == right->return_entry && left->cursor_address == right->cursor_address &&
+           left->remaining_address == right->remaining_address;
+}
+
 static bool parse_workload(const char *path, GraphicsWorkload *workload,
                            char *error, size_t error_capacity)
 {
@@ -184,33 +217,26 @@ static bool parse_workload(const char *path, GraphicsWorkload *workload,
         return false;
     }
 
-    uint64_t number;
     if (strcmp(values[0], REVIEW_GRAPHICS_METRICS_WORKLOAD) || strcmp(values[1], "test") ||
         !is_sha256(values[2]) || !copy_text(workload->baseline_image_sha256, sizeof(workload->baseline_image_sha256), values[2]) ||
         !is_sha256(values[3]) || !copy_text(workload->candidate_image_sha256, sizeof(workload->candidate_image_sha256), values[3]) ||
-        !parse_u64(values[4], &number) || number != GRAPHICS_CLEAR_TEST_LOAD_ADDRESS ||
-        !parse_u64(values[5], &number) || !number || number > GRAPHICS_CLEAR_TEST_IMAGE_CAPACITY) {
+        !parse_image_layout(values, 4, &workload->baseline_image) ||
+        !parse_image_layout(values, 11, &workload->candidate_image)) {
         set_error(error, error_capacity, "graphics workload identity or image bounds are invalid");
         return false;
     }
-    workload->image.image_bytes = (size_t)number;
-    uint16_t *addresses[] = { &workload->image.reset_entry, &workload->image.slice_entry,
-        &workload->image.return_entry, &workload->image.cursor_address, &workload->image.remaining_address };
-    for (size_t i = 0; i < sizeof(addresses) / sizeof(addresses[0]); ++i) {
-        if (!parse_u64(values[6 + i], &number) || number > UINT16_MAX ||
-            number < GRAPHICS_CLEAR_TEST_LOAD_ADDRESS ||
-            number >= GRAPHICS_CLEAR_TEST_LOAD_ADDRESS + workload->image.image_bytes) {
-            set_error(error, error_capacity, "graphics workload entry or state address is outside the test image");
-            return false;
-        }
-        *addresses[i] = (uint16_t)number;
+    if (!strcmp(workload->baseline_image_sha256, workload->candidate_image_sha256) &&
+        !same_image_layout(&workload->baseline_image, &workload->candidate_image)) {
+        set_error(error, error_capacity, "same image hash has conflicting layouts");
+        return false;
     }
-    if (!parse_u64(values[11], &number) || number != GRAPHICS_CLEAR_TEST_PRIORITY_ADDRESS ||
-        !parse_u64(values[12], &number) || number != GRAPHICS_CLEAR_TEST_PRIORITY_BYTES ||
-        !parse_u64(values[13], &number) || number != GRAPHICS_CLEAR_TEST_SLICE_COUNT ||
-        !parse_u64(values[14], &number) || number != 0x44 ||
-        !parse_u64(values[15], &number) || number != 0x5A || !is_sha256(values[16]) ||
-        !copy_text(workload->toolchain_sha256, sizeof(workload->toolchain_sha256), values[16]) ||
+    uint64_t number;
+    if (!parse_u64(values[18], &number) || number != GRAPHICS_CLEAR_TEST_PRIORITY_ADDRESS ||
+        !parse_u64(values[19], &number) || number != GRAPHICS_CLEAR_TEST_PRIORITY_BYTES ||
+        !parse_u64(values[20], &number) || number != GRAPHICS_CLEAR_TEST_SLICE_COUNT ||
+        !parse_u64(values[21], &number) || number != 0x44 ||
+        !parse_u64(values[22], &number) || number != 0x5A || !is_sha256(values[23]) ||
+        !copy_text(workload->toolchain_sha256, sizeof(workload->toolchain_sha256), values[23]) ||
         !copy_text(workload->workload, sizeof(workload->workload), values[0])) {
         set_error(error, error_capacity, "graphics workload constants or toolchain binding are invalid");
         return false;
@@ -253,8 +279,12 @@ int review_graphics_metrics_measure(const char *input_path, const char *image_pa
         set_error(error, error_capacity, "cannot hash linked graphics test image");
         return -1;
     }
-    if (strcmp(image_sha256, workload.baseline_image_sha256) &&
-        strcmp(image_sha256, workload.candidate_image_sha256)) {
+    const GraphicsClearTestImage *image = NULL;
+    if (!strcmp(image_sha256, workload.baseline_image_sha256))
+        image = &workload.baseline_image;
+    else if (!strcmp(image_sha256, workload.candidate_image_sha256))
+        image = &workload.candidate_image;
+    else {
         set_error(error, error_capacity, "linked image is not bound by this graphics workload input");
         return -1;
     }
@@ -269,7 +299,7 @@ int review_graphics_metrics_measure(const char *input_path, const char *image_pa
     uint8_t output_vram[GRAPHICS_CLEAR_TEST_VRAM_BYTES];
     uint32_t cycles = 0;
     uint64_t total_cycles = 0;
-    int oracle = graphics_clear_run_test_image(image_path, &workload.image, output_vram,
+    int oracle = graphics_clear_run_test_image(image_path, image, output_vram,
                                                sizeof(output_vram), &cycles, &total_cycles,
                                                error, error_capacity);
     if (!cycles) {
@@ -449,6 +479,7 @@ static size_t find_bytes(const unsigned char *bytes, size_t length,
 }
 
 static void write_workload(const char *path, const GraphicsClearTestImage *image,
+                           const GraphicsClearTestImage *candidate_image,
                            const char *baseline_sha, const char *candidate_sha,
                            const char *toolchain_sha)
 {
@@ -456,12 +487,19 @@ static void write_workload(const char *path, const GraphicsClearTestImage *image
     int result = fprintf(file,
         REVIEW_GRAPHICS_METRICS_INPUT_MAGIC "\n"
         "workload|%s\nimage_kind|test\nbaseline_image_sha256|%s\ncandidate_image_sha256|%s\n"
-        "load_address|%u\nimage_bytes|%zu\nreset_entry|%u\nslice_entry|%u\nreturn_entry|%u\n"
-        "cursor_address|%u\nremaining_address|%u\npriority_address|%u\npriority_bytes|%u\n"
+        "baseline_load_address|%u\nbaseline_image_bytes|%zu\nbaseline_reset_entry|%u\n"
+        "baseline_slice_entry|%u\nbaseline_return_entry|%u\nbaseline_cursor_address|%u\n"
+        "baseline_remaining_address|%u\ncandidate_load_address|%u\ncandidate_image_bytes|%zu\n"
+        "candidate_reset_entry|%u\ncandidate_slice_entry|%u\ncandidate_return_entry|%u\n"
+        "candidate_cursor_address|%u\ncandidate_remaining_address|%u\n"
+        "priority_address|%u\npriority_bytes|%u\n"
         "slice_count|%u\nfill_byte|68\nsentinel_byte|90\ntoolchain_sha256|%s\n",
         REVIEW_GRAPHICS_METRICS_WORKLOAD, baseline_sha, candidate_sha,
         GRAPHICS_CLEAR_TEST_LOAD_ADDRESS, image->image_bytes, image->reset_entry, image->slice_entry,
         image->return_entry, image->cursor_address, image->remaining_address,
+        GRAPHICS_CLEAR_TEST_LOAD_ADDRESS, candidate_image->image_bytes,
+        candidate_image->reset_entry, candidate_image->slice_entry,
+        candidate_image->return_entry, candidate_image->cursor_address, candidate_image->remaining_address,
         GRAPHICS_CLEAR_TEST_PRIORITY_ADDRESS, GRAPHICS_CLEAR_TEST_PRIORITY_BYTES,
         GRAPHICS_CLEAR_TEST_SLICE_COUNT, toolchain_sha);
     CHECK(result > 0 && !ferror(file), "Cannot write graphics workload input");
@@ -599,6 +637,19 @@ static void check_malformed_input(const char *input, const char *image,
           "Rejected graphics input created an output artifact");
 }
 
+static void check_conflicting_layout(const char *input, const char *image, const char *output)
+{
+    ReviewGraphicsMetricsMeasurement measurement;
+    char error[256] = {0};
+    CHECK(review_graphics_metrics_measure(input, image, output,
+              REVIEW_GRAPHICS_METRICS_WORKLOAD, &measurement, error, sizeof(error)) != 0,
+          "A workload with one image hash and conflicting layouts was accepted");
+    CHECK(strstr(error, "same image hash has conflicting layouts") != NULL,
+          "Same-hash conflicting layout was rejected for the wrong reason");
+    CHECK(access(output, F_OK) != 0 && errno == ENOENT,
+          "Conflicting image layouts created an output artifact");
+}
+
 int main(int argc, char **argv)
 {
     CHECK(argc == 3 && argv[1][0] == '/' && argv[2][0] == '/',
@@ -608,6 +659,7 @@ int main(int argc, char **argv)
     char repository[4096], fixture_source[4096], repo_candidate_image[4096], repo_tradeoff[4096];
     char baseline_manifest[4096], candidate_manifest[4096], mutation_manifest[4096];
     char input_path[4096], mutated_input_path[4096], trailing_input_path[4096], nul_input_path[4096];
+    char conflict_input_path[4096], conflict_output_path[4096];
     char baseline_output[4096], candidate_output[4096], mutated_output[4096];
     char trailing_output[4096], nul_output[4096];
     char gate_report[8192], mutation_gate_report[8192];
@@ -624,6 +676,8 @@ int main(int argc, char **argv)
     path_in_output(mutated_path, sizeof(mutated_path), "graphics-clear-mutated.bin");
     path_in_output(input_path, sizeof(input_path), "graphics-clear-workload.txt");
     path_in_output(mutated_input_path, sizeof(mutated_input_path), "graphics-clear-mutated-workload.txt");
+    path_in_output(conflict_input_path, sizeof(conflict_input_path), "graphics-clear-conflicting-layout-workload.txt");
+    path_in_output(conflict_output_path, sizeof(conflict_output_path), "graphics-clear-conflicting-layout-vram.bin");
     path_in_output(trailing_input_path, sizeof(trailing_input_path), "graphics-clear-trailing-workload.txt");
     path_in_output(nul_input_path, sizeof(nul_input_path), "graphics-clear-nul-workload.txt");
     path_in_output(baseline_output, sizeof(baseline_output), "graphics-clear-baseline-vram.bin");
@@ -661,15 +715,26 @@ int main(int argc, char **argv)
     char baseline_commit[65], baseline_tree[65], candidate_commit[65], candidate_tree[65];
     git_fixture_value(repository, head, baseline_commit);
     git_fixture_value(repository, tree, baseline_tree);
-    if (!copy_file(image_path, repo_candidate_image)) {
-        fprintf(stderr, "Cannot create candidate image in Git fixture: source=%d destination=%s errno=%d\n",
-                access(image_path, R_OK), repo_candidate_image, errno);
-        exit(EXIT_FAILURE);
-    }
+    size_t copied_bytes;
+    unsigned char *image_copy = read_bytes(image_path, &copied_bytes);
+    CHECK(copied_bytes == image.image_bytes, "Exported test image size changed while copying");
+    GraphicsClearTestImage candidate_image = image;
+    candidate_image.image_bytes = copied_bytes + 1;
+    unsigned char *candidate_image_bytes = realloc(image_copy, candidate_image.image_bytes);
+    CHECK(candidate_image_bytes, "Cannot allocate harmless candidate padding byte");
+    candidate_image_bytes[copied_bytes] = 0xEA;
+    CHECK(write_bytes(repo_candidate_image, candidate_image_bytes, candidate_image.image_bytes) &&
+          write_bytes(candidate_path, candidate_image_bytes, candidate_image.image_bytes),
+          "Cannot create padded candidate graphics image");
+    free(candidate_image_bytes);
+    CHECK(candidate_image.image_bytes <= GRAPHICS_CLEAR_TEST_IMAGE_CAPACITY,
+          "Padded candidate image exceeds the bounded test-image capacity");
+    CHECK(!review_sha256_file(repo_candidate_image, candidate_sha) && strcmp(image_sha, candidate_sha),
+          "Padding byte did not change the candidate image digest");
     static const char tradeoff[] =
         "review-metrics-tradeoff-v1\n"
         "review_reference|native regression calibration\n"
-        "reason|Byte-identical test images validate the integrated gate and workload; no performance improvement is claimed.\n";
+        "reason|A harmless padded test image validates layout-aware comparison; no performance improvement is claimed.\n";
     CHECK(write_bytes(repo_tradeoff, tradeoff, sizeof(tradeoff) - 1), "Cannot write neutral calibration proposal");
     char *add_candidate[] = { (char *)"add", (char *)"--", (char *)"graphics-candidate.bin",
         (char *)"review-metrics-tradeoff.txt", NULL };
@@ -679,17 +744,11 @@ int main(int argc, char **argv)
     git_fixture_value(repository, head, candidate_commit);
     git_fixture_value(repository, tree, candidate_tree);
     write_image_manifest(baseline_manifest, baseline_commit, baseline_tree, image_sha);
-    write_image_manifest(candidate_manifest, candidate_commit, candidate_tree, image_sha);
-    size_t copied_bytes;
-    unsigned char *image_copy = read_bytes(image_path, &copied_bytes);
-    CHECK(copied_bytes == image.image_bytes, "Exported test image size changed while copying");
-    CHECK(write_bytes(candidate_path, image_copy, copied_bytes), "Cannot create byte-identical candidate image");
-    free(image_copy);
-    CHECK(!review_sha256_file(candidate_path, candidate_sha) && !strcmp(image_sha, candidate_sha),
-          "Candidate test image differs from the baseline image");
+    write_image_manifest(candidate_manifest, candidate_commit, candidate_tree, candidate_sha);
     CHECK(!review_graphics_metrics_toolchain_sha256(toolchain_sha, error, sizeof(error)),
           error[0] ? error : "Cannot hash pinned graphics test toolchain");
-    write_workload(input_path, &image, image_sha, candidate_sha, toolchain_sha);
+    write_workload(input_path, &image, &candidate_image, image_sha, candidate_sha, toolchain_sha);
+    char input_sha[65]; CHECK(!review_sha256_file(input_path, input_sha), "Cannot hash graphics workload input");
 
     size_t input_bytes;
     unsigned char *valid_input = read_bytes(input_path, &input_bytes);
@@ -714,15 +773,36 @@ int main(int argc, char **argv)
     check_malformed_input(nul_input_path, image_path, nul_output,
                           "Embedded-NUL workload input was accepted");
 
+    static const char max_bytes[] = "65536";
+    static const char max_cycles[] = "100000";
+    static const char max_latency[] = "12500000";
+    CHECK(!run_gate(argv[1], repository, input_path, image_path, baseline_manifest,
+                    repo_candidate_image, candidate_manifest, argv[2], suite_output_directory,
+                    max_bytes, max_cycles, max_latency, gate_report, sizeof(gate_report)),
+          gate_report[0] ? gate_report : "Actual review_metrics gate rejected equivalent padded graphics images");
+    CHECK(report_field_equals(gate_report, "workload", REVIEW_GRAPHICS_METRICS_WORKLOAD) &&
+          report_field_equals(gate_report, "input_sha256", input_sha) &&
+          report_field_equals(gate_report, "baseline_commit", baseline_commit) &&
+          report_field_equals(gate_report, "baseline_tree", baseline_tree) &&
+          report_field_equals(gate_report, "candidate_commit", candidate_commit) &&
+          report_field_equals(gate_report, "candidate_tree", candidate_tree),
+          "Actual review_metrics gate reported different fixture identities");
+    char expected_number[64];
+    CHECK(snprintf(expected_number, sizeof(expected_number), "%zu", image.image_bytes) < (int)sizeof(expected_number) &&
+          report_field_equals(gate_report, "baseline_bytes", expected_number),
+          "Actual review_metrics gate reported the wrong baseline image size");
+    CHECK(snprintf(expected_number, sizeof(expected_number), "%zu", candidate_image.image_bytes) < (int)sizeof(expected_number) &&
+          report_field_equals(gate_report, "candidate_bytes", expected_number),
+          "Actual review_metrics gate did not report the padded candidate image size");
+
     char baseline_report[2048], candidate_report[2048];
     CHECK(!run_runner(argv[2], input_path, image_path, baseline_output, baseline_report, sizeof(baseline_report)),
           baseline_report[0] ? baseline_report : "Baseline graphics metric runner failed");
     CHECK(!run_runner(argv[2], input_path, candidate_path, candidate_output, candidate_report, sizeof(candidate_report)),
           candidate_report[0] ? candidate_report : "Candidate graphics metric runner failed");
-    char input_sha[65]; CHECK(!review_sha256_file(input_path, input_sha), "Cannot hash graphics workload input");
     uint64_t baseline_cycles = parse_report(baseline_report, input_sha, toolchain_sha);
     uint64_t candidate_cycles = parse_report(candidate_report, input_sha, toolchain_sha);
-    CHECK(baseline_cycles == candidate_cycles, "Identical linked test images changed measured cycle counts");
+    CHECK(baseline_cycles == candidate_cycles, "Harmlessly padded linked test image changed measured cycle counts");
     ReviewGraphicsMetricsMeasurement baseline_measurement = {0};
     memset(error, 0, sizeof(error));
     CHECK(!review_graphics_metrics_measure(input_path, image_path, baseline_output,
@@ -732,6 +812,15 @@ int main(int argc, char **argv)
           baseline_measurement.total_cycles >= baseline_measurement.cycles &&
           baseline_measurement.latency_ns == baseline_measurement.cycles * UINT64_C(125),
           "Direct graphics measurement disagrees with the runner's worst-slice metric");
+    ReviewGraphicsMetricsMeasurement candidate_measurement = {0};
+    memset(error, 0, sizeof(error));
+    CHECK(!review_graphics_metrics_measure(input_path, candidate_path, candidate_output,
+              REVIEW_GRAPHICS_METRICS_WORKLOAD, &candidate_measurement, error, sizeof(error)),
+          error[0] ? error : "Could not measure harmlessly padded graphics candidate");
+    CHECK(candidate_measurement.cycles == candidate_cycles &&
+          candidate_measurement.total_cycles == baseline_measurement.total_cycles &&
+          candidate_measurement.latency_ns == baseline_measurement.latency_ns,
+          "Padded candidate image changed the actual AGI workload measurement");
     size_t baseline_bytes, candidate_bytes;
     unsigned char *baseline_vram = read_bytes(baseline_output, &baseline_bytes);
     unsigned char *candidate_vram = read_bytes(candidate_output, &candidate_bytes);
@@ -748,27 +837,14 @@ int main(int argc, char **argv)
           "Independent metric runner and direct output hashes differ");
     free(candidate_vram);
 
-    char max_bytes[32], max_cycles[32], max_latency[32], expected_number[64];
-    CHECK(snprintf(max_bytes, sizeof(max_bytes), "%zu", image.image_bytes) < (int)sizeof(max_bytes) &&
-          snprintf(max_cycles, sizeof(max_cycles), "%" PRIu64, baseline_measurement.cycles) < (int)sizeof(max_cycles) &&
-          snprintf(max_latency, sizeof(max_latency), "%" PRIu64, baseline_measurement.latency_ns) < (int)sizeof(max_latency),
-          "Graphics metric budget value is too long");
-    CHECK(!run_gate(argv[1], repository, input_path, image_path, baseline_manifest,
-                    repo_candidate_image, candidate_manifest, argv[2], suite_output_directory,
-                    max_bytes, max_cycles, max_latency, gate_report, sizeof(gate_report)),
-          gate_report[0] ? gate_report : "Actual review_metrics gate rejected equivalent graphics test images");
-    CHECK(report_field_equals(gate_report, "workload", REVIEW_GRAPHICS_METRICS_WORKLOAD) &&
-          report_field_equals(gate_report, "input_sha256", input_sha) &&
-          report_field_equals(gate_report, "baseline_commit", baseline_commit) &&
-          report_field_equals(gate_report, "baseline_tree", baseline_tree) &&
-          report_field_equals(gate_report, "candidate_commit", candidate_commit) &&
-          report_field_equals(gate_report, "candidate_tree", candidate_tree),
-          "Actual review_metrics gate reported different fixture identities");
     CHECK(snprintf(expected_number, sizeof(expected_number), "%zu", image.image_bytes) < (int)sizeof(expected_number),
-          "Graphics image size does not fit the gate result field");
-    CHECK(report_field_equals(gate_report, "baseline_bytes", expected_number) &&
-          report_field_equals(gate_report, "candidate_bytes", expected_number),
-          "Actual review_metrics gate reported different linked image sizes");
+          "Baseline graphics image size does not fit the gate result field");
+    CHECK(report_field_equals(gate_report, "baseline_bytes", expected_number),
+          "Actual review_metrics gate reported a different baseline linked image size");
+    CHECK(snprintf(expected_number, sizeof(expected_number), "%zu", candidate_image.image_bytes) < (int)sizeof(expected_number),
+          "Candidate graphics image size does not fit the gate result field");
+    CHECK(report_field_equals(gate_report, "candidate_bytes", expected_number),
+          "Actual review_metrics gate reported a different candidate linked image size");
     CHECK(snprintf(expected_number, sizeof(expected_number), "%" PRIu64, baseline_measurement.cycles) < (int)sizeof(expected_number),
           "Graphics cycle count does not fit the gate result field");
     CHECK(report_field_equals(gate_report, "baseline_cycles", expected_number) &&
@@ -786,6 +862,9 @@ int main(int argc, char **argv)
           report_field_equals(gate_report, "decision", "documented tradeoff proposal"),
           "Actual review_metrics gate did not preserve measured output and image identities");
 
+    write_workload(conflict_input_path, &image, &candidate_image, image_sha, image_sha, toolchain_sha);
+    check_conflicting_layout(conflict_input_path, image_path, conflict_output_path);
+
     size_t mutated_size;
     unsigned char *mutated = read_bytes(image_path, &mutated_size);
     size_t opcode_offset = (size_t)(image.slice_entry - GRAPHICS_CLEAR_TEST_LOAD_ADDRESS);
@@ -796,7 +875,8 @@ int main(int argc, char **argv)
     free(mutated); free(baseline_vram);
     CHECK(!review_sha256_file(mutated_path, candidate_sha) && strcmp(candidate_sha, image_sha),
           "Instruction mutation did not change the linked image digest");
-    write_workload(mutated_input_path, &image, image_sha, candidate_sha, toolchain_sha);
+    GraphicsClearTestImage mutation_image = image;
+    write_workload(mutated_input_path, &image, &mutation_image, image_sha, candidate_sha, toolchain_sha);
     write_image_manifest(mutation_manifest, candidate_commit, candidate_tree, candidate_sha);
 
     ReviewGraphicsMetricsMeasurement mutation = {0};
@@ -826,10 +906,10 @@ int main(int argc, char **argv)
           strstr(mutation_gate_report, "metric runner did not complete successfully") != NULL,
           "Actual review_metrics gate accepted a real instruction mutation that failed VRAM");
 
-    printf("Graphics metrics integration: %zu linked test-image bytes, %" PRIu64
+    printf("Graphics metrics integration: %zu baseline / %zu padded candidate test-image bytes, %" PRIu64
            " total workload cycles, %" PRIu64 " worst-slice cycles, %" PRIu64
-           " derived ns; actual review_metrics gate accepted the equivalent pair and rejected the RTS mutation; malformed inputs rejected\n",
-           image.image_bytes, baseline_measurement.total_cycles, baseline_cycles,
+           " derived ns; actual review_metrics gate accepted the equivalent pair and rejected the RTS mutation; conflicting layouts and malformed inputs rejected\n",
+           image.image_bytes, candidate_image.image_bytes, baseline_measurement.total_cycles, baseline_cycles,
            baseline_cycles * UINT64_C(125));
     return EXIT_SUCCESS;
 }

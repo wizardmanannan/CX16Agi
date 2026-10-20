@@ -5,7 +5,7 @@
 #include <stdint.h>
 
 #define REVIEW_GRAPHICS_METRICS_WORKLOAD "graphics-priority-clear-test-v1"
-#define REVIEW_GRAPHICS_METRICS_INPUT_MAGIC "review-graphics-test-workload-v1"
+#define REVIEW_GRAPHICS_METRICS_INPUT_MAGIC "review-graphics-test-workload-v2"
 
 typedef struct {
     uint64_t cycles;

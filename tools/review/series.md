@@ -106,7 +106,12 @@ do not establish source-to-image derivation. The CLI's `--proof-kind` option
 selects this image-kind budget category; it is not a build or approval claim.
 
 For the linked graphics-clear workload, reported latency is nominal emulated
-time calculated as `ceil(cycles * 1,000,000,000 / 8,000,000)`, using the
+time for the worst slice. Its v2 workload input binds separate baseline and
+candidate image layouts to their hashes, so different binary sizes and entry
+addresses can use the same workload. The permanent native integration case
+compares different image sizes and checks the gate's exact byte counts.
+
+Latency is calculated as `ceil(cycles * 1,000,000,000 / 8,000,000)`, using the
 emulated 8 MHz CPU clock. It is not host wall time or a hardware latency
 measurement. The runner-reported latency and toolchain hash are checked for
 format and agreement across runs, but the gate cannot independently attest
