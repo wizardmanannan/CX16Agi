@@ -1,6 +1,9 @@
 #include <assert.h>
 #include <stdio.h>
 #include <string.h>
+#include <stdarg.h>
+#include <unistd.h>
+#include <sys/wait.h>
 #include "parser.h"
 #include "logic.h"
 #include "object.h"
@@ -32,14 +35,31 @@ static char allocatedWindow[80];
 static unsigned int allocations;
 static unsigned int metadataInitializations, dependencyLoads;
 BITMAP* screen;
-unsigned int vSyncCounter;
+volatile unsigned int vSyncCounter;
 static byte expectedRow, expectedColumn, expectedWidth;
 static unsigned int positionedDisplays, positionedClears;
+static unsigned int waitCalls, timedPolls;
+static int timedMode;
 extern void b5Print_at(void), b5Print_at_v(void);
+extern void b3PrintMessageInTextbox(byte, byte, byte, byte, boolean);
+byte _assmByte;
+
+void native_asm(const char* instruction, ...)
+{
+    va_list arguments;
+    if (strcmp(instruction, "jsr %w")) return;
+    va_start(arguments, instruction);
+    assert(va_arg(arguments, int) == GETIN_ADDRESS);
+    va_end(arguments);
+    timedPolls++;
+    vSyncCounter = (vSyncCounter + (timedMode ? 1 : 17)) & 65535;
+    _assmByte = timedMode == 2 ? KEY_ESC : timedMode ? KEY_ENTER : 0;
+}
 
 void show_mouse(BITMAP* bitmap) { (void)bitmap; }
 void b5WaitOnSpecificKeys(byte* keys, byte count)
 {
+    waitCalls++;
     assert(count == 2 && keys[0] == KEY_ESC && keys[1] == KEY_ENTER);
 }
 void b3ClearLastPlacedText(void) { positionedClears++; }
@@ -206,6 +226,38 @@ static void test_positioned_print(void)
     assert(operandCount == 4 && positionedDisplays == 2 && positionedClears == 2);
 }
 
+static void test_message_dismissal(void)
+{
+    unsigned int mode, failures = 0;
+    for (mode = 0; mode < 4; mode++) {
+        int status;
+        pid_t child = fork();
+        assert(child >= 0);
+        if (!child) {
+            unsigned int cleared = positionedClears;
+            alarm(2);
+            waitCalls = timedPolls = 0;
+            timedMode = mode;
+            variables[PRINT_TIMEOUT] = mode == 3 ? 0 : 1;
+            flags[15] = mode == 3;
+            vSyncCounter = 65525;
+            b3PrintMessageInTextbox(1, expectedColumn, expectedRow, expectedWidth, TRUE);
+            assert(waitCalls == 0);
+            assert(variables[PRINT_TIMEOUT] == 0);
+            assert(!flags[15]);
+            assert(positionedClears == cleared + (mode != 3));
+            assert(timedPolls == (mode == 0 ? 2 : mode == 3 ? 0 : 1));
+            _exit(0);
+        }
+        assert(waitpid(child, &status, 0) == child);
+        if (!WIFEXITED(status) || WEXITSTATUS(status)) {
+            fprintf(stderr, "message dismissal case %u failed (0=skipped deadline/wrap, 1=Enter, 2=Escape, 3=nonblocking), status=%d\n", mode, status);
+            failures++;
+        }
+    }
+    assert(failures == 0);
+}
+
 static void test_word_to_string(void)
 {
 	strcpy(b7WordText[0], "look");
@@ -339,6 +391,7 @@ int main(void)
 	test_said_trailing_wildcard();
     test_said_high_dictionary_ids();
     test_positioned_print();
+    test_message_dismissal();
 	puts("string command tests passed");
 	return 0;
 }

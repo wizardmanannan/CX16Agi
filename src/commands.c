@@ -1495,7 +1495,8 @@ void b3PrintMessageInTextbox(byte messNum, byte x, byte y, byte length, boolean 
 	char* messagePointer;
 	byte timeoutFlagVal = var[PRINT_TIMEOUT];
 	unsigned int waitTicks;
-	unsigned int vSyncToContinueAt;
+	word waitStarted;
+	int ch;
 	LOGICFile logicFile;
 	byte keysToWait[NO_KEYS_TO_WAIT] = { KEY_ESC, KEY_ENTER };
 
@@ -1515,18 +1516,25 @@ void b3PrintMessageInTextbox(byte messNum, byte x, byte y, byte length, boolean 
 	messagePointer = getMessagePointer(currentLog, messNum - 1);
 
 	b3DisplayMessageBox(messagePointer, logicFile.messageBank, y, x, TEXTBOX_PALETTE_NUMBER, length, wrap, FIRST_TEXT_ROW);
+	if (flag[15]) {
+		flag[15] = FALSE;
+		return;
+	}
 
 	if (timeoutFlagVal)
 	{
 		waitTicks = timeoutFlagVal * 30;  // The timeout value is given in half seconds and the TotalTicks in 1/60ths of a second.
-		vSyncToContinueAt = vSyncCounter + waitTicks;
-
-		while (vSyncCounter != vSyncToContinueAt);
+		waitStarted = vSyncCounter;
+		while ((word)(vSyncCounter - waitStarted) < waitTicks) {
+			GET_IN(ch);
+			if (ch == KEY_ENTER || ch == KEY_ESC) break;
+		}
 	}
 	else
 	{
 		b5WaitOnSpecificKeys(keysToWait, NO_KEYS_TO_WAIT);
 	}
+	var[PRINT_TIMEOUT] = 0;
 
 	b3ClearLastPlacedText();
 
