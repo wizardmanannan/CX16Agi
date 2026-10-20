@@ -1,0 +1,40 @@
+# game|id|directory|title|AGI interpreter|support status|version/resource evidence
+# resource|id|staged relative name|installed source relative name|SHA-256
+# WinAGI metadata identifies both installed DOS game trees as AGI 2.917.
+# The extracted dependency tables are project inputs consumed by the real
+# normal loader and are staged under meta/ without changing the game folders.
+game|KQ1|Kings-Quest-1|King's Quest I|2.917|installed DOS AGIv2 corpus; full-app status is asserted by test|KQ1.wag Interpreter=2.917; LOGDIR has 105 entries; real Logic0 header is VOL.0, code 3904 bytes
+resource|KQ1|LOGDIR|LOGDIR|18d53ac02a5457494f03352c36a4a4c2eb8251df70fff8dae6dc3d5b41d55b38
+resource|KQ1|PICDIR|PICDIR|7a2181429c473c5983547f115869c1a948249d986d0176f5fa30b605510cc3c9
+resource|KQ1|VIEWDIR|VIEWDIR|1b36ab1ccaa118870ee7d6d651359912e79f35f3acc71858e4b668e3b34e2a04
+resource|KQ1|SNDDIR|SNDDIR|fd5d50fd0eac57168e3cd070b7cf0d7040a26d303415f5318142a0695959563d
+resource|KQ1|KQ1.wag|KQ1.wag|d25c04f092fa915eeb1ff07bb5cb5737ab176e9beab32aba2f31c4195ba26a51
+resource|KQ1|OBJECT|OBJECT|2d1b7a75bb443b4a340cb8d9a2842ff5c834d7d597ea2a1365b6a7a2dfb57985
+resource|KQ1|WORDS.TOK|WORDS.TOK|41d863172326c712c0aebadf12fc63b049ff5d892743f4ee990004c344eb3780
+resource|KQ1|VOL.0|VOL.0|7f10c63737b4da8cf1633ba7c317ffc84a4bbc4eca10b39d2e349b18636bb5e2
+resource|KQ1|VOL.1|VOL.1|7c3a0c86c8ad1b028dc3d56cafb30a925690f243d70f2e7b2ac6f0dc802b00d0
+resource|KQ1|VOL.2|VOL.2|b6e321821a0d90809d985f57b279c2f155a6972482c4811c4a737987042a53cf
+resource|KQ1|meta/KQ1-logic-ids.idx|extract/KQ1-SCRIPT-IDS.IDX|fb0327150e21e5eefec36113250797c37024b70f5d6c1f6fa50c53f5c8a32ecc
+resource|KQ1|meta/KQ1-logic-ids.bin|extract/KQ1-SCRIPT-IDS.BIN|cb2bd14dbec53a7dffb49db9bcd965c1784e10e18001b1bc21b952d6bf8c3756
+resource|KQ1|meta/KQ1-sound-ids.idx|extract/KQ1-SOUND-IDS.IDX|c0a1a7e158a9da45cc5a4941de853ff12de09c804fab0fa2ba1c0a8795dfdfb5
+resource|KQ1|meta/KQ1-sound-ids.bin|extract/KQ1-SOUND-IDS.BIN|6bfb9d2aca9592428a714e8ff203ed7afd44583d3fb407e7cfd5132b3d28086d
+resource|KQ1|meta/KQ1-view-ids.idx|extract/KQ1-VIEW-IDS.IDX|54712a8ab9d43fcde490e6cb12286897793e983426e64d53b45c2020d8e9af55
+resource|KQ1|meta/KQ1-view-ids.bin|extract/KQ1-VIEW-IDS.BIN|1525e854441621ceb4ce1fcb86d51e5d03f2b1c8c0cf5b375fc92e9017e1bc14
+
+game|KQ3|Kings-Quest-3|King's Quest III|2.917|installed DOS AGIv2 corpus; full-app status is asserted by test|KQ3.wag Interpreter=2.917; LOGDIR has 130 entries; real Logic0 header is VOL.1, code 6834 bytes
+resource|KQ3|LOGDIR|LOGDIR|abf65a85bfac4f7de80bfa99c7d538e729406c5232f6f83e91803125cf0828e3
+resource|KQ3|PICDIR|PICDIR|c719395f872946997ca0e1fa042ded600cdefb3b81ab848af02d537f7ee0cae3
+resource|KQ3|VIEWDIR|VIEWDIR|ff5a45611f26a5ead36cd52ec2cf4b0d51b2764c986e6b24cf5706c188dee8fa
+resource|KQ3|SNDDIR|SNDDIR|8b59060429a5499b957bfdee98fa9ded41c6b400bd26c2d2c4dc2638ad9c548b
+resource|KQ3|KQ3.wag|KQ3.wag|3761cc45a79da0f36e85706e741f0bdeb0f2dd5bc5a1b9d17f8a413fb30c5b2a
+resource|KQ3|OBJECT|OBJECT|c6bd058fea81017391dc7d61ad20817b678c1c2702ff2d43df22992922233712
+resource|KQ3|WORDS.TOK|WORDS.TOK|3119d49660710ab1efcbf11e5d37d299bb8415ba0af19d731a4b8cd5cc12ae54
+resource|KQ3|VOL.0|VOL.0|c79b280b2557aef8f471eccf19c207071634666fc301bbb0c54dbeb74d9a29f3
+resource|KQ3|VOL.1|VOL.1|d056266dbd8ddc61c8d25f47ce17803df9b11c0f1ffed3ee5184472b1bbaaf91
+resource|KQ3|VOL.2|VOL.2|9fffd6a34a0cc4aae05ee3c6f157ade1a3263bbcf066e8965183f4c14e33e0b5
+resource|KQ3|meta/KQ3-logic-ids.idx|extracted/KQ3-LOGIC-IDS.IDX|507d4167801cf44797489ab66448203b23f1dffd437ffb4f978ab22475eaca50
+resource|KQ3|meta/KQ3-logic-ids.bin|extracted/KQ3-LOGIC-IDS.BIN|c0b5167f0626200a95813739e6dab69ecaa23bdfea1c9edef3b1e9a3a35e0823
+resource|KQ3|meta/KQ3-sound-ids.idx|extracted/KQ3-SOUND-IDS.IDX|8e0c04b6f7fa23c351ab93660ecdf169d0b98cfb454a8497fac92c9cda1da3e7
+resource|KQ3|meta/KQ3-sound-ids.bin|extracted/KQ3-SOUND-IDS.BIN|129d893e26b03700d61243b687630db4b7c4bc21215820b3bbdb81298f936b82
+resource|KQ3|meta/KQ3-view-ids.idx|extracted/KQ3-VIEW-IDS.IDX|30fde9ffa4d012a1eb0a6b6b62a49c3099ede834f295625d429a4c57da9174c9
+resource|KQ3|meta/KQ3-view-ids.bin|extracted/KQ3-VIEW-IDS.BIN|9114e98653c6f99594fc3bf784bbd8e0b22918ba01a45d32a05ad92a1b9b8797
