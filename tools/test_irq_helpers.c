@@ -572,8 +572,8 @@ static void test_sound_source_contract(void) {
           "Sound startup must mute PSG and restore caller interrupt state");
     CHECK(play_disabled < play_save && play_save < play_sei && play_sei < play_restore && play_restore < play_end,
           "Disabled sound must return before masking IRQs; play must preserve caller interrupt state");
-    CHECK(find(play, "memset(bBIsPlaying, TRUE, NO_CHANNELS)") < find(play, "bBChannelsPlaying = NO_CHANNELS"),
-          "Sound start did not publish all playing channels before its count");
+    /* Channel publication is exercised by the compiled zero-through-four-channel
+     * callers in production-test; starting every channel is no longer valid. */
     CHECK(stop_count < stop_restore && find(stop, "memset(bBIsPlaying, FALSE, NO_CHANNELS)") < stop_count,
           "Sound stop did not clear flags and channel count before restoring IRQ state");
     CHECK(stop_restore < stop_end, "Sound stop did not restore caller interrupt state");
