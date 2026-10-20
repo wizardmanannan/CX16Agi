@@ -567,31 +567,15 @@ TRAMPOLINE _debugBank, _bDbgResetScanStart
         sta ZP_TMP 
         lda ZP_TMP + 1
         adc #$0
+        sta ZP_TMP + 1
         
         lda (ZP_TMP)
 
         sta result
 .endmacro
 .macro GET_VAR_OR_FLAG_VAR_OFFSET areaStartOffset, result
-
-        clc
-        lda #<GOLDEN_RAM
-        adc #<areaStartOffset
-        sta ZP_TMP
-        lda #>GOLDEN_RAM
-        adc #>areaStartOffset
-        sta ZP_TMP + 1
-
         GET_VAR_OR_FLAG VARS_AREA_START_GOLDEN_OFFSET, result
-
-        adc ZP_TMP
-        sta ZP_TMP 
-        lda ZP_TMP + 1
-        adc #$0
-
-        lda (ZP_TMP)
-
-        sta result
+        GET_VAR_OR_FLAG areaStartOffset, result, result
 .endmacro
 
 ; Macro: HANDLE_C_IF_RESULT
@@ -1336,7 +1320,7 @@ b2Togglev:
         lda #$1
         sta @flagVal
         @setValue:
-        SET_VAR_OR_FLAG VARS_AREA_START_GOLDEN_OFFSET, @flagVal
+        SET_VAR_OR_FLAG FLAGS_AREA_START_GOLDEN_OFFSET, @flagVal, @varVal
 
         DEBUG_POST_CHECK_FLAG @flagVal
 
@@ -2040,7 +2024,7 @@ b1Issetv:
 
     INC_CODE
     lda var1
-    bne @fail
+    beq @fail
     jmp returnFromOpCodeTrue
     @fail:
     jmp returnFromOpCodeFalse
