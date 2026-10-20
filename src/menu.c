@@ -335,11 +335,16 @@ char* bAStoreMessageInBuffer(LOGICFile* currentLogicFile, byte messNum)
 // ================================================================
 void bASetMenu(byte messNum)
 {
-	int startOffset;
+	byte i;
+	size_t occupied = 0, available;
 	MENU newMenu;
 	LOGICFile currentLogicFile;
 
 	if (numOfMenus >= MAX_MENUS) return;
+	for (i = 0; i < numOfMenus; i++) occupied += strlen(the_menu[i].text) + 1;
+	/* Reserve the assembly renderer's separator and at least one padding cell. */
+	if (occupied >= MENU_BAR_WIDTH - 2) return;
+	available = MENU_BAR_WIDTH - occupied - 2;
 	asm("sei");
 
 	if (numOfMenus == 0)
@@ -355,6 +360,7 @@ void bASetMenu(byte messNum)
 		REENABLE_INTERRUPTS();
 		return;
 	}
+	if (strlen(newMenu.text) > available) newMenu.text[available] = '\0';
 	newMenu.controller = NOT_ASSOCIATED;
 	/* Create new menu and allocate space for MAX_MENU_SIZE items */
 

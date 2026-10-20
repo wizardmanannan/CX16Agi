@@ -58,6 +58,24 @@ static void test_child_menu_width(size_t labelLength, byte messageNumber, char f
 	assert(bAMenuChildWidth[0] == MENU_BAR_WIDTH);
 }
 
+static void test_top_menu_bar_capacity(void)
+{
+	char label[257];
+	char* saved;
+	numOfMenus = 0;
+	nextMenuTextBufferAddr = menuTextBuffer;
+	bAInitMenuState();
+	memset(label, 'x', sizeof(label) - 1);
+	label[sizeof(label) - 1] = 0;
+	messages[0] = (byte*)label;
+	bASetMenu(1);
+	/* Leave one padding cell so the assembly bar's padding count is nonzero. */
+	assert(numOfMenus == 1 && strlen(the_menu[0].text) == MENU_BAR_WIDTH - 2);
+	saved = nextMenuTextBufferAddr;
+	bASetMenu(1);
+	assert(numOfMenus == 1 && nextMenuTextBufferAddr == saved);
+}
+
 int main(void)
 {
 	LOGICFile file;
@@ -77,7 +95,7 @@ int main(void)
 	bASetMenu(1);
 	assert(numOfMenus == 0);
 	nextMenuTextBufferAddr = menuTextBuffer;
-	messages[0] = (byte*)"Menu";
+	messages[0] = (byte*)"M";
 	for (i = 0; i < MAX_MENUS; i++) bASetMenu(1);
 	assert(numOfMenus == MAX_MENUS);
 	assert(the_menu[MAX_MENUS].text == NULL);
@@ -86,6 +104,7 @@ int main(void)
 	assert(numOfMenus == MAX_MENUS && nextMenuTextBufferAddr == saved);
 	test_child_menu_width(255, 2, 'x');
 	test_child_menu_width(256, 3, 'y');
+	test_top_menu_bar_capacity();
 	puts("menu text tests passed");
 	return 0;
 }
