@@ -1652,9 +1652,10 @@ static void run_loader_test(const char *game,const char *build,const char *nativ
     REQUIRE(!failed,"Real X16 WORDS startup regression failed");
 }
 int main(int argc,char **argv) {
-    char *emulator=NULL,*rom=NULL,*build=NULL,*game=NULL,*output=NULL,*sdl=NULL,*symbol=NULL,*tas_capture_header=NULL;unsigned long trigger=180000000;bool foreground_test=false,picture_test=false,combined_test=false,loader_test=false,random_ram=false,intro_test=false;unsigned startup_room=0;
+    char *emulator=NULL,*rom=NULL,*build=NULL,*game=NULL,*output=NULL,*sdl=NULL,*symbol=NULL,*tas_capture_header=NULL;unsigned long trigger=180000000;bool foreground_test=false,picture_test=false,combined_test=false,loader_test=false,random_ram=false,intro_test=false,play=false;unsigned startup_room=0;
     for(int i=1;i<argc;i++) {
-        if(!strcmp(argv[i],"--help")) {puts("Usage: test_full_game_irq --emulator-source DIR --rom FILE --build DIR --game DIR [--output DIR] [--symbols FILE] [--sdl-prefix DIR] [--tas-capture-header FILE] [--trigger-cycle N] [--foreground-test] [--combined-irq-test] [--picture-test] [--loader-test] [--startup-room 1|7] [--random-ram] [--intro-test]");return 0;}
+        if(!strcmp(argv[i],"--help")) {puts("Usage: test_full_game_irq --emulator-source DIR --rom FILE --build DIR --game DIR [--output DIR] [--symbols FILE] [--sdl-prefix DIR] [--tas-capture-header FILE] [--trigger-cycle N] [--foreground-test] [--combined-irq-test] [--picture-test] [--loader-test] [--startup-room 1|7] [--random-ram] [--intro-test] [--play]");return 0;}
+        if(!strcmp(argv[i],"--play")) { play=true;random_ram=true;continue;}
         if(!strcmp(argv[i],"--intro-test")) { intro_test=true;startup_room=1;continue;}
         if(!strcmp(argv[i],"--random-ram")) { random_ram=true;continue;}
         if(!strcmp(argv[i],"--foreground-test")) {foreground_test=true;continue;}
@@ -1666,6 +1667,7 @@ int main(int argc,char **argv) {
         else if(!strcmp(option,"--emulator-source"))emulator=value;else if(!strcmp(option,"--rom"))rom=value;else if(!strcmp(option,"--build"))build=value;else if(!strcmp(option,"--game"))game=value;else if(!strcmp(option,"--output"))output=value;else if(!strcmp(option,"--sdl-prefix"))sdl=value;else if(!strcmp(option,"--symbols"))symbol=value;else if(!strcmp(option,"--tas-capture-header"))tas_capture_header=value;
         else if(!strcmp(option,"--trigger-cycle")) {char *end;errno=0;trigger=strtoul(value,&end,10);REQUIRE(!errno&&*value&&!*end&&trigger<=UINT32_MAX,"Invalid trigger cycle");}else fail("Unknown option %s",option);
     }
+    REQUIRE(!play||!(startup_room||foreground_test||picture_test||combined_test||loader_test),"Interactive play must run separately from test scenarios");
     REQUIRE(!startup_room||!(foreground_test||picture_test||combined_test||loader_test),"Startup must run separately from injected command scenarios");
     REQUIRE(emulator&&rom&&build&&game,"Require --emulator-source, --rom, --build and --game");
     if(sdl) REQUIRE(exists(sdl),"SDL prefix does not exist");
@@ -1678,12 +1680,13 @@ int main(int argc,char **argv) {
     REQUIRE(!exists(join(output,"emulator")),"Output already contains an emulator; use a fresh directory");
     char *source=join(output,"emulator"),*stage=NULL;copy_tree(emulator,source);stage_tas_capture_header(source,tas_capture_header);
     if(!loader_test) {
-        const char *fixture_name=startup_room?"startup-game":combined_test?"combined-game":picture_test?"picture-game":"foreground-game";
+        const char *fixture_name=play?"play-game":startup_room?"startup-game":combined_test?"combined-game":picture_test?"picture-game":"foreground-game";
         suite_test_paths_init(fixture_name);
         if(atexit(cleanup_stage)) fail("Cannot register game fixture cleanup");
         stage=create_stage("game");
         copy_stage(game,stage,false,false);copy_stage(build,stage,true,false);
     }
+    if(!play) {
     const char *candidates[]={"final.lbl","agi.cx16.lbl","final.dbg","agi.cx16.dbg"};
     if(!symbol)for(size_t i=0;i<4;i++) {char *p=join(build,candidates[i]);if(exists(p)){symbol=p;break;}free(p);}
     REQUIRE(symbol,"Provide --symbols with private assembly symbols");load_symbols(join(build,"final.lbl"));load_symbols(join(build,"agi.cx16.lbl"));load_symbols(symbol);
@@ -1732,27 +1735,36 @@ int main(int argc,char **argv) {
     patch(video,"#include \"video.h\"","#include \"video.h\"\n#include \"cpu/fake6502.h\"",1);
     patch(video,"\t\tif (record_gif == RECORD_GIF_SINGLE) {","\t\tif (record_gif > RECORD_GIF_PAUSED) {\n\t\t\textern void shake_video_frame_written(uint32_t,uint32_t,uint16_t,uint8_t);\n\t\t\tshake_video_frame_written((uint32_t)frame_count, clockticks6502, regs.pc, memory_get_ram_bank());\n\t\t}\n\t\tif (record_gif == RECORD_GIF_SINGLE) {",1);
     patch(i2c,"\nvoid i2c_reset_state() {","\nvoid shake_get_i2c_state(uint8_t *out) { out[0]=i2c_port.clk_in; out[1]=i2c_port.data_in; out[2]=i2c_port.data_out; out[3]=(uint8_t)(state+1); out[4]=read_mode; out[5]=value; out[6]=(uint8_t)count; out[7]=device; }\n\nvoid i2c_reset_state() {",1);
+    }
+    if(play) {
+        const char *adapter=getenv("CX16AGI_TEST_AUDIO_ADAPTER");
+        REQUIRE(adapter&&exists(adapter),"Run interactive playback through make -C tools play (audio adapter required)");
+        char *upstream_audio=join(source,"src/audio-upstream.c");
+        copy_file(join(source,"src/audio.c"),upstream_audio);
+        copy_file(adapter,join(source,"src/audio.c"));
+    }
     patch(join(source,"src/disasm.c"),"char *where = strstr(mnemonic, \"%%0%hhux\");","const char *where = strstr(mnemonic, \"%%0%hhux\");",1);
     char *native=join(output,"native"),*buildlog=join(output,"build.log");
     if(!sdl) {char *parent=strdup(emulator),*slash=strrchr(parent,'/');REQUIRE(slash,"Invalid emulator path");*slash=0;sdl=join(parent,"sdl2-install");free(parent);}
     char *prefix=NULL;if(exists(sdl)) {char *absolute=realpath(sdl,NULL);REQUIRE(absolute,"Cannot resolve SDL prefix");prefix=format("-DCMAKE_PREFIX_PATH=%s",absolute);free(absolute);}
-    char *configure[]={"cmake","-S",source,"-B",native,"-DENABLE_LTO=OFF","-DENABLE_TRACE=OFF","-DENABLE_FLUIDSYNTH=OFF",prefix,NULL};run_from(configure,buildlog,0,NULL);
+    char *configure[]={"cmake","-S",source,"-B",native,"-DCMAKE_BUILD_TYPE=Release",play?"-DENABLE_LTO=ON":"-DENABLE_LTO=OFF","-DENABLE_TRACE=OFF","-DENABLE_FLUIDSYNTH=OFF",prefix,NULL};run_from(configure,buildlog,0,NULL);
     char *compile[]={"cmake","--build",native,"-j4",NULL};run_from(compile,buildlog,0,NULL);
-    REQUIRE(!setenv("SDL_VIDEODRIVER","dummy",1)&&!setenv("SDL_AUDIODRIVER","dummy",1),"Cannot set SDL environment");
+    if(!play) REQUIRE(!setenv("SDL_VIDEODRIVER","dummy",1)&&!setenv("SDL_AUDIODRIVER","dummy",1),"Cannot set SDL environment");
     if(loader_test) { run_loader_test(game,build,native,rom,output); return 0; }
     char *tas=NULL;
-    if(!startup_room) { tas=join(output,"input.tas");write_file(tas,"0:Return\n",9); }
-    char *command[24];int command_length=0;
+    if(!startup_room&&!play) { tas=join(output,"input.tas");write_file(tas,"0:Return\n",9); }
+    char *command[26];int command_length=0;
     command[command_length++]=join(native,"x16emu");command[command_length++]="-rom";command[command_length++]=rom;
     command[command_length++]="-fsroot";command[command_length++]=stage;command[command_length++]="-startin";command[command_length++]=stage;
     command[command_length++]="-prg";command[command_length++]=join(stage,"agi.cx16");command[command_length++]="-run";if(!random_ram) command[command_length++]="-zeroram";
-    command[command_length++]="-warp";command[command_length++]="-sound";command[command_length++]="none";
-    if(!startup_room&&!picture_test&&!combined_test) { command[command_length++]="-gif";command[command_length++]=format("%s/game.gif,wait",output); }
+    if(!play) { command[command_length++]="-warp";command[command_length++]="-sound";command[command_length++]="none"; }
+    if(!play&&!startup_room&&!picture_test&&!combined_test) { command[command_length++]="-gif";command[command_length++]=format("%s/game.gif,wait",output); }
     if(tas) { command[command_length++]="-tas";command[command_length++]=tas; }
     command[command_length++]="-echo";command[command_length]=NULL;
-    run(command,join(output,"run.log"),(picture_test||startup_room)?300:90);
+    run(command,join(output,"run.log"),play?0:(picture_test||startup_room)?300:90);
     cleanup_stage();
     if(!stage||exists(stage)) fail("Integration fixture cleanup regression: private staged game was not removed");
     require_no_retained_stage(output);
-    if(startup_room) { REQUIRE(file_contains(join(output,"run.log"),intro_test?"PASS natural intro presentation":"PASS natural game startup"),"Game did not reach its playable room"); puts("PASS natural game startup and sustained interpreter/input/render progress"); } else if(picture_test) validate_picture(output); else if(combined_test) validate_combined(output); else validate(output,foreground_test);return 0;
+    if(play) { puts("Interactive emulator closed; staged game cleaned"); return 0; }
+    if(startup_room) { REQUIRE(file_contains(join(output,"run.log"),intro_test?"PASS natural intro presentation":"PASS natural game startup"),"Game did not reach its playable room"); puts(intro_test?"PASS natural intro text publication and audio cadence":"PASS natural game startup and sustained interpreter/input/render progress"); } else if(picture_test) validate_picture(output); else if(combined_test) validate_combined(output); else validate(output,foreground_test);return 0;
 }
