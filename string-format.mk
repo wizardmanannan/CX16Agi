@@ -27,4 +27,5 @@ string-format-target-check:
 	set -e; for name in stringFormat parser textLayer commands menu; do \
 	$(CC65) -t cx16 -O -o $(STRING_FORMAT_OUT)/$$name.s src/$$name.c; \
 	$(CA65) -t cx16 -o $(STRING_FORMAT_OUT)/$$name.o $(STRING_FORMAT_OUT)/$$name.s; \
-	done; } 9>$(CX16AGI_BUILD_DIR)/.string-format.lock
+	done; \
+	$(CA65) -t cx16 -o $(STRING_FORMAT_OUT)/stringFormatAsm.o src/stringFormatAsm.s; } 9>$(CX16AGI_BUILD_DIR)/.string-format.lock

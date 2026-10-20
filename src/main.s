@@ -1,3 +1,4 @@
+    .include "stringFormatAsm.s"
     .importzp sreg
     .include "init.s"
     .include "commandLoop.s"

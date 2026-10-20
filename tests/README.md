@@ -4,7 +4,9 @@ RAM. Its KQ3 workload checks the 106-byte wizard line, its two `%m` messages,
 115-byte output, source preservation, bank restoration, and a cycle budget. The
 target driver also covers tokens, escapes, recursion, cycles, depth limits,
 chunked output, and destination capacities 0, 1, and truncated output. The
-remaining host tests cover string commands and menu text/count capacity.
+host display/parser regressions send their fixtures to that same target
+formatter through a byte transport; there is no host expansion implementation.
+Other host tests cover string commands and menu text/count capacity.
 
 The target test creates its executable and emulator input in a unique directory
 beneath `$CX16AGI_BUILD_DIR/obj/host/string-format`, then removes that directory
@@ -19,6 +21,7 @@ This checks target compilation, not a full interpreter link or emulator replay.
 
 The KQ3 warning workload is 106 input bytes, two message references, and 115
 output bytes. The current C formatter baseline is 86,586 emulator CPU cycles;
-the suite's strict 86,585-cycle budget requires the assembly formatter to
-improve it. The test checks output copying in 50-byte chunks plus the
+the resident assembly formatter takes 24,759 cycles with the same workload
+(71% fewer). The suite retains the strict 86,585-cycle budget. The test checks
+output copying in 50-byte chunks plus the
 terminator.
