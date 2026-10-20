@@ -417,3 +417,198 @@ typedef struct AppFaultOracleContext {
     LogicOracleResult semantic_failure;
 } AppFaultOracleContext;
 
+static uint64_t app_milliseconds(void)
+{
+    struct timespec now;
+    if (clock_gettime(CLOCK_MONOTONIC, &now)) return 0;
+    return (uint64_t)now.tv_sec * 1000u + (uint64_t)now.tv_nsec / 1000000u;
+}
+
+static int absolute_app_path(char *out, size_t size, const char *path)
+{
+    char cwd[4096];
+    if (path[0] == '/') return copy_text(out, size, path);
+    if (!getcwd(cwd, sizeof cwd)) return -1;
+    int length = snprintf(out, size, "%s/%s", cwd, path);
+    return length < 0 || (size_t)length >= size ? -1 : 0;
+}
+
+static int app_reference_run(const char *directory, const char *game_dir,
+    const char *manifest_path, uint32_t ticks, uint64_t deadline)
+{
+    const char *configured = getenv("CX16_SCUMMVM_ORACLE");
+    char program[4096], game[4096], manifest[4096], tick_text[16];
+    pid_t child;
+    int status;
+    struct timespec pause = {0, 10000000};
+    if (!configured || !*configured) configured = "obj/cx16/logic-oracle-scummvm";
+    if (absolute_app_path(program, sizeof program, configured) ||
+        absolute_app_path(game, sizeof game, game_dir) ||
+        absolute_app_path(manifest, sizeof manifest, manifest_path)) return -1;
+    snprintf(tick_text, sizeof tick_text, "%u", (unsigned)ticks);
+    child = fork();
+    if (child < 0) return -1;
+    if (!child) {
+        if (chdir(directory)) _exit(126);
+        execl(program, program, "--game-dir", game, "--manifest", manifest,
+              "--input-trace", "reference.ltrace", "--ticks", tick_text,
+              "--snapshot", "reference.lors", "--checkpoint-profile",
+              "completed-cycle", (char *)NULL);
+        _exit(127);
+    }
+    for (;;) {
+        pid_t waited = waitpid(child, &status, WNOHANG);
+        if (waited == child) return WIFEXITED(status) && !WEXITSTATUS(status) ? 0 : -1;
+        if (waited < 0 && errno != EINTR) return -1;
+        if (app_milliseconds() >= deadline) {
+            kill(child, SIGKILL);
+            while (waitpid(child, &status, 0) < 0 && errno == EINTR) { }
+            return -1;
+        }
+        nanosleep(&pause, NULL);
+    }
+}
+
+static int app_version(const char *text, uint16_t *version)
+{
+    char digits[8], *end;
+    size_t length = 0;
+    unsigned long value;
+    if (text[0] == '0' && (text[1] == 'x' || text[1] == 'X')) text += 2;
+    for (; *text; ++text) {
+        if (*text == '.') continue;
+        if (length + 1 >= sizeof digits) return -1;
+        digits[length++] = *text;
+    }
+    digits[length] = 0;
+    value = strtoul(digits, &end, 16);
+    if (!length || *end || !value || value > UINT16_MAX) return -1;
+    *version = (uint16_t)value;
+    return 0;
+}
+
+static int same_semantic_failure(const LogicOracleResult *a, const LogicOracleResult *b)
+{
+    return a->checkpoint_index == b->checkpoint_index &&
+        !strcmp(a->field, b->field) &&
+        a->reference_value == b->reference_value && a->candidate_value == b->candidate_value &&
+        !strcmp(a->reference_text, b->reference_text) &&
+        !strcmp(a->candidate_text, b->candidate_text);
+}
+
+static int full_app_semantic_oracle(void *opaque,
+    const LogicReplayManifest *manifest, const LogicReplayEvent *events,
+    size_t count, uint32_t timeout_ms, LogicFailureSignature *signature)
+{
+    AppFaultOracleContext *context = opaque;
+    LogicAppReplayInput input[LOGIC_APP_REPLAY_INPUT_MAX];
+    LogicReplayEvent expanded[LOGIC_APP_REPLAY_INPUT_MAX * 2];
+    uint8_t raw[LOGIC_APP_REPLAY_OUTPUT_SIZE] = {0}, manifest_hash[32], input_hash[32], reference_hash[32];
+    LogicOracleSnapshot candidate, *reference = NULL;
+    uint8_t (*series)[LOGIC_APP_REPLAY_OUTPUT_SIZE] = NULL;
+    LogicOracleResult comparison;
+    uint16_t version;
+    size_t reference_count = 0;
+    uint64_t deadline = app_milliseconds() + timeout_ms;
+    char directory[] = "obj/cx16/app-semantic-reduce-XXXXXX";
+    char canonical_path[512], reference_path[512], snapshot_path[512], detail[256];
+    int result = -1, fixture = 0;
+    uint32_t ticks = context && context->has_semantic_failure
+        ? context->semantic_failure.checkpoint_index + 1 : context ? context->tick_count : 0;
+    if (!context || !manifest || !signature || !timeout_ms ||
+        app_inputs_from_trace(events, count, context->tick_count, input) ||
+        app_version(manifest->agi_version, &version)) return -1;
+    if (!mkdtemp(directory)) return -1;
+    fixture = 1;
+    snprintf(canonical_path, sizeof canonical_path, "%s/input.ltrace", directory);
+    snprintf(reference_path, sizeof reference_path, "%s/reference.ltrace", directory);
+    snprintf(snapshot_path, sizeof snapshot_path, "%s/reference.lors", directory);
+    for (size_t i = 0; i < count; ++i) {
+        expanded[i * 2] = events[i];
+        expanded[i * 2].sequence = (uint32_t)(i * 2);
+        expanded[i * 2].reason = LOGIC_REPLAY_REASON_INPUT_DOWN;
+        expanded[i * 2].before = 0; expanded[i * 2].after = 1;
+        expanded[i * 2 + 1] = expanded[i * 2];
+        expanded[i * 2 + 1].sequence++;
+        expanded[i * 2 + 1].reason = LOGIC_REPLAY_REASON_INPUT_UP;
+        expanded[i * 2 + 1].before = 1; expanded[i * 2 + 1].after = 0;
+    }
+    if (logic_replay_trace_write(canonical_path, events, count) ||
+        logic_replay_trace_write(reference_path, expanded, count * 2) ||
+        logic_replay_sha256_file(context->manifest_path, manifest_hash) ||
+        logic_replay_sha256_file(canonical_path, input_hash) ||
+        logic_replay_sha256_file(reference_path, reference_hash) ||
+        app_milliseconds() >= deadline ||
+        app_reference_run(directory, context->game_dir, context->manifest_path,
+            ticks, deadline) ||
+        logic_oracle_snapshot_load(snapshot_path, &reference, &reference_count) ||
+        reference_count != ticks) goto done;
+    for (size_t i = 0; i < reference_count; ++i) {
+        if (memcmp(reference[i].input_sha256, reference_hash, 32)) goto done;
+        /* Down/up expansion was constructed from this exact candidate above. */
+        memcpy(reference[i].input_sha256, input_hash, 32);
+    }
+    /* Capture every boundary: a final match can hide earlier corruption. */
+    series = calloc(ticks, sizeof *series);
+    if (!series) goto done;
+    {
+        uint64_t now = app_milliseconds();
+        if (now >= deadline) goto done;
+        int captured = logic_app_replay_x16_series(context->game_dir,
+            context->seed, input, count, ticks, (uint32_t)(deadline - now),
+            context->fault_flags, series, ticks, detail, sizeof detail);
+        const uint8_t *last = series[ticks - 1];
+        if (captured && !((context->fault_flags & LOGIC_APP_REPLAY_FAULT_SEMANTIC_WRITE) &&
+                !(last[58] & LOGIC_APP_REPLAY_STATUS_FAULT_TRIGGERED) &&
+                last[5] == 1 && get_u16(last + 6) == ticks)) {
+            if (last[58] & LOGIC_APP_REPLAY_STATUS_INPUT_WAIT_EXHAUSTED) result = 1;
+            else fprintf(stderr, "semantic reduction series failed: %s\n", detail);
+            goto done;
+        }
+    }
+    for (uint32_t tick = 1; tick <= ticks; ++tick) {
+        uint64_t now = app_milliseconds();
+        LogicOracleStatus status;
+        if (now >= deadline) goto done;
+        memcpy(raw, series[tick - 1], sizeof raw);
+        if (context->fault_flags & LOGIC_APP_REPLAY_FAULT_SEMANTIC_WRITE)
+            raw[58] &= (uint8_t)~LOGIC_APP_REPLAY_STATUS_FAULT_TRIGGERED;
+        if (logic_app_replay_snapshot_to_oracle(manifest->engine, version, manifest,
+            manifest_hash, input_hash, raw, sizeof raw, &candidate, detail, sizeof detail))
+            goto done;
+        status = logic_oracle_compare_with_policy(&reference[tick - 1], &candidate,
+            LOGIC_ORACLE_POLICY_CROSS_ENGINE_SEMANTIC, &comparison);
+        if (status == LOGIC_ORACLE_DIVERGED) break;
+        if (status != LOGIC_ORACLE_MATCH) {
+            fprintf(stderr, "semantic reduction comparison invalid: %s\n", comparison.detail);
+            goto done;
+        }
+        if (tick == ticks) { result = 1; goto done; }
+    }
+    if (!context->has_semantic_failure) {
+        context->semantic_failure = comparison;
+        context->has_semantic_failure = 1;
+    } else if (!same_semantic_failure(&context->semantic_failure, &comparison)) {
+        result = 1;
+        goto done;
+    }
+    memset(signature, 0, sizeof *signature);
+    signature->kind = LOGIC_TRACE_KIND_MARK;
+    signature->reason = LOGIC_REPLAY_REASON_SEMANTIC_MISMATCH;
+    signature->code = 1;
+    result = 0;
+done:
+    free(series);
+    free(reference);
+    if (fixture) {
+        static const char *const names[] = {"input.ltrace", "reference.ltrace", "reference.lors", "scummvm.ini"};
+        char path[512];
+        for (size_t i = 0; i < sizeof names / sizeof names[0]; ++i) {
+            snprintf(path, sizeof path, "%s/%s", directory, names[i]);
+            if (unlink(path) && errno != ENOENT) result = -1;
+        }
+        if (rmdir(directory)) result = -1;
+    }
+    return result;
+}
+
