@@ -232,3 +232,206 @@ byte replay_rng_next(void)
     return value;
 }
 
+static void initialize_runtime(void)
+{
+    unsigned int i;
+
+    for (i = 0; i < 256; ++i) {
+        golden_vars[i] = 0;
+        golden_flags[i] = 0;
+        replay_variables[i] = 0;
+        replay_flags[i] = 0;
+    }
+    for (i = 0; i < sizeof event_consumed; ++i)
+        event_consumed[i] = FALSE;
+    for (i = 0; i < 19; ++i)
+        replay_output[i] = 0;
+    for (i = 0; i < sizeof replay_objects; ++i)
+        replay_objects[i] = 0;
+
+    /* These are the AGI defaults applied by both the production startup and
+       the ScummVM comparison fixture. */
+    golden_flags[2] = FALSE;
+    golden_flags[4] = FALSE;
+    golden_flags[5] = TRUE;
+    golden_flags[9] = TRUE;
+    golden_flags[11] = TRUE;
+    golden_vars[19] = 0;
+    if (replay_checkpoint_length >= 4 &&
+        replay_checkpoint[0] == 0x4C && replay_checkpoint[1] == 0x43 &&
+        replay_checkpoint[2] == 0x58 && replay_checkpoint[3] == 0x31)
+        golden_vars[100] = 1;
+    replay_key_down = FALSE;
+    replay_current_key = 0;
+    replay_current_tick = 0;
+    replay_rng_minimum = 0;
+    replay_rng_maximum = 0;
+    replay_rng_call_count = 0;
+    replay_rng_final_state = 0;
+    replay_ticks_executed = 0;
+    rng_calls_this_tick = 0;
+    expected_rng_calls_this_tick = 0;
+    rng_state = (unsigned long)replay_rng_seed[0] |
+                ((unsigned long)replay_rng_seed[1] << 8) |
+                ((unsigned long)replay_rng_seed[2] << 16) |
+                ((unsigned long)replay_rng_seed[3] << 24);
+    replay_rng_final_state = rng_state;
+    fault_pending = (replay_fault_flags & 1) != 0;
+    replay_invalid = FALSE;
+    test_result = 0;
+    test_step_count = 0;
+    exitAllLogics = FALSE;
+    hasEnteredNewRoom = FALSE;
+    newRoomNum = 0;
+    currentLog = 0;
+    numInputWords = 0;
+    for (i = 0; i < 16; ++i)
+        inputWords[i] = 0;
+
+    initialize_logic_resources();
+    assmLogicEntry.loaded = TRUE;
+    assmLogicEntry.entryPoint = 0;
+    assmLogicEntry.currentPoint = 0;
+    assmLogicEntry.data = (LOGICFile *)0;
+    assmLogicEntry.dataBank = 0;
+    assmLogicEntry.isLogicZeroOrDependency = FALSE;
+    assmLogicFile.codeSize = 0;
+    assmLogicFile.logicCode = (byte *)0;
+    assmLogicFile.numMessages = 0;
+    assmLogicFile.messages = (byte **)0;
+    assmLogicFile.codeBank = 0;
+    assmLogicFile.messageBank = 0;
+}
+
+static void apply_event(byte index)
+{
+    byte reason = event_reason(index);
+    unsigned long after = event_u32(index, 20);
+
+    if (replay_events[index][8] != 4 || replay_events[index][9] != 0) {
+        replay_invalid = TRUE;
+        event_consumed[index] = TRUE;
+        return;
+    }
+    if (reason == 1) { /* key down */
+        replay_current_key = event_field(index);
+        replay_key_down = TRUE;
+        golden_vars[19] = replay_current_key;
+        event_consumed[index] = TRUE;
+    } else if (reason == 2) { /* key up */
+        if (!replay_key_down || replay_current_key != event_field(index))
+            replay_invalid = TRUE;
+        replay_key_down = FALSE;
+        event_consumed[index] = TRUE;
+    } else if (reason == 3) { /* checked after the real RNG opcode runs */
+        unsigned long before = event_u32(index, 16);
+        if (golden_vars[event_field(index)] != (byte)before)
+            replay_invalid = TRUE;
+        ++expected_rng_calls_this_tick;
+    } else if (reason == 4) { /* TIME: after is elapsed seconds */
+        if (event_u32(index, 16) != agi_clock_seconds())
+            replay_invalid = TRUE;
+        set_agi_clock(after);
+        event_consumed[index] = TRUE;
+    } else {
+        replay_invalid = TRUE;
+        event_consumed[index] = TRUE;
+    }
+}
+
+static void record_context_mismatch(void)
+{
+    word pc;
+    byte logic;
+    unsigned long code;
+    if (!logicContextVerifyFailed || replay_output[0] == 1)
+        return;
+
+    pc = logicContextMismatchPc();
+    logic = logicContextMismatchLogic();
+    code = ((unsigned long)logicContextMismatchField() << 8) |
+           logicContextMismatchOffset();
+    replay_output[0] = 1;
+    replay_output[9] = 4; /* LOGIC_TRACE_KIND_MARK */
+    replay_output[10] = logic;
+    replay_output[11] = (byte)pc;
+    replay_output[12] = (byte)(pc >> 8);
+    replay_output[13] = logicContextMismatchOpcode();
+    replay_output[14] = 5; /* context mismatch */
+    put_u32(replay_output + 15, code);
+}
+
+static void run_ticks(void)
+{
+    unsigned long tick;
+    unsigned int i;
+
+    for (tick = 1; tick <= replay_tick_count; ++tick) {
+        replay_current_tick = tick;
+        rng_calls_this_tick = 0;
+        expected_rng_calls_this_tick = 0;
+        for (i = 0; i < replay_event_count; ++i)
+            if (!event_consumed[i] && event_u32(i, 4) == tick)
+                apply_event(i);
+
+        replay_dispatch_logic_zero();
+        /* ScummVM's interpretCycle clears VM_FLAG_NEW_ROOM_EXEC after the
+           first cycle; the production dispatch fixture supplies that outer
+           cycle bookkeeping around the real command loop. */
+        golden_flags[5] = FALSE;
+        replay_ticks_executed = tick;
+        if (rng_calls_this_tick != expected_rng_calls_this_tick)
+            replay_invalid = TRUE;
+        for (i = 0; i < replay_event_count; ++i) {
+            if (event_consumed[i] && event_u32(i, 4) == tick &&
+                event_reason(i) == 3 &&
+                golden_vars[event_field(i)] != (byte)event_u32(i, 20))
+                replay_invalid = TRUE;
+        }
+        replay_rng_final_state = rng_state;
+        record_context_mismatch();
+    }
+}
+
+static void capture_result(void)
+{
+    unsigned int i;
+    unsigned long consumed = 0;
+    for (i = 0; i < replay_event_count; ++i)
+        if (event_consumed[i])
+            ++consumed;
+        else
+            replay_invalid = TRUE;
+
+    for (i = 0; i < 256; ++i) {
+        replay_variables[i] = golden_vars[i];
+        replay_flags[i] = golden_flags[i] ? 1 : 0;
+    }
+    replay_room = replay_variables[0];
+    replay_object_count = 0;
+    if (test_result == 99 && replay_output[0] == 0) {
+        replay_output[0] = 2;
+        replay_output[14] = 1; /* production dispatch step guard */
+    }
+    if (replay_invalid && replay_output[0] == 0) {
+        replay_output[0] = 1;
+        replay_output[9] = 4;
+        replay_output[14] = 3; /* deterministic replay mismatch */
+    }
+    put_u32(replay_output + 1, consumed);
+    put_u32(replay_output + 5, 0);
+    replay_rng_final_state = rng_state;
+}
+
+void replay_execute_body(void)
+{
+    initialize_runtime();
+    run_ticks();
+    capture_result();
+}
+
+int main(void)
+{
+    /* The host enters replay_execute after cc65 startup has initialized BSS. */
+    asm("jmp $fffd");
+}
