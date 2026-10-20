@@ -56,6 +56,11 @@ void bDSetObject(byte objNum, objectType* objectType)
     bDObjects[objNum] = *objectType;
 }
 
+int bDGetObjectCount(void)
+{
+    return bDNumObjects;
+}
+
 /**************************************************************************
 ** isObjCrypt
 **
@@ -152,7 +157,6 @@ void bDLoadObjectFile()
         bDObjectNameLengths[objNum] = strlen(bDObjects[objNum].name);
     }
 }
-
 void bDInitObjects()
 {
     byte i, rowCounter;
