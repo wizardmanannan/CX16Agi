@@ -1443,6 +1443,7 @@ boolean agiBlit(byte entryNum, boolean disableInterupts)
 	byte isAnimated = FALSE;
 	SpriteAllocationSize allocationWidth, allocationHeight;
 	byte combinedSpriteAllocationSize;
+	PaletteGetResult paletteResult;
 	if (disableInterupts)
 	{
 		b6EnterForegroundVera();
@@ -1473,6 +1474,18 @@ boolean agiBlit(byte entryNum, boolean disableInterupts)
 	getLoadedView(&localView, viewNum);
 	getLoadedLoop(&localView, &localLoop, localViewTab.currentLoop);
 	getLoadedCel(&localLoop, &localCel, localViewTab.currentCel);
+
+	/* Room changes recycle palette slots while decoded views remain cached. */
+	if (localLoop.palette == PALETTE_NOT_SET)
+	{
+		localLoop.palette = bECreateSpritePalette(localCel.transparency, &paletteResult);
+		if (paletteResult == FailToAllocate)
+		{
+			result = FALSE;
+			goto endAgiBlit;
+		}
+		setLoadedLoop(&localView, &localLoop, localViewTab.currentLoop);
+	}
 
 
 	if (viewTabNoToMetaData[entryNum] != VIEWNO_TO_METADATA_NO_SET && viewTableMetadata[entryNum].viewNum != viewNum)
@@ -2135,7 +2148,10 @@ void bAInitObjects()
 void bAResetViews()     /* Called after new.room */
 {
 	int entryNum;
+	byte loop;
 	ViewTable localViewtab;
+	View localView;
+	Loop localLoop;
 
 	memset(viewsWithSpriteMem, 0, VIEW_TABLE_SIZE);
 
@@ -2147,6 +2163,18 @@ void bAResetViews()     /* Called after new.room */
 	}
 
 	bAReset();
+	/* Invalidate every cached loop, including views not used in the next room. */
+	for (entryNum = 0; entryNum < 256; ++entryNum)
+	{
+		getLoadedView(&localView, entryNum);
+		if (!localView.loaded) continue;
+		for (loop = 0; loop < localView.numberOfLoops; ++loop)
+		{
+			getLoadedLoop(&localView, &localLoop, loop);
+			localLoop.palette = PALETTE_NOT_SET;
+			setLoadedLoop(&localView, &localLoop, loop);
+		}
+	}
 }
 
 void bAPopulatePrecomputedPriorityTable()
