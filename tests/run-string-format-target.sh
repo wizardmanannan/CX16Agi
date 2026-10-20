@@ -101,3 +101,12 @@ for test in test-string-format test-text-interpolation; do
         -Wno-unknown-pragmas "${sources[@]}" -Wl,--gc-sections -o "$fixture/$test"
     "$fixture/$test"
 done
+
+# Link the complete product, then execute its real bank-7 parser cleanup routine.
+if ! python3 "$repo_root/tests/build-target-product.py" "$repo_root" "$fixture/product" "$cc65_home" > "$fixture/product-build.log" 2>&1; then
+    tail -40 "$fixture/product-build.log" >&2
+    exit 1
+fi
+"${compiler[@]}" -std=c99 "$repo_root/tests/test-parser-cleanup-target.c" -o "$fixture/test-parser-cleanup-target"
+"$fixture/test-parser-cleanup-target" "$fixture/product/agi.cx16" "$fixture/product/agi.lbl" "$fixture/product/agi.cx16.07"
+cp "$fixture/product/agi.map" "$build_root/product.map"
