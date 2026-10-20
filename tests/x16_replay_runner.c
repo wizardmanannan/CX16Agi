@@ -329,3 +329,209 @@ static int read_memory(int input, int output, unsigned address,
     return 0;
 }
 
+static int read_resource_file(const char *directory, const char *name,
+                              ReplayResourceCode *resource)
+{
+    char path[1024];
+    char *end;
+    unsigned long logic;
+    uint8_t *bytes;
+    size_t size;
+
+    if (strncmp(name, "LOGIC.", 6) != 0)
+        return -1;
+    errno = 0;
+    logic = strtoul(name + 6, &end, 10);
+    if (errno || *end || logic >= REPLAY_PROTOCOL_LOGIC_COUNT ||
+        resource[logic].present)
+        return -1;
+    if (resource_path(path, sizeof path, directory, name) != 0)
+        return -1;
+    if (read_file(path, &bytes, &size) != 0)
+        return -1;
+    if (!size || size > sizeof resource[logic].bytes) {
+        free(bytes);
+        return -1;
+    }
+    memcpy(resource[logic].bytes, bytes, size);
+    free(bytes);
+    resource[logic].size = size;
+    resource[logic].present = 1;
+    return 0;
+}
+
+static int read_manifest_resource(const LogicReplayManifest *manifest,
+                                  const char *directory, const char *name,
+                                  uint8_t **bytes, size_t *size)
+{
+    char path[1024];
+    unsigned i;
+    for (i = 0; i < manifest->resource_count; ++i) {
+        if (!strcmp(manifest->resources[i].name, name)) {
+            if (resource_path(path, sizeof path, directory, name) != 0)
+                return -1;
+            return read_file(path, bytes, size);
+        }
+    }
+    return -1;
+}
+
+static int read_volume_logic(const uint8_t *volume, size_t volume_size,
+                             size_t offset, ReplayResourceCode *resource)
+{
+    uint16_t payload_size, code_size;
+    if (offset > volume_size || volume_size - offset < 5 ||
+        volume[offset] != 0x12 || volume[offset + 1] != 0x34 ||
+        volume[offset + 2] != 0)
+        return -1;
+    payload_size = (uint16_t)(volume[offset + 3] |
+                              ((uint16_t)volume[offset + 4] << 8));
+    offset += 5;
+    if (payload_size < 2 || payload_size > volume_size - offset)
+        return -1;
+    code_size = (uint16_t)(volume[offset] |
+                           ((uint16_t)volume[offset + 1] << 8));
+    offset += 2;
+    if (!code_size || code_size > REPLAY_PROTOCOL_LOGIC_BYTES ||
+        code_size > payload_size - 2)
+        return -1;
+    memcpy(resource->bytes, volume + offset, code_size);
+    resource->size = code_size;
+    resource->present = 1;
+    return 0;
+}
+
+static int load_volume_resources(const LogicReplayManifest *manifest,
+                                 const char *directory,
+                                 ReplayResourceCode code[REPLAY_PROTOCOL_LOGIC_COUNT])
+{
+    uint8_t *logdir = NULL;
+    size_t logdir_size = 0;
+    unsigned logic;
+    if (read_manifest_resource(manifest, directory, "LOGDIR",
+                               &logdir, &logdir_size) != 0 ||
+        logdir_size < 256u * 3u) {
+        free(logdir);
+        return -1;
+    }
+    memset(code, 0, sizeof(ReplayResourceCode) * REPLAY_PROTOCOL_LOGIC_COUNT);
+    for (logic = 0; logic < REPLAY_PROTOCOL_LOGIC_COUNT; ++logic) {
+        const uint8_t *entry = logdir + logic * 3u;
+        unsigned volume_number;
+        size_t offset;
+        uint8_t *volume = NULL;
+        size_t volume_size = 0;
+        char volume_name[16];
+        int found;
+
+        if (entry[0] == 0xFF && entry[1] == 0xFF && entry[2] == 0xFF)
+            continue;
+        volume_number = entry[0] >> 4;
+        offset = ((size_t)(entry[0] & 0x0Fu) << 16) |
+                 ((size_t)entry[1] << 8) | entry[2];
+        if (snprintf(volume_name, sizeof volume_name, "VOL.%u", volume_number) < 0 ||
+            read_manifest_resource(manifest, directory, volume_name,
+                                   &volume, &volume_size) != 0) {
+            free(volume);
+            free(logdir);
+            return -1;
+        }
+        found = read_volume_logic(volume, volume_size, offset, &code[logic]);
+        free(volume);
+        if (found != 0) {
+            free(logdir);
+            return -1;
+        }
+    }
+    free(logdir);
+    return code[0].present && code[1].present ? 0 : -1;
+}
+
+static int load_resource_code(const LogicReplayManifest *manifest,
+                              const char *directory,
+                              ReplayResourceCode code[REPLAY_PROTOCOL_LOGIC_COUNT])
+{
+    unsigned i;
+    memset(code, 0, sizeof(ReplayResourceCode) * REPLAY_PROTOCOL_LOGIC_COUNT);
+    for (i = 0; i < manifest->resource_count; ++i)
+        if (!strcmp(manifest->resources[i].name, "LOGDIR"))
+            return load_volume_resources(manifest, directory, code);
+    if (manifest->resource_count != REPLAY_PROTOCOL_LOGIC_COUNT)
+        return -1;
+    for (i = 0; i < manifest->resource_count; ++i)
+        if (read_resource_file(directory, manifest->resources[i].name, code) != 0)
+            return -1;
+    return code[0].present && code[1].present && code[2].present ? 0 : -1;
+}
+
+static void put_u16(uint8_t output[2], uint16_t value)
+{
+    output[0] = (uint8_t)value;
+    output[1] = (uint8_t)(value >> 8);
+}
+
+static void put_u32(uint8_t output[4], uint32_t value)
+{
+    unsigned i;
+    for (i = 0; i < 4; ++i)
+        output[i] = (uint8_t)(value >> (i * 8));
+}
+
+static uint32_t get_u32(const uint8_t input[4])
+{
+    return (uint32_t)input[0] | ((uint32_t)input[1] << 8) |
+           ((uint32_t)input[2] << 16) | ((uint32_t)input[3] << 24);
+}
+
+static uint16_t get_u16(const uint8_t input[2])
+{
+    return (uint16_t)(input[0] | ((uint16_t)input[1] << 8));
+}
+
+static int16_t get_i16(const uint8_t input[2])
+{
+    uint16_t value = get_u16(input);
+    return value <= INT16_MAX ? (int16_t)value
+                              : (int16_t)((int32_t)value - 65536);
+}
+
+static void hash_byte(uint32_t *hash, uint8_t byte)
+{
+    *hash ^= byte;
+    *hash *= UINT32_C(16777619);
+}
+
+static uint32_t semantic_hash(const LogicReplayResult *result)
+{
+    uint32_t hash = UINT32_C(2166136261);
+    uint8_t bytes[4];
+    size_t i;
+    for (i = 0; i < sizeof result->variables; ++i)
+        hash_byte(&hash, result->variables[i]);
+    for (i = 0; i < sizeof result->flags; ++i)
+        hash_byte(&hash, result->flags[i]);
+    put_u16(bytes, result->room);
+    put_u16(bytes + 2, result->object_count);
+    for (i = 0; i < sizeof bytes; ++i)
+        hash_byte(&hash, bytes[i]);
+    for (i = 0; i < result->object_count; ++i) {
+        const LogicReplayObject *object = &result->objects[i];
+        hash_byte(&hash, object->id);
+        put_u16(bytes, (uint16_t)object->x);
+        put_u16(bytes + 2, (uint16_t)object->y);
+        for (size_t j = 0; j < 4; ++j)
+            hash_byte(&hash, bytes[j]);
+        hash_byte(&hash, object->view);
+        hash_byte(&hash, object->loop);
+        hash_byte(&hash, object->cel);
+        hash_byte(&hash, object->motion);
+    }
+    put_u32(bytes, result->rng_call_count);
+    for (i = 0; i < sizeof bytes; ++i)
+        hash_byte(&hash, bytes[i]);
+    put_u32(bytes, result->rng_final_state);
+    for (i = 0; i < sizeof bytes; ++i)
+        hash_byte(&hash, bytes[i]);
+    return hash;
+}
+
