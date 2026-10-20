@@ -21,7 +21,10 @@ TEST_FIXTURE_ROOT ?= $(if $(TMPDIR),$(TMPDIR),/tmp)
 export CC65_HOME X16_EMULATOR_SOURCE TMPDIR TEST_OUTPUT_DIR ROM GAME BUILD SYMBOLS SDL_PREFIX TAS_CAPTURE_HEADER
 unexport KEEP_TEST_OUTPUT
 
-.PHONY: test suite commands-test image production-test integration-test picture-test loader-test modes integration _run
+.PHONY: test suite commands-test image production-test integration-test picture-test loader-test modes integration _run build-test
+
+build-test:
+	@$(MAKE) --no-print-directory -f "$(REPO_ROOT)/tools/Makefile" _run MODE=build-test
 
 test suite:
 	@$(MAKE) --no-print-directory -f "$(REPO_ROOT)/tools/Makefile" _run MODE=core
@@ -69,6 +72,7 @@ _run:
 	  need_file "$$repo/tools/test-image.mk"; need_file "$$repo/tools/test_image_exports.s"; \
 	}; \
 	case "$$mode" in \
+	  build-test) need_cc65; need_exec "$$CC65_HOME/bin/cl65" ;; \
 	  core) need_cc65; need_cpu ;; \
 	  commands-test) need_cc65 ;; \
 	  image) need_cc65; need_exec "$$CC65_HOME/bin/cl65"; need_image_makefile ;; \
@@ -155,6 +159,9 @@ _run:
 	  fi; \
 	}; \
 	case "$$mode" in \
+	  build-test) \
+	    "$(HOST_CC)" $(HOST_CFLAGS) "$$repo/tools/test_build.c" -o "$$work/bin/test_build"; \
+	    "$$work/bin/test_build" "$$repo" ;; \
 	  commands-test) \
 	    build_commands; prepare_sanitizers; failed=0; \
 	    for option in '' --parse --strings --allocation; do \
