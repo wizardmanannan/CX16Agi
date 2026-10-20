@@ -172,10 +172,15 @@ int main(int argc,char **argv) {
                                      getword(symbol(notes[i]))==0xB000+0x100*i-5,
                                      "Unloaded sound changed live channel state");
 
+        /* The sound opcode stores its requested flag even when play rejects it. */
+        word(symbol("_soundEndFlag"),31);
+        rearm_call();call("_bBStopSound",masked);
+        CHECK(get(0x8800+23)==1,"Stop completed the rejected request instead of the sound still playing");
+
         prepare(masked);put(0x8800+9,0);put(symbol("_bBChannelsPlaying"),2);ram[0x9000]=7;regs.a=23;
         call("_bBPlaySound",masked);CHECK(get(0x8800+23)==1 && get(symbol("_bBChannelsPlaying"))==2 && !psg_writes,"Disabled sound play changed playback state");
         for(unsigned active=0;active<2;active++) {
-            prepare(masked);word(symbol("_soundEndFlag"),23);put(0x8800+23,0);put(symbol("_bBChannelsPlaying"),active?4:0);
+            prepare(masked);word(symbol("_soundEndFlag"),23);put(symbol("_bBEndSoundFlag"),23);put(0x8800+23,0);put(symbol("_bBChannelsPlaying"),active?4:0);
             for(unsigned i=0;i<4;i++)put(symbol("_bBIsPlaying")+i,(uint8_t)active);
             call("_bBStopSound",masked);CHECK(!get(symbol("_bBChannelsPlaying")),"Stop retained channels");
             for(unsigned i=0;i<4;i++)CHECK(!get(symbol("_bBIsPlaying")+i),"Stop retained playing flag");

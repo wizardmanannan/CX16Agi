@@ -790,7 +790,7 @@ void bBStopSound()
 	{
 		bBPsgClear();       // Clear PSG sound generator state
 		memset(bBIsPlaying, FALSE, NO_CHANNELS); // Mark all channels as not playing
-		flag[soundEndFlag] = TRUE;
+		flag[bBEndSoundFlag] = TRUE;
 	}
 	bBChannelsPlaying = 0;
 	asm("plp"); // Restore the caller's interrupt state without acknowledging VSYNC
