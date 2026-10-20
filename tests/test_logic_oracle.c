@@ -400,3 +400,389 @@ static int check_distinct_rng_comparison(void)
     return 0;
 }
 
+static int patch_u16(const char *path, long offset, unsigned value)
+{
+    FILE *file = fopen(path, "r+b");
+    unsigned char bytes[2];
+    int ok, close_result;
+    if (!file) return -1;
+    bytes[0] = (unsigned char)value;
+    bytes[1] = (unsigned char)(value >> 8);
+    ok = fseek(file, offset, SEEK_SET) == 0 &&
+         fwrite(bytes, 1, sizeof bytes, file) == sizeof bytes;
+    close_result = fclose(file);
+    if (close_result != 0) ok = 0;
+    return ok ? 0 : -1;
+}
+
+static int patch_u32(const char *path, long offset, unsigned value)
+{
+    FILE *file = fopen(path, "r+b");
+    unsigned char bytes[4];
+    int ok, close_result;
+    if (!file) return -1;
+    bytes[0] = (unsigned char)value;
+    bytes[1] = (unsigned char)(value >> 8);
+    bytes[2] = (unsigned char)(value >> 16);
+    bytes[3] = (unsigned char)(value >> 24);
+    ok = fseek(file, offset, SEEK_SET) == 0 &&
+         fwrite(bytes, 1, sizeof bytes, file) == sizeof bytes;
+    close_result = fclose(file);
+    if (close_result != 0) ok = 0;
+    return ok ? 0 : -1;
+}
+
+static int write_bytes(const char *path, const void *bytes, size_t length)
+{
+    FILE *file = fopen(path, "wb");
+    int ok, close_result;
+    if (!file) return -1;
+    ok = fwrite(bytes, 1, length, file) == length;
+    close_result = fclose(file);
+    if (close_result != 0) ok = 0;
+    return ok ? 0 : -1;
+}
+
+static int game_file(char *path, size_t size, const char *directory,
+                     const char *name)
+{
+    int length = snprintf(path, size, "%s/%s", directory, name);
+    return length >= 0 && (size_t)length < size ? 0 : -1;
+}
+
+static int copy_file(const char *source_path, const char *target_path)
+{
+    unsigned char bytes[8192];
+    FILE *source = fopen(source_path, "rb");
+    FILE *target;
+    int ok = 1;
+    if (!source) return -1;
+    target = fopen(target_path, "wb");
+    if (!target) {
+        fclose(source);
+        return -1;
+    }
+    for (;;) {
+        size_t count = fread(bytes, 1, sizeof bytes, source);
+        if (count && fwrite(bytes, 1, count, target) != count) {
+            ok = 0;
+            break;
+        }
+        if (count < sizeof bytes) {
+            if (ferror(source)) ok = 0;
+            break;
+        }
+    }
+    if (fclose(source) != 0) ok = 0;
+    if (fclose(target) != 0) ok = 0;
+    return ok ? 0 : -1;
+}
+
+static int stage_game_assets(const char *source_directory,
+                             const char *target_directory,
+                             const char *const *names, size_t name_count)
+{
+    char source_path[1024], target_path[1024];
+    size_t i;
+    if (mkdir(target_directory, 0700) != 0) return -1;
+    for (i = 0; i < name_count; ++i) {
+        if (game_file(source_path, sizeof source_path, source_directory,
+                      names[i]) != 0 ||
+            game_file(target_path, sizeof target_path, target_directory,
+                      names[i]) != 0 ||
+            copy_file(source_path, target_path) != 0)
+            return -1;
+    }
+    return 0;
+}
+
+static void remove_game_assets(const char *directory,
+                               const char *const *names, size_t name_count)
+{
+    char path[1024];
+    size_t i;
+    if (!directory[0]) return;
+    for (i = 0; i < name_count; ++i) {
+        if (game_file(path, sizeof path, directory, names[i]) == 0 &&
+            unlink(path) != 0 && errno != ENOENT)
+            fprintf(stderr, "test_logic_oracle: cannot remove %s: %s\n",
+                    path, strerror(errno));
+    }
+    if (rmdir(directory) != 0 && errno != ENOENT)
+        fprintf(stderr, "test_logic_oracle: cannot remove %s: %s\n",
+                directory, strerror(errno));
+}
+
+static int write_game_replay_manifest(const char *game_directory,
+                                     const char *manifest_path,
+                                     const char *game_id,
+                                     const char *const *names,
+                                     size_t name_count)
+{
+    LogicReplayManifest manifest;
+    char path[1024];
+    size_t i;
+    memset(&manifest, 0, sizeof manifest);
+    manifest.version = LOGIC_REPLAY_MANIFEST_VERSION;
+    if (strlen(game_id) >= sizeof manifest.engine) return -1;
+    strcpy(manifest.engine, game_id);
+    strcpy(manifest.build, "scummvm-reference-kq-regression");
+    strcpy(manifest.agi_version, "0x2917");
+    manifest.resource_count = name_count;
+    manifest.rng_seed = UINT32_C(0x4a474931);
+    strcpy(manifest.rng_algorithm, "xorshift32-v1");
+    manifest.tick_numerator = 20;
+    manifest.tick_denominator = 1;
+    for (i = 0; i < name_count; ++i) {
+        if (strlen(names[i]) >= sizeof manifest.resources[i].name)
+            return -1;
+        strcpy(manifest.resources[i].name, names[i]);
+        if (game_file(path, sizeof path, game_directory, names[i]) != 0 ||
+            logic_replay_sha256_file(path,
+                manifest.resources[i].sha256) != 0)
+            return -1;
+    }
+    return logic_replay_manifest_write(manifest_path, &manifest);
+}
+
+static int append_key_event(LogicReplayEvent *events, size_t capacity,
+                            size_t *count, uint32_t tick, uint8_t key,
+                            uint8_t reason)
+{
+    LogicReplayEvent *event;
+    if (*count >= capacity) return -1;
+    event = &events[(*count)++];
+    memset(event, 0, sizeof *event);
+    event->sequence = (uint32_t)(*count - 1);
+    event->tick = tick;
+    event->kind = LOGIC_TRACE_KIND_MARK;
+    event->field = key;
+    event->before = reason == LOGIC_REPLAY_REASON_INPUT_UP;
+    event->after = reason == LOGIC_REPLAY_REASON_INPUT_DOWN;
+    event->reason = reason;
+    return 0;
+}
+
+static int write_game_input_trace(const char *path)
+{
+    static const uint32_t intro_ticks[] = {2, 10, 18, 26, 34};
+    static const uint32_t command_ticks[] = {50, 54, 58, 62, 66};
+    static const uint8_t command_keys[] = {'l', 'o', 'o', 'k', '\r'};
+    LogicReplayEvent events[32];
+    size_t count = 0, i;
+    for (i = 0; i < sizeof intro_ticks / sizeof intro_ticks[0]; ++i) {
+        if (append_key_event(events, 32, &count, intro_ticks[i], '\r',
+                             LOGIC_REPLAY_REASON_INPUT_DOWN) != 0 ||
+            append_key_event(events, 32, &count, intro_ticks[i], '\r',
+                             LOGIC_REPLAY_REASON_INPUT_UP) != 0)
+            return -1;
+    }
+    for (i = 0; i < sizeof command_ticks / sizeof command_ticks[0]; ++i) {
+        if (append_key_event(events, 32, &count, command_ticks[i],
+                             command_keys[i],
+                             LOGIC_REPLAY_REASON_INPUT_DOWN) != 0 ||
+            append_key_event(events, 32, &count, command_ticks[i],
+                             command_keys[i],
+                             LOGIC_REPLAY_REASON_INPUT_UP) != 0)
+            return -1;
+    }
+    return logic_replay_trace_write(path, events, count);
+}
+
+static int file_has_line(const char *path, const char *expected)
+{
+    char line[256];
+    FILE *file = fopen(path, "r");
+    int found = 0;
+    if (!file) return 0;
+    while (fgets(line, sizeof line, file)) {
+        line[strcspn(line, "\r\n")] = '\0';
+        if (strcmp(line, expected) == 0) {
+            found = 1;
+            break;
+        }
+    }
+    if (fclose(file) != 0) return 0;
+    return found;
+}
+
+static int read_milestone_uint(const char *path, const char *key,
+                               unsigned long *value)
+{
+    char line[256], found_key[64], found_value[128];
+    FILE *file = fopen(path, "r");
+    int found = 0;
+    if (!file) return -1;
+    while (fgets(line, sizeof line, file)) {
+        if (sscanf(line, "%63[^=]=%127s", found_key, found_value) == 2 &&
+            strcmp(found_key, key) == 0) {
+            char *end = NULL;
+            errno = 0;
+            unsigned long parsed = strtoul(found_value, &end, 10);
+            if (!errno && end && *end == '\0') {
+                *value = parsed;
+                found = 1;
+            }
+            break;
+        }
+    }
+    if (fclose(file) != 0) return -1;
+    return found ? 0 : -1;
+}
+
+static void set_v2_directory_entry(unsigned char *directory, unsigned resource,
+                                   unsigned offset)
+{
+    unsigned char *entry = directory + resource * 3;
+    entry[0] = (unsigned char)((offset >> 16) & 0x0f);
+    entry[1] = (unsigned char)(offset >> 8);
+    entry[2] = (unsigned char)offset;
+}
+
+static uint8_t scummvm_random_1_to_10(uint32_t *state)
+{
+    uint32_t product;
+    *state ^= *state >> 13;
+    *state ^= *state << 21;
+    *state ^= *state >> 11;
+    product = *state * UINT32_C(0xDEADBF03);
+    return (uint8_t)(product % 10 + 1);
+}
+
+static size_t append_v2_logic(unsigned char *volume, size_t offset,
+                              const unsigned char *code, size_t code_length)
+{
+    size_t payload_length = 2 + code_length + 3;
+    volume[offset++] = 0x12;
+    volume[offset++] = 0x34;
+    volume[offset++] = 0;
+    volume[offset++] = (unsigned char)payload_length;
+    volume[offset++] = (unsigned char)(payload_length >> 8);
+    volume[offset++] = (unsigned char)code_length;
+    volume[offset++] = (unsigned char)(code_length >> 8);
+    memcpy(volume + offset, code, code_length);
+    offset += code_length;
+    volume[offset++] = 0; /* no logic messages */
+    volume[offset++] = 2;
+    volume[offset++] = 0;
+    return offset;
+}
+
+static int write_minimal_agi_game(const char *directory)
+{
+    static const unsigned char logic_zero[] = {
+        4, 42, 19,       /* assignv v42, v19 (the delivered key) */
+        0x82, 1, 10, 50, /* random 1..10, v50 */
+        22, 1,           /* call logic 1 */
+        5, 42, 3,         /* addn v42, 3 after the nested call */
+        0                /* return */
+    };
+    static const unsigned char logic_one[] = {
+        5, 42, 5,         /* addn v42, 5 */
+        22, 2,            /* call logic 2 to exercise nested context restore */
+        0
+    };
+    static const unsigned char logic_two[] = {
+        5, 42, 7,         /* addn v42, 7 */
+        0                /* return */
+    };
+    unsigned char logdir[256 * 3], empty_dir[256 * 3];
+    unsigned char volume[64];
+    unsigned char words[26 * 2] = {0};
+    static const char wag[] =
+        "[General]\n"
+        "Interpreter=2.917\n"
+        "GameID=agi-fanmade\n"
+        "Description=Oracle fixture\n"
+        "GameVersion=fixture-v1\n";
+    char path[512];
+    size_t volume_length = 0;
+
+    memset(logdir, 0xff, sizeof logdir);
+    memset(empty_dir, 0xff, sizeof empty_dir);
+    set_v2_directory_entry(logdir, 0, (unsigned)volume_length);
+    volume_length = append_v2_logic(volume, volume_length,
+                                    logic_zero, sizeof logic_zero);
+    set_v2_directory_entry(logdir, 1, (unsigned)volume_length);
+    volume_length = append_v2_logic(volume, volume_length,
+                                    logic_one, sizeof logic_one);
+    set_v2_directory_entry(logdir, 2, (unsigned)volume_length);
+    volume_length = append_v2_logic(volume, volume_length,
+                                    logic_two, sizeof logic_two);
+
+    if (game_file(path, sizeof path, directory, "LOGDIR") != 0 ||
+        write_bytes(path, logdir, sizeof logdir) != 0 ||
+        game_file(path, sizeof path, directory, "PICDIR") != 0 ||
+        write_bytes(path, empty_dir, sizeof empty_dir) != 0 ||
+        game_file(path, sizeof path, directory, "VIEWDIR") != 0 ||
+        write_bytes(path, empty_dir, sizeof empty_dir) != 0 ||
+        game_file(path, sizeof path, directory, "SNDDIR") != 0 ||
+        write_bytes(path, empty_dir, sizeof empty_dir) != 0 ||
+        game_file(path, sizeof path, directory, "VOL.0") != 0 ||
+        write_bytes(path, volume, volume_length) != 0 ||
+        game_file(path, sizeof path, directory, "OBJECT") != 0 ||
+        write_bytes(path, "", 0) != 0 ||
+        game_file(path, sizeof path, directory, "WORDS.TOK") != 0 ||
+        write_bytes(path, words, sizeof words) != 0 ||
+        game_file(path, sizeof path, directory, "oracle.wag") != 0 ||
+        write_bytes(path, wag, sizeof wag - 1) != 0)
+        return -1;
+    return 0;
+}
+
+static int write_replay_manifest(const char *game_directory,
+                                 const char *manifest_path)
+{
+    static const char *const names[] = {
+        "LOGDIR", "PICDIR", "VIEWDIR", "SNDDIR", "VOL.0", "OBJECT",
+        "WORDS.TOK", "oracle.wag"
+    };
+    LogicReplayManifest manifest;
+    char path[512];
+    size_t i;
+    memset(&manifest, 0, sizeof manifest);
+    manifest.version = LOGIC_REPLAY_MANIFEST_VERSION;
+    strcpy(manifest.engine, "agi-fanmade");
+    strcpy(manifest.build, "t3code-f508eb73");
+    strcpy(manifest.agi_version, "0x2917");
+    manifest.resource_count = sizeof names / sizeof names[0];
+    manifest.rng_seed = 0x4a474931ULL;
+    strcpy(manifest.rng_algorithm, "xorshift32-v1");
+    manifest.tick_numerator = 20;
+    manifest.tick_denominator = 1;
+    for (i = 0; i < sizeof names / sizeof names[0]; ++i) {
+        strcpy(manifest.resources[i].name, names[i]);
+        if (game_file(path, sizeof path, game_directory, names[i]) != 0 ||
+            logic_replay_sha256_file(path, manifest.resources[i].sha256) != 0)
+            return -1;
+    }
+    return logic_replay_manifest_write(manifest_path, &manifest);
+}
+
+static void remove_minimal_agi_game(const char *directory)
+{
+    static const char *const names[] = {
+        "LOGDIR", "PICDIR", "VIEWDIR", "SNDDIR", "VOL.0", "OBJECT",
+        "WORDS.TOK", "oracle.wag"
+    };
+    char path[512];
+    size_t i;
+    for (i = 0; i < sizeof names / sizeof names[0]; ++i) {
+        if (game_file(path, sizeof path, directory, names[i]) == 0 &&
+            unlink(path) != 0 && errno != ENOENT)
+            fprintf(stderr, "test_logic_oracle: cannot remove %s: %s\n",
+                    path, strerror(errno));
+    }
+    if (rmdir(directory) != 0 && errno != ENOENT)
+        fprintf(stderr, "test_logic_oracle: cannot remove %s: %s\n",
+                directory, strerror(errno));
+}
+
+static const char *fixture_relative_path(const char *path,
+                                         const char *fixture_directory)
+{
+    size_t length = strlen(fixture_directory);
+    return strncmp(path, fixture_directory, length) == 0 && path[length] == '/'
+        ? path + length + 1 : path;
+}
+
