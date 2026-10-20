@@ -143,12 +143,14 @@ void b7GetString(char* promptStr, byte promptStringBank, char* returnStr, byte r
 		GET_IN(ch);
 		if (ch)
 		{
-			if ((ch >> 8) == 0x1C) ch |= 0x0D; /* Handle keypad ENTER */
 			switch (ch & 0xff) {
 			case 0:     /* Ignore these when building input string */
 			case 0x09:
-			case 0x1B:
 				break;
+			case KEY_ESC:
+				strPos = 0;
+				b7CurrentInputStr[0] = 0;
+				/* Cancellation submits an empty result. */
 			case 0x0D:  /* ENTER */
 				memCpyBankedBetween((byte*)returnStr, returnStrBank,
 				                   (byte*)b7CurrentInputStr, STRING_BANK, (size_t)strPos + 1);
@@ -167,6 +169,9 @@ void b7GetString(char* promptStr, byte promptStringBank, char* returnStr, byte r
 				break;
 			case 0x0A: break;
 			default:
+				if (ch >= KEY_CAP_A && ch <= KEY_CAP_Z) ch -= 0x80;
+				else if (ch >= KEY_LOWER_A && ch <= KEY_LOWER_Z) ch += ASCII_DIFF;
+				if (ch < SPACE || ch > 0x7e) break;
 				if (strPos >= l) break;
 				b7CurrentInputStr[strPos] = (ch & 0xff);
 				strPos++;

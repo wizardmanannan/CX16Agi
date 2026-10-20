@@ -83,6 +83,33 @@ static void test_idle_input(void)
 	assert(inputKeyPosition == sizeof(keys));
 }
 
+static void test_modal_keyboard_encoding(void)
+{
+    static const byte keys[] = { KEY_LOWER_A, KEY_CAP_A, KEY_RIGHT, KEY_F1, KEY_ENTER };
+    char result[40] = "unchanged";
+    inputKeys = keys;
+    inputKeyCount = sizeof(keys);
+    inputKeyPosition = 0;
+    b7GetString("Name:", 21, result, STRING_BANK, 1, 1, 39);
+    assert(strcmp(result, "aA") == 0);
+}
+
+
+static void test_modal_cancel(void)
+{
+    static const byte keys[] = { '1', KEY_ESC };
+    char result[40] = "unchanged";
+    strcpy(b7CurrentInputStr, "previous");
+    inputKeys = keys;
+    inputKeyCount = sizeof(keys);
+    inputKeyPosition = 0;
+    b7GetString("Name:", 21, result, STRING_BANK, 1, 1, 39);
+    assert(result[0] == 0);
+    assert(strcmp(b7CurrentInputStr, "previous") == 0);
+    assert(!b7ReadingString && !b7InputReady);
+}
+
+
 static void test_string_input_publication(void)
 {
     static const byte keys[] = { 0, '4', '2', KEY_ENTER };
@@ -568,6 +595,8 @@ int main(void)
 	test_border_preserves_empty_lines();
 	test_empty_message_does_not_clear(warning);
 	test_idle_input();
+    test_modal_keyboard_encoding();
+    test_modal_cancel();
     test_get_string_backspace();
     test_input_line_composition();
 	test_input_capacity();
