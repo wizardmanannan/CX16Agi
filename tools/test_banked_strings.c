@@ -48,6 +48,7 @@ static uint8_t commands_code_image[BANK_SIZE];
 static uint8_t logic_code_image[BANK_SIZE];
 static uint8_t memory_code_image[BANK_SIZE];
 static uint8_t view_code_image[BANK_SIZE];
+static uint8_t view_loader_image[BANK_SIZE],view_reset_image[BANK_SIZE];
 static uint8_t sound_code_image[BANK_SIZE];
 static uint8_t object_data_code_image[BANK_SIZE];
 static uint8_t object_predicate_code_image[BANK_SIZE];
@@ -474,6 +475,8 @@ static void load_image(const char *build)
 	load_low_bank_image(build, "agi.cx16.06", irq_code_image, "Cannot open IRQ code bank image");
 	load_low_bank_image(build, "agi.cx16.07", parser_code_image, "Cannot open parser code bank image");
 	load_raw_bank_image(build, "agi.cx16.10", memory_code_image, "Cannot open memory-manager code bank image");
+	load_low_bank_image(build, "agi.cx16.09", view_loader_image, "Cannot open view loader bank");
+	load_raw_bank_image(build, "agi.cx16.0A", view_reset_image, "Cannot open view reset bank");
 	load_raw_bank_image(build, "agi.cx16.0E", view_code_image, "Cannot open view metadata code bank image");
 	load_raw_bank_image(build, "agi.cx16.0B", sound_code_image, "Cannot open sound code bank image");
 	load_raw_bank_image(build, "agi.cx16.0D", object_data_code_image, "Cannot open object code bank image");
@@ -557,6 +560,8 @@ static void prepare(void)
 	memcpy(bank_ram[6], irq_code_image, sizeof(irq_code_image));
 	memcpy(bank_ram[7], parser_code_image, sizeof(parser_code_image));
 	memcpy(bank_ram[0x10], memory_code_image, sizeof(memory_code_image));
+	memcpy(bank_ram[9],view_loader_image,BANK_SIZE);
+	memcpy(bank_ram[10],view_reset_image,BANK_SIZE);
 	memcpy(bank_ram[0x0E], view_code_image, sizeof(view_code_image));
 	memcpy(bank_ram[0x0D], object_data_code_image, sizeof(object_data_code_image));
 	memcpy(bank_ram[0x0F], object_predicate_code_image, sizeof(object_predicate_code_image));
@@ -756,6 +761,7 @@ static bool call_target_caller_until_exit(const char *name)
 #include "test_banked_strings_sound_cases.h"
 #include "test_banked_strings_text_cases.h"
 #include "test_timer_target_cases.h"
+#include "test_view_lifecycle_cases.h"
 
 static void run_harness_smoke(void)
 {
@@ -789,6 +795,8 @@ int main(int argc, char **argv)
 		else if (!strcmp(argv[3], "--show-object")) run_show_obj_allocation_cases();
 		else if (!strcmp(argv[3], "--sound")) run_sound_cases();
 		else if (!strcmp(argv[3], "--sound-cache")) run_sound_cache_capacity();
+		else if (!strcmp(argv[3], "--view-headers")) run_view_header_cases();
+		else if (!strcmp(argv[3], "--cached-closeup")) run_cached_closeup_case();
 		else if (!strcmp(argv[3], "--sound-channels")) run_sound_valid_prefix_playback();
 		else if (!strcmp(argv[3], "--sound-growth")) run_sound_output_growth();
 		else if (!strcmp(argv[3], "--sound-discard")) run_repeated_sound_discard();
@@ -815,5 +823,7 @@ int main(int argc, char **argv)
 	run_sound_valid_prefix_playback();
 	run_text_cleanup_cases();
 	run_timer_clock_cases();
+	run_view_header_cases();
+	run_cached_closeup_case();
 	return 0;
 }

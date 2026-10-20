@@ -22,7 +22,7 @@ all:
 	repo='$(REPO_ROOT)'; out='$(OUT)'; \
 	mkdir -p "$$out/obj"; \
 	set --; \
-	for source in "$$repo"/src/*.c "$$repo/tools/test_banked_strings_target.c" "$$repo/tools/test_banked_strings_bounded_target.c" "$$repo/tools/test_banked_strings_input_target.c" "$$repo/tools/test_banked_strings_metadata_target.c" "$$repo/tools/test_banked_strings_allocator_target.c" "$$repo/tools/test_banked_strings_commands_target.c" "$$repo/tools/test_banked_strings_sound_target.c" "$$repo/tools/test_object_commands_target.c" "$$repo/tools/test_show_obj_allocation_target.c" "$$repo/tools/test_timer_target.c"; do \
+	for source in "$$repo"/src/*.c "$$repo/tools/test_banked_strings_target.c" "$$repo/tools/test_banked_strings_bounded_target.c" "$$repo/tools/test_banked_strings_input_target.c" "$$repo/tools/test_banked_strings_metadata_target.c" "$$repo/tools/test_banked_strings_allocator_target.c" "$$repo/tools/test_banked_strings_commands_target.c" "$$repo/tools/test_banked_strings_sound_target.c" "$$repo/tools/test_object_commands_target.c" "$$repo/tools/test_show_obj_allocation_target.c" "$$repo/tools/test_timer_target.c" "$$repo/tools/test_view_lifecycle_target.c"; do \
 	  name=$${source##*/}; stem=$${name%.c}; object="$$out/obj/$$stem.o"; assembly="$$out/obj/$$stem.s"; \
 	  echo "CC $$name"; \
 	  '$(CC65)' -t cx16 -I "$$repo/src" $(TEST_CC65_CFLAGS) -o "$$assembly" "$$source"; \
