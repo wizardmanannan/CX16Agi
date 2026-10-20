@@ -332,3 +332,32 @@ void testRunSoundPlayRaw0(void)
 {
 	testRunSoundPlay(1);
 }
+
+byte testSoundResourceId;
+
+void testInitSoundResources(void)
+{
+	byte previousBank = RAM_BANK;
+	RAM_BANK = MEMORY_MANAGEMENT_BANK;
+	b10InitDynamicMemory();
+	bBInitSound();
+	RAM_BANK = SOUND_BANK;
+	soundLoadCounter = 0;
+	RAM_BANK = DIRECTORY_BANK;
+	memset(snddir, 0xFF, sizeof(AGIFilePosType) * MAX_SOUNDS);
+	numSounds = MAX_SOUNDS;
+	numLogics = numViews = numPictures = 0;
+	RAM_BANK = previousBank;
+}
+
+void testLoadSoundResource(void)
+{
+	AGIFilePosType location;
+	location.fileNum = 0;
+	location.filePos = 0;
+	b10SetResourceDirectory(&location, &snddir[testSoundResourceId]);
+	bBLoadSoundFile(testSoundResourceId);
+}
+
+
+void testDiscardSoundResource(void) { bBDiscardSoundFile(testSoundResourceId); }

@@ -163,6 +163,7 @@ void bBClearLoadedSound(byte soundFileNumber)
 // Initializes the loaded sound arrays by clearing all sound entries and pointers.
 void bBInitSound() {
 	int i;
+	soundLoadCounter = 0;
 	for (i = 0; i < MAX_LOADED_SOUNDS; i++)
 	{
 		bBClearLoadedSound(i);
@@ -652,7 +653,7 @@ void bBPrecomputeValues(SoundFile* soundFile, unsigned int* soundChannelOffSets,
 	// If periodic sound is detected and noise channel has volume, perform precomputation for periodic sound.
 	if (periodicSoundDetected && noiseChHasVolume)
 	{
-		bBPreComputePeriodicSound(&bBLoadedSounds[soundLoadCounter], soundChannelOffSets);
+		bBPreComputePeriodicSound(soundFile, soundChannelOffSets);
 	}
 }
 
@@ -670,32 +671,33 @@ void bBLoadSoundFile(int soundNum) {
 		return;
 	}
 
+	for (i = 0; i < MAX_LOADED_SOUNDS; ++i)
+		if (!bBLoadedSounds[i].soundResource) break;
+	if (i == MAX_LOADED_SOUNDS) return;
+
 	// Gets logic directory entry for sound file number and loads AGI file
 	b10GetLogicDirectory(&agiFilePosType, &snddir[soundNum]);
 	if (!b6LoadAGIFile(SOUND, &agiFilePosType, &tempAGI))
 		return;
 
 	// Save references to loaded sound resource data and bank info
-	bBLoadedSounds[soundLoadCounter].soundResource = tempAGI.code;
-	bBLoadedSounds[soundLoadCounter].soundBank = tempAGI.codeBank;
-	bBLoadedSoundsPointer[soundNum] = &bBLoadedSounds[soundLoadCounter];
+	bBLoadedSounds[i].soundResource = tempAGI.code;
+	bBLoadedSounds[i].soundBank = tempAGI.codeBank;
+	bBLoadedSoundsPointer[soundNum] = &bBLoadedSounds[i];
 	totalSoundSize = tempAGI.totalSize;
 
 	// Copy sound channel offsets from the beginning of code resource
 	memCpyBanked((byte*)soundChannelOffSets, tempAGI.code, tempAGI.codeBank, NO_CHANNELS * 2);
 
 	// Set channel pointers in loaded sound struct
-	validChannels = bBSetChannelOffsets(tempAGI.code, &bBLoadedSounds[soundLoadCounter], soundChannelOffSets, totalSoundSize);
+	validChannels = bBSetChannelOffsets(tempAGI.code, &bBLoadedSounds[i], soundChannelOffSets, totalSoundSize);
 
 
 	// Precompute frequency and volume values for loaded sound
-	bBPrecomputeValues(&bBLoadedSounds[soundLoadCounter], soundChannelOffSets, validChannels);
+	bBPrecomputeValues(&bBLoadedSounds[i], soundChannelOffSets, validChannels);
 
 	// Increment sound load counter if space available
-	if (soundLoadCounter < MAX_LOADED_SOUNDS - 1)
-	{
-		soundLoadCounter++;
-	}
+	if (soundLoadCounter <= i) soundLoadCounter = i + 1;
 }
 
 extern unsigned int bBCh1Ticks;

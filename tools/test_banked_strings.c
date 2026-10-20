@@ -788,6 +788,7 @@ int main(int argc, char **argv)
 		else if (!strcmp(argv[3], "--object-crypto-pointer")) run_object_crypto_pointer_case();
 		else if (!strcmp(argv[3], "--show-object")) run_show_obj_allocation_cases();
 		else if (!strcmp(argv[3], "--sound")) run_sound_cases();
+		else if (!strcmp(argv[3], "--sound-cache")) run_sound_cache_capacity();
 		else if (!strcmp(argv[3], "--sound-discard")) run_repeated_sound_discard();
 		else if (!strcmp(argv[3], "--text-cleanup")) run_text_cleanup_cases();
 		else if (!strcmp(argv[3], "--timer")) run_timer_clock_cases();
@@ -807,6 +808,7 @@ int main(int argc, char **argv)
 	run_show_obj_allocation_cases();
 	run_sound_cases();
 	run_repeated_sound_discard();
+	run_sound_cache_capacity();
 	run_text_cleanup_cases();
 	run_timer_clock_cases();
 	return 0;
