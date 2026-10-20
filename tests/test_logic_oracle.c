@@ -1198,3 +1198,335 @@ static int run_candidate_engine(const char *game_directory,
     return WIFEXITED(status) && WEXITSTATUS(status) == 0 ? 0 : -1;
 }
 
+int main(int argc, char **argv)
+{
+    char directory[] = "obj/cx16/logic-oracle-test-XXXXXX";
+    char scummvm_config_path[512] = "";
+    char snapshots_path[256] = "", trace_path[256] = "";
+    char game_directory[256] = "", input_trace[256] = "";
+    char manifest_path[256] = "";
+    char candidate_snapshot_path[256] = "";
+    char faulted_candidate_snapshot_path[256] = "";
+    char kq1_source_directory[512] = "", kq3_source_directory[512] = "";
+    char kq1_game_directory[512] = "", kq3_game_directory[512] = "";
+    char kq1_manifest_path[512] = "", kq3_manifest_path[512] = "";
+    char game_input_path[512] = "";
+    char kq1_snapshot_path[512] = "", kq3_snapshot_path[512] = "";
+    char kq1_repeat_snapshot_path[512] = "";
+    char kq3_repeat_snapshot_path[512] = "";
+    char kq1_milestones_path[512] = "", kq3_milestones_path[512] = "";
+    LogicOracleSnapshot reference, candidate, loaded[2], series[2], candidate_series[2];
+    LogicReplayManifest replay_manifest;
+    LogicOracleSnapshot *loaded_all = NULL;
+    LogicOracleSnapshot *candidate_snapshots = NULL;
+    LogicOracleTraceEvent event, events[2], read_events[2], found_event;
+    LogicReplayEvent replay_events[3] = {{0}};
+    LogicOracleResult result;
+    uint8_t expected_manifest_hash[LOGIC_REPLAY_SHA256_SIZE];
+    uint8_t expected_input_hash[LOGIC_REPLAY_SHA256_SIZE];
+    uint32_t expected_rng_state;
+    uint8_t expected_random_value;
+    size_t loaded_count = 0, event_count = 0;
+    FILE *file = NULL;
+    int failed = 0;
+    int cleanup_ok = 1;
+    int cycle_only = argc == 2 && strcmp(argv[1], "--cycle-only") == 0;
+    int compare_only = argc == 2 &&
+                       strcmp(argv[1], "--compare-only") == 0;
+    int fail_after_fixtures = argc == 2 &&
+                              strcmp(argv[1], "--fail-after-fixtures") == 0;
+
+    if (check_inventory_wire() != 0 || check_unaligned_cycle_samples() != 0) return 1;
+    if (compare_only) {
+        if (check_distinct_rng_comparison() != 0)
+            return 1;
+        puts("logic oracle cross-RNG semantic comparison passed");
+        return 0;
+    }
+    if (argc != 1 && !fail_after_fixtures && !cycle_only) {
+        fprintf(stderr, "usage: %s [--compare-only|--cycle-only|--fail-after-fixtures]\n",
+                argv[0]);
+        return 2;
+    }
+
+    if (!mkdtemp(directory)) {
+        fprintf(stderr, "test_logic_oracle: mkdtemp: %s\n", strerror(errno));
+        return 1;
+    }
+    snprintf(snapshots_path, sizeof snapshots_path, "%s/snapshots.bin", directory);
+    snprintf(trace_path, sizeof trace_path, "%s/trace.bin", directory);
+    snprintf(game_directory, sizeof game_directory, "%s/game", directory);
+    snprintf(input_trace, sizeof input_trace, "%s/input.trace", directory);
+    snprintf(manifest_path, sizeof manifest_path, "%s/replay.manifest", directory);
+    snprintf(candidate_snapshot_path, sizeof candidate_snapshot_path,
+             "%s/candidate.lors", directory);
+    snprintf(faulted_candidate_snapshot_path,
+             sizeof faulted_candidate_snapshot_path,
+             "%s/candidate-faulted.lors", directory);
+    snprintf(scummvm_config_path, sizeof scummvm_config_path,
+             "%s/scummvm.ini", directory);
+    snprintf(kq1_game_directory, sizeof kq1_game_directory,
+             "%s/game-kq1", directory);
+    snprintf(kq3_game_directory, sizeof kq3_game_directory,
+             "%s/game-kq3", directory);
+    snprintf(kq1_manifest_path, sizeof kq1_manifest_path,
+             "%s/kq1.manifest", directory);
+    snprintf(kq3_manifest_path, sizeof kq3_manifest_path,
+             "%s/kq3.manifest", directory);
+    snprintf(game_input_path, sizeof game_input_path,
+             "%s/game-input.trace", directory);
+    snprintf(kq1_snapshot_path, sizeof kq1_snapshot_path,
+             "%s/kq1.snap", directory);
+    snprintf(kq3_snapshot_path, sizeof kq3_snapshot_path,
+             "%s/kq3.snap", directory);
+    snprintf(kq1_repeat_snapshot_path, sizeof kq1_repeat_snapshot_path,
+             "%s/kq1-repeat.snap", directory);
+    snprintf(kq3_repeat_snapshot_path, sizeof kq3_repeat_snapshot_path,
+             "%s/kq3-repeat.snap", directory);
+    snprintf(kq1_milestones_path, sizeof kq1_milestones_path,
+             "%s/kq1.milestones", directory);
+    snprintf(kq3_milestones_path, sizeof kq3_milestones_path,
+             "%s/kq3.milestones", directory);
+
+    CHECK(mkdir(game_directory, 0700) == 0);
+    CHECK(write_minimal_agi_game(game_directory) == 0);
+    {
+        const char *games_root = getenv("CX16_AGI_TEST_GAMES_DIR");
+        CHECK(games_root && games_root[0]);
+        CHECK(game_file(kq1_source_directory,
+                        sizeof kq1_source_directory, games_root,
+                        "Kings-Quest-1") == 0);
+        CHECK(game_file(kq3_source_directory,
+                        sizeof kq3_source_directory, games_root,
+                        "Kings-Quest-3") == 0);
+    }
+    CHECK(stage_game_assets(kq1_source_directory, kq1_game_directory,
+                            kq1_assets,
+                            sizeof kq1_assets / sizeof kq1_assets[0]) == 0);
+    CHECK(stage_game_assets(kq3_source_directory, kq3_game_directory,
+                            kq3_assets,
+                            sizeof kq3_assets / sizeof kq3_assets[0]) == 0);
+    CHECK(write_game_replay_manifest(
+              kq1_game_directory, kq1_manifest_path, "kq1", kq1_assets,
+              sizeof kq1_assets / sizeof kq1_assets[0]) == 0);
+    CHECK(write_game_replay_manifest(
+              kq3_game_directory, kq3_manifest_path, "kq3", kq3_assets,
+              sizeof kq3_assets / sizeof kq3_assets[0]) == 0);
+    CHECK(write_game_input_trace(game_input_path) == 0);
+    replay_events[0].sequence = 0;
+    replay_events[0].tick = 1;
+    replay_events[0].kind = LOGIC_TRACE_KIND_MARK;
+    replay_events[0].field = 97;
+    replay_events[0].after = 1;
+    replay_events[0].reason = LOGIC_REPLAY_REASON_INPUT_DOWN;
+    replay_events[1].sequence = 1;
+    replay_events[1].tick = 1;
+    replay_events[1].kind = LOGIC_TRACE_KIND_MARK;
+    replay_events[1].field = 97;
+    replay_events[1].before = 1;
+    replay_events[1].reason = LOGIC_REPLAY_REASON_INPUT_UP;
+    replay_events[2].sequence = 2;
+    replay_events[2].tick = 1;
+    replay_events[2].kind = LOGIC_TRACE_KIND_MARK;
+    replay_events[2].field = 50;
+    replay_events[2].after = 3;
+    replay_events[2].reason = LOGIC_REPLAY_REASON_RNG;
+    CHECK(logic_replay_trace_write(input_trace, replay_events, 3) == 0);
+    CHECK(write_replay_manifest(game_directory, manifest_path) == 0);
+    CHECK(logic_replay_manifest_read(manifest_path, &replay_manifest) == 0);
+    expected_rng_state = (uint32_t)replay_manifest.rng_seed;
+    expected_random_value = scummvm_random_1_to_10(&expected_rng_state);
+    CHECK(replay_manifest.rng_seed == UINT32_C(0x4a474931));
+    CHECK(expected_rng_state == UINT32_C(0x2b207fa8));
+    CHECK(expected_random_value == 3);
+
+    init_snapshot(&reference, "AGILE checkpoint capture");
+    init_snapshot(&candidate, "CX16 checkpoint capture");
+    reference.tick = 100;
+    candidate.tick = 900;
+    reference.trace_sequence = 20;
+    candidate.trace_sequence = 27;
+    candidate.objects[0] = reference.objects[1];
+    candidate.objects[1] = reference.objects[0];
+    CHECK(logic_oracle_compare(&reference, &candidate, &result) == LOGIC_ORACLE_MATCH);
+
+    candidate.variables[42] = 10;
+    CHECK(logic_oracle_compare(&reference, &candidate, &result) == LOGIC_ORACLE_DIVERGED);
+    CHECK(strcmp(result.field, "variable[42]") == 0);
+    CHECK(result.reference_value == 9 && result.candidate_value == 10);
+    CHECK(strcmp(result.reference_provenance, "AGILE checkpoint capture") == 0);
+    CHECK(strcmp(result.candidate_provenance, "CX16 checkpoint capture") == 0);
+    CHECK(result.reference_trace_sequence == 20 && result.candidate_trace_sequence == 27);
+
+    candidate.variables[42] = reference.variables[42];
+    candidate.rng_call_count++;
+    CHECK(logic_oracle_compare(&reference, &candidate, &result) ==
+          LOGIC_ORACLE_DIVERGED);
+    CHECK(strcmp(result.field, "rng_call_count") == 0);
+    candidate.rng_call_count = reference.rng_call_count;
+    candidate.rng_final_state++;
+    CHECK(logic_oracle_compare(&reference, &candidate, &result) ==
+          LOGIC_ORACLE_DIVERGED);
+    CHECK(strcmp(result.field, "rng_final_state") == 0);
+    candidate.rng_final_state = reference.rng_final_state;
+    candidate.objects[1].x++;
+    CHECK(logic_oracle_compare(&reference, &candidate, &result) == LOGIC_ORACLE_DIVERGED);
+    CHECK(strcmp(result.field, "object[3].x") == 0);
+    CHECK(result.reference_value == 10 && result.candidate_value == 11);
+    candidate.objects[1].x--;
+
+    strcpy(candidate.messages[0].text, "You found a different key.");
+    CHECK(logic_oracle_compare(&reference, &candidate, &result) == LOGIC_ORACLE_DIVERGED);
+    CHECK(strcmp(result.field, "message[2:17].text") == 0);
+    CHECK(strcmp(result.reference_text, "You found a key.") == 0);
+    CHECK(strcmp(result.candidate_text, "You found a different key.") == 0);
+    strcpy(candidate.messages[0].text, reference.messages[0].text);
+
+    /* Printed messages are an ordered stream, including repeated prints. */
+    reference.messages[1] = reference.messages[0];
+    candidate.messages[1] = candidate.messages[0];
+    reference.message_count = 2;
+    CHECK(logic_oracle_compare(&reference, &candidate, &result) == LOGIC_ORACLE_DIVERGED);
+    CHECK(strcmp(result.field, "message_count") == 0);
+    candidate.message_count = 2;
+    CHECK(logic_oracle_compare(&reference, &candidate, &result) == LOGIC_ORACLE_MATCH);
+    reference.messages[1].id++;
+    candidate.messages[0] = reference.messages[1];
+    candidate.messages[1] = reference.messages[0];
+    CHECK(logic_oracle_compare(&reference, &candidate, &result) == LOGIC_ORACLE_DIVERGED);
+    CHECK(strcmp(result.field, "message[0].identity") == 0);
+    candidate.messages[0] = reference.messages[0];
+    reference.message_count = candidate.message_count = 1;
+
+    candidate.logic = 9;
+    candidate.logical_pc = 0x4321;
+    candidate.control_flow_reliable = 0;
+    CHECK(logic_oracle_compare(&reference, &candidate, &result) == LOGIC_ORACLE_MATCH);
+    candidate.control_flow_reliable = 1;
+    CHECK(logic_oracle_compare(&reference, &candidate, &result) == LOGIC_ORACLE_DIVERGED);
+    CHECK(strcmp(result.field, "logic") == 0);
+    candidate.logic = reference.logic;
+    candidate.logical_pc = reference.logical_pc;
+
+    candidate.agi_version++;
+    CHECK(logic_oracle_compare(&reference, &candidate, &result) == LOGIC_ORACLE_INCOMPATIBLE);
+    candidate.agi_version = reference.agi_version;
+    candidate.timing_profile++;
+    CHECK(logic_oracle_compare(&reference, &candidate, &result) == LOGIC_ORACLE_INCOMPATIBLE);
+    candidate.timing_profile = reference.timing_profile;
+    candidate.manifest_sha256[0]++;
+    CHECK(logic_oracle_compare(&reference, &candidate, &result) == LOGIC_ORACLE_INCOMPATIBLE);
+    candidate.manifest_sha256[0]--;
+    candidate.input_sha256[0]++;
+    CHECK(logic_oracle_compare(&reference, &candidate, &result) == LOGIC_ORACLE_INCOMPATIBLE);
+    candidate.input_sha256[0]--;
+    candidate.rng_seed++;
+    CHECK(logic_oracle_compare(&reference, &candidate, &result) == LOGIC_ORACLE_INCOMPATIBLE);
+    candidate.rng_seed--;
+    candidate.tick_numerator++;
+    CHECK(logic_oracle_compare(&reference, &candidate, &result) == LOGIC_ORACLE_INCOMPATIBLE);
+    candidate.tick_numerator--;
+
+    series[0] = reference;
+    series[1] = reference;
+    series[1].checkpoint_index = 1;
+    strcpy(series[1].checkpoint, "after-command");
+    series[1].has_failure = 1;
+    series[1].failure_kind = 4;
+    series[1].failure_logic = 1;
+    series[1].failure_logical_pc = 0xA104;
+    series[1].failure_opcode = 22;
+    series[1].failure_reason = 5;
+    series[1].failure_code = 0x600;
+    CHECK(logic_oracle_snapshot_write(snapshots_path, series, 2) == 0);
+    CHECK(logic_oracle_snapshot_read(snapshots_path, loaded, 2, &loaded_count) == 0);
+    CHECK(loaded_count == 2 && loaded[1].checkpoint_index == 1);
+    CHECK(strcmp(loaded[1].checkpoint, "after-command") == 0);
+    CHECK(strcmp(loaded[1].messages[0].text, "You found a key.") == 0);
+    CHECK(loaded[0].rng_call_count == reference.rng_call_count);
+    CHECK(loaded[0].rng_final_state == reference.rng_final_state);
+    CHECK(loaded[1].rng_call_count == reference.rng_call_count);
+    CHECK(loaded[1].rng_final_state == reference.rng_final_state);
+    CHECK(loaded[1].has_failure == 1 && loaded[1].failure_kind == 4 &&
+          loaded[1].failure_logic == 1 &&
+          loaded[1].failure_logical_pc == 0xA104 &&
+          loaded[1].failure_opcode == 22 && loaded[1].failure_reason == 5 &&
+          loaded[1].failure_code == 0x600);
+    CHECK(logic_oracle_snapshot_load(snapshots_path, &loaded_all, &loaded_count) == 0);
+    CHECK(loaded_count == 2 && loaded_all[1].trace_sequence == 20);
+    CHECK(loaded_all[1].rng_call_count == reference.rng_call_count);
+    CHECK(loaded_all[1].rng_final_state == reference.rng_final_state);
+    free(loaded_all);
+    loaded_all = NULL;
+cleanup:
+    if (file) fclose(file);
+    free(loaded_all);
+    free(candidate_snapshots);
+    if (snapshots_path[0] && unlink(snapshots_path) != 0 && errno != ENOENT) {
+        fprintf(stderr, "test_logic_oracle: cannot remove %s: %s\n",
+                snapshots_path, strerror(errno));
+        cleanup_ok = 0;
+    }
+    if (trace_path[0] && unlink(trace_path) != 0 && errno != ENOENT) {
+        fprintf(stderr, "test_logic_oracle: cannot remove %s: %s\n",
+                trace_path, strerror(errno));
+        cleanup_ok = 0;
+    }
+    if (manifest_path[0] && unlink(manifest_path) != 0 && errno != ENOENT) {
+        fprintf(stderr, "test_logic_oracle: cannot remove %s: %s\n",
+                manifest_path, strerror(errno));
+        cleanup_ok = 0;
+    }
+    if (candidate_snapshot_path[0] && unlink(candidate_snapshot_path) != 0 &&
+        errno != ENOENT) {
+        fprintf(stderr, "test_logic_oracle: cannot remove %s: %s\n",
+                candidate_snapshot_path, strerror(errno));
+        cleanup_ok = 0;
+    }
+    if (faulted_candidate_snapshot_path[0] &&
+        unlink(faulted_candidate_snapshot_path) != 0 && errno != ENOENT) {
+        fprintf(stderr, "test_logic_oracle: cannot remove %s: %s\n",
+                faulted_candidate_snapshot_path, strerror(errno));
+        cleanup_ok = 0;
+    }
+    if (scummvm_config_path[0] && unlink(scummvm_config_path) != 0 &&
+        errno != ENOENT) {
+        fprintf(stderr, "test_logic_oracle: cannot remove %s: %s\n",
+                scummvm_config_path, strerror(errno));
+        cleanup_ok = 0;
+    }
+    {
+        const char *const paths[] = {
+            kq1_manifest_path, kq3_manifest_path, game_input_path,
+            kq1_snapshot_path, kq3_snapshot_path,
+            kq1_repeat_snapshot_path, kq3_repeat_snapshot_path,
+            kq1_milestones_path, kq3_milestones_path
+        };
+        size_t i;
+        for (i = 0; i < sizeof paths / sizeof paths[0]; ++i) {
+            if (paths[i][0] && unlink(paths[i]) != 0 && errno != ENOENT) {
+                fprintf(stderr, "test_logic_oracle: cannot remove %s: %s\n",
+                        paths[i], strerror(errno));
+                cleanup_ok = 0;
+            }
+        }
+    }
+    if (input_trace[0] && unlink(input_trace) != 0 && errno != ENOENT) {
+        fprintf(stderr, "test_logic_oracle: cannot remove %s: %s\n",
+                input_trace, strerror(errno));
+        cleanup_ok = 0;
+    }
+    remove_game_assets(kq1_game_directory, kq1_assets,
+                       sizeof kq1_assets / sizeof kq1_assets[0]);
+    remove_game_assets(kq3_game_directory, kq3_assets,
+                       sizeof kq3_assets / sizeof kq3_assets[0]);
+    if (game_directory[0]) remove_minimal_agi_game(game_directory);
+    if (rmdir(directory) != 0) {
+        fprintf(stderr, "test_logic_oracle: fixture cleanup failed: %s\n", directory);
+        cleanup_ok = 0;
+    }
+    if (fail_after_fixtures) return cleanup_ok ? 2 : 1;
+    if (failed || !cleanup_ok) return 1;
+    puts("test_logic_oracle: PASS");
+    return 0;
+}
