@@ -608,3 +608,296 @@ static int run_scummvm_oracle(const char *game_directory, uint32_t ticks,
     return run_process_in_directory(arguments, game_directory);
 }
 
+static int inspect_logic_resources(CorpusGame *game,
+                                   const char *staged_directory,
+                                   uint32_t code_sizes[3],
+                                   size_t *logic_count)
+{
+    char path[PATH_CAPACITY];
+    uint8_t *logdir = NULL;
+    size_t logdir_size = 0;
+    static const char *const directory_names[4] = {
+        "LOGDIR", "PICDIR", "VIEWDIR", "SNDDIR"
+    };
+    unsigned logic, directory_index;
+    int result = -1;
+    int needed_volumes[16] = {0};
+    for (directory_index = 0; directory_index < 4; ++directory_index) {
+        uint8_t *directory = NULL;
+        size_t directory_size = 0;
+        size_t entry_index;
+        if (!find_resource(game, directory_names[directory_index]) ||
+            path_join(path, sizeof path, staged_directory,
+                      directory_names[directory_index], "") != 0)
+            goto done;
+        path[strlen(path) - 1] = '\0';
+        if (read_file(path, &directory, &directory_size) != 0 ||
+            directory_size % 3 != 0) {
+            free(directory);
+            goto done;
+        }
+        game->directory_counts[directory_index] = directory_size / 3;
+        for (entry_index = 0; entry_index < directory_size / 3;
+             ++entry_index) {
+            const uint8_t *entry = directory + entry_index * 3;
+            if (!(entry[0] == 0xFF && entry[1] == 0xFF &&
+                  entry[2] == 0xFF))
+                needed_volumes[entry[0] >> 4] = 1;
+        }
+        if (directory_index == 0) {
+            logdir = directory;
+            logdir_size = directory_size;
+        } else {
+            free(directory);
+        }
+    }
+    *logic_count = logdir_size / 3;
+    if (!*logic_count || game->resource_count < 12 ||
+        !find_resource(game, "OBJECT") || !find_resource(game, "WORDS.TOK"))
+        goto done;
+    {
+        static const char *const meta_suffixes[6] = {
+            "logic-ids.idx", "logic-ids.bin", "sound-ids.idx",
+            "sound-ids.bin", "view-ids.idx", "view-ids.bin"
+        };
+        char meta_name[64];
+        size_t meta_index;
+        for (meta_index = 0; meta_index < 6; ++meta_index) {
+            if (snprintf(meta_name, sizeof meta_name, "meta/%s-%s",
+                         game->id, meta_suffixes[meta_index]) <= 0 ||
+                !find_resource(game, meta_name))
+                goto done;
+        }
+    }
+    for (logic = 0; logic < 3; ++logic) {
+        const uint8_t *entry = logdir + logic * 3;
+        unsigned volume_number;
+        size_t offset;
+        uint8_t *volume = NULL;
+        size_t volume_size = 0;
+        char volume_name[16];
+        uint16_t payload_size, code_size;
+        size_t code_at, i;
+        int any_code = 0;
+        if (entry[0] == 0xFF && entry[1] == 0xFF && entry[2] == 0xFF)
+            goto done;
+        volume_number = entry[0] >> 4;
+        offset = ((size_t)(entry[0] & 0x0Fu) << 16) |
+                 ((size_t)entry[1] << 8) | entry[2];
+        if (snprintf(volume_name, sizeof volume_name, "VOL.%u",
+                     volume_number) < 0 ||
+            !find_resource(game, volume_name) ||
+            path_join(path, sizeof path, staged_directory, volume_name,
+                      "") != 0)
+            goto done;
+        path[strlen(path) - 1] = '\0';
+        if (read_file(path, &volume, &volume_size) != 0)
+            goto done;
+        if (offset > volume_size || volume_size - offset < 7 ||
+            volume[offset] != 0x12 || volume[offset + 1] != 0x34 ||
+            volume[offset + 2] != volume_number) {
+            free(volume);
+            goto done;
+        }
+        payload_size = (uint16_t)(volume[offset + 3] |
+                                  ((uint16_t)volume[offset + 4] << 8));
+        code_at = offset + 7;
+        code_size = (uint16_t)(volume[offset + 5] |
+                               ((uint16_t)volume[offset + 6] << 8));
+        if (!code_size || payload_size < 2 ||
+            payload_size > volume_size - offset - 5 ||
+            code_size > payload_size - 2 ||
+            code_at > volume_size || code_size > volume_size - code_at) {
+            free(volume);
+            goto done;
+        }
+        for (i = 0; i < code_size; ++i)
+            any_code |= volume[code_at + i] != 0;
+        free(volume);
+        if (!any_code)
+            goto done;
+        game->logic_volume[logic] = (uint8_t)volume_number;
+        code_sizes[logic] = code_size;
+        needed_volumes[volume_number] = 1;
+    }
+    for (logic = 0; logic < 16; ++logic) {
+        char volume_name[16];
+        if (!needed_volumes[logic])
+            continue;
+        if (snprintf(volume_name, sizeof volume_name, "VOL.%u", logic) < 0 ||
+            !find_resource(game, volume_name))
+            goto done;
+    }
+    {
+        size_t minimum_resources = 12;
+        for (logic = 0; logic < 16; ++logic)
+            minimum_resources += (size_t)needed_volumes[logic];
+        ++minimum_resources; /* The matching WinAGI version record is staged. */
+        if (game->resource_count != minimum_resources)
+            goto done;
+    }
+    result = 0;
+done:
+    free(logdir);
+    if (result != 0)
+        fprintf(stderr, "real-game corpus: %s LOGDIR or logic 0..2 volume records are invalid/incomplete\n",
+                game->id);
+    return result;
+}
+
+static int inspect_object_count(const char *game_directory, uint16_t *count)
+{
+    static const uint8_t key[] = "Avis Durgan";
+    char path[PATH_CAPACITY];
+    uint8_t *data = NULL;
+    size_t size, i, check_length;
+    uint32_t encoded_count;
+    int encrypted = 0, length, result = -1;
+    length = snprintf(path, sizeof path, "%s/OBJECT", game_directory);
+    if (length < 0 || (size_t)length >= sizeof path ||
+        read_file(path, &data, &size) != 0 || size < 2)
+        goto done;
+    check_length = size < 20 ? 10 : 20;
+    for (i = size - 1; i > size - check_length; --i)
+        if ((data[i] < 0x20 || data[i] > 0x7F) && data[i] != 0) {
+            encrypted = 1;
+            break;
+        }
+    if (encrypted)
+        for (i = 0; i < size; ++i)
+            data[i] ^= key[i % (sizeof key - 1)];
+    encoded_count = ((uint32_t)data[1] << 8) | data[0];
+    encoded_count /= 3;
+    if (!encoded_count || encoded_count > LOGIC_APP_REPLAY_INVENTORY_MAX)
+        goto done;
+    *count = (uint16_t)encoded_count;
+    result = 0;
+done:
+    free(data);
+    return result;
+}
+
+static int unlink_if_present(const char *path)
+{
+    if (!path[0] || unlink(path) == 0 || errno == ENOENT)
+        return 0;
+    fprintf(stderr, "real-game corpus: cannot remove %s: %s\n",
+            path, strerror(errno));
+    return -1;
+}
+
+static int rmdir_if_present(const char *path)
+{
+    if (rmdir(path) == 0 || errno == ENOENT)
+        return 0;
+    fprintf(stderr, "real-game corpus: cannot remove %s: %s\n",
+            path, strerror(errno));
+    return -1;
+}
+
+static int clean_fixture(const char *fixture, const CorpusGame games[],
+                         size_t game_count)
+{
+    char directory[PATH_CAPACITY], path[PATH_CAPACITY];
+    size_t i, j;
+    int failed = 0;
+    if (!fixture[0])
+        return 0;
+    for (i = 0; i < game_count; ++i) {
+        int length = snprintf(directory, sizeof directory, "%s/%s", fixture,
+                              games[i].id);
+        if (length < 0 || (size_t)length >= sizeof directory) {
+            failed = 1;
+            continue;
+        }
+        for (j = 0; j < games[i].resource_count; ++j) {
+            length = snprintf(path, sizeof path, "%s/%s", directory,
+                              games[i].resources[j].name);
+            if (length < 0 || (size_t)length >= sizeof path ||
+                unlink_if_present(path) != 0)
+                failed = 1;
+        }
+        for (j = 0; j < APP_OVERLAY_COUNT; ++j) {
+            length = snprintf(path, sizeof path, "%s/%s", directory,
+                              overlay_targets[j]);
+            if (length < 0 || (size_t)length >= sizeof path ||
+                unlink_if_present(path) != 0)
+                failed = 1;
+        }
+        {
+            static const char *const replay_files[] = {
+                "replay.in", "replay.out", "replay.done", "replay.stage",
+                "app.manifest", "app.ltrace", "reference.lors",
+                "scummvm.ltrace",
+                "full-app-1.x16r", "full-app-2.x16r", "full-app-failure.x16r", "reduced.ltrace",
+                "scummvm.ini"
+            };
+            for (j = 0; j < sizeof replay_files / sizeof replay_files[0];
+                 ++j) {
+                length = snprintf(path, sizeof path, "%s/%s", directory,
+                                  replay_files[j]);
+                if (length < 0 || (size_t)length >= sizeof path ||
+                    unlink_if_present(path) != 0)
+                    failed = 1;
+            }
+        }
+        length = snprintf(path, sizeof path, "%s/meta", directory);
+        if (length < 0 || (size_t)length >= sizeof path ||
+            rmdir_if_present(path) != 0)
+            failed = 1;
+        if (rmdir_if_present(directory) != 0)
+            failed = 1;
+    }
+    if (rmdir_if_present(fixture) != 0)
+        failed = 1;
+    return failed ? -1 : 0;
+}
+
+static uint16_t get_u16(const uint8_t *bytes)
+{
+    return (uint16_t)(bytes[0] | ((uint16_t)bytes[1] << 8));
+}
+
+static uint32_t get_u32(const uint8_t *bytes)
+{
+    return (uint32_t)bytes[0] | ((uint32_t)bytes[1] << 8) |
+           ((uint32_t)bytes[2] << 16) | ((uint32_t)bytes[3] << 24);
+}
+
+static int parse_agi_version(const char *text, uint16_t *version)
+{
+    char digits[8];
+    const char *dot;
+    size_t before, after;
+    char *end;
+    unsigned long value;
+    if (!text || !*text || !version)
+        return -1;
+    if (text[0] == '0' && (text[1] == 'x' || text[1] == 'X')) {
+        value = strtoul(text, &end, 0);
+        if (*end || !value || value > UINT16_MAX)
+            return -1;
+        *version = (uint16_t)value;
+        return 0;
+    }
+    dot = strchr(text, '.');
+    if (!dot)
+        return -1;
+    before = (size_t)(dot - text);
+    after = strlen(dot + 1);
+    if (!before || before > 2 || after != 3 || before + after >= sizeof digits)
+        return -1;
+    memcpy(digits, text, before);
+    memcpy(digits + before, dot + 1, after + 1);
+    for (size_t i = 0; i < before + after; ++i)
+        if (!((digits[i] >= '0' && digits[i] <= '9') ||
+              (digits[i] >= 'a' && digits[i] <= 'f') ||
+              (digits[i] >= 'A' && digits[i] <= 'F')))
+            return -1;
+    value = strtoul(digits, &end, 16);
+    if (*end || !value || value > UINT16_MAX)
+        return -1;
+    *version = (uint16_t)value;
+    return 0;
+}
+
