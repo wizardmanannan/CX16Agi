@@ -101,3 +101,10 @@ per character. The previous assembly baselines were 11,787 wizard cycles and
 capacity cases span 0/1/2, 49/50/51, 99/100/101, 255/256/257 and 301/302 bytes
 for both literal and recursive messages. An unaligned 300-byte source checks
 cursor preservation through indexed wrap, a format token, and an escape.
+
+Input-line composition is one bounded assembly routine shared by get.string
+and keyboard polling, replacing their repeated snprintf calls. Native get.string
+cases cover platform (0x14) and ASCII (0x08) backspace, stored input, and cursor
+cell erasure. Composition cases compare the former snprintf contract at exact
+fits and truncation boundaries, with custom cursors, 40 input bytes and up to
+255 prompt bytes. The emulator checks termination and an adjacent output canary.

@@ -28,6 +28,8 @@ byte targetBankAfter;
 #pragma bss-name (push, "BANKRAM07")
 char b7WordText[10][80];
 char string[12][40];
+char b7Temp[256], b7CurrentInputStr[41], b7OutputString[80];
+byte inputLineCanary;
 #pragma bss-name (pop)
 
 #pragma bss-name (push, "BANKRAM0D")
@@ -43,7 +45,9 @@ byte b3LastBoxLines, bridgeMaximum;
 int bridgeWidth;
 extern byte __fastcall__ b3WrapText(char* text, int width, byte* maximum);
 extern void __fastcall__ b3DrawBorder(byte width, size_t messageSize);
-byte bridgeActive, bridgeControls, bridgeLines, bridgeCounts[2];
+byte bridgeActive, bridgeControls, bridgeLines, bridgeCounts[2], bridgeErase;
+char cursorChar;
+extern void __fastcall__ b7RefreshInputLine(boolean erasePrevious);
 extern byte __fastcall__ b3ClipTextToMap(char* text);
 extern void __fastcall__ b3ApplyTextModeControls(char* text);
 extern void __fastcall__ b7StripExtraChars(char* text);
@@ -435,7 +439,17 @@ void targetBridge(void)
 	bridgeLines = 1;
 	if (bridgeControls) {
 		RAM_BANK = SOURCE_BANK;
-		if (bridgeControls == 6) {
+		if (bridgeControls == 7) {
+            RAM_BANK = PARSER_BANK;
+            inputLineCanary = 0x5a;
+            memset(b7OutputString, 0x5a, sizeof(b7OutputString));
+            b7RefreshInputLine(bridgeErase);
+            if (inputLineCanary != 0x5a || !memchr(b7OutputString, 0, sizeof(b7OutputString))) {
+                targetResult = 4;
+                return;
+            }
+        }
+        else if (bridgeControls == 6) {
             bridgeLines = (byte)(((unsigned int)b7TokenizeWords((char*)SOURCE_ADDRESS, (char**)0xA800) - 0xA800 + 2) / 2);
         }
         else if (bridgeControls == 5) {

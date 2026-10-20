@@ -36,6 +36,11 @@ char* b7LookupWordTokens[MAX_INPUT_STRING_LENGTH / 2];
 char b7LookupWord[MAX_INPUT_STRING_LENGTH + 1];
 //boolean wordsAreWaiting=FALSE;
 
+typedef char parserInputLineSizesMustMatchAssembly[
+    sizeof(b7OutputString) == 80 && sizeof(b7Temp) == 256 &&
+    sizeof(b7CurrentInputStr) == 41 ? 1 : -1];
+extern void __fastcall__ b7RefreshInputLine(boolean erasePrevious);
+
 char b7LastLine[80];
 EventType b7Events[256];  /* controller(), set.key(), set.menu.item() */
 byte b7Directions[9] = { 0, 0, 0, 0, 0, 0, 0, 0, 0 };
@@ -130,7 +135,7 @@ void b7GetString(char* promptStr, byte promptStringBank, char* returnStr, byte r
 	gx = (x - 1) * 16;
 	gy = ((y - 1) * 16) + 20;
 	b7ProcessString(promptStr, promptStringBank, b7Temp, PARSER_BANK, sizeof(b7Temp));
-	snprintf(b7OutputString, sizeof(b7OutputString), "%s%s%c", b7Temp, b7CurrentInputStr, cursorChar);
+	b7RefreshInputLine(FALSE);
 
 	do {
 		GET_IN(ch);
@@ -152,6 +157,7 @@ void b7GetString(char* promptStr, byte promptStringBank, char* returnStr, byte r
 				if (strPos > 0) {
 					strPos--;
 					b7CurrentInputStr[strPos] = 0;
+					b7RefreshInputLine(TRUE);
 				}
 				break;
 			case 0x0A: break;
@@ -160,7 +166,7 @@ void b7GetString(char* promptStr, byte promptStringBank, char* returnStr, byte r
 				b7CurrentInputStr[strPos] = (ch & 0xff);
 				strPos++;
 				b7CurrentInputStr[strPos] = 0;
-				snprintf(b7OutputString, sizeof(b7OutputString), "%s%s%c", b7Temp, b7CurrentInputStr, cursorChar);
+				b7RefreshInputLine(FALSE);
 				break;
 			}
 		}
@@ -201,7 +207,7 @@ void b7PollKeyboard()
 	gx = 0;
 	gy = ((user_input_line - 1) * 16) + 20;
 	if (inputLineDisplayed) {
-		snprintf(b7OutputString, sizeof(b7OutputString), "%s%s%c", b7Temp, b7CurrentInputStr, cursorChar);
+		b7RefreshInputLine(FALSE);
 	}
 
 	do {
@@ -242,14 +248,14 @@ void b7PollKeyboard()
 					b7LookupWords(b7CurrentInputStr);
 					b7CurrentInputStr[0] = 0;
 					strPos = 0;
-					snprintf(b7OutputString, sizeof(b7OutputString), "%s%s%c", b7Temp, b7CurrentInputStr, cursorChar);
+					b7RefreshInputLine(FALSE);
 					strcpy(b7LastLine, b7CurrentInputStr);
 					break;
 				case KEY_BACKSPACE:   /* Backspace */
 					if (strPos > 0) {
 						strPos--;
 						b7CurrentInputStr[strPos] = 0;
-						snprintf(b7OutputString, sizeof(b7OutputString), "%s%s%c ", b7Temp, b7CurrentInputStr, cursorChar);
+						b7RefreshInputLine(TRUE);
 						//drawBigString(screen, " ", (strPos*16), 448, 7, 0);
 					}
 					else
@@ -271,7 +277,7 @@ void b7PollKeyboard()
 						b7CurrentInputStr[strPos] = (ch);
 						strPos++;
 						b7CurrentInputStr[strPos] = 0;
-						snprintf(b7OutputString, sizeof(b7OutputString), "%s%s%c", b7Temp, b7CurrentInputStr, cursorChar);
+						b7RefreshInputLine(FALSE);
 					}
 					break;
 				}

@@ -1,10 +1,13 @@
-; Reused from t3code-a0c2e42d; no second C implementation.
+; Punctuation compaction reused from t3code-a0c2e42d; tokenization and input
+; composition share this resident module. No second C implementation.
 .ifndef PARSER_INPUT_ASM_INC
 PARSER_INPUT_ASM_INC = 1
 .importzp ptr1, ptr2, tmp1, tmp2
 .import popax
 .export _b7StripExtraChars, _b7StripExtraCharsEnd
 .export _b7TokenizeWords
+.export _b7RefreshInputLine
+.import _b7Temp, _b7CurrentInputStr, _b7OutputString, _cursorChar
 .segment "CODE"
 ; Resident code also permits the emulator fixture to supply another input bank.
 
@@ -113,5 +116,47 @@ _b7TokenizeWords:
     sbc #0
     tax
     tya
+    rts
+
+; Compose prompt + input + cursor, optionally followed by a blank to erase the
+; previous cursor cell. Reserve byte 79 for NUL; parser.c checks these sizes.
+_b7RefreshInputLine:
+    sta tmp2
+    ldx #0
+    ldy #0
+@prompt:
+    lda _b7Temp,y
+    beq @inputStart
+    sta _b7OutputString,x
+    inx
+    cpx #79
+    beq @finish
+    iny
+    bra @prompt
+@inputStart:
+    ldy #0
+@input:
+    lda _b7CurrentInputStr,y
+    beq @cursor
+    sta _b7OutputString,x
+    inx
+    cpx #79
+    beq @finish
+    iny
+    bra @input
+@cursor:
+    lda _cursorChar
+    sta _b7OutputString,x
+    inx
+    cpx #79
+    beq @finish
+    lda tmp2
+    beq @finish
+    lda #32
+    sta _b7OutputString,x
+    inx
+@finish:
+    lda #0
+    sta _b7OutputString,x
     rts
 .endif

@@ -18,7 +18,9 @@ extern int numInputWords, currentLog;
 extern char* getMessagePointer(byte logic, byte message);
 byte textClipColumns, textClipRows;
 static unsigned int layoutWidth;
-static byte layoutMaximum, layoutBoxLines, tokenBytes[40];
+static byte layoutMaximum, layoutBoxLines, tokenBytes[40], inputErase;
+static char inputPrompt[256], inputText[41], inputCursor;
+extern char b7Temp[256], b7CurrentInputStr[41], b7OutputString[80], cursorChar;
 
 static unsigned int address(const char* symbol)
 {
@@ -78,6 +80,10 @@ static byte targetTransform(const char* source, byte sourceBank, char* destinati
     bytes(commands, address("_textClipRows"), &textClipRows, 1);
     putWord(commands, address("_bridgeCapacity"), capacity);
     putWord(commands, address("_bridgeWidth"), layoutWidth);
+    if (controls == 7) {
+        bytes(commands, address("_cursorChar"), &inputCursor, 1);
+        bytes(commands, address("_bridgeErase"), &inputErase, 1);
+    }
     bytes(commands, address("_b3LastBoxLines"), &layoutBoxLines, 1);
     bytes(commands, address("_variables"), var, 256);
     putWord(commands, address("_numInputWords"), numInputWords);
@@ -100,6 +106,10 @@ static byte targetTransform(const char* source, byte sourceBank, char* destinati
     }
     fprintf(commands, "RAM 07\n");
     bytes(commands, address("_string"), string, sizeof(string));
+    if (controls == 7) {
+        bytes(commands, address("_b7Temp"), inputPrompt, strlen(inputPrompt) + 1);
+        bytes(commands, address("_b7CurrentInputStr"), inputText, strlen(inputText) + 1);
+    }
     bytes(commands, address("_b7WordText"), b7WordText, sizeof(b7WordText));
     fprintf(commands, "RAM 0D\n");
     putWord(commands, address("_bDNumObjects"), bDNumObjects);
@@ -119,10 +129,10 @@ static byte targetTransform(const char* source, byte sourceBank, char* destinati
             address("targetBridgeEntry"), address("_targetResult"));
     fprintf(commands, "RAM 00\nRQM %04X\nRAM 16\n", address("_bridgeLines"));
     fprintf(commands, "RAM 00\nRQM %04X\nRQM %04X\n", address("_bridgeMaximum"), address("_b3LastBoxLines"));
-    fprintf(commands, "RAM %02X\n", controls == 5 ? 3 : controls ? 21 : 22);
+    fprintf(commands, "RAM %02X\n", controls == 7 ? 7 : controls == 5 ? 3 : controls ? 21 : 22);
     if (controls == 6)
         for (i = 0; i < sizeof(tokenBytes); i++) fprintf(commands, "RQM %04X\n", 0xa800 + i);
-    for (i = 0; i < capacity; i++) fprintf(commands, "RQM %04X\n", (controls == 5 ? address("_b3TextBuffers") + 1000 : controls ? 0xa100 : 0xa300) + i);
+    for (i = 0; i < capacity; i++) fprintf(commands, "RQM %04X\n", (controls == 7 ? address("_b7OutputString") : controls == 5 ? address("_b3TextBuffers") + 1000 : controls ? 0xa100 : 0xa300) + i);
     rewind(commands);
     fflush(responses);
     child = fork();
@@ -226,4 +236,13 @@ char** b7TokenizeWords(char* text, char** tokens)
         tokens[i] = text + offset;
     }
     return tokens + count - 1;
+}
+
+void b7RefreshInputLine(boolean erasePrevious)
+{
+    inputErase = erasePrevious;
+    inputCursor = cursorChar;
+    memcpy(inputPrompt, b7Temp, sizeof(inputPrompt));
+    memcpy(inputText, b7CurrentInputStr, sizeof(inputText));
+    targetTransform(inputPrompt, 7, b7OutputString, 7, sizeof(b7OutputString), 7);
 }

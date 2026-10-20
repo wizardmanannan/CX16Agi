@@ -19,7 +19,8 @@ boolean* flag = flagValues;
 byte keyState[256];
 byte* key = keyState;
 byte _assmByte;
-extern char b7OutputString[80];
+extern char b7OutputString[80], b7Temp[256], b7CurrentInputStr[41], cursorChar;
+extern void b7RefreshInputLine(boolean erasePrevious);
 extern byte b3WrapText(char* text, int width, byte* maxWidth);
 extern void b3DrawBorder(byte width, size_t messageSize);
 int currentLog = 106;
@@ -67,13 +68,42 @@ static void test_idle_input(void)
 
 static void test_get_string_backspace(void)
 {
-    static const byte keys[] = { 'a', 'b', KEY_BACKSPACE, KEY_ENTER };
+    static const byte keys[][4] = {
+        { 'a', 'b', KEY_BACKSPACE, KEY_ENTER },
+        { 'a', 'b', 0x08, KEY_ENTER }
+    };
+    unsigned int i;
     char result[40];
-    inputKeys = keys;
-    inputKeyCount = sizeof(keys);
-    inputKeyPosition = 0;
-    b7GetString(">", 21, result, STRING_BANK, 1, 1, 39);
-    assert(strcmp(result, "a") == 0);
+    for (i = 0; i < sizeof(keys) / sizeof(keys[0]); i++) {
+        inputKeys = keys[i];
+        inputKeyCount = sizeof(keys[i]);
+        inputKeyPosition = 0;
+        b7GetString(">", 21, result, STRING_BANK, 1, 1, 39);
+        assert(strcmp(result, "a") == 0);
+        assert(strcmp(b7OutputString, ">a_ ") == 0);
+    }
+}
+
+static void test_input_line_composition(void)
+{
+    static const size_t promptLengths[] = { 0, 37, 38, 39, 79, 255 };
+    size_t i;
+    boolean erase;
+    char expected[80], savedCursor = cursorChar;
+    cursorChar = '?';
+    memset(b7CurrentInputStr, 'x', 40);
+    b7CurrentInputStr[40] = 0;
+    for (i = 0; i < sizeof(promptLengths) / sizeof(promptLengths[0]); i++) {
+        memset(b7Temp, 'p', promptLengths[i]);
+        b7Temp[promptLengths[i]] = 0;
+        for (erase = FALSE; erase <= TRUE; erase++) {
+            /* The prior snprintf contract is an independent output oracle. */
+            snprintf(expected, sizeof(expected), "%s%s%c%s", b7Temp, b7CurrentInputStr, cursorChar, erase ? " " : "");
+            b7RefreshInputLine(erase);
+            assert(strcmp(b7OutputString, expected) == 0);
+        }
+    }
+    cursorChar = savedCursor;
 }
 
 static void test_input_capacity(void)
@@ -453,6 +483,7 @@ int main(void)
 	test_empty_message_does_not_clear(warning);
 	test_idle_input();
     test_get_string_backspace();
+    test_input_line_composition();
 	test_input_capacity();
 	test_banked_input();
 	test_word_capacity();
