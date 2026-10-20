@@ -172,7 +172,7 @@ int8_t b6Cx16_fseek(uint8_t channel, uint32_t offset) {
 void b6LoadAGIDir(int dirNum, const char* fName, int* count)
 {
 	FILE* fp;
-	unsigned char byte1, byte2, byte3;
+	int byte1, byte2, byte3;
 	unsigned char address[4] = { 0,0,0,0 };
 	AGIFilePosType tempPos;
 	int value;
@@ -182,17 +182,30 @@ void b6LoadAGIDir(int dirNum, const char* fName, int* count)
 		exit(0);
 	}
 
-	while (!feof(fp)) {
+	for (;;) {
 		byte1 = fgetc(fp);
+		if (byte1 == EOF)
+			break;
 		byte2 = fgetc(fp);
 		byte3 = fgetc(fp);
+		if (byte2 == EOF || byte3 == EOF) {
+			printf("Malformed AGI directory %s: incomplete 3-byte entry\n", fName);
+			fclose(fp);
+			exit(1);
+		}
+		if (*count >= NO_DIRECTORY_ENTRYS) {
+			printf("Malformed AGI directory %s: more than %d entries\n",
+			       fName, NO_DIRECTORY_ENTRYS);
+			fclose(fp);
+			exit(1);
+		}
 
-		tempPos.fileNum = ((byte1 & 0xF0) >> 4);
+		tempPos.fileNum = (byte)((byte1 & 0xF0) >> 4);
 
 		address[3] = 0;
-		address[2] = byte1 & 0x0F;
-		address[1] = byte2;
-		address[0] = byte3;
+		address[2] = (byte)(byte1 & 0x0F);
+		address[1] = (byte)byte2;
+		address[0] = (byte)byte3;
 
 
 		memcpy(&tempPos.filePos, &address[0], 4);
@@ -236,6 +249,11 @@ void b6LoadAGIDir(int dirNum, const char* fName, int* count)
 		}
 
 		(*count)++;
+	}
+	if (ferror(fp)) {
+		printf("Could not read AGI directory %s\n", fName);
+		fclose(fp);
+		exit(1);
 	}
 
 	fclose(fp);
