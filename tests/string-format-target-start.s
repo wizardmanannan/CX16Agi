@@ -21,10 +21,6 @@
 .import _targetValidateLiteral
 .export targetValidateLiteralEntry
 .export _trampoline
-.include "x16.inc"
-VIEW_TABLE_SIZE = 20
-.include "../src/inputIrqHandler.s"
-.export b7HandleInputLine
 
 .segment "CODE"
 

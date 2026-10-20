@@ -31,7 +31,9 @@ for line in plan.splitlines():
             ], cwd=repository, check=True)
         else:
             assembly = source
-        subprocess.run([str(bins / "ca65"), "-t", "cx16", "-o", str(target), str(assembly)],
+        if source.name == "main.s":
+            assembly = repository / "tests/string-product-observer.s"
+        subprocess.run([str(bins / "ca65"), "-t", "cx16", "-I", str(repository / "src"), "-o", str(target), str(assembly)],
                        cwd=repository, check=True)
     else:
         args[args.index("--mapfile") + 1] = str(output / "agi.map")

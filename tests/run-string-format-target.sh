@@ -108,9 +108,6 @@ export FORMAT_TARGET_PRG="$fixture/string-format-target.prg"
 export FORMAT_TARGET_LABELS="$fixture/string-format-target.lbl"
 export FORMAT_TARGET_FIXTURE="$fixture"
 hostcc=${4:-cc}
-read -r -a compiler <<< "$hostcc"
-"${compiler[@]}" -std=c99 "$repo_root/tests/test-input-render-target.c" -o "$fixture/test-input-render-target"
-"$fixture/test-input-render-target" "$fixture/string-format-target.prg" "$fixture/string-format-target.lbl" "$fixture/string-format-target.prg.07"
 for test in test-string-format test-text-interpolation; do
     # HOSTCC may contain sanitizer flags, as in the existing host suite.
     read -r -a compiler <<< "$hostcc"
@@ -124,11 +121,13 @@ for test in test-string-format test-text-interpolation; do
     "$fixture/$test"
 done
 
-# Link the complete product, then execute its real bank-7 parser cleanup routine.
+# Link the complete product, then execute its real rendering and parser routines.
 if ! python3 "$repo_root/tests/build-target-product.py" "$repo_root" "$fixture/product" "$cc65_home" > "$fixture/product-build.log" 2>&1; then
     tail -40 "$fixture/product-build.log" >&2
     exit 1
 fi
+"${compiler[@]}" -std=c99 "$repo_root/tests/test-input-render-target.c" -o "$fixture/test-input-render-target"
+"$fixture/test-input-render-target" "$fixture/product/agi.cx16" "$fixture/product/agi.lbl" "$fixture/product/agi.cx16.07"
 "${compiler[@]}" -std=c99 "$repo_root/tests/test-parser-cleanup-target.c" -o "$fixture/test-parser-cleanup-target"
 "$fixture/test-parser-cleanup-target" "$fixture/product/agi.cx16" "$fixture/product/agi.lbl" "$fixture/product/agi.cx16.07" "$fixture/product/agi.cx16.03"
 "${compiler[@]}" -std=c99 "$repo_root/tests/test-string-compare-target.c" -o "$fixture/test-string-compare-target"
@@ -138,3 +137,5 @@ fi
 cp "$fixture/product/agi.map" "$build_root/product.map"
 "${compiler[@]}" -std=c99 "$repo_root/tests/test-text-command-target.c" -o "$fixture/test-text-command-target"
 "$fixture/test-text-command-target" "$fixture/product/agi.cx16" "$fixture/product/agi.lbl" "$fixture/product/agi.cx16.05"
+"${compiler[@]}" -std=c99 "$repo_root/tests/test-inventory-copy-target.c" -o "$fixture/test-inventory-copy-target"
+"$fixture/test-inventory-copy-target" "$fixture/product/agi.cx16" "$fixture/product/agi.lbl" "$fixture/product/agi.cx16.0D" "$fixture/product/agi.cx16.05"

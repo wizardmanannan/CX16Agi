@@ -56,6 +56,8 @@ int main(int argc, char** argv)
     assert(argc == 4);
     routine = targetFixtureSymbol(argv[2], "b7HandleInputLine");
     bank = fopen(argv[3], "rb"); assert(bank);
+    at = (unsigned int)fgetc(bank);
+    at |= (unsigned int)fgetc(bank) << 8;
     fprintf(input, "STM 0000 07\n");
     while ((byte = fgetc(bank)) != EOF) store(input, at++, byte);
     fclose(bank);
