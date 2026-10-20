@@ -862,3 +862,204 @@ LogicOracleStatus logic_oracle_compare_streams(
         LOGIC_ORACLE_POLICY_DETERMINISTIC, result);
 }
 
+int logic_oracle_snapshot_write(const char *path,
+                                const LogicOracleSnapshot *snapshots,
+                                size_t count)
+{
+    FILE *file;
+    size_t i;
+    char detail[128];
+    int ok = 0;
+    if (!path || !snapshots || !count || count > UINT32_MAX) return -1;
+    if (!snapshot_stream_valid(snapshots, count, detail, sizeof detail))
+        return -1;
+    file = fopen(path, "wb");
+    if (!file) return -1;
+    if (write_header(file, "LORS", LOGIC_ORACLE_SNAPSHOT_VERSION,
+                     LOGIC_ORACLE_SNAPSHOT_RECORD_SIZE, count) != 0)
+        goto done;
+    for (i = 0; i < count; i++) {
+        if (write_snapshot(file, &snapshots[i]) != 0)
+            goto done;
+    }
+    ok = 1;
+done:
+    if (fclose(file) != 0) ok = 0;
+    return ok ? 0 : -1;
+}
+
+static int snapshot_load_from(FILE *file, uint32_t disk_count,
+                              LogicOracleSnapshot **snapshots, size_t *count)
+{
+    LogicOracleSnapshot *items;
+    if (!snapshots || !count || disk_count == 0) return -1;
+    items = (LogicOracleSnapshot *)calloc(disk_count, sizeof *items);
+    if (!items) return -1;
+    if (read_snapshot_records(file, disk_count, items, disk_count) != 0) {
+        free(items);
+        return -1;
+    }
+    *snapshots = items;
+    *count = disk_count;
+    return 0;
+}
+
+int logic_oracle_snapshot_read(const char *path,
+                               LogicOracleSnapshot *snapshots,
+                               size_t capacity, size_t *count)
+{
+    FILE *file;
+    uint32_t disk_count;
+    int ok;
+    if (!path || !count) return -1;
+    file = fopen(path, "rb");
+    if (!file) return -1;
+    ok = read_header(file, "LORS", LOGIC_ORACLE_SNAPSHOT_VERSION,
+                     LOGIC_ORACLE_SNAPSHOT_RECORD_SIZE,
+                     &disk_count) == 0 &&
+         read_snapshot_records(file, disk_count, snapshots, capacity) == 0;
+    if (fclose(file) != 0) ok = 0;
+    if (!ok) return -1;
+    *count = disk_count;
+    return 0;
+}
+
+int logic_oracle_snapshot_load(const char *path,
+                               LogicOracleSnapshot **snapshots,
+                               size_t *count)
+{
+    FILE *file;
+    uint32_t disk_count;
+    int ok;
+    if (!path || !snapshots || !count) return -1;
+    *snapshots = NULL;
+    *count = 0;
+    file = fopen(path, "rb");
+    if (!file) return -1;
+    ok = read_header(file, "LORS", LOGIC_ORACLE_SNAPSHOT_VERSION,
+                     LOGIC_ORACLE_SNAPSHOT_RECORD_SIZE,
+                     &disk_count) == 0 &&
+         snapshot_load_from(file, disk_count, snapshots, count) == 0;
+    if (fclose(file) != 0) ok = 0;
+    if (!ok) {
+        free(*snapshots);
+        *snapshots = NULL;
+        *count = 0;
+        return -1;
+    }
+    return 0;
+}
+
+int logic_oracle_trace_write(const char *path,
+                             const LogicOracleTraceEvent *events,
+                             size_t count)
+{
+    FILE *file;
+    size_t i;
+    uint32_t previous_sequence = 0;
+    int ok = 0;
+    if (!path || (count && !events) || count > UINT32_MAX) return -1;
+    file = fopen(path, "wb");
+    if (!file) return -1;
+    if (write_header(file, "LORT", LOGIC_ORACLE_TRACE_VERSION,
+                     LOGIC_ORACLE_TRACE_RECORD_SIZE, count) != 0)
+        goto done;
+    for (i = 0; i < count; i++) {
+        if (!trace_event_valid(&events[i]) ||
+            (i && events[i].sequence <= previous_sequence) ||
+            write_trace_event(file, &events[i]) != 0)
+            goto done;
+        previous_sequence = events[i].sequence;
+    }
+    ok = 1;
+done:
+    if (fclose(file) != 0) ok = 0;
+    return ok ? 0 : -1;
+}
+
+int logic_oracle_trace_read(const char *path,
+                            LogicOracleTraceEvent *events,
+                            size_t capacity, size_t *count)
+{
+    FILE *file;
+    uint32_t disk_count;
+    int ok;
+    if (!path || !count) return -1;
+    file = fopen(path, "rb");
+    if (!file) return -1;
+    ok = read_header(file, "LORT", LOGIC_ORACLE_TRACE_VERSION,
+                     LOGIC_ORACLE_TRACE_RECORD_SIZE,
+                     &disk_count) == 0 &&
+         read_trace_records(file, disk_count, events, capacity) == 0;
+    if (fclose(file) != 0) ok = 0;
+    if (!ok) return -1;
+    *count = disk_count;
+    return 0;
+}
+
+int logic_oracle_trace_validate(const char *path)
+{
+    FILE *file;
+    uint32_t count, i, previous_sequence = 0;
+    LogicOracleTraceEvent event;
+    int ok = 0;
+    if (!path) return -1;
+    file = fopen(path, "rb");
+    if (!file) return -1;
+    if (read_header(file, "LORT", LOGIC_ORACLE_TRACE_VERSION,
+                    LOGIC_ORACLE_TRACE_RECORD_SIZE, &count) != 0)
+        goto done;
+    for (i = 0; i < count; i++) {
+        if (read_trace_event(file, &event) != 0 ||
+            (i && event.sequence <= previous_sequence))
+            goto done;
+        previous_sequence = event.sequence;
+    }
+    if (file_finished(file) != 0) goto done;
+    ok = 1;
+done:
+    if (fclose(file) != 0) ok = 0;
+    return ok ? 0 : -1;
+}
+
+int logic_oracle_trace_find(const char *path, uint32_t sequence,
+                            LogicOracleTraceEvent *event)
+{
+    FILE *file;
+    uint32_t count, i, previous_sequence = 0;
+    int found = 0, ok = 0;
+    LogicOracleTraceEvent current, saved;
+    if (!path || !event) return -1;
+    file = fopen(path, "rb");
+    if (!file) return -1;
+    if (read_header(file, "LORT", LOGIC_ORACLE_TRACE_VERSION,
+                    LOGIC_ORACLE_TRACE_RECORD_SIZE, &count) != 0)
+        goto done;
+    for (i = 0; i < count; i++) {
+        if (read_trace_event(file, &current) != 0 ||
+            (i && current.sequence <= previous_sequence))
+            goto done;
+        previous_sequence = current.sequence;
+        if (current.sequence == sequence) {
+            saved = current;
+            found = 1;
+        }
+    }
+    if (file_finished(file) != 0) goto done;
+    if (found) *event = saved;
+    ok = 1;
+done:
+    if (fclose(file) != 0) ok = 0;
+    return ok ? (found ? 0 : 1) : -1;
+}
+
+const char *logic_oracle_status_name(LogicOracleStatus status)
+{
+    switch (status) {
+    case LOGIC_ORACLE_MATCH: return "match";
+    case LOGIC_ORACLE_DIVERGED: return "diverged";
+    case LOGIC_ORACLE_INCOMPATIBLE: return "incompatible";
+    case LOGIC_ORACLE_INVALID: return "invalid";
+    }
+    return "invalid";
+}
