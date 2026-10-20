@@ -612,3 +612,191 @@ done:
     return result;
 }
 
+static int full_app_fault_oracle(void *opaque,
+                                 const LogicReplayManifest *manifest,
+                                 const LogicReplayEvent *events, size_t count,
+                                 uint32_t timeout_ms,
+                                 LogicFailureSignature *signature)
+{
+    AppFaultOracleContext *context = (AppFaultOracleContext *)opaque;
+    LogicAppReplayInput input[LOGIC_APP_REPLAY_INPUT_MAX];
+    uint8_t checkpoint[LOGIC_APP_REPLAY_OUTPUT_SIZE] = {0};
+    char detail[256] = {0};
+    int result;
+    uint32_t run_ticks = context && context->context_failure_tick
+        ? context->context_failure_tick : context ? context->tick_count : 0;
+    if (!context || !manifest || !signature || count > LOGIC_APP_REPLAY_INPUT_MAX ||
+        manifest->rng_seed != context->seed ||
+        app_inputs_from_trace(events, count, context->tick_count, input) != 0)
+        return -1;
+    result = logic_app_replay_x16_run(context->game_dir, context->seed,
+        input, count, run_ticks, timeout_ms, context->fault_flags,
+        checkpoint, detail, sizeof detail);
+    if (checkpoint[0] != 'X' || checkpoint[1] != '1' ||
+        checkpoint[2] != '6' || checkpoint[3] != 'R' ||
+        checkpoint[4] != LOGIC_APP_REPLAY_SNAPSHOT_VERSION)
+        return -1;
+    /* Exhausting the input schedule is not a context failure. In particular,
+       deleting a prompt response must never preserve an unrelated signature. */
+    if (checkpoint[58] & LOGIC_APP_REPLAY_STATUS_INPUT_WAIT_EXHAUSTED)
+        return 1;
+    if (checkpoint[58] & LOGIC_APP_REPLAY_STATUS_CONTEXT_VERIFY_FAILED) {
+        /* Injection is optional: the verifier's field/PC signature identifies
+           the failure regardless of whether a test fault caused it. */
+        if (context->fault_flags &&
+            !(checkpoint[58] & LOGIC_APP_REPLAY_STATUS_FAULT_TRIGGERED))
+            return -1;
+        memset(signature, 0, sizeof *signature);
+        signature->kind = LOGIC_TRACE_KIND_MARK;
+        signature->logic = checkpoint[25];
+        signature->logical_pc = get_u16(checkpoint + 27);
+        signature->opcode = checkpoint[26];
+        signature->reason = LOGIC_REPLAY_REASON_CONTEXT_MISMATCH;
+        signature->code = ((uint32_t)checkpoint[23] << 8) | checkpoint[24];
+        if (!context->context_failure_tick)
+            context->context_failure_tick = get_u16(checkpoint + 6);
+        return 0;
+    }
+    /* Deleting the trigger is a rejected reduction candidate, rather than
+       an oracle error. Require a complete, otherwise valid clean run. */
+    if (context->fault_flags &&
+        !(checkpoint[58] & LOGIC_APP_REPLAY_STATUS_FAULT_TRIGGERED) &&
+        (uint32_t)get_u16(checkpoint + 6) == run_ticks &&
+        get_u16(checkpoint + 8) == 0 &&
+        checkpoint[38] == (uint8_t)run_ticks &&
+        !(checkpoint[58] & (uint8_t)~(LOGIC_APP_REPLAY_STATUS_TRACE_DROPPED |
+            LOGIC_APP_REPLAY_STATUS_CAPTURE_CAPACITY)) &&
+        !(get_u16(checkpoint + LOGIC_APP_REPLAY_CAPACITY_FLAGS_OFFSET) &
+            (uint16_t)~LOGIC_APP_REPLAY_CAPACITY_TRACE_DROPPED))
+        return 1;
+    if (result != 0)
+        fprintf(stderr, "context reduction target rejected: %s (status=%02x field=%u offset=%u)\n",
+                detail, checkpoint[58], checkpoint[23], checkpoint[24]);
+    return result == 0 ? 1 : -1;
+}
+
+static int app_reduce_command(int argc, char **argv)
+{
+    const char *game_dir = NULL, *manifest_path = NULL, *trace_path = NULL;
+    const char *output_path = NULL;
+    LogicReplayManifest manifest;
+    LogicReplayEvent *events = NULL, *reduced = NULL;
+    LogicAppReplayInput input[LOGIC_APP_REPLAY_INPUT_MAX];
+    size_t event_count = 0, reduced_count = 0;
+    LogicReductionOptions options = {20, 120000, 2};
+    LogicReductionReport report;
+    LogicFailureSignature failure;
+    AppFaultOracleContext context = {0};
+    uint32_t tick_count = 0, max_attempts = 20;
+    uint16_t seed = 0;
+    int result = 1;
+    int reduction_status;
+    int fault_seen = 0;
+    for (int i = 2; i < argc; ++i) {
+        const char *option = argv[i];
+        if (!strcmp(option, "--failure")) {
+            if (++i >= argc) goto usage;
+            if (!strcmp(argv[i], "semantic")) context.semantic = 1;
+            else if (!strcmp(argv[i], "context")) context.semantic = 0;
+            else goto usage;
+            continue;
+        }
+        if (!strcmp(option, "--fault")) {
+            if (++i >= argc || fault_seen) goto usage;
+            if (!strcmp(argv[i], "omit-metadata-save"))
+                fault_seen = LOGIC_APP_REPLAY_FAULT_OMIT_METADATA_SAVE;
+            else if (!strcmp(argv[i], "semantic-write"))
+                fault_seen = LOGIC_APP_REPLAY_FAULT_SEMANTIC_WRITE;
+            else goto usage;
+            continue;
+        }
+        if (++i >= argc)
+            goto usage;
+        if (!strcmp(option, "--game-dir")) game_dir = argv[i];
+        else if (!strcmp(option, "--manifest")) manifest_path = argv[i];
+        else if (!strcmp(option, "--input-trace")) trace_path = argv[i];
+        else if (!strcmp(option, "--ticks")) {
+            if (parse_u32(argv[i], &tick_count) != 0)
+                goto usage;
+        } else if (!strcmp(option, "--output-trace")) output_path = argv[i];
+        else if (!strcmp(option, "--max-attempts")) {
+            if (parse_u32(argv[i], &max_attempts) != 0)
+                goto usage;
+        } else if (!strcmp(option, "--timeout-ms")) {
+            if (parse_u32(argv[i], &options.timeout_ms) != 0)
+                goto usage;
+        } else goto usage;
+    }
+    if (!game_dir || !manifest_path || !trace_path ||
+        !output_path || !tick_count || tick_count > 255u ||
+        !max_attempts || !options.timeout_ms ||
+        (context.semantic && fault_seen == LOGIC_APP_REPLAY_FAULT_OMIT_METADATA_SAVE) ||
+        (!context.semantic && fault_seen == LOGIC_APP_REPLAY_FAULT_SEMANTIC_WRITE))
+        goto usage;
+    options.max_attempts = max_attempts;
+    if (read_app_replay_inputs(game_dir, manifest_path, trace_path, tick_count,
+            &manifest, &events, &event_count, input, &seed) != 0)
+        goto done;
+    context.manifest_path = manifest_path;
+    context.game_dir = game_dir;
+    context.seed = seed;
+    context.tick_count = tick_count;
+    context.fault_flags = (uint8_t)fault_seen;
+    reduction_status = logic_reduce_trace(&manifest, events, event_count,
+            context.semantic ? full_app_semantic_oracle : full_app_fault_oracle,
+            &context, &options, &reduced, &reduced_count, &failure,
+            &report);
+    if (reduction_status != 0 || report.limit_reached ||
+        !report.repeated_run_agreement || reduced_count >= event_count) {
+        fprintf(stderr,
+                "logic-replay: full-app failure was not reduced with repeated signature agreement: status=%d limit=%d agreement=%d attempts=%zu runs=%zu elapsed-ms=%u events=%zu->%zu\n",
+                reduction_status, report.limit_reached,
+                report.repeated_run_agreement, report.attempts,
+                report.oracle_runs, report.elapsed_ms, event_count, reduced_count);
+        goto done;
+    }
+    if (logic_replay_trace_write(output_path, reduced, reduced_count) != 0) {
+        fprintf(stderr, "logic-replay: cannot write reduced full-app trace %s\n",
+                output_path);
+        goto done;
+    }
+    printf("full-app reduction events=%zu->%zu signature=%u:%u:%04x:%u:%u:%08" PRIx32
+           " attempts=%zu emulator-runs=%zu elapsed-ms=%" PRIu32 " trace=%s\n",
+           event_count, reduced_count, failure.kind, failure.logic,
+           failure.logical_pc, failure.opcode, failure.reason, failure.code,
+           report.attempts, report.oracle_runs, report.elapsed_ms, output_path);
+    if (context.semantic)
+        printf("semantic failure checkpoint=%u field=%s reference=%lld candidate=%lld reference-text=%s candidate-text=%s\n",
+            context.semantic_failure.checkpoint_index, context.semantic_failure.field,
+            (long long)context.semantic_failure.reference_value,
+            (long long)context.semantic_failure.candidate_value,
+            context.semantic_failure.reference_text, context.semantic_failure.candidate_text);
+    result = 0;
+    goto done;
+usage:
+    fprintf(stderr, "usage: logic-replay app-reduce --game-dir DIR --manifest FILE"
+            " --input-trace FILE --ticks N --output-trace FILE"
+            " [--failure context|semantic] [--fault omit-metadata-save|semantic-write] [--max-attempts N] [--timeout-ms N]\n");
+done:
+    logic_replay_events_free(events);
+    free(reduced);
+    return result;
+}
+
+int main(int argc, char **argv)
+{
+    if (argc < 2) {
+        fprintf(stderr, "usage: logic-replay {validate|snapshot|full-app|app-reduce} ...\n");
+        return 2;
+    }
+    if (!strcmp(argv[1], "validate"))
+        return validate_command(argc, argv);
+    if (!strcmp(argv[1], "snapshot"))
+        return snapshot_command(argc, argv);
+    if (!strcmp(argv[1], "full-app"))
+        return full_app_command(argc, argv);
+    if (!strcmp(argv[1], "app-reduce"))
+        return app_reduce_command(argc, argv);
+    fprintf(stderr, "logic-replay: unknown command '%s'\n", argv[1]);
+    return 2;
+}
