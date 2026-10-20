@@ -1322,7 +1322,7 @@ bra @updatePosition
 
 @checkGreaterThanYMax:
 lda OY
-cmp #PICTURE_HEIGHT + 1
+cmp #PICTURE_HEIGHT
 bcc @checkLessThanHorizon
 
 lda #PICTURE_HEIGHT - 1
