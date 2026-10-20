@@ -39,7 +39,7 @@ static void run_view_header_cases(void)
 		prepare_text_cleanup_case(); set_object_file_stream(volume,length,false);
 		call_target_caller("_testInitViewResource"); call_target_caller("_testLoadViewLoops");
 		CHECK(!ram[symbol("_testViewLoaded")],"Invalid loop header was published as a loaded view");
-		for(unsigned i=0;i<232;++i) CHECK(!bank_ram[0x10][symbol("_allocationArray")-BANK_START+i],"Rejected view header retained an allocation");
+		for(unsigned i=0;i<ram[symbol("_testViewAllocationSlots")];++i) CHECK(!bank_ram[0x10][symbol("_allocationArray")-BANK_START+i],"Rejected view header retained an allocation");
 	}
 	puts("PASS production view loader decodes every loop at 7/8/14/15 boundaries");
 }
@@ -48,6 +48,12 @@ static void run_cached_closeup_case(void)
 {
 	prepare_view_resource(1,14);
 	CHECK(ram[symbol("_testViewLoaded")],"Close-up fixture did not load its real view resource");
+	call_target_caller("_testResetCachedCloseup");
+	call_target_caller("_testFillCloseupPalettes");
+	getin_enabled=true; getin_count=0;
+	service_text_render_irqs=true;
+	call_target_caller("_testShowCachedCloseup");
+	CHECK(vram[0x1ffe7]==TEXT_CLEANUP_SENTINEL,"Failed palette allocation published a close-up sprite");
 	call_target_caller("_testResetCachedCloseup");
 	getin_enabled=true; getin_keys[0]=getin_keys[1]=13; getin_count=2;
 	service_text_render_irqs=true;

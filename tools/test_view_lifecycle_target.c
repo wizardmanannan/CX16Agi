@@ -6,6 +6,14 @@ extern byte viewHeaderBuffer[501];
 extern ViewTableMetadata viewTableMetadata[SPRITE_SLOTS];
 byte testViewLoopErrors;
 byte testViewLoaded;
+byte testViewAllocationSlots = ALLOCATION_ARRAY_SIZE;
+
+void testFillCloseupPalettes(void)
+{
+	byte i;
+	PaletteGetResult result;
+	for (i = 0; i < NO_MANAGED_PALETTES; ++i) bFGetPalette(100 + i, &result);
+}
 
 void testInitViewResource(void)
 {
