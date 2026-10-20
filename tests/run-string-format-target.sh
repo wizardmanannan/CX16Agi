@@ -89,6 +89,7 @@ fi
 # Host layout/parser cases use the same target formatter through a byte transport.
 export FORMAT_TARGET_PRG="$fixture/string-format-target.prg"
 export FORMAT_TARGET_LABELS="$fixture/string-format-target.lbl"
+export FORMAT_TARGET_FIXTURE="$fixture"
 hostcc=${4:-cc}
 for test in test-string-format test-text-interpolation; do
     # HOSTCC may contain sanitizer flags, as in the existing host suite.

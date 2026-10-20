@@ -7,6 +7,7 @@
 #include <string.h>
 #include <sys/wait.h>
 #include <unistd.h>
+#include "target-fixture.h"
 #include "stringFormat.h"
 #include "logic.h"
 #include "object.h"
@@ -64,8 +65,8 @@ static byte targetTransform(const char* source, byte sourceBank, char* destinati
     (void)sourceBank;
     if (!capacity) return 0;
     assert(capacity <= 2000 && strlen(source) < 0x1f00);
-    commands = tmpfile();
-    responses = tmpfile();
+    commands = targetFixtureFile();
+    responses = targetFixtureFile();
     assert(commands && responses);
     fprintf(commands, "RUN %04X\nRAM 00\n", address("targetPrepareKq3Entry"));
     bytes(commands, address("_bridgeActive"), &active, 1);

@@ -6,6 +6,7 @@
 #include <string.h>
 #include <sys/wait.h>
 #include <unistd.h>
+#include "target-fixture.h"
 
 static unsigned int symbol(const char* labels, const char* wanted)
 {
@@ -29,8 +30,8 @@ int main(int argc, char** argv)
     static const unsigned char cleaned[] = "go north now";
     static const unsigned char crossing[] = { 'a', ',', ' ', ' ', 'b', '!', 0xc1, 0 };
     static const unsigned char crossingCleaned[] = { 'a', ' ', 'b', 0xc1, 0 };
-    FILE* input = tmpfile();
-    FILE* output = tmpfile();
+    FILE* input = targetFixtureFile();
+    FILE* output = targetFixtureFile();
     FILE* bank;
     unsigned int routine, stack, size, address, i, repeat;
     unsigned long value, before = 0, elapsed = 0;
