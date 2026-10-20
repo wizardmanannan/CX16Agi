@@ -7,6 +7,11 @@ chunked output, and destination capacities 0, 1, and truncated output. The
 host display/parser regressions send their fixtures to that same target
 formatter through a byte transport; there is no host expansion implementation.
 Other host tests cover string commands and menu text/count capacity.
+The fidelity cases also cover full-width dictionary IDs in `said`, positioned
+`print.at` operands, PETSCII letter conversion, punctuation, command history,
+the script's input limit, modal cancellation, and editing recalled input.
+Message-command cases check elapsed timeout ticks across 16-bit wraparound,
+Enter/Escape dismissal, timeout reset, and flag-15 nonblocking output.
 Display cases include KQ3's clock and a message whose address matches the staging
 buffer in another bank; only text already staged in the display bank bypasses
 interpolation.
@@ -136,3 +141,15 @@ cases cover platform (0x14) and ASCII (0x08) backspace, stored input, and cursor
 cell erasure. Composition cases compare the former snprintf contract at exact
 fits and truncation boundaries, with custom cursors, 40 input bytes and up to
 255 prompt bytes. The emulator checks termination and an adjacent output canary.
+The IRQ renderer is exercised in the complete product: assertions read actual
+VERA tiles and palette attributes for custom prompts, row/column positioning,
+tail erasure, right-edge clipping, hidden/incomplete publications, and the active
+text palette. The native colour test checks all 256 legal colour-pair identities.
+
+Inventory cases execute the C page composition and the complete product's
+assembly name-copy, padding and highlighting routines. They cover empty and
+zero-length names, cross-page staging flushes, 255-byte names clipped to 20
+columns, canaries and stack restoration. Native page cases cover 0, 1, 52, 54,
+61 and 100 carried objects, PgUp/PgDn navigation and selection by game object ID.
+The opcode tests follow the actual dispatch vectors for `echo.line` and
+`cancel.line`, including prompt interpolation and software-stack restoration.
