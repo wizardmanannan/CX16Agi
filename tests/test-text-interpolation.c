@@ -276,7 +276,7 @@ static void test_border_width_capacity(void)
 	memset(b3TextBuffer1, 'x', TEXTBUFFER_SIZE - 1);
 	for (i = 1; i < TEXTBUFFER_SIZE - 1; i += 2) b3TextBuffer1[i] = NEW_LINE;
 	b3TextBuffer1[TEXTBUFFER_SIZE - 1] = '\0';
-	memset(b3TextBuffer2, 0x5a, sizeof(b3TextBuffer2));
+	memset(b3TextBuffer2, 0x5a, TEXTBUFFER_SIZE);
 	b3DrawBorder(TILE_LAYER_WIDTH - 2, TEXTBUFFER_SIZE);
 	assert(b3LastBoxLines == expectedRows);
 	assert(b3LastBoxLines <= TEXT_ROWS);
@@ -342,6 +342,17 @@ static void test_display_map_bounds(void)
 	b3DisplayMessageBox("outside", 21, 1, 254, 1, 0, FALSE, FIRST_TEXT_ROW);
 	assert(displays == priorDisplays);
 	assert(b3LastBoxLines == 0);
+}
+
+static void test_long_unboxed_text(void)
+{
+	char text[1201];
+	memset(text, 'x', sizeof(text) - 1);
+	text[sizeof(text) - 1] = 0;
+	controlExpected = text;
+	b3DisplayMessageBox(text, 21, 1, 0, 1, 0, FALSE, FIRST_TEXT_ROW);
+	assert(b3LastBoxLines == 19);
+	controlExpected = NULL;
 }
 
 static void test_empty_message_does_not_clear(char* priorText)
@@ -419,6 +430,7 @@ int main(void)
 	test_text_mode_controls();
 	test_cleanup_capacity();
 	test_display_map_bounds();
+	test_long_unboxed_text();
 	puts("text interpolation tests passed");
 	return 0;
 }

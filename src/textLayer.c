@@ -17,8 +17,7 @@ byte b3CurrentBackgroundColour;
 byte b3LastBoxLines;
 byte b3LastBoxStartLine;
 static byte b3LastBoxFirstRow;
-char b3TextBuffer1[TEXTBUFFER_SIZE];
-char b3TextBuffer2[TEXTBUFFER_SIZE];
+char b3TextBuffers[TEXTBUFFER_SIZE * 2];
 #pragma bss-name (pop)
 
 #pragma code-name (push, "BANKRAM03")
