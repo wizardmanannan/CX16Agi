@@ -905,6 +905,8 @@ static const char hook[] =
 "static void shake_before_step(void) {\n"
 "    if(STARTUP_TEST_ROOM) { startup_before_step(); return; }\n"
 "    if(LOADER_TEST_ENABLED) { loader_before_step(regs.pc,memory_get_ram_bank()); return; }\n"
+"    static uint32_t next_progress=100000000u; if(clockticks6502>=next_progress) { fprintf(stderr,\"Native rendering progress: cycles=%u host_ms=%u command=%u picture_stage=%u\\n\",clockticks6502,SDL_GetTicks(),shake_command_index,picture_test_stage); next_progress+=100000000u; }\n"
+"    if(clockticks6502>=TRIGGER_CYCLE&&clockticks6502-TRIGGER_CYCLE>200000000u) { fprintf(stderr,\"Native rendering workload exceeded its 200M post-trigger cycle limit\\n\"); exit(3); }\n"
 "    if(text_case_active&&!waiting) text_case_track_source_helpers(regs.pc);\n"
 "    shake_check_sprite_owner_wrapper_return();\n"
 "    if(shake_sprite_owner_wrapper_active&&!shake_sprite_owner_wrapper_progress_logged&&clockticks6502-shake_sprite_owner_wrapper_start_cycle>500000u) { shake_sprite_owner_wrapper_progress_logged=true; fprintf(stderr,\"Sprite-owner wrapper progress: pc=%04x bank=%u codebank=%u SP=%04x E=%u depth=%u Cstack=%04x return=%04x/%04x target=%04x\\n\",regs.pc,memory_get_ram_bank(),regs.k,regs.sp,regs.e,shake_read(S__foregroundVeraDepth),combined_read16(S_c_sp,0),shake_sprite_owner_wrapper_return_pc,shake_sprite_owner_wrapper_return_sp,shake_sprite_owner_wrapper_is_end?S__testEndSpritePublicationWork:S__testBeginSpritePublicationWork); }\n"
@@ -1821,7 +1823,7 @@ int main(int argc,char **argv) {
     if(!play) { command[command_length++]="-warp";command[command_length++]="-sound";command[command_length++]="none"; }
     if(!play&&!startup_room&&!picture_test&&!combined_test) { command[command_length++]="-gif";command[command_length++]=format("%s/game.gif,wait",output); }
     command[command_length++]="-echo";command[command_length]=NULL;
-    run(command,join(output,"run.log"),play?0:(picture_test||startup_room)?300:90);
+    run(command,join(output,"run.log"),play?0:300);
     cleanup_stage();
     if(!stage||exists(stage)) fail("Integration fixture cleanup regression: private staged game was not removed");
     require_no_retained_stage(output);
