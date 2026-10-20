@@ -7,6 +7,9 @@ chunked output, and destination capacities 0, 1, and truncated output. The
 host display/parser regressions send their fixtures to that same target
 formatter through a byte transport; there is no host expansion implementation.
 Other host tests cover string commands and menu text/count capacity.
+Display cases include KQ3's clock and a message whose address matches the staging
+buffer in another bank; only text already staged in the display bank bypasses
+interpolation.
 
 The target test creates its executable and emulator input in a unique directory
 beneath `$CX16AGI_BUILD_DIR/obj/host/string-format`, then removes that directory

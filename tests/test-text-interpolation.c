@@ -276,6 +276,39 @@ static void test_explicit_line_breaks(void)
     assert(strcmp(crossing, "a\nb") == 0);
 }
 
+static void test_kq3_clock_display(void)
+{
+    boolean wasBoxed = boxed;
+    boxed = FALSE;
+    variables[117] = 1;
+    variables[116] = 2;
+    variables[115] = 3;
+    controlExpected = "1:02:03 ";
+    b3DisplayMessageBox("%v117:%v116|2:%v115|2 ", 21, 2, 20, 1, 0, FALSE, FIRST_TEXT_ROW);
+    controlExpected = NULL;
+    boxed = wasBoxed;
+}
+
+static void test_display_buffer_address_in_another_bank(void)
+{
+    boolean wasBoxed = boxed;
+    unsigned int priorDisplays = displays;
+    boxed = FALSE;
+    variables[117] = 1;
+    /* A banked message can have the same address as the staging buffer. */
+    strcpy(b3TextBuffer1, "%v117");
+    controlExpected = "1";
+    b3DisplayMessageBox(b3TextBuffer1, 21, 2, 20, 1, 0, FALSE, FIRST_TEXT_ROW);
+    assert(displays == priorDisplays + 1);
+    /* Text deliberately staged in the display bank remains literal. */
+    strcpy(b3TextBuffer1, "%v117");
+    controlExpected = "%v117";
+    b3DisplayMessageBox(b3TextBuffer1, TEXT_CODE_BANK, 2, 20, 1, 0, FALSE, FIRST_TEXT_ROW);
+    assert(displays == priorDisplays + 2);
+    controlExpected = NULL;
+    boxed = wasBoxed;
+}
+
 static void test_text_mode_controls(void)
 {
 	boolean wasBoxed = boxed;
@@ -488,6 +521,8 @@ int main(void)
 	test_banked_input();
 	test_word_capacity();
 	test_word_lookup_uses_cleaned_input();
+    test_kq3_clock_display();
+    test_display_buffer_address_in_another_bank();
 	test_text_mode_controls();
 	test_cleanup_capacity();
 	test_display_map_bounds();
