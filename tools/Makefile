@@ -18,13 +18,16 @@ override HOST_CFLAGS += $(HOST_TEST_FLAGS)
 TEST_OUTPUT_ROOT ?= $(REPO_ROOT)/obj
 TEST_FIXTURE_ROOT ?= $(if $(TMPDIR),$(TMPDIR),/tmp)
 
-export CC65_HOME X16_EMULATOR_SOURCE TMPDIR TEST_OUTPUT_DIR ROM GAME BUILD SYMBOLS SDL_PREFIX TAS_CAPTURE_HEADER
+export GAME_KQ1 GAME_KQ3 CC65_HOME X16_EMULATOR_SOURCE TMPDIR TEST_OUTPUT_DIR ROM GAME BUILD SYMBOLS SDL_PREFIX TAS_CAPTURE_HEADER
 unexport KEEP_TEST_OUTPUT
 
-.PHONY: test suite commands-test image production-test integration-test picture-test loader-test modes integration _run build-test
+.PHONY: test suite commands-test image production-test integration-test picture-test loader-test modes integration _run build-test games-test
 
 build-test:
 	@$(MAKE) --no-print-directory -f "$(REPO_ROOT)/tools/Makefile" _run MODE=build-test
+
+games-test:
+	@$(MAKE) --no-print-directory -f "$(REPO_ROOT)/tools/Makefile" _run MODE=games-test
 
 test suite:
 	@$(MAKE) --no-print-directory -f "$(REPO_ROOT)/tools/Makefile" _run MODE=core
@@ -79,8 +82,14 @@ _run:
 	  production-test) \
 	    need_cc65; need_exec "$$CC65_HOME/bin/cl65"; need_cpu; need_image_makefile; \
 	    need_file "$$repo/tools/test_sound_foreground.c" ;; \
-	  modes|integration-test|picture-test) \
-	    need_command cmake; need_command magick; need_command pkg-config; \
+	  modes|integration-test|picture-test|games-test) \
+	    need_command cmake; need_command pkg-config; \
+	    if [ "$$mode" != games-test ]; then need_command magick; fi; \
+	    if [ "$$mode" = games-test ]; then \
+	      [ -n "$${GAME_KQ1:-}" ] && [ -d "$$GAME_KQ1" ] || fail 'set GAME_KQ1 to original KQ1 data'; \
+	      [ -n "$${GAME_KQ3:-}" ] && [ -d "$$GAME_KQ3" ] || fail 'set GAME_KQ3 to original KQ3 data'; \
+	      GAME="$$GAME_KQ1"; \
+	    fi; \
 	    if [ -n "$${SDL_PREFIX:-}" ]; then \
 	      need_file "$$SDL_PREFIX/lib/cmake/SDL2/SDL2Config.cmake"; \
 	    else pkg-config --exists sdl2 || fail 'SDL2 development files are required (pkg-config sdl2 or SDL_PREFIX)'; fi; \
@@ -159,6 +168,20 @@ _run:
 	  fi; \
 	}; \
 	case "$$mode" in \
+	  games-test) \
+	    "$(HOST_CC)" $(HOST_CFLAGS) "$$repo/tools/test_build.c" -o "$$work/bin/test_build"; \
+	    "$$work/bin/test_build" "$$repo"; \
+	    "$(HOST_CC)" $(HOST_CFLAGS) "$$repo/tools/test_full_game_irq.c" -lpng -o "$$work/bin/test_full_game_irq"; \
+	    failed=0; \
+	    for game_id in KQ1 KQ3; do \
+	      if [ "$$game_id" = KQ1 ]; then game="$$GAME_KQ1"; room=1; else game="$$GAME_KQ3"; room=7; fi; \
+	      echo "RUN natural $$game_id startup to room $$room"; \
+	      set -- --emulator-source "$$X16_EMULATOR_SOURCE" --rom "$$ROM" --build "$$work/image" --game "$$game" --symbols "$$work/image/agi.cx16.dbg" --startup-room "$$room" --random-ram --output "$$work/$$game_id"; \
+	      if [ -n "$${TAS_CAPTURE_HEADER:-}" ]; then set -- "$$@" --tas-capture-header "$$TAS_CAPTURE_HEADER"; fi; \
+	      if [ -n "$${SDL_PREFIX:-}" ]; then set -- "$$@" --sdl-prefix "$$SDL_PREFIX"; fi; \
+	      if "$$work/bin/test_full_game_irq" "$$@"; then :; else failed=$$((failed+1)); fi; \
+	    done; \
+	    [ "$$failed" -eq 0 ] || fail "$$failed game acceptance case(s) failed" ;; \
 	  build-test) \
 	    "$(HOST_CC)" $(HOST_CFLAGS) "$$repo/tools/test_build.c" -o "$$work/bin/test_build"; \
 	    "$$work/bin/test_build" "$$repo" ;; \
