@@ -372,3 +372,319 @@ int logic_replay_manifest_matches(const LogicReplayManifest *expected,
     return 1;
 }
 
+/* Compact SHA-256 implementation keeps resource verification dependency-free. */
+typedef struct Sha256State {
+    uint32_t words[8];
+    uint64_t bit_length;
+    uint8_t block[64];
+    size_t block_length;
+} Sha256State;
+
+static uint32_t rotate_right(uint32_t value, unsigned count)
+{
+    return (value >> count) | (value << (32 - count));
+}
+
+static void sha256_transform(Sha256State *state, const uint8_t block[64])
+{
+    static const uint32_t constants[64] = {
+        0x428a2f98,0x71374491,0xb5c0fbcf,0xe9b5dba5,0x3956c25b,0x59f111f1,0x923f82a4,0xab1c5ed5,
+        0xd807aa98,0x12835b01,0x243185be,0x550c7dc3,0x72be5d74,0x80deb1fe,0x9bdc06a7,0xc19bf174,
+        0xe49b69c1,0xefbe4786,0x0fc19dc6,0x240ca1cc,0x2de92c6f,0x4a7484aa,0x5cb0a9dc,0x76f988da,
+        0x983e5152,0xa831c66d,0xb00327c8,0xbf597fc7,0xc6e00bf3,0xd5a79147,0x06ca6351,0x14292967,
+        0x27b70a85,0x2e1b2138,0x4d2c6dfc,0x53380d13,0x650a7354,0x766a0abb,0x81c2c92e,0x92722c85,
+        0xa2bfe8a1,0xa81a664b,0xc24b8b70,0xc76c51a3,0xd192e819,0xd6990624,0xf40e3585,0x106aa070,
+        0x19a4c116,0x1e376c08,0x2748774c,0x34b0bcb5,0x391c0cb3,0x4ed8aa4a,0x5b9cca4f,0x682e6ff3,
+        0x748f82ee,0x78a5636f,0x84c87814,0x8cc70208,0x90befffa,0xa4506ceb,0xbef9a3f7,0xc67178f2
+    };
+    uint32_t schedule[64], a,b,c,d,e,f,g,h;
+    unsigned i;
+    for (i = 0; i < 16; ++i)
+        schedule[i] = ((uint32_t)block[i * 4] << 24) |
+                      ((uint32_t)block[i * 4 + 1] << 16) |
+                      ((uint32_t)block[i * 4 + 2] << 8) |
+                      (uint32_t)block[i * 4 + 3];
+    for (i = 16; i < 64; ++i) {
+        uint32_t s0 = rotate_right(schedule[i - 15], 7) ^
+                      rotate_right(schedule[i - 15], 18) ^
+                      (schedule[i - 15] >> 3);
+        uint32_t s1 = rotate_right(schedule[i - 2], 17) ^
+                      rotate_right(schedule[i - 2], 19) ^
+                      (schedule[i - 2] >> 10);
+        schedule[i] = schedule[i - 16] + s0 + schedule[i - 7] + s1;
+    }
+    a = state->words[0]; b = state->words[1]; c = state->words[2]; d = state->words[3];
+    e = state->words[4]; f = state->words[5]; g = state->words[6]; h = state->words[7];
+    for (i = 0; i < 64; ++i) {
+        uint32_t s1 = rotate_right(e, 6) ^ rotate_right(e, 11) ^ rotate_right(e, 25);
+        uint32_t choose = (e & f) ^ (~e & g);
+        uint32_t first = h + s1 + choose + constants[i] + schedule[i];
+        uint32_t s0 = rotate_right(a, 2) ^ rotate_right(a, 13) ^ rotate_right(a, 22);
+        uint32_t majority = (a & b) ^ (a & c) ^ (b & c);
+        uint32_t second = s0 + majority;
+        h = g; g = f; f = e; e = d + first;
+        d = c; c = b; b = a; a = first + second;
+    }
+    state->words[0] += a; state->words[1] += b; state->words[2] += c; state->words[3] += d;
+    state->words[4] += e; state->words[5] += f; state->words[6] += g; state->words[7] += h;
+}
+
+static void sha256_init(Sha256State *state)
+{
+    static const uint32_t initial[8] = {
+        0x6a09e667,0xbb67ae85,0x3c6ef372,0xa54ff53a,
+        0x510e527f,0x9b05688c,0x1f83d9ab,0x5be0cd19
+    };
+    memcpy(state->words, initial, sizeof initial);
+    state->bit_length = 0;
+    state->block_length = 0;
+}
+
+static int sha256_update(Sha256State *state, const uint8_t *bytes, size_t length)
+{
+    size_t offset = 0;
+    if ((uint64_t)length > (UINT64_MAX - state->bit_length) / 8)
+        return -1;
+    state->bit_length += (uint64_t)length * 8;
+    while (offset < length) {
+        size_t available = sizeof state->block - state->block_length;
+        size_t copy_length = length - offset < available ? length - offset : available;
+        memcpy(state->block + state->block_length, bytes + offset, copy_length);
+        state->block_length += copy_length;
+        offset += copy_length;
+        if (state->block_length == sizeof state->block) {
+            sha256_transform(state, state->block);
+            state->block_length = 0;
+        }
+    }
+    return 0;
+}
+
+static void sha256_finish(Sha256State *state, uint8_t digest[32])
+{
+    uint8_t length_bytes[8];
+    unsigned i;
+    uint64_t length = state->bit_length;
+    state->block[state->block_length++] = 0x80;
+    if (state->block_length > 56) {
+        memset(state->block + state->block_length, 0,
+               sizeof state->block - state->block_length);
+        sha256_transform(state, state->block);
+        state->block_length = 0;
+    }
+    memset(state->block + state->block_length, 0, 56 - state->block_length);
+    for (i = 0; i < 8; ++i)
+        length_bytes[7 - i] = (uint8_t)(length >> (i * 8));
+    memcpy(state->block + 56, length_bytes, sizeof length_bytes);
+    sha256_transform(state, state->block);
+    for (i = 0; i < 8; ++i) {
+        digest[i * 4] = (uint8_t)(state->words[i] >> 24);
+        digest[i * 4 + 1] = (uint8_t)(state->words[i] >> 16);
+        digest[i * 4 + 2] = (uint8_t)(state->words[i] >> 8);
+        digest[i * 4 + 3] = (uint8_t)state->words[i];
+    }
+}
+
+int logic_replay_sha256_file(const char *path,
+                             uint8_t digest[LOGIC_REPLAY_SHA256_SIZE])
+{
+    uint8_t buffer[8192];
+    Sha256State state;
+    FILE *file;
+    int result = -1;
+    if (!path || !digest)
+        return -1;
+    file = fopen(path, "rb");
+    if (!file)
+        return -1;
+    sha256_init(&state);
+    for (;;) {
+        size_t count = fread(buffer, 1, sizeof buffer, file);
+        if (count && sha256_update(&state, buffer, count) != 0)
+            goto done;
+        if (count < sizeof buffer) {
+            if (ferror(file))
+                goto done;
+            break;
+        }
+    }
+    sha256_finish(&state, digest);
+    result = 0;
+
+done:
+    if (fclose(file) != 0)
+        result = -1;
+    return result;
+}
+
+int logic_replay_manifest_verify_resources(const LogicReplayManifest *manifest,
+                                           const char *resource_directory)
+{
+    size_t directory_length;
+    uint16_t i;
+    if (logic_replay_manifest_validate(manifest) != 0 ||
+        !resource_directory || !resource_directory[0])
+        return -1;
+    directory_length = strlen(resource_directory);
+    for (i = 0; i < manifest->resource_count; ++i) {
+        size_t name_length = strlen(manifest->resources[i].name);
+        int separator = directory_length && resource_directory[directory_length - 1] != '/';
+        char *path;
+        uint8_t digest[LOGIC_REPLAY_SHA256_SIZE];
+        if (directory_length > SIZE_MAX - name_length - (size_t)separator - 1)
+            return -1;
+        path = (char *)malloc(directory_length + name_length + (size_t)separator + 1);
+        if (!path)
+            return -1;
+        memcpy(path, resource_directory, directory_length);
+        if (separator)
+            path[directory_length] = '/';
+        memcpy(path + directory_length + (size_t)separator,
+               manifest->resources[i].name, name_length + 1);
+        if (logic_replay_sha256_file(path, digest) != 0 ||
+            memcmp(digest, manifest->resources[i].sha256, sizeof digest) != 0) {
+            free(path);
+            return -1;
+        }
+        free(path);
+    }
+    return 0;
+}
+
+int logic_replay_trace_validate(const LogicReplayEvent *events, size_t count)
+{
+    uint8_t active[256 * 256] = {0};
+    LogicTraceCallFrame *call_stack = NULL;
+    uint32_t previous_tick = 0;
+    size_t i;
+    if ((!events && count) || count > UINT32_MAX ||
+        count > SIZE_MAX / sizeof *call_stack)
+        return -1;
+    if (count) {
+        call_stack = (LogicTraceCallFrame *)malloc(count * sizeof *call_stack);
+        if (!call_stack)
+            return -1;
+    }
+    if (logic_trace_validate(events, count, call_stack, count, NULL) != 0) {
+        free(call_stack);
+        return -1;
+    }
+    for (i = 0; i < count; ++i) {
+        const LogicReplayEvent *event = &events[i];
+        size_t input_index = ((size_t)event->logic << 8) | event->field;
+        if (i && event->tick < previous_tick) {
+            free(call_stack);
+            return -1;
+        }
+        previous_tick = event->tick;
+        if (event->kind == LOGIC_TRACE_KIND_MARK &&
+            event->reason == LOGIC_REPLAY_REASON_INPUT_DOWN) {
+            if (event->before != 0 || event->after != 1 || active[input_index]) {
+                free(call_stack);
+                return -1;
+            }
+            active[input_index] = 1;
+        } else if (event->kind == LOGIC_TRACE_KIND_MARK &&
+                   event->reason == LOGIC_REPLAY_REASON_INPUT_UP) {
+            if (event->before != 1 || event->after != 0 || !active[input_index]) {
+                free(call_stack);
+                return -1;
+            }
+            active[input_index] = 0;
+        }
+    }
+    free(call_stack);
+    for (i = 0; i < sizeof active; ++i)
+        if (active[i])
+            return -1;
+    return 0;
+}
+
+int logic_replay_trace_write(const char *path,
+                             const LogicReplayEvent *events, size_t count)
+{
+    FILE *file;
+    size_t i;
+    int result = -1;
+    uint8_t header[LOGIC_REPLAY_TRACE_HEADER_SIZE];
+    if (!path || logic_replay_trace_validate(events, count) != 0 ||
+        count > UINT32_MAX ||
+        logic_trace_header_encode((uint32_t)count, header, sizeof header) != 0)
+        return -1;
+    file = fopen(path, "wb");
+    if (!file)
+        return -1;
+    if (fwrite(header, 1, sizeof header, file) != sizeof header)
+        goto done;
+    for (i = 0; i < count; ++i) {
+        uint8_t record[LOGIC_REPLAY_EVENT_RECORD_SIZE];
+        if (logic_trace_event_encode(&events[i], record, sizeof record) != 0 ||
+            fwrite(record, 1, sizeof record, file) != sizeof record)
+            goto done;
+    }
+    result = 0;
+
+done:
+    if (fclose(file) != 0)
+        result = -1;
+    if (result != 0)
+        remove(path);
+    return result;
+}
+
+int logic_replay_trace_read(const char *path, LogicReplayEvent **events,
+                            size_t *count)
+{
+    uint8_t header[LOGIC_REPLAY_TRACE_HEADER_SIZE];
+    uint32_t encoded_count;
+    size_t event_count, i;
+    LogicReplayEvent *loaded = NULL;
+    FILE *file;
+    int result = -1;
+    if (!path || !events || !count)
+        return -1;
+    *events = NULL;
+    *count = 0;
+    file = fopen(path, "rb");
+    if (!file)
+        return -1;
+    if (fread(header, 1, sizeof header, file) != sizeof header ||
+        logic_trace_header_decode(header, sizeof header, &encoded_count) != 0)
+        goto done;
+    event_count = encoded_count;
+    if (event_count > SIZE_MAX / sizeof *loaded)
+        goto done;
+    if (event_count) {
+        loaded = (LogicReplayEvent *)malloc(event_count * sizeof *loaded);
+        if (!loaded)
+            goto done;
+    }
+    for (i = 0; i < event_count; ++i) {
+        uint8_t record[LOGIC_REPLAY_EVENT_RECORD_SIZE];
+        if (fread(record, 1, sizeof record, file) != sizeof record ||
+            logic_trace_event_decode(record, sizeof record, &loaded[i]) != 0)
+            goto done;
+    }
+    if (!file_at_end(file) || logic_replay_trace_validate(loaded, event_count) != 0)
+        goto done;
+    *events = loaded;
+    *count = event_count;
+    loaded = NULL;
+    result = 0;
+
+done:
+    free(loaded);
+    if (fclose(file) != 0)
+        result = -1;
+    if (result != 0) {
+        free(*events);
+        *events = NULL;
+        *count = 0;
+    }
+    return result;
+}
+
+void logic_replay_events_free(LogicReplayEvent *events)
+{
+    free(events);
+}
