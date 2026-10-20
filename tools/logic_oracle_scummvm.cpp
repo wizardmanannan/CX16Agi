@@ -547,5 +547,298 @@ private:
     uint16 _printedMessageCount;
 };
 
+static int usage(const char *program) {
+    std::fprintf(stderr,
+        "usage: %s --game-dir DIR --input-trace FILE --manifest FILE --ticks N --snapshot FILE [--milestones] [--checkpoint-profile wall|completed-cycle]\n",
+        program);
+    return 2;
+}
+
+static void printMilestones(const OracleNullBackend &backend,
+                            const LogicOracleSnapshot &snapshot) {
+    std::fprintf(stdout, "game_id=%s\n", snapshot.game_id);
+    std::fprintf(stdout, "agi_version=0x%04x\n", snapshot.agi_version);
+    std::fprintf(stdout, "detected_agi_version=0x%04x\n",
+                 backend.detectedAgiVersion());
+    std::fprintf(stdout, "version_override=%u\n",
+                 backend.versionOverridden() ? 1U : 0U);
+    std::fprintf(stdout, "logic0_loaded=%u\n",
+                 backend.logicZeroLoaded() ? 1U : 0U);
+    std::fprintf(stdout, "loaded_logic_count=%u\n",
+                 backend.maxLoadedLogicCount());
+    std::fprintf(stdout, "input_keydown_count=%u\n", backend.keyDownCount());
+    std::fprintf(stdout, "max_parser_word_count=%u\n",
+                 backend.maxParserWordCount());
+    std::fprintf(stdout, "parsed_look=%u\n", backend.parsedLook() ? 1U : 0U);
+    std::fprintf(stdout, "max_game_seconds=%u\n", backend.maxGameSeconds());
+    std::fflush(stdout);
+}
 
 } // namespace
+
+extern "C" void cx16_agi_oracle_completed_cycle(void *engine) {
+    if (activeOracleBackend)
+        activeOracleBackend->completedCycle(static_cast<Agi::AgiEngine *>(engine));
+}
+
+extern "C" int cx16_agi_oracle_uses_semantic_clock(void *engine) {
+    return activeOracleBackend && activeOracleBackend->usesSemanticClock(
+        static_cast<Agi::AgiEngine *>(engine));
+}
+
+extern "C" void cx16_agi_oracle_printed_message(void *engine, int number, const char *text) {
+    if (activeOracleBackend)
+        activeOracleBackend->printedMessage(static_cast<Agi::AgiEngine *>(engine), number, text);
+}
+
+int main(int argc, char **argv) {
+    const char *gameDirectory = nullptr;
+    const char *inputPath = nullptr;
+    const char *manifestPath = nullptr;
+    const char *snapshotPath = nullptr;
+    uint64 tickCount64 = 0;
+    uint16 expectedAgiVersion = 0;
+    bool reportMilestones = false;
+    bool completedCycle = false;
+    LogicReplayEvent *events = nullptr;
+    size_t eventCount = 0;
+    LogicOracleSnapshot *snapshots = nullptr;
+    LogicReplayManifest manifest = {};
+    uint8_t manifestHash[LOGIC_REPLAY_SHA256_SIZE];
+    uint8_t inputHash[LOGIC_REPLAY_SHA256_SIZE];
+    OracleNullBackend *clockBackend = nullptr;
+    Common::FSList directoryEntries;
+    DetectedGames detectedGames;
+    DetectedGame identifiedGame;
+    bool requestedGameDetected = false;
+    const void *metaDescription = nullptr;
+    Common::String detectedGameId;
+    MetaEngineDetection *detection = nullptr;
+    MetaEngine *metaEngine = nullptr;
+    OSystem *system = nullptr;
+    Engine *engine = nullptr;
+    Agi::AgiEngine *agiEngine = nullptr;
+    int result = 1;
+
+    for (int i = 1; i < argc; ++i) {
+        if (std::strcmp(argv[i], "--milestones") == 0) {
+            if (reportMilestones)
+                return usage(argv[0]);
+            reportMilestones = true;
+            continue;
+        }
+        if (i + 1 >= argc)
+            return usage(argv[0]);
+        const char *option = argv[i++];
+        const char *value = argv[i];
+        if (std::strcmp(option, "--game-dir") == 0)
+            gameDirectory = value;
+        else if (std::strcmp(option, "--input-trace") == 0)
+            inputPath = value;
+        else if (std::strcmp(option, "--manifest") == 0)
+            manifestPath = value;
+        else if (std::strcmp(option, "--ticks") == 0) {
+            if (!parseUnsigned(value, tickCount64) || tickCount64 == 0 ||
+                tickCount64 > LOGIC_ORACLE_MAX_REFERENCE_TICKS)
+                return usage(argv[0]);
+        } else if (std::strcmp(option, "--checkpoint-profile") == 0) {
+            if (std::strcmp(value, "completed-cycle") == 0) completedCycle = true;
+            else if (std::strcmp(value, "wall") == 0) completedCycle = false;
+            else return usage(argv[0]);
+        } else if (std::strcmp(option, "--snapshot") == 0)
+            snapshotPath = value;
+        else
+            return usage(argv[0]);
+    }
+    if (!gameDirectory || !inputPath || !manifestPath || !snapshotPath ||
+        tickCount64 == 0 ||
+        logic_replay_manifest_read(manifestPath, &manifest) != 0 ||
+        logic_replay_manifest_verify_resources(&manifest, gameDirectory) != 0 ||
+        logic_replay_sha256_file(manifestPath, manifestHash) != 0 ||
+        logic_replay_sha256_file(inputPath, inputHash) != 0 ||
+        logic_replay_trace_read(inputPath, &events, &eventCount) != 0 ||
+        !validateInputEvents(events, eventCount)) {
+        std::fprintf(stderr, "invalid replay manifest, resources, or input trace\n");
+        logic_replay_events_free(events);
+        return 2;
+    }
+    {
+        char *end = nullptr;
+        errno = 0;
+        unsigned long version = std::strtoul(manifest.agi_version, &end, 0);
+        if (errno || !end || *end || version == 0 || version > UINT16_MAX) {
+            std::fprintf(stderr, "invalid AGI version in replay manifest\n");
+            logic_replay_events_free(events);
+            return 2;
+        }
+        expectedAgiVersion = static_cast<uint16>(version);
+    }
+    if (!manifest.tick_numerator || !manifest.tick_denominator ||
+        static_cast<uint64>(manifest.tick_denominator) * 1000ULL <
+            manifest.tick_numerator) {
+        std::fprintf(stderr,
+                     "ScummVM clock resolution is one millisecond; schedule rate is unsupported\n");
+        logic_replay_events_free(events);
+        return 2;
+    }
+    if (manifest.rng_seed > 0xffffffffULL) {
+        std::fprintf(stderr, "ScummVM RandomSource accepts a 32-bit replay seed\n");
+        logic_replay_events_free(events);
+        return 2;
+    }
+    snapshots = static_cast<LogicOracleSnapshot *>(
+        std::calloc(static_cast<size_t>(tickCount64), sizeof *snapshots));
+    if (!snapshots) {
+        logic_replay_events_free(events);
+        return 1;
+    }
+
+    clockBackend = new OracleNullBackend(events, eventCount, manifest,
+                                         manifestHash, inputHash,
+                                         static_cast<uint32>(tickCount64), snapshots, completedCycle);
+    if (!clockBackend) {
+        std::fprintf(stderr, "ScummVM Null backend allocation failed\n");
+        goto done;
+    }
+    activeOracleBackend = clockBackend;
+    system = clockBackend;
+    g_system = system;
+    system->initBackend();
+    Base::registerDefaults();
+    ConfMan.setActiveDomain("logic-oracle");
+    ConfMan.setPath("path", Common::Path(gameDirectory), "logic-oracle");
+    ConfMan.setBool("mousesupport", false, "logic-oracle");
+    ConfMan.setBool("predictivedlgonmouseclick", false, "logic-oracle");
+
+    detection = dynamic_cast<MetaEngineDetection *>(g_AGI_DETECTION_getObject());
+    if (!detection) {
+        std::fprintf(stderr, "ScummVM AGI detection plugin is unavailable\n");
+        goto done;
+    }
+    if (!Common::FSNode(Common::Path(gameDirectory)).getChildren(
+            directoryEntries, Common::FSNode::kListAll)) {
+        std::fprintf(stderr, "could not read staged AGI game directory\n");
+        goto done;
+    }
+    detectedGames = detection->detectGames(directoryEntries);
+    for (uint i = 0; i < detectedGames.size(); ++i) {
+        if (detectedGames[i].gameId == manifest.engine) {
+            requestedGameDetected = true;
+            break;
+        }
+    }
+    if (!requestedGameDetected) {
+        std::fprintf(stderr,
+                     "ScummVM did not detect requested AGI game %s (%u candidates)\n",
+                     manifest.engine, static_cast<unsigned>(detectedGames.size()));
+        goto done;
+    }
+
+    detectedGameId = manifest.engine;
+    ConfMan.set("gameid", detectedGameId, "logic-oracle");
+    if (detection->identifyGame(identifiedGame, &metaDescription).getCode() !=
+            Common::kNoError || !metaDescription ||
+        identifiedGame.gameId != detectedGameId) {
+        std::fprintf(stderr,
+                     "ScummVM could not identify the detected AGI descriptor\n");
+        goto done;
+    }
+    {
+        Agi::AGIGameDescription *description = const_cast<Agi::AGIGameDescription *>(
+            static_cast<const Agi::AGIGameDescription *>(metaDescription));
+        const uint16 detectedAgiVersion = description->version;
+        if (description->version != expectedAgiVersion) {
+            /* The installed KQ3 data hashes to a 2.936 table entry, while its
+             * staged WAG metadata and this replay explicitly select 2.917.
+             * Keep the detected game/platform/features, and apply that
+             * requested v2 compatibility version before ScummVM's factory
+             * constructs the native engine.
+             */
+            if (expectedAgiVersion != 0x2917 ||
+                description->gameType != Agi::GType_V2) {
+                std::fprintf(stderr,
+                             "ScummVM detected AGI 0x%04X but manifest requires 0x%04X\n",
+                             description->version, expectedAgiVersion);
+                goto done;
+            }
+            description->version = expectedAgiVersion;
+            clockBackend->setVersionOverridden();
+        }
+        if (!clockBackend->setDetectedIdentity(detectedGameId.c_str(),
+                                               detectedAgiVersion)) {
+            std::fprintf(stderr,
+                         "detected AGI identity exceeds canonical snapshot limits\n");
+            goto done;
+        }
+    }
+    metaEngine = dynamic_cast<MetaEngine *>(g_AGI_getObject());
+    if (!metaEngine) {
+        std::fprintf(stderr, "ScummVM AGI engine plugin is unavailable\n");
+        goto done;
+    }
+    if (metaEngine->createInstance(system, &engine, identifiedGame,
+                                   metaDescription).getCode() != Common::kNoError ||
+        !engine) {
+        std::fprintf(stderr,
+                     "ScummVM AGI meta-engine could not create the detected game\n");
+        goto done;
+    }
+    agiEngine = dynamic_cast<Agi::AgiEngine *>(engine);
+    if (!agiEngine) {
+        std::fprintf(stderr,
+                     "ScummVM AGI meta-engine created a non-AGI interpreter\n");
+        goto done;
+    }
+    if (agiEngine->getVersion() != expectedAgiVersion) {
+        std::fprintf(stderr,
+                     "ScummVM detected AGI 0x%04X but manifest requires 0x%04X\n",
+                     agiEngine->getVersion(), expectedAgiVersion);
+        goto done;
+    }
+    engine->initializePath(Common::FSNode(Common::Path(gameDirectory)));
+    agiEngine->_rnd->setSeed(static_cast<uint32>(manifest.rng_seed));
+    clockBackend->attachEngine(agiEngine);
+    /* Engine::run is public here; the virtual dispatch enters AgiBase::run,
+     * then AgiEngine::go -> runGame -> agiInit/playGame via ScummVM's normal
+     * lifecycle and the meta-engine's factory-created instance.
+     */
+    if (engine->run().getCode() != Common::kNoError) {
+        std::fprintf(stderr, "ScummVM AGI engine run failed\n");
+        goto done;
+    }
+    if (clockBackend->failed() ||
+        clockBackend->completedCheckpoints() != tickCount64) {
+        std::fprintf(stderr,
+                     "ScummVM run ended before all wall-clock checkpoints were captured\n");
+        goto done;
+    }
+    if (logic_oracle_snapshot_write(snapshotPath, snapshots,
+                                    static_cast<size_t>(tickCount64)) != 0) {
+        std::fprintf(stderr, "could not write canonical ScummVM snapshots\n");
+        goto done;
+    }
+    if (reportMilestones)
+        printMilestones(*clockBackend, snapshots[tickCount64 - 1]);
+    result = 0;
+
+done:
+    activeOracleBackend = nullptr;
+    if (metaEngine && metaDescription) {
+        metaEngine->deleteInstance(engine, identifiedGame, metaDescription);
+        engine = nullptr;
+        metaDescription = nullptr;
+    } else {
+        delete engine;
+    }
+    if (metaDescription) {
+        delete static_cast<const ADDynamicGameDescription<Agi::AGIGameDescription> *>(
+            metaDescription);
+    }
+    delete metaEngine;
+    delete detection;
+    if (system)
+        system->destroy();
+    std::free(snapshots);
+    logic_replay_events_free(events);
+    return result;
+}
