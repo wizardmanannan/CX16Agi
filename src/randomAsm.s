@@ -3,9 +3,17 @@ RANDOM_INC = 1
 .segment "CODE"
 
 .import _b6RandomNumbers
+.ifdef LOGIC_APP_REPLAY_TARGET
+.import _logicAppReplayRandomNumber
+.endif
 
-;byte rand8Bit(byte max);
+; byte rand8Bit(byte exclusiveBound); zero selects all 256 byte values.
 _rand8Bit:
+.ifdef LOGIC_APP_REPLAY_TARGET
+; rand8Bit's bound is exclusive; ScummVM RandomSource's is inclusive.
+dec
+jmp _logicAppReplayRandomNumber
+.else
 sta MOD_DIVISOR
 
 lda RAM_BANK
@@ -27,21 +35,12 @@ plx
 stx RAM_BANK
 
 rts
+.endif
 @randomCounter: .byte $0
 
-; randBetweenAsmCall
-; In:  A = min, X = max (unsigned 8-bit, max >= min)
-; Out: A = value in min..max inclusive
-;      X clobbered, Y preserved, carry clear
-; sreg is scratch and is not preserved.
-;
-; _rand8Bit(n) returns 0..n-1, so you must add one to max
-; before subtracting min. Passing max - min alone never
-; returns max.
-;
-; Do not call with max < min (the subtract borrows and the span wraps).
-; Adding one to max wraps if max is 255. That makes the span 0
-; and _rand8Bit(0) is not a valid modulus, so 0..255 is a special case.
+; A=min, X=max (max >= min); returns A in min..max inclusive.
+; X, Y and sreg are scratch. A zero exclusive width selects all 256 values.
+; Replay uses the reference generator's inclusive bound directly.
 
 _randBetween:
 pha
@@ -54,15 +53,22 @@ randBetweenAsmCall:
         sta sreg        ; sreg = min
         pha             ; save min across the call
 
-        inx        ; add one to max: exclusive upper bound
-        sec
-        txa
-        sbc sreg        ; A = (max + 1) - min
-        jsr _rand8Bit   ; A = 0 .. max-min inclusive
+sec
+txa
+sbc sreg
+.ifdef LOGIC_APP_REPLAY_TARGET
+; AGI random(min,max) includes max, unlike the rand8Bit helper contract.
+jsr _logicAppReplayRandomNumber
+.else
+; Inclusive width; 256 wraps to the rand8Bit/mod8 full-byte sentinel zero.
+inc
+jsr _rand8Bit
+.endif
 
-        plx             ; X = saved min
-        stx sreg
-        clc
-        adc sreg        ; A = random + min
-        rts
+plx
+stx sreg
+
+clc
+adc sreg
+rts
 .endif
