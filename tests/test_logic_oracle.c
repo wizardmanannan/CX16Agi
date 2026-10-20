@@ -786,3 +786,415 @@ static const char *fixture_relative_path(const char *path,
         ? path + length + 1 : path;
 }
 
+static int run_reference_engine_profile(const char *fixture_directory,
+                                const char *game_directory,
+                                const char *input_schedule,
+                                const char *manifest_path,
+                                const char *ticks,
+                                const char *snapshot_path,
+                                const char *milestones_path,
+                                const char *profile)
+{
+    char *arguments[17];
+    char executable_path[1024];
+    size_t count = 0;
+    static const char executable_suffix[] =
+        "/obj/cx16/logic-oracle-scummvm";
+    if (!getcwd(executable_path, sizeof executable_path))
+        return -1;
+    size_t cwd_length = strlen(executable_path);
+    if (cwd_length + sizeof executable_suffix > sizeof executable_path)
+        return -1;
+    memcpy(executable_path + cwd_length, executable_suffix,
+           sizeof executable_suffix);
+    arguments[count++] = executable_path;
+    arguments[count++] = "--game-dir";
+    arguments[count++] = (char *)fixture_relative_path(
+        game_directory, fixture_directory);
+    arguments[count++] = "--input-trace";
+    arguments[count++] = (char *)fixture_relative_path(
+        input_schedule, fixture_directory);
+    arguments[count++] = "--manifest";
+    arguments[count++] = (char *)fixture_relative_path(
+        manifest_path, fixture_directory);
+    arguments[count++] = "--ticks";
+    arguments[count++] = (char *)ticks;
+    arguments[count++] = "--snapshot";
+    arguments[count++] = (char *)fixture_relative_path(
+        snapshot_path, fixture_directory);
+    if (profile) {
+        arguments[count++] = "--checkpoint-profile";
+        arguments[count++] = (char *)profile;
+    }
+    if (milestones_path) {
+        arguments[count++] = "--milestones";
+    }
+    arguments[count] = NULL;
+    pid_t child = fork();
+    int status;
+    if (child < 0) return -1;
+    if (child == 0) {
+        if (chdir(fixture_directory) != 0) {
+            perror("test_logic_oracle: chdir ScummVM fixture");
+            _exit(126);
+        }
+        if (milestones_path) {
+            int output = open(fixture_relative_path(
+                                  milestones_path, fixture_directory),
+                              O_WRONLY | O_CREAT | O_TRUNC, 0600);
+            if (output < 0 || dup2(output, STDOUT_FILENO) < 0)
+                _exit(126);
+            close(output);
+        }
+        execv(arguments[0], arguments);
+        perror("test_logic_oracle: exec logic-oracle-scummvm");
+        _exit(127);
+    }
+    while (waitpid(child, &status, 0) < 0) {
+        if (errno != EINTR) return -1;
+    }
+    return WIFEXITED(status) && WEXITSTATUS(status) == 0 ? 0 : -1;
+}
+
+static int run_reference_engine(const char *fixture_directory,
+    const char *game_directory, const char *input_schedule,
+    const char *manifest_path, const char *ticks,
+    const char *snapshot_path, const char *milestones_path)
+{
+    return run_reference_engine_profile(fixture_directory, game_directory,
+        input_schedule, manifest_path, ticks, snapshot_path, milestones_path, NULL);
+}
+
+static int check_completed_cycle_capture(const char *fixture_directory,
+    const char *game_directory, const char *input_schedule,
+    const char *manifest_path, const char *snapshot_path)
+{
+    LogicOracleSnapshot *snapshots = NULL;
+    size_t count = 0;
+    int result = -1;
+    if (run_reference_engine_profile(fixture_directory, game_directory,
+            input_schedule, manifest_path, "1", snapshot_path, NULL,
+            "completed-cycle") != 0 ||
+        logic_oracle_snapshot_load(snapshot_path, &snapshots, &count) != 0 ||
+        count != 1 || snapshots[0].timing_profile != LOGIC_ORACLE_TIMING_AGI_TICK ||
+        snapshots[0].tick != 1 || strcmp(snapshots[0].checkpoint, "agi-tick-1") ||
+        !snapshots[0].control_flow_reliable || snapshots[0].logic != 0 ||
+        snapshots[0].logical_pc != 12 ||
+        !strstr(snapshots[0].provenance, "cycle-hook") ||
+        snapshots[0].variables[19] != 0 || snapshots[0].flags[2] ||
+        snapshots[0].flags[4] || snapshots[0].rng_call_count != 1 ||
+        !snapshots[0].inventory_known) {
+        fprintf(stderr, "completed-cycle regression: actual post-cycle capture unavailable or invalid\n");
+        goto done;
+    }
+    result = 0;
+done:
+    free(snapshots);
+    return result;
+}
+
+/* A timed PRINT blocks the real interpreter beyond its first wall sample. */
+static int check_timed_print_cycle_boundary(const char *fixture_directory)
+{
+    char game[512], manifest[512], input[512], wall_path[512], cycle_path[512];
+    unsigned char logdir[256 * 3], volume[128];
+    static const unsigned char code[] = {
+        3, 21, 2, 101, 1, /* timed print1 */
+        3, 21, 2, 101, 1, /* same source message printed again */
+        103, 1, 1, 1, /* display source message, without a modal print */
+        3, 42, 99, 0
+    };
+    static const char text[] = "Timed cycle boundary";
+    static const char unused[] = "Loaded but never printed";
+    static const char key[] = "Avis Durgan";
+    LogicOracleSnapshot *wall = NULL, *cycle = NULL;
+    size_t wall_count = 0, cycle_count = 0, length, section, i;
+    char path[512];
+    int result = -1;
+    if (game_file(game, sizeof game, fixture_directory, "timed-game") ||
+        game_file(manifest, sizeof manifest, fixture_directory, "timed.manifest") ||
+        game_file(input, sizeof input, fixture_directory, "timed.ltrace") ||
+        game_file(wall_path, sizeof wall_path, fixture_directory, "timed-wall.lors") ||
+        game_file(cycle_path, sizeof cycle_path, fixture_directory, "timed-cycle.lors"))
+        return -1;
+    if (mkdir(game, 0700) || write_minimal_agi_game(game)) goto done;
+    memset(logdir, 0xff, sizeof logdir);
+    set_v2_directory_entry(logdir, 0, 0);
+    length = append_v2_logic(volume, 0, code, sizeof code);
+    section = length - 3;
+    /* V2 message size excludes count byte, offsets relative to section+1. */
+    volume[section] = 2;
+    volume[section + 1] = (unsigned char)(6 + sizeof text + sizeof unused);
+    volume[section + 2] = 0;
+    volume[section + 3] = 6; volume[section + 4] = 0;
+    volume[section + 5] = (unsigned char)(6 + sizeof text);
+    volume[section + 6] = 0;
+    for (i = 0; i < sizeof text; ++i)
+        volume[section + 7 + i] = (unsigned char)text[i] ^ key[i % (sizeof key - 1)];
+    for (i = 0; i < sizeof unused; ++i)
+        volume[section + 7 + sizeof text + i] =
+            (unsigned char)unused[i] ^ key[(sizeof text + i) % (sizeof key - 1)];
+    length = section + 7 + sizeof text + sizeof unused;
+    volume[3] = (unsigned char)(length - 5);
+    volume[4] = (unsigned char)((length - 5) >> 8);
+    if (game_file(path, sizeof path, game, "LOGDIR") || write_bytes(path, logdir, sizeof logdir) ||
+        game_file(path, sizeof path, game, "VOL.0") || write_bytes(path, volume, length) ||
+        write_replay_manifest(game, manifest) || logic_replay_trace_write(input, NULL, 0) ||
+        run_reference_engine_profile(fixture_directory, game, input, manifest,
+            "1", wall_path, NULL, "wall") ||
+        run_reference_engine_profile(fixture_directory, game, input, manifest,
+            "1", cycle_path, NULL, "completed-cycle") ||
+        logic_oracle_snapshot_load(wall_path, &wall, &wall_count) ||
+        logic_oracle_snapshot_load(cycle_path, &cycle, &cycle_count)) goto done;
+    if (wall_count != 1 || cycle_count != 1 ||
+        wall[0].timing_profile != LOGIC_ORACLE_TIMING_WALL_MILLISECONDS ||
+        cycle[0].timing_profile != LOGIC_ORACLE_TIMING_AGI_TICK ||
+        wall[0].variables[21] != 2 || cycle[0].variables[21] != 0 ||
+        wall[0].variables[42] != 0 || cycle[0].variables[42] != 99 ||
+        cycle[0].variables[19] || cycle[0].flags[2] || cycle[0].flags[4] ||
+        cycle[0].message_count != 3 || strcmp(cycle[0].messages[0].text, text) ||
+        strcmp(cycle[0].messages[1].text, text) ||
+        strcmp(cycle[0].messages[2].text, text)) {
+        fprintf(stderr, "timed-print regression: wall v42=%u/cycle v42=%u; emitted messages=%u expected3 (two loaded)\n",
+                wall[0].variables[42], cycle[0].variables[42], cycle[0].message_count);
+        goto done;
+    }
+    result = 0;
+done:
+    free(wall); free(cycle);
+    if (unlink(manifest) && errno != ENOENT) result = -1;
+    if (unlink(input) && errno != ENOENT) result = -1;
+    if (unlink(wall_path) && errno != ENOENT) result = -1;
+    if (unlink(cycle_path) && errno != ENOENT) result = -1;
+    remove_minimal_agi_game(game);
+    return result;
+}
+
+static int check_nonblocking_transition_clock(const char *fixture_directory)
+{
+    char game[512], manifest[512], input[512], capture[512], path[512];
+    unsigned char logdir[768], volume[256];
+    static const unsigned char code[] = {
+        255, 1, 0, 0, 255, 6, 0, /* if v0==0 */
+        12, 15, 101, 1, 18, 1, /* nonblocking print; new.room(1) */
+        3, 42, 99, 0
+    };
+    static const unsigned char child[] = {0};
+    static const char text[] = "Nonblocking transition";
+    static const char key[] = "Avis Durgan";
+    LogicOracleSnapshot *snapshots = NULL;
+    size_t count = 0, length, section, i;
+    int result = -1;
+    if (game_file(game, sizeof game, fixture_directory, "transition-game") ||
+        game_file(manifest, sizeof manifest, fixture_directory, "transition.manifest") ||
+        game_file(input, sizeof input, fixture_directory, "transition.ltrace") ||
+        game_file(capture, sizeof capture, fixture_directory, "transition.lors"))
+        return -1;
+    if (mkdir(game, 0700) || write_minimal_agi_game(game)) goto done;
+    memset(logdir, 255, sizeof logdir);
+    set_v2_directory_entry(logdir, 0, 0);
+    length = append_v2_logic(volume, 0, code, sizeof code);
+    section = length - 3;
+    volume[section] = 1;
+    volume[section + 1] = 4 + sizeof text;
+    volume[section + 2] = 0;
+    volume[section + 3] = 4;
+    volume[section + 4] = 0;
+    for (i = 0; i < sizeof text; ++i)
+        volume[section + 5 + i] = text[i] ^ key[i % (sizeof key - 1)];
+    length = section + 5 + sizeof text;
+    volume[3] = length - 5;
+    volume[4] = (length - 5) >> 8;
+    set_v2_directory_entry(logdir, 1, length);
+    length = append_v2_logic(volume, length, child, sizeof child);
+    if (game_file(path, sizeof path, game, "LOGDIR") || write_bytes(path, logdir, sizeof logdir) ||
+        game_file(path, sizeof path, game, "VOL.0") || write_bytes(path, volume, length) ||
+        write_replay_manifest(game, manifest) || logic_replay_trace_write(input, NULL, 0) ||
+        run_reference_engine_profile(fixture_directory, game, input, manifest,
+            "1", capture, NULL, "completed-cycle") ||
+        logic_oracle_snapshot_load(capture, &snapshots, &count)) goto done;
+    if (count != 1 || snapshots[0].room != 1 || snapshots[0].variables[42] != 99 ||
+        snapshots[0].message_count != 1 || strcmp(snapshots[0].messages[0].text, text) ||
+        !strstr(snapshots[0].provenance, "presentation-delays=off") ||
+        !strstr(snapshots[0].provenance, "elapsed-ms=30")) {
+        fprintf(stderr, "nonblocking transition clock regression: %s\n",
+                count ? snapshots[0].provenance : "missing checkpoint");
+        goto done;
+    }
+    result = 0;
+done:
+    free(snapshots);
+    if (unlink(manifest) && errno != ENOENT) result = -1;
+    if (unlink(input) && errno != ENOENT) result = -1;
+    if (unlink(capture) && errno != ENOENT) result = -1;
+    remove_minimal_agi_game(game);
+    return result;
+}
+
+static int check_real_game_run(const char *fixture_directory,
+                               const char *game_directory,
+                               const char *input_path,
+                               const char *manifest_path,
+                               const char *snapshot_path,
+                               const char *repeat_snapshot_path,
+                               const char *milestones_path,
+                               const char *game_id,
+                               unsigned detected_agi_version,
+                               int expected_version_override)
+{
+    LogicOracleSnapshot *snapshots = NULL;
+    uint8_t first_snapshot_hash[LOGIC_REPLAY_SHA256_SIZE];
+    uint8_t repeat_snapshot_hash[LOGIC_REPLAY_SHA256_SIZE];
+    size_t count = 0;
+    unsigned long loaded_logic_count, input_count, parser_word_count;
+    unsigned long game_seconds;
+    int okay = 0;
+    if (run_reference_engine(fixture_directory, game_directory, input_path,
+                             manifest_path,
+                             "140", snapshot_path, milestones_path) != 0 ||
+        logic_oracle_snapshot_load(snapshot_path, &snapshots, &count) != 0 ||
+        count != 140)
+        goto done;
+    if (!snapshots[0].inventory_known ||
+        !snapshots[count - 1].inventory_known ||
+        snapshots[0].inventory_count == 0 ||
+        snapshots[0].inventory_count != snapshots[count - 1].inventory_count) {
+        fprintf(stderr,
+                "test_logic_oracle: ScummVM object locations unavailable or unstable: first known=%u count=%u last known=%u count=%u\n",
+                snapshots[0].inventory_known,
+                (unsigned)snapshots[0].inventory_count,
+                snapshots[count - 1].inventory_known,
+                (unsigned)snapshots[count - 1].inventory_count);
+        goto done;
+    }
+    if (snapshots[0].timing_profile != LOGIC_ORACLE_TIMING_WALL_MILLISECONDS ||
+        snapshots[count - 1].timing_profile != LOGIC_ORACLE_TIMING_WALL_MILLISECONDS ||
+        snapshots[0].control_flow_reliable ||
+        snapshots[count - 1].control_flow_reliable ||
+        snapshots[0].tick_numerator != 20 ||
+        snapshots[0].tick_denominator != 1 ||
+        strcmp(snapshots[0].checkpoint, "wall-ms-51") != 0 ||
+        strcmp(snapshots[count - 1].checkpoint, "wall-ms-7001") != 0 ||
+        strcmp(snapshots[0].rng_algorithm,
+               "scummvm-randomsource-v1") != 0) {
+        fprintf(stderr,
+                "test_logic_oracle: ScummVM checkpoint identity mismatch: timing=%u first=%s last=%s rng=%s\n",
+                (unsigned)snapshots[0].timing_profile,
+                snapshots[0].checkpoint, snapshots[count - 1].checkpoint,
+                snapshots[0].rng_algorithm);
+        goto done;
+    }
+    if (strcmp(snapshots[count - 1].game_id, game_id) != 0 ||
+        snapshots[count - 1].agi_version != 0x2917 ||
+        snapshots[count - 1].tick != 140 ||
+        snapshots[count - 1].message_count == 0 ||
+        snapshots[count - 1].variables[11] == 0 ||
+        strstr(snapshots[count - 1].provenance, "ScummVM") == NULL ||
+        strstr(snapshots[count - 1].provenance, "det=0x") == NULL ||
+        (expected_version_override &&
+         strstr(snapshots[count - 1].provenance,
+                "manifest-compat") == NULL) ||
+        !file_has_line(milestones_path, "agi_version=0x2917") ||
+        !file_has_line(milestones_path,
+                       expected_version_override
+                           ? "version_override=1" : "version_override=0") ||
+        !file_has_line(milestones_path, "logic0_loaded=1") ||
+        read_milestone_uint(milestones_path, "loaded_logic_count",
+                            &loaded_logic_count) != 0 ||
+        loaded_logic_count == 0 ||
+        read_milestone_uint(milestones_path, "input_keydown_count",
+                            &input_count) != 0 ||
+        input_count < 10 ||
+        read_milestone_uint(milestones_path, "max_parser_word_count",
+                            &parser_word_count) != 0 ||
+        parser_word_count == 0 ||
+        !file_has_line(milestones_path, "parsed_look=1") ||
+        read_milestone_uint(milestones_path, "max_game_seconds",
+                            &game_seconds) != 0 ||
+        game_seconds == 0 ||
+        snapshots[count - 1].variables[11] != game_seconds)
+        goto done;
+    {
+        char expected_game_id[64];
+        char expected_detected_version[64];
+        char expected_detected_provenance[32];
+        int length = snprintf(expected_game_id, sizeof expected_game_id,
+                              "game_id=%s", game_id);
+        if (length < 0 || (size_t)length >= sizeof expected_game_id ||
+            !file_has_line(milestones_path, expected_game_id))
+            goto done;
+        length = snprintf(expected_detected_version,
+                          sizeof expected_detected_version,
+                          "detected_agi_version=0x%04x",
+                          detected_agi_version);
+        if (length < 0 ||
+            (size_t)length >= sizeof expected_detected_version ||
+            !file_has_line(milestones_path, expected_detected_version))
+            goto done;
+        length = snprintf(expected_detected_provenance,
+                          sizeof expected_detected_provenance,
+                          "det=0x%04x", detected_agi_version);
+        if (length < 0 ||
+            (size_t)length >= sizeof expected_detected_provenance ||
+            strstr(snapshots[count - 1].provenance,
+                   expected_detected_provenance) == NULL)
+            goto done;
+    }
+    if (logic_replay_sha256_file(snapshot_path, first_snapshot_hash) != 0 ||
+        run_reference_engine(fixture_directory, game_directory, input_path,
+                             manifest_path,
+                             "140", repeat_snapshot_path, NULL) != 0 ||
+        logic_replay_sha256_file(repeat_snapshot_path,
+                                 repeat_snapshot_hash) != 0 ||
+        memcmp(first_snapshot_hash, repeat_snapshot_hash,
+               sizeof first_snapshot_hash) != 0) {
+        fprintf(stderr,
+                "test_logic_oracle: ScummVM %s replay was not deterministic\n",
+                game_id);
+        goto done;
+    }
+    okay = 1;
+
+done:
+    if (!okay)
+        fprintf(stderr,
+                "test_logic_oracle: ScummVM %s game/resource/cycle/parser milestones failed\n",
+                game_id);
+    free(snapshots);
+    return okay ? 0 : -1;
+}
+
+static int run_candidate_engine(const char *game_directory,
+                                const char *input_trace,
+                                const char *manifest_path,
+                                const char *snapshot_path,
+                                int inject_test_fault)
+{
+    char *arguments[15] = {
+        "obj/cx16/logic-replay", "snapshot",
+        "--game-dir", (char *)game_directory,
+        "--manifest", (char *)manifest_path,
+        "--input-trace", (char *)input_trace,
+        "--ticks", "1",
+        "--snapshot", (char *)snapshot_path,
+        NULL
+    };
+    if (inject_test_fault) {
+        arguments[12] = "--test-fault";
+        arguments[13] = "omit-metadata-save";
+        arguments[14] = NULL;
+    }
+    pid_t child = fork();
+    int status;
+    if (child < 0) return -1;
+    if (child == 0) {
+        execv(arguments[0], arguments);
+        perror("test_logic_oracle: exec logic-replay snapshot");
+        _exit(127);
+    }
+    while (waitpid(child, &status, 0) < 0) {
+        if (errno != EINTR) return -1;
+    }
+    return WIFEXITED(status) && WEXITSTATUS(status) == 0 ? 0 : -1;
+}
+
