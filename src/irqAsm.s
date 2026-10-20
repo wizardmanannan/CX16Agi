@@ -386,7 +386,7 @@ _foregroundVeraDepth: .byte $0
 .export _b6EnterForegroundVera, _b6LeaveForegroundVera, _foregroundVeraDepth
 
 ; Long foreground VERA work owns the VERA ports and IRQ scratch. Keep VSYNC
-; accounting live while deferring normal sound, input, and display work.
+; accounting and sound live while deferring normal input and display work.
 _b6EnterForegroundVera:
 php
 sei
@@ -452,6 +452,7 @@ jmp @defaultIqr
 @callSoundHandler:
 lda _foregroundVeraDepth
 beq @normalVsyncWork
+jsr b6ForegroundSound
 jmp @vSyncCounter
 
 @normalVsyncWork:
@@ -767,5 +768,62 @@ jmp (default_irq_vector)
 ; Global aliases end ca65's cheap-local scope, so define this after the handler.
 shakeCount = @shakeCountLoad + 1
 .assert shakeCount < $9F00, lderror, "Shake operand must stay in resident RAM"
+
+; Sound borrows both ports without changing an interrupted renderer or FX multiply.
+b6ForegroundSound:
+lda #SOUND_BANK
+sta RAM_BANK
+lda _bBChannelsPlaying
+beq @return
+lda SOUND_SREG
+pha
+lda SOUND_SREG + 1
+pha
+stz VERA_ctrl
+lda VERA_addr_low
+pha
+lda VERA_addr_high
+pha
+lda VERA_addr_bank
+pha
+lda #1
+sta VERA_ctrl
+lda VERA_addr_low
+pha
+lda VERA_addr_high
+pha
+lda VERA_addr_bank
+pha
+lda #(2 << 1)
+sta VERA_ctrl
+lda VERA_fx_ctrl
+pha
+stz VERA_fx_ctrl
+jsr bBSoundHandler
+lda #(2 << 1)
+sta VERA_ctrl
+pla
+sta VERA_fx_ctrl
+lda #1
+sta VERA_ctrl
+pla
+sta VERA_addr_bank
+pla
+sta VERA_addr_high
+pla
+sta VERA_addr_low
+stz VERA_ctrl
+pla
+sta VERA_addr_bank
+pla
+sta VERA_addr_high
+pla
+sta VERA_addr_low
+pla
+sta SOUND_SREG + 1
+pla
+sta SOUND_SREG
+@return:
+rts
 
 .endif ; IRQ_INC

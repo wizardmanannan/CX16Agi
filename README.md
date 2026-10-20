@@ -140,6 +140,7 @@ make -C tools production-test
 make -C tools build-test
 make -C tools staging-test
 make -C tools metadata-test
+make -C tools irq-test
 # Required before developer handoff (both original games, no skipped games):
 make -C tools review-check ROM=/path/to/rom.bin \
   GAME_KQ1=/path/to/Kings-Quest-1 GAME_KQ3=/path/to/Kings-Quest-3
@@ -269,7 +270,7 @@ The same scenario dispatches real `load.view(0); set.view(0,0); draw(0);` comman
 
 `tools/test_irq_helpers.c` assembles the IRQ macros, input/sprite helpers, sound handler, and 32-bit VSYNC snapshot into a small fixture, then runs them on the emulator CPU core. It checks every input length (0–40), clean-row no-write and invalidation paths, all initial X values, sound start/stop/end state and partial-channel stride, snapshot byte order/caller-I preservation, pending-VSYNC preservation across interrupt reenable and wait cases, and sprite clearing through the 127-entry table boundary.
 
-`tools/test_timer.c` runs the production timer code in a host fixture through `make -C tools test`. It covers retained VSYNC fractions, 16-bit and 32-bit rollover, long blocking intervals, and calendar boundaries. The game clock has one source: the serviced VSYNC counter. Foreground code that owns VERA leaves IRQs enabled; a short IRQ path acknowledges and counts VSYNC without touching VERA address/data ports or foreground scratch, then normal sound, input, and display work resumes after the owner exits. VERA exposes VSYNC as a pending status bit, so multiple frames coalesce if code outside these managed sections masks IRQs across them; this counter cannot reconstruct such an unbounded interval without a separate elapsed-time source.
+`tools/test_timer.c` runs the production timer code in a host fixture through `make -C tools test`. It covers retained VSYNC fractions, 16-bit and 32-bit rollover, long blocking intervals, and calendar boundaries. The game clock has one source: the serviced VSYNC counter. Foreground code that owns VERA leaves IRQs enabled. Its IRQ counts VSYNC and services active sound while saving/restoring both VERA ports, FX control and non-playback scratch; input and display work remain deferred. `irq-test` (also part of `test`) verifies tick/refill/simultaneous endings, both selectors, nested owners, FX cache preservation and CPU/bank state. Its measured maximum is 1,438 CPU cycles against a 2,000-cycle ceiling, with nine temporary hardware-stack bytes for saved renderer state. The full-emulator renderer probes additionally compare FX cache/multiplier state. VERA exposes VSYNC as a pending status bit, so multiple frames coalesce if other code masks IRQs across them; the counter cannot reconstruct that interval without a separate elapsed-time source.
 
 `tools/test_random.c` checks inclusive random ranges across all 256 source bytes, both assembly and C calling conventions, bank and stack restoration, and the exclusive upper bound of `rand8Bit`. `tools/test_text_irq.c` checks 512-byte source boundaries, NUL/newline edges, 16-bit source wrap, 17-bit VERA wrap, and text/palette slices through the maximum row count.
 
