@@ -901,3 +901,332 @@ static int parse_agi_version(const char *text, uint16_t *version)
     return 0;
 }
 
+static uint64_t monotonic_milliseconds(void)
+{
+    struct timespec now;
+    if (clock_gettime(CLOCK_MONOTONIC, &now) != 0)
+        return 0;
+    return (uint64_t)now.tv_sec * 1000u +
+           (uint64_t)now.tv_nsec / 1000000u;
+}
+
+static int run_app_checkpoint(const char *name, const char *game_directory,
+                              uint16_t seed,
+                              const LogicAppReplayInput *events,
+                              size_t event_count, uint32_t ticks,
+                              uint32_t timeout_ms, uint8_t fault_flags,
+                              uint8_t snapshot[LOGIC_APP_REPLAY_OUTPUT_SIZE],
+                              char *detail, size_t detail_capacity)
+{
+    uint64_t started = monotonic_milliseconds();
+    uint64_t finished;
+    int result = logic_app_replay_x16_run(
+        game_directory, seed, events, event_count, ticks, timeout_ms,
+        fault_flags, snapshot, detail, detail_capacity);
+    finished = monotonic_milliseconds();
+    if (result == 0) {
+        printf("full-app checkpoint-run: %s wall-ms=%llu tick=%u elapsed-vsync=%u cycles=%u context-bytes=%u sampled-hw-call-stack-depth=%u sampled-sw-call-stack-growth=%u rng-calls=%u\n",
+               name, (unsigned long long)(finished - started),
+               (unsigned)get_u32(snapshot + 6),
+               (unsigned)get_u32(snapshot +
+                   LOGIC_APP_REPLAY_ELAPSED_VSYNC_OFFSET),
+               (unsigned)snapshot[38], (unsigned)get_u16(snapshot + 53),
+               (unsigned)snapshot[55], (unsigned)get_u16(snapshot + 56),
+               (unsigned)get_u32(snapshot + 60));
+    } else {
+        printf("full-app checkpoint-run: %s wall-ms=%llu failed: %s\n",
+               name, (unsigned long long)(finished - started),
+               detail && *detail ? detail : "no runner detail");
+    }
+    return result;
+}
+
+static int create_app_replay_identity(
+    const CorpusGame *game, const char *game_directory,
+    const char *application_build, uint16_t seed,
+    const LogicAppReplayInput *input, size_t input_count,
+    LogicReplayManifest *manifest, LogicReplayEvent trace[],
+    uint8_t manifest_hash[LOGIC_REPLAY_SHA256_SIZE],
+    uint8_t input_hash[LOGIC_REPLAY_SHA256_SIZE])
+{
+    char manifest_path[PATH_CAPACITY], trace_path[PATH_CAPACITY];
+    size_t i;
+    int length;
+    if (!game || !game_directory || !application_build || !manifest ||
+        !trace || !manifest_hash || !input_hash ||
+        input_count > LOGIC_APP_REPLAY_INPUT_MAX ||
+        (input_count && !input))
+        return -1;
+    memset(manifest, 0, sizeof *manifest);
+    uint16_t agi_version;
+    char version_text[8];
+    if (parse_agi_version(game->agi_version, &agi_version) != 0 ||
+        copy_text(manifest->engine, sizeof manifest->engine,
+                  !strcmp(game->id, "KQ1") ? "kq1" :
+                  !strcmp(game->id, "KQ3") ? "kq3" : "") != 0 ||
+        copy_text(manifest->rng_algorithm,
+                  sizeof manifest->rng_algorithm,
+                  LOGIC_APP_REPLAY_RNG_ALGORITHM) != 0)
+        return -1;
+    snprintf(version_text, sizeof version_text, "0x%04x", agi_version);
+    if (copy_text(manifest->agi_version, sizeof manifest->agi_version,
+                  version_text) != 0)
+        return -1;
+    if (!manifest->engine[0])
+        return -1;
+    {
+        int build_length = snprintf(manifest->build,
+                                    sizeof manifest->build,
+                                    "cx16-full-app-%.16s", application_build);
+        if (build_length < 0 || (size_t)build_length >= sizeof manifest->build)
+            return -1;
+    }
+    manifest->version = LOGIC_REPLAY_MANIFEST_VERSION;
+    manifest->resource_count = (uint16_t)game->resource_count;
+    manifest->rng_seed = seed;
+    manifest->tick_numerator = 10;
+    manifest->tick_denominator = 1;
+    for (i = 0; i < game->resource_count; ++i) {
+        if (copy_text(manifest->resources[i].name,
+                      sizeof manifest->resources[i].name,
+                      game->resources[i].name) != 0)
+            return -1;
+        memcpy(manifest->resources[i].sha256, game->resources[i].sha256,
+               sizeof manifest->resources[i].sha256);
+    }
+    if (game->resource_count + APP_OVERLAY_COUNT > LOGIC_REPLAY_MAX_RESOURCES)
+        return -1;
+    for (i = 0; i < APP_OVERLAY_COUNT; ++i) {
+        char path[PATH_CAPACITY];
+        LogicReplayResource *image = &manifest->resources[manifest->resource_count];
+        if (copy_text(image->name, sizeof image->name, overlay_targets[i]) ||
+            snprintf(path, sizeof path, "%s/%s", game_directory,
+                     overlay_targets[i]) >= (int)sizeof path ||
+            logic_replay_sha256_file(path, image->sha256))
+            return -1;
+        ++manifest->resource_count;
+    }
+    for (i = 0; i < input_count; ++i) {
+        if (!input[i].frame || input[i].frame % 6u ||
+            input[i].frame / 6u > UINT32_MAX)
+            return -1;
+        memset(&trace[i], 0, sizeof trace[i]);
+        trace[i].sequence = (uint32_t)i;
+        trace[i].tick = input[i].frame / 6u;
+        trace[i].kind = LOGIC_TRACE_KIND_MARK;
+        trace[i].field = input[i].petscii;
+        trace[i].before = 0;
+        trace[i].after = 1;
+        trace[i].reason = LOGIC_REPLAY_REASON_SEMANTIC_KEYPRESS;
+    }
+    if (logic_replay_trace_validate(trace, input_count) != 0 ||
+        logic_replay_manifest_validate(manifest) != 0)
+        return -1;
+    length = snprintf(manifest_path, sizeof manifest_path,
+                       "%s/app.manifest", game_directory);
+    if (length < 0 || (size_t)length >= sizeof manifest_path)
+        return -1;
+    length = snprintf(trace_path, sizeof trace_path,
+                       "%s/app.ltrace", game_directory);
+    if (length < 0 || (size_t)length >= sizeof trace_path)
+        return -1;
+    if (logic_replay_manifest_write(manifest_path, manifest) != 0 ||
+        logic_replay_manifest_verify_resources(manifest, game_directory) != 0 ||
+        logic_replay_trace_write(trace_path, trace, input_count) != 0 ||
+        logic_replay_sha256_file(manifest_path, manifest_hash) != 0 ||
+        logic_replay_sha256_file(trace_path, input_hash) != 0)
+        return -1;
+    return 0;
+}
+
+static void print_full_app_checkpoint(const CorpusGame *game,
+                                      const uint8_t *snapshot)
+{
+    unsigned i;
+    uint8_t loaded_count = 0;
+    fprintf(stderr,
+            "full-app checkpoint detail: %s room=%u logic=%u pc=%04x opcode=%u depth=%u error=%u tick=%u elapsed-vsync=%u input=%u/%u parsed=%u words=%u status=%02x trace=%u dropped=%u rng-calls=%u context-frames=%u\n",
+            game->id, (unsigned)snapshot[15], (unsigned)snapshot[16],
+            (unsigned)get_u16(snapshot + 17), (unsigned)snapshot[19],
+            (unsigned)snapshot[20], (unsigned)snapshot[21],
+            (unsigned)get_u32(snapshot + 6),
+            (unsigned)get_u32(snapshot + LOGIC_APP_REPLAY_ELAPSED_VSYNC_OFFSET),
+            (unsigned)get_u16(snapshot + 12),
+            (unsigned)get_u16(snapshot + 10),
+            (unsigned)get_u16(snapshot + LOGIC_APP_REPLAY_PARSER_OFFSET),
+            (unsigned)get_u16(snapshot + LOGIC_APP_REPLAY_WORD_COUNT_OFFSET),
+            (unsigned)snapshot[58], (unsigned)snapshot[41],
+            (unsigned)get_u32(snapshot + 42), (unsigned)get_u32(snapshot + 60),
+            (unsigned)snapshot[LOGIC_APP_REPLAY_CONTEXT_FRAME_COUNT_OFFSET]);
+    for (i = 0; i < 256; ++i) {
+        if (snapshot[LOGIC_APP_REPLAY_LOADED_LOGICS_OFFSET + i / 8] &
+            (uint8_t)(1u << (i & 7))) {
+            fprintf(stderr, "  loaded logic %u\n", i);
+            ++loaded_count;
+        }
+    }
+    for (i = 0; i < snapshot[41]; ++i) {
+        uint16_t offset = (uint16_t)(LOGIC_APP_REPLAY_TRACE_OFFSET +
+            i * LOGIC_APP_REPLAY_TRACE_RECORD_SIZE);
+        fprintf(stderr,
+                "  trace seq=%u tick=%u kind=%u logic=%u pc=%04x opcode=%u depth=%u bank=%u field=%u before=%08x after=%08x reason=%u\n",
+                (unsigned)get_u32(snapshot + offset),
+                (unsigned)get_u32(snapshot + offset + 4),
+                (unsigned)snapshot[offset + 8],
+                (unsigned)snapshot[offset + 9],
+                (unsigned)get_u16(snapshot + offset + 10),
+                (unsigned)snapshot[offset + 12],
+                (unsigned)snapshot[offset + 13],
+                (unsigned)snapshot[offset + 14],
+                (unsigned)snapshot[offset + 15],
+                (unsigned)get_u32(snapshot + offset + 16),
+                (unsigned)get_u32(snapshot + offset + 20),
+                (unsigned)snapshot[offset + 24]);
+    }
+    for (i = 0; i < snapshot[46] && i < LOGIC_APP_REPLAY_MESSAGE_MAX; ++i) {
+        size_t offset = LOGIC_APP_REPLAY_MESSAGES_OFFSET +
+            i * LOGIC_APP_REPLAY_MESSAGE_RECORD_SIZE;
+        size_t text_length = snapshot[offset + 2];
+        fprintf(stderr, "  message logic=%u id=%u text=\"",
+                (unsigned)snapshot[offset], (unsigned)snapshot[offset + 1]);
+        fwrite(snapshot + offset + 3, 1, text_length, stderr);
+        fputs("\"\n", stderr);
+    }
+    {
+        const size_t parser = LOGIC_APP_REPLAY_PARSER_OFFSET;
+        uint16_t words = get_u16(snapshot + parser);
+        fprintf(stderr, "  parser words=%u", (unsigned)words);
+        for (i = 0; i < words && i < 10; ++i)
+            fprintf(stderr, " %u", (unsigned)get_u16(snapshot + parser + 2 + i * 2));
+        fputc('\n', stderr);
+    }
+    fprintf(stderr, "  loaded logic count=%u\n", (unsigned)loaded_count);
+}
+
+static int trace_window_is_honest(const uint8_t *snapshot)
+{
+    uint8_t count = snapshot[41];
+    uint32_t dropped = get_u32(snapshot + 42);
+    uint8_t status = snapshot[58];
+    uint16_t capacity =
+        get_u16(snapshot + LOGIC_APP_REPLAY_CAPACITY_FLAGS_OFFSET);
+    unsigned i;
+    if (count > LOGIC_APP_REPLAY_TRACE_MAX ||
+        (count == LOGIC_APP_REPLAY_TRACE_MAX
+             ? dropped != get_u32(snapshot + LOGIC_APP_REPLAY_TRACE_OFFSET)
+             : dropped != 0) ||
+        (!!(status & LOGIC_APP_REPLAY_STATUS_TRACE_DROPPED) != !!dropped) ||
+        (!!(capacity & LOGIC_APP_REPLAY_CAPACITY_TRACE_DROPPED) != !!dropped) ||
+        (!!(status & LOGIC_APP_REPLAY_STATUS_CAPTURE_CAPACITY) != !!capacity) ||
+        (status & (uint8_t)~(
+            LOGIC_APP_REPLAY_STATUS_TRACE_DROPPED |
+            LOGIC_APP_REPLAY_STATUS_CAPTURE_CAPACITY)) ||
+        (capacity & (uint16_t)~LOGIC_APP_REPLAY_CAPACITY_TRACE_DROPPED))
+        return 0;
+    if (count && !dropped &&
+        get_u32(snapshot + LOGIC_APP_REPLAY_TRACE_OFFSET) != 0)
+        return 0;
+    for (i = 1; i < count; ++i) {
+        size_t previous = LOGIC_APP_REPLAY_TRACE_OFFSET +
+            (i - 1) * LOGIC_APP_REPLAY_TRACE_RECORD_SIZE;
+        size_t current = LOGIC_APP_REPLAY_TRACE_OFFSET +
+            i * LOGIC_APP_REPLAY_TRACE_RECORD_SIZE;
+        if (get_u32(snapshot + current) != get_u32(snapshot + previous) + 1u)
+            return 0;
+    }
+    return 1;
+}
+
+static int verify_full_app_logic_trace(const CorpusGame *game,
+                                       const uint8_t *snapshot,
+                                       int require_non_whitelisted_write,
+                                       int report_missing)
+{
+    uint8_t count = snapshot[41];
+    uint32_t dropped = get_u32(snapshot + 42);
+    int has_call = 0, has_return = 0, has_other_write = 0;
+    unsigned i;
+    if (!trace_window_is_honest(snapshot)) {
+        fprintf(stderr,
+                "full-app trace regression: %s has inconsistent recent-ring count=%u dropped=%u first-sequence=%u status=%02x capacity=%04x\n",
+                game->id, (unsigned)count, (unsigned)dropped,
+                count ? (unsigned)get_u32(snapshot + LOGIC_APP_REPLAY_TRACE_OFFSET) : 0,
+                (unsigned)snapshot[58],
+                (unsigned)get_u16(snapshot + LOGIC_APP_REPLAY_CAPACITY_FLAGS_OFFSET));
+        return -1;
+    }
+    for (i = 0; i < count; ++i) {
+        size_t offset = LOGIC_APP_REPLAY_TRACE_OFFSET +
+            i * LOGIC_APP_REPLAY_TRACE_RECORD_SIZE;
+        uint8_t kind = snapshot[offset + 8];
+        uint8_t field = snapshot[offset + 15];
+        uint32_t tick = get_u32(snapshot + offset + 4);
+        if (!tick || tick > get_u32(snapshot + 6) ||
+            get_u16(snapshot + offset + 10) >= 0x8000u) {
+            fprintf(stderr,
+                    "full-app trace provenance regression: %s tick=%u checkpoint=%u offset=%04x\n",
+                    game->id, (unsigned)tick,
+                    (unsigned)get_u32(snapshot + 6),
+                    (unsigned)get_u16(snapshot + offset + 10));
+            return -1;
+        }
+        if (kind == LOGIC_TRACE_KIND_CALL)
+            has_call = 1;
+        else if (kind == LOGIC_TRACE_KIND_RETURN)
+            has_return = 1;
+        else if (kind == LOGIC_TRACE_KIND_WRITE && field != 0 && field != 11 &&
+                 field != 39 && field != 101 && field != 229)
+            has_other_write = 1;
+    }
+    if (!has_call || !has_return ||
+        (require_non_whitelisted_write && !has_other_write)) {
+        if (report_missing)
+            fprintf(stderr,
+                    "full-app trace regression: %s recent trace lacks production logic path events (CALL=%u RETURN=%u non-whitelisted-WRITE=%u count=%u dropped=%u)\n",
+                    game->id, has_call, has_return, has_other_write,
+                    (unsigned)count, (unsigned)dropped);
+        return -1;
+    }
+    return 0;
+}
+
+static uint64_t fnv1a64(const uint8_t *bytes, size_t size)
+{
+    uint64_t hash = UINT64_C(14695981039346656037);
+    size_t i;
+    for (i = 0; i < size; ++i) {
+        hash ^= bytes[i];
+        hash *= UINT64_C(1099511628211);
+    }
+    return hash;
+}
+
+static int snapshot_has_message(const uint8_t *snapshot,
+                                const char *expected_text)
+{
+    uint8_t message_count = snapshot[46];
+    unsigned message_index;
+    if (message_count > LOGIC_APP_REPLAY_MESSAGE_MAX)
+        return 0;
+    for (message_index = 0; message_index < message_count; ++message_index) {
+        size_t offset = LOGIC_APP_REPLAY_MESSAGES_OFFSET +
+            message_index * LOGIC_APP_REPLAY_MESSAGE_RECORD_SIZE;
+        size_t text_length = snapshot[offset + 2];
+        size_t expected_length = strlen(expected_text);
+        size_t start;
+        if (expected_length > text_length)
+            continue;
+        for (start = 0; start + expected_length <= text_length; ++start)
+            if (memcmp(snapshot + offset + 3 + start, expected_text,
+                       expected_length) == 0)
+                return 1;
+    }
+    return 0;
+}
+
+static int loaded_logic(const uint8_t *snapshot, uint8_t logic)
+{
+    return (snapshot[LOGIC_APP_REPLAY_LOADED_LOGICS_OFFSET + logic / 8] &
+            (uint8_t)(1u << (logic & 7))) != 0;
+}
+
