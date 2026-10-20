@@ -481,6 +481,24 @@ TRAMPOLINE _debugBank, _bDbgResetScanStart
 ; Macro to get a variable or flag value and store it in the result
 .macro SET_VAR_OR_FLAG areaStartOffset, toStore, var
 
+.ifdef LOGIC_CONTEXT_TRACE
+.if areaStartOffset = VARS_AREA_START_GOLDEN_OFFSET
+        .ifblank var
+        LOAD_CODE_WIN_CODE
+        .else
+        lda var
+        .endif
+        sta _logicContextWriteField
+.elseif areaStartOffset = FLAGS_AREA_START_GOLDEN_OFFSET
+        .ifblank var
+        LOAD_CODE_WIN_CODE
+        .else
+        lda var
+        .endif
+        sta _logicContextWriteField
+.endif
+.endif
+
         clc
         lda #<GOLDEN_RAM
         adc #<areaStartOffset
@@ -500,9 +518,30 @@ TRAMPOLINE _debugBank, _bDbgResetScanStart
         sta ZP_TMP 
         lda ZP_TMP + 1
         adc #$0
+        sta ZP_TMP + 1
 
         lda toStore
+.ifdef LOGIC_CONTEXT_TRACE
+.if areaStartOffset = VARS_AREA_START_GOLDEN_OFFSET
+        sta _logicContextWriteAfter
+        lda (ZP_TMP)
+        sta _logicContextWriteBefore
+        lda _logicContextWriteAfter
+.elseif areaStartOffset = FLAGS_AREA_START_GOLDEN_OFFSET
+        sta _logicContextWriteAfter
+        lda (ZP_TMP)
+        sta _logicContextWriteBefore
+        lda _logicContextWriteAfter
+.endif
+.endif
         sta (ZP_TMP)
+.ifdef LOGIC_CONTEXT_TRACE
+.if areaStartOffset = VARS_AREA_START_GOLDEN_OFFSET
+        jsr _logicContextRecordPendingWrite
+.elseif areaStartOffset = FLAGS_AREA_START_GOLDEN_OFFSET
+        jsr _logicContextRecordPendingWrite
+.endif
+.endif
 .endmacro
 
 ; Macro to get a variable or flag value with a variable offset and store it in the result
@@ -886,12 +925,20 @@ b1NoOp_4:
 b1Increment:
     bra @start
     @value: .byte $0
+    .ifdef LOGIC_CONTEXT_TRACE
+    @oldValue: .byte $0
+    .endif
     @var: .byte $0
     @start:
          DEBUG_INC
          LOAD_CODE_WIN_CODE
          sta @var
          GET_VAR_OR_FLAG VARS_AREA_START_GOLDEN_OFFSET, @value
+
+         .ifdef LOGIC_CONTEXT_TRACE
+         lda @value
+         sta @oldValue
+         .endif
 
          INC_CODE
          lda @value 
@@ -1696,7 +1743,15 @@ b4Random_num:
         sta OPCODE_FUNC_TMP + 1
         INC_CODE
 
+.ifdef LOGIC_CONTEXT_TRACE
+        GET_VAR_OR_FLAG VARS_AREA_START_GOLDEN_OFFSET, _logicContextWriteBefore, OPCODE_FUNC_TMP + 1
+        lda OPCODE_FUNC_TMP + 1
+        sta _logicContextWriteField
+        lda OPCODE_FUNC_TMP
+        sta _logicContextWriteAfter
+.endif
         SET_VAR_OR_FLAG VARS_AREA_START_GOLDEN_OFFSET, OPCODE_FUNC_TMP, OPCODE_FUNC_TMP + 1
+
         
         jmp mainLoop
 b4Program_controlCCall:
