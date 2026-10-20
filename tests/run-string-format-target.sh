@@ -26,13 +26,14 @@ done
 "$ca65" -t cx16 -o "$fixture/stringFormat.o" "$fixture/stringFormat.s"
 "$ca65" -t cx16 -o "$fixture/stringFormatAsm.o" "$repo_root/src/stringFormatAsm.s"
 "$ca65" -t cx16 -o "$fixture/textControlsAsm.o" "$repo_root/src/textControlsAsm.s"
+"$ca65" -t cx16 -o "$fixture/parserInputAsm.o" "$repo_root/src/parserInputAsm.s"
 "$cc65" -t cx16 -O -I "$repo_root/src" -o "$fixture/test-string-format-target.s" "$repo_root/tests/test-string-format-target.c"
 "$ca65" -t cx16 -o "$fixture/test-string-format-target.o" "$fixture/test-string-format-target.s"
 "$ca65" -t cx16 -o "$fixture/string-format-target-start.o" "$repo_root/tests/string-format-target-start.s"
 "$cl65" -t cx16 -C "$repo_root/tests/string-format-target.cfg" \
 	-m "$fixture/string-format-target.map" -Ln "$fixture/string-format-target.lbl" \
 	-o "$fixture/string-format-target.prg" \
-	"$fixture/stringFormat.o" "$fixture/stringFormatAsm.o" "$fixture/textControlsAsm.o" "$fixture/test-string-format-target.o" \
+	"$fixture/stringFormat.o" "$fixture/stringFormatAsm.o" "$fixture/textControlsAsm.o" "$fixture/parserInputAsm.o" "$fixture/test-string-format-target.o" \
 	"$fixture/string-format-target-start.o"
 
 label_address() {

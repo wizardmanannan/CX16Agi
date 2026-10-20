@@ -1,7 +1,7 @@
 HOSTCC ?= cc
 CX16AGI_BUILD_DIR ?= $(HOME)/.cache/cx16agi/build
 STRING_FORMAT_OUT := $(CX16AGI_BUILD_DIR)/obj/host/string-format
-STRING_FORMAT_CYCLE_BUDGET ?= 86585
+STRING_FORMAT_CYCLE_BUDGET ?= 30000
 STRING_FORMAT_FLAGS := -std=c99 -D_MSC_VER -Itests/stubs -Isrc -include tests/stubs/native.h -ffunction-sections -fdata-sections -Wno-unknown-pragmas
 CC65_HOME ?= $(HOME)/.cache/cx16agi/tools/cc65
 X16EMU ?= $(HOME)/.cache/cx16agi/tools/x16-emulator/build-tas/x16emu
@@ -29,4 +29,5 @@ string-format-target-check:
 	$(CA65) -t cx16 -o $(STRING_FORMAT_OUT)/$$name.o $(STRING_FORMAT_OUT)/$$name.s; \
 	done; \
 	$(CA65) -t cx16 -o $(STRING_FORMAT_OUT)/stringFormatAsm.o src/stringFormatAsm.s; \
-	$(CA65) -t cx16 -o $(STRING_FORMAT_OUT)/textControlsAsm.o src/textControlsAsm.s; } 9>$(CX16AGI_BUILD_DIR)/.string-format.lock
+	$(CA65) -t cx16 -o $(STRING_FORMAT_OUT)/textControlsAsm.o src/textControlsAsm.s; \
+	$(CA65) -t cx16 -o $(STRING_FORMAT_OUT)/parserInputAsm.o src/parserInputAsm.s; } 9>$(CX16AGI_BUILD_DIR)/.string-format.lock

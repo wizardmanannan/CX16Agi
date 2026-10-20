@@ -27,16 +27,19 @@ int main(int argc, char** argv)
 {
     static const unsigned char phrase[] = "go!,  north.  (now)";
     static const unsigned char cleaned[] = "go north now";
+    static const unsigned char crossing[] = { 'a', ',', ' ', ' ', 'b', '!', 0xc1, 0 };
+    static const unsigned char crossingCleaned[] = { 'a', ' ', 'b', 0xc1, 0 };
     FILE* input = tmpfile();
     FILE* output = tmpfile();
     FILE* bank;
-    unsigned int routine, stack, address, i, repeat;
+    unsigned int routine, stack, size, address, i, repeat;
     unsigned long value, before = 0, elapsed = 0;
     char line[256];
     int status, byte, phase = 0, valid = 1;
     pid_t child;
     assert(argc == 4 && input && output);
     routine = symbol(argv[2], "_b7StripExtraChars");
+    size = symbol(argv[2], "_b7StripExtraCharsEnd") - routine;
     stack = symbol(argv[2], "c_sp");
     bank = fopen(argv[3], "rb");
     assert(bank);
@@ -53,6 +56,9 @@ int main(int argc, char** argv)
     }
     fprintf(input, "RQC\n");
     for (i = 0; i < sizeof(cleaned); i++) fprintf(input, "RQM %04X\n", 0x8000 + i);
+    for (i = 0; i < sizeof(crossing); i++) fprintf(input, "STM %04X %02X\n", 0x80fd + i, crossing[i]);
+    fprintf(input, "STA FD\nSTX 80\nRUN %04X\n", routine);
+    for (i = 0; i < sizeof(crossingCleaned); i++) fprintf(input, "RQM %04X\n", 0x80fd + i);
     rewind(input);
     child = fork();
     assert(child >= 0);
@@ -72,17 +78,24 @@ int main(int argc, char** argv)
         if (!phase) before = value;
         else if (phase == 1) elapsed = value - before;
         else {
-            assert((unsigned int)(phase - 2) < sizeof(cleaned));
-            if (value != cleaned[phase - 2]) {
+            unsigned int offset = phase - 2;
+            unsigned char expected;
+            assert(offset < sizeof(cleaned) + sizeof(crossingCleaned));
+            expected = offset < sizeof(cleaned) ? cleaned[offset] : crossingCleaned[offset - sizeof(cleaned)];
+            if (value != expected) {
                 fprintf(stderr, "parser byte %d: got %02lx, expected %02x\n",
-                        phase - 2, value, cleaned[phase - 2]);
+                        phase - 2, value, expected);
                 valid = 0;
             }
         }
         phase++;
     }
-    assert(phase == 2 + sizeof(cleaned));
-    printf("Parser cleanup: 32 phrases, %lu cycles\n", elapsed);
+    assert(phase == 2 + sizeof(cleaned) + sizeof(crossingCleaned));
+    printf("Parser cleanup: 32 phrases, %lu cycles, %u code bytes\n", elapsed, size);
+    fflush(stdout);
+    /* Same full-product workload: the original C routine took 511,232 cycles. */
+    assert(elapsed < 90000);
+    assert(size <= 96);
     assert(valid);
     fclose(input);
     fclose(output);

@@ -120,6 +120,7 @@ static byte targetTransform(const char* source, byte sourceBank, char* destinati
     if (!child) {
         assert(dup2(fileno(commands), STDIN_FILENO) >= 0);
         assert(dup2(fileno(responses), STDOUT_FILENO) >= 0);
+        assert(dup2(fileno(responses), STDERR_FILENO) >= 0);
         execlp("timeout", "timeout", "30", getenv("X16EMU"), "-testbench", "-rom",
                getenv("X16_ROM"), "-prg", getenv("FORMAT_TARGET_PRG"),
                "-warp", "-sound", "none", (char*)NULL);
@@ -167,4 +168,9 @@ void b3ApplyTextModeControls(char* text)
 byte b3ClipTextToMap(char* text)
 {
     return targetTransform(text, 3, text, 3, strlen(text) + 1, 2);
+}
+
+void b7StripExtraChars(char* text)
+{
+    targetTransform(text, 7, text, 7, strlen(text) + 1, 3);
 }

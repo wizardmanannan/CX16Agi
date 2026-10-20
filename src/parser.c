@@ -286,69 +286,7 @@ void b7PollKeyboard()
 **   Removes punctuation and collapses multiple spaces in the input string,
 **   then writes the cleaned result back into the same buffer.
 ***************************************************************************/
-void b7StripExtraChars(char* userInput)
-{
-	// Create small temporary buffer to build the cleaned string
-	char tempString[41] = "";
-
-	// Position counters: one for reading input, one for writing to temp
-	int strPos, tempPos = 0;
-
-	// Flag to remember whether the last written character was a space
-	boolean lastCharSpace = FALSE;
-
-	// Loop through every character in the input string
-	for (strPos = 0; strPos < strlen(userInput); strPos++)
-	{
-		// Decide what to do based on current character
-		switch (userInput[strPos])
-		{
-		case ' ':
-			// Only write a space if we didn't just write one
-			if (!lastCharSpace)
-			{
-				tempString[tempPos++] = ' ';
-			}
-			// Remember that last written character was space
-			lastCharSpace = TRUE;
-			break;
-
-			// These characters are completely ignored / removed
-		case ',':
-		case '.':
-		case '?':
-		case '!':
-		case '(':
-		case ')':
-		case ';':
-		case ':':
-		case '[':
-		case ']':
-		case '{':
-		case '}':
-		case '\'':
-		case '`':
-		case '-':
-		case '"':
-			// Do nothing � skip this character
-			break;
-
-		default:
-			// Any other character is kept as-is
-			// Reset space flag since this is not a space
-			lastCharSpace = FALSE;
-			// Copy the character to the output buffer
-			tempString[tempPos++] = userInput[strPos];
-			break;
-		}
-	}
-
-	// Terminate the cleaned string properly
-	tempString[tempPos] = '\0';
-
-	// Copy the result back into the caller's buffer (overwriting original)
-	strcpy(userInput, tempString);
-}
+extern void __fastcall__ b7StripExtraChars(char* userInput);
 
 
 /***************************************************************************
