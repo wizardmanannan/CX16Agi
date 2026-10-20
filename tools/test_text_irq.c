@@ -130,7 +130,9 @@ static void assemble(void) {
         ".segment \"CODE\"\nrunInit: jsr b3InitDisplayTextSlice\nrts\n"
         "runText: jsr handleDisplayTextSlice\nrts\n"
         "runPalette: jsr b3SetPaletteSlice\nrts\n"
-        "done: rts\n",
+        "done: rts\n"
+        "_b6EnterForegroundVera: rts\n_b6LeaveForegroundVera: rts\n"
+        "_inputLineDirty: .byte 0\nirqCompletionGeneration: .word 0\n",
         (int)(palette_end - data), data,
         (int)(text_data - text_code), text_code, (int)(end - text_data), text_data);
     CHECK(n >= 0 && n < (int)sizeof(fixture), "Assembler fixture too large");

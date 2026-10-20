@@ -73,6 +73,7 @@ extern byte b3TextModeTileByte; //Changes the background colour the next time yo
 void b3InitLayer1Mapbase(byte tileByte);
 byte b3DisplayManuallyWrappedMessageBox(char* message, byte messageBank, byte row, byte col, byte paletteNumber, byte boxWidth, byte boxHeight);
 void b3DisplayMessageBox(char* message, byte messageBank, byte row, byte col, byte paletteNumber, byte boxWidth, boolean wrap, byte firstRow);
+void b3DisplayShortText(void);
 void b3FillChar(byte startLine, byte endLine, byte paletteNumber, byte charToFill);
 void b3ClearLastPlacedText();
 byte b3SetTextColor(byte foreground, byte background);

@@ -117,6 +117,21 @@ asl
 sta displayPaletteValue
 rts
 
+; At most one 40-character row: finish before yielding another game command.
+.export _b3DisplayShortText
+_b3DisplayShortText:
+jsr _b6EnterForegroundVera
+jsr b3InitDisplayTextSlice
+jsr handleDisplayTextSlice
+jsr b3SetPaletteSlice
+lda #1
+sta _inputLineDirty
+inc irqCompletionGeneration
+bne :+
+inc irqCompletionGeneration + 1
+:
+jmp _b6LeaveForegroundVera
+
 b3SetPaletteSlice:
 lda displayPaletteRowsRemaining
 beq @paletteComplete
