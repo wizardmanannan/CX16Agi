@@ -157,7 +157,10 @@ that same image and runs both games with normal emulator RAM initialization.
 It sends Return through the emulator keyboard to leave the introduction,
 requires KQ1 room 1 and KQ3 room 7, completed picture rendering, visible sprites,
 and ten more interpreter/input cycles, then sends Right and checks that the
-player actually moves. It does not replace a full playthrough or a visual/audio
+player actually moves. Before sending KQ3 a key, it requires intro room 45 to
+be drawn and shown, then waits 120 VSYNC frames with no injected input. KQ3's
+game script skips its intro on any key, including Return.
+It does not replace a full playthrough or a visual/audio
 fidelity check. `review-check` runs `test`, `production-test`, `games-test`,
 `intro-test`, and `emulator-audio-test` sequentially and fails if either game
 or any required input is missing.
