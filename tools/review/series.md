@@ -16,6 +16,7 @@ area. The temporary inputs are removed after both passing and failing runs.
 Build a route from exact Git commits and sealed review evidence with:
 
 ```sh
+make -C tools review-series
 obj/review-series/review_series route --repo REPOSITORY --manifest series.txt --output NEW_DIRECTORY
 ```
 
@@ -79,7 +80,8 @@ at the candidate commit.
 Run it with:
 
 ```sh
-obj/review-series/review_metrics gate \
+make -C tools review-metrics
+obj/review-metrics gate \
   --repo REPOSITORY --input WORKLOAD_INPUT --workload graphics-clear \
   --baseline-image BASELINE_IMAGE --baseline-manifest BASELINE_MANIFEST \
   --candidate-image CANDIDATE_IMAGE --candidate-manifest CANDIDATE_MANIFEST \
