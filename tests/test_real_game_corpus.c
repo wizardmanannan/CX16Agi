@@ -2571,3 +2571,453 @@ static int verify_checkpoint_series(const char *directory,
     return 0;
 }
 
+int main(int argc, char **argv)
+{
+    char fixture_template[] = "obj/cx16/real-game-test-XXXXXX";
+    char fixture[PATH_CAPACITY] = "";
+    char staged_directories[CORPUS_MAX_GAMES][PATH_CAPACITY] = {{0}};
+    const char *manifest_path = "tests/real_game_corpus.tsv";
+    const char *games_directory = getenv("CX16_GAMES_DIR");
+    const char *application_directory = getenv("CX16_LOGIC_APP_DIR");
+    const char *application_program = getenv("CX16_LOGIC_APP_PRG");
+    const char *release_program = getenv("CX16_LOGIC_RELEASE_PRG");
+    CorpusGame games[CORPUS_MAX_GAMES] = {0};
+    LogicReplayManifest app_manifest;
+    LogicReplayEvent app_trace[LOGIC_APP_REPLAY_INPUT_MAX];
+    uint8_t app_manifest_hash[LOGIC_REPLAY_SHA256_SIZE];
+    uint8_t app_input_hash[LOGIC_REPLAY_SHA256_SIZE];
+    uint8_t app_digest[LOGIC_REPLAY_SHA256_SIZE];
+    char app_digest_hex[LOGIC_REPLAY_SHA256_SIZE * 2 + 1];
+    size_t game_count = 0, i;
+    uint32_t app_timeout_ms = 120000;
+    /* Input deadlines use virtual 60Hz frames, independently of completed
+       interpreter cycles. LTRC stores semantic keys and arrow tokens. */
+    static const LogicAppReplayInput kq1_input[] = {
+        {6, 'L'}, {12, 'C'}, {18, 'H'}, {24, 'E'},
+        {30, 'C'}, {36, 'K'}, {42, ' '}, {48, 'R'},
+        {54, 'O'}, {60, 'O'}, {66, 'M'}, {72, 0x0D},
+        {84, 0x0D}, {90, LOGIC_APP_REPLAY_SEMANTIC_KEY_RIGHT},
+        {240, 0x0D}
+    };
+    static const LogicAppReplayInput kq3_input[] = {
+        {240, 0x0D}, {300, 'l'}, {324, 'o'}, {348, 'o'}, {372, 'k'},
+        {396, 0x0D}, {432, 0x0D},
+        {468, LOGIC_APP_REPLAY_SEMANTIC_KEY_DOWN},
+        {504, 0x0D}, {540, 0x0D}, {588, 0x0D}
+    };
+    int failed = 0, cleanup_failed = 0, intentional_failure = 0;
+    int fail_after_fixtures = 0;
+    int stage_only = 0;
+    const char *only_game = getenv("CX16_APP_REPLAY_ONLY");
+    int wait_only = getenv("CX16_APP_REPLAY_WAIT_ONLY") != NULL;
+    int focused_only = getenv("CX16_APP_REPLAY_FOCUSED") != NULL;
+    int reducer_only = getenv("CX16_APP_REPLAY_REDUCER_ONLY") != NULL;
+
+    setvbuf(stdout, NULL, _IOLBF, 0);
+    if (!application_directory || !*application_directory)
+        application_directory = "obj/cx16/logic-app-replay";
+    if (!application_program || !*application_program)
+        application_program = "obj/cx16/logic-app-replay/agi.cx16";
+    if (!release_program || !*release_program)
+        release_program = "obj/cx16/logic-app-release/agi.cx16";
+    if (argc > 3) {
+        fprintf(stderr, "usage: %s [MANIFEST] [--fail-after-fixtures]\n",
+                argv[0]);
+        return 2;
+    }
+    {
+        int manifest_seen = 0;
+        int argument;
+        for (argument = 1; argument < argc; ++argument) {
+            if (!strcmp(argv[argument], "--fail-after-fixtures")) {
+                if (fail_after_fixtures || stage_only)
+                    goto usage;
+                fail_after_fixtures = 1;
+            } else if (!strcmp(argv[argument], "--stage-only")) {
+                if (stage_only || fail_after_fixtures)
+                    goto usage;
+                stage_only = 1;
+            } else if (!manifest_seen) {
+                manifest_path = argv[argument];
+                manifest_seen = 1;
+            } else {
+                goto usage;
+            }
+        }
+    }
+    if (!games_directory || !*games_directory)
+        games_directory = default_games_directory;
+    {
+        const char *timeout_text = getenv("CX16_APP_REPLAY_TIMEOUT_MS");
+        if (timeout_text && *timeout_text) {
+            char *end;
+            unsigned long timeout_value;
+            errno = 0;
+            timeout_value = strtoul(timeout_text, &end, 10);
+            if (errno || *end || !timeout_value || timeout_value > UINT32_MAX) {
+                fprintf(stderr, "real-game corpus: invalid CX16_APP_REPLAY_TIMEOUT_MS\n");
+                return 2;
+            }
+            app_timeout_ms = (uint32_t)timeout_value;
+        }
+    }
+
+    if (check_prefix_comparison_diagnostics() != 0 ||
+        check_bounded_prefix_conversion() != 0) {
+        fprintf(stderr, "real-game corpus regression: semantic comparison diagnostics\n");
+        failed = 1;
+        goto cleanup;
+    }
+    CHECK(read_corpus(manifest_path, games, &game_count) == 0);
+    CHECK(find_game(games, game_count, "KQ1") != NULL);
+    CHECK(find_game(games, game_count, "KQ3") != NULL);
+    CHECK(logic_replay_sha256_file(application_program, app_digest) == 0);
+    CHECK(verify_parser_footprint(release_program) == 0);
+    for (i = 0; i < sizeof app_digest; ++i)
+        snprintf(app_digest_hex + i * 2, 3, "%02x", app_digest[i]);
+    printf("full-app build: %s SHA-256=%s\n", application_program,
+           app_digest_hex);
+    CHECK(mkdtemp(fixture_template) != NULL);
+    CHECK(copy_text(fixture, sizeof fixture, fixture_template) == 0);
+
+    for (i = 0; i < game_count; ++i) {
+        CorpusGame *game = &games[i];
+        char game_directory[PATH_CAPACITY];
+        size_t logic_count = 0;
+        size_t j;
+        CHECK(stage_game(games_directory, fixture, game,
+                         staged_directories[i],
+                         sizeof staged_directories[i]) == 0);
+        CHECK(stage_app_overlays(application_directory,
+                                 staged_directories[i]) == 0);
+        CHECK(inspect_logic_resources(game, staged_directories[i],
+                                      game->logic_bytes, &logic_count) == 0);
+        CHECK(inspect_object_count(staged_directories[i],
+                                   &game->object_count) == 0);
+        game->logic_count = logic_count;
+        CHECK(path_join(game_directory, sizeof game_directory, fixture,
+                        game->id, "") == 0);
+        game_directory[strlen(game_directory) - 1] = '\0';
+        printf("real-game corpus: %s (%s), AGI %s [%s], directory entries LOG/PIC/VIEW/SND=%lu/%lu/%lu/%lu, logics=%lu, inventory entries=%u, Logic0..2 bytes=%lu,%lu,%lu; staged resources:",
+               game->id, game->title, game->agi_version,
+               game->version_evidence,
+               (unsigned long)game->directory_counts[0],
+               (unsigned long)game->directory_counts[1],
+               (unsigned long)game->directory_counts[2],
+               (unsigned long)game->directory_counts[3],
+               (unsigned long)logic_count,
+               (unsigned)game->object_count,
+               (unsigned long)game->logic_bytes[0],
+               (unsigned long)game->logic_bytes[1],
+               (unsigned long)game->logic_bytes[2]);
+        for (j = 0; j < game->resource_count; ++j)
+            printf(" %s", game->resources[j].name);
+        putchar('\n');
+    }
+
+    if (stage_only) {
+        puts("real-game corpus staging and SHA-256 checks passed");
+        goto cleanup;
+    }
+    if (fail_after_fixtures) {
+        fprintf(stderr, "real-game corpus cleanup probe: intentional failure after staging\n");
+        intentional_failure = 1;
+        goto cleanup;
+    }
+
+    for (i = 0; i < game_count; ++i) {
+        CorpusGame *game = &games[i];
+        const LogicAppReplayInput *scripted_input;
+        size_t scripted_input_count;
+        uint32_t scripted_ticks;
+        uint32_t watchdog_ticks;
+        uint8_t expected_room, expected_logic;
+        uint16_t min_ego_x, max_ego_x, min_ego_y, max_ego_y;
+        const char *expected_message;
+        const char *expected_transition_message;
+        uint8_t first[LOGIC_APP_REPLAY_OUTPUT_SIZE];
+        uint8_t repeated[LOGIC_APP_REPLAY_OUTPUT_SIZE];
+        uint8_t intro[LOGIC_APP_REPLAY_OUTPUT_SIZE];
+        char first_path[PATH_CAPACITY], repeated_path[PATH_CAPACITY];
+        /* First input becomes available during the opening cycle. */
+        static const LogicAppReplayInput delayed_intro[] = {{1, 'L'}};
+        static const LogicAppReplayInput kq3_intro[] = {{1, 'L'}};
+        /* The watchdog-only run keeps one semantic key per AGI cycle so it
+           reaches the no-input path quickly. Prefix comparisons retain the
+           full real-game schedule. */
+        static const LogicAppReplayInput kq3_watchdog_input[] = {
+            {6, 0x0D}, {12, 'l'}, {18, 'o'}, {24, 'o'}, {30, 'k'},
+            {36, 0x0D}, {42, 0x0D},
+            {48, LOGIC_APP_REPLAY_SEMANTIC_KEY_DOWN},
+            {54, 0x0D}, {60, 0x0D}, {66, 0x0D}
+        };
+        char detail[256];
+        int first_length, repeated_length;
+        char game_directory[PATH_CAPACITY];
+        if (path_join(game_directory, sizeof game_directory, fixture,
+                      game->id, "") != 0) {
+            failed = 1;
+            continue;
+        }
+        game_directory[strlen(game_directory) - 1] = '\0';
+        if (only_game && *only_game && strcmp(only_game, game->id))
+            continue;
+        if (reducer_only) {
+            if (!strcmp(game->id, "KQ1") &&
+                strcmp(getenv("CX16_APP_REPLAY_REDUCER_ONLY"), "semantic") &&
+                verify_full_app_fault_reducer(game, game_directory,
+                    app_digest_hex, kq1_input,
+                    sizeof kq1_input / sizeof kq1_input[0], 100,
+                    app_timeout_ms)) failed = 1;
+            if (!strcmp(game->id, "KQ1") &&
+                verify_semantic_reducer(game, game_directory,
+                    app_digest_hex, app_timeout_ms)) failed = 1;
+            continue;
+        }
+        if (!strcmp(game->id, "KQ1")) {
+            scripted_input = kq1_input;
+            scripted_input_count = sizeof kq1_input / sizeof kq1_input[0];
+            scripted_ticks = 100;
+            watchdog_ticks = 1;
+            expected_room = 8;
+            expected_logic = 8;
+            /* ScummVM and CX16 agree on (42,100) after this script. */
+            min_ego_x = 40;
+            max_ego_x = 45;
+            min_ego_y = 98;
+            max_ego_y = 102;
+            expected_message = "You are standing outside a castle";
+            expected_transition_message = NULL;
+        } else if (!strcmp(game->id, "KQ3")) {
+            scripted_input = kq3_input;
+            scripted_input_count = sizeof kq3_input / sizeof kq3_input[0];
+            /* Cover the entire 9.8-second input schedule after the intro. */
+            scripted_ticks = 200;
+            watchdog_ticks = 32;
+            expected_room = 34;
+            expected_logic = 34;
+            /* All 200 completed cycles agree with ScummVM, ending here. */
+            min_ego_x = max_ego_x = 39;
+            min_ego_y = max_ego_y = 152;
+            expected_message = "This is the main entry room of the wizard's house";
+            expected_transition_message = "You open the front door of the house and go outside";
+        } else {
+            fprintf(stderr, "full-app replay regression: no gameplay scenario for %s\n",
+                    game->id);
+            failed = 1;
+            continue;
+        }
+        if (!strcmp(game->id, "KQ1") &&
+            verify_production_commands(game_directory, app_timeout_ms) != 0) {
+            failed = 1;
+            continue;
+        }
+        memset(first, 0, sizeof first);
+        if (run_app_checkpoint("cold-boot-state", game_directory,
+                UINT16_C(0xA61B), NULL, 0, 0, app_timeout_ms, 0,
+                first, detail, sizeof detail) != 0 ||
+            first[LOGIC_APP_REPLAY_VARS_OFFSET + 10] != 0 ||
+            first[LOGIC_APP_REPLAY_VARS_OFFSET + 255] != 0 ||
+            first[LOGIC_APP_REPLAY_FLAGS_OFFSET + 255] != 0) {
+            fprintf(stderr,
+                    "full-app cold-boot regression: %s speed=%u v255=%u f255=%u detail=%s\n",
+                    game->id, first[LOGIC_APP_REPLAY_VARS_OFFSET + 10],
+                    first[LOGIC_APP_REPLAY_VARS_OFFSET + 255],
+                    first[LOGIC_APP_REPLAY_FLAGS_OFFSET + 255], detail);
+            failed = 1;
+            continue;
+        }
+        if (verify_checkpoint_series(game_directory, scripted_input,
+                scripted_input_count, app_timeout_ms)) {
+            failed = 1;
+            continue;
+        }
+        if (focused_only)
+            continue;
+        if (!strcmp(game->id, "KQ3") &&
+            verify_future_input_prefix(game, game_directory,
+                scripted_input, scripted_input_count,
+                app_timeout_ms) != 0) {
+            failed = 1;
+            continue;
+        }
+        if (!strcmp(game->id, "KQ1")) {
+            int trace_window_found = 0;
+            uint32_t prefix;
+            for (prefix = 1; prefix <= 12 && !trace_window_found; ++prefix) {
+                memset(first, 0, sizeof first);
+                if (run_app_checkpoint("logic-trace-regression",
+                        game_directory, UINT16_C(0xA61B), scripted_input,
+                        scripted_input_count, prefix, app_timeout_ms, 0,
+                        first, detail, sizeof detail) == 0 &&
+                    verify_full_app_logic_trace(game, first, 1, 0) == 0)
+                    trace_window_found = 1;
+            }
+            if (!trace_window_found) {
+                fprintf(stderr,
+                        "full-app trace regression: %s has no recent window among the first 12 completed cycles containing CALL, RETURN, and a non-whitelisted WRITE (last-run: %s)\n",
+                        game->id, detail[0] ? detail : "no matching event window");
+                failed = 1;
+                continue;
+            }
+        }
+        memset(intro, 0, sizeof intro);
+        if (logic_app_replay_x16_run(game_directory, UINT16_C(0xA61B),
+                                     !strcmp(game->id, "KQ1")
+                                         ? delayed_intro : kq3_intro,
+                                     1,
+                                     1, app_timeout_ms, 0, intro,
+                                     detail, sizeof detail) != 0 ||
+            verify_intro_checkpoint(game, intro) != 0) {
+            fprintf(stderr, "full-app intro/timing regression: %s: %s\n",
+                    game->id, detail);
+            print_full_app_checkpoint(game, intro);
+            failed = 1;
+            continue;
+        }
+        /* KQ3's scripted modal print requires another key. KQ1's intro
+           display does not block, so it cannot prove input exhaustion. */
+        if (!strcmp(game->id, "KQ3") &&
+            verify_input_wait_failure(game, game_directory, app_digest_hex,
+                                      kq3_watchdog_input,
+                                      sizeof kq3_watchdog_input /
+                                          sizeof kq3_watchdog_input[0],
+                                      watchdog_ticks,
+                                      app_timeout_ms) != 0) {
+            failed = 1;
+            continue;
+        }
+        if (wait_only)
+            continue;
+        memset(first, 0, sizeof first);
+        memset(repeated, 0, sizeof repeated);
+        if (create_app_replay_identity(game, game_directory, app_digest_hex,
+                UINT16_C(0xA61B), scripted_input, scripted_input_count,
+                &app_manifest, app_trace, app_manifest_hash,
+                app_input_hash) != 0 ||
+            write_scummvm_input_trace(game_directory, app_trace,
+                                      scripted_input_count) != 0) {
+            fprintf(stderr, "full-app replay regression: %s could not create verified manifest/input trace\n",
+                    game->id);
+            failed = 1;
+            continue;
+        }
+        first_length = snprintf(first_path, sizeof first_path,
+                                "%s/full-app-1.x16r", game_directory);
+        if (first_length < 0 || (size_t)first_length >= sizeof first_path ||
+            run_full_app_cli(game_directory, scripted_ticks, app_timeout_ms,
+                             first_path, first) != 0) {
+            fprintf(stderr, "full-app replay regression: %s: %s\n",
+                    game->id, "public full-app record/replay command failed");
+            failed = 1;
+            continue;
+        }
+        if (verify_full_app_logic_trace(game, first, 0, 1) != 0) {
+            print_full_app_checkpoint(game, first);
+            failed = 1;
+            continue;
+        }
+        if (compare_app_prefixes_with_scummvm(game, game_directory,
+                scripted_ticks, scripted_input, scripted_input_count,
+                app_timeout_ms, &app_manifest, app_manifest_hash,
+                app_input_hash) != 0) {
+            failed = 1;
+            continue;
+        }
+        if (verify_full_app_boot(game, first, scripted_ticks,
+                                 scripted_input_count, game->object_count,
+                                 expected_room,
+                                 min_ego_x, max_ego_x, min_ego_y, max_ego_y,
+                                 expected_logic, expected_message,
+                                 expected_transition_message) != 0) {
+            print_full_app_checkpoint(game, first);
+            failed = 1;
+            continue;
+        }
+        if (verify_parser_checkpoint(game, first, scripted_ticks,
+                                     scripted_input_count, expected_room,
+                                     expected_logic, expected_message) != 0) {
+            print_full_app_checkpoint(game, first);
+            failed = 1;
+            continue;
+        }
+        if ((repeated_length = snprintf(repeated_path, sizeof repeated_path,
+                     "%s/full-app-2.x16r", game_directory)) < 0 ||
+            (size_t)repeated_length >= sizeof repeated_path ||
+            run_full_app_cli(game_directory, scripted_ticks, app_timeout_ms,
+                             repeated_path, repeated) != 0) {
+            fprintf(stderr,
+                    "full-app deterministic replay regression: %s second public full-app replay failed\n",
+                    game->id);
+            failed = 1;
+            continue;
+        }
+        /* Real rendering duration is diagnostic; all execution state and the
+           virtual schedule must repeat exactly. */
+        if (memcmp(first, repeated, LOGIC_APP_REPLAY_ELAPSED_VSYNC_OFFSET) != 0 ||
+            memcmp(first + LOGIC_APP_REPLAY_SCHEDULE_FRAME_OFFSET,
+                   repeated + LOGIC_APP_REPLAY_SCHEDULE_FRAME_OFFSET, 4) != 0) {
+            size_t offset;
+            for (offset = 0; offset < sizeof first; ++offset)
+                if (first[offset] != repeated[offset])
+                    break;
+            fprintf(stderr,
+                    "full-app deterministic replay regression: %s independent run differs at checkpoint byte %lu (%02x != %02x)\n",
+                    game->id, (unsigned long)offset, first[offset],
+                    repeated[offset]);
+            failed = 1;
+            continue;
+        }
+        if (!strcmp(game->id, "KQ1") &&
+            verify_full_app_fault_reducer(game, game_directory,
+                app_digest_hex, scripted_input, scripted_input_count,
+                scripted_ticks, app_timeout_ms) != 0) {
+            failed = 1;
+            continue;
+        }
+        if (!strcmp(game->id, "KQ1") &&
+            verify_semantic_reducer(game, game_directory,
+                app_digest_hex, app_timeout_ms)) {
+            failed = 1;
+            continue;
+        }
+        printf("full-app replay: %s ready after %u completed cycles (final var[10]=%u); room=%u ego=(%u,%u) logic-%u loaded; interpreter cycles=%u input events=%u parsed words=%u message count=%u; real Logic0=%u bytes bank=%u; loaded logics=%u objects=%u words=%u trace=%u dropped=%u RNG draws=%u table-digest=fnv1a64; deterministic checkpoint FNV1a64=%016llx\n",
+               game->id,
+               (unsigned)get_u32(first + 6),
+               (unsigned)first[LOGIC_APP_REPLAY_VARS_OFFSET + 10],
+               (unsigned)first[15],
+               (unsigned)get_u16(first + LOGIC_APP_REPLAY_OBJECTS_OFFSET + 3),
+               (unsigned)get_u16(first + LOGIC_APP_REPLAY_OBJECTS_OFFSET + 5),
+               (unsigned)expected_logic, (unsigned)first[38],
+               (unsigned)get_u16(first + 12),
+               (unsigned)get_u16(first + LOGIC_APP_REPLAY_PARSER_OFFSET),
+               (unsigned)first[46],
+               (unsigned)get_u16(first + LOGIC_APP_REPLAY_LOGIC0_SIZE_OFFSET),
+               (unsigned)first[LOGIC_APP_REPLAY_LOGIC0_BANK_OFFSET],
+               (unsigned)get_u16(first + 39),
+               (unsigned)get_u16(first + 51),
+               (unsigned)get_u16(first + LOGIC_APP_REPLAY_WORD_COUNT_OFFSET),
+               (unsigned)first[41], (unsigned)get_u32(first + 42),
+               (unsigned)get_u32(first + 60),
+               (unsigned long long)fnv1a64(first, sizeof first));
+    }
+    if (!failed)
+        puts(focused_only ? "production-app focused state/command checks passed" :
+             wait_only ? "production-app intro/input-watchdog checks passed" :
+             "full production-app real-game interpreter replay checks passed");
+
+cleanup:
+    if (fixture[0] && clean_fixture(fixture, games, game_count) != 0)
+        cleanup_failed = 1;
+    if (cleanup_failed)
+        return 1;
+    if (intentional_failure)
+        return 2;
+    return failed ? 1 : 0;
+
+usage:
+    fprintf(stderr,
+            "usage: %s [MANIFEST] [--stage-only|--fail-after-fixtures]\n",
+            argv[0]);
+    return 2;
+}
