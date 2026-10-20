@@ -82,3 +82,20 @@ if (( cycles >= cycle_budget )); then
 	echo "KQ3 formatter exceeded the cycle budget" >&2
 	exit 1
 fi
+
+# Host layout/parser cases use the same target formatter through a byte transport.
+export FORMAT_TARGET_PRG="$fixture/string-format-target.prg"
+export FORMAT_TARGET_LABELS="$fixture/string-format-target.lbl"
+hostcc=${4:-cc}
+for test in test-string-format test-text-interpolation; do
+    # HOSTCC may contain sanitizer flags, as in the existing host suite.
+    read -r -a compiler <<< "$hostcc"
+    sources=("$repo_root/tests/$test.c" "$repo_root/tests/format-target-bridge.c")
+    if [[ $test == test-text-interpolation ]]; then
+        sources+=("$repo_root/src/textLayer.c" "$repo_root/src/parser.c")
+    fi
+    "${compiler[@]}" -std=c99 -D_MSC_VER -I"$repo_root/tests/stubs" -I"$repo_root/src" \
+        -include "$repo_root/tests/stubs/native.h" -ffunction-sections -fdata-sections \
+        -Wno-unknown-pragmas "${sources[@]}" -Wl,--gc-sections -o "$fixture/$test"
+    "$fixture/$test"
+done

@@ -6,11 +6,13 @@
 .import _targetPrepareKq3
 .import _targetExpandKq3
 .import _targetValidateKq3
+.import _targetBridge
 .import _targetEdgeCases
 
 .export targetPrepareKq3Entry
 .export targetExpandKq3Entry
 .export targetValidateKq3Entry
+.export targetBridgeEntry
 .export targetEdgeCasesEntry
 .export _trampoline
 
@@ -58,4 +60,9 @@ targetValidateKq3Entry:
 targetEdgeCasesEntry:
     jsr initCStack
     jsr _targetEdgeCases
+    rts
+
+targetBridgeEntry:
+    jsr initCStack
+    jsr _targetBridge
     rts

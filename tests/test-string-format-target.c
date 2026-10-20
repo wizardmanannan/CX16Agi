@@ -35,6 +35,10 @@ objectType bDObjects[MAX_OBJECTS];
 int bDNumObjects;
 #pragma bss-name (pop)
 
+byte bridgeActive, bridgeCounts[2];
+byte* bridgeMessages[2][256];
+size_t bridgeCapacity;
+
 static LOGICFile logicFiles[TEST_LOGICS];
 static byte* messagePointers[TEST_LOGICS][TEST_MESSAGES];
 
@@ -57,10 +61,16 @@ void b5GetLogicFile(LOGICFile* result, byte logicNo)
 		return;
 	}
 	*result = logicFiles[logicNo];
+	if (bridgeActive) {
+		result->numMessages = bridgeCounts[logicNo];
+		result->messages = bridgeMessages[logicNo];
+		result->messageBank = logicNo ? MESSAGE_BANK : MESSAGE_BANK - 1;
+	}
 }
 
 char* getMessagePointer(byte logicNo, byte messageNo)
 {
+	if (bridgeActive && logicNo < 2) return (char*)bridgeMessages[logicNo][messageNo];
 	if (logicNo >= TEST_LOGICS || messageNo >= TEST_MESSAGES) return NULL;
 	return (char*)messagePointers[logicNo][messageNo];
 }
@@ -103,6 +113,7 @@ static void initializeFixture(void)
 	byte logicNo;
 	byte messageNo;
 
+	bridgeActive = 0;
 	memset(variables, 0, sizeof(variables));
 	memset(logicFiles, 0, sizeof(logicFiles));
 	memset(messagePointers, 0, sizeof(messagePointers));
@@ -269,6 +280,14 @@ void targetEdgeCases(void)
 	valid = valid && targetBankAfter == previousBank && RAM_BANK == 13;
 
 	targetResult = valid ? 0 : 2;
+}
+
+void targetBridge(void)
+{
+	RAM_BANK = 13;
+	expandFormatCodes((char*)SOURCE_ADDRESS, SOURCE_BANK,
+	                  (char*)OUTPUT_ADDRESS, DESTINATION_BANK, bridgeCapacity);
+	targetResult = RAM_BANK == 13 ? 0 : 1;
 }
 
 int main(void)

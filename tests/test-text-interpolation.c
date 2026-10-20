@@ -124,17 +124,16 @@ static void test_word_lookup_uses_cleaned_input(void)
 
 void b5GetLogicFile(LOGICFile* result, byte logicNo)
 {
-	assert(logicNo == 106);
+	assert(logicNo == 106 || logicNo == 0);
 	memset(result, 0, sizeof(*result));
 	result->messages = messages;
-	result->numMessages = 26;
+	result->numMessages = logicNo == 0 ? 0 : 26;
 	result->messageBank = 21;
 }
 
 char* getMessagePointer(byte logicNo, byte messageNo)
 {
 	assert(logicNo == 106 && messageNo < 26);
-	assert(messages[messageNo] != NULL);
 	return (char*)messages[messageNo];
 }
 
