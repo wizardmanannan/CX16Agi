@@ -82,6 +82,7 @@ case checks cursor wraparound, embedded metacharacters at byte 254, termination,
 a destination canary, and bank restoration.
 
 Dictionary comparison runs the full product's strcmpIgnoreSpace on 64 spaced
-phrases: the C baseline is 273,152 cycles. Cases retain exact signed 16-bit
-results, prefix ordering, high bytes, space-only inputs, tabs, bank/stack state,
-source preservation, and a 305-byte page-crossing input.
+phrases: the C baseline is 273,152 cycles and resident assembly takes 40,832
+(85% fewer), with a 90,000-cycle budget. Cases retain exact signed 16-bit results,
+prefix ordering, high bytes, space-only inputs, tabs, bank/stack state, and source
+preservation. Symmetric 305-byte inputs cross pages in both cursor paths.

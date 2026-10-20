@@ -5,6 +5,7 @@
 .import _strlen, _strcpy, _memcpy, _memset
 .export _strLenBanked, _strcpyBanked, _memCpyBanked, _memsetBanked
 .export _memCpyBankedBetween
+.export _strcmpIgnoreSpace
 .segment "CODE"
 _strLenBanked:
     tay
@@ -136,3 +137,69 @@ bankedCopyWrite:
     sta $00
     ldy #56
     jmp addysp
+
+; Dictionary comparison ignores ASCII spaces only. Preserve the C helper's
+; +/-1 prefix results and unsigned-byte differences as a signed 16-bit int.
+_strcmpIgnoreSpace:
+    sta ptr2
+    stx ptr2+1
+    jsr popax
+    sta ptr1
+    stx ptr1+1
+compareSkipLeft:
+    lda (ptr1)
+    cmp #32
+    bne compareLeftReady
+    inc ptr1
+    bne compareSkipLeft
+    inc ptr1+1
+    bra compareSkipLeft
+compareLeftReady:
+    tax
+compareSkipRight:
+    lda (ptr2)
+    cmp #32
+    bne compareRightReady
+    inc ptr2
+    bne compareSkipRight
+    inc ptr2+1
+    bra compareSkipRight
+compareRightReady:
+    tay
+    beq compareRightEnd
+    cpx #0
+    beq compareLeftEnd
+    sta tmp1
+    cpx tmp1
+    bne compareDifference
+    inc ptr1
+    bne :+
+    inc ptr1+1
+:
+    inc ptr2
+    bne compareSkipLeft
+    inc ptr2+1
+    bra compareSkipLeft
+compareDifference:
+    txa
+    sec
+    sbc tmp1
+    ldx #0
+    bcs :+
+    dex
+:
+    rts
+compareRightEnd:
+    cpx #0
+    beq compareEqual
+    lda #1
+    ldx #0
+    rts
+compareLeftEnd:
+    lda #$ff
+    tax
+    rts
+compareEqual:
+    lda #0
+    tax
+    rts
