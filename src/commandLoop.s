@@ -256,21 +256,30 @@ bra @start
     jmp ifHandlerLoop
 
     @gtFC:
-    LESS_THAN_OR_EQ_8 #$FC, @ch, startOrModeLoop
+        bcs @start
 
 
     cmp #$0E
     bne @else
 
     @0E:
-    LEFT_SHIFT_BY_1 @ch, @ch 
-
-    INC_CODE_BY @ch
-    jmp startOrModeLoop
+        ; said has a count byte followed by that many 16-bit word IDs.
+        LOAD_CODE_WIN_CODE
+        sta @ch
+        INC_CODE
+        stz @ch + 1
+        asl @ch
+        rol @ch + 1
+        bra @skipArgs
 
     @else:
-        ADD_WORD_16_8 numArgs, @ch, ZP_TMP
+        tax
+        lda numArgs,x
+        sta @ch
+        stz @ch + 1
+    @skipArgs:
         INC_CODE_BY @ch
+        jmp startOrModeLoop
 
 ;endIfHelpers
 ifHandler:
