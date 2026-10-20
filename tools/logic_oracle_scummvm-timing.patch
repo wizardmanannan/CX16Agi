@@ -1,0 +1,41 @@
+diff --git a/engines/agi/agi.cpp b/engines/agi/agi.cpp
+index 95d4ad40..897e26ad 100644
+--- a/engines/agi/agi.cpp
++++ b/engines/agi/agi.cpp
+@@ -30,6 +30,10 @@
+ 
+ #include "engines/util.h"
+ 
++#ifdef CX16_AGI_ORACLE_SEMANTIC_CLOCK
++extern "C" int cx16_agi_oracle_uses_semantic_clock(void *engine);
++#endif
++
+ #include "base/plugins.h"
+ #include "base/version.h"
+ 
+@@ -776,6 +780,12 @@ uint16 AgiEngine::artificialDelay_SearchTable(AgiArtificialDelayTriggerType trig
+ }
+ 
+ void AgiEngine::artificialDelayTrigger_NewRoom(int16 newRoomNr) {
++#ifdef CX16_AGI_ORACLE_SEMANTIC_CLOCK
++	if (cx16_agi_oracle_uses_semantic_clock(this)) {
++		_artificialDelayCurrentRoom = newRoomNr;
++		return;
++	}
++#endif
+ 	//warning("artificial delay trigger: room %d -> new room %d", _artificialDelayCurrentRoom, newRoomNr);
+ 
+ 	if (!_game.automaticRestoreGame) {
+@@ -814,6 +824,12 @@ void AgiEngine::artificialDelayTrigger_NewRoom(int16 newRoomNr) {
+ }
+ 
+ void AgiEngine::artificialDelayTrigger_DrawPicture(int16 newPictureNr) {
++#ifdef CX16_AGI_ORACLE_SEMANTIC_CLOCK
++	if (cx16_agi_oracle_uses_semantic_clock(this)) {
++		_artificialDelayCurrentPicture = newPictureNr;
++		return;
++	}
++#endif
+ 	//warning("artificial delay trigger: picture %d -> new picture %d", _artificialDelayCurrentPicture, newPictureNr);
+ 
+ 	if (!_game.automaticRestoreGame) {
