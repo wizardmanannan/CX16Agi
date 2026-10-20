@@ -35,6 +35,9 @@ review-check:
 build-test:
 	@$(MAKE) --no-print-directory -f "$(REPO_ROOT)/tools/Makefile" _run MODE=build-test
 
+irq-test:
+	@$(MAKE) --no-print-directory -f "$(REPO_ROOT)/tools/Makefile" _run MODE=irq-test
+
 metadata-test:
 	@$(MAKE) --no-print-directory -f "$(REPO_ROOT)/tools/Makefile" _run MODE=metadata-test
 
@@ -99,6 +102,7 @@ _run:
 	  need_file "$$repo/tools/test-image.mk"; need_file "$$repo/tools/test_image_exports.s"; \
 	}; \
 	case "$$mode" in \
+	  irq-test) need_cc65; need_cpu ;; \
 	  metadata-test) need_cc65 ;; \
 	  staging-test) need_command pkg-config; pkg-config --exists libpng ;; \
 	  emulator-audio-test) need_file "$$X16_EMULATOR_SOURCE/src/audio.c"; need_command pkg-config; pkg-config --exists sdl2 ;; \
@@ -198,6 +202,9 @@ _run:
 	  fi; \
 	}; \
 	case "$$mode" in \
+	  irq-test) \
+	    "$(HOST_CC)" $(HOST_CFLAGS) -I"$$X16_EMULATOR_SOURCE/src/cpu" "$$repo/tools/test_irq_helpers.c" "$$X16_EMULATOR_SOURCE/src/cpu/fake6502.c" -o "$$work/bin/test_irq_helpers"; \
+	    cd "$$repo"; "$$work/bin/test_irq_helpers" ;; \
 	  metadata-test) build_metadata; "$$work/bin/test_dependency_metadata" ;; \
 	  staging-test) \
 	    "$(HOST_CC)" $(HOST_CFLAGS) "$$repo/tools/test_full_game_irq.c" -lpng -o "$$work/bin/test_full_game_irq"; \

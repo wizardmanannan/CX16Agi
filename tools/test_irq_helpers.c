@@ -35,6 +35,7 @@ static void advance_vera(unsigned port) {
 
 uint8_t read6502(uint16_t address, uint8_t bank) {
     (void)bank;
+    if (address == 0x9F29 && (ram[0x9F25] >> 1) == 2) return fx_write ? 0x40 : 0;
     if (track_sprite_reads && address >= sprite_read_start - 1 && address < sprite_read_end + 2) {
         CHECK(address >= sprite_read_start && address < sprite_read_limit,
               "Sprite consumer read beyond its accepted records/terminator");
@@ -1120,6 +1121,57 @@ static void test_irq_counter_carries(void) {
     ram[symbol("_foregroundVeraDepth")] = 0;
 }
 
+/* An owned renderer must keep music ticking without surrendering either port. */
+static void test_foreground_sound_cadence(void) {
+    const char *ticks[]={"_bBCh1Ticks","_bBCh2Ticks","_bBCh3Ticks","_bBCh4Ticks"};
+    const unsigned notes=symbol("_ZP_CURRENTLY_PLAYING_NOTE_1");
+    unsigned worst=0;
+    for(unsigned owner=1;owner<=2;++owner)
+        for(unsigned selector=0;selector<2;++selector)
+            for(unsigned refill=0;refill<3;++refill)
+                for(unsigned cached=0;cached<2;++cached) {
+                    ram[symbol("_foregroundVeraDepth")]=(uint8_t)owner;
+                    ram[symbol("_bBChannelsPlaying")]=4;
+                    ram[symbol("_bBEndSoundFlag")]=23; ram[0x400+257+23]=0;
+                    for(unsigned c=0;c<4;++c) {
+                        ram[symbol("_bBIsPlaying")+c]=1;
+                        write_word(symbol(ticks[c]),refill?0:2);
+                        unsigned source=0x9000+c*16;
+                        write_word(notes+c*2,source-5);
+                        ram[source]=refill==2?255:3; ram[source+1]=refill==2?255:0; ram[source+2]=0x34;
+                        ram[source+3]=c==3?3:0x12; ram[source+4]=15;
+                    }
+                    write_word(symbol("SOUND_SREG"),0xBEAD);
+                    addr[0]=0x12345; addr[1]=0x15678;
+                    addr_control[0]=0x28; addr_control[1]=0x40;
+                    stride[0]=-2; stride[1]=8;
+                    ram[0x9F25]=(uint8_t)(12+selector);
+                    fx_write=cached;
+                    for(unsigned i=0;i<4;++i) fx_cache[i]=(uint8_t)(0x91+i);
+                    ram[symbol("default_irq_vector")]=(uint8_t)symbol("irqDefault");
+                    ram[symbol("default_irq_vector")+1]=(uint8_t)(symbol("irqDefault")>>8);
+                    init_cpu(symbol("done"),0x42); regs.sp=0x1FF; regs.a=0x31; regs.y=0x53;
+                    ram[0]=0x35; ram[1]=0x74; ram[0x9F27]=3;
+                    ram[0xFFFE]=(uint8_t)symbol("irqEntry"); ram[0xFFFF]=(uint8_t)(symbol("irqEntry")>>8);
+                    unsigned start=clockticks6502;
+                    irq6502(); run();
+                    unsigned cycles=clockticks6502-start; if(cycles>worst) worst=cycles;
+                    for(unsigned c=0;c<4;++c) CHECK(ram[symbol(ticks[c])]==(refill==2?0:refill?3:1),"Foreground VERA ownership skipped active sound ticks");
+                    CHECK(ram[symbol("_bBChannelsPlaying")]==(refill==2?0:4) && ram[0x400+257+23]==(refill==2),"Foreground sound did not publish simultaneous channel endings");
+                    CHECK(addr_control[0]==0x28 && addr_control[1]==0x40,"Foreground sound changed address-control bits");
+                    CHECK(addr[0]==0x12345 && addr[1]==0x15678 && stride[0]==-2 && stride[1]==8 && ram[0x9F25]==12+selector,"Foreground sound changed a renderer port or selector");
+                    CHECK(fx_write==cached,"Foreground sound changed FX cache-write mode");
+                    for(unsigned i=0;i<4;++i) CHECK(fx_cache[i]==0x91+i,"Foreground sound changed FX multiplier cache bytes");
+                    CHECK(ram[symbol("SOUND_SREG")]==0xAD && ram[symbol("SOUND_SREG")+1]==0xBE,"Foreground sound changed non-playback zero-page scratch");
+                    CHECK(ram[0]==0x35 && ram[1]==0x74 && regs.a==0x31 && regs.x==0x42 && regs.y==0x53 && regs.sp==0x1FF,"Foreground sound changed CPU state or banks");
+                    CHECK(acks==1 && ram[0x9F27]==2,"Foreground sound acknowledged an unrelated IRQ source");
+                    for(unsigned i=0;i<writes;++i) CHECK(write_addresses[i]>=0x1F9C0 && write_addresses[i]<0x1F9D0,"Foreground sound wrote outside AGI PSG registers");
+                }
+    fx_write=false; ram[symbol("_foregroundVeraDepth")]=0;
+    CHECK(worst<2000,"Foreground sound IRQ exceeded its 2000-cycle budget");
+    printf("Foreground sound tick/refill preserves both ports, FX cache, scratch and CPU state: max %u cycles\n",worst);
+}
+
 static void test_sprite_clear(void) {
     unsigned first_z = symbol("spriteFirstZ"), count = symbol("spriteCount");
     CHECK(count == 127 && first_z + (count - 1) * 8 == 0x1FFFE, "Fixture sprite table bounds differ from VERA");
@@ -1765,6 +1817,7 @@ int main(void) {
     test_atomic_vsync_snapshot();
     test_snapshot_interrupt_boundaries();
     test_irq_counter_carries();
+    test_foreground_sound_cadence();
     test_sprite_clear();
     test_sprite_updates();
     test_sprite_snapshot_reset();
