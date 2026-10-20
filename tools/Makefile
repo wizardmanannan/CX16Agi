@@ -21,7 +21,7 @@ TEST_FIXTURE_ROOT ?= $(if $(TMPDIR),$(TMPDIR),/tmp)
 export GAME_KQ1 GAME_KQ3 CC65_HOME X16_EMULATOR_SOURCE TMPDIR TEST_OUTPUT_DIR ROM GAME BUILD SYMBOLS SDL_PREFIX TAS_CAPTURE_HEADER
 unexport KEEP_TEST_OUTPUT
 
-.PHONY: test suite commands-test image production-test integration-test picture-test loader-test modes integration _run build-test games-test review-check intro-test
+.PHONY: test suite commands-test image production-test integration-test picture-test loader-test modes integration _run build-test games-test review-check intro-test emulator-audio-test
 
 # A review handoff requires both original games; missing inputs fail closed.
 review-check:
@@ -31,6 +31,9 @@ review-check:
 
 build-test:
 	@$(MAKE) --no-print-directory -f "$(REPO_ROOT)/tools/Makefile" _run MODE=build-test
+
+emulator-audio-test:
+	@$(MAKE) --no-print-directory -f "$(REPO_ROOT)/tools/Makefile" _run MODE=emulator-audio-test
 
 intro-test:
 	@$(MAKE) --no-print-directory -f "$(REPO_ROOT)/tools/Makefile" _run MODE=intro-test
@@ -84,6 +87,7 @@ _run:
 	  need_file "$$repo/tools/test-image.mk"; need_file "$$repo/tools/test_image_exports.s"; \
 	}; \
 	case "$$mode" in \
+	  emulator-audio-test) need_file "$$X16_EMULATOR_SOURCE/src/audio.c"; need_command pkg-config; pkg-config --exists sdl2 ;; \
 	  build-test) need_cc65; need_exec "$$CC65_HOME/bin/cl65" ;; \
 	  core) need_cc65; need_cpu ;; \
 	  commands-test) need_cc65 ;; \
@@ -177,6 +181,9 @@ _run:
 	  fi; \
 	}; \
 	case "$$mode" in \
+	  emulator-audio-test) \
+	    "$(HOST_CC)" $(HOST_CFLAGS) -I"$$X16_EMULATOR_SOURCE/src" $$(pkg-config --cflags sdl2) -ffunction-sections -fdata-sections "$$repo/tools/test_emulator_audio.c" $$(pkg-config --libs sdl2) -Wl,--gc-sections -o "$$work/bin/test_emulator_audio"; \
+	    "$$work/bin/test_emulator_audio" ;; \
 	  games-test|intro-test) \
 	    "$(HOST_CC)" $(HOST_CFLAGS) "$$repo/tools/test_build.c" -o "$$work/bin/test_build"; \
 	    "$$work/bin/test_build" "$$repo"; \
