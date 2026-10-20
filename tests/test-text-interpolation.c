@@ -25,6 +25,15 @@ extern byte b3WrapText(char* text, int width, byte* maxWidth);
 extern void b3DrawBorder(byte width, size_t messageSize);
 int currentLog = 106;
 int screenMode;
+int user_input_line = 23, controlMode = 1, dirnOfEgo;
+boolean inputLineDisplayed;
+void b1ResetControllers(void) {}
+boolean b1SetControllerByPetscii(byte ch) { (void)ch; return FALSE; }
+boolean b5IsDebuggingEnabled(void) { return FALSE; }
+void bDbgShowPriority(void) {}
+void trampolineDebug(void (*function)(void)) { function(); }
+void getViewTab(ViewTable* view, byte index) { (void)index; memset(view, 0, sizeof(*view)); }
+void setViewTab(ViewTable* view, byte index) { (void)view; (void)index; }
 objectType bDObjects[MAX_OBJECTS];
 int bDNumObjects;
 static byte* messages[26];
@@ -64,6 +73,20 @@ static void test_idle_input(void)
 	b7GetString("Name:", 21, result, STRING_BANK, 1, 1, 39);
 	assert(strcmp(result, "hi") == 0);
 	assert(inputKeyPosition == sizeof(keys));
+}
+
+static void test_keyboard_zero_digit(void)
+{
+    static const byte keys[] = { '1', '0', '0', 0 };
+    b7CurrentInputStr[0] = 0;
+    inputLineDisplayed = TRUE;
+    inputKeys = keys;
+    inputKeyCount = sizeof(keys);
+    inputKeyPosition = 0;
+    b7PollKeyboard();
+    assert(strcmp(b7CurrentInputStr, "100") == 0);
+    assert(inputKeyPosition == sizeof(keys));
+    inputLineDisplayed = FALSE;
 }
 
 static void test_get_string_backspace(void)
@@ -527,6 +550,7 @@ int main(void)
 	test_cleanup_capacity();
 	test_display_map_bounds();
 	test_long_unboxed_text();
+    test_keyboard_zero_digit();
 	puts("text interpolation tests passed");
 	return 0;
 }
