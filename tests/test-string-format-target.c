@@ -35,7 +35,8 @@ objectType bDObjects[MAX_OBJECTS];
 int bDNumObjects;
 #pragma bss-name (pop)
 
-byte bridgeActive, bridgeCounts[2];
+byte bridgeActive, bridgeControls, bridgeCounts[2];
+extern void __fastcall__ b3ApplyTextModeControls(char* text);
 byte* bridgeMessages[2][256];
 size_t bridgeCapacity;
 
@@ -114,6 +115,7 @@ static void initializeFixture(void)
 	byte messageNo;
 
 	bridgeActive = 0;
+	bridgeControls = 0;
 	memset(variables, 0, sizeof(variables));
 	memset(logicFiles, 0, sizeof(logicFiles));
 	memset(messagePointers, 0, sizeof(messagePointers));
@@ -285,8 +287,14 @@ void targetEdgeCases(void)
 void targetBridge(void)
 {
 	RAM_BANK = 13;
-	expandFormatCodes((char*)SOURCE_ADDRESS, SOURCE_BANK,
-	                  (char*)OUTPUT_ADDRESS, DESTINATION_BANK, bridgeCapacity);
+	if (bridgeControls) {
+		RAM_BANK = SOURCE_BANK;
+		b3ApplyTextModeControls((char*)SOURCE_ADDRESS);
+		RAM_BANK = 13;
+	} else {
+		expandFormatCodes((char*)SOURCE_ADDRESS, SOURCE_BANK,
+		                  (char*)OUTPUT_ADDRESS, DESTINATION_BANK, bridgeCapacity);
+	}
 	targetResult = RAM_BANK == 13 ? 0 : 1;
 }
 

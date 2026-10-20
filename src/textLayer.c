@@ -412,6 +412,8 @@ void b3DrawBorder(byte boxWidth, size_t messageSize)
 	b3LastBoxLines = rowsWritten + 4;
 }
 
+extern void __fastcall__ b3ApplyTextModeControls(char* text);
+
 extern unsigned long displayTextAddressToCopyTo;
 extern char* currentTextBuffer;
 extern long b3PaletteAddress;
@@ -452,6 +454,10 @@ void b3DisplayMessageBox(char* message, byte messageBank, byte row, byte col, by
 			/* Replacement text must participate in wrapping and box sizing. */
 			expandFormatCodes(message, messageBank, b3TextBuffer1, TEXT_CODE_BANK, maxMessageSize);
 			messageSize = strLenBanked(b3TextBuffer1, TEXT_CODE_BANK) + 1;
+		}
+		if (screenMode == AGI_TEXT) {
+			b3ApplyTextModeControls(b3TextBuffer1);
+			messageSize = strlen(b3TextBuffer1) + 1;
 		}
 		if (messageSize == 1) return;
 

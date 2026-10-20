@@ -23,6 +23,7 @@ extern char b7OutputString[80];
 extern byte b3WrapText(char* text, int width, byte* maxWidth);
 extern void b3DrawBorder(byte width, size_t messageSize);
 int currentLog = 106;
+int screenMode;
 objectType bDObjects[MAX_OBJECTS];
 int bDNumObjects;
 static byte* messages[26];
@@ -30,6 +31,7 @@ static unsigned int displays;
 static unsigned int clearDisplays;
 static boolean boxed;
 static boolean observingClear;
+static const char* controlExpected;
 static const byte* inputKeys;
 static size_t inputKeyCount, inputKeyPosition;
 static char bankWindow[80], bank24[80];
@@ -167,6 +169,10 @@ void b6SetAndWaitForIrqState(IRQ_COMMAND state)
 {
 	assert(state == DISPLAY_TEXT);
 	displays++;
+	if (controlExpected) {
+		assert(strcmp(currentTextBuffer, controlExpected) == 0);
+		return;
+	}
 	if (observingClear) {
 		clearDisplays++;
 		return;
@@ -193,6 +199,32 @@ static void test_explicit_line_breaks(void)
 	assert(strcmp(hardBreak, "abc\ndef ghi") == 0);
 	assert(b3WrapText(hardBreakAfterSpace, 8, &maxWidth) == 2);
 	assert(strcmp(hardBreakAfterSpace, "ab cd\nef gh ij") == 0);
+}
+
+static void test_text_mode_controls(void)
+{
+	boolean wasBoxed = boxed;
+	boxed = FALSE;
+	screenMode = AGI_TEXT;
+	controlExpected = "AC";
+	b3DisplayMessageBox("AB\bC", 21, 1, 1, 1, 0, FALSE, FIRST_TEXT_ROW);
+	controlExpected = "A ";
+	b3DisplayMessageBox("AB\b", 21, 1, 1, 1, 0, FALSE, FIRST_TEXT_ROW);
+	controlExpected = "CB";
+	b3DisplayMessageBox("AB\rC", 21, 1, 1, 1, 0, FALSE, FIRST_TEXT_ROW);
+	controlExpected = "A\nB";
+	b3DisplayMessageBox("A\nB", 21, 1, 1, 1, 0, FALSE, FIRST_TEXT_ROW);
+	controlExpected = "CB\nD";
+	b3DisplayMessageBox("AB\rC\nD", 21, 1, 1, 1, 0, FALSE, FIRST_TEXT_ROW);
+	controlExpected = "A\nB";
+	b3DisplayMessageBox("A\n\bB", 21, 1, 1, 1, 0, FALSE, FIRST_TEXT_ROW);
+	controlExpected = "B";
+	b3DisplayMessageBox("\b\bB", 21, 1, 1, 1, 0, FALSE, FIRST_TEXT_ROW);
+	screenMode = AGI_GRAPHICS;
+	controlExpected = "AB\rC";
+	b3DisplayMessageBox("AB\rC", 21, 1, 1, 1, 0, FALSE, FIRST_TEXT_ROW);
+	controlExpected = NULL;
+	boxed = wasBoxed;
 }
 
 static void test_border_capacity(void)
@@ -299,6 +331,7 @@ int main(void)
 	test_banked_input();
 	test_word_capacity();
 	test_word_lookup_uses_cleaned_input();
+	test_text_mode_controls();
 	puts("text interpolation tests passed");
 	return 0;
 }

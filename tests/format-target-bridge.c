@@ -47,8 +47,8 @@ static void putWord(FILE* commands, unsigned int at, unsigned int value)
     bytes(commands, at, pair, 2);
 }
 
-void expandFormatCodes(const char* source, byte sourceBank, char* destination,
-                       byte destinationBank, size_t capacity)
+static void targetTransform(const char* source, byte sourceBank, char* destination,
+                            byte destinationBank, size_t capacity, byte controls)
 {
     FILE* commands;
     FILE* responses;
@@ -68,6 +68,7 @@ void expandFormatCodes(const char* source, byte sourceBank, char* destination,
     assert(commands && responses);
     fprintf(commands, "RUN %04X\nRAM 00\n", address("targetPrepareKq3Entry"));
     bytes(commands, address("_bridgeActive"), &active, 1);
+    bytes(commands, address("_bridgeControls"), &controls, 1);
     putWord(commands, address("_bridgeCapacity"), capacity);
     bytes(commands, address("_variables"), var, 256);
     putWord(commands, address("_numInputWords"), numInputWords);
@@ -106,7 +107,8 @@ void expandFormatCodes(const char* source, byte sourceBank, char* destination,
     bytes(commands, 0xa100, source, strlen(source) + 1);
     fprintf(commands, "RUN %04X\nRAM 00\nRQM %04X\nRAM 16\n",
             address("targetBridgeEntry"), address("_targetResult"));
-    for (i = 0; i < capacity; i++) fprintf(commands, "RQM %04X\n", 0xa300 + i);
+    if (controls) fprintf(commands, "RAM 15\n");
+    for (i = 0; i < capacity; i++) fprintf(commands, "RQM %04X\n", (controls ? 0xa100 : 0xa300) + i);
     rewind(commands);
     fflush(responses);
     child = fork();
@@ -143,4 +145,15 @@ void expandFormatCodes(const char* source, byte sourceBank, char* destination,
     free(output);
     fclose(commands);
     fclose(responses);
+}
+
+void expandFormatCodes(const char* source, byte sourceBank, char* destination,
+                       byte destinationBank, size_t capacity)
+{
+    targetTransform(source, sourceBank, destination, destinationBank, capacity, 0);
+}
+
+void b3ApplyTextModeControls(char* text)
+{
+    targetTransform(text, 3, text, 3, strlen(text) + 1, 1);
 }

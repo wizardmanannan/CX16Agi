@@ -1,3 +1,4 @@
+    .include "textControlsAsm.s"
     .include "stringFormatAsm.s"
     .importzp sreg
     .include "init.s"

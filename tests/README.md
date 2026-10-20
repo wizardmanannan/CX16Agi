@@ -21,7 +21,13 @@ This checks target compilation, not a full interpreter link or emulator replay.
 
 The KQ3 warning workload is 106 input bytes, two message references, and 115
 output bytes. The current C formatter baseline is 86,586 emulator CPU cycles;
-the resident assembly formatter takes 24,759 cycles with the same workload
+the resident assembly formatter takes about 24,800 cycles with the same workload
 (71% fewer). The suite retains the strict 86,585-cycle budget. The test checks
 output copying in 50-byte chunks plus the
 terminator.
+
+Text-mode display cases execute the production control-character assembly through
+the same bridge: backspace blanks the preceding character without crossing the
+line start, CR returns to that start, and LF begins the next line. Graphics-mode
+text is unchanged. The behavior is ported from the existing textControls.c in
+the t3code-a0c2e42d worktree; only the assembly implementation is shipped here.

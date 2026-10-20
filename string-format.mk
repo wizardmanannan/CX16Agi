@@ -28,4 +28,5 @@ string-format-target-check:
 	$(CC65) -t cx16 -O -o $(STRING_FORMAT_OUT)/$$name.s src/$$name.c; \
 	$(CA65) -t cx16 -o $(STRING_FORMAT_OUT)/$$name.o $(STRING_FORMAT_OUT)/$$name.s; \
 	done; \
-	$(CA65) -t cx16 -o $(STRING_FORMAT_OUT)/stringFormatAsm.o src/stringFormatAsm.s; } 9>$(CX16AGI_BUILD_DIR)/.string-format.lock
+	$(CA65) -t cx16 -o $(STRING_FORMAT_OUT)/stringFormatAsm.o src/stringFormatAsm.s; \
+	$(CA65) -t cx16 -o $(STRING_FORMAT_OUT)/textControlsAsm.o src/textControlsAsm.s; } 9>$(CX16AGI_BUILD_DIR)/.string-format.lock
