@@ -24,7 +24,7 @@ char cursorChar = 0x5f; /* AGI ASCII underscore, independent of the target charm
 boolean b7ReadingString, b7InputReady;
 byte b7InputRow, b7InputColumn;
 
-#define MAX_INPUT_STRING_LENGTH 40 //Includes terminator 
+#define MAX_INPUT_STRING_LENGTH 40
 
 //#define VERBOSE_DEBUG_LOOKUP_WORDS
 #pragma rodata-name (push, "BANKRAM07")
@@ -203,7 +203,7 @@ extern byte debugBank;
 ***************************************************************************/
 void b7PollKeyboard()
 {
-	static char strPos = 0;
+	byte strPos = strlen(b7CurrentInputStr);
 	int ch, dummy, gx, gy;
 
 	b1ResetControllers();
@@ -227,7 +227,6 @@ void b7PollKeyboard()
 		if (ch) {
 			var[19] = ch;
 			lastKey = ch;  /* Store key value for have.key() cmd */
-			if (ch == 0x1C) ch |= 0x0D; /* Handle keypad ENTER */
 		
 			//if ((ch >> 8) == KEY_F11) saveSnapShot();
 
@@ -256,12 +255,12 @@ void b7PollKeyboard()
 					{
 						trampolineDebug(bDbgShowPriority);
 					}
+					if (b7CurrentInputStr[0]) strcpy(b7LastLine, b7CurrentInputStr);
 					b7LookupWords(b7CurrentInputStr);
 					b7CurrentInputStr[0] = 0;
 					strPos = 0;
                         b7ProcessString(string[0], STRING_BANK, b7Temp, PARSER_BANK, sizeof(b7Temp));
 					b7RefreshInputLine(FALSE);
-					strcpy(b7LastLine, b7CurrentInputStr);
 					break;
 				case KEY_BACKSPACE:   /* Backspace */
 					if (strPos > 0) {
@@ -274,23 +273,14 @@ void b7PollKeyboard()
 						return;
 					break;
 				default:
-						if (strlen(b7CurrentInputStr) < MAX_INPUT_STRING_LENGTH && (ch >= KEY_CAP_A && ch <= KEY_CAP_Z || ch >= KEY_LOWER_A && ch <= KEY_LOWER_Z || ch >= KEY_0 && ch <= KEY_9 || ch == SPACE))
-					{
-						if (ch >= KEY_CAP_A && ch <= KEY_CAP_Z)
-						{
-							ch -= KEY_CAP_A - KEY_LOWER_A;
-							ch += ASCII_DIFF;
-						}
-						else if (ch >= KEY_LOWER_A && ch <= KEY_LOWER_Z)
-						{
-							ch += ASCII_DIFF;
-						}
-						
-						b7CurrentInputStr[strPos] = (ch);
-						strPos++;
-						b7CurrentInputStr[strPos] = 0;
-						b7RefreshInputLine(FALSE);
-					}
+                        if (ch >= KEY_CAP_A && ch <= KEY_CAP_Z) ch -= 0x80;
+                        else if (ch >= KEY_LOWER_A && ch <= KEY_LOWER_Z) ch += ASCII_DIFF;
+                        if (strPos < MAX_INPUT_STRING_LENGTH && strPos < var[24] && ch >= SPACE && ch <= 0x7e)
+                        {
+                            b7CurrentInputStr[strPos++] = ch;
+                            b7CurrentInputStr[strPos] = 0;
+                            b7RefreshInputLine(FALSE);
+                        }
 					break;
 				}
 			}

@@ -20,6 +20,7 @@ byte keyState[256];
 byte* key = keyState;
 byte _assmByte;
 extern char b7OutputString[80], b7Temp[256], b7CurrentInputStr[41], cursorChar;
+extern char b7LastLine[80];
 extern void b7RefreshInputLine(boolean erasePrevious);
 extern boolean b7ReadingString, b7InputReady;
 extern byte b7InputRow, b7InputColumn;
@@ -134,6 +135,7 @@ static void test_keyboard_zero_digit(void)
     assert(strcmp(string[0], ">") == 0);
     strcpy(string[0], "Cmd%v2:");
     variables[2] = 4;
+    variables[24] = 41;
     b7CurrentInputStr[0] = 0;
     inputLineDisplayed = TRUE;
     inputKeys = keys;
@@ -145,6 +147,66 @@ static void test_keyboard_zero_digit(void)
     assert(inputKeyPosition == sizeof(keys));
     inputLineDisplayed = FALSE;
 }
+
+static void test_command_keyboard_text(void)
+{
+    static const byte keys[] = { KEY_ENTER, KEY_CAP_A, KEY_LOWER_A, '\'', '!', 0 };
+    static const byte submit[] = { KEY_ENTER, 0 };
+    inputLineDisplayed = TRUE;
+    inputKeys = keys;
+    inputKeyCount = sizeof(keys);
+    inputKeyPosition = 0;
+    b7PollKeyboard();
+    assert(strcmp(b7CurrentInputStr, "Aa'!") == 0);
+    inputKeys = submit;
+    inputKeyCount = sizeof(submit);
+    inputKeyPosition = 0;
+    b7PollKeyboard();
+    assert(strcmp(b7LastLine, "Aa'!") == 0);
+    assert(b7CurrentInputStr[0] == 0);
+    inputLineDisplayed = FALSE;
+}
+
+
+static void test_command_input_limit(void)
+{
+    static const byte keys[] = { '1', '2', '3', 0 };
+    static const byte disabled[] = { KEY_ENTER, '1', 0 };
+    inputLineDisplayed = TRUE;
+    variables[24] = 2;
+    inputKeys = keys;
+    inputKeyCount = sizeof(keys);
+    inputKeyPosition = 0;
+    b7PollKeyboard();
+    assert(strcmp(b7CurrentInputStr, "12") == 0);
+    variables[24] = 0;
+    inputKeys = disabled;
+    inputKeyCount = sizeof(disabled);
+    inputKeyPosition = 0;
+    b7PollKeyboard();
+    assert(b7CurrentInputStr[0] == 0);
+    variables[24] = 41;
+    inputLineDisplayed = FALSE;
+}
+
+
+static void test_control_key_does_not_move_ego(void)
+{
+    static const byte keys[] = { KEY_ENTER, 0x1c, '3', 0 };
+    int previousDirection = dirnOfEgo;
+    controlMode = 0;
+    inputLineDisplayed = TRUE;
+    inputKeys = keys;
+    inputKeyCount = sizeof(keys);
+    inputKeyPosition = 0;
+    b7PollKeyboard();
+    assert(strcmp(b7CurrentInputStr, "3") == 0);
+    assert(dirnOfEgo == previousDirection);
+    assert(inputKeyPosition == sizeof(keys));
+    inputLineDisplayed = FALSE;
+    controlMode = 1;
+}
+
 
 static void test_get_string_backspace(void)
 {
@@ -619,6 +681,9 @@ int main(void)
 	test_display_map_bounds();
 	test_long_unboxed_text();
     test_keyboard_zero_digit();
+    test_command_keyboard_text();
+    test_command_input_limit();
+    test_control_key_does_not_move_ego();
     test_string_input_publication();
 	puts("text interpolation tests passed");
 	return 0;
