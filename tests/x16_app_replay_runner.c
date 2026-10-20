@@ -238,3 +238,174 @@ static int read_memory(int input, int output, unsigned address,
     return 0;
 }
 
+static int launch_emulator(const char *emulator, const char *rom,
+                           const char *program, const char *game_directory,
+                           pid_t *child_out, int *input_out, int *output_out)
+{
+    int to_child[2], from_child[2];
+    pid_t child;
+    if (pipe(to_child) != 0)
+        return -1;
+    if (pipe(from_child) != 0) {
+        close(to_child[0]);
+        close(to_child[1]);
+        return -1;
+    }
+    child = fork();
+    if (child < 0) {
+        close(to_child[0]); close(to_child[1]);
+        close(from_child[0]); close(from_child[1]);
+        return -1;
+    }
+    if (child == 0) {
+        char *arguments[24];
+        int count = 0;
+        int capture_fd;
+        if (dup2(to_child[0], STDIN_FILENO) < 0 ||
+            dup2(from_child[1], STDOUT_FILENO) < 0 ||
+            dup2(from_child[1], STDERR_FILENO) < 0)
+            _exit(126);
+        close(to_child[0]); close(to_child[1]);
+        close(from_child[0]); close(from_child[1]);
+        capture_fd = open("/dev/null", O_WRONLY);
+        if (capture_fd < 0)
+            _exit(126);
+        if (capture_fd != 3) {
+            if (dup2(capture_fd, 3) < 0)
+                _exit(126);
+            close(capture_fd);
+        }
+        setenv("SDL_AUDIODRIVER", "dummy", 1);
+        setenv("SDL_VIDEODRIVER", "dummy", 1);
+        setenv("TAS_CAPTURE_FD", "3", 1);
+        arguments[count++] = (char *)emulator;
+        arguments[count++] = "-testbench";
+        arguments[count++] = "-warp";
+        arguments[count++] = "-sound";
+        arguments[count++] = "none";
+        arguments[count++] = "-zeroram";
+        arguments[count++] = "-rom";
+        arguments[count++] = (char *)rom;
+        arguments[count++] = "-fsroot";
+        arguments[count++] = (char *)game_directory;
+        arguments[count++] = "-startin";
+        arguments[count++] = (char *)game_directory;
+        arguments[count++] = "-prg";
+        arguments[count++] = (char *)program;
+        arguments[count] = NULL;
+        if (strchr(emulator, '/'))
+            execv(emulator, arguments);
+        else
+            execvp(emulator, arguments);
+        _exit(127);
+    }
+    close(to_child[0]);
+    close(from_child[1]);
+    *child_out = child;
+    *input_out = to_child[1];
+    *output_out = from_child[0];
+    return 0;
+}
+
+static void stop_child(pid_t child, int input, int output)
+{
+    int status;
+    int64_t deadline;
+    struct timespec delay = {0, 10000000};
+    if (input >= 0)
+        close(input);
+    if (output >= 0)
+        close(output);
+    if (child <= 0)
+        return;
+    (void)kill(child, SIGTERM);
+    deadline = monotonic_ms() + 500;
+    while (waitpid(child, &status, WNOHANG) == 0 && remaining_ms(deadline))
+        nanosleep(&delay, NULL);
+    if (waitpid(child, &status, WNOHANG) == 0) {
+        (void)kill(child, SIGKILL);
+        while (waitpid(child, &status, 0) < 0 && errno == EINTR) { }
+    }
+}
+
+static int finish_child(pid_t child, int input, int output,
+                        int64_t deadline)
+{
+    int status;
+    struct timespec delay = {0, 10000000};
+    if (close(input) != 0) {
+        close(output);
+        stop_child(child, -1, -1);
+        return -1;
+    }
+    for (;;) {
+        pid_t waited = waitpid(child, &status, WNOHANG);
+        if (waited == child)
+            break;
+        if (waited < 0 && errno != EINTR) {
+            close(output);
+            stop_child(child, -1, -1);
+            return -1;
+        }
+        if (!remaining_ms(deadline)) {
+            close(output);
+            stop_child(child, -1, -1);
+            return -2;
+        }
+        nanosleep(&delay, NULL);
+    }
+    close(output);
+    return WIFEXITED(status) && WEXITSTATUS(status) == 0 ? 0 : -1;
+}
+
+static void put_u32(uint8_t bytes[4], uint32_t value)
+{
+    unsigned i;
+    for (i = 0; i < 4; ++i)
+        bytes[i] = (uint8_t)(value >> (i * 8));
+}
+
+/* Corpus/input-trace bytes are semantic ASCII/control keys. Translate only
+   at the X16 boundary; the shared LTRC trace remains engine-independent. */
+static int semantic_key_to_petscii(uint8_t semantic, uint8_t *petscii)
+{
+    if (!petscii)
+        return -1;
+    switch (semantic) {
+    case 0x80: *petscii = 0x91; return 0; /* up */
+    case 0x81: *petscii = 0x11; return 0; /* down */
+    case 0x82: *petscii = 0x9D; return 0; /* left */
+    case 0x83: *petscii = 0x1D; return 0; /* right */
+    default: break;
+    }
+    if (semantic >= 'A' && semantic <= 'Z') {
+        *petscii = (uint8_t)(semantic + 0x80u);
+    } else if (semantic >= 'a' && semantic <= 'z') {
+        *petscii = (uint8_t)(semantic - 0x20u);
+    } else if ((semantic >= 0x20u && semantic <= 0x7Eu) ||
+               semantic == 0x08u || semantic == 0x09u ||
+               semantic == 0x0Au || semantic == 0x0Du ||
+               semantic == 0x1Bu) {
+        *petscii = semantic;
+    } else {
+        return -1;
+    }
+    return 0;
+}
+
+static uint32_t get_u32(const uint8_t bytes[4])
+{
+    return (uint32_t)bytes[0] | ((uint32_t)bytes[1] << 8) |
+           ((uint32_t)bytes[2] << 16) | ((uint32_t)bytes[3] << 24);
+}
+
+static uint16_t get_u16(const uint8_t bytes[2])
+{
+    return (uint16_t)(bytes[0] | ((uint16_t)bytes[1] << 8));
+}
+
+static int set_detail(char *detail, size_t capacity, const char *text)
+{
+    return copy_text(detail, capacity, text);
+}
+
