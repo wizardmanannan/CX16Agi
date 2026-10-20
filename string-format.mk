@@ -18,7 +18,9 @@ string-format-test:
 	$(HOSTCC) $(STRING_FORMAT_FLAGS) tests/test-string-commands.c src/commands.c -Wl,--gc-sections -o $(STRING_FORMAT_OUT)/test-string-commands && \
 	$(STRING_FORMAT_OUT)/test-string-commands && \
 	$(HOSTCC) $(STRING_FORMAT_FLAGS) tests/test-menu-text.c src/menu.c -Wl,--gc-sections -o $(STRING_FORMAT_OUT)/test-menu-text && \
-	$(STRING_FORMAT_OUT)/test-menu-text; } 9>$(CX16AGI_BUILD_DIR)/.string-format.lock
+	$(STRING_FORMAT_OUT)/test-menu-text && \
+	$(HOSTCC) $(STRING_FORMAT_FLAGS) tests/test-inventory-text.c -Wl,--gc-sections -o $(STRING_FORMAT_OUT)/test-inventory-text && \
+	$(STRING_FORMAT_OUT)/test-inventory-text; } 9>$(CX16AGI_BUILD_DIR)/.string-format.lock
 
 .PHONY: string-format-target-check
 string-format-target-check:

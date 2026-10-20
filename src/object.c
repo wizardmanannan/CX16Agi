@@ -171,6 +171,8 @@ const char BD_YOU_ARE_CARRYING[] = "            You are carrying:"; //Spaces are
 const char BD_NOTHING[] = "                  nothing";
 const char BD_EXIT_INVENTORY[] = "    Press a key to return to the game";
 const char BD_SHOW_INVENTORY[] = "   Press ENTER to select, ESC to cancel";
+const char BD_PAGE_INVENTORY[] = "PgUp/PgDn page; any other key exits";
+const char BD_PAGE_SELECT[] = "PgUp/PgDn page; ENTER select; ESC exit";
 #pragma rodata (pop)
 #include <cbm_petscii_charmap.h>
 
@@ -183,7 +185,7 @@ extern byte bDPadWordsWithSpaces(byte objectNumber, byte lastLength);
 //extern void bDPadWordsWithSpacesNoCompare(byte objectNumber, byte lastLength);
 
 #define NOTHING_TO_SELECT 0xFF
-void bDShowObject(byte numObjs)
+byte bDShowObject(byte numObjs)
 {
     byte ch, changed = FALSE;
 
@@ -205,6 +207,9 @@ void bDShowObject(byte numObjs)
         // }
         switch (ch)
         {
+        case KEY_PGUP:
+        case KEY_PGDN:
+            return ch;
         case KEY_UP:
             if (bDSelectedScreenObjNum - 2 >= 0)
             {
@@ -255,13 +260,14 @@ void bDShowObject(byte numObjs)
     {
         var[25] = NOTHING_TO_SELECT;
     }
+    return ch;
 }
 
 #define WRITE_ZP ZP_TMP_10
 #define BUFFER_STATUS_ZP ZP_TMP_12
 #define OBJECT_NAME_ZP ZP_TMP_13
 #define WRITE_ZP_PTR ((byte**)WRITE_ZP)
-#define BUFFER_ZP_PTR ((byte**)BUFFER_STATUS_ZP)
+#define BUFFER_ZP_PTR ((BufferStatus**)BUFFER_STATUS_ZP)
 #define OBJECT_NAME_PTR ((byte**)OBJECT_NAME_ZP)
 
 
@@ -280,12 +286,21 @@ void bDDisplayInventory(boolean showObject)
     byte inventoryPaletteByte = 0x10, numObjs = 0;
     byte* data;
     BufferStatus bufferStatus;
-    char* exitMessage;
+    const char* exitMessage;
 
     objectType object;
     char* objectName;
     unsigned int i;
     boolean evenObj = TRUE, foundObject = FALSE;
+    unsigned int firstItem = 0, carriedIndex, totalCarried = 0;
+    for (i = 0; i < bDNumObjects && i < MAX_OBJECTS; i++)
+        if (bDObjects[i].roomNum == HAS_OBJ) totalCarried++;
+
+displayPage:
+    lastLength = rows = numObjs = 0;
+    evenObj = TRUE;
+    foundObject = FALSE;
+    carriedIndex = 0;
 
     *WRITE_ZP_PTR = GOLDEN_RAM_WORK_AREA;    /* assembly WRITE_NEXT starts here */
     *BUFFER_ZP_PTR = &bufferStatus;
@@ -307,22 +322,25 @@ void bDDisplayInventory(boolean showObject)
 
     bDWriteNext(NEW_LINE);
 
-    for (i = 0; i < bDNumObjects; i++)
+    for (i = 0; i < bDNumObjects && i < MAX_OBJECTS; i++)
     {
         object.name = bDObjects[i].name;
         object.roomNum = bDObjects[i].roomNum;
 
         if (object.roomNum == HAS_OBJ)      /* carried by the player */
         {
+            if (carriedIndex++ < firstItem) continue;
+            if (numObjs >= INVENTORY_ITEMS_PER_PAGE) break;
             objectName = object.name;
 
             thisLength = bDObjectNameLengths[i];
+            if (thisLength > INVENTORY_NAME_COLUMNS) thisLength = INVENTORY_NAME_COLUMNS;
 
             *OBJECT_NAME_PTR = object.name; /* for the asm name-copy helpers */
 
             if (!evenObj && foundObject)
             {
-                numSpacesAdded = bDPadWordsWithSpaces(i, lastLength);  /* second column of the pair */
+                numSpacesAdded = bDPadWordsWithSpaces(i, lastLength);
                 rows++; //One row for every even row
                 bDObjects[i].lengthOffset = lastLength + numSpacesAdded;
             }
@@ -354,18 +372,18 @@ void bDDisplayInventory(boolean showObject)
     }
 
 
-    for (i = 0; i < 26 - rows; i++)
+    for (i = rows; i < INVENTORY_ROWS; i++)
     {
         bDWriteNext(NEW_LINE);          /* pad remaining rows of the box */
     }
 
     if(showObject && foundObject)
     {
-        exitMessage = BD_SHOW_INVENTORY;
+        exitMessage = totalCarried > INVENTORY_ITEMS_PER_PAGE ? BD_PAGE_SELECT : BD_SHOW_INVENTORY;
     }
     else
     {
-        exitMessage = BD_EXIT_INVENTORY;
+        exitMessage = totalCarried > INVENTORY_ITEMS_PER_PAGE ? BD_PAGE_INVENTORY : BD_EXIT_INVENTORY;
     }
 
     i = 0;
@@ -385,14 +403,24 @@ void bDDisplayInventory(boolean showObject)
 
     if (showObject && foundObject)
     {
-        bDShowObject(numObjs);
+        ch = bDShowObject(numObjs);
     }
     else
     {
+        if (showObject) var[25] = NOTHING_TO_SELECT;
         do
         {
             GET_IN(ch);                     //Wait for input
         } while (!ch);
+    }
+
+    if (ch == KEY_PGDN) {
+        if (firstItem + INVENTORY_ITEMS_PER_PAGE < totalCarried)
+            firstItem += INVENTORY_ITEMS_PER_PAGE;
+        goto displayPage;
+    } else if (ch == KEY_PGUP) {
+        if (firstItem >= INVENTORY_ITEMS_PER_PAGE) firstItem -= INVENTORY_ITEMS_PER_PAGE;
+        goto displayPage;
     }
 
     b6SetBackgroundColour(PALETTE_COLOR_BLACK);
