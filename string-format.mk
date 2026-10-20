@@ -14,6 +14,10 @@ string-format-test:
 	@mkdir -p $(STRING_FORMAT_OUT)
 	@{ flock -n 9 || { echo 'Build output busy; set CX16AGI_BUILD_DIR to a private base.' >&2; exit 1; }; \
 	ulimit -c 0; \
+	$(HOSTCC) $(STRING_FORMAT_FLAGS) tests/test-text-interpolation.c src/textLayer.c src/parser.c src/stringFormat.c -Wl,--gc-sections -o $(STRING_FORMAT_OUT)/test-text-interpolation && \
+	$(STRING_FORMAT_OUT)/test-text-interpolation && \
+	$(HOSTCC) $(STRING_FORMAT_FLAGS) tests/test-string-format.c src/stringFormat.c -Wl,--gc-sections -o $(STRING_FORMAT_OUT)/test-string-format && \
+	$(STRING_FORMAT_OUT)/test-string-format && \
 	CC65_HOME='$(CC65_HOME)' X16EMU='$(X16EMU)' X16_ROM='$(X16_ROM)' bash tests/run-string-format-target.sh '$(STRING_FORMAT_OUT)' '$(CURDIR)' '$(STRING_FORMAT_CYCLE_BUDGET)' && \
 	$(HOSTCC) $(STRING_FORMAT_FLAGS) tests/test-string-commands.c src/commands.c -Wl,--gc-sections -o $(STRING_FORMAT_OUT)/test-string-commands && \
 	$(STRING_FORMAT_OUT)/test-string-commands && \

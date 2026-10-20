@@ -1,3 +1,4 @@
+#include <ascii_charmap.h>
 #include <cx16.h>
 
 #include <string.h>
