@@ -24,6 +24,10 @@ static void read_command(const char *command, char *output, size_t size)
 int main(void)
 {
     char common[4096], actual[16384], expected[16384], command[8192];
+    /* The parent make may export command-line overrides to this test. */
+    unsetenv("MAKEFLAGS");
+    unsetenv("MAKEOVERRIDES");
+    unsetenv("SHARED_TOOL_ROOT");
     read_command("git rev-parse --path-format=absolute --git-common-dir", common, sizeof common);
     char *slash = strrchr(common, '/');
     if (!slash || strcmp(slash, "/.git")) return 1;
@@ -32,6 +36,11 @@ int main(void)
     read_command("env -u CC65_HOME -u X16_EMULATOR_SOURCE make --no-print-directory -s -f tools/Makefile --eval 'probe:;@printf \"%s|%s\\n\" \"$(CC65_HOME)\" \"$(X16_EMULATOR_SOURCE)\"' probe", actual, sizeof actual);
     if (strcmp(actual, expected)) {
         fprintf(stderr, "Shared dependency discovery: got [%s], expected [%s]\n", actual, expected);
+        return 1;
+    }
+    read_command("make --no-print-directory -s -f tools/Makefile CC65_HOME=/cli/compiler X16_EMULATOR_SOURCE=/cli/emulator --eval 'probe:;@printf \"%s|%s\\n\" \"$(CC65_HOME)\" \"$(X16_EMULATOR_SOURCE)\"' probe", actual, sizeof actual);
+    if (strcmp(actual, "/cli/compiler|/cli/emulator")) {
+        fprintf(stderr, "Make command-line overrides: got [%s], expected [/cli/compiler|/cli/emulator]\n", actual);
         return 1;
     }
     read_command("env CC65_HOME=/explicit/compiler X16_EMULATOR_SOURCE=/explicit/emulator make --no-print-directory -s -f tools/Makefile --eval 'probe:;@printf \"%s|%s\\n\" \"$(CC65_HOME)\" \"$(X16_EMULATOR_SOURCE)\"' probe", actual, sizeof actual);
