@@ -1,14 +1,28 @@
 ; AGI wire strings use ASCII, independently of cc65's character map.
 ; All scanning, decimal conversion, recursion, and bounded appending stay resident.
 .macpack longbranch
-.import _formatSource, _formatSourceBank, _formatRemaining
-.import _formatBuffered, _formatBuffer, _formatFlush, _formatResolve
-.import _formatCode, _formatIndex, _formatInvalid
-.import _formatText, _formatTextBank, _formatRecursive, _var
-.importzp ptr1
-.export _formatExpandAsm
+.import _formatMessage, _var, _currentLog
+.import _string, _b7WordText, _numInputWords, _bDObjects, _bDNumObjects
+.importzp ptr1, ptr2, c_sp
+.import incsp6
+.export _expandFormatCodes, _formatIndex, _formatTextBank
 
 .segment "BSS"
+_formatSource: .res 2
+_formatSourceBank: .res 1
+_formatDestination: .res 2
+_formatDestinationBank: .res 1
+_formatRemaining: .res 2
+_formatBuffered: .res 1
+_formatBuffer: .res 50
+_formatCode: .res 1
+_formatIndex: .res 1
+_formatInvalid: .res 1
+_formatText: .res 2
+_formatTextBank: .res 1
+_formatRecursive: .res 1
+formatPreviousBank: .res 1
+formatOffsetHi: .res 1
 formatCursor: .res 2
 formatBank: .res 1
 formatDepth: .res 1
@@ -54,13 +68,87 @@ formatAppend:
     lda formatBuffered
     cmp #50
     bne :+
-    jsr _formatFlush
+    jsr formatFlush
 :   rts
 
-; Keep imports spelled like the C workspace names above.
 formatBuffered = _formatBuffered
 
-_formatExpandAsm:
+; cc65 passes dstMax in AX; software-stack offsets are bank/dst/srcBank/src.
+_expandFormatCodes:
+    sta _formatRemaining
+    stx _formatRemaining+1
+    ora _formatRemaining+1
+    bne :+
+    jmp incsp6
+:   lda $00
+    sta formatPreviousBank
+    ldy #0
+    lda (c_sp),y
+    sta _formatDestinationBank
+    iny
+    lda (c_sp),y
+    sta _formatDestination
+    iny
+    lda (c_sp),y
+    sta _formatDestination+1
+    iny
+    lda (c_sp),y
+    sta _formatSourceBank
+    iny
+    lda (c_sp),y
+    sta _formatSource
+    iny
+    lda (c_sp),y
+    sta _formatSource+1
+    lda _formatRemaining
+    bne :+
+    dec _formatRemaining+1
+:   dec _formatRemaining
+    stz _formatBuffered
+    jsr formatExpand
+    jsr formatFlush
+    lda _formatDestinationBank
+    sta $00
+    lda _formatDestination
+    sta ptr2
+    lda _formatDestination+1
+    sta ptr2+1
+    lda #0
+    sta (ptr2)
+    lda formatPreviousBank
+    sta $00
+    jmp incsp6
+
+formatFlush:
+    ldy _formatBuffered
+    beq @done
+    lda $00
+    pha
+    lda _formatDestinationBank
+    sta $00
+    lda _formatDestination
+    sta ptr2
+    lda _formatDestination+1
+    sta ptr2+1
+    dey
+@copy:
+    lda _formatBuffer,y
+    sta (ptr2),y
+    dey
+    bpl @copy
+    clc
+    lda _formatDestination
+    adc _formatBuffered
+    sta _formatDestination
+    bcc :+
+    inc _formatDestination+1
+:   stz _formatBuffered
+    pla
+    sta $00
+@done:
+    rts
+
+formatExpand:
     stz formatDepth
     lda _formatSource
     sta formatCursor
@@ -77,16 +165,56 @@ formatScan:
     ora _formatRemaining+1
     bne :+
     rts
-:   jsr formatPeek
-    bne :+
-    jmp formatPop
-:   cmp #$25
-    jeq formatToken
+:   lda formatBank
+    sta $00
+    lda formatCursor
+    sta ptr1
+    lda formatCursor+1
+    sta ptr1+1
+    ldx _formatBuffered
+; Keep the literal run in ZP/X; flush preserves ptr1 and X.
+formatLiteral:
+    lda (ptr1)
+    beq formatLiteralEnd
+    cmp #$25
+    beq formatLiteralToken
     cmp #$5c
-    jeq formatEscape
-    jsr formatAppend
-    jsr formatNext
-    jmp formatScan
+    beq formatLiteralEscape
+    sta _formatBuffer,x
+    inx
+    inc ptr1
+    bne :+
+    inc ptr1+1
+:   lda _formatRemaining
+    bne :+
+    dec _formatRemaining+1
+:   dec _formatRemaining
+    cpx #50
+    bne :+
+    stx _formatBuffered
+    jsr formatFlush
+    ldx #0
+:   lda _formatRemaining
+    ora _formatRemaining+1
+    bne formatLiteral
+    jsr formatSaveLiteral
+    rts
+formatLiteralEnd:
+    jsr formatSaveLiteral
+    jmp formatPop
+formatLiteralToken:
+    jsr formatSaveLiteral
+    jmp formatToken
+formatLiteralEscape:
+    jsr formatSaveLiteral
+    jmp formatEscape
+formatSaveLiteral:
+    stx _formatBuffered
+    lda ptr1
+    sta formatCursor
+    lda ptr1+1
+    sta formatCursor+1
+    rts
 
 formatEscape:
     jsr formatNext
@@ -183,7 +311,35 @@ formatWidthNext:
     jmp formatParseWidth
 
 formatLookup:
-    jsr _formatResolve
+    stz _formatText
+    stz _formatText+1
+    stz _formatRecursive
+    lda _formatInvalid
+    beq :+
+    jmp formatScan
+:   lda _formatCode
+    cmp #$73
+    jeq formatString
+    cmp #$77
+    jeq formatWord
+    cmp #$30
+    jeq formatObject
+    cmp #$67
+    beq @global
+    cmp #$6d
+    beq @message
+    jmp formatScan
+@global:
+    lda #0
+    bra @lookup
+@message:
+    inc _formatRecursive
+    lda _currentLog
+@lookup:
+    jsr _formatMessage
+    sta _formatText
+    stx _formatText+1
+formatResolved:
     lda _formatText
     ora _formatText+1
     bne :+
@@ -209,6 +365,103 @@ formatCopyText:
     jne formatCopyText
     inc _formatText+1
     jmp formatCopyText
+
+formatTimes5:
+    stz formatOffsetHi
+    sta formatValue
+    asl
+    rol formatOffsetHi
+    asl
+    rol formatOffsetHi
+    clc
+    adc formatValue
+    bcc :+
+    inc formatOffsetHi
+:   rts
+
+formatString:
+    lda _formatIndex
+    cmp #12
+    jcs formatScan
+    jsr formatTimes5
+    .repeat 3
+    asl
+    rol formatOffsetHi
+    .endrepeat
+    clc
+    adc #<_string
+    sta _formatText
+    lda formatOffsetHi
+    adc #>_string
+    sta _formatText+1
+    lda #7
+    sta _formatTextBank
+    inc _formatRecursive
+    jmp formatResolved
+
+formatWord:
+    lda _formatIndex
+    jeq formatScan
+    cmp #11
+    jcs formatScan
+    ldx _numInputWords+1
+    jmi formatScan
+    bne @valid
+    cmp _numInputWords
+    beq @valid
+    jcs formatScan
+@valid:
+    dec
+    jsr formatTimes5
+    .repeat 4
+    asl
+    rol formatOffsetHi
+    .endrepeat
+    clc
+    adc #<_b7WordText
+    sta _formatText
+    lda formatOffsetHi
+    adc #>_b7WordText
+    sta _formatText+1
+    lda #7
+    sta _formatTextBank
+    jmp formatResolved
+
+formatObject:
+    lda _formatIndex
+    jeq formatScan
+    cmp #101
+    jcs formatScan
+    lda #13
+    sta $00
+    ldx _bDNumObjects+1
+    bmi @invalid
+    lda _formatIndex
+    cpx #0
+    bne @valid
+    cmp _bDNumObjects
+    beq @valid
+    bcs @invalid
+@valid:
+    dec
+    jsr formatTimes5
+    clc
+    adc #<(_bDObjects+1)
+    sta ptr1
+    lda formatOffsetHi
+    adc #>(_bDObjects+1)
+    sta ptr1+1
+    lda (ptr1)
+    sta _formatText
+    ldy #1
+    lda (ptr1),y
+    sta _formatText+1
+    lda #13
+    sta _formatTextBank
+@invalid:
+    lda formatBank
+    sta $00
+    jmp formatResolved
 
 formatPush:
     ldx formatDepth

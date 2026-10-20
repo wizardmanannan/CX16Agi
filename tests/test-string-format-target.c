@@ -173,7 +173,7 @@ void targetPrepareKq3(void)
 
 	initializeFixture();
 	putBankedString(SOURCE_BANK, SOURCE_ADDRESS, warning);
-	bankedCopyCalls = 0;
+	fillBanked(DESTINATION_BANK, OUTPUT_ADDRESS, 0x5A, 256);
 	targetResult = 0xFF;
 	RAM_BANK = 13;
 }
@@ -199,7 +199,10 @@ void targetValidateKq3(void)
 	RAM_BANK = SOURCE_BANK;
 	valid = valid && strlen((char*)SOURCE_ADDRESS) == 106 && strcmp((char*)SOURCE_ADDRESS, warning) == 0;
 	RAM_BANK = 13;
-	valid = valid && targetBankBefore == targetBankAfter && bankedCopyCalls == 4;
+	valid = valid && targetBankBefore == targetBankAfter;
+	RAM_BANK = DESTINATION_BANK;
+	valid = valid && ((byte*)OUTPUT_ADDRESS)[116] == 0x5A;
+	RAM_BANK = 13;
 	targetResult = valid ? 0 : 1;
 }
 
@@ -234,6 +237,16 @@ void targetEdgeCases(void)
 	valid = valid && expectFormat("trailing\\", "trailing\\", 256);
 	valid = valid && expectFormat("%v256|2/%s12/%w10/%m0/%q9/end", "/////end", 256);
 	valid = valid && expectFormat("%v999999999999999999999tail", "tail", 256);
+	setParserString(11, "last string");
+	RAM_BANK = PARSER_BANK;
+	strcpy(b7WordText[9], "last word");
+	numInputWords = 10;
+	RAM_BANK = OBJECT_BANK;
+	bDNumObjects = MAX_OBJECTS;
+	bDObjects[MAX_OBJECTS - 1].name = (char*)0xA600;
+	RAM_BANK = 13;
+	putBankedString(OBJECT_BANK, 0xA600, "last object");
+	valid = valid && expectFormat("%s11/%w10/%0100/%0101", "last string/last word/last object/", 256);
 
 	setParserString(0, "A%s0");
 	valid = valid && expectFormat("%s0", "A", 256);
@@ -265,7 +278,9 @@ void targetEdgeCases(void)
 	RAM_BANK = DESTINATION_BANK;
 	valid = valid && strcmp((char*)OUTPUT_ADDRESS, expanded200) == 0;
 	RAM_BANK = 13;
-	valid = valid && bankedCopyCalls == 5;
+	RAM_BANK = DESTINATION_BANK;
+	valid = valid && ((byte*)OUTPUT_ADDRESS)[201] == 0x5A;
+	RAM_BANK = 13;
 
 	valid = valid && expectCapacity("abcdef", "abc", 4, 0x5A, 0x5A);
 	valid = valid && expectCapacity("abcdef", "", 1, 0x5A, 0x5A);
