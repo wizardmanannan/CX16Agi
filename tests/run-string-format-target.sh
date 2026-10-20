@@ -110,5 +110,5 @@ if ! python3 "$repo_root/tests/build-target-product.py" "$repo_root" "$fixture/p
     exit 1
 fi
 "${compiler[@]}" -std=c99 "$repo_root/tests/test-parser-cleanup-target.c" -o "$fixture/test-parser-cleanup-target"
-"$fixture/test-parser-cleanup-target" "$fixture/product/agi.cx16" "$fixture/product/agi.lbl" "$fixture/product/agi.cx16.07"
+"$fixture/test-parser-cleanup-target" "$fixture/product/agi.cx16" "$fixture/product/agi.lbl" "$fixture/product/agi.cx16.07" "$fixture/product/agi.cx16.03"
 cp "$fixture/product/agi.map" "$build_root/product.map"

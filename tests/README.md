@@ -46,3 +46,8 @@ The product build keeps the makefile's flags except the obsolete OptStackOps
 option removed by current cc65, relocates the hardcoded map path into the build
 root, and emits explicit compiler/assembler intermediates. The retained
 `product.map` is under the suite output root; all transient fixtures are removed.
+
+Additional full-product layout baselines (32 calls each): C word wrapping takes
+222,784 cycles for `ab cd ef gh ij` at width 5, and C border construction takes
+1,980,480 cycles for a width-30 box containing `one\n\ntwo\n`. The cases check
+wrapped output, width, return values, empty rows, terminators and canaries.
