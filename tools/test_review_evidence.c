@@ -120,7 +120,7 @@ static void check_engine_fixture_temps_clean(void)
     CHECK(!leaked, "Review evidence did not clean external fixture temps");
 }
 
-static void check_native_workflow_binary(const char *report_directory)
+static void check_native_workflow_binary(const char *report_directory, char binary_sha[65])
 {
     char artifacts[4096];
     path_join(artifacts, sizeof(artifacts), report_directory, "artifacts/suites/required-native");
@@ -141,6 +141,8 @@ static void check_native_workflow_binary(const char *report_directory)
         path_join(binary, sizeof(binary), work, "bin/test_review_workflow");
         struct stat info;
         if (!stat(binary, &info) && S_ISREG(info.st_mode) && !access(binary, X_OK)) {
+            CHECK(!review_sha256_file(binary, binary_sha),
+                  "Cannot hash retained native workflow test binary");
             found = true;
             break;
         }
@@ -215,6 +217,25 @@ static char *replace_text(const char *text, const char *needle, const char *repl
     memcpy(result + prefix, replacement, replacement_length);
     memcpy(result + prefix + replacement_length, match + needle_length, suffix + 1);
     return result;
+}
+
+static char *without_native_workflow_requirement(const char *plan)
+{
+    const char *suite =
+        "suite|required-native|20|8|@TOOL:make@|-C|@INPUT:product-tools@|review-workflow-test|"
+        "TEST_OUTPUT_ROOT=@OUT@|TEST_FIXTURE_ROOT=@TMP@|HOST_CC=@TOOL:host-cc@|KEEP_TEST_OUTPUT=1\n";
+    char *without_suite = replace_text(plan, suite, "");
+    char *without_artifact = replace_text(without_suite,
+        "artifact|required-native|cx16agi-review-workflow.*/bin/test_review_workflow\n", "");
+    char product_tools_record[8192];
+    int length = snprintf(product_tools_record, sizeof(product_tools_record),
+                          "input|product-tools|%s\n", product_tools);
+    CHECK(length > 0 && length < (int)sizeof(product_tools_record),
+          "Review native tools input path is too long");
+    char *without_tool_input = replace_text(without_artifact, product_tools_record, "");
+    free(without_suite);
+    free(without_artifact);
+    return without_tool_input;
 }
 
 static void last_field_from_record(const char *text, const char *prefix, char value[65])
@@ -387,6 +408,16 @@ static void create_fixture(const char *host_cc, char *baseline, size_t baseline_
         "test: build\n"
         "\t\"$(OUT)/contract-test\"\n"
         "\ttest -f \"$(INPUT_DIR)/input.txt\"\n"
+        "\tmkdir -p \"$(OUT)/artifact-cases\"\n"
+        "\t: > \"$(OUT)/artifact-cases/empty.bin\"\n"
+        "\tln -s \"$(INPUT_DIR)/input.txt\" \"$(OUT)/artifact-cases/escape.bin\"\n"
+        "\tprintf valid > \"$(OUT)/artifact-cases/mixed-valid.bin\"\n"
+        "\tln -s \"$(INPUT_DIR)/input.txt\" \"$(OUT)/artifact-cases/mixed-escape.bin\"\n"
+        "\tmkdir \"$(OUT)/artifact-cases/directory-match-dir\"\n"
+        "\tprintf valid > \"$(OUT)/artifact-cases/directory-match-valid.bin\"\n"
+        "\tmkdir -p \"$(OUT)/artifact-cases/multi\"\n"
+        "\tprintf second > \"$(OUT)/artifact-cases/multi/b.bin\"\n"
+        "\tprintf first > \"$(OUT)/artifact-cases/multi/a.bin\"\n"
         "flood: build\n"
         "\t\"$(OUT)/flood-test\"\n"
         "failure:\n"
@@ -442,9 +473,11 @@ static void create_fixture(const char *host_cc, char *baseline, size_t baseline_
 static void write_plan(const char *path, const char *candidate, const char *baseline,
                        bool failing_suite, bool timeout_suite, bool wrong_symptom,
                        bool broken_build, const char *overlay_test, const char *fixture_input,
-                       const char *mutation_marker)
+                       const char *mutation_marker, const char *artifact_suite,
+                       const char *artifact_pattern)
 {
     char plan[8192], suite[4096];
+    bool native_workflow = artifact_suite && !strcmp(artifact_suite, "required-native");
     if (failing_suite) snprintf(suite, sizeof(suite),
         "suite|required-contract|15|5|@TOOL:make@|-f|Makefile|failure|HOST_CC=@TOOL:host-cc@\n");
     else if (timeout_suite) snprintf(suite, sizeof(suite),
@@ -458,12 +491,14 @@ static void write_plan(const char *path, const char *candidate, const char *base
         "suite|required-contract|15|7|@TOOL:make@|-f|Makefile|test|OUT=@OUT@|CC=@TOOLCHAIN@|HOST_CC=@TOOL:host-cc@\n");
     char input_record[8192] = "";
     if (fixture_input && *fixture_input) {
-        int input_length = snprintf(input_record, sizeof(input_record),
-                                    "input|fixture-data|%s\ninput|product-tools|%s\n",
-                                    fixture_input, product_tools);
+        int input_length = native_workflow ?
+            snprintf(input_record, sizeof(input_record),
+                     "input|fixture-data|%s\ninput|product-tools|%s\n",
+                     fixture_input, product_tools) :
+            snprintf(input_record, sizeof(input_record), "input|fixture-data|%s\n", fixture_input);
         CHECK(input_length > 0 && input_length < (int)sizeof(input_record), "Review input path is too long");
     }
-    if (fixture_input && *fixture_input) {
+    if (native_workflow && fixture_input && *fixture_input) {
         size_t used = strlen(suite);
         CHECK(used < sizeof(suite), "Review native fixture guard suite is too large");
         int suite_length = snprintf(suite + used, sizeof(suite) - used,
@@ -471,6 +506,15 @@ static void write_plan(const char *path, const char *candidate, const char *base
             "TEST_OUTPUT_ROOT=@OUT@|TEST_FIXTURE_ROOT=@TMP@|HOST_CC=@TOOL:host-cc@|KEEP_TEST_OUTPUT=1\n");
         CHECK(suite_length > 0 && (size_t)suite_length < sizeof(suite) - used,
               "Review native fixture guard suite is too large");
+    }
+    char artifact_record[1024] = "";
+    if (artifact_suite || artifact_pattern) {
+        CHECK(artifact_suite && artifact_pattern,
+              "Review evidence artifact fixture needs a suite and pattern");
+        int artifact_length = snprintf(artifact_record, sizeof(artifact_record),
+                                       "artifact|%s|%s\n", artifact_suite, artifact_pattern);
+        CHECK(artifact_length > 0 && artifact_length < (int)sizeof(artifact_record),
+              "Review evidence artifact requirement is too long");
     }
     int length = snprintf(plan, sizeof(plan),
         "review-plan-v2\n"
@@ -481,13 +525,14 @@ static void write_plan(const char *path, const char *candidate, const char *base
         "tool|host-cc|cc\n"
         "%s"
         "%s"
+        "%s"
         "witness|addition-contract|%s|15|7|WITNESS_EXECUTED: addition-contract|"
         "%s|PASS: addition-contract|6|@TOOL:make@|-f|Makefile|build|"
         "OUT=@OUT@|CC=%s|1|@OUT@/contract-test\n"
         "scope|addition-contract|add two values and return their sum|add|calc.c|contract_test.c:main calls add|contract_test.c|required-contract|same permanent contract case must run on baseline and candidate|none\n"
         "overlay|addition-contract|Makefile\n"
         "overlay|addition-contract|%s\n",
-        project, candidate, input_record, suite, baseline,
+        project, candidate, input_record, suite, artifact_record, baseline,
         wrong_symptom ? "ASSERTION: unrelated failure" : "ASSERTION: expected 42, got 41",
         broken_build ? "/bin/false" : "@TOOLCHAIN@", overlay_test);
     CHECK(length > 0 && length < (int)sizeof(plan), "Review evidence test plan is too large");
@@ -547,8 +592,10 @@ static void expect_capture_uses_external_fixture_root(const char *tool, const ch
     if (status) {
         if (access(native_log, R_OK) || !file_contains(native_log,
                 "test fixtures must be outside the product worktree")) {
-            fprintf(stderr, "Review evidence capture failed before reaching the product fixture-root guard (exit %d)\n",
-                    status);
+            char *diagnostics = read_text(tool_log);
+            fprintf(stderr, "Review evidence capture failed before reaching the product fixture-root guard (exit %d): %s\n",
+                    status, diagnostics);
+            free(diagnostics);
             run_from_print_log_tail(tool_log);
             exit(EXIT_FAILURE);
         }
@@ -681,10 +728,13 @@ int main(int argc, char **argv)
 
     char baseline[64], candidate[64];
     create_fixture(argv[2], baseline, sizeof(baseline), candidate, sizeof(candidate));
-    write_plan(plan_path, candidate, baseline, false, false, false, false, "contract_test.c", fixture_input, NULL);
+    write_plan(plan_path, candidate, baseline, false, false, false, false, "contract_test.c",
+               fixture_input, NULL, "required-native",
+               "cx16agi-review-workflow.*/bin/test_review_workflow");
 
     expect_capture_uses_external_fixture_root(argv[1], plan_path, report);
-    check_native_workflow_binary(report);
+    char native_workflow_binary_sha[65];
+    check_native_workflow_binary(report, native_workflow_binary_sha);
     check_engine_fixture_temps_clean();
     char evidence_path[4096], packet_path[4096];
     path_join(evidence_path, sizeof(evidence_path), report, "evidence.v2");
@@ -709,7 +759,117 @@ int main(int argc, char **argv)
           strstr(packet, "omit exactly the root `.git` entry") &&
           strstr(packet, "Artifact-tree hashes do not apply the `.git` exclusion"),
           "Generated review packet omitted external-input VCS exclusion semantics");
+    CHECK(strstr(packet, "## Required artifacts") &&
+          strstr(packet, "required-native") &&
+          strstr(packet, "cx16agi-review-workflow.*/bin/test_review_workflow") &&
+          strstr(packet, "test_review_workflow") &&
+          strstr(packet, native_workflow_binary_sha),
+          "Generated review packet omitted the required artifact match and its file hash");
     free(packet);
+
+    char missing_artifact_plan[4096], empty_artifact_plan[4096], symlink_artifact_plan[4096];
+    char directory_artifact_plan[4096];
+    char missing_artifact_report[4096], empty_artifact_report[4096], symlink_artifact_report[4096];
+    char directory_artifact_report[4096];
+    path_join(missing_artifact_plan, sizeof(missing_artifact_plan), suite_fixture_directory,
+              "missing-artifact.plan");
+    path_join(empty_artifact_plan, sizeof(empty_artifact_plan), suite_fixture_directory,
+              "empty-artifact.plan");
+    path_join(symlink_artifact_plan, sizeof(symlink_artifact_plan), suite_fixture_directory,
+              "symlink-artifact.plan");
+    path_join(directory_artifact_plan, sizeof(directory_artifact_plan), suite_fixture_directory,
+              "directory-artifact.plan");
+    path_join(missing_artifact_report, sizeof(missing_artifact_report), output_root,
+              "missing-artifact");
+    path_join(empty_artifact_report, sizeof(empty_artifact_report), output_root,
+              "empty-artifact");
+    path_join(symlink_artifact_report, sizeof(symlink_artifact_report), output_root,
+              "symlink-artifact");
+    path_join(directory_artifact_report, sizeof(directory_artifact_report), output_root,
+              "directory-artifact");
+    write_plan(missing_artifact_plan, candidate, baseline, false, false, false, false,
+               "contract_test.c", fixture_input, NULL, "required-contract",
+               "artifact-cases/missing.bin");
+    expect_capture_rejected(argv[1], missing_artifact_plan, missing_artifact_report,
+                            "required artifact pattern matched no files: required-contract:artifact-cases/missing.bin");
+    check_engine_fixture_temps_clean();
+    write_plan(empty_artifact_plan, candidate, baseline, false, false, false, false,
+               "contract_test.c", fixture_input, NULL, "required-contract",
+               "artifact-cases/empty.bin");
+    expect_capture_rejected(argv[1], empty_artifact_plan, empty_artifact_report,
+                            "required artifact match is empty: artifacts/suites/required-contract/artifact-cases/empty.bin");
+    check_engine_fixture_temps_clean();
+    write_plan(symlink_artifact_plan, candidate, baseline, false, false, false, false,
+               "contract_test.c", fixture_input, NULL, "required-contract",
+               "artifact-cases/mixed-*");
+    expect_capture_rejected(argv[1], symlink_artifact_plan, symlink_artifact_report,
+                            "required artifact match is not a regular file: artifacts/suites/required-contract/artifact-cases/mixed-escape.bin");
+    check_engine_fixture_temps_clean();
+    write_plan(directory_artifact_plan, candidate, baseline, false, false, false, false,
+               "contract_test.c", fixture_input, NULL, "required-contract",
+               "artifact-cases/directory-match*");
+    expect_capture_rejected(argv[1], directory_artifact_plan, directory_artifact_report,
+                            "required artifact match is not a regular file: artifacts/suites/required-contract/artifact-cases/directory-match-dir");
+    check_engine_fixture_temps_clean();
+
+    char multi_artifact_plan[4096], multi_artifact_report[4096], multi_artifact_packet[4096];
+    path_join(multi_artifact_plan, sizeof(multi_artifact_plan), suite_fixture_directory,
+              "multiple-artifact-matches.plan");
+    path_join(multi_artifact_report, sizeof(multi_artifact_report), output_root,
+              "multiple-artifact-matches");
+    write_plan(multi_artifact_plan, candidate, baseline, false, false, false, false,
+               "contract_test.c", fixture_input, NULL, "required-contract",
+               "artifact-cases/multi/*");
+    expect_tool_status(argv[1], "capture", multi_artifact_plan, multi_artifact_report, NULL, 0,
+                       "Capture failed to record multiple matching regular artifacts");
+    path_join(multi_artifact_packet, sizeof(multi_artifact_packet), multi_artifact_report, "review.md");
+    char *multi_packet = read_text(multi_artifact_packet);
+    const char *artifact_a = strstr(multi_packet,
+                                    "artifacts/suites/required-contract/artifact-cases/multi/a.bin");
+    const char *artifact_b = strstr(multi_packet,
+                                    "artifacts/suites/required-contract/artifact-cases/multi/b.bin");
+    CHECK(artifact_a && artifact_b && artifact_a < artifact_b,
+          "Review packet did not sort multiple artifact matches by relative path");
+    free(multi_packet);
+    expect_tool_status(argv[1], "verify", multi_artifact_plan, multi_artifact_report, output_root, 0,
+                       "Fresh replay rejected multiple required artifact matches");
+    check_engine_fixture_temps_clean();
+
+    char artifact_suite_plan[4096], artifact_pattern_plan[4096], artifact_limit_plan[4096];
+    path_join(artifact_suite_plan, sizeof(artifact_suite_plan), suite_fixture_directory,
+              "unknown-artifact-suite.plan");
+    path_join(artifact_pattern_plan, sizeof(artifact_pattern_plan), suite_fixture_directory,
+              "unsafe-artifact-pattern.plan");
+    path_join(artifact_limit_plan, sizeof(artifact_limit_plan), suite_fixture_directory,
+              "artifact-limit.plan");
+    write_plan(artifact_suite_plan, candidate, baseline, false, false, false, false,
+               "contract_test.c", fixture_input, NULL, "missing-suite", "artifact.bin");
+    expect_capture_rejected(argv[1], artifact_suite_plan, output_root,
+                            "required artifact names an unknown suite: missing-suite");
+    write_plan(artifact_pattern_plan, candidate, baseline, false, false, false, false,
+               "contract_test.c", fixture_input, NULL, "required-contract", "../escape.bin");
+    expect_capture_rejected(argv[1], artifact_pattern_plan, output_root,
+                            "invalid required artifact path pattern: ../escape.bin");
+    write_plan(artifact_limit_plan, candidate, baseline, false, false, false, false,
+               "contract_test.c", fixture_input, NULL, "required-contract",
+               "artifact-cases/limit-base.bin");
+    char *limit_base = read_text(artifact_limit_plan);
+    char additions[4096] = "artifact|required-contract|artifact-cases/limit-base.bin\n";
+    size_t additions_used = strlen(additions);
+    for (unsigned i = 0; i < 32; ++i) {
+        int extra_length = snprintf(additions + additions_used, sizeof(additions) - additions_used,
+                                    "artifact|required-contract|artifact-cases/limit-%u.bin\n", i);
+        CHECK(extra_length > 0 && (size_t)extra_length < sizeof(additions) - additions_used,
+              "Review evidence artifact limit fixture is too large");
+        additions_used += (size_t)extra_length;
+    }
+    char *limited_plan = replace_text(limit_base,
+        "artifact|required-contract|artifact-cases/limit-base.bin\n", additions);
+    write_text(artifact_limit_plan, limited_plan);
+    expect_capture_rejected(argv[1], artifact_limit_plan, output_root,
+                            "too many or incomplete required artifact records");
+    free(limited_plan);
+    free(limit_base);
 
     char stderr_version_helper[4096], stderr_version_plan_path[4096];
     char stderr_version_report[4096], stderr_version_evidence_path[4096];
@@ -731,7 +891,9 @@ int main(int argc, char **argv)
         "toolchain|@INPUT:stderr-version-cc@\ninput|stderr-version-cc|%s\n", stderr_version_helper);
     CHECK(input_record_length > 0 && input_record_length < (int)sizeof(input_record),
           "stderr-only compiler input path is too long");
-    char *ordinary_plan = read_text(plan_path);
+    char *captured_plan = read_text(plan_path);
+    char *ordinary_plan = without_native_workflow_requirement(captured_plan);
+    free(captured_plan);
     char *stderr_version_plan = replace_text(ordinary_plan, "toolchain|cc\n", input_record);
     write_text(stderr_version_plan_path, stderr_version_plan);
     free(ordinary_plan);
@@ -753,7 +915,7 @@ int main(int argc, char **argv)
     path_join(unsafe_overlay_plan, sizeof(unsafe_overlay_plan), suite_fixture_directory, "unsafe-overlay.plan");
     path_join(unsafe_overlay_report, sizeof(unsafe_overlay_report), output_root, "unsafe-overlay");
     write_plan(unsafe_overlay_plan, candidate, baseline, false, false, false, false,
-               "contract_test.c", fixture_input, NULL);
+               "contract_test.c", fixture_input, NULL, NULL, NULL);
     char *unsafe_plan = read_text(unsafe_overlay_plan);
     replace_once(unsafe_plan, "overlay|addition-contract|Makefile", "overlay|addition-contract|./calc.c");
     write_text(unsafe_overlay_plan, unsafe_plan);
@@ -778,9 +940,13 @@ int main(int argc, char **argv)
     expect_tool_failure(argv[1], "capture", unavailable_plan, unavailable_report, NULL,
                         "Required coverage availability did not block review evidence capture");
     char *unavailable_diagnostic = read_text(tool_log);
-    CHECK(strstr(unavailable_diagnostic,
-                 "required coverage unavailable for witness addition-contract: full-game SDL caller unavailable") != NULL,
-          "Unavailable required coverage did not produce an actionable capture diagnostic");
+    if (!strstr(unavailable_diagnostic,
+                "required coverage unavailable for witness addition-contract: full-game SDL caller unavailable")) {
+        fprintf(stderr, "Unavailable required coverage produced the wrong capture diagnostic: %s\n",
+                unavailable_diagnostic);
+        free(unavailable_diagnostic);
+        exit(EXIT_FAILURE);
+    }
     free(unavailable_diagnostic);
     path_join(unavailable_packet, sizeof(unavailable_packet), unavailable_report, "review.md");
     char *unavailable_packet_text = read_text(unavailable_packet);
@@ -862,7 +1028,9 @@ int main(int argc, char **argv)
     CHECK(!mkdir(nested_workdir, 0700), "Cannot create nested Git invocation directory");
     path_join(nested_plan, sizeof(nested_plan), suite_fixture_directory, "portable-review.plan");
     path_join(nested_report, sizeof(nested_report), output_root, "portable-review");
-    char *portable = read_text(plan_path);
+    char *captured_portable = read_text(plan_path);
+    char *portable = without_native_workflow_requirement(captured_portable);
+    free(captured_portable);
     char *repo_relative = replace_text(portable, project, ".");
     char *head_relative = replace_text(repo_relative, candidate, "HEAD");
     char *environment_input = replace_text(head_relative, fixture_input, "@ENV:REVIEW_TEST_INPUT@");
@@ -999,7 +1167,8 @@ int main(int argc, char **argv)
     char failed_plan[4096], failed_report[4096];
     path_join(failed_plan, sizeof(failed_plan), suite_fixture_directory, "failed-suite.plan");
     path_join(failed_report, sizeof(failed_report), output_root, "failed-suite");
-    write_plan(failed_plan, candidate, baseline, true, false, false, false, "contract_test.c", NULL, NULL);
+    write_plan(failed_plan, candidate, baseline, true, false, false, false,
+               "contract_test.c", NULL, NULL, NULL, NULL);
     expect_tool_failure(argv[1], "capture", failed_plan, failed_report, NULL,
                         "Capture accepted a nonzero required suite");
     check_engine_fixture_temps_clean();
@@ -1040,7 +1209,7 @@ int main(int argc, char **argv)
     path_join(wrong_symptom_plan, sizeof(wrong_symptom_plan), suite_fixture_directory, "wrong-symptom.plan");
     path_join(wrong_symptom_report, sizeof(wrong_symptom_report), output_root, "wrong-symptom");
     write_plan(wrong_symptom_plan, candidate, baseline, false, false, true, false,
-               "contract_test.c", fixture_input, NULL);
+               "contract_test.c", fixture_input, NULL, NULL, NULL);
     expect_tool_failure(argv[1], "capture", wrong_symptom_plan, wrong_symptom_report, NULL,
                         "Capture accepted a generic baseline failure without its declared symptom");
     path_join(packet_path, sizeof(packet_path), wrong_symptom_report, "review.md");
@@ -1053,7 +1222,7 @@ int main(int argc, char **argv)
     path_join(broken_build_plan, sizeof(broken_build_plan), suite_fixture_directory, "broken-build.plan");
     path_join(broken_build_report, sizeof(broken_build_report), output_root, "broken-build");
     write_plan(broken_build_plan, candidate, baseline, false, false, false, true,
-               "contract_test.c", fixture_input, NULL);
+               "contract_test.c", fixture_input, NULL, NULL, NULL);
     expect_tool_failure(argv[1], "capture", broken_build_plan, broken_build_report, NULL,
                         "Capture accepted a compiler failure as a regression witness");
     path_join(baseline_run_log, sizeof(baseline_run_log), broken_build_report,
@@ -1067,7 +1236,7 @@ int main(int argc, char **argv)
     path_join(timeout_plan, sizeof(timeout_plan), suite_fixture_directory, "timeout.plan");
     path_join(timeout_report, sizeof(timeout_report), output_root, "timeout");
     write_plan(timeout_plan, candidate, baseline, false, true, false, false,
-               "contract_test.c", NULL, NULL);
+               "contract_test.c", NULL, NULL, NULL, NULL);
     expect_tool_failure(argv[1], "capture", timeout_plan, timeout_report, NULL,
                         "Capture accepted a timed-out required suite");
     path_join(evidence_path, sizeof(evidence_path), timeout_report, "evidence.v2");
@@ -1088,7 +1257,7 @@ int main(int argc, char **argv)
     path_join(mutation_marker, sizeof(mutation_marker), suite_fixture_directory, "mutate-during-verify");
     path_join(calc_path, sizeof(calc_path), project, "calc.c");
     write_plan(mutation_plan, candidate, baseline, false, false, false, false,
-               "contract_test.c", fixture_input, mutation_marker);
+               "contract_test.c", fixture_input, mutation_marker, NULL, NULL);
     expect_tool_status(argv[1], "capture", mutation_plan, mutation_report, NULL, 0,
                        "Mutation replay fixture did not capture a clean candidate");
     write_text(mutation_marker, "mutate candidate during verification\n");
@@ -1109,7 +1278,7 @@ int main(int argc, char **argv)
     path_join(input_mutation_marker, sizeof(input_mutation_marker), suite_fixture_directory,
               "mutate-external-input-during-verify");
     write_plan(input_mutation_plan, candidate, baseline, false, false, false, false,
-               "contract_test.c", fixture_input, input_mutation_marker);
+               "contract_test.c", fixture_input, input_mutation_marker, NULL, NULL);
     char mutation_target[8192];
     int mutation_target_length = snprintf(mutation_target, sizeof(mutation_target),
                                           "%s|@TOOL:make@", input_file);

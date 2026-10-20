@@ -7,6 +7,7 @@
 #include <dirent.h>
 #include <errno.h>
 #include <fcntl.h>
+#include <fnmatch.h>
 #include <limits.h>
 #include <poll.h>
 #include <signal.h>
@@ -29,6 +30,9 @@
 #define MAX_SCOPES MAX_WITNESSES
 #define MAX_TOOLS 32
 #define MAX_INPUTS 16
+#define MAX_ARTIFACT_REQUIREMENTS 32
+#define MAX_ARTIFACT_MATCHES 128
+#define MAX_ARTIFACT_PATTERN 512
 #define MAX_OVERLAYS 16
 #define MAX_ARGS 64
 #define MAX_FIELDS 256
@@ -58,6 +62,16 @@ typedef struct {
     size_t argc;
     char *argv[MAX_ARGS];
 } Suite;
+
+typedef struct {
+    char suite[128];
+    char pattern[MAX_ARTIFACT_PATTERN];
+} ArtifactRequirement;
+
+typedef struct {
+    char path[PATH_CAP];
+    char sha[65];
+} ArtifactMatch;
 
 typedef struct {
     char name[128];
@@ -98,6 +112,8 @@ typedef struct {
     Input inputs[MAX_INPUTS];
     size_t suite_count;
     Suite suites[MAX_SUITES];
+    size_t artifact_requirement_count;
+    ArtifactRequirement artifact_requirements[MAX_ARTIFACT_REQUIREMENTS];
     size_t witness_count;
     Witness witnesses[MAX_WITNESSES];
     size_t scope_count;
@@ -262,6 +278,19 @@ static bool safe_relative_path(const char *path)
             return false;
         if (!*at) break;
         part = at + 1;
+    }
+    return true;
+}
+
+static bool safe_artifact_pattern(const char *pattern)
+{
+    size_t length = strlen(pattern);
+    if (!length || length >= MAX_ARTIFACT_PATTERN || !safe_relative_path(pattern)) return false;
+    size_t wildcards = 0;
+    for (const unsigned char *at = (const unsigned char *)pattern; *at; ++at) {
+        if (isalnum(*at) || *at == '/' || *at == '.' || *at == '_' || *at == '-') continue;
+        if (*at == '*' && ++wildcards <= 8) continue;
+        return false;
     }
     return true;
 }
@@ -524,7 +553,7 @@ static void parse_plan(const char *path, Plan *plan)
     if (count != 2 || strcmp(fields[0], "toolchain")) fail("expected toolchain record after candidate SHA");
     copy_field(plan->toolchain, sizeof(plan->toolchain), fields[1], "toolchain executable");
 
-    bool saw_suite = false, saw_witness = false;
+    bool saw_suite = false, saw_artifact = false, saw_witness = false;
     for (size_t line = 4; line < line_count; ++line) {
         split_fields(lines[line], fields, MAX_FIELDS, &count);
         if (!strcmp(fields[0], "tool")) {
@@ -549,7 +578,8 @@ static void parse_plan(const char *path, Plan *plan)
             if (input->path[0] != '/' && !valid_environment_token(input->path))
                 fail("external input path must be absolute or an @ENV:NAME@ token: %s", input->path);
         } else if (!strcmp(fields[0], "suite")) {
-            if (saw_witness) fail("required suites must precede witnesses");
+            if (saw_artifact || saw_witness)
+                fail("required suites must precede artifact requirements and witnesses");
             if (plan->suite_count == MAX_SUITES || count < 5) fail("too many or incomplete required suites");
             saw_suite = true;
             Suite *suite = &plan->suites[plan->suite_count++];
@@ -559,6 +589,29 @@ static void parse_plan(const char *path, Plan *plan)
                 if (!strcmp(plan->suites[i].name, suite->name)) fail("duplicate suite name: %s", suite->name);
             suite->timeout = parse_unsigned(fields[2], 1, 3600, "suite timeout");
             parse_arguments(fields, count, 3, &suite->argc, suite->argv, "suite argv");
+        } else if (!strcmp(fields[0], "artifact")) {
+            if (!saw_suite || saw_witness || count != 3 ||
+                plan->artifact_requirement_count == MAX_ARTIFACT_REQUIREMENTS)
+                fail("too many or incomplete required artifact records");
+            saw_artifact = true;
+            ArtifactRequirement *requirement =
+                &plan->artifact_requirements[plan->artifact_requirement_count++];
+            copy_field(requirement->suite, sizeof(requirement->suite), fields[1], "artifact suite name");
+            if (!valid_name(requirement->suite))
+                fail("invalid required artifact suite name: %s", requirement->suite);
+            bool found_suite = false;
+            for (size_t i = 0; i < plan->suite_count; ++i)
+                if (!strcmp(plan->suites[i].name, requirement->suite)) found_suite = true;
+            if (!found_suite) fail("required artifact names an unknown suite: %s", requirement->suite);
+            copy_field(requirement->pattern, sizeof(requirement->pattern), fields[2],
+                       "artifact path pattern");
+            if (!safe_artifact_pattern(requirement->pattern))
+                fail("invalid required artifact path pattern: %s", requirement->pattern);
+            for (size_t i = 0; i + 1 < plan->artifact_requirement_count; ++i)
+                if (!strcmp(plan->artifact_requirements[i].suite, requirement->suite) &&
+                    !strcmp(plan->artifact_requirements[i].pattern, requirement->pattern))
+                    fail("duplicate required artifact pattern for suite %s: %s",
+                         requirement->suite, requirement->pattern);
         } else if (!strcmp(fields[0], "witness")) {
             saw_witness = true;
             if (plan->witness_count == MAX_WITNESSES || count < 12) fail("too many or incomplete regression witnesses");
@@ -1044,6 +1097,151 @@ static void tree_sha(const char *path, char digest[65])
     unsigned char bytes[32];
     review_sha256_final(&context, bytes);
     review_sha256_hex(bytes, digest);
+}
+
+static void artifact_file_sha(const char *path, const struct stat *expected, char digest[65])
+{
+    int descriptor = open(path, O_RDONLY | O_NOFOLLOW);
+    if (descriptor < 0) fail("cannot open required artifact %s: %s", path, strerror(errno));
+    struct stat opened;
+    if (fstat(descriptor, &opened) || !S_ISREG(opened.st_mode) ||
+        opened.st_dev != expected->st_dev || opened.st_ino != expected->st_ino ||
+        opened.st_size != expected->st_size || opened.st_size <= 0) {
+        close(descriptor);
+        fail("required artifact changed or is empty while hashing: %s", path);
+    }
+    review_sha256 context;
+    review_sha256_init(&context);
+    unsigned char chunk[16384];
+    uint64_t total = 0;
+    for (;;) {
+        ssize_t length = read(descriptor, chunk, sizeof(chunk));
+        if (length < 0) {
+            if (errno == EINTR) continue;
+            close(descriptor);
+            fail("cannot read required artifact %s: %s", path, strerror(errno));
+        }
+        if (!length) break;
+        review_sha256_update(&context, chunk, (size_t)length);
+        total += (uint64_t)length;
+    }
+    struct stat after;
+    if (fstat(descriptor, &after) || after.st_dev != opened.st_dev || after.st_ino != opened.st_ino ||
+        after.st_size != opened.st_size || total != (uint64_t)opened.st_size) {
+        close(descriptor);
+        fail("required artifact changed while hashing: %s", path);
+    }
+    if (close(descriptor)) fail("cannot close required artifact %s: %s", path, strerror(errno));
+    unsigned char bytes[32];
+    review_sha256_final(&context, bytes);
+    review_sha256_hex(bytes, digest);
+}
+
+static void collect_artifact_matches_at(const char *suite_root, const char *suite_relative,
+                                        const char *relative, const char *pattern,
+                                        ArtifactMatch matches[MAX_ARTIFACT_MATCHES],
+                                        size_t *match_count, unsigned depth)
+{
+    if (depth > 64) fail("required artifact tree exceeds the maximum directory depth");
+    char directory_path[PATH_CAP];
+    if (*relative) join_path(directory_path, sizeof(directory_path), suite_root, relative);
+    else copy_field(directory_path, sizeof(directory_path), suite_root, "suite artifact root");
+    DIR *directory = opendir(directory_path);
+    if (!directory) fail("cannot inspect required artifact directory %s: %s",
+                         directory_path, strerror(errno));
+    for (;;) {
+        errno = 0;
+        struct dirent *entry = readdir(directory);
+        if (!entry) {
+            if (errno) {
+                int error = errno;
+                closedir(directory);
+                fail("cannot read required artifact directory %s: %s", directory_path, strerror(error));
+            }
+            break;
+        }
+        if (!strcmp(entry->d_name, ".") || !strcmp(entry->d_name, "..")) continue;
+        char child_relative[PATH_CAP], child_path[PATH_CAP], display_path[PATH_CAP];
+        int relative_length = *relative ?
+            snprintf(child_relative, sizeof(child_relative), "%s/%s", relative, entry->d_name) :
+            snprintf(child_relative, sizeof(child_relative), "%s", entry->d_name);
+        if (relative_length < 0 || relative_length >= (int)sizeof(child_relative)) {
+            closedir(directory);
+            fail("required artifact path is too long under %s", suite_root);
+        }
+        join_path(child_path, sizeof(child_path), suite_root, child_relative);
+        int display_length = snprintf(display_path, sizeof(display_path), "%s/%s",
+                                      suite_relative, child_relative);
+        if (display_length < 0 || display_length >= (int)sizeof(display_path)) {
+            closedir(directory);
+            fail("required artifact display path is too long");
+        }
+        struct stat info;
+        if (lstat(child_path, &info)) {
+            int error = errno;
+            closedir(directory);
+            fail("cannot inspect required artifact %s: %s", display_path, strerror(error));
+        }
+        bool matched = fnmatch(pattern, child_relative, FNM_PATHNAME) == 0;
+        if (matched) {
+            if (!S_ISREG(info.st_mode)) {
+                closedir(directory);
+                fail("required artifact match is not a regular file: %s", display_path);
+            }
+            if (info.st_size <= 0) {
+                closedir(directory);
+                fail("required artifact match is empty: %s", display_path);
+            }
+            if (*match_count == MAX_ARTIFACT_MATCHES) {
+                closedir(directory);
+                fail("required artifact pattern matched too many files: %s", display_path);
+            }
+            ArtifactMatch *match = &matches[(*match_count)++];
+            copy_field(match->path, sizeof(match->path), child_relative, "matched artifact path");
+            artifact_file_sha(child_path, &info, match->sha);
+        }
+        if (S_ISDIR(info.st_mode) && !S_ISLNK(info.st_mode))
+            collect_artifact_matches_at(suite_root, suite_relative, child_relative, pattern,
+                                        matches, match_count, depth + 1);
+    }
+    if (closedir(directory)) fail("cannot close required artifact directory %s", directory_path);
+}
+
+static int compare_artifact_matches(const void *left, const void *right)
+{
+    const ArtifactMatch *a = left;
+    const ArtifactMatch *b = right;
+    return strcmp(a->path, b->path);
+}
+
+static size_t collect_artifact_matches(const char *root, const ArtifactRequirement *requirement,
+                                       ArtifactMatch matches[MAX_ARTIFACT_MATCHES])
+{
+    char suite_relative[256], suite_root[PATH_CAP];
+    snprintf(suite_relative, sizeof(suite_relative), "artifacts/suites/%s", requirement->suite);
+    join_path(suite_root, sizeof(suite_root), root, suite_relative);
+    struct stat info;
+    if (lstat(suite_root, &info) || !S_ISDIR(info.st_mode) || S_ISLNK(info.st_mode))
+        fail("required artifact suite root is not a real directory: %s", suite_relative);
+    size_t match_count = 0;
+    collect_artifact_matches_at(suite_root, suite_relative, "", requirement->pattern,
+                                matches, &match_count, 0);
+    if (!match_count)
+        fail("required artifact pattern matched no files: %s:%s",
+             requirement->suite, requirement->pattern);
+    qsort(matches, match_count, sizeof(matches[0]), compare_artifact_matches);
+    return match_count;
+}
+
+static void validate_artifact_requirements(const Plan *plan, const char *suite_name,
+                                           const char *root)
+{
+    for (size_t i = 0; i < plan->artifact_requirement_count; ++i) {
+        const ArtifactRequirement *requirement = &plan->artifact_requirements[i];
+        if (strcmp(requirement->suite, suite_name)) continue;
+        ArtifactMatch matches[MAX_ARTIFACT_MATCHES];
+        collect_artifact_matches(root, requirement, matches);
+    }
 }
 
 static void external_input_sha(const char *path, char digest[65])
@@ -1778,6 +1976,7 @@ static void run_suite_capture(const Plan *plan, const Suite *suite, const char *
     free(toolchain_path);
     fact->result = run_logged(arguments, plan->repo, log, sandbox, fixture_temp, suite->timeout);
     free_argv(arguments, suite->argc);
+    if (result_ok(&fact->result)) validate_artifact_requirements(plan, suite->name, root);
     copy_field(fact->name, sizeof(fact->name), suite->name, "suite name");
     copy_field(fact->log, sizeof(fact->log), log_relative, "suite log path");
     hash_log(root, fact->log, fact->log_sha);
@@ -2278,6 +2477,7 @@ static void verify_captured_files(const Plan *plan, const Evidence *evidence, co
         char artifact[256];
         snprintf(artifact, sizeof(artifact), "artifacts/suites/%s", fact->name);
         verify_artifact_tree(root, artifact, fact->artifact_sha);
+        if (result_ok(&fact->result)) validate_artifact_requirements(plan, fact->name, root);
     }
     for (size_t i = 0; i < evidence->witness_fact_count; ++i) {
         const WitnessFact *fact = &evidence->witnesses[i];
@@ -2562,6 +2762,27 @@ static char *make_review_packet(const Plan *plan, const Evidence *evidence, cons
                       fact->name, fact->result.exit_code, fact->result.signal_number,
                       fact->result.timed_out ? "yes" : "no", fact->result.skipped ? "yes" : "no",
                       fact->log, fact->log_sha, fact->artifact_sha);
+    }
+    if (plan->artifact_requirement_count) {
+        buffer_append(&packet, "\n## Required artifacts\n\n");
+        for (size_t i = 0; i < plan->artifact_requirement_count; ++i) {
+            const ArtifactRequirement *requirement = &plan->artifact_requirements[i];
+            const SuiteFact *suite_fact = NULL;
+            for (size_t suite = 0; suite < evidence->suite_count; ++suite)
+                if (!strcmp(evidence->suites[suite].name, requirement->suite))
+                    suite_fact = &evidence->suites[suite];
+            buffer_printf(&packet, "- `%s` requires a nonempty regular file matching `%s`.\n",
+                          requirement->suite, requirement->pattern);
+            if (!suite_fact || !result_ok(&suite_fact->result)) {
+                buffer_append(&packet, "  - No successful suite artifact output was recorded.\n");
+                continue;
+            }
+            ArtifactMatch matches[MAX_ARTIFACT_MATCHES];
+            size_t match_count = collect_artifact_matches(root, requirement, matches);
+            for (size_t match = 0; match < match_count; ++match)
+                buffer_printf(&packet, "  - `artifacts/suites/%s/%s` (file SHA-256 `%s`).\n",
+                              requirement->suite, matches[match].path, matches[match].sha);
+        }
     }
     buffer_append(&packet, "\n## Regression witnesses\n\n");
     for (size_t i = 0; i < plan->witness_count; ++i) {
