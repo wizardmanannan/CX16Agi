@@ -8,3 +8,7 @@
 *.exe binary
 *.dll binary
 *.zip binary
+
+# Unified patches retain upstream context indentation and blank context lines.
+tools/logic_oracle_scummvm-*.patch -whitespace
+tools/x16_testbench_video.patch -whitespace
