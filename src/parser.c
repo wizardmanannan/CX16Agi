@@ -20,7 +20,7 @@ extern int controlMode;
 
 int lastKey;
 int numInputWords;
-char cursorChar = '_';
+char cursorChar = 0x5f; /* AGI ASCII underscore, independent of the target charmap. */
 boolean b7ReadingString, b7InputReady;
 byte b7InputRow, b7InputColumn;
 

@@ -56,6 +56,8 @@ int main(int argc, char** argv)
     pid_t child;
     assert(argc == 6);
     routine = targetFixtureSymbol(argv[2], "b7HandleInputLine");
+    fprintf(input, "RQM %04X\n", targetFixtureSymbol(argv[2], "_cursorChar"));
+    expected[count++] = 0x5f;
     bank = fopen(argv[3], "rb"); assert(bank);
     at = (unsigned int)fgetc(bank);
     at |= (unsigned int)fgetc(bank) << 8;
