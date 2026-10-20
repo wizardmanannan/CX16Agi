@@ -35,6 +35,9 @@ review-check:
 build-test:
 	@$(MAKE) --no-print-directory -f "$(REPO_ROOT)/tools/Makefile" _run MODE=build-test
 
+metadata-test:
+	@$(MAKE) --no-print-directory -f "$(REPO_ROOT)/tools/Makefile" _run MODE=metadata-test
+
 staging-test:
 	@$(MAKE) --no-print-directory -f "$(REPO_ROOT)/tools/Makefile" _run MODE=staging-test
 
@@ -96,6 +99,7 @@ _run:
 	  need_file "$$repo/tools/test-image.mk"; need_file "$$repo/tools/test_image_exports.s"; \
 	}; \
 	case "$$mode" in \
+	  metadata-test) need_cc65 ;; \
 	  staging-test) need_command pkg-config; pkg-config --exists libpng ;; \
 	  emulator-audio-test) need_file "$$X16_EMULATOR_SOURCE/src/audio.c"; need_command pkg-config; pkg-config --exists sdl2 ;; \
 	  build-test) need_cc65; need_exec "$$CC65_HOME/bin/cl65" ;; \
@@ -182,6 +186,9 @@ _run:
 	    "$(HOST_CC)" $(HOST_CFLAGS) -Wno-unknown-pragmas -Wno-error=incompatible-pointer-types -Wno-error=int-conversion -D_MSC_VER -D__CBM__ '-D__fastcall__=' -idirafter "$$CC65_HOME/include" -ffunction-sections -fdata-sections -fsanitize=address,undefined -fno-sanitize-recover=all "$$repo/tools/test_$$name.c" -Wl,--gc-sections -o "$$work/bin/test_$$name"; \
 	  done; \
 	}; \
+	build_metadata() { \
+	    "$(HOST_CC)" $(HOST_CFLAGS) -Wno-unknown-pragmas -D__CX16__ -D_MSC_VER -D__CBM__ '-D__fastcall__=' -idirafter "$$CC65_HOME/include" -ffunction-sections -fdata-sections "$$repo/tools/test_dependency_metadata.c" -Wl,--gc-sections -o "$$work/bin/test_dependency_metadata"; \
+	}; \
 	prepare_sanitizers() { \
 	  sanitized_preload=$${LD_PRELOAD:-}; \
 	  if [ -n "$$sanitized_preload" ]; then \
@@ -191,6 +198,7 @@ _run:
 	  fi; \
 	}; \
 	case "$$mode" in \
+	  metadata-test) build_metadata; "$$work/bin/test_dependency_metadata" ;; \
 	  staging-test) \
 	    "$(HOST_CC)" $(HOST_CFLAGS) "$$repo/tools/test_full_game_irq.c" -lpng -o "$$work/bin/test_full_game_irq"; \
 	    "$$work/bin/test_full_game_irq" --staging-test ;; \
@@ -243,6 +251,7 @@ _run:
 	    "$(HOST_CC)" $(HOST_CFLAGS) -Wno-unknown-pragmas -fsanitize=bounds -fno-sanitize-recover=bounds "$$repo/tools/test_controllers.c" -o "$$work/bin/test_controllers"; \
 	    "$(HOST_CC)" $(HOST_CFLAGS) -Wno-unknown-pragmas -fsanitize=address,undefined -fno-sanitize-recover=all "$$repo/tools/test_menu.c" -o "$$work/bin/test_menu"; \
 	    build_commands; \
+	    build_metadata; \
 	    "$(HOST_CC)" $(HOST_CFLAGS) -Wno-unknown-pragmas -fsanitize=address,undefined -fno-sanitize-recover=all -idirafter "$$CC65_HOME/include" "$$repo/tools/test_text_buffers.c" -o "$$work/bin/test_text_buffers"; \
 	    "$(HOST_CC)" $(HOST_CFLAGS) -Wno-error=incompatible-pointer-types -Wno-error=int-conversion -D_MSC_VER -D__CBM__ '-D__fastcall__=' -idirafter "$$CC65_HOME/include" -Wno-unknown-pragmas -ffunction-sections -fdata-sections -fsanitize=address,undefined -fno-sanitize-recover=all "$$repo/tools/test_words_file.c" -Wl,--gc-sections -o "$$work/bin/test_words_file"; \
 	    "$(HOST_CC)" $(HOST_CFLAGS) -Wno-error=incompatible-pointer-types -Wno-error=int-conversion -D_MSC_VER -D__CBM__ '-D__fastcall__=' -idirafter "$$CC65_HOME/include" -Wno-unknown-pragmas -ffunction-sections -fdata-sections -fsanitize=address,undefined -fno-sanitize-recover=all "$$repo/tools/test_agifiles.c" -Wl,--gc-sections -o "$$work/bin/test_agifiles"; \
@@ -257,6 +266,7 @@ _run:
 	    run_test "$$work/bin/test_tool_paths"; \
 	    run_test "$$work/bin/test_fixture_cleanup"; \
 	    run_test "$$work/bin/test_palette_manager"; \
+	    run_test "$$work/bin/test_dependency_metadata"; \
 	    run_test "$$work/bin/test_controllers"; \
 	    prepare_sanitizers; \
 	    run_test env LD_PRELOAD="$$sanitized_preload" "$$work/bin/test_menu"; \
