@@ -1468,6 +1468,8 @@ static void test_combined_irq_workload(void) {
            /* Base 5364f892 with original irqAsm.s and the page-aligned fixture. */
            MIXED_TEXT_DISPATCH_BASELINE_CYCLES = 79570,
            MIXED_PALETTE_DISPATCH_BASELINE_CYCLES = 67159,
+           MIXED_TEXT_ATTRIBUTE_STORE_CYCLES = 4,
+           MIXED_TEXT_PALETTE_CACHE_LOAD_CYCLES = 4,
            DISPATCH_CYCLE_REDUCTION = 3,
            MENU_MAX_TOP_LEVELS = 10, MENU_TEXT_BUFFER_BYTES = 500,
            MENU_MAX_CHILDREN = 15, MENU_MAX_WIDTH = 40,
@@ -1505,6 +1507,9 @@ static void test_combined_irq_workload(void) {
     };
     unsigned tick_addresses[SOUND_CHANNELS], note_pointer_addresses[SOUND_CHANNELS];
     unsigned note_buffers[SOUND_CHANNELS];
+    const unsigned text_copy_cycle_ceiling = MIXED_TEXT_DISPATCH_BASELINE_CYCLES +
+        TEXT_LENGTH * MIXED_TEXT_ATTRIBUTE_STORE_CYCLES + MIXED_TEXT_PALETTE_CACHE_LOAD_CYCLES -
+        DISPATCH_CYCLE_REDUCTION;
 
     /* Baseline before this gap was filled: one sprite record, channel 1 at three ticks;
        text=65333, palette=52205, max masked=65333, total=117538 cycles (two VSYNCs). */
@@ -1539,7 +1544,8 @@ static void test_combined_irq_workload(void) {
     ram[symbol("_foregroundVeraDepth")] = 0;
     ram[symbol("_menuDirty")] = 1;
     ram[status_bar_showing] = 1;
-    ram[symbol("_inputLineDisplayed")] = ram[symbol("_inputLineDirty")] = 0;
+    ram[symbol("_inputLineDisplayed")] = 1; /* Visible input still needs redraw after text completion. */
+    ram[symbol("_inputLineDirty")] = 0;
     ram[symbol("_mainLoopCounter")] = 1;
     ram[symbol("lastMainLoopCounter")] = 0;
     ram[0x9F25] = 0;
@@ -1619,7 +1625,7 @@ static void test_combined_irq_workload(void) {
           ram[symbol("irqWorkKind")] == 2 && ram[symbol("irqTextStage")] == 1,
           "Text-copy IRQ completed early or lost its pending palette stage");
     const unsigned first_writes = MENU_CLEAR_WRITES + MENU_BAR_WRITES + MENU_CHILD_WRITES +
-        SPRITE_BATCH_WRITES + SOUND_CHANNELS * SOUND_REFILL_WRITES + TEXT_LENGTH;
+        SPRITE_BATCH_WRITES + SOUND_CHANNELS * SOUND_REFILL_WRITES + TEXT_LENGTH * 2;
     CHECK(writes == first_writes,
           "Text-copy IRQ lost real menu, sprite, or text writes");
     CHECK(data_port_reads == SPRITE_CLEAR_WRITES + SOUND_CHANNELS * SOUND_REFILL_READS +
@@ -1665,8 +1671,8 @@ static void test_combined_irq_workload(void) {
           "Text-copy IRQ did not persist the source cursor at its terminator");
     for (unsigned i = 0; i < TEXT_LENGTH; ++i)
         CHECK(vram[TEXT_DESTINATION + i * 2] == 'A' &&
-              vram[TEXT_DESTINATION + i * 2 + 1] == 0x5A,
-              "Text-copy IRQ dropped a tile or changed its attribute byte");
+              vram[TEXT_DESTINATION + i * 2 + 1] == 0xA0,
+              "Text-copy IRQ dropped a glyph or its selected palette attribute");
     CHECK(ram[0] == 0x35 && ram[1] == 0x74,
           "Text-copy IRQ did not restore the caller's RAM and ROM banks");
     CHECK(!fx_write && ram[0x9F25] == 0,
@@ -1739,16 +1745,19 @@ static void test_combined_irq_workload(void) {
     CHECK(!fx_write && ram[0x9F25] == 0,
           "Second production menu pass left VERA FX cache writes or a nondefault port enabled");
     fprintf(stderr,
-            "Combined max-menu/max-sprite IRQ: menu %u bytes, text %u bytes, sprites %u records/%u bytes per slice, sound 4 channels (3 periodic + 1 latched-noise refill, then tick), writes %u/%u, reads %u/%u; text-copy %u cycles, palette %u cycles, max conservative acceptance-to-RTI I-masked bound %u, total %u cycles, completion in 2 VSYNCs (< %u/frame)\n",
+            "Combined max-menu/max-sprite IRQ: menu %u bytes, text %u bytes, sprites %u records/%u bytes per slice, sound 4 channels (3 periodic + 1 latched-noise refill, then tick), writes %u/%u, reads %u/%u; text-copy %u cycles (old baseline %u + per-cell allowance %u), palette %u cycles, max conservative acceptance-to-RTI I-masked bound %u, total %u cycles, completion in 2 VSYNCs (< %u/frame)\n",
             MENU_TEXT_BUFFER_BYTES, TEXT_LENGTH, SPRITE_UPDATE_MAX_RECORDS,
             SPRITE_UPDATE_MAX_RECORDS * SPRITE_UPDATE_RECORD_BYTES,
             first_writes, writes - second_write_start,
-            first_reads, data_port_reads - second_read_start, first_cycles, palette_cycles,
+            first_reads, data_port_reads - second_read_start, first_cycles,
+            MIXED_TEXT_DISPATCH_BASELINE_CYCLES,
+            TEXT_LENGTH * MIXED_TEXT_ATTRIBUTE_STORE_CYCLES + MIXED_TEXT_PALETTE_CACHE_LOAD_CYCLES,
+            palette_cycles,
             max_masked_cycles, total_cycles, FRAME_CYCLES);
-    if (first_cycles > MIXED_TEXT_DISPATCH_BASELINE_CYCLES - DISPATCH_CYCLE_REDUCTION ||
+    if (first_cycles > text_copy_cycle_ceiling ||
         palette_cycles > MIXED_PALETTE_DISPATCH_BASELINE_CYCLES - DISPATCH_CYCLE_REDUCTION) {
         fprintf(stderr, "Mixed IRQ dispatch ceilings: text %u <= %u, palette %u <= %u\n",
-                first_cycles, MIXED_TEXT_DISPATCH_BASELINE_CYCLES - DISPATCH_CYCLE_REDUCTION,
+                first_cycles, text_copy_cycle_ceiling,
                 palette_cycles, MIXED_PALETTE_DISPATCH_BASELINE_CYCLES - DISPATCH_CYCLE_REDUCTION);
         CHECK(false, "Mixed text/palette IRQ retained redundant dispatch cycles");
     }

@@ -206,7 +206,8 @@ sta _inputLineDirty
 rts
 
 handleDisplayTextSlice:
-SET_VERA_ADDRESS_ABSOLUTE displayTextVeraAddress, #$0, #$2
+SET_VERA_ADDRESS_ABSOLUTE displayTextVeraAddress, #$0, #$1
+ldx displayPaletteValue
 
 lda displayTextSourcePointer
 sta ZP_DISPLAY_TEXT_SOURCE_POINTER
@@ -227,7 +228,9 @@ jsr b3DisplayTextNewLine
 bra @consumeTextCharacter ; Newline advances the VERA cursor without a tile write
 
 @storeTextCharacter:
+; Publish each glyph with its selected palette in the same copy slice.
 sta VERA_data0
+stx VERA_data0
 
 @consumeTextCharacter:
 iny
@@ -277,7 +280,7 @@ adc _displayTextAddressToCopyTo + 2
 and #$1
 sta _displayTextAddressToCopyTo + 2
 
-SET_VERA_ADDRESS_ABSOLUTE _displayTextAddressToCopyTo, #$0, #$2
+SET_VERA_ADDRESS_ABSOLUTE _displayTextAddressToCopyTo, #$0, #$1
 rts
 
 _displayTextAddressToCopyTo: .word $0
@@ -676,8 +679,11 @@ sta irqTextStage
 rts
 
 @finishDisplayText:
-lda #$1
+; A hidden input line must not clear game text sharing its row.
+lda _inputLineDisplayed
+beq @displayTextComplete
 sta _inputLineDirty
+@displayTextComplete:
 stz irqWorkKind
 inc irqCompletionGeneration
 bne @serviceWorkReturn

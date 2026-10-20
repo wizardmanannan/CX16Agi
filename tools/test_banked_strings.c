@@ -57,6 +57,38 @@ static uint32_t vera_address;
 static unsigned vera_stride;
 static bool vera_decrement;
 static bool service_text_render_irqs;
+static bool startup_display_trace_active;
+static bool startup_credit_palette_capture_active;
+static bool startup_credit_irq_pending;
+static bool startup_credit_irq_pending_at_entry;
+static uint16_t startup_credit_irq_return_pc;
+static uint8_t startup_credit_irq_return_sp;
+static unsigned startup_credit_vsync_count;
+static unsigned startup_credit_first_physical_row;
+static unsigned startup_credit_first_column;
+static unsigned startup_credit_line_count;
+static unsigned startup_credit_line_width;
+static bool startup_credit_partial_text;
+static struct {
+	uint16_t completion_generation;
+	uint16_t vsync_counter;
+	uint8_t work_kind, text_stage, pending_at_entry;
+	uint8_t first_tile, first_attribute, expected_attribute;
+	unsigned visible_cells, wrong_visible_glyphs, wrong_visible_cell_palettes, old_palette_row_cells;
+	uint16_t visible_background_rgb;
+} startup_credit_vsyncs[8];
+static uint16_t startup_display_c_sp_address;
+static uint16_t startup_display_command_entry;
+static uint16_t startup_display_v_entry;
+static uint16_t startup_display_message_entry;
+static struct {
+	bool command_seen, display_v_seen, message_seen, credit_message_seen;
+	unsigned message_calls;
+	uint8_t message, command_column, command_row;
+	uint8_t credit_column, credit_row, credit_message_bank, credit_first_message_byte;
+	uint8_t first_row, wrap, width, column, row, message_bank, first_message_byte;
+	uint16_t message_pointer, credit_message_pointer;
+} startup_display_trace;
 static bool watch_text_buffer_overflow;
 static uint16_t text_buffer_overflow_start;
 static uint16_t text_buffer_overflow_end;
@@ -386,6 +418,8 @@ static uint16_t symbol(const char *name)
 	exit(1);
 }
 
+static void record_startup_credit_vsync(void);
+
 static void path(char *destination, size_t size, const char *build, const char *name)
 {
 	CHECK(snprintf(destination, size, "%s/%s", build, name) < (int)size, "Build path too long");
@@ -631,6 +665,48 @@ static void call_target_caller(const char *name)
 				object_file_status, object_file_close_calls, object_file_read_failed);
 			CHECK(false, "Production target caller did not return");
 		}
+		if (startup_display_trace_active && ram[0] == 3)
+		{
+			if (!startup_display_trace.command_seen && regs.pc == startup_display_command_entry)
+			{
+				uint16_t c_stack = get_word(startup_display_c_sp_address);
+				startup_display_trace.message = regs.a;
+				startup_display_trace.command_column = ram[c_stack];
+				startup_display_trace.command_row = ram[c_stack + 1];
+				startup_display_trace.command_seen = true;
+			}
+			if (!startup_display_trace.display_v_seen && regs.pc == startup_display_v_entry)
+				startup_display_trace.display_v_seen = true;
+			if (regs.pc == startup_display_message_entry)
+			{
+				uint16_t c_stack = get_word(startup_display_c_sp_address);
+				uint16_t message = (uint16_t)(ram[c_stack + 6] | ((uint16_t)ram[c_stack + 7] << 8));
+				uint8_t first_message_byte = message >= BANK_START && message < BANK_END ?
+					bank_ram[ram[c_stack + 5]][message - BANK_START] : 0;
+				++startup_display_trace.message_calls;
+				if (startup_display_trace.message_calls == 1)
+				{
+					startup_display_trace.first_row = regs.a;
+					startup_display_trace.wrap = ram[c_stack];
+					startup_display_trace.width = ram[c_stack + 1];
+					startup_display_trace.column = ram[c_stack + 3];
+					startup_display_trace.row = ram[c_stack + 4];
+					startup_display_trace.message_bank = ram[c_stack + 5];
+					startup_display_trace.message_pointer = message;
+					startup_display_trace.first_message_byte = first_message_byte;
+					startup_display_trace.message_seen = true;
+				}
+				if (startup_display_trace.message_calls == 3)
+				{
+					startup_display_trace.credit_row = ram[c_stack + 4];
+					startup_display_trace.credit_column = ram[c_stack + 3];
+					startup_display_trace.credit_message_bank = ram[c_stack + 5];
+					startup_display_trace.credit_message_pointer = message;
+					startup_display_trace.credit_first_message_byte = first_message_byte;
+					startup_display_trace.credit_message_seen = true;
+				}
+			}
+		}
 		if (sound_bounds_monitor_requested)
 		{
 			if (!sound_bounds_periodic_active && ram[0] == SOUND_BANK &&
@@ -677,11 +753,32 @@ static void call_target_caller(const char *name)
 			++object_crypto_read_return;
 		}
 		step6502();
+		if (startup_credit_irq_pending && regs.pc == startup_credit_irq_return_pc &&
+			(uint8_t)regs.sp == startup_credit_irq_return_sp)
+		{
+			startup_credit_irq_pending = false;
+			record_startup_credit_vsync();
+		}
 		if (service_text_render_irqs)
 		{
 			/* Deliver VSYNC at WAI and let irq6502 run the production handler. */
 			if (waiting) ram[VERA_ISR] |= 1;
-			if (ram[VERA_ISR] & 1) irq6502();
+			if (ram[VERA_ISR] & 1)
+			{
+				uint16_t return_pc = regs.pc;
+				uint8_t return_sp = (uint8_t)regs.sp;
+				bool capture_irq = startup_credit_palette_capture_active;
+				bool pending_at_entry = capture_irq &&
+					(ram[symbol("sendIrqCommand")] == 4 || ram[symbol("irqWorkKind")] != 0);
+				irq6502();
+				if (capture_irq && (regs.pc != return_pc || (uint8_t)regs.sp != return_sp))
+				{
+					startup_credit_irq_pending = true;
+					startup_credit_irq_return_pc = return_pc;
+					startup_credit_irq_return_sp = return_sp;
+					startup_credit_irq_pending_at_entry = pending_at_entry;
+				}
+			}
 		}
 		if (object_crypto_read_active && regs.pc == object_crypto_read_return &&
 			(uint8_t)regs.sp == (uint8_t)(object_crypto_read_stack + 2))
@@ -745,6 +842,64 @@ static bool call_target_caller_until_exit(const char *name)
 #include "test_banked_strings_sound_cases.h"
 #include "test_banked_strings_text_cases.h"
 #include "test_timer_target_cases.h"
+
+static void record_startup_credit_vsync(void)
+{
+	const unsigned row_start = 0xDA00 + startup_credit_first_physical_row * 128;
+	const unsigned first_column = startup_credit_first_column;
+	const unsigned palette_start = 0x1FA00;
+	uint8_t palette_number = bank_ram[3][symbol("_b3PaletteNumber") - BANK_START];
+	uint8_t expected_attribute = (uint8_t)(palette_number << 4);
+	unsigned line, cell;
+	unsigned visible_cells = 0;
+	unsigned old_palette_row_cells = 0;
+	unsigned wrong_visible_cell_palettes = 0;
+	unsigned wrong_visible_glyphs = 0;
+	uint16_t completion = get_word(symbol("irqCompletionGeneration"));
+	uint8_t attribute = vram[row_start + first_column * 2 + 1];
+	unsigned visible_palette = attribute >> 4;
+	unsigned background_palette_address = palette_start + visible_palette * 32 + 4;
+
+	CHECK(startup_credit_vsync_count < sizeof(startup_credit_vsyncs) / sizeof(startup_credit_vsyncs[0]),
+		"Startup credit display used more VSYNC slices than the regression capture supports");
+	for (line = 0; line < startup_credit_line_count; ++line)
+	{
+		unsigned line_start = row_start + line * TEXT_CLEANUP_ROW_BYTES;
+		for (cell = 0; cell < TEXT_CLEANUP_MAP_WIDTH; ++cell)
+			if (vram[line_start + cell * 2 + 1] == TEXT_CLEANUP_CLEAR_PALETTE)
+				++old_palette_row_cells;
+		for (cell = 0; cell < startup_credit_line_width; ++cell)
+		{
+			unsigned map_offset = line_start + (first_column + cell) * 2;
+			uint8_t tile = vram[map_offset];
+			uint8_t expected_tile;
+			if (startup_credit_partial_text && tile == TEXT_CLEANUP_TRANSPARENT)
+				continue;
+			++visible_cells;
+			expected_tile = startup_credit_partial_text ? kq1_long_credit_tile(line, cell) :
+				(uint8_t)kq1StartupMessages[0][cell];
+			if (tile != expected_tile)
+				++wrong_visible_glyphs;
+			if (vram[map_offset + 1] != expected_attribute)
+				++wrong_visible_cell_palettes;
+		}
+	}
+	startup_credit_vsyncs[startup_credit_vsync_count].completion_generation = completion;
+	startup_credit_vsyncs[startup_credit_vsync_count].vsync_counter = get_word(symbol("_vSyncCounter"));
+	startup_credit_vsyncs[startup_credit_vsync_count].work_kind = ram[symbol("irqWorkKind")];
+	startup_credit_vsyncs[startup_credit_vsync_count].text_stage = ram[symbol("irqTextStage")];
+	startup_credit_vsyncs[startup_credit_vsync_count].pending_at_entry = startup_credit_irq_pending_at_entry;
+	startup_credit_vsyncs[startup_credit_vsync_count].first_tile = vram[row_start + first_column * 2];
+	startup_credit_vsyncs[startup_credit_vsync_count].first_attribute = attribute;
+	startup_credit_vsyncs[startup_credit_vsync_count].expected_attribute = expected_attribute;
+	startup_credit_vsyncs[startup_credit_vsync_count].visible_cells = visible_cells;
+	startup_credit_vsyncs[startup_credit_vsync_count].wrong_visible_glyphs = wrong_visible_glyphs;
+	startup_credit_vsyncs[startup_credit_vsync_count].wrong_visible_cell_palettes = wrong_visible_cell_palettes;
+	startup_credit_vsyncs[startup_credit_vsync_count].old_palette_row_cells = old_palette_row_cells;
+	startup_credit_vsyncs[startup_credit_vsync_count].visible_background_rgb =
+		(uint16_t)(vram[background_palette_address] | ((uint16_t)vram[background_palette_address + 1] << 8));
+	++startup_credit_vsync_count;
+}
 
 static void run_harness_smoke(void)
 {

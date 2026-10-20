@@ -225,7 +225,7 @@ static void set_text_config(uint16_t source, unsigned destination) {
     set_long(symbol("_displayTextAddressToCopyTo"), destination | 0xA5000000u);
     set_long(symbol("_b3PaletteAddress"), 0x1F000 | 0x5A000000u);
     ram[symbol("_b3PaletteRows")] = 0;
-    ram[symbol("_b3PaletteNumber")] = 0;
+    ram[symbol("_b3PaletteNumber")] = 0x0A;
 }
 
 static void check_text(const uint8_t *bytes, unsigned length, uint16_t source,
@@ -253,7 +253,7 @@ static void check_text(const uint8_t *bytes, unsigned length, uint16_t source,
               "Text slice zero flag disagrees with its completion result");
         if (cycles > max_text_slice_cycles) max_text_slice_cycles = cycles;
         unsigned sliceWrites = writes - beforeWrites;
-        CHECK(sliceWrites <= 512, "Text helper exceeded its 512-byte output budget");
+        CHECK(sliceWrites <= 1024, "Text helper exceeded two VERA writes per source byte in a 512-byte slice");
         CHECK(cycles < 90000, "Text helper exceeded its per-slice cycle bound");
         ++calls;
         if (regs.a) break;
@@ -268,13 +268,14 @@ static void check_text(const uint8_t *bytes, unsigned length, uint16_t source,
             cursor = origin;
         } else {
             CHECK(vram[cursor] == bytes[i], "Text tile differs across a page, VERA wrap, or slice boundary");
-            CHECK(vram[(cursor + 1) & 0x1FFFF] == 0x5A, "Text helper changed a tile attribute");
+            CHECK(vram[(cursor + 1) & 0x1FFFF] == 0xA0,
+                  "Text helper did not publish the selected palette beside its tile");
             ++characters;
             cursor = (cursor + 2) & 0x1FFFF;
         }
     }
     wrapped_text_overlay = false;
-    CHECK(writes == characters, "Text helper wrote the wrong number of tile bytes");
+    CHECK(writes == characters * 2, "Text helper did not write both bytes of every tile cell");
     CHECK(get_17bit(symbol("_displayTextAddressToCopyTo")) == ((destination + newlines * 128) & 0x1FFFF),
           "Newline origin did not persist across text slices");
     CHECK(ram[symbol("_displayTextAddressToCopyTo") + 3] == 0xA5,
@@ -288,7 +289,7 @@ static void check_text(const uint8_t *bytes, unsigned length, uint16_t source,
     CHECK(get_17bit(symbol("displayTextVeraAddress")) == cursor,
           "Private text VERA cursor did not persist the hardware address");
     CHECK(ram[0] == 3 && ram[1] == 0x74, "Text helper changed RAM or ROM bank");
-    CHECK((read6502(0x9F22, 0) & 0x31) == (0x20 | ((cursor >> 16) & 1)) && ram[0x9F25] == 0,
+    CHECK((read6502(0x9F22, 0) & 0x31) == (0x10 | ((cursor >> 16) & 1)) && ram[0x9F25] == 0,
           "Text helper left the wrong VERA bank, stride, or address port");
     CHECK((regs.status & (FLAG_INTERRUPT | FLAG_DECIMAL)) == FLAG_INTERRUPT,
           "Text helper changed the IRQ/decimal flag contract");
