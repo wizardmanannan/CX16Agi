@@ -165,8 +165,9 @@ It sends Return through the emulator keyboard to leave the introduction,
 requires KQ1 room 1 and KQ3 room 7, completed picture rendering, visible sprites,
 and ten more interpreter/input cycles, then sends Right and checks that the
 player actually moves. Before sending KQ3 a key, it requires all three title/credit pictures in intro
-room 45, the natural transition into story room 46, and its first picture to be
-shown. It then waits 120 more VSYNC frames with no injected input. KQ3's
+room 45, the natural transition into story room 46, its first picture, and both
+chicken sprites to be published. It then waits 120 more VSYNC frames with no
+injected input. KQ3's
 game script skips its intro on any key, including Return.
 The KQ3 case also walks outside, checks Gwydion's published sprite palette
 against the game's base colours in all four walking directions, then goes
@@ -183,6 +184,10 @@ Release/LTO emulator and buffered audio, prefix that command with
 `CX16AGI_VISIBLE_STARTUP=1`. It logs real key events and closes automatically
 after verifying the story picture remains visible for 120 frames. Leave the
 keyboard untouched during that run.
+For interactive play that protects the requested opening, use
+`CX16AGI_WATCH_OPENING=1` instead: it ignores early keys until the chickens/story
+scene has been visible for 120 frames, then restores normal controls and keeps
+the game running. It never changes rooms or game variables to skip ahead.
 
 `make -C tools intro-test ROM=/path/to/rom.bin GAME_KQ1=/path/to/KQ1`
 retains KQ1's natural title and checks a real 13-row credit redraw. The batch

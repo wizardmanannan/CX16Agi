@@ -1138,11 +1138,29 @@ static const char startup_hook[] =
 "        for(unsigned c=1;c<16;c++) { unsigned base=0x1fa00+(c==14?0:c*2),actual=0x1fa00+palette*32+c*2; unsigned expected=video_space_read(base)|((video_space_read(base+1)&15)<<8),got=video_space_read(actual)|((video_space_read(actual+1)&15)<<8); if(got!=expected) { fprintf(stderr,\"KQ3 ego colour changed: room=%u loop=%u sprite=%u palette=%u colour=%u RGB=%03x expected=%03x\\n\",room,shake_banked_read(S__viewtab+shake_read(S__offsetOfCurrentLoop),9),slot,palette,c,got,expected); exit(3); } } startup_ego_palette_checks++; startup_ego_palette_room=room; if(room==34) startup_ego_palette_loops|=1u<<shake_banked_read(S__viewtab+shake_read(S__offsetOfCurrentLoop),9); return;\n"
 "    }\n"
 "}\n"
+"static bool startup_story_chickens_visible(void) {\n"
+"    for(unsigned object=1;object<=2;object++) {\n"
+"        uint16_t tab=S__viewtab+object*shake_read(S__sizeOfViewTab);\n"
+"        unsigned view=shake_banked_read(tab+shake_read(S__offsetOfCurrentView),9);\n"
+"        if(view!=205&&view!=206) return false;\n"
+"        int x=combined_read16(tab+shake_read(S__offsetOfXPos),9),y=combined_read16(tab+shake_read(S__offsetOfYPos),9);\n"
+"        int height=shake_banked_read(tab+shake_read(S__offsetOfYSize),9); bool found=false;\n"
+"        for(unsigned slot=0;slot<128;slot++) {\n"
+"            unsigned a=0x1fc00+slot*8; if(!(video_space_read(a+6)&12)) continue;\n"
+"            int sx=video_space_read(a+2)|((video_space_read(a+3)&3)<<8),sy=video_space_read(a+4)|((video_space_read(a+5)&3)<<8);\n"
+"            if(abs(sx-x*2)<=2&&abs(sy+height-y-37)<=1) { found=true; break; }\n"
+"        }\n"
+"        if(!found) return false;\n"
+"    }\n"
+"    return true;\n"
+"}\n"
+"bool cx16agiOpeningReady;\n"
 "static void startup_before_step(void) {\n"
+"    if(WATCH_OPENING_ENABLED&&cx16agiOpeningReady) return;\n"
 "    static unsigned dependency_walks;\n"
 "    static unsigned sound_history_frame; static uint8_t sound_history_active[8],sound_history_owner[8],sound_history_bank[8],sound_owner_bank; static uint16_t sound_history_pc[8],sound_owner_pc;\n"
 "    static unsigned pictures,room_pictures,polls,ticks,updates,room_ticks,room_polls,last_room=256;\n"
-"    static unsigned colour_phase,colour_phase_tick; static unsigned kq3_intro_pictures,kq3_intro_stages,kq3_story_first_frame; static bool kq3_story_shown; static bool kq3_intro_shown,showing; static uint16_t show_return; static uint8_t show_sp;\n"
+"    static unsigned colour_phase,colour_phase_tick; static unsigned kq3_intro_pictures,kq3_intro_stages,kq3_story_first_frame; static bool kq3_story_shown,kq3_chickens_verified; static bool kq3_intro_shown,showing; static uint16_t show_return; static uint8_t show_sp;\n"
 "    static unsigned intro_rows,intro_first_frame,intro_last_frame,intro_sound_calls,intro_last_sound_frame,intro_max_sound_gap,intro_display_waits;\n"
 "    static uint32_t intro_first_cycle,intro_last_cycle,intro_call_cycle,intro_display_cycles;\n"
 "    static uint32_t intro_host_start; if(!intro_host_start) intro_host_start=SDL_GetTicks()+1;\n"
@@ -1161,12 +1179,13 @@ static const char startup_hook[] =
 "    if(bank==17&&pc==S__b11DrawPic) { drawing=true; picture_return=shake_call_return(&picture_sp); }\n"
 "    if(drawing&&pc==picture_return&&(uint8_t)regs.sp==picture_sp) { pictures++; unsigned room=shake_banked_read(shake_var_address(0),0); if(room==STARTUP_TEST_ROOM) room_pictures++; if(STARTUP_TEST_ROOM==7&&room==45) { kq3_intro_pictures++; unsigned stage=shake_banked_read(shake_var_address(226),0); if(stage==0||stage==2||stage==3) kq3_intro_stages|=1u<<stage; fprintf(stderr,\"KQ3 natural intro picture: stage=%u mask=%x frame=%u\\n\",stage,kq3_intro_stages,shake_frames_seen); } drawing=false; }\n"
 "    if(STARTUP_TEST_ROOM==7&&bank==2&&pc==S__b2Show_pic&&(shake_banked_read(shake_var_address(0),0)==45||shake_banked_read(shake_var_address(0),0)==46)) { showing=true; show_return=shake_call_return(&show_sp); }\n"
-"    if(showing&&pc==show_return&&(uint8_t)regs.sp==show_sp) { if(shake_banked_read(shake_var_address(0),0)==46&&!kq3_story_shown) { if(kq3_intro_stages!=13) { fprintf(stderr,\"KQ3 opening skipped title/credit pictures: mask=%x\\n\",kq3_intro_stages); exit(3); } kq3_story_shown=true; kq3_story_first_frame=shake_frames_seen; fprintf(stderr,\"KQ3 story visible after natural titles: frame=%u; withholding input for 120 more frames\\n\",shake_frames_seen); } if(!kq3_intro_shown) { fprintf(stderr,\"KQ3 intro visible: room=45 frame=%u; withholding input through the title and story opening\\n\",shake_frames_seen); } kq3_intro_shown=true; showing=false; }\n"
+"    if(showing&&pc==show_return&&(uint8_t)regs.sp==show_sp) { if(shake_banked_read(shake_var_address(0),0)==46&&!kq3_story_shown) { if(kq3_intro_stages!=13) { fprintf(stderr,\"KQ3 opening skipped title/credit pictures: mask=%x\\n\",kq3_intro_stages); exit(3); } kq3_story_shown=true; fprintf(stderr,\"KQ3 story visible after natural titles: frame=%u; withholding input for 120 more frames\\n\",shake_frames_seen); } if(!kq3_intro_shown) { fprintf(stderr,\"KQ3 intro visible: room=45 frame=%u; withholding input through the title and story opening\\n\",shake_frames_seen); } kq3_intro_shown=true; showing=false; }\n"
 "    if(bank==7&&pc==S__b7PollKeyboard) polls++;\n"
 "    if(bank==9&&pc==S_b9UpdateObjects) updates++;\n"
 "    if(bank==6&&pc==S__b6Interpret) {\n"
 "        ticks++; unsigned room=shake_banked_read(shake_var_address(0),0);\n"
-"        if(STARTUP_TEST_ROOM==7&&room==7&&(!kq3_intro_pictures||!kq3_intro_shown||!kq3_story_shown)) { fprintf(stderr,\"KQ3 skipped its intro: gameplay room 7 reached before the title/story opening completed; v70=%u restart_flag=%u\\n\",shake_banked_read(shake_var_address(70),0),shake_banked_read(shake_pointer_value(S__flag)+6,0)); exit(3); }\n"
+"        if(STARTUP_TEST_ROOM==7&&room==46&&kq3_story_shown&&!kq3_chickens_verified&&startup_story_chickens_visible()) { kq3_chickens_verified=true; kq3_story_first_frame=shake_frames_seen; fprintf(stderr,\"KQ3 both chicken sprites are published: frame=%u\\n\",shake_frames_seen); }\n"
+"        if(STARTUP_TEST_ROOM==7&&room==7&&(!kq3_intro_pictures||!kq3_intro_shown||!kq3_chickens_verified)) { fprintf(stderr,\"KQ3 skipped its intro: gameplay room 7 reached before the title/story opening completed; v70=%u restart_flag=%u\\n\",shake_banked_read(shake_var_address(70),0),shake_banked_read(shake_pointer_value(S__flag)+6,0)); exit(3); }\n"
 "        if(STARTUP_TEST_ROOM==7&&room==7&&shake_frames_seen-kq3_story_first_frame<120) { fprintf(stderr,\"KQ3 intro dismissed without input after %u frames\\n\",shake_frames_seen-kq3_story_first_frame); exit(3); }\n"
 "        if(INTRO_TEST_ENABLED&&STARTUP_TEST_ROOM==1) {\n"
 "            if(intro_rows>=13) { unsigned span=intro_last_frame-intro_first_frame; fprintf(stderr,\"Natural intro credit batch: rows=%u visible_update_frames=%u active_sound_calls=%u max_sound_gap_frames=%u emulated_cycles=%u host_ms=%u batch_cycles=%u display_cycles=%u waits=%u\\n\",intro_rows,span,intro_sound_calls,intro_max_sound_gap,clockticks6502,SDL_GetTicks()+1-intro_host_start,intro_last_cycle-intro_first_cycle,intro_display_cycles,intro_display_waits); if(span>3||intro_last_cycle-intro_first_cycle>403200u||intro_display_waits) { fprintf(stderr,\"Intro credit batch exceeded its three-frame CPU budget or waited for display IRQs\\n\"); exit(3); } if(!intro_sound_calls||intro_max_sound_gap>1) { fprintf(stderr,\"Intro sound updates missed active VSYNC frames\\n\"); exit(3); } fprintf(stderr,\"PASS natural intro presentation\\n\"); exit(0); }\n"
@@ -1187,8 +1206,8 @@ static const char startup_hook[] =
 "            else if((x!=start_x||y!=start_y)&&shake_banked_read(shake_var_address(6),0)==3) { fprintf(stderr,\"PASS natural game startup: room=%u ticks=%u polls=%u pictures=%u updates=%u visible_sprites=%u moved=%u,%u->%u,%u\\n\",room,ticks,polls,pictures,updates,sprites,start_x,start_y,x,y); if(STARTUP_TEST_ROOM!=7) exit(0); if(!colour_phase) { static char down[]=\"\\x11\"; machine_paste(down,false); colour_phase=1; next_key=clockticks6502+8000000u; } }\n"
 "        }\n"
 "    }\n"
-"    if(INTRO_TEST_ENABLED&&STARTUP_TEST_ROOM==7&&kq3_story_shown&&shake_frames_seen-kq3_story_first_frame>=120) { fprintf(stderr,\"PASS natural intro presentation: KQ3 titles/credits mask=%x and story opening remained visible without input\\n\",kq3_intro_stages); exit(0); }\n"
-"    if(!INTRO_TEST_ENABLED&&(STARTUP_TEST_ROOM!=7||(kq3_story_shown&&shake_frames_seen-kq3_story_first_frame>=120))&&clockticks6502>=next_key&&(last_room!=STARTUP_TEST_ROOM||colour_phase)) { static char key[]=\"\\r\"; machine_paste(key,false); next_key=clockticks6502+8000000u; }\n"
+"    if(INTRO_TEST_ENABLED&&STARTUP_TEST_ROOM==7&&kq3_chickens_verified&&shake_frames_seen-kq3_story_first_frame>=120) { fprintf(stderr,\"PASS natural intro presentation: KQ3 titles/credits mask=%x and story opening remained visible without input\\n\",kq3_intro_stages); if(WATCH_OPENING_ENABLED) { cx16agiOpeningReady=true; fprintf(stderr,\"KQ3 chickens/story scene verified; normal keyboard input is enabled\\n\"); return; } exit(0); }\n"
+"    if(!INTRO_TEST_ENABLED&&(STARTUP_TEST_ROOM!=7||(kq3_chickens_verified&&shake_frames_seen-kq3_story_first_frame>=120))&&clockticks6502>=next_key&&(last_room!=STARTUP_TEST_ROOM||colour_phase)) { static char key[]=\"\\r\"; machine_paste(key,false); next_key=clockticks6502+8000000u; }\n"
 "}\n";
 
 static const char *names[] = {"custom_irq_handler","mainLoop","codeWindow","cwCurrentCode","endPos","codeWindowInvalid","b4ShakeScreen","b3Load_soundCCall","b3Play_soundCCall","b5Set_menuCCall","b2Load_logicsCCall","_b6LoadLogicFile","_b4IsInited","_b4LoadUnloadResources","_currentLog","_logicFiles","_logics","shakeCount","shakePhases","shakeFrames","_menuDirty","_menuShown","_menuAllowed","_numOfMenus","_charSetInited","_mainLoopCounter","_bBChannelsPlaying","_bBLoadedSoundsPointer","_bBEndSoundFlag","bBSoundHandler","b7HandleInputLine","bADisplayMenu","b10DisplayStatusBar","bEHandleSpriteUpdates","b10PrintStatusBarString","handleScreenShake","handleDisplayTextSlice","@handleSound","_inputLineDisplayed","_inputLineDirty","_b7CurrentInputStr","_bESpritesUpdatedBuffer","_bESpritesUpdatedBufferPointer","_b11DrawPic","_b2Load_pic","_b2Draw_pic","_b2Show_pic","_b3Display_v","_b2Load_view","_b2Animate_obj","_b2Set_view","_b2Position","_b2Draw","b9UpdateObjects","_b6LoadAGIFile","_b9LoadViewFile","_b7PollKeyboard","_viewdir","_numViews","_agiBlit","_bESetLoop","_bEAllocateSpriteMemory","_bDSpriteAllocTable","_viewtab","_viewTableMetadata","_loadedViews","_offsetOfCurrentView","_offsetOfCurrentLoop","_offsetOfCurrentCel","_offsetOfEntryNum","_offsetOfFlags","_offsetOfXPos","_offsetOfYPos","_offsetOfYSize","_offsetOfPrevX","_offsetOfPrevY","_offsetOfStopped","_offsetOfBackBuffers","_offsetOfViewMetadataBank","_offsetOfIsOnBackBuffer","_offsetOfloopsVeraAddressesPointers","_offsetOfLoops","_offsetOfLoopsBank","_offsetOfAllocationWidth","_offsetOfAllocationHeight","_offsetOfMaxVeraSlots","_sizeOfLoop","_sizeOfViewTab","_sizeOfView","findFreeVRamLowByteLoop","findFirstFreeVRamBlock_optimisticSkip","_vSyncCounter","_vSyncCounterHigh","_foregroundVeraDepth","_b6EnterForegroundVera","_ZP_CURRENTLY_PLAYING_NOTE_1","sendIrqCommand","irqWorkKind","irqCompletionGeneration","lastMainLoopCounter","_currentTextBuffer","_displayTextAddressToCopyTo","_displayTextAddressToCopyToHigh","_b3PaletteRows","_b8AsmFloodFillSections","_b11SplitPriority","_var","_flag","_b6Interpret","_executeLogic","_b5GetLogicEntry","_testRunCombinedDisplayText","_testMultiplyBoundsResults","_testRunBankAliasDisplay","_testRunBankBoundaryDisplay","_testRunFullLayerClear","_testBankAliasSource","_testBankAliasBank","_b3TextBuffers","_strLenBankedBounded","_memCpyBankedBetween","_memCpyBanked","_testCombinedSoundEndFlag","_testBeginSpritePublicationWork","_testEndSpritePublicationWork","c_sp"};
@@ -1724,7 +1743,8 @@ static void test_game_staging(void) {
 int main(int argc,char **argv) {
     if(argc==2&&!strcmp(argv[1],"--staging-test")) { test_game_staging(); return 0; }
     char *emulator=NULL,*rom=NULL,*build=NULL,*game=NULL,*output=NULL,*sdl=NULL,*symbol=NULL,*tas_capture_header=NULL;unsigned long trigger=180000000;bool foreground_test=false,picture_test=false,combined_test=false,loader_test=false,random_ram=false,intro_test=false,play=false;
-    bool visible_startup=getenv("CX16AGI_VISIBLE_STARTUP")&&!strcmp(getenv("CX16AGI_VISIBLE_STARTUP"),"1");
+    bool watch_opening=getenv("CX16AGI_WATCH_OPENING")&&!strcmp(getenv("CX16AGI_WATCH_OPENING"),"1");
+    bool visible_startup=watch_opening||(getenv("CX16AGI_VISIBLE_STARTUP")&&!strcmp(getenv("CX16AGI_VISIBLE_STARTUP"),"1"));
     unsigned startup_room=0;
     for(int i=1;i<argc;i++) {
         if(!strcmp(argv[i],"--help")) {puts("Usage: test_full_game_irq --emulator-source DIR --rom FILE --build DIR --game DIR [--output DIR] [--symbols FILE] [--sdl-prefix DIR] [--tas-capture-header FILE] [--trigger-cycle N] [--foreground-test] [--combined-irq-test] [--picture-test] [--loader-test] [--startup-room 1|7] [--random-ram] [--intro-test] [--play]");return 0;}
@@ -1740,6 +1760,7 @@ int main(int argc,char **argv) {
         else if(!strcmp(option,"--emulator-source"))emulator=value;else if(!strcmp(option,"--rom"))rom=value;else if(!strcmp(option,"--build"))build=value;else if(!strcmp(option,"--game"))game=value;else if(!strcmp(option,"--output"))output=value;else if(!strcmp(option,"--sdl-prefix"))sdl=value;else if(!strcmp(option,"--symbols"))symbol=value;else if(!strcmp(option,"--tas-capture-header"))tas_capture_header=value;
         else if(!strcmp(option,"--trigger-cycle")) {char *end;errno=0;trigger=strtoul(value,&end,10);REQUIRE(!errno&&*value&&!*end&&trigger<=UINT32_MAX,"Invalid trigger cycle");}else fail("Unknown option %s",option);
     }
+    REQUIRE(!watch_opening||(intro_test&&startup_room==7),"Watch opening requires the KQ3 intro scenario");
     REQUIRE(!visible_startup||startup_room,"Visible startup requires a startup scenario");
     REQUIRE(!play||!(startup_room||foreground_test||picture_test||combined_test||loader_test),"Interactive play must run separately from test scenarios");
     REQUIRE(!startup_room||!(foreground_test||picture_test||combined_test||loader_test),"Startup must run separately from injected command scenarios");
@@ -1792,12 +1813,14 @@ int main(int argc,char **argv) {
         if(picture_test&&!fixture_found[i]) fail("Missing sprite fixture target symbol %s",fixture_names[i]);
         fprintf(mem,"#define S_%s 0x%x\n",fixture_names[i],fixture_found[i]?fixture_labels[i]:0);
     }
+    fprintf(mem,"#define WATCH_OPENING_ENABLED %u\n",watch_opening?1:0);
     fprintf(mem,"#define STARTUP_TEST_ROOM %u\n#define INTRO_TEST_ENABLED %u\nstatic void startup_before_step(void);\n",startup_room,intro_test?1:0);
     fputs(hook,mem);fputs(startup_hook,mem);fputs("\nvoid *emulator_loop(void *param);",mem);REQUIRE(!fclose(mem),"Hook buffer close failed");patch(main_c,"void *emulator_loop(void *param);",injected,1);free(injected);
     patch(main_c,"\t\tstep6502();","\t\tshake_before_step();\n\t\tuint8_t shake_opcode=waiting ? 0 : debug_read6502(regs.pc,regs.k,USE_CURRENT_X16_BANK);\n\t\tstep6502();\n\t\tshake_after_step(shake_opcode);",1);
     patch(cpu,"void irq6502() {","extern void shake_irq_accepted(void);\nextern int shake_suppress_irq(void);\nvoid irq6502() {",1);
     patch(cpu,"        interrupt6502(INT_IRQ);","        if(!shake_suppress_irq()) { shake_irq_accepted(); interrupt6502(INT_IRQ); }",1);
     patch(memory,"read6502(uint16_t address, uint8_t bank) {\n\tif (!is_gen2) bank = 0;","read6502(uint16_t address, uint8_t bank) {\n\textern void shake_text_source_read(uint16_t,uint8_t,uint16_t,uint8_t);\n\tshake_text_source_read(address,bank,opcode_addr,regs.k);\n\tif (!is_gen2) bank = 0;",1);
+    if(watch_opening) patch(video,"while (SDL_PollEvent(&event)) {","extern bool cx16agiOpeningReady;\n\twhile (SDL_PollEvent(&event)) {\n\t\tif(!cx16agiOpeningReady && (event.type==SDL_KEYDOWN || event.type==SDL_KEYUP)) continue;",1);
     patch(video,"void video_write(uint8_t reg, uint8_t value) {","void shake_get_display(uint8_t *values) { for(int i=0;i<4;i++) values[i]=reg_composer[4+i]; values[4]=reg_composer[3]; }\nextern void shake_window_write(void);\nextern void shake_foreground_vera_register_write(uint8_t,uint8_t,uint8_t,uint8_t,uint16_t,uint8_t,uint8_t);\nvoid video_write(uint8_t reg, uint8_t value) {\n\tif(reg<=2 || reg==5) { uint8_t oldvalue=0; if(reg==0) oldvalue=io_addr[io_addrsel]&0xff; else if(reg==1) oldvalue=(io_addr[io_addrsel]>>8)&0xff; else if(reg==2) oldvalue=((io_addr[io_addrsel]>>16)&1)|(fx_nibble_bit[io_addrsel]<<1)|(fx_nibble_incr[io_addrsel]<<2)|(io_inc[io_addrsel]<<3); else oldvalue=(io_dcsel<<1)|io_addrsel; shake_foreground_vera_register_write(reg,io_dcsel,value,oldvalue,opcode_addr,regs.k,memory_get_ram_bank()); }\n\tif(io_dcsel == 1 && reg>=9 && reg<=12) shake_window_write();",1);
     patch(video,"\t\tisr |= 1; // VSYNC IRQ","\t\textern void shake_vsync_asserted(void);\n\t\tshake_vsync_asserted();\n\t\tisr |= 1; // VSYNC IRQ",1);
     patch(video,"video_space_write(uint32_t address, uint8_t value)\n{","video_space_write(uint32_t address, uint8_t value)\n{\n\textern void shake_sprite_write(uint32_t,uint8_t);\n\textern void shake_foreground_vram_write(uint32_t);\n\tshake_foreground_vram_write(address);\n\tif(address>=0x1fc00 && address<0x20000) shake_sprite_write(address,value);",1);
@@ -1833,7 +1856,7 @@ int main(int argc,char **argv) {
     if(!play&&!visible_startup) { command[command_length++]="-warp";command[command_length++]="-sound";command[command_length++]="none"; }
     if(!play&&!startup_room&&!picture_test&&!combined_test) { command[command_length++]="-gif";command[command_length++]=format("%s/game.gif,wait",output); }
     command[command_length++]="-echo";command[command_length]=NULL;
-    run(command,join(output,"run.log"),play?0:300);
+    run(command,join(output,"run.log"),(play||watch_opening)?0:300);
     cleanup_stage();
     if(!stage||exists(stage)) fail("Integration fixture cleanup regression: private staged game was not removed");
     require_no_retained_stage(output);
