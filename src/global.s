@@ -10,6 +10,9 @@
 startPos: .word $0
 endPos:  .word $0
 _codeBank: .byte $0
+.global _codeBank, _startPos, _endPos
+_startPos = startPos
+_endPos = endPos
 
 ; Set global definitions
 GLOBAL_INC = 1
@@ -143,10 +146,6 @@ JSRFAR_KERNAL_ADDR = $FF6E
 ; Define true and false values for easier reading
 TRUE = 1
 FALSE = 0
-
-;Define sizes
-LOGIC_ENTRY_SIZE = 8
-LOGIC_FILE_SIZE = 2
 
 ;Work Area
 
