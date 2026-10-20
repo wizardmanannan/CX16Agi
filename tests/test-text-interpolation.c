@@ -32,6 +32,9 @@ static unsigned int clearDisplays;
 static boolean boxed;
 static boolean observingClear;
 static const char* controlExpected;
+static boolean observingFill;
+static unsigned int fillRows, fillChunks, expectedFillRow;
+static byte expectedFirstRow;
 static const byte* inputKeys;
 static size_t inputKeyCount, inputKeyPosition;
 static char bankWindow[80], bank24[80];
@@ -169,6 +172,19 @@ void b6SetAndWaitForIrqState(IRQ_COMMAND state)
 {
 	assert(state == DISPLAY_TEXT);
 	displays++;
+	if (observingFill) {
+		size_t size = strlen(currentTextBuffer);
+		unsigned int rows = (size + 1) / (TILE_LAYER_WIDTH + 1);
+		assert(currentTextBuffer == b3TextBuffer1);
+		assert(size < TEXTBUFFER_SIZE);
+		assert(rows && size == rows * (TILE_LAYER_WIDTH + 1) - 1);
+		assert(displayTextAddressToCopyTo == MAPBASE +
+		       (expectedFirstRow + expectedFillRow - 1) * TILE_LAYER_BYTES_PER_ROW);
+		fillRows += rows;
+		expectedFillRow += rows;
+		fillChunks++;
+		return;
+	}
 	if (controlExpected) {
 		assert(strcmp(currentTextBuffer, controlExpected) == 0);
 		return;
@@ -273,6 +289,38 @@ static void test_border_preserves_empty_lines(void)
 	assert(strcmp(b3TextBuffer1, "a\n\nb\n") == 0);
 }
 
+static void test_cleanup_capacity(void)
+{
+	memset(b3TextBuffer2, 0x5a, TEXTBUFFER_SIZE);
+	observingFill = TRUE;
+	fillRows = fillChunks = expectedFillRow = 0;
+	expectedFirstRow = FIRST_TEXT_ROW;
+	b3FillChar(0, 255, TEXTBOX_PALETTE_NUMBER, TRANSPARENT_CHAR);
+	observingFill = FALSE;
+	assert(fillRows == TILE_LAYER_HEIGHT - FIRST_TEXT_ROW + 1);
+	assert(fillChunks == 2);
+	assert((byte)b3TextBuffer2[0] == 0x5a);
+	assert((byte)b3TextBuffer2[TEXTBUFFER_SIZE - 1] == 0x5a);
+	observingFill = TRUE;
+	b3FillChar(255, 255, TEXTBOX_PALETTE_NUMBER, TRANSPARENT_CHAR);
+	b3FillChar(10, 4, TEXTBOX_PALETTE_NUMBER, TRANSPARENT_CHAR);
+	assert(fillChunks == 2);
+	observingFill = FALSE;
+	controlExpected = "x";
+	b3DisplayMessageBox("x", 21, 3, 1, 1, 0, FALSE, 2);
+	controlExpected = NULL;
+	fillRows = fillChunks = 0;
+	expectedFillRow = 3;
+	expectedFirstRow = 2;
+	observingFill = TRUE;
+	b3ClearLastPlacedText();
+	assert(fillRows == 1 && fillChunks == 1);
+	assert(b3LastBoxLines == 0 && b3LastBoxStartLine == 3);
+	b3ClearLastPlacedText();
+	assert(fillChunks == 1);
+	observingFill = FALSE;
+}
+
 static void test_empty_message_does_not_clear(char* priorText)
 {
 	boolean wasBoxed = boxed;
@@ -346,6 +394,7 @@ int main(void)
 	test_word_capacity();
 	test_word_lookup_uses_cleaned_input();
 	test_text_mode_controls();
+	test_cleanup_capacity();
 	puts("text interpolation tests passed");
 	return 0;
 }
