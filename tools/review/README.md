@@ -37,6 +37,38 @@ absolute `TMPDIR` (default `/tmp`), outside the checkout. Generated binaries,
 logs, and retained artifacts stay in the evidence output tree. Both capture
 and fresh verification clean their temporary fixture directories on failure.
 
+Declare retained outputs after all `suite` records and before the witnesses:
+
+```text
+artifact|production-native|cx16agi-production-test.*/image/agi.cx16
+artifact|production-native|cx16agi-production-test.*/image/final.lbl
+artifact|production-native|cx16agi-production-test.*/image/final.map
+```
+
+Patterns are relative to that suite's artifact directory. Only `*` wildcards
+are supported, and they do not cross directory separators. Each rule must
+match at least one nonempty regular file; matching directories and symlinks
+fail, and traversal never follows symlinks. Capture and fresh replay enforce
+these rules. The packet lists sorted matched paths and individual file hashes,
+alongside the digest of the complete artifact tree. The project plan requests
+`KEEP_TEST_OUTPUT=1` for the compiled production suite so its TEST image, labels,
+and map survive fixture cleanup. These artifacts describe the test build;
+they do not establish a release-image size or release qualification.
+
+The permanent review cases have these focused rerun commands. The aggregate
+`make -C tools test` also runs them; the plan separately runs
+`make -C tools production-test` for compiled production callers.
+
+| Area | Permanent C case | Focused command after `make -C tools` |
+| --- | --- | --- |
+| Capture, replay, artifacts, and identity | `test_review_evidence.c` | `-f review-enforcement-test.mk test` |
+| Current GitHub reviews, checks, and protection | `test_review_policy.c` | `-f review-policy.mk review-policy-test` |
+| Real workflow readiness script | `test_review_workflow.c` | `review-workflow-test` |
+| Dependency order and commit accounting | `test_review_series.c` | `-f review-series.mk review-series-core-test` |
+| Equivalent outputs and image budgets | `test_review_metrics.c` | `-f review-series.mk review-metrics-test` |
+| Linked graphics assembly and VRAM oracle | `review_graphics_metrics.c`, `test_graphics_clear.c` | `-f review-graphics-metrics.mk review-graphics-metrics-test` |
+| Task/run/revision event transitions | `test_review_events.c` | `-f review-series.mk review-events-test` |
+
 The packet establishes executable results for named revisions. It cannot
 establish when they ran, who approved them, or whether GitHub permits a merge.
 The local `review-events` ledger records versioned task and process events for
