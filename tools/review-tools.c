@@ -2448,6 +2448,7 @@ static void run_verify_command(const char *plan_path, const char *evidence_path,
     create_output_layout(replay_root);
     replay_required_suites(&plan, replay_root, fixture_base);
     replay_witnesses(&plan, &evidence, replay_root, fixture_base);
+    verify_tool_identities(&plan, &evidence, argv0);
     verify_current_identity(&plan, &evidence);
     remove_owned_directory(replay_root);
     printf("Verified executable review evidence for %s\n", evidence.candidate);

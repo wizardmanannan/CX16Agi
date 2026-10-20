@@ -577,6 +577,40 @@ static void expect_verify_rejected(const char *tool, const char *plan, const cha
     expect_verify_rejected_at(tool, plan, report, output_root, reason);
 }
 
+static void expect_verify_rechecks_external_input(const char *tool, const char *plan,
+                                                  const char *evidence_directory,
+                                                  const char *replay_root, const char *input_path)
+{
+    int status = run_tool(tool, "verify", plan, evidence_directory, replay_root);
+    char *diagnostics = read_text(tool_log);
+    char *mutated_input = read_text(input_path);
+    CHECK(strstr(mutated_input, "int add(int a, int b) { return a + b - 1; }") != NULL,
+          "Verification replay did not mutate the declared external input");
+    free(mutated_input);
+
+    char *git_status_argv[] = { (char *)"git", (char *)"-C", project,
+        (char *)"status", (char *)"--porcelain=v1", (char *)"--untracked-files=all", NULL };
+    CHECK(run_argv(git_status_argv, NULL, tool_log) == 0,
+          "Cannot inspect fixture repository after external input mutation");
+    char *git_status = read_text(tool_log);
+    CHECK(!*git_status, "External input mutation also dirtied the product Git repository");
+    free(git_status);
+
+    if (!status) {
+        fputs("Regression reproduced: verification accepted a replay-time external input mutation while Git stayed clean\n",
+              stderr);
+        free(diagnostics);
+        exit(EXIT_FAILURE);
+    }
+    if (!strstr(diagnostics, "external input identity mismatch: fixture-data")) {
+        fprintf(stderr, "Verifier rejected the replay-time input mutation for the wrong reason: %s\n",
+                diagnostics);
+        free(diagnostics);
+        exit(EXIT_FAILURE);
+    }
+    free(diagnostics);
+}
+
 int main(int argc, char **argv)
 {
     CHECK(argc == 3, "Expected review-tools path and host C compiler name");
@@ -1033,6 +1067,35 @@ int main(int argc, char **argv)
     free(mutated_calc);
     write_text(calc_path, "int add(int a, int b) { return a + b; }\n");
     CHECK(!unlink(mutation_marker), "Cannot remove verification mutation marker");
+
+    char input_mutation_plan[4096], input_mutation_report[4096], input_mutation_marker[4096];
+    path_join(input_mutation_plan, sizeof(input_mutation_plan), suite_fixture_directory,
+              "verify-input-mutation.plan");
+    path_join(input_mutation_report, sizeof(input_mutation_report), output_root,
+              "verify-input-mutation");
+    path_join(input_mutation_marker, sizeof(input_mutation_marker), suite_fixture_directory,
+              "mutate-external-input-during-verify");
+    write_plan(input_mutation_plan, candidate, baseline, false, false, false, false,
+               "contract_test.c", fixture_input, input_mutation_marker);
+    char mutation_target[8192];
+    int mutation_target_length = snprintf(mutation_target, sizeof(mutation_target),
+                                          "%s|@TOOL:make@", input_file);
+    CHECK(mutation_target_length > 0 && mutation_target_length < (int)sizeof(mutation_target),
+          "External input mutation target is too long");
+    char *unmodified_input_mutation_plan = read_text(input_mutation_plan);
+    char *external_input_mutation_plan = replace_text(unmodified_input_mutation_plan,
+        "@REPO@/calc.c|@TOOL:make@", mutation_target);
+    write_text(input_mutation_plan, external_input_mutation_plan);
+    free(unmodified_input_mutation_plan);
+    free(external_input_mutation_plan);
+    expect_tool_status(argv[1], "capture", input_mutation_plan, input_mutation_report, NULL, 0,
+                       "External input mutation replay fixture did not capture a clean candidate");
+    write_text(input_mutation_marker, "mutate declared external input during verification\n");
+    expect_verify_rechecks_external_input(argv[1], input_mutation_plan, input_mutation_report,
+                                          output_root, input_file);
+    check_engine_fixture_temps_clean();
+    write_text(input_file, "declared suite input\n");
+    CHECK(!unlink(input_mutation_marker), "Cannot remove external input mutation marker");
 
     const char *add[] = { "-c", "core.hooksPath=/dev/null", "add", "calc.c", "contract_test.c", "Makefile" };
     git_ok(add, sizeof(add) / sizeof(add[0]));
