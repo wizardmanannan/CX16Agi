@@ -46,6 +46,23 @@ byte testSoundGrowthBytes[220];
 byte testSoundGrowthPrefix[8];
 byte testSoundGrowthCursorValid;
 
+byte testSoundPrefixChannels;
+
+void testPlaySoundValidPrefix(void)
+{
+	byte previousBank = RAM_BANK, i;
+	unsigned int offsets[4];
+	for (i = 0; i < 4; ++i) offsets[i] = i < testSoundPrefixChannels ? 8 + i * 2 : 0xFFFF;
+	bBInitSound();
+	RAM_BANK = SOUND_BANK;
+	bBSetChannelOffsets((byte*)0xA000, &bBLoadedSounds[0], offsets, 16);
+	bBLoadedSounds[0].soundBank = 0x13;
+	bBLoadedSoundsPointer[0] = &bBLoadedSounds[0];
+	flag[9] = TRUE;
+	bBPlaySound(0, 23);
+	RAM_BANK = previousBank;
+}
+
 void testSoundOutputGrowth(void)
 {
 	byte previousBank = RAM_BANK, bank, *resource, *next;

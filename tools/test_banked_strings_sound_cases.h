@@ -10,6 +10,24 @@ static void run_sound_output_growth(void)
 	puts("PASS generated sound output survives relocation, prefix accounting and multiple flushes");
 }
 
+static void run_sound_handler(void);
+
+static void run_sound_valid_prefix_playback(void)
+{
+	for(unsigned count=0;count<=4;++count) {
+		prepare();
+		memset(bank_ram[0x13]+8,0xFF,8);
+		ram[symbol("_testSoundPrefixChannels")]=(uint8_t)count;
+		call_target_caller("_testPlaySoundValidPrefix");
+		CHECK(bank_ram[SOUND_BANK][symbol("_bBChannelsPlaying")-BANK_START]==count,"Playback started a channel rejected by offset validation");
+		for(unsigned i=count;i<4;++i) CHECK(!bank_ram[SOUND_BANK][symbol("_bBIsPlaying")-BANK_START+i],"Absent sound channel was marked playing");
+		run_sound_handler();
+		CHECK(!bank_ram[SOUND_BANK][symbol("_bBChannelsPlaying")-BANK_START],"Valid sound prefix did not finish after its real channel terminators");
+		CHECK(ram[0x400+257+23],"Valid sound prefix did not signal its completion flag");
+	}
+	puts("PASS sound prefixes of zero through four channels play and complete without NULL reads");
+}
+
 static void run_sound_cache_capacity(void)
 {
     static const uint8_t volume[]={0x12,0x34,0,16,0,8,0,10,0,12,0,14,0,255,255,255,255,255,255,255,255};

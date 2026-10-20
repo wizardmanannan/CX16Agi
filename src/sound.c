@@ -746,18 +746,20 @@ void bBPlaySound(byte soundNum, byte endSoundFlag)
 	// Clear the end sound flag in the system flag array
 	flag[endSoundFlag] = FALSE;
 
-	// Set current playing note pointers for each channel, offset by NO_NOTE_BYTES bytes before actual note start
-	ZP_CURRENTLY_PLAYING_NOTE_1 = bBLoadedSoundsPointer[soundNum]->ch0 - NO_NOTE_BYTES;
-	ZP_CURRENTLY_PLAYING_NOTE_2 = bBLoadedSoundsPointer[soundNum]->ch1 - NO_NOTE_BYTES;
-	ZP_CURRENTLY_PLAYING_NOTE_3 = bBLoadedSoundsPointer[soundNum]->ch2 - NO_NOTE_BYTES;
-	ZP_CURRENTLY_PLAYING_NOTE_NOISE = bBLoadedSoundsPointer[soundNum]->chNoise - NO_NOTE_BYTES;
-
-	// Set sound bank for playback
+	/* Offset validation may leave an absent channel. Never advance NULL. */
+	ZP_CURRENTLY_PLAYING_NOTE_1 = bBLoadedSoundsPointer[soundNum]->ch0 ? bBLoadedSoundsPointer[soundNum]->ch0 - NO_NOTE_BYTES : NULL;
+	ZP_CURRENTLY_PLAYING_NOTE_2 = bBLoadedSoundsPointer[soundNum]->ch1 ? bBLoadedSoundsPointer[soundNum]->ch1 - NO_NOTE_BYTES : NULL;
+	ZP_CURRENTLY_PLAYING_NOTE_3 = bBLoadedSoundsPointer[soundNum]->ch2 ? bBLoadedSoundsPointer[soundNum]->ch2 - NO_NOTE_BYTES : NULL;
+	ZP_CURRENTLY_PLAYING_NOTE_NOISE = bBLoadedSoundsPointer[soundNum]->chNoise ? bBLoadedSoundsPointer[soundNum]->chNoise - NO_NOTE_BYTES : NULL;
+	bBIsPlaying[0] = bBLoadedSoundsPointer[soundNum]->ch0 != NULL;
+	bBIsPlaying[1] = bBLoadedSoundsPointer[soundNum]->ch1 != NULL;
+	bBIsPlaying[2] = bBLoadedSoundsPointer[soundNum]->ch2 != NULL;
+	bBIsPlaying[3] = bBLoadedSoundsPointer[soundNum]->chNoise != NULL;
 	bBSoundDataBank = bBLoadedSoundsPointer[soundNum]->soundBank;
-
-	// Mark all channels as playing
-	memset(bBIsPlaying, TRUE, NO_CHANNELS);
-	bBChannelsPlaying = NO_CHANNELS;
+	bBChannelsPlaying = 0;
+	for (i = 0; i < NO_CHANNELS; ++i) bBChannelsPlaying += bBIsPlaying[i];
+	if (bBChannelsPlaying < NO_CHANNELS) bBPsgClear();
+	if (!bBChannelsPlaying) flag[endSoundFlag] = TRUE;
 
 	// Store end sound flag for signaling when sound finishes
 	bBEndSoundFlag = endSoundFlag;
