@@ -4,6 +4,7 @@
 #include "general.h"
 #include "memoryManager.h"
 #include "helpers.h"
+#include <stdint.h>
 
 typedef enum {
     DONT_CHANGE = 0,
@@ -20,12 +21,14 @@ typedef enum {
     HIGHLIGHT_INVENTORY_ROW = 11
 } IRQ_COMMAND;
 
-extern unsigned int vSyncCounter; //Updated by IRQ every 60ms
+extern volatile unsigned int vSyncCounter; //Updated by IRQ every 60ms
 
 //Only to be called directly by bank 6
 extern void b6SetAndWaitForIrqStateAsm(IRQ_COMMAND state);
 
 #pragma wrapped-call (push, trampoline, IRQ_BANK)
+extern uint16_t b6ReadVSyncCounter(void);
+extern void b6WaitForVSyncFrames(unsigned int frames);
 extern void b6SetAndWaitForIrqState(IRQ_COMMAND state);
 #pragma wrapped-call (pop)
 

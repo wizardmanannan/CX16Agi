@@ -514,7 +514,7 @@ byte b3DisplayManuallyWrappedMessageBox(char* message, byte messageBank, byte ro
 
 
 	do {
-		GET_IN(ch);
+		GET_IN_WAIT(ch);
 		ch >> 8;
 	} while ((ch != KEY_ESC) && (ch != KEY_ENTER));
 

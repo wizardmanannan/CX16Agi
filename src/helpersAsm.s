@@ -1,5 +1,5 @@
 .ifndef  HELPERS_INC
-.importzp sreg
+.importzp sreg, ptr4
 
 HELPERS_INC = 1
 
