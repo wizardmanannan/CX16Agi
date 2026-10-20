@@ -25,6 +25,9 @@ LOGIC_ENTRY_PARAMETERS_OFFSET = 0
 
 .global endMainLoop
 .global mainLoop
+.ifdef LOGIC_DISPATCH_TEST_HOOK
+.global codeBankArray
+.endif
 .global returnFromOpCodeTrue
 .global returnFromOpCodeFalse
 
@@ -37,6 +40,10 @@ LOGIC_ENTRY_PARAMETERS_OFFSET = 0
 .import _logicEntryAddressesLow
 .import _logicEntryAddressesHigh
 .import _currentLog
+.ifdef LOGIC_CONTEXT_TRACE
+.import _logicContextOpcode
+.import _logicContextInstructionPc
+.endif
 .import popax
 .import popa
 
@@ -60,6 +67,10 @@ codeBankArray: .byte $5,$1,$1,$1,$1,$1,$1,$2,$2,$2,$2,$2,$2,$2,$2,$2,$2,$2,$2,$2
 .import _bFGotoFunc
 .import _callC1
 .import _callC2
+.ifdef LOGIC_DISPATCH_TEST_HOOK
+.import _test_result
+.import _test_step_count
+.endif
 
 ; Logic array imports
 .import _logics
@@ -405,21 +416,27 @@ _executeLogic:
          entryPoint: .word $0
          codeSize: .word $0
          codeAtTimeOfLastBankSwitch: .byte $0
-         previousRamBank: .byte $0
          .ifdef VERBOSE_ROOM_CHANGE
          lastRoom: .byte $0
          currentRoom: .byte $0
          .endif
          start:    
 
+         bra :+
+         logicNumber: .word $0
+:
+         sta logicNumber
+         stx logicNumber + 1
          ldy RAM_BANK
-         sty previousRamBank
-         
-         ldy _currentLog
          phy
-    
+         lda _currentLog
+         pha
+         lda _currentLog + 1
+         pha
+         lda logicNumber
          sta _currentLog
-         stx _currentLog + 1
+         lda logicNumber + 1
+         sta _currentLog + 1
          
          jsr popax 
          sta ZP_PTR_LE
@@ -478,6 +495,21 @@ _executeLogic:
          sta codeWindowInvalid ;At the beginning start from ZP_PTR_CODE
          jsr refreshCodeWindow
          mainLoop:
+.ifdef LOGIC_DISPATCH_TEST_HOOK
+         inc _test_step_count
+         bne @testStepCounted
+         inc _test_step_count + 1
+         @testStepCounted:
+         lda _test_step_count + 1
+         cmp #4
+         bcc @testStepLimitPassed
+         lda #99
+         sta _test_result
+         lda #TRUE
+         sta _exitAllLogics
+         jmp endMainLoop
+         @testStepLimitPassed:
+.endif
          GREATER_THAN_OR_EQ_16 ZP_PTR_CODE, endPos, endMainLoop
          
          lda #LOGIC_BANK
@@ -491,6 +523,25 @@ _executeLogic:
 		; 	exit(0);
 		; }
          LOAD_CODE_WIN_CODE
+.ifdef LOGIC_CONTEXT_TRACE
+         sta _logicContextOpcode
+         pha
+         clc
+         lda ZP_PTR_CODE
+         adc cwCurrentCode
+         sta _logicContextInstructionPc
+         lda ZP_PTR_CODE + 1
+         adc cwCurrentCode + 1
+         sta _logicContextInstructionPc + 1
+         sec
+         lda _logicContextInstructionPc
+         sbc startPos
+         sta _logicContextInstructionPc
+         lda _logicContextInstructionPc + 1
+         sbc startPos + 1
+         sta _logicContextInstructionPc + 1
+         pla
+.endif
          sta codeAtTimeOfLastBankSwitch
          cmp #$FF
          bne @checkGoTo
@@ -498,7 +549,6 @@ _executeLogic:
          INC_CODE
          SET_BANK_TO_IF_BANK
          jmp ifHandler
-         bra mainLoop
          @checkGoTo:
          cmp #$FE
          beq @FE
@@ -534,12 +584,16 @@ _executeLogic:
             ldx jumpOffset
             jmp (jmpTableCommands2,x)
         endMainLoop:
-        lda previousRamBank
-        sta RAM_BANK
-
+        lda _exitAllLogics
+        beq @keepContext
+        jsr _logicContextAbandon
+        @keepContext:
+        pla
+        sta _currentLog + 1
         pla
         sta _currentLog
+        pla
+        sta RAM_BANK
 
         rts
 .endif
-

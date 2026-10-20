@@ -13,18 +13,38 @@ LOGICCOMMANDS_INC = 1
 ; Include necessary files
 .include "global.s"
 .include "codeWindow.s"
+.include "logicContext.s"
 
 .global endMainLoop
 .global mainLoop
 .global returnFromOpCodeTrue
 .global returnFromOpCodeFalse
+.ifdef LOGIC_DISPATCH_TEST_HOOK
+.global b2Call
+.global b2CallAfterLogic
+.global b2CallVAfterLogic
+.endif
 
 ; Import various functions and variables from other files
 ; (functions related to game logic, drawing, animations, sound, text, etc.)
 
 .import _assmLogicEntry
 .import _assmLogicFile
-
+.global _logicContextEnter
+.global _logicContextLeave
+.global _logicContextAbandon
+.ifdef LOGIC_CONTEXT_TRACE
+.import _logicContextOpcode
+.import _logicContextRequestedLogic
+.import _logicContextWriteField
+.import _logicContextWriteBefore
+.import _logicContextWriteAfter
+.import _logicContextRecordPendingWrite
+.endif
+.ifdef LOGIC_DISPATCH_TEST_HOOK
+.import _test_snapshot_call
+.import _test_capture_nested_return
+.endif
 .import _b1Has
 .import _b1Obj_in_room
 .import _b1Posn
@@ -458,51 +478,6 @@ TRAMPOLINE _debugBank, _bDbgResetScanStart
 .endif
 .endmacro
 
-; Macro to store values on the stack for recursive calls
-.macro STORE_ON_STACK_RECURSIVE_CALL
-lda startPos
-pha 
-lda startPos + 1
-pha
-lda endPos
-pha 
-lda endPos + 1
-pha
-CATCH_UP_CODE
-lda ZP_PTR_CODE
-pha
-lda ZP_PTR_CODE + 1
-pha
-lda _codeBank
-pha
-lda ZP_PTR_LE
-pha
-lda ZP_PTR_LE + 1
-pha
-.endmacro
-
-; Macro to restore values from the stack after a recursive call
-.macro RESTORE_FROM_STACK_RECURSIVE_CALL
-pla
-sta ZP_PTR_LE + 1
-pla
-sta ZP_PTR_LE
-pla
-sta _codeBank
-pla
-sta ZP_PTR_CODE + 1
-pla
-sta ZP_PTR_CODE
-pla
-sta endPos + 1
-pla
-sta endPos
-pla
-sta startPos + 1
-pla
-sta startPos
-.endmacro
-
 ; Macro to get a variable or flag value and store it in the result
 .macro SET_VAR_OR_FLAG areaStartOffset, toStore, var
 
@@ -613,14 +588,17 @@ OPCODE_FUNC_TMP: .res 2 ;Reserved for interpreter opcode functions
 callLogic: ; A subroutine for making calls, not an instruction
 bra @start
 @logNum: .byte $0
-@previousBank: .byte $0
 @start:
 sta @logNum
+.ifdef LOGIC_CONTEXT_TRACE
+sta _logicContextRequestedLogic
+.endif
 
-lda RAM_BANK
-sta @previousBank
-
-STORE_ON_STACK_RECURSIVE_CALL
+.if .defined(LOGIC_CONTEXT_TRACE) .or .defined(LOGIC_CONTEXT_VERIFY)
+jsr _logicContextCaptureStackPointers
+.endif
+jsr _logicContextEnter
+beq @done
 
 lda #LOGIC_BANK
 sta RAM_BANK
@@ -654,13 +632,29 @@ jsr pushax
 lda @logNum
 ldx #$0
 jsr _executeLogic
-RESTORE_FROM_STACK_RECURSIVE_CALL
+.if .defined(LOGIC_CONTEXT_TRACE) .or .defined(LOGIC_CONTEXT_VERIFY)
+jsr _logicContextCaptureStackPointers
+.endif
+jsr _logicContextLeave
+beq @done
+lda _exitAllLogics
+bne @done
 lda #TRUE
 sta codeWindowInvalid
 jsr refreshCodeWindow
 
-lda @previousBank
+@done:
+rts
+
+; Bank-2 opcode handlers return to this common-code bridge before resuming
+; their banked continuation. The logic frame may have been abandoned by a
+; room transition, so its saved RAM bank is not the execution return bank.
+callLogicFromBank2:
+jsr callLogic
+pha
+lda #$02
 sta RAM_BANK
+pla
 rts
 
 ; Jump table for commands
@@ -1304,9 +1298,24 @@ b2Togglev:
 
 b2Call:
 LOAD_CODE_WIN_CODE
-jsr callLogic
-INC_CODE
+.ifdef LOGIC_CONTEXT_TRACE
+pha
+lda #22
+sta _logicContextOpcode
+pla
+.endif
+.ifdef LOGIC_DISPATCH_TEST_HOOK
+pha
+jsr _test_snapshot_call
+pla
+.endif
+jsr callLogicFromBank2
+b2CallAfterLogic:
+.ifdef LOGIC_DISPATCH_TEST_HOOK
+jsr _test_capture_nested_return
+.endif
 EXIT_ALL_LOGICS_IF_SET
+INC_CODE
 jmp mainLoop
 
 b2Call_v:
@@ -1316,9 +1325,24 @@ bra @start
 GET_VAR_OR_FLAG VARS_AREA_START_GOLDEN_OFFSET, @var1
 
 lda @var1
-jsr callLogic
-INC_CODE
+.ifdef LOGIC_CONTEXT_TRACE
+pha
+lda #23
+sta _logicContextOpcode
+pla
+.endif
+.ifdef LOGIC_DISPATCH_TEST_HOOK
+pha
+jsr _test_snapshot_call
+pla
+.endif
+jsr callLogicFromBank2
+b2CallVAfterLogic:
+.ifdef LOGIC_DISPATCH_TEST_HOOK
+jsr _test_capture_nested_return
+.endif
 EXIT_ALL_LOGICS_IF_SET
+INC_CODE
 jmp mainLoop
 
 b2New_room:
@@ -1650,6 +1674,7 @@ b4StatusCCall:
         jmp mainLoop
 b4Restart_gameCCall:
         jsr _b4Restart_game
+        EXIT_ALL_LOGICS_IF_SET
         jmp mainLoop
 b4Show_objCCall:
         jsr _b4Show_obj
