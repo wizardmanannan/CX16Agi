@@ -21,8 +21,8 @@ This checks target compilation, not a full interpreter link or emulator replay.
 
 The KQ3 warning workload is 106 input bytes, two message references, and 115
 output bytes. The original C formatter baseline is 86,586 emulator CPU cycles;
-the resident assembly formatter takes about 11,800 cycles with the same workload
-(86% fewer). The suite enforces a 12,000-cycle budget and checks output bytes,
+the resident assembly formatter takes about 10,100 cycles with the same workload
+(88% fewer). The suite enforces an 11,000-cycle budget and checks output bytes,
 terminators, canaries, and bank restoration. Entry, flushing, literals, all token
 lookups, recursion, and decimal conversion execute in assembly. The formatter
 calls the existing bank-5 engine API for logic metadata; stringFormat.c only
@@ -76,7 +76,7 @@ the formerly uninitialized strcpyBanked result), canaries, banks, and stack clea
 
 A second formatter workload expands literal word/object/global-message tokens
 into 239 output bytes. Keeping its read cursor and buffer count in registers
-reduced 30,464 cycles to about 17,800; its budget is 20,000. Percent signs and
+reduced 30,464 cycles to about 14,200; its budget is 15,000. Percent signs and
 backslashes remain literal in these replacements. A 300-byte global-message
 case checks cursor wraparound, embedded metacharacters at byte 254, termination,
 a destination canary, and bank restoration.
@@ -94,3 +94,10 @@ inserted NULs, empty/all-space inputs, tabs, table/source canaries, stack and ba
 state, a full 20-entry table, and source/table addresses across page boundaries.
 The display/parser host suite transports token bytes and pointer offsets through
 that same target scanner; there is no host tokenizer implementation.
+
+The formatter accounts for literal bytes once per bounded run rather than once
+per character. The previous assembly baselines were 11,787 wizard cycles and
+17,777 literal-token cycles; batching takes about 10,100 and 14,200. Permanent
+capacity cases span 0/1/2, 49/50/51, 99/100/101, 255/256/257 and 301/302 bytes
+for both literal and recursive messages. An unaligned 300-byte source checks
+cursor preservation through indexed wrap, a format token, and an escape.

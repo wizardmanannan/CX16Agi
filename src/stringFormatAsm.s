@@ -22,6 +22,8 @@ _formatInvalid: .res 1
 _formatText: .res 2
 _formatTextBank: .res 1
 _formatRecursive: .res 1
+formatRunStart: .res 1
+formatRunLimit: .res 1
 formatLogicFile: .res 9
 formatPreviousBank: .res 1
 formatOffsetHi: .res 1
@@ -174,9 +176,11 @@ formatScan:
     lda formatCursor+1
     sta ptr1+1
     ldx _formatBuffered
-; Keep the literal run in ZP/X; flush preserves ptr1 and X.
+    ldy #0
+    jsr formatBeginRun
+; Bound the whole run before scanning; account for bytes at a token/flush/end.
 formatLiteral:
-    lda (ptr1)
+    lda (ptr1),y
     beq formatLiteralEnd
     cmp #$25
     beq formatLiteralToken
@@ -184,23 +188,24 @@ formatLiteral:
     beq formatLiteralEscape
     sta _formatBuffer,x
     inx
-    inc ptr1
+    iny
     bne :+
     inc ptr1+1
-:   lda _formatRemaining
-    bne :+
-    dec _formatRemaining+1
-:   dec _formatRemaining
+:   cpx formatRunLimit
+    bne formatLiteral
+    jsr formatEndRun
     cpx #50
     bne :+
-    stx _formatBuffered
+    phy
     jsr formatFlush
+    ply
     ldx #0
 :   lda _formatRemaining
-    bne formatLiteral
-    lda _formatRemaining+1
-    bne formatLiteral
-    jsr formatSaveLiteral
+    ora _formatRemaining+1
+    beq :+
+    jsr formatBeginRun
+    bra formatLiteral
+:   jsr formatSaveCursor
     rts
 formatLiteralEnd:
     jsr formatSaveLiteral
@@ -212,11 +217,46 @@ formatLiteralEscape:
     jsr formatSaveLiteral
     jmp formatEscape
 formatSaveLiteral:
-    stx _formatBuffered
-    lda ptr1
+    jsr formatEndRun
+formatSaveCursor:
+    tya
+    clc
+    adc ptr1
     sta formatCursor
     lda ptr1+1
+    adc #0
     sta formatCursor+1
+    rts
+
+; X is the buffered count. Neither helper disturbs X, Y or source pointer.
+formatBeginRun:
+    stx formatRunStart
+    lda #50
+    sta formatRunLimit
+    lda _formatRemaining+1
+    bne @done
+    txa
+    clc
+    adc _formatRemaining
+    bcs @done
+    cmp #50
+    bcs @done
+    sta formatRunLimit
+@done:
+    rts
+formatEndRun:
+    stx _formatBuffered
+    txa
+    sec
+    sbc formatRunStart
+    sta formatRunStart
+    sec
+    lda _formatRemaining
+    sbc formatRunStart
+    sta _formatRemaining
+    bcs @done
+    dec _formatRemaining+1
+@done:
     rts
 
 formatEscape:
@@ -362,8 +402,8 @@ formatCopyText:
     sta ptr1+1
     ldx _formatBuffered
     ldy #0
-; Literal replacements do not interpret percent signs or backslashes. Keep
-; their cursor in ZP and buffered count in X, as for the outer literal run.
+    jsr formatBeginRun
+; Replacement bytes are literal, including percent signs and backslashes.
 formatCopyLiteral:
     lda (ptr1),y
     beq formatCopyLiteralEnd
@@ -372,25 +412,23 @@ formatCopyLiteral:
     iny
     bne :+
     inc ptr1+1
-:   lda _formatRemaining
-    bne :+
-    dec _formatRemaining+1
-:   dec _formatRemaining
+:   cpx formatRunLimit
+    bne formatCopyLiteral
+    jsr formatEndRun
     cpx #50
     bne :+
-    stx _formatBuffered
     phy
     jsr formatFlush
     ply
     ldx #0
 :   lda _formatRemaining
-    bne formatCopyLiteral
-    lda _formatRemaining+1
-    bne formatCopyLiteral
-    stx _formatBuffered
-    rts
+    ora _formatRemaining+1
+    beq :+
+    jsr formatBeginRun
+    bra formatCopyLiteral
+:   rts
 formatCopyLiteralEnd:
-    stx _formatBuffered
+    jsr formatEndRun
     jmp formatScan
 
 ; Resolve metadata through the engine's wrapped bank-5 API. Its packed

@@ -273,7 +273,9 @@ static int expectCapacity(const char* input, const char* expected, size_t max,
 void targetEdgeCases(void)
 {
 	char expanded200[201];
-    unsigned int i;
+    static char expanded300[301];
+    unsigned int i, j, n, used;
+    static const unsigned int capacities[] = { 0, 1, 2, 49, 50, 51, 99, 100, 101, 255, 256, 257, 301, 302 };
 	int valid = 1;
 	byte previousBank;
 
@@ -364,6 +366,48 @@ void targetEdgeCases(void)
     for (i = 0; i < 300; i++)
         valid = valid && ((char*)OUTPUT_ADDRESS)[i] == (i >= 254 && i < 259 ? "%v1\\x"[i - 254] : 'q');
     valid = valid && ((byte*)OUTPUT_ADDRESS)[300] == 0 && ((byte*)OUTPUT_ADDRESS)[301] == 0x5a;
+    RAM_BANK = 13;
+
+
+    /* End literal and recursive runs on either side of every flush boundary. */
+    fillBanked(MESSAGE_BANK, 0xA200, 'q', 300);
+    fillBanked(MESSAGE_BANK, 0xA32C, 0, 1);
+    for (n = 0; n < 2; n++) {
+        putBankedString(SOURCE_BANK, SOURCE_ADDRESS, n ? "%m1" : "%g1");
+        for (j = 0; j < sizeof(capacities) / sizeof(capacities[0]); j++) {
+            fillBanked(DESTINATION_BANK, OUTPUT_ADDRESS, 0x5a, 303);
+            RAM_BANK = 13;
+            expandFormatCodes((char*)SOURCE_ADDRESS, SOURCE_BANK,
+                              (char*)OUTPUT_ADDRESS, DESTINATION_BANK, capacities[j]);
+            valid = valid && RAM_BANK == 13;
+            RAM_BANK = DESTINATION_BANK;
+            used = capacities[j] ? capacities[j] - 1 : 0;
+            if (used > 300) used = 300;
+            for (i = 0; i < used; i++) valid = valid && ((byte*)OUTPUT_ADDRESS)[i] == 'q';
+            if (capacities[j]) valid = valid && ((byte*)OUTPUT_ADDRESS)[used] == 0;
+            valid = valid && ((byte*)OUTPUT_ADDRESS)[capacities[j]] == 0x5a;
+        }
+    }
+    RAM_BANK = 13;
+
+
+    /* Save a token cursor after indexed wrap on an unaligned banked source. */
+    memset(expanded300, 'x', 300);
+    expanded300[300] = 0;
+    memcpy(expanded300 + 259, "%v1", 3);
+    memcpy(expanded300 + 290, "\\%", 2);
+    putBankedString(SOURCE_BANK, 0xA0FD, expanded300);
+    fillBanked(DESTINATION_BANK, OUTPUT_ADDRESS, 0x5a, 303);
+    RAM_BANK = 13;
+    expandFormatCodes((char*)0xA0FD, SOURCE_BANK,
+                      (char*)OUTPUT_ADDRESS, DESTINATION_BANK, 301);
+    valid = valid && RAM_BANK == 13;
+    RAM_BANK = DESTINATION_BANK;
+    for (i = 0; i < 298; i++)
+        valid = valid && ((char*)OUTPUT_ADDRESS)[i] == (i == 259 ? '4' : i == 260 ? '2' : i == 289 ? '%' : 'x');
+    valid = valid && ((byte*)OUTPUT_ADDRESS)[298] == 0 && ((byte*)OUTPUT_ADDRESS)[299] == 0x5a;
+    RAM_BANK = SOURCE_BANK;
+    valid = valid && strcmp((char*)0xA0FD, expanded300) == 0;
     RAM_BANK = 13;
 
 	valid = valid && expectCapacity("abcdef", "abc", 4, 0x5A, 0x5A);

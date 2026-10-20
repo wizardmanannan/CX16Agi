@@ -97,8 +97,8 @@ if [[ ${response[6]} != 0 ]]; then
     echo "literal formatter regression failed: result=${response[6]}" >&2
     exit 1
 fi
-printf 'Literal token copies: output=239 bytes, cycles=%d, budget=20000\n' "$literal_cycles"
-if (( literal_cycles >= 20000 )); then
+printf 'Literal token copies: output=239 bytes, cycles=%d, budget=15000\n' "$literal_cycles"
+if (( literal_cycles >= 15000 )); then
     echo 'literal formatter exceeded the cycle budget' >&2
     exit 1
 fi
