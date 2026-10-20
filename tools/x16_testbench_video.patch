@@ -1,0 +1,30 @@
+diff --git a/src/main.c b/src/main.c
+--- a/src/main.c
++++ b/src/main.c
+@@ -1250,7 +1250,7 @@
+ #ifdef __EMSCRIPTEN__
+ 	emscripten_set_main_loop(emscripten_main_loop, 0, 0);
+ #endif
+-	if (!headless) {
++	if (!headless || testbench) {
+ 		// Shows up in the power management area of Linux desktops of applications inhibiting the screensaver
+ 		// As well as the audio mixer
+ 		// Unless hinted, defaults are "My SDL application" and "Playing a game"
+@@ -1299,7 +1299,7 @@
+ }
+ 
+ void main_shutdown() {
+-	if (!headless){
++	if (!headless || testbench){
+ 		wav_recorder_shutdown();
+ 		audio_close();
+ 		video_end();
+@@ -1725,7 +1725,7 @@
+ 		if (has_via2) {
+ 			via2_step(clocks);
+ 		}
+-		if (!headless) {
++		if (!headless || testbench) {
+ 			new_frame |= video_step(MHZ, clocks, false);
+ 		}
+ 
