@@ -115,7 +115,7 @@ static void assemble(uint16_t start, bool code_window, bool guards) {
     char *gate = find(irq, "@callSoundHandler:") + strlen("@callSoundHandler:");
     char *end = find(gate, "lda #SOUND_BANK");
     char *alias = find(end, "shakeCount = @shakeCountLoad");
-    char *alias_end = find(alias, ".endif");
+    char *alias_end = find(alias, "\n\n") + 1;
     const char *prefix = code_window ? ".segment \"CODE\"\n.include \"global.s\"\n.export codeWindow,cwCurrentCode,codeWindowInvalid,_codeBank\n" : ".include \"x16.inc\"\nDISPLAY_SCALE_GRAPHICS=64\nVSYNC_BIT=1\n";
     const char *reader = code_window ? ".include \"codeWindow.s\"\n" : "_loadAndIncWinCode:\ninc consumed\nlda operand\nldx #0\nrts\n";
     int length = snprintf(source, sizeof(source), "%s.segment \"CODE\"\n"
@@ -123,7 +123,7 @@ static void assemble(uint16_t start, bool code_window, bool guards) {
         ".export shakeCount,shakePhases,shakeFrames,shakeWindow,shakeShiftedWindow,shakeBorder\n"
         "irqStart:\npha\nphx\nphy\nlda $00\npha\nlda #3\nsta $00\nirqDispatch:\n"
         "%.*sbne irqEntry\njmp irqEnd\nirqEntry:\n"
-        "%.*s@vSyncCounter:\n%.*sirqEnd:\npla\nsta $00\nply\nplx\npla\nrti\nmainLoop: brk\noperand: .byte 0\nconsumed: .byte 0\n_foregroundVeraDepth: .byte 0\n%s%s",
+        "%.*s@vSyncCounter:\n%.*sirqEnd:\npla\nsta $00\nply\nplx\npla\nrti\nmainLoop: brk\noperand: .byte 0\nconsumed: .byte 0\n_foregroundVeraDepth: .byte 0\nb6ForegroundSound: rts\n%s%s",
         prefix, (int)(dispatch_branch-dispatch), dispatch, (int)(end - gate), gate, (int)(alias_end - alias), alias, reader, helper);
     CHECK(length >= 0 && length < (int)sizeof(source), "Fixture source too large");
     free(irq); free(helper);
