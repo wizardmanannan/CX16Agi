@@ -1048,7 +1048,7 @@ b1Addv:
          
          sta @var
          
-         GET_VAR_OR_FLAG VARS_AREA_START_GOLDEN_OFFSET, @existingVal              
+         GET_VAR_OR_FLAG VARS_AREA_START_GOLDEN_OFFSET, @existingVal
          INC_CODE
 
          .ifdef DEBUG
@@ -1378,7 +1378,6 @@ jmp mainLoop
 b2New_room:
 DEBUG_NEW_ROOM
 LOAD_CODE_WIN_CODE
-
 switchToNewRoom:
 sta _newRoomNum
 stz _newRoomNum + 1
@@ -1709,7 +1708,7 @@ b4Restart_gameCCall:
 b4Show_objCCall:
         jsr _b4Show_obj
         jmp mainLoop
-b4Random_num:       
+b4Random_num:
         LOAD_CODE_WIN_CODE
         sta OPCODE_FUNC_TMP
         INC_CODE
@@ -1721,7 +1720,7 @@ b4Random_num:
         ldx OPCODE_FUNC_TMP + 1
         jsr randBetweenAsmCall
         sta OPCODE_FUNC_TMP
- 
+
         LOAD_CODE_WIN_CODE
         sta OPCODE_FUNC_TMP + 1
         INC_CODE
