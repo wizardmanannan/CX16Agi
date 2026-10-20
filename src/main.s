@@ -1,3 +1,4 @@
+    .include "bankedStringAsm.s"
 .include "textLayoutAsm.s"
     .include "parserInputAsm.s"
     .include "textControlsAsm.s"

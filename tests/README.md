@@ -15,8 +15,8 @@ a host C compiler, Python 3, a linker supporting `--gc-sections`, and `flock`. S
 `CC65_HOME`, `X16EMU`, and `X16_ROM` when the tools are elsewhere. Concurrent
 builds must use separate `CX16AGI_BUILD_DIR` values.
 
-`make string-format-target-check` compiles and assembles the five changed C
-production modules and all four assembly modules with cc65/ca65. Set `CC65_HOME` if the tools are outside PATH.
+`make string-format-target-check` compiles and assembles the six changed C
+production modules and all five assembly modules with cc65/ca65. Set `CC65_HOME` if the tools are outside PATH.
 This checks target compilation, not a full interpreter link or emulator replay.
 
 The KQ3 warning workload is 106 input bytes, two message references, and 115
@@ -66,6 +66,10 @@ map clipping, parser compaction, interpolation, wrapping, and border byte loops
 have one production assembly implementation each.
 
 The shared cross-bank copy workload runs 32 copies of 513 bytes through the
-full product helper; the C baseline is 1,241,728 cycles. Permanent cases cover
+full product helper; the C baseline is 1,241,728 cycles and assembly takes about
+562,500 (55% fewer), with a 700,000-cycle budget. Permanent cases cover
 zero length, 49/50/51-byte chunk edges, page crossings, 8,176 bytes, same-bank
 copies, fixed RAM, source preservation, canaries, and software-stack cleanup.
+The banked strlen/strcpy/memcpy/memset entry points are resident assembly around
+the cc65 runtime. Cases check page-crossing lengths, returned pointers (including
+the formerly uninitialized strcpyBanked result), canaries, banks, and stack cleanup.

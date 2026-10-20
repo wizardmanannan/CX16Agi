@@ -24,11 +24,12 @@ string-format-test:
 string-format-target-check:
 	@mkdir -p $(STRING_FORMAT_OUT)
 	@{ flock -n 9 || { echo 'Build output busy; set CX16AGI_BUILD_DIR to a private base.' >&2; exit 1; }; \
-	set -e; for name in stringFormat parser textLayer commands menu; do \
+	set -e; for name in stringFormat parser textLayer commands menu helpers; do \
 	$(CC65) -t cx16 -O -o $(STRING_FORMAT_OUT)/$$name.s src/$$name.c; \
 	$(CA65) -t cx16 -o $(STRING_FORMAT_OUT)/$$name.o $(STRING_FORMAT_OUT)/$$name.s; \
 	done; \
 	$(CA65) -t cx16 -o $(STRING_FORMAT_OUT)/stringFormatAsm.o src/stringFormatAsm.s; \
 	$(CA65) -t cx16 -o $(STRING_FORMAT_OUT)/textControlsAsm.o src/textControlsAsm.s; \
 	$(CA65) -t cx16 -o $(STRING_FORMAT_OUT)/parserInputAsm.o src/parserInputAsm.s; \
-	$(CA65) -t cx16 -o $(STRING_FORMAT_OUT)/textLayoutAsm.o src/textLayoutAsm.s; } 9>$(CX16AGI_BUILD_DIR)/.string-format.lock
+	$(CA65) -t cx16 -o $(STRING_FORMAT_OUT)/textLayoutAsm.o src/textLayoutAsm.s; \
+	$(CA65) -t cx16 -o $(STRING_FORMAT_OUT)/bankedStringAsm.o src/bankedStringAsm.s; } 9>$(CX16AGI_BUILD_DIR)/.string-format.lock

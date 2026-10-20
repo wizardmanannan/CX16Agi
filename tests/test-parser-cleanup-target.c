@@ -152,6 +152,35 @@ int main(int argc, char** argv)
         fprintf(input, "RAM %02X\n", sourceBank);
         for (i = 0; i < length; i++) copyByte(input, copyExpected, &copyCount, source + i, (i * 37 + 129) & 255);
     }
+
+    /* The single-bank wrappers retain cc65's return values and stack ABI. */
+    for (n = 0; n < 4; n++) {
+        static const char* names[] = { "_strLenBanked", "_strcpyBanked", "_memCpyBanked", "_memsetBanked" };
+        unsigned int start = n == 0 ? 0x8efe : n == 1 ? 0x8efc : n == 2 ? 0x8efb : 0x8efa;
+        fprintf(input, "RAM 15\nFLM A0FD A2FD 78\nSTM A2FE 00\nFLM A7FF AA02 5A\n");
+        fprintf(input, "STM %04X %02X\nSTM %04X 8E\n", stack, start & 255, stack + 1);
+        if (n < 2) fprintf(input, "STM %04X FD\nSTM %04X A0\n", start, start + 1);
+        if (n == 1) fprintf(input, "STM 8EFE 00\nSTM 8EFF A8\n");
+        if (n == 2) fprintf(input, "STM 8EFB 15\nSTM 8EFC FD\nSTM 8EFD A0\nSTM 8EFE 00\nSTM 8EFF A8\n");
+        if (n == 3) fprintf(input, "STM 8EFA 01\nSTM 8EFB 02\nSTM 8EFC A7\nSTM 8EFD 00\nSTM 8EFE 00\nSTM 8EFF A8\n");
+        fprintf(input, "STM 0000 0D\nSTA %02X\nSTX %02X\nRUN %04X\n",
+                n == 2 ? 1 : 21, n == 2 ? 2 : 0, symbol(argv[2], names[n]));
+        if (n != 3) {
+            fprintf(input, "RQA\nRQX\n");
+            copyExpected[copyCount++] = n == 0 ? 1 : 0;
+            copyExpected[copyCount++] = n == 0 ? 2 : 0xa8;
+        }
+        copyByte(input, copyExpected, &copyCount, 0, 13);
+        copyByte(input, copyExpected, &copyCount, stack, 0);
+        copyByte(input, copyExpected, &copyCount, stack + 1, 0x8f);
+        fprintf(input, "RAM 15\n");
+        copyByte(input, copyExpected, &copyCount, 0xa7ff, 0x5a);
+        for (i = 0; i < 513; i++) copyByte(input, copyExpected, &copyCount, 0xa800 + i, n == 0 ? 0x5a : n == 3 ? 0xa7 : 'x');
+        copyByte(input, copyExpected, &copyCount, 0xaa01, n == 1 ? 0 : 0x5a);
+        copyByte(input, copyExpected, &copyCount, 0xaa02, 0x5a);
+        for (i = 0; i < 513; i++) copyByte(input, copyExpected, &copyCount, 0xa0fd + i, 'x');
+        copyByte(input, copyExpected, &copyCount, 0xa2fe, 0);
+    }
     rewind(input);
     child = fork();
     assert(child >= 0);
@@ -220,6 +249,7 @@ int main(int argc, char** argv)
     assert(wrapCycles < 100000);
     assert(borderCycles < 250000);
     assert(valid);
+    assert(copyCycles < 700000);
     fclose(input);
     fclose(output);
     return 0;
