@@ -348,3 +348,263 @@ static const CorpusResource *find_resource(const CorpusGame *game,
     return NULL;
 }
 
+static int read_file(const char *path, uint8_t **bytes, size_t *size)
+{
+    FILE *file = fopen(path, "rb");
+    long length;
+    size_t read_count;
+    uint8_t *buffer;
+    if (!file || fseek(file, 0, SEEK_END) != 0 ||
+        (length = ftell(file)) < 0 || fseek(file, 0, SEEK_SET) != 0) {
+        if (file)
+            fclose(file);
+        return -1;
+    }
+    buffer = (uint8_t *)malloc(length ? (size_t)length : 1);
+    if (!buffer) {
+        fclose(file);
+        return -1;
+    }
+    read_count = fread(buffer, 1, (size_t)length, file);
+    if (fclose(file) != 0 || read_count != (size_t)length) {
+        free(buffer);
+        return -1;
+    }
+    *bytes = buffer;
+    *size = (size_t)length;
+    return 0;
+}
+
+static int run_process(char *const arguments[])
+{
+    pid_t child = fork();
+    int status;
+    if (child < 0)
+        return -1;
+    if (child == 0) {
+        execvp(arguments[0], arguments);
+        fprintf(stderr, "real-game corpus: cannot execute %s: %s\n",
+                arguments[0], strerror(errno));
+        _exit(127);
+    }
+    while (waitpid(child, &status, 0) < 0) {
+        if (errno != EINTR)
+            return -1;
+    }
+    return WIFEXITED(status) ? WEXITSTATUS(status) : -1;
+}
+
+static int run_process_in_directory(char *const arguments[],
+                                    const char *directory)
+{
+    pid_t child = fork();
+    int status;
+    if (child < 0)
+        return -1;
+    if (child == 0) {
+        if (chdir(directory) != 0)
+            _exit(126);
+        execvp(arguments[0], arguments);
+        fprintf(stderr, "real-game corpus: cannot execute %s: %s\n",
+                arguments[0], strerror(errno));
+        _exit(127);
+    }
+    while (waitpid(child, &status, 0) < 0) {
+        if (errno != EINTR)
+            return -1;
+    }
+    return WIFEXITED(status) ? WEXITSTATUS(status) : -1;
+}
+
+static int absolute_path(char destination[], size_t capacity,
+                         const char *path)
+{
+    char current_directory[PATH_CAPACITY];
+    int length;
+    if (!path || !*path)
+        return -1;
+    if (path[0] == '/')
+        return copy_text(destination, capacity, path);
+    if (!getcwd(current_directory, sizeof current_directory))
+        return -1;
+    length = snprintf(destination, capacity, "%s/%s", current_directory, path);
+    return length < 0 || (size_t)length >= capacity ? -1 : 0;
+}
+
+static const char *logic_replay_cli(void)
+{
+    const char *path = getenv("CX16_LOGIC_REPLAY_CLI");
+    return path && *path ? path : "obj/cx16/logic-replay";
+}
+
+static int run_full_app_cli(const char *game_directory, uint32_t ticks,
+                            uint32_t timeout_ms, const char *output_path,
+                            uint8_t snapshot[LOGIC_APP_REPLAY_OUTPUT_SIZE])
+{
+    char manifest[PATH_CAPACITY], trace[PATH_CAPACITY];
+    char tick_text[16], timeout_text[16];
+    uint8_t *bytes = NULL;
+    size_t size = 0;
+    char *arguments[16];
+    int count = 0, length;
+    length = snprintf(manifest, sizeof manifest, "%s/app.manifest", game_directory);
+    if (length < 0 || (size_t)length >= sizeof manifest)
+        return -1;
+    length = snprintf(trace, sizeof trace, "%s/app.ltrace", game_directory);
+    if (length < 0 || (size_t)length >= sizeof trace)
+        return -1;
+    snprintf(tick_text, sizeof tick_text, "%u", (unsigned)ticks);
+    snprintf(timeout_text, sizeof timeout_text, "%u", (unsigned)timeout_ms);
+    arguments[count++] = (char *)logic_replay_cli();
+    arguments[count++] = "full-app";
+    arguments[count++] = "--game-dir";
+    arguments[count++] = (char *)game_directory;
+    arguments[count++] = "--manifest";
+    arguments[count++] = manifest;
+    arguments[count++] = "--input-trace";
+    arguments[count++] = trace;
+    arguments[count++] = "--ticks";
+    arguments[count++] = tick_text;
+    arguments[count++] = "--timeout-ms";
+    arguments[count++] = timeout_text;
+    arguments[count++] = "--output";
+    arguments[count++] = (char *)output_path;
+    arguments[count] = NULL;
+    {
+        int process_status = run_process(arguments);
+        if (process_status != 0) {
+            fprintf(stderr, "full-app CLI exited with status %d for %s\n",
+                    process_status, output_path);
+            return -1;
+        }
+    }
+    if (read_file(output_path, &bytes, &size) != 0) {
+        fprintf(stderr, "full-app CLI did not create %s: %s\n",
+                output_path, strerror(errno));
+        return -1;
+    }
+    if (size != LOGIC_APP_REPLAY_OUTPUT_SIZE) {
+        fprintf(stderr, "full-app CLI wrote %lu checkpoint bytes to %s; expected %u\n",
+                (unsigned long)size, output_path,
+                (unsigned)LOGIC_APP_REPLAY_OUTPUT_SIZE);
+        free(bytes);
+        return -1;
+    }
+    memcpy(snapshot, bytes, size);
+    free(bytes);
+    return 0;
+}
+
+static int run_full_app_reducer_cli(const char *game_directory,
+                                    uint32_t ticks, uint32_t timeout_ms,
+                                    const char *output_path, int semantic)
+{
+    char manifest[PATH_CAPACITY], trace[PATH_CAPACITY];
+    char tick_text[16], timeout_text[16];
+    char *arguments[24];
+    int count = 0, length;
+    length = snprintf(manifest, sizeof manifest, "%s/app.manifest", game_directory);
+    if (length < 0 || (size_t)length >= sizeof manifest)
+        return -1;
+    length = snprintf(trace, sizeof trace, "%s/app.ltrace", game_directory);
+    if (length < 0 || (size_t)length >= sizeof trace)
+        return -1;
+    snprintf(tick_text, sizeof tick_text, "%u", (unsigned)ticks);
+    /* A reduction boots many candidates; its total budget is separate from
+       the timeout for one application replay. Keep the budget bounded. */
+    uint32_t reduction_timeout = timeout_ms <= UINT32_MAX / 3u ?
+                                 timeout_ms * 3u : UINT32_MAX;
+    snprintf(timeout_text, sizeof timeout_text, "%u", (unsigned)reduction_timeout);
+    arguments[count++] = (char *)logic_replay_cli();
+    arguments[count++] = "app-reduce";
+    if (semantic) {
+        arguments[count++] = "--failure";
+        arguments[count++] = "semantic";
+    }
+    arguments[count++] = "--game-dir";
+    arguments[count++] = (char *)game_directory;
+    arguments[count++] = "--manifest";
+    arguments[count++] = manifest;
+    arguments[count++] = "--input-trace";
+    arguments[count++] = trace;
+    arguments[count++] = "--ticks";
+    arguments[count++] = tick_text;
+    arguments[count++] = "--fault";
+    arguments[count++] = semantic ? "semantic-write" : "omit-metadata-save";
+    arguments[count++] = "--output-trace";
+    arguments[count++] = (char *)output_path;
+    arguments[count++] = "--max-attempts";
+    arguments[count++] = "20";
+    arguments[count++] = "--timeout-ms";
+    arguments[count++] = timeout_text;
+    arguments[count] = NULL;
+    return run_process(arguments);
+}
+
+static int write_scummvm_input_trace(const char *game_directory,
+                                     const LogicReplayEvent *events,
+                                     size_t event_count)
+{
+    char path[PATH_CAPACITY];
+    LogicReplayEvent expanded[LOGIC_APP_REPLAY_INPUT_MAX * 2u];
+    size_t i;
+    int length = snprintf(path, sizeof path, "%s/scummvm.ltrace",
+                          game_directory);
+    if (length < 0 || (size_t)length >= sizeof path ||
+        event_count > LOGIC_APP_REPLAY_INPUT_MAX ||
+        (event_count && !events))
+        return -1;
+    for (i = 0; i < event_count; ++i) {
+        LogicReplayEvent *down = &expanded[i * 2];
+        LogicReplayEvent *up = &expanded[i * 2 + 1];
+        if (events[i].kind != LOGIC_TRACE_KIND_MARK ||
+            events[i].reason != LOGIC_REPLAY_REASON_SEMANTIC_KEYPRESS ||
+            events[i].logic != 0 || !events[i].tick)
+            return -1;
+        *down = events[i];
+        down->sequence = (uint32_t)(i * 2);
+        down->reason = LOGIC_REPLAY_REASON_INPUT_DOWN;
+        down->before = 0;
+        down->after = 1;
+        *up = events[i];
+        up->sequence = (uint32_t)(i * 2 + 1);
+        up->reason = LOGIC_REPLAY_REASON_INPUT_UP;
+        up->before = 1;
+        up->after = 0;
+    }
+    return logic_replay_trace_write(path, expanded, event_count * 2);
+}
+
+static int run_scummvm_oracle(const char *game_directory, uint32_t ticks,
+                              const char *snapshot_path)
+{
+    const char *oracle = getenv("CX16_SCUMMVM_ORACLE");
+    char oracle_path[PATH_CAPACITY], tick_text[16];
+    char *arguments[17];
+    const char *snapshot_name;
+    int count = 0;
+    if (!oracle || !*oracle)
+        oracle = "obj/cx16/logic-oracle-scummvm";
+    if (absolute_path(oracle_path, sizeof oracle_path, oracle) != 0)
+        return -1;
+    snapshot_name = strrchr(snapshot_path, '/');
+    snapshot_name = snapshot_name ? snapshot_name + 1 : snapshot_path;
+    snprintf(tick_text, sizeof tick_text, "%u", (unsigned)ticks);
+    arguments[count++] = oracle_path;
+    arguments[count++] = "--game-dir";
+    arguments[count++] = ".";
+    arguments[count++] = "--manifest";
+    arguments[count++] = "app.manifest";
+    arguments[count++] = "--input-trace";
+    arguments[count++] = "scummvm.ltrace";
+    arguments[count++] = "--ticks";
+    arguments[count++] = tick_text;
+    arguments[count++] = "--snapshot";
+    arguments[count++] = (char *)snapshot_name;
+    arguments[count++] = "--milestones";
+    arguments[count++] = "--checkpoint-profile";
+    arguments[count++] = "completed-cycle";
+    arguments[count] = NULL;
+    return run_process_in_directory(arguments, game_directory);
+}
+
