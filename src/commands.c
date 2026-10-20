@@ -19,6 +19,9 @@
 #include "memoryManager.h"
 #include "view.h"
 #include "stub.h"
+#if defined(LOGIC_APP_REPLAY_TARGET)
+#include "../tools/logic_app_replay.h"
+#endif
 #include "helpers.h"
 #include "parser.h"
 #include "menu.h"
@@ -232,6 +235,10 @@ boolean b1Have_key() // 0, 0x00
 
 	if (!key)
 	{
+		#if defined(LOGIC_APP_REPLAY_TARGET)
+		/* Match the reference's 10 ms have.key event-poll interval. */
+		logicAppReplayAdvanceMilliseconds(10UL);
+		#endif
 		GET_IN(key);
 		LOGIC_STORE_VAR(19, key);
 	}
@@ -1469,7 +1476,6 @@ void b3PrintMessageInTextbox(byte messNum, byte x, byte y, byte length, boolean 
 	char* messagePointer;
 	byte timeoutFlagVal = var[PRINT_TIMEOUT];
 	unsigned int waitTicks;
-	unsigned int vSyncToContinueAt;
 	LOGICFile logicFile;
 	byte keysToWait[NO_KEYS_TO_WAIT] = { KEY_ESC, KEY_ENTER };
 
@@ -1487,20 +1493,26 @@ void b3PrintMessageInTextbox(byte messNum, byte x, byte y, byte length, boolean 
 	show_mouse(screen);
 
 	messagePointer = getMessagePointer(currentLog, messNum - 1);
+	#if defined(LOGIC_APP_REPLAY_TARGET)
+	logicAppReplayRecordMessage((byte)currentLog, messNum, messagePointer,
+	                            logicFile.messageBank);
+	#endif
 
 	b3DisplayMessageBox(messagePointer, logicFile.messageBank, y, x, TEXTBOX_PALETTE_NUMBER, length, wrap, FIRST_TEXT_ROW);
 
 	if (timeoutFlagVal)
 	{
 		waitTicks = timeoutFlagVal * 30;  // The timeout value is given in half seconds and the TotalTicks in 1/60ths of a second.
-		vSyncToContinueAt = vSyncCounter + waitTicks;
-
-		while (vSyncCounter != vSyncToContinueAt);
+		b6WaitForVSyncFrames(waitTicks);
 	}
 	else
 	{
 		b5WaitOnSpecificKeys(keysToWait, NO_KEYS_TO_WAIT);
 	}
+	LOGIC_STORE_VAR(PRINT_TIMEOUT, 0);
+	#if defined(LOGIC_APP_REPLAY_TARGET)
+	logicAppReplayResetCycleClock();
+	#endif
 
 	b3ClearLastPlacedText();
 
@@ -1532,6 +1544,10 @@ void b3DisplayWithoutTextbox(byte row, byte col, byte messNum)
 	b5GetLogicFile(&logicFile, currentLog);
 
 	messagePointer = getMessagePointer(currentLog, messNum - 1);
+	#if defined(LOGIC_APP_REPLAY_TARGET)
+	logicAppReplayRecordMessage((byte)currentLog, messNum, messagePointer,
+	                            logicFile.messageBank);
+	#endif
 
 #ifdef VERBOSE_MESSAGE_PRINT
 	printf("attempting to print %d from script %d. The length is %d. The message pointer is %p and the bank is %p\n", messNum, currentLog, strLenBanked(messagePointer, logicFile.messageBank), messagePointer, logicFile.messageBank);
@@ -2203,6 +2219,3 @@ void b5SetPriorityBase()
 }
 
 #pragma code-name (pop)
-
-
-
