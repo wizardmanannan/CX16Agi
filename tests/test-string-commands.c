@@ -26,6 +26,7 @@ extern void b4Get_num(void);
 extern void b4Set_cursor_char(void);
 extern void b5Set_game_id(void);
 extern boolean b1Said(void);
+extern char* getMessagePointer(byte logic, byte message);
 char cursorChar = '_';
 static char allocatedWindow[80];
 static unsigned int allocations;
@@ -262,6 +263,10 @@ static void test_said_trailing_wildcard(void)
 int main(void)
 {
 	currentLog = 106;
+	RAM_BANK = 13;
+	assert(strcmp(getMessagePointer(106, 255), "") == 0);
+	assert(strcmp(getMessagePointer(106, 0), "") == 0);
+	assert(RAM_BANK == 13);
 	strcpy(string[0], "look");
 	operands[0] = 0;
 	b4Parse();

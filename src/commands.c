@@ -99,14 +99,15 @@ char* getMessagePointer(byte logicFileNo, byte messageNo)
 {
 	byte previousBank = RAM_BANK;
 	char* result;
-	int i;
 
 	LOGICFile logicFile;
 	b5GetLogicFile(&logicFile, logicFileNo);
+	if (!logicFile.messages || messageNo >= logicFile.numMessages) return "";
 
 	RAM_BANK = logicFile.messageBank;
 
 	result = (char*)logicFile.messages[messageNo];
+	if (!result) result = "";
 
 	//for (i = 1; i < strlen(result) && *result == ' '; i++) //Skip tabbing
 	//{
