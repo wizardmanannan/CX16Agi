@@ -50,7 +50,6 @@ LOGICCOMMANDS_INC = 1
 .import _b1Posn
 .import _b1Controller
 .import _b1Have_key 
-.import _b1Said
 .import _b1Compare_strings
 .import _b1Obj_in_box
 .import _b1Center_posn

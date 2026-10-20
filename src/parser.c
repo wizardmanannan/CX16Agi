@@ -61,11 +61,6 @@ void b7SetEvent(EventType* event, byte eventNumber)
 	b7Events[eventNumber] = *event;
 }
 
-byte b7GetInputWord(byte number)
-{
-	return inputWords[number];
-}
-
 char* b7GetInternalStringPtr(byte number, size_t* length)
 {
 	*length = strlen(string[number]);
@@ -510,48 +505,6 @@ void b7LookupWords(char* inputLine)
 		// Mark that the command has not yet been handled
 		flag[4] = FALSE;
 	}
-}
-
-/***************************************************************************
-** said
-**
-** Purpose: To execute the said() test command. Each two-byte argument is
-** compared with the relevant words entered by the user. If there is an
-** exact match, it returns TRUE, otherwise it returns false.
-***************************************************************************/
-boolean b7Said(byte** data)
-{
-	int numOfArgs, wordNum, argValue;
-	boolean wordsMatch = TRUE;
-	byte argLo, argHi;
-
-	numOfArgs = *(*data)++;
-
-	if ((flag[2] == 0) || (flag[4] == 1)) {  /* Not valid input waiting */
-		*data += (numOfArgs * 2); /* Jump over arguments */
-		return FALSE;
-	}
-
-	/* Needs to deal with ANYWORD and ROL */
-	for (wordNum = 0; wordNum < numOfArgs; wordNum++) {
-		argLo = *(*data)++;
-		argHi = *(*data)++;
-		argValue = (argLo + (argHi << 8));
-		if (argValue == 9999) break; /* Should always be last argument */
-		if (argValue == 1) continue; /* Word comparison does not matter */
-
-		if (inputWords[wordNum] != argValue) wordsMatch = FALSE;
-	}
-
-	if ((numInputWords != numOfArgs) && (argValue != 9999)) return FALSE;
-
-	if (wordsMatch) {
-		flag[4] = TRUE;    /* said() accepted input */
-		numInputWords = 0;
-		flag[2] = FALSE;   /* not sure about this one */
-	}
-
-	return (wordsMatch);
 }
 
 #pragma code-name (pop)

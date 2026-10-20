@@ -225,47 +225,6 @@ boolean b1Have_key() // 0, 0x00
 	return key;
 }
 
-boolean b1Said()
-{
-	int numOfArgs, wordNum, argValue;
-	boolean wordsMatch = TRUE;
-	byte argLo, argHi;
-
-	numOfArgs = loadAndIncWinCode();
-
-	if ((flag[2] == 0) || (flag[4] == 1)) {  /* Not valid input waiting */
-		incCodeBy(numOfArgs * 2); /* Jump over arguments */
-		return FALSE;
-	}
-
-	/* Needs to deal with ANYWORD and ROL */
-	for (wordNum = 0; wordNum < numOfArgs; wordNum++) {
-		argLo = loadAndIncWinCode();
-		argHi = loadAndIncWinCode();
-		argValue = (argLo + (argHi << 8));
-		if (argValue == 9999) break; /* Should always be last argument */
-		if (argValue == 1) continue; /* Word comparison does not matter */
-		if (b7GetInputWord(wordNum) != argValue) wordsMatch = FALSE;
-	}
-
-	if ((numInputWords != numOfArgs) && (argValue != 9999)) return FALSE;
-
-	if (wordsMatch) {
-		flag[4] = TRUE;    /* said() accepted input */
-		numInputWords = 0;
-		flag[2] = FALSE;   /* not sure about this one */
-	}
-
-	return (wordsMatch);
-}
-
-/* The said() command is in parser.h
-boolean said(byte **data)
-{
-
-}
-*/
-
 boolean b1Compare_strings() // 2, 0x00 
 {
 	int s1, s2;
