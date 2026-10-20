@@ -24,6 +24,27 @@ static unsigned int symbol(const char* labels, const char* wanted)
     abort();
 }
 
+static void copyCall(FILE* input, unsigned int routine, unsigned int stack,
+                     unsigned int length, unsigned int source, unsigned int sourceBank,
+                     unsigned int destination, unsigned int destinationBank)
+{
+    fprintf(input, "STM %04X FA\nSTM %04X 8E\n", stack, stack + 1);
+    fprintf(input, "STM 8EFA %02X\nSTM 8EFB %02X\nSTM 8EFC %02X\n",
+            sourceBank, source & 255, source >> 8);
+    fprintf(input, "STM 8EFD %02X\nSTM 8EFE %02X\nSTM 8EFF %02X\n",
+            destinationBank, destination & 255, destination >> 8);
+    fprintf(input, "STM 0000 0D\nSTA %02X\nSTX %02X\nRUN %04X\n",
+            length & 255, length >> 8, routine);
+}
+
+static void copyByte(FILE* input, unsigned char* expected, unsigned int* count,
+                     unsigned int address, unsigned char value)
+{
+    assert(*count < 32768);
+    expected[(*count)++] = value;
+    fprintf(input, "RQM %04X\n", address);
+}
+
 int main(int argc, char** argv)
 {
     static const unsigned char phrase[] = "go!,  north.  (now)";
@@ -34,6 +55,10 @@ int main(int argc, char** argv)
     static const unsigned char wrapped[] = "ab cd\nef gh\nij";
     static const unsigned char borderInput[] = "one\n\ntwo\n";
     static const unsigned char borderExpected[] = { 8, 158, 'o', 32, 't', 32, 0, 0x5a };
+    static const unsigned int copyLengths[] = { 0, 1, 49, 50, 51, 255, 256, 511, 512, 513, 8176 };
+    static unsigned char copyExpected[32768];
+    unsigned int copyCount = 0, copyRoutine, n, length, source, destination, sourceBank, destinationBank;
+    unsigned long copyCycles = 0;
     FILE* input = targetFixtureFile();
     FILE* output = targetFixtureFile();
     FILE* bank;
@@ -45,6 +70,7 @@ int main(int argc, char** argv)
     int status, byte, phase = 0, valid = 1;
     pid_t child;
     assert(argc == 5 && input && output);
+    copyRoutine = symbol(argv[2], "_memCpyBankedBetween");
     wrap = symbol(argv[2], "_b3WrapText");
     border = symbol(argv[2], "_b3DrawBorder");
     buffers = symbol(argv[2], "_b3TextBuffers");
@@ -95,6 +121,37 @@ int main(int argc, char** argv)
         unsigned int offsets[] = { 0, 65, 97, 129, 161, 255, 256 };
         for (i = 0; i < sizeof(offsets) / sizeof(offsets[0]); i++) fprintf(input, "RQM %04X\n", buffers + 1000 + offsets[i]);
     }
+
+    /* Cross-bank menu/set.string/input copies: byte patterns include NUL/high bytes. */
+    fprintf(input, "RAM 15\n");
+    for (i = 0; i < 513; i++) fprintf(input, "STM %04X %02X\n", 0xa0fd + i, (i * 37 + 129) & 255);
+    fprintf(input, "RQC\n");
+    for (repeat = 0; repeat < 32; repeat++)
+        copyCall(input, copyRoutine, stack, 513, 0xa0fd, 21, 0xa1ff, 22);
+    fprintf(input, "RQC\n");
+    for (n = 0; n < sizeof(copyLengths) / sizeof(copyLengths[0]) + 4; n++) {
+        unsigned int mode = n < sizeof(copyLengths) / sizeof(copyLengths[0]) ? 0 :
+                            n - sizeof(copyLengths) / sizeof(copyLengths[0]) + 1;
+        length = mode ? 513 : copyLengths[n];
+        sourceBank = 21;
+        destinationBank = mode == 1 ? 21 : 22;
+        source = length > 513 ? 0xa000 : mode == 2 || mode == 4 ? 0x8000 : 0xa0fd;
+        destination = length > 513 ? 0xa000 : mode == 1 ? 0xa800 : mode >= 3 ? 0x8400 : 0xa1ff;
+        fprintf(input, "RAM %02X\n", sourceBank);
+        for (i = 0; i < length; i++) fprintf(input, "STM %04X %02X\n", source + i, (i * 37 + 129) & 255);
+        fprintf(input, "RAM %02X\nFLM %04X %04X 5A\n", destinationBank,
+                destination == 0xa000 ? destination : destination - 1, destination + length);
+        copyCall(input, copyRoutine, stack, length, source, sourceBank, destination, destinationBank);
+        copyByte(input, copyExpected, &copyCount, 0, 13);
+        copyByte(input, copyExpected, &copyCount, stack, 0);
+        copyByte(input, copyExpected, &copyCount, stack + 1, 0x8f);
+        fprintf(input, "RAM %02X\n", destinationBank);
+        if (destination != 0xa000) copyByte(input, copyExpected, &copyCount, destination - 1, 0x5a);
+        for (i = 0; i < length; i++) copyByte(input, copyExpected, &copyCount, destination + i, (i * 37 + 129) & 255);
+        copyByte(input, copyExpected, &copyCount, destination + length, 0x5a);
+        fprintf(input, "RAM %02X\n", sourceBank);
+        for (i = 0; i < length; i++) copyByte(input, copyExpected, &copyCount, source + i, (i * 37 + 129) & 255);
+    }
     rewind(input);
     child = fork();
     assert(child >= 0);
@@ -133,13 +190,26 @@ int main(int argc, char** argv)
         }
         else if ((unsigned int)phase == parserValues + wrapValues) before = value;
         else if ((unsigned int)phase == parserValues + wrapValues + 1) borderCycles = value - before;
-        else {
+        else if ((unsigned int)phase < parserValues + wrapValues + 2 + sizeof(borderExpected)) {
             unsigned int offset = phase - parserValues - wrapValues - 2;
-            assert(offset < sizeof(borderExpected) && value == borderExpected[offset]);
+            assert(value == borderExpected[offset]);
+        }
+        else {
+            unsigned int offset = phase - parserValues - wrapValues - 2 - sizeof(borderExpected);
+            if (!offset) before = value;
+            else if (offset == 1) copyCycles = value - before;
+            else {
+                assert(offset - 2 < copyCount);
+                if (value != copyExpected[offset - 2]) {
+                    fprintf(stderr, "banked copy byte %u: got %02lx, expected %02x\n", offset - 2, value, copyExpected[offset - 2]);
+                    valid = 0;
+                }
+            }
         }
         phase++;
     }
-    assert((unsigned int)phase == parserValues + wrapValues + 2 + sizeof(borderExpected));
+    assert((unsigned int)phase == parserValues + wrapValues + 4 + sizeof(borderExpected) + copyCount);
+    printf("Banked copies: 32 x 513 bytes, %lu cycles\n", copyCycles);
     printf("Text layout: 32 wraps %lu cycles; 32 borders %lu cycles\n", wrapCycles, borderCycles);
     printf("Parser cleanup: 32 phrases, %lu cycles, %u code bytes\n", elapsed, size);
     fflush(stdout);

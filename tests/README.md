@@ -64,3 +64,8 @@ polling, or orchestrate display rows and menus. Their byte copies, fills, and
 string lengths use the existing assembly runtime/banked helpers. Text controls,
 map clipping, parser compaction, interpolation, wrapping, and border byte loops
 have one production assembly implementation each.
+
+The shared cross-bank copy workload runs 32 copies of 513 bytes through the
+full product helper; the C baseline is 1,241,728 cycles. Permanent cases cover
+zero length, 49/50/51-byte chunk edges, page crossings, 8,176 bytes, same-bank
+copies, fixed RAM, source preservation, canaries, and software-stack cleanup.
