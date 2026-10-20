@@ -18,6 +18,31 @@ a host C compiler, Python 3, a linker supporting `--gc-sections`, and `flock`. S
 `CC65_HOME`, `X16EMU`, and `X16_ROM` when the tools are elsewhere. Concurrent
 builds must use separate `CX16AGI_BUILD_DIR` values.
 
+The cycle tests require the `RQC` testbench command in
+[`x16-testbench-cycles.patch`](x16-testbench-cycles.patch). It only exposes the
+emulator's existing CPU counter; it does not change CPU emulation. To build the
+tested emulator from a clean checkout (CMake, a C/C++ compiler and SDL2 development
+headers are required), run from this repository:
+
+```sh
+export CX16AGI_BUILD_DIR="$HOME/.cache/cx16agi/build"
+mkdir -p "$CX16AGI_BUILD_DIR/tools"
+git clone https://github.com/X16Community/x16-emulator.git "$CX16AGI_BUILD_DIR/tools/x16-emulator"
+git -C "$CX16AGI_BUILD_DIR/tools/x16-emulator" checkout 77f2bab332e24c5456f9844a6c7ddd203f6198e6
+git -C "$CX16AGI_BUILD_DIR/tools/x16-emulator" apply "$PWD/tests/x16-testbench-cycles.patch"
+cmake -S "$CX16AGI_BUILD_DIR/tools/x16-emulator" -B "$CX16AGI_BUILD_DIR/tools/x16-emulator/build" -DCMAKE_BUILD_TYPE=Release
+cmake --build "$CX16AGI_BUILD_DIR/tools/x16-emulator/build"
+export X16EMU="$CX16AGI_BUILD_DIR/tools/x16-emulator/build/x16emu"
+export CC65_HOME=/path/to/cc65
+export X16_ROM=/path/to/rom.bin
+make string-format-test
+```
+
+The verified compiler is cc65 V2.19 at
+`a6530f46914232c085c281c4bf84e87bd136596f`; the ROM is the R49 release image.
+The suite needs no Sierra game files. Without the patch, the emulator reports
+`ERR Unknown command` for `RQC` and the cycle tests cannot run.
+
 `make string-format-target-check` compiles and assembles the six changed C
 production modules and all five assembly modules with cc65/ca65. Set `CC65_HOME` if the tools are outside PATH.
 This checks target compilation, not a full interpreter link or emulator replay.
