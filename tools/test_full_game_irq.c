@@ -1814,15 +1814,12 @@ int main(int argc,char **argv) {
     char *compile[]={"cmake","--build",native,"-j4",NULL};run_from(compile,buildlog,0,NULL);
     if(!play) REQUIRE(!setenv("SDL_VIDEODRIVER","dummy",1)&&!setenv("SDL_AUDIODRIVER","dummy",1),"Cannot set SDL environment");
     if(loader_test) { run_loader_test(game,build,native,rom,output); return 0; }
-    char *tas=NULL;
-    if(!startup_room&&!play) { tas=join(output,"input.tas");write_file(tas,"0:Return\n",9); }
     char *command[26];int command_length=0;
     command[command_length++]=join(native,"x16emu");command[command_length++]="-rom";command[command_length++]=rom;
     command[command_length++]="-fsroot";command[command_length++]=stage;command[command_length++]="-startin";command[command_length++]=stage;
     command[command_length++]="-prg";command[command_length++]=join(stage,"agi.cx16");command[command_length++]="-run";if(!random_ram) command[command_length++]="-zeroram";
     if(!play) { command[command_length++]="-warp";command[command_length++]="-sound";command[command_length++]="none"; }
     if(!play&&!startup_room&&!picture_test&&!combined_test) { command[command_length++]="-gif";command[command_length++]=format("%s/game.gif,wait",output); }
-    if(tas) { command[command_length++]="-tas";command[command_length++]=tas; }
     command[command_length++]="-echo";command[command_length]=NULL;
     run(command,join(output,"run.log"),play?0:(picture_test||startup_room)?300:90);
     cleanup_stage();
