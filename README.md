@@ -138,6 +138,8 @@ The suite defaults to `.tools/cc65-latest` and `.tools/x16-emulator` beside Git'
 make -C tools test
 make -C tools production-test
 make -C tools build-test
+make -C tools staging-test
+make -C tools metadata-test
 # Required before developer handoff (both original games, no skipped games):
 make -C tools review-check ROM=/path/to/rom.bin \
   GAME_KQ1=/path/to/Kings-Quest-1 GAME_KQ3=/path/to/Kings-Quest-3
@@ -154,6 +156,10 @@ make -C tools loader-test ROM=/path/to/rom.bin GAME=/path/to/KQ1
 `build-test` runs the shipped Makefile with its normal compiler flags, placing
 the program, bank files and map in the suite output tree. `games-test` builds
 that same image and runs both games with normal emulator RAM initialization.
+Game staging retains `meta/`. For the shared cache layout it maps the six
+`*-{logic,sound,view}-ids.{idx,bin}` files from `extracted/` into `meta/`.
+Both game cases require validated metadata and actual dependency traversal;
+missing metadata can no longer produce a passing acceptance result.
 It sends Return through the emulator keyboard to leave the introduction,
 requires KQ1 room 1 and KQ3 room 7, completed picture rendering, visible sprites,
 and ten more interpreter/input cycles, then sends Right and checks that the
@@ -196,6 +202,20 @@ is on PATH). The map is written beside the program as `agi.cx16.map`.
 Deploy `agi.cx16`, all numbered `agi.cx16.01` through `agi.cx16.12` banks,
 and the `.INIT`, `.DEBUG`, and `.SPRITEDEBUG` files from the same build into
 the game's directory. The game checks stage that complete set automatically.
+Keep the game's matching dependency index/data pairs in its `meta/` directory
+when launching an emulator directly. Invalid files disable dependency traversal
+and produce a diagnostic; the review gate rejects that configuration.
+
+`staging-test` checks both metadata directory layouts using owned fixtures.
+`metadata-test` runs the production reader against missing, truncated,
+out-of-range, oversized and failed reads, empty lists and valid retries. It also
+runs within `test`. `production-test` includes compiled real-allocator cases for
+repeated sound discard, 30-slot cache capacity and hole reuse, output relocation
+across banks, zero through four sound channels, end flags after rejected play,
+and ownership during periodic conversion. View cases load real generated AGI
+resources with 7/8/14/15 loops, reject invalid headers without retained
+allocations, and run cached `show.obj` through room reset, palette exhaustion,
+retry, IRQ publication and repeated input/cleanup cycles.
 
 For native rendering and input integration:
 
