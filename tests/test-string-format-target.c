@@ -214,6 +214,49 @@ void targetValidateKq3(void)
 	targetResult = valid ? 0 : 1;
 }
 
+void targetPrepareLiteral(void)
+{
+    char text[80];
+    initializeFixture();
+    memset(text, 'w', 79);
+    text[79] = 0;
+    memcpy(text + 2, "%v1\\x", 5);
+    setWord(text);
+    fillBanked(OBJECT_BANK, 0xA100, 'y', 79);
+    fillBanked(OBJECT_BANK, 0xA14F, 0, 1);
+    fillBanked(MESSAGE_BANK, 0xA200, 'z', 79);
+    fillBanked(MESSAGE_BANK, 0xA24F, 0, 1);
+    putBankedString(SOURCE_BANK, SOURCE_ADDRESS, "%w1/%01/%g1");
+    fillBanked(DESTINATION_BANK, OUTPUT_ADDRESS, 0x5a, 256);
+}
+
+void targetExpandLiteral(void)
+{
+    RAM_BANK = 13;
+    targetBankBefore = RAM_BANK;
+    expandFormatCodes((char*)SOURCE_ADDRESS, SOURCE_BANK,
+                      (char*)OUTPUT_ADDRESS, DESTINATION_BANK, 240);
+    targetBankAfter = RAM_BANK;
+}
+
+void targetValidateLiteral(void)
+{
+    unsigned int i;
+    byte expected;
+    int valid = targetBankBefore == targetBankAfter && targetBankAfter == 13;
+    RAM_BANK = DESTINATION_BANK;
+    for (i = 0; i < 239; i++) {
+        expected = i < 79 ? 'w' : i == 79 || i == 159 ? '/' : i < 159 ? 'y' : 'z';
+        if (i >= 2 && i < 7) expected = "%v1\\x"[i - 2];
+        if (((byte*)OUTPUT_ADDRESS)[i] != expected) valid = 0;
+    }
+    valid = valid && ((byte*)OUTPUT_ADDRESS)[239] == 0 && ((byte*)OUTPUT_ADDRESS)[240] == 0x5a;
+    RAM_BANK = SOURCE_BANK;
+    valid = valid && strcmp((char*)SOURCE_ADDRESS, "%w1/%01/%g1") == 0;
+    RAM_BANK = 13;
+    targetResult = valid ? 0 : 3;
+}
+
 static int expectCapacity(const char* input, const char* expected, size_t max,
 			  byte firstGuard, byte afterGuard)
 {
@@ -229,6 +272,7 @@ static int expectCapacity(const char* input, const char* expected, size_t max,
 void targetEdgeCases(void)
 {
 	char expanded200[201];
+    unsigned int i;
 	int valid = 1;
 	byte previousBank;
 
@@ -302,6 +346,24 @@ void targetEdgeCases(void)
 	RAM_BANK = DESTINATION_BANK;
 	valid = valid && ((byte*)OUTPUT_ADDRESS)[201] == 0x5A;
 	RAM_BANK = 13;
+
+
+    /* A literal message crosses the indexed cursor's 256-byte boundary. */
+    fillBanked(MESSAGE_BANK, 0xA200, 'q', 300);
+    fillBanked(MESSAGE_BANK, 0xA32C, 0, 1);
+    RAM_BANK = MESSAGE_BANK;
+    memcpy((char*)0xA200 + 254, "%v1\\x", 5);
+    putBankedString(SOURCE_BANK, SOURCE_ADDRESS, "%g1");
+    fillBanked(DESTINATION_BANK, OUTPUT_ADDRESS, 0x5a, 302);
+    RAM_BANK = 13;
+    expandFormatCodes((char*)SOURCE_ADDRESS, SOURCE_BANK,
+                      (char*)OUTPUT_ADDRESS, DESTINATION_BANK, 302);
+    valid = valid && RAM_BANK == 13;
+    RAM_BANK = DESTINATION_BANK;
+    for (i = 0; i < 300; i++)
+        valid = valid && ((char*)OUTPUT_ADDRESS)[i] == (i >= 254 && i < 259 ? "%v1\\x"[i - 254] : 'q');
+    valid = valid && ((byte*)OUTPUT_ADDRESS)[300] == 0 && ((byte*)OUTPUT_ADDRESS)[301] == 0x5a;
+    RAM_BANK = 13;
 
 	valid = valid && expectCapacity("abcdef", "abc", 4, 0x5A, 0x5A);
 	valid = valid && expectCapacity("abcdef", "", 1, 0x5A, 0x5A);

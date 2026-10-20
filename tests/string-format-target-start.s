@@ -14,6 +14,12 @@
 .export targetValidateKq3Entry
 .export targetBridgeEntry
 .export targetEdgeCasesEntry
+.import _targetPrepareLiteral
+.export targetPrepareLiteralEntry
+.import _targetExpandLiteral
+.export targetExpandLiteralEntry
+.import _targetValidateLiteral
+.export targetValidateLiteralEntry
 .export _trampoline
 
 .segment "CODE"
@@ -65,4 +71,19 @@ targetEdgeCasesEntry:
 targetBridgeEntry:
     jsr initCStack
     jsr _targetBridge
+    rts
+
+targetPrepareLiteralEntry:
+    jsr initCStack
+    jsr _targetPrepareLiteral
+    rts
+
+targetExpandLiteralEntry:
+    jsr initCStack
+    jsr _targetExpandLiteral
+    rts
+
+targetValidateLiteralEntry:
+    jsr initCStack
+    jsr _targetValidateLiteral
     rts

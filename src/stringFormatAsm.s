@@ -360,14 +360,38 @@ formatCopyText:
     sta ptr1
     lda _formatText+1
     sta ptr1+1
-    lda (ptr1)
+    ldx _formatBuffered
+    ldy #0
+; Literal replacements do not interpret percent signs or backslashes. Keep
+; their cursor in ZP and buffered count in X, as for the outer literal run.
+formatCopyLiteral:
+    lda (ptr1),y
+    beq formatCopyLiteralEnd
+    sta _formatBuffer,x
+    inx
+    iny
     bne :+
+    inc ptr1+1
+:   lda _formatRemaining
+    bne :+
+    dec _formatRemaining+1
+:   dec _formatRemaining
+    cpx #50
+    bne :+
+    stx _formatBuffered
+    phy
+    jsr formatFlush
+    ply
+    ldx #0
+:   lda _formatRemaining
+    bne formatCopyLiteral
+    lda _formatRemaining+1
+    bne formatCopyLiteral
+    stx _formatBuffered
+    rts
+formatCopyLiteralEnd:
+    stx _formatBuffered
     jmp formatScan
-:   jsr formatAppend
-    inc _formatText
-    jne formatCopyText
-    inc _formatText+1
-    jmp formatCopyText
 
 ; Resolve metadata through the engine's wrapped bank-5 API. Its packed
 ; LOGICFile offsets are checked by stringFormat.c at target compile time.

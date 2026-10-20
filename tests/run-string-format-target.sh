@@ -48,6 +48,9 @@ expand=$(label_address targetExpandKq3Entry)
 validate=$(label_address targetValidateKq3Entry)
 edges=$(label_address targetEdgeCasesEntry)
 result=$(label_address _targetResult)
+literal_prepare=$(label_address targetPrepareLiteralEntry)
+literal_expand=$(label_address targetExpandLiteralEntry)
+literal_validate=$(label_address targetValidateLiteralEntry)
 
 {
 	printf 'RUN %s\n' "$prepare"
@@ -58,6 +61,8 @@ result=$(label_address _targetResult)
 	printf 'RAM 00\nRQM %s\n' "$result"
 	printf 'RUN %s\n' "$edges"
 	printf 'RAM 00\nRQM %s\n' "$result"
+    printf 'RUN %s\nRQC\nRUN %s\nRQC\nRUN %s\nRAM 00\nRQM %s\n' \
+        "$literal_prepare" "$literal_expand" "$literal_validate" "$result"
 } > "$fixture/testbench.in"
 
 if ! timeout 30 "$x16emu" -testbench -rom "$x16_rom" -prg "$fixture/string-format-target.prg" \
@@ -68,9 +73,9 @@ if ! timeout 30 "$x16emu" -testbench -rom "$x16_rom" -prg "$fixture/string-forma
 fi
 
 mapfile -t response < <(awk '/^[[:xdigit:]]+$/ { print tolower($0) }' "$fixture/testbench.out")
-if [[ ${#response[@]} -ne 4 ]]; then
+if [[ ${#response[@]} -ne 7 ]]; then
 	cat "$fixture/testbench.out" >&2
-	echo "target emulator returned ${#response[@]} values; expected 4" >&2
+	echo "target emulator returned ${#response[@]} values; expected 7" >&2
 	exit 1
 fi
 
@@ -85,6 +90,17 @@ printf 'KQ3 formatter: input=106 bytes, messages=2, output=115 bytes, cycles=%d,
 if (( cycles >= cycle_budget )); then
 	echo "KQ3 formatter exceeded the cycle budget" >&2
 	exit 1
+fi
+
+literal_cycles=$((16#${response[5]} - 16#${response[4]}))
+if [[ ${response[6]} != 0 ]]; then
+    echo "literal formatter regression failed: result=${response[6]}" >&2
+    exit 1
+fi
+printf 'Literal token copies: output=239 bytes, cycles=%d, budget=20000\n' "$literal_cycles"
+if (( literal_cycles >= 20000 )); then
+    echo 'literal formatter exceeded the cycle budget' >&2
+    exit 1
 fi
 
 # Host layout/parser cases use the same target formatter through a byte transport.

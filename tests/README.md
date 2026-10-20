@@ -73,3 +73,10 @@ copies, fixed RAM, source preservation, canaries, and software-stack cleanup.
 The banked strlen/strcpy/memcpy/memset entry points are resident assembly around
 the cc65 runtime. Cases check page-crossing lengths, returned pointers (including
 the formerly uninitialized strcpyBanked result), canaries, banks, and stack cleanup.
+
+A second formatter workload expands literal word/object/global-message tokens
+into 239 output bytes. Keeping its read cursor and buffer count in registers
+reduced 30,464 cycles to about 17,800; its budget is 20,000. Percent signs and
+backslashes remain literal in these replacements. A 300-byte global-message
+case checks cursor wraparound, embedded metacharacters at byte 254, termination,
+a destination canary, and bank restoration.
