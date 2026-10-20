@@ -619,3 +619,246 @@ static const LogicOracleObject *object_by_id(const LogicOracleSnapshot *snapshot
     return NULL;
 }
 
+LogicOracleStatus logic_oracle_compare_with_policy(
+    const LogicOracleSnapshot *reference, const LogicOracleSnapshot *candidate,
+    LogicOraclePolicy policy, LogicOracleResult *result)
+{
+    char detail[128], field[48];
+    unsigned i;
+    int rng_algorithm_matches;
+    if (!result) return LOGIC_ORACLE_INVALID;
+    memset(result, 0, sizeof *result);
+    if (policy != LOGIC_ORACLE_POLICY_DETERMINISTIC &&
+        policy != LOGIC_ORACLE_POLICY_CROSS_ENGINE_SEMANTIC)
+        return invalid_result(result, "invalid comparison policy");
+    if (!snapshot_valid(reference, detail, sizeof detail) ||
+        !snapshot_valid(candidate, detail, sizeof detail))
+        return invalid_result(result, detail);
+    result_context(result, reference, candidate);
+    if (strcmp(reference->game_id, candidate->game_id) != 0)
+        return incompatible_result(result, reference, candidate, "game identifiers differ");
+    if (reference->agi_version != candidate->agi_version)
+        return incompatible_result(result, reference, candidate, "AGI resource versions differ");
+    if (reference->timing_profile != candidate->timing_profile)
+        return incompatible_result(result, reference, candidate,
+            "sample boundaries differ; explicitly aligned timing profiles required");
+    if (reference->tick_numerator != candidate->tick_numerator ||
+        reference->tick_denominator != candidate->tick_denominator)
+        return incompatible_result(result, reference, candidate, "timing identities differ");
+    if (memcmp(reference->manifest_sha256, candidate->manifest_sha256,
+               sizeof reference->manifest_sha256) != 0)
+        return incompatible_result(result, reference, candidate,
+                                   "resource manifest identities differ");
+    if (memcmp(reference->input_sha256, candidate->input_sha256,
+               sizeof reference->input_sha256) != 0)
+        return incompatible_result(result, reference, candidate,
+                                   "delivered input identities differ");
+    rng_algorithm_matches =
+        strcmp(reference->rng_algorithm, candidate->rng_algorithm) == 0;
+    if (policy == LOGIC_ORACLE_POLICY_DETERMINISTIC &&
+        (reference->rng_seed != candidate->rng_seed || !rng_algorithm_matches))
+        return incompatible_result(result, reference, candidate,
+                                   "RNG identities differ");
+    if (policy == LOGIC_ORACLE_POLICY_CROSS_ENGINE_SEMANTIC &&
+        reference->rng_seed != candidate->rng_seed)
+        return incompatible_result(result, reference, candidate,
+                                   "RNG seed identities differ");
+    if (policy == LOGIC_ORACLE_POLICY_CROSS_ENGINE_SEMANTIC &&
+        reference->tick != candidate->tick)
+        return diverged_value(result, reference, candidate, "tick",
+                              reference->tick, candidate->tick);
+    if (reference->checkpoint_index != candidate->checkpoint_index)
+        return diverged_value(result, reference, candidate, "checkpoint_index",
+                              reference->checkpoint_index, candidate->checkpoint_index);
+    if (strcmp(reference->checkpoint, candidate->checkpoint) != 0)
+        return diverged_text(result, reference, candidate, "checkpoint",
+                             reference->checkpoint, candidate->checkpoint);
+
+    if (reference->inventory_known != candidate->inventory_known)
+        return incompatible_result(result, reference, candidate,
+                                   "inventory availability differs");
+    if (reference->inventory_known) {
+        if (reference->inventory_count != candidate->inventory_count)
+            return diverged_value(result, reference, candidate, "inventory_count",
+                                  reference->inventory_count, candidate->inventory_count);
+        for (i = 0; i < reference->inventory_count; ++i) {
+            if (reference->inventory_rooms[i] != candidate->inventory_rooms[i]) {
+                snprintf(field, sizeof field, "inventory[%u].room", i);
+                return diverged_value(result, reference, candidate, field,
+                    reference->inventory_rooms[i], candidate->inventory_rooms[i]);
+            }
+        }
+    }
+
+    for (i = 0; i < 256; i++) {
+        if (reference->variables[i] != candidate->variables[i]) {
+            snprintf(field, sizeof field, "variable[%u]", i);
+            return diverged_value(result, reference, candidate, field,
+                                  reference->variables[i], candidate->variables[i]);
+        }
+    }
+    for (i = 0; i < 256; i++) {
+        if (reference->flags[i] != candidate->flags[i]) {
+            snprintf(field, sizeof field, "flag[%u]", i);
+            return diverged_value(result, reference, candidate, field,
+                                  reference->flags[i], candidate->flags[i]);
+        }
+    }
+    if (reference->room != candidate->room)
+        return diverged_value(result, reference, candidate, "room",
+                              reference->room, candidate->room);
+    if (rng_algorithm_matches) {
+        if (reference->rng_call_count != candidate->rng_call_count)
+            return diverged_value(result, reference, candidate, "rng_call_count",
+                                  reference->rng_call_count,
+                                  candidate->rng_call_count);
+        if (reference->rng_final_state != candidate->rng_final_state)
+            return diverged_value(result, reference, candidate, "rng_final_state",
+                                  reference->rng_final_state,
+                                  candidate->rng_final_state);
+    }
+
+    for (i = 0; i < 256; i++) {
+        const LogicOracleObject *a = object_by_id(reference, i);
+        const LogicOracleObject *b = object_by_id(candidate, i);
+        if (!!a != !!b) {
+            snprintf(field, sizeof field, "object[%u].present", i);
+            return diverged_value(result, reference, candidate, field, !!a, !!b);
+        }
+        if (!a) continue;
+#define COMPARE_OBJECT(member) \
+        do { \
+            if (a->member != b->member) { \
+                snprintf(field, sizeof field, "object[%u].%s", i, #member); \
+                return diverged_value(result, reference, candidate, field, \
+                                      a->member, b->member); \
+            } \
+        } while (0)
+        COMPARE_OBJECT(x);
+        COMPARE_OBJECT(y);
+        COMPARE_OBJECT(view);
+        COMPARE_OBJECT(loop);
+        COMPARE_OBJECT(cel);
+        COMPARE_OBJECT(motion);
+#undef COMPARE_OBJECT
+    }
+    if (reference->message_count != candidate->message_count)
+        return diverged_value(result, reference, candidate, "message_count",
+                              reference->message_count, candidate->message_count);
+    for (i = 0; i < reference->message_count; ++i) {
+        const LogicOracleMessage *a = &reference->messages[i];
+        const LogicOracleMessage *b = &candidate->messages[i];
+        if (a->logic != b->logic || a->id != b->id) {
+            snprintf(field, sizeof field, "message[%u].identity", i);
+            return diverged_value(result, reference, candidate, field,
+                                  (unsigned)a->logic * 256u + a->id,
+                                  (unsigned)b->logic * 256u + b->id);
+        }
+        if (strcmp(a->text, b->text) != 0) {
+            snprintf(field, sizeof field, "message[%u:%u].text", a->logic, a->id);
+            return diverged_text(result, reference, candidate, field, a->text, b->text);
+        }
+    }
+    if (reference->has_failure != candidate->has_failure)
+        return diverged_value(result, reference, candidate, "failure.present",
+                              reference->has_failure, candidate->has_failure);
+    if (reference->has_failure) {
+        if (reference->failure_kind != candidate->failure_kind)
+            return diverged_value(result, reference, candidate, "failure.kind",
+                                  reference->failure_kind,
+                                  candidate->failure_kind);
+        if (reference->failure_logic != candidate->failure_logic)
+            return diverged_value(result, reference, candidate, "failure.logic",
+                                  reference->failure_logic,
+                                  candidate->failure_logic);
+        if (reference->failure_logical_pc != candidate->failure_logical_pc)
+            return diverged_value(result, reference, candidate,
+                                  "failure.logical_pc",
+                                  reference->failure_logical_pc,
+                                  candidate->failure_logical_pc);
+        if (reference->failure_opcode != candidate->failure_opcode)
+            return diverged_value(result, reference, candidate,
+                                  "failure.opcode",
+                                  reference->failure_opcode,
+                                  candidate->failure_opcode);
+        if (reference->failure_reason != candidate->failure_reason)
+            return diverged_value(result, reference, candidate,
+                                  "failure.reason",
+                                  reference->failure_reason,
+                                  candidate->failure_reason);
+        if (reference->failure_code != candidate->failure_code)
+            return diverged_value(result, reference, candidate,
+                                  "failure.code",
+                                  reference->failure_code,
+                                  candidate->failure_code);
+    }
+    if (reference->control_flow_reliable && candidate->control_flow_reliable) {
+        if (reference->logic != candidate->logic)
+            return diverged_value(result, reference, candidate, "logic",
+                                  reference->logic, candidate->logic);
+        if (reference->logical_pc != candidate->logical_pc)
+            return diverged_value(result, reference, candidate, "logical_pc",
+                                  reference->logical_pc, candidate->logical_pc);
+    }
+    result->status = LOGIC_ORACLE_MATCH;
+    return result->status;
+}
+
+LogicOracleStatus logic_oracle_compare(const LogicOracleSnapshot *reference,
+                                      const LogicOracleSnapshot *candidate,
+                                      LogicOracleResult *result)
+{
+    return logic_oracle_compare_with_policy(reference, candidate,
+                                            LOGIC_ORACLE_POLICY_DETERMINISTIC,
+                                            result);
+}
+
+LogicOracleStatus logic_oracle_compare_streams_with_policy(
+    const LogicOracleSnapshot *reference, size_t reference_count,
+    const LogicOracleSnapshot *candidate, size_t candidate_count,
+    LogicOraclePolicy policy, LogicOracleResult *result)
+{
+    char detail[128];
+    size_t i, shared_count;
+    LogicOracleStatus status;
+    if (!result) return LOGIC_ORACLE_INVALID;
+    memset(result, 0, sizeof *result);
+    if (policy != LOGIC_ORACLE_POLICY_DETERMINISTIC &&
+        policy != LOGIC_ORACLE_POLICY_CROSS_ENGINE_SEMANTIC)
+        return invalid_result(result, "invalid comparison policy");
+    if (!snapshot_stream_valid(reference, reference_count, detail, sizeof detail) ||
+        !snapshot_stream_valid(candidate, candidate_count, detail, sizeof detail))
+        return invalid_result(result, detail);
+    shared_count = reference_count < candidate_count ? reference_count : candidate_count;
+    for (i = 0; i < shared_count; i++) {
+        status = logic_oracle_compare_with_policy(&reference[i], &candidate[i],
+                                                  policy, result);
+        if (status != LOGIC_ORACLE_MATCH) return status;
+    }
+    if (reference_count != candidate_count) {
+        const LogicOracleSnapshot *a = i < reference_count ? &reference[i] : NULL;
+        const LogicOracleSnapshot *b = i < candidate_count ? &candidate[i] : NULL;
+        result_context(result, a, b);
+        result->checkpoint_index = (uint32_t)i;
+        result->status = LOGIC_ORACLE_DIVERGED;
+        snprintf(result->field, sizeof result->field, "checkpoint");
+        snprintf(result->reference_text, sizeof result->reference_text, "%s",
+                 a ? a->checkpoint : "<end>");
+        snprintf(result->candidate_text, sizeof result->candidate_text, "%s",
+                 b ? b->checkpoint : "<end>");
+        return result->status;
+    }
+    result->status = LOGIC_ORACLE_MATCH;
+    return result->status;
+}
+
+LogicOracleStatus logic_oracle_compare_streams(
+    const LogicOracleSnapshot *reference, size_t reference_count,
+    const LogicOracleSnapshot *candidate, size_t candidate_count,
+    LogicOracleResult *result)
+{
+    return logic_oracle_compare_streams_with_policy(
+        reference, reference_count, candidate, candidate_count,
+        LOGIC_ORACLE_POLICY_DETERMINISTIC, result);
+}
+
