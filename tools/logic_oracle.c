@@ -377,3 +377,245 @@ static int message_zero(const LogicOracleMessage *message)
     return message->logic == 0 && message->id == 0 && message->text[0] == '\0';
 }
 
+static int read_snapshot(FILE *file, LogicOracleSnapshot *snapshot)
+{
+    size_t i;
+    int byte;
+    memset(snapshot, 0, sizeof *snapshot);
+    if (read_u32(file, &snapshot->checkpoint_index) != 0 ||
+        read_u32(file, &snapshot->tick) != 0 ||
+        read_u32(file, &snapshot->trace_sequence) != 0 ||
+        (byte = fgetc(file)) == EOF)
+        return -1;
+    snapshot->has_trace = (uint8_t)byte;
+    if (read_u16(file, &snapshot->agi_version) != 0 ||
+        (byte = fgetc(file)) == EOF)
+        return -1;
+    snapshot->timing_profile = (uint8_t)byte;
+    if ((byte = fgetc(file)) == EOF) return -1;
+    snapshot->control_flow_reliable = (uint8_t)byte;
+    if (string_read(file, snapshot->game_id, sizeof snapshot->game_id, 0) != 0 ||
+        string_read(file, snapshot->checkpoint, sizeof snapshot->checkpoint, 0) != 0 ||
+        string_read(file, snapshot->provenance, sizeof snapshot->provenance, 0) != 0 ||
+        fread(snapshot->manifest_sha256, 1, sizeof snapshot->manifest_sha256, file) != sizeof snapshot->manifest_sha256 ||
+        fread(snapshot->input_sha256, 1, sizeof snapshot->input_sha256, file) != sizeof snapshot->input_sha256 ||
+        read_u64(file, &snapshot->rng_seed) != 0 ||
+        string_read(file, snapshot->rng_algorithm, sizeof snapshot->rng_algorithm, 0) != 0 ||
+        read_u32(file, &snapshot->tick_numerator) != 0 ||
+        read_u32(file, &snapshot->tick_denominator) != 0 ||
+        read_u32(file, &snapshot->rng_call_count) != 0 ||
+        read_u32(file, &snapshot->rng_final_state) != 0 ||
+        fread(snapshot->variables, 1, sizeof snapshot->variables, file) != sizeof snapshot->variables ||
+        fread(snapshot->flags, 1, sizeof snapshot->flags, file) != sizeof snapshot->flags ||
+        read_u16(file, &snapshot->room) != 0 ||
+        read_u16(file, &snapshot->object_count) != 0 ||
+        snapshot->object_count > LOGIC_ORACLE_MAX_OBJECTS)
+        return -1;
+    for (i = 0; i < LOGIC_ORACLE_MAX_OBJECTS; i++) {
+        LogicOracleObject object;
+        if (read_object(file, &object) != 0) return -1;
+        if (i < snapshot->object_count) snapshot->objects[i] = object;
+        else if (!object_zero(&object)) return -1;
+    }
+    if (read_u16(file, &snapshot->message_count) != 0 ||
+        snapshot->message_count > LOGIC_ORACLE_MAX_MESSAGES)
+        return -1;
+    for (i = 0; i < LOGIC_ORACLE_MAX_MESSAGES; i++) {
+        LogicOracleMessage message;
+        if ((byte = fgetc(file)) == EOF) return -1;
+        message.logic = (uint8_t)byte;
+        if ((byte = fgetc(file)) == EOF) return -1;
+        message.id = (uint8_t)byte;
+        if (string_read(file, message.text, sizeof message.text, 1) != 0)
+            return -1;
+        if (i < snapshot->message_count) snapshot->messages[i] = message;
+        else if (!message_zero(&message)) return -1;
+    }
+    if ((byte = fgetc(file)) == EOF || read_u16(file, &snapshot->logical_pc) != 0)
+        return -1;
+    snapshot->logic = (uint8_t)byte;
+    if ((byte = fgetc(file)) == EOF)
+        return -1;
+    snapshot->has_failure = (uint8_t)byte;
+    if ((byte = fgetc(file)) == EOF)
+        return -1;
+    snapshot->failure_kind = (uint8_t)byte;
+    if ((byte = fgetc(file)) == EOF)
+        return -1;
+    snapshot->failure_logic = (uint8_t)byte;
+    if (read_u16(file, &snapshot->failure_logical_pc) != 0 ||
+        (byte = fgetc(file)) == EOF)
+        return -1;
+    snapshot->failure_opcode = (uint8_t)byte;
+    if ((byte = fgetc(file)) == EOF)
+        return -1;
+    snapshot->failure_reason = (uint8_t)byte;
+    if (read_u32(file, &snapshot->failure_code) != 0 ||
+        (byte = fgetc(file)) == EOF)
+        return -1;
+    snapshot->inventory_known = (uint8_t)byte;
+    if (read_u16(file, &snapshot->inventory_count) != 0 ||
+        fread(snapshot->inventory_rooms, 1, 256, file) != 256)
+        return -1;
+    return 0;
+}
+
+static int read_snapshot_records(FILE *file, uint32_t disk_count,
+                                 LogicOracleSnapshot *snapshots,
+                                 size_t capacity)
+{
+    uint32_t i, previous_trace = 0;
+    int have_previous_trace = 0;
+    char detail[128];
+    if (!snapshots || disk_count == 0 || disk_count > capacity) return -1;
+    for (i = 0; i < disk_count; i++) {
+        if (read_snapshot(file, &snapshots[i]) != 0 ||
+            snapshots[i].checkpoint_index != i ||
+            (i && !snapshot_identity_equal(&snapshots[0], &snapshots[i])) ||
+            (snapshots[i].has_trace && have_previous_trace &&
+             snapshots[i].trace_sequence < previous_trace) ||
+            !snapshot_valid(&snapshots[i], detail, sizeof detail))
+            return -1;
+        if (snapshots[i].has_trace) {
+            previous_trace = snapshots[i].trace_sequence;
+            have_previous_trace = 1;
+        }
+    }
+    return file_finished(file);
+}
+
+static int trace_event_valid(const LogicOracleTraceEvent *event)
+{
+    return event != NULL;
+}
+
+static int write_trace_event(FILE *file, const LogicOracleTraceEvent *event)
+{
+    if (write_u32(file, event->sequence) != 0 || write_u32(file, event->tick) != 0 ||
+        fputc(event->kind, file) == EOF || fputc(event->logic, file) == EOF ||
+        write_u16(file, event->logical_pc) != 0 || fputc(event->opcode, file) == EOF ||
+        fputc(event->depth, file) == EOF || fputc(event->bank, file) == EOF ||
+        fputc(event->field, file) == EOF || write_u32(file, event->before) != 0 ||
+        write_u32(file, event->after) != 0 || fputc(event->reason, file) == EOF)
+        return -1;
+    return 0;
+}
+
+static int read_trace_event(FILE *file, LogicOracleTraceEvent *event)
+{
+    int byte;
+    if (read_u32(file, &event->sequence) != 0 || read_u32(file, &event->tick) != 0 ||
+        (byte = fgetc(file)) == EOF)
+        return -1;
+    event->kind = (uint8_t)byte;
+    if ((byte = fgetc(file)) == EOF) return -1;
+    event->logic = (uint8_t)byte;
+    if (read_u16(file, &event->logical_pc) != 0 || (byte = fgetc(file)) == EOF)
+        return -1;
+    event->opcode = (uint8_t)byte;
+    if ((byte = fgetc(file)) == EOF) return -1;
+    event->depth = (uint8_t)byte;
+    if ((byte = fgetc(file)) == EOF) return -1;
+    event->bank = (uint8_t)byte;
+    if ((byte = fgetc(file)) == EOF) return -1;
+    event->field = (uint8_t)byte;
+    if (read_u32(file, &event->before) != 0 || read_u32(file, &event->after) != 0 ||
+        (byte = fgetc(file)) == EOF)
+        return -1;
+    event->reason = (uint8_t)byte;
+    return trace_event_valid(event) ? 0 : -1;
+}
+
+static int read_trace_records(FILE *file, uint32_t disk_count,
+                              LogicOracleTraceEvent *events, size_t capacity)
+{
+    uint32_t i, previous_sequence = 0;
+    if (disk_count > capacity || (disk_count && !events)) return -1;
+    for (i = 0; i < disk_count; i++) {
+        if (read_trace_event(file, &events[i]) != 0 ||
+            (i && events[i].sequence <= previous_sequence))
+            return -1;
+        previous_sequence = events[i].sequence;
+    }
+    return file_finished(file);
+}
+
+static void result_context(LogicOracleResult *result,
+                           const LogicOracleSnapshot *reference,
+                           const LogicOracleSnapshot *candidate)
+{
+    if (reference) {
+        result->checkpoint_index = reference->checkpoint_index;
+        snprintf(result->checkpoint, sizeof result->checkpoint, "%s", reference->checkpoint);
+        snprintf(result->reference_provenance, sizeof result->reference_provenance,
+                 "%s", reference->provenance);
+        result->reference_trace_sequence = reference->trace_sequence;
+        result->reference_has_trace = reference->has_trace;
+    }
+    if (candidate) {
+        if (!reference) {
+            result->checkpoint_index = candidate->checkpoint_index;
+            snprintf(result->checkpoint, sizeof result->checkpoint, "%s", candidate->checkpoint);
+        }
+        snprintf(result->candidate_provenance, sizeof result->candidate_provenance,
+                 "%s", candidate->provenance);
+        result->candidate_trace_sequence = candidate->trace_sequence;
+        result->candidate_has_trace = candidate->has_trace;
+    }
+}
+
+static LogicOracleStatus invalid_result(LogicOracleResult *result, const char *detail)
+{
+    result->status = LOGIC_ORACLE_INVALID;
+    snprintf(result->detail, sizeof result->detail, "%s", detail);
+    return result->status;
+}
+
+static LogicOracleStatus incompatible_result(LogicOracleResult *result,
+                                             const LogicOracleSnapshot *reference,
+                                             const LogicOracleSnapshot *candidate,
+                                             const char *detail)
+{
+    result_context(result, reference, candidate);
+    result->status = LOGIC_ORACLE_INCOMPATIBLE;
+    snprintf(result->detail, sizeof result->detail, "%s", detail);
+    return result->status;
+}
+
+static LogicOracleStatus diverged_value(LogicOracleResult *result,
+                                       const LogicOracleSnapshot *reference,
+                                       const LogicOracleSnapshot *candidate,
+                                       const char *field, int64_t reference_value,
+                                       int64_t candidate_value)
+{
+    result_context(result, reference, candidate);
+    result->status = LOGIC_ORACLE_DIVERGED;
+    result->reference_value = reference_value;
+    result->candidate_value = candidate_value;
+    snprintf(result->field, sizeof result->field, "%s", field);
+    return result->status;
+}
+
+static LogicOracleStatus diverged_text(LogicOracleResult *result,
+                                      const LogicOracleSnapshot *reference,
+                                      const LogicOracleSnapshot *candidate,
+                                      const char *field, const char *reference_text,
+                                      const char *candidate_text)
+{
+    result_context(result, reference, candidate);
+    result->status = LOGIC_ORACLE_DIVERGED;
+    snprintf(result->field, sizeof result->field, "%s", field);
+    snprintf(result->reference_text, sizeof result->reference_text, "%s", reference_text);
+    snprintf(result->candidate_text, sizeof result->candidate_text, "%s", candidate_text);
+    return result->status;
+}
+
+static const LogicOracleObject *object_by_id(const LogicOracleSnapshot *snapshot,
+                                             unsigned id)
+{
+    size_t i;
+    for (i = 0; i < snapshot->object_count; i++)
+        if (snapshot->objects[i].id == id) return &snapshot->objects[i];
+    return NULL;
+}
+
