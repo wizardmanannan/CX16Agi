@@ -23,7 +23,7 @@ TEST_FIXTURE_ROOT ?= $(if $(TMPDIR),$(TMPDIR),/tmp)
 export CC65_HOME X16_EMULATOR_SOURCE TMPDIR TEST_OUTPUT_DIR ROM GAME BUILD SYMBOLS SDL_PREFIX TAS_CAPTURE_HEADER
 unexport KEEP_TEST_OUTPUT
 
-.PHONY: test suite commands-test image production-test integration-test picture-test loader-test modes integration review-tools review-policy review-series review-metrics review-events review-ready review-workflow-test _run
+.PHONY: test suite commands-test image production-test integration-test picture-test loader-test startup-text-test modes integration review-tools review-policy review-series review-metrics review-events review-ready review-workflow-test _run
 
 test suite:
 	@$(MAKE) --no-print-directory -f "$(REPO_ROOT)/tools/Makefile" _run MODE=core
@@ -51,6 +51,9 @@ picture-test:
 
 loader-test:
 	@$(MAKE) --no-print-directory -f "$(REPO_ROOT)/tools/Makefile" _run MODE=loader-test
+
+startup-text-test:
+	@$(MAKE) --no-print-directory -f "$(REPO_ROOT)/tools/Makefile" _run MODE=startup-text-test
 
 modes integration:
 	@$(MAKE) --no-print-directory -f "$(REPO_ROOT)/tools/Makefile" _run MODE=modes
@@ -133,7 +136,7 @@ _run:
 	    need_file "$$ROM"; [ -d "$$GAME" ] || fail "game directory not found: $$GAME"; \
 	    if [ "$$mode" = modes ]; then [ -d "$$BUILD" ] || fail "build directory not found: $$BUILD"; need_file "$$SYMBOLS"; fi; \
 	    need_file "$$X16_EMULATOR_SOURCE/src/main.c"; need_file "$$repo/tools/test_full_game_irq.c" ;; \
-	  loader-test) \
+	  loader-test|startup-text-test) \
 	    need_command cmake; need_command pkg-config; \
 	    if [ -n "$${SDL_PREFIX:-}" ]; then need_file "$$SDL_PREFIX/lib/cmake/SDL2/SDL2Config.cmake"; \
 	    else pkg-config --exists sdl2 || fail 'SDL2 development files are required (pkg-config sdl2 or SDL_PREFIX)'; fi; \
@@ -159,7 +162,7 @@ _run:
 	cleanup_suite() { \
 	  status=$$?; trap - EXIT; \
 	  if [ "$$status" -ne 0 ]; then \
-	    for log in "$$work"/foreground/build.log "$$work"/combined/build.log "$$work"/picture/build.log; do \
+	    for log in "$$work"/foreground/build.log "$$work"/combined/build.log "$$work"/picture/build.log "$$work"/startup-text/build.log; do \
 	      if [ -f "$$log" ]; then echo "--- $$log (last 80 lines) ---" >&2; tail -n 80 "$$log" >&2; fi; \
 	    done; \
 	  fi; \
@@ -299,6 +302,15 @@ _run:
 	      echo 'RUN test_full_game_irq --combined-irq-test'; "$$work/bin/test_full_game_irq" "$$@" --output "$$work/combined" --combined-irq-test; \
 	    fi; \
 	    echo 'RUN test_full_game_irq --picture-test'; "$$work/bin/test_full_game_irq" "$$@" --output "$$work/picture" --picture-test ;; \
+	  startup-text-test) \
+	    $(MAKE) --no-print-directory -f "$$repo/tools/test-image.mk" "REPO_ROOT=$$repo" "OUT=$$work/image"; \
+	    BUILD="$$work/image"; SYMBOLS="$$work/image/final.lbl"; \
+	    echo 'CC test_full_game_irq.c'; \
+	    "$(HOST_CC)" $(HOST_CFLAGS) "$$repo/tools/test_full_game_irq.c" -lpng -o "$$work/bin/test_full_game_irq"; \
+	    cd "$$repo"; set -- --emulator-source "$$X16_EMULATOR_SOURCE" --rom "$$ROM" --build "$$BUILD" --game "$$GAME" --symbols "$$SYMBOLS" --startup-text-test; \
+	    if [ -n "$${TAS_CAPTURE_HEADER:-}" ]; then set -- "$$@" --tas-capture-header "$$TAS_CAPTURE_HEADER"; fi; \
+	    if [ -n "$${SDL_PREFIX:-}" ]; then set -- "$$@" --sdl-prefix "$$SDL_PREFIX"; fi; \
+	    echo 'RUN test_full_game_irq --startup-text-test'; "$$work/bin/test_full_game_irq" "$$@" --output "$$work/startup-text" ;; \
 	  loader-test) \
 	    $(MAKE) --no-print-directory -f "$$repo/tools/test-image.mk" "REPO_ROOT=$$repo" "OUT=$$work/image"; \
 	    BUILD="$$work/image"; SYMBOLS="$$work/image/final.lbl"; \

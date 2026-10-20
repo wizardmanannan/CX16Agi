@@ -153,6 +153,13 @@ static const char hook[] =
 "static uint8_t shake_saved_flag9;\n"
 "static bool shake_start_return_queued, shake_start_return_seen, shake_start_poll_active;\n"
 "static uint16_t shake_start_poll_return_pc; static uint8_t shake_start_poll_return_sp;\n"
+"static bool startup_text_active;\n"
+"static unsigned startup_text_returns, startup_text_phase, startup_text_phase_call;\n"
+"static unsigned startup_text_frame_samples, startup_text_visible_frame_samples;\n"
+"static uint8_t startup_text_row, startup_text_column, startup_text_message;\n"
+"static uint16_t startup_text_return_pc, startup_text_generation;\n"
+"static uint8_t startup_text_return_sp, startup_text_entry_ram_bank;\n"
+"static uint32_t startup_text_call_cycles, startup_text_call_frames, startup_text_phase_start_cycles, startup_text_phase_start_frames, startup_text_phase_cycles, startup_text_phase_frames, startup_text_total_cycles, startup_text_total_frames;\n"
 "static uint8_t shake_saved_sprite_batch[SHAKE_SPRITE_BUFFER_SIZE];\n"
 "static uint8_t shake_view_warm_first_snapshot[SHAKE_SPRITE_BUFFER_SIZE], shake_view_warm_latest_snapshot[SHAKE_SPRITE_BUFFER_SIZE];\n"
 "static uint16_t shake_view_warm_first_snapshot_length, shake_view_warm_latest_snapshot_length;\n"
@@ -408,7 +415,61 @@ static const char hook[] =
 "        shake_return_bank=memory_get_ram_bank(); shake_return_rom=memory_get_rom_bank(); }\n"
 "}\n"
 "void shake_vsync_asserted(void) { shake_vsync=clockticks6502; shake_frames_seen++; }\n"
-"void shake_video_frame_written(uint32_t emulator_frame,uint32_t cycle,uint16_t pc,uint8_t bank) { if(!shake_video_trace) { shake_video_trace=fopen(SHAKE_VIDEO_CSV,\"w\"); if(!shake_video_trace) { perror(\"video frame trace\"); exit(2); } fprintf(shake_video_trace,\"gif_frame,emulator_frame,cycle,asserted_frames,command_index,shake_count,shake_phases,shake_frames,hstart,hstop,vstart,vstop,border,pc,bank,b9_entries,foreground_active,foreground_kind\\n\"); } uint8_t display[5]; shake_get_display(display); fprintf(shake_video_trace,\"%u,%u,%u,%u,%d,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%d\\n\",shake_video_frame_index++,emulator_frame,cycle,shake_frames_seen,shake_command_index,shake_read(S_shakeCount),shake_read(S_shakePhases),shake_read(S_shakeFrames),display[0],display[1],display[2],display[3],display[4],(unsigned)pc,bank,shake_real_b9_entries,foreground_active,foreground_kind); fflush(shake_video_trace); }\n"
+"static void startup_text_check_frame(uint32_t frame, uint32_t cycle, uint16_t pc, uint8_t bank) {\n"
+"    if (!startup_text_phase)\n"
+"        return;\n"
+"    startup_text_frame_samples++;\n"
+"    unsigned visible = 0;\n"
+"    for (unsigned row = 6; row <= 18; row++)\n"
+"        for (unsigned column = 12; column <= 28; column++) {\n"
+"            uint32_t address = 0xda00u + (row + 3u) * 128u + column * 2u;\n"
+"            uint8_t tile = video_space_read(address);\n"
+"            if (tile == 0x80)\n"
+"                continue;\n"
+"            visible++;\n"
+"            uint8_t attribute = video_space_read(address + 1u);\n"
+"            unsigned palette = attribute >> 4;\n"
+"            uint32_t palette_address = 0x1fa00u + palette * 32u;\n"
+"            uint16_t foreground =\n"
+"                (uint16_t)(video_space_read(palette_address + 2u) |\n"
+"                           ((uint16_t)video_space_read(palette_address + 3u) << 8));\n"
+"            uint16_t background =\n"
+"                (uint16_t)(video_space_read(palette_address + 4u) |\n"
+"                           ((uint16_t)video_space_read(palette_address + 5u) << 8));\n"
+"            if (foreground != 0x0fffu || background != 0) {\n"
+"                fprintf(\n"
+"                    stderr,\n"
+"                    \"KQ1 startup frame RGB regression: gif_frame=%u cycle=%u phase=%u returns=%u row=%u column=%u tile=%02x attribute=%02x palette=%u foregroundRGB=%04x backgroundRGB=%04x expectedForegroundRGB=0fff expectedBackgroundRGB=0000 PC=%04x RAMbank=%u\\n\",\n"
+"                    frame, cycle, startup_text_phase, startup_text_returns, row, column, tile,\n"
+"                    attribute, palette, foreground, background, pc, bank);\n"
+"                exit(3);\n"
+"            }\n"
+"        }\n"
+"    if (visible)\n"
+"        startup_text_visible_frame_samples++;\n"
+"}\n"
+"void shake_video_frame_written(uint32_t emulator_frame, uint32_t cycle, uint16_t pc, uint8_t bank) {\n"
+"    if (STARTUP_TEXT_TEST_ENABLED)\n"
+"        startup_text_check_frame(emulator_frame, cycle, pc, bank);\n"
+"    if (!shake_video_trace) {\n"
+"        shake_video_trace = fopen(SHAKE_VIDEO_CSV, \"w\");\n"
+"        if (!shake_video_trace) {\n"
+"            perror(\"video frame trace\");\n"
+"            exit(2);\n"
+"        }\n"
+"        fprintf(\n"
+"            shake_video_trace,\n"
+"            \"gif_frame,emulator_frame,cycle,asserted_frames,command_index,shake_count,shake_phases,shake_frames,hstart,hstop,vstart,vstop,border,pc,bank,b9_entries,foreground_active,foreground_kind\\n\");\n"
+"    }\n"
+"    uint8_t display[5];\n"
+"    shake_get_display(display);\n"
+"    fprintf(shake_video_trace, \"%u,%u,%u,%u,%d,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%d\\n\",\n"
+"            shake_video_frame_index++, emulator_frame, cycle, shake_frames_seen,\n"
+"            shake_command_index, shake_read(S_shakeCount), shake_read(S_shakePhases),\n"
+"            shake_read(S_shakeFrames), display[0], display[1], display[2], display[3], display[4],\n"
+"            (unsigned)pc, bank, shake_real_b9_entries, foreground_active, foreground_kind);\n"
+"    fflush(shake_video_trace);\n"
+"}\n"
 "void shake_foreground_vram_write(uint32_t address) { if(foreground_irq_active) { fprintf(stderr,\"KERNAL IRQ wrote VERA memory at $%05x during renderer ownership\\n\",address); exit(3); } }\n"
 "void shake_foreground_vera_register_write(uint8_t reg,uint8_t dcsel,uint8_t value,uint8_t oldvalue,uint16_t pc,uint8_t codebank,uint8_t rambank) { if(!foreground_irq_active || !(reg<=2 || reg==5)) return; fprintf(stderr,\"Foreground IRQ VERA register write: PC=%04x PBR=%02x RAM=%02x DCSEL=%u reg=%u value=%02x old=%02x cycle=%u\\n\",pc,codebank,rambank,dcsel,reg,value,oldvalue,clockticks6502); if(reg<=2 || value!=oldvalue) { fprintf(stderr,\"Foreground IRQ mutated VERA address/control register %u during renderer ownership\\n\",reg); exit(3); } }\n"
 "void shake_window_write(void) {\n"
@@ -511,6 +572,207 @@ static const char hook[] =
 "static uint16_t shake_flag_address(uint8_t index) { return (uint16_t)(shake_pointer_value(S__flag)+index); }\n"
 "static uint16_t combined_read16(uint16_t address,uint8_t bank) { return (uint16_t)(shake_banked_read(address,bank)|((uint16_t)shake_banked_read(address+1,bank)<<8)); }\n"
 "static void combined_check_multiply_results(void) { static const uint8_t values[]={2,0,1,14,15,16,17,18,255}; for(unsigned row=0;row<sizeof(values);row++) for(unsigned column=0;column<sizeof(values);column++) { uint8_t left=values[row],right=values[column]; uint16_t expected=(uint16_t)((uint16_t)left*(uint16_t)right); uint16_t actual=combined_read16(S__testMultiplyBoundsResults+2*(row*sizeof(values)+column),0); if(actual!=expected) { fprintf(stderr,\"MULT_8x8_16 regression: A=%u Y=%u got=%u expected=%u\\n\",left,right,actual,expected); exit(3); } } fprintf(stderr,\"MULT_8x8_16 boundary grid passed: 81 products checked with 16-bit oracle\\n\"); }\n"
+"static const char *const startup_text_messages[23]={\"Designed and    \",\"    Written by: \",\"Roberta Williams\",\"                \",\"Orig. Version by\",\" Charles Tingley\",\"  Ken MacNeill  \",\"   Chris Iden   \",\"                \",\"Graphics by:    \",\" Doug MacNeill  \",\"  Greg Rowland  \",\"                \",\"New Version by: \",\" Jeff Stephenson\",\"  Sol Ackerman  \",\"   Chris Iden   \",\"                \",\"Thanks to:      \",\" Linda Ackerman  \",\"  Mark Crowe     \",\"   Robert Heitman\",\"    Scott Murphy \"};\n"
+"static void startup_text_check_line(uint8_t logical_row, uint8_t column, uint8_t message) {\n"
+"    if (!logical_row || !message || message > 23) {\n"
+"        fprintf(stderr, \"Invalid startup text expectation row=%u column=%u message=%u\\n\",\n"
+"                logical_row, column, message);\n"
+"        exit(3);\n"
+"    }\n"
+"    uint32_t address = 0xda00u + (uint32_t)(logical_row + 3u) * 128u + (uint32_t)column * 2u;\n"
+"    const char *expected = startup_text_messages[message - 1];\n"
+"    for (unsigned i = 0; i < strlen(expected); i++) {\n"
+"        uint8_t actual = video_space_read(address + i * 2u), want = (uint8_t)expected[i];\n"
+"        if (actual != want) {\n"
+"            fprintf(\n"
+"                stderr,\n"
+"                \"KQ1 startup credit mismatch: phase=%u call=%u row=%u column=%u message=%u cell=%u VERA=%05x got=%02x expected=%02x\\n\",\n"
+"                startup_text_phase, startup_text_phase_call, logical_row, column, message, i,\n"
+"                address + i * 2u, actual, want);\n"
+"            exit(3);\n"
+"        }\n"
+"    }\n"
+"}\n"
+"static void startup_text_check_blank_line(uint8_t logical_row) {\n"
+"    for (unsigned column = 12; column <= 28; column++) {\n"
+"        uint32_t address = 0xda00u + (uint32_t)(logical_row + 3u) * 128u + column * 2u;\n"
+"        uint8_t actual = video_space_read(address);\n"
+"        if (actual != 0x80) {\n"
+"            fprintf(\n"
+"                stderr,\n"
+"                \"KQ1 startup blank credit row mismatch: phase=%u row=%u column=%u VERA=%05x got=%02x expected=80\\n\",\n"
+"                startup_text_phase, logical_row, column, address, actual);\n"
+"            exit(3);\n"
+"        }\n"
+"    }\n"
+"}\n"
+"static void startup_text_check_fixed(uint8_t logical_row, uint8_t column, const char *expected) {\n"
+"    uint32_t address = 0xda00u + (uint32_t)(logical_row + 3u) * 128u + (uint32_t)column * 2u;\n"
+"    for (unsigned i = 0; i < strlen(expected); i++) {\n"
+"        uint8_t actual = video_space_read(address + i * 2u), want = (uint8_t)expected[i];\n"
+"        if (actual != want) {\n"
+"            fprintf(\n"
+"                stderr,\n"
+"                \"KQ1 startup fixed text mismatch: row=%u column=%u cell=%u VERA=%05x got=%02x expected=%02x\\n\",\n"
+"                logical_row, column, i, address + i * 2u, actual, want);\n"
+"            exit(3);\n"
+"        }\n"
+"    }\n"
+"}\n"
+"static void startup_text_check_phase(void) {\n"
+"    unsigned lines = startup_text_phase < 13 ? startup_text_phase : 13;\n"
+"    for (unsigned i = 0; i < lines; i++)\n"
+"        startup_text_check_line((uint8_t)(18u - i), 12, (uint8_t)(startup_text_phase - i));\n"
+"    for (unsigned row = 6; row <= 18u - lines; row++)\n"
+"        startup_text_check_blank_line((uint8_t)row);\n"
+"    startup_text_check_fixed(22, 1, \"(c) copyright SIERRA On-Line Inc.  1987\");\n"
+"    startup_text_check_fixed(24, 5, \"Press any key to continue.\");\n"
+"}\n"
+"static bool startup_graphics_active; static unsigned startup_graphics_checks; static uint16_t startup_graphics_return_pc, startup_graphics_entry_c_sp; static uint8_t startup_graphics_return_sp; static uint32_t startup_graphics_entry_cycle;\n"
+"static void startup_graphics_abi_check(uint16_t pc, uint8_t bank) {\n"
+"    if (startup_graphics_active && pc == startup_graphics_return_pc &&\n"
+"        (uint8_t)regs.sp == startup_graphics_return_sp) {\n"
+"        uint16_t return_c_sp = combined_read16(S_c_sp, 0);\n"
+"        if (return_c_sp != startup_graphics_entry_c_sp) {\n"
+"            fprintf(\n"
+"                stderr,\n"
+"                \"KQ1 startup ABI regression: real b6InitGraphics return changed C stack pointer entry=%04x return=%04x caller=%04x entry_cycle=%u return_cycle=%u RAMbank=%u PBR=%u\\n\",\n"
+"                startup_graphics_entry_c_sp, return_c_sp,\n"
+"                (uint16_t)(startup_graphics_return_pc - 1u), startup_graphics_entry_cycle,\n"
+"                clockticks6502, bank, regs.k);\n"
+"            exit(3);\n"
+"        }\n"
+"        startup_graphics_active = false;\n"
+"        startup_graphics_checks++;\n"
+"        fprintf(stderr, \"KQ1 startup ABI check passed: b6InitGraphics preserved c_sp=%04x\\n\",\n"
+"                return_c_sp);\n"
+"    }\n"
+"    if (!startup_graphics_active && bank == 6 && pc == S__b6InitGraphics) {\n"
+"        startup_graphics_return_pc = shake_call_return(&startup_graphics_return_sp);\n"
+"        startup_graphics_entry_c_sp = combined_read16(S_c_sp, 0);\n"
+"        startup_graphics_entry_cycle = clockticks6502;\n"
+"        startup_graphics_active = true;\n"
+"    }\n"
+"}\n"
+"static void startup_text_before_step(uint16_t pc, uint8_t bank) {\n"
+"    if (startup_text_active && pc == startup_text_return_pc &&\n"
+"        (uint8_t)regs.sp == startup_text_return_sp) {\n"
+"        uint16_t generation = combined_read16(S_irqCompletionGeneration, 6);\n"
+"        uint8_t command = shake_banked_read(S_sendIrqCommand, 6),\n"
+"                work = shake_banked_read(S_irqWorkKind, 6);\n"
+"        if (memory_get_ram_bank() != startup_text_entry_ram_bank ||\n"
+"            generation != (uint16_t)(startup_text_generation + 1) || command || work) {\n"
+"            fprintf(\n"
+"                stderr,\n"
+"                \"KQ1 startup display.v did not return after exactly one command completion: call=%u bank=%u/%u generation=%04x expected=%04x command/work=%u/%u\\n\",\n"
+"                startup_text_returns + 1, memory_get_ram_bank(), startup_text_entry_ram_bank,\n"
+"                generation, (uint16_t)(startup_text_generation + 1), command, work);\n"
+"            exit(3);\n"
+"        }\n"
+"        startup_text_active = false;\n"
+"        startup_text_returns++;\n"
+"        startup_text_phase_call++;\n"
+"        uint8_t expected_message = (uint8_t)(startup_text_phase - startup_text_phase_call + 1),\n"
+"                expected_row = (uint8_t)(18u - startup_text_phase_call + 1);\n"
+"        if (startup_text_message != expected_message || startup_text_row != expected_row ||\n"
+"            startup_text_column != 12) {\n"
+"            fprintf(\n"
+"                stderr,\n"
+"                \"KQ1 startup Logic83 argument sequence mismatch: phase=%u call=%u row/column/message=%u/%u/%u expected=%u/12/%u\\n\",\n"
+"                startup_text_phase, startup_text_phase_call, startup_text_row, startup_text_column,\n"
+"                startup_text_message, expected_row, expected_message);\n"
+"            exit(3);\n"
+"        }\n"
+"        uint32_t call_cycles = clockticks6502 - startup_text_call_cycles,\n"
+"                 call_frames = shake_frames_seen - startup_text_call_frames;\n"
+"        fprintf(\n"
+"            stderr,\n"
+"            \"KQ1 Logic83 display.v phase=%u call=%u row=%u message=%u cycle_span=%u frame_span=%u generation=%04x->%04x\\n\",\n"
+"            startup_text_phase, startup_text_phase_call, startup_text_row, startup_text_message,\n"
+"            call_cycles, call_frames, startup_text_generation, generation);\n"
+"        startup_text_check_line(startup_text_row, startup_text_column, startup_text_message);\n"
+"        if (startup_text_phase_call == (startup_text_phase < 13 ? startup_text_phase : 13)) {\n"
+"            startup_text_check_phase();\n"
+"            startup_text_phase_cycles = clockticks6502 - startup_text_phase_start_cycles;\n"
+"            startup_text_phase_frames = shake_frames_seen - startup_text_phase_start_frames;\n"
+"            fprintf(\n"
+"                stderr,\n"
+"                \"KQ1 Logic83 startup credit phase %u passed (lines=%u, real display.v calls=%u, cycle_span=%u, frame_span=%u)\\n\",\n"
+"                startup_text_phase, startup_text_phase_call, startup_text_returns,\n"
+"                startup_text_phase_cycles, startup_text_phase_frames);\n"
+"            startup_text_phase_call = 0;\n"
+"            if (startup_text_phase == 23) {\n"
+"                if (startup_text_returns != 221) {\n"
+"                    fprintf(\n"
+"                        stderr,\n"
+"                        \"KQ1 startup credit sequence ended after %u display.v calls, expected 221\\n\",\n"
+"                        startup_text_returns);\n"
+"                    exit(3);\n"
+"                }\n"
+"                if (startup_graphics_checks != 1) {\n"
+"                    fprintf(stderr, \"KQ1 startup ABI check ran %u times, expected exactly once\\n\",\n"
+"                            startup_graphics_checks);\n"
+"                    exit(3);\n"
+"                }\n"
+"                if (!startup_text_frame_samples || !startup_text_visible_frame_samples) {\n"
+"                    fprintf(\n"
+"                        stderr,\n"
+"                        \"KQ1 startup GIF did not capture visible credits: RGB frame samples=%u with-visible-credits=%u\\n\",\n"
+"                        startup_text_frame_samples, startup_text_visible_frame_samples);\n"
+"                    exit(3);\n"
+"                }\n"
+"                fprintf(\n"
+"                    stderr,\n"
+"                    \"Production KQ1 startup text passed: 23 Logic83 phases, 221 display.v returns, 13-row cap, blank rows and frame RGB verified; total cycles=%u frames=%u RGB frame samples=%u with-visible-credits=%u\\n\",\n"
+"                    clockticks6502 - startup_text_total_cycles,\n"
+"                    shake_frames_seen - startup_text_total_frames, startup_text_frame_samples,\n"
+"                    startup_text_visible_frame_samples);\n"
+"                emu_write(5, 0);\n"
+"                raise(SIGINT);\n"
+"            }\n"
+"        }\n"
+"        return;\n"
+"    }\n"
+"    if (!startup_text_active && bank == 3 && pc == S__b3Display_v) {\n"
+"        if (shake_read(S__currentLog) != 83) {\n"
+"            fprintf(stderr, \"Startup display.v entered outside Logic83: currentLog=%u\\n\",\n"
+"                    shake_read(S__currentLog));\n"
+"            exit(3);\n"
+"        }\n"
+"        startup_text_row = shake_banked_read(shake_var_address(36), 0);\n"
+"        startup_text_column = shake_banked_read(shake_var_address(37), 0);\n"
+"        startup_text_message = shake_banked_read(shake_var_address(32), 0);\n"
+"        if (startup_text_row == 18) {\n"
+"            startup_text_phase++;\n"
+"            startup_text_phase_call = 0;\n"
+"            if (startup_text_phase == 1) {\n"
+"                startup_text_total_cycles = clockticks6502;\n"
+"                startup_text_total_frames = shake_frames_seen;\n"
+"            }\n"
+"            startup_text_phase_start_cycles = clockticks6502;\n"
+"            startup_text_phase_start_frames = shake_frames_seen;\n"
+"        }\n"
+"        if (!startup_text_phase || startup_text_phase > 23) {\n"
+"            fprintf(stderr, \"Unexpected Logic83 startup phase %u at row=%u message=%u\\n\",\n"
+"                    startup_text_phase, startup_text_row, startup_text_message);\n"
+"            exit(3);\n"
+"        }\n"
+"        startup_text_return_pc = shake_call_return(&startup_text_return_sp);\n"
+"        startup_text_entry_ram_bank = memory_get_ram_bank();\n"
+"        startup_text_generation = combined_read16(S_irqCompletionGeneration, 6);\n"
+"        startup_text_call_cycles = clockticks6502;\n"
+"        startup_text_call_frames = shake_frames_seen;\n"
+"        startup_text_active = true;\n"
+"        return;\n"
+"    }\n"
+"    if (clockticks6502 > 500000000u) {\n"
+"        fprintf(\n"
+"            stderr,\n"
+"            \"Timed out before natural KQ1 Logic83 startup credits completed: phases=%u calls=%u currentLog=%u PC=%04x bank=%u\\n\",\n"
+"            startup_text_phase, startup_text_returns, shake_read(S__currentLog), pc, bank);\n"
+"        exit(3);\n"
+"    }\n"
+"}\n"
 "static void text_case_track_source_helpers(uint16_t pc) { while(text_source_depth && pc==text_source_frames[text_source_depth-1].return_pc && (uint8_t)regs.sp==text_source_frames[text_source_depth-1].return_sp) text_source_depth--; if(pc==S__strLenBankedBounded||pc==S__memCpyBankedBetween||pc==S__memCpyBanked) { if(text_source_depth>=sizeof(text_source_frames)/sizeof(text_source_frames[0])) { fprintf(stderr,\"Text source helper nesting exceeded its bound\\n\"); exit(3); } TextSourceFrame *frame=&text_source_frames[text_source_depth++]; frame->return_pc=shake_call_return(&frame->return_sp); } }\n"
 "static void text_case_seed_map(void) { if(!text_case_active) { text_case_map_seeded=false; return; } for(unsigned row=3;row<=32;row++) for(unsigned column=0;column<64;column++) { uint32_t cell=0xda00u+row*128u+column*2u; video_space_write(cell,0x23); video_space_write(cell+1,0x23); } }\n"
 "static void text_case_set_source(uint16_t source,uint8_t bank) { shake_ram(S__testBankAliasSource,(uint8_t)source); shake_ram(S__testBankAliasSource+1,(uint8_t)(source>>8)); shake_ram(S__testBankAliasBank,bank); text_case_source=source; text_case_source_bank=bank; }\n"
@@ -996,6 +1258,7 @@ static const char hook[] =
 "}\n"
 "static void shake_before_step(void) {\n"
 "    if(LOADER_TEST_ENABLED) { loader_before_step(regs.pc,memory_get_ram_bank()); return; }\n"
+"    if(STARTUP_TEXT_TEST_ENABLED) { startup_graphics_abi_check(regs.pc,memory_get_ram_bank()); startup_text_before_step(regs.pc,memory_get_ram_bank()); return; }\n"
 "    if(text_case_active&&!waiting) text_case_track_source_helpers(regs.pc);\n"
 "    shake_check_sprite_owner_wrapper_return();\n"
 "    if(shake_sprite_owner_wrapper_active&&!shake_sprite_owner_wrapper_progress_logged&&clockticks6502-shake_sprite_owner_wrapper_start_cycle>500000u) { shake_sprite_owner_wrapper_progress_logged=true; fprintf(stderr,\"Sprite-owner wrapper progress: pc=%04x bank=%u codebank=%u SP=%04x E=%u depth=%u Cstack=%04x return=%04x/%04x target=%04x\\n\",regs.pc,memory_get_ram_bank(),regs.k,regs.sp,regs.e,shake_read(S__foregroundVeraDepth),combined_read16(S_c_sp,0),shake_sprite_owner_wrapper_return_pc,shake_sprite_owner_wrapper_return_sp,shake_sprite_owner_wrapper_is_end?S__testEndSpritePublicationWork:S__testBeginSpritePublicationWork); }\n"
@@ -1177,6 +1440,7 @@ static const char hook[] =
 "}\n"
 "static void shake_after_step(uint8_t opcode) {\n"
 "    if(LOADER_TEST_ENABLED) return;\n"
+"    if(STARTUP_TEXT_TEST_ENABLED) return;\n"
 "    if(COMBINED_IRQ_TEST_ENABLED) { combined_after_step(opcode); return; }\n"
 "    if(shake_write_pending) {\n"
 "        if(shake_window_writes==1) shake_first_write=clockticks6502-shake_entry_vsync;\n"
@@ -1210,7 +1474,7 @@ static const char hook[] =
 "    }\n"
 "}\n"
 ;
-static const char *names[] = {"custom_irq_handler","mainLoop","codeWindow","cwCurrentCode","endPos","codeWindowInvalid","b4ShakeScreen","b3Load_soundCCall","b3Play_soundCCall","b5Set_menuCCall","b2Load_logicsCCall","_b6LoadLogicFile","_currentLog","_logicFiles","_logics","shakeCount","shakePhases","shakeFrames","_menuDirty","_menuShown","_menuAllowed","_numOfMenus","_charSetInited","_mainLoopCounter","_bBChannelsPlaying","_bBLoadedSoundsPointer","_bBEndSoundFlag","bBSoundHandler","b7HandleInputLine","bADisplayMenu","b10DisplayStatusBar","bEHandleSpriteUpdates","b10PrintStatusBarString","handleScreenShake","handleDisplayTextSlice","@handleSound","_inputLineDisplayed","_inputLineDirty","_b7CurrentInputStr","_bESpritesUpdatedBuffer","_bESpritesUpdatedBufferPointer","_b11DrawPic","_b2Load_pic","_b2Draw_pic","_b2Load_view","_b2Animate_obj","_b2Set_view","_b2Position","_b2Draw","b9UpdateObjects","_b6LoadAGIFile","_b9LoadViewFile","_b7PollKeyboard","_viewdir","_numViews","_agiBlit","_bESetLoop","_bEAllocateSpriteMemory","_bDSpriteAllocTable","_viewtab","_viewTableMetadata","_loadedViews","_offsetOfCurrentView","_offsetOfCurrentLoop","_offsetOfCurrentCel","_offsetOfEntryNum","_offsetOfFlags","_offsetOfPrevX","_offsetOfPrevY","_offsetOfStopped","_offsetOfBackBuffers","_offsetOfViewMetadataBank","_offsetOfIsOnBackBuffer","_offsetOfloopsVeraAddressesPointers","_offsetOfLoops","_offsetOfLoopsBank","_offsetOfAllocationWidth","_offsetOfAllocationHeight","_offsetOfMaxVeraSlots","_sizeOfLoop","_sizeOfViewTab","_sizeOfView","findFreeVRamLowByteLoop","findFirstFreeVRamBlock_optimisticSkip","_vSyncCounter","_vSyncCounterHigh","_foregroundVeraDepth","sendIrqCommand","irqWorkKind","irqCompletionGeneration","lastMainLoopCounter","_currentTextBuffer","_displayTextAddressToCopyTo","_displayTextAddressToCopyToHigh","_b3PaletteRows","_b3PaletteNumber","_b8AsmFloodFillSections","_b11SplitPriority","_var","_flag","_b6Interpret","_executeLogic","_b5GetLogicEntry","_testRunCombinedDisplayText","_testMultiplyBoundsResults","_testRunBankAliasDisplay","_testRunBankBoundaryDisplay","_testRunFullLayerClear","_testBankAliasSource","_testBankAliasBank","_b3TextBuffers","_strLenBankedBounded","_memCpyBankedBetween","_memCpyBanked","_testCombinedSoundEndFlag","_testBeginSpritePublicationWork","_testEndSpritePublicationWork","c_sp"};
+static const char *names[] = {"custom_irq_handler","mainLoop","codeWindow","cwCurrentCode","endPos","codeWindowInvalid","b4ShakeScreen","b3Load_soundCCall","b3Play_soundCCall","b5Set_menuCCall","b2Load_logicsCCall","_b6LoadLogicFile","_currentLog","_logicFiles","_logics","shakeCount","shakePhases","shakeFrames","_menuDirty","_menuShown","_menuAllowed","_numOfMenus","_charSetInited","_mainLoopCounter","_bBChannelsPlaying","_bBLoadedSoundsPointer","_bBEndSoundFlag","bBSoundHandler","b7HandleInputLine","bADisplayMenu","b10DisplayStatusBar","bEHandleSpriteUpdates","b10PrintStatusBarString","handleScreenShake","handleDisplayTextSlice","@handleSound","_inputLineDisplayed","_inputLineDirty","_b7CurrentInputStr","_bESpritesUpdatedBuffer","_bESpritesUpdatedBufferPointer","_b11DrawPic","_b2Load_pic","_b2Draw_pic","_b2Load_view","_b2Animate_obj","_b2Set_view","_b2Position","_b2Draw","b9UpdateObjects","_b6LoadAGIFile","_b9LoadViewFile","_b7PollKeyboard","_viewdir","_numViews","_agiBlit","_bESetLoop","_bEAllocateSpriteMemory","_bDSpriteAllocTable","_viewtab","_viewTableMetadata","_loadedViews","_offsetOfCurrentView","_offsetOfCurrentLoop","_offsetOfCurrentCel","_offsetOfFlags","_offsetOfPrevX","_offsetOfPrevY","_offsetOfStopped","_offsetOfBackBuffers","_offsetOfViewMetadataBank","_offsetOfIsOnBackBuffer","_offsetOfloopsVeraAddressesPointers","_offsetOfLoops","_offsetOfLoopsBank","_offsetOfAllocationWidth","_offsetOfAllocationHeight","_offsetOfMaxVeraSlots","_sizeOfLoop","_sizeOfViewTab","_sizeOfView","findFreeVRamLowByteLoop","findFirstFreeVRamBlock_optimisticSkip","_vSyncCounter","_vSyncCounterHigh","_foregroundVeraDepth","sendIrqCommand","irqWorkKind","irqCompletionGeneration","lastMainLoopCounter","_currentTextBuffer","_displayTextAddressToCopyTo","_displayTextAddressToCopyToHigh","_b3PaletteRows","_b3PaletteNumber","_b8AsmFloodFillSections","_b11SplitPriority","_var","_flag","_b6Interpret","_executeLogic","_b5GetLogicEntry","_testRunCombinedDisplayText","_testMultiplyBoundsResults","_testRunBankAliasDisplay","_testRunBankBoundaryDisplay","_testRunFullLayerClear","_testBankAliasSource","_testBankAliasBank","_b3TextBuffers","_strLenBankedBounded","_memCpyBankedBetween","_memCpyBanked","_testCombinedSoundEndFlag","_testBeginSpritePublicationWork","_testEndSpritePublicationWork","c_sp","_b3Display_v"};
 #define NAME_COUNT (sizeof(names)/sizeof(names[0]))
 static unsigned labels[NAME_COUNT]; static bool found[NAME_COUNT];
 static const char *allocator_names[]={"_bEAllocateSpriteMemoryBulk","_bEBulkAllocatedAddresses","bDFindFreeVramBlock","_bDDeleteAllocation","bDDeleteAllocationAsmCall","VIEW_POS_ENTRY_NUM","sreg","BLOCKS_TO_FIND"};
@@ -1222,6 +1486,9 @@ static unsigned loader_labels[LOADER_NAME_COUNT]; static bool loader_found[LOADE
 static const char *loader_search_names[]={"_testRunWordsSearch","_testWordsQuery","_testWordsResult"};
 #define LOADER_SEARCH_NAME_COUNT (sizeof(loader_search_names)/sizeof(loader_search_names[0]))
 static unsigned loader_search_labels[LOADER_SEARCH_NAME_COUNT]; static bool loader_search_found[LOADER_SEARCH_NAME_COUNT];
+static const char *startup_names[]={"_b6InitGraphics"};
+#define STARTUP_NAME_COUNT (sizeof(startup_names)/sizeof(startup_names[0]))
+static unsigned startup_labels[STARTUP_NAME_COUNT]; static bool startup_found[STARTUP_NAME_COUNT];
 static const char *fixture_names[]={"_testReserveSpriteFixtureBlocks","_testPrepareSpriteFixturePartialRun","_testReleaseSpriteFixtureBlocks","_testSpriteFixtureWidth","_testSpriteFixtureHeight","_testSpriteFixtureError","_testSpriteFixtureGapBlocks","_testSpriteFixtureAllocationCount","_testSpriteFixtureReleasedCount","_testSpriteFixtureGapAddress"};
 #define FIXTURE_NAME_COUNT (sizeof(fixture_names)/sizeof(fixture_names[0]))
 static unsigned fixture_labels[FIXTURE_NAME_COUNT]; static bool fixture_found[FIXTURE_NAME_COUNT];
@@ -1236,6 +1503,7 @@ static void load_symbols(const char *path) {
             for(size_t i=0;i<ALLOCATOR_NAME_COUNT;i++)if(!strcmp(n,allocator_names[i])) { allocator_labels[i]=address;allocator_found[i]=true; }
             for(size_t i=0;i<LOADER_NAME_COUNT;i++)if(!strcmp(n,loader_names[i])) { loader_labels[i]=address;loader_found[i]=true; }
             for(size_t i=0;i<LOADER_SEARCH_NAME_COUNT;i++)if(!strcmp(n,loader_search_names[i])) { loader_search_labels[i]=address;loader_search_found[i]=true; }
+            for(size_t i=0;i<STARTUP_NAME_COUNT;i++)if(!strcmp(n,startup_names[i])) { startup_labels[i]=address;startup_found[i]=true; }
             for(size_t i=0;i<FIXTURE_NAME_COUNT;i++)if(!strcmp(n,fixture_names[i])) { fixture_labels[i]=address;fixture_found[i]=true; }
         } else if(!strncmp(line,"sym\t",4)&&(strstr(line,"type=lab")||strstr(line,"type=equ"))) {
             char *n=strstr(line,"name=\""),*v=strstr(line,"val=0x"); if(!n||!v)continue; n+=6;char *end=strchr(n,'"');if(!end)continue;*end=0;
@@ -1243,6 +1511,7 @@ static void load_symbols(const char *path) {
             for(size_t i=0;i<ALLOCATOR_NAME_COUNT;i++)if(!strcmp(n,allocator_names[i])) { allocator_labels[i]=address;allocator_found[i]=true; }
             for(size_t i=0;i<LOADER_NAME_COUNT;i++)if(!strcmp(n,loader_names[i])) { loader_labels[i]=address;loader_found[i]=true; }
             for(size_t i=0;i<LOADER_SEARCH_NAME_COUNT;i++)if(!strcmp(n,loader_search_names[i])) { loader_search_labels[i]=address;loader_search_found[i]=true; }
+            for(size_t i=0;i<STARTUP_NAME_COUNT;i++)if(!strcmp(n,startup_names[i])) { startup_labels[i]=address;startup_found[i]=true; }
             for(size_t i=0;i<FIXTURE_NAME_COUNT;i++)if(!strcmp(n,fixture_names[i])) { fixture_labels[i]=address;fixture_found[i]=true; }
         }
     } free(data);
@@ -1725,13 +1994,14 @@ static void run_loader_test(const char *game,const char *build,const char *nativ
     REQUIRE(!failed,"Real X16 WORDS startup regression failed");
 }
 int main(int argc,char **argv) {
-    char *emulator=NULL,*rom=NULL,*build=NULL,*game=NULL,*output=NULL,*sdl=NULL,*symbol=NULL,*tas_capture_header=NULL;unsigned long trigger=180000000;bool foreground_test=false,picture_test=false,combined_test=false,loader_test=false;
+    char *emulator=NULL,*rom=NULL,*build=NULL,*game=NULL,*output=NULL,*sdl=NULL,*symbol=NULL,*tas_capture_header=NULL;unsigned long trigger=180000000;bool foreground_test=false,picture_test=false,combined_test=false,loader_test=false,startup_text_test=false;
     for(int i=1;i<argc;i++) {
-        if(!strcmp(argv[i],"--help")) {puts("Usage: test_full_game_irq --emulator-source DIR --rom FILE --build DIR --game DIR [--output DIR] [--symbols FILE] [--sdl-prefix DIR] [--tas-capture-header FILE] [--trigger-cycle N] [--foreground-test] [--combined-irq-test] [--picture-test] [--loader-test]");return 0;}
+        if(!strcmp(argv[i],"--help")) {puts("Usage: test_full_game_irq --emulator-source DIR --rom FILE --build DIR --game DIR [--output DIR] [--symbols FILE] [--sdl-prefix DIR] [--tas-capture-header FILE] [--trigger-cycle N] [--foreground-test] [--combined-irq-test] [--picture-test] [--loader-test] [--startup-text-test]");return 0;}
         if(!strcmp(argv[i],"--foreground-test")) {foreground_test=true;continue;}
         if(!strcmp(argv[i],"--picture-test")) {picture_test=true;continue;}
         if(!strcmp(argv[i],"--combined-irq-test")) {combined_test=true;continue;}
         if(!strcmp(argv[i],"--loader-test")) {loader_test=true;continue;}
+        if(!strcmp(argv[i],"--startup-text-test")) {startup_text_test=true;continue;}
         REQUIRE(i+1<argc,"Missing option argument");char *option=argv[i],*value=argv[++i];
         if(!strcmp(option,"--emulator-source"))emulator=value;else if(!strcmp(option,"--rom"))rom=value;else if(!strcmp(option,"--build"))build=value;else if(!strcmp(option,"--game"))game=value;else if(!strcmp(option,"--output"))output=value;else if(!strcmp(option,"--sdl-prefix"))sdl=value;else if(!strcmp(option,"--symbols"))symbol=value;else if(!strcmp(option,"--tas-capture-header"))tas_capture_header=value;
         else if(!strcmp(option,"--trigger-cycle")) {char *end;errno=0;trigger=strtoul(value,&end,10);REQUIRE(!errno&&*value&&!*end&&trigger<=UINT32_MAX,"Invalid trigger cycle");}else fail("Unknown option %s",option);
@@ -1747,7 +2017,7 @@ int main(int argc,char **argv) {
     REQUIRE(!exists(join(output,"emulator")),"Output already contains an emulator; use a fresh directory");
     char *source=join(output,"emulator"),*stage=NULL;copy_tree(emulator,source);stage_tas_capture_header(source,tas_capture_header);
     if(!loader_test) {
-        const char *fixture_name=combined_test?"combined-game":picture_test?"picture-game":"foreground-game";
+        const char *fixture_name=startup_text_test?"startup-text-game":combined_test?"combined-game":picture_test?"picture-game":"foreground-game";
         suite_test_paths_init(fixture_name);
         if(atexit(cleanup_stage)) fail("Cannot register game fixture cleanup");
         stage=create_stage("game");
@@ -1763,7 +2033,7 @@ int main(int argc,char **argv) {
     char *qloader_words=quoted_c("WORDS.TOK"),*qloader_result=quoted_c(join(output,"loader-result.txt"));
     fputs("#include <sys/stat.h>\n#include <unistd.h>\n",mem);
     fprintf(mem,"#define SHAKE_SPRITE_UPDATE_RECORD_BYTES %u\n#define SHAKE_SPRITE_UPDATE_MAX_RECORDS %u\n#define SHAKE_SPRITE_TERMINATOR_BYTES %u\n#define SHAKE_SPRITE_BUFFER_SIZE %u\n",SPRITE_UPDATE_RECORD_BYTES,SPRITE_UPDATE_MAX_RECORDS,SPRITE_UPDATE_TERMINATOR_BYTES,SPRITE_UPDATED_BUFFER_SIZE);
-    fprintf(mem,"#define SHAKE_CSV %s\n#define SHAKE_COMMANDS %s\n#define SHAKE_INPUT_TRACE %s\n#define SHAKE_VIDEO_CSV %s\n#define FOREGROUND_CSV %s\n#define FOREGROUND_TEST_ENABLED %u\n#define COMBINED_CSV %s\n#define COMBINED_IRQ_TEST_ENABLED %u\n#define PICTURE_CSV %s\n#define PICTURE_IRQ_VRAM %s\n#define PICTURE_REFERENCE_VRAM %s\n#define BLIT_FAILURE_CSV %s\n#define VIEW_LOAD_RETRY_CSV %s\n#define PICTURE_TEST_ENABLED %u\n#define LOADER_TEST_ENABLED %u\n#define LOADER_WORDS_PATH %s\n#define LOADER_RESULT_PATH %s\n#define TRIGGER_CYCLE %luu\n",qcsv,qcommands,qinputtrace,qvideotrace,qforeground,(foreground_test||picture_test)?1:0,qcombined,combined_test?1:0,qpicture,qpicture_irq,qpicture_reference,qblit,qview_retry,picture_test?1:0,loader_test?1:0,qloader_words,qloader_result,trigger);
+    fprintf(mem,"#define SHAKE_CSV %s\n#define SHAKE_COMMANDS %s\n#define SHAKE_INPUT_TRACE %s\n#define SHAKE_VIDEO_CSV %s\n#define FOREGROUND_CSV %s\n#define FOREGROUND_TEST_ENABLED %u\n#define COMBINED_CSV %s\n#define COMBINED_IRQ_TEST_ENABLED %u\n#define PICTURE_CSV %s\n#define PICTURE_IRQ_VRAM %s\n#define PICTURE_REFERENCE_VRAM %s\n#define BLIT_FAILURE_CSV %s\n#define VIEW_LOAD_RETRY_CSV %s\n#define PICTURE_TEST_ENABLED %u\n#define LOADER_TEST_ENABLED %u\n#define STARTUP_TEXT_TEST_ENABLED %u\n#define LOADER_WORDS_PATH %s\n#define LOADER_RESULT_PATH %s\n#define TRIGGER_CYCLE %luu\n",qcsv,qcommands,qinputtrace,qvideotrace,qforeground,(foreground_test||picture_test)?1:0,qcombined,combined_test?1:0,qpicture,qpicture_irq,qpicture_reference,qblit,qview_retry,picture_test?1:0,loader_test?1:0,startup_text_test?1:0,qloader_words,qloader_result,trigger);
     free(qcsv);free(qcommands);free(qinputtrace);free(qvideotrace);free(qforeground);free(qcombined);free(qpicture);free(qpicture_irq);free(qpicture_reference);free(qblit);free(qview_retry);free(qloader_words);free(qloader_result);
     for(size_t i=0;i<NAME_COUNT;i++) {if(!found[i])fail("Missing symbol %s",names[i]);if(names[i][0]=='@')fprintf(mem,"#define S_local_%s 0x%x\n",names[i]+1,labels[i]);else fprintf(mem,"#define S_%s 0x%x\n",names[i],labels[i]);}
     for(size_t i=0;i<ALLOCATOR_NAME_COUNT;i++) {if(!allocator_found[i])fail("Missing allocator symbol %s",allocator_names[i]);fprintf(mem,"#define S_%s 0x%x\n",allocator_names[i],allocator_labels[i]);}
@@ -1774,6 +2044,10 @@ int main(int argc,char **argv) {
     for(size_t i=0;i<LOADER_SEARCH_NAME_COUNT;i++) {
         if(loader_test&&!loader_search_found[i]) fail("Missing WORDS search target symbol %s",loader_search_names[i]);
         fprintf(mem,"#define S_%s 0x%x\n",loader_search_names[i],loader_search_found[i]?loader_search_labels[i]:0);
+    }
+    for(size_t i=0;i<STARTUP_NAME_COUNT;i++) {
+        if(startup_text_test&&!startup_found[i]) fail("Missing startup trace symbol %s",startup_names[i]);
+        fprintf(mem,"#define S_%s 0x%x\n",startup_names[i],startup_found[i]?startup_labels[i]:0);
     }
     for(size_t i=0;i<FIXTURE_NAME_COUNT;i++) {
         if(picture_test&&!fixture_found[i]) fail("Missing sprite fixture target symbol %s",fixture_names[i]);
@@ -1802,17 +2076,31 @@ int main(int argc,char **argv) {
     char *compile[]={"cmake","--build",native,"-j4",NULL};run_from(compile,buildlog,0,NULL);
     REQUIRE(!setenv("SDL_VIDEODRIVER","dummy",1)&&!setenv("SDL_AUDIODRIVER","dummy",1),"Cannot set SDL environment");
     if(loader_test) { run_loader_test(game,build,native,rom,output); return 0; }
-    char *tas=join(output,"input.tas");write_file(tas,"0:Return\n",9);
+    char *tas=join(output,"input.tas");write_file(tas,startup_text_test?"":"0:Return\n",startup_text_test?0:9);
     char *command[24];int command_length=0;
     command[command_length++]=join(native,"x16emu");command[command_length++]="-rom";command[command_length++]=rom;
     command[command_length++]="-fsroot";command[command_length++]=stage;command[command_length++]="-startin";command[command_length++]=stage;
     command[command_length++]="-prg";command[command_length++]=join(stage,"agi.cx16");command[command_length++]="-run";command[command_length++]="-zeroram";
     command[command_length++]="-warp";command[command_length++]="-sound";command[command_length++]="none";
-    if(!picture_test&&!combined_test) { command[command_length++]="-gif";command[command_length++]=format("%s/game.gif,wait",output); }
-    command[command_length++]="-tas";command[command_length++]=tas;command[command_length++]="-echo";command[command_length]=NULL;
-    run(command,join(output,"run.log"),picture_test?300:90);
+    if(!picture_test&&!combined_test) { command[command_length++]="-gif";command[command_length++]=format(startup_text_test?"%s/game.gif":"%s/game.gif,wait",output); }
+    command[command_length++]="-tas";command[command_length++]=tas;
+    command[command_length++]="-echo";command[command_length]=NULL;
+    run(command,join(output,"run.log"),picture_test||startup_text_test?300:90);
     cleanup_stage();
     if(!stage||exists(stage)) fail("Integration fixture cleanup regression: private staged game was not removed");
     require_no_retained_stage(output);
-    if(picture_test) validate_picture(output); else if(combined_test) validate_combined(output); else validate(output,foreground_test);return 0;
+    if(startup_text_test) {
+        char *log=read_file(join(output,"run.log"),NULL);
+        REQUIRE(strstr(log,"Production KQ1 startup text passed: 23 Logic83 phases, 221 display.v returns, 13-row cap, blank rows and frame RGB verified"),"Natural KQ1 Logic83 startup text sequence did not complete");
+        REQUIRE(strstr(log,"RGB frame samples="),"Natural KQ1 startup text did not report captured frame RGB samples");
+        free(log);
+        char *gif=join(output,"game.gif");
+        size_t gifsize;
+        unsigned char *header=(unsigned char*)read_file(gif,&gifsize);
+        REQUIRE(gifsize>40&&(!memcmp(header,"GIF87a",6)||!memcmp(header,"GIF89a",6))&&header[gifsize-1]==0x3B,
+                "Startup text GIF capture is incomplete");
+        free(header);
+        free(gif);
+    }
+    else if(picture_test) validate_picture(output); else if(combined_test) validate_combined(output); else validate(output,foreground_test);return 0;
 }

@@ -13,7 +13,6 @@ PRIORITY_TAIL_SIZE = PRIORITY_SIZE .mod PRIORITY_SLICE_SIZE
 
 .segment "BANKRAM06"
 .import _b3InitCharset
-.import pushax
 .import pusha
 .import popa
 .import _b6DisplayLoadingScreen
@@ -393,8 +392,7 @@ TRAMPOLINE #SPRITE_UPDATES_BANK, _bEClearSpriteAttributes
 jsr _b6InitInput
 
 lda #DEFAULT_TEXT_FOREGROUND
-ldx #$0
-jsr pushax
+jsr pusha
 
 lda #DEFAULT_TEXT_BACKGROUND
 ldx #$0
