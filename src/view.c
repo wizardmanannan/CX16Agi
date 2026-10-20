@@ -2227,9 +2227,10 @@ extern byte loopHeaderBuffer[LOOP_HEADER_BUFFER_SIZE];
 
 extern int currentLog;
 
-void setViewData(byte viewNum, AGIFile* tempAGI, View* localView)
+boolean setViewData(byte viewNum, AGIFile* tempAGI, View* localView)
 {
 	byte numberOfLoops;
+	unsigned int headerSize;
 	boolean isThereADescription;
 	const char* description;
 	int descriptionLength;
@@ -2237,13 +2238,12 @@ void setViewData(byte viewNum, AGIFile* tempAGI, View* localView)
 #ifdef VERBOSE_LOAD_VIEWS
 	byte tmp[10];
 #endif
-	memCpyBankedBetween((byte*)&viewHeaderBuffer[0], VIEW_BUFFERS_BANK, tempAGI->code, tempAGI->codeBank, NO_LOOPS_INDEX_BYTES_AVERAGE + POSITION_OF_LOOPS_OFFSET); //Guessing at 7 loops, this should copy enough 99% of the time, and we can copy again once we have the first byte (loopCounter), is necessary . If there is less loops than we have just copied bytes which will be ignored
+	if (tempAGI->totalSize < POSITION_OF_LOOPS_OFFSET) return FALSE;
+	memCpyBankedBetween(viewHeaderBuffer, VIEW_BUFFERS_BANK, tempAGI->code, tempAGI->codeBank, POSITION_OF_LOOPS_OFFSET);
 	numberOfLoops = viewHeaderBuffer[POSITION_OF_NO_LOOPS];
-
-	if (numberOfLoops > NO_LOOPS_INDEX_BYTES_AVERAGE)
-	{
-		memCpyBankedBetween((byte*)&viewHeaderBuffer[0], VIEW_BUFFERS_BANK, tempAGI->code, tempAGI->codeBank, numberOfLoops * 2 + POSITION_OF_LOOPS_OFFSET);
-	}
+	headerSize = POSITION_OF_LOOPS_OFFSET + (unsigned int)numberOfLoops * 2;
+	if (!numberOfLoops || headerSize > VIEW_HEADER_BUFFER_SIZE || headerSize > tempAGI->totalSize) return FALSE;
+	memCpyBankedBetween(viewHeaderBuffer, VIEW_BUFFERS_BANK, tempAGI->code, tempAGI->codeBank, headerSize);
 
 
 #ifdef VERBOSE_SET_VIEW
@@ -2295,7 +2295,8 @@ void setViewData(byte viewNum, AGIFile* tempAGI, View* localView)
 	localView->maxVeraSlots = 0;
 	localView->codeBlock = tempAGI->code;
 	localView->codeBlockBank = tempAGI->codeBank;
-	setLoadedView(&localView, viewNum);
+	setLoadedView(localView, viewNum);
+	return TRUE;
 }
 
 #define POSITION_OF_NO_CELS 0
@@ -2408,7 +2409,11 @@ PaletteGetResult b9LoadViewFile(byte viewNum)
 		printf("loaded agiFile of total size %u\n", tempAGI.totalSize);
 #endif
 
-		setViewData(viewNum, &tempAGI, &localView);
+		if (!setViewData(viewNum, &tempAGI, &localView))
+		{
+			b10BankedDealloc(tempAGI.code, tempAGI.codeBank);
+			return FailToAllocate;
+		}
 
 #ifdef VERBOSE_LOAD_VIEWS
 		printf("The view desc %s, loaded %d, loops %p, loopsBank %d, numberOfLoops %d\n", localView.description, localView.loaded, localView.loops, localView.loopsBank, localView.numberOfLoops);

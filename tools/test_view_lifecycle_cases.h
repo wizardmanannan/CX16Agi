@@ -30,6 +30,17 @@ static void run_view_header_cases(void)
 		CHECK(ram[symbol("_testViewLoaded")],"Valid multi-loop view was rejected");
 		CHECK(!ram[symbol("_testViewLoopErrors")],"View loader used stale offsets beyond its seven-loop initial header");
 	}
+	for(unsigned malformed=0;malformed<3;++malformed) {
+		unsigned length;
+		const uint8_t *input=view_resource_volume(1,0,&length);
+		uint8_t volume[128]; memcpy(volume,input,length);
+		if(malformed==0) { volume[3]=4; length=9; }
+		else volume[7]=malformed==1?0:249;
+		prepare_text_cleanup_case(); set_object_file_stream(volume,length,false);
+		call_target_caller("_testInitViewResource"); call_target_caller("_testLoadViewLoops");
+		CHECK(!ram[symbol("_testViewLoaded")],"Invalid loop header was published as a loaded view");
+		for(unsigned i=0;i<232;++i) CHECK(!bank_ram[0x10][symbol("_allocationArray")-BANK_START+i],"Rejected view header retained an allocation");
+	}
 	puts("PASS production view loader decodes every loop at 7/8/14/15 boundaries");
 }
 
