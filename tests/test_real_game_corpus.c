@@ -2263,3 +2263,311 @@ static int verify_input_wait_failure(const CorpusGame *game,
     return 0;
 }
 
+static int verify_future_input_prefix(const CorpusGame *game,
+                                      const char *game_directory,
+                                      const LogicAppReplayInput *events,
+                                      size_t event_count,
+                                      uint32_t timeout_ms)
+{
+    uint8_t snapshot[LOGIC_APP_REPLAY_OUTPUT_SIZE] = {0};
+    char detail[256] = {0};
+    LogicAppReplayInput probe_event;
+    uint32_t elapsed;
+    uint16_t consumed;
+    uint32_t pending_frame = 0;
+    int result;
+    if (!events || !event_count || event_count > LOGIC_APP_REPLAY_INPUT_MAX)
+        return -1;
+    /* Rendering must not consume the virtual input deadline: the first
+       interpreter cycle completes before the scheduled frame. */
+    probe_event.frame = 12;
+    probe_event.petscii = events[0].petscii;
+    result = run_app_checkpoint("future-input-prefix", game_directory,
+        UINT16_C(0xA61B), &probe_event, 1, 1, timeout_ms, 0,
+        snapshot, detail, sizeof detail);
+    elapsed = get_u32(snapshot + LOGIC_APP_REPLAY_ELAPSED_VSYNC_OFFSET);
+    consumed = get_u16(snapshot + 12);
+    if (consumed < 1)
+        pending_frame = probe_event.frame;
+    if (result != 0 || snapshot[0] != 'X' || snapshot[1] != '1' ||
+        snapshot[2] != '6' || snapshot[3] != 'R' ||
+        snapshot[4] != LOGIC_APP_REPLAY_SNAPSHOT_VERSION || snapshot[5] != 1 ||
+        get_u32(snapshot + 6) != 1 || snapshot[38] != 1 ||
+        get_u16(snapshot + 10) != 1 || consumed != 0 || pending_frame != 12 ||
+        snapshot[14] || !trace_window_is_honest(snapshot) ||
+        get_u32(snapshot + LOGIC_APP_REPLAY_SCHEDULE_FRAME_OFFSET) >= pending_frame) {
+        fprintf(stderr,
+                "full-app future-input prefix regression: %s tick=%u cycles=%u input=%u/%u pending-frame=%u elapsed-vsync=%u missed=%u status=%02x returned=%d detail=%s\n",
+                game->id, (unsigned)get_u32(snapshot + 6),
+                (unsigned)snapshot[38], (unsigned)get_u16(snapshot + 12),
+                (unsigned)get_u16(snapshot + 10), (unsigned)pending_frame,
+                (unsigned)elapsed, (unsigned)snapshot[14],
+                (unsigned)snapshot[58], result,
+                detail[0] ? detail : "none");
+        if (snapshot[0] == 'X' && snapshot[1] == '1' &&
+            snapshot[2] == '6' && snapshot[3] == 'R')
+            print_full_app_checkpoint(game, snapshot);
+        return -1;
+    }
+    printf("full-app future-input clock origin: %s completed tick 1 at VSYNC %u with probe frame %u still pending\n",
+           game->id, (unsigned)elapsed, (unsigned)pending_frame);
+    return 0;
+}
+
+typedef struct FullAppFaultOracleContext {
+    const char *game_directory;
+    uint16_t seed;
+    uint32_t tick_count;
+} FullAppFaultOracleContext;
+
+static int full_app_fault_oracle(void *opaque,
+                                 const LogicReplayManifest *manifest,
+                                 const LogicReplayEvent *events, size_t count,
+                                 uint32_t timeout_ms,
+                                 LogicFailureSignature *signature)
+{
+    FullAppFaultOracleContext *context = (FullAppFaultOracleContext *)opaque;
+    LogicAppReplayInput input[LOGIC_APP_REPLAY_INPUT_MAX];
+    uint8_t snapshot[LOGIC_APP_REPLAY_OUTPUT_SIZE] = {0};
+    char detail[256] = {0};
+    size_t i;
+    int result;
+    if (!context || !manifest || !signature || count > LOGIC_APP_REPLAY_INPUT_MAX ||
+        logic_replay_manifest_validate(manifest) != 0)
+        return -1;
+    for (i = 0; i < count; ++i) {
+        if (events[i].kind != LOGIC_TRACE_KIND_MARK ||
+            (events[i].reason != LOGIC_REPLAY_REASON_INPUT_DOWN &&
+             events[i].reason != LOGIC_REPLAY_REASON_SEMANTIC_KEYPRESS) ||
+            events[i].logic != 0 || !events[i].tick ||
+            events[i].tick > UINT16_MAX / 6u)
+            return -1;
+        input[i].frame = events[i].tick * 6u;
+        input[i].petscii = events[i].field;
+    }
+    result = logic_app_replay_x16_run(
+        context->game_directory, context->seed, input, count,
+        context->tick_count, timeout_ms,
+        LOGIC_APP_REPLAY_FAULT_OMIT_METADATA_SAVE,
+        snapshot, detail, sizeof detail);
+    if (snapshot[0] != 'X' || snapshot[1] != '1' ||
+        snapshot[2] != '6' || snapshot[3] != 'R' ||
+        snapshot[4] != LOGIC_APP_REPLAY_SNAPSHOT_VERSION)
+        return -1;
+    if ((snapshot[58] & (LOGIC_APP_REPLAY_STATUS_FAULT_TRIGGERED |
+                         LOGIC_APP_REPLAY_STATUS_CONTEXT_VERIFY_FAILED)) ==
+        (LOGIC_APP_REPLAY_STATUS_FAULT_TRIGGERED |
+         LOGIC_APP_REPLAY_STATUS_CONTEXT_VERIFY_FAILED)) {
+        memset(signature, 0, sizeof *signature);
+        signature->kind = LOGIC_TRACE_KIND_MARK;
+        signature->logic = snapshot[25];
+        signature->logical_pc = get_u16(snapshot + 27);
+        signature->opcode = snapshot[26];
+        signature->reason = LOGIC_REPLAY_REASON_CONTEXT_MISMATCH;
+        signature->code = ((uint32_t)snapshot[23] << 8) | snapshot[24];
+        return 0;
+    }
+    if (result != 0 &&
+        (snapshot[58] & LOGIC_APP_REPLAY_STATUS_INPUT_WAIT_EXHAUSTED))
+        return 1;
+    if (result != 0 && !snapshot[5])
+        return -1;
+    return 1;
+}
+
+static int same_failure_signature(const LogicFailureSignature *left,
+                                 const LogicFailureSignature *right)
+{
+    return left->kind == right->kind && left->logic == right->logic &&
+           left->logical_pc == right->logical_pc &&
+           left->opcode == right->opcode && left->reason == right->reason &&
+           left->code == right->code;
+}
+
+static int verify_full_app_fault_reducer(
+    const CorpusGame *game, const char *game_directory,
+    const char *application_build, const LogicAppReplayInput *input,
+    size_t input_count, uint32_t tick_count, uint32_t timeout_ms)
+{
+    const uint16_t seed = UINT16_C(0xA61B);
+    LogicReplayManifest manifest;
+    LogicReplayEvent trace[LOGIC_APP_REPLAY_INPUT_MAX];
+    LogicReplayEvent *minimized = NULL;
+    LogicReplayEvent without_trigger[LOGIC_APP_REPLAY_INPUT_MAX];
+    size_t minimized_count = 0, without_trigger_count = 0, i;
+    LogicFailureSignature failure, original_repeat, minimized_repeat;
+    FullAppFaultOracleContext context;
+    uint8_t manifest_hash[LOGIC_REPLAY_SHA256_SIZE];
+    uint8_t input_hash[LOGIC_REPLAY_SHA256_SIZE];
+    char reduced_path[PATH_CAPACITY];
+    int length;
+    int status;
+    if (create_app_replay_identity(game, game_directory, application_build,
+            seed, input, input_count, &manifest, trace, manifest_hash,
+            input_hash) != 0)
+        return -1;
+    if (logic_replay_manifest_verify_resources(&manifest, game_directory) != 0)
+        return -1;
+    context.game_directory = game_directory;
+    context.seed = seed;
+    context.tick_count = tick_count;
+    length = snprintf(reduced_path, sizeof reduced_path,
+                      "%s/reduced.ltrace", game_directory);
+    if (length < 0 || (size_t)length >= sizeof reduced_path)
+        return -1;
+    status = run_full_app_reducer_cli(game_directory, tick_count, timeout_ms,
+                                      reduced_path, 0);
+    if (status != 0 ||
+        logic_replay_trace_read(reduced_path, &minimized,
+                                &minimized_count) != 0 ||
+        !minimized || !minimized_count || minimized_count >= input_count) {
+        fprintf(stderr,
+                "full-app public reducer regression: %s status=%d original=%lu minimized=%lu\n",
+                game->id, status, (unsigned long)input_count,
+                (unsigned long)minimized_count);
+        free(minimized);
+        return -1;
+    }
+    if (full_app_fault_oracle(&context, &manifest, trace, input_count,
+            timeout_ms, &failure) != 0) {
+        fprintf(stderr, "full-app reducer regression: %s cannot reproduce original signature\n",
+                game->id);
+        free(minimized);
+        return -1;
+    }
+    status = full_app_fault_oracle(&context, &manifest, trace, input_count,
+                                   timeout_ms, &original_repeat);
+    if (status != 0 || !same_failure_signature(&failure, &original_repeat)) {
+        fprintf(stderr, "full-app reducer regression: %s original trace did not repeat signature\n",
+                game->id);
+        free(minimized);
+        return -1;
+    }
+    status = full_app_fault_oracle(&context, &manifest, minimized,
+                                   minimized_count, timeout_ms,
+                                   &minimized_repeat);
+    if (status != 0 || !same_failure_signature(&failure, &minimized_repeat)) {
+        fprintf(stderr, "full-app reducer regression: %s minimized trace did not repeat signature\n",
+                game->id);
+        free(minimized);
+        return -1;
+    }
+    for (i = 0; i < minimized_count; ++i) {
+        if (minimized[i].field == 'L' && minimized[i].tick == 1)
+            continue;
+        without_trigger[without_trigger_count++] = minimized[i];
+    }
+    if (without_trigger_count == minimized_count ||
+        full_app_fault_oracle(&context, &manifest, without_trigger,
+            without_trigger_count, timeout_ms, &minimized_repeat) != 1) {
+        fprintf(stderr,
+                "full-app reducer regression: %s removing the delivered L event retained the injected signature\n",
+                game->id);
+        free(minimized);
+        return -1;
+    }
+    printf("full-app public reducer: %s input-triggered context failure signature kind=%u logic=%u pc=%04x opcode=%u field-offset=%08x; events %lu -> %lu; original/minimized signatures repeated and deleting frame6 L removed failure\n",
+           game->id, (unsigned)failure.kind, (unsigned)failure.logic,
+           (unsigned)failure.logical_pc, (unsigned)failure.opcode,
+           (unsigned)failure.code, (unsigned long)input_count,
+           (unsigned long)minimized_count);
+    free(minimized);
+    return 0;
+}
+
+static int verify_semantic_reducer(const CorpusGame *game, const char *directory,
+    const char *build, uint32_t timeout_ms)
+{
+    static const LogicAppReplayInput inputs[] = {{6, 'L'}, {12, 'C'}, {18, 'H'}, {24, 'E'}};
+    LogicReplayManifest manifest;
+    LogicReplayEvent trace[4], *reduced = NULL;
+    LogicOracleSnapshot final, *reference = NULL;
+    LogicOracleResult comparison;
+    uint8_t manifest_hash[32], input_hash[32];
+    uint8_t raw[LOGIC_APP_REPLAY_OUTPUT_SIZE];
+    char path[PATH_CAPACITY], detail[256];
+    size_t count = 0, reference_count = 0;
+    int result = -1;
+    if (create_app_replay_identity(game, directory, build, UINT16_C(0xA61B),
+            inputs, 4, &manifest, trace, manifest_hash, input_hash) ||
+        snprintf(path, sizeof path, "%s/reduced.ltrace", directory) >= (int)sizeof path)
+        return -1;
+    /* A transient wrong variable must be found even after reconvergence. */
+    if (logic_app_replay_x16_run(directory, UINT16_C(0xA61B), inputs, 4, 4,
+            timeout_ms, LOGIC_APP_REPLAY_FAULT_SEMANTIC_WRITE, raw, detail, sizeof detail) ||
+        !(raw[58] & LOGIC_APP_REPLAY_STATUS_FAULT_TRIGGERED) ||
+        (raw[58] & LOGIC_APP_REPLAY_STATUS_CONTEXT_VERIFY_FAILED) ||
+        raw[LOGIC_APP_REPLAY_VARS_OFFSET + 255] != 0) {
+        fprintf(stderr, "semantic reconvergence fixture did not complete: %s\n", detail);
+        return -1;
+    }
+    /* Confirm complete semantic reconvergence, not just the repaired byte. */
+    raw[58] &= (uint8_t)~LOGIC_APP_REPLAY_STATUS_FAULT_TRIGGERED;
+    if (write_scummvm_input_trace(directory, trace, 4) ||
+        snprintf(path, sizeof path, "%s/reference.lors", directory) >= (int)sizeof path ||
+        run_scummvm_oracle(directory, 4, path) ||
+        logic_oracle_snapshot_load(path, &reference, &reference_count) || reference_count != 4 ||
+        logic_app_replay_snapshot_to_oracle(manifest.engine, 0x2917, &manifest,
+            manifest_hash, input_hash, raw, sizeof raw, &final, detail, sizeof detail))
+        goto done;
+    memcpy(reference[3].input_sha256, input_hash, sizeof input_hash);
+    if (logic_oracle_compare_with_policy(&reference[3], &final,
+            LOGIC_ORACLE_POLICY_CROSS_ENGINE_SEMANTIC, &comparison) != LOGIC_ORACLE_MATCH) {
+        fprintf(stderr, "transient fault did not semantically reconverge: %s\n", comparison.detail);
+        goto done;
+    }
+    if (snprintf(path, sizeof path, "%s/reduced.ltrace", directory) >= (int)sizeof path)
+        goto done;
+    if (run_full_app_reducer_cli(directory, 4, timeout_ms, path, 1) ||
+        logic_replay_trace_read(path, &reduced, &count) || count != 1 ||
+        reduced[0].tick != 1 || reduced[0].field != 'L') {
+        fprintf(stderr, "semantic reducer did not retain only the transient corruption trigger\n");
+        goto done;
+    }
+    if (logic_app_replay_x16_run(directory, UINT16_C(0xA61B), inputs + 1, 3, 4,
+            timeout_ms, LOGIC_APP_REPLAY_FAULT_SEMANTIC_WRITE, raw, detail, sizeof detail) != -1 ||
+        memcmp(raw, "X16R", 4) || get_u32(raw + 6) != 4 ||
+        (raw[58] & (LOGIC_APP_REPLAY_STATUS_FAULT_TRIGGERED |
+                    LOGIC_APP_REPLAY_STATUS_CONTEXT_VERIFY_FAILED)) ||
+        raw[LOGIC_APP_REPLAY_VARS_OFFSET + 255] != 0)
+        goto done;
+    puts("full-app semantic reducer: KQ1 transient variable divergence reduced 4 -> 1; reconverged final state retained, deleting trigger removed corruption");
+    result = 0;
+done:
+    free(reference);
+    free(reduced);
+    return result;
+}
+
+static int verify_checkpoint_series(const char *directory,
+    const LogicAppReplayInput *events, size_t count, uint32_t timeout_ms)
+{
+    uint8_t series[4][LOGIC_APP_REPLAY_OUTPUT_SIZE];
+    uint8_t cold[LOGIC_APP_REPLAY_OUTPUT_SIZE];
+    char detail[256] = {0};
+    uint64_t start = monotonic_milliseconds(), series_ms, cold_ms;
+    if (logic_app_replay_x16_series(directory, UINT16_C(0xA61B), events, count,
+            4, timeout_ms, 0, series, 4, detail, sizeof detail)) {
+        fprintf(stderr, "application checkpoint series regression: %s\n", detail);
+        return -1;
+    }
+    series_ms = monotonic_milliseconds() - start;
+    start = monotonic_milliseconds();
+    for (uint32_t tick = 1; tick <= 4; ++tick) {
+        if (run_app_checkpoint("series-cold-parity", directory,
+                UINT16_C(0xA61B), events, count, tick, timeout_ms, 0,
+                cold, detail, sizeof detail) ||
+            memcmp(cold, series[tick - 1], LOGIC_APP_REPLAY_ELAPSED_VSYNC_OFFSET) ||
+            memcmp(cold + LOGIC_APP_REPLAY_SCHEDULE_FRAME_OFFSET,
+                   series[tick - 1] + LOGIC_APP_REPLAY_SCHEDULE_FRAME_OFFSET, 4)) {
+            fprintf(stderr, "application checkpoint series differs from cold boot at cycle %u: %s\n",
+                    tick, detail);
+            return -1;
+        }
+    }
+    cold_ms = monotonic_milliseconds() - start;
+    printf("application checkpoint series: four completed cycles match four cold boots; one-boot wall-ms=%llu cold-boots wall-ms=%llu\n",
+        (unsigned long long)series_ms, (unsigned long long)cold_ms);
+    return 0;
+}
+
