@@ -147,7 +147,8 @@ void b7GetString(char* promptStr, byte promptStringBank, char* returnStr, byte r
 				                   (byte*)b7CurrentInputStr, STRING_BANK, (size_t)strPos + 1);
 				while (key[KEY_ENTER]) { /* Wait until ENTER released */ }
 				return;
-			case 0x08: /* Backspace */
+			case KEY_BACKSPACE: /* Platform delete/backspace */
+			case 0x08: /* ASCII Backspace */
 				if (strPos > 0) {
 					strPos--;
 					b7CurrentInputStr[strPos] = 0;

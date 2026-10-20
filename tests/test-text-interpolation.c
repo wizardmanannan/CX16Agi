@@ -65,6 +65,17 @@ static void test_idle_input(void)
 	assert(inputKeyPosition == sizeof(keys));
 }
 
+static void test_get_string_backspace(void)
+{
+    static const byte keys[] = { 'a', 'b', KEY_BACKSPACE, KEY_ENTER };
+    char result[40];
+    inputKeys = keys;
+    inputKeyCount = sizeof(keys);
+    inputKeyPosition = 0;
+    b7GetString(">", 21, result, STRING_BANK, 1, 1, 39);
+    assert(strcmp(result, "a") == 0);
+}
+
 static void test_input_capacity(void)
 {
 	byte keys[51];
@@ -441,6 +452,7 @@ int main(void)
 	test_border_preserves_empty_lines();
 	test_empty_message_does_not_clear(warning);
 	test_idle_input();
+    test_get_string_backspace();
 	test_input_capacity();
 	test_banked_input();
 	test_word_capacity();
