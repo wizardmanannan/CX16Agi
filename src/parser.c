@@ -10,6 +10,7 @@
 #define  PROGRAM_CONTROL  1
 
 #include "parser.h"
+#include "logicContext.h"
 
 extern boolean* flag;
 extern byte* var;
@@ -39,7 +40,35 @@ EventType b7Events[256];  /* controller(), set.key(), set.menu.item() */
 byte b7Directions[9] = { 0, 0, 0, 0, 0, 0, 0, 0, 0 };
 #pragma bss-name (pop)
 
+#if LOGIC_CONTEXT_TRACE
+static byte parserCommandWriteTrace;
+#define PARSER_STORE_VAR(index, value) \
+	do { \
+		if (parserCommandWriteTrace) \
+			logicContextWriteVariable((byte)(index), (byte)(value)); \
+		else \
+			var[(index)] = (value); \
+	} while (0)
+#define PARSER_STORE_FLAG(index, value) \
+	do { \
+		if (parserCommandWriteTrace) \
+			logicContextWriteFlag((byte)(index), (boolean)(value)); \
+		else \
+			flag[(index)] = (value); \
+	} while (0)
+#else
+#define PARSER_STORE_VAR(index, value) (var[(index)] = (value))
+#define PARSER_STORE_FLAG(index, value) (flag[(index)] = (value))
+#endif
+
 #pragma code-name (push, "BANKRAM07")
+#if LOGIC_CONTEXT_TRACE
+void b7SetCommandWriteTrace(byte enabled)
+{
+	parserCommandWriteTrace = enabled;
+}
+#endif
+
 int b7Strcmp(char const* _Str1, char const* _Str2)
 {
 	return strcmp(_Str1, _Str2);
@@ -59,11 +88,6 @@ void b7ActivateEvent(byte eventNumber)
 void b7SetEvent(EventType* event, byte eventNumber)
 {
 	b7Events[eventNumber] = *event;
-}
-
-byte b7GetInputWord(byte number)
-{
-	return inputWords[number];
 }
 
 char* b7GetInternalStringPtr(byte number, size_t* length)
@@ -103,12 +127,12 @@ void b7HandleDirection(int dirn)
 			memset(b7Directions, 0, 9);
 			b7Directions[dirn] = 1;
 			viewTab.direction = dirn;
-			var[6] = dirnOfEgo = dirn;
+			PARSER_STORE_VAR(6, dirnOfEgo = dirn);
 		}
 		else {
 			memset(b7Directions, 0, 9);
 			viewTab.direction = 0;
-			var[6] = dirnOfEgo = 0;
+			PARSER_STORE_VAR(6, dirnOfEgo = 0);
 			viewTab.staleCounter = 1;
 		}
 
@@ -181,10 +205,10 @@ void b7PollKeyboard()
 
 	b1ResetControllers();
 
-	var[19] = 0;
-	flag[2] = FALSE;
-	flag[4] = FALSE;
-	var[9] = 0;
+	PARSER_STORE_VAR(19, 0);
+	PARSER_STORE_FLAG(2, FALSE);
+	PARSER_STORE_FLAG(4, FALSE);
+	PARSER_STORE_VAR(9, 0);
 
 	//b1ProcessString(temp, PARSER_BANK, outputString );
 	gx = 0;
@@ -197,7 +221,7 @@ void b7PollKeyboard()
 		GET_IN(ch);
 
 		if (ch) {
-			var[19] = ch;
+			PARSER_STORE_VAR(19, ch);
 			lastKey = ch;  /* Store key value for have.key() cmd */
 			if (ch == 0x1C) ch |= 0x0D; /* Handle keypad ENTER */
 		
@@ -448,7 +472,7 @@ void b7LookupWords(char* inputLine)
 			if (start == end)
 			{
 				// Record position (1-based) of the unknown word
-				var[9] = numInputWords + 1;
+				PARSER_STORE_VAR(9, numInputWords + 1);
 				// Cause loop to exit
 				allWordsFound = FALSE;
 			}
@@ -482,7 +506,7 @@ void b7LookupWords(char* inputLine)
 			// If synonym number is non-zero, store it
 			if (synNum)
 			{
-				flag[2] = TRUE;
+				PARSER_STORE_FLAG(2, TRUE);
 				// Save synonym number
 				inputWords[numInputWords] = synNum;
 				// Save original spelling of the word
@@ -506,52 +530,10 @@ void b7LookupWords(char* inputLine)
 	if (strlen(inputLine))
 	{
 		// Mark that input was received this turn
-		flag[2] = TRUE;
+		PARSER_STORE_FLAG(2, TRUE);
 		// Mark that the command has not yet been handled
-		flag[4] = FALSE;
+		PARSER_STORE_FLAG(4, FALSE);
 	}
-}
-
-/***************************************************************************
-** said
-**
-** Purpose: To execute the said() test command. Each two-byte argument is
-** compared with the relevant words entered by the user. If there is an
-** exact match, it returns TRUE, otherwise it returns false.
-***************************************************************************/
-boolean b7Said(byte** data)
-{
-	int numOfArgs, wordNum, argValue;
-	boolean wordsMatch = TRUE;
-	byte argLo, argHi;
-
-	numOfArgs = *(*data)++;
-
-	if ((flag[2] == 0) || (flag[4] == 1)) {  /* Not valid input waiting */
-		*data += (numOfArgs * 2); /* Jump over arguments */
-		return FALSE;
-	}
-
-	/* Needs to deal with ANYWORD and ROL */
-	for (wordNum = 0; wordNum < numOfArgs; wordNum++) {
-		argLo = *(*data)++;
-		argHi = *(*data)++;
-		argValue = (argLo + (argHi << 8));
-		if (argValue == 9999) break; /* Should always be last argument */
-		if (argValue == 1) continue; /* Word comparison does not matter */
-
-		if (inputWords[wordNum] != argValue) wordsMatch = FALSE;
-	}
-
-	if ((numInputWords != numOfArgs) && (argValue != 9999)) return FALSE;
-
-	if (wordsMatch) {
-		flag[4] = TRUE;    /* said() accepted input */
-		numInputWords = 0;
-		flag[2] = FALSE;   /* not sure about this one */
-	}
-
-	return (wordsMatch);
 }
 
 #pragma code-name (pop)

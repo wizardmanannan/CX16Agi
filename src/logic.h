@@ -6,27 +6,8 @@
 #define _LOGIC_H_
 
 #include "helpers.h"
+#include "logicTypes.h"
 #include "dependencyResolver.h"
-
-
-typedef struct {
-	word codeSize; //0
-	byte* logicCode; //2
-	byte numMessages; //4
-	byte** messages; // 5
-	byte codeBank; //7
-	byte messageBank; //8
-
-} LOGICFile;
-
-typedef struct {
-	boolean loaded; //0
-	word entryPoint; //1
-	word currentPoint; //3
-	LOGICFile* data; //5
-	byte dataBank; //7
-	boolean isLogicZeroOrDependency; //So we can avoid unloading zero and its dependencies. Zero counts as a dependency of itself.
-} LOGICEntry;
 
 //extern LOGICEntry logics;
 void b6InitLogics();

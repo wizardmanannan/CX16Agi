@@ -265,9 +265,9 @@ stz VERA_ctrl
  _b8GetVeraPictureAddress:
  pha
  jsr popa
- sta GENERAL_TMP
+ sta ZP_TMP_2
  ply
- CALC_VRAM_ADDR_VISUAL GENERAL_TMP, #$0
+ CALC_VRAM_ADDR_VISUAL ZP_TMP_2, #$0
  lda VERA_addr_low
  ldx VERA_addr_high
  stz sreg 

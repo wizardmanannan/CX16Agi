@@ -7,6 +7,8 @@ IRQ_INC = 1
 .include "spriteIrqHandler.s"
 .include "inputIrqHandler.s"
 
+ZP_TILE_LAYER_NO_TILES_HIGH = ZP_TMP_2
+
 .import _mainLoopCounter
 .import _menuDirty
 
@@ -168,14 +170,21 @@ _displayTextAddressToCopyToHigh: .word $0
 _currentTextBuffer: .word $0
 .segment "BANKRAM06"
 _b6InitIrq:
- ; backup default RAM IRQ vector
+   sei ; disable IRQ while the vector is changing
+   lda IRQVec
+   cmp #<custom_irq_handler
+   bne @saveDefault
+   lda IRQVec+1
+   cmp #>custom_irq_handler
+   beq @installCustom
+
+@saveDefault:
    lda IRQVec
    sta default_irq_vector
    lda IRQVec+1
    sta default_irq_vector+1
 
-   ; overwrite RAM IRQ vector with custom handler address
-   sei ; disable IRQ while vector is changing
+@installCustom:
    lda #<custom_irq_handler
    sta IRQVec
    lda #>custom_irq_handler
@@ -186,7 +195,6 @@ _b6InitIrq:
 rts
 
 
-ZP_TILE_LAYER_NO_TILES_HIGH = ZP_TMP_2
 
 _b6SetAndWaitForIrqStateAsm:
 sta @state
@@ -412,4 +420,3 @@ jmp (default_irq_vector)
 @previousRamBank: .byte $0
 
 .endif ; IRQ_INC
-

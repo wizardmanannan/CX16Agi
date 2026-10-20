@@ -17,6 +17,9 @@ codeWindow: .res CODE_WINDOW_SIZE
 cwCurrentCode: .word $0 ;A counter 
 codeWindowAddress: .addr codeWindow
 codeWindowInvalid: .byte TRUE
+.global _cwCurrentCode, _codeWindowInvalid
+_cwCurrentCode = cwCurrentCode
+_codeWindowInvalid = codeWindowInvalid
 
 ; Macro for loading code from the window without incrementing.
 .macro LOAD_CODE_WIN_CODE

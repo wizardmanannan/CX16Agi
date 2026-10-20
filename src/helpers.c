@@ -20,7 +20,7 @@ void b5WaitOnKey()
 	byte ch;
 
 	do {
-		GET_IN(ch);
+		GET_IN_WAIT(ch);
 	} while (!ch);
 }
 
@@ -119,7 +119,7 @@ void b5WaitOnSpecificKeys(byte* keys, byte length)
 	boolean keyPressed = FALSE;
 
 	do {
-		GET_IN(ch);
+		GET_IN_WAIT(ch);
 
 		if (ch)
 		{

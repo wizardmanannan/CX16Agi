@@ -354,8 +354,8 @@ _bAFollowEgoAsmSec:
 ;   localViewTab: Pointer to the local view table
 ;   entryNum: Entry number of the local object
 ; Description:
-;   If Param1 is zero, a new direction and wander distance are chosen.
-;   If stopped, no movement occurs. Remaining wander steps decrement.
+;   Decrement the byte counter, retaining AGI's zero-to-255 wrap. Choose a
+;   direction when the original counter was zero or the object did not move.
 ;------------------------------------------------------------------------------
 _bAWander:
 .scope
@@ -373,17 +373,16 @@ _bAWander:
     sta LOCAL_VIEW_TAB              ; Save the lower byte of localViewTab pointer
     stx LOCAL_VIEW_TAB + 1          ; Save the upper byte of localViewTab pointer
 
-    ; Check the value of Param1 to decide on the next action
     GET_STRUCT_8_STORED_OFFSET _offsetOfParam1, LOCAL_VIEW_TAB ; Load Param1
-    beq @selectDirection            ; If Param1 is zero, branch to select a new direction
-
-    ; Decrement Param1 if it is not zero
+    tax
     dec                             ; Decrease the wander step count
     sta (LOCAL_VIEW_TAB),y          ; Store the decremented value back to Param1
+    txa
+    beq @selectDirection
 
     ; Check if the local object is marked as stopped
     GET_STRUCT_8_STORED_OFFSET _offsetOfStopped, LOCAL_VIEW_TAB ; Load the stopped flag
-    beq @end                        ; If the object is stopped, skip further logic and end
+    beq @end                        ; Keep direction while movement succeeds
 
 @selectDirection:
     ; Select a random direction for the object
@@ -401,11 +400,14 @@ _bAWander:
     SET_VAR_NON_INTERPRETER sreg    ; Set the ego direction value for processing
 
 @setMotionParam1:
-    ; Choose a random wander distance between the defined minimum and maximum values
-    lda #MIN_WANDER_DISTANCE        ; Load the minimum wander distance
-    ldx #MAX_WANDER_DISTANCE        ; Load the maximum wander distance
-    jsr randBetweenAsmCall          ; Generate a random value between min and max
+    GET_STRUCT_8_STORED_OFFSET _offsetOfParam1, LOCAL_VIEW_TAB
+    cmp #MIN_WANDER_DISTANCE
+    bcs @end
+    ; AGI rejects samples below six; it does not rescale the random range.
+    lda #MAX_WANDER_DISTANCE + 1
+    jsr _rand8Bit
     SET_STRUCT_8_STORED_OFFSET_VALUE_IN_REG _offsetOfParam1, LOCAL_VIEW_TAB ; Save the wander distance to Param1
+    bra @setMotionParam1
 
 @end:
     ; End the subroutine and return

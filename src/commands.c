@@ -19,10 +19,27 @@
 #include "memoryManager.h"
 #include "view.h"
 #include "stub.h"
+#if defined(LOGIC_APP_REPLAY_TARGET)
+#include "../tools/logic_app_replay.h"
+#endif
 #include "helpers.h"
 #include "parser.h"
 #include "menu.h"
 #include "showObj.h"
+#include "logicContext.h"
+
+#if LOGIC_CONTEXT_TRACE
+#define LOGIC_STORE_VAR(index, value) \
+	logicContextWriteVariable((byte)(index), (byte)(value))
+#define LOGIC_STORE_FLAG(index, value) \
+	logicContextWriteFlag((byte)(index), (boolean)(value))
+#pragma wrapped-call (push, trampoline, STRING_BANK)
+extern void b7SetCommandWriteTrace(byte enabled);
+#pragma wrapped-call (pop)
+#else
+#define LOGIC_STORE_VAR(index, value) (var[(index)] = (value))
+#define LOGIC_STORE_FLAG(index, value) (flag[(index)] = (value))
+#endif
 
 #define HIGHEST_BANK1_FUNC 36
 #define HIGHEST_BANK2_FUNC 91
@@ -218,53 +235,16 @@ boolean b1Have_key() // 0, 0x00
 
 	if (!key)
 	{
+		#if defined(LOGIC_APP_REPLAY_TARGET)
+		/* Match the reference's 10 ms have.key event-poll interval. */
+		logicAppReplayAdvanceMilliseconds(10UL);
+		#endif
 		GET_IN(key);
-		var[19] = key;
+		LOGIC_STORE_VAR(19, key);
 	}
 
 	return key;
 }
-
-boolean b1Said()
-{
-	int numOfArgs, wordNum, argValue;
-	boolean wordsMatch = TRUE;
-	byte argLo, argHi;
-
-	numOfArgs = loadAndIncWinCode();
-
-	if ((flag[2] == 0) || (flag[4] == 1)) {  /* Not valid input waiting */
-		incCodeBy(numOfArgs * 2); /* Jump over arguments */
-		return FALSE;
-	}
-
-	/* Needs to deal with ANYWORD and ROL */
-	for (wordNum = 0; wordNum < numOfArgs; wordNum++) {
-		argLo = loadAndIncWinCode();
-		argHi = loadAndIncWinCode();
-		argValue = (argLo + (argHi << 8));
-		if (argValue == 9999) break; /* Should always be last argument */
-		if (argValue == 1) continue; /* Word comparison does not matter */
-		if (b7GetInputWord(wordNum) != argValue) wordsMatch = FALSE;
-	}
-
-	if ((numInputWords != numOfArgs) && (argValue != 9999)) return FALSE;
-
-	if (wordsMatch) {
-		flag[4] = TRUE;    /* said() accepted input */
-		numInputWords = 0;
-		flag[2] = FALSE;   /* not sure about this one */
-	}
-
-	return (wordsMatch);
-}
-
-/* The said() command is in parser.h
-boolean said(byte **data)
-{
-
-}
-*/
 
 boolean b1Compare_strings() // 2, 0x00 
 {
@@ -571,8 +551,8 @@ void b2Get_posn() // 3, 0x60
 	getViewTab(&localViewtab, entryNum);
 
 
-	var[loadAndIncWinCode()] = localViewtab.xPos;
-	var[loadAndIncWinCode()] = localViewtab.yPos;
+	LOGIC_STORE_VAR(loadAndIncWinCode(), localViewtab.xPos);
+	LOGIC_STORE_VAR(loadAndIncWinCode(), localViewtab.yPos);
 
 	return;
 }
@@ -732,7 +712,7 @@ void b2Last_cel() // 2, 0x40
 	getViewTab(&localViewtab, entryNum);
 	varNum = loadAndIncWinCode();
 
-	var[varNum] = localViewtab.numberOfCels - 1;
+	LOGIC_STORE_VAR(varNum, localViewtab.numberOfCels - 1);
 	setViewTab(&localViewtab, entryNum);
 	return;
 }
@@ -746,7 +726,7 @@ void b2Current_cel() // 2, 0x40
 	getViewTab(&localViewtab, entryNum);
 	varNum = loadAndIncWinCode();
 
-	var[varNum] = localViewtab.currentCel;
+	LOGIC_STORE_VAR(varNum, localViewtab.currentCel);
 	setViewTab(&localViewtab, entryNum);
 	return;
 }
@@ -760,7 +740,7 @@ void b2Current_loop() // 2, 0x40
 	varNum = loadAndIncWinCode();
 	getViewTab(&localViewtab, entryNum);
 
-	var[varNum] = localViewtab.currentLoop;
+	LOGIC_STORE_VAR(varNum, localViewtab.currentLoop);
 	setViewTab(&localViewtab, entryNum);
 	return;
 }
@@ -775,7 +755,7 @@ void b2Current_view() // 2, 0x40
 	getViewTab(&localViewtab, entryNum);
 
 	varNum = loadAndIncWinCode();
-	var[varNum] = localViewtab.currentView;
+	LOGIC_STORE_VAR(varNum, localViewtab.currentView);
 
 	setViewTab(&localViewtab, entryNum);
 
@@ -791,7 +771,7 @@ void b2Number_of_loops() // 2, 0x40
 	getViewTab(&localViewtab, entryNum);
 
 	varNum = loadAndIncWinCode();
-	var[varNum] = localViewtab.numberOfLoops;
+	LOGIC_STORE_VAR(varNum, localViewtab.numberOfLoops);
 
 	setViewTab(&localViewtab, entryNum);
 	return;
@@ -851,7 +831,7 @@ void b2Get_priority() // 2, 0x40
 
 
 	varNum = loadAndIncWinCode();
-	var[varNum] = localViewtab.priority;
+	LOGIC_STORE_VAR(varNum, localViewtab.priority);
 
 	setViewTab(&localViewtab, entryNum);
 	return;
@@ -1016,14 +996,14 @@ void b2Distance() // 3, 0x20
 	/* Check that both objects are on screen here. If they aren't
 	** then 255 should be returned. */
 	if (!((localViewtab1.flags & DRAWN) && (localViewtab2.flags & DRAWN))) {
-		var[varNum] = 255;
+		LOGIC_STORE_VAR(varNum, 255);
 		return;
 	}
 	x1 = localViewtab1.xPos;
 	y1 = localViewtab1.yPos;
 	x2 = localViewtab2.xPos;
 	y2 = localViewtab2.yPos;
-	var[varNum] = abs(x1 - x2) + abs(y1 - y2);
+	LOGIC_STORE_VAR(varNum, abs(x1 - x2) + abs(y1 - y2));
 	return;
 }
 
@@ -1078,6 +1058,7 @@ void b2End_of_loop() // 2, 0x00
 	getViewTab(&localViewtab, entryNum);
 
 	localViewtab.param1 = loadAndIncWinCode();
+	LOGIC_STORE_FLAG(localViewtab.param1, FALSE);
 	localViewtab.cycleStatus = 1;
 	localViewtab.flags |= (UPDATE | CYCLING);
 	localViewtab.noAdvance = TRUE;
@@ -1110,6 +1091,7 @@ void b2Reverse_loop() // 2, 0x00
 	getViewTab(&localViewtab, entryNum);
 
 	localViewtab.param1 = loadAndIncWinCode();
+	LOGIC_STORE_FLAG(localViewtab.param1, FALSE);
 	localViewtab.cycleStatus = 2;
 	localViewtab.flags |= (UPDATE | CYCLING);
 
@@ -1147,7 +1129,7 @@ void b2Stop_motion() // 1, 0x00
 
 	if (entryNum == 0)
 	{
-		var[6] = 0;
+		LOGIC_STORE_VAR(6, 0);
 		controlMode = PROGRAM_CONTROL;
 	}
 
@@ -1168,7 +1150,7 @@ void b2Start_motion() // 1, 0x00
 
 	if (entryNum == 0)
 	{
-		var[6] = 0;
+		LOGIC_STORE_VAR(6, 0);
 		controlMode = PLAYER_CONTROL;
 	}
 
@@ -1314,7 +1296,7 @@ void b2Get_dir() // 2, 0x40
 	entryNum = loadAndIncWinCode();
 	getViewTab(&localViewtab, entryNum);
 
-	var[loadAndIncWinCode()] = localViewtab.direction;
+	LOGIC_STORE_VAR(loadAndIncWinCode(), localViewtab.direction);
 
 	setViewTab(&localViewtab, entryNum);
 	return;
@@ -1445,7 +1427,7 @@ void b3Get_room_v() // 2, 0xC0
 
 	bDGetObject(objNum, &objectType);
 
-	var[loadAndIncWinCode()] = objectType.roomNum;
+	LOGIC_STORE_VAR(loadAndIncWinCode(), objectType.roomNum);
 	return;
 }
 
@@ -1494,7 +1476,6 @@ void b3PrintMessageInTextbox(byte messNum, byte x, byte y, byte length, boolean 
 	char* messagePointer;
 	byte timeoutFlagVal = var[PRINT_TIMEOUT];
 	unsigned int waitTicks;
-	unsigned int vSyncToContinueAt;
 	LOGICFile logicFile;
 	byte keysToWait[NO_KEYS_TO_WAIT] = { KEY_ESC, KEY_ENTER };
 
@@ -1512,20 +1493,26 @@ void b3PrintMessageInTextbox(byte messNum, byte x, byte y, byte length, boolean 
 	show_mouse(screen);
 
 	messagePointer = getMessagePointer(currentLog, messNum - 1);
+	#if defined(LOGIC_APP_REPLAY_TARGET)
+	logicAppReplayRecordMessage((byte)currentLog, messNum, messagePointer,
+	                            logicFile.messageBank);
+	#endif
 
 	b3DisplayMessageBox(messagePointer, logicFile.messageBank, y, x, TEXTBOX_PALETTE_NUMBER, length, wrap, FIRST_TEXT_ROW);
 
 	if (timeoutFlagVal)
 	{
 		waitTicks = timeoutFlagVal * 30;  // The timeout value is given in half seconds and the TotalTicks in 1/60ths of a second.
-		vSyncToContinueAt = vSyncCounter + waitTicks;
-
-		while (vSyncCounter != vSyncToContinueAt);
+		b6WaitForVSyncFrames(waitTicks);
 	}
 	else
 	{
 		b5WaitOnSpecificKeys(keysToWait, NO_KEYS_TO_WAIT);
 	}
+	LOGIC_STORE_VAR(PRINT_TIMEOUT, 0);
+	#if defined(LOGIC_APP_REPLAY_TARGET)
+	logicAppReplayResetCycleClock();
+	#endif
 
 	b3ClearLastPlacedText();
 
@@ -1557,6 +1544,10 @@ void b3DisplayWithoutTextbox(byte row, byte col, byte messNum)
 	b5GetLogicFile(&logicFile, currentLog);
 
 	messagePointer = getMessagePointer(currentLog, messNum - 1);
+	#if defined(LOGIC_APP_REPLAY_TARGET)
+	logicAppReplayRecordMessage((byte)currentLog, messNum, messagePointer,
+	                            logicFile.messageBank);
+	#endif
 
 #ifdef VERBOSE_MESSAGE_PRINT
 	printf("attempting to print %d from script %d. The length is %d. The message pointer is %p and the bank is %p\n", messNum, currentLog, strLenBanked(messagePointer, logicFile.messageBank), messagePointer, logicFile.messageBank);
@@ -1732,13 +1723,19 @@ void b4Parse() // 1, 0x00
 	int stringNum;
 	size_t length;
 	char* stringToParse;
-	flag[2] = FALSE;
-	flag[4] = FALSE;
+#if LOGIC_CONTEXT_TRACE
+	b7SetCommandWriteTrace(TRUE);
+#endif
+	LOGIC_STORE_FLAG(2, FALSE);
+	LOGIC_STORE_FLAG(4, FALSE);
 
 	stringToParse = b7GetInternalStringPtr(stringNum, &length);
 
 	stringNum = loadAndIncWinCode();
 	b7LookupWords(stringToParse);
+#if LOGIC_CONTEXT_TRACE
+	b7SetCommandWriteTrace(FALSE);
+#endif
 	return;
 }
 
@@ -1759,7 +1756,7 @@ void b4Get_num() // 2, 0x40
 
 	messagePointer = getMessagePointer(currentLog, messNum - 1);
 	b7GetString(messagePointer, logicFile.messageBank, b7Temp, tempBank, 1, 23, 3);
-	var[varNum] = atoi(b7Temp);
+	LOGIC_STORE_VAR(varNum, atoi(b7Temp));
 
 	b10BankedDealloc((byte*)b7Temp, tempBank);
 
@@ -1853,15 +1850,18 @@ void b4Restart_game() // 0, 0x00
 
 	/* Not supported yet */
 	for (i = 0; i < 256; i++) {
-		flag[i] = FALSE;
-		var[i] = 0;
+		LOGIC_STORE_FLAG(i, FALSE);
+		LOGIC_STORE_VAR(i, 0);
 	}
-	var[24] = 0x29;
-	var[26] = 3;
-	var[8] = 255;     /* Number of free 256 byte pages of memory */
+	LOGIC_STORE_FLAG(11, TRUE);
+	LOGIC_STORE_VAR(24, 38);      /* Maximum input characters */
+	LOGIC_STORE_VAR(26, 3);
+	LOGIC_STORE_VAR(22, 1);      /* PC speaker sound generator */
+	LOGIC_STORE_VAR(8, 180);     /* Number of free 256 byte pages of memory */
 
 	newRoomNum = 0;
 	hasEnteredNewRoom = TRUE;
+	exitAllLogics = TRUE;
 	return;
 }
 
@@ -2156,25 +2156,59 @@ void b5Allow_menu() // 1, 0x01
 
 void b5Mul_n() // 2, 0x80 
 {
+#if LOGIC_CONTEXT_TRACE
+	byte varIndex, before, operand;
+	varIndex = loadAndIncWinCode();
+	before = var[varIndex];
+	operand = loadAndIncWinCode();
+	logicContextWriteVariable(varIndex, (byte)(before * operand));
+#else
 	var[loadAndIncWinCode()] *= loadAndIncWinCode();
+#endif
 	return;
 }
 
 void b5Mul_v() // 2, 0xC0 
 {
+#if LOGIC_CONTEXT_TRACE
+	byte varIndex, operandIndex, before, operand;
+	varIndex = loadAndIncWinCode();
+	before = var[varIndex];
+	operandIndex = loadAndIncWinCode();
+	operand = var[operandIndex];
+	logicContextWriteVariable(varIndex, (byte)(before * operand));
+#else
 	var[loadAndIncWinCode()] *= var[loadAndIncWinCode()];
+#endif
 	return;
 }
 
 void b5Div_n() // 2, 0x80 
 {
+#if LOGIC_CONTEXT_TRACE
+	byte varIndex, before, operand;
+	varIndex = loadAndIncWinCode();
+	before = var[varIndex];
+	operand = loadAndIncWinCode();
+	logicContextWriteVariable(varIndex, (byte)(before / operand));
+#else
 	var[loadAndIncWinCode()] /= loadAndIncWinCode();
+#endif
 	return;
 }
 
 void b5Div_v() // 2, 0xC0 
 {
+#if LOGIC_CONTEXT_TRACE
+	byte varIndex, operandIndex, before, operand;
+	varIndex = loadAndIncWinCode();
+	before = var[varIndex];
+	operandIndex = loadAndIncWinCode();
+	operand = var[operandIndex];
+	logicContextWriteVariable(varIndex, (byte)(before / operand));
+#else
 	var[loadAndIncWinCode()] /= var[loadAndIncWinCode()];
+#endif
 	return;
 }
 
@@ -2185,6 +2219,3 @@ void b5SetPriorityBase()
 }
 
 #pragma code-name (pop)
-
-
-

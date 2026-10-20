@@ -33,6 +33,8 @@ extern int bDNumObjects;
 #pragma wrapped-call (push, trampoline, OBJECT_BANK)
 void bDGetObject(byte objNum, objectType* objectType);
 void bDSetObject(byte objNum, objectType* objectType);
+int bDGetObjectCount(void);
+void bDLoadObjectFile();
 void bDDisplayInventory(boolean showObject);
 void bDInitObjects();
 

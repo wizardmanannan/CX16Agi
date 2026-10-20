@@ -1,0 +1,23 @@
+--- a/engines/agi/cycle.cpp
++++ b/engines/agi/cycle.cpp
+@@ -31,6 +31,10 @@
+ #include "agi/systemui.h"
+ #include "agi/appleIIgs_timedelay_overwrite.h"
+ 
++#ifdef CX16_AGI_ORACLE_CYCLE_HOOK
++extern "C" void cx16_agi_oracle_completed_cycle(void *engine);
++#endif
++
+ namespace Agi {
+ 
+ /**
+@@ -433,6 +437,9 @@
+ 			setFlag(VM_FLAG_SAID_ACCEPTED_INPUT, false);
+ 			setVar(VM_VAR_WORD_NOT_FOUND, 0);
+ 			setVar(VM_VAR_KEY, 0);
++#ifdef CX16_AGI_ORACLE_CYCLE_HOOK
++			cx16_agi_oracle_completed_cycle(this);
++#endif
+ 		}
+ 
+ 	} while (!(shouldQuit() || _restartGame));

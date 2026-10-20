@@ -224,7 +224,7 @@ void bAShowMenu(boolean shown)
 
 	do 
 	{
-		GET_IN(ch);                     // Get keyboard input
+		GET_IN_WAIT(ch);                // Get keyboard input
 		
 		if(ch == KEY_LEFT)
 		{

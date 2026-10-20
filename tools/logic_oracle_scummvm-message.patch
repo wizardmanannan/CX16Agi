@@ -1,0 +1,35 @@
+diff --git a/engines/agi/text.cpp b/engines/agi/text.cpp
+index cc02816b..c0d7b637 100644
+--- a/engines/agi/text.cpp
++++ b/engines/agi/text.cpp
+@@ -29,6 +29,10 @@
+ #include "agi/systemui.h"
+ #include "agi/words.h"
+ 
++#ifdef CX16_AGI_ORACLE_MESSAGE_HOOK
++extern "C" void cx16_agi_oracle_printed_message(void *engine, int message, const char *text);
++#endif
++
+ namespace Agi {
+ 
+ TextMgr::TextMgr(AgiEngine *vm, Words *words, GfxMgr *gfx) {
+@@ -246,6 +250,9 @@ void TextMgr::display(int16 textNr, int16 textRow, int16 textColumn) {
+ 
+ 	if (textNr >= 1 && textNr <= _vm->_game._curLogic->numTexts) {
+ 		logicTextPtr = _vm->_game._curLogic->texts[textNr - 1];
++#ifdef CX16_AGI_ORACLE_MESSAGE_HOOK
++		cx16_agi_oracle_printed_message(_vm, textNr, logicTextPtr);
++#endif
+ 		processedTextPtr = stringPrintf(logicTextPtr);
+ 
+ 		int16 calculatedWidth = 0;
+@@ -403,6 +410,9 @@ void TextMgr::print(int16 textNr) {
+ 	const char *logicTextPtr = nullptr;
+ 	if (textNr >= 1 && textNr <= _vm->_game._curLogic->numTexts) {
+ 		logicTextPtr = _vm->_game._curLogic->texts[textNr - 1];
++#ifdef CX16_AGI_ORACLE_MESSAGE_HOOK
++		cx16_agi_oracle_printed_message(_vm, textNr, logicTextPtr);
++#endif
+ 		messageBox(logicTextPtr);
+ 	}
+ }
