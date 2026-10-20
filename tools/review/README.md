@@ -32,6 +32,10 @@ obj/review-tools verify --plan tools/review/cx16.plan \
 Capture creates its new evidence directory; create an empty replay root before
 verification. Use separate paths for each run. The plan declares
 which suites and baseline witnesses the publication decision requires.
+Suite and witness fixtures use unique owned directories under the caller's
+absolute `TMPDIR` (default `/tmp`), outside the checkout. Generated binaries,
+logs, and retained artifacts stay in the evidence output tree. Both capture
+and fresh verification clean their temporary fixture directories on failure.
 
 The packet establishes executable results for named revisions. It cannot
 establish when they ran, who approved them, or whether GitHub permits a merge.

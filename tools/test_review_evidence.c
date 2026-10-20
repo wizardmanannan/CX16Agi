@@ -1,3 +1,4 @@
+#define _XOPEN_SOURCE 700
 #define _POSIX_C_SOURCE 200809L
 #include <errno.h>
 #include <fcntl.h>
@@ -27,6 +28,8 @@ static char report[4096];
 static char plan_path[4096];
 static char tool_log[4096];
 static char fixture_input[4096];
+static char product_tools[4096];
+static char engine_temp_base[4096];
 
 static void path_join(char *path, size_t capacity, const char *root, const char *part)
 {
@@ -63,6 +66,58 @@ static void create_unix_socket(const char *path)
     CHECK(!bind(descriptor, (struct sockaddr *)&address, sizeof(address)),
           "Cannot bind review evidence Unix socket fixture");
     CHECK(!close(descriptor), "Cannot close review evidence Unix socket fixture");
+}
+
+static void check_engine_fixture_temps_clean(void)
+{
+    DIR *directory = opendir(engine_temp_base);
+    CHECK(directory != NULL, "Cannot inspect review evidence fixture temp root");
+    bool leaked = false;
+    for (;;) {
+        errno = 0;
+        struct dirent *entry = readdir(directory);
+        if (!entry) {
+            CHECK(!errno, "Cannot read review evidence fixture temp root");
+            break;
+        }
+        if (!strncmp(entry->d_name, "review-suite-", strlen("review-suite-")) ||
+            !strncmp(entry->d_name, "review-witness-", strlen("review-witness-"))) {
+            fprintf(stderr, "Review evidence leaked external fixture temp %s/%s\n",
+                    engine_temp_base, entry->d_name);
+            leaked = true;
+        }
+    }
+    CHECK(!closedir(directory), "Cannot close review evidence fixture temp root");
+    CHECK(!leaked, "Review evidence did not clean external fixture temps");
+}
+
+static void check_native_workflow_binary(const char *report_directory)
+{
+    char artifacts[4096];
+    path_join(artifacts, sizeof(artifacts), report_directory, "artifacts/suites/required-native");
+    DIR *directory = opendir(artifacts);
+    CHECK(directory != NULL, "Native workflow suite artifact directory is missing");
+    bool found = false;
+    for (;;) {
+        errno = 0;
+        struct dirent *entry = readdir(directory);
+        if (!entry) {
+            CHECK(!errno, "Cannot read native workflow suite artifacts");
+            break;
+        }
+        if (strncmp(entry->d_name, "cx16agi-review-workflow.",
+                    strlen("cx16agi-review-workflow."))) continue;
+        char work[4096], binary[4096];
+        path_join(work, sizeof(work), artifacts, entry->d_name);
+        path_join(binary, sizeof(binary), work, "bin/test_review_workflow");
+        struct stat info;
+        if (!stat(binary, &info) && S_ISREG(info.st_mode) && !access(binary, X_OK)) {
+            found = true;
+            break;
+        }
+    }
+    CHECK(!closedir(directory), "Cannot close native workflow suite artifacts");
+    CHECK(found, "Native workflow suite did not retain its compiled test binary");
 }
 
 static char *read_text(const char *path)
@@ -372,10 +427,21 @@ static void write_plan(const char *path, const char *candidate, const char *base
         "suite|required-contract|15|8|@TOOL:make@|-f|Makefile|test|OUT=@OUT@|CC=@TOOLCHAIN@|HOST_CC=@TOOL:host-cc@|INPUT_DIR=@INPUT:fixture-data@\n");
     else snprintf(suite, sizeof(suite),
         "suite|required-contract|15|7|@TOOL:make@|-f|Makefile|test|OUT=@OUT@|CC=@TOOLCHAIN@|HOST_CC=@TOOL:host-cc@\n");
-    char input_record[4096] = "";
+    char input_record[8192] = "";
     if (fixture_input && *fixture_input) {
-        int input_length = snprintf(input_record, sizeof(input_record), "input|fixture-data|%s\n", fixture_input);
+        int input_length = snprintf(input_record, sizeof(input_record),
+                                    "input|fixture-data|%s\ninput|product-tools|%s\n",
+                                    fixture_input, product_tools);
         CHECK(input_length > 0 && input_length < (int)sizeof(input_record), "Review input path is too long");
+    }
+    if (fixture_input && *fixture_input) {
+        size_t used = strlen(suite);
+        CHECK(used < sizeof(suite), "Review native fixture guard suite is too large");
+        int suite_length = snprintf(suite + used, sizeof(suite) - used,
+            "suite|required-native|20|8|@TOOL:make@|-C|@INPUT:product-tools@|review-workflow-test|"
+            "TEST_OUTPUT_ROOT=@OUT@|TEST_FIXTURE_ROOT=@TMP@|HOST_CC=@TOOL:host-cc@|KEEP_TEST_OUTPUT=1\n");
+        CHECK(suite_length > 0 && (size_t)suite_length < sizeof(suite) - used,
+              "Review native fixture guard suite is too large");
     }
     int length = snprintf(plan, sizeof(plan),
         "review-plan-v2\n"
@@ -443,6 +509,29 @@ static void expect_tool_status(const char *tool, const char *operation, const ch
     }
 }
 
+static void expect_capture_uses_external_fixture_root(const char *tool, const char *plan,
+                                                      const char *directory)
+{
+    int status = run_tool(tool, "capture", plan, directory, NULL);
+    char native_log[4096];
+    path_join(native_log, sizeof(native_log), directory, "logs/required-native.log");
+    if (status) {
+        if (access(native_log, R_OK) || !file_contains(native_log,
+                "test fixtures must be outside the product worktree")) {
+            fprintf(stderr, "Review evidence capture failed before reaching the product fixture-root guard (exit %d)\n",
+                    status);
+            run_from_print_log_tail(tool_log);
+            exit(EXIT_FAILURE);
+        }
+        fputs("Regression reproduced: the native product suite received an in-worktree fixture root\n", stderr);
+        run_from_print_log_tail(native_log);
+        exit(EXIT_FAILURE);
+    }
+    CHECK(file_contains(native_log,
+                        "PASS actual workflow aggregate rejects incomplete jobs, stale identities and forged merge trees"),
+          "Review evidence capture did not execute the real native workflow suite");
+}
+
 static void expect_tool_failure(const char *tool, const char *operation, const char *plan,
                                 const char *directory, const char *replay_root,
                                 const char *message)
@@ -492,6 +581,15 @@ int main(int argc, char **argv)
 {
     CHECK(argc == 3, "Expected review-tools path and host C compiler name");
     suite_test_paths_init("review-evidence");
+    const char *temp_root = getenv("TMPDIR");
+    if (!temp_root || !*temp_root) temp_root = "/tmp";
+    CHECK(realpath(temp_root, engine_temp_base) != NULL,
+          "Cannot resolve review evidence external fixture temp root");
+    CHECK(realpath(__FILE__, product_tools) != NULL,
+          "Cannot resolve review evidence native product test source");
+    char *source_separator = strrchr(product_tools, '/');
+    CHECK(source_separator != NULL, "Review evidence native product source path has no directory");
+    *source_separator = '\0';
     CHECK(snprintf(output_root, sizeof(output_root), "%s/review-evidence-XXXXXX", suite_output_directory) <
           (int)sizeof(output_root), "Review evidence output path is too long");
     CHECK(mkdtemp(output_root) != NULL, "Cannot create review evidence suite output");
@@ -518,8 +616,9 @@ int main(int argc, char **argv)
     create_fixture(argv[2], baseline, sizeof(baseline), candidate, sizeof(candidate));
     write_plan(plan_path, candidate, baseline, false, false, false, false, "contract_test.c", fixture_input, NULL);
 
-    expect_tool_status(argv[1], "capture", plan_path, report, NULL, 0,
-                       "Review evidence capture did not record the real C baseline failure and fixed candidate");
+    expect_capture_uses_external_fixture_root(argv[1], plan_path, report);
+    check_native_workflow_binary(report);
+    check_engine_fixture_temps_clean();
     char evidence_path[4096], packet_path[4096];
     path_join(evidence_path, sizeof(evidence_path), report, "evidence.v2");
     path_join(packet_path, sizeof(packet_path), report, "review.md");
@@ -676,6 +775,7 @@ int main(int argc, char **argv)
     write_text(git_head_metadata, "ref: refs/heads/metadata-change\n");
     expect_tool_status(argv[1], "verify", plan_path, report, output_root, 0,
                        "Trusted review evidence verification rejected an intact run");
+    check_engine_fixture_temps_clean();
 
     char outside_git_socket[4096], outside_git_report[4096];
     path_join(outside_git_socket, sizeof(outside_git_socket), fixture_input, "s");
@@ -835,6 +935,7 @@ int main(int argc, char **argv)
     write_plan(failed_plan, candidate, baseline, true, false, false, false, "contract_test.c", NULL, NULL);
     expect_tool_failure(argv[1], "capture", failed_plan, failed_report, NULL,
                         "Capture accepted a nonzero required suite");
+    check_engine_fixture_temps_clean();
     path_join(evidence_path, sizeof(evidence_path), failed_report, "evidence.v2");
     CHECK(access(evidence_path, R_OK) == 0, "Failed required suite did not leave inspectable failure evidence");
     check_plan_digest(failed_plan, evidence_path);

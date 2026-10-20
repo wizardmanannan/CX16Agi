@@ -1108,14 +1108,17 @@ static void cleanup_temporary_root(void)
     }
 }
 
-static void make_safe_environment(const char *root, char home[PATH_CAP], char temp[PATH_CAP],
+static void make_safe_environment(const char *root, const char *fixture_temp,
+                                  char home[PATH_CAP], char temp[PATH_CAP],
                                   char output[PATH_CAP], char *env[11])
 {
     join_path(home, PATH_CAP, root, "home");
-    join_path(temp, PATH_CAP, root, "tmp");
+    copy_field(temp, PATH_CAP, fixture_temp, "external fixture temp directory");
     join_path(output, PATH_CAP, root, "test-output");
     mkdir_one(home);
-    mkdir_one(temp);
+    struct stat temp_info;
+    if (lstat(temp, &temp_info) || !S_ISDIR(temp_info.st_mode) || S_ISLNK(temp_info.st_mode))
+        fail("external fixture temp is not a real directory: %s", temp);
     mkdir_one(output);
     static char path_env[] = "PATH=/usr/local/bin:/usr/bin:/bin";
     static char lang_env[] = "LANG=C";
@@ -1177,7 +1180,7 @@ static char *find_executable_at(const char *name, const char *directory)
 }
 
 static ProcessResult run_logged(char *const argv[], const char *directory, const char *log,
-                                const char *sandbox, unsigned timeout)
+                                const char *sandbox, const char *fixture_temp, unsigned timeout)
 {
     ProcessResult result = { .exit_code = 127, .signal_number = 0, .timed_out = 0, .skipped = 0 };
     char *program = find_executable_at(argv[0], directory);
@@ -1191,7 +1194,7 @@ static ProcessResult run_logged(char *const argv[], const char *directory, const
     }
     char home[PATH_CAP], temp[PATH_CAP], output[PATH_CAP];
     char *env[11];
-    make_safe_environment(sandbox, home, temp, output, env);
+    make_safe_environment(sandbox, fixture_temp, home, temp, output, env);
     char limit_message[128];
     int limit_length = snprintf(limit_message, sizeof(limit_message),
                                 "\nreview-tools: child log output limit reached (%u bytes)\n",
@@ -1596,19 +1599,66 @@ static void create_output_layout(const char *root)
     }
 }
 
-static void create_owned_directory(const char *root, char owned[PATH_CAP])
+static void create_owned_directory_named(const char *root, const char *prefix,
+                                         char owned[PATH_CAP])
 {
     if (temporary_root_count == sizeof(temporary_roots) / sizeof(temporary_roots[0]))
         fail("too many nested owned replay directories");
     char template[PATH_CAP];
-    int length = snprintf(template, sizeof(template), "%s/review-replay-XXXXXX", root);
+    int length = snprintf(template, sizeof(template), "%s/%sXXXXXX", root, prefix);
     if (length < 0 || length >= (int)sizeof(template)) fail("replay path is too long");
     if (!mkdtemp(template)) fail("cannot create owned replay directory under %s: %s", root, strerror(errno));
-    copy_field(owned, PATH_CAP, template, "owned replay directory");
-    copy_field(temporary_roots[temporary_root_count++], PATH_CAP, template, "temporary replay directory");
     if (!temporary_cleanup_registered) {
-        if (atexit(cleanup_temporary_root)) fail("cannot register replay cleanup");
+        if (atexit(cleanup_temporary_root)) {
+            remove_tree(template);
+            fail("cannot register replay cleanup");
+        }
         temporary_cleanup_registered = true;
+    }
+    char resolved[PATH_CAP];
+    if (!realpath(template, resolved)) {
+        int saved_errno = errno;
+        remove_tree(template);
+        fail("cannot resolve owned replay directory: %s", strerror(saved_errno));
+    }
+    copy_field(owned, PATH_CAP, resolved, "owned replay directory");
+    copy_field(temporary_roots[temporary_root_count++], PATH_CAP, resolved, "temporary replay directory");
+}
+
+static void create_owned_directory(const char *root, char owned[PATH_CAP])
+{
+    create_owned_directory_named(root, "review-replay-", owned);
+}
+
+static bool path_is_within(const char *root, const char *path)
+{
+    size_t length = strlen(root);
+    if (length == 1 && root[0] == '/') return path[0] == '/';
+    return !strncmp(path, root, length) && (path[length] == '/' || path[length] == '\0');
+}
+
+static void resolve_fixture_temp_base(char base[PATH_CAP])
+{
+    const char *requested = getenv("TMPDIR");
+    if (!requested || !*requested) requested = "/tmp";
+    if (requested[0] != '/') fail("caller TMPDIR must be an absolute existing directory");
+    struct stat info;
+    if (!realpath(requested, base) || stat(base, &info) || !S_ISDIR(info.st_mode))
+        fail("caller TMPDIR must be an absolute existing directory: %s", requested);
+}
+
+static void remove_owned_directory(const char *path);
+
+static void create_external_fixture_directory(const Plan *plan, const char *base,
+                                              const char *prefix, char owned[PATH_CAP])
+{
+    create_owned_directory_named(base, prefix, owned);
+    char repo[PATH_CAP];
+    if (!realpath(plan->repo, repo))
+        fail("cannot resolve external suite fixture directory");
+    if (path_is_within(repo, owned)) {
+        remove_owned_directory(owned);
+        fail("external suite fixture directory is inside the product worktree: %s", owned);
     }
 }
 
@@ -1704,34 +1754,40 @@ static void require_identity(const Plan *plan, char head[65], char tree[65])
     if (!clean_repo(plan->repo)) fail("Git checkout has tracked or untracked input changes");
 }
 
-static void run_suite_capture(const Plan *plan, const Suite *suite, const char *root, SuiteFact *fact)
+static void run_suite_capture(const Plan *plan, const Suite *suite, const char *root,
+                              const char *fixture_base, SuiteFact *fact)
 {
     char artifact_relative[256], log_relative[256], sandbox_relative[256];
     snprintf(artifact_relative, sizeof(artifact_relative), "artifacts/suites/%s", suite->name);
     snprintf(log_relative, sizeof(log_relative), "logs/%s.log", suite->name);
     snprintf(sandbox_relative, sizeof(sandbox_relative), "sandbox-suite-%s", suite->name);
-    char artifacts[PATH_CAP], log[PATH_CAP], sandbox[PATH_CAP];
+    char artifacts[PATH_CAP], log[PATH_CAP], sandbox[PATH_CAP], fixture_temp[PATH_CAP];
     join_path(artifacts, sizeof(artifacts), root, artifact_relative);
     join_path(log, sizeof(log), root, log_relative);
     join_path(sandbox, sizeof(sandbox), root, sandbox_relative);
     ensure_directory(artifacts);
     ensure_directory(sandbox);
-    char sandbox_temp[PATH_CAP];
-    join_path(sandbox_temp, sizeof(sandbox_temp), sandbox, "tmp");
+    char fixture_prefix[256];
+    int prefix_length = snprintf(fixture_prefix, sizeof(fixture_prefix), "review-suite-%s-", suite->name);
+    if (prefix_length < 0 || prefix_length >= (int)sizeof(fixture_prefix))
+        fail("suite fixture temp name is too long");
+    create_external_fixture_directory(plan, fixture_base, fixture_prefix, fixture_temp);
     char *toolchain_path = resolve_plan_toolchain(plan);
-    char **arguments = expand_argv(plan, suite->argv, suite->argc, artifacts, sandbox_temp,
+    char **arguments = expand_argv(plan, suite->argv, suite->argc, artifacts, fixture_temp,
                                    plan->repo, toolchain_path);
     free(toolchain_path);
-    fact->result = run_logged(arguments, plan->repo, log, sandbox, suite->timeout);
+    fact->result = run_logged(arguments, plan->repo, log, sandbox, fixture_temp, suite->timeout);
     free_argv(arguments, suite->argc);
     copy_field(fact->name, sizeof(fact->name), suite->name, "suite name");
     copy_field(fact->log, sizeof(fact->log), log_relative, "suite log path");
     hash_log(root, fact->log, fact->log_sha);
     tree_sha(artifacts, fact->artifact_sha);
+    remove_owned_directory(fixture_temp);
     if (!remove_tree(sandbox)) fail("cannot clean suite sandbox %s", sandbox);
 }
 
 static void extract_revision(const Plan *plan, const char *revision, const char *scratch,
+                            const char *fixture_temp,
                             char source[PATH_CAP], char tree[65])
 {
     char archive[PATH_CAP], archive_log[PATH_CAP], extract_log[PATH_CAP];
@@ -1743,12 +1799,14 @@ static void extract_revision(const Plan *plan, const char *revision, const char 
 
     char *archive_argv[] = { (char *)"git", (char *)"-C", (char *)plan->repo, (char *)"archive",
         (char *)"--format=tar", (char *)"--output", archive, (char *)revision, NULL };
-    ProcessResult archived = run_logged(archive_argv, plan->repo, archive_log, scratch, 60);
+    ProcessResult archived = run_logged(archive_argv, plan->repo, archive_log, scratch,
+                                        fixture_temp, 60);
     if (!result_ok(&archived)) fail("cannot archive regression revision %s", revision);
 
     char *tar_argv[] = { (char *)"tar", (char *)"-xf", archive, (char *)"-C", source,
         (char *)"--no-same-owner", (char *)"--no-same-permissions", NULL };
-    ProcessResult extracted = run_logged(tar_argv, scratch, extract_log, scratch, 60);
+    ProcessResult extracted = run_logged(tar_argv, scratch, extract_log, scratch,
+                                         fixture_temp, 60);
     if (!result_ok(&extracted)) fail("cannot extract regression revision %s", revision);
     git_tree(plan->repo, revision, tree);
 }
@@ -1857,21 +1915,28 @@ static void apply_witness_overlays(const Witness *witness, const char *overlay_r
 }
 
 static void run_witness_side(const Plan *plan, const Witness *witness, const char *side,
-                             const char *revision, const char *root, WitnessFact *fact)
+                             const char *revision, const char *root, const char *fixture_base,
+                             WitnessFact *fact)
 {
     char artifact_relative[256], build_relative[256], run_relative[256];
     snprintf(artifact_relative, sizeof(artifact_relative), "artifacts/witnesses/%s-%s", witness->name, side);
     snprintf(build_relative, sizeof(build_relative), "logs/%s-%s-build.log", witness->name, side);
     snprintf(run_relative, sizeof(run_relative), "logs/%s-%s-run.log", witness->name, side);
-    char artifacts[PATH_CAP], build_log[PATH_CAP], run_log[PATH_CAP], scratch[PATH_CAP];
+    char artifacts[PATH_CAP], build_log[PATH_CAP], run_log[PATH_CAP];
+    char scratch[PATH_CAP], fixture_temp[PATH_CAP], fixture_prefix[256];
     join_path(artifacts, sizeof(artifacts), root, artifact_relative);
     join_path(build_log, sizeof(build_log), root, build_relative);
     join_path(run_log, sizeof(run_log), root, run_relative);
     ensure_directory(artifacts);
     create_owned_directory(root, scratch);
+    int prefix_length = snprintf(fixture_prefix, sizeof(fixture_prefix),
+                                 "review-witness-%s-%s-", witness->name, side);
+    if (prefix_length < 0 || prefix_length >= (int)sizeof(fixture_prefix))
+        fail("witness fixture temp name is too long");
+    create_external_fixture_directory(plan, fixture_base, fixture_prefix, fixture_temp);
 
     char source[PATH_CAP];
-    extract_revision(plan, revision, scratch, source, fact->tree);
+    extract_revision(plan, revision, scratch, fixture_temp, source, fact->tree);
     char overlay_root[PATH_CAP];
     if (!strcmp(revision, plan->candidate)) {
         copy_field(overlay_root, sizeof(overlay_root), source, "candidate overlay source");
@@ -1879,24 +1944,25 @@ static void run_witness_side(const Plan *plan, const Witness *witness, const cha
         char overlay_scratch[PATH_CAP], ignored_tree[65];
         join_path(overlay_scratch, sizeof(overlay_scratch), scratch, "candidate-overlay");
         ensure_directory(overlay_scratch);
-        extract_revision(plan, plan->candidate, overlay_scratch, overlay_root, ignored_tree);
+        extract_revision(plan, plan->candidate, overlay_scratch, fixture_temp,
+                         overlay_root, ignored_tree);
     }
     apply_witness_overlays(witness, overlay_root, source, fact->overlay_sha);
     readonly_tree(source);
-    char scratch_temp[PATH_CAP];
-    join_path(scratch_temp, sizeof(scratch_temp), scratch, "tmp");
     char *toolchain_path = resolve_plan_toolchain(plan);
     char **build_argv = expand_argv(plan, witness->build_argv, witness->build_argc, artifacts,
-                                    scratch_temp, source, toolchain_path);
+                                    fixture_temp, source, toolchain_path);
     free(toolchain_path);
-    fact->build = run_logged(build_argv, source, build_log, scratch, witness->timeout);
+    fact->build = run_logged(build_argv, source, build_log, scratch, fixture_temp,
+                             witness->timeout);
     free_argv(build_argv, witness->build_argc);
     if (result_ok(&fact->build)) {
         char *run_toolchain = resolve_plan_toolchain(plan);
         char **run_argv = expand_argv(plan, witness->run_argv, witness->run_argc, artifacts,
-                                      scratch_temp, source, run_toolchain);
+                                      fixture_temp, source, run_toolchain);
         free(run_toolchain);
-        fact->run = run_logged(run_argv, source, run_log, scratch, witness->timeout);
+        fact->run = run_logged(run_argv, source, run_log, scratch, fixture_temp,
+                               witness->timeout);
         free_argv(run_argv, witness->run_argc);
     } else {
         fact->run.exit_code = 0;
@@ -1914,6 +1980,7 @@ static void run_witness_side(const Plan *plan, const Witness *witness, const cha
     hash_log(root, fact->build_log, fact->build_log_sha);
     hash_log(root, fact->run_log, fact->run_log_sha);
     tree_sha(artifacts, fact->artifact_sha);
+    remove_owned_directory(fixture_temp);
     remove_owned_directory(scratch);
 }
 
@@ -2317,11 +2384,11 @@ static void verify_recorded_outcomes(const Plan *plan, const Evidence *evidence,
     }
 }
 
-static void replay_required_suites(const Plan *plan, const char *root)
+static void replay_required_suites(const Plan *plan, const char *root, const char *fixture_base)
 {
     for (size_t i = 0; i < plan->suite_count; ++i) {
         SuiteFact replay = { 0 };
-        run_suite_capture(plan, &plan->suites[i], root, &replay);
+        run_suite_capture(plan, &plan->suites[i], root, fixture_base, &replay);
         if (!result_ok(&replay.result))
             fail("trusted required suite replay failed: %s (exit=%d, signal=%d, timeout=%s, skipped=%s; log %s/%s)",
                  plan->suites[i].name, replay.result.exit_code, replay.result.signal_number,
@@ -2330,14 +2397,15 @@ static void replay_required_suites(const Plan *plan, const char *root)
     }
 }
 
-static void replay_witnesses(const Plan *plan, const Evidence *captured, const char *root)
+static void replay_witnesses(const Plan *plan, const Evidence *captured, const char *root,
+                             const char *fixture_base)
 {
     Evidence replay = { 0 };
     for (size_t i = 0; i < plan->witness_count; ++i) {
         run_witness_side(plan, &plan->witnesses[i], "baseline", plan->witnesses[i].baseline,
-                         root, &replay.witnesses[replay.witness_fact_count++]);
+                         root, fixture_base, &replay.witnesses[replay.witness_fact_count++]);
         run_witness_side(plan, &plan->witnesses[i], "candidate", plan->candidate,
-                         root, &replay.witnesses[replay.witness_fact_count++]);
+                         root, fixture_base, &replay.witnesses[replay.witness_fact_count++]);
         for (size_t side = 0; side < 2; ++side) {
             const WitnessFact *recorded = &captured->witnesses[i * 2 + side];
             const WitnessFact *fresh = &replay.witnesses[i * 2 + side];
@@ -2372,12 +2440,14 @@ static void run_verify_command(const char *plan_path, const char *evidence_path,
     verify_tool_identities(&plan, &evidence, argv0);
     verify_captured_files(&plan, &evidence, root);
     verify_recorded_outcomes(&plan, &evidence, root);
+    char fixture_base[PATH_CAP];
+    resolve_fixture_temp_base(fixture_base);
     char replay_base[PATH_CAP], replay_root[PATH_CAP];
     safe_scratch_root(replay_path, replay_base);
     create_owned_directory(replay_base, replay_root);
     create_output_layout(replay_root);
-    replay_required_suites(&plan, replay_root);
-    replay_witnesses(&plan, &evidence, replay_root);
+    replay_required_suites(&plan, replay_root, fixture_base);
+    replay_witnesses(&plan, &evidence, replay_root, fixture_base);
     verify_current_identity(&plan, &evidence);
     remove_owned_directory(replay_root);
     printf("Verified executable review evidence for %s\n", evidence.candidate);
@@ -2603,6 +2673,8 @@ static void run_capture_command(const char *plan_path, const char *output_path, 
     Plan plan = { 0 };
     Evidence evidence = { 0 };
     parse_plan(plan_path, &plan);
+    char fixture_base[PATH_CAP];
+    resolve_fixture_temp_base(fixture_base);
     if (mkdir(output_path, 0700)) fail("cannot create evidence output %s: %s", output_path, strerror(errno));
     char output_root[PATH_CAP];
     if (!realpath(output_path, output_root)) fail("cannot resolve evidence output %s", output_path);
@@ -2621,13 +2693,16 @@ static void run_capture_command(const char *plan_path, const char *output_path, 
 
     evidence.suite_count = plan.suite_count;
     for (size_t i = 0; i < plan.suite_count; ++i)
-        run_suite_capture(&plan, &plan.suites[i], output_root, &evidence.suites[i]);
+        run_suite_capture(&plan, &plan.suites[i], output_root, fixture_base,
+                          &evidence.suites[i]);
 
     for (size_t i = 0; i < plan.witness_count; ++i) {
         run_witness_side(&plan, &plan.witnesses[i], "baseline", plan.witnesses[i].baseline,
-                         output_root, &evidence.witnesses[evidence.witness_fact_count++]);
+                         output_root, fixture_base,
+                         &evidence.witnesses[evidence.witness_fact_count++]);
         run_witness_side(&plan, &plan.witnesses[i], "candidate", plan.candidate,
-                         output_root, &evidence.witnesses[evidence.witness_fact_count++]);
+                         output_root, fixture_base,
+                         &evidence.witnesses[evidence.witness_fact_count++]);
     }
 
     verify_tool_identities(&plan, &evidence, argv0);
