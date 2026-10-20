@@ -2053,12 +2053,20 @@ void b5Reposition_to_v() // 3, 0x60
 
 void b5Print_at() // 4, 0x00           /* 3 args for AGI versions before */
 {
-	b3PrintMessageInTextbox(loadAndIncWinCode(), loadAndIncWinCode(), loadAndIncWinCode(), loadAndIncWinCode(), TRUE);
+    byte message = loadAndIncWinCode();
+    byte row = loadAndIncWinCode();
+    byte column = loadAndIncWinCode();
+    byte width = loadAndIncWinCode();
+    b3PrintMessageInTextbox(message, column, row, width, TRUE);
 }
 
 void b5Print_at_v() // 4, 0x80         /* 2_440 (maybe laterz) */
 {
-	b3PrintMessageInTextbox(var[loadAndIncWinCode()], loadAndIncWinCode(), loadAndIncWinCode(), loadAndIncWinCode(), TRUE);
+    byte message = var[loadAndIncWinCode()];
+    byte row = loadAndIncWinCode();
+    byte column = loadAndIncWinCode();
+    byte width = loadAndIncWinCode();
+    b3PrintMessageInTextbox(message, column, row, width, TRUE);
 }
 
 void b5Discard_view_v() // 1, 0x80 

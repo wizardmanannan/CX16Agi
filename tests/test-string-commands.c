@@ -31,6 +31,27 @@ char cursorChar = '_';
 static char allocatedWindow[80];
 static unsigned int allocations;
 static unsigned int metadataInitializations, dependencyLoads;
+BITMAP* screen;
+unsigned int vSyncCounter;
+static byte expectedRow, expectedColumn, expectedWidth;
+static unsigned int positionedDisplays, positionedClears;
+extern void b5Print_at(void), b5Print_at_v(void);
+
+void show_mouse(BITMAP* bitmap) { (void)bitmap; }
+void b5WaitOnSpecificKeys(byte* keys, byte count)
+{
+    assert(count == 2 && keys[0] == KEY_ESC && keys[1] == KEY_ENTER);
+}
+void b3ClearLastPlacedText(void) { positionedClears++; }
+void b3DisplayMessageBox(char* message, byte bank, byte row, byte column,
+                        byte palette, byte width, boolean wrap, byte firstRow)
+{
+    assert(strcmp(message, "placed") == 0 && bank == 21);
+    assert(row == expectedRow && column == expectedColumn);
+    assert(width == expectedWidth && wrap && firstRow == FIRST_TEXT_ROW);
+    assert(palette == TEXTBOX_PALETTE_NUMBER);
+    positionedDisplays++;
+}
 
 void b4InitMetadata(void)
 {
@@ -165,6 +186,26 @@ static void test_set_string(void)
 	assert(strcmp(string[1], "guard") == 0);
 }
 
+static void test_positioned_print(void)
+{
+    messages[0] = (byte*)"placed";
+    operands[0] = 1;
+    operands[1] = expectedRow = 2;
+    operands[2] = expectedColumn = 10;
+    operands[3] = expectedWidth = 18;
+    operandCount = 0;
+    b5Print_at();
+    assert(operandCount == 4 && positionedDisplays == 1 && positionedClears == 1);
+    variables[42] = 1;
+    operands[0] = 42;
+    operands[1] = expectedRow = 3;
+    operands[2] = expectedColumn = 11;
+    operands[3] = expectedWidth = 20;
+    operandCount = 0;
+    b5Print_at_v();
+    assert(operandCount == 4 && positionedDisplays == 2 && positionedClears == 2);
+}
+
 static void test_word_to_string(void)
 {
 	strcpy(b7WordText[0], "look");
@@ -297,6 +338,7 @@ int main(void)
 	test_said_rejects_excess_arguments();
 	test_said_trailing_wildcard();
     test_said_high_dictionary_ids();
+    test_positioned_print();
 	puts("string command tests passed");
 	return 0;
 }
