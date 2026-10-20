@@ -22,6 +22,10 @@
     .include "controllersAsm.s"
     .include "statusBar.s"
     .include "showObjAsm.s"
+
+.ifdef LOGIC_APP_REPLAY_TARGET
+    .include "logicAppReplay.s"
+.endif
     .include "objectAsm.s"
     
     .export _executeLogic
@@ -130,4 +134,3 @@
     .export _bDWriteNext
     .export _bDDisplayInventoryInner
     .export _bDPadWordsWithSpaces
-

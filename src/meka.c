@@ -31,6 +31,9 @@
 #include "sound.h"
 #include "spriteAllocator.h"
 #include "menu.h"
+#if LOGIC_CONTEXT_TRACE
+#include "logicContext.h"
+#endif
 //#include "sound.h"
 
 boolean hasEnteredNewRoom = FALSE, exitAllLogics = FALSE;
@@ -208,6 +211,10 @@ void b6Interpret()
 
         b9UpdateObjectDirections();
         executeLogic(&logicEntry, 0);
+#if defined(LOGIC_APP_REPLAY_TARGET) && defined(LOGIC_CONTEXT_VERIFY)
+        if (logicContextVerifyFailed)
+            return;
+#endif
 
         //dirnOfEgo = var[6];
         getViewTab(&localViewtab, 0);
@@ -329,22 +336,13 @@ void b6Initialise()
 extern void loadInitBankAndInitMemory();
 
 byte mainLoopCounter = 0;
-void main()
+
+/* Keep normal startup and the deterministic emulator entry on the same
+   application initialization path. The test target changes only the seed. */
+void b6ReplayStartApplication(unsigned int seed)
 {
-    int ret, oldCount = 0;
-    unsigned int lastVsync = vSyncCounter;
-
-
-    //chdir("..\\KQ1-2917");
-    //chdir("..\\COMPILER\\NEW\\SAMPLE\\TEMPLATE");
-    //chdir("\\GAMES\\SIERRA\\MH2");
-    //chdir("\\GAMES\\SIERRA\\MH1");
-    //chdir("\\GAMES\\SIERRA\\SQ2");
-    //chdir("\\GAMES\\SIERRA\\LSL1");
-    //chdir("..\\KQ2-2917");
-
     RAM_BANK = 7;
-    srand(*((unsigned int*)0xA000)); //Memory starts as random gibberish
+    srand(seed);
 
     loadInitBankAndInitMemory();
     RAM_BANK = DEBUG_INIT_BANK;
@@ -352,27 +350,61 @@ void main()
 
     RAM_BANK = MEKA_BANK;
     b6Initialise();
+}
+
+void b6ReplayRunInterpreterCycle(void)
+{
+    byte previousBank = RAM_BANK;
+#if LOGIC_CONTEXT_TRACE
+    ++logicContextTick;
+#endif
+    RAM_BANK = MEKA_BANK;
+    b6Interpret();
+    flag[2] = FALSE;
+    flag[4] = FALSE;
+    var[9] = 0;
+    var[19] = 0;
+    mainLoopCounter++;
+#if !defined(LOGIC_APP_REPLAY_TARGET)
+    b6CheckTimer();
+#endif
+    RAM_BANK = previousBank;
+}
+
+byte b6ReplayMainLoopStepReady(unsigned int lastVsync)
+{
+    uint16_t elapsed = (uint16_t)(b6ReadVSyncCounter() - (uint16_t)lastVsync);
+    return elapsed >= (unsigned int)var[10] * 3u;
+}
+
+void main()
+{
+#if defined(LOGIC_APP_REPLAY_TARGET)
+    extern volatile byte logicAppReplayRunRequested;
+    extern void logicAppReplayRunTarget(void);
+    if (!logicAppReplayRunRequested)
+        asm("jmp $fffd");
+    logicAppReplayRunTarget();
+    asm("jmp $fffd");
+#else
+    unsigned int lastVsync;
+    b6ReplayStartApplication(*((unsigned int*)0xA000));
+    lastVsync = b6ReadVSyncCounter();
     while (TRUE) {
         /* Cycle initiator. Controlled by delay variable (var[10). */
 
-        if (abs(vSyncCounter - lastVsync) >= var[10] * 3) {
+        if (b6ReplayMainLoopStepReady(lastVsync)) {
 
-            lastVsync = vSyncCounter;
+            lastVsync = b6ReadVSyncCounter();
 
 
 #ifdef VERBOSE
             printf("Interpret Runs\n");
 #endif // VERBOSE
-            b6Interpret();
-            // runIncrementalGarbageCollector();
-            mainLoopCounter++;
-
-            b6CheckTimer();
+            b6ReplayRunInterpreterCycle();
         }
     }
-
-    //chdir("\\HACK\\AGI\\D\\AGI\\MEKA");
-    //closedown();
+#endif
 }
 
 void main2()
