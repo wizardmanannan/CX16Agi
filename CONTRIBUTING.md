@@ -26,6 +26,8 @@ checkpoint as green.
 ```sh
 make -C tools test
 make -C tools production-test
+make -C tools review-check ROM=/path/to/rom.bin \
+  GAME_KQ1=/path/to/Kings-Quest-1 GAME_KQ3=/path/to/Kings-Quest-3
 ```
 
 The first command runs focused native C cases. The second builds a fresh image
@@ -33,6 +35,13 @@ and exercises compiled production callers on the emulator CPU core; it needs
 neither a ROM nor game files. See [README.md](README.md) for dependency setup,
 overrides, and full-emulator integration commands. Use your original game data
 and a compatible ROM for asset-dependent validation; do not commit those inputs.
+
+Before sending a change to the developer, `review-check` must pass for both
+KQ1 and KQ3 on that candidate. It runs the focused and production suites, then
+builds the shipped Makefile and runs both original games in the full emulator.
+Missing game data is a failure, never a skipped acceptance result. Record the
+game versions and compiler, emulator, and ROM revisions with the results.
+CI's ROM-free native job alone does not satisfy this handoff requirement.
 
 Report the tested commit SHA, commands, results, and execution boundaries.
 Successful tests with uncommitted changes do not validate the published head.

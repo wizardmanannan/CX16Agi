@@ -128,7 +128,7 @@ See: https://github.com/wizardmanannan/CX16Agi/blob/main/How%20To%20Setup%20Meka
 
 The audit experiments are represented by checked-in C tests under `tools/`. Generated `.audit-tmp` binaries, assembly listings, emulator clones, logs, and captures are evidence, not test inputs. Tests generate their own fixtures from current production source; no audit directory is needed.
 
-The focused C suite covers screen shake, random range/ABI behavior, exact graphics clears, sliced text, command completion, IRQ/input/sprite helpers, show-object attributes, elapsed-VSYNC timer arithmetic, palette-cache lifecycle, controller indexing, menu storage/rendering/selection, text preparation, dictionary search bounds, and bulk allocation rollback. Native scenarios additionally exercise production sprite updates and picture drawing, compare rendering against an IRQ-suppressed reference, and check allocation failure cleanup. Native runs need your own compatible ROM and KQ1 data; neither is bundled.
+The focused C suite covers screen shake, random range/ABI behavior, exact graphics clears, sliced text, command completion, IRQ/input/sprite helpers, show-object attributes, elapsed-VSYNC timer arithmetic, palette-cache lifecycle, controller indexing, menu storage/rendering/selection, text preparation, dictionary search bounds, and bulk allocation rollback. Native scenarios additionally exercise production sprite updates and picture drawing, compare rendering against an IRQ-suppressed reference, and check allocation failure cleanup. Native runs need your own compatible ROM and game data; the review gate requires both KQ1 and KQ3. These inputs are not bundled.
 
 Run from the repository root (or use `make -C tools`):
 
@@ -137,6 +137,10 @@ The suite defaults to `.tools/cc65-latest` and `.tools/x16-emulator` beside Git'
 ```sh
 make -C tools test
 make -C tools production-test
+make -C tools build-test
+# Required before developer handoff (both original games, no skipped games):
+make -C tools review-check ROM=/path/to/rom.bin \
+  GAME_KQ1=/path/to/Kings-Quest-1 GAME_KQ3=/path/to/Kings-Quest-3
 # With a compatible ROM and King's Quest I data:
 make -C tools integration-test ROM=/path/to/rom.bin GAME=/path/to/KQ1
 make -C tools picture-test ROM=/path/to/rom.bin GAME=/path/to/KQ1
@@ -147,6 +151,22 @@ make -C tools loader-test ROM=/path/to/rom.bin GAME=/path/to/KQ1
 
 `test` compiles and runs the focused C regressions, including shared dependency discovery and override checks. `production-test` builds a fresh application image and runs the compiled foreground sound routines on the emulator CPU core, without ROM or game data. Each run prints its fresh output directory under the project's `obj/` build tree; `TEST_OUTPUT_ROOT` can select another build output tree. Tests clean their owned output on exit. Set `KEEP_TEST_OUTPUT=1` only when you explicitly need diagnostic captures. Cleanup failure is an error. `HOST_CC` and `HOST_CFLAGS` configure the host compiler. Dependencies are checked explicitly.
 
+`build-test` runs the shipped Makefile with its normal compiler flags, placing
+the program, bank files and map in the suite output tree. `games-test` builds
+that same image and runs both games with normal emulator RAM initialization.
+It sends Return through the emulator keyboard to leave the introduction,
+requires KQ1 room 1 and KQ3 room 7, completed picture rendering, visible sprites,
+and ten more interpreter/input cycles, then sends Right and checks that the
+player actually moves. It does not replace a full playthrough or a visual/audio
+fidelity check. `review-check` runs `test`, `production-test`, and `games-test`
+sequentially and fails if either game or any required input is missing.
+
+For a normal build, run `CC65_HOME=/path/to/cc65 make` (or `make` when `cl65`
+is on PATH). The map is written beside the program as `agi.cx16.map`.
+Deploy `agi.cx16`, all numbered `agi.cx16.01` through `agi.cx16.12` banks,
+and the `.INIT`, `.DEBUG`, and `.SPRITEDEBUG` files from the same build into
+the game's directory. The game checks stage that complete set automatically.
+
 For native rendering and input integration:
 
 ```sh
@@ -156,7 +176,7 @@ make -C tools modes ROM=/path/to/rom.bin GAME=/path/to/KQ1 \
   SDL_PREFIX=/optional/SDL2/install
 ```
 
-`modes` runs both foreground and picture scenarios. It also requires CMake, ImageMagick (`magick`), libpng development files, and SDL2 development files, supplied by pkg-config or `SDL_PREFIX`. The isolated image build preserves production optimizer exclusions except `OptStackOps`, which current cc65 rejects, and includes private assembly debug symbols. No test reads `.audit-tmp`; old evidence can be archived independently.
+`modes` runs both foreground and picture scenarios. It also requires CMake, ImageMagick (`magick`), libpng development files, and SDL2 development files, supplied by pkg-config or `SDL_PREFIX`. The isolated image build preserves production optimizer exclusions and includes private assembly debug symbols. No test reads `.audit-tmp`; old evidence can be archived independently.
 
 `integration-test` builds the same isolated image and runs foreground, combined IRQ/text, and picture scenarios. `picture-test` runs the picture scenarios alone. The combined IRQ workload records two production dispatch rows, total IRQ cycles, the continuous I-masked interval from IRQ acceptance through the observed RTI, and two-frame text completion. Its current finite KQ1 regression reference is 29,987 cycles for the first row, 34,076 total IRQ cycles, and 29,987 maximum I-masked cycles, each with a 4,096-cycle tolerance; this is not maximum-menu or all-game coverage.
 

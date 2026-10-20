@@ -21,7 +21,13 @@ TEST_FIXTURE_ROOT ?= $(if $(TMPDIR),$(TMPDIR),/tmp)
 export GAME_KQ1 GAME_KQ3 CC65_HOME X16_EMULATOR_SOURCE TMPDIR TEST_OUTPUT_DIR ROM GAME BUILD SYMBOLS SDL_PREFIX TAS_CAPTURE_HEADER
 unexport KEEP_TEST_OUTPUT
 
-.PHONY: test suite commands-test image production-test integration-test picture-test loader-test modes integration _run build-test games-test
+.PHONY: test suite commands-test image production-test integration-test picture-test loader-test modes integration _run build-test games-test review-check
+
+# A review handoff requires both original games; missing inputs fail closed.
+review-check:
+	@$(MAKE) --no-print-directory -f "$(REPO_ROOT)/tools/Makefile" test
+	@$(MAKE) --no-print-directory -f "$(REPO_ROOT)/tools/Makefile" production-test
+	@$(MAKE) --no-print-directory -f "$(REPO_ROOT)/tools/Makefile" games-test
 
 build-test:
 	@$(MAKE) --no-print-directory -f "$(REPO_ROOT)/tools/Makefile" _run MODE=build-test

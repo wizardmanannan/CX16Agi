@@ -83,7 +83,7 @@ jobs:
             exit "$build_status"
           fi
 
-      - name: Run core and production suites
+      - name: Run shipped build, core and production suites
         shell: bash
         run: |
           set -euo pipefail
@@ -91,6 +91,7 @@ jobs:
           export TEST_FIXTURE_ROOT="$RUNNER_TEMP" TMPDIR="$RUNNER_TEMP"
           core_status=0
           production_status=0
+          build_status=0
           evidence_status=0
 
           run_suite() {
@@ -114,15 +115,17 @@ jobs:
               evidence_status=1
             fi
             case "$label" in
+              build) build_status="$status" ;;
               core) core_status="$status" ;;
               production) production_status="$status" ;;
             esac
           }
 
+          run_suite build build-test
           run_suite core test
           run_suite production production-test
 
-          if [[ "$core_status" -ne 0 || "$production_status" -ne 0 || "$evidence_status" -ne 0 ]]; then
+          if [[ "$build_status" -ne 0 || "$core_status" -ne 0 || "$production_status" -ne 0 || "$evidence_status" -ne 0 ]]; then
             exit 1
           fi
 
