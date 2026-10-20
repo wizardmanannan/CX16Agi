@@ -25,6 +25,7 @@ unexport KEEP_TEST_OUTPUT
 
 # A review handoff requires both original games; missing inputs fail closed.
 review-check:
+	@$(MAKE) --no-print-directory -f "$(REPO_ROOT)/tools/Makefile" staging-test
 	@$(MAKE) --no-print-directory -f "$(REPO_ROOT)/tools/Makefile" test
 	@$(MAKE) --no-print-directory -f "$(REPO_ROOT)/tools/Makefile" production-test
 	@$(MAKE) --no-print-directory -f "$(REPO_ROOT)/tools/Makefile" games-test
@@ -33,6 +34,9 @@ review-check:
 
 build-test:
 	@$(MAKE) --no-print-directory -f "$(REPO_ROOT)/tools/Makefile" _run MODE=build-test
+
+staging-test:
+	@$(MAKE) --no-print-directory -f "$(REPO_ROOT)/tools/Makefile" _run MODE=staging-test
 
 play:
 	@$(MAKE) --no-print-directory -f "$(REPO_ROOT)/tools/Makefile" _run MODE=play
@@ -92,6 +96,7 @@ _run:
 	  need_file "$$repo/tools/test-image.mk"; need_file "$$repo/tools/test_image_exports.s"; \
 	}; \
 	case "$$mode" in \
+	  staging-test) need_command pkg-config; pkg-config --exists libpng ;; \
 	  emulator-audio-test) need_file "$$X16_EMULATOR_SOURCE/src/audio.c"; need_command pkg-config; pkg-config --exists sdl2 ;; \
 	  build-test) need_cc65; need_exec "$$CC65_HOME/bin/cl65" ;; \
 	  core) need_cc65; need_cpu ;; \
@@ -186,6 +191,9 @@ _run:
 	  fi; \
 	}; \
 	case "$$mode" in \
+	  staging-test) \
+	    "$(HOST_CC)" $(HOST_CFLAGS) "$$repo/tools/test_full_game_irq.c" -lpng -o "$$work/bin/test_full_game_irq"; \
+	    "$$work/bin/test_full_game_irq" --staging-test ;; \
 	  emulator-audio-test) \
 	    "$(HOST_CC)" $(HOST_CFLAGS) -I"$$X16_EMULATOR_SOURCE/src" $$(pkg-config --cflags sdl2) -ffunction-sections -fdata-sections "$$repo/tools/test_emulator_audio.c" $$(pkg-config --libs sdl2) -Wl,--gc-sections -o "$$work/bin/test_emulator_audio"; \
 	    "$$work/bin/test_emulator_audio" ;; \

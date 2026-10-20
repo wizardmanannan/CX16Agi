@@ -69,8 +69,27 @@ static void copy_tree(const char *from,const char *to) {
 static void copy_stage(const char *from,const char *to,bool build,bool omit_object) {
     DIR *d=opendir(from); if(!d) fail("opendir %s",from); struct dirent *e;
     while((e=readdir(d))) { bool agi=!strncasecmp(e->d_name,"agi.cx16",8); if(agi!=build||(omit_object&&!strcasecmp(e->d_name,"object"))) continue;
-        char *a=join(from,e->d_name),*b=join(to,e->d_name); struct stat st; if(!stat(a,&st)&&S_ISREG(st.st_mode)) copy_file(a,b); free(a);free(b);
+        char *a=join(from,e->d_name),*b=join(to,e->d_name); struct stat st;
+        if(!stat(a,&st)) {
+            if(S_ISREG(st.st_mode)) copy_file(a,b);
+            else if(!build&&S_ISDIR(st.st_mode)&&!strcasecmp(e->d_name,"meta")) copy_tree(a,join(to,"meta"));
+        }
+        free(a);free(b);
     } closedir(d);
+    /* The shared game cache keeps extractor output beside the original files. */
+    char *extracted=join(from,"extracted"),*metadata=join(to,"meta");
+    if(!build&&!exists(metadata)&&(d=opendir(extracted))) {
+        while((e=readdir(d))) {
+            char *lower=strdup(e->d_name); REQUIRE(lower,"Out of memory");
+            for(char *p=lower;*p;++p) *p=(char)tolower((unsigned char)*p);
+            if(strstr(lower,"-ids.idx")||strstr(lower,"-ids.bin")) {
+                mkdirs(metadata); copy_file(join(extracted,e->d_name),join(metadata,lower));
+            }
+            free(lower);
+        }
+        closedir(d);
+    }
+    free(extracted); free(metadata);
 }
 static void run(char *const argv[],const char *log,int timeout) {
     run_from(argv,log,timeout,NULL);
@@ -1671,7 +1690,18 @@ static void run_loader_test(const char *game,const char *build,const char *nativ
     free(result_path);
     REQUIRE(!failed,"Real X16 WORDS startup regression failed");
 }
+static void test_game_staging(void) {
+    suite_test_paths_init("game-staging");
+    char *game=join(suite_fixture_directory,"original"),*stage=join(suite_fixture_directory,"staged");
+    mkdirs(join(game,"meta")); mkdirs(stage);
+    write_file(join(game,"VOL.0"),"volume",6);
+    write_file(join(game,"meta/KQ3-SOUND-IDS.IDX"),"index",5);
+    copy_stage(game,stage,false,false);
+    REQUIRE(file_contains(join(stage,"meta/KQ3-SOUND-IDS.IDX"),"index"),"Game staging omitted production dependency metadata");
+    puts("PASS game staging retains dependency metadata");
+}
 int main(int argc,char **argv) {
+    if(argc==2&&!strcmp(argv[1],"--staging-test")) { test_game_staging(); return 0; }
     char *emulator=NULL,*rom=NULL,*build=NULL,*game=NULL,*output=NULL,*sdl=NULL,*symbol=NULL,*tas_capture_header=NULL;unsigned long trigger=180000000;bool foreground_test=false,picture_test=false,combined_test=false,loader_test=false,random_ram=false,intro_test=false,play=false;unsigned startup_room=0;
     for(int i=1;i<argc;i++) {
         if(!strcmp(argv[i],"--help")) {puts("Usage: test_full_game_irq --emulator-source DIR --rom FILE --build DIR --game DIR [--output DIR] [--symbols FILE] [--sdl-prefix DIR] [--tas-capture-header FILE] [--trigger-cycle N] [--foreground-test] [--combined-irq-test] [--picture-test] [--loader-test] [--startup-room 1|7] [--random-ram] [--intro-test] [--play]");return 0;}
