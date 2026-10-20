@@ -1403,3 +1403,262 @@ static int check_bounded_prefix_conversion(void)
     return 0;
 }
 
+static int compare_app_prefixes_with_scummvm(
+    const CorpusGame *game, const char *game_directory, uint32_t ticks,
+    const LogicAppReplayInput *events, size_t event_count,
+    uint32_t timeout_ms, const LogicReplayManifest *manifest,
+    const uint8_t manifest_hash[LOGIC_REPLAY_SHA256_SIZE],
+    const uint8_t input_hash[LOGIC_REPLAY_SHA256_SIZE])
+{
+    char reference_path[PATH_CAPACITY], scummvm_trace_path[PATH_CAPACITY];
+    LogicOracleSnapshot *reference = NULL, candidate;
+    uint8_t (*series)[LOGIC_APP_REPLAY_OUTPUT_SIZE] = NULL;
+    LogicOracleResult result;
+    uint8_t scummvm_input_hash[LOGIC_REPLAY_SHA256_SIZE];
+    char conversion_detail[LOGIC_REPLAY_DETAIL_MAX] = {0};
+    uint8_t raw[LOGIC_APP_REPLAY_OUTPUT_SIZE];
+    size_t reference_count = 0;
+    uint16_t expected_version;
+    uint32_t previous_elapsed_vsync = 0;
+    int bounded_trace_seen = 0;
+    int length, status = -1;
+    length = snprintf(reference_path, sizeof reference_path,
+                      "%s/reference.lors", game_directory);
+    if (!events || !event_count || event_count > LOGIC_APP_REPLAY_INPUT_MAX ||
+        length < 0 || (size_t)length >= sizeof reference_path ||
+        run_scummvm_oracle(game_directory, ticks, reference_path) != 0 ||
+        logic_oracle_snapshot_load(reference_path, &reference,
+                                   &reference_count) != 0 ||
+        reference_count != ticks ||
+        (length = snprintf(scummvm_trace_path, sizeof scummvm_trace_path,
+                           "%s/scummvm.ltrace", game_directory)) < 0 ||
+        (size_t)length >= sizeof scummvm_trace_path ||
+        logic_replay_sha256_file(scummvm_trace_path, scummvm_input_hash) != 0 ||
+        parse_agi_version(game->agi_version, &expected_version) != 0) {
+        fprintf(stderr, "real ScummVM comparison setup failed for %s: %s\n",
+                game->id, conversion_detail[0] ? conversion_detail : "invalid reference capture");
+        goto done;
+    }
+    {
+        const LogicOracleSnapshot *last = &reference[reference_count - 1];
+        if (last->agi_version != expected_version || last->tick != ticks ||
+            last->timing_profile != LOGIC_ORACLE_TIMING_AGI_TICK ||
+            last->tick_numerator != manifest->tick_numerator ||
+            last->tick_denominator != manifest->tick_denominator ||
+            memcmp(last->manifest_sha256, manifest_hash,
+                   LOGIC_REPLAY_SHA256_SIZE) != 0 ||
+            memcmp(last->input_sha256, scummvm_input_hash,
+                   LOGIC_REPLAY_SHA256_SIZE) != 0 ||
+            (strcmp(game->id, "KQ3") == 0 &&
+             (!strstr(last->provenance, "det=0x2936") ||
+              !strstr(last->provenance, "manifest-compat"))) ||
+            (strcmp(game->id, "KQ1") == 0 &&
+             (!strstr(last->provenance, "det=0x2917") ||
+              strstr(last->provenance, "manifest-compat")))) {
+            fprintf(stderr,
+                    "ScummVM identity/version/boundary regression: %s version=%04x tick=%u profile=%u provenance=%s\n",
+                    game->id, last->agi_version, last->tick,
+                    last->timing_profile, last->provenance);
+            goto done;
+        }
+    }
+    /* The app trace records one semantic press. ScummVM's event API needs a
+       same-tick down/up pair. After verifying that generated expansion, give
+       both snapshots the canonical app schedule hash. */
+    for (size_t i = 0; i < reference_count; ++i)
+        memcpy(reference[i].input_sha256, input_hash,
+               LOGIC_REPLAY_SHA256_SIZE);
+    series = calloc(ticks, sizeof *series);
+    if (!series || logic_app_replay_x16_series(game_directory,
+            UINT16_C(0xA61B), events, event_count, ticks, timeout_ms, 0,
+            series, ticks, conversion_detail, sizeof conversion_detail)) {
+        fprintf(stderr, "application semantic series failed for %s: %s\n",
+                game->id, conversion_detail);
+        goto done;
+    }
+    for (uint32_t prefix = 1; prefix <= ticks; ++prefix) {
+        uint32_t elapsed;
+        uint16_t consumed;
+        uint32_t pending_frame = 0;
+        int run_status;
+        memset(raw, 0, sizeof raw);
+        memcpy(raw, series[prefix - 1], sizeof raw);
+        run_status = 0;
+        if (raw[0] == 'X' && raw[1] == '1' && raw[2] == '6' &&
+            raw[3] == 'R' &&
+            (raw[58] & LOGIC_APP_REPLAY_STATUS_INPUT_WAIT_EXHAUSTED)) {
+            fprintf(stderr,
+                    "full semantic prefix incomplete cycle: %s attempted tick=%u after %u completed cycles, input=%u/%u frame=%u key=%02x polls=%u elapsed-vsync=%u detail=%s; candidate was not compared\n",
+                    game->id, (unsigned)get_u32(raw + 6),
+                    (unsigned)raw[38], (unsigned)get_u16(raw + 12),
+                    (unsigned)get_u16(raw + 10),
+                    (unsigned)get_u32(raw +
+                        LOGIC_APP_REPLAY_LAST_INPUT_FRAME_OFFSET),
+                    (unsigned)raw[LOGIC_APP_REPLAY_LAST_INPUT_KEY_OFFSET],
+                    (unsigned)get_u16(raw +
+                        LOGIC_APP_REPLAY_INPUT_WAIT_POLLS_OFFSET),
+                    (unsigned)get_u32(raw +
+                        LOGIC_APP_REPLAY_ELAPSED_VSYNC_OFFSET),
+                    conversion_detail[0] ? conversion_detail : "none");
+            goto done;
+        }
+        elapsed = get_u32(raw + LOGIC_APP_REPLAY_ELAPSED_VSYNC_OFFSET);
+        consumed = get_u16(raw + 12);
+        if (consumed < event_count)
+            pending_frame = events[consumed].frame;
+        if (run_status != 0 || raw[0] != 'X' || raw[1] != '1' ||
+            raw[2] != '6' || raw[3] != 'R' ||
+            app_prefix_snapshot_to_oracle(
+                manifest->engine, expected_version, manifest, manifest_hash,
+                input_hash, raw, prefix, event_count, consumed, pending_frame,
+                &candidate, conversion_detail, sizeof conversion_detail) != 0) {
+            fprintf(stderr,
+                    "full semantic prefix regression: %s tick=%u completed=%u input=%u/%u pending-frame=%u elapsed-vsync=%u missed=%u status=%02x returned=%d detail=%s\n",
+                    game->id, (unsigned)get_u32(raw + 6),
+                    (unsigned)raw[38], (unsigned)consumed,
+                    (unsigned)get_u16(raw + 10), (unsigned)pending_frame,
+                    (unsigned)elapsed, (unsigned)raw[14],
+                    (unsigned)raw[58], run_status,
+                    conversion_detail[0] ? conversion_detail : "invalid completed checkpoint");
+            if (raw[0] == 'X' && raw[1] == '1' &&
+                raw[2] == '6' && raw[3] == 'R')
+                print_full_app_checkpoint(game, raw);
+            goto done;
+        }
+        /* Conversion owns exact trace-overwrite validation. */
+        if (raw[58] & LOGIC_APP_REPLAY_STATUS_TRACE_DROPPED)
+            bounded_trace_seen = 1;
+        if (reference[prefix - 1].tick != prefix) {
+            fprintf(stderr,
+                    "ScummVM prefix reference regression: %s index=%u tick=%u\n",
+                    game->id, (unsigned)(prefix - 1),
+                    (unsigned)reference[prefix - 1].tick);
+            goto done;
+        }
+        if (prefix == 2 && elapsed <= previous_elapsed_vsync + 1u) {
+            fprintf(stderr,
+                    "full-app clock regression: %s completed tick 2 at VSYNC %u after tick 1 at VSYNC %u; a real six-frame cycle interval must advance the counter\n",
+                    game->id, (unsigned)elapsed,
+                    (unsigned)previous_elapsed_vsync);
+            goto done;
+        }
+        previous_elapsed_vsync = elapsed;
+        status = logic_oracle_compare_with_policy(
+            &reference[prefix - 1], &candidate,
+            LOGIC_ORACLE_POLICY_CROSS_ENGINE_SEMANTIC, &result);
+        if (status != LOGIC_ORACLE_MATCH) {
+            unsigned variable;
+            print_prefix_comparison(stderr, game->id, prefix, &result);
+            fprintf(stderr, "  target virtual-frame=%u speed=%u seconds=%u\n",
+                    (unsigned)get_u32(raw + LOGIC_APP_REPLAY_SCHEDULE_FRAME_OFFSET),
+                    raw[LOGIC_APP_REPLAY_VARS_OFFSET + 10],
+                    raw[LOGIC_APP_REPLAY_VARS_OFFSET + 11]);
+            for (uint32_t t = 0; t < prefix; ++t) {
+                if (t >= 4 && t + 8 < prefix) continue;
+                fprintf(stderr, "  clock cycle=%u target-frame=%u speed=%u seconds=%u; %s\n",
+                    t + 1, (unsigned)get_u32(series[t] + LOGIC_APP_REPLAY_SCHEDULE_FRAME_OFFSET),
+                    series[t][LOGIC_APP_REPLAY_VARS_OFFSET + 10],
+                    series[t][LOGIC_APP_REPLAY_VARS_OFFSET + 11], reference[t].provenance);
+            }
+            fputs("  differing variables:", stderr);
+            for (variable = 0; variable < 256; ++variable) {
+                if (reference[prefix - 1].variables[variable] !=
+                    candidate.variables[variable])
+                    fprintf(stderr, " v%u=%u/%u", variable,
+                            (unsigned)reference[prefix - 1].variables[variable],
+                            (unsigned)candidate.variables[variable]);
+            }
+            fputc('\n', stderr);
+            fprintf(stderr,
+                    "  RNG reference=%s calls=%u state=%08x candidate=%s calls=%u state=%08x seed=%08x\n",
+                    reference[prefix - 1].rng_algorithm,
+                    (unsigned)reference[prefix - 1].rng_call_count,
+                    (unsigned)reference[prefix - 1].rng_final_state,
+                    candidate.rng_algorithm,
+                    (unsigned)candidate.rng_call_count,
+                    (unsigned)candidate.rng_final_state,
+                    (unsigned)candidate.rng_seed);
+            fprintf(stderr,
+                    "  control variables v0=%u/%u v39=%u/%u v101=%u/%u\n",
+                    (unsigned)reference[prefix - 1].variables[0],
+                    (unsigned)candidate.variables[0],
+                    (unsigned)reference[prefix - 1].variables[39],
+                    (unsigned)candidate.variables[39],
+                    (unsigned)reference[prefix - 1].variables[101],
+                    (unsigned)candidate.variables[101]);
+            for (unsigned object_id = 0; object_id < 256; ++object_id) {
+                const LogicOracleObject *ref_object = NULL;
+                const LogicOracleObject *app_object = NULL;
+                for (unsigned object_index = 0;
+                     object_index < reference[prefix - 1].object_count;
+                     ++object_index)
+                    if (reference[prefix - 1].objects[object_index].id == object_id)
+                        ref_object = &reference[prefix - 1].objects[object_index];
+                for (unsigned object_index = 0;
+                     object_index < candidate.object_count; ++object_index)
+                    if (candidate.objects[object_index].id == object_id)
+                        app_object = &candidate.objects[object_index];
+                if (!!ref_object != !!app_object ||
+                    (ref_object &&
+                     (ref_object->x != app_object->x ||
+                      ref_object->y != app_object->y ||
+                      ref_object->view != app_object->view ||
+                      ref_object->loop != app_object->loop ||
+                      ref_object->cel != app_object->cel ||
+                      ref_object->motion != app_object->motion)))
+                    fprintf(stderr,
+                            "  object[%u] ref=%s(%d,%d v%u l%u c%u m%u) app=%s(%d,%d v%u l%u c%u m%u)\n",
+                            object_id, ref_object ? "present" : "absent",
+                            ref_object ? ref_object->x : 0,
+                            ref_object ? ref_object->y : 0,
+                            ref_object ? ref_object->view : 0,
+                            ref_object ? ref_object->loop : 0,
+                            ref_object ? ref_object->cel : 0,
+                            ref_object ? ref_object->motion : 0,
+                            app_object ? "present" : "absent",
+                            app_object ? app_object->x : 0,
+                            app_object ? app_object->y : 0,
+                            app_object ? app_object->view : 0,
+                            app_object ? app_object->loop : 0,
+                            app_object ? app_object->cel : 0,
+                            app_object ? app_object->motion : 0);
+            }
+            for (unsigned object_index = 0;
+                 object_index < LOGIC_APP_REPLAY_OBJECT_MAX; ++object_index) {
+                const uint8_t *object = raw + LOGIC_APP_REPLAY_OBJECTS_OFFSET +
+                    object_index * LOGIC_APP_REPLAY_OBJECT_RECORD_SIZE;
+                if (object[1] || object[2] || object[7] || object[8] ||
+                    object[9] || object[10] || object[11])
+                    fprintf(stderr,
+                            "  app object[%u] flags=%04x view=%u loop=%u cel=%u motion=%u cycle=%u noAdvance=%u param2=%u\n",
+                            object[0],
+                            (unsigned)object[1] | ((unsigned)object[2] << 8),
+                            object[7], object[8], object[9], object[11],
+                            object[12] & 0x7fu, object[12] >> 7,
+                            object[13]);
+            }
+            print_full_app_checkpoint(game, raw);
+            goto done;
+        }
+    }
+    if (!bounded_trace_seen) {
+        fprintf(stderr,
+                "full semantic prefix regression: %s did not exercise bounded trace history\n",
+                game->id);
+        goto done;
+    }
+    printf("ScummVM semantic prefix comparison: %s matched completed cycles 1..%u across variables, flags, room, objects, inventory and messages; reference=%s",
+           game->id, (unsigned)ticks,
+           reference[reference_count - 1].provenance);
+    if (conversion_detail[0])
+        printf(" capture=%s", conversion_detail);
+    putchar('\n');
+    status = 0;
+done:
+    free(series);
+    free(reference);
+    return status;
+}
+
+/* All generated Logic0 bytes stay in this suite's staged game. Restore them
+   before hash-verified gameplay, including when the emulator or assertion fails. */
