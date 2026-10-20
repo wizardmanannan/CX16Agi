@@ -665,3 +665,297 @@ static int fail_run(pid_t child, int input, int output,
     return 0;
 }
 
+int logic_replay_x16_run_ticks(const LogicReplayManifest *manifest,
+                               const LogicReplayEvent *events,
+                               size_t event_count, const char *resource_dir,
+                               uint32_t tick_count, uint32_t timeout_ms,
+                               unsigned fault_flags,
+                               LogicReplayResult *result)
+{
+    static const char *const default_emulator = "x16emu";
+    static const char *const default_rom = "rom.bin";
+    static const char *const default_program = "obj/cx16/test-logic-replay.prg";
+    static const char *const default_labels = "obj/cx16/test-logic-replay.lbl";
+    const char *emulator, *rom, *program, *label_path;
+    ReplayTargetLabels labels;
+    ReplayResourceCode resources[REPLAY_PROTOCOL_LOGIC_COUNT];
+    uint8_t resource_sizes[REPLAY_PROTOCOL_LOGIC_COUNT * 2];
+    uint8_t seed[8], tick[4], denominator[4], ticks[4], fault, count_bytes[2];
+    uint8_t checkpoint_length[2], *encoded_events = NULL;
+    uint8_t output_block[REPLAY_PROTOCOL_OUTPUT_SIZE];
+    size_t encoded_event_size = event_count * REPLAY_PROTOCOL_EVENT_BYTES;
+    pid_t child = -1;
+    int input = -1, output = -1;
+    char line[256], command[64];
+    int64_t deadline;
+    unsigned i;
+    int command_result;
+    int execute_budget;
+
+    if (!manifest || !result || (!events && event_count) || !resource_dir ||
+        !timeout_ms || event_count > REPLAY_PROTOCOL_MAX_EVENTS ||
+        fault_flags & ~LOGIC_REPLAY_FAULT_OMIT_METADATA_SAVE ||
+        logic_replay_manifest_validate(manifest) != 0 ||
+        logic_replay_trace_validate(events, event_count) != 0)
+        return -1;
+    for (i = 0; i < event_count; ++i)
+        if (events[i].tick > tick_count)
+            return -1;
+    memset(result, 0, sizeof *result);
+    result->outcome = LOGIC_REPLAY_OUTCOME_RUNNER_ERROR;
+    if (logic_replay_manifest_verify_resources(manifest, resource_dir) != 0 ||
+        load_resource_code(manifest, resource_dir, resources) != 0 ||
+        encode_events(events, event_count, &encoded_events) != 0)
+        return -1;
+
+    emulator = getenv("X16EMU");
+    rom = getenv("X16ROM");
+    program = getenv("CX16_LOGIC_REPLAY_PRG");
+    label_path = getenv("CX16_LOGIC_REPLAY_LABELS");
+    if (!emulator || !*emulator) emulator = default_emulator;
+    if (!rom || !*rom) rom = default_rom;
+    if (!program || !*program) program = default_program;
+    if (!label_path || !*label_path) label_path = default_labels;
+    if (read_labels(label_path, &labels) != 0 ||
+        launch_emulator(emulator, rom, program, &child, &input, &output) != 0) {
+        free(encoded_events);
+        return -1;
+    }
+    deadline = monotonic_ms();
+    if (deadline < 0) {
+        free(encoded_events);
+        return fail_run(child, input, output, result,
+                        "cannot read monotonic clock", 0);
+    }
+    deadline += timeout_ms;
+
+    command_result = wait_for_ready(output, line, sizeof line, deadline);
+    if (command_result != 0) {
+        free(encoded_events);
+        return fail_run(child, input, output, result,
+                        command_result == -2 ? "emulator startup timed out"
+                                             : "emulator did not reach testbench",
+                        command_result == -2);
+    }
+    command_result = snprintf(command, sizeof command, "RUN %04X\n", labels.start);
+    if (command_result <= 0 || (size_t)command_result >= sizeof command ||
+        send_command(input, output, command, line, sizeof line, deadline) != 0) {
+        free(encoded_events);
+        return fail_run(child, input, output, result,
+                        "replay target startup failed",
+                        remaining_ms(deadline) == 0);
+    }
+
+    for (i = 0; i < REPLAY_PROTOCOL_LOGIC_COUNT; ++i) {
+        put_u16(resource_sizes + i * 2, (uint16_t)resources[i].size);
+        if (resources[i].size &&
+            (write_logic_code(input, output, 40u + i, 0xA000u + i * 0x100u,
+                              resources[i].bytes, resources[i].size,
+                              line, sizeof line, deadline) != 0 ||
+             verify_uploaded_resource(input, output, 40u + i,
+                                     0xA000u + i * 0x100u,
+                                     resources[i].bytes[0], line,
+                                     sizeof line, deadline) != 0)) {
+            free(encoded_events);
+            return fail_run(child, input, output, result,
+                            "could not upload verified logic resources",
+                            remaining_ms(deadline) == 0);
+        }
+    }
+
+    command_result = snprintf(command, sizeof command, "RAM 00\n");
+    if (command_result <= 0 || (size_t)command_result >= sizeof command ||
+        send_command(input, output, command, line, sizeof line, deadline) != 0) {
+        free(encoded_events);
+        return fail_run(child, input, output, result,
+                        "could not select target memory bank",
+                        remaining_ms(deadline) == 0);
+    }
+
+    put_u16(count_bytes, (uint16_t)event_count);
+    put_u16(checkpoint_length, manifest->checkpoint_length);
+    put_u32(tick, manifest->tick_numerator);
+    put_u32(denominator, manifest->tick_denominator);
+    put_u32(ticks, tick_count);
+    for (i = 0; i < 8; ++i)
+        seed[i] = (uint8_t)(manifest->rng_seed >> (i * 8));
+    fault = (uint8_t)fault_flags;
+    if (write_memory(input, output, labels.event_count, count_bytes,
+                     sizeof count_bytes, line, sizeof line, deadline) != 0 ||
+        write_memory(input, output, labels.events, encoded_events,
+                     encoded_event_size, line, sizeof line, deadline) != 0 ||
+        write_memory(input, output, labels.rng_seed, seed, sizeof seed,
+                     line, sizeof line, deadline) != 0 ||
+        write_memory(input, output, labels.tick_numerator, tick, sizeof tick,
+                     line, sizeof line, deadline) != 0 ||
+        write_memory(input, output, labels.tick_denominator, denominator,
+                     sizeof denominator, line, sizeof line, deadline) != 0 ||
+        write_memory(input, output, labels.tick_count, ticks, sizeof ticks,
+                     line, sizeof line, deadline) != 0 ||
+        write_memory(input, output, labels.fault_flags, &fault, 1,
+                     line, sizeof line, deadline) != 0 ||
+        write_memory(input, output, labels.checkpoint_length, checkpoint_length,
+                     sizeof checkpoint_length, line, sizeof line, deadline) != 0 ||
+        write_memory(input, output, labels.checkpoint,
+                     manifest->initial_checkpoint, manifest->checkpoint_length,
+                     line, sizeof line, deadline) != 0 ||
+        write_memory(input, output, labels.resource_sizes, resource_sizes,
+                     sizeof resource_sizes, line, sizeof line, deadline) != 0) {
+        free(encoded_events);
+        return fail_run(child, input, output, result,
+                        "could not deliver replay input to target",
+                        remaining_ms(deadline) == 0);
+    }
+    free(encoded_events);
+    encoded_events = NULL;
+
+    execute_budget = remaining_ms(deadline);
+    command_result = snprintf(command, sizeof command, "RUN %04X\n", labels.execute);
+    if (command_result <= 0 || (size_t)command_result >= sizeof command) {
+        free(encoded_events);
+        return fail_run(child, input, output, result,
+                        "invalid replay execute address", 0);
+    }
+    command_result = send_command(input, output, command, line, sizeof line,
+                                  deadline);
+    if (command_result != 0) {
+        fprintf(stderr, "replay target execute handshake failed: result=%d before_run=%d remaining=%d response=%s\n",
+                command_result, execute_budget, remaining_ms(deadline), line);
+        return fail_run(child, input, output, result,
+                        "production interpreter replay failed",
+                        remaining_ms(deadline) == 0);
+    }
+    command_result = snprintf(command, sizeof command, "RAM 00\n");
+    if (command_result <= 0 || (size_t)command_result >= sizeof command ||
+        send_command(input, output, command, line, sizeof line, deadline) != 0) {
+        return fail_run(child, input, output, result,
+                        "could not select replay output bank",
+                        remaining_ms(deadline) == 0);
+    }
+    if (read_memory(input, output, labels.output, output_block,
+                    sizeof output_block, line, sizeof line, deadline) != 0) {
+        return fail_run(child, input, output, result,
+                        "could not read replay result block",
+                        remaining_ms(deadline) == 0);
+    }
+    if (read_memory(input, output, labels.variables, result->variables,
+                    sizeof result->variables, line, sizeof line, deadline) != 0 ||
+        read_memory(input, output, labels.flags, result->flags,
+                    sizeof result->flags, line, sizeof line, deadline) != 0) {
+        return fail_run(child, input, output, result,
+                        "could not read semantic variable/flag state",
+                        remaining_ms(deadline) == 0);
+    }
+    {
+        uint8_t bytes[4];
+        uint8_t count_bytes[2];
+        uint8_t object_bytes[REPLAY_PROTOCOL_OBJECT_BYTES * LOGIC_REPLAY_OBJECT_MAX];
+        if (read_memory(input, output, labels.room, bytes, 2,
+                        line, sizeof line, deadline) != 0 ||
+            read_memory(input, output, labels.object_count, count_bytes, 2,
+                        line, sizeof line, deadline) != 0) {
+            return fail_run(child, input, output, result,
+                            "could not read room/object snapshot state",
+                            remaining_ms(deadline) == 0);
+        }
+        result->room = get_u16(bytes);
+        result->object_count = get_u16(count_bytes);
+        if (result->object_count > LOGIC_REPLAY_OBJECT_MAX ||
+            read_memory(input, output, labels.objects, object_bytes,
+                        result->object_count * REPLAY_PROTOCOL_OBJECT_BYTES,
+                        line, sizeof line, deadline) != 0 ||
+            read_memory(input, output, labels.rng_call_count, bytes, 4,
+                        line, sizeof line, deadline) != 0) {
+            return fail_run(child, input, output, result,
+                            "could not read replay object/RNG state",
+                            remaining_ms(deadline) == 0);
+        }
+        result->rng_call_count = get_u32(bytes);
+        if (read_memory(input, output, labels.rng_final_state, bytes, 4,
+                        line, sizeof line, deadline) != 0) {
+            return fail_run(child, input, output, result,
+                            "could not read replay RNG/tick results",
+                            remaining_ms(deadline) == 0);
+        }
+        result->rng_final_state = get_u32(bytes);
+        if (read_memory(input, output, labels.ticks_executed, bytes, 4,
+                        line, sizeof line, deadline) != 0) {
+            return fail_run(child, input, output, result,
+                            "could not read replay RNG/tick results",
+                            remaining_ms(deadline) == 0);
+        }
+        result->ticks_executed = get_u32(bytes);
+        for (i = 0; i < result->object_count; ++i) {
+            const uint8_t *encoded = object_bytes +
+                                    i * REPLAY_PROTOCOL_OBJECT_BYTES;
+            LogicReplayObject *object = &result->objects[i];
+            object->id = encoded[0];
+            object->x = get_i16(encoded + 1);
+            object->y = get_i16(encoded + 3);
+            object->view = encoded[5];
+            object->loop = encoded[6];
+            object->cel = encoded[7];
+            object->motion = encoded[8];
+        }
+    }
+
+    command_result = finish_child(child, input, output, deadline);
+    if (command_result == -2) {
+        result->outcome = LOGIC_REPLAY_OUTCOME_TIMEOUT;
+        set_detail(result, "emulator did not exit before timeout");
+        return 0;
+    }
+    if (command_result != 0) {
+        result->outcome = LOGIC_REPLAY_OUTCOME_RUNNER_ERROR;
+        set_detail(result, "emulator exited unsuccessfully");
+        return 0;
+    }
+
+    result->events_consumed = get_u32(output_block + 1);
+    result->tick_count = tick_count;
+    result->semantic_hash = semantic_hash(result);
+    result->signature.kind = output_block[9];
+    result->signature.logic = output_block[10];
+    result->signature.logical_pc = (uint16_t)(output_block[11] |
+                                              ((uint16_t)output_block[12] << 8));
+    result->signature.opcode = output_block[13];
+    result->signature.reason = output_block[14];
+    result->signature.code = get_u32(output_block + 15);
+    if (output_block[0] == 0) {
+        result->outcome = result->events_consumed == event_count &&
+                          result->ticks_executed == tick_count
+            ? LOGIC_REPLAY_OUTCOME_PASS : LOGIC_REPLAY_OUTCOME_MISMATCH;
+        set_detail(result, result->events_consumed == event_count &&
+                           result->ticks_executed == tick_count
+                           ? "production interpreter replay passed"
+                           : "production interpreter did not consume the full schedule");
+    } else if (output_block[0] == 1) {
+        result->outcome = LOGIC_REPLAY_OUTCOME_MISMATCH;
+        set_detail(result, "production interpreter context mismatch");
+    } else if (output_block[0] == 2) {
+        result->outcome = LOGIC_REPLAY_OUTCOME_CRASH;
+        set_detail(result, "production interpreter reported a crash");
+    } else {
+        result->outcome = LOGIC_REPLAY_OUTCOME_RUNNER_ERROR;
+        set_detail(result, "replay target returned an invalid outcome");
+    }
+    (void)copy_text(result->provenance, sizeof result->provenance,
+                    "x16emu-headless-production-dispatch");
+    return 0;
+}
+
+int logic_replay_x16_run(const LogicReplayManifest *manifest,
+                         const LogicReplayEvent *events, size_t event_count,
+                         const char *resource_dir, uint32_t timeout_ms,
+                         unsigned fault_flags, LogicReplayResult *result)
+{
+    uint32_t ticks = 0;
+    size_t i;
+    if (events)
+        for (i = 0; i < event_count; ++i)
+            if (events[i].tick > ticks)
+                ticks = events[i].tick;
+    return logic_replay_x16_run_ticks(manifest, events, event_count,
+                                      resource_dir, ticks, timeout_ms,
+                                      fault_flags, result);
+}
