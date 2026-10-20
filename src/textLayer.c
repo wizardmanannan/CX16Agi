@@ -328,10 +328,9 @@ byte b3WrapText(char* line_start, int width, byte* maxWidth) {
 void b3DrawBorder(byte boxWidth, size_t messageSize)
 {
 	byte i;
-	char* currentCharToWrite = &b3TextBuffer2[0], * charToReadNext;
+	char* currentCharToWrite = &b3TextBuffer2[0], * charToReadNext, * nextLine;
 	int segmentLength;
 	char* leftBarPosition;
-	char delimiter[2];
 	size_t rowBytes;
 	byte rowsLeft, rowsWritten = 0;
 
@@ -342,9 +341,6 @@ void b3DrawBorder(byte boxWidth, size_t messageSize)
 	/* Reserve top/bottom borders, padding rows and the terminator. */
 	rowsLeft = (byte)(TEXTBUFFER_SIZE / rowBytes - 4);
 	if (rowsLeft > TEXT_ROWS - 4) rowsLeft = TEXT_ROWS - 4;
-
-	delimiter[0] = NEW_LINE;
-	delimiter[1] = '\0';
 
 	for (i = 0; i <= boxWidth; i++)
 	{
@@ -364,20 +360,22 @@ void b3DrawBorder(byte boxWidth, size_t messageSize)
 
 	*currentCharToWrite++ = NEW_LINE;
 
-	charToReadNext = strtok(b3TextBuffer1, delimiter);
+	charToReadNext = b3TextBuffer1;
 
 	while (charToReadNext && rowsLeft)
 	{
 		leftBarPosition = currentCharToWrite;
 		*currentCharToWrite++ = LEFT_BORDER;
 
-		segmentLength = strlen(charToReadNext);
+		/* strchr/strlen use cc65's assembly routines and retain empty rows. */
+		nextLine = strchr(charToReadNext, NEW_LINE);
+		segmentLength = nextLine ? nextLine - charToReadNext : strlen(charToReadNext);
 		if (segmentLength > boxWidth - 1) segmentLength = boxWidth - 1;
 		memcpy(currentCharToWrite, charToReadNext, segmentLength);
 
 		currentCharToWrite += segmentLength;
 
-		charToReadNext = strtok(NULL, delimiter);
+		charToReadNext = nextLine ? nextLine + 1 : NULL;
 
 		while (currentCharToWrite < leftBarPosition + boxWidth)
 		{

@@ -260,6 +260,19 @@ static void test_border_width_capacity(void)
 	assert((byte)b3TextBuffer2[expectedSize] == 0x5a);
 }
 
+static void test_border_preserves_empty_lines(void)
+{
+	strcpy(b3TextBuffer1, "a\n\nb\n");
+	b3DrawBorder(8, 7);
+	assert(b3LastBoxLines == 8);
+	assert(strlen(b3TextBuffer2) == 79);
+	assert(b3TextBuffer2[21] == 'a');
+	assert(b3TextBuffer2[31] == SPACE);
+	assert(b3TextBuffer2[41] == 'b');
+	assert(b3TextBuffer2[51] == SPACE);
+	assert(strcmp(b3TextBuffer1, "a\n\nb\n") == 0);
+}
+
 static void test_empty_message_does_not_clear(char* priorText)
 {
 	boolean wasBoxed = boxed;
@@ -325,6 +338,7 @@ int main(void)
 	test_explicit_line_breaks();
 	test_border_capacity();
 	test_border_width_capacity();
+	test_border_preserves_empty_lines();
 	test_empty_message_does_not_clear(warning);
 	test_idle_input();
 	test_input_capacity();
