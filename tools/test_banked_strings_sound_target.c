@@ -15,6 +15,9 @@ extern byte bBSetChannelOffsets(byte *codePtr, SoundFile *soundFile,
 	unsigned int *soundChannelOffSets, unsigned int totalSize);
 extern void bBPrecomputeValues(SoundFile *soundFile,
 	unsigned int *soundChannelOffSets, byte validChannels);
+extern void bBWriteNextNG(byte **memoryBlock, byte *buffer, byte **dataPtr,
+	byte toWrite, BufferStatus *status, unsigned int *oldSize,
+	unsigned int newSize, byte *bank, unsigned int bufferSize);
 #pragma wrapped-call (pop)
 
 byte testSoundConversionNoiseBytes[2][12];
@@ -39,6 +42,32 @@ unsigned int testSoundBoundsOutputResource;
 unsigned int testSoundBoundsOutputNoise;
 byte testSoundBoundsOutputBank;
 byte testSoundBoundsOutputReleased;
+byte testSoundGrowthBytes[220];
+byte testSoundGrowthPrefix[8];
+byte testSoundGrowthCursorValid;
+
+void testSoundOutputGrowth(void)
+{
+	byte previousBank = RAM_BANK, bank, *resource, *next;
+	byte buffer[166];
+	unsigned int size = 16, i;
+	BufferStatus status;
+	RAM_BANK = MEMORY_MANAGEMENT_BANK;
+	b10InitDynamicMemory();
+	resource = b10BankedAlloc(size, &bank);
+	memsetBanked(resource, 0x52, 8, bank);
+	status.bank = bank; status.bankedData = resource + 8; status.bufferCounter = 0;
+	next = buffer;
+	for (i = 0; i < sizeof(testSoundGrowthBytes); ++i)
+		bBWriteNextNG(&resource, buffer, &next, (byte)(i + 1), &status,
+			&size, size + 30, &bank, sizeof(buffer));
+	b5FlushBufferNonGolden(&status, buffer, sizeof(buffer), next - buffer);
+	testSoundGrowthCursorValid = status.bankedData == resource + 8 && status.bank == bank;
+	memCpyBanked(testSoundGrowthPrefix, resource, bank, 8);
+	memCpyBanked(testSoundGrowthBytes, resource + 8, bank, sizeof(testSoundGrowthBytes));
+	b10BankedDealloc(resource, bank);
+	RAM_BANK = previousBank;
+}
 unsigned int testSoundDiscardNeighbour;
 byte testSoundDiscardNeighbourBank;
 void testPrepareRepeatedSoundDiscard(void)

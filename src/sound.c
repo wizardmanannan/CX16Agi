@@ -62,17 +62,19 @@ const unsigned char SN76489_to_CX16_Volume[16] = {
 // reallocating or flushing buffers as necessary.
 void bBWriteNextNG(byte** memoryBlock, byte* buffer, byte** dataPtr, byte toWrite, BufferStatus* bufferStatus, unsigned int* oldBlockSize, unsigned int newBlockSize, byte* bank, unsigned int bufferSize)
 {
-	// If pointer exceeds buffer size, flush and reset pointer.
+	unsigned int prefix = bufferStatus->bankedData - *memoryBlock;
+	unsigned int required = prefix + bufferStatus->bufferCounter * bufferSize + (*dataPtr - buffer) + 1;
+	if (required > *oldBlockSize)
+	{
+		if (newBlockSize < required) newBlockSize = required;
+		b5ReallocateBiggerMemoryBlock(memoryBlock, newBlockSize, oldBlockSize, bank);
+		bufferStatus->bankedData = *memoryBlock + prefix;
+		bufferStatus->bank = *bank;
+	}
 	if (*dataPtr >= buffer + bufferSize)
 	{
 		b5FlushBufferNonGolden(bufferStatus, buffer, bufferSize, bufferSize);
 		*dataPtr = buffer;
-	}
-
-	// Check if current position exceeds allocated block size, reallocate if needed.
-	if (bufferStatus->bufferCounter * bufferSize + (*dataPtr - buffer) > *(oldBlockSize))
-	{
-		b5ReallocateBiggerMemoryBlock(memoryBlock, newBlockSize, oldBlockSize, bank);
 	}
 
 	// Write the byte and move data pointer forward
@@ -491,6 +493,9 @@ void bBPreComputePeriodicSound(SoundFile* soundFile, unsigned int* soundChannelO
 
 	// Flush any remaining buffered noise channel data to banked memory
 	b5FlushBufferNonGolden(&newChNoiseLocalBufferStatus, ORIGINAL_CHNOISEBUFFER, ONETHIRDBUFFERSIZE, newChNoiseBuffer - ORIGINAL_CHNOISEBUFFER);
+
+	/* Growth may have moved the resource; publish all channels from its final base. */
+	bBSetChannelOffsets(newSoundFile.soundResource, &newSoundFile, soundChannelOffSets, allocatedBlockSize);
 
 	// Deallocate previous sound resource memory
 	b10BankedDealloc(soundFile->soundResource, soundFile->soundBank);

@@ -1,6 +1,15 @@
 #ifndef TEST_BANKED_STRINGS_SOUND_CASES_H
 #define TEST_BANKED_STRINGS_SOUND_CASES_H
 
+static void run_sound_output_growth(void)
+{
+	prepare(); call_target_caller("_testSoundOutputGrowth");
+	CHECK(ram[symbol("_testSoundGrowthCursorValid")],"Generated sound flush retained a freed allocation address or bank after growth");
+	for(unsigned i=0;i<8;++i) CHECK(ram[symbol("_testSoundGrowthPrefix")+i]==0x52,"Sound growth damaged the channel prefix");
+	for(unsigned i=0;i<220;++i) CHECK(ram[symbol("_testSoundGrowthBytes")+i]==(uint8_t)(i+1),"Sound growth lost generated output across a flush or relocation");
+	puts("PASS generated sound output survives relocation, prefix accounting and multiple flushes");
+}
+
 static void run_sound_cache_capacity(void)
 {
     static const uint8_t volume[]={0x12,0x34,0,16,0,8,0,10,0,12,0,14,0,255,255,255,255,255,255,255,255};
