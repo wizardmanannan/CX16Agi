@@ -30,7 +30,7 @@ done
 "$ca65" -t cx16 -o "$fixture/parserInputAsm.o" "$repo_root/src/parserInputAsm.s"
 "$cc65" -t cx16 -O -I "$repo_root/src" -o "$fixture/test-string-format-target.s" "$repo_root/tests/test-string-format-target.c"
 "$ca65" -t cx16 -o "$fixture/test-string-format-target.o" "$fixture/test-string-format-target.s"
-"$ca65" -t cx16 -o "$fixture/string-format-target-start.o" "$repo_root/tests/string-format-target-start.s"
+"$ca65" -t cx16 -I "$repo_root/src" -o "$fixture/string-format-target-start.o" "$repo_root/tests/string-format-target-start.s"
 "$cl65" -t cx16 -C "$repo_root/tests/string-format-target.cfg" \
 	-m "$fixture/string-format-target.map" -Ln "$fixture/string-format-target.lbl" \
 	-o "$fixture/string-format-target.prg" \
@@ -108,6 +108,9 @@ export FORMAT_TARGET_PRG="$fixture/string-format-target.prg"
 export FORMAT_TARGET_LABELS="$fixture/string-format-target.lbl"
 export FORMAT_TARGET_FIXTURE="$fixture"
 hostcc=${4:-cc}
+read -r -a compiler <<< "$hostcc"
+"${compiler[@]}" -std=c99 "$repo_root/tests/test-input-render-target.c" -o "$fixture/test-input-render-target"
+"$fixture/test-input-render-target" "$fixture/string-format-target.prg" "$fixture/string-format-target.lbl" "$fixture/string-format-target.prg.07"
 for test in test-string-format test-text-interpolation; do
     # HOSTCC may contain sanitizer flags, as in the existing host suite.
     read -r -a compiler <<< "$hostcc"

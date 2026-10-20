@@ -21,6 +21,9 @@ byte* key = keyState;
 byte _assmByte;
 extern char b7OutputString[80], b7Temp[256], b7CurrentInputStr[41], cursorChar;
 extern void b7RefreshInputLine(boolean erasePrevious);
+extern boolean b7ReadingString, b7InputReady;
+extern byte b7InputRow, b7InputColumn;
+static boolean observingStringInput;
 extern byte b3WrapText(char* text, int width, byte* maxWidth);
 extern void b3DrawBorder(byte width, size_t messageSize);
 int currentLog = 106;
@@ -57,6 +60,11 @@ void native_asm(const char* instruction, ...)
 	if (strcmp(instruction, "jsr %w") != 0) return;
 	va_start(args, instruction);
 	if (va_arg(args, int) == GETIN_ADDRESS) {
+        if (observingStringInput) {
+            assert(b7ReadingString && b7InputReady);
+            assert(b7InputRow == 2 && b7InputColumn == 10);
+            assert(strncmp(b7OutputString, "Code 7:", 7) == 0);
+        }
 		assert(inputKeyPosition < inputKeyCount);
 		_assmByte = inputKeys[inputKeyPosition++];
 	}
@@ -75,9 +83,30 @@ static void test_idle_input(void)
 	assert(inputKeyPosition == sizeof(keys));
 }
 
+static void test_string_input_publication(void)
+{
+    static const byte keys[] = { 0, '4', '2', KEY_ENTER };
+    char result[40];
+    strcpy(b7CurrentInputStr, "unfinished");
+    variables[1] = 7;
+    inputKeys = keys;
+    inputKeyCount = sizeof(keys);
+    inputKeyPosition = 0;
+    observingStringInput = TRUE;
+    b7GetString("Code %v1:", 21, result, STRING_BANK, 10, 2, 39);
+    observingStringInput = FALSE;
+    assert(strcmp(result, "42") == 0);
+    assert(strcmp(b7CurrentInputStr, "unfinished") == 0);
+    assert(!b7ReadingString && !b7InputReady);
+}
+
 static void test_keyboard_zero_digit(void)
 {
     static const byte keys[] = { '1', '0', '0', 0 };
+    b7InitEvents();
+    assert(strcmp(string[0], ">") == 0);
+    strcpy(string[0], "Cmd%v2:");
+    variables[2] = 4;
     b7CurrentInputStr[0] = 0;
     inputLineDisplayed = TRUE;
     inputKeys = keys;
@@ -85,6 +114,7 @@ static void test_keyboard_zero_digit(void)
     inputKeyPosition = 0;
     b7PollKeyboard();
     assert(strcmp(b7CurrentInputStr, "100") == 0);
+    assert(strcmp(b7OutputString, "Cmd4:100_") == 0 && b7InputReady);
     assert(inputKeyPosition == sizeof(keys));
     inputLineDisplayed = FALSE;
 }
@@ -551,6 +581,7 @@ int main(void)
 	test_display_map_bounds();
 	test_long_unboxed_text();
     test_keyboard_zero_digit();
+    test_string_input_publication();
 	puts("text interpolation tests passed");
 	return 0;
 }

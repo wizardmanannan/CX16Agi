@@ -10,6 +10,7 @@ PARSER_INPUT_ASM_INC = 1
 .import _inputWords
 .export _b7RefreshInputLine
 .import _b7Temp, _b7CurrentInputStr, _b7OutputString, _cursorChar
+.import _b7InputReady
 .segment "CODE"
 ; Dictionary synonym IDs are words, including values above 255.
 _b7GetInputWord:
@@ -132,6 +133,7 @@ _b7TokenizeWords:
 ; Compose prompt + input + cursor, optionally followed by a blank to erase the
 ; previous cursor cell. Reserve byte 79 for NUL; parser.c checks these sizes.
 _b7RefreshInputLine:
+    stz _b7InputReady
     sta tmp2
     ldx #0
     ldy #0
@@ -169,5 +171,6 @@ _b7RefreshInputLine:
 @finish:
     lda #0
     sta _b7OutputString,x
+    inc _b7InputReady
     rts
 .endif

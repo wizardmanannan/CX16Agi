@@ -48,6 +48,9 @@ extern byte __fastcall__ b3WrapText(char* text, int width, byte* maximum);
 extern void __fastcall__ b3DrawBorder(byte width, size_t messageSize);
 byte bridgeActive, bridgeControls, bridgeLines, bridgeCounts[2], bridgeErase;
 char cursorChar;
+boolean inputLineDisplayed, b7ReadingString, b7InputReady;
+byte b7InputRow, b7InputColumn;
+int user_input_line = 23;
 extern void __fastcall__ b7RefreshInputLine(boolean erasePrevious);
 extern byte __fastcall__ b3ClipTextToMap(char* text);
 extern void __fastcall__ b3ApplyTextModeControls(char* text);
@@ -445,6 +448,7 @@ void targetBridge(void)
             inputLineCanary = 0x5a;
             memset(b7OutputString, 0x5a, sizeof(b7OutputString));
             b7RefreshInputLine(bridgeErase);
+            bridgeLines = b7InputReady;
             if (inputLineCanary != 0x5a || !memchr(b7OutputString, 0, sizeof(b7OutputString))) {
                 targetResult = 4;
                 return;

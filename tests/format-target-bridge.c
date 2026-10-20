@@ -21,6 +21,7 @@ static unsigned int layoutWidth;
 static byte layoutMaximum, layoutBoxLines, tokenBytes[40], inputErase;
 static char inputPrompt[256], inputText[41], inputCursor;
 extern char b7Temp[256], b7CurrentInputStr[41], b7OutputString[80], cursorChar;
+extern boolean b7InputReady;
 
 static unsigned int address(const char* symbol)
 {
@@ -244,5 +245,5 @@ void b7RefreshInputLine(boolean erasePrevious)
     inputCursor = cursorChar;
     memcpy(inputPrompt, b7Temp, sizeof(inputPrompt));
     memcpy(inputText, b7CurrentInputStr, sizeof(inputText));
-    targetTransform(inputPrompt, 7, b7OutputString, 7, sizeof(b7OutputString), 7);
+    b7InputReady = targetTransform(inputPrompt, 7, b7OutputString, 7, sizeof(b7OutputString), 7);
 }

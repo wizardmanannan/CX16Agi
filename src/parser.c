@@ -21,6 +21,8 @@ extern int controlMode;
 int lastKey;
 int numInputWords;
 char cursorChar = '_';
+boolean b7ReadingString, b7InputReady;
+byte b7InputRow, b7InputColumn;
 
 #define MAX_INPUT_STRING_LENGTH 40 //Includes terminator 
 
@@ -87,6 +89,8 @@ void b7ProcessString(char* stringPointer, byte stringBank, char* b7OutputString,
 void b7InitEvents()
 {
 	int eventNum;
+    string[0][0] = '>';
+    string[0][1] = 0;
 
 	for (eventNum = 0; eventNum < 256; eventNum++) {
 		b7Events[eventNum].activated = FALSE;
@@ -120,15 +124,18 @@ void b7HandleDirection(int dirn)
 
 void b7GetString(char* promptStr, byte promptStringBank, char* returnStr, byte returnStrBank, int x, int y, int l)
 {
-	int ch, gx, gy;
-	boolean stillInputing = TRUE;
+	int ch;
+    char previousInput[MAX_INPUT_STRING_LENGTH + 1];
 
 	if (l < 0) l = 0;
 	if (l > MAX_INPUT_STRING_LENGTH) l = MAX_INPUT_STRING_LENGTH;
+    strcpy(previousInput, b7CurrentInputStr);
+    b7InputReady = FALSE;
+    b7ReadingString = TRUE;
+    b7InputRow = y;
+    b7InputColumn = x;
 	strPos = 0;
 	b7CurrentInputStr[0] = '\0';
-	gx = (x - 1) * 16;
-	gy = ((y - 1) * 16) + 20;
 	b7ProcessString(promptStr, promptStringBank, b7Temp, PARSER_BANK, sizeof(b7Temp));
 	b7RefreshInputLine(FALSE);
 
@@ -146,6 +153,9 @@ void b7GetString(char* promptStr, byte promptStringBank, char* returnStr, byte r
 				memCpyBankedBetween((byte*)returnStr, returnStrBank,
 				                   (byte*)b7CurrentInputStr, STRING_BANK, (size_t)strPos + 1);
 				while (key[KEY_ENTER]) { /* Wait until ENTER released */ }
+                b7InputReady = FALSE;
+                strcpy(b7CurrentInputStr, previousInput);
+                b7ReadingString = FALSE;
 				return;
 			case KEY_BACKSPACE: /* Platform delete/backspace */
 			case 0x08: /* ASCII Backspace */
@@ -202,7 +212,8 @@ void b7PollKeyboard()
 	gx = 0;
 	gy = ((user_input_line - 1) * 16) + 20;
 	if (inputLineDisplayed) {
-		b7RefreshInputLine(FALSE);
+        b7ProcessString(string[0], STRING_BANK, b7Temp, PARSER_BANK, sizeof(b7Temp));
+        b7RefreshInputLine(FALSE);
 	}
 
 	do {
@@ -243,6 +254,7 @@ void b7PollKeyboard()
 					b7LookupWords(b7CurrentInputStr);
 					b7CurrentInputStr[0] = 0;
 					strPos = 0;
+                        b7ProcessString(string[0], STRING_BANK, b7Temp, PARSER_BANK, sizeof(b7Temp));
 					b7RefreshInputLine(FALSE);
 					strcpy(b7LastLine, b7CurrentInputStr);
 					break;
