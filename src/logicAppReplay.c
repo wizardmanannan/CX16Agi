@@ -431,5 +431,212 @@ static void captureSnapshot(void)
     logicAppReplayOutputLength = LOGIC_APP_REPLAY_OUTPUT_SIZE;
 }
 
+void logicAppReplayBootBody(void)
+{
+    unsigned int seed = (unsigned int)logicAppReplaySeed[0] |
+                        ((unsigned int)logicAppReplaySeed[1] << 8);
+    replayTick = 0;
+    replayElapsedVsync = 0;
+    replayScheduleFrame = 0;
+    replayScheduleMilliseconds = 0;
+    lastCycleMilliseconds = 0;
+    replayTimerMilliseconds = 0;
+    nextInputEvent = 0;
+    inputWasMissed = 0;
+    messageCount = 0;
+    messageDropped = 0;
+    messageOverflow = 0;
+    inputWaitExhausted = 0;
+    faultTriggered = 0;
+    semanticFaultPhase = 0;
+    inputWaitPolls = 0;
+    inputWaitTick = 0xFFFFFFFFUL;
+    lastInputFrame = 0;
+    lastInputKey = 0;
+    capacityFlags = 0;
+    if (logicAppReplayEventCount > LOGIC_APP_REPLAY_INPUT_MAX) {
+        capacityFlags |= LOGIC_APP_REPLAY_CAPACITY_INPUT_COUNT_TRUNCATED;
+        logicAppReplayEventCount = LOGIC_APP_REPLAY_INPUT_MAX;
+    }
+    memset((void *)(logicAppReplayOutput + LOGIC_APP_REPLAY_MESSAGES_OFFSET), 0,
+           LOGIC_APP_REPLAY_MESSAGE_MAX * LOGIC_APP_REPLAY_MESSAGE_RECORD_SIZE);
+    logicAppReplayRandomCalls = 0;
+    logicAppReplayRandomIndex = 0;
+    replayRandomState = seed ? seed : 1;
+    logicAppReplayReady = 0;
+    b6ReplayStartApplication(seed);
+    lastSnapshotVsync = b6ReadVSyncCounter();
+    lastCycleVsync = lastSnapshotVsync;
+    logicAppReplayReady = 1;
+    captureSnapshot();
+}
+
+void logicAppReplayStepBody(void)
+{
+    if (!logicAppReplayReady) {
+        logicAppReplayOutput[5] = 2;
+        logicAppReplayOutputLength = LOGIC_APP_REPLAY_OUTPUT_SIZE;
+        return;
+    }
+    while (!b6ReplayMainLoopStepReady(lastCycleVsync)) { }
+    lastCycleVsync = b6ReadVSyncCounter();
+    ++replayTick;
+    advanceReplayCycleClock();
+    b6ReplayRunInterpreterCycle();
+    /* Test-only transient corruption: the next completed cycle repairs it.
+       This proves semantic reduction cannot rely on the final state alone. */
+    if (semanticFaultPhase) {
+        GOLDEN_RAM[VARS_AREA_START + 255] ^= 1;
+        --semanticFaultPhase;
+    }
+    updateReplayClock();
+    /* A prefix boundary is not an input deadline: a key can become due
+       during this cycle and remain queued until the next GETIN. */
+    captureSnapshot();
+}
+
+void logicAppReplayRunTarget(void)
+{
+    replayTickLimit = logicAppReplayTickLimit;
+    logicAppReplayRunRequested = 0;
+    logicAppReplayBootBody();
+    if (replayTickLimit > 255u) {
+        replayTickLimit = 255u;
+        capacityFlags |= LOGIC_APP_REPLAY_CAPACITY_TICK_LIMIT_UNSUPPORTED;
+        captureSnapshot();
+    }
+    while (replayTick < replayTickLimit && !inputWaitExhausted) {
+        logicAppReplayStepBody();
+#ifdef LOGIC_CONTEXT_VERIFY
+            if (logicContextVerifyFailed)
+                break;
+#endif
+    }
+}
+
+int logicAppReplayReadInput(int *output)
+{
+    uint8_t index = nextInputEvent;
+    uint32_t frame;
+    if (!output)
+        return 0;
+    updateReplayClock();
+    if (index >= logicAppReplayEventCount) {
+        if (inputWaitExhausted)
+            return 0;
+        if (inputWaitTick != replayTick) {
+            inputWaitTick = replayTick;
+            inputWaitPolls = 0;
+        }
+        if (inputWaitPolls < 0xFFFFu)
+            ++inputWaitPolls;
+        if (inputWaitPolls >= LOGIC_APP_REPLAY_INPUT_WAIT_LIMIT) {
+            inputWaitExhausted = 1;
+            captureSnapshot();
+            /* This is the replay target's existing testbench return sentinel.
+               It exits the blocked interpreter path without inventing a key;
+               the host sees INPUT_WAIT_EXHAUSTED and must reject the run. */
+            asm("jmp $fffd");
+        }
+        return 0;
+    }
+    frame = (uint32_t)logicAppReplayEvents[index][0] |
+            ((uint32_t)logicAppReplayEvents[index][1] << 8) |
+            ((uint32_t)logicAppReplayEvents[index][2] << 16) |
+            ((uint32_t)logicAppReplayEvents[index][3] << 24);
+    if (frame > replayScheduleFrame)
+        return 0;
+    *output = logicAppReplayEvents[index][4];
+    lastInputFrame = frame;
+    lastInputKey = (uint8_t)*output;
+    ++nextInputEvent;
+    inputWaitPolls = 0;
+    inputWaitTick = replayTick;
+    if (logicAppReplayFaultFlags &&
+        frame == LOGIC_APP_REPLAY_FAULT_TRIGGER_FRAME &&
+        (uint8_t)*output == LOGIC_APP_REPLAY_FAULT_TRIGGER_PETSCII) {
+        faultTriggered = 1;
+#if defined(LOGIC_CONTEXT_VERIFY) && defined(LOGIC_CONTEXT_FAULT_INJECTION)
+        if (logicAppReplayFaultFlags & LOGIC_APP_REPLAY_FAULT_OMIT_METADATA_SAVE)
+            logicContextTestOmitMetadataSave();
+#endif
+        if (logicAppReplayFaultFlags & LOGIC_APP_REPLAY_FAULT_SEMANTIC_WRITE)
+            semanticFaultPhase = 2;
+        logicAppReplayFaultFlags = 0;
+    }
+    return 1;
+}
+
+int logicAppReplayWaitForInput(int *output)
+{
+    for (;;) {
+        uint8_t index;
+        uint32_t frame;
+        uint32_t remaining;
+        if (logicAppReplayReadInput(output))
+            return 1;
+        index = nextInputEvent;
+        if (index >= logicAppReplayEventCount)
+            return 0;
+        frame = (uint32_t)logicAppReplayEvents[index][0] |
+                ((uint32_t)logicAppReplayEvents[index][1] << 8) |
+                ((uint32_t)logicAppReplayEvents[index][2] << 16) |
+                ((uint32_t)logicAppReplayEvents[index][3] << 24);
+        updateReplayClock();
+        if (frame <= replayScheduleFrame)
+            continue;
+        /* Modal input is sampled on the same 10 ms poll grid as have.key. */
+        remaining = ((frame * 5UL + 2UL) / 3UL) * 10UL -
+                    replayScheduleMilliseconds;
+        logicAppReplayAdvanceMilliseconds(remaining);
+    }
+}
+
+void logicAppReplayRecordMessage(uint8_t logic, uint8_t message,
+                                 const char *text, uint8_t bank)
+{
+    uint16_t i;
+    uint16_t length;
+    uint16_t offset;
+    if (!text)
+        return;
+    length = strLenBanked((char *)text, bank);
+    if (length > LOGIC_APP_REPLAY_MESSAGE_TEXT_MAX) {
+        messageOverflow = 1;
+        capacityFlags |= LOGIC_APP_REPLAY_CAPACITY_MESSAGE_TEXT_TRUNCATED;
+        length = LOGIC_APP_REPLAY_MESSAGE_TEXT_MAX;
+    }
+    if (messageCount == LOGIC_APP_REPLAY_MESSAGE_MAX) {
+        for (i = 0; i + 1 < LOGIC_APP_REPLAY_MESSAGE_MAX; ++i) {
+            uint16_t j;
+            uint16_t from = LOGIC_APP_REPLAY_MESSAGES_OFFSET +
+                (uint16_t)(i + 1) * LOGIC_APP_REPLAY_MESSAGE_RECORD_SIZE;
+            uint16_t to = LOGIC_APP_REPLAY_MESSAGES_OFFSET +
+                (uint16_t)i * LOGIC_APP_REPLAY_MESSAGE_RECORD_SIZE;
+            for (j = 0; j < LOGIC_APP_REPLAY_MESSAGE_RECORD_SIZE; ++j)
+                logicAppReplayOutput[to + j] = logicAppReplayOutput[from + j];
+        }
+        --messageCount;
+        if (messageDropped == 0xFFFFu) {
+            capacityFlags |=
+                LOGIC_APP_REPLAY_CAPACITY_MESSAGE_DROP_COUNT_SATURATED;
+        } else {
+            ++messageDropped;
+        }
+        capacityFlags |= LOGIC_APP_REPLAY_CAPACITY_MESSAGE_EVICTED;
+        messageOverflow = 1;
+    }
+    offset = LOGIC_APP_REPLAY_MESSAGES_OFFSET +
+             (uint16_t)messageCount * LOGIC_APP_REPLAY_MESSAGE_RECORD_SIZE;
+    logicAppReplayOutput[offset] = logic;
+    logicAppReplayOutput[offset + 1] = message;
+    logicAppReplayOutput[offset + 2] = (uint8_t)length;
+    for (i = 0; i < LOGIC_APP_REPLAY_MESSAGE_RECORD_SIZE - 3; ++i)
+        logicAppReplayOutput[offset + 3 + i] = 0;
+    if (length)
+        memCpyBanked((byte *)&logicAppReplayOutput[offset + 3],
+                     (byte *)text, bank, length);
+    ++messageCount;
+}
 
 #endif
