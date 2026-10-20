@@ -1051,6 +1051,7 @@ void b2End_of_loop() // 2, 0x00
 	getViewTab(&localViewtab, entryNum);
 
 	localViewtab.param1 = loadAndIncWinCode();
+	LOGIC_STORE_FLAG(localViewtab.param1, FALSE);
 	localViewtab.cycleStatus = 1;
 	localViewtab.flags |= (UPDATE | CYCLING);
 	localViewtab.noAdvance = TRUE;
@@ -1083,6 +1084,7 @@ void b2Reverse_loop() // 2, 0x00
 	getViewTab(&localViewtab, entryNum);
 
 	localViewtab.param1 = loadAndIncWinCode();
+	LOGIC_STORE_FLAG(localViewtab.param1, FALSE);
 	localViewtab.cycleStatus = 2;
 	localViewtab.flags |= (UPDATE | CYCLING);
 
