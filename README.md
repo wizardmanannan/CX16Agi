@@ -161,6 +161,12 @@ player actually moves. It does not replace a full playthrough or a visual/audio
 fidelity check. `review-check` runs `test`, `production-test`, and `games-test`
 sequentially and fails if either game or any required input is missing.
 
+`make -C tools intro-test ROM=/path/to/rom.bin GAME_KQ1=/path/to/KQ1`
+retains KQ1's natural title and checks a real 13-row credit redraw. The batch
+must finish within one display frame and active sound updates must arrive on
+every VSYNC. The case reports emulated cycles and host time for the repeatable
+workload; the initial failure exposed partial credits for 27 frames.
+
 For a normal build, run `CC65_HOME=/path/to/cc65 make` (or `make` when `cl65`
 is on PATH). The map is written beside the program as `agi.cx16.map`.
 Deploy `agi.cx16`, all numbered `agi.cx16.01` through `agi.cx16.12` banks,

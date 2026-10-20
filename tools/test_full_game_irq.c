@@ -1104,17 +1104,26 @@ static const char hook[] =
 static const char startup_hook[] =
 "static void startup_before_step(void) {\n"
 "    static unsigned pictures,room_pictures,polls,ticks,updates,room_ticks,room_polls,last_room=256;\n"
-"    static bool moving; static uint16_t start_x,start_y;\n"
+"    static unsigned intro_rows,intro_first_frame,intro_last_frame,intro_sound_calls,intro_last_sound_frame,intro_max_sound_gap;\n"
+"    static uint32_t intro_host_start; if(!intro_host_start) intro_host_start=SDL_GetTicks()+1;\n"
+"    static bool moving,intro_display_active; static uint16_t start_x,start_y,intro_display_return; static uint8_t intro_display_sp;\n"
 "    static uint32_t next_key=8000000u; static uint16_t picture_return; static uint8_t picture_sp; static bool drawing;\n"
 "    if(clockticks6502>800000000u) { fprintf(stderr,\"Startup timeout: expected room=%u actual=%u pictures=%u polls=%u ticks=%u updates=%u pc=%04x bank=%u\\n\",STARTUP_TEST_ROOM,last_room,pictures,polls,ticks,updates,regs.pc,memory_get_ram_bank()); exit(3); }\n"
 "    if(regs.k||waiting) return;\n"
 "    uint16_t pc=regs.pc; uint8_t bank=memory_get_ram_bank();\n"
+"    if(INTRO_TEST_ENABLED&&bank==3&&pc==S__b3Display_v) { if(!intro_rows) intro_first_frame=shake_frames_seen; intro_rows++; intro_display_active=true; intro_display_return=shake_call_return(&intro_display_sp); }\n"
+"    if(intro_display_active&&pc==intro_display_return&&(uint8_t)regs.sp==intro_display_sp) { intro_last_frame=shake_frames_seen; intro_display_active=false; }\n"
+"    if(INTRO_TEST_ENABLED&&bank==11&&pc==S_bBSoundHandler&&shake_banked_read(S__bBChannelsPlaying,11)) { unsigned gap=shake_frames_seen-intro_last_sound_frame; if(intro_sound_calls&&gap>intro_max_sound_gap) intro_max_sound_gap=gap; intro_last_sound_frame=shake_frames_seen; intro_sound_calls++; }\n"
 "    if(bank==17&&pc==S__b11DrawPic) { drawing=true; picture_return=shake_call_return(&picture_sp); }\n"
 "    if(drawing&&pc==picture_return&&(uint8_t)regs.sp==picture_sp) { pictures++; if(shake_banked_read(shake_var_address(0),0)==STARTUP_TEST_ROOM) room_pictures++; drawing=false; }\n"
 "    if(bank==7&&pc==S__b7PollKeyboard) polls++;\n"
 "    if(bank==9&&pc==S_b9UpdateObjects) updates++;\n"
 "    if(bank==6&&pc==S__b6Interpret) {\n"
 "        ticks++; unsigned room=shake_banked_read(shake_var_address(0),0);\n"
+"        if(INTRO_TEST_ENABLED) {\n"
+"            if(intro_rows>=13) { unsigned span=intro_last_frame-intro_first_frame; fprintf(stderr,\"Natural intro credit batch: rows=%u visible_update_frames=%u active_sound_calls=%u max_sound_gap_frames=%u emulated_cycles=%u host_ms=%u\\n\",intro_rows,span,intro_sound_calls,intro_max_sound_gap,clockticks6502,SDL_GetTicks()+1-intro_host_start); if(span>1) { fprintf(stderr,\"Intro text redraw exposes a partial credit batch for multiple display frames\\n\"); exit(3); } if(!intro_sound_calls||intro_max_sound_gap>1) { fprintf(stderr,\"Intro sound updates missed active VSYNC frames\\n\"); exit(3); } fprintf(stderr,\"PASS natural intro presentation\\n\"); exit(0); }\n"
+"            intro_rows=0;\n"
+"        }\n"
 "        if(room!=last_room) { fprintf(stderr,\"Natural startup: room=%u cycle=%u pictures=%u ticks=%u polls=%u\\n\",room,clockticks6502,pictures,ticks,polls); last_room=room; room_ticks=ticks; room_polls=polls; }\n"
 "        unsigned sprites=0; for(unsigned i=0;i<128;i++) if(video_space_read(0x1fc00+i*8+6)&12) sprites++;\n"
 "        uint16_t x=combined_read16(S__viewtab+shake_read(S__offsetOfXPos),9),y=combined_read16(S__viewtab+shake_read(S__offsetOfYPos),9);\n"
@@ -1123,10 +1132,10 @@ static const char startup_hook[] =
 "            else if((x!=start_x||y!=start_y)&&shake_banked_read(shake_var_address(6),0)==3) { fprintf(stderr,\"PASS natural game startup: room=%u ticks=%u polls=%u pictures=%u updates=%u visible_sprites=%u moved=%u,%u->%u,%u\\n\",room,ticks,polls,pictures,updates,sprites,start_x,start_y,x,y); exit(0); }\n"
 "        }\n"
 "    }\n"
-"    if(clockticks6502>=next_key&&last_room!=STARTUP_TEST_ROOM) { static char key[]=\"\\r\"; machine_paste(key,false); next_key=clockticks6502+8000000u; }\n"
+"    if(!INTRO_TEST_ENABLED&&clockticks6502>=next_key&&last_room!=STARTUP_TEST_ROOM) { static char key[]=\"\\r\"; machine_paste(key,false); next_key=clockticks6502+8000000u; }\n"
 "}\n";
 
-static const char *names[] = {"custom_irq_handler","mainLoop","codeWindow","cwCurrentCode","endPos","codeWindowInvalid","b4ShakeScreen","b3Load_soundCCall","b3Play_soundCCall","b5Set_menuCCall","b2Load_logicsCCall","_b6LoadLogicFile","_currentLog","_logicFiles","_logics","shakeCount","shakePhases","shakeFrames","_menuDirty","_menuShown","_menuAllowed","_numOfMenus","_charSetInited","_mainLoopCounter","_bBChannelsPlaying","_bBLoadedSoundsPointer","_bBEndSoundFlag","bBSoundHandler","b7HandleInputLine","bADisplayMenu","b10DisplayStatusBar","bEHandleSpriteUpdates","b10PrintStatusBarString","handleScreenShake","handleDisplayTextSlice","@handleSound","_inputLineDisplayed","_inputLineDirty","_b7CurrentInputStr","_bESpritesUpdatedBuffer","_bESpritesUpdatedBufferPointer","_b11DrawPic","_b2Load_pic","_b2Draw_pic","_b2Load_view","_b2Animate_obj","_b2Set_view","_b2Position","_b2Draw","b9UpdateObjects","_b6LoadAGIFile","_b9LoadViewFile","_b7PollKeyboard","_viewdir","_numViews","_agiBlit","_bESetLoop","_bEAllocateSpriteMemory","_bDSpriteAllocTable","_viewtab","_viewTableMetadata","_loadedViews","_offsetOfCurrentView","_offsetOfCurrentLoop","_offsetOfCurrentCel","_offsetOfEntryNum","_offsetOfFlags","_offsetOfXPos","_offsetOfYPos","_offsetOfPrevX","_offsetOfPrevY","_offsetOfStopped","_offsetOfBackBuffers","_offsetOfViewMetadataBank","_offsetOfIsOnBackBuffer","_offsetOfloopsVeraAddressesPointers","_offsetOfLoops","_offsetOfLoopsBank","_offsetOfAllocationWidth","_offsetOfAllocationHeight","_offsetOfMaxVeraSlots","_sizeOfLoop","_sizeOfViewTab","_sizeOfView","findFreeVRamLowByteLoop","findFirstFreeVRamBlock_optimisticSkip","_vSyncCounter","_vSyncCounterHigh","_foregroundVeraDepth","sendIrqCommand","irqWorkKind","irqCompletionGeneration","lastMainLoopCounter","_currentTextBuffer","_displayTextAddressToCopyTo","_displayTextAddressToCopyToHigh","_b3PaletteRows","_b8AsmFloodFillSections","_b11SplitPriority","_var","_flag","_b6Interpret","_executeLogic","_b5GetLogicEntry","_testRunCombinedDisplayText","_testMultiplyBoundsResults","_testRunBankAliasDisplay","_testRunBankBoundaryDisplay","_testRunFullLayerClear","_testBankAliasSource","_testBankAliasBank","_b3TextBuffers","_strLenBankedBounded","_memCpyBankedBetween","_memCpyBanked","_testCombinedSoundEndFlag","_testBeginSpritePublicationWork","_testEndSpritePublicationWork","c_sp"};
+static const char *names[] = {"custom_irq_handler","mainLoop","codeWindow","cwCurrentCode","endPos","codeWindowInvalid","b4ShakeScreen","b3Load_soundCCall","b3Play_soundCCall","b5Set_menuCCall","b2Load_logicsCCall","_b6LoadLogicFile","_currentLog","_logicFiles","_logics","shakeCount","shakePhases","shakeFrames","_menuDirty","_menuShown","_menuAllowed","_numOfMenus","_charSetInited","_mainLoopCounter","_bBChannelsPlaying","_bBLoadedSoundsPointer","_bBEndSoundFlag","bBSoundHandler","b7HandleInputLine","bADisplayMenu","b10DisplayStatusBar","bEHandleSpriteUpdates","b10PrintStatusBarString","handleScreenShake","handleDisplayTextSlice","@handleSound","_inputLineDisplayed","_inputLineDirty","_b7CurrentInputStr","_bESpritesUpdatedBuffer","_bESpritesUpdatedBufferPointer","_b11DrawPic","_b2Load_pic","_b2Draw_pic","_b3Display_v","_b2Load_view","_b2Animate_obj","_b2Set_view","_b2Position","_b2Draw","b9UpdateObjects","_b6LoadAGIFile","_b9LoadViewFile","_b7PollKeyboard","_viewdir","_numViews","_agiBlit","_bESetLoop","_bEAllocateSpriteMemory","_bDSpriteAllocTable","_viewtab","_viewTableMetadata","_loadedViews","_offsetOfCurrentView","_offsetOfCurrentLoop","_offsetOfCurrentCel","_offsetOfEntryNum","_offsetOfFlags","_offsetOfXPos","_offsetOfYPos","_offsetOfPrevX","_offsetOfPrevY","_offsetOfStopped","_offsetOfBackBuffers","_offsetOfViewMetadataBank","_offsetOfIsOnBackBuffer","_offsetOfloopsVeraAddressesPointers","_offsetOfLoops","_offsetOfLoopsBank","_offsetOfAllocationWidth","_offsetOfAllocationHeight","_offsetOfMaxVeraSlots","_sizeOfLoop","_sizeOfViewTab","_sizeOfView","findFreeVRamLowByteLoop","findFirstFreeVRamBlock_optimisticSkip","_vSyncCounter","_vSyncCounterHigh","_foregroundVeraDepth","sendIrqCommand","irqWorkKind","irqCompletionGeneration","lastMainLoopCounter","_currentTextBuffer","_displayTextAddressToCopyTo","_displayTextAddressToCopyToHigh","_b3PaletteRows","_b8AsmFloodFillSections","_b11SplitPriority","_var","_flag","_b6Interpret","_executeLogic","_b5GetLogicEntry","_testRunCombinedDisplayText","_testMultiplyBoundsResults","_testRunBankAliasDisplay","_testRunBankBoundaryDisplay","_testRunFullLayerClear","_testBankAliasSource","_testBankAliasBank","_b3TextBuffers","_strLenBankedBounded","_memCpyBankedBetween","_memCpyBanked","_testCombinedSoundEndFlag","_testBeginSpritePublicationWork","_testEndSpritePublicationWork","c_sp"};
 #define NAME_COUNT (sizeof(names)/sizeof(names[0]))
 static unsigned labels[NAME_COUNT]; static bool found[NAME_COUNT];
 static const char *allocator_names[]={"_bEAllocateSpriteMemoryBulk","_bEBulkAllocatedAddresses","bDFindFreeVramBlock","_bDDeleteAllocation","bDDeleteAllocationAsmCall","VIEW_POS_ENTRY_NUM","sreg","BLOCKS_TO_FIND"};
@@ -1641,9 +1650,10 @@ static void run_loader_test(const char *game,const char *build,const char *nativ
     REQUIRE(!failed,"Real X16 WORDS startup regression failed");
 }
 int main(int argc,char **argv) {
-    char *emulator=NULL,*rom=NULL,*build=NULL,*game=NULL,*output=NULL,*sdl=NULL,*symbol=NULL,*tas_capture_header=NULL;unsigned long trigger=180000000;bool foreground_test=false,picture_test=false,combined_test=false,loader_test=false,random_ram=false;unsigned startup_room=0;
+    char *emulator=NULL,*rom=NULL,*build=NULL,*game=NULL,*output=NULL,*sdl=NULL,*symbol=NULL,*tas_capture_header=NULL;unsigned long trigger=180000000;bool foreground_test=false,picture_test=false,combined_test=false,loader_test=false,random_ram=false,intro_test=false;unsigned startup_room=0;
     for(int i=1;i<argc;i++) {
-        if(!strcmp(argv[i],"--help")) {puts("Usage: test_full_game_irq --emulator-source DIR --rom FILE --build DIR --game DIR [--output DIR] [--symbols FILE] [--sdl-prefix DIR] [--tas-capture-header FILE] [--trigger-cycle N] [--foreground-test] [--combined-irq-test] [--picture-test] [--loader-test] [--startup-room 1|7] [--random-ram]");return 0;}
+        if(!strcmp(argv[i],"--help")) {puts("Usage: test_full_game_irq --emulator-source DIR --rom FILE --build DIR --game DIR [--output DIR] [--symbols FILE] [--sdl-prefix DIR] [--tas-capture-header FILE] [--trigger-cycle N] [--foreground-test] [--combined-irq-test] [--picture-test] [--loader-test] [--startup-room 1|7] [--random-ram] [--intro-test]");return 0;}
+        if(!strcmp(argv[i],"--intro-test")) { intro_test=true;startup_room=1;continue;}
         if(!strcmp(argv[i],"--random-ram")) { random_ram=true;continue;}
         if(!strcmp(argv[i],"--foreground-test")) {foreground_test=true;continue;}
         if(!strcmp(argv[i],"--picture-test")) {picture_test=true;continue;}
@@ -1703,7 +1713,7 @@ int main(int argc,char **argv) {
         if(picture_test&&!fixture_found[i]) fail("Missing sprite fixture target symbol %s",fixture_names[i]);
         fprintf(mem,"#define S_%s 0x%x\n",fixture_names[i],fixture_found[i]?fixture_labels[i]:0);
     }
-    fprintf(mem,"#define STARTUP_TEST_ROOM %u\nstatic void startup_before_step(void);\n",startup_room);
+    fprintf(mem,"#define STARTUP_TEST_ROOM %u\n#define INTRO_TEST_ENABLED %u\nstatic void startup_before_step(void);\n",startup_room,intro_test?1:0);
     fputs(hook,mem);fputs(startup_hook,mem);fputs("\nvoid *emulator_loop(void *param);",mem);REQUIRE(!fclose(mem),"Hook buffer close failed");patch(main_c,"void *emulator_loop(void *param);",injected,1);free(injected);
     patch(main_c,"\t\tstep6502();","\t\tshake_before_step();\n\t\tuint8_t shake_opcode=waiting ? 0 : debug_read6502(regs.pc,regs.k,USE_CURRENT_X16_BANK);\n\t\tstep6502();\n\t\tshake_after_step(shake_opcode);",1);
     patch(cpu,"void irq6502() {","extern void shake_irq_accepted(void);\nextern int shake_suppress_irq(void);\nvoid irq6502() {",1);
@@ -1742,5 +1752,5 @@ int main(int argc,char **argv) {
     cleanup_stage();
     if(!stage||exists(stage)) fail("Integration fixture cleanup regression: private staged game was not removed");
     require_no_retained_stage(output);
-    if(startup_room) { REQUIRE(file_contains(join(output,"run.log"),"PASS natural game startup"),"Game did not reach its playable room"); puts("PASS natural game startup and sustained interpreter/input/render progress"); } else if(picture_test) validate_picture(output); else if(combined_test) validate_combined(output); else validate(output,foreground_test);return 0;
+    if(startup_room) { REQUIRE(file_contains(join(output,"run.log"),intro_test?"PASS natural intro presentation":"PASS natural game startup"),"Game did not reach its playable room"); puts("PASS natural game startup and sustained interpreter/input/render progress"); } else if(picture_test) validate_picture(output); else if(combined_test) validate_combined(output); else validate(output,foreground_test);return 0;
 }
