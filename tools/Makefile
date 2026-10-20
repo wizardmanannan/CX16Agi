@@ -21,7 +21,7 @@ TEST_FIXTURE_ROOT ?= $(if $(TMPDIR),$(TMPDIR),/tmp)
 export GAME_KQ1 GAME_KQ3 CC65_HOME X16_EMULATOR_SOURCE TMPDIR TEST_OUTPUT_DIR ROM GAME BUILD SYMBOLS SDL_PREFIX TAS_CAPTURE_HEADER
 unexport KEEP_TEST_OUTPUT
 
-.PHONY: test suite commands-test image production-test integration-test picture-test loader-test modes integration _run build-test games-test review-check intro-test play emulator-audio-test
+.PHONY: test suite commands-test image production-test integration-test picture-test loader-test modes integration _run build-test games-test review-check intro-test play emulator-audio-test staging-test metadata-test
 
 # A review handoff requires both original games; missing inputs fail closed.
 review-check:

@@ -1701,6 +1701,11 @@ static void test_game_staging(void) {
     write_file(join(game,"meta/KQ3-SOUND-IDS.IDX"),"index",5);
     copy_stage(game,stage,false,false);
     REQUIRE(file_contains(join(stage,"meta/KQ3-SOUND-IDS.IDX"),"index"),"Game staging omitted production dependency metadata");
+    char *cache=join(suite_fixture_directory,"cache"),*cached_stage=join(suite_fixture_directory,"cached-stage");
+    mkdirs(join(cache,"extracted")); mkdirs(cached_stage);
+    write_file(join(cache,"extracted/KQ3-VIEW-IDS.BIN"),"views",5);
+    copy_stage(cache,cached_stage,false,false);
+    REQUIRE(file_contains(join(cached_stage,"meta/kq3-view-ids.bin"),"views"),"Shared extractor output did not reach the production metadata path");
     puts("PASS game staging retains dependency metadata");
 }
 int main(int argc,char **argv) {

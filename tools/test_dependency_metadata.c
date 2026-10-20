@@ -47,10 +47,16 @@ int main(void)
     b4InitMetadata(); CHECK(!b4IsInited,"Partial dependency index record was accepted");
     valid_files(); fixture("view","idx",outside,sizeof(outside));
     b4InitMetadata(); CHECK(!b4IsInited,"Dependency offset outside loaded metadata was accepted");
+    byte oversized[701]; memset(oversized,7,sizeof(oversized));
+    valid_files(); fixture("view","bin",oversized,sizeof(oversized));
+    b4InitMetadata(); CHECK(!b4IsInited,"Oversized metadata file was silently truncated");
     valid_files(); readFailure=TRUE; b4InitMetadata();
     CHECK(!b4IsInited,"Negative metadata read was accepted");
     readFailure=FALSE; valid_files(); b4InitMetadata();
     CHECK(b4IsInited,"Dependency metadata could not recover after failure");
+    static const byte emptyIndex[]={0,0,0};
+    fixture("sound","idx",emptyIndex,sizeof(emptyIndex)); fixture("sound","bin",emptyIndex,0);
+    b4InitMetadata(); CHECK(b4IsInited,"Empty dependency list was rejected");
     puts("PASS dependency metadata rejects missing, partial, out-of-range and failed reads, then retries");
     return 0;
 }
