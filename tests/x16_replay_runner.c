@@ -535,3 +535,133 @@ static uint32_t semantic_hash(const LogicReplayResult *result)
     return hash;
 }
 
+static int encode_events(const LogicReplayEvent *events, size_t count,
+                         uint8_t **encoded)
+{
+    size_t i;
+    size_t size;
+    uint8_t *bytes;
+    if (count > UINT16_MAX || count > SIZE_MAX / REPLAY_PROTOCOL_EVENT_BYTES)
+        return -1;
+    size = count * REPLAY_PROTOCOL_EVENT_BYTES;
+    bytes = (uint8_t *)malloc(size ? size : 1);
+    if (!bytes)
+        return -1;
+    for (i = 0; i < count; ++i) {
+        if (logic_trace_event_encode(&events[i],
+                                     bytes + i * REPLAY_PROTOCOL_EVENT_BYTES,
+                                     REPLAY_PROTOCOL_EVENT_BYTES) != 0) {
+            free(bytes);
+            return -1;
+        }
+    }
+    *encoded = bytes;
+    return 0;
+}
+
+static int kill_child(pid_t child, int input, int output)
+{
+    int status;
+    if (input >= 0)
+        close(input);
+    if (output >= 0)
+        close(output);
+    (void)kill(child, SIGTERM);
+    while (waitpid(child, &status, 0) < 0 && errno == EINTR) { }
+    return 0;
+}
+
+static int launch_emulator(const char *emulator, const char *rom,
+                           const char *program, pid_t *child_out,
+                           int *input_out, int *output_out)
+{
+    int to_child[2], from_child[2];
+    pid_t child;
+    if (pipe(to_child) != 0 || pipe(from_child) != 0)
+        return -1;
+    child = fork();
+    if (child < 0) {
+        close(to_child[0]); close(to_child[1]);
+        close(from_child[0]); close(from_child[1]);
+        return -1;
+    }
+    if (child == 0) {
+        char *args[16];
+        int count = 0;
+        dup2(to_child[0], STDIN_FILENO);
+        dup2(from_child[1], STDOUT_FILENO);
+        dup2(from_child[1], STDERR_FILENO);
+        close(to_child[0]); close(to_child[1]);
+        close(from_child[0]); close(from_child[1]);
+        setenv("SDL_VIDEODRIVER", "dummy", 1);
+        setenv("SDL_AUDIODRIVER", "dummy", 1);
+        args[count++] = (char *)emulator;
+        args[count++] = "-testbench";
+        args[count++] = "-sound";
+        args[count++] = "none";
+        args[count++] = "-zeroram";
+        args[count++] = "-rom";
+        args[count++] = (char *)rom;
+        args[count++] = "-prg";
+        args[count++] = (char *)program;
+        args[count] = NULL;
+        if (strchr(emulator, '/'))
+            execv(emulator, args);
+        else
+            execvp(emulator, args);
+        _exit(127);
+    }
+    close(to_child[0]);
+    close(from_child[1]);
+    *child_out = child;
+    *input_out = to_child[1];
+    *output_out = from_child[0];
+    return 0;
+}
+
+static int finish_child(pid_t child, int input, int output, int64_t deadline)
+{
+    int status;
+    struct timespec pause = {0, 10000000};
+    close(input);
+    for (;;) {
+        pid_t waited = waitpid(child, &status, WNOHANG);
+        if (waited == child)
+            break;
+        if (waited < 0 && errno != EINTR) {
+            close(output);
+            return -1;
+        }
+        if (remaining_ms(deadline) == 0) {
+            close(output);
+            (void)kill(child, SIGTERM);
+            while (waitpid(child, &status, 0) < 0 && errno == EINTR) { }
+            return -2;
+        }
+        nanosleep(&pause, NULL);
+    }
+    close(output);
+    return WIFEXITED(status) && WEXITSTATUS(status) == 0 ? 0 : -1;
+}
+
+static void set_detail(LogicReplayResult *result, const char *detail)
+{
+    (void)copy_text(result->detail, sizeof result->detail, detail);
+}
+
+static int fail_run(pid_t child, int input, int output,
+                    LogicReplayResult *result, const char *detail,
+                    int timeout)
+{
+    if (child > 0)
+        (void)kill_child(child, input, output);
+    else {
+        if (input >= 0) close(input);
+        if (output >= 0) close(output);
+    }
+    result->outcome = timeout ? LOGIC_REPLAY_OUTCOME_TIMEOUT
+                              : LOGIC_REPLAY_OUTCOME_RUNNER_ERROR;
+    set_detail(result, detail);
+    return 0;
+}
+
