@@ -190,6 +190,7 @@ void bBDiscardSoundFile(int soundNum)
 
 	// Get pointer to loaded sound structure
 	sound = bBLoadedSoundsPointer[soundNum];
+	if (!sound) return;
 
 	if (sound->isLogicZeroOrDependency)
 	{

@@ -1,6 +1,23 @@
 #ifndef TEST_BANKED_STRINGS_SOUND_CASES_H
 #define TEST_BANKED_STRINGS_SOUND_CASES_H
 
+static void run_repeated_sound_discard(void)
+{
+	prepare();
+	call_target_caller("_testPrepareRepeatedSoundDiscard");
+	CHECK(bank_ram[0x10][symbol("_allocationArray")-BANK_START+1],"Discard neighbour was not allocated");
+	/* A NULL SoundFile aliases unrelated machine state, not an empty record. */
+	ram[8]=ram[symbol("_testSoundDiscardNeighbourBank")];
+	put_word(9,get_word(symbol("_testSoundDiscardNeighbour")));
+	ram[11]=0;
+	null_sound_reads=0; monitor_null_sound=true;
+	call_target_caller("_testRepeatSoundDiscard");
+	monitor_null_sound=false;
+	CHECK(!null_sound_reads,"Repeated sound discard dereferenced a NULL SoundFile in zero page");
+	CHECK(bank_ram[0x10][symbol("_allocationArray")-BANK_START+1],"Repeated sound discard freed an unrelated allocation through NULL");
+	puts("PASS repeated sound discard preserves unrelated allocator owners");
+}
+
 static void run_sound_handler(void)
 {
 	uint8_t previousBank = ram[0];

@@ -39,6 +39,30 @@ unsigned int testSoundBoundsOutputResource;
 unsigned int testSoundBoundsOutputNoise;
 byte testSoundBoundsOutputBank;
 byte testSoundBoundsOutputReleased;
+unsigned int testSoundDiscardNeighbour;
+byte testSoundDiscardNeighbourBank;
+void testPrepareRepeatedSoundDiscard(void)
+{
+	byte previousBank = RAM_BANK, bank;
+	byte *resource;
+	RAM_BANK = MEMORY_MANAGEMENT_BANK;
+	b10InitDynamicMemory();
+	bBInitSound();
+	resource = b10BankedAlloc(16, &bank);
+	RAM_BANK = SOUND_BANK;
+	bBLoadedSounds[0].soundResource = resource;
+	bBLoadedSounds[0].soundBank = bank;
+	bBLoadedSoundsPointer[37] = &bBLoadedSounds[0];
+	soundLoadCounter = 1;
+	testSoundDiscardNeighbour = (unsigned int)b10BankedAlloc(16, &testSoundDiscardNeighbourBank);
+	bBDiscardSoundFile(37);
+	RAM_BANK = previousBank;
+}
+
+void testRepeatSoundDiscard(void)
+{
+	bBDiscardSoundFile(37);
+}
 
 #define TEST_SOUND_LONG_NOISE_NOTES 150
 #define TEST_SOUND_LONG_RESOURCE_SIZE (24 + TEST_SOUND_LONG_NOISE_NOTES * 5 + 2)

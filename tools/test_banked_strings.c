@@ -57,6 +57,8 @@ static uint32_t vera_address;
 static unsigned vera_stride;
 static bool vera_decrement;
 static bool service_text_render_irqs;
+static bool monitor_null_sound;
+static unsigned null_sound_reads;
 static bool watch_text_buffer_overflow;
 static uint16_t text_buffer_overflow_start;
 static uint16_t text_buffer_overflow_end;
@@ -149,6 +151,7 @@ static void advance_vera_address(void)
 
 uint8_t read6502(uint16_t address, uint8_t bank)
 {
+	if (monitor_null_sound && address == 11) ++null_sound_reads;
 	unsigned sound_copy_index = SOUND_BOUNDS_MAX_COPY_CALLS;
 	(void)bank;
 	if (object_crypto_read_active && ram[0] == 0x0D &&
@@ -268,6 +271,14 @@ uint8_t read6502(uint16_t address, uint8_t bank)
 			else
 				allocator_oom_output_overflow = true;
 		}
+		return 0x60;
+	}
+	/* Missing-file diagnostics use the real CRT and the platform console. */
+	if (address == CBM_CKOUT_ADDRESS || address == CBM_READST_ADDRESS ||
+		address == CBM_CLRCH_ADDRESS || address == CBM_BSOUT_ADDRESS)
+	{
+		regs.a = 0;
+		regs.status &= (uint8_t)~FLAG_CARRY;
 		return 0x60;
 	}
 	if (address == VERA_DATA0)
@@ -777,6 +788,7 @@ int main(int argc, char **argv)
 		else if (!strcmp(argv[3], "--object-crypto-pointer")) run_object_crypto_pointer_case();
 		else if (!strcmp(argv[3], "--show-object")) run_show_obj_allocation_cases();
 		else if (!strcmp(argv[3], "--sound")) run_sound_cases();
+		else if (!strcmp(argv[3], "--sound-discard")) run_repeated_sound_discard();
 		else if (!strcmp(argv[3], "--text-cleanup")) run_text_cleanup_cases();
 		else if (!strcmp(argv[3], "--timer")) run_timer_clock_cases();
 		else CHECK(false, "Unknown production caller test case");
@@ -794,6 +806,7 @@ int main(int argc, char **argv)
 	run_object_crypto_pointer_case();
 	run_show_obj_allocation_cases();
 	run_sound_cases();
+	run_repeated_sound_discard();
 	run_text_cleanup_cases();
 	run_timer_clock_cases();
 	return 0;
