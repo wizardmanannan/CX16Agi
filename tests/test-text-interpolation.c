@@ -235,6 +235,15 @@ static void test_word_lookup_uses_cleaned_input(void)
 {
 	char punctuated[] = "go!";
 	char separated[] = "go,  go!";
+    char capitals[] = "Go!";
+
+    numInputWords = 0;
+    b7LookupWords(capitals);
+    if (numInputWords != 1) fprintf(stderr, "capitalized parse: cleaned='%s', count=%d\n", b7Temp, numInputWords);
+    assert(numInputWords == 1 && inputWords[0] == 1);
+    assert(strcmp(b7WordText[0], "go") == 0);
+    assert(strcmp(capitals, "Go!") == 0);
+
 
 	numInputWords = 0;
 	b7LookupWords(punctuated);

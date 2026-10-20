@@ -54,6 +54,12 @@ _b7StripExtraChars:
     bne @read
 @keep:
     lda tmp1
+    cmp #$41
+    bcc :+
+    cmp #$5b
+    bcs :+
+    ora #$20
+:
     cmp #$20
     bne @write
     cmp tmp2
