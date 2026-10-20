@@ -130,4 +130,6 @@ fi
 "$fixture/test-parser-cleanup-target" "$fixture/product/agi.cx16" "$fixture/product/agi.lbl" "$fixture/product/agi.cx16.07" "$fixture/product/agi.cx16.03"
 "${compiler[@]}" -std=c99 "$repo_root/tests/test-string-compare-target.c" -o "$fixture/test-string-compare-target"
 "$fixture/test-string-compare-target" "$fixture/product/agi.cx16" "$fixture/product/agi.lbl"
+"${compiler[@]}" -std=c99 "$repo_root/tests/test-parser-tokens-target.c" -o "$fixture/test-parser-tokens-target"
+"$fixture/test-parser-tokens-target" "$fixture/product/agi.cx16" "$fixture/product/agi.lbl" "$fixture/product/agi.cx16.07"
 cp "$fixture/product/agi.map" "$build_root/product.map"
