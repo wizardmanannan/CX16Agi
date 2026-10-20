@@ -1,3 +1,4 @@
+.include "textLayoutAsm.s"
     .include "parserInputAsm.s"
     .include "textControlsAsm.s"
     .include "stringFormatAsm.s"

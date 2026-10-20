@@ -35,6 +35,14 @@ objectType bDObjects[MAX_OBJECTS];
 int bDNumObjects;
 #pragma bss-name (pop)
 
+#pragma bss-name (push, "BANKRAM03")
+char b3TextBuffers[2000];
+byte borderCanary;
+#pragma bss-name (pop)
+byte b3LastBoxLines, bridgeMaximum;
+int bridgeWidth;
+extern byte __fastcall__ b3WrapText(char* text, int width, byte* maximum);
+extern void __fastcall__ b3DrawBorder(byte width, size_t messageSize);
 byte bridgeActive, bridgeControls, bridgeLines, bridgeCounts[2];
 extern byte __fastcall__ b3ClipTextToMap(char* text);
 extern void __fastcall__ b3ApplyTextModeControls(char* text);
@@ -307,7 +315,20 @@ void targetBridge(void)
 	bridgeLines = 1;
 	if (bridgeControls) {
 		RAM_BANK = SOURCE_BANK;
-		if (bridgeControls == 3) b7StripExtraChars((char*)SOURCE_ADDRESS);
+		if (bridgeControls == 5) {
+            RAM_BANK = 3;
+            memset(b3TextBuffers + 1000, 0x5a, 1000);
+            borderCanary = 0x5a;
+            b3DrawBorder((byte)bridgeWidth, 0);
+            bridgeLines = b3LastBoxLines;
+            if (!memchr(b3TextBuffers + 1000, 0, 1000) ||
+                borderCanary != 0x5a) {
+                targetResult = 2;
+                return;
+            }
+        }
+        else if (bridgeControls == 4) bridgeLines = b3WrapText((char*)SOURCE_ADDRESS, bridgeWidth, &bridgeMaximum);
+        else if (bridgeControls == 3) b7StripExtraChars((char*)SOURCE_ADDRESS);
 		else if (bridgeControls == 2) bridgeLines = b3ClipTextToMap((char*)SOURCE_ADDRESS);
 		else b3ApplyTextModeControls((char*)SOURCE_ADDRESS);
 		RAM_BANK = 13;

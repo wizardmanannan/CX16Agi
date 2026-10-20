@@ -146,6 +146,9 @@ int main(int argc, char** argv)
     /* Same full-product workload: the original C routine took 511,232 cycles. */
     assert(elapsed < 90000);
     assert(size <= 96);
+    /* Measured C baselines: 222,784 / 1,980,480 cycles for these workloads. */
+    assert(wrapCycles < 100000);
+    assert(borderCycles < 250000);
     assert(valid);
     fclose(input);
     fclose(output);

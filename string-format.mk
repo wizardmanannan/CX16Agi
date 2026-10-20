@@ -30,4 +30,5 @@ string-format-target-check:
 	done; \
 	$(CA65) -t cx16 -o $(STRING_FORMAT_OUT)/stringFormatAsm.o src/stringFormatAsm.s; \
 	$(CA65) -t cx16 -o $(STRING_FORMAT_OUT)/textControlsAsm.o src/textControlsAsm.s; \
-	$(CA65) -t cx16 -o $(STRING_FORMAT_OUT)/parserInputAsm.o src/parserInputAsm.s; } 9>$(CX16AGI_BUILD_DIR)/.string-format.lock
+	$(CA65) -t cx16 -o $(STRING_FORMAT_OUT)/parserInputAsm.o src/parserInputAsm.s; \
+	$(CA65) -t cx16 -o $(STRING_FORMAT_OUT)/textLayoutAsm.o src/textLayoutAsm.s; } 9>$(CX16AGI_BUILD_DIR)/.string-format.lock

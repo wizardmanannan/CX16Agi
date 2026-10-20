@@ -219,11 +219,20 @@ static void test_explicit_line_breaks(void)
 {
 	char hardBreak[] = "abc\ndef ghi";
 	char hardBreakAfterSpace[] = "ab cd\nef gh ij";
+	char crossing[263];
 	byte maxWidth;
 	assert(b3WrapText(hardBreak, 8, &maxWidth) == 2);
 	assert(strcmp(hardBreak, "abc\ndef ghi") == 0);
 	assert(b3WrapText(hardBreakAfterSpace, 8, &maxWidth) == 2);
 	assert(strcmp(hardBreakAfterSpace, "ab cd\nef gh ij") == 0);
+    memset(crossing, 'x', 260);
+    strcpy(crossing + 260, " z");
+    assert(b3WrapText(crossing, 255, &maxWidth) == 2);
+    assert(crossing[260] == '\n' && crossing[261] == 'z');
+    assert(maxWidth == 5); /* Existing byte-sized width across a page. */
+    strcpy(crossing, "a b");
+    assert(b3WrapText(crossing, -1, &maxWidth) == 2);
+    assert(strcmp(crossing, "a\nb") == 0);
 }
 
 static void test_text_mode_controls(void)
@@ -255,6 +264,11 @@ static void test_text_mode_controls(void)
 static void test_border_capacity(void)
 {
 	size_t i;
+    strcpy(b3TextBuffer1, "a");
+    b3DrawBorder(0, 1);
+    assert(b3LastBoxLines == 5 && strlen(b3TextBuffer2) == 19);
+    b3DrawBorder(255, 1);
+    assert(b3LastBoxLines == 5 && strlen(b3TextBuffer2) == 319);
 	memset(b3TextBuffer1, 'x', TEXTBUFFER_SIZE - 1);
 	b3TextBuffer1[TEXTBUFFER_SIZE - 1] = '\0';
 	b3DrawBorder(30, TEXTBUFFER_SIZE);

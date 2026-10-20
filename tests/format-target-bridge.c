@@ -17,6 +17,8 @@ extern byte* var;
 extern int numInputWords, currentLog;
 extern char* getMessagePointer(byte logic, byte message);
 byte textClipColumns, textClipRows;
+static unsigned int layoutWidth;
+static byte layoutMaximum, layoutBoxLines;
 
 static unsigned int address(const char* symbol)
 {
@@ -60,7 +62,7 @@ static byte targetTransform(const char* source, byte sourceBank, char* destinati
     size_t length, produced = 0;
     char* output;
     pid_t child;
-    int status, result = -1, lines = -1;
+    int status, result = -1, lines = -1, maximum = -1, boxLines = -1;
     byte active = 1;
     (void)sourceBank;
     if (!capacity) return 0;
@@ -74,6 +76,8 @@ static byte targetTransform(const char* source, byte sourceBank, char* destinati
     bytes(commands, address("_textClipColumns"), &textClipColumns, 1);
     bytes(commands, address("_textClipRows"), &textClipRows, 1);
     putWord(commands, address("_bridgeCapacity"), capacity);
+    putWord(commands, address("_bridgeWidth"), layoutWidth);
+    bytes(commands, address("_b3LastBoxLines"), &layoutBoxLines, 1);
     bytes(commands, address("_variables"), var, 256);
     putWord(commands, address("_numInputWords"), numInputWords);
     for (i = 0; i < 2; i++) {
@@ -108,12 +112,14 @@ static byte targetTransform(const char* source, byte sourceBank, char* destinati
         packed += length;
     }
     fprintf(commands, "RAM 15\n");
-    bytes(commands, 0xa100, source, strlen(source) + 1);
+    if (controls == 5) fprintf(commands, "RAM 03\n");
+    bytes(commands, controls == 5 ? address("_b3TextBuffers") : 0xa100, source, strlen(source) + 1);
     fprintf(commands, "RUN %04X\nRAM 00\nRQM %04X\nRAM 16\n",
             address("targetBridgeEntry"), address("_targetResult"));
     fprintf(commands, "RAM 00\nRQM %04X\nRAM 16\n", address("_bridgeLines"));
-    if (controls) fprintf(commands, "RAM 15\n");
-    for (i = 0; i < capacity; i++) fprintf(commands, "RQM %04X\n", (controls ? 0xa100 : 0xa300) + i);
+    fprintf(commands, "RAM 00\nRQM %04X\nRQM %04X\n", address("_bridgeMaximum"), address("_b3LastBoxLines"));
+    fprintf(commands, "RAM %02X\n", controls == 5 ? 3 : controls ? 21 : 22);
+    for (i = 0; i < capacity; i++) fprintf(commands, "RQM %04X\n", (controls == 5 ? address("_b3TextBuffers") + 1000 : controls ? 0xa100 : 0xa300) + i);
     rewind(commands);
     fflush(responses);
     child = fork();
@@ -136,6 +142,8 @@ static byte targetTransform(const char* source, byte sourceBank, char* destinati
         if (sscanf(line, "%x %c", &value, &extra) != 1) continue;
         if (result == -1) result = value;
         else if (lines == -1) lines = value;
+        else if (maximum == -1) maximum = value;
+        else if (boxLines == -1) boxLines = value;
         else {
             assert(produced < capacity);
             output[produced++] = value;
@@ -149,6 +157,8 @@ static byte targetTransform(const char* source, byte sourceBank, char* destinati
         memCpyBanked((byte*)destination + i, (byte*)output + i, destinationBank, j);
     }
     memCpyBanked((byte*)destination + length, (byte*)output + length, destinationBank, 1);
+    layoutMaximum = maximum;
+    layoutBoxLines = boxLines;
     free(output);
     fclose(commands);
     fclose(responses);
@@ -174,4 +184,24 @@ byte b3ClipTextToMap(char* text)
 void b7StripExtraChars(char* text)
 {
     targetTransform(text, 7, text, 7, strlen(text) + 1, 3);
+}
+
+extern byte b3LastBoxLines;
+extern char b3TextBuffers[2000];
+byte b3WrapText(char* text, int width, byte* maximum)
+{
+    byte lines;
+    layoutWidth = width;
+    layoutBoxLines = b3LastBoxLines;
+    lines = targetTransform(text, 3, text, 3, strlen(text) + 1, 4);
+    *maximum = layoutMaximum;
+    b3LastBoxLines = layoutBoxLines;
+    return lines;
+}
+void b3DrawBorder(byte width, size_t ignored)
+{
+    (void)ignored;
+    layoutWidth = width;
+    targetTransform(b3TextBuffers, 3, b3TextBuffers + 1000, 3, 1000, 5);
+    b3LastBoxLines = layoutBoxLines;
 }
