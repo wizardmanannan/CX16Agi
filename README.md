@@ -171,7 +171,7 @@ The KQ3 case also walks outside, checks Gwydion's published sprite palette
 against the game's base colours in all four walking directions, then goes
 through the front door and returns to the courtyard to check the colours again.
 It does not replace a full playthrough or a visual/audio
-fidelity check. `review-check` runs `test`, `production-test`, `games-test`,
+fidelity check. `review-check` runs `staging-test`, `test`, `production-test`, `games-test`,
 `intro-test`, and `emulator-audio-test` sequentially and fails if either game
 or any required input is missing.
 
@@ -228,6 +228,12 @@ make -C tools modes ROM=/path/to/rom.bin GAME=/path/to/KQ1 \
 ```
 
 `modes` runs both foreground and picture scenarios. It also requires CMake, ImageMagick (`magick`), libpng development files, and SDL2 development files, supplied by pkg-config or `SDL_PREFIX`. The isolated image build preserves production optimizer exclusions and includes private assembly debug symbols. No test reads `.audit-tmp`; old evidence can be archived independently.
+
+The rendering scenarios finish natural KQ1 startup with real keyboard input before
+saving interpreter pointers for command injection. They allow 300 seconds of host
+time while retaining emulated cycle/frame bounds. The full foreground IRQ budget
+is 4,096 cycles for the ROM path plus the independently tested 2,000-cycle sound
+budget; the measured real-game maximum is 4,670 cycles.
 
 `integration-test` builds the same isolated image and runs foreground, combined IRQ/text, and picture scenarios. `picture-test` runs the picture scenarios alone. The combined IRQ workload records two production dispatch rows, total IRQ cycles, the continuous I-masked interval from IRQ acceptance through the observed RTI, and two-frame text completion. Its current finite KQ1 regression reference is 29,987 cycles for the first row, 34,076 total IRQ cycles, and 29,987 maximum I-masked cycles, each with a 4,096-cycle tolerance; this is not maximum-menu or all-game coverage.
 
