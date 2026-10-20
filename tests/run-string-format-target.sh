@@ -136,6 +136,6 @@ fi
 "$fixture/test-parser-tokens-target" "$fixture/product/agi.cx16" "$fixture/product/agi.lbl" "$fixture/product/agi.cx16.07"
 cp "$fixture/product/agi.map" "$build_root/product.map"
 "${compiler[@]}" -std=c99 "$repo_root/tests/test-text-command-target.c" -o "$fixture/test-text-command-target"
-"$fixture/test-text-command-target" "$fixture/product/agi.cx16" "$fixture/product/agi.lbl" "$fixture/product/agi.cx16.05"
+"$fixture/test-text-command-target" "$fixture/product/agi.cx16" "$fixture/product/agi.lbl" "$fixture/product/agi.cx16.05" "$fixture/product/agi.cx16.01" "$fixture/product/agi.cx16.07"
 "${compiler[@]}" -std=c99 "$repo_root/tests/test-inventory-copy-target.c" -o "$fixture/test-inventory-copy-target"
 "$fixture/test-inventory-copy-target" "$fixture/product/agi.cx16" "$fixture/product/agi.lbl" "$fixture/product/agi.cx16.0D" "$fixture/product/agi.cx16.05"

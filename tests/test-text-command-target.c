@@ -20,13 +20,13 @@ int main(int argc, char** argv)
     FILE* output = targetFixtureFile();
     FILE* bank;
     unsigned int stack, fetch, helper, pop, var, at, i, j, value, count = 0;
-    unsigned int expected[16];
+    unsigned int expected[256];
     unsigned char jump[3], capture[40];
     const unsigned char fetchCode[] = { 0xae,0x10,0x90,0xbd,0x00,0x90,0xee,0x10,0x90,0xa2,0,0x60 };
     char line[256];
     int byte, status;
     pid_t child;
-    assert(argc == 4);
+    assert(argc == 6);
     stack = targetFixtureSymbol(argv[2], "c_sp");
     fetch = targetFixtureSymbol(argv[2], "_loadAndIncWinCode");
     helper = targetFixtureSymbol(argv[2], "_b3PrintMessageInTextbox");
@@ -68,6 +68,44 @@ int main(int argc, char** argv)
         expected[count++] = 10; expected[count++] = 1;
         fprintf(input, "RQM 9010\nRQM %04X\nRQM %04X\n", stack, stack + 1);
         expected[count++] = 4; expected[count++] = 0; expected[count++] = 0x8f;
+    }
+    for (i = 4; i < 6; i++) {
+        bank = fopen(argv[i], "rb"); assert(bank);
+        at = (unsigned int)fgetc(bank); at |= (unsigned int)fgetc(bank) << 8;
+        fprintf(input, "STM 0000 %02X\n", i == 4 ? 1 : 7);
+        while ((byte = fgetc(bank)) != EOF) fprintf(input, "STM %04X %02X\n", at++, byte);
+        fclose(bank);
+    }
+    {
+        unsigned int current = targetFixtureSymbol(argv[2], "_b7CurrentInputStr");
+        unsigned int previous = targetFixtureSymbol(argv[2], "_b7LastLine");
+        unsigned int outputLine = targetFixtureSymbol(argv[2], "_b7OutputString");
+        const unsigned char prefixes[][8] = { "A", "123456", "A", "abc" };
+        const unsigned char results[][8] = { "Aa'!", "123456", "Aa", "" };
+        const unsigned char outputs[][16] = { "Cmd4:Aa'!_", "Cmd4:123456_", "Cmd4:Aa_", "Cmd4:_" };
+        bytes(input, targetFixtureSymbol(argv[2], "_string"), (const unsigned char*)"Cmd%v2:", 8);
+        bytes(input, previous, (const unsigned char*)"Aa'!", 5);
+        fprintf(input, "STM 9302 04\nSTM %04X 60\n", targetFixtureSymbol(argv[2], "mainLoop"));
+        for (i = 0; i < 4; i++) {
+            unsigned int opcode = i == 3 ? 138 : 137;
+            unsigned int bankAddress = targetFixtureSymbol(argv[2], "codeBankArray") + opcode;
+            unsigned int vector = targetFixtureSymbol(argv[2], "jmpTableCommands2") + (opcode - 128) * 2;
+            unsigned char dispatch[] = { 0xad, bankAddress & 255, bankAddress >> 8, 0x85, 0, 0x6c, vector & 255, vector >> 8 };
+            bytes(input, current, prefixes[i], strlen((const char*)prefixes[i]) + 1);
+            fprintf(input, "STM 9318 %02X\n", i == 2 ? 2 : 40);
+            bytes(input, 0x9180, dispatch, sizeof(dispatch));
+            fprintf(input, "RUN 9180\nSTM 0000 07\n");
+            for (j = 0; j <= strlen((const char*)results[i]); j++) {
+                fprintf(input, "RQM %04X\n", current + j);
+                expected[count++] = results[i][j];
+            }
+            for (j = 0; j <= strlen((const char*)outputs[i]); j++) {
+                fprintf(input, "RQM %04X\n", outputLine + j);
+                expected[count++] = outputs[i][j];
+            }
+            fprintf(input, "RQM %04X\nRQM %04X\nRQM %04X\n", targetFixtureSymbol(argv[2], "_b7InputReady"), stack, stack + 1);
+            expected[count++] = 1; expected[count++] = 0; expected[count++] = 0x8f;
+        }
     }
     rewind(input);
     child = fork();

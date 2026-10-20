@@ -1935,17 +1935,16 @@ void b5Pause() // 0, 0x00
 }
 
 
-//void b4Echo_line() // 0, 0x00 
-//{
-//
-//}
+void b5Echo_line(void)
+{
+    b7EchoLine();
+}
 
 
-//void b4Cancel_line() // 0, 0x00 
-//{
-//	/*currentInputStr[0]=0;
-//	strPos=0;*/
-//}
+void b5Cancel_line(void)
+{
+    b7CancelLine();
+}
 
 //void b4Init_joy() // 0, 0x00 
 //{

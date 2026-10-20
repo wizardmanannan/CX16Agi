@@ -95,7 +95,6 @@ static void test_modal_keyboard_encoding(void)
     assert(strcmp(result, "aA") == 0);
 }
 
-
 static void test_modal_cancel(void)
 {
     static const byte keys[] = { '1', KEY_ESC };
@@ -109,7 +108,6 @@ static void test_modal_cancel(void)
     assert(strcmp(b7CurrentInputStr, "previous") == 0);
     assert(!b7ReadingString && !b7InputReady);
 }
-
 
 static void test_string_input_publication(void)
 {
@@ -167,7 +165,6 @@ static void test_command_keyboard_text(void)
     inputLineDisplayed = FALSE;
 }
 
-
 static void test_command_input_limit(void)
 {
     static const byte keys[] = { '1', '2', '3', 0 };
@@ -189,6 +186,29 @@ static void test_command_input_limit(void)
     inputLineDisplayed = FALSE;
 }
 
+static void test_recalled_command_editing(void)
+{
+    static const byte append[] = { '1', 0 };
+    static const byte afterCancel[] = { '2', 0 };
+    strcpy(b7CurrentInputStr, "A");
+    strcpy(b7LastLine, "Ab");
+    b7EchoLine();
+    assert(strcmp(b7CurrentInputStr, "Ab") == 0);
+    inputLineDisplayed = TRUE;
+    inputKeys = append;
+    inputKeyCount = sizeof(append);
+    inputKeyPosition = 0;
+    b7PollKeyboard();
+    assert(strcmp(b7CurrentInputStr, "Ab1") == 0);
+    b7CancelLine();
+    assert(b7CurrentInputStr[0] == 0);
+    inputKeys = afterCancel;
+    inputKeyCount = sizeof(afterCancel);
+    inputKeyPosition = 0;
+    b7PollKeyboard();
+    assert(strcmp(b7CurrentInputStr, "2") == 0);
+    inputLineDisplayed = FALSE;
+}
 
 static void test_control_key_does_not_move_ego(void)
 {
@@ -206,7 +226,6 @@ static void test_control_key_does_not_move_ego(void)
     inputLineDisplayed = FALSE;
     controlMode = 1;
 }
-
 
 static void test_get_string_backspace(void)
 {
@@ -305,7 +324,6 @@ static void test_word_lookup_uses_cleaned_input(void)
     assert(numInputWords == 1 && inputWords[0] == 1);
     assert(strcmp(b7WordText[0], "go") == 0);
     assert(strcmp(capitals, "Go!") == 0);
-
 
 	numInputWords = 0;
 	b7LookupWords(punctuated);
@@ -683,6 +701,7 @@ int main(void)
     test_keyboard_zero_digit();
     test_command_keyboard_text();
     test_command_input_limit();
+    test_recalled_command_editing();
     test_control_key_does_not_move_ego();
     test_string_input_publication();
 	puts("text interpolation tests passed");

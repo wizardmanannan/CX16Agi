@@ -288,6 +288,30 @@ void b7PollKeyboard()
 	} while (ch);
 }
 
+void b7EchoLine(void)
+{
+    size_t length = strlen(b7CurrentInputStr);
+    size_t previousLength = strlen(b7LastLine);
+    size_t limit = var[24];
+    if (limit > MAX_INPUT_STRING_LENGTH) limit = MAX_INPUT_STRING_LENGTH;
+    if (previousLength > limit) previousLength = limit;
+    b7InputReady = FALSE;
+    if (length < previousLength) {
+        memcpy(b7CurrentInputStr + length, b7LastLine + length, previousLength - length);
+        b7CurrentInputStr[previousLength] = 0;
+    }
+    b7ProcessString(string[0], STRING_BANK, b7Temp, PARSER_BANK, sizeof(b7Temp));
+    b7RefreshInputLine(FALSE);
+}
+
+void b7CancelLine(void)
+{
+    b7InputReady = FALSE;
+    b7CurrentInputStr[0] = 0;
+    b7ProcessString(string[0], STRING_BANK, b7Temp, PARSER_BANK, sizeof(b7Temp));
+    b7RefreshInputLine(FALSE);
+}
+
 /***************************************************************************
 ** b7StripExtraChars
 **
