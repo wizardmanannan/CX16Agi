@@ -1982,3 +1982,284 @@ static int verify_production_commands(const char *game_directory,
     return result;
 }
 
+static int verify_intro_checkpoint(const CorpusGame *game,
+                                   const uint8_t *snapshot)
+{
+    uint16_t ego_x = get_u16(snapshot + LOGIC_APP_REPLAY_OBJECTS_OFFSET + 3);
+    uint16_t ego_y = get_u16(snapshot + LOGIC_APP_REPLAY_OBJECTS_OFFSET + 5);
+    if (verify_app_checkpoint_header(game, snapshot, 1, 1) != 0 ||
+        get_u32(snapshot + LOGIC_APP_REPLAY_SCHEDULE_FRAME_OFFSET) != 1) {
+        fprintf(stderr, "intro clock regression: %s frame=%u expected1 after the initial 30 ms cycle\n",
+                game->id, (unsigned)get_u32(snapshot + LOGIC_APP_REPLAY_SCHEDULE_FRAME_OFFSET));
+        return -1;
+    }
+    if (!strcmp(game->id, "KQ1")) {
+        if (snapshot[15] != 1 || snapshot[16] != 0 ||
+            get_u16(snapshot + LOGIC_APP_REPLAY_VARS_OFFSET + 1) != 83 ||
+            !loaded_logic(snapshot, 1) || loaded_logic(snapshot, 83) ||
+            !snapshot_has_message(snapshot, "Press any key to continue.") ||
+            !(snapshot[LOGIC_APP_REPLAY_OBJECTS_OFFSET + 1] & 1) ||
+            ego_x < 108 || ego_x > 112 || ego_y < 98 || ego_y > 102) {
+            fprintf(stderr,
+                    "full-app intro-skip regression: KQ1 room=%u logic=%u previous=%u ego=(%u,%u) Logic83=%u\n",
+                    (unsigned)snapshot[15], (unsigned)snapshot[16],
+                    (unsigned)get_u16(snapshot + LOGIC_APP_REPLAY_VARS_OFFSET + 1),
+                    (unsigned)ego_x, (unsigned)ego_y,
+                    (unsigned)loaded_logic(snapshot, 83));
+            return -1;
+        }
+    } else if (!strcmp(game->id, "KQ3")) {
+        if (snapshot[15] != 7 || snapshot[16] != 0 ||
+            get_u16(snapshot + LOGIC_APP_REPLAY_VARS_OFFSET + 1) != 34 ||
+            (snapshot[LOGIC_APP_REPLAY_FLAGS_OFFSET + 42] & 1) ||
+            !loaded_logic(snapshot, 7) ||
+            !(snapshot[LOGIC_APP_REPLAY_OBJECTS_OFFSET + 1] & 1) ||
+            ego_x < 93 || ego_x > 97 || ego_y < 163 || ego_y > 167) {
+            fprintf(stderr,
+                    "full-app intro-skip regression: KQ3 room=%u logic=%u previous=%u flag42=%u ego=(%u,%u) Logic7=%u\n",
+                    (unsigned)snapshot[15], (unsigned)snapshot[16],
+                    (unsigned)get_u16(snapshot + LOGIC_APP_REPLAY_VARS_OFFSET + 1),
+                    (unsigned)(snapshot[LOGIC_APP_REPLAY_FLAGS_OFFSET + 42] & 1),
+                    (unsigned)ego_x, (unsigned)ego_y,
+                    (unsigned)loaded_logic(snapshot, 7));
+            return -1;
+        }
+    } else {
+        return -1;
+    }
+    return 0;
+}
+
+static int verify_parser_checkpoint(const CorpusGame *game,
+                                    const uint8_t *snapshot,
+                                    uint32_t ticks, size_t input_events,
+                                    uint8_t room, uint8_t logic,
+                                    const char *response)
+{
+    if (verify_app_checkpoint_header(game, snapshot, ticks, input_events) != 0 ||
+        snapshot[15] != room || !loaded_logic(snapshot, logic) ||
+        !snapshot_has_message(snapshot, response)) {
+        fprintf(stderr,
+                "full-app parser checkpoint regression: %s room=%u logic-%u=%u response=%u parsed=%u messages=%u\n",
+                game->id, (unsigned)snapshot[15], (unsigned)logic,
+                (unsigned)loaded_logic(snapshot, logic),
+                (unsigned)snapshot_has_message(snapshot, response),
+                (unsigned)get_u16(snapshot + LOGIC_APP_REPLAY_PARSER_OFFSET),
+                (unsigned)snapshot[46]);
+        return -1;
+    }
+    return 0;
+}
+
+static int verify_full_app_boot(const CorpusGame *game,
+                                const uint8_t *snapshot,
+                                uint32_t expected_ticks,
+                                size_t expected_input_events,
+                                uint16_t expected_inventory,
+                                uint8_t expected_room,
+                                uint16_t min_ego_x, uint16_t max_ego_x,
+                                uint16_t min_ego_y, uint16_t max_ego_y,
+                                uint8_t expected_logic,
+                                const char *expected_message,
+                                const char *expected_transition_message)
+{
+    static const char *const names[4] = {
+        "LOGDIR", "PICDIR", "VIEWDIR", "SNDDIR"
+    };
+    unsigned i;
+    uint8_t logic_zero_loaded =
+        (uint8_t)((snapshot[LOGIC_APP_REPLAY_LOADED_LOGICS_OFFSET] & 1) != 0);
+    if (verify_app_checkpoint_header(game, snapshot, expected_ticks,
+                                     expected_input_events) != 0)
+        return -1;
+    if (expected_ticks == 0 && snapshot[38] != 0) {
+        fprintf(stderr, "full-app run regression: %s clean boot executed an unexpected interpreter cycle\n",
+                game->id);
+        return -1;
+    }
+    if (!logic_zero_loaded || get_u16(snapshot + 39) == 0) {
+        fprintf(stderr, "full-app run regression: %s did not load real Logic 0 through b6InitLogics\n",
+                game->id);
+        return -1;
+    }
+    if (expected_ticks && get_u16(snapshot + 39) < 2) {
+        fprintf(stderr,
+                "full-app run regression: %s interpreter did not load a real nonzero logic during gameplay cycles\n",
+                game->id);
+        return -1;
+    }
+    for (i = 0; i < 4; ++i) {
+        uint16_t actual = get_u16(snapshot +
+            LOGIC_APP_REPLAY_DIRECTORY_COUNTS_OFFSET + i * 2);
+        if (actual != game->directory_counts[i]) {
+            fprintf(stderr,
+                    "full-app run regression: %s normal loader reports %s count %u for %lu real entries\n",
+                    game->id, names[i], (unsigned)actual,
+                    (unsigned long)game->directory_counts[i]);
+            return -1;
+        }
+    }
+    if (get_u16(snapshot + LOGIC_APP_REPLAY_LOGIC0_SIZE_OFFSET) !=
+            game->logic_bytes[0] ||
+        get_u16(snapshot + 51) != expected_inventory ||
+        get_u16(snapshot + LOGIC_APP_REPLAY_WORD_COUNT_OFFSET) < 100) {
+        fprintf(stderr,
+                "full-app run regression: %s Logic0=%u/%u inventory=%u/%u words=%u\n",
+                game->id,
+                (unsigned)get_u16(snapshot + LOGIC_APP_REPLAY_LOGIC0_SIZE_OFFSET),
+                (unsigned)game->logic_bytes[0],
+                (unsigned)get_u16(snapshot + 51),
+                (unsigned)expected_inventory,
+                (unsigned)get_u16(snapshot + LOGIC_APP_REPLAY_WORD_COUNT_OFFSET));
+        return -1;
+    }
+    if (expected_input_events &&
+        (get_u16(snapshot + 12) != expected_input_events || snapshot[14])) {
+        fprintf(stderr,
+                "full-app input regression: %s consumed %u/%lu events, missed=%u, parsed words=%u\n",
+                game->id, (unsigned)get_u16(snapshot + 12),
+                (unsigned long)expected_input_events, (unsigned)snapshot[14],
+                (unsigned)get_u16(snapshot + LOGIC_APP_REPLAY_PARSER_OFFSET));
+        return -1;
+    }
+    {
+        const uint8_t *ego = snapshot + LOGIC_APP_REPLAY_OBJECTS_OFFSET;
+        uint16_t ego_x = get_u16(ego + 3);
+        uint16_t ego_y = get_u16(ego + 5);
+        if (snapshot[15] != expected_room || !(ego[1] & 0x01u) ||
+            ego_x < min_ego_x || ego_x > max_ego_x ||
+            ego_y < min_ego_y || ego_y > max_ego_y ||
+            !loaded_logic(snapshot, expected_logic)) {
+            fprintf(stderr,
+                    "full-app gameplay regression: %s room=%u ego=(%u,%u) flags=%02x logic-%u-loaded=%u; expected room=%u ego=(%u..%u,%u..%u) and real logic milestone\n",
+                    game->id, (unsigned)snapshot[15], (unsigned)ego_x,
+                    (unsigned)ego_y, (unsigned)ego[1],
+                    (unsigned)expected_logic,
+                    (unsigned)loaded_logic(snapshot, expected_logic),
+                    (unsigned)expected_room, (unsigned)min_ego_x,
+                    (unsigned)max_ego_x, (unsigned)min_ego_y,
+                    (unsigned)max_ego_y);
+            return -1;
+        }
+    }
+    /* The live parser buffer may be cleared by later blank input or a room
+       transition. The title-specific response message is the durable proof
+       that normal parser dispatch accepted the command. */
+    if (!snapshot[46] || !expected_message ||
+        !snapshot_has_message(snapshot, expected_message) ||
+        (expected_transition_message &&
+         !snapshot_has_message(snapshot, expected_transition_message))) {
+        fprintf(stderr,
+                "full-app interaction regression: %s parser words=%u messages=%u response=%u transition=%u\n",
+                game->id,
+                (unsigned)get_u16(snapshot + LOGIC_APP_REPLAY_PARSER_OFFSET),
+                (unsigned)snapshot[46],
+                (unsigned)(expected_message &&
+                    snapshot_has_message(snapshot, expected_message)),
+                (unsigned)(!expected_transition_message ||
+                    snapshot_has_message(snapshot,
+                                         expected_transition_message)));
+        return -1;
+    }
+    {
+        uint8_t status = snapshot[58];
+        uint16_t capacity =
+            get_u16(snapshot + LOGIC_APP_REPLAY_CAPACITY_FLAGS_OFFSET);
+        uint32_t dropped = get_u32(snapshot + 42);
+        uint8_t unexpected_status = status & (uint8_t)~(
+            LOGIC_APP_REPLAY_STATUS_TRACE_DROPPED |
+            LOGIC_APP_REPLAY_STATUS_CAPTURE_CAPACITY);
+        uint16_t unexpected_capacity = capacity & (uint16_t)~
+            LOGIC_APP_REPLAY_CAPACITY_TRACE_DROPPED;
+        if (!snapshot[41] || snapshot[21] || snapshot[22] ||
+            unexpected_status || unexpected_capacity ||
+            (!!(status & LOGIC_APP_REPLAY_STATUS_TRACE_DROPPED) != !!dropped) ||
+            (!!(capacity & LOGIC_APP_REPLAY_CAPACITY_TRACE_DROPPED) != !!dropped) ||
+            (!!(status & LOGIC_APP_REPLAY_STATUS_CAPTURE_CAPACITY) != !!capacity)) {
+        fprintf(stderr,
+                "full-app replay regression: %s logic error=%u verifier=%u status=%u trace=%u dropped=%u capacity=%04x\n",
+                game->id, snapshot[21], snapshot[22], status,
+                snapshot[41], (unsigned)dropped, (unsigned)capacity);
+            return -1;
+        }
+    }
+    return 0;
+}
+
+static int verify_input_wait_failure(const CorpusGame *game,
+                                     const char *game_directory,
+                                     const char *application_build,
+                                     const LogicAppReplayInput *events,
+                                     size_t event_count,
+                                     uint32_t tick_count,
+                                     uint32_t timeout_ms)
+{
+    uint8_t snapshot[LOGIC_APP_REPLAY_OUTPUT_SIZE] = {0};
+    char detail[256] = {0};
+    int result = run_app_checkpoint("missing-input-watchdog", game_directory,
+        UINT16_C(0xA61B), events, event_count, tick_count, timeout_ms, 0,
+        snapshot, detail, sizeof detail);
+    if (result == 0 || snapshot[0] != 'X' || snapshot[1] != '1' ||
+        snapshot[2] != '6' || snapshot[3] != 'R' ||
+        snapshot[4] != LOGIC_APP_REPLAY_SNAPSHOT_VERSION || snapshot[5] != 1 ||
+        !(snapshot[58] & LOGIC_APP_REPLAY_STATUS_INPUT_WAIT_EXHAUSTED) ||
+        get_u16(snapshot + 10) != event_count ||
+        get_u16(snapshot + 12) != event_count ||
+        get_u16(snapshot + LOGIC_APP_REPLAY_INPUT_WAIT_POLLS_OFFSET) <
+            LOGIC_APP_REPLAY_INPUT_WAIT_LIMIT ||
+        get_u32(snapshot + LOGIC_APP_REPLAY_ELAPSED_VSYNC_OFFSET) > UINT16_MAX ||
+        !strstr(detail, "input_wait_exhausted")) {
+        fprintf(stderr,
+                "full-app wait diagnostic regression: %s returned=%d detail=%s status=%02x events=%u/%u wait-polls=%u\n",
+                game->id, result, detail, (unsigned)snapshot[58],
+                (unsigned)get_u16(snapshot + 12),
+                (unsigned)get_u16(snapshot + 10),
+                (unsigned)get_u16(snapshot +
+                    LOGIC_APP_REPLAY_INPUT_WAIT_POLLS_OFFSET));
+        if (snapshot[0] == 'X' && snapshot[1] == '1' &&
+            snapshot[2] == '6' && snapshot[3] == 'R')
+            print_full_app_checkpoint(game, snapshot);
+        return -1;
+    }
+    printf("full-app missing-input diagnostic: %s stopped at tick=%u after %u/%u delivered events, last frame=%u key=%02x, elapsed-vsync=%u polls=%u; rejected as input_wait_exhausted\n",
+           game->id, (unsigned)get_u32(snapshot + 6),
+           (unsigned)get_u16(snapshot + 12),
+           (unsigned)get_u16(snapshot + 10),
+           (unsigned)get_u32(snapshot +
+               LOGIC_APP_REPLAY_LAST_INPUT_FRAME_OFFSET),
+           (unsigned)snapshot[LOGIC_APP_REPLAY_LAST_INPUT_KEY_OFFSET],
+           (unsigned)get_u32(snapshot + LOGIC_APP_REPLAY_ELAPSED_VSYNC_OFFSET),
+           (unsigned)get_u16(snapshot +
+                         LOGIC_APP_REPLAY_INPUT_WAIT_POLLS_OFFSET));
+    if (getenv("CX16_APP_REPLAY_DIAGNOSTICS"))
+        print_full_app_checkpoint(game, snapshot);
+    {
+        LogicReplayManifest manifest;
+        LogicReplayEvent trace[LOGIC_APP_REPLAY_INPUT_MAX];
+        uint8_t manifest_hash[LOGIC_REPLAY_SHA256_SIZE], input_hash[LOGIC_REPLAY_SHA256_SIZE];
+        uint8_t ignored[LOGIC_APP_REPLAY_OUTPUT_SIZE], *saved = NULL;
+        size_t size = 0;
+        char path[PATH_CAPACITY];
+        if (snprintf(path, sizeof path, "%s/full-app-failure.x16r", game_directory) >=
+                (int)sizeof path ||
+            create_app_replay_identity(game, game_directory, application_build,
+                UINT16_C(0xA61B), events, event_count, &manifest, trace,
+                manifest_hash, input_hash)) return -1;
+        int status = run_full_app_cli(game_directory, tick_count, timeout_ms, path, ignored);
+        int valid = status != 0 && !read_file(path, &saved, &size) &&
+            size == sizeof snapshot && !memcmp(saved, "X16R", 4) &&
+            saved[4] == LOGIC_APP_REPLAY_SNAPSHOT_VERSION && saved[5] == 1 &&
+            (saved[58] & LOGIC_APP_REPLAY_STATUS_INPUT_WAIT_EXHAUSTED) &&
+            get_u16(saved + 12) == event_count && saved[41] > 0;
+        free(saved);
+        if (!valid) {
+            fprintf(stderr, "full-app CLI failure artifact regression: no complete input-exhaustion checkpoint retained\n");
+            return -1;
+        }
+        char *arguments[] = {"obj/cx16/logic-trace", "recent", path, "--count", "2", NULL};
+        if (run_process(arguments)) return -1;
+        puts("full-app CLI failure checkpoint retained and recent trace decoded");
+    }
+    return 0;
+}
+
