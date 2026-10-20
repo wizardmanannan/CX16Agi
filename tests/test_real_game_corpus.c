@@ -1230,3 +1230,176 @@ static int loaded_logic(const uint8_t *snapshot, uint8_t logic)
             (uint8_t)(1u << (logic & 7))) != 0;
 }
 
+static int verify_app_checkpoint_header(const CorpusGame *game,
+                                        const uint8_t *snapshot,
+                                        uint32_t expected_ticks,
+                                        size_t expected_input_events)
+{
+    uint32_t elapsed = get_u32(
+        snapshot + LOGIC_APP_REPLAY_ELAPSED_VSYNC_OFFSET);
+    if (snapshot[0] != 'X' || snapshot[1] != '1' || snapshot[2] != '6' ||
+        snapshot[3] != 'R' ||
+        snapshot[4] != LOGIC_APP_REPLAY_SNAPSHOT_VERSION || snapshot[5] != 1 ||
+        get_u32(snapshot + 6) != expected_ticks ||
+        snapshot[38] != (uint8_t)expected_ticks ||
+        get_u16(snapshot + 10) != expected_input_events ||
+        get_u16(snapshot + 12) != expected_input_events || snapshot[14] ||
+        !trace_window_is_honest(snapshot) ||
+        elapsed > UINT16_MAX ||
+        snapshot[LOGIC_APP_REPLAY_VARS_OFFSET + 10] != 2) {
+        fprintf(stderr,
+                "full-app checkpoint regression: %s tick=%u/%u input=%u/%lu missed=%u status=%02x capacity=%04x elapsed-vsync=%u var10=%u\n",
+                game->id, (unsigned)get_u32(snapshot + 6),
+                (unsigned)expected_ticks, (unsigned)get_u16(snapshot + 12),
+                (unsigned long)expected_input_events,
+                (unsigned)snapshot[14], (unsigned)snapshot[58],
+                (unsigned)get_u16(snapshot +
+                    LOGIC_APP_REPLAY_CAPACITY_FLAGS_OFFSET),
+                (unsigned)elapsed,
+                (unsigned)snapshot[LOGIC_APP_REPLAY_VARS_OFFSET + 10]);
+        return -1;
+    }
+    return 0;
+}
+
+static void print_prefix_comparison(FILE *output, const char *game,
+                                    uint32_t prefix,
+                                    const LogicOracleResult *result)
+{
+    if (result->status == LOGIC_ORACLE_DIVERGED)
+        fprintf(output, "full semantic divergence: %s first completed-cycle=%u",
+                game, (unsigned)prefix);
+    else if (result->status == LOGIC_ORACLE_INVALID)
+        fprintf(output, "full semantic comparison invalid: %s cycle=%u status=%s",
+                game, (unsigned)prefix,
+                logic_oracle_status_name(result->status));
+    else if (result->status == LOGIC_ORACLE_INCOMPATIBLE)
+        fprintf(output, "full semantic comparison incompatible: %s cycle=%u status=%s",
+                game, (unsigned)prefix,
+                logic_oracle_status_name(result->status));
+    else
+        fprintf(output, "full semantic comparison failed: %s cycle=%u status=%s",
+                game, (unsigned)prefix,
+                logic_oracle_status_name(result->status));
+    if (result->field[0]) fprintf(output, " field=%s", result->field);
+    if (result->reference_text[0] || result->candidate_text[0])
+        fprintf(output, " reference-text=%s candidate-text=%s",
+                result->reference_text, result->candidate_text);
+    else if (result->field[0])
+        fprintf(output, " reference=%lld candidate=%lld",
+                (long long)result->reference_value,
+                (long long)result->candidate_value);
+    if (result->detail[0]) fprintf(output, " detail=%s", result->detail);
+    fprintf(output, "\n  ScummVM: %s\n  CX16: %s\n",
+            result->reference_provenance, result->candidate_provenance);
+}
+
+static int capture_prefix_comparison(const LogicOracleResult *result,
+                                     char output[], size_t output_size)
+{
+    FILE *stream = tmpfile();
+    size_t length;
+    int okay = 0;
+    if (!stream) return -1;
+    print_prefix_comparison(stream, "KQ1", 12, result);
+    if (fflush(stream) == 0 && fseek(stream, 0, SEEK_SET) == 0) {
+        length = fread(output, 1, output_size - 1, stream);
+        if (!ferror(stream)) {
+            output[length] = '\0';
+            okay = 1;
+        }
+    }
+    if (fclose(stream) != 0) okay = 0;
+    return okay ? 0 : -1;
+}
+
+static int check_prefix_comparison_diagnostics(void)
+{
+    LogicOracleResult result = {0};
+    char output[1024];
+    result.status = LOGIC_ORACLE_INVALID;
+    strcpy(result.field, "message[2:4]");
+    strcpy(result.reference_text, "reference sentence");
+    strcpy(result.candidate_text, "candidate sentence");
+    strcpy(result.detail, "checkpoint identity mismatch");
+    strcpy(result.reference_provenance, "ScummVM");
+    strcpy(result.candidate_provenance, "CX16");
+    if (capture_prefix_comparison(&result, output, sizeof output) != 0 ||
+        !strstr(output, "full semantic comparison invalid") ||
+        !strstr(output, "status=invalid") ||
+        strstr(output, "first completed-cycle") ||
+        !strstr(output, "reference-text=reference sentence") ||
+        !strstr(output, "candidate-text=candidate sentence"))
+        return -1;
+    result.status = LOGIC_ORACLE_INCOMPATIBLE;
+    if (capture_prefix_comparison(&result, output, sizeof output) != 0 ||
+        !strstr(output, "full semantic comparison incompatible") ||
+        !strstr(output, "status=incompatible") ||
+        strstr(output, "first completed-cycle"))
+        return -1;
+    result.status = LOGIC_ORACLE_DIVERGED;
+    if (capture_prefix_comparison(&result, output, sizeof output) != 0 ||
+        !strstr(output, "full semantic divergence") ||
+        !strstr(output, "first completed-cycle=12") ||
+        !strstr(output, "reference-text=reference sentence") ||
+        !strstr(output, "candidate-text=candidate sentence"))
+        return -1;
+    return 0;
+}
+
+static int app_prefix_snapshot_to_oracle(
+    const char *game_id, uint16_t agi_version,
+    const LogicReplayManifest *manifest,
+    const uint8_t manifest_hash[LOGIC_REPLAY_SHA256_SIZE],
+    const uint8_t input_hash[LOGIC_REPLAY_SHA256_SIZE],
+    const uint8_t raw[LOGIC_APP_REPLAY_OUTPUT_SIZE], uint32_t prefix,
+    size_t event_count, uint16_t consumed, uint32_t pending_frame,
+    LogicOracleSnapshot *snapshot, char *detail, size_t detail_size)
+{
+    (void)pending_frame;
+    if (raw[4] != LOGIC_APP_REPLAY_SNAPSHOT_VERSION || raw[5] != 1 ||
+        get_u32(raw + 6) != prefix || raw[38] != (uint8_t)prefix ||
+        get_u16(raw + 10) != event_count ||
+        get_u16(raw + 12) != consumed || consumed > event_count || raw[14]) {
+        if (detail && detail_size)
+            snprintf(detail, detail_size,
+                     "incomplete or missed-input semantic prefix");
+        return -1;
+    }
+    return logic_app_replay_snapshot_to_oracle(
+        game_id, agi_version, manifest, manifest_hash, input_hash, raw,
+        LOGIC_APP_REPLAY_OUTPUT_SIZE, snapshot, detail, detail_size);
+}
+
+static int check_bounded_prefix_conversion(void)
+{
+    LogicReplayManifest manifest = {0};
+    LogicOracleSnapshot snapshot;
+    uint8_t raw[LOGIC_APP_REPLAY_OUTPUT_SIZE] = {0};
+    uint8_t hash[LOGIC_REPLAY_SHA256_SIZE] = {0};
+    char detail[128] = {0};
+    strcpy(manifest.engine, "kq1");
+    strcpy(manifest.rng_algorithm, LOGIC_APP_REPLAY_RNG_ALGORITHM);
+    manifest.tick_numerator = 10;
+    manifest.tick_denominator = 1;
+    memcpy(raw, "X16R", 4);
+    raw[4] = LOGIC_APP_REPLAY_SNAPSHOT_VERSION;
+    raw[5] = raw[6] = raw[38] = raw[LOGIC_APP_REPLAY_VARS_OFFSET] = raw[15] = 1;
+    raw[41] = LOGIC_APP_REPLAY_TRACE_MAX;
+    raw[42] = 1;
+    raw[58] = LOGIC_APP_REPLAY_STATUS_TRACE_DROPPED |
+              LOGIC_APP_REPLAY_STATUS_CAPTURE_CAPACITY;
+    raw[LOGIC_APP_REPLAY_CAPACITY_FLAGS_OFFSET] =
+        LOGIC_APP_REPLAY_CAPACITY_TRACE_DROPPED;
+    if (app_prefix_snapshot_to_oracle(
+            "kq1", 0x2917, &manifest, hash, hash, raw, 1, 0, 0, 180,
+            &snapshot, detail, sizeof detail) != 0 ||
+        snapshot.tick != 1 || !snapshot.control_flow_reliable || snapshot.has_trace) {
+        fprintf(stderr,
+                "real-game corpus regression: valid bounded trace prefix rejected: %s\n",
+                detail);
+        return -1;
+    }
+    return 0;
+}
+
