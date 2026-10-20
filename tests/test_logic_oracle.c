@@ -1458,6 +1458,174 @@ int main(int argc, char **argv)
     CHECK(loaded_all[1].rng_final_state == reference.rng_final_state);
     free(loaded_all);
     loaded_all = NULL;
+
+    candidate_series[0] = series[0];
+    candidate_series[1] = series[1];
+    candidate_series[1].variables[90] = 4;
+    CHECK(logic_oracle_compare_streams(series, 2, candidate_series, 2, &result) ==
+          LOGIC_ORACLE_DIVERGED);
+    CHECK(result.checkpoint_index == 1 && strcmp(result.field, "variable[90]") == 0);
+    candidate_series[1].checkpoint_index = 0;
+    CHECK(logic_oracle_compare_streams(series, 2, candidate_series, 2, &result) ==
+          LOGIC_ORACLE_INVALID);
+    candidate_series[1].checkpoint_index = 1;
+    candidate_series[1].input_sha256[0]++;
+    CHECK(logic_oracle_compare_streams(series, 2, candidate_series, 2, &result) ==
+          LOGIC_ORACLE_INVALID);
+    CHECK(logic_oracle_snapshot_write(snapshots_path, candidate_series, 2) != 0);
+    CHECK(logic_oracle_snapshot_load(snapshots_path, &loaded_all, &loaded_count) == 0);
+    CHECK(loaded_count == 2);
+    free(loaded_all);
+    loaded_all = NULL;
+    candidate_series[1].input_sha256[0]--;
+
+    CHECK(patch_u32(snapshots_path,
+                    LOGIC_ORACLE_HEADER_SIZE + LOGIC_ORACLE_SNAPSHOT_RECORD_SIZE +
+                    17 + 2 * LOGIC_ORACLE_ID_SIZE + LOGIC_ORACLE_PROVENANCE_SIZE,
+                    0x12345678) == 0);
+    CHECK(logic_oracle_snapshot_read(snapshots_path, loaded, 2, &loaded_count) != 0);
+    CHECK(logic_oracle_snapshot_write(snapshots_path, series, 2) == 0);
+
+    CHECK(patch_u16(snapshots_path, 4,
+                    LOGIC_ORACLE_SNAPSHOT_VERSION + 1) == 0);
+    CHECK(logic_oracle_snapshot_read(snapshots_path, loaded, 2, &loaded_count) != 0);
+    CHECK(logic_oracle_snapshot_write(snapshots_path, series, 2) == 0);
+    CHECK(patch_u32(snapshots_path, 6, LOGIC_ORACLE_SNAPSHOT_RECORD_SIZE - 1) == 0);
+    CHECK(logic_oracle_snapshot_read(snapshots_path, loaded, 2, &loaded_count) != 0);
+    CHECK(logic_oracle_snapshot_write(snapshots_path, series, 2) == 0);
+    CHECK(truncate(snapshots_path, LOGIC_ORACLE_HEADER_SIZE +
+                   LOGIC_ORACLE_SNAPSHOT_RECORD_SIZE + 1) == 0);
+    CHECK(logic_oracle_snapshot_read(snapshots_path, loaded, 2, &loaded_count) != 0);
+    CHECK(logic_oracle_snapshot_write(snapshots_path, series, 2) == 0);
+    CHECK(patch_u32(snapshots_path, LOGIC_ORACLE_HEADER_SIZE +
+                    LOGIC_ORACLE_SNAPSHOT_RECORD_SIZE, 0) == 0);
+    CHECK(logic_oracle_snapshot_read(snapshots_path, loaded, 2, &loaded_count) != 0);
+
+    memset(&event, 0, sizeof event);
+    event.sequence = 0;
+    event.tick = 0x12345678;
+    event.kind = 2;
+    event.logic = 7;
+    event.logical_pc = 0x9abc;
+    event.opcode = 0x42;
+    event.depth = 3;
+    event.bank = 40;
+    event.field = 5;
+    event.before = 0x01020304;
+    event.after = 0xa0b0c0d0;
+    event.reason = 6;
+    events[0] = event;
+    events[1] = event;
+    events[1].sequence = 1;
+    CHECK(logic_oracle_trace_write(trace_path, events, 2) == 0);
+    if (fail_after_fixtures) {
+        fprintf(stderr, "test_logic_oracle: intentional fixture failure\n");
+        failed = 1;
+        goto cleanup;
+    }
+    CHECK(check_completed_cycle_capture(directory, game_directory, input_trace, manifest_path, snapshots_path) == 0);
+    CHECK(check_timed_print_cycle_boundary(directory) == 0);
+    CHECK(check_nonblocking_transition_clock(directory) == 0);
+    if (cycle_only) goto cleanup;
+    CHECK(logic_oracle_trace_validate(trace_path) == 0);
+    CHECK(logic_oracle_trace_read(trace_path, read_events, 2, &event_count) == 0);
+    CHECK(event_count == 2);
+    CHECK(read_events[0].tick == event.tick && read_events[0].logical_pc == event.logical_pc);
+    CHECK(read_events[0].before == event.before && read_events[0].after == event.after);
+    CHECK(logic_oracle_trace_find(trace_path, 0, &found_event) == 0);
+    CHECK(found_event.sequence == 0 && found_event.reason == event.reason);
+
+    file = fopen(trace_path, "rb");
+    CHECK(file != NULL);
+    {
+        unsigned char bytes[LOGIC_ORACLE_HEADER_SIZE + LOGIC_ORACLE_TRACE_RECORD_SIZE];
+        CHECK(fread(bytes, 1, sizeof bytes, file) == sizeof bytes);
+        CHECK(memcmp(bytes, "LORT", 4) == 0);
+        CHECK(bytes[4] == 1 && bytes[5] == 0);
+        CHECK(bytes[6] == LOGIC_ORACLE_TRACE_RECORD_SIZE && bytes[7] == 0 &&
+              bytes[8] == 0 && bytes[9] == 0);
+        CHECK(bytes[LOGIC_ORACLE_HEADER_SIZE + 4] == 0x78 &&
+              bytes[LOGIC_ORACLE_HEADER_SIZE + 5] == 0x56 &&
+              bytes[LOGIC_ORACLE_HEADER_SIZE + 6] == 0x34 &&
+              bytes[LOGIC_ORACLE_HEADER_SIZE + 7] == 0x12);
+        CHECK(bytes[LOGIC_ORACLE_HEADER_SIZE + 16] == 0x04 &&
+              bytes[LOGIC_ORACLE_HEADER_SIZE + 17] == 0x03 &&
+              bytes[LOGIC_ORACLE_HEADER_SIZE + 18] == 0x02 &&
+              bytes[LOGIC_ORACLE_HEADER_SIZE + 19] == 0x01);
+    }
+    fclose(file);
+    file = NULL;
+
+    CHECK(patch_u16(trace_path, 4, 2) == 0);
+    CHECK(logic_oracle_trace_read(trace_path, read_events, 2, &event_count) != 0);
+    CHECK(logic_oracle_trace_write(trace_path, events, 2) == 0);
+    CHECK(patch_u32(trace_path, 6, LOGIC_ORACLE_TRACE_RECORD_SIZE - 1) == 0);
+    CHECK(logic_oracle_trace_read(trace_path, read_events, 2, &event_count) != 0);
+    CHECK(logic_oracle_trace_write(trace_path, events, 2) == 0);
+    CHECK(truncate(trace_path, LOGIC_ORACLE_HEADER_SIZE +
+                   LOGIC_ORACLE_TRACE_RECORD_SIZE) == 0);
+    CHECK(logic_oracle_trace_read(trace_path, read_events, 2, &event_count) != 0);
+    CHECK(logic_oracle_trace_write(trace_path, events, 2) == 0);
+    CHECK(patch_u32(trace_path, LOGIC_ORACLE_HEADER_SIZE +
+                    LOGIC_ORACLE_TRACE_RECORD_SIZE, 0) == 0);
+    CHECK(logic_oracle_trace_read(trace_path, read_events, 2, &event_count) != 0);
+    CHECK(logic_oracle_trace_validate(trace_path) != 0);
+
+    events[1].sequence = 0;
+    CHECK(logic_oracle_trace_write(trace_path, events, 2) != 0);
+    series[1].checkpoint_index = 0;
+    CHECK(logic_oracle_snapshot_write(snapshots_path, series, 2) != 0);
+
+    CHECK(logic_replay_sha256_file(manifest_path, expected_manifest_hash) == 0);
+    CHECK(logic_replay_sha256_file(input_trace, expected_input_hash) == 0);
+    CHECK(run_candidate_engine(game_directory, input_trace, manifest_path,
+                               candidate_snapshot_path, 0) == 0);
+    CHECK(logic_oracle_snapshot_load(candidate_snapshot_path, &loaded_all,
+                                     &loaded_count) == 0);
+    candidate_snapshots = loaded_all;
+    loaded_all = NULL;
+    CHECK(loaded_count == 1);
+    CHECK(memcmp(candidate_snapshots[0].manifest_sha256,
+                 expected_manifest_hash, sizeof expected_manifest_hash) == 0);
+    CHECK(memcmp(candidate_snapshots[0].input_sha256,
+                 expected_input_hash, sizeof expected_input_hash) == 0);
+    CHECK(candidate_snapshots[0].variables[19] == 97);
+    CHECK(candidate_snapshots[0].variables[42] == 112);
+    CHECK(candidate_snapshots[0].variables[50] == expected_random_value);
+    CHECK(candidate_snapshots[0].rng_call_count == 1);
+    CHECK(candidate_snapshots[0].rng_final_state == expected_rng_state);
+    free(candidate_snapshots);
+    candidate_snapshots = NULL;
+
+    CHECK(run_candidate_engine(game_directory, input_trace, manifest_path,
+                               faulted_candidate_snapshot_path, 1) == 0);
+    CHECK(logic_oracle_snapshot_load(faulted_candidate_snapshot_path,
+                                     &candidate_snapshots,
+                                     &loaded_count) == 0);
+    CHECK(loaded_count == 1);
+    /* The verifier halts at the child return, before caller A adds 3. */
+    CHECK(candidate_snapshots[0].variables[42] == 109);
+    CHECK(candidate_snapshots[0].has_failure == 1);
+    CHECK(candidate_snapshots[0].failure_kind == 4);
+    CHECK(candidate_snapshots[0].failure_logic == 1);
+    CHECK(candidate_snapshots[0].failure_logical_pc == 0xA104);
+    CHECK(candidate_snapshots[0].failure_opcode == 22);
+    CHECK(candidate_snapshots[0].failure_reason == 5);
+    CHECK(candidate_snapshots[0].failure_code == 0x705);
+    free(candidate_snapshots);
+    candidate_snapshots = NULL;
+
+    CHECK(check_real_game_run(directory, kq1_game_directory, game_input_path,
+                              kq1_manifest_path, kq1_snapshot_path,
+                              kq1_repeat_snapshot_path, kq1_milestones_path,
+                              "kq1", 0x2917, 0) == 0);
+    CHECK(check_real_game_run(directory, kq3_game_directory, game_input_path,
+                              kq3_manifest_path, kq3_snapshot_path,
+                              kq3_repeat_snapshot_path, kq3_milestones_path,
+                              "kq3", 0x2936, 1) == 0);
+
+    CHECK(check_distinct_rng_comparison() == 0);
+
 cleanup:
     if (file) fclose(file);
     free(loaded_all);
