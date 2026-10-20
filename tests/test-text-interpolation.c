@@ -284,19 +284,23 @@ static void test_border_capacity(void)
 
 static void test_border_width_capacity(void)
 {
-	size_t i;
-	size_t expectedRows = TEXTBUFFER_SIZE / TILE_LAYER_WIDTH;
-	size_t expectedSize = expectedRows * TILE_LAYER_WIDTH;
-	memset(b3TextBuffer1, 'x', TEXTBUFFER_SIZE - 1);
-	for (i = 1; i < TEXTBUFFER_SIZE - 1; i += 2) b3TextBuffer1[i] = NEW_LINE;
-	b3TextBuffer1[TEXTBUFFER_SIZE - 1] = '\0';
-	memset(b3TextBuffer2, 0x5a, TEXTBUFFER_SIZE);
-	b3DrawBorder(TILE_LAYER_WIDTH - 2, TEXTBUFFER_SIZE);
-	assert(b3LastBoxLines == expectedRows);
-	assert(b3LastBoxLines <= TEXT_ROWS);
-	assert(strlen(b3TextBuffer2) == expectedSize - 1);
-	assert(b3TextBuffer2[expectedSize - 1] == '\0');
-	assert((byte)b3TextBuffer2[expectedSize] == 0x5a);
+    static const byte widths[] = { 48, 49, TILE_LAYER_WIDTH - 2 };
+    size_t i, n, expectedRows, expectedSize;
+    memset(b3TextBuffer1, 'x', TEXTBUFFER_SIZE - 1);
+    for (i = 1; i < TEXTBUFFER_SIZE - 1; i += 2) b3TextBuffer1[i] = NEW_LINE;
+    b3TextBuffer1[TEXTBUFFER_SIZE - 1] = '\0';
+    for (n = 0; n < sizeof(widths); n++) {
+        expectedRows = TEXTBUFFER_SIZE / (widths[n] + 2);
+        if (expectedRows > TEXT_ROWS) expectedRows = TEXT_ROWS;
+        expectedSize = expectedRows * (widths[n] + 2);
+        memset(b3TextBuffer2, 0x5a, TEXTBUFFER_SIZE);
+        b3DrawBorder(widths[n], TEXTBUFFER_SIZE);
+        assert(b3LastBoxLines == expectedRows);
+        assert(strlen(b3TextBuffer2) == expectedSize - 1);
+        assert(b3TextBuffer2[expectedSize - 1] == '\0');
+        if (expectedSize < TEXTBUFFER_SIZE)
+            assert((byte)b3TextBuffer2[expectedSize] == 0x5a);
+    }
 }
 
 static void test_border_preserves_empty_lines(void)

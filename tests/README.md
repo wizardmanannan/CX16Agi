@@ -16,15 +16,18 @@ a host C compiler, Python 3, a linker supporting `--gc-sections`, and `flock`. S
 builds must use separate `CX16AGI_BUILD_DIR` values.
 
 `make string-format-target-check` compiles and assembles the five changed C
-production modules and all three assembly modules with cc65/ca65. Set `CC65_HOME` if the tools are outside PATH.
+production modules and all four assembly modules with cc65/ca65. Set `CC65_HOME` if the tools are outside PATH.
 This checks target compilation, not a full interpreter link or emulator replay.
 
 The KQ3 warning workload is 106 input bytes, two message references, and 115
-output bytes. The current C formatter baseline is 86,586 emulator CPU cycles;
-the resident assembly formatter takes about 24,800 cycles with the same workload
-(71% fewer). The suite enforces a 30,000-cycle budget to retain the improvement
-while allowing minor code-layout changes. It checks output copying in 50-byte
-chunks plus the terminator.
+output bytes. The original C formatter baseline is 86,586 emulator CPU cycles;
+the resident assembly formatter takes about 11,800 cycles with the same workload
+(86% fewer). The suite enforces a 12,000-cycle budget and checks output bytes,
+terminators, canaries, and bank restoration. Entry, flushing, literals, all token
+lookups, recursion, and decimal conversion execute in assembly. The formatter
+calls the existing bank-5 engine API for logic metadata; stringFormat.c only
+checks packed structure offsets at compile time. Highest valid string, word,
+object, and message indices exercise offsets across page boundaries.
 
 Text-mode display cases execute the production control-character assembly through
 the same bridge: backspace blanks the preceding character without crossing the
@@ -47,7 +50,17 @@ option removed by current cc65, relocates the hardcoded map path into the build
 root, and emits explicit compiler/assembler intermediates. The retained
 `product.map` is under the suite output root; all transient fixtures are removed.
 
-Additional full-product layout baselines (32 calls each): C word wrapping takes
-222,784 cycles for `ab cd ef gh ij` at width 5, and C border construction takes
-1,980,480 cycles for a width-30 box containing `one\n\ntwo\n`. The cases check
-wrapped output, width, return values, empty rows, terminators and canaries.
+Full-product layout workloads run 32 calls each. Word wrapping takes about
+42,200 cycles versus 222,784 in C for `ab cd ef gh ij` at width 5; its budget is
+100,000 cycles. Border construction takes about 172,000 versus 1,980,480 in C
+for a width-30 box containing `one\n\ntwo\n`; its budget is 250,000 cycles.
+Both production loops are assembly, also exercised by the display suite through
+the target bridge. Cases check hard breaks, page crossings, width clamps, exact
+buffer fits, row limits, blank/trailing rows, terminators, and an emulator-side
+border canary. Original C baselines were retained before migration.
+
+The remaining C changes validate command operands and capacities, manage input
+polling, or orchestrate display rows and menus. Their byte copies, fills, and
+string lengths use the existing assembly runtime/banked helpers. Text controls,
+map clipping, parser compaction, interpolation, wrapping, and border byte loops
+have one production assembly implementation each.
