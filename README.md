@@ -158,14 +158,32 @@ It sends Return through the emulator keyboard to leave the introduction,
 requires KQ1 room 1 and KQ3 room 7, completed picture rendering, visible sprites,
 and ten more interpreter/input cycles, then sends Right and checks that the
 player actually moves. It does not replace a full playthrough or a visual/audio
-fidelity check. `review-check` runs `test`, `production-test`, and `games-test`
-sequentially and fails if either game or any required input is missing.
+fidelity check. `review-check` runs `test`, `production-test`, `games-test`,
+`intro-test`, and `emulator-audio-test` sequentially and fails if either game
+or any required input is missing.
 
 `make -C tools intro-test ROM=/path/to/rom.bin GAME_KQ1=/path/to/KQ1`
 retains KQ1's natural title and checks a real 13-row credit redraw. The batch
-must finish within one display frame and active sound updates must arrive on
-every VSYNC. The case reports emulated cycles and host time for the repeatable
-workload; the initial failure exposed partial credits for 27 frames.
+must finish within three display frames without per-row IRQ waits; active sound
+updates must arrive on every VSYNC. The case reports emulated cycles and host
+time for the repeatable workload; the initial failure exposed partial credits
+for 27 frames.
+
+For an interactive check, use `make -C tools play ROM=/path/to/rom.bin
+GAME=/path/to/game`. It builds the shipped image and a Release emulator with
+link-time optimization, and stages a private copy of the game. Closing the
+window cleans the staged files. The suite emulator primes half of its existing
+audio queue before playback; this adds about 84 ms of headroom with the default
+HostFS buffers. Shared emulator sources are not modified.
+This headroom handles brief scheduling delays; it cannot sustain clean playback
+when the emulator runs slower than real time. Audible crackling remains under
+investigation even when the automated timing checks pass.
+
+`make -C tools emulator-audio-test` compiles that adapter with the actual
+emulator audio producer and callback. Its deterministic three-second workload
+delays one producer frame every twenty frames and rejects inserted silence
+after startup. Chip synthesis is replaced with constant input to isolate host
+buffering; this check does not establish musical fidelity.
 
 For a normal build, run `CC65_HOME=/path/to/cc65 make` (or `make` when `cl65`
 is on PATH). The map is written beside the program as `agi.cx16.map`.
