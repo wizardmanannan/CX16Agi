@@ -1103,17 +1103,17 @@ static const char hook[] =
 /* Observe natural game execution; Return and Right use the emulator keyboard. */
 static const char startup_hook[] =
 "/* KQ3 view 0 uses transparent colour 14 in every walking loop. */\n"
-"static unsigned startup_ego_palette_checks,startup_ego_palette_room;\n"
+"static unsigned startup_ego_palette_checks,startup_ego_palette_room,startup_ego_palette_loops;\n"
 "static void startup_check_ego_palette(unsigned room,uint16_t x,uint16_t y) {\n"
 "    if(shake_banked_read(S__viewtab+shake_read(S__offsetOfCurrentView),9)!=0) return;\n"
 "    unsigned height=shake_banked_read(S__viewtab+shake_read(S__offsetOfYSize),9);\n"
 "    for(unsigned slot=0;slot<128;slot++) { unsigned a=0x1fc00+slot*8; if(!(video_space_read(a+6)&12)) continue; unsigned sx=video_space_read(a+2)|((video_space_read(a+3)&3)<<8),sy=video_space_read(a+4)|((video_space_read(a+5)&3)<<8); if((sx!=x*2&&sx+2!=x*2)||sy+height!=y+37) continue; unsigned palette=video_space_read(a+7)&15;\n"
-"        for(unsigned c=1;c<16;c++) { unsigned base=0x1fa00+(c==14?0:c*2),actual=0x1fa00+palette*32+c*2; unsigned expected=video_space_read(base)|((video_space_read(base+1)&15)<<8),got=video_space_read(actual)|((video_space_read(actual+1)&15)<<8); if(got!=expected) { fprintf(stderr,\"KQ3 ego colour changed: room=%u loop=%u sprite=%u palette=%u colour=%u RGB=%03x expected=%03x\\n\",room,shake_banked_read(S__viewtab+shake_read(S__offsetOfCurrentLoop),9),slot,palette,c,got,expected); exit(3); } } startup_ego_palette_checks++; startup_ego_palette_room=room; return;\n"
+"        for(unsigned c=1;c<16;c++) { unsigned base=0x1fa00+(c==14?0:c*2),actual=0x1fa00+palette*32+c*2; unsigned expected=video_space_read(base)|((video_space_read(base+1)&15)<<8),got=video_space_read(actual)|((video_space_read(actual+1)&15)<<8); if(got!=expected) { fprintf(stderr,\"KQ3 ego colour changed: room=%u loop=%u sprite=%u palette=%u colour=%u RGB=%03x expected=%03x\\n\",room,shake_banked_read(S__viewtab+shake_read(S__offsetOfCurrentLoop),9),slot,palette,c,got,expected); exit(3); } } startup_ego_palette_checks++; startup_ego_palette_room=room; if(room==34) startup_ego_palette_loops|=1u<<shake_banked_read(S__viewtab+shake_read(S__offsetOfCurrentLoop),9); return;\n"
 "    }\n"
 "}\n"
 "static void startup_before_step(void) {\n"
 "    static unsigned pictures,room_pictures,polls,ticks,updates,room_ticks,room_polls,last_room=256;\n"
-"    static unsigned colour_phase; static unsigned kq3_intro_pictures,kq3_intro_first_frame; static bool kq3_intro_shown,showing; static uint16_t show_return; static uint8_t show_sp;\n"
+"    static unsigned colour_phase,colour_phase_tick; static unsigned kq3_intro_pictures,kq3_intro_first_frame; static bool kq3_intro_shown,showing; static uint16_t show_return; static uint8_t show_sp;\n"
 "    static unsigned intro_rows,intro_first_frame,intro_last_frame,intro_sound_calls,intro_last_sound_frame,intro_max_sound_gap,intro_display_waits;\n"
 "    static uint32_t intro_first_cycle,intro_last_cycle,intro_call_cycle,intro_display_cycles;\n"
 "    static uint32_t intro_host_start; if(!intro_host_start) intro_host_start=SDL_GetTicks()+1;\n"
@@ -1144,7 +1144,11 @@ static const char startup_hook[] =
 "        unsigned sprites=0; for(unsigned i=0;i<128;i++) if(video_space_read(0x1fc00+i*8+6)&12) sprites++;\n"
 "        uint16_t x=combined_read16(S__viewtab+shake_read(S__offsetOfXPos),9),y=combined_read16(S__viewtab+shake_read(S__offsetOfYPos),9);\n"
 "        if(STARTUP_TEST_ROOM==7&&room!=45&&ticks-room_ticks>=3) startup_check_ego_palette(room,x,y);\n"
-"        if(STARTUP_TEST_ROOM==7&&colour_phase&&room==34&&ticks-room_ticks>=10&&startup_ego_palette_checks&&startup_ego_palette_room==34) { fprintf(stderr,\"PASS natural game startup and courtyard colour preservation: checks=%u\\n\",startup_ego_palette_checks); exit(0); }\n"
+"        if(STARTUP_TEST_ROOM==7&&colour_phase==1&&room==34) { static char stop[]=\"\\x11\\x11\"; unsigned direction=shake_banked_read(shake_var_address(6),0); if(direction==5) machine_paste(stop,false); colour_phase=2; fprintf(stderr,\"Courtyard stop at %u,%u direction=%u\\n\",x,y,direction); colour_phase_tick=ticks; next_key=clockticks6502+8000000u; }\n"
+"        if(STARTUP_TEST_ROOM==7&&room==34&&colour_phase>=2&&colour_phase<=6&&ticks-colour_phase_tick>=(colour_phase==2?10u:3u)&&startup_ego_palette_room==34) { static char open[]=\"\\x11OPEN DOOR\\r\"; if(colour_phase<6) { static char turns[][5]={\"\\\\X91\",\"\\\\X9D\",\"\\\\X1D\",\"\\\\X11\"}; machine_paste(turns[colour_phase-2],false); } else machine_paste(open,false); colour_phase++; fprintf(stderr,\"Courtyard phase=%u position=%u,%u loops=%x input=%u\\n\",colour_phase,x,y,startup_ego_palette_loops,shake_read(S__inputLineDisplayed)); colour_phase_tick=ticks; next_key=clockticks6502+8000000u; }\n"
+"        if(STARTUP_TEST_ROOM==7&&colour_phase==7&&ticks%50==0) fprintf(stderr,\"Door waiting: position=%u,%u direction=%u unknown=%u input=%u loopmask=%x\\n\",x,y,shake_banked_read(shake_var_address(6),0),shake_banked_read(shake_var_address(9),0),shake_read(S__inputLineDisplayed),startup_ego_palette_loops);\n"
+"        if(STARTUP_TEST_ROOM==7&&colour_phase==7&&room==7&&ticks-room_ticks>=10) { static char down[]=\"\\x11\"; machine_paste(down,false); colour_phase=8; next_key=clockticks6502+8000000u; }\n"
+"        if(STARTUP_TEST_ROOM==7&&colour_phase==8&&room==34&&ticks-room_ticks>=10&&startup_ego_palette_room==34) { if(startup_ego_palette_loops!=15) { fprintf(stderr,\"Courtyard walking loops missing: mask=%x\\n\",startup_ego_palette_loops); exit(3); } fprintf(stderr,\"PASS natural game startup and courtyard round trip colours: checks=%u\\n\",startup_ego_palette_checks); exit(0); }\n"
 "        if(room==STARTUP_TEST_ROOM&&ticks-room_ticks>=10&&polls-room_polls>=10&&room_pictures&&updates&&sprites) {\n"
 "            if(!moving) { static char right[]=\"\\x1d\"; start_x=x; start_y=y; moving=true; machine_paste(right,false); fprintf(stderr,\"Startup movement: right from %u,%u\\n\",x,y); }\n"
 "            else if((x!=start_x||y!=start_y)&&shake_banked_read(shake_var_address(6),0)==3) { fprintf(stderr,\"PASS natural game startup: room=%u ticks=%u polls=%u pictures=%u updates=%u visible_sprites=%u moved=%u,%u->%u,%u\\n\",room,ticks,polls,pictures,updates,sprites,start_x,start_y,x,y); if(STARTUP_TEST_ROOM!=7) exit(0); if(!colour_phase) { static char down[]=\"\\x11\"; machine_paste(down,false); colour_phase=1; next_key=clockticks6502+8000000u; } }\n"
@@ -1782,5 +1786,5 @@ int main(int argc,char **argv) {
     if(!stage||exists(stage)) fail("Integration fixture cleanup regression: private staged game was not removed");
     require_no_retained_stage(output);
     if(play) { puts("Interactive emulator closed; staged game cleaned"); return 0; }
-    if(startup_room) { REQUIRE(file_contains(join(output,"run.log"),intro_test?"PASS natural intro presentation":"PASS natural game startup"),"Game did not reach its playable room"); puts(intro_test?"PASS natural intro text publication and audio cadence":"PASS natural game startup and sustained interpreter/input/render progress"); } else if(picture_test) validate_picture(output); else if(combined_test) validate_combined(output); else validate(output,foreground_test);return 0;
+    if(startup_room) { REQUIRE(file_contains(join(output,"run.log"),intro_test?"PASS natural intro presentation":startup_room==7?"PASS natural game startup and courtyard round trip colours":"PASS natural game startup"),"Game did not reach its playable room"); puts(intro_test?"PASS natural intro text publication and audio cadence":"PASS natural game startup and sustained interpreter/input/render progress"); } else if(picture_test) validate_picture(output); else if(combined_test) validate_combined(output); else validate(output,foreground_test);return 0;
 }
