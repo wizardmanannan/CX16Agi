@@ -5,6 +5,15 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sim65.h>
+
+void __fastcall__ testScanFloor(const byte* data, byte length);
+static unsigned long cycles(void)
+{
+    peripherals.counter.select = COUNTER_SELECT_CLOCKCYCLE_COUNTER;
+    peripherals.counter.latch = 0;
+    return peripherals.counter.value32[0];
+}
 
 void testSetLine(const char* line);
 void testScanReset(void);
@@ -82,7 +91,7 @@ static void differential(const char* path)
     static byte order[256], chunk[128], header[7];
     unsigned count = 0, i, j, rooms = 0, words = 0, typed = 0, close = 0;
     unsigned long bytes = 0;
-    unsigned long position = 0, start, left;
+    unsigned long position = 0, start, left, scanCycles = 0, floorCycles = 0;
     byte n, current = 255, size, q;
     FILE* file = NULL;
     char name[128];
@@ -139,7 +148,9 @@ static void differential(const char* path)
             if (size > left) size = (byte)left;
             assert(fread(chunk, 1, size, file) == size);
             position += size; left -= size; bytes += size;
-            testScan(chunk, size); refScan(chunk, size);
+            start = cycles(); testScan(chunk, size); scanCycles += cycles() - start;
+            start = cycles(); testScanFloor(chunk, size); floorCycles += cycles() - start;
+            refScan(chunk, size);
         }
         testScanEnd(); refScanEnd();
         for (q = 0; q < 12; ++q) {
@@ -159,8 +170,8 @@ static void differential(const char* path)
         ++rooms;
     }
     if (file) fclose(file);
-    printf("PASS: %s: 65C02 scanner equals the C model in %u rooms (%lu bytes, %u matches, %u words matched with typos, %u close pairs)\n",
-           path, rooms, bytes, words, typed, close);
+    printf("PASS: %s: 65C02 scanner equals the C model in %u rooms (%lu bytes, %u matches, %u words matched with typos, %u close pairs; %lu cycles/byte, decrypt-and-classify floor %lu)\n",
+           path, rooms, bytes, words, typed, close, scanCycles / bytes, floorCycles / bytes);
 }
 
 /* Rooms with pictures, by volume and offset, so files are read forward only. */

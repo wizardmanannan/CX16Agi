@@ -206,3 +206,36 @@ _testScan:                      ; void __fastcall__ testScan(const byte* data, b
     jmp bFTeleportScan
 _testScanEnd:                   ; void testScanEnd(void)
     jmp bFTeleportScanEnd
+
+; The least any scanner must do per byte - decrypt it, tell letters from
+; the rest, keep letters - to measure bFTeleportScan against.
+.export _testScanFloor
+_testScanFloor:                 ; void __fastcall__ testScanFloor(const byte* data, byte length)
+    sta tmp1
+    jsr popax
+    sta ptr1
+    stx ptr1 + 1
+    ldx testFloorKey
+    ldy #0
+@byte:
+    lda (ptr1),y
+    eor _avisDurgan,x
+    inx
+    cpx #11
+    bne @key
+    ldx #0
+@key:
+    ora #$20
+    cmp #'a'
+    bcc @next
+    cmp #'z' + 1
+    bcs @next
+    sta testFloorWord
+@next:
+    iny
+    cpy tmp1
+    bne @byte
+    stx testFloorKey
+    rts
+testFloorKey: .res 1
+testFloorWord: .res 1
