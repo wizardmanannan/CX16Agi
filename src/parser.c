@@ -179,7 +179,9 @@ void b7PollKeyboard()
 {
 	static char strPos = 0;
 	int ch, dummy, gx, gy;
-	boolean controllerHandled;
+#if ENABLE_TELEPORT
+	boolean teleportLine;
+#endif
 
 	b1ResetControllers();
 
@@ -220,12 +222,12 @@ void b7PollKeyboard()
 			}
            
 #if ENABLE_TELEPORT
-			if (inputLineDisplayed && b7TeleportInputPrefix(b7CurrentInputStr))
-				controllerHandled = FALSE;
-			else
+			/* A teleport line takes every key, even controller-bound ones. */
+			teleportLine = inputLineDisplayed && b7TeleportInputPrefix(b7CurrentInputStr);
+			if ((teleportLine || !b1SetControllerByPetscii(ch)) && inputLineDisplayed) {
+#else
+			if (!b1SetControllerByPetscii(ch) && inputLineDisplayed) {
 #endif
-				controllerHandled = b1SetControllerByPetscii(ch);
-			if (!controllerHandled && inputLineDisplayed) {
 				switch (ch & 0xff) {
 				case KEY_TAB:  /* Ignore these when building input string */
 				case KEY_ESC:
@@ -258,7 +260,7 @@ void b7PollKeyboard()
 				default:
 					if (strlen(b7CurrentInputStr) < MAX_INPUT_STRING_LENGTH && (ch >= KEY_CAP_A && ch <= KEY_CAP_Z || ch >= KEY_LOWER_A && ch <= KEY_LOWER_Z || ch >= KEY_0 && ch <= KEY_9 || ch == SPACE
 #if ENABLE_TELEPORT
-						|| (ch == KEY_COLON || ch == KEY_COMMA) && b7TeleportInputPrefix(b7CurrentInputStr)
+						|| (ch == KEY_COLON || ch == KEY_COMMA) && teleportLine
 #endif
 						))
 					{
