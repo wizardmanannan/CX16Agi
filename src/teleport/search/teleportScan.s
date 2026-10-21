@@ -46,6 +46,15 @@ bFScanLength: .res 1            ; TELEPORT_WORD_SIZE marks an overlong word
 bFScanWord: .res TELEPORT_WORD_SIZE
 bFScanQuery: .res 1
 bFScanFlags: .res TELEPORT_MAX_WORDS ; per query word: SCAN_FIRST, SCAN_LAST
+; Query word lists, in order, as word + 1 (0 ends): per first character
+; (0-9, then a-z) and of 9+ letters, which may begin with any (two typos).
+bFScanChain: .res TELEPORT_MAX_WORDS ; the next word with the same first character
+bFScanLongChain: .res TELEPORT_MAX_WORDS ; the next of 9+ letters
+bFScanStarts: .res 36           ; each list's first word
+bFScanLong: .res 1
+SCAN_TABLES = 36 + 1           ; from bFScanStarts on
+bFScanLetterNext: .res 1        ; the walk through both lists
+bFScanLongNext: .res 1
 SCAN_LAST = 1                   ; last word of its stop: also a prefix
 SCAN_FIRST = 2                  ; first word of its stop
 bFScanSaveY: .res 1
@@ -67,6 +76,42 @@ bFTeleportScanReset:
     sta _bFTeleportPairs,x
     dex
     bpl @clear
+    jsr bFTeleportLinePointer2  ; the query word lists
+    ldx #SCAN_TABLES - 1
+@tables:
+    stz bFScanStarts,x
+    dex
+    bpl @tables
+    ldx _bFTeleportWords
+@word:
+    dex
+    bmi @words
+    lda _bFTeleportWordLength,x
+    cmp #9
+    bcc @short
+    lda bFScanLong
+    sta bFScanLongChain,x
+    txa
+    inc a
+    sta bFScanLong
+@short:
+    ldy _bFTeleportWordStart,x  ; 0-9 then a-z
+    lda (ptr2),y
+    cmp #'a'
+    bcc @digit
+    sbc #'a' - 10
+    bra @first
+@digit:
+    sbc #'0' - 1                ; carry clear
+@first:
+    tay
+    lda bFScanStarts,y
+    sta bFScanChain,x
+    txa
+    inc a
+    sta bFScanStarts,y
+    bra @word
+@words:
     ldx _bFTeleportStopCount
 @stop:
     dex
@@ -156,36 +201,55 @@ bFTeleportScanEnd:
     jsr bFTeleportLinePointer2
     ; Fall through.
 
-; Counts the current word against every query word, then clears it.
+; Counts the current word against the query words it can match, then clears it.
 ; Preserves Y.
 bFScanEndWord:
     lda bFScanLength
     beq @exit
     cmp #TELEPORT_WORD_SIZE
     beq @clear
+    jsr bFScanStart             ; only query words starting like it, and
+    sta bFScanLetterNext        ; those of 9+ letters
+    ora bFScanLong
+    beq @clear                  ; none: nor can it join two
     sty bFScanSaveY
-    ldx #0
-@query:
-    cpx _bFTeleportWords
+    lda bFScanLong
+    bne @both
+    lda bFScanLetterNext        ; one list
+@chain:
+    dec a
+    tax
+    jsr bFScanCount
+    lda bFScanChain,x
+    bne @chain
+    bra @restore
+@both:
+    sta bFScanLongNext
+@walk:                          ; both lists, in order, each word once
+    lda bFScanLetterNext
+    beq @long
+    ldx bFScanLongNext
+    beq @letter
+    cmp bFScanLongNext
+    bcc @letter
+    bne @long
+    lda bFScanLongChain - 1,x   ; in both
+    sta bFScanLongNext
+    lda bFScanLetterNext
+@letter:
+    tax
+    lda bFScanChain - 1,x
+    sta bFScanLetterNext
+    bra @count
+@long:
+    ldx bFScanLongNext
     beq @restore
-    jsr bFScanMatch
-    lda #0                      ; exact: no typos
-    bcs @hit
-    jsr bFScanTypos
-    bcc @next
-@hit:
-    cmp _bFTeleportTypos,x
-    bcs @count
-    sta _bFTeleportTypos,x
+    lda bFScanLongChain - 1,x
+    sta bFScanLongNext
 @count:
-    jsr bFScanNear
-    lda _bFTeleportHits,x
-    inc a
-    beq @next
-    sta _bFTeleportHits,x
-@next:
-    inx
-    bra @query
+    dex
+    jsr bFScanCount
+    bra @walk
 @restore:
     jsr bFScanJoins
     ldy bFScanSaveY
@@ -195,6 +259,38 @@ bFScanEndWord:
     bne @exit
     inc bFScanPosition + 1
 @exit:
+    rts
+
+; The first query word + 1 (0 none) starting like the current word.
+bFScanStart:
+    ldx bFScanWord
+    cpx #'a'
+    bcs @letter
+    lda bFScanStarts - '0',x
+    rts
+@letter:
+    lda bFScanStarts + 10 - 'a',x
+    rts
+
+; Counts a match of the current word for query word X, if it is one.
+; Preserves X.
+bFScanCount:
+    jsr bFScanMatch
+    lda #0                      ; exact: no typos
+    bcs @hit
+    jsr bFScanTypos
+    bcc @done
+@hit:
+    cmp _bFTeleportTypos,x
+    bcs @count
+    sta _bFTeleportTypos,x
+@count:
+    jsr bFScanNear
+    lda _bFTeleportHits,x
+    inc a
+    beq @done
+    sta _bFTeleportHits,x
+@done:
     rts
 
 ; Does the current word join two neighbours of a stop? Each such pair (word
