@@ -15,17 +15,20 @@ TELEPORT_LANDING_INC = 1
 ; probe, nearest first, and the first that passes is the row's best. The full
 ; probe decides, so the result is the one probing every point in distance
 ; order would give, at a fraction of the probes.
-.importzp c_sp, ptr1, ptr2
+.importzp c_sp, ptr1, ptr2, tmp1, tmp2
 .import subysp, addysp
 
 TELEPORT_ROW_BYTES = TELEPORT_WIDTH / 2
 TELEPORT_BACKGROUND = 4
-TELEPORT_NO_BEST = $FF          ; bALandingBest + 1: nothing found yet
+TELEPORT_NO_BEST = $FF          ; best high byte: nothing found yet
+TELEPORT_QUIET = 0              ; levels: index into the best tables
+TELEPORT_ANY = 1                ; ... walkable is enough
 
 .segment "BANKRAM0A"
-bALandingNeed: .res 1           ; TELEPORT_SAFE, then TELEPORT_WALKABLE
+bALandingLevel: .res 1          ; TELEPORT_QUIET or TELEPORT_ANY
+bALandingNeed: .res 1           ; probe result it needs
+bALandingMask: .res 1           ; its window flag
 bALandingWalkLow: .res 1        ; lowest priority a walkable pixel may have
-bALandingLow: .res 1            ; ... for this search
 bALandingWidth: .res 1
 bALandingDy: .res 1
 bALandingY: .res 1
@@ -33,13 +36,18 @@ bALandingX: .res 1
 bALandingDx: .res 1
 bALandingLimit: .res 1          ; largest |dx| still worth probing on the row
 bALandingLast: .res 1           ; borrowed while clearing a box
-bALandingAny: .res 1            ; nonzero if any window on the row passed
-bALandingBest: .res 2           ; distance of the best point
-bALandingBestX: .res 1
-bALandingBestY: .res 1
+bALandingAny: .res 1            ; window flags seen on the row
+bALandingDistance: .res 2
+bALandingBestLow: .res 2        ; per level: distance of the best point,
+bALandingBestHigh: .res 2       ; ... TELEPORT_NO_BEST if none
+bALandingBestX: .res 2
+bALandingBestY: .res 2
 
 ; Out: A = TELEPORT_PLACED (quiet, at the target), TELEPORT_ADJUSTED (quiet),
 ; TELEPORT_UNQUIET (walkable only), or TELEPORT_REJECTED.
+; One sweep finds both: the nearest quiet point and, while no quiet point
+; is known, the nearest walkable one - the rows a quiet search must visit
+; anyway.
 bATeleportLanding:
     ldy #TELEPORT_WIDTH         ; the row: one byte per X
     jsr subysp
@@ -68,40 +76,33 @@ bATeleportLanding:
     ldx #0
 @low:
     stx bALandingWalkLow
-    lda #TELEPORT_SAFE
-    sta bALandingNeed
     jsr bALandingSearch
-    bne @done
-    dec bALandingNeed
-    jsr bALandingSearch
-    beq @done
-    lda #TELEPORT_UNQUIET
-@done:
     ldy #TELEPORT_WIDTH
     jmp addysp                  ; preserves A
 
-; Out: A = TELEPORT_PLACED, TELEPORT_ADJUSTED or TELEPORT_REJECTED; Z reflects A.
 bALandingSearch:
     lda #TELEPORT_NO_BEST
-    sta bALandingBest + 1
-    lda bALandingWalkLow        ; quiet: plain background only
-    ldx bALandingNeed
-    cpx #TELEPORT_SAFE
-    bne @low
-    lda #TELEPORT_BACKGROUND
-@low:
-    sta bALandingLow
+    sta bALandingBestHigh + TELEPORT_QUIET
+    sta bALandingBestHigh + TELEPORT_ANY
     lda _teleportX              ; the target itself, before any row work
     sta bALandingX
     lda _teleportY
+    sta bALandingY
     jsr bATeleportTryAt
-    lda #TELEPORT_PLACED
-    bcs @placed
+    cmp #TELEPORT_SAFE
+    beq @placed
+    cmp #TELEPORT_WALKABLE
+    bne @rows
+    stz bALandingDy             ; walkable here: the nearest possible
+    stz bALandingDx
+    ldx #TELEPORT_ANY
+    jsr bALandingKeep
+@rows:
     stz bALandingDy
 @row:
-    lda bALandingBest + 1       ; rows past the best distance cannot win
-    bne @visit
-    lda bALandingBest
+    lda bALandingBestHigh + TELEPORT_QUIET
+    bne @visit                  ; no quiet point yet (or 256 away): every row
+    lda bALandingBestLow + TELEPORT_QUIET ; rows past it cannot win
     cmp bALandingDy
     bcc @end
 @visit:
@@ -125,25 +126,40 @@ bALandingSearch:
     cmp #TELEPORT_HEIGHT
     bcc @row
 @end:
-    lda bALandingBest + 1
+    ldx #TELEPORT_QUIET
+    lda bALandingBestHigh,x
+    cmp #TELEPORT_NO_BEST
+    bne @best
+    inx
+    lda bALandingBestHigh,x
     cmp #TELEPORT_NO_BEST
     beq @rejected
-    lda bALandingBestX          ; the probe ends on the winner
+@best:
+    lda bALandingBestX,x        ; the probe ends on the winner
     sta bALandingX
-    lda bALandingBestY
+    lda bALandingBestY,x
+    phx
     jsr bATeleportTryAt
-    lda bALandingBest           ; distance 0 is the target itself
-    ora bALandingBest + 1
+    plx
+    bne @walkable
+    lda bALandingBestLow        ; quiet: distance 0 is the target itself
+    ora bALandingBestHigh
     cmp #1
     lda #TELEPORT_PLACED
     adc #0
+    rts
+@walkable:
+    lda #TELEPORT_UNQUIET
+    rts
 @placed:
+    lda #TELEPORT_PLACED
     rts
 @rejected:
     lda #TELEPORT_REJECTED
     rts
 
-; Row A: its nearest passing point, kept if it beats the best so far.
+; Row A: for each level still open, its nearest passing point, kept if it
+; beats that level's best.
 bALandingRow:
     sta bALandingY
     ldy #TELEPORT_VT_YPOS       ; a row ego cannot stand on at all
@@ -153,20 +169,44 @@ bALandingRow:
     sta (VIEW_POS_LOCAL_VIEW_TAB),y
     TRAMPOLINE #TELEPORT_VIEW_BANK, b9TeleportInBounds
     beq @done
+    jsr bALandingWindows
+    lda bALandingAny
+    beq @done
+    ldx #TELEPORT_QUIET
+    jsr bALandingLevelRow
+    lda bALandingBestHigh + TELEPORT_QUIET
+    cmp #TELEPORT_NO_BEST
+    bne @done                   ; quiet found: walkable no longer matters
+    ldx #TELEPORT_ANY
+    jmp bALandingLevelRow
+@done:
+    rts
+
+; Level X on row bALandingY: its nearest passing point within the level's
+; best distance.
+bALandingLevelRow:
+    stx bALandingLevel
+    txa                         ; mask: 1 quiet, 2 walkable
+    inc a
+    and bALandingAny
+    beq @done                   ; no such window on the row
+    sta bALandingMask
+    lda #TELEPORT_SAFE          ; need: quiet, then walkable
+    sec
+    sbc bALandingLevel
+    sta bALandingNeed
     lda #TELEPORT_WIDTH - 1     ; |dx| <= best - |dy|
-    ldx bALandingBest + 1
+    ldy bALandingBestHigh,x
     bne @limit                  ; nothing yet, or 256 and more
-    lda bALandingBest
+    lda bALandingBestLow,x
     sec
     sbc bALandingDy
+    bcc @done
     cmp #TELEPORT_WIDTH
     bcc @limit
     lda #TELEPORT_WIDTH - 1
 @limit:
     sta bALandingLimit
-    jsr bALandingWindows
-    lda bALandingAny
-    beq @done
     stz bALandingDx
 @dx:
     lda _teleportX              ; left first: ties go to the smaller X
@@ -190,65 +230,115 @@ bALandingRow:
     bcc @dx
 @done:
     rts
-@found:                         ; distance dy + dx, at most 326
-    lda bALandingDy
+@found:
+    ldx bALandingLevel
+    ; Fall through.
+
+; Keeps (bALandingX, bALandingY), dy + dx away, as level X's best if it is
+; nearer, or as near and further left.
+bALandingKeep:
+    lda bALandingDy             ; at most 326
     clc
     adc bALandingDx
-    tax
+    sta bALandingDistance
     lda #0
-    adc #0
-    cmp bALandingBest + 1       ; nothing yet: high byte $FF, always more
+    rol a
+    sta bALandingDistance + 1
+    cmp bALandingBestHigh,x     ; nothing yet: $FF, always more
     bcc @better
     bne @done
-    cpx bALandingBest
+    lda bALandingDistance
+    cmp bALandingBestLow,x
     bcc @better
     bne @done
-    lda bALandingX              ; equally near: the smaller X
-    cmp bALandingBestX
-    bcs @done
-    lda bALandingBest + 1
-@better:
-    stx bALandingBest
-    sta bALandingBest + 1
     lda bALandingX
-    sta bALandingBestX
+    cmp bALandingBestX,x
+    bcs @done
+@better:
+    lda bALandingDistance
+    sta bALandingBestLow,x
+    lda bALandingDistance + 1
+    sta bALandingBestHigh,x
+    lda bALandingX
+    sta bALandingBestX,x
     lda bALandingY
-    sta bALandingBestY
+    sta bALandingBestY,x
+@done:
     rts
 
-; Row bALandingY at (ptr2), one byte per X, becomes window flags: X is
-; nonzero if pixels X - width + 1 .. X all lie in bALandingLow ..
-; background and, for a quiet landing, ego ending there is outside every
-; trigger box. A window is found by its last pixel, so each pixel costs one
-; compare against the running count of passing pixels in X.
+; Row bALandingY at (ptr2), one byte per X, becomes window flags for the
+; window of pixels X - width + 1 .. X: bit 1 if all are walkable (walk low
+; .. background), bit 0 if all are plain background and ego there is outside
+; every trigger box. A window is found by its last pixel, from running
+; counts of passing pixels.
 bALandingWindows:
     ldy bALandingY
     jsr TELEPORT_ROW_READER
     stz bALandingAny
-    ldx #0
+    stz tmp1                    ; plain background pixels in a row
+    lda bALandingWidth
+    sta tmp2
+    ldx #0                      ; walkable pixels in a row
     ldy #0
+    lda bALandingBestHigh + TELEPORT_QUIET
+    cmp #TELEPORT_NO_BEST
+    bne @quiet                  ; quiet found: walkable no longer matters
+    lda bALandingBestHigh + TELEPORT_ANY
+    bne @pixel                  ; nothing walkable yet (or 256 away)
+    lda bALandingBestLow + TELEPORT_ANY
+    cmp bALandingDy
+    bcs @pixel                  ; a nearer walkable point may be here
+@quiet:                         ; quiet windows only: X counts background
+    lda (ptr2),y
+    cmp #TELEPORT_BACKGROUND
+    bne @busy
+    inx
+    .byte $2C                   ; bit abs: skip the ldx
+@busy:
+    ldx #0
+    cpx tmp2
+    lda #0
+    rol a
+    beq @empty
+    tsb bALandingAny
+@empty:
+    sta (ptr2),y
+    iny
+    cpy #TELEPORT_WIDTH
+    bne @quiet
+    bra @boxes
 @pixel:
     lda (ptr2),y
-    cmp #TELEPORT_BACKGROUND + 1
-    bcs @fail
-    cmp bALandingLow
+    cmp #TELEPORT_BACKGROUND
+    beq @plain                  ; the common case: both runs grow
+    bcs @fail                   ; raised scenery
+    cmp bALandingWalkLow
     bcc @fail
     inx
+    stz tmp1
+    bra @flag
+@plain:
+    inx
+    inc tmp1
     bra @flag
 @fail:
     ldx #0
+    stz tmp1
 @flag:
-    cpx bALandingWidth
     lda #0
-    rol a
-    sta (ptr2),y
+    cpx tmp2
+    bcc @store                  ; not walkable, so not quiet either
+    lda tmp1
+    cmp tmp2
+    lda #1
+    rol a                       ; bit 1 walkable, bit 0 quiet
     tsb bALandingAny
+@store:
+    sta (ptr2),y
     iny
     cpy #TELEPORT_WIDTH
     bne @pixel
-    lda bALandingNeed
-    cmp #TELEPORT_SAFE
-    bne @done
+@boxes:
     lda bATeleportZones         ; count, then x1 y1 x2 y2
     sta ptr1
     lda bATeleportZones + 1
@@ -284,8 +374,9 @@ bALandingWindows:
     phy
     lda (ptr1),y
     tay
-    lda #0
 @clear:
+    lda (ptr2),y                ; not quiet
+    and #$FE
     sta (ptr2),y
     cpy bALandingLast
     iny
@@ -315,14 +406,17 @@ bALandingCandidate:
     bcs @no
     tay
     lda (ptr2),y
+    and bALandingMask
     beq @no
     lda bALandingY
-    jmp bATeleportTryAt
+    jsr bATeleportTryAt
+    cmp bALandingNeed
+    rts
 @no:
     clc
     rts
 
-; Probes (bALandingX, A). Out: carry set if good enough (bALandingNeed).
+; Probes (bALandingX, A). Out: A = the probe's result.
 bATeleportTryAt:
     ldy #TELEPORT_VT_YPOS
     sta (VIEW_POS_LOCAL_VIEW_TAB),y
@@ -333,9 +427,7 @@ bATeleportTryAt:
     sta (VIEW_POS_LOCAL_VIEW_TAB),y
     ldy #TELEPORT_VT_PREVX
     sta (VIEW_POS_LOCAL_VIEW_TAB),y
-    jsr bATeleportProbe
-    cmp bALandingNeed
-    rts
+    jmp bATeleportProbe
 
 .ifndef TELEPORT_ROW_READER
 TELEPORT_ROW_READER = bATeleportReadRow

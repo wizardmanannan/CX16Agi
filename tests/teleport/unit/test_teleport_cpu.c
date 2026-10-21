@@ -534,7 +534,8 @@ static void test_quiet_landing(void)
 /* What a new-room landing costs - cycles, single-pixel and row reads - for
    an open room, a far-off safe island, a room with no quiet spot (all
    water) and one with no walkable spot. The landings are fixed; the cycle
-   ceilings catch a return to probing every point (100 to 240 million). */
+   ceilings catch a return to probing every point (100 to 240 million)
+   or to a second pass for walkable spots (3 million). */
 static unsigned long cyclesNow(void)
 {
     peripherals.counter.select = COUNTER_SELECT_CLOCKCYCLE_COUNTER;
@@ -561,12 +562,12 @@ static void test_landing_cost(void)
     reset(); landingCost("open", 20, 60, 50000); placed(20, 60);
     reset(); memset(terrain, 0, sizeof terrain);
     for (y = 150; y < 168; ++y) memset(terrain[y] + 130, 4, 30);
-    landingCost("island", 20, 60, 3000000); placed(130, 150);
+    landingCost("island", 20, 60, 2000000); placed(130, 150);
     reset(); memset(terrain, 3, sizeof terrain);
-    landingCost("noquiet", 20, 60, 3000000); placed(20, 60);
+    landingCost("noquiet", 20, 60, 2000000); placed(20, 60);
     assert(strstr(lastMessage, "No quiet spot"));
     reset(); memset(terrain, 0, sizeof terrain);
-    landingCost("blocked", 20, 60, 5000000);
+    landingCost("blocked", 20, 60, 2000000);
     at(20, 60); assert(strstr(lastMessage, "rejected"));
     puts("PASS: landing cost: row-by-row search, same landings, within cycle ceilings");
 }

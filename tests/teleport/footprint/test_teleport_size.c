@@ -15,7 +15,7 @@ static const struct { const char* segment; unsigned long budget; } budgets[] = {
     { "BANKRAM06", 224 },   /* interpreter cycle, room entry, unparking */
     { "BANKRAM07", 512 },   /* keyword, line hand-off, notices */
     { "BANKRAM09", 240 },   /* view table: ego, objects, collision, flags */
-    { "BANKRAM0A", 1280 },  /* placement, quiet-spot checks, parking */
+    { "BANKRAM0A", 1376 },  /* placement, quiet-spot checks, parking */
     { "BANKRAM0F", 2976 },  /* grammar, room search, triggers, tours, replies */
 };
 
