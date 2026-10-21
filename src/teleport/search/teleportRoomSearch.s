@@ -7,8 +7,10 @@ TELEPORT_ROOM_SEARCH_INC = 1
 ; moat most. Rooms are logics with a picture of the same number, which skips
 ; most helper scripts. Each room's message text is streamed from its VOL file
 ; through the scratch block - no heap, no resource loading - so every stop is
-; resolved in a single pass over the game. Score: distinct words found, then
-; total matches; ties keep the lower room.
+; resolved in a single pass over the game. Rooms are ranked as Meilisearch
+; ranks documents, bucket by bucket: words found, then fewest typos, then
+; how close the words appear, then - for game text, where the room a thing
+; is in mentions it most - total matches; ties keep the lower room.
 .importzp ptr1, ptr2, ptr3, tmp1, tmp2, tmp3, sreg
 .import pusha, _numLogics
 .import _b6Cbm_openForSeeking, _b6Cx16_fseek
@@ -23,8 +25,12 @@ bFSearchNext: .res 1            ; lowest later volume seen, $FF if none
 bFSearchOffset: .res 3          ; file position
 bFSearchLeft: .res 2            ; message text still to scan
 bFSearchCount: .res 1           ; bytes in this read
-bFSearchBestLow: .res TELEPORT_MAX_STOPS
-bFSearchBestHigh: .res TELEPORT_MAX_STOPS
+bFSearchBestLow: .res TELEPORT_MAX_STOPS  ; matches, at most 255
+bFSearchBestHigh: .res TELEPORT_MAX_STOPS ; 15 - typos, 15 - proximity
+bFSearchBestTop: .res TELEPORT_MAX_STOPS  ; words found
+bFScoreTypos: .res 1
+bFScoreNear: .res 1
+bFScorePair: .res 1
 
 ; Sets bFTeleportStopRoom for every named stop: 0 if nothing matched. One
 ; pass per VOL file, lowest first, so each file is opened once; each pass also
@@ -34,6 +40,7 @@ bFTeleportFindRooms:
 @clear:
     stz bFSearchBestLow,x
     stz bFSearchBestHigh,x
+    stz bFSearchBestTop,x
     dex
     bpl @clear
     lda #$FF
@@ -208,35 +215,12 @@ bFSearchScore:
 @stop:
     cpx _bFTeleportStopCount
     bcs @done
-    stz tmp1                    ; distinct words
-    stz tmp2                    ; total, low
-    stz tmp3                    ; total, high
-    ldy _bFTeleportStopFirst,x
-@word:
-    tya
-    cmp _bFTeleportStopFirst + 1,x
-    bcs @score
-    lda _bFTeleportHits,y
-    beq @nextWord
-    inc tmp1
-    clc
-    adc tmp2
-    sta tmp2
-    bcc @nextWord
-    inc tmp3
-@nextWord:
-    iny
-    bra @word
-@score:
-    lda tmp1                    ; score = distinct * 4096 + total
-    beq @nextStop
-    asl a
-    asl a
-    asl a
-    asl a
-    ora tmp3
-    sta tmp3
-    lda bFSearchBestHigh,x      ; better, or as good and a lower room
+    jsr bFScoreStop
+    beq @next                   ; no word found
+    lda bFSearchBestTop,x       ; better, or as good and a lower room
+    cmp tmp1
+    bne @decided
+    lda bFSearchBestHigh,x
     cmp tmp3
     bne @decided
     lda bFSearchBestLow,x
@@ -245,17 +229,86 @@ bFSearchScore:
     lda bFSearchRoom
     cmp _bFTeleportStopRoom,x
 @decided:
-    bcs @nextStop
-    lda tmp2
-    sta bFSearchBestLow,x
+    bcs @next
+    lda tmp1
+    sta bFSearchBestTop,x
     lda tmp3
     sta bFSearchBestHigh,x
+    lda tmp2
+    sta bFSearchBestLow,x
     lda bFSearchRoom
     sta _bFTeleportStopRoom,x
-@nextStop:
+@next:
     inx
     bra @stop
 @done:
+    rts
+
+; This room's score for stop X, highest byte first: tmp1 = words found,
+; tmp3 = (15 - typos) * 16 + 15 - proximity, tmp2 = matches (at most 255).
+; Z set if no word was found. Preserves X.
+bFScoreStop:
+    stz tmp1
+    stz tmp2
+    stz bFScoreTypos
+    stz bFScoreNear
+    ldy _bFTeleportStopFirst,x
+@word:
+    tya
+    cmp _bFTeleportStopFirst + 1,x
+    bcs @score
+    lda _bFTeleportHits,y
+    beq @pair
+    inc tmp1
+    clc
+    adc tmp2
+    bcc @matches
+    lda #255
+@matches:
+    sta tmp2
+    lda _bFTeleportTypos,y
+    clc
+    adc bFScoreTypos
+    sta bFScoreTypos
+@pair:                          ; with the next word of the stop
+    iny
+    tya
+    cmp _bFTeleportStopFirst + 1,x
+    bcs @score
+    lda #TELEPORT_FAR           ; a missing word is far
+    sta bFScorePair
+    lda _bFTeleportHits - 1,y
+    beq @near
+    lda _bFTeleportHits,y
+    beq @near
+    lda _bFTeleportPairs - 1,y
+    sta bFScorePair
+@near:
+    lda bFScorePair
+    clc
+    adc bFScoreNear
+    sta bFScoreNear
+    bra @word
+@score:
+    lda bFScoreTypos
+    jsr @inverse
+    asl a
+    asl a
+    asl a
+    asl a
+    sta tmp3
+    lda bFScoreNear
+    jsr @inverse
+    ora tmp3
+    sta tmp3
+    lda tmp1
+    rts
+@inverse:                       ; A = 15 - min(A, 15)
+    cmp #15
+    bcc @small
+    lda #15
+@small:
+    eor #15
     rts
 
 ; Opens VOL.<A> ("vol.N" in PETSCII, as agifiles.c opens it) for seeking.
