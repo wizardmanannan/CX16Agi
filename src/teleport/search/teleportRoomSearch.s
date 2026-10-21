@@ -184,10 +184,10 @@ bFSearchRoomText:
     bne @full
     lda bFSearchLeft
     beq @end
-    cmp #TELEPORT_SCRATCH_SIZE
+    cmp #TELEPORT_SCRATCH_SIZE  ; one byte left for the scan's end mark
     bcc @read
 @full:
-    lda #TELEPORT_SCRATCH_SIZE
+    lda #TELEPORT_SCRATCH_SIZE - 1
 @read:
     jsr bFSearchRead
     bne @end                    ; short read: scan no further

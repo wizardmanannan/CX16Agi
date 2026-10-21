@@ -88,7 +88,7 @@ static unsigned seed = 1;
 
 static void differential(const char* path)
 {
-    static byte order[256], chunk[128], header[7];
+    static byte order[256], chunk[129], header[7]; /* and the scan's end mark */
     unsigned count = 0, i, j, rooms = 0, words = 0, typed = 0, close = 0;
     unsigned long bytes = 0;
     unsigned long position = 0, start, left, scanCycles = 0, floorCycles = 0;

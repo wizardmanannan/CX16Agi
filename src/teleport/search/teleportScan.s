@@ -21,7 +21,7 @@ TELEPORT_SCAN_INC = 1
 ; costing one typo.
 ; Text words over 15 characters never match.
 ; Query words are offsets into the command line (teleportGrammar.s).
-.importzp ptr1, ptr2, ptr4, tmp1, tmp2, tmp3, tmp4
+.importzp ptr1, ptr2, ptr4, tmp1, tmp2
 .import popax, _avisDurgan
 .export _bFTeleportHits, _bFTeleportTypos, _bFTeleportPairs
 TELEPORT_FAR = 3                ; pair cost: not close
@@ -43,7 +43,7 @@ bFEditBudget: .res 1
 bFEditRest: .res 1
 bFScanKey: .res 1
 bFScanLength: .res 1            ; TELEPORT_WORD_SIZE marks an overlong word
-bFScanWord: .res TELEPORT_WORD_SIZE
+bFScanWord: .res TELEPORT_WORD_SIZE + TELEPORT_KEY_LENGTH ; length checked per key run
 bFScanQuery: .res 1
 bFScanFlags: .res TELEPORT_MAX_WORDS ; per query word: SCAN_FIRST, SCAN_LAST
 ; Query word lists, in order, as word + 1 (0 ends): per first character
@@ -55,6 +55,7 @@ bFScanJoined: .res TELEPORT_WORD_SIZE ; nonzero: two stop neighbours make a word
 bFScanLong: .res 1
 SCAN_TABLES = 36 + TELEPORT_WORD_SIZE + 1 ; from bFScanStarts on
 bFScanSkip: .res 1              ; bit 7: in a word no query word can match
+bFScanKeyReversed: .res TELEPORT_KEY_LENGTH ; X counts down through the key
 bFScanLetterNext: .res 1        ; the walk through both lists
 bFScanLongNext: .res 1
 SCAN_LAST = 1                   ; last word of its stop: also a prefix
@@ -65,7 +66,15 @@ TELEPORT_ASCII
 ; Starts a room's message text; marks each stop's first and last word.
 bFTeleportScanReset:
     stz bFScanSkip
-    stz bFScanKey
+    ldx #TELEPORT_KEY_LENGTH - 1
+    stx bFScanKey
+    ldy #0
+@key:
+    lda _avisDurgan,y
+    sta bFScanKeyReversed,x
+    iny
+    dex
+    bpl @key
     stz bFScanLength
     ldx #TELEPORT_MAX_WORDS - 1
     stz bFScanPosition
@@ -151,57 +160,48 @@ bFTeleportScanReset:
 @done:
     rts
 
-; Scans A bytes (1-255) at ptr1 (low RAM). Decryption and word state carry
-; over from the previous call. The key byte of data byte Y is (ptr4),y until
-; Y reaches tmp3, where the key restarts; tmp4, the nearer of that and the
-; end, is the only test per byte. Three loops: between words; in a word,
-; X its length so far; and in a word no query word can match, only looked
-; through for its end. bFScanSkip says which one a run stopped in.
+; Scans A bytes (1-255) at ptr1 (low RAM); ptr1[A] must be writable. A byte
+; with bit 7 set there decrypts to no character a word or a space can be,
+; so the only test per byte is the key's: X counts down through it. Three
+; loops: between words; in a word a query word can match, its letters
+; stored at (ptr4),y; and in a word none can, only looked through for its
+; end. Decryption and word state carry over to the next call.
 bFTeleportScan:
     sta tmp1
+    tay
+    lda #$80                    ; the end mark
+    sta (ptr1),y
     jsr bFTeleportLinePointer2
-    lda bFScanKey
-    clc
-    adc #<_avisDurgan
+    ldx bFScanKey
+    ldy #0
+    bit bFScanSkip
+    bmi @skip
+    lda bFScanLength
+    bne @word
+    jmp @gap
+@word:
+    cmp #TELEPORT_WORD_SIZE
+    bcs @skip                   ; too long to match
+    adc #<bFScanWord            ; carry clear: (ptr4),y is the next letter
     sta ptr4
-    lda #>_avisDurgan
+    lda #>bFScanWord
     adc #0
     sta ptr4 + 1
-    lda #TELEPORT_KEY_LENGTH
-    sec
-    sbc bFScanKey
-    sta tmp3
-    ldx bFScanLength
-    ldy #0
-    clc
-@limit:                         ; carry set: tmp3 is past 255
-    lda tmp1
-    bcs @far
-    cmp tmp3
-    bcc @far
-    lda tmp3
-@far:
-    sta tmp4
-    bit bFScanSkip              ; carry on where the last run stopped
-    bmi @skip
-    txa
-    beq @gap
     jmp @store
+@skipKey:
+    ldx #TELEPORT_KEY_LENGTH - 1
 @skip:
     lda (ptr1),y
-    eor (ptr4),y
+    eor bFScanKeyReversed,x
     cmp #'a'
     bcc @skipOther
     cmp #'z' + 1
     bcs @skipEnd
 @skipNext:
     iny
-    cpy tmp4
-    bne @skip
-    lda #$80                    ; the loop to return to
-    sta bFScanSkip
-    ldx #0
-    jmp @restart
+    dex
+    bpl @skip
+    bra @skipKey
 @skipOther:
     cmp #' '                    ; the most common end
     beq @skipSpace
@@ -220,6 +220,8 @@ bFTeleportScan:
     cmp #$27
     beq @skipNext
 @skipEnd:
+    cpy tmp1
+    beq @skipped                ; the end mark: the word goes on
     inc bFScanPosition
     bne @mark
     inc bFScanPosition + 1
@@ -229,25 +231,71 @@ bFTeleportScan:
     bne @gapNext
     inc bFScanPosition + 1
     bra @gapNext
+@skipped:
+    lda #$80
+    sta bFScanSkip
+    stz bFScanLength
+    stx bFScanKey
+    rts
+@mark:                          ; A ends no word, or one just ended
+    cmp #' '                    ; the most common
+    beq @gapNext
+    cmp #0                      ; a sentence or message ends: far apart
+    beq @sentence
+    cmp #'.'
+    beq @sentence
+    cmp #'!'
+    beq @sentence
+    cmp #'?'
+    beq @sentence
+    cpy tmp1
+    bne @gapNext
+    stz bFScanSkip              ; the end mark
+    stz bFScanLength
+    stx bFScanKey
+    rts
+@sentence:
+    lda bFScanPosition
+    clc
+    adc #TELEPORT_SENTENCE
+    sta bFScanPosition
+    bcc @gapNext
+    inc bFScanPosition + 1
+@gapNext:
+    iny
+    dex
+    bpl @gap
+@gapKey:
+    ldx #TELEPORT_KEY_LENGTH - 1
 @gap:
     lda (ptr1),y
-    eor (ptr4),y
+    eor bFScanKeyReversed,x
     cmp #'a'
     bcc @gapOther
     cmp #'z' + 1
     bcs @mark
 @first:                         ; a word starts: can a query word match it?
+    phx
     tax
     lda bFScanStarts + 10 - 'a',x
 @listed:
     ora bFScanLong
     beq @unlisted
     txa
+    plx
     sta bFScanWord
-    ldx #1
+    sty ptr4                    ; ptr4 = bFScanWord - Y
+    lda #<bFScanWord
+    sec
+    sbc ptr4
+    sta ptr4
+    lda #>bFScanWord
+    sbc #0
+    sta ptr4 + 1
     jmp @storeNext
 @unlisted:
-    bra @skipNext
+    plx
+    jmp @skipNext
 @gapOther:
     cmp #'A'
     bcc @gapDigit
@@ -260,104 +308,83 @@ bFTeleportScan:
     bcc @gapApostrophe
     cmp #'9' + 1
     bcs @mark
+    phx
     tax
     lda bFScanStarts - '0',x
     bra @listed
 @gapApostrophe:
     cmp #$27                    ; dropped
-    beq @gapNext
-@mark:                          ; A ends no word, or one just ended
-    cmp #' '                    ; the most common
-    beq @gapNext
-    cmp #0                      ; a sentence or message ends: far apart
-    beq @sentence
-    cmp #'.'
-    beq @sentence
-    cmp #'!'
-    beq @sentence
-    cmp #'?'
-    bne @gapNext
-@sentence:
-    lda bFScanPosition
-    clc
-    adc #TELEPORT_SENTENCE
-    sta bFScanPosition
-    bcc @gapNext
-    inc bFScanPosition + 1
-@gapNext:
-    iny
-    cpy tmp4
-    bne @gap
-    ldx #0
-    stz bFScanSkip
-@restart:                       ; Y = tmp4
-    cpy tmp3
-    bne @end
-    lda ptr4                    ; the key restarts: 11 bytes back
-    sec
-    sbc #TELEPORT_KEY_LENGTH
-    sta ptr4
-    bcs @page
-    dec ptr4 + 1
-@page:
+    beq @dropped
+    jmp @mark
+@dropped:
+    jmp @gapNext
+@storeKey:                      ; and too long to match yet?
+    ldx #TELEPORT_KEY_LENGTH - 1
     tya
     clc
-    adc #TELEPORT_KEY_LENGTH
-    sta tmp3
-    cpy tmp1
-    beq @end
-    cpy tmp3                    ; carry set: tmp3 wrapped past 255
-    jmp @limit
-@end:
-    stx bFScanLength
-    tya                         ; the key's place: count - restart + 11
+    adc ptr4
     sec
-    sbc tmp3
-    clc
-    adc #TELEPORT_KEY_LENGTH
-    sta bFScanKey
-    rts
+    sbc #<bFScanWord
+    cmp #TELEPORT_WORD_SIZE
+    bcc @store
+    jmp @skip
 @store:
     lda (ptr1),y
-    eor (ptr4),y
+    eor bFScanKeyReversed,x
     cmp #'a'
     bcc @storeOther
     cmp #'z' + 1
     bcs @storeEnd
-@append:
-    cpx #TELEPORT_WORD_SIZE
-    beq @storeNext
-    sta bFScanWord,x
-    inx
+@put:
+    sta (ptr4),y
 @storeNext:
     iny
-    cpy tmp4
-    bne @store
-    stz bFScanSkip
-    bra @restart
+    dex
+    bpl @store
+    bra @storeKey
 @storeOther:
     cmp #'A'
     bcc @storeDigit
     cmp #'Z' + 1
     bcs @storeEnd
     ora #$20
-    bra @append
+    bra @put
 @storeDigit:
     cmp #'0'
     bcc @storeApostrophe
     cmp #'9' + 1
-    bcc @append
+    bcc @put
     bra @storeEnd
 @storeApostrophe:
     cmp #$27
-    beq @storeNext
+    bne @storeEnd
+    lda ptr4                    ; dropped: the next letter takes its place
+    bne @back
+    dec ptr4 + 1
+@back:
+    dec ptr4
+    bra @storeNext
 @storeEnd:
-    stx bFScanLength
     pha
+    tya                         ; the word's length
+    clc
+    adc ptr4
+    sec
+    sbc #<bFScanWord
+    sta bFScanLength
+    pla
+    cpy tmp1
+    beq @stored                 ; the end mark: the word goes on
+    pha
+    stx bFScanKey
     jsr bFScanEndWord
-    ldx #0
+    ldx bFScanKey
     pla
     jmp @mark
+@stored:
+    stz bFScanSkip
+    stx bFScanKey
+    rts
 
 ; Ends the room's message text.
 bFTeleportScanEnd:
@@ -370,7 +397,7 @@ bFScanEndWord:
     lda bFScanLength
     beq @exit
     cmp #TELEPORT_WORD_SIZE
-    beq @clear
+    bcs @clear
     jsr bFScanStart             ; only query words starting like it, and
     sta bFScanLetterNext        ; those of 9+ letters
     ora bFScanLong
