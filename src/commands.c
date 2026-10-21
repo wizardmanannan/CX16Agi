@@ -11,6 +11,7 @@
 ***************************************************************************/
 
 
+#include "teleport/teleport.h"
 #include <cx16.h>
 
 #include "commands.h"
@@ -1498,6 +1499,11 @@ void b3PrintMessageInTextbox(byte messNum, byte x, byte y, byte length, boolean 
 	LOGICFile logicFile;
 	byte keysToWait[NO_KEYS_TO_WAIT] = { KEY_ESC, KEY_ENTER };
 
+#if ENABLE_TELEPORT
+	/* A room's script speaking while a teleport arrives: say nothing, as if
+	   the game had been restored there. */
+	if (teleportPending) return;
+#endif
 	b5GetLogicFile(&logicFile, currentLog);
 
 #ifdef  VERBOSE_MESSAGE_PRINT
