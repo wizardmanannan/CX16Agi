@@ -414,6 +414,19 @@ static void test_quiet_landing(void)
         reset(); logdir[9].filePos = helper; logdir[2].filePos = variableCaller; var[30] = 9;
         assert(command("tp 2 90 110")); cycle(); placed(90, 104);
     }
+    /* if (f1) { if (f2) { goto past the end } if (box) {} } with f1 and f2
+       set: the goto leaves the outer block, so it is an early exit, not an
+       else (which f2 would make inactive) - the box after it stays armed. */
+    {
+        static const byte exits[] = { 0xFF, 0x07, 1, 0xFF, 0x15, 0x00,
+            0xFF, 0x07, 2, 0xFF, 0x03, 0x00, 0xFE, 0x20, 0x00,
+            0xFF, BOX, BLOCK, 0x00 };
+        reset(); flag[1] = flag[2] = TRUE;
+        var[0] = 2; logdir[2].filePos = logic(exits, sizeof exits);
+        memset(zones, 0xEE, sizeof zones);
+        bFTeleportTriggers(zones);
+        assert(zones[0] == 1);
+    }
     puts("PASS: quiet landings: trigger lines, water and armed script boxes (also in called logics) are avoided");
 
     /* Parking before entry: the new room's script runs a cycle before

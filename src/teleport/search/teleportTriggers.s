@@ -54,6 +54,7 @@ bFCallCount: .res 1
 bFCallNext: .res 1
 bFFrameTemp: .res 1
 bFArgumentCount: .res 1
+bFPushEnd: .res 2               ; else end being checked
 
 ; void bFTeleportTriggers(byte* zones): zones[0] = count, then x1 y1 x2 y2 per box.
 _bFTeleportTriggers:
@@ -275,8 +276,9 @@ bFTriggerCall:
 @done:
     rts
 
-; A goto that ends an if block and jumps forward begins its else block.
-; In: A = offset high byte, bFGotoLow.
+; A goto that ends an if block and jumps forward, but not past the end of
+; the enclosing block, begins its else block. One that leaves the enclosing
+; block is an early exit, not an else. In: A = offset high byte, bFGotoLow.
 bFTriggerElse:
     cmp #$80
     bcs @done                   ; backward: a loop, not an else
@@ -291,14 +293,33 @@ bFTriggerElse:
     lda bFCodePosition + 1
     cmp (ptr3),y
     bne @pull
-    iny
     lda bFCodePosition          ; else end = here + offset
     clc
     adc bFGotoLow
-    sta (ptr3),y
-    iny
+    sta bFPushEnd
     pla
     adc bFCodePosition + 1
+    sta bFPushEnd + 1
+    cpx #2
+    bcc @else
+    tya                         ; the enclosing block's end
+    sec
+    sbc #TELEPORT_FRAME_SIZE + 1
+    tay
+    lda (ptr3),y
+    cmp bFPushEnd
+    iny
+    lda (ptr3),y
+    sbc bFPushEnd + 1
+    bcc @done                   ; it ends first: an early exit
+@else:
+    jsr bFTriggerFrame
+    iny
+    iny
+    lda bFPushEnd
+    sta (ptr3),y
+    iny
+    lda bFPushEnd + 1
     sta (ptr3),y
     iny
     lda (ptr3),y

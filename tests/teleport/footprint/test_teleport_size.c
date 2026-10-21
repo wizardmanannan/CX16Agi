@@ -15,7 +15,7 @@ static const struct { const char* segment; unsigned long budget; } budgets[] = {
     { "BANKRAM07", 480 },   /* keyword, line hand-off, notices */
     { "BANKRAM09", 192 },   /* view table: ego, collision, flags */
     { "BANKRAM0A", 1280 },  /* placement, quiet-spot checks, parking */
-    { "BANKRAM0F", 3328 },  /* grammar, room search, triggers, tours, replies */
+    { "BANKRAM0F", 3360 },  /* grammar, room search, triggers, tours, replies */
 };
 
 static void sizes(const char* path)

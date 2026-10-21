@@ -74,7 +74,9 @@ void refTriggerLogic(FILE* file, unsigned length)
             offset = (unsigned)c;
             if ((c = next()) < 0) break;
             offset |= (unsigned)c << 8;
-            if (offset < 0x8000 && depth && position == frame[depth - 1].end) {
+            /* An else, unless it would outlast the enclosing block (an exit). */
+            if (offset < 0x8000 && depth && position == frame[depth - 1].end
+                && (depth == 1 || position + offset <= frame[depth - 2].end)) {
                 frame[depth - 1].elseEnd = position + offset;
                 frame[depth - 1].hasElse = 1;
             }
