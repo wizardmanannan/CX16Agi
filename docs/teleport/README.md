@@ -75,19 +75,42 @@ been loaded there. Ego therefore lands on a *quiet* spot:
 
 For the second, teleport reads the room's logic from its VOL file and walks
 its code without running it (`teleportTriggers.s`), then the logics it calls
-(`call`, `call.v`; up to four). Each `if` whose
-condition contains `posn`, `obj.in.box`, `center.posn` or `right.posn` on ego
-gives a box. The rest of the condition, and every enclosing `if`/`else`, is
-judged against the current variables and flags: variable and flag tests
-exactly; `said`, `have.key` and `controller` as false, since they need the
-player; anything else as "might". A box counts if its condition might hold.
-For example, KQ1's throne room (53) arms two boxes near the throne, and many
-rooms arm their screen-edge exits. Aiming at `tp 1 80 160` (the moat) lands
-on dry ground; `tp 53 40 100` lands just outside the throne boxes.
+(`call`, `call.v`; up to four). Each `if` whose condition contains `posn`,
+`obj.in.box`, `center.posn` or `right.posn` on ego gives a box. The rest of
+the condition, and every enclosing `if`/`else`, is judged against the
+current variables and flags: variable and flag tests exactly; `said`,
+`have.key` and `controller` as false, since they need the player; anything
+else as "might". A box counts if its condition might hold. For example,
+KQ1's throne room (53) arms two boxes near the throne, and many rooms arm
+their screen-edge exits. Aiming at `tp 1 80 160` (the moat) lands on dry
+ground; `tp 53 40 100` lands just outside the throne boxes.
+
+Scripts also test positions through variables:
+
+- `get.posn(ego, vx, vy)`, then `lessn`, `greatern` or `equaln` (or `not`
+  of them) on `vx` or `vy`, narrows a box on ego's X or Y;
+- `distance(ego, object, v)`, then `lessn`, `equaln` or `not greatern` on
+  `v`, gives the box around the object: ego within that distance of it
+  (`|dx| + |dy|`, inside `x ± r`, `y ± r`).
+
+Such tests also steer paths and priorities, so their box is kept only if
+its block, or a block inside it, does something: flags, `new.room`,
+inventory, sound, `print` or `display`, `program.control`. They are always
+"might" - never judged by the variables' stale values, which could
+otherwise rule out a whole block. In KQ1 47 of these boxes guard nothing
+and are dropped; 1 is kept.
+
+A `goto` that ends a block and jumps forward within the enclosing block
+starts an `else`; one that leaves the enclosing block (Sierra scripts end
+many blocks with a jump to the end of the logic) is an early exit.
 
 If a room has no quiet spot at all, ego lands on the nearest walkable spot
 and "No quiet spot here: placed where the room may react." is shown (not
-during tours).
+during tours). If the walk could not see the whole room - more than 63
+boxes, four called logics or four `distance` variables, `if`s nested deeper
+than 16, a command it does not know, code cut short - the landing shows
+"Room too complex to check fully: it may react." No room of KQ1 or KQ3
+does.
 
 Arriving in another room is handled the same way. `new.room` keeps ego's
 old-room coordinates, and the new room's script runs a whole cycle before
@@ -100,19 +123,22 @@ flags: teleport patches its "is this ego?" branch, so nothing runs during
 normal play. During that cycle the room's message boxes are skipped. In KQ1
 this is what stops the river room (34) drowning ego, the water rooms (4, 5,
 17, 20, 41, 43, 47, 72) taking control for a swim, and the gnome's room (40)
-narrating on arrival. What the room's initialization records - visited
-flags, an arrival score - stays, as it would in a save made just after
-arriving.
+narrating on arrival.
 
-Limits: the room's own initialization still runs, as on any entry. The engine
-has no save/restore to arrive any other way. Positions compared through
-variables (`get.posn`, then `lessn`...) are not treated as triggers: in KQ1
-(112 uses) they mostly reposition objects, steer paths or set priorities,
-and counting them would fence off whole rooms (KQ1's dragon cave
-entirely). Distance tests against other objects, logics called more than
-four deep, and more than 32 boxes in a room are not seen either. Rooms whose
-script always drives ego (KQ1's sky, 80) reject the landing; ego stays where
-the room put it.
+The room's own initialization runs, as on any entry, and what it records -
+visited flags, an arrival score - stays, as in a save made just after
+walking in. That is deliberate: undoing it would leave the game
+inconsistent (a score taken back while the flag saying it was given stays
+set means those points can never be earned). For the same reason teleport
+does not set story flags, inventory or other prerequisites; they depend on
+the game.
+
+Not seen as triggers: tests between two position variables (`lessv`...),
+position tests inside `or()`, being far from an object, positions read by
+logic 0 (only the room and the logics it calls are walked), and, before
+entry, `distance` to objects the new room has not placed yet. Rooms whose
+script always drives ego (KQ1's sky, 80) reject the landing; ego stays
+where the room put it.
 
 ## Placement
 
@@ -123,7 +149,18 @@ room walks a straight line (diagonal first) toward the target, without
 crossing anything that is not walkable, and lands on the last quiet point it
 passed - usually the target. A new room has no path from the old room's
 coordinates; the landing is the quiet point nearest to the target by
-Manhattan distance.
+Manhattan distance (ties: smaller X, then above), or failing that the
+nearest walkable one.
+
+That search (`teleportLanding.s`) probes the target first, then visits rows
+outward from the target row and stops at the first row farther than the
+best point found. Each row's priority line is read from VERA once and
+reduced, with a running count, to the X positions whose whole baseline could
+pass, minus the room's trigger boxes on that row; only those get the full
+probe, nearest first. The full probe decides, so the result is the one
+probing every point would give. In a room with little open ground this is
+about 65 to 130 times faster than probing point by point (2 x 26880 probes
+at worst).
 
 Walkable follows the interpreter's own movement rules (screen, horizon,
 other objects, control lines, water) plus teleport's rule that no pixel
@@ -131,8 +168,7 @@ under ego's feet is raised scenery, so ego never lands in front of a wall.
 Placement needs normal player control and motion; otherwise it is rejected
 and nothing changes. Probes have no side effects. A landing away from the
 requested X Y shows "Placed at nearest reachable point" (not for automatic
-landings or tours). Teleport does not set story flags, inventory or other
-prerequisites.
+landings or tours).
 
 ## Implementation
 
@@ -154,12 +190,17 @@ under `src/teleport/` and included from `src/main.s`:
 | `search` | `teleportScan.s` | F | How often does each word occur in this text? |
 | `tour` | `teleportTour.s` | F | When does the next stop start? |
 | `placement` | `teleportArrival.s` | 6 | What happens when the requested room is reached? |
-| `placement` | `teleportPlace.s` | 9 | Can ego be placed now, and where? |
-| `placement` | `teleportPark.s` | 9 | Where can ego wait while the new room sets itself up? |
-| `placement` | `teleportPath.s` | 9 | How far can ego go along a straight line? |
-| `placement` | `teleportLanding.s` | 9 | Where is the nearest landing in a new room? |
-| `placement` | `teleportProbe.s` | 9 | Can ego stand here, and would that start anything? |
+| `placement` | `teleportView.s` | 9 | What do ego's view entry and the collision rules say? |
 | `placement` | `teleportPublish.s` | 9 | How does ego take the accepted position? |
+| `placement` | `teleportPlace.s` | 0xA | Can ego be placed now, and where? |
+| `placement` | `teleportPark.s` | 0xA | Where can ego wait while the new room sets itself up? |
+| `placement` | `teleportPath.s` | 0xA | How far can ego go along a straight line? |
+| `placement` | `teleportLanding.s` | 0xA | Where is the nearest landing in a new room? |
+| `placement` | `teleportProbe.s` | 0xA | Can ego stand here, and would that start anything? |
+
+Placement works on a copy of ego in bank 0xA and reaches bank 9 - the view
+table and the interpreter's collision routines - only through
+`teleportView.s`.
 
 `src/teleport/teleport.h` is the C-visible surface used by `parser.c`,
 `meka.c` and `commands.c`. Outside `src/teleport`, the engine has only its
@@ -181,18 +222,21 @@ docs/teleport/             this document
 |---|---|
 | Low RAM (request, X, Y, tour flag) | 4 |
 | Zero page | 0 |
-| Bank 6 (interpreter cycle, room entry) | 183 |
-| Bank 7 (keyword, hand-off, notices) | 453 |
-| Bank 9 (placement, quiet-spot checks, parking) | 962 |
-| Bank 0xF (grammar, search, triggers, tours, replies) | 3309 |
+| Bank 6 (interpreter cycle, room entry) | 215 + 19 in `meka.c` |
+| Bank 7 (keyword, hand-off, notices) | 502 + 80 in `parser.c` |
+| Bank 3 (silent arrival) | 8 in `commands.c` |
+| Bank 9 (view table, collision, parking flags) | 230 |
+| Bank 0xA (placement, landing search, parking) | 1213 |
+| Bank 0xF (grammar, search, triggers, tours, replies) | 3954 |
 
-Gameplay cost is two byte tests per interpreter cycle. A command uses a
-41-byte copy of the line and a 128-byte block on the C stack (directory
-entries, file reads, replies) only while it runs; placement uses a 39-byte
-copy of ego and a 129-byte box list the same way, and reading the room's
-triggers a 144-byte block. There is no heap use, resource loading, table or
-other persistent buffer. Files are read with the KERNAL block read (MACPTR),
-byte by byte on devices without it.
+Gameplay cost is one test (`lda`, `ora`, `beq`) per interpreter cycle, and
+one more after the logics while a request is pending. While a command runs
+it uses, on the C stack only: a 41-byte copy of the line and a 128-byte
+block (directory entries, file reads, replies); for placement a 39-byte
+copy of ego and a 253-byte box list, plus a 160-byte row for a new-room
+landing; for reading triggers a 160-byte block. There is no heap use,
+resource loading, table or other persistent buffer. Files are read with the
+KERNAL block read (MACPTR), byte by byte on devices without it.
 
 To omit teleport entirely, build C with `-D ENABLE_TELEPORT=0` and assemble
 `main.s` with `--asm-define ENABLE_TELEPORT=0`.
@@ -217,13 +261,18 @@ make -C tests/teleport footprint
   tour timing, clock wrap and cancellation; quiet landings against
   hand-assembled room logics (armed, flag-guarded, `said`, `not`, `or`,
   nested and `else` boxes, boxes in `call`ed and `call.v`ed logics, a box
-  over the whole screen); parking before entry; the message box call.
+  over the whole screen); boxes from `get.posn` and `distance` variables,
+  dropped when their block does nothing; a goto out of the enclosing block
+  as an exit; walks that cannot see everything reported; parking before
+  entry; the message box call; and the new-room landing search against
+  fixed results and cycle ceilings (sim65 cycle counter).
 - `rooms`: KQ1 and KQ3 names and tour plans, through both the block read and
   the byte read; the 65C02 word scanner against an independent C model over
   every room's message text in both games; and the 65C02 trigger reader
   against an independent C model over every room's code and the logics it
-  calls (KQ1: 100 armed boxes in 81 rooms, 72 calls; KQ3: 157 in 86, 132
-  calls). One game per sim65 run.
+  calls, with 15 objects drawn so `distance` boxes are compared too (KQ1:
+  102 armed boxes in 81 rooms, 47 dropped, 72 calls; KQ3: 169 in 86, 52
+  dropped, 132 calls; no partial walk). One game per sim65 run.
 - `footprint`: each bank's teleport bytes against a budget, and no teleport
   symbol in the parser, interpreter or `main.s` built with
   `ENABLE_TELEPORT=0`.
