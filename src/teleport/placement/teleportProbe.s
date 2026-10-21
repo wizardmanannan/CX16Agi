@@ -28,14 +28,7 @@ quit:                           ; A = 0, in branch range of the tests
 
 ; Out: A = 0 (not walkable), TELEPORT_WALKABLE or TELEPORT_SAFE. Z reflects A.
 ::b9TeleportProbe:
-    jsr b9GoodPositionAsm       ; bounds and horizon
-    beq quit
-    stz VIEW_POS_ENTRY_NUM      ; objects, skipping ego's own entry
-    jsr b9CollideAsm
-    eor #1
-    beq quit
-    sta VIEW_POS_ENTRY_NUM      ; 1: control lines without ego's flag writes
-    jsr b9CanBeHereAsm
+    jsr b9TeleportWalkable
     beq quit
     lda #TELEPORT_SAFE
     sta b9ProbeGround

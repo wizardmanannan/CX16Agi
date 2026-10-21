@@ -10,25 +10,24 @@ TELEPORT_PARK_INC = 1
 ; as if already there), and the stale water/trigger flags are cleared.
 ; The new picture is not drawn yet, so the parked spot may be water: the
 ; room's own draw would then set the water flag and its script start a swim.
-; While ego is parked, CanBeHere therefore leaves ego's water and trigger
-; flags alone: its "is this ego?" branch becomes BRA until b9TeleportUnpark.
-; Patching the branch costs nothing when no teleport is in progress.
+; While ego is parked, CanBeHere leaves ego's water and trigger flags alone
+; (teleportView.s) until b9TeleportUnpark.
 .importzp c_sp
 .import subysp, addysp
-.export _b9TeleportPark, _b9TeleportUnpark
+.export _b9TeleportPark
 
 TELEPORT_PARK_STEP = 12         ; grid tried after the target
-TELEPORT_OP_BNE = $D0
-TELEPORT_OP_BRA = $80
 
 .segment "BANKRAM09"
 b9ParkX: .res 1
 b9ParkY: .res 1
+b9ParkWidth: .res 1
 
 ; void b9TeleportPark(void): before entering room teleportPending.
 _b9TeleportPark:
-    lda #TELEPORT_OP_BRA
-    sta b9CanBeHereEgoFlags
+    jsr b9TeleportHoldEgoFlags
+    jsr b9TeleportEgoWidth
+    sta b9ParkWidth
     stz TELEPORT_FLAG + 0       ; ego on water: the old room's
     stz TELEPORT_FLAG + 3       ; ego touched a trigger line
     ldy #TELEPORT_ZONE_BYTES
@@ -79,30 +78,19 @@ _b9TeleportPark:
     ldy #TELEPORT_ZONE_BYTES
     jmp addysp
 
-; void b9TeleportUnpark(void): CanBeHere sets ego's flags again.
-_b9TeleportUnpark:
-    lda #TELEPORT_OP_BNE
-    sta b9CanBeHereEgoFlags
-    rts
-
 ; Parks ego at (A, X) unless that is in a box. Carry set if it is.
 b9TeleportParkAt:
     sta b9ProbeLeft
     stx b9ProbeY
     clc
-    adc _viewtab + TELEPORT_VT_XSIZE
+    adc b9ParkWidth
     dec a
     sta b9ProbeRight
     jsr b9TeleportZoneHit
     bcs @done
     lda b9ProbeLeft
-    sta _viewtab + TELEPORT_VT_XPOS
-    sta _viewtab + TELEPORT_VT_PREVX
-    stz _viewtab + TELEPORT_VT_XPOS + 1
-    lda b9ProbeY
-    sta _viewtab + TELEPORT_VT_YPOS
-    sta _viewtab + TELEPORT_VT_PREVY
-    stz _viewtab + TELEPORT_VT_YPOS + 1
+    ldx b9ProbeY
+    jmp b9TeleportMoveEgo
 @done:
     rts
 .endif

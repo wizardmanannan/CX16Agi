@@ -158,6 +158,7 @@ testCount: .res 1
 .include "teleport/command/teleportKeyword.s"
 .include "teleport/command/teleportEntry.s"
 .include "teleport/command/teleportNotice.s"
+.include "teleport/placement/teleportView.s"
 .include "teleport/placement/teleportProbe.s"
 .include "teleport/placement/teleportPath.s"
 .include "teleport/placement/teleportLanding.s"

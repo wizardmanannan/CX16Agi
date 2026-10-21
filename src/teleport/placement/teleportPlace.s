@@ -9,7 +9,7 @@ TELEPORT_PLACE_INC = 1
 ; is done on copies on the C stack - ego, then the trigger boxes - so a
 ; rejection leaves ego and the world flags untouched.
 .importzp c_sp
-.import subysp, addysp, _controlMode
+.import subysp, addysp
 .export _b9TryTeleport
 
 TELEPORT_PLACE_SCRATCH = TELEPORT_VT_SIZE + TELEPORT_ZONE_BYTES
@@ -17,35 +17,15 @@ TELEPORT_PLACE_SCRATCH = TELEPORT_VT_SIZE + TELEPORT_ZONE_BYTES
 .segment "BANKRAM09"
 ; byte b9TryTeleport(void): TELEPORT_REJECTED, _PLACED, _ADJUSTED or _UNQUIET.
 _b9TryTeleport:
-    lda _controlMode
-    ora _controlMode + 1
-    ora _viewtab + TELEPORT_VT_MOTION
-    ora _viewtab + TELEPORT_VT_XPOS + 1
-    ora _viewtab + TELEPORT_VT_YPOS + 1
-    ora _viewtab + TELEPORT_VT_XSIZE + 1
-    ora _viewtab + TELEPORT_VT_YSIZE + 1
-    bne @reject
-    lda _viewtab + TELEPORT_VT_FLAGS
-    and #TELEPORT_EGO_ACTIVE
-    eor #TELEPORT_EGO_ACTIVE
-    bne @reject
-    lda _viewtab + TELEPORT_VT_XSIZE
-    dec a                       ; 1..160 -> 0..159
-    cmp #TELEPORT_WIDTH
+    jsr b9TeleportCanPlace
     bcs @reject
-    lda _viewtab + TELEPORT_VT_YSIZE
-    dec a
-    cmp #TELEPORT_HEIGHT
-    bcs @reject
-
     ldy #TELEPORT_PLACE_SCRATCH
     jsr subysp
-    ldy #TELEPORT_VT_SIZE - 1
-@copy:
-    lda _viewtab,y
-    sta (c_sp),y
-    dey
-    bpl @copy
+    lda c_sp
+    sta VIEW_POS_LOCAL_VIEW_TAB
+    lda c_sp + 1
+    sta VIEW_POS_LOCAL_VIEW_TAB + 1
+    jsr b9TeleportCopyEgo
     lda c_sp                    ; trigger boxes follow the copy
     clc
     adc #TELEPORT_VT_SIZE
