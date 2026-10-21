@@ -6,6 +6,7 @@ TELEPORT_VIEW_INC = 1
 ; routines, which live in bank 9 with it. Placement itself works on a copy of
 ; ego at VIEW_POS_LOCAL_VIEW_TAB.
 .import _controlMode
+.importzp ptr4
 .export _b9TeleportUnpark
 
 TELEPORT_OP_BNE = $D0
@@ -65,6 +66,39 @@ b9TeleportWalkable:
 
 ; Out: A = 0 if the probe is off screen or not below the horizon; Z reflects A.
 b9TeleportInBounds = b9GoodPositionAsm
+
+; In: X = object. Out: carry set if it is not drawn; else A = its X and
+; X = its Y (baseline), as distance() reads them.
+b9TeleportObjectAt:
+    lda #<_viewtab              ; ptr4 is free once the trampoline has jumped
+    sta ptr4
+    lda #>_viewtab
+    sta ptr4 + 1
+@entry:
+    dex
+    bmi @found
+    lda ptr4
+    clc
+    adc #TELEPORT_VT_SIZE
+    sta ptr4
+    bcc @entry
+    inc ptr4 + 1
+    bra @entry
+@found:
+    ldy #TELEPORT_VT_FLAGS
+    lda (ptr4),y
+    lsr a                       ; DRAWN
+    bcc @hidden
+    ldy #TELEPORT_VT_YPOS
+    lda (ptr4),y
+    tax
+    ldy #TELEPORT_VT_XPOS
+    lda (ptr4),y
+    clc
+    rts
+@hidden:
+    sec
+    rts
 
 ; Out: A = ego's cel width.
 b9TeleportEgoWidth:

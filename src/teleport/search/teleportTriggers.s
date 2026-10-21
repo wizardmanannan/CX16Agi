@@ -20,6 +20,10 @@ TELEPORT_TRIGGERS_INC = 1
 ; paths and priorities, so the box is kept only if its block does something
 ; - changes room, flags or inventory, prints, sounds or takes control.
 ; Either way those tests are "might be", not judged by stale values.
+; distance(ego, object, v) followed by lessn, equaln or not greatern on v
+; gives, the same way, the box around the object's position (|dx| + |dy|
+; <= r inside x +- r, y +- r). Before entry objects still stand where the
+; old room left them, so then such tests are only "might be".
 .importzp c_sp, ptr1, ptr3
 .import subysp, addysp
 .export _bFTeleportTriggers
@@ -33,6 +37,8 @@ TELEPORT_TRIGGER_SCRATCH = TELEPORT_CODE_BUFFER + TELEPORT_FRAMES * TELEPORT_FRA
 TELEPORT_ACTIONS = 182
 TELEPORT_TESTS = 19
 TELEPORT_GET_POSN = 39
+TELEPORT_DISTANCE = 69
+TELEPORT_NEAR_MAX = 4           ; distance() variables followed
 TELEPORT_NO_BOX = $FF
 CAN_TRUE = 1                    ; condition values: which outcomes are possible
 CAN_FALSE = 2
@@ -62,6 +68,11 @@ bFBoxIndex: .res 1              ; its index once added, else TELEPORT_NO_BOX
 bFEgoKnown: .res 1              ; nonzero once get.posn(ego, ...) was seen
 bFEgoX: .res 1                  ; the variables it read ego's X and Y into
 bFEgoY: .res 1
+bFNearCount: .res 1             ; distance(ego, object, v) results followed
+bFNearVar: .res TELEPORT_NEAR_MAX
+bFNearX: .res TELEPORT_NEAR_MAX ; the object's position, or
+bFNearY: .res TELEPORT_NEAR_MAX ; ... X = Y = $FF if unknown or hidden
+bFNearRadius: .res 1
 bFGotoLow: .res 1
 bFCalls: .res TELEPORT_CALLS_MAX
 bFCallCount: .res 1
@@ -79,6 +90,7 @@ _bFTeleportTriggers:
     stz bFZoneCount
     stz bFPartial
     stz bFEgoKnown
+    stz bFNearCount
     ldy #TELEPORT_TRIGGER_SCRATCH
     jsr subysp
     lda c_sp
@@ -280,6 +292,8 @@ bFTriggerWalk:
 bFTriggerAction:
     cmp #TELEPORT_GET_POSN
     beq @position
+    cmp #TELEPORT_DISTANCE
+    beq bFTriggerDistance
     pha
     jsr bFTriggerEffect
     bcc @skip
@@ -307,6 +321,65 @@ bFTriggerAction:
 @other:
     clc
 @done:
+    rts
+
+; distance(a, b, v): remembers v if one of a, b is ego, with where the other
+; stands. Carry set at the end of the code.
+bFTriggerDistance:
+    jsr bFTriggerByte
+    bcs @done
+    sta bFConditionArgs
+    jsr bFTriggerByte
+    bcs @done
+    sta bFConditionArgs + 1
+    jsr bFTriggerByte
+    bcs @done
+    sta bFConditionArgs + 2
+    ldx bFConditionArgs + 1     ; b
+    lda bFConditionArgs         ; a
+    beq @ego                    ; a is ego: the other is b
+    cpx #0
+    bne @other                  ; neither is ego
+    tax                         ; b is ego: the other is a
+@ego:
+    txa
+    beq @other                  ; both are ego
+    ldy bFNearCount             ; the same variable again: its entry
+@find:
+    dey
+    bmi @new
+    lda bFNearVar,y
+    cmp bFConditionArgs + 2
+    bne @find
+    bra @entry
+@new:
+    ldy bFNearCount
+    cpy #TELEPORT_NEAR_MAX
+    bcs @full
+    inc bFNearCount
+@entry:
+    lda bFConditionArgs + 2
+    sta bFNearVar,y
+    phy
+    lda _teleportPending        ; set while parking: objects not placed yet
+    bne @unknown
+    TRAMPOLINE #TELEPORT_VIEW_BANK, b9TeleportObjectAt
+    bcc @store
+@unknown:
+    lda #$FF                    ; unknown or hidden
+    tax
+@store:
+    ply
+    sta bFNearX,y
+    txa
+    sta bFNearY,y
+@other:
+    clc
+@done:
+    rts
+@full:
+    jsr bFTriggerPartial
+    clc
     rts
 
 ; Carry set if action A does something a box should guard: flags (set ..
@@ -754,19 +827,30 @@ bFTriggerEvaluate:
     rts
 @compare:
     ldx bFEgoKnown              ; a variable holding ego's position?
-    beq @exact
+    beq @near
     ldx bFConditionArgs
     cpx bFEgoX
     beq @onX
     cpx bFEgoY
-    bne @exact
+    bne @near
     ldx #1
     .byte $2C                   ; bit abs: skip the ldx
 @onX:
     ldx #0
     jsr bFTriggerAxis
     bra @maybe
+@near:
+    ldx bFNearCount             ; ... or ego's distance to an object?
+@nearest:
+    dex
+    bmi @exact
+    lda bFNearVar,x
+    cmp bFConditionArgs
+    bne @nearest
+    jsr bFTriggerNear
+    bra @maybe
 @exact:
+    lda bFConditionTest
     lsr a                       ; odd: number form
     lda bFConditionArgs + 1
     bcs @right
@@ -827,19 +911,15 @@ bFTriggerAddBox:
 ; bFConditionTest against number bFConditionArgs + 1. Inside or(), against a
 ; variable, or a negated equality, the box cannot express it.
 bFTriggerAxis:
-    lda bFConditionInOr
-    bne @unusable
-    lda bFConditionTest
-    lsr a                       ; 0 equaln, 1 lessn, 2 greatern; carry: number
-    bcc @unusable
-    ldy bFConditionArgs + 1
+    jsr bFTriggerBound          ; Y = n, A = 0 equal, 1 less, 2 greater
+    bcs bFTriggerUnusable
     cmp #1
     beq @less
     bcs @greater
     lda bFConditionNot          ; equaln: low = high = n
-    bne @unusable
+    bne bFTriggerUnusable
     tya
-    jsr @raise
+    jsr bFTriggerRaise
     tya
     bra @lower
 @less:
@@ -849,7 +929,7 @@ bFTriggerAxis:
     bra @raise
 @below:
     tya                         ; lessn: x <= n - 1
-    beq @unusable
+    beq bFTriggerUnusable
     dec a
     bra @lower
 @greater:
@@ -860,22 +940,103 @@ bFTriggerAxis:
 @above:
     tya                         ; greatern: x >= n + 1
     inc a
-    beq @unusable
-@raise:                         ; low = max(low, A)
-    cmp bFBox,x
-    bcc @narrowed
-    sta bFBox,x
-    bra @narrowed
-@lower:                         ; high = min(high, A)
-    cmp bFBox + 2,x
-    bcs @narrowed
-    sta bFBox + 2,x
-@narrowed:
+    beq bFTriggerUnusable
+@raise:
+    jsr bFTriggerRaise
+    bra bFTriggerNarrowed
+@lower:
+    jsr bFTriggerLower
+    ; Fall through.
+bFTriggerNarrowed:
     lda #1
     .byte $2C                   ; bit abs: skip the lda
-@unusable:
+bFTriggerUnusable:
     lda #$80
     tsb bFBoxState
+    rts
+
+; Narrows the condition's box to near object entry X: ego within r of it,
+; for lessn n (r = n - 1), equaln n and not greatern n (r = n). Being far
+; from it, or not knowing where it is, cannot be a box.
+bFTriggerNear:
+    lda bFNearX,x
+    cmp #$FF
+    beq bFTriggerUnusable
+    jsr bFTriggerBound
+    bcs bFTriggerUnusable
+    cmp #1
+    beq @less
+    bcs @greater
+    lda bFConditionNot          ; equaln: r = n
+    bne bFTriggerUnusable
+    bra @radius
+@less:
+    lda bFConditionNot
+    bne bFTriggerUnusable
+    dey                         ; lessn: r = n - 1
+    cpy #$FF
+    beq bFTriggerUnusable
+    bra @radius
+@greater:
+    lda bFConditionNot          ; not greatern: r = n
+    beq bFTriggerUnusable
+@radius:
+    sty bFNearRadius
+    phx
+    lda bFNearX,x
+    ldx #0
+    jsr @span
+    plx
+    lda bFNearY,x
+    ldx #1
+    jsr @span
+    bra bFTriggerNarrowed
+@span:                          ; axis X: centre A +- radius, on screen
+    pha
+    sec
+    sbc bFNearRadius
+    bcs @low
+    lda #0
+@low:
+    jsr bFTriggerRaise
+    pla
+    clc
+    adc bFNearRadius
+    bcc bFTriggerLower
+    lda #$FF
+    ; Fall through.
+; high = min(high, A) on axis X.
+bFTriggerLower:
+    cmp bFBox + 2,x
+    bcs @done
+    sta bFBox + 2,x
+@done:
+    rts
+
+; low = max(low, A) on axis X.
+bFTriggerRaise:
+    cmp bFBox,x
+    bcc @done
+    sta bFBox,x
+@done:
+    rts
+
+; A number test on a tracked variable: Y = n, A = 0 equaln, 1 lessn,
+; 2 greatern. Carry set if the box cannot use it: inside or(), or the
+; variable form.
+bFTriggerBound:
+    lda bFConditionInOr
+    cmp #1                      ; inside or(): carry set
+    bcs @done
+    ldy bFConditionArgs + 1
+    lda bFConditionTest
+    lsr a                       ; carry: number form
+    bcc @variable
+    clc
+    rts
+@variable:
+    sec
+@done:
     rts
 
 ; Argument bytes per command, two per byte (even command in the high nibble).

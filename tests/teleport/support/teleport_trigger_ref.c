@@ -5,7 +5,8 @@
    calls (up to four, each once, not logic 0 or the room), and whether
    anything was left unseen. get.posn(ego, vx, vy) makes tests on vx and vy
    "might be" and gives a box, kept only if its block does something
-   (effect()). Reads code from FILEs the caller opens: refTriggerLogic for
+   (effect()); so does distance(ego, object, v), as the box around the
+   object (x and y within r), unless parking or the object is hidden. Reads code from FILEs the caller opens: refTriggerLogic for
    the room, then for each of refCalls. */
 #include "teleport_sim.h"
 #include <stdio.h>
@@ -27,6 +28,7 @@ static unsigned left, position;
 unsigned refTriggerConsumed;     /* code bytes read by the last refTriggerLogic */
 byte refCalls[4], refCallCount, refTriggersPartial;
 static byte count, *boxes, room, egoKnown, egoX, egoY;
+static byte nearCount, nearVar[4], nearX[4], nearY[4];
 
 static void called(byte logic)
 {
@@ -40,7 +42,7 @@ static void called(byte logic)
 void refTriggersBegin(byte* out, byte currentRoom)
 {
     boxes = out; count = 0; refCallCount = 0; room = currentRoom; refTriggersPartial = 0;
-    egoKnown = 0;
+    egoKnown = 0; nearCount = 0;
 }
 
 byte refTriggersEnd(void) { boxes[0] = count; return count; }
@@ -71,6 +73,27 @@ static byte axis(byte* box, byte which, byte test, byte n, byte negate, byte inG
     return 1;
 }
 
+static void narrow(byte* box, byte which, int low, int high)
+{
+    if (low < 0) low = 0;
+    if (high > 255) high = 255;
+    if (low >= box[which]) box[which] = (byte)low;
+    if (high < box[which + 2]) box[which + 2] = (byte)high;
+}
+
+/* Narrows box[] to within r of near entry e; returns state bits. */
+static byte nearBox(byte* box, byte e, byte test, byte n, byte negate, byte inGroup)
+{
+    int r;
+    if (nearX[e] == 0xFF || inGroup || !(test & 1)) return 0x80;
+    if (test == 1) { if (negate) return 0x80; r = n; }
+    else if (test == 3) { if (negate || !n) return 0x80; r = n - 1; }
+    else { if (!negate) return 0x80; r = n; }
+    narrow(box, 0, nearX[e] - r, nearX[e] + r);
+    narrow(box, 1, nearY[e] - r, nearY[e] + r);
+    return 1;
+}
+
 static byte both(byte a, byte b) { return (byte)(((a & b) & MAYBE_TRUE) | ((a | b) & MAYBE_FALSE)); }
 static byte either(byte a, byte b) { return (byte)(((a | b) & MAYBE_TRUE) | ((a & b) & MAYBE_FALSE)); }
 
@@ -79,7 +102,7 @@ void refTriggerLogic(FILE* file, unsigned length)
 {
     struct { unsigned end, elseEnd; byte active, enclosing, maybeFalse, hasElse, pending; } frame[16];
     byte depth = 0, start, condition, group, inGroup, negate, test, i, value, active;
-    byte args[5], box[4], state, pending;
+    byte args[5], box[4], state, pending, e;
     int c;
     unsigned size, offset;
 
@@ -123,6 +146,22 @@ void refTriggerLogic(FILE* file, unsigned length)
                 if (!args[0]) { egoX = args[1]; egoY = args[2]; egoKnown = 1; }
                 continue;
             }
+            if (c == 69) { /* distance(a, b, v) */
+                byte other;
+                for (i = 0; i < 3; ++i) { if ((c = next()) < 0) goto done; args[i] = (byte)c; }
+                if ((args[0] && args[1]) || (!args[0] && !args[1])) continue;
+                other = args[0] ? args[0] : args[1];
+                for (e = 0; e < nearCount && nearVar[e] != args[2]; ++e) {}
+                if (e == nearCount) {
+                    if (nearCount == 4) { refTriggersPartial = 1; continue; }
+                    ++nearCount;
+                }
+                nearVar[e] = args[2];
+                if (!teleportPending && (viewtab[other].flags & DRAWN)) {
+                    nearX[e] = (byte)viewtab[other].xPos; nearY[e] = (byte)viewtab[other].yPos;
+                } else nearX[e] = nearY[e] = 0xFF;
+                continue;
+            }
             if (effect(c)) for (i = 0; i < depth; ++i) frame[i].pending = 0xFF;
             for (i = 0; i < actionArguments[c]; ++i) if (next() < 0) goto done;
             continue;
@@ -150,8 +189,14 @@ void refTriggerLogic(FILE* file, unsigned length)
                     if ((c = next()) < 0) goto done;
                     args[i] = (byte)c;
                 }
+                e = 0xFF;
+                if (test >= 1 && test <= 6 && !(egoKnown && (args[0] == egoX || args[0] == egoY)))
+                    for (e = nearCount; e-- && nearVar[e] != args[0];) {}
                 if (test >= 1 && test <= 6 && egoKnown && (args[0] == egoX || args[0] == egoY)) {
                     state |= axis(box, args[0] == egoX ? 0 : 1, test, args[1], negate, inGroup);
+                    value = MAYBE_TRUE | MAYBE_FALSE;
+                } else if (test >= 1 && test <= 6 && e != 0xFF) {
+                    state |= nearBox(box, e, test, args[1], negate, inGroup);
                     value = MAYBE_TRUE | MAYBE_FALSE;
                 } else switch (test) {
                 case 1: value = var[args[0]] == args[1] ? MAYBE_TRUE : MAYBE_FALSE; break;

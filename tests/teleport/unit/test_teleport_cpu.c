@@ -451,6 +451,26 @@ static void test_quiet_landing(void)
         assert(armedBoxes(stale, sizeof stale) == 2);
         assert(zones[5] == 85 && zones[6] == 105 && zones[7] == 95 && zones[8] == 115);
     }
+    /* distance(ego, o3, v50): v50 < 10 means within 9 of object 3. */
+    {
+        /* if (v50 < 10) { new.room(5) } */
+        static const byte nearby[] = { 0x45, 0, 3, 50, 0xFF, 0x03, 50, 10, 0xFF,
+            0x02, 0x00, 0x12, 5, 0x00 };
+        /* if (v50 > 10) { new.room(5) }: far away is not a box */
+        static const byte away[] = { 0x45, 3, 0, 50, 0xFF, 0x05, 50, 10, 0xFF,
+            0x02, 0x00, 0x12, 5, 0x00 };
+        armedBoxes(nearby, sizeof nearby); /* object 3 not drawn: no box */
+        assert(!zones[0]);
+        viewtab[3].flags = DRAWN; viewtab[3].xPos = 100; viewtab[3].yPos = 120;
+        var[0] = 2; memset(zones, 0xEE, sizeof zones);
+        logdir[2].filePos = logic(nearby, sizeof nearby);
+        bFTeleportTriggers(zones);
+        assert(zones[0] == 1 && zones[1] == 91 && zones[2] == 111 && zones[3] == 109 && zones[4] == 129);
+        teleportPending = 2; bFTeleportTriggers(zones); /* parking: objects not placed */
+        assert(!zones[0]); teleportPending = 0;
+        logdir[2].filePos = logic(away, sizeof away);
+        bFTeleportTriggers(zones); assert(!zones[0]);
+    }
     puts("PASS: quiet landings: trigger lines, water and armed script boxes (also in called logics) are avoided");
 
     /* What the walk cannot see is reported: an unknown test, more boxes or

@@ -200,6 +200,9 @@ static void triggers(const char* path)
         memset(testVars, 0, sizeof testVars);
         memset(testFlags, 0, sizeof testFlags);
         var[0] = (byte)room; flag[5] = TRUE;
+        for (i = 1; i < 16; ++i) { /* drawn objects, so distance() boxes are compared too */
+            viewtab[i].flags = DRAWN; viewtab[i].xPos = 9 * i; viewtab[i].yPos = 50 + 7 * i;
+        }
         partial = bFTeleportTriggers(machine);
         assert(!testFileOpen());
         refTriggersBegin(model, (byte)room);
