@@ -37,6 +37,7 @@
     .include "teleport/placement/teleportLanding.s"
     .include "teleport/placement/teleportPublish.s"
     .include "teleport/placement/teleportPlace.s"
+    .include "teleport/placement/teleportPark.s"
     .include "teleport/command/teleportGrammar.s"
     .include "teleport/search/teleportDirectory.s"
     .include "teleport/command/teleportText.s"
