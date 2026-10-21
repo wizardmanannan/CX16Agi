@@ -191,7 +191,7 @@ static FILE* openLogic(const char* path, byte n, unsigned* length)
 static void triggers(const char* path)
 {
     static byte machine[1 + 4 * 63], model[1 + 4 * 63];
-    unsigned room, i, rooms = 0, boxes = 0, calls = 0, partials = 0, length;
+    unsigned room, i, rooms = 0, boxes = 0, dropped = 0, calls = 0, partials = 0, length;
     byte partial;
     FILE* file;
     game(path);
@@ -218,12 +218,15 @@ static void triggers(const char* path)
         assert(!memcmp(machine, model, 1 + 4 * model[0]));
         assert(!partial == !refTriggersPartial);
         if (partial) { printf("room %u: not every trigger seen\n", room); ++partials; }
-        boxes += model[0];
+        for (i = 0; i < model[0]; ++i) {
+            if (model[2 + 4 * i] == 0xFF) ++dropped; /* a position box that guarded nothing */
+            else ++boxes;
+        }
         calls += refCallCount;
         ++rooms;
     }
-    printf("PASS: %s: trigger boxes equal the C model in %u rooms (%u armed, %u calls followed, %u partial)\n",
-           path, rooms, boxes, calls, partials);
+    printf("PASS: %s: trigger boxes equal the C model in %u rooms (%u armed, %u position boxes dropped, %u calls followed, %u partial)\n",
+           path, rooms, boxes, dropped, calls, partials);
 }
 
 /* One game per run (sim65 caps cycles): game directory, then kq1, kq3 or any. */

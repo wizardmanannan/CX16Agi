@@ -13,10 +13,13 @@ TELEPORT_TRIGGERS_INC = 1
 ; outside these boxes, so arriving starts nothing - like loading a saved game
 ; there. A walk that cannot see everything - more boxes or calls than kept,
 ; ifs nested too deep, a command it does not know, code cut short - says so,
-; and the landing is reported as not fully checked. Positions compared
-; through variables (get.posn, then lessn...) are left out: in practice they
-; mostly steer priorities and paths, and counting them would fence off whole
-; rooms.
+; and the landing is reported as not fully checked.
+;
+; Ego's position read into variables (get.posn(ego, vx, vy), then lessn,
+; greatern or equaln on them) gives a box too, but such tests also steer
+; paths and priorities, so the box is kept only if its block does something
+; - changes room, flags or inventory, prints, sounds or takes control.
+; Either way those tests are "might be", not judged by stale values.
 .importzp c_sp, ptr1, ptr3
 .import subysp, addysp
 .export _bFTeleportTriggers
@@ -25,10 +28,12 @@ TELEPORT_ZONES_MAX = (TELEPORT_ZONE_BYTES - 1) / 4
 TELEPORT_CALLS_MAX = 4          ; called logics followed
 TELEPORT_CODE_BUFFER = 64       ; logic code read at a time
 TELEPORT_FRAMES = 16            ; nested ifs followed; deeper code ends the walk
-TELEPORT_FRAME_SIZE = 5         ; end(2), else end(2), bits
+TELEPORT_FRAME_SIZE = 6         ; end(2), else end(2), bits, position box
 TELEPORT_TRIGGER_SCRATCH = TELEPORT_CODE_BUFFER + TELEPORT_FRAMES * TELEPORT_FRAME_SIZE
 TELEPORT_ACTIONS = 182
 TELEPORT_TESTS = 19
+TELEPORT_GET_POSN = 39
+TELEPORT_NO_BOX = $FF
 CAN_TRUE = 1                    ; condition values: which outcomes are possible
 CAN_FALSE = 2
 FRAME_ACTIVE = 1                ; frame bits
@@ -51,6 +56,12 @@ bFConditionNot: .res 1
 bFConditionTest: .res 1
 bFConditionTemp: .res 1
 bFConditionArgs: .res 5
+bFBox: .res 4                   ; ego-position box of this condition: x1 y1 x2 y2
+bFBoxState: .res 1              ; bit 0: narrowed; bit 7: not expressible
+bFBoxIndex: .res 1              ; its index once added, else TELEPORT_NO_BOX
+bFEgoKnown: .res 1              ; nonzero once get.posn(ego, ...) was seen
+bFEgoX: .res 1                  ; the variables it read ego's X and Y into
+bFEgoY: .res 1
 bFGotoLow: .res 1
 bFCalls: .res TELEPORT_CALLS_MAX
 bFCallCount: .res 1
@@ -67,6 +78,7 @@ _bFTeleportTriggers:
     stx bFZones + 1
     stz bFZoneCount
     stz bFPartial
+    stz bFEgoKnown
     ldy #TELEPORT_TRIGGER_SCRATCH
     jsr subysp
     lda c_sp
@@ -229,8 +241,7 @@ bFTriggerWalk:
     beq @call
     cmp #$17                    ; call.v(v)
     beq @callVariable
-    jsr bFActionArgumentCount
-    jsr bFTriggerSkip
+    jsr bFTriggerAction
     bcc bFTriggerWalk
 @end:
     jmp bFTriggerPartial
@@ -260,6 +271,85 @@ bFTriggerWalk:
     jsr bFTriggerPush
     bcc bFTriggerWalk
     bra @end
+@done:
+    rts
+
+; Steps over action A and its arguments, noting what matters: get.posn on
+; ego, and anything a position box should guard. Carry set at the end of
+; the code.
+bFTriggerAction:
+    cmp #TELEPORT_GET_POSN
+    beq @position
+    pha
+    jsr bFTriggerEffect
+    bcc @skip
+    jsr bFTriggerConfirm
+@skip:
+    pla
+    jsr bFActionArgumentCount
+    jmp bFTriggerSkip
+@position:                      ; get.posn(object, vx, vy)
+    jsr bFTriggerByte
+    bcs @done
+    tax
+    jsr bFTriggerByte
+    bcs @done
+    sta bFConditionTemp
+    jsr bFTriggerByte
+    bcs @done
+    cpx #0
+    bne @other
+    sta bFEgoY
+    lda bFConditionTemp
+    sta bFEgoX
+    lda #1
+    sta bFEgoKnown
+@other:
+    clc
+@done:
+    rts
+
+; Carry set if action A does something a box should guard: flags (set ..
+; toggle.v), new.room, inventory (get, get.v, drop), sound, print and
+; display, program.control.
+bFTriggerEffect:
+    cmp #12
+    bcc @no
+    cmp #20
+    bcc @yes
+    cmp #92
+    bcc @no
+    cmp #95
+    bcc @yes
+    cmp #99
+    beq @yes
+    cmp #101
+    bcc @no
+    cmp #105
+    bcc @yes
+    cmp #131
+    beq @yes
+@no:
+    clc
+    rts
+@yes:
+    sec
+    rts
+
+; The enclosing blocks do something: their position boxes stay.
+bFTriggerConfirm:
+    ldx bFFrameDepth
+    beq @done
+    lda #TELEPORT_CODE_BUFFER + 5
+@frame:
+    tay
+    lda #TELEPORT_NO_BOX
+    sta (ptr3),y
+    tya
+    clc
+    adc #TELEPORT_FRAME_SIZE
+    dex
+    bne @frame
 @done:
     rts
 
@@ -350,8 +440,8 @@ bFTriggerElse:
 bFTriggerFrame:
     lda bFFrameDepth
     dec a
-    sta bFFrameTemp
     asl a
+    sta bFFrameTemp
     asl a
     adc bFFrameTemp
     adc #TELEPORT_CODE_BUFFER
@@ -388,6 +478,23 @@ bFTriggerUnwind:
     iny
     iny
     iny
+    iny                         ; a position box whose block did nothing
+    lda (ptr3),y
+    cmp #TELEPORT_NO_BOX
+    beq @bits
+    phy
+    asl a                       ; x1 = y1 = 255: never hit, never cleared
+    asl a
+    tay
+    iny
+    lda #$FF
+    sta (ptr1),y
+    iny
+    sta (ptr1),y
+    ply
+    sta (ptr3),y
+@bits:
+    dey
     lda (ptr3),y                ; bits
     and #FRAME_ELSE
     beq @pop
@@ -439,6 +546,8 @@ bFTriggerPush:
     bne @active
     lda bFZoneStart             ; its boxes cannot fire
     sta bFZoneCount
+    lda #TELEPORT_NO_BOX
+    sta bFBoxIndex
     lda #0
 @active:
     ora bFConditionTemp
@@ -465,6 +574,9 @@ bFTriggerPush:
     iny
     lda bFConditionTemp
     sta (ptr3),y
+    iny
+    lda bFBoxIndex
+    sta (ptr3),y
     clc
 @done:
     rts
@@ -483,8 +595,28 @@ bFTriggerCondition:
     sta bFCondition
     stz bFConditionInOr
     stz bFConditionNot
+    stz bFBox                   ; the whole screen, until narrowed
+    stz bFBox + 1
+    lda #TELEPORT_WIDTH - 1
+    sta bFBox + 2
+    lda #TELEPORT_HEIGHT - 1
+    sta bFBox + 3
+    stz bFBoxState
     bra @test
-@closed:
+@closed:                        ; a narrowed position box is added, pending
+    ldx #TELEPORT_NO_BOX
+    lda bFBoxState
+    cmp #1
+    bne @store
+    ldx bFZoneCount
+    phx
+    ldx #bFBox - bFConditionArgs
+    jsr bFTriggerAddBox
+    plx
+    bcc @store
+    ldx #TELEPORT_NO_BOX
+@store:
+    stx bFBoxIndex
     clc
     rts
 @failed:
@@ -601,29 +733,11 @@ bFTriggerEvaluate:
     bne @maybe                  ; taken as true; under not it is unknown.
     lda bFConditionNot
     bne @maybe
-    ldx bFZoneCount
-    cpx #TELEPORT_ZONES_MAX
-    bcs @full
-    txa
-    asl a
-    asl a
-    tay
-    iny                         ; zones + 1 + 4 * count
     ldx #1
-@corner:
-    lda bFConditionArgs,x
-    sta (ptr1),y
-    iny
-    inx
-    cpx #5
-    bne @corner
-    inc bFZoneCount
+    jsr bFTriggerAddBox
 @true:
     lda #CAN_TRUE
     rts
-@full:
-    jsr bFTriggerPartial
-    bra @true
 @isset:
     ldx bFConditionArgs
     lda TELEPORT_FLAG,x
@@ -639,6 +753,20 @@ bFTriggerEvaluate:
     lda #CAN_FALSE
     rts
 @compare:
+    ldx bFEgoKnown              ; a variable holding ego's position?
+    beq @exact
+    ldx bFConditionArgs
+    cpx bFEgoX
+    beq @onX
+    cpx bFEgoY
+    bne @exact
+    ldx #1
+    .byte $2C                   ; bit abs: skip the ldx
+@onX:
+    ldx #0
+    jsr bFTriggerAxis
+    bra @maybe
+@exact:
     lsr a                       ; odd: number form
     lda bFConditionArgs + 1
     bcs @right
@@ -667,6 +795,88 @@ bFTriggerEvaluate:
     plp
     bcc @true
     bra @false
+
+; Adds the box at bFConditionArgs + X (x1 y1 x2 y2). Carry set if the list
+; is full: then the walk is partial.
+bFTriggerAddBox:
+    lda bFZoneCount
+    cmp #TELEPORT_ZONES_MAX
+    bcc @room
+    jsr bFTriggerPartial
+    sec
+    rts
+@room:
+    asl a
+    asl a
+    tay
+    iny                         ; zones + 1 + 4 * count
+@corner:
+    lda bFConditionArgs,x
+    sta (ptr1),y
+    inx
+    iny
+    tya
+    and #3
+    cmp #1
+    bne @corner                 ; four corners: up to the next 4k + 1
+    inc bFZoneCount
+    clc
+    rts
+
+; Narrows the condition's ego-position box on axis X (0: X, 1: Y) by test
+; bFConditionTest against number bFConditionArgs + 1. Inside or(), against a
+; variable, or a negated equality, the box cannot express it.
+bFTriggerAxis:
+    lda bFConditionInOr
+    bne @unusable
+    lda bFConditionTest
+    lsr a                       ; 0 equaln, 1 lessn, 2 greatern; carry: number
+    bcc @unusable
+    ldy bFConditionArgs + 1
+    cmp #1
+    beq @less
+    bcs @greater
+    lda bFConditionNot          ; equaln: low = high = n
+    bne @unusable
+    tya
+    jsr @raise
+    tya
+    bra @lower
+@less:
+    lda bFConditionNot          ; not lessn: x >= n
+    beq @below
+    tya
+    bra @raise
+@below:
+    tya                         ; lessn: x <= n - 1
+    beq @unusable
+    dec a
+    bra @lower
+@greater:
+    lda bFConditionNot          ; not greatern: x <= n
+    beq @above
+    tya
+    bra @lower
+@above:
+    tya                         ; greatern: x >= n + 1
+    inc a
+    beq @unusable
+@raise:                         ; low = max(low, A)
+    cmp bFBox,x
+    bcc @narrowed
+    sta bFBox,x
+    bra @narrowed
+@lower:                         ; high = min(high, A)
+    cmp bFBox + 2,x
+    bcs @narrowed
+    sta bFBox + 2,x
+@narrowed:
+    lda #1
+    .byte $2C                   ; bit abs: skip the lda
+@unusable:
+    lda #$80
+    tsb bFBoxState
+    rts
 
 ; Argument bytes per command, two per byte (even command in the high nibble).
 ; Action commands 0-181 (AGI 2), from AGI Studio's command table.

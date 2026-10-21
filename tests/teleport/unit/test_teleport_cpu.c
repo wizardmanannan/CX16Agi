@@ -428,6 +428,29 @@ static void test_quiet_landing(void)
         bFTeleportTriggers(zones);
         assert(zones[0] == 1);
     }
+    /* get.posn(ego, v40, v41): number tests on v40/v41 are "might be" and
+       make a box, kept only if the block does something. */
+    {
+        /* if (v40 < 50 && v41 > 120) { new.room(5) } */
+        static const byte guarded[] = { 0x27, 0, 40, 41, 0xFF, 0x03, 40, 50, 0x05, 41, 120, 0xFF,
+            0x02, 0x00, 0x12, 5, 0x00 };
+        /* if (v40 < 50) { reposition.to(ego, 60, 100) }: steering, no box */
+        static const byte steering[] = { 0x27, 0, 40, 41, 0xFF, 0x03, 40, 50, 0xFF,
+            0x04, 0x00, 0x3B, 0, 60, 100, 0x00 };
+        /* if (v40 < 50 || f9) { new.room(5) }: not expressible as a box */
+        static const byte either[] = { 0x27, 0, 40, 41, 0xFF, 0xFC, 0x03, 40, 50, 0x07, 9, 0xFC, 0xFF,
+            0x02, 0x00, 0x12, 5, 0x00 };
+        /* if (v40 > 100) { if (box) { v5++ } }: v40 is stale (0); the inner
+           box must not be judged dead by it */
+        static const byte stale[] = { 0x27, 0, 40, 41, 0xFF, 0x05, 40, 100, 0xFF, 0x0D, 0x00,
+            0xFF, BOX, BLOCK, 0x00 };
+        assert(armedBoxes(guarded, sizeof guarded) == 1);
+        assert(zones[1] == 0 && zones[2] == 121 && zones[3] == 49 && zones[4] == 167);
+        assert(armedBoxes(steering, sizeof steering) == 1 && zones[1] == 0xFF && zones[2] == 0xFF);
+        assert(!armedBoxes(either, sizeof either));
+        assert(armedBoxes(stale, sizeof stale) == 2);
+        assert(zones[5] == 85 && zones[6] == 105 && zones[7] == 95 && zones[8] == 115);
+    }
     puts("PASS: quiet landings: trigger lines, water and armed script boxes (also in called logics) are avoided");
 
     /* What the walk cannot see is reported: an unknown test, more boxes or
