@@ -42,6 +42,7 @@ static void test_kq1(const char* path)
 {
     game(path);
     search("tp castle"); assert(teleportPending == 2 && teleportX == TELEPORT_AUTO);
+    search("tp cast"); assert(teleportPending == 2); /* the last word is a prefix */
     search("tp moat 80 120"); assert(teleportPending == 1 && teleportX == 80 && teleportY == 120);
     search("tp king edward"); assert(teleportPending == 53);
     /* Two throne rooms: the leprechaun king's mentions "throne" more. */
@@ -92,6 +93,8 @@ static void differential(const char* path)
         while (line[i] == ' ') ++i;
     }
     assert(bFTeleportWords == 12);
+    bFTeleportStopCount = 4; /* stops of three words: each third word is also a prefix */
+    for (i = 0; i <= 4; ++i) bFTeleportStopFirst[i] = (byte)(3 * i);
     testSetLine(line);
     for (i = 1; i < (unsigned)numLogics; ++i)
         if (logdir[i].filePos != EMPTY && picdir[i].filePos != EMPTY) order[count++] = (byte)i;

@@ -7,8 +7,9 @@ TELEPORT_SCAN_INC = 1
 ; that match. Words are runs of ASCII letters and digits, folded to lowercase;
 ; apostrophes are dropped (king's -> kings); anything else ends a word. A text
 ; word matches a query word when equal, or when one is the other plus 's'
-; (king/kings). Text words over 15 characters never match. Query words are
-; offsets into the command line (teleportGrammar.s).
+; (king/kings). As in Meilisearch, the last word of each stop is also a
+; prefix: "tp cast" finds "castle". Text words over 15 characters never
+; match. Query words are offsets into the command line (teleportGrammar.s).
 .importzp ptr1, ptr2, tmp1, tmp2, tmp3
 .import popax, _avisDurgan
 .export _bFTeleportHits
@@ -21,18 +22,38 @@ bFScanKey: .res 1
 bFScanLength: .res 1            ; TELEPORT_WORD_SIZE marks an overlong word
 bFScanWord: .res TELEPORT_WORD_SIZE
 bFScanQuery: .res 1
+bFScanFlags: .res TELEPORT_MAX_WORDS ; per query word: SCAN_FIRST, SCAN_LAST
+SCAN_LAST = 1                   ; last word of its stop: also a prefix
+SCAN_FIRST = 2                  ; first word of its stop
 bFScanSaveY: .res 1
 
 TELEPORT_ASCII
-; Starts a room's message text.
+; Starts a room's message text; marks each stop's first and last word.
 bFTeleportScanReset:
     stz bFScanKey
     stz bFScanLength
     ldx #TELEPORT_MAX_WORDS - 1
 @clear:
     stz _bFTeleportHits,x
+    stz bFScanFlags,x
     dex
     bpl @clear
+    ldx _bFTeleportStopCount
+@stop:
+    dex
+    bmi @done
+    lda _bFTeleportStopFirst + 1,x
+    cmp _bFTeleportStopFirst,x
+    beq @stop                   ; a number: no words
+    tay
+    lda #SCAN_LAST
+    sta bFScanFlags - 1,y
+    ldy _bFTeleportStopFirst,x
+    lda bFScanFlags,y
+    ora #SCAN_FIRST
+    sta bFScanFlags,y
+    bra @stop
+@done:
     rts
 
 ; Scans A bytes (1-255) at ptr1 (low RAM). Decryption and word state carry
@@ -102,51 +123,13 @@ bFScanEndWord:
 @query:
     cpx _bFTeleportWords
     beq @restore
-    stx bFScanQuery
-    lda bFScanLength
-    sec
-    sbc _bFTeleportWordLength,x
-    beq @same
-    cmp #1
-    beq @wordPlural
-    cmp #$FF
-    bne @nextQuery
-    lda _bFTeleportWordStart,x  ; query = word + 's'
-    clc
-    adc bFScanLength
-    tay
-    lda (ptr2),y
-    cmp #'s'
-    bne @nextQuery
-@same:
-    lda bFScanLength
-    bra @compare
-@wordPlural:                    ; word = query + 's'
-    ldy bFScanLength
-    lda bFScanWord - 1,y
-    cmp #'s'
-    bne @nextQuery
-    lda _bFTeleportWordLength,x
-@compare:
-    sta tmp2                    ; characters to compare
-    lda _bFTeleportWordStart,x
-    tay
-    ldx #0
-@char:
-    lda (ptr2),y
-    cmp bFScanWord,x
-    bne @nextQuery
-    iny
-    inx
-    cpx tmp2
-    bne @char
-    ldx bFScanQuery
+    jsr bFScanMatch
+    bcc @next
     lda _bFTeleportHits,x
     inc a
-    beq @nextQuery
+    beq @next
     sta _bFTeleportHits,x
-@nextQuery:
-    ldx bFScanQuery
+@next:
     inx
     bra @query
 @restore:
@@ -154,6 +137,66 @@ bFScanEndWord:
 @clear:
     stz bFScanLength
 @exit:
+    rts
+
+; Does the current word match query word X: equal, one the other plus 's',
+; or, for the last word of a stop, starting with it? Carry set if so.
+; Preserves X.
+bFScanMatch:
+    lda bFScanFlags,x
+    lsr a                       ; SCAN_LAST
+    bcc @whole
+    lda bFScanLength
+    cmp _bFTeleportWordLength,x
+    bcc @whole
+    lda _bFTeleportWordLength,x
+    bra @compare
+@whole:
+    lda bFScanLength
+    sec
+    sbc _bFTeleportWordLength,x
+    beq @same
+    cmp #1
+    beq @wordPlural
+    cmp #$FF
+    bne @no
+    lda _bFTeleportWordStart,x  ; query = word + 's'
+    clc
+    adc bFScanLength
+    tay
+    lda (ptr2),y
+    cmp #'s'
+    bne @no
+@same:
+    lda bFScanLength
+    bra @compare
+@wordPlural:                    ; word = query + 's'
+    ldy bFScanLength
+    lda bFScanWord - 1,y
+    cmp #'s'
+    bne @no
+    lda _bFTeleportWordLength,x
+@compare:                       ; A characters of the query and the word
+    sta tmp2
+    stx bFScanQuery
+    lda _bFTeleportWordStart,x
+    tay
+    ldx #0
+@char:
+    lda (ptr2),y
+    cmp bFScanWord,x
+    bne @differ
+    iny
+    inx
+    cpx tmp2
+    bne @char
+    ldx bFScanQuery
+    sec
+    rts
+@differ:
+    ldx bFScanQuery
+@no:
+    clc
     rts
 .popcharmap
 .endif
