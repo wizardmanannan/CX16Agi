@@ -51,8 +51,9 @@ bFScanFlags: .res TELEPORT_MAX_WORDS ; per query word: SCAN_FIRST, SCAN_LAST
 bFScanChain: .res TELEPORT_MAX_WORDS ; the next word with the same first character
 bFScanLongChain: .res TELEPORT_MAX_WORDS ; the next of 9+ letters
 bFScanStarts: .res 36           ; each list's first word
+bFScanJoined: .res TELEPORT_WORD_SIZE ; nonzero: two stop neighbours make a word this long
 bFScanLong: .res 1
-SCAN_TABLES = 36 + 1           ; from bFScanStarts on
+SCAN_TABLES = 36 + TELEPORT_WORD_SIZE + 1 ; from bFScanStarts on
 bFScanLetterNext: .res 1        ; the walk through both lists
 bFScanLongNext: .res 1
 SCAN_LAST = 1                   ; last word of its stop: also a prefix
@@ -126,6 +127,24 @@ bFTeleportScanReset:
     lda bFScanFlags,y
     ora #SCAN_FIRST
     sta bFScanFlags,y
+    phx                         ; the stop's joinable lengths
+@join:
+    iny
+    tya
+    cmp _bFTeleportStopFirst + 1,x
+    bcs @joined
+    lda _bFTeleportWordLength - 1,y
+    clc
+    adc _bFTeleportWordLength,y
+    cmp #TELEPORT_WORD_SIZE
+    bcs @join
+    tax
+    sta bFScanJoined,x          ; nonzero: at least 2
+    plx
+    phx
+    bra @join
+@joined:
+    plx
     bra @stop
 @done:
     rts
@@ -251,7 +270,11 @@ bFScanEndWord:
     jsr bFScanCount
     bra @walk
 @restore:
+    ldx bFScanLength
+    lda bFScanJoined,x
+    beq @unjoined
     jsr bFScanJoins
+@unjoined:
     ldy bFScanSaveY
 @clear:
     stz bFScanLength
@@ -294,29 +317,39 @@ bFScanCount:
     rts
 
 ; Does the current word join two neighbours of a stop? Each such pair (word
-; X - 1, X) counts a match for both, adjacent, costing one typo.
+; X - 1, X) counts a match for both, adjacent, costing one typo. The first
+; word starts like it.
 bFScanJoins:
-    ldx #0
-@pair:
-    inx
+    jsr bFScanStart
+    beq @done
+@chain:
+    tax                         ; the pair's second word
+    jsr bFScanJoin
+    lda bFScanChain - 1,x
+    bne @chain
+@done:
+    rts
+
+; Pair (X - 1, X), if X is a query word in the same stop. Preserves X.
+bFScanJoin:
     cpx _bFTeleportWords
     bcs @done
     lda bFScanFlags,x
     and #SCAN_FIRST
-    bne @pair                   ; X starts a stop
+    bne @done                   ; X starts a stop
     lda _bFTeleportWordLength - 1,x
     clc
     adc _bFTeleportWordLength,x
     cmp bFScanLength
-    bne @pair
+    bne @done
     dex
     lda #0
     jsr bFScanSegment           ; the first word, then the second after it
     inx
-    bcc @pair
+    bcc @done
     lda _bFTeleportWordLength - 1,x
     jsr bFScanSegment
-    bcc @pair
+    bcc @done
     stz _bFTeleportPairs - 1,x  ; adjacent
     stz _bFTeleportTypos,x
     lda _bFTeleportTypos - 1,x  ; one typo for the pair
@@ -328,10 +361,6 @@ bFScanJoins:
     dex
     jsr @hit
     inx
-    jsr @hit
-    bra @pair
-@done:
-    rts
 @hit:                           ; a match for word X, here
     lda bFScanPosition
     sta bFScanLastLow,x
@@ -339,9 +368,9 @@ bFScanJoins:
     sta bFScanLastHigh,x
     lda _bFTeleportHits,x
     inc a
-    beq @full
+    beq @done
     sta _bFTeleportHits,x
-@full:
+@done:
     rts
 
 ; Is query word X the current word's letters from A on? Carry set if so.
