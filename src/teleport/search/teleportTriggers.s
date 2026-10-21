@@ -11,14 +11,17 @@ TELEPORT_TRIGGERS_INC = 1
 ; every enclosing if or else, might be true. Logics the room calls (call,
 ; call.v; up to four) are walked the same way afterwards. Teleport then lands
 ; outside these boxes, so arriving starts nothing - like loading a saved game
-; there. Positions compared through variables (get.posn, then lessn...) are
-; left out: in practice they mostly steer priorities and paths, and counting
-; them would fence off whole rooms.
+; there. A walk that cannot see everything - more boxes or calls than kept,
+; ifs nested too deep, a command it does not know, code cut short - says so,
+; and the landing is reported as not fully checked. Positions compared
+; through variables (get.posn, then lessn...) are left out: in practice they
+; mostly steer priorities and paths, and counting them would fence off whole
+; rooms.
 .importzp c_sp, ptr1, ptr3
 .import subysp, addysp
 .export _bFTeleportTriggers
 
-TELEPORT_ZONES_MAX = 32         ; boxes kept; more are ignored
+TELEPORT_ZONES_MAX = (TELEPORT_ZONE_BYTES - 1) / 4
 TELEPORT_CALLS_MAX = 4          ; called logics followed
 TELEPORT_CODE_BUFFER = 64       ; logic code read at a time
 TELEPORT_FRAMES = 16            ; nested ifs followed; deeper code ends the walk
@@ -55,12 +58,15 @@ bFCallNext: .res 1
 bFFrameTemp: .res 1
 bFArgumentCount: .res 1
 bFPushEnd: .res 2               ; else end being checked
+bFPartial: .res 1               ; bit 7 set: something was not seen
 
-; void bFTeleportTriggers(byte* zones): zones[0] = count, then x1 y1 x2 y2 per box.
+; byte bFTeleportTriggers(byte* zones): zones[0] = count, then x1 y1 x2 y2
+; per box. Returns nonzero if the walk could not see everything.
 _bFTeleportTriggers:
     sta bFZones
     stx bFZones + 1
     stz bFZoneCount
+    stz bFPartial
     ldy #TELEPORT_TRIGGER_SCRATCH
     jsr subysp
     lda c_sp
@@ -85,8 +91,9 @@ _bFTeleportTriggers:
     sta ptr1 + 1
     lda bFZoneCount
     sta (ptr1)
+    lda bFPartial
     ldy #TELEPORT_TRIGGER_SCRATCH
-    jmp addysp
+    jmp addysp                  ; preserves A
 
 ; Reads logic A's header, then walks its code.
 bFTriggerLogic:
@@ -211,7 +218,7 @@ bFTestArgumentCount:
 bFTriggerWalk:
     jsr bFTriggerUnwind
     jsr bFTriggerByte
-    bcs @end
+    bcs @done                   ; the end of the code
     cmp #$FF
     beq @if
     cmp #$FE
@@ -226,7 +233,7 @@ bFTriggerWalk:
     jsr bFTriggerSkip
     bcc bFTriggerWalk
 @end:
-    rts
+    jmp bFTriggerPartial
 @call:
     jsr bFTriggerByte
     bcs @end
@@ -252,6 +259,8 @@ bFTriggerWalk:
     bcs @end
     jsr bFTriggerPush
     bcc bFTriggerWalk
+    bra @end
+@done:
     rts
 
 ; Remembers logic A to walk later: not logic 0 or the room, each once.
@@ -261,8 +270,6 @@ bFTriggerCall:
     cmp TELEPORT_VAR + 0
     beq @done
     ldx bFCallCount
-    cpx #TELEPORT_CALLS_MAX
-    bcs @done
 @seen:
     dex
     bmi @new
@@ -271,9 +278,17 @@ bFTriggerCall:
     rts
 @new:
     ldx bFCallCount
+    cpx #TELEPORT_CALLS_MAX
+    bcs bFTriggerPartial
     sta bFCalls,x
     inc bFCallCount
 @done:
+    rts
+
+; Something was left unseen.
+bFTriggerPartial:
+    sec
+    ror bFPartial
     rts
 
 ; A goto that ends an if block and jumps forward, but not past the end of
@@ -588,7 +603,7 @@ bFTriggerEvaluate:
     bne @maybe
     ldx bFZoneCount
     cpx #TELEPORT_ZONES_MAX
-    bcs @true
+    bcs @full
     txa
     asl a
     asl a
@@ -606,6 +621,9 @@ bFTriggerEvaluate:
 @true:
     lda #CAN_TRUE
     rts
+@full:
+    jsr bFTriggerPartial
+    bra @true
 @isset:
     ldx bFConditionArgs
     lda TELEPORT_FLAG,x

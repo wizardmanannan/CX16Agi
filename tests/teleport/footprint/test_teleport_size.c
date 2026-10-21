@@ -12,10 +12,10 @@
 static const struct { const char* segment; unsigned long budget; } budgets[] = {
     { "BSS", 4 },           /* low RAM: the request, X, Y, tour flag */
     { "BANKRAM06", 224 },   /* interpreter cycle, room entry, unparking */
-    { "BANKRAM07", 480 },   /* keyword, line hand-off, notices */
+    { "BANKRAM07", 512 },   /* keyword, line hand-off, notices */
     { "BANKRAM09", 192 },   /* view table: ego, collision, flags */
     { "BANKRAM0A", 1280 },  /* placement, quiet-spot checks, parking */
-    { "BANKRAM0F", 3360 },  /* grammar, room search, triggers, tours, replies */
+    { "BANKRAM0F", 3392 },  /* grammar, room search, triggers, tours, replies */
 };
 
 static void sizes(const char* path)

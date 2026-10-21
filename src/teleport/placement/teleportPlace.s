@@ -12,30 +12,35 @@ TELEPORT_PLACE_INC = 1
 .import subysp, addysp
 .export _bATryTeleport
 
-TELEPORT_PLACE_SCRATCH = TELEPORT_VT_SIZE + TELEPORT_ZONE_BYTES
-
 .segment "BANKRAM0A"
-; byte b9TryTeleport(void): TELEPORT_REJECTED, _PLACED, _ADJUSTED or _UNQUIET.
+bAPlacePartial: .res 1
+
+; byte bATryTeleport(void): TELEPORT_REJECTED, _PLACED, _ADJUSTED, _UNQUIET
+; or _PARTIAL.
 _bATryTeleport:
     TRAMPOLINE #TELEPORT_VIEW_BANK, b9TeleportCanPlace
-    bcs @reject
-    ldy #TELEPORT_PLACE_SCRATCH
+    bcc @take
+    lda #TELEPORT_REJECTED
+    tax
+    rts
+@take:
+    ldy #TELEPORT_ZONE_BYTES    ; the trigger boxes
+    jsr subysp
+    lda c_sp
+    sta bATeleportZones
+    lda c_sp + 1
+    sta bATeleportZones + 1
+    ldy #TELEPORT_VT_SIZE       ; then ego's copy
     jsr subysp
     lda c_sp
     sta VIEW_POS_LOCAL_VIEW_TAB
     lda c_sp + 1
     sta VIEW_POS_LOCAL_VIEW_TAB + 1
     TRAMPOLINE #TELEPORT_VIEW_BANK, b9TeleportCopyEgo
-    lda c_sp                    ; trigger boxes follow the copy
-    clc
-    adc #TELEPORT_VT_SIZE
-    sta bATeleportZones
-    lda c_sp + 1
-    adc #0
-    sta bATeleportZones + 1
-    tax
     lda bATeleportZones
+    ldx bATeleportZones + 1
     TRAMPOLINE #TELEPORT_BANK, _bFTeleportTriggers
+    sta bAPlacePartial
     lda c_sp
     sta VIEW_POS_LOCAL_VIEW_TAB
     lda c_sp + 1
@@ -51,12 +56,15 @@ _bATryTeleport:
     cmp #TELEPORT_REJECTED
     beq @free
     TRAMPOLINE #TELEPORT_VIEW_BANK, b9TeleportPublish
+    cmp #TELEPORT_UNQUIET
+    beq @free
+    ldx bAPlacePartial          ; quiet only as far as the walk could see
+    beq @free
+    lda #TELEPORT_PARTIAL
 @free:
     ldx #0
-    ldy #TELEPORT_PLACE_SCRATCH
-    jmp addysp                  ; preserves A
-@reject:
-    lda #TELEPORT_REJECTED
-    tax
-    rts
+    ldy #TELEPORT_VT_SIZE
+    jsr addysp                  ; preserves A
+    ldy #TELEPORT_ZONE_BYTES
+    jmp addysp
 .endif

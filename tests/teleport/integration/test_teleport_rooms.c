@@ -17,8 +17,8 @@ extern byte refHits[12];
 void refTriggersBegin(byte* boxes, byte room);
 void refTriggerLogic(FILE* file, unsigned length);
 byte refTriggersEnd(void);
-extern byte refCalls[4], refCallCount;
-void __fastcall__ bFTeleportTriggers(byte* zones);
+extern byte refCalls[4], refCallCount, refTriggersPartial;
+byte __fastcall__ bFTeleportTriggers(byte* zones);
 byte __fastcall__ testPriority(unsigned int xy) { (void)xy; assert(!"no placement here"); return 0; }
 byte* testRowBuffer;
 void __fastcall__ testReadRow(byte y) { (void)y; assert(!"no placement here"); }
@@ -190,8 +190,9 @@ static FILE* openLogic(const char* path, byte n, unsigned* length)
    in a fresh-arrival state (var 0 = room, flag 5 set). */
 static void triggers(const char* path)
 {
-    static byte machine[1 + 4 * 32], model[1 + 4 * 32];
-    unsigned room, i, rooms = 0, boxes = 0, calls = 0, length;
+    static byte machine[1 + 4 * 63], model[1 + 4 * 63];
+    unsigned room, i, rooms = 0, boxes = 0, calls = 0, partials = 0, length;
+    byte partial;
     FILE* file;
     game(path);
     for (room = 1; room < (unsigned)numLogics; ++room) {
@@ -199,7 +200,7 @@ static void triggers(const char* path)
         memset(testVars, 0, sizeof testVars);
         memset(testFlags, 0, sizeof testFlags);
         var[0] = (byte)room; flag[5] = TRUE;
-        bFTeleportTriggers(machine);
+        partial = bFTeleportTriggers(machine);
         assert(!testFileOpen());
         refTriggersBegin(model, (byte)room);
         file = openLogic(path, (byte)room, &length);
@@ -215,12 +216,14 @@ static void triggers(const char* path)
         if (memcmp(machine, model, 1 + 4 * model[0]))
             printf("room %u: 65C02 %u boxes, model %u\n", room, machine[0], model[0]);
         assert(!memcmp(machine, model, 1 + 4 * model[0]));
+        assert(!partial == !refTriggersPartial);
+        if (partial) { printf("room %u: not every trigger seen\n", room); ++partials; }
         boxes += model[0];
         calls += refCallCount;
         ++rooms;
     }
-    printf("PASS: %s: trigger boxes equal the C model in %u rooms (%u armed, %u calls followed)\n",
-           path, rooms, boxes, calls);
+    printf("PASS: %s: trigger boxes equal the C model in %u rooms (%u armed, %u calls followed, %u partial)\n",
+           path, rooms, boxes, calls, partials);
 }
 
 /* One game per run (sim65 caps cycles): game directory, then kq1, kq3 or any. */

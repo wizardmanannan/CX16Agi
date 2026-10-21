@@ -2,7 +2,7 @@
    the differential test in test_teleport_rooms.c: walks AGI logic code and
    lists the boxes on ego whose condition, and enclosing blocks, might hold
    for the current var[] and flag[], and the logics it calls (up to four,
-   each once, not logic 0 or the room). Reads code from FILEs the caller
+   each once, not logic 0 or the room), and whether anything was left unseen. Reads code from FILEs the caller
    opens: refTriggerLogic for the room, then for each of refCalls. */
 #include "teleport_sim.h"
 #include <stdio.h>
@@ -22,20 +22,21 @@ static const byte testArguments[19] = { 0,2,2,2,2,2,2,1,1,1,2,5,1,0,0,2,5,5,5 };
 static FILE* code;
 static unsigned left, position;
 unsigned refTriggerConsumed;     /* code bytes read by the last refTriggerLogic */
-byte refCalls[4], refCallCount;
+byte refCalls[4], refCallCount, refTriggersPartial;
 static byte count, *boxes, room;
 
 static void called(byte logic)
 {
     byte i;
-    if (!logic || logic == room || refCallCount == 4) return;
+    if (!logic || logic == room) return;
     for (i = 0; i < refCallCount; ++i) if (refCalls[i] == logic) return;
+    if (refCallCount == 4) { refTriggersPartial = 1; return; }
     refCalls[refCallCount++] = logic;
 }
 
 void refTriggersBegin(byte* out, byte currentRoom)
 {
-    boxes = out; count = 0; refCallCount = 0; room = currentRoom;
+    boxes = out; count = 0; refCallCount = 0; room = currentRoom; refTriggersPartial = 0;
 }
 
 byte refTriggersEnd(void) { boxes[0] = count; return count; }
@@ -68,11 +69,11 @@ void refTriggerLogic(FILE* file, unsigned length)
                 frame[depth - 1].hasElse = 0;
             } else --depth;
         }
-        if ((c = next()) < 0) break;
+        if ((c = next()) < 0) goto end;
         if (c == 0xFE) {
-            if ((c = next()) < 0) break;
+            if ((c = next()) < 0) goto done;
             offset = (unsigned)c;
-            if ((c = next()) < 0) break;
+            if ((c = next()) < 0) goto done;
             offset |= (unsigned)c << 8;
             /* An else, unless it would outlast the enclosing block (an exit). */
             if (offset < 0x8000 && depth && position == frame[depth - 1].end
@@ -84,12 +85,12 @@ void refTriggerLogic(FILE* file, unsigned length)
         }
         if (c == 0x16 || c == 0x17) {
             byte op = (byte)c;
-            if ((c = next()) < 0) break;
+            if ((c = next()) < 0) goto done;
             called(op == 0x16 ? (byte)c : var[c]);
             continue;
         }
         if (c != 0xFF) {
-            if (c >= 182) break;
+            if (c >= 182) goto done;
             for (i = 0; i < actionArguments[c]; ++i) if (next() < 0) goto done;
             continue;
         }
@@ -127,10 +128,10 @@ void refTriggerLogic(FILE* file, unsigned length)
                 case 12: case 13: value = MAYBE_FALSE; break;
                 case 11: case 16: case 17: case 18:
                     if (args[0] || negate) { value = MAYBE_TRUE | MAYBE_FALSE; break; }
-                    if (count < 32) {
+                    if (count < 63) {
                         for (i = 0; i < 4; ++i) boxes[1 + 4 * count + i] = args[1 + i];
                         ++count;
-                    }
+                    } else refTriggersPartial = 1;
                     value = MAYBE_TRUE;
                     break;
                 default: value = MAYBE_TRUE | MAYBE_FALSE;
@@ -143,13 +144,13 @@ void refTriggerLogic(FILE* file, unsigned length)
             if (inGroup) group = either(group, value);
             else condition = both(condition, value);
         }
-        if ((c = next()) < 0) break;
+        if ((c = next()) < 0) goto done;
         size = (unsigned)c;
-        if ((c = next()) < 0) break;
+        if ((c = next()) < 0) goto done;
         size |= (unsigned)c << 8;
         active = depth ? frame[depth - 1].active : 1;
         if (!(active && (condition & MAYBE_TRUE))) count = start;
-        if (depth == 16) break;
+        if (depth == 16) goto done;
         frame[depth].end = position + size;
         frame[depth].enclosing = active;
         frame[depth].active = active && (condition & MAYBE_TRUE);
@@ -158,5 +159,7 @@ void refTriggerLogic(FILE* file, unsigned length)
         ++depth;
     }
 done:
+    refTriggersPartial = 1;
+end:
     refTriggerConsumed = position;
 }

@@ -22,7 +22,7 @@ TELEPORT_AUTO = 255             ; teleportX: choose the landing automatically
 TELEPORT_AUTO_X = 76            ; automatic search origin, X
 TELEPORT_WIDTH = 160
 TELEPORT_HEIGHT = 168
-TELEPORT_ZONE_BYTES = 1 + 4 * 32 ; trigger boxes: count and up to 32 boxes
+TELEPORT_ZONE_BYTES = 1 + 4 * 63 ; trigger boxes: count and up to 63 (Y-indexed)
 
 ; Notices (b7TeleportNotice)
 TELEPORT_BLOCKED = 1
@@ -30,12 +30,14 @@ TELEPORT_WRONG_ROOM = 2
 TELEPORT_CANCELED = 3
 TELEPORT_NEAREST = 4
 TELEPORT_EXPOSED = 5            ; no quiet spot: placed where the room may react
+TELEPORT_UNCHECKED = 6          ; placed, but the room's triggers were not all seen
 
 ; b9TryTeleport results
 TELEPORT_REJECTED = 0
 TELEPORT_PLACED = 1
 TELEPORT_ADJUSTED = 2
 TELEPORT_UNQUIET = 3            ; walkable, but on a trigger, water or script box
+TELEPORT_PARTIAL = 4            ; placed, but the room's triggers were not all seen
 
 ; b9TeleportProbe results
 TELEPORT_WALKABLE = 1

@@ -54,7 +54,7 @@ b7TeleportShow:
 @done:
     rts
 
-; void b7TeleportNotice(byte reason): TELEPORT_BLOCKED..TELEPORT_EXPOSED
+; void b7TeleportNotice(byte reason): TELEPORT_BLOCKED..TELEPORT_UNCHECKED
 _b7TeleportNotice:
     tay
     lda #TELEPORT_NOTICE_BANK
@@ -64,12 +64,13 @@ _b7TeleportNotice:
     ldx b7NoticeHigh - 1,y
     bra b7TeleportShow
 
-b7NoticeLow: .lobytes b7Blocked, b7WrongRoom, b7Canceled, b7Nearest, b7Exposed
-b7NoticeHigh: .hibytes b7Blocked, b7WrongRoom, b7Canceled, b7Nearest, b7Exposed
+b7NoticeLow: .lobytes b7Blocked, b7WrongRoom, b7Canceled, b7Nearest, b7Exposed, b7Unchecked
+b7NoticeHigh: .hibytes b7Blocked, b7WrongRoom, b7Canceled, b7Nearest, b7Exposed, b7Unchecked
 b7Blocked: .asciiz "Teleport rejected: blocked path or scripted movement."
 b7WrongRoom: .asciiz "Teleport canceled: entered a different room."
 b7Canceled: .asciiz "Teleport canceled."
 b7Nearest: .asciiz "Placed at nearest reachable point."
 b7Exposed: .asciiz "No quiet spot here: placed where the room may react."
+b7Unchecked: .asciiz "Room too complex to check fully: it may react."
 .popcharmap
 .endif

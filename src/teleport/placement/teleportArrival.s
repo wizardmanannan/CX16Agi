@@ -83,6 +83,9 @@ _b6FinishTeleport:
     ldx #TELEPORT_EXPOSED
     cmp #TELEPORT_UNQUIET
     beq @report
+    ldx #TELEPORT_UNCHECKED
+    cmp #TELEPORT_PARTIAL
+    beq @report
     ldx #TELEPORT_BLOCKED
 @report:
     lda _teleportTour           ; a tour moves on, without notices

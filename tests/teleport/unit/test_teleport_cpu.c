@@ -344,17 +344,18 @@ static void lands(const byte* code, unsigned length, byte x, byte y, const char*
     placed(x, y);
 }
 
-void __fastcall__ bFTeleportTriggers(byte* zones);
+byte __fastcall__ bFTeleportTriggers(byte* zones);
 
-/* The boxes the trigger reader reports for room 2 running `code`. */
-static byte zones[1 + 4 * 32];
+/* The boxes the trigger reader reports for room 2 running `code`, and
+   whether it said the walk could not see everything. */
+static byte zones[1 + 4 * 63], partial;
 static byte armedBoxes(const byte* code, unsigned length)
 {
     reset();
     var[0] = 2;
     logdir[2].filePos = logic(code, length);
     memset(zones, 0xEE, sizeof zones);
-    bFTeleportTriggers(zones);
+    partial = bFTeleportTriggers(zones);
     assert(!testFileOpen());
     return zones[0];
 }
@@ -428,6 +429,33 @@ static void test_quiet_landing(void)
         assert(zones[0] == 1);
     }
     puts("PASS: quiet landings: trigger lines, water and armed script boxes (also in called logics) are avoided");
+
+    /* What the walk cannot see is reported: an unknown test, more boxes or
+       calls than kept, ifs nested too deep. Calls already queued are free. */
+    {
+        static const byte unknown[] = { 0xFF, 0x13, BLOCK, 0x00 };
+        static const byte fiveCalls[] = { 0x16, 11, 0x16, 12, 0x16, 13, 0x16, 14, 0x16, 15, 0x00 };
+        static const byte fourCalls[] = { 0x16, 11, 0x16, 12, 0x16, 13, 0x16, 14, 0x16, 11, 0x00 };
+        static byte many[2 + 6 * 64 + 6], deep[17 * 8 + 1];
+        unsigned i, n = 0;
+        assert(!armedBoxes(armed, sizeof armed) == 0 && !partial);
+        armedBoxes(unknown, sizeof unknown); assert(partial);
+        armedBoxes(fourCalls, sizeof fourCalls); assert(!partial);
+        armedBoxes(fiveCalls, sizeof fiveCalls); assert(partial);
+        many[n++] = 0xFF;
+        for (i = 0; i < 64; ++i) { many[n++] = 0x0B; many[n++] = 0; many[n++] = 85; many[n++] = 105; many[n++] = 95; many[n++] = 115; }
+        many[n++] = 0xFF; many[n++] = 0x02; many[n++] = 0x00; many[n++] = 0x01; many[n++] = 0x05; many[n++] = 0x00;
+        assert(armedBoxes(many, n) == 63 && partial);
+        for (i = 0, n = 0; i < 17; ++i) { /* if (isset(f1)) { ... 17 deep */
+            deep[n++] = 0xFF; deep[n++] = 0x07; deep[n++] = 1; deep[n++] = 0xFF;
+            deep[n++] = (byte)(8 * (16 - i) + 2); deep[n++] = 0x00; deep[n++] = 0x01; deep[n++] = 0x05;
+        }
+        deep[n++] = 0x00;
+        flag[1] = TRUE; armedBoxes(deep, n); assert(partial);
+        lands(unknown, sizeof unknown, 90, 110, "an unreadable script still lands, with a warning");
+        assert(strstr(lastMessage, "too complex"));
+    }
+    puts("PASS: unseen triggers: unknown tests, box, call and nesting limits are reported");
 
     /* Parking before entry: the new room's script runs a cycle before
        placement, so ego waits outside its armed boxes, read as if in that
