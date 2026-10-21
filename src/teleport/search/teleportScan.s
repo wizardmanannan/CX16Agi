@@ -54,6 +54,7 @@ bFScanStarts: .res 36           ; each list's first word
 bFScanJoined: .res TELEPORT_WORD_SIZE ; nonzero: two stop neighbours make a word this long
 bFScanLong: .res 1
 SCAN_TABLES = 36 + TELEPORT_WORD_SIZE + 1 ; from bFScanStarts on
+bFScanSkip: .res 1              ; bit 7: in a word no query word can match
 bFScanLetterNext: .res 1        ; the walk through both lists
 bFScanLongNext: .res 1
 SCAN_LAST = 1                   ; last word of its stop: also a prefix
@@ -63,6 +64,7 @@ bFScanSaveY: .res 1
 TELEPORT_ASCII
 ; Starts a room's message text; marks each stop's first and last word.
 bFTeleportScanReset:
+    stz bFScanSkip
     stz bFScanKey
     stz bFScanLength
     ldx #TELEPORT_MAX_WORDS - 1
@@ -150,9 +152,11 @@ bFTeleportScanReset:
     rts
 
 ; Scans A bytes (1-255) at ptr1 (low RAM). Decryption and word state carry
-; over from the previous call. X holds the word's length; the key byte of
-; data byte Y is (ptr4),y until Y reaches tmp3, where the key restarts.
-; tmp4, the nearer of that and the end, is the only test per byte.
+; over from the previous call. The key byte of data byte Y is (ptr4),y until
+; Y reaches tmp3, where the key restarts; tmp4, the nearer of that and the
+; end, is the only test per byte. Three loops: between words; in a word,
+; X its length so far; and in a word no query word can match, only looked
+; through for its end. bFScanSkip says which one a run stopped in.
 bFTeleportScan:
     sta tmp1
     jsr bFTeleportLinePointer2
@@ -170,63 +174,6 @@ bFTeleportScan:
     ldx bFScanLength
     ldy #0
     clc
-    bra @limit
-@other:
-    cmp #'A'
-    bcc @digit
-    cmp #'Z' + 1
-    bcs @boundary
-    ora #$20
-    bra @append
-@digit:
-    cmp #'0'
-    bcc @apostrophe
-    cmp #'9' + 1
-    bcc @append
-    bra @boundary
-@apostrophe:
-    cmp #$27                    ; drop it
-    beq @next
-@boundary:
-    cpx #0
-    beq @mark                   ; no word before it
-    stx bFScanLength
-    ldx bFScanWord
-    pha
-    lda bFScanLong
-    bne @word
-    cpx #'a'
-    bcc @word                   ; a digit
-    lda bFScanStarts + 10 - 'a',x
-    bne @word
-    inc bFScanPosition          ; no query word starts like it: next
-    bne @skipped
-    inc bFScanPosition + 1
-    bra @skipped
-@word:
-    jsr bFScanEndWord
-@skipped:
-    ldx #0
-    pla
-@mark:
-    cmp #' '                    ; the most common
-    beq @next
-    cmp #0                      ; a sentence or message ends: far apart
-    beq @sentence
-    cmp #'.'
-    beq @sentence
-    cmp #'!'
-    beq @sentence
-    cmp #'?'
-    bne @next
-@sentence:
-    lda bFScanPosition
-    clc
-    adc #TELEPORT_SENTENCE
-    sta bFScanPosition
-    bcc @next
-    inc bFScanPosition + 1
-    bra @next
 @limit:                         ; carry set: tmp3 is past 255
     lda tmp1
     bcs @far
@@ -235,22 +182,115 @@ bFTeleportScan:
     lda tmp3
 @far:
     sta tmp4
-@byte:
+    bit bFScanSkip              ; carry on where the last run stopped
+    bmi @skip
+    txa
+    beq @gap
+    jmp @store
+@skip:
     lda (ptr1),y
     eor (ptr4),y
-    cmp #'a'                    ; lowercase first: the most common
-    bcc @other
+    cmp #'a'
+    bcc @skipOther
     cmp #'z' + 1
-    bcs @boundary
-@append:
-    cpx #TELEPORT_WORD_SIZE
-    beq @next
-    sta bFScanWord,x
-    inx
-@next:
+    bcs @skipEnd
+@skipNext:
     iny
     cpy tmp4
-    bne @byte
+    bne @skip
+    lda #$80                    ; the loop to return to
+    sta bFScanSkip
+    ldx #0
+    jmp @restart
+@skipOther:
+    cmp #' '                    ; the most common end
+    beq @skipSpace
+    cmp #'A'
+    bcc @skipDigit
+    cmp #'Z' + 1
+    bcc @skipNext
+    bra @skipEnd
+@skipDigit:
+    cmp #'0'
+    bcc @skipApostrophe
+    cmp #'9' + 1
+    bcc @skipNext
+    bra @skipEnd
+@skipApostrophe:
+    cmp #$27
+    beq @skipNext
+@skipEnd:
+    inc bFScanPosition
+    bne @mark
+    inc bFScanPosition + 1
+    bra @mark
+@skipSpace:
+    inc bFScanPosition
+    bne @gapNext
+    inc bFScanPosition + 1
+    bra @gapNext
+@gap:
+    lda (ptr1),y
+    eor (ptr4),y
+    cmp #'a'
+    bcc @gapOther
+    cmp #'z' + 1
+    bcs @mark
+@first:                         ; a word starts: can a query word match it?
+    tax
+    lda bFScanStarts + 10 - 'a',x
+@listed:
+    ora bFScanLong
+    beq @unlisted
+    txa
+    sta bFScanWord
+    ldx #1
+    jmp @storeNext
+@unlisted:
+    bra @skipNext
+@gapOther:
+    cmp #'A'
+    bcc @gapDigit
+    cmp #'Z' + 1
+    bcs @mark
+    ora #$20
+    bra @first
+@gapDigit:
+    cmp #'0'
+    bcc @gapApostrophe
+    cmp #'9' + 1
+    bcs @mark
+    tax
+    lda bFScanStarts - '0',x
+    bra @listed
+@gapApostrophe:
+    cmp #$27                    ; dropped
+    beq @gapNext
+@mark:                          ; A ends no word, or one just ended
+    cmp #' '                    ; the most common
+    beq @gapNext
+    cmp #0                      ; a sentence or message ends: far apart
+    beq @sentence
+    cmp #'.'
+    beq @sentence
+    cmp #'!'
+    beq @sentence
+    cmp #'?'
+    bne @gapNext
+@sentence:
+    lda bFScanPosition
+    clc
+    adc #TELEPORT_SENTENCE
+    sta bFScanPosition
+    bcc @gapNext
+    inc bFScanPosition + 1
+@gapNext:
+    iny
+    cpy tmp4
+    bne @gap
+    ldx #0
+    stz bFScanSkip
+@restart:                       ; Y = tmp4
     cpy tmp3
     bne @end
     lda ptr4                    ; the key restarts: 11 bytes back
@@ -267,7 +307,7 @@ bFTeleportScan:
     cpy tmp1
     beq @end
     cpy tmp3                    ; carry set: tmp3 wrapped past 255
-    bra @limit
+    jmp @limit
 @end:
     stx bFScanLength
     tya                         ; the key's place: count - restart + 11
@@ -277,6 +317,48 @@ bFTeleportScan:
     adc #TELEPORT_KEY_LENGTH
     sta bFScanKey
     rts
+@store:
+    lda (ptr1),y
+    eor (ptr4),y
+    cmp #'a'
+    bcc @storeOther
+    cmp #'z' + 1
+    bcs @storeEnd
+@append:
+    cpx #TELEPORT_WORD_SIZE
+    beq @storeNext
+    sta bFScanWord,x
+    inx
+@storeNext:
+    iny
+    cpy tmp4
+    bne @store
+    stz bFScanSkip
+    bra @restart
+@storeOther:
+    cmp #'A'
+    bcc @storeDigit
+    cmp #'Z' + 1
+    bcs @storeEnd
+    ora #$20
+    bra @append
+@storeDigit:
+    cmp #'0'
+    bcc @storeApostrophe
+    cmp #'9' + 1
+    bcc @append
+    bra @storeEnd
+@storeApostrophe:
+    cmp #$27
+    beq @storeNext
+@storeEnd:
+    stx bFScanLength
+    pha
+    jsr bFScanEndWord
+    ldx #0
+    pla
+    jmp @mark
+
 ; Ends the room's message text.
 bFTeleportScanEnd:
     jsr bFTeleportLinePointer2
