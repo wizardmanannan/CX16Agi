@@ -49,6 +49,17 @@ bALandingBestY: .res 2
 ; is known, the nearest walkable one - the rows a quiet search must visit
 ; anyway.
 bATeleportLanding:
+    lda _teleportX              ; the target itself, before any setup
+    sta bALandingX
+    lda _teleportY
+    sta bALandingY
+    jsr bATeleportTryAt
+    cmp #TELEPORT_SAFE
+    bne @search
+    lda #TELEPORT_PLACED
+    rts
+@search:
+    pha                         ; the target's result
     ldy #TELEPORT_WIDTH         ; the row: one byte per X
     jsr subysp
     lda c_sp
@@ -76,21 +87,16 @@ bATeleportLanding:
     ldx #0
 @low:
     stx bALandingWalkLow
+    pla
     jsr bALandingSearch
     ldy #TELEPORT_WIDTH
     jmp addysp                  ; preserves A
 
+; In: A = the target's probe result, not quiet; bALandingX/Y the target.
 bALandingSearch:
-    lda #TELEPORT_NO_BEST
-    sta bALandingBestHigh + TELEPORT_QUIET
-    sta bALandingBestHigh + TELEPORT_ANY
-    lda _teleportX              ; the target itself, before any row work
-    sta bALandingX
-    lda _teleportY
-    sta bALandingY
-    jsr bATeleportTryAt
-    cmp #TELEPORT_SAFE
-    beq @placed
+    ldx #TELEPORT_NO_BEST
+    stx bALandingBestHigh + TELEPORT_QUIET
+    stx bALandingBestHigh + TELEPORT_ANY
     cmp #TELEPORT_WALKABLE
     bne @rows
     stz bALandingDy             ; walkable here: the nearest possible
@@ -142,17 +148,10 @@ bALandingSearch:
     jsr bATeleportTryAt
     plx
     bne @walkable
-    lda bALandingBestLow        ; quiet: distance 0 is the target itself
-    ora bALandingBestHigh
-    cmp #1
-    lda #TELEPORT_PLACED
-    adc #0
+    lda #TELEPORT_ADJUSTED      ; quiet, and not the target (it was probed)
     rts
 @walkable:
     lda #TELEPORT_UNQUIET
-    rts
-@placed:
-    lda #TELEPORT_PLACED
     rts
 @rejected:
     lda #TELEPORT_REJECTED
