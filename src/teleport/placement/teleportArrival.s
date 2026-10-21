@@ -9,9 +9,28 @@ TELEPORT_ARRIVAL_INC = 1
 ; (commands.c). Placement follows once that has run (flag 5). A request for the
 ; current room is placed at once.
 .import _b6NewRoom, _newRoomNum, _horizon, _dirnOfEgo
-.export _b6BeginTeleport, _b6FinishTeleport
+.export _b6TeleportCycle, _b6TeleportAfterLogic, _b6BeginTeleport, _b6FinishTeleport
 
 .segment "BANKRAM06"
+; void b6TeleportCycle(void): a request or a tour is active.
+_b6TeleportCycle:
+    lda _teleportPending
+    bne _b6BeginTeleport
+    ldy #TELEPORT_BANK          ; TRAMPOLINE as a tail call
+    sty tmp4
+    ldy #<_bFTeleportTourTick
+    sty ptr4
+    ldy #>_bFTeleportTourTick
+    sty ptr4 + 1
+    jmp _trampoline
+
+; void b6TeleportAfterLogic(void): a request is pending; the room's logics
+; have run this cycle.
+_b6TeleportAfterLogic:
+    lda TELEPORT_FLAG + 5       ; new room entered
+    bne _b6FinishTeleport
+    rts
+
 ; void b6BeginTeleport(void): teleportPending is nonzero.
 _b6BeginTeleport:
     lda _teleportPending

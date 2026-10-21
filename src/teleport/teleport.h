@@ -23,11 +23,9 @@ extern byte teleportTour;       /* nonzero while a tour runs */
 /* Bank 7, from the parser: is the line a teleport command, and run it. */
 boolean b7TeleportInputPrefix(const char* input);
 boolean b7TeleportCommand(const char* input);
-/* Bank 6, from the interpreter cycle. */
-void b6BeginTeleport(void);
-void b6FinishTeleport(void);
-#pragma wrapped-call (push, trampoline, TELEPORT_BANK)
-void bFTeleportTourTick(void);
-#pragma wrapped-call (pop)
+/* Bank 6, from the interpreter cycle: before the logics while a request or
+   tour is active, and after them while a request is. */
+void b6TeleportCycle(void);
+void b6TeleportAfterLogic(void);
 #endif
 #endif

@@ -189,8 +189,7 @@ void b6Interpret()
     flag[4] = FALSE;   //The 'said' command has accepted the input
     b7PollKeyboard();
 #if ENABLE_TELEPORT
-    if (teleportPending) b6BeginTeleport();
-    else if (teleportTour) bFTeleportTourTick();
+    if (teleportPending | teleportTour) b6TeleportCycle();
 #endif
     //if (controlMode == PROGRAM_CONTROL)
     //   dirnOfEgo = var[6];
@@ -228,7 +227,7 @@ void b6Interpret()
         if (!hasEnteredNewRoom)
         {
 #if ENABLE_TELEPORT
-            if (teleportPending && flag[5]) b6FinishTeleport();
+            if (teleportPending) b6TeleportAfterLogic();
 #endif
             flag[5] = 0;
         }

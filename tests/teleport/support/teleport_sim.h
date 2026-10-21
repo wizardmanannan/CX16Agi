@@ -70,6 +70,11 @@ void trampoline(void);
 #include "agifiles.h"
 #include "movement.h"
 #include "teleport/teleport.h"
+/* Entry points the tests drive directly (meka.c reaches them through
+   b6TeleportCycle and b6TeleportAfterLogic). */
+void b6BeginTeleport(void);
+void b6FinishTeleport(void);
+void bFTeleportTourTick(void);
 #include <assert.h>
 
 /* teleport_services.c: the engine around the teleport modules. */

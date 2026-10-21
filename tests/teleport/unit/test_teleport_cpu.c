@@ -66,13 +66,12 @@ static void reset(void)
 static boolean command(const char* text) { return b7TeleportCommand(text); }
 
 /* One interpreter cycle, as meka.c runs the hooks. */
+/* One interpreter cycle's teleport calls, as in meka.c. */
 static void cycle(void)
 {
-    if (teleportPending) {
-        flag[5] = FALSE;
-        b6BeginTeleport();
-        if (teleportPending && flag[5]) b6FinishTeleport();
-    } else if (teleportTour) bFTeleportTourTick();
+    flag[5] = FALSE;
+    if (teleportPending | teleportTour) b6TeleportCycle();
+    if (teleportPending) b6TeleportAfterLogic();
 }
 
 static void go(const char* text)
