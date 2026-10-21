@@ -82,11 +82,13 @@ static void test_kq3(const char* path)
 }
 
 /* Each room's message text, streamed in pseudo-random chunk sizes through
-   both scanners; every word count must agree. */
-static char line[] = "tp kings room moat castel bean stalk a the dargon goat sir grahm"; /* typos, a 2-gram */
+   both scanners; every word count must agree. Stops of three words. */
+static char stress[] = "tp kings room moat castel bean stalk a the dargon goat sir grahm"; /* typos, a 2-gram */
+static char single[] = "tp castle";
+static char unmatched[] = "tp qx"; /* no KQ1 or KQ3 word starts with q: the scan's floor */
 static unsigned seed = 1;
 
-static void differential(const char* path)
+static void differential(const char* path, char* line)
 {
     static byte order[256], chunk[129], header[7]; /* and the scan's end mark */
     unsigned count = 0, i, j, rooms = 0, words = 0, typed = 0, close = 0;
@@ -97,7 +99,7 @@ static void differential(const char* path)
     char name[128];
 
     game(path);
-    bFTeleportWords = 0; /* the query words of the line above */
+    bFTeleportWords = 0;
     for (i = 3; line[i]; ) {
         bFTeleportWordStart[bFTeleportWords] = (byte)i;
         while (line[i] && line[i] != ' ') ++i;
@@ -105,9 +107,10 @@ static void differential(const char* path)
         ++bFTeleportWords;
         while (line[i] == ' ') ++i;
     }
-    assert(bFTeleportWords == 12);
-    bFTeleportStopCount = 4; /* stops of three words: each third word is also a prefix */
-    for (i = 0; i <= 4; ++i) bFTeleportStopFirst[i] = (byte)(3 * i);
+    assert(bFTeleportWords >= 1 && bFTeleportWords <= 12);
+    bFTeleportStopCount = (byte)((bFTeleportWords + 2) / 3); /* each stop's last word is also a prefix */
+    for (i = 0; i <= bFTeleportStopCount; ++i)
+        bFTeleportStopFirst[i] = (byte)(3 * i < bFTeleportWords ? 3 * i : bFTeleportWords);
     testSetLine(line);
     for (i = 1; i < (unsigned)numLogics; ++i)
         if (logdir[i].filePos != EMPTY && picdir[i].filePos != EMPTY) order[count++] = (byte)i;
@@ -153,7 +156,7 @@ static void differential(const char* path)
             refScan(chunk, size);
         }
         testScanEnd(); refScanEnd();
-        for (q = 0; q < 12; ++q) {
+        for (q = 0; q < bFTeleportWords; ++q) {
             if (bFTeleportHits[q] != refHits[q])
                 printf("room %u word %u: 65C02 %u, model %u\n", order[i], q, bFTeleportHits[q], refHits[q]);
             assert(bFTeleportHits[q] == refHits[q]);
@@ -170,8 +173,8 @@ static void differential(const char* path)
         ++rooms;
     }
     if (file) fclose(file);
-    printf("PASS: %s: 65C02 scanner equals the C model in %u rooms (%lu bytes, %u matches, %u words matched with typos, %u close pairs; %lu cycles/byte, decrypt-and-classify floor %lu)\n",
-           path, rooms, bytes, words, typed, close, scanCycles / bytes, floorCycles / bytes);
+    printf("PASS: %s: \"%s\": 65C02 scanner equals the C model in %u rooms (%lu bytes, %u matches, %u words matched with typos, %u close pairs; %lu cycles/byte, decrypt-and-classify floor %lu)\n",
+           path, line + 3, rooms, bytes, words, typed, close, scanCycles / bytes, floorCycles / bytes);
 }
 
 /* Rooms with pictures, by volume and offset, so files are read forward only. */
@@ -268,7 +271,9 @@ int main(int argc, char** argv)
         test_kq1(argv[1]);
         testNoMacptr = 0;
     } else if (!strcmp(argv[2], "kq3")) test_kq3(argv[1]);
-    differential(argv[1]);
+    differential(argv[1], stress);
+    differential(argv[1], single);
+    differential(argv[1], unmatched);
     triggers(argv[1]);
     return 0;
 }
