@@ -8,16 +8,26 @@ TELEPORT_SCAN_INC = 1
 ; apostrophes are dropped (king's -> kings); anything else ends a word. A text
 ; word matches a query word when equal, or when one is the other plus 's'
 ; (king/kings). As in Meilisearch, the last word of each stop is also a
-; prefix: "tp cast" finds "castle". Text words over 15 characters never
-; match. Query words are offsets into the command line (teleportGrammar.s).
+; prefix: "tp cast" finds "castle". Otherwise, as in Meilisearch, a query
+; word of 5 letters or more allows one typo, of 9 or more two: a letter
+; changed, missing, extra, or two neighbours swapped each count one, and a
+; wrong first letter counts two. _bFTeleportTypos keeps each query word's
+; fewest typos ($FF: no match). Text words over 15 characters never match.
+; Query words are offsets into the command line (teleportGrammar.s).
 .importzp ptr1, ptr2, tmp1, tmp2, tmp3
 .import popax, _avisDurgan
-.export _bFTeleportHits
+.export _bFTeleportHits, _bFTeleportTypos
 
 TELEPORT_KEY_LENGTH = 11
 
 .segment "BANKRAM0F"
 _bFTeleportHits: .res TELEPORT_MAX_WORDS ; saturating at 255
+_bFTeleportTypos: .res TELEPORT_MAX_WORDS ; fewest typos of a match, $FF none
+bFEditEnd: .res 1               ; the query word's end in the line
+bFEditPrefix: .res 1            ; nonzero: the word may run on past it
+bFEditLeft: .res 1              ; edits still allowed
+bFEditBudget: .res 1
+bFEditRest: .res 1
 bFScanKey: .res 1
 bFScanLength: .res 1            ; TELEPORT_WORD_SIZE marks an overlong word
 bFScanWord: .res TELEPORT_WORD_SIZE
@@ -33,9 +43,11 @@ bFTeleportScanReset:
     stz bFScanKey
     stz bFScanLength
     ldx #TELEPORT_MAX_WORDS - 1
+    lda #$FF
 @clear:
     stz _bFTeleportHits,x
     stz bFScanFlags,x
+    sta _bFTeleportTypos,x
     dex
     bpl @clear
     ldx _bFTeleportStopCount
@@ -124,7 +136,15 @@ bFScanEndWord:
     cpx _bFTeleportWords
     beq @restore
     jsr bFScanMatch
+    lda #0                      ; exact: no typos
+    bcs @hit
+    jsr bFScanTypos
     bcc @next
+@hit:
+    cmp _bFTeleportTypos,x
+    bcs @count
+    sta _bFTeleportTypos,x
+@count:
     lda _bFTeleportHits,x
     inc a
     beq @next
@@ -195,6 +215,166 @@ bFScanMatch:
     rts
 @differ:
     ldx bFScanQuery
+@no:
+    clc
+    rts
+; The current word within query word X's typo budget? Carry set and A =
+; typos (1 or 2) if so. Preserves X.
+bFScanTypos:
+    stx bFScanQuery
+    lda _bFTeleportWordLength,x ; budget: 5+ letters 1, 9+ letters 2
+    ldy #0
+    cmp #5
+    bcc @none
+    iny
+    cmp #9
+    bcc @budget
+    iny
+@budget:
+    sty bFEditBudget
+    tay
+    clc
+    adc _bFTeleportWordStart,x
+    sta bFEditEnd
+    lda bFScanFlags,x
+    and #SCAN_LAST
+    sta bFEditPrefix
+    tya                         ; lengths too far apart: no
+    sec
+    sbc bFScanLength            ; query - word
+    bcc @longer
+    cmp bFEditBudget
+    beq @lengths
+    bcs @none
+    bra @lengths
+@longer:
+    ldy bFEditPrefix            ; a prefix may be shorter than the word
+    bne @lengths
+    eor #$FF
+    inc a
+    cmp bFEditBudget
+    beq @lengths
+    bcs @none
+@lengths:
+    ldy _bFTeleportWordStart,x
+    lda (ptr2),y
+    ldx #1
+    cmp bFScanWord
+    beq @level
+    inx                         ; a wrong first letter counts two
+@level:
+    cpx bFEditBudget
+    beq @try
+    bcs @none
+@try:
+    stx bFEditLeft
+    phx
+    ldy bFScanQuery
+    lda _bFTeleportWordStart,y
+    tay
+    ldx #0
+    jsr bFEdit
+    pla
+    bcs @found
+    tax
+    inx
+    bra @level
+@found:
+    ldx bFScanQuery
+    rts
+@none:
+    ldx bFScanQuery
+    clc
+    rts
+
+; Can query[Y..bFEditEnd) become word[X..bFScanLength) in bFEditLeft edits?
+; A prefix may stop early. Carry set if so; bFEditLeft is kept.
+bFEdit:
+@same:
+    cpy bFEditEnd
+    beq @queryDone
+    cpx bFScanLength
+    beq @wordDone
+    lda (ptr2),y
+    cmp bFScanWord,x
+    bne @differ
+    iny
+    inx
+    bra @same
+@queryDone:                     ; the word's rest: extra letters
+    lda bFEditPrefix
+    bne @yes
+    txa
+    eor #$FF
+    sec
+    adc bFScanLength
+    bra @rest
+@wordDone:                      ; the query's rest: missing letters
+    tya
+    eor #$FF
+    sec
+    adc bFEditEnd
+@rest:
+    sta bFEditRest
+    lda bFEditLeft
+    cmp bFEditRest
+    rts
+@yes:
+    sec
+    rts
+@differ:
+    lda bFEditLeft
+    beq @no
+    dec bFEditLeft
+    phx
+    phy
+    inx                         ; a letter changed
+    iny
+    jsr bFEdit
+    ply
+    plx
+    bcs @found
+    phx
+    phy
+    iny                         ; the query's letter is missing
+    jsr bFEdit
+    ply
+    plx
+    bcs @found
+    phx
+    phy
+    inx                         ; the word's letter is extra
+    jsr bFEdit
+    ply
+    plx
+    bcs @found
+    phx
+    phy
+    inx                         ; two neighbours swapped
+    cpx bFScanLength
+    bcs @unswapped
+    iny
+    cpy bFEditEnd
+    bcs @unswapped
+    lda (ptr2),y
+    cmp bFScanWord - 1,x
+    bne @unswapped
+    dey
+    lda (ptr2),y
+    cmp bFScanWord,x
+    bne @unswapped
+    iny
+    iny
+    inx
+    jsr bFEdit
+    .byte $24                   ; bit zp: skip the clc
+@unswapped:
+    clc
+    ply
+    plx
+@found:
+    inc bFEditLeft
+    rts
 @no:
     clc
     rts

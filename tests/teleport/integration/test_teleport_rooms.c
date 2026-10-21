@@ -13,7 +13,7 @@ void testScanEnd(void);
 void refScanReset(const char* line);
 void refScan(const byte* data, unsigned length);
 void refScanEnd(void);
-extern byte refHits[12];
+extern byte refHits[12], refTypos[12];
 void refTriggersBegin(byte* boxes, byte room);
 void refTriggerLogic(FILE* file, unsigned length);
 byte refTriggersEnd(void);
@@ -43,6 +43,8 @@ static void test_kq1(const char* path)
     game(path);
     search("tp castle"); assert(teleportPending == 2 && teleportX == TELEPORT_AUTO);
     search("tp cast"); assert(teleportPending == 2); /* the last word is a prefix */
+    search("tp castel"); assert(teleportPending == 2); /* swapped letters: one typo */
+    search("tp dragn"); assert(teleportPending == 51); /* a missing letter */
     search("tp moat 80 120"); assert(teleportPending == 1 && teleportX == 80 && teleportY == 120);
     search("tp king edward"); assert(teleportPending == 53);
     /* Two throne rooms: the leprechaun king's mentions "throne" more. */
@@ -63,6 +65,7 @@ static void test_kq3(const char* path)
 {
     game(path);
     search("tp kitchen"); assert(teleportPending == 6);
+    search("tp kitchn"); assert(teleportPending == 6); /* a missing letter */
     search("tp:1:wizard,spider"); assert(teleportPending == 4);
     assert(!strcmp(lastMessage, "Teleport tour, 1 seconds per stop: wizard=4, spider=14"));
     printf("PASS: %s: KQ3 names\n", path);
@@ -70,13 +73,13 @@ static void test_kq3(const char* path)
 
 /* Each room's message text, streamed in pseudo-random chunk sizes through
    both scanners; every word count must agree. */
-static char line[] = "tp kings room moat castle s king a the dragon goat sir graham";
+static char line[] = "tp kings room moat castel s king a the dargon goat sir grahm"; /* three typos */
 static unsigned seed = 1;
 
 static void differential(const char* path)
 {
     static byte order[256], chunk[128], header[7];
-    unsigned count = 0, i, j, rooms = 0, words = 0;
+    unsigned count = 0, i, j, rooms = 0, words = 0, typed = 0;
     unsigned long bytes = 0;
     unsigned long position = 0, start, left;
     byte n, current = 255, size, q;
@@ -142,13 +145,17 @@ static void differential(const char* path)
             if (bFTeleportHits[q] != refHits[q])
                 printf("room %u word %u: 65C02 %u, model %u\n", order[i], q, bFTeleportHits[q], refHits[q]);
             assert(bFTeleportHits[q] == refHits[q]);
+            if (bFTeleportTypos[q] != refTypos[q])
+                printf("room %u word %u: 65C02 %u typos, model %u\n", order[i], q, bFTeleportTypos[q], refTypos[q]);
+            assert(bFTeleportTypos[q] == refTypos[q]);
+            typed += refTypos[q] == 1 || refTypos[q] == 2;
             words += refHits[q];
         }
         ++rooms;
     }
     if (file) fclose(file);
-    printf("PASS: %s: 65C02 scanner equals the C model in %u rooms (%lu bytes, %u matches)\n",
-           path, rooms, bytes, words);
+    printf("PASS: %s: 65C02 scanner equals the C model in %u rooms (%lu bytes, %u matches, %u words matched with typos)\n",
+           path, rooms, bytes, words, typed);
 }
 
 /* Rooms with pictures, by volume and offset, so files are read forward only. */
