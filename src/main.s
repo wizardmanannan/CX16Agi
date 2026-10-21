@@ -31,6 +31,7 @@
     .if ENABLE_TELEPORT
     .include "teleport/core/teleportState.s"
     .include "teleport/command/teleportKeyword.s"
+    .include "teleport/command/teleportGrammar.s"
     .endif
     
     .export _executeLogic
