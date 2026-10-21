@@ -65,8 +65,7 @@ bFTeleportRun:
 @cancel:
     stz _teleportPending
     lda #TELEPORT_CANCELED
-    TRAMPOLINE #TELEPORT_NOTICE_BANK, _b7TeleportNotice
-    rts
+    TELEPORT_JUMP #TELEPORT_NOTICE_BANK, _b7TeleportNotice
 
 @rooms:
     ldx #0                      ; numbered stops must exist

@@ -339,8 +339,7 @@ bFSearchOpen:
     sta (ptr3),y
     lda ptr3
     ldx ptr3 + 1
-    TRAMPOLINE #TELEPORT_ROOM_BANK, _b6Cbm_openForSeeking
-    rts
+    TELEPORT_JUMP #TELEPORT_ROOM_BANK, _b6Cbm_openForSeeking
 bFSearchVol: .byte $56, $4F, $4C, $2E
 
 ; offset += X + A * 256. Preserves X and Y.
@@ -489,6 +488,5 @@ bFSearchSeek:
     stz sreg + 1
     lda bFSearchOffset
     ldx bFSearchOffset + 1
-    TRAMPOLINE #TELEPORT_ROOM_BANK, _b6Cx16_fseek
-    rts
+    TELEPORT_JUMP #TELEPORT_ROOM_BANK, _b6Cx16_fseek
 .endif

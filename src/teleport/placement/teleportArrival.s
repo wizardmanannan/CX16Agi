@@ -16,13 +16,7 @@ TELEPORT_ARRIVAL_INC = 1
 _b6TeleportCycle:
     lda _teleportPending
     bne _b6BeginTeleport
-    ldy #TELEPORT_BANK          ; TRAMPOLINE as a tail call
-    sty tmp4
-    ldy #<_bFTeleportTourTick
-    sty ptr4
-    ldy #>_bFTeleportTourTick
-    sty ptr4 + 1
-    jmp _trampoline
+    TELEPORT_JUMP #TELEPORT_BANK, _bFTeleportTourTick
 
 ; void b6TeleportAfterLogic(void): a request is pending; the room's logics
 ; have run this cycle.
@@ -90,8 +84,7 @@ _b6FinishTeleport:
 @report:
     lda _teleportTour           ; a tour moves on, without notices
     beq @notice
-    TRAMPOLINE #TELEPORT_BANK, _bFTeleportArrived
-    rts
+    TELEPORT_JUMP #TELEPORT_BANK, _bFTeleportArrived
 @notice:
     txa
     beq @done

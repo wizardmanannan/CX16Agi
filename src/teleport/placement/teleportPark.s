@@ -83,8 +83,7 @@ bATeleportParkAt:
     bcs @done
     lda bAProbeLeft
     ldx bAProbeY
-    TRAMPOLINE #TELEPORT_VIEW_BANK, b9TeleportMoveEgo
-    rts
+    TELEPORT_JUMP #TELEPORT_VIEW_BANK, b9TeleportMoveEgo
 @done:
     rts
 .endif

@@ -102,8 +102,7 @@ bFTeleportShow:
     ror tmp2
     ldy #TELEPORT_BANK
     sty tmp1
-    TRAMPOLINE #TELEPORT_NOTICE_BANK, b7TeleportShow
-    rts
+    TELEPORT_JUMP #TELEPORT_NOTICE_BANK, b7TeleportShow
 
 ; Shows the message being built, waiting for Enter/Escape.
 bFTextShow:

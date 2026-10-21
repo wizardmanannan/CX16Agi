@@ -80,6 +80,17 @@ TELEPORT_READST = $FFB7
 TELEPORT_CLOSE = $FFC3          ; A = logical file
 .endif
 
+; TRAMPOLINE as a tail call: JMPTO in BANK returns to our caller.
+.macro TELEPORT_JUMP BANK, JMPTO
+    ldy BANK
+    sty tmp4
+    ldy #<JMPTO
+    sty ptr4
+    ldy #>JMPTO
+    sty ptr4 + 1
+    jmp _trampoline
+.endmacro
+
 ; Teleport text is ASCII (message boxes); ca65 would translate to PETSCII.
 .macro TELEPORT_ASCII
     .pushcharmap

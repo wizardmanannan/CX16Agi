@@ -24,8 +24,7 @@ bAReadTriggers:
     sta bATeleportZones
     ldx c_sp + 1
     stx bATeleportZones + 1
-    TRAMPOLINE #TELEPORT_TRIGGER_BANK, _b1TeleportTriggers
-    rts
+    TELEPORT_JUMP #TELEPORT_TRIGGER_BANK, _b1TeleportTriggers
 
 ; byte bATryTeleport(void): TELEPORT_REJECTED, _PLACED, _ADJUSTED, _UNQUIET
 ; or _PARTIAL.
