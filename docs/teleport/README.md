@@ -60,10 +60,13 @@ No index is kept: one pass over each room's text yields, per word of the
 name, its matches, its fewest typos and its closeness to the next word.
 Each text word is compared only with the name's words it could match:
 those starting with its first character, and words of 9 or more letters,
-whose two typos allow a different first letter. Over every room's messages
-in KQ1 and KQ3 the pass takes about 65 cycles per byte for a one-word name
-and 100 for a 12-word one, against 39 to decrypt the bytes and tell letters
-from the rest.
+whose two typos allow a different first letter. A word none can match is
+only looked through for its end, and each run of text ends in a mark byte,
+so most bytes cost one decryption, two compares and the key's countdown.
+Over every room's messages in KQ1 and KQ3 the pass takes 38-39 cycles per
+byte when no word of the name starts a text word - the same as a loop that
+only decrypts and tells letters from the rest - 44-45 for `castle`, and 94
+for a 12-word name.
 
 In KQ1, `kings room` finds King Edward's throne room (53), `moat` the castle
 moat (1), `castle` the castle entrance (2), `dragon` 51 and `goat` 11. Names
@@ -73,8 +76,9 @@ before it starts, for example
 `Teleport tour, 5 seconds per stop: kings room=53, moat=1, castle=2`;
 press Enter to start. An unmatched name is reported and nothing happens.
 
-A search reads each VOL file once, about 1–1.5 seconds for KQ1 on an 8 MHz
-X16, while "Teleport: searching rooms..." is shown.
+A search reads each VOL file once, while "Teleport: searching rooms..." is
+shown. In the X16 emulator (8 MHz), KQ1 has chosen the room for `tp castle`
+0.6 seconds after the line is typed.
 
 ## Tours
 
@@ -252,7 +256,7 @@ docs/teleport/             this document
 | Bank 9 (view table, collision, parking flags) | 231 |
 | Bank 0xA (placement, landing search, parking) | 1331 |
 | Bank 1 (trigger reader) | 1721 |
-| Bank 0xF (grammar, name search, file access, tours, replies) | 3482 |
+| Bank 0xF (grammar, name search, file access, tours, replies) | 3685 |
 
 Gameplay cost is one test (`lda`, `ora`, `beq`) per interpreter cycle, and
 one more after the logics while a request is pending. While a command runs
@@ -293,8 +297,9 @@ make -C tests/teleport footprint
   fixed results and cycle ceilings (sim65 cycle counter).
 - `rooms`: KQ1 and KQ3 names and tour plans, through both the block read and
   the byte read; the 65C02 word scanner against an independent C model over
-  every room's message text in both games, with its cycles per byte next to
-  a loop that only decrypts; and the 65C02 trigger reader
+  every room's message text in both games, for a 12-word name, `castle`
+  and a name no word starts like, with its cycles per byte next to a loop
+  that only decrypts; and the 65C02 trigger reader
   against an independent C model over every room's code and the logics it
   calls, with 15 objects drawn so `distance` boxes are compared too (KQ1:
   102 armed boxes in 81 rooms, 47 dropped, 72 calls; KQ3: 169 in 86, 52
