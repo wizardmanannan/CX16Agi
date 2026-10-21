@@ -13,9 +13,10 @@ TELEPORT_OP_BNE = $D0
 TELEPORT_OP_BRA = $80
 
 .segment "BANKRAM09"
-; Out: carry clear if ego can be placed: player control, moving normally,
-; drawn and animated, with a sane cel size.
-b9TeleportCanPlace:
+; If ego can be placed - player control, moving normally, drawn and
+; animated, with a sane cel size - copies its view entry to the probe at
+; VIEW_POS_LOCAL_VIEW_TAB. Out: carry clear if so.
+b9TeleportTakeEgo:
     lda _controlMode
     ora _controlMode + 1
     ora _viewtab + TELEPORT_VT_MOTION
@@ -37,17 +38,14 @@ b9TeleportCanPlace:
     lda _viewtab + TELEPORT_VT_YSIZE
     dec a
     cmp #TELEPORT_HEIGHT
-@done:
-    rts
-
-; Copies ego's view entry to the probe at VIEW_POS_LOCAL_VIEW_TAB.
-b9TeleportCopyEgo:
+    bcs @done
     ldy #TELEPORT_VT_SIZE - 1
 @copy:
     lda _viewtab,y
     sta (VIEW_POS_LOCAL_VIEW_TAB),y
     dey
-    bpl @copy
+    bpl @copy                   ; carry still clear
+@done:
     rts
 
 ; Out: A = 0 if the probe breaks the interpreter's movement rules - screen

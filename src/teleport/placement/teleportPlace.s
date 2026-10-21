@@ -29,21 +29,19 @@ bAReadTriggers:
 ; byte bATryTeleport(void): TELEPORT_REJECTED, _PLACED, _ADJUSTED, _UNQUIET
 ; or _PARTIAL.
 _bATryTeleport:
-    TRAMPOLINE #TELEPORT_VIEW_BANK, b9TeleportCanPlace
-    bcc @take
-    lda #TELEPORT_REJECTED
-    tax
-    rts
-@take:
-    jsr bAReadTriggers          ; the trigger boxes
-    sta bAPlacePartial
-    ldy #TELEPORT_VT_SIZE       ; then ego's copy
+    ldy #TELEPORT_VT_SIZE       ; ego's copy
     jsr subysp
     lda c_sp
     sta VIEW_POS_LOCAL_VIEW_TAB
     lda c_sp + 1
     sta VIEW_POS_LOCAL_VIEW_TAB + 1
-    TRAMPOLINE #TELEPORT_VIEW_BANK, b9TeleportCopyEgo
+    TRAMPOLINE #TELEPORT_VIEW_BANK, b9TeleportTakeEgo
+    bcc @take
+    lda #TELEPORT_REJECTED
+    bra @copy
+@take:
+    jsr bAReadTriggers          ; then the trigger boxes
+    sta bAPlacePartial
 
     lda TELEPORT_FLAG + 5       ; new room
     beq @path
@@ -61,9 +59,10 @@ _bATryTeleport:
     beq @free
     lda #TELEPORT_PARTIAL
 @free:
+    ldy #TELEPORT_ZONE_BYTES
+    jsr addysp                  ; preserves A
+@copy:
     ldx #0
     ldy #TELEPORT_VT_SIZE
-    jsr addysp                  ; preserves A
-    ldy #TELEPORT_ZONE_BYTES
     jmp addysp
 .endif
