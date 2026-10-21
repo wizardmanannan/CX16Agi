@@ -37,7 +37,12 @@
     .include "teleport/placement/teleportLanding.s"
     .include "teleport/placement/teleportPublish.s"
     .include "teleport/command/teleportGrammar.s"
+    .include "teleport/search/teleportDirectory.s"
+    .include "teleport/command/teleportText.s"
+    .include "teleport/search/teleportScan.s"
+    .include "teleport/search/teleportRoomSearch.s"
     .include "teleport/tour/teleportTour.s"
+    .include "teleport/command/teleportCommand.s"
     .endif
     
     .export _executeLogic
