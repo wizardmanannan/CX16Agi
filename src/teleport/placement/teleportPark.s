@@ -14,28 +14,28 @@ TELEPORT_PARK_INC = 1
 ; (teleportView.s) until b9TeleportUnpark.
 .importzp c_sp
 .import subysp, addysp
-.export _b9TeleportPark
+.export _bATeleportPark
 
 TELEPORT_PARK_STEP = 12         ; grid tried after the target
 
-.segment "BANKRAM09"
-b9ParkX: .res 1
-b9ParkY: .res 1
-b9ParkWidth: .res 1
+.segment "BANKRAM0A"
+bAParkX: .res 1
+bAParkY: .res 1
+bAParkWidth: .res 1
 
 ; void b9TeleportPark(void): before entering room teleportPending.
-_b9TeleportPark:
-    jsr b9TeleportHoldEgoFlags
-    jsr b9TeleportEgoWidth
-    sta b9ParkWidth
+_bATeleportPark:
+    TRAMPOLINE #TELEPORT_VIEW_BANK, b9TeleportHoldEgoFlags
+    TRAMPOLINE #TELEPORT_VIEW_BANK, b9TeleportEgoWidth
+    sta bAParkWidth
     stz TELEPORT_FLAG + 0       ; ego on water: the old room's
     stz TELEPORT_FLAG + 3       ; ego touched a trigger line
     ldy #TELEPORT_ZONE_BYTES
     jsr subysp
     lda c_sp
-    sta b9TeleportZones
+    sta bATeleportZones
     ldx c_sp + 1
-    stx b9TeleportZones + 1
+    stx bATeleportZones + 1
     ldy TELEPORT_VAR + 0        ; read the destination as if there
     phy
     ldy _teleportPending
@@ -50,28 +50,28 @@ _b9TeleportPark:
     lda #TELEPORT_AUTO_X
     ldx #120
 @target:
-    jsr b9TeleportParkAt
+    jsr bATeleportParkAt
     bcc @free
     lda #TELEPORT_HEIGHT - 8    ; then a grid, bottom up
-    sta b9ParkY
+    sta bAParkY
 @row:
     lda #4
-    sta b9ParkX
+    sta bAParkX
 @column:
-    lda b9ParkX
-    ldx b9ParkY
-    jsr b9TeleportParkAt
+    lda bAParkX
+    ldx bAParkY
+    jsr bATeleportParkAt
     bcc @free
-    lda b9ParkX
+    lda bAParkX
     clc
     adc #TELEPORT_PARK_STEP
-    sta b9ParkX
+    sta bAParkX
     cmp #TELEPORT_WIDTH - 8
     bcc @column
-    lda b9ParkY
+    lda bAParkY
     sec
     sbc #TELEPORT_PARK_STEP
-    sta b9ParkY
+    sta bAParkY
     cmp #40
     bcs @row                    ; nowhere free: ego stays where it was
 @free:
@@ -79,18 +79,19 @@ _b9TeleportPark:
     jmp addysp
 
 ; Parks ego at (A, X) unless that is in a box. Carry set if it is.
-b9TeleportParkAt:
-    sta b9ProbeLeft
-    stx b9ProbeY
+bATeleportParkAt:
+    sta bAProbeLeft
+    stx bAProbeY
     clc
-    adc b9ParkWidth
+    adc bAParkWidth
     dec a
-    sta b9ProbeRight
-    jsr b9TeleportZoneHit
+    sta bAProbeRight
+    jsr bATeleportZoneHit
     bcs @done
-    lda b9ProbeLeft
-    ldx b9ProbeY
-    jmp b9TeleportMoveEgo
+    lda bAProbeLeft
+    ldx bAProbeY
+    TRAMPOLINE #TELEPORT_VIEW_BANK, b9TeleportMoveEgo
+    rts
 @done:
     rts
 .endif

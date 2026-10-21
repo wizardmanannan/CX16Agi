@@ -11,12 +11,12 @@ TELEPORT_PROBE_INC = 1
 ; fire now (teleportTriggers.s). Nothing is published while probing.
 .importzp ptr1
 
-.segment "BANKRAM09"
-b9ProbeGround: .res 1
-b9ProbeLeft: .res 1
-b9ProbeRight: .res 1
-b9ProbeY: .res 1
-b9TeleportZones: .res 2         ; count, then x1 y1 x2 y2 per box
+.segment "BANKRAM0A"
+bAProbeGround: .res 1
+bAProbeLeft: .res 1
+bAProbeRight: .res 1
+bAProbeY: .res 1
+bATeleportZones: .res 2         ; count, then x1 y1 x2 y2 per box
 
 .scope
 X_VAL = ZP_TMP_25               ; GET_PRIORITY operands
@@ -27,41 +27,41 @@ quit:                           ; A = 0, in branch range of the tests
     rts
 
 ; Out: A = 0 (not walkable), TELEPORT_WALKABLE or TELEPORT_SAFE. Z reflects A.
-::b9TeleportProbe:
-    jsr b9TeleportWalkable
+::bATeleportProbe:
+    TRAMPOLINE #TELEPORT_VIEW_BANK, b9TeleportWalkable
     beq quit
     lda #TELEPORT_SAFE
-    sta b9ProbeGround
+    sta bAProbeGround
     ldy #TELEPORT_VT_YPOS
     lda (VIEW_POS_LOCAL_VIEW_TAB),y
     sta Y_VAL
-    sta b9ProbeY
+    sta bAProbeY
     ldy #TELEPORT_VT_XPOS
     lda (VIEW_POS_LOCAL_VIEW_TAB),y
     sta X_VAL
-    sta b9ProbeLeft
+    sta bAProbeLeft
     ldy #TELEPORT_VT_XSIZE
     clc
     adc (VIEW_POS_LOCAL_VIEW_TAB),y
     sta VIEW_POS_WIDTH
     dec a
-    sta b9ProbeRight
+    sta bAProbeRight
 @pixel:
     GET_PRIORITY
     cmp #TELEPORT_BACKGROUND
     beq @next
     bcs @scenery
     lda #TELEPORT_WALKABLE      ; trigger line or water underfoot
-    sta b9ProbeGround
+    sta bAProbeGround
 @next:
     inc X_VAL
     lda X_VAL
     cmp VIEW_POS_WIDTH
     bne @pixel
-    lda b9ProbeGround
+    lda bAProbeGround
     cmp #TELEPORT_SAFE
     bne @done
-    jsr b9TeleportZoneHit
+    jsr bATeleportZoneHit
     lda #TELEPORT_WALKABLE      ; standing here could start a scene
     bcs @done
 @safe:
@@ -73,32 +73,32 @@ quit:                           ; A = 0, in branch range of the tests
     rts
 .endscope
 
-; Carry set if ego's baseline (b9ProbeLeft..b9ProbeRight at b9ProbeY) is in
-; any box at b9TeleportZones.
-b9TeleportZoneHit:
-    lda b9TeleportZones
+; Carry set if ego's baseline (bAProbeLeft..bAProbeRight at bAProbeY) is in
+; any box at bATeleportZones.
+bATeleportZoneHit:
+    lda bATeleportZones
     sta ptr1
-    lda b9TeleportZones + 1
+    lda bATeleportZones + 1
     sta ptr1 + 1
     lda (ptr1)
     beq @clear
     tax
     ldy #1
 @zone:
-    lda b9ProbeRight            ; x1 <= right
+    lda bAProbeRight            ; x1 <= right
     cmp (ptr1),y
     bcc @miss
     iny
-    lda b9ProbeY                ; y1 <= y
+    lda bAProbeY                ; y1 <= y
     cmp (ptr1),y
     bcc @miss
     iny
     lda (ptr1),y                ; left <= x2
-    cmp b9ProbeLeft
+    cmp bAProbeLeft
     bcc @miss
     iny
     lda (ptr1),y                ; y <= y2
-    cmp b9ProbeY
+    cmp bAProbeY
     bcs @hit
 @miss:
     tya                         ; next box: 4k+1 .. 4k+4 -> 4k+5

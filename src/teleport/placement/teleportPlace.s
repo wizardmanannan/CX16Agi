@@ -10,14 +10,14 @@ TELEPORT_PLACE_INC = 1
 ; rejection leaves ego and the world flags untouched.
 .importzp c_sp
 .import subysp, addysp
-.export _b9TryTeleport
+.export _bATryTeleport
 
 TELEPORT_PLACE_SCRATCH = TELEPORT_VT_SIZE + TELEPORT_ZONE_BYTES
 
-.segment "BANKRAM09"
+.segment "BANKRAM0A"
 ; byte b9TryTeleport(void): TELEPORT_REJECTED, _PLACED, _ADJUSTED or _UNQUIET.
-_b9TryTeleport:
-    jsr b9TeleportCanPlace
+_bATryTeleport:
+    TRAMPOLINE #TELEPORT_VIEW_BANK, b9TeleportCanPlace
     bcs @reject
     ldy #TELEPORT_PLACE_SCRATCH
     jsr subysp
@@ -25,16 +25,16 @@ _b9TryTeleport:
     sta VIEW_POS_LOCAL_VIEW_TAB
     lda c_sp + 1
     sta VIEW_POS_LOCAL_VIEW_TAB + 1
-    jsr b9TeleportCopyEgo
+    TRAMPOLINE #TELEPORT_VIEW_BANK, b9TeleportCopyEgo
     lda c_sp                    ; trigger boxes follow the copy
     clc
     adc #TELEPORT_VT_SIZE
-    sta b9TeleportZones
+    sta bATeleportZones
     lda c_sp + 1
     adc #0
-    sta b9TeleportZones + 1
+    sta bATeleportZones + 1
     tax
-    lda b9TeleportZones
+    lda bATeleportZones
     TRAMPOLINE #TELEPORT_BANK, _bFTeleportTriggers
     lda c_sp
     sta VIEW_POS_LOCAL_VIEW_TAB
@@ -43,14 +43,14 @@ _b9TryTeleport:
 
     lda TELEPORT_FLAG + 5       ; new room
     beq @path
-    jsr b9TeleportLanding
+    jsr bATeleportLanding
     bra @placed
 @path:
-    jsr b9TeleportPath
+    jsr bATeleportPath
 @placed:
     cmp #TELEPORT_REJECTED
     beq @free
-    jsr b9TeleportPublish
+    TRAMPOLINE #TELEPORT_VIEW_BANK, b9TeleportPublish
 @free:
     ldx #0
     ldy #TELEPORT_PLACE_SCRATCH

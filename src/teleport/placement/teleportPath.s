@@ -10,18 +10,18 @@ TELEPORT_PATH_INC = 1
 ; walkable point, as ordinary movement leaves them for the collision test.
 .importzp tmp1
 
-.segment "BANKRAM09"
-b9PathSteps: .res 1
-b9PathQuietX: .res 1
-b9PathQuietY: .res 1
-b9PathQuiet: .res 1             ; nonzero once a quiet point was passed
+.segment "BANKRAM0A"
+bAPathSteps: .res 1
+bAPathQuietX: .res 1
+bAPathQuietY: .res 1
+bAPathQuiet: .res 1             ; nonzero once a quiet point was passed
 
 ; Out: A = TELEPORT_PLACED (quiet, at the target), TELEPORT_ADJUSTED (quiet,
 ; short of it), TELEPORT_UNQUIET (no quiet point on the way), or
 ; TELEPORT_REJECTED when the start or the first step is not walkable.
-b9TeleportPath:
-    stz b9PathSteps
-    stz b9PathQuiet
+bATeleportPath:
+    stz bAPathSteps
+    stz bAPathQuiet
     ldy #TELEPORT_VT_XPOS
     lda (VIEW_POS_LOCAL_VIEW_TAB),y
     ldy #TELEPORT_VT_PREVX
@@ -31,17 +31,17 @@ b9TeleportPath:
     ldy #TELEPORT_VT_PREVY
     sta (VIEW_POS_LOCAL_VIEW_TAB),y
 @probe:
-    jsr b9TeleportProbe
+    jsr bATeleportProbe
     beq @blocked
     cmp #TELEPORT_SAFE
     bne @arrived
-    sta b9PathQuiet
+    sta bAPathQuiet
     ldy #TELEPORT_VT_XPOS
     lda (VIEW_POS_LOCAL_VIEW_TAB),y
-    sta b9PathQuietX
+    sta bAPathQuietX
     ldy #TELEPORT_VT_YPOS
     lda (VIEW_POS_LOCAL_VIEW_TAB),y
-    sta b9PathQuietY
+    sta bAPathQuietY
 @arrived:
     ldy #TELEPORT_VT_XPOS
     lda (VIEW_POS_LOCAL_VIEW_TAB),y
@@ -52,18 +52,18 @@ b9TeleportPath:
     cmp _teleportY
     beq @end
 @step:
-    inc b9PathSteps
+    inc bAPathSteps
     ldy #TELEPORT_VT_XPOS
     ldx #TELEPORT_VT_PREVX
     lda _teleportX
-    jsr b9TeleportApproach
+    jsr bATeleportApproach
     ldy #TELEPORT_VT_YPOS
     ldx #TELEPORT_VT_PREVY
     lda _teleportY
-    jsr b9TeleportApproach
+    jsr bATeleportApproach
     bra @probe
 @blocked:
-    lda b9PathSteps
+    lda bAPathSteps
     cmp #2
     bcc @rejected               ; 0: start invalid; 1: first step invalid
     ldy #TELEPORT_VT_PREVX      ; back to the last walkable point
@@ -75,17 +75,17 @@ b9TeleportPath:
     ldy #TELEPORT_VT_YPOS
     sta (VIEW_POS_LOCAL_VIEW_TAB),y
 @end:
-    lda b9PathQuiet
+    lda bAPathQuiet
     beq @unquiet
-    lda b9PathQuietX            ; land on the last quiet point
+    lda bAPathQuietX            ; land on the last quiet point
     ldy #TELEPORT_VT_XPOS
     sta (VIEW_POS_LOCAL_VIEW_TAB),y
     ldy #TELEPORT_VT_YPOS
-    lda b9PathQuietY
+    lda bAPathQuietY
     sta (VIEW_POS_LOCAL_VIEW_TAB),y
     cmp _teleportY
     bne @adjusted
-    lda b9PathQuietX
+    lda bAPathQuietX
     cmp _teleportX
     bne @adjusted
     lda #TELEPORT_PLACED
@@ -102,7 +102,7 @@ b9TeleportPath:
 
 ; Copies the coordinate at offset Y to offset X (previous), then moves it one
 ; pixel toward A.
-b9TeleportApproach:
+bATeleportApproach:
     sta tmp1
     lda (VIEW_POS_LOCAL_VIEW_TAB),y
     phy

@@ -36,7 +36,7 @@ _b6BeginTeleport:
     lda _teleportPending
     cmp TELEPORT_VAR + 0
     beq _b6FinishTeleport
-    TRAMPOLINE #TELEPORT_PLACE_BANK, _b9TeleportPark
+    TRAMPOLINE #TELEPORT_PLACE_BANK, _bATeleportPark
     lda _teleportPending
     stz TELEPORT_VAR + 2        ; no entry edge: ego stays parked
     stz TELEPORT_VAR + 6
@@ -49,7 +49,7 @@ _b6BeginTeleport:
 ; void b6FinishTeleport(void): the requested room has initialized (or is current).
 ; A redirect by the room script consumes the request without placement.
 _b6FinishTeleport:
-    TRAMPOLINE #TELEPORT_PLACE_BANK, _b9TeleportUnpark
+    TRAMPOLINE #TELEPORT_VIEW_BANK, _b9TeleportUnpark
     ldx #TELEPORT_WRONG_ROOM
     lda _teleportPending
     stz _teleportPending
@@ -73,7 +73,7 @@ _b6FinishTeleport:
 @explicit:
     lda #TELEPORT_NEAREST
     pha                         ; notice for an adjusted landing
-    TRAMPOLINE #TELEPORT_PLACE_BANK, _b9TryTeleport
+    TRAMPOLINE #TELEPORT_PLACE_BANK, _bATryTeleport
     plx
     cmp #TELEPORT_ADJUSTED
     beq @report

@@ -11,7 +11,8 @@ TELEPORT_STATE_INC = 1
 ; Banks
 TELEPORT_BANK = $0F             ; command, room search, tour
 TELEPORT_NOTICE_BANK = $07      ; parser input and message texts
-TELEPORT_PLACE_BANK = $09       ; view table and collision
+TELEPORT_PLACE_BANK = $0A       ; placement
+TELEPORT_VIEW_BANK = $09        ; view table and collision
 TELEPORT_ROOM_BANK = $06        ; interpreter cycle, room entry, file seek
 TELEPORT_TEXT_BANK = $03        ; message boxes
 TELEPORT_KEYS_BANK = $05        ; key waits
