@@ -23,6 +23,14 @@
     .include "statusBar.s"
     .include "showObjAsm.s"
     .include "objectAsm.s"
+    ; Teleport (docs/teleport/README.md): one module per question, in dependency
+    ; order. Assemble with ENABLE_TELEPORT=0 (and compile C likewise) to omit it.
+    .ifndef ENABLE_TELEPORT
+    ENABLE_TELEPORT = 1
+    .endif
+    .if ENABLE_TELEPORT
+    .include "teleport/core/teleportState.s"
+    .endif
     
     .export _executeLogic
     .export _b6InitInterpreter
