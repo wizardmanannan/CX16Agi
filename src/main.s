@@ -41,6 +41,7 @@
     .include "teleport/command/teleportText.s"
     .include "teleport/search/teleportScan.s"
     .include "teleport/search/teleportRoomSearch.s"
+    .include "teleport/search/teleportTriggers.s"
     .include "teleport/tour/teleportTour.s"
     .include "teleport/command/teleportCommand.s"
     .endif
