@@ -58,6 +58,12 @@ Matching and ranking follow Meilisearch's defaults:
 
 No index is kept: one pass over each room's text yields, per word of the
 name, its matches, its fewest typos and its closeness to the next word.
+Each text word is compared only with the name's words it could match:
+those starting with its first character, and words of 9 or more letters,
+whose two typos allow a different first letter. Over every room's messages
+in KQ1 and KQ3 the pass takes about 65 cycles per byte for a one-word name
+and 100 for a 12-word one, against 39 to decrypt the bytes and tell letters
+from the rest.
 
 In KQ1, `kings room` finds King Edward's throne room (53), `moat` the castle
 moat (1), `castle` the castle entrance (2), `dragon` 51 and `goat` 11. Names
@@ -244,9 +250,9 @@ docs/teleport/             this document
 | Bank 7 (keyword, hand-off, notices) | 502 + 80 in `parser.c` |
 | Bank 3 (silent arrival) | 8 in `commands.c` |
 | Bank 9 (view table, collision, parking flags) | 231 |
-| Bank 0xA (placement, landing search, parking) | 1339 |
+| Bank 0xA (placement, landing search, parking) | 1331 |
 | Bank 1 (trigger reader) | 1721 |
-| Bank 0xF (grammar, name search, file access, tours, replies) | 3100 |
+| Bank 0xF (grammar, name search, file access, tours, replies) | 3482 |
 
 Gameplay cost is one test (`lda`, `ora`, `beq`) per interpreter cycle, and
 one more after the logics while a request is pending. While a command runs
@@ -287,7 +293,8 @@ make -C tests/teleport footprint
   fixed results and cycle ceilings (sim65 cycle counter).
 - `rooms`: KQ1 and KQ3 names and tour plans, through both the block read and
   the byte read; the 65C02 word scanner against an independent C model over
-  every room's message text in both games; and the 65C02 trigger reader
+  every room's message text in both games, with its cycles per byte next to
+  a loop that only decrypts; and the 65C02 trigger reader
   against an independent C model over every room's code and the logics it
   calls, with 15 objects drawn so `distance` boxes are compared too (KQ1:
   102 armed boxes in 81 rooms, 47 dropped, 72 calls; KQ3: 169 in 86, 52
