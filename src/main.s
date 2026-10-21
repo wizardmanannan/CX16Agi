@@ -31,6 +31,7 @@
     .if ENABLE_TELEPORT
     .include "teleport/core/teleportState.s"
     .include "teleport/command/teleportKeyword.s"
+    .include "teleport/command/teleportEntry.s"
     .include "teleport/command/teleportNotice.s"
     .include "teleport/placement/teleportProbe.s"
     .include "teleport/placement/teleportPath.s"
