@@ -100,10 +100,6 @@ b9TeleportObjectAt:
     sec
     rts
 
-; Out: A = ego's cel width.
-b9TeleportEgoWidth:
-    lda _viewtab + TELEPORT_VT_XSIZE
-    rts
 
 ; Puts ego at (A, X) as if it had stopped there.
 b9TeleportMoveEgo:
@@ -115,11 +111,15 @@ b9TeleportMoveEgo:
     stz _viewtab + TELEPORT_VT_YPOS + 1
     rts
 
-; CanBeHere stops writing ego's water and trigger flags: its "is this ego?"
-; branch becomes BRA. Costs nothing when no teleport is in progress.
-b9TeleportHoldEgoFlags:
+; Parking: CanBeHere stops writing ego's water and trigger flags - its
+; "is this ego?" branch becomes BRA, which costs nothing when no teleport
+; is in progress. Out: A = ego's cel width.
+b9TeleportPark:
     lda #TELEPORT_OP_BRA
-    .byte $2C                   ; bit abs: skip the lda
+    sta b9CanBeHereEgoFlags
+    lda _viewtab + TELEPORT_VT_XSIZE
+    rts
+
 ; void b9TeleportUnpark(void): CanBeHere sets ego's flags again.
 _b9TeleportUnpark:
     lda #TELEPORT_OP_BNE

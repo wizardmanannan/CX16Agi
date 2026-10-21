@@ -25,8 +25,7 @@ bAParkWidth: .res 1
 
 ; void b9TeleportPark(void): before entering room teleportPending.
 _bATeleportPark:
-    TRAMPOLINE #TELEPORT_VIEW_BANK, b9TeleportHoldEgoFlags
-    TRAMPOLINE #TELEPORT_VIEW_BANK, b9TeleportEgoWidth
+    TRAMPOLINE #TELEPORT_VIEW_BANK, b9TeleportPark
     sta bAParkWidth
     stz TELEPORT_FLAG + 0       ; ego on water: the old room's
     stz TELEPORT_FLAG + 3       ; ego touched a trigger line
