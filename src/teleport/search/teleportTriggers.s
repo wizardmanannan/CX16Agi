@@ -26,11 +26,10 @@ TELEPORT_TRIGGERS_INC = 1
 ; old room left them, so then such tests are only "might be".
 .importzp c_sp, ptr1, ptr3
 .import subysp, addysp
-.export _bFTeleportTriggers
+.export _b1TeleportTriggers
 
 TELEPORT_ZONES_MAX = (TELEPORT_ZONE_BYTES - 1) / 4
 TELEPORT_CALLS_MAX = 4          ; called logics followed
-TELEPORT_CODE_BUFFER = 64       ; logic code read at a time
 TELEPORT_FRAMES = 16            ; nested ifs followed; deeper code ends the walk
 TELEPORT_FRAME_SIZE = 6         ; end(2), else end(2), bits, position box
 TELEPORT_TRIGGER_SCRATCH = TELEPORT_CODE_BUFFER + TELEPORT_FRAMES * TELEPORT_FRAME_SIZE
@@ -47,155 +46,122 @@ FRAME_CAN_FALSE = 2
 FRAME_ELSE = 4
 FRAME_ENCLOSING = 8
 
-.segment "BANKRAM0F"
-bFZones: .res 2
-bFZoneCount: .res 1
-bFZoneStart: .res 1
-bFCodeIndex: .res 1
-bFCodeFill: .res 1
-bFCodePosition: .res 2
-bFFrameDepth: .res 1
-bFCondition: .res 1
-bFConditionOr: .res 1
-bFConditionInOr: .res 1
-bFConditionNot: .res 1
-bFConditionTest: .res 1
-bFConditionTemp: .res 1
-bFConditionArgs: .res 5
-bFBox: .res 4                   ; ego-position box of this condition: x1 y1 x2 y2
-bFBoxState: .res 1              ; bit 0: narrowed; bit 7: not expressible
-bFBoxIndex: .res 1              ; its index once added, else TELEPORT_NO_BOX
-bFEgoKnown: .res 1              ; nonzero once get.posn(ego, ...) was seen
-bFEgoX: .res 1                  ; the variables it read ego's X and Y into
-bFEgoY: .res 1
-bFNearCount: .res 1             ; distance(ego, object, v) results followed
-bFNearVar: .res TELEPORT_NEAR_MAX
-bFNearX: .res TELEPORT_NEAR_MAX ; the object's position, or
-bFNearY: .res TELEPORT_NEAR_MAX ; ... X = Y = $FF if unknown or hidden
-bFNearRadius: .res 1
-bFGotoLow: .res 1
-bFCalls: .res TELEPORT_CALLS_MAX
-bFCallCount: .res 1
-bFCallNext: .res 1
-bFFrameTemp: .res 1
-bFArgumentCount: .res 1
-bFPushEnd: .res 2               ; else end being checked
-bFPartial: .res 1               ; bit 7 set: something was not seen
+.segment "BANKRAM01"
+b1Zones: .res 2
+b1TriggerBuffer: .res 2         ; code buffer, then frames, on the C stack
+b1ZoneCount: .res 1
+b1ZoneStart: .res 1
+b1CodeIndex: .res 1
+b1CodeFill: .res 1
+b1CodePosition: .res 2
+b1FrameDepth: .res 1
+b1Condition: .res 1
+b1ConditionOr: .res 1
+b1ConditionInOr: .res 1
+b1ConditionNot: .res 1
+b1ConditionTest: .res 1
+b1ConditionTemp: .res 1
+b1ConditionArgs: .res 5
+b1Box: .res 4                   ; ego-position box of this condition: x1 y1 x2 y2
+b1BoxState: .res 1              ; bit 0: narrowed; bit 7: not expressible
+b1BoxIndex: .res 1              ; its index once added, else TELEPORT_NO_BOX
+b1EgoKnown: .res 1              ; nonzero once get.posn(ego, ...) was seen
+b1EgoX: .res 1                  ; the variables it read ego's X and Y into
+b1EgoY: .res 1
+b1NearCount: .res 1             ; distance(ego, object, v) results followed
+b1NearVar: .res TELEPORT_NEAR_MAX
+b1NearX: .res TELEPORT_NEAR_MAX ; the object's position, or
+b1NearY: .res TELEPORT_NEAR_MAX ; ... X = Y = $FF if unknown or hidden
+b1NearRadius: .res 1
+b1GotoLow: .res 1
+b1Calls: .res TELEPORT_CALLS_MAX
+b1CallCount: .res 1
+b1CallNext: .res 1
+b1FrameTemp: .res 1
+b1ArgumentCount: .res 1
+b1PushEnd: .res 2               ; else end being checked
+b1Partial: .res 1               ; bit 7 set: something was not seen
 
-; byte bFTeleportTriggers(byte* zones): zones[0] = count, then x1 y1 x2 y2
+; byte b1TeleportTriggers(byte* zones): zones[0] = count, then x1 y1 x2 y2
 ; per box. Returns nonzero if the walk could not see everything.
-_bFTeleportTriggers:
-    sta bFZones
-    stx bFZones + 1
-    stz bFZoneCount
-    stz bFPartial
-    stz bFEgoKnown
-    stz bFNearCount
+_b1TeleportTriggers:
+    sta b1Zones
+    stx b1Zones + 1
+    stz b1ZoneCount
+    stz b1Partial
+    stz b1EgoKnown
+    stz b1NearCount
     ldy #TELEPORT_TRIGGER_SCRATCH
     jsr subysp
     lda c_sp
-    sta bFTeleportScratch
+    sta b1TriggerBuffer
     lda c_sp + 1
-    sta bFTeleportScratch + 1
-    stz bFCallCount
-    stz bFCallNext
+    sta b1TriggerBuffer + 1
+    stz b1CallCount
+    stz b1CallNext
     lda TELEPORT_VAR + 0
 @logic:
-    jsr bFTriggerLogic
-    ldx bFCallNext
-    cpx bFCallCount
+    jsr b1TriggerLogic
+    ldx b1CallNext
+    cpx b1CallCount
     bcs @written
-    inc bFCallNext
-    lda bFCalls,x
+    inc b1CallNext
+    lda b1Calls,x
     bra @logic
 @written:
-    lda bFZones
+    lda b1Zones
     sta ptr1
-    lda bFZones + 1
+    lda b1Zones + 1
     sta ptr1 + 1
-    lda bFZoneCount
+    lda b1ZoneCount
     sta (ptr1)
-    lda bFPartial
+    lda b1Partial
     ldy #TELEPORT_TRIGGER_SCRATCH
     jmp addysp                  ; preserves A
 
-; Reads logic A's header, then walks its code.
-bFTriggerLogic:
-    ldx #0
-    jsr bFTeleportDirectory
+; Walks logic A's code, read through bank 0xF's file access.
+b1TriggerLogic:
+    ldx b1TriggerBuffer         ; reads go to the code buffer
+    stx ptr3
+    ldx b1TriggerBuffer + 1
+    stx ptr3 + 1
+    TRAMPOLINE #TELEPORT_BANK, bFTeleportOpenCode
     bcs @done
-    ldy #3
-@position:
-    lda (ptr3),y
-    sta bFSearchOffset - 1,y
-    dey
-    bne @position
-    lda (ptr3)
-    jsr bFSearchOpen
-    lda #7                      ; 12 34 volume size(2) code-size(2)
-    jsr bFSearchReadAt
-    bne @close
-    lda (ptr3)
-    cmp #$12
-    bne @close
-    ldy #5
-    lda (ptr3),y
-    sta bFSearchLeft
-    iny
-    lda (ptr3),y
-    sta bFSearchLeft + 1
-    stz bFCodeIndex
-    stz bFCodeFill
-    stz bFCodePosition
-    stz bFCodePosition + 1
-    stz bFFrameDepth
-    lda bFZones
+    stz b1CodeIndex
+    stz b1CodeFill
+    stz b1CodePosition
+    stz b1CodePosition + 1
+    stz b1FrameDepth
+    lda b1Zones
     sta ptr1
-    lda bFZones + 1
+    lda b1Zones + 1
     sta ptr1 + 1
-    jsr bFTriggerWalk
-@close:
+    jsr b1TriggerWalk
     lda #TELEPORT_LFN
     jmp TELEPORT_CLOSE
 @done:
     rts
 
 ; The next code byte in A. Carry set at the end of the code. Preserves X.
-bFTriggerByte:
-    ldy bFCodeIndex
-    cpy bFCodeFill
+b1TriggerByte:
+    ldy b1CodeIndex
+    cpy b1CodeFill
     bcc @have
-    lda bFSearchLeft + 1
-    bne @full
-    lda bFSearchLeft
-    beq @end
-    cmp #TELEPORT_CODE_BUFFER
-    bcc @read
-@full:
-    lda #TELEPORT_CODE_BUFFER
-@read:
     phx
-    jsr bFSearchRead
+    lda #TELEPORT_CODE_BUFFER
+    TRAMPOLINE #TELEPORT_BANK, bFTeleportReadCode
     plx
-    cmp #0                      ; bytes not read
-    bne @end
-    lda bFSearchCount
-    sta bFCodeFill
-    lda bFSearchLeft
-    sec
-    sbc bFCodeFill
-    sta bFSearchLeft
-    bcs @counted
-    dec bFSearchLeft + 1
-@counted:
+    sta b1CodeFill
+    cmp #1
+    bcc @end                    ; nothing more
     ldy #0
 @have:
     lda (ptr3),y
     iny
-    sty bFCodeIndex
-    inc bFCodePosition
+    sty b1CodeIndex
+    inc b1CodePosition
     bne @done
-    inc bFCodePosition + 1
+    inc b1CodePosition + 1
 @done:
     clc
     rts
@@ -204,11 +170,11 @@ bFTriggerByte:
     rts
 
 ; Skips A code bytes. Carry set at the end of the code.
-bFTriggerSkip:
+b1TriggerSkip:
     tax
     beq @done
 @byte:
-    jsr bFTriggerByte
+    jsr b1TriggerByte
     bcs @end
     dex
     bne @byte
@@ -218,10 +184,10 @@ bFTriggerSkip:
     rts
 
 ; A = argument bytes of action command A (0-181).
-bFActionArgumentCount:
+b1ActionArgumentCount:
     lsr a
     tax
-    lda bFActionArguments,x
+    lda b1ActionArguments,x
     bcs @low
     lsr a
     lsr a
@@ -233,15 +199,15 @@ bFActionArgumentCount:
     rts
 
 ; A = argument bytes of test command A (0-18): its table follows the actions'.
-bFTestArgumentCount:
+b1TestArgumentCount:
     clc
     adc #TELEPORT_ACTIONS
-    bra bFActionArgumentCount
+    bra b1ActionArgumentCount
 
 ; Walks statements to the end of the code.
-bFTriggerWalk:
-    jsr bFTriggerUnwind
-    jsr bFTriggerByte
+b1TriggerWalk:
+    jsr b1TriggerUnwind
+    jsr b1TriggerByte
     bcs @done                   ; the end of the code
     cmp #$FF
     beq @if
@@ -253,35 +219,35 @@ bFTriggerWalk:
     beq @call
     cmp #$17                    ; call.v(v)
     beq @callVariable
-    jsr bFTriggerAction
-    bcc bFTriggerWalk
+    jsr b1TriggerAction
+    bcc b1TriggerWalk
 @end:
-    jmp bFTriggerPartial
+    jmp b1TriggerPartial
 @call:
-    jsr bFTriggerByte
+    jsr b1TriggerByte
     bcs @end
-    jsr bFTriggerCall
-    bra bFTriggerWalk
+    jsr b1TriggerCall
+    bra b1TriggerWalk
 @callVariable:
-    jsr bFTriggerByte
+    jsr b1TriggerByte
     bcs @end
     tax
     lda TELEPORT_VAR,x
-    jsr bFTriggerCall
-    bra bFTriggerWalk
+    jsr b1TriggerCall
+    bra b1TriggerWalk
 @goto:
-    jsr bFTriggerByte
+    jsr b1TriggerByte
     bcs @end
-    sta bFGotoLow
-    jsr bFTriggerByte
+    sta b1GotoLow
+    jsr b1TriggerByte
     bcs @end
-    jsr bFTriggerElse
-    bra bFTriggerWalk
+    jsr b1TriggerElse
+    bra b1TriggerWalk
 @if:
-    jsr bFTriggerCondition
+    jsr b1TriggerCondition
     bcs @end
-    jsr bFTriggerPush
-    bcc bFTriggerWalk
+    jsr b1TriggerPush
+    bcc b1TriggerWalk
     bra @end
 @done:
     rts
@@ -289,35 +255,35 @@ bFTriggerWalk:
 ; Steps over action A and its arguments, noting what matters: get.posn on
 ; ego, and anything a position box should guard. Carry set at the end of
 ; the code.
-bFTriggerAction:
+b1TriggerAction:
     cmp #TELEPORT_GET_POSN
     beq @position
     cmp #TELEPORT_DISTANCE
-    beq bFTriggerDistance
+    beq b1TriggerDistance
     pha
-    jsr bFTriggerEffect
+    jsr b1TriggerEffect
     bcc @skip
-    jsr bFTriggerConfirm
+    jsr b1TriggerConfirm
 @skip:
     pla
-    jsr bFActionArgumentCount
-    jmp bFTriggerSkip
+    jsr b1ActionArgumentCount
+    jmp b1TriggerSkip
 @position:                      ; get.posn(object, vx, vy)
-    jsr bFTriggerByte
+    jsr b1TriggerByte
     bcs @done
     tax
-    jsr bFTriggerByte
+    jsr b1TriggerByte
     bcs @done
-    sta bFConditionTemp
-    jsr bFTriggerByte
+    sta b1ConditionTemp
+    jsr b1TriggerByte
     bcs @done
     cpx #0
     bne @other
-    sta bFEgoY
-    lda bFConditionTemp
-    sta bFEgoX
+    sta b1EgoY
+    lda b1ConditionTemp
+    sta b1EgoX
     lda #1
-    sta bFEgoKnown
+    sta b1EgoKnown
 @other:
     clc
 @done:
@@ -325,18 +291,18 @@ bFTriggerAction:
 
 ; distance(a, b, v): remembers v if one of a, b is ego, with where the other
 ; stands. Carry set at the end of the code.
-bFTriggerDistance:
-    jsr bFTriggerByte
+b1TriggerDistance:
+    jsr b1TriggerByte
     bcs @done
-    sta bFConditionArgs
-    jsr bFTriggerByte
+    sta b1ConditionArgs
+    jsr b1TriggerByte
     bcs @done
-    sta bFConditionArgs + 1
-    jsr bFTriggerByte
+    sta b1ConditionArgs + 1
+    jsr b1TriggerByte
     bcs @done
-    sta bFConditionArgs + 2
-    ldx bFConditionArgs + 1     ; b
-    lda bFConditionArgs         ; a
+    sta b1ConditionArgs + 2
+    ldx b1ConditionArgs + 1     ; b
+    lda b1ConditionArgs         ; a
     beq @ego                    ; a is ego: the other is b
     cpx #0
     bne @other                  ; neither is ego
@@ -344,22 +310,22 @@ bFTriggerDistance:
 @ego:
     txa
     beq @other                  ; both are ego
-    ldy bFNearCount             ; the same variable again: its entry
+    ldy b1NearCount             ; the same variable again: its entry
 @find:
     dey
     bmi @new
-    lda bFNearVar,y
-    cmp bFConditionArgs + 2
+    lda b1NearVar,y
+    cmp b1ConditionArgs + 2
     bne @find
     bra @entry
 @new:
-    ldy bFNearCount
+    ldy b1NearCount
     cpy #TELEPORT_NEAR_MAX
     bcs @full
-    inc bFNearCount
+    inc b1NearCount
 @entry:
-    lda bFConditionArgs + 2
-    sta bFNearVar,y
+    lda b1ConditionArgs + 2
+    sta b1NearVar,y
     phy
     lda _teleportPending        ; set while parking: objects not placed yet
     bne @unknown
@@ -370,22 +336,22 @@ bFTriggerDistance:
     tax
 @store:
     ply
-    sta bFNearX,y
+    sta b1NearX,y
     txa
-    sta bFNearY,y
+    sta b1NearY,y
 @other:
     clc
 @done:
     rts
 @full:
-    jsr bFTriggerPartial
+    jsr b1TriggerPartial
     clc
     rts
 
 ; Carry set if action A does something a box should guard: flags (set ..
 ; toggle.v), new.room, inventory (get, get.v, drop), sound, print and
 ; display, program.control.
-bFTriggerEffect:
+b1TriggerEffect:
     cmp #12
     bcc @no
     cmp #20
@@ -410,8 +376,8 @@ bFTriggerEffect:
     rts
 
 ; The enclosing blocks do something: their position boxes stay.
-bFTriggerConfirm:
-    ldx bFFrameDepth
+b1TriggerConfirm:
+    ldx b1FrameDepth
     beq @done
     lda #TELEPORT_CODE_BUFFER + 5
 @frame:
@@ -427,57 +393,57 @@ bFTriggerConfirm:
     rts
 
 ; Remembers logic A to walk later: not logic 0 or the room, each once.
-bFTriggerCall:
+b1TriggerCall:
     tay
     beq @done
     cmp TELEPORT_VAR + 0
     beq @done
-    ldx bFCallCount
+    ldx b1CallCount
 @seen:
     dex
     bmi @new
-    cmp bFCalls,x
+    cmp b1Calls,x
     bne @seen
     rts
 @new:
-    ldx bFCallCount
+    ldx b1CallCount
     cpx #TELEPORT_CALLS_MAX
-    bcs bFTriggerPartial
-    sta bFCalls,x
-    inc bFCallCount
+    bcs b1TriggerPartial
+    sta b1Calls,x
+    inc b1CallCount
 @done:
     rts
 
 ; Something was left unseen.
-bFTriggerPartial:
+b1TriggerPartial:
     sec
-    ror bFPartial
+    ror b1Partial
     rts
 
 ; A goto that ends an if block and jumps forward, but not past the end of
 ; the enclosing block, begins its else block. One that leaves the enclosing
-; block is an early exit, not an else. In: A = offset high byte, bFGotoLow.
-bFTriggerElse:
+; block is an early exit, not an else. In: A = offset high byte, b1GotoLow.
+b1TriggerElse:
     cmp #$80
     bcs @done                   ; backward: a loop, not an else
-    ldx bFFrameDepth
+    ldx b1FrameDepth
     beq @done
     pha
-    jsr bFTriggerFrame          ; Y = top frame
-    lda bFCodePosition
+    jsr b1TriggerFrame          ; Y = top frame
+    lda b1CodePosition
     cmp (ptr3),y
     bne @pull
     iny
-    lda bFCodePosition + 1
+    lda b1CodePosition + 1
     cmp (ptr3),y
     bne @pull
-    lda bFCodePosition          ; else end = here + offset
+    lda b1CodePosition          ; else end = here + offset
     clc
-    adc bFGotoLow
-    sta bFPushEnd
+    adc b1GotoLow
+    sta b1PushEnd
     pla
-    adc bFCodePosition + 1
-    sta bFPushEnd + 1
+    adc b1CodePosition + 1
+    sta b1PushEnd + 1
     cpx #2
     bcc @else
     tya                         ; the enclosing block's end
@@ -485,19 +451,19 @@ bFTriggerElse:
     sbc #TELEPORT_FRAME_SIZE + 1
     tay
     lda (ptr3),y
-    cmp bFPushEnd
+    cmp b1PushEnd
     iny
     lda (ptr3),y
-    sbc bFPushEnd + 1
+    sbc b1PushEnd + 1
     bcc @done                   ; it ends first: an early exit
 @else:
-    jsr bFTriggerFrame
+    jsr b1TriggerFrame
     iny
     iny
-    lda bFPushEnd
+    lda b1PushEnd
     sta (ptr3),y
     iny
-    lda bFPushEnd + 1
+    lda b1PushEnd + 1
     sta (ptr3),y
     iny
     lda (ptr3),y
@@ -510,22 +476,22 @@ bFTriggerElse:
     rts
 
 ; Y = offset of the top frame in scratch.
-bFTriggerFrame:
-    lda bFFrameDepth
+b1TriggerFrame:
+    lda b1FrameDepth
     dec a
     asl a
-    sta bFFrameTemp
+    sta b1FrameTemp
     asl a
-    adc bFFrameTemp
+    adc b1FrameTemp
     adc #TELEPORT_CODE_BUFFER
     tay
     rts
 
 ; A = FRAME_ACTIVE if code here can run (every enclosing block might).
-bFTriggerActive:
-    lda bFFrameDepth
+b1TriggerActive:
+    lda b1FrameDepth
     beq @top
-    jsr bFTriggerFrame
+    jsr b1TriggerFrame
     iny
     iny
     iny
@@ -538,14 +504,14 @@ bFTriggerActive:
     rts
 
 ; Leaves every block that ends here; an if with an else continues as the else.
-bFTriggerUnwind:
-    lda bFFrameDepth
+b1TriggerUnwind:
+    lda b1FrameDepth
     beq @done
-    jsr bFTriggerFrame
-    lda bFCodePosition
+    jsr b1TriggerFrame
+    lda b1CodePosition
     cmp (ptr3),y
     iny
-    lda bFCodePosition + 1
+    lda b1CodePosition + 1
     sbc (ptr3),y
     bcc @done                   ; still inside
     iny
@@ -592,63 +558,63 @@ bFTriggerUnwind:
     dey
     dey
     sta (ptr3),y
-    bra bFTriggerUnwind
+    bra b1TriggerUnwind
 @pop:
-    dec bFFrameDepth
-    bra bFTriggerUnwind
+    dec b1FrameDepth
+    bra b1TriggerUnwind
 @done:
     rts
 
-; Pushes the if block whose condition is in bFCondition. Carry set if too deep.
-bFTriggerPush:
-    jsr bFTriggerByte           ; block size
+; Pushes the if block whose condition is in b1Condition. Carry set if too deep.
+b1TriggerPush:
+    jsr b1TriggerByte           ; block size
     bcs @done
-    sta bFGotoLow
-    jsr bFTriggerByte
+    sta b1GotoLow
+    jsr b1TriggerByte
     bcs @done
     pha
-    jsr bFTriggerActive
+    jsr b1TriggerActive
     asl a
     asl a
     asl a                       ; FRAME_ENCLOSING
-    sta bFConditionTemp
+    sta b1ConditionTemp
     lsr a
     lsr a
     lsr a
-    and bFCondition             ; active: enclosing and might be true
+    and b1Condition             ; active: enclosing and might be true
     bne @active
-    lda bFZoneStart             ; its boxes cannot fire
-    sta bFZoneCount
+    lda b1ZoneStart             ; its boxes cannot fire
+    sta b1ZoneCount
     lda #TELEPORT_NO_BOX
-    sta bFBoxIndex
+    sta b1BoxIndex
     lda #0
 @active:
-    ora bFConditionTemp
-    sta bFConditionTemp
-    lda bFCondition
+    ora b1ConditionTemp
+    sta b1ConditionTemp
+    lda b1Condition
     and #CAN_FALSE
-    ora bFConditionTemp
-    sta bFConditionTemp
-    lda bFFrameDepth
+    ora b1ConditionTemp
+    sta b1ConditionTemp
+    lda b1FrameDepth
     cmp #TELEPORT_FRAMES
     bcs @deep
-    inc bFFrameDepth
-    jsr bFTriggerFrame
-    lda bFCodePosition          ; end = here + size
+    inc b1FrameDepth
+    jsr b1TriggerFrame
+    lda b1CodePosition          ; end = here + size
     clc
-    adc bFGotoLow
+    adc b1GotoLow
     sta (ptr3),y
     iny
     pla
-    adc bFCodePosition + 1
+    adc b1CodePosition + 1
     sta (ptr3),y
     iny
     iny
     iny
-    lda bFConditionTemp
+    lda b1ConditionTemp
     sta (ptr3),y
     iny
-    lda bFBoxIndex
+    lda b1BoxIndex
     sta (ptr3),y
     clc
 @done:
@@ -658,133 +624,133 @@ bFTriggerPush:
     sec
     rts
 
-; Reads a condition up to its closing $FF into bFCondition (CAN_* bits),
+; Reads a condition up to its closing $FF into b1Condition (CAN_* bits),
 ; adding its boxes on ego. Carry set at the end of the code or on an
 ; unknown test.
-bFTriggerCondition:
-    lda bFZoneCount
-    sta bFZoneStart
+b1TriggerCondition:
+    lda b1ZoneCount
+    sta b1ZoneStart
     lda #CAN_TRUE
-    sta bFCondition
-    stz bFConditionInOr
-    stz bFConditionNot
-    stz bFBox                   ; the whole screen, until narrowed
-    stz bFBox + 1
+    sta b1Condition
+    stz b1ConditionInOr
+    stz b1ConditionNot
+    stz b1Box                   ; the whole screen, until narrowed
+    stz b1Box + 1
     lda #TELEPORT_WIDTH - 1
-    sta bFBox + 2
+    sta b1Box + 2
     lda #TELEPORT_HEIGHT - 1
-    sta bFBox + 3
-    stz bFBoxState
+    sta b1Box + 3
+    stz b1BoxState
     bra @test
 @closed:                        ; a narrowed position box is added, pending
     ldx #TELEPORT_NO_BOX
-    lda bFBoxState
+    lda b1BoxState
     cmp #1
     bne @store
-    ldx bFZoneCount
+    ldx b1ZoneCount
     phx
-    ldx #bFBox - bFConditionArgs
-    jsr bFTriggerAddBox
+    ldx #b1Box - b1ConditionArgs
+    jsr b1TriggerAddBox
     plx
     bcc @store
     ldx #TELEPORT_NO_BOX
 @store:
-    stx bFBoxIndex
+    stx b1BoxIndex
     clc
     rts
 @failed:
     sec
     rts
 @test:
-    jsr bFTriggerByte
+    jsr b1TriggerByte
     bcs @failed
     cmp #$FF
     beq @closed
     cmp #$FC                    ; or( ... )
     bne @notOr
-    lda bFConditionInOr
+    lda b1ConditionInOr
     eor #1
-    sta bFConditionInOr
+    sta b1ConditionInOr
     beq @closeOr
     lda #CAN_FALSE
-    sta bFConditionOr
+    sta b1ConditionOr
     bra @test
 @closeOr:
-    lda bFConditionOr
-    jsr bFTriggerAnd
+    lda b1ConditionOr
+    jsr b1TriggerAnd
     bra @test
 @notOr:
     cmp #$FD                    ; not
     bne @notNot
-    sta bFConditionNot
+    sta b1ConditionNot
     bra @test
 @notNot:
     cmp #$0E                    ; said(count, words...)
     bne @fixed
-    jsr bFTriggerByte
+    jsr b1TriggerByte
     bcs @failed
     asl a
-    jsr bFTriggerSkip
+    jsr b1TriggerSkip
     bcs @failed
     lda #CAN_FALSE
     bra @value
 @fixed:
     cmp #TELEPORT_TESTS
     bcs @failed
-    sta bFConditionTest
-    jsr bFTestArgumentCount
-    sta bFArgumentCount
+    sta b1ConditionTest
+    jsr b1TestArgumentCount
+    sta b1ArgumentCount
     beq @evaluate
     ldx #0
 @argument:
-    jsr bFTriggerByte           ; preserves X
+    jsr b1TriggerByte           ; preserves X
     bcs @failed
-    sta bFConditionArgs,x
+    sta b1ConditionArgs,x
     inx
-    cpx bFArgumentCount
+    cpx b1ArgumentCount
     bcc @argument
 @evaluate:
-    jsr bFTriggerEvaluate
+    jsr b1TriggerEvaluate
 @value:
-    ldx bFConditionNot
+    ldx b1ConditionNot
     beq @combine
-    stz bFConditionNot
+    stz b1ConditionNot
     cmp #CAN_TRUE | CAN_FALSE
     beq @combine
     eor #CAN_TRUE | CAN_FALSE
 @combine:
-    ldx bFConditionInOr
+    ldx b1ConditionInOr
     bne @or
-    jsr bFTriggerAnd
+    jsr b1TriggerAnd
     bra @test
 @or:
     tax                         ; or: might be true if either might,
-    ora bFConditionOr           ; false only if both might be
+    ora b1ConditionOr           ; false only if both might be
     and #CAN_TRUE
-    sta bFConditionTemp
+    sta b1ConditionTemp
     txa
-    and bFConditionOr
+    and b1ConditionOr
     and #CAN_FALSE
-    ora bFConditionTemp
-    sta bFConditionOr
+    ora b1ConditionTemp
+    sta b1ConditionOr
     jmp @test
 
-; bFCondition = bFCondition and A.
-bFTriggerAnd:
+; b1Condition = b1Condition and A.
+b1TriggerAnd:
     tax
-    and bFCondition
+    and b1Condition
     and #CAN_TRUE
-    sta bFConditionTemp
+    sta b1ConditionTemp
     txa
-    ora bFCondition
+    ora b1Condition
     and #CAN_FALSE
-    ora bFConditionTemp
-    sta bFCondition
+    ora b1ConditionTemp
+    sta b1Condition
     rts
 
-; A = CAN_* outcomes of test bFConditionTest with bFConditionArgs.
-bFTriggerEvaluate:
-    lda bFConditionTest
+; A = CAN_* outcomes of test b1ConditionTest with b1ConditionArgs.
+b1TriggerEvaluate:
+    lda b1ConditionTest
     cmp #7
     bcc @compare                ; 1-6: equal/less/greater, n or v
     beq @isset
@@ -802,21 +768,21 @@ bFTriggerEvaluate:
     lda #CAN_TRUE | CAN_FALSE
     rts
 @position:
-    lda bFConditionArgs         ; on ego: a box to avoid. Its own test is
+    lda b1ConditionArgs         ; on ego: a box to avoid. Its own test is
     bne @maybe                  ; taken as true; under not it is unknown.
-    lda bFConditionNot
+    lda b1ConditionNot
     bne @maybe
     ldx #1
-    jsr bFTriggerAddBox
+    jsr b1TriggerAddBox
 @true:
     lda #CAN_TRUE
     rts
 @isset:
-    ldx bFConditionArgs
+    ldx b1ConditionArgs
     lda TELEPORT_FLAG,x
     bra @bool
 @issetv:
-    ldx bFConditionArgs
+    ldx b1ConditionArgs
     lda TELEPORT_VAR,x
     tax
     lda TELEPORT_FLAG,x
@@ -826,43 +792,43 @@ bFTriggerEvaluate:
     lda #CAN_FALSE
     rts
 @compare:
-    ldx bFEgoKnown              ; a variable holding ego's position?
+    ldx b1EgoKnown              ; a variable holding ego's position?
     beq @near
-    ldx bFConditionArgs
-    cpx bFEgoX
+    ldx b1ConditionArgs
+    cpx b1EgoX
     beq @onX
-    cpx bFEgoY
+    cpx b1EgoY
     bne @near
     ldx #1
     .byte $2C                   ; bit abs: skip the ldx
 @onX:
     ldx #0
-    jsr bFTriggerAxis
+    jsr b1TriggerAxis
     bra @maybe
 @near:
-    ldx bFNearCount             ; ... or ego's distance to an object?
+    ldx b1NearCount             ; ... or ego's distance to an object?
 @nearest:
     dex
     bmi @exact
-    lda bFNearVar,x
-    cmp bFConditionArgs
+    lda b1NearVar,x
+    cmp b1ConditionArgs
     bne @nearest
-    jsr bFTriggerNear
+    jsr b1TriggerNear
     bra @maybe
 @exact:
-    lda bFConditionTest
+    lda b1ConditionTest
     lsr a                       ; odd: number form
-    lda bFConditionArgs + 1
+    lda b1ConditionArgs + 1
     bcs @right
     tax
     lda TELEPORT_VAR,x
 @right:
-    sta bFConditionTemp
-    ldx bFConditionArgs
+    sta b1ConditionTemp
+    ldx b1ConditionArgs
     lda TELEPORT_VAR,x
-    cmp bFConditionTemp
+    cmp b1ConditionTemp
     php
-    lda bFConditionTest
+    lda b1ConditionTest
     cmp #3
     bcc @equal
     cmp #5
@@ -880,13 +846,13 @@ bFTriggerEvaluate:
     bcc @true
     bra @false
 
-; Adds the box at bFConditionArgs + X (x1 y1 x2 y2). Carry set if the list
+; Adds the box at b1ConditionArgs + X (x1 y1 x2 y2). Carry set if the list
 ; is full: then the walk is partial.
-bFTriggerAddBox:
-    lda bFZoneCount
+b1TriggerAddBox:
+    lda b1ZoneCount
     cmp #TELEPORT_ZONES_MAX
     bcc @room
-    jsr bFTriggerPartial
+    jsr b1TriggerPartial
     sec
     rts
 @room:
@@ -895,7 +861,7 @@ bFTriggerAddBox:
     tay
     iny                         ; zones + 1 + 4 * count
 @corner:
-    lda bFConditionArgs,x
+    lda b1ConditionArgs,x
     sta (ptr1),y
     inx
     iny
@@ -903,133 +869,133 @@ bFTriggerAddBox:
     and #3
     cmp #1
     bne @corner                 ; four corners: up to the next 4k + 1
-    inc bFZoneCount
+    inc b1ZoneCount
     clc
     rts
 
 ; Narrows the condition's ego-position box on axis X (0: X, 1: Y) by test
-; bFConditionTest against number bFConditionArgs + 1. Inside or(), against a
+; b1ConditionTest against number b1ConditionArgs + 1. Inside or(), against a
 ; variable, or a negated equality, the box cannot express it.
-bFTriggerAxis:
-    jsr bFTriggerBound          ; Y = n, A = 0 equal, 1 less, 2 greater
-    bcs bFTriggerUnusable
+b1TriggerAxis:
+    jsr b1TriggerBound          ; Y = n, A = 0 equal, 1 less, 2 greater
+    bcs b1TriggerUnusable
     cmp #1
     beq @less
     bcs @greater
-    lda bFConditionNot          ; equaln: low = high = n
-    bne bFTriggerUnusable
+    lda b1ConditionNot          ; equaln: low = high = n
+    bne b1TriggerUnusable
     tya
-    jsr bFTriggerRaise
+    jsr b1TriggerRaise
     tya
     bra @lower
 @less:
-    lda bFConditionNot          ; not lessn: x >= n
+    lda b1ConditionNot          ; not lessn: x >= n
     beq @below
     tya
     bra @raise
 @below:
     tya                         ; lessn: x <= n - 1
-    beq bFTriggerUnusable
+    beq b1TriggerUnusable
     dec a
     bra @lower
 @greater:
-    lda bFConditionNot          ; not greatern: x <= n
+    lda b1ConditionNot          ; not greatern: x <= n
     beq @above
     tya
     bra @lower
 @above:
     tya                         ; greatern: x >= n + 1
     inc a
-    beq bFTriggerUnusable
+    beq b1TriggerUnusable
 @raise:
-    jsr bFTriggerRaise
-    bra bFTriggerNarrowed
+    jsr b1TriggerRaise
+    bra b1TriggerNarrowed
 @lower:
-    jsr bFTriggerLower
+    jsr b1TriggerLower
     ; Fall through.
-bFTriggerNarrowed:
+b1TriggerNarrowed:
     lda #1
     .byte $2C                   ; bit abs: skip the lda
-bFTriggerUnusable:
+b1TriggerUnusable:
     lda #$80
-    tsb bFBoxState
+    tsb b1BoxState
     rts
 
 ; Narrows the condition's box to near object entry X: ego within r of it,
 ; for lessn n (r = n - 1), equaln n and not greatern n (r = n). Being far
 ; from it, or not knowing where it is, cannot be a box.
-bFTriggerNear:
-    lda bFNearX,x
+b1TriggerNear:
+    lda b1NearX,x
     cmp #$FF
-    beq bFTriggerUnusable
-    jsr bFTriggerBound
-    bcs bFTriggerUnusable
+    beq b1TriggerUnusable
+    jsr b1TriggerBound
+    bcs b1TriggerUnusable
     cmp #1
     beq @less
     bcs @greater
-    lda bFConditionNot          ; equaln: r = n
-    bne bFTriggerUnusable
+    lda b1ConditionNot          ; equaln: r = n
+    bne b1TriggerUnusable
     bra @radius
 @less:
-    lda bFConditionNot
-    bne bFTriggerUnusable
+    lda b1ConditionNot
+    bne b1TriggerUnusable
     dey                         ; lessn: r = n - 1
     cpy #$FF
-    beq bFTriggerUnusable
+    beq b1TriggerUnusable
     bra @radius
 @greater:
-    lda bFConditionNot          ; not greatern: r = n
-    beq bFTriggerUnusable
+    lda b1ConditionNot          ; not greatern: r = n
+    beq b1TriggerUnusable
 @radius:
-    sty bFNearRadius
+    sty b1NearRadius
     phx
-    lda bFNearX,x
+    lda b1NearX,x
     ldx #0
     jsr @span
     plx
-    lda bFNearY,x
+    lda b1NearY,x
     ldx #1
     jsr @span
-    bra bFTriggerNarrowed
+    bra b1TriggerNarrowed
 @span:                          ; axis X: centre A +- radius, on screen
     pha
     sec
-    sbc bFNearRadius
+    sbc b1NearRadius
     bcs @low
     lda #0
 @low:
-    jsr bFTriggerRaise
+    jsr b1TriggerRaise
     pla
     clc
-    adc bFNearRadius
-    bcc bFTriggerLower
+    adc b1NearRadius
+    bcc b1TriggerLower
     lda #$FF
     ; Fall through.
 ; high = min(high, A) on axis X.
-bFTriggerLower:
-    cmp bFBox + 2,x
+b1TriggerLower:
+    cmp b1Box + 2,x
     bcs @done
-    sta bFBox + 2,x
+    sta b1Box + 2,x
 @done:
     rts
 
 ; low = max(low, A) on axis X.
-bFTriggerRaise:
-    cmp bFBox,x
+b1TriggerRaise:
+    cmp b1Box,x
     bcc @done
-    sta bFBox,x
+    sta b1Box,x
 @done:
     rts
 
 ; A number test on a tracked variable: Y = n, A = 0 equaln, 1 lessn,
 ; 2 greatern. Carry set if the box cannot use it: inside or(), or the
 ; variable form.
-bFTriggerBound:
-    lda bFConditionInOr
+b1TriggerBound:
+    lda b1ConditionInOr
     cmp #1                      ; inside or(): carry set
     bcs @done
-    ldy bFConditionArgs + 1
-    lda bFConditionTest
+    ldy b1ConditionArgs + 1
+    lda b1ConditionTest
     lsr a                       ; carry: number form
     bcc @variable
     clc
@@ -1041,7 +1007,7 @@ bFTriggerBound:
 
 ; Argument bytes per command, two per byte (even command in the high nibble).
 ; Action commands 0-181 (AGI 2), from AGI Studio's command table.
-bFActionArguments:
+b1ActionArguments:
     .byte $01, $12, $22, $22, $22, $22, $11, $11, $11, $11, $11, $11, $11, $01, $10, $11
     .byte $11, $01, $13, $33, $32, $22, $21, $12, $22, $22, $22, $22, $12, $11, $11, $11
     .byte $11, $11, $13, $11, $12, $12, $21, $12, $25, $53, $11, $22, $11, $40, $11, $12
@@ -1049,6 +1015,6 @@ bFActionArguments:
     .byte $01, $30, $01, $10, $00, $00, $00, $11, $10, $03, $30, $34, $41, $52, $12, $01
     .byte $10, $10, $02, $22, $20, $10, $00, $11, $01, $04, $20
 ; Test commands 0-18; said (14) is variable and handled apart.
-bFTestArguments:
+b1TestArguments:
     .byte $02, $22, $22, $21, $11, $25, $10, $02, $55, $50
 .endif

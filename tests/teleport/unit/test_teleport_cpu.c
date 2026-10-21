@@ -344,7 +344,7 @@ static void lands(const byte* code, unsigned length, byte x, byte y, const char*
     placed(x, y);
 }
 
-byte __fastcall__ bFTeleportTriggers(byte* zones);
+byte __fastcall__ b1TeleportTriggers(byte* zones);
 
 /* The boxes the trigger reader reports for room 2 running `code`, and
    whether it said the walk could not see everything. */
@@ -355,7 +355,7 @@ static byte armedBoxes(const byte* code, unsigned length)
     var[0] = 2;
     logdir[2].filePos = logic(code, length);
     memset(zones, 0xEE, sizeof zones);
-    partial = bFTeleportTriggers(zones);
+    partial = b1TeleportTriggers(zones);
     assert(!testFileOpen());
     return zones[0];
 }
@@ -425,7 +425,7 @@ static void test_quiet_landing(void)
         reset(); flag[1] = flag[2] = TRUE;
         var[0] = 2; logdir[2].filePos = logic(exits, sizeof exits);
         memset(zones, 0xEE, sizeof zones);
-        bFTeleportTriggers(zones);
+        b1TeleportTriggers(zones);
         assert(zones[0] == 1);
     }
     /* get.posn(ego, v40, v41): number tests on v40/v41 are "might be" and
@@ -464,12 +464,12 @@ static void test_quiet_landing(void)
         viewtab[3].flags = DRAWN; viewtab[3].xPos = 100; viewtab[3].yPos = 120;
         var[0] = 2; memset(zones, 0xEE, sizeof zones);
         logdir[2].filePos = logic(nearby, sizeof nearby);
-        bFTeleportTriggers(zones);
+        b1TeleportTriggers(zones);
         assert(zones[0] == 1 && zones[1] == 91 && zones[2] == 111 && zones[3] == 109 && zones[4] == 129);
-        teleportPending = 2; bFTeleportTriggers(zones); /* parking: objects not placed */
+        teleportPending = 2; b1TeleportTriggers(zones); /* parking: objects not placed */
         assert(!zones[0]); teleportPending = 0;
         logdir[2].filePos = logic(away, sizeof away);
-        bFTeleportTriggers(zones); assert(!zones[0]);
+        b1TeleportTriggers(zones); assert(!zones[0]);
     }
     puts("PASS: quiet landings: trigger lines, water and armed script boxes (also in called logics) are avoided");
 

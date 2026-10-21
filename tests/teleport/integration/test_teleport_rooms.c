@@ -18,7 +18,7 @@ void refTriggersBegin(byte* boxes, byte room);
 void refTriggerLogic(FILE* file, unsigned length);
 byte refTriggersEnd(void);
 extern byte refCalls[4], refCallCount, refTriggersPartial;
-byte __fastcall__ bFTeleportTriggers(byte* zones);
+byte __fastcall__ b1TeleportTriggers(byte* zones);
 byte __fastcall__ testPriority(unsigned int xy) { (void)xy; assert(!"no placement here"); return 0; }
 byte* testRowBuffer;
 void __fastcall__ testReadRow(byte y) { (void)y; assert(!"no placement here"); }
@@ -213,7 +213,7 @@ static void triggers(const char* path)
         for (i = 1; i < 16; ++i) { /* drawn objects, so distance() boxes are compared too */
             viewtab[i].flags = DRAWN; viewtab[i].xPos = 9 * i; viewtab[i].yPos = 50 + 7 * i;
         }
-        partial = bFTeleportTriggers(machine);
+        partial = b1TeleportTriggers(machine);
         assert(!testFileOpen());
         refTriggersBegin(model, (byte)room);
         file = openLogic(path, (byte)room, &length);

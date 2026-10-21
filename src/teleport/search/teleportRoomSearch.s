@@ -361,6 +361,72 @@ bFSearchRead:
     lda tmp1
     rts
 
+; For the trigger reader (bank 1). In: A = logic, ptr3 = its buffer, used
+; for reads from now on. Opens the logic's VOL file at its code. Out: carry
+; set if it has none, or is not a logic (the file is then closed).
+bFTeleportOpenCode:
+    ldx ptr3
+    stx bFTeleportScratch
+    ldx ptr3 + 1
+    stx bFTeleportScratch + 1
+    ldx #0
+    jsr bFTeleportDirectory
+    bcs @done
+    ldy #3
+@position:
+    lda (ptr3),y
+    sta bFSearchOffset - 1,y
+    dey
+    bne @position
+    lda (ptr3)
+    jsr bFSearchOpen
+    lda #7                      ; 12 34 volume size(2) code-size(2)
+    jsr bFSearchReadAt
+    bne @close
+    lda (ptr3)
+    cmp #$12
+    bne @close
+    ldy #5
+    lda (ptr3),y
+    sta bFSearchLeft
+    iny
+    lda (ptr3),y
+    sta bFSearchLeft + 1
+    clc
+    rts
+@close:
+    lda #TELEPORT_LFN
+    jsr TELEPORT_CLOSE
+    sec
+@done:
+    rts
+
+; For the trigger reader: the next A (1-128) code bytes, fewer at the end,
+; to its buffer. Out: A = bytes read, 0 at the end or on a short read.
+bFTeleportReadCode:
+    ldx bFSearchLeft + 1
+    bne @read
+    cmp bFSearchLeft
+    bcc @read
+    lda bFSearchLeft
+    beq @done
+@read:
+    jsr bFSearchRead
+    bne @short
+    lda bFSearchLeft
+    sec
+    sbc bFSearchCount
+    sta bFSearchLeft
+    bcs @counted
+    dec bFSearchLeft + 1
+@counted:
+    lda bFSearchCount
+    rts
+@short:
+    lda #0
+@done:
+    rts
+
 ; Seeks the open VOL file to the offset.
 bFSearchSeek:
     lda #TELEPORT_CHANNEL

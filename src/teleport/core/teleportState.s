@@ -17,12 +17,14 @@ TELEPORT_ROOM_BANK = $06        ; interpreter cycle, room entry, file seek
 TELEPORT_TEXT_BANK = $03        ; message boxes
 TELEPORT_KEYS_BANK = $05        ; key waits
 TELEPORT_DIRECTORY_BANK = $10   ; logdir, picdir
+TELEPORT_TRIGGER_BANK = $01     ; the trigger reader
 
 TELEPORT_AUTO = 255             ; teleportX: choose the landing automatically
 TELEPORT_AUTO_X = 76            ; automatic search origin, X
 TELEPORT_WIDTH = 160
 TELEPORT_HEIGHT = 168
 TELEPORT_ZONE_BYTES = 1 + 4 * 63 ; trigger boxes: count and up to 63 (Y-indexed)
+TELEPORT_CODE_BUFFER = 64       ; logic code read at a time
 
 ; Notices (b7TeleportNotice)
 TELEPORT_BLOCKED = 1
