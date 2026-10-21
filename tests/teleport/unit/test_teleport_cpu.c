@@ -5,6 +5,7 @@
 #include <stddef.h>
 #include <stdio.h>
 #include <string.h>
+#include <sim65.h>
 
 byte terrain[168][160];
 
@@ -14,6 +15,16 @@ byte __fastcall__ testPriority(unsigned int xy)
     assert(x < 160 && y < 168);
     ++pixelReads;
     return terrain[y][x];
+}
+
+/* A whole priority row, one byte per X. */
+byte* testRowBuffer;
+unsigned rowReads;
+void __fastcall__ testReadRow(byte y)
+{
+    assert(y < 168);
+    ++rowReads;
+    memcpy(testRowBuffer, terrain[y], 160);
 }
 
 /* A synthetic game: VOL.0 holds hand-assembled room logics for the
@@ -122,6 +133,7 @@ static void test_layout(void)
     assert((unsigned)teleportVtYSize == offsetof(ViewTable, ysize));
     assert((unsigned)teleportVtDirection == offsetof(ViewTable, direction));
     assert((unsigned)teleportVtMotion == offsetof(ViewTable, motion));
+    assert((unsigned)teleportVtPriority == offsetof(ViewTable, priority));
     assert((unsigned)teleportVtFlags == offsetof(ViewTable, flags));
     assert((unsigned)teleportVtStale == offsetof(ViewTable, staleCounter));
     assert((unsigned)teleportVtPrevX == offsetof(ViewTable, previousX));
@@ -435,6 +447,46 @@ static void test_quiet_landing(void)
     puts("PASS: parking: before entry ego waits outside the new room's armed boxes, unaffected by its water");
 }
 
+/* What a new-room landing costs - cycles, single-pixel and row reads - for
+   an open room, a far-off safe island, a room with no quiet spot (all
+   water) and one with no walkable spot. The landings are fixed; the cycle
+   ceilings catch a return to probing every point (100 to 240 million). */
+static unsigned long cyclesNow(void)
+{
+    peripherals.counter.select = COUNTER_SELECT_CLOCKCYCLE_COUNTER;
+    peripherals.counter.latch = 0;
+    return peripherals.counter.value32[0];
+}
+static void landingCost(const char* name, byte x, byte y, unsigned long ceiling)
+{
+    unsigned long start, cycles;
+    pixelReads = rowReads = 0;
+    assert(command("tp 2"));
+    teleportX = x; teleportY = y;
+    b6BeginTeleport();
+    start = cyclesNow();
+    b6FinishTeleport();
+    cycles = cyclesNow() - start;
+    printf("COST %-8s %8lu cycles %5u reads %3u rows -> (%u,%u)\n", name, cycles,
+           pixelReads, rowReads, viewtab[0].xPos, viewtab[0].yPos);
+    assert(var[0] == 2 && cycles < ceiling);
+}
+static void test_landing_cost(void)
+{
+    byte y;
+    reset(); landingCost("open", 20, 60, 50000); placed(20, 60);
+    reset(); memset(terrain, 0, sizeof terrain);
+    for (y = 150; y < 168; ++y) memset(terrain[y] + 130, 4, 30);
+    landingCost("island", 20, 60, 3000000); placed(130, 150);
+    reset(); memset(terrain, 3, sizeof terrain);
+    landingCost("noquiet", 20, 60, 3000000); placed(20, 60);
+    assert(strstr(lastMessage, "No quiet spot"));
+    reset(); memset(terrain, 0, sizeof terrain);
+    landingCost("blocked", 20, 60, 5000000);
+    at(20, 60); assert(strstr(lastMessage, "rejected"));
+    puts("PASS: landing cost: row-by-row search, same landings, within cycle ceilings");
+}
+
 int main(int argc, char** argv)
 {
     char path[128];
@@ -454,6 +506,7 @@ int main(int argc, char** argv)
     test_grammar();
     test_tour();
     test_quiet_landing();
+    test_landing_cost();
     fclose(volume);
     return 0;
 }

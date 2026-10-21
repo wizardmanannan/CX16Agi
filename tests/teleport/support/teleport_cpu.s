@@ -14,7 +14,7 @@
 .export _teleportVtDirection: abs = TELEPORT_VT_DIRECTION, _teleportVtMotion: abs = TELEPORT_VT_MOTION
 .export _teleportVtFlags: abs = TELEPORT_VT_FLAGS, _teleportVtStale: abs = TELEPORT_VT_STALE
 .export _teleportVtPrevX: abs = TELEPORT_VT_PREVX, _teleportVtPrevY: abs = TELEPORT_VT_PREVY
-.export _teleportVtSize: abs = TELEPORT_VT_SIZE
+.export _teleportVtSize: abs = TELEPORT_VT_SIZE, _teleportVtPriority: abs = TELEPORT_VT_PRIORITY
 .export _b9CanBeHere
 
 ANIMATED = $40
@@ -39,6 +39,7 @@ TELEPORT_RDTIM = testJiffies
 TELEPORT_CHKIN = testChkin
 TELEPORT_CLRCHN = testClrchn
 TELEPORT_MACPTR = testMacptr
+TELEPORT_ROW_READER = testReadRow
 TELEPORT_BASIN = testBasin
 TELEPORT_READST = testReadst
 TELEPORT_CLOSE = testClose
@@ -119,6 +120,16 @@ testJiffies:
 .endmacro
 testChkin:
 testClrchn:
+    rts
+; Priority row Y to (ptr2), as VERA would give it.
+.import _testRowBuffer, _testReadRow
+testReadRow:
+    lda ptr2
+    sta _testRowBuffer
+    lda ptr2 + 1
+    sta _testRowBuffer + 1
+    tya
+    KERNAL_STUB _testReadRow
     rts
 testMacptr:                     ; A bytes to X/Y; X = bytes read, C set if unsupported
     sta testCount

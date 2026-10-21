@@ -105,5 +105,6 @@ extern byte bFTeleportDelay, bFTeleportTourForm, bFTeleportHits[12];
 extern char teleportVtXPos[], teleportVtYPos[], teleportVtXSize[], teleportVtYSize[];
 extern char teleportVtDirection[], teleportVtMotion[], teleportVtFlags[];
 extern char teleportVtStale[], teleportVtPrevX[], teleportVtPrevY[], teleportVtSize[];
+extern char teleportVtPriority[];
 boolean b9CanBeHere(ViewTable* localViewtab, byte entryNum); /* collision.inc */
 #endif

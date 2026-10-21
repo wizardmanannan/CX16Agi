@@ -20,6 +20,8 @@ byte refTriggersEnd(void);
 extern byte refCalls[4], refCallCount;
 void __fastcall__ bFTeleportTriggers(byte* zones);
 byte __fastcall__ testPriority(unsigned int xy) { (void)xy; assert(!"no placement here"); return 0; }
+byte* testRowBuffer;
+void __fastcall__ testReadRow(byte y) { (void)y; assert(!"no placement here"); }
 
 static void search(const char* text)
 {

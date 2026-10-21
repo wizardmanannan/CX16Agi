@@ -63,6 +63,9 @@ b9TeleportWalkable:
 @done:
     rts
 
+; Out: A = 0 if the probe is off screen or not below the horizon; Z reflects A.
+b9TeleportInBounds = b9GoodPositionAsm
+
 ; Out: A = ego's cel width.
 b9TeleportEgoWidth:
     lda _viewtab + TELEPORT_VT_XSIZE
