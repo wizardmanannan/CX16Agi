@@ -45,6 +45,8 @@ trailing `s` (`king`, `kings`, `king's`).
 Matching and ranking follow Meilisearch's defaults:
 
 - the last word of a name is also a prefix: `tp cast` finds the castle;
+- two neighbouring words joined may equal a text word: `tp bean stalk`
+  finds "beanstalk" (room 6), counted as one typo;
 - a word of 5 letters or more allows one typo, of 9 or more two; a changed,
   missing or extra letter, or two swapped neighbours, each count one, and a
   wrong first letter counts two: `tp castel`, `tp dragn`, `tp kitchn` (KQ3)
@@ -169,9 +171,11 @@ nearest walkable one.
 That search (`teleportLanding.s`) probes the target first, then visits rows
 outward from the target row and stops at the first row farther than the
 best point found. Each row's priority line is read from VERA once and
-reduced, with a running count, to the X positions whose whole baseline could
-pass, minus the room's trigger boxes on that row; only those get the full
-probe, nearest first. The full probe decides, so the result is the one
+reduced, with running counts, to the X positions whose whole baseline could
+pass - quiet (minus the room's trigger boxes on that row) and merely
+walkable - and only those get the full probe, nearest first. The walkable
+fallback rides on the same sweep while no quiet point is known, so a room
+without one is read once, not twice. The full probe decides, so the result is the one
 probing every point would give. In a room with little open ground this is
 about 65 to 130 times faster than probing point by point (2 x 26880 probes
 at worst).
@@ -236,13 +240,13 @@ docs/teleport/             this document
 |---|---|
 | Low RAM (request, X, Y, tour flag) | 4 |
 | Zero page | 0 |
-| Bank 6 (interpreter cycle, room entry) | 215 + 19 in `meka.c` |
+| Bank 6 (interpreter cycle, room entry) | 214 + 19 in `meka.c` |
 | Bank 7 (keyword, hand-off, notices) | 502 + 80 in `parser.c` |
 | Bank 3 (silent arrival) | 8 in `commands.c` |
-| Bank 9 (view table, collision, parking flags) | 230 |
-| Bank 0xA (placement, landing search, parking) | 1213 |
+| Bank 9 (view table, collision, parking flags) | 231 |
+| Bank 0xA (placement, landing search, parking) | 1339 |
 | Bank 1 (trigger reader) | 1721 |
-| Bank 0xF (grammar, name search, file access, tours, replies) | 2965 |
+| Bank 0xF (grammar, name search, file access, tours, replies) | 3100 |
 
 Gameplay cost is one test (`lda`, `ora`, `beq`) per interpreter cycle, and
 one more after the logics while a request is pending. While a command runs
