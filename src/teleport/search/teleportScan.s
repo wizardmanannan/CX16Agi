@@ -12,17 +12,27 @@ TELEPORT_SCAN_INC = 1
 ; word of 5 letters or more allows one typo, of 9 or more two: a letter
 ; changed, missing, extra, or two neighbours swapped each count one, and a
 ; wrong first letter counts two. _bFTeleportTypos keeps each query word's
-; fewest typos ($FF: no match). Text words over 15 characters never match.
+; fewest typos ($FF: no match). For proximity, also Meilisearch's, every
+; text word has a position (a sentence end adds 4) and _bFTeleportPairs
+; keeps, for each query word and the next one in its stop, how close they
+; came: in order, distance - 1; reversed, distance; at most 3 (not close).
+; Text words over 15 characters never match.
 ; Query words are offsets into the command line (teleportGrammar.s).
 .importzp ptr1, ptr2, tmp1, tmp2, tmp3
 .import popax, _avisDurgan
-.export _bFTeleportHits, _bFTeleportTypos
+.export _bFTeleportHits, _bFTeleportTypos, _bFTeleportPairs
+TELEPORT_FAR = 3                ; pair cost: not close
+TELEPORT_SENTENCE = 4           ; positions a sentence end adds
 
 TELEPORT_KEY_LENGTH = 11
 
 .segment "BANKRAM0F"
 _bFTeleportHits: .res TELEPORT_MAX_WORDS ; saturating at 255
 _bFTeleportTypos: .res TELEPORT_MAX_WORDS ; fewest typos of a match, $FF none
+_bFTeleportPairs: .res TELEPORT_MAX_WORDS ; word and the next: 0 adjacent .. 3 far
+bFScanPosition: .res 2          ; the current text word's position
+bFScanLastLow: .res TELEPORT_MAX_WORDS ; each query word's last match
+bFScanLastHigh: .res TELEPORT_MAX_WORDS
 bFEditEnd: .res 1               ; the query word's end in the line
 bFEditPrefix: .res 1            ; nonzero: the word may run on past it
 bFEditLeft: .res 1              ; edits still allowed
@@ -43,11 +53,15 @@ bFTeleportScanReset:
     stz bFScanKey
     stz bFScanLength
     ldx #TELEPORT_MAX_WORDS - 1
-    lda #$FF
+    stz bFScanPosition
+    stz bFScanPosition + 1
 @clear:
     stz _bFTeleportHits,x
     stz bFScanFlags,x
+    lda #$FF
     sta _bFTeleportTypos,x
+    lda #TELEPORT_FAR
+    sta _bFTeleportPairs,x
     dex
     bpl @clear
     ldx _bFTeleportStopCount
@@ -111,7 +125,23 @@ bFTeleportScan:
     inc bFScanLength
     bra @next
 @boundary:
+    pha
     jsr bFScanEndWord
+    pla                         ; a sentence or message ends: far apart
+    beq @sentence
+    cmp #'.'
+    beq @sentence
+    cmp #'!'
+    beq @sentence
+    cmp #'?'
+    bne @next
+@sentence:
+    lda bFScanPosition
+    clc
+    adc #TELEPORT_SENTENCE
+    sta bFScanPosition
+    bcc @next
+    inc bFScanPosition + 1
 @next:
     iny
     cpy tmp1
@@ -145,6 +175,7 @@ bFScanEndWord:
     bcs @count
     sta _bFTeleportTypos,x
 @count:
+    jsr bFScanNear
     lda _bFTeleportHits,x
     inc a
     beq @next
@@ -156,7 +187,66 @@ bFScanEndWord:
     ldy bFScanSaveY
 @clear:
     stz bFScanLength
+    inc bFScanPosition
+    bne @exit
+    inc bFScanPosition + 1
 @exit:
+    rts
+
+; Query word X matches here: how close did its stop neighbours' last
+; matches come? Then this is its last match. Preserves X.
+bFScanNear:
+    lda bFScanFlags,x
+    and #SCAN_FIRST
+    bne @right
+    lda _bFTeleportHits - 1,x   ; in order, after the previous word
+    beq @right
+    dex
+    jsr @distance
+    inx
+    cmp #1
+    bcc @left                   ; the same word matched both: adjacent
+    dec a                       ; distance - 1
+@left:
+    cmp _bFTeleportPairs - 1,x
+    bcs @right
+    sta _bFTeleportPairs - 1,x
+@right:
+    lda bFScanFlags,x
+    lsr a                       ; SCAN_LAST: no next word
+    bcs @here
+    lda _bFTeleportHits + 1,x   ; reversed, after the next word
+    beq @here
+    inx
+    jsr @distance
+    dex
+    cmp #TELEPORT_FAR + 1       ; distance, at most 3
+    bcc @reversed
+    lda #TELEPORT_FAR
+@reversed:
+    cmp _bFTeleportPairs,x
+    bcs @here
+    sta _bFTeleportPairs,x
+@here:
+    lda bFScanPosition
+    sta bFScanLastLow,x
+    lda bFScanPosition + 1
+    sta bFScanLastHigh,x
+    rts
+@distance:                      ; A = min(position - last match of X, 4)
+    lda bFScanPosition
+    sec
+    sbc bFScanLastLow,x
+    tay
+    lda bFScanPosition + 1
+    sbc bFScanLastHigh,x
+    bne @far
+    tya
+    cmp #TELEPORT_FAR + 1
+    bcc @close
+@far:
+    lda #TELEPORT_FAR + 1
+@close:
     rts
 
 ; Does the current word match query word X: equal, one the other plus 's',

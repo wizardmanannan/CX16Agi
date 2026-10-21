@@ -7,12 +7,30 @@
 #include "teleport_sim.h"
 #include <string.h>
 
-byte refHits[12], refTypos[12];
+byte refHits[12], refTypos[12], refPairs[12];
 static const byte* refLine;
 static const byte key[] = "Avis Durgan";
 static byte keyPos, textLength;
 static char text[16];
-static byte last[12]; /* last word of its stop */
+static byte last[12], first[12]; /* last, first word of its stop */
+static unsigned position, seen[12]; /* text word position; each query word's last match */
+
+static byte distance(byte k) { unsigned d = position - seen[k]; return d > 4 ? 4 : (byte)d; }
+
+/* Query word q matches at position: its stop neighbours' closeness. */
+static void closeness(byte q)
+{
+    byte c;
+    if (!first[q] && refHits[q - 1]) { /* in order: distance - 1 */
+        c = distance(q - 1); if (c) --c;
+        if (c < refPairs[q - 1]) refPairs[q - 1] = c;
+    }
+    if (!last[q] && refHits[q + 1]) { /* reversed: distance, at most 3 */
+        c = distance(q + 1); if (c > 3) c = 3;
+        if (c < refPairs[q]) refPairs[q] = c;
+    }
+    seen[q] = position;
+}
 
 /* Edits (at most left) to turn q[0..m) into t[0..n); a prefix may stop early. */
 static int edit(const char* q, int m, const char* t, int n, int left, int prefix)
@@ -45,7 +63,8 @@ static void endWord(void)
     const byte* query;
     boolean match;
 
-    if (textLength && textLength < 16) {
+    if (!textLength) return;
+    if (textLength < 16) {
         for (q = 0; q < bFTeleportWords; ++q) {
             length = bFTeleportWordLength[q];
             query = refLine + bFTeleportWordStart[q];
@@ -59,10 +78,12 @@ static void endWord(void)
             t = match ? 0 : typos(q);
             if (match || t) {
                 if (t < refTypos[q]) refTypos[q] = t;
+                closeness(q);
                 if (refHits[q] < 255) ++refHits[q];
             }
         }
     }
+    ++position;
     textLength = 0;
 }
 
@@ -73,9 +94,15 @@ void refScanReset(const char* line)
     keyPos = textLength = 0;
     memset(refHits, 0, sizeof refHits);
     memset(refTypos, 0xFF, sizeof refTypos);
+    memset(refPairs, 3, sizeof refPairs);
     memset(last, 0, sizeof last);
+    memset(first, 0, sizeof first);
+    position = 0;
     for (s = 0; s < bFTeleportStopCount; ++s)
-        if (bFTeleportStopFirst[s + 1] > bFTeleportStopFirst[s]) last[bFTeleportStopFirst[s + 1] - 1] = 1;
+        if (bFTeleportStopFirst[s + 1] > bFTeleportStopFirst[s]) {
+            last[bFTeleportStopFirst[s + 1] - 1] = 1;
+            first[bFTeleportStopFirst[s]] = 1;
+        }
 }
 
 void refScan(const byte* data, unsigned length)
@@ -88,7 +115,10 @@ void refScan(const byte* data, unsigned length)
         if (c >= 'A' && c <= 'Z') c += 32;
         if ((c >= 'a' && c <= 'z') || (c >= '0' && c <= '9')) {
             if (textLength < 16) text[textLength++] = (char)c;
-        } else endWord();
+        } else {
+            endWord();
+            if (!c || c == '.' || c == '!' || c == '?') position += 4; /* a sentence ends */
+        }
     }
 }
 

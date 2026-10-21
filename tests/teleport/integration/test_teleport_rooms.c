@@ -13,7 +13,7 @@ void testScanEnd(void);
 void refScanReset(const char* line);
 void refScan(const byte* data, unsigned length);
 void refScanEnd(void);
-extern byte refHits[12], refTypos[12];
+extern byte refHits[12], refTypos[12], refPairs[12];
 void refTriggersBegin(byte* boxes, byte room);
 void refTriggerLogic(FILE* file, unsigned length);
 byte refTriggersEnd(void);
@@ -79,7 +79,7 @@ static unsigned seed = 1;
 static void differential(const char* path)
 {
     static byte order[256], chunk[128], header[7];
-    unsigned count = 0, i, j, rooms = 0, words = 0, typed = 0;
+    unsigned count = 0, i, j, rooms = 0, words = 0, typed = 0, close = 0;
     unsigned long bytes = 0;
     unsigned long position = 0, start, left;
     byte n, current = 255, size, q;
@@ -148,14 +148,18 @@ static void differential(const char* path)
             if (bFTeleportTypos[q] != refTypos[q])
                 printf("room %u word %u: 65C02 %u typos, model %u\n", order[i], q, bFTeleportTypos[q], refTypos[q]);
             assert(bFTeleportTypos[q] == refTypos[q]);
+            if (bFTeleportPairs[q] != refPairs[q])
+                printf("room %u word %u: 65C02 pair %u, model %u\n", order[i], q, bFTeleportPairs[q], refPairs[q]);
+            assert(bFTeleportPairs[q] == refPairs[q]);
+            close += refPairs[q] < 3;
             typed += refTypos[q] == 1 || refTypos[q] == 2;
             words += refHits[q];
         }
         ++rooms;
     }
     if (file) fclose(file);
-    printf("PASS: %s: 65C02 scanner equals the C model in %u rooms (%lu bytes, %u matches, %u words matched with typos)\n",
-           path, rooms, bytes, words, typed);
+    printf("PASS: %s: 65C02 scanner equals the C model in %u rooms (%lu bytes, %u matches, %u words matched with typos, %u close pairs)\n",
+           path, rooms, bytes, words, typed, close);
 }
 
 /* Rooms with pictures, by volume and offset, so files are read forward only. */

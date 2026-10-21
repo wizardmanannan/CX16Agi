@@ -100,7 +100,7 @@ extern byte testNoMacptr;       /* nonzero: the device has no block read */
 extern byte bFTeleportStopCount, bFTeleportStopRoom[8], bFTeleportStopX[8];
 extern byte bFTeleportStopY[8], bFTeleportStopFirst[9], bFTeleportWords;
 extern byte bFTeleportWordStart[12], bFTeleportWordLength[12];
-extern byte bFTeleportDelay, bFTeleportTourForm, bFTeleportHits[12], bFTeleportTypos[12];
+extern byte bFTeleportDelay, bFTeleportTourForm, bFTeleportHits[12], bFTeleportTypos[12], bFTeleportPairs[12];
 /* ViewTable offsets the assembly assumes (teleportState.s). */
 extern char teleportVtXPos[], teleportVtYPos[], teleportVtXSize[], teleportVtYSize[];
 extern char teleportVtDirection[], teleportVtMotion[], teleportVtFlags[];
