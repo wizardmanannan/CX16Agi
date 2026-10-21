@@ -33,6 +33,7 @@
     .include "teleport/command/teleportKeyword.s"
     .include "teleport/command/teleportNotice.s"
     .include "teleport/placement/teleportProbe.s"
+    .include "teleport/placement/teleportPath.s"
     .include "teleport/command/teleportGrammar.s"
     .include "teleport/tour/teleportTour.s"
     .endif
