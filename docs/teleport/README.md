@@ -40,8 +40,22 @@ room's script can print. Each room logic with a picture of the same number
 (which skips most helper scripts) has its message text read from the VOL
 file and decrypted as it streams by. Words are letters and digits,
 lowercased, with apostrophes dropped; a word also matches with or without a
-trailing `s` (`king`, `kings`, `king's`). The room with the most *different*
-words of the name wins, then the most matches, then the lower room number.
+trailing `s` (`king`, `kings`, `king's`).
+
+Matching and ranking follow Meilisearch's defaults:
+
+- the last word of a name is also a prefix: `tp cast` finds the castle;
+- a word of 5 letters or more allows one typo, of 9 or more two; a changed,
+  missing or extra letter, or two swapped neighbours, each count one, and a
+  wrong first letter counts two: `tp castel`, `tp dragn`, `tp kitchn` (KQ3)
+  find their rooms;
+- rooms are ranked bucket by bucket: most words of the name found, then
+  fewest typos, then how close the words appear (adjacent and in order is
+  best; a sentence end separates them), then, for game text, the most
+  matches; ties go to the lower room number.
+
+No index is kept: one pass over each room's text yields, per word of the
+name, its matches, its fewest typos and its closeness to the next word.
 
 In KQ1, `kings room` finds King Edward's throne room (53), `moat` the castle
 moat (1), `castle` the castle entrance (2), `dragon` 51 and `goat` 11. Names
@@ -186,7 +200,7 @@ under `src/teleport/` and included from `src/main.s`:
 | `command` | `teleportText.s` | F | How is a reply composed? |
 | `search` | `teleportDirectory.s` | F | Where is a room's logic or picture on disk? |
 | `search` | `teleportRoomSearch.s` | F | Which room best matches each name? |
-| `search` | `teleportTriggers.s` | F | Which of this room's position triggers could fire now? |
+| `search` | `teleportTriggers.s` | 1 | Which of this room's position triggers could fire now? |
 | `search` | `teleportScan.s` | F | How often does each word occur in this text? |
 | `tour` | `teleportTour.s` | F | When does the next stop start? |
 | `placement` | `teleportArrival.s` | 6 | What happens when the requested room is reached? |
@@ -227,7 +241,8 @@ docs/teleport/             this document
 | Bank 3 (silent arrival) | 8 in `commands.c` |
 | Bank 9 (view table, collision, parking flags) | 230 |
 | Bank 0xA (placement, landing search, parking) | 1213 |
-| Bank 0xF (grammar, search, triggers, tours, replies) | 3954 |
+| Bank 1 (trigger reader) | 1721 |
+| Bank 0xF (grammar, name search, file access, tours, replies) | 2965 |
 
 Gameplay cost is one test (`lda`, `ora`, `beq`) per interpreter cycle, and
 one more after the logics while a request is pending. While a command runs
