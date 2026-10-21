@@ -771,6 +771,7 @@ stz VIEW_POS_CAN_BE_HERE          ; StayOnWater but not entirely on water → fa
 
 @setEgoWaterSpecialFlags: ; ego-specific flag setting
 lda VIEW_POS_ENTRY_NUM
+::b9CanBeHereEgoFlags = *         ; teleportPark.s turns this into BRA
 bne @return                       ; skip if not ego
 
 lda VIEW_POS_ENTIRELY_ON_WATER

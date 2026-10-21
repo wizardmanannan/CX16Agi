@@ -37,6 +37,8 @@
 #define KEY_0           0x30
 #define KEY_1           0x31
 #define KEY_9           0x39
+#define KEY_COMMA       0x2C
+#define KEY_COLON       0x3A
 
 #define KEY_CAP_A       0xC1
 #define KEY_LOWER_A     0x41
