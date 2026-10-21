@@ -17,6 +17,25 @@ static unsigned position, seen[12]; /* text word position; each query word's las
 
 static byte distance(byte k) { unsigned d = position - seen[k]; return d > 4 ? 4 : (byte)d; }
 
+/* Two neighbours of a stop joined equal the word: a match for both,
+   adjacent, one typo for the pair. */
+static void joins(void)
+{
+    byte q, a, b;
+    for (q = 1; q < bFTeleportWords; ++q) {
+        if (first[q]) continue;
+        a = bFTeleportWordLength[q - 1]; b = bFTeleportWordLength[q];
+        if (a + b != textLength || memcmp(text, refLine + bFTeleportWordStart[q - 1], a)
+            || memcmp(text + a, refLine + bFTeleportWordStart[q], b)) continue;
+        refPairs[q - 1] = 0;
+        refTypos[q] = 0;
+        if (refTypos[q - 1] > 1) refTypos[q - 1] = 1;
+        seen[q - 1] = seen[q] = position;
+        if (refHits[q - 1] < 255) ++refHits[q - 1];
+        if (refHits[q] < 255) ++refHits[q];
+    }
+}
+
 /* Query word q matches at position: its stop neighbours' closeness. */
 static void closeness(byte q)
 {
@@ -82,6 +101,7 @@ static void endWord(void)
                 if (refHits[q] < 255) ++refHits[q];
             }
         }
+        joins();
     }
     ++position;
     textLength = 0;

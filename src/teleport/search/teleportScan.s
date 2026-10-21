@@ -16,6 +16,9 @@ TELEPORT_SCAN_INC = 1
 ; text word has a position (a sentence end adds 4) and _bFTeleportPairs
 ; keeps, for each query word and the next one in its stop, how close they
 ; came: in order, distance - 1; reversed, distance; at most 3 (not close).
+; Two neighbours of a stop joined may also equal a text word (Meilisearch's
+; 2-grams: "bean stalk" finds "beanstalk"): a match for both, adjacent, and
+; costing one typo.
 ; Text words over 15 characters never match.
 ; Query words are offsets into the command line (teleportGrammar.s).
 .importzp ptr1, ptr2, tmp1, tmp2, tmp3
@@ -184,6 +187,7 @@ bFScanEndWord:
     inx
     bra @query
 @restore:
+    jsr bFScanJoins
     ldy bFScanSaveY
 @clear:
     stz bFScanLength
@@ -191,6 +195,83 @@ bFScanEndWord:
     bne @exit
     inc bFScanPosition + 1
 @exit:
+    rts
+
+; Does the current word join two neighbours of a stop? Each such pair (word
+; X - 1, X) counts a match for both, adjacent, costing one typo.
+bFScanJoins:
+    ldx #0
+@pair:
+    inx
+    cpx _bFTeleportWords
+    bcs @done
+    lda bFScanFlags,x
+    and #SCAN_FIRST
+    bne @pair                   ; X starts a stop
+    lda _bFTeleportWordLength - 1,x
+    clc
+    adc _bFTeleportWordLength,x
+    cmp bFScanLength
+    bne @pair
+    dex
+    lda #0
+    jsr bFScanSegment           ; the first word, then the second after it
+    inx
+    bcc @pair
+    lda _bFTeleportWordLength - 1,x
+    jsr bFScanSegment
+    bcc @pair
+    stz _bFTeleportPairs - 1,x  ; adjacent
+    stz _bFTeleportTypos,x
+    lda _bFTeleportTypos - 1,x  ; one typo for the pair
+    cmp #2
+    bcc @typo
+    lda #1
+    sta _bFTeleportTypos - 1,x
+@typo:
+    dex
+    jsr @hit
+    inx
+    jsr @hit
+    bra @pair
+@done:
+    rts
+@hit:                           ; a match for word X, here
+    lda bFScanPosition
+    sta bFScanLastLow,x
+    lda bFScanPosition + 1
+    sta bFScanLastHigh,x
+    lda _bFTeleportHits,x
+    inc a
+    beq @full
+    sta _bFTeleportHits,x
+@full:
+    rts
+
+; Is query word X the current word's letters from A on? Carry set if so.
+; Preserves X.
+bFScanSegment:
+    stx bFScanQuery
+    tax
+    ldy bFScanQuery
+    lda _bFTeleportWordLength,y
+    sta bFEditRest
+    lda _bFTeleportWordStart,y
+    tay
+@char:
+    lda (ptr2),y
+    cmp bFScanWord,x
+    bne @no
+    iny
+    inx
+    dec bFEditRest
+    bne @char
+    ldx bFScanQuery
+    sec
+    rts
+@no:
+    ldx bFScanQuery
+    clc
     rts
 
 ; Query word X matches here: how close did its stop neighbours' last

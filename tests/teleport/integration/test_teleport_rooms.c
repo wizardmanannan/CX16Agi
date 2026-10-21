@@ -45,6 +45,7 @@ static void test_kq1(const char* path)
     search("tp cast"); assert(teleportPending == 2); /* the last word is a prefix */
     search("tp castel"); assert(teleportPending == 2); /* swapped letters: one typo */
     search("tp dragn"); assert(teleportPending == 51); /* a missing letter */
+    search("tp bean stalk"); assert(teleportPending == 6); /* joined: "beanstalk" */
     search("tp moat 80 120"); assert(teleportPending == 1 && teleportX == 80 && teleportY == 120);
     search("tp king edward"); assert(teleportPending == 53);
     /* Two throne rooms: the leprechaun king's mentions "throne" more. */
@@ -73,7 +74,7 @@ static void test_kq3(const char* path)
 
 /* Each room's message text, streamed in pseudo-random chunk sizes through
    both scanners; every word count must agree. */
-static char line[] = "tp kings room moat castel s king a the dargon goat sir grahm"; /* three typos */
+static char line[] = "tp kings room moat castel bean stalk a the dargon goat sir grahm"; /* typos, a 2-gram */
 static unsigned seed = 1;
 
 static void differential(const char* path)
