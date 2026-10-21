@@ -15,6 +15,18 @@ TELEPORT_PLACE_INC = 1
 .segment "BANKRAM0A"
 bAPlacePartial: .res 1
 
+; Room var[0]'s trigger boxes, in a list put on the C stack (the caller
+; frees TELEPORT_ZONE_BYTES). Out: A nonzero if the walk was partial.
+bAReadTriggers:
+    ldy #TELEPORT_ZONE_BYTES
+    jsr subysp
+    lda c_sp
+    sta bATeleportZones
+    ldx c_sp + 1
+    stx bATeleportZones + 1
+    TRAMPOLINE #TELEPORT_BANK, _bFTeleportTriggers
+    rts
+
 ; byte bATryTeleport(void): TELEPORT_REJECTED, _PLACED, _ADJUSTED, _UNQUIET
 ; or _PARTIAL.
 _bATryTeleport:
@@ -24,12 +36,8 @@ _bATryTeleport:
     tax
     rts
 @take:
-    ldy #TELEPORT_ZONE_BYTES    ; the trigger boxes
-    jsr subysp
-    lda c_sp
-    sta bATeleportZones
-    lda c_sp + 1
-    sta bATeleportZones + 1
+    jsr bAReadTriggers          ; the trigger boxes
+    sta bAPlacePartial
     ldy #TELEPORT_VT_SIZE       ; then ego's copy
     jsr subysp
     lda c_sp
@@ -37,14 +45,6 @@ _bATryTeleport:
     lda c_sp + 1
     sta VIEW_POS_LOCAL_VIEW_TAB + 1
     TRAMPOLINE #TELEPORT_VIEW_BANK, b9TeleportCopyEgo
-    lda bATeleportZones
-    ldx bATeleportZones + 1
-    TRAMPOLINE #TELEPORT_BANK, _bFTeleportTriggers
-    sta bAPlacePartial
-    lda c_sp
-    sta VIEW_POS_LOCAL_VIEW_TAB
-    lda c_sp + 1
-    sta VIEW_POS_LOCAL_VIEW_TAB + 1
 
     lda TELEPORT_FLAG + 5       ; new room
     beq @path

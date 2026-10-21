@@ -30,17 +30,11 @@ _bATeleportPark:
     sta bAParkWidth
     stz TELEPORT_FLAG + 0       ; ego on water: the old room's
     stz TELEPORT_FLAG + 3       ; ego touched a trigger line
-    ldy #TELEPORT_ZONE_BYTES
-    jsr subysp
-    lda c_sp
-    sta bATeleportZones
-    ldx c_sp + 1
-    stx bATeleportZones + 1
-    ldy TELEPORT_VAR + 0        ; read the destination as if there
-    phy
-    ldy _teleportPending
-    sty TELEPORT_VAR + 0
-    TRAMPOLINE #TELEPORT_BANK, _bFTeleportTriggers
+    lda TELEPORT_VAR + 0        ; read the destination as if there
+    pha
+    lda _teleportPending
+    sta TELEPORT_VAR + 0
+    jsr bAReadTriggers
     pla
     sta TELEPORT_VAR + 0
     lda _teleportX              ; first choice: the target
