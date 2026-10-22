@@ -13,11 +13,15 @@ and witnesses. The canonical plan format and witness are exercised by
 
 The KQ1 startup palette witness builds the real test image and compiled caller
 harness on baseline `079d92d91f7dc415ba1770b8adc2f38f64cf8f81` and the
-candidate. It overlays the permanent `--text-cleanup` C case and its target
-callers onto that pre-KQ1 baseline. The baseline must report the exact
-`palette=$10 expected=$40` symptom: the old white palette-1 attribute remains
+candidate. It overlays the permanent `--text-palette-witness` C case and its
+target caller onto that pre-KQ1 baseline. This case renders a 573-byte startup
+credit through the production display path and checks visible glyphs and
+palette attributes at every returned IRQ. The baseline must report
+`attribute=$10 expected-attribute=$40 background-RGB=$0FFF
+expected-background-RGB=$0000`: the old white palette-1 attribute remains
 visible where the managed black-background palette should be. The candidate
-must complete the same case and print its success marker.
+must complete the same case and print its success marker. The separate
+`--text-cleanup` case retains the short-text zero-IRQ-wait check.
 
 The Said `REST_OF_LINE` witness uses baseline
 `e406ba7a3727723a16391f7adc74c2987a4a7c9e` and the compiled `--said` case.
@@ -26,6 +30,13 @@ pass on the candidate with the interpreter at the next bytecode. The permanent
 oracle records the actual HADMATCH value, true/false return counts, and cursor
 when this mismatch occurs. Both production witnesses use the same compiled
 caller builder in `review-enforcement-test.mk`.
+
+Each witness overlays the current test-only build closure onto its historical
+source tree: `test_banked_strings.c`, the `test-image.mk` source list, every
+changed or new case header and compiled caller wrapper, and
+`review-enforcement-test.mk`. These overlay records name files under `tools/`;
+each revision supplies its own production `src/` implementation for the
+baseline symptom or candidate pass.
 
 The production case also retains the 457-byte pre-sharing matcher baseline and
 measured `executeLogic` cycles. The shared purge keeps the zero-input path at
@@ -81,7 +92,7 @@ The permanent review cases have these focused rerun commands. The aggregate
 
 | Area | Permanent C case | Focused command after `make -C tools` |
 | --- | --- | --- |
-| KQ1 startup white-attribute regression | `test_banked_strings_text_cases.h:run_kq1_startup_display_case` | `production-test` |
+| KQ1 startup white-attribute regression | `test_banked_strings_text_cases.h:run_kq1_startup_long_display_case` | `production-test` (`--text-palette-witness` for the baseline witness) |
 | Said REST_OF_LINE regression | `test_said_cases.h:run_said_rest_of_line_regression` | `production-test` |
 | Capture, replay, artifacts, and identity | `test_review_evidence.c` | `-f review-enforcement-test.mk test` |
 | Current GitHub reviews, checks, and protection | `test_review_policy.c` | `-f review-policy.mk review-policy-test` |

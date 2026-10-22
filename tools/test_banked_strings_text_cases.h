@@ -550,8 +550,12 @@ static bool run_kq1_startup_long_display_case(void)
 			startup_credit_vsyncs[sample].wrong_visible_glyphs)
 		{
 			fprintf(stderr,
-				"Long startup credit VSYNC %u: frame=%u pending=%u completion=%u work=%u stage=%u visible-cells=%u wrong-glyphs=%u wrong-palette-cells=%u old-palette-row-cells=%u background-RGB=$%04X expected-background-RGB=$%04X\n",
-				sample, startup_credit_vsyncs[sample].vsync_counter - baseline_vsync,
+				"Long startup credit VSYNC %u: attribute=$%02X expected-attribute=$%02X background-RGB=$%04X expected-background-RGB=$%04X; frame=%u pending=%u completion=%u work=%u stage=%u visible-cells=%u wrong-glyphs=%u wrong-palette-cells=%u old-palette-row-cells=%u\n",
+				sample, startup_credit_vsyncs[sample].first_attribute,
+				startup_credit_vsyncs[sample].expected_attribute,
+				startup_credit_vsyncs[sample].visible_background_rgb,
+				expected_dynamic_background,
+				startup_credit_vsyncs[sample].vsync_counter - baseline_vsync,
 				startup_credit_vsyncs[sample].pending_at_entry,
 				startup_credit_vsyncs[sample].completion_generation,
 				startup_credit_vsyncs[sample].work_kind,
@@ -559,9 +563,7 @@ static bool run_kq1_startup_long_display_case(void)
 				startup_credit_vsyncs[sample].visible_cells,
 				startup_credit_vsyncs[sample].wrong_visible_glyphs,
 				startup_credit_vsyncs[sample].wrong_visible_cell_palettes,
-				startup_credit_vsyncs[sample].old_palette_row_cells,
-				startup_credit_vsyncs[sample].visible_background_rgb,
-				expected_dynamic_background);
+				startup_credit_vsyncs[sample].old_palette_row_cells);
 		}
 		CHECK(startup_credit_vsyncs[sample].wrong_visible_glyphs == 0,
 			"Long startup credit slice wrote a wrong tile before VSYNC return");
@@ -596,6 +598,13 @@ static bool run_kq1_startup_long_display_case(void)
 		KQ1_LONG_CREDIT_SOURCE_BYTES, startup_credit_vsync_count, visible_cells,
 		palette_ok ? "none" : "observed");
 	return palette_ok;
+}
+
+static void run_kq1_startup_palette_witness(void)
+{
+	CHECK(run_kq1_startup_long_display_case(),
+		"Long startup credit glyph background uses the previous textbox palette during a partial IRQ slice");
+	puts("Compiled 573-byte startup credit publishes its managed palette at every returned IRQ");
 }
 
 static void run_kq1_startup_display_case(void)

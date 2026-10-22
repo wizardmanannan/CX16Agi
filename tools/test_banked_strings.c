@@ -976,7 +976,7 @@ static void run_harness_smoke(void)
 int main(int argc, char **argv)
 {
 	CHECK((argc == 3 || argc == 4) && !strcmp(argv[1], "--build"),
-		"Usage: test_banked_strings --build DIR [--smoke|--bounded|--input|--metadata|--allocator-oom|--get-num|--said|--object-commands|--object-crypto-bounds|--object-crypto-pointer|--show-object|--sound|--text-cleanup|--timer]");
+		"Usage: test_banked_strings --build DIR [--smoke|--bounded|--input|--metadata|--allocator-oom|--get-num|--said|--object-commands|--object-crypto-bounds|--object-crypto-pointer|--show-object|--sound|--text-cleanup|--text-palette-witness|--timer]");
 	load_image(argv[2]);
 	if (argc == 4)
 	{
@@ -1003,6 +1003,7 @@ int main(int argc, char **argv)
 		else if (!strcmp(argv[3], "--sound-growth")) run_sound_output_growth();
 		else if (!strcmp(argv[3], "--sound-discard")) run_repeated_sound_discard();
 		else if (!strcmp(argv[3], "--text-cleanup")) run_text_cleanup_cases();
+		else if (!strcmp(argv[3], "--text-palette-witness")) run_kq1_startup_palette_witness();
 		else if (!strcmp(argv[3], "--timer")) run_timer_clock_cases();
 		else CHECK(false, "Unknown production caller test case");
 		return 0;

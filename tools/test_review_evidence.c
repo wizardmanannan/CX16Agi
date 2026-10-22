@@ -383,25 +383,31 @@ static void check_kq1_startup_palette_witness_contract(void)
     const char *baseline = witness + strlen("witness|kq1-startup-white-attribute|");
     const char *baseline_end = strchr(baseline, '|');
     const char *witness_tail =
-        "|240|1|WITNESS_EXECUTED: kq1-startup-white-attribute|palette=$10 expected=$40|"
-        "Compiled Logic83 startup display commands keep credits and fixed text on their requested VRAM rows|13|";
+        "|240|1|WITNESS_EXECUTED: kq1-startup-white-attribute|"
+        "attribute=$10 expected-attribute=$40 background-RGB=$0FFF expected-background-RGB=$0000|"
+        "Compiled 573-byte startup credit publishes its managed palette at every returned IRQ|13|";
     CHECK(baseline_end && !strncmp(baseline_end, witness_tail, strlen(witness_tail)),
           "Review plan omitted the compiled KQ1 white-attribute production witness contract");
     size_t baseline_length = (size_t)(baseline_end - baseline);
     check_witness_baseline(baseline, baseline_length, log_path);
     CHECK(strstr(plan,
           "@TOOL:make@|-C|@REPO@/tools|-f|review-enforcement-test.mk|compiled-caller-witness-build|") != NULL &&
-          strstr(plan, "WITNESS_CASE=--text-cleanup|WITNESS_RUNNER=run-kq1-startup-palette") != NULL &&
+          strstr(plan, "WITNESS_CASE=--text-palette-witness|WITNESS_RUNNER=run-kq1-startup-palette") != NULL &&
           strstr(plan, "@OUT@/run-kq1-startup-palette") != NULL,
           "KQ1 palette witness did not build and run the compiled production target callers");
     CHECK(strstr(plan, "overlay|kq1-startup-white-attribute|tools/test_banked_strings.c\n") != NULL &&
           strstr(plan, "overlay|kq1-startup-white-attribute|tools/test_said_cases.h\n") != NULL &&
           strstr(plan, "overlay|kq1-startup-white-attribute|tools/test_banked_strings_text_cases.h\n") != NULL &&
           strstr(plan, "overlay|kq1-startup-white-attribute|tools/test_banked_strings_commands_target.c\n") != NULL &&
-          strstr(plan, "overlay|kq1-startup-white-attribute|tools/review-enforcement-test.mk\n") != NULL,
-          "KQ1 palette witness omitted its permanent production test and compiled callers");
+          strstr(plan, "overlay|kq1-startup-white-attribute|tools/review-enforcement-test.mk\n") != NULL &&
+          strstr(plan, "overlay|kq1-startup-white-attribute|tools/test-image.mk\n") != NULL &&
+          strstr(plan, "overlay|kq1-startup-white-attribute|tools/test_banked_strings_sound_cases.h\n") != NULL &&
+          strstr(plan, "overlay|kq1-startup-white-attribute|tools/test_banked_strings_sound_target.c\n") != NULL &&
+          strstr(plan, "overlay|kq1-startup-white-attribute|tools/test_view_lifecycle_cases.h\n") != NULL &&
+          strstr(plan, "overlay|kq1-startup-white-attribute|tools/test_view_lifecycle_target.c\n") != NULL,
+          "KQ1 palette witness omitted merged test-only harness dependencies");
     CHECK(strstr(plan,
-          "scope|kq1-startup-white-attribute|KQ1 startup credit glyphs use their managed black-background palette at VSYNC return|"
+          "scope|kq1-startup-white-attribute|KQ1 startup credit glyphs use their managed black-background palette at every VSYNC return|"
           "handleDisplayTextSlice|src/irqAsm.s|compiled KQ1 startup credit caller reaches b3Display_v and b3SetTextColor|"
           "tools/test_banked_strings_text_cases.h|production-native|") != NULL,
           "KQ1 palette witness omitted its production entry, caller, or required suite");
@@ -433,9 +439,15 @@ static void check_said_rest_witness_contract(void)
           "SAID REST_OF_LINE witness did not build and run the compiled production caller");
     CHECK(strstr(plan, "overlay|said-rest-only-regression|tools/test_banked_strings.c\n") != NULL &&
           strstr(plan, "overlay|said-rest-only-regression|tools/test_said_cases.h\n") != NULL &&
+          strstr(plan, "overlay|said-rest-only-regression|tools/test_banked_strings_text_cases.h\n") != NULL &&
           strstr(plan, "overlay|said-rest-only-regression|tools/test_banked_strings_commands_target.c\n") != NULL &&
-          strstr(plan, "overlay|said-rest-only-regression|tools/review-enforcement-test.mk\n") != NULL,
-          "SAID REST_OF_LINE witness omitted its permanent production test or compiled caller");
+          strstr(plan, "overlay|said-rest-only-regression|tools/review-enforcement-test.mk\n") != NULL &&
+          strstr(plan, "overlay|said-rest-only-regression|tools/test-image.mk\n") != NULL &&
+          strstr(plan, "overlay|said-rest-only-regression|tools/test_banked_strings_sound_cases.h\n") != NULL &&
+          strstr(plan, "overlay|said-rest-only-regression|tools/test_banked_strings_sound_target.c\n") != NULL &&
+          strstr(plan, "overlay|said-rest-only-regression|tools/test_view_lifecycle_cases.h\n") != NULL &&
+          strstr(plan, "overlay|said-rest-only-regression|tools/test_view_lifecycle_target.c\n") != NULL,
+          "SAID REST_OF_LINE witness omitted merged test-only harness dependencies");
     CHECK(strstr(plan,
           "scope|said-rest-only-regression|Said REST_OF_LINE matches from a lone REST token, records HADMATCH, and advances to the next bytecode|"
           "bFSaid|src/logicCommands.s|compiled executeLogic invokes bFSaid and returns through the true opcode path|"
