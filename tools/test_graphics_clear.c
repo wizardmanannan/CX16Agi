@@ -187,8 +187,8 @@ static void assemble(const char *graphics_path, unsigned priority_size, unsigned
         "lda ADDRESS_SEL\nsta VERA_ctrl\nlda #^VERA_ADDRESS\nand #$1\nora STRIDE << 4\nsta VERA_addr_bank\n"
         "lda #<VERA_ADDRESS\nsta VERA_addr_low\nlda #>VERA_ADDRESS\nsta VERA_addr_high\n.endmacro\n"
         "ZP_TILE_LAYER_NO_TILES_HIGH=ZP_TMP_2\n"
-        ".export runBackground,done,runPriority,runBackgroundSlice,resetBackgroundSlices,runPrioritySlice,resetPrioritySlices,runMap,sliceDone,_b3InitLayer1Mapbase,_inputLineDirty,b8ClearPriorityAddress,b8ClearPriorityRemaining,priorityFullStart,priorityFullEnd,prioritySliceStart,prioritySliceEnd\n"
-        ".segment \"CODE\"\n_inputLineDirty: .byte $0\n%.*s\npriorityFullStart:\n%.*s\npriorityFullEnd:\n%.*s\nprioritySliceStart:\n%.*s\nprioritySliceEnd:\n%.*s\n"
+        ".export runBackground,done,runPriority,runBackgroundSlice,resetBackgroundSlices,runPrioritySlice,resetPrioritySlices,runMap,sliceDone,_b3InitLayer1Mapbase,_inputLineDirty,_inputLineWasDisplayed,b8ClearPriorityAddress,b8ClearPriorityRemaining,priorityFullStart,priorityFullEnd,prioritySliceStart,prioritySliceEnd\n"
+        ".segment \"CODE\"\n_inputLineDirty: .byte $0\n_inputLineWasDisplayed: .byte $0\n%.*s\npriorityFullStart:\n%.*s\npriorityFullEnd:\n%.*s\nprioritySliceStart:\n%.*s\nprioritySliceEnd:\n%.*s\n"
         "runBackground: jsr _b8ClearBackground\ndone: rts\n"
         "runPriority: jsr _b8ClearPriority\nrts\n"
         "resetBackgroundSlices: jsr _b8ClearBackgroundSliceReset\nrts\n"
@@ -305,7 +305,9 @@ static void test_bounded_slices(void) {
     for (unsigned i = 0; i < PRIORITY_SIZE; ++i) CHECK(vram[PRIORITY_START + i] == 0x44, "Priority byte differs");
     CHECK(vram[PRIORITY_START - 1] == 0x5A && vram[PRIORITY_START + PRIORITY_SIZE] == 0x5A, "Priority slices wrote outside the picture");
 
-    memset(vram, 0x5A, sizeof(vram)); writes = 0; ram[symbol("_inputLineDirty")] = 0;
+    memset(vram, 0x5A, sizeof(vram)); writes = 0;
+    ram[symbol("_inputLineDirty")] = 0;
+    ram[symbol("_inputLineWasDisplayed")] = 1;
     run_helper("runMap", 300000);
     unsigned map_cycles = (unsigned)clockticks6502;
     CHECK(writes == (64 * 32 - 40) * 2, "Map clear wrote the wrong number of bytes");
@@ -313,6 +315,7 @@ static void test_bounded_slices(void) {
     for (unsigned address = 0xDA50; address < 0xEA00; address += 2)
         CHECK(vram[address] == 0x80 && vram[address + 1] == 0x10, "Map clear tile bytes differ");
     CHECK(ram[symbol("_inputLineDirty")] == 1, "Map clear did not invalidate the input row");
+    CHECK(ram[symbol("_inputLineWasDisplayed")] == 0, "Map clear did not reset input-row display ownership");
     /* Paired single-cell loop baseline: 26238 cycles. */
     CHECK(clockticks6502 < 22000, "Map clear exceeded 22000 cycles (baseline 26238)");
     printf("Clear slices: background max %u cycles/1920 writes, priority max %u cycles/2048 writes, map %u cycles/4016 writes; 22 VSYNCs total\n",
@@ -365,6 +368,7 @@ static void test_map_boundaries(const char *graphics_path) {
         assemble(graphics_path, PRIORITY_SIZE, cells[n]);
         memset(vram, 0x5A, sizeof(vram)); writes = 0;
         ram[symbol("_inputLineDirty")] = 0;
+        ram[symbol("_inputLineWasDisplayed")] = 1;
         run_helper("runMap", 1000000);
         CHECK(writes == cells[n] * 2, "Map boundary variant has wrong write count");
         CHECK(vram[0xDA4F] == 0x5A && vram[0xDA50 + cells[n] * 2] == 0x5A,
@@ -373,6 +377,7 @@ static void test_map_boundaries(const char *graphics_path) {
             CHECK(vram[0xDA50 + i * 2] == 0x80 && vram[0xDA51 + i * 2] == 0x10,
                   "Map boundary variant changed tile/attribute ordering");
         CHECK(ram[symbol("_inputLineDirty")] == 1, "Map variant did not invalidate input");
+        CHECK(ram[symbol("_inputLineWasDisplayed")] == 0, "Map variant did not reset input-row display ownership");
     }
 }
 #endif
