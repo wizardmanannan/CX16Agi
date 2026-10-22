@@ -11,6 +11,7 @@ IRQ_INC = 1
 .import _menuDirty
 .import _inputLineDirty
 .import _inputLineDisplayed
+.import _inputLineWasDisplayed
 
 .macro SEND_IRQ_COMMAND command, vSyncToCheck
 sei
@@ -220,6 +221,7 @@ bne @pageLoop
 dec ZP_TILE_LAYER_NO_TILES_HIGH
 bne @page
 @mapClearDone:
+stz _inputLineWasDisplayed
 lda #$1
 sta _inputLineDirty
 rts

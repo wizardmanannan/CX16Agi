@@ -21,6 +21,10 @@ static const char *const kq1StartupMessages[25] = {
 	[23] = "(c) copyright SIERRA On-Line Inc.  1987", [24] = "Press any key to continue."
 };
 
+static uint8_t publish_kq1_startup_copyright(uint8_t expected_guard_tile);
+static void check_kq1_startup_copyright(uint8_t expected_attribute, uint8_t expected_guard_tile);
+static void seed_startup_palette_colors(void);
+
 static void set_resident_byte(const char *name, uint8_t value)
 {
 	uint16_t address = symbol(name);
@@ -48,6 +52,7 @@ static void prepare_text_cleanup_case(void)
 	set_bank_byte(3, "_b3LastBoxLines", 0);
 	set_bank_byte(3, "_b3LastBoxStartLine", 0);
 	set_bank_byte(SOUND_BANK, "_bBChannelsPlaying", 0);
+	set_resident_byte("_inputLineDisplayed", 0);
 	set_resident_byte("_inputLineDirty", 0);
 	set_resident_byte("_menuDirty", 0);
 	set_resident_byte("_menuShown", 0);
@@ -60,6 +65,106 @@ static void prepare_text_cleanup_case(void)
 	ram[symbol("default_irq_vector") + 1] = (uint8_t)(TEXT_CLEANUP_IRQ_RETURN >> 8);
 	ram[TEXT_CLEANUP_IRQ_RETURN] = 0x40; /* RTI: return from the real production IRQ handler. */
 	memset(vram, TEXT_CLEANUP_SENTINEL, sizeof(vram));
+}
+
+static void run_input_ownership_tick(void)
+{
+	service_text_render_irqs = true;
+	call_target_caller("_testRunInputOwnershipTick");
+	service_text_render_irqs = false;
+}
+
+static void prepare_input_ownership_case(void)
+{
+	uint16_t input = symbol("_b7CurrentInputStr");
+
+	prepare_text_cleanup_case();
+	CHECK(input >= BANK_START && (unsigned)input + 5u <= BANK_END,
+		"Input ownership fixture is outside its parser bank");
+	memcpy(bank_ram[7] + input - BANK_START, "LOOK", 5);
+	set_resident_byte("_inputLineWasDisplayed", 0);
+	set_resident_byte("_inputLineDisplayed", 1);
+	set_resident_byte("_inputLineDirty", 1);
+}
+
+static void check_visible_input_ownership(void)
+{
+	CHECK(vram[INPUT_STRING_ADDRESS] == 0x3E &&
+		vram[INPUT_STRING_ADDRESS + 2] == 'L' &&
+		vram[INPUT_STRING_ADDRESS + 4] == 'O' &&
+		vram[INPUT_STRING_ADDRESS + 6] == 'O' &&
+		vram[INPUT_STRING_ADDRESS + 8] == 'K' &&
+		vram[INPUT_STRING_ADDRESS + 10] == 0x5F,
+		"Production IRQ did not render the known input line");
+	CHECK(ram[symbol("_inputLineWasDisplayed")] == 1,
+		"Production input render did not record row ownership");
+}
+
+static void run_input_row_ownership_cases(void)
+{
+	unsigned writes_before;
+	uint8_t copyright_attribute;
+
+	prepare_input_ownership_case();
+	run_input_ownership_tick();
+	check_visible_input_ownership();
+	writes_before = vera_data0_writes;
+	set_resident_byte("_inputLineDisplayed", 0);
+	set_resident_byte("_inputLineDirty", 1);
+	run_input_ownership_tick();
+	CHECK(vera_data0_writes - writes_before == 41 &&
+		ram[symbol("_inputLineWasDisplayed")] == 0,
+		"Hiding a displayed input line did not clear its owned row exactly once");
+	copyright_attribute = publish_kq1_startup_copyright(TEXT_CLEANUP_TRANSPARENT);
+	set_resident_byte("_inputLineDirty", 1);
+	writes_before = vera_data0_writes;
+	run_input_ownership_tick();
+	CHECK(vera_data0_writes == writes_before,
+		"A second hidden input update accessed the row after ownership ended");
+	check_kq1_startup_copyright(copyright_attribute, TEXT_CLEANUP_TRANSPARENT);
+
+	prepare_input_ownership_case();
+	run_input_ownership_tick();
+	check_visible_input_ownership();
+	service_text_render_irqs = true;
+	call_target_caller("_testRunInputOwnershipTextMode");
+	call_target_caller("_testRunInputOwnershipTextMode");
+	service_text_render_irqs = false;
+	set_resident_byte("_inputLineDisplayed", 0);
+	set_resident_byte("_inputLineDirty", 0);
+	copyright_attribute = publish_kq1_startup_copyright(TEXT_CLEANUP_TRANSPARENT);
+	set_resident_byte("_inputLineDirty", 1);
+	run_input_ownership_tick();
+	check_kq1_startup_copyright(copyright_attribute, TEXT_CLEANUP_TRANSPARENT);
+	CHECK(ram[symbol("_inputLineWasDisplayed")] == 0,
+		"A completed full map clear retained input row ownership");
+
+	service_text_render_irqs = true;
+	call_target_caller("_testRunInputOwnershipGraphicsMode");
+	service_text_render_irqs = false;
+	set_resident_byte("_inputLineDisplayed", 1);
+	set_resident_byte("_inputLineDirty", 1);
+	run_input_ownership_tick();
+	check_visible_input_ownership();
+	set_resident_byte("_inputLineDisplayed", 0);
+	set_resident_byte("_inputLineDirty", 1);
+	writes_before = vera_data0_writes;
+	run_input_ownership_tick();
+	CHECK(vera_data0_writes - writes_before == 41 &&
+		ram[symbol("_inputLineWasDisplayed")] == 0,
+		"A shown input line did not release ownership on the next hide");
+
+	prepare_input_ownership_case();
+	set_resident_byte("_inputLineDisplayed", 0);
+	set_resident_byte("_inputLineWasDisplayed", 0);
+	set_resident_byte("_inputLineDirty", 0);
+	copyright_attribute = publish_kq1_startup_copyright(TEXT_CLEANUP_SENTINEL);
+	set_resident_byte("_inputLineDirty", 1);
+	writes_before = vera_data0_writes;
+	run_input_ownership_tick();
+	CHECK(vera_data0_writes == writes_before,
+		"A never-displayed hidden input line accessed VERA");
+	check_kq1_startup_copyright(copyright_attribute, TEXT_CLEANUP_SENTINEL);
 }
 
 static void check_text_cleanup_canary_row(unsigned start)
@@ -223,6 +328,18 @@ static void check_startup_text_line(unsigned logicalRow, unsigned column, const 
 		"Compiled KQ1 startup display command wrote outside its message width");
 }
 
+static void check_kq1_startup_copyright(uint8_t expected_attribute, uint8_t expected_guard_tile)
+{
+	const char *message = kq1StartupMessages[23];
+	unsigned start = TEXT_CLEANUP_MAP_BASE + 25 * TEXT_CLEANUP_ROW_BYTES + 2;
+	unsigned cell;
+
+	check_startup_text_line(22, 1, message, expected_guard_tile);
+	for (cell = 0; cell < strlen(message); ++cell)
+		CHECK(vram[start + cell * 2 + 1] == expected_attribute,
+			"Compiled KQ1 copyright publisher wrote an unexpected palette attribute");
+}
+
 static void begin_kq1_startup_trace(void)
 {
 	startup_display_c_sp_address = symbol("c_sp");
@@ -286,6 +403,26 @@ static void seed_kq1_startup_messages(void)
 		CHECK(length <= 0x40, "KQ1 startup message does not fit its banked resource slot");
 		memcpy(bank_ram[0x24] + offset, kq1StartupMessages[messageNo], length);
 	}
+}
+
+static uint8_t publish_kq1_startup_copyright(uint8_t expected_guard_tile)
+{
+	uint8_t palette_number, expected_attribute;
+
+	seed_startup_palette_colors();
+	seed_kq1_startup_messages();
+	seed_startup_display_code_window();
+	set_bank_byte(3, "_b3CurrentForegroundColour", 15);
+	set_bank_byte(3, "_b3CurrentBackgroundColour", 0);
+	service_text_render_irqs = true;
+	call_target_caller("_testPrepareKq1StartupDisplay");
+	service_text_render_irqs = false;
+	palette_number = bank_ram[3][symbol("_b3PaletteNumber") - BANK_START];
+	CHECK(palette_number < 16,
+		"Compiled KQ1 copyright publisher selected an invalid palette");
+	expected_attribute = (uint8_t)(palette_number << 4);
+	check_kq1_startup_copyright(expected_attribute, expected_guard_tile);
+	return expected_attribute;
 }
 
 static void seed_startup_palette_colors(void)
@@ -545,6 +682,7 @@ static void run_kq1_startup_display_case(void)
 static void run_text_cleanup_cases(void)
 {
 	run_kq1_startup_display_case();
+	run_input_row_ownership_cases();
 	run_text_cleanup_case("_testRunTextCleanupRow1", 0);
 	run_text_cleanup_case("_testRunTextCleanupRow4", 3);
 	run_text_cleanup_case("_testRunTextCleanupLastRow", TEXT_CLEANUP_MAP_ROWS - 1);

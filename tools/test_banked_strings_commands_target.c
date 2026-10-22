@@ -3,6 +3,7 @@
 #include "logic.h"
 #include "memoryManager.h"
 #include "paletteManager.h"
+#include "irq.h"
 #include <cx16.h>
 
 extern byte *var;
@@ -64,6 +65,21 @@ void testRunGetNum(void)
 	RAM_BANK = previousBank;
 	var = (byte *)0x0800;
 	b4Get_num();
+}
+
+void testRunInputOwnershipTick(void)
+{
+	b6SetAndWaitForIrqState(DONT_CHANGE);
+}
+
+void testRunInputOwnershipTextMode(void)
+{
+	b6SetAndWaitForIrqState(TEXT_ONLY);
+}
+
+void testRunInputOwnershipGraphicsMode(void)
+{
+	b6SetAndWaitForIrqState(DISPLAY_GRAPHICS);
 }
 
 void testPrepareKq1StartupDisplay(void)
