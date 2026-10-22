@@ -1,4 +1,8 @@
 #define _POSIX_C_SOURCE 200809L
+/* Match the fortified test build while preserving any stronger caller setting. */
+#ifndef _FORTIFY_SOURCE
+#define _FORTIFY_SOURCE 2
+#endif
 #include <ctype.h>
 #include <errno.h>
 #include <fcntl.h>
@@ -65,14 +69,60 @@ static long read_pid_file(const char *name)
     path_join(path, sizeof(path), fixture_directory, name);
     FILE *file = fopen(path, "r");
     if (!file) return 0;
-    long pid = 0;
-    (void)fscanf(file, "%ld", &pid);
-    fclose(file);
-    return pid;
+    char contents[64];
+    size_t length = fread(contents, 1, sizeof(contents) - 1, file);
+    bool read_error = ferror(file) != 0;
+    int close_status = fclose(file);
+    if (read_error || close_status != 0 || length == sizeof(contents) - 1 ||
+        memchr(contents, '\0', length) != NULL) return 0;
+    contents[length] = '\0';
+
+    errno = 0;
+    char *end;
+    long pid = strtol(contents, &end, 10);
+    if (end == contents || errno == ERANGE || pid <= 1) return 0;
+    while (isspace((unsigned char)*end)) ++end;
+    if (*end) return 0;
+    pid_t process_id = (pid_t)pid;
+    if (process_id <= 1 || (long)process_id != pid) return 0;
+    return (long)process_id;
+}
+
+static void test_read_pid_file(void)
+{
+    const char *name = "pid-file-semantics";
+    CHECK(read_pid_file(name) == 0, "Missing PID file did not return the invalid sentinel");
+
+    const char *invalid_contents[] = {
+        "", "not-a-pid\n", "0\n", "1\n", "-1\n", "123suffix\n",
+        "999999999999999999999999999999999999999999\n"
+    };
+    for (size_t i = 0; i < sizeof(invalid_contents) / sizeof(invalid_contents[0]); ++i) {
+        write_text(name, invalid_contents[i]);
+        CHECK(read_pid_file(name) == 0, "Invalid PID file contents were accepted");
+    }
+
+    char path[4096];
+    path_join(path, sizeof(path), fixture_directory, name);
+    FILE *file = fopen(path, "wb");
+    CHECK(file != NULL, "Cannot create binary PID fixture");
+    static const char embedded_nul[] = "123\0suffix";
+    CHECK(fwrite(embedded_nul, 1, sizeof(embedded_nul) - 1, file) == sizeof(embedded_nul) - 1,
+          "Cannot write binary PID fixture");
+    CHECK(!fclose(file), "Cannot close binary PID fixture");
+    CHECK(read_pid_file(name) == 0, "PID file with embedded NUL hid trailing bytes");
+
+    long expected = (long)getpid();
+    char contents[64];
+    int length = snprintf(contents, sizeof(contents), "%ld\n", expected);
+    CHECK(length > 0 && length < (int)sizeof(contents), "Valid PID fixture is too large");
+    write_text(name, contents);
+    CHECK(read_pid_file(name) == expected, "Valid PID file contents were not read");
 }
 
 static void expect_transport_group_gone(void)
 {
+    CHECK(last_transport_group > 1, "Review policy recorded an invalid transport process group");
     CHECK(last_cli_saw_transport_group, "Fake GitHub CLI did not run in its owned process group");
     CHECK(last_cli_saw_transport_descendant, "Fake GitHub CLI did not start a child in its owned process group");
     for (int attempt = 0; attempt < 100; ++attempt) {
@@ -353,7 +403,8 @@ static int run_cli(const char *tool, const char *policy, bool forged_approval_op
         if (last_cli_elapsed_ms >= TEST_CLI_TIMEOUT_MS) {
             kill(child, SIGKILL);
             while (waitpid(child, &status, 0) < 0 && errno == EINTR) { }
-            if (last_cli_saw_transport_group) (void)kill((pid_t)-last_transport_group, SIGKILL);
+            if (last_cli_saw_transport_group && last_transport_group > 1)
+                (void)kill((pid_t)-last_transport_group, SIGKILL);
             long descendant = read_pid_file("transport-grandchild.pid");
             if (descendant > 1) (void)kill((pid_t)descendant, SIGKILL);
             if (transport_pid > 1) (void)kill((pid_t)transport_pid, SIGKILL);
@@ -448,6 +499,7 @@ int main(int argc, char **argv)
           (int)sizeof(output_directory), "Review policy output path is too long");
     CHECK(mkdtemp(output_directory) != NULL, "Cannot create review policy suite output");
     CHECK(!atexit(cleanup_output), "Cannot register review policy output cleanup");
+    test_read_pid_file();
     path_join(gh_log, sizeof(gh_log), output_directory, "gh-argv.log");
     path_join(cli_log, sizeof(cli_log), output_directory, "review-policy.log");
 
