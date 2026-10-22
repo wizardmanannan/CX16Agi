@@ -2008,11 +2008,6 @@ rol sreg + 1
 INC_CODE_BY sreg
 .endmacro
 
-.macro PURGE_ARGS
-SKIP_SAID_ARGS
-jmp returnFromOpCodeFalse
-.endmacro
-
 ; ------------------------------------------------------------
 ; Said() interpreter opcode
 ;
@@ -2081,7 +2076,8 @@ bFSaid:
     bne @inputExists
 
 @purgeArgs:
-    PURGE_ARGS
+    SKIP_SAID_ARGS
+    jmp returnFromOpCodeFalse
 @inputExists:
 
 
@@ -2103,7 +2099,7 @@ bFSaid:
     GET_FLAG_NON_INTERPRETER sreg
     beq @setupInputWordsZp
 
-    PURGE_ARGS
+    jmp @purgeArgs
 
 
 ; ------------------------------------------------------------
@@ -2210,8 +2206,7 @@ bFSaid:
 
 @incrementByUnusedWordsFalse:
 
-    SKIP_SAID_ARGS
-    jmp returnFromOpCodeFalse
+    jmp @purgeArgs
 
 
 ; ------------------------------------------------------------

@@ -30,6 +30,8 @@ static void run_said_case_with_state(const uint16_t *expected_words, unsigned ex
 	unsigned code_size = 0;
 	unsigned i;
 	uint16_t code_cursor;
+	uint32_t call_start_cycles;
+	/* Pre-sharing executeLogic cycles: no-input 2016, HADMATCH purge 3076, mismatch 2281. */
 
 	CHECK(expected_count <= 255, "Said fixture exceeds its encoded byte-sized word count");
 	CHECK(input_count <= 10, "Said fixture exceeds the production parser's ten-word buffer");
@@ -76,7 +78,22 @@ static void run_said_case_with_state(const uint16_t *expected_words, unsigned ex
 	said_input_read_monitor = true;
 	said_flag_write_monitor = true;
 	said_return_monitor = true;
+	call_start_cycles = clockticks6502;
 	call_target_caller("_testRunSaid");
+	if (!strcmp(case_name, "no_input_words") ||
+		!strcmp(case_name, "hadmatch_flag_set_long_arguments") ||
+		!strcmp(case_name, "word_mismatch"))
+	{
+		uint32_t cycles = clockticks6502 - call_start_cycles;
+		fprintf(stderr, "SAID_EXECUTELOGIC_CYCLES case=%s cycles=%u\n", case_name,
+			(unsigned)cycles);
+		if (!strcmp(case_name, "no_input_words"))
+			CHECK(cycles <= 2016, "Said no-input executeLogic path exceeded its 2016-cycle baseline");
+		else if (!strcmp(case_name, "hadmatch_flag_set_long_arguments"))
+			CHECK(cycles <= 3079, "Said HADMATCH purge exceeded its baseline plus the 3-cycle jump allowance");
+		else
+			CHECK(cycles <= 2284, "Said word-mismatch purge exceeded its baseline plus the 3-cycle jump allowance");
+	}
 	if (exercise_match_lifecycle)
 	{
 		check_said_case(ram[SAID_HAD_MATCH_FLAG_ADDRESS] == 1 &&
@@ -112,6 +129,13 @@ static void run_said_case_with_state(const uint16_t *expected_words, unsigned ex
 	said_return_monitor = false;
 
 	code_cursor = (uint16_t)(get_word(0xA9) + get_word(symbol("cwCurrentCode")));
+	if ((ram[SAID_HAD_MATCH_FLAG_ADDRESS] != 0) != (expect_match || had_match_flag))
+		fprintf(stderr,
+			"SAID_REGRESSION: case=%s expected_match=%u actual_match=%u hadmatch=%u cursor=$%04X true=%u false=%u\n",
+			case_name, (unsigned)expect_match,
+			(unsigned)(said_return_true_count != 0),
+			(unsigned)(ram[SAID_HAD_MATCH_FLAG_ADDRESS] != 0), code_cursor,
+			said_return_true_count, said_return_false_count);
 	check_said_case((ram[SAID_HAD_MATCH_FLAG_ADDRESS] != 0) ==
 		(expect_match || had_match_flag), case_name,
 		expect_match ? "Said rejected matching recognized input" :
@@ -206,11 +230,11 @@ static void run_said_cases(void)
 	run_said_case(many_expected, 128, ten_input, 10, false, false, "long_arguments_128");
 	run_said_case(many_expected, 255, ten_input, 10, false, false, "long_arguments_255");
 	run_said_case(many_expected, 255, NULL, 0, false, false, "long_arguments_255_no_input");
-	/* TEST-image span: original 485 bytes, corrected matcher 475 before sharing success. */
+	/* Pre-sharing TEST-image baseline is 457 bytes; the shared purge must shrink it. */
 	unsigned matcher_bytes = symbol("b1Compare_stringsCCall") - symbol("bFSaid");
-	fprintf(stderr, "Production Said matcher: %u test-image bytes (baselines 485/475; require <475)\n",
+	fprintf(stderr, "Production Said matcher: %u test-image bytes (baselines 485/475/457; require <457)\n",
 		matcher_bytes);
-	CHECK(matcher_bytes < 475, "Said matcher retained duplicate success-flag publication");
+	CHECK(matcher_bytes < 457, "Said matcher did not shrink below the 457-byte pre-sharing baseline");
 	puts("Production Said opcode passes exact, wildcard, REST_OF_LINE, flag lifecycle, exhaustion and long-argument cases");
 }
 
