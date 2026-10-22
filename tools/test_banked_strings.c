@@ -104,6 +104,21 @@ static unsigned label_count;
 static unsigned bank_window_reads;
 static unsigned out_of_window_reads;
 static bool track_source_reads;
+static bool said_input_read_monitor;
+static uint16_t said_input_read_start;
+static unsigned said_input_readable_bytes;
+static unsigned said_input_reads;
+static unsigned said_input_overread_reads;
+static bool said_flag_write_monitor;
+static uint16_t said_input_flag_address;
+static unsigned said_input_flag_writes;
+static uint16_t said_had_match_flag_address;
+static unsigned said_had_match_flag_writes;
+static bool said_return_monitor;
+static uint16_t said_return_true_pc;
+static uint16_t said_return_false_pc;
+static unsigned said_return_true_count;
+static unsigned said_return_false_count;
 static bool sound_bounds_monitor_requested;
 static bool sound_bounds_periodic_active;
 static bool sound_bounds_prefix_active;
@@ -183,6 +198,12 @@ uint8_t read6502(uint16_t address, uint8_t bank)
 {
 	unsigned sound_copy_index = SOUND_BOUNDS_MAX_COPY_CALLS;
 	(void)bank;
+	if (said_input_read_monitor && address >= said_input_read_start &&
+		address < said_input_read_start + said_input_readable_bytes)
+		++said_input_reads;
+	if (said_input_read_monitor && address >= said_input_read_start + said_input_readable_bytes &&
+		address < said_input_read_start + 40)
+		++said_input_overread_reads;
 	if (object_crypto_read_active && ram[0] == 0x0D &&
 		address >= BANK_START && address < BANK_END)
 	{
@@ -339,6 +360,10 @@ uint8_t read6502(uint16_t address, uint8_t bank)
 void write6502(uint16_t address, uint8_t bank, uint8_t value)
 {
 	(void)bank;
+	if (said_flag_write_monitor && address == said_had_match_flag_address)
+		++said_had_match_flag_writes;
+	if (said_flag_write_monitor && address == said_input_flag_address)
+		++said_input_flag_writes;
 	if (watch_text_buffer_overflow && ram[0] == 3 &&
 		address >= text_buffer_overflow_start && address < text_buffer_overflow_end && value == 0x80)
 	{
@@ -596,6 +621,21 @@ static void prepare(void)
 	bank_window_reads = 0;
 	out_of_window_reads = 0;
 	track_source_reads = false;
+	said_input_read_monitor = false;
+	said_input_read_start = 0;
+	said_input_readable_bytes = 0;
+	said_input_reads = 0;
+	said_input_overread_reads = 0;
+	said_flag_write_monitor = false;
+	said_input_flag_address = 0;
+	said_input_flag_writes = 0;
+	said_had_match_flag_address = 0;
+	said_had_match_flag_writes = 0;
+	said_return_monitor = false;
+	said_return_true_pc = 0;
+	said_return_false_pc = 0;
+	said_return_true_count = 0;
+	said_return_false_count = 0;
 	sound_bounds_monitor_requested = false;
 	sound_bounds_periodic_active = false;
 	sound_bounds_copy_active = false;
@@ -752,6 +792,11 @@ static void call_target_caller(const char *name)
 				((uint16_t)ram[0x100 + (uint8_t)(regs.sp + 2)] << 8));
 			++object_crypto_read_return;
 		}
+		if (said_return_monitor)
+		{
+			if (regs.pc == said_return_true_pc) ++said_return_true_count;
+			if (regs.pc == said_return_false_pc) ++said_return_false_count;
+		}
 		step6502();
 		if (startup_credit_irq_pending && regs.pc == startup_credit_irq_return_pc &&
 			(uint8_t)regs.sp == startup_credit_irq_return_sp)
@@ -837,6 +882,7 @@ static bool call_target_caller_until_exit(const char *name)
 #include "test_banked_strings_metadata_cases.h"
 #include "test_banked_strings_allocator_cases.h"
 #include "test_banked_strings_commands_cases.h"
+#include "test_said_cases.h"
 #include "test_object_commands_cases.h"
 #include "test_show_obj_allocation_cases.h"
 #include "test_banked_strings_sound_cases.h"
@@ -913,7 +959,7 @@ static void run_harness_smoke(void)
 int main(int argc, char **argv)
 {
 	CHECK((argc == 3 || argc == 4) && !strcmp(argv[1], "--build"),
-		"Usage: test_banked_strings --build DIR [--smoke|--bounded|--input|--metadata|--allocator-oom|--get-num|--object-commands|--object-crypto-bounds|--object-crypto-pointer|--show-object|--sound|--text-cleanup|--timer]");
+		"Usage: test_banked_strings --build DIR [--smoke|--bounded|--input|--metadata|--allocator-oom|--get-num|--said|--object-commands|--object-crypto-bounds|--object-crypto-pointer|--show-object|--sound|--text-cleanup|--timer]");
 	load_image(argv[2]);
 	if (argc == 4)
 	{
@@ -927,6 +973,7 @@ int main(int argc, char **argv)
 		else if (!strcmp(argv[3], "--metadata")) run_metadata_cases();
 		else if (!strcmp(argv[3], "--allocator-oom")) run_allocator_oom_case();
 		else if (!strcmp(argv[3], "--get-num")) run_commands_cases();
+		else if (!strcmp(argv[3], "--said")) run_said_cases();
 		else if (!strcmp(argv[3], "--object-commands")) run_object_commands_cases();
 		else if (!strcmp(argv[3], "--object-crypto-bounds")) run_object_crypto_bounds_case();
 		else if (!strcmp(argv[3], "--object-crypto-pointer")) run_object_crypto_pointer_case();
@@ -944,6 +991,7 @@ int main(int argc, char **argv)
 	run_metadata_cases();
 	run_allocator_oom_case();
 	run_commands_cases();
+	run_said_cases();
 	run_object_commands_cases();
 	run_object_crypto_bounds_case();
 	run_object_crypto_pointer_case();

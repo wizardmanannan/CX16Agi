@@ -7,6 +7,25 @@
 
 extern byte *var;
 extern int currentLog;
+void executeLogic(LOGICEntry *logicEntry, int logNum);
+
+unsigned int testSaidCodeSize;
+static LOGICFile testSaidLogicFile;
+static LOGICEntry testSaidLogicEntry;
+
+void testRunSaid(void)
+{
+	testSaidLogicFile.codeSize = testSaidCodeSize;
+	testSaidLogicFile.logicCode = (byte *)0xA100;
+	testSaidLogicFile.codeBank = 0x24;
+	testSaidLogicEntry.loaded = TRUE;
+	testSaidLogicEntry.entryPoint = 0;
+	testSaidLogicEntry.currentPoint = 0;
+	testSaidLogicEntry.data = &testSaidLogicFile;
+	testSaidLogicEntry.dataBank = 0;
+	testSaidLogicEntry.isLogicZeroOrDependency = FALSE;
+	executeLogic(&testSaidLogicEntry, 0);
+}
 
 #pragma wrapped-call (push, trampoline, LOGIC_BANK)
 extern void b5SetLogicEntry(LOGICEntry *logicEntry, byte logicFileNo);

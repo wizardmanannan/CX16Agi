@@ -388,6 +388,7 @@ static void check_kq1_startup_palette_witness_contract(void)
           strstr(plan, "@OUT@/run-kq1-startup-palette") != NULL,
           "KQ1 palette witness did not build and run the compiled production target callers");
     CHECK(strstr(plan, "overlay|kq1-startup-white-attribute|tools/test_banked_strings.c\n") != NULL &&
+          strstr(plan, "overlay|kq1-startup-white-attribute|tools/test_said_cases.h\n") != NULL &&
           strstr(plan, "overlay|kq1-startup-white-attribute|tools/test_banked_strings_text_cases.h\n") != NULL &&
           strstr(plan, "overlay|kq1-startup-white-attribute|tools/test_banked_strings_commands_target.c\n") != NULL &&
           strstr(plan, "overlay|kq1-startup-white-attribute|tools/review-enforcement-test.mk\n") != NULL,

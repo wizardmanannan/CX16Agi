@@ -19,6 +19,7 @@ overlay|check-run-suite-head-optional|tools/test_review_policy.c
 witness|kq1-startup-white-attribute|079d92d91f7dc415ba1770b8adc2f38f64cf8f81|240|1|WITNESS_EXECUTED: kq1-startup-white-attribute|palette=$10 expected=$40|Compiled Logic83 startup display commands keep credits and fixed text on their requested VRAM rows|10|@TOOL:make@|-C|@REPO@/tools|-f|review-enforcement-test.mk|kq1-palette-witness-build|HOST_CC=@TOOL:host-cc@|CC65_HOME=@INPUT:cc65-home@|X16_EMULATOR_SOURCE=@INPUT:x16-emulator-source@|KQ1_WITNESS_OUT=@OUT@|1|@OUT@/run-kq1-startup-palette
 scope|kq1-startup-white-attribute|KQ1 startup credit glyphs use their managed black-background palette at VSYNC return|handleDisplayTextSlice|src/irqAsm.s|compiled KQ1 startup credit caller reaches b3Display_v and b3SetTextColor|tools/test_banked_strings_text_cases.h|production-native|same permanent compiled startup case must show the white palette-1 attribute on baseline and the managed black palette on candidate|none
 overlay|kq1-startup-white-attribute|tools/test_banked_strings.c
+overlay|kq1-startup-white-attribute|tools/test_said_cases.h
 overlay|kq1-startup-white-attribute|tools/test_banked_strings_text_cases.h
 overlay|kq1-startup-white-attribute|tools/test_banked_strings_commands_target.c
 overlay|kq1-startup-white-attribute|tools/review-enforcement-test.mk

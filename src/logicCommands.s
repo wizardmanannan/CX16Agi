@@ -1999,12 +1999,17 @@ b1Have_keyCCall:
     HANDLE_C_IF_RESULT
 
 
-.macro PURGE_ARGS
+.macro SKIP_SAID_ARGS
 lda NO_ARGS
-asl
 sta sreg
 stz sreg + 1
+asl sreg
+rol sreg + 1
 INC_CODE_BY sreg
+.endmacro
+
+.macro PURGE_ARGS
+SKIP_SAID_ARGS
 jmp returnFromOpCodeFalse
 .endmacro
 
@@ -2049,7 +2054,6 @@ REST_OF_LINE = 9999
 ANY_WORD = 1
 
 NO_ARGS = ZP_TMP_2
-WORDS_COUNTER = ZP_PTR_2 + 1
 ARGS = ZP_TMP_3
 
 
@@ -2103,18 +2107,11 @@ bFSaid:
 
 
 ; ------------------------------------------------------------
-; Prepare loop counters
-;
-; Word numbers are stored as 16-bit values.
-; Multiply number of words by 2 to obtain byte count.
+; X is the byte offset into recognised words. NO_ARGS tracks
+; expected words still unread from the bytecode.
 ; ------------------------------------------------------------
 
 @setupInputWordsZp:
-
-    lda NO_ARGS
-    asl
-    sta WORDS_COUNTER
-
     ldx #$0
 
 
@@ -2124,10 +2121,9 @@ bFSaid:
 
 @numberWordsLoopCheck:
 
-    cpx WORDS_COUNTER
-    bcc @numberWordsLoopBody
+    lda NO_ARGS
+    bne @numberWordsLoopBody
     jmp @checkWordNumbersCount
-
 
 ; ------------------------------------------------------------
 ; Load next test word (16-bit) from bytecode
@@ -2142,6 +2138,7 @@ bFSaid:
     LOAD_CODE_WIN_CODE
     sta ARGS + 1
     INC_CODE
+    dec NO_ARGS
 
 
 ; ------------------------------------------------------------
@@ -2158,33 +2155,26 @@ bFSaid:
 @checkRestOfLine:
 
     lda ARGS + 1
-    beq @checkRecognisedWordCount
-
     cmp #>REST_OF_LINE
     bne @checkRecognisedWordCount
 
     lda ARGS
     cmp #<REST_OF_LINE
     bne @checkRecognisedWordCount
-
-    lda #INT_FLAG_INPUT
-    SET_FLAG_NON_INTERPRETER sreg
-
     jmp @incrementByUnusedWordsTrue
 
 
 ; ------------------------------------------------------------
-; Ensure we haven't run out of recognised input words
-;
-; C# equivalent:
-; if (i >= RecognisedWordNumbers.Count)
-;     return false;
+; Ensure a regular expected word has a recognised input word
+; before reading the input buffer.
 ; ------------------------------------------------------------
 
 @checkRecognisedWordCount:
 
-    cpx WORDS_COUNTER
-    bcc @checkWordMatch
+    txa
+    lsr
+    cmp _numInputWords
+    bcc @checkAnyWord
     jmp @incrementByUnusedWordsFalse
 
 
@@ -2192,45 +2182,21 @@ bFSaid:
 ; Compare test word against input word
 ; ------------------------------------------------------------
 
-@checkWordMatch:
-
-    lda ARGS + 1
-    cmp _inputWords + 1,x
-    beq @checkLowByte
-
-    ; If high bytes differ and the test word is not ANY_WORD,
-    ; the match fails.
-
-    tay
-    bne @incrementByUnusedWordsFalse
-
-
-; ------------------------------------------------------------
-; ANY_WORD wildcard test
-;
-; C# equivalent:
-; if (testWordNumber == ANYWORD)
-;     match
-; ------------------------------------------------------------
-
 @checkAnyWord:
-
+    lda ARGS + 1
+    bne @checkWordMatch
     lda ARGS
     cmp #ANY_WORD
     beq @incrementLoopCounter
 
-    bra @incrementByUnusedWordsFalse
-
-
-; ------------------------------------------------------------
-; High bytes match — check low bytes
-; ------------------------------------------------------------
-
-@checkLowByte:
+@checkWordMatch:
+    lda _inputWords + 1,x
+    cmp ARGS + 1
+    bne @incrementByUnusedWordsFalse
 
     lda _inputWords,x
     cmp ARGS
-    bne @checkAnyWord
+    bne @incrementByUnusedWordsFalse
 
     bra @incrementLoopCounter
 
@@ -2244,23 +2210,7 @@ bFSaid:
 
 @incrementByUnusedWordsFalse:
 
-    inx
-    inx
-
-    stx sreg
-    lda NO_ARGS
-    asl
-    sec
-    sbc sreg
-    sta sreg
-    stz sreg + 1
-
-    beq @returnFromOpCodeFalseJmp
-
-    INC_CODE_BY sreg
-
-@returnFromOpCodeFalseJmp:
-
+    SKIP_SAID_ARGS
     jmp returnFromOpCodeFalse
 
 
@@ -2272,11 +2222,7 @@ bFSaid:
 
     inx
     inx
-
-    cpx WORDS_COUNTER
-    bcs @checkWordNumbersCount
-
-    jmp @numberWordsLoopBody
+    jmp @numberWordsLoopCheck
 
 
 ; ------------------------------------------------------------
@@ -2305,6 +2251,10 @@ bFSaid:
 ; Successful match
 ; ------------------------------------------------------------
 
+; REST_OF_LINE skips its unread operands, then shares normal success.
+@incrementByUnusedWordsTrue:
+    SKIP_SAID_ARGS
+
 @matched:
 
     lda #INT_FLAG_HAD_MATCH
@@ -2313,27 +2263,6 @@ bFSaid:
     jmp returnFromOpCodeTrue
 
 
-; ------------------------------------------------------------
-; REST_OF_LINE match
-;
-; Skip remaining bytecode arguments
-; ------------------------------------------------------------
-
-@incrementByUnusedWordsTrue:
-
-    inx
-    inx
-
-    stx sreg
-    sec
-    lda NO_ARGS
-    sbc sreg
-    sta sreg
-    stz sreg + 1
-
-    INC_CODE_BY sreg
-
-    jmp returnFromOpCodeFalse
 
 b1Compare_stringsCCall:
     jsr _b1Compare_strings
