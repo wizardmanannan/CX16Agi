@@ -4,8 +4,9 @@ HOST_CFLAGS ?= -std=c11 -O1 -g -Wall -Wextra -Werror -fsanitize=address,undefine
 TEST_OUTPUT_ROOT ?= $(REPO_ROOT)/obj
 TEST_FIXTURE_ROOT ?= $(if $(TMPDIR),$(TMPDIR),/tmp)
 WITNESS_OUT ?= $(REPO_ROOT)/obj/review-enforcement-witness
+KQ1_WITNESS_OUT ?= $(WITNESS_OUT)/kq1-startup-palette
 
-.PHONY: build test
+.PHONY: build test kq1-palette-witness-build
 build:
 	@set -eu; \
 	mkdir -p "$(WITNESS_OUT)"; \
@@ -15,6 +16,23 @@ build:
 	"$(HOST_CC)" -std=c11 -Wall -Wextra -Werror -I"$(REPO_ROOT)/tools" \
 	  "$(REPO_ROOT)/tools/test_review_evidence.c" "$(REPO_ROOT)/tools/review_sha256.c" \
 	  -o "$(WITNESS_OUT)/test_review_evidence"
+
+kq1-palette-witness-build:
+	@set -eu; \
+	mkdir -p "$(KQ1_WITNESS_OUT)/bin"; \
+	$(MAKE) --no-print-directory -f "$(REPO_ROOT)/tools/test-image.mk" \
+	  "REPO_ROOT=$(REPO_ROOT)" "OUT=$(KQ1_WITNESS_OUT)/image" "CC65_HOME=$(CC65_HOME)"; \
+	"$(HOST_CC)" -std=c11 -O2 -Wall -Wextra -save-temps=obj -fno-use-linker-plugin \
+	  -I"$(X16_EMULATOR_SOURCE)/src/cpu" \
+	  "$(REPO_ROOT)/tools/test_banked_strings.c" \
+	  "$(X16_EMULATOR_SOURCE)/src/cpu/fake6502.c" \
+	  -o "$(KQ1_WITNESS_OUT)/bin/test_banked_strings"; \
+	printf '%s\n' '#!/bin/sh' 'set -eu' \
+	  'out=$$(CDPATH= cd -- "$$(dirname -- "$$0")" && pwd)' \
+	  'printf "%s\n" "WITNESS_EXECUTED: kq1-startup-white-attribute" >&2' \
+	  'exec "$$out/bin/test_banked_strings" --build "$$out/image" --text-cleanup' \
+	  > "$(KQ1_WITNESS_OUT)/run-kq1-startup-palette"; \
+	chmod +x "$(KQ1_WITNESS_OUT)/run-kq1-startup-palette"
 
 test:
 	@set -eu; \

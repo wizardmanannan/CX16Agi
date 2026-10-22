@@ -11,6 +11,14 @@ packet. `review-tools verify` checks the packet and replays its declared suites
 and witnesses. The canonical plan format and witness are exercised by
 `tools/test_review_evidence.c`.
 
+The KQ1 startup palette witness builds the real test image and compiled caller
+harness on baseline `29569481a8ef72dc8a22bce4c0af18129fab3729` and the
+candidate. It overlays the permanent `--text-cleanup` C case and its target
+callers onto that pre-KQ1 baseline. The baseline must report the exact
+`palette=$10 expected=$40` symptom: the old white palette-1 attribute remains
+visible where the managed black-background palette should be. The candidate
+must complete the same case and print its success marker.
+
 The plan takes absolute dependency roots from `CC65_HOME` and
 `X16_EMULATOR_SOURCE`. Export the same installed roots used by the native
 suites before capture and verification; CI supplies its pinned installations.
@@ -61,6 +69,7 @@ The permanent review cases have these focused rerun commands. The aggregate
 
 | Area | Permanent C case | Focused command after `make -C tools` |
 | --- | --- | --- |
+| KQ1 startup white-attribute regression | `test_banked_strings_text_cases.h:run_kq1_startup_display_case` | `production-test` |
 | Capture, replay, artifacts, and identity | `test_review_evidence.c` | `-f review-enforcement-test.mk test` |
 | Current GitHub reviews, checks, and protection | `test_review_policy.c` | `-f review-policy.mk review-policy-test` |
 | Real workflow readiness script | `test_review_workflow.c` | `review-workflow-test` |

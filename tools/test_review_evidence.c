@@ -166,6 +166,34 @@ static char *read_text(const char *path)
     return contents;
 }
 
+static void check_kq1_startup_palette_witness_contract(void)
+{
+    char plan_path[4096];
+    path_join(plan_path, sizeof(plan_path), product_tools, "review/cx16.plan");
+    char *plan = read_text(plan_path);
+    const char *witness =
+        "witness|kq1-startup-white-attribute|29569481a8ef72dc8a22bce4c0af18129fab3729|240|1|"
+        "WITNESS_EXECUTED: kq1-startup-white-attribute|palette=$10 expected=$40|"
+        "Compiled Logic83 startup display commands keep credits and fixed text on their requested VRAM rows|10|";
+    CHECK(strstr(plan, witness) != NULL,
+          "Review plan omitted the compiled KQ1 white-attribute production witness");
+    CHECK(strstr(plan,
+          "@TOOL:make@|-C|@REPO@/tools|-f|review-enforcement-test.mk|kq1-palette-witness-build|") != NULL &&
+          strstr(plan, "@OUT@/run-kq1-startup-palette") != NULL,
+          "KQ1 palette witness did not build and run the compiled production target callers");
+    CHECK(strstr(plan, "overlay|kq1-startup-white-attribute|tools/test_banked_strings.c\n") != NULL &&
+          strstr(plan, "overlay|kq1-startup-white-attribute|tools/test_banked_strings_text_cases.h\n") != NULL &&
+          strstr(plan, "overlay|kq1-startup-white-attribute|tools/test_banked_strings_commands_target.c\n") != NULL &&
+          strstr(plan, "overlay|kq1-startup-white-attribute|tools/review-enforcement-test.mk\n") != NULL,
+          "KQ1 palette witness omitted its permanent production test and compiled callers");
+    CHECK(strstr(plan,
+          "scope|kq1-startup-white-attribute|KQ1 startup credit glyphs use their managed black-background palette at VSYNC return|"
+          "handleDisplayTextSlice|src/irqAsm.s|compiled KQ1 startup credit caller reaches b3Display_v and b3SetTextColor|"
+          "tools/test_banked_strings_text_cases.h|production-native|") != NULL,
+          "KQ1 palette witness omitted its production entry, caller, or required suite");
+    free(plan);
+}
+
 static bool file_contains(const char *path, const char *needle)
 {
     FILE *file = fopen(path, "rb");
@@ -700,6 +728,7 @@ int main(int argc, char **argv)
     char *source_separator = strrchr(product_tools, '/');
     CHECK(source_separator != NULL, "Review evidence native product source path has no directory");
     *source_separator = '\0';
+    check_kq1_startup_palette_witness_contract();
     CHECK(snprintf(output_root, sizeof(output_root), "%s/review-evidence-XXXXXX", suite_output_directory) <
           (int)sizeof(output_root), "Review evidence output path is too long");
     CHECK(mkdtemp(output_root) != NULL, "Cannot create review evidence suite output");
