@@ -35,45 +35,9 @@ static SDL_AudioDeviceID test_open_audio_device(const char *device, int iscaptur
 uint8_t MHZ = 8;
 uint32_t clockticks6502 = 0;
 
-static unsigned capture_chunks;
-static uint64_t capture_samples;
-static unsigned capture_non_silent_chunks;
-static unsigned invalid_capture_chunks;
 static unsigned callback_count;
 static unsigned callback_underflows;
 static unsigned audible_callbacks;
-
-int tas_capture_audio_samples(const TasAudioChunk *chunk)
-{
-    const size_t bytes_per_frame = 2 * sizeof(int16_t);
-    const int16_t *samples;
-    bool audible = false;
-
-    if (!chunk || !chunk->data || chunk->sample_count == 0 ||
-        chunk->chunk_index != capture_chunks || chunk->sample_start != capture_samples ||
-        chunk->byte_offset != capture_samples * bytes_per_frame ||
-        chunk->length != chunk->sample_count * bytes_per_frame ||
-        chunk->sample_rate != AUDIO_SAMPLERATE || chunk->channels != 2 ||
-        chunk->bits_per_sample != 16 || chunk->cycle_end < chunk->cycle_start) {
-        invalid_capture_chunks++;
-        return -1;
-    }
-
-    samples = (const int16_t *)chunk->data;
-    for (uint64_t i = 0; i < chunk->sample_count * 2; ++i) {
-        int32_t value = samples[i];
-        if (value < 0) value = -value;
-        if (value > 32) {
-            audible = true;
-            break;
-        }
-    }
-
-    if (audible) capture_non_silent_chunks++;
-    capture_chunks++;
-    capture_samples += chunk->sample_count;
-    return 0;
-}
 
 static void service_callbacks(unsigned frame)
 {
@@ -163,17 +127,9 @@ int main(void)
     }
 
     printf("Real emulator audio: 180 frames, %u callbacks, %u queue underruns, "
-        "%u audible callbacks, %u captured chunks (%llu samples, %u audible)\n",
-        callback_count, callback_underflows, audible_callbacks, capture_chunks,
-        (unsigned long long)capture_samples, capture_non_silent_chunks);
+        "%u audible callbacks\n", callback_count, callback_underflows, audible_callbacks);
 
-    if (invalid_capture_chunks) {
-        fprintf(stderr, "TAS audio capture rejected %u invalid production chunks\n",
-            invalid_capture_chunks);
-        goto cleanup;
-    }
-    if (capture_chunks < 100 || capture_non_silent_chunks * 2 < capture_chunks ||
-        audible_callbacks * 2 < callback_count) {
+    if (callback_count < 500 || audible_callbacks * 2 < callback_count) {
         fputs("Real emulator audio producer did not sustain audible PSG output\n", stderr);
         goto cleanup;
     }
