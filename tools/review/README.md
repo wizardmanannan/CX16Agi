@@ -19,6 +19,18 @@ callers onto that pre-KQ1 baseline. The baseline must report the exact
 visible where the managed black-background palette should be. The candidate
 must complete the same case and print its success marker.
 
+The Said `REST_OF_LINE` witness uses baseline
+`e406ba7a3727723a16391f7adc74c2987a4a7c9e` and the compiled `--said` case.
+Its lone `REST_OF_LINE` token must fail on baseline with HADMATCH unset, then
+pass on the candidate with the interpreter at the next bytecode. The permanent
+oracle records the actual HADMATCH value, true/false return counts, and cursor
+when this mismatch occurs. Both production witnesses use the same compiled
+caller builder in `review-enforcement-test.mk`.
+
+The production case also retains the 457-byte pre-sharing matcher baseline and
+measured `executeLogic` cycles. The shared purge keeps the zero-input path at
+2016 cycles and adds three cycles to the HADMATCH-set and word-mismatch paths.
+
 The plan takes absolute dependency roots from `CC65_HOME` and
 `X16_EMULATOR_SOURCE`. Export the same installed roots used by the native
 suites before capture and verification; CI supplies its pinned installations.
@@ -70,6 +82,7 @@ The permanent review cases have these focused rerun commands. The aggregate
 | Area | Permanent C case | Focused command after `make -C tools` |
 | --- | --- | --- |
 | KQ1 startup white-attribute regression | `test_banked_strings_text_cases.h:run_kq1_startup_display_case` | `production-test` |
+| Said REST_OF_LINE regression | `test_said_cases.h:run_said_rest_of_line_regression` | `production-test` |
 | Capture, replay, artifacts, and identity | `test_review_evidence.c` | `-f review-enforcement-test.mk test` |
 | Current GitHub reviews, checks, and protection | `test_review_policy.c` | `-f review-policy.mk review-policy-test` |
 | Real workflow readiness script | `test_review_workflow.c` | `review-workflow-test` |

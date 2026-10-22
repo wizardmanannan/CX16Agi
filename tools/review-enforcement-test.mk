@@ -4,9 +4,11 @@ HOST_CFLAGS ?= -std=c11 -O1 -g -Wall -Wextra -Werror -fsanitize=address,undefine
 TEST_OUTPUT_ROOT ?= $(REPO_ROOT)/obj
 TEST_FIXTURE_ROOT ?= $(if $(TMPDIR),$(TMPDIR),/tmp)
 WITNESS_OUT ?= $(REPO_ROOT)/obj/review-enforcement-witness
-KQ1_WITNESS_OUT ?= $(WITNESS_OUT)/kq1-startup-palette
+WITNESS_NAME ?=
+WITNESS_CASE ?=
+WITNESS_RUNNER ?=
 
-.PHONY: build test kq1-palette-witness-build
+.PHONY: build test compiled-caller-witness-build
 build:
 	@set -eu; \
 	mkdir -p "$(WITNESS_OUT)"; \
@@ -17,22 +19,23 @@ build:
 	  "$(REPO_ROOT)/tools/test_review_evidence.c" "$(REPO_ROOT)/tools/review_sha256.c" \
 	  -o "$(WITNESS_OUT)/test_review_evidence"
 
-kq1-palette-witness-build:
+compiled-caller-witness-build:
 	@set -eu; \
-	mkdir -p "$(KQ1_WITNESS_OUT)/bin"; \
+	test -n "$(WITNESS_NAME)" -a -n "$(WITNESS_CASE)" -a -n "$(WITNESS_RUNNER)"; \
+	mkdir -p "$(WITNESS_OUT)/bin"; \
 	$(MAKE) --no-print-directory -f "$(REPO_ROOT)/tools/test-image.mk" \
-	  "REPO_ROOT=$(REPO_ROOT)" "OUT=$(KQ1_WITNESS_OUT)/image" "CC65_HOME=$(CC65_HOME)"; \
+	  "REPO_ROOT=$(REPO_ROOT)" "OUT=$(WITNESS_OUT)/image" "CC65_HOME=$(CC65_HOME)"; \
 	"$(HOST_CC)" -std=c11 -O2 -Wall -Wextra -save-temps=obj -fno-use-linker-plugin \
 	  -I"$(X16_EMULATOR_SOURCE)/src/cpu" \
 	  "$(REPO_ROOT)/tools/test_banked_strings.c" \
 	  "$(X16_EMULATOR_SOURCE)/src/cpu/fake6502.c" \
-	  -o "$(KQ1_WITNESS_OUT)/bin/test_banked_strings"; \
+	  -o "$(WITNESS_OUT)/bin/test_banked_strings"; \
 	printf '%s\n' '#!/bin/sh' 'set -eu' \
 	  'out=$$(CDPATH= cd -- "$$(dirname -- "$$0")" && pwd)' \
-	  'printf "%s\n" "WITNESS_EXECUTED: kq1-startup-white-attribute" >&2' \
-	  'exec "$$out/bin/test_banked_strings" --build "$$out/image" --text-cleanup' \
-	  > "$(KQ1_WITNESS_OUT)/run-kq1-startup-palette"; \
-	chmod +x "$(KQ1_WITNESS_OUT)/run-kq1-startup-palette"
+	  'printf "%s\n" "WITNESS_EXECUTED: $(WITNESS_NAME)" >&2' \
+	  'exec "$$out/bin/test_banked_strings" --build "$$out/image" "$(WITNESS_CASE)"' \
+	  > "$(WITNESS_OUT)/$(WITNESS_RUNNER)"; \
+	chmod +x "$(WITNESS_OUT)/$(WITNESS_RUNNER)"
 
 test:
 	@set -eu; \

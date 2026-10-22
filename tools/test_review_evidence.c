@@ -340,6 +340,38 @@ static int run_argv(char *const argv[], const char *directory, const char *log)
     return 128 + WTERMSIG(status);
 }
 
+static void check_witness_baseline(const char *baseline, size_t baseline_length,
+                                  const char *log_path)
+{
+    CHECK(baseline_length == 40 || baseline_length == 64,
+          "Witness baseline must be a full Git commit ID");
+    char baseline_sha[65];
+    memcpy(baseline_sha, baseline, baseline_length);
+    baseline_sha[baseline_length] = '\0';
+    for (size_t i = 0; i < baseline_length; ++i)
+        CHECK((baseline_sha[i] >= '0' && baseline_sha[i] <= '9') ||
+              (baseline_sha[i] >= 'a' && baseline_sha[i] <= 'f'),
+              "Witness baseline must be a full Git commit ID");
+
+    char commit_spec[80];
+    CHECK(snprintf(commit_spec, sizeof(commit_spec), "%s^{commit}", baseline_sha) <
+          (int)sizeof(commit_spec), "Witness baseline commit ID is too long");
+    char *resolve_argv[] = { "git", "-C", product_tools, "rev-parse", "--verify", "--quiet",
+        "--end-of-options", commit_spec, NULL };
+    CHECK(run_argv(resolve_argv, NULL, log_path) == 0,
+          "Witness baseline does not resolve to a commit in the product repository");
+    char *resolved = read_text(log_path);
+    CHECK(strlen(resolved) == baseline_length + 1 &&
+          !memcmp(resolved, baseline_sha, baseline_length) && resolved[baseline_length] == '\n',
+          "Witness baseline must be a full Git commit ID");
+    free(resolved);
+
+    char *ancestor_argv[] = { "git", "-C", product_tools, "merge-base", "--is-ancestor",
+        baseline_sha, "HEAD", NULL };
+    CHECK(run_argv(ancestor_argv, NULL, log_path) == 0,
+          "Witness baseline is not in the published branch ancestry");
+}
+
 static void check_kq1_startup_palette_witness_contract(void)
 {
     char plan_path[4096], log_path[4096];
@@ -352,39 +384,14 @@ static void check_kq1_startup_palette_witness_contract(void)
     const char *baseline_end = strchr(baseline, '|');
     const char *witness_tail =
         "|240|1|WITNESS_EXECUTED: kq1-startup-white-attribute|palette=$10 expected=$40|"
-        "Compiled Logic83 startup display commands keep credits and fixed text on their requested VRAM rows|10|";
+        "Compiled Logic83 startup display commands keep credits and fixed text on their requested VRAM rows|13|";
     CHECK(baseline_end && !strncmp(baseline_end, witness_tail, strlen(witness_tail)),
           "Review plan omitted the compiled KQ1 white-attribute production witness contract");
     size_t baseline_length = (size_t)(baseline_end - baseline);
-    CHECK(baseline_length == 40 || baseline_length == 64,
-          "KQ1 witness baseline must be a full Git commit ID");
-    char baseline_sha[65];
-    memcpy(baseline_sha, baseline, baseline_length);
-    baseline_sha[baseline_length] = '\0';
-    for (size_t i = 0; i < baseline_length; ++i)
-        CHECK((baseline_sha[i] >= '0' && baseline_sha[i] <= '9') ||
-              (baseline_sha[i] >= 'a' && baseline_sha[i] <= 'f'),
-              "KQ1 witness baseline must be a full Git commit ID");
-
-    char commit_spec[80];
-    CHECK(snprintf(commit_spec, sizeof(commit_spec), "%s^{commit}", baseline_sha) <
-          (int)sizeof(commit_spec), "KQ1 witness baseline commit ID is too long");
-    char *resolve_argv[] = { "git", "-C", product_tools, "rev-parse", "--verify", "--quiet",
-        "--end-of-options", commit_spec, NULL };
-    CHECK(run_argv(resolve_argv, NULL, log_path) == 0,
-          "KQ1 witness baseline does not resolve to a commit in the product repository");
-    char *resolved = read_text(log_path);
-    CHECK(strlen(resolved) == baseline_length + 1 &&
-          !memcmp(resolved, baseline_sha, baseline_length) && resolved[baseline_length] == '\n',
-          "KQ1 witness baseline must be a full Git commit ID");
-    free(resolved);
-
-    char *ancestor_argv[] = { "git", "-C", product_tools, "merge-base", "--is-ancestor",
-        baseline_sha, "HEAD", NULL };
-    CHECK(run_argv(ancestor_argv, NULL, log_path) == 0,
-          "KQ1 witness baseline is not in the published branch ancestry");
+    check_witness_baseline(baseline, baseline_length, log_path);
     CHECK(strstr(plan,
-          "@TOOL:make@|-C|@REPO@/tools|-f|review-enforcement-test.mk|kq1-palette-witness-build|") != NULL &&
+          "@TOOL:make@|-C|@REPO@/tools|-f|review-enforcement-test.mk|compiled-caller-witness-build|") != NULL &&
+          strstr(plan, "WITNESS_CASE=--text-cleanup|WITNESS_RUNNER=run-kq1-startup-palette") != NULL &&
           strstr(plan, "@OUT@/run-kq1-startup-palette") != NULL,
           "KQ1 palette witness did not build and run the compiled production target callers");
     CHECK(strstr(plan, "overlay|kq1-startup-white-attribute|tools/test_banked_strings.c\n") != NULL &&
@@ -398,6 +405,43 @@ static void check_kq1_startup_palette_witness_contract(void)
           "handleDisplayTextSlice|src/irqAsm.s|compiled KQ1 startup credit caller reaches b3Display_v and b3SetTextColor|"
           "tools/test_banked_strings_text_cases.h|production-native|") != NULL,
           "KQ1 palette witness omitted its production entry, caller, or required suite");
+    free(plan);
+}
+
+static void check_said_rest_witness_contract(void)
+{
+    char plan_path[4096], log_path[4096];
+    path_join(plan_path, sizeof(plan_path), product_tools, "review/cx16.plan");
+    path_join(log_path, sizeof(log_path), suite_output_directory, "said-witness-baseline-git.log");
+    char *plan = read_text(plan_path);
+    const char *witness = strstr(plan, "witness|said-rest-only-regression|");
+    CHECK(witness != NULL, "Review plan omitted the compiled SAID REST_OF_LINE production witness");
+    const char *baseline = witness + strlen("witness|said-rest-only-regression|");
+    const char *baseline_end = strchr(baseline, '|');
+    const char *witness_tail =
+        "|240|1|WITNESS_EXECUTED: said-rest-only-regression|"
+        "SAID_REGRESSION: case=rest_only_regression expected_match=1 actual_match=0 hadmatch=0|"
+        "Production Said opcode passes exact, wildcard, REST_OF_LINE, flag lifecycle, exhaustion and long-argument cases|13|";
+    CHECK(baseline_end && !strncmp(baseline_end, witness_tail, strlen(witness_tail)),
+          "Review plan omitted the SAID REST_OF_LINE baseline symptom or candidate oracle");
+    size_t baseline_length = (size_t)(baseline_end - baseline);
+    check_witness_baseline(baseline, baseline_length, log_path);
+
+    CHECK(strstr(plan,
+          "@TOOL:make@|-C|@REPO@/tools|-f|review-enforcement-test.mk|compiled-caller-witness-build|") != NULL &&
+          strstr(plan, "WITNESS_CASE=--said|WITNESS_RUNNER=run-said-rest-only|1|@OUT@/run-said-rest-only") != NULL,
+          "SAID REST_OF_LINE witness did not build and run the compiled production caller");
+    CHECK(strstr(plan, "overlay|said-rest-only-regression|tools/test_banked_strings.c\n") != NULL &&
+          strstr(plan, "overlay|said-rest-only-regression|tools/test_said_cases.h\n") != NULL &&
+          strstr(plan, "overlay|said-rest-only-regression|tools/test_banked_strings_commands_target.c\n") != NULL &&
+          strstr(plan, "overlay|said-rest-only-regression|tools/review-enforcement-test.mk\n") != NULL,
+          "SAID REST_OF_LINE witness omitted its permanent production test or compiled caller");
+    CHECK(strstr(plan,
+          "scope|said-rest-only-regression|Said REST_OF_LINE matches from a lone REST token, records HADMATCH, and advances to the next bytecode|"
+          "bFSaid|src/logicCommands.s|compiled executeLogic invokes bFSaid and returns through the true opcode path|"
+          "tools/test_said_cases.h|production-native|same compiled rest_only_regression case must show HADMATCH false on baseline and pass on candidate|none\n") != NULL,
+          "SAID REST_OF_LINE witness omitted its production entry, compiled caller, case, or coverage obligation");
+
     free(plan);
 }
 
@@ -762,6 +806,7 @@ int main(int argc, char **argv)
     CHECK(source_separator != NULL, "Review evidence native product source path has no directory");
     *source_separator = '\0';
     check_kq1_startup_palette_witness_contract();
+    check_said_rest_witness_contract();
     CHECK(snprintf(output_root, sizeof(output_root), "%s/review-evidence-XXXXXX", suite_output_directory) <
           (int)sizeof(output_root), "Review evidence output path is too long");
     CHECK(mkdtemp(output_root) != NULL, "Cannot create review evidence suite output");
