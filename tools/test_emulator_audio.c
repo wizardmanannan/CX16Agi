@@ -1,77 +1,192 @@
-/* Run the actual emulator audio producer/callback with a deterministic host clock. */
+/* Exercise the emulator's real producer, chip renderers, resampler and callback. */
 #include <stdbool.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#define SDL_OpenAudioDevice test_audio_open
-#define SDL_CloseAudioDevice test_audio_close
-#define SDL_PauseAudioDevice test_audio_pause
-#define SDL_LockAudioDevice test_audio_lock
-#define SDL_UnlockAudioDevice test_audio_unlock
+
+#include <SDL.h>
+#include "vera_pcm.h"
+#include "vera_psg.h"
+
+static SDL_AudioDeviceID startup_locked_audio_device;
+
+static SDL_AudioDeviceID test_open_audio_device(const char *device, int iscapture,
+    const SDL_AudioSpec *desired, SDL_AudioSpec *obtained, int allowed_changes)
+{
+    SDL_AudioDeviceID opened = SDL_OpenAudioDevice(device, iscapture, desired,
+        obtained, allowed_changes);
+    if (opened) {
+        SDL_LockAudioDevice(opened);
+        startup_locked_audio_device = opened;
+    }
+    return opened;
+}
+
+#define SDL_OpenAudioDevice test_open_audio_device
+#ifdef CX16_AUDIO_BUFFERED_TEST
 #define CX16_UPSTREAM_AUDIO <audio.c>
 #include "emulator-audio-buffer.c"
+#else
+#include <audio.c>
+#endif
+#undef SDL_OpenAudioDevice
 
 uint8_t MHZ = 8;
 uint32_t clockticks6502 = 0;
 
+static unsigned capture_chunks;
+static uint64_t capture_samples;
+static unsigned capture_non_silent_chunks;
+static unsigned invalid_capture_chunks;
+static unsigned callback_count;
+static unsigned callback_underflows;
+static unsigned audible_callbacks;
+
 int tas_capture_audio_samples(const TasAudioChunk *chunk)
 {
-    (void)chunk;
+    const size_t bytes_per_frame = 2 * sizeof(int16_t);
+    const int16_t *samples;
+    bool audible = false;
+
+    if (!chunk || !chunk->data || chunk->sample_count == 0 ||
+        chunk->chunk_index != capture_chunks || chunk->sample_start != capture_samples ||
+        chunk->byte_offset != capture_samples * bytes_per_frame ||
+        chunk->length != chunk->sample_count * bytes_per_frame ||
+        chunk->sample_rate != AUDIO_SAMPLERATE || chunk->channels != 2 ||
+        chunk->bits_per_sample != 16 || chunk->cycle_end < chunk->cycle_start) {
+        invalid_capture_chunks++;
+        return -1;
+    }
+
+    samples = (const int16_t *)chunk->data;
+    for (uint64_t i = 0; i < chunk->sample_count * 2; ++i) {
+        int32_t value = samples[i];
+        if (value < 0) value = -value;
+        if (value > 32) {
+            audible = true;
+            break;
+        }
+    }
+
+    if (audible) capture_non_silent_chunks++;
+    capture_chunks++;
+    capture_samples += chunk->sample_count;
     return 0;
 }
 
-SDL_AudioDeviceID test_audio_open(const char *name, int capture,
-    const SDL_AudioSpec *desired, SDL_AudioSpec *obtained, int changes)
+static void service_callbacks(unsigned frame)
 {
-    (void)name; (void)capture; (void)changes;
-    *obtained = *desired;
-    return 1;
+    const unsigned due = (uint64_t)frame * AUDIO_SAMPLERATE /
+        (60 * SAMPLES_PER_BUFFER);
+    int16_t samples[SAMPLES_PER_BUFFER * 2];
+
+    while (callback_count < due) {
+        int32_t peak = 0;
+        if (buffer_written < SAMPLES_PER_BUFFER * 2) callback_underflows++;
+        audio_callback(NULL, (Uint8 *)samples, sizeof(samples));
+        for (unsigned i = 0; i < SAMPLES_PER_BUFFER * 2; ++i) {
+            int32_t value = samples[i];
+            if (value < 0) value = -value;
+            if (value > peak) peak = value;
+        }
+        if (peak > 32) audible_callbacks++;
+        callback_count++;
+    }
 }
-void test_audio_close(SDL_AudioDeviceID device) { (void)device; }
-void test_audio_pause(SDL_AudioDeviceID device, int paused) { (void)device; (void)paused; }
-void test_audio_lock(SDL_AudioDeviceID device) { (void)device; }
-void test_audio_unlock(SDL_AudioDeviceID device) { (void)device; }
-void YM_Create(int clock) { (void)clock; }
-void YM_init(int rate, int frames) { (void)rate; (void)frames; }
-void YM_stream_update(uint16_t *out, uint32_t count) { memset(out, 0, count * 4); }
-void psg_render(int16_t *out, unsigned count)
-{
-    for (unsigned i = 0; i < count * 2; ++i) out[i] = 6000;
-}
-void pcm_render(int16_t *out, unsigned count) { memset(out, 0, count * 4); }
-void midi_synth_render(int16_t *out, int count) { memset(out, 0, (size_t)count * 4); }
-void wav_recorder_process(const int16_t *samples, int count) { (void)samples; (void)count; }
 
 int main(void)
 {
-    unsigned callbacks = 0, gaps = 0, pending_clocks = 0;
-    int16_t samples[SAMPLES_PER_BUFFER * 2];
-    audio_init(NULL, 32);
-    for (unsigned frame = 1; frame <= 180; ++frame) {
-        pending_clocks += 8000000 / 60;
-        /* One late video frame every third second, then the producer catches up. */
-        if (frame % 20 != 10) {
-            audio_step((int)pending_clocks);
-            audio_render();
-            pending_clocks = 0;
-        }
-        unsigned due = (uint64_t)frame * AUDIO_SAMPLERATE / (60 * SAMPLES_PER_BUFFER);
-        while (callbacks < due) {
-            memset(samples, 0x5A, sizeof(samples));
-            audio_callback(NULL, (Uint8 *)samples, sizeof(samples));
-            ++callbacks;
-            if (frame > 30) {
-                for (unsigned i = 0; i < SAMPLES_PER_BUFFER * 2; ++i)
-                    if (!samples[i]) { ++gaps; break; }
-            }
-        }
-    }
-    audio_close();
-    printf("Native audio jitter workload: 180 frames, %u callbacks, %u audible gaps\n", callbacks, gaps);
-    if (gaps) {
-        fputs("Audio callback inserted silence during bounded host jitter\n", stderr);
+    uint32_t pending_clocks = 0;
+    uint32_t fractional_cycles = 0;
+    bool audio_initialized = false;
+    const char *audio_driver;
+    int result = EXIT_FAILURE;
+
+    if (SDL_setenv("SDL_AUDIODRIVER", "dummy", 1) != 0) {
+        fputs("Could not select SDL dummy audio driver\n", stderr);
         return EXIT_FAILURE;
     }
-    return EXIT_SUCCESS;
+    if (SDL_Init(SDL_INIT_AUDIO) != 0) {
+        fprintf(stderr, "SDL audio initialization failed: %s\n", SDL_GetError());
+        return EXIT_FAILURE;
+    }
+    audio_driver = SDL_GetCurrentAudioDriver();
+    if (!audio_driver || strcmp(audio_driver, "dummy") != 0) {
+        fputs("SDL did not select the dummy audio driver\n", stderr);
+        SDL_Quit();
+        return EXIT_FAILURE;
+    }
+
+    audio_init(NULL, 32);
+    audio_initialized = audio_dev != 0;
+    if (!audio_initialized) {
+        if (startup_locked_audio_device) {
+            SDL_UnlockAudioDevice(startup_locked_audio_device);
+            startup_locked_audio_device = 0;
+        }
+        fputs("Emulator did not open an SDL audio device\n", stderr);
+        goto cleanup;
+    }
+    if (startup_locked_audio_device != audio_dev) {
+        fputs("Emulator audio device was not held during initialization\n", stderr);
+        goto cleanup;
+    }
+    SDL_PauseAudioDevice(audio_dev, 1);
+    SDL_UnlockAudioDevice(audio_dev);
+    startup_locked_audio_device = 0;
+
+    psg_reset();
+    psg_writereg(0, 0x00);
+    psg_writereg(1, 0x10);
+    psg_writereg(2, 0xff);
+    psg_writereg(3, 0x40);
+    pcm_reset();
+
+    for (unsigned frame = 1; frame <= 180; ++frame) {
+        fractional_cycles += 8000000;
+        uint32_t frame_clocks = fractional_cycles / 60;
+        fractional_cycles %= 60;
+        pending_clocks += frame_clocks;
+        clockticks6502 += frame_clocks;
+
+        /* Delay one producer frame every third second while host callbacks continue. */
+        if (frame % 20 == 10) {
+            service_callbacks(frame);
+            continue;
+        }
+
+        audio_step((int)pending_clocks);
+        audio_render();
+        pending_clocks = 0;
+        service_callbacks(frame);
+    }
+
+    printf("Real emulator audio: 180 frames, %u callbacks, %u queue underruns, "
+        "%u audible callbacks, %u captured chunks (%llu samples, %u audible)\n",
+        callback_count, callback_underflows, audible_callbacks, capture_chunks,
+        (unsigned long long)capture_samples, capture_non_silent_chunks);
+
+    if (invalid_capture_chunks) {
+        fprintf(stderr, "TAS audio capture rejected %u invalid production chunks\n",
+            invalid_capture_chunks);
+        goto cleanup;
+    }
+    if (capture_chunks < 100 || capture_non_silent_chunks * 2 < capture_chunks ||
+        audible_callbacks * 2 < callback_count) {
+        fputs("Real emulator audio producer did not sustain audible PSG output\n", stderr);
+        goto cleanup;
+    }
+    if (callback_underflows) {
+        fprintf(stderr, "Audio callback exhausted the producer queue %u times during bounded jitter\n",
+            callback_underflows);
+        goto cleanup;
+    }
+
+    result = EXIT_SUCCESS;
+
+cleanup:
+    if (audio_initialized) audio_close();
+    SDL_Quit();
+    return result;
 }

@@ -19,6 +19,7 @@ REVIEW_SERIES_BIN ?= $(REPO_ROOT)/obj/review-series/review_series
 # Sanitized host children need ASan first while retaining injected command guards for fixture cleanup.
 TEST_OUTPUT_ROOT ?= $(REPO_ROOT)/obj
 TEST_FIXTURE_ROOT ?= $(if $(TMPDIR),$(TMPDIR),/tmp)
+AUDIO_TEST_BUFFERED ?= 1
 
 export GAME_KQ1 GAME_KQ3 CC65_HOME X16_EMULATOR_SOURCE TMPDIR TEST_OUTPUT_DIR ROM GAME BUILD SYMBOLS SDL_PREFIX TAS_CAPTURE_HEADER
 unexport KEEP_TEST_OUTPUT
@@ -152,7 +153,7 @@ _run:
 	  irq-test) need_cc65; need_cpu ;; \
 	  metadata-test) need_cc65 ;; \
 	  staging-test) need_command pkg-config; pkg-config --exists libpng ;; \
-	  emulator-audio-test) need_file "$$X16_EMULATOR_SOURCE/src/audio.c"; need_file "$$TAS_CAPTURE_HEADER"; need_command pkg-config; pkg-config --exists sdl2 ;; \
+	  emulator-audio-test) need_file "$$X16_EMULATOR_SOURCE/src/audio.c"; need_file "$$TAS_CAPTURE_HEADER"; need_command cmake; need_command make; need_command pkg-config; pkg-config --exists sdl2 ;; \
 	  build-test) need_cc65; need_exec "$$CC65_HOME/bin/cl65" ;; \
 	  core) need_cc65; need_cpu ;; \
 	  review-workflow) need_command git; need_command bash ;; \
@@ -264,7 +265,13 @@ _run:
 	    "$(HOST_CC)" $(HOST_CFLAGS) "$$repo/tools/test_full_game_irq.c" -lpng -o "$$work/bin/test_full_game_irq"; \
 	    "$$work/bin/test_full_game_irq" --staging-test ;; \
 	  emulator-audio-test) \
-	    "$(HOST_CC)" $(HOST_CFLAGS) -I"$$X16_EMULATOR_SOURCE/src" -include "$$TAS_CAPTURE_HEADER" -DX16_TAS_CAPTURE_INCLUDE_H $$(pkg-config --cflags sdl2) -ffunction-sections -fdata-sections "$$repo/tools/test_emulator_audio.c" $$(pkg-config --libs sdl2) -Wl,--gc-sections -o "$$work/bin/test_emulator_audio"; \
+	    cmake -S "$$X16_EMULATOR_SOURCE" -B "$$work/audio-emulator" -G "Unix Makefiles" -DENABLE_LTO=OFF -DENABLE_FLUIDSYNTH=OFF "-DCMAKE_C_FLAGS=-ffunction-sections -fdata-sections" "-DCMAKE_CXX_FLAGS=-ffunction-sections -fdata-sections"; \
+	    for audio_object in CMakeFiles/x16emu.dir/src/vera_pcm.c.o CMakeFiles/x16emu.dir/src/vera_psg.c.o CMakeFiles/x16emu.dir/src/wav_recorder.c.o CMakeFiles/x16emu.dir/src/midi.c.o CMakeFiles/x16emu.dir/src/ymglue.cpp.o CMakeFiles/x16emu.dir/src/extern/ymfm/src/ymfm_opm.cpp.o; do \
+	      make --no-print-directory -C "$$work/audio-emulator" -f CMakeFiles/x16emu.dir/build.make "$$audio_object"; \
+	    done; \
+	    audio_mode=; if [ "$(AUDIO_TEST_BUFFERED)" = 1 ]; then audio_mode=-DCX16_AUDIO_BUFFERED_TEST; fi; \
+	    "$(HOST_CC)" $(HOST_CFLAGS) -I"$$X16_EMULATOR_SOURCE/src" -include "$$TAS_CAPTURE_HEADER" -DX16_TAS_CAPTURE_INCLUDE_H $$(pkg-config --cflags sdl2) -ffunction-sections -fdata-sections $$audio_mode -c "$$repo/tools/test_emulator_audio.c" -o "$$work/bin/test_emulator_audio.o"; \
+	    "$(HOST_CC)" "$$work/bin/test_emulator_audio.o" "$$work/audio-emulator/CMakeFiles/x16emu.dir/src/vera_pcm.c.o" "$$work/audio-emulator/CMakeFiles/x16emu.dir/src/vera_psg.c.o" "$$work/audio-emulator/CMakeFiles/x16emu.dir/src/wav_recorder.c.o" "$$work/audio-emulator/CMakeFiles/x16emu.dir/src/midi.c.o" "$$work/audio-emulator/CMakeFiles/x16emu.dir/src/ymglue.cpp.o" "$$work/audio-emulator/CMakeFiles/x16emu.dir/src/extern/ymfm/src/ymfm_opm.cpp.o" $$(pkg-config --libs sdl2) -Wl,--gc-sections -lstdc++ -lm -ldl -pthread -o "$$work/bin/test_emulator_audio"; \
 	    "$$work/bin/test_emulator_audio" ;; \
 	  games-test|intro-test|kq3-intro-test|play) \
 	    "$(HOST_CC)" $(HOST_CFLAGS) "$$repo/tools/test_build.c" -o "$$work/bin/test_build"; \
