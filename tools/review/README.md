@@ -12,7 +12,7 @@ and witnesses. The canonical plan format and witness are exercised by
 `tools/test_review_evidence.c`.
 
 The KQ1 startup palette witness builds the real test image and compiled caller
-harness on baseline `29569481a8ef72dc8a22bce4c0af18129fab3729` and the
+harness on baseline `079d92d91f7dc415ba1770b8adc2f38f64cf8f81` and the
 candidate. It overlays the permanent `--text-cleanup` C case and its target
 callers onto that pre-KQ1 baseline. The baseline must report the exact
 `palette=$10 expected=$40` symptom: the old white palette-1 attribute remains

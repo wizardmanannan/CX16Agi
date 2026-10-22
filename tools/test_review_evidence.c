@@ -166,34 +166,6 @@ static char *read_text(const char *path)
     return contents;
 }
 
-static void check_kq1_startup_palette_witness_contract(void)
-{
-    char plan_path[4096];
-    path_join(plan_path, sizeof(plan_path), product_tools, "review/cx16.plan");
-    char *plan = read_text(plan_path);
-    const char *witness =
-        "witness|kq1-startup-white-attribute|29569481a8ef72dc8a22bce4c0af18129fab3729|240|1|"
-        "WITNESS_EXECUTED: kq1-startup-white-attribute|palette=$10 expected=$40|"
-        "Compiled Logic83 startup display commands keep credits and fixed text on their requested VRAM rows|10|";
-    CHECK(strstr(plan, witness) != NULL,
-          "Review plan omitted the compiled KQ1 white-attribute production witness");
-    CHECK(strstr(plan,
-          "@TOOL:make@|-C|@REPO@/tools|-f|review-enforcement-test.mk|kq1-palette-witness-build|") != NULL &&
-          strstr(plan, "@OUT@/run-kq1-startup-palette") != NULL,
-          "KQ1 palette witness did not build and run the compiled production target callers");
-    CHECK(strstr(plan, "overlay|kq1-startup-white-attribute|tools/test_banked_strings.c\n") != NULL &&
-          strstr(plan, "overlay|kq1-startup-white-attribute|tools/test_banked_strings_text_cases.h\n") != NULL &&
-          strstr(plan, "overlay|kq1-startup-white-attribute|tools/test_banked_strings_commands_target.c\n") != NULL &&
-          strstr(plan, "overlay|kq1-startup-white-attribute|tools/review-enforcement-test.mk\n") != NULL,
-          "KQ1 palette witness omitted its permanent production test and compiled callers");
-    CHECK(strstr(plan,
-          "scope|kq1-startup-white-attribute|KQ1 startup credit glyphs use their managed black-background palette at VSYNC return|"
-          "handleDisplayTextSlice|src/irqAsm.s|compiled KQ1 startup credit caller reaches b3Display_v and b3SetTextColor|"
-          "tools/test_banked_strings_text_cases.h|production-native|") != NULL,
-          "KQ1 palette witness omitted its production entry, caller, or required suite");
-    free(plan);
-}
-
 static bool file_contains(const char *path, const char *needle)
 {
     FILE *file = fopen(path, "rb");
@@ -366,6 +338,66 @@ static int run_argv(char *const argv[], const char *directory, const char *log)
     CHECK(waitpid(child, &status, 0) == child, "Cannot wait for review evidence command");
     if (WIFEXITED(status)) return WEXITSTATUS(status);
     return 128 + WTERMSIG(status);
+}
+
+static void check_kq1_startup_palette_witness_contract(void)
+{
+    char plan_path[4096], log_path[4096];
+    path_join(plan_path, sizeof(plan_path), product_tools, "review/cx16.plan");
+    path_join(log_path, sizeof(log_path), suite_output_directory, "kq1-witness-baseline-git.log");
+    char *plan = read_text(plan_path);
+    const char *witness = strstr(plan, "witness|kq1-startup-white-attribute|");
+    CHECK(witness != NULL, "Review plan omitted the compiled KQ1 white-attribute production witness");
+    const char *baseline = witness + strlen("witness|kq1-startup-white-attribute|");
+    const char *baseline_end = strchr(baseline, '|');
+    const char *witness_tail =
+        "|240|1|WITNESS_EXECUTED: kq1-startup-white-attribute|palette=$10 expected=$40|"
+        "Compiled Logic83 startup display commands keep credits and fixed text on their requested VRAM rows|10|";
+    CHECK(baseline_end && !strncmp(baseline_end, witness_tail, strlen(witness_tail)),
+          "Review plan omitted the compiled KQ1 white-attribute production witness contract");
+    size_t baseline_length = (size_t)(baseline_end - baseline);
+    CHECK(baseline_length == 40 || baseline_length == 64,
+          "KQ1 witness baseline must be a full Git commit ID");
+    char baseline_sha[65];
+    memcpy(baseline_sha, baseline, baseline_length);
+    baseline_sha[baseline_length] = '\0';
+    for (size_t i = 0; i < baseline_length; ++i)
+        CHECK((baseline_sha[i] >= '0' && baseline_sha[i] <= '9') ||
+              (baseline_sha[i] >= 'a' && baseline_sha[i] <= 'f'),
+              "KQ1 witness baseline must be a full Git commit ID");
+
+    char commit_spec[80];
+    CHECK(snprintf(commit_spec, sizeof(commit_spec), "%s^{commit}", baseline_sha) <
+          (int)sizeof(commit_spec), "KQ1 witness baseline commit ID is too long");
+    char *resolve_argv[] = { "git", "-C", product_tools, "rev-parse", "--verify", "--quiet",
+        "--end-of-options", commit_spec, NULL };
+    CHECK(run_argv(resolve_argv, NULL, log_path) == 0,
+          "KQ1 witness baseline does not resolve to a commit in the product repository");
+    char *resolved = read_text(log_path);
+    CHECK(strlen(resolved) == baseline_length + 1 &&
+          !memcmp(resolved, baseline_sha, baseline_length) && resolved[baseline_length] == '\n',
+          "KQ1 witness baseline must be a full Git commit ID");
+    free(resolved);
+
+    char *ancestor_argv[] = { "git", "-C", product_tools, "merge-base", "--is-ancestor",
+        baseline_sha, "HEAD", NULL };
+    CHECK(run_argv(ancestor_argv, NULL, log_path) == 0,
+          "KQ1 witness baseline is not in the published branch ancestry");
+    CHECK(strstr(plan,
+          "@TOOL:make@|-C|@REPO@/tools|-f|review-enforcement-test.mk|kq1-palette-witness-build|") != NULL &&
+          strstr(plan, "@OUT@/run-kq1-startup-palette") != NULL,
+          "KQ1 palette witness did not build and run the compiled production target callers");
+    CHECK(strstr(plan, "overlay|kq1-startup-white-attribute|tools/test_banked_strings.c\n") != NULL &&
+          strstr(plan, "overlay|kq1-startup-white-attribute|tools/test_banked_strings_text_cases.h\n") != NULL &&
+          strstr(plan, "overlay|kq1-startup-white-attribute|tools/test_banked_strings_commands_target.c\n") != NULL &&
+          strstr(plan, "overlay|kq1-startup-white-attribute|tools/review-enforcement-test.mk\n") != NULL,
+          "KQ1 palette witness omitted its permanent production test and compiled callers");
+    CHECK(strstr(plan,
+          "scope|kq1-startup-white-attribute|KQ1 startup credit glyphs use their managed black-background palette at VSYNC return|"
+          "handleDisplayTextSlice|src/irqAsm.s|compiled KQ1 startup credit caller reaches b3Display_v and b3SetTextColor|"
+          "tools/test_banked_strings_text_cases.h|production-native|") != NULL,
+          "KQ1 palette witness omitted its production entry, caller, or required suite");
+    free(plan);
 }
 
 static void git_ok(const char *const args[], size_t count)
