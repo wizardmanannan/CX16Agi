@@ -30,13 +30,14 @@ jobs:
       TESTED_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
       EVENT_BASE_SHA: ${{ github.event.pull_request.base.sha || github.sha }}
       TEST_OUTPUT_ROOT: ${{ github.workspace }}/obj
-      EVIDENCE_DIR: ${{ runner.temp }}/cx16agi-native-head
 
     steps:
       - name: Initialize native head evidence
         shell: bash
         run: |
           set -euo pipefail
+          EVIDENCE_DIR="$RUNNER_TEMP/cx16agi-native-head-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT"
+          echo "EVIDENCE_DIR=$EVIDENCE_DIR" >> "$GITHUB_ENV"
           mkdir -p "$EVIDENCE_DIR"
           {
             echo "role=head"
@@ -148,7 +149,7 @@ jobs:
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: native-head-${{ github.run_id }}-${{ github.run_attempt }}
-          path: ${{ runner.temp }}/cx16agi-native-head
+          path: ${{ runner.temp }}/cx16agi-native-head-${{ github.run_id }}-${{ github.run_attempt }}
           if-no-files-found: error
           retention-days: 14
 
@@ -171,13 +172,14 @@ jobs:
       TESTED_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
       EVENT_BASE_SHA: ${{ github.event.pull_request.base.sha || github.sha }}
       TEST_OUTPUT_ROOT: ${{ github.workspace }}/obj
-      EVIDENCE_DIR: ${{ runner.temp }}/cx16agi-native-integration
 
     steps:
       - name: Initialize native integration evidence
         shell: bash
         run: |
           set -euo pipefail
+          EVIDENCE_DIR="$RUNNER_TEMP/cx16agi-native-integration-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT"
+          echo "EVIDENCE_DIR=$EVIDENCE_DIR" >> "$GITHUB_ENV"
           mkdir -p "$EVIDENCE_DIR"
           {
             echo "role=integration"
@@ -327,7 +329,7 @@ jobs:
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: native-integration-${{ github.run_id }}-${{ github.run_attempt }}
-          path: ${{ runner.temp }}/cx16agi-native-integration
+          path: ${{ runner.temp }}/cx16agi-native-integration-${{ github.run_id }}-${{ github.run_attempt }}
           if-no-files-found: error
           retention-days: 14
 
@@ -350,13 +352,14 @@ jobs:
       INTEGRATION_HEAD_TREE: ${{ needs.native-integration.outputs.head_tree }}
       INTEGRATION_MERGE_SHA: ${{ needs.native-integration.outputs.merge_sha }}
       INTEGRATION_MERGE_TREE: ${{ needs.native-integration.outputs.merge_tree }}
-      EVIDENCE_DIR: ${{ runner.temp }}/cx16agi-native-ready
 
     steps:
       - name: Initialize readiness evidence
         shell: bash
         run: |
           set -euo pipefail
+          EVIDENCE_DIR="$RUNNER_TEMP/cx16agi-native-ready-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT"
+          echo "EVIDENCE_DIR=$EVIDENCE_DIR" >> "$GITHUB_ENV"
           mkdir -p "$EVIDENCE_DIR"
           {
             echo "role=aggregate"
@@ -500,6 +503,6 @@ jobs:
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: native-ready-${{ github.run_id }}-${{ github.run_attempt }}
-          path: ${{ runner.temp }}/cx16agi-native-ready
+          path: ${{ runner.temp }}/cx16agi-native-ready-${{ github.run_id }}-${{ github.run_attempt }}
           if-no-files-found: error
           retention-days: 14

@@ -34,6 +34,37 @@ static char *read_text(const char *path)
     return text;
 }
 
+static bool runner_temp_in_job_environment(const char *yaml)
+{
+    char *copy = strdup(yaml);
+    CHECK(copy, "Cannot allocate workflow context check");
+    bool in_job_env = false;
+    char *state = NULL;
+    for (char *line = strtok_r(copy, "\n", &state); line; line = strtok_r(NULL, "\n", &state)) {
+        size_t indent = 0;
+        while (line[indent] == ' ') ++indent;
+        if (indent == 4 && !strcmp(line + indent, "env:")) {
+            in_job_env = true;
+            continue;
+        }
+        if (in_job_env && indent <= 4) in_job_env = false;
+        if (in_job_env && strstr(line, "runner.temp")) {
+            free(copy);
+            return true;
+        }
+    }
+    free(copy);
+    return false;
+}
+
+static size_t count_text(const char *text, const char *needle)
+{
+    size_t count = 0;
+    size_t length = strlen(needle);
+    for (const char *match = text; (match = strstr(match, needle)); match += length) ++count;
+    return count;
+}
+
 /* Execute the production block itself; duplicating its predicates would hide drift. */
 static char *aggregate_script(const char *path)
 {
@@ -84,8 +115,29 @@ static void run_gate(char *script, bool success, const char *diagnostic)
 int main(int argc, char **argv)
 {
     CHECK(argc == 2, "Expected native workflow path");
-    char *script = aggregate_script(argv[1]);
     suite_test_paths_init("review-workflow");
+    CHECK(runner_temp_in_job_environment(
+        "jobs:\n  check:\n    env:\n      EVIDENCE_DIR: ${{ runner.temp }}/evidence\n"),
+        "Context regression check missed unavailable job-level runner.temp");
+    CHECK(!runner_temp_in_job_environment(
+        "jobs:\n  check:\n    env:\n      MODE: test\n    steps:\n"
+        "      - uses: actions/upload-artifact\n        with:\n"
+        "          path: ${{ runner.temp }}/evidence\n"),
+        "Context regression check rejected permitted step-level runner.temp");
+    char *yaml = read_text(argv[1]);
+    CHECK(!runner_temp_in_job_environment(yaml), "runner.temp is unavailable in job-level env");
+    CHECK(count_text(yaml, "path: ${{ runner.temp }}/cx16agi-native-") == 3,
+          "runner.temp must remain available in the three step-level artifact paths");
+    CHECK(count_text(yaml, "echo \"EVIDENCE_DIR=$EVIDENCE_DIR\" >> \"$GITHUB_ENV\"") == 3,
+          "Each job must pass its runner-temp evidence path through GITHUB_ENV");
+    CHECK(strstr(yaml, "EVIDENCE_DIR=\"$RUNNER_TEMP/cx16agi-native-head-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT\""),
+          "Head evidence path must be unique per workflow run and attempt");
+    CHECK(strstr(yaml, "EVIDENCE_DIR=\"$RUNNER_TEMP/cx16agi-native-integration-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT\""),
+          "Integration evidence path must be unique per workflow run and attempt");
+    CHECK(strstr(yaml, "EVIDENCE_DIR=\"$RUNNER_TEMP/cx16agi-native-ready-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT\""),
+          "Readiness evidence path must be unique per workflow run and attempt");
+    free(yaml);
+    char *script = aggregate_script(argv[1]);
     suite_test_path(log_path, sizeof(log_path), suite_output_directory, "review-workflow.log");
     /* Real Git history provides every SHA/tree read by the production gate. */
     char *setup[] = {"bash", "-eu", "-c",
