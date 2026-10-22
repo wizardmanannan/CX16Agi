@@ -112,6 +112,88 @@ static void run_gate(char *script, bool success, const char *diagnostic)
     free(log);
 }
 
+static void check_output_ignored(const char *fixture, const char *path)
+{
+    char *args[] = {"bash", "-eu", "-c",
+        "if git -c core.excludesFile=/dev/null check-ignore -q -- \"$1\"; then :; "
+        "else printf 'production .gitignore does not ignore built output: %s\\n' \"$1\" >&2; exit 1; fi",
+        "review-workflow-ignore", (char *)path, NULL};
+    run_from(args, log_path, 15, fixture);
+}
+
+static void check_production_gitignore(const char *workflow_path)
+{
+    const char *workflow_suffix = "/.github/workflows/native-regressions.yml";
+    size_t path_length = strlen(workflow_path);
+    size_t suffix_length = strlen(workflow_suffix);
+    CHECK(path_length > suffix_length &&
+          !strcmp(workflow_path + path_length - suffix_length, workflow_suffix),
+          "Unexpected native workflow path");
+    char ignore_path[4096];
+    CHECK(snprintf(ignore_path, sizeof(ignore_path), "%.*s/.gitignore",
+                   (int)(path_length - suffix_length), workflow_path) < (int)sizeof(ignore_path),
+          "Production .gitignore path is too long");
+
+    char fixture[4096];
+    suite_test_path(fixture, sizeof(fixture), suite_fixture_directory, "review-ignore");
+    CHECK(!mkdir(fixture, 0700), "Cannot create isolated ignore fixture");
+
+    char *ignore = read_text(ignore_path);
+    char path[4096];
+    suite_test_path(path, sizeof(path), fixture, ".gitignore");
+    write_text(path, ignore);
+    free(ignore);
+
+    env("GIT_CONFIG_NOSYSTEM", "1");
+    env("GIT_CONFIG_GLOBAL", "/dev/null");
+    char *init[] = {"git", "-c", "core.excludesFile=/dev/null", "init", "--template=",
+                    "--initial-branch=main", NULL};
+    run_from(init, log_path, 15, fixture);
+
+    char source[4096];
+    suite_test_path(source, sizeof(source), fixture, "src");
+    CHECK(!mkdir(source, 0700), "Cannot create source input directory");
+    char output[4096];
+    suite_test_path(output, sizeof(output), fixture, "obj");
+    CHECK(!mkdir(output, 0700), "Cannot create output directory");
+    suite_test_path(output, sizeof(output), fixture, "obj/ci-tools");
+    CHECK(!mkdir(output, 0700), "Cannot create ci-tools output directory");
+
+    suite_test_path(path, sizeof(path), fixture, "src/tracked.s");
+    write_text(path, "tracked input\n");
+    suite_test_path(path, sizeof(path), fixture, "src/untracked.s");
+    write_text(path, "unexpected input\n");
+    suite_test_path(path, sizeof(path), fixture, "obj/review-tools");
+    write_text(path, "built tool\n");
+    suite_test_path(path, sizeof(path), fixture, "obj/ci-tools/ci-tools");
+    write_text(path, "built tool\n");
+
+    char *commit[] = {"bash", "-eu", "-c",
+        "git -c core.excludesFile=/dev/null config user.name Workflow-Test; "
+        "git -c core.excludesFile=/dev/null config user.email workflow@example.invalid; "
+        "git -c core.excludesFile=/dev/null add .gitignore src/tracked.s; "
+        "git -c core.excludesFile=/dev/null commit -qm base; "
+        "printf 'changed input\\n' > src/tracked.s",
+        "review-workflow-ignore-setup", NULL};
+    run_from(commit, log_path, 15, fixture);
+
+    check_output_ignored(fixture, "obj/review-tools");
+    check_output_ignored(fixture, "obj/ci-tools/ci-tools");
+
+    write_text(log_path, "");
+    char *status[] = {"git", "-c", "core.excludesFile=/dev/null", "status", "--short",
+                      "--untracked-files=all", NULL};
+    run_from(status, log_path, 15, fixture);
+    char *status_text = read_text(log_path);
+    CHECK(strstr(status_text, "src/tracked.s"),
+          "Production .gitignore hid a tracked source change");
+    CHECK(strstr(status_text, "?? src/untracked.s"),
+          "Production .gitignore hid an unrelated untracked source input");
+    CHECK(!strstr(status_text, "obj/review-tools") && !strstr(status_text, "obj/ci-tools"),
+          "Built output remains visible in Git status");
+    free(status_text);
+}
+
 int main(int argc, char **argv)
 {
     CHECK(argc == 2, "Expected native workflow path");
@@ -192,6 +274,7 @@ int main(int argc, char **argv)
     char *advance[] = {"git", "checkout", "--detach", values[4], NULL};
     run_from(advance, log_path, 15, suite_fixture_directory);
     run_gate(script, false, "main moved");
+    check_production_gitignore(argv[1]);
     for (size_t i = 0; i < 6; ++i) free(values[i]);
     free(script);
     puts("PASS actual workflow aggregate rejects incomplete jobs, stale identities and forged merge trees");

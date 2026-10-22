@@ -1,7 +1,7 @@
 /tools/*/bin
 /tools/*/obj
 /tools/*/.vs
-/obj/cx16
+/obj/
 /.vs
 /src/tests/TestCache/x64/Debug/*
 /src/Tests/TestMemoryAllocation/Debug/*
