@@ -285,7 +285,6 @@ _run:
 	      if [ "$$mode" = play ]; then \
 	        set -- --emulator-source "$$X16_EMULATOR_SOURCE" --rom "$$ROM" --build "$$work/image" --game "$$game" --output "$$work/$$game_id" --play; \
 	      elif [ "$$mode" = intro-test ] || [ "$$mode" = kq3-intro-test ]; then set -- "$$@" --intro-test; fi; \
-	      if [ -n "$${TAS_CAPTURE_HEADER:-}" ]; then set -- "$$@" --tas-capture-header "$$TAS_CAPTURE_HEADER"; fi; \
 	      if [ -n "$${SDL_PREFIX:-}" ]; then set -- "$$@" --sdl-prefix "$$SDL_PREFIX"; fi; \
 	      if CX16AGI_TEST_AUDIO_ADAPTER="$$repo/tools/emulator-audio-buffer.c" "$$work/bin/test_full_game_irq" "$$@"; then :; else failed=$$((failed+1)); fi; \
 	    done; \
@@ -384,7 +383,6 @@ _run:
 	    echo 'CC test_full_game_irq.c'; \
 	    "$(HOST_CC)" $(HOST_CFLAGS) "$$repo/tools/test_full_game_irq.c" -lpng -o "$$work/bin/test_full_game_irq"; \
 	    cd "$$repo"; set -- --emulator-source "$$X16_EMULATOR_SOURCE" --rom "$$ROM" --build "$$BUILD" --game "$$GAME" --symbols "$$SYMBOLS"; \
-	    if [ -n "$${TAS_CAPTURE_HEADER:-}" ]; then set -- "$$@" --tas-capture-header "$$TAS_CAPTURE_HEADER"; fi; \
 	    if [ -n "$${SDL_PREFIX:-}" ]; then set -- "$$@" --sdl-prefix "$$SDL_PREFIX"; fi; \
 	    if [ "$$mode" != picture-test ]; then \
 	      echo 'RUN test_full_game_irq --foreground-test'; "$$work/bin/test_full_game_irq" "$$@" --output "$$work/foreground" --foreground-test; \
@@ -399,7 +397,6 @@ _run:
 	    echo 'CC test_full_game_irq.c'; \
 	    "$(HOST_CC)" $(HOST_CFLAGS) "$$repo/tools/test_full_game_irq.c" -lpng -o "$$work/bin/test_full_game_irq"; \
 	    cd "$$repo"; set -- --emulator-source "$$X16_EMULATOR_SOURCE" --rom "$$ROM" --build "$$BUILD" --game "$$GAME" --symbols "$$SYMBOLS" --startup-text-test; \
-	    if [ -n "$${TAS_CAPTURE_HEADER:-}" ]; then set -- "$$@" --tas-capture-header "$$TAS_CAPTURE_HEADER"; fi; \
 	    if [ -n "$${SDL_PREFIX:-}" ]; then set -- "$$@" --sdl-prefix "$$SDL_PREFIX"; fi; \
 	    echo 'RUN test_full_game_irq --startup-text-test'; "$$work/bin/test_full_game_irq" "$$@" --output "$$work/startup-text" ;; \
 	  loader-test) \
@@ -408,7 +405,6 @@ _run:
 	    echo 'CC test_full_game_irq.c'; \
 	    "$(HOST_CC)" $(HOST_CFLAGS) "$$repo/tools/test_full_game_irq.c" -lpng -o "$$work/bin/test_full_game_irq"; \
 	    cd "$$repo"; set -- --emulator-source "$$X16_EMULATOR_SOURCE" --rom "$$ROM" --build "$$BUILD" --game "$$GAME" --symbols "$$SYMBOLS" --loader-test; \
-	    if [ -n "$${TAS_CAPTURE_HEADER:-}" ]; then set -- "$$@" --tas-capture-header "$$TAS_CAPTURE_HEADER"; fi; \
 	    if [ -n "$${SDL_PREFIX:-}" ]; then set -- "$$@" --sdl-prefix "$$SDL_PREFIX"; fi; \
 	    echo 'RUN test_full_game_irq --loader-test'; "$$work/bin/test_full_game_irq" "$$@" --output "$$work/loader" ;; \
 	esac

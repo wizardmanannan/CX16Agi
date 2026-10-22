@@ -118,17 +118,6 @@ static bool file_contains(const char *path,const char *needle) {
     if(!exists(path)) return false;
     char *contents=read_file(path,NULL); bool found=strstr(contents,needle)!=NULL; free(contents); return found;
 }
-static void stage_tas_capture_header(const char *source,const char *configured_header) {
-    char *header_wrapper=join(source,"src/tas-capture.h"),*capture_source=join(source,"src/tas_capture.c");
-    bool external_wrapper=file_contains(header_wrapper,"#include \"../../../tools/tas/tas-capture.h\"");
-    bool external_capture=file_contains(capture_source,"#include \"../../../tas-capture.h\"");
-    if(!external_wrapper&&!external_capture) { free(header_wrapper); free(capture_source); return; }
-    REQUIRE(configured_header&&exists(configured_header),"Emulator references an external TAS capture contract; set TAS_CAPTURE_HEADER (or pass --tas-capture-header) to the real contract header");
-    char *resolved=realpath(configured_header,NULL); REQUIRE(resolved,"Cannot resolve TAS capture contract header");
-    copy_file(resolved,header_wrapper);
-    if(external_capture) patch(capture_source,"#include \"../../../tas-capture.h\"","#include \"tas-capture.h\"",1);
-    free(resolved); free(header_wrapper); free(capture_source);
-}
 static const char hook[] =
 "\n"
 "static FILE *shake_csv, *shake_commands;\n"
@@ -2373,12 +2362,12 @@ static void test_game_staging(void) {
 }
 int main(int argc,char **argv) {
     if(argc==2&&!strcmp(argv[1],"--staging-test")) { test_game_staging(); return 0; }
-    char *emulator=NULL,*rom=NULL,*build=NULL,*game=NULL,*output=NULL,*sdl=NULL,*symbol=NULL,*tas_capture_header=NULL;unsigned long trigger=180000000;bool foreground_test=false,picture_test=false,combined_test=false,loader_test=false,startup_text_test=false,random_ram=false,intro_test=false,play=false;
+    char *emulator=NULL,*rom=NULL,*build=NULL,*game=NULL,*output=NULL,*sdl=NULL,*symbol=NULL;unsigned long trigger=180000000;bool foreground_test=false,picture_test=false,combined_test=false,loader_test=false,startup_text_test=false,random_ram=false,intro_test=false,play=false;
     bool watch_opening=getenv("CX16AGI_WATCH_OPENING")&&!strcmp(getenv("CX16AGI_WATCH_OPENING"),"1");
     bool visible_startup=watch_opening||(getenv("CX16AGI_VISIBLE_STARTUP")&&!strcmp(getenv("CX16AGI_VISIBLE_STARTUP"),"1"));
     unsigned startup_room=0;
     for(int i=1;i<argc;i++) {
-        if(!strcmp(argv[i],"--help")) {puts("Usage: test_full_game_irq --emulator-source DIR --rom FILE --build DIR --game DIR [--output DIR] [--symbols FILE] [--sdl-prefix DIR] [--tas-capture-header FILE] [--trigger-cycle N] [--foreground-test] [--combined-irq-test] [--picture-test] [--loader-test] [--startup-text-test] [--startup-room 1|7] [--random-ram] [--intro-test] [--play]");return 0;}
+        if(!strcmp(argv[i],"--help")) {puts("Usage: test_full_game_irq --emulator-source DIR --rom FILE --build DIR --game DIR [--output DIR] [--symbols FILE] [--sdl-prefix DIR] [--trigger-cycle N] [--foreground-test] [--combined-irq-test] [--picture-test] [--loader-test] [--startup-text-test] [--startup-room 1|7] [--random-ram] [--intro-test] [--play]");return 0;}
         if(!strcmp(argv[i],"--play")) { play=true;random_ram=true;continue;}
         if(!strcmp(argv[i],"--intro-test")) { intro_test=true;if(!startup_room) startup_room=1;continue;}
         if(!strcmp(argv[i],"--random-ram")) { random_ram=true;continue;}
@@ -2389,7 +2378,7 @@ int main(int argc,char **argv) {
         if(!strcmp(argv[i],"--startup-text-test")) {startup_text_test=true;continue;}
         REQUIRE(i+1<argc,"Missing option argument");char *option=argv[i],*value=argv[++i];
         if(!strcmp(option,"--startup-room")) { char *end; unsigned long n=strtoul(value,&end,10); REQUIRE(*value&&!*end&&(n==1||n==7),"Startup room must be 1 (KQ1) or 7 (KQ3)"); startup_room=(unsigned)n; }
-        else if(!strcmp(option,"--emulator-source"))emulator=value;else if(!strcmp(option,"--rom"))rom=value;else if(!strcmp(option,"--build"))build=value;else if(!strcmp(option,"--game"))game=value;else if(!strcmp(option,"--output"))output=value;else if(!strcmp(option,"--sdl-prefix"))sdl=value;else if(!strcmp(option,"--symbols"))symbol=value;else if(!strcmp(option,"--tas-capture-header"))tas_capture_header=value;
+        else if(!strcmp(option,"--emulator-source"))emulator=value;else if(!strcmp(option,"--rom"))rom=value;else if(!strcmp(option,"--build"))build=value;else if(!strcmp(option,"--game"))game=value;else if(!strcmp(option,"--output"))output=value;else if(!strcmp(option,"--sdl-prefix"))sdl=value;else if(!strcmp(option,"--symbols"))symbol=value;
         else if(!strcmp(option,"--trigger-cycle")) {char *end;errno=0;trigger=strtoul(value,&end,10);REQUIRE(!errno&&*value&&!*end&&trigger<=UINT32_MAX,"Invalid trigger cycle");}else fail("Unknown option %s",option);
     }
     REQUIRE(!watch_opening||(intro_test&&startup_room==7),"Watch opening requires the KQ3 intro scenario");
@@ -2405,7 +2394,7 @@ int main(int argc,char **argv) {
     REQUIRE(strncmp(output,emulator,source_len)||(output[source_len]&&output[source_len]!='/'),"Output must be outside emulator source tree");
     /* A fresh output prevents stale logs or previously patched emulator sources. */
     REQUIRE(!exists(join(output,"emulator")),"Output already contains an emulator; use a fresh directory");
-    char *source=join(output,"emulator"),*stage=NULL;copy_tree(emulator,source);stage_tas_capture_header(source,tas_capture_header);
+    char *source=join(output,"emulator"),*stage=NULL;copy_tree(emulator,source);
     if(!loader_test) {
         const char *fixture_name=play?"play-game":startup_text_test?"startup-text-game":startup_room?"startup-game":combined_test?"combined-game":picture_test?"picture-game":"foreground-game";
         suite_test_paths_init(fixture_name);
@@ -2485,14 +2474,12 @@ int main(int argc,char **argv) {
     if(!play&&!visible_startup) REQUIRE(!setenv("SDL_VIDEODRIVER","dummy",1)&&!setenv("SDL_AUDIODRIVER","dummy",1),"Cannot set SDL environment");
     if(loader_test) { run_loader_test(game,build,native,rom,output); return 0; }
     if(startup_text_test) {
-        char *tas=join(output,"input.tas");write_file(tas,"",0);
         char *command[24];int command_length=0;
         command[command_length++]=join(native,"x16emu");command[command_length++]="-rom";command[command_length++]=rom;
         command[command_length++]="-fsroot";command[command_length++]=stage;command[command_length++]="-startin";command[command_length++]=stage;
         command[command_length++]="-prg";command[command_length++]=join(stage,"agi.cx16");command[command_length++]="-run";command[command_length++]="-zeroram";
         command[command_length++]="-warp";command[command_length++]="-sound";command[command_length++]="none";
         command[command_length++]="-gif";command[command_length++]=format("%s/game.gif",output);
-        command[command_length++]="-tas";command[command_length++]=tas;
         command[command_length++]="-echo";command[command_length]=NULL;
         run(command,join(output,"run.log"),300);
     } else {
