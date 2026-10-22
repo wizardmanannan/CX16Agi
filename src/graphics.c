@@ -2,6 +2,7 @@
 
 int screenMode;
 boolean inputLineDisplayed = FALSE;
+volatile byte inputLineWasDisplayed = FALSE;
 extern volatile byte inputLineDirty;
 
 #pragma code-name (push, "BANKRAM06")

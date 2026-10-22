@@ -665,13 +665,15 @@ void b3DisplayMessageBox(char* message, byte messageBank, byte row, byte col, by
 		}
 		availableRows = lastLogicalRow - preparedStartLine + 1;
 		availableColumns = displayWidth - preparedColumn;
-		b3ClipPreparedText(preparedBuffer, availableColumns, availableRows);
-		if (!preparedBuffer[0]) goto message_rejected;
-
-		preparedRows = 1;
-		for (preparedChar = preparedBuffer; *preparedChar; ++preparedChar)
+		if (maximumLineWidth > availableColumns || preparedRows > availableRows)
 		{
-			if (*preparedChar == NEW_LINE) ++preparedRows;
+			b3ClipPreparedText(preparedBuffer, availableColumns, availableRows);
+			if (!preparedBuffer[0]) goto message_rejected;
+			preparedRows = 1;
+			for (preparedChar = preparedBuffer; *preparedChar; ++preparedChar)
+			{
+				if (*preparedChar == NEW_LINE) ++preparedRows;
+			}
 		}
 		if (preparedRows > 255) goto message_rejected;
 
@@ -685,7 +687,14 @@ void b3DisplayMessageBox(char* message, byte messageBank, byte row, byte col, by
 		b3PaletteRows = preparedRows;
 		b3PaletteNumber = paletteNumber;
 
-		b6SetAndWaitForIrqState(DISPLAY_TEXT);
+		if (preparedRows == 1 && preparedChar - preparedBuffer <= MAX_CHAR_ACROSS)
+		{
+			b3DisplayShortText();
+		}
+		else
+		{
+			b6SetAndWaitForIrqState(DISPLAY_TEXT);
+		}
 		return;
 	}
 

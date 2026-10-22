@@ -15,6 +15,9 @@ extern byte bBSetChannelOffsets(byte *codePtr, SoundFile *soundFile,
 	unsigned int *soundChannelOffSets, unsigned int totalSize);
 extern void bBPrecomputeValues(SoundFile *soundFile,
 	unsigned int *soundChannelOffSets, byte validChannels);
+extern void bBWriteNextNG(byte **memoryBlock, byte *buffer, byte **dataPtr,
+	byte toWrite, BufferStatus *status, unsigned int *oldSize,
+	unsigned int newSize, byte *bank, unsigned int bufferSize);
 #pragma wrapped-call (pop)
 
 byte testSoundConversionNoiseBytes[2][12];
@@ -24,6 +27,7 @@ unsigned int testSoundConversionResources[2];
 unsigned int testSoundConversionNoiseAddresses[2];
 byte testSoundConversionSourcesReleased[2];
 byte testSoundConversionOutputsReleased[2];
+byte testSoundConversionProtected[2];
 unsigned int testSoundBoundsResource;
 unsigned int testSoundBoundsResourceEnd;
 unsigned int testSoundBoundsAllocationEnd;
@@ -39,6 +43,73 @@ unsigned int testSoundBoundsOutputResource;
 unsigned int testSoundBoundsOutputNoise;
 byte testSoundBoundsOutputBank;
 byte testSoundBoundsOutputReleased;
+byte testSoundGrowthBytes[220];
+byte testSoundGrowthPrefix[8];
+byte testSoundGrowthCursorValid;
+
+byte testSoundPrefixChannels;
+
+void testPlaySoundValidPrefix(void)
+{
+	byte previousBank = RAM_BANK, i;
+	unsigned int offsets[4];
+	for (i = 0; i < 4; ++i) offsets[i] = i < testSoundPrefixChannels ? 8 + i * 2 : 0xFFFF;
+	bBInitSound();
+	RAM_BANK = SOUND_BANK;
+	bBSetChannelOffsets((byte*)0xA000, &bBLoadedSounds[0], offsets, 16);
+	bBLoadedSounds[0].soundBank = 0x13;
+	bBLoadedSoundsPointer[0] = &bBLoadedSounds[0];
+	flag[9] = TRUE;
+	bBPlaySound(0, 23);
+	RAM_BANK = previousBank;
+}
+
+void testSoundOutputGrowth(void)
+{
+	byte previousBank = RAM_BANK, bank, *resource, *next;
+	byte buffer[166];
+	unsigned int size = 16, i;
+	BufferStatus status;
+	RAM_BANK = MEMORY_MANAGEMENT_BANK;
+	b10InitDynamicMemory();
+	resource = b10BankedAlloc(size, &bank);
+	memsetBanked(resource, 0x52, 8, bank);
+	status.bank = bank; status.bankedData = resource + 8; status.bufferCounter = 0;
+	next = buffer;
+	for (i = 0; i < sizeof(testSoundGrowthBytes); ++i)
+		bBWriteNextNG(&resource, buffer, &next, (byte)(i + 1), &status,
+			&size, size + 30, &bank, sizeof(buffer));
+	b5FlushBufferNonGolden(&status, buffer, sizeof(buffer), next - buffer);
+	testSoundGrowthCursorValid = status.bankedData == resource + 8 && status.bank == bank;
+	memCpyBanked(testSoundGrowthPrefix, resource, bank, 8);
+	memCpyBanked(testSoundGrowthBytes, resource + 8, bank, sizeof(testSoundGrowthBytes));
+	b10BankedDealloc(resource, bank);
+	RAM_BANK = previousBank;
+}
+unsigned int testSoundDiscardNeighbour;
+byte testSoundDiscardNeighbourBank;
+void testPrepareRepeatedSoundDiscard(void)
+{
+	byte previousBank = RAM_BANK, bank;
+	byte *resource;
+	RAM_BANK = MEMORY_MANAGEMENT_BANK;
+	b10InitDynamicMemory();
+	bBInitSound();
+	resource = b10BankedAlloc(16, &bank);
+	RAM_BANK = SOUND_BANK;
+	bBLoadedSounds[0].soundResource = resource;
+	bBLoadedSounds[0].soundBank = bank;
+	bBLoadedSoundsPointer[37] = &bBLoadedSounds[0];
+	soundLoadCounter = 1;
+	testSoundDiscardNeighbour = (unsigned int)b10BankedAlloc(16, &testSoundDiscardNeighbourBank);
+	bBDiscardSoundFile(37);
+	RAM_BANK = previousBank;
+}
+
+void testRepeatSoundDiscard(void)
+{
+	bBDiscardSoundFile(37);
+}
 
 #define TEST_SOUND_LONG_NOISE_NOTES 150
 #define TEST_SOUND_LONG_RESOURCE_SIZE (24 + TEST_SOUND_LONG_NOISE_NOTES * 5 + 2)
@@ -77,6 +148,7 @@ static void testBuildSoundConversion(byte rawVolume, byte resultIndex)
 
 	RAM_BANK = SOUND_BANK;
 	memset(&bBLoadedSounds[resultIndex], 0, sizeof(SoundFile));
+	bBLoadedSounds[resultIndex].isLogicZeroOrDependency = resultIndex;
 	soundLoadCounter = resultIndex;
 	bBLoadedSounds[resultIndex].soundBank = sourceBank;
 	bBLoadedSounds[resultIndex].soundResource = sourceResource;
@@ -89,6 +161,7 @@ static void testBuildSoundConversion(byte rawVolume, byte resultIndex)
 	outputResource = bBLoadedSounds[resultIndex].soundResource;
 	outputBank = bBLoadedSounds[resultIndex].soundBank;
 	outputNoise = bBLoadedSounds[resultIndex].chNoise;
+	testSoundConversionProtected[resultIndex] = bBLoadedSounds[resultIndex].isLogicZeroOrDependency;
 	testSoundConversionBanks[resultIndex] = outputBank;
 	testSoundConversionSourceBanks[resultIndex] = sourceBank;
 	testSoundConversionResources[resultIndex] = (unsigned int)outputResource;
@@ -308,3 +381,32 @@ void testRunSoundPlayRaw0(void)
 {
 	testRunSoundPlay(1);
 }
+
+byte testSoundResourceId;
+
+void testInitSoundResources(void)
+{
+	byte previousBank = RAM_BANK;
+	RAM_BANK = MEMORY_MANAGEMENT_BANK;
+	b10InitDynamicMemory();
+	bBInitSound();
+	RAM_BANK = SOUND_BANK;
+	soundLoadCounter = 0;
+	RAM_BANK = DIRECTORY_BANK;
+	memset(snddir, 0xFF, sizeof(AGIFilePosType) * MAX_SOUNDS);
+	numSounds = MAX_SOUNDS;
+	numLogics = numViews = numPictures = 0;
+	RAM_BANK = previousBank;
+}
+
+void testLoadSoundResource(void)
+{
+	AGIFilePosType location;
+	location.fileNum = 0;
+	location.filePos = 0;
+	b10SetResourceDirectory(&location, &snddir[testSoundResourceId]);
+	bBLoadSoundFile(testSoundResourceId);
+}
+
+
+void testDiscardSoundResource(void) { bBDiscardSoundFile(testSoundResourceId); }

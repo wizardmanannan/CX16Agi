@@ -62,17 +62,19 @@ const unsigned char SN76489_to_CX16_Volume[16] = {
 // reallocating or flushing buffers as necessary.
 void bBWriteNextNG(byte** memoryBlock, byte* buffer, byte** dataPtr, byte toWrite, BufferStatus* bufferStatus, unsigned int* oldBlockSize, unsigned int newBlockSize, byte* bank, unsigned int bufferSize)
 {
-	// If pointer exceeds buffer size, flush and reset pointer.
+	unsigned int prefix = bufferStatus->bankedData - *memoryBlock;
+	unsigned int required = prefix + bufferStatus->bufferCounter * bufferSize + (*dataPtr - buffer) + 1;
+	if (required > *oldBlockSize)
+	{
+		if (newBlockSize < required) newBlockSize = required;
+		b5ReallocateBiggerMemoryBlock(memoryBlock, newBlockSize, oldBlockSize, bank);
+		bufferStatus->bankedData = *memoryBlock + prefix;
+		bufferStatus->bank = *bank;
+	}
 	if (*dataPtr >= buffer + bufferSize)
 	{
 		b5FlushBufferNonGolden(bufferStatus, buffer, bufferSize, bufferSize);
 		*dataPtr = buffer;
-	}
-
-	// Check if current position exceeds allocated block size, reallocate if needed.
-	if (bufferStatus->bufferCounter * bufferSize + (*dataPtr - buffer) > *(oldBlockSize))
-	{
-		b5ReallocateBiggerMemoryBlock(memoryBlock, newBlockSize, oldBlockSize, bank);
 	}
 
 	// Write the byte and move data pointer forward
@@ -163,6 +165,7 @@ void bBClearLoadedSound(byte soundFileNumber)
 // Initializes the loaded sound arrays by clearing all sound entries and pointers.
 void bBInitSound() {
 	int i;
+	soundLoadCounter = 0;
 	for (i = 0; i < MAX_LOADED_SOUNDS; i++)
 	{
 		bBClearLoadedSound(i);
@@ -190,6 +193,7 @@ void bBDiscardSoundFile(int soundNum)
 
 	// Get pointer to loaded sound structure
 	sound = bBLoadedSoundsPointer[soundNum];
+	if (!sound) return;
 
 	if (sound->isLogicZeroOrDependency)
 	{
@@ -402,6 +406,7 @@ void bBPreComputePeriodicSound(SoundFile* soundFile, unsigned int* soundChannelO
 	unsigned int lfsrDuration, lsfrFrequencyToPlay, lfsr = LFSR_INITIAL_SEED, feedback;
 	unsigned long remainingBeats = totalBeats;
 
+	newSoundFile = *soundFile;
 	oldCh2Input.source = soundFile->ch2;
 	oldCh2Input.buffer = oldCh2Buffer;
 	oldCh2Input.next = oldCh2Buffer + ONETHIRDBUFFERSIZE;
@@ -489,6 +494,9 @@ void bBPreComputePeriodicSound(SoundFile* soundFile, unsigned int* soundChannelO
 
 	// Flush any remaining buffered noise channel data to banked memory
 	b5FlushBufferNonGolden(&newChNoiseLocalBufferStatus, ORIGINAL_CHNOISEBUFFER, ONETHIRDBUFFERSIZE, newChNoiseBuffer - ORIGINAL_CHNOISEBUFFER);
+
+	/* Growth may have moved the resource; publish all channels from its final base. */
+	bBSetChannelOffsets(newSoundFile.soundResource, &newSoundFile, soundChannelOffSets, allocatedBlockSize);
 
 	// Deallocate previous sound resource memory
 	b10BankedDealloc(soundFile->soundResource, soundFile->soundBank);
@@ -651,7 +659,7 @@ void bBPrecomputeValues(SoundFile* soundFile, unsigned int* soundChannelOffSets,
 	// If periodic sound is detected and noise channel has volume, perform precomputation for periodic sound.
 	if (periodicSoundDetected && noiseChHasVolume)
 	{
-		bBPreComputePeriodicSound(&bBLoadedSounds[soundLoadCounter], soundChannelOffSets);
+		bBPreComputePeriodicSound(soundFile, soundChannelOffSets);
 	}
 }
 
@@ -669,32 +677,33 @@ void bBLoadSoundFile(int soundNum) {
 		return;
 	}
 
+	for (i = 0; i < MAX_LOADED_SOUNDS; ++i)
+		if (!bBLoadedSounds[i].soundResource) break;
+	if (i == MAX_LOADED_SOUNDS) return;
+
 	// Gets logic directory entry for sound file number and loads AGI file
 	b10GetLogicDirectory(&agiFilePosType, &snddir[soundNum]);
 	if (!b6LoadAGIFile(SOUND, &agiFilePosType, &tempAGI))
 		return;
 
 	// Save references to loaded sound resource data and bank info
-	bBLoadedSounds[soundLoadCounter].soundResource = tempAGI.code;
-	bBLoadedSounds[soundLoadCounter].soundBank = tempAGI.codeBank;
-	bBLoadedSoundsPointer[soundNum] = &bBLoadedSounds[soundLoadCounter];
+	bBLoadedSounds[i].soundResource = tempAGI.code;
+	bBLoadedSounds[i].soundBank = tempAGI.codeBank;
+	bBLoadedSoundsPointer[soundNum] = &bBLoadedSounds[i];
 	totalSoundSize = tempAGI.totalSize;
 
 	// Copy sound channel offsets from the beginning of code resource
 	memCpyBanked((byte*)soundChannelOffSets, tempAGI.code, tempAGI.codeBank, NO_CHANNELS * 2);
 
 	// Set channel pointers in loaded sound struct
-	validChannels = bBSetChannelOffsets(tempAGI.code, &bBLoadedSounds[soundLoadCounter], soundChannelOffSets, totalSoundSize);
+	validChannels = bBSetChannelOffsets(tempAGI.code, &bBLoadedSounds[i], soundChannelOffSets, totalSoundSize);
 
 
 	// Precompute frequency and volume values for loaded sound
-	bBPrecomputeValues(&bBLoadedSounds[soundLoadCounter], soundChannelOffSets, validChannels);
+	bBPrecomputeValues(&bBLoadedSounds[i], soundChannelOffSets, validChannels);
 
 	// Increment sound load counter if space available
-	if (soundLoadCounter < MAX_LOADED_SOUNDS - 1)
-	{
-		soundLoadCounter++;
-	}
+	if (soundLoadCounter <= i) soundLoadCounter = i + 1;
 }
 
 extern unsigned int bBCh1Ticks;
@@ -738,18 +747,20 @@ void bBPlaySound(byte soundNum, byte endSoundFlag)
 	// Clear the end sound flag in the system flag array
 	flag[endSoundFlag] = FALSE;
 
-	// Set current playing note pointers for each channel, offset by NO_NOTE_BYTES bytes before actual note start
-	ZP_CURRENTLY_PLAYING_NOTE_1 = bBLoadedSoundsPointer[soundNum]->ch0 - NO_NOTE_BYTES;
-	ZP_CURRENTLY_PLAYING_NOTE_2 = bBLoadedSoundsPointer[soundNum]->ch1 - NO_NOTE_BYTES;
-	ZP_CURRENTLY_PLAYING_NOTE_3 = bBLoadedSoundsPointer[soundNum]->ch2 - NO_NOTE_BYTES;
-	ZP_CURRENTLY_PLAYING_NOTE_NOISE = bBLoadedSoundsPointer[soundNum]->chNoise - NO_NOTE_BYTES;
-
-	// Set sound bank for playback
+	/* Offset validation may leave an absent channel. Never advance NULL. */
+	ZP_CURRENTLY_PLAYING_NOTE_1 = bBLoadedSoundsPointer[soundNum]->ch0 ? bBLoadedSoundsPointer[soundNum]->ch0 - NO_NOTE_BYTES : NULL;
+	ZP_CURRENTLY_PLAYING_NOTE_2 = bBLoadedSoundsPointer[soundNum]->ch1 ? bBLoadedSoundsPointer[soundNum]->ch1 - NO_NOTE_BYTES : NULL;
+	ZP_CURRENTLY_PLAYING_NOTE_3 = bBLoadedSoundsPointer[soundNum]->ch2 ? bBLoadedSoundsPointer[soundNum]->ch2 - NO_NOTE_BYTES : NULL;
+	ZP_CURRENTLY_PLAYING_NOTE_NOISE = bBLoadedSoundsPointer[soundNum]->chNoise ? bBLoadedSoundsPointer[soundNum]->chNoise - NO_NOTE_BYTES : NULL;
+	bBIsPlaying[0] = bBLoadedSoundsPointer[soundNum]->ch0 != NULL;
+	bBIsPlaying[1] = bBLoadedSoundsPointer[soundNum]->ch1 != NULL;
+	bBIsPlaying[2] = bBLoadedSoundsPointer[soundNum]->ch2 != NULL;
+	bBIsPlaying[3] = bBLoadedSoundsPointer[soundNum]->chNoise != NULL;
 	bBSoundDataBank = bBLoadedSoundsPointer[soundNum]->soundBank;
-
-	// Mark all channels as playing
-	memset(bBIsPlaying, TRUE, NO_CHANNELS);
-	bBChannelsPlaying = NO_CHANNELS;
+	bBChannelsPlaying = 0;
+	for (i = 0; i < NO_CHANNELS; ++i) bBChannelsPlaying += bBIsPlaying[i];
+	if (bBChannelsPlaying < NO_CHANNELS) bBPsgClear();
+	if (!bBChannelsPlaying) flag[endSoundFlag] = TRUE;
 
 	// Store end sound flag for signaling when sound finishes
 	bBEndSoundFlag = endSoundFlag;
@@ -780,7 +791,7 @@ void bBStopSound()
 	{
 		bBPsgClear();       // Clear PSG sound generator state
 		memset(bBIsPlaying, FALSE, NO_CHANNELS); // Mark all channels as not playing
-		flag[soundEndFlag] = TRUE;
+		flag[bBEndSoundFlag] = TRUE;
 	}
 	bBChannelsPlaying = 0;
 	asm("plp"); // Restore the caller's interrupt state without acknowledging VSYNC

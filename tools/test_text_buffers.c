@@ -70,6 +70,9 @@ void b6SetAndWaitForIrqState(IRQ_COMMAND state)
 void b6EnterForegroundVera(void) { ++foregroundEnters; }
 void b6LeaveForegroundVera(void) { ++foregroundLeaves; }
 
+/* Host checks inspect prepared text; target tests execute both renderers. */
+void b3DisplayShortText(void) { b6SetAndWaitForIrqState(DISPLAY_TEXT); }
+
 unsigned int b6SetPaletteToInt(byte color) { return color; }
 
 byte bFGetPalette(int id, PaletteGetResult* result)

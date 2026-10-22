@@ -20,10 +20,46 @@ REVIEW_SERIES_BIN ?= $(REPO_ROOT)/obj/review-series/review_series
 TEST_OUTPUT_ROOT ?= $(REPO_ROOT)/obj
 TEST_FIXTURE_ROOT ?= $(if $(TMPDIR),$(TMPDIR),/tmp)
 
-export CC65_HOME X16_EMULATOR_SOURCE TMPDIR TEST_OUTPUT_DIR ROM GAME BUILD SYMBOLS SDL_PREFIX TAS_CAPTURE_HEADER
+export GAME_KQ1 GAME_KQ3 CC65_HOME X16_EMULATOR_SOURCE TMPDIR TEST_OUTPUT_DIR ROM GAME BUILD SYMBOLS SDL_PREFIX TAS_CAPTURE_HEADER
 unexport KEEP_TEST_OUTPUT
 
-.PHONY: test suite commands-test image production-test integration-test picture-test loader-test startup-text-test modes integration review-tools review-policy review-series review-metrics review-events review-ready review-workflow-test _run
+.PHONY: test suite commands-test image production-test integration-test picture-test loader-test startup-text-test modes integration review-tools review-policy review-series review-metrics review-events review-ready review-workflow-test build-test irq-test metadata-test staging-test emulator-audio-test games-test intro-test kq3-intro-test play review-check _run
+
+# A review handoff requires both original games; missing inputs fail closed.
+review-check:
+	@$(MAKE) --no-print-directory -f "$(REPO_ROOT)/tools/Makefile" staging-test
+	@$(MAKE) --no-print-directory -f "$(REPO_ROOT)/tools/Makefile" test
+	@$(MAKE) --no-print-directory -f "$(REPO_ROOT)/tools/Makefile" production-test
+	@$(MAKE) --no-print-directory -f "$(REPO_ROOT)/tools/Makefile" games-test
+	@$(MAKE) --no-print-directory -f "$(REPO_ROOT)/tools/Makefile" intro-test
+	@$(MAKE) --no-print-directory -f "$(REPO_ROOT)/tools/Makefile" emulator-audio-test
+
+build-test:
+	@$(MAKE) --no-print-directory -f "$(REPO_ROOT)/tools/Makefile" _run MODE=build-test
+
+irq-test:
+	@$(MAKE) --no-print-directory -f "$(REPO_ROOT)/tools/Makefile" _run MODE=irq-test
+
+metadata-test:
+	@$(MAKE) --no-print-directory -f "$(REPO_ROOT)/tools/Makefile" _run MODE=metadata-test
+
+staging-test:
+	@$(MAKE) --no-print-directory -f "$(REPO_ROOT)/tools/Makefile" _run MODE=staging-test
+
+play:
+	@$(MAKE) --no-print-directory -f "$(REPO_ROOT)/tools/Makefile" _run MODE=play
+
+emulator-audio-test:
+	@$(MAKE) --no-print-directory -f "$(REPO_ROOT)/tools/Makefile" _run MODE=emulator-audio-test
+
+intro-test:
+	@$(MAKE) --no-print-directory -f "$(REPO_ROOT)/tools/Makefile" _run MODE=intro-test
+
+kq3-intro-test:
+	@$(MAKE) --no-print-directory -f "$(REPO_ROOT)/tools/Makefile" _run MODE=kq3-intro-test
+
+games-test:
+	@$(MAKE) --no-print-directory -f "$(REPO_ROOT)/tools/Makefile" _run MODE=games-test
 
 test suite:
 	@$(MAKE) --no-print-directory -f "$(REPO_ROOT)/tools/Makefile" _run MODE=core
@@ -113,6 +149,11 @@ _run:
 	  need_file "$$repo/tools/test-image.mk"; need_file "$$repo/tools/test_image_exports.s"; \
 	}; \
 	case "$$mode" in \
+	  irq-test) need_cc65; need_cpu ;; \
+	  metadata-test) need_cc65 ;; \
+	  staging-test) need_command pkg-config; pkg-config --exists libpng ;; \
+	  emulator-audio-test) need_file "$$X16_EMULATOR_SOURCE/src/audio.c"; need_file "$$TAS_CAPTURE_HEADER"; need_command pkg-config; pkg-config --exists sdl2 ;; \
+	  build-test) need_cc65; need_exec "$$CC65_HOME/bin/cl65" ;; \
 	  core) need_cc65; need_cpu ;; \
 	  review-workflow) need_command git; need_command bash ;; \
 	  commands-test) need_cc65 ;; \
@@ -120,8 +161,16 @@ _run:
 	  production-test) \
 	    need_cc65; need_exec "$$CC65_HOME/bin/cl65"; need_cpu; need_image_makefile; \
 	    need_file "$$repo/tools/test_sound_foreground.c" ;; \
-	  modes|integration-test|picture-test) \
-	    need_command cmake; need_command magick; need_command pkg-config; \
+	  modes|integration-test|picture-test|games-test|intro-test|kq3-intro-test|play) \
+	    need_command cmake; need_command pkg-config; \
+	    if [ "$$mode" != games-test ] && [ "$$mode" != intro-test ] && [ "$$mode" != kq3-intro-test ] && [ "$$mode" != play ]; then need_command magick; fi; \
+	    if [ "$$mode" = kq3-intro-test ]; then \
+	      [ -n "$${GAME_KQ3:-}" ] && [ -d "$$GAME_KQ3" ] || fail 'set GAME_KQ3 to original KQ3 data'; GAME="$$GAME_KQ3"; \
+	    elif [ "$$mode" = games-test ] || [ "$$mode" = intro-test ]; then \
+	      [ -n "$${GAME_KQ1:-}" ] && [ -d "$$GAME_KQ1" ] || fail 'set GAME_KQ1 to original KQ1 data'; \
+	      if [ "$$mode" = games-test ]; then [ -n "$${GAME_KQ3:-}" ] && [ -d "$$GAME_KQ3" ] || fail 'set GAME_KQ3 to original KQ3 data'; fi; \
+	      GAME="$$GAME_KQ1"; \
+	    fi; \
 	    if [ -n "$${SDL_PREFIX:-}" ]; then \
 	      need_file "$$SDL_PREFIX/lib/cmake/SDL2/SDL2Config.cmake"; \
 	    else pkg-config --exists sdl2 || fail 'SDL2 development files are required (pkg-config sdl2 or SDL_PREFIX)'; fi; \
@@ -191,6 +240,9 @@ _run:
 	    "$(HOST_CC)" $(HOST_CFLAGS) -Wno-unknown-pragmas -Wno-error=incompatible-pointer-types -Wno-error=int-conversion -D_MSC_VER -D__CBM__ '-D__fastcall__=' -idirafter "$$CC65_HOME/include" -ffunction-sections -fdata-sections -fsanitize=address,undefined -fno-sanitize-recover=all "$$repo/tools/test_$$name.c" -Wl,--gc-sections -o "$$work/bin/test_$$name"; \
 	  done; \
 	}; \
+	build_metadata() { \
+	    "$(HOST_CC)" $(HOST_CFLAGS) -Wno-unknown-pragmas -D__CX16__ -D_MSC_VER -D__CBM__ '-D__fastcall__=' -idirafter "$$CC65_HOME/include" -ffunction-sections -fdata-sections "$$repo/tools/test_dependency_metadata.c" -Wl,--gc-sections -o "$$work/bin/test_dependency_metadata"; \
+	}; \
 	prepare_sanitizers() { \
 	  sanitized_preload=$${LD_PRELOAD:-}; \
 	  if [ -n "$$sanitized_preload" ]; then \
@@ -204,6 +256,37 @@ _run:
 	    cd "$$repo"; \
 	    "$(HOST_CC)" $(HOST_CFLAGS) "$$repo/tools/test_review_workflow.c" -o "$$work/bin/test_review_workflow"; \
 	    "$$work/bin/test_review_workflow" "$$repo/.github/workflows/native-regressions.yml" ;; \
+	  irq-test) \
+	    "$(HOST_CC)" $(HOST_CFLAGS) -I"$$X16_EMULATOR_SOURCE/src/cpu" "$$repo/tools/test_irq_helpers.c" "$$X16_EMULATOR_SOURCE/src/cpu/fake6502.c" -o "$$work/bin/test_irq_helpers"; \
+	    cd "$$repo"; "$$work/bin/test_irq_helpers" ;; \
+	  metadata-test) build_metadata; "$$work/bin/test_dependency_metadata" ;; \
+	  staging-test) \
+	    "$(HOST_CC)" $(HOST_CFLAGS) "$$repo/tools/test_full_game_irq.c" -lpng -o "$$work/bin/test_full_game_irq"; \
+	    "$$work/bin/test_full_game_irq" --staging-test ;; \
+	  emulator-audio-test) \
+	    "$(HOST_CC)" $(HOST_CFLAGS) -I"$$X16_EMULATOR_SOURCE/src" -include "$$TAS_CAPTURE_HEADER" -DX16_TAS_CAPTURE_INCLUDE_H $$(pkg-config --cflags sdl2) -ffunction-sections -fdata-sections "$$repo/tools/test_emulator_audio.c" $$(pkg-config --libs sdl2) -Wl,--gc-sections -o "$$work/bin/test_emulator_audio"; \
+	    "$$work/bin/test_emulator_audio" ;; \
+	  games-test|intro-test|kq3-intro-test|play) \
+	    "$(HOST_CC)" $(HOST_CFLAGS) "$$repo/tools/test_build.c" -o "$$work/bin/test_build"; \
+	    "$$work/bin/test_build" "$$repo"; \
+	    "$(HOST_CC)" $(HOST_CFLAGS) "$$repo/tools/test_full_game_irq.c" -lpng -o "$$work/bin/test_full_game_irq"; \
+	    failed=0; \
+	    game_ids="KQ1 KQ3"; if [ "$$mode" = intro-test ] || [ "$$mode" = play ]; then game_ids=KQ1; elif [ "$$mode" = kq3-intro-test ]; then game_ids=KQ3; fi; \
+	    for game_id in $$game_ids; do \
+	      if [ "$$mode" = play ]; then game="$$GAME"; room=1; elif [ "$$game_id" = KQ1 ]; then game="$$GAME_KQ1"; room=1; else game="$$GAME_KQ3"; room=7; fi; \
+	      echo "RUN $$mode $$game_id"; \
+	      set -- --emulator-source "$$X16_EMULATOR_SOURCE" --rom "$$ROM" --build "$$work/image" --game "$$game" --symbols "$$work/image/agi.cx16.dbg" --startup-room "$$room" --random-ram --output "$$work/$$game_id"; \
+	      if [ "$$mode" = play ]; then \
+	        set -- --emulator-source "$$X16_EMULATOR_SOURCE" --rom "$$ROM" --build "$$work/image" --game "$$game" --output "$$work/$$game_id" --play; \
+	      elif [ "$$mode" = intro-test ] || [ "$$mode" = kq3-intro-test ]; then set -- "$$@" --intro-test; fi; \
+	      if [ -n "$${TAS_CAPTURE_HEADER:-}" ]; then set -- "$$@" --tas-capture-header "$$TAS_CAPTURE_HEADER"; fi; \
+	      if [ -n "$${SDL_PREFIX:-}" ]; then set -- "$$@" --sdl-prefix "$$SDL_PREFIX"; fi; \
+	      if CX16AGI_TEST_AUDIO_ADAPTER="$$repo/tools/emulator-audio-buffer.c" "$$work/bin/test_full_game_irq" "$$@"; then :; else failed=$$((failed+1)); fi; \
+	    done; \
+	    [ "$$failed" -eq 0 ] || fail "$$failed game acceptance case(s) failed" ;; \
+	  build-test) \
+	    "$(HOST_CC)" $(HOST_CFLAGS) "$$repo/tools/test_build.c" -o "$$work/bin/test_build"; \
+	    "$$work/bin/test_build" "$$repo" ;; \
 	  commands-test) \
 	    build_commands; prepare_sanitizers; failed=0; \
 	    for option in '' --parse --strings --allocation; do \
@@ -229,6 +312,7 @@ _run:
 	    "$(HOST_CC)" $(HOST_CFLAGS) -Wno-unknown-pragmas -fsanitize=bounds -fno-sanitize-recover=bounds "$$repo/tools/test_controllers.c" -o "$$work/bin/test_controllers"; \
 	    "$(HOST_CC)" $(HOST_CFLAGS) -Wno-unknown-pragmas -fsanitize=address,undefined -fno-sanitize-recover=all "$$repo/tools/test_menu.c" -o "$$work/bin/test_menu"; \
 	    build_commands; \
+	    build_metadata; \
 	    "$(HOST_CC)" $(HOST_CFLAGS) -Wno-unknown-pragmas -fsanitize=address,undefined -fno-sanitize-recover=all -idirafter "$$CC65_HOME/include" "$$repo/tools/test_text_buffers.c" -o "$$work/bin/test_text_buffers"; \
 	    "$(HOST_CC)" $(HOST_CFLAGS) -Wno-error=incompatible-pointer-types -Wno-error=int-conversion -D_MSC_VER -D__CBM__ '-D__fastcall__=' -idirafter "$$CC65_HOME/include" -Wno-unknown-pragmas -ffunction-sections -fdata-sections -fsanitize=address,undefined -fno-sanitize-recover=all "$$repo/tools/test_words_file.c" -Wl,--gc-sections -o "$$work/bin/test_words_file"; \
 	    "$(HOST_CC)" $(HOST_CFLAGS) -Wno-error=incompatible-pointer-types -Wno-error=int-conversion -D_MSC_VER -D__CBM__ '-D__fastcall__=' -idirafter "$$CC65_HOME/include" -Wno-unknown-pragmas -ffunction-sections -fdata-sections -fsanitize=address,undefined -fno-sanitize-recover=all "$$repo/tools/test_agifiles.c" -Wl,--gc-sections -o "$$work/bin/test_agifiles"; \
@@ -250,6 +334,7 @@ _run:
 	    run_test "$$work/bin/test_review_evidence" "$$work/bin/review-tools" "$(HOST_CC)"; \
 	    run_test "$$work/bin/test_review_workflow" "$$repo/.github/workflows/native-regressions.yml"; \
 	    run_test "$$work/bin/test_palette_manager"; \
+	    run_test "$$work/bin/test_dependency_metadata"; \
 	    run_test "$$work/bin/test_controllers"; \
 	    prepare_sanitizers; \
 	    run_test env LD_PRELOAD="$$sanitized_preload" "$$work/bin/test_menu"; \
@@ -274,7 +359,7 @@ _run:
 	        "$(HOST_CC)" $(HOST_CFLAGS) -I"$$X16_EMULATOR_SOURCE/src/cpu" "$$repo/tools/test_$$name.c" "$$X16_EMULATOR_SOURCE/src/cpu/fake6502.c" -o "$$work/bin/test_$$name"; \
 	        cd "$$repo"; \
 	        if [ "$$name" = banked_strings ]; then \
-	          for test_case in --smoke --bounded --input --metadata --allocator-oom --get-num --said --object-commands --object-crypto-bounds --object-crypto-pointer --show-object --sound --text-cleanup --timer; do \
+	          for test_case in --smoke --bounded --input --metadata --allocator-oom --get-num --said --object-commands --object-crypto-bounds --object-crypto-pointer --show-object --sound --sound-discard --sound-cache --sound-growth --sound-channels --view-headers --cached-closeup --text-cleanup --timer; do \
 	            echo "RUN test_banked_strings $$test_case"; \
 	            if "$$work/bin/test_banked_strings" --build "$$work/image" "$$test_case"; then :; else failed=$$((failed + 1)); fi; \
 	          done; \

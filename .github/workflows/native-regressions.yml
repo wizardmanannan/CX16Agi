@@ -105,6 +105,17 @@ jobs:
             exit "$build_status"
           fi
 
+      - name: Install staging test headers
+        run: sudo apt-get update && sudo apt-get install -y libpng-dev
+
+      - name: Run shipped build and metadata staging suites
+        shell: bash
+        run: |
+          set -euo pipefail
+          export TEST_FIXTURE_ROOT="$RUNNER_TEMP" TMPDIR="$RUNNER_TEMP"
+          make -C tools build-test 2>&1 | tee "$EVIDENCE_DIR/build.log"
+          make -C tools staging-test 2>&1 | tee "$EVIDENCE_DIR/staging.log"
+
       - name: Capture and replay the declared review plan
         shell: bash
         run: |
@@ -126,7 +137,7 @@ jobs:
         run: |
           set -euo pipefail
           : > "$EVIDENCE_DIR/SHA256SUMS"
-          for name in identity.txt dependency-fetch.log cc65-build.log capture.log verify.log; do
+          for name in identity.txt dependency-fetch.log cc65-build.log build.log staging.log capture.log verify.log; do
             if [[ -f "$EVIDENCE_DIR/$name" ]]; then
               (cd "$EVIDENCE_DIR" && sha256sum "$name") >> "$EVIDENCE_DIR/SHA256SUMS"
             fi
@@ -273,6 +284,17 @@ jobs:
             exit "$build_status"
           fi
 
+      - name: Install staging test headers
+        run: sudo apt-get update && sudo apt-get install -y libpng-dev
+
+      - name: Run shipped build and metadata staging suites
+        shell: bash
+        run: |
+          set -euo pipefail
+          export TEST_FIXTURE_ROOT="$RUNNER_TEMP" TMPDIR="$RUNNER_TEMP"
+          make -C tools build-test 2>&1 | tee "$EVIDENCE_DIR/build.log"
+          make -C tools staging-test 2>&1 | tee "$EVIDENCE_DIR/staging.log"
+
       - name: Capture and replay the declared review plan
         shell: bash
         run: |
@@ -294,7 +316,7 @@ jobs:
         run: |
           set -euo pipefail
           : > "$EVIDENCE_DIR/SHA256SUMS"
-          for name in identity.txt dependency-fetch.log cc65-build.log capture.log verify.log; do
+          for name in identity.txt dependency-fetch.log cc65-build.log build.log staging.log capture.log verify.log; do
             if [[ -f "$EVIDENCE_DIR/$name" ]]; then
               (cd "$EVIDENCE_DIR" && sha256sum "$name") >> "$EVIDENCE_DIR/SHA256SUMS"
             fi

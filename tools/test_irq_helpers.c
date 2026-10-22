@@ -35,6 +35,7 @@ static void advance_vera(unsigned port) {
 
 uint8_t read6502(uint16_t address, uint8_t bank) {
     (void)bank;
+    if (address == 0x9F29 && (ram[0x9F25] >> 1) == 2) return fx_write ? 0x40 : 0;
     if (track_sprite_reads && address >= sprite_read_start - 1 && address < sprite_read_end + 2) {
         CHECK(address >= sprite_read_start && address < sprite_read_limit,
               "Sprite consumer read beyond its accepted records/terminator");
@@ -283,7 +284,7 @@ static void assemble(void) {
         "INPUT_LINE_RENDER_CELLS=MAX_INPUT_STRING_LENGTH+1\n"
         ".assert INPUT_LINE_COL + INPUT_LINE_RENDER_CELLS <= TILE_LAYER_WIDTH, error, \"Input line rendering exceeds tile map row\"\n"
         ".segment \"CODE\"\n"
-        ".export input,enable,send,wait,done,snapshot,snapshot32,snapshotOutput,_vSyncCounter,_vSyncCounterHigh,sendIrqCommand,_inputLineDisplayed,_inputLineDirty,_b7CurrentInputStr,_foregroundVeraDepth,_b6EnterForegroundVera,_b6LeaveForegroundVera\n"
+        ".export input,enable,send,wait,done,snapshot,snapshot32,snapshotOutput,_vSyncCounter,_vSyncCounterHigh,sendIrqCommand,_inputLineDisplayed,_inputLineWasDisplayed,_inputLineDirty,_b7CurrentInputStr,_foregroundVeraDepth,_b6EnterForegroundVera,_b6LeaveForegroundVera\n"
         ".export clearSprites,inputStringAddress,spriteFirstZ,spriteCount\n"
         ".export handleSpriteUpdates,checkSpriteUpdateCapacity,bEBeginSpriteSnapshot,_bESpritesUpdatedBuffer,_bESpritesUpdatedBufferPointer,_bESpriteUpdateOverflowed,spriteBufferBefore,spriteBufferEnd,spriteBufferGuard,spriteUpdateBufferBytes,spriteUpdateRecordBytes,spriteUpdateMaxRecords,spriteUpdateBank,irqScratchPointer\n"
         ".export bBSoundHandler,_bBChannelsPlaying,_bBEndSoundFlag,_bBIsPlaying,_bBCh1Ticks,_bBCh2Ticks,_bBCh3Ticks,_bBCh4Ticks\n"
@@ -306,7 +307,7 @@ static void assemble(void) {
         "wait: WAIT_FOR_NEXT_IRQ snapshot\nrts\n"
         "clearSprites: CLEAR_SPRITE_ATTRS\nrts\n"
         "done: brk\ncommand: .byte 4\nsendIrqCommand: .byte 0\nsnapshot: .word 0\n_vSyncCounter: .word 0\n_vSyncCounterHigh: .word 0\n_foregroundVeraDepth: .byte 0\nsnapshotOutput: .res 4\nsnapshot32: jmp _b6CopyVSyncCounter32\n"
-        "_inputLineDisplayed: .byte 0\n_inputLineDirty: .byte 0\n_b7CurrentInputStr: .res 41\n"
+        "_inputLineDisplayed: .byte 0\n_inputLineWasDisplayed: .byte 0\n_inputLineDirty: .byte 0\n_b7CurrentInputStr: .res 41\n"
         ".include \"soundAsm.s\"\n.segment \"CODE\"\n"
         "soundCriticalSection: php\nsei\nplp\nrts\n"
         "%.*s\n%.*s\n"
@@ -434,6 +435,7 @@ static void seed_input_map(void) {
 static void set_input(unsigned shown, unsigned length) {
     unsigned buffer = symbol("_b7CurrentInputStr");
     ram[symbol("_inputLineDisplayed")] = (uint8_t)shown;
+    ram[symbol("_inputLineWasDisplayed")] = 1;
     ram[symbol("_inputLineDirty")] = 1;
     memset(ram + buffer, 0, INPUT_MAX_LENGTH + 1);
     for (unsigned i = 0; i < length; ++i)
@@ -517,6 +519,21 @@ static void test_input_dirty(void) {
     check_input_map(1, 4);
 }
 
+static void test_hidden_input_preserves_unowned_row(void) {
+    const unsigned base = symbol("inputStringAddress");
+    seed_input_map();
+    vram[base + 2] = '('; /* A title copyright shares the row reserved for input. */
+    ram[symbol("_inputLineDisplayed")] = 0;
+    ram[symbol("_inputLineWasDisplayed")] = 0;
+    ram[symbol("_inputLineDirty")] = 1;
+    writes = 0;
+    init_cpu(symbol("input"), 0);
+    run();
+    CHECK(!writes, "A never-displayed hidden input line cleared VERA");
+    CHECK(vram[base + 2] == '(', "A hidden input-line clear erased underlying game text");
+    CHECK(!ram[symbol("_inputLineDirty")], "Hidden input no-op did not consume its dirty flag");
+}
+
 static void test_input_dirty_sources(void) {
     char *parser = read_file("src/parser.c");
     char *commands = read_file("src/commands.c");
@@ -572,8 +589,8 @@ static void test_sound_source_contract(void) {
           "Sound startup must mute PSG and restore caller interrupt state");
     CHECK(play_disabled < play_save && play_save < play_sei && play_sei < play_restore && play_restore < play_end,
           "Disabled sound must return before masking IRQs; play must preserve caller interrupt state");
-    CHECK(find(play, "memset(bBIsPlaying, TRUE, NO_CHANNELS)") < find(play, "bBChannelsPlaying = NO_CHANNELS"),
-          "Sound start did not publish all playing channels before its count");
+    /* Channel publication is exercised by the compiled zero-through-four-channel
+     * callers in production-test; starting every channel is no longer valid. */
     CHECK(stop_count < stop_restore && find(stop, "memset(bBIsPlaying, FALSE, NO_CHANNELS)") < stop_count,
           "Sound stop did not clear flags and channel count before restoring IRQ state");
     CHECK(stop_restore < stop_end, "Sound stop did not restore caller interrupt state");
@@ -1118,6 +1135,57 @@ static void test_irq_counter_carries(void) {
                       "Foreground-owned or non-VSYNC IRQ executed normal work");
             }
     ram[symbol("_foregroundVeraDepth")] = 0;
+}
+
+/* An owned renderer must keep music ticking without surrendering either port. */
+static void test_foreground_sound_cadence(void) {
+    const char *ticks[]={"_bBCh1Ticks","_bBCh2Ticks","_bBCh3Ticks","_bBCh4Ticks"};
+    const unsigned notes=symbol("_ZP_CURRENTLY_PLAYING_NOTE_1");
+    unsigned worst=0;
+    for(unsigned owner=1;owner<=2;++owner)
+        for(unsigned selector=0;selector<2;++selector)
+            for(unsigned refill=0;refill<3;++refill)
+                for(unsigned cached=0;cached<2;++cached) {
+                    ram[symbol("_foregroundVeraDepth")]=(uint8_t)owner;
+                    ram[symbol("_bBChannelsPlaying")]=4;
+                    ram[symbol("_bBEndSoundFlag")]=23; ram[0x400+257+23]=0;
+                    for(unsigned c=0;c<4;++c) {
+                        ram[symbol("_bBIsPlaying")+c]=1;
+                        write_word(symbol(ticks[c]),refill?0:2);
+                        unsigned source=0x9000+c*16;
+                        write_word(notes+c*2,source-5);
+                        ram[source]=refill==2?255:3; ram[source+1]=refill==2?255:0; ram[source+2]=0x34;
+                        ram[source+3]=c==3?3:0x12; ram[source+4]=15;
+                    }
+                    write_word(symbol("SOUND_SREG"),0xBEAD);
+                    addr[0]=0x12345; addr[1]=0x15678;
+                    addr_control[0]=0x28; addr_control[1]=0x40;
+                    stride[0]=-2; stride[1]=8;
+                    ram[0x9F25]=(uint8_t)(12+selector);
+                    fx_write=cached;
+                    for(unsigned i=0;i<4;++i) fx_cache[i]=(uint8_t)(0x91+i);
+                    ram[symbol("default_irq_vector")]=(uint8_t)symbol("irqDefault");
+                    ram[symbol("default_irq_vector")+1]=(uint8_t)(symbol("irqDefault")>>8);
+                    init_cpu(symbol("done"),0x42); regs.sp=0x1FF; regs.a=0x31; regs.y=0x53;
+                    ram[0]=0x35; ram[1]=0x74; ram[0x9F27]=3;
+                    ram[0xFFFE]=(uint8_t)symbol("irqEntry"); ram[0xFFFF]=(uint8_t)(symbol("irqEntry")>>8);
+                    unsigned start=clockticks6502;
+                    irq6502(); run();
+                    unsigned cycles=clockticks6502-start; if(cycles>worst) worst=cycles;
+                    for(unsigned c=0;c<4;++c) CHECK(ram[symbol(ticks[c])]==(refill==2?0:refill?3:1),"Foreground VERA ownership skipped active sound ticks");
+                    CHECK(ram[symbol("_bBChannelsPlaying")]==(refill==2?0:4) && ram[0x400+257+23]==(refill==2),"Foreground sound did not publish simultaneous channel endings");
+                    CHECK(addr_control[0]==0x28 && addr_control[1]==0x40,"Foreground sound changed address-control bits");
+                    CHECK(addr[0]==0x12345 && addr[1]==0x15678 && stride[0]==-2 && stride[1]==8 && ram[0x9F25]==12+selector,"Foreground sound changed a renderer port or selector");
+                    CHECK(fx_write==cached,"Foreground sound changed FX cache-write mode");
+                    for(unsigned i=0;i<4;++i) CHECK(fx_cache[i]==0x91+i,"Foreground sound changed FX multiplier cache bytes");
+                    CHECK(ram[symbol("SOUND_SREG")]==0xAD && ram[symbol("SOUND_SREG")+1]==0xBE,"Foreground sound changed non-playback zero-page scratch");
+                    CHECK(ram[0]==0x35 && ram[1]==0x74 && regs.a==0x31 && regs.x==0x42 && regs.y==0x53 && regs.sp==0x1FF,"Foreground sound changed CPU state or banks");
+                    CHECK(acks==1 && ram[0x9F27]==2,"Foreground sound acknowledged an unrelated IRQ source");
+                    for(unsigned i=0;i<writes;++i) CHECK(write_addresses[i]>=0x1F9C0 && write_addresses[i]<0x1F9D0,"Foreground sound wrote outside AGI PSG registers");
+                }
+    fx_write=false; ram[symbol("_foregroundVeraDepth")]=0;
+    CHECK(worst<2000,"Foreground sound IRQ exceeded its 2000-cycle budget");
+    printf("Foreground sound tick/refill preserves both ports, FX cache, scratch and CPU state: max %u cycles\n",worst);
 }
 
 static void test_sprite_clear(void) {
@@ -1768,12 +1836,14 @@ int main(void) {
     assemble();
     test_input();
     test_input_dirty();
+    test_hidden_input_preserves_unowned_row();
     test_input_dirty_sources();
     test_reenable_preserves_pending_isr();
     test_snapshot_and_wait();
     test_atomic_vsync_snapshot();
     test_snapshot_interrupt_boundaries();
     test_irq_counter_carries();
+    test_foreground_sound_cadence();
     test_sprite_clear();
     test_sprite_updates();
     test_sprite_snapshot_reset();

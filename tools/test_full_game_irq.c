@@ -69,8 +69,27 @@ static void copy_tree(const char *from,const char *to) {
 static void copy_stage(const char *from,const char *to,bool build,bool omit_object) {
     DIR *d=opendir(from); if(!d) fail("opendir %s",from); struct dirent *e;
     while((e=readdir(d))) { bool agi=!strncasecmp(e->d_name,"agi.cx16",8); if(agi!=build||(omit_object&&!strcasecmp(e->d_name,"object"))) continue;
-        char *a=join(from,e->d_name),*b=join(to,e->d_name); struct stat st; if(!stat(a,&st)&&S_ISREG(st.st_mode)) copy_file(a,b); free(a);free(b);
+        char *a=join(from,e->d_name),*b=join(to,e->d_name); struct stat st;
+        if(!stat(a,&st)) {
+            if(S_ISREG(st.st_mode)) copy_file(a,b);
+            else if(!build&&S_ISDIR(st.st_mode)&&!strcasecmp(e->d_name,"meta")) copy_tree(a,join(to,"meta"));
+        }
+        free(a);free(b);
     } closedir(d);
+    /* The shared game cache keeps extractor output beside the original files. */
+    char *extracted=join(from,"extracted"),*metadata=join(to,"meta");
+    if(!build&&!exists(metadata)&&(d=opendir(extracted))) {
+        while((e=readdir(d))) {
+            char *lower=strdup(e->d_name); REQUIRE(lower,"Out of memory");
+            for(char *p=lower;*p;++p) *p=(char)tolower((unsigned char)*p);
+            if(strstr(lower,"-ids.idx")||strstr(lower,"-ids.bin")) {
+                mkdirs(metadata); copy_file(join(extracted,e->d_name),join(metadata,lower));
+            }
+            free(lower);
+        }
+        closedir(d);
+    }
+    free(extracted); free(metadata);
 }
 static void run(char *const argv[],const char *log,int timeout) {
     run_from(argv,log,timeout,NULL);
@@ -156,6 +175,7 @@ static const char hook[] =
 "static bool startup_text_active;\n"
 "static bool startup_text_negative_control_injected, startup_text_negative_control_active;\n"
 "static bool startup_text_negative_control_rejected, startup_text_published_initialized;\n"
+"static bool startup_text_fixed_rows_seen;\n"
 "static unsigned startup_text_returns, startup_text_phase, startup_text_phase_call;\n"
 "static unsigned startup_text_frame_samples, startup_text_visible_frame_samples;\n"
 "static uint8_t startup_text_published_messages[13], startup_text_published_widths[13];\n"
@@ -188,7 +208,7 @@ static const char hook[] =
 "static uint32_t foreground_irq_start_cycles, foreground_irq_max_cycles, foreground_irq_count;\n"
 "static uint8_t foreground_irq_a, foreground_irq_x, foreground_irq_y, foreground_irq_status;\n"
 "static uint8_t foreground_irq_ram_bank, foreground_irq_rom_bank, foreground_irq_vera[4], foreground_irq_depth;\n"
-"static uint8_t foreground_irq_zp[0x52+0x57], foreground_irq_work[500], foreground_irq_i2c[8];\n"
+"static uint8_t foreground_irq_zp[0x52+0x57], foreground_irq_work[500], foreground_irq_i2c[8], foreground_irq_fx[6]; static uint32_t foreground_irq_fx_accum;\n"
 "static uint8_t foreground_max_irq_depth;\n"
 "typedef struct { uint32_t cycles, i_masked_cycles, calls, sound_channels, psg_writes, audible_psg_writes, menu_count, menu_vram_writes, sprite_records, sprite_vram_writes, text_vram_writes; uint8_t command, work_kind, entry_depth, entry_i; } CombinedIRQRow;\n"
 "static FILE *combined_csv;\n"
@@ -385,6 +405,7 @@ static const char hook[] =
 "    if(kind==1 && PICTURE_TEST_ENABLED && (picture_test_stage==1 || picture_test_stage==3)) { picture_draw_active=true; picture_floodfill_count=picture_split_count=0; }\n"
 "}\n"
 "static void foreground_finish(void) {\n"
+"    if(!FOREGROUND_TEST_ENABLED) return;\n"
 "    uint32_t frames=shake_frames_seen-foreground_start_frames, serviced=foreground_vsync_counter()-foreground_start_counter;\n"
 "    uint32_t missed=frames>serviced?frames-serviced:0; uint32_t cycles=clockticks6502-foreground_start_cycles;\n"
 "    if(missed>0 && !(PICTURE_TEST_ENABLED && ((foreground_kind==1 && picture_irq_suppressed) || (foreground_kind==2 && picture_test_stage>=4)))) { fprintf(stderr,\"Production foreground caller %s lost %u VSYNC(s): cycles=%u asserted=%u serviced=%u\\n\",foreground_kind==1?\"b11DrawPic\":\"b9UpdateObjects\",missed,cycles,frames,serviced); exit(3); }\n"
@@ -393,7 +414,7 @@ static const char hook[] =
 "    if(PICTURE_TEST_ENABLED && foreground_kind==2 && blit_pending_parent_phase) { blit_parent_return_depth=shake_read(S__foregroundVeraDepth); if(blit_failure_stage<=2&&!blit_parent_viewtab_unchanged()) { fprintf(stderr,\"b9UpdateObjects changed caller ViewTable state after agiBlit allocation failure\\n\"); exit(3); } unsigned values[]={ (unsigned)blit_failure_stage,blit_set_loop_entered,blit_set_loop_returned,blit_set_loop_succeeded,blit_set_loop_bank_restored,blit_second_allocator_entered,blit_result,blit_entry_depth,blit_nested_depth,blit_agi_return_depth,blit_parent_return_depth,blit_bank_preserved,blit_rom_preserved,blit_i_preserved,blit_load_view_entries,blit_set_view_entries,blit_draw_entries,blit_loaded_resource,blit_loop_addresses_unchanged,blit_after_failure.loop_zero,blit_loop_addresses_valid,blit_loop_addresses_reserved,blit_backbuffers_unchanged,blit_after_failure.backbuffer_zero,blit_backbuffers_valid,blit_backbuffers_reserved,blit_metadata_unchanged,blit_retry_entered,blit_retry_result,blit_retry_set_loop_entries,blit_retry_loop_consistent,blit_retry_backbuffers_valid,blit_retry_backbuffers_reserved,blit_retry_metadata_committed,blit_retry_bank_preserved,blit_retry_rom_preserved,blit_retry_i_preserved,blit_retry_depth_restored }; for(unsigned i=0;i<sizeof(values)/sizeof(values[0]);i++) fprintf(blit_failure_csv,\"%s%u\",i?\",\":\"\",values[i]); fputc('\\n',blit_failure_csv); fflush(blit_failure_csv); blit_pending_parent_phase=false; if(blit_failure_stage==1) blit_failure_stage=2; else if(blit_failure_stage==2) blit_failure_stage=3; else { blit_restore_viewtab_flags(); emu_write(5,0); raise(SIGINT); } }\n"
 "    fprintf(foreground_csv,\"%d,%u,%u,%u,%u,%u,%u,%u\\n\",foreground_kind,cycles,frames,serviced,missed,foreground_irq_count,foreground_irq_max_cycles,foreground_entry_i);\n"
 "    fflush(foreground_csv); foreground_active=false; foreground_kind=0;\n"
-"    if(picture_draw_active) {\n"
+"    if(PICTURE_TEST_ENABLED && picture_draw_active) {\n"
 "        const char *path=picture_draw_count==0?PICTURE_IRQ_VRAM:PICTURE_REFERENCE_VRAM;\n"
 "        uint32_t hash=picture_capture(path);\n"
 "        fprintf(picture_csv,\"%d,1,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u\\n\",picture_draw_count+1,cycles,frames,serviced,missed,foreground_irq_count,foreground_irq_max_cycles,foreground_max_irq_depth,picture_floodfill_count,picture_split_count,foreground_entry_i,hash,picture_load_entries,picture_draw_entries);\n"
@@ -411,6 +432,7 @@ static const char hook[] =
 "        if(!foreground_irq_depth) { fprintf(stderr,\"Foreground IRQ ran without VERA ownership\\n\"); exit(3); }\n"
 "        if(foreground_irq_depth>foreground_max_irq_depth) foreground_max_irq_depth=foreground_irq_depth;\n"
 "        for(int i=0;i<4;i++) foreground_irq_vera[i]=foreground_vera_state(i);\n"
+"        foreground_irq_fx[0]=video_get_dc_value(8); foreground_irq_fx[1]=video_get_dc_value(11); for(int i=0;i<4;i++) foreground_irq_fx[i+2]=video_get_dc_value(24+i); foreground_irq_fx_accum=video_get_fx_accum();\n"
 "        for(int i=0;i<0x52;i++) foreground_irq_zp[i]=shake_read(0x22+i);\n"
 "        for(int i=0;i<0x57;i++) foreground_irq_zp[0x52+i]=shake_read(0xa9+i);\n"
 "        for(int i=0;i<500;i++) foreground_irq_work[i]=shake_read(0x602+i);\n"
@@ -531,8 +553,8 @@ static const char hook[] =
 "            (unsigned)pc, bank, shake_real_b9_entries, foreground_active, foreground_kind);\n"
 "    fflush(shake_video_trace);\n"
 "}\n"
-"void shake_foreground_vram_write(uint32_t address) { if(foreground_irq_active) { fprintf(stderr,\"KERNAL IRQ wrote VERA memory at $%05x during renderer ownership\\n\",address); exit(3); } }\n"
-"void shake_foreground_vera_register_write(uint8_t reg,uint8_t dcsel,uint8_t value,uint8_t oldvalue,uint16_t pc,uint8_t codebank,uint8_t rambank) { if(!foreground_irq_active || !(reg<=2 || reg==5)) return; fprintf(stderr,\"Foreground IRQ VERA register write: PC=%04x PBR=%02x RAM=%02x DCSEL=%u reg=%u value=%02x old=%02x cycle=%u\\n\",pc,codebank,rambank,dcsel,reg,value,oldvalue,clockticks6502); if(reg<=2 || value!=oldvalue) { fprintf(stderr,\"Foreground IRQ mutated VERA address/control register %u during renderer ownership\\n\",reg); exit(3); } }\n"
+"void shake_foreground_vram_write(uint32_t address) { if(foreground_irq_active&&(address<0x1f9c0||address>=0x1f9d0)) { fprintf(stderr,\"KERNAL IRQ wrote VERA memory at $%05x during renderer ownership\\n\",address); exit(3); } }\n"
+"void shake_foreground_vera_register_write(uint8_t reg,uint8_t dcsel,uint8_t value,uint8_t oldvalue,uint16_t pc,uint8_t codebank,uint8_t rambank) { (void)dcsel; (void)oldvalue; (void)pc; (void)codebank; (void)rambank; if(foreground_irq_active&&reg==5&&value!=0&&value!=1&&value!=4&&value!=foreground_irq_vera[0]) { fprintf(stderr,\"Foreground sound selected an unexpected VERA register bank\\n\"); exit(3); } }\n"
 "void shake_window_write(void) {\n"
 "    if(shake_irq_active) {\n"
 "        shake_write_pending=true; shake_window_writes++; shake_total_writes++;\n"
@@ -707,8 +729,22 @@ static const char hook[] =
 "        startup_text_check_line((uint8_t)(18u - i), 12, (uint8_t)(startup_text_phase - i));\n"
 "    for (unsigned row = 6; row <= 18u - lines; row++)\n"
 "        startup_text_check_blank_line((uint8_t)row);\n"
-"    startup_text_check_fixed(22, 1, \"(c) copyright SIERRA On-Line Inc.  1987\");\n"
-"    startup_text_check_fixed(24, 5, \"Press any key to continue.\");\n"
+"    uint32_t copyright = 0xda00u + 25u * 128u + 2u;\n"
+"    uint32_t prompt = 0xda00u + 27u * 128u + 10u;\n"
+"    if (!startup_text_fixed_rows_seen && video_space_read(copyright) == '(' &&\n"
+"        video_space_read(prompt) == 'P') {\n"
+"        startup_text_fixed_rows_seen = true;\n"
+"        fprintf(stderr, \"KQ1 startup fixed title text became visible by phase %u\\n\",\n"
+"                startup_text_phase);\n"
+"    }\n"
+"    if (startup_text_fixed_rows_seen) {\n"
+"        startup_text_check_fixed(22, 1, \"(c) copyright SIERRA On-Line Inc.  1987\");\n"
+"        startup_text_check_fixed(24, 5, \"Press any key to continue.\");\n"
+"    } else if (startup_text_phase == 23) {\n"
+"        fprintf(stderr, \"KQ1 startup fixed title text never appeared: copyright=%02x prompt=%02x\\n\",\n"
+"                video_space_read(copyright), video_space_read(prompt));\n"
+"        exit(3);\n"
+"    }\n"
 "}\n"
 "static uint32_t startup_text_cell_address(uint8_t row, unsigned index) {\n"
 "    return 0xda00u + (uint32_t)(row + 3u) * 128u + (12u + index) * 2u;\n"
@@ -1492,8 +1528,13 @@ static const char hook[] =
 "    if(picture_test_stage==6 && !view_load_retry_blit_done && clockticks6502>TRIGGER_CYCLE+50000000u) { fprintf(stderr,\"No real agiBlit occurred after load.view retry for view %u\\n\",view_load_target); exit(3); }\n"
 "}\n"
 "static void shake_before_step(void) {\n"
+"    if(STARTUP_TEST_ROOM) { startup_before_step(); return; }\n"
 "    if(LOADER_TEST_ENABLED) { loader_before_step(regs.pc,memory_get_ram_bank()); return; }\n"
 "    if(STARTUP_TEXT_TEST_ENABLED) { startup_graphics_abi_check(regs.pc,memory_get_ram_bank()); startup_text_before_step(regs.pc,memory_get_ram_bank()); return; }\n"
+"    static uint32_t next_progress=100000000u; if(clockticks6502>=next_progress) { fprintf(stderr,\"Native rendering progress: cycles=%u host_ms=%u command=%u picture_stage=%u pc=%04x bank=%u room=%u cursor=%u:%u handler=%u frames=%u depth=%u\\n\",clockticks6502,SDL_GetTicks(),shake_command_index,picture_test_stage,regs.pc,memory_get_ram_bank(),shake_banked_read(shake_var_address(0),0),shake_read(S_cwCurrentCode+1),shake_read(S_cwCurrentCode),shake_command_handler_seen,shake_frames_seen,shake_read(S__foregroundVeraDepth)); next_progress+=100000000u; }\n"
+"    if(clockticks6502>=TRIGGER_CYCLE&&clockticks6502-TRIGGER_CYCLE>200000000u) { fprintf(stderr,\"Native rendering workload exceeded its 200M post-trigger cycle limit\\n\"); exit(3); }\n"
+"    /* Match natural startup before saving interpreter pointers for injected workloads. */\n"
+"    static uint32_t next_start_key=8000000u; if(!shake_view_warm_started&&clockticks6502>=next_start_key&&shake_banked_read(shake_var_address(0),0)!=1) { static char key[]=\"\\r\"; machine_paste(key,false); next_start_key=clockticks6502+8000000u; }\n"
 "    if(text_case_active&&!waiting) text_case_track_source_helpers(regs.pc);\n"
 "    shake_check_sprite_owner_wrapper_return();\n"
 "    if(shake_sprite_owner_wrapper_active&&!shake_sprite_owner_wrapper_progress_logged&&clockticks6502-shake_sprite_owner_wrapper_start_cycle>500000u) { shake_sprite_owner_wrapper_progress_logged=true; fprintf(stderr,\"Sprite-owner wrapper progress: pc=%04x bank=%u codebank=%u SP=%04x E=%u depth=%u Cstack=%04x return=%04x/%04x target=%04x\\n\",regs.pc,memory_get_ram_bank(),regs.k,regs.sp,regs.e,shake_read(S__foregroundVeraDepth),combined_read16(S_c_sp,0),shake_sprite_owner_wrapper_return_pc,shake_sprite_owner_wrapper_return_sp,shake_sprite_owner_wrapper_is_end?S__testEndSpritePublicationWork:S__testBeginSpritePublicationWork); }\n"
@@ -1535,7 +1576,8 @@ static const char hook[] =
 "        uint32_t cycles=clockticks6502-foreground_irq_start_cycles; if(cycles>foreground_irq_max_cycles) foreground_irq_max_cycles=cycles; foreground_irq_count++;\n"
 "        if(regs.a!=foreground_irq_a || regs.xl!=foreground_irq_x || regs.yl!=foreground_irq_y || (regs.status&0xcf)!=foreground_irq_status || memory_get_ram_bank()!=foreground_irq_ram_bank || memory_get_rom_bank()!=foreground_irq_rom_bank) { fprintf(stderr,\"Foreground IRQ changed CPU registers/flags/banks\\n\"); exit(3); }\n"
 "        for(int i=0;i<4;i++) if(foreground_vera_state(i)!=foreground_irq_vera[i]) { fprintf(stderr,\"Foreground IRQ changed VERA address/control state\\n\"); exit(3); }\n"
-"        for(int i=0;i<0x52;i++) if(shake_read(0x22+i)!=foreground_irq_zp[i]) { fprintf(stderr,\"Foreground IRQ changed zero-page scratch at $%02x\\n\",0x22+i); exit(3); }\n"
+"        if(video_get_dc_value(8)!=foreground_irq_fx[0]||video_get_dc_value(11)!=foreground_irq_fx[1]||video_get_fx_accum()!=foreground_irq_fx_accum) { fprintf(stderr,\"Foreground sound changed FX control or multiplier state\\n\"); exit(3); } for(int i=0;i<4;i++) if(video_get_dc_value(24+i)!=foreground_irq_fx[i+2]) { fprintf(stderr,\"Foreground sound changed FX cache bytes\\n\"); exit(3); }\n"
+"        for(int i=0;i<0x52;i++) if((0x22+i<S__ZP_CURRENTLY_PLAYING_NOTE_1||0x22+i>=S__ZP_CURRENTLY_PLAYING_NOTE_1+8)&&shake_read(0x22+i)!=foreground_irq_zp[i]) { fprintf(stderr,\"Foreground IRQ changed zero-page scratch at $%02x\\n\",0x22+i); exit(3); }\n"
 "        for(int i=0;i<0x57;i++) if(shake_read(0xa9+i)!=foreground_irq_zp[0x52+i]) { fprintf(stderr,\"Foreground IRQ changed zero-page scratch at $%02x\\n\",0xa9+i); exit(3); }\n"
 "        for(int i=0;i<500;i++) if(shake_read(0x602+i)!=foreground_irq_work[i]) { fprintf(stderr,\"Foreground IRQ changed renderer work area at $%04x\\n\",0x602+i); exit(3); }\n"
 "        uint8_t i2c_state[8]; shake_get_i2c_state(i2c_state); if(memcmp(i2c_state,foreground_irq_i2c,sizeof(i2c_state))) { fprintf(stderr,\"Foreground IRQ changed I2C protocol state\\n\"); exit(3); }\n"
@@ -1576,6 +1618,7 @@ static const char hook[] =
 "    if(shake_injected && ((shake_command_index==0 && bank==3 && pc==S_b3Load_soundCCall) || (shake_command_index==1 && bank==3 && pc==S_b3Play_soundCCall) || (shake_command_index>=2 && bank==4 && pc==S_b4ShakeScreen))) shake_command_handler_seen=true;\n"
 "    if(shake_injected && pc==S_mainLoop && shake_read(S_cwCurrentCode)==shake_command_lengths[shake_command_index] && !shake_read(S_cwCurrentCode+1)) shake_command_cursor_seen=true;\n"
 "    if(pc!=S_mainLoop || shake_irq_active || clockticks6502<TRIGGER_CYCLE) return;\n"
+"    if(!shake_view_warm_started&&(shake_banked_read(shake_var_address(0),0)!=1||shake_banked_read(shake_flag_address(5),0))) return;\n"
 "    if(!shake_capture_started) { warp_mode=false; emu_write(5,2); shake_capture_started=true; shake_capture_start_frames=shake_frames_seen; return; }\n"
 "    if(!shake_view_warm_started) { uint8_t loaded; uint16_t code,end; if(!shake_logic0_interpreter_ready(&loaded,&code,&end)) { static bool waiting_reported; if(!waiting_reported) { fprintf(stderr,\"Waiting for real LOGIC0 interpreter context before warm injection: loaded=%u code=%04x end=%04x\\n\",loaded,code,end); waiting_reported=true; } if(clockticks6502-TRIGGER_CYCLE>50000000u) { fprintf(stderr,\"Real LOGIC0 was not loaded into a valid banked interpreter context before the warm fixture timeout: loaded=%u code=%04x end=%04x\\n\",loaded,code,end); exit(3); } return; } shake_begin_view_warm(); return; }\n"
 "    if(shake_view_warm_active) {\n"
@@ -1674,6 +1717,7 @@ static const char hook[] =
 "    shake_command_start=clockticks6502; shake_start_frames=shake_frames_seen; shake_command_cursor_seen=false; shake_injected=true;\n"
 "}\n"
 "static void shake_after_step(uint8_t opcode) {\n"
+"    if(STARTUP_TEST_ROOM) return;\n"
 "    if(LOADER_TEST_ENABLED) return;\n"
 "    if(STARTUP_TEXT_TEST_ENABLED) return;\n"
 "    if(COMBINED_IRQ_TEST_ENABLED) { combined_after_step(opcode); return; }\n"
@@ -1709,7 +1753,90 @@ static const char hook[] =
 "    }\n"
 "}\n"
 ;
-static const char *names[] = {"custom_irq_handler","mainLoop","codeWindow","cwCurrentCode","endPos","codeWindowInvalid","b4ShakeScreen","b3Load_soundCCall","b3Play_soundCCall","b5Set_menuCCall","b2Load_logicsCCall","_b6LoadLogicFile","_currentLog","_logicFiles","_logics","shakeCount","shakePhases","shakeFrames","_menuDirty","_menuShown","_menuAllowed","_numOfMenus","_charSetInited","_mainLoopCounter","_bBChannelsPlaying","_bBLoadedSoundsPointer","_bBEndSoundFlag","bBSoundHandler","b7HandleInputLine","bADisplayMenu","b10DisplayStatusBar","bEHandleSpriteUpdates","b10PrintStatusBarString","handleScreenShake","handleDisplayTextSlice","@handleSound","_inputLineDisplayed","_inputLineDirty","_b7CurrentInputStr","_bESpritesUpdatedBuffer","_bESpritesUpdatedBufferPointer","_b11DrawPic","_b2Load_pic","_b2Draw_pic","_b2Load_view","_b2Animate_obj","_b2Set_view","_b2Position","_b2Draw","b9UpdateObjects","_b6LoadAGIFile","_b9LoadViewFile","_b7PollKeyboard","_viewdir","_numViews","_agiBlit","_bESetLoop","_bEAllocateSpriteMemory","_bDSpriteAllocTable","_viewtab","_viewTableMetadata","_loadedViews","_offsetOfCurrentView","_offsetOfCurrentLoop","_offsetOfCurrentCel","_offsetOfFlags","_offsetOfPrevX","_offsetOfPrevY","_offsetOfStopped","_offsetOfBackBuffers","_offsetOfViewMetadataBank","_offsetOfIsOnBackBuffer","_offsetOfloopsVeraAddressesPointers","_offsetOfLoops","_offsetOfLoopsBank","_offsetOfAllocationWidth","_offsetOfAllocationHeight","_offsetOfMaxVeraSlots","_sizeOfLoop","_sizeOfViewTab","_sizeOfView","findFreeVRamLowByteLoop","findFirstFreeVRamBlock_optimisticSkip","_vSyncCounter","_vSyncCounterHigh","_foregroundVeraDepth","sendIrqCommand","irqWorkKind","irqCompletionGeneration","lastMainLoopCounter","_currentTextBuffer","_displayTextAddressToCopyTo","_displayTextAddressToCopyToHigh","_b3PaletteRows","_b3PaletteNumber","_b8AsmFloodFillSections","_b11SplitPriority","_var","_flag","_b6Interpret","_executeLogic","_b5GetLogicEntry","_testRunCombinedDisplayText","_testMultiplyBoundsResults","_testRunBankAliasDisplay","_testRunBankBoundaryDisplay","_testRunFullLayerClear","_testBankAliasSource","_testBankAliasBank","_b3TextBuffers","_strLenBankedBounded","_memCpyBankedBetween","_memCpyBanked","_testCombinedSoundEndFlag","_testBeginSpritePublicationWork","_testEndSpritePublicationWork","c_sp","_b3Display_v"};
+/* Observe natural game execution; Return and Right use the emulator keyboard. */
+static const char startup_hook[] =
+"/* KQ3 view 0 uses transparent colour 14 in every walking loop. */\n"
+"static unsigned startup_ego_palette_checks,startup_ego_palette_room,startup_ego_palette_loops;\n"
+"static void startup_check_ego_palette(unsigned room,uint16_t x,uint16_t y) {\n"
+"    if(shake_banked_read(S__viewtab+shake_read(S__offsetOfCurrentView),9)!=0) return;\n"
+"    unsigned height=shake_banked_read(S__viewtab+shake_read(S__offsetOfYSize),9);\n"
+"    for(unsigned slot=0;slot<128;slot++) { unsigned a=0x1fc00+slot*8; if(!(video_space_read(a+6)&12)) continue; unsigned sx=video_space_read(a+2)|((video_space_read(a+3)&3)<<8),sy=video_space_read(a+4)|((video_space_read(a+5)&3)<<8); if((sx!=x*2&&sx+2!=x*2)||sy+height!=y+37) continue; unsigned palette=video_space_read(a+7)&15;\n"
+"        for(unsigned c=1;c<16;c++) { unsigned base=0x1fa00+(c==14?0:c*2),actual=0x1fa00+palette*32+c*2; unsigned expected=video_space_read(base)|((video_space_read(base+1)&15)<<8),got=video_space_read(actual)|((video_space_read(actual+1)&15)<<8); if(got!=expected) { fprintf(stderr,\"KQ3 ego colour changed: room=%u loop=%u sprite=%u palette=%u colour=%u RGB=%03x expected=%03x\\n\",room,shake_banked_read(S__viewtab+shake_read(S__offsetOfCurrentLoop),9),slot,palette,c,got,expected); exit(3); } } startup_ego_palette_checks++; startup_ego_palette_room=room; if(room==34) startup_ego_palette_loops|=1u<<shake_banked_read(S__viewtab+shake_read(S__offsetOfCurrentLoop),9); return;\n"
+"    }\n"
+"}\n"
+"static bool startup_story_chickens_visible(void) {\n"
+"    for(unsigned object=1;object<=2;object++) {\n"
+"        uint16_t tab=S__viewtab+object*shake_read(S__sizeOfViewTab);\n"
+"        unsigned view=shake_banked_read(tab+shake_read(S__offsetOfCurrentView),9);\n"
+"        if(view!=205&&view!=206) return false;\n"
+"        int x=combined_read16(tab+shake_read(S__offsetOfXPos),9),y=combined_read16(tab+shake_read(S__offsetOfYPos),9);\n"
+"        int height=shake_banked_read(tab+shake_read(S__offsetOfYSize),9); bool found=false;\n"
+"        for(unsigned slot=0;slot<128;slot++) {\n"
+"            unsigned a=0x1fc00+slot*8; if(!(video_space_read(a+6)&12)) continue;\n"
+"            int sx=video_space_read(a+2)|((video_space_read(a+3)&3)<<8),sy=video_space_read(a+4)|((video_space_read(a+5)&3)<<8);\n"
+"            if(abs(sx-x*2)<=2&&abs(sy+height-y-37)<=1) { found=true; break; }\n"
+"        }\n"
+"        if(!found) return false;\n"
+"    }\n"
+"    return true;\n"
+"}\n"
+"bool cx16agiOpeningReady;\n"
+"static void startup_before_step(void) {\n"
+"    if(WATCH_OPENING_ENABLED&&cx16agiOpeningReady) return;\n"
+"    static unsigned dependency_walks;\n"
+"    static unsigned sound_history_frame; static uint8_t sound_history_active[8],sound_history_owner[8],sound_history_bank[8],sound_owner_bank; static uint16_t sound_history_pc[8],sound_owner_pc;\n"
+"    static unsigned pictures,room_pictures,polls,ticks,updates,room_ticks,room_polls,last_room=256;\n"
+"    static unsigned colour_phase,colour_phase_tick; static unsigned kq3_intro_pictures,kq3_intro_stages,kq3_story_first_frame; static bool kq3_story_shown,kq3_chickens_verified; static bool kq3_intro_shown,showing; static uint16_t show_return; static uint8_t show_sp;\n"
+"    static unsigned intro_rows,intro_first_frame,intro_last_frame,intro_sound_calls,intro_last_sound_frame,intro_max_sound_gap,intro_display_waits;\n"
+"    static uint32_t intro_first_cycle,intro_last_cycle,intro_call_cycle,intro_display_cycles;\n"
+"    static uint32_t intro_host_start; if(!intro_host_start) intro_host_start=SDL_GetTicks()+1;\n"
+"    static bool moving,intro_display_active; static uint16_t start_x,start_y,intro_display_return; static uint8_t intro_display_sp;\n"
+"    static uint32_t next_key=8000000u; static uint16_t picture_return; static uint8_t picture_sp; static bool drawing;\n"
+"    if(clockticks6502>(STARTUP_TEST_ROOM==7?2000000000u:800000000u)) { fprintf(stderr,\"Startup timeout: expected room=%u actual=%u pictures=%u polls=%u ticks=%u updates=%u pc=%04x bank=%u\\n\",STARTUP_TEST_ROOM,last_room,pictures,polls,ticks,updates,regs.pc,memory_get_ram_bank()); exit(3); }\n"
+"    if(INTRO_TEST_ENABLED&&intro_display_active&&waiting) intro_display_waits++;\n"
+"    if(regs.k||waiting) return;\n"
+"    uint16_t pc=regs.pc; uint8_t bank=memory_get_ram_bank();\n"
+"    if(bank==4&&pc==S__b4LoadUnloadResources) dependency_walks++;\n"
+"    if(INTRO_TEST_ENABLED&&bank==3&&pc==S__b3Display_v) { if(!intro_rows) { intro_first_frame=shake_frames_seen; intro_first_cycle=clockticks6502; } intro_rows++; intro_display_active=true; intro_call_cycle=clockticks6502; intro_display_return=shake_call_return(&intro_display_sp); }\n"
+"    if(intro_display_active&&pc==intro_display_return&&(uint8_t)regs.sp==intro_display_sp) { intro_last_frame=shake_frames_seen; intro_last_cycle=clockticks6502; intro_display_cycles+=clockticks6502-intro_call_cycle; intro_display_active=false; }\n"
+"    if(INTRO_TEST_ENABLED&&pc==S__b6EnterForegroundVera&&!shake_read(S__foregroundVeraDepth)) { uint8_t sp; sound_owner_pc=shake_call_return(&sp); sound_owner_bank=bank; }\n"
+"    if(INTRO_TEST_ENABLED&&sound_history_frame!=shake_frames_seen) { sound_history_frame=shake_frames_seen; sound_history_active[shake_frames_seen%8]=shake_banked_read(S__bBChannelsPlaying,11); sound_history_owner[shake_frames_seen%8]=shake_read(S__foregroundVeraDepth); sound_history_pc[shake_frames_seen%8]=sound_owner_pc; sound_history_bank[shake_frames_seen%8]=sound_owner_bank; }\n"
+"    if(INTRO_TEST_ENABLED&&bank==11&&pc==S_bBSoundHandler&&shake_banked_read(S__bBChannelsPlaying,11)) { unsigned gap=shake_frames_seen-intro_last_sound_frame; if(intro_sound_calls&&gap>intro_max_sound_gap) { intro_max_sound_gap=gap; if(gap>1) fprintf(stderr,\"Intro cadence gap=%u frame=%u prior_active=%u prior_owner=%u current_owner=%u caller=%02x:%04x\\n\",gap,shake_frames_seen,sound_history_active[(shake_frames_seen-1)%8],sound_history_owner[(shake_frames_seen-1)%8],shake_read(S__foregroundVeraDepth),sound_history_bank[(shake_frames_seen-1)%8],sound_history_pc[(shake_frames_seen-1)%8]); } intro_last_sound_frame=shake_frames_seen; intro_sound_calls++; }\n"
+"    if(bank==17&&pc==S__b11DrawPic) { drawing=true; picture_return=shake_call_return(&picture_sp); }\n"
+"    if(drawing&&pc==picture_return&&(uint8_t)regs.sp==picture_sp) { pictures++; unsigned room=shake_banked_read(shake_var_address(0),0); if(room==STARTUP_TEST_ROOM) room_pictures++; if(STARTUP_TEST_ROOM==7&&room==45) { kq3_intro_pictures++; unsigned stage=shake_banked_read(shake_var_address(226),0); if(stage==0||stage==2||stage==3) kq3_intro_stages|=1u<<stage; fprintf(stderr,\"KQ3 natural intro picture: stage=%u mask=%x frame=%u\\n\",stage,kq3_intro_stages,shake_frames_seen); } drawing=false; }\n"
+"    if(STARTUP_TEST_ROOM==7&&bank==2&&pc==S__b2Show_pic&&(shake_banked_read(shake_var_address(0),0)==45||shake_banked_read(shake_var_address(0),0)==46)) { showing=true; show_return=shake_call_return(&show_sp); }\n"
+"    if(showing&&pc==show_return&&(uint8_t)regs.sp==show_sp) { if(shake_banked_read(shake_var_address(0),0)==46&&!kq3_story_shown) { if(kq3_intro_stages!=13) { fprintf(stderr,\"KQ3 opening skipped title/credit pictures: mask=%x\\n\",kq3_intro_stages); exit(3); } kq3_story_shown=true; fprintf(stderr,\"KQ3 story visible after natural titles: frame=%u; withholding input for 120 more frames\\n\",shake_frames_seen); } if(!kq3_intro_shown) { fprintf(stderr,\"KQ3 intro visible: room=45 frame=%u; withholding input through the title and story opening\\n\",shake_frames_seen); } kq3_intro_shown=true; showing=false; }\n"
+"    if(bank==7&&pc==S__b7PollKeyboard) polls++;\n"
+"    if(bank==9&&pc==S_b9UpdateObjects) updates++;\n"
+"    if(bank==6&&pc==S__b6Interpret) {\n"
+"        ticks++; unsigned room=shake_banked_read(shake_var_address(0),0);\n"
+"        if(STARTUP_TEST_ROOM==7&&room==46&&kq3_story_shown&&!kq3_chickens_verified&&startup_story_chickens_visible()) { kq3_chickens_verified=true; kq3_story_first_frame=shake_frames_seen; fprintf(stderr,\"KQ3 both chicken sprites are published: frame=%u\\n\",shake_frames_seen); }\n"
+"        if(STARTUP_TEST_ROOM==7&&room==7&&(!kq3_intro_pictures||!kq3_intro_shown||!kq3_chickens_verified)) { fprintf(stderr,\"KQ3 skipped its intro: gameplay room 7 reached before the title/story opening completed; v70=%u restart_flag=%u\\n\",shake_banked_read(shake_var_address(70),0),shake_banked_read(shake_pointer_value(S__flag)+6,0)); exit(3); }\n"
+"        if(STARTUP_TEST_ROOM==7&&room==7&&shake_frames_seen-kq3_story_first_frame<120) { fprintf(stderr,\"KQ3 intro dismissed without input after %u frames\\n\",shake_frames_seen-kq3_story_first_frame); exit(3); }\n"
+"        if(INTRO_TEST_ENABLED&&STARTUP_TEST_ROOM==1) {\n"
+"            if(intro_rows>=13) { unsigned span=intro_last_frame-intro_first_frame; fprintf(stderr,\"Natural intro credit batch: rows=%u visible_update_frames=%u active_sound_calls=%u max_sound_gap_frames=%u emulated_cycles=%u host_ms=%u batch_cycles=%u display_cycles=%u waits=%u\\n\",intro_rows,span,intro_sound_calls,intro_max_sound_gap,clockticks6502,SDL_GetTicks()+1-intro_host_start,intro_last_cycle-intro_first_cycle,intro_display_cycles,intro_display_waits); if(span>3||intro_last_cycle-intro_first_cycle>403200u||intro_display_waits) { fprintf(stderr,\"Intro credit batch exceeded its three-frame CPU budget or waited for display IRQs\\n\"); exit(3); } if(!intro_sound_calls||intro_max_sound_gap>1) { fprintf(stderr,\"Intro sound updates missed active VSYNC frames\\n\"); exit(3); } fprintf(stderr,\"PASS natural intro presentation\\n\"); exit(0); }\n"
+"            intro_rows=0; intro_display_waits=0; intro_display_cycles=0;\n"
+"        }\n"
+"        if(room!=last_room) { fprintf(stderr,\"Natural startup: room=%u cycle=%u pictures=%u ticks=%u polls=%u v70=%u restart_flag=%u\\n\",room,clockticks6502,pictures,ticks,polls,shake_banked_read(shake_var_address(70),0),shake_banked_read(shake_pointer_value(S__flag)+6,0)); last_room=room; room_ticks=ticks; room_polls=polls; }\n"
+"        unsigned sprites=0; for(unsigned i=0;i<128;i++) if(video_space_read(0x1fc00+i*8+6)&12) sprites++;\n"
+"        uint16_t x=combined_read16(S__viewtab+shake_read(S__offsetOfXPos),9),y=combined_read16(S__viewtab+shake_read(S__offsetOfYPos),9);\n"
+"        if(STARTUP_TEST_ROOM==7&&room!=45&&ticks-room_ticks>=3) startup_check_ego_palette(room,x,y);\n"
+"        if(STARTUP_TEST_ROOM==7&&colour_phase==1&&room==34) { static char stop[]=\"\\x11\\x11\"; unsigned direction=shake_banked_read(shake_var_address(6),0); if(direction==5) machine_paste(stop,false); colour_phase=2; fprintf(stderr,\"Courtyard stop at %u,%u direction=%u\\n\",x,y,direction); colour_phase_tick=ticks; next_key=clockticks6502+8000000u; }\n"
+"        if(STARTUP_TEST_ROOM==7&&room==34&&colour_phase>=2&&colour_phase<=6&&ticks-colour_phase_tick>=(colour_phase==2?10u:3u)&&startup_ego_palette_room==34) { static char open[]=\"\\x11OPEN DOOR\\r\"; if(colour_phase<6) { static char turns[][5]={\"\\\\X91\",\"\\\\X9D\",\"\\\\X1D\",\"\\\\X11\"}; machine_paste(turns[colour_phase-2],false); } else machine_paste(open,false); colour_phase++; fprintf(stderr,\"Courtyard phase=%u position=%u,%u loops=%x input=%u\\n\",colour_phase,x,y,startup_ego_palette_loops,shake_read(S__inputLineDisplayed)); colour_phase_tick=ticks; next_key=clockticks6502+8000000u; }\n"
+"        if(STARTUP_TEST_ROOM==7&&colour_phase==7&&ticks%50==0) fprintf(stderr,\"Door waiting: position=%u,%u direction=%u unknown=%u input=%u loopmask=%x\\n\",x,y,shake_banked_read(shake_var_address(6),0),shake_banked_read(shake_var_address(9),0),shake_read(S__inputLineDisplayed),startup_ego_palette_loops);\n"
+"        if(STARTUP_TEST_ROOM==7&&colour_phase==7&&room==7&&ticks-room_ticks>=10) { static char down[]=\"\\x11\"; machine_paste(down,false); colour_phase=8; next_key=clockticks6502+8000000u; }\n"
+"        if(STARTUP_TEST_ROOM==7&&colour_phase==8&&room==34&&ticks-room_ticks>=10&&startup_ego_palette_room==34) { if(startup_ego_palette_loops!=15) { fprintf(stderr,\"Courtyard walking loops missing: mask=%x\\n\",startup_ego_palette_loops); exit(3); } fprintf(stderr,\"PASS natural game startup and courtyard round trip colours: checks=%u\\n\",startup_ego_palette_checks); exit(0); }\n"
+"        if(room==STARTUP_TEST_ROOM&&ticks-room_ticks>=10&&polls-room_polls>=10&&room_pictures&&updates&&sprites) {\n"
+"            if(!shake_banked_read(S__b4IsInited,4)||dependency_walks<6) { fprintf(stderr,\"Game skipped validated dependency metadata: initialized=%u walks=%u\\n\",shake_banked_read(S__b4IsInited,4),dependency_walks); exit(3); }\n"
+"            if(!moving) { static char right[]=\"\\x1d\"; start_x=x; start_y=y; moving=true; machine_paste(right,false); fprintf(stderr,\"Startup movement: right from %u,%u\\n\",x,y); }\n"
+"            else if((x!=start_x||y!=start_y)&&shake_banked_read(shake_var_address(6),0)==3) { fprintf(stderr,\"PASS natural game startup: room=%u ticks=%u polls=%u pictures=%u updates=%u visible_sprites=%u moved=%u,%u->%u,%u\\n\",room,ticks,polls,pictures,updates,sprites,start_x,start_y,x,y); if(STARTUP_TEST_ROOM!=7) exit(0); if(!colour_phase) { static char down[]=\"\\x11\"; machine_paste(down,false); colour_phase=1; next_key=clockticks6502+8000000u; } }\n"
+"        }\n"
+"    }\n"
+"    if(INTRO_TEST_ENABLED&&STARTUP_TEST_ROOM==7&&kq3_chickens_verified&&shake_frames_seen-kq3_story_first_frame>=120) { fprintf(stderr,\"PASS natural intro presentation: KQ3 titles/credits mask=%x and story opening remained visible without input\\n\",kq3_intro_stages); if(WATCH_OPENING_ENABLED) { cx16agiOpeningReady=true; fprintf(stderr,\"KQ3 chickens/story scene verified; normal keyboard input is enabled\\n\"); return; } exit(0); }\n"
+"    if(!INTRO_TEST_ENABLED&&(STARTUP_TEST_ROOM!=7||(kq3_chickens_verified&&shake_frames_seen-kq3_story_first_frame>=120))&&clockticks6502>=next_key&&(last_room!=STARTUP_TEST_ROOM||colour_phase)) { static char key[]=\"\\r\"; machine_paste(key,false); next_key=clockticks6502+8000000u; }\n"
+"}\n";
+
+static const char *names[] = {"custom_irq_handler","mainLoop","codeWindow","cwCurrentCode","endPos","codeWindowInvalid","b4ShakeScreen","b3Load_soundCCall","b3Play_soundCCall","b5Set_menuCCall","b2Load_logicsCCall","b3DisplayCCall","_b6LoadLogicFile","_b4IsInited","_b4LoadUnloadResources","_currentLog","_logicFiles","_logics","shakeCount","shakePhases","shakeFrames","_menuDirty","_menuShown","_menuAllowed","_numOfMenus","_charSetInited","_mainLoopCounter","_bBChannelsPlaying","_bBLoadedSoundsPointer","_bBEndSoundFlag","bBSoundHandler","b7HandleInputLine","bADisplayMenu","b10DisplayStatusBar","bEHandleSpriteUpdates","b10PrintStatusBarString","handleScreenShake","handleDisplayTextSlice","@handleSound","_inputLineDisplayed","_inputLineDirty","_b7CurrentInputStr","_bESpritesUpdatedBuffer","_bESpritesUpdatedBufferPointer","_b11DrawPic","_b2Load_pic","_b2Draw_pic","_b2Show_pic","_b3Display","_b3Display_v","_b2Load_view","_b2Animate_obj","_b2Set_view","_b2Position","_b2Draw","b9UpdateObjects","_b6LoadAGIFile","_b9LoadViewFile","_b7PollKeyboard","_viewdir","_numViews","_agiBlit","_bESetLoop","_bEAllocateSpriteMemory","_bDSpriteAllocTable","_viewtab","_viewTableMetadata","_loadedViews","_offsetOfCurrentView","_offsetOfCurrentLoop","_offsetOfCurrentCel","_offsetOfEntryNum","_offsetOfFlags","_offsetOfXPos","_offsetOfYPos","_offsetOfYSize","_offsetOfPrevX","_offsetOfPrevY","_offsetOfStopped","_offsetOfBackBuffers","_offsetOfViewMetadataBank","_offsetOfIsOnBackBuffer","_offsetOfloopsVeraAddressesPointers","_offsetOfLoops","_offsetOfLoopsBank","_offsetOfAllocationWidth","_offsetOfAllocationHeight","_offsetOfMaxVeraSlots","_sizeOfLoop","_sizeOfViewTab","_sizeOfView","findFreeVRamLowByteLoop","findFirstFreeVRamBlock_optimisticSkip","_vSyncCounter","_vSyncCounterHigh","_foregroundVeraDepth","_b6EnterForegroundVera","_ZP_CURRENTLY_PLAYING_NOTE_1","sendIrqCommand","irqWorkKind","irqCompletionGeneration","lastMainLoopCounter","_currentTextBuffer","_displayTextAddressToCopyTo","_displayTextAddressToCopyToHigh","_b3PaletteRows","_b8AsmFloodFillSections","_b11SplitPriority","_var","_flag","_b6Interpret","_executeLogic","_b5GetLogicEntry","_testRunCombinedDisplayText","_testMultiplyBoundsResults","_testRunBankAliasDisplay","_testRunBankBoundaryDisplay","_testRunFullLayerClear","_testBankAliasSource","_testBankAliasBank","_b3TextBuffers","_strLenBankedBounded","_memCpyBankedBetween","_memCpyBanked","_testCombinedSoundEndFlag","_testBeginSpritePublicationWork","_testEndSpritePublicationWork","c_sp","_b3PaletteNumber"};
 #define NAME_COUNT (sizeof(names)/sizeof(names[0]))
 static unsigned labels[NAME_COUNT]; static bool found[NAME_COUNT];
 static const char *allocator_names[]={"_bEAllocateSpriteMemoryBulk","_bEBulkAllocatedAddresses","bDFindFreeVramBlock","_bDDeleteAllocation","bDDeleteAllocationAsmCall","VIEW_POS_ENTRY_NUM","sreg","BLOCKS_TO_FIND"};
@@ -1950,8 +2077,9 @@ static void validate(const char *output,bool foreground_test) {
         }
         REQUIRE(picture_calls&&picture_vsyncs,"Warm-up did not render the real KQ1 picture through b11DrawPic");
         REQUIRE(object_calls&&object_vsyncs&&object_busy_irqs,"No actual b9UpdateObjects workload crossed a VSYNC with a busy IRQ");
-        REQUIRE(max_busy_irq<4096,"Foreground IRQ exceeded 4096 CPU cycles");
         fprintf(stderr,"Production renderer timing: b11DrawPic calls=%zu, b9UpdateObjects calls=%zu, picture VSYNCs=%zu, max caller cycles=%llu, busy IRQs=%llu, max busy IRQ cycles=%llu\n",picture_calls,object_calls,picture_vsyncs,(unsigned long long)max_cycles,(unsigned long long)busy_irqs,(unsigned long long)max_busy_irq);
+        /* Whole IRQ includes ROM keyboard work plus the separately bounded sound path. */
+        REQUIRE(max_busy_irq<4096+2000,"Foreground IRQ exceeded ROM plus sound CPU budget");
         free(foreground);
     }
     uint64_t original[4]={0},original_border=0;
@@ -2228,19 +2356,46 @@ static void run_loader_test(const char *game,const char *build,const char *nativ
     free(result_path);
     REQUIRE(!failed,"Real X16 WORDS startup regression failed");
 }
+static void test_game_staging(void) {
+    suite_test_paths_init("game-staging");
+    char *game=join(suite_fixture_directory,"original"),*stage=join(suite_fixture_directory,"staged");
+    mkdirs(join(game,"meta")); mkdirs(stage);
+    write_file(join(game,"VOL.0"),"volume",6);
+    write_file(join(game,"meta/KQ3-SOUND-IDS.IDX"),"index",5);
+    copy_stage(game,stage,false,false);
+    REQUIRE(file_contains(join(stage,"meta/KQ3-SOUND-IDS.IDX"),"index"),"Game staging omitted production dependency metadata");
+    char *cache=join(suite_fixture_directory,"cache"),*cached_stage=join(suite_fixture_directory,"cached-stage");
+    mkdirs(join(cache,"extracted")); mkdirs(cached_stage);
+    write_file(join(cache,"extracted/KQ3-VIEW-IDS.BIN"),"views",5);
+    copy_stage(cache,cached_stage,false,false);
+    REQUIRE(file_contains(join(cached_stage,"meta/kq3-view-ids.bin"),"views"),"Shared extractor output did not reach the production metadata path");
+    puts("PASS game staging retains dependency metadata");
+}
 int main(int argc,char **argv) {
-    char *emulator=NULL,*rom=NULL,*build=NULL,*game=NULL,*output=NULL,*sdl=NULL,*symbol=NULL,*tas_capture_header=NULL;unsigned long trigger=180000000;bool foreground_test=false,picture_test=false,combined_test=false,loader_test=false,startup_text_test=false;
+    if(argc==2&&!strcmp(argv[1],"--staging-test")) { test_game_staging(); return 0; }
+    char *emulator=NULL,*rom=NULL,*build=NULL,*game=NULL,*output=NULL,*sdl=NULL,*symbol=NULL,*tas_capture_header=NULL;unsigned long trigger=180000000;bool foreground_test=false,picture_test=false,combined_test=false,loader_test=false,startup_text_test=false,random_ram=false,intro_test=false,play=false;
+    bool watch_opening=getenv("CX16AGI_WATCH_OPENING")&&!strcmp(getenv("CX16AGI_WATCH_OPENING"),"1");
+    bool visible_startup=watch_opening||(getenv("CX16AGI_VISIBLE_STARTUP")&&!strcmp(getenv("CX16AGI_VISIBLE_STARTUP"),"1"));
+    unsigned startup_room=0;
     for(int i=1;i<argc;i++) {
-        if(!strcmp(argv[i],"--help")) {puts("Usage: test_full_game_irq --emulator-source DIR --rom FILE --build DIR --game DIR [--output DIR] [--symbols FILE] [--sdl-prefix DIR] [--tas-capture-header FILE] [--trigger-cycle N] [--foreground-test] [--combined-irq-test] [--picture-test] [--loader-test] [--startup-text-test]");return 0;}
+        if(!strcmp(argv[i],"--help")) {puts("Usage: test_full_game_irq --emulator-source DIR --rom FILE --build DIR --game DIR [--output DIR] [--symbols FILE] [--sdl-prefix DIR] [--tas-capture-header FILE] [--trigger-cycle N] [--foreground-test] [--combined-irq-test] [--picture-test] [--loader-test] [--startup-text-test] [--startup-room 1|7] [--random-ram] [--intro-test] [--play]");return 0;}
+        if(!strcmp(argv[i],"--play")) { play=true;random_ram=true;continue;}
+        if(!strcmp(argv[i],"--intro-test")) { intro_test=true;if(!startup_room) startup_room=1;continue;}
+        if(!strcmp(argv[i],"--random-ram")) { random_ram=true;continue;}
         if(!strcmp(argv[i],"--foreground-test")) {foreground_test=true;continue;}
         if(!strcmp(argv[i],"--picture-test")) {picture_test=true;continue;}
         if(!strcmp(argv[i],"--combined-irq-test")) {combined_test=true;continue;}
         if(!strcmp(argv[i],"--loader-test")) {loader_test=true;continue;}
         if(!strcmp(argv[i],"--startup-text-test")) {startup_text_test=true;continue;}
         REQUIRE(i+1<argc,"Missing option argument");char *option=argv[i],*value=argv[++i];
-        if(!strcmp(option,"--emulator-source"))emulator=value;else if(!strcmp(option,"--rom"))rom=value;else if(!strcmp(option,"--build"))build=value;else if(!strcmp(option,"--game"))game=value;else if(!strcmp(option,"--output"))output=value;else if(!strcmp(option,"--sdl-prefix"))sdl=value;else if(!strcmp(option,"--symbols"))symbol=value;else if(!strcmp(option,"--tas-capture-header"))tas_capture_header=value;
+        if(!strcmp(option,"--startup-room")) { char *end; unsigned long n=strtoul(value,&end,10); REQUIRE(*value&&!*end&&(n==1||n==7),"Startup room must be 1 (KQ1) or 7 (KQ3)"); startup_room=(unsigned)n; }
+        else if(!strcmp(option,"--emulator-source"))emulator=value;else if(!strcmp(option,"--rom"))rom=value;else if(!strcmp(option,"--build"))build=value;else if(!strcmp(option,"--game"))game=value;else if(!strcmp(option,"--output"))output=value;else if(!strcmp(option,"--sdl-prefix"))sdl=value;else if(!strcmp(option,"--symbols"))symbol=value;else if(!strcmp(option,"--tas-capture-header"))tas_capture_header=value;
         else if(!strcmp(option,"--trigger-cycle")) {char *end;errno=0;trigger=strtoul(value,&end,10);REQUIRE(!errno&&*value&&!*end&&trigger<=UINT32_MAX,"Invalid trigger cycle");}else fail("Unknown option %s",option);
     }
+    REQUIRE(!watch_opening||(intro_test&&startup_room==7),"Watch opening requires the KQ3 intro scenario");
+    REQUIRE(!visible_startup||startup_room,"Visible startup requires a startup scenario");
+    REQUIRE(!play||!(startup_room||foreground_test||picture_test||combined_test||loader_test),"Interactive play must run separately from test scenarios");
+    REQUIRE(!startup_room||!(foreground_test||picture_test||combined_test||loader_test),"Startup must run separately from injected command scenarios");
     REQUIRE(emulator&&rom&&build&&game,"Require --emulator-source, --rom, --build and --game");
     if(sdl) REQUIRE(exists(sdl),"SDL prefix does not exist");
     emulator=realpath(emulator,NULL);rom=realpath(rom,NULL);build=realpath(build,NULL);game=realpath(game,NULL);REQUIRE(emulator&&rom&&build&&game,"Input path does not exist");
@@ -2252,26 +2407,32 @@ int main(int argc,char **argv) {
     REQUIRE(!exists(join(output,"emulator")),"Output already contains an emulator; use a fresh directory");
     char *source=join(output,"emulator"),*stage=NULL;copy_tree(emulator,source);stage_tas_capture_header(source,tas_capture_header);
     if(!loader_test) {
-        const char *fixture_name=startup_text_test?"startup-text-game":combined_test?"combined-game":picture_test?"picture-game":"foreground-game";
+        const char *fixture_name=play?"play-game":startup_text_test?"startup-text-game":startup_room?"startup-game":combined_test?"combined-game":picture_test?"picture-game":"foreground-game";
         suite_test_paths_init(fixture_name);
         if(atexit(cleanup_stage)) fail("Cannot register game fixture cleanup");
         stage=create_stage("game");
         copy_stage(game,stage,false,false);copy_stage(build,stage,true,false);
     }
+    if(!play) {
     const char *candidates[]={"final.lbl","agi.cx16.lbl","final.dbg","agi.cx16.dbg"};
     if(!symbol)for(size_t i=0;i<4;i++) {char *p=join(build,candidates[i]);if(exists(p)){symbol=p;break;}free(p);}
     REQUIRE(symbol,"Provide --symbols with private assembly symbols");load_symbols(join(build,"final.lbl"));load_symbols(join(build,"agi.cx16.lbl"));load_symbols(symbol);
+    if(startup_room) {
+        const char *required[]={"_b4IsInited","_b4LoadUnloadResources","_var","_b6Interpret","_b7PollKeyboard","_b11DrawPic","_b2Show_pic","b9UpdateObjects","_offsetOfXPos","_offsetOfYPos","_offsetOfYSize","_viewtab"};
+        for(size_t r=0;r<sizeof(required)/sizeof(*required);r++)
+            for(size_t i=0;i<NAME_COUNT;i++) if(!strcmp(names[i],required[r])&&!found[i]) fail("Missing startup symbol %s",required[r]);
+    }
     char *main_c=join(source,"src/main.c"),*cpu=join(source,"src/cpu/fake6502.c"),*video=join(source,"src/video.c"),*i2c=join(source,"src/i2c.c"),*memory=join(source,"src/memory.c");
     char *injected=NULL;size_t size=0;FILE *mem=open_memstream(&injected,&size);REQUIRE(mem,"Out of memory");
     char *qcsv=quoted_c(join(output,"irq.csv")),*qcommands=quoted_c(join(output,"commands.csv")),*qforeground=quoted_c(join(output,"foreground.csv")),*qcombined=quoted_c(join(output,"combined.csv")),*qinputtrace=quoted_c(join(output,"input-trace.csv")),*qvideotrace=quoted_c(join(output,"video-frames.csv"));
     char *qpicture=quoted_c(join(output,"picture.csv")),*qpicture_irq=quoted_c(join(output,"picture-irq.vram")),*qpicture_reference=quoted_c(join(output,"picture-reference.vram")),*qblit=quoted_c(join(output,"agi-blit-failures.csv")),*qview_retry=quoted_c(join(output,"view-load-retry.csv"));
     char *qloader_words=quoted_c("WORDS.TOK"),*qloader_result=quoted_c(join(output,"loader-result.txt"));
-    fputs("#include <sys/stat.h>\n#include <unistd.h>\n",mem);
+    fputs("#include <sys/stat.h>\n#include <unistd.h>\n#include <signal.h>\n",mem);
     fprintf(mem,"#define SHAKE_SPRITE_UPDATE_RECORD_BYTES %u\n#define SHAKE_SPRITE_UPDATE_MAX_RECORDS %u\n#define SHAKE_SPRITE_TERMINATOR_BYTES %u\n#define SHAKE_SPRITE_BUFFER_SIZE %u\n",SPRITE_UPDATE_RECORD_BYTES,SPRITE_UPDATE_MAX_RECORDS,SPRITE_UPDATE_TERMINATOR_BYTES,SPRITE_UPDATED_BUFFER_SIZE);
     fprintf(mem,"#define SHAKE_CSV %s\n#define SHAKE_COMMANDS %s\n#define SHAKE_INPUT_TRACE %s\n#define SHAKE_VIDEO_CSV %s\n#define FOREGROUND_CSV %s\n#define FOREGROUND_TEST_ENABLED %u\n#define COMBINED_CSV %s\n#define COMBINED_IRQ_TEST_ENABLED %u\n#define PICTURE_CSV %s\n#define PICTURE_IRQ_VRAM %s\n#define PICTURE_REFERENCE_VRAM %s\n#define BLIT_FAILURE_CSV %s\n#define VIEW_LOAD_RETRY_CSV %s\n#define PICTURE_TEST_ENABLED %u\n#define LOADER_TEST_ENABLED %u\n#define STARTUP_TEXT_TEST_ENABLED %u\n#define LOADER_WORDS_PATH %s\n#define LOADER_RESULT_PATH %s\n#define TRIGGER_CYCLE %luu\n",qcsv,qcommands,qinputtrace,qvideotrace,qforeground,(foreground_test||picture_test)?1:0,qcombined,combined_test?1:0,qpicture,qpicture_irq,qpicture_reference,qblit,qview_retry,picture_test?1:0,loader_test?1:0,startup_text_test?1:0,qloader_words,qloader_result,trigger);
     free(qcsv);free(qcommands);free(qinputtrace);free(qvideotrace);free(qforeground);free(qcombined);free(qpicture);free(qpicture_irq);free(qpicture_reference);free(qblit);free(qview_retry);free(qloader_words);free(qloader_result);
-    for(size_t i=0;i<NAME_COUNT;i++) {if(!found[i])fail("Missing symbol %s",names[i]);if(names[i][0]=='@')fprintf(mem,"#define S_local_%s 0x%x\n",names[i]+1,labels[i]);else fprintf(mem,"#define S_%s 0x%x\n",names[i],labels[i]);}
-    for(size_t i=0;i<ALLOCATOR_NAME_COUNT;i++) {if(!allocator_found[i])fail("Missing allocator symbol %s",allocator_names[i]);fprintf(mem,"#define S_%s 0x%x\n",allocator_names[i],allocator_labels[i]);}
+    for(size_t i=0;i<NAME_COUNT;i++) {if(!found[i]&&!startup_room)fail("Missing symbol %s",names[i]);if(names[i][0]=='@')fprintf(mem,"#define S_local_%s 0x%x\n",names[i]+1,labels[i]);else fprintf(mem,"#define S_%s 0x%x\n",names[i],labels[i]);}
+    for(size_t i=0;i<ALLOCATOR_NAME_COUNT;i++) {if(!allocator_found[i]&&!startup_room)fail("Missing allocator symbol %s",allocator_names[i]);fprintf(mem,"#define S_%s 0x%x\n",allocator_names[i],allocator_labels[i]);}
     for(size_t i=0;i<LOADER_NAME_COUNT;i++) {
         if(loader_test&&!loader_found[i]) fail("Missing loader symbol %s",loader_names[i]);
         fprintf(mem,"#define S_%s 0x%x\n",loader_names[i],loader_found[i]?loader_labels[i]:0);
@@ -2288,11 +2449,14 @@ int main(int argc,char **argv) {
         if(picture_test&&!fixture_found[i]) fail("Missing sprite fixture target symbol %s",fixture_names[i]);
         fprintf(mem,"#define S_%s 0x%x\n",fixture_names[i],fixture_found[i]?fixture_labels[i]:0);
     }
-    fputs(hook,mem);fputs("\nvoid *emulator_loop(void *param);",mem);REQUIRE(!fclose(mem),"Hook buffer close failed");patch(main_c,"void *emulator_loop(void *param);",injected,1);free(injected);
+    fprintf(mem,"#define WATCH_OPENING_ENABLED %u\n",watch_opening?1:0);
+    fprintf(mem,"#define STARTUP_TEST_ROOM %u\n#define INTRO_TEST_ENABLED %u\nstatic void startup_before_step(void);\n",startup_room,intro_test?1:0);
+    fputs(hook,mem);fputs(startup_hook,mem);fputs("\nvoid *emulator_loop(void *param);",mem);REQUIRE(!fclose(mem),"Hook buffer close failed");patch(main_c,"void *emulator_loop(void *param);",injected,1);free(injected);
     patch(main_c,"\t\tstep6502();","\t\tshake_before_step();\n\t\tuint8_t shake_opcode=waiting ? 0 : debug_read6502(regs.pc,regs.k,USE_CURRENT_X16_BANK);\n\t\tstep6502();\n\t\tshake_after_step(shake_opcode);",1);
     patch(cpu,"void irq6502() {","extern void shake_irq_accepted(void);\nextern int shake_suppress_irq(void);\nvoid irq6502() {",1);
     patch(cpu,"        interrupt6502(INT_IRQ);","        if(!shake_suppress_irq()) { shake_irq_accepted(); interrupt6502(INT_IRQ); }",1);
     patch(memory,"read6502(uint16_t address, uint8_t bank) {\n\tif (!is_gen2) bank = 0;","read6502(uint16_t address, uint8_t bank) {\n\textern void shake_text_source_read(uint16_t,uint8_t,uint16_t,uint8_t);\n\tshake_text_source_read(address,bank,opcode_addr,regs.k);\n\tif (!is_gen2) bank = 0;",1);
+    if(watch_opening) patch(video,"while (SDL_PollEvent(&event)) {","extern bool cx16agiOpeningReady;\n\twhile (SDL_PollEvent(&event)) {\n\t\tif(!cx16agiOpeningReady && (event.type==SDL_KEYDOWN || event.type==SDL_KEYUP)) continue;",1);
     patch(video,"void video_write(uint8_t reg, uint8_t value) {","void shake_get_display(uint8_t *values) { for(int i=0;i<4;i++) values[i]=reg_composer[4+i]; values[4]=reg_composer[3]; }\nextern void shake_window_write(void);\nextern void shake_foreground_vera_register_write(uint8_t,uint8_t,uint8_t,uint8_t,uint16_t,uint8_t,uint8_t);\nvoid video_write(uint8_t reg, uint8_t value) {\n\tif(reg<=2 || reg==5) { uint8_t oldvalue=0; if(reg==0) oldvalue=io_addr[io_addrsel]&0xff; else if(reg==1) oldvalue=(io_addr[io_addrsel]>>8)&0xff; else if(reg==2) oldvalue=((io_addr[io_addrsel]>>16)&1)|(fx_nibble_bit[io_addrsel]<<1)|(fx_nibble_incr[io_addrsel]<<2)|(io_inc[io_addrsel]<<3); else oldvalue=(io_dcsel<<1)|io_addrsel; shake_foreground_vera_register_write(reg,io_dcsel,value,oldvalue,opcode_addr,regs.k,memory_get_ram_bank()); }\n\tif(io_dcsel == 1 && reg>=9 && reg<=12) shake_window_write();",1);
     patch(video,"\t\tisr |= 1; // VSYNC IRQ","\t\textern void shake_vsync_asserted(void);\n\t\tshake_vsync_asserted();\n\t\tisr |= 1; // VSYNC IRQ",1);
     patch(video,"video_space_write(uint32_t address, uint8_t value)\n{","video_space_write(uint32_t address, uint8_t value)\n{\n\textern void shake_sprite_write(uint32_t,uint8_t);\n\textern void shake_foreground_vram_write(uint32_t);\n\tshake_foreground_vram_write(address);\n\tif(address>=0x1fc00 && address<0x20000) shake_sprite_write(address,value);",1);
@@ -2301,26 +2465,47 @@ int main(int argc,char **argv) {
     patch(video,"if (!fx_trans_writes || value > 0) video_ram[address & 0x1FFFF] = value;","if (!fx_trans_writes || value > 0) { video_ram[address & 0x1FFFF] = value; extern void shake_combined_vram_write(uint32_t,uint8_t); shake_combined_vram_write(address,value); }",1);
     patch(video,"\t\t\tcase 3:\n\t\t\t\t// Do nothing\n\t\t\t\tbreak;\n\t\t}\n\t}\n}","\t\t\tcase 3:\n\t\t\t\t// Do nothing\n\t\t\t\tbreak;\n\t\t}\n\t\textern void shake_combined_vram_write(uint32_t,uint8_t);\n\t\tshake_combined_vram_write(address,video_ram[address & 0x1FFFF]);\n\t}\n}",1);
     patch(video,"psg_writereg(address & 0x3f, value);","extern void shake_psg_write(uint8_t reg,uint8_t value);\n\t\tshake_psg_write(address & 0x3f,value);\n\t\tpsg_writereg(address & 0x3f, value);",2);
+    patch(video,"#include \"video.h\"","#include \"video.h\"\n#include \"cpu/fake6502.h\"",1);
     patch(video,"\t\tif (record_gif == RECORD_GIF_SINGLE) {","\t\tif (record_gif > RECORD_GIF_PAUSED) {\n\t\t\textern void shake_video_frame_written(uint32_t,uint32_t,uint16_t,uint8_t);\n\t\t\tshake_video_frame_written((uint32_t)frame_count, clockticks6502, regs.pc, memory_get_ram_bank());\n\t\t}\n\t\tif (record_gif == RECORD_GIF_SINGLE) {",1);
     patch(i2c,"\nvoid i2c_reset_state() {","\nvoid shake_get_i2c_state(uint8_t *out) { out[0]=i2c_port.clk_in; out[1]=i2c_port.data_in; out[2]=i2c_port.data_out; out[3]=(uint8_t)(state+1); out[4]=read_mode; out[5]=value; out[6]=(uint8_t)count; out[7]=device; }\n\nvoid i2c_reset_state() {",1);
+    }
+    if(play||visible_startup) {
+        const char *adapter=getenv("CX16AGI_TEST_AUDIO_ADAPTER");
+        REQUIRE(adapter&&exists(adapter),"Interactive scenarios require the suite audio adapter");
+        char *upstream_audio=join(source,"src/audio-upstream.c");
+        copy_file(join(source,"src/audio.c"),upstream_audio);
+        copy_file(adapter,join(source,"src/audio.c"));
+    }
     patch(join(source,"src/disasm.c"),"char *where = strstr(mnemonic, \"%%0%hhux\");","const char *where = strstr(mnemonic, \"%%0%hhux\");",1);
     char *native=join(output,"native"),*buildlog=join(output,"build.log");
     if(!sdl) {char *parent=strdup(emulator),*slash=strrchr(parent,'/');REQUIRE(slash,"Invalid emulator path");*slash=0;sdl=join(parent,"sdl2-install");free(parent);}
     char *prefix=NULL;if(exists(sdl)) {char *absolute=realpath(sdl,NULL);REQUIRE(absolute,"Cannot resolve SDL prefix");prefix=format("-DCMAKE_PREFIX_PATH=%s",absolute);free(absolute);}
-    char *configure[]={"cmake","-S",source,"-B",native,"-DENABLE_LTO=OFF","-DENABLE_TRACE=OFF","-DENABLE_FLUIDSYNTH=OFF",prefix,NULL};run_from(configure,buildlog,0,NULL);
+    char *configure[]={"cmake","-S",source,"-B",native,"-DCMAKE_BUILD_TYPE=Release",(play||visible_startup)?"-DENABLE_LTO=ON":"-DENABLE_LTO=OFF","-DENABLE_TRACE=OFF","-DENABLE_FLUIDSYNTH=OFF",prefix,NULL};run_from(configure,buildlog,0,NULL);
     char *compile[]={"cmake","--build",native,"-j4",NULL};run_from(compile,buildlog,0,NULL);
-    REQUIRE(!setenv("SDL_VIDEODRIVER","dummy",1)&&!setenv("SDL_AUDIODRIVER","dummy",1),"Cannot set SDL environment");
+    if(!play&&!visible_startup) REQUIRE(!setenv("SDL_VIDEODRIVER","dummy",1)&&!setenv("SDL_AUDIODRIVER","dummy",1),"Cannot set SDL environment");
     if(loader_test) { run_loader_test(game,build,native,rom,output); return 0; }
-    char *tas=join(output,"input.tas");write_file(tas,startup_text_test?"":"0:Return\n",startup_text_test?0:9);
-    char *command[24];int command_length=0;
-    command[command_length++]=join(native,"x16emu");command[command_length++]="-rom";command[command_length++]=rom;
-    command[command_length++]="-fsroot";command[command_length++]=stage;command[command_length++]="-startin";command[command_length++]=stage;
-    command[command_length++]="-prg";command[command_length++]=join(stage,"agi.cx16");command[command_length++]="-run";command[command_length++]="-zeroram";
-    command[command_length++]="-warp";command[command_length++]="-sound";command[command_length++]="none";
-    if(!picture_test&&!combined_test) { command[command_length++]="-gif";command[command_length++]=format(startup_text_test?"%s/game.gif":"%s/game.gif,wait",output); }
-    command[command_length++]="-tas";command[command_length++]=tas;
-    command[command_length++]="-echo";command[command_length]=NULL;
-    run(command,join(output,"run.log"),picture_test||startup_text_test?300:90);
+    if(startup_text_test) {
+        char *tas=join(output,"input.tas");write_file(tas,"",0);
+        char *command[24];int command_length=0;
+        command[command_length++]=join(native,"x16emu");command[command_length++]="-rom";command[command_length++]=rom;
+        command[command_length++]="-fsroot";command[command_length++]=stage;command[command_length++]="-startin";command[command_length++]=stage;
+        command[command_length++]="-prg";command[command_length++]=join(stage,"agi.cx16");command[command_length++]="-run";command[command_length++]="-zeroram";
+        command[command_length++]="-warp";command[command_length++]="-sound";command[command_length++]="none";
+        command[command_length++]="-gif";command[command_length++]=format("%s/game.gif",output);
+        command[command_length++]="-tas";command[command_length++]=tas;
+        command[command_length++]="-echo";command[command_length]=NULL;
+        run(command,join(output,"run.log"),300);
+    } else {
+        char *command[26];int command_length=0;
+        command[command_length++]=join(native,"x16emu");command[command_length++]="-rom";command[command_length++]=rom;
+        command[command_length++]="-fsroot";command[command_length++]=stage;command[command_length++]="-startin";command[command_length++]=stage;
+        command[command_length++]="-prg";command[command_length++]=join(stage,"agi.cx16");command[command_length++]="-run";if(!random_ram) command[command_length++]="-zeroram";
+        if(visible_startup) { command[command_length++]="-log";command[command_length++]="K"; }
+        if(!play&&!visible_startup) { command[command_length++]="-warp";command[command_length++]="-sound";command[command_length++]="none"; }
+        if(!play&&!visible_startup&&!startup_room&&!picture_test&&!combined_test) { command[command_length++]="-gif";command[command_length++]=format("%s/game.gif,wait",output); }
+        command[command_length++]="-echo";command[command_length]=NULL;
+        run(command,join(output,"run.log"),(play||watch_opening)?0:300);
+    }
     cleanup_stage();
     if(!stage||exists(stage)) fail("Integration fixture cleanup regression: private staged game was not removed");
     require_no_retained_stage(output);
@@ -2351,5 +2536,22 @@ int main(int argc,char **argv) {
         free(header);
         free(gif);
     }
-    else if(picture_test) validate_picture(output); else if(combined_test) validate_combined(output); else validate(output,foreground_test);return 0;
+    else if(play) { puts("Interactive emulator closed; staged game cleaned"); return 0; }
+    else {
+        if(intro_test&&startup_room==1) {
+            char *log=read_file(join(output,"run.log"),NULL);
+            char *row=strstr(log,"Natural intro credit batch:");
+            REQUIRE(row,"Missing intro workload evidence");
+            char *end=strchr(row,'\n'); if(end) *end=0;
+            puts(row); free(log);
+        }
+        if(startup_room) {
+            REQUIRE(file_contains(join(output,"run.log"),intro_test?"PASS natural intro presentation":startup_room==7?"PASS natural game startup and courtyard round trip colours":"PASS natural game startup"),"Game did not reach its playable room");
+            puts(intro_test?(startup_room==7?"PASS natural KQ3 titles and story opening without input":"PASS natural intro text publication and audio cadence"):"PASS natural game startup and sustained interpreter/input/render progress");
+        } else if(picture_test) validate_picture(output);
+        else if(combined_test) validate_combined(output);
+        else validate(output,foreground_test);
+    }
+    return 0;
+
 }

@@ -1,6 +1,78 @@
 #ifndef TEST_BANKED_STRINGS_SOUND_CASES_H
 #define TEST_BANKED_STRINGS_SOUND_CASES_H
 
+static void run_sound_output_growth(void)
+{
+	prepare(); call_target_caller("_testSoundOutputGrowth");
+	CHECK(ram[symbol("_testSoundGrowthCursorValid")],"Generated sound flush retained a freed allocation address or bank after growth");
+	for(unsigned i=0;i<8;++i) CHECK(ram[symbol("_testSoundGrowthPrefix")+i]==0x52,"Sound growth damaged the channel prefix");
+	for(unsigned i=0;i<220;++i) CHECK(ram[symbol("_testSoundGrowthBytes")+i]==(uint8_t)(i+1),"Sound growth lost generated output across a flush or relocation");
+	puts("PASS generated sound output survives relocation, prefix accounting and multiple flushes");
+}
+
+static void run_sound_handler(void);
+
+static void run_sound_valid_prefix_playback(void)
+{
+	for(unsigned count=0;count<=4;++count) {
+		prepare();
+		memset(bank_ram[0x13]+8,0xFF,8);
+		ram[symbol("_testSoundPrefixChannels")]=(uint8_t)count;
+		call_target_caller("_testPlaySoundValidPrefix");
+		CHECK(bank_ram[SOUND_BANK][symbol("_bBChannelsPlaying")-BANK_START]==count,"Playback started a channel rejected by offset validation");
+		for(unsigned i=count;i<4;++i) CHECK(!bank_ram[SOUND_BANK][symbol("_bBIsPlaying")-BANK_START+i],"Absent sound channel was marked playing");
+		run_sound_handler();
+		CHECK(!bank_ram[SOUND_BANK][symbol("_bBChannelsPlaying")-BANK_START],"Valid sound prefix did not finish after its real channel terminators");
+		CHECK(ram[0x400+257+23],"Valid sound prefix did not signal its completion flag");
+	}
+	puts("PASS sound prefixes of zero through four channels play and complete without NULL reads");
+}
+
+static void run_sound_cache_capacity(void)
+{
+    static const uint8_t volume[]={0x12,0x34,0,16,0,8,0,10,0,12,0,14,0,255,255,255,255,255,255,255,255};
+    uint16_t pointers[30];
+    prepare(); call_target_caller("_testInitSoundResources");
+    for(unsigned id=0;id<30;++id) {
+        set_object_file_stream(volume,sizeof(volume),false);
+        ram[symbol("_testSoundResourceId")]=(uint8_t)id;
+        call_target_caller("_testLoadSoundResource");
+        unsigned p=symbol("_bBLoadedSoundsPointer")-BANK_START+id*2;
+        pointers[id]=bank_ram[SOUND_BANK][p]|((uint16_t)bank_ram[SOUND_BANK][p+1]<<8);
+        CHECK(pointers[id],"Sound cache rejected a free slot");
+        for(unsigned j=0;j<id;++j) CHECK(pointers[id]!=pointers[j],"Sound cache aliased live owners before capacity");
+    }
+    set_object_file_stream(volume,sizeof(volume),false);
+    ram[symbol("_testSoundResourceId")]=30;
+    call_target_caller("_testLoadSoundResource");
+    unsigned p=symbol("_bBLoadedSoundsPointer")-BANK_START+60;
+    CHECK(!bank_ram[SOUND_BANK][p]&&!bank_ram[SOUND_BANK][p+1],"Full sound cache overwrote a live record");
+    ram[symbol("_testSoundResourceId")]=10;
+    call_target_caller("_testDiscardSoundResource");
+    ram[symbol("_testSoundResourceId")]=30;
+    set_object_file_stream(volume,sizeof(volume),false);
+    call_target_caller("_testLoadSoundResource");
+    CHECK((bank_ram[SOUND_BANK][p]|((uint16_t)bank_ram[SOUND_BANK][p+1]<<8))==pointers[10],"Sound cache did not reuse its freed middle slot");
+    puts("PASS sound cache preserves 30 owners, rejects overflow and reuses a middle slot");
+}
+
+static void run_repeated_sound_discard(void)
+{
+	prepare();
+	call_target_caller("_testPrepareRepeatedSoundDiscard");
+	CHECK(bank_ram[0x10][symbol("_allocationArray")-BANK_START+1],"Discard neighbour was not allocated");
+	/* A NULL SoundFile aliases unrelated machine state, not an empty record. */
+	ram[8]=ram[symbol("_testSoundDiscardNeighbourBank")];
+	put_word(9,get_word(symbol("_testSoundDiscardNeighbour")));
+	ram[11]=0;
+	null_sound_reads=0; monitor_null_sound=true;
+	call_target_caller("_testRepeatSoundDiscard");
+	monitor_null_sound=false;
+	CHECK(!null_sound_reads,"Repeated sound discard dereferenced a NULL SoundFile in zero page");
+	CHECK(bank_ram[0x10][symbol("_allocationArray")-BANK_START+1],"Repeated sound discard freed an unrelated allocation through NULL");
+	puts("PASS repeated sound discard preserves unrelated allocator owners");
+}
+
 static void run_sound_handler(void)
 {
 	uint8_t previousBank = ram[0];
@@ -42,6 +114,8 @@ static void run_sound_conversion(void)
 
 	prepare();
 	call_target_caller("_testRunSoundConversion");
+	CHECK(ram[symbol("_testSoundConversionProtected")] == 0 && ram[symbol("_testSoundConversionProtected")+1] == 1,
+		"Periodic conversion lost persistent dependency ownership");
 	CHECK(read6502((uint16_t)(outputBanks), 0) == 0x13 &&
 		read6502((uint16_t)(outputBanks + 1), 0) == 0x13,
 		"Sound conversion did not use real allocator banks for both generated resources");

@@ -48,6 +48,7 @@ extern void getLoadedView(View* returnedLoadedView, byte loadedViewNumber);
 extern void setLoadedView(View* loadedView, byte loadedViewNumber);
 
 void getLoadedLoop(View* loadedView, Loop* returnedLocalLoop, byte localLoopNumber);
+void setLoadedLoop(View* loadedView, Loop* localLoop, byte localLoopNumber);
 void getLoadedCel(Loop* loadedLoop, Cel* localCell, byte localCellNumber);
 
 #pragma wrapped-call (push, trampoline, VIEW_CODE_BANK_1)
@@ -81,6 +82,7 @@ extern void bCCalcObjMotion();
 #pragma wrapped-call (push, trampoline, SPRITE_UPDATED_BANK)
 extern void bEClearSpriteAttributes();
 SpriteAllocationSize bEGetSpriteAllocateSize(SpriteAttributeSize spriteAttributeSize);
+byte bECreateSpritePalette(byte transparentColor, PaletteGetResult* result);
 extern void bEClearVeraSprite(byte celWidth, byte celHeight);
 #pragma wrapped-call (pop)
 

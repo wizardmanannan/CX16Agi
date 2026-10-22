@@ -68,6 +68,7 @@ void b11ShowObj(byte objNum)
 	SpriteAllocationSize spriteAllocationWidth, spriteAllocationHeight;
 	VeraSpriteAddress spriteAddress[MAX_SPRITES_ROW_OR_COLUMN_SIZE];
 	PaletteGetResult paletteGetResult;
+	PaletteGetResult refreshedPalette;
 	byte i, ch, allocatedSlots = 0;
 	boolean outOfSpriteMemory, viewWasLoaded;
 
@@ -82,6 +83,13 @@ void b11ShowObj(byte objNum)
 
 	getLoadedLoop(&localView, &localLoop, 0);   /* show.obj always uses loop 0 */
 	getLoadedCel(&localLoop, &localCel, 0);     /* and cel 0 */
+	if (localLoop.palette == PALETTE_NOT_SET)
+	{
+		localLoop.palette = bECreateSpritePalette(localCel.transparency, &refreshedPalette);
+		if (refreshedPalette == FailToAllocate) return;
+		/* This palette belongs to the retained view, beyond the close-up. */
+		setLoadedLoop(&localView, &localLoop, 0);
+	}
 	spriteAllocationWidth = bEGetSpriteAllocateSize(localLoop.allocationWidth);
 	spriteAllocationHeight = bEGetSpriteAllocateSize(localLoop.allocationHeight);
 	outOfSpriteMemory = localView.maxVeraSlots == 0 ||

@@ -464,14 +464,12 @@ static bool run_kq1_startup_long_display_case(void)
 static void run_kq1_startup_display_case(void)
 {
 	uint16_t baseline_generation;
-	uint16_t baseline_vsync;
 	unsigned palette_start = 0x1FA00;
+	unsigned credit_row_start = TEXT_CLEANUP_MAP_BASE + 21 * TEXT_CLEANUP_ROW_BYTES;
+	size_t credit_length = strlen(kq1StartupMessages[0]);
 	uint16_t textbox_background;
 	uint16_t expected_dynamic_background;
-	uint8_t dynamic_palette;
-	unsigned sample;
-	bool pending_vsync_seen = false;
-	bool first_credit_palette_ok = true;
+	uint8_t dynamic_palette, expected_attribute;
 	bool long_credit_palette_ok;
 
 	prepare_text_cleanup_case();
@@ -493,20 +491,30 @@ static void run_kq1_startup_display_case(void)
 	startup_credit_irq_pending = false;
 	startup_credit_palette_capture_active = true;
 	baseline_generation = get_word(symbol("irqCompletionGeneration"));
-	baseline_vsync = get_word(symbol("_vSyncCounter"));
 	call_target_caller("_testRunKq1StartupFirstCredit");
 	startup_credit_palette_capture_active = false;
-	CHECK(!startup_credit_irq_pending, "Startup credit VSYNC capture did not reach the IRQ return");
-	CHECK(startup_credit_vsync_count > 0, "Startup credit did not publish work to a VSYNC");
+	CHECK(!startup_credit_irq_pending && startup_credit_vsync_count == 0,
+		"Short startup credit unexpectedly waited for a VSYNC instead of publishing on return");
+	CHECK(get_word(symbol("irqCompletionGeneration")) == (uint16_t)(baseline_generation + 1),
+		"Short startup credit did not publish exactly one completed batch");
 	CHECK(startup_display_trace.display_v_seen && startup_display_trace.credit_message_seen &&
 		startup_display_trace.credit_message_bank == 0x24 &&
 		startup_display_trace.credit_message_pointer == 0xA100 &&
 		startup_display_trace.credit_row == 18 && startup_display_trace.credit_column == 12 &&
 		startup_display_trace.credit_first_message_byte == 'D',
 		"KQ1 Logic83 first credit did not reach compiled b3Display_v with raw message 1 at row 18, column 12");
-	dynamic_palette = startup_credit_vsyncs[0].expected_attribute >> 4;
+	dynamic_palette = bank_ram[3][symbol("_b3PaletteNumber") - BANK_START];
+	expected_attribute = (uint8_t)(dynamic_palette << 4);
 	CHECK(dynamic_palette >= 4 && dynamic_palette != 1,
 		"Compiled b3SetTextColor did not select a managed palette distinct from textbox palette 1");
+	for (size_t column = 0; column < credit_length; ++column)
+	{
+		unsigned cell = credit_row_start + (startup_credit_first_column + column) * 2;
+		CHECK(vram[cell] == (uint8_t)kq1StartupMessages[0][column],
+			"Short startup credit did not publish its expected glyph before returning");
+		CHECK(vram[cell + 1] == expected_attribute,
+			"Short startup credit did not publish each glyph with its selected palette");
+	}
 	textbox_background = (uint16_t)(vram[palette_start + 1 * 32 + 4] |
 		((uint16_t)vram[palette_start + 1 * 32 + 5] << 8));
 	CHECK(textbox_background == 0x0FFF,
@@ -515,39 +523,6 @@ static void run_kq1_startup_display_case(void)
 		((uint16_t)vram[palette_start + dynamic_palette * 32 + 5] << 8));
 	CHECK(expected_dynamic_background == 0,
 		"Compiled b3SetTextColor(15,0) did not create a black-background dynamic palette");
-	for (sample = 0; sample < startup_credit_vsync_count; ++sample)
-	{
-		if (startup_credit_vsyncs[sample].pending_at_entry)
-			pending_vsync_seen = true;
-		if (startup_credit_vsyncs[sample].wrong_visible_cell_palettes ||
-			startup_credit_vsyncs[sample].wrong_visible_glyphs)
-		{
-			fprintf(stderr,
-				"Startup credit VSYNC %u: frame=%u pending=%u completion=%u work=%u stage=%u tile=$%02X palette=$%02X expected=$%02X wrong-glyphs=%u wrong-palette-cells=%u visible-cells=%u old-palette-row-cells=%u background-RGB=$%04X expected-background-RGB=$%04X\n",
-				sample, startup_credit_vsyncs[sample].vsync_counter - baseline_vsync,
-				startup_credit_vsyncs[sample].pending_at_entry,
-				startup_credit_vsyncs[sample].completion_generation,
-				startup_credit_vsyncs[sample].work_kind,
-				startup_credit_vsyncs[sample].text_stage,
-				startup_credit_vsyncs[sample].first_tile,
-				startup_credit_vsyncs[sample].first_attribute,
-				startup_credit_vsyncs[sample].expected_attribute,
-				startup_credit_vsyncs[sample].wrong_visible_glyphs,
-				startup_credit_vsyncs[sample].wrong_visible_cell_palettes,
-				startup_credit_vsyncs[sample].visible_cells,
-				startup_credit_vsyncs[sample].old_palette_row_cells,
-				startup_credit_vsyncs[sample].visible_background_rgb,
-				expected_dynamic_background);
-		}
-		CHECK(startup_credit_vsyncs[sample].wrong_visible_glyphs == 0,
-			"Startup credit glyphs are not visible with their published message at VSYNC return");
-		if (startup_credit_vsyncs[sample].wrong_visible_cell_palettes)
-			first_credit_palette_ok = false;
-	}
-	CHECK(pending_vsync_seen, "Startup credit capture missed the VSYNC with its published display work pending");
-	CHECK(startup_credit_vsyncs[startup_credit_vsync_count - 1].completion_generation ==
-		(uint16_t)(baseline_generation + 1),
-		"Startup credit did not complete its published display work exactly once");
 	call_target_caller("_testRunKq1StartupRemainingCredits");
 	service_text_render_irqs = false;
 	startup_display_trace_active = false;
@@ -562,8 +537,6 @@ static void run_kq1_startup_display_case(void)
 	check_startup_text_line(16, 12, "    Written by: ", TEXT_CLEANUP_SENTINEL);
 	check_startup_text_line(15, 12, "Designed and    ", TEXT_CLEANUP_SENTINEL);
 	long_credit_palette_ok = run_kq1_startup_long_display_case();
-	CHECK(first_credit_palette_ok,
-		"Startup credit glyph background uses the previous textbox palette at VSYNC return");
 	CHECK(long_credit_palette_ok,
 		"Long startup credit glyph background uses the previous textbox palette during a partial IRQ slice");
 	puts("Compiled Logic83 startup display commands keep credits and fixed text on their requested VRAM rows");

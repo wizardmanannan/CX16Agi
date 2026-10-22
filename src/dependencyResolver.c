@@ -55,52 +55,48 @@ byte b4LastRoomLoaded = 0;
 
 #pragma code-name (push, "BANKRAM04")
 
-// Opens a metadata file (index or data) and reads its entire contents into the supplied buffer.
-// Returns TRUE if at least one byte was successfully read.
-boolean b4OpenMetadataFile(char* fileName, byte* buffer, int size)
+/* Read bounded files, retaining their lengths for index validation. */
+int b4OpenMetadataFile(char* fileName, byte* buffer, int size)
 {
-    byte fileOpenResult, result = FALSE;
     int bytes;
-
-    fileOpenResult = cbm_open(SEQUENTIAL_LFN, FILE_DEVICE, FILE_OPEN_ADDRESS, fileName);
-
-    if (!fileOpenResult) //This should be not, because cbm_open returns 0 for success and something else for an error code
-    {
-        bytes = cbm_read(SEQUENTIAL_LFN, buffer, size);
-        if (bytes != 0) {
-            result = TRUE;
-        }
-
-        cbm_close(SEQUENTIAL_LFN);
-    }
-
-    return result;
+    byte extra;
+    if (cbm_open(SEQUENTIAL_LFN, FILE_DEVICE, FILE_OPEN_ADDRESS, fileName)) return -1;
+    bytes = cbm_read(SEQUENTIAL_LFN, buffer, size);
+    if (bytes == size && cbm_read(SEQUENTIAL_LFN, &extra, 1) != 0) bytes = -1;
+    cbm_close(SEQUENTIAL_LFN);
+    return bytes;
 }
 
-// Builds the two filenames for a resource type (index + data) and loads both into the provided buffers.
-void b4InitResourceMetadata(char* fileNameTemplate, byte* indexBuffer, byte* metadataBuffer, int metadataSize)
+boolean b4InitResourceMetadata(char* fileNameTemplate, byte* indexBuffer, byte* metadataBuffer, int metadataSize)
 {
     byte fileName[32];
-
+    int indexSize, dataSize, i;
+    unsigned int offset;
+    memset(indexBuffer, 0, INDEX_CACHE_SIZE);
+    memset(metadataBuffer, 0, metadataSize);
     sprintf(fileName, fileNameTemplate, b4Folder, gameId, b4IndexExtension, b4FileFlags);
-    b4OpenMetadataFile(fileName, indexBuffer, INDEX_CACHE_SIZE);
-
+    indexSize = b4OpenMetadataFile(fileName, indexBuffer, INDEX_CACHE_SIZE);
     sprintf(fileName, fileNameTemplate, b4Folder, gameId, b4DataExtension, b4FileFlags);
-    b4OpenMetadataFile(fileName, metadataBuffer, metadataSize);
+    dataSize = b4OpenMetadataFile(fileName, metadataBuffer, metadataSize);
+    if (indexSize < 0 || indexSize % 3 || dataSize < 0) return FALSE;
+    for (i = 0; i < indexSize; i += 3)
+    {
+        offset = indexBuffer[i] | ((unsigned int)indexBuffer[i + 1] << 8);
+        if (offset > (unsigned int)dataSize || indexBuffer[i + 2] > (unsigned int)dataSize - offset)
+            return FALSE;
+    }
+    return TRUE;
 }
 
-// Loads all three pairs of index/metadata files (logic, sound, view) and marks the resolver as ready.
 void b4InitMetadata()
 {
-    int result;
-
-    b4InitResourceMetadata(b4LogicIdsFileName, b4LogicIndex, b4LogicMetadata, LOGIC_METADATA_SIZE);
-
-
-    b4InitResourceMetadata(b4SoundIdsFileName, b4SoundIndex, b4SoundMetadata, SOUND_METADATA_SIZE);
-    b4InitResourceMetadata(b4ViewIdsFileName, b4ViewIndex, b4ViewMetadata, VIEW_METADATA_SIZE);
-
-    b4IsInited = TRUE;
+    boolean valid;
+    b4IsInited = FALSE;
+    valid = b4InitResourceMetadata(b4LogicIdsFileName, b4LogicIndex, b4LogicMetadata, LOGIC_METADATA_SIZE);
+    valid &= b4InitResourceMetadata(b4SoundIdsFileName, b4SoundIndex, b4SoundMetadata, SOUND_METADATA_SIZE);
+    valid &= b4InitResourceMetadata(b4ViewIdsFileName, b4ViewIndex, b4ViewMetadata, VIEW_METADATA_SIZE);
+    b4IsInited = valid;
+    if (!valid) printf("Missing or invalid dependency metadata\n");
 }
 
 // Core dependency walker.

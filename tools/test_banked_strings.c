@@ -48,6 +48,7 @@ static uint8_t commands_code_image[BANK_SIZE];
 static uint8_t logic_code_image[BANK_SIZE];
 static uint8_t memory_code_image[BANK_SIZE];
 static uint8_t view_code_image[BANK_SIZE];
+static uint8_t view_loader_image[BANK_SIZE],view_reset_image[BANK_SIZE];
 static uint8_t sound_code_image[BANK_SIZE];
 static uint8_t object_data_code_image[BANK_SIZE];
 static uint8_t object_predicate_code_image[BANK_SIZE];
@@ -89,6 +90,8 @@ static struct {
 	uint8_t first_row, wrap, width, column, row, message_bank, first_message_byte;
 	uint16_t message_pointer, credit_message_pointer;
 } startup_display_trace;
+static bool monitor_null_sound;
+static unsigned null_sound_reads;
 static bool watch_text_buffer_overflow;
 static uint16_t text_buffer_overflow_start;
 static uint16_t text_buffer_overflow_end;
@@ -196,6 +199,7 @@ static void advance_vera_address(void)
 
 uint8_t read6502(uint16_t address, uint8_t bank)
 {
+	if (monitor_null_sound && address == 11) ++null_sound_reads;
 	unsigned sound_copy_index = SOUND_BOUNDS_MAX_COPY_CALLS;
 	(void)bank;
 	if (said_input_read_monitor && address >= said_input_read_start &&
@@ -321,6 +325,14 @@ uint8_t read6502(uint16_t address, uint8_t bank)
 			else
 				allocator_oom_output_overflow = true;
 		}
+		return 0x60;
+	}
+	/* Missing-file diagnostics use the real CRT and the platform console. */
+	if (address == CBM_CKOUT_ADDRESS || address == CBM_READST_ADDRESS ||
+		address == CBM_CLRCH_ADDRESS || address == CBM_BSOUT_ADDRESS)
+	{
+		regs.a = 0;
+		regs.status &= (uint8_t)~FLAG_CARRY;
 		return 0x60;
 	}
 	if (address == VERA_DATA0)
@@ -522,6 +534,8 @@ static void load_image(const char *build)
 	load_low_bank_image(build, "agi.cx16.06", irq_code_image, "Cannot open IRQ code bank image");
 	load_low_bank_image(build, "agi.cx16.07", parser_code_image, "Cannot open parser code bank image");
 	load_raw_bank_image(build, "agi.cx16.10", memory_code_image, "Cannot open memory-manager code bank image");
+	load_low_bank_image(build, "agi.cx16.09", view_loader_image, "Cannot open view loader bank");
+	load_raw_bank_image(build, "agi.cx16.0A", view_reset_image, "Cannot open view reset bank");
 	load_raw_bank_image(build, "agi.cx16.0E", view_code_image, "Cannot open view metadata code bank image");
 	load_raw_bank_image(build, "agi.cx16.0B", sound_code_image, "Cannot open sound code bank image");
 	load_raw_bank_image(build, "agi.cx16.0D", object_data_code_image, "Cannot open object code bank image");
@@ -605,6 +619,8 @@ static void prepare(void)
 	memcpy(bank_ram[6], irq_code_image, sizeof(irq_code_image));
 	memcpy(bank_ram[7], parser_code_image, sizeof(parser_code_image));
 	memcpy(bank_ram[0x10], memory_code_image, sizeof(memory_code_image));
+	memcpy(bank_ram[9],view_loader_image,BANK_SIZE);
+	memcpy(bank_ram[10],view_reset_image,BANK_SIZE);
 	memcpy(bank_ram[0x0E], view_code_image, sizeof(view_code_image));
 	memcpy(bank_ram[0x0D], object_data_code_image, sizeof(object_data_code_image));
 	memcpy(bank_ram[0x0F], object_predicate_code_image, sizeof(object_predicate_code_image));
@@ -888,6 +904,7 @@ static bool call_target_caller_until_exit(const char *name)
 #include "test_banked_strings_sound_cases.h"
 #include "test_banked_strings_text_cases.h"
 #include "test_timer_target_cases.h"
+#include "test_view_lifecycle_cases.h"
 
 static void record_startup_credit_vsync(void)
 {
@@ -979,6 +996,12 @@ int main(int argc, char **argv)
 		else if (!strcmp(argv[3], "--object-crypto-pointer")) run_object_crypto_pointer_case();
 		else if (!strcmp(argv[3], "--show-object")) run_show_obj_allocation_cases();
 		else if (!strcmp(argv[3], "--sound")) run_sound_cases();
+		else if (!strcmp(argv[3], "--sound-cache")) run_sound_cache_capacity();
+		else if (!strcmp(argv[3], "--view-headers")) run_view_header_cases();
+		else if (!strcmp(argv[3], "--cached-closeup")) run_cached_closeup_case();
+		else if (!strcmp(argv[3], "--sound-channels")) run_sound_valid_prefix_playback();
+		else if (!strcmp(argv[3], "--sound-growth")) run_sound_output_growth();
+		else if (!strcmp(argv[3], "--sound-discard")) run_repeated_sound_discard();
 		else if (!strcmp(argv[3], "--text-cleanup")) run_text_cleanup_cases();
 		else if (!strcmp(argv[3], "--timer")) run_timer_clock_cases();
 		else CHECK(false, "Unknown production caller test case");
@@ -997,7 +1020,13 @@ int main(int argc, char **argv)
 	run_object_crypto_pointer_case();
 	run_show_obj_allocation_cases();
 	run_sound_cases();
+	run_repeated_sound_discard();
+	run_sound_cache_capacity();
+	run_sound_output_growth();
+	run_sound_valid_prefix_playback();
 	run_text_cleanup_cases();
 	run_timer_clock_cases();
+	run_view_header_cases();
+	run_cached_closeup_case();
 	return 0;
 }
