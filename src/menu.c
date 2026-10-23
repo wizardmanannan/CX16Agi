@@ -132,14 +132,11 @@ void bAMenuChildInit()
 {
 	int i;
 
-	asm("sei");                         // Disable interrupts during initialization
-
 	for (i = 0; i < MAX_MENUS * MAX_MENU_CHILDREN; i++)
 	{
 		the_menuChildren[i].controller = NOT_ASSOCIATED;
 		the_menuChildren[i].text = NULL;
 	}
-	REENABLE_INTERRUPTS();
 }
 
 // ================================================================
@@ -151,9 +148,7 @@ void bAMenuChildInit()
 // ================================================================
 void bAAllowMenu(boolean allowed)
 {
-	asm("sei");
 	menuAllowed = allowed;
-	REENABLE_INTERRUPTS();
 }
 
 // ================================================================
@@ -165,6 +160,11 @@ void bAAllowMenu(boolean allowed)
 // ================================================================
 void bAGoToNextMenu(signed char direction)
 {
+  if (numOfMenus == 0) {
+	bAMenuSelected = bAMenuChildSelected = 0;
+	return;
+  }
+  asm("php");
   asm("sei");
   menuDirty = TRUE;
   bAMenuSelected += direction;
@@ -178,7 +178,7 @@ void bAGoToNextMenu(signed char direction)
   {
 	bAMenuSelected = 0;
   }
-  REENABLE_INTERRUPTS();	
+  asm("plp");
 }
 
 // ================================================================
@@ -190,6 +190,11 @@ void bAGoToNextMenu(signed char direction)
 // ================================================================
 void bAGoToNextChildMenu(signed char direction)
 {
+  if (bAMenuSelected >= numOfMenus || bAMenuChildCount[bAMenuSelected] == 0) {
+	bAMenuChildSelected = 0;
+	return;
+  }
+  asm("php");
   asm("sei");
   menuDirty = TRUE;
   bAMenuChildSelected += direction;
@@ -202,7 +207,7 @@ void bAGoToNextChildMenu(signed char direction)
   {
 	bAMenuChildSelected = 0;
   }
-  REENABLE_INTERRUPTS();	
+  asm("plp");
 }
 
 // ================================================================
@@ -216,11 +221,14 @@ void bAGoToNextChildMenu(signed char direction)
 void bAShowMenu(boolean shown)
 {
 	byte ch, controller;
+	boolean selected = FALSE;
+	(void)shown;
 
+	asm("php");
 	asm("sei");
 	menuShown = TRUE;
 	menuDirty = TRUE;
-	REENABLE_INTERRUPTS();
+	asm("plp");
 
 	do 
 	{
@@ -242,23 +250,26 @@ void bAShowMenu(boolean shown)
 		{
 		   bAGoToNextChildMenu(1);
 		}
-		else if(ch == KEY_ENTER)
+		else if(ch == KEY_ENTER && bAMenuSelected < numOfMenus &&
+		        bAMenuChildSelected < bAMenuChildCount[bAMenuSelected])
 		{
 			controller = the_menuChildren[bAMenuSelected * MAX_MENU_CHILDREN + bAMenuChildSelected].controller;
 
-			if(controller != NOT_ASSOCIATED)
+			if(controller != NOT_ASSOCIATED && bAEnabledMenuControllers[controller])
 			{
 				b1SetController(controller);    // Activate associated controller/action
+				selected = TRUE;
 			}
 		}
 
-	} while(ch != KEY_ESC && ch != KEY_ENTER || ch == KEY_ENTER && !bAEnabledMenuControllers[controller]);
+	} while(ch != KEY_ESC && !selected);
 
+	asm("php");
 	asm("sei");
 	menuDirty = TRUE;
 	menuShown = FALSE;
 	bAChildMenuToClear = bAMenuSelected;    // Mark which child menu to clear on next redraw
-	REENABLE_INTERRUPTS();
+	asm("plp");
 }
 
 // ================================================================
@@ -285,6 +296,7 @@ void bAGetMenu(MENU* menu, byte menuNo)
 void bASetMenuChild(MENU* menu, byte menuNo)
 {
 	int i;
+	if (menuNo >= numOfMenus || menuNo >= MAX_MENUS) return;
 	
 	for (i = 0; i < MAX_MENU_CHILDREN && the_menuChildren[menuNo * MAX_MENU_CHILDREN + i].text != NULL; i++);
 
@@ -309,11 +321,18 @@ void bASetMenuChild(MENU* menu, byte menuNo)
 char* bAStoreMessageInBuffer(LOGICFile* currentLogicFile, byte messNum)
 {
 	char* messData,*result;
-	byte messLength;
+	size_t messLength, remaining;
+	boolean messageTerminated;
 
+	if (!messNum) return NULL;
 
 	messData = getMessagePointer(currentLog, messNum - 1);
-	messLength = strLenBanked(messData, currentLogicFile->messageBank) + 1;
+	if (!messData) return NULL;
+	remaining = (size_t)(menuTextBuffer + MENU_TEXT_BUFFER_SIZE - nextMenuTextBufferAddr);
+	messLength = strLenBankedBounded(messData, currentLogicFile->messageBank,
+		remaining, &messageTerminated);
+	if (!messageTerminated) return NULL;
+	++messLength;
 	
 	memCpyBankedBetween((byte*)nextMenuTextBufferAddr, MENU_BANK, (byte*)messData, currentLogicFile->messageBank, messLength);
 
@@ -333,11 +352,9 @@ char* bAStoreMessageInBuffer(LOGICFile* currentLogicFile, byte messNum)
 // ================================================================
 void bASetMenu(byte messNum)
 {
-	int startOffset;
 	MENU newMenu;
 	LOGICFile currentLogicFile;
-
-	asm("sei");
+	if (numOfMenus >= MAX_MENUS) return;
 
 	if (numOfMenus == 0)
 	{
@@ -348,6 +365,7 @@ void bASetMenu(byte messNum)
 	
 	
 	newMenu.text = bAStoreMessageInBuffer(&currentLogicFile, messNum);
+	if (!newMenu.text) return;
 	newMenu.controller = NOT_ASSOCIATED;
 	/* Create new menu and allocate space for MAX_MENU_SIZE items */
 
@@ -357,15 +375,11 @@ void bASetMenu(byte messNum)
 #endif // VERBOSE_MENU
 
 	the_menu[numOfMenus] = newMenu;
-
-	numOfMenus++;
-
 	newMenu.text = NULL;
 
 	/* Mark end of menu */
-	the_menu[numOfMenus] = newMenu;
-
-	REENABLE_INTERRUPTS();
+	if (numOfMenus + 1 < MAX_MENUS) the_menu[numOfMenus + 1] = newMenu;
+	numOfMenus++;
 
 	return;
 }
@@ -408,27 +422,19 @@ void bASetMenuChildShiftBack(byte menuNumber)
 // ================================================================
 void bASetMenuItem(int messNum, int controllerNum)
 {
-	int i;
 	MENU childMenu;
 	LOGICFile currentLogicFile;
-	EventType event;
-	byte menuTextLength;
+	size_t menuTextLength;
 	
-	asm("sei");
-
+	if (numOfMenus == 0 || bAMenuChildCount[numOfMenus - 1] >= MAX_MENU_CHILDREN) return;
 	b5GetLogicFile(&currentLogicFile, currentLog);
 
-	if (event.type == NO_EVENT) {
-		event.type = MENU_EVENT;
-	}
-	event.activated = 0;
-
 	childMenu.text = bAStoreMessageInBuffer(&currentLogicFile, messNum);
+	if (!childMenu.text) return;
 	childMenu.controller = controllerNum;
 
-	bASetMenuChild(&childMenu, numOfMenus - 1);
-
 	menuTextLength = strlen(childMenu.text);
+	if (menuTextLength > MENU_BAR_WIDTH - 2) menuTextLength = MENU_BAR_WIDTH - 2;
 
 	if(menuTextLength + 2 > bAMenuChildWidth[numOfMenus - 1])
 	{
@@ -436,11 +442,12 @@ void bASetMenuItem(int messNum, int controllerNum)
 		bASetMenuChildShiftBack(numOfMenus - 1);
 	}
 
+	/* Publish the child count only after its text and width metadata are ready. */
+	bASetMenuChild(&childMenu, numOfMenus - 1);
+
 #ifdef VERBOSE_MENU_DUMP
 	testMenus();
 #endif // VERBOSE_MENU
-
-    REENABLE_INTERRUPTS();
 
 	return;
 }

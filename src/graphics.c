@@ -2,6 +2,8 @@
 
 int screenMode;
 boolean inputLineDisplayed = FALSE;
+volatile byte inputLineWasDisplayed = FALSE;
+extern volatile byte inputLineDirty;
 
 #pragma code-name (push, "BANKRAM06")
 void b6InitVeraMemory()
@@ -9,14 +11,14 @@ void b6InitVeraMemory()
 	long i;
 #define INITIAL_VALUE 0
 
-    asm("sei");
+	b6EnterForegroundVera();
 	SET_VERA_ADDRESS(SPRITES_DATA_START, 0, 1);
 
 	for (i = SPRITES_DATA_START; i <= VERA_END; i++)
 	{
 		WRITE_BYTE_DEF_TO_ASSM(0, VERA_data0);
 	}
-	 REENABLE_INTERRUPTS();
+	b6LeaveForegroundVera();
 }
 
 unsigned int b6SetPaletteToInt(byte paletteReference)
@@ -47,6 +49,7 @@ void b6TextMode()
 	screenMode = AGI_TEXT;
 	/* Do something else here */
 	inputLineDisplayed = FALSE;
+	inputLineDirty = TRUE;
 	statusLineDisplayed = FALSE;
 	b6SetAndWaitForIrqState(TEXT_ONLY);
 
@@ -58,6 +61,7 @@ void b6GraphicsMode()
 	screenMode = AGI_GRAPHICS;
 	/* Do something else here */
 	inputLineDisplayed = TRUE;
+	inputLineDirty = TRUE;
 	statusLineDisplayed = TRUE;
 	b6SetAndWaitForIrqState(DISPLAY_GRAPHICS);
 }

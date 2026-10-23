@@ -1,25 +1,37 @@
 .ifndef  INPUTIRQ_INC
 GLOBAL_INPUTIRQ_INC = 1
-MAX_INPUT_STRING_LENGTH = 40 ;Includes terminator
+MAX_INPUT_STRING_LENGTH = 40 ;Maximum input characters; buffer also needs a terminator
 .import _inputLineDisplayed
+.import _inputLineWasDisplayed
 .import _b7CurrentInputStr
+.import _inputLineDirty
 
 .include "globalGraphics.s"
+INPUT_LINE_RENDER_CELLS = MAX_INPUT_STRING_LENGTH + 1
+.assert INPUT_LINE_COL + INPUT_LINE_RENDER_CELLS <= TILE_LAYER_WIDTH, error, "Input line rendering exceeds tile map row"
 .segment "BANKRAM07"
 b7HandleInputLine:
-lda _inputLineDisplayed
-beq @end
+lda _inputLineDirty
+beq @done
 
+lda _inputLineDisplayed
+bne @clearInputRow
+lda _inputLineWasDisplayed
+beq @discardDirty
+
+@clearInputRow:
 SET_VERA_ADDRESS_IMMEDIATE INPUT_STRING_ADDRESS, #$0, #$2
-@clearInputLine:
 lda #TRANSPARENT_CHAR
+ldx #0
 
 @clearLoop:
 sta VERA_data0
 inx
-cpx #MAX_INPUT_STRING_LENGTH
+cpx #INPUT_LINE_RENDER_CELLS
 bne @clearLoop
 
+lda _inputLineDisplayed
+beq @hiddenComplete
 ldx #$0
 SET_VERA_ADDRESS_IMMEDIATE INPUT_STRING_ADDRESS, #$0, #$2
 @drawInput:
@@ -39,12 +51,25 @@ bra @drawInputLoop
 
 @drawCursor:
 cpx #MAX_INPUT_STRING_LENGTH ;Don't draw if we are at the end
-beq @end
+beq @visibleComplete
 lda #CURSOR_CHAR
 sta VERA_data0
 
-@end:
-rts
-.endif
+@visibleComplete:
+lda #1
+sta _inputLineWasDisplayed
+bra @finish
 
+@hiddenComplete:
+stz _inputLineWasDisplayed
+
+@finish:
+stz _inputLineDirty
+@done:
+rts
+
+@discardDirty:
+stz _inputLineDirty
+bra @done
+.endif
 

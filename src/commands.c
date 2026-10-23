@@ -99,14 +99,23 @@ char* getMessagePointer(byte logicFileNo, byte messageNo)
 {
 	byte previousBank = RAM_BANK;
 	char* result;
-	int i;
 
 	LOGICFile logicFile;
 	b5GetLogicFile(&logicFile, logicFileNo);
+	if (!logicFile.messages || messageNo >= logicFile.numMessages)
+	{
+		RAM_BANK = previousBank;
+		return NULL;
+	}
 
 	RAM_BANK = logicFile.messageBank;
 
 	result = (char*)logicFile.messages[messageNo];
+	if (!result)
+	{
+		RAM_BANK = previousBank;
+		return NULL;
+	}
 
 	//for (i = 1; i < strlen(result) && *result == ' '; i++) //Skip tabbing
 	//{
@@ -114,7 +123,7 @@ char* getMessagePointer(byte logicFileNo, byte messageNo)
 	//}
 
 #ifdef VERBOSE_MESSAGE_PRINT
-	printf("Attempting to print message %d from address %p, from logic %d. The length is %d\n", messageNo, result, logicFileNo, strlen(result));
+	printf("Attempting to print message %d from address %p, from logic %d\n", messageNo, result, logicFileNo);
 #endif // VERBOSE_MESSAGE_PRINT
 #ifdef VERBOSE_MESSAGE_TEXT
 	printf("The menu is %s \n", result);
@@ -176,7 +185,8 @@ boolean b1Has() // 1, 0x00
 {
 	objectType objectType;
 
-	bDGetObject(loadAndIncWinCode(), &objectType);
+	if (!bDGetObject(loadAndIncWinCode(), &objectType))
+		return FALSE;
 
 	return (objectType.roomNum == 255);
 }
@@ -187,9 +197,10 @@ boolean b1Obj_in_room() // 2, 0x40
 	objectType objectType;
 
 	objNum = loadAndIncWinCode();
-	bDGetObject(objNum, &objectType);
-
 	varNum = var[loadAndIncWinCode()];
+	if (!bDGetObject(objNum, &objectType))
+		return FALSE;
+
 	return (objectType.roomNum == varNum);
 }
 
@@ -272,6 +283,7 @@ boolean b1Compare_strings() // 2, 0x00
 
 	s1 = loadAndIncWinCode();
 	s2 = loadAndIncWinCode();
+	if (s1 >= sizeof(string) / sizeof(string[0]) || s2 >= sizeof(string) / sizeof(string[0])) return FALSE;
 	if (b7Strcmp(string[s1], string[s2]) == 0) return TRUE;
 	return FALSE;
 }
@@ -1367,11 +1379,13 @@ void b3Get() // 1, 00
 	objectType objectType;
 	byte objNum = loadAndIncWinCode();
 
-	bDGetObject(objNum, &objectType);
+	if (!bDGetObject(objNum, &objectType))
+		return;
 
 	objectType.roomNum = 255;
 
-	bDSetObject(objNum, &objectType);
+	if (!bDSetObject(objNum, &objectType))
+		return;
 
 	return;
 }
@@ -1381,11 +1395,13 @@ void b3Get_v() // 1, 0x80
 	objectType objectType;
 	byte objNum = var[loadAndIncWinCode()];
 
-	bDGetObject(objNum, &objectType);
+	if (!bDGetObject(objNum, &objectType))
+		return;
 
 	objectType.roomNum = 255;
 
-	bDSetObject(objNum, &objectType);
+	if (!bDSetObject(objNum, &objectType))
+		return;
 
 	return;
 }
@@ -1395,11 +1411,13 @@ void b3Drop() // 1, 0x00
 	objectType objectType;
 	byte objNum = loadAndIncWinCode();
 
-	bDGetObject(objNum, &objectType);
+	if (!bDGetObject(objNum, &objectType))
+		return;
 
 	objectType.roomNum = 0;
 
-	bDSetObject(objNum, &objectType);
+	if (!bDSetObject(objNum, &objectType))
+		return;
 	return;
 }
 
@@ -1412,11 +1430,13 @@ void b3Put() // 2, 0x00
 	objNum = loadAndIncWinCode();
 	room = loadAndIncWinCode();
 
-	bDGetObject(objNum, &objectType);
+	if (!bDGetObject(objNum, &objectType))
+		return;
 
 	objectType.roomNum = room;
 
-	bDSetObject(objNum, &objectType);
+	if (!bDSetObject(objNum, &objectType))
+		return;
 	return;
 }
 
@@ -1428,24 +1448,27 @@ void b3Put_v() // 2, 0x00
 	objNum = loadAndIncWinCode();
 	room = var[loadAndIncWinCode()];
 
-	bDGetObject(objNum, &objectType);
+	if (!bDGetObject(objNum, &objectType))
+		return;
 
 	objectType.roomNum = room;
 
-	bDSetObject(objNum, &objectType);
+	if (!bDSetObject(objNum, &objectType))
+		return;
 	return;
 }
 
 void b3Get_room_v() // 2, 0xC0 
 {
-	int objNum, room;
+	int objNum, roomVar;
 	objectType objectType;
 
 	objNum = var[loadAndIncWinCode()];
+	roomVar = loadAndIncWinCode();
+	if (!bDGetObject(objNum, &objectType))
+		return;
 
-	bDGetObject(objNum, &objectType);
-
-	var[loadAndIncWinCode()] = objectType.roomNum;
+	var[roomVar] = objectType.roomNum;
 	return;
 }
 
@@ -1494,7 +1517,7 @@ void b3PrintMessageInTextbox(byte messNum, byte x, byte y, byte length, boolean 
 	char* messagePointer;
 	byte timeoutFlagVal = var[PRINT_TIMEOUT];
 	unsigned int waitTicks;
-	unsigned int vSyncToContinueAt;
+	unsigned long vSyncStart, vSyncNow;
 	LOGICFile logicFile;
 	byte keysToWait[NO_KEYS_TO_WAIT] = { KEY_ESC, KEY_ENTER };
 
@@ -1512,15 +1535,17 @@ void b3PrintMessageInTextbox(byte messNum, byte x, byte y, byte length, boolean 
 	show_mouse(screen);
 
 	messagePointer = getMessagePointer(currentLog, messNum - 1);
+	if (!messagePointer) return;
 
 	b3DisplayMessageBox(messagePointer, logicFile.messageBank, y, x, TEXTBOX_PALETTE_NUMBER, length, wrap, FIRST_TEXT_ROW);
 
 	if (timeoutFlagVal)
 	{
 		waitTicks = timeoutFlagVal * 30;  // The timeout value is given in half seconds and the TotalTicks in 1/60ths of a second.
-		vSyncToContinueAt = vSyncCounter + waitTicks;
-
-		while (vSyncCounter != vSyncToContinueAt);
+		b6CopyVSyncCounter32(&vSyncStart);
+		do {
+			b6CopyVSyncCounter32(&vSyncNow);
+		} while (vSyncNow - vSyncStart < waitTicks);
 	}
 	else
 	{
@@ -1557,6 +1582,7 @@ void b3DisplayWithoutTextbox(byte row, byte col, byte messNum)
 	b5GetLogicFile(&logicFile, currentLog);
 
 	messagePointer = getMessagePointer(currentLog, messNum - 1);
+	if (!messagePointer) return;
 
 #ifdef VERBOSE_MESSAGE_PRINT
 	printf("attempting to print %d from script %d. The length is %d. The message pointer is %p and the bank is %p\n", messNum, currentLog, strLenBanked(messagePointer, logicFile.messageBank), messagePointer, logicFile.messageBank);
@@ -1612,6 +1638,7 @@ void b4Set_cursor_char() // 1, 0x00
 	byte msgNo = loadAndIncWinCode() - 1;
 	char* messagePointer = getMessagePointer(currentLog, msgNo);
 	LOGICFile logicFile;
+	if (!messagePointer) return;
 
 	b5GetLogicFile(&logicFile, currentLog);
 
@@ -1644,12 +1671,6 @@ void b4Set_text_attribute() // 2, 0x00
 
 	return;
 }
-
-//void b4Shake_screen() // 1, 0x00 
-//{
-//	(*data)++;  /* Ignore this for now. */
-//}
-
 
 void b4Configure_screen() // 3, 0x00 
 {
@@ -1707,6 +1728,7 @@ void b4Get_string() // 5, 0x00
 	l = loadAndIncWinCode();
 
 	messagePointer = getMessagePointer(currentLog, messNum - 1);
+	if (!messagePointer) return;
 
 	b7GetInternalString(messagePointer, logicFile.messageBank, strNum, row, col, l);
 	return;
@@ -1735,9 +1757,10 @@ void b4Parse() // 1, 0x00
 	flag[2] = FALSE;
 	flag[4] = FALSE;
 
-	stringToParse = b7GetInternalStringPtr(stringNum, &length);
-
 	stringNum = loadAndIncWinCode();
+	stringToParse = b7GetInternalStringPtr(stringNum, &length);
+	if (!stringToParse) return;
+
 	b7LookupWords(stringToParse);
 	return;
 }
@@ -1750,16 +1773,20 @@ void b4Get_num() // 2, 0x40
 	LOGICFile logicFile;
 	byte tempBank;
 
-	b7Temp = (char*)b10BankedAlloc(80, &tempBank);
+	messNum = loadAndIncWinCode();
+	varNum = loadAndIncWinCode();
+	if (!messNum) return;
 
 	b5GetLogicFile(&logicFile, currentLog);
 
-	messNum = loadAndIncWinCode();
-	varNum = loadAndIncWinCode();
-
 	messagePointer = getMessagePointer(currentLog, messNum - 1);
+	if (!messagePointer) return;
+
+	b7Temp = (char*)b10BankedAlloc(80, &tempBank);
+	if (!b7Temp) return;
+
 	b7GetString(messagePointer, logicFile.messageBank, b7Temp, tempBank, 1, 23, 3);
-	var[varNum] = atoi(b7Temp);
+	var[varNum] = atoiBanked(b7Temp, tempBank);
 
 	b10BankedDealloc((byte*)b7Temp, tempBank);
 
@@ -1769,6 +1796,7 @@ void b4Get_num() // 2, 0x40
 void b4Prevent_input() // 0, 0x00 
 {
 	inputLineDisplayed = FALSE;
+	inputLineDirty = TRUE;
 	/* Do something else here */
 	return;
 }
@@ -1776,6 +1804,7 @@ void b4Prevent_input() // 0, 0x00
 void b4Accept_input() // 0, 0x00 
 {
 	inputLineDisplayed = TRUE;
+	inputLineDirty = TRUE;
 	/* Do something else here */
 	return;
 }
@@ -1976,6 +2005,8 @@ void b5Set_game_id() // 1, 0x00
 	LOGICFile logicFile;
 	char* messagePointer;
 	byte messageNo;
+	size_t gameIdLength;
+	boolean terminated;
 
 
 
@@ -1984,8 +2015,11 @@ void b5Set_game_id() // 1, 0x00
 	b5GetLogicFile(&logicFile, currentLog);
 
 	messagePointer = getMessagePointer(currentLog, messageNo - 1);  /* Ignore the game ID. Not important */
+	if (!messagePointer) return;
 
-	strcpyBanked(gameId, messagePointer, logicFile.messageBank);
+	gameIdLength = strLenBankedBounded(messagePointer, logicFile.messageBank, sizeof(gameId), &terminated);
+	if (!terminated || gameIdLength > GAMEID_MAX_LENGTH) return;
+	memCpyBanked((byte*)gameId, (byte*)messagePointer, logicFile.messageBank, gameIdLength + 1);
 
 	b4InitMetadata();
 
@@ -2130,7 +2164,7 @@ void b5Show_obj_v() // 1, 0x01
 	int objectNum;
 
 	objectNum = var[loadAndIncWinCode()];
-	
+
     b11ShowObj(objectNum);
 
 	return;
@@ -2185,6 +2219,3 @@ void b5SetPriorityBase()
 }
 
 #pragma code-name (pop)
-
-
-

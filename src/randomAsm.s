@@ -40,8 +40,8 @@ rts
 ; returns max.
 ;
 ; Do not call with max < min (the subtract borrows and the span wraps).
-; Adding one to max wraps if max is 255. That makes the span 0
-; and _rand8Bit(0) is not a valid modulus, so 0..255 is a special case.
+; Adding one to max wraps if max is 255. That makes the span 0;
+; mod8 then returns the full input byte, giving the 0..255 range.
 
 _randBetween:
 pha
@@ -54,11 +54,11 @@ randBetweenAsmCall:
         sta sreg        ; sreg = min
         pha             ; save min across the call
 
-        inx        ; add one to max: exclusive upper bound
-        sec
-        txa
-        sbc sreg        ; A = (max + 1) - min
-        jsr _rand8Bit   ; A = 0 .. max-min inclusive
+sec
+txa
+sbc sreg
+inc ; inclusive max; 0..255 wraps to the full 256-byte span
+jsr _rand8Bit
 
         plx             ; X = saved min
         stx sreg

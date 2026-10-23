@@ -47,6 +47,10 @@ _b12FindSynonymNumSearch:
 sta USER_WORD_ADDR
 stx USER_WORD_ADDR + 1
 
+lda _numWords
+ora _numWords + 1
+beq @notFound
+
 lda (USER_WORD_ADDR)
 sta USER_WORD_FIX_THREE_BYTES
 ldy #$1
@@ -128,6 +132,11 @@ COMPARE_BYTE_POSSIBLE_TERMINATOR @checkByte3, #$1
 COMPARE_BYTE_POSSIBLE_TERMINATOR @prefixEqual, #$2
 
 @less:
+lda MID
+ora MID + 1
+bne @lessNonZero
+jmp @notFound
+@lessNonZero:
 lda MID 
 beq @lessTwoBytes
 @lessOneByte:

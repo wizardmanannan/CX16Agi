@@ -1,4 +1,5 @@
 #include "helpers.h"
+#include <stdlib.h>
 //#define VERBOSE
 //#define VERBOSE_CPY_CHECK
 //#define VERBOSE_MEMSET_CHECK
@@ -161,7 +162,6 @@ int strcmpIgnoreSpace(const char* str1, const char* str2) {
 
 char* strcpyBanked(char* dest, const char* src, byte bank)
 {
-	char* result;
 	byte previousRamBank = RAM_BANK;
 
 	RAM_BANK = bank;
@@ -170,7 +170,7 @@ char* strcpyBanked(char* dest, const char* src, byte bank)
 
 	RAM_BANK = previousRamBank;
 
-	return result;
+	return dest;
 }
 
 void* memCpyBanked(byte* dest, byte* src, byte bank, size_t len)
@@ -271,6 +271,44 @@ size_t strLenBanked(char* string, int bank)
 	RAM_BANK = previousRamBank;
 
 	return len;
+}
+
+
+size_t strLenBankedBounded(char* string, int bank, size_t byteLimit, boolean* terminated)
+{
+	byte previousRamBank = RAM_BANK;
+	size_t len = 0;
+	boolean foundTerminator = FALSE;
+#ifdef __CX16__
+	unsigned int sourceAddress = (unsigned int)string;
+	if (sourceAddress >= 0xA000 && sourceAddress < 0xC000)
+	{
+		unsigned int bytesLeftInBankWindow = 0xC000 - sourceAddress;
+		if (byteLimit > bytesLeftInBankWindow) byteLimit = bytesLeftInBankWindow;
+	}
+#endif
+	if (terminated) *terminated = FALSE;
+	if (!string) return 0;
+
+	RAM_BANK = bank;
+	while (len < byteLimit && string[len]) ++len;
+	foundTerminator = len < byteLimit;
+	RAM_BANK = previousRamBank;
+
+	if (terminated) *terminated = foundTerminator;
+	return len;
+}
+
+int atoiBanked(const char* string, byte bank)
+{
+	byte previousRamBank = RAM_BANK;
+	int value;
+	if (!string) return 0;
+
+	RAM_BANK = bank;
+	value = atoi(string);
+	RAM_BANK = previousRamBank;
+	return value;
 }
 
 

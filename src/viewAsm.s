@@ -244,7 +244,7 @@ bEAllocateSpriteMemory:
 
     jsr bEAllocateSpriteMemoryBulkAsm
     bne success
-    jmp restoreBank
+    jmp restoreBankFailure
 
 success:
     jmp copyAddresses
@@ -272,6 +272,8 @@ copyToBlitCelArrayLoop:
 .export _bESetLoop
 _bESetLoop:
     sta ENTRY_NUM               ; entry number for viewsWithSpriteMem flag
+    lda RAM_BANK
+    sta PREVIOUS_BANK
 
     jsr popax
     sta LOOP_VERA_ADDRESS
@@ -501,6 +503,13 @@ restoreBank:
     sta RAM_BANK
 
     lda #TRUE        
+    rts
+
+restoreBankFailure:
+    lda PREVIOUS_BANK
+    sta RAM_BANK
+
+    lda #FALSE
     rts
 
 .endscope
@@ -1962,11 +1971,16 @@ b9ObjectList: .res VIEW_TABLE_SIZE * 2
 ;   Notes:
 ;       - Uses a lightweight insertion-sort style (bubble) algorithm, efficient for small
 ;         numbers of on-screen objects.
-;       - Interrupts are disabled during the critical sorting and list-building phase.
+;       - IRQ display work is deferred while the foreground owns VERA/IRQ scratch.
 ;       - Calls into the AGI engine for actual blitting (_agiBlit).
 ; =============================================================================
 
 b9UpdateObjects:
+
+        jsr _b6EnterForegroundVera
+
+        ; Replace any unconsumed snapshot while the IRQ is deferred.
+        JSRFAR bEBeginSpriteSnapshot, SPRITE_UPDATES_BANK
 
         stz UPDATE_OBJ_NUM_OBJS         ; Reset number of objects to update this frame
 
@@ -1975,8 +1989,6 @@ b9UpdateObjects:
         sta loopMethodToCall + 1
         lda #>b9PrepareUpdateObjectsList
         sta loopMethodToCall + 2
-
-        sei                             ; Disable interrupts during critical update
 
         ; Populate b9ObjectList with all objects that have the DRAWN flag set
         lda #DRAWN
@@ -2050,7 +2062,7 @@ b9UpdateObjects:
 
 @exit:
         JSRFAR _bETerminateSpriteBuffer, SPRITE_UPDATES_BANK
-        REENABLE_INTERRUPTS             ; Re-enable interrupts
+        jsr _b6LeaveForegroundVera
         rts
 
 
@@ -2426,4 +2438,3 @@ jsr b9LoopThroughAnimatedObjects
 rts
 
 .endif
-

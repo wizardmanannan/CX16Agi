@@ -21,7 +21,7 @@ int lastKey;
 int numInputWords;
 char cursorChar = '_';
 
-#define MAX_INPUT_STRING_LENGTH 40 //Includes terminator 
+#define MAX_INPUT_STRING_LENGTH 40 // Maximum number of input characters
 
 //#define VERBOSE_DEBUG_LOOKUP_WORDS
 #pragma rodata-name (push, "BANKRAM07")
@@ -29,7 +29,7 @@ char SHOW_PRIORITY[] = {0X73, 0X68, 0X6F, 0X77, 0X20, 0X70, 0X72, 0X69, 0X6F, 0X
 #pragma rodata-name (pop)
 int inputWords[10];
 #pragma bss-name (push, "BANKRAM07")
-char b7WordText[10][80], b7CurrentInputStr[MAX_INPUT_STRING_LENGTH + 1], strPos = 0, b7OutputString[80], b7Temp[256];
+char b7WordText[10][80], b7CurrentInputStr[MAX_INPUT_STRING_LENGTH + 1], strPos = 0, b7Temp[256];
 char string[12][40];
 char b7LookupWordsBuffer[125];
 //boolean wordsAreWaiting=FALSE;
@@ -68,7 +68,13 @@ byte b7GetInputWord(byte number)
 
 char* b7GetInternalStringPtr(byte number, size_t* length)
 {
-	*length = strlen(string[number]);
+	char* terminator;
+	if (!length) return NULL;
+	*length = 0;
+	if (number >= sizeof(string) / sizeof(string[0])) return NULL;
+	terminator = (char*)memchr(string[number], '\0', sizeof(string[0]));
+	if (!terminator) return NULL;
+	*length = (size_t)(terminator - string[number]);
 	return string[number];
 }
 
@@ -118,51 +124,59 @@ void b7HandleDirection(int dirn)
 
 void b7GetString(char* promptStr, byte promptStringBank, char* returnStr, byte returnStrBank, int x, int y, int l)
 {
-	int ch, gx, gy;
+	int ch;
 	boolean stillInputing = TRUE;
 
-	gx = (x - 1) * 16;
-	gy = ((y - 1) * 16) + 20;
+	if (l < 0) l = 0;
+	if (l > MAX_INPUT_STRING_LENGTH) l = MAX_INPUT_STRING_LENGTH;
+	strPos = 0;
+	b7CurrentInputStr[0] = '\0';
+	inputLineDirty = TRUE;
 	b7ProcessString(promptStr, promptStringBank, b7Temp, PARSER_BANK);
-	sprintf(b7OutputString, "%s%s%c", b7Temp, b7CurrentInputStr, cursorChar);
 
-	do {
+	while (stillInputing)
+	{
 		GET_IN(ch);
-		if (ch)
-		{
-			if ((ch >> 8) == 0x1C) ch |= 0x0D; /* Handle keypad ENTER */
-			switch (ch & 0xff) {
-			case 0:     /* Ignore these when building input string */
-			case 0x09:
-			case 0x1B:
-				break;
-			case 0x0D:  /* ENTER */
-				strcpy(returnStr, b7CurrentInputStr);
-				while (key[KEY_ENTER]) { /* Wait until ENTER released */ }
-				return;
-			case 0x08: /* Backspace */
-				if (strPos > 0) {
-					strPos--;
-					b7CurrentInputStr[strPos] = 0;
-				}
-				break;
-			case 0x0A: break;
-			default:
-				if (strPos == l) break;
-				b7CurrentInputStr[strPos] = (ch & 0xff);
-				strPos++;
+		if (!ch) continue;
+		if ((ch >> 8) == 0x1C) ch |= 0x0D; /* Handle keypad ENTER */
+		switch (ch & 0xff) {
+		case 0:     /* Ignore these when building input string */
+		case 0x09:
+		case 0x1B:
+			break;
+		case 0x0D:  /* ENTER */
+			b7CurrentInputStr[strPos] = '\0';
+			memCpyBankedBetween((byte*)returnStr, returnStrBank,
+				(byte*)b7CurrentInputStr, STRING_BANK, strPos + 1);
+			while (key[KEY_ENTER]) { /* Wait until ENTER released */ }
+			stillInputing = FALSE;
+			break;
+		case 0x08: /* Backspace */
+			if (strPos > 0) {
+				strPos--;
 				b7CurrentInputStr[strPos] = 0;
-				sprintf(b7OutputString, "%s%s%c", b7Temp, b7CurrentInputStr, cursorChar);
-				break;
+				inputLineDirty = TRUE;
 			}
+			break;
+		case 0x0A: break;
+		default:
+			if (strPos >= l) break;
+			b7CurrentInputStr[strPos] = (ch & 0xff);
+			strPos++;
+			b7CurrentInputStr[strPos] = 0;
+			inputLineDirty = TRUE;
+			break;
 		}
-	} while (ch);
+	}
 }
 
 /* used by get.string and get.num */
 void b7GetInternalString(char* promptStr, byte promptStringBank, byte stringNumber, int x, int y, int l)
 {
-	char* inputString = string[stringNumber];
+	char* inputString;
+	if (stringNumber >= sizeof(string) / sizeof(string[0])) return;
+	if (l >= (int)sizeof(string[0])) l = (int)sizeof(string[0]) - 1;
+	inputString = string[stringNumber];
 	b7GetString(promptStr, promptStringBank, inputString, PARSER_BANK, x, y, l);
 }
 
@@ -189,9 +203,6 @@ void b7PollKeyboard()
 	//b1ProcessString(temp, PARSER_BANK, outputString );
 	gx = 0;
 	gy = ((user_input_line - 1) * 16) + 20;
-	if (inputLineDisplayed) {
-		sprintf(b7OutputString, "%s%s%c", b7Temp, b7CurrentInputStr, cursorChar);
-	}
 
 	do {
 		GET_IN(ch);
@@ -231,14 +242,14 @@ void b7PollKeyboard()
 					b7LookupWords(b7CurrentInputStr);
 					b7CurrentInputStr[0] = 0;
 					strPos = 0;
-					sprintf(b7OutputString, "%s%s%c", b7Temp, b7CurrentInputStr, cursorChar);
+					inputLineDirty = TRUE;
 					strcpy(b7LastLine, b7CurrentInputStr);
 					break;
 				case KEY_BACKSPACE:   /* Backspace */
 					if (strPos > 0) {
 						strPos--;
 						b7CurrentInputStr[strPos] = 0;
-						sprintf(b7OutputString, "%s%s%c ", b7Temp, b7CurrentInputStr, cursorChar);
+						inputLineDirty = TRUE;
 						//drawBigString(screen, " ", (strPos*16), 448, 7, 0);
 					}
 					else
@@ -260,7 +271,7 @@ void b7PollKeyboard()
 						b7CurrentInputStr[strPos] = (ch);
 						strPos++;
 						b7CurrentInputStr[strPos] = 0;
-						sprintf(b7OutputString, "%s%s%c", b7Temp, b7CurrentInputStr, cursorChar);
+						inputLineDirty = TRUE;
 					}
 					break;
 				}
@@ -555,4 +566,3 @@ boolean b7Said(byte** data)
 }
 
 #pragma code-name (pop)
-

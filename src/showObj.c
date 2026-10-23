@@ -20,129 +20,141 @@ extern byte b11VeraSlots;
  * After the description box and Enter/Esc, CLEAR_OBJ deactivates those
  * sprite slots; allocations, view, and any extra palette are then released.
  */
+byte b11AllocateShowObjSlots(SpriteAllocationSize width, SpriteAllocationSize height,
+	byte requestedSlots, VeraSpriteAddress* spriteAddresses)
+{
+	byte i;
+	if (!spriteAddresses)
+	{
+		return 0;
+	}
+	for (i = 0; i < MAX_SHOW_OBJ_SPLIT_SPRITES; ++i)
+		spriteAddresses[i] = 0;
+	if (requestedSlots == 0 || requestedSlots > MAX_SHOW_OBJ_SPLIT_SPRITES)
+		return 0;
+	for (i = 0; i < requestedSlots; ++i)
+	{
+		spriteAddresses[i] = bDFindFreeVramBlock(width, height);
+		if (!spriteAddresses[i])
+		{
+			break;
+		}
+	}
+	return i;
+}
+
+void b11ReleaseShowObjSlots(SpriteAllocationSize width, SpriteAllocationSize height,
+	byte slotCount, VeraSpriteAddress* spriteAddresses)
+{
+	byte i;
+	if (!spriteAddresses || slotCount > MAX_SHOW_OBJ_SPLIT_SPRITES)
+	{
+		return;
+	}
+	for (i = 0; i < slotCount; ++i)
+	{
+		if (spriteAddresses[i])
+		{
+			bDDeleteAllocation(spriteAddresses[i], width, height);
+		}
+	}
+}
+
 void b11ShowObj(byte objNum)
 {
-   View localView;
-   Loop localLoop;
-   Cel localCel;
-   SpriteAllocationSize spriteAllocationWidth, spriteAllocationHeight;
-   VeraSpriteAddress spriteAddress[MAX_SPRITES_ROW_OR_COLUMN_SIZE];
-   PaletteGetResult paletteGetResult;
-   byte palette = 0, i, ch;
-   boolean outOfSpriteMemory = FALSE;
+	View localView;
+	Loop localLoop;
+	Cel localCel;
+	SpriteAllocationSize spriteAllocationWidth, spriteAllocationHeight;
+	VeraSpriteAddress spriteAddress[MAX_SPRITES_ROW_OR_COLUMN_SIZE];
+	PaletteGetResult paletteGetResult;
+	PaletteGetResult refreshedPalette;
+	byte i, ch, allocatedSlots = 0;
+	boolean outOfSpriteMemory, viewWasLoaded;
 
+	getLoadedView(&localView, objNum);
+	viewWasLoaded = localView.loaded;
+	paletteGetResult = b9LoadViewFile(objNum);
+	getLoadedView(&localView, objNum);
+	if (!localView.loaded)
+	{
+		return;
+	}
 
-   /* May claim a free palette; see the Allocated check at the end. */
-   paletteGetResult = b9LoadViewFile(objNum);
+	getLoadedLoop(&localView, &localLoop, 0);   /* show.obj always uses loop 0 */
+	getLoadedCel(&localLoop, &localCel, 0);     /* and cel 0 */
+	if (localLoop.palette == PALETTE_NOT_SET)
+	{
+		localLoop.palette = bECreateSpritePalette(localCel.transparency, &refreshedPalette);
+		if (refreshedPalette == FailToAllocate) return;
+		/* This palette belongs to the retained view, beyond the close-up. */
+		setLoadedLoop(&localView, &localLoop, 0);
+	}
+	spriteAllocationWidth = bEGetSpriteAllocateSize(localLoop.allocationWidth);
+	spriteAllocationHeight = bEGetSpriteAllocateSize(localLoop.allocationHeight);
+	outOfSpriteMemory = localView.maxVeraSlots == 0 ||
+		localView.maxVeraSlots > MAX_SPRITES_ROW_OR_COLUMN_SIZE ||
+		localView.maxVeraSlots > MAX_SHOW_OBJ_SPLIT_SPRITES;
+	if (!outOfSpriteMemory)
+	{
+		allocatedSlots = b11AllocateShowObjSlots(spriteAllocationWidth,
+			spriteAllocationHeight, localView.maxVeraSlots, spriteAddress);
+		outOfSpriteMemory = allocatedSlots != localView.maxVeraSlots;
+		for (i = 0; i < allocatedSlots; ++i)
+			b11ShowObjSpriteAddressShifted[i] = spriteAddress[i] >> 5;
+	}
 
-   getLoadedView(&localView, objNum);
-   getLoadedLoop(&localView, &localLoop, 0);   /* show.obj always uses loop 0 */
-   getLoadedCel(&localLoop, &localCel, 0);     /* and cel 0 */
+	if (!outOfSpriteMemory)
+	{
+		if (localView.maxVeraSlots > 1)
+			*((byte*)SPLIT_COUNTER) = 1;
 
-   /* AGI allocation size -> VERA sprite size enum for the allocator. */
-   spriteAllocationWidth = bEGetSpriteAllocateSize(localLoop.allocationWidth);
-   spriteAllocationHeight = bEGetSpriteAllocateSize(localLoop.allocationHeight);
+		for (i = 0; i < localView.maxVeraSlots; ++i)
+		{
+			/* Clear the slot while the foreground owns the VERA ports. */
+			b6EnterForegroundVera();
+			SET_VERA_ADDRESS_ZP(spriteAddress[i], VERA_ADDRESS, VERA_ADDRESS_HIGH);
+			bEClearVeraSprite(localLoop.allocationWidth, localLoop.allocationHeight);
+			b6LeaveForegroundVera();
 
-   /* One VRAM block per Vera slot. Raw address is kept for free;
-    * >>5 form is what the IRQ writes into sprite attrs 0–1.
-    * A failed alloc sets outOfSpriteMemory and leaves later entries 0.
-    */
-   for (i = 0; i < localView.maxVeraSlots && !outOfSpriteMemory; i++)
-   {
-      spriteAddress[i] = bDFindFreeVramBlock(spriteAllocationWidth, spriteAllocationHeight);
-      b11ShowObjSpriteAddressShifted[i] = spriteAddress[i] >> 5;
+			if (localView.maxVeraSlots > 1)
+			{
+				*((byte*)(SPLIT_CEL_BANK)) = localCel.splitCelBank;
+				*((byte***)(SPLIT_CEL_SEGMENTS)) = localCel.splitCelPointers;
+			}
+			b9CelToVera(&localCel, localLoop.celsBank, spriteAddress[i],
+				MAX_PRIORITY, spriteAllocationWidth / 2, 0, 0, MAX_PRIORITY,
+				localView.maxVeraSlots);
 
-      outOfSpriteMemory = !spriteAddress[i];
+			if (localView.maxVeraSlots > 1)
+				(*((byte*)SPLIT_COUNTER))++;
+		}
 
-   }
+		b11ShowObjX = PICTURE_WIDTH - localCel.width;
+		b11ShowObjY = 204 - localCel.height;
+		b11ShowObjSprAttr7 = localLoop.allocationHeight << 6 |
+			localLoop.allocationWidth << 4 | localLoop.palette;
+		b11VeraSlots = localView.maxVeraSlots;
+		b6SetAndWaitForIrqState(SHOW_OBJ);
+	}
 
-   if (!outOfSpriteMemory)
-   {
-      /* Split-cel blit helper expects SPLIT_COUNTER starting at 1. */
-      if (localView.maxVeraSlots > 1)
-      {
-         *((byte*)SPLIT_COUNTER) = 1;
-      }
+	b3DisplayMessageBox(localView.description, localView.codeBlockBank,
+		AUTO_CALC_ROW, AUTO_CALC_COLUMN, TEXTBOX_PALETTE_NUMBER,
+		DEFAULT_BOX_WIDTH, TRUE, FIRST_TEXT_ROW);
+	do
+	{
+		GET_IN(ch);
+	} while (ch != KEY_ESC && ch != KEY_ENTER);
 
-      for (i = 0; i < localView.maxVeraSlots; i++)
-      {
-         asm("sei");
+	b3ClearLastPlacedText();
+	b6SetAndWaitForIrqState(CLEAR_OBJ);
+	b11ReleaseShowObjSlots(spriteAllocationWidth, spriteAllocationHeight,
+		allocatedSlots, spriteAddress);
 
-         /* Clear this slot's VRAM before writing the cel pixels. */
-         SET_VERA_ADDRESS_ZP(spriteAddress[i], VERA_ADDRESS, VERA_ADDRESS_HIGH);
-         bEClearVeraSprite(localLoop.allocationWidth, localLoop.allocationHeight);
-         REENABLE_INTERRUPTS();
-
-         if (localView.maxVeraSlots > 1)
-         {
-            /* Bank + segment table for the current slice of a split cel. */
-            *((byte*)(SPLIT_CEL_BANK)) = localCel.splitCelBank;
-            *((byte***)(SPLIT_CEL_SEGMENTS)) = localCel.splitCelPointers;
-         }
-
-         /* Blit this slot into the VRAM just reserved.
-          * MAX_PRIORITY so the close-up sits above the picture.
-          */
-         b9CelToVera(&localCel, localLoop.celsBank, spriteAddress[i], MAX_PRIORITY, spriteAllocationWidth / 2, 0, 0, MAX_PRIORITY, localView.maxVeraSlots);
-
-         if (localView.maxVeraSlots > 1)
-         {
-            (*((byte*)SPLIT_COUNTER))++;
-         }
-      }
-
-      /* Left edge of slot 0. The IRQ adds SPR_SIZE_64 per extra slot,
-       * so a split object is a left-to-right strip of 64-pixel sprites.
-       * Y is the bottom of the picture area (204-based). Bottom centre.
-       */
-      b11ShowObjX = PICTURE_WIDTH - localCel.width;
-      b11ShowObjY = 204 - localCel.height;
-
-      /* Attr 7 written by the IRQ: H-size << 6 | W-size << 4 | palette. */
-      b11ShowObjSprAttr7 = localLoop.allocationHeight << 6 | localLoop.allocationWidth << 4 | localLoop.palette;
-
-      /* Slot count. The IRQ ASLs this so it can CPY against a byte index
-       * into the 16-bit _b11ShowObjSpriteAddressShifted table.
-       */
-      b11VeraSlots = localView.maxVeraSlots;
-      b6SetAndWaitForIrqState(SHOW_OBJ);
-   }
-
-   /* Shown even if sprite allocation failed. */
-   b3DisplayMessageBox(localView.description, localView.codeBlockBank, AUTO_CALC_ROW, AUTO_CALC_COLUMN, TEXTBOX_PALETTE_NUMBER, DEFAULT_BOX_WIDTH, TRUE, FIRST_TEXT_ROW);
-
-   do
-   {
-      GET_IN(ch);                     // Get keyboard input
-
-   } while (ch != KEY_ESC && ch != KEY_ENTER);
-
-   b3ClearLastPlacedText();
-   /* Zeros the enable byte of up to MAX_SHOW_OBJ_SPLIT_SPRITES
-    * attributes at $1FFE0. Harmless if they were never programmed.
-    */
-   b6SetAndWaitForIrqState(CLEAR_OBJ); //Doesn't matter is we clear the sprite attributes if we didn't display anything due to out of memory; this just deactivates sprites, which will have no effect if they were never displayed
-
-
-   /* Free any slot that actually received an address.
-    * Outside the success path: a multi-slot object can allocate some
-    * blocks and then fail.
-    */
-   for (i = 0; i < localView.maxVeraSlots; i++)  //We might have enough memory to allocate one part of the object but not the other; this is why this is not inside the if (!outOfSpriteMemory)
-   {
-      if (spriteAddress[i])
-      {
-         bDDeleteAllocation(spriteAddress[i], spriteAllocationWidth, spriteAllocationHeight);
-      }
-   }
-
-   /* Give back a palette claimed only for this view. */
-   if (paletteGetResult == Allocated) //We only have so many palettes, if we allocate a palette which is not in used by one of the game sprites we should dispose it of
-   {
-      bFRemoveLastPalette();
-   }
-
-   b9DiscardView(objNum);
+	if (paletteGetResult == Allocated)
+		bFRemoveLastPalette();
+	if (!viewWasLoaded)
+		b9DiscardView(objNum);
 }
 
 #pragma code-name (pop)

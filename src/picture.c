@@ -8,6 +8,7 @@
 **************************************************************************/
 
 #include "picture.h"
+#include "irq.h"
 //#define TEST_LINE_DRAW
 //#define TEST_PRIORITY_DRAW_LINES;
 
@@ -34,6 +35,7 @@ PictureFile loadedPictures[NO_PICTURES];
 #pragma bss-name (pop)
 
 int min_print_line = 1, user_input_line = 23, status_line_num = 0;
+volatile byte inputLineDirty = TRUE;
 
 BITMAP* picture;
 BITMAP* priority;
@@ -476,9 +478,6 @@ void b11SplitPriority()
 int picFNum = 0;
 boolean showPicCalled = FALSE;
 
-#pragma wrapped-call (push, trampoline, GRAPHICS_BANK)
-extern void b6Clear();
-#pragma wrapped-call (pop)
 /**************************************************************************
 ** drawPic
 **
@@ -486,7 +485,6 @@ extern void b6Clear();
 **
 **  pLen = length of PICTURE data
 **************************************************************************/
-extern boolean disableIrq;
 void b11DrawPic(byte* bankedData, int pLen, boolean okToClearScreen, byte picNum)
 {
 	unsigned long i;
@@ -522,10 +520,9 @@ void b11DrawPic(byte* bankedData, int pLen, boolean okToClearScreen, byte picNum
 	b5RefreshBuffer(bufferStatus);
 
 	if (okToClearScreen) {
-		asm("sei");
-		b6Clear();
+		b6SetAndWaitForIrqState(CLEAR);
 	}
-	asm("sei");
+	b6EnterForegroundVera();
 
 #ifdef TEST_PRIORITY_DRAW_LINES
 	b8TestAsmPlotPriHLineFast();
@@ -632,9 +629,8 @@ void b11DrawPic(byte* bankedData, int pLen, boolean okToClearScreen, byte picNum
 
 	b11SplitPriority();
 
-	REENABLE_INTERRUPTS(); //Loading screen stays on until showPic command
-
 	showPicCalled = FALSE;
+	b6LeaveForegroundVera(); //Loading screen stays on until showPic command
 }
 
 void b6InitPictures()
@@ -672,7 +668,8 @@ void b6LoadPictureFile(int picFileNum)
 	printf("The picture number is %d \n", picFileNum);
 	printf("Loading Picture file %d, position %d\n", agiFilePosType.fileNum, agiFilePosType.filePos);
 #endif
-	b6LoadAGIFile(PICTURE, &agiFilePosType, &tempAGI);
+	if (!b6LoadAGIFile(PICTURE, &agiFilePosType, &tempAGI))
+		return;
 
 
 	loadedPicture.size = tempAGI.totalSize;
@@ -706,9 +703,9 @@ void b6ShowPicture()
 {
 	if (showPicCalled)
 	{
-		asm("sei");
+		b6EnterForegroundVera();
 		b3InitLayer1Mapbase(TILE_BYTE_2);
-		asm("cli");
+		b6LeaveForegroundVera();
 	}
 	showPicCalled = TRUE;
 }

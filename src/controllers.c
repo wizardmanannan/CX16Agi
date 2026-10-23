@@ -171,7 +171,13 @@ void b1AssociateController(byte asciiCode, byte scanCode, byte controller)
 
 boolean b1SetControllerByPetscii(byte petscii)
 {
-    byte controller = b1PetciiToControllers[petscii];
+    byte controller;
+
+    if (petscii > LARGEST_PETSCII)
+    {
+        return FALSE;
+    }
+    controller = b1PetciiToControllers[petscii];
 
     return b1SetController(controller);
 }

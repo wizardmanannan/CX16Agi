@@ -15,6 +15,7 @@ MENU_INC = 1                        ; Define include guard
 .import _bAMenuChildSelected
 .import _bAInitMenuState
 .import _bAMenuChildWidth
+.import _bAMenuChildCount
 .import _bAFirstMenuChild
 .import _bAMenuChildShiftBack
 .import _bAEnabledMenuControllers
@@ -42,8 +43,8 @@ MENU_NOT_SELECTED = $10             ; Attribute byte for unselected items
 MENU_SELECTED = $20                 ; Attribute byte for selected items
 MENU_SELECTED_DISABLED = $30        ; Attribute byte for disabled selected items
 
-MAX_MENU_CHILDREN = 10              ; Maximum number of child menu items
-MENU_CHILD_TILES = (MAX_MENU_CHILDREN + 3) * MENU_BAR_WIDTH  ; Total tiles needed
+MAX_MENU_CHILDREN = 15              ; Maximum number of child menu items
+MENU_CHILD_TILES = (MAX_MENU_CHILDREN + 2) * TILE_LAYER_WIDTH ; Full rows including borders
 MENU_CHILDREN_ADDRESS = MENU_BAR_LOCATION + (TILE_LAYER_WIDTH * 2)  ; VRAM location for children
 
 
@@ -151,6 +152,8 @@ dex
 lda #MENU_TOP_END                   ; Left corner tile
 sta VERA_data0
 sty VERA_data0                      ; Palette byte
+cpx #0
+beq @rightCorner
 
 lda #MENU_TOP                       ; Top border tile
 @drawBorderLoop:
@@ -159,6 +162,7 @@ sty VERA_data0                      ; Write palette
 dex
 bne @drawBorderLoop                 ; Loop across width
 
+@rightCorner:
 lda #MENU_TOP_END                   ; Right corner tile
 sta VERA_data0
 ldy #CHILD_MENU_PALETTE | 4         ; Flip horizontally
@@ -185,6 +189,8 @@ dex
 lda #MENU_TOP_END                   ; Left bottom corner
 sta VERA_data0
 sty VERA_data0
+cpx #0
+beq @rightCorner
 
 lda #MENU_TOP                       ; Bottom border line
 @drawBorderLoop:
@@ -193,6 +199,7 @@ sty VERA_data0
 dex
 bne @drawBorderLoop
 
+@rightCorner:
 lda #MENU_TOP_END                   ; Right bottom corner
 sta VERA_data0
 ldy #CHILD_MENU_PALETTE | 4 | 8     ; Flip both ways
@@ -211,6 +218,17 @@ rts
 ; Output:  None (renders directly to VERA)
 ; ================================================================
 bADisplayChildMenu:                 ; Draw complete child (dropdown) menu
+ldx _bAMenuSelected
+lda _bAMenuChildCount,x
+beq @empty
+lda _bAMenuChildWidth,x
+cmp #2
+bcc @empty
+cmp #MENU_BAR_WIDTH + 1
+bcc @drawChildren
+@empty:
+rts
+@drawChildren:
 stz VERA_ctrl                       ; Reset VERA control
 
 clc
@@ -238,7 +256,13 @@ sta MENU_SREG + 1
 
 stz CHILD_MENU_COUNTER              ; Reset child counter
 
-@childMenuLoop:                     ; Loop through each child menu item
+@childMenuLoop:                     ; Stop at the producer's published count
+ldx _bAMenuSelected
+lda CHILD_MENU_COUNTER
+cmp _bAMenuChildCount,x
+bcc @readChild
+jmp @drawBottomBorder
+@readChild:
 GET_STRUCT_16_STORED_OFFSET _offsetOfText, MENU_SREG,TEXT_ZP
 GET_STRUCT_8_STORED_OFFSET _offsetOfController, MENU_SREG,CONTROLLER
 
@@ -382,7 +406,7 @@ rts
 bAClearMenuChildren:                ; Fast clear of entire child menu area
 
 ; Step 1: Configure VERA control register for cache operations
-lda #%00001100                      ; DCSEL=3 (Mode 3) + other bits to prepare for fill
+lda #%00001100                      ; DCSEL=6 for cache data registers
 sta VERA_ctrl
 
 ; Step 2: Set up the 4-byte cache fill pattern (Tile + Attribute repeated)
@@ -404,7 +428,6 @@ sta VERA_addr_bank
 
 ; Step 4: Prepare loop counters
 ; Note: VERA cache writes 4 bytes at a time, but only 2 are actual tile data (tile+attr)
-lda MENU_CHILD_TILES                ; Total number of tile+attr pairs to clear
 ldx #<((MENU_CHILD_TILES - 1) / 2)  ; Low byte of (tiles / 2) - 1
 ldy #>((MENU_CHILD_TILES - 1) / 2)  ; High byte of (tiles / 2) - 1
 
@@ -460,6 +483,10 @@ stz MENU_TEXT_COUNTER               ; Reset character counter for padding calcul
 ldx #$0                             ; X = menu item index (0 = first top-level menu)
 
 @menusLoop:                         ; Main loop: process each top-level menu item
+cpx _numOfMenus
+bcc @hasMenu
+jmp @end
+@hasMenu:
 cpx _bAMenuSelected                 ; Is this the currently selected menu?
 bne @getTextZp
 
@@ -489,6 +516,11 @@ beq @end                            ; No more items → finish
 
 ldy #$0                             ; Y = character index in string
 @printTextLoop:                     ; Inner loop: print one character + attribute
+lda MENU_TEXT_COUNTER
+cmp #MENU_BAR_WIDTH
+bcc @hasColumn
+jmp @end
+@hasColumn:
 lda (TEXT_ZP),y                     ; Read next character
 beq @endPrintTextLoop               ; Null terminator → end of this item
 sta VERA_data0                      ; Write character tile to VERA
@@ -508,6 +540,9 @@ iny                                 ; Next character
 bra @printTextLoop
 
 @endPrintTextLoop:                  ; Finished printing text for this item
+lda MENU_TEXT_COUNTER
+cmp #MENU_BAR_WIDTH
+bcs @end
 lda #SPACE                          ; Add trailing space for separation
 sta VERA_data0
 
@@ -524,7 +559,7 @@ lda MENU_SREG + 1
 adc #$0
 sta MENU_SREG + 1
 inx                                 ; Next top-level menu item
-bra @menusLoop
+jmp @menusLoop
 
 @end:
 rts
@@ -624,6 +659,8 @@ jsr bAPrintMenuText                 ; Print all top-level menu items
 sec
 lda #MENU_BAR_WIDTH                 ; Calculate how many padding tiles needed
 sbc MENU_TEXT_COUNTER
+beq @paddingDone
+bcc @paddingDone
 ldx #SPACE
 ldy #MENU_NOT_SELECTED
 @padLoop:
@@ -632,6 +669,7 @@ sty VERA_data0                      ; Write unselected attribute
 dec
 bne @padLoop  
 
+@paddingDone:
 jsr bAPrintMenuChildText            ; Draw the dropdown child menu if applicable
 
 bra @return

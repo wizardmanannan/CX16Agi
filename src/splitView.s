@@ -219,9 +219,9 @@ sta SEGMENT_SIZE
 stx SEGMENT_SIZE + 1
 
 ;3. Now partition the _bCSplitBuffer buffer into equal sized segments to the allocated memory
-lda #<_bCSplitBuffer 
+lda #<_bCSplitBuffer
 sta ZP_TMP_14
-lda #>_bCSplitBuffer 
+lda #>_bCSplitBuffer
 sta ZP_TMP_14 + 1
 
 PARTITION_MEMORY
@@ -243,9 +243,9 @@ asl
 ldx #$0
 jsr _memCpyBanked
 
-lda #<_bCSplitBuffer 
+lda #<_bCSplitBuffer
 sta ZP_TMP_14
-lda #>_bCSplitBuffer 
+lda #>_bCSplitBuffer
 sta ZP_TMP_14 + 1
 
 ;5. Call bCSplitCel

@@ -40,9 +40,14 @@ unsigned char bDSelectedScreenObjNum, bDUnselectedScreenObjNum;
 ** Purpose: Copy object objNum from the loaded table into the caller's
 ** struct.
 **************************************************************************/
-void bDGetObject(byte objNum, objectType* objectType)
+boolean bDGetObject(byte objNum, objectType* objectType)
 {
+    if (!objectType || bDNumObjects <= 0 || bDNumObjects > MAX_OBJECTS ||
+        objNum >= MAX_OBJECTS || objNum >= bDNumObjects)
+        return FALSE;
+
     *objectType = bDObjects[objNum];
+    return TRUE;
 }
 
 /**************************************************************************
@@ -51,9 +56,14 @@ void bDGetObject(byte objNum, objectType* objectType)
 ** Purpose: Write the caller's object struct back into slot objNum of
 ** the loaded table (e.g. after changing roomNum when picking up / dropping).
 **************************************************************************/
-void bDSetObject(byte objNum, objectType* objectType)
+boolean bDSetObject(byte objNum, objectType* objectType)
 {
+    if (!objectType || bDNumObjects <= 0 || bDNumObjects > MAX_OBJECTS ||
+        objNum >= MAX_OBJECTS || objNum >= bDNumObjects)
+        return FALSE;
+
     bDObjects[objNum] = *objectType;
+    return TRUE;
 }
 
 /**************************************************************************
@@ -70,13 +80,16 @@ boolean bDIsObjCrypt(long fileLen, byte* objData)
 {
     int i, checkLen;
 
+    if (!objData || fileLen <= 0 || fileLen > OBJ_NAME_CACHE_SIZE)
+        return FALSE;
+
     checkLen = ((fileLen < 20) ? 10 : 20);   /* inspect last 10 or 20 bytes */
 
     /* TODO: Needs a fix here for Mixed Up Mother Goose */
     // ->>>
 
-    for (i = fileLen - 1; i > (fileLen - checkLen); i--) {
-        if (((bDObjData[i] < 0x20) || (bDObjData[i] > 0x7F)) && (bDObjData[i] != 0))
+    for (i = fileLen - 1; i >= 0 && i > (fileLen - checkLen); i--) {
+        if (((objData[i] < 0x20) || (objData[i] > 0x7F)) && (objData[i] != 0))
             return TRUE;                    /* non-printable => encrypted */
     }
 
@@ -88,32 +101,52 @@ boolean bDIsObjCrypt(long fileLen, byte* objData)
 **
 ** Purpose: Open "object" via the CBM seek helper and read it byte-by-byte
 ** into buffer. fileLen is set to the number of bytes read. Exits if the
-** file is missing or larger than OBJ_NAME_CACHE_SIZE.
+** file is missing. Returns zero after closing the file if a read fails or
+** the input exceeds OBJ_NAME_CACHE_SIZE.
 **
 ** Returns: the logical file number that was used (already closed).
 **************************************************************************/
+/* BANKRAM0D has no room for the bounds-checked reader. */
+#pragma code-name (push, "CODE")
 byte bDLoadFile(int* fileLen, byte* buffer)
 {
-    byte lfn = b6Cbm_openForSeeking(BD_OBJECT_FILE_NAME);
+	byte lfn;
+	byte readByte;
+	int bytesRead;
+
+	if (!fileLen || !buffer)
+	{
+		if (fileLen)
+			*fileLen = -1;
+		return 0;
+	}
+
+	*fileLen = 0;
+	lfn = b6Cbm_openForSeeking(BD_OBJECT_FILE_NAME);
 
     if (lfn == NULL) {
         printf("Cannot find file : object\n");
         exit(1);
     }
 
-    for (*fileLen = 0; cbm_read(lfn, buffer++, 1); *fileLen += 1)
+	while ((bytesRead = cbm_read(lfn, &readByte, 1)) != 0)
     {
-        if (*fileLen > OBJ_NAME_CACHE_SIZE)
+		if (bytesRead != 1 || *fileLen >= OBJ_NAME_CACHE_SIZE)
         {
-            printf(BD_CANNOT_OPEN);
-            exit(0);
+			cbm_close(lfn);
+			*fileLen = -1;
+			return 0;
         }
+
+		buffer[*fileLen] = readByte;
+		++*fileLen;
     }
 
     cbm_close(lfn);
 
     return lfn;
 }
+#pragma code-name (pop)
 
 /**************************************************************************
 ** loadObjectFile
@@ -121,17 +154,75 @@ byte bDLoadFile(int* fileLen, byte* buffer)
 ** Purpose: Load the names of the inventory items from the OBJECT file and
 ** their starting rooms.
 **************************************************************************/
+boolean bDParseObjectFileData(int fileLen)
+{
+    int objNum, nameLen;
+    byte* marker;
+    word tableSize, tableEnd, nameOffset;
+
+    bDNumObjects = 0;
+    if (fileLen < 3 || fileLen > OBJ_NAME_CACHE_SIZE)
+        return FALSE;
+
+    /* Header is the byte size of the three-byte object record table. */
+    tableSize = (word)bDObjData[0] | ((word)bDObjData[1] << 8);
+    if ((tableSize % 3) != 0 || tableSize > (MAX_OBJECTS * 3) ||
+        (tableSize + 3) > fileLen)
+        return FALSE;
+
+    tableEnd = tableSize + 3;
+    marker = (byte*)bDObjData + 3;
+
+    /* Validate every name before publishing a count to object commands. */
+    for (objNum = 0; objNum < (tableSize / 3); ++objNum, marker += 3) {
+        nameOffset = (word)marker[0] | ((word)marker[1] << 8);
+        nameOffset += 3;
+        if (nameOffset < tableEnd || nameOffset >= fileLen)
+            return FALSE;
+
+        nameLen = 0;
+        while ((nameOffset + nameLen) < fileLen &&
+               bDObjData[nameOffset + nameLen] != 0)
+            ++nameLen;
+        if ((nameOffset + nameLen) >= fileLen || nameLen > 255)
+            return FALSE;
+    }
+
+    marker = (byte*)bDObjData + 3;
+    for (objNum = 0; objNum < (tableSize / 3); ++objNum, marker += 3) {
+        nameOffset = (word)marker[0] | ((word)marker[1] << 8);
+        nameOffset += 3;
+        bDObjects[objNum].name = (char*)&bDObjData[nameOffset];
+        bDObjects[objNum].roomNum = marker[2];
+        bDObjects[objNum].objectNum = objNum;
+        nameLen = 0;
+        while (bDObjData[nameOffset + nameLen] != 0)
+            ++nameLen;
+        bDObjectNameLengths[objNum] = nameLen;
+    }
+
+    bDNumObjects = tableSize / 3;
+
+    return TRUE;
+}
+
 void bDLoadObjectFile()
 {
     byte lfn;
-    int avisPos = 0, objNum, i, strPos = 0;
-    int fileLen;
-    byte* marker;
-    word index;
+    int avisPos = 0, i, fileLen;
 
     lfn = bDLoadFile(&fileLen, bDObjData);
+	if (lfn == NULL)
+	{
+		bDNumObjects = 0;
+		printf(BD_CANNOT_OPEN);
+		exit(1);
+	}
 
-    marker = (byte*)bDObjData + 3;          /* first 3-byte object record */
+    if (fileLen < 3 || fileLen > OBJ_NAME_CACHE_SIZE) {
+        bDNumObjects = 0;
+        exit(1);
+    }
 
     if (bDIsObjCrypt(fileLen, bDObjData))
     {
@@ -141,15 +232,9 @@ void bDLoadObjectFile()
         }
     }
 
-    /* header word is byte offset of name table; divide by 3 = object count */
-    bDNumObjects = (((bDObjData[1] * 256) + bDObjData[0]) / 3);
-
-    for (objNum = 0; objNum < bDNumObjects; objNum++, strPos = 0, marker += 3) {
-        index = *(marker)+256 * (*(marker + 1)) + 3;     /* name offset in file */
-        bDObjects[objNum].name = (char*)&bDObjData[index];
-        bDObjects[objNum].roomNum = *(marker + 2);
-        bDObjects[objNum].objectNum = objNum;
-        bDObjectNameLengths[objNum] = strlen(bDObjects[objNum].name);
+    if (!bDParseObjectFileData(fileLen))
+    {
+        exit(1);
     }
 }
 

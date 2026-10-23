@@ -35,6 +35,7 @@ const char B12_WORDS_OVERFLOW[] = "Too many words, overflowed\n";
 
 #pragma bss-name (push, "BANKRAM12")
 #define WORDS_TEXT_START_SIZE 4500
+#define WORDS_MAX_COUNT (WORDS_TEXT_START_SIZE / 3)
 char wordsTextStart[WORDS_TEXT_START_SIZE];
 int numWords, numSynonyms;  /* Big difference between the two */
 byte wordBank;
@@ -48,181 +49,201 @@ byte synonymsListBank;
 #pragma bss-name (pop)
 
 #pragma code-name (push, "BANKRAM12")
-char* b12SwapWordsTextStartWithWordPointers(byte* tempWordsTextStartBank) //WordsTextStart is stored in a temp place on the bank, and wordPointers is stored in its place
+typedef struct {
+    int wordCount;
+    int synonymCount;
+    int dataSize;
+} WordsLoadInfo;
+
+#pragma wrapped-call (push, trampoline, PALETTE_MANAGER_BANK)
+boolean b0FReadWordsPass(char *stagedWords, byte stagedWordsBank,
+                         char **stagedPointers, byte stagedPointersBank,
+                         word *stagedSynonyms, byte stagedSynonymsBank,
+                         const WordsLoadInfo *capacity, WordsLoadInfo *result);
+#pragma wrapped-call (pop)
+
+#pragma code-name (push, "BANKRAM0F")
+boolean b0FReadWordsPass(char *stagedWords, byte stagedWordsBank,
+                         char **stagedPointers, byte stagedPointersBank,
+                         word *stagedSynonyms, byte stagedSynonymsBank,
+                         const WordsLoadInfo *capacity, WordsLoadInfo *result)
 {
-    int wordsTextStartSize = WORDS_TEXT_START_SIZE;
-    char* tempWordStore;
-    char** tempWordsPointersStore = (char**)&wordsTextStart[0];
-    int wordPointersSize = numWords * sizeof(char*);
+    byte header[52];
+    byte offsetSeen[26];
+    byte prefixLength;
+    byte encoded;
+    byte terminal;
+    boolean endOfWords;
+    byte synonymBytes[2];
+    word offsets[26];
+    word synonym;
+    word maxSynonym = 0;
+    long position;
+    long recordPosition;
+    word firstOffset = 52;
+    word previousOffset = 0;
+    int previousLetter = -1;
+    int previousWordLength = 0;
+    char previousWord[MAX_WORD_SIZE];
+    int wordCount = 0;
+    int synonymCount = 0;
+    int dataSize = 0;
+    int newWordLength;
+    int wordSize;
+    int letter;
+    int i;
+    int readResult;
+    int bytesRead;
+    char *newWord = (char *)GOLDEN_RAM_WORK_AREA;
+    char *wordsDataPointer = stagedWords;
+    char **wordPointersPointer = stagedPointers;
+    word *synonymsPointer = stagedSynonyms;
 
-    tempWordStore = (char*)b10BankedAlloc(wordsTextStartSize, tempWordsTextStartBank);
-    memCpyBankedBetween((byte*)tempWordStore, *tempWordsTextStartBank, (byte*)wordsTextStart, WORD_BANK, wordsTextStartSize);
+    if (!result || ((stagedWords || stagedPointers || stagedSynonyms) &&
+                    (!stagedWords || !stagedPointers || !stagedSynonyms)))
+        return FALSE;
+    if ((capacity && (!stagedWords || !stagedPointers || !stagedSynonyms)) ||
+        (!capacity && (stagedWords || stagedPointers || stagedSynonyms)))
+        return FALSE;
+    if (b6Cx16_fseek(FILE_OPEN_ADDRESS, 0) != 0 ||
+        cbm_read(SEQUENTIAL_LFN, header, sizeof(header)) != (int)sizeof(header))
+        return FALSE;
 
-    memCpyBankedBetween((byte*)tempWordsPointersStore, WORD_BANK, (byte*)wordPointers, wordsPointersBank, wordPointersSize);
-
-    return tempWordStore;
-}
-
-void b12RecoverWordsTextStart(char* tempWordsTextStart, byte tempWordsTextStartBank)
-{
-    int wordsTextStartSize = WORDS_TEXT_START_SIZE;
-    char* tempWordStore;
-    char** tempWordsPointersStore = (char**)&wordsTextStart[0];
-    int wordPointersSize = numWords * sizeof(char*);
-
-    memCpyBankedBetween((byte*)wordPointers, wordsPointersBank, (byte*)tempWordsPointersStore, WORD_BANK, wordPointersSize);
-    
-    memCpyBankedBetween((byte*)wordsTextStart, WORD_BANK, (byte*)tempWordsTextStart, tempWordsTextStartBank, wordsTextStartSize);
-
-    b10BankedDealloc((byte*)tempWordsTextStart, tempWordsTextStartBank);
-}
-
-long b12CalculateStartPosition()
-{
-    byte data[2];
-
-    b6Cx16_fseek(FILE_OPEN_ADDRESS, 0);
-    if (!cbm_read(SEQUENTIAL_LFN, &data[0], 2))
-    {
-        printf("Failed to read from file");
-        exit(0);
+    memset(offsetSeen, 0, sizeof(offsetSeen));
+    for (i = 0; i < 26; ++i) {
+        offsets[i] = (word)((unsigned long)header[i * 2] * 256UL + header[i * 2 + 1]);
+        if (!offsets[i])
+            continue;
+        if (offsets[i] < sizeof(header) || offsets[i] <= previousOffset)
+            return FALSE;
+        if (previousOffset == 0)
+            firstOffset = offsets[i];
+        previousOffset = offsets[i];
     }
 
-#ifdef VERBOSE_CALC_WORDS
-    printf("the contents of data is %d and %d\n", data[0], data[1]);
-#endif
+    if (b6Cx16_fseek(FILE_OPEN_ADDRESS, firstOffset) != 0)
+        return FALSE;
+    position = firstOffset;
+    for (;;) {
+        readResult = cbm_read(SEQUENTIAL_LFN, &prefixLength, 1);
+        if (readResult == 0)
+            break;
+        if (readResult != 1 || position > 65535L)
+            return FALSE;
+        recordPosition = position;
+        if (prefixLength > previousWordLength || (!wordCount && prefixLength))
+            return FALSE;
+        ++position;
+        newWordLength = prefixLength;
+        endOfWords = FALSE;
+        do {
+            readResult = cbm_read(SEQUENTIAL_LFN, &encoded, 1);
+            if (readResult == 0 && !prefixLength && wordCount) {
+                endOfWords = TRUE;
+                break;
+            }
+            if (readResult != 1 || newWordLength >= MAX_WORD_SIZE - 1)
+                return FALSE;
+            ++position;
+            terminal = encoded & 0x80;
+            encoded ^= 0x7F;
+            encoded &= 0x7F;
+            if (!encoded)
+                return FALSE;
+            newWord[newWordLength++] = (char)encoded;
+        } while (!terminal);
+        if (endOfWords)
+            break;
+        if (wordCount >= WORDS_MAX_COUNT ||
+            (capacity && wordCount >= capacity->wordCount))
+            return FALSE;
+        if (newWordLength <= prefixLength)
+            return FALSE;
+        newWord[newWordLength] = '\0';
 
-#ifdef VERBOSE_CALC_WORDS
-    printf("the start pos calc (%d * 256 + %d)\n", data[0], data[1]);
-#endif
-
-#ifdef VERBOSE_CALC_WORDS
-    printf("start pos is %lu\n", (byte)data[0] * (long)256 + (byte)data[1]);
-#endif
-
-    return (byte)data[0] * (long)256 + (byte)data[1];
-}
-
-/**************************************************************************
-** calcNumWords
-**
-** Purpose: Calculate the number of different words (including synonyms)
-** and the number of synonyms which are contained in the WORDS.TOK file.
-** The number of words will determine how much memory to allocate for the
-** words list. The number of synonyms will be used to check against the
-** parameters to said() to determine whether those synonyms exist.
-**************************************************************************/
-int b12CalcNumWords(long startPos)
-{
-    byte data[2];
-    int synMax, synNum, wordCount = 0;
-
-    
-    b6Cx16_fseek(FILE_OPEN_ADDRESS, startPos);
-
-    while (cbm_read(SEQUENTIAL_LFN, &data, 1)) {
-#ifdef VERBOSE_CALC_WORDS
-        printf("data[0] is %p\n", data[0]);
-#endif
-        if (data[0] > 0x80) {  /* Top bit set marks the end of a word */
-            cbm_read(SEQUENTIAL_LFN, &data, 2);
-            wordCount++;
-            synNum = (byte)data[0] * 256 + (byte)data[1];
-            if ((synNum > synMax) && (synNum != 9999)) synMax = synNum;
+        /* wordsAsm searches the fully reconstructed words in lexical order. */
+        if (wordCount) {
+            for (i = 0; i < newWordLength && i < previousWordLength; ++i) {
+                if (newWord[i] < previousWord[i])
+                    return FALSE;
+                if (newWord[i] > previousWord[i])
+                    break;
+            }
+            if (i == newWordLength && newWordLength < previousWordLength)
+                return FALSE;
         }
+
+        letter = newWord[0] - ASCIIa;
+        if (letter < 0 || letter >= 26 || letter < previousLetter)
+            return FALSE;
+        if (letter != previousLetter) {
+            if (prefixLength || offsets[letter] != (word)recordPosition || offsetSeen[letter])
+                return FALSE;
+            offsetSeen[letter] = 1;
+        } else if (!offsets[letter] || !offsetSeen[letter]) {
+            return FALSE;
+        }
+
+        bytesRead = cbm_read(SEQUENTIAL_LFN, synonymBytes, sizeof(synonymBytes));
+        if (bytesRead != (int)sizeof(synonymBytes))
+            return FALSE;
+        position += sizeof(synonymBytes);
+        synonym = (word)((unsigned long)synonymBytes[0] * 256UL + synonymBytes[1]);
+        if (synonym != 9999 && synonym > 32767U)
+            return FALSE;
+        if (synonym != 9999 && synonym > maxSynonym)
+            maxSynonym = synonym;
+
+        wordSize = newWordLength + 1;
+        if (wordSize > LARGE_SIZE - dataSize ||
+            (capacity && dataSize + wordSize > capacity->dataSize))
+            return FALSE;
+        if (stagedWords) {
+            if (memCpyBanked((byte *)wordsDataPointer, (byte *)newWord,
+                             stagedWordsBank, (size_t)wordSize) != wordsDataPointer ||
+                memCpyBanked((byte *)wordPointersPointer, (byte *)&wordsDataPointer,
+                             stagedPointersBank, sizeof(char *)) != wordPointersPointer ||
+                memCpyBanked((byte *)synonymsPointer, (byte *)&synonym,
+                             stagedSynonymsBank, sizeof(word)) != synonymsPointer)
+                return FALSE;
+            wordsDataPointer += wordSize;
+            ++wordPointersPointer;
+            ++synonymsPointer;
+        }
+
+        dataSize += wordSize;
+        ++wordCount;
+        for (i = 0; i <= newWordLength; ++i)
+            previousWord[i] = newWord[i];
+        previousWordLength = newWordLength;
+        previousLetter = letter;
     }
 
-    numWords = wordCount;
-    numSynonyms = synMax;
+    for (i = 0; i < 26; ++i)
+        if (offsets[i] && !offsetSeen[i])
+            return FALSE;
 
-
-#ifdef VERBOSE_CALC_WORDS
-    printf("there are %d words\n", numWords);
-#endif
-
-    return 0;
+    synonymCount = (int)maxSynonym;
+    if (capacity && (wordCount != capacity->wordCount ||
+                     synonymCount != capacity->synonymCount ||
+                     dataSize != capacity->dataSize))
+        return FALSE;
+    result->wordCount = wordCount;
+    result->synonymCount = synonymCount;
+    result->dataSize = dataSize;
+    return TRUE;
 }
+#pragma code-name (pop)
 
 byte b12OpenWords()
 {
     byte lfn = b6Cbm_openForSeeking(B12_WORDS_FILE);    
-    if (lfn == NULL) {
+    if (!lfn) {
         printf(B12_CANNOT_FIND_FILE);
-        exit(1);
+        return 0;
     }
 
     return lfn;
-}
-
-void b12UpdateWordPointersAfterCompress(char* oldWordsAddress, char* newWordsAddress)
-{
-    int difference = newWordsAddress - oldWordsAddress;
-    
-    //This method will temporarily clobber the words metadata store so we can have the word pointers on this bank to update them.
-    //It will store them somewhere else and then put them back
-    char* tempWordsTextStart;
-    byte tempWordsTextStartBank;
-    char** tempWordsPointersStore = (char**) & wordsTextStart[0];
-    int i;
-    
-#ifdef VERBOSE_UPDATE_WORD_POINTERS
-    printf("the difference is %p - %p = %p\n", oldWordsAddress, newWordsAddress, oldWordsAddress - newWordsAddress);
-#endif
-
-    tempWordsTextStart = b12SwapWordsTextStartWithWordPointers(&tempWordsTextStartBank);
-
-    for (i = 0; i < numWords; i++, tempWordsPointersStore++)
-    {
-#ifdef VERBOSE_UPDATE_WORD_POINTERS
-        printf("we will update %p by %d\n", tempWordsPointersStore, difference);
-#endif
-        *tempWordsPointersStore += difference;
-
-#ifdef VERBOSE_UPDATE_WORD_POINTERS
-        printf("we updated %p by %d\n", tempWordsPointersStore, difference);
-#endif
-    }
-
-    b12RecoverWordsTextStart(tempWordsTextStart, tempWordsTextStartBank);
-}
-
-extern MemoryArea* _memoryAreas;
-//Doesn't compress the data but rather moves to the smallest allocation slot practical
-void b12CompressWordsAllocation(int wordsLength)
-{
-    int secondBiggestSegment;
-    byte i;
-    char* newWordsData;
-    byte newWordsDataBank;
-
-    //If the words are small enough to fit into the second biggest segment, then that is our justification to call bankedAlloc and move them to a smaller segment. Note, bankedAlloc will take care of figuring out which segment the words belong in
-    memCpyBanked((byte*)&secondBiggestSegment, (byte*)&_memoryAreas[NO_SIZES - 2].segmentSize, MEMORY_MANAGEMENT_BANK, sizeof(int));
-
-    if (wordsLength <= secondBiggestSegment) //Check to 
-    {
-#ifdef VERBOSE_COMPRESS
-        printf("wordsLength %d < %d (%d)\n", wordsLength, secondBiggestSegment, wordsLength <= secondBiggestSegment);
-#endif
-
-            newWordsData = b10BankedAlloc(wordsLength, &newWordsDataBank);
-            memCpyBankedBetween((byte*)newWordsData, newWordsDataBank, (byte*) wordsData, wordsDataBank, wordsLength);
-
-#ifdef VERBOSE_UPDATE_WORD_POINTERS
-            printf("the address of wordTypes is %p and the address of wordPointers is %p on bank %p and the the address of word data is %p on bank %p\n", &wordsTextStart[0], wordPointers, wordsPointersBank, newWordsData, newWordsDataBank);
-#endif // VERBOSE_UPDATE_WORD_POINTERS
-            b12UpdateWordPointersAfterCompress(wordsData, newWordsData);
-
-            //printf("new words segment %p on bank %p wordpointers %d on bank %d, wordTypeAddress %p\n", newWordsData, newWordsDataBank, wordPointers, wordsPointersBank, &wordsTextStart[0]);
-
-            b10BankedDealloc((byte*)wordsData, wordsDataBank);
-
-            wordsData = newWordsData;
-            wordsDataBank = newWordsDataBank;
-
-#ifdef VERBOSE_COMPRESS
-            printf("compressed down to size %d address %p bank %p\n", secondBiggestSegment, wordsData, wordsDataBank);
-#endif
-        }
 }
 
 #ifdef TEST_SYN //Designed for King's Quest 1
@@ -325,121 +346,124 @@ void b12TestSyn()
 **
 ** Purpose: Load words in from the WORDS.TOK file.
 **************************************************************************/
-void b12LoadWords()
+static void b12FreeWordAllocations(char *data, byte dataBank,
+                                   char **pointers, byte pointersBank,
+                                   word *synonyms, byte synonymsBank)
 {
-#define NEW_WORD_ADDRESS GOLDEN_RAM_WORK_AREA
-#define NEW_WORD_SIZE 80
+    if (data)
+        b10BankedDealloc((byte *)data, dataBank);
+    if (pointers)
+        b10BankedDealloc((byte *)pointers, pointersBank);
+    if (synonyms)
+        b10BankedDealloc((byte *)synonyms, synonymsBank);
+}
 
-    byte wordPos;
-    byte data[2];
-    long startPos;
-    word wordNum,synNum;
-    char* wordsDataPointer;
-    char* newWord = (char*) NEW_WORD_ADDRESS;
-    char** wordPointersPointer;
-    byte wordLength, lfn;
-    word* synonymsListPointer;
-    
+boolean b12LoadWords()
+{
+    WordsLoadInfo counts;
+    WordsLoadInfo stagedCounts;
+    char *stagedWords = NULL;
+    char **stagedPointers = NULL;
+    word *stagedSynonyms = NULL;
+    char *oldWords;
+    char **oldPointers;
+    word *oldSynonyms;
+    char *stagedWordPointer;
+    byte stagedWordsBank = 0;
+    byte stagedPointersBank = 0;
+    byte stagedSynonymsBank = 0;
+    byte oldWordsBank;
+    byte oldPointersBank;
+    byte oldSynonymsBank;
+    byte lfn;
+    char firstThree[3];
+    int pointerBytes;
+    int synonymBytes;
+    int i;
+    int j;
+
     printf(B12_LOADING_WORDS);
 
     lfn = b12OpenWords();
+    if (!lfn)
+        return FALSE;
+    if (!b0FReadWordsPass(NULL, 0, NULL, 0, NULL, 0, NULL, &counts)) {
+        cbm_close(lfn);
+        return FALSE;
+    }
+    cbm_close(lfn);
 
-#ifdef VERBOSE_CALC_WORDS
-    printf("the lfn is %d\n", lfn);
-#endif // VERBOSE_WORDS
-
-    startPos = b12CalculateStartPosition();
-
-    b12CalcNumWords(startPos);
-    wordsData = b10BankedAlloc(LARGE_SIZE, data); //This allocation will be swapped by a smaller one if practical in b12CompressAllocation
-    wordsDataBank = data[0];
-
-    wordPointers = (char**)b10BankedAlloc(numWords * sizeof(char*), data);
-
-    wordsPointersBank = data[0];
-    wordPointersPointer = wordPointers;
-
-    synonymsList = (word*) b10BankedAlloc(numWords * sizeof(int), data);
-    synonymsListBank = data[0];
-    synonymsListPointer = synonymsList;
-
-#ifdef VERBOSE_WORDS
-    printf("the word pointers are at %p on bank %p\n", wordPointersPointer, wordsPointersBank);
-    printf("the words are stored at %p on bank %p\n", wordsData, wordsDataBank);
-#endif
-
-    wordsDataPointer = wordsData;
-
-    cbm_close(SEQUENTIAL_LFN);
+    pointerBytes = counts.wordCount * (int)sizeof(char *);
+    synonymBytes = counts.wordCount * (int)sizeof(word);
+    stagedWords = (char *)b10BankedAlloc(counts.dataSize ? counts.dataSize : 1,
+                                         &stagedWordsBank);
+    if (!stagedWords)
+        goto failed;
+    stagedPointers = (char **)b10BankedAlloc(pointerBytes ? pointerBytes : 1,
+                                              &stagedPointersBank);
+    if (!stagedPointers)
+        goto failed;
+    stagedSynonyms = (word *)b10BankedAlloc(synonymBytes ? synonymBytes : 1,
+                                             &stagedSynonymsBank);
+    if (!stagedSynonyms)
+        goto failed;
 
     lfn = b12OpenWords();
-    b6Cx16_fseek(FILE_OPEN_ADDRESS, startPos);
+    if (!lfn)
+        goto failed;
+    if (!b0FReadWordsPass(stagedWords, stagedWordsBank,
+                          stagedPointers, stagedPointersBank,
+                          stagedSynonyms, stagedSynonymsBank,
+                          &counts, &stagedCounts)) {
+        cbm_close(lfn);
+        goto failed;
+    }
+    cbm_close(lfn);
 
-#ifdef VERBOSE_WORDS
-    printf("the start pos is %lu\n", startPos);
-#endif
-
-    for (wordNum = 0; wordNum < numWords; wordNum++) {
-        cbm_read(SEQUENTIAL_LFN, &wordPos, 1);
-        do {
-            cbm_read(SEQUENTIAL_LFN, &data[0], 1);
-            newWord[wordPos++] = ((data[0] ^ 0x7F) & 0x7F);
-
-#ifdef VERBOSE_LETTERS
-            printf("we read %d\n", ((data[0] ^ 0x7F) & 0x7F));
-#endif
-
-        } while (data[0] < 0x80);
-        newWord[wordPos] = NULL;
-
-#ifdef VERBOSE_WORDS
-        printf("word: %s\n", newWord);
-#endif
-
-        cbm_read(SEQUENTIAL_LFN, &data[0], 1);
-        synNum = (word) data[0] * 256;
-
-        cbm_read(SEQUENTIAL_LFN, &data[0], 1);
-        synNum += data[0];
-
-        wordLength = strlen(newWord) + 1;
-
-
-//#ifdef VERBOSE_WORDS
-//        printf("copying from %p to %p on bank %p length %p\n", &newWord);
-//#endif
-        memCpyBanked((byte*)wordsDataPointer, (byte*)newWord, wordsDataBank, wordLength);
-      
-        wordsTextStart[wordNum * 3] = newWord[0];
-        wordsTextStart[wordNum * 3 + 1] = newWord[1];
-        wordsTextStart[wordNum * 3 + 2] = newWord[2];
-
-        memCpyBanked((byte*)wordPointersPointer, (byte*)&wordsDataPointer, wordsPointersBank, 2);
-
-        wordsDataPointer += wordLength;
-        wordPointersPointer++;
-        
-        memCpyBanked((byte*)synonymsListPointer, (byte*)&synNum, synonymsListBank, sizeof(word));
-        synonymsListPointer++;
-
-        if (wordsDataPointer > (char*)BANK_MAX)
-        {
-            printf(B12_WORDS_OVERFLOW);
+    /* All file reads and allocations have succeeded; publish the staged copy. */
+    memsetBanked(wordsTextStart, 0, WORDS_TEXT_START_SIZE, WORD_BANK);
+    for (i = 0; i < stagedCounts.wordCount; ++i) {
+        memset(firstThree, 0, sizeof(firstThree));
+        memCpyBanked((byte *)&stagedWordPointer,
+                     (byte *)(stagedPointers + i), stagedPointersBank, sizeof(char *));
+        for (j = 0; j < (int)sizeof(firstThree); ++j) {
+            memCpyBanked((byte *)&firstThree[j], (byte *)stagedWordPointer + j,
+                         stagedWordsBank, 1);
+            if (!firstThree[j])
+                break;
         }
+        memCpyBanked((byte *)&wordsTextStart[i * 3], (byte *)firstThree,
+                     WORD_BANK, sizeof(firstThree));
     }
 
-    b12CompressWordsAllocation(wordsDataPointer - wordsData - 1); //Words data pointer is pointing to a blank byte read for another word. Therefore -1 from the length
+    oldWords = wordsData;
+    oldPointers = wordPointers;
+    oldSynonyms = synonymsList;
+    oldWordsBank = wordsDataBank;
+    oldPointersBank = wordsPointersBank;
+    oldSynonymsBank = synonymsListBank;
+    wordsData = stagedWords;
+    wordPointers = stagedPointers;
+    synonymsList = stagedSynonyms;
+    wordsDataBank = stagedWordsBank;
+    wordsPointersBank = stagedPointersBank;
+    synonymsListBank = stagedSynonymsBank;
+    numWords = stagedCounts.wordCount;
+    numSynonyms = stagedCounts.synonymCount;
 
-    //printf("wordsTextStart %p wordsPointers %p on bank %p wordData %p on bank %p\n", wordsTextStart, wordPointers, wordsPointersBank, wordsData, wordsDataBank);
-
-#ifdef VERBOSE_WORDS
-    printf("end of function reached\n");
-#endif
-    cbm_close(SEQUENTIAL_LFN);
+    b12FreeWordAllocations(oldWords, oldWordsBank, oldPointers, oldPointersBank,
+                           oldSynonyms, oldSynonymsBank);
 
 #ifdef TEST_SYN
     b12TestSyn();
 #endif
+    return TRUE;
+
+failed:
+    b12FreeWordAllocations(stagedWords, stagedWordsBank,
+                           stagedPointers, stagedPointersBank,
+                           stagedSynonyms, stagedSynonymsBank);
+    return FALSE;
 }
 
 /***************************************************************************
@@ -449,7 +473,18 @@ void b12LoadWords()
 ***************************************************************************/
 void b12DiscardWords()
 {
-    b10BankedDealloc((byte*)wordsData, wordsDataBank);
+    b12FreeWordAllocations(wordsData, wordsDataBank,
+                           wordPointers, wordsPointersBank,
+                           synonymsList, synonymsListBank);
+    wordsData = NULL;
+    wordsDataBank = 0;
+    wordPointers = NULL;
+    wordsPointersBank = 0;
+    synonymsList = NULL;
+    synonymsListBank = 0;
+    numWords = 0;
+    numSynonyms = 0;
+    memsetBanked(wordsTextStart, 0, WORDS_TEXT_START_SIZE, WORD_BANK);
 }
 
 #define USER_WORD_BUFFER ((char*) GOLDEN_RAM_WORK_AREA)

@@ -1,0 +1,508 @@
+name: Native regressions
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: native-regressions-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  native-head:
+    name: native-head
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+    outputs:
+      head_sha: ${{ steps.identity.outputs.head_sha }}
+      head_tree: ${{ steps.identity.outputs.head_tree }}
+    env:
+      CC65_SHA: e11fb5c39371046ebe25485f984f644c5a0d65d3
+      X16_EMULATOR_SHA: 77f2bab332e24c5456f9844a6c7ddd203f6198e6
+      CC65_HOME: ${{ github.workspace }}/obj/ci-tools/cc65
+      X16_EMULATOR_SOURCE: ${{ github.workspace }}/obj/ci-tools/x16-emulator
+      TESTED_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+      EVENT_BASE_SHA: ${{ github.event.pull_request.base.sha || github.sha }}
+      TEST_OUTPUT_ROOT: ${{ github.workspace }}/obj
+
+    steps:
+      - name: Initialize native head evidence
+        shell: bash
+        run: |
+          set -euo pipefail
+          EVIDENCE_DIR="$RUNNER_TEMP/cx16agi-native-head-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT"
+          echo "EVIDENCE_DIR=$EVIDENCE_DIR" >> "$GITHUB_ENV"
+          mkdir -p "$EVIDENCE_DIR"
+          {
+            echo "role=head"
+            echo "expected_head_sha=$TESTED_SHA"
+            echo "event_check_sha=$GITHUB_SHA"
+            echo "event_base_sha=$EVENT_BASE_SHA"
+          } > "$EVIDENCE_DIR/identity.txt"
+
+      - name: Check out the pull request head
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+          fetch-depth: 0
+
+      - name: Record head identity
+        id: identity
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "$EVIDENCE_DIR"
+          actual_sha=$(git rev-parse HEAD)
+          tree_sha=$(git rev-parse 'HEAD^{tree}')
+          if [[ "$actual_sha" != "$TESTED_SHA" ]]; then
+            echo "Checked out $actual_sha, expected $TESTED_SHA" >&2
+            exit 1
+          fi
+          {
+            echo "role=head"
+            echo "head_sha=$actual_sha"
+            echo "head_tree=$tree_sha"
+            echo "event_check_sha=$GITHUB_SHA"
+            echo "event_base_sha=$EVENT_BASE_SHA"
+            echo "cc65_sha=$CC65_SHA"
+            echo "x16_emulator_sha=$X16_EMULATOR_SHA"
+          } > "$EVIDENCE_DIR/identity.txt"
+          echo "head_sha=$actual_sha" >> "$GITHUB_OUTPUT"
+          echo "head_tree=$tree_sha" >> "$GITHUB_OUTPUT"
+          {
+            printf '%s\n' '### Native head regressions'
+            printf -- '- Tested PR head: `%s` (tree `%s`)\n' "$actual_sha" "$tree_sha"
+            printf -- '- Event check SHA: `%s`; event base: `%s`\n' "$GITHUB_SHA" "$EVENT_BASE_SHA"
+            printf -- '- cc65: `%s`; x16-emulator CPU: `%s`\n' "$CC65_SHA" "$X16_EMULATOR_SHA"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Build pinned cc65 and fetch emulator CPU
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "$(dirname "$CC65_HOME")"
+          if ! git clone --quiet --filter=blob:none --no-checkout https://github.com/cc65/cc65.git "$CC65_HOME" > "$EVIDENCE_DIR/dependency-fetch.log" 2>&1; then
+            cat "$EVIDENCE_DIR/dependency-fetch.log" >&2
+            exit 1
+          fi
+          git -C "$CC65_HOME" checkout --quiet --detach "$CC65_SHA"
+          if ! git clone --quiet --filter=blob:none --no-checkout https://github.com/X16Community/x16-emulator.git "$X16_EMULATOR_SOURCE" >> "$EVIDENCE_DIR/dependency-fetch.log" 2>&1; then
+            cat "$EVIDENCE_DIR/dependency-fetch.log" >&2
+            exit 1
+          fi
+          git -C "$X16_EMULATOR_SOURCE" checkout --quiet --detach "$X16_EMULATOR_SHA"
+          if make -C "$CC65_HOME" -j2 all > "$EVIDENCE_DIR/cc65-build.log" 2>&1; then
+            echo "Built cc65 at $CC65_SHA"
+          else
+            build_status=$?
+            tail -n 80 "$EVIDENCE_DIR/cc65-build.log" >&2
+            exit "$build_status"
+          fi
+
+      - name: Install staging test headers
+        run: sudo apt-get update && sudo apt-get install -y libpng-dev
+
+      - name: Run shipped build and metadata staging suites
+        shell: bash
+        run: |
+          set -euo pipefail
+          export TEST_FIXTURE_ROOT="$RUNNER_TEMP" TMPDIR="$RUNNER_TEMP"
+          make -C tools build-test 2>&1 | tee "$EVIDENCE_DIR/build.log"
+          make -C tools staging-test 2>&1 | tee "$EVIDENCE_DIR/staging.log"
+
+      - name: Capture and replay the declared review plan
+        shell: bash
+        run: |
+          set -euo pipefail
+          export TEST_FIXTURE_ROOT="$RUNNER_TEMP" TMPDIR="$RUNNER_TEMP"
+          make -C tools review-tools
+          obj/review-tools capture --plan tools/review/cx16.plan \
+            --output "$EVIDENCE_DIR/packet" 2>&1 | tee "$EVIDENCE_DIR/capture.log"
+          mkdir -p "$GITHUB_WORKSPACE/obj/review-ci-replay"
+          obj/review-tools verify --plan tools/review/cx16.plan \
+            --evidence-dir "$EVIDENCE_DIR/packet" \
+            --replay-root "$GITHUB_WORKSPACE/obj/review-ci-replay" \
+            2>&1 | tee "$EVIDENCE_DIR/verify.log"
+          cat "$EVIDENCE_DIR/packet/review.md" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Digest native head evidence
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          : > "$EVIDENCE_DIR/SHA256SUMS"
+          for name in identity.txt dependency-fetch.log cc65-build.log build.log staging.log capture.log verify.log; do
+            if [[ -f "$EVIDENCE_DIR/$name" ]]; then
+              (cd "$EVIDENCE_DIR" && sha256sum "$name") >> "$EVIDENCE_DIR/SHA256SUMS"
+            fi
+          done
+
+      - name: Upload native head logs and digests
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: native-head-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/cx16agi-native-head-${{ github.run_id }}-${{ github.run_attempt }}
+          if-no-files-found: error
+          retention-days: 14
+
+  native-integration:
+    name: native-integration
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+    outputs:
+      base_sha: ${{ steps.identity.outputs.base_sha }}
+      base_tree: ${{ steps.identity.outputs.base_tree }}
+      head_sha: ${{ steps.identity.outputs.head_sha }}
+      head_tree: ${{ steps.identity.outputs.head_tree }}
+      merge_sha: ${{ steps.identity.outputs.merge_sha }}
+      merge_tree: ${{ steps.identity.outputs.merge_tree }}
+    env:
+      CC65_SHA: e11fb5c39371046ebe25485f984f644c5a0d65d3
+      X16_EMULATOR_SHA: 77f2bab332e24c5456f9844a6c7ddd203f6198e6
+      CC65_HOME: ${{ github.workspace }}/obj/ci-tools/cc65
+      X16_EMULATOR_SOURCE: ${{ github.workspace }}/obj/ci-tools/x16-emulator
+      TESTED_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+      EVENT_BASE_SHA: ${{ github.event.pull_request.base.sha || github.sha }}
+      TEST_OUTPUT_ROOT: ${{ github.workspace }}/obj
+
+    steps:
+      - name: Initialize native integration evidence
+        shell: bash
+        run: |
+          set -euo pipefail
+          EVIDENCE_DIR="$RUNNER_TEMP/cx16agi-native-integration-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT"
+          echo "EVIDENCE_DIR=$EVIDENCE_DIR" >> "$GITHUB_ENV"
+          mkdir -p "$EVIDENCE_DIR"
+          {
+            echo "role=integration"
+            echo "event_check_sha=$GITHUB_SHA"
+            echo "expected_head_sha=$TESTED_SHA"
+            echo "event_base_sha=$EVENT_BASE_SHA"
+          } > "$EVIDENCE_DIR/identity.txt"
+
+      - name: Check out the immutable event revision
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Verify event merge identity
+        id: identity
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "$EVIDENCE_DIR"
+          merge_sha=$(git rev-parse HEAD)
+          merge_tree=$(git rev-parse 'HEAD^{tree}')
+          if [[ "$merge_sha" != "$GITHUB_SHA" ]]; then
+            echo "Checked out $merge_sha, expected event merge $GITHUB_SHA" >&2
+            exit 1
+          fi
+          event_merge_tree=$(git rev-parse "$GITHUB_SHA^{tree}")
+          if [[ "$merge_tree" != "$event_merge_tree" ]]; then
+            echo "Test checkout tree $merge_tree differs from event merge tree $event_merge_tree" >&2
+            exit 1
+          fi
+          head_tree=$(git rev-parse "$TESTED_SHA^{tree}")
+          if [[ "$GITHUB_EVENT_NAME" == pull_request ]]; then
+            read -r -a commit_line <<< "$(git rev-list --parents -n 1 "$merge_sha")"
+            if [[ "${#commit_line[@]}" -ne 3 ]]; then
+              echo "Expected the GitHub PR merge to have exactly base and head parents" >&2
+              exit 1
+            fi
+            base_sha="${commit_line[1]}"
+            head_sha="${commit_line[2]}"
+            if [[ "$base_sha" != "$EVENT_BASE_SHA" || "$head_sha" != "$TESTED_SHA" ]]; then
+              echo "Event merge parents do not match the expected PR base and head" >&2
+              exit 1
+            fi
+            base_tree=$(git rev-parse "$base_sha^{tree}")
+          else
+            if [[ "$GITHUB_REF" != refs/heads/main || "$merge_sha" != "$TESTED_SHA" ]]; then
+              echo "Non-PR native integration runs are supported only for the exact main revision" >&2
+              exit 1
+            fi
+            base_sha="$merge_sha"
+            base_tree="$merge_tree"
+            head_sha="$TESTED_SHA"
+            head_tree="$merge_tree"
+          fi
+          {
+            echo "role=integration"
+            echo "base_ref=main"
+            echo "base_sha=$base_sha"
+            echo "base_tree=$base_tree"
+            echo "head_sha=$head_sha"
+            echo "head_tree=$head_tree"
+            echo "merge_sha=$merge_sha"
+            echo "merge_tree=$merge_tree"
+            echo "event_merge_tree=$event_merge_tree"
+            echo "event_check_sha=$GITHUB_SHA"
+            echo "cc65_sha=$CC65_SHA"
+            echo "x16_emulator_sha=$X16_EMULATOR_SHA"
+          } > "$EVIDENCE_DIR/identity.txt"
+          echo "base_sha=$base_sha" >> "$GITHUB_OUTPUT"
+          echo "base_tree=$base_tree" >> "$GITHUB_OUTPUT"
+          echo "head_sha=$head_sha" >> "$GITHUB_OUTPUT"
+          echo "head_tree=$head_tree" >> "$GITHUB_OUTPUT"
+          echo "merge_sha=$merge_sha" >> "$GITHUB_OUTPUT"
+          echo "merge_tree=$merge_tree" >> "$GITHUB_OUTPUT"
+          {
+            printf '%s\n' '### Native integration regressions'
+            printf -- '- Base: `main` `%s` (tree `%s`)\n' "$base_sha" "$base_tree"
+            printf -- '- Head: `%s` (tree `%s`)\n' "$head_sha" "$head_tree"
+            printf -- '- Tested GitHub merge: `%s` (tree `%s`)\n' "$merge_sha" "$merge_tree"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Build pinned cc65 and fetch emulator CPU
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "$(dirname "$CC65_HOME")"
+          if ! git clone --quiet --filter=blob:none --no-checkout https://github.com/cc65/cc65.git "$CC65_HOME" > "$EVIDENCE_DIR/dependency-fetch.log" 2>&1; then
+            cat "$EVIDENCE_DIR/dependency-fetch.log" >&2
+            exit 1
+          fi
+          git -C "$CC65_HOME" checkout --quiet --detach "$CC65_SHA"
+          if ! git clone --quiet --filter=blob:none --no-checkout https://github.com/X16Community/x16-emulator.git "$X16_EMULATOR_SOURCE" >> "$EVIDENCE_DIR/dependency-fetch.log" 2>&1; then
+            cat "$EVIDENCE_DIR/dependency-fetch.log" >&2
+            exit 1
+          fi
+          git -C "$X16_EMULATOR_SOURCE" checkout --quiet --detach "$X16_EMULATOR_SHA"
+          if make -C "$CC65_HOME" -j2 all > "$EVIDENCE_DIR/cc65-build.log" 2>&1; then
+            echo "Built cc65 at $CC65_SHA"
+          else
+            build_status=$?
+            tail -n 80 "$EVIDENCE_DIR/cc65-build.log" >&2
+            exit "$build_status"
+          fi
+
+      - name: Install staging test headers
+        run: sudo apt-get update && sudo apt-get install -y libpng-dev
+
+      - name: Run shipped build and metadata staging suites
+        shell: bash
+        run: |
+          set -euo pipefail
+          export TEST_FIXTURE_ROOT="$RUNNER_TEMP" TMPDIR="$RUNNER_TEMP"
+          make -C tools build-test 2>&1 | tee "$EVIDENCE_DIR/build.log"
+          make -C tools staging-test 2>&1 | tee "$EVIDENCE_DIR/staging.log"
+
+      - name: Capture and replay the declared review plan
+        shell: bash
+        run: |
+          set -euo pipefail
+          export TEST_FIXTURE_ROOT="$RUNNER_TEMP" TMPDIR="$RUNNER_TEMP"
+          make -C tools review-tools
+          obj/review-tools capture --plan tools/review/cx16.plan \
+            --output "$EVIDENCE_DIR/packet" 2>&1 | tee "$EVIDENCE_DIR/capture.log"
+          mkdir -p "$GITHUB_WORKSPACE/obj/review-ci-replay"
+          obj/review-tools verify --plan tools/review/cx16.plan \
+            --evidence-dir "$EVIDENCE_DIR/packet" \
+            --replay-root "$GITHUB_WORKSPACE/obj/review-ci-replay" \
+            2>&1 | tee "$EVIDENCE_DIR/verify.log"
+          cat "$EVIDENCE_DIR/packet/review.md" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Digest native integration evidence
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          : > "$EVIDENCE_DIR/SHA256SUMS"
+          for name in identity.txt dependency-fetch.log cc65-build.log build.log staging.log capture.log verify.log; do
+            if [[ -f "$EVIDENCE_DIR/$name" ]]; then
+              (cd "$EVIDENCE_DIR" && sha256sum "$name") >> "$EVIDENCE_DIR/SHA256SUMS"
+            fi
+          done
+
+      - name: Upload native integration logs and digests
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: native-integration-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/cx16agi-native-integration-${{ github.run_id }}-${{ github.run_attempt }}
+          if-no-files-found: error
+          retention-days: 14
+
+  native-ready:
+    name: native-ready
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    needs: [native-head, native-integration]
+    if: always()
+    env:
+      EXPECTED_HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+      EVENT_BASE_SHA: ${{ github.event.pull_request.base.sha || github.sha }}
+      HEAD_RESULT: ${{ needs.native-head.result }}
+      INTEGRATION_RESULT: ${{ needs.native-integration.result }}
+      HEAD_JOB_SHA: ${{ needs.native-head.outputs.head_sha }}
+      HEAD_JOB_TREE: ${{ needs.native-head.outputs.head_tree }}
+      INTEGRATION_BASE_SHA: ${{ needs.native-integration.outputs.base_sha }}
+      INTEGRATION_BASE_TREE: ${{ needs.native-integration.outputs.base_tree }}
+      INTEGRATION_HEAD_SHA: ${{ needs.native-integration.outputs.head_sha }}
+      INTEGRATION_HEAD_TREE: ${{ needs.native-integration.outputs.head_tree }}
+      INTEGRATION_MERGE_SHA: ${{ needs.native-integration.outputs.merge_sha }}
+      INTEGRATION_MERGE_TREE: ${{ needs.native-integration.outputs.merge_tree }}
+
+    steps:
+      - name: Initialize readiness evidence
+        shell: bash
+        run: |
+          set -euo pipefail
+          EVIDENCE_DIR="$RUNNER_TEMP/cx16agi-native-ready-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT"
+          echo "EVIDENCE_DIR=$EVIDENCE_DIR" >> "$GITHUB_ENV"
+          mkdir -p "$EVIDENCE_DIR"
+          {
+            echo "role=aggregate"
+            echo "event=$GITHUB_EVENT_NAME"
+            echo "event_check_sha=$GITHUB_SHA"
+            echo "event_base_sha=$EVENT_BASE_SHA"
+            echo "expected_head_sha=$EXPECTED_HEAD_SHA"
+            echo "native_head_result=$HEAD_RESULT"
+            echo "native_integration_result=$INTEGRATION_RESULT"
+          } > "$EVIDENCE_DIR/identity.txt"
+
+      - name: Check out current main for freshness
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: main
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Fetch the exact event commit for tree verification
+        shell: bash
+        run: |
+          set -euo pipefail
+          if ! git cat-file -e "$GITHUB_SHA^{commit}" 2>/dev/null; then
+            if ! git fetch --quiet --no-tags origin "$GITHUB_SHA" > "$EVIDENCE_DIR/event-fetch.log" 2>&1; then
+              cat "$EVIDENCE_DIR/event-fetch.log" >&2
+              exit 1
+            fi
+          else
+            printf '%s\n' 'Event commit was already present in the checkout.' > "$EVIDENCE_DIR/event-fetch.log"
+          fi
+
+      - name: Require complete and current evidence
+        id: gate
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "$EVIDENCE_DIR"
+          current_main_sha=$(git rev-parse HEAD)
+          current_main_tree=$(git rev-parse 'HEAD^{tree}')
+          {
+            echo "role=aggregate"
+            echo "event=$GITHUB_EVENT_NAME"
+            echo "event_check_sha=$GITHUB_SHA"
+            echo "event_base_sha=$EVENT_BASE_SHA"
+            echo "expected_head_sha=$EXPECTED_HEAD_SHA"
+            echo "native_head_result=$HEAD_RESULT"
+            echo "native_integration_result=$INTEGRATION_RESULT"
+            echo "native_head_sha=$HEAD_JOB_SHA"
+            echo "native_head_tree=$HEAD_JOB_TREE"
+            echo "integration_base_sha=$INTEGRATION_BASE_SHA"
+            echo "integration_base_tree=$INTEGRATION_BASE_TREE"
+            echo "integration_head_sha=$INTEGRATION_HEAD_SHA"
+            echo "integration_head_tree=$INTEGRATION_HEAD_TREE"
+            echo "integration_merge_sha=$INTEGRATION_MERGE_SHA"
+            echo "integration_merge_tree=$INTEGRATION_MERGE_TREE"
+            echo "current_main_sha=$current_main_sha"
+            echo "current_main_tree=$current_main_tree"
+          } > "$EVIDENCE_DIR/identity.txt"
+
+          if [[ "$HEAD_RESULT" != success || "$INTEGRATION_RESULT" != success ]]; then
+            echo "Required native jobs must both succeed (head=$HEAD_RESULT, integration=$INTEGRATION_RESULT)" >&2
+            exit 1
+          fi
+          for value in "$EXPECTED_HEAD_SHA" "$EVENT_BASE_SHA" "$GITHUB_SHA" "$HEAD_JOB_SHA" "$HEAD_JOB_TREE" \
+                       "$INTEGRATION_BASE_SHA" "$INTEGRATION_BASE_TREE" \
+                       "$INTEGRATION_HEAD_SHA" "$INTEGRATION_HEAD_TREE" \
+                       "$INTEGRATION_MERGE_SHA" "$INTEGRATION_MERGE_TREE"; do
+            if [[ ! "$value" =~ ^([0-9a-f]{40}|[0-9a-f]{64})$ ]]; then
+              echo "Required native identity is missing or malformed: '$value'" >&2
+              exit 1
+            fi
+          done
+          if ! git cat-file -e "$GITHUB_SHA^{commit}" 2>/dev/null; then
+            echo "GitHub event merge commit is unavailable for integration tree verification" >&2
+            exit 1
+          fi
+          event_merge_tree=$(git rev-parse "$GITHUB_SHA^{tree}")
+          event_base_tree=$(git rev-parse "$EVENT_BASE_SHA^{tree}")
+          event_head_tree=$(git rev-parse "$EXPECTED_HEAD_SHA^{tree}")
+          {
+            echo "event_merge_tree=$event_merge_tree"
+            echo "event_base_tree=$event_base_tree"
+            echo "event_head_tree=$event_head_tree"
+          } >> "$EVIDENCE_DIR/identity.txt"
+          if [[ "$HEAD_JOB_SHA" != "$EXPECTED_HEAD_SHA" || "$INTEGRATION_HEAD_SHA" != "$EXPECTED_HEAD_SHA" ]]; then
+            echo "Native jobs did not test the same event head" >&2
+            exit 1
+          fi
+          if [[ "$HEAD_JOB_TREE" != "$event_head_tree" || "$INTEGRATION_HEAD_TREE" != "$event_head_tree" ]]; then
+            echo "Head and integration jobs recorded different head trees or not the actual event head tree" >&2
+            exit 1
+          fi
+          if [[ "$INTEGRATION_MERGE_SHA" != "$GITHUB_SHA" ]]; then
+            echo "Integration result does not match the GitHub event check SHA" >&2
+            exit 1
+          fi
+          if [[ "$INTEGRATION_MERGE_TREE" != "$event_merge_tree" ]]; then
+            echo "The integration tree does not match the GitHub event merge tree" >&2
+            exit 1
+          fi
+          if [[ "$EVENT_BASE_SHA" != "$INTEGRATION_BASE_SHA" ]]; then
+            echo "Integration result does not match the event base SHA" >&2
+            exit 1
+          fi
+          if [[ "$INTEGRATION_BASE_TREE" != "$event_base_tree" ]]; then
+            echo "Integration base tree does not match the GitHub event base tree" >&2
+            exit 1
+          fi
+          if [[ "$GITHUB_EVENT_NAME" == pull_request ]]; then
+            expected_current_main="$INTEGRATION_BASE_SHA"
+          else
+            expected_current_main="$EXPECTED_HEAD_SHA"
+          fi
+          if [[ "$current_main_sha" != "$expected_current_main" || "$current_main_tree" != "$INTEGRATION_BASE_TREE" ]]; then
+            echo "main moved or its tree changed during the native run; tested $INTEGRATION_BASE_SHA, current main is $current_main_sha" >&2
+            exit 1
+          fi
+          echo "Native head and current-main integration evidence is complete."
+          {
+            printf '%s\n' '### Native readiness'
+            printf -- '- Head and integration jobs both succeeded for `%s`.\n' "$EXPECTED_HEAD_SHA"
+            printf -- '- GitHub integration merge: `%s` (tree `%s`).\n' "$INTEGRATION_MERGE_SHA" "$INTEGRATION_MERGE_TREE"
+            printf -- '- Current main: `%s` (matches tested base).\n' "$current_main_sha"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Digest aggregate evidence
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          : > "$EVIDENCE_DIR/SHA256SUMS"
+          if [[ -f "$EVIDENCE_DIR/identity.txt" ]]; then
+            (cd "$EVIDENCE_DIR" && sha256sum identity.txt) >> "$EVIDENCE_DIR/SHA256SUMS"
+          fi
+          if [[ -f "$EVIDENCE_DIR/event-fetch.log" ]]; then
+            (cd "$EVIDENCE_DIR" && sha256sum event-fetch.log) >> "$EVIDENCE_DIR/SHA256SUMS"
+          fi
+
+      - name: Upload native readiness identity
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: native-ready-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/cx16agi-native-ready-${{ github.run_id }}-${{ github.run_attempt }}
+          if-no-files-found: error
+          retention-days: 14

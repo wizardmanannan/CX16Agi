@@ -1,0 +1,42 @@
+review-plan-v2
+repo|.
+candidate|HEAD
+toolchain|@INPUT:cc65-home@/bin/cc65
+tool|make|make
+tool|host-cc|cc
+input|cc65-home|@ENV:CC65_HOME@
+input|x16-emulator-source|@ENV:X16_EMULATOR_SOURCE@
+suite|required-native|1800|13|@TOOL:make@|-C|@REPO@/tools|test|HOST_CC=@TOOL:host-cc@|CC65_HOME=@INPUT:cc65-home@|X16_EMULATOR_SOURCE=@INPUT:x16-emulator-source@|CC65=@TOOLCHAIN@|TEST_OUTPUT_ROOT=@OUT@|TEST_FIXTURE_ROOT=@TMP@|OUT_ROOT=@OUT@/review-series|REVIEW_POLICY_OUTPUT_ROOT=@OUT@/review-policy|REVIEW_POLICY_HOST_CC=@TOOL:host-cc@
+suite|production-native|1800|11|@TOOL:make@|-C|@REPO@/tools|production-test|HOST_CC=@TOOL:host-cc@|CC65_HOME=@INPUT:cc65-home@|X16_EMULATOR_SOURCE=@INPUT:x16-emulator-source@|CC65=@TOOLCHAIN@|TEST_OUTPUT_ROOT=@OUT@|TEST_FIXTURE_ROOT=@TMP@|KEEP_TEST_OUTPUT=1
+suite|enforcement-focus|600|9|@TOOL:make@|-C|@REPO@/tools|-f|review-enforcement-test.mk|test|HOST_CC=@TOOL:host-cc@|TEST_OUTPUT_ROOT=@OUT@|TEST_FIXTURE_ROOT=@TMP@
+artifact|production-native|cx16agi-production-test.*/image/agi.cx16
+artifact|production-native|cx16agi-production-test.*/image/final.lbl
+artifact|production-native|cx16agi-production-test.*/image/final.map
+witness|check-run-suite-head-optional|35f2fffc22160f99dfb3f249bc8a2f0a87658688|120|1|WITNESS_EXECUTED: check-run-suite-head-optional|NOT READY: check run has incomplete identity or App data|POLICY_WITNESS_PASS: check-run-suite-head-optional|8|@TOOL:make@|-C|@REPO@/tools|-f|review-policy.mk|review-policy-witness-build|REVIEW_POLICY_WITNESS_OUTPUT=@OUT@|REVIEW_POLICY_HOST_CC=@TOOL:host-cc@|4|@OUT@/test_review_policy|@OUT@/review-policy|@REPO@/tools/review/branch-protection.json|--witness
+scope|check-run-suite-head-optional|Accept GitHub check runs whose check_suite supplies its documented id without an unadvertised nested head_sha|check_run_identity|tools/review_policy.c|review_policy_check -> fetch_observed_checks -> collect_check_identities -> check_run_identity|tools/test_review_policy.c|required-native,production-native,enforcement-focus|Use the observed id-only check_suite response in the permanent protocol case; reject it on the old implementation and accept it on the fixed implementation|none
+overlay|check-run-suite-head-optional|tools/review-policy.mk
+overlay|check-run-suite-head-optional|tools/test_review_policy.c
+witness|kq1-startup-white-attribute|079d92d91f7dc415ba1770b8adc2f38f64cf8f81|240|1|WITNESS_EXECUTED: kq1-startup-white-attribute|attribute=$10 expected-attribute=$40 background-RGB=$0FFF expected-background-RGB=$0000|Compiled 573-byte startup credit publishes its managed palette at every returned IRQ|13|@TOOL:make@|-C|@REPO@/tools|-f|review-enforcement-test.mk|compiled-caller-witness-build|HOST_CC=@TOOL:host-cc@|CC65_HOME=@INPUT:cc65-home@|X16_EMULATOR_SOURCE=@INPUT:x16-emulator-source@|WITNESS_OUT=@OUT@|WITNESS_NAME=kq1-startup-white-attribute|WITNESS_CASE=--text-palette-witness|WITNESS_RUNNER=run-kq1-startup-palette|1|@OUT@/run-kq1-startup-palette
+scope|kq1-startup-white-attribute|KQ1 startup credit glyphs use their managed black-background palette at every VSYNC return|handleDisplayTextSlice|src/irqAsm.s|compiled KQ1 startup credit caller reaches b3Display_v and b3SetTextColor|tools/test_banked_strings_text_cases.h|production-native|the permanent 573-byte --text-palette-witness case must show white palette-1 attributes and RGB on baseline and the managed black palette and RGB on candidate; --text-cleanup keeps the short-text zero-IRQ check|none
+overlay|kq1-startup-white-attribute|tools/test_banked_strings.c
+overlay|kq1-startup-white-attribute|tools/test_said_cases.h
+overlay|kq1-startup-white-attribute|tools/test_banked_strings_text_cases.h
+overlay|kq1-startup-white-attribute|tools/test_banked_strings_commands_target.c
+overlay|kq1-startup-white-attribute|tools/review-enforcement-test.mk
+overlay|kq1-startup-white-attribute|tools/test-image.mk
+overlay|kq1-startup-white-attribute|tools/test_banked_strings_sound_cases.h
+overlay|kq1-startup-white-attribute|tools/test_banked_strings_sound_target.c
+overlay|kq1-startup-white-attribute|tools/test_view_lifecycle_cases.h
+overlay|kq1-startup-white-attribute|tools/test_view_lifecycle_target.c
+witness|said-rest-only-regression|e406ba7a3727723a16391f7adc74c2987a4a7c9e|240|1|WITNESS_EXECUTED: said-rest-only-regression|SAID_REGRESSION: case=rest_only_regression expected_match=1 actual_match=0 hadmatch=0|Production Said opcode passes exact, wildcard, REST_OF_LINE, flag lifecycle, exhaustion and long-argument cases|13|@TOOL:make@|-C|@REPO@/tools|-f|review-enforcement-test.mk|compiled-caller-witness-build|HOST_CC=@TOOL:host-cc@|CC65_HOME=@INPUT:cc65-home@|X16_EMULATOR_SOURCE=@INPUT:x16-emulator-source@|WITNESS_OUT=@OUT@|WITNESS_NAME=said-rest-only-regression|WITNESS_CASE=--said|WITNESS_RUNNER=run-said-rest-only|1|@OUT@/run-said-rest-only
+scope|said-rest-only-regression|Said REST_OF_LINE matches from a lone REST token, records HADMATCH, and advances to the next bytecode|bFSaid|src/logicCommands.s|compiled executeLogic invokes bFSaid and returns through the true opcode path|tools/test_said_cases.h|production-native|same compiled rest_only_regression case must show HADMATCH false on baseline and pass on candidate|none
+overlay|said-rest-only-regression|tools/test_banked_strings.c
+overlay|said-rest-only-regression|tools/test_said_cases.h
+overlay|said-rest-only-regression|tools/test_banked_strings_commands_target.c
+overlay|said-rest-only-regression|tools/review-enforcement-test.mk
+overlay|said-rest-only-regression|tools/test_banked_strings_text_cases.h
+overlay|said-rest-only-regression|tools/test-image.mk
+overlay|said-rest-only-regression|tools/test_banked_strings_sound_cases.h
+overlay|said-rest-only-regression|tools/test_banked_strings_sound_target.c
+overlay|said-rest-only-regression|tools/test_view_lifecycle_cases.h
+overlay|said-rest-only-regression|tools/test_view_lifecycle_target.c

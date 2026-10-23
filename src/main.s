@@ -12,8 +12,8 @@
     .include "fillAsm.s"
     .include "priority.s"
     .include "movementAsm.s"
-    .include "randomAsm.s"
     .include "modulus.s"
+    .include "randomAsm.s"
     .include "soundAsm.s"
     .include "spriteAllocatorAsm.s"
     .include "viewAsm.s"
@@ -22,6 +22,7 @@
     .include "controllersAsm.s"
     .include "statusBar.s"
     .include "showObjAsm.s"
+    .include "screenShake.s"
     .include "objectAsm.s"
     
     .export _executeLogic

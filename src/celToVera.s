@@ -13,7 +13,8 @@ _loopHeaderBuffer: .res LOOP_HEADER_BUFFER_SIZE
 NO_MARGIN = 4
 ;void b9CelToVera(Cel* localCel, byte celBank, long veraAddress, byte bCol, byte drawingAreaWidth, byte x, byte y, byte pNum, byte noVeraSlots)
 _b9CelToVera:
-sta NO_SPLIT_SEGMENTS 
+sta NO_SPLIT_SEGMENTS
+jsr _b6EnterForegroundVera
 jsr popa
 sta P_NUM
 jsr popax
@@ -34,7 +35,6 @@ jsr popax
 sta CEL_ADDR
 stx CEL_ADDR + 1
 
-sei
 lda celToVeraLowRam_skipBasedOnPriority
 pha
 lda #LDX_ABS
@@ -44,7 +44,7 @@ sta CEL_TO_VERA_IS_FORWARD_DIRECTION
 jsr _celToVera
 pla
 sta celToVeraLowRam_skipBasedOnPriority
-REENABLE_INTERRUPTS
+jsr _b6LeaveForegroundVera
 rts
 
 .segment "BANKRAM0E"

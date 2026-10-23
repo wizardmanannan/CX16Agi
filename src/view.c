@@ -21,6 +21,7 @@
 #include "general.h"
 #include "agifiles.h"
 #include "view.h"
+#include "spriteUpdates.h"
 
 //#define VERBOSE_SWITCH_METADATA
 //#define VERBOSE_GET_PALETTE
@@ -47,14 +48,17 @@ byte priorityBase = DEFAULT_PRIORITY_BASE;
 
 #define NO_PRIORITIES (MAX_SPRITE_PRIORITY - MIN_SPRITE_PRIORITY)
 
-#define BYTES_PER_SPRITE_UPDATE 7
-#define SPRITE_UPDATED_BUFFER_SIZE  VIEW_TABLE_SIZE * BYTES_PER_SPRITE_UPDATE * 2
 extern byte bESpritesUpdatedBuffer[SPRITE_UPDATED_BUFFER_SIZE];
 
 //These views are believed to have sprite memory allocated. It is possible for the value to be falsely true, but not falsely false. 
 boolean viewsWithSpriteMem[VIEW_TABLE_SIZE];
 
 extern byte* bESpritesUpdatedBufferPointer;
+
+#pragma bss-name (push, "BANKRAM0E")
+volatile byte bESpriteUpdateOverflowed;
+static byte bESpriteUpdateRecordStaged;
+#pragma bss-name (pop)
 
 
 extern void bAFollowEgoAsmSec(ViewTable* localViewTab, ViewTable* egoViewTab, byte egoWidth, byte localCelWidth);
@@ -76,7 +80,7 @@ extern int dirnOfEgo;
 
 #define MAX_INACTIVE_METADATA 10
 
-extern byte bEBulkAllocatedAddresses[VIEW_TABLE_SIZE * sizeof(VeraSpriteAddress) * MAX_BULK_ALLOCATED_SIZE];
+extern byte bEBulkAllocatedAddresses[MAX_BULK_ALLOCATED_SIZE];
 
 void getViewTab(ViewTable* returnedViewTab, byte viewTabNumber)
 {
@@ -969,6 +973,7 @@ extern void bESplitCel(Cel* cel);
 
 void bETerminateSpriteBuffer()
 {
+	// At most 127 records have been staged, leaving room for both terminator bytes.
 	*bESpritesUpdatedBufferPointer++ = 0;
 	*bESpritesUpdatedBufferPointer++ = 0;
 }
@@ -987,7 +992,9 @@ void bEResetInactiveViewTableMetadata(ViewTableMetadata* localViewTableMetadata)
 
 		if (localInactiveMetadata.loopsVeraAddressesPointers)
 		{
-			b10BankedDealloc((byte*)localInactiveMetadata.loopsVeraAddressesPointers, localInactiveMetadata.inactiveBank);
+			if (localInactiveMetadata.loopsVeraAddressesPointers != localViewTableMetadata->loopsVeraAddressesPointers ||
+				localInactiveMetadata.viewTableMetadataBank != localViewTableMetadata->viewTableMetadataBank)
+				b10BankedDealloc((byte*)localInactiveMetadata.loopsVeraAddressesPointers, localInactiveMetadata.viewTableMetadataBank);
 		}
 		else
 		{
@@ -998,32 +1005,26 @@ void bEResetInactiveViewTableMetadata(ViewTableMetadata* localViewTableMetadata)
 
 void bEResetViewTableMetadata()
 {
-	byte i, j, stop;
-	ViewTableMetadata localInactiveMetadata;
-	ViewTableMetadata* inActivePtr;
+	byte i;
 
 	for (i = 0; i < SPRITE_SLOTS; i++)
 	{
-		if (viewTableMetadata[i].loopsVeraAddressesPointers != NULL)
-		{
-			b10BankedDealloc((byte*)viewTableMetadata[i].loopsVeraAddressesPointers, viewTableMetadata[i].viewTableMetadataBank);
-		}
-
-		viewTableMetadata[i].loopsVeraAddressesPointers = NULL;
-		viewTableMetadata[i].viewTableMetadataBank = NULL;
-		viewTableMetadata[i].viewNum = 0;
-
 		if (viewTableMetadata[i].inactive != NULL)
 		{
-			inActivePtr = (ViewTableMetadata*)viewTableMetadata[i].inactive;
-
 			bEResetInactiveViewTableMetadata(&viewTableMetadata[i]);
 
 			b10BankedDealloc((byte*)viewTableMetadata[i].inactive, viewTableMetadata[i].inactiveBank);
 		}
 
+		if (viewTableMetadata[i].loopsVeraAddressesPointers != NULL)
+			b10BankedDealloc((byte*)viewTableMetadata[i].loopsVeraAddressesPointers, viewTableMetadata[i].viewTableMetadataBank);
+
+		viewTableMetadata[i].loopsVeraAddressesPointers = NULL;
+		viewTableMetadata[i].veraAddresses = NULL;
+		viewTableMetadata[i].viewTableMetadataBank = 0;
+		viewTableMetadata[i].viewNum = 0;
 		viewTableMetadata[i].inactive = NULL;
-		viewTableMetadata[i].inactiveBank = NULL;
+		viewTableMetadata[i].inactiveBank = 0;
 		viewTableMetadata[i].backBuffers = NULL;
 		viewTableMetadata[i].isOnBackBuffer = FALSE;
 		viewTableMetadata[i].backBufferSize = 0;
@@ -1041,6 +1042,7 @@ void bEResetSpritesUpdatedBuffer()
 {
 	memsetBanked(bESpritesUpdatedBuffer, 0, VIEW_TABLE_SIZE, SPRITE_UPDATED_BANK);
 	bESpritesUpdatedBufferPointer = bESpritesUpdatedBuffer;
+	bESpriteUpdateOverflowed = FALSE;
 }
 
 #pragma wrapped-call (pop)
@@ -1171,7 +1173,7 @@ byte bECreateSpritePalette(byte transparentColor, PaletteGetResult* palleteGetRe
 
 	if (*palleteGetResult == Allocated)
 	{
-		asm("sei");
+		b6EnterForegroundVera();
 		SET_VERA_ADDRESS(PALETTE_START, 0, 1);
 
 		SET_VERA_ADDRESS_ABSOLUTE(paletteWriteAddress, 1, 1);
@@ -1209,7 +1211,7 @@ byte bECreateSpritePalette(byte transparentColor, PaletteGetResult* palleteGetRe
 		}
 
 		SET_VERA_ADDRESS(PALETTE_START, 0, 1); //Setting back to channel zero as if we don't printf can screw up our memory. This is a possible framework bug
-		REENABLE_INTERRUPTS();
+		b6LeaveForegroundVera();
 	}
 
 	return paletteSlot;
@@ -1275,6 +1277,7 @@ void bESwitchMetadata(ViewTable* localViewTab, View* localView, byte viewNum, by
 			b10BankedDealloc((byte*)inActiveMetadataPointer, localMetadata.inactiveBank);
 			localMetadata.inactive = NULL;
 			localMetadata.inactiveBank = NULL;
+			viewTableMetadata[entryNum] = localMetadata;
 
 			bESwitchMetadata(localViewTab, localView, viewNum, entryNum); //Call itself with clear inactive metadata
 
@@ -1435,10 +1438,16 @@ boolean agiBlit(byte entryNum, boolean disableInterupts)
 	VeraSpriteAddress* loopVeraAddresses;
 	VeraSpriteAddress loopVeraAddress, tempVeraAddress; //Put out here so it can be accessed by inline assembly without going via a C variable
 	boolean isAllocated = FALSE;
+	boolean result = TRUE;
 	byte splitCounter; //Store the SPLIT_COUNTER ZP in here as this makes it easier for C to access it 
 	byte isAnimated = FALSE;
 	SpriteAllocationSize allocationWidth, allocationHeight;
 	byte combinedSpriteAllocationSize;
+	PaletteGetResult paletteResult;
+	if (disableInterupts)
+	{
+		b6EnterForegroundVera();
+	}
 	
 // if(entryNum != 0)
 // {
@@ -1465,6 +1474,18 @@ boolean agiBlit(byte entryNum, boolean disableInterupts)
 	getLoadedView(&localView, viewNum);
 	getLoadedLoop(&localView, &localLoop, localViewTab.currentLoop);
 	getLoadedCel(&localLoop, &localCel, localViewTab.currentCel);
+
+	/* Room changes recycle palette slots while decoded views remain cached. */
+	if (localLoop.palette == PALETTE_NOT_SET)
+	{
+		localLoop.palette = bECreateSpritePalette(localCel.transparency, &paletteResult);
+		if (paletteResult == FailToAllocate)
+		{
+			result = FALSE;
+			goto endAgiBlit;
+		}
+		setLoadedLoop(&localView, &localLoop, localViewTab.currentLoop);
+	}
 
 
 	if (viewTabNoToMetaData[entryNum] != VIEWNO_TO_METADATA_NO_SET && viewTableMetadata[entryNum].viewNum != viewNum)
@@ -1513,9 +1534,8 @@ boolean agiBlit(byte entryNum, boolean disableInterupts)
 #endif
 		if (!bESetLoop(&localViewTab, &localMetadata, &localView, loopVeraAddresses, entryNum))
 		{
-			RAM_BANK = previousBank;
-
-			return FALSE;
+			result = FALSE;
+			goto endAgiBlit;
 		}
 	}
 
@@ -1605,7 +1625,8 @@ initialise:
 		viewsWithSpriteMem[entryNum] = TRUE;
 		if (!bEAllocateSpriteMemory(&localLoop, localView.maxVeraSlots))
 		{
-			return FALSE;
+			result = FALSE;
+			goto endAgiBlit;
 		}
 
 		localMetadata.isOnBackBuffer = TRUE;
@@ -1660,11 +1681,6 @@ splitLoop:
 setSpritesUpdatedBank:
 	RAM_BANK = SPRITE_UPDATED_BANK;
 
-	if (disableInterupts)
-	{
-		asm("sei");
-	}
-
 	WRITE_INT_VAR_TO_ASSM((unsigned int)bESpritesUpdatedBufferPointer, ZP_SPRITE_STORE_PTR);
 
 	//Put bytes into a buffer to be picked up by the irq see spriteIrqHandler.s (bEHandleSpriteUpdates)
@@ -1711,6 +1727,14 @@ onBackBuffer:
 updateSpriteBuffer:
 	RAM_BANK = SPRITE_UPDATED_BANK;
 	_assmULong = loopVeraAddress;
+	asm("jsr _bECanAppendSpriteUpdate");
+	asm("bcs %g", spriteUpdateHasRoom);
+	asm("lda #$0");
+	asm("sta %v", bESpriteUpdateRecordStaged);
+	asm("jmp %g", spriteUpdateFieldsDone);
+	spriteUpdateHasRoom:
+	asm("lda #$1");
+	asm("sta %v", bESpriteUpdateRecordStaged);
 	
 	//0 and 1 x low and high shifted by 5 to form the two bytes required by VERA
 	asm("lda %v + 2", _assmULong); //Note that the third byte of the vera address is either 0 or 1 which means when it is shift it must be zero. Therefore we only need to shift this byte once
@@ -1888,6 +1912,7 @@ yPos: _assmByte = (byte)localViewTab.yPos;
 
 
 	asm("sta (%w),y", ZP_SPRITE_STORE_PTR);
+	spriteUpdateFieldsDone:
 	_assmByte = isAnimated;
 	asm("lda %v", _assmByte);
 	asm("bne %g", callCelToVera);
@@ -1946,7 +1971,10 @@ celToVeraBackwards:
 	bECelToVeraBackwards();
 
 updateBufferPointer:
-	bESpritesUpdatedBufferPointer += BYTES_PER_SPRITE_UPDATE;
+	asm("lda %v", bESpriteUpdateRecordStaged);
+	asm("beq %g", spriteUpdatePointerAdvanced);
+	bESpritesUpdatedBufferPointer += SPRITE_UPDATE_RECORD_BYTES;
+	spriteUpdatePointerAdvanced:
 
 	asm("clc");
 	asm("lda #%w", SPR_SIZE_64 / 2);
@@ -1965,13 +1993,13 @@ endBlit:
 
 	setViewTab(&localViewTab, entryNum);
 
+endAgiBlit:
+	RAM_BANK = previousBank;
 	if (disableInterupts)
 	{
-		REENABLE_INTERRUPTS();
+		b6LeaveForegroundVera();
 	}
-
-	RAM_BANK = previousBank;
-	return TRUE;
+	return result;
 }
 
 #pragma code-name (push, "BANKRAM09")
@@ -2120,7 +2148,10 @@ void bAInitObjects()
 void bAResetViews()     /* Called after new.room */
 {
 	int entryNum;
+	byte loop;
 	ViewTable localViewtab;
+	View localView;
+	Loop localLoop;
 
 	memset(viewsWithSpriteMem, 0, VIEW_TABLE_SIZE);
 
@@ -2132,6 +2163,18 @@ void bAResetViews()     /* Called after new.room */
 	}
 
 	bAReset();
+	/* Invalidate every cached loop, including views not used in the next room. */
+	for (entryNum = 0; entryNum < 256; ++entryNum)
+	{
+		getLoadedView(&localView, entryNum);
+		if (!localView.loaded) continue;
+		for (loop = 0; loop < localView.numberOfLoops; ++loop)
+		{
+			getLoadedLoop(&localView, &localLoop, loop);
+			localLoop.palette = PALETTE_NOT_SET;
+			setLoadedLoop(&localView, &localLoop, loop);
+		}
+	}
 }
 
 void bAPopulatePrecomputedPriorityTable()
@@ -2184,9 +2227,10 @@ extern byte loopHeaderBuffer[LOOP_HEADER_BUFFER_SIZE];
 
 extern int currentLog;
 
-void setViewData(byte viewNum, AGIFile* tempAGI, View* localView)
+boolean setViewData(byte viewNum, AGIFile* tempAGI, View* localView)
 {
 	byte numberOfLoops;
+	unsigned int headerSize;
 	boolean isThereADescription;
 	const char* description;
 	int descriptionLength;
@@ -2194,13 +2238,12 @@ void setViewData(byte viewNum, AGIFile* tempAGI, View* localView)
 #ifdef VERBOSE_LOAD_VIEWS
 	byte tmp[10];
 #endif
-	memCpyBankedBetween((byte*)&viewHeaderBuffer[0], VIEW_BUFFERS_BANK, tempAGI->code, tempAGI->codeBank, NO_LOOPS_INDEX_BYTES_AVERAGE + POSITION_OF_LOOPS_OFFSET); //Guessing at 7 loops, this should copy enough 99% of the time, and we can copy again once we have the first byte (loopCounter), is necessary . If there is less loops than we have just copied bytes which will be ignored
+	if (tempAGI->totalSize < POSITION_OF_LOOPS_OFFSET) return FALSE;
+	memCpyBankedBetween(viewHeaderBuffer, VIEW_BUFFERS_BANK, tempAGI->code, tempAGI->codeBank, POSITION_OF_LOOPS_OFFSET);
 	numberOfLoops = viewHeaderBuffer[POSITION_OF_NO_LOOPS];
-
-	if (numberOfLoops > NO_LOOPS_INDEX_BYTES_AVERAGE)
-	{
-		memCpyBankedBetween((byte*)&viewHeaderBuffer[0], VIEW_BUFFERS_BANK, tempAGI->code, tempAGI->codeBank, numberOfLoops * 2 + POSITION_OF_LOOPS_OFFSET);
-	}
+	headerSize = POSITION_OF_LOOPS_OFFSET + (unsigned int)numberOfLoops * 2;
+	if (!numberOfLoops || headerSize > VIEW_HEADER_BUFFER_SIZE || headerSize > tempAGI->totalSize) return FALSE;
+	memCpyBankedBetween(viewHeaderBuffer, VIEW_BUFFERS_BANK, tempAGI->code, tempAGI->codeBank, headerSize);
 
 
 #ifdef VERBOSE_SET_VIEW
@@ -2252,7 +2295,8 @@ void setViewData(byte viewNum, AGIFile* tempAGI, View* localView)
 	localView->maxVeraSlots = 0;
 	localView->codeBlock = tempAGI->code;
 	localView->codeBlockBank = tempAGI->codeBank;
-	setLoadedView(&localView, viewNum);
+	setLoadedView(localView, viewNum);
+	return TRUE;
 }
 
 #define POSITION_OF_NO_CELS 0
@@ -2349,7 +2393,7 @@ PaletteGetResult b9LoadViewFile(byte viewNum)
 	byte maxLoopVeraSlots = 1;
 	byte currentCelVeraSlots;
 	PaletteGetResult paletteGetResult = FailToAllocate;
-	
+
 	getLoadedView(&localView, viewNum);
 
 	if (!localView.loaded)
@@ -2359,13 +2403,17 @@ PaletteGetResult b9LoadViewFile(byte viewNum)
 #endif // VERBOSE_LOAD_VIEWS
 
 		b10GetLogicDirectory(&agiFilePosType, &viewdir[viewNum]);
-		b6LoadAGIFile(VIEW, &agiFilePosType, &tempAGI);
+		if (!b6LoadAGIFile(VIEW, &agiFilePosType, &tempAGI)) return FailToAllocate;
 
 #ifdef VERBOSE_LOAD_VIEWS
 		printf("loaded agiFile of total size %u\n", tempAGI.totalSize);
 #endif
 
-		setViewData(viewNum, &tempAGI, &localView);
+		if (!setViewData(viewNum, &tempAGI, &localView))
+		{
+			b10BankedDealloc(tempAGI.code, tempAGI.codeBank);
+			return FailToAllocate;
+		}
 
 #ifdef VERBOSE_LOAD_VIEWS
 		printf("The view desc %s, loaded %d, loops %p, loopsBank %d, numberOfLoops %d\n", localView.description, localView.loaded, localView.loops, localView.loopsBank, localView.numberOfLoops);

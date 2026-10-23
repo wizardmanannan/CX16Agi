@@ -72,7 +72,7 @@ SPR_ATTR_16 = 1
 SPR_ATTR_32 = 2
 SPR_ATTR_64 = 3
 
-;Sprite Size 
+;Sprite Size
 SPR_SIZE_8 = 8
 SPR_SIZE_16 = 16
 SPR_SIZE_32 = 32

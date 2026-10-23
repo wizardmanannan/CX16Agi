@@ -207,7 +207,7 @@ byte* b10BankedAlloc(int size, byte* bank)
 	if (!result)
 	{
 		printf(B10_OUT_DYNAMIC,size);
-		exit(0);
+		exit(EXIT_FAILURE);
 	}
 
 	return result;

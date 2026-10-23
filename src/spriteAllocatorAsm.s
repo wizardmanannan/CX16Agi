@@ -28,9 +28,10 @@ ZP_HEIGHT = ZP_TMP_24 + 1
 ZP_NUMBER_TO_ALLOCATE = ZP_TMP_25
 ZP_ARRAY_COUNTER = ZP_TMP_25 + 1
 MAX_BULK_ALLOCATED_SIZE = 256
-;Puts the returned memory addresses into the _bEBulkAllocatedAddresses buffer. Note as the lower byte is always zero only the high and middle bytes (in that order) are pushed onto the stack
-;boolean bEAllocateSpriteMemoryBulk(SpriteAllocationSize width, SpriteAllocationSize height, byte number);
+MAX_BULK_ALLOCATED_COUNT = MAX_BULK_ALLOCATED_SIZE / 4
+; Each successful result record stores the three VRAM address bytes and a zero high byte.
 _bEBulkAllocatedAddresses: .res MAX_BULK_ALLOCATED_SIZE, $0
+; boolean bEAllocateSpriteMemoryBulk(SpriteAllocationSize width, SpriteAllocationSize height, byte number);
 _bEAllocateSpriteMemoryBulk:
 sta ZP_NUMBER_TO_ALLOCATE ;Save the number of sprites to allocate
 jsr popax
@@ -38,6 +39,14 @@ sta ZP_HEIGHT ;Save the size of the allocation
 stx ZP_WIDTH
 
 bEAllocateSpriteMemoryBulkAsm:
+lda ZP_NUMBER_TO_ALLOCATE
+bne @checkCapacity
+jmp @returnFail
+@checkCapacity:
+cmp #MAX_BULK_ALLOCATED_COUNT + 1
+bcc @withinCapacity
+jmp @returnFail
+@withinCapacity:
 
 stz ZP_ARRAY_COUNTER
 
@@ -61,7 +70,7 @@ txa
 bne @incrementCounter
 lda _bEBulkAllocatedAddresses,y
 bne @incrementCounter
-bra @returnFail ;If the high byte is zero and the middle byte is also zero then we have failed to allocate, due lack of memory
+jmp @rollback ;Do not leave any allocations published after a partial failure.
 
 @incrementCounter:
 iny
@@ -71,15 +80,45 @@ iny
 sty ZP_ARRAY_COUNTER
 
 dec ZP_NUMBER_TO_ALLOCATE
-beq @return
-jmp @loop
+bne @loop
+jmp @return
 
+@rollback:
+lda ZP_ARRAY_COUNTER
+bne @rollbackEntry
+jmp @returnFail
+@rollbackEntry:
+sec
+sbc #4
+sta ZP_ARRAY_COUNTER
+tay
+
+; Reuse the allocator's delete path. BLOCKS_TO_FIND still has this request's geometry.
+lda _bEBulkAllocatedAddresses + 2,y
+sta sreg
+lda _bEBulkAllocatedAddresses,y
+ldx _bEBulkAllocatedAddresses + 1,y
+TRAMPOLINE #$D, bDDeleteAllocationAsmCall
+
+; Failed requests do not expose addresses that were just undone.
+ldy ZP_ARRAY_COUNTER
+lda #$0
+sta _bEBulkAllocatedAddresses,y
+iny
+sta _bEBulkAllocatedAddresses,y
+iny
+sta _bEBulkAllocatedAddresses,y
+iny
+sta _bEBulkAllocatedAddresses,y
+jmp @rollback
 
 @return:
+ldx #$0
 lda #$1
 rts
 
 @returnFail:
+ldx #$0
 lda #$0
 rts
 

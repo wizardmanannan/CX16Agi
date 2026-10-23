@@ -21,6 +21,9 @@ SoundFile* bBLoadedSoundsPointer[MAX_SOUNDS];        // Pointers to loaded sound
 byte soundLoadCounter;                                 // Counter of loaded sounds
 unsigned long totalSoundSize, totalBeats;             // Total size and beats for current sound
 static unsigned int bBLFSR = LFSR_INITIAL_SEED;       // Static LFSR state used in noise generation
+extern boolean bBIsPlaying[NO_CHANNELS];
+extern byte bBChannelsPlaying;
+extern void bBPsgClear(void);
 
 // Predefined noise frequencies for noise channel
 const uint16_t b7NoiseFreq[] = { 2230, 1115, 557 };
@@ -59,17 +62,19 @@ const unsigned char SN76489_to_CX16_Volume[16] = {
 // reallocating or flushing buffers as necessary.
 void bBWriteNextNG(byte** memoryBlock, byte* buffer, byte** dataPtr, byte toWrite, BufferStatus* bufferStatus, unsigned int* oldBlockSize, unsigned int newBlockSize, byte* bank, unsigned int bufferSize)
 {
-	// If pointer exceeds buffer size, flush and reset pointer.
+	unsigned int prefix = bufferStatus->bankedData - *memoryBlock;
+	unsigned int required = prefix + bufferStatus->bufferCounter * bufferSize + (*dataPtr - buffer) + 1;
+	if (required > *oldBlockSize)
+	{
+		if (newBlockSize < required) newBlockSize = required;
+		b5ReallocateBiggerMemoryBlock(memoryBlock, newBlockSize, oldBlockSize, bank);
+		bufferStatus->bankedData = *memoryBlock + prefix;
+		bufferStatus->bank = *bank;
+	}
 	if (*dataPtr >= buffer + bufferSize)
 	{
 		b5FlushBufferNonGolden(bufferStatus, buffer, bufferSize, bufferSize);
 		*dataPtr = buffer;
-	}
-
-	// Check if current position exceeds allocated block size, reallocate if needed.
-	if (bufferStatus->bufferCounter * bufferSize + (*dataPtr - buffer) > *(oldBlockSize))
-	{
-		b5ReallocateBiggerMemoryBlock(memoryBlock, newBlockSize, oldBlockSize, bank);
 	}
 
 	// Write the byte and move data pointer forward
@@ -160,6 +165,7 @@ void bBClearLoadedSound(byte soundFileNumber)
 // Initializes the loaded sound arrays by clearing all sound entries and pointers.
 void bBInitSound() {
 	int i;
+	soundLoadCounter = 0;
 	for (i = 0; i < MAX_LOADED_SOUNDS; i++)
 	{
 		bBClearLoadedSound(i);
@@ -169,6 +175,13 @@ void bBInitSound() {
 	{
 		bBLoadedSoundsPointer[i] = NULL;
 	}
+
+	asm("php");
+	asm("sei");
+	memset(bBIsPlaying, FALSE, NO_CHANNELS);
+	bBChannelsPlaying = 0;
+	bBPsgClear();
+	asm("plp");
 }
 
 // Discards/unloads a sound file by releasing its allocated memory and clearing references.
@@ -180,6 +193,7 @@ void bBDiscardSoundFile(int soundNum)
 
 	// Get pointer to loaded sound structure
 	sound = bBLoadedSoundsPointer[soundNum];
+	if (!sound) return;
 
 	if (sound->isLogicZeroOrDependency)
 	{
@@ -249,9 +263,6 @@ unsigned int bBCopyAhead(SoundFile* soundFile, unsigned int bytePerBufferCounter
 #define ORIGINAL_CHNOISEBUFFER (GOLDEN_RAM_WORK_AREA + ONETHIRDBUFFERSIZE * 2)  // Noise channel buffer start in local work area
 #define INCREASE_BLOCK_SIZE_AMOUNT 30    // Memory block growth size constant
 
-// Macro to get the next note generation byte for channel i
-#define GET_CH(i) GET_NEXT_NG(channelBytes[i], oldBuffer, oldChDataPtr, bufferStatus, ONETHIRDBUFFERSIZE);
-
 // Macro to write noise byte using the noise channel generator function
 #define WRITENOISE(toWrite) bBWriteNextNG(&newSoundFile.soundResource, ORIGINAL_CHNOISEBUFFER, newChNoiseDataPtr, toWrite, &newChNoiseLocalBufferStatus, &allocatedBlockSize, allocatedBlockSize + INCREASE_BLOCK_SIZE_AMOUNT, &newSoundFile.soundBank, ONETHIRDBUFFERSIZE);
 
@@ -259,33 +270,76 @@ unsigned int bBCopyAhead(SoundFile* soundFile, unsigned int bytePerBufferCounter
 // Accepts as an argument the 'codePtr' which is a pointer to the sounds allocated resource block
 byte bBSetChannelOffsets(byte* codePtr, SoundFile* soundFile, unsigned int* soundChannelOffSets, unsigned int totalSoundSize)
 {
-	byte i, ** currentChannel, validChannels = 0;
+	byte i, validChannels = 0;
+	unsigned int previousOffset = 0;
+	byte* channelAddress;
 
-	// Iterate through all channels
-	for (i = 0, currentChannel = &soundFile->ch0; i < NO_CHANNELS; i++, currentChannel++) /*Some Sierra games such as King's Quest III and doubtless some fan games have sounds with pointers that go beyond 
-	//the sound data, due to game bugs. This defends against this by checking the pointer to make sure it is inbounds. KQ3 snd 36 track 2 has a valid pointer 
-	but the data runs over, defended after that by making sure the next track is inbounds. 
-	If the next track is in bounds the previous track must be in bounds to because it follows.*/
+	soundFile->ch0 = NULL;
+	soundFile->ch1 = NULL;
+	soundFile->ch2 = NULL;
+	soundFile->chNoise = NULL;
+
+	/* The channel streams are consumed in offset-table order. Keep the valid
+	 * prefix: an invalid next entry does not invalidate the current channel. */
+	for (i = 0; i < NO_CHANNELS; ++i)
 	{
-		if (soundChannelOffSets[i] < totalSoundSize && (i == NO_CHANNELS - 1 || soundChannelOffSets[i + 1] < totalSoundSize))
+		if (soundChannelOffSets[i] >= totalSoundSize ||
+			(i && soundChannelOffSets[i] < previousOffset))
+			break;
+		channelAddress = codePtr + soundChannelOffSets[i];
+		switch (i)
 		{
-		// Set pointer for each channel start position by adding offset to base pointer
-			*currentChannel = codePtr + soundChannelOffSets[i];
-			validChannels++;
+		case 0: soundFile->ch0 = channelAddress; break;
+		case 1: soundFile->ch1 = channelAddress; break;
+		case 2: soundFile->ch2 = channelAddress; break;
+		case 3: soundFile->chNoise = channelAddress; break;
 		}
+		previousOffset = soundChannelOffSets[i];
+		validChannels++;
 	}
 
 	return validChannels;
 }
 
-// Fills a note buffer from old channel data pointers into channelBytes, returns FALSE if end marker found.
-boolean bBFillNoteBuffer(byte* oldBuffer, byte** oldChDataPtr, BufferStatus* bufferStatus, byte* channelBytes)
+typedef struct
+{
+	byte* source;
+	byte* buffer;
+	byte* next;
+	unsigned int length;
+	unsigned int loaded;
+	byte bank;
+} SoundInputBuffer;
+
+static void bBRefreshSoundInputBuffer(SoundInputBuffer* input)
+{
+	unsigned int amount = input->length - input->loaded;
+	if (amount > ONETHIRDBUFFERSIZE) amount = ONETHIRDBUFFERSIZE;
+	if (amount)
+	{
+		memCpyBanked(input->buffer, input->source + input->loaded, input->bank, amount);
+		input->loaded += amount;
+	}
+	if (amount < ONETHIRDBUFFERSIZE)
+		memset(input->buffer + amount, 0xFF, ONETHIRDBUFFERSIZE - amount);
+	input->next = input->buffer;
+}
+
+static byte bBReadSoundInputByte(SoundInputBuffer* input)
+{
+	if (input->next >= input->buffer + ONETHIRDBUFFERSIZE)
+		bBRefreshSoundInputBuffer(input);
+	return *input->next++;
+}
+
+// Fills a note buffer from one bounded channel stream, returning FALSE at its terminator.
+static boolean bBFillNoteBuffer(SoundInputBuffer* input, byte* channelBytes)
 {
 	byte i;
 
 	for (i = 0; i < NO_NOTE_BYTES; i++)
 	{
-		GET_CH(i) // Use macro to copy note byte from old buffer
+		channelBytes[i] = bBReadSoundInputByte(input);
 
 			// If first two bytes signal end of stream (0xFF 0xFF), stop reading.
 			// Only the first two bytes together can signal the end, which is why we can only detect the end when we have read 1.
@@ -302,11 +356,10 @@ boolean bBFillNoteBuffer(byte* oldBuffer, byte** oldChDataPtr, BufferStatus* buf
 // Returns frequency value from the updated note.
 // Used particularly to advance our buffer of channel 2, used in LSFR
 // The idea is to advance the duration by the set amount, and when we run out of duration go to the next note
-unsigned int bBAdvance2(byte* oldBuffer, byte** oldChDataPtr, BufferStatus* bufferStatus, byte* channelBytes, boolean* moreTwoToRead, unsigned int advancement)
+static unsigned int bBAdvance2(SoundInputBuffer* input, byte* channelBytes, boolean* moreTwoToRead, unsigned int advancement)
 {
 	long currentDuration;              // Long because it can be decremented to less than zero (temporarily)
 	boolean finished = FALSE;          // Loop control flag
-	byte i;
 	unsigned int result;
 
 	// Get current duration value from note bytes, assuming little endian 2-byte int.
@@ -318,7 +371,7 @@ unsigned int bBAdvance2(byte* oldBuffer, byte** oldChDataPtr, BufferStatus* buff
 		currentDuration -= advancement;
 
 		// If current duration expires, load next note and reset advancement accordingly
-		if (currentDuration < 0 && (*moreTwoToRead = bBFillNoteBuffer(oldBuffer, oldChDataPtr, bufferStatus, channelBytes)))
+		if (currentDuration < 0 && (*moreTwoToRead = bBFillNoteBuffer(input, channelBytes)))
 		{
 			advancement = currentDuration * -1; // Negative remainder is turned positive
 			currentDuration = *((unsigned int*)&channelBytes[DURATION_BYTE]); // Reset duration for next note
@@ -342,31 +395,31 @@ unsigned int bBAdvance2(byte* oldBuffer, byte** oldChDataPtr, BufferStatus* buff
 // Precomputes periodic sound data, modifying noise channel data for periodic noise types, leaving white noise alone as this can be handled by the VERA.
 void bBPreComputePeriodicSound(SoundFile* soundFile, unsigned int* soundChannelOffSets)
 {
-	BufferStatus oldCh2LocalBufferStatus, oldChNoiseLocalBufferStatus, newChNoiseLocalBufferStatus;
+	BufferStatus newChNoiseLocalBufferStatus;
 	byte* oldCh2Buffer = GOLDEN_RAM_WORK_AREA, * oldChNoiseBuffer = GOLDEN_RAM_WORK_AREA + ONETHIRDBUFFERSIZE, * newChNoiseBuffer = ORIGINAL_CHNOISEBUFFER;
-	byte** oldCh2DataPtr = &oldCh2Buffer, ** oldChNoiseDataPtr = &oldChNoiseBuffer, ** newChNoiseDataPtr = &newChNoiseBuffer;
-	BufferStatus* ch2BufferStatus;
+	byte** newChNoiseDataPtr = &newChNoiseBuffer;
+	SoundInputBuffer oldCh2Input, oldChNoiseInput;
 	SoundFile newSoundFile;
 	byte oldCh2Bytes[NO_NOTE_BYTES], oldChNoiseBytes[NO_NOTE_BYTES];
 	boolean moreTwoToRead;
-	unsigned int i, noiseFrequency, advancement, ch2CurrentFreq = 0, allocatedBlockSize = totalSoundSize + totalSoundSize / 2;
+	unsigned int i, advancement, allocatedBlockSize = totalSoundSize + totalSoundSize / 2;
 	unsigned int lfsrDuration, lsfrFrequencyToPlay, lfsr = LFSR_INITIAL_SEED, feedback;
 	unsigned long remainingBeats = totalBeats;
 
-	// Setup buffer statuses for channel 2 and noise channel
-	ch2BufferStatus = &oldCh2LocalBufferStatus;
-
-	oldCh2LocalBufferStatus.bank = soundFile->soundBank;
-	oldCh2LocalBufferStatus.bankedData = soundFile->ch2;
-	oldCh2LocalBufferStatus.bufferCounter = 0;
-
-	oldChNoiseLocalBufferStatus.bank = soundFile->soundBank;
-	oldChNoiseLocalBufferStatus.bankedData = soundFile->chNoise;
-	oldChNoiseLocalBufferStatus.bufferCounter = 0;
-
-	// Refresh local buffers from banked data for channel 2 and noise channel
-	b5RefreshBufferNonGolden(&oldCh2LocalBufferStatus, oldCh2Buffer, ONETHIRDBUFFERSIZE);
-	b5RefreshBufferNonGolden(&oldChNoiseLocalBufferStatus, oldChNoiseBuffer, ONETHIRDBUFFERSIZE);
+	newSoundFile = *soundFile;
+	oldCh2Input.source = soundFile->ch2;
+	oldCh2Input.buffer = oldCh2Buffer;
+	oldCh2Input.next = oldCh2Buffer + ONETHIRDBUFFERSIZE;
+	oldCh2Input.length = soundFile->chNoise > soundFile->ch2 ? soundFile->chNoise - soundFile->ch2 : 0;
+	oldCh2Input.loaded = 0;
+	oldCh2Input.bank = soundFile->soundBank;
+	oldChNoiseInput.source = soundFile->chNoise;
+	oldChNoiseInput.buffer = oldChNoiseBuffer;
+	oldChNoiseInput.next = oldChNoiseBuffer + ONETHIRDBUFFERSIZE;
+	oldChNoiseInput.length = totalSoundSize > (unsigned long)(soundFile->chNoise - soundFile->soundResource) ?
+		(unsigned int)(totalSoundSize - (unsigned long)(soundFile->chNoise - soundFile->soundResource)) : 0;
+	oldChNoiseInput.loaded = 0;
+	oldChNoiseInput.bank = soundFile->soundBank;
 
 	// Allocate new memory block for new sound resource with increased size
 	newSoundFile.soundResource = b10BankedAlloc(allocatedBlockSize, &newSoundFile.soundBank);
@@ -383,22 +436,17 @@ void bBPreComputePeriodicSound(SoundFile* soundFile, unsigned int* soundChannelO
 	newChNoiseLocalBufferStatus.bufferCounter = 0;
 
 	// Read first notes from channel 2 buffer
-	moreTwoToRead = bBFillNoteBuffer(oldCh2Buffer, oldCh2DataPtr, &oldCh2LocalBufferStatus, oldCh2Bytes);
-
-	if (moreTwoToRead)
-	{
-		ch2CurrentFreq = *((unsigned int*)oldCh2Bytes[FREQUENCY_BYTE]);
-	}
+	moreTwoToRead = bBFillNoteBuffer(&oldCh2Input, oldCh2Bytes);
 
 	// Main loop processing noise channel notes
-	while (bBFillNoteBuffer(oldChNoiseBuffer, oldChNoiseDataPtr, &oldChNoiseLocalBufferStatus, oldChNoiseBytes))
+	while (bBFillNoteBuffer(&oldChNoiseInput, oldChNoiseBytes))
 	{
 		// Check if noise is white noise (noise channel flags bit 2 set)
 		if ((oldChNoiseBytes[NOISE_CHANNEL] & 4) >> 2) // white noise
 		{
 			// Advance channel 2 note position by noise channel note duration
-			advancement = *((unsigned int*)oldChNoiseBytes[DURATION_BYTE]);
-			bBAdvance2(oldCh2Buffer, oldCh2DataPtr, &oldCh2LocalBufferStatus, oldCh2Bytes, &moreTwoToRead, advancement);
+			advancement = *((unsigned int*)&oldChNoiseBytes[DURATION_BYTE]);
+			bBAdvance2(&oldCh2Input, oldCh2Bytes, &moreTwoToRead, advancement);
 
 			// Write noise channel note bytes verbatim into new noise channel buffer
 			for (i = 0; i < NO_NOTE_BYTES; i++)
@@ -423,14 +471,14 @@ void bBPreComputePeriodicSound(SoundFile* soundFile, unsigned int* soundChannelO
 			WRITENOISE((*((byte*)&lsfrFrequencyToPlay)));
 			WRITENOISE((*((byte*)&lsfrFrequencyToPlay + 1)));
 			//If the lsfr ends in 1 we will hear this note, otherwise we won't
-			WRITENOISE((lfsr & 1 ? SN76489_to_CX16_Volume[oldChNoiseBytes[VOLUME_BYTE]] & 0xF : 0) | 0X80); //High byte of volume is used to indicate periodic sound
+			WRITENOISE((lfsr & 1 ? oldChNoiseBytes[VOLUME_BYTE] : 0) | 0x80); // High byte of volume is used to indicate periodic sound
 
 			// Update LFSR feedback according to noise generator algorithm
 			feedback = (lfsr ^ (lfsr >> 14)) & 1;
 			lfsr = (lfsr >> 1) | (feedback << 14);   // keep it 15-bit state
 
 			// Advance channel 2 notes by the lfsrDuration used
-			bBAdvance2(oldCh2Buffer, oldCh2DataPtr, &oldCh2LocalBufferStatus, oldCh2Bytes, &moreTwoToRead, lfsrDuration);
+			bBAdvance2(&oldCh2Input, oldCh2Bytes, &moreTwoToRead, lfsrDuration);
 
 			// Decrement remaining beats accordingly
 			if (remainingBeats > lfsrDuration)
@@ -446,6 +494,9 @@ void bBPreComputePeriodicSound(SoundFile* soundFile, unsigned int* soundChannelO
 
 	// Flush any remaining buffered noise channel data to banked memory
 	b5FlushBufferNonGolden(&newChNoiseLocalBufferStatus, ORIGINAL_CHNOISEBUFFER, ONETHIRDBUFFERSIZE, newChNoiseBuffer - ORIGINAL_CHNOISEBUFFER);
+
+	/* Growth may have moved the resource; publish all channels from its final base. */
+	bBSetChannelOffsets(newSoundFile.soundResource, &newSoundFile, soundChannelOffSets, allocatedBlockSize);
 
 	// Deallocate previous sound resource memory
 	b10BankedDealloc(soundFile->soundResource, soundFile->soundBank);
@@ -567,7 +618,7 @@ void bBPrecomputeValues(SoundFile* soundFile, unsigned int* soundChannelOffSets,
 				}
 
 				// Move to next byte within note
-				noteByteCounter = (noteByteCounter + 1) % NO_NOTE_BYTES;
+				if (++noteByteCounter == NO_NOTE_BYTES) noteByteCounter = 0;
 			}
 		}
 		else
@@ -608,7 +659,7 @@ void bBPrecomputeValues(SoundFile* soundFile, unsigned int* soundChannelOffSets,
 	// If periodic sound is detected and noise channel has volume, perform precomputation for periodic sound.
 	if (periodicSoundDetected && noiseChHasVolume)
 	{
-		bBPreComputePeriodicSound(&bBLoadedSounds[soundLoadCounter], soundChannelOffSets);
+		bBPreComputePeriodicSound(soundFile, soundChannelOffSets);
 	}
 }
 
@@ -626,40 +677,40 @@ void bBLoadSoundFile(int soundNum) {
 		return;
 	}
 
+	for (i = 0; i < MAX_LOADED_SOUNDS; ++i)
+		if (!bBLoadedSounds[i].soundResource) break;
+	if (i == MAX_LOADED_SOUNDS) return;
+
 	// Gets logic directory entry for sound file number and loads AGI file
 	b10GetLogicDirectory(&agiFilePosType, &snddir[soundNum]);
-	b6LoadAGIFile(SOUND, &agiFilePosType, &tempAGI);
+	if (!b6LoadAGIFile(SOUND, &agiFilePosType, &tempAGI))
+		return;
 
 	// Save references to loaded sound resource data and bank info
-	bBLoadedSounds[soundLoadCounter].soundResource = tempAGI.code;
-	bBLoadedSounds[soundLoadCounter].soundBank = tempAGI.codeBank;
-	bBLoadedSoundsPointer[soundNum] = &bBLoadedSounds[soundLoadCounter];
+	bBLoadedSounds[i].soundResource = tempAGI.code;
+	bBLoadedSounds[i].soundBank = tempAGI.codeBank;
+	bBLoadedSoundsPointer[soundNum] = &bBLoadedSounds[i];
 	totalSoundSize = tempAGI.totalSize;
 
 	// Copy sound channel offsets from the beginning of code resource
 	memCpyBanked((byte*)soundChannelOffSets, tempAGI.code, tempAGI.codeBank, NO_CHANNELS * 2);
 
 	// Set channel pointers in loaded sound struct
-	validChannels = bBSetChannelOffsets(tempAGI.code, &bBLoadedSounds[soundLoadCounter], soundChannelOffSets, totalSoundSize);
+	validChannels = bBSetChannelOffsets(tempAGI.code, &bBLoadedSounds[i], soundChannelOffSets, totalSoundSize);
 
 
 	// Precompute frequency and volume values for loaded sound
-	bBPrecomputeValues(&bBLoadedSounds[soundLoadCounter], soundChannelOffSets, validChannels);
+	bBPrecomputeValues(&bBLoadedSounds[i], soundChannelOffSets, validChannels);
 
 	// Increment sound load counter if space available
-	if (soundLoadCounter < MAX_LOADED_SOUNDS - 1)
-	{
-		soundLoadCounter++;
-	}
+	if (soundLoadCounter <= i) soundLoadCounter = i + 1;
 }
 
 extern unsigned int bBCh1Ticks;
 extern unsigned int bBCh2Ticks;
 extern unsigned int bBCh3Ticks;
 extern unsigned int bBCh4Ticks;
-extern boolean bBIsPlaying[NO_CHANNELS];
 extern byte bBSoundDataBank;
-extern byte bBChannelsPlaying;
 extern byte bBEndSoundFlag;
 
 extern byte* ZP_CURRENTLY_PLAYING_NOTE_1;
@@ -671,8 +722,6 @@ extern byte* ZP_CURRENTLY_PLAYING_NOTE_3;
 extern byte* ZP_CURRENTLY_PLAYING_NOTE_NOISE;
 #pragma zpsym("ZP_CURRENTLY_PLAYING_NOTE_NOISE")
 
-extern void bBPsgClear();
-
 // Plays a loaded sound by initializing playback pointers and state.
 void bBPlaySound(byte soundNum, byte endSoundFlag)
 {
@@ -680,14 +729,14 @@ void bBPlaySound(byte soundNum, byte endSoundFlag)
 	unsigned int* ticksPointer;
 	byte** channelPointer;
 
-	asm("sei"); // Disable interrupts to initialize sound playback safely
-
-	if (!flag[9])
+	if(!flag[9] || !bBLoadedSoundsPointer[soundNum])
 	{
 		flag[endSoundFlag] = TRUE;
 		return;
 	}
 
+	asm("php");
+	asm("sei"); // Disable interrupts to initialize sound playback safely
 
 	// Reset tick counters for all channels
 	bBCh1Ticks = 0;
@@ -698,23 +747,25 @@ void bBPlaySound(byte soundNum, byte endSoundFlag)
 	// Clear the end sound flag in the system flag array
 	flag[endSoundFlag] = FALSE;
 
-	// Set current playing note pointers for each channel, offset by NO_NOTE_BYTES bytes before actual note start
-	ZP_CURRENTLY_PLAYING_NOTE_1 = bBLoadedSoundsPointer[soundNum]->ch0 - NO_NOTE_BYTES;
-	ZP_CURRENTLY_PLAYING_NOTE_2 = bBLoadedSoundsPointer[soundNum]->ch1 - NO_NOTE_BYTES;
-	ZP_CURRENTLY_PLAYING_NOTE_3 = bBLoadedSoundsPointer[soundNum]->ch2 - NO_NOTE_BYTES;
-	ZP_CURRENTLY_PLAYING_NOTE_NOISE = bBLoadedSoundsPointer[soundNum]->chNoise - NO_NOTE_BYTES;
-
-	// Set sound bank for playback
+	/* Offset validation may leave an absent channel. Never advance NULL. */
+	ZP_CURRENTLY_PLAYING_NOTE_1 = bBLoadedSoundsPointer[soundNum]->ch0 ? bBLoadedSoundsPointer[soundNum]->ch0 - NO_NOTE_BYTES : NULL;
+	ZP_CURRENTLY_PLAYING_NOTE_2 = bBLoadedSoundsPointer[soundNum]->ch1 ? bBLoadedSoundsPointer[soundNum]->ch1 - NO_NOTE_BYTES : NULL;
+	ZP_CURRENTLY_PLAYING_NOTE_3 = bBLoadedSoundsPointer[soundNum]->ch2 ? bBLoadedSoundsPointer[soundNum]->ch2 - NO_NOTE_BYTES : NULL;
+	ZP_CURRENTLY_PLAYING_NOTE_NOISE = bBLoadedSoundsPointer[soundNum]->chNoise ? bBLoadedSoundsPointer[soundNum]->chNoise - NO_NOTE_BYTES : NULL;
+	bBIsPlaying[0] = bBLoadedSoundsPointer[soundNum]->ch0 != NULL;
+	bBIsPlaying[1] = bBLoadedSoundsPointer[soundNum]->ch1 != NULL;
+	bBIsPlaying[2] = bBLoadedSoundsPointer[soundNum]->ch2 != NULL;
+	bBIsPlaying[3] = bBLoadedSoundsPointer[soundNum]->chNoise != NULL;
 	bBSoundDataBank = bBLoadedSoundsPointer[soundNum]->soundBank;
-
-	// Mark all channels as playing
-	memset(bBIsPlaying, TRUE, NO_CHANNELS);
-	bBChannelsPlaying = NO_CHANNELS;
+	bBChannelsPlaying = 0;
+	for (i = 0; i < NO_CHANNELS; ++i) bBChannelsPlaying += bBIsPlaying[i];
+	if (bBChannelsPlaying < NO_CHANNELS) bBPsgClear();
+	if (!bBChannelsPlaying) flag[endSoundFlag] = TRUE;
 
 	// Store end sound flag for signaling when sound finishes
 	bBEndSoundFlag = endSoundFlag;
 
-	REENABLE_INTERRUPTS(); // Re-enable interrupts for playback
+	asm("plp"); // Restore the caller's interrupt state without acknowledging VSYNC
 }
 
 boolean bBIsPlayingNoInterupts()
@@ -733,15 +784,17 @@ boolean bBIsPlayingNoInterupts()
 // Stops current playing sound, clears PSG state, and cancels playing flags.
 void bBStopSound()
 {
+	asm("php");
 	asm("sei");         // Disable interrupts to safely stop sound
 
 	if (bBIsPlayingNoInterupts())
 	{
 		bBPsgClear();       // Clear PSG sound generator state
 		memset(bBIsPlaying, FALSE, NO_CHANNELS); // Mark all channels as not playing
-		flag[soundEndFlag] = TRUE;
+		flag[bBEndSoundFlag] = TRUE;
 	}
-	REENABLE_INTERRUPTS(); // Re-enable interrupts after sound stop
+	bBChannelsPlaying = 0;
+	asm("plp"); // Restore the caller's interrupt state without acknowledging VSYNC
 }
 
 void bBMarkSoundAsAZeroDependency(byte soundNum)

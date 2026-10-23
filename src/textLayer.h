@@ -54,8 +54,13 @@
 #define MAX_ROWS_DOWN 24
 
 #define TEXTBUFFER_SIZE 1000
+#define TEXTBUFFER_TOTAL_SIZE (TEXTBUFFER_SIZE * 2)
 
 #define FIRST_TEXT_ROW 4
+
+#if ((TILE_LAYER_HEIGHT - FIRST_TEXT_ROW + 1) * (TILE_LAYER_WIDTH + 1)) > TEXTBUFFER_TOTAL_SIZE
+#error Text buffers are too small for a full tile-map clear
+#endif
 
 #define TEXTBOX_PALETTE_NUMBER 1
 
@@ -68,13 +73,15 @@ extern byte b3TextModeTileByte; //Changes the background colour the next time yo
 void b3InitLayer1Mapbase(byte tileByte);
 byte b3DisplayManuallyWrappedMessageBox(char* message, byte messageBank, byte row, byte col, byte paletteNumber, byte boxWidth, byte boxHeight);
 void b3DisplayMessageBox(char* message, byte messageBank, byte row, byte col, byte paletteNumber, byte boxWidth, boolean wrap, byte firstRow);
+void b3DisplayShortText(void);
 void b3FillChar(byte startLine, byte endLine, byte paletteNumber, byte charToFill);
 void b3ClearLastPlacedText();
 byte b3SetTextColor(byte foreground, byte background);
 #pragma wrapped-call(pop)
 
-extern char b3TextBuffer1[TEXTBUFFER_SIZE];
-extern char b3TextBuffer2[TEXTBUFFER_SIZE];
+extern char b3TextBuffers[TEXTBUFFER_TOTAL_SIZE];
+#define b3TextBuffer1 b3TextBuffers
+#define b3TextBuffer2 (b3TextBuffers + TEXTBUFFER_SIZE)
 
 extern byte b3CurrentForegroundColour;
 extern byte b3CurrentBackgroundColour;

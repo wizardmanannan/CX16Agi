@@ -18,6 +18,8 @@ WAVE_FORM_PULSE_WIDTH = $3F       ; Default wave form and 50% pulse width duty c
 NOISE_WAVE = $C0                  ; Noise waveform parameter
 SAW_TOOTH = $40                   ; Saw tooth waveform parameter
 
+.assert >(FIRST_PSG_VOL_REGISTER) = >(FIRST_PSG_VOL_REGISTER + NO_BYTES_PER_CHANNEL * NO_AGI_CHANNELS), error, "AGI PSG channel cursors must stay in one VERA address page"
+
 .import _bBLoadedSoundsPointer       ; Import pointer for loaded sounds
 
 .segment "ZEROPAGE"
@@ -54,6 +56,11 @@ bBNoiseFreq:
 bBSoundHandler:
 .scope
 start:
+    lda _bBChannelsPlaying
+    bne @active
+    rts                         ; No active channels means no PSG work is needed
+
+@active:
     SET_VERA_ADDRESS_IMMEDIATE FIRST_PSG_VOL_REGISTER, #$0, #1  ; Set VERA PSG volume register address
 
     ldx #$0                      ; Start loop counter at 0
@@ -64,10 +71,9 @@ channelLoop:
     tay                         ; Transfer A to Y (indexing _bBIsPlaying bits)
     lda _bBIsPlaying,y           ; Load _bBIsPlaying flag for current channel (Y)
     bne checkNoteLength          ; If channel is playing, check note length
-    jmp silenceChannel           ; Otherwise silence the channel
+    jmp skipSilentChannel        ; Its PSG slot was silenced when it ended
 
 checkNoteLength:
-    ldy #$1                      ; Offset 1 into ticks (high byte)
     lda _bBCh1Ticks + 1,x        ; Load high byte of channel ticks
     bne deductOne                ; If non-zero, deduct one tick
     lda _bBCh1Ticks,x            ; Load low byte of channel ticks
@@ -75,10 +81,10 @@ checkNoteLength:
     jmp zeroDurationNote         ; Zero ticks means load next note
 
 deductOne:
-    lda VERA_data0               ; Move to the volume byte 
-    lda VERA_data0               ;    
-    lda VERA_data0
-    lda VERA_data0
+    ; X is even, so channelLoop's LSR leaves carry clear for this add.
+    lda VERA_addr_low
+    adc #NO_BYTES_PER_CHANNEL
+    sta VERA_addr_low
 
     dec _bBCh1Ticks,x            ; Decrement low byte ticks
     lda _bBCh1Ticks,x            ; Reload low byte ticks
@@ -188,18 +194,38 @@ disableChannel:
     SET_FLAG_NON_INTERPRETER SOUND_SREG   ; Set flag for non-interpreter sound register
 
 silenceChannel:
-    lda #$0                   ; Load zero
-; Silence frequency
-    sta VERA_data0            ; Write zero frequency low byte
-    sta VERA_data0            ; Write zero frequency high byte
+    ; The loop cursor points at this channel's volume register. Rewind to
+    ; frequency low, clear exactly this channel's four PSG registers, then
+    ; move to the next channel's volume register.
+    sec
+    lda VERA_addr_low
+    sbc #2
+    sta VERA_addr_low
+    bcs @silenceSlot
+    dec VERA_addr_high
+@silenceSlot:
+    .repeat 4
+        stz VERA_data0
+    .endrepeat
 
-; Silence volume
-    sta VERA_data0            ; Set volume to zero
+    clc
+    lda VERA_addr_low
+    adc #2
+    sta VERA_addr_low
+    bcc @muteNextChannel
+    inc VERA_addr_high
+@muteNextChannel:
+    jmp incrementChannelCounter
 
-; Silence waveform/width
-    sta VERA_data0            ; Set waveform to zero
-
-    jmp incrementChannelCounter ; Continue to next channel
+skipSilentChannel:
+    ; A stopped channel was silenced on its transition to inactive. Preserve
+    ; the volume-register cursor without rewriting PSG state each VSYNC.
+    txa
+    asl
+    clc
+    adc #<(FIRST_PSG_VOL_REGISTER + NO_BYTES_PER_CHANNEL)
+    sta VERA_addr_low
+    jmp incrementChannelCounter
 
 bBPlayNoise:
     ldy #$1                   ; Load 1 into Y (noise channel index)
@@ -327,12 +353,14 @@ getTicksJump:
 ; void bBPsgClear() - Clear all PSG registers to silence sound
 _bBPsgClear:
     SET_VERA_ADDRESS_IMMEDIATE PSG_REGISTERS, #$0, #1    ; Set to PSG registers start
-    ldx #NO_SYSTEM_CHANNELS * NO_BYTES_PER_CHANNEL       ; Initialize counter for all system channels
+    .assert ((NO_SYSTEM_CHANNELS * NO_BYTES_PER_CHANNEL) .mod 8) = 0, error, "PSG register count must be divisible by eight"
+    ldx #(NO_SYSTEM_CHANNELS * NO_BYTES_PER_CHANNEL) / 8 ; Eight writes per loop pass
 
 @clearLoop:
-    stz VERA_data0              ; Store zero to current PSG register
-@checkLoop:
-    dex                        ; Decrement counter
+    .repeat 8
+        stz VERA_data0
+    .endrepeat
+    dex                         ; Decrement eight-write group counter
     bne @clearLoop              ; Repeat until all are cleared
     rts                        ; Return from subroutine
 

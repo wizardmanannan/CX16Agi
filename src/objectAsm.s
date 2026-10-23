@@ -173,7 +173,7 @@ lda #$0
 adc WRITE_ZP + 1
 sta sreg + 1            ; sreg = WRITE_ZP + incoming length (end probe)
 
-cmp #>(GOLDEN_RAM_WORK_AREA + LOCAL_WORK_AREA_SIZE) 
+cmp #>(GOLDEN_RAM_WORK_AREA + LOCAL_WORK_AREA_SIZE)
 bcs @checkLowByte
 
 @noCompareNeeded:
@@ -208,7 +208,7 @@ sta WRITE_ZP + 1        ; advance write pointer by bytes copied
 rts
 @checkLowByte:
 lda sreg
-cmp #<(GOLDEN_RAM_WORK_AREA + LOCAL_WORK_AREA_SIZE) 
+cmp #<(GOLDEN_RAM_WORK_AREA + LOCAL_WORK_AREA_SIZE)
 bcc @noCompareNeeded
 jmp bDDisplayInventoryInnerWithCompare   ; not enough guaranteed room
 
@@ -217,7 +217,7 @@ jmp bDDisplayInventoryInnerWithCompare   ; not enough guaranteed room
 ; Pads the current inventory line with spaces until J_COUNTER reaches
 ; TILES_ACROSS, checking the write pointer against the work-area limit
 ; on every store and flushing/resetting when full.
-bDPadWordsWithSpacesWithCompare: 
+bDPadWordsWithSpacesWithCompare:
 
 ;Note: Experiment using an index (WRITE_ZP),y, but didn't make much difference and didn't seem worth the complexity
 
@@ -291,7 +291,7 @@ rts
 ; compare-and-flush variant.
 _bDPadWordsWithSpaces:
 sta LASTLENGTH
-jsr popa 
+jsr popa
 sta I_COUNTER           ; I_COUNTER = object index
 
 @loopInit:
@@ -355,10 +355,10 @@ lda SCREEN_OBJ_NUM
 lsr ;Why are we halfing and then doubling? This is sensible, halfing gets up the row via integer maths for example half of 3 is 1. Then you need to double for the 16 bit address for row 1 which is at position 2.
 asl
 
-tax 
+tax
 lda _bDObjectRowPaletteAddresses,x
 tay
-lda _bDObjectRowPaletteAddresses + 1,x 
+lda _bDObjectRowPaletteAddresses + 1,x
 tax
 
 clc
