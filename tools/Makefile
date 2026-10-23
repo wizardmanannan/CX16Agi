@@ -265,12 +265,12 @@ _run:
 	    "$$work/bin/test_full_game_irq" --staging-test ;; \
 	  emulator-audio-test) \
 	    cmake -S "$$X16_EMULATOR_SOURCE" -B "$$work/audio-emulator" -G "Unix Makefiles" -DENABLE_LTO=OFF -DENABLE_FLUIDSYNTH=OFF "-DCMAKE_C_FLAGS=-ffunction-sections -fdata-sections" "-DCMAKE_CXX_FLAGS=-ffunction-sections -fdata-sections"; \
-	    for audio_object in CMakeFiles/x16emu.dir/src/vera_pcm.c.o CMakeFiles/x16emu.dir/src/vera_psg.c.o CMakeFiles/x16emu.dir/src/wav_recorder.c.o CMakeFiles/x16emu.dir/src/midi.c.o CMakeFiles/x16emu.dir/src/ymglue.cpp.o CMakeFiles/x16emu.dir/src/extern/ymfm/src/ymfm_opm.cpp.o; do \
+	    for audio_object in CMakeFiles/x16emu.dir/src/video.c.o CMakeFiles/x16emu.dir/src/vera_pcm.c.o CMakeFiles/x16emu.dir/src/vera_psg.c.o CMakeFiles/x16emu.dir/src/wav_recorder.c.o CMakeFiles/x16emu.dir/src/midi.c.o CMakeFiles/x16emu.dir/src/ymglue.cpp.o CMakeFiles/x16emu.dir/src/extern/ymfm/src/ymfm_opm.cpp.o; do \
 	      make --no-print-directory -C "$$work/audio-emulator" -f CMakeFiles/x16emu.dir/build.make "$$audio_object"; \
 	    done; \
 	    audio_mode=; if [ "$(AUDIO_TEST_BUFFERED)" = 1 ]; then audio_mode=-DCX16_AUDIO_BUFFERED_TEST; fi; \
 	    "$(HOST_CC)" $(HOST_CFLAGS) -I"$$X16_EMULATOR_SOURCE/src" $$(pkg-config --cflags sdl2) -ffunction-sections -fdata-sections $$audio_mode -c "$$repo/tools/test_emulator_audio.c" -o "$$work/bin/test_emulator_audio.o"; \
-	    "$(HOST_CC)" "$$work/bin/test_emulator_audio.o" "$$work/audio-emulator/CMakeFiles/x16emu.dir/src/vera_pcm.c.o" "$$work/audio-emulator/CMakeFiles/x16emu.dir/src/vera_psg.c.o" "$$work/audio-emulator/CMakeFiles/x16emu.dir/src/wav_recorder.c.o" "$$work/audio-emulator/CMakeFiles/x16emu.dir/src/midi.c.o" "$$work/audio-emulator/CMakeFiles/x16emu.dir/src/ymglue.cpp.o" "$$work/audio-emulator/CMakeFiles/x16emu.dir/src/extern/ymfm/src/ymfm_opm.cpp.o" $$(pkg-config --libs sdl2) -Wl,--gc-sections -lstdc++ -lm -ldl -pthread -o "$$work/bin/test_emulator_audio"; \
+	    "$(HOST_CC)" "$$work/bin/test_emulator_audio.o" "$$work/audio-emulator/CMakeFiles/x16emu.dir/src/video.c.o" "$$work/audio-emulator/CMakeFiles/x16emu.dir/src/vera_pcm.c.o" "$$work/audio-emulator/CMakeFiles/x16emu.dir/src/vera_psg.c.o" "$$work/audio-emulator/CMakeFiles/x16emu.dir/src/wav_recorder.c.o" "$$work/audio-emulator/CMakeFiles/x16emu.dir/src/midi.c.o" "$$work/audio-emulator/CMakeFiles/x16emu.dir/src/ymglue.cpp.o" "$$work/audio-emulator/CMakeFiles/x16emu.dir/src/extern/ymfm/src/ymfm_opm.cpp.o" $$(pkg-config --libs sdl2) -Wl,--gc-sections -lstdc++ -lm -ldl -pthread -o "$$work/bin/test_emulator_audio"; \
 	    "$$work/bin/test_emulator_audio" ;; \
 	  games-test|intro-test|kq3-intro-test|play) \
 	    "$(HOST_CC)" $(HOST_CFLAGS) "$$repo/tools/test_build.c" -o "$$work/bin/test_build"; \
