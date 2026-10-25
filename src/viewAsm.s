@@ -68,6 +68,8 @@ VIEW_INC = 1
 .import _b10BankedDealloc
 .import _offsetOfVeraAddresses
 .import _viewTabNoToMetaData
+.import _offsetOfBackBuffers
+.import _offsetOfBackBufferSize
 
 .ifdef SPRITE_DEBUG
 .import _bSdRunNumber
@@ -240,6 +242,10 @@ jsr mul8x8to16
 sta FINAL_LOOP_OFFSET
 stx FINAL_LOOP_OFFSET + 1
 
+ldy _offsetOfMaxVeraSlots
+lda  (VIEW_ADDRESS),y 
+sta MAX_VERA_SLOTS
+
 ldy _offsetOfLoopsBank
 lda (VIEW_ADDRESS),y
 sta LOOPS_BANK
@@ -352,19 +358,111 @@ dec LOOP_BYTE_COUNTER
 bmi endLoops
 jmp loops
 endLoops: 
-
-lda #SPRITE_METADATA_BANK
-sta RAM_BANK
-jmp afterSwitchMetadataLoop
+jmp backBufferClear
 
 checkForZero:
 ora TO_DELETE_HIGH
 bne nonZero
 beq moreCelsCheck
- 
 
+backBufferClear:
+lda MAX_VERA_SLOTS
+ldy #$4
+jsr mul8x8to8
+dec
+tay
+
+lda VIEW_MD_BANK
+sta RAM_BANK
+
+backBufferClearLoop:
+dey
+lda (BACK_BUFFERS),y
+sta TO_DELETE_HIGH
+dey
+lda (BACK_BUFFERS),y
+sta TO_DELETE_MID
+dey
+lda (BACK_BUFFERS),y
+sta TO_DELETE_LOW
+dey
+sty MAX_VERA_ADDRESSES_COUNTER
+ora TO_DELETE_MID
+beq checkForZeroBB
+
+nonZeroBB:
+ldx #GARBAGE_BANK
+stx RAM_BANK
+
+lda TO_DELETE_LOW
+ldx TO_DELETE_MID
+ldy TO_DELETE_HIGH
+
+MARK_FOR_DELETION BACK_BUFFER_WIDTH, BACK_BUFFER_HEIGHT
+
+moreBBCheck:
+ldx MAX_VERA_ADDRESSES_COUNTER
+bpl backBufferClearLoop
+
+lda #SPRITE_METADATA_BANK
+sta RAM_BANK
+jmp afterSwitchMetadataLoop
+
+checkForZeroBB:
+ora TO_DELETE_HIGH
+bne nonZeroBB
+beq moreBBCheck  
 
 .segment "BANKRAM0E"
+
+
+; Width lookup table (allocationWidth) — bank E
+bEBackBufferSizeToWidth:
+    .res 16, 0                  ; 0–15
+    .byte 8                     ; 16  (8+8)
+    .res 7, 0                   ; 17–23
+    .byte 8                     ; 24  (8+16)
+    .res 7, 0                   ; 25–31
+    .byte 16                    ; 32  (16+16)
+    .res 7, 0                   ; 33–39
+    .byte 8                     ; 40  (8+32)
+    .res 7, 0                   ; 41–47
+    .byte 16                    ; 48  (16+32)
+    .res 15, 0                  ; 49–63
+    .byte 32                    ; 64  (32+32)
+    .res 7, 0                   ; 65–71
+    .byte 8                     ; 72  (8+64)
+    .res 7, 0                   ; 73–79
+    .byte 16                    ; 80  (16+64)
+    .res 15, 0                  ; 81–95
+    .byte 32                    ; 96  (32+64)
+    .res 31, 0                  ; 97–127
+    .byte 64                    ; 128 (64+64)
+
+; Height lookup table (allocationHeight) — bank E
+bEBackBufferSizeToHeight:
+    .res 16, 0                  ; 0–15
+    .byte 8                     ; 16  (8+8)
+    .res 7, 0                   ; 17–23
+    .byte 16                    ; 24  (8+16)
+    .res 7, 0                   ; 25–31
+    .byte 16                    ; 32  (16+16)
+    .res 7, 0                   ; 33–39
+    .byte 32                    ; 40  (8+32)
+    .res 7, 0                   ; 41–47
+    .byte 32                    ; 48  (16+32)
+    .res 15, 0                  ; 49–63
+    .byte 32                    ; 64  (32+32)
+    .res 7, 0                   ; 65–71
+    .byte 64                    ; 72  (8+64)
+    .res 7, 0                   ; 73–79
+    .byte 64                    ; 80  (16+64)
+    .res 15, 0                  ; 81–95
+    .byte 64                    ; 96  (32+64)
+    .res 31, 0                  ; 97–127
+    .byte 64                    ; 128 (64+64)
+
+
 .export _bESwitchMetadata
 
 VIEW_TAB_MD = ZP_TMP_28
@@ -386,6 +484,10 @@ ALLOCATION_HEIGHT = ZP_TMP_39
 NUM_LOOPS = ZP_TMP_39 + 1
 FINAL_LOOP_OFFSET = ZP_TMP_40
 VIEW_NUM = ZP_TMP_41
+MAX_VERA_SLOTS = ZP_TMP_41 + 1
+BACK_BUFFERS = ZP_TMP_42
+BACK_BUFFER_WIDTH = ZP_TMP_43
+BACK_BUFFER_HEIGHT = ZP_TMP_43 + 1
 
 
 ;void bESwitchMetadata(byte entryNum)
@@ -418,6 +520,21 @@ sta LOOP_VERA_ADDRESS_POINTER + 1
 ldy _offsetOfViewMetadataBank    ; Y = offset of NumberOfLoops
 lda  (VIEW_TAB_MD),y
 sta VIEW_MD_BANK
+
+ldy _offsetOfBackBuffers
+lda (VIEW_TAB_MD),y
+sta BACK_BUFFERS
+iny
+lda (VIEW_TAB_MD),y
+sta BACK_BUFFERS + 1
+
+ldy _offsetOfBackBufferSize
+lda (VIEW_TAB_MD),y
+tax
+lda bEBackBufferSizeToWidth,x
+sta BACK_BUFFER_WIDTH
+lda bEBackBufferSizeToHeight,x
+sta BACK_BUFFER_HEIGHT
 
 jmp switchMetadataLoop
 

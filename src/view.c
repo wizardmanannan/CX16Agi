@@ -1615,43 +1615,43 @@ animatedSprite:
 				{
 				case 16:   // 8 + 8
 					allocationWidth = SPR_SIZE_8;
-					allocationHeight = SPR_ATTR_8;
+					allocationHeight = SPR_SIZE_8;
 					break;
 				case 24:   // 8 + 16
 					allocationWidth = SPR_SIZE_8;
-					allocationHeight = SPR_ATTR_16;
+					allocationHeight = SPR_SIZE_16;
 					break;
 				case 32:   // 16 + 16
 					allocationWidth = SPR_SIZE_16;
-					allocationHeight = SPR_ATTR_16;
+					allocationHeight = SPR_SIZE_16;
 					break;
 				case 40:   // 8 + 32
 					allocationWidth = SPR_SIZE_8;
-					allocationHeight = SPR_ATTR_32;
+					allocationHeight = SPR_SIZE_32;
 					break;
 				case 48:   // 16 + 32
 					allocationWidth = SPR_SIZE_16;
-					allocationHeight = SPR_ATTR_32;
+					allocationHeight = SPR_SIZE_32;
 					break;
 				case 64:   // 32 + 32
 					allocationWidth = SPR_SIZE_32;
-					allocationHeight = SPR_ATTR_32;
+					allocationHeight = SPR_SIZE_32;
 					break;
 				case 72:   // 8 + 64
 					allocationWidth = SPR_SIZE_8;
-					allocationHeight = SPR_ATTR_64;
+					allocationHeight = SPR_SIZE_64;
 					break;
 				case 80:   // 16 + 64
 					allocationWidth = SPR_SIZE_16;
-					allocationHeight = SPR_ATTR_64;
+					allocationHeight = SPR_SIZE_64;
 					break;
 				case 96:   // 32 + 64
 					allocationWidth = SPR_SIZE_32;
-					allocationHeight = SPR_ATTR_64;
+					allocationHeight = SPR_SIZE_64;
 					break;
 				case 128:  // 64 + 64
 					allocationWidth = SPR_SIZE_64;
-					allocationHeight = SPR_ATTR_64;
+					allocationHeight = SPR_SIZE_64;
 					break;
 				}
 
