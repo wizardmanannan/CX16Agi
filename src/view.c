@@ -1480,13 +1480,17 @@ boolean agiBlit(byte entryNum, boolean disableInterupts)
 		bESwitchMetadata(entryNum);
 		localViewTab.staleCounter = localLoop.numberOfCels;
 
+
+		bESetViewMetadata(&localView, &localViewTab, viewNum, entryNum, viewTabNoToMetaData[entryNum]);
+
 		loopSet = TRUE;
 	}
-
-	if (viewTabNoToMetaData[entryNum] == VIEWNO_TO_METADATA_NO_SET) //Statement will be true if switched to another view for the first time in bESwitchMetadata
+	else if (viewTabNoToMetaData[entryNum] == VIEWNO_TO_METADATA_NO_SET) //Statement will be true if switched to another view for the first time in bESwitchMetadata
 	{
 #ifdef VERBOSE_DEBUG_NO_BLIT_CACHE
 		printf("set Metadata %d. The vt is %d\n", localViewTab->viewData, entryNum);
+
+		
 #endif
 		bESetViewMetadata(&localView, &localViewTab, viewNum, entryNum, VIEWNO_TO_METADATA_NO_SET);
 	}
