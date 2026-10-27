@@ -567,6 +567,9 @@ sta  (VIEW_TAB_MD),y
 ldy _offsetOfViewNum
 sta  (VIEW_TAB_MD),y
 
+lda #VIEWNO_TO_METADATA_NO_SET
+ldy ENTRY_NUM
+sta _viewTabNoToMetaData,y
 
 rts
 
