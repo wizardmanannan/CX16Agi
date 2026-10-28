@@ -495,7 +495,15 @@ _bESwitchMetadata:
 sta ENTRY_NUM
 tax
 
+
 ldy ENTRY_NUM
+
+lda _viewTabNoToMetaData,y
+cmp #VIEWNO_TO_METADATA_NO_SET
+bne start
+jmp return
+
+start:
 lda _sizeOfViewTableMetadata
 jsr mul8x8to16
 
@@ -571,6 +579,7 @@ lda #VIEWNO_TO_METADATA_NO_SET
 ldy ENTRY_NUM
 sta _viewTabNoToMetaData,y
 
+return:
 rts
 
 .endscope
