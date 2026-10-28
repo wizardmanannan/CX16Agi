@@ -346,7 +346,6 @@ MARK_FOR_DELETION ALLOCATION_WIDTH, ALLOCATION_HEIGHT
 
 moreCelsCheck:
 lda MAX_VERA_ADDRESSES_COUNTER
-
 bpl cels
 
 endCels:
@@ -372,10 +371,10 @@ jsr mul8x8to8
 dec
 tay
 
+backBufferClearLoop:
 lda VIEW_MD_BANK
 sta RAM_BANK
 
-backBufferClearLoop:
 dey
 lda (BACK_BUFFERS),y
 sta TO_DELETE_HIGH
@@ -401,7 +400,7 @@ ldy TO_DELETE_HIGH
 MARK_FOR_DELETION BACK_BUFFER_WIDTH, BACK_BUFFER_HEIGHT
 
 moreBBCheck:
-ldx MAX_VERA_ADDRESSES_COUNTER
+ldy MAX_VERA_ADDRESSES_COUNTER
 bpl backBufferClearLoop
 
 lda #SPRITE_METADATA_BANK
