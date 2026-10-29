@@ -87,8 +87,8 @@ MULT_16x16_16 sreg, sreg2
 .endmacro
 
 .segment "BANKRAM05"
-MAX_TIMETABLE_MULT_A = 15
-MAX_TIMETABLE_MULT_B = 17
+MAX_TIMETABLE_MULT_A = 17
+MAX_TIMETABLE_MULT_B = 15
 
 multBy0: .byte $00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00
 multBy1: .byte $00,$01,$02,$03,$04,$05,$06,$07,$08,$09,$0a,$0b,$0c,$0d,$0e,$0f
