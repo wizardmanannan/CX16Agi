@@ -528,7 +528,9 @@ void b2Erase() // 1, 0x00
 	localViewtab.flags &= ~DRAWN;
 	setViewTab(&localViewtab, entryNum);
 
+	asm("sei"); //TODO: Investigate why this is required without it VERA register 9F29 gets corrupted
 	bESwitchMetadata(entryNum);
+	REENABLE_INTERRUPTS()
 
 	return;
 }
