@@ -132,5 +132,5 @@
     .export _bDPadWordsWithSpaces
     .export _bDMarkForDeletion
     .export _bDRunSpriteGarbageCollector
-
+    .export _bDMarkForDeletionIndex
 

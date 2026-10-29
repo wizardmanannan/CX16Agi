@@ -627,7 +627,7 @@ bDMarkedForDeletionAllocationHeight: .res NO_DELETION_SLOTS
 .local @end
 sty sreg
 
-ldy bDMarkForDeletionIndex
+ldy _bDMarkForDeletionIndex
 bcs @end
 
 sta bDMarkedForDeletionTableLow,y
@@ -643,14 +643,14 @@ lda ALLOCATION_HEIGHT
 sta bDMarkedForDeletionAllocationHeight,y
 
 iny
-sty bDMarkForDeletionIndex
+sty _bDMarkForDeletionIndex
 
 @end:
 .endmacro
 
 ;void bDMarkForDeletion(SpriteAllocationSize width, SpriteAllocationSize height, VeraSpriteAddress addr)
 _bDMarkForDeletion:
-ldy bDMarkForDeletionIndex
+ldy _bDMarkForDeletionIndex
 cpy #NO_DELETION_SLOTS
 bcs @fullRoutine
 
@@ -660,26 +660,26 @@ sta bDMarkedForDeletionTableMiddle,y
 lda sreg
 sta bDMarkedForDeletionTableHigh,y
 
-sty bDMarkForDeletionIndex
+sty _bDMarkForDeletionIndex
 jsr popax
-ldy bDMarkForDeletionIndex
+ldy _bDMarkForDeletionIndex
 sta bDMarkedForDeletionAllocationHeight,y
 txa
 sta bDMarkedForDeletionAllocationWidth,y
 
 iny
-sty bDMarkForDeletionIndex
+sty _bDMarkForDeletionIndex
 
 rts
 @fullRoutine:
 ;jsr bDDeleteAllocationAsmCall ; Edge case for when the list is full, not ideal, as it may cause graphical glitches, but hopefully this shouldn't be called
 rts
 
-bDMarkForDeletionIndex: .byte $0
+_bDMarkForDeletionIndex: .byte $0
 
 ;void bDRunSpriteGarbageCollector()
 _bDRunSpriteGarbageCollector:
-ldy bDMarkForDeletionIndex
+ldy _bDMarkForDeletionIndex
 bne @stuffToDelete
 
 @nothingToDo:
@@ -701,14 +701,14 @@ lda bDMarkedForDeletionTableMiddle - 1,y
 tax
 lda bDMarkedForDeletionTableLow - 1,y
 
-sty bDMarkForDeletionIndex
+sty _bDMarkForDeletionIndex
 
 jsr bDDeleteAllocationAsmCall
-ldy bDMarkForDeletionIndex
+ldy _bDMarkForDeletionIndex
 dey
 bne @stuffToDeleteLoop
 @endLoop:
-sty bDMarkForDeletionIndex
+sty _bDMarkForDeletionIndex
 rts
 
 .endif                            ; End include guard

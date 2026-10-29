@@ -286,12 +286,14 @@ extern byte bDBlocksBySizeFastLookup[FAST_LOOKUP_SIZE];
 #pragma rodata-name (pop)
 
 extern void bDReenableOptimisticMode();
+extern byte bDMarkForDeletionIndex;
 
 void bDResetSpriteMemoryManager()
 {
 	memset(bDSpriteAllocTable, 0, TOTAL_REAL_BLOCKS);
 	bDResetSpriteTablePointer();
 	bDReenableOptimisticMode();
+	bDMarkForDeletionIndex = 0; //Resets the garbage collector
 }
 
 void bDInitSpriteMemoryManager()
