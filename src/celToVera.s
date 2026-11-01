@@ -477,7 +477,9 @@ sty CEL_COUNTER
 
 lda MAX_SPRITE_SLOTS_FOR_VIEW
 cmp #$1 
-beq @checkLoop ;Skip multiply where this view is not split, for efficiency 
+bne @multiply
+jmp @checkLoop ;Skip multiply where this view is not split, for efficiency 
+@multiply:
 lda MAX_SPRITE_SLOTS_FOR_VIEW
 ldy CEL_COUNTER
 MULT_8x8_16

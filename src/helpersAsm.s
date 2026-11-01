@@ -3,7 +3,6 @@
 
 HELPERS_INC = 1
 
-
 ;Input a/y, output a/x
 .macro MULT_8x8_16 
 .local @end
@@ -16,7 +15,7 @@ bcs @largeMult
 jsr mul8x8to8
 ldx #$0
 
-bra @end
+jmp @end
 @largeMult:
 sta sreg
 stz sreg + 1
@@ -28,6 +27,15 @@ MULT_16x16_16 sreg, sreg2
 .endmacro
 
 .macro MULT_16x16_16 addra, addrb
+    .local @end
+
+    php
+    pla
+    and #%100 ;Preserve the current value of interupts disable, so we can put it back afterwards
+    pha
+
+    sei ;We don't care if we disable interupts when they are already disabled; it is a waste to branch around it
+
     ; DCSEL = 2 for FX control registers
     lda #(2 << 1)
     sta VERA_ctrl
@@ -84,6 +92,14 @@ MULT_16x16_16 sreg, sreg2
     stz VERA_fx_mult
     stz VERA_fx_ctrl
     stz VERA_ctrl
+
+    ply
+    bne @end ;If interupts were not disabled before the start of this method renable them, otherwise leave it untouched
+    pha
+    REENABLE_INTERRUPTS
+    pla
+    @end:
+
 .endmacro
 
 .segment "BANKRAM05"

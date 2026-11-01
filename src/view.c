@@ -1474,9 +1474,6 @@ boolean agiBlit(byte entryNum, boolean disableInterupts)
 		// RAM_BANK = viewTableMetadata->viewTableMetadataBank;
 		// printf("data %p\n", tempMd.loopsVeraAddressesPointers);
 		// RAM_BANK = SPRITE_METADATA_BANK;
-		
-
-			
 		bESwitchMetadata(entryNum);
 		localViewTab.staleCounter = localLoop.numberOfCels;
 
