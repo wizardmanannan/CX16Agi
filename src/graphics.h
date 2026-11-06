@@ -72,8 +72,6 @@ typedef struct ViewTableMetadata {
 	VeraSpriteAddress* veraAddresses;
 	byte viewTableMetadataBank;
 	byte viewNum;
-	void* inactive; //Sometimes a single viewtab can have views swapped rapidly, we keep the previous ones here so we can easily switch between them
-	byte inactiveBank;
 	VeraSpriteAddress* backBuffers;
 	boolean isOnBackBuffer;
 	byte backBufferSize;
