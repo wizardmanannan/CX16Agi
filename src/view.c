@@ -1424,12 +1424,6 @@ boolean agiBlit(byte entryNum, boolean disableInterupts)
 	SpriteAllocationSize allocationWidth, allocationHeight;
 	byte combinedSpriteAllocationSize;
 
-	// if(entryNum != 0)
-	// {
-	// 	return TRUE;
-	// }
-
-
 	previousBank = RAM_BANK;
 	RAM_BANK = SPRITE_METADATA_BANK;
 
