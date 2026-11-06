@@ -613,7 +613,7 @@ rts
 
 ; Zero-page temporaries used by this routine
 ENTRY_NUM               = ZP_TMP_28
-PREVIOUS_BANK           = ZP_TMP_28 + 1
+;Vacant ZP_TMP_28 + 1
 LOOP_VERA_ADDRESS       = ZP_TMP_29     ; pointer to destination array in RAM
 VIEW                    = ZP_TMP_30
 VIEW_TABLE_METADATA     = ZP_TMP_31
@@ -903,8 +903,6 @@ callCelToVeraBulk:
 ; Restore previous RAM bank and return
 ; -----------------------------------------------------------------------------
 restoreBank:
-    lda PREVIOUS_BANK
-    sta RAM_BANK
     lda #TRUE        
     rts
 
