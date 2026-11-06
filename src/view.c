@@ -918,9 +918,6 @@ ViewTable viewtab[VIEW_TABLE_SIZE];
 #pragma bss-name (push, "BANKRAM0E")
 ViewTableMetadata viewTableMetadata[SPRITE_SLOTS];
 
-#define VIEWNO_TO_METADATA_NO_SET SPRITE_SLOTS + 1
-
-
 long nextSpriteAttribute;
 byte nextSpriteSlot;
 byte nextViewMetadataSlot;
