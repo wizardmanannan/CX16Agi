@@ -1461,7 +1461,7 @@ boolean agiBlit(byte entryNum, boolean disableInterupts)
 		localViewTab.staleCounter = localLoop.numberOfCels;
 
 		bESetViewMetadata(&localView, &localViewTab, viewNum, entryNum);
-
+		localMetadata = viewTableMetadata[entryNum];
 		loopSet = TRUE;
 	}
 	else if (!localMetadata.loopsVeraAddressesPointers) //Statement will be true if switched to another view for the first time in bESwitchMetadata
@@ -1472,9 +1472,10 @@ boolean agiBlit(byte entryNum, boolean disableInterupts)
 
 #endif
 		bESetViewMetadata(&localView, &localViewTab, viewNum, entryNum);
+		localMetadata = viewTableMetadata[entryNum];
 	}
 	
-    localMetadata = viewTableMetadata[entryNum];
+
 
 #ifdef VERBOSE_DEBUG_BLIT
 	printf("Address %p. The bank is %d\n", localMetadata.loopsVeraAddressesPointers[localViewTab->currentLoop], localMetadata.viewTableMetadataBank);
