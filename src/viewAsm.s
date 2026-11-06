@@ -67,7 +67,6 @@ VIEW_INC = 1
 .import _offsetOfloopsVeraAddressesPointers
 .import _b10BankedDealloc
 .import _offsetOfVeraAddresses
-.import _viewTabNoToMetaData
 .import _offsetOfBackBuffers
 .import _offsetOfBackBufferSize
 
@@ -493,17 +492,8 @@ BACK_BUFFER_HEIGHT = ZP_TMP_43 + 1
 ;void bESwitchMetadata(byte entryNum)
 _bESwitchMetadata:
 sta ENTRY_NUM
-tax
-
 
 ldy ENTRY_NUM
-
-lda _viewTabNoToMetaData,y
-cmp #VIEWNO_TO_METADATA_NO_SET
-bne start
-jmp return
-
-start:
 lda _sizeOfViewTableMetadata
 jsr mul8x8to16
 
@@ -514,6 +504,15 @@ txa
 adc #>_viewTableMetadata
 sta VIEW_TAB_MD + 1
 
+
+ldy _offsetoOfLoopsVeraAddressesPointers
+lda (VIEW_TAB_MD),y 
+iny
+ora (VIEW_TAB_MD),y 
+bne start
+jmp return
+
+start:
 ldy _offsetOfViewNum
 lda (VIEW_TAB_MD),y
 sta VIEW_NUM
@@ -574,10 +573,6 @@ sta  (VIEW_TAB_MD),y
 
 ldy _offsetOfViewNum
 sta  (VIEW_TAB_MD),y
-
-lda #VIEWNO_TO_METADATA_NO_SET
-ldy ENTRY_NUM
-sta _viewTabNoToMetaData,y
 
 return:
 rts
@@ -652,7 +647,7 @@ bEAllocateSpriteMemory:
     ldx ALLOCATION_HEIGHT
     lda bEAllocateWidthToSpriteSize,x
     sta ZP_HEIGHT
-
+    
     jsr bEAllocateSpriteMemoryBulkAsm
     bne success
     jmp restoreBank
@@ -844,7 +839,7 @@ copyAddressesLoopCheck:
     dex
     dex
     bpl copyAddressesLoop
-
+   
 ; -----------------------------------------------------------------------------
 ; Copy current cel into temporary Golden RAM work area
 ; -----------------------------------------------------------------------------
@@ -910,7 +905,6 @@ callCelToVeraBulk:
 restoreBank:
     lda PREVIOUS_BANK
     sta RAM_BANK
-
     lda #TRUE        
     rts
 

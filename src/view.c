@@ -921,7 +921,6 @@ ViewTable viewtab[VIEW_TABLE_SIZE];
 ViewTableMetadata viewTableMetadata[SPRITE_SLOTS];
 
 #define VIEWNO_TO_METADATA_NO_SET SPRITE_SLOTS + 1
-byte viewTabNoToMetaData[MAXVIEW];
 
 
 long nextSpriteAttribute;
@@ -1028,8 +1027,6 @@ void bEResetViewTableMetadata()
 		viewTableMetadata[i].isOnBackBuffer = FALSE;
 		viewTableMetadata[i].backBufferSize = 0;
 	}
-
-	memset(&viewTabNoToMetaData[0], VIEWNO_TO_METADATA_NO_SET, MAXVIEW);
 }
 void bEResetSpritePointers()
 {
@@ -1046,7 +1043,7 @@ void bEResetSpritesUpdatedBuffer()
 #pragma wrapped-call (pop)
 #define MAX_SLOT_1_SIZED_SPRITE 64
 #define MAX_SPRITE_SIZE 128
-void bESetViewMetadata(View* localView, ViewTable* viewTable, byte viewNum, byte viewTabNo, byte viewMetadataSlot)
+void bESetViewMetadata(View* localView, ViewTable* viewTable, byte viewNum, byte viewTabNo)
 {
 	byte i;
 	byte maxVeraAddresses;
@@ -1077,14 +1074,7 @@ void bESetViewMetadata(View* localView, ViewTable* viewTable, byte viewNum, byte
 	printf("Max vera addresses is %d\n", maxVeraAddresses);
 #endif
 
-	if (viewMetadataSlot == VIEWNO_TO_METADATA_NO_SET)
-	{
-		viewMetadataSlot = nextViewMetadataSlot++;
-	}
-
 	metadata = viewTableMetadata[viewTabNo];
-
-	viewTabNoToMetaData[viewTabNo] = viewMetadataSlot;
 
 	if (metadata.loopsVeraAddressesPointers != NULL)
 	{
@@ -1444,12 +1434,10 @@ boolean agiBlit(byte entryNum, boolean disableInterupts)
 	RAM_BANK = SPRITE_METADATA_BANK;
 
 
-
-
 	getViewTab(&localViewTab, entryNum);
 
 	viewNum = localViewTab.currentView;
-	#ifdef VERBOSE_DEBUG_BLIT
+#ifdef VERBOSE_DEBUG_BLIT
 	printf("The viewNum is %d and the loop is %d\n", viewNum, localViewTab->currentLoop);
 #endif // VERBOSE_DEBUG_BLIT
 
@@ -1459,16 +1447,17 @@ boolean agiBlit(byte entryNum, boolean disableInterupts)
 	getLoadedLoop(&localView, &localLoop, localViewTab.currentLoop);
 	getLoadedCel(&localLoop, &localCel, localViewTab.currentCel);
 
+	localMetadata = viewTableMetadata[entryNum];
 
-	if (viewTabNoToMetaData[entryNum] != VIEWNO_TO_METADATA_NO_SET && viewTableMetadata[entryNum].viewNum != viewNum)
+	if (localMetadata.loopsVeraAddressesPointers && viewTableMetadata[entryNum].viewNum != viewNum)
 	{
 #ifdef VERBOSE_SWITCH_METADATA
 		printf("switching to %d for entry %d\n", viewNum, entryNum);
 #endif
 		//printf("ll %p vt %p e %d bank %d %p view %p loops %p loopsBank %p vn %d", &localLoop, &localViewTab, entryNum, viewTableMetadata[entryNum].viewTableMetadataBank, &viewTableMetadata[entryNum].viewTableMetadataBank, &localView, localView.loops, localView.loopsBank, viewNum);
 		//printf("the address of the loops are %p on bank %p the size of look is %d on \n", &loadedViews[0].loops, &loadedViews[0].loopsBank, sizeof(Loop), &viewTableMetadata[0].veraAddresses);
-		
-		
+
+
 		// printf("md bank %p  md %p \n", &viewTableMetadata->viewTableMetadataBank, &viewTableMetadata[0].veraAddresses);
 		// tempMd = viewTableMetadata[0];
 		// RAM_BANK = viewTableMetadata->viewTableMetadataBank;
@@ -1477,23 +1466,21 @@ boolean agiBlit(byte entryNum, boolean disableInterupts)
 		bESwitchMetadata(entryNum);
 		localViewTab.staleCounter = localLoop.numberOfCels;
 
-
-		bESetViewMetadata(&localView, &localViewTab, viewNum, entryNum, viewTabNoToMetaData[entryNum]);
+		bESetViewMetadata(&localView, &localViewTab, viewNum, entryNum);
 
 		loopSet = TRUE;
 	}
-	else if (viewTabNoToMetaData[entryNum] == VIEWNO_TO_METADATA_NO_SET) //Statement will be true if switched to another view for the first time in bESwitchMetadata
+	else if (!localMetadata.loopsVeraAddressesPointers) //Statement will be true if switched to another view for the first time in bESwitchMetadata
 	{
 #ifdef VERBOSE_DEBUG_NO_BLIT_CACHE
 		printf("set Metadata %d. The vt is %d\n", localViewTab->viewData, entryNum);
 
-		
-#endif
-		bESetViewMetadata(&localView, &localViewTab, viewNum, entryNum, VIEWNO_TO_METADATA_NO_SET);
-	}
 
-	localMetadata = viewTableMetadata[entryNum];
-	//printf("local md from %d %p %p\n", entryNum, &viewTableMetadata[entryNum], viewTableMetadata[entryNum]);
+#endif
+		bESetViewMetadata(&localView, &localViewTab, viewNum, entryNum);
+	}
+	
+    localMetadata = viewTableMetadata[entryNum];
 
 #ifdef VERBOSE_DEBUG_BLIT
 	printf("Address %p. The bank is %d\n", localMetadata.loopsVeraAddressesPointers[localViewTab->currentLoop], localMetadata.viewTableMetadataBank);

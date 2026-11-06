@@ -66,7 +66,7 @@ const char bDbgRoomChangeMessage[] = "we are at %d, counter %lu\n";
 #pragma rodata-name (pop)
 
 #pragma rodata-name (push, "BANKRAM05")
-const char b5InitializingDebug[] = "debug now initializing on bank %d\n";
+const char b5InitializingDebug[] = "debug now initializing on bank %p\n";
 int b5ReadSizes[4] = { LOCAL_WORK_AREA_SIZE, 100, 10, 1 };
 #pragma rodata-name (pop)
 
