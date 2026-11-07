@@ -121,7 +121,6 @@ extern byte b8AsmFloodFillSectionsVisOnly(BufferStatus* bufferStatus, boolean* c
 #pragma wrapped-call (pop)
 
 #pragma code-name (push, "BANKRAM0C")
-extern boolean trap;
 void b0CGetLoadedPicture(PictureFile* returnedloadedPicture, byte loadedPictureNumber)
 {
 	*returnedloadedPicture = loadedPictures[loadedPictureNumber];

@@ -171,7 +171,6 @@ extern void b9AnimateObjects();
 extern void b9UpdateObjectDirections();
 #pragma wrapped-call (pop)
 
-extern boolean trap;
 /***************************************************************************
 ** interpret
 **
