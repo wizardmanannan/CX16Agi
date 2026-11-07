@@ -103,6 +103,11 @@ Fix object placement bugs, but trying to make code function exactly the same and
 
 **Only AGI 1 & 2 games are currently supported**
 
+For testing, `tp` (or `teleport`) jumps ego to a room by number or by name
+found in the game's own text, with optional coordinates, and can tour rooms:
+`tp castle`, `tp 2 100 100`, `tp:5:kings room,moat,castle`. See
+[teleport usage and limits](docs/teleport/README.md).
+
 Sierra released many well-known adventure games, like King's Quest and Police Quest. For obvious reasons, these games were not coded from scratch but rather depended upon engines to run the games.
 
 One such engine was the AGI engine, which was used to power games such as King's Quest 1 - 3 and Space Quest 1 and 2.
