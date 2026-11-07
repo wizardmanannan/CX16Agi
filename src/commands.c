@@ -515,7 +515,7 @@ void b2Draw() // 1, 0x00
 }
 
 #pragma wrapped-call (push, trampoline, SPRITE_UPDATED_BANK)
-extern void bESwitchMetadata(byte entryNum);
+extern void bEClearMetadata(byte entryNum);
 #pragma wrapped-call (pop)
 
 void b2Erase() // 1, 0x00 
@@ -528,7 +528,7 @@ void b2Erase() // 1, 0x00
 	localViewtab.flags &= ~DRAWN;
 	setViewTab(&localViewtab, entryNum);
 
-	bESwitchMetadata(entryNum);
+	bEClearMetadata(entryNum);
 
 	return;
 }

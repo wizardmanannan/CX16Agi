@@ -1199,7 +1199,7 @@ extern void bECalculateBytesPerRow(byte celWidth);
 extern boolean bESetLoop(ViewTable* localViewTab, ViewTableMetadata* localMetadata, View* localView, VeraSpriteAddress* loopVeraAddresses, byte entryNum);
 
 extern void bEClearVeraSprite(byte celWidth, byte celHeight);
-extern void bESwitchMetadata(byte maxVeraAddresses);
+extern void bEClearMetadata(byte maxVeraAddresses);
 
 #define SET_VERA_ADDRESS_ZP(loopVeraAddress, VERA_ADDRESS, VERA_ADDRESS_HIGH) \
     do { \
@@ -1256,14 +1256,14 @@ boolean agiBlit(byte entryNum, boolean disableInterupts)
 #ifdef VERBOSE_SWITCH_METADATA
 		printf("switching to %d for entry %d\n", viewNum, entryNum);
 #endif
-		bESwitchMetadata(entryNum);
+		bEClearMetadata(entryNum);
 		localViewTab.staleCounter = localLoop.numberOfCels;
 
 		bESetViewMetadata(&localView, &localViewTab, viewNum, entryNum);
 		localMetadata = viewTableMetadata[entryNum];
 		loopSet = TRUE;
 	}
-	else if (!localMetadata.loopsVeraAddressesPointers) //Statement will be true if switched to another view for the first time in bESwitchMetadata
+	else if (!localMetadata.loopsVeraAddressesPointers) //Statement will be true if switched to another view for the first time in bEClearMetadata
 	{
 #ifdef VERBOSE_DEBUG_NO_BLIT_CACHE
 		printf("set Metadata %d. The vt is %d\n", localViewTab->viewData, entryNum);

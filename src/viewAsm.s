@@ -187,20 +187,23 @@ jsr debugSpritesNextRun
 .endmacro
 
 
-
 .segment "CODE"
 .scope
 
 attributeSizetoAllocationSize: .byte 8,16,32,64
+; Lookup: attribute size index (0..3) → actual pixel size (8/16/32/64)
 
-switchMetadataLoop:
+clearMetadataLoop:
+; Entry point for the per-view loop/cel cleanup (called from _bEClearMetadata)
 
 lda #LOADED_VIEW_BANK
 sta RAM_BANK
+; Switch to the bank that holds the loaded view table
 
 lda _sizeOfView
 ldy VIEW_NUM
 jsr mul8x8to16
+; VIEW_NUM * sizeOfView → offset into loadedViews table
 
 clc
 adc #<_loadedViews
@@ -208,6 +211,7 @@ sta VIEW_ADDRESS
 txa
 adc #>_loadedViews
 sta VIEW_ADDRESS + 1
+; VIEW_ADDRESS = &loadedViews[VIEW_NUM]
 
 ldy _offsetOfMaxVeraSlots
 lda (VIEW_ADDRESS),y
@@ -217,6 +221,8 @@ lda (VIEW_ADDRESS),y
 ldy sreg
 jsr mul8x8to16
 sta MAX_VERA_ADDRESSES
+; MAX_VERA_ADDRESSES = maxVeraSlots * maxCels
+; (total number of VERA address slots used by this view)
 
 ldy _offsetOfLoops
 lda (VIEW_ADDRESS),y
@@ -224,6 +230,7 @@ sta LOOPS_POINTER
 iny
 lda (VIEW_ADDRESS),y
 sta LOOPS_POINTER + 1
+; LOOPS_POINTER = pointer to the loop array for this view
 
 ldy _offsetOfNumberOfLoops    ; Y = offset of NumberOfLoops
 lda  (VIEW_ADDRESS),y 
@@ -233,24 +240,31 @@ dec
 sta LOOP_BYTE_COUNTER
 dex
 stx NUM_LOOPS
-
+; LOOP_BYTE_COUNTER = (numberOfLoops * 2) - 1
+; NUM_LOOPS         = numberOfLoops - 1
+; (used for reverse walk of the 2-byte vera-address pointers)
 
 lda NUM_LOOPS
 ldy _sizeOfLoop
 jsr mul8x8to16
 sta FINAL_LOOP_OFFSET
 stx FINAL_LOOP_OFFSET + 1
+; FINAL_LOOP_OFFSET = (numberOfLoops-1) * sizeOfLoop
+; (byte offset from start of loop array to the last loop)
 
 ldy _offsetOfMaxVeraSlots
 lda  (VIEW_ADDRESS),y 
 sta MAX_VERA_SLOTS
+; Cache maxVeraSlots for later back-buffer clearing
 
 ldy _offsetOfLoopsBank
 lda (VIEW_ADDRESS),y
 sta LOOPS_BANK
+; Bank that holds the loop data
 
 lda LOOPS_BANK
 sta RAM_BANK
+; Switch to the loops bank
 
 clc
 lda LOOPS_POINTER
@@ -259,13 +273,17 @@ sta LOOPS_POINTER
 lda LOOPS_POINTER + 1
 adc FINAL_LOOP_OFFSET + 1
 sta LOOPS_POINTER + 1
+; Point LOOPS_POINTER one past the last loop (ready for reverse walk)
 
 lda VIEW_MD_BANK
 sta RAM_BANK
+; Switch to the view-metadata bank (holds the vera address pointers)
 
 bra startLoops
+; Fall into the reverse loop walk
 
 loops:
+; Step backward one loop
 sec
 lda LOOPS_POINTER
 sbc _sizeOfLoop
@@ -275,24 +293,29 @@ sbc #$0
 sta LOOPS_POINTER + 1
 
 startLoops:
+; Process the current loop
 
 lda LOOPS_BANK
 sta RAM_BANK
+; Ensure we are in the loops bank
 
 ldy _offsetOfAllocationWidth
 lda (LOOPS_POINTER),y
 tax 
 lda attributeSizetoAllocationSize,x
 sta ALLOCATION_WIDTH
+; Translate allocation-width index → pixel width
 
 ldy _offsetOfAllocationHeight
 lda (LOOPS_POINTER),y
 tax 
 lda attributeSizetoAllocationSize,x
 sta ALLOCATION_HEIGHT
+; Translate allocation-height index → pixel height
 
 lda VIEW_MD_BANK
 sta RAM_BANK
+; Switch back to metadata bank to read the vera-address pointer for this loop
 
 ldy LOOP_BYTE_COUNTER
 lda (LOOP_VERA_ADDRESS_POINTER),y
@@ -300,22 +323,30 @@ sta CELS_POINTER + 1
 dey 
 lda (LOOP_VERA_ADDRESS_POINTER),y
 sta CELS_POINTER
+; Load the 2-byte pointer to the cel vera-address array for this loop
+; (high byte first because we are walking the array backward)
 
 ora CELS_POINTER + 1
 beq endCels
+; If both bytes are zero, this loop has no cels → skip to next loop
 
 sty LOOP_BYTE_COUNTER
+; Save the updated counter for the next loop
 
 lda MAX_VERA_ADDRESSES
 ldy #$4 ;Times the number of vera address bytes
 jsr mul8x8to8
 dec
 sta MAX_VERA_ADDRESSES_COUNTER
+; MAX_VERA_ADDRESSES_COUNTER = (maxVeraSlots * maxCels * 4) - 1
+; (byte index of the last byte of the last 4-byte VERA address)
 
 cels:
+; Walk the 4-byte VERA addresses for this loop’s cels (reverse order)
 
 lda VIEW_MD_BANK
 sta RAM_BANK
+; Ensure metadata bank is active
 
 ldy MAX_VERA_ADDRESSES_COUNTER
 dey
@@ -330,39 +361,52 @@ lda (CELS_POINTER),y
 dey
 sta TO_DELETE_LOW
 sty MAX_VERA_ADDRESSES_COUNTER
+; Load the next 4-byte VERA address (high → mid → low) into the three ZP temps
+; and leave Y pointing at the next address’s last byte
 
 ora TO_DELETE_MID
 beq checkForZero
+; Quick test: if low|mid == 0, go check the high byte as well
 
 nonZero:
 ldx #GARBAGE_BANK
 stx RAM_BANK
+; Switch to the garbage/free bank
 
 lda TO_DELETE_LOW
 ldx TO_DELETE_MID
 ldy TO_DELETE_HIGH
 
 MARK_FOR_DELETION ALLOCATION_WIDTH, ALLOCATION_HEIGHT
+; Mark this VERA address for later free (using the loop’s allocation size)
 
 moreCelsCheck:
 lda MAX_VERA_ADDRESSES_COUNTER
 bpl cels
+; Continue while the byte counter is still >= 0
 
 endCels:
+; Finished all cels for this loop
 
 lda LOOPS_BANK
 sta RAM_BANK
+; Restore loops bank for the next iteration
 
 dec LOOP_BYTE_COUNTER
 bmi endLoops
 jmp loops
+; Step to the previous loop; stop when the pointer-array counter goes negative
+
 endLoops: 
 jmp backBufferClear
+; All loops processed → clear the back buffers
 
 checkForZero:
 ora TO_DELETE_HIGH
 bne nonZero
 beq moreCelsCheck
+; If high is also zero the whole address is zero → skip the mark
+; otherwise fall through to the non-zero path
 
 backBufferClear:
 lda MAX_VERA_SLOTS
@@ -370,6 +414,7 @@ ldy #$4
 jsr mul8x8to8
 dec
 tay
+; Y = (maxVeraSlots * 4) - 1  (last byte of the back-buffer address array)
 
 backBufferClearLoop:
 lda VIEW_MD_BANK
@@ -386,6 +431,8 @@ lda (BACK_BUFFERS),y
 sta TO_DELETE_LOW
 dey
 sty MAX_VERA_ADDRESSES_COUNTER
+; Load the next 4-byte back-buffer VERA address
+
 ora TO_DELETE_MID
 beq checkForZeroBB
 
@@ -398,22 +445,26 @@ ldx TO_DELETE_MID
 ldy TO_DELETE_HIGH
 
 MARK_FOR_DELETION BACK_BUFFER_WIDTH, BACK_BUFFER_HEIGHT
+; Mark the back-buffer address for deletion (using the cached back-buffer size)
 
 moreBBCheck:
 ldy MAX_VERA_ADDRESSES_COUNTER
 bpl backBufferClearLoop
+; Continue while the counter is still >= 0
 
 lda #SPRITE_METADATA_BANK
 sta RAM_BANK
-jmp afterSwitchMetadataLoop
+jmp afterClearMetadataLoop
+; Done with back buffers → restore sprite-metadata bank and return to caller
 
 checkForZeroBB:
 ora TO_DELETE_HIGH
 bne nonZeroBB
 beq moreBBCheck  
+; Same zero-address skip logic as the cel loop
 
 .segment "BANKRAM0E"
-
+; Everything below lives in bank E
 
 ; Width lookup table (allocationWidth) — bank E
 bEBackBufferSizeToWidth:
@@ -437,6 +488,7 @@ bEBackBufferSizeToWidth:
     .byte 32                    ; 96  (32+64)
     .res 31, 0                  ; 97–127
     .byte 64                    ; 128 (64+64)
+; Maps a packed back-buffer size value → pixel width
 
 ; Height lookup table (allocationHeight) — bank E
 bEBackBufferSizeToHeight:
@@ -460,10 +512,11 @@ bEBackBufferSizeToHeight:
     .byte 64                    ; 96  (32+64)
     .res 31, 0                  ; 97–127
     .byte 64                    ; 128 (64+64)
+; Maps a packed back-buffer size value → pixel height
 
+.export _bEClearMetadata
 
-.export _bESwitchMetadata
-
+; Zero-page temporaries used by the routine
 VIEW_TAB_MD = ZP_TMP_28
 TO_DELETE_LOW = ZP_TMP_30
 TO_DELETE_MID = ZP_TMP_30 + 1
@@ -488,14 +541,27 @@ BACK_BUFFERS = ZP_TMP_42
 BACK_BUFFER_WIDTH = ZP_TMP_43
 BACK_BUFFER_HEIGHT = ZP_TMP_43 + 1
 
-
-;void bESwitchMetadata(byte entryNum)
-_bESwitchMetadata:
+; ----------------------------------------------------------------------------
+; void bEClearMetadata(byte entryNum)
+;
+; Clears the view currently associated with the given view-table entry.
+; Walks every loop and cel of that view (and its back buffers), marks
+; all of their VERA addresses for later deletion, then zeros the metadata
+; fields and frees the banked allocation that held the address pointers.
+;
+; On entry:
+;   A = entryNum (index into viewTableMetadata)
+;
+; Clobbers: all ZP_TMP_28..43, RAM_BANK, A/X/Y, sreg
+; ----------------------------------------------------------------------------
+_bEClearMetadata:
 sta ENTRY_NUM
+; Save the entry number we were called with
 
 ldy ENTRY_NUM
 lda _sizeOfViewTableMetadata
 jsr mul8x8to16
+; entryNum * sizeOfViewTableMetadata
 
 clc
 adc #<_viewTableMetadata
@@ -503,7 +569,7 @@ sta VIEW_TAB_MD
 txa
 adc #>_viewTableMetadata
 sta VIEW_TAB_MD + 1
-
+; VIEW_TAB_MD = &viewTableMetadata[entryNum]
 
 ldy _offsetoOfLoopsVeraAddressesPointers
 lda (VIEW_TAB_MD),y 
@@ -511,11 +577,13 @@ iny
 ora (VIEW_TAB_MD),y 
 bne start
 jmp return
+; If the loops-vera-addresses pointer is null, nothing to free → early exit
 
 start:
 ldy _offsetOfViewNum
 lda (VIEW_TAB_MD),y
 sta VIEW_NUM
+; Cache the view number
 
 ldy _offsetoOfLoopsVeraAddressesPointers
 lda (VIEW_TAB_MD),y 
@@ -523,10 +591,12 @@ sta LOOP_VERA_ADDRESS_POINTER
 iny
 lda (VIEW_TAB_MD),y 
 sta LOOP_VERA_ADDRESS_POINTER + 1
+; Load the pointer to the array of per-loop vera-address pointers
 
 ldy _offsetOfViewMetadataBank    ; Y = offset of NumberOfLoops
 lda  (VIEW_TAB_MD),y
 sta VIEW_MD_BANK
+; Bank that holds the view metadata
 
 ldy _offsetOfBackBuffers
 lda (VIEW_TAB_MD),y
@@ -534,6 +604,7 @@ sta BACK_BUFFERS
 iny
 lda (VIEW_TAB_MD),y
 sta BACK_BUFFERS + 1
+; Pointer to the back-buffer VERA address array
 
 ldy _offsetOfBackBufferSize
 lda (VIEW_TAB_MD),y
@@ -542,11 +613,13 @@ lda bEBackBufferSizeToWidth,x
 sta BACK_BUFFER_WIDTH
 lda bEBackBufferSizeToHeight,x
 sta BACK_BUFFER_HEIGHT
+; Translate the packed back-buffer size into pixel width & height
 
-jmp switchMetadataLoop
+jmp clearMetadataLoop
+; Jump to the common cleanup loop (above)
 
-afterSwitchMetadataLoop:
-
+afterClearMetadataLoop:
+; Returned here after all VERA addresses have been marked for deletion
 
 ldy _offsetOfloopsVeraAddressesPointers
 iny
@@ -559,23 +632,31 @@ lda  (VIEW_TAB_MD),y
 jsr pushax
 lda #$0
 sta (VIEW_TAB_MD),y
+; Zero the loops-vera-addresses pointer and push the old value
+; (so the banked deallocator can free the block)
+
 lda VIEW_MD_BANK
 TRAMPOLINE #BANKED_ALLOC_BANK, _b10BankedDealloc
+; Free the metadata block that held the vera-address pointers
 
 ldy _offsetOfVeraAddresses
 lda #$0
 sta  (VIEW_TAB_MD),y
 iny
 sta  (VIEW_TAB_MD),y
+; Zero the (now-invalid) vera-addresses pointer
 
 ldy _offsetOfViewMetadataBank
 sta  (VIEW_TAB_MD),y
+; Clear the metadata-bank field
 
 ldy _offsetOfViewNum
 sta  (VIEW_TAB_MD),y
+; Clear the view-number field
 
 return:
 rts
+; Done
 
 .endscope
 
