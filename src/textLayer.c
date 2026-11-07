@@ -1,4 +1,5 @@
 #include "textLayer.h"
+#include "stringFormat.h"
 #pragma code-name (push, "BANKRAM06")
 //#define VERBOSE_CHAR_SET_LOAD
 //#define TEST_CHARSET
@@ -10,13 +11,15 @@ int byteCounter = 0;
 #endif
 
 boolean charSetInited = FALSE;
+/* Resident so the input IRQ can use the active text palette in bank 7. */
+byte b3InputTextPalette = 0x20;
 #pragma bss-name (push, "BANKRAM03")
 byte b3CurrentForegroundColour;
 byte b3CurrentBackgroundColour;
 byte b3LastBoxLines;
 byte b3LastBoxStartLine;
-char b3TextBuffer1[TEXTBUFFER_SIZE];
-char b3TextBuffer2[TEXTBUFFER_SIZE];
+static byte b3LastBoxFirstRow;
+char b3TextBuffers[TEXTBUFFER_SIZE * 2];
 #pragma bss-name (pop)
 
 #pragma code-name (push, "BANKRAM03")
@@ -261,145 +264,47 @@ void b6TestCharset()
 }
 #endif
 
+/* Adapted from t3-text-cleanup-max-height: chunk before staging is exhausted. */
+static void b3FillCharAt(byte firstRow, byte startLine, unsigned int endLine,
+                       byte paletteNumber, byte charToFill)
+{
+    unsigned int line, chunkStart, chunkLast, lastMapLine;
+    const unsigned int rowsPerChunk = TEXTBUFFER_SIZE / (TILE_LAYER_WIDTH + 1);
+    char* buffer;
+    if (!firstRow || firstRow > TILE_LAYER_HEIGHT) return;
+    lastMapLine = TILE_LAYER_HEIGHT - firstRow;
+    if (startLine > lastMapLine || startLine > endLine) return;
+    if (endLine > lastMapLine) endLine = lastMapLine;
+    for (line = startLine; line <= endLine;) {
+        chunkStart = line;
+        chunkLast = line + rowsPerChunk - 1;
+        if (chunkLast > endLine) chunkLast = endLine;
+        buffer = b3TextBuffer1;
+        while (line <= chunkLast) {
+            /* cc65's memset is assembly; no per-character C copy loop. */
+            memset(buffer, charToFill, TILE_LAYER_WIDTH);
+            buffer += TILE_LAYER_WIDTH;
+            if (line < chunkLast) *buffer++ = NEW_LINE;
+            line++;
+        }
+        *buffer = 0;
+        b3DisplayMessageBox(b3TextBuffer1, TEXT_CODE_BANK, chunkStart, 0,
+                            paletteNumber, 0, TRUE, firstRow);
+    }
+}
+
 void b3FillChar(byte startLine, byte endLine, byte paletteNumber, byte charToFill)
 {
-	byte i, j;
-
-	char* clearBuffer = b3TextBuffer1;
-
-	for (i = startLine; i <= endLine; i++)
-	{
-		for (j = 0; j < TILE_LAYER_WIDTH; j++)
-		{
-			*clearBuffer = charToFill;
-			clearBuffer++; // Moved out from dereferencing for clarity
-		}
-
-		// It's a good idea to use brackets {} for multiline if-else statements
-		if (clearBuffer > &clearBuffer[LOCAL_WORK_AREA_SIZE] - TILE_LAYER_WIDTH - 1
-			|| i == endLine) // Minus one so the terminator can fit in
-		{
-			*clearBuffer = '\0';
-			b3DisplayMessageBox(b3TextBuffer1, TEXT_CODE_BANK, startLine, 0, paletteNumber, 0, TRUE, FIRST_TEXT_ROW);
-		}
-		else
-		{
-			*clearBuffer = NEW_LINE;
-			clearBuffer++; // Increment the buffer after adding '\n' to avoid potential buffer overruns in the next iteration.
-		}
-	}
+    b3FillCharAt(FIRST_TEXT_ROW, startLine, endLine, paletteNumber, charToFill);
 }
 
-//Thanks to https://www.rosettacode.org/wiki/Word_wrap#In-place_greedy
-//Agi text does not have newlines and requires the programmer to manually wrap the text
-byte b3WrapText(char* line_start, int width, byte* maxWidth) {
-	char* last_space = 0;
-	char* p;
-	byte numberOfLines = 1;
-	*maxWidth = 0;
+/* Layout loops share the same bounded buffers as the display path. */
+extern byte __fastcall__ b3WrapText(char* text, int width, byte* maxWidth);
+extern void __fastcall__ b3DrawBorder(byte width, size_t messageSize);
 
-	for (p = line_start; *p; p++) {
-		if (*p == ' ') {
-			last_space = p;
-		}
-
-		if (p - line_start > width && last_space || *p == NEW_LINE) {
-			if (*p != NEW_LINE)
-			{
-				*last_space = NEW_LINE;
-				if (*maxWidth < (last_space - line_start) + 1)
-				{
-					*maxWidth = (last_space - line_start) + 1;
-				}
-			}
-
-			line_start = last_space + 1;
-			last_space = 0;
-			b3LastBoxLines++;
-
-			numberOfLines++;
-		}
-	}
-
-	return numberOfLines;
-}
-
-void b3DrawBorder(byte boxWidth, size_t messageSize)
-{
-	byte i;
-	char* currentCharToWrite = &b3TextBuffer2[0], * charToReadNext;
-	int segmentLength;
-	char* leftBarPosition;
-	char delimiter[2];
-
-	delimiter[0] = NEW_LINE;
-	delimiter[1] = '\0';
-
-	for (i = 0; i <= boxWidth; i++)
-	{
-		*currentCharToWrite++ = TOP_BORDER;
-	}
-
-	*currentCharToWrite++ = NEW_LINE;
-
-	*currentCharToWrite++ = LEFT_BORDER;
-
-	for (i = 0; i <= boxWidth - 2; i++)
-	{
-		*currentCharToWrite++ = SPACE;
-	}
-
-	*currentCharToWrite++ = RIGHT_BORDER;
-
-	*currentCharToWrite++ = NEW_LINE;
-
-	charToReadNext = strtok(b3TextBuffer1, delimiter);
-
-	do
-	{
-		leftBarPosition = currentCharToWrite;
-		*currentCharToWrite++ = LEFT_BORDER;
-
-		segmentLength = strlen(charToReadNext);
-		memcpy(currentCharToWrite, charToReadNext, segmentLength);
-
-		currentCharToWrite += segmentLength;
-
-		charToReadNext = strtok(NULL, delimiter);
-
-		while (currentCharToWrite < leftBarPosition + boxWidth)
-		{
-			*currentCharToWrite++ = SPACE;
-		}
-
-		*currentCharToWrite++ = RIGHT_BORDER;
-		*currentCharToWrite++ = NEW_LINE;
-
-	} while (charToReadNext);
-
-
-	*currentCharToWrite++ = LEFT_BORDER;
-
-	for (i = 0; i <= boxWidth - 2; i++)
-	{
-		*currentCharToWrite++ = SPACE;
-	}
-
-	*currentCharToWrite++ = RIGHT_BORDER;
-
-	*currentCharToWrite++ = NEW_LINE;
-
-	for (i = 0; i <= boxWidth; i++)
-	{
-		*currentCharToWrite++ = BOTTOM_BORDER;
-	}
-	*currentCharToWrite++ = '\0';
-
-	if (currentCharToWrite > &b3TextBuffer2[0] + TEXTBUFFER_SIZE - 1)
-	{
-		printf("Bounds check fail. Boxing function");
-	}
-}
+extern void __fastcall__ b3ApplyTextModeControls(char* text);
+extern byte __fastcall__ b3ClipTextToMap(char* text);
+extern byte textClipColumns, textClipRows;
 
 extern unsigned long displayTextAddressToCopyTo;
 extern char* currentTextBuffer;
@@ -411,8 +316,7 @@ extern byte b3PaletteNumber;
 //Supports copying from banks or putting data directly into textbuffer, which is on bank 3
 void b3DisplayMessageBox(char* message, byte messageBank, byte row, byte col, byte paletteNumber, byte boxWidth, boolean wrap, byte firstRow)
 {
-	int i;
-	char terminator = 0;
+	int autoRow;
 	size_t messageSize = strLenBanked(message, messageBank) + 1;
 	long displayAddressCopyPaletteTo;
 	byte textWidth = boxWidth;
@@ -421,12 +325,10 @@ void b3DisplayMessageBox(char* message, byte messageBank, byte row, byte col, by
 
 	currentTextBuffer = b3TextBuffer1;
 
-	b3LastBoxLines = 1;
-
-	if (boxWidth)
-	{
-		b3LastBoxLines += 4; //Account for the top and bottom border, plus padding at the top at the bottom
-	}
+	b3LastBoxLines = 0;
+	if (!firstRow || firstRow > TILE_LAYER_HEIGHT) return;
+	if (boxWidth && boxWidth < 4) boxWidth = 4;
+	if (boxWidth > TILE_LAYER_WIDTH) boxWidth = TILE_LAYER_WIDTH;
 
 	if (messageSize > 1) //Agi sometimes has empty messages. We say greater than 1 because of the terminator
 	{
@@ -436,19 +338,28 @@ void b3DisplayMessageBox(char* message, byte messageBank, byte row, byte col, by
 		printf("Address: %p + (%d + %d) * %d + %d * %d = %lx\n", MAPBASE, FIRST_ROW, row, TILE_LAYER_BYTES_PER_ROW, col, BYTES_PER_CELL, displayTextAddressToCopyTo);
 		printf("displayAddressCopyPaletteTo = %lx\n", displayAddressCopyPaletteTo);
 #endif
-		if (messageSize > maxMessageSize)
-		{
-			memCpyBanked((byte*)message + maxMessageSize - 1, (byte*)&terminator, messageBank, 1);
-		}
 
 #ifdef VERBOSE_DISPLAY_TEXT
 		printf("Copy message %p on bank %d of size %d\n", message, messageBank, messageSize);
 		printf("row %d and col is %d", row, col);
 #endif // VERBOSE_DISPLAY_TEXT
 
-		if (message != (char*)b3TextBuffer1)
+		if (messageBank != TEXT_CODE_BANK || message != (char*)b3TextBuffer1)
 		{
-			memCpyBankedBetween((byte*)b3TextBuffer1, TEXT_CODE_BANK, (byte*)message, messageBank, messageSize);
+			/* Replacement text must participate in wrapping and box sizing. */
+			expandFormatCodes(message, messageBank, b3TextBuffer1, TEXT_CODE_BANK, maxMessageSize);
+			messageSize = strLenBanked(b3TextBuffer1, TEXT_CODE_BANK) + 1;
+		}
+		if (screenMode == AGI_TEXT) {
+			b3ApplyTextModeControls(b3TextBuffer1);
+			messageSize = strlen(b3TextBuffer1) + 1;
+		}
+		if (messageSize == 1) return;
+
+		b3LastBoxLines = 1;
+		if (boxWidth)
+		{
+			b3LastBoxLines += 4; //Account for the top and bottom border, plus padding at the top at the bottom
 		}
 
 		if (messageSize - 1 > TILE_LAYER_WIDTH / 2)
@@ -476,12 +387,14 @@ void b3DisplayMessageBox(char* message, byte messageBank, byte row, byte col, by
 		if (boxWidth)
 		{
 			b3DrawBorder(boxWidth - 2, messageSize);
+			numberOfLines = b3LastBoxLines - 4;
 			currentTextBuffer = b3TextBuffer2;
 		}
 
 		if (row == AUTO_CALC_ROW)
 		{
-			b3LastBoxStartLine = (TEXT_ROWS / 2 - (numberOfLines + 2) / 2);
+			autoRow = TEXT_ROWS / 2 - (numberOfLines + 2) / 2;
+			b3LastBoxStartLine = autoRow < 0 ? 0 : autoRow;
 		}
 		else
 		{
@@ -490,9 +403,18 @@ void b3DisplayMessageBox(char* message, byte messageBank, byte row, byte col, by
 
 		if (col == AUTO_CALC_COLUMN)
 		{
-			col = MAX_CHAR_ACROSS / 2 - boxWidth / 2;
+			col = boxWidth > MAX_CHAR_ACROSS ? 0 : MAX_CHAR_ACROSS / 2 - boxWidth / 2;
 		}
 
+		if (b3LastBoxStartLine > TILE_LAYER_HEIGHT - firstRow || col >= TILE_LAYER_WIDTH) {
+			b3LastBoxLines = 0;
+			return;
+		}
+		textClipColumns = TILE_LAYER_WIDTH - col;
+		textClipRows = TILE_LAYER_HEIGHT - (firstRow + b3LastBoxStartLine - 1);
+		numberOfLines = b3ClipTextToMap(currentTextBuffer);
+		b3LastBoxLines = numberOfLines;
+		b3LastBoxFirstRow = firstRow;
 		displayTextAddressToCopyTo = MAPBASE + (firstRow + b3LastBoxStartLine - 1) * TILE_LAYER_BYTES_PER_ROW + col * BYTES_PER_CELL;
 		b3PaletteAddress = MAPBASE + (firstRow + b3LastBoxStartLine - 1) * TILE_LAYER_BYTES_PER_ROW + 1; //We will set the same palette for the whole row
 		b3PaletteRows = numberOfLines;
@@ -508,7 +430,7 @@ byte b3DisplayManuallyWrappedMessageBox(char* message, byte messageBank, byte ro
 	byte ch;
 
 	b3DisplayMessageBox(message, messageBank, AUTO_CALC_ROW, AUTO_CALC_COLUMN, TEXTBOX_PALETTE_NUMBER, boxWidth, FALSE, FIRST_TEXT_ROW);
-	b3LastBoxLines = boxHeight;
+	if (b3LastBoxLines) b3LastBoxLines = boxHeight;
 
 	//b3PrintMessageInTextbox(loadAndIncWinCode(), DEFAULT_TEXTBOX_X, DEFAULT_TEXTBOX_Y, DEFAULT_BOX_WIDTH);
 
@@ -525,7 +447,7 @@ byte b3DisplayManuallyWrappedMessageBox(char* message, byte messageBank, byte ro
 
 byte b3SetTextColor(byte foreground, byte background)
 {
-	int textId = (int)foreground << 4 + background;
+	int textId = ((int)foreground << 4) + background;
 	unsigned int foreColorBytes, backColorBytes;
 	long paletteWriteAddress;
 	byte paletteSlot;
@@ -533,6 +455,7 @@ byte b3SetTextColor(byte foreground, byte background)
 	int textPalette;
 
 	paletteSlot = bFGetPalette(BASE_TEXT_ID + textId, &palleteGetResult);
+	b3InputTextPalette = paletteSlot << 4;
 
 #ifdef VERBOSE_SET_PALETTE
 	printf("fore of %d and back of %d\n", foreground, background);
@@ -573,11 +496,20 @@ byte b3SetTextColor(byte foreground, byte background)
 
 void b3ClearLastPlacedText()
 {
+	byte startLine = b3LastBoxStartLine;
+	byte firstRow = b3LastBoxFirstRow;
+	unsigned int lastLine;
+	if (!b3LastBoxLines) return;
+
 #ifdef VERBOSE_DISPLAY_TEXT
 	printf("Trying to clear at start line %d number of lines %d end line %d \n", lastBoxStartLine, b3LastBoxLines, lastBoxStartLine + lastBoxLines - 1);
 #endif
 
-	b3FillChar(b3LastBoxStartLine, b3LastBoxStartLine + b3LastBoxLines - 1, TEXTBOX_PALETTE_NUMBER, TRANSPARENT_CHAR);
+	lastLine = (unsigned int)startLine + b3LastBoxLines - 1;
+	b3FillCharAt(firstRow, startLine, lastLine, TEXTBOX_PALETTE_NUMBER, TRANSPARENT_CHAR);
+	b3LastBoxStartLine = startLine;
+	b3LastBoxFirstRow = firstRow;
+	b3LastBoxLines = 0;
 }
 
 #pragma code-name (pop)

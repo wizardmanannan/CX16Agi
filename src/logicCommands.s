@@ -147,6 +147,7 @@ LOGICCOMMANDS_INC = 1
 .import _b4Obj_status_v
 .import _b5Quit
 .import _b5Pause
+.import _b5Echo_line, _b5Cancel_line
 .import _b5Version
 .import _b5Set_game_id
 .import _b5Reset_scan_start
@@ -806,8 +807,8 @@ jmpTableCommands2:
 .addr b5QuitCCall
 .addr b1NoOp_0
 .addr b5PauseCCall
-.addr b1NoOp_0
-.addr b1NoOp_0
+.addr b5EchoLineCCall
+.addr b5CancelLineCCall
 .addr b1NoOp_0
 .addr b1NoOp_0
 .addr _b5Version
@@ -1689,6 +1690,12 @@ b5QuitCCall:
         jmp mainLoop
 b5PauseCCall:
         jsr _b5Pause
+        jmp mainLoop
+b5EchoLineCCall:
+        jsr _b5Echo_line
+        jmp mainLoop
+b5CancelLineCCall:
+        jsr _b5Cancel_line
         jmp mainLoop
 b5VersionCCall:
         jsr _b5Version

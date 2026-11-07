@@ -12,7 +12,7 @@ boolean menuDirty;                  // Flag to indicate menu needs redrawing
 boolean menuAllowed;                // Global flag controlling if menu system is enabled
 
 #pragma bss-name (push, "BANKRAM0A")
-MENU the_menu[MAX_MENUS];                           // Array of top-level menu items
+MENU the_menu[MAX_MENUS + 1];                       // Includes the end sentinel
 MENU the_menuChildren[MAX_MENU_CHILDREN * MAX_MENUS]; // Storage for all child menu items
 MENU* bAFirstMenuChild[MAX_MENUS];                  // Pointers to first child of each menu
 char menuTextBuffer[MENU_TEXT_BUFFER_SIZE];         // Buffer for storing menu text strings
@@ -309,11 +309,13 @@ void bASetMenuChild(MENU* menu, byte menuNo)
 char* bAStoreMessageInBuffer(LOGICFile* currentLogicFile, byte messNum)
 {
 	char* messData,*result;
-	byte messLength;
+	size_t messLength;
 
 
+	if (!messNum || messNum > currentLogicFile->numMessages || !currentLogicFile->messages) return NULL;
 	messData = getMessagePointer(currentLog, messNum - 1);
 	messLength = strLenBanked(messData, currentLogicFile->messageBank) + 1;
+	if (messLength > (size_t)(menuTextBuffer + MENU_TEXT_BUFFER_SIZE - nextMenuTextBufferAddr)) return NULL;
 	
 	memCpyBankedBetween((byte*)nextMenuTextBufferAddr, MENU_BANK, (byte*)messData, currentLogicFile->messageBank, messLength);
 
@@ -333,10 +335,16 @@ char* bAStoreMessageInBuffer(LOGICFile* currentLogicFile, byte messNum)
 // ================================================================
 void bASetMenu(byte messNum)
 {
-	int startOffset;
+	byte i;
+	size_t occupied = 0, available;
 	MENU newMenu;
 	LOGICFile currentLogicFile;
 
+	if (numOfMenus >= MAX_MENUS) return;
+	for (i = 0; i < numOfMenus; i++) occupied += strlen(the_menu[i].text) + 1;
+	/* Reserve the assembly renderer's separator and at least one padding cell. */
+	if (occupied >= MENU_BAR_WIDTH - 2) return;
+	available = MENU_BAR_WIDTH - occupied - 2;
 	asm("sei");
 
 	if (numOfMenus == 0)
@@ -348,6 +356,11 @@ void bASetMenu(byte messNum)
 	
 	
 	newMenu.text = bAStoreMessageInBuffer(&currentLogicFile, messNum);
+	if (!newMenu.text) {
+		REENABLE_INTERRUPTS();
+		return;
+	}
+	if (strlen(newMenu.text) > available) newMenu.text[available] = '\0';
 	newMenu.controller = NOT_ASSOCIATED;
 	/* Create new menu and allocate space for MAX_MENU_SIZE items */
 
@@ -412,8 +425,10 @@ void bASetMenuItem(int messNum, int controllerNum)
 	MENU childMenu;
 	LOGICFile currentLogicFile;
 	EventType event;
-	byte menuTextLength;
+	size_t menuTextWidth;
 	
+	if (numOfMenus <= 0 || numOfMenus > MAX_MENUS ||
+	    bAMenuChildCount[numOfMenus - 1] >= MAX_MENU_CHILDREN) return;
 	asm("sei");
 
 	b5GetLogicFile(&currentLogicFile, currentLog);
@@ -424,15 +439,20 @@ void bASetMenuItem(int messNum, int controllerNum)
 	event.activated = 0;
 
 	childMenu.text = bAStoreMessageInBuffer(&currentLogicFile, messNum);
+	if (!childMenu.text) {
+		REENABLE_INTERRUPTS();
+		return;
+	}
 	childMenu.controller = controllerNum;
 
 	bASetMenuChild(&childMenu, numOfMenus - 1);
 
-	menuTextLength = strlen(childMenu.text);
+	menuTextWidth = strlen(childMenu.text) + 2;
+	if (menuTextWidth > MENU_BAR_WIDTH) menuTextWidth = MENU_BAR_WIDTH;
 
-	if(menuTextLength + 2 > bAMenuChildWidth[numOfMenus - 1])
+	if(menuTextWidth > bAMenuChildWidth[numOfMenus - 1])
 	{
-		bAMenuChildWidth[numOfMenus - 1] = menuTextLength + 2; // Plus 2 to account for left and right borders
+		bAMenuChildWidth[numOfMenus - 1] = menuTextWidth; // Includes left and right borders
 		bASetMenuChildShiftBack(numOfMenus - 1);
 	}
 

@@ -19,6 +19,9 @@
 #define INVENTORY_PALETTE_NUMBER 1
 #define FIRST_OBJECT_ROW 1
 #define MAX_OBJECT_ROWS 30
+#define INVENTORY_ROWS (MAX_OBJECT_ROWS - 4)
+#define INVENTORY_ITEMS_PER_PAGE (INVENTORY_ROWS * 2)
+#define INVENTORY_NAME_COLUMNS 20
 
 typedef struct objectType {
 	byte roomNum;

@@ -1,0 +1,28 @@
+diff --git a/src/testbench.c b/src/testbench.c
+index 5604f95..c4b2b6b 100644
+--- a/src/testbench.c
++++ b/src/testbench.c
+@@ -286,6 +286,11 @@ void testbench_init()
+             fflush(stdout);
+         }
+
++        else if(strncmp(line, "RQC", 3) == 0) {             //Request emulator CPU clock count
++            printf("%lx\n", (unsigned long)clockticks6502);
++            fflush(stdout);
++        }
++
+         else {
+             printf("ERR Unknown command\n");
+             fflush(stdout);
+diff --git a/src/testbench.h b/src/testbench.h
+index 53143b6..496f11a 100644
+--- a/src/testbench.h
++++ b/src/testbench.h
+@@ -40,6 +40,7 @@ RQX                 Request value of X register
+ RQY                 Request value of Y register
+ RST                 Request value of status register
+ RSP                 Request value of stack pointer
++RQC                 Request current emulator CPU clock count
+
+
+ 4. Message formatting

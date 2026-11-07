@@ -20,7 +20,7 @@ typedef enum {
     HIGHLIGHT_INVENTORY_ROW = 11
 } IRQ_COMMAND;
 
-extern unsigned int vSyncCounter; //Updated by IRQ every 60ms
+extern volatile unsigned int vSyncCounter; //Updated by IRQ at 60 Hz
 
 //Only to be called directly by bank 6
 extern void b6SetAndWaitForIrqStateAsm(IRQ_COMMAND state);

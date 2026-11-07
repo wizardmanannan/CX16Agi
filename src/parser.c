@@ -10,6 +10,7 @@
 #define  PROGRAM_CONTROL  1
 
 #include "parser.h"
+#include "stringFormat.h"
 
 extern boolean* flag;
 extern byte* var;
@@ -19,9 +20,11 @@ extern int controlMode;
 
 int lastKey;
 int numInputWords;
-char cursorChar = '_';
+char cursorChar = 0x5f; /* AGI ASCII underscore, independent of the target charmap. */
+boolean b7ReadingString, b7InputReady;
+byte b7InputRow, b7InputColumn;
 
-#define MAX_INPUT_STRING_LENGTH 40 //Includes terminator 
+#define MAX_INPUT_STRING_LENGTH 40
 
 //#define VERBOSE_DEBUG_LOOKUP_WORDS
 #pragma rodata-name (push, "BANKRAM07")
@@ -31,8 +34,14 @@ int inputWords[10];
 #pragma bss-name (push, "BANKRAM07")
 char b7WordText[10][80], b7CurrentInputStr[MAX_INPUT_STRING_LENGTH + 1], strPos = 0, b7OutputString[80], b7Temp[256];
 char string[12][40];
-char b7LookupWordsBuffer[125];
+char* b7LookupWordTokens[MAX_INPUT_STRING_LENGTH / 2];
+char b7LookupWord[MAX_INPUT_STRING_LENGTH + 1];
 //boolean wordsAreWaiting=FALSE;
+
+typedef char parserInputLineSizesMustMatchAssembly[
+    sizeof(b7OutputString) == 80 && sizeof(b7Temp) == 256 &&
+    sizeof(b7CurrentInputStr) == 41 ? 1 : -1];
+extern void __fastcall__ b7RefreshInputLine(boolean erasePrevious);
 
 char b7LastLine[80];
 EventType b7Events[256];  /* controller(), set.key(), set.menu.item() */
@@ -61,11 +70,6 @@ void b7SetEvent(EventType* event, byte eventNumber)
 	b7Events[eventNumber] = *event;
 }
 
-byte b7GetInputWord(byte number)
-{
-	return inputWords[number];
-}
-
 char* b7GetInternalStringPtr(byte number, size_t* length)
 {
 	*length = strlen(string[number]);
@@ -74,17 +78,19 @@ char* b7GetInternalStringPtr(byte number, size_t* length)
 
 void b7LookupWords(char* inputLine);
 
-void b7ProcessString(char* stringPointer, byte stringBank, char* b7OutputString, byte outputStringBank)
+/* Fixed code remains visible while the formatter switches source banks. */
+#pragma code-name (push, "CODE")
+void b7ProcessString(char* stringPointer, byte stringBank, char* b7OutputString, byte outputStringBank, size_t dstMax)
 {
-#define TEMP_SIZE 80
-#define NUM_STRING_SIZE 80
-#define INPUT_BUFFER_SIZE 10
-
+	expandFormatCodes(stringPointer, stringBank, b7OutputString, outputStringBank, dstMax);
 }
+#pragma code-name (pop)
 
 void b7InitEvents()
 {
 	int eventNum;
+    string[0][0] = '>';
+    string[0][1] = 0;
 
 	for (eventNum = 0; eventNum < 256; eventNum++) {
 		b7Events[eventNum].activated = FALSE;
@@ -118,51 +124,72 @@ void b7HandleDirection(int dirn)
 
 void b7GetString(char* promptStr, byte promptStringBank, char* returnStr, byte returnStrBank, int x, int y, int l)
 {
-	int ch, gx, gy;
-	boolean stillInputing = TRUE;
+	int ch;
+    char previousInput[MAX_INPUT_STRING_LENGTH + 1];
 
-	gx = (x - 1) * 16;
-	gy = ((y - 1) * 16) + 20;
-	b7ProcessString(promptStr, promptStringBank, b7Temp, PARSER_BANK);
-	sprintf(b7OutputString, "%s%s%c", b7Temp, b7CurrentInputStr, cursorChar);
+	if (l < 0) l = 0;
+	if (l > MAX_INPUT_STRING_LENGTH) l = MAX_INPUT_STRING_LENGTH;
+    strcpy(previousInput, b7CurrentInputStr);
+    b7InputReady = FALSE;
+    b7ReadingString = TRUE;
+    b7InputRow = y;
+    b7InputColumn = x;
+	strPos = 0;
+	b7CurrentInputStr[0] = '\0';
+	b7ProcessString(promptStr, promptStringBank, b7Temp, PARSER_BANK, sizeof(b7Temp));
+	b7RefreshInputLine(FALSE);
 
 	do {
 		GET_IN(ch);
 		if (ch)
 		{
-			if ((ch >> 8) == 0x1C) ch |= 0x0D; /* Handle keypad ENTER */
 			switch (ch & 0xff) {
 			case 0:     /* Ignore these when building input string */
 			case 0x09:
-			case 0x1B:
 				break;
+			case KEY_ESC:
+				strPos = 0;
+				b7CurrentInputStr[0] = 0;
+				/* Cancellation submits an empty result. */
 			case 0x0D:  /* ENTER */
-				strcpy(returnStr, b7CurrentInputStr);
+				memCpyBankedBetween((byte*)returnStr, returnStrBank,
+				                   (byte*)b7CurrentInputStr, STRING_BANK, (size_t)strPos + 1);
 				while (key[KEY_ENTER]) { /* Wait until ENTER released */ }
+                b7InputReady = FALSE;
+                strcpy(b7CurrentInputStr, previousInput);
+                b7ReadingString = FALSE;
 				return;
-			case 0x08: /* Backspace */
+			case KEY_BACKSPACE: /* Platform delete/backspace */
+			case 0x08: /* ASCII Backspace */
 				if (strPos > 0) {
 					strPos--;
 					b7CurrentInputStr[strPos] = 0;
+					b7RefreshInputLine(TRUE);
 				}
 				break;
 			case 0x0A: break;
 			default:
-				if (strPos == l) break;
+				if (ch >= KEY_CAP_A && ch <= KEY_CAP_Z) ch -= 0x80;
+				else if (ch >= KEY_LOWER_A && ch <= KEY_LOWER_Z) ch += ASCII_DIFF;
+				if (ch < SPACE || ch > 0x7e) break;
+				if (strPos >= l) break;
 				b7CurrentInputStr[strPos] = (ch & 0xff);
 				strPos++;
 				b7CurrentInputStr[strPos] = 0;
-				sprintf(b7OutputString, "%s%s%c", b7Temp, b7CurrentInputStr, cursorChar);
+				b7RefreshInputLine(FALSE);
 				break;
 			}
 		}
-	} while (ch);
+	} while (TRUE);
 }
 
 /* used by get.string and get.num */
 void b7GetInternalString(char* promptStr, byte promptStringBank, byte stringNumber, int x, int y, int l)
 {
-	char* inputString = string[stringNumber];
+	char* inputString;
+	if (stringNumber >= sizeof(string) / sizeof(string[0])) return;
+	if (l >= sizeof(string[0])) l = sizeof(string[0]) - 1;
+	inputString = string[stringNumber];
 	b7GetString(promptStr, promptStringBank, inputString, PARSER_BANK, x, y, l);
 }
 
@@ -176,7 +203,7 @@ extern byte debugBank;
 ***************************************************************************/
 void b7PollKeyboard()
 {
-	static char strPos = 0;
+	byte strPos = strlen(b7CurrentInputStr);
 	int ch, dummy, gx, gy;
 
 	b1ResetControllers();
@@ -190,7 +217,8 @@ void b7PollKeyboard()
 	gx = 0;
 	gy = ((user_input_line - 1) * 16) + 20;
 	if (inputLineDisplayed) {
-		sprintf(b7OutputString, "%s%s%c", b7Temp, b7CurrentInputStr, cursorChar);
+        b7ProcessString(string[0], STRING_BANK, b7Temp, PARSER_BANK, sizeof(b7Temp));
+        b7RefreshInputLine(FALSE);
 	}
 
 	do {
@@ -199,7 +227,6 @@ void b7PollKeyboard()
 		if (ch) {
 			var[19] = ch;
 			lastKey = ch;  /* Store key value for have.key() cmd */
-			if (ch == 0x1C) ch |= 0x0D; /* Handle keypad ENTER */
 		
 			//if ((ch >> 8) == KEY_F11) saveSnapShot();
 
@@ -228,45 +255,61 @@ void b7PollKeyboard()
 					{
 						trampolineDebug(bDbgShowPriority);
 					}
+					if (b7CurrentInputStr[0]) strcpy(b7LastLine, b7CurrentInputStr);
 					b7LookupWords(b7CurrentInputStr);
 					b7CurrentInputStr[0] = 0;
 					strPos = 0;
-					sprintf(b7OutputString, "%s%s%c", b7Temp, b7CurrentInputStr, cursorChar);
-					strcpy(b7LastLine, b7CurrentInputStr);
+                        b7ProcessString(string[0], STRING_BANK, b7Temp, PARSER_BANK, sizeof(b7Temp));
+					b7RefreshInputLine(FALSE);
 					break;
 				case KEY_BACKSPACE:   /* Backspace */
 					if (strPos > 0) {
 						strPos--;
 						b7CurrentInputStr[strPos] = 0;
-						sprintf(b7OutputString, "%s%s%c ", b7Temp, b7CurrentInputStr, cursorChar);
+						b7RefreshInputLine(TRUE);
 						//drawBigString(screen, " ", (strPos*16), 448, 7, 0);
 					}
 					else
 						return;
 					break;
 				default:
-					if (strlen(b7CurrentInputStr) < MAX_INPUT_STRING_LENGTH && (ch >= KEY_CAP_A && ch <= KEY_CAP_Z || ch >= KEY_LOWER_A && ch <= KEY_LOWER_Z || ch >= KEY_1 && ch <= KEY_9 || ch == SPACE))
-					{
-						if (ch >= KEY_CAP_A && ch <= KEY_CAP_Z)
-						{
-							ch -= KEY_CAP_A - KEY_LOWER_A;
-							ch += ASCII_DIFF;
-						}
-						else if (ch >= KEY_LOWER_A && ch <= KEY_LOWER_Z)
-						{
-							ch += ASCII_DIFF;
-						}
-						
-						b7CurrentInputStr[strPos] = (ch);
-						strPos++;
-						b7CurrentInputStr[strPos] = 0;
-						sprintf(b7OutputString, "%s%s%c", b7Temp, b7CurrentInputStr, cursorChar);
-					}
+                        if (ch >= KEY_CAP_A && ch <= KEY_CAP_Z) ch -= 0x80;
+                        else if (ch >= KEY_LOWER_A && ch <= KEY_LOWER_Z) ch += ASCII_DIFF;
+                        if (strPos < MAX_INPUT_STRING_LENGTH && strPos < var[24] && ch >= SPACE && ch <= 0x7e)
+                        {
+                            b7CurrentInputStr[strPos++] = ch;
+                            b7CurrentInputStr[strPos] = 0;
+                            b7RefreshInputLine(FALSE);
+                        }
 					break;
 				}
 			}
 		}
 	} while (ch);
+}
+
+void b7EchoLine(void)
+{
+    size_t length = strlen(b7CurrentInputStr);
+    size_t previousLength = strlen(b7LastLine);
+    size_t limit = var[24];
+    if (limit > MAX_INPUT_STRING_LENGTH) limit = MAX_INPUT_STRING_LENGTH;
+    if (previousLength > limit) previousLength = limit;
+    b7InputReady = FALSE;
+    if (length < previousLength) {
+        memcpy(b7CurrentInputStr + length, b7LastLine + length, previousLength - length);
+        b7CurrentInputStr[previousLength] = 0;
+    }
+    b7ProcessString(string[0], STRING_BANK, b7Temp, PARSER_BANK, sizeof(b7Temp));
+    b7RefreshInputLine(FALSE);
+}
+
+void b7CancelLine(void)
+{
+    b7InputReady = FALSE;
+    b7CurrentInputStr[0] = 0;
+    b7ProcessString(string[0], STRING_BANK, b7Temp, PARSER_BANK, sizeof(b7Temp));
+    b7RefreshInputLine(FALSE);
 }
 
 /***************************************************************************
@@ -276,94 +319,18 @@ void b7PollKeyboard()
 **   Removes punctuation and collapses multiple spaces in the input string,
 **   then writes the cleaned result back into the same buffer.
 ***************************************************************************/
-void b7StripExtraChars(char* userInput)
-{
-	// Create small temporary buffer to build the cleaned string
-	char tempString[41] = "";
-
-	// Position counters: one for reading input, one for writing to temp
-	int strPos, tempPos = 0;
-
-	// Flag to remember whether the last written character was a space
-	boolean lastCharSpace = FALSE;
-
-	// Loop through every character in the input string
-	for (strPos = 0; strPos < strlen(userInput); strPos++)
-	{
-		// Decide what to do based on current character
-		switch (userInput[strPos])
-		{
-		case ' ':
-			// Only write a space if we didn't just write one
-			if (!lastCharSpace)
-			{
-				tempString[tempPos++] = ' ';
-			}
-			// Remember that last written character was space
-			lastCharSpace = TRUE;
-			break;
-
-			// These characters are completely ignored / removed
-		case ',':
-		case '.':
-		case '?':
-		case '!':
-		case '(':
-		case ')':
-		case ';':
-		case ':':
-		case '[':
-		case ']':
-		case '{':
-		case '}':
-		case '\'':
-		case '`':
-		case '-':
-		case '"':
-			// Do nothing � skip this character
-			break;
-
-		default:
-			// Any other character is kept as-is
-			// Reset space flag since this is not a space
-			lastCharSpace = FALSE;
-			// Copy the character to the output buffer
-			tempString[tempPos++] = userInput[strPos];
-			break;
-		}
-	}
-
-	// Terminate the cleaned string properly
-	tempString[tempPos] = '\0';
-
-	// Copy the result back into the caller's buffer (overwriting original)
-	strcpy(userInput, tempString);
-}
+extern void __fastcall__ b7StripExtraChars(char* userInput);
 
 
 /***************************************************************************
 ** b7TokenizeWords
 **
 ** Overall purpose:
-**   Splits the input string into space-separated words using strtok,
+**   Splits the input string into space-separated words in assembly,
 **   stores pointers to each word in the tokens array, and returns
 **   a pointer to the last stored token pointer.
 ***************************************************************************/
-char** b7TokenizeWords(char* inputLine, char** tokens)
-{
-	char* token;    // Will hold each token pointer returned by strtok
-
-	// First call finds the first token; subsequent calls use NULL
-	for (token = strtok(inputLine, " "); token; token = strtok(0, " "))
-	{
-		// Store the pointer to this token in the next free slot
-		*tokens++ = token;
-	}
-
-	// Return pointer to the last stored token pointer
-	// (subtract 1 because tokens++ has already advanced past it)
-	return tokens - 1;
-}
+extern char** __fastcall__ b7TokenizeWords(char* inputLine, char** tokens);
 
 
 /***************************************************************************
@@ -386,11 +353,11 @@ void b7LookupWords(char* inputLine)
 	// Working buffer for input copies
 	char* userInput = b7Temp;
 
-	// Pointers into the token array stored in b7LookupWordsBuffer
-	char** start = (char**)b7LookupWordsBuffer, ** end, ** originalEnd;
+	// Token pointers and word text have separate, correctly sized storage.
+	char** start = b7LookupWordTokens, ** end, ** originalEnd;
 
-	// Area after the token pointers � used to hold one word for lookup
-	char* strBuf = (char*)start + MAX_WORD_SIZE * sizeof(char*) + sizeof(char**);
+	// Holds one candidate phrase for dictionary lookup.
+	char* strBuf = b7LookupWord;
 
 	// Length of the current word being processed
 	byte stringLength;
@@ -404,9 +371,12 @@ void b7LookupWords(char* inputLine)
 
 	// Remove punctuation and collapse spaces
 	b7StripExtraChars(userInput);
+	// Tokenization inserts nulls; preserve the cleaned phrase for phrase lookup.
+	strcpy(strBuf, userInput);
 
 	// Tokenize ? fill token pointer array, get pointer to last token
 	end = b7TokenizeWords(userInput, start);
+	strcpy(userInput, strBuf);
 
 	// Save the original end-of-tokens pointer
 	originalEnd = end;
@@ -416,14 +386,11 @@ void b7LookupWords(char* inputLine)
 	printf("start %p end %p\n", start, end);
 #endif
 
-	// Re-copy original input (strtok inserted nulls into previous copy)
-	strcpy(userInput, inputLine);
-
 	// Reset count of recognized words this turn
 	numInputWords = 0;
 
-	// Starting length value (will be updated per token)
-	stringLength = strlen(inputLine);
+	// Starting length of the cleaned phrase (updated as tokens are consumed)
+	stringLength = strlen(userInput);
 
 	// Main loop: process tokens while we have some left and haven't failed
 	while (start <= end && allWordsFound)
@@ -482,6 +449,11 @@ void b7LookupWords(char* inputLine)
 			// If synonym number is non-zero, store it
 			if (synNum)
 			{
+				if (numInputWords >= sizeof(inputWords) / sizeof(inputWords[0])) {
+					var[9] = numInputWords + 1;
+					allWordsFound = FALSE;
+					break;
+				}
 				flag[2] = TRUE;
 				// Save synonym number
 				inputWords[numInputWords] = synNum;

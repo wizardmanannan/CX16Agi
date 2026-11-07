@@ -33,12 +33,12 @@ High Level Things Completed:
 - Interpreter
 - Inventory
 - Text boxes
+- String interpolation and text-mode controls ([native regression tests](tests/README.md))
 - Horizontal split sprites
   
 
 High Level Things To Be Done:
 - Load and save
-- String interpolation
 - Vertical split sprites
 - Screen shaking
 - Support for games with resources larger than 8k
@@ -48,7 +48,6 @@ High Level Things To Be Done:
 
 
 # CX 16 Iteration 16 Goals (Current)
-- Implement string interpolation (string token replacement) 
 - Continuing to work towards playability of King's Quest I:
 - Implement screen shaking using the Vera scroll registers
 - Continuing to squash bugs that would stop a player completing the game
