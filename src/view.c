@@ -1017,11 +1017,6 @@ void bESetViewMetadata(View* localView, ViewTable* viewTable, byte viewNum, byte
 	printf("The viewNum is %d\n", viewNum);
 #endif
 
-	if (nextSpriteSlot > SPRITE_SLOTS)
-	{
-		printf("Fail: Sprite slot too big");
-	}
-
 #ifdef VERBOSE_DEBUG_SET_METADATA
 	printf("The max number of vera slots is %d \n", localView->veraSlots);
 #endif
@@ -1033,12 +1028,6 @@ void bESetViewMetadata(View* localView, ViewTable* viewTable, byte viewNum, byte
 #endif
 
 	metadata = viewTableMetadata[viewTabNo];
-
-	if (metadata.loopsVeraAddressesPointers != NULL)
-	{
-		b10BankedDealloc((byte*)metadata.loopsVeraAddressesPointers, metadata.viewTableMetadataBank);
-		//TODO: Deallocate vera as well
-	}
 
 	numberLoopVeraAddressPointers = localView->numberOfLoops;
 	numberVeraAddresses = maxVeraAddresses * localView->numberOfLoops;
@@ -1267,9 +1256,6 @@ boolean agiBlit(byte entryNum, boolean disableInterupts)
 #ifdef VERBOSE_SWITCH_METADATA
 		printf("switching to %d for entry %d\n", viewNum, entryNum);
 #endif
-		//printf("ll %p vt %p e %d bank %d %p view %p loops %p loopsBank %p vn %d", &localLoop, &localViewTab, entryNum, viewTableMetadata[entryNum].viewTableMetadataBank, &viewTableMetadata[entryNum].viewTableMetadataBank, &localView, localView.loops, localView.loopsBank, viewNum);
-		//printf("the address of the loops are %p on bank %p the size of look is %d on \n", &loadedViews[0].loops, &loadedViews[0].loopsBank, sizeof(Loop), &viewTableMetadata[0].veraAddresses);
-
 		bESwitchMetadata(entryNum);
 		localViewTab.staleCounter = localLoop.numberOfCels;
 
@@ -1304,11 +1290,6 @@ boolean agiBlit(byte entryNum, boolean disableInterupts)
 
 	if (!loopVeraAddresses[localView.maxVeraSlots * localViewTab.currentCel])
 	{
-
-		//printf("current cel %d\n", localViewTab.currentCel);
-		//printf("you are checking %d %d address %p on bank %p %p\n", localView.maxVeraSlots, localViewTab.currentCel, &loopVeraAddresses[localView.maxVeraSlots * localViewTab.currentCel], RAM_BANK, loopVeraAddresses[localView.maxVeraSlots * localViewTab.currentCel]);
-		//asm("stp");
-
 		RAM_BANK = SPRITE_METADATA_BANK;
 
 #ifdef VERBOSE_DEBUG_NO_BLIT_CACHE
@@ -1393,7 +1374,6 @@ animatedSprite:
 
 				RAM_BANK = localMetadata.viewTableMetadataBank;
 				tempVeraAddress = localMetadata.backBuffers[i];
-				//printf("tempVera is %lx\n", tempVeraAddress);
 				localMetadata.backBuffers[i] = NULL;
 				_assmULong = NULL;
 				RAM_BANK = SPRITE_MEMORY_MANAGER_BANK;
@@ -1509,10 +1489,8 @@ invert:
 	asm("jmp %g", saveMetadata);
 switchToBackBuffer:
 	RAM_BANK = localMetadata.viewTableMetadataBank;
-	//printf("invert\n");
 	loopVeraAddress = localMetadata.backBuffers[0];
 	_assmULong = loopVeraAddress;
-	//printf("2. your local loop has an allocated height of %d\n", localLoop.allocationHeight);
 
 	asm("lda #%w", SPRITE_METADATA_BANK);
 	asm("sta 0");
@@ -1539,7 +1517,6 @@ setSpritesUpdatedBank:
 
 	//Put bytes into a buffer to be picked up by the irq see spriteIrqHandler.s (bEHandleSpriteUpdates)
 
-	//marker
 	asm("lda %w", SPLIT_COUNTER);
 	asm("dec");
 	asm("bne %g", checkWhetherOnBackBuffer); //loopVera address will always be correct on the first iteration, it was set at the beginning
@@ -1566,11 +1543,6 @@ notOnBackBuffer:
 
 onBackBuffer:
 	loopVeraAddress = localMetadata.backBuffers[splitCounter - 1];
-
-	if (((localViewTab.flags & MOTION > 0) && localViewTab.direction > 0) || localViewTab.staleCounter || localMetadata.isOnBackBuffer)
-	{
-		//printf("loop vera address %p\n", loopVeraAddress);
-	}
 
 	RAM_BANK = SPRITE_UPDATED_BANK;
 	SET_VERA_ADDRESS_ZP(loopVeraAddress, VERA_ADDRESS, VERA_ADDRESS_HIGH);
@@ -1830,8 +1802,6 @@ updateBufferPointer:
 	asm("jmp %g", splitLoop);
 
 endBlit:
-
-
 	setViewTab(&localViewTab, entryNum);
 
 	if (disableInterupts)
