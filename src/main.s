@@ -23,6 +23,7 @@
     .include "statusBar.s"
     .include "showObjAsm.s"
     .include "objectAsm.s"
+    .include "stringFormatAsm.s"
     
     .export _executeLogic
     .export _b6InitInterpreter

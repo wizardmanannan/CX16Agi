@@ -10,6 +10,7 @@
 #include "graphics.h"
 #include "paletteManager.h"
 #include "keyboard.h"
+#include "stringFormat.h"
 
 #define BYTES_PER_CHARACTER 16
 #define NO_CHARS 160

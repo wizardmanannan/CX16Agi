@@ -446,9 +446,11 @@ void b3DisplayMessageBox(char* message, byte messageBank, byte row, byte col, by
 		printf("row %d and col is %d", row, col);
 #endif // VERBOSE_DISPLAY_TEXT
 
-		if (message != (char*)b3TextBuffer1)
+		if (messageBank != TEXT_CODE_BANK || message != (char*)b3TextBuffer1)
 		{
-			memCpyBankedBetween((byte*)b3TextBuffer1, TEXT_CODE_BANK, (byte*)message, messageBank, messageSize);
+			/* Replacement text must participate in wrapping and box sizing. */
+			expandFormatCodes(message, messageBank, b3TextBuffer1, TEXT_CODE_BANK, maxMessageSize);
+			messageSize = strLenBanked(b3TextBuffer1, TEXT_CODE_BANK) + 1;
 		}
 
 		if (messageSize - 1 > TILE_LAYER_WIDTH / 2)
