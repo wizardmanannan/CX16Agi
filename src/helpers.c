@@ -173,6 +173,11 @@ char* strcpyBanked(char* dest, const char* src, byte bank)
 	return result;
 }
 
+void strCpyBankedBetween(byte* dest, byte bankDst, byte* src, byte bankSrc)
+{
+	memCpyBankedBetween(dest, bankDst, src, bankSrc, strLenBanked(src, bankSrc) + 1);
+}
+
 void* memCpyBanked(byte* dest, byte* src, byte bank, size_t len)
 {
 	byte previousRamBank = RAM_BANK;

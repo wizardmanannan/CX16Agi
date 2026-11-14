@@ -13,7 +13,7 @@
 
 .import _b5GetLogicFile, _var, _currentLog
 .global _trampoline
-.import _string, _b7WordText, _numInputWords, _bDObjects, _bDNumObjects
+.import _b7String, _b7WordText, _numInputWords, _bDObjects, _bDNumObjects
 .importzp ptr1, ptr2, ptr4, tmp4, sp
 .import incsp6, pushax
 .export _expandFormatCodes, _formatIndex, _formatTextBank
@@ -665,10 +665,10 @@ formatString:
         rol formatOffsetHi
         .endrepeat                  ; *8 → total *40
         clc
-        adc #<_string
+        adc #<_b7String
         sta _formatText
         lda formatOffsetHi
-        adc #>_string
+        adc #>_b7String
         sta _formatText+1
         lda #7
         sta _formatTextBank         ; bank = 7

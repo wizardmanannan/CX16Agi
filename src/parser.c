@@ -13,7 +13,7 @@
 
 extern boolean* flag;
 extern byte* var;
-extern char string[12][40];
+extern char b7String[12][40];
 extern int dirnOfEgo;
 extern int controlMode;
 
@@ -30,7 +30,7 @@ char SHOW_PRIORITY[] = {0X73, 0X68, 0X6F, 0X77, 0X20, 0X70, 0X72, 0X69, 0X6F, 0X
 int inputWords[10];
 #pragma bss-name (push, "BANKRAM07")
 char b7WordText[10][80], b7CurrentInputStr[MAX_INPUT_STRING_LENGTH + 1], strPos = 0, b7OutputString[80], b7Temp[256];
-char string[12][40];
+char b7String[12][40];
 char b7LookupWordsBuffer[125];
 //boolean wordsAreWaiting=FALSE;
 
@@ -68,8 +68,8 @@ byte b7GetInputWord(byte number)
 
 char* b7GetInternalStringPtr(byte number, size_t* length)
 {
-	*length = strlen(string[number]);
-	return string[number];
+	*length = strlen(b7String[number]);
+	return b7String[number];
 }
 
 void b7LookupWords(char* inputLine);
@@ -162,7 +162,7 @@ void b7GetString(char* promptStr, byte promptStringBank, char* returnStr, byte r
 /* used by get.string and get.num */
 void b7GetInternalString(char* promptStr, byte promptStringBank, byte stringNumber, int x, int y, int l)
 {
-	char* inputString = string[stringNumber];
+	char* inputString = b7String[stringNumber];
 	b7GetString(promptStr, promptStringBank, inputString, PARSER_BANK, x, y, l);
 }
 

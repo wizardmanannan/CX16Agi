@@ -70,7 +70,7 @@ BITMAP* spriteScreen;
 
 extern byte* var;
 extern boolean* flag;
-extern char string[12][40];
+extern char b7String[12][40];
 extern byte horizon;
 extern int dirnOfEgo;
 

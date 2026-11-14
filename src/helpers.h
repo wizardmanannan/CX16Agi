@@ -39,6 +39,7 @@ byte convertAsciiByteToPetsciiByte(byte toConvert);
 extern int strcmpIgnoreSpace(const char* str1, const char* str2);
 extern char* strcpyBanked(char* dest, const char* src, byte bank);
 extern size_t strLenBanked(char* string, int bank);
+extern void strCpyBankedBetween(byte* dest, byte bankDst, byte* src, byte bankSrc);
 
 extern void* memCpyBanked(byte* dest, byte* src, byte bank, size_t len);
 extern void memCpyBankedBetween(byte* dest, byte bankDst, byte* src, byte bankSrc, size_t len);

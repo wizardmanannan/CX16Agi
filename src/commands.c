@@ -272,7 +272,7 @@ boolean b1Compare_strings() // 2, 0x00
 
 	s1 = loadAndIncWinCode();
 	s2 = loadAndIncWinCode();
-	if (b7Strcmp(string[s1], string[s2]) == 0) return TRUE;
+	if (b7Strcmp(b7String[s1], b7String[s2]) == 0) return TRUE;
 	return FALSE;
 }
 
@@ -1690,11 +1690,9 @@ void b4Set_string() // 2, 0x00
 	messNum = loadAndIncWinCode();
 	messagePointer = getMessagePointer(currentLog, messNum - 1);
 
-	/*printf("attempting to %p on bank %p to %p. the length is %d\n", string[stringNum - 1], messagePointer, logicFile.messageBank, strLenBanked(messagePointer, logicFile.messageBank));
 
-	strcpyBanked(string[stringNum - 1], messagePointer, logicFile.messageBank);
 
-	asm("stp");*/
+	strCpyBankedBetween(&b7String[stringNum], PARSER_BANK, messagePointer, logicFile.messageBank);
 
 	return;
 }
