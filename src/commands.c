@@ -1692,7 +1692,7 @@ void b4Set_string() // 2, 0x00
 
 
 
-	strCpyBankedBetween(&b7String[stringNum], PARSER_BANK, messagePointer, logicFile.messageBank);
+	strCpyBankedBetween(&b7String[stringNum], STRING_BANK, messagePointer, logicFile.messageBank);
 
 	return;
 }

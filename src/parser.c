@@ -449,6 +449,8 @@ void b7LookupWords(char* inputLine)
 			{
 				// Record position (1-based) of the unknown word
 				var[9] = numInputWords + 1;
+				strcpy(b7WordText[numInputWords], strBuf);
+				numInputWords++;
 				// Cause loop to exit
 				allWordsFound = FALSE;
 			}
