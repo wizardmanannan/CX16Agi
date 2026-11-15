@@ -62,4 +62,9 @@ void b6GraphicsMode()
 	b6SetAndWaitForIrqState(DISPLAY_GRAPHICS);
 }
 
+void b6BlankScreen()
+{
+	b6SetAndWaitForIrqStateAsm(BLANK_SCREEN);
+}
+
 #pragma code-name (pop);

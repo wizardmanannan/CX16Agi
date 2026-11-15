@@ -56,6 +56,7 @@ extern void b6SetBackgroundColour(unsigned int paletteEntry);
 extern void b6TextMode();
 extern void b6GraphicsMode();
 extern void b6Clear();
+extern void b6BlankScreen();
 #pragma wrapped-call (pop);
 
 #define PICTURE_WIDTH   160  /* Picture resolution */

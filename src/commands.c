@@ -1866,6 +1866,7 @@ void b5Reset_scan_start();
 
 void b4Restart_game() // 0, 0x00 
 {
+	 b6BlankScreen();
      bBStopSound();
      b7ClearStrings();
 	 b6ClearVars();
@@ -1875,10 +1876,12 @@ void b4Restart_game() // 0, 0x00
 	 b3SetTextColor(15, 0);
 	 horizon = 0;
 	 controlMode = PLAYER_CONTROL;
-	 //TODO: Blocking
+	 //TODO: Blocking	 
+	 asm("sei");
 	 b6Clear();
-	 b6GraphicsMode();
 	 b4Status_line_off();
+	 REENABLE_INTERRUPTS();
+	 
 	 currentLog = 0;
 	 b1ResetControllers();
 	 bAAllowMenu(TRUE);
@@ -1886,7 +1889,7 @@ void b4Restart_game() // 0, 0x00
 	 bDInitObjects();
 	 flag[6] = TRUE;
 	b5Reset_scan_start();
-
+    b6GraphicsMode();
 
 	return;
 }
