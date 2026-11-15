@@ -69,7 +69,7 @@ boolean oldQuit = FALSE;
 int printCounter = 1;
 byte lastRoom = 0;
 
-void executeLogic(LOGICEntry* logicEntry, int logNum);
+boolean executeLogic(LOGICEntry* logicEntry, int logNum);
 
 int getNum(char* inputString, int* i, int inputStringBank)
 {
@@ -1859,6 +1859,11 @@ void b6SetInitialVars();
 void b6SetInitialFlags();
 #pragma wrapped-call (pop)
 
+
+#pragma wrapped-call (push, trampoline, RESET_SCAN_START_BANK)
+void b5Reset_scan_start();
+#pragma wrapped-call (pop)
+
 void b4Restart_game() // 0, 0x00 
 {
      bBStopSound();
@@ -1880,6 +1885,8 @@ void b4Restart_game() // 0, 0x00
 	 bAResetViews();
 	 bDInitObjects();
 	 flag[6] = TRUE;
+	b5Reset_scan_start();
+
 
 	return;
 }

@@ -481,7 +481,7 @@ lda ZP_PTR_LE + 1
 pha
 .endmacro
 
-; Macro to restore values from the stack after a recursive call
+; Macro to restore values from the stack after a recursive call, make sure not to change this macro to use x, as it is holding the return value of execute logic
 .macro RESTORE_FROM_STACK_RECURSIVE_CALL
 pla
 sta ZP_PTR_LE + 1
@@ -654,13 +654,17 @@ jsr pushax
 lda @logNum
 ldx #$0
 jsr _executeLogic
+tax
 RESTORE_FROM_STACK_RECURSIVE_CALL
 lda #TRUE
 sta codeWindowInvalid
+phx
 jsr refreshCodeWindow
 
 lda @previousBank
 sta RAM_BANK
+
+pla
 rts
 
 ; Jump table for commands
@@ -1305,6 +1309,7 @@ b2Togglev:
 b2Call:
 LOAD_CODE_WIN_CODE
 jsr callLogic
+beq gameRestart
 INC_CODE
 EXIT_ALL_LOGICS_IF_SET
 jmp mainLoop
@@ -1317,9 +1322,14 @@ GET_VAR_OR_FLAG VARS_AREA_START_GOLDEN_OFFSET, @var1
 
 lda @var1
 jsr callLogic
+beq gameRestart
 INC_CODE
 EXIT_ALL_LOGICS_IF_SET
 jmp mainLoop
+
+gameRestart:
+lda #$0
+jmp returnExecuteLogic     
 
 b2New_room:
 DEBUG_NEW_ROOM
@@ -1650,7 +1660,8 @@ b4StatusCCall:
         jmp mainLoop
 b4Restart_gameCCall:
         jsr _b4Restart_game
-        jmp mainLoop
+        lda #$0
+        jmp returnExecuteLogic
 b4Show_objCCall:
         jsr _b4Show_obj
         jmp mainLoop

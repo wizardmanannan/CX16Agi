@@ -14,7 +14,7 @@
 #include "menu.h"
 #include "controllers.h"
 
-void executeLogic(LOGICEntry* logicEntry, int logNum);
+boolean executeLogic(LOGICEntry* logicEntry, int logNum);
 void b1Call(unsigned char** data);
 
 extern boolean _b1Greatern();

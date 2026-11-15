@@ -206,7 +206,11 @@ void b6Interpret()
         exitAllLogics = FALSE;
 
         b9UpdateObjectDirections();
-        executeLogic(&logicEntry, 0);
+        
+        if(!executeLogic(&logicEntry, 0))
+        {
+            return;
+        }
 
         //dirnOfEgo = var[6];
         getViewTab(&localViewtab, 0);

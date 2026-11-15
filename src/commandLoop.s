@@ -534,12 +534,13 @@ _executeLogic:
             ldx jumpOffset
             jmp (jmpTableCommands2,x)
         endMainLoop:
-        lda previousRamBank
-        sta RAM_BANK
+        lda #$1
+        returnExecuteLogic:
+        ldx previousRamBank
+        stx RAM_BANK
 
-        pla
-        sta _currentLog
-
+        plx
+        stx _currentLog
         rts
 .endif
 
