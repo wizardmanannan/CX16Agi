@@ -1881,7 +1881,7 @@ void b4Restart_game() // 0, 0x00
 	 b6Clear();
 	 b4Status_line_off();
 	 REENABLE_INTERRUPTS();
-	 
+	 b6DiscardLogicFile(currentLog);
 	 currentLog = 0;
 	 b1ResetControllers();
 	 bAAllowMenu(TRUE);
