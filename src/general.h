@@ -81,3 +81,6 @@ extern byte bCSplitBuffer[SPLIT_BUFFER_SIZE];
     } while (0);
 
 #endif  /* _GENERAL_H_ */
+
+#define NEW_LINE 10
+#define SPACE 32

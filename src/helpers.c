@@ -37,7 +37,7 @@ void b5RefreshBufferNonGolden(BufferStatus* bufferStatus, byte* buffer, int buff
 
 byte* b5ReallocateBiggerMemoryBlock(byte** memoryBlock, unsigned int newBufferSize, unsigned int* oldBufferSize, byte* bank)
 {
-	byte oldBank, *oldMemoryBlock;
+	byte oldBank, * oldMemoryBlock;
 
 	oldMemoryBlock = *memoryBlock;
 	oldBank = *bank;
@@ -157,6 +157,15 @@ int strcmpIgnoreSpace(const char* str1, const char* str2) {
 	}
 
 	return 0;
+}
+
+void strTrimEnd(char* input)
+{
+	byte strLen; 
+	for (strLen = strlen(input); strLen && input[strLen - 1] == SPACE;)
+	{
+		input[strLen - 1] = '\0';
+	}
 }
 
 char* strcpyBanked(char* dest, const char* src, byte bank)

@@ -27,8 +27,6 @@
 #define BOTTOM_BORDER 157
 #define LEFT_BORDER 159
 #define RIGHT_BORDER 156
-#define NEW_LINE 10
-#define SPACE 32
 #define MENU_TOP_END 130
 #define MENU_TOP 131
 #define MENU_VERTICAL 132

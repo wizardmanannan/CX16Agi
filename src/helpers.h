@@ -44,6 +44,7 @@ extern void strCpyBankedBetween(byte* dest, byte bankDst, byte* src, byte bankSr
 extern void* memCpyBanked(byte* dest, byte* src, byte bank, size_t len);
 extern void memCpyBankedBetween(byte* dest, byte bankDst, byte* src, byte bankSrc, size_t len);
 extern void memsetBanked(void* _Dst, int _Val, size_t _Size, byte bank);
+extern void strTrimEnd(char* input);
 
 #define COPY_EVERYTHING 32767
 extern void copyStringFromBanked(char* src, char* dest, int start, int chunk, byte sourceBank, boolean convertFromAsciiByteToPetscii);
@@ -181,6 +182,5 @@ extern byte _previousRomBank;
         asm("sta %v", _assmByte); \
         byteVar = _assmByte; \
     } while(0) \
-
 
 #endif
