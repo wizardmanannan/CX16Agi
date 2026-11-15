@@ -1874,7 +1874,7 @@ void b4Restart_game() // 0, 0x00
 	 b6ClearFlags();
      b6SetInitialFlags();
 	 b3SetTextColor(15, 0);
-	 horizon = 0;
+	 horizon = DEFAULT_HORIZON;
 	 controlMode = PLAYER_CONTROL;
 	 //TODO: Blocking	 
 	 asm("sei");
@@ -1885,7 +1885,7 @@ void b4Restart_game() // 0, 0x00
 	 currentLog = 0;
 	 b1ResetControllers();
 	 bAAllowMenu(TRUE);
-	 bAResetViews();
+	 bAResetViews(TRUE);
 	 bDInitObjects();
 	 flag[6] = TRUE;
 	b5Reset_scan_start();

@@ -102,7 +102,7 @@ void b6NewRoom()
 
     bBStopSound();
 
-    bAResetViews();
+    bAResetViews(FALSE);
     //stop_update_all();
     //unanimate_all();
     b6DiscardResources();
@@ -131,7 +131,7 @@ void b6NewRoom()
 
 
     controlMode = PLAYER_CONTROL;
-    horizon = 36;
+    horizon = DEFAULT_HORIZON;
 
     score = var[3];
     memsetBanked(b7Directions, 0, 9, STRING_BANK);
@@ -357,7 +357,7 @@ void b6Initialise()
     asm("sei");
     b6InitGraphics();
     REENABLE_INTERRUPTS();
-    horizon = 36;
+    horizon = DEFAULT_HORIZON;
 
     ///* Set up timer. The timer controls the interpreter speed. */
 

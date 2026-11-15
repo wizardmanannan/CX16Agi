@@ -1902,18 +1902,18 @@ void bAResetSpriteMemory(boolean clearBuffer)
 	bDResetSpriteMemoryManager();
 }
 
-void bAReset()
+void bAReset(boolean fullReset)
 {
 	bAResetSpriteMemory(TRUE);
 	bFInitPaletteManager();
 
-	bAResetViewtabs(FALSE);
+	bAResetViewtabs(fullReset);
 }
 
 void bAInitSpriteData()
 {
 	byte i;
-	bAReset();
+	bAReset(FALSE);
 }
 
 
@@ -1956,7 +1956,7 @@ void bAInitObjects()
 	memsetBanked(viewTableMetadata, NULL, sizeof(ViewTableMetadata) * SPRITE_SLOTS, SPRITE_METADATA_BANK);
 }
 
-void bAResetViews()     /* Called after new.room */
+void bAResetViews(boolean fullReset)     /* Called after new.room */
 {
 	int entryNum;
 	ViewTable localViewtab;
@@ -1970,7 +1970,7 @@ void bAResetViews()     /* Called after new.room */
 		setViewTab(&localViewtab, entryNum);
 	}
 
-	bAReset();
+	bAReset(fullReset);
 }
 
 void bAPopulatePrecomputedPriorityTable()

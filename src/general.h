@@ -84,3 +84,5 @@ extern byte bCSplitBuffer[SPLIT_BUFFER_SIZE];
 
 #define NEW_LINE 10
 #define SPACE 32
+
+#define DEFAULT_HORIZON 36
