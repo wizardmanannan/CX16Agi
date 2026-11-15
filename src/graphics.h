@@ -55,6 +55,7 @@ extern unsigned int b6SetPaletteToInt(byte paletteReference);
 extern void b6SetBackgroundColour(unsigned int paletteEntry);
 extern void b6TextMode();
 extern void b6GraphicsMode();
+extern void b6Clear();
 #pragma wrapped-call (pop);
 
 #define PICTURE_WIDTH   160  /* Picture resolution */

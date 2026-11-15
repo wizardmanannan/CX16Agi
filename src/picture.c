@@ -475,9 +475,6 @@ void b11SplitPriority()
 int picFNum = 0;
 boolean showPicCalled = FALSE;
 
-#pragma wrapped-call (push, trampoline, GRAPHICS_BANK)
-extern void b6Clear();
-#pragma wrapped-call (pop)
 /**************************************************************************
 ** drawPic
 **

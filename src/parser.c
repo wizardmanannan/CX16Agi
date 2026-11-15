@@ -11,9 +11,12 @@
 
 #include "parser.h"
 
+#define NUM_STRINGS 12
+#define STRING_LENGTH 40
+
 extern boolean* flag;
 extern byte* var;
-extern char b7String[12][40];
+extern char b7String[NUM_STRINGS][STRING_LENGTH];
 extern int dirnOfEgo;
 extern int controlMode;
 
@@ -555,6 +558,16 @@ boolean b7Said(byte** data)
 	}
 
 	return (wordsMatch);
+}
+
+void b7ClearStrings()
+{
+	byte i;
+
+	for(i = 0; i < NUM_STRINGS; i++)
+	{
+		b7String[i][0] = '\0';
+	}
 }
 
 #pragma code-name (pop)

@@ -1852,21 +1852,35 @@ void b4Status() // 0, 0x00
 //	/* Not supported yet */
 //}
 
+#pragma wrapped-call (push, trampoline, MEKA_BANK)
+void b6ClearVars();
+void b6ClearFlags();
+void b6SetInitialVars();
+void b6SetInitialFlags();
+#pragma wrapped-call (pop)
+
 void b4Restart_game() // 0, 0x00 
 {
-	int i;
+     bBStopSound();
+     b7ClearStrings();
+	 b6ClearVars();
+	 b6SetInitialVars();
+	 b6ClearFlags();
+     b6SetInitialFlags();
+	 b3SetTextColor(15, 0);
+	 horizon = 0;
+	 controlMode = PLAYER_CONTROL;
+	 //TODO: Blocking
+	 b6Clear();
+	 b6GraphicsMode();
+	 b4Status_line_off();
+	 currentLog = 0;
+	 b1ResetControllers();
+	 bAAllowMenu(TRUE);
+	 bAResetViews();
+	 bDInitObjects();
+	 flag[6] = TRUE;
 
-	/* Not supported yet */
-	for (i = 0; i < 256; i++) {
-		flag[i] = FALSE;
-		var[i] = 0;
-	}
-	var[24] = 0x29;
-	var[26] = 3;
-	var[8] = 255;     /* Number of free 256 byte pages of memory */
-
-	newRoomNum = 0;
-	hasEnteredNewRoom = TRUE;
 	return;
 }
 

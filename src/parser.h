@@ -56,6 +56,7 @@ extern void b7InitEvents();
 extern void b7PollKeyboard();
 extern byte b7GetInputWord(byte number);
 extern void b7ActivateEvent(byte eventNumber);
+extern void b7ClearStrings();
 
 extern char b7String[12][40];
 #pragma wrapped-call (pop)
