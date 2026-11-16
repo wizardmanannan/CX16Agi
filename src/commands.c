@@ -1863,13 +1863,17 @@ void b6SetInitialFlags();
 byte b4Restart_game() // 0, 0x00 
 {
 
-	byte ch;
+	byte ch = 0;
+    
 
 	#define RESTART_BOX_WIDTH 25	
     #define RESTART_BOX_HEIGHT 8
-	ch = b3DisplayManuallyWrappedMessageBox(B5_RESTART_MESSAGE, COMMAND_MESSAGES_BANK, AUTO_CALC_ROW, AUTO_CALC_COLUMN, TEXTBOX_PALETTE_NUMBER, RESTART_BOX_WIDTH, RESTART_BOX_HEIGHT);
 
-	if (ch == KEY_ENTER)
+	if(!flag[16])
+	{
+		ch = b3DisplayManuallyWrappedMessageBox(B5_RESTART_MESSAGE, COMMAND_MESSAGES_BANK, AUTO_CALC_ROW, AUTO_CALC_COLUMN, TEXTBOX_PALETTE_NUMBER, RESTART_BOX_WIDTH, RESTART_BOX_HEIGHT);
+	}
+	if (flag[16] || ch == KEY_ENTER)
 	{
 		b6BlankScreen();
 		bBStopSound();
