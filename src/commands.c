@@ -1859,37 +1859,32 @@ void b6SetInitialVars();
 void b6SetInitialFlags();
 #pragma wrapped-call (pop)
 
-
-#pragma wrapped-call (push, trampoline, RESET_SCAN_START_BANK)
-void b5Reset_scan_start();
-#pragma wrapped-call (pop)
-
 void b4Restart_game() // 0, 0x00 
 {
-	 b6BlankScreen();
-     bBStopSound();
-     b7ClearStrings();
-	 b6ClearVars();
-	 b6SetInitialVars();
-	 b6ClearFlags();
-     b6SetInitialFlags();
-	 b3SetTextColor(15, 0);
-	 horizon = DEFAULT_HORIZON;
-	 controlMode = PLAYER_CONTROL;
-	 //TODO: Blocking	 
-	 asm("sei");
-	 b6Clear();
-	 b4Status_line_off();
-	 REENABLE_INTERRUPTS();
-	 b6DiscardLogicFile(currentLog);
-	 currentLog = 0;
-	 b1ResetControllers();
-	 bAAllowMenu(TRUE);
-	 bAResetViews(TRUE);
-	 bDInitObjects();
-	 flag[6] = TRUE;
-	b5Reset_scan_start();
-    b6GraphicsMode();
+	b6BlankScreen();
+	bBStopSound();
+	b7ClearStrings();
+	b6ClearVars();
+	b6SetInitialVars();
+	b6ClearFlags();
+	b6SetInitialFlags();
+	b3SetTextColor(15, 0);
+	horizon = DEFAULT_HORIZON;
+	controlMode = PLAYER_CONTROL;
+	//TODO: Blocking	 
+	asm("sei");
+	b6Clear();
+	b4Status_line_off();
+	REENABLE_INTERRUPTS();
+	b6DiscardLogicFile(currentLog);
+	currentLog = 0;
+	b1ResetControllers();
+	bAAllowMenu(TRUE);
+	bAResetViews(TRUE);
+	bDInitObjects();
+	flag[6] = TRUE;
+	b5ResetAllScanStarts();
+	b6GraphicsMode();
 
 	return;
 }
@@ -2159,8 +2154,8 @@ void b5Show_obj_v() // 1, 0x01
 	int objectNum;
 
 	objectNum = var[loadAndIncWinCode()];
-	
-    b11ShowObj(objectNum);
+
+	b11ShowObj(objectNum);
 
 	return;
 }

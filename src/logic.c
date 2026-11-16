@@ -71,6 +71,22 @@ void b5GetLogicEntry(LOGICEntry* logicEntry, byte logicFileNo)
 {
 	*logicEntry = logics[logicFileNo];
 }
+
+
+void b5ResetAllScanStarts() // 0, 0x00 
+{
+	LOGICEntry logicEntry;
+	int i;
+
+	for(i = 0; i < 256; i++)
+	{
+		b5GetLogicEntry(&logicEntry, i);
+		logicEntry.entryPoint = 0;
+		b5SetLogicEntry(&logicEntry, i);
+	}
+	return;
+}
+
 #pragma code-name (pop)
 #pragma wrapped-call (pop)
 
@@ -225,5 +241,4 @@ void b6DiscardLogicFile(byte logFileNum)
 		b4LoadUnloadDependencies(logFileNum, FALSE, FALSE);
 	}
 }
-
 #pragma code-name (pop)

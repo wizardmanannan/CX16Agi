@@ -41,6 +41,7 @@ extern void b5GetLogicFile(LOGICFile* logicFile, byte logicFileNo);
 extern void b5SetLogicFile(LOGICFile* logicFile, byte logicFileNo);
 extern void b5GetLogicEntry(LOGICEntry* logicEntry, byte logicFileNo);
 extern void b5SetLogicEntry(LOGICEntry* logicEntry, byte logicFileNo);
+extern void b5ResetAllScanStarts();
 #pragma wrapped-call (pop)
 
 #endif  /* _LOGIC_H_ */
