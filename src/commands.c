@@ -49,10 +49,11 @@ const char B5_QUIT_MESSAGE[] = "Press ENTER to quit.\nPress ESC to keep playing.
 const char B5_PAUSE_MESSAGE[] = "      Game paused.\nPress ENTER to continue.";
 const char B5_MEKA_MESSAGE[] = "MEKA AGI Interpreter\n    Version 1.0";
 const char B5_VERSION_MESSAGE[] = "MEKA AGI Interpreter\n    Version 1.0";
+const char B5_RESTART_MESSAGE[] = "Press ENTER to restart\nthe game.\n\nPress ESC to continue\nthis game.";
 #include <cbm_petscii_charmap.h>
 #pragma rodata-name (pop)
 
-extern byte* var;
+extern byte * var;
 extern boolean* flag;
 
 extern int newRoomNum;
@@ -1859,34 +1860,44 @@ void b6SetInitialVars();
 void b6SetInitialFlags();
 #pragma wrapped-call (pop)
 
-void b4Restart_game() // 0, 0x00 
+byte b4Restart_game() // 0, 0x00 
 {
-	b6BlankScreen();
-	bBStopSound();
-	b7ClearStrings();
-	b6ClearVars();
-	b6SetInitialVars();
-	b6ClearFlags();
-	b6SetInitialFlags();
-	b3SetTextColor(15, 0);
-	horizon = DEFAULT_HORIZON;
-	controlMode = PLAYER_CONTROL;
-	//TODO: Blocking	 
-	asm("sei");
-	b6Clear();
-	b4Status_line_off();
-	REENABLE_INTERRUPTS();
-	b6DiscardLogicFile(currentLog);
-	currentLog = 0;
-	b1ResetControllers();
-	bAAllowMenu(TRUE);
-	bAResetViews(TRUE);
-	bDInitObjects();
-	flag[6] = TRUE;
-	b5ResetAllScanStarts();
-	b6GraphicsMode();
 
-	return;
+	byte ch;
+
+	#define RESTART_BOX_WIDTH 25	
+    #define RESTART_BOX_HEIGHT 8
+	ch = b3DisplayManuallyWrappedMessageBox(B5_RESTART_MESSAGE, COMMAND_MESSAGES_BANK, AUTO_CALC_ROW, AUTO_CALC_COLUMN, TEXTBOX_PALETTE_NUMBER, RESTART_BOX_WIDTH, RESTART_BOX_HEIGHT);
+
+	if (ch == KEY_ENTER)
+	{
+		b6BlankScreen();
+		bBStopSound();
+		b7ClearStrings();
+		b6ClearVars();
+		b6SetInitialVars();
+		b6ClearFlags();
+		b6SetInitialFlags();
+		b3SetTextColor(15, 0);
+		horizon = DEFAULT_HORIZON;
+		controlMode = PLAYER_CONTROL;
+		//TODO: Blocking	 
+		asm("sei");
+		b6Clear();
+		b4Status_line_off();
+		REENABLE_INTERRUPTS();
+		b6DiscardLogicFile(currentLog);
+		currentLog = 0;
+		b1ResetControllers();
+		bAAllowMenu(TRUE);
+		bAResetViews(TRUE);
+		bDInitObjects();
+		flag[6] = TRUE;
+		b5ResetAllScanStarts();
+		b6GraphicsMode();
+		return 0;
+	}
+	return 1;
 }
 
 void b4Show_obj() // 1, 0x00 

@@ -1660,7 +1660,6 @@ b4StatusCCall:
         jmp mainLoop
 b4Restart_gameCCall:
         jsr _b4Restart_game
-        lda #$0
         jmp returnExecuteLogic
 b4Show_objCCall:
         jsr _b4Show_obj
