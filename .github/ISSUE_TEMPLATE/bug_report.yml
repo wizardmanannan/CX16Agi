@@ -1,13 +1,21 @@
 name: Bug report
-description: A supported AGI game behaves differently from the original interpreter.
+description: Report a player-visible problem in a supported AGI game.
 title: "GAME AREA: symptom"
 labels: ["bug"]
 body:
   - type: markdown
     attributes:
       value: |
-        This port is under construction and only AGI 1 and AGI 2 games are supported.
-        A report without a game, a build, and a route to the scene cannot be reproduced.
+        Check the [issue map](https://github.com/wizardmanannan/CX16Agi/issues/37) for an existing report.
+        Start with what the player sees. Code analysis is optional.
+
+  - type: textarea
+    id: scene
+    attributes:
+      label: Scene and symptom
+      description: Name the room or sequence, what you were doing, and what went wrong.
+    validations:
+      required: true
 
   - type: dropdown
     id: game
@@ -29,7 +37,7 @@ body:
     id: game-version
     attributes:
       label: Game version or build
-      description: "Example: KQ3 v2.14 PC booter, AGI 2.272. Say if you do not know."
+      description: Give the release and AGI interpreter version if known. Say if either is unknown.
     validations:
       required: true
 
@@ -37,7 +45,7 @@ body:
     id: port-revision
     attributes:
       label: Port revision
-      description: Use the exact commit if you have it. Say whether this was GitHub main or a PR build.
+      description: Give the exact commit if known. Say whether you ran GitHub main or a PR build.
     validations:
       required: true
 
@@ -48,49 +56,53 @@ body:
       description: Give the emulator and ROM versions, or the hardware and firmware revision, if known.
 
   - type: textarea
+    id: impact
+    attributes:
+      label: Play impact and workaround
+      description: Say whether this blocks progress and how a player can recover, if known.
+
+  - type: textarea
     id: steps
     attributes:
-      label: Steps to reproduce
-      description: Room, keys or typed commands, and the shortest route from a reachable point.
+      label: Reproduce it
+      description: Give numbered steps from a reachable point with the exact keys or commands, prerequisites and approximate time.
       placeholder: |
-        1. Start King's Quest III and finish the intro.
+        1. Start the game and reach ...
         2. Walk to ...
-        3. Type ...
+        3. Type or press ...
     validations:
       required: true
 
   - type: textarea
     id: expected
     attributes:
-      label: What should happen
+      label: Expected behaviour
+      description: Describe what the player should see or be able to do.
     validations:
       required: true
 
   - type: textarea
     id: actual
     attributes:
-      label: What happens instead
+      label: Actual behaviour
+      description: Describe what you saw, where it first diverged and how often it happens.
     validations:
       required: true
 
   - type: textarea
-    id: original
-    attributes:
-      label: Original interpreter comparison
-      description: What DOSBox or ScummVM does with the same build and steps, if you can check.
-
-  - type: textarea
     id: evidence
     attributes:
-      label: Screenshots, serial log, or crash output
-      description: Paste a stable rerun command, attach a capture or log, or link a candidate PR if you tested one.
+      label: Evidence
+      description: Attach a capture, log or stable rerun command. For source findings, distinguish confirmed facts, suspected causes and checks still to run.
 
-  - type: checkboxes
-    id: checks
+  - type: textarea
+    id: original
     attributes:
-      label: Checks
-      options:
-        - label: I searched the issue map and the existing issues.
-          required: true
-        - label: I included the game build and the port revision.
-          required: true
+      label: Reference implementation
+      description: If available, give the result for the same release in a reference interpreter or link the spec or reference code.
+
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: How to verify a fix
+      description: Describe the observable result that would pass the same reproduction and link related issues or candidate PRs if known.

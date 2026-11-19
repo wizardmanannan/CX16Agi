@@ -12,4 +12,5 @@
 ## Evidence
 
 <!-- Record the tested commit, game release or resource fingerprint, emulator/ROM or hardware,
-     exact rerun command, and observed result. List the specific issue acceptance cases you checked. -->
+     exact rerun command, and observed result. List the specific issue acceptance cases you checked.
+     Name the main revision used for the baseline and identify this PR's result as candidate evidence. -->
