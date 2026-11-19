@@ -2,6 +2,7 @@ name: Feature request
 description: Propose a capability or a fidelity improvement.
 title: "AREA: proposal"
 labels: ["enhancement"]
+type: Feature
 body:
   - type: markdown
     attributes:

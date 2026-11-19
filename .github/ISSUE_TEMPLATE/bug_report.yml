@@ -2,6 +2,7 @@ name: Bug report
 description: Report a player-visible problem in a supported AGI game.
 title: "GAME AREA: symptom"
 labels: ["bug"]
+type: Bug
 body:
   - type: markdown
     attributes:
