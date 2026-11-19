@@ -49,4 +49,10 @@ body:
     id: acceptance
     attributes:
       label: How would we know it works?
-      description: A scene, a command, and the observable result.
+      description: Name a scene or command, its observable result, and any game data needed.
+
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Current evidence or candidate work
+      description: Link a capture, reference or open PR. If you ran a build, include its revision and a rerun command.

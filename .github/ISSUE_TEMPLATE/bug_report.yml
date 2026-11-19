@@ -18,6 +18,7 @@ body:
         - King's Quest II
         - King's Quest III
         - The Black Cauldron
+        - Space Quest II
         - Police Quest 1
         - Christmas Card 1986
         - Another AGI 1 or 2 game
@@ -36,9 +37,15 @@ body:
     id: port-revision
     attributes:
       label: Port revision
-      description: Commit hash or branch you built.
+      description: Use the exact commit if you have it. Say whether this was GitHub main or a PR build.
     validations:
       required: true
+
+  - type: input
+    id: environment
+    attributes:
+      label: Emulator, ROM or hardware
+      description: Give the emulator and ROM versions, or the hardware and firmware revision, if known.
 
   - type: textarea
     id: steps
@@ -76,7 +83,7 @@ body:
     id: evidence
     attributes:
       label: Screenshots, serial log, or crash output
-      description: Paste text or drag files here.
+      description: Paste a stable rerun command, attach a capture or log, or link a candidate PR if you tested one.
 
   - type: checkboxes
     id: checks
