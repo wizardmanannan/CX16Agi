@@ -1,0 +1,52 @@
+name: Feature request
+description: Propose a capability or a fidelity improvement.
+title: "AREA: proposal"
+labels: ["enhancement"]
+body:
+  - type: dropdown
+    id: scope
+    attributes:
+      label: Scope
+      options:
+        - All games
+        - King's Quest I
+        - King's Quest II
+        - King's Quest III
+        - The Black Cauldron
+        - Police Quest 1
+        - Christmas Card 1986
+        - The interpreter itself
+    validations:
+      required: true
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: What problem does this solve?
+      description: Describe the player-visible gap, not only the missing function.
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed behaviour
+    validations:
+      required: true
+
+  - type: textarea
+    id: original
+    attributes:
+      label: Original AGI behaviour
+      description: What does the Sierra interpreter or the AGI specification do? Cite a source if you can.
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: How would we know it works?
+      description: A scene, a command, and the observable result.

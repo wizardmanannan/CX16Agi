@@ -1,0 +1,89 @@
+name: Bug report
+description: A supported AGI game behaves differently from the original interpreter.
+title: "GAME AREA: symptom"
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        This port is under construction and only AGI 1 and AGI 2 games are supported.
+        A report without a game, a build, and a route to the scene cannot be reproduced.
+
+  - type: dropdown
+    id: game
+    attributes:
+      label: Game
+      options:
+        - King's Quest I
+        - King's Quest II
+        - King's Quest III
+        - The Black Cauldron
+        - Police Quest 1
+        - Christmas Card 1986
+        - Another AGI 1 or 2 game
+    validations:
+      required: true
+
+  - type: input
+    id: game-version
+    attributes:
+      label: Game version or build
+      description: "Example: KQ3 v2.14 PC booter, AGI 2.272. Say if you do not know."
+    validations:
+      required: true
+
+  - type: input
+    id: port-revision
+    attributes:
+      label: Port revision
+      description: Commit hash or branch you built.
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      description: Room, keys or typed commands, and the shortest route from a reachable point.
+      placeholder: |
+        1. Start King's Quest III and finish the intro.
+        2. Walk to ...
+        3. Type ...
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: What should happen
+    validations:
+      required: true
+
+  - type: textarea
+    id: actual
+    attributes:
+      label: What happens instead
+    validations:
+      required: true
+
+  - type: textarea
+    id: original
+    attributes:
+      label: Original interpreter comparison
+      description: What DOSBox or ScummVM does with the same build and steps, if you can check.
+
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Screenshots, serial log, or crash output
+      description: Paste text or drag files here.
+
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Checks
+      options:
+        - label: I searched the issue map and the existing issues.
+          required: true
+        - label: I included the game build and the port revision.
+          required: true

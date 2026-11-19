@@ -1,0 +1,5 @@
+blank_issues_enabled: true
+contact_links:
+  - name: "Start here: supported builds, controls, and the issue map"
+    url: https://github.com/wizardmanannan/CX16Agi/issues/37
+    about: Read this before filing. It lists the supported games, the controls, every open issue, and what a reproducible report needs.
