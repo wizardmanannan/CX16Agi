@@ -123,6 +123,7 @@ SOUND_BANK = $0B
 MOVEMENT_BANK = $0A
 UPDATE_OBJECTS_BANK = $0B
 SHOW_OBJ_BANK = $11
+TIMER_BANK = $6
 
 
 ; Define offsets for different areas within golden RAM

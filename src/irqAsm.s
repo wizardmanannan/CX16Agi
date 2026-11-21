@@ -380,8 +380,13 @@ sta sendIrqCommand
 
 @vSyncCounter:
 inc _vSyncCounter
-bne @resetLatches
+bne @handleTimer
 inc _vSyncCounter + 1
+
+@handleTimer:
+lda #TIMER_BANK
+sta RAM_BANK
+jsr b6TimerTick
 
 @resetLatches:
 lda #(VSYNC_BIT)

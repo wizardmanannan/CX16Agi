@@ -24,6 +24,7 @@
     .include "showObjAsm.s"
     .include "objectAsm.s"
     .include "stringFormatAsm.s"
+    .include "timerAsm.s"
     
     .export _executeLogic
     .export _b6InitInterpreter
