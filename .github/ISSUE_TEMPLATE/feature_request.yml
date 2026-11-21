@@ -1,0 +1,77 @@
+name: Feature request
+description: Propose a capability or a fidelity improvement.
+title: "AREA: proposal"
+labels: ["enhancement"]
+type: Feature
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Check the [issue map](https://github.com/wizardmanannan/CX16Agi/issues/37) for an existing request.
+        Start with the goal and who it helps.
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: Goal and current gap
+      description: Name the scene or workflow that needs improvement and what happens in the port today.
+    validations:
+      required: true
+
+  - type: dropdown
+    id: scope
+    attributes:
+      label: Scope
+      options:
+        - All games
+        - King's Quest I
+        - King's Quest II
+        - King's Quest III
+        - The Black Cauldron
+        - Space Quest II
+        - Police Quest 1
+        - Christmas Card 1986
+        - Another game
+        - The interpreter itself
+    validations:
+      required: true
+
+  - type: textarea
+    id: example
+    attributes:
+      label: Example or steps
+      description: Include a named game build and route or a repeatable workload if one illustrates the gap.
+
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Expected behaviour
+      description: Describe what should happen for the player or contributor.
+    validations:
+      required: true
+
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Evidence
+      description: Identify the GitHub main commit you checked, any unmerged candidate PR, and what remains to verify.
+
+  - type: textarea
+    id: original
+    attributes:
+      label: Reference implementation
+      description: If applicable, link the original interpreter, reference code or spec and explain the expected result.
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Fix direction or alternatives
+      description: Note constraints or options if you know them.
+
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Acceptance criteria
+      description: Give an observable pass condition. Include a scene, command or workload and any required game data.
+    validations:
+      required: true
