@@ -4,4 +4,7 @@
 typedef void (*timer_proc)();
 void b6InitTimer(timer_proc timerProc);
 void b6CheckTimer();
+
+extern boolean timerEnabled;
+
 #endif /* _TIMER_H_ */

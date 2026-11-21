@@ -6,6 +6,7 @@
 #include "logic.h"
 #include "parser.h"
 #include "controllers.h"
+#include "timer.h"
 
 /* ================================================================
    Menu System Configuration Constants

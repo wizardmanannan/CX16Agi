@@ -1523,6 +1523,9 @@ void b3PrintMessageInTextbox(byte messNum, byte x, byte y, byte length, boolean 
 
 	b3DisplayMessageBox(messagePointer, logicFile.messageBank, y, x, TEXTBOX_PALETTE_NUMBER, length, wrap, FIRST_TEXT_ROW);
 
+	asm("sei");
+	timerEnabled = FALSE;
+	REENABLE_INTERRUPTS();
 	if (timeoutFlagVal)
 	{
 		waitTicks = timeoutFlagVal * 30;  // The timeout value is given in half seconds and the TotalTicks in 1/60ths of a second.
@@ -1540,6 +1543,11 @@ void b3PrintMessageInTextbox(byte messNum, byte x, byte y, byte length, boolean 
 	show_mouse(NULL);
 
 	show_mouse(screen);
+
+		
+	asm("sei");
+	timerEnabled = TRUE;
+	REENABLE_INTERRUPTS();
 	return;
 }
 #pragma wrapped-call (pop)

@@ -525,6 +525,9 @@ byte b3DisplayManuallyWrappedMessageBox(char* message, byte messageBank, byte ro
 
 	//b3PrintMessageInTextbox(loadAndIncWinCode(), DEFAULT_TEXTBOX_X, DEFAULT_TEXTBOX_Y, DEFAULT_BOX_WIDTH);
 
+	asm("sei");
+    timerEnabled = FALSE;
+    REENABLE_INTERRUPTS();
 
 	do {
 		GET_IN(ch);
@@ -532,6 +535,10 @@ byte b3DisplayManuallyWrappedMessageBox(char* message, byte messageBank, byte ro
 	} while ((ch != KEY_ESC) && (ch != KEY_ENTER));
 
 	b3ClearLastPlacedText();
+
+	asm("sei");
+    timerEnabled = TRUE;
+    REENABLE_INTERRUPTS();
 
 	return ch;
 }

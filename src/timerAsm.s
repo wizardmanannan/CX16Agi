@@ -1,6 +1,9 @@
 .ifndef TIMER_INC
 TIMER_INC = 1
 
+.segment "CODE"
+.export _timerEnabled
+_timerEnabled: .byte $1
 .segment "BANKRAM06"
 
 TIMER_TICK = 1
@@ -31,6 +34,9 @@ lda #$1
 rts
 
 b6TimerTick:
+lda _timerEnabled
+beq @end
+
 clc
 lda b6Hund
 adc #TIMER_TICK
