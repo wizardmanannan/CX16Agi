@@ -17,18 +17,16 @@ b6HandleTimeComponent:
 ldy TIMER_VAR
 GET_VAR_NON_INTERPRETER
 inc
-tax
-tya
-SET_VAR_NON_INTERPRETER IRQ_TMP_1
+sta SET_VAR_OFFSET,y
+
 cmp INC_NEXT_UNIT_AFTER
 bcs @timeHasPassed
 lda #$0
 rts
 
 @timeHasPassed:
-ldx #$0
-lda TIMER_VAR
-SET_VAR_NON_INTERPRETER IRQ_TMP_1
+lda #$0
+sta SET_VAR_OFFSET,y
 lda #$1
 rts
 
