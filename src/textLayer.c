@@ -495,8 +495,19 @@ void b3DisplayMessageBox(char* message, byte messageBank, byte row, byte col, by
 			col = MAX_CHAR_ACROSS / 2 - boxWidth / 2;
 		}
 
-		displayTextAddressToCopyTo = MAPBASE + (firstRow + b3LastBoxStartLine - 1) * TILE_LAYER_BYTES_PER_ROW + col * BYTES_PER_CELL;
-		b3PaletteAddress = MAPBASE + (firstRow + b3LastBoxStartLine - 1) * TILE_LAYER_BYTES_PER_ROW + 1; //We will set the same palette for the whole row
+
+
+		if (row)
+		{
+			displayTextAddressToCopyTo = MAPBASE + (firstRow + b3LastBoxStartLine - 1) * TILE_LAYER_BYTES_PER_ROW + col * BYTES_PER_CELL;
+			b3PaletteAddress = MAPBASE + (firstRow + b3LastBoxStartLine - 1) * TILE_LAYER_BYTES_PER_ROW + 1; //We will set the same palette for the whole row
+		}
+		else //The only place I know that needs this is the KQ3 clock which appears on the status bar
+		{
+			displayTextAddressToCopyTo = MAPBASE + col * BYTES_PER_CELL;
+			b3PaletteAddress = MAPBASE + 1; //We will set the same palette for the whole row
+		}
+		
 		b3PaletteRows = numberOfLines;
 		b3PaletteNumber = paletteNumber;
 
