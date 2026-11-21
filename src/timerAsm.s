@@ -3,7 +3,7 @@ TIMER_INC = 1
 
 .segment "BANKRAM06"
 
-TIMER_TICK = 5
+TIMER_TICK = 1
 
 SECONDS_VAR = 11
 MINUTES_VAR = 12
@@ -17,6 +17,8 @@ b6HandleTimeComponent:
 ldy TIMER_VAR
 GET_VAR_NON_INTERPRETER
 inc
+tax
+tya
 SET_VAR_NON_INTERPRETER IRQ_TMP_1
 cmp INC_NEXT_UNIT_AFTER
 bcs @timeHasPassed
@@ -24,7 +26,8 @@ lda #$0
 rts
 
 @timeHasPassed:
-lda #$0
+ldx #$0
+lda TIMER_VAR
 SET_VAR_NON_INTERPRETER IRQ_TMP_1
 lda #$1
 rts
@@ -35,28 +38,30 @@ lda b6Hund
 adc #TIMER_TICK
 sta b6Hund
 
-cmp #100
-bcs @seconds
+cmp #60
+bcs @clearHundreds
 rts
 
+@clearHundreds:
+stz b6Hund
+
 @seconds:
-lda #$60
+lda #60
 sta INC_NEXT_UNIT_AFTER
 
-lda SECONDS_VAR
+lda #SECONDS_VAR
 sta TIMER_VAR
-stp
 jsr b6HandleTimeComponent
 beq @end
 
 @minutes:
-lda MINUTES_VAR
+lda #MINUTES_VAR
 sta TIMER_VAR
 jsr b6HandleTimeComponent
 beq @end
 
 @hours:
-lda HOURS_VAR
+lda #HOURS_VAR
 sta TIMER_VAR
 lda #24
 sta INC_NEXT_UNIT_AFTER
@@ -64,7 +69,7 @@ jsr b6HandleTimeComponent
 beq @end
 
 @days:
-lda DAYS_VAR
+lda #DAYS_VAR
 sta TIMER_VAR
 lda #255 ;There is no unit higher than days, so just set to a very high amount
 sta INC_NEXT_UNIT_AFTER
