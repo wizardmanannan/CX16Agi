@@ -756,7 +756,7 @@ SET_VAR_OFFSET = (GOLDEN_RAM + VARS_AREA_START_GOLDEN_OFFSET)
         lda GOLDEN_RAM + VARS_AREA_START_GOLDEN_OFFSET,y    
 .endmacro
 
-.macro SET_VAR_NON_INTERPRETER ZP ;TODO: This over complicated, replaced with the one below
+.macro SET_VAR_NON_INTERPRETER ZP ;TODO: This over complicated, replace
         tay
         lda #<SET_VAR_OFFSET
         sta ZP
