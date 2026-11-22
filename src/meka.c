@@ -241,27 +241,6 @@ void b6Interpret()
     } while (hasEnteredNewRoom);
 }
 
-void b6Timing_proc()
-{
-    hund += 5;
-    if (hund >= 100) { //One second has passed
-        var[11]++;
-        if (var[11] >= 60) {  //One minute has passed
-            var[12]++;
-            if (var[12] >= 60) { //One hour has passed
-                var[13]++;
-                if (var[13] >= 24) { //One day has passed 
-                    var[14]++;
-                    var[13] = 0;
-                }
-                var[12] = 0;
-            }
-            var[11] = 0;
-        }
-        hund = 0;
-    }
-}
-
 void b6Closedown()
 {
     b12DiscardWords();
@@ -319,7 +298,6 @@ void b6Initialise()
 {
     int i;
 
-    b6InitTimer(&b6Timing_proc);
     b6InitFiles();             /* Load resource directories */
     b6InitRandom();
     bAInitMenus();
@@ -358,9 +336,6 @@ void b6Initialise()
     b6InitGraphics();
     REENABLE_INTERRUPTS();
     horizon = DEFAULT_HORIZON;
-
-    ///* Set up timer. The timer controls the interpreter speed. */
-
     b6TellMeTheAddressPlease();
     bFInitPaletteManager();
     b1InitControllers();
@@ -401,20 +376,13 @@ void main()
         if (abs(vSyncCounter - lastVsync) >= var[10] * 3) {
 
             lastVsync = vSyncCounter;
-
-
 #ifdef VERBOSE
             printf("Interpret Runs\n");
 #endif // VERBOSE
             b6Interpret();
             mainLoopCounter++;
-
-            b6CheckTimer();
         }
     }
-
-    //chdir("\\HACK\\AGI\\D\\AGI\\MEKA");
-    //closedown();
 }
 
 void main2()

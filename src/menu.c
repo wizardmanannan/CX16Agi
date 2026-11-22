@@ -220,6 +220,7 @@ void bAShowMenu(boolean shown)
 	asm("sei");
 	menuShown = TRUE;
 	menuDirty = TRUE;
+	b6PauseTimer();
 	REENABLE_INTERRUPTS();
 
 	do 
@@ -257,7 +258,9 @@ void bAShowMenu(boolean shown)
 	asm("sei");
 	menuDirty = TRUE;
 	menuShown = FALSE;
-	bAChildMenuToClear = bAMenuSelected;    // Mark which child menu to clear on next redraw
+	bAChildMenuToClear = bAMenuSelected; 
+	b6ResumeTimer(TRUE);
+	   // Mark which child menu to clear on next redraw
 	REENABLE_INTERRUPTS();
 }
 

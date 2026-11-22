@@ -123,6 +123,7 @@ SOUND_BANK = $0B
 MOVEMENT_BANK = $0A
 UPDATE_OBJECTS_BANK = $0B
 SHOW_OBJ_BANK = $11
+TIMER_BANK = $6
 
 
 ; Define offsets for different areas within golden RAM
@@ -748,14 +749,14 @@ jsr _printfSafe
 
 .endmacro
 
-SET_VAR_OFFSET = GOLDEN_RAM + VARS_AREA_START_GOLDEN_OFFSET
+SET_VAR_OFFSET = (GOLDEN_RAM + VARS_AREA_START_GOLDEN_OFFSET)
 ;For getting a var, outside of the interpreter. Can still be called by an interpreter command, but doesn't affect or know about the current interpreter state.
-;Requires var number to be set in y
+;Requires var number to be set in a
 .macro GET_VAR_NON_INTERPRETER
         lda GOLDEN_RAM + VARS_AREA_START_GOLDEN_OFFSET,y    
 .endmacro
 
-.macro SET_VAR_NON_INTERPRETER ZP
+.macro SET_VAR_NON_INTERPRETER ZP ;TODO: This over complicated, replace
         tay
         lda #<SET_VAR_OFFSET
         sta ZP
@@ -765,7 +766,6 @@ SET_VAR_OFFSET = GOLDEN_RAM + VARS_AREA_START_GOLDEN_OFFSET
         txa
         sta (ZP),y    
 .endmacro
-
 
 FLAG_OFFSET = GOLDEN_RAM + FLAGS_AREA_START_GOLDEN_OFFSET
 ;For setting a flag, outside of the interpreter. Can still be called by an interpreter command, but doesn't affect or know about the current interpreter state.

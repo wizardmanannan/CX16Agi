@@ -1,26 +1,41 @@
 #include "timer.h"
 
 #pragma code-name (push, "BANKRAM06")
-
-timer_proc _timerProc;
-unsigned int previousVSyncCounter;
-
-void b6InitTimer(timer_proc timerProc)
+void b6PauseTimer()
 {
-	_timerProc = timerProc;
-	previousVSyncCounter = vSyncCounter;
+	boolean areInteruptsAlreadyDisabled = isInteruptDisabled();
+	
+	if(!areInteruptsAlreadyDisabled)
+	{
+		asm("sei");
+	}
+	
+	timerEnabled = FALSE;
+
+	if(!areInteruptsAlreadyDisabled)
+	{
+		REENABLE_INTERRUPTS();
+	}
 }
 
-void b6CheckTimer()
+void b6ResumeTimer(boolean setKq3TimerFlag)
 {
-	if (previousVSyncCounter != vSyncCounter)
+	boolean areInteruptsAlreadyDisabled = isInteruptDisabled();
+	
+	if(!areInteruptsAlreadyDisabled)
 	{
-		if (_timerProc != NULL)
-		{
-			_timerProc();
-		}
-		
-		previousVSyncCounter = vSyncCounter;
+		asm("sei");
+	}
+	timerEnabled = TRUE;
+
+	if(isKq3 && setKq3TimerFlag)
+	{
+	flag[76] = TRUE; //Forced timer to be redrawn with the 'updateTimer' flag
+	}
+
+	if(!areInteruptsAlreadyDisabled)
+	{
+		REENABLE_INTERRUPTS();
 	}
 }
 

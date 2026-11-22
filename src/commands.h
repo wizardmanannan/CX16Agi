@@ -13,6 +13,7 @@
 #include "view.h"
 #include "menu.h"
 #include "controllers.h"
+#include "timer.h"
 
 boolean executeLogic(LOGICEntry* logicEntry, int logNum);
 void b1Call(unsigned char** data);

@@ -11,6 +11,7 @@
 #include "irq.h"
 #include "textLayer.h"
 #include "zeroPointer.h"
+#include "timer.h"
 
 
 #define MAX_OBJECTS 100
