@@ -2033,14 +2033,9 @@ void b5Set_game_id() // 1, 0x00
 	b4InitMetadata();
 
 	#include <ascii_charmap.h>
-	if(!strcmp("KQ3", gameId))
-	{
-		isKq3 = TRUE;
-		asm("stp");
-	}
+	isKq3 = !strcmp("KQ3", gameId);	
 	#include <cbm_petscii_charmap.h>
 
-	//printf("start\n");
 	b4LoadUnloadDependencies(0, TRUE, TRUE);
 }
 //

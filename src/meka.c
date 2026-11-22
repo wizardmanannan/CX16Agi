@@ -319,7 +319,6 @@ void b6Initialise()
 {
     int i;
 
-    b6InitTimer(&b6Timing_proc);
     b6InitFiles();             /* Load resource directories */
     b6InitRandom();
     bAInitMenus();
@@ -358,9 +357,6 @@ void b6Initialise()
     b6InitGraphics();
     REENABLE_INTERRUPTS();
     horizon = DEFAULT_HORIZON;
-
-    ///* Set up timer. The timer controls the interpreter speed. */
-
     b6TellMeTheAddressPlease();
     bFInitPaletteManager();
     b1InitControllers();
@@ -401,20 +397,13 @@ void main()
         if (abs(vSyncCounter - lastVsync) >= var[10] * 3) {
 
             lastVsync = vSyncCounter;
-
-
 #ifdef VERBOSE
             printf("Interpret Runs\n");
 #endif // VERBOSE
             b6Interpret();
             mainLoopCounter++;
-
-            b6CheckTimer();
         }
     }
-
-    //chdir("\\HACK\\AGI\\D\\AGI\\MEKA");
-    //closedown();
 }
 
 void main2()
