@@ -291,9 +291,7 @@ void bDDisplayInventory(boolean showObject)
     *BUFFER_ZP_PTR = &bufferStatus;
 
 
-    asm("sei");
-    timerEnabled = FALSE;
-    REENABLE_INTERRUPTS();
+    b6PauseTimer();
 
     memCpyBanked(&b3TextModeTileByte, &inventoryPaletteByte, TEXT_CODE_BANK, 1); //Text mode only sets the stuff below the menu bar, but since the menu bar is already the right color (white), we are going to not add any extra complexity
 
@@ -403,9 +401,7 @@ void bDDisplayInventory(boolean showObject)
     b6SetBackgroundColour(PALETTE_COLOR_BLACK);
     b6GraphicsMode();
 
-    asm("sei");
-    timerEnabled = TRUE;
-    REENABLE_INTERRUPTS();
+    b6ResumeTimer(TRUE);
 }
 
 #pragma code-name (pop)

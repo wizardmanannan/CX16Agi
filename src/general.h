@@ -68,6 +68,8 @@ extern boolean* flag;
 
 extern int currentLog;
 
+extern boolean isKq3;
+
 #define DEFAULT_PRIORITY_BASE 48
 
 #define SPLIT_BUFFER_SIZE 4000

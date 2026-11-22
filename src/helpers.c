@@ -24,7 +24,6 @@ void b5WaitOnKey()
 	} while (!ch);
 }
 
-
 void b5RefreshBufferNonGolden(BufferStatus* bufferStatus, byte* buffer, int bufferSize)
 {
 	BufferStatus localBufferStatus;

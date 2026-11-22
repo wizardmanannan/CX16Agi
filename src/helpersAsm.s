@@ -146,6 +146,15 @@ multLookUp:
 .addr multBy17
 
 .segment "CODE"
+
+.export _isInteruptDisabled
+;boolean isInteruptDisabled();
+_isInteruptDisabled:
+php
+pla
+and #%100
+rts
+
 ;Input a/y, output a/x
 mul8x8to16:
 MULT_8x8_16

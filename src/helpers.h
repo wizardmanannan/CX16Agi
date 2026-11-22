@@ -46,6 +46,8 @@ extern void memCpyBankedBetween(byte* dest, byte bankDst, byte* src, byte bankSr
 extern void memsetBanked(void* _Dst, int _Val, size_t _Size, byte bank);
 extern void strTrimEnd(char* input);
 
+extern boolean isInteruptDisabled();
+
 #define COPY_EVERYTHING 32767
 extern void copyStringFromBanked(char* src, char* dest, int start, int chunk, byte sourceBank, boolean convertFromAsciiByteToPetscii);
 
