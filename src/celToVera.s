@@ -260,6 +260,7 @@ lda VERA_addr_bank
 pha
 
 lda VERA_addr_bank ;If the incrementor is off we need to go back one. The incrementor is bit 4, so if it is on and you EOR with 1 you get zero. Hence we don't go back one on zero
+and #%10000
 eor #%10000
 bne @backOne
 
