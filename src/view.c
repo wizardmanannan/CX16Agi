@@ -1601,7 +1601,32 @@ updateSpriteBuffer:
 	//2 x low
 	_assmUInt = (byte)localViewTab.xPos;
 	_assmByte = localCel.flipped;
+	_assmByte2 = localCel.width;
 
+	// Source segments stay in their original order. A mirrored segment starts
+	// at 2 * (x + cel width - split offset) - allocated physical width.
+	// Keep the intermediate position in 16 bits, including the final borrow.
+	asm("lda %v", _assmByte);
+	asm("beq %g", addForwardSplitOffset);
+
+	asm("clc");
+	asm("lda %v", _assmUInt);
+	asm("adc %v", _assmByte2);
+	asm("sta %v", _assmUInt);
+	asm("lda %v + 1", _assmUInt);
+	asm("adc #$0");
+	asm("sta %v + 1", _assmUInt);
+
+	asm("sec");
+	asm("lda %v", _assmUInt);
+	asm("sbc %w", SPLIT_OFFSET);
+	asm("sta %v", _assmUInt);
+	asm("lda %v + 1", _assmUInt);
+	asm("sbc #$0");
+	asm("sta %v + 1", _assmUInt);
+	asm("bra %g", doubleWidthForScreen);
+
+addForwardSplitOffset:
 	asm("lda %w", SPLIT_OFFSET);
 	asm("beq %g", doubleWidthForScreen);
 
@@ -1633,12 +1658,7 @@ doubleWidthForScreen:
 
 	//x low and high if flipped (used in addition to what is above, if flipped the code above will put x on the stack so that further calculation can be done below)
 moveXDueToFlipped:
-	_assmByte = localCel.width;
 	_assmByte2 = localLoop.allocationWidth;
-
-	asm("lda %v", _assmByte);
-	asm("asl");
-	asm("sta %v", _assmByte);
 
 	//Width 8
 	asm("lda %v", _assmByte2);
@@ -1664,14 +1684,14 @@ moveXDueToFlipped:
 	//Width64
 	asm("@set64: lda #%w", SPR_SIZE_64);
 
-	asm("@takeWidthFromMaxWidth: sec");
-	asm("sbc %v", _assmByte); //Can't unset carry as we expect only 8 bit subtraction
+	asm("@takeWidthFromMaxWidth:");
 	asm("sta %v", _assmByte);
 
 	asm("pla");
 	asm("tax");
 	asm("pla");
 
+	asm("sec");
 	asm("sbc %v", _assmByte);
 	asm("ldy #$2");
 	asm("sta (%w),y", ZP_SPRITE_STORE_PTR);
