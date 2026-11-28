@@ -432,6 +432,10 @@ GET_STRUCT_8_STORED_OFFSET _offsetOfCelTrans, CEL_ADDR, CEL_TRANS
 
 CLEAR_VERA VERA_ADDRESS, TOTAL_ROWS, VERA_BYTES_PER_ROW, #$0
 
+; Each segment starts from the whole cel's position. The backwards wrapper
+; and the split renderer both adjust X_VAL for the segment being drawn.
+lda X_VAL
+pha
 lda Y_VAL
 pha
 
@@ -451,6 +455,8 @@ jsr _bECelToVeraBackwards
 @restoreStack:
 pla
 sta Y_VAL
+pla
+sta X_VAL
 
 @checkSplitLoop:
 
@@ -605,6 +611,33 @@ sta BMP_DATA
 iny
 lda (SPLIT_CEL_SEGMENTS), y
 sta BMP_DATA + 1
+
+; Horizontal segments contain 32 AGI pixels (64 physical pixels).
+; Their RLE rows start at the segment's first pixel, without leading padding.
+; The backwards wrapper has already moved X_VAL to the whole cel's right edge.
+lda SPLIT_COUNTER
+dec
+asl
+asl
+asl
+asl
+asl
+sta CEL_TO_VERA_GENERAL_TMP
+
+lda CEL_TO_VERA_IS_FORWARD_DIRECTION
+beq celToVeraLowRam_splitBackwardsX
+
+clc
+lda X_VAL
+adc CEL_TO_VERA_GENERAL_TMP
+sta X_VAL
+bra celToVeraLowRam_start
+
+celToVeraLowRam_splitBackwardsX:
+sec
+lda X_VAL
+sbc CEL_TO_VERA_GENERAL_TMP
+sta X_VAL
 
 celToVeraLowRam_start:
 lda CEL_TRANS
