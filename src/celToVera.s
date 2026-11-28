@@ -261,8 +261,7 @@ pha
 
 lda VERA_addr_bank ;If the incrementor is off we need to go back one. The incrementor is bit 4, so if it is on and you EOR with 1 you get zero. Hence we don't go back one on zero
 and #%10000
-eor #%10000
-bne @backOne
+beq @backOne
 
 @dontGoBackOne:
 ldy CEL_TO_VERA_IS_FORWARD_DIRECTION ;Store in Y whether we are in forward direction mode or not. Later on if we are going forward, then that means we will read the even nibble otherwise the odd nibble
